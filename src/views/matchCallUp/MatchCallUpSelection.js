@@ -43,7 +43,6 @@ import { useGetTeams } from '@/services/team/teamQueries';
 import {
   getCompositionPlayerId,
   getCompositionPlayerLabel,
-  isCompositionPerson,
 } from '@/utils/compositionPlayer';
 
 import {
@@ -53,7 +52,8 @@ import {
   hasSilentCallUp,
   isManualCallUpPlayer,
 } from './matchCallUpUtils';
-import { resumeFieldForSelection } from './matchCompositionUtils';
+import { readCalledUpIdsFromPack, resumeFieldForSelection } from './matchCompositionUtils';
+import useSiteCompositionRecovery from './useSiteCompositionRecovery';
 
 /**
  * D77 — ECRANS 1 et 2 du pack composition : « Selection des convoques » et
@@ -132,10 +132,14 @@ function MatchCallUpSelection() {
   const route = useRoute();
   const insets = useSafeAreaInsets();
 
+  // COMPO-WEB — sur le SITE, arrive par l'adresse (lien, rechargement), l'ecran
+  // n'a aucun objet : il relit alors la composition sur le serveur. Sur le
+  // telephone, ce crochet rend `route.params` tel quel (`useSiteCompositionRecovery.js`).
+  const { params: paramsRecus } = useSiteCompositionRecovery(route.params, 'selection');
   // Fige : `route.params || {}` fabriquerait un objet neuf a chaque rendu, et
   // les rappels qui le transmettent (ecran 3, terrain) changeraient avec lui.
   /** @type {any} */
-  const params = useMemo(() => route.params || {}, [route.params]);
+  const params = useMemo(() => paramsRecus || {}, [paramsRecus]);
   const {
     clubId: clubIdParam,
     eventId,
@@ -269,30 +273,20 @@ function MatchCallUpSelection() {
       return;
     }
 
-    /** @type {any[]} */
-    const placements = existingComposition?.placements
-      || (existingComposition?.teams || EMPTY_LIST)
-        .flatMap((/** @type {any} */ team) => team?.placements || EMPTY_LIST);
-    /** @type {any[]} */
-    const selected = existingComposition?.selectedPlayerIds || EMPTY_LIST;
-    /** @type {any[]} */
-    const reserve = existingComposition?.reservePlayerIds || EMPTY_LIST;
-    // COMPODBL — les identifiants que l'instantane du pack connait sans qu'ils
-    // designent une personne (le doublon d'un compte range sous son numero) :
-    // ils ne sont pas des convoques, ils ne sont pas comptes.
-    const pasDesPersonnes = new Set(
-      (existingComposition?.snapshotPlayers || EMPTY_LIST)
-        .filter((/** @type {any} */ player) => !isCompositionPerson(player))
-        .map(getCompositionPlayerId)
-        .filter(Boolean),
-    );
+    // ♻️ COMPO-WEB — « qui est convoque dans ce pack » (placements, retenus, banc,
+    // filtre COMPODBL) vit dans `readCalledUpIdsFromPack` : deplacee A
+    // L'IDENTIQUE, pour que le terrain du site, qui relit le serveur, lise la
+    // meme regle que ce pre-cochage.
     const knownIds = convoquesDuMoment
       ? convoquesDuMoment.map(getCompositionPlayerId).filter(Boolean)
-      : [
-        ...placements.map((placement) => String(placement?.playerId || '').trim()),
-        ...selected.map((value) => String(value || '').trim()),
-        ...reserve.map((value) => String(value || '').trim()),
-      ].filter((playerId) => Boolean(playerId) && !pasDesPersonnes.has(playerId));
+      : readCalledUpIdsFromPack(existingComposition);
+    // COMPO-WEB — LE JOUEUR HORS APP QUI REVIENT DE L'ECRAN 3 EST COMPTE DES
+    // L'AMORCE. Sans lui, l'amorce ne dependait que de l'ORDRE des deux effets :
+    // rejouee une seconde fois (le site tourne sous `StrictMode`, qui rejoue
+    // chaque effet en developpement), elle effacait le joueur que l'effet
+    // d'ajout, deja passe, ne remettait plus. Le resultat est le meme sur le
+    // telephone : l'effet d'ajout, plus bas, ne fait qu'ajouter ce qui manque.
+    const pendingId = pendingManualPlayer ? getCompositionPlayerId(pendingManualPlayer) : '';
 
     // ⚠️ LES JOUEURS HORS APP SE PERDENT EN PREMIER : aucun effectif ne les
     // porte, ils n'existent que dans le pack et dans la liste des convoques. On
@@ -304,6 +298,7 @@ function MatchCallUpSelection() {
     [
       ...(existingComposition?.manualPlayers || EMPTY_LIST),
       ...(convoquesDuMoment || EMPTY_LIST).filter(isManualCallUpPlayer),
+      ...(pendingId ? [pendingManualPlayer] : EMPTY_LIST),
     ].forEach((/** @type {any} */ player) => {
       const playerId = getCompositionPlayerId(player);
       if (!playerId || horsAppVus.has(playerId)) return;
@@ -311,10 +306,10 @@ function MatchCallUpSelection() {
       horsApp.push(player);
     });
 
-    setSelectedIds(new Set(knownIds));
+    setSelectedIds(new Set(pendingId ? [pendingId, ...knownIds] : knownIds));
     setManualPlayers(horsApp.length > 0 ? horsApp : EMPTY_LIST);
     setBootstrapped(true);
-  }, [bootstrapped, convoquesRecus, existingComposition]);
+  }, [bootstrapped, convoquesRecus, existingComposition, pendingManualPlayer]);
 
   // Retour de l'ecran 3 : le joueur hors app arrive par les parametres, on le
   // range puis on efface le parametre pour qu'un re-rendu ne l'ajoute pas deux fois.

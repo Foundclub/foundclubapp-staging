@@ -13,6 +13,12 @@ import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import {
+  canDeclareLatePresence,
+  isArrivalTrackingEnabled,
+  isRsvpEnabled,
+} from '@/domains/event/presenceRule';
+import { resolveClientSourceTeamForUser } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -27,7 +33,7 @@ import {
   isTournamentTeamNonCompliant,
   normalizeTournamentText,
 } from '@/views/event/tournamentUtils';
-import { getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
+import { buildPublishedBoardTarget, getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -39,7 +45,7 @@ import {
   useGetEventConvocation,
   useGetEventTeamComposition,
 } from '@/services/event/eventQueries';
-import { updateEvent } from '@/services/event/eventService';
+import { respondToEventRsvp, updateEvent } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   createEventParticipation,
@@ -415,7 +421,36 @@ function EventDetails({ navigation, route }) {
   // Le telephone ajoute `showOverviewTab` a cette condition : le site n a pas
   // d onglets, sa page EST l Apercu. Les trois autres sont celles de N5
   // (EventDetails.js:4747), mot pour mot.
-  const showNextActionCard = canEdit && canAccessAttendance && !isTournamentEvent;
+  // POINTAGE (29/09) — « Suivre les arrivees » decochee : pas d appel.
+  const showNextActionCard = canEdit && canAccessAttendance && !isTournamentEvent
+    && isArrivalTrackingEnabled(event);
+
+  // 🙋 POINTAGE — LES MEMES REGLES QUE LE TELEPHONE (`domains/event/presenceRule.js`).
+  // Un MEMBRE convie ne « demande » pas a participer : il repond. Reponses
+  // decochees = pas de bouton ; apres coup, le « pas renseigne » passe present
+  // par la route des reponses (le serveur ne l ouvre qu a lui).
+  const isConvenedMember = Boolean(resolveClientSourceTeamForUser(event, userData));
+  const monPointage = useMemo(
+    () => (attendancePayload?.data?.items || [])
+      .find((item) => (
+        item?.user?.documentId && item.user.documentId === userData?.documentId
+      )) || null,
+    [attendancePayload?.data?.items, userData?.documentId],
+  );
+  const peutPasserPresentApresCoup = !isTournamentEvent && canDeclareLatePresence({
+    event,
+    hasPendingRequest: participationState?.hasPendingRequest,
+    isConvenedMember,
+    isMissing: participationState?.isMissing,
+    isParticipating: participationState?.isParticipating,
+    myAttendanceStatus: monPointage?.attendanceStatus,
+  });
+  const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
+  const afficherParticiper = !canEdit
+    && !peutPasserPresentApresCoup
+    && !reponsesFermeesAuMembre
+    && !participationState?.isParticipating
+    && !participationState?.hasPendingRequest;
   const tournamentConfig = useMemo(
     () => event?.tournamentConfig || {},
     [event?.tournamentConfig],
@@ -716,6 +751,9 @@ function EventDetails({ navigation, route }) {
       navigation.navigate(compositionRoute, {
         aggregateBranches: Array.isArray(options.aggregateBranches) ? options.aggregateBranches : undefined,
         canEdit: Boolean(options.canEdit),
+        // COMPO-WEB — le club et la categorie voyagent comme sur le telephone
+        // (renforts du club a l'ecran 1, format du terrain a l'ecran 4).
+        clubId: event?.team?.club?.documentId || null,
         compositionIntent: options.compositionIntent || null,
         editorMode: 'event',
         editorSource: options.editorSource || null,
@@ -729,6 +767,9 @@ function EventDetails({ navigation, route }) {
         players: Array.isArray(options.players) ? options.players : (Array.isArray(staffCompositionPayload?.eligiblePlayers) ? staffCompositionPayload.eligiblePlayers : []),
         readOnly: Boolean(options.readOnly),
         sport: composition?.sportContext || compositionSport,
+        teamCategory: compositionEditorTeam?.category?.name
+          || compositionEditorTeam?.category
+          || null,
         teamComposition: options.teamComposition || staffCompositionPayload || null,
         teamId: compositionTeamId,
         teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
@@ -758,31 +799,24 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    const hasAutoPresets = Array.isArray(staffCompositionPayload?.availablePresets) && staffCompositionPayload.availablePresets.length > 0;
-    if (!hasAutoPresets) {
-      openBoard(staffCompositionPayload?.bootstrap?.composition || null, {
-        canEdit: true,
-        compositionIntent: 'manual',
-        editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
-        editorSourceLabel: 'Nouvelle composition',
-        readOnly: false,
-      });
-      return;
-    }
-
-    const wantsAuto = window.confirm(t('eventDetails.okToCreateTheTeams', 'OK pour créer les équipes automatiquement ? Clique sur Annuler pour passer en mode manuel.'));
+    // COMPO-WEB — COMME LE TELEPHONE (C-E, `EventDetails.js`) : plus de fenetre
+    // « Creation auto / a la main » avant d'ouvrir. Elle interrompait le coach du
+    // site avec un OK/Annuler du navigateur, pour une question que l'ecran
+    // suivant pose lui-meme (la selection, ou l'ecran 13 d'une detection).
     openBoard(staffCompositionPayload?.bootstrap?.composition || null, {
       canEdit: true,
-      compositionIntent: wantsAuto ? 'auto' : 'manual',
+      compositionIntent: 'manual',
       editorSource: staffCompositionPayload?.bootstrap?.source || 'empty',
       editorSourceLabel: 'Nouvelle composition',
       readOnly: false,
     });
   }, [
+    compositionEditorTeam?.category,
     compositionEditorTeam?.name,
     compositionEventLabel,
     compositionSport,
     compositionTeamId,
+    event?.team?.club?.documentId,
     event?.type?.name,
     eventId,
     isDetectionEvent,
@@ -790,6 +824,114 @@ function EventDetails({ navigation, route }) {
     navigation,
     staffCompositionPayload, t,
   ]);
+
+  // 🚪 COMPO-WEB — LA PORTE « CONVOCATION PUBLIEE » DE L'ENTRAINEUR, SUR LE SITE.
+  //
+  // Sur le site, l'entraineur n'avait que l'ANCIEN terrain en lecture seule
+  // (« Voir la composition publiee ») : AUCUN chemin vers les reponses de ses
+  // convoques, la relance, ni « Remplacer » un desistement. Ces deux gestes sont
+  // le miroir d'`openPublishedConvocation` et d'`openCompositionEdit`
+  // (`EventDetails.js`) : le terrain en consultation (qui porte « Voir la
+  // convocation et les reponses »), sinon directement l'ecran des reponses.
+  // ♻️ Le terrain a rouvrir vient du helper PARTAGE `buildPublishedBoardTarget`
+  // (carte du fil, « Tu es convoque ») — aucune regle recopiee. Meme garde que le
+  // telephone : UN seul terrain dessinable, sinon pas de terrain.
+  const compositionEligiblePlayers = Array.isArray(staffCompositionPayload?.eligiblePlayers)
+    ? staffCompositionPayload.eligiblePlayers
+    : null;
+  const publishedBoardTarget = useMemo(() => {
+    const dessinables = convocationBranches
+      .map((branch) => buildPublishedBoardTarget(branch?.published, {
+        sport: compositionSport,
+        teamName: branch?.team?.name || compositionEditorTeam?.name || '',
+      }))
+      .filter(Boolean);
+    return dessinables.length === 1 ? dessinables[0] : null;
+  }, [compositionEditorTeam?.name, compositionSport, convocationBranches]);
+
+  const openPublishedConvocation = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+    if (publishedBoardTarget) {
+      navigation.navigate(RouteNames.MatchCompositionBoard, {
+        ...publishedBoardTarget,
+        canEdit: true,
+        clubId: event?.team?.club?.documentId || null,
+        eventId,
+        eventLabel: compositionEventLabel,
+        eventTypeLabel: event?.type?.name || null,
+        // La liste ou « Modifier » ira repecher des convoques : l'effectif eligible.
+        players: compositionEligiblePlayers || publishedBoardTarget.selectedPlayers,
+        readOnly: true,
+        teamId: compositionTeamId,
+      });
+      return;
+    }
+    navigation.navigate(RouteNames.MatchConvocationPublished, {
+      clubId: event?.team?.club?.documentId || null,
+      eventId,
+      eventLabel: compositionEventLabel,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || null,
+    });
+  }, [
+    compositionEditorTeam?.name,
+    compositionEligiblePlayers,
+    compositionEventLabel,
+    compositionSport,
+    compositionTeamId,
+    event?.team?.club?.documentId,
+    event?.type?.name,
+    eventId,
+    navigation,
+    publishedBoardTarget,
+  ]);
+
+  const openCompositionEdit = useCallback(() => {
+    if (!eventId || !compositionTeamId || !publishedBoardTarget) return;
+    navigation.navigate(RouteNames.MatchCallUpSelection, {
+      ...publishedBoardTarget,
+      canEdit: true,
+      clubId: event?.team?.club?.documentId || null,
+      eventId,
+      eventLabel: compositionEventLabel,
+      eventName: compositionEventLabel,
+      eventTypeLabel: event?.type?.name || null,
+      players: compositionEligiblePlayers || publishedBoardTarget.selectedPlayers,
+      readOnly: false,
+      teamId: compositionTeamId,
+    });
+  }, [
+    compositionEligiblePlayers,
+    compositionEventLabel,
+    compositionTeamId,
+    event?.team?.club?.documentId,
+    event?.type?.name,
+    eventId,
+    navigation,
+    publishedBoardTarget,
+  ]);
+
+  // 🗣️ COMPO-WEB — LE RESUME DE LA CONVOCATION PUBLIEE, avec les MEMES clefs et
+  // les memes pluriels que le telephone (FINITIONS du 28/09) : le site ecrivait
+  // encore « 1 equipe(s) publiee(s) » et « 1 {{count}} convocations ».
+  const publishedCompositionSummary = [
+    publishedCompositionTeamCount > 0 ? t('eventDetails.teamSPublished', {
+      count: publishedCompositionTeamCount,
+      defaultValue_one: '{{count}} équipe publiée',
+      defaultValue_other: '{{count}} équipes publiées',
+    }) : t('eventDetails.lineUpPublished', 'Composition publiée'),
+    convocationBranches.length > 1 ? t('eventDetails.visibleBranchEs', {
+      count: convocationBranches.length,
+      defaultValue_one: '{{count}} convocation',
+      defaultValue_other: '{{count}} convocations',
+    }) : '',
+    publishedCompositionReserveCount > 0 ? t('eventDetails.substitutesCount', {
+      count: publishedCompositionReserveCount,
+      defaultValue_one: '{{count}} remplaçant',
+      defaultValue_other: '{{count}} remplaçants',
+    }) : '',
+  ].filter(Boolean);
 
   useEffect(() => {
     if (!trainingOpenConfig.isTraining) return;
@@ -839,6 +981,11 @@ function EventDetails({ navigation, route }) {
 
   const cancelParticipationMutation = useMutation({
     mutationFn: (requestId) => deleteEventParticipation(requestId),
+    onSuccess: invalidateEventQueries,
+  });
+  // POINTAGE — « Je passe en present », apres coup.
+  const latePresenceMutation = useMutation({
+    mutationFn: () => respondToEventRsvp(eventId, 'present'),
     onSuccess: invalidateEventQueries,
   });
   const updateTrainingMutation = useMutation({
@@ -1564,7 +1711,41 @@ function EventDetails({ navigation, route }) {
                   {statusDetailLabel}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {!canEdit && !participationState?.isParticipating && !participationState?.hasPendingRequest ? (
+                  {peutPasserPresentApresCoup ? (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <span style={{ color: mutedTextColor, fontSize: 14 }}>
+                        {t(
+                          'eventList.info.notReported',
+                          "Tu n'as pas répondu : tu es « pas renseigné ». "
+                            + 'Tu étais là ? Passe en présent.',
+                        )}
+                      </span>
+                      <button
+                        disabled={latePresenceMutation.isPending}
+                        onClick={async () => {
+                          setActionError('');
+                          try {
+                            await latePresenceMutation.mutateAsync();
+                          } catch (lateError) {
+                            setActionError(lateError?.message || t(
+                              'eventDetails.unableToJoinThisEvent',
+                              'Impossible de rejoindre cet événement.',
+                            ));
+                          }
+                        }}
+                        style={{
+                          ...primaryButtonStyle,
+                          cursor: latePresenceMutation.isPending ? 'not-allowed' : 'pointer',
+                          opacity: latePresenceMutation.isPending ? 0.7 : 1,
+                          padding: '12px 16px',
+                        }}
+                        type="button"
+                      >
+                        {t('eventList.actions.declareLatePresence', 'Je passe en présent')}
+                      </button>
+                    </div>
+                  ) : null}
+                  {afficherParticiper ? (
                     <button
                       disabled={createParticipationMutation.isPending}
                       onClick={handleJoin}
@@ -1867,17 +2048,7 @@ function EventDetails({ navigation, route }) {
 
                   {convocationBranches.length > 0 ? (
                     <div style={{ color: softTextColor, display: 'grid', fontSize: 14, gap: 6 }}>
-                      <span>
-                        {publishedCompositionTeamCount}
-                        {' '}
-                        {t('eventDetails.teamSPublished2', 'equipe(s) publiee(s)')}
-                      </span>
-                      <span>
-                        {convocationBranches.length}
-                        {' '}
-                        {t('eventDetails.visibleBranchEs', 'branche(s) visible(s)')}
-                        {publishedCompositionReserveCount > 0 ? ` · ${publishedCompositionReserveCount} remplacant(s)` : ''}
-                      </span>
+                      <span>{publishedCompositionSummary.join(' · ')}</span>
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <span>
                           {t('eventDetails.publishedOn', 'Publiée le')}
@@ -1900,7 +2071,32 @@ function EventDetails({ navigation, route }) {
                       </button>
                     ) : null}
 
-                    {convocationBranches.length > 0 && viewerConvocationRole ? (
+                    {/* 🚪 COMPO-WEB — l'entraineur : les reponses de ses convoques
+                        (et le terrain qui y mene), puis « Modifier ». */}
+                    {canEdit && convocationBranches.length > 0 ? (
+                      <button
+                        onClick={openPublishedConvocation}
+                        style={outlineButtonStyle}
+                        type="button"
+                      >
+                        {t('matchConvocation.published.openCta')}
+                      </button>
+                    ) : null}
+
+                    {/* « Modifier la composition », et non « Modifier » seul comme
+                        sur le telephone : l'en-tete de la fiche du site porte deja
+                        un « Modifier » (celui de l'evenement). */}
+                    {canEdit && publishedBoardTarget ? (
+                      <button
+                        onClick={openCompositionEdit}
+                        style={outlineButtonStyle}
+                        type="button"
+                      >
+                        {t('matchConvocation.published.actions.edit')}
+                      </button>
+                    ) : null}
+
+                    {!canEdit && convocationBranches.length > 0 && viewerConvocationRole ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.PlayerConvocation, {
                           eventId,
@@ -1913,7 +2109,7 @@ function EventDetails({ navigation, route }) {
                       </button>
                     ) : null}
 
-                    {convocationBranches.length > 0 && !viewerConvocationRole ? (
+                    {!canEdit && convocationBranches.length > 0 && !viewerConvocationRole ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.TacticalBoardV2, {
                           aggregateBranches: convocationBranches,

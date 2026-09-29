@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
+import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -133,6 +134,10 @@ function PlayerConvocationScreen() {
     refetchOnMount: true,
   });
   const eventQuery = useGetEvent(eventId, { enabled: Boolean(eventId) });
+  // POINTAGE (29/09) — « Les participants repondent » decochee : pas de barre de
+  // reponse. ponytail: tant que l evenement n est pas relu, la barre s affiche
+  // (charge de convocation sans l option) ; elle disparait a la relecture.
+  const reponsesOuvertes = isRsvpEnabled(eventQuery.data);
 
   const convocation = convocationQuery.data;
   const viewerId = String(userData?.documentId || userData?.id || '').trim();
@@ -625,25 +630,27 @@ function PlayerConvocationScreen() {
 
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur
           la calcule (`responses.byPlayerId`), l'app ne la recalcule pas. */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}
-        <View style={styles.footerRow}>
-          <Button
-            isLoading={pendingAnswer === 'present'}
-            onPress={() => handleAnswer('present')}
-            style={styles.footerCta}
-            title={t('playerConvocation.actions.present')}
-            variant={answer === 'present' ? 'Primary' : 'Secondary'}
-          />
-          <Button
-            isLoading={pendingAnswer === 'absent'}
-            onPress={() => handleAnswer('absent')}
-            style={styles.footerCta}
-            title={t('playerConvocation.actions.absent')}
-            variant={answer === 'absent' ? 'Primary' : 'Secondary'}
-          />
+      {reponsesOuvertes ? (
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}
+          <View style={styles.footerRow}>
+            <Button
+              isLoading={pendingAnswer === 'present'}
+              onPress={() => handleAnswer('present')}
+              style={styles.footerCta}
+              title={t('playerConvocation.actions.present')}
+              variant={answer === 'present' ? 'Primary' : 'Secondary'}
+            />
+            <Button
+              isLoading={pendingAnswer === 'absent'}
+              onPress={() => handleAnswer('absent')}
+              style={styles.footerCta}
+              title={t('playerConvocation.actions.absent')}
+              variant={answer === 'absent' ? 'Primary' : 'Secondary'}
+            />
+          </View>
         </View>
-      </View>
+      ) : null}
     </ScreenContainer>
   );
 }

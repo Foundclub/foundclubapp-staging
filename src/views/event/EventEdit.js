@@ -47,6 +47,7 @@ import safeJsonParse from '@/utils/safeJsonParse';
 
 import EventTasksEditor from './components/EventTasksEditor';
 import EventTeamAudiencesEditor from './components/EventTeamAudiencesEditor';
+import PresenceOptionsFields from './components/PresenceOptionsFields';
 
 // R5 (b) — LES EQUIPES DU CLUB SONT RELUES AU PLUS UNE FOIS PAR MINUTE.
 // Elles ne changent pas d'une ouverture de l'ecran a l'autre, et elles etaient
@@ -65,6 +66,7 @@ const AUCUNE_EQUIPE = [];
 /** @typedef {import('@/domains/team/types').Team} Team */
 
 const defaultValues = {
+  arrivalTrackingEnabled: true,
   capacity: null,
   date: '',
   description: '',
@@ -85,6 +87,7 @@ const defaultValues = {
   recurrenceInterval: 1,
   recurrenceStartDate: '',
   reservationMode: 'FULL_GROUP',
+  rsvpEnabled: true,
   sessionStatus: 'open',
   startTime: '',
   team: undefined,
@@ -229,6 +232,8 @@ const clampDateToToday = (value) => {
 };
 
 const eventSchema = Joi.object({
+  // POINTAGE (29/09) — les deux options de presence de l evenement.
+  arrivalTrackingEnabled: Joi.boolean().optional(),
   capacity: Joi.number().allow(null, '').optional(),
   date: Joi.string()
     .pattern(/^(\d{2}\/\d{2}\/\d{4})?$/)
@@ -283,6 +288,7 @@ const eventSchema = Joi.object({
     then: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).required(),
   }),
   reservationMode: Joi.string().valid('FULL_GROUP', 'RECRUITING').optional(),
+  rsvpEnabled: Joi.boolean().optional(),
   sessionStatus: Joi.string().valid('open', 'closed').required(),
   startTime: Joi.string().pattern(/^(\d{2}:\d{2})?$/).required(),
   team: Joi.string().required(),
@@ -480,6 +486,7 @@ function EventEdit({ navigation, route }) {
   } = useForm({
     defaultValues: {
       ...defaultValues,
+      arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
       capacity: event?.capacity,
       date: initialDateValue,
       description: event?.description || '',
@@ -498,6 +505,7 @@ function EventEdit({ navigation, route }) {
       participantIdentityVisibility: event?.participantIdentityVisibility || 'VISIBLE',
       pricePerPerson: event?.pricePerPerson,
       reservationMode: event?.reservationMode || 'FULL_GROUP',
+      rsvpEnabled: event?.rsvpEnabled !== false,
       sessionStatus: event?.sessionStatus || 'open',
       startTime: event?.startTime ? event.startTime.substring(0, 5) : '',
       team: event?.team?.documentId || '',
@@ -716,6 +724,7 @@ function EventEdit({ navigation, route }) {
       console.log('Récurrence Group ID:', event.recurrenceGroupId);
       reset({
         ...defaultValues,
+        arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
         capacity: event?.capacity,
         date: event?.date ? format(new Date(event?.date), 'dd/MM/yyyy') : '',
         description: event?.description || '',
@@ -734,6 +743,7 @@ function EventEdit({ navigation, route }) {
         participantIdentityVisibility: event?.participantIdentityVisibility || 'VISIBLE',
         pricePerPerson: event?.pricePerPerson,
         reservationMode: event?.reservationMode || 'FULL_GROUP',
+        rsvpEnabled: event?.rsvpEnabled !== false,
         sessionStatus: event?.sessionStatus || 'open',
         startTime: event?.startTime ? event.startTime.substring(0, 5) : '',
         team: event?.team?.documentId || '',
@@ -1212,6 +1222,21 @@ function EventEdit({ navigation, route }) {
                 </Text>
               </View>
             ) : null}
+
+            {/* POINTAGE (decisions d Adel du 29/09) — les deux options de
+                presence, cochees par defaut a la creation, modifiables ici. */}
+            <View style={[Spaces.gap[8]]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('eventEdit.fields.presence.label', 'Présences')}
+              </Text>
+              <PresenceOptionsFields
+                arrivalTrackingEnabled={watch('arrivalTrackingEnabled')}
+                onChange={(changement) => Object.entries(changement).forEach(([champ, valeur]) => {
+                  setValue(champ, valeur, { shouldDirty: true });
+                })}
+                rsvpEnabled={watch('rsvpEnabled')}
+              />
+            </View>
 
             <Controller
               control={control}

@@ -8,6 +8,7 @@ import {
   getCurrentUserEventParticipationState,
   resolveRsvpAnswer,
 } from '@/domains/event/participationState';
+import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 
 import { useGetEvent } from '@/services/event/eventQueries';
@@ -55,6 +56,7 @@ import { respondToEventRsvp } from '@/services/event/eventService';
  * @param {string | undefined} eventId - L'evenement nomme par le bandeau.
  * @returns {{
  *   answer: string | null,
+ *   canAnswer: boolean,
  *   isAnswering: boolean,
  *   submit: (answer: 'present' | 'absent') => void,
  * }} L'etat confirme par le serveur, et le geste.
@@ -126,6 +128,10 @@ export const useHomeEventAnswer = (eventId) => {
 
   return {
     answer,
+    // POINTAGE (29/09) — l organisateur a pu decocher « Les participants
+    // repondent » : le bandeau ne propose alors pas de reponse. Tant que
+    // l evenement n est pas relu, on garde le comportement d avant (vrai).
+    canAnswer: isRsvpEnabled(event),
     isAnswering: mutation.isPending,
     submit,
   };

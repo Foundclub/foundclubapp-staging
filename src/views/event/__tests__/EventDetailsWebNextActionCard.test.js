@@ -561,3 +561,27 @@ describe('P9 · ecran 2 — la carte « APRES LE MATCH » sur l Apercu du site',
     expect(parTestID(root, 'post-match-journey')).toHaveLength(0);
   });
 });
+
+// ==========================================================================
+// POINTAGE (decisions d Adel du 29/09) — « SUIVRE LES ARRIVEES » DECOCHEE :
+// pas de carte d appel sur le site non plus. Ecrit ROUGE contre app `8d017cd6`.
+// ==========================================================================
+describe('POINTAGE — la carte d appel suit l option « Suivre les arrivees »', () => {
+  test('option decochee : pas de carte « Faire l appel »', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(),
+      event: buildEvent({ arrivalTrackingEnabled: false }),
+    });
+
+    expect(parTestID(root, 'event-next-action')).toHaveLength(0);
+  });
+
+  test('option cochee (ou evenement d avant le lot) : la carte est la, comme avant', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(),
+      event: buildEvent({ arrivalTrackingEnabled: null }),
+    });
+
+    expect(parTestID(root, 'event-next-action')[0]).toBeDefined();
+  });
+});

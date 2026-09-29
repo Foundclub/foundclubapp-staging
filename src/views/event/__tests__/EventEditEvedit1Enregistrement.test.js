@@ -793,3 +793,61 @@ describe('R1 — on ne fait plus la queue derriere le rafraichissement', () => {
     alerte.mockRestore();
   });
 });
+
+// ---------------------------------------------------------------------------
+// POINTAGE (decisions d Adel du 29/09) — LES DEUX OPTIONS SE MODIFIENT ICI.
+// ---------------------------------------------------------------------------
+//
+// « Les participants repondent Present / Absent » et « Suivre les arrivees » :
+// cochees par defaut dans le tunnel, MODIFIABLES ensuite par l organisateur.
+// Un evenement d avant le lot (champ absent) s ouvre avec les deux cochees.
+// Ecrits ROUGES contre app `8d017cd6`.
+describe('POINTAGE — les deux options de presence se modifient', () => {
+  const REPONSES = 'Les participants répondent Présent / Absent';
+  const ARRIVEES = 'Suivre les arrivées';
+
+  /**
+   * Les cases de l ecran, par leur libelle accessible.
+   * @param {any} racine - La racine du rendu.
+   * @returns {Record<string, any>} - Les rangees, par libelle.
+   */
+  const cases = (racine) => Object.fromEntries(racine.findAll(
+    (/** @type {any} */ noeud) => noeud.props?.accessibilityRole === 'checkbox'
+      && typeof noeud.props?.onPress === 'function',
+  ).map((/** @type {any} */ noeud) => [noeud.props.accessibilityLabel, noeud]));
+
+  test('un evenement d AVANT le lot s ouvre coche, et renvoie coche', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const racine = await monterSur(evenementRempli());
+
+    expect(cases(racine)[REPONSES]?.props.accessibilityState?.checked).toBe(true);
+    expect(cases(racine)[ARRIVEES]?.props.accessibilityState?.checked).toBe(true);
+    await act(async () => {
+      await boutonEnregistrer(racine).props.onPress();
+    });
+
+    const [charge] = eventService.updateEvent.mock.calls[0];
+    expect(charge.eventData.rsvpEnabled).toBe(true);
+    expect(charge.eventData.arrivalTrackingEnabled).toBe(true);
+    alerte.mockRestore();
+  });
+
+  test('🚨 decochee a la creation, elle s ouvre decochee ; l autre se decoche', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const racine = await monterSur(evenementRempli({ arrivalTrackingEnabled: false }));
+
+    expect(cases(racine)[ARRIVEES]?.props.accessibilityState?.checked).toBe(false);
+    await act(async () => {
+      cases(racine)[REPONSES].props.onPress();
+    });
+    expect(cases(racine)[REPONSES]?.props.accessibilityState?.checked).toBe(false);
+    await act(async () => {
+      await boutonEnregistrer(racine).props.onPress();
+    });
+
+    const [charge] = eventService.updateEvent.mock.calls[0];
+    expect(charge.eventData.rsvpEnabled).toBe(false);
+    expect(charge.eventData.arrivalTrackingEnabled).toBe(false);
+    alerte.mockRestore();
+  });
+});

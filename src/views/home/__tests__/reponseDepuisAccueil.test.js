@@ -96,8 +96,12 @@ const REPONDU_ABSENT = {
  * @returns {null} Rien a rendre.
  */
 function SondeReponse({ vues }) {
-  const { answer, isAnswering, submit } = useHomeEventAnswer(EVENEMENT_ID);
-  vues.push({ answer, isAnswering, submit });
+  const {
+    answer, canAnswer, isAnswering, submit,
+  } = useHomeEventAnswer(EVENEMENT_ID);
+  vues.push({
+    answer, canAnswer, isAnswering, submit,
+  });
   return null;
 }
 
@@ -352,5 +356,38 @@ describe('T02 temoin 5 — les autres variantes du bandeau continuent de MENER a
     const bloc = SOURCE_HUB.slice(debut, debut + 400);
 
     expect(bloc).toContain('handleOpenEvent(seance.id)');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POINTAGE (decisions d Adel du 29/09) — « LES PARTICIPANTS REPONDENT » DECOCHEE :
+// le bandeau du joueur ne propose plus Present / Absent, il ouvre l evenement.
+// Le hook relit deja l evenement complet : c est lui qui le dit (`canAnswer`).
+// Ecrits ROUGES contre app `4c0d8a57`.
+// ---------------------------------------------------------------------------
+describe('POINTAGE — le bandeau suit l option « Les participants repondent »', () => {
+  it('option cochee (ou evenement d avant le lot) : on peut repondre', async () => {
+    getEventById.mockResolvedValue(SANS_REPONSE);
+    const sonde = await monterLaSonde();
+
+    expect(sonde.vues[sonde.vues.length - 1].canAnswer).toBe(true);
+    await sonde.demonter();
+  });
+
+  it('🚨 option decochee : on ne repond pas', async () => {
+    getEventById.mockResolvedValue({ ...SANS_REPONSE, rsvpEnabled: false });
+    const sonde = await monterLaSonde();
+
+    expect(sonde.vues[sonde.vues.length - 1].canAnswer).toBe(false);
+    await sonde.demonter();
+  });
+
+  it('🚨 HomeHub : sans reponse possible, le bandeau du joueur OUVRE l evenement', () => {
+    const debut = SOURCE_HUB.indexOf('const evenement = homeCounters.prochainEvenement;');
+    expect(debut).toBeGreaterThan(-1);
+    const bloc = SOURCE_HUB.slice(debut, SOURCE_HUB.indexOf("key: 'present'", debut));
+
+    expect(bloc).toContain('canAnswerMyEvent');
+    expect(bloc).toContain('handleOpenEvent(evenement.id)');
   });
 });

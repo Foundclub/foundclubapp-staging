@@ -1821,6 +1821,7 @@ export default {
 
     // Event errors
     EVENT_ALREADY_MISSING: 'Tu as déjà répondu absent à cet événement.',
+    EVENT_ARRIVAL_TRACKING_DISABLED: "L'organisateur ne suit pas les arrivées pour cet événement.",
     EVENT_AUDIENCE_NOT_TARGETED: "Cet événement ne convie qu'une partie de ton équipe.",
     EVENT_CANCEL_ERROR: "Erreur lors de l'annulation de l'événement.",
     EVENT_CAPACITY_ERROR: "La capacité maximale de l'événement est atteinte.",
@@ -1836,6 +1837,7 @@ export default {
     EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitée.',
     EVENT_PARTICIPATION_CREATE_ERROR: 'Erreur lors de la création de la participation.',
     EVENT_PARTICIPATION_REFUSE_ERROR: 'Erreur lors du refus de la participation.',
+    EVENT_RSVP_DISABLED: 'Les réponses Présent / Absent sont désactivées pour cet événement.',
     EVENT_SLOT_CONFLICT: 'Un conflit de créneau a été détecté pour ce lieu.',
     EVENT_UPDATE_ERROR: "Erreur lors de la mise à jour de l'événement.",
     EVENT_USER_ALREADY_IN_EVENT_ERROR: "L'utilisateur est déjà inscrit à cet événement.",
@@ -5783,7 +5785,7 @@ export default {
     archived: 'Archivee',
     arrivalAlreadyRecorded: 'Arrivée déjà enregistrée.',
     // eslint-disable-next-line max-len
-    arrivalNotConfirmed: "Ton arrivée n'a pas été confirmée avant la fin du match. Un coach doit corriger ta présence avant de débloquer ton retour post-match.",
+    arrivalNotConfirmed: "Un encadrant t'a marqué absent à l'appel de ce match. S'il s'est trompé, il corrige ta présence et ton questionnaire se débloque.",
     arrivalStatus: "Statut d'arrivée",
     assignmentS: 'affectation(s)',
     attendanceActions: {
@@ -5792,11 +5794,13 @@ export default {
       onTime: "À l'heure",
     },
     attendanceBadge: {
+      absentAtCall: 'Absent à l’appel',
       arrived: 'Arrivé',
       declaredLate: 'Retard annoncé',
       early: 'min en avance',
       late: 'min de retard',
       notMarked: 'Non pointé',
+      notReported: 'Pas renseigné',
       saidYes: 'Prévu à l’heure',
       selfArrived: 'Je suis arrivé·e',
       toMark: 'À pointer',
@@ -5918,7 +5922,7 @@ export default {
     capacity: 'Capacite',
     checkInTheArrival: "Pointer l'arrivée",
     checkInTheArrivalAnd: "Pointe l'arrivée et ajuste le retard si nécessaire.",
-    checkInToCorrect: 'Pointage à corriger',
+    checkInToCorrect: 'Absent à l’appel',
     // eslint-disable-next-line max-len
     checkYourSubscriptionToSee: 'Consulte ton abonnement pour voir les offres FoundClub, tes quotas restants et les droits qui se debloquent ensuite.',
     chooseAPosition: 'Choisir un poste',
@@ -6563,7 +6567,7 @@ export default {
     theCoachHasnTLeft: "Le coach n'a pas encore laisse d'avis individuel pour ce match.",
     theCoachPublishedIndividualFeedback: 'Le coach a publié un retour individuel pour ton match.',
     // eslint-disable-next-line max-len
-    theEventIsOverAnd: "L'événement est terminé et aucune arrivée n'a été confirmée. Un coach doit corriger le pointage si besoin.",
+    theEventIsOverAnd: "Un encadrant t'a marqué absent à l'appel. S'il s'est trompé, il peut corriger ton pointage.",
     // eslint-disable-next-line max-len
     theMatchIsOverSave: 'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton équipe.',
     // eslint-disable-next-line max-len
@@ -6796,6 +6800,9 @@ export default {
           anonymized: 'Participants anonymisés',
           visible: 'Identités visibles',
         },
+      },
+      presence: {
+        label: 'Présences',
       },
       pricePerPerson: {
         label: 'Prix par personne (€)',
@@ -7044,6 +7051,7 @@ export default {
       about: 'À propos',
       absent: 'Absent·e',
       add: 'Ajouter un événement',
+      declareLatePresence: 'Je passe en présent',
       findEvent: 'Trouver un événement',
       join: 'Participer',
       present: 'Présent·e',
@@ -7055,6 +7063,7 @@ export default {
       alreadyMissing: 'Je serai absent·e',
       declinedRequest: 'Demande refusée',
       eventFull: 'Cet événement est complet.',
+      notReported: "Tu n'as pas répondu : tu es « pas renseigné ». Tu étais là ? Passe en présent.",
       pendingRequest: 'Demande en attente',
       restrictedEvent: 'Accès réservé',
       staffDoesNotRsvp: 'Tu encadres cet événement : ce sont les joueurs qui répondent.',
@@ -7109,6 +7118,14 @@ export default {
     noAnswer: 'Sans réponse',
     noConfirmedParticipantYet: 'Aucun participant confirme pour le moment.',
     user: 'Utilisateur',
+  },
+  eventPresenceOptions: {
+    arrivals: 'Suivre les arrivées',
+    arrivalsHint: 'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. '
+      + 'Décoché : pas de pointage.',
+    rsvp: 'Les participants répondent Présent / Absent',
+    rsvpHint: 'Chacun dit à l’avance s’il vient. '
+      + 'Décoché : ni boutons Présent / Absent, ni relances.',
   },
   eventReservationActions: {
     full: '✅ Complet',
@@ -7329,6 +7346,11 @@ export default {
       organizationTitle: 'Organisation',
       participationTitle: 'Participation',
       perDayLocations: 'Lieux personnalises par jour',
+      presenceArrivalsOff: 'Pas de suivi des arrivées',
+      presenceArrivalsOn: 'Suivi des arrivées',
+      presenceRsvpOff: 'Pas de réponses Présent / Absent',
+      presenceRsvpOn: 'Réponses Présent / Absent',
+      presenceTitle: 'Présences',
       pricePerPerson: 'Prix par personne: {{value}}',
       quickOverviewTitle: 'Vue d\'ensemble',
       ready: 'Prêt à créer',
@@ -7392,6 +7414,7 @@ export default {
         identityRow: 'Identités des participants',
         identityVisible: 'Visibles',
         identityVisibleHint: 'Les participants apparaissent avec leur nom et leur photo.',
+        presenceGroup: 'Présences',
         subtitleShort: "Qui voit l'événement, et comment on s'y inscrit.",
         titleShort: 'Accès',
         validationAutoHint: 'Les participants confirment seuls leur présence — recommandé.',
@@ -10488,6 +10511,32 @@ export default {
         starters_other: '{{count}} titulaires',
       },
       edit: 'Modifier',
+      // COMPO-WEB (29/09) — le terrain du SITE, arrivé sans ses joueurs : pourquoi
+      // « Publier » est fermé.
+      guard: {
+        emptyMessage: 'Cette composition n’a pas pu être retrouvée. Reviens à la '
+          + 'sélection (« Modifier ») pour choisir tes convoqués : '
+          + 'une composition vide ne se publie pas.',
+        emptyTitle: 'Aucun joueur à placer',
+        failedMessage: 'La composition n’a pas pu être relue. Recharge la page ou '
+          + 'reviens à la sélection (« Modifier ») : rien ne part tant qu’elle manque.',
+        failedTitle: 'Composition introuvable',
+        loading: 'Chargement de la composition…',
+        missingMessage_one: '{{count}} convoqué n’a pas pu être retrouvé : repasse par '
+          + '« Modifier » avant de publier, sinon il sortirait de la convocation.',
+        missingMessage_other: '{{count}} convoqués n’ont pas pu être retrouvés : repasse par '
+          + '« Modifier » avant de publier, sinon ils sortiraient de la convocation.',
+        missingTitle: 'Composition incomplète',
+      },
+      // COMPO-WEB (29/09) — placer ses joueurs AU CLAVIER sur le site.
+      keyboard: {
+        cancel: 'Annuler',
+        hint: 'Au clavier : Entrée sur un joueur, puis sur un poste.',
+        picked: '{{name}} est choisi : Entrée sur un poste libre pour l’y placer.',
+        placeOnField: 'Placer {{name}} sur le terrain',
+        placeOnSlot: 'Placer {{name}} au poste {{label}}',
+        toBench: 'Remettre {{name}} au banc',
+      },
       title: 'Composition',
       tokenOnBench: '{{name}}, sur le banc',
       tokenOnField: '{{name}}, sur le terrain',
