@@ -100,6 +100,22 @@ const TeamLocationIconView = /** @type {any} */ (TeamLocationIcon);
  */
 
 /**
+ * FINITIONS2 (recette du 29/09) — le serveur n'a de statistiques de match que pour
+ * le foot et le basket : pour tout autre sport, `GET /teams/:id/performance-stats`
+ * repond 400 (« Unsupported team sport for performance stats »). Meme lecture que
+ * lui (`normalizeSportLabel` du service match-stats-report, admin) : la PREMIERE
+ * activite de l'equipe. Equipe pas encore chargee = on ne sait pas : on attend.
+ * @param {any} team - L'equipe chargee.
+ * @returns {boolean} Vrai si le serveur peut rendre ses statistiques de match.
+ */
+const hasMatchStatsSport = (team) => {
+  if (!team) return false;
+  const sport = String(team?.activities?.[0]?.name || team?.activity?.name || team?.sport || '')
+    .toLowerCase();
+  return sport.includes('basket') || sport.includes('foot');
+};
+
+/**
  * Team details screen component
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Team details screen component
@@ -173,6 +189,13 @@ function TeamDetails({ navigation, route }) {
   );
   const { data: rawClubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId || '');
   const clubData = /** @type {any} */ (rawClubData);
+  // FINITIONS2 — UNE SEULE PORTE par requete, lue par la requete ET par le retour
+  // sur la fiche (`useFocusEffect` plus bas) : `refetch` passe outre `enabled`, et
+  // ce retour recoltait des 403 (pas membre) et des 400 (sport sans statistiques).
+  const canLoadTeamStats = Boolean(teamId && isMyTeam);
+  const canLoadTeamPerformanceStats = canLoadTeamStats && hasMatchStatsSport(team);
+  const reloadGatesRef = useRef({ performance: false, stats: false });
+  reloadGatesRef.current = { performance: canLoadTeamPerformanceStats, stats: canLoadTeamStats };
   const {
     data: rawTeamStatsData,
     error: teamStatsError,
@@ -181,7 +204,7 @@ function TeamDetails({ navigation, route }) {
   } = useGetTeamStats(
     teamId || '',
     {
-      enabled: Boolean(teamId && isMyTeam),
+      enabled: canLoadTeamStats,
       staleTime: 1000 * 60,
     },
   );
@@ -193,7 +216,7 @@ function TeamDetails({ navigation, route }) {
     refetch: refetchTeamPerformanceStats,
   } = useGetTeamPerformanceStats(teamId || '', {
     // Route reservee aux membres (is-team-member) : requeter une autre equipe = 403 garanti.
-    enabled: Boolean(teamId && isMyTeam),
+    enabled: canLoadTeamPerformanceStats,
     staleTime: 1000 * 60,
   });
   const teamPerformanceStats = /** @type {any} */ (rawTeamPerformanceStats);
@@ -1990,8 +2013,11 @@ function TeamDetails({ navigation, route }) {
   useFocusEffect(
     useCallback(() => {
       refetch();
-      refetchTeamStats();
-      refetchTeamPerformanceStats();
+      // FINITIONS2 — les portes du moment, lues par reference : le retour ne se
+      // relance pas quand l'equipe finit de charger (la requete qui s'ouvre alors
+      // part toute seule).
+      if (reloadGatesRef.current.stats) refetchTeamStats();
+      if (reloadGatesRef.current.performance) refetchTeamPerformanceStats();
     }, [refetch, refetchTeamPerformanceStats, refetchTeamStats]),
   );
 
