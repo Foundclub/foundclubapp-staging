@@ -315,6 +315,36 @@ describe('COMPOMSG · écran 3 — toucher le terrain ouvre le PLEIN ÉCRAN', ()
     expect(parametres.selectedPlayers.map((/** @type {any} */ p) => p.documentId))
       .toEqual([MOI, 'joueur-2', 'joueur-3']);
   });
+
+  /**
+   * Touche le terrain et rend les parametres envoyes au plein ecran.
+   * @returns {any}
+   */
+  const ouvrirLePleinEcran = () => {
+    const bouton = rendre().root.findAll(
+      (/** @type {any} */ n) => typeof n.props?.onPress === 'function'
+        && n.props?.accessibilityLabel === 'Voir la composition en plein écran',
+    )[0];
+    act(() => { bouton.props.onPress(); });
+    return mockNavigate.mock.calls.pop()[1];
+  };
+
+  test('📱 URL-BOOLEENS — sur le telephone, AUCUNE relecture demandee (economie COMPOMSG)', () => {
+    expect(ouvrirLePleinEcran().refreshFromServer).toBeUndefined();
+  });
+
+  test('🌐 URL-BOOLEENS — sur le SITE, le plein ecran relit la compo sur le serveur', () => {
+    // Sur le site, les joueurs et les placements (des objets) ne voyagent pas dans
+    // l adresse : sans relecture, le plein ecran y arrivait VIDE.
+    const { Platform } = jest.requireActual('react-native');
+    const systemeReel = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      expect(ouvrirLePleinEcran().refreshFromServer).toBe(true);
+    } finally {
+      Platform.OS = systemeReel;
+    }
+  });
 });
 
 describe('COMPOMSG · écran 3 — les MÊMES infos que la carte du fil', () => {
