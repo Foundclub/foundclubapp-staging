@@ -376,10 +376,16 @@ const monterPuisRevenirSurLaFiche = () => {
   });
 };
 
-/** @returns {any} Les options du DERNIER rendu de la requete des performances. */
+/**
+ * Les options du DERNIER rendu de la requete des performances.
+ * @returns {any}
+ */
 const optionsPerformances = () => mockOptionsPerformances[mockOptionsPerformances.length - 1];
 
-/** @returns {any} Les options du DERNIER rendu de la requete des presences. */
+/**
+ * Les options du DERNIER rendu de la requete des presences.
+ * @returns {any}
+ */
 const optionsPresences = () => mockOptionsPresences[mockOptionsPresences.length - 1];
 
 afterEach(() => {
