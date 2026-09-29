@@ -424,11 +424,16 @@ function MatchCompositionBoard() {
   // Le jeton (ou la cible) qui a le focus porte un anneau clair ; le jeton
   // CHOISI garde son anneau de couleur.
   const [focusClavier, setFocusClavier] = useState(/** @type {string | null} */ (null));
+  // ⚠️ La bordure est RESERVEE en permanence (transparente) : seule sa couleur
+  // change. Un anneau qui ajoute 2 px au focus fait grandir le banc et
+  // redimensionne le terrain PENDANT le glisser (le clic de souris donne aussi
+  // le focus) — mesure au banc : le joueur n'etait plus pose.
   const anneauClavier = (/** @type {string} */ cle, /** @type {boolean} */ estChoisi) => {
     if (!clavierActif) return null;
-    if (estChoisi) return [styles.jetonChoisi, { borderColor: Colors.primary500 }];
-    if (focusClavier === cle) return [styles.jetonChoisi, { borderColor: Colors.neutral00 }];
-    return null;
+    let borderColor = Colors.transparent;
+    if (estChoisi) borderColor = Colors.primary500;
+    else if (focusClavier === cle) borderColor = Colors.neutral00;
+    return [styles.jetonChoisi, { borderColor }];
   };
   const prendreLeFocus = (/** @type {string} */ cle) => (
     clavierActif ? () => setFocusClavier(cle) : undefined
@@ -715,32 +720,46 @@ function MatchCompositionBoard() {
       const filDeLEquipe = startTeamChat(teamId).catch(() => null);
 
       setIsSheetVisible(false);
+      const allerALaFicheEtAuFil = () => {
+        // 🚪 T01 — DEPILER AVANT DE PARTIR, et c'est ce qui repare le retour.
+        // Le fil de l'equipe ne vit pas dans cette pile mais dans
+        // `PrivateNavigator` : y aller laisse les 3 ecrans de composition
+        // DESSOUS, et le bouton retour retombe sur l'ecran de publication —
+        // une compo publiee se reproposait ainsi a la republication.
+        // `popTo` est l'idiome du depot (`FriendlyMatchWizardRecap`) ; on
+        // n'emploie pas `reset`, qui ecrase la pile entiere (defaut deja paye
+        // par `HistoryWizardSingle`).
+        // @ts-ignore
+        navigation.popTo(RouteNames.EventDetails, { eventId });
+        // Sans fil trouve, on s'arrete a l'evenement : jamais bloque, et
+        // jamais de retour vers l'ecran de publication.
+        // ⚠️ L'evenement est atteint AVANT de lire le fil : si la recherche
+        // n'est pas encore revenue, le coach est deja arrive quelque part.
+        filDeLEquipe.then((/** @type {any} */ teamChat) => {
+          if (teamChat?.documentId) {
+            // @ts-ignore
+            navigation.navigate(RouteNames.Conversation, { chatId: teamChat.documentId });
+          }
+        });
+      };
+      // 🌐 COMPO-WEB — SUR LE SITE, UNE ALERTE SANS CHOIX. La doublure `Alert` du
+      // site change toute alerte A BOUTON en OK / ANNULER du navigateur :
+      // « Annuler » laissait l'entraineur sur le terrain, et un second « Publier »
+      // renvoyait la convocation — et ses notifications — a toute l'equipe. Le site
+      // informe donc, puis part. ⛔ Telephone : l'alerte et son bouton, inchanges.
+      if (Platform.OS === 'web') {
+        Alert.alert(
+          t('matchComposition.board.alerts.published.title'),
+          t('matchComposition.board.alerts.published.message'),
+        );
+        allerALaFicheEtAuFil();
+        return;
+      }
       Alert.alert(
         t('matchComposition.board.alerts.published.title'),
         t('matchComposition.board.alerts.published.message'),
         [{
-          onPress: () => {
-            // 🚪 T01 — DEPILER AVANT DE PARTIR, et c'est ce qui repare le retour.
-            // Le fil de l'equipe ne vit pas dans cette pile mais dans
-            // `PrivateNavigator` : y aller laisse les 3 ecrans de composition
-            // DESSOUS, et le bouton retour retombe sur l'ecran de publication —
-            // une compo publiee se reproposait ainsi a la republication.
-            // `popTo` est l'idiome du depot (`FriendlyMatchWizardRecap`) ; on
-            // n'emploie pas `reset`, qui ecrase la pile entiere (defaut deja paye
-            // par `HistoryWizardSingle`).
-            // @ts-ignore
-            navigation.popTo(RouteNames.EventDetails, { eventId });
-            // Sans fil trouve, on s'arrete a l'evenement : jamais bloque, et
-            // jamais de retour vers l'ecran de publication.
-            // ⚠️ L'evenement est atteint AVANT de lire le fil : si la recherche
-            // n'est pas encore revenue, le coach est deja arrive quelque part.
-            filDeLEquipe.then((/** @type {any} */ teamChat) => {
-              if (teamChat?.documentId) {
-                // @ts-ignore
-                navigation.navigate(RouteNames.Conversation, { chatId: teamChat.documentId });
-              }
-            });
-          },
+          onPress: allerALaFicheEtAuFil,
           text: t('matchComposition.board.alerts.published.ok'),
         }],
       );

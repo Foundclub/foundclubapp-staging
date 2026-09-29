@@ -1,4 +1,6 @@
-import { Platform, StyleSheet, Text } from 'react-native';
+import {
+  Alert, Platform, StyleSheet, Text,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { saveEventCompositionDraft } from '@/services/event/eventService';
@@ -389,15 +391,18 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     expect(jeton.props.focusable).toBe(true);
     expect(jeton.props.accessibilityRole).toBe('button');
 
-    // Le focus SE VOIT : un anneau clair sur le jeton qui a le focus clavier.
-    expect(StyleSheet.flatten(jeton.props.style || {}).borderWidth).toBeUndefined();
+    // Le focus SE VOIT : l'anneau, reserve (transparent), s'eclaire au focus
+    // clavier — sans changer la TAILLE du jeton (le clic donne aussi le focus).
+    const anneau = (/** @type {any} */ noeud) => StyleSheet.flatten(noeud.props.style);
+    expect(anneau(jeton).borderWidth).toBe(2);
+    const sansFocus = anneau(jeton).borderColor;
     await act(async () => { jeton.props.onFocus(); });
     const focalise = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
-    expect(StyleSheet.flatten(focalise.props.style).borderWidth).toBe(2);
+    expect(anneau(focalise).borderWidth).toBe(2);
+    expect(anneau(focalise).borderColor).not.toBe(sansFocus);
     await act(async () => { focalise.props.onBlur(); });
     const apres = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
-    expect(StyleSheet.flatten(apres.props.style || {}).borderWidth)
-      .toBeUndefined();
+    expect(anneau(apres).borderColor).toBe(sansFocus);
 
     const preventDefault = jest.fn();
     const entree = { nativeEvent: { key: 'Enter' }, preventDefault };
@@ -435,6 +440,29 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     expect(jeton.props.onKeyDown).toBeUndefined();
     expect(jeton.props.focusable).toBeUndefined();
     expect(texteVisible(arbre)).not.toContain('Au clavier');
+  });
+
+  // 🔁 La doublure `Alert` du site change toute alerte A BOUTON en OK / ANNULER
+  // du navigateur : « Annuler » laissait l'entraineur sur le terrain, et un second
+  // « Publier » renvoyait la convocation a toute l'equipe. Sur le site, l'alerte
+  // de publication n'a donc AUCUN choix, et l'entraineur part vers sa fiche.
+  test('🔴 8. apres « Publier », une alerte SANS choix, puis la fiche du match', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockNavigation.popTo.mockClear();
+    mockReponseComposition = { data: undefined, isError: false };
+    const arbre = await rendre(MatchCompositionBoard, {
+      ...PAR_L_ADRESSE,
+      selectedPlayers: [J1],
+      startPlacements: [],
+    });
+
+    await act(async () => { boutonTitre(arbre, 'Publier').props.onPress(); });
+    await act(async () => { boutonTitre(arbre, 'Publier la convocation').props.onPress(); });
+
+    expect(alerte).toHaveBeenCalledTimes(1);
+    expect(alerte.mock.calls[0]).toHaveLength(2);
+    expect(mockNavigation.popTo).toHaveBeenCalledWith('EventDetails', { eventId: 'evt_1' });
+    alerte.mockRestore();
   });
 
   test('🔴 7. « Partir de… » arrive sans convoques : il les relit aussi', async () => {
