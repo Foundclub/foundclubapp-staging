@@ -8,6 +8,7 @@ import useTheme from '@/theme/themeContext';
 
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import PresenceOptionsFields from '@/views/event/components/PresenceOptionsFields';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -114,6 +115,12 @@ function EventWizardAccess({ navigation, route }) {
     state.sessionStatus || getDefaultSessionStatusForEventType(state.type?.name),
   );
   const [validationMode, setValidationMode] = useState(state.validationMode || 'auto');
+  // POINTAGE (29/09) — les deux options de presence. `!== false` : un brouillon
+  // web enregistre avant ce lot n a pas le champ, il part coche.
+  const [presenceOptions, setPresenceOptions] = useState({
+    arrivalTrackingEnabled: state.arrivalTrackingEnabled !== false,
+    rsvpEnabled: state.rsvpEnabled !== false,
+  });
   // La visibilite des identites est le seul reglage « avance » du pack : il
   // reste replie tant que personne ne le demande, mais sa VALEUR est toujours
   // lisible sur la rangee — un reglage cache dont on ignore l'etat serait pire
@@ -197,6 +204,7 @@ function EventWizardAccess({ navigation, route }) {
   const handleNext = () => {
     dispatch({
       payload: {
+        ...presenceOptions,
         participantIdentityVisibility,
         sessionStatus,
       },
@@ -295,6 +303,17 @@ function EventWizardAccess({ navigation, route }) {
             </View>
           </View>
         ) : null}
+
+        <View style={[Spaces.marginTop[16]]}>
+          <GroupLabel>
+            {t('eventWizard.steps.access.presenceGroup', 'Présences')}
+          </GroupLabel>
+          <PresenceOptionsFields
+            arrivalTrackingEnabled={presenceOptions.arrivalTrackingEnabled}
+            onChange={(changement) => setPresenceOptions((courantes) => ({ ...courantes, ...changement }))}
+            rsvpEnabled={presenceOptions.rsvpEnabled}
+          />
+        </View>
 
         <View style={[Spaces.marginTop[16]]}>
           <GroupLabel>

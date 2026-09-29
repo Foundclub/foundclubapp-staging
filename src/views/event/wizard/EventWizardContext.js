@@ -88,6 +88,11 @@ const createInitialState = () => {
     // Step 6: Validation mode
     externalParticipantValidationMode: 'manual',
     validationMode: 'auto',
+    // POINTAGE (decisions d Adel du 29/09) — les deux options de presence,
+    // COCHEES par defaut, decochables a l etape « Acces ». Aucun reglage par
+    // type d evenement n existe (le type n a qu un nom cote serveur).
+    arrivalTrackingEnabled: true,
+    rsvpEnabled: true,
 
     // Step 7+: Meta
     description: '',
