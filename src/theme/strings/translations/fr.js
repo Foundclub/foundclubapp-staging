@@ -671,6 +671,50 @@ export default {
     titleLabel: 'Titre',
     titlePlaceholder: 'Nom du sponsor',
   },
+  adminCollectivites: {
+    activation: {
+      activate: 'Activer',
+      // eslint-disable-next-line max-len
+      activateMessage_one: 'Le club rattaché recevra l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      // eslint-disable-next-line max-len
+      activateMessage_other: 'Les {{count}} clubs rattachés recevront l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      // eslint-disable-next-line max-len
+      activateMessageNone: 'Aucun club n’est rattaché pour l’instant : chaque club que tu rattacheras recevra l’offre Club offerte.',
+      activateTitle: 'Activer {{name}} ?',
+      cancel: 'Annuler',
+      deactivate: 'Couper',
+      // eslint-disable-next-line max-len
+      deactivateMessage_one: 'Le club rattaché perdra l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      // eslint-disable-next-line max-len
+      deactivateMessage_other: 'Les {{count}} clubs rattachés perdront l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      deactivateMessageNone: 'Aucun club n’est rattaché : rien d’autre ne change.',
+      deactivateTitle: 'Couper {{name}} ?',
+      doneActivated: 'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}}',
+      doneDeactivated: 'Coupée. Offre retirée : {{revoked}}',
+    },
+    kicker: 'Console',
+    list: {
+      clubsCount: 'Clubs rattachés : {{nombre}}',
+      empty: 'Aucune collectivité pour l’instant.',
+      errorTitle: 'Collectivités indisponibles',
+      heading: 'Collectivités : {{nombre}}',
+      hint: 'Activer offre l’offre Club aux clubs rattachés ; couper la leur retire.',
+      loading: 'Lecture des collectivités…',
+      retry: 'Réessayer',
+      title: 'Collectivités',
+      truncated: '{{shown}} affichées sur {{total}}.',
+    },
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+    },
+    types: {
+      commune: 'Commune',
+      departement: 'Département',
+      intercommunalite: 'Intercommunalité',
+      region: 'Région',
+    },
+  },
   adminDashboard: {
     billing: {
       receivedOn: 'Recu le',
@@ -691,6 +735,8 @@ export default {
       autoAffiliatedCoaches: 'Coachs auto-affilies',
       claims: 'Revendications',
       clubOnboarding: 'Clubs à onboarder',
+      collectivites: 'Collectivités',
+      collectivitesValue: 'Mairies',
       contentExplorer: 'Explorer CM',
       contentMeta: 'Contenus',
       detectionsPending: 'A vérifier',
@@ -1293,6 +1339,7 @@ export default {
       clubDetail: 'Détail Club',
       clubEdit: 'Édition Club',
       clubOnboarding: 'Clubs à onboarder',
+      collectivites: 'Collectivités',
       contentExplorer: 'Explorer CM',
       entries: 'Entrées',
       entryDetail: 'Détail',
@@ -1912,6 +1959,8 @@ export default {
     COLLECTIVITE_INSTALLATION_NOT_FOUND: "Cette installation n'est pas l'une de celles de la collectivité.",
     // eslint-disable-next-line max-len
     COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : vérifie le nom, le type, les horaires (HH:MM) et la capacité.',
+    // D61 (29/09) — console super-admin : la collectivite visee n existe pas (ou plus)
+    COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',

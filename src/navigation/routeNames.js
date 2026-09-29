@@ -50,6 +50,7 @@ export const RouteNames = /** @type {const} */ ({
   AdminClubWizardMultisport: 'AdminClubWizardMultisport',
   AdminClubWizardRecap: 'AdminClubWizardRecap',
   AdminClubWizardSponsors: 'AdminClubWizardSponsors',
+  AdminCollectiviteList: 'AdminCollectiviteList',
   AdminDashboard: 'AdminDashboard',
   AdminEvents: 'AdminEvents',
   AdminLeagueDisputes: 'AdminLeagueDisputes',
