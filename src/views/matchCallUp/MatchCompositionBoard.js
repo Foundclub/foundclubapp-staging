@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from 'react';
@@ -453,12 +454,39 @@ function MatchCompositionBoard() {
   // ⇒ La position vit maintenant DANS le worklet (fil UI), la ou le doigt est
   // deja. Ne reste sur le fil JS que ce qui en a vraiment besoin : mesurer le
   // terrain, vibrer, et dire QUI on traine.
+  // 🖱️ COMPO-WEB — SUR LE SITE, L'APERCU DU JETON NE SUIVAIT PAS LA SOURIS.
+  //
+  // Le site n'a pas de fil UI : `react-native-reanimated` y est une doublure dont
+  // les valeurs partagees ne redessinent RIEN. Mesure au banc : l'apercu restait
+  // fige a son point de depart pendant tout le glisser (le lacher, lui, tombait
+  // juste). Et le calque de l'apercu ne commence pas au coin de la page (le
+  // gabarit du site a son en-tete) : la position doit en retirer le decalage.
+  // ⇒ Sur le site SEULEMENT, chaque mouvement repositionne l'apercu, dans le
+  // repere de son calque, et redessine. ⛔ Telephone : rien ne change — le
+  // worklet n'appelle ce chemin que si `surLeSite`, et la position y reste
+  // ecrite sur le fil UI (T01).
+  const surLeSite = Platform.OS === 'web';
+  const calqueFantomeRef = useRef(null);
+  const decalageCalqueRef = useRef({ x: 0, y: 0 });
+  const [, redessinerLeFantome] = useReducer((/** @type {number} */ compte) => compte + 1, 0);
+  const suivreLaSourisSurLeSite = useCallback((/** @type {number} */ x, /** @type {number} */ y) => {
+    ghostX.value = x - decalageCalqueRef.current.x - (GHOST_TOKEN_SIZE.width / 2);
+    ghostY.value = y - decalageCalqueRef.current.y - (GHOST_TOKEN_SIZE.height / 2);
+    redessinerLeFantome();
+  }, [ghostX, ghostY]);
+
   const beginDrag = useCallback((player) => {
     if (!player) return;
     measureField();
+    if (surLeSite) {
+      const calque = /** @type {any} */ (calqueFantomeRef.current);
+      calque?.measureInWindow?.((/** @type {number} */ x, /** @type {number} */ y) => {
+        decalageCalqueRef.current = { x: Number(x) || 0, y: Number(y) || 0 };
+      });
+    }
     Vibration.vibrate(8);
     setActiveDragPlayer(player);
-  }, [measureField]);
+  }, [measureField, surLeSite]);
 
   const clearDragPlayer = useCallback(() => {
     setActiveDragPlayer(null);
@@ -512,6 +540,8 @@ function MatchCompositionBoard() {
 
         ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
         ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
+        // 🖱️ COMPO-WEB — le site seulement (voir `suivreLaSourisSurLeSite`).
+        if (surLeSite) runOnJS(suivreLaSourisSurLeSite)(event.absoluteX, event.absoluteY);
       })
       .onEnd((event) => {
         'worklet';
@@ -533,6 +563,8 @@ function MatchCompositionBoard() {
     ghostScale,
     ghostX,
     ghostY,
+    suivreLaSourisSurLeSite,
+    surLeSite,
   ]);
 
   // --- Enregistrer / publier.
@@ -1233,7 +1265,12 @@ function MatchCompositionBoard() {
           qui porte la position. C'est ce motif-la qui est repris ici, tel quel.
           Il ne coute rien tant qu'il est vide, et `pointerEvents="none"`
           l'empeche d'intercepter le moindre appui. */}
-      <View pointerEvents="none" style={styles.dragGhostLayer}>
+      <View
+        pointerEvents="none"
+        ref={calqueFantomeRef}
+        style={styles.dragGhostLayer}
+        testID="compo-fantome"
+      >
         {activeDragPlayer ? (
           <DraggableToken
             isGhost
