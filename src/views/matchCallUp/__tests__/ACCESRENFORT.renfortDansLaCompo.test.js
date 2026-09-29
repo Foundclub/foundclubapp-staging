@@ -85,6 +85,10 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// FINITIONS3 (29/09) — l ecran lit l abonnement (mur d avance de « Modifier ») : `useAuth`
+// est double ici comme dans les 6 autres temoins qui montent la selection (recolte du 29/09 soir).
+jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => ({}) }));
+
 jest.mock('@/services/event/eventQueries', () => ({
   useGetEvent: () => ({ data: mockEvent, isFetching: false }),
 }));
