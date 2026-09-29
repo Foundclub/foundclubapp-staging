@@ -19,6 +19,7 @@ import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -391,7 +392,9 @@ function PlayerConvocationScreen() {
               ) : null}
               {view.publishedByName ? (
                 <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                  {t('playerConvocation.card.calledUpBy', { name: view.publishedByName })}
+                  {t('playerConvocation.card.calledUpBy', {
+                    name: view.publishedByName, ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
               ) : null}
             </View>

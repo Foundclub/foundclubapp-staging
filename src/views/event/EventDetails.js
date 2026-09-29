@@ -49,7 +49,10 @@ import {
   resolveClientSourceTeamForUser,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
-import { getSubscriptionQuotaItem, hasActiveClubOffer } from '@/domains/subscription/subscriptionDecision';
+import {
+  canManageCompositionForClub,
+  getSubscriptionQuotaItem,
+} from '@/domains/subscription/subscriptionDecision';
 import { hasLivingUser } from '@/domains/user/deletedAccount';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
@@ -4300,10 +4303,12 @@ function EventDetails({ navigation, route }) {
   // par l'offre de Demo (le serveur l'accepte), et un match d'AIKI montre le mur
   // d'avance (le serveur le refusait en 403 apres coup : recette du 28/09).
   // Repli sur le club affiche pour les doublures de `useAuth` d'avant ce lot.
-  const compositionAccessLevel = getSubscriptionAccessLevelForClub?.(eventClubId)
-    || subscriptionAccessLevel;
-  const canManageComposition = compositionAccessLevel === 'TEAM'
-    || hasActiveClubOffer(compositionAccessLevel);
+  // FINITIONS3 (29/09) — la garde vit desormais dans `subscriptionDecision.js` :
+  // la selection des convoques (portes « Modifier ») la reutilise.
+  const canManageComposition = canManageCompositionForClub(
+    { getSubscriptionAccessLevelForClub, subscriptionAccessLevel },
+    eventClubId,
+  );
 
   // 🚪 Le rappel ne parait QUE la ou il y a quelque chose a preparer, et il se
   // tait partout ailleurs :
@@ -7513,6 +7518,7 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.p4, Fonts.neutral300]}>
                   {t('eventDetails.tournamentTeams.lead', 'Référent·e : {{name}}', {
                     name: tournamentTeamLead,
+                    ...SANS_ECHAPPEMENT,
                   })}
                 </Text>
               ) : null}

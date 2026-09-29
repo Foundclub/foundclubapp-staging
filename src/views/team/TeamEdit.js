@@ -530,6 +530,7 @@ function TeamEdit({ navigation, route }) {
         {
           defaultValue: `Veux-tu vraiment supprimer l'équipe "${teamDisplayName}" ? Cette action est irréversible.`,
           teamName: teamDisplayName,
+          ...SANS_ECHAPPEMENT,
         },
       ),
       [

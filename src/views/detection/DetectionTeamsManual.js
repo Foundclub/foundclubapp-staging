@@ -19,6 +19,7 @@ import {
   isTeamMember,
 } from '@/domains/detection/detectionSplit';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -256,7 +257,9 @@ function DetectionTeamsManual() {
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{getPlayerName(player)}</Text>
           <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
             {isTeamMember(player)
-              ? t('detection.squad.meta.member', { teamName: params?.teamName || '' })
+              ? t('detection.squad.meta.member', {
+                teamName: params?.teamName || '', ...SANS_ECHAPPEMENT,
+              })
               : t('detection.squad.meta.requestedPosition', {
                 position: player?.appliedPosition || t('detection.squad.meta.positionToDefine'),
               })}

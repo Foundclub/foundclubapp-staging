@@ -182,7 +182,10 @@ function TeamInviteSheetBody({
         t(
           'teamDetails.invite.sentMessage',
           '{{name}} va recevoir une notification. Elle rejoindra l\'équipe si elle accepte.',
-          { name: variables?.userName || t('teamDetails.invite.someone', 'Cette personne') },
+          {
+            name: variables?.userName || t('teamDetails.invite.someone', 'Cette personne'),
+            ...SANS_ECHAPPEMENT,
+          },
         ),
       );
       refreshLists();

@@ -18,6 +18,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -39,6 +40,7 @@ import { deleteFacility, getFacilitySections } from '@/services/facility/facilit
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 
 const getAddressLabel = (address, fallback = i18next.t(
   'facilityList.noAddress',
@@ -360,10 +362,12 @@ function FacilityList() {
     // anciennes n'en portent pas. Le segment disparait alors, au lieu
     // d'afficher un repli qui sonne comme une panne pour un simple champ vide.
     // COLL1C : en mode collectivite, les horaires d ouverture entrent dans la ligne.
+    // COLL1D : cote club aussi (restes du lot 1b : recus, jamais affiches) ; une
+    // installation sans horaires n en montre pas. Le type se lit par son libelle.
     const metaLabel = [
-      item?.type,
+      getFacilityTypeLabel(item?.type),
       capacityLabel,
-      isCollectiviteMode ? formatOpeningHours(item?.openingTime, item?.closingTime) : null,
+      formatOpeningHours(item?.openingTime, item?.closingTime),
       hasAddress ? addressLabel : null,
     ].filter(Boolean).join(' · ');
     const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
@@ -499,7 +503,7 @@ function FacilityList() {
                 {t(
                   'facilityList.collectiviteOwnerHint',
                   'Installation de {{ownerName}} : planning en lecture seule.',
-                  { ownerName: sharedOwnerLabel },
+                  { ownerName: sharedOwnerLabel, ...SANS_ECHAPPEMENT },
                 )}
               </Text>
             ) : (
@@ -508,7 +512,7 @@ function FacilityList() {
                   {t(
                     'facilityList.sharedOwnerHint',
                     'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
-                    { ownerName: sharedOwnerLabel },
+                    { ownerName: sharedOwnerLabel, ...SANS_ECHAPPEMENT },
                   )}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>

@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -268,7 +269,7 @@ function MatchCompositionAmend() {
             </Text>
             <Text style={[Fonts.p2Bold, styles.cardTitle, { color: Colors.neutral00 }]}>
               {t('matchConvocation.amend.withdrawal.message', {
-                count: withdrawn.length, name: nomDe(withdrawn[0]?.player),
+                count: withdrawn.length, name: nomDe(withdrawn[0]?.player), ...SANS_ECHAPPEMENT,
               })}
             </Text>
             <Text style={[Fonts.p4, styles.cardBody, { color: Colors.neutral300 }]}>
@@ -328,7 +329,9 @@ function MatchCompositionAmend() {
                 {t('matchConvocation.amend.resend.title')}
               </Text>
               <Text style={[Fonts.p4, styles.cardBody, { color: Colors.neutral300 }]}>
-                {t('matchConvocation.amend.resend.body', { teamName: resolvedTeamName })}
+                {t('matchConvocation.amend.resend.body', {
+                  teamName: resolvedTeamName, ...SANS_ECHAPPEMENT,
+                })}
               </Text>
             </View>
           </>

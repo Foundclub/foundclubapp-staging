@@ -12,6 +12,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -267,6 +268,7 @@ function TeamMembershipRequestList({ navigation, route }) {
               >
                 {t('teamMembershipRequestList.fields.pending', {
                   firstname: item?.user?.firstname,
+                  ...SANS_ECHAPPEMENT,
                 })}
                 {' '}
                 {item?.team?.name}

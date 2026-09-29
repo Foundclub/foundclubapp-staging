@@ -24,6 +24,7 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -473,6 +474,7 @@ function UserDetails({ navigation, route }) {
       t('userBlock.confirm.message', {
         defaultValue: '{{name}} ne pourra plus t’écrire ni ouvrir de discussion avec toi, et tu ne verras plus ses messages.',
         name: displayName,
+        ...SANS_ECHAPPEMENT,
       }),
       [
         { style: 'cancel', text: t('userBlock.confirm.cancel', 'Annuler') },

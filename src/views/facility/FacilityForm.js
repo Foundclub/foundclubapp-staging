@@ -48,6 +48,9 @@ import {
   isValidFacilityPlanningColor,
   resolveFacilityPlanningColor,
 } from '@/utils/facilityPlanningColor';
+// COLL1D (D28) : la liste des types (5 d'avant + 8 des mairies) vit dans utils : les
+// cartes des installations y lisent aussi le libelle.
+import { FACILITY_TYPES } from '@/utils/facilityTypes';
 
 // COLL1C : un horaire d ouverture tel qu un agent le tape (« 08:00 »).
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -67,10 +70,12 @@ const buildTimeRule = () => Joi.string().allow('').pattern(HEURE).optional()
 // I18N-4 : le schema est construit a chaque rendu -- ses messages sont lus dans la langue
 // courante (un schema de module les figeait dans celle du demarrage).
 const buildSchema = () => Joi.object({
+  // FINITIONS3 : `null` (installation posee en base sans adresse) passe ici ; c est
+  // handleSave qui juge l adresse, avec son message et son alerte.
   address: Joi.alternatives().try(
     Joi.string().allow('').optional(),
     Joi.object().optional(),
-  ),
+  ).allow(null),
   capacityConflictMode: Joi.string().valid(
     FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
@@ -98,40 +103,6 @@ const buildSchema = () => Joi.object({
     'string.empty': i18next.t('facilityForm.validation.typeRequired', 'Le type est requis'),
   }),
 });
-
-// I18N-4 : la VALEUR reste le contrat serveur ; seul le libelle suit la langue (accesseur).
-const FACILITY_TYPES = [
-  {
-    get label() {
-      return i18next.t('facilityForm.types.pitch', 'Terrain');
-    },
-    value: 'Terrain',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.gym', 'Gymnase');
-    },
-    value: 'Gymnase',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.videoRoom', 'Salle vidéo');
-    },
-    value: 'Salle vidéo',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.changingRoom', 'Vestiaire');
-    },
-    value: 'Vestiaire',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.clubHouse', 'Club House');
-    },
-    value: 'Club House',
-  },
-];
 
 const getAddressCoordinates = (address) => {
   if (!address || typeof address !== 'object') return null;
@@ -424,8 +395,14 @@ function FacilityForm() {
       return;
     }
 
+    // FINITIONS3 (29/09) : une installation posee hors de l app (base, import, demo) peut
+    // n avoir aucune coordonnee. Tant que l adresse n est PAS touchee, on enregistre le reste
+    // sans l exiger, et elle ne part pas : le serveur garde la sienne. Des qu on la change
+    // (ou qu on la vide), la regle d avant revient. Club et collectivite : meme formulaire.
+    const adresseIntacte = isEdit
+      && JSON.stringify(data.address ?? null) === JSON.stringify(facility?.address ?? null);
     const normalizedAddress = normalizeAddressPayload(data.address);
-    if (!normalizedAddress) {
+    if (!normalizedAddress && !adresseIntacte) {
       setError('address', {
         message: t(
           'facilityForm.errors.addressGeocodeRequired',
@@ -448,7 +425,10 @@ function FacilityForm() {
 
     // COLL1C : les horaires ne partent QUE par la route de la collectivite ; le chemin
     // club garde exactement le corps d avant.
-    const { closingTime, openingTime, ...clubFields } = data;
+    const {
+      address, closingTime, openingTime, ...clubFields
+    } = data;
+    const addressField = normalizedAddress ? { address: normalizedAddress } : {};
     if (isCollectiviteMode && openingTime && closingTime && openingTime >= closingTime) {
       setError('closingTime', {
         message: t(
@@ -461,7 +441,7 @@ function FacilityForm() {
     }
     const formattedData = {
       ...clubFields,
-      address: normalizedAddress,
+      ...addressField,
       allowOverflowRequests: true,
       capacityConflictMode: data.capacityConflictMode || FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     };
@@ -472,7 +452,7 @@ function FacilityForm() {
         await saveCollectiviteInstallation.mutateAsync({
           collectiviteId,
           data: {
-            address: normalizedAddress,
+            ...addressField,
             capacityConflictMode: formattedData.capacityConflictMode,
             closingTime: closingTime || null,
             maxSlots: data.maxSlots,

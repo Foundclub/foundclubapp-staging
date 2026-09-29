@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -159,7 +160,7 @@ function CreateSectionScreen({ navigation, route }) {
         t(
           'multisport.sectionCreatedMessage',
           'La section "{{name}}" a été créée avec succès.',
-          { name: result?.data?.name || name },
+          { name: result?.data?.name || name, ...SANS_ECHAPPEMENT },
         ),
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
       );

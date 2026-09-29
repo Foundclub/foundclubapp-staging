@@ -662,8 +662,12 @@ export const buildFieldFromServerComposition = (payload) => {
   // donc d'annuaire, puis ce que le pack porte lui-meme.
   /** @type {Map<string, any>} */
   const annuaire = new Map();
+  // ACCES-RENFORT (6c) — et les renforts que le pack range : le serveur les rend
+  // a part (`reinforcementPlayers`), `eligiblePlayers` restant « Mon equipe ».
+  // Sans eux, un renfort au terrain d un brouillon etait « introuvable ».
   [
     ...(payload?.eligiblePlayers || []),
+    ...(payload?.reinforcementPlayers || []),
     ...(pack?.snapshotPlayers || []),
     ...(pack?.reserveSnapshotPlayers || []),
     ...(pack?.manualPlayers || []),

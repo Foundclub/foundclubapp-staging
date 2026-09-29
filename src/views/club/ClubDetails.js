@@ -20,9 +20,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { countClubTrainers } from '@/domains/club/clubStaff';
+import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
-import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import {
+  extractSubscriptionDecisionFromError,
+  formatCollectiviteOfferedBy,
+  getCollectiviteOffer,
+} from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -75,6 +80,7 @@ import {
   isPartnerClub,
 } from '@/utils/clubCertification';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 import safeJsonParse from '@/utils/safeJsonParse';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
@@ -245,6 +251,7 @@ function ClubDetails({ navigation, route }) {
     canEditClub,
     canJoinClub,
     clubs,
+    entitlementsSummary,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
     hasClubAccess,
@@ -581,7 +588,7 @@ function ClubDetails({ navigation, route }) {
         t(
           'clubDetails.alerts.playerTeamJoin.description',
           'Ta demande pour rejoindre {{teamName}} a été envoyée.',
-          { teamName: selectedTeamName },
+          { teamName: selectedTeamName, ...SANS_ECHAPPEMENT },
         ),
         [{
           onPress: () => {
@@ -1013,7 +1020,9 @@ function ClubDetails({ navigation, route }) {
    */
   const handleDeleteSponsor = (sponsor) => {
     Alert.alert(
-      t('clubDetails.alerts.deleteSponsor.title', { sponsorName: sponsor.title }),
+      t('clubDetails.alerts.deleteSponsor.title', {
+        sponsorName: sponsor.title, ...SANS_ECHAPPEMENT,
+      }),
       t('clubDetails.alerts.deleteSponsor.description'),
       [
         {
@@ -1225,6 +1234,14 @@ function ClubDetails({ navigation, route }) {
     // fonction partagee compare desormais en texte.
     return Boolean(clubId) && isClubMember(clubId);
   }, [clubId, isClubMember, userData]);
+
+  // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
+  // l'offre Club de CE club, nommee par le serveur sur le droit (bootstrap du dirigeant
+  // et de l'entraineur, `entitlementsSummary[].offeredBy`). Rien pour un visiteur.
+  const collectiviteOffer = useMemo(() => getCollectiviteOffer({
+    clubDocumentId: club?.documentId || clubId,
+    entitlementsSummary,
+  }), [club?.documentId, clubId, entitlementsSummary]);
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
@@ -1545,6 +1562,7 @@ function ClubDetails({ navigation, route }) {
               + ' pour {{firstname}}. Tu recevras leur réponse.',
             firstname: variables?.childFirstname || '',
             teamName: selectedTeamName,
+            ...SANS_ECHAPPEMENT,
           }),
           [{ text: t('common.actions.ok', 'OK') }],
         );
@@ -1556,7 +1574,7 @@ function ClubDetails({ navigation, route }) {
         t(
           'clubDetails.clubInterest.sentDescription',
           'Le staff de {{teamName}} a reçu ton intérêt et pourra te répondre.',
-          { teamName: selectedTeamName },
+          { teamName: selectedTeamName, ...SANS_ECHAPPEMENT },
         ),
         [{ text: t('common.actions.ok', 'OK') }],
       );
@@ -2169,7 +2187,7 @@ function ClubDetails({ navigation, route }) {
       t(
         'clubDetails.alerts.playerTeamJoin.confirmation',
         'Une demande sera envoyée pour rejoindre {{teamName}}.',
-        { teamName: teamItem?.name || t('common.team', 'Équipe') },
+        { teamName: teamItem?.name || t('common.team', 'Équipe'), ...SANS_ECHAPPEMENT },
       ),
       [
         {
@@ -2251,11 +2269,13 @@ function ClubDetails({ navigation, route }) {
         t('clubDetails.childInterest.confirmTitle', {
           defaultValue: 'Demander une place pour {{firstname}} ?',
           firstname: enfantPourDemande.firstname,
+          ...SANS_ECHAPPEMENT,
         }),
         t('clubDetails.childInterest.confirmDescription', {
           defaultValue: 'Les responsables de {{teamName}} verront son prénom et son âge,'
             + ' et pourront accepter ou refuser.',
           teamName,
+          ...SANS_ECHAPPEMENT,
         }),
         [
           { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
@@ -2285,7 +2305,7 @@ function ClubDetails({ navigation, route }) {
       t(
         'clubDetails.clubInterest.confirmDescription',
         'Le staff de {{teamName}} verra ton profil et pourra te répondre.',
-        { teamName: teamItem?.name || t('common.team', 'Équipe') },
+        { teamName: teamItem?.name || t('common.team', 'Équipe'), ...SANS_ECHAPPEMENT },
       ),
       [
         {
@@ -2684,6 +2704,29 @@ function ClubDetails({ navigation, route }) {
                     {clubCertificationLabel}
                   </Text>
                 </View>
+                {/* COLL1D — le bandeau qui valorise la mairie (SPEC §3), sur la carte du
+                    club : une pastille sous celle de la certification, rien de plus. */}
+                {collectiviteOffer ? (
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      Spaces.paddingVertical[4],
+                      Spaces.paddingHorizontal[12],
+                      {
+                        backgroundColor: withAlpha(Colors.success500, 0.12),
+                        borderColor: withAlpha(Colors.success500, 0.45),
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.textCenter, { color: Colors.success200 }]}>
+                      {t('clubDetails.collectiviteOffer.banner', 'Offert par {{who}}', {
+                        who: formatCollectiviteOfferedBy(collectiviteOffer.name),
+                        ...SANS_ECHAPPEMENT,
+                      })}
+                    </Text>
+                  </View>
+                ) : null}
                 <Text style={[Fonts.p2, Fonts.primary100]}>
                   {(() => {
                     const parsedAddress = safeJsonParse(club?.addressDetails, null);
@@ -2959,7 +3002,13 @@ function ClubDetails({ navigation, route }) {
                           facility?.maxSlots,
                           t,
                         );
-                        const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
+                        const typeLabel = getFacilityTypeLabel(facility?.type)
+                          || t('facilityList.defaults.unknownType', 'Type inconnu');
+                        // COLL1D — horaires d'ouverture, recus depuis le lot 1b, jamais affiches.
+                        const openingHoursLabel = formatOpeningHours(
+                          facility?.openingTime,
+                          facility?.closingTime,
+                        );
                         const addressLabel = getFacilityAddressLabel(facility?.address);
                         const planningColor = resolveFacilityPlanningColor(facility);
                         const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
@@ -3114,12 +3163,20 @@ function ClubDetails({ navigation, route }) {
                                 </>
                               ) : null}
                             </View>
+                            {openingHoursLabel ? (
+                              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                                {t('facilityList.openingHours', 'Ouvert {{hours}}', {
+                                  hours: openingHoursLabel,
+                                  ...SANS_ECHAPPEMENT,
+                                })}
+                              </Text>
+                            ) : null}
                             {isCollectiviteFacility ? (
                               <Text style={[Fonts.p3, Fonts.neutral300]}>
                                 {t(
                                   'facilityList.collectiviteOwnerHint',
                                   'Installation de {{ownerName}} : planning en lecture seule.',
-                                  { ownerName: facility?.ownerName || '' },
+                                  { ownerName: facility?.ownerName || '', ...SANS_ECHAPPEMENT },
                                 )}
                               </Text>
                             ) : null}
@@ -3128,7 +3185,11 @@ function ClubDetails({ navigation, route }) {
                                 {t(
                                   'facilityList.sharedOwnerHint',
                                   'Installation partagée du multisport {{ownerName}}. Lecture seule cété club.',
-                                  { ownerName: facility?.ownerName || t('facilityList.badges.multisport', 'Multisport') },
+                                  {
+                                    ownerName: facility?.ownerName
+                                      || t('facilityList.badges.multisport', 'Multisport'),
+                                    ...SANS_ECHAPPEMENT,
+                                  },
                                 )}
                               </Text>
                             ) : null}
@@ -3297,6 +3358,7 @@ function ClubDetails({ navigation, route }) {
                               {
                                 defaultValue: 'Supprimer le sponsor {{sponsorName}}',
                                 sponsorName: sponsor.title,
+                                ...SANS_ECHAPPEMENT,
                               },
                             )}
                             accessibilityRole="button"
@@ -4062,6 +4124,7 @@ function ClubDetails({ navigation, route }) {
                   ? t('clubDetails.childInterest.pickerTitleNamed', {
                     defaultValue: 'Une place pour {{firstname}}',
                     firstname: enfantPourDemande.firstname,
+                    ...SANS_ECHAPPEMENT,
                   })
                   : t('clubDetails.childInterest.pickerTitle', 'Une place pour ton enfant');
               })()}
@@ -4354,6 +4417,7 @@ function ClubDetails({ navigation, route }) {
                   ? t('clubDetails.actions.joinForChild', {
                     defaultValue: 'Demander à rejoindre au nom de {{firstname}}',
                     firstname: prenomEnfantUnique,
+                    ...SANS_ECHAPPEMENT,
                   })
                   : t(
                     'clubDetails.actions.joinForChildren',

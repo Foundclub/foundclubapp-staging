@@ -2608,6 +2608,9 @@ export default {
     clubSelector: {
       title: 'Choisir un club',
     },
+    collectiviteOffer: {
+      banner: 'Offert par {{who}}',
+    },
     facilities: {
       nameFallback: 'Installation',
     },
@@ -7956,10 +7959,18 @@ export default {
       edit: 'Modifier l\'installation',
     },
     types: {
+      athleticsTrack: 'Piste d’athlétisme',
       changingRoom: 'Vestiaire',
       clubHouse: 'Club House',
+      dojo: 'Dojo',
       gym: 'Gymnase',
+      multisportPitch: 'Terrain multisport',
       pitch: 'Terrain',
+      pool: 'Piscine',
+      rugbyPitch: 'Terrain de rugby',
+      skatepark: 'Skatepark',
+      sportsHall: 'Salle de sport',
+      tennisCourt: 'Court de tennis',
       videoRoom: 'Salle vidéo',
     },
     validation: {
@@ -8021,6 +8032,7 @@ export default {
       title: 'Club introuvable',
     },
     noAddress: 'Adresse non renseignée',
+    openingHours: 'Ouvert {{hours}}',
     planning: {
       allClubFacilities: 'Toutes installations',
       allSharedFacilities: 'Toutes partagées',
@@ -8030,6 +8042,11 @@ export default {
       // eslint-disable-next-line max-len
       capacityReachedStrict: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements passeront en demande en attente.',
       capacityTitle: 'Capacité installation',
+      member: {
+        available_one: '{{count}} place libre au moment le plus chargé de la semaine.',
+        available_other: '{{count}} places libres au moment le plus chargé de la semaine.',
+        full: 'Complet au moment le plus chargé de la semaine : plus aucune place libre.',
+      },
       occupiedBy: 'Occupé par {{clubName}}',
       overflowAllowed: 'Autorise et notifier',
       overflowBlocked: 'Demande en attente',
@@ -15522,6 +15539,10 @@ export default {
         title: 'Messagerie',
       },
     },
+    collectivite: {
+      subtitle: 'Toutes les équipes de ton club sont couvertes, sans limite.',
+      title: 'Offre Club offerte par {{who}}',
+    },
     offers: {
       club: 'Offre Club',
       clubLicensee: 'Offre Club au licencié · équipes illimitées',
@@ -15662,6 +15683,7 @@ export default {
       club: 'Club / {{period}}',
       clubLicensee: 'Club au licencié / {{period}}',
       clubTier: 'Club {{tierName}} / {{period}}',
+      collectivite: 'Club · offert par la collectivité',
       none: 'Aucune offre active',
       team_one: 'Équipe · {{count}} équipe / {{period}}',
       team_other: 'Équipe · {{count}} équipes / {{period}}',

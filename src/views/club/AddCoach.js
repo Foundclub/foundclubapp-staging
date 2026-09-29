@@ -11,6 +11,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { Joi } from '@/theme/strings';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -201,6 +202,7 @@ function AddCoach({ navigation, route }) {
                 {
                   firstname: user.firstname,
                   lastname: user.lastname,
+                  ...SANS_ECHAPPEMENT,
                 },
               )
               : t(
@@ -208,6 +210,7 @@ function AddCoach({ navigation, route }) {
                 {
                   firstname: user.firstname,
                   lastname: user.lastname,
+                  ...SANS_ECHAPPEMENT,
                 },
               ),
 
@@ -224,11 +227,13 @@ function AddCoach({ navigation, route }) {
                 {
                   firstname: user.firstname,
                   lastname: user.lastname,
+                  ...SANS_ECHAPPEMENT,
                 },
               )
               : t('addCoach.alerts.alreadyExist.description', {
                 firstname: user.firstname,
                 lastname: user.lastname,
+                ...SANS_ECHAPPEMENT,
               }),
             [
               {
@@ -269,6 +274,7 @@ function AddCoach({ navigation, route }) {
             'Le dirigeant {{managerName}} a bien été ajouté à cette section.',
             {
               managerName: successEntityName(variables?.firstname, variables?.lastname, variables?.phoneNumber),
+              ...SANS_ECHAPPEMENT,
             },
           ),
           [{ onPress: () => navigation.goBack(), text: t('common.actions.ok', 'OK') }],

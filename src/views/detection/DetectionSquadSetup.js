@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isTeamMember, MEMBER_MODES } from '@/domains/detection/detectionSplit';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -145,6 +146,7 @@ function DetectionSquadSetup() {
     members: members.length,
     registered: players.length,
     teamName: teamName || t('common.team', { defaultValue: '' }),
+    ...SANS_ECHAPPEMENT,
   });
 
   // L'apercu du pack change avec le choix : c'est lui qui rend la consequence
@@ -155,6 +157,7 @@ function DetectionSquadSetup() {
       members: members.length,
       teamName,
       total: players.length,
+      ...SANS_ECHAPPEMENT,
     });
     return checkInFirst ? `${base} ${t('detection.squad.preview.withCheckIn')}` : base;
   }, [activeMode, candidateCount, checkInFirst, members.length, players.length, t, teamName]);
@@ -230,7 +233,7 @@ function DetectionSquadSetup() {
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{getPlayerName(player)}</Text>
           <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
             {isTeamMember(player)
-              ? t('detection.squad.meta.member', { teamName })
+              ? t('detection.squad.meta.member', { teamName, ...SANS_ECHAPPEMENT })
               : t('detection.squad.meta.requestedPosition', {
                 position: player?.appliedPosition || t('detection.squad.meta.positionToDefine'),
               })}
@@ -288,7 +291,9 @@ function DetectionSquadSetup() {
           ]}
         >
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-            {t('detection.squad.intro.title', { count: members.length, teamName })}
+            {t('detection.squad.intro.title', {
+              count: members.length, teamName, ...SANS_ECHAPPEMENT,
+            })}
           </Text>
           <Text style={[Fonts.p3, styles.optionSubtitle, { color: Colors.neutral300 }]}>
             {t('detection.squad.intro.subtitle')}

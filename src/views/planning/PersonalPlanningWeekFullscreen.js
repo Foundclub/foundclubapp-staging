@@ -23,6 +23,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -50,6 +52,7 @@ import {
   FACILITY_CONFLICT_MODES,
   getFacilityConflictMode,
 } from '@/utils/facilityConflictMode';
+import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
   getPlanningPeakOccupancy,
@@ -203,8 +206,20 @@ function PlanningWeekFullscreen() {
     ...planningQuery,
   });
 
-  const events = normalizePlanningItems(data?.data || []);
+  // COLL1D — sur le planning d'UNE installation, une couleur par club (SPEC §2 C) :
+  // tous les blocs y partagent la meme installation, donc la meme couleur sans cela.
+  const normalizedEvents = normalizePlanningItems(data?.data || []);
+  const events = sourceType === FULLSCREEN_SOURCE_TYPES.facility
+    ? assignClubPlanningColors(normalizedEvents)
+    : normalizedEvents;
   const hasEvents = events.length > 0;
+  // COLL1D — le texte de capacite parle a CELUI qui lit : les « depassements » et les
+  // « demandes en attente » ne regardent que ceux qui posent des evenements (entraineur,
+  // dirigeant) ; un joueur ou un parent lit ce qui est libre.
+  const { userData } = /** @type {any} */ (useAuth()) || {};
+  const readsAsOrganizer = ['coach', 'president', 'superAdmin'].includes(
+    getUserRoleKey(userData?.role?.type || userData?.role?.name),
+  );
   // COLL1B : ouvert par un lien du site (params reduits a l adresse), l ecran d une
   // installation retrouve son nom et sa capacite dans la reponse du serveur.
   const serverFacility = sourceType === FULLSCREEN_SOURCE_TYPES.facility
@@ -269,6 +284,20 @@ function PlanningWeekFullscreen() {
   const facilitySummaryMessage = useMemo(() => {
     if (!facilityPlanningSummary) return '';
 
+    // COLL1D — le texte du MEMBRE : ce qui est libre, sans les regles de reservation.
+    if (!readsAsOrganizer) {
+      return facilityPlanningSummary.reachedCapacity
+        ? t(
+          'facilityList.planning.member.full',
+          'Complet au moment le plus chargé de la semaine : plus aucune place libre.',
+        )
+        : t('facilityList.planning.member.available', {
+          count: facilityPlanningSummary.remainingAtPeak,
+          defaultValue_one: '{{count}} place libre au moment le plus chargé de la semaine.',
+          defaultValue_other: '{{count}} places libres au moment le plus chargé de la semaine.',
+        });
+    }
+
     if (facilityPlanningSummary.reachedCapacity) {
       if (facilityPlanningSummary.allowsImmediateConfirmation) {
         return t(
@@ -288,7 +317,7 @@ function PlanningWeekFullscreen() {
       '{{count}} slot(s) restaient disponibles au pic de charge.',
       { count: facilityPlanningSummary.remainingAtPeak },
     );
-  }, [facilityPlanningSummary, t]);
+  }, [facilityPlanningSummary, readsAsOrganizer, t]);
 
   const handleClose = useCallback(() => {
     navigation.goBack();
@@ -618,14 +647,18 @@ function PlanningWeekFullscreen() {
 
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
               {[
-                t(
+                // COLL1D — « 2 slots » ne parle qu'a celui qui reserve : le membre lit
+                // la capacite comme sur la carte de l'installation (« 2 equipes simultanees »).
+                readsAsOrganizer ? t(
                   'personalPlanningWeekFullscreen.slots',
                   {
                     count: facilityPlanningSummary.maxSlots,
                     defaultValue_one: '{{count}} slot',
                     defaultValue_other: '{{count}} slots',
                   },
-                ),
+                ) : `${facilityPlanningSummary.maxSlots} ${facilityPlanningSummary.maxSlots > 1
+                  ? t('facilityList.capacity.teamPlural', 'équipes simultanées')
+                  : t('facilityList.capacity.teamSingular', 'équipe simultanée')}`,
                 t(
                   'personalPlanningWeekFullscreen.peak',
                   'Pic {{peak}}/{{max}}',

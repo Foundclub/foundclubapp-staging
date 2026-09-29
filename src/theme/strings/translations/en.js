@@ -2405,6 +2405,9 @@ export default {
     clubSelector: {
       title: 'Choose a club',
     },
+    collectiviteOffer: {
+      banner: 'Offered by {{who}}',
+    },
     facilities: {
       nameFallback: 'Facility',
     },
@@ -7475,10 +7478,18 @@ export default {
       edit: 'Edit facility',
     },
     types: {
+      athleticsTrack: 'Athletics track',
       changingRoom: 'Changing room',
       clubHouse: 'Club house',
+      dojo: 'Dojo',
       gym: 'Sports hall',
+      multisportPitch: 'Multi-sport pitch',
       pitch: 'Pitch',
+      pool: 'Swimming pool',
+      rugbyPitch: 'Rugby pitch',
+      skatepark: 'Skatepark',
+      sportsHall: 'Sports hall',
+      tennisCourt: 'Tennis court',
       videoRoom: 'Video room',
     },
     validation: {
@@ -7539,6 +7550,7 @@ export default {
       title: 'Club not found',
     },
     noAddress: 'Address not provided',
+    openingHours: 'Open {{hours}}',
     planning: {
       allClubFacilities: 'All facilities',
       allSharedFacilities: 'All shared',
@@ -7546,6 +7558,11 @@ export default {
       capacityReachedOverflow: 'Capacity has already been reached for this period. New overflow bookings are still allowed and will notify club managers.',
       capacityReachedStrict: 'Capacity has already been reached for this period. New overflow bookings will become pending requests.',
       capacityTitle: 'Facility capacity',
+      member: {
+        available_one: '{{count}} free place at the busiest time of the week.',
+        available_other: '{{count}} free places at the busiest time of the week.',
+        full: 'Full at the busiest time of the week: no free place left.',
+      },
       occupiedBy: 'Occupied by {{clubName}}',
       overflowAllowed: 'Allow and notify',
       overflowBlocked: 'Pending request',
@@ -14770,6 +14787,10 @@ export default {
         title: 'Messaging',
       },
     },
+    collectivite: {
+      subtitle: 'All your club’s teams are covered, with no limit.',
+      title: 'Club plan offered by {{who}}',
+    },
     offers: {
       club: 'Club plan',
       clubLicensee: 'Per-member Club plan · unlimited teams',
@@ -14903,6 +14924,7 @@ export default {
       club: 'Club / {{period}}',
       clubLicensee: 'Club per member / {{period}}',
       clubTier: 'Club {{tierName}} / {{period}}',
+      collectivite: 'Club · offered by the local authority',
       none: 'No active plan',
       team_one: 'Team · {{count}} team / {{period}}',
       team_other: 'Team · {{count}} teams / {{period}}',

@@ -34,6 +34,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -968,6 +969,7 @@ function MatchCompositionBoard() {
                   <View
                     accessibilityLabel={t('matchComposition.board.tokenOnField', {
                       name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                      ...SANS_ECHAPPEMENT,
                     })}
                     accessibilityRole={clavierActif ? 'button' : undefined}
                     accessibilityState={clavierActif
@@ -1014,10 +1016,11 @@ function MatchCompositionBoard() {
                 <TouchableOpacity
                   accessibilityLabel={entry
                     ? t('matchComposition.board.keyboard.placeOnSlot', {
-                      label: entry.label, name: nomDuJoueurChoisi,
+                      label: entry.label, name: nomDuJoueurChoisi, ...SANS_ECHAPPEMENT,
                     })
                     : t('matchComposition.board.keyboard.placeOnField', {
                       name: nomDuJoueurChoisi,
+                      ...SANS_ECHAPPEMENT,
                     })}
                   accessibilityRole="button"
                   activeOpacity={0.8}
@@ -1075,7 +1078,9 @@ function MatchCompositionBoard() {
             <View accessibilityLiveRegion="polite" style={styles.clavierBar}>
               <Text style={[Fonts.p4, styles.clavierTexte, { color: Colors.neutral300 }]}>
                 {joueurChoisi
-                  ? t('matchComposition.board.keyboard.picked', { name: nomDuJoueurChoisi })
+                  ? t('matchComposition.board.keyboard.picked', {
+                    name: nomDuJoueurChoisi, ...SANS_ECHAPPEMENT,
+                  })
                   : t('matchComposition.board.keyboard.hint')}
               </Text>
               {joueurChoisiSurLeTerrain ? (
@@ -1092,7 +1097,9 @@ function MatchCompositionBoard() {
                   }]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    {t('matchComposition.board.keyboard.toBench', { name: nomDuJoueurChoisi })}
+                    {t('matchComposition.board.keyboard.toBench', {
+                      name: nomDuJoueurChoisi, ...SANS_ECHAPPEMENT,
+                    })}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -1132,6 +1139,7 @@ function MatchCompositionBoard() {
                 <View
                   accessibilityLabel={t('matchComposition.board.tokenOnBench', {
                     name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                    ...SANS_ECHAPPEMENT,
                   })}
                   accessibilityRole={clavierActif ? 'button' : undefined}
                   accessibilityState={clavierActif ? { selected: estChoisi } : undefined}
@@ -1279,7 +1287,7 @@ function MatchCompositionBoard() {
             {t('matchComposition.sheet.title')}
           </Text>
           <Text style={[Fonts.p2, styles.sheetText, { color: Colors.neutral300 }]}>
-            {t('matchComposition.sheet.description', { teamName })}
+            {t('matchComposition.sheet.description', { teamName, ...SANS_ECHAPPEMENT })}
           </Text>
 
           <View

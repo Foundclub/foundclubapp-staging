@@ -16,6 +16,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -416,7 +417,7 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
             ? t(
               'eventWizard.steps.opponent.invitePendingSummary',
               'Invitation envoyée à {{team}} — son coach doit accepter.',
-              { team: invitedAudience?.team?.name || '' },
+              { team: invitedAudience?.team?.name || '', ...SANS_ECHAPPEMENT },
             )
             : t(
               'eventWizard.steps.opponent.inviteSubtitle',

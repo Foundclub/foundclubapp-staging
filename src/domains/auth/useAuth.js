@@ -52,6 +52,7 @@ import {
   getAccountSubscriptionAccessLevel,
   getSubscriptionAccessLevel,
 } from '@/domains/subscription/subscriptionDecision';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import {
   canUserEditClub,
   formatBirthdateToDisplay,
@@ -505,6 +506,7 @@ const useAuth = () => {
     const shareMessage = t('clubDetails.alerts.inviteTrainer.message', {
       clubName,
       coachName: firstname,
+      ...SANS_ECHAPPEMENT,
     });
     const installUrl = buildInstallLandingUrl(/** @type {any} */ ({
       id: clubId,

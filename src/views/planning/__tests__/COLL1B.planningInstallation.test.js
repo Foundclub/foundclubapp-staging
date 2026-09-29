@@ -31,6 +31,13 @@ let mockNavigation;
 /** @type {any[]} */
 const mockTimelineProps = [];
 
+// COLL1D (29/09) : l ecran lit la session (texte de capacite du membre). Un JOUEUR, ici ;
+// le vrai module charge les services (memoire piege-env-absent-worktree-import-service).
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: { role: { name: 'Joueur', type: 'joueur' } } }),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
   useNavigation: () => mockNavigation,
