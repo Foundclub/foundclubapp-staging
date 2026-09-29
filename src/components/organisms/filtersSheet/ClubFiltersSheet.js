@@ -14,8 +14,10 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetTerritoires } from '@/services/annuaire/annuaireQueries';
 
-import coordonneesDeLaVille from './cityCoordinates';
 import FiltersSheet from './FiltersSheet';
+import {
+  filtresAvecLieu, libelleDuLieu, optionsDeTerritoires, RAYON_PAR_DEFAUT,
+} from './lieuDesFiltresClub';
 
 /**
  * La feuille de filtres du marche « Club », a la forme du pack Rechercher.
@@ -34,14 +36,6 @@ import FiltersSheet from './FiltersSheet';
  * equivalent cote serveur, et le pack demande de RETIRER une rangee sans
  * equivalent plutot que de l'afficher grisee.
  */
-
-const RAYON_PAR_DEFAUT = 20;
-
-const normaliser = (/** @type {unknown} */ valeur) => String(valeur || '')
-  .normalize('NFD')
-  .replace(/\p{Diacritic}/gu, '')
-  .toLowerCase()
-  .trim();
 
 /**
  * @param {{
@@ -106,74 +100,19 @@ function ClubFiltersSheet({
   );
 
   const estTerritoire = Boolean(city?.territoire);
-  let libelleVille = TOUTES_VILLES;
-  if (estTerritoire) {
-    libelleVille = String(city.nom || city.label);
-  } else if (city?.label) {
-    libelleVille = `${String(city.label)} · ${String(radius)} km`;
-  }
+  const libelleVille = libelleDuLieu(city, radius, TOUTES_VILLES);
 
-  const optionsTerritoires = useCallback((/** @type {string} */ recherche) => {
-    const terme = normaliser(recherche);
-    if (terme.length < 2) return [];
-    const correspond = (/** @type {any} */ item) => normaliser(item?.name).includes(terme)
-      || normaliser(item?.code) === terme;
-    /**
-     * Traduit un lieu de l'annuaire en option du champ Lieu.
-     * @param {any} item Un département ou une région de l'annuaire.
-     * @param {'departement' | 'region'} territoire Son échelle.
-     * @returns {any} L'option du champ Lieu.
-     */
-    const versOption = (item, territoire) => ({
-      code: item.code || null,
-      label: `${item.name} (${territoire === 'departement'
-        ? t('clubFiltersSheet.department', 'département')
-        : t('clubFiltersSheet.region', 'région')})`,
-      nom: item.name,
-      slug: item.slug,
-      territoire,
-      value: `${territoire}:${item.slug}`,
-    });
-    const regions = (territoires?.regions || []).filter(correspond).slice(0, 3);
-    const departements = (territoires?.departments || []).filter(correspond).slice(0, 5);
-    return [
-      ...regions.map((item) => versOption(item, 'region')),
-      ...departements.map((item) => versOption(item, 'departement')),
-    ];
-  }, [t, territoires]);
+  const optionsTerritoires = useCallback(
+    (/** @type {string} */ recherche) => optionsDeTerritoires({ recherche, t, territoires }),
+    [t, territoires],
+  );
 
+  // ANNUAIRE-E1 : la règle du lieu (territoire sans rayon, ville avec sa zone) vit dans
+  // lieuDesFiltresClub.js, partagée avec les pastilles de filtre.
   const appliquer = () => {
-    // Un département ou une région n'a ni point ni rayon : la liste lira l'annuaire par son slug.
-    if (city?.territoire) {
-      onApply({
-        ...filters,
-        activity,
-        city,
-        geohash: undefined,
-        lat: undefined,
-        lon: undefined,
-        radius,
-      });
-      onClose();
-      return;
-    }
-    const coordonnees = coordonneesDeLaVille(city);
-    const geohash = coordonnees
-      ? getGeohashForPointAndRadius(coordonnees.lat, coordonnees.lon, radius)
-      : undefined;
-
-    // Une ville retiree doit RETIRER sa zone : laisser trainer l'ancien
-    // `geohash` ferait mentir la pastille et filtrerait sur une zone que plus
-    // aucun libelle n'annonce.
-    onApply({
-      ...filters,
-      activity,
-      city: city || { label: '', value: '' },
-      geohash: geohash || undefined,
-      lat: coordonnees ? coordonnees.lat : undefined,
-      lon: coordonnees ? coordonnees.lon : undefined,
-      radius,
-    });
+    onApply(filtresAvecLieu({
+      activity, city, filters, getGeohashForPointAndRadius, radius,
+    }));
     onClose();
   };
 
