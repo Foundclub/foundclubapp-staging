@@ -91,3 +91,32 @@ describe('resolveEventAttendanceGate', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// POINTAGE (decisions d Adel du 29/09) — « SUIVRE LES ARRIVEES » DECOCHEE :
+// le joueur ne signale plus son arrivee. La LECTURE de la feuille, elle, reste :
+// elle porte aussi le verdict « present / absent / pas renseigne ».
+// Ecrit ROUGE contre app `8d017cd6`.
+// ---------------------------------------------------------------------------
+describe('POINTAGE — l option « Suivre les arrivees »', () => {
+  test('decochee : plus de « je suis arrive » pour le joueur inscrit, la lecture reste', () => {
+    const result = resolveEventAttendanceGate({
+      arrivalTrackingEnabled: false,
+      canEdit: false,
+      isCurrentUserParticipating: true,
+      isTeamMember: true,
+    });
+
+    expect(result).toEqual({
+      canAccessAttendance: true,
+      canSelfMarkArrival: false,
+    });
+  });
+
+  test('cochee ou absente (evenement d avant le lot) : rien ne change', () => {
+    const input = { canEdit: false, isCurrentUserParticipating: true, isTeamMember: true };
+
+    expect(resolveEventAttendanceGate({ ...input, arrivalTrackingEnabled: true }).canSelfMarkArrival).toBe(true);
+    expect(resolveEventAttendanceGate(input).canSelfMarkArrival).toBe(true);
+  });
+});

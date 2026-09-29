@@ -42,6 +42,7 @@ import {
 } from '@/domains/event/eventParticipantSections';
 import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/event/presenceRule';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getParticipationErrorMessage,
@@ -1386,13 +1387,17 @@ function EventDetails({ navigation, route }) {
     );
   }, [event?.participations, trainerKeysForEvent, userData?.documentId]);
 
+  // POINTAGE (29/09) — « Suivre les arrivees » decochee par l organisateur :
+  // le joueur ne signale plus son arrivee (la lecture de la feuille reste).
+  const arrivalTrackingEnabled = isArrivalTrackingEnabled(event);
   const { canAccessAttendance, canSelfMarkArrival } = useMemo(
     () => resolveEventAttendanceGate({
+      arrivalTrackingEnabled,
       canEdit,
       isCurrentUserParticipating,
       isTeamMember,
     }),
-    [canEdit, isCurrentUserParticipating, isTeamMember],
+    [arrivalTrackingEnabled, canEdit, isCurrentUserParticipating, isTeamMember],
   );
 
   const {
@@ -1814,10 +1819,11 @@ function EventDetails({ navigation, route }) {
         badgeLabel: t('eventDetails.absenceRecorded', 'Absence enregistrée'),
         badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
         badgeValue: null,
+        // POINTAGE (29/09) — `no_show` n est plus qu une absence CONSTATEE A
+        // L APPEL : ne pas pointer ne rend jamais absent.
         description: t(
           'eventDetails.theEventIsOverAnd',
-          "L'événement est terminé et aucune arrivée n'a été confirmée. Un coach doit corriger "
-            + 'le pointage si besoin.',
+          "Un encadrant t'a marqué absent à l'appel. S'il s'est trompé, il peut corriger ton pointage.",
         ),
         hasArrived: false,
         primaryAction: null,
@@ -2157,6 +2163,18 @@ function EventDetails({ navigation, route }) {
     () => Boolean(resolveClientSourceTeamForUser(event, userData)),
     [event, userData],
   );
+  // 🙋 POINTAGE (« reponse B » d Adel, 29/09) — APRES COUP, LE « PAS
+  // RENSEIGNE » PEUT PASSER PRESENT. La regle vit dans
+  // `domains/event/presenceRule.js`, miroir de celle du serveur ; un tournoi
+  // garde son propre parcours d inscription.
+  const peutPasserPresentApresCoup = !isTournamentEvent && canDeclareLatePresence({
+    event,
+    hasPendingRequest: currentUserParticipationState.hasPendingRequest,
+    isConvenedMember: isConvenedTeamMember,
+    isMissing: currentUserParticipationState.isMissing,
+    isParticipating: currentUserParticipationState.isParticipating,
+    myAttendanceStatus: myAttendance?.attendanceStatus,
+  });
   const tournamentAwareParticipationFlow = useMemo(() => {
     if (!isTournamentEvent || isStageDayEvent || userData?.role?.name !== USER_ROLES.player) {
       return currentParticipationFlow;
@@ -2901,6 +2919,17 @@ function EventDetails({ navigation, route }) {
 
     handleJoinEvent();
   }, [event, handleJoinEvent, mutations.respondToEventRsvpMutation]);
+
+  // POINTAGE — la porte etroite passe par la route des reponses : le serveur
+  // l ouvre au seul « pas renseigne » (`assertLatePresenceAllowed`).
+  const handleDeclareLatePresence = useCallback(() => {
+    if (!event?.documentId) return;
+    // @ts-ignore: FIXME: Baseline TS regression
+    mutations.respondToEventRsvpMutation.mutate({
+      answer: 'present',
+      eventId: event.documentId,
+    });
+  }, [event?.documentId, mutations.respondToEventRsvpMutation]);
 
   const handleConfirmParticipation = useCallback(async () => {
     if (!event?.documentId) return;
@@ -5673,7 +5702,9 @@ function EventDetails({ navigation, route }) {
   const showNextActionCard = showOverviewTab
     && canEdit
     && canAccessAttendance
-    && !isTournamentEvent;
+    && !isTournamentEvent
+    // POINTAGE (29/09) — « Suivre les arrivees » decochee : pas d appel.
+    && arrivalTrackingEnabled;
 
   // Les trois conditions que la repartition en onglets rendait trop longues
   // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
@@ -7640,6 +7671,7 @@ function EventDetails({ navigation, route }) {
         event={event}
         hasAcceptedRequest={hasAcceptedRequest}
         hasPendingRequest={hasPendingRequest}
+        onDeclareLatePresence={peutPasserPresentApresCoup ? handleDeclareLatePresence : undefined}
         onDecline={() => handleDeclineEvent(event)}
         onDeleteParticipation={handleDeleteParticipation}
         onJoin={handleJoinEvent}
@@ -8294,13 +8326,13 @@ function EventDetails({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.error500 || 'rgb(248, 113, 113)' }]}>
-                    {t('eventDetails.checkInToCorrect', 'Pointage à corriger')}
+                    {t('eventDetails.checkInToCorrect', 'Absent à l’appel')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {t(
                       'eventDetails.arrivalNotConfirmed',
-                      "Ton arrivée n'a pas été confirmée avant la fin du match. "
-                        + 'Un coach doit corriger ta présence avant de débloquer ton retour post-match.',
+                      "Un encadrant t'a marqué absent à l'appel de ce match. "
+                        + "S'il s'est trompé, il corrige ta présence et ton questionnaire se débloque.",
                     )}
                   </Text>
                 </View>

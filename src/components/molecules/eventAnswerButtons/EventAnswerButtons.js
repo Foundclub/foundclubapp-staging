@@ -5,6 +5,7 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { isMatchEventType } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState, resolveRsvpAnswer } from '@/domains/event/participationState';
+import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import useEvent from '@/domains/event/useEvent';
 import { resolveClientResponderDecision, resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
@@ -26,12 +27,16 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} [props.onDeleteParticipation] - Callback to delete their participation
  * @param {() => void} [props.onEdit] - Callback when user wants to edit the event
  * @param {() => void} [props.onCancel] - Callback when user wants to cancel the event
+ * @param {() => void} [props.onDeclareLatePresence] - POINTAGE : la porte « je passe
+ *   en present » du « pas renseigne », apres coup. La fiche ne la donne que
+ *   quand `canDeclareLatePresence` l ouvre (`domains/event/presenceRule.js`).
  * @param {ReturnType<typeof resolveParticipationFlow>} [props.participationFlow]
  * @param {'present' | 'absent' | ''} [props.submittingAnswer] - T2 : la réponse
  *   en cours d envoi. Elle allume le bouton correspondant et prend les deux, le
  *   temps de l aller-retour. ⛔ Ce n est PAS un état optimiste : rien n est
  *   affiché comme acquis avant que le serveur ait répondu.
- * @returns {import('react').ReactElement} Event answer buttons component
+ * @returns {import('react').ReactElement | null} Event answer buttons component — `null`
+ *   quand l organisateur a decoche « Les participants repondent » (POINTAGE).
  */
 function EventAnswerButtons({
   event,
@@ -39,6 +44,7 @@ function EventAnswerButtons({
   hasPendingRequest,
   onAbout,
   onCancel,
+  onDeclareLatePresence,
   onDecline,
   onDeleteParticipation,
   onEdit,
@@ -136,6 +142,32 @@ function EventAnswerButtons({
 
   // If user is a player — or a member of a convened team — show the answer buttons
   if (userData?.role?.name === USER_ROLES.player || canAnswerAsMember) {
+    // 🚫 POINTAGE (decision d Adel du 29/09) — « LES PARTICIPANTS REPONDENT »
+    // DECOCHEE : la rangee disparait, sans motif de refus. Rien a expliquer :
+    // l organisateur a choisi qu on ne reponde pas. Une personne du dehors
+    // (non conviee) garde sa demande de participation, comme au serveur.
+    if (isConvenedMember && !isRsvpEnabled(event)) return null;
+
+    // 🙋 POINTAGE (« reponse B ») — APRES COUP, LE « PAS RENSEIGNE » PEUT
+    // PASSER PRESENT. La fiche ne tend cette porte que quand elle est ouverte.
+    if (onDeclareLatePresence) {
+      return (
+        <View style={[Alignments.fullWidth, Spaces.gap[12]]}>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('eventList.info.notReported')}
+          </Text>
+          <Button
+            disabled={isSubmitting}
+            isLoading={submittingAnswer === 'present'}
+            onPress={onDeclareLatePresence}
+            style={Alignments.fullWidth}
+            title={t('eventList.actions.declareLatePresence')}
+            variant="Primary"
+          />
+        </View>
+      );
+    }
+
     if (isStageDayEvent && dailyRsvpStatus) {
       let statusLabel = '';
       if (dailyRsvpStatus === 'present') statusLabel = t('eventList.info.alreadyJoined');

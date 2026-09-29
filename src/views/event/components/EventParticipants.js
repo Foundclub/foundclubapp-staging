@@ -8,6 +8,7 @@ import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { isArrivalTrackingEnabled, isRsvpEnabled } from '@/domains/event/presenceRule';
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -306,6 +307,11 @@ const resolveAttendanceBadge = ({
     attendance?.attendanceStatus || attendance?.finalState || '',
   ).trim().toLowerCase();
   const normalizedRsvpStatus = String(attendance?.rsvpStatus || '').trim().toLowerCase();
+  // POINTAGE (29/09) — le VERDICT du serveur une fois l evenement fini :
+  // `present` / `late` / `absent` / `not_reported` (« pas renseigne »), ou
+  // `pending` tant que l evenement court. Il est calcule a un seul endroit
+  // (`resolveAttendanceSummary`) : cette pastille le lit, elle ne le refait pas.
+  const finalOperationalStatus = String(attendance?.finalOperationalStatus || '').trim().toLowerCase();
   const hasArrived = Boolean(attendance?.arrivedAt);
   const lateMinutes = Math.max(0, Number(attendance?.lateMinutes || 0));
   const declaredLateMinutes = Math.max(0, Number(attendance?.declaredLateMinutes || 0));
@@ -318,12 +324,15 @@ const resolveAttendanceBadge = ({
     }
   }
 
+  // 🚫 POINTAGE — depuis le 29/09, le serveur ne rend `no_show` que pour une
+  // absence CONSTATEE A L APPEL par un encadrant. « Non pointe » disait l ancien
+  // robot, qui n existe plus : ne pas pointer ne rend jamais absent.
   if (normalizedAttendanceStatus === 'no_show') {
     return {
       backgroundColor: `${colors.error500}18`,
       borderColor: `${colors.error500}36`,
       textColor: colors.error500,
-      title: t('eventDetails.attendanceBadge.notMarked', 'Non pointé'),
+      title: t('eventDetails.attendanceBadge.absentAtCall', 'Absent à l’appel'),
       value: null,
     };
   }
@@ -343,7 +352,11 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.neutral300}12`,
       borderColor: `${colors.neutral300}24`,
       textColor: colors.neutral200,
-      title: t('eventParticipants.noAnswer', 'Sans réponse'),
+      // POINTAGE (« reponse B ») — l evenement fini, rien repondu, rien
+      // constate : ni present ni absent, « pas renseigne ».
+      title: finalOperationalStatus === 'not_reported'
+        ? t('eventDetails.attendanceBadge.notReported', 'Pas renseigné')
+        : t('eventParticipants.noAnswer', 'Sans réponse'),
       value: null,
     };
   }
@@ -397,6 +410,19 @@ const resolveAttendanceBadge = ({
       textColor: colors.warning500,
       title: t('eventDetails.attendanceBadge.declaredLate', 'Retard annoncé'),
       value: `+${declaredLateMinutes} min`,
+    };
+  }
+
+  // ✅ POINTAGE (29/09) — L EVENEMENT EST FINI ET IL AVAIT DIT PRESENT : IL EST
+  // PRESENT. Pointer n est jamais obligatoire ; « A pointer +180 min » sur un
+  // match d hier accusait un joueur que personne n a declare absent.
+  if (finalOperationalStatus === 'present') {
+    return {
+      backgroundColor: withAlpha(colors.success500, 0.09),
+      borderColor: withAlpha(colors.success500, 0.21),
+      textColor: colors.success500,
+      title: t('eventDetails.present', 'Présent'),
+      value: null,
     };
   }
 
@@ -464,6 +490,10 @@ function EventParticipants({
   // faire descendre, et les deux boutons « Relancer » de cet ecran se grisent
   // ensemble — ils declenchent le meme envoi.
   const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
+  // POINTAGE (29/09) — les deux options de l evenement : decochee, « Relancer »
+  // (reponses) ou « Faire l appel » (arrivees) disparait de la liste.
+  const reponsesOuvertes = isRsvpEnabled(event);
+  const arriveesSuivies = isArrivalTrackingEnabled(event);
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
 
   // 🗑️ S3-bis (25/08) - L ECRITURE « À l'heure » DE R7-d A ETE RETIREE
@@ -876,7 +906,7 @@ function EventParticipants({
               <Text style={[Fonts.h4Bold, Fonts.primary500]}>
                 {t('eventDetails.participationStatus.notAnswered')}
               </Text>
-              {canEdit ? (
+              {canEdit && reponsesOuvertes ? (
                 // 🎯 N4 (D5) — LE BOUTON DIT QUELLE EQUIPE IL VISE. La feuille de
                 // relance s'ouvre avec CETTE equipe deja cochee : le serveur
                 // n'accepte qu'un `teamId` par appel, et c'est ici, et nulle
@@ -884,7 +914,7 @@ function EventParticipants({
                 <Button isLoading={isReminding} isOption onPress={() => handleRemindPlayers(section.key)} title={t('eventDetails.actions.remind')} variant="Primary" />
               ) : null}
             </View>
-            {canEdit ? renderProchaineRelance() : null}
+            {canEdit && reponsesOuvertes ? renderProchaineRelance() : null}
             {section.notAnswered.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-not-answered`,
@@ -1424,11 +1454,11 @@ function EventParticipants({
                 <Text style={[Fonts.h4Bold, Fonts.primary500]}>
                   {t('eventDetails.participationStatus.notAnswered')}
                 </Text>
-                {canEdit ? (
+                {canEdit && reponsesOuvertes ? (
                   <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
                 ) : null}
               </View>
-              {canEdit ? renderProchaineRelance() : null}
+              {canEdit && reponsesOuvertes ? renderProchaineRelance() : null}
               {(listesAffichees.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
                 keyPrefix: 'legacy-not-answered',
@@ -1491,7 +1521,7 @@ function EventParticipants({
           🧭 Place AVANT le bloc de compteurs, donc avant la legende
           « reponses sur » qui sert de COUPE a trois temoins d ordre (AD06, AE02) :
           il n entre pas dans leur lecture de la liste. */}
-      {canEdit && (
+      {canEdit && arriveesSuivies && (
         <Button
           onPress={ouvrirLAppel}
           title={t('eventDetails.nextAction.action', 'Faire l’appel')}
