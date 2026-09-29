@@ -216,7 +216,14 @@ function MatchCallUpSelection() {
     const source = Array.isArray(playersParam) && playersParam.length > 0
       ? playersParam
       : (eventFromApi?.team?.players || EMPTY_LIST);
-    return source.map((player) => normalizePlayer(player)).filter(Boolean);
+    // ACCES-RENFORT (6b) — rouvrir une compo PUBLIEE passe son instantane comme
+    // effectif (`handleManageComposition`) ; il porte aussi les renforts, que le
+    // serveur y etiquette `club_reinforcement`. Sans ce tri, le renfort
+    // s affichait sous « Mon equipe » et disparaissait d « Autres equipes ».
+    return source
+      .filter((player) => player?.participantSource !== 'club_reinforcement')
+      .map((player) => normalizePlayer(player))
+      .filter(Boolean);
   }, [eventFromApi?.team?.players, playersParam]);
 
   const reinforcementPlayers = useMemo(() => {
