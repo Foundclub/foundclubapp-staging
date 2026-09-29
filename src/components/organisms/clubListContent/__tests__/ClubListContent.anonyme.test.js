@@ -138,6 +138,7 @@ jest.mock('@/components/atoms/emptyState/EmptyState', () => 'EmptyState');
 jest.mock('@/components/atoms/loader/Loader', () => 'Loader');
 jest.mock('@/components/atoms/searchMapFab/SearchMapFab', () => 'SearchMapFab');
 jest.mock('@/components/organisms/filtersSheet/ClubFiltersSheet', () => 'ClubFiltersSheet');
+jest.mock('@/components/organisms/filtersSheet/PastillesFiltresClub', () => 'PastillesFiltresClub');
 jest.mock(
   '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState',
   () => 'SearchResultsLoadingState',

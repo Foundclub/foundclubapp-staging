@@ -249,3 +249,37 @@ describe('En-tete de Rechercher — CE QUE D07 CHANGE', () => {
     expect(navigation.navigate).not.toHaveBeenCalled();
   });
 });
+
+// ANNUAIRE-E1 (29/09) — l'annuaire du site pose `annuaire` : sa page porte deja sa barre (logo,
+// « Ouvrir l'app »). La maquette validee par Adel ne veut, dans l'annuaire, ni le bandeau
+// « FoundClub League », ni la cloche, ni l'avatar — connecte ou non. Et plus de cadre d'ecran a
+// hauteur bornee : la liste defile avec la page.
+describe('ANNUAIRE-E1 — la coquille de l annuaire du site', () => {
+  const cadres = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ noeud) => noeud.type?.name === 'ConteneurMock',
+  );
+
+  it('ne rend ni le bandeau logo, ni la cloche, ni l avatar', () => {
+    const affiches = textesVisibles(rendre({ annuaire: true }));
+    expect(affiches).not.toContain('temoin-bandeau-logo');
+    expect(affiches).not.toContain('temoin-cloche');
+    expect(affiches).not.toContain('temoin-avatar');
+  });
+
+  it('garde les chips de categorie puis le contenu, dans cet ordre', () => {
+    const affiches = textesVisibles(rendre({ annuaire: true }));
+    expect(affiches.indexOf('temoin-chips:amicaux')).toBeGreaterThanOrEqual(0);
+    const rang = (/** @type {string} */ temoin) => affiches.indexOf(temoin);
+    expect(rang('temoin-chips:amicaux')).toBeLessThan(rang('temoin-contenu'));
+  });
+
+  it('n utilise plus le cadre d ecran (ScreenContainer) : la page du site defile', () => {
+    const arbre = rendre({ annuaire: true });
+    expect(cadres(arbre)).toHaveLength(0);
+  });
+
+  it('📌 sans le drapeau, le cadre d ecran est toujours la', () => {
+    const arbre = rendre();
+    expect(cadres(arbre).length).toBeGreaterThan(0);
+  });
+});

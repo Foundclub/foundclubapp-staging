@@ -33,7 +33,11 @@ import { RouteNames } from '@/navigation/routeNames';
  *  };
  *  onTutorialLayout?: (key: 'header' | 'switcher', layout: { x: number; y: number; width: number; height: number }) => void;
  *  types?: ReadonlyArray<SearchType>;
+ *  annuaire?: boolean;
  * }} props
+ *   `annuaire` (ANNUAIRE-E1, posé par l'annuaire du site seulement) : ni l'en-tête de l'app
+ *   (« FoundClub League », cloche, avatar), ni le cadre d'écran à hauteur bornée — la page du site
+ *   porte déjà sa barre, et la liste défile avec elle. Absent, le téléphone ne change pas.
  * @returns {import('react').ReactElement}
  *
  * ⚠️ `tutorialSteps.header` reste dans le type mais n'est PLUS rendu depuis le
@@ -44,6 +48,7 @@ import { RouteNames } from '@/navigation/routeNames';
  */
 function SearchScreenShell({
   activeType,
+  annuaire = false,
   children,
   navigation,
   onTutorialLayout,
@@ -117,6 +122,22 @@ function SearchScreenShell({
     },
     [activeType, navigation, onTypeChange, userData],
   );
+
+  if (annuaire) {
+    // ANNUAIRE-E1 — l'annuaire garde les onglets et le contenu de l'écran, rien d'autre.
+    return (
+      <View>
+        <SearchTypeSwitcher
+          activeType={activeType}
+          onTypeChange={handleTypeChange}
+          types={types}
+        />
+        <View style={[Spaces.marginTop[4]]}>
+          {children}
+        </View>
+      </View>
+    );
+  }
 
   return (
     // RECHERCHE-UNIQUE (25/09) — `boundedHeight` : sur le SITE, sans lui la liste
