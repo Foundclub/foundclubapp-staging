@@ -491,7 +491,7 @@ describe('S04 — quitter le terrain et y revenir le retrouve tel qu il etait', 
 
   test('sans compo enregistree, il n y a rien a reprendre : l ecran 4 garde son role', () => {
     expect(resumeFieldForSelection({ players: ONZE })).toEqual({
-      placements: [], shouldResume: false,
+      knowsField: false, placements: [], shouldResume: false,
     });
     expect(resumeFieldForSelection({
       existingComposition: { selectedPlayerIds: ['p0'] }, players: ONZE,

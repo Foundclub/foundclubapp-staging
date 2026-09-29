@@ -367,7 +367,8 @@ function MatchCallUpSelection() {
       reinforcementPlayers,
       selectedIds,
       sport,
-      startersOnField: resumedField.shouldResume ? resumedField.placements.length : null,
+      // FINITIONS2 — un terrain CONNU fait foi, meme vide (compo publiee au banc).
+      startersOnField: resumedField.knowsField ? resumedField.placements.length : null,
     }),
     [manualPlayers, reinforcementPlayers, resumedField, selectedIds, sport],
   );
