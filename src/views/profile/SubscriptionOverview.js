@@ -26,6 +26,7 @@ import {
   getActiveOfferDetails,
   getCoveredTeamCount,
   getCoveringEntitlement,
+  getSubscriptionBadgeLevel,
   getSubscriptionStatusMeta,
   getSubscriptionTeamSlotSummary,
   hasActiveClubOffer,
@@ -275,9 +276,27 @@ function SubscriptionOverview({ navigation, route }) {
     () => getSubscriptionStatusMeta(subscriptionAccessLevel),
     [subscriptionAccessLevel],
   );
+  // ABOCLUB (2026-09-28) — L'OFFRE CLUB DU COMPTE COUVRE UN AUTRE CLUB QUE
+  // CELUI QU'IL REGARDE. Le niveau d'acces est celui du COMPTE : sans ce garde,
+  // l'ecran annoncait « rien n'est bloque » pour un club que le serveur refuse
+  // (recette du 28/09). Le titre garde le nom de ce qui est paye ; seules la
+  // description et la couverture disent ou l'offre s'applique.
+  const uncoveredActiveClub = useMemo(() => getActiveClubNotCovered({
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionAccessLevel,
+    userData,
+  }), [clubVerificationSummary, entitlementsSummary, subscriptionAccessLevel, userData]);
+  // ABOPARCLUB — recette du 29/09 (tournee 4, defaut 4) : le badge dit l'etat
+  // du club AFFICHE quand l'offre en couvre un autre, plus « Club · actif ».
+  const badgeAccessLevel = getSubscriptionBadgeLevel({
+    activeClubLevel: activeClubSubscriptionAccessLevel,
+    paidLevel: subscriptionAccessLevel,
+    uncoveredActiveClub,
+  });
   // Chip de statut DS (design 13c) : neutre / cyan / violet, jamais de couleurs Tailwind.
   const subscriptionChip = useMemo(() => {
-    switch (subscriptionAccessLevel) {
+    switch (badgeAccessLevel) {
       case 'CLUB':
       case 'CLUB_UNVERIFIED':
         return {
@@ -286,7 +305,7 @@ function SubscriptionOverview({ navigation, route }) {
           // suggerait au client une attente qui ne le concerne pas.
           borderColor: withAlpha(Colors.violet500, 0.55),
           fillColor: withAlpha(Colors.violet500, 0.16),
-          label: t(`profile.subscription.states.${subscriptionAccessLevel === 'CLUB' ? 'club' : 'clubUnverified'}`),
+          label: t(`profile.subscription.states.${badgeAccessLevel === 'CLUB' ? 'club' : 'clubUnverified'}`),
           textColor: Colors.violet200,
         };
       case 'TEAM':
@@ -304,7 +323,7 @@ function SubscriptionOverview({ navigation, route }) {
           textColor: Colors.neutral200,
         };
     }
-  }, [subscriptionAccessLevel, Colors, t]);
+  }, [badgeAccessLevel, Colors, t]);
 
   // ABOCLUB2 (2026-09-28) — les offres UNE PAR UNE, chacune avec sa date et son
   // club, celle qui couvre le club actif en tete : c'est elle que la carte
@@ -349,17 +368,6 @@ function SubscriptionOverview({ navigation, route }) {
     'subscriptionOverview.planCard.freeTitle',
     'Offre gratuite FoundClub',
   ) : (planLabels[0] || statusMeta.label);
-  // ABOCLUB (2026-09-28) — L'OFFRE CLUB DU COMPTE COUVRE UN AUTRE CLUB QUE
-  // CELUI QU'IL REGARDE. Le niveau d'acces est celui du COMPTE : sans ce garde,
-  // l'ecran annoncait « rien n'est bloque » pour un club que le serveur refuse
-  // (recette du 28/09). Le titre garde le nom de ce qui est paye ; seules la
-  // description et la couverture disent ou l'offre s'applique.
-  const uncoveredActiveClub = useMemo(() => getActiveClubNotCovered({
-    clubVerificationSummary,
-    entitlementsSummary,
-    subscriptionAccessLevel,
-    userData,
-  }), [clubVerificationSummary, entitlementsSummary, subscriptionAccessLevel, userData]);
   let uncoveredClubDescription = '';
   if (uncoveredActiveClub) {
     uncoveredClubDescription = uncoveredActiveClub.activeClubName ? t(
@@ -1033,7 +1041,14 @@ function SubscriptionOverview({ navigation, route }) {
           ),
         ) : null}
 
-        <LegalFooter restore={false} />
+        {/* ABOPARCLUB — recette du 29/09 (tournee 4, defaut 4) : « Renouvellement
+            automatique » ne se dit que si l'offre decrite se renouvelle vraiment
+            (pas sous une offre OFFERTE ni sous une offre posee a la main). Le
+            gratuit garde la mention : elle parle des offres a acheter. */}
+        <LegalFooter
+          pricesNotice={isFreeLevel || planCardDate?.kind === 'renews'}
+          restore={false}
+        />
       </ScrollView>
 
       {/* S12-B/D5 — LA FEUILLE « AUGMENTER », pas une route neuve.

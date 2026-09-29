@@ -103,6 +103,17 @@ beforeEach(() => {
   mockInvalidateQueries.mockResolvedValue(undefined);
 });
 
+describe('LegalFooter — la mention de renouvellement ne se dit que si elle est vraie (recette du 29/09)', () => {
+  it('pricesNotice={false} : plus de « Renouvellement automatique », les liens legaux restent', () => {
+    const tree = render({ pricesNotice: false });
+    const texts = tree.root.findAllByType(Text)
+      .flatMap((/** @type {any} */ node) => collectTexts(node.props.children));
+
+    expect(texts.join(' ')).not.toContain('Renouvellement automatique');
+    expect(texts).toContain('Conditions générales');
+  });
+});
+
 describe('LegalFooter — ce qu il faisait deja (caracterisation)', () => {
   it('affiche la mention legale partagee', () => {
     const tree = render({});

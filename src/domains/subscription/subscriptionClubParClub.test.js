@@ -9,9 +9,11 @@ import {
   resolveSubscriptionChangeTarget,
 } from '@/domains/subscription/subscriptionBilling';
 import {
+  endSentenceAfterName,
   getAccountSubscriptionAccessLevel,
   getCoveringEntitlement,
   getSubscriptionAccessLevel,
+  getSubscriptionBadgeLevel,
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItems,
   isClubOfferCurrentForClub,
@@ -357,6 +359,33 @@ describe('ABOPARCLUB — l ecran des offres ne vend plus rien a travers les club
       subscriptionSummary: doublon,
       userDocumentId: MOI,
     }).map((abonnement) => abonnement.clubDocumentIds)).toEqual([null, null]);
+  });
+});
+
+describe('ABOPARCLUB — recette du 29/09 (tournee 4, defaut 4)', () => {
+  it('BADGE — l offre couvre un autre club : il dit l etat du club AFFICHE, plus « Club »', () => {
+    const nonCouvert = { activeClubName: 'AIKI', coveredClubNames: ['FoundClub Démo'] };
+    expect(getSubscriptionBadgeLevel({
+      activeClubLevel: 'FREE', paidLevel: 'CLUB_UNVERIFIED', uncoveredActiveClub: nonCouvert,
+    })).toBe('FREE');
+    expect(getSubscriptionBadgeLevel({
+      activeClubLevel: 'TEAM', paidLevel: 'CLUB_UNVERIFIED', uncoveredActiveClub: nonCouvert,
+    })).toBe('TEAM');
+    // Un niveau « Club » ne peut pas etre celui d'un club non couvert.
+    expect(getSubscriptionBadgeLevel({
+      activeClubLevel: 'CLUB_UNVERIFIED', paidLevel: 'CLUB_UNVERIFIED', uncoveredActiveClub: nonCouvert,
+    })).toBe('FREE');
+    // Temoin « inchange » : club couvert, le badge dit ce que le compte paie.
+    expect(getSubscriptionBadgeLevel({
+      activeClubLevel: 'CLUB_UNVERIFIED', paidLevel: 'CLUB_UNVERIFIED', uncoveredActiveClub: null,
+    })).toBe('CLUB_UNVERIFIED');
+  });
+
+  it('POINT FINAL — un nom qui finit par un point n en recoit pas un second', () => {
+    expect(endSentenceAfterName("pas ton club 'AIKI-ADVENTURE'.."))
+      .toBe("pas ton club 'AIKI-ADVENTURE'.");
+    expect(endSentenceAfterName('pas ton club AIKI.')).toBe('pas ton club AIKI.');
+    expect(endSentenceAfterName('pas ton club Allez!.')).toBe('pas ton club Allez!');
   });
 });
 

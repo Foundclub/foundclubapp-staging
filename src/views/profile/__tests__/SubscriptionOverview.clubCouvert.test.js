@@ -432,4 +432,11 @@ describe('ABOPARCLUB — niveau du club affiche GRATUIT : l ecran garde l offre 
     expect(texte).toContain(`Ton club ${NOM_AIKI} n'est pas couvert par cette offre.`);
     expect(texte).not.toContain('Offre gratuite FoundClub');
   });
+
+  it('recette du 29/09 (tournee 4) : le badge dit « Gratuit » (etat d AIKI), plus « Club · actif »', async () => {
+    const texte = texteVisible(await rendre(depuisAikiApresLeLot()));
+
+    expect(texte).toContain('Gratuit');
+    expect(texte).not.toContain('Club · actif');
+  });
 });

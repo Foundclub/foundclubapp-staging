@@ -216,7 +216,10 @@ describe('ABOCLUB — carte « Mon abonnement » du Profil', () => {
 
     expect(texte).not.toContain('Tes droits Club sont actifs.');
     expect(texte).not.toContain('Ton club est en cours de certification');
-    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}.`);
+    // Recette du 29/09 (tournee 4) : le nom finit deja par un point, la phrase
+    // n'en ajoute pas un second (« 'AIKI-ADVENTURE'.. »).
+    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}`);
+    expect(texte).not.toContain(`${NOM_AIKI}.`);
   });
 
   it('ne change RIEN quand l\'offre couvre le club actif', async () => {
@@ -235,7 +238,7 @@ describe('ABOCLUB — carte « Mon abonnement » du Profil', () => {
 // ce que le compte paie. La carte doit montrer les deux : les compteurs gratuits
 // d'AIKI, ET la phrase qui dit ou s'applique l'offre payee.
 describe('ABOPARCLUB — carte « Mon abonnement » quand le club affiche est gratuit', () => {
-  it('garde la puce Club et la phrase « couvre Demo, pas AIKI », et montre les compteurs d AIKI', async () => {
+  it('puce = etat d AIKI, phrase « couvre Demo, pas AIKI » (un seul point), et compteurs d AIKI', async () => {
     mockAuthValue = {
       ...contexteAuth({ couvreLeClubActif: false }),
       accountSubscriptionAccessLevel: 'CLUB_UNVERIFIED',
@@ -259,8 +262,12 @@ describe('ABOPARCLUB — carte « Mon abonnement » quand le club affiche est gr
       arbre.unmount();
     });
 
-    expect(texte).toContain('Club · actif');
-    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}.`);
+    // Recette du 29/09 (tournee 4) : le badge dit l'etat d'AIKI (gratuit), plus
+    // « Club · actif » a cote de « pas ton club » ; et un seul point final.
+    expect(texte).toContain('Gratuit');
+    expect(texte).not.toContain('Club · actif');
+    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}`);
+    expect(texte).not.toContain(`${NOM_AIKI}.`);
     expect(texte).toContain('Événements');
   });
 });

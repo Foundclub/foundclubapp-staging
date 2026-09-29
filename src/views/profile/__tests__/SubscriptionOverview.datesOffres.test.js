@@ -140,7 +140,10 @@ jest.mock('@/components/molecules/legalFooter/LegalFooter', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: () => <TexteRN>PIED DE PAGE</TexteRN>,
+    // ABOPARCLUB : la doublure dit si la mention de renouvellement est demandee.
+    default: (/** @type {any} */ { pricesNotice = true }) => (
+      <TexteRN>{pricesNotice ? 'PIED DE PAGE · Renouvellement automatique' : 'PIED DE PAGE'}</TexteRN>
+    ),
   };
 });
 
@@ -387,6 +390,25 @@ describe('ABOCLUB2 — chaque offre, son mot', () => {
     expect(texte).toContain(
       'Autres offres actives : Équipe · 2 équipes / an, renouvelé le 20 janvier 2027',
     );
+  });
+});
+
+describe('ABOPARCLUB — recette du 29/09 (tournee 4) : « Renouvellement automatique » seulement si c est vrai', () => {
+  it('sous l Apercu Club OFFERT, le pied de page ne parle plus de renouvellement', async () => {
+    const texte = await texteDeLEcran(PHOTO_DU_SOIR);
+
+    expect(texte).toContain('Aperçu Club (offert)');
+    expect(texte).not.toContain('Renouvellement automatique');
+  });
+
+  it('temoin « inchange » : une offre payante qui se renouvelle garde la mention', async () => {
+    const texte = await texteDeLEcran(offrePayanteSeule({
+      autoRenew: true,
+      currentPeriodEnd: '2027-09-04T12:00:00.000Z',
+      provider: 'apple',
+    }));
+
+    expect(texte).toContain('Renouvellement automatique');
   });
 });
 

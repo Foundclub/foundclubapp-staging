@@ -1556,6 +1556,37 @@ export const getActiveClubNotCovered = ({
   };
 };
 
+/**
+ * LE BADGE D'ETAT DES CARTES « MON ABONNEMENT » (ecran et Profil) — recette
+ * du 29/09, tournee 4, defaut 4.
+ *
+ * Le badge disait « Club · actif » juste a cote de « Ton club AIKI n'est pas
+ * couvert par cette offre » : deux phrases qui se contredisent a l'oeil. Le
+ * badge dit desormais l'etat du club AFFICHE quand l'offre payee en couvre un
+ * autre (decision « niveau oui ») ; sinon, ce que le compte paie, comme avant.
+ * Un niveau « Club » ne peut pas etre celui d'un club non couvert : une
+ * doublure ou un resume en retard qui le pretendrait retombe sur « gratuit ».
+ * @param {object} params
+ * @param {string | null | undefined} params.activeClubLevel - Le niveau du club affiche.
+ * @param {string | null | undefined} params.paidLevel - Ce que le compte paie.
+ * @param {any} params.uncoveredActiveClub - `getActiveClubNotCovered`, ou `null`.
+ * @returns {string | null | undefined} Le niveau que le badge doit dire.
+ */
+export const getSubscriptionBadgeLevel = ({ activeClubLevel, paidLevel, uncoveredActiveClub }) => {
+  if (!uncoveredActiveClub) return paidLevel;
+  if (!activeClubLevel || hasActiveClubOffer(/** @type {any} */ (activeClubLevel))) return 'FREE';
+  return activeClubLevel;
+};
+
+/**
+ * UNE PHRASE QUI FINIT PAR UN NOM N'Y AJOUTE PAS UN SECOND POINT — recette du
+ * 29/09, tournee 4, defaut 4 : le club « 'AIKI-ADVENTURE'. » donnait
+ * « … pas ton club 'AIKI-ADVENTURE'.. ».
+ * @param {string} sentence - La phrase, terminee par son point.
+ * @returns {string} La meme, sans le point de trop.
+ */
+export const endSentenceAfterName = (sentence) => String(sentence || '').replace(/([.!?…])\.$/u, '$1');
+
 const ACTIVE_PAYER_SUBSCRIPTION_STATUSES = ['active', 'grace_period'];
 
 /**

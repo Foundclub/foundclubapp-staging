@@ -18,11 +18,14 @@ import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
  * la ou on vend) + lien « Restaurer mes achats » (restauration RevenueCat +
  * invalidation du contexte).
  * @param {object} props
+ * @param {boolean} [props.pricesNotice] - Affiche « Prix TTC. Renouvellement automatique… »
+ *   (defaut true). Faux sous une offre qui ne se renouvelle pas (offerte, posee
+ *   a la main) : la phrase y serait fausse (recette du 29/09, tournee 4).
  * @param {boolean} [props.restore] - Affiche le lien de restauration (defaut true).
  * @param {object | Array<object>} [props.style] - Style additionnel du conteneur.
  * @returns {import('react').ReactElement}
  */
-function LegalFooter({ restore = true, style }) {
+function LegalFooter({ pricesNotice = true, restore = true, style }) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const queryClient = useQueryClient();
@@ -78,12 +81,14 @@ function LegalFooter({ restore = true, style }) {
 
   return (
     <View style={[{ alignItems: 'center' }, style]}>
-      <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
-        {t(
-          'legalFooter.pricesNotice',
-          'Prix TTC. Renouvellement automatique, résiliable à tout moment.',
-        )}
-      </Text>
+      {pricesNotice ? (
+        <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
+          {t(
+            'legalFooter.pricesNotice',
+            'Prix TTC. Renouvellement automatique, résiliable à tout moment.',
+          )}
+        </Text>
+      ) : null}
       <View
         style={[
           Spaces.paddingTop[8],
