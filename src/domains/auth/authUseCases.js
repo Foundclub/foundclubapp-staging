@@ -1233,6 +1233,9 @@ export const NOTIFICATION_TYPES = {
   EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',
   EVENT_CONVOCATION_PUBLISHED: 'eventConvocationPublished',
+  // CONVOC-NOTIFS (29/09) — « Tu n'es plus dans la convocation ». Jumeau serveur :
+  // admin/src/api/user-fcm-token/types/index.ts (EVENT_CONVOCATION_REMOVED).
+  EVENT_CONVOCATION_REMOVED: 'eventConvocationRemoved',
   EVENT_LINEUP_PUBLISH_REMINDER: 'eventLineupPublishReminder',
   EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
   EVENT_PUBLISHED: 'eventPublished',
