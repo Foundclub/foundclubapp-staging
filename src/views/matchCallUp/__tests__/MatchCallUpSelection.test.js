@@ -559,7 +559,7 @@ describe('D77 ecran 2 — convoquer hors equipe', () => {
     expect(texte).not.toContain('0 hors app');
   });
 
-  test('FINITIONS4 — « Pa… » : le nom d un renfort garde sa ligne, les etiquettes passent dessous', async () => {
+  test('FINITIONS4 — « Pa… » : le nom du renfort garde sa ligne, etiquettes dessous', async () => {
     const arbre = await rendre();
     await appuyerSur(arbre, 'Autres équipes');
 

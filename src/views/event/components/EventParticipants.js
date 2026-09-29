@@ -17,13 +17,13 @@ import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+import { resolveEventEndedAt } from '@/views/event/eventMatchClock';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
-import { resolveEventEndedAt } from '@/views/event/eventMatchClock';
 
 // 🪤 R7-d — PAR L ALIAS, PAS EN RELATIF. `import/order` veut l alias avant le
 // relatif, `perfectionist/sort-imports` veut l inverse : un seul import en

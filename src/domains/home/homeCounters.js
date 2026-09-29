@@ -34,8 +34,9 @@
  * @property {number} mesReponses
  * @property {{ aLaUne: number, clubsAOnboarder: number, revendications: number,
  *   signalements: number }} moderation
- * @property {null | { id: string, label: string, rsvpEnabled?: boolean, startsAt: string }}
- *   prochainEvenement - `rsvpEnabled` : « Les participants repondent » (FINITIONS4).
+ * @property {null | { id: string, label: string, rsvpEnabled?: boolean,
+ *   startsAt: string }} prochainEvenement - `rsvpEnabled` (FINITIONS4) : « Les participants
+ *   repondent ».
  * @property {null | { convoques: number, id: string, opponent: string, sansReponse: number,
  *   startsAt: string, team: string }} prochaineSeance
  */

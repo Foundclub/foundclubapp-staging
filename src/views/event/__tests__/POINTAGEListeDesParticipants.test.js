@@ -158,7 +158,10 @@ test('POINTAGE-L2 — 🚨 reponses decochees : plus de « Relancer »', async (
 });
 
 test('POINTAGE-L3 — 🚨 arrivees decochees : plus de « Faire l appel »', async () => {
-  const arbre = await monter({ ...proprietes({ arrivalTrackingEnabled: false }), nowMs: LA_VEILLE });
+  const arbre = await monter({
+    ...proprietes({ arrivalTrackingEnabled: false }),
+    nowMs: LA_VEILLE,
+  });
 
   expect(titres(arbre)).not.toContain('eventDetails.nextAction.action');
   expect(titres(arbre)).toContain('eventDetails.actions.remind');

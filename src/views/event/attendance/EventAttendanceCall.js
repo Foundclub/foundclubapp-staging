@@ -506,7 +506,9 @@ function EventAttendanceCall() {
             Le cadre « avant » affichait l heure du REPLI LOCAL (« Ouvre à 17:30 »,
             30 min avant le debut) alors que l appel s ouvre des la creation.
             On charge ; une charge illisible ne dit rien plutot qu une heure fausse. */}
-        {!payloadData && !isAttendanceError ? <ActivityIndicator color={Colors.primary500} /> : null}
+        {!payloadData && !isAttendanceError
+          ? <ActivityIndicator color={Colors.primary500} />
+          : null}
         {payloadData && mode === 'open' ? renderOpenCall() : null}
         {payloadData && mode !== 'open' ? renderBeforeWindow() : null}
       </ScrollView>

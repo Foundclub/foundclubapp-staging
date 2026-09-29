@@ -15,7 +15,9 @@ import renderer, { act } from 'react-test-renderer';
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
   useTranslation: () => ({
-    t: (/** @type {string} */ clef, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : clef),
+    t: (/** @type {string} */ clef, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : clef
+    ),
   }),
 }));
 
@@ -84,7 +86,7 @@ const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .filter(Boolean);
 
 describe('FINITIONS4 D7 — la carte « Faire l appel » n invente pas d heure', () => {
-  test('🚨 LE TEMOIN : feuille d appel en chargement → ni « Ouvre à », ni « Pas encore ouvert »', () => {
+  test('🚨 LE TEMOIN : appel en chargement → ni « Ouvre à », ni « Pas encore ouvert »', () => {
     const arbre = monter({ mode: 'loading', opensAtLabel: '16:30' });
     const lus = textes(arbre);
 

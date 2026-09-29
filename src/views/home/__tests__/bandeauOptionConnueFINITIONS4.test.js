@@ -48,7 +48,10 @@ const EVENEMENT = {
   participations: [],
 };
 
-/** Une relecture qui ne revient JAMAIS : l instant du lancement, fige. */
+/**
+ * Une relecture qui ne revient JAMAIS : l instant du lancement, fige.
+ * @returns {Promise<never>} Une promesse jamais tenue.
+ */
 const relectureEnVol = () => new Promise(() => {});
 
 /**

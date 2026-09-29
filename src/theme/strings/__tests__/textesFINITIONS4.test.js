@@ -140,7 +140,8 @@ describe('FINITIONS4 D5 — le code de l app', () => {
   });
 
   test('🚨 « Sam.. 15h00 » : l en-tete de la convocation n ajoute plus de point', () => {
-    const source = readFileSync(join(RACINE_SRC, 'views', 'matchCallUp', 'MatchCallUpSelection.js'), 'utf8');
+    const chemin = join(RACINE_SRC, 'views', 'matchCallUp', 'MatchCallUpSelection.js');
+    const source = readFileSync(chemin, 'utf8');
     expect(source).not.toContain('"EEE. ');
     expect(source).toContain('"EEE HH\'h\'mm"');
     // Le motif rend, avec la vraie langue francaise de date-fns, UN seul point.

@@ -136,7 +136,8 @@ const titres = (arbre) => arbre.root.findAllByType(Button).map((bouton) => bouto
 const textes = (arbre) => arbre.root.findAllByType(Text)
   .map((noeud) => noeud.props.children)
   .filter((enfant) => typeof enfant === 'string');
-const aLeTestID = (arbre, testID) => arbre.root.findAll((noeud) => noeud.props.testID === testID).length > 0;
+const parTestID = (arbre, testID) => arbre.root.findAll((noeud) => noeud.props.testID === testID);
+const aLeTestID = (arbre, testID) => parTestID(arbre, testID).length > 0;
 
 describe('FINITIONS4 D6 — reponses desactivees : aucun compteur de reponses', () => {
   it('🚨 LE TEMOIN : ni tuiles, ni pastilles de filtre, ni « 0 réponse sur 1 · 0 % »', async () => {
@@ -150,7 +151,7 @@ describe('FINITIONS4 D6 — reponses desactivees : aucun compteur de reponses', 
     expect(aLeTestID(arbre, 'AE02-pourcentage')).toBe(false);
   });
 
-  it('🚨 ni « Personne n a encore confirmé sa présence », ni « Aucune absence signalée »', async () => {
+  it('🚨 ni « Personne n a encore confirmé… », ni « Aucune absence signalée »', async () => {
     const lus = textes(await monter(proprietes({ evenement: { rsvpEnabled: false } })));
 
     expect(lus).not.toContain('eventDetails.emptyStates.noConfirmation');
@@ -192,11 +193,13 @@ describe('FINITIONS4 D6 — evenement termine : « pas renseigné », et plus de
     const lus = textes(arbre);
 
     expect(lus).not.toContain(SANS_REPONSE);
-    const tuile = arbre.root.findAll((noeud) => noeud.props.testID === 'AD06-tuile-notAnswered')[0];
+    const tuile = parTestID(arbre, 'AD06-tuile-notAnswered')[0];
     const libellesTuile = tuile.findAllByType(Text).map((noeud) => noeud.props.children);
     expect(libellesTuile).toContain(PAS_RENSEIGNE);
-    const pastille = arbre.root.findAll((noeud) => noeud.props.testID === 'P2-pastille-notAnswered')[0];
-    const libellePastille = pastille.findAllByType(Text).map((noeud) => noeud.props.children).join(' ');
+    const pastille = parTestID(arbre, 'P2-pastille-notAnswered')[0];
+    const libellePastille = pastille.findAllByType(Text)
+      .map((noeud) => noeud.props.children)
+      .join(' ');
     expect(libellePastille).toContain(PAS_RENSEIGNE);
   });
 

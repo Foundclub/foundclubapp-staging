@@ -548,7 +548,7 @@ describe('N5 — la carte « Faire l appel » sur l Aperçu', () => {
     expect(textesVisibles(root).some((texte) => texte.includes('attendus'))).toBe(false);
   });
 
-  test('FINITIONS4 (D7) — la charge d appel en ERREUR : pas de carte, plutot qu une heure fausse', () => {
+  test('FINITIONS4 (D7) — charge d appel en ERREUR : pas de carte, pas d heure fausse', () => {
     const root = monter({ attendance: null, attendanceError: true });
 
     expect(laCarte(root)).toBeNull();

@@ -1462,7 +1462,9 @@ function EventDetails({ navigation, route }) {
         'notAnswered',
         libelleSansReponse,
         section.notAnswered,
-        reponsesOuvertes ? t('eventDetails.emptyStates.allAnswered', 'Tout le monde a répondu.') : '',
+        reponsesOuvertes
+          ? t('eventDetails.emptyStates.allAnswered', 'Tout le monde a répondu.')
+          : '',
       )}
       {renderStaffGroup(section)}
     </div>

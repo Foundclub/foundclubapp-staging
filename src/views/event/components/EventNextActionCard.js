@@ -39,7 +39,8 @@ import Button from '@/components/atoms/button/Button';
  *   encore la, ou n a pas pu etre lue (FINITIONS4, D7).
  * @param {() => void} [props.onPress] - Ouvrir l ecran d appel. Appele au seul etat `open`.
  * @param {string} [props.opensAtLabel] - L heure d ouverture « 17:30 », dans le fuseau DU CLUB.
- * @returns {import('react').ReactElement} - La carte.
+ * @returns {import('react').ReactElement | null} - La carte, ou rien si la charge
+ *   d appel n a pas pu etre lue.
  */
 function EventNextActionCard({
   expectedCount = null,

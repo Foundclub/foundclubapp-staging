@@ -282,17 +282,6 @@ const boutonDe = (/** @type {any} */ root, /** @type {string} */ testID) => {
   return conteneur.findAllByType(TouchableOpacity)[0];
 };
 
-/**
- * Les parametres du dernier envoi vers cette route.
- * @param {string} route - Le nom de la route cherchee.
- * @returns {any} - Les parametres, ou null si la route n a jamais ete empruntee.
- */
-const dernierEnvoiVers = (/** @type {string} */ route) => {
-  const call = [...mockNavigate.mock.calls].reverse()
-    .find((/** @type {any} */ entry) => entry[0] === route);
-  return call ? call[1] : null;
-};
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockEventQuery.data = null;
@@ -347,7 +336,7 @@ describe('FINITIONS4 D6 — la liste du site suit la regle du telephone', () => 
     expect(textOf(sansReponse)).not.toContain('Sans réponse');
   });
 
-  test('reponses ouvertes, evenement a venir : « Sans réponse » et les trois groupes, comme avant', () => {
+  test('reponses ouvertes, evenement a venir : « Sans réponse » et 3 groupes, comme avant', () => {
     const root = mountScreen({
       attendance: buildAttendance(),
       event: entrainementAvecPaul(),
