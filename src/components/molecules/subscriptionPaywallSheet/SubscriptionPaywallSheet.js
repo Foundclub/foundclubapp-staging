@@ -32,6 +32,7 @@ import {
   getSubscriptionTierAbBucket,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
+  resolveStorePlanChangeTarget,
   sanitizeSubscriptionLicenseeCountInput,
   SUBSCRIPTION_TIER_AB_TEST_ENABLED,
 } from '@/domains/subscription/subscriptionBilling';
@@ -50,6 +51,7 @@ import {
 import {
   getActiveSubscriptionPurchaseRail,
   isSubscriptionPurchaseAvailable,
+  performSubscriptionPlanChange,
   performSubscriptionPurchase,
   SUBSCRIPTION_PURCHASE_RAILS,
 } from '@/domains/subscription/subscriptionPurchaseRail';
@@ -346,8 +348,12 @@ function SubscriptionPaywallSheet({
   const selectedEntry = selectedTierOption?.entry || null;
 
   const purchaseMutation = useMutation({
+    // ABOPARCLUB-RAIL : un changement d'offre du meme magasin passe par le rail
+    // du changement (proratisation, pas de second abonnement).
     mutationFn: async (/** @type {any} */ purchaseInput) => (
-      performSubscriptionPurchase(purchaseInput)
+      purchaseInput?.subscriptionDocumentId
+        ? performSubscriptionPlanChange(purchaseInput)
+        : performSubscriptionPurchase(purchaseInput)
     ),
   });
 
@@ -569,18 +575,32 @@ function SubscriptionPaywallSheet({
     // REMPLACERAIT l'abonnement Apple qui couvre un autre club. Sur Google, la
     // meme offre ne s'achete pas deux fois. On le dit, avec la marche a suivre,
     // et on n'achete rien (decision d'Adel « abo2 A » : on ne contourne pas).
+    const storeProvider = getStoreProviderForPurchase({
+      isStoreRail: getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT,
+      platformOS: Platform.OS,
+    });
+    // ABOPARCLUB-RAIL (2026-09-29) — un abonnement DU MEME MAGASIN couvre deja ce
+    // club (ou, offre Equipe, ses equipes) : ce n'est pas un achat, c'est un
+    // CHANGEMENT de cet abonnement. Apple le remplacerait de toute facon ; un
+    // achat neuf laissait deux enregistrements serveur (Google : deux factures).
+    const storeChangeTarget = resolveStorePlanChangeTarget({
+      catalogEntry: selectedEntry,
+      clubDocumentId: purchaseClubDocumentId,
+      entitlementsSummary,
+      storeProvider,
+      subscriptionSummary,
+      userDocumentId: userData?.documentId,
+    });
     const storeConflict = getStoreSubscriptionConflict({
       catalogEntry: selectedEntry,
+      changeSourceSubscriptionDocumentId: storeChangeTarget?.subscriptionDocumentId,
       clubDocumentId: purchaseClubDocumentId,
       payerSubscriptions: getPayerSubscriptionsWithClubs({
         entitlementsSummary,
         subscriptionSummary,
         userDocumentId: userData?.documentId,
       }),
-      storeProvider: getStoreProviderForPurchase({
-        isStoreRail: getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT,
-        platformOS: Platform.OS,
-      }),
+      storeProvider,
     });
     if (storeConflict) {
       const notice = getStoreSubscriptionConflictNotice({
@@ -612,6 +632,10 @@ function SubscriptionPaywallSheet({
       const result = await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
         clubDocumentId: isClubPurchase ? purchaseClubDocumentId : undefined,
+        ...(storeChangeTarget ? {
+          currentPlanCode: storeChangeTarget.currentPlanCode,
+          subscriptionDocumentId: storeChangeTarget.subscriptionDocumentId,
+        } : {}),
         payerUserDocumentId: String(userData?.documentId || '').trim(),
         // Une offre Club couvre tout le club : elle n'occupe aucun slot d'equipe.
         teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({

@@ -930,6 +930,11 @@ export const getPayerSubscriptionsWithClubs = ({
  *    usage), sinon celui qui couvre le club affiche (retrogradation) ;
  *  - dans les deux cas, en dernier recours, un abonnement qui ne couvre RIEN ;
  *  - sinon `null` : c'est un NOUVEL abonnement pour ce club.
+ * ⛔ Un abonnement pose A LA MAIN (cadeau, essai : `provider: 'manual'`) n'est
+ * jamais une cible : aucun magasin ne le connait, donc « le changer » faisait
+ * encaisser le magasin puis refuser le serveur (« abonnement source introuvable
+ * chez le store »). L'achat neuf est la voie prevue : le serveur remplace le
+ * cadeau (UPGRADE/U4, `assertClubNotAlreadyCovered`).
  * Un serveur qui ne rend pas le detail des abonnements garde l'ancienne regle,
  * sauf quand il affirme que le club affiche n'est pas couvert (offre Club).
  * @param {object} params
@@ -939,7 +944,7 @@ export const getPayerSubscriptionsWithClubs = ({
  * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte.
  * @param {any} [params.subscriptionSummary] - Le resume d'abonnement.
  * @param {string} [params.userDocumentId] - Moi.
- * @returns {{ currentPlanCode: string; subscriptionDocumentId: string } | null} La cible.
+ * @returns {{ currentPlanCode: string; provider?: string; subscriptionDocumentId: string } | null} La cible.
  */
 export const resolveSubscriptionChangeTarget = ({
   catalogEntry,
@@ -979,20 +984,49 @@ export const resolveSubscriptionChangeTarget = ({
     };
   }
 
+  const storeSubscriptions = subscriptions.filter((entry) => entry.provider !== 'manual');
   const coveringSubscription = activeClubDocumentId
-    ? subscriptions.find((entry) => entry.clubDocumentIds?.includes(activeClubDocumentId))
+    ? storeSubscriptions.find((entry) => entry.clubDocumentIds?.includes(activeClubDocumentId))
     : null;
-  const unattachedSubscription = subscriptions.find(
+  const unattachedSubscription = storeSubscriptions.find(
     (entry) => Array.isArray(entry.clubDocumentIds) && entry.clubDocumentIds.length === 0,
   );
   const teamSubscription = isTeamOffer
-    ? subscriptions.find((entry) => entry.planCode.startsWith('fc_team_'))
+    ? storeSubscriptions.find((entry) => entry.planCode.startsWith('fc_team_'))
     : null;
   const target = teamSubscription || coveringSubscription || unattachedSubscription || null;
 
   return target
-    ? { currentPlanCode: target.planCode, subscriptionDocumentId: target.documentId }
+    ? {
+      currentPlanCode: target.planCode,
+      provider: target.provider,
+      subscriptionDocumentId: target.documentId,
+    }
     : null;
+};
+
+/**
+ * UN ACHAT DEPUIS LE MUR PAYANT QUI EST EN FAIT UN CHANGEMENT D'OFFRE —
+ * ABOPARCLUB-RAIL, 2026-09-29.
+ *
+ * La feuille « mur payant » et le recapitulatif du guide ne savaient qu'ACHETER.
+ * Or un abonne Apple « Equipe » qui prend « Club » pour le MEME club n'ouvre pas
+ * un second abonnement : Apple REMPLACE le premier (un seul par groupe). L'app
+ * validait pourtant un achat neuf, et le serveur gardait DEUX enregistrements
+ * pour un seul abonnement magasin (l'ancien, change par le webhook, et le neuf).
+ * Chez Google, l'achat neuf ouvrait un second abonnement, facture en double.
+ * Le bon geste est « changer d'offre » de CET abonnement — c'est ce que fait
+ * deja l'ecran des offres (`resolveSubscriptionChangeTarget`).
+ * Seulement si la cible est du magasin de CET achat : sinon (caisse web, rail de
+ * test, cadeau, autre magasin), l'achat reste un achat, comme avant.
+ * @param {Record<string, any> & { storeProvider?: 'apple' | 'google' | null }} params - Les
+ *   entrees de `resolveSubscriptionChangeTarget`, plus `storeProvider` : le magasin de CET achat.
+ * @returns {{ currentPlanCode: string; provider?: string; subscriptionDocumentId: string } | null}
+ */
+export const resolveStorePlanChangeTarget = ({ storeProvider, ...params }) => {
+  if (!storeProvider) return null;
+  const target = resolveSubscriptionChangeTarget(/** @type {any} */ (params));
+  return target && target.provider === storeProvider ? target : null;
 };
 
 /**

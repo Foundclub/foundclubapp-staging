@@ -6,6 +6,7 @@ import {
   getBlockingClubCoveragePlanCode,
   getPayerSubscriptionsWithClubs,
   getStoreSubscriptionConflict,
+  resolveStorePlanChangeTarget,
   resolveSubscriptionChangeTarget,
 } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -329,6 +330,7 @@ describe('ABOPARCLUB — l ecran des offres ne vend plus rien a travers les club
     // Temoin « inchange » : depuis Demo, c est un changement de SON abonnement.
     expect(cible(DEMO, 'CLUB')).toEqual({
       currentPlanCode: 'fc_club_tier_1_yearly',
+      provider: 'apple',
       subscriptionDocumentId: 'sub-demo',
     });
   });
@@ -386,6 +388,50 @@ describe('ABOPARCLUB — recette du 29/09 (tournee 4, defaut 4)', () => {
       .toBe("pas ton club 'AIKI-ADVENTURE'.");
     expect(endSentenceAfterName('pas ton club AIKI.')).toBe('pas ton club AIKI.');
     expect(endSentenceAfterName('pas ton club Allez!.')).toBe('pas ton club Allez!');
+  });
+});
+
+describe('ABOPARCLUB-RAIL — un abonnement pose a la main ne se « change » jamais au magasin', () => {
+  it('le cadeau qui couvre AIKI n est pas une cible : acheter Club depuis AIKI est un ACHAT', () => {
+    const resume = {
+      payerSubscriptionIds: ['sub-cadeau'],
+      payerSubscriptionsSummary: [abonnementPaye('sub-cadeau', 'fc_trial_club', 'manual', [AIKI])],
+    };
+    expect(resolveSubscriptionChangeTarget({
+      catalogEntry: { planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB' },
+      clubDocumentId: AIKI,
+      entitlementsSummary: [droitClub(AIKI, 'fc_trial_club')],
+      subscriptionSummary: resume,
+      userDocumentId: MOI,
+    })).toBeNull();
+  });
+});
+
+describe('ABOPARCLUB-RAIL — le mur payant change l abonnement DU MEME MAGASIN au lieu de racheter', () => {
+  const abonneEquipeApple = {
+    payerSubscriptionIds: ['sub-equipe'],
+    payerSubscriptionsSummary: [abonnementPaye('sub-equipe', 'fc_team_1_yearly', 'apple', [DEMO])],
+  };
+  const cible = (storeProvider) => resolveStorePlanChangeTarget({
+    catalogEntry: { planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB' },
+    clubDocumentId: DEMO,
+    entitlementsSummary: [],
+    storeProvider,
+    subscriptionSummary: abonneEquipeApple,
+    userDocumentId: MOI,
+  });
+
+  it('iPhone : Equipe (Apple) -> Club pour le MEME club = changement de CET abonnement', () => {
+    expect(cible('apple')).toEqual({
+      currentPlanCode: 'fc_team_1_yearly',
+      provider: 'apple',
+      subscriptionDocumentId: 'sub-equipe',
+    });
+  });
+
+  it('un autre magasin, la caisse web ou le rail de test : un achat, comme avant', () => {
+    expect(cible('google')).toBeNull();
+    expect(cible(null)).toBeNull();
   });
 });
 

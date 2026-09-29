@@ -16,6 +16,7 @@ import SubscriptionPaywallSheet from '../SubscriptionPaywallSheet';
 const mockGetSubscriptionCatalog = jest.fn();
 const mockTrackFunnelEvent = jest.fn();
 const mockPerformPurchase = jest.fn();
+const mockPerformPlanChange = jest.fn();
 const mockIsPurchaseAvailable = jest.fn();
 const mockScheduleRefresh = jest.fn();
 const mockUseAuth = jest.fn();
@@ -69,6 +70,7 @@ jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({
   // ABOPARCLUB : la feuille demande quel rail est actif (rail de test ici).
   getActiveSubscriptionPurchaseRail: () => mockRail,
   isSubscriptionPurchaseAvailable: (/** @type {any} */ ...args) => mockIsPurchaseAvailable(...args),
+  performSubscriptionPlanChange: (/** @type {any} */ ...args) => mockPerformPlanChange(...args),
   performSubscriptionPurchase: (/** @type {any} */ ...args) => mockPerformPurchase(...args),
   SUBSCRIPTION_PURCHASE_RAILS: { REVENUECAT: 'revenuecat', TRUSTED_TEST: 'trusted-test' },
 }));
@@ -808,6 +810,71 @@ describe('R3 — « Restaurer mes achats » est visible sur la feuille de vente'
     const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
 
     expect(allTexts(tree)).toContain('Restaurer mes achats');
+  });
+});
+
+// ABOPARCLUB-RAIL (2026-09-29) — un abonne Apple « Equipe » qui prend « Club »
+// pour le MEME club depuis le mur payant : Apple remplace son abonnement (un
+// seul par groupe). La feuille validait un ACHAT neuf => deux enregistrements
+// serveur pour un seul abonnement magasin. C'est un CHANGEMENT d'offre.
+describe('ABOPARCLUB-RAIL — le mur payant change l abonnement du meme magasin', () => {
+  const abonneEquipeApple = () => baseAuthValue({
+    entitlementsSummary: [],
+    subscriptionSummary: {
+      payerSubscriptionIds: ['sub-equipe'],
+      payerSubscriptionsSummary: [{
+        documentId: 'sub-equipe',
+        planCode: 'fc_team_1_yearly',
+        provider: 'apple',
+        scopeClubDocumentIds: ['club-du-payeur'],
+        status: 'active',
+      }],
+      teamSlotSummary: { assigned: 1, available: 0, total: 1 },
+    },
+  });
+
+  beforeEach(() => {
+    mockPerformPlanChange.mockResolvedValue({ ok: true });
+  });
+
+  afterEach(() => {
+    mockRail = 'trusted-test';
+  });
+
+  it('iPhone : « Debloquer Club 100 » change l abonnement Equipe, sans nouvel achat', async () => {
+    mockRail = 'revenuecat';
+    const tree = renderSheet({
+      auth: abonneEquipeApple(),
+      clubDocumentId: 'club-du-payeur',
+      decision: FACILITY_DECISION,
+    });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
+    });
+
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    expect(mockPerformPlanChange).toHaveBeenCalledTimes(1);
+    const envoi = mockPerformPlanChange.mock.calls[0][0];
+    expect(envoi.subscriptionDocumentId).toBe('sub-equipe');
+    expect(envoi.currentPlanCode).toBe('fc_team_1_yearly');
+    expect(envoi.catalogEntry.planCode).toBe('fc_club_tier_1_yearly');
+    expect(envoi.clubDocumentId).toBe('club-du-payeur');
+  });
+
+  it('TEMOIN — rail de test (sans magasin) : un achat, comme avant', async () => {
+    const tree = renderSheet({
+      auth: abonneEquipeApple(),
+      clubDocumentId: 'club-du-payeur',
+      decision: FACILITY_DECISION,
+    });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
+    });
+
+    expect(mockPerformPlanChange).not.toHaveBeenCalled();
+    expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
   });
 });
 

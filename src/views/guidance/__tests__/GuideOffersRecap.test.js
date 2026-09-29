@@ -16,6 +16,7 @@ import GuideOffersRecap from '../GuideOffersRecap';
 
 const mockTrackFunnelEvent = jest.fn();
 const mockPerformPurchase = jest.fn();
+const mockPerformPlanChange = jest.fn();
 const mockIsPurchaseAvailable = jest.fn();
 const mockScheduleRefresh = jest.fn();
 const mockUseAuth = jest.fn();
@@ -25,6 +26,8 @@ const mockRefetchCatalog = jest.fn();
 
 let mockCatalogQueryState = { data: undefined, isError: false, isLoading: false };
 let mockPurchaseIsPending = false;
+// ABOPARCLUB-RAIL : le rail actif, pilotable par temoin (rail de test par defaut).
+let mockRail = 'trusted-test';
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
@@ -53,8 +56,9 @@ jest.mock('@/services/subscription/subscriptionService', () => ({
 
 jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({
   // ABOPARCLUB : le recapitulatif demande quel rail est actif (rail de test ici).
-  getActiveSubscriptionPurchaseRail: () => 'trusted-test',
+  getActiveSubscriptionPurchaseRail: () => mockRail,
   isSubscriptionPurchaseAvailable: (/** @type {any} */ ...args) => mockIsPurchaseAvailable(...args),
+  performSubscriptionPlanChange: (/** @type {any} */ ...args) => mockPerformPlanChange(...args),
   performSubscriptionPurchase: (/** @type {any} */ ...args) => mockPerformPurchase(...args),
   SUBSCRIPTION_PURCHASE_RAILS: { REVENUECAT: 'revenuecat', TRUSTED_TEST: 'trusted-test' },
 }));
@@ -222,6 +226,49 @@ beforeEach(() => {
   mockPurchaseIsPending = false;
   mockIsPurchaseAvailable.mockReturnValue(true);
   mockPerformPurchase.mockResolvedValue({ ok: true });
+});
+
+// ABOPARCLUB-RAIL (2026-09-29) — meme defaut que la feuille « mur payant » : un
+// abonne Apple « Equipe » qui prend « Club » pour le MEME club rachetait au lieu
+// de CHANGER son abonnement (Apple le remplace ; le serveur en gardait deux).
+describe('ABOPARCLUB-RAIL — le recapitulatif change l abonnement du meme magasin', () => {
+  const abonneEquipeApple = () => ({
+    ...authValue(),
+    entitlementsSummary: [],
+    subscriptionSummary: {
+      payerSubscriptionIds: ['sub-equipe'],
+      payerSubscriptionsSummary: [{
+        documentId: 'sub-equipe',
+        planCode: 'fc_team_1_yearly',
+        provider: 'apple',
+        scopeClubDocumentIds: ['club-1'],
+        status: 'active',
+      }],
+      teamSlotSummary: { assigned: 1, available: 0, total: 1 },
+    },
+  });
+
+  afterEach(() => {
+    mockRail = 'trusted-test';
+  });
+
+  it('iPhone : « Debloquer Club 100 » change l abonnement Equipe, sans nouvel achat', async () => {
+    mockRail = 'revenuecat';
+    mockPerformPlanChange.mockResolvedValue({ ok: true });
+    const tree = renderRecap(abonneEquipeApple());
+
+    act(() => { findByText(tree, 'Club').props.onPress(); });
+    await act(async () => {
+      findByText(tree, 'Débloquer Club 100 · 249,99 €/an').props.onPress();
+    });
+
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    expect(mockPerformPlanChange).toHaveBeenCalledTimes(1);
+    const envoi = mockPerformPlanChange.mock.calls[0][0];
+    expect(envoi.subscriptionDocumentId).toBe('sub-equipe');
+    expect(envoi.currentPlanCode).toBe('fc_team_1_yearly');
+    expect(envoi.clubDocumentId).toBe('club-1');
+  });
 });
 
 describe('GuideOffersRecap — les deux offres sont proposees (comportement conserve)', () => {
