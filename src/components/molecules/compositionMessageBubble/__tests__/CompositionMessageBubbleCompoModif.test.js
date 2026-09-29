@@ -156,7 +156,9 @@ describe('COMPOMODIF · M1 — la carte du tchat rallume « Modifier » pour le 
 
     appuyerSurLaCarte();
 
-    expect(derniereRoute()?.params?.canEdit).toBe(false);
+    // COMPO-CARTE-SITE — aucun droit = AUCUN `canEdit` (defaut du plateau :
+    // `false`). Ecrit `false`, il devenait « false » — vrai — sur le site.
+    expect(derniereRoute()?.params).not.toHaveProperty('canEdit');
   });
 
   test('🔒 sans `teamId` dans la charge, la carte n ouvre aucun droit', () => {
@@ -164,7 +166,7 @@ describe('COMPOMODIF · M1 — la carte du tchat rallume « Modifier » pour le 
 
     appuyerSurLaCarte({ ...COMPO, teamId: undefined });
 
-    expect(derniereRoute()?.params?.canEdit).toBe(false);
+    expect(derniereRoute()?.params).not.toHaveProperty('canEdit');
   });
 
   // ⚠️ Ouvrir la porte sans donner de quoi modifier recreerait M4 : l'ecran de

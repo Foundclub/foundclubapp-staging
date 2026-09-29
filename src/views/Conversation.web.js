@@ -26,6 +26,8 @@ import {
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging'
 import { BREAKPOINTS } from '@/responsive'
+// eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
+import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import ScreenContainer from '@/components/templates/ScreenContainer'
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
@@ -1281,7 +1283,7 @@ function Conversation({ navigation, route }) {
   ), [baseTextColor, borderColor, mutedTextColor, primaryColor])
 
   // @ts-ignore: FIXME: Baseline TS regression
-  const renderComposition = useCallback((message) => {
+  const renderComposition = useCallback((message, isMine = false) => {
     const composition = message?.composition
     if (!composition?.type) return null
 
@@ -1496,13 +1498,46 @@ function Conversation({ navigation, route }) {
       )
     }
 
+    // 🙋 COMPO-CARTE-SITE — LA MEME CARTE QUE LE TELEPHONE. Le site ecrivait ici
+    // « Composition lineup_share » en texte brut : le mot technique, a tout
+    // lecteur d'un canal d'equipe. La carte est le composant du telephone,
+    // tel quel : titre, quand, ou, terrain, noms, Present / Absent (BULLE) et
+    // « Ouvrir » vers « Tu es convoque » ou le plein ecran (regle COMPOMSG).
+    // ⛔ Sans match rattache, « Ouvrir » n'aurait rien a ouvrir sur le site :
+    // le telephone passe la compo a l'ecran par la memoire, le site par
+    // l'adresse, qui ne porte ni joueurs ni placements. Repli, comme pour tout
+    // type que le site ne sait pas dessiner — en francais, jamais son nom.
+    if (composition.type === 'lineup_share' && String(composition?.eventId || '').trim()) {
+      return <CompositionMessageBubble composition={composition} isMe={isMine} />;
+    }
+
     return (
-      <div style={{ color: mutedTextColor, fontSize: 13 }}>
-        Composition
-        {' '}
-        {composition.type}
+      <div
+        style={{
+          color: mutedTextColor,
+          display: 'grid',
+          fontSize: 13,
+          gap: 4,
+        }}
+      >
+        {composition.type === 'lineup_share' ? (
+          <span
+            style={{
+              color: baseTextColor,
+              fontFamily: 'Montserrat-Bold, sans-serif',
+            }}
+          >
+            {i18next.t('compositionMessageBubble.published', 'Composition publiée')}
+          </span>
+        ) : null}
+        <span>
+          {i18next.t(
+            'conversation.web.composition.unavailable',
+            'Ce contenu ne peut pas s’afficher sur le site.',
+          )}
+        </span>
       </div>
-    )
+    );
   }, [
     baseTextColor,
     borderColor,
@@ -1866,7 +1901,7 @@ function Conversation({ navigation, route }) {
             </div>
           ) : null}
           {shouldRenderAttachments ? renderAttachments(attachments) : null}
-          {message?.composition ? renderComposition(message) : null}
+          {message?.composition ? renderComposition(message, isMine) : null}
           {messageReactions.length > 0 ? (
             <div
               data-testid={`MSGREACT-rangee-${getMessageId(message)}`}

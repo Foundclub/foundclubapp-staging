@@ -4768,6 +4768,9 @@ export default {
         noneUploaded: 'No attachment could be uploaded.',
         sendError: 'Unable to send this attachment.',
       },
+      composition: {
+        unavailable: "This content can't be shown on the website.",
+      },
       empty: 'No messages yet.',
       footerNote: 'Text, replies, attachments, shares, polls and proposals already use the shared hooks, services and sockets. Voice notes use the browser microphone when supported.',
       league: {

@@ -290,7 +290,12 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       navigation.navigate(RouteNames.EventStack, {
         params: {
           ...target,
-          canEdit: peutModifier,
+          // 🌐 COMPO-CARTE-SITE — le droit ABSENT n'est pas ecrit `false` : sur
+          // le site, ces parametres voyagent dans l'adresse (`buildWebPath`),
+          // ou `false` devient la chaine « false » — non vide, donc VRAIE pour
+          // le plateau, qui montrait « Modifier » a un simple lecteur. Absent,
+          // le plateau prend sa valeur par defaut : `canEdit = false`.
+          ...(peutModifier ? { canEdit: true } : {}),
           eventId,
           eventLabel: title,
           // Sans ces deux-la, « Modifier » ouvrirait un ecran incapable de
@@ -404,16 +409,33 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const pitchTitle = t('compositionMessageBubble.onThePitch', 'Sur le terrain');
   const benchTitle = t('compositionMessageBubble.onTheBench', 'Sur le banc');
 
-  const carte = (
-    <TouchableOpacity
-      accessibilityHint={t('compositionMessageBubble.openHint', 'Ouvre la composition')}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      activeOpacity={0.85}
-      onPress={handlePress}
-      style={proposeLaReponse ? null : cadre}
-    >
-      <View style={styles.body}>
+  // ♿ COMPO-CARTE-SITE — TROIS BOUTONS COTE A COTE, AUCUN DANS UN AUTRE.
+  //
+  // 🔍 Le terrain « Agrandir » etait un bouton RANGE DANS le bouton-carte. Un
+  // element accessible (la carte) se lit comme UN SEUL element : VoiceOver et
+  // TalkBack ne voyaient pas le terrain, et le site rendait un `role="button"`
+  // dans un autre. Meme remede que les boutons Present / Absent de BULLE : le
+  // cadre passe a un conteneur, et les boutons s'y suivent.
+  //
+  // 👀 CE QUE VOIT UN VOYANT NE CHANGE PAS : memes textes, meme ordre, memes
+  // marges (`fieldTouch` reprend l'ecart que `gap` lui donnait), et chaque zone
+  // touchee ouvre ce qu'elle ouvrait. Seul l'assombrissement au toucher se
+  // limite desormais a la zone touchee.
+  //
+  // 🦻 CE QU'ENTEND UN LECTEUR D'ECRAN : la carte (sa phrase dit tout, compte
+  // des convoques compris), puis le terrain. Le bas de carte (noms, « Ouvrir »)
+  // fait la MEME chose que la carte : il est masque aux lecteurs d'ecran et hors
+  // de la tabulation, sinon chaque carte annoncerait deux fois le meme bouton.
+  return (
+    <View style={cadre}>
+      <TouchableOpacity
+        accessibilityHint={t('compositionMessageBubble.openHint', 'Ouvre la composition')}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        activeOpacity={0.85}
+        onPress={handlePress}
+        style={styles.body}
+      >
         <View style={styles.kickerRow}>
           <View style={[styles.kickerDot, { backgroundColor: Colors.primary500 }]} />
           <Text
@@ -477,51 +499,61 @@ function CompositionMessageBubble({ composition, isMe = false }) {
             </Text>
           </View>
         ) : null}
+      </TouchableOpacity>
 
-        {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au
-            plein ecran, meme pour un convoque (que la carte, elle, envoie sur
-            « Tu es convoque »). La pastille « Agrandir » le dit. */}
-        <TouchableOpacity
-          accessibilityLabel={t(
-            'compositionMessageBubble.openFullScreen',
-            'Voir la composition en plein écran',
-          )}
-          accessibilityRole="button"
-          activeOpacity={0.85}
-          onPress={openFullScreen}
-          style={styles.fieldTouch}
+      {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au
+          plein ecran, meme pour un convoque (que la carte, elle, envoie sur
+          « Tu es convoque »). La pastille « Agrandir » le dit. */}
+      <TouchableOpacity
+        accessibilityLabel={t(
+          'compositionMessageBubble.openFullScreen',
+          'Voir la composition en plein écran',
+        )}
+        accessibilityRole="button"
+        activeOpacity={0.85}
+        onPress={openFullScreen}
+        style={styles.fieldTouch}
+      >
+        <RenderedTacticalField
+          sport={sport}
+          style={[
+            styles.miniField,
+            { aspectRatio: 1 / getTacticalFieldAspectRatio(sportContext || sport) },
+          ]}
         >
-          <RenderedTacticalField
-            sport={sport}
-            style={[
-              styles.miniField,
-              { aspectRatio: 1 / getTacticalFieldAspectRatio(sportContext || sport) },
-            ]}
-          >
-            {starters.map(({ placement, player }) => (
-              <View
-                key={`${placement?.playerId}-${placement?.positionX}-${placement?.positionY}`}
-                style={[
-                  styles.tokenSlot,
-                  {
-                    left: `${placement?.positionX || 0}%`,
-                    top: `${placement?.positionY || 0}%`,
-                  },
-                ]}
-              >
-                <PlayerHeadToken player={player} size={MINI_TOKEN_SIZE} />
-              </View>
-            ))}
-          </RenderedTacticalField>
-          <View
-            style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.72) }]}
-          >
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-              {t('compositionMessageBubble.expand', 'Agrandir')}
-            </Text>
-          </View>
-        </TouchableOpacity>
+          {starters.map(({ placement, player }) => (
+            <View
+              key={`${placement?.playerId}-${placement?.positionX}-${placement?.positionY}`}
+              style={[
+                styles.tokenSlot,
+                {
+                  left: `${placement?.positionX || 0}%`,
+                  top: `${placement?.positionY || 0}%`,
+                },
+              ]}
+            >
+              <PlayerHeadToken player={player} size={MINI_TOKEN_SIZE} />
+            </View>
+          ))}
+        </RenderedTacticalField>
+        <View
+          style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.72) }]}
+        >
+          <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+            {t('compositionMessageBubble.expand', 'Agrandir')}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
+      {/* Le bas de carte : meme toucher que la carte, masque aux lecteurs
+          d'ecran (la phrase de la carte le dit deja). */}
+      <TouchableOpacity
+        accessible={false}
+        activeOpacity={0.85}
+        aria-hidden
+        focusable={false}
+        onPress={handlePress}
+      >
         {/* 🧾 R6 — QUI EST CONVOQUE. Memes mots que l'onglet « Convocation » de
             la page d'evenement. Le bloc entier disparait quand il n'y a
             personne : une section « Sur le banc » suivie de rien se lit comme
@@ -554,33 +586,30 @@ function CompositionMessageBubble({ composition, isMe = false }) {
             ) : null}
           </View>
         ) : null}
-      </View>
 
-      <View style={[styles.footer, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
-        <Text numberOfLines={1} style={[Fonts.p4, styles.footerText, { color: Colors.neutral300 }]}>
-          {calledUpLine}
-        </Text>
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          {t('compositionMessageBubble.open', 'Ouvrir')}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={[styles.footer, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p4, styles.footerText, { color: Colors.neutral300 }]}
+          >
+            {calledUpLine}
+          </Text>
+          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+            {t('compositionMessageBubble.open', 'Ouvrir')}
+          </Text>
+        </View>
+      </TouchableOpacity>
 
-  if (!proposeLaReponse) return carte;
-
-  // ♿ BULLE — avec les boutons, le CADRE passe a un conteneur qui porte la
-  // carte PUIS les boutons, cote a cote et non imbriques : un bouton range dans
-  // un element accessible (la carte) est invisible pour VoiceOver et TalkBack.
-  return (
-    <View style={cadre}>
-      {carte}
-      <CompositionAnswerBar
-        eventId={eventId}
-        publishedVersion={publishedVersion}
-        teamId={teamId}
-        viewerId={viewerId}
-      />
+      {/* ♿ BULLE — les boutons de reponse, a la suite et non imbriques, pour
+          la meme raison que le terrain. */}
+      {proposeLaReponse ? (
+        <CompositionAnswerBar
+          eventId={eventId}
+          publishedVersion={publishedVersion}
+          teamId={teamId}
+          viewerId={viewerId}
+        />
+      ) : null}
     </View>
   );
 }
@@ -609,9 +638,12 @@ const styles = StyleSheet.create({
     right: 6,
     top: 6,
   },
+  // COMPO-CARTE-SITE — le terrain est sorti de `body` : il reprend a la main
+  // l'ecart que `gap` (8) lui donnait en plus de sa marge (4).
   fieldTouch: {
     alignSelf: 'center',
-    marginVertical: 4,
+    marginBottom: 4,
+    marginTop: 12,
   },
   footer: {
     alignItems: 'center',
@@ -652,8 +684,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
+  // Hors de `body` lui aussi : son ecart (8) et ses marges laterales (14).
   roster: {
     gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 14,
   },
   rosterGroup: {
     gap: 2,
