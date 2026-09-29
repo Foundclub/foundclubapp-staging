@@ -72,6 +72,10 @@ const ABSENT_APPEL = {
 
 const DEBUT = Date.parse('2026-09-28T18:00:00.000Z');
 const TROIS_HEURES_APRES = DEBUT + 3 * 60 * 60 * 1000;
+// FINITIONS4 (D6, decision du chef du 29/09) : « Relancer » n est JAMAIS propose
+// sur un evenement termine. L1 et L3 verifient les OPTIONS : ils regardent donc
+// le match la veille, quand relancer a encore un sens.
+const LA_VEILLE = DEBUT - 24 * 60 * 60 * 1000;
 
 /**
  * Les proprietes de la liste d un match d hier, vu par l entraineur.
@@ -140,7 +144,7 @@ const textes = (arbre) => arbre.root.findAllByType(Text)
   .filter((enfant) => typeof enfant === 'string');
 
 test('POINTAGE-L1 — options cochees : « Relancer » et « Faire l appel » sont la', async () => {
-  const arbre = await monter(proprietes());
+  const arbre = await monter({ ...proprietes(), nowMs: LA_VEILLE });
 
   expect(titres(arbre)).toContain('eventDetails.actions.remind');
   expect(titres(arbre)).toContain('eventDetails.nextAction.action');
@@ -154,7 +158,7 @@ test('POINTAGE-L2 — 🚨 reponses decochees : plus de « Relancer »', async (
 });
 
 test('POINTAGE-L3 — 🚨 arrivees decochees : plus de « Faire l appel »', async () => {
-  const arbre = await monter(proprietes({ arrivalTrackingEnabled: false }));
+  const arbre = await monter({ ...proprietes({ arrivalTrackingEnabled: false }), nowMs: LA_VEILLE });
 
   expect(titres(arbre)).not.toContain('eventDetails.nextAction.action');
   expect(titres(arbre)).toContain('eventDetails.actions.remind');

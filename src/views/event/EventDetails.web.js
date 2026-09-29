@@ -555,6 +555,15 @@ function EventDetails({ navigation, route }) {
     () => resolveIsMatchFinished({ eventEndedAt, serverNowMs: serverClockMs }),
     [eventEndedAt, serverClockMs],
   );
+  // 🏁 FINITIONS4 (D6, recette du 29/09) — LA REGLE DU TELEPHONE
+  // (`EventParticipants.js`) : quand une reponse n est plus attendue (« Les
+  // participants repondent » decochee, ou evenement termine), « Sans réponse »
+  // devient « pas renseigné », un seul mot ; reponses decochees, les groupes
+  // Present / Absent vides et leurs messages disparaissent.
+  const reponsesOuvertes = isRsvpEnabled(event);
+  const libelleSansReponse = reponsesOuvertes && !isMatchFinished
+    ? t('eventDetails.participationStatus.notAnswered', 'Sans réponse')
+    : t('eventDetails.attendanceBadge.notReported', 'Pas renseigné');
   const {
     data: matchStatsPayload,
     isFetching: isMatchStatsFetching,
@@ -1385,7 +1394,9 @@ function EventDetails({ navigation, route }) {
     const staff = section.staff || {};
     const present = t('eventDetails.present', 'Présent');
     const absent = t('eventParticipants.absent', 'Absent');
-    const sansReponse = t('eventParticipants.noAnswer', 'Sans réponse');
+    const sansReponse = reponsesOuvertes && !isMatchFinished
+      ? t('eventParticipants.noAnswer', 'Sans réponse')
+      : libelleSansReponse;
     const rangees = [
       ...(staff.participating || []).map((person) => [person, present]),
       ...(staff.missing || []).map((person) => [person, absent]),
@@ -1430,23 +1441,23 @@ function EventDetails({ navigation, route }) {
           {getParticipantSectionBadge(section)}
         </span>
       </div>
-      {renderParticipantGroup(
+      {reponsesOuvertes || section.participating.length > 0 ? renderParticipantGroup(
         'participating',
         t('eventDetails.participationStatus.participating', 'Présent·e·s'),
         section.participating,
         t('eventDetails.emptyStates.noConfirmation', 'Personne n\'a encore confirmé sa présence.'),
-      )}
-      {renderParticipantGroup(
+      ) : null}
+      {reponsesOuvertes || section.missing.length > 0 ? renderParticipantGroup(
         'missing',
         t('eventDetails.participationStatus.missing', 'Absent·e·s'),
         section.missing,
         t('eventDetails.emptyStates.noAbsence', 'Aucune absence signalée.'),
-      )}
+      ) : null}
       {renderParticipantGroup(
         'notAnswered',
-        t('eventDetails.participationStatus.notAnswered', 'Sans réponse'),
+        libelleSansReponse,
         section.notAnswered,
-        t('eventDetails.emptyStates.allAnswered', 'Tout le monde a répondu.'),
+        reponsesOuvertes ? t('eventDetails.emptyStates.allAnswered', 'Tout le monde a répondu.') : '',
       )}
       {renderStaffGroup(section)}
     </div>
