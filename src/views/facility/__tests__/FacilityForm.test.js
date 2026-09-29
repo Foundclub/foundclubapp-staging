@@ -988,3 +988,127 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
     expect(champ('Fermeture')).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// ✂️ FINITIONS3 (29/09, tournee 5, defaut 1) — une installation posee HORS de l app
+// (base, import, demo) n a pas de coordonnees. Changer seulement l heure d ouverture
+// affichait « Selectionne une adresse geolocalisee » : l installation etait ineditable.
+// Decision du chef (A) : adresse NON touchee ⇒ on enregistre sans l exiger, et elle ne
+// part pas (le serveur garde la sienne) ; adresse CHANGEE ⇒ l exigence d avant reste.
+// Le meme formulaire sert le club et la collectivite : la regle vaut pour les deux.
+// ROUGE avant : l enregistrement etait refuse dans les deux modes.
+// ---------------------------------------------------------------------------
+describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', () => {
+  // Telle que le serveur la rend pour une installation posee en base : un libelle, pas de GPS.
+  const ADRESSE_POSEE_EN_BASE = { label: 'Gymnase de la Recette, 13001 Marseille' };
+  const INSTALLATION_SANS_GPS = {
+    address: ADRESSE_POSEE_EN_BASE,
+    closingTime: '22:00:00.000',
+    documentId: 'gymnase-recette',
+    maxSlots: 2,
+    name: 'Gymnase de la Recette',
+    openingTime: '08:00:00.000',
+    type: 'Gymnase',
+  };
+  const MESSAGE = 'Sélectionne une adresse géolocalisée dans la liste.';
+  const champ = (/** @type {string} */ libelle) => mockInputProps
+    .filter((props) => props.label === libelle).pop();
+
+  beforeEach(() => {
+    mockSaveCollectivite.mockResolvedValue({ data: { documentId: 'gymnase-recette' } });
+    mockCollectiviteInstallations = {
+      data: [INSTALLATION_SANS_GPS], error: null, isLoading: false, refetch: jest.fn(),
+    };
+  });
+
+  it('collectivité : seule l heure change ⇒ l enregistrement part, sans adresse', async () => {
+    const arbre = await monterEcran({
+      params: { collectiviteId: 'ville-de-recette', facilityId: 'gymnase-recette' },
+    });
+    await act(async () => {
+      champ('Ouverture').onChangeText('09:00');
+    });
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockSaveCollectivite).toHaveBeenCalledTimes(1);
+    const [{ data, facilityId }] = mockSaveCollectivite.mock.calls[0];
+    expect(facilityId).toBe('gymnase-recette');
+    expect(data.openingTime).toBe('09:00');
+    expect(data.closingTime).toBe('22:00');
+    // Absente du corps = inchangee cote serveur (`readInstallationPayload`, partial).
+    expect('address' in data).toBe(false);
+    expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('club : même formulaire, même règle — la mise à jour part sans adresse', async () => {
+    const arbre = await monterEcran({
+      facility: { ...INSTALLATION_SANS_GPS, planningColor: FACILITY_PLANNING_PALETTE[1] },
+      params: { facilityId: 'gymnase-recette' },
+    });
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(updateFacility).toHaveBeenCalledTimes(1);
+    const [documentId, charge] = /** @type {any} */ (updateFacility).mock.calls[0];
+    expect(documentId).toBe('gymnase-recette');
+    expect(charge.name).toBe('Gymnase de la Recette');
+    expect('address' in charge).toBe(false);
+  });
+
+  it('adresse CHANGÉE pour une adresse sans coordonnées ⇒ refus inchangé', async () => {
+    const arbre = await monterEcran({
+      params: { collectiviteId: 'ville-de-recette', facilityId: 'gymnase-recette' },
+    });
+    await choisirAdresse(ADRESSE_SANS_GPS);
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(mockSaveCollectivite).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith('Erreur', MESSAGE);
+    expect(dernieresProps(mockAddressProps).error).toBe(MESSAGE);
+  });
+
+  it('adresse vidée ⇒ refus inchangé (vider, c est toucher)', async () => {
+    const arbre = await monterEcran({
+      facility: INSTALLATION_SANS_GPS,
+      params: { facilityId: 'gymnase-recette' },
+    });
+    await choisirAdresse(undefined);
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(updateFacility).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith('Erreur', MESSAGE);
+  });
+
+  it('aucune adresse du tout, non touchée : l enregistrement part aussi', async () => {
+    const arbre = await monterEcran({
+      facility: { ...INSTALLATION_SANS_GPS, address: null },
+      params: { facilityId: 'gymnase-recette' },
+    });
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(updateFacility).toHaveBeenCalledTimes(1);
+    expect('address' in /** @type {any} */ (updateFacility).mock.calls[0][1]).toBe(false);
+  });
+
+  it('adresse géocodée non touchée : elle part normalisée, comme avant', async () => {
+    const arbre = await monterEcran({
+      facility: { ...INSTALLATION_SANS_GPS, address: ADRESSE_GEOCODEE },
+      params: { facilityId: 'gymnase-recette' },
+    });
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    const [, charge] = /** @type {any} */ (updateFacility).mock.calls[0];
+    expect(charge.address).toEqual({
+      description: '3 Boulevard Michelet 13008 Marseille',
+      geometry: { coordinates: [5.395, 43.269], type: 'Point' },
+    });
+  });
+});
