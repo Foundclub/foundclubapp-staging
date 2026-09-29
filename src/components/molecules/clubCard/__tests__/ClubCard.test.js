@@ -404,3 +404,56 @@ describe('ClubCard — MARQUEE : une carte HORS ECRAN n\'anime rien', () => {
     expect(getActiveMarqueeCount()).toBe(0);
   });
 });
+
+// ANNUAIRE-E1 (29/09) — sur l'annuaire du site, la carte est un VRAI lien vers la fiche publique :
+// Google le suit, un clic du milieu ou Ctrl+clic l'ouvre ailleurs. Un clic simple reste une
+// navigation DANS le site (onPress), sans rechargement.
+describe('ClubCard — ANNUAIRE-E1 : le lien vers la fiche, sur le site', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const osDOrigine = Platform.OS;
+  const FICHE = '/annuaire/clubs/club-1/fc-marseille-nord/';
+
+  afterEach(() => { Platform.OS = osDOrigine; });
+
+  it('sur le site : la carte porte l adresse de la fiche et se lit comme un lien', () => {
+    Platform.OS = 'web';
+    const tree = renderCard({ href: FICHE, item: baseClub, onPress: jest.fn() });
+    const carte = tree.root.findAllByType(TouchableOpacity)[0];
+    expect(carte.props.href).toBe(FICHE);
+    expect(carte.props.accessibilityRole).toBe('link');
+  });
+
+  it('clic simple : navigation dans le site, le rechargement du lien est empêché', () => {
+    Platform.OS = 'web';
+    const onPress = jest.fn();
+    const preventDefault = jest.fn();
+    const tree = renderCard({ href: FICHE, item: baseClub, onPress });
+    act(() => {
+      const carte = tree.root.findAllByType(TouchableOpacity)[0];
+      carte.props.onPress({ nativeEvent: {}, preventDefault });
+    });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(onPress).toHaveBeenCalled();
+  });
+
+  it('Ctrl + clic : le navigateur ouvre le lien ailleurs, la page ne bouge pas', () => {
+    Platform.OS = 'web';
+    const onPress = jest.fn();
+    const preventDefault = jest.fn();
+    const tree = renderCard({ href: FICHE, item: baseClub, onPress });
+    act(() => {
+      const carte = tree.root.findAllByType(TouchableOpacity)[0];
+      carte.props.onPress({ nativeEvent: { ctrlKey: true }, preventDefault });
+    });
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('📌 sur le téléphone, l adresse est ignorée : la carte reste un bouton', () => {
+    Platform.OS = 'ios';
+    const tree = renderCard({ href: FICHE, item: baseClub, onPress: jest.fn() });
+    const carte = tree.root.findAllByType(TouchableOpacity)[0];
+    expect(carte.props.href).toBeUndefined();
+    expect(carte.props.accessibilityRole).toBe('button');
+  });
+});
