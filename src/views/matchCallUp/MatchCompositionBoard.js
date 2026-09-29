@@ -73,6 +73,7 @@ import {
   removePlayerFromField,
 } from './matchCompositionUtils';
 import { getMatchFormationByKey } from './matchFormationCatalog';
+import useSiteCompositionRecovery from './useSiteCompositionRecovery';
 
 /**
  * D79 — ECRANS 5 et 6 du pack composition : le terrain + banc, et la feuille
@@ -108,6 +109,13 @@ const SOURCE_BENCH = 'bench';
 /** Retrait lateral de l'enveloppe du terrain (le calcul de taille du site le deduit). */
 const FIELD_WRAPPER_PADDING = 14;
 
+/**
+ * ⌨️ COMPO-WEB — ou poser un joueur AU CLAVIER quand le sport n'a aucun poste
+ * dessine (ou qu'ils sont tous pris) : la premiere case libre d'une grille 4 x 4.
+ */
+const GRILLE_CLAVIER = Object.freeze([20, 40, 60, 80]
+  .flatMap((y) => [20, 40, 60, 80].map((x) => Object.freeze({ x, y }))));
+
 function MatchCompositionBoard() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -123,10 +131,15 @@ function MatchCompositionBoard() {
   // photo prise a la publication, et une compo republiee depuis doit se voir.
   const [relectureServeur, setRelectureServeur] = useState(/** @type {any} */ (null));
 
+  // 🌐 COMPO-WEB — sur le SITE, un terrain arrive par l'adresse (lien,
+  // rechargement) SANS ses joueurs : il les relit sur le serveur, et
+  // `recovery.publicationBlocked` ferme la publication tant qu'il n'en a aucun.
+  // Sur le telephone, ce crochet rend `route.params` tel quel, sans blocage.
+  const { params: paramsRecus, recovery } = useSiteCompositionRecovery(route.params, 'field');
   /** @type {any} */
   const params = useMemo(
-    () => ({ ...(route.params || {}), ...(relectureServeur || {}) }),
-    [relectureServeur, route.params],
+    () => ({ ...(paramsRecus || {}), ...(relectureServeur || {}) }),
+    [paramsRecus, relectureServeur],
   );
   const {
     canEdit = false,
@@ -170,6 +183,12 @@ function MatchCompositionBoard() {
   // telephone ce cas n'existe pas : la selection refuse « Suivant » a 0 coche.
   const isReadOnly = Boolean(readOnly)
     || !Array.isArray(selectedPlayers) || selectedPlayers.length === 0;
+  // 🔒 COMPO-WEB — JAMAIS UNE PUBLICATION VIDE PAR ACCIDENT. La garde ci-dessus
+  // reste le FILET (un terrain sans joueur ne s'ouvre pas en ecriture). Celle-ci
+  // couvre ce qu'elle ne voit pas — relecture du serveur en cours ou en echec,
+  // convoque introuvable — et c'est elle qui DIT pourquoi (bandeau), des que
+  // l'ecriture etait demandee. Sur le telephone, le crochet ne bloque jamais.
+  const publicationBloquee = !readOnly && Boolean(recovery?.publicationBlocked);
 
   // 🔄 COMPOMSG — OUVERT DEPUIS UNE CARTE DU FIL, LE PLATEAU RELIT LA DERNIERE
   // VERSION PUBLIEE.
@@ -322,6 +341,80 @@ function MatchCompositionBoard() {
       });
     return map;
   }, [selectedPlayers]);
+
+  // ⌨️ COMPO-WEB — LE CHEMIN SANS SOURIS, SUR LE SITE.
+  //
+  // Decision d'Adel (29/09) : sur ordinateur, l'entraineur place ses joueurs a
+  // la souris (glisser-deposer) ET au clavier. Le chemin clavier tient en deux
+  // gestes : Entree (ou Espace) sur un jeton le CHOISIT, puis Entree sur un
+  // poste libre l'y POSE — ou « Remettre au banc ».
+  // ♻️ Aucune regle neuve : poser passe par `placePlayerAt`, retirer par
+  // `removePlayerFromField`, exactement comme le lacher du glisser-deposer.
+  // ⛔ Telephone : rien ne change (`Platform.OS`), le glisser-deposer y reste le
+  // seul geste.
+  const clavierActif = Platform.OS === 'web' && !isReadOnly;
+  const [joueurAuClavier, setJoueurAuClavier] = useState(/** @type {string | null} */ (null));
+  const joueurChoisi = clavierActif && joueurAuClavier ? playerById.get(joueurAuClavier) || null : null;
+  const nomDuJoueurChoisi = joueurChoisi
+    ? `${joueurChoisi?.firstname || ''} ${joueurChoisi?.lastname || ''}`.trim()
+    : '';
+  const joueurChoisiSurLeTerrain = Boolean(joueurChoisi) && placements
+    .some((/** @type {any} */ placement) => String(placement?.playerId || '') === joueurAuClavier);
+  const caseLibreAuClavier = GRILLE_CLAVIER.find(({ x, y }) => !placements.some(
+    (/** @type {any} */ placement) => Math.abs(Number(placement?.positionX) - x) < 8
+      && Math.abs(Number(placement?.positionY) - y) < 8,
+  )) || GRILLE_CLAVIER[0];
+
+  const choisirAuClavier = useCallback((/** @type {any} */ player) => {
+    const playerId = getCompositionPlayerId(player);
+    if (!playerId) return;
+    setJoueurAuClavier((current) => (current === playerId ? null : playerId));
+  }, []);
+
+  const toucheSurUnJeton = useCallback((/** @type {any} */ player) => (/** @type {any} */ event) => {
+    const touche = event?.nativeEvent?.key || event?.key;
+    if (touche === 'Escape') {
+      setJoueurAuClavier(null);
+      return;
+    }
+    if (touche !== 'Enter' && touche !== ' ') return;
+    event?.preventDefault?.();
+    choisirAuClavier(player);
+  }, [choisirAuClavier]);
+
+  const poserAuClavier = useCallback((/** @type {{ x: number, y: number, surUnPoste: boolean }} */ cible) => {
+    if (!joueurAuClavier) return;
+    setPlacements((current) => placePlayerAt({
+      // Un poste NOMME (« au poste GB ») est vise expres : le jeton s'y accroche.
+      magnetEnabled: cible.surUnPoste,
+      placements: current,
+      playerId: joueurAuClavier,
+      slots,
+      x: cible.x,
+      y: cible.y,
+    }));
+    setJoueurAuClavier(null);
+  }, [joueurAuClavier, slots]);
+
+  // 🔒 COMPO-WEB — ce que dit le bandeau de garde, selon la raison du blocage.
+  let gardeTitre = t('matchComposition.board.guard.emptyTitle');
+  let gardeMessage = t('matchComposition.board.guard.emptyMessage');
+  if (recovery?.status === 'loading') {
+    gardeTitre = t('matchComposition.board.guard.loading');
+    gardeMessage = '';
+  } else if (recovery?.status === 'failed') {
+    gardeTitre = t('matchComposition.board.guard.failedTitle');
+    gardeMessage = t('matchComposition.board.guard.failedMessage');
+  } else if (recovery?.status === 'missing') {
+    gardeTitre = t('matchComposition.board.guard.missingTitle');
+    gardeMessage = t('matchComposition.board.guard.missingMessage', { count: recovery.missingCount });
+  }
+
+  const remettreAuBancAuClavier = useCallback(() => {
+    if (!joueurAuClavier) return;
+    setPlacements((current) => removePlayerFromField(current, joueurAuClavier));
+    setJoueurAuClavier(null);
+  }, [joueurAuClavier]);
 
   // --- Glisser-deposer : le rectangle du terrain est la seule zone mesuree.
   // Lacher DEDANS place, lacher DEHORS remet au banc. C'est ce qui fait les deux
@@ -500,7 +593,7 @@ function MatchCompositionBoard() {
   // bouton cache un geste ; le fermer a la source le supprime. Les 2 seules
   // ecritures de l'ecran passent par ces 2 fonctions.
   const handleSave = useCallback(async () => {
-    if (isReadOnly) return;
+    if (isReadOnly || publicationBloquee) return;
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
     try {
@@ -515,10 +608,10 @@ function MatchCompositionBoard() {
     } finally {
       setIsBusy(false);
     }
-  }, [buildPack, eventId, handleActionError, isBusy, isReadOnly, t, teamId]);
+  }, [buildPack, eventId, handleActionError, isBusy, isReadOnly, publicationBloquee, t, teamId]);
 
   const handlePublish = useCallback(async () => {
-    if (isReadOnly) return;
+    if (isReadOnly || publicationBloquee) return;
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
     try {
@@ -601,6 +694,7 @@ function MatchCompositionBoard() {
     isBusy,
     isReadOnly,
     navigation,
+    publicationBloquee,
     queryClient,
     startTeamChat,
     t,
@@ -749,6 +843,7 @@ function MatchCompositionBoard() {
               { aspectRatio: 1 / getTacticalFieldAspectRatio(sport) },
               siteFieldSize,
             ]}
+            testID="compo-terrain"
           >
             <RenderedTacticalField sport={sport} style={styles.fieldFill}>
               {/* 🎁 LOT TERRAIN — LES POSTES SE VOIENT ENFIN.
@@ -793,10 +888,20 @@ function MatchCompositionBoard() {
                     accessibilityLabel={t('matchComposition.board.tokenOnField', {
                       name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
                     })}
+                    accessibilityRole={clavierActif ? 'button' : undefined}
+                    accessibilityState={clavierActif
+                      ? { selected: joueurAuClavier === String(placement.playerId) }
+                      : undefined}
+                    focusable={clavierActif || undefined}
                     key={`placed-${placement.playerId}`}
+                    // @ts-ignore — `onKeyDown` n'existe que sur le site (react-native-web).
+                    onKeyDown={clavierActif ? toucheSurUnJeton(player) : undefined}
                     style={[
                       styles.fieldToken,
                       { left: `${placement.positionX}%`, top: `${placement.positionY}%` },
+                      joueurAuClavier === String(placement.playerId) && clavierActif
+                        ? [styles.jetonChoisi, { borderColor: Colors.primary500 }]
+                        : null,
                     ]}
                   >
                     <DraggableToken isOnField player={player} />
@@ -815,6 +920,40 @@ function MatchCompositionBoard() {
                   </GestureDetector>
                 );
               })}
+              {/* ⌨️ COMPO-WEB — un joueur est choisi au clavier : chaque poste
+                  LIBRE devient une cible (un vrai bouton, atteignable a la
+                  tabulation). Sans poste libre, une seule cible : la premiere
+                  case libre du terrain. */}
+              {joueurChoisi ? (freeSlots.length > 0 ? freeSlots : [null]).map((
+                /** @type {any} */ entry,
+              ) => (
+                <TouchableOpacity
+                  accessibilityLabel={entry
+                    ? t('matchComposition.board.keyboard.placeOnSlot', {
+                      label: entry.label, name: nomDuJoueurChoisi,
+                    })
+                    : t('matchComposition.board.keyboard.placeOnField', { name: nomDuJoueurChoisi })}
+                  accessibilityRole="button"
+                  activeOpacity={0.8}
+                  key={`cible-${entry ? entry.slotId : 'terrain'}`}
+                  onPress={() => poserAuClavier(entry
+                    ? { surUnPoste: true, x: entry.positionX, y: entry.positionY }
+                    : { surUnPoste: false, x: caseLibreAuClavier.x, y: caseLibreAuClavier.y })}
+                  style={[
+                    styles.cibleClavier,
+                    {
+                      backgroundColor: withAlpha(Colors.primary500, 0.22),
+                      borderColor: Colors.primary500,
+                      left: `${entry ? entry.positionX : caseLibreAuClavier.x}%`,
+                      top: `${entry ? entry.positionY : caseLibreAuClavier.y}%`,
+                    },
+                  ]}
+                >
+                  <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {entry ? entry.label : '+'}
+                  </Text>
+                </TouchableOpacity>
+              )) : null}
             </RenderedTacticalField>
           </View>
         </View>
@@ -840,6 +979,41 @@ function MatchCompositionBoard() {
               </Text>
             )}
           </View>
+          {/* ⌨️ COMPO-WEB — le chemin clavier se DIT (sinon personne ne le trouve),
+              et le joueur choisi s'annonce au lecteur d'ecran. */}
+          {clavierActif ? (
+            <View accessibilityLiveRegion="polite" style={styles.clavierBar}>
+              <Text style={[Fonts.p4, styles.clavierTexte, { color: Colors.neutral300 }]}>
+                {joueurChoisi
+                  ? t('matchComposition.board.keyboard.picked', { name: nomDuJoueurChoisi })
+                  : t('matchComposition.board.keyboard.hint')}
+              </Text>
+              {joueurChoisiSurLeTerrain ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  activeOpacity={0.8}
+                  onPress={remettreAuBancAuClavier}
+                  style={[styles.clavierAction, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                    {t('matchComposition.board.keyboard.toBench', { name: nomDuJoueurChoisi })}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {joueurChoisi ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  activeOpacity={0.8}
+                  onPress={() => setJoueurAuClavier(null)}
+                  style={[styles.clavierAction, { borderColor: withAlpha(Colors.neutral00, 0.28) }]}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {t('matchComposition.board.keyboard.cancel')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
           <ScrollView
             contentContainerStyle={styles.benchContent}
             horizontal
@@ -851,12 +1025,19 @@ function MatchCompositionBoard() {
               </Text>
             ) : null}
             {benchPlayers.map((/** @type {any} */ player) => {
+              const estChoisi = clavierActif && joueurAuClavier === getCompositionPlayerId(player);
               const jeton = (
                 <View
                   accessibilityLabel={t('matchComposition.board.tokenOnBench', {
                     name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
                   })}
+                  accessibilityRole={clavierActif ? 'button' : undefined}
+                  accessibilityState={clavierActif ? { selected: estChoisi } : undefined}
+                  focusable={clavierActif || undefined}
                   key={`bench-${getCompositionPlayerId(player)}`}
+                  // @ts-ignore — `onKeyDown` n'existe que sur le site (react-native-web).
+                  onKeyDown={clavierActif ? toucheSurUnJeton(player) : undefined}
+                  style={estChoisi ? [styles.jetonChoisi, { borderColor: Colors.primary500 }] : undefined}
                 >
                   <DraggableToken player={player} />
                 </View>
@@ -905,18 +1086,44 @@ function MatchCompositionBoard() {
 
         {/* 🔒 COMPOLECT (D1) — EN CONSULTATION, LE PIED D'ECRAN NE PORTE PLUS
             AUCUNE ACTION D'ECRITURE. Le terrain gagne la place. */}
+        {/* 🔒 COMPO-WEB — POURQUOI ON NE PEUT PAS PUBLIER, dit en clair. Le terrain
+            est arrive vide (lien, rechargement) et la relecture du serveur n'a
+            rien rendu : publier remplacerait la vraie compo par une compo vide. */}
+        {publicationBloquee ? (
+          <View
+            accessibilityLiveRegion="polite"
+            style={[
+              styles.gardeBanner,
+              {
+                backgroundColor: withAlpha(Colors.warning500, 0.09),
+                borderColor: withAlpha(Colors.warning500, 0.34),
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{gardeTitre}</Text>
+            {gardeMessage ? (
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{gardeMessage}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {isReadOnly ? null : (
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <Button
+              disabled={publicationBloquee}
               onPress={handleSave}
               style={styles.footerSave}
               title={t('matchComposition.board.actions.save')}
               variant="Secondary"
             />
             <Button
+              disabled={publicationBloquee}
               icon="send"
               iconPosition="before"
-              onPress={() => setIsSheetVisible(true)}
+              onPress={() => {
+                if (publicationBloquee) return;
+                setIsSheetVisible(true);
+              }}
               style={styles.footerPublish}
               title={t('matchComposition.board.actions.publish')}
               variant="Primary"
@@ -1091,6 +1298,37 @@ const styles = StyleSheet.create({
   chipSpacer: {
     flex: 1,
   },
+  // ⌨️ COMPO-WEB — la cible d'un poste, choisie au clavier : un cercle plein,
+  // plus gros que le repere en pointilles qu'il recouvre (44 px, cible tactile).
+  cibleClavier: {
+    alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: 2,
+    height: 44,
+    justifyContent: 'center',
+    marginLeft: -22,
+    marginTop: -22,
+    position: 'absolute',
+    width: 44,
+  },
+  clavierAction: {
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 32,
+    paddingHorizontal: 12,
+  },
+  clavierBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+  },
+  clavierTexte: {
+    flexShrink: 1,
+  },
   dragGhostLayer: {
     bottom: 0,
     left: 0,
@@ -1152,6 +1390,15 @@ const styles = StyleSheet.create({
   footerSave: {
     flex: 1,
   },
+  // 🔒 COMPO-WEB — le bandeau qui dit pourquoi la publication est fermee.
+  gardeBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 12,
+  },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1161,6 +1408,11 @@ const styles = StyleSheet.create({
   },
   headerTexts: {
     flex: 1,
+  },
+  // ⌨️ COMPO-WEB — le jeton choisi au clavier porte un anneau.
+  jetonChoisi: {
+    borderRadius: 16,
+    borderWidth: 2,
   },
   responseRow: {
     alignItems: 'center',
