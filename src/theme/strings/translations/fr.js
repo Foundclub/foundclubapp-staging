@@ -6287,6 +6287,9 @@ export default {
     participantsSummary: {
       nextReminder: 'Prochaine relance possible le {{date}}',
       responses: '{{received}} réponses sur {{total}}',
+      // FINITIONS2 (recette du 29/09) — « 1 réponses sur 1 » : un vrai pluriel.
+      responses_one: '{{received}} réponse sur {{total}}',
+      responses_other: '{{received}} réponses sur {{total}}',
     },
     participationStatus: {
       missing: 'Absent·e·s',
