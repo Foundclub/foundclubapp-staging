@@ -396,6 +396,50 @@ function PrivateNavigator() {
             headerTitle: t('privateNavigator.headers.multisportManagement', 'Gestion CM'),
           }}
         />
+        {/* COLLECTIVITES 1c — l espace du gestionnaire de mairie, a la RACINE : la porte
+            (Profil) et la notification d une nouvelle demande (ctaRoute) y menent. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteHome').default}
+          name={RouteNames.CollectiviteHome}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.home.header', 'Ma collectivité'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteRequests').default}
+          name={RouteNames.CollectiviteRequests}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.requests.header', 'Demandes de la Ville'),
+          }}
+        />
+        {/* COLLECTIVITES 1c — les installations de la Ville : la liste et le formulaire du
+            club, en mode collectivite (route.params.collectiviteId). */}
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/FacilityList').default}
+          name={RouteNames.CollectiviteInstallations}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.installations.header', 'Installations de la Ville'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteClubs').default}
+          name={RouteNames.CollectiviteClubs}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.clubs.header', 'Clubs rattachés'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/FacilityForm').default}
+          name={RouteNames.CollectiviteInstallationForm}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
         <Stack.Screen
           getComponent={() => require('@/views/multisportClub/MyClubsScreen').default}
           name={RouteNames.MyClubs}

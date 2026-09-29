@@ -1904,9 +1904,21 @@ export default {
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
+    //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
+    COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Tu ne gères pas cette collectivité.',
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_INSTALLATION_NOT_FOUND: "Cette installation n'est pas l'une de celles de la collectivité.",
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : vérifie le nom, le type, les horaires (HH:MM) et la capacité.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
+    //   COLLECTIVITES 3a/1c — accepter une demande d installation : la place a ete prise par
+    //   une autre acceptation depuis la demande (409), ou ce compte n est pas le proprietaire.
+    // eslint-disable-next-line max-len
+    FACILITY_OVERRIDE_CAPACITY_CHANGED: 'Plus de place : une autre demande a été acceptée sur ce moment entre-temps. Tu peux refuser celle-ci.',
+    // eslint-disable-next-line max-len
+    FACILITY_OVERRIDE_OWNER_REQUIRED: "Seul le propriétaire de l'installation (club, structure ou collectivité) tranche cette demande.",
     generic: 'Une erreur est survenue. Merci de réessayer plus tard.',
     HAD_PENDING_MEMBERSHIP_REQUEST_POLICY_ERROR: "Tu as déjà une demande d'adhésion en attente.",
     MANAGER_TRAINER_CLUB_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et dirigeant·e·s du club.',
@@ -4489,6 +4501,84 @@ export default {
     },
     search: {
       placeholder: 'Rechercher une équipe...',
+    },
+  },
+  collectivite: {
+    clubs: {
+      counts: 'Équipes : {{teams}} · Membres : {{members}}',
+      empty: 'Aucun club rattaché pour l’instant.',
+      header: 'Clubs rattachés',
+      hint: 'Le contact général de chaque club et des nombres : jamais le nom d’un membre.',
+      noContact: 'Pas de contact renseigné par le club.',
+      title: 'Clubs rattachés : {{nombre}}',
+    },
+    entry: {
+      label: 'Ma collectivité · {{name}}',
+    },
+    home: {
+      cards: {
+        clubs: {
+          hint: 'Leur contact, leurs équipes et leurs membres (des nombres).',
+          title: 'Clubs rattachés',
+        },
+        installations: {
+          hint: 'Horaires, capacité, planning de chaque installation.',
+          title: 'Installations',
+        },
+        requests: {
+          hint: 'À trancher : accepter ou refuser, avec un message.',
+          title: 'Demandes en attente',
+        },
+      },
+      header: 'Ma collectivité',
+      kicker: 'Ma collectivité',
+      notManaged: 'Tu ne gères pas cette collectivité.',
+      // eslint-disable-next-line max-len
+      subtitle: 'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
+    },
+    installations: {
+      header: 'Installations de la Ville',
+    },
+    requests: {
+      actions: {
+        approve: 'Accepter',
+        refuse: 'Refuser',
+      },
+      conflict: {
+        free: 'Personne n’occupe ce moment : la place est libre.',
+        occupant: 'Déjà là : {{club}} · {{team}} ({{slot}})',
+        remaining: 'Place restante : {{remaining}} sur {{max}}',
+      },
+      decisionReason: 'Ton message : {{message}}',
+      emptyDecided: 'Aucune demande traitée pour l’instant.',
+      emptyPending: 'Aucune demande en attente.',
+      header: 'Demandes de la Ville',
+      modal: {
+        // eslint-disable-next-line max-len
+        approveHint: 'Le club reçoit ta réponse et ton message. S’il y avait un occupant, il est prévenu.',
+        approvePlaceholder: 'Un mot pour le club (facultatif)',
+        approveTitle: 'Accepter la demande',
+        cancel: 'Annuler',
+        reasonRequired: 'Écris le motif : le club le lira.',
+        refuseHint: 'Le club reçoit ton motif ; son entraînement est annulé.',
+        refusePlaceholder: 'Le motif du refus (obligatoire)',
+        refuseTitle: 'Refuser la demande',
+      },
+      once: 'Ponctuel',
+      reason: 'Motif : {{reason}}',
+      requestedBy: 'Demandé par {{name}}',
+      retry: 'Réessayer',
+      status: {
+        approved: 'Acceptée',
+        refused: 'Refusée',
+      },
+      tabs: {
+        decided: 'Traitées',
+        pending: 'En attente ({{nombre}})',
+      },
+      title: 'Demandes de la Ville',
+      unknownClub: 'Club',
+      weekly: 'Chaque semaine',
     },
   },
   comingSoonLeagueScreen: {
@@ -7788,6 +7878,7 @@ export default {
     },
     errors: {
       addressGeocodeRequired: 'Sélectionne une adresse géolocalisée dans la liste.',
+      closingBeforeOpening: 'La fermeture doit suivre l’ouverture.',
       contextMissing: 'Impossible de récupérer les informations du club.',
       planningColorInvalid: 'Sélectionne une couleur validé.',
       saveFailed: "Une erreur est survenue lors de l'enregistrement.",
@@ -7796,7 +7887,9 @@ export default {
       address: 'Adresse (lieu exact)',
       capacity: 'Capacité',
       capacityConflictMode: 'Comportement en cas de conflit',
+      closingTime: 'Fermeture',
       name: 'Nom de l\'installation',
+      openingTime: 'Ouverture',
       planningColor: 'Couleur dans le planning',
       type: 'Type — requis',
     },
@@ -7841,6 +7934,7 @@ export default {
       colorInvalid: 'Sélectionne une couleur validé',
       colorRequired: 'Sélectionne une couleur',
       nameRequired: 'Le nom est requis',
+      timeFormat: 'Format attendu : HH:MM (ex. 08:00)',
       typeRequired: 'Le type est requis',
     },
   },
@@ -7868,7 +7962,10 @@ export default {
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
+    // eslint-disable-next-line max-len
+    collectiviteEmpty: 'Ajoute les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
     collectiviteOwnerHint: 'Installation de {{ownerName}} : planning en lecture seule.',
+    collectiviteTitle: 'Installations de la Ville',
     defaults: {
       addressMissing: 'Adresse non renseignée',
       facilityName: 'Installation',

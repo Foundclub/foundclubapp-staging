@@ -92,6 +92,13 @@ jest.mock('@/services/facility/facilityQueries', () => ({
   },
 }));
 
+// COLL1C — le mode collectivite lit les installations de LA collectivite.
+/** @type {any} */
+let mockCollectiviteInstallations = { data: undefined, isLoading: false, refetch: jest.fn() };
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useCollectiviteInstallations: () => mockCollectiviteInstallations,
+}));
+
 // Le service est double ENTIEREMENT, fonctions pures comprises : le module
 // importe le client HTTP, qui refuse de se charger sans `API_URL` (piege paye
 // au lot L35, 2026-08-05). `getFacilitySections` est donc reimplemente ici a
@@ -558,5 +565,78 @@ describe('FacilityList — COLL1B : les installations de la collectivite du club
 
     expect(pressableAvecTexte(arbre, 'Supprimer')).toBeUndefined();
     expect(pressableAvecTexte(arbre, 'Modifier')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 🏛️ COLLECTIVITES 1c — ECRAN 4 : les installations de LA collectivite (SPEC §2 B)
+// ROUGE avant l ecran 4 : la liste ne connaissait que le club du compte.
+// ---------------------------------------------------------------------------
+describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () => {
+  const GYMNASE = {
+    address: { description: '1 avenue du Stade, Recette' },
+    capacityConflictMode: 'pending_validation',
+    closingTime: '22:00:00',
+    documentId: 'gymnase-recette',
+    maxSlots: 2,
+    name: 'Gymnase de la Recette',
+    openingTime: '08:00:00',
+    type: 'Gymnase',
+  };
+
+  beforeEach(() => {
+    mockRoute = { params: { collectiviteId: 'ville-de-recette' } };
+    mockCollectiviteInstallations = {
+      data: [GYMNASE], error: null, isLoading: false, isRefetching: false, refetch: jest.fn(),
+    };
+  });
+
+  it('liste les installations de la Ville, horaires compris — jamais celles du club', () => {
+    const textes = textesVisibles(rendre());
+    expect(textes).toContain('Installations de la Ville');
+    expect(textes).toContain('Gymnase de la Recette');
+    expect(textes.includes('08:00 – 22:00')).toBe(true);
+    expect(textes.includes('2 équipes simultanées')).toBe(true);
+    expect(textes).not.toContain('Terrain Honneur');
+    // Aucune lecture du club : le contexte club est demande SANS club ni structure.
+    expect(mockFacilityContextCalls.every(({ contexte }) => !contexte.clubId && !contexte.cmId))
+      .toBe(true);
+  });
+
+  it('pas de « Supprimer » pour le gestionnaire (le serveur ne le lui ouvre pas)', () => {
+    expect(pressableAvecTexte(rendre(), 'Supprimer')).toBeUndefined();
+  });
+
+  it('« Modifier » ouvre le formulaire de la COLLECTIVITE, avec l identifiant', () => {
+    const arbre = rendre();
+    act(() => {
+      pressableAvecTexte(arbre, 'Modifier').props.onPress();
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInstallationForm', {
+      collectiviteId: 'ville-de-recette',
+      facility: expect.objectContaining({ documentId: 'gymnase-recette' }),
+      facilityId: 'gymnase-recette',
+    });
+  });
+
+  it('« Ajouter » ouvre le formulaire VIDE de la collectivité', () => {
+    const arbre = rendre();
+    act(() => {
+      pressableAvecTexte(arbre, 'Ajouter').props.onPress();
+    });
+    expect(mockNavigation.navigate)
+      .toHaveBeenCalledWith('CollectiviteInstallationForm', { collectiviteId: 'ville-de-recette' });
+  });
+
+  it('« Voir le planning » ouvre le planning de CETTE installation (lot 1b)', () => {
+    const arbre = rendre();
+    act(() => {
+      pressableAvecTexte(arbre, 'Voir le planning').props.onPress();
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
+      contextDetailLabel: 'Gymnase de la Recette',
+      facilityId: 'gymnase-recette',
+      sourceType: 'facility',
+    });
   });
 });

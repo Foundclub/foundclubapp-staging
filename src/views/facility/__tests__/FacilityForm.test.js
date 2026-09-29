@@ -103,6 +103,18 @@ jest.mock('@/services/facility/facilityQueries', () => ({
   useGetFacility: () => mockFacilityQuery,
 }));
 
+// COLL1C — le mode collectivite relit l installation dans la liste de la collectivite et
+// enregistre par la route du gestionnaire.
+/** @type {any} */
+let mockCollectiviteInstallations = {
+  data: undefined, error: null, isLoading: false, refetch: jest.fn(),
+};
+const mockSaveCollectivite = jest.fn();
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useCollectiviteInstallations: () => mockCollectiviteInstallations,
+  useSaveCollectiviteInstallation: () => ({ mutateAsync: mockSaveCollectivite }),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   createFacility: jest.fn(),
   updateFacility: jest.fn(),
@@ -867,5 +879,112 @@ describe('FacilityForm — D63 : l ecart entre la maquette et l ecran', () => {
     // 2 et non 1 : un noeud RN se compte deux fois dans l arbre rendu (le
     // composite et son hote), comme le note deja le test de palette de D51.
     expect(anneaux).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 🏛️ COLLECTIVITES 1c — ECRAN 4 : creer / modifier une installation de LA collectivite
+// ROUGE avant l ecran 4 : le formulaire creait toujours sur le club du compte.
+// ---------------------------------------------------------------------------
+describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', () => {
+  /**
+   * Les dernieres props du champ portant ce libelle.
+   * @param {string} libelle
+   * @returns {any}
+   */
+  const champ = (libelle) => mockInputProps.filter((props) => props.label === libelle).pop();
+  const saisir = async (/** @type {string} */ libelle, /** @type {string} */ valeur) => {
+    await act(async () => {
+      champ(libelle).onChangeText(valeur);
+    });
+  };
+
+  beforeEach(() => {
+    mockSaveCollectivite.mockResolvedValue({ data: { documentId: 'gymnase-neuf' } });
+    mockCollectiviteInstallations = {
+      data: undefined, error: null, isLoading: false, refetch: jest.fn(),
+    };
+  });
+
+  it('créer : la route de la COLLECTIVITE, horaires compris ; pas POST /facilities', async () => {
+    const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
+    await saisir('Nom de l\'installation', 'Gymnase Jean Bouin');
+    await choisirAdresse(ADRESSE_GEOCODEE);
+    await saisir('Ouverture', '07:45');
+    await saisir('Fermeture', '22:30');
+
+    await appuyerSur(arbre, 'Créer');
+
+    expect(createFacility).not.toHaveBeenCalled();
+    expect(mockSaveCollectivite).toHaveBeenCalledWith({
+      collectiviteId: 'ville-de-recette',
+      data: {
+        address: {
+          description: '3 Boulevard Michelet 13008 Marseille',
+          geometry: { coordinates: [5.395, 43.269], type: 'Point' },
+        },
+        capacityConflictMode: 'pending_validation',
+        closingTime: '22:30',
+        maxSlots: 1,
+        name: 'Gymnase Jean Bouin',
+        openingTime: '07:45',
+        planningColor: FACILITY_PLANNING_PALETTE[0],
+        type: 'Terrain',
+      },
+      facilityId: null,
+    });
+    expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('modifier par un lien du site (identifiant seul) : relue dans la liste', async () => {
+    mockCollectiviteInstallations = {
+      data: [{
+        address: ADRESSE_GEOCODEE,
+        closingTime: '22:00:00.000',
+        documentId: 'gymnase-recette',
+        maxSlots: 2,
+        name: 'Gymnase de la Recette',
+        openingTime: '08:00:00.000',
+        type: 'Gymnase',
+      }],
+      error: null,
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    const arbre = await monterEcran({
+      params: { collectiviteId: 'ville-de-recette', facilityId: 'gymnase-recette' },
+    });
+    expect(champ('Ouverture').value).toBe('08:00');
+    expect(champ('Fermeture').value).toBe('22:00');
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(updateFacility).not.toHaveBeenCalled();
+    expect(mockSaveCollectivite).toHaveBeenCalledWith(expect.objectContaining({
+      collectiviteId: 'ville-de-recette',
+      data: expect.objectContaining({
+        closingTime: '22:00', maxSlots: 2, name: 'Gymnase de la Recette', openingTime: '08:00',
+      }),
+      facilityId: 'gymnase-recette',
+    }));
+  });
+
+  it('une fermeture avant l ouverture est refusée avant tout appel', async () => {
+    const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
+    await saisir('Nom de l\'installation', 'Salle');
+    await choisirAdresse(ADRESSE_GEOCODEE);
+    await saisir('Ouverture', '20:00');
+    await saisir('Fermeture', '08:00');
+
+    await appuyerSur(arbre, 'Créer');
+
+    expect(mockSaveCollectivite).not.toHaveBeenCalled();
+    expect(champ('Fermeture').error).toBe('La fermeture doit suivre l’ouverture.');
+  });
+
+  it('en mode club, les horaires ne s affichent pas et le corps envoyé ne change pas', async () => {
+    await monterEcran();
+    expect(champ('Ouverture')).toBeUndefined();
+    expect(champ('Fermeture')).toBeUndefined();
   });
 });
