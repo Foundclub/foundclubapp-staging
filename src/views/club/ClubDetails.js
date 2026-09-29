@@ -5,7 +5,15 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Image, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, useWindowDimensions, View,
+  Image,
+  Linking,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -178,11 +186,6 @@ const compareTeamsByAgeCategoryDesc = (teamA, teamB) => {
   return nameA.localeCompare(nameB, 'fr', { numeric: true, sensitivity: 'base' });
 };
 
-/**
- * Club details screen component
- * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
- * @returns {import('react').ReactElement} Club details screen component
- */
 // ANNUAIRE-E1 — sur l'annuaire du site, au-delà de cette largeur, les deux boutons « Je joue » /
 // « Je dirige » quittent le bas de l'écran pour une colonne à droite (planche « ordinateur »).
 const LARGEUR_COLONNE_D_ACTIONS = 1024;
@@ -224,6 +227,11 @@ function CadreDeLaFiche({ annuaire, children, deuxColonnes }) {
   );
 }
 
+/**
+ * Club details screen component
+ * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
+ * @returns {import('react').ReactElement} Club details screen component
+ */
 function ClubDetails({ navigation, route }) {
   const { fromOnboardingAffiliation = false } = route?.params ?? {};
 
@@ -251,7 +259,8 @@ function ClubDetails({ navigation, route }) {
   // publique /annuaire/clubs/<id>/<slug>/. Absent, le téléphone ne change pas.
   const annuaire = route?.params?.annuaire === true;
   const { width: largeurEcran } = useWindowDimensions();
-  const actionsEnColonne = annuaire && Platform.OS === 'web' && largeurEcran >= LARGEUR_COLONNE_D_ACTIONS;
+  const actionsEnColonne = annuaire && Platform.OS === 'web'
+    && largeurEcran >= LARGEUR_COLONNE_D_ACTIONS;
   const [aProposDeplie, setAProposDeplie] = useState(false);
   const clubId = routeClubId || activeClubId || clubs?.[0]?.documentId || clubs?.[0]?.id || null;
   const { startClubChat } = useMessaging();
@@ -841,7 +850,9 @@ function ClubDetails({ navigation, route }) {
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
   const facilitiesLoading = canLoadFacilityContext && isLoadingFacilities;
   const facilities = useMemo(() => {
-    const duContexte = Array.isArray(facilityContext?.allFacilities) ? facilityContext.allFacilities : [];
+    const duContexte = Array.isArray(facilityContext?.allFacilities)
+      ? facilityContext.allFacilities
+      : [];
     // ANNUAIRE-E1 — un visiteur n'a pas accès au contexte des installations ; la porte publique
     // les porte déjà (getPublicClubById : `publicFacilities`).
     if (duContexte.length || isAuthenticated) return duContexte;
@@ -2646,7 +2657,7 @@ function ClubDetails({ navigation, route }) {
                     nom tel qu'il est en base, donc rien ne change pour un
                     lecteur d'ecran ni pour une recherche. */}
                 <Text
-                  // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                  // eslint-disable-next-line react/jsx-props-no-spreading
                   {...proprietesDeTitre(1)}
                   style={[
                     Fonts.h3Black,
@@ -2729,8 +2740,9 @@ function ClubDetails({ navigation, route }) {
           ) : null}
 
           {/* ANNUAIRE-E1 — « À propos » (décision d'Adel du 29/09 : A) : le texte officiel de
-              l'association, tel que le répertoire national des associations le publie, renettoyé
-              par le serveur (porte publique) ; dans l'app ET sur le site, sous la carte d'identité. */}
+              l'association, tel que le répertoire national des associations le publie,
+              renettoyé par le serveur (porte publique) ; dans l'app ET sur le site, sous la
+              carte d'identité. */}
           {!isClubSubPage && aPropos ? (
             <View
               style={[
@@ -2742,7 +2754,7 @@ function ClubDetails({ navigation, route }) {
               testID="club-details-a-propos"
             >
               <Text
-                // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                // eslint-disable-next-line react/jsx-props-no-spreading
                 {...proprietesDeTitre(2)}
                 style={[Fonts.h4Black, Fonts.neutral00]}
               >
@@ -2903,7 +2915,7 @@ function ClubDetails({ navigation, route }) {
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
                     <Text
-                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      // eslint-disable-next-line react/jsx-props-no-spreading
                       {...proprietesDeTitre(2)}
                       style={[Fonts.h4Black, Fonts.neutral00]}
                     >
@@ -3201,7 +3213,7 @@ function ClubDetails({ navigation, route }) {
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
                     <Text
-                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      // eslint-disable-next-line react/jsx-props-no-spreading
                       {...proprietesDeTitre(2)}
                       style={[Fonts.h4Black, Fonts.neutral00]}
                     >
@@ -3219,7 +3231,7 @@ function ClubDetails({ navigation, route }) {
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text
-                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      // eslint-disable-next-line react/jsx-props-no-spreading
                       {...proprietesDeTitre(2)}
                       style={[Fonts.h4Black, Fonts.neutral00]}
                     >
@@ -3329,7 +3341,7 @@ function ClubDetails({ navigation, route }) {
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text
-                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      // eslint-disable-next-line react/jsx-props-no-spreading
                       {...proprietesDeTitre(2)}
                       style={[Fonts.h4Black, Fonts.neutral00]}
                     >
@@ -3464,7 +3476,7 @@ function ClubDetails({ navigation, route }) {
                       Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                     >
                       <Text
-                        // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                        // eslint-disable-next-line react/jsx-props-no-spreading
                         {...proprietesDeTitre(2)}
                         style={[Fonts.h4Black, Fonts.neutral00]}
                       >
@@ -3564,7 +3576,7 @@ function ClubDetails({ navigation, route }) {
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
                     <Text
-                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      // eslint-disable-next-line react/jsx-props-no-spreading
                       {...proprietesDeTitre(2)}
                       style={[Fonts.h4Black, Fonts.neutral00]}
                     >

@@ -504,7 +504,7 @@ function versInstallationsDeLaFiche(installations) {
  * texte BRUT du répertoire des associations ; la porte publique le rend renettoyé (aucune donnée
  * personnelle sous la mention « source : RNA »). En panne ou absente : null, jamais d'erreur — la
  * fiche s'affiche sans ce bloc.
- * @param {string} id - Le documentId du club.
+ * @param {string | number} id - Le documentId du club.
  * @returns {Promise<any>} Le bloc « À propos », ou null.
  */
 export const getClubAssociation = async (id) => {
@@ -518,7 +518,7 @@ export const getClubAssociation = async (id) => {
 
 /**
  * ANNUAIRE-E1 — la fiche privée d'un club, avec son « À propos » lu à la porte publique.
- * @param {string} id - Le documentId du club.
+ * @param {string | number} id - Le documentId du club.
  * @returns {Promise<any>} La fiche.
  */
 export const getClubByIdWithAssociation = async (id) => {

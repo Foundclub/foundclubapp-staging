@@ -5,7 +5,8 @@ import ClubDetails from '../ClubDetails';
 // ANNUAIRE-E1 (29/09) — LA FICHE CLUB DE L'APP, MONTÉE SUR L'ANNUAIRE DU SITE.
 //
 // Maquette validée par Adel le 29/09 (« ok maquette »), partie B : un clic sur une carte de
-// l'annuaire ouvre LA fiche de l'app (ClubDetails), à l'adresse publique /annuaire/clubs/<id>/<slug>/,
+// l'annuaire ouvre LA fiche de l'app (ClubDetails), à l'adresse publique
+// /annuaire/clubs/<id>/<slug>/,
 // pour tout le monde. Ce que ce filet garde :
 //   1. « À propos » (décision d'Adel du 29/09 : A) — le texte officiel de l'association, SOUS la
 //      carte d'identité, avec sa source ; dans l'app ET sur le site ;
@@ -439,8 +440,8 @@ const ASSOCIATION = {
   createdYear: 1923,
   dissolved: false,
   formerNames: [],
-  objectText: 'Organiser et promouvoir la pratique de la compétition et des activités physiques sportives.',
-  sourceNote: "Objet déclaré au Journal officiel — source : RNA, ministère de l'Intérieur (Licence Ouverte)",
+  objectText: 'Organiser et promouvoir la pratique de la compétition et des activités sportives.',
+  sourceNote: "Objet déclaré au Journal officiel — source : RNA, ministère de l'Intérieur",
   websiteUrl: null,
 };
 
@@ -450,12 +451,18 @@ afterEach(() => {
   mockDimensions.width = 375;
 });
 
-/** Les textes rendus en titre, avec leur rang (dans l'ordre de l'écran). */
-const titres = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
-  .filter((/** @type {any} */ noeud) => noeud.props.accessibilityRole === 'header' || noeud.props.role === 'heading')
+/**
+ * Les textes rendus en titre, avec leur rang, dans l'ordre de l'écran.
+ * @param {any} arbre L'arbre monté.
+ * @returns {Array<{ niveau: number | null, texte: string }>} Les titres.
+ */
+const titres = (arbre) => arbre.root.findAllByType(Text)
+  .filter((/** @type {any} */ noeud) => noeud.props.accessibilityRole === 'header'
+    || noeud.props.role === 'heading')
   .map((/** @type {any} */ noeud) => ({
     niveau: noeud.props['aria-level'] || null,
-    texte: [noeud.props.children].flat(Infinity).filter((x) => typeof x === 'string').join('').trim(),
+    texte: [noeud.props.children].flat(Infinity)
+      .filter((x) => typeof x === 'string').join('').trim(),
   }));
 
 describe('ANNUAIRE-E1 · « À propos » (décision d Adel du 29/09 : A)', () => {
@@ -520,9 +527,14 @@ describe('ANNUAIRE-E1 · les installations se lisent aussi pour un visiteur', ()
   });
 });
 
-describe('ANNUAIRE-E1 · le nom du club est LE titre ; les rubriques sont des titres de rang 2', () => {
+describe('ANNUAIRE-E1 · le nom du club est LE titre ; les rubriques, de rang 2', () => {
   // La doublure de traduction rend la CLÉ quand l'appel n'a pas de repli (titres de fr.js).
-  const RUBRIQUES = ['Installations', 'clubDetails.titles.activities', 'clubDetails.titles.sponsors', 'clubDetails.titles.teams'];
+  const RUBRIQUES = [
+    'Installations',
+    'clubDetails.titles.activities',
+    'clubDetails.titles.sponsors',
+    'clubDetails.titles.teams',
+  ];
   const CLUB_COMPLET = {
     ...CLUB_SANS_EQUIPE,
     activites: [{ documentId: 'a-1', name: 'Football' }],
@@ -539,12 +551,13 @@ describe('ANNUAIRE-E1 · le nom du club est LE titre ; les rubriques sont des ti
     });
   });
 
-  it('✅ site : le nom est un titre de rang 1, les rubriques de rang 2, dans l ordre de l app', () => {
+  it('✅ site : le nom en rang 1, les rubriques en rang 2, dans l ordre de l app', () => {
     Platform.OS = 'web';
     devenirVisiteur();
     mockClubQuery.data = CLUB_COMPLET;
     const lus = titres(monter());
-    expect(lus.filter((titre) => titre.niveau === 1).map((titre) => titre.texte)).toEqual(['BASKET CLUB DE LETOILE']);
+    const principaux = lus.filter((titre) => titre.niveau === 1).map((titre) => titre.texte);
+    expect(principaux).toEqual(['BASKET CLUB DE LETOILE']);
     const rubriques = lus.filter((titre) => titre.niveau === 2).map((titre) => titre.texte);
     const rangs = RUBRIQUES.map((titre) => rubriques.indexOf(titre));
     expect(rangs.every((rang) => rang >= 0)).toBe(true);
@@ -554,9 +567,13 @@ describe('ANNUAIRE-E1 · le nom du club est LE titre ; les rubriques sont des ti
 
 describe('ANNUAIRE-E1 · sur l annuaire du site (`annuaire`)', () => {
   const pied = (/** @type {any} */ arbre) => arbre.root.findAll(
-    (/** @type {any} */ noeud) => noeud.props?.testID === 'club-details-actions-footer' && typeof noeud.type === 'string',
+    (/** @type {any} */ noeud) => noeud.props?.testID === 'club-details-actions-footer'
+      && typeof noeud.type === 'string',
   )[0];
-  const style = (/** @type {any} */ noeud) => Object.assign({}, ...[noeud.props.style].flat(Infinity).filter(Boolean));
+  const style = (/** @type {any} */ noeud) => Object.assign(
+    {},
+    ...[noeud.props.style].flat(Infinity).filter(Boolean),
+  );
 
   it('✅ pas de défilement interne : la page du site défile', () => {
     Platform.OS = 'web';

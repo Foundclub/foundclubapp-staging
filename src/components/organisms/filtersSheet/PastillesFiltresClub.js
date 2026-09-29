@@ -319,8 +319,8 @@ function ChoixDuLieu({
                 maximumValue={50}
                 minimumTrackTintColor={Colors.primary500}
                 minimumValue={2}
-                onSlidingComplete={(valeur) => onRayon(Math.round(Number(valeur)))}
-                onValueChange={(valeur) => setRayonAffiche(Math.round(Number(valeur)))}
+                onSlidingComplete={(/** @type {number} */ v) => onRayon(Math.round(Number(v)))}
+                onValueChange={(/** @type {number} */ v) => setRayonAffiche(Math.round(Number(v)))}
                 step={1}
                 style={{ height: 44, width: '100%' }}
                 tapToSeek
