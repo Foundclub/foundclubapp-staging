@@ -24,6 +24,7 @@ import {
   formatSubscriptionPlanLabel,
   getActiveClubNotCovered,
   getActiveOfferDetails,
+  getCollectiviteOffer,
   getCoveredTeamCount,
   getCoveringEntitlement,
   getSubscriptionBadgeLevel,
@@ -256,6 +257,22 @@ function SubscriptionOverview({ navigation, route }) {
       .filter(/** @param {any} entry */ (entry) => entry?.scopeType === 'TEAM' && entry?.scopeTeamName)
       .map(/** @param {any} entry */ (entry) => String(entry.scopeTeamName)),
   )), [entitlementsSummary]);
+  // COLL1D (29/09) — L'OFFRE CLUB OFFERTE PAR LA COLLECTIVITE (SPEC §3, §4) : « Mon
+  // abonnement » le dit, sans date ni prix — personne ne paie dans l'app. Seul un
+  // abonnement pris dans un MAGASIN (ou sur le site) garde l'ecran de gestion : c'est
+  // la seule porte pour le gerer ou le resilier. Un cadeau `manual` ne compte pas.
+  const collectiviteOffer = useMemo(() => getCollectiviteOffer({
+    clubDocumentId: currentClubDocumentId,
+    entitlementsSummary,
+  }), [currentClubDocumentId, entitlementsSummary]);
+  /** @type {any[]} */
+  const payerSubscriptionRows = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
+    ? subscriptionSummary.payerSubscriptionsSummary
+    : [];
+  const paysInAStore = payerSubscriptionRows.some((entry) => (
+    ['active', 'grace_period'].includes(String(entry?.status || '').trim().toLowerCase())
+      && String(entry?.provider || '').trim().toLowerCase() !== 'manual'
+  ));
 
   useEffect(() => {
     if (canShowSubscriptionExperience) {
@@ -738,6 +755,17 @@ function SubscriptionOverview({ navigation, route }) {
 
   if (!canShowSubscriptionExperience) {
     return null;
+  }
+
+  if (collectiviteOffer && !paysInAStore) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingBottom[12], Spaces.paddingTop[0]]}
+      >
+        <SubscriptionCoveredHero collectiviteOffer={collectiviteOffer} navigation={navigation} />
+      </ScreenContainer>
+    );
   }
 
   if (coveringEntitlement) {

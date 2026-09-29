@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 
 import useMessaging from '@/domains/messaging/useMessaging';
+import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -88,11 +90,71 @@ const getHeroOfferLabel = (planCode) => {
 };
 
 /**
+ * COLL1D (29/09) — la variante « offerte par la collectivite » (SPEC §3, §4) : le nom de
+ * la Ville au centre, « Offre Club offerte par la Ville de X ». Ni date, ni prix, ni
+ * bouton : personne ne paie dans l'app, et la mairie n'a pas de messagerie de payeur.
+ * @param {{ collectiviteOffer: { name: string } }} props
+ * @returns {import('react').ReactElement}
+ */
+function CollectiviteOfferedHero({ collectiviteOffer }) {
+  const { t } = useTranslation();
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
+
+  return (
+    <View
+      style={[
+        Alignments.fill,
+        Alignments.alignCenter,
+        Alignments.justifyCenter,
+        Spaces.padding[24],
+      ]}
+    >
+      <Text style={[Fonts.h2Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginTop[16]]}>
+        {t('subscriptionCoveredHero.collectivite.title', 'Offre Club offerte par {{who}}', {
+          who: formatCollectiviteOfferedBy(collectiviteOffer?.name),
+          ...SANS_ECHAPPEMENT,
+        })}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter, Spaces.marginTop[8]]}>
+        {t(
+          'subscriptionCoveredHero.collectivite.subtitle',
+          'Toutes les équipes de ton club sont couvertes, sans limite.',
+        )}
+      </Text>
+      <View
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.marginTop[16],
+          {
+            backgroundColor: withAlpha(Colors.success500, 0.1),
+            borderColor: withAlpha(Colors.success500, 0.4),
+            borderRadius: 999,
+            columnGap: 6,
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+          },
+        ]}
+      >
+        <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>✓</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>
+          {t('subscriptionCoveredHero.unlockedChip', 'Tout est débloqué pour toi')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
  * Page heros « deja couvert » (handoff 7b) : le payeur au centre, offre et
  * renouvellement en sous-titre, chip « tout est debloque », action = ecrire
  * au payeur via le chat existant.
  * @param {object} props
- * @param {any} props.coveringEntitlement - Entitlement couvrant l'utilisateur
+ * @param {any} [props.collectiviteOffer] - COLL1D : la collectivite qui offre l'offre
+ *   Club du club affiche (`getCollectiviteOffer`) ; la page devient sa variante.
+ * @param {any} [props.coveringEntitlement] - Entitlement couvrant l'utilisateur
  *   (expose paidBy, scopeType, scopeTeamName, subscriptionPlanCode,
  *   subscriptionCurrentPeriodEnd).
  * @param {string[]} [props.coveredTeamNames] - Noms des equipes couvertes (scope TEAM).
@@ -100,7 +162,30 @@ const getHeroOfferLabel = (planCode) => {
  * @returns {import('react').ReactElement}
  */
 function SubscriptionCoveredHero({
+  collectiviteOffer = null,
   coveredTeamNames = [],
+  coveringEntitlement = null,
+  navigation,
+}) {
+  if (collectiviteOffer) {
+    return <CollectiviteOfferedHero collectiviteOffer={collectiviteOffer} />;
+  }
+  return (
+    <PaidByMemberHero
+      coveredTeamNames={coveredTeamNames}
+      coveringEntitlement={coveringEntitlement}
+      navigation={navigation}
+    />
+  );
+}
+
+/**
+ * La page d'avant COLL1D, inchangee : un membre paie pour moi.
+ * @param {{ coveredTeamNames: string[], coveringEntitlement: any, navigation: any }} props
+ * @returns {import('react').ReactElement}
+ */
+function PaidByMemberHero({
+  coveredTeamNames,
   coveringEntitlement,
   navigation,
 }) {

@@ -1245,6 +1245,16 @@ export const formatSubscriptionPlanLabel = (planCode) => {
     return i18next.t('subscriptionDecision.planLabel.none', 'Aucune offre active');
   }
 
+  // COLL1D — l'offre Club offerte par une collectivite (plan jamais vendu, admin
+  // subscription-catalog.ts) : sans cette ligne, le repli du bas l'ecrivait
+  // « Fc Collectivite Club ».
+  if (normalizedPlanCode === 'fc_collectivite_club') {
+    return i18next.t(
+      'subscriptionDecision.planLabel.collectivite',
+      'Club · offert par la collectivité',
+    );
+  }
+
   // T09 — c'est le SEUL nom que connaisse l'ecran « Mon abonnement » : il ne
   // recoit qu'un planCode (SubscriptionOverview.js:239), jamais le displayName du
   // catalogue. Il doit donc reconstruire mot pour mot le nom sous lequel l'offre
@@ -1474,6 +1484,57 @@ export const getClubDisplayName = (documentId, entitlements, userData) => {
     (club) => String(club?.documentId || '').trim() === documentId,
   );
   return String(knownClub?.name || '').trim();
+};
+
+/**
+ * L'OFFRE CLUB OFFERTE PAR UNE COLLECTIVITE, POUR CE CLUB — COLL1D, 2026-09-29.
+ *
+ * SPEC Collectivites D4, D13, §3 : tant que la collectivite est active, chaque club
+ * rattache a l'offre Club complete, sans limite. Le serveur NOMME la collectivite sur
+ * le droit Club qu'elle offre (`entitlementsSummary[].offeredBy`, admin
+ * subscription-permission.ts) : rien n'est devine ici. Sans ce nom — droit paye,
+ * serveur d'avant le lot, autre club —, pas de bandeau.
+ * @param {object} [params]
+ * @param {string} [params.clubDocumentId] - Le club affiche.
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte (bootstrap).
+ * @returns {{ documentId: string, name: string } | null} La collectivite qui offre, ou null.
+ */
+export const getCollectiviteOffer = ({ clubDocumentId, entitlementsSummary } = {}) => {
+  const target = trimId(clubDocumentId);
+  if (!target) return null;
+  const entry = normalizeDecisionArray(entitlementsSummary).find((droit) => (
+    droit?.scopeType === 'CLUB'
+    && trimId(droit?.scopeClubDocumentId) === target
+    && String(droit?.offeredBy?.name || '').trim() !== ''
+  ));
+  return entry
+    ? { documentId: trimId(entry.offeredBy.documentId), name: String(entry.offeredBy.name).trim() }
+    : null;
+};
+
+// Les noms communs par lesquels commence le nom d'une collectivite, et l'article que
+// la phrase « Offert par … » leur donne en francais. Un nom propre nu (« Lyon ») n'en
+// prend aucun.
+const COLLECTIVITE_ARTICLES_FR = [
+  [/^(ville|commune|mairie|m[ée]tropole|communaut[ée]|agglom[ée]ration|r[ée]gion|collectivit[ée])(?=\s|$)/i, 'la'],
+  [/^(d[ée]partement|conseil|syndicat)(?=\s|$)/i, 'le'],
+];
+
+/**
+ * Le nom d'une collectivite tel que la phrase « Offert par … » le lit : « la Ville de
+ * Recette », « le Département du Rhône », « Lyon ». Hors francais, le nom tel quel.
+ * ponytail: la regle ne connait que les noms communs ci-dessus ; un nom saisi autrement
+ * (« Saint-Priest ») se lit sans article — plafond assume, voie de sortie : saisir le nom
+ * de la collectivite sous sa forme « Ville de … ».
+ * @param {string} name - Le nom de la collectivite, tel que saisi par nous (super-admin).
+ * @param {string} [language] - La langue de l'ecran (defaut : celle d'i18next).
+ * @returns {string} Le nom, precede de son article s'il en faut un.
+ */
+export const formatCollectiviteOfferedBy = (name, language = i18next.language) => {
+  const nom = String(name || '').trim();
+  if (!nom || !String(language || 'fr').toLowerCase().startsWith('fr')) return nom;
+  const regle = COLLECTIVITE_ARTICLES_FR.find(([motif]) => /** @type {RegExp} */ (motif).test(nom));
+  return regle ? `${regle[1]} ${nom}` : nom;
 };
 
 /**
