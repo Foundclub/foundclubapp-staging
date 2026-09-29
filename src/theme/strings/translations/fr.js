@@ -5075,6 +5075,11 @@ export default {
         noneUploaded: 'Aucune pièce jointe n a pu être televersee.',
         sendError: 'Impossible d envoyer cette pièce jointe.',
       },
+      // COMPO-CARTE-SITE — le repli d'une charge que le site ne sait pas dessiner.
+      // Il remplace « Composition lineup_share » : jamais le nom technique à l'écran.
+      composition: {
+        unavailable: 'Ce contenu ne peut pas s’afficher sur le site.',
+      },
       empty: 'Aucun message pour le moment.',
       // eslint-disable-next-line max-len
       footerNote: 'Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.',
