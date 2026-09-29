@@ -497,3 +497,65 @@ describe('FINITIONS2 1 — une compo publiee sans titulaire compte 0 titulaire',
   // La compo NEUVE (projection « 2 coches = 2 titulaires ») a deja son temoin
   // juste au-dessus, dans « COMPODBL 🔒 — ce qui ne bouge pas ».
 });
+
+/**
+ * Le dernier ecran ouvert par « Suivant », et les convoques qu'il a recus.
+ * @returns {{ convoques: string[], ecran: string }}
+ */
+const derniereDestination = () => {
+  const [ecran, parametres] = [...mockNavigate.mock.calls].pop();
+  return { convoques: (parametres.selectedPlayers || []).map(idDe), ecran };
+};
+
+describe('FINITIONS2 4 — convoque parti de l equipe : les 2 etapes comptent pareil', () => {
+  test('mouri a quitte l effectif : « 1 convoqué », « Suivant » en emmene 1', async () => {
+    // mouri a quitte COMPO-Foot-U15 : ni l effectif de l ecran, ni celui de
+    // l evenement, ni les autres equipes du club ne le portent plus.
+    mockEvent = { ...mockEvent, team: { ...mockEvent.team, players: [PAUL] } };
+    mockClubTeams = {
+      pages: [{
+        data: [{
+          documentId: 'xpzuyxb64l0mujluirrmq69l', name: 'COMPO-Foot-U15', players: [PAUL],
+        }],
+      }],
+    };
+    const arbre = await rendre({
+      existingComposition: PUBLIE_TOUS_AU_BANC,
+      players: [PAUL],
+      publishedComposition: PUBLIE_TOUS_AU_BANC,
+    });
+
+    const texte = texteVisible(arbre);
+    await appuyerSur(arbre, 'Suivant');
+    const { convoques } = derniereDestination();
+
+    // Le compteur annonce EXACTEMENT ceux que l etape suivante recoit.
+    expect(convoques).toEqual([HORS_APP_ID]);
+    expect(texte).toContain('1 convoqué');
+    expect(texte).not.toContain('2 convoqués');
+    expect(texte).toContain('0 titulaire · 1 sur le banc');
+  });
+
+  test('🔒 passe dans une AUTRE equipe du club : compte ET transmis', async () => {
+    mockEvent = { ...mockEvent, team: { ...mockEvent.team, players: [PAUL] } };
+    mockClubTeams = {
+      pages: [{
+        data: [
+          { documentId: 'xpzuyxb64l0mujluirrmq69l', name: 'COMPO-Foot-U15', players: [PAUL] },
+          { documentId: 'silence-u15', name: 'SILENCE-Test-U15', players: [MOURI] },
+        ],
+      }],
+    };
+    const arbre = await rendre({
+      existingComposition: PUBLIE_TOUS_AU_BANC,
+      players: [PAUL],
+      publishedComposition: PUBLIE_TOUS_AU_BANC,
+    });
+
+    const texte = texteVisible(arbre);
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(texte).toContain('2 convoqués');
+    expect(derniereDestination().convoques).toEqual([DOC_MOURI, HORS_APP_ID]);
+  });
+});
