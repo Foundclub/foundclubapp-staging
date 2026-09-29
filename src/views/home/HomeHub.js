@@ -1610,6 +1610,7 @@ function HomeHubContent({ auth, navigation, route }) {
   const isPlayerBanner = !isCoach && !isPresident && !isSuperAdmin;
   const {
     answer: myAnswer,
+    canAnswer: canAnswerMyEvent,
     isAnswering,
     submit: submitMyAnswer,
   } = useHomeEventAnswer(isPlayerBanner ? homeCounters.prochainEvenement?.id : '');
@@ -1737,6 +1738,22 @@ function HomeHubContent({ auth, navigation, route }) {
 
     const evenement = homeCounters.prochainEvenement;
     if (!evenement) return null;
+    // 🚫 POINTAGE (29/09) — « Les participants repondent » decochee par
+    // l organisateur : pas de Present / Absent (le serveur les refuserait). Le
+    // bandeau garde l evenement, et son bouton y mene — comme les autres roles.
+    if (!canAnswerMyEvent) {
+      return {
+        actions: [{
+          key: 'open',
+          label: t('common.actions.seeMore', 'Voir le détail'),
+          onPress: () => handleOpenEvent(evenement.id),
+        }],
+        label: t('homeHub.banner.player.label', 'Ma semaine'),
+        subtitle: evenement.label,
+        title: formatBannerTitle(evenement.startsAt),
+        variant: 'event',
+      };
+    }
     // T02 — ICI, « Présent » et « Absent » REPONDENT. Ils n'emmenent plus nulle
     // part (constat d'Adel du 2026-08-17). Ce sont les deux seules reponses que le
     // serveur accepte : `POST /events/:id/rsvp` refuse tout le reste
@@ -1790,6 +1807,7 @@ function HomeHubContent({ auth, navigation, route }) {
     handleOpenEvent,
     handleOpenRequestsHub,
     homeCounters,
+    canAnswerMyEvent,
     isAnswering,
     isCoach,
     isPresident,
