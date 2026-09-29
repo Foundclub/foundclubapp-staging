@@ -361,15 +361,21 @@ function MatchCallUpSelection() {
     startPlacements: params.startPlacements ?? null,
   }), [existingComposition, params.startPlacements, selectedPlayers]);
 
+  // FINITIONS2 (recette du 29/09) — LE COMPTEUR ANNONCE CEUX QUE « Suivant »
+  // EMMENE, pas les cases cochees. Un convoque qui a quitte l'equipe reste coche
+  // (le pack le nomme) mais aucune liste ne le porte plus : il etait compte ici
+  // (« 2 convoqués »), puis absent de l'etape suivante (« 1 convoqué »), sans
+  // ligne ou le decocher. Les deux etapes lisent desormais `selectedPlayers`.
   const counters = useMemo(
     () => getCallUpCounters({
       manualPlayers,
       reinforcementPlayers,
-      selectedIds,
+      selectedIds: selectedPlayers.map(getCompositionPlayerId),
       sport,
-      startersOnField: resumedField.shouldResume ? resumedField.placements.length : null,
+      // FINITIONS2 — un terrain CONNU fait foi, meme vide (compo publiee au banc).
+      startersOnField: resumedField.knowsField ? resumedField.placements.length : null,
     }),
-    [manualPlayers, reinforcementPlayers, resumedField, selectedIds, sport],
+    [manualPlayers, reinforcementPlayers, resumedField, selectedPlayers, sport],
   );
 
   // 👻 LOT COMPO (2026-09-05) — LE 2e JOUEUR HORS APP EFFACAIT LE 1er.
@@ -437,7 +443,8 @@ function MatchCallUpSelection() {
   // la selection INTACTE, absents compris. C'est la demande d'Adel, mot pour
   // mot — « en laissant la possibilite de convoquer les absents ».
   const handleNext = useCallback(() => {
-    if (selectedIds.size === 0) {
+    // FINITIONS2 — meme regle que le compteur : personne a emmener, personne de convoque.
+    if (selectedPlayers.length === 0) {
       Alert.alert(
         t('matchCallUp.selection.alerts.noneSelected.title'),
         t('matchCallUp.selection.alerts.noneSelected.message'),
@@ -454,7 +461,7 @@ function MatchCallUpSelection() {
     }
 
     goToComposition();
-  }, [goToComposition, rsvpAnswers, selectedIds.size, selectedPlayers, t]);
+  }, [goToComposition, rsvpAnswers, selectedPlayers, t]);
 
   const absentNames = useMemo(
     () => (absentsToConfirm || EMPTY_LIST).map(getCompositionPlayerLabel).join(', '),

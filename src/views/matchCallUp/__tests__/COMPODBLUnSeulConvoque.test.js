@@ -453,3 +453,109 @@ describe('COMPODBL 🔒 — ce qui ne bouge pas', () => {
     expect(texte).toContain('2 titulaires · 0 sur le banc');
   });
 });
+
+// ==========================================================================
+// FINITIONS2 (recette du 29/09, tournee 4) — « Modifier » sur la VERSION 2 du
+// match de test : mouri nio et Recette HorsApp publies TOUS LES DEUX sur le
+// banc (serveur : `placements []`, remplacants `[mouri, HorsApp]`).
+// Capture `T4-1-modifier-convoques.png` : « 2 convoqués · 2 titulaires ·
+// 0 sur le banc ». Juste des qu'un joueur est sur le terrain (v3).
+// ==========================================================================
+
+const PUBLIE_TOUS_AU_BANC = {
+  manualPlayers: [HORS_APP],
+  reservePlayerIds: [DOC_MOURI, HORS_APP_ID],
+  reserveSnapshotPlayers: [instantane(MOURI, 'reserve'), instantane(HORS_APP, 'reserve')],
+  schemaVersion: 3,
+  selectedPlayerIds: [DOC_MOURI, HORS_APP_ID],
+  snapshotPlayers: [instantane(MOURI, 'reserve'), instantane(HORS_APP, 'reserve')],
+  sportContext: 'football',
+  teams: [{ id: 'team_1', name: 'COMPO-Foot-U15', placements: [] }],
+  version: 2,
+};
+
+describe('FINITIONS2 1 — une compo publiee sans titulaire compte 0 titulaire', () => {
+  test('« Modifier » la v2 (tout le monde au banc) : 0 titulaire · 2 sur le banc', async () => {
+    // Exactement ce que « Convocation publiee » -> « Modifier » transmet.
+    const arbre = await rendre({
+      existingComposition: PUBLIE_TOUS_AU_BANC,
+      publishedComposition: PUBLIE_TOUS_AU_BANC,
+    });
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('2 convoqués');
+    expect(texte).toContain('0 titulaire · 2 sur le banc');
+    expect(texte).not.toContain('2 titulaires');
+  });
+
+  test('🔒 le terrain qu on rouvre fait toujours foi : v3 (1 terrain, 1 banc)', async () => {
+    const cible = buildPublishedBoardTarget(PUBLIE_ABIME, { teamName: 'COMPO-Foot-U15' });
+    const arbre = await rendre(cible || {});
+
+    expect(texteVisible(arbre)).toContain('1 titulaire · 1 sur le banc');
+  });
+  // La compo NEUVE (projection « 2 coches = 2 titulaires ») a deja son temoin
+  // juste au-dessus, dans « COMPODBL 🔒 — ce qui ne bouge pas ».
+});
+
+/**
+ * Le dernier ecran ouvert par « Suivant », et les convoques qu'il a recus.
+ * @returns {{ convoques: string[], ecran: string }}
+ */
+const derniereDestination = () => {
+  const [ecran, parametres] = [...mockNavigate.mock.calls].pop();
+  return { convoques: (parametres.selectedPlayers || []).map(idDe), ecran };
+};
+
+describe('FINITIONS2 4 — convoque parti de l equipe : les 2 etapes comptent pareil', () => {
+  test('mouri a quitte l effectif : « 1 convoqué », « Suivant » en emmene 1', async () => {
+    // mouri a quitte COMPO-Foot-U15 : ni l effectif de l ecran, ni celui de
+    // l evenement, ni les autres equipes du club ne le portent plus.
+    mockEvent = { ...mockEvent, team: { ...mockEvent.team, players: [PAUL] } };
+    mockClubTeams = {
+      pages: [{
+        data: [{
+          documentId: 'xpzuyxb64l0mujluirrmq69l', name: 'COMPO-Foot-U15', players: [PAUL],
+        }],
+      }],
+    };
+    const arbre = await rendre({
+      existingComposition: PUBLIE_TOUS_AU_BANC,
+      players: [PAUL],
+      publishedComposition: PUBLIE_TOUS_AU_BANC,
+    });
+
+    const texte = texteVisible(arbre);
+    await appuyerSur(arbre, 'Suivant');
+    const { convoques } = derniereDestination();
+
+    // Le compteur annonce EXACTEMENT ceux que l etape suivante recoit.
+    expect(convoques).toEqual([HORS_APP_ID]);
+    expect(texte).toContain('1 convoqué');
+    expect(texte).not.toContain('2 convoqués');
+    expect(texte).toContain('0 titulaire · 1 sur le banc');
+  });
+
+  test('🔒 passe dans une AUTRE equipe du club : compte ET transmis', async () => {
+    mockEvent = { ...mockEvent, team: { ...mockEvent.team, players: [PAUL] } };
+    mockClubTeams = {
+      pages: [{
+        data: [
+          { documentId: 'xpzuyxb64l0mujluirrmq69l', name: 'COMPO-Foot-U15', players: [PAUL] },
+          { documentId: 'silence-u15', name: 'SILENCE-Test-U15', players: [MOURI] },
+        ],
+      }],
+    };
+    const arbre = await rendre({
+      existingComposition: PUBLIE_TOUS_AU_BANC,
+      players: [PAUL],
+      publishedComposition: PUBLIE_TOUS_AU_BANC,
+    });
+
+    const texte = texteVisible(arbre);
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(texte).toContain('2 convoqués');
+    expect(derniereDestination().convoques).toEqual([DOC_MOURI, HORS_APP_ID]);
+  });
+});

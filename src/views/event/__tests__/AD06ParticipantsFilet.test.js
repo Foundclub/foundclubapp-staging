@@ -76,10 +76,25 @@ jest.mock('react-i18next', () => {
   return {
     initReactI18next: { init: jest.fn(), type: '3rdParty' },
     useTranslation: () => ({
+      // FINITIONS2 — la doublure suit i18next : avec `count`, la variante `_one`
+      // / `_other` d'abord (regle FRANCAISE : zero ET un au singulier), puis les
+      // `{{valeurs}}` remplies. Sans options, elle rend la chaine telle quelle.
       t: (/** @type {string} */ clef, /** @type {any} */ valeurParDefaut) => {
-        const valeur = lire(clef);
-        if (typeof valeur === 'string') return valeur;
-        return typeof valeurParDefaut === 'string' ? valeurParDefaut : clef;
+        const options = valeurParDefaut && typeof valeurParDefaut === 'object'
+          ? valeurParDefaut
+          : null;
+        const compte = options?.count;
+        const plurielle = typeof compte === 'number'
+          ? lire(`${clef}_${compte === 0 || compte === 1 ? 'one' : 'other'}`)
+          : undefined;
+        const valeur = typeof plurielle === 'string' ? plurielle : lire(clef);
+        if (typeof valeur !== 'string') {
+          return typeof valeurParDefaut === 'string' ? valeurParDefaut : clef;
+        }
+        if (!options) return valeur;
+        return valeur.replace(/{{(\w+)}}/g, (entier, nom) => (
+          options[nom] === undefined ? entier : String(options[nom])
+        ));
       },
     }),
   };
@@ -300,7 +315,7 @@ const pastilles = (arbre) => arbre.root
  */
 const textesDeLaListe = (arbre) => {
   const textes = textesVisibles(arbre);
-  const rangLegende = textes.findIndex((/** @type {string} */ t) => /réponses sur/.test(t));
+  const rangLegende = textes.findIndex((/** @type {string} */ t) => /réponses? sur/.test(t));
   return rangLegende >= 0 ? textes.slice(rangLegende + 1) : textes;
 };
 
@@ -603,5 +618,37 @@ describe('AD06 · temoin 7 — l heure d arrivee et les accents', () => {
     });
 
     expect(textesVisibles(arbre).join(' | ')).not.toMatch(/Invalid Date|NaN/);
+  });
+});
+
+// FINITIONS2 (recette du 29/09, tournee 4) — « 1 réponses sur 1 » (capture
+// `T4-2-participants.png`) et « 0 réponses sur 0 » (`T4-2-contre-epreuve-staff.png`).
+describe('FINITIONS2 2 — la legende de la barre accorde son nombre', () => {
+  test('1 present sur 1 : « 1 réponse sur 1 »', () => {
+    const arbre = monter({
+      teamParticipationSections: [section({ participating: [P_ARRIVE] })],
+    });
+
+    expect(parIdentifiant(arbre, 'AD06-barre-legende')).toBe('1 réponse sur 1');
+  });
+
+  test('personne a attendre : « 0 réponse sur 0 » (zero au singulier, en francais)', () => {
+    const arbre = monter({ teamParticipationSections: [section({})] });
+
+    expect(parIdentifiant(arbre, 'AD06-barre-legende')).toBe('0 réponse sur 0');
+  });
+
+  test('🔒 le pluriel reste : 4 presents + 2 absents sur 9 -> « 6 réponses sur 9 »', () => {
+    const arbre = monter({
+      teamParticipationSections: [section({
+        missing: [joueur('m-1', 'Mia'), joueur('m-2', 'Malo')],
+        notAnswered: [joueur('n-1', 'Nina'), joueur('n-2', 'Noe'), joueur('n-3', 'Nour')],
+        participating: [
+          joueur('p-1', 'Paul'), joueur('p-2', 'Pia'), joueur('p-3', 'Pol'), joueur('p-4', 'Pam'),
+        ],
+      })],
+    });
+
+    expect(parIdentifiant(arbre, 'AD06-barre-legende')).toBe('6 réponses sur 9');
   });
 });

@@ -6011,6 +6011,8 @@ export default {
     participantsSummary: {
       nextReminder: 'Next reminder possible on {{date}}',
       responses: '{{received}} responses out of {{total}}',
+      responses_one: '{{received}} response out of {{total}}',
+      responses_other: '{{received}} responses out of {{total}}',
     },
     participationStatus: {
       missing: 'Absent',

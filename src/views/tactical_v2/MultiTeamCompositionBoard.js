@@ -1284,7 +1284,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         </Text>
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {branch?.published?.publishedAt
-                            ? t('multiTeamCompositionBoard.publishedOn', 'Publie le {{date}}', { date: new Date(branch.published.publishedAt).toLocaleString(localeDesFormats()), ...SANS_ECHAPPEMENT })
+                            ? t('multiTeamCompositionBoard.publishedOn', 'Publiée le {{date}}', { date: new Date(branch.published.publishedAt).toLocaleString(localeDesFormats()), ...SANS_ECHAPPEMENT })
                             : t(
                               'multiTeamCompositionBoard.teamLineupPublished',
                               "Composition d'équipes publiée",

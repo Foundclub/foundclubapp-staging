@@ -123,10 +123,13 @@ const monter = async (evenements) => {
   let arbre;
   await act(async () => {
     arbre = renderer.create(
+      // FINITIONS2 — comme les 4 vrais ecrans, on donne de quoi ouvrir un bloc :
+      // sans elle, un bloc n'est plus un bouton (et `blocs()` lit les boutons).
       <PlanningWeekTimelineView
         currentDate={MERCREDI}
         events={normalizePlanningItems(evenements)}
         mode="3days"
+        onEventPress={() => {}}
       />,
     );
   });

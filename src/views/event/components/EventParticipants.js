@@ -1199,9 +1199,14 @@ function EventParticipants({
     <View style={[Spaces.gap[8]]}>
       <View style={[Alignments.rowBetween, Spaces.gap[8]]}>
         <Text style={[Fonts.p3, Fonts.neutral200]} testID="AD06-barre-legende">
-          {t('eventDetails.participantsSummary.responses', '{{received}} réponses sur {{total}}')
-            .replace('{{received}}', String(reponsesRecues))
-            .replace('{{total}}', String(totalAttendu))}
+          {/* FINITIONS2 (recette du 29/09) — « 1 réponses sur 1 », « 0 réponses
+              sur 0 » : les nombres etaient poses APRES coup, donc i18next ne
+              voyait jamais `count` ni de pluriel. Il recoit tout, et accorde. */}
+          {t('eventDetails.participantsSummary.responses', {
+            count: reponsesRecues,
+            received: reponsesRecues,
+            total: totalAttendu,
+          })}
         </Text>
         {/* AE02 (1A) : le chiffre etait DEJA calcule et ne servait que de
             largeur de barre (`width: ${partReponses}%`). Il vit dans SON noeud,

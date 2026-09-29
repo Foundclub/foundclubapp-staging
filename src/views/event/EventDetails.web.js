@@ -1880,7 +1880,7 @@ function EventDetails({ navigation, route }) {
                       </span>
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <span>
-                          {t('eventDetails.publishedOn', 'Publie le')}
+                          {t('eventDetails.publishedOn', 'Publiée le')}
                           {' '}
                           {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
                         </span>

@@ -530,18 +530,39 @@ export const removePlayerFromField = (placements, playerId) => {
  * @param {any[]} [input.players] Les convoques APRES modification de la liste.
  * @param {any[] | null} [input.startPlacements] Le terrain en cours, rendu par
  *   l'ecran 5 quand le coach remonte a la selection. `null` = on n'en vient pas.
- * @returns {{ placements: any[], shouldResume: boolean }} `shouldResume` dit s'il
- *   y a un terrain a rouvrir — sinon l'ecran 4 « Partir de… » garde son role.
+ * @returns {{ knowsField: boolean, placements: any[], shouldResume: boolean }}
+ *   `shouldResume` dit s'il y a un terrain a rouvrir — sinon l'ecran 4
+ *   « Partir de… » garde son role. `knowsField` dit si l'on CONNAIT deja le
+ *   terrain de ces convoques, meme vide (voir FINITIONS2 ci-dessous).
  */
 export const resumeFieldForSelection = ({
   existingComposition = null, players = [], startPlacements = null,
 }) => {
   const comesFromField = Array.isArray(startPlacements);
+  const packPlacements = readPlacementsFromPack(existingComposition);
   const placements = keepPlacementsOfCalledUpPlayers(
-    comesFromField ? startPlacements : readPlacementsFromPack(existingComposition),
+    comesFromField ? startPlacements : packPlacements,
     players,
   );
-  return { placements, shouldResume: comesFromField || placements.length > 0 };
+
+  // FINITIONS2 (recette du 29/09) — « 2 titulaires · 0 sur le banc » pour une
+  // compo publiee dont les 2 convoques etaient AU BANC : un terrain vide ne
+  // rouvre rien (`shouldResume` faux), et le compteur retombait alors sur la
+  // projection du sport, faite pour une compo NEUVE. Or le pack le dit : il
+  // range ces joueurs, et aucun sur le terrain. Des qu'il nomme un convoque
+  // (place, coche ou au banc), son terrain fait foi — meme a zero titulaire.
+  const packList = (/** @type {string} */ key) => (
+    Array.isArray(existingComposition?.[key]) ? existingComposition[key] : []
+  );
+  const packIds = new Set([
+    ...packPlacements.map((placement) => placement.playerId),
+    ...packList('selectedPlayerIds'),
+    ...packList('reservePlayerIds'),
+  ].map((value) => String(value || '').trim()).filter(Boolean));
+  const knowsField = comesFromField || (Array.isArray(players) ? players : [])
+    .some((player) => packIds.has(getCompositionPlayerId(player)));
+
+  return { knowsField, placements, shouldResume: comesFromField || placements.length > 0 };
 };
 
 /**

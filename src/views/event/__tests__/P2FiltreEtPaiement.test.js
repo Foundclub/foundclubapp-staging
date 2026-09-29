@@ -67,10 +67,25 @@ jest.mock('react-i18next', () => {
   return {
     initReactI18next: { init: jest.fn(), type: '3rdParty' },
     useTranslation: () => ({
+      // FINITIONS2 — la doublure suit i18next : avec `count`, la variante `_one`
+      // / `_other` d'abord (regle FRANCAISE : zero ET un au singulier), puis les
+      // `{{valeurs}}` remplies. Sans options, elle rend la chaine telle quelle.
       t: (/** @type {string} */ clef, /** @type {any} */ valeurParDefaut) => {
-        const valeur = lire(clef);
-        if (typeof valeur === 'string') return valeur;
-        return typeof valeurParDefaut === 'string' ? valeurParDefaut : clef;
+        const options = valeurParDefaut && typeof valeurParDefaut === 'object'
+          ? valeurParDefaut
+          : null;
+        const compte = options?.count;
+        const plurielle = typeof compte === 'number'
+          ? lire(`${clef}_${compte === 0 || compte === 1 ? 'one' : 'other'}`)
+          : undefined;
+        const valeur = typeof plurielle === 'string' ? plurielle : lire(clef);
+        if (typeof valeur !== 'string') {
+          return typeof valeurParDefaut === 'string' ? valeurParDefaut : clef;
+        }
+        if (!options) return valeur;
+        return valeur.replace(/{{(\w+)}}/g, (entier, nom) => (
+          options[nom] === undefined ? entier : String(options[nom])
+        ));
       },
     }),
   };
@@ -253,7 +268,7 @@ const pastilles = (arbre) => arbre.root
  */
 const textesDeLaListe = (arbre) => {
   const textes = textesVisibles(arbre);
-  const rangLegende = textes.findIndex((/** @type {string} */ t) => /réponses sur/.test(t));
+  const rangLegende = textes.findIndex((/** @type {string} */ t) => /réponses? sur/.test(t));
   return rangLegende >= 0 ? textes.slice(rangLegende + 1) : textes;
 };
 
@@ -402,7 +417,7 @@ describe('P2 · temoin 4 — l ORDRE des groupes ne bouge pas', () => {
   test('les chips se rendent AU-DESSUS de la legende, donc hors de la liste', () => {
     const arbre = monter({ participationsByStatus: LES_TROIS });
     const tous = textesVisibles(arbre);
-    const rangLegende = tous.findIndex((/** @type {string} */ t) => /réponses sur/.test(t));
+    const rangLegende = tous.findIndex((/** @type {string} */ t) => /réponses? sur/.test(t));
     const rangChip = tous.findIndex((/** @type {string} */ t) => /^Tous/.test(t));
 
     expect(rangChip).toBeGreaterThanOrEqual(0);
