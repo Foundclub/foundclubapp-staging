@@ -475,7 +475,12 @@ export const versFicheClubPublique = (club) => {
     // renettoyé par le serveur) et les installations du club, que la porte publique rend déjà.
     association: club.association || null,
     publicFacilities: versInstallationsDeLaFiche(club.facilities),
-    sponsor: Array.isArray(club.sponsors) ? club.sponsors : [],
+    // ANNUAIRE-E1 — la porte publique rend `logoUrl`, l'écran dessine `logo.url`.
+    sponsor: (Array.isArray(club.sponsors) ? club.sponsors : [])
+      .map((/** @type {any} */ sponsor) => ({
+        ...sponsor,
+        logo: sponsor?.logoUrl ? { url: sponsor.logoUrl } : null,
+      })),
     teams: Array.isArray(club.teams) ? club.teams : [],
   };
 };

@@ -297,3 +297,36 @@ describe('ANNUAIRE-E1 · T5 — « À propos » et installations traversent la t
     await expect(getClubAssociation('club-1')).resolves.toBeNull();
   });
 });
+
+describe('ANNUAIRE-E1 · T6 — les partenaires arrivent avec leur logo, là où l écran le lit', () => {
+  // La porte publique rend `{ title, link, logoUrl }` ; la fiche (ClubDetails) dessine
+  // `sponsor.logo.url`. Sans la traduction, chaque partenaire s'affichait en simple texte.
+  const REPONSE_AVEC_PARTENAIRES = {
+    data: {
+      data: {
+        ...REPONSE_PUBLIQUE.data.data,
+        club: {
+          ...REPONSE_PUBLIQUE.data.data.club,
+          sponsors: [
+            { link: 'https://foundclub.app', logoUrl: 'https://cdn.exemple.fr/foundclub.png', title: 'Foundclub' },
+            { link: null, logoUrl: null, title: 'Mama' },
+          ],
+        },
+      },
+    },
+  };
+
+  it('le logo d un partenaire se lit à sponsor.logo.url', async () => {
+    mockGet.mockResolvedValue(REPONSE_AVEC_PARTENAIRES);
+    const fiche = await getPublicClubById('club-1');
+    expect(fiche.sponsor.map((/** @type {any} */ sponsor) => sponsor.logo?.url ?? null))
+      .toEqual(['https://cdn.exemple.fr/foundclub.png', null]);
+  });
+
+  it('le nom et le lien du partenaire traversent tels quels', async () => {
+    mockGet.mockResolvedValue(REPONSE_AVEC_PARTENAIRES);
+    const fiche = await getPublicClubById('club-1');
+    expect(fiche.sponsor.map((/** @type {any} */ sponsor) => [sponsor.title, sponsor.link]))
+      .toEqual([['Foundclub', 'https://foundclub.app'], ['Mama', null]]);
+  });
+});
