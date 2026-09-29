@@ -222,7 +222,10 @@ describe('ABOCLUB — carte « Mon abonnement » du Profil', () => {
 
     expect(texte).not.toContain('Tes droits Club sont actifs.');
     expect(texte).not.toContain('Ton club est en cours de certification');
-    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}.`);
+    // Recette du 29/09 (tournee 4) : le nom finit deja par un point, la phrase
+    // n'en ajoute pas un second (« 'AIKI-ADVENTURE'.. »).
+    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}`);
+    expect(texte).not.toContain(`${NOM_AIKI}.`);
   });
 
   it('ne change RIEN quand l\'offre couvre le club actif', async () => {
@@ -233,5 +236,44 @@ describe('ABOCLUB — carte « Mon abonnement » du Profil', () => {
       'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
     );
     expect(texte).not.toContain('pas ton club');
+  });
+});
+
+// ABOPARCLUB (2026-09-29) — PIEGE A, cote Profil. Le vrai `useAuth` rend
+// desormais DEUX niveaux : GRATUIT pour le club affiche (AIKI), « Club » pour
+// ce que le compte paie. La carte doit montrer les deux : les compteurs gratuits
+// d'AIKI, ET la phrase qui dit ou s'applique l'offre payee.
+describe('ABOPARCLUB — carte « Mon abonnement » quand le club affiche est gratuit', () => {
+  it('puce = etat d AIKI, phrase « couvre Demo, pas AIKI » (un seul point), et compteurs d AIKI', async () => {
+    mockAuthValue = {
+      ...contexteAuth({ couvreLeClubActif: false }),
+      accountSubscriptionAccessLevel: 'CLUB_UNVERIFIED',
+      freeUsageSummary: [{
+        limit: 1, quotaType: 'EVENT_PUBLISH', remaining: 1, used: 0,
+      }],
+      subscriptionAccessLevel: 'FREE',
+    };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    const texte = arbre.root
+      .findAllByType(Text)
+      .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+      .join(' | ');
+    act(() => {
+      arbre.unmount();
+    });
+
+    // Recette du 29/09 (tournee 4) : le badge dit l'etat d'AIKI (gratuit), plus
+    // « Club · actif » a cote de « pas ton club » ; et un seul point final.
+    expect(texte).toContain('Gratuit');
+    expect(texte).not.toContain('Club · actif');
+    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}`);
+    expect(texte).not.toContain(`${NOM_AIKI}.`);
+    expect(texte).toContain('Événements');
   });
 });

@@ -70,12 +70,17 @@ function SubscriptionQuotaBanner({
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const {
+    clubVerificationSummary,
     entitlementsSummary,
     freeUsageSummary,
     subscriptionAccessLevel,
     subscriptionSummary,
     userData,
   } = useAuth();
+  // ABOPARCLUB — le club AFFICHE : seul un tiers qui paie pour lui est « deja couvert ».
+  const activeClubDocumentId = String(
+    clubVerificationSummary?.clubDocumentId || userData?.club?.documentId || '',
+  ).trim();
 
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canShowSubscriptionQuota = roleKey === 'coach'
@@ -90,12 +95,19 @@ function SubscriptionQuotaBanner({
   // D59 ⑤ — « Deja couvert » : quelqu'un d'autre paie pour cette equipe / ce club.
   const coveringEntitlement = useMemo(
     () => getCoveringEntitlement({
+      clubDocumentId: activeClubDocumentId,
       entitlementsSummary,
       subscriptionAccessLevel,
       subscriptionSummary,
       userDocumentId: userData?.documentId,
     }),
-    [entitlementsSummary, subscriptionAccessLevel, subscriptionSummary, userData?.documentId],
+    [
+      activeClubDocumentId,
+      entitlementsSummary,
+      subscriptionAccessLevel,
+      subscriptionSummary,
+      userData?.documentId,
+    ],
   );
 
   if (!canShowSubscriptionQuota) {

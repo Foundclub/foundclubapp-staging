@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Text, TouchableOpacity, View,
+  Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -17,14 +17,22 @@ import {
   formatSubscriptionYearlyDiscountLabel,
   getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
+  getPayerSubscriptionsWithClubs,
+  getStoreProviderForPurchase,
+  getStoreSubscriptionConflict,
+  getStoreSubscriptionConflictNotice,
   getSubscriptionBillingErrorMessage,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
+  resolveStorePlanChangeTarget,
 } from '@/domains/subscription/subscriptionBilling';
 import { getSubscriptionTeamSlotSummary } from '@/domains/subscription/subscriptionDecision';
 import {
+  getActiveSubscriptionPurchaseRail,
   isSubscriptionPurchaseAvailable,
+  performSubscriptionPlanChange,
   performSubscriptionPurchase,
+  SUBSCRIPTION_PURCHASE_RAILS,
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
@@ -223,12 +231,15 @@ function GuideOffersRecap({ navigation }) {
   } = useAuth();
   // UPGRADE / U5 — l'offre Club qu'un AUTRE membre paie deja, ou ''. Le serveur
   // ne prend plus que les offres SUPERIEURES a celle-la (`CLUB_ALREADY_COVERED`).
+  const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
+  // ABOPARCLUB : une couverture d'un AUTRE club ne grise rien ici.
   const blockingClubPlanCode = useMemo(
     () => getBlockingClubCoveragePlanCode({
+      clubDocumentId: currentClubDocumentId,
       entitlementsSummary,
       userDocumentId: userData?.documentId,
     }),
-    [entitlementsSummary, userData?.documentId],
+    [currentClubDocumentId, entitlementsSummary, userData?.documentId],
   );
 
   const [selectedOffer, setSelectedOffer] = useState('team');
@@ -296,7 +307,6 @@ function GuideOffersRecap({ navigation }) {
     [clubTier, clubTierEntries, selectableClubTierEntries],
   );
 
-  const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
   const isCatalogLoading = catalogQuery.isLoading;
   const isCatalogError = catalogQuery.isError
     || (!catalogQuery.isLoading && teamTierEntries.length === 0);
@@ -319,8 +329,12 @@ function GuideOffersRecap({ navigation }) {
   );
 
   const purchaseMutation = useMutation({
+    // ABOPARCLUB-RAIL : un changement d'offre du meme magasin passe par le rail
+    // du changement (proratisation, pas de second abonnement).
     mutationFn: async (/** @type {any} */ purchaseInput) => (
-      performSubscriptionPurchase(purchaseInput)
+      purchaseInput?.subscriptionDocumentId
+        ? performSubscriptionPlanChange(purchaseInput)
+        : performSubscriptionPurchase(purchaseInput)
     ),
   });
 
@@ -361,6 +375,55 @@ function GuideOffersRecap({ navigation }) {
       return;
     }
 
+    // ABOPARCLUB (2026-09-29) — LE MAGASIN INTERDIT-IL CET ACHAT ? Sur iPhone,
+    // un seul abonnement par compte Apple dans le groupe FoundClub : acheter ici
+    // REMPLACERAIT l'abonnement Apple qui couvre un autre club. Sur Google, la
+    // meme offre ne s'achete pas deux fois. On le dit, avec la marche a suivre,
+    // et on n'achete rien (decision d'Adel « abo2 A » : on ne contourne pas).
+    const storeProvider = getStoreProviderForPurchase({
+      isStoreRail: getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT,
+      platformOS: Platform.OS,
+    });
+    // ABOPARCLUB-RAIL (2026-09-29) — un abonnement DU MEME MAGASIN couvre deja ce
+    // club (ou, offre Equipe, ses equipes) : ce n'est pas un achat, c'est un
+    // CHANGEMENT de cet abonnement. Apple le remplacerait de toute facon ; un
+    // achat neuf laissait deux enregistrements serveur (Google : deux factures).
+    const storeChangeTarget = resolveStorePlanChangeTarget({
+      catalogEntry: selectedEntry,
+      clubDocumentId: currentClubDocumentId,
+      entitlementsSummary,
+      storeProvider,
+      subscriptionSummary,
+      userDocumentId: userData?.documentId,
+    });
+    const storeConflict = getStoreSubscriptionConflict({
+      catalogEntry: selectedEntry,
+      changeSourceSubscriptionDocumentId: storeChangeTarget?.subscriptionDocumentId,
+      clubDocumentId: currentClubDocumentId,
+      payerSubscriptions: getPayerSubscriptionsWithClubs({
+        entitlementsSummary,
+        subscriptionSummary,
+        userDocumentId: userData?.documentId,
+      }),
+      storeProvider,
+    });
+    if (storeConflict) {
+      const notice = getStoreSubscriptionConflictNotice({
+        clubDocumentId: currentClubDocumentId,
+        conflict: storeConflict,
+        entitlementsSummary,
+        userData,
+      });
+      Alert.alert(notice.title, notice.message, [
+        { style: 'cancel', text: notice.closeLabel },
+        {
+          onPress: () => { Promise.resolve(Linking.openURL(notice.mailto)).catch(() => {}); },
+          text: notice.contactLabel,
+        },
+      ]);
+      return;
+    }
+
     const slotCount = Number(selectedEntry?.slotCount || 0);
     trackSubscriptionFunnelEvent('recap_unlock_started', {
       planCode: String(selectedEntry?.planCode || ''),
@@ -373,6 +436,10 @@ function GuideOffersRecap({ navigation }) {
       const result = await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
         clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
+        ...(storeChangeTarget ? {
+          currentPlanCode: storeChangeTarget.currentPlanCode,
+          subscriptionDocumentId: storeChangeTarget.subscriptionDocumentId,
+        } : {}),
         payerUserDocumentId: String(userData?.documentId || '').trim(),
         teamDocumentIds: isClubPurchase ? [] : getInitialTeamSelection({
           availableTeams,

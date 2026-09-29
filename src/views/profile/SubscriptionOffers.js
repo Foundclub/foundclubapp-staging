@@ -6,6 +6,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Linking,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -31,6 +33,10 @@ import {
   formatSubscriptionYearlyDiscountLabel,
   getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
+  getPayerSubscriptionsWithClubs,
+  getStoreProviderForPurchase,
+  getStoreSubscriptionConflict,
+  getStoreSubscriptionConflictNotice,
   getSubscriptionBillingErrorMessage,
   getSubscriptionEntryPeriod,
   getSubscriptionEntryScope,
@@ -39,11 +45,13 @@ import {
   getSubscriptionSelectableTeams,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
+  resolveSubscriptionChangeTarget,
   sanitizeSubscriptionLicenseeCountInput,
 } from '@/domains/subscription/subscriptionBilling';
 import {
   getSubscriptionQuotaItems,
   getSubscriptionTeamSlotSummary,
+  isClubOfferCurrentForClub,
 } from '@/domains/subscription/subscriptionDecision';
 import {
   getActiveSubscriptionPurchaseRail,
@@ -311,14 +319,39 @@ function SubscriptionOffers({ navigation, route }) {
     () => (Array.isArray(subscriptionSummary?.activePlanCodes) ? subscriptionSummary.activePlanCodes : []),
     [subscriptionSummary?.activePlanCodes],
   );
-  const primarySubscriptionDocumentId = String(
-    Array.isArray(subscriptionSummary?.payerSubscriptionIds)
-      ? subscriptionSummary.payerSubscriptionIds[0] || ''
-      : '',
-  ).trim();
   const currentClubDocumentId = String(
     clubVerificationSummary?.clubDocumentId || userData?.club?.documentId || '',
   ).trim();
+
+  // ABOPARCLUB (2026-09-29, decision d'Adel « abo2 A ») — CE QU'UN ACHAT A LE
+  // DROIT DE MODIFIER. On envoyait le PREMIER abonnement paye du compte
+  // (`payerSubscriptionIds[0]`) avec le club AFFICHE : depuis AIKI, tout autre
+  // palier modifiait le « Club 100 » paye pour FoundClub Demo et y repointait
+  // la couverture. Desormais seul l'abonnement qui couvre le club affiche se
+  // change ; sinon c'est un NOUVEL abonnement pour ce club.
+  /**
+   * @param {SubscriptionCatalogEntry | { scopeType: string } | null} catalogEntry - L'offre choisie.
+   * @returns {{ currentPlanCode: string; subscriptionDocumentId: string } | null} La cible.
+   */
+  const getChangeTarget = useCallback((/** @type {any} */ catalogEntry) => resolveSubscriptionChangeTarget({
+    catalogEntry,
+    clubDocumentId: currentClubDocumentId,
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionSummary,
+    userDocumentId: userData?.documentId,
+  }), [
+    clubVerificationSummary,
+    currentClubDocumentId,
+    entitlementsSummary,
+    subscriptionSummary,
+    userData?.documentId,
+  ]);
+  const payerSubscriptions = useMemo(() => getPayerSubscriptionsWithClubs({
+    entitlementsSummary,
+    subscriptionSummary,
+    userDocumentId: userData?.documentId,
+  }), [entitlementsSummary, subscriptionSummary, userData?.documentId]);
 
   const isPurchaseAvailable = isSubscriptionPurchaseAvailable();
   const isTestPurchaseRail = getActiveSubscriptionPurchaseRail()
@@ -371,11 +404,53 @@ function SubscriptionOffers({ navigation, route }) {
   // (decision U4 : un abonnement offert ne fait jamais refuser un paiement).
   const blockingClubPlanCode = useMemo(
     () => getBlockingClubCoveragePlanCode({
+      clubDocumentId: currentClubDocumentId,
       entitlementsSummary,
       userDocumentId: userData?.documentId,
     }),
-    [entitlementsSummary, userData?.documentId],
+    [currentClubDocumentId, entitlementsSummary, userData?.documentId],
   );
+
+  /**
+   * ABOPARCLUB — LE MAGASIN INTERDIT-IL CET ACHAT ? Chez Apple, un seul
+   * abonnement par compte dans le groupe FoundClub : acheter pour AIKI
+   * remplacerait celui de Demo. Chez Google, la meme offre ne s'achete pas deux
+   * fois. L'ecran le dit franchement, avec la marche a suivre, et n'achete rien.
+   * @param {SubscriptionCatalogEntry} catalogEntry - L'offre choisie.
+   * @param {string} [changeSourceSubscriptionDocumentId] - L'abonnement qu'on change, s'il y en a un.
+   * @returns {boolean} Vrai si l'achat est arrete.
+   */
+  const stopOnStoreConflict = useCallback((
+    /** @type {any} */ catalogEntry,
+    /** @type {string | undefined} */ changeSourceSubscriptionDocumentId,
+  ) => {
+    const conflict = getStoreSubscriptionConflict({
+      catalogEntry,
+      changeSourceSubscriptionDocumentId,
+      clubDocumentId: currentClubDocumentId,
+      payerSubscriptions,
+      storeProvider: getStoreProviderForPurchase({
+        isStoreRail: getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT,
+        platformOS: Platform.OS,
+      }),
+    });
+    if (!conflict) return false;
+
+    const notice = getStoreSubscriptionConflictNotice({
+      clubDocumentId: currentClubDocumentId,
+      conflict,
+      entitlementsSummary,
+      userData,
+    });
+    Alert.alert(notice.title, notice.message, [
+      { style: 'cancel', text: notice.closeLabel },
+      {
+        onPress: () => { Promise.resolve(Linking.openURL(notice.mailto)).catch(() => {}); },
+        text: notice.contactLabel,
+      },
+    ]);
+    return true;
+  }, [currentClubDocumentId, entitlementsSummary, payerSubscriptions, userData]);
 
   /**
    * Paliers d'une famille pour la periode choisie, du moins cher au plus cher.
@@ -812,8 +887,8 @@ function SubscriptionOffers({ navigation, route }) {
     if (!catalogEntry) return;
 
     const scopeType = getSubscriptionEntryScope(catalogEntry);
-    const hasPaidSubscription = Boolean(primarySubscriptionDocumentId);
-    const action = hasPaidSubscription ? 'change' : 'purchase';
+    const changeTarget = getChangeTarget(catalogEntry);
+    const action = changeTarget ? 'change' : 'purchase';
 
     // Une offre Équipe couvre des equipes NOMMEES : on demande lesquelles avant
     // d'encaisser quoi que ce soit.
@@ -854,19 +929,22 @@ function SubscriptionOffers({ navigation, route }) {
       payerUserDocumentId: String(userData?.documentId || '').trim(),
       teamDocumentIds: [],
     };
-    if (hasPaidSubscription) {
-      input.currentPlanCode = String(activePlanCodes[0] || '');
-      input.subscriptionDocumentId = primarySubscriptionDocumentId;
+    if (changeTarget) {
+      input.currentPlanCode = changeTarget.currentPlanCode;
+      input.subscriptionDocumentId = changeTarget.subscriptionDocumentId;
     }
+
+    if (stopOnStoreConflict(catalogEntry, changeTarget?.subscriptionDocumentId)) return;
 
     await commitSubscriptionMutation({ action, catalogEntry, input });
   }, [
     activePlanCodes,
     commitSubscriptionMutation,
     currentClubDocumentId,
+    getChangeTarget,
     isPurchaseAvailable,
     openTeamPlanModal,
-    primarySubscriptionDocumentId,
+    stopOnStoreConflict,
     userData?.documentId,
   ]);
 
@@ -960,14 +1038,15 @@ function SubscriptionOffers({ navigation, route }) {
       return;
     }
 
-    const action = primarySubscriptionDocumentId ? 'change' : 'purchase';
+    const changeTarget = getChangeTarget(selectedTeamPlanEntry);
+    const action = changeTarget ? 'change' : 'purchase';
     /** @type {Record<string, any>} */
     const input = {
       catalogEntry: selectedTeamPlanEntry,
       payerUserDocumentId: String(userData?.documentId || '').trim(),
       teamDocumentIds: selectedTeamIds,
     };
-    if (primarySubscriptionDocumentId) {
+    if (changeTarget) {
       // L40 — `currentPlanCode` EGAL au plan vise est ce qui fait prendre au rail
       // la branche « reassignation de creneaux » : aucun passage store, aucune
       // seconde facturation (subscriptionPurchaseRail.js:241). On le pointe donc
@@ -977,8 +1056,16 @@ function SubscriptionOffers({ navigation, route }) {
       // enverrait l'abonne repasser a la caisse pour ce qu'il paie deja.
       input.currentPlanCode = teamPlanModalState.actionMode === 'manage-team-slots'
         ? String(selectedTeamPlanEntry?.planCode || '')
-        : String(activePlanCodes[0] || '');
-      input.subscriptionDocumentId = primarySubscriptionDocumentId;
+        : changeTarget.currentPlanCode;
+      input.subscriptionDocumentId = changeTarget.subscriptionDocumentId;
+    }
+
+    // Reattribuer ses places (meme offre) ne passe par aucun magasin.
+    const isSlotReassignment = Boolean(changeTarget)
+      && input.currentPlanCode === String(selectedTeamPlanEntry?.planCode || '');
+    if (!isSlotReassignment
+      && stopOnStoreConflict(selectedTeamPlanEntry, changeTarget?.subscriptionDocumentId)) {
+      return;
     }
 
     await commitSubscriptionMutation({
@@ -987,12 +1074,12 @@ function SubscriptionOffers({ navigation, route }) {
       input,
     });
   }, [
-    activePlanCodes,
     commitSubscriptionMutation,
+    getChangeTarget,
     hasAtLeastOneSelectedTeam,
     isPurchaseAvailable,
-    primarySubscriptionDocumentId,
     selectedTeamIds,
+    stopOnStoreConflict,
     selectedTeamPlanEntry,
     teamOptions.length,
     teamPlanModalState.actionMode,
@@ -1195,7 +1282,15 @@ function SubscriptionOffers({ navigation, route }) {
   };
 
   const isTeamEntryActivePlan = Boolean(teamEntry && activePlanCodes.includes(teamEntry?.planCode));
-  const isClubEntryActivePlan = Boolean(clubEntry && activePlanCodes.includes(clubEntry?.planCode));
+  // ABOPARCLUB — une offre Club n'est « Ton offre actuelle » que pour le club
+  // qu'elle couvre : depuis AIKI, le Club 100 paye pour Demo ne l'est pas.
+  const isClubEntryActivePlan = Boolean(clubEntry && isClubOfferCurrentForClub({
+    activePlanCodes,
+    clubDocumentId: currentClubDocumentId,
+    clubVerificationSummary,
+    entitlementsSummary,
+    planCode: clubEntry?.planCode,
+  }));
 
   /**
    * CTA collant de la carte active. Il ne ment jamais : desactive quand il n'y a
@@ -1862,7 +1957,7 @@ function SubscriptionOffers({ navigation, route }) {
               disabled={isTeamSelectionConfirmDisabled}
               isLoading={subscriptionMutation.isPending}
               onPress={handleConfirmTeamPlan}
-              title={primarySubscriptionDocumentId ? t(
+              title={getChangeTarget(selectedTeamPlanEntry || { scopeType: 'TEAM' }) ? t(
                 'subscriptionOffers.teamModal.confirmChange',
                 'Confirmer le changement',
               ) : t(

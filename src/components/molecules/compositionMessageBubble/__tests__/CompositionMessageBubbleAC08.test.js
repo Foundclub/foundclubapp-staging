@@ -189,7 +189,9 @@ describe('COMPOLECT-2 · la carte du tchat mene au plateau de creation', () => {
     ]);
     expect(params?.selectedPlayers.map((/** @type {any} */ p) => p.documentId))
       .toEqual([JOUEUR, REMPLACANT]);
-    expect(params?.canEdit).toBe(false);
+    // COMPO-CARTE-SITE — aucun droit = AUCUN `canEdit` : ecrit `false`, il
+    // devenait la chaine « false » (vraie) dans l'adresse du site.
+    expect(params).not.toHaveProperty('canEdit');
     expect(params?.teamName).toBe('U15 A');
   });
 

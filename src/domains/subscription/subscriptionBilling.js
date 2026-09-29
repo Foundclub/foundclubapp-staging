@@ -2,10 +2,15 @@ import { format } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
 import i18next from 'i18next';
 
+import {
+  formatSubscriptionPlanLabel,
+  getClubCoverage,
+  getClubDisplayName,
+} from '@/domains/subscription/subscriptionDecision';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
-import { formatSubscriptionPlanLabel } from './subscriptionDecision';
+import { SUPPORT_CONTACT_EMAIL, SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
 const TEAM_SCOPE = 'TEAM';
 
@@ -812,15 +817,25 @@ export const getSubscriptionClubOfferRank = (entry) => {
  * ⚠️ On lit `paidBy` et non `activePlanCodes` : cette liste-la porte TOUS les
  * droits actifs du compte, y compris ceux payes par quelqu'un d'autre — c'est
  * le piege VITRINE/W4 qui avait rendu un ecran entier inatteignable.
+ *
+ * ABOPARCLUB (2026-09-29) — `clubDocumentId` (le club pour lequel on achete) :
+ * une couverture qui NOMME un autre club ne bloque rien ici. Depuis AIKI, le
+ * Club de Demo paye par un autre membre grisait les tranches d'AIKI.
  * @param {object} params - ce que le serveur dit des droits du compte.
+ * @param {string} [params.clubDocumentId] - le club vise par l'achat.
  * @param {any[]} [params.entitlementsSummary] - les droits actifs, avec leur payeur.
  * @param {string} [params.userDocumentId] - moi.
  * @returns {string} - le code de plan qui bloque, ou '' quand rien ne bloque.
  */
-export const getBlockingClubCoveragePlanCode = ({ entitlementsSummary, userDocumentId }) => {
+export const getBlockingClubCoveragePlanCode = ({ clubDocumentId, entitlementsSummary, userDocumentId }) => {
   const myDocumentId = String(userDocumentId || '').trim();
+  const targetClubDocumentId = String(clubDocumentId || '').trim();
   const blocking = (Array.isArray(entitlementsSummary) ? entitlementsSummary : []).find((entry) => {
     if (String(entry?.scopeType || '').trim().toUpperCase() !== 'CLUB') return false;
+    const entryClubDocumentId = String(entry?.scopeClubDocumentId || '').trim();
+    if (targetClubDocumentId && entryClubDocumentId && entryClubDocumentId !== targetClubDocumentId) {
+      return false;
+    }
     const payerDocumentId = String(entry?.paidBy?.documentId || '').trim();
     // Payeur inconnu : on ne devine pas, et on ne grise rien sur une supposition.
     if (!payerDocumentId) return false;
@@ -830,6 +845,307 @@ export const getBlockingClubCoveragePlanCode = ({ entitlementsSummary, userDocum
   });
 
   return blocking ? String(blocking.subscriptionPlanCode || '').trim() : '';
+};
+
+const ACTIVE_PAYER_SUBSCRIPTION_STATUSES = ['active', 'grace_period'];
+
+/**
+ * @param {any} value - Un identifiant, peut-etre absent.
+ * @returns {string} L'identifiant sans blanc, ou ''.
+ */
+const trimId = (value) => String(value || '').trim();
+
+/**
+ * Famille d'un code d'offre (`fc_club_tier_1_yearly` → `fc_club_tier_1`) : c'est
+ * l'identifiant d'ABONNEMENT chez Google Play (les periodes en sont les « base
+ * plans »). Meme regle que `getRevenueCatOfferingIdForPlanCode`, recopiee pour
+ * ne pas tirer le module du SDK magasin dans ce module pur.
+ * @param {any} planCode - Le code d'offre.
+ * @returns {string} La famille.
+ */
+const getPlanFamily = (planCode) => trimId(planCode).replace(/_(monthly|yearly)$/, '');
+
+/**
+ * LES ABONNEMENTS QUE JE PAIE, CHACUN AVEC LE OU LES CLUBS QU'IL COUVRE —
+ * ABOPARCLUB, 2026-09-29.
+ *
+ * Le serveur le dit depuis ce lot (`scopeClubDocumentIds`,
+ * subscription-permission.ts). Un serveur plus ancien ne le dit pas : on le
+ * deduit alors de MES droits (meme code d'offre, `paidBy` = moi), et deux
+ * abonnements au meme code d'offre rendent `null` (inconnu) plutot qu'une
+ * supposition — la meme reserve que `getActiveOfferDetails`.
+ * @param {object} params
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte.
+ * @param {any} [params.subscriptionSummary] - Le resume d'abonnement (bootstrap).
+ * @param {string} [params.userDocumentId] - Moi.
+ * @returns {Array<{ clubDocumentIds: string[] | null; documentId: string; planCode: string;
+ *   provider: string }> | null} `null` quand le serveur ne rend pas le detail.
+ */
+export const getPayerSubscriptionsWithClubs = ({
+  entitlementsSummary,
+  subscriptionSummary,
+  userDocumentId,
+}) => {
+  if (!Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)) return null;
+  const myDocumentId = trimId(userDocumentId);
+  const subscriptions = subscriptionSummary.payerSubscriptionsSummary.filter((/** @type {any} */ entry) => {
+    const status = trimId(entry?.status).toLowerCase();
+    return trimId(entry?.documentId) && (!status || ACTIVE_PAYER_SUBSCRIPTION_STATUSES.includes(status));
+  });
+  const myEntitlements = (Array.isArray(entitlementsSummary) ? entitlementsSummary : [])
+    .filter((entry) => myDocumentId && trimId(entry?.paidBy?.documentId) === myDocumentId);
+
+  return subscriptions.map((/** @type {any} */ entry) => {
+    const planCode = trimId(entry?.planCode);
+    let clubDocumentIds = null;
+    if (Array.isArray(entry?.scopeClubDocumentIds)) {
+      clubDocumentIds = Array.from(new Set(entry.scopeClubDocumentIds.map(trimId).filter(Boolean)));
+    } else if (subscriptions.filter((/** @type {any} */ other) => trimId(other?.planCode) === planCode)
+      .length === 1) {
+      const derived = Array.from(new Set(myEntitlements
+        .filter((droit) => trimId(droit?.subscriptionPlanCode) === planCode)
+        .map((droit) => trimId(droit?.scopeClubDocumentId))
+        .filter(Boolean)));
+      clubDocumentIds = derived.length > 0 ? derived : null;
+    }
+    return {
+      clubDocumentIds,
+      documentId: trimId(entry?.documentId),
+      planCode,
+      provider: trimId(entry?.provider).toLowerCase(),
+    };
+  });
+};
+
+/**
+ * QUEL ABONNEMENT UN « CHANGER D'OFFRE » A-T-IL LE DROIT DE MODIFIER ? —
+ * ABOPARCLUB, decision d'Adel « abo2 A » du 2026-09-29.
+ *
+ * 🧨 L'ecran des offres envoyait le PREMIER abonnement paye du compte
+ * (`payerSubscriptionIds[0]`) avec le club AFFICHE : depuis AIKI, choisir un
+ * autre palier modifiait le « Club 100 » paye pour FoundClub Demo et y
+ * repointait la couverture. Desormais :
+ *  - offre Club : SEUL l'abonnement qui couvre le club affiche se change ;
+ *  - offre Equipe : mon abonnement Equipe (ses places se reattribuent, c'est son
+ *    usage), sinon celui qui couvre le club affiche (retrogradation) ;
+ *  - dans les deux cas, en dernier recours, un abonnement qui ne couvre RIEN ;
+ *  - sinon `null` : c'est un NOUVEL abonnement pour ce club.
+ * ⛔ Un abonnement pose A LA MAIN (cadeau, essai : `provider: 'manual'`) n'est
+ * jamais une cible : aucun magasin ne le connait, donc « le changer » faisait
+ * encaisser le magasin puis refuser le serveur (« abonnement source introuvable
+ * chez le store »). L'achat neuf est la voie prevue : le serveur remplace le
+ * cadeau (UPGRADE/U4, `assertClubNotAlreadyCovered`).
+ * Un serveur qui ne rend pas le detail des abonnements garde l'ancienne regle,
+ * sauf quand il affirme que le club affiche n'est pas couvert (offre Club).
+ * @param {object} params
+ * @param {any} params.catalogEntry - L'offre choisie.
+ * @param {string} [params.clubDocumentId] - Le club affiche.
+ * @param {any} [params.clubVerificationSummary] - Le resume du club ACTIF.
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte.
+ * @param {any} [params.subscriptionSummary] - Le resume d'abonnement.
+ * @param {string} [params.userDocumentId] - Moi.
+ * @returns {{ currentPlanCode: string; provider?: string; subscriptionDocumentId: string } | null} La cible.
+ */
+export const resolveSubscriptionChangeTarget = ({
+  catalogEntry,
+  clubDocumentId,
+  clubVerificationSummary,
+  entitlementsSummary,
+  subscriptionSummary,
+  userDocumentId,
+}) => {
+  const isTeamOffer = getSubscriptionEntryScope(catalogEntry) === TEAM_SCOPE;
+  const activeClubDocumentId = trimId(clubDocumentId);
+  const subscriptions = getPayerSubscriptionsWithClubs({
+    entitlementsSummary,
+    subscriptionSummary,
+    userDocumentId,
+  });
+
+  if (!subscriptions) {
+    const primarySubscriptionDocumentId = trimId(
+      Array.isArray(subscriptionSummary?.payerSubscriptionIds)
+        ? subscriptionSummary.payerSubscriptionIds[0]
+        : '',
+    );
+    if (!primarySubscriptionDocumentId) return null;
+    if (!isTeamOffer && getClubCoverage({
+      clubDocumentId: activeClubDocumentId,
+      clubVerificationSummary,
+      entitlementsSummary,
+    }) === 'not-covered') {
+      return null;
+    }
+    return {
+      currentPlanCode: trimId(Array.isArray(subscriptionSummary?.activePlanCodes)
+        ? subscriptionSummary.activePlanCodes[0]
+        : ''),
+      subscriptionDocumentId: primarySubscriptionDocumentId,
+    };
+  }
+
+  const storeSubscriptions = subscriptions.filter((entry) => entry.provider !== 'manual');
+  const coveringSubscription = activeClubDocumentId
+    ? storeSubscriptions.find((entry) => entry.clubDocumentIds?.includes(activeClubDocumentId))
+    : null;
+  const unattachedSubscription = storeSubscriptions.find(
+    (entry) => Array.isArray(entry.clubDocumentIds) && entry.clubDocumentIds.length === 0,
+  );
+  const teamSubscription = isTeamOffer
+    ? storeSubscriptions.find((entry) => entry.planCode.startsWith('fc_team_'))
+    : null;
+  const target = teamSubscription || coveringSubscription || unattachedSubscription || null;
+
+  return target
+    ? {
+      currentPlanCode: target.planCode,
+      provider: target.provider,
+      subscriptionDocumentId: target.documentId,
+    }
+    : null;
+};
+
+/**
+ * UN ACHAT DEPUIS LE MUR PAYANT QUI EST EN FAIT UN CHANGEMENT D'OFFRE —
+ * ABOPARCLUB-RAIL, 2026-09-29.
+ *
+ * La feuille « mur payant » et le recapitulatif du guide ne savaient qu'ACHETER.
+ * Or un abonne Apple « Equipe » qui prend « Club » pour le MEME club n'ouvre pas
+ * un second abonnement : Apple REMPLACE le premier (un seul par groupe). L'app
+ * validait pourtant un achat neuf, et le serveur gardait DEUX enregistrements
+ * pour un seul abonnement magasin (l'ancien, change par le webhook, et le neuf).
+ * Chez Google, l'achat neuf ouvrait un second abonnement, facture en double.
+ * Le bon geste est « changer d'offre » de CET abonnement — c'est ce que fait
+ * deja l'ecran des offres (`resolveSubscriptionChangeTarget`).
+ * Seulement si la cible est du magasin de CET achat : sinon (caisse web, rail de
+ * test, cadeau, autre magasin), l'achat reste un achat, comme avant.
+ * @param {Record<string, any> & { storeProvider?: 'apple' | 'google' | null }} params - Les
+ *   entrees de `resolveSubscriptionChangeTarget`, plus `storeProvider` : le magasin de CET achat.
+ * @returns {{ currentPlanCode: string; provider?: string; subscriptionDocumentId: string } | null}
+ */
+export const resolveStorePlanChangeTarget = ({ storeProvider, ...params }) => {
+  if (!storeProvider) return null;
+  const target = resolveSubscriptionChangeTarget(/** @type {any} */ (params));
+  return target && target.provider === storeProvider ? target : null;
+};
+
+/**
+ * LE MAGASIN DE CET ACHAT : Apple sur iPhone, Google sur Android — et aucun
+ * hors du rail des magasins (caisse web, rail de test).
+ * @param {object} params
+ * @param {boolean} params.isStoreRail - Le rail actif est-il celui des magasins (RevenueCat) ?
+ * @param {string} params.platformOS - `Platform.OS`.
+ * @returns {'apple' | 'google' | null} Le magasin, ou `null`.
+ */
+export const getStoreProviderForPurchase = ({ isStoreRail, platformOS }) => {
+  if (!isStoreRail) return null;
+  return platformOS === 'ios' ? 'apple' : 'google';
+};
+
+/**
+ * CE QUE LE MAGASIN INTERDIT POUR UN 2e CLUB — ABOPARCLUB, 2026-09-29.
+ *
+ * Mesure avant d'ecrire (compte rendu du lot) :
+ *  - 🍎 Apple : les offres FoundClub sont dans UN seul groupe d'abonnements, et
+ *    un compte Apple n'y a qu'UN abonnement actif. Acheter depuis AIKI, avec un
+ *    abonnement Apple qui couvre Demo, ne cree pas un second abonnement : Apple
+ *    REMPLACE celui de Demo. Bloque.
+ *  - 🤖 Google Play : chaque famille d'offres est un abonnement a part. Un 2e
+ *    abonnement d'une AUTRE famille est possible ; la MEME famille, non (Google
+ *    refuse d'acheter deux fois ce qu'on possede deja). Bloque seulement ce cas.
+ *  - 🌐 Caisse web (Stripe), rail de test, abonnement pose a la main : aucun
+ *    magasin ne s'interpose. Rien ne bloque.
+ * Seul un abonnement dont on SAIT qu'il couvre un AUTRE club bloque : sans
+ * preuve, on laisse faire, comme avant.
+ * @param {object} params
+ * @param {any} params.catalogEntry - L'offre choisie.
+ * @param {string} [params.changeSourceSubscriptionDocumentId] - L'abonnement qu'on
+ *   CHANGE, quand c'en est un : il ne peut pas se bloquer lui-meme.
+ * @param {string} [params.clubDocumentId] - Le club affiche.
+ * @param {ReturnType<typeof getPayerSubscriptionsWithClubs>} params.payerSubscriptions - Mes abonnements.
+ * @param {'apple' | 'google' | null} [params.storeProvider] - Le magasin de CET achat, `null` hors magasin.
+ * @returns {{ coveredClubDocumentIds: string[]; reason: 'apple-single-group' | 'google-same-product' } | null}
+ */
+export const getStoreSubscriptionConflict = ({
+  catalogEntry,
+  changeSourceSubscriptionDocumentId,
+  clubDocumentId,
+  payerSubscriptions,
+  storeProvider,
+}) => {
+  if (!storeProvider || !Array.isArray(payerSubscriptions)) return null;
+  // L'offre au licencie passe par la caisse web, meme depuis un telephone.
+  if (isPerLicenseeSubscriptionEntry(catalogEntry)) return null;
+
+  const activeClubDocumentId = trimId(clubDocumentId);
+  const changeSource = trimId(changeSourceSubscriptionDocumentId);
+  const targetFamily = getPlanFamily(catalogEntry?.planCode);
+  const conflicting = payerSubscriptions.find((entry) => {
+    if (entry.provider !== storeProvider || entry.documentId === changeSource) return false;
+    if (!Array.isArray(entry.clubDocumentIds) || entry.clubDocumentIds.length === 0) return false;
+    if (activeClubDocumentId && entry.clubDocumentIds.includes(activeClubDocumentId)) return false;
+    return storeProvider === 'apple' || getPlanFamily(entry.planCode) === targetFamily;
+  });
+  if (!conflicting) return null;
+
+  return {
+    coveredClubDocumentIds: conflicting.clubDocumentIds || [],
+    reason: storeProvider === 'apple' ? 'apple-single-group' : 'google-same-product',
+  };
+};
+
+/**
+ * CE QUE L'ECRAN DIT QUAND LE MAGASIN INTERDIT L'ACHAT — franchement, et avec la
+ * marche a suivre (decision « abo2 A » : on ne contourne pas).
+ * @param {object} params
+ * @param {string} [params.clubDocumentId] - Le club qu'on voulait couvrir.
+ * @param {{ coveredClubDocumentIds: string[]; reason: string }} params.conflict - Le verdict.
+ * @param {any[]} [params.entitlementsSummary] - Pour nommer les clubs.
+ * @param {any} [params.userData] - Pour nommer les clubs.
+ * @returns {{ closeLabel: string; contactLabel: string; mailto: string; message: string;
+ *   title: string }} L'alerte : titre, texte, et le bouton qui ouvre le courriel.
+ */
+export const getStoreSubscriptionConflictNotice = ({
+  clubDocumentId,
+  conflict,
+  entitlementsSummary,
+  userData,
+}) => {
+  const clubName = getClubDisplayName(trimId(clubDocumentId), entitlementsSummary || [], userData)
+    || i18next.t('subscriptionOffers.storeConflict.thisClub', 'ce club');
+  const coveredClubs = (conflict?.coveredClubDocumentIds || [])
+    .map((documentId) => getClubDisplayName(trimId(documentId), entitlementsSummary || [], userData))
+    .filter(Boolean)
+    .join(', ') || i18next.t('subscriptionOffers.storeConflict.otherClub', 'un autre club');
+  const valeurs = {
+    clubName, coveredClubs, email: SUPPORT_CONTACT_EMAIL, ...SANS_ECHAPPEMENT,
+  };
+
+  return {
+    closeLabel: i18next.t('common.close', 'Fermer'),
+    contactLabel: i18next.t('subscriptionOffers.storeConflict.contactUs', 'Nous écrire'),
+    // Objet generique : aucune donnee personnelle dans l'adresse.
+    mailto: `${SUPPORT_CONTACT_MAILTO}?subject=${encodeURIComponent(i18next.t(
+      'subscriptionOffers.storeConflict.mailSubject',
+      'Abonnement pour un autre club',
+    ))}`,
+    message: conflict?.reason === 'google-same-product'
+      ? i18next.t(
+        'subscriptionOffers.storeConflict.googleMessage',
+        "Ton compte Google Play a déjà cette offre, pour {{coveredClubs}}. Google n'autorise pas "
+          + 'deux fois la même : choisis une autre offre pour {{clubName}}, ou écris-nous à '
+          + '{{email}}.',
+        valeurs,
+      )
+      : i18next.t(
+        'subscriptionOffers.storeConflict.appleMessage',
+        "Ton compte Apple a déjà un abonnement FoundClub, pour {{coveredClubs}}. Apple n'en "
+          + "autorise qu'un à la fois : un nouvel achat le remplacerait. Pour couvrir aussi "
+          + "{{clubName}}, écris-nous à {{email}}, on s'en occupe.",
+        valeurs,
+      ),
+    title: i18next.t('subscriptionOffers.storeConflict.title', 'Couvrir {{clubName}}', valeurs),
+  };
 };
 
 /**
@@ -1128,6 +1444,17 @@ export const getSubscriptionBillingErrorMessage = (error) => {
       'subscriptionBilling.errors.teamCoveredByClubPlan',
       "Cette équipe est déjà couverte par l'offre Club de son club : tu as déjà ces droits, "
         + 'inutile de payer une offre Équipe pour elle.',
+    );
+  }
+
+  // ABOPARCLUB (2026-09-29) — le serveur refuse un changement d'offre qui
+  // viserait l'abonnement d'un AUTRE club (decision d'Adel « abo2 A »).
+  if (message === 'SUBSCRIPTION_CHANGE_OTHER_CLUB') {
+    return i18next.t(
+      'subscriptionBilling.errors.subscriptionChangeOtherClub',
+      'Cet abonnement couvre un autre club : il ne se modifie pas depuis ce club-ci. Pour '
+        + 'couvrir ce club, prends-lui sa propre offre, ou écris-nous à {{email}}.',
+      { email: SUPPORT_CONTACT_EMAIL, ...SANS_ECHAPPEMENT },
     );
   }
 

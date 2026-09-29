@@ -412,3 +412,31 @@ describe('ABOCLUB — l\'offre couvre le club actif : RIEN ne change', () => {
     expect(texte).not.toContain("n'est pas couvert par cette offre");
   });
 });
+
+// ABOPARCLUB (2026-09-29) — PIEGE A. Depuis la decision « niveau oui »,
+// `useAuth` rend le niveau du club AFFICHE : GRATUIT dans AIKI. Les decors
+// ci-dessus posent ce niveau A LA MAIN (piege c) ; celui-ci pose les DEUX
+// valeurs que rend desormais le vrai hook, et mesure que l'ecran qui gere
+// l'offre lit toujours ce que le compte PAIE.
+describe('ABOPARCLUB — niveau du club affiche GRATUIT : l ecran garde l offre payee', () => {
+  const depuisAikiApresLeLot = () => payeurDepuisAiki({
+    accountSubscriptionAccessLevel: 'CLUB_UNVERIFIED',
+    subscriptionAccessLevel: 'FREE',
+  });
+
+  it('le Club 100 paye reste a l ecran, avec le club qu il couvre et celui qu il ne couvre pas', async () => {
+    const texte = texteVisible(await rendre(depuisAikiApresLeLot()));
+
+    expect(texte).toContain('Club 100 / an');
+    expect(texte).toContain(`Couvre : ${NOM_DEMO}`);
+    expect(texte).toContain(`Ton club ${NOM_AIKI} n'est pas couvert par cette offre.`);
+    expect(texte).not.toContain('Offre gratuite FoundClub');
+  });
+
+  it('recette du 29/09 (tournee 4) : le badge dit « Gratuit » (etat d AIKI), plus « Club · actif »', async () => {
+    const texte = texteVisible(await rendre(depuisAikiApresLeLot()));
+
+    expect(texte).toContain('Gratuit');
+    expect(texte).not.toContain('Club · actif');
+  });
+});

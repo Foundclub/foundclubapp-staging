@@ -20,7 +20,9 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import {
+  endSentenceAfterName,
   getActiveClubNotCovered,
+  getSubscriptionBadgeLevel,
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -78,6 +80,7 @@ function Profile({ navigation, route }) {
   const { i18n, t } = useTranslation();
   const [{ fcmToken }] = useAppContext();
   const {
+    accountSubscriptionAccessLevel,
     addAccount,
     authSessions,
     canEditClub,
@@ -132,6 +135,11 @@ function Profile({ navigation, route }) {
     return canEditClub(userData?.club?.documentId);
   }, [userData, canEditClub]);
 
+  // ABOPARCLUB (2026-09-29) — DEUX NIVEAUX, ET CHACUN A SA PLACE. Les compteurs
+  // gratuits sont ceux du club AFFICHE (dans AIKI non couvert, ils reviennent) ;
+  // la puce et la phrase disent ce que le compte PAIE (piege a du lot : le
+  // « Club 100 » paye pour un autre club ne disparait pas de la carte).
+  const paidSubscriptionAccessLevel = accountSubscriptionAccessLevel || subscriptionAccessLevel;
   const visibleSubscriptionQuotaItems = useMemo(
     () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel).slice(0, 2),
     [freeUsageSummary, subscriptionAccessLevel],
@@ -142,9 +150,9 @@ function Profile({ navigation, route }) {
   const uncoveredActiveClub = useMemo(() => getActiveClubNotCovered({
     clubVerificationSummary,
     entitlementsSummary,
-    subscriptionAccessLevel,
+    subscriptionAccessLevel: paidSubscriptionAccessLevel,
     userData,
-  }), [clubVerificationSummary, entitlementsSummary, subscriptionAccessLevel, userData]);
+  }), [clubVerificationSummary, entitlementsSummary, paidSubscriptionAccessLevel, userData]);
 
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
@@ -415,8 +423,15 @@ function Profile({ navigation, route }) {
   );
 
   // ----- Carte abonnement (chip 4 états + jauges humaines) -----
+  // ABOPARCLUB — recette du 29/09 (tournee 4, defaut 4) : meme badge que
+  // « Mon abonnement », jamais « Club · actif » a cote de « pas ton club ».
+  const badgeAccessLevel = getSubscriptionBadgeLevel({
+    activeClubLevel: subscriptionAccessLevel,
+    paidLevel: paidSubscriptionAccessLevel,
+    uncoveredActiveClub,
+  });
   const subscriptionChip = useMemo(() => {
-    switch (subscriptionAccessLevel) {
+    switch (badgeAccessLevel) {
       case 'CLUB':
         return {
           container: { backgroundColor: 'rgba(133,103,255,0.16)', borderColor: 'rgba(133,103,255,0.55)' },
@@ -448,29 +463,33 @@ function Profile({ navigation, route }) {
           textColor: Colors.neutral200,
         };
     }
-  }, [subscriptionAccessLevel, Colors, t]);
+  }, [badgeAccessLevel, Colors, t]);
 
   const subscriptionStatusKey = {
     CLUB: 'club',
     CLUB_UNVERIFIED: 'clubUnverified',
     FREE: 'free',
     TEAM: 'team',
-  }[subscriptionAccessLevel] || 'free';
+  }[paidSubscriptionAccessLevel] || 'free';
   let subscriptionStatusText = t(`profile.subscription.status.${subscriptionStatusKey}`);
   if (uncoveredActiveClub) {
     const [coveredClubName] = uncoveredActiveClub.coveredClubNames;
-    subscriptionStatusText = coveredClubName && uncoveredActiveClub.activeClubName ? t(
-      'profile.subscription.otherClub.named',
-      'Ton offre Club couvre {{coveredClubs}}, pas ton club {{clubName}}.',
-      {
-        clubName: uncoveredActiveClub.activeClubName,
-        coveredClubs: uncoveredActiveClub.coveredClubNames.join(', '),
-        ...SANS_ECHAPPEMENT,
-      },
-    ) : t(
-      'profile.subscription.otherClub.unnamed',
-      'Ton offre Club couvre un autre club que ton club actuel.',
-    );
+    // Le nom du club finit la phrase : s'il porte deja son point, on n'en
+    // ajoute pas un second (« 'AIKI-ADVENTURE'.. », recette du 29/09).
+    subscriptionStatusText = coveredClubName && uncoveredActiveClub.activeClubName
+      ? endSentenceAfterName(t(
+        'profile.subscription.otherClub.named',
+        'Ton offre Club couvre {{coveredClubs}}, pas ton club {{clubName}}.',
+        {
+          clubName: uncoveredActiveClub.activeClubName,
+          coveredClubs: uncoveredActiveClub.coveredClubNames.join(', '),
+          ...SANS_ECHAPPEMENT,
+        },
+      ))
+      : t(
+        'profile.subscription.otherClub.unnamed',
+        'Ton offre Club couvre un autre club que ton club actuel.',
+      );
   }
 
   const renderQuotaGauge = (item) => {
@@ -552,11 +571,14 @@ function Profile({ navigation, route }) {
         <View style={{ gap: 12 }}>
           {visibleSubscriptionQuotaItems.map(renderQuotaGauge)}
         </View>
-      ) : (
+      ) : null}
+      {/* ABOPARCLUB — dans un club non couvert, les compteurs du club ET la
+          phrase qui dit ou l'offre payee s'applique : l'un n'efface pas l'autre. */}
+      {!visibleSubscriptionQuotaItems.length || uncoveredActiveClub ? (
         <Text style={{ color: Colors.neutral200, fontSize: 12.5, lineHeight: 18 }}>
           {subscriptionStatusText}
         </Text>
-      )}
+      ) : null}
 
       <View style={{ backgroundColor: SURFACE.divider, height: 1 }} />
 
