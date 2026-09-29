@@ -1016,10 +1016,11 @@ function MatchCompositionBoard() {
                 <TouchableOpacity
                   accessibilityLabel={entry
                     ? t('matchComposition.board.keyboard.placeOnSlot', {
-                      label: entry.label, name: nomDuJoueurChoisi,
+                      label: entry.label, name: nomDuJoueurChoisi, ...SANS_ECHAPPEMENT,
                     })
                     : t('matchComposition.board.keyboard.placeOnField', {
                       name: nomDuJoueurChoisi,
+                      ...SANS_ECHAPPEMENT,
                     })}
                   accessibilityRole="button"
                   activeOpacity={0.8}
@@ -1077,7 +1078,9 @@ function MatchCompositionBoard() {
             <View accessibilityLiveRegion="polite" style={styles.clavierBar}>
               <Text style={[Fonts.p4, styles.clavierTexte, { color: Colors.neutral300 }]}>
                 {joueurChoisi
-                  ? t('matchComposition.board.keyboard.picked', { name: nomDuJoueurChoisi })
+                  ? t('matchComposition.board.keyboard.picked', {
+                    name: nomDuJoueurChoisi, ...SANS_ECHAPPEMENT,
+                  })
                   : t('matchComposition.board.keyboard.hint')}
               </Text>
               {joueurChoisiSurLeTerrain ? (
@@ -1094,7 +1097,9 @@ function MatchCompositionBoard() {
                   }]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    {t('matchComposition.board.keyboard.toBench', { name: nomDuJoueurChoisi })}
+                    {t('matchComposition.board.keyboard.toBench', {
+                      name: nomDuJoueurChoisi, ...SANS_ECHAPPEMENT,
+                    })}
                   </Text>
                 </TouchableOpacity>
               ) : null}
