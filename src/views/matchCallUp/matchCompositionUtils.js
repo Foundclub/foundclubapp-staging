@@ -13,7 +13,7 @@
 
 import i18next from 'i18next';
 
-import { getCompositionPlayerId } from '@/utils/compositionPlayer';
+import { getCompositionPlayerId, isCompositionPerson } from '@/utils/compositionPlayer';
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
 import { getMatchSquadSizes } from './matchCallUpUtils';
@@ -563,6 +563,126 @@ export const resumeFieldForSelection = ({
     .some((player) => packIds.has(getCompositionPlayerId(player)));
 
   return { knowsField, placements, shouldResume: comesFromField || placements.length > 0 };
+};
+
+/**
+ * QUI EST CONVOQUE DANS CE PACK — titulaires, puis retenus, puis banc, sans
+ * doublon.
+ *
+ * ♻️ COMPO-WEB (29/09) : cette lecture vivait dans l'amorce de
+ * `MatchCallUpSelection` (pre-cochage). Elle en est SORTIE A L'IDENTIQUE — meme
+ * forme ancienne ou v3, meme filtre COMPODBL — pour que le terrain du SITE, qui
+ * relit le serveur, applique la MEME regle que la selection du telephone. Une
+ * regle recopiee finirait par diverger.
+ *
+ * 🧮 COMPODBL — un identifiant que l'instantane du pack connait sans qu'il
+ * designe une personne (le doublon d'un compte range sous son numero) n'est pas
+ * un convoque.
+ * @param {any} [pack] Brouillon ou compo publiee (forme v3 ou ancienne).
+ * @returns {string[]}
+ */
+export const readCalledUpIdsFromPack = (pack) => {
+  if (!pack || typeof pack !== 'object') return [];
+
+  /** @type {any[]} */
+  const placements = pack?.placements
+    || (pack?.teams || []).flatMap((/** @type {any} */ team) => team?.placements || []);
+  /** @type {any[]} */
+  const selected = pack?.selectedPlayerIds || [];
+  /** @type {any[]} */
+  const reserve = pack?.reservePlayerIds || [];
+  const pasDesPersonnes = new Set(
+    (pack?.snapshotPlayers || [])
+      .filter((/** @type {any} */ player) => !isCompositionPerson(player))
+      .map(getCompositionPlayerId)
+      .filter(Boolean),
+  );
+
+  return [...new Set([
+    ...placements.map((placement) => String(placement?.playerId || '').trim()),
+    ...selected.map((value) => String(value || '').trim()),
+    ...reserve.map((value) => String(value || '').trim()),
+  ].filter((playerId) => Boolean(playerId) && !pasDesPersonnes.has(playerId)))];
+};
+
+/**
+ * COMPO-WEB (29/09) — QUEL PACK OUVRIR POUR COMPOSER, a partir de la charge de
+ * `GET /events/:id/composition` : le brouillon d'abord, sinon la compo publiee,
+ * sinon le point de depart propose par le serveur (`bootstrap`).
+ *
+ * C'est l'ordre de « Gerer la composition » (`handleManageComposition`, fiche du
+ * match), et la meme liste de joueurs : l'instantane de la compo publiee quand
+ * on la reprend, l'effectif eligible sinon. Le site s'en sert quand un ecran
+ * arrive par l'adresse, sans objet.
+ * @param {any} payload La charge de `GET /events/:id/composition`.
+ * @returns {{ existingComposition: any, players: any[] }}
+ */
+export const pickCompositionToEdit = (payload) => {
+  /** @type {any[]} */
+  const eligiblePlayers = Array.isArray(payload?.eligiblePlayers) ? payload.eligiblePlayers : [];
+  if (payload?.draft) return { existingComposition: payload.draft, players: eligiblePlayers };
+  if (payload?.published) {
+    const snapshot = payload.published.snapshotPlayers;
+    return {
+      existingComposition: payload.published,
+      players: Array.isArray(snapshot) && snapshot.length > 0 ? snapshot : eligiblePlayers,
+    };
+  }
+  return { existingComposition: payload?.bootstrap?.composition || null, players: eligiblePlayers };
+};
+
+/**
+ * COMPO-WEB (29/09) — LE TERRAIN A ROUVRIR a partir de la charge du serveur :
+ * le brouillon s'il existe, sinon la compo publiee. JAMAIS le `bootstrap` : un
+ * point de depart propose n'est la selection de personne — sans pack, le
+ * terrain reste vide, et vide il ne se publie pas.
+ *
+ * 🔒 Un convoque que la charge ne permet pas de nommer n'est PAS lache en
+ * silence : il est rendu dans `missingPlayerIds`, et le site bloque alors la
+ * publication (le republier le retirerait de la convocation sans que personne
+ * l'ait decide).
+ * @param {any} payload La charge de `GET /events/:id/composition`.
+ * @returns {{
+ *   existingComposition: any,
+ *   missingPlayerIds: string[],
+ *   selectedPlayers: any[],
+ *   startPlacements: any[],
+ * }}
+ */
+export const buildFieldFromServerComposition = (payload) => {
+  const pack = payload?.draft || payload?.published || null;
+  if (!pack || typeof pack !== 'object') {
+    return {
+      existingComposition: null, missingPlayerIds: [], selectedPlayers: [], startPlacements: [],
+    };
+  }
+
+  // Le brouillon enregistre ne porte PAS d'instantane de ses titulaires (le
+  // serveur ne le fabrique qu'a la publication) : l'effectif eligible sert
+  // donc d'annuaire, puis ce que le pack porte lui-meme.
+  /** @type {Map<string, any>} */
+  const annuaire = new Map();
+  [
+    ...(payload?.eligiblePlayers || []),
+    ...(pack?.snapshotPlayers || []),
+    ...(pack?.reserveSnapshotPlayers || []),
+    ...(pack?.manualPlayers || []),
+  ].forEach((/** @type {any} */ player) => {
+    const playerId = getCompositionPlayerId(player);
+    if (playerId && !annuaire.has(playerId)) annuaire.set(playerId, player);
+  });
+
+  const calledUpIds = readCalledUpIdsFromPack(pack);
+  const selectedPlayers = calledUpIds
+    .map((playerId) => annuaire.get(playerId))
+    .filter(Boolean);
+
+  return {
+    existingComposition: pack,
+    missingPlayerIds: calledUpIds.filter((playerId) => !annuaire.has(playerId)),
+    selectedPlayers,
+    startPlacements: keepPlacementsOfCalledUpPlayers(readPlacementsFromPack(pack), selectedPlayers),
+  };
 };
 
 /**
