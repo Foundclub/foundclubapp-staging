@@ -162,7 +162,14 @@ function MatchCompositionBoard() {
   // Ce qui DISPARAIT : tout ce qui ecrit — le glisser-deposer, « Enregistrer »,
   // « Publier », et la consigne « Glisse un joueur… », qui promettrait un geste
   // qui n'existe plus.
-  const isReadOnly = Boolean(readOnly);
+  //
+  // 🔒 URL-BOOLEENS (29/09) — UN TERRAIN SANS AUCUN JOUEUR NE S'OUVRE PAS EN
+  // ECRITURE. Sur le site, les joueurs (des objets) ne voyagent pas dans
+  // l'adresse : le terrain y arrive vide, et « Publier » remplacait la vraie
+  // compo par une compo a 0 joueur (le serveur ne le refuse pas). Sur le
+  // telephone ce cas n'existe pas : la selection refuse « Suivant » a 0 coche.
+  const isReadOnly = Boolean(readOnly)
+    || !Array.isArray(selectedPlayers) || selectedPlayers.length === 0;
 
   // 🔄 COMPOMSG — OUVERT DEPUIS UNE CARTE DU FIL, LE PLATEAU RELIT LA DERNIERE
   // VERSION PUBLIEE.

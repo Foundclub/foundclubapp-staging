@@ -494,3 +494,32 @@ describe('COMPOLECT · NON-REGRESSION — le chemin d EDITION est intact', () =>
     expect(texte).not.toContain('Voir la convocation et les réponses');
   });
 });
+
+describe('URL-BOOLEENS — un terrain SANS AUCUN joueur ne s ouvre pas en ecriture', () => {
+  // 🧨 Sur le site, les joueurs (des objets) ne voyagent pas dans l adresse : le
+  // terrain y arrive VIDE. Mesure au banc du 29/09 : « Publier » y envoyait un
+  // brouillon a 0 joueur (`selectedPlayerIds: []`), et le serveur l accepte — la
+  // vraie compo aurait ete remplacee par une compo vide.
+  const SANS_JOUEUR = {
+    existingComposition: null, readOnly: false, selectedPlayers: [], startPlacements: [],
+  };
+
+  test('🔒 edition demandee, aucun joueur : ni « Enregistrer » ni « Publier »', async () => {
+    const texte = texteVisible(await rendreEnLecture(SANS_JOUEUR));
+
+    expect(texte).not.toContain('Enregistrer');
+    expect(texte).not.toContain('Publier');
+  });
+
+  test('📱 telephone inchange : avec UN seul joueur, le chemin d edition reste ouvert', async () => {
+    // La selection refuse « Suivant » a 0 coche (MatchCallUpSelection.js:440) :
+    // sur le telephone, un terrain en edition porte toujours au moins un joueur.
+    const arbre = await rendreEnLecture({
+      ...SANS_JOUEUR, selectedPlayers: [joueur('p0', 'Seul', 'Convoque')],
+    });
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(texteVisible(arbre)).toContain('Publier');
+    expect(saveEventCompositionDraft).toHaveBeenCalledTimes(1);
+  });
+});
