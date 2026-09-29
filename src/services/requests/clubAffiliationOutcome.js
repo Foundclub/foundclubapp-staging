@@ -1,3 +1,5 @@
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 /**
  * AFFIL A2/A3 — CE QUE DIT LA FENETRE QUAND LA DEMANDE EST PARTIE.
  *
@@ -115,6 +117,7 @@ export const resolveClubAffiliationOutcome = (reponse, t, contexte = {}) => {
     message: phraseDuServeur || t(modele.messageKey, {
       club: nomDuClub,
       defaultValue: modele.messageFallback,
+      ...SANS_ECHAPPEMENT,
     }),
     outcome: issue,
     title: t(modele.titleKey, { defaultValue: modele.titleFallback }),

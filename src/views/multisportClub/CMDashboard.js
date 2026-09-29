@@ -15,6 +15,7 @@ import { useClubScope } from '@/context/ClubScopeContext';
 import useClub from '@/domains/club/useClub';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -288,7 +289,7 @@ function CMDashboard({ navigation, route }) {
   const handleDeleteSection = useCallback((/** @type {CMSectionRow} */ section) => {
     Alert.alert(
       t('multisport.deleteSectionTitle'),
-      t('multisport.deleteSectionConfirm', { name: section.name }),
+      t('multisport.deleteSectionConfirm', { name: section.name, ...SANS_ECHAPPEMENT }),
       [
         { style: 'cancel', text: t('common.actions.cancel') },
         {

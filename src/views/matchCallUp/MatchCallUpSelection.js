@@ -21,6 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -752,6 +753,7 @@ function MatchCallUpSelection() {
             {renderSectionTitle(t('matchCallUp.selection.sections.squad', {
               count: squadPlayers.length,
               teamName: squadTabLabel,
+              ...SANS_ECHAPPEMENT,
             }))}
             {visibleSquad.length > 0
               ? visibleSquad.map(renderPlayerRow)
@@ -872,6 +874,7 @@ function MatchCallUpSelection() {
             {t('matchCallUp.selection.absentWarning.message', {
               count: (absentsToConfirm || EMPTY_LIST).length,
               names: absentNames,
+              ...SANS_ECHAPPEMENT,
             })}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>

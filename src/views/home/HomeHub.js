@@ -2183,6 +2183,7 @@ function HomeHubContent({ auth, navigation, route }) {
             countdown: compteARebours(trainingNextSession.plannedDate, t),
             day: nextDay.title,
             program: trainingEnrollment.program?.title || '',
+            ...SANS_ECHAPPEMENT,
           })
           : t('training.home.myCard.emptyTitle'),
       },

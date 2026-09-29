@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -197,7 +198,9 @@ function MatchCompositionStart() {
         });
       }
     }
-    return t(`matchComposition.start.options.${option.key}.subtitle`, { teamName });
+    return t(`matchComposition.start.options.${option.key}.subtitle`, {
+      teamName, ...SANS_ECHAPPEMENT,
+    });
   };
 
   const renderOption = (/** @type {any} */ option) => {

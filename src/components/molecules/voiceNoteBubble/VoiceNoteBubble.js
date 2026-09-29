@@ -26,6 +26,7 @@ import { onVoicePlayRequest, requestVoicePlay } from '@/domains/messaging/voiceC
 import { useVoiceListened } from '@/domains/messaging/voiceListenedStore';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
@@ -454,6 +455,7 @@ function VoiceNoteBubble({
       defaultValue: 'Message vocal de {{name}}, {{duration}}',
       duration: duree,
       name: senderName || t('voiceNoteBubble.someone', 'quelqu\'un'),
+      ...SANS_ECHAPPEMENT,
     });
   if (nonEcoute) libelleLecture = `${libelleLecture}, ${t('voiceNoteBubble.unlistened', 'non écouté')}`;
   if (isPlaying) libelleLecture = t('voiceNoteBubble.pause', 'Mettre en pause');

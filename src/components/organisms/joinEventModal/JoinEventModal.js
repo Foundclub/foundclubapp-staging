@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -131,7 +132,7 @@ function JoinEventModal({
         ) : null}
 
         <Text style={[Fonts.p1, Fonts.neutral00]}>
-          {description || t('eventList.joinModal.description', { clubName })}
+          {description || t('eventList.joinModal.description', { clubName, ...SANS_ECHAPPEMENT })}
         </Text>
 
         {errorMessage ? (

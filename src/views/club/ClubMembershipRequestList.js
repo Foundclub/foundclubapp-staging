@@ -179,7 +179,7 @@ function ClubMembershipRequestList({ navigation, route }) {
           t(
             'clubMembershipRequestList.fields.claimAccepted',
             '{{firstname}} a bien été ajouté comme dirigeant du club.',
-            { firstname: trainerLabel },
+            { firstname: trainerLabel, ...SANS_ECHAPPEMENT },
           ),
         );
         return;
@@ -365,9 +365,11 @@ function ClubMembershipRequestList({ navigation, route }) {
                 {isClaimRequest
                   ? t('clubMembershipRequestList.fields.pendingClaim', {
                     firstname: pendingName,
+                    ...SANS_ECHAPPEMENT,
                   })
                   : t('clubMembershipRequestList.fields.pending', {
                     firstname: pendingName,
+                    ...SANS_ECHAPPEMENT,
                   })}
               </Text>
             </View>

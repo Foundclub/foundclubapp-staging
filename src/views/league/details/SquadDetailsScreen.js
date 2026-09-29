@@ -1046,8 +1046,16 @@ function SquadDetailsScreen({ navigation, route }) {
       Alert.alert(
         t('squadDetails.captains.assignSuccessTitle', 'Capitaines mis à jour'),
         mode === 'transfer'
-          ? t('squadDetails.captains.transferSuccess', '{{name}} devient le seul capitaine de la squad.', { name: captainAssignmentTargetName })
-          : t('squadDetails.captains.addSuccess', '{{name}} est maintenant capitaine avec toi.', { name: captainAssignmentTargetName }),
+          ? t(
+            'squadDetails.captains.transferSuccess',
+            '{{name}} devient le seul capitaine de la squad.',
+            { name: captainAssignmentTargetName, ...SANS_ECHAPPEMENT },
+          )
+          : t(
+            'squadDetails.captains.addSuccess',
+            '{{name}} est maintenant capitaine avec toi.',
+            { name: captainAssignmentTargetName, ...SANS_ECHAPPEMENT },
+          ),
       );
     } catch (error) {
       console.error(error);
@@ -1435,6 +1443,7 @@ function SquadDetailsScreen({ navigation, route }) {
       t('squadDetails.delete.confirmationWithName', {
         defaultValue: `Es-tu sûr de vouloir supprimer la squad "${teamDisplayName}" ? Cette action est irréversible.`,
         teamName: teamDisplayName,
+        ...SANS_ECHAPPEMENT,
       }),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
@@ -1469,6 +1478,7 @@ function SquadDetailsScreen({ navigation, route }) {
       t('squadDetails.leave.confirmationWithName', {
         defaultValue: `Veux-tu quitter la squad "${teamDisplayName}" ? Si tu es le dernier membre, elle sera archivée après 7 jours.`,
         teamName: teamDisplayName,
+        ...SANS_ECHAPPEMENT,
       }),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
@@ -1506,6 +1516,7 @@ function SquadDetailsScreen({ navigation, route }) {
       t('squadDetails.roster.removeConfirmation', {
         defaultValue: `Retirer ${playerName} de la squad ?`,
         playerName,
+        ...SANS_ECHAPPEMENT,
       }),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
@@ -3340,6 +3351,7 @@ function SquadDetailsScreen({ navigation, route }) {
           >
             {t('squadDetails.captains.modalDescription', 'Choisis comment donner le rôle de capitaine a {{name}}.', {
               name: captainAssignmentTargetName,
+              ...SANS_ECHAPPEMENT,
             })}
           </Text>
 
@@ -3383,6 +3395,7 @@ function SquadDetailsScreen({ navigation, route }) {
             <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginBottom: 12 }]}>
               {t('squadDetails.captains.transferHint', '{{name}} devient le seul capitaine de la squad.', {
                 name: captainAssignmentTargetName,
+                ...SANS_ECHAPPEMENT,
               })}
             </Text>
             <Button

@@ -18,6 +18,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -499,7 +500,7 @@ function FacilityList() {
                 {t(
                   'facilityList.collectiviteOwnerHint',
                   'Installation de {{ownerName}} : planning en lecture seule.',
-                  { ownerName: sharedOwnerLabel },
+                  { ownerName: sharedOwnerLabel, ...SANS_ECHAPPEMENT },
                 )}
               </Text>
             ) : (
@@ -508,7 +509,7 @@ function FacilityList() {
                   {t(
                     'facilityList.sharedOwnerHint',
                     'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
-                    { ownerName: sharedOwnerLabel },
+                    { ownerName: sharedOwnerLabel, ...SANS_ECHAPPEMENT },
                   )}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>

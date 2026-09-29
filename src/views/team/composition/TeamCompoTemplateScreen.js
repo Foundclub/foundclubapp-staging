@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -386,6 +387,7 @@ function TeamCompoTemplateScreen() {
                     <View
                       accessibilityLabel={t('compoTemplate.tokenOnField', {
                         name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                        ...SANS_ECHAPPEMENT,
                       })}
                       style={[
                         styles.fieldToken,
@@ -455,6 +457,7 @@ function TeamCompoTemplateScreen() {
                 <View
                   accessibilityLabel={t('compoTemplate.tokenOnBench', {
                     name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                    ...SANS_ECHAPPEMENT,
                   })}
                 >
                   <DraggableToken player={player} />

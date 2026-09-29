@@ -33,6 +33,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -792,6 +793,7 @@ function MatchCompositionBoard() {
                   <View
                     accessibilityLabel={t('matchComposition.board.tokenOnField', {
                       name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                      ...SANS_ECHAPPEMENT,
                     })}
                     key={`placed-${placement.playerId}`}
                     style={[
@@ -855,6 +857,7 @@ function MatchCompositionBoard() {
                 <View
                   accessibilityLabel={t('matchComposition.board.tokenOnBench', {
                     name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                    ...SANS_ECHAPPEMENT,
                   })}
                   key={`bench-${getCompositionPlayerId(player)}`}
                 >
@@ -965,7 +968,7 @@ function MatchCompositionBoard() {
             {t('matchComposition.sheet.title')}
           </Text>
           <Text style={[Fonts.p2, styles.sheetText, { color: Colors.neutral300 }]}>
-            {t('matchComposition.sheet.description', { teamName })}
+            {t('matchComposition.sheet.description', { teamName, ...SANS_ECHAPPEMENT })}
           </Text>
 
           <View

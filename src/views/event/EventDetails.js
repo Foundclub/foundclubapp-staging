@@ -7481,6 +7481,7 @@ function EventDetails({ navigation, route }) {
                 <Text style={[Fonts.p4, Fonts.neutral300]}>
                   {t('eventDetails.tournamentTeams.lead', 'Référent·e : {{name}}', {
                     name: tournamentTeamLead,
+                    ...SANS_ECHAPPEMENT,
                   })}
                 </Text>
               ) : null}

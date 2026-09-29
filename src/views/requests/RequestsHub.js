@@ -23,6 +23,7 @@ import {
   REQUEST_HUB_FILTERS,
 } from '@/domains/requests/requestMappers';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -451,6 +452,7 @@ function RequestsHub({ navigation, route }) {
           t('requestsHub.childInterest.refuseMessage', {
             defaultValue: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
             firstname: item?.meta?.childFirstname || '',
+            ...SANS_ECHAPPEMENT,
           }),
           [
             { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },

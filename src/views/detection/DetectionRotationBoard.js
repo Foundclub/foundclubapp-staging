@@ -37,6 +37,7 @@ import {
 } from '@/domains/detection/detectionSplit';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -485,6 +486,7 @@ function DetectionRotationBoard() {
                       accessibilityLabel={t('detection.teams.rotation.tokenOnField', {
                         count: cumulativePlaytime[playerId] || 0,
                         name: getPlayerName(player),
+                        ...SANS_ECHAPPEMENT,
                       })}
                       style={[styles.fieldToken, { left: `${spot[0]}%`, top: `${spot[1]}%` }]}
                     >
@@ -540,6 +542,7 @@ function DetectionRotationBoard() {
                     accessibilityLabel={t('detection.teams.rotation.tokenInRotation', {
                       count: cumulativePlaytime[playerId] || 0,
                       name: getPlayerName(player),
+                      ...SANS_ECHAPPEMENT,
                     })}
                   >
                     {renderToken(player, false)}

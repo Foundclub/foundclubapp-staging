@@ -360,7 +360,9 @@ function Profile({ navigation, route }) {
     || userData?.myTeams?.[0]?.name
     || '';
   const identitySubline = identityClubName
-    ? t('profile.identity.roleWithClub', { club: identityClubName, role: identityRoleLabel })
+    ? t('profile.identity.roleWithClub', {
+      club: identityClubName, role: identityRoleLabel, ...SANS_ECHAPPEMENT,
+    })
     : identityRoleLabel;
   let identityClub = null;
   let identityClubOnPress = null;

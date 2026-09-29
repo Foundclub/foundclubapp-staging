@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -134,7 +135,7 @@ function MatchCallUpManualPlayer() {
             {t('matchCallUp.manualPlayer.title')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            {t('matchCallUp.manualPlayer.subtitle', { teamName })}
+            {t('matchCallUp.manualPlayer.subtitle', { teamName, ...SANS_ECHAPPEMENT })}
           </Text>
         </View>
       </View>
@@ -203,6 +204,7 @@ function MatchCallUpManualPlayer() {
               {t('matchCallUp.manualPlayer.warning.before', {
                 firstname: firstname.trim()
                   || t('matchCallUp.manualPlayer.warning.fallbackName'),
+                ...SANS_ECHAPPEMENT,
               })}
               {' '}
               <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
