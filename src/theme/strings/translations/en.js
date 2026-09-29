@@ -4204,6 +4204,17 @@ export default {
       placeholder: 'Search for a team...',
     },
   },
+  collectivite: {
+    entry: {
+      label: 'My local authority · {{name}}',
+    },
+    home: {
+      header: 'My local authority',
+      kicker: 'My local authority',
+      notManaged: "You don't manage this local authority.",
+      subtitle: "Your manager space: the facilities of {{name}}, the clubs' requests and the attached clubs.",
+    },
+  },
   comingSoonLeagueScreen: {
     back: 'Back',
     backHint: 'Returns to classic FoundClub',

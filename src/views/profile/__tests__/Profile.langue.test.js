@@ -109,6 +109,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// COLLECTIVITES 1c — Profil lit `/collectivites/mine` (la porte « Ma collectivite ») :
+// doublure, comme tout service que l ecran importe (le client HTTP ne se charge pas ici).
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useMyCollectivites: () => ({ data: [] }),
+}));
+
 jest.mock('@/services/auth/authService', () => ({
   deleteAccount: jest.fn(),
 }));

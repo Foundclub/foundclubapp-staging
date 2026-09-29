@@ -76,6 +76,10 @@ const WEB_ROUTE_PATTERNS = {
   // URL monte bien un ecran cote web.
   [RouteNames.MyClubs]: '/multisport',
   [RouteNames.RequestsHub]: '/requests',
+  // COLLECTIVITES 1c (2026-09-29) — « Ma collectivite » : une mairie travaille surtout sur
+  // ordinateur. Chaque ecran porte la collectivite dans son adresse (le site ne transmet
+  // que l adresse et ses parametres texte).
+  [RouteNames.CollectiviteHome]: '/collectivite/:collectiviteId',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',

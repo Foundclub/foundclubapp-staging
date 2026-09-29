@@ -47,6 +47,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { deleteAccount } from '@/services/auth/authService';
+import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
@@ -150,6 +151,13 @@ function Profile({ navigation, route }) {
 
   // Get the first multisport club for quick access
   const firstMultisportClub = useMemo(() => multisportClubs[0] || null, [multisportClubs]);
+
+  // 🏛️ COLLECTIVITES 1c — la porte d entree de « Ma collectivite ». Elle n existe que pour
+  // un gestionnaire : `/collectivites/mine` est vide pour tout autre compte, et le serveur
+  // garde chaque ecran derriere (policy is-gestionnaire-collectivite). Un agent municipal
+  // n a souvent AUCUN club : la porte ne depend donc ni du club, ni du role.
+  const { data: myCollectivites } = useMyCollectivites();
+  const managedCollectivites = Array.isArray(myCollectivites) ? myCollectivites : [];
 
   /**
    * Retient la langue choisie et la parle tout de suite.
@@ -635,6 +643,18 @@ function Profile({ navigation, route }) {
   );
 
   const activityRows = [
+    // 🏛️ COLLECTIVITES 1c — en tete : pour un agent municipal, c est LA raison d ouvrir l app.
+    ...managedCollectivites.map((collectivite) => ({
+      icon: Images.flag,
+      key: `collectivite-${collectivite?.documentId}`,
+      label: t('collectivite.entry.label', 'Ma collectivité · {{name}}', {
+        name: collectivite?.name || '',
+        ...SANS_ECHAPPEMENT,
+      }),
+      onPress: () => navigation.navigate(RouteNames.CollectiviteHome, {
+        collectiviteId: collectivite?.documentId,
+      }),
+    })),
     {
       icon: Images.trophy, key: 'myCard', label: t('profile.actions.myCard', 'Ma carte de collection'), onPress: handleOpenMyCard,
     },

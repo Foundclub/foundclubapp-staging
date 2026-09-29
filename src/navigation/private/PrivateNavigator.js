@@ -396,6 +396,16 @@ function PrivateNavigator() {
             headerTitle: t('privateNavigator.headers.multisportManagement', 'Gestion CM'),
           }}
         />
+        {/* COLLECTIVITES 1c — l espace du gestionnaire de mairie, a la RACINE : la porte
+            (Profil) et la notification d une nouvelle demande (ctaRoute) y menent. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteHome').default}
+          name={RouteNames.CollectiviteHome}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.home.header', 'Ma collectivité'),
+          }}
+        />
         <Stack.Screen
           getComponent={() => require('@/views/multisportClub/MyClubsScreen').default}
           name={RouteNames.MyClubs}

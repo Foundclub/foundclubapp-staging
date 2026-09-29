@@ -4491,6 +4491,18 @@ export default {
       placeholder: 'Rechercher une équipe...',
     },
   },
+  collectivite: {
+    entry: {
+      label: 'Ma collectivité · {{name}}',
+    },
+    home: {
+      header: 'Ma collectivité',
+      kicker: 'Ma collectivité',
+      notManaged: 'Tu ne gères pas cette collectivité.',
+      // eslint-disable-next-line max-len
+      subtitle: 'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
+    },
+  },
   comingSoonLeagueScreen: {
     back: 'Retour',
     backHint: 'Retourne vers FoundClub classique',
