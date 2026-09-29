@@ -425,6 +425,14 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteClubs').default}
+          name={RouteNames.CollectiviteClubs}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.clubs.header', 'Clubs rattachés'),
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/facility/FacilityForm').default}
           name={RouteNames.CollectiviteInstallationForm}
           options={{

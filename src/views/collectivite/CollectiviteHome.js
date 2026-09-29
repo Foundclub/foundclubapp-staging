@@ -126,7 +126,7 @@ function CollectiviteHome() {
       ),
       icon: Images.users,
       key: 'clubs',
-      route: null,
+      route: RouteNames.CollectiviteClubs,
       title: t('collectivite.home.cards.clubs.title', 'Clubs rattachés'),
     },
   ];

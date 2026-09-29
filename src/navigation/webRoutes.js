@@ -81,6 +81,7 @@ const WEB_ROUTE_PATTERNS = {
   // que l adresse et ses parametres texte).
   [RouteNames.CollectiviteHome]: '/collectivite/:collectiviteId',
   [RouteNames.CollectiviteRequests]: '/collectivite/:collectiviteId/requests',
+  [RouteNames.CollectiviteClubs]: '/collectivite/:collectiviteId/clubs',
   [RouteNames.CollectiviteInstallations]: '/collectivite/:collectiviteId/installations',
   [RouteNames.CollectiviteInstallationForm]:
     '/collectivite/:collectiviteId/installation/:facilityId?',

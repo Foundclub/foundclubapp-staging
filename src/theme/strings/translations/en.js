@@ -4210,6 +4210,14 @@ export default {
     },
   },
   collectivite: {
+    clubs: {
+      counts: 'Teams: {{teams}} · Members: {{members}}',
+      empty: 'No attached club yet.',
+      header: 'Attached clubs',
+      hint: "Each club's general contact and numbers: never a member's name.",
+      noContact: 'No contact provided by the club.',
+      title: 'Attached clubs: {{nombre}}',
+    },
     entry: {
       label: 'My local authority · {{name}}',
     },

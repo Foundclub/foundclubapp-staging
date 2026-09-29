@@ -4504,6 +4504,14 @@ export default {
     },
   },
   collectivite: {
+    clubs: {
+      counts: 'Équipes : {{teams}} · Membres : {{members}}',
+      empty: 'Aucun club rattaché pour l’instant.',
+      header: 'Clubs rattachés',
+      hint: 'Le contact général de chaque club et des nombres : jamais le nom d’un membre.',
+      noContact: 'Pas de contact renseigné par le club.',
+      title: 'Clubs rattachés : {{nombre}}',
+    },
     entry: {
       label: 'Ma collectivité · {{name}}',
     },

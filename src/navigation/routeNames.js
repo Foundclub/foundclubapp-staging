@@ -97,6 +97,7 @@ export const RouteNames = /** @type {const} */ ({
   // COLLECTIVITES 1c (2026-09-29) — l espace « Ma collectivite » du gestionnaire de mairie.
   // ⚠️ `CollectiviteRequests` est aussi le `ctaRoute` que le SERVEUR pose sur la notification
   // d une nouvelle demande (admin, facility-override-request) : ne pas le renommer seul.
+  CollectiviteClubs: 'CollectiviteClubs',
   CollectiviteHome: 'CollectiviteHome',
   CollectiviteInstallationForm: 'CollectiviteInstallationForm',
   CollectiviteInstallations: 'CollectiviteInstallations',
