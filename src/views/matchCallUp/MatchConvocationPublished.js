@@ -12,6 +12,7 @@ import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -179,7 +180,9 @@ function MatchConvocationPublished() {
   const handleResend = useCallback(() => {
     Alert.alert(
       t('matchConvocation.published.alerts.resendConfirm.title'),
-      t('matchConvocation.published.alerts.resendConfirm.message', { teamName: resolvedTeamName }),
+      t('matchConvocation.published.alerts.resendConfirm.message', {
+        teamName: resolvedTeamName, ...SANS_ECHAPPEMENT,
+      }),
       [
         { style: 'cancel', text: t('matchConvocation.published.alerts.resendConfirm.cancel') },
         {
@@ -374,9 +377,11 @@ function MatchConvocationPublished() {
           <Text style={[Fonts.p4, styles.recapSubtitle, { color: Colors.neutral300 }]}>
             {publishedAtLabel
               ? t('matchConvocation.published.recap.sentAt', {
-                teamName: resolvedTeamName, time: publishedAtLabel,
+                teamName: resolvedTeamName, time: publishedAtLabel, ...SANS_ECHAPPEMENT,
               })
-              : t('matchConvocation.published.recap.sent', { teamName: resolvedTeamName })}
+              : t('matchConvocation.published.recap.sent', {
+                teamName: resolvedTeamName, ...SANS_ECHAPPEMENT,
+              })}
           </Text>
           <Text style={[styles.recapNumber, { color: Colors.neutral00 }]}>
             {counts.calledUp}

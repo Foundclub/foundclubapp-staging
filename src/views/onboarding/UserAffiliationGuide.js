@@ -25,6 +25,7 @@ import { getGeohashForPointAndRadius } from '@/domains/places/placesUseCases';
 import { ENABLE_AFFILIATION_ONBOARDING_TUTORIAL } from '@/domains/tutorial/tutorialFeatureFlags';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -795,12 +796,12 @@ function UserAffiliationGuideContent({ navigation, route }) {
         ? t(
           'onboardingAffiliation.a11y.cardLabelClubSelect',
           'Sélectionner le club {{name}}',
-          { name: item?.name || '-' },
+          { name: item?.name || '-', ...SANS_ECHAPPEMENT },
         )
         : t(
           'onboardingAffiliation.a11y.cardLabelClub',
           'Ouvrir la fiche du club {{name}}',
-          { name: item?.name || '-' },
+          { name: item?.name || '-', ...SANS_ECHAPPEMENT },
         )}
       distanceKm={getClubDistanceKm(userPosition, item)}
       item={item}
@@ -819,7 +820,7 @@ function UserAffiliationGuideContent({ navigation, route }) {
       accessibilityLabel={t(
         'onboardingAffiliation.a11y.cardLabelTeam',
         "Ouvrir la fiche de l'équipe {{name}}",
-        { name: item?.name || '-' },
+        { name: item?.name || '-', ...SANS_ECHAPPEMENT },
       )}
       accessibilityRole="button"
       onPress={() => handleSelectResult(item)}

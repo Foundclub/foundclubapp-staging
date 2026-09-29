@@ -6,6 +6,7 @@ import {
   Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -83,8 +84,12 @@ function MyChildren() {
   const demanderSuppression = useCallback((enfant) => {
     const prenom = enfant?.firstname || '';
     Alert.alert(
-      t('myChildren.confirmDelete.title', 'Supprimer cette fiche ?', { firstname: prenom }),
-      t('myChildren.confirmDelete.message', 'Cette fiche sera effacée.', { firstname: prenom }),
+      t('myChildren.confirmDelete.title', 'Supprimer cette fiche ?', {
+        firstname: prenom, ...SANS_ECHAPPEMENT,
+      }),
+      t('myChildren.confirmDelete.message', 'Cette fiche sera effacée.', {
+        firstname: prenom, ...SANS_ECHAPPEMENT,
+      }),
       [
         { style: 'cancel', text: t('myChildren.confirmDelete.cancel', 'Annuler') },
         {
@@ -205,7 +210,7 @@ function MyChildren() {
                           {t(
                             'myChildren.actions.searchClub',
                             'Chercher un club pour {{firstname}}',
-                            { firstname: prenom },
+                            { firstname: prenom, ...SANS_ECHAPPEMENT },
                           )}
                         </Text>
                       </TouchableOpacity>
@@ -217,7 +222,7 @@ function MyChildren() {
                         {t(
                           'myChildren.screen.tooOldHint',
                           'À partir de 13 ans, {{firstname}} fait ses demandes lui-même.',
-                          { firstname: prenom },
+                          { firstname: prenom, ...SANS_ECHAPPEMENT },
                         )}
                       </Text>
                     ) : null}
@@ -226,7 +231,7 @@ function MyChildren() {
                         {t(
                           'myChildren.screen.adultHint',
                           '{{firstname}} est majeur : il gère son compte seul.',
-                          { firstname: prenom },
+                          { firstname: prenom, ...SANS_ECHAPPEMENT },
                         )}
                       </Text>
                     ) : null}

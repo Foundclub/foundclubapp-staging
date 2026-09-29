@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -45,7 +46,7 @@ function TrainerInvitedModal({
           {t('addCoach.alerts.success.title')}
         </Text>
         <Text style={[Fonts.p1, { textAlign: 'center' }]}>
-          {t('addCoach.alerts.success.description', { trainerName })}
+          {t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT })}
         </Text>
       </View>
       <View style={[Spaces.gap[16]]}>

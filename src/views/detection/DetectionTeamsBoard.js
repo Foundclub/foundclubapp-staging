@@ -42,6 +42,7 @@ import {
 } from '@/domains/detection/detectionSplit';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -494,6 +495,7 @@ function DetectionTeamsBoard() {
             name: team?.bibColor
               ? t(`detection.teams.manual.bibs.${team.bibColor}`)
               : team?.name,
+            ...SANS_ECHAPPEMENT,
           })}
         </Text>
       </TouchableOpacity>
@@ -593,6 +595,7 @@ function DetectionTeamsBoard() {
                         team: activeTeam?.bibColor
                           ? t(`detection.teams.manual.bibs.${activeTeam.bibColor}`)
                           : activeTeam?.name,
+                        ...SANS_ECHAPPEMENT,
                       })}
                       style={[styles.fieldToken, { left: `${spot[0]}%`, top: `${spot[1]}%` }]}
                     >
@@ -648,6 +651,7 @@ function DetectionTeamsBoard() {
                   <View
                     accessibilityLabel={t('detection.teams.board.tokenUnassigned', {
                       name: getPlayerName(player),
+                      ...SANS_ECHAPPEMENT,
                     })}
                   >
                     {renderToken(player, false)}

@@ -1711,7 +1711,7 @@ function RecruitmentAdDetails() {
           </View>
 
           <Text style={[Fonts.p1, { color: Colors.neutral100, lineHeight: 24 }]}>
-            {t('eventList.joinModal.description', { clubName })}
+            {t('eventList.joinModal.description', { clubName, ...SANS_ECHAPPEMENT })}
           </Text>
 
           <Checkable

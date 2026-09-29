@@ -87,6 +87,11 @@ jest.mock('@/services/team/teamQueries', () => ({
   useGetTeams: () => ({ data: mockClubTeams, isFetching: false }),
 }));
 
+// FINITIONS3 (29/09) — l ecran lit l abonnement (mur d avance de « Modifier ») : `useAuth`
+// charge le client HTTP, absent d une copie de travail. Auth vide = niveau inconnu =
+// ecran inchange ; le mur a son propre temoin (MatchCallUpSelection.murDavanceFINITIONS3).
+jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => ({}) }));
+
 // PERF2 - l ecran importe desormais WithDataWrapper -> SkeletonLoader, qui
 // tire MaskedView / LinearGradient / Reanimated : hors sujet dans cette
 // suite. ⚠️ Cette fabrique est A FORME FIXE (pas de cle isLoading) : les

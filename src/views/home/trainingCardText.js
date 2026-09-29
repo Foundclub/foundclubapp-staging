@@ -1,3 +1,5 @@
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 /**
  * CE QU'ANNONCE LA CARTE « MON ENTRAÎNEMENT » DE L'ACCUEIL.
  *
@@ -62,6 +64,7 @@ export const sousTitreSeance = (journee, t) => {
     day: journee.title,
     duration: journee.durationMinutes,
     place: journee.place,
+    ...SANS_ECHAPPEMENT,
   })];
   const preparatifs = Array.isArray(journee.markers) ? journee.markers.length : 0;
   if (preparatifs > 0) {

@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import client from '@/services/client';
 
 const getFacilities = async (clubId) => {
@@ -130,7 +132,7 @@ const getFacilitySections = (facilities, labels = {}) => {
       title: i18next.t(
         'facilityService.sections.collectivite',
         'Installations · {{name}}',
-        { name },
+        { name, ...SANS_ECHAPPEMENT },
       ),
     });
   });

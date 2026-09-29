@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -248,6 +249,7 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
   const sousTitre = t('trainingReviewPrompt.subtitle', {
     date: formatDateDeFin(nextPrompt?.endedAt),
     team: nextPrompt?.teamName || nextPrompt?.eventName || '',
+    ...SANS_ECHAPPEMENT,
   });
 
   return (
