@@ -100,6 +100,34 @@ const getEventColor = (event, fallbackColor) => {
 };
 
 /**
+ * FINITIONS2 (recette du 29/09) — UN BLOC QU'AUCUN APPUI N'OUVRE N'EST PAS UN
+ * BOUTON. Le planning d'une installation partagee montre les creneaux des
+ * AUTRES clubs sans leur identifiant (le serveur ne le donne qu'au club du
+ * lecteur) : ces blocs ne menaient nulle part, mais TalkBack les annoncait
+ * « cliquables ». Les quatre ecrans qui montent cette vue ouvrent un bloc par
+ * son `documentId`, et ne font rien sans lui : la regle est donc ici, une fois.
+ * Le bloc inerte reste lu d'un seul tenant (`accessible`), sans role de bouton.
+ * @param {object} props
+ * @param {any} props.children
+ * @param {any} props.event
+ * @param {Function} [props.onEventPress]
+ * @param {any} props.style
+ * @returns {JSX.Element}
+ */
+function EventBlock({
+  children, event, onEventPress, style,
+}) {
+  if (onEventPress && event?.documentId) {
+    return (
+      <TouchableOpacity onPress={() => onEventPress(event)} style={style}>
+        {children}
+      </TouchableOpacity>
+    );
+  }
+  return <View accessible style={style}>{children}</View>;
+}
+
+/**
  *
  * @param root0
  * @param root0.cardDisplayProfile
@@ -543,9 +571,10 @@ function PlanningWeekTimelineView({
     }
 
     return (
-      <TouchableOpacity
+      <EventBlock
+        event={event}
         key={event.documentId || `${event.dayIndex}-${event.top}`}
-        onPress={() => onEventPress?.(event)}
+        onEventPress={onEventPress}
         style={[styles.eventCard, {
           backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
           borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
@@ -625,7 +654,7 @@ function PlanningWeekTimelineView({
         {event.leagueMatch || event.league_match ? (
           <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
         ) : null}
-      </TouchableOpacity>
+      </EventBlock>
     );
   };
 
@@ -705,9 +734,10 @@ function PlanningWeekTimelineView({
                 ? 'none'
                 : 'uppercase';
               return (
-                <TouchableOpacity
+                <EventBlock
+                  event={event}
                   key={event.documentId || `${getDayKey(weekDays[index])}-${getPlanningDisplayTitle(event)}`}
-                  onPress={() => onEventPress?.(event)}
+                  onEventPress={onEventPress}
                   style={[
                     styles.untimedCard,
                     compactFullscreen ? styles.compactUntimedCard : null,
@@ -742,7 +772,7 @@ function PlanningWeekTimelineView({
                       {contextLabel}
                     </Text>
                   ) : null}
-                </TouchableOpacity>
+                </EventBlock>
               );
             })}
             {dayEvents.length > 2 ? (
