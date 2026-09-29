@@ -358,3 +358,23 @@ describe('FINITIONS4 D6 — la liste du site suit la regle du telephone', () => 
     expect(textOf(groupes(root, 'notAnswered')[0])).toContain('Sans réponse · 1');
   });
 });
+
+describe('FINITIONS4 D7 — sans la charge d appel, la carte du site n invente pas d heure', () => {
+  test('🚨 charge d appel absente : la carte est la, fermee, sans « Ouvre à »', () => {
+    const root = mountScreen({ attendance: null });
+
+    expect(parTestID(root, 'event-next-action')[0]).toBeDefined();
+    const bouton = boutonDe(root, 'event-next-action-button');
+    expect(textOf(bouton)).not.toContain('Ouvre à');
+    expect(textOf(bouton)).not.toContain('Pas encore ouvert');
+    expect(bouton.props.disabled).toBe(true);
+  });
+
+  test('l heure revient des que le serveur l a dite', () => {
+    const root = mountScreen({
+      attendance: buildAttendance({ serverNow: '2099-01-01T15:00:00.000Z' }),
+    });
+
+    expect(textOf(boutonDe(root, 'event-next-action-button'))).toContain('Ouvre à 17:30');
+  });
+});

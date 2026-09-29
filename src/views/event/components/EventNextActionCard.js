@@ -34,7 +34,9 @@ import Button from '@/components/atoms/button/Button';
  * @param {number | null} [props.expectedCount] - Combien de personnes sont attendues,
  *   ou `null` quand on ne le sait pas encore (la ligne disparait alors : on
  *   n annonce pas « 0 attendu » a la place de « je ne sais pas »).
- * @param {'before' | 'closed' | 'open'} [props.mode] - L etat de la fenetre d appel.
+ * @param {'before' | 'closed' | 'loading' | 'open' | 'unavailable'} [props.mode] - L etat de
+ *   la fenetre d appel ; `loading` / `unavailable` : la charge d appel n est pas
+ *   encore la, ou n a pas pu etre lue (FINITIONS4, D7).
  * @param {() => void} [props.onPress] - Ouvrir l ecran d appel. Appele au seul etat `open`.
  * @param {string} [props.opensAtLabel] - L heure d ouverture « 17:30 », dans le fuseau DU CLUB.
  * @returns {import('react').ReactElement} - La carte.
@@ -52,9 +54,19 @@ function EventNextActionCard({
 
   const estOuvert = mode === 'open';
   const estTermine = mode === 'closed';
+  // 🕰️ FINITIONS4 (D7, recette du 29/09) — TANT QUE LE SERVEUR N A RIEN DIT, PAS
+  // D HEURE. La carte affichait « Ouvre à 16:30 » : l heure du REPLI LOCAL (30 min
+  // avant le debut), au-dessus de « L’appel est ouvert dès la création ». Elle
+  // charge desormais (le bouton porte son indicateur), et si la charge n a pas
+  // pu etre lue, elle ne dit rien plutot qu une heure fausse.
+  const enChargement = mode === 'loading';
+
+  if (mode === 'unavailable') return null;
 
   const libelleDuBouton = () => {
-    if (estOuvert) return t('eventDetails.nextAction.action', 'Faire l’appel');
+    // Le libelle lui-meme ne porte aucune heure pendant le chargement : meme un
+    // rendu qui ignorerait l indicateur ne peut pas afficher l heure du repli.
+    if (estOuvert || enChargement) return t('eventDetails.nextAction.action', 'Faire l’appel');
     if (estTermine) return t('eventDetails.nextAction.done', 'Appel terminé');
 
     // 🪤 Sans heure lisible, « Ouvre à  » se terminerait par un blanc. On dit
@@ -108,6 +120,7 @@ function EventNextActionCard({
       <View testID="event-next-action-button">
         <Button
           disabled={!estOuvert}
+          isLoading={enChargement}
           onPress={estOuvert ? onPress : undefined}
           title={libelleDuBouton()}
           variant={estOuvert ? 'Primary' : 'Secondary'}

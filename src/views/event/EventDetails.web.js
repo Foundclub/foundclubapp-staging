@@ -364,7 +364,10 @@ function EventDetails({ navigation, route }) {
     () => resolveEventAttendanceGate({ canEdit, isCurrentUserParticipating, isTeamMember }),
     [canEdit, isCurrentUserParticipating, isTeamMember],
   );
-  const { data: attendancePayload } = useGetEventAttendance(eventId || '', {
+  const {
+    data: attendancePayload,
+    isError: isAttendanceError,
+  } = useGetEventAttendance(eventId || '', {
     enabled: Boolean(eventId && canAccessAttendance),
   });
 
@@ -397,13 +400,15 @@ function EventDetails({ navigation, route }) {
     () => resolveAttendanceWindow({ event, payloadData: attendancePayload?.data }),
     [attendancePayload?.data, event],
   );
-  // D5 du telephone : sans charge d appel, la carte se montre avec le repli
-  // local pour que l organisateur VOIE la porte, mais elle ne s ouvre pas.
+  // D5 du telephone : sans charge d appel, la carte se montre pour que
+  // l organisateur VOIE la porte, mais elle ne s ouvre pas.
+  // 🕰️ FINITIONS4 (D7) — comme le telephone : elle CHARGE, sans heure inventee ;
+  // une charge en erreur ne montre pas de carte.
   const nextActionMode = useMemo(() => {
-    if (!attendancePayload?.data) return 'before';
+    if (!attendancePayload?.data) return isAttendanceError ? 'unavailable' : 'loading';
 
     return resolveCallMode({ serverNowMs: serverClockMs, window: attendanceCallWindow });
-  }, [attendanceCallWindow, attendancePayload?.data, serverClockMs]);
+  }, [attendanceCallWindow, attendancePayload?.data, isAttendanceError, serverClockMs]);
   // « N attendus » = l audience entiere. `null` quand la charge n est pas la :
   // on ne dit pas « 0 attendu » a la place de « je ne sais pas ».
   const nextActionExpectedCount = useMemo(() => {

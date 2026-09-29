@@ -4,7 +4,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -139,7 +139,10 @@ function EventAttendanceCall() {
   // 🧊 `refetchOnMount: 'always'` n est pas une precaution : sans lui, l ecran
   // herite du `serverNow` que l Apercu a lu il y a plusieurs minutes, et
   // affiche « Ouvre à 17:30 » alors qu il est 17:35.
-  const { data: attendancePayload } = useGetEventAttendance(eventId, { refetchOnMount: 'always' });
+  const {
+    data: attendancePayload,
+    isError: isAttendanceError,
+  } = useGetEventAttendance(eventId, { refetchOnMount: 'always' });
 
   const [elapsedMs, setElapsedMs] = useState(0);
   const [bulkMessage, setBulkMessage] = useState('');
@@ -499,7 +502,13 @@ function EventAttendanceCall() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {mode === 'open' ? renderOpenCall() : renderBeforeWindow()}
+        {/* 🕰️ FINITIONS4 (D7, recette du 29/09) — SANS LA CHARGE, PAS D HEURE.
+            Le cadre « avant » affichait l heure du REPLI LOCAL (« Ouvre à 17:30 »,
+            30 min avant le debut) alors que l appel s ouvre des la creation.
+            On charge ; une charge illisible ne dit rien plutot qu une heure fausse. */}
+        {!payloadData && !isAttendanceError ? <ActivityIndicator color={Colors.primary500} /> : null}
+        {payloadData && mode === 'open' ? renderOpenCall() : null}
+        {payloadData && mode !== 'open' ? renderBeforeWindow() : null}
       </ScrollView>
 
       {mode === 'open' && (
