@@ -102,7 +102,9 @@ const formatEventMoment = (/** @type {any} */ rawDate) => {
   if (!rawDate) return '';
   const parsed = new Date(rawDate);
   if (Number.isNaN(parsed.getTime())) return '';
-  return capitalizeFirst(format(parsed, "EEE. HH'h'mm"));
+  // FINITIONS4 (recette du 29/09) — « Sam.. 15h00 » : l abreviation francaise
+  // porte deja son point (« sam. »). Le motif n en ajoute plus.
+  return capitalizeFirst(format(parsed, "EEE HH'h'mm"));
 };
 
 const normalizePlayer = (/** @type {any} */ player, /** @type {any} */ extra = {}) => {
@@ -893,9 +895,19 @@ function MatchCallUpSelection() {
           ) : null}
           {counters.reinforcements > 0 || counters.offApp > 0 ? (
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {/* FINITIONS4 (recette du 29/09) — « dont 1 renforts · 0 hors app » :
+                  chaque compteur est accordé À PART, et seuls les non nuls sont dits. */}
               {t('matchCallUp.selection.footer.extras', {
-                offApp: counters.offApp,
-                reinforcements: counters.reinforcements,
+                details: [
+                  counters.reinforcements > 0
+                    ? t('matchCallUp.selection.footer.reinforcementsCount', {
+                      count: counters.reinforcements,
+                    })
+                    : '',
+                  counters.offApp > 0
+                    ? t('matchCallUp.selection.footer.offAppCount', { count: counters.offApp })
+                    : '',
+                ].filter(Boolean).join(' · '),
               })}
             </Text>
           ) : null}
@@ -1029,9 +1041,13 @@ const styles = StyleSheet.create({
   playerName: {
     flexShrink: 1,
   },
+  // FINITIONS4 (recette du 29/09) — « Pa… » : le nom partageait sa ligne avec
+  // l equipe d origine et la reponse, et fondait jusqu a deux lettres. La rangee
+  // passe a la ligne : le nom garde sa largeur, les etiquettes descendent.
   playerNameRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   playerRow: {

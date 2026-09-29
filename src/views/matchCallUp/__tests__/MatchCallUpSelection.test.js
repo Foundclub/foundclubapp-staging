@@ -552,7 +552,25 @@ describe('D77 ecran 2 — convoquer hors equipe', () => {
 
     const texte = texteVisible(arbre);
     expect(texte).toContain('2 convoqués');
-    expect(texte).toContain('dont 1 renforts · 0 hors app');
+    // FINITIONS4 (recette du 29/09) — ce temoin exigeait « dont 1 renforts · 0 hors
+    // app » : le defaut lui-meme. Un renfort au singulier, et un compteur nul se tait.
+    expect(texte).toContain('dont 1 renfort');
+    expect(texte).not.toContain('dont 1 renforts');
+    expect(texte).not.toContain('0 hors app');
+  });
+
+  test('FINITIONS4 — « Pa… » : le nom d un renfort garde sa ligne, les etiquettes passent dessous', async () => {
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Autres équipes');
+
+    const nom = arbre.root.findAll((/** @type {any} */ noeud) => noeud.type === Text
+      && noeud.props.numberOfLines === 1
+      && aplatirTexte(noeud.props.children) === 'Bilal Lopez')[0];
+    expect(nom).toBeDefined();
+    // La rangee qui porte le nom, l equipe d origine et la reponse PASSE A LA
+    // LIGNE : sans cela, le nom fondait jusqu a « Pa… » (capture T6-2).
+    const style = StyleSheet.flatten(nom.parent.props.style);
+    expect(style.flexWrap).toBe('wrap');
   });
 
   test('sans autre equipe dans le club, l onglet le dit au lieu de rester vide', async () => {
@@ -770,7 +788,9 @@ describe('D84 — la barre du bas reste atteignable, quel que soit l effectif', 
       rangeeJoueur(arbre, 'Bilal Lopez').props.onPress();
     });
     expect(texteVisible(arbre)).toContain('2 convoqués');
-    expect(texteVisible(arbre)).toContain('dont 1 renforts · 0 hors app');
+    // FINITIONS4 : accorde, et le compteur nul se tait (voir « D77 ecran 2 »).
+    expect(texteVisible(arbre)).toContain('dont 1 renfort');
+    expect(texteVisible(arbre)).not.toContain('0 hors app');
 
     await appuyerSur(arbre, 'Hors app');
     // La barre suit sur le 3e onglet : meme compteur, meme CTA.

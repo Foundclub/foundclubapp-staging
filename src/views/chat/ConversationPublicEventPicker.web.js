@@ -267,7 +267,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
                         style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '10px 14px' }}
                         type="button"
                       >
-                        {t('conversationPublicEventPicker.web.viewDetails', 'Voir le detail')}
+                        {t('conversationPublicEventPicker.web.viewDetails', 'Voir le détail')}
                       </button>
                       <button
                         onClick={() => handleSelectEvent(event)}

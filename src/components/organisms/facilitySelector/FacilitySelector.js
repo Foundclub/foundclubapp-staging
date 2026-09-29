@@ -195,7 +195,7 @@ function FacilitySelector({
   let occupancyTone = Fonts.primary200;
   let occupancyMessage = t(
     'eventWizard.steps.location.capacityAvailable',
-    'Cette installation à encore de la capacité pour ce créneau.',
+    'Cette installation a encore de la capacité pour ce créneau.',
   );
 
   if (isSaturated && requiresApproval) {
@@ -204,7 +204,7 @@ function FacilitySelector({
     occupancyTone = Fonts.warning500;
     occupancyMessage = t(
       'eventWizard.steps.location.pendingValidationConflict',
-      "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'a validation d'un dirigeant.",
+      "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'à validation d'un dirigeant.",
     );
   } else if (isSaturated && allowsImmediateConfirmation) {
     occupancyCardBackground = 'rgba(1, 179, 244, 0.12)';
@@ -212,7 +212,7 @@ function FacilitySelector({
     occupancyTone = Fonts.primary500;
     occupancyMessage = t(
       'eventWizard.steps.location.allowAndNotifyConflict',
-      'Ce créneau dépasse la capacité, mais il restera autorise et notifiera les dirigeants.',
+      'Ce créneau dépasse la capacité, mais il restera autorisé et notifiera les dirigeants.',
     );
   }
 
@@ -462,9 +462,17 @@ function FacilitySelector({
               {!isFetchingOccupancy && occupancySummary ? (
                 <>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {`${occupancySummary.overlapCount || 0}/${occupancySummary.maxSlots || 1} slots occupes`}
+                    {/* FINITIONS4 (recette du 29/09) — la ligne d occupation etait ecrite
+                        en dur, en franglais, sans accent ni accord : elle passe par t(). */}
+                    {t('eventWizard.steps.location.occupancy', {
+                      count: Number(occupancySummary.overlapCount || 0),
+                      max: Number(occupancySummary.maxSlots || 1),
+                      occupied: Number(occupancySummary.overlapCount || 0),
+                    })}
                     {Number.isFinite(occupancySummary.remaining)
-                      ? ` • ${Math.max(0, Number(occupancySummary.remaining || 0))} restant(s)`
+                      ? ` • ${t('eventWizard.steps.location.remaining', {
+                        count: Math.max(0, Number(occupancySummary.remaining || 0)),
+                      })}`
                       : ''}
                   </Text>
                   <Text

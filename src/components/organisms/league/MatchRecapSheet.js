@@ -121,7 +121,7 @@ function MatchRecapSheet({
           <View style={styles.buttons}>
             <Button
               onPress={onOpenMatch}
-              title={t('matchRecapSheet.viewDetails', 'Voir le detail')}
+              title={t('matchRecapSheet.viewDetails', 'Voir le détail')}
               variant="Primary"
             />
             <Button
