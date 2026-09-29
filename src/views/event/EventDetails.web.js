@@ -13,6 +13,8 @@ import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import { canDeclareLatePresence, isArrivalTrackingEnabled, isRsvpEnabled } from '@/domains/event/presenceRule';
+import { resolveClientSourceTeamForUser } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -39,7 +41,7 @@ import {
   useGetEventConvocation,
   useGetEventTeamComposition,
 } from '@/services/event/eventQueries';
-import { updateEvent } from '@/services/event/eventService';
+import { respondToEventRsvp, updateEvent } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 import {
   createEventParticipation,
@@ -415,7 +417,34 @@ function EventDetails({ navigation, route }) {
   // Le telephone ajoute `showOverviewTab` a cette condition : le site n a pas
   // d onglets, sa page EST l Apercu. Les trois autres sont celles de N5
   // (EventDetails.js:4747), mot pour mot.
-  const showNextActionCard = canEdit && canAccessAttendance && !isTournamentEvent;
+  // POINTAGE (29/09) — « Suivre les arrivees » decochee : pas d appel.
+  const showNextActionCard = canEdit && canAccessAttendance && !isTournamentEvent
+    && isArrivalTrackingEnabled(event);
+
+  // 🙋 POINTAGE — LES MEMES REGLES QUE LE TELEPHONE (`domains/event/presenceRule.js`).
+  // Un MEMBRE convie ne « demande » pas a participer : il repond. Reponses
+  // decochees = pas de bouton ; apres coup, le « pas renseigne » passe present
+  // par la route des reponses (le serveur ne l ouvre qu a lui).
+  const isConvenedMember = Boolean(resolveClientSourceTeamForUser(event, userData));
+  const monPointage = useMemo(
+    () => (attendancePayload?.data?.items || [])
+      .find((item) => item?.user?.documentId && item.user.documentId === userData?.documentId) || null,
+    [attendancePayload?.data?.items, userData?.documentId],
+  );
+  const peutPasserPresentApresCoup = !isTournamentEvent && canDeclareLatePresence({
+    event,
+    hasPendingRequest: participationState?.hasPendingRequest,
+    isConvenedMember,
+    isMissing: participationState?.isMissing,
+    isParticipating: participationState?.isParticipating,
+    myAttendanceStatus: monPointage?.attendanceStatus,
+  });
+  const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
+  const afficherParticiper = !canEdit
+    && !peutPasserPresentApresCoup
+    && !reponsesFermeesAuMembre
+    && !participationState?.isParticipating
+    && !participationState?.hasPendingRequest;
   const tournamentConfig = useMemo(
     () => event?.tournamentConfig || {},
     [event?.tournamentConfig],
@@ -839,6 +868,11 @@ function EventDetails({ navigation, route }) {
 
   const cancelParticipationMutation = useMutation({
     mutationFn: (requestId) => deleteEventParticipation(requestId),
+    onSuccess: invalidateEventQueries,
+  });
+  // POINTAGE — « Je passe en present », apres coup.
+  const latePresenceMutation = useMutation({
+    mutationFn: () => respondToEventRsvp(eventId, 'present'),
     onSuccess: invalidateEventQueries,
   });
   const updateTrainingMutation = useMutation({
@@ -1564,7 +1598,40 @@ function EventDetails({ navigation, route }) {
                   {statusDetailLabel}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {!canEdit && !participationState?.isParticipating && !participationState?.hasPendingRequest ? (
+                  {peutPasserPresentApresCoup ? (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <span style={{ color: mutedTextColor, fontSize: 14 }}>
+                        {t(
+                          'eventList.info.notReported',
+                          "Tu n'as pas répondu : tu es « pas renseigné ». Tu étais là ? Passe en présent.",
+                        )}
+                      </span>
+                      <button
+                        disabled={latePresenceMutation.isPending}
+                        onClick={async () => {
+                          setActionError('');
+                          try {
+                            await latePresenceMutation.mutateAsync();
+                          } catch (lateError) {
+                            setActionError(lateError?.message || t(
+                              'eventDetails.unableToJoinThisEvent',
+                              'Impossible de rejoindre cet événement.',
+                            ));
+                          }
+                        }}
+                        style={{
+                          ...primaryButtonStyle,
+                          cursor: latePresenceMutation.isPending ? 'not-allowed' : 'pointer',
+                          opacity: latePresenceMutation.isPending ? 0.7 : 1,
+                          padding: '12px 16px',
+                        }}
+                        type="button"
+                      >
+                        {t('eventList.actions.declareLatePresence', 'Je passe en présent')}
+                      </button>
+                    </div>
+                  ) : null}
+                  {afficherParticiper ? (
                     <button
                       disabled={createParticipationMutation.isPending}
                       onClick={handleJoin}

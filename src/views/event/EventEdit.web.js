@@ -99,6 +99,8 @@ function EventEdit({ navigation, route }) {
   const initialTeamId = String(route?.params?.teamId || '').trim() || getEntityDocumentId(event?.team);
 
   const [formState, setFormState] = useState({
+    // POINTAGE (29/09) — les deux options de presence, cochees par defaut.
+    arrivalTrackingEnabled: true,
     capacity: '',
     date: toDateInputValue(route?.params?.date),
     description: '',
@@ -110,6 +112,7 @@ function EventEdit({ navigation, route }) {
     invitedTeams: [],
     locationLabel: '',
     pricePerPerson: '',
+    rsvpEnabled: true,
     sessionStatus: 'open',
     startTime: '',
     team: String(route?.params?.teamId || '').trim(),
@@ -143,6 +146,8 @@ function EventEdit({ navigation, route }) {
     if (!event) return;
     const trainingOpenConfig = resolveTrainingOpenConfig(event);
     setFormState({
+      // Absent (evenement d avant le lot) = coche.
+      arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
       capacity: event?.capacity != null ? String(event.capacity) : '',
       date: toDateInputValue(event?.date),
       description: String(event?.description || ''),
@@ -165,6 +170,7 @@ function EventEdit({ navigation, route }) {
           : event?.location?.label || '',
       ),
       pricePerPerson: event?.pricePerPerson != null ? String(event.pricePerPerson) : '',
+      rsvpEnabled: event?.rsvpEnabled !== false,
       sessionStatus: String(event?.sessionStatus || 'open'),
       startTime: toTimeInputValue(event?.startTime),
       team: getEntityDocumentId(event?.team),
@@ -381,6 +387,7 @@ function EventEdit({ navigation, route }) {
       normalizedTotalPlayers = formState.totalPlayers ? Number(formState.totalPlayers) : null;
     }
     const baseFormPayload = {
+      arrivalTrackingEnabled: formState.arrivalTrackingEnabled !== false,
       capacity: formState.capacity ? Number(formState.capacity) : null,
       date: toDisplayDateValue(formState.date),
       description: formState.description,
@@ -396,6 +403,7 @@ function EventEdit({ navigation, route }) {
         ? { label: formState.locationLabel, value: '' }
         : undefined,
       pricePerPerson: formState.pricePerPerson ? Number(formState.pricePerPerson) : null,
+      rsvpEnabled: formState.rsvpEnabled !== false,
       sessionStatus: formState.sessionStatus,
       startTime: formState.startTime,
       team: formState.team,
@@ -729,6 +737,45 @@ function EventEdit({ navigation, route }) {
                     </span>
                   </div>
                 ) : null}
+
+                {/* POINTAGE (decisions d Adel du 29/09) — les deux options de
+                    presence : de vraies cases du navigateur, lues au clavier et
+                    par le lecteur d ecran. */}
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                    {t('eventEdit.fields.presence.label', 'Présences')}
+                  </span>
+                  {[
+                    {
+                      champ: 'rsvpEnabled',
+                      phrase: t(
+                        'eventPresenceOptions.rsvpHint',
+                        'Chacun dit à l’avance s’il vient. Décoché : ni boutons Présent / Absent, ni relances.',
+                      ),
+                      titre: t('eventPresenceOptions.rsvp', 'Les participants répondent Présent / Absent'),
+                    },
+                    {
+                      champ: 'arrivalTrackingEnabled',
+                      phrase: t(
+                        'eventPresenceOptions.arrivalsHint',
+                        'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. Décoché : pas de pointage.',
+                      ),
+                      titre: t('eventPresenceOptions.arrivals', 'Suivre les arrivées'),
+                    },
+                  ].map((option) => (
+                    <label key={option.champ} style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}>
+                      <input
+                        checked={formState[option.champ] !== false}
+                        onChange={(eventObject) => updateField(option.champ, eventObject.target.checked)}
+                        type="checkbox"
+                      />
+                      <span style={{ display: 'grid', gap: 2 }}>
+                        <span style={{ color: textColor, fontSize: 14, fontWeight: 600 }}>{option.titre}</span>
+                        <span style={{ color: mutedTextColor, fontSize: 13 }}>{option.phrase}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
 
                 {isOpenTrainingType ? (
                   <label style={{ display: 'grid', gap: 8 }}>

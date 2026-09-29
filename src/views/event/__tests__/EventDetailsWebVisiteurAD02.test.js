@@ -2,6 +2,7 @@ import renderer, { act } from 'react-test-renderer';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 
+import { respondToEventRsvp } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
 // AD02 (E6) puis AD11 — lire ceci AVANT de « reparer » quoi que ce soit.
@@ -129,6 +130,8 @@ jest.mock('@/services/event/eventService', () => ({
   assignEventTask: jest.fn(),
   cancelEventTaskAssignment: jest.fn(),
   rejectEventTaskAssignment: jest.fn(),
+  // POINTAGE (29/09) — « Je passe en present » passe par la route des reponses.
+  respondToEventRsvp: jest.fn(() => Promise.resolve({})),
   updateEvent: jest.fn(),
 }));
 
@@ -439,5 +442,44 @@ describe('AD02 · la page publique d un evenement face a un visiteur sans compte
     ALL_NAMES.forEach((name) => {
       expect(text).not.toContain(name);
     });
+  });
+});
+
+// ==========================================================================
+// POINTAGE (decisions d Adel du 29/09) — LE SITE SUIT LES MEMES REGLES.
+// Un joueur CONVIE ne « demande » pas a participer. Reponses decochees : pas de
+// « Participer ». Apres coup, le « pas renseigne » voit « Je passe en present »,
+// qui part par la route des reponses. Ecrits ROUGES contre app `8d017cd6`.
+// ==========================================================================
+describe('POINTAGE — le joueur convie sur le site', () => {
+  const JOUEUR = {
+    documentId: 'joueur-convie', firstname: 'Enzo', lastname: 'Martin', role: { name: 'Joueur' },
+  };
+  const monterEnJoueur = (evenement) => mountScreen({
+    auth: { canManageEvent: () => false, userData: JOUEUR },
+    event: buildEvent({
+      missings: [],
+      participations: [],
+      team: {
+        club: { documentId: CLUB_ID }, documentId: TEAM_ID, name: 'U15', players: [{ documentId: JOUEUR.documentId }],
+      },
+      ...evenement,
+    }),
+  });
+
+  test('🚨 le lendemain, il voit « Je passe en present » et plus « Participer » ; l appui repond present', async () => {
+    const root = monterEnJoueur({ date: '2026-09-28T18:00:00.000Z' });
+
+    expect(buttonWithText(root, 'Participer')).toBeUndefined();
+    await click(root, 'Je passe en présent');
+
+    expect(respondToEventRsvp).toHaveBeenCalledWith('event-1', 'present');
+  });
+
+  test('🚨 « Les participants repondent » decochee : pas de « Participer » pour lui', () => {
+    const root = monterEnJoueur({ rsvpEnabled: false });
+
+    expect(buttonWithText(root, 'Participer')).toBeUndefined();
+    expect(buttonWithText(root, 'Je passe en présent')).toBeUndefined();
   });
 });
