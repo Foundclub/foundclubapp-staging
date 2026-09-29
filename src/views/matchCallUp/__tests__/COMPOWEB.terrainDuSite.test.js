@@ -1,4 +1,4 @@
-import { Platform, Text } from 'react-native';
+import { Platform, StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { saveEventCompositionDraft } from '@/services/event/eventService';
@@ -380,6 +380,16 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     const jeton = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
     expect(jeton.props.focusable).toBe(true);
     expect(jeton.props.accessibilityRole).toBe('button');
+
+    // Le focus SE VOIT : un anneau clair sur le jeton qui a le focus clavier.
+    expect(StyleSheet.flatten(jeton.props.style || {}).borderWidth).toBeUndefined();
+    await act(async () => { jeton.props.onFocus(); });
+    const focalise = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
+    expect(StyleSheet.flatten(focalise.props.style).borderWidth).toBe(2);
+    await act(async () => { focalise.props.onBlur(); });
+    expect(StyleSheet.flatten(parLibelle(arbre, 'Prenom2 Nom2, sur le banc').props.style || {}).borderWidth)
+      .toBeUndefined();
+
     const preventDefault = jest.fn();
     await act(async () => { jeton.props.onKeyDown({ nativeEvent: { key: 'Enter' }, preventDefault }); });
     expect(preventDefault).toHaveBeenCalled();

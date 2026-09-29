@@ -411,6 +411,26 @@ function MatchCompositionBoard() {
     gardeMessage = t('matchComposition.board.guard.missingMessage', { count: recovery.missingCount });
   }
 
+  // ⌨️ COMPO-WEB — LE FOCUS SE VOIT. Mesure au banc (capture) : le jeton qui
+  // avait le focus clavier ne portait AUCUN contour — on tabulait a l'aveugle.
+  // Le jeton (ou la cible) qui a le focus porte un anneau clair ; le jeton
+  // CHOISI garde son anneau de couleur.
+  const [focusClavier, setFocusClavier] = useState(/** @type {string | null} */ (null));
+  const anneauClavier = (/** @type {string} */ cle, /** @type {boolean} */ estChoisi) => {
+    if (!clavierActif) return null;
+    if (estChoisi) return [styles.jetonChoisi, { borderColor: Colors.primary500 }];
+    if (focusClavier === cle) return [styles.jetonChoisi, { borderColor: Colors.neutral00 }];
+    return null;
+  };
+  const prendreLeFocus = (/** @type {string} */ cle) => (
+    clavierActif ? () => setFocusClavier(cle) : undefined
+  );
+  const perdreLeFocus = (/** @type {string} */ cle) => (
+    clavierActif
+      ? () => setFocusClavier((/** @type {string | null} */ actuel) => (actuel === cle ? null : actuel))
+      : undefined
+  );
+
   const remettreAuBancAuClavier = useCallback(() => {
     if (!joueurAuClavier) return;
     setPlacements((current) => removePlayerFromField(current, joueurAuClavier));
@@ -469,7 +489,7 @@ function MatchCompositionBoard() {
   const calqueFantomeRef = useRef(null);
   const decalageCalqueRef = useRef({ x: 0, y: 0 });
   const [, redessinerLeFantome] = useReducer((/** @type {number} */ compte) => compte + 1, 0);
-  const suivreLaSourisSurLeSite = useCallback((/** @type {number} */ x, /** @type {number} */ y) => {
+  const suivreLaSourisSurLeSite = useCallback((x = 0, y = 0) => {
     ghostX.value = x - decalageCalqueRef.current.x - (GHOST_TOKEN_SIZE.width / 2);
     ghostY.value = y - decalageCalqueRef.current.y - (GHOST_TOKEN_SIZE.height / 2);
     redessinerLeFantome();
@@ -926,14 +946,17 @@ function MatchCompositionBoard() {
                       : undefined}
                     focusable={clavierActif || undefined}
                     key={`placed-${placement.playerId}`}
+                    onBlur={perdreLeFocus(`jeton:${placement.playerId}`)}
+                    onFocus={prendreLeFocus(`jeton:${placement.playerId}`)}
                     // @ts-ignore — `onKeyDown` n'existe que sur le site (react-native-web).
                     onKeyDown={clavierActif ? toucheSurUnJeton(player) : undefined}
                     style={[
                       styles.fieldToken,
                       { left: `${placement.positionX}%`, top: `${placement.positionY}%` },
-                      joueurAuClavier === String(placement.playerId) && clavierActif
-                        ? [styles.jetonChoisi, { borderColor: Colors.primary500 }]
-                        : null,
+                      anneauClavier(
+                        `jeton:${placement.playerId}`,
+                        joueurAuClavier === String(placement.playerId),
+                      ),
                     ]}
                   >
                     <DraggableToken isOnField player={player} />
@@ -968,6 +991,8 @@ function MatchCompositionBoard() {
                   accessibilityRole="button"
                   activeOpacity={0.8}
                   key={`cible-${entry ? entry.slotId : 'terrain'}`}
+                  onBlur={perdreLeFocus(`cible:${entry ? entry.slotId : 'terrain'}`)}
+                  onFocus={prendreLeFocus(`cible:${entry ? entry.slotId : 'terrain'}`)}
                   onPress={() => poserAuClavier(entry
                     ? { surUnPoste: true, x: entry.positionX, y: entry.positionY }
                     : { surUnPoste: false, x: caseLibreAuClavier.x, y: caseLibreAuClavier.y })}
@@ -975,7 +1000,9 @@ function MatchCompositionBoard() {
                     styles.cibleClavier,
                     {
                       backgroundColor: withAlpha(Colors.primary500, 0.22),
-                      borderColor: Colors.primary500,
+                      borderColor: focusClavier === `cible:${entry ? entry.slotId : 'terrain'}`
+                        ? Colors.neutral00
+                        : Colors.primary500,
                       left: `${entry ? entry.positionX : caseLibreAuClavier.x}%`,
                       top: `${entry ? entry.positionY : caseLibreAuClavier.y}%`,
                     },
@@ -1024,8 +1051,14 @@ function MatchCompositionBoard() {
                 <TouchableOpacity
                   accessibilityRole="button"
                   activeOpacity={0.8}
+                  onBlur={perdreLeFocus('action:banc')}
+                  onFocus={prendreLeFocus('action:banc')}
                   onPress={remettreAuBancAuClavier}
-                  style={[styles.clavierAction, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
+                  style={[styles.clavierAction, {
+                    borderColor: focusClavier === 'action:banc'
+                      ? Colors.neutral00
+                      : withAlpha(Colors.primary500, 0.45),
+                  }]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
                     {t('matchComposition.board.keyboard.toBench', { name: nomDuJoueurChoisi })}
@@ -1036,8 +1069,14 @@ function MatchCompositionBoard() {
                 <TouchableOpacity
                   accessibilityRole="button"
                   activeOpacity={0.8}
+                  onBlur={perdreLeFocus('action:annuler')}
+                  onFocus={prendreLeFocus('action:annuler')}
                   onPress={() => setJoueurAuClavier(null)}
-                  style={[styles.clavierAction, { borderColor: withAlpha(Colors.neutral00, 0.28) }]}
+                  style={[styles.clavierAction, {
+                    borderColor: focusClavier === 'action:annuler'
+                      ? Colors.neutral00
+                      : withAlpha(Colors.neutral00, 0.28),
+                  }]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
                     {t('matchComposition.board.keyboard.cancel')}
@@ -1067,9 +1106,11 @@ function MatchCompositionBoard() {
                   accessibilityState={clavierActif ? { selected: estChoisi } : undefined}
                   focusable={clavierActif || undefined}
                   key={`bench-${getCompositionPlayerId(player)}`}
+                  onBlur={perdreLeFocus(`jeton:${getCompositionPlayerId(player)}`)}
+                  onFocus={prendreLeFocus(`jeton:${getCompositionPlayerId(player)}`)}
                   // @ts-ignore — `onKeyDown` n'existe que sur le site (react-native-web).
                   onKeyDown={clavierActif ? toucheSurUnJeton(player) : undefined}
-                  style={estChoisi ? [styles.jetonChoisi, { borderColor: Colors.primary500 }] : undefined}
+                  style={anneauClavier(`jeton:${getCompositionPlayerId(player)}`, estChoisi) || undefined}
                 >
                   <DraggableToken player={player} />
                 </View>
