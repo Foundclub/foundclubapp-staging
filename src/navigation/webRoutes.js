@@ -286,6 +286,35 @@ const buildQueryString = (params = {}, reservedKeys = []) => {
   return result ? `?${result}` : '';
 };
 
+/**
+ * Une valeur d'adresse : « true » et « false » redeviennent des booleens.
+ * @param {string} value
+ * @returns {string | boolean}
+ */
+const readQueryValue = (value) => {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+};
+
+/**
+ * URL-BOOLEENS (29/09) — L'INVERSE DE `buildQueryString`, lu par le site
+ * (`useSharedScreenProps`). Une adresse ne porte que des chaines : `?canEdit=false`
+ * rendait « false », NON VIDE donc VRAIE, et `preview === true` ne reconnaissait
+ * plus « true ». Les deux booleens reprennent donc leur type ICI, une fois pour
+ * tous les ecrans. `false` n'est PAS saute a l'ecriture : un parametre « vrai par
+ * defaut » (`enableMapMode !== false`) y perdrait son `false` explicite, et
+ * `navigation.setParams` ecrit l'adresse sans passer par `buildQueryString`.
+ * ponytail: un TEXTE valant exactement « true » ou « false » revient booleen.
+ * Aucun parametre texte ne le vaut au 29/09 ; si un jour il le faut, marquer le
+ * type a l'ecriture au lieu de le deviner ici.
+ * @param {URLSearchParams} searchParams
+ * @returns {Record<string, string | boolean>}
+ */
+export const readWebQueryParams = (searchParams) => Object.fromEntries(
+  Array.from(searchParams.entries(), ([key, value]) => [key, readQueryValue(value)]),
+);
+
 export const getWebRoutePattern = (routeName) => WEB_ROUTE_PATTERNS[routeName] || '/';
 
 export const buildWebPath = (routeName, params = {}, options = {}) => {

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -282,6 +283,10 @@ function PlayerConvocationScreen() {
       eventId,
       eventLabel: eventDisplayName,
       readOnly: true,
+      // URL-BOOLEENS (29/09) — sur le SITE, le pack (des objets) ne voyage pas
+      // dans l'adresse : le plein ecran arrivait VIDE. Il y relit donc la compo ;
+      // le telephone garde l'economie de COMPOMSG (aucune relecture).
+      ...(Platform.OS === 'web' ? { refreshFromServer: true } : {}),
       teamId: view.teamId || teamId,
     });
   };
