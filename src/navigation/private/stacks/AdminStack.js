@@ -7,6 +7,7 @@ import AdminClubDetail from '@/views/admin/AdminClubDetail';
 import AdminClubForm from '@/views/admin/AdminClubForm';
 import AdminClubList from '@/views/admin/AdminClubList';
 import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
+import AdminCollectiviteDetail from '@/views/admin/AdminCollectiviteDetail';
 import AdminCollectiviteList from '@/views/admin/AdminCollectiviteList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
@@ -276,6 +277,14 @@ function AdminStack() {
           options={{
             ...commonOptions,
             headerTitle: t('adminStack.titles.collectivites', 'Collectivités'),
+          }}
+        />
+        <Stack.Screen
+          component={AdminCollectiviteDetail}
+          name={RouteNames.AdminCollectiviteDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: t('adminStack.titles.collectiviteDetail', 'Collectivité'),
           }}
         />
         <Stack.Screen

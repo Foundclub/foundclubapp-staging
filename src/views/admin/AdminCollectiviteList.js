@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -13,9 +14,12 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdminCollectivites } from '@/services/collectivite/collectiviteQueries';
 
@@ -34,6 +38,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  */
 function AdminCollectiviteList() {
   const { t } = useTranslation();
+  const navigation = /** @type {any} */ (useNavigation());
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -91,6 +96,14 @@ function AdminCollectiviteList() {
         })}
       </Text>
       <CollectiviteActivation collectivite={ligne} />
+      <Button
+        onPress={() => navigation.navigate(RouteNames.AdminCollectiviteDetail, {
+          collectiviteId: ligne.documentId,
+        })}
+        size="sm"
+        title={t('adminCollectivites.list.manage', 'Gérer')}
+        variant="Ghost"
+      />
     </View>
   );
 

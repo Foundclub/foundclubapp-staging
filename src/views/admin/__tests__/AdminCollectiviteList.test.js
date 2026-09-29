@@ -41,8 +41,10 @@ jest.mock('@/services/client', () => ({
   },
 }));
 
+const mockNavigate = jest.fn();
+
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -184,7 +186,8 @@ const bouton = (/** @type {any} */ noeud, /** @type {string} */ titre) => noeud.
 beforeEach(() => {
   collectivitesServeur = [MONTRIVAGE, VAL, DEPARTEMENT];
   alerte = null;
-  [mockGet, mockPost, mockPut, mockDelete].forEach((doublure) => doublure.mockReset());
+  // eslint-disable-next-line max-len
+  [mockGet, mockPost, mockPut, mockDelete, mockNavigate].forEach((doublure) => doublure.mockReset());
   mockPost.mockImplementation(async () => reponseListe());
   jest.spyOn(Alert, 'alert').mockImplementation((titre, message, boutons) => {
     alerte = { boutons, message, titre };
@@ -200,14 +203,14 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     const arbre = await monter();
     expect(mockPost).toHaveBeenCalledWith(ROUTE_LISTE, ADMIN_COLLECTIVITES_LIST_PAYLOAD);
     expect(textes(carte(arbre, 'ville-montrivage'))).toEqual([
-      'Ville de Montrivage', 'Commune', 'Inactive', 'Clubs rattachés : 3', 'Activer',
+      'Ville de Montrivage', 'Commune', 'Inactive', 'Clubs rattachés : 3', 'Activer', 'Gérer',
     ]);
     expect(textes(carte(arbre, 'cc-du-val'))).toEqual([
       // eslint-disable-next-line max-len
-      'Communauté de communes du Val', 'Intercommunalité', 'Active', 'Clubs rattachés : 1', 'Couper',
+      'Communauté de communes du Val', 'Intercommunalité', 'Active', 'Clubs rattachés : 1', 'Couper', 'Gérer',
     ]);
     expect(textes(carte(arbre, 'dep-var'))).toEqual([
-      'Département du Var', 'Département', 'Inactive', 'Clubs rattachés : 0', 'Activer',
+      'Département du Var', 'Département', 'Inactive', 'Clubs rattachés : 0', 'Activer', 'Gérer',
     ]);
     expect(textes(arbre.root)).toContain('Collectivités : 3');
   });
@@ -244,7 +247,7 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     const confirmer = alerte.boutons.find((/** @type {any} */ b) => b.style !== 'cancel');
     expect(confirmer.text).toBe('Activer');
     await act(async () => { confirmer.onPress(); });
-    await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 6);
+    await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 7);
 
     expect(mockPut).toHaveBeenCalledTimes(1);
     expect(mockPut).toHaveBeenCalledWith('/superadmin/collectivites/ville-montrivage/active', {
@@ -254,7 +257,7 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     expect(mockPost).toHaveBeenCalledTimes(2);
     expect(textes(carte(arbre, 'ville-montrivage'))).toEqual([
       'Ville de Montrivage', 'Commune', 'Active', 'Clubs rattachés : 3', 'Couper',
-      'Activée. Offre posée : 2 · Club qui paie déjà : 1',
+      'Activée. Offre posée : 2 · Club qui paie déjà : 1', 'Gérer',
     ]);
   });
 
@@ -265,7 +268,7 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     mockPut.mockResolvedValue({ data: { data: { changed: false, clubs: [], isActive: true } } });
     await act(async () => { alerte.boutons[1].onPress(); });
     // eslint-disable-next-line max-len
-    await attendre(() => mockPost.mock.calls.length === 2 && textes(carte(arbre, 'ville-montrivage')).length === 6);
+    await attendre(() => mockPost.mock.calls.length === 2 && textes(carte(arbre, 'ville-montrivage')).length === 7);
     expect(mockPost).toHaveBeenCalledTimes(2);
     expect(textes(carte(arbre, 'ville-montrivage')).slice(0, 5)).toEqual([
       'Ville de Montrivage', 'Commune', 'Inactive', 'Clubs rattachés : 3', 'Activer',
@@ -289,14 +292,14 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
       };
     });
     await act(async () => { alerte.boutons[1].onPress(); });
-    await attendre(() => textes(carte(arbre, 'cc-du-val')).length === 6);
+    await attendre(() => textes(carte(arbre, 'cc-du-val')).length === 7);
     expect(mockPut).toHaveBeenCalledWith('/superadmin/collectivites/cc-du-val/active', {
       data: { isActive: false },
     });
     expect(textes(carte(arbre, 'cc-du-val'))).toEqual([
       // eslint-disable-next-line max-len
       'Communauté de communes du Val', 'Intercommunalité', 'Inactive', 'Clubs rattachés : 1', 'Activer',
-      'Coupée. Offre retirée : 1',
+      'Coupée. Offre retirée : 1', 'Gérer',
     ]);
   });
 
@@ -326,11 +329,19 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
       },
     });
     await act(async () => { alerte.boutons[1].onPress(); });
-    await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 6);
+    await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 7);
     expect(textes(carte(arbre, 'ville-montrivage'))).toEqual([
       'Ville de Montrivage', 'Commune', 'Inactive', 'Clubs rattachés : 3', 'Activer',
-      'Cette collectivité est introuvable : elle a peut-être été supprimée.',
+      'Cette collectivité est introuvable : elle a peut-être été supprimée.', 'Gérer',
     ]);
+  });
+
+  it('« Gérer » ouvre le détail de la collectivité', async () => {
+    const arbre = await monter();
+    await act(async () => { bouton(carte(arbre, 'cc-du-val'), 'Gérer').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminCollectiviteDetail, {
+      collectiviteId: 'cc-du-val',
+    });
   });
 
   // eslint-disable-next-line max-len
@@ -370,21 +381,26 @@ describe('D61 — la porte : seul un SuperAdmin voit la rubrique', () => {
     expect(navigateur).toMatch(/const isSuperAdmin = getUserRoleKey\([^)]*\) === 'superAdmin';/);
   });
 
-  it('la liste n est enregistrée QUE dans AdminStack, et la tuile de la console y mène', () => {
+  it('les écrans de la rubrique ne sont enregistrés QUE dans AdminStack ; la tuile y mène', () => {
     /** @type {string[]} */
     const hotes = [];
     const parcourir = (/** @type {string} */ dossier) => readdirSync(dossier).forEach((nom) => {
       const chemin = join(dossier, nom);
       if (statSync(chemin).isDirectory()) {
         if (nom !== '__tests__') parcourir(chemin);
-      } else if (/\.js$/.test(nom) && /name=\{RouteNames\.AdminCollectiviteList\}/.test(readFileSync(chemin, 'utf8'))) {
+      } else if (/\.js$/.test(nom) && /name=\{RouteNames\.AdminCollectivite(List|Detail)\}/.test(readFileSync(chemin, 'utf8'))) {
         hotes.push(chemin.slice(SRC.length + 1).replace(/\\/g, '/'));
       }
     });
     parcourir(SRC);
     expect(hotes).toEqual(['navigation/private/stacks/AdminStack.js']);
+    const pile = lire('navigation/private/stacks/AdminStack.js');
+    expect(pile).toContain('name={RouteNames.AdminCollectiviteList}');
+    expect(pile).toContain('name={RouteNames.AdminCollectiviteDetail}');
     expect(lire('views/admin/AdminDashboard.js'))
       .toContain('navigation.navigate(RouteNames.AdminCollectiviteList)');
     expect(getWebRoutePattern(RouteNames.AdminCollectiviteList)).toBe('/admin/collectivites');
+    expect(getWebRoutePattern(RouteNames.AdminCollectiviteDetail))
+      .toBe('/admin/collectivites/:collectiviteId');
   });
 });

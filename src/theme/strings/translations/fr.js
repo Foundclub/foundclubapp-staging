@@ -692,6 +692,40 @@ export default {
       doneActivated: 'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}}',
       doneDeactivated: 'Coupée. Offre retirée : {{revoked}}',
     },
+    detail: {
+      addManager: 'Ajouter',
+      alreadyAttached: 'Déjà rattaché',
+      alreadyManager: 'Déjà gestionnaire',
+      attach: 'Rattacher',
+      // eslint-disable-next-line max-len
+      attachedAlreadyPaid: '{{club}} est rattaché à {{collectivite}} ; il paie déjà son abonnement, rien ne change pour lui.',
+      attachedGranted: '{{club}} est rattaché à {{collectivite}} et reçoit l’offre Club offerte.',
+      // eslint-disable-next-line max-len
+      attachedInactive: '{{club}} est rattaché à {{collectivite}}. Elle est inactive : l’offre Club sera posée à son activation.',
+      detach: 'Détacher',
+      detached: '{{club}} est détaché.',
+      // eslint-disable-next-line max-len
+      detachMessage: 'Le club reste intact : équipes, membres et événements. S’il recevait l’offre Club offerte par {{collectivite}}, elle lui est retirée.',
+      detachTitle: 'Détacher {{club}} ?',
+      installationLine: '{{type}} · capacité : {{nombre}}',
+      installationsCount: 'Installations : {{nombre}}',
+      loading: 'Lecture de la collectivité…',
+      managerAdded: '{{nom}} gère désormais {{collectivite}}.',
+      managerRemoved: '{{nom}} ne gère plus {{collectivite}}.',
+      managersCount: 'Gestionnaires : {{nombre}}',
+      noClub: 'Aucun club rattaché.',
+      // eslint-disable-next-line max-len
+      noInstallation: 'Aucune installation : le gestionnaire les ajoute depuis « Ma collectivité ».',
+      noManager: 'Aucun gestionnaire.',
+      noResult: 'Aucun résultat.',
+      removeManager: 'Retirer',
+      // eslint-disable-next-line max-len
+      removeManagerMessage: 'Son compte reste intact : il perd seulement l’accès à « Ma collectivité » de {{collectivite}}.',
+      removeManagerTitle: 'Retirer {{nom}} ?',
+      searchClub: 'Rattacher un club : son nom',
+      searching: 'Recherche…',
+      searchUser: 'Ajouter un gestionnaire : nom ou e-mail',
+    },
     kicker: 'Console',
     list: {
       clubsCount: 'Clubs rattachés : {{nombre}}',
@@ -700,6 +734,7 @@ export default {
       heading: 'Collectivités : {{nombre}}',
       hint: 'Activer offre l’offre Club aux clubs rattachés ; couper la leur retire.',
       loading: 'Lecture des collectivités…',
+      manage: 'Gérer',
       retry: 'Réessayer',
       title: 'Collectivités',
       truncated: '{{shown}} affichées sur {{total}}.',
@@ -1339,6 +1374,7 @@ export default {
       clubDetail: 'Détail Club',
       clubEdit: 'Édition Club',
       clubOnboarding: 'Clubs à onboarder',
+      collectiviteDetail: 'Collectivité',
       collectivites: 'Collectivités',
       contentExplorer: 'Explorer CM',
       entries: 'Entrées',
@@ -1953,6 +1989,11 @@ export default {
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
+    // eslint-disable-next-line max-len
+    // D61 (29/09) — console super-admin : rattacher un club qui a deja sa collectivite (409), club absent
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_CLUB_ALREADY_ATTACHED: 'Ce club est déjà rattaché à une autre collectivité : détache-le d’abord.',
+    COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Tu ne gères pas cette collectivité.',
     // eslint-disable-next-line max-len
@@ -1961,6 +2002,7 @@ export default {
     COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : vérifie le nom, le type, les horaires (HH:MM) et la capacité.',
     // D61 (29/09) — console super-admin : la collectivite visee n existe pas (ou plus)
     COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
+    COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
