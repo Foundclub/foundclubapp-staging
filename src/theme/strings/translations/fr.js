@@ -726,9 +726,44 @@ export default {
       searching: 'Recherche…',
       searchUser: 'Ajouter un gestionnaire : nom ou e-mail',
     },
+    form: {
+      codeInsee: 'Code INSEE',
+      email: 'E-mail (facultatif)',
+      errors: {
+        codeInsee: 'Code INSEE : 5 caractères (2A ou 2B en Corse).',
+        identifier: 'Un code INSEE ou un SIREN est obligatoire.',
+        // eslint-disable-next-line max-len
+        officialName: 'Le nom doit suivre la forme officielle, par exemple {{exemple}} : c’est lui qu’affiche le bandeau « Offert par… ».',
+        siren: 'SIREN : 9 chiffres.',
+        type: 'Choisis le type de collectivité.',
+      },
+      examples: {
+        commune: '« Ville de Montrivage » ou « Ville d’Aix »',
+        departement: '« Département du Var »',
+        // eslint-disable-next-line max-len
+        intercommunalite: '« Communauté de communes du Val » ou « Métropole Aix-Marseille-Provence »',
+        region: '« Région Sud »',
+      },
+      hint: 'Elle naît inactive : tu l’actives ensuite, depuis la liste ou sa fiche.',
+      name: 'Nom officiel',
+      // eslint-disable-next-line max-len
+      nameHint: 'Forme officielle, par exemple {{exemple}}. C’est ce nom qu’affiche le bandeau « Offert par… » des clubs.',
+      phone: 'Téléphone (facultatif)',
+      prefixes: {
+        commune: 'Ville de ',
+        departement: 'Département de ',
+        intercommunalite: 'Communauté de communes ',
+        region: 'Région ',
+      },
+      siren: 'SIREN',
+      submit: 'Créer',
+      title: 'Créer une collectivité',
+      type: 'Type',
+    },
     kicker: 'Console',
     list: {
       clubsCount: 'Clubs rattachés : {{nombre}}',
+      create: 'Créer une collectivité',
       empty: 'Aucune collectivité pour l’instant.',
       errorTitle: 'Collectivités indisponibles',
       heading: 'Collectivités : {{nombre}}',
@@ -1375,6 +1410,7 @@ export default {
       clubEdit: 'Édition Club',
       clubOnboarding: 'Clubs à onboarder',
       collectiviteDetail: 'Collectivité',
+      collectiviteForm: 'Nouvelle collectivité',
       collectivites: 'Collectivités',
       contentExplorer: 'Explorer CM',
       entries: 'Entrées',
@@ -1990,6 +2026,9 @@ export default {
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
     // eslint-disable-next-line max-len
+    // eslint-disable-next-line max-len
+    // D61 (29/09) — console super-admin : creer une collectivite dont le code INSEE ou le SIREN est pris (409)
+    COLLECTIVITE_ALREADY_EXISTS: 'Une collectivité porte déjà ce code INSEE ou ce SIREN.',
     // D61 (29/09) — console super-admin : rattacher un club qui a deja sa collectivite (409), club absent
     // eslint-disable-next-line max-len
     COLLECTIVITE_CLUB_ALREADY_ATTACHED: 'Ce club est déjà rattaché à une autre collectivité : détache-le d’abord.',

@@ -336,6 +336,12 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     ]);
   });
 
+  it('« Créer une collectivité » ouvre le formulaire', async () => {
+    const arbre = await monter();
+    await act(async () => { bouton(arbre.root, 'Créer une collectivité').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminCollectiviteForm);
+  });
+
   it('« Gérer » ouvre le détail de la collectivité', async () => {
     const arbre = await monter();
     await act(async () => { bouton(carte(arbre, 'cc-du-val'), 'Gérer').props.onPress(); });
@@ -388,7 +394,7 @@ describe('D61 — la porte : seul un SuperAdmin voit la rubrique', () => {
       const chemin = join(dossier, nom);
       if (statSync(chemin).isDirectory()) {
         if (nom !== '__tests__') parcourir(chemin);
-      } else if (/\.js$/.test(nom) && /name=\{RouteNames\.AdminCollectivite(List|Detail)\}/.test(readFileSync(chemin, 'utf8'))) {
+      } else if (/\.js$/.test(nom) && /name=\{RouteNames\.AdminCollectivite(List|Detail|Form)\}/.test(readFileSync(chemin, 'utf8'))) {
         hotes.push(chemin.slice(SRC.length + 1).replace(/\\/g, '/'));
       }
     });
@@ -397,10 +403,12 @@ describe('D61 — la porte : seul un SuperAdmin voit la rubrique', () => {
     const pile = lire('navigation/private/stacks/AdminStack.js');
     expect(pile).toContain('name={RouteNames.AdminCollectiviteList}');
     expect(pile).toContain('name={RouteNames.AdminCollectiviteDetail}');
+    expect(pile).toContain('name={RouteNames.AdminCollectiviteForm}');
     expect(lire('views/admin/AdminDashboard.js'))
       .toContain('navigation.navigate(RouteNames.AdminCollectiviteList)');
     expect(getWebRoutePattern(RouteNames.AdminCollectiviteList)).toBe('/admin/collectivites');
     expect(getWebRoutePattern(RouteNames.AdminCollectiviteDetail))
       .toBe('/admin/collectivites/:collectiviteId');
+    expect(getWebRoutePattern(RouteNames.AdminCollectiviteForm)).toBe('/admin/collectivites/new');
   });
 });

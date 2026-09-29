@@ -8,6 +8,7 @@ import AdminClubForm from '@/views/admin/AdminClubForm';
 import AdminClubList from '@/views/admin/AdminClubList';
 import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
 import AdminCollectiviteDetail from '@/views/admin/AdminCollectiviteDetail';
+import AdminCollectiviteForm from '@/views/admin/AdminCollectiviteForm';
 import AdminCollectiviteList from '@/views/admin/AdminCollectiviteList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
@@ -285,6 +286,14 @@ function AdminStack() {
           options={{
             ...commonOptions,
             headerTitle: t('adminStack.titles.collectiviteDetail', 'Collectivité'),
+          }}
+        />
+        <Stack.Screen
+          component={AdminCollectiviteForm}
+          name={RouteNames.AdminCollectiviteForm}
+          options={{
+            ...commonOptions,
+            headerTitle: t('adminStack.titles.collectiviteForm', 'Nouvelle collectivité'),
           }}
         />
         <Stack.Screen

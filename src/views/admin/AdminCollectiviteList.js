@@ -140,6 +140,12 @@ function AdminCollectiviteList() {
             )}
           </Text>
         </View>
+        <Button
+          onPress={() => navigation.navigate(RouteNames.AdminCollectiviteForm)}
+          size="sm"
+          title={t('adminCollectivites.list.create', 'Créer une collectivité')}
+          variant="Primary"
+        />
         {lignes.length === 0 ? (
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('adminCollectivites.list.empty', 'Aucune collectivité pour l’instant.')}
