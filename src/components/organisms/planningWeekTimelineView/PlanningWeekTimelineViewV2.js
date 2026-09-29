@@ -78,6 +78,9 @@ const extractTime = (event) => {
 };
 
 const getEventColor = (event, fallbackColor) => {
+  // COLL1D — le planning d'une installation pose la couleur du CLUB de chaque bloc
+  // (assignClubPlanningColors) : elle passe avant celle, commune, de l'installation.
+  if (event?.displayColor) return event.displayColor;
   const facilityColor = resolveFacilityPlanningColor(event?.facility);
   if (facilityColor) return facilityColor;
 
