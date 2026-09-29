@@ -37,6 +37,7 @@ import {
   START_FROM_LAST_MATCH,
 } from './matchCompositionUtils';
 import { getMatchFormations } from './matchFormationCatalog';
+import useSiteCompositionRecovery from './useSiteCompositionRecovery';
 
 /**
  * D79 — ECRAN 4 du pack composition : « Partir de… ».
@@ -73,8 +74,11 @@ function MatchCompositionStart() {
   // 🧨 Fige : `route.params || {}` fabrique un objet NEUF a chaque rendu. Les
   // listes par defaut sont gelees au niveau module pour la meme raison — c'est
   // ce defaut exact qui avait produit 402 rendus et gele le terrain (D42).
+  // COMPO-WEB — sur le SITE, arrive par l'adresse, l'ecran relit ses convoques
+  // sur le serveur (brouillon, sinon compo publiee). Sur le telephone : tel quel.
+  const { params: paramsRecus } = useSiteCompositionRecovery(route.params, 'field');
   /** @type {any} */
-  const params = useMemo(() => route.params || {}, [route.params]);
+  const params = useMemo(() => paramsRecus || {}, [paramsRecus]);
   const {
     selectedPlayers = EMPTY_LIST,
     sport = 'football',

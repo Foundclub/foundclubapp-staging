@@ -9895,6 +9895,28 @@ export default {
         starters_other: '{{count}} starters',
       },
       edit: 'Edit',
+      guard: {
+        emptyMessage: "This line-up couldn't be found. Go back to the selection (\"Edit\") "
+          + 'to pick your players: an empty line-up is never published.',
+        emptyTitle: 'No player to place',
+        failedMessage: "The line-up couldn't be read again. Reload the page or go back to the "
+          + 'selection ("Edit"): nothing is sent while it is missing.',
+        failedTitle: 'Line-up not found',
+        loading: 'Loading the line-up…',
+        missingMessage_one: "{{count}} called-up player couldn't be found: go through \"Edit\" "
+          + 'before publishing, otherwise they would leave the call-up.',
+        missingMessage_other: "{{count}} called-up players couldn't be found: go through \"Edit\" "
+          + 'before publishing, otherwise they would leave the call-up.',
+        missingTitle: 'Incomplete line-up',
+      },
+      keyboard: {
+        cancel: 'Cancel',
+        hint: 'With the keyboard: Enter on a player, then on a position.',
+        picked: '{{name}} is picked: press Enter on a free position to place them there.',
+        placeOnField: 'Place {{name}} on the pitch',
+        placeOnSlot: 'Place {{name}} at position {{label}}',
+        toBench: 'Send {{name}} back to the bench',
+      },
       title: 'Line-up',
       tokenOnBench: '{{name}}, on the bench',
       tokenOnField: '{{name}}, on the pitch',
