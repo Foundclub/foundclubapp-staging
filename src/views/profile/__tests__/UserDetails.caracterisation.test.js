@@ -303,8 +303,17 @@ describe('UserDetails — la liste d\'experiences renvoie SUR la liste (D40 marc
   // on ajoutait depuis sa liste, et on atterrissait ailleurs. Il fallait
   // retraverser pour en ajouter une seconde — l'aller-retour que le motif
   // LinkedIn supprime.
+  //
+  // PROFIL-JOUEUR (A18, 30/09) — ces deux temoins passaient par l'APERCU
+  // (`preview: true`) pour atteindre la page publique en proprietaire : ils
+  // EXIGEAIENT donc que l'apercu garde « + Ajouter » et le crayon, c'est-a-dire
+  // le defaut lui-meme. Ils atteignent desormais la meme page par un compte qui
+  // y edite pour de vrai : un PARENT, qui n'a pas d'ecran « voir = modifier ».
+  // Le contrat D40 (la route de retour) est inchange.
+  const parentConnecte = { documentId: 'user-p', role: { name: 'Parent', type: 'parent' } };
+
   it('« + Ajouter » annonce la LISTE comme route de retour, pas le profil', async () => {
-    await rendre(dirigeantConnecte, { preview: true });
+    await rendre(parentConnecte);
 
     const { onAddPress } = propsSectionHistorique.current;
     expect(onAddPress).toBeDefined();
@@ -317,7 +326,7 @@ describe('UserDetails — la liste d\'experiences renvoie SUR la liste (D40 marc
   });
 
   it('modifier une ligne revient AUSSI sur la liste', async () => {
-    await rendre(dirigeantConnecte, { preview: true });
+    await rendre(parentConnecte);
 
     const { onEditPress } = propsSectionHistorique.current;
     expect(onEditPress).toBeDefined();
@@ -327,6 +336,15 @@ describe('UserDetails — la liste d\'experiences renvoie SUR la liste (D40 marc
       editingEntry: { documentId: 'histo-1' },
       returnRoute: 'UserDetails',
     });
+  });
+
+  it('A18 — en APERCU, ni l\'un ni l\'autre n\'existe : la vitrine ne s\'edite pas', async () => {
+    await rendre(dirigeantConnecte, { preview: true });
+
+    const { isOwnProfile, onAddPress, onEditPress } = propsSectionHistorique.current;
+    expect(isOwnProfile).toBe(false);
+    expect(onAddPress).toBeUndefined();
+    expect(onEditPress).toBeUndefined();
   });
 });
 
