@@ -33,6 +33,8 @@
  * renvoye ce compte parmi les encadrants ou les joueurs de cette equipe.
  */
 
+import { canUserEditClub } from '@/domains/auth/authUseCases';
+
 /**
  * L'identifiant d'un objet relation, qu'il arrive entier ou deja reduit a son id.
  * @param {any} value Une entite, ou directement son documentId.
@@ -82,4 +84,93 @@ export const isMyTeam = (team, user) => {
 
   return toDocumentIds(team?.trainers).includes(userDocumentId)
     || toDocumentIds(team?.players).includes(userDocumentId);
+};
+
+/**
+ * « Est-ce que je GERE cette equipe ? » — la question de DROIT, a ne pas
+ * confondre avec `isMyTeam` juste au-dessus, qui est celle d'APPARTENANCE.
+ *
+ * GERER-ANNONCE (audit V1, A15/A16, 2026-09-30) : quatre ecrans d'annonces
+ * repondaient « oui » des que l'equipe etait dans `myTeams`. Or `myTeams` est
+ * la liste des equipes ou l'on JOUE (schema utilisateur, `mappedBy: players`,
+ * rendue telle quelle par `/me`) : un joueur recevait les outils du club
+ * (« Modifier », « Avis de recherche », « Supprimer »), que le serveur lui
+ * refusait ensuite. Et un dirigeant qui n'entraine pas l'equipe ne les recevait
+ * pas, alors que le serveur les lui accorde.
+ *
+ * ⚖️ Meme reponse que le serveur, `api::team.auth.canManageTeam`
+ * (admin/src/api/team/services/auth.ts:92-113) :
+ *   · entraineur de l'equipe — le profil (`trainedTeams`, source lente) ou
+ *     l'equipe elle-meme (`team.trainers`, source fraiche, cf. `isMyTeam`) ;
+ *   · OU dirigeant/president du club de l'equipe — `canUserEditClub`, la porte
+ *     qui dit deja « dirigeant de ce club » partout dans l'app.
+ * Ce juge n'ouvre rien : le serveur revalide chaque ecriture.
+ * @param {any} team L'equipe (avec son `club` pour le versant dirigeant).
+ * @param {any} user Le compte connecte (`userData`).
+ * @returns {boolean} true si ce compte gere cette equipe.
+ */
+export const isTeamManager = (team, user) => {
+  const teamDocumentId = toDocumentId(team);
+  if (!teamDocumentId || !user) return false;
+
+  if (toDocumentIds(user?.trainedTeams).includes(teamDocumentId)) return true;
+
+  const userDocumentId = toDocumentId(user);
+  if (userDocumentId && toDocumentIds(team?.trainers).includes(userDocumentId)) return true;
+
+  return canUserEditClub(user, toDocumentId(team?.club));
+};
+
+/**
+ * Les equipes du profil que ce compte GERE, sans doublon — la liste a donner aux
+ * choix d'equipe et aux filtres « mes annonces ».
+ *
+ * Meme ordre que la paire `myTeams` + `trainedTeams` que lisaient ces ecrans,
+ * mais une equipe ou l'on ne fait que jouer en sort. Elle y reste si l'on
+ * dirige son club : c'est alors `canManageTeam` qui dit oui au serveur.
+ * @param {any} user Le compte connecte (`userData`).
+ * @returns {any[]} Les equipes gerees, telles que le profil les porte.
+ */
+export const getManagedTeams = (user) => {
+  const seen = new Set();
+  return [
+    ...(Array.isArray(user?.myTeams) ? user.myTeams : []),
+    ...(Array.isArray(user?.trainedTeams) ? user.trainedTeams : []),
+  ].filter((team) => {
+    const teamDocumentId = toDocumentId(team);
+    if (!teamDocumentId || seen.has(teamDocumentId) || !isTeamManager(team, user)) return false;
+    seen.add(teamDocumentId);
+    return true;
+  });
+};
+
+/**
+ * Meme entite, par documentId ou par id — la regle `isSameUserEntity` des deux
+ * polices serveur ci-dessous, deux valeurs VIDES ne se ressemblent jamais.
+ * @param {any} left Une entite.
+ * @param {any} right Une autre.
+ * @returns {boolean} true si c'est la meme.
+ */
+const isSameEntity = (left, right) => {
+  const leftDocumentId = toDocumentId(left);
+  if (leftDocumentId && leftDocumentId === toDocumentId(right)) return true;
+
+  const leftId = String(left?.id ?? '').trim();
+  return Boolean(leftId && leftId === String(right?.id ?? '').trim());
+};
+
+/**
+ * « Est-ce que je gere cette ANNONCE ? » — annonce de recrutement comme annonce
+ * de match amical : le serveur tient la meme regle pour les deux,
+ * `canManageTeam(equipe de l'annonce)` OU auteur de l'annonce
+ * (admin : recruitment-ad/policies/can-manage-recruitment-ad.ts:50-59,
+ * friendly-match-ad/services/friendly-match-workflow.ts:143-151).
+ * @param {any} ad L'annonce (avec `team`, `team.club` et `author`).
+ * @param {any} user Le compte connecte (`userData`).
+ * @returns {boolean} true si ce compte en a les outils.
+ */
+export const canManageTeamAd = (ad, user) => {
+  if (!ad || !user) return false;
+  if (ad?.author && isSameEntity(ad.author, user)) return true;
+  return isTeamManager(ad?.team, user);
 };
