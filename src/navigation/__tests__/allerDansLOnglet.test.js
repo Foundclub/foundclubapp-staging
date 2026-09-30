@@ -3,6 +3,7 @@ import path from 'path';
 
 import allerDansLOnglet from '../allerDansLOnglet';
 import { RouteNames } from '../routeNames';
+import { buildWebPath } from '../webRoutes';
 
 /**
  * 🔴 LE DEFAUT QUE CE FILET FERME, mesure a l ecran le 2026-09-08.
@@ -61,6 +62,22 @@ describe('la forme imbriquee', () => {
       },
       { pop: true },
     );
+  });
+
+  it('🌐 le SITE ne voit pas `pop` : l adresse est la meme qu avant RETOUR-ONGLET', () => {
+    // MyChildren est aussi une page du site (dist : MyChildren-*.js porte l'appel).
+    // L'adaptateur du site ignore le troisieme argument de navigate, et l'adresse
+    // ne se construit qu'a partir de screen/params : `pop` ne doit pas y fuir.
+    const navigation = { navigate: jest.fn() };
+
+    allerDansLOnglet(navigation, RouteNames.SearchClubs, { childDocumentId: 'enfant-1' });
+    const [route, parametres] = navigation.navigate.mock.calls[0];
+
+    expect(buildWebPath(route, parametres)).toBe(buildWebPath(RouteNames.HomeTab, {
+      params: { params: { childDocumentId: 'enfant-1' }, screen: RouteNames.SearchClubs },
+      screen: RouteNames.Search,
+    }));
+    expect(buildWebPath(route, parametres)).not.toContain('pop');
   });
 
   it('accepte un ecran sans parametre', () => {
