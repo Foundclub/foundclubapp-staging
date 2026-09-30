@@ -247,6 +247,7 @@ const monterSur = async (evenementRendu) => {
           canGoBack: () => false,
           goBack: jest.fn(),
           navigate: jest.fn(),
+          popTo: jest.fn(),
           replace: jest.fn(),
           setOptions: jest.fn(),
         },
@@ -291,6 +292,7 @@ const monterSansQueLaFicheArrive = async () => {
           canGoBack: () => false,
           goBack: jest.fn(),
           navigate: jest.fn(),
+          popTo: jest.fn(),
           replace: jest.fn(),
           setOptions: jest.fn(),
         },
@@ -488,6 +490,7 @@ describe('D1 — quand ca rate, ca se dit', () => {
             canGoBack: () => false,
             goBack: jest.fn(),
             navigate: jest.fn(),
+            popTo: remplacer,
             replace: remplacer,
             setOptions: jest.fn(),
           },
@@ -523,6 +526,7 @@ describe('D1 — quand ca rate, ca se dit', () => {
             canGoBack: () => false,
             goBack: jest.fn(),
             navigate: jest.fn(),
+            popTo: remplacer,
             replace: remplacer,
             setOptions: jest.fn(),
           },
@@ -537,7 +541,10 @@ describe('D1 — quand ca rate, ca se dit', () => {
     });
 
     expect(alerte).not.toHaveBeenCalled();
-    expect(remplacer).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' });
+    // EVENTEDIT-SAISIE (D3) — on REDESCEND a la fiche d'ou l'on vient
+    // (`popTo`) : `replace` en posait une neuve par-dessus, et les fiches
+    // s'empilaient. Preuve sur un vrai routeur : EventEditSaisieRelecture.test.js.
+    expect(remplacer).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' }, { merge: true });
     alerte.mockRestore();
   });
 });
@@ -633,6 +640,7 @@ describe('D2 — l echec d un evenement RECURRENT se dit aussi', () => {
             canGoBack: () => false,
             goBack: jest.fn(),
             navigate: jest.fn(),
+            popTo: remplacer,
             replace: remplacer,
             setOptions: jest.fn(),
           },
@@ -647,7 +655,7 @@ describe('D2 — l echec d un evenement RECURRENT se dit aussi', () => {
     });
     await choisirLaPortee(alerte, 'Tous les');
 
-    expect(remplacer).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' });
+    expect(remplacer).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' }, { merge: true });
     const [charge] = eventService.updateEvent.mock.calls[0];
     expect(charge.recurrenceMode).toBe('all');
     alerte.mockRestore();
@@ -747,6 +755,7 @@ describe('R1 — on ne fait plus la queue derriere le rafraichissement', () => {
             canGoBack: () => false,
             goBack: jest.fn(),
             navigate: jest.fn(),
+            popTo: navigations,
             replace: navigations,
             setOptions: jest.fn(),
           },
@@ -768,7 +777,7 @@ describe('R1 — on ne fait plus la queue derriere le rafraichissement', () => {
     const { navigations } = await monterAvecInvalidationsQuiNeFinissentJamais();
 
     // 🎯 Le rechargement n'est jamais revenu, et pourtant on est deja sur la fiche.
-    expect(navigations).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' });
+    expect(navigations).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' }, { merge: true });
     alerte.mockRestore();
   });
 

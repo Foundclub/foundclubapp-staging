@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import i18next from 'i18next';
 import Joi from 'joi';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -179,6 +181,23 @@ const decrireLesChampsFautifs = (errors, traduire) => {
     { fields: noms.join(', '), ...SANS_ECHAPPEMENT },
   );
 };
+
+/**
+ * Le titre de l'ecran, decide d'apres la ROUTE qui l'ouvre.
+ *
+ * 🏷️ EVENTEDIT-SAISIE (D8, tournee 6 du 29/09) — « CREER UN EVENEMENT »
+ * S'AFFICHAIT PENDANT LE CHARGEMENT DE « MODIFIER ». La pile declarait pour cet
+ * ecran un titre FIXE, et le bon n'arrivait qu'apres le premier dessin, pose
+ * par un `useEffect` de l'ecran. La pile lit desormais cette fonction dans ses
+ * options (`navigation/private/stacks/EventStack.js`) : le titre est juste des
+ * la premiere image, avant meme que l'ecran ne se dessine.
+ * @param {any} route - La route qui ouvre l'ecran.
+ * @param {(cle: string) => string} t - La traduction de la pile.
+ * @returns {string} - « Modifier l'evenement », ou « Creer un evenement ».
+ */
+export const getEventEditHeaderTitle = (route, t) => (
+  route?.params?.eventId ? t('eventEdit.titleEdit') : t('eventEdit.title')
+);
 
 const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInput) => {
   if (!dateValue || !startTime || !endTime || typeof getDateFromDateInput !== 'function') {
@@ -462,10 +481,45 @@ function EventEdit({ navigation, route }) {
     onSuccess: invalidateEventQueries,
   });
 
+  /**
+   * Pose sur la fiche, tout de suite, ce que le serveur vient d'enregistrer.
+   *
+   * 🔴 EVENTEDIT-SAISIE (D2, tournee 6 du 29/09) — LA FICHE RESTAIT SUR
+   * L'ANCIENNE VERSION PENDANT PRES D'UNE MINUTE. L'invalidation ci-dessus fait
+   * bien relire la fiche, mais cette relecture-la est la plus lourde de l'app
+   * (equipe, joueurs, avatars, equipes conviees...) : tant qu'elle n'est pas
+   * revenue, la fiche montrait l'ancienne date, les anciennes heures, et la
+   * carte « Faire l'appel » d'un pointage qu'on venait de couper. Pendant ce
+   * temps, la REPONSE de l'enregistrement portait deja la nouvelle version.
+   *
+   * ✅ Ses champs recouvrent ceux de la fiche. Ce qu'elle ne porte pas (les
+   * relations peuplees : equipe, joueurs, lieu) reste en place, et la relecture
+   * complete arrive ensuite, comme avant : l'invalidation n'est PAS retiree.
+   * 📎 Le meme paquet sert deja de fiche a la creation (`EventWizardRecap.js`,
+   * `setQueryData(['event', eventId], ...)`) : la fiche sait l'afficher.
+   *
+   * ⛔ Pas de fiche en cache, pas de fiche fabriquee : un demi-evenement
+   * s'afficherait comme s'il etait complet.
+   * Temoin : `__tests__/EventEditSaisieRelecture.test.js`.
+   * @param {any} reponse - Le corps rendu par `PUT /events/:id`.
+   * @returns {void}
+   */
+  const afficherLaReponseSurLaFiche = (reponse) => {
+    const evenementEnregistre = reponse?.data;
+    if (!eventId || evenementEnregistre?.documentId !== eventId) return;
+    queryClient.setQueryData(
+      ['event', eventId],
+      (/** @type {any} */ fiche) => (fiche ? { ...fiche, ...evenementEnregistre } : fiche),
+    );
+  };
+
   const updateEventMutation = useMutation({
     mutationFn: updateEvent,
     onError: signalerEchecEnregistrement,
-    onSuccess: invalidateEventQueries,
+    onSuccess: (/** @type {any} */ reponse) => {
+      afficherLaReponseSurLaFiche(reponse);
+      invalidateEventQueries();
+    },
   });
 
   let initialDateValue = '';
@@ -717,11 +771,39 @@ function EventEdit({ navigation, route }) {
     [selectedTypeData?.name],
   );
 
-  // Reset form when event data is loaded
+  // 🔴 EVENTEDIT-SAISIE (D1, tournee 6 du 29/09) — UNE RELECTURE N'EFFACE PLUS
+  // CE QUE LA PERSONNE EST EN TRAIN DE SAISIR.
+  //
+  // 🧨 CE `reset` REPARTAIT A CHAQUE NOUVELLE VERSION DE `event` — et il y en
+  // a une a CHAQUE relecture, meme identique : le service change `date` en
+  // objet `Date` (Joi), que react-query ne sait pas comparer, donc chaque
+  // lecture rend un NOUVEL objet. Or ouvrir le calendrier ou l'horloge Android
+  // fait passer l'app en arriere-plan, et au retour `queryRefreshOnReturn.js`
+  // relit `['event']` — la clef de cet ecran comprise. Vu 4 fois en recette :
+  // la date choisie revenait au 02/10, les heures 09:00/10:00 retombaient a
+  // 18:00/19:00. Et c'est l'ANCIENNE date qui partait a l'enregistrement : un
+  // match enregistre au mauvais jour.
+  //
+  // ✅ LA REGLE :
+  //   · la PREMIERE version d'un evenement remplit TOUT le formulaire — avant
+  //     elle, il est pre-rempli A VIDE, et l'enregistrer effacerait taches,
+  //     equipes conviees et lieu (D5) ;
+  //   · ensuite, une relecture ne remet a jour QUE les champs que la personne
+  //     n'a pas touches (`keepDirtyValues`, natif de react-hook-form). Ce
+  //     qu'elle a choisi ou tape reste tel quel.
+  // 🎯 POURQUOI CHAMP PAR CHAMP, et pas « formulaire touche = plus rien »
+  // (le choix de `ProfileEdit.js`) : l'ecran peut s'ouvrir sur une copie
+  // PERIMEE — rouvert juste apres un enregistrement, avant que la relecture ne
+  // revienne. Si la personne tape d'abord la description, la date fraiche doit
+  // quand meme arriver ; sinon l'ANCIENNE repartirait a l'enregistrement.
+  // ⚠️ Un champ ecrit par `setValue` ne compte comme touche qu'avec
+  // `shouldDirty` : c'est pourquoi l'installation le porte (plus bas).
+  // Temoin : `__tests__/EventEditSaisieRelecture.test.js`.
+  const evenementDejaRempliRef = useRef(/** @type {string | null} */ (null));
   useEffect(() => {
     if (event) {
-      console.log('Event data loaded:', event);
-      console.log('Récurrence Group ID:', event.recurrenceGroupId);
+      const premiereVersion = evenementDejaRempliRef.current !== event.documentId;
+      evenementDejaRempliRef.current = event.documentId;
       reset({
         ...defaultValues,
         arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
@@ -751,18 +833,12 @@ function EventEdit({ navigation, route }) {
         totalPlayers: event?.totalPlayers,
         type: event?.type?.documentId || '',
         validationMode: event?.validationMode || 'auto',
-      });
+      }, { keepDirtyValues: !premiereVersion });
     }
   }, [event, reset, resolveTrainingOpenConfig]);
 
-  // Set navigation options to change the header title based on whether editing or creating
-  useEffect(() => {
-    navigation.setOptions({
-      headerTitle: eventId
-        ? t('eventEdit.titleEdit')
-        : t('eventEdit.title'),
-    });
-  }, [navigation, eventId, t]);
+  // 🏷️ EVENTEDIT-SAISIE (D8) — LE TITRE N'EST PLUS POSE D'ICI, apres le premier
+  // dessin : c'est la pile qui le lit, d'apres la route (`getEventEditHeaderTitle`).
 
   /**
    * Handle form submit
@@ -865,7 +941,14 @@ function EventEdit({ navigation, route }) {
             // dire. La personne reste sur son formulaire, avec ses saisies.
             return;
           }
-          navigation.replace(RouteNames.EventDetails, { eventId });
+          // 🔴 EVENTEDIT-SAISIE (D3) — ON REVIENT A LA FICHE, ON N'EN POSE PAS
+          // UNE DE PLUS. `replace` mettait une NOUVELLE fiche a la place de cet
+          // ecran, par-dessus celle d'ou l'on venait : apres quatre
+          // enregistrements, cinq fiches du meme evenement et cinq retours pour
+          // sortir. `popTo` redescend a la fiche existante (ses parametres
+          // gardes) ; s'il n'y en a pas — ecran ouvert par un lien —, il remplace
+          // cet ecran par la fiche, exactement comme avant.
+          navigation.popTo(RouteNames.EventDetails, { eventId }, { merge: true });
         };
 
         if (event?.recurrenceGroupId) {
@@ -1053,7 +1136,10 @@ function EventEdit({ navigation, route }) {
                     : null}
                   onChange={(/** @type {{ location: string; facilityId?: string }} */ { facilityId: newFacilityId, location: newLocation }) => {
                     onChange(newLocation);
-                    setValue('facility', newFacilityId || '');
+                    // D1 — choisir une installation EST une saisie : sans
+                    // `shouldDirty`, une relecture la remettrait a l'ancienne
+                    // sous le lieu nouveau (le lieu, lui, est marque touche).
+                    setValue('facility', newFacilityId || '', { shouldDirty: true });
                   }}
                   onOccupancyResolved={setSelectedOccupancy}
                 />

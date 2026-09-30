@@ -241,6 +241,7 @@ const monterSur = async (evenementRendu) => {
           canGoBack: () => false,
           goBack: jest.fn(),
           navigate: jest.fn(),
+          popTo: jest.fn(),
           replace: jest.fn(),
           setOptions: jest.fn(),
         },
