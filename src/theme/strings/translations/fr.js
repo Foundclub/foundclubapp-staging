@@ -13885,7 +13885,7 @@ export default {
       pendingTitle: 'Candidature déjà envoyée sur cette détection',
     },
     owner: {
-      posterCta: 'Avis de recherche',
+      posterCta: 'Créer l’affiche à partager',
     },
     state: {
       loadError: 'Chargement impossible',

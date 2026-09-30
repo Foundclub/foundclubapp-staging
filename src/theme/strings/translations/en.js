@@ -13125,7 +13125,7 @@ export default {
       pendingTitle: 'Application already sent for this trial',
     },
     owner: {
-      posterCta: 'Wanted poster',
+      posterCta: 'Create the poster to share',
     },
     state: {
       loadError: 'Unable to load',

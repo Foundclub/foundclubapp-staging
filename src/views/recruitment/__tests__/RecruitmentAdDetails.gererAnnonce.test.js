@@ -258,7 +258,8 @@ const findButton = (tree, title) => tree.root.findAll(
   { deep: true },
 )[0];
 
-const OUTILS_DU_CLUB = ['Modifier', 'Avis de recherche', 'Supprimer'];
+// FINITIONS-AUDIT (2) : « Avis de recherche » est devenu « Créer l’affiche à partager ».
+const OUTILS_DU_CLUB = ['Modifier', 'Créer l’affiche à partager', 'Supprimer'];
 
 /**
  * Les outils de l'equipe qui recrute, presents dans le rendu.
@@ -314,10 +315,10 @@ describe('RecruitmentAdDetails — caracterisation (ce qui ne bouge pas)', () =>
       .toHaveBeenCalledWith('RecruitmentAdEdit', { ad: AD, adId: 'ad-u15' });
   });
 
-  it('« Avis de recherche » ouvre l affiche de CETTE annonce', async () => {
+  it('« Créer l’affiche à partager » ouvre l affiche de CETTE annonce', async () => {
     const tree = await renderFor(ENTRAINEUR_DE_L_EQUIPE);
 
-    await act(async () => { findButton(tree, 'Avis de recherche').props.onPress(); });
+    await act(async () => { findButton(tree, 'Créer l’affiche à partager').props.onPress(); });
 
     expect(mockNavigation.navigate).toHaveBeenCalledWith('VisualShowcase', expect.objectContaining({
       subjectId: 'ad-u15',

@@ -1601,7 +1601,7 @@ function RecruitmentAdDetails() {
             <View style={{ marginBottom: 12 }}>
               <Button
                 onPress={handleOpenPosterShowcase}
-                title={t('recruitmentAdDetails.owner.posterCta', 'Avis de recherche')}
+                title={t('recruitmentAdDetails.owner.posterCta', 'Créer l’affiche à partager')}
                 variant="Secondary"
               />
             </View>
