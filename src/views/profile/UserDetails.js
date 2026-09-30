@@ -41,6 +41,8 @@ import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
+
 import { useGetUserById } from '@/services/auth/authQueries';
 import { useUserCurrentLicense } from '@/services/license/licenseQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
@@ -489,11 +491,6 @@ function UserDetails({ navigation, route }) {
   // A18 — l'APERCU de son propre profil : un bandeau le dit, et aucune action
   // d'edition n'y survit (l'historique suivait encore `isSelfProfile`).
   const isSelfPreview = isSelfProfile && isPreview;
-  // A19 — « Suivi › Retours du coach » ouvre cette vue-ci, sur la route du
-  // profil (le site la sert deja : aucune route neuve a declarer). Proprietaire
-  // SEULEMENT : ni un tiers ni l'apercu ne l'obtiennent — et le serveur refuse de
-  // toute facon ces donnees a un tiers (`getPersonalStats` : 403).
-  const isCoachFeedbackView = isOwnerView && route?.params?.view === 'coachFeedback';
   const targetUserId = requestedUserId || currentUserId;
   const [selectedStatsSport, setSelectedStatsSport] = useState('all');
   const [selectedStatsTeamKey, setSelectedStatsTeamKey] = useState('all');
@@ -508,6 +505,24 @@ function UserDetails({ navigation, route }) {
   });
 
   const user = isSelfProfile ? currentUser : fetchedUser;
+
+  // PARENT-RETOURS (Adel, 30/09, « parent B ») — le parent DECLARE d'un MINEUR.
+  // Lu sur le profil public que rend le serveur (`parentAccount`, `age`) : ce
+  // n'est qu'une facon de ne pas proposer ce qui serait refuse — le vrai juge est
+  // le serveur (`getPersonalStats` relit le lien et l'age en base). Age inconnu :
+  // la minorite ne se prouve pas, rien ne s'ouvre.
+  const profileAge = readProfileAge(user);
+  const isParentOfMinorViewer = !isSelfProfile
+    && Boolean(currentUserId)
+    && toComparableId(user?.parentAccount?.documentId) === currentUserId
+    && typeof profileAge === 'number'
+    && profileAge < PARENTAL_POWER_ENDS_AGE;
+  // A19 — « Suivi › Retours du coach » ouvre cette vue-ci, sur la route du
+  // profil (le site la sert deja : aucune route neuve a declarer). Proprietaire,
+  // ou parent declare d'un mineur (PARENT-RETOURS) : ni un tiers ni l'apercu ne
+  // l'obtiennent — et le serveur leur refuse ces donnees (`getPersonalStats` : 403).
+  const isCoachFeedbackView = (isOwnerView || isParentOfMinorViewer)
+    && route?.params?.view === 'coachFeedback';
 
   const { refetch: refetchOwnHistories } = useGetMyHistories({
     enabled: isSelfProfile,
@@ -595,6 +610,9 @@ function UserDetails({ navigation, route }) {
     unblockTargetUser(targetUserId);
   }, [targetUserId, unblockTargetUser]);
 
+  // Au parent, le serveur ne rend QUE les retours : les statistiques restent a
+  // l'enfant, comme pour un tiers — on le dit au lieu d'afficher des zeros.
+  const areMatchStatsPrivate = isAccessRefusalError(personalStatsError) || isParentOfMinorViewer;
   const isCompactScreen = screenWidth <= 375;
   const scrollBottomPadding = canContact || canBlock ? insets.bottom + 128 : insets.bottom + 24;
 
@@ -984,6 +1002,11 @@ function UserDetails({ navigation, route }) {
               { width: 88 },
             ]}
           />
+          {/* PARENT-RETOURS — les retours de QUI : un parent de deux enfants
+              doit le lire sans deviner. */}
+          {!isSelfProfile ? (
+            <Text style={[Fonts.p2Bold, Fonts.neutral200]}>{displayName}</Text>
+          ) : null}
         </View>
 
         <ScrollView
@@ -1296,7 +1319,7 @@ function UserDetails({ navigation, route }) {
 
                 {/* VA1 — le serveur refuse ces stats a qui n'est pas la personne :
                     le dire, au lieu d'afficher des zeros. */}
-                {!isPersonalStatsLoading && isAccessRefusalError(personalStatsError) ? (
+                {!isPersonalStatsLoading && areMatchStatsPrivate ? (
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {t(
                       'userDetails.stats.privateToOwner',
@@ -1308,7 +1331,7 @@ function UserDetails({ navigation, route }) {
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {t('userDetails.stats.loading', 'Chargement des statistiques...')}
                   </Text>
-                ) : !isAccessRefusalError(personalStatsError) && (
+                ) : !areMatchStatsPrivate && (
                   <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
                     {profileSummaryCards.map((stat) => (
                       <View
@@ -1354,6 +1377,40 @@ function UserDetails({ navigation, route }) {
               title={t('userDetails.sections.coachFeedback', 'Retours du coach')}
             >
               <CoachFeedbackList items={recentCoachFeedback} />
+            </SectionCard>
+          ) : null}
+
+          {/* PARENT-RETOURS — le parent declare d'un mineur n'a pas le bloc :
+              une ENTREE vers la vue des retours, sur l'enfant. Meme ecran, meme
+              `CoachFeedbackList`, rien de duplique. */}
+          {isParentOfMinorViewer ? (
+            <SectionCard
+              ApplicationStyle={ApplicationStyle}
+              Colors={Colors}
+              Fonts={Fonts}
+              Spaces={Spaces}
+              title={t('userDetails.sections.coachFeedback', 'Retours du coach')}
+            >
+              <TouchableOpacity
+                accessibilityLabel={t(
+                  'userDetails.feedback.openForChild',
+                  'Voir les retours du coach de {{firstname}}',
+                  { firstname: user?.firstname || displayName, ...SANS_ECHAPPEMENT },
+                )}
+                accessibilityRole="button"
+                onPress={() => navigation.navigate(RouteNames.UserDetails, {
+                  userId: targetUserId,
+                  view: 'coachFeedback',
+                })}
+              >
+                <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+                  {t(
+                    'userDetails.feedback.openForChild',
+                    'Voir les retours du coach de {{firstname}}',
+                    { firstname: user?.firstname || displayName, ...SANS_ECHAPPEMENT },
+                  )}
+                </Text>
+              </TouchableOpacity>
             </SectionCard>
           ) : null}
 

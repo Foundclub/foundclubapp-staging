@@ -18394,6 +18394,7 @@ export default {
       empty: 'No individual feedback from the coach yet.',
       matchFallback: 'Match',
       noComment: 'No detailed comment for this feedback.',
+      openForChild: "See the coach's feedback for {{firstname}}",
     },
     fields: {
       address: 'Address',

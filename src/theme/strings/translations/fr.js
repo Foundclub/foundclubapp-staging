@@ -19596,6 +19596,7 @@ export default {
       empty: 'Aucun retour individuel du coach pour le moment.',
       matchFallback: 'Match',
       noComment: 'Pas de commentaire détaillé pour ce retour.',
+      openForChild: 'Voir les retours du coach de {{firstname}}',
     },
     fields: {
       address: 'Adresse',
