@@ -135,8 +135,9 @@ function NotificationBadge({
     }).start();
   };
 
+  // A04 (audit V1) : plus de vibration a l'appui. Seule l'ARRIVEE d'une notification
+  // (le compteur qui monte, plus haut) fait encore vibrer.
   const handlePress = () => {
-    Vibration.vibrate(10);
     if (onPress) {
       onPress();
     } else {
