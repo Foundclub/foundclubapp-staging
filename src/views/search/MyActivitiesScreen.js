@@ -21,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -31,7 +32,10 @@ import {
   getMyFriendlyMatchAds,
   getMyFriendlyMatchApplications,
 } from '@/services/friendlyMatch/friendlyMatchService';
+import { markApplicationResponsesAsRead } from '@/services/notification/notificationService';
 import { getMyApplications, getMyRecruitmentAds } from '@/services/recruitment/recruitmentService';
+
+import texteInsecable from '@/utils/texteInsecable';
 
 const TAB_PUBLICATIONS = 'publications';
 const TAB_RESPONSES = 'responses';
@@ -53,6 +57,13 @@ const getManagedTeamIds = (userData) => getManagedTeams(userData).map(documentKe
  * On PUBLIE depuis Rechercher, on GERE ici. L ecran ne calcule rien lui-meme :
  * la lecture des donnees vit dans domains/search/myActivitiesFeed.js, testee a
  * part. Ici il ne reste que « aller chercher » et « dessiner ».
+ *
+ * MES-CANDIDATURES (audit V1, A12, decision d'Adel du 30/09) : pour un JOUEUR (et
+ * tout compte qui ne publie pas), la page s'appelle « Mes candidatures » — une seule
+ * liste, sans onglet : l'onglet « Publications » lui restait vide pour toujours.
+ * ⚠️ Le STAFF (entraineur, dirigeant, super admin) garde « Mes activites » et ses
+ * deux onglets : il a des PUBLICATIONS. La regle est `getRecruitmentRoleMode`, la
+ * meme que la case de l'accueil qui ouvre cette page (HomeHub.js).
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props Props de navigation.
  * @returns {import('react').ReactElement} L ecran.
  */
@@ -134,6 +145,19 @@ function MyActivitiesScreen({ navigation }) {
       setSentFriendlyApplications(valeur(mesPropositions));
       setUnreachable([offres, matchs, mesCandidatures, mesPropositions]
         .every((resultat) => resultat.status === 'rejected'));
+
+      // MES-CANDIDATURES (A13) — la liste est a l'ecran : ses reponses sont VUES, et
+      // la pastille rouge de l'accueil s'eteint (le serveur compte les notifications
+      // de reponse non lues). Seulement si les DEUX sources ont ete lues : marquer vu
+      // ce qui n'a pas pu s'afficher serait mentir. Un echec ne coute que la pastille.
+      if (!isStaff && [mesCandidatures, mesPropositions]
+        .every((resultat) => resultat.status === 'fulfilled')) {
+        Promise.resolve()
+          .then(() => markApplicationResponsesAsRead())
+          .catch((error) => {
+            console.warn('[MyActivitiesScreen] mark responses seen failed:', error);
+          });
+      }
     } catch (error) {
       console.error('[MyActivitiesScreen] Error fetching activities:', error);
       setUnreachable(true);
@@ -149,7 +173,7 @@ function MyActivitiesScreen({ navigation }) {
   }, [fetchActivities]));
 
   const items = useMemo(() => {
-    if (activeTab === TAB_PUBLICATIONS) {
+    if (isStaff && activeTab === TAB_PUBLICATIONS) {
       return buildMyActivitiesPublications({ friendlyAds, recruitmentAds });
     }
     return isStaff
@@ -164,10 +188,8 @@ function MyActivitiesScreen({ navigation }) {
     sentFriendlyApplications,
   ]);
 
-  const responsesLabel = isStaff ? t(
-    'myActivitiesScreen.tabs.receivedResponses',
-    'Réponses reçues',
-  ) : t('myActivitiesScreen.tabs.myResponses', 'Mes réponses');
+  // Les onglets ne sont plus montres qu'au staff (A12) : le second dit ce qu'il RECOIT.
+  const responsesLabel = t('myActivitiesScreen.tabs.receivedResponses', 'Réponses reçues');
 
   const openItem = useCallback((/** @type {any} */ item) => {
     const nav = /** @type {any} */ (navigation);
@@ -183,6 +205,13 @@ function MyActivitiesScreen({ navigation }) {
   }, [isStaff, navigation]);
 
   const cardSurface = withAlpha(Colors.primary900, 0.6);
+  // Gris pour ce qui attend le club (A13 : attendre n'est pas une alerte), vert pour
+  // un oui, rouge d'erreur de la charte pour un non, gris fonce pour ce qui est clos.
+  const statusColor = (/** @type {string} */ tone) => ({
+    accepted: Colors.success500,
+    declined: Colors.error500,
+    pending: Colors.neutral300,
+  })[tone] || Colors.neutral500;
   const cardBorder = withAlpha(Colors.neutral00, 0.13);
 
   const renderSection = (/** @type {any} */ item) => (
@@ -217,10 +246,42 @@ function MyActivitiesScreen({ navigation }) {
         },
       ]}
     >
+      {/* MES-CANDIDATURES (A12) : le club, d'un coup d'oeil — son logo, sinon ses initiales. */}
+      {item.club ? <ClubLogoMark club={item.club} size={40} /> : null}
+
       <View style={{ flex: 1 }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{item.title}</Text>
         {item.meta ? (
           <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>{item.meta}</Text>
+        ) : null}
+
+        {/* MES-CANDIDATURES (A12, A14) : l'etat de MA candidature, sous sa date.
+            Espaces insecables : pastille grasse de plusieurs mots (Android 16). */}
+        {item.statusLabel ? (
+          <View style={[
+            Spaces.marginTop[8],
+            Spaces.paddingHorizontal[8],
+            {
+              alignSelf: 'flex-start',
+              borderColor: statusColor(item.statusTone),
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingVertical: 2,
+            },
+          ]}
+          >
+            <Text style={[
+              Fonts.p4Bold,
+              {
+                color: statusColor(item.statusTone),
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+              },
+            ]}
+            >
+              {texteInsecable(item.statusLabel)}
+            </Text>
+          </View>
         ) : null}
 
         {item.type === 'publication' ? (
@@ -276,6 +337,21 @@ function MyActivitiesScreen({ navigation }) {
       );
     }
 
+    if (!isStaff) {
+      return (
+        <EmptyState
+          description={t(
+            'myActivitiesScreen.empty.applicationsBody',
+            'Postule à une offre depuis Rechercher › Recrutement : tu suivras sa réponse ici.',
+          )}
+          title={t(
+            'myActivitiesScreen.empty.applicationsTitle',
+            'Aucune candidature pour le moment.',
+          )}
+        />
+      );
+    }
+
     return (
       <EmptyState
         description={activeTab === TAB_PUBLICATIONS
@@ -301,22 +377,26 @@ function MyActivitiesScreen({ navigation }) {
     >
       <View style={[Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>
-          {t('myActivitiesScreen.title', 'Mes activités')}
+          {isStaff
+            ? t('myActivitiesScreen.title', 'Mes activités')
+            : t('myActivitiesScreen.titleApplications', 'Mes candidatures')}
         </Text>
       </View>
 
-      <SegmentedControl
-        centerContent
-        onChange={setActiveTab}
-        options={[
-          {
-            label: t('myActivitiesScreen.tabs.publications', 'Publications'),
-            value: TAB_PUBLICATIONS,
-          },
-          { label: responsesLabel, value: TAB_RESPONSES },
-        ]}
-        value={activeTab}
-      />
+      {isStaff ? (
+        <SegmentedControl
+          centerContent
+          onChange={setActiveTab}
+          options={[
+            {
+              label: t('myActivitiesScreen.tabs.publications', 'Publications'),
+              value: TAB_PUBLICATIONS,
+            },
+            { label: responsesLabel, value: TAB_RESPONSES },
+          ]}
+          value={activeTab}
+        />
+      ) : null}
 
       {loading ? <Loader /> : (
         <FlatList

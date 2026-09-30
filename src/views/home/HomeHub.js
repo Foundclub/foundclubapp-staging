@@ -30,9 +30,10 @@ import {
   selectBannerLines,
   selectHomeAlerts,
   selectModerationTotal,
+  selectMyApplicationsStatus,
 } from '@/domains/home/homeCounters';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
-import { getDefaultRecruitmentTab } from '@/domains/search/recruitmentFlow';
+import { getDefaultRecruitmentTab, getRecruitmentRoleMode } from '@/domains/search/recruitmentFlow';
 import {
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
@@ -2297,15 +2298,45 @@ function HomeHubContent({ auth, navigation, route }) {
       // existe et porte pour lui l'onglet « Mes reponses ».
       // Volontairement SANS `tutorial` : les deux cases voisines se tiennent par
       // `nextTargetStepId`, et s'inserer au milieu de cette chaine la casserait.
+      // MES-CANDIDATURES (audit V1, A12) — la case dit ce que la page dit : MEME regle
+      // que MyActivitiesScreen. Le joueur lit « Mes candidatures » ; le super admin, qui
+      // arrive ici mais voit la page du staff, lit « Mes activites » comme elle.
+      const isMyActivitiesStaff = getRecruitmentRoleMode(userData) === 'staff';
+      // A13 — l'attente s'ECRIT, en gris (« 1 en attente ») ; le rouge ne s'allume que
+      // pour une reponse non vue (`search-my-activities`, homeCounters.js).
+      const myApplicationsStatus = selectMyApplicationsStatus(homeCounters)
+        .map(({ count, key }) => (key === 'unseen'
+          ? t('homeHub.cards.search.myActivities.unseen', {
+            count,
+            defaultValue_one: '{{count}} nouvelle réponse',
+            defaultValue_other: '{{count}} nouvelles réponses',
+          })
+          : t('homeHub.cards.search.myActivities.pending', {
+            count,
+            defaultValue_one: '{{count}} en attente',
+            defaultValue_other: '{{count}} en attente',
+          })));
+      const myApplicationsSubtitle = myApplicationsStatus.length > 0
+        ? myApplicationsStatus.join(' · ')
+        : t('homeHub.cards.search.myActivities.subtitle', 'Tes candidatures et leurs réponses.');
       cards.push({
         accentColor: Colors.primary500,
-        hasAlert: homeAlerts['search-my-activities'],
+        hasAlert: isMyActivitiesStaff
+          ? homeAlerts['manage-my-ads']
+          : homeAlerts['search-my-activities'],
         icon: 'running',
         key: 'search-my-activities',
         onPress: () => navigation.navigate(RouteNames.MyActivities),
-        subtitle: t('homeHub.cards.search.myActivities.subtitle', 'Tes candidatures et leurs réponses.'),
+        subtitle: isMyActivitiesStaff
+          ? t(
+            'homeHub.cards.manage.myAds.subtitle',
+            'Tes offres, tes matchs et les réponses reçues.',
+          )
+          : myApplicationsSubtitle,
         subtitleLines: 2,
-        title: t('homeHub.cards.search.myActivities.title', 'Mes réponses'),
+        title: isMyActivitiesStaff
+          ? t('homeHub.cards.manage.myAds.title', 'Mes activités')
+          : t('homeHub.cards.search.myActivities.title', 'Mes candidatures'),
       });
     }
 
@@ -2385,6 +2416,7 @@ function HomeHubContent({ auth, navigation, route }) {
     Colors.primary500,
     hasManageSection,
     homeAlerts,
+    homeCounters,
     isParent,
     makeTutorial,
     navigation,

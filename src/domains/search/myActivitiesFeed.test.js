@@ -223,30 +223,150 @@ describe('Reponses recues — ce qu on m a repondu', () => {
   });
 });
 
-describe('Mes reponses — ce que J AI envoye', () => {
+// MES-CANDIDATURES (audit V1, A12 + A14 — 01/10). La page du JOUEUR s'appelle
+// « Mes candidatures » : une seule liste, rangee en « En attente » et « Reponses
+// recues », chaque ligne avec SA date et SON etat (maquette APRES de A12). Avant,
+// un seul groupe « Candidatures envoyees · N », sans date : l'auditeur ne savait
+// pas dire qu'une candidature datait d'avant son test (A14).
+const MAINTENANT = new Date(2026, 8, 30, 12, 0);
+
+const candidature = (/** @type {any} */ statut, /** @type {any} */ dates = {}) => offre({
+  applicationStatus: statut,
+  myApplication: { status: statut, ...dates },
+  team: { club: { name: 'Montrivage FC' }, name: 'Seniors A' },
+});
+
+const repondue = (/** @type {string} */ envoi, /** @type {string} */ reponse) => ({
+  createdAt: envoi, reviewedAt: reponse,
+});
+
+describe('Mes candidatures — ce que J AI envoye (A12, A14)', () => {
   it('ne titre AUCUN groupe quand je n ai rien envoye', () => {
     expect(buildMyActivitiesSentResponses()).toEqual([]);
   });
 
-  it('affiche le statut de chaque candidature envoyee', () => {
+  it('range en « En attente » puis « Reponses recues », chaque groupe compte les siens', () => {
     const lignes = buildMyActivitiesSentResponses({
-      sentApplications: [offre({
-        applicationStatus: 'accepted',
-        team: { club: { name: 'Test FC' }, name: 'Seniors A' },
-      })],
+      now: MAINTENANT,
+      sentApplications: [
+        candidature('accepted', repondue('2026-09-20T10:00:00', '2026-09-28T09:00:00')),
+        candidature('pending', { createdAt: '2026-09-12T10:00:00' }),
+      ],
     });
 
-    expect(lignes[0].title).toBe('Candidatures envoyées · 1');
-    expect(lignes[1]).toMatchObject({
-      meta: 'Test FC · Acceptée',
+    expect(lignes.filter((l) => l.type === 'section').map((l) => l.title)).toEqual([
+      'En attente · 1',
+      'Réponses reçues · 1',
+    ]);
+    expect(lignes.map((l) => l.type)).toEqual(['section', 'response', 'section', 'response']);
+  });
+
+  it('une candidature EN ATTENTE dit quand elle est partie, et qu on attend le club', () => {
+    const [, ligne] = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [candidature('pending', { createdAt: '2026-09-12T10:00:00' })],
+    });
+
+    expect(ligne).toMatchObject({
+      club: { name: 'Montrivage FC' },
+      meta: 'Montrivage FC · envoyée le 12/09',
+      statusLabel: 'En attente du club',
+      statusTone: 'pending',
       title: 'Ailier fort — Seniors A',
     });
   });
 
+  it('une REPONSE dit quand le club a repondu, et ce qu il a repondu', () => {
+    const lignes = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [
+        candidature('accepted', repondue('2026-09-20T10:00:00', '2026-09-28T09:00:00')),
+        candidature('declined', repondue('2026-09-02T10:00:00', '2026-09-05T09:00:00')),
+      ],
+    });
+
+    expect(lignes[1]).toMatchObject({
+      meta: 'Montrivage FC · réponse le 28/09', statusLabel: 'Acceptée', statusTone: 'accepted',
+    });
+    expect(lignes[2]).toMatchObject({
+      meta: 'Montrivage FC · réponse le 05/09', statusLabel: 'Refusée', statusTone: 'declined',
+    });
+  });
+
+  it('la reponse la plus RECENTE vient en tete, quel que soit l ordre d envoi', () => {
+    const lignes = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [
+        candidature('declined', repondue('2026-09-25T10:00:00', '2026-09-26T09:00:00')),
+        candidature('accepted', repondue('2026-09-01T10:00:00', '2026-09-29T09:00:00')),
+      ],
+    });
+
+    expect(lignes.slice(1).map((l) => l.statusLabel)).toEqual(['Acceptée', 'Refusée']);
+  });
+
+  it('une date d une AUTRE annee porte son annee : « 12/09 » seul ne dit plus laquelle', () => {
+    const [, ligne] = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [candidature('pending', { createdAt: '2025-09-12T10:00:00' })],
+    });
+
+    expect(ligne.meta).toBe('Montrivage FC · envoyée le 12/09/2025');
+  });
+
+  it('une candidature RETIREE par moi n est pas une reponse : son propre groupe', () => {
+    const lignes = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [candidature('withdrawn', { updatedAt: '2026-09-14T10:00:00' })],
+    });
+
+    expect(lignes[0].title).toBe('Retirées · 1');
+    expect(lignes[1]).toMatchObject({
+      meta: 'Montrivage FC · retirée le 14/09', statusLabel: 'Retirée',
+    });
+  });
+
+  it('une annonce FERMEE par le club est une reponse, dite comme telle', () => {
+    const [, ligne] = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [candidature('cancelled', { reviewedAt: '2026-09-15T10:00:00' })],
+    });
+
+    expect(ligne).toMatchObject({ statusLabel: 'Annonce close', statusTone: 'closed' });
+  });
+
+  it('sans date connue, la ligne garde le club et ne dit pas « le » dans le vide', () => {
+    const [, ligne] = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [candidature('pending')],
+    });
+
+    expect(ligne.meta).toBe('Montrivage FC');
+  });
+
   it('replie sur « En attente » quand le serveur ne dit rien', () => {
     const lignes = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
       sentFriendlyApplications: [match({ applicationStatus: undefined })],
     });
-    expect(lignes[1].meta).toBe('En attente');
+
+    expect(lignes[0].title).toBe('En attente · 1');
+    expect(lignes[1].statusLabel).toBe('En attente du club');
+  });
+
+  it('les propositions de match envoyees restent dans la liste — rien ne disparait', () => {
+    const lignes = buildMyActivitiesSentResponses({
+      now: MAINTENANT,
+      sentApplications: [candidature('pending', { createdAt: '2026-09-12T10:00:00' })],
+      sentFriendlyApplications: [match({
+        applicationStatus: 'accepted',
+        myApplication: { reviewedAt: '2026-09-27T09:00:00', status: 'accepted' },
+      })],
+    });
+
+    expect(lignes.find((l) => l.market === 'amicaux')).toMatchObject({
+      meta: 'réponse le 27/09', statusLabel: 'Acceptée', title: 'Seniors A',
+    });
+    expect(lignes.filter((l) => l.type === 'response')).toHaveLength(2);
   });
 });

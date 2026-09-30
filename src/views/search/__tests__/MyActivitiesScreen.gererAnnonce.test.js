@@ -95,6 +95,18 @@ jest.mock('@/services/friendlyMatch/friendlyMatchService', () => ({
   ),
 }));
 
+// MES-CANDIDATURES (A12) : le medaillon du club des lignes du joueur.
+jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+// MES-CANDIDATURES (A13) : l'ecran marque vues les reponses a mes candidatures. Doublure
+// ENTIERE, pour la meme raison que les services ci-dessus (client HTTP sans API_URL).
+jest.mock('@/services/notification/notificationService', () => ({
+  markApplicationResponsesAsRead: () => Promise.resolve({ ok: true, updated: 0 }),
+}));
+
 jest.mock('@/theme/colors', () => ({ withAlpha: (/** @type {any} */ color) => color }));
 jest.mock('@/theme/themeContext', () => {
   /**
@@ -227,13 +239,15 @@ describe('MyActivitiesScreen — caracterisation (ce qui ne bouge pas)', () => {
     );
   });
 
-  it('un JOUEUR ouvre sur « Mes reponses » et lit SES candidatures', async () => {
+  // MES-CANDIDATURES (A12, 01/10) : la page du joueur n'a plus d'onglet ; elle
+  // s'appelle « Mes candidatures » (MyActivitiesScreen.mesCandidatures.test.js).
+  it('un JOUEUR ouvre « Mes candidatures » et lit SES candidatures', async () => {
     const joueur = {
       documentId: 'u-joueur', myTeams: [], role: { name: 'Joueur' }, trainedTeams: [],
     };
     const tree = await renderFor(joueur);
 
-    expect(allText(tree)).toContain('[Mes réponses]');
+    expect(allText(tree)).toContain('Mes candidatures');
     expect(mockGetMyApplications).toHaveBeenCalledWith(joueur);
     expect(mockGetMyRecruitmentAds).not.toHaveBeenCalled();
   });

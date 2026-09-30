@@ -270,83 +270,179 @@ export const buildMyActivitiesReceivedResponses = ({
 
 // I18N-4 : une fonction, lue a chaque appel -- une table calculee au chargement du module
 // resterait dans la langue du demarrage.
-const sentStatusLabels = () => ({
-  accepted: i18next.t('myActivitiesFeed.sentStatus.accepted', 'Acceptée'),
-  declined: i18next.t('myActivitiesFeed.sentStatus.declined', 'Refusée'),
-  pending: i18next.t('myActivitiesFeed.sentStatus.pending', 'En attente'),
-  rejected: i18next.t('myActivitiesFeed.sentStatus.rejected', 'Refusée'),
-  withdrawn: i18next.t('myActivitiesFeed.sentStatus.withdrawn', 'Retirée'),
+// MES-CANDIDATURES (audit V1, A12) : chaque etat dit aussi DANS QUEL GROUPE il se range
+// et de quel ton se dit sa pastille. « En attente » devient « En attente du club » :
+// c'est le club qui doit agir, pas moi (meme raison que la pastille grise de A13).
+// Une annonce FERMEE (`cancelled`) est une reponse du club ; une candidature RETIREE
+// (`withdrawn`) est MON geste, pas une reponse : elle a son groupe a elle.
+const sentStatuses = () => ({
+  accepted: {
+    group: 'answered',
+    label: i18next.t('myActivitiesFeed.sentStatus.accepted', 'Acceptée'),
+    tone: 'accepted',
+  },
+  cancelled: {
+    group: 'answered',
+    label: i18next.t('myActivitiesFeed.sentStatus.cancelled', 'Annonce close'),
+    tone: 'closed',
+  },
+  declined: {
+    group: 'answered',
+    label: i18next.t('myActivitiesFeed.sentStatus.declined', 'Refusée'),
+    tone: 'declined',
+  },
+  pending: {
+    group: 'pending',
+    label: i18next.t('myActivitiesFeed.sentStatus.pendingClub', 'En attente du club'),
+    tone: 'pending',
+  },
+  rejected: {
+    group: 'answered',
+    label: i18next.t('myActivitiesFeed.sentStatus.rejected', 'Refusée'),
+    tone: 'declined',
+  },
+  withdrawn: {
+    group: 'withdrawn',
+    label: i18next.t('myActivitiesFeed.sentStatus.withdrawn', 'Retirée'),
+    tone: 'closed',
+  },
 });
 
 /**
- * Le meme onglet, cote joueur : « Mes reponses » — ce que J AI envoye.
- * @param {{ sentApplications?: any[], sentFriendlyApplications?: any[] }} sources Les listes brutes.
+ * « 12/09 » — et « 12/09/2025 » quand ce n'est pas l'annee en cours : « 12/09 »
+ * seul ne dit plus de quelle annee on parle (A14 : une candidature d'avant).
+ * @param {any} value La date lue sur la candidature.
+ * @param {Date} now Maintenant.
+ * @returns {string} La date courte, ou '' si elle est absente ou illisible.
+ */
+const jourMois = (value, now) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  const jour = String(date.getDate()).padStart(2, '0');
+  const mois = String(date.getMonth() + 1).padStart(2, '0');
+  const annee = date.getFullYear();
+  return annee === now.getFullYear() ? `${jour}/${mois}` : `${jour}/${mois}/${annee}`;
+};
+
+// La date que chaque groupe raconte : l'envoi pour ce qui attend, la reponse pour
+// ce qui a ete tranche, le retrait pour ce que j'ai retire.
+const dateOfGroup = {
+  answered: (/** @type {any} */ application) => application?.reviewedAt || application?.updatedAt,
+  pending: (/** @type {any} */ application) => application?.createdAt,
+  withdrawn: (/** @type {any} */ application) => application?.updatedAt,
+};
+
+/**
+ * « envoyée le 12/09 », « réponse le 28/09 », « retirée le 14/09 ».
+ * @param {string} group Le groupe de la ligne.
+ * @param {string} date La date courte.
+ * @returns {string} Le libelle.
+ */
+const sentDateLabel = (group, date) => {
+  const options = { ...SANS_ECHAPPEMENT, date };
+  if (group === 'answered') {
+    return i18next.t('myActivitiesFeed.sentDate.answered', 'réponse le {{date}}', options);
+  }
+  if (group === 'withdrawn') {
+    return i18next.t('myActivitiesFeed.sentDate.withdrawn', 'retirée le {{date}}', options);
+  }
+  return i18next.t('myActivitiesFeed.sentDate.pending', 'envoyée le {{date}}', options);
+};
+
+/**
+ * Le titre d'un groupe, avec son compte.
+ * @param {string} group Le groupe.
+ * @param {number} total Le nombre de lignes du groupe.
+ * @returns {string} Le titre.
+ */
+const sentGroupTitle = (group, total) => {
+  if (group === 'answered') {
+    return i18next.t('myActivitiesFeed.sections.answered', 'Réponses reçues · {{total}}', {
+      total,
+    });
+  }
+  if (group === 'withdrawn') {
+    return i18next.t('myActivitiesFeed.sections.withdrawn', 'Retirées · {{total}}', { total });
+  }
+  return i18next.t('myActivitiesFeed.sections.pending', 'En attente · {{total}}', { total });
+};
+
+const SENT_GROUPS = [
+  { group: 'pending', key: 'section-en-attente' },
+  { group: 'answered', key: 'section-reponses' },
+  { group: 'withdrawn', key: 'section-retirees' },
+];
+
+/**
+ * Une ligne de « Mes candidatures » : ce que j'ai envoye, quand, et ou ca en est.
+ * @param {any} ad L'annonce, portant `myApplication` (ma candidature ou ma proposition).
+ * @param {'recruitment' | 'amicaux'} market Le marche.
+ * @param {Date} now Maintenant.
+ * @returns {any} La ligne.
+ */
+const toSentLine = (ad, market, now) => {
+  const application = ad?.myApplication || {};
+  const statuses = sentStatuses();
+  const statusKey = String(ad?.applicationStatus || application?.status || PENDING_STATUS)
+    .toLowerCase();
+  const status = statuses[/** @type {keyof typeof statuses} */ (statusKey)]
+    || statuses[PENDING_STATUS];
+  const groupKey = /** @type {keyof typeof dateOfGroup} */ (status.group);
+  const date = jourMois(dateOfGroup[groupKey](application), now);
+  const dateLabel = date ? sentDateLabel(groupKey, date) : '';
+  const isRecruitment = market === 'recruitment';
+
+  return {
+    ad,
+    answeredAt: new Date(dateOfGroup.answered(application) || 0).getTime() || 0,
+    // Le medaillon de la ligne (maquette APRES de A12) : le club qui recrute, ou le
+    // club de l'equipe qui a publie le match.
+    club: ad?.team?.club || null,
+    group: status.group,
+    isNew: false,
+    key: `${isRecruitment ? 'ma-candidature' : 'ma-proposition'}-${documentKey(ad)}`,
+    market,
+    meta: joinMeta([
+      isRecruitment ? (nameOf(ad?.team?.club) || nameOf(ad?.team)) : '',
+      dateLabel,
+    ]),
+    statusLabel: status.label,
+    statusTone: status.tone,
+    title: isRecruitment
+      ? buildRecruitmentAdTitle(ad)
+      : nameOf(ad?.team) || i18next.t('myActivitiesFeed.friendlyMatch', 'Match amical'),
+    type: 'response',
+  };
+};
+
+/**
+ * « Mes candidatures » (le JOUEUR, A12) — ce que J AI envoye, candidatures et
+ * propositions de match confondues, range par ou ca en est : « En attente »,
+ * puis « Reponses recues » (la plus recente en tete), puis « Retirees ».
+ * Un groupe vide ne se titre pas.
+ * @param {{ sentApplications?: any[], sentFriendlyApplications?: any[], now?: Date }} sources
+ *   Les listes brutes ; `now` est injectable pour les temoins.
  * @returns {any[]} Les lignes, sections comprises.
  */
 export const buildMyActivitiesSentResponses = ({
+  now = new Date(),
   sentApplications = [],
   sentFriendlyApplications = [],
 } = {}) => {
+  const lines = [
+    ...sentApplications.map((ad) => toSentLine(ad, 'recruitment', now)),
+    ...sentFriendlyApplications.map((ad) => toSentLine(ad, 'amicaux', now)),
+  ];
+
   /** @type {any[]} */
   const items = [];
-
-  if (sentApplications.length > 0) {
-    items.push({
-      key: 'section-mes-candidatures',
-      title: i18next.t(
-        'myActivitiesFeed.sections.sentApplications',
-        'Candidatures envoyées · {{total}}',
-        { total: sentApplications.length },
-      ),
-      type: 'section',
-    });
-    sentApplications.forEach((ad) => {
-      const status = String(ad?.applicationStatus || ad?.myApplication?.status || PENDING_STATUS)
-        .toLowerCase();
-      items.push({
-        ad,
-        isNew: false,
-        key: `ma-candidature-${documentKey(ad)}`,
-        market: 'recruitment',
-        meta: joinMeta([
-          nameOf(ad?.team?.club) || nameOf(ad?.team),
-          sentStatusLabels()[status] || i18next.t(
-            'myActivitiesFeed.sentStatus.pending',
-            'En attente',
-          ),
-        ]),
-        title: buildRecruitmentAdTitle(ad),
-        type: 'response',
-      });
-    });
-  }
-
-  if (sentFriendlyApplications.length > 0) {
-    items.push({
-      key: 'section-mes-propositions',
-      title: i18next.t(
-        'myActivitiesFeed.sections.sentProposals',
-        'Propositions envoyées · {{total}}',
-        { total: sentFriendlyApplications.length },
-      ),
-      type: 'section',
-    });
-    sentFriendlyApplications.forEach((ad) => {
-      const status = String(ad?.applicationStatus || PENDING_STATUS).toLowerCase();
-      items.push({
-        ad,
-        isNew: false,
-        key: `ma-proposition-${documentKey(ad)}`,
-        market: 'amicaux',
-        meta: sentStatusLabels()[status] || i18next.t(
-          'myActivitiesFeed.sentStatus.pending',
-          'En attente',
-        ),
-        title: `${nameOf(ad?.team) || i18next.t('myActivitiesFeed.friendlyMatch', 'Match amical')}`,
-        type: 'response',
-      });
-    });
-  }
+  SENT_GROUPS.forEach(({ group, key }) => {
+    const groupLines = lines.filter((line) => line.group === group);
+    if (groupLines.length === 0) return;
+    if (group === 'answered') groupLines.sort((a, b) => b.answeredAt - a.answeredAt);
+    items.push({ key, title: sentGroupTitle(group, groupLines.length), type: 'section' });
+    items.push(...groupLines);
+  });
 
   return items;
 };

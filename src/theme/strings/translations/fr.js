@@ -9038,8 +9038,12 @@ export default {
           title: 'Événement',
         },
         myActivities: {
+          pending_one: '{{count}} en attente',
+          pending_other: '{{count}} en attente',
           subtitle: 'Tes candidatures et leurs réponses.',
-          title: 'Mes réponses',
+          title: 'Mes candidatures',
+          unseen_one: '{{count}} nouvelle réponse',
+          unseen_other: '{{count}} nouvelles réponses',
         },
         // PARENT P2 — la porte vers « Mes enfants » depuis l accueil du parent.
         myChildren: {
@@ -11842,25 +11846,38 @@ export default {
     proposalCount_one: '{{count}} proposition',
     proposalCount_other: '{{count}} propositions',
     sections: {
+      answered: 'Réponses reçues · {{total}}',
       friendly_one: 'Matchs amicaux · {{count}} match proposé',
       friendly_other: 'Matchs amicaux · {{count}} matchs proposés',
+      pending: 'En attente · {{total}}',
       receivedApplications: 'Candidatures reçues · {{total}}',
       receivedProposals: 'Propositions reçues · {{total}}',
       recruitment_one: 'Recrutement · {{count}} offre',
       recruitment_other: 'Recrutement · {{count}} offres',
       sentApplications: 'Candidatures envoyées · {{total}}',
       sentProposals: 'Propositions envoyées · {{total}}',
+      withdrawn: 'Retirées · {{total}}',
+    },
+    sentDate: {
+      answered: 'réponse le {{date}}',
+      pending: 'envoyée le {{date}}',
+      withdrawn: 'retirée le {{date}}',
     },
     sentStatus: {
       accepted: 'Acceptée',
+      cancelled: 'Annonce close',
       declined: 'Refusée',
       pending: 'En attente',
+      pendingClub: 'En attente du club',
       rejected: 'Refusée',
       withdrawn: 'Retirée',
     },
   },
   myActivitiesScreen: {
     empty: {
+      // eslint-disable-next-line max-len
+      applicationsBody: 'Postule à une offre depuis Rechercher › Recrutement : tu suivras sa réponse ici.',
+      applicationsTitle: 'Aucune candidature pour le moment.',
       // eslint-disable-next-line max-len
       publicationsBody: 'Publie une offre ou un match amical depuis Rechercher : tu les géreras ici.',
       publicationsTitle: 'Tu n’as encore rien publié.',
@@ -11878,6 +11895,7 @@ export default {
       receivedResponses: 'Réponses reçues',
     },
     title: 'Mes activités',
+    titleApplications: 'Mes candidatures',
     unreachable: {
       description: 'Vérifie ta connexion, puis réessaie.',
       retry: 'Réessayer',
