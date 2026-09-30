@@ -67,6 +67,7 @@ import {
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
+import { getRecruitmentAdPlayerTitle } from '@/utils/recruitmentAdTitle';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (
@@ -500,10 +501,7 @@ function RecruitmentAdDetails() {
       'recruitmentAdDetails.fallback.coachRole',
       'Rôle entraîneur',
     ))
-    : (ad?.position || t(
-      'recruitmentAdDetails.fallback.positionUnspecified',
-      'Poste non specifie',
-    ));
+    : getRecruitmentAdPlayerTitle(ad);
   const levelName = ad?.level?.name || ad?.minLevel || t(
     'recruitmentAdDetails.fallback.level',
     'Niveau ?',

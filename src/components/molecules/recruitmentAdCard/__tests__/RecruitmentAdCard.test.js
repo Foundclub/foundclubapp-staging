@@ -115,6 +115,22 @@ describe('RecruitmentAdCard — etiquette du sport (ANNONCES-SPORT)', () => {
     expect(textes).not.toContain('Football');
   });
 
+  // FINITIONS-AUDIT (3) : sans poste, le titre est « <Sport> — <Catégorie> », jamais
+  // « Poste non spécifié ».
+  it('sans poste : le titre est « SPORT — CATEGORIE », le sport seul sans categorie', () => {
+    const judo = {
+      activities: [{ name: 'Arts martiaux' }], club: { name: 'Dojo de Lyon' }, name: 'Seniors',
+    };
+    const avecCategorie = texteAffiche(annonce({
+      category: { name: 'U13' }, position: null, team: judo,
+    }));
+    expect(avecCategorie).toContain('ARTS MARTIAUX — U13');
+    expect(avecCategorie).not.toContain('POSTE NON SPÉCIFIÉ');
+
+    expect(texteAffiche(annonce({ category: null, position: '', sport: 'Arts martiaux' })))
+      .toContain('ARTS MARTIAUX');
+  });
+
   it('sans sport ni activite : AUCUNE etiquette de sport, surtout pas « Football »', () => {
     const textes = texteAffiche(annonce({ sport: null }));
     expect(textes).not.toContain('Football');

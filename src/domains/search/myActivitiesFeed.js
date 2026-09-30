@@ -21,6 +21,8 @@ import i18next from 'i18next';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { getRecruitmentAdPlayerTitle } from '@/utils/recruitmentAdTitle';
+
 import { getCoachRoleLabel } from '@/constants/coachRoles';
 
 const PENDING_STATUS = 'pending';
@@ -52,6 +54,7 @@ const nameOf = (/** @type {any} */ value) => {
 
 /**
  * Le titre d une offre, dans les mots du pack : « Ailier fort — Seniors A ».
+ * Sans poste (sport sans postes) : « Arts martiaux — U13 — Seniors A ».
  * @param {any} ad L offre de recrutement.
  * @returns {string} Le titre affiche.
  */
@@ -64,7 +67,7 @@ export const buildRecruitmentAdTitle = (ad) => {
       'myActivitiesFeed.coachRole',
       'Rôle entraîneur',
     ))
-    : (ad?.position || i18next.t('myActivitiesFeed.positionUnspecified', 'Poste non spécifié'));
+    : getRecruitmentAdPlayerTitle(ad);
   const teamName = nameOf(ad?.team);
   return teamName ? `${role} — ${teamName}` : String(role);
 };

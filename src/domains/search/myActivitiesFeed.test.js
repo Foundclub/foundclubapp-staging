@@ -88,6 +88,17 @@ describe('buildRecruitmentAdTitle', () => {
     }))).toBe('Préparateur mental — U13');
   });
 
+  // FINITIONS-AUDIT (3) : le « Poste non spécifié » d'une annonce sans poste devient
+  // « <Sport> — <Catégorie> » ; le nom de l'equipe suit, comme pour toute offre.
+  it('sans poste : « Sport — Categorie », puis l equipe', () => {
+    expect(buildRecruitmentAdTitle(offre({
+      category: { name: 'U13' },
+      position: '',
+      sport: null,
+      team: { activities: [{ name: 'Arts martiaux' }], name: 'Dojo A' },
+    }))).toBe('Arts martiaux — U13 — Dojo A');
+  });
+
   it('ne laisse jamais un titre vide', () => {
     expect(buildRecruitmentAdTitle({})).toBe('Poste non spécifié');
   });

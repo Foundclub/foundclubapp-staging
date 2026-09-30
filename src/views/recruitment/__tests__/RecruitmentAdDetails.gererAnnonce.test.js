@@ -328,6 +328,23 @@ describe('RecruitmentAdDetails — caracterisation (ce qui ne bouge pas)', () =>
   });
 });
 
+// FINITIONS-AUDIT (3) : une annonce sans poste (sport sans postes) s'intitule
+// « <Sport> — <Catégorie> » sur la fiche, comme sur la carte et dans Mes activites.
+describe('RecruitmentAdDetails — FINITIONS-AUDIT : le titre d une annonce sans poste', () => {
+  it('« Arts martiaux — U13 », jamais « Poste non spécifié »', async () => {
+    const tree = await renderFor(TIERS, {
+      ...AD,
+      audienceType: 'player',
+      category: { name: 'U13' },
+      position: null,
+      team: { ...TEAM, activities: [{ name: 'Arts martiaux' }] },
+    });
+
+    expect(allText(tree)).toContain('Arts martiaux — U13');
+    expect(allText(tree)).not.toMatch(/Poste non sp/);
+  });
+});
+
 describe('RecruitmentAdDetails — GERER-ANNONCE : seul qui GERE l equipe a les outils', () => {
   it('A15/A16 — un JOUEUR de l equipe voit « Postuler », sans les outils du club', async () => {
     const tree = await renderFor(JOUEUR_DE_L_EQUIPE);

@@ -25,6 +25,7 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
+import { getRecruitmentAdPlayerTitle, getRecruitmentAdSportName } from '@/utils/recruitmentAdTitle';
 
 import CARD_BACKGROUND from '@/assets/background-card-event/card-autre.png';
 import { getRecruitAthleteNoun } from '@/constants/positions';
@@ -34,16 +35,6 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
-
-/**
- * Nom lisible d'une activite, qu'elle arrive en texte (`ad.sport`) ou en objet
- * (`team.activities[0]`, `team.sport`).
- * @param {unknown} value
- * @returns {string}
- */
-const readSportName = (value) => String(
-  (typeof value === 'string' ? value : /** @type {any} */ (value)?.name) || '',
-).trim();
 
 const humanizeEnumLabel = (value, fallback = '') => {
   const normalizedValue = String(value || '').trim();
@@ -106,7 +97,7 @@ function RecruitmentAdCard({
       'recruitmentAdCard.coachRole',
       'Rôle entraîneur',
     ))
-    : (ad.position || t('recruitmentAdCard.positionUnspecified', 'Poste non spécifié'));
+    : getRecruitmentAdPlayerTitle(ad);
   const levelName = ad.level?.name || ad.minLevel || t(
     'recruitmentAdCard.levelUnknown',
     'Niveau ?',
@@ -119,9 +110,8 @@ function RecruitmentAdCard({
   // ANNONCES-SPORT (audit V1, A10) — plus de « Football » invente : une annonce
   // d'arts martiaux sans sport s'affichait FOOTBALL. Sans sport, on reprend
   // l'activite de l'equipe quand la reponse la porte ; sinon l'etiquette disparait.
-  const sportName = readSportName(ad.sport)
-    || readSportName(team?.activities?.[0])
-    || readSportName(team?.sport);
+  // (La meme lecture fait le titre d'une annonce sans poste : recruitmentAdTitle.js.)
+  const sportName = getRecruitmentAdSportName(ad);
   const address = getShortAddress(ad.city || club?.city || '');
   // T8 : 6 annonces portent « Gymnase - [object Object] » ECRIT EN BASE (releve du
   // 26/08). Tant que ces lignes ne sont pas reparees, l'affichage recompose le
