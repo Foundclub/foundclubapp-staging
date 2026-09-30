@@ -1,25 +1,17 @@
-// SPORTS-DOUBLONS (01/10/2026) — UN SPORT = UNE CLÉ, ET UN NOM.
+// SPORTS-DOUBLONS (01/10/2026) — UN SPORT = UNE CLÉ.
 //
 // La base garde 4 sports en double (« Volley » / « Volleyball », « Echecs » / « Échecs »,
 // « Equitation » / « Équitation », « Canoë-Kayak » / « Canoë-kayak ») : le choix du sport de la
 // recherche les montrait deux fois. La règle qui dit « ces deux noms sont le même sport » est celle
 // du serveur (`admin/src/api/search/services/sport-key.ts`), recopiée ici À L'IDENTIQUE : le témoin
 // admin `tests/authz/SPORTS-DOUBLONS-2-parite-app.test.js` lit CE fichier et compare les deux, nom
-// par nom. Changer l'une sans l'autre le fait rougir.
+// par nom, et vérifie que la ligne montrée est celle que le serveur déclare officielle.
 //
 // ⛔ Aucun import et rien que du JavaScript : ce témoin l'évalue tel quel, hors de React Native.
 
 /** Un nom court (déjà réduit en clé) → la clé du sport qu'il désigne. */
 export const ALIAS_DE_CLE = Object.freeze({
   volley: 'volleyball',
-});
-
-/** Le nom à afficher et à envoyer pour une clé qui a plusieurs écritures dans la base. */
-export const NOMS_OFFICIELS = Object.freeze({
-  canoekayak: 'Canoë-kayak',
-  echecs: 'Échecs',
-  equitation: 'Équitation',
-  volleyball: 'Volleyball',
 });
 
 /**
@@ -45,19 +37,32 @@ export const cleDeSport = (nom) => {
 };
 
 /**
- * Le nom à afficher et à envoyer : « Volley » devient « Volleyball ».
- * @param {unknown} nom Un nom de sport.
- * @returns {string} Le nom officiel de sa clé, sinon le nom tel quel.
+ * Le rang d'une écriture dans son groupe, la mieux écrite d'abord : la forme complète (pas un
+ * alias : « Volleyball » avant « Volley »), puis la plus accentuée (« Échecs » avant « Echecs »),
+ * puis celle qui a le moins de majuscules (« Canoë-kayak » avant « Canoë-Kayak »). C'est ainsi que
+ * le serveur a choisi ses noms officiels ; le témoin de parité le vérifie sur les doublons réels.
+ * @param {unknown} nom L'écriture.
+ * @param {string} cle La clé de son groupe.
+ * @returns {number[]} Le rang, à comparer terme à terme.
  */
-export const nomOfficielDeSport = (nom) => (
-  NOMS_OFFICIELS[/** @type {keyof typeof NOMS_OFFICIELS} */ (cleDeSport(nom))]
-  || String(nom ?? '').trim()
-);
+const rangDEcriture = (nom, cle) => [
+  compacterNomDeSport(nom) === cle ? 0 : 1,
+  -(String(nom ?? '').normalize('NFD').match(/\p{Diacritic}/gu) || []).length,
+  (String(nom ?? '').match(/\p{Lu}/gu) || []).length,
+];
 
 /**
- * Les sports regroupés par clé, un groupe par sport, dans l'ordre de la liste reçue. Le nom du
- * groupe est le nom officiel (sinon celui de sa première ligne) ; son représentant, la ligne qui
- * porte ce nom (sinon la première).
+ * Compare deux rangs terme à terme.
+ * @param {number[]} a Un rang.
+ * @param {number[]} b Un autre.
+ * @returns {number} Négatif si `a` passe avant `b`.
+ */
+const comparerLesRangs = (a, b) => a.reduce((ecart, valeur, i) => ecart || valeur - b[i], 0);
+
+/**
+ * Les sports regroupés par clé, un groupe par sport, dans l'ordre de la liste reçue. Le
+ * représentant est l'écriture la mieux écrite (à rang égal, la première de la liste) : c'est son
+ * nom qu'on affiche et qu'on envoie.
  * @param {any[] | undefined} sports Les lignes du référentiel (`documentId`, `name`).
  * @returns {{ cle: string, membres: any[], nom: string, representant: any }[]} Les groupes.
  */
@@ -70,13 +75,13 @@ export const regrouperLesSports = (sports) => {
     groupes.set(cle, [...(groupes.get(cle) || []), sport]);
   });
   return [...groupes.entries()].map(([cle, membres]) => {
-    const nom = NOMS_OFFICIELS[/** @type {keyof typeof NOMS_OFFICIELS} */ (cle)]
-      || String(membres[0]?.name ?? '').trim();
+    const representant = membres.reduce((meilleur, sport) => (
+      comparerLesRangs(rangDEcriture(sport?.name, cle), rangDEcriture(meilleur?.name, cle)) < 0
+        ? sport
+        : meilleur
+    ));
     return {
-      cle,
-      membres,
-      nom,
-      representant: membres.find((sport) => sport?.name === nom) || membres[0],
+      cle, membres, nom: String(representant?.name ?? '').trim(), representant,
     };
   });
 };

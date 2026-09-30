@@ -1,8 +1,6 @@
 import {
   cleDeSport,
   compacterNomDeSport,
-  nomOfficielDeSport,
-  NOMS_OFFICIELS,
   regrouperLesSports,
 } from './cleDeSport';
 
@@ -26,21 +24,14 @@ describe('cleDeSport — un sport, une clé', () => {
     expect(cleDeSport('Beach volley')).not.toBe(cleDeSport('Volleyball'));
   });
 
-  it('le nom officiel des doublons ; les autres gardent le leur', () => {
-    expect(['Canoë-Kayak', 'Echecs', 'Equitation', 'Volley'].map(nomOfficielDeSport))
-      .toEqual(['Canoë-kayak', 'Échecs', 'Équitation', 'Volleyball']);
-    expect(nomOfficielDeSport(' Football ')).toBe('Football');
-    expect(Object.keys(NOMS_OFFICIELS)).toHaveLength(4);
-  });
-
   it('compacterNomDeSport ne connaît pas les alias (la recherche à la main en a besoin)', () => {
     expect(compacterNomDeSport('Volley')).toBe('volley');
     expect(compacterNomDeSport('Équitation')).toBe('equitation');
   });
 });
 
-describe('regrouperLesSports — un groupe par clé, représenté par la ligne au nom officiel', () => {
-  it('« Volley » et « Volleyball » : un groupe, la ligne « Volleyball » en tête', () => {
+describe('regrouperLesSports — un groupe par clé, représenté par sa forme la mieux écrite', () => {
+  it('« Volley » et « Volleyball » : un groupe, la ligne « Volleyball » en représentant', () => {
     const groupes = regrouperLesSports([
       { documentId: 'a-volley', name: 'Volley' },
       { documentId: 'a-foot', name: 'Football' },
@@ -52,9 +43,23 @@ describe('regrouperLesSports — un groupe par clé, représenté par la ligne a
       .toEqual(['a-volley', 'a-volleyball']);
   });
 
-  it('sans ligne au nom officiel : ce nom quand même, la première ligne en représentant', () => {
+  it('les 4 doublons de la base, dans les deux ordres : toujours la forme officielle', () => {
+    const paires = [
+      ['Canoë-Kayak', 'Canoë-kayak'],
+      ['Echecs', 'Échecs'],
+      ['Equitation', 'Équitation'],
+      ['Volley', 'Volleyball'],
+    ];
+    const noms = (lignes) => regrouperLesSports(lignes.map((name) => ({ name })))
+      .map(({ nom }) => nom);
+    const officiels = ['Canoë-kayak', 'Échecs', 'Équitation', 'Volleyball'];
+    expect(noms(paires.flat())).toEqual(officiels);
+    expect(noms(paires.flat().reverse())).toEqual([...officiels].reverse());
+  });
+
+  it('un sport écrit une seule fois garde son nom', () => {
     const [groupe] = regrouperLesSports([{ documentId: 'a-equit', name: 'Equitation' }]);
-    expect(groupe.nom).toBe('Équitation');
+    expect(groupe.nom).toBe('Equitation');
     expect(groupe.representant.documentId).toBe('a-equit');
   });
 
