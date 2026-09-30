@@ -658,7 +658,7 @@ describe('le pied de page', () => {
    * (photographie, A22_seance-bloquee_3 et _4). Reecrit, pas supprime : la porte du
    * carnet reste la troisieme forme du pied, c'est son CHIFFRE qui change.
    */
-  it('prend sa TROISIEME forme quand la journee est finie : la porte du carnet, au nombre de mesures FAITES', () => {
+  it('journee finie : la TROISIEME forme, la porte du carnet, au nombre de mesures FAITES', () => {
     const navigate = jest.fn();
     const arbre = rendre({
       etat: avec(JOURNEE, { ...SEANCE, status: 'done' }),

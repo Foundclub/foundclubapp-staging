@@ -71,7 +71,9 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ clef, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : clef),
+    t: (/** @type {string} */ clef, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : clef
+    ),
   }),
 }));
 
@@ -96,7 +98,10 @@ jest.mock('@/theme/themeContext', () => {
 // `commonOptions` tire le verre depoli et le bouton d'onglet anime (modules natifs) :
 // ils ne servent qu'a la barre d'onglets, jamais a l'en-tete mesure ici.
 jest.mock('@/components/atoms/glassSurface/GlassSurface', () => 'GlassSurface');
-jest.mock('@/components/atoms/animatedTabBarButton/AnimatedTabBarButton', () => 'AnimatedTabBarButton');
+jest.mock(
+  '@/components/atoms/animatedTabBarButton/AnimatedTabBarButton',
+  () => 'AnimatedTabBarButton',
+);
 
 /** @type {Record<string, any>} La navigation de chaque ecran, capturee au rendu. */
 const mockNavigations = {};
@@ -136,6 +141,7 @@ jest.mock('@/views/training/TrainingSessionNow', () => mockEcran('TrainingSessio
 jest.mock('@/views/training/TrainingVideoQueue', () => mockEcran('TrainingVideoQueue'));
 
 const FICHIER_PILE = path.join(__dirname, '..', 'SearchStack.js');
+const SOURCES_VUES = path.join(__dirname, '..', '..', '..', '..', 'views');
 const ROUTES = [
   ...fs.readFileSync(FICHIER_PILE, 'utf8').matchAll(/name=\{RouteNames\.(\w+)\}/g),
 ].map((m) => m[1]);
@@ -155,7 +161,7 @@ const ALIAS = [
  */
 const avecLeurPropreBarre = () => [RouteNames.MyLicenses, RouteNames.MyLicensesArchive]
   .filter((nom) => /<MemberTopBar\s+onBack=/.test(
-    fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'views', 'license', `${nom}.js`), 'utf8'),
+    fs.readFileSync(path.join(SOURCES_VUES, 'license', `${nom}.js`), 'utf8'),
   ));
 
 const NON_RACINES = ROUTES
@@ -235,7 +241,7 @@ describe('RETOUR-ONGLET (b) — la pile de l onglet d accueil', () => {
     expect(fleches()).toHaveLength(0);
   });
 
-  it('A06 — « Evenement » depuis l accueil : la recherche montre la fleche, et elle ramene a l accueil', () => {
+  it('A06 — « Evenement » depuis l accueil : la recherche a sa fleche vers l accueil', () => {
     monter();
     act(() => { mockNavigations[RouteNames.SearchHome].navigate(RouteNames.SearchEvents); });
     expect(pile()).toEqual([RouteNames.SearchHome, RouteNames.SearchHub]);
@@ -251,7 +257,9 @@ describe('RETOUR-ONGLET (b) — la pile de l onglet d accueil', () => {
       (/** @type {any} */ n) => n.props?.accessibilityRole === 'button' && n.props?.hitSlop,
     )[0];
     expect(pressable.props.accessibilityLabel).toBe('common.back');
-    const { bottom, left, right, top } = pressable.props.hitSlop;
+    const {
+      bottom, left, right, top,
+    } = pressable.props.hitSlop;
     expect([32 + top + bottom, 32 + left + right]).toEqual([44, 44]);
     act(() => { flecheVisible().props.onPress(); });
 

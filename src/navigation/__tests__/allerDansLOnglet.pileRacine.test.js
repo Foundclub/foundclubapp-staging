@@ -63,6 +63,7 @@ const destinationsDesAppelants = () => {
   /** @type {Set<string>} */
   const cibles = new Set();
   /**
+   * Descend dans un dossier et note chaque destination rencontree.
    * @param {string} dossier un dossier a parcourir
    * @returns {void}
    */
@@ -245,7 +246,8 @@ const pileAccueil = () => {
  */
 const appuyerSurOnglet = (nom) => {
   const boutons = arbre.root.findAll(
-    (/** @type {any} */ n) => n.props?.testID === `onglet-${nom}` && typeof n.props.onPress === 'function',
+    (/** @type {any} */ n) => n.props?.testID === `onglet-${nom}`
+      && typeof n.props.onPress === 'function',
   );
   act(() => { boutons[boutons.length - 1].props.onPress(); });
 };

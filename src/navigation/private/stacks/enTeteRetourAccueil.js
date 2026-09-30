@@ -27,22 +27,25 @@ import { RouteNames } from '@/navigation/routeNames';
 
 /**
  * Les écrans de la pile qui ne reçoivent PAS cet en-tête :
- *  · la RACINE — l'accueil garde son en-tête League + cloche + avatar (D07, A01
- *    en attente d'Adel : on n'y touche pas) ;
- *  · les ALIAS de la recherche (`SearchHubRouteAlias`) — ils se remplacent par la
- *    recherche au premier rendu, un en-tête n'y ferait que clignoter ;
- *  · les cotisations — elles dessinent DÉJÀ leur barre flèche + titre
- *    (`MemberTopBar`, S9-bis) : une seconde flèche serait un doublon.
+ *  · la RACINE (`SearchHome`) — l'accueil garde son en-tête League + cloche +
+ *    avatar (D07, A01 en attente d'Adel : on n'y touche pas) ;
+ *  · les ALIAS de la recherche (`SearchClubs`, `SearchEvents`,
+ *    `SearchRecruitment`, `SearchReservations` → `SearchHubRouteAlias`) — ils se
+ *    remplacent par la recherche au premier rendu, un en-tête n'y ferait que
+ *    clignoter ;
+ *  · les cotisations (`MyLicenses`, `MyLicensesArchive`) — elles dessinent DÉJÀ
+ *    leur barre flèche + titre (`MemberTopBar`, S9-bis) : une seconde flèche
+ *    serait un doublon.
  */
-const SANS_EN_TETE = new Set([
-  RouteNames.SearchHome,
-  RouteNames.SearchEvents,
-  RouteNames.SearchClubs,
-  RouteNames.SearchReservations,
-  RouteNames.SearchRecruitment,
+const SANS_EN_TETE = new Set(/** @type {string[]} */ ([
   RouteNames.MyLicenses,
   RouteNames.MyLicensesArchive,
-]);
+  RouteNames.SearchClubs,
+  RouteNames.SearchEvents,
+  RouteNames.SearchHome,
+  RouteNames.SearchRecruitment,
+  RouteNames.SearchReservations,
+]));
 
 /**
  * L'en-tête de la maison, sans ce qui n'est pas de l'en-tête : l'animation des

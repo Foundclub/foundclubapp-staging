@@ -362,8 +362,10 @@ function TrainingDay({ navigation, route }) {
      * la journée » sans un seul test fait, elle promettait « Voir les 128 mesures au
      * carnet »… et le carnet s'ouvrait vide. La porte compte ce qui a été SAISI.
      */
-    const codesDuJour = new Set(/** @type {Record<string, any>[]} */ (tests).map((test) => test.code));
-    const mesuresFaites = (Array.isArray(session?.results) ? session.results : [])
+    const codesDuJour = new Set(/** @type {Record<string, any>[]} */ (tests)
+      .map((test) => test.code));
+    const saisies = session?.results;
+    const mesuresFaites = (Array.isArray(saisies) ? saisies : [])
       .filter((row) => codesDuJour.has(row?.test?.code)).length;
     return {
       faits,
