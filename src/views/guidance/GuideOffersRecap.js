@@ -342,7 +342,10 @@ function GuideOffersRecap({ navigation }) {
     const homeRoute = typeof getPostOnboardingHomeRoute === 'function'
       ? getPostOnboardingHomeRoute()
       : RouteNames.HomeTab;
-    navigation.navigate(homeRoute);
+    // RETOUR-ONGLET-2 : ce recapitulatif est monte sur la RACINE (fiche d'equipe, mur
+    // payant, tour guide). Sans `pop`, React Navigation 7 EMPILAIT un second accueil
+    // par-dessus au lieu de revenir au premier (retourOnglet2.pileRacine.test.js, F3).
+    navigation.navigate(homeRoute, undefined, { pop: true });
   };
 
   // Achat direct depuis le Recap (mode test backend — RevenueCat a l'item 14).

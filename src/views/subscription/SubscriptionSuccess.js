@@ -341,12 +341,20 @@ function SubscriptionSuccess({ navigation, route }) {
   // un ecran pousse sur le navigateur racine, comme celui-ci (R06).
   // `icon` pointe la banque d'icones du theme (Images), la meme que les cartes
   // de l'accueil (HomeActionCard.js:186) : aucune image nouvelle a embarquer.
+  // RETOUR-ONGLET-2 : cet ecran est monte sur la RACINE. Sans `pop`, React
+  // Navigation 7 EMPILAIT un second HomeTab au lieu de revenir au premier — et
+  // cette page de succes attendait dessous (preuve sur les vrais routeurs :
+  // navigation/__tests__/retourOnglet2.pileRacine.test.js, F3).
   const firstActions = [
     {
       icon: 'calendar',
       id: 'events',
       label: t('subscriptionSuccess.firstActions.events', FIRST_ACTION_FALLBACK_LABELS.events),
-      open: () => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList }),
+      open: () => navigation.navigate(
+        RouteNames.HomeTab,
+        { screen: RouteNames.MyEventList },
+        { pop: true },
+      ),
     },
     {
       icon: 'users',
@@ -355,7 +363,11 @@ function SubscriptionSuccess({ navigation, route }) {
         'subscriptionSuccess.firstActions.composition',
         FIRST_ACTION_FALLBACK_LABELS.composition,
       ),
-      open: () => navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyTeamList }),
+      open: () => navigation.navigate(
+        RouteNames.HomeTab,
+        { screen: RouteNames.MyTeamList },
+        { pop: true },
+      ),
     },
     {
       icon: 'search',

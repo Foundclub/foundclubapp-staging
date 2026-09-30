@@ -917,7 +917,10 @@ function EventWizardRecap({ navigation }) {
       return;
     }
 
-    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList });
+    // RETOUR-ONGLET-2 : le tunnel est monte sur la RACINE (EventStack). Sans `pop`,
+    // React Navigation 7 EMPILAIT un second HomeTab par-dessus le tunnel au lieu de
+    // revenir au premier (navigation/__tests__/retourOnglet2.pileRacine.test.js, F3).
+    navigation.navigate(RouteNames.HomeTab, { screen: RouteNames.MyEventList }, { pop: true });
     InteractionManager.runAfterInteractions(() => {
       setTimeout(() => {
         celebrate(creationCelebration.actionKey, creationCelebration.payload);
