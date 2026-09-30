@@ -15,6 +15,7 @@ import {
   buildMyActivitiesSentResponses,
 } from '@/domains/search/myActivitiesFeed';
 import { getRecruitmentRoleMode } from '@/domains/search/recruitmentFlow';
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -38,15 +39,13 @@ const TAB_RESPONSES = 'responses';
 const documentKey = (/** @type {any} */ item) => String(item?.documentId || item?.id || '').trim();
 
 /**
- * Les equipes que je gere, sans doublon : une meme equipe peut arriver par
- * `myTeams` (dirigeant) ET par `trainedTeams` (entraineur).
+ * Les equipes que je GERE, sans doublon. GERER-ANNONCE (A15/A16) : `myTeams`
+ * n'est PAS « dirigeant », c'est la liste des equipes ou l'on JOUE ; la regle
+ * partagee n'en garde que celles dont on dirige le club.
  * @param {any} userData Le profil connecte.
  * @returns {string[]} Les identifiants d equipe, dedoublonnes.
  */
-const getManagedTeamIds = (userData) => Array.from(new Set([
-  ...(userData?.myTeams || []),
-  ...(userData?.trainedTeams || []),
-].map(documentKey).filter(Boolean)));
+const getManagedTeamIds = (userData) => getManagedTeams(userData).map(documentKey).filter(Boolean);
 
 /**
  * « Mes activites » — captures 06 et 07 du pack Rechercher.
