@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -158,10 +159,9 @@ function AdWizardTeam({ navigation, route }) {
     }
   }, [dispatch, handleSelectTeam, isFocused, loading, route.params?.event, state.event, state.team]);
 
-  const userTeams = useMemo(() => dedupeTeams([
-    ...(userData?.myTeams || []),
-    ...(userData?.trainedTeams || []),
-  ]), [userData?.myTeams, userData?.trainedTeams]);
+  // GERER-ANNONCE (A15/A16) — les equipes que je GERE : `myTeams` liste celles
+  // ou je JOUE, pour lesquelles le serveur refuse la publication (canManageTeam).
+  const userTeams = useMemo(() => dedupeTeams(getManagedTeams(userData)), [userData]);
 
   useEffect(() => {
     if (isFocused && userTeams.length === 1 && !state.team && !loading) {

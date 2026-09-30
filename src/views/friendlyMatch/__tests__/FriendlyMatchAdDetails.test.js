@@ -558,3 +558,72 @@ describe('D90 — le detail nomme toutes les categories et tous les niveaux', ()
     expect(rendered).toContain('U15');
   });
 });
+
+// GERER-ANNONCE (audit V1, A15/A16, 2026-09-30) — « cote annonceur » voulait
+// dire « l'equipe est dans myTeams ou trainedTeams ». Or `myTeams` liste les
+// equipes ou l'on JOUE : un joueur recevait « Annuler l'annonce » et les
+// propositions recues, que le serveur lui refuse (friendly-match-workflow.ts:
+// 143-151, `canManageTeam` OU auteur). Et un dirigeant du club qui n'entraine
+// pas l'equipe, lui, n'avait rien.
+describe('FriendlyMatchAdDetails — GERER-ANNONCE : cote annonceur = qui GERE l equipe', () => {
+  const CLUB_ANNONCEUR = { documentId: 'club-annonceur', name: 'Club Annonceur' };
+  const AD_DU_CLUB = { ...AD_OPEN, team: { ...AD_OPEN.team, club: CLUB_ANNONCEUR } };
+
+  /**
+   * Le premier bouton portant ce titre.
+   * @param {any} tree
+   * @param {string} title
+   * @returns {any}
+   */
+  const findButton = (tree, title) => tree.root.findAll(
+    (/** @type {any} */ node) => node.props?.title === title,
+    { deep: true },
+  )[0];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchAd.mockResolvedValue(AD_DU_CLUB);
+    mockGetFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  it('un JOUEUR de l equipe qui publie n a ni « Annuler » ni les propositions', async () => {
+    const tree = await renderFor({
+      documentId: 'u-joueur',
+      myTeams: [{ club: CLUB_ANNONCEUR, documentId: 'team-annonceur', name: 'FC Annonceur U15' }],
+      role: { name: 'Joueur' },
+    });
+
+    expect(Boolean(findButton(tree, 'Annuler l’annonce'))).toBe(false);
+    expect(allText(tree)).not.toContain('Les propositions reçues');
+    expect(mockGetFriendlyMatchApplications).not.toHaveBeenCalled();
+  });
+
+  it('un DIRIGEANT du club qui publie, sans entrainer l equipe, est cote annonceur', async () => {
+    const tree = await renderFor({
+      club: CLUB_ANNONCEUR,
+      documentId: 'u-dirigeant',
+      role: { name: 'Dirigeant' },
+    });
+
+    expect(Boolean(findButton(tree, 'Annuler l’annonce'))).toBe(true);
+    expect(allText(tree)).toContain('Les propositions reçues');
+    expect(mockGetFriendlyMatchApplications).toHaveBeenCalledWith('ad-1');
+  });
+
+  it('un entraineur qui JOUE dans l equipe qui publie ne propose qu avec SES equipes', async () => {
+    const tree = await renderFor({
+      documentId: 'u-candidat',
+      myTeams: [{ club: CLUB_ANNONCEUR, documentId: 'team-annonceur', name: 'FC Annonceur U15' }],
+      role: { name: 'Entraineur' },
+      trainedTeams: [MY_TEAM],
+    });
+
+    expect(Boolean(findButton(tree, 'Annuler l’annonce'))).toBe(false);
+    expect(Boolean(findButton(tree, 'Proposer un match'))).toBe(true);
+    const sheet = tree.root.findAll(
+      (/** @type {any} */ node) => Array.isArray(node.props?.managedTeams),
+    )[0];
+    expect(sheet.props.managedTeams.map((/** @type {any} */ team) => team.documentId))
+      .toEqual(['team-candidat']);
+  });
+});

@@ -22,6 +22,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { canManageTeamAd } from '@/domains/team/teamMembership';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -222,20 +223,10 @@ function RecruitmentAdDetails() {
     && applicationState.linkedRecruitmentAdDocumentId !== recruitmentAdDocumentId,
   );
 
-  const isOwner = useMemo(() => {
-    if (!userData || !ad) return false;
-
-    if (ad.author?.documentId === userData.documentId || ad.author?.id === userData.id) return true;
-
-    const myTeams = userData.myTeams || [];
-    const trainedTeams = userData.trainedTeams || [];
-    const allUserTeams = [...myTeams, ...trainedTeams];
-
-    const adTeamId = ad.team?.documentId || ad.team?.id;
-    if (!adTeamId) return false;
-
-    return allUserTeams.some((/** @type {any} */ teamItem) => teamItem.documentId === adTeamId || teamItem.id === adTeamId);
-  }, [userData, ad]);
+  // GERER-ANNONCE (A15/A16) — « je gere cette equipe », la regle du serveur.
+  // Avant, `myTeams` (les equipes ou l'on JOUE) donnait les outils du club a un
+  // joueur ; Test : __tests__/RecruitmentAdDetails.gererAnnonce.test.js.
+  const isOwner = useMemo(() => canManageTeamAd(ad, userData), [userData, ad]);
 
   const slotParticipationsQuery = /** @type {any} */ (useQuery({
     enabled: Boolean(isOwner && eventDocumentId && recruitmentAdDocumentId),

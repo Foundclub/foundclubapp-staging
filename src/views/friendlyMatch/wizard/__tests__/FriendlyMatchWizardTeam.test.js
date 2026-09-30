@@ -99,7 +99,13 @@ const originesPosees = () => mockActions
 beforeEach(() => {
   mockPropsDuGabarit.length = 0;
   mockActions.length = 0;
-  mockUtilisateur = { myTeams: [{ documentId: 'team-1', name: 'U15' }] };
+  // GERER-ANNONCE (30/09) : une equipe « encadree » est une equipe ENTRAINEE.
+  // Cette fixture la mettait dans `myTeams`, qui liste les equipes ou l'on JOUE.
+  mockUtilisateur = {
+    documentId: 'u-coach',
+    role: { name: 'Entraineur' },
+    trainedTeams: [{ documentId: 'team-1', name: 'U15' }],
+  };
 });
 
 describe('Etape 1/7 « Publier une annonce »', () => {
@@ -132,6 +138,21 @@ describe('Etape 1/7 « Publier une annonce »', () => {
     const { arbre } = rendre();
 
     expect(JSON.stringify(arbre.toJSON())).toContain('Il faut encadrer une équipe');
+  });
+
+  // GERER-ANNONCE (audit V1, A15/A16) — le serveur refuse de publier pour une
+  // equipe qu'on ne gere pas (`can-manage-friendly-match-ad-create.ts`,
+  // `canManageTeam`) : la proposer menait a un refus en fin de tunnel.
+  it('ne propose pas une equipe ou l on ne fait que JOUER', () => {
+    mockUtilisateur = {
+      ...mockUtilisateur,
+      myTeams: [{ club: { documentId: 'club-b' }, documentId: 'team-joueur', name: 'Seniors' }],
+    };
+    const { arbre } = rendre();
+    const rendu = JSON.stringify(arbre.toJSON());
+
+    expect(rendu).toContain('U15');
+    expect(rendu).not.toContain('Seniors');
   });
 });
 

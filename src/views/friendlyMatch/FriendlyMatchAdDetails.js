@@ -18,6 +18,7 @@ import {
   getReferenceNames,
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
+import { canManageTeamAd, getManagedTeams } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -99,27 +100,15 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   const isAuthenticated = Boolean(userData?.documentId);
   const canApply = canApplyToFriendlyMatchAd(userData);
 
-  const managedTeams = useMemo(() => {
-    const seen = new Set();
-    return [
-      ...(userData?.myTeams || []),
-      ...(userData?.trainedTeams || []),
-    ].filter((team) => {
-      const key = getKey(team);
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [userData?.myTeams, userData?.trainedTeams]);
+  // GERER-ANNONCE (A15/A16) — les equipes que je GERE ; celles ou je ne fais
+  // que jouer (`myTeams`) en sortent : le serveur ne les laisse pas proposer.
+  const managedTeams = useMemo(() => getManagedTeams(userData), [userData]);
 
   const managedTeamIds = useMemo(() => managedTeams.map(getKey), [managedTeams]);
 
-  // Cote annonceur : soit j encadre l equipe qui publie, soit j en suis l auteur.
-  const isAdSideStaff = useMemo(() => {
-    if (!ad) return false;
-    if (getKey(ad.author) && getKey(ad.author) === getKey(userData)) return true;
-    return managedTeamIds.includes(getKey(ad.team));
-  }, [ad, managedTeamIds, userData]);
+  // Cote annonceur : soit je gere l equipe qui publie (entraineur ou dirigeant
+  // de son club), soit j en suis l auteur — la regle du serveur.
+  const isAdSideStaff = useMemo(() => canManageTeamAd(ad, userData), [ad, userData]);
 
   const myApplication = useMemo(
     () => findMyApplicationOnAd(ad, managedTeamIds),
