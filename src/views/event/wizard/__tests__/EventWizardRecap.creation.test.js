@@ -123,17 +123,23 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () =
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL`.
 // La creation est doublee par UNE attente : c'est la part serveur, elle n'est
 // pas du ressort de ce lot — on la mesure, on ne la corrige pas.
+// RETOUR-ONGLET-2 — une creation dont le serveur ne rend AUCUN identifiant : c'est le
+// repli `EventWizardRecap:920`. Faux par defaut : les temoins ecrits avant ce lot
+// mesurent exactement ce qu'ils mesuraient.
+let mockCreationSansIdentifiant = false;
 jest.mock('@/services/event/eventService', () => ({
   createEventsWithConcurrency: async () => {
     await new Promise((resoudre) => {
       setTimeout(resoudre, 30);
     });
     return {
-      created: [{
-        documentId: 'ev-1',
-        payload: { name: 'Un evenement' },
-        response: { data: { documentId: 'ev-1' } },
-      }],
+      created: [mockCreationSansIdentifiant
+        ? { payload: { name: 'Un evenement' }, response: { data: {} } }
+        : {
+          documentId: 'ev-1',
+          payload: { name: 'Un evenement' },
+          response: { data: { documentId: 'ev-1' } },
+        }],
       failed: [],
     };
   },
@@ -206,15 +212,18 @@ beforeEach(() => {
  * empile derriere le detail. Le defaut ne bouge pas : les temoins ecrits avant
  * ce lot mesurent exactement ce qu'ils mesuraient.
  * @param {any} [surcharges] Champs de l'etat du tunnel a remplacer.
- * @returns {Promise<{ msJusquALEcranSuivant: number, reset: any[] }>} La mesure.
+ * @returns {Promise<{ msJusquALEcranSuivant: number, navigations: any[][], reset: any[] }>}
+ *   La mesure, et les appels a `navigate` (RETOUR-ONGLET-2).
  */
 const chronometrerLaCreation = async (surcharges = {}) => {
   /** @type {any[]} */
   const reset = [];
+  /** @type {any[][]} */
+  const navigations = [];
   const navigation = {
     canGoBack: () => true,
     goBack: () => {},
-    navigate: () => {},
+    navigate: (/** @type {any[]} */ ...appel) => { navigations.push(appel); },
     push: () => {},
     replace: () => {},
     reset: (/** @type {any} */ config) => {
@@ -248,7 +257,7 @@ const chronometrerLaCreation = async (surcharges = {}) => {
   const msJusquALEcranSuivant = reset[0]?.msEcoulees ?? maintenant();
 
   act(() => arbre.unmount());
-  return { msJusquALEcranSuivant, reset };
+  return { msJusquALEcranSuivant, navigations, reset };
 };
 
 describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
@@ -390,5 +399,27 @@ describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
 
     expect(`${msJusquALEcranSuivant < LATENCE_RESEAU * 2} (${msJusquALEcranSuivant} ms)`)
       .toBe(`true (${msJusquALEcranSuivant} ms)`);
+  });
+});
+
+// RETOUR-ONGLET-2 (30/09) — le tunnel de creation est monte sur la pile RACINE
+// (EventStack). Quand le serveur ne rend aucun identifiant, le Recap renvoie au
+// Planning par `navigate(HomeTab, …)` : sans `pop`, React Navigation 7 EMPILAIT un
+// second HomeTab par-dessus le tunnel, qui attendait dessous. Preuve de l'etat sur les
+// vrais routeurs : navigation/__tests__/retourOnglet2.pileRacine.test.js (F3).
+describe('RETOUR-ONGLET-2 — creation sans identifiant : le Planning, sans second HomeTab', () => {
+  afterEach(() => {
+    mockCreationSansIdentifiant = false;
+  });
+
+  test('EventWizardRecap:920 — navigate(HomeTab, Planning) porte `pop`', async () => {
+    mockCreationSansIdentifiant = true;
+
+    const { navigations, reset } = await chronometrerLaCreation();
+
+    expect(reset).toHaveLength(0);
+    expect(navigations).toEqual([
+      [RouteNames.HomeTab, { screen: RouteNames.MyEventList }, { pop: true }],
+    ]);
   });
 });

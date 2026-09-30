@@ -6,6 +6,8 @@ import '@/theme/strings';
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import GuideOffersRecap from '../GuideOffersRecap';
 
 // Filet L10-A (docs/STRATEGIE_PAYWALL_2026_08_01.md) : l'ecran de comparaison des
@@ -453,5 +455,36 @@ describe('S12-B — le recap du tour guide vend les PALIERS, pas l offre au lice
     // Équipe est selectionne par defaut : la carte Club est donc repliee.
     expect(hasTextContaining(arbre, '249,99 €')).toBe(true);
     expect(hasTextContaining(arbre, '2,50 €')).toBe(false);
+  });
+});
+
+// RETOUR-ONGLET-2 (30/09) — « Plus tard » renvoie a l'accueil. Or ce recapitulatif est
+// monte sur la pile RACINE (on y arrive depuis la fiche d'equipe, la feuille « mur
+// payant », le tour guide) : sans `pop`, React Navigation 7 EMPILAIT un second HomeTab
+// par-dessus, et le premier — avec le recapitulatif — attendait dessous. Preuve de
+// l'etat sur les vrais routeurs : navigation/__tests__/retourOnglet2.pileRacine.test.js (F3).
+describe('RETOUR-ONGLET-2 — « Plus tard » revient a L accueil, sans en empiler un second', () => {
+  it('« Plus tard » : navigate(HomeTab) porte `pop`', () => {
+    const arbre = renderRecap();
+
+    act(() => {
+      findByText(arbre, 'Plus tard').props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, undefined, { pop: true });
+  });
+
+  it('en mode League, l accueil est LeagueHomeTab : meme `pop`', () => {
+    const arbre = renderRecap({
+      ...authValue(),
+      getPostOnboardingHomeRoute: () => RouteNames.LeagueHomeTab,
+    });
+
+    act(() => {
+      findByText(arbre, 'Plus tard').props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.LeagueHomeTab, undefined, { pop: true });
   });
 });
