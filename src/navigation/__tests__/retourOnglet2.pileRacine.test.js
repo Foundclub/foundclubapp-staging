@@ -13,8 +13,8 @@ import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import SearchHubLegacyRedirect from '@/views/search/SearchHubLegacyRedirect';
-import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
+import SearchRouteRedirect from '@/views/search/SearchRouteRedirect';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
@@ -374,7 +374,9 @@ afterEach(() => {
 describe('RETOUR-ONGLET-2 — le témoin lit les VRAIS fichiers (sinon il ne mesure rien)', () => {
   it('les onglets, la pile d accueil et les piles imbriquées sont ceux de l app', () => {
     expect(ONGLETS[0]).toBe(RouteNames.Search);
-    expect(ONGLETS).toEqual(expect.arrayContaining([RouteNames.MyEventList, RouteNames.MyTeamList]));
+    expect(ONGLETS).toEqual(expect.arrayContaining([
+      RouteNames.MyEventList, RouteNames.MyTeamList,
+    ]));
     expect(ROUTES_ACCUEIL[0]).toBe(RouteNames.SearchHome);
     expect(ROUTES_ACCUEIL).toContain(RouteNames.SearchHub);
     expect(ROUTES_EVENEMENT).toEqual(expect.arrayContaining([
@@ -398,8 +400,8 @@ describe('RETOUR-ONGLET-2 — le témoin lit les VRAIS fichiers (sinon il ne mes
   });
 });
 
-describe('F1 — les écrans de redirection de la racine (SearchHubLegacyRedirect, SearchRouteRedirect)', () => {
-  it('SearchHubLegacyRedirect:25 — sans paramètre : la recherche s ouvre dans L onglet, pas dans une copie', () => {
+describe('F1 — les écrans de REDIRECTION de la racine', () => {
+  it('SearchHubLegacyRedirect:25 — sans paramètre : la recherche dans L onglet', () => {
     monter();
     ouvrirDepuisLAccueil(RouteNames.SearchAlerts);
 
@@ -431,7 +433,7 @@ describe('F1 — les écrans de redirection de la racine (SearchHubLegacyRedirec
     [RouteNames.SearchClubs, 'clubs'],
     [RouteNames.SearchReservations, 'reservations'],
     [RouteNames.SearchRecruitment, 'recruitment'],
-  ])('SearchRouteRedirect:37 — %s depuis les alertes (SearchAlerts:119) : un seul HomeTab', (route, type) => {
+  ])('SearchRouteRedirect:37 — %s depuis les alertes (SearchAlerts:119)', (route, type) => {
     monter();
     ouvrirDepuisLAccueil(RouteNames.SearchAlerts);
 
@@ -466,7 +468,7 @@ describe('F1 — les écrans de redirection de la racine (SearchHubLegacyRedirec
     attendreUnSeulAccueilPuisSaRacine();
   });
 
-  it('🛡️ sans HomeTab dessous (mode League) : la redirection est REMPLACÉE, jamais laissée en dessous', () => {
+  it('🛡️ sans HomeTab dessous (mode League) : la redirection est REMPLACÉE', () => {
     // C'est ce cas qui interdit `navigate(…, { pop: true })` ici : faute de HomeTab à
     // retrouver, il EMPILERAIT par-dessus l'écran de redirection, et le retour
     // retomberait sur un écran qui tourne à vide (son effet ne se rejoue pas).
@@ -484,7 +486,7 @@ describe('F1 — les écrans de redirection de la racine (SearchHubLegacyRedirec
 });
 
 describe('F2 — navigateToSearchHub appelé depuis la RACINE', () => {
-  it('SubscriptionSuccess:367 « Publier une annonce » : la recherche dans L onglet, un seul HomeTab', () => {
+  it('SubscriptionSuccess:367 « Publier une annonce » : un seul HomeTab', () => {
     monter();
     ouvrirDepuisLAccueil(RouteNames.SubscriptionSuccess);
 
@@ -496,7 +498,7 @@ describe('F2 — navigateToSearchHub appelé depuis la RACINE', () => {
     attendreUnSeulAccueilPuisSaRacine();
   });
 
-  it('TeamWizardName:239 « Rechercher mon club » (TeamStack, pile imbriquée) : un seul HomeTab', () => {
+  it('TeamWizardName:239 « Rechercher mon club » (dans TeamStack) : un seul HomeTab', () => {
     monter();
     ouvrirDepuisLAccueil(RouteNames.TeamStack, { screen: RouteNames.TeamWizardName });
     expect(pileRacine()).toEqual([RouteNames.HomeTab, RouteNames.TeamStack]);
@@ -530,7 +532,9 @@ const APPELS_VERS_UN_AUTRE_ONGLET = [
   },
   {
     appel: 'EventWizardRecap:920 (création sans identifiant)',
-    depart: () => ouvrirDepuisLAccueil(RouteNames.EventStack, { screen: RouteNames.EventWizardRecap }),
+    depart: () => ouvrirDepuisLAccueil(RouteNames.EventStack, {
+      screen: RouteNames.EventWizardRecap,
+    }),
     ecran: RouteNames.EventWizardRecap,
     onglet: RouteNames.MyEventList,
     parametres: { screen: RouteNames.MyEventList },
@@ -545,7 +549,7 @@ const APPELS_VERS_UN_AUTRE_ONGLET = [
 ];
 
 describe('F3 — un autre onglet, appelé en direct depuis la RACINE', () => {
-  it.each(APPELS_VERS_UN_AUTRE_ONGLET)('$appel — SANS pop (la forme d avant) : un 2ᵉ HomeTab, c est le défaut', ({
+  it.each(APPELS_VERS_UN_AUTRE_ONGLET)('$appel — SANS pop (avant) : un 2ᵉ HomeTab', ({
     depart, ecran, parametres,
   }) => {
     monter();
@@ -557,7 +561,7 @@ describe('F3 — un autre onglet, appelé en direct depuis la RACINE', () => {
     expect(pileRacine()).toEqual([...avant, RouteNames.HomeTab]);
   });
 
-  it.each(APPELS_VERS_UN_AUTRE_ONGLET)('$appel — AVEC pop : l onglet visé, un seul HomeTab, Accueil à sa racine', ({
+  it.each(APPELS_VERS_UN_AUTRE_ONGLET)('$appel — AVEC pop : un seul HomeTab', ({
     depart, ecran, onglet, parametres,
   }) => {
     monter();
@@ -640,7 +644,7 @@ describe('F4 — les retours de repli : ils ne courent que si la racine n a RIEN
     attendreUnSeulAccueilPuisSaRacine();
   });
 
-  it.each(REPLIS)('$appel — seul à la racine (lien, notification) : UN HomeTab, posé par le repli', ({ route }) => {
+  it.each(REPLIS)('$appel — seul à la racine (lien, notification) : UN HomeTab', ({ route }) => {
     monter({ etatInitial: { routes: [{ name: route }] } });
 
     act(() => { retourDeRepli(navigations[route]); });
@@ -659,10 +663,13 @@ describe('F4 — les retours de repli : ils ne courent que si la racine n a RIEN
     attendreUnSeulAccueilPuisSaRacine();
   });
 
-  it('EventDetails:3218 — seul à la racine (lien d événement) : UN HomeTab, sur le Planning', () => {
+  it('EventDetails:3218 — seul à la racine (lien d événement) : UN HomeTab', () => {
     monter({
       etatInitial: {
-        routes: [{ name: RouteNames.EventStack, state: { routes: [{ name: RouteNames.EventDetails }] } }],
+        routes: [{
+          name: RouteNames.EventStack,
+          state: { routes: [{ name: RouteNames.EventDetails }] },
+        }],
       },
     });
 
