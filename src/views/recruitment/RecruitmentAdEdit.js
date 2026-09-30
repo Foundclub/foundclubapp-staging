@@ -25,7 +25,11 @@ import { useGetSections } from '@/services/section/sectionQueries';
 const schema = Joi.object({
   availabilityText: Joi.string().allow('').optional(),
   category: Joi.alternatives().try(Joi.string(), Joi.object()).optional(),
-  certificationsWanted: Joi.alternatives().try(Joi.array(), Joi.string()).optional(),
+  // RECRUTER-TUNNEL — `buildDefaultValues` pose '' quand l'annonce n'a aucune
+  // certification (TOUTES les annonces joueur : le serveur y met []). `Joi.string()`
+  // refuse la chaine vide : le formulaire etait rejete EN SILENCE, sur un champ
+  // qu'une annonce joueur n'affiche meme pas, et « Enregistrer » ne faisait rien.
+  certificationsWanted: Joi.alternatives().try(Joi.array(), Joi.string().allow('')).optional(),
   coachExperienceLevel: Joi.string().allow('').optional(),
   coachRole: Joi.string().allow('').optional(),
   coachRoleOther: Joi.string().allow('').optional(),
@@ -177,6 +181,11 @@ function RecruitmentAdEdit({ navigation, route }) {
 
   const resolvedAd = fetchedAd || ad || null;
   const isCoachAd = String(resolvedAd?.audienceType || '').trim().toLowerCase() === 'coach';
+  // RECRUTER-TUNNEL (audit V1, H2) — un sport qui ne se joue pas par postes
+  // (arts martiaux...) publie une annonce SANS poste. Le poste n'est donc exige
+  // que si l'annonce en avait un : on ne peut toujours pas l'effacer, mais on ne
+  // force plus l'auteur a en inventer un pour corriger sa description.
+  const isPositionRequired = Boolean(String(resolvedAd?.position || '').trim());
 
   const {
     control,
@@ -258,7 +267,7 @@ function RecruitmentAdEdit({ navigation, route }) {
         ));
         return;
       }
-    } else if (!String(data.position || '').trim()) {
+    } else if (isPositionRequired && !String(data.position || '').trim()) {
       Alert.alert(t('recruitmentAdEdit.alerts.errorTitle', 'Erreur'), t(
         'recruitmentAdEdit.alerts.positionRequired',
         'Le poste est requis.',
