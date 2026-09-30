@@ -153,10 +153,14 @@ function EventListSeparator() {
  * @param {import('react').ReactElement | null} [props.customEmptyComponent] - Custom empty state (optional)
  * @param {number} [props.refreshSignal]
  * @param {boolean} [props.screenActive]
+ * @param {boolean} [props.annuaire] - ANNUAIRE-E1 : posé par l'annuaire du site seulement. La liste
+ *   défile AVEC la page (cartes à plat, « Voir plus ») au lieu de défiler dans sa propre boîte :
+ *   sans borne, une liste de l'app réclamait toutes ses pages d'un coup (banc du 25/09).
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
   additionalFilters,
+  annuaire = false,
   customEmptyComponent = null,
   enableMapMode = false,
   events: propEvents,
@@ -575,10 +579,13 @@ function EventListContent({
     }
   }
   let isListFetchingNext = isFetchingNextPage;
+  let listHasNextPage = hasNextPage;
   if (isViewportListMode) {
     isListFetchingNext = isFetchingViewportNextPage;
+    listHasNextPage = hasViewportNextPage;
   } else if (isSmartSearchEnabled) {
     isListFetchingNext = isFetchingSearchNextPage;
+    listHasNextPage = hasSearchNextPage;
   }
   const lastStableDefaultEventsRef = useRef(/** @type {FCEvent[]} */ ([]));
   const canReusePreviousDefaultEvents = !propEvents && !isViewportListMode && !isSmartSearchEnabled;
@@ -1463,40 +1470,82 @@ function EventListContent({
     </View>
   );
 
+  // ANNUAIRE-E1 — sur l'annuaire du site, les cartes sont posées à plat et défilent avec la page ;
+  // la page suivante se demande au bouton « Voir plus » (même règle que la liste de clubs).
+  const listeAPlat = annuaire ? (
+    <View style={[Spaces.gap[16], { paddingBottom: listBottomPadding }]}>
+      {listHeader}
+      {visibleEvents.length === 0 ? emptyListContent : visibleEvents.map((item, index) => (
+        <View key={(item?.documentId || `evenement-${index}`).toString()}>
+          {renderItem({ index, item })}
+        </View>
+      ))}
+      {!propEvents && listHasNextPage && visibleEvents.length > 0 ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          disabled={isListFetchingNext}
+          onPress={handleEndReached}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+            Spaces.gap[8],
+            {
+              alignSelf: 'center',
+              borderColor: Colors.primary500,
+              borderRadius: 999,
+              borderWidth: 1,
+              minHeight: 48,
+              paddingHorizontal: 28,
+            },
+          ]}
+        >
+          {isListFetchingNext ? <Loader color={Colors.primary500} size="small" /> : null}
+          <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+            {t('clubListContent.loadMore', 'Voir plus')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  ) : null;
+
   return (
-    <View style={[Spaces.gap[24], Alignments.fill]}>
+    <View style={annuaire ? [Spaces.gap[24]] : [Spaces.gap[24], Alignments.fill]}>
       <WithDataWrapper
         error={activeError?.message}
         isLoading={false}
-        wrapperStyle={[Alignments.fill]}
+        wrapperStyle={annuaire ? [] : [Alignments.fill]}
       >
-        <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
-          <FlashList
-            contentContainerStyle={{ paddingBottom: listBottomPadding }}
-            data={/** @type {FCEvent[]} */ (visibleEvents)}
-            ItemSeparatorComponent={EventListSeparator}
-            keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
-            ListEmptyComponent={emptyListContent}
-            ListHeaderComponent={listHeader}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            onRefresh={() => {
-              if (isViewportListMode) {
-                refetchViewport();
-              } else if (isSmartSearchEnabled) {
-                refetchSearch();
-              } else {
-                refetch();
-              }
-              if (areFeaturedEventsEnabled) {
-                refetchFeatured();
-              }
-            }}
-            refreshing={isActiveQueryBusy && !isListFetchingNext}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+        {annuaire ? listeAPlat : (
+          <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
+            <FlashList
+              contentContainerStyle={{ paddingBottom: listBottomPadding }}
+              data={/** @type {FCEvent[]} */ (visibleEvents)}
+              ItemSeparatorComponent={EventListSeparator}
+              keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
+              ListEmptyComponent={emptyListContent}
+              ListHeaderComponent={listHeader}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.5}
+              onRefresh={() => {
+                if (isViewportListMode) {
+                  refetchViewport();
+                } else if (isSmartSearchEnabled) {
+                  refetchSearch();
+                } else {
+                  refetch();
+                }
+                if (areFeaturedEventsEnabled) {
+                  refetchFeatured();
+                }
+              }}
+              refreshing={isActiveQueryBusy && !isListFetchingNext}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        )}
       </WithDataWrapper>
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || ''}

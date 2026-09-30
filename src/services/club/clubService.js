@@ -442,7 +442,16 @@ export const getMultisportClubs = async (params = {}) => {
  */
 export const getPublicClubById = async (id) => {
   const response = await client.get(`/public-directory/clubs/${id}`);
-  const club = response?.data?.data?.club || null;
+  return versFicheClubPublique(response?.data?.data?.club || null);
+};
+
+/**
+ * La traduction, seule : ANNUAIRE-E1 — la fiche publique du site a DÉJÀ cette réponse (sa tête SEO
+ * la lit) ; elle en remplit le cache de la fiche de l'app plutôt que de la redemander.
+ * @param {any} club - Le club tel que la porte publique le rend (`data.club`).
+ * @returns {any} La fiche, dans le vocabulaire de l'écran, ou null.
+ */
+export const versFicheClubPublique = (club) => {
   if (!club) return null;
 
   return {
@@ -462,9 +471,64 @@ export const getPublicClubById = async (id) => {
     membersCount: 0,
     name: club.name || '',
     phoneNumber: undefined,
-    sponsor: Array.isArray(club.sponsors) ? club.sponsors : [],
+    // ANNUAIRE-E1 — « À propos » (décision d'Adel du 29/09 : le texte officiel de l'association,
+    // renettoyé par le serveur) et les installations du club, que la porte publique rend déjà.
+    association: club.association || null,
+    publicFacilities: versInstallationsDeLaFiche(club.facilities),
+    // ANNUAIRE-E1 — la porte publique rend `logoUrl`, l'écran dessine `logo.url`.
+    sponsor: (Array.isArray(club.sponsors) ? club.sponsors : [])
+      .map((/** @type {any} */ sponsor) => ({
+        ...sponsor,
+        logo: sponsor?.logoUrl ? { url: sponsor.logoUrl } : null,
+      })),
     teams: Array.isArray(club.teams) ? club.teams : [],
   };
+};
+
+/**
+ * ANNUAIRE-E1 — les installations de la porte publique, dans la forme que lit la fiche du club
+ * (celle de `normalizeClubFacility`, facilityService.js).
+ * @param {unknown} installations Les installations rendues par l'annuaire public.
+ * @returns {any[]} Les installations de la fiche.
+ */
+function versInstallationsDeLaFiche(installations) {
+  if (!Array.isArray(installations)) return [];
+  return installations.map((/** @type {any} */ installation) => ({
+    address: installation?.addressLabel || '',
+    documentId: installation?.documentId || null,
+    isShared: false,
+    maxSlots: installation?.maxSlots ?? null,
+    name: installation?.name || '',
+    ownerType: 'club',
+    type: installation?.type || null,
+  }));
+}
+
+/**
+ * ANNUAIRE-E1 — « À propos » d'un club pour un lecteur CONNECTÉ : la fiche privée ne porte que le
+ * texte BRUT du répertoire des associations ; la porte publique le rend renettoyé (aucune donnée
+ * personnelle sous la mention « source : RNA »). En panne ou absente : null, jamais d'erreur — la
+ * fiche s'affiche sans ce bloc.
+ * @param {string | number} id - Le documentId du club.
+ * @returns {Promise<any>} Le bloc « À propos », ou null.
+ */
+export const getClubAssociation = async (id) => {
+  try {
+    const response = await client.get(`/public-directory/clubs/${id}`);
+    return response?.data?.data?.club?.association || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * ANNUAIRE-E1 — la fiche privée d'un club, avec son « À propos » lu à la porte publique.
+ * @param {string | number} id - Le documentId du club.
+ * @returns {Promise<any>} La fiche.
+ */
+export const getClubByIdWithAssociation = async (id) => {
+  const [club, association] = await Promise.all([getClubById(id), getClubAssociation(id)]);
+  return club ? { ...club, association } : club;
 };
 
 export const getClubById = async (id) => {

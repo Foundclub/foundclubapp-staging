@@ -295,7 +295,9 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
     expect(panneauxMontes()).toEqual([visible('clubs')]);
     // 🔒 Props EXACTES : aujourd'hui l'écran ne passe ni sport, ni ville, ni nom
     // tapé à la liste de clubs — tout vit dans `clubFilters` du contexte.
+    // ANNUAIRE-E1 (29/09) : `annuaire` s'y ajoute, FAUX tant que la route ne le pose pas.
     expect(mockPanneaux.clubs.props).toEqual({
+      annuaire: false,
       enableMapMode: true,
       refreshSignal: 0,
       screenActive: true,
@@ -440,6 +442,7 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
 
     expect(mockPanneaux.events.props).toEqual({
       additionalFilters: FILTRES_EVENEMENTS_PAR_DEFAUT,
+      annuaire: false,
       enableMapMode: true,
       refreshSignal: 0,
       screenActive: true,
@@ -567,5 +570,40 @@ describe('RECHERCHE-UNIQUE — les reglages de l annuaire', () => {
     await monter({ activeType: 'clubs', types: ['n-importe-quoi'] });
 
     expect(mockCoquille.props.types).toBeUndefined();
+  });
+});
+
+// ANNUAIRE-E1 (29/09) — `annuaire: true`, pose par l'annuaire du site seulement : la coquille
+// retire l'en-tete de l'app et la liste de clubs defile avec la page. Absent (le telephone), tout
+// est faux.
+describe('ANNUAIRE-E1 — le drapeau « annuaire » de la route', () => {
+  test('✅ annuaire: true est transmis a la coquille ET a la liste de clubs', async () => {
+    await monter({
+      activeType: 'clubs', annuaire: true, enableMapMode: false, types: ['clubs', 'events'],
+    });
+
+    expect(mockCoquille.props.annuaire).toBe(true);
+    expect(mockPanneaux.clubs.props.annuaire).toBe(true);
+  });
+
+  test('✅ ... et a la liste d evenements (meme pagination au bouton « Voir plus »)', async () => {
+    await monter({
+      activeType: 'events', annuaire: true, enableMapMode: false, types: ['clubs', 'events'],
+    });
+
+    expect(mockPanneaux.events.props.annuaire).toBe(true);
+  });
+
+  test('📌 sans le drapeau (le telephone), coquille et liste gardent leur forme', async () => {
+    await monter({ activeType: 'clubs' });
+
+    expect(mockCoquille.props.annuaire).toBe(false);
+    expect(mockPanneaux.clubs.props.annuaire).toBe(false);
+  });
+
+  test('📌 seul le booleen vrai compte (une chaine d adresse ne l allume pas)', async () => {
+    await monter({ activeType: 'clubs', annuaire: 'true' });
+
+    expect(mockCoquille.props.annuaire).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import {
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -58,16 +59,30 @@ const resolveStatValue = (...candidates) => {
  * Carte club des listes de recherche (design 5a).
  * @param {object} props
  * @param {any} props.item - Club (ou club multisport, `_type: 'multisport'`).
+ * @param {string | null} [props.href] - ANNUAIRE-E1 : sur le site, l'adresse de la fiche ; la carte
+ *   devient alors un VRAI lien (`<a href>`), que Google suit et qu'on ouvre dans un nouvel onglet.
  * @param {() => void} [props.onPress]
  * @param {boolean} [props.paused] - Vrai quand la carte n'est PAS a l'ecran : elle n'anime alors rien.
  * @param {string} [props.reasonLabel] - Raison de pertinence (recherche intelligente).
  * @returns {import('react').ReactElement}
  */
 function ClubCard({
-  item, onPress, paused = false, reasonLabel = '',
+  href = null, item, onPress, paused = false, reasonLabel = '',
 }) {
   const { t } = useTranslation();
   const { Colors, Images } = useTheme();
+  const estUnLien = Platform.OS === 'web' && Boolean(href);
+
+  // Un clic simple reste une navigation DANS le site (onPress) ; Ctrl, Cmd, Maj ou le bouton du
+  // milieu laissent le navigateur ouvrir le lien ailleurs, comme n'importe quel lien.
+  const surAppui = (/** @type {any} */ evenement) => {
+    if (estUnLien) {
+      const natif = evenement?.nativeEvent || evenement;
+      if (natif?.metaKey || natif?.ctrlKey || natif?.shiftKey || natif?.button === 1) return;
+      evenement?.preventDefault?.();
+    }
+    onPress?.();
+  };
 
   const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
   const shortAddress = getShortAddress(item?.addressDetails || item?.address);
@@ -112,10 +127,14 @@ function ClubCard({
   return (
     <TouchableOpacity
       accessibilityLabel={[item?.name || 'Club', shortAddress].filter(Boolean).join(', ')}
-      accessibilityRole="button"
+      accessibilityRole={estUnLien ? 'link' : 'button'}
       activeOpacity={0.85}
       disabled={!onPress}
-      onPress={onPress}
+      // react-native-web rend une boîte qui porte `href` en balise <a>. Étalé : `href` n'existe
+      // pas dans les types du téléphone, et il ne doit JAMAIS lui être passé.
+      // eslint-disable-next-line react/jsx-props-no-spreading
+      {...(estUnLien ? { href } : {})}
+      onPress={estUnLien ? surAppui : onPress}
     >
       {/*
         R07 — le degrade est un FOND POSE DERRIERE, jamais le conteneur. Le motif

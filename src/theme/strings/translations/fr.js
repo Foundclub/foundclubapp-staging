@@ -2489,6 +2489,13 @@ export default {
       deleteSponsor: 'Supprimer le sponsor {{sponsorName}}',
       emailClub: 'Envoyer un e-mail a {{email}}',
     },
+    about: {
+      createdIn: 'Créée en {{year}}.',
+      dissolved: 'Association dissoute (RNA)',
+      less: 'Réduire',
+      more: 'Lire la suite',
+      title: 'À propos',
+    },
     actions: {
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait
@@ -4279,6 +4286,7 @@ export default {
       description: 'Nous chargeons les clubs correspondant à ta recherche.',
       title: 'Chargement des clubs',
     },
+    loadMore: 'Voir plus',
     refreshing: 'Actualisation des clubs...',
     relevanceReason: 'Tri pertinence: {{reason}}',
     sortedByRelevance: 'Trie par pertinence',
@@ -12606,6 +12614,24 @@ export default {
     youReAlreadyTakingPart3: 'Tu participes déjà à cette détection.',
     youReStaffForThis: 'Tu encadres cet événement : ce sont les joueurs qui répondent.',
     youVeAlreadyAnsweredThis: 'Tu as déjà répondu à cet événement.',
+  },
+  pastillesFiltresClub: {
+    place: {
+      current: 'Lieu actuel',
+      everywhere: 'Toute la France',
+      other: 'Un autre lieu',
+      pill: 'Filtrer par lieu',
+      title: 'Choisir un lieu',
+    },
+    sport: {
+      all: 'Tous les sports, de A à Z',
+      current: 'Sport actuel',
+      none: 'Aucun sport ne correspond.',
+      pill: 'Filtrer par sport',
+      popular: 'Les plus cherchés',
+      search: 'Rechercher un sport',
+      title: 'Choisir un sport',
+    },
   },
   pastMatchDetails: {
     alerts: {

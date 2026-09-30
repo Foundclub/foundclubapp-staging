@@ -2315,6 +2315,13 @@ export default {
       deleteSponsor: 'Delete sponsor {{sponsorName}}',
       emailClub: 'Send an email to {{email}}',
     },
+    about: {
+      createdIn: 'Founded in {{year}}.',
+      dissolved: 'Dissolved association (RNA)',
+      less: 'Show less',
+      more: 'Read more',
+      title: 'About',
+    },
     actions: {
       bringClubOver: 'This is my club',
       claimClub: 'This is my club',
@@ -3980,6 +3987,7 @@ export default {
       description: 'We are loading the clubs matching your search.',
       title: 'Loading clubs',
     },
+    loadMore: 'See more',
     refreshing: 'Refreshing clubs...',
     relevanceReason: 'Sorted by relevance: {{reason}}',
     sortedByRelevance: 'Sorted by relevance',
@@ -11947,6 +11955,24 @@ export default {
     youReAlreadyTakingPart3: 'You’re already taking part in this trial.',
     youReStaffForThis: 'You’re staff for this event: the players are the ones who answer.',
     youVeAlreadyAnsweredThis: 'You’ve already answered this event.',
+  },
+  pastillesFiltresClub: {
+    place: {
+      current: 'Current place',
+      everywhere: 'All of France',
+      other: 'Another place',
+      pill: 'Filter by place',
+      title: 'Choose a place',
+    },
+    sport: {
+      all: 'All sports, A to Z',
+      current: 'Current sport',
+      none: 'No sport matches.',
+      pill: 'Filter by sport',
+      popular: 'Most searched',
+      search: 'Search for a sport',
+      title: 'Choose a sport',
+    },
   },
   pastMatchDetails: {
     alerts: {

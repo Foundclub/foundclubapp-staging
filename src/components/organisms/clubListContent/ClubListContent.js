@@ -10,8 +10,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   InteractionManager,
+  Platform,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -33,7 +35,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetClubsDuTerritoire } from '@/services/annuaire/annuaireQueries';
-import { slugAnnuaire } from '@/services/annuaire/slugAnnuaire';
+import { cheminFicheAnnuaire, slugAnnuaire } from '@/services/annuaire/slugAnnuaire';
 import { useGetClubs, useGetMultisportClubs } from '@/services/club/clubQueries';
 import { keepPreviousPageData } from '@/services/queryOptions';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
@@ -42,11 +44,26 @@ import { getMatchReasonLabel, mapSearchPayload } from '@/services/search/searchS
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
 
 import ClubFiltersSheet from '../filtersSheet/ClubFiltersSheet';
+import PastillesFiltresClub from '../filtersSheet/PastillesFiltresClub';
 import SearchComponent from '../searchComponent/searchComponent';
+
+/**
+ * La clé d'une carte de club dans la liste.
+ * @param {any} item Le club.
+ * @param {number} index Sa place.
+ * @returns {string} La clé.
+ */
+const cleDeCarte = (item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`;
 
 function ClubsListSeparator() {
   return <View style={{ height: 12 }} />;
 }
+
+// ANNUAIRE-E1 — au-delà, l'annuaire du site range ses cartes sur deux colonnes (planche
+// « ordinateur » de la maquette).
+const LARGEUR_DEUX_COLONNES = 1024;
+// ANNUAIRE-E1 — l'identifiant des cartes posées à plat, lu par le suivi de ce qui est à l'écran.
+const PREFIXE_CARTE = 'carte-club-';
 
 const hasFiniteViewportBounds = (viewport) => (
   Number.isFinite(Number(viewport?.north))
@@ -121,10 +138,19 @@ const mergeClubCollections = (...collections) => {
 
 /**
  * Club list element to inject on home page or a dedicated one.
- * @param {{ enableMapMode?: boolean; refreshSignal?: number; screenActive?: boolean }} [props]
+ * @param {{
+ *  annuaire?: boolean;
+ *  enableMapMode?: boolean;
+ *  refreshSignal?: number;
+ *  screenActive?: boolean;
+ * }} [props]
+ *   `annuaire` (ANNUAIRE-E1, posé par l'annuaire du site seulement) : la liste défile AVEC la page
+ *   (cartes à plat, « Voir plus » au lieu du défilement sans fin) et chaque carte est un vrai lien
+ *   vers sa fiche publique. Absent, rien ne change — le téléphone garde sa liste.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
+  annuaire = false,
   enableMapMode = false,
   refreshSignal = 0,
   screenActive = true,
@@ -136,6 +162,7 @@ function ClubListContent({
   const { getClubFiltersNumber } = useClub();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const { width: largeurEcran } = useWindowDimensions();
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
 
   const [isMultisportDeferredEnabled, setIsMultisportDeferredEnabled] = useState(false);
@@ -356,12 +383,16 @@ function ClubListContent({
   }
 
   let activeIsFetchingNext = isFetchingNextPage;
+  let activeHasNextPage = hasNextPage;
   if (isViewportListMode) {
     activeIsFetchingNext = isFetchingViewportNextPage;
+    activeHasNextPage = hasViewportNextPage;
   } else if (isTerritoryMode) {
     activeIsFetchingNext = isFetchingTerritoireNextPage;
+    activeHasNextPage = hasTerritoireNextPage;
   } else if (isSmartSearchEnabled) {
     activeIsFetchingNext = isFetchingSmartNextPage;
+    activeHasNextPage = hasSmartNextPage;
   }
   const hasResolvedActiveQuery = activeHasFetched || Boolean(activeError);
   const isActiveQueryBusy = Boolean(activeIsLoading || activeIsFetching);
@@ -631,22 +662,9 @@ function ClubListContent({
     setFiltersSheetVisible(true);
   }, []);
 
-  // D6 (decision d'Adel du 25/09) — le sport et le lieu SE VOIENT sans ouvrir
-  // la feuille (constat du 23/09 : « il n'y a pas de barre de recherche les
-  // villes »). Meme libelle que la rangee Lieu de la feuille : une ville avec
-  // son rayon, un departement ou une region avec son seul nom (phase 3).
-  const resumeFiltres = useMemo(() => {
-    const sport = (activites || []).find(
-      (/** @type {any} */ item) => item?.documentId === clubFilters?.activity,
-    )?.name || t('clubFiltersSheet.allSports', 'Tous les sports');
-    let lieu = t('clubFiltersSheet.allCities', 'Toutes les villes');
-    if (clubFilters?.city?.territoire) {
-      lieu = String(clubFilters.city.nom || clubFilters.city.label);
-    } else if (clubFilters?.city?.label) {
-      lieu = `${String(clubFilters.city.label)} · ${String(Number(clubFilters?.radius) || 20)} km`;
-    }
-    return `${sport} · ${lieu}`;
-  }, [activites, clubFilters?.activity, clubFilters?.city, clubFilters?.radius, t]);
+  const appliquerFiltres = useCallback((/** @type {Record<string, any>} */ filtresChoisis) => {
+    appDispatch({ payload: filtresChoisis, type: 'SET_CLUB_FILTERS' });
+  }, [appDispatch]);
 
   const handleSearchField = useCallback((name) => {
     appDispatch({
@@ -718,6 +736,29 @@ function ClubListContent({
 
   const reglageDeVisibilite = useRef({ itemVisiblePercentThreshold: 10 }).current;
 
+  // ANNUAIRE-E1 — sur l'annuaire, la liste défile AVEC la page : elle ne sait plus ce qui est à
+  // l'écran (sa fenêtre est tout son contenu). C'est la FENÊTRE du navigateur qui le dit, carte par
+  // carte : même seuil de 10 %, et les sponsors d'une carte hors de l'écran restent immobiles.
+  const racineAPlatRef = useRef(/** @type {any} */ (null));
+  useEffect(() => {
+    const Observateur = typeof window === 'undefined' ? undefined : window.IntersectionObserver;
+    if (!annuaire || Platform.OS !== 'web' || typeof Observateur !== 'function') return undefined;
+    const racine = racineAPlatRef.current;
+    if (!racine || typeof racine.querySelectorAll !== 'function') return undefined;
+    const aLEcran = new Set();
+    const observateur = new Observateur((entrees) => {
+      entrees.forEach((entree) => {
+        const id = String(entree.target.id || '').slice(PREFIXE_CARTE.length);
+        if (entree.isIntersecting) aLEcran.add(id);
+        else aLEcran.delete(id);
+      });
+      setIdsVisibles(new Set(aLEcran));
+    }, { threshold: 0.1 });
+    racine.querySelectorAll(`[id^="${PREFIXE_CARTE}"]`)
+      .forEach((/** @type {Element} */ carte) => observateur.observe(carte));
+    return () => observateur.disconnect();
+  }, [annuaire, displayedClubs]);
+
   const renderItem = useCallback(({ item }) => {
     const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
     const searchMeta = Reflect.get(item || {}, '__search');
@@ -725,6 +766,7 @@ function ClubListContent({
 
     return (
       <ClubCard
+        href={annuaire ? cheminFicheAnnuaire(item) : null}
         item={item}
         onPress={() => (isMultisport
           ? handleMultisportSelection(item.documentId)
@@ -739,7 +781,7 @@ function ClubListContent({
           : ''}
       />
     );
-  }, [handleClubSelection, handleMultisportSelection, idsVisibles, t]);
+  }, [annuaire, handleClubSelection, handleMultisportSelection, idsVisibles, t]);
 
   const renderEmptyList = useCallback(() => {
     if (showLoadingPlaceholder) {
@@ -775,8 +817,71 @@ function ClubListContent({
     );
   }, [handleCreateClub, requiresViewportZoom, showLoadingPlaceholder, t]);
 
+  // ANNUAIRE-E1 — sur l'annuaire du site, les cartes sont posées à plat et défilent AVEC la page.
+  // Une liste qui ne défile pas elle-même ne sait plus quand elle arrive au bout : sans borne, elle
+  // réclamait TOUTES ses pages (banc du 25/09 : 8 sur 8). La page suivante se demande donc au
+  // bouton « Voir plus », comme la planche le dessine.
+  const deuxColonnes = annuaire && Platform.OS === 'web' && largeurEcran >= LARGEUR_DEUX_COLONNES;
+  const enTetePertinence = isSmartSearchEnabled ? (
+    <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
+      {t('clubListContent.sortedByRelevance', 'Trie par pertinence')}
+    </Text>
+  ) : null;
+  const listeAPlat = annuaire ? (
+    <View ref={racineAPlatRef} style={[Spaces.gap[16], { paddingBottom: listBottomPadding }]}>
+      {enTetePertinence}
+      {displayedClubs.length === 0 ? renderEmptyList() : (
+        <View
+          style={deuxColonnes
+            ? {
+              flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 16,
+            }
+            : Spaces.gap[12]}
+        >
+          {displayedClubs.map((item, index) => (
+            <View
+              key={cleDeCarte(item, index)}
+              // Rendu en `id` sur le site : c'est par lui que la fenêtre dit quelle carte est vue.
+              nativeID={`${PREFIXE_CARTE}${String(item?.documentId || index)}`}
+              style={deuxColonnes ? { width: '49%' } : null}
+            >
+              {renderItem({ item })}
+            </View>
+          ))}
+        </View>
+      )}
+      {activeHasNextPage && displayedClubs.length > 0 ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          disabled={activeIsFetchingNext}
+          onPress={handleEndReached}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+            Spaces.gap[8],
+            {
+              alignSelf: 'center',
+              borderColor: Colors.primary500,
+              borderRadius: 999,
+              borderWidth: 1,
+              minHeight: 48,
+              paddingHorizontal: 28,
+            },
+          ]}
+        >
+          {activeIsFetchingNext ? <Loader color={Colors.primary500} size="small" /> : null}
+          <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+            {t('clubListContent.loadMore', 'Voir plus')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  ) : null;
+
   return (
-    <View style={[Alignments.fill, Spaces.gap[16]]}>
+    <View style={annuaire ? Spaces.gap[16] : [Alignments.fill, Spaces.gap[16]]}>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
         <View style={{ flex: 1 }}>
           <SearchComponent
@@ -790,17 +895,10 @@ function ClubListContent({
           />
         </View>
       </View>
-      <TouchableOpacity
-        accessibilityLabel={t('filtersSheet.title', 'Filtrer')}
-        accessibilityRole="button"
-        activeOpacity={0.8}
-        onPress={handleOpenFilters}
-        testID="club-filtres-resume"
-      >
-        <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary500]}>
-          {resumeFiltres}
-        </Text>
-      </TouchableOpacity>
+      {/* ANNUAIRE-E1 (maquette validée le 29/09) — le sport et le lieu en deux pastilles écrites,
+          qui ouvrent CHACUNE leur choix en un geste. Elles remplacent la ligne-résumé de D6
+          (« Football · Lyon · 10 km »), qui ouvrait toute la fenêtre « Filtrer ». */}
+      <PastillesFiltresClub filters={clubFilters} onApply={appliquerFiltres} />
       {showInlineLoadingHint ? (
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Loader color={Colors.primary500} size="small" />
@@ -863,34 +961,32 @@ function ClubListContent({
       <WithDataWrapper
         error={activeError?.message}
         isLoading={false}
-        wrapperStyle={[Alignments.fill]}
+        wrapperStyle={annuaire ? [] : [Alignments.fill]}
       >
-        <FlashList
-          contentContainerStyle={[
-            { paddingBottom: listBottomPadding },
-            displayedClubs.length === 0 ? Alignments.fill : null,
-          ]}
-          data={displayedClubs}
-          ItemSeparatorComponent={ClubsListSeparator}
-          keyExtractor={(item, index) => item?.documentId || `unknown-${item?.name || ''}-${index}`}
-          ListEmptyComponent={renderEmptyList}
-          ListHeaderComponent={isSmartSearchEnabled ? (
-            <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
-              {t('clubListContent.sortedByRelevance', 'Trie par pertinence')}
-            </Text>
-          ) : null}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.5}
-          onRefresh={refreshHandler}
-          // ⚠️ Ces deux-la sont FIGES dans un `ref` : react-native refuse
-          // qu'ils changent d'identite en cours de route.
-          onViewableItemsChanged={rapportDeVisibilite}
-          ref={listeRef}
-          refreshing={isActiveQueryBusy && !activeIsFetchingNext}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          viewabilityConfig={reglageDeVisibilite}
-        />
+        {annuaire ? listeAPlat : (
+          <FlashList
+            contentContainerStyle={[
+              { paddingBottom: listBottomPadding },
+              displayedClubs.length === 0 ? Alignments.fill : null,
+            ]}
+            data={displayedClubs}
+            ItemSeparatorComponent={ClubsListSeparator}
+            keyExtractor={cleDeCarte}
+            ListEmptyComponent={renderEmptyList}
+            ListHeaderComponent={enTetePertinence}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            onRefresh={refreshHandler}
+            // ⚠️ Ces deux-la sont FIGES dans un `ref` : react-native refuse
+            // qu'ils changent d'identite en cours de route.
+            onViewableItemsChanged={rapportDeVisibilite}
+            ref={listeRef}
+            refreshing={isActiveQueryBusy && !activeIsFetchingNext}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+            viewabilityConfig={reglageDeVisibilite}
+          />
+        )}
       </WithDataWrapper>
 
       {shouldShowMapToggle ? (
@@ -906,9 +1002,7 @@ function ClubListContent({
       <ClubFiltersSheet
         filters={clubFilters}
         isVisible={filtersSheetVisible}
-        onApply={(filtresChoisis) => {
-          appDispatch({ payload: filtresChoisis, type: 'SET_CLUB_FILTERS' });
-        }}
+        onApply={appliquerFiltres}
         onClose={() => setFiltersSheetVisible(false)}
       />
     </View>

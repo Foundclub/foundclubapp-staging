@@ -110,7 +110,16 @@ jest.mock('@/components/molecules/clubCard/ClubCard', () => {
   const { Text } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { item }) => <Text>{`carte:${item?.name || ''}`}</Text>,
+    default: (/** @type {any} */ { href, item }) => (
+      <Text
+        testID={`carte-${item?.documentId || ''}`}
+        // L adresse de la fiche n est posee que si la liste en donne une.
+        // eslint-disable-next-line react/jsx-props-no-spreading
+        {...(href ? { accessibilityHint: href } : {})}
+      >
+        {`carte:${item?.name || ''}`}
+      </Text>
+    ),
   };
 });
 
@@ -137,6 +146,7 @@ jest.mock('@/components/atoms/emptyState/EmptyState', () => 'EmptyState');
 jest.mock('@/components/atoms/loader/Loader', () => 'Loader');
 jest.mock('@/components/atoms/searchMapFab/SearchMapFab', () => 'SearchMapFab');
 jest.mock('@/components/organisms/filtersSheet/ClubFiltersSheet', () => 'ClubFiltersSheet');
+jest.mock('@/components/organisms/filtersSheet/PastillesFiltresClub', () => 'PastillesFiltresClub');
 jest.mock(
   '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState',
   () => 'SearchResultsLoadingState',
@@ -254,15 +264,21 @@ const demonter = () => {
   monte = null;
 };
 
-const monter = async () => {
+/** @type {Record<string, any>} */
+let propsMontees = {};
+
+const monter = async (/** @type {Record<string, any>} */ props = {}) => {
   demonter();
+  propsMontees = props;
   await act(async () => {
-    monte = renderer.create(<ClubListContent />);
+    // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
+    monte = renderer.create(<ClubListContent {...props} />);
   });
 };
 
 const rendreDeNouveau = async () => {
-  await act(async () => { monte.update(<ClubListContent />); });
+  // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
+  await act(async () => { monte.update(<ClubListContent {...propsMontees} />); });
 };
 
 /**
@@ -486,35 +502,93 @@ describe('HAUT / D2 — la remontee ne doit RIEN faire a la pagination', () => {
   });
 });
 
-// D6 — decision d'Adel du 25/09 (« D6 B »). Le 23/09 il relevait : « il n'y a pas
-// de barre de recherche les villes ». Le sport et la ville vivaient DERRIERE le
-// bouton filtre. Ils se lisent desormais sous la barre, et un appui ouvre la
-// feuille — sur le telephone comme sur l'annuaire du site (meme ecran).
-describe('D6 — le sport et la ville se voient sans ouvrir la feuille', () => {
-  const resume = () => monte.root.findByProps({ testID: 'club-filtres-resume' });
+// D6 — decision d'Adel du 25/09 (« D6 B ») : le sport et la ville se voient sans ouvrir la feuille.
+// ANNUAIRE-E1 (maquette validee le 29/09) : la ligne-resume « Football · Lyon · 10 km » est devenue
+// DEUX pastilles, qui ouvrent chacune leur choix en un geste (PastillesFiltresClub, et ses libelles
+// sont verrouilles par PastillesFiltresClub.test.js). Le bouton filtre du champ, lui, reste.
+describe('D6 / ANNUAIRE-E1 — le sport et le lieu en deux pastilles sous le champ', () => {
+  const pastilles = () => monte.root.findByType('PastillesFiltresClub');
   const feuille = () => monte.root.findByType('ClubFiltersSheet');
 
-  test('📌 sans filtre, la ligne dit « Tous les sports · Toutes les villes »', async () => {
-    await monter();
-
-    expect(texteRendu()).toContain('Tous les sports · Toutes les villes');
-  });
-
-  test('✅ avec un sport et une ville, la ligne les nomme avec le rayon', async () => {
+  test('✅ les pastilles lisent les filtres de la recherche', async () => {
     mockEtat.filtres = { activity: 'sport-foot', city: { label: 'Lyon', value: '4.83|45.76' }, radius: 10 };
 
     await monter();
 
-    expect(texteRendu()).toContain('Football · Lyon · 10 km');
+    expect(pastilles().props.filters).toEqual(expect.objectContaining({
+      activity: 'sport-foot', city: { label: 'Lyon', value: '4.83|45.76' }, radius: 10,
+    }));
   });
 
-  test('✅ appuyer sur la ligne ouvre la feuille de filtres', async () => {
+  test('✅ un choix fait dans une pastille est appliqué tout de suite à la recherche', async () => {
     await monter();
+
+    await act(async () => { pastilles().props.onApply({ activity: 'sport-basket' }); });
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      payload: { activity: 'sport-basket' }, type: 'SET_CLUB_FILTERS',
+    });
+  });
+
+  test('📌 plus de ligne-resume ; le bouton filtre du champ ouvre toujours la feuille', async () => {
+    await monter();
+    expect(monte.root.findAllByProps({ testID: 'club-filtres-resume' })).toHaveLength(0);
     expect(feuille().props.isVisible).toBe(false);
 
-    await act(async () => { resume().props.onPress(); });
+    await act(async () => { mockChamp.props.openFilters(); });
 
     expect(feuille().props.isVisible).toBe(true);
+  });
+});
+
+// ANNUAIRE-E1 (29/09) — sur l'annuaire du site (`annuaire`), la liste defile AVEC la page : les
+// cartes sont posees a plat, la page suivante se demande au bouton « Voir plus », et chaque carte
+// est un lien vers sa fiche publique. Sans le drapeau, rien ne change (temoins ci-dessus).
+describe('ANNUAIRE-E1 — la liste de l annuaire du site', () => {
+  const SMUC = { documentId: 'abc', name: 'Stade Marseillais UC' };
+  const boutonVoirPlus = () => monte.root.findAll(
+    (noeud) => noeud.props?.accessibilityRole === 'button'
+      && typeof noeud.props?.onPress === 'function'
+      && noeud.findAll((enfant) => enfant.props?.children === 'Voir plus').length > 0,
+  );
+
+  test('✅ les cartes sont posees a plat : aucune liste virtualisee', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [club('Olympique'), club('Racing')] }] };
+
+    await monter({ annuaire: true });
+
+    expect(mockListe.props).toBeNull();
+    expect(texteRendu()).toContain('carte:Olympique');
+    expect(texteRendu()).toContain('carte:Racing');
+  });
+
+  test('✅ chaque carte recoit l adresse de sa fiche publique', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [SMUC] }] };
+
+    await monter({ annuaire: true });
+
+    expect(monte.root.findByProps({ testID: 'carte-abc' }).props.accessibilityHint)
+      .toBe('/annuaire/clubs/abc/stade-marseillais-uc/');
+  });
+
+  test('✅ « Voir plus » demande la page suivante, et elle seule', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [club('Olympique')] }] };
+
+    await monter({ annuaire: true });
+    expect(mockPageSuivanteListe).not.toHaveBeenCalled();
+    expect(boutonVoirPlus().length).toBeGreaterThan(0);
+
+    await act(async () => { boutonVoirPlus()[0].props.onPress(); });
+
+    expect(mockPageSuivanteListe).toHaveBeenCalledTimes(1);
+  });
+
+  test('📌 sans le drapeau, pas de lien sur la carte (le telephone ne change pas)', async () => {
+    mockEtat.pagesListe = { pages: [{ data: [SMUC] }] };
+
+    await monter();
+
+    expect(monte.root.findByProps({ testID: 'carte-abc' }).props.accessibilityHint).toBeUndefined();
   });
 });
 
@@ -544,7 +618,8 @@ describe('RECHERCHE-UNIQUE — un departement dans le champ Lieu', () => {
       department: 'bouches-du-rhone', q: undefined, region: undefined, sport: 'football',
     });
     expect(texteRendu()).toContain('carte:Club des Bouches');
-    expect(texteRendu()).toContain('Football · Bouches-du-Rhône');
+    // ANNUAIRE-E1 : le lieu se lit dans la pastille Lieu (« Bouches-du-Rhône ▾ »).
+    expect(monte.root.findByType('PastillesFiltresClub').props.filters.city).toEqual(BOUCHES);
   });
 
   test('✅ le nom tape cherche DANS le departement (q), pas dans la France entiere', async () => {

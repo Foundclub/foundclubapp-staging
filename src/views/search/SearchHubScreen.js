@@ -75,6 +75,9 @@ function SearchHubScreen({ navigation, route }) {
   // Le site n'a pas de carte publique : il eteint le bouton carte (Home.js natif
   // anonyme fait de meme). Absent, rien ne change.
   const enableMapMode = route?.params?.enableMapMode !== false;
+  // ANNUAIRE-E1 (29/09) — l'annuaire du site pose `annuaire: true` : pas d'en-tête de l'app, et
+  // une liste qui défile avec la page. Absent, rien ne change (le téléphone ne le pose jamais).
+  const annuaire = route?.params?.annuaire === true;
   const [activeType, setActiveType] = useState(requestedType);
   const [visitedTypes, setVisitedTypes] = useState(() => new Set([requestedType]));
   const [refreshSignals, setRefreshSignals] = useState({
@@ -180,6 +183,7 @@ function SearchHubScreen({ navigation, route }) {
       return (
         <EventListContent
           additionalFilters={DEFAULT_EVENT_FILTERS}
+          annuaire={annuaire}
           enableMapMode={enableMapMode}
           refreshSignal={refreshSignals.events}
           screenActive={activeType === 'events'}
@@ -191,6 +195,7 @@ function SearchHubScreen({ navigation, route }) {
     if (type === 'clubs') {
       return (
         <ClubListContent
+          annuaire={annuaire}
           enableMapMode={enableMapMode}
           refreshSignal={refreshSignals.clubs}
           screenActive={activeType === 'clubs'}
@@ -245,6 +250,7 @@ function SearchHubScreen({ navigation, route }) {
   }, [
     Colors,
     activeType,
+    annuaire,
     enableMapMode,
     initialRecruitmentTab,
     refreshSignals,
@@ -254,11 +260,13 @@ function SearchHubScreen({ navigation, route }) {
   return (
     <SearchScreenShell
       activeType={activeType}
+      annuaire={annuaire}
       navigation={navigation}
       onTypeChange={handleTypeChange}
       types={isRestricted ? allowedTypes : undefined}
     >
-      <View style={{ flex: 1 }}>
+      {/* Sur l'annuaire, la hauteur suit le contenu (la page défile) : pas de `flex: 1`. */}
+      <View style={annuaire ? null : { flex: 1 }}>
         {SEARCH_TAB_TYPES.map((type) => {
           if (!visitedTypes.has(type)) return null;
 
@@ -267,7 +275,7 @@ function SearchHubScreen({ navigation, route }) {
               key={type}
               pointerEvents={activeType === type ? 'auto' : 'none'}
               style={[
-                { flex: 1 },
+                annuaire ? null : { flex: 1 },
                 activeType === type ? null : { display: 'none' },
               ]}
             >
