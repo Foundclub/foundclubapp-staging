@@ -649,7 +649,16 @@ describe('le pied de page', () => {
     expect(navigate).toHaveBeenCalledWith('TrainingSessionNow', { sessionId: 'seance-9' });
   });
 
-  it('prend sa TROISIEME forme quand la journee est finie : la porte du carnet', () => {
+  /*
+   * RETOUR-ONGLET (c) — A22 de l'audit V1 (30/09). Ce temoin exigeait
+   * `seeMeasures|{"count":6}` : 6, c'est le nombre de mesures PREVUES par la journee
+   * (2 + 3 + 1), alors que la seance n'en porte que TROIS saisies. Il figeait donc le
+   * defaut lui-meme : apres « Terminer la journee » sans aucun test fait, le bouton
+   * promettait « Voir les 128 mesures au carnet »… et le carnet s'ouvrait VIDE
+   * (photographie, A22_seance-bloquee_3 et _4). Reecrit, pas supprime : la porte du
+   * carnet reste la troisieme forme du pied, c'est son CHIFFRE qui change.
+   */
+  it('prend sa TROISIEME forme quand la journee est finie : la porte du carnet, au nombre de mesures FAITES', () => {
     const navigate = jest.fn();
     const arbre = rendre({
       etat: avec(JOURNEE, { ...SEANCE, status: 'done' }),
@@ -657,9 +666,38 @@ describe('le pied de page', () => {
     });
     const bouton = boutonPrincipal(arbre);
 
-    expect(bouton.props.title).toBe('training.day.seeMeasures|{"count":6}');
+    // S10 x 2 + CMJ x 1 : trois mesures saisies — pas les six prevues.
+    expect(bouton.props.title).toBe('training.day.seeMeasures|{"count":3}');
     act(() => { bouton.props.onPress(); });
     expect(navigate).toHaveBeenCalledWith('TrainingLogbook');
+  });
+
+  it('journee finie SANS aucune mesure : « Ouvrir le carnet », jamais un chiffre invente', () => {
+    // Le cas exact d'A22 : « Terminer la journee » sans avoir fait un seul test.
+    // Le bouton reste (c'est la seule sortie du pied, et le carnet peut porter les
+    // mesures des seances d'avant), mais il ne promet plus rien qu'il ne tient pas.
+    const navigate = jest.fn();
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, results: [], status: 'done' }),
+      navigation: { navigate },
+    });
+    const bouton = boutonPrincipal(arbre);
+
+    expect(bouton.props.title).toBe('training.day.openLogbook');
+    act(() => { bouton.props.onPress(); });
+    expect(navigate).toHaveBeenCalledWith('TrainingLogbook');
+  });
+
+  it('une ligne d un AUTRE test que ceux de la journee ne compte pas', () => {
+    const arbre = rendre({
+      etat: avec(JOURNEE, {
+        ...SEANCE,
+        results: [{ test: { code: 'S10' } }, { test: { code: 'HORS' } }, { test: null }],
+        status: 'done',
+      }),
+    });
+
+    expect(boutonPrincipal(arbre).props.title).toBe('training.day.seeMeasures|{"count":1}');
   });
 });
 

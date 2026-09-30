@@ -39,16 +39,28 @@ const routesDe = (fichier) => {
   return new Set([...source.matchAll(/name=\{RouteNames\.(\w+)\}/g)].map((m) => m[1]));
 };
 
+/*
+ * RETOUR-ONGLET (30/09) — ce temoin figeait la forme d'appel A DEUX arguments, et il
+ * etait VERT sur le defaut A22 de l'audit V1 : en React Navigation 7, cette forme
+ * EMPILE un second `HomeTab` au lieu de revenir a celui qui est deja ouvert. Un espion
+ * ne voit pas l'etat : la preuve vit dans `allerDansLOnglet.pileRacine.test.js`, sur
+ * les vrais routeurs. Ce temoin-ci garde la FORME, desormais avec `pop` aux deux
+ * niveaux qui en ont besoin (la racine, et la pile de l'onglet).
+ */
 describe('la forme imbriquee', () => {
-  it('nomme le chemin complet : onglet d accueil, puis la pile, puis l ecran', () => {
+  it('nomme le chemin complet et REVIENT a ce qui est deja ouvert (pop), sans empiler', () => {
     const navigation = { navigate: jest.fn() };
 
     allerDansLOnglet(navigation, RouteNames.TrainingSessionNow, { sessionId: 'abc' });
 
-    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
-      params: { params: { sessionId: 'abc' }, screen: RouteNames.TrainingSessionNow },
-      screen: RouteNames.Search,
-    });
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      RouteNames.HomeTab,
+      {
+        params: { params: { sessionId: 'abc' }, pop: true, screen: RouteNames.TrainingSessionNow },
+        screen: RouteNames.Search,
+      },
+      { pop: true },
+    );
   });
 
   it('accepte un ecran sans parametre', () => {
