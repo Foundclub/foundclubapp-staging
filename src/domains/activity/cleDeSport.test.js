@@ -1,13 +1,14 @@
 import {
   cleDeSport,
   compacterNomDeSport,
-  NOMS_OFFICIELS,
   nomOfficielDeSport,
+  NOMS_OFFICIELS,
   regrouperLesSports,
 } from './cleDeSport';
 
-// SPORTS-DOUBLONS (01/10/2026) — la règle « un sport = une clé » côté app. Sa parité avec le serveur
-// est prouvée côté admin (`tests/authz/SPORTS-DOUBLONS-2-parite-app.test.js`, qui lit ce module).
+// SPORTS-DOUBLONS (01/10/2026) — la règle « un sport = une clé » côté app. Sa parité avec le
+// serveur est prouvée côté admin (`tests/authz/SPORTS-DOUBLONS-2-parite-app.test.js`, qui lit
+// ce module).
 
 describe('cleDeSport — un sport, une clé', () => {
   it('les 4 doublons de la base ont une seule clé', () => {
@@ -47,10 +48,11 @@ describe('regrouperLesSports — un groupe par clé, représenté par la ligne a
     ]);
     expect(groupes.map(({ nom }) => nom)).toEqual(['Volleyball', 'Football']);
     expect(groupes[0].representant.documentId).toBe('a-volleyball');
-    expect(groupes[0].membres.map((sport) => sport.documentId)).toEqual(['a-volley', 'a-volleyball']);
+    expect(groupes[0].membres.map((sport) => sport.documentId))
+      .toEqual(['a-volley', 'a-volleyball']);
   });
 
-  it('sans ligne au nom officiel : le nom officiel quand même, la première ligne en représentant', () => {
+  it('sans ligne au nom officiel : ce nom quand même, la première ligne en représentant', () => {
     const [groupe] = regrouperLesSports([{ documentId: 'a-equit', name: 'Equitation' }]);
     expect(groupe.nom).toBe('Équitation');
     expect(groupe.representant.documentId).toBe('a-equit');

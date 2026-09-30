@@ -225,9 +225,11 @@ describe('ChoixDuSport — un sport en double dans la base n’apparaît qu’un
     expect(onChoisir).toHaveBeenCalledWith('Canoë-kayak');
   });
 
-  it('un choix rangé sous l’autre ligne (« Volley ») coche « Volleyball », et le décocher le retire', async () => {
+  it('un choix rangé sous « Volley » coche « Volleyball », et le décocher le retire', async () => {
     const onChoisir = jest.fn();
-    const tree = await rendreAvecDoublons({ multiple: true, onChoisir, valeurs: ['a-volley-court'] });
+    const tree = await rendreAvecDoublons({
+      multiple: true, onChoisir, valeurs: ['a-volley-court'],
+    });
     expect(lignesDeSport(tree)[0]).toBe('Volleyball');
     await chercherUnSport(tree, 'volleyball');
     expect(ligneHote(tree, 'Volleyball').props['aria-checked']).toBe(true);

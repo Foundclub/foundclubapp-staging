@@ -2,10 +2,9 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { compacterNomDeSport, regrouperLesSports } from '@/domains/activity/cleDeSport';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
-
-import { compacterNomDeSport, regrouperLesSports } from '@/domains/activity/cleDeSport';
 
 import Input from '@/components/molecules/input/Input';
 
@@ -29,9 +28,9 @@ export { compacterNomDeSport };
  *
  * SPORTS-DOUBLONS (01/10/2026) — les doublons de la base (« Volley » / « Volleyball », « Echecs » /
  * « Échecs », « Equitation » / « Équitation », « Canoë-Kayak » / « Canoë-kayak ») ne font plus
- * qu'UNE ligne, sous le nom officiel (`domains/activity/cleDeSport.js`). La ligne rend l'identifiant
- * de la ligne au nom officiel, ou ce nom ; le serveur ramène les clubs des deux lignes tant que la
- * base n'est pas fusionnée (admin `search/services/sport-key.ts`).
+ * qu'UNE ligne, sous le nom officiel (`domains/activity/cleDeSport.js`). La ligne rend
+ * l'identifiant de la ligne au nom officiel, ou ce nom ; le serveur ramène les clubs des deux
+ * lignes tant que la base n'est pas fusionnée (admin `search/services/sport-key.ts`).
  */
 
 // ponytail: une liste écrite à la main (décision d'Adel) ; voie de sortie = la trier par les

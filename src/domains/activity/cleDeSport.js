@@ -45,11 +45,13 @@ export const cleDeSport = (nom) => {
 };
 
 /**
+ * Le nom à afficher et à envoyer : « Volley » devient « Volleyball ».
  * @param {unknown} nom Un nom de sport.
  * @returns {string} Le nom officiel de sa clé, sinon le nom tel quel.
  */
 export const nomOfficielDeSport = (nom) => (
-  NOMS_OFFICIELS[/** @type {keyof typeof NOMS_OFFICIELS} */ (cleDeSport(nom))] || String(nom ?? '').trim()
+  NOMS_OFFICIELS[/** @type {keyof typeof NOMS_OFFICIELS} */ (cleDeSport(nom))]
+  || String(nom ?? '').trim()
 );
 
 /**
