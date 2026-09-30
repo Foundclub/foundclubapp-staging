@@ -1887,13 +1887,22 @@ function ClubDetails({ navigation, route }) {
     : 40;
   // ANNUAIRE-E1 — sur l'annuaire du site, la fiche n'a plus d'écran à elle : « en bas » veut dire
   // en bas de la FENÊTRE (fixé), et, sur grand écran, une colonne à droite qui suit la page.
+  // FINITIONS5 (tournee 7, defaut 5) — sur le telephone, le pied flottait SANS
+  // FOND : deux « Demande en attente » desactives (opacite 0,7 x 0,5) laissaient
+  // lire « Sports / Football » au travers. Le pied porte desormais un fond, du
+  // haut des boutons au bas de l'ecran — la recette du pied de l'annuaire du
+  // site ci-dessous (`primary900` a 0,92). Les boutons ne bougent pas : le
+  // retrait bas devient une marge interieure.
   let styleDuPiedDesActions = [
     Alignments.absolute,
     Spaces.gap[12],
     {
-      bottom: floatingClubActionsBottomInset,
+      backgroundColor: withAlpha(Colors.primary900, 0.92),
+      bottom: 0,
       elevation: 24,
       left: 0,
+      paddingBottom: floatingClubActionsBottomInset,
+      paddingTop: 12,
       right: 0,
       zIndex: 24,
     },
@@ -1924,11 +1933,15 @@ function ClubDetails({ navigation, route }) {
     shadowOpacity: 0.24,
     shadowRadius: 16,
   };
+  // FINITIONS5 (tournee 7, defaut 5) — « Interesse par le club » etait ecrit
+  // en tout petit. `paddingVertical: 14` dans une boite de 52 (bordure 1) ne
+  // laissait que 22 points au libelle, pour une ligne de 23 : Android RETRECIT
+  // alors la police (`adjustsFontSizeToFit` du bouton) jusqu'a l'illisible. Le
+  // bouton centre deja son libelle : la marge ne servait a rien.
   const floatingClubInterestButtonStyle = {
     backgroundColor: Colors.primary900,
     borderRadius: 20,
     minHeight: 52,
-    paddingVertical: 14,
   };
 
   const canAccessSharedPlanning = useMemo(() => (

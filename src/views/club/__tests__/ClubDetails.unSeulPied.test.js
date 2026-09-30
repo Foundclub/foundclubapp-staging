@@ -659,3 +659,66 @@ describe('Z01 · temoin 6 — la reserve basse compte tous les boutons', () => {
     expect(reserveBasseDuDefilement(arbre)).toBe(RESERVE_SANS_BOUTON);
   });
 });
+
+// FINITIONS5 (tournee 7, defaut 5) — fiche de Montrivage FC sur le telephone :
+// deux « Demande en attente » laissaient lire « Sports / Football » AU TRAVERS
+// (boutons desactives : opacite 0,7 x 0,5), et « Interesse par le club » etait
+// ecrit en tout petit.
+//
+// ⚠️ `react-test-renderer` ne calcule aucune mise en page : ces temoins tiennent
+// l'ARITHMETIQUE, comme le temoin 6 tient celle de la reserve basse.
+describe('FINITIONS5 · le pied ne laisse plus voir la fiche, et ses libelles restent lisibles', () => {
+  const { StyleSheet } = jest.requireActual('react-native');
+  const couleurs = jest.requireActual('@/theme/colors').default();
+  const stylesDeLApp = jest.requireActual('@/theme/applicationStyle').default(couleurs);
+  const polices = jest.requireActual('@/theme/fonts').default(couleurs);
+
+  /**
+   * La hauteur laissee au libelle d'un bouton : c'est elle qu'Android compare a
+   * la hauteur d'une ligne avant de RETRECIR la police (`adjustsFontSizeToFit`).
+   * @param {any} bouton - L'instance du bouton (ses props).
+   * @returns {number} La place du texte, en points.
+   */
+  const placeDuLibelle = (bouton) => {
+    const variante = bouton.props.variant || 'Primary';
+    const boite = StyleSheet.flatten([stylesDeLApp[`button${variante}`], bouton.props.style]);
+    const hauteur = Math.max(boite.height || 0, boite.minHeight || 0);
+    const haut = boite.paddingTop ?? boite.paddingVertical ?? boite.padding ?? 0;
+    const bas = boite.paddingBottom ?? boite.paddingVertical ?? boite.padding ?? 0;
+    return hauteur - haut - bas - (2 * (boite.borderWidth || 0));
+  };
+
+  const boutonNomme = (arbre, titre) => tousLesBoutons(arbre).find((bouton) => bouton.props.title === titre);
+
+  it('le pied a un FOND, du haut des boutons jusqu’en bas de l’écran', () => {
+    devenirEntraineur();
+    mockClubQuery.data = CLUB_AVEC_EQUIPE;
+    const arbre = monter();
+    const pied = arbre.root.findAll((noeud) => noeud.props?.testID === PIED_ACTIONS)[0];
+    const style = StyleSheet.flatten(pied.props.style);
+
+    expect(style.backgroundColor).toBeTruthy();
+    expect(style.backgroundColor).not.toBe('transparent');
+    expect(style.bottom).toBe(0);
+    // Les boutons ne bougent pas : ils restent a la meme hauteur qu'avant.
+    expect(style.paddingBottom).toBe(RESERVE_BASSE);
+  });
+
+  it('« Intéressé par le club » a la place d’une ligne entière (Android ne rétrécit plus)', () => {
+    devenirEntraineur();
+    mockClubQuery.data = CLUB_AVEC_EQUIPE;
+    const arbre = monter();
+    const bouton = boutonNomme(arbre, 'Intéressé par le club');
+
+    expect(bouton).toBeTruthy();
+    expect(placeDuLibelle(bouton)).toBeGreaterThanOrEqual(polices.p1Bold.lineHeight);
+  });
+
+  it('même règle pour « Prévenez-moi quand ce club arrive », qui partage ce style', () => {
+    const arbre = monter();
+    const bouton = boutonNomme(arbre, 'Prévenez-moi quand ce club arrive');
+
+    expect(bouton).toBeTruthy();
+    expect(placeDuLibelle(bouton)).toBeGreaterThanOrEqual(polices.p1Bold.lineHeight);
+  });
+});
