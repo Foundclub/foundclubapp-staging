@@ -35,6 +35,9 @@ import UserDetails from '../UserDetails';
 let mockAuthValue;
 /** @type {any} */
 let mockPersonalStats;
+/** Le profil d'un AUTRE compte, tel que `GET /firebase-auth/:id` le rend. */
+/** @type {any} */
+let mockFetchedUser;
 /** @type {any[]} */
 let mockMyHistories = [];
 const mockNavigate = jest.fn();
@@ -106,7 +109,7 @@ jest.mock('@/domains/places/usePlaces', () => ({
 
 jest.mock('@/services/auth/authQueries', () => ({
   useGetUserById: () => ({
-    data: undefined, error: undefined, isLoading: false, refetch: jest.fn(),
+    data: mockFetchedUser, error: undefined, isLoading: false, refetch: jest.fn(),
   }),
 }));
 
@@ -450,6 +453,7 @@ const VUE_RETOURS = { userId: 'user-joueur', view: 'coachFeedback' };
 beforeEach(() => {
   jest.clearAllMocks();
   mockPersonalStats = undefined;
+  mockFetchedUser = undefined;
   mockMyHistories = [];
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
@@ -677,5 +681,107 @@ describe('PROFIL-JOUEUR · A19 — « Retours du coach » s\'ouvre sur les retou
 
     expect(adresse.pathname).toBe('/users/user-joueur');
     expect(readWebQueryParams(adresse.searchParams).view).toBe('coachFeedback');
+  });
+});
+
+// PARENT-RETOURS (Adel, 30/09, « parent B ») — le parent DECLARE d'un joueur MINEUR lit
+// les retours du coach de son enfant. Une entree sur le profil de l'enfant ouvre CETTE
+// vue, sur l'enfant : meme ecran, meme bloc `CoachFeedbackList`.
+// Le serveur (admin `firebase-auth.ts` getPersonalStats) ne rend au parent QUE les
+// retours : l'ecran ne doit donc pas afficher des zeros a la place des statistiques.
+// Le lien et l'age viennent du profil public (`parentAccount`, `age`) ; le serveur
+// reste le seul juge — l'ecran ne fait que ne pas proposer ce qui serait refuse.
+describe('PARENT-RETOURS — le parent d\'un mineur lit les retours du coach de son enfant', () => {
+  /**
+   * Le compte de l'enfant, tel que le profil public le rend.
+   * @param {object} [surcharge]
+   * @returns {any}
+   */
+  const enfant = (surcharge = {}) => ({
+    age: 15,
+    documentId: 'user-enfant',
+    firstname: 'Léa',
+    lastname: 'Lemaire',
+    parentAccount: { documentId: 'user-parent' },
+    role: { name: 'Joueur' },
+    ...surcharge,
+  });
+  const VUE_RETOURS_ENFANT = { userId: 'user-enfant', view: 'coachFeedback' };
+  /** La reponse REDUITE que le serveur rend au parent. */
+  const statsDuParent = { recentCoachFeedback: retours, userDocumentId: 'user-enfant' };
+
+  /**
+   * L'entree « Retours du coach » de la fiche de l'enfant.
+   * @param {any} arbre
+   * @returns {any}
+   */
+  const entreeRetours = (arbre) => arbre.root
+    .findAllByType(TouchableOpacity)
+    .find((/** @type {any} */ noeud) => String(noeud.props.accessibilityLabel || '')
+      .startsWith('Voir les retours du coach'));
+
+  it('sur la fiche de son enfant mineur, l\'entrée ouvre la vue des retours SUR L\'ENFANT', async () => {
+    mockFetchedUser = enfant();
+    mockPersonalStats = statsDuParent;
+    const arbre = await rendre(parent, { userId: 'user-enfant' });
+
+    const entree = entreeRetours(arbre);
+    expect(entree).toBeDefined();
+    await act(async () => {
+      entree.props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.UserDetails, VUE_RETOURS_ENFANT);
+  });
+
+  it('la vue liste les retours de l\'enfant, et dit de qui il s\'agit', async () => {
+    mockFetchedUser = enfant();
+    mockPersonalStats = statsDuParent;
+    const arbre = await rendre(parent, VUE_RETOURS_ENFANT);
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('RETOURS DU COACH');
+    expect(texte).toContain('Léa Lemaire');
+    expect(texte).toContain('Match U15 contre ES Val');
+    expect(texte).toContain('7/10');
+    expect(texte).toContain('Bon placement, pense a parler davantage a ta defense.');
+    // Une lecture : ni le formulaire, ni ses boutons.
+    expect(texte).not.toContain('Enregistrer');
+  });
+
+  it('sur la fiche, les statistiques ne s\'affichent pas en zéros : elles restent à l\'enfant', async () => {
+    mockFetchedUser = enfant();
+    mockPersonalStats = statsDuParent;
+    const arbre = await rendre(parent, { userId: 'user-enfant' });
+
+    expect(texteVisible(arbre))
+      .toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
+  });
+
+  it('enfant MAJEUR : ni entrée, ni vue — le lien parental s\'éteint à 18 ans', async () => {
+    mockFetchedUser = enfant({ age: 19 });
+    mockPersonalStats = statsDuParent;
+    const arbre = await rendre(parent, VUE_RETOURS_ENFANT);
+
+    expect(entreeRetours(arbre)).toBeUndefined();
+    expect(texteVisible(arbre)).not.toContain('Bon placement');
+  });
+
+  it('un autre adulte : ni entrée, ni vue, même avec le paramètre dans l\'adresse', async () => {
+    mockFetchedUser = enfant({ parentAccount: { documentId: 'un-autre-parent' } });
+    mockPersonalStats = statsDuParent;
+    const arbre = await rendre(parent, VUE_RETOURS_ENFANT);
+
+    expect(entreeRetours(arbre)).toBeUndefined();
+    expect(texteVisible(arbre)).not.toContain('Bon placement');
+  });
+
+  it('âge inconnu : ni entrée, ni vue — la minorité ne se prouve pas', async () => {
+    mockFetchedUser = enfant({ age: null });
+    mockPersonalStats = statsDuParent;
+    const arbre = await rendre(parent, VUE_RETOURS_ENFANT);
+
+    expect(entreeRetours(arbre)).toBeUndefined();
+    expect(texteVisible(arbre)).not.toContain('Bon placement');
   });
 });

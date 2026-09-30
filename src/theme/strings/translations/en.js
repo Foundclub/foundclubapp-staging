@@ -11207,10 +11207,21 @@ export default {
     },
   },
   myChildren: {
+    accounts: {
+      cancel: 'Cancel',
+      empty: 'Is your child 13 or older with their own account? Link it to yours:'
+        + " you'll see their coach's feedback, never their messages.",
+      link: "Link my child's account",
+      open: 'See their profile',
+      pending: 'Request sent to the number ending in {{hint}}.',
+      pendingForChild: 'Request sent to the number ending in {{hint}} (for {{firstname}}).',
+      title: "My children's accounts",
+    },
     actions: {
       add: 'Add a child',
       delete: 'Delete',
       edit: 'Edit',
+      giveAccount: 'Give {{firstname}} an account',
       searchClub: 'Find a club for {{firstname}}',
     },
     confirmDelete: {
@@ -11254,6 +11265,7 @@ export default {
       count_other: '{{count}} children registered',
       empty: "You haven't registered a child yet.",
       emptyHint: 'Register them here, then find them a club. You can add as many as you like.',
+      hasAccount: '{{firstname}} has their own account.',
       hint: "You register your children from YOUR account: under 13, they don't have their own account.",
       noTeam: 'No team yet',
       title: 'My children',
@@ -11929,6 +11941,67 @@ export default {
     description: 'This profile belongs to a child under 15. To continue, you must confirm that you are their parent or legal guardian.',
     title: 'Parental declaration required',
   },
+  parentLink: {
+    child: {
+      accept: 'Accept',
+      emptyHint: 'If your parent sends you a request from their account, it will show up here.',
+      errors: {
+        alreadyLinked: 'Your account is already linked to a parent. Remove that link before accepting another one.',
+        closed: 'This request is no longer valid.',
+        generic: "Can't answer right now.",
+        notEligible: 'Only an account aged 13 to 17 can be linked to a parent. Check your date of birth.',
+      },
+      linkedTo: 'Your account is linked to',
+      noParent: 'No parent is linked to your account.',
+      refuse: 'Decline',
+      requestFrom: '{{name}} asks to link your account to theirs, as your parent.',
+      title: 'My parent',
+      unlink: 'Remove the link',
+      unlinkConfirm: {
+        cancel: 'Cancel',
+        confirm: 'Remove',
+        message: "{{name}} won't see your coach's feedback anymore. You can accept a new request later.",
+        title: 'Remove the link?',
+      },
+      whatParentSees: "A parent linked to your account sees your coach's feedback. They never see your messages."
+        + ' You can remove the link whenever you want.',
+    },
+    invite: {
+      declaration: 'You confirm you are their parent or legal guardian.'
+        + ' This declaration is recorded with your request.',
+      declarationTitle: 'Parental declaration',
+      done: 'Back to My children',
+      errors: {
+        adult: '{{firstname}} is an adult: they manage their own account.',
+        ageRequired: "Add your date of birth in your profile to link a child's account.",
+        alreadyHasAccount: '{{firstname}} already has an account.',
+        declaration: 'Tick the parental declaration to continue.',
+        generic: "Can't send the request right now.",
+        notAdult: "Only an adult can link a child's account.",
+        phone: 'This number is not valid.',
+        self: "That's your own number.",
+        tooMany: 'Too many requests: try again in an hour.',
+        tooYoung: '{{firstname}} will get an account at 13.',
+      },
+      hint: "Enter your child's number (13 to 17). They get your request in their app"
+        + ' and they are the one who accepts it: nothing is linked without their consent.',
+      hintForChild: '{{firstname}} creates their account with this number (code sent by text). Your request will wait,'
+        + ' and {{firstname}} is the one who accepts it: nothing is linked without their consent.',
+      phoneLabel: "Your child's phone number",
+      phonePlaceholder: '06 12 34 56 78',
+      sendSms: 'Let {{firstname}} know by text',
+      sentBody: 'If this number belongs to a FoundClub account aged 13 to 17, your child will see'
+        + ' your request and can accept it. Otherwise it will wait 30 days, while they create'
+        + ' their account with this number.',
+      sentTitle: 'Request sent',
+      smsMessage: "I've set up a FoundClub account for you. Install the app and sign in with this number: {{url}}",
+      submit: 'Send the request',
+      title: "Link my child's account",
+      titleForChild: 'Give {{firstname}} an account',
+      whatYouSee: "Once linked, you see their coach's feedback. You never see their messages,"
+        + ' and they can remove the link whenever they want. At 18, the link ends.',
+    },
+  },
   participantEventList: {
     addAnEvent: 'Add an event',
     anErrorOccurred: 'An error occurred.',
@@ -12537,6 +12610,7 @@ export default {
       myCard: 'My collector card',
       myChildren: 'My children',
       myLicenses: 'My fees',
+      myParent: 'My parent',
       myTeams: 'My teams',
       previewPublic: 'See my profile as others do',
       save: 'Continue',
@@ -18485,6 +18559,7 @@ export default {
       empty: 'No individual feedback from the coach yet.',
       matchFallback: 'Match',
       noComment: 'No detailed comment for this feedback.',
+      openForChild: "See the coach's feedback for {{firstname}}",
     },
     fields: {
       address: 'Address',

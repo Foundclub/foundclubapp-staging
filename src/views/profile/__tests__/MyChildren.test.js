@@ -264,3 +264,122 @@ test('P2/7 ⑦ « chercher un club » emmène la recherche AVEC l\'enfant visé'
     { pop: true },
   );
 });
+
+// ===========================================================================
+// PARENT-LIEN (30/09, « lien B » d'Adel) — « LES COMPTES DE MES ENFANTS »
+//
+// Une rangée par ado RELIÉ (il a accepté depuis son compte) : elle ouvre SON profil, où vit
+// « Retours du coach ». Et les deux portes vers le lien : « Relier le compte de mon enfant »
+// (13-17 ans qui a déjà son compte) et F20 « Donner un compte à Léa » sur la fiche d'un enfant
+// qui a 13 ans.
+// ===========================================================================
+
+/** @type {any} */
+let mockLiens;
+const mockAnnuler = jest.fn();
+
+jest.mock('@/services/parentLink/parentLinkQueries', () => ({
+  useCancelParentLink: () => ({ isPending: false, mutate: mockAnnuler }),
+  useParentLinksAsParent: () => ({ data: mockLiens, error: undefined, isLoading: false }),
+}));
+
+/**
+ * Le premier élément pressable dont le texte contient `libelle`.
+ * @param {any} arbre - L'arbre rendu.
+ * @param {string} libelle - Le texte cherché.
+ * @returns {any} Le nœud, ou undefined.
+ */
+const pressable = (arbre, libelle) => arbre.root.findAll((/** @type {any} */ noeud) => (
+  typeof noeud.props?.onPress === 'function'
+  && aplatirTexte(noeud.props?.children).includes(libelle)
+))[0];
+
+describe('PARENT-LIEN — les comptes de mes enfants', () => {
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+  });
+
+  // ① — avec la porte « Relier le compte de mon enfant ».
+  test('LIEN ① la section existe même sans aucune fiche', async () => {
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Les comptes de mes enfants');
+    expect(texte).toContain('Relier le compte de mon enfant');
+
+    await act(async () => { pressable(arbre, 'Relier le compte de mon enfant').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('ParentLinkInvite', undefined);
+  });
+
+  // ② — c'est sur SON profil que vit « Retours du coach ».
+  test('LIEN ② une rangée par ado RELIÉ, qui ouvre SON profil', async () => {
+    mockLiens = {
+      children: [{
+        age: 15,
+        avatar: null,
+        documentId: 'ado-1',
+        firstname: 'Inès',
+        lastname: 'Martin',
+      }],
+      requests: [],
+    };
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Inès Martin');
+    expect(texte).toContain('15 ans');
+
+    await act(async () => { pressable(arbre, 'Inès Martin').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('UserDetails', { userId: 'ado-1' });
+  });
+
+  // ③ — sur la fiche d un enfant de 13 ans SANS compte.
+  test('LIEN ③ F20 : « Donner un compte à Léa »', async () => {
+    mockEnfants = [unEnfant({ age: 13 })];
+    const arbre = await rendre();
+
+    const bouton = pressable(arbre, 'Donner un compte à Léa');
+    expect(bouton).toBeTruthy();
+    await act(async () => { bouton.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('ParentLinkInvite', {
+      childDocumentId: 'enfant-1',
+      childFirstname: 'Léa',
+    });
+  });
+
+  // ④ — ni avant 13 ans, ni quand la fiche a déjà son compte.
+  test('LIEN ④ la porte F20 n existe pas partout', async () => {
+    mockEnfants = [
+      unEnfant({ age: 9 }),
+      unEnfant({
+        account: { documentId: 'ado-2' },
+        age: 14,
+        documentId: 'enfant-2',
+        firstname: 'Tom',
+      }),
+    ];
+    const texte = texteVisible(await rendre());
+
+    expect(texte).not.toContain('Donner un compte à Léa');
+    expect(texte).not.toContain('Donner un compte à Tom');
+    expect(texte).toContain('Tom a son propre compte.');
+  });
+
+  test('LIEN ⑤ une demande envoyée se voit (sans rien dire du numéro), et s annule', async () => {
+    mockLiens = {
+      children: [],
+      requests: [{
+        declaredChild: { documentId: 'enfant-1', firstname: 'Léa' },
+        documentId: 'dem-1',
+        phoneHint: '78',
+        state: 'pending',
+      }],
+    };
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Demande envoyée au numéro finissant par 78 (pour Léa).');
+    await act(async () => { pressable(arbre, 'Annuler').props.onPress(); });
+    expect(mockAnnuler).toHaveBeenCalledWith('dem-1');
+  });
+});

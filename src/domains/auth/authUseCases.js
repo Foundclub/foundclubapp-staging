@@ -1248,6 +1248,9 @@ export const NOTIFICATION_TYPES = {
   FEATURED_REQUEST: 'featuredRequest',
   NEW_PARTICIPATION: 'newParticipation',
   OVERBOOKING_REQUEST: 'overbookingRequest',
+  // PARENT-LIEN (30/09) — « Un parent demande a relier ton compte au sien ». Jumeau serveur :
+  // admin/src/api/user-fcm-token/types/index.ts (PARENT_LINK_REQUEST).
+  PARENT_LINK_REQUEST: 'parentLinkRequest',
   PARTICIPATION_REQUEST: 'participationRequest',
   RESERVATION_COMPLETE: 'reservationComplete',
   RESERVATION_PLAYER_JOINED: 'reservationPlayerJoined',
