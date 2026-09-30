@@ -22,6 +22,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetRoles } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
 
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
+
 /**
  * User type selection screen component. Let users to select their role
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -59,12 +61,21 @@ function UserRole({ navigation }) {
   }, [userData?.role?.documentId]);
 
   const updateUserMutation = useMutation({
+    // FINITIONS5 (tournee 7, defaut 8) — UNE SEULE VOIX, EN FRANCAIS. La recette
+    // lisait deux alertes pour un meme refus : celle-ci (« Failed to update user
+    // data: Requested role is not allowed », le message brut du serveur), puis
+    // celle du gestionnaire global des mutations (« Acces refuse. »). L'ecran
+    // parle seul : la traduction du refus quand il en a une, sinon sa phrase.
+    meta: { preventToastError: true },
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert(t('userRole.alerts.updateError.title', 'Erreur'), error?.message || t(
-        'userRole.alerts.updateError.message',
-        'Impossible de mettre à jour ton profil.',
-      ));
+      Alert.alert(
+        t('userRole.alerts.updateError.title', 'Erreur'),
+        getApiErrorTranslation(error) || t(
+          'userRole.alerts.updateError.message',
+          'Impossible de mettre à jour ton profil.',
+        ),
+      );
     },
     onSuccess: async () => {
       // Rafraichir le profil AVANT de naviguer : sinon les etapes suivantes sont
@@ -79,10 +90,6 @@ function UserRole({ navigation }) {
       navigation.navigate(RouteNames.UserName);
     },
   });
-
-  const handleNext = () => {
-    updateUserMutation.mutate({ role });
-  };
 
   /**
    * Handle the selection of the user type
@@ -99,6 +106,18 @@ function UserRole({ navigation }) {
   // PARENT (2026-09-02) — le 4e choix : « un compte parent dans les roles ».
   // Il n apparait que si le serveur porte ce role (liste `/users-permissions/roles`).
   const parentRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.parent);
+  // FINITIONS5 (tournee 7, defaut 8) — « Continuer » ne part qu'avec un role
+  // COCHE. `role` demarre sur le role ACTUEL du compte : pour un compte neuf,
+  // c'est le role provisoire (« Authenticated »), qu'aucune case ne montre.
+  // Il n'etait pas vide, donc le bouton restait actif et l'envoyait — 403.
+  const hasChosenRole = [playerRoleId, coachRoleId, presidentRoleId, parentRoleId]
+    .filter(Boolean)
+    .includes(role);
+
+  const handleNext = () => {
+    if (!hasChosenRole) return;
+    updateUserMutation.mutate({ role });
+  };
 
   if (userDataLoading) {
     return (
@@ -220,7 +239,7 @@ function UserRole({ navigation }) {
         </WithDataWrapper>
       </ScrollView>
       <Button
-        disabled={!role}
+        disabled={!hasChosenRole}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         style={[Spaces.marginTop[24]]}

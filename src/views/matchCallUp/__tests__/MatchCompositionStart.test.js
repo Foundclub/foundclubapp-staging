@@ -307,6 +307,37 @@ describe('D79 ecran 4 — l ecran et ses 3 rangees', () => {
 
     expect(texteVisible(arbre)).toContain('La compo de samedi 8 août, telle quelle.');
   });
+
+  // FINITIONS5 (tournee 7, defaut 1) — la recette lisait « Dernier match ·
+  // 2026-10-10T16:00:00.000Z » : la date BRUTE du serveur collee au titre, alors
+  // que le sous-titre la dit deja en toutes lettres.
+  const repriseDu3059 = (/** @type {string} */ playerId) => ({
+    teamComposition: {
+      bootstrap: {
+        composition: { teams: [{ placements: [{ playerId, positionX: 50, positionY: 90 }] }] },
+        event: { date: '2026-10-10T16:00:00.000Z' },
+        source: 'last_match',
+      },
+    },
+  });
+
+  test('FINITIONS5 · « Dernier match » ne montre JAMAIS la date brute du serveur', async () => {
+    const arbre = await rendre(repriseDu3059('p0'));
+    const texte = texteVisible(arbre);
+
+    expect(texte).not.toContain('2026-10-10');
+    expect(texte).not.toContain('T16:00');
+    expect(texte).toContain('La compo de samedi 10 octobre, telle quelle.');
+  });
+
+  test('FINITIONS5 · grisee (aucun convoque du match repris), la rangee ne la montre pas non plus', async () => {
+    const arbre = await rendre(repriseDu3059('joueur-parti'));
+    const texte = texteVisible(arbre);
+
+    expect(rangee(arbre, 'Dernier match').props.accessibilityState.disabled).toBe(true);
+    expect(texte).toContain('Aucune compo déjà publiée à reprendre.');
+    expect(texte).not.toContain('2026-10-10');
+  });
 });
 
 describe('D79 ecran 4 — l aimantation suit le point de depart', () => {

@@ -238,10 +238,14 @@ function MatchCompositionStart() {
               🎁 LOT TERRAIN — une rangee de compo type porte son NOM PROPRE
               (« 4-3-3 », « Réception en W ») : il vient du catalogue, pas d'une
               cle de traduction, parce qu'un schema de jeu ne se traduit pas. */}
+          {/* FINITIONS5 (T7, defaut 1) — le `detail` de « Dernier match » est
+              une DATE ISO du serveur : la recette lisait « Dernier match ·
+              2026-10-10T16:00:00.000Z ». Elle se dit en toutes lettres dans le
+              sous-titre (`optionSubtitle`), jamais brute dans le titre. */}
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
             {[
               option.title || t(`matchComposition.start.options.${option.key}.title`),
-              option.detail,
+              option.key === START_FROM_LAST_MATCH ? '' : option.detail,
             ].filter(Boolean).join(' · ')}
           </Text>
           {/* `String(…)` et non le retour brut : avec des parametres,

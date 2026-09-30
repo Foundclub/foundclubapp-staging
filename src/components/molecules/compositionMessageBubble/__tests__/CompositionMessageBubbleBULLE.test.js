@@ -53,6 +53,12 @@ const mockServeur = {
   refus: null,
   reponse: 'pending',
   requireResponse: true,
+  /**
+   * FINITIONS5 — « Les participants repondent » de l evenement. `undefined` =
+   * un serveur d avant FINITIONS5, qui ne le joint pas.
+   * @type {boolean | undefined}
+   */
+  rsvpEnabled: undefined,
   version: 2,
 };
 
@@ -126,7 +132,12 @@ jest.mock('@/services/event/eventService', () => ({
         },
         team: { documentId: 'team-1', name: 'Aix-Perd en Buvette' },
       }],
-      event: { date: '2099-06-14T16:00:00.000Z', documentId: 'evt-1', name: '' },
+      event: {
+        date: '2099-06-14T16:00:00.000Z',
+        documentId: 'evt-1',
+        name: '',
+        ...(mockServeur.rsvpEnabled === undefined ? {} : { rsvpEnabled: mockServeur.rsvpEnabled }),
+      },
     });
   }),
   missingEvent: jest.fn(() => Promise.resolve({})),
@@ -336,6 +347,7 @@ beforeEach(() => {
   mockServeur.refus = null;
   mockServeur.reponse = 'pending';
   mockServeur.requireResponse = true;
+  mockServeur.rsvpEnabled = undefined;
   mockServeur.version = 2;
   mockFocus.valeur = true;
   rendusDuMur.length = 0;
@@ -543,6 +555,27 @@ describe('BULLE — rien ne change pour les autres lecteurs', () => {
 
     expect(boutons(arbre, 'Présent')).toHaveLength(0);
     expect(boutons(arbre, 'Absent')).toHaveLength(0);
+  });
+
+  // FINITIONS5 (tournee 7, defaut 2) — match 3059 a « reponses coupees » : la
+  // carte proposait Present / Absent, le toucher rendait `POST /rsvp` 400 et
+  // une alerte « Erreur ». Meme regle que « Tu es convoque » (`isRsvpEnabled`).
+  it('témoin 14 — réponses COUPÉES par l’organisateur : aucun bouton', async () => {
+    mockServeur.rsvpEnabled = false;
+    const { arbre } = await monterDansLeFil();
+    await attendre(() => mockServeur.lectures > 0);
+    await laisserPasser();
+
+    expect(boutons(arbre, 'Présent')).toHaveLength(0);
+    expect(boutons(arbre, 'Absent')).toHaveLength(0);
+  });
+
+  it('témoin 15 — réponses OUVERTES (dit par le serveur) : les boutons restent', async () => {
+    mockServeur.rsvpEnabled = true;
+    const { arbre } = await monterEtLire();
+
+    expect(boutons(arbre, 'Présent')).toHaveLength(1);
+    expect(boutons(arbre, 'Absent')).toHaveLength(1);
   });
 
   it('témoin 12 — match PASSÉ : aucun bouton, aucune lecture (refus serveur)', async () => {
