@@ -955,6 +955,14 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       if (alertType === 'mercato') {
         return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
       }
+      // ALERTES-ANNONCES (30/09) — l'annonce trouvée, rangée par le serveur sous
+      // `recruitmentAdId` (admin/.../search-alert/types/filters.ts, TARGET_DATA_KEYS).
+      if (alertType === 'recruitment' && payload.recruitmentAdId) {
+        return adaptDestinationForCurrentPlatform(payload, {
+          params: { adId: String(payload.recruitmentAdId) },
+          route: RouteNames.RecruitmentAdDetails,
+        });
+      }
       if (payload.eventId) return adaptDestinationForCurrentPlatform(payload, eventDetailsDestination(payload.eventId));
       if (payload.profileId) return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
       return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.SearchAlerts });

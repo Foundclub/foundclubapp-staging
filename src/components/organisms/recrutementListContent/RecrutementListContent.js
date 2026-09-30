@@ -14,6 +14,12 @@ import {
   getRecruitmentRoleMode,
   sanitizeRecruitmentTabForRole,
 } from '@/domains/search/recruitmentFlow';
+import {
+  filtresDeLAlerteAnnonce,
+  resumeDeLAlerteAnnonce,
+} from '@/domains/searchAlert/alerteAnnonce';
+import { SorteAlerte, StatutAlerte } from '@/domains/searchAlert/alerteEvenement';
+import useAlerteRecherche from '@/domains/searchAlert/useAlerteRecherche';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -24,6 +30,10 @@ import { RouteNames } from '@/navigation/routeNames';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/RecruitmentAdCard';
+import {
+  CarteMePrevenir,
+  GuideAlertes,
+} from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import RecruitmentFiltersSheet from '@/components/organisms/recruitmentFiltersSheet/RecruitmentFiltersSheet';
 import RecruitmentProfilesList from '@/components/organisms/recruitmentProfilesList/RecruitmentProfilesList';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
@@ -307,6 +317,19 @@ function RecrutementListContent({
   const [adSearchValue, setAdSearchValue] = useState('');
   const [audienceFilter, setAudienceFilter] = useState('all');
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
+  // 🔔 ALERTES-ANNONCES (30/09) — « je veux que les joueurs soient prevenus [des
+  // annonces], meme les entraineurs » (Adel). La MEME carte « Me prevenir » que
+  // sous les evenements (lot ALERTES) se pose sous les annonces, pour tout compte
+  // connecte : joueur (onglet unique) comme staff (« Opportunites »). Une alerte
+  // appartient a un compte : pas de carte pour un visiteur.
+  // Ouverte POUR une alerte, la feuille s'ouvre sur la rangee Ville.
+  const [feuillePourAlerte, setFeuillePourAlerte] = useState(false);
+  const [guideAlertesVisible, setGuideAlertesVisible] = useState(false);
+  const {
+    creer: creerAlerteAnnonce,
+    enCours: alerteEnCours,
+    estDejaCreee: alerteDejaCreee,
+  } = useAlerteRecherche(SorteAlerte.annonce);
   const [showProfileMatchesOnly, setShowProfileMatchesOnly] = useState(false);
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
@@ -410,6 +433,17 @@ function RecrutementListContent({
       else if (page > 1) setAdsLoadingMore(false);
     }
   }, [adSearchValue, hasAdFilters, recruitmentAdFilters]);
+
+  // 🔔 « Me prevenir » cree l'alerte avec les filtres AFFICHES et le profil
+  // choisi. Sans ville, le serveur la refuserait : on ouvre les filtres sur la
+  // rangee Ville, ou l'etoile attend.
+  const creerAlerteDepuisLaRecherche = useCallback(async () => {
+    const statut = await creerAlerteAnnonce(recruitmentAdFilters, audienceFilter);
+    if (statut === StatutAlerte.villeManquante) {
+      setFeuillePourAlerte(true);
+      setFiltersSheetVisible(true);
+    }
+  }, [audienceFilter, creerAlerteAnnonce, recruitmentAdFilters]);
 
   // Load more ads Handler
   const handleLoadMoreAds = useCallback(() => {
@@ -1113,7 +1147,10 @@ function RecrutementListContent({
         <SearchComponent
           filterNumber={badgeFiltersCount}
           handleSearchField={setAdSearchValue}
-          openFilters={() => setFiltersSheetVisible(true)}
+          openFilters={() => {
+            setFeuillePourAlerte(false);
+            setFiltersSheetVisible(true);
+          }}
           placeholder={t('recrutementListContent.searchPlaceholder', 'Rechercher une annonce...')}
           searchDefaultValue={adSearchValue}
         />
@@ -1124,6 +1161,37 @@ function RecrutementListContent({
         ) : null}
       </View>
     </View>
+  );
+
+  const PUBLICS = {
+    coach: t('recruitmentFiltersSheet.audience.coach', 'Coachs'),
+    player: t('recruitmentFiltersSheet.audience.player', 'Joueur·se·s'),
+  };
+  // 🔔 SOUS les annonces (et sous l'etat vide : c'est la qu'on veut etre prevenu
+  // de la prochaine), apres le chargement de la page suivante.
+  const piedDeListe = (
+    <>
+      {adsLoadingMore ? (
+        <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
+          <ActivityIndicator color={Colors.primary500} />
+        </View>
+      ) : null}
+      {isAuthenticated ? (
+        <CarteMePrevenir
+          dejaCreee={alerteDejaCreee(recruitmentAdFilters, audienceFilter)}
+          enCours={alerteEnCours}
+          onCreer={creerAlerteDepuisLaRecherche}
+          onGerer={() => nav.navigate(RouteNames.SearchAlerts)}
+          onGuide={() => setGuideAlertesVisible(true)}
+          resume={resumeDeLAlerteAnnonce(
+            filtresDeLAlerteAnnonce(recruitmentAdFilters, audienceFilter),
+            t('recruitmentFiltersSheet.allSports', 'Tous les sports'),
+            PUBLICS[/** @type {'coach' | 'player'} */ (audienceFilter)] || '',
+          )}
+          sorte={SorteAlerte.annonce}
+        />
+      ) : null}
+    </>
   );
 
   // Render content for Player - Smart Feed
@@ -1137,11 +1205,7 @@ function RecrutementListContent({
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => item.key}
         ListEmptyComponent={renderPlayerEmptyState()}
-        ListFooterComponent={adsLoadingMore ? (
-          <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
-            <ActivityIndicator color={Colors.primary500} />
-          </View>
-        ) : null}
+        ListFooterComponent={piedDeListe}
         ListHeaderComponent={renderPlayerListHeader()}
         nestedScrollEnabled
         onEndReached={handleLoadMoreAds}
@@ -1291,7 +1355,17 @@ function RecrutementListContent({
           setAudienceFilter(profilChoisi);
         }}
         onClose={() => setFiltersSheetVisible(false)}
+        onCreateAlert={isAuthenticated ? creerAlerteAnnonce : undefined}
+        pourUneAlerte={feuillePourAlerte}
       />
+
+      {isAuthenticated ? (
+        <GuideAlertes
+          isVisible={guideAlertesVisible}
+          onClose={() => setGuideAlertesVisible(false)}
+          sorte={SorteAlerte.annonce}
+        />
+      ) : null}
     </View>
   );
 }

@@ -3,14 +3,18 @@ import {
   useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import usePlaces from '@/domains/places/usePlaces';
 import { StatutAlerte } from '@/domains/searchAlert/alerteEvenement';
 import useTheme from '@/theme/themeContext';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
-import { ConfirmationAlerte } from '@/components/organisms/alerteEvenements/AlerteEvenements';
+import {
+  EtoileAlerte,
+  NoteAlerte,
+  useEtoileAlerte,
+} from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
@@ -20,8 +24,6 @@ import { useGetClubs } from '@/services/club/clubQueries';
 import { useGetEventTypes } from '@/services/event/eventQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
-
-import texteInsecable from '@/utils/texteInsecable';
 
 import coordonneesDeLaVille from './cityCoordinates';
 import FiltersSheet from './FiltersSheet';
@@ -114,9 +116,7 @@ function EventFiltersSheet({
   const TOUTES_VILLES = t('eventFiltersSheet.allCities', 'Toutes les villes');
   const TOUTES = t('eventFiltersSheet.allFeminine', 'Toutes');
   const TOUS = t('eventFiltersSheet.allMasculine', 'Tous');
-  const {
-    Alignments, Colors, Fonts, Spaces,
-  } = /** @type {any} */ (useTheme());
+  const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
 
   const [activity, setActivity] = useState(/** @type {string[]} */ ([]));
@@ -134,9 +134,13 @@ function EventFiltersSheet({
   const [rechercheNiveau, setRechercheNiveau] = useState('');
   const [rechercheType, setRechercheType] = useState('');
   const [rechercheEquipe, setRechercheEquipe] = useState('');
-  // '' | StatutAlerte : la note lue sous le titre apres un appui sur l'etoile.
-  const [noteAlerte, setNoteAlerte] = useState('');
-  const [alerteEnCours, setAlerteEnCours] = useState(false);
+  // L'etoile (A20.4) : son etat vit avec elle (`AlerteEvenements.js`).
+  const {
+    creer: creerAlerte,
+    enCours: alerteEnCours,
+    note: noteAlerte,
+    setNote: setNoteAlerte,
+  } = useEtoileAlerte(onCreateAlert);
 
   const etaitOuverteRef = useRef(false);
 
@@ -162,7 +166,7 @@ function EventFiltersSheet({
     setRechercheType('');
     setRechercheEquipe('');
     setNoteAlerte(pourUneAlerte ? StatutAlerte.villeManquante : '');
-  }, [filters, isVisible, pourUneAlerte]);
+  }, [filters, isVisible, pourUneAlerte, setNoteAlerte]);
 
   const { data: allActivities } = useGetActivities();
   const { data: allCategories } = useGetCategories();
@@ -250,59 +254,10 @@ function EventFiltersSheet({
     onClose();
   };
 
-  const creerAlerte = async () => {
-    if (!onCreateAlert || alerteEnCours) return;
-    setAlerteEnCours(true);
-    try {
-      setNoteAlerte(await onCreateAlert(brouillon()));
-    } catch {
-      setNoteAlerte(StatutAlerte.erreur);
-    } finally {
-      setAlerteEnCours(false);
-    }
-  };
-
-  const etoile = onCreateAlert ? (
-    <TouchableOpacity
-      accessibilityLabel={t('searchAlerts.sheet.starLabel', 'Créer une alerte avec ces filtres')}
-      accessibilityRole="button"
-      accessibilityState={{ busy: alerteEnCours, disabled: alerteEnCours }}
-      disabled={alerteEnCours}
-      hitSlop={{
-        bottom: 8, left: 8, right: 8, top: 8,
-      }}
-      onPress={creerAlerte}
-      style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44, minWidth: 44 }]}
-    >
-      <Text style={[Fonts.h3Bold, { color: Colors.primary500 }]}>★</Text>
-      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-        {texteInsecable(t('eventFilters.createAlert', 'Créer alerte'))}
-      </Text>
-    </TouchableOpacity>
-  ) : undefined;
-
-  let noteDeLEtoile = null;
-  if (noteAlerte === StatutAlerte.creee) {
-    noteDeLEtoile = <ConfirmationAlerte />;
-  } else if (noteAlerte === StatutAlerte.villeManquante) {
-    noteDeLEtoile = (
-      <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-        {t(
-          'searchAlerts.sheet.needCity',
-          'Choisis une ville, puis touche ★ pour créer ton alerte.',
-        )}
-      </Text>
-    );
-  } else if (noteAlerte === StatutAlerte.erreur) {
-    noteDeLEtoile = (
-      <Text style={[Fonts.p3, { color: Colors.error500 }]}>
-        {t(
-          'searchAlerts.sheet.error',
-          'L\'alerte n\'a pas pu être créée. Réessaie dans un instant.',
-        )}
-      </Text>
-    );
-  }
+  const etoile = onCreateAlert
+    ? <EtoileAlerte enCours={alerteEnCours} onPress={() => creerAlerte(brouillon())} />
+    : undefined;
+  const noteDeLEtoile = noteAlerte ? <NoteAlerte statut={noteAlerte} /> : null;
 
   // « Reinitialiser » vide TOUT, comme le faisait « Effacer les filtres » de
   // l'ecran plein : la barre de recherche partait deja avec le reste.

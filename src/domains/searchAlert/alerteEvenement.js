@@ -18,6 +18,15 @@ export const RAYON_ALERTE_PAR_DEFAUT = 20;
 /** La mémoire « déjà vu » de la proposition de première ouverture (`tutorialStorage`). */
 export const PROPOSITION_ALERTE_EVENEMENTS = 'search_events_alert_offer';
 
+/**
+ * ALERTES-ANNONCES (30/09) — les deux sortes d'alerte que la recherche propose :
+ * Rechercher › Événement et Rechercher › Recrutement (`alerteAnnonce.js`).
+ */
+export const SorteAlerte = Object.freeze({
+  annonce: 'annonce',
+  evenement: 'evenement',
+});
+
 /** Les trois issues d'une création, lues par la carte, la feuille et la proposition. */
 export const StatutAlerte = Object.freeze({
   creee: 'creee',
@@ -30,7 +39,7 @@ export const StatutAlerte = Object.freeze({
  * @param {any} valeur Une valeur de critère : chaîne, tableau, ou rien.
  * @returns {string[]} Les identifiants, toujours en tableau.
  */
-const enTableau = (valeur) => {
+export const enTableau = (valeur) => {
   if (Array.isArray(valeur)) return valeur.map(String).filter(Boolean);
   if (typeof valeur === 'string' && valeur) return [valeur];
   return [];
@@ -92,6 +101,21 @@ export const resumeDeLAlerte = (alerte, sports, tousLesSports) => {
 };
 
 /**
+ * Un nom déjà pris dans « Mes alertes » reçoit un numéro : « Football · Lyon (2) ».
+ * Règle commune aux alertes d'événements et d'annonces (ALERTES-ANNONCES).
+ * @param {string} base Le nom voulu.
+ * @param {{ label?: string }[] | undefined} alertesExistantes Les alertes du compte.
+ * @returns {string} Le nom, numéroté s'il est déjà pris.
+ */
+export function libelleUnique(base, alertesExistantes) {
+  const doublons = (alertesExistantes || []).filter((existante) => {
+    const nom = String(existante?.label || '');
+    return nom === base || nom.startsWith(`${base} (`);
+  }).length;
+  return doublons > 0 ? `${base} (${String(doublons + 1)})` : base;
+}
+
+/**
  * Le nom rangé dans « Mes alertes » : les sports et la ville, sinon le gabarit de
  * l'écran d'alertes (« Événement · Ville »). Un nom déjà pris reçoit un numéro,
  * exactement comme l'écran plein le faisait (`EventFilters.js:464-477`).
@@ -106,11 +130,7 @@ export const libelleDeLAlerte = (alerte, sports, alertesExistantes, libelleSansS
   const base = noms.length
     ? [noms.join(', '), alerte.city.label].filter(Boolean).join(' · ')
     : libelleSansSport;
-  const doublons = (alertesExistantes || []).filter((existante) => {
-    const nom = String(existante?.label || '');
-    return nom === base || nom.startsWith(`${base} (`);
-  }).length;
-  return doublons > 0 ? `${base} (${String(doublons + 1)})` : base;
+  return libelleUnique(base, alertesExistantes);
 };
 
 /**

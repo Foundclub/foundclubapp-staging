@@ -14473,11 +14473,15 @@ export default {
     actions: {
       create: 'Créer une alerte',
     },
+    ads: {
+      labelPrefix: 'Annonces',
+    },
     card: {
       chooseCity: 'Choisir une ville',
       create: "Créer l'alerte",
       noCity: 'Choisis une ville : une alerte en a besoin pour savoir où chercher.',
       title: 'Me prévenir des nouveaux événements comme ceux-ci',
+      titleAds: 'Me prévenir des nouvelles annonces comme celles-ci',
     },
     create: {
       desc: 'Donne un nom à ta recherche pour recevoir des notifications.',
@@ -14487,6 +14491,7 @@ export default {
     },
     created: {
       body: "Tu seras prévenu·e dès qu'un nouvel événement comme ceux-ci est publié.",
+      bodyAds: "Tu seras prévenu·e dès qu'une nouvelle annonce comme celles-ci est publiée.",
       title: 'Alerte créée',
     },
     deleteModal: {
@@ -14508,12 +14513,16 @@ export default {
       linkLong: 'Comment créer une alerte ?',
       // eslint-disable-next-line max-len
       step1Body: 'Dans Rechercher › Événement, ouvre les filtres et choisis au moins une ville. Le sport, la catégorie et le niveau sont en plus.',
+      // eslint-disable-next-line max-len
+      step1BodyAds: 'Dans Rechercher › Recrutement, ouvre les filtres et écris une ville. Le sport, le profil, la catégorie et le niveau sont en plus.',
       step1Title: 'Choisis tes critères',
       // eslint-disable-next-line max-len
       step2Body: "L'étoile en haut à droite des filtres, ou le bouton sous les résultats, enregistre ta recherche en un toucher.",
       step2Title: "Touche ★ ou « Créer l'alerte »",
       // eslint-disable-next-line max-len
       step3Body: "Dès qu'un nouvel événement correspondant est publié, on te prévient. Tes alertes (10 au maximum) se gèrent dans Mon compte › Gérer mes alertes.",
+      // eslint-disable-next-line max-len
+      step3BodyAds: "Dès qu'une nouvelle annonce correspondante est publiée, on te prévient. Tes alertes (10 au maximum) se gèrent dans Mon compte › Gérer mes alertes.",
       step3Title: 'Reçois une notification',
       title: 'Comment créer une alerte ?',
     },
@@ -14541,6 +14550,7 @@ export default {
     },
     title: 'Mes Alertes',
     type: {
+      ads: 'Alerte annonces',
       events: 'Alerte événements',
       profiles: 'Alerte profils',
     },

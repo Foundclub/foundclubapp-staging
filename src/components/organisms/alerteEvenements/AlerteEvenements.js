@@ -6,6 +6,7 @@ import {
   Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { SorteAlerte, StatutAlerte } from '@/domains/searchAlert/alerteEvenement';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -13,13 +14,20 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /**
  * ALERTES (audit V1, A20) — les trois surfaces qui mènent à une alerte
  * d'événements depuis la recherche : la carte « Me prévenir » sous les résultats,
  * la proposition de première ouverture, et le guide « Comment créer une alerte ? ».
  *
  * Aucune ne parle au serveur : elles appellent ce qu'on leur donne. La création
- * vit dans `useAlerteEvenement`, les règles dans `domains/searchAlert/alerteEvenement`.
+ * vit dans `useAlerteRecherche`, les règles dans `domains/searchAlert/`.
+ *
+ * ALERTES-ANNONCES (30/09) — les MÊMES surfaces servent aux alertes d'ANNONCES
+ * (Rechercher › Recrutement) : `sorte="annonce"` ne change que les mots. L'étoile
+ * « Créer alerte » et sa note vivent ici aussi, pour les deux feuilles de filtres.
+ * Le nom du fichier est resté celui du lot ALERTES : trois témoins le doublent.
  */
 
 const TAILLE_PASTILLE = 40;
@@ -86,10 +94,10 @@ function PastilleCloche() {
 /**
  * « Alerte créée » : une coche ET des mots — le vert seul ne dirait rien à qui ne
  * le distingue pas.
- * @param {{ avecCorps?: boolean }} props Les props.
+ * @param {{ avecCorps?: boolean, sorte?: string }} props Les props.
  * @returns {import('react').ReactElement} La confirmation.
  */
-export function ConfirmationAlerte({ avecCorps = true }) {
+export function ConfirmationAlerte({ avecCorps = true, sorte = SorteAlerte.evenement }) {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -109,10 +117,15 @@ export function ConfirmationAlerte({ avecCorps = true }) {
       </View>
       {avecCorps ? (
         <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-          {t(
-            'searchAlerts.created.body',
-            'Tu seras prévenu·e dès qu\'un nouvel événement comme ceux-ci est publié.',
-          )}
+          {sorte === SorteAlerte.annonce
+            ? t(
+              'searchAlerts.created.bodyAds',
+              'Tu seras prévenu·e dès qu\'une nouvelle annonce comme celles-ci est publiée.',
+            )
+            : t(
+              'searchAlerts.created.body',
+              'Tu seras prévenu·e dès qu\'un nouvel événement comme ceux-ci est publié.',
+            )}
         </Text>
       ) : null}
     </View>
@@ -122,20 +135,28 @@ export function ConfirmationAlerte({ avecCorps = true }) {
 /**
  * Les trois étapes pour créer une alerte. Elles servent au guide ET, sur place, à
  * la proposition de première ouverture : un seul texte, deux portes.
+ * @param {{ sorte?: string }} props Les props.
  * @returns {import('react').ReactElement} Les étapes.
  */
-export function EtapesAlerte() {
+export function EtapesAlerte({ sorte = SorteAlerte.evenement }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
+  const pourAnnonces = sorte === SorteAlerte.annonce;
   const etapes = [
     {
-      corps: t(
-        'searchAlerts.guide.step1Body',
-        // eslint-disable-next-line max-len -- un texte ne se coupe pas
-        'Dans Rechercher › Événement, ouvre les filtres et choisis au moins une ville. Le sport, la catégorie et le niveau sont en plus.',
-      ),
+      corps: pourAnnonces
+        ? t(
+          'searchAlerts.guide.step1BodyAds',
+          // eslint-disable-next-line max-len -- un texte ne se coupe pas
+          'Dans Rechercher › Recrutement, ouvre les filtres et écris une ville. Le sport, le profil, la catégorie et le niveau sont en plus.',
+        )
+        : t(
+          'searchAlerts.guide.step1Body',
+          // eslint-disable-next-line max-len -- un texte ne se coupe pas
+          'Dans Rechercher › Événement, ouvre les filtres et choisis au moins une ville. Le sport, la catégorie et le niveau sont en plus.',
+        ),
       titre: t('searchAlerts.guide.step1Title', 'Choisis tes critères'),
     },
     {
@@ -147,11 +168,17 @@ export function EtapesAlerte() {
       titre: t('searchAlerts.guide.step2Title', 'Touche ★ ou « Créer l\'alerte »'),
     },
     {
-      corps: t(
-        'searchAlerts.guide.step3Body',
-        // eslint-disable-next-line max-len -- un texte ne se coupe pas
-        'Dès qu\'un nouvel événement correspondant est publié, on te prévient. Tes alertes (10 au maximum) se gèrent dans Mon compte › Gérer mes alertes.',
-      ),
+      corps: pourAnnonces
+        ? t(
+          'searchAlerts.guide.step3BodyAds',
+          // eslint-disable-next-line max-len -- un texte ne se coupe pas
+          'Dès qu\'une nouvelle annonce correspondante est publiée, on te prévient. Tes alertes (10 au maximum) se gèrent dans Mon compte › Gérer mes alertes.',
+        )
+        : t(
+          'searchAlerts.guide.step3Body',
+          // eslint-disable-next-line max-len -- un texte ne se coupe pas
+          'Dès qu\'un nouvel événement correspondant est publié, on te prévient. Tes alertes (10 au maximum) se gèrent dans Mon compte › Gérer mes alertes.',
+        ),
       titre: t('searchAlerts.guide.step3Title', 'Reçois une notification'),
     },
   ];
@@ -186,10 +213,10 @@ export function EtapesAlerte() {
 
 /**
  * Le guide « Comment créer une alerte ? », ouvrable autant de fois qu'on veut.
- * @param {{ isVisible: boolean, onClose: () => void }} props Les props.
+ * @param {{ isVisible: boolean, onClose: () => void, sorte?: string }} props Les props.
  * @returns {import('react').ReactElement} La feuille.
  */
-export function GuideAlertes({ isVisible, onClose }) {
+export function GuideAlertes({ isVisible, onClose, sorte = SorteAlerte.evenement }) {
   const { Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
   return (
@@ -198,7 +225,7 @@ export function GuideAlertes({ isVisible, onClose }) {
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {t('searchAlerts.guide.title', 'Comment créer une alerte ?')}
         </Text>
-        <EtapesAlerte />
+        <EtapesAlerte sorte={sorte} />
         <Button
           onPress={onClose}
           title={t('searchAlerts.guide.close', 'J\'ai compris')}
@@ -210,7 +237,8 @@ export function GuideAlertes({ isVisible, onClose }) {
 }
 
 /**
- * Sous les résultats : « Me prévenir des nouveaux événements comme ceux-ci ».
+ * Sous les résultats : « Me prévenir des nouveaux événements comme ceux-ci », ou
+ * « … des nouvelles annonces comme celles-ci » (`sorte="annonce"`).
  * @param {{
  *   dejaCreee: boolean;
  *   enCours: boolean;
@@ -218,11 +246,12 @@ export function GuideAlertes({ isVisible, onClose }) {
  *   onGerer: () => void;
  *   onGuide: () => void;
  *   resume: string;
+ *   sorte?: string;
  * }} props `resume` vide = pas de ville : le bouton mène alors aux filtres.
  * @returns {import('react').ReactElement} La carte.
  */
 export function CarteMePrevenir({
-  dejaCreee, enCours, onCreer, onGerer, onGuide, resume,
+  dejaCreee, enCours, onCreer, onGerer, onGuide, resume, sorte = SorteAlerte.evenement,
 }) {
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -250,13 +279,15 @@ export function CarteMePrevenir({
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
         <PastilleCloche />
         <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
-          {t('searchAlerts.card.title', 'Me prévenir des nouveaux événements comme ceux-ci')}
+          {sorte === SorteAlerte.annonce
+            ? t('searchAlerts.card.titleAds', 'Me prévenir des nouvelles annonces comme celles-ci')
+            : t('searchAlerts.card.title', 'Me prévenir des nouveaux événements comme ceux-ci')}
         </Text>
       </View>
 
       {dejaCreee ? (
         <>
-          <ConfirmationAlerte />
+          <ConfirmationAlerte sorte={sorte} />
           <TouchableOpacity
             accessibilityRole="button"
             onPress={onGerer}
@@ -398,4 +429,101 @@ export function PropositionAlerte({ isVisible, onCreer, onFermer }) {
       </View>
     </BottomModal>
   );
+}
+
+/**
+ * ⭐ L'étoile d'une feuille de filtres : ce qu'on y touche, et ce qu'on en lit.
+ * `creer(...)` confie ses arguments à `onCreateAlert` et range la réponse
+ * (un `StatutAlerte`) dans `note`. Sans `onCreateAlert`, rien ne se passe.
+ *
+ * ALERTES-ANNONCES (30/09) — sortie d'`EventFiltersSheet` (A20.4), où elle vivait
+ * seule : la feuille du recrutement la porte désormais aussi.
+ * @param {((...args: any[]) => Promise<string>) | undefined} onCreateAlert La création.
+ * @returns {{
+ *   creer: (...args: any[]) => Promise<void>;
+ *   enCours: boolean;
+ *   note: string;
+ *   setNote: (note: string) => void;
+ * }} L'état de l'étoile.
+ */
+export function useEtoileAlerte(onCreateAlert) {
+  // '' | StatutAlerte : la note lue sous le titre après un appui sur l'étoile.
+  const [note, setNote] = useState('');
+  const [enCours, setEnCours] = useState(false);
+
+  const creer = async (/** @type {any[]} */ ...args) => {
+    if (!onCreateAlert || enCours) return;
+    setEnCours(true);
+    try {
+      setNote(await onCreateAlert(...args));
+    } catch {
+      setNote(StatutAlerte.erreur);
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  return {
+    creer, enCours, note, setNote,
+  };
+}
+
+/**
+ * ⭐ « Créer alerte », en haut à droite d'une feuille de filtres.
+ * @param {{ enCours: boolean, onPress: () => void }} props Les props.
+ * @returns {import('react').ReactElement} L'étoile.
+ */
+export function EtoileAlerte({ enCours, onPress }) {
+  const { Alignments, Colors, Fonts } = /** @type {any} */ (useTheme());
+  const { t } = useTranslation();
+  return (
+    <TouchableOpacity
+      accessibilityLabel={t('searchAlerts.sheet.starLabel', 'Créer une alerte avec ces filtres')}
+      accessibilityRole="button"
+      accessibilityState={{ busy: enCours, disabled: enCours }}
+      disabled={enCours}
+      hitSlop={{
+        bottom: 8, left: 8, right: 8, top: 8,
+      }}
+      onPress={onPress}
+      style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44, minWidth: 44 }]}
+    >
+      <Text style={[Fonts.h3Bold, { color: Colors.primary500 }]}>★</Text>
+      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+        {texteInsecable(t('eventFilters.createAlert', 'Créer alerte'))}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Ce que l'étoile a produit, lu sous le titre de la feuille.
+ * @param {{ statut: string, sorte?: string }} props `statut` : un `StatutAlerte`.
+ * @returns {import('react').ReactElement | null} La note, ou rien.
+ */
+export function NoteAlerte({ sorte = SorteAlerte.evenement, statut }) {
+  const { Colors, Fonts } = /** @type {any} */ (useTheme());
+  const { t } = useTranslation();
+  if (statut === StatutAlerte.creee) return <ConfirmationAlerte sorte={sorte} />;
+  if (statut === StatutAlerte.villeManquante) {
+    return (
+      <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+        {t(
+          'searchAlerts.sheet.needCity',
+          'Choisis une ville, puis touche ★ pour créer ton alerte.',
+        )}
+      </Text>
+    );
+  }
+  if (statut === StatutAlerte.erreur) {
+    return (
+      <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+        {t(
+          'searchAlerts.sheet.error',
+          'L\'alerte n\'a pas pu être créée. Réessaie dans un instant.',
+        )}
+      </Text>
+    );
+  }
+  return null;
 }

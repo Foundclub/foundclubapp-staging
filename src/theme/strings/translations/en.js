@@ -13776,11 +13776,15 @@ export default {
     actions: {
       create: 'Create an alert',
     },
+    ads: {
+      labelPrefix: 'Ads',
+    },
     card: {
       chooseCity: 'Choose a city',
       create: 'Create the alert',
       noCity: 'Choose a city: an alert needs one to know where to look.',
       title: 'Notify me about new events like these',
+      titleAds: 'Notify me about new ads like these',
     },
     create: {
       desc: 'Give your search a name to receive notifications.',
@@ -13790,6 +13794,7 @@ export default {
     },
     created: {
       body: 'You will be notified as soon as a new event like these is published.',
+      bodyAds: 'You will be notified as soon as a new ad like these is published.',
       title: 'Alert created',
     },
     deleteModal: {
@@ -13809,10 +13814,12 @@ export default {
       linkLabel: 'See how to create an alert',
       linkLong: 'How do I create an alert?',
       step1Body: 'In Search › Event, open the filters and choose at least a city. Sport, category and level are optional.',
+      step1BodyAds: 'In Search › Recruitment, open the filters and type a city. Sport, profile, category and level are optional.',
       step1Title: 'Choose your criteria',
       step2Body: 'The star at the top right of the filters, or the button under the results, saves your search in one tap.',
       step2Title: 'Tap ★ or “Create the alert”',
       step3Body: 'As soon as a matching new event is published, we notify you. Manage your alerts (10 at most) in My account › Manage my alerts.',
+      step3BodyAds: 'As soon as a matching new ad is published, we notify you. Manage your alerts (10 at most) in My account › Manage my alerts.',
       step3Title: 'Get a notification',
       title: 'How do I create an alert?',
     },
@@ -13838,6 +13845,7 @@ export default {
     },
     title: 'My alerts',
     type: {
+      ads: 'Ad alert',
       events: 'Event alert',
       profiles: 'Profile alert',
     },

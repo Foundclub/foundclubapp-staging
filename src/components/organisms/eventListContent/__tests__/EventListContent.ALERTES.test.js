@@ -810,8 +810,11 @@ describe('A20.4 — l étoile en haut à droite des filtres', () => {
     const etoile = parEtiquette(tree, 'Créer une alerte avec ces filtres');
     expect(etoile).toBeDefined();
     expect(texteDuNoeud(etoile)).toContain('★');
-    // Même rangée que le titre, et APRÈS lui.
-    const rangee = etoile.parent;
+    // Même rangée que le titre, et APRÈS lui. ALERTES-ANNONCES : l'étoile est
+    // devenue un composant partagé (`EtoileAlerte`), son parent direct est ce
+    // composant : on remonte jusqu'au premier ancêtre qui porte le titre.
+    let rangee = etoile.parent;
+    while (rangee && !texteDuNoeud(rangee).includes('Filtrer')) rangee = rangee.parent;
     const texteDeLaRangee = texteDuNoeud(rangee);
     expect(texteDeLaRangee.indexOf('Filtrer')).toBe(0);
     expect(texteDeLaRangee.indexOf('★')).toBeGreaterThan(0);

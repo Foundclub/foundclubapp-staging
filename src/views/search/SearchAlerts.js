@@ -24,7 +24,7 @@ import { deleteSearchAlert, getSearchAlerts, updateSearchAlert } from '@/service
  * @property {string} [documentId]
  * @property {number | string} [id]
  * @property {string} [label]
- * @property {'event' | 'mercato' | string} [type]
+ * @property {'event' | 'mercato' | 'recruitment' | string} [type]
  * @property {Record<string, any>} [filters]
  * @property {boolean} [isActive]
  */
@@ -146,11 +146,34 @@ function SearchAlerts({ navigation }) {
       navigation.navigate(RouteNames.SearchRecruitment, {
         initialRecruitmentTab: 'profils',
       });
+    } else if (alert.type === 'recruitment') {
+      // ALERTES-ANNONCES (30/09) — les filtres NORMALISES par le serveur
+      // (filter-normalizer.ts) redeviennent ceux de Rechercher › Recrutement.
+      // Le profil (joueurs / coachs) est un etat local de la liste : il n'est pas
+      // repose, la liste s'ouvre sur « les deux ».
+      appDispatch({
+        payload: {
+          category: rawFilters.categoryIds || [],
+          city: rawFilters.city?.label || '',
+          level: rawFilters.levelIds || [],
+          sport: rawFilters.activityNames?.[0] || '',
+        },
+        type: 'SET_RECRUITMENT_AD_FILTERS',
+      });
+      navigation.navigate(RouteNames.SearchRecruitment, {
+        initialRecruitmentTab: canUseProfileAlerts ? 'opportunites' : 'annonces',
+      });
     }
   };
 
   // Edit alert - navigate to filters with pre-filled values
   const handleEditAlert = (/** @type {SearchAlertItem} */ alert) => {
+    // ALERTES-ANNONCES : aucun ecran ne sait modifier une alerte d'annonces ; la
+    // toucher relance sa recherche, ou l'on en recree une au besoin.
+    if (alert.type === 'recruitment') {
+      handleLaunchSearch(alert);
+      return;
+    }
     if (alert.type === 'event') {
       navigation.navigate(RouteNames.EventFilters, {
         alertDocumentId: alert.documentId,
@@ -196,13 +219,11 @@ function SearchAlerts({ navigation }) {
     }
   };
 
-  const getAlertTypeLabel = (type) => (type === 'mercato' ? t(
-    'searchAlerts.type.profiles',
-    'Alerte profils',
-  ) : t(
-    'searchAlerts.type.events',
-    'Alerte événements',
-  ));
+  const getAlertTypeLabel = (type) => {
+    if (type === 'mercato') return t('searchAlerts.type.profiles', 'Alerte profils');
+    if (type === 'recruitment') return t('searchAlerts.type.ads', 'Alerte annonces');
+    return t('searchAlerts.type.events', 'Alerte événements');
+  };
 
   // Format filters into readable string with calendar icon
   const formatFilters = (/** @type {Record<string, any> | undefined} */ filters, /** @type {string} */ type) => {
@@ -331,12 +352,14 @@ function SearchAlerts({ navigation }) {
                       title={t('searchAlerts.item.search', 'Rechercher')}
                       variant="Secondary"
                     />
-                <Button
+                {item.type === 'recruitment' ? null : (
+                  <Button
                       disabled={isProfileAlertUnavailable}
                       icon="edit"
                       onPress={() => handleEditAlert(item)}
                       variant="Secondary"
                     />
+                )}
                 <Button
                       icon="trash"
                       onPress={() => handleDeletePress(item.documentId)}
