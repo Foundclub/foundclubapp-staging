@@ -1745,7 +1745,7 @@ export default {
       coachSummary_one: '{{count}} profil coach recherche pour le rôle {{role}}.',
       coachSummary_other: '{{count}} profils coach recherches pour le rôle {{role}}.',
       eyebrow: 'Besoins',
-      noPositions: "Aucun poste n'à encore été ajouté.",
+      noPositions: "Aucun poste n'a encore été ajouté.",
       playerSummary_one: '{{count}} joueur recherché sur {{positions}}.',
       playerSummary_other: '{{count}} joueurs recherchés sur {{positions}}.',
       title: 'Postes recherchés',
@@ -1753,6 +1753,7 @@ export default {
     },
     overview: {
       location: 'Lieu',
+      noPositionsNeeded: 'Sans poste',
       positions: 'Postes',
       profile: 'Profil',
       progress: '{{done}} / 4 informations clés prêtes à publier',
@@ -1793,7 +1794,7 @@ export default {
     text: {
       eyebrow: "Texte de l'annonce",
       noDescription: "Aucune description personnalisée n'a été ajoutée.",
-      noMissions: 'Aucune mission détaillée n à encore été ajoutée.',
+      noMissions: "Aucune mission détaillée n'a encore été ajoutée.",
       title: 'Description',
       titleCoach: 'Description et missions',
     },
@@ -14465,6 +14466,11 @@ export default {
     },
   },
   search: {
+    filters: {
+      button: 'Filtrer',
+      buttonActive_one: 'Filtrer, {{count}} filtre actif',
+      buttonActive_other: 'Filtrer, {{count}} filtres actifs',
+    },
     map: {
       addressPlaceholder: 'Tape une adresse ou une ville',
     },

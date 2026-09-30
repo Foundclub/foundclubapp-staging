@@ -67,6 +67,27 @@ describe('buildRecruitmentAdTitle', () => {
     }))).toBe('Coach adjoint — Seniors A');
   });
 
+  // RECRUTER-TUNNEL (audit V1, H3) — capture `H3_role-technique-affiche_1` :
+  // « entraineur_adjoint — U13 » dans Mes activites › Publications. Le serveur
+  // enregistre la VALEUR de l'enumeration ; l'ecran doit en montrer le libelle.
+  it('traduit le role enregistre par le serveur, jamais sa valeur technique', () => {
+    expect(buildRecruitmentAdTitle(offre({
+      audienceType: 'coach',
+      coachRole: 'entraineur_adjoint',
+      position: null,
+      team: { name: 'U13' },
+    }))).toBe('Entraîneur adjoint — U13');
+  });
+
+  it('un role « autre » se lit par sa precision', () => {
+    expect(buildRecruitmentAdTitle(offre({
+      audienceType: 'coach',
+      coachRole: 'other',
+      coachRoleOther: 'Préparateur mental',
+      team: { name: 'U13' },
+    }))).toBe('Préparateur mental — U13');
+  });
+
   it('ne laisse jamais un titre vide', () => {
     expect(buildRecruitmentAdTitle({})).toBe('Poste non spécifié');
   });

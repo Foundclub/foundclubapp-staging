@@ -12,6 +12,7 @@ import {
   isAdWizardCoachProfileComplete,
   isAdWizardLocationComplete,
   isAdWizardNeedsComplete,
+  isAdWizardPlayerAdWithoutPositions,
   isAdWizardSportProfileComplete,
 } from './adWizardStepUtils';
 
@@ -67,6 +68,26 @@ describe('adWizardStepUtils', () => {
   test('requires positions for player needs', () => {
     expect(isAdWizardNeedsComplete({ audienceType: 'player', positions: [] })).toBe(false);
     expect(isAdWizardNeedsComplete({ audienceType: 'player', positions: [{ name: 'Gardien', quantity: 1 }] })).toBe(true);
+  });
+
+  // RECRUTER-TUNNEL (audit V1, H2) — la regle que l'etape Postes ET le
+  // recapitulatif lisent desormais tous les deux.
+  test('lets a player ad for a sport without positions go out without one', () => {
+    const artsMartiaux = {
+      audienceType: 'player',
+      positions: [],
+      team: { activities: [{ name: 'Arts martiaux' }] },
+    };
+    const football = { ...artsMartiaux, team: { activities: [{ name: 'Football' }] } };
+
+    expect(isAdWizardPlayerAdWithoutPositions(artsMartiaux)).toBe(true);
+    expect(isAdWizardNeedsComplete(artsMartiaux)).toBe(true);
+    expect(isAdWizardPlayerAdWithoutPositions(football)).toBe(false);
+    expect(isAdWizardNeedsComplete(football)).toBe(false);
+    // Un sport inconnu n'ouvre pas la porte : les postes restent exiges.
+    expect(isAdWizardPlayerAdWithoutPositions({ audienceType: 'player', positions: [] })).toBe(false);
+    // Une annonce entraineur n'a jamais de poste : elle suit sa propre regle.
+    expect(isAdWizardPlayerAdWithoutPositions({ ...artsMartiaux, audienceType: 'coach' })).toBe(false);
   });
 
   test('requires section, category and level in the sport profile step', () => {

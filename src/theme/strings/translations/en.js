@@ -1685,6 +1685,7 @@ export default {
     },
     overview: {
       location: 'Location',
+      noPositionsNeeded: 'No positions needed',
       positions: 'Positions',
       profile: 'Profile',
       progress: '{{done}} / 4 key details ready to publish',
@@ -13768,6 +13769,11 @@ export default {
     },
   },
   search: {
+    filters: {
+      button: 'Filter',
+      buttonActive_one: 'Filter, {{count}} active filter',
+      buttonActive_other: 'Filter, {{count}} active filters',
+    },
     map: {
       addressPlaceholder: 'Type an address or city',
     },
