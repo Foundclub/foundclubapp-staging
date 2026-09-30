@@ -30,6 +30,7 @@ import {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -284,7 +285,16 @@ function MatchCompositionBoard() {
     setPlacements(Array.isArray(startPlacements) ? startPlacements : EMPTY_LIST);
   }
   const [isSheetVisible, setIsSheetVisible] = useState(false);
-  const [requireResponse, setRequireResponse] = useState(true);
+  // FINITIONS5 (tournee 7, defaut 3) — « Demander une reponse » etait ALLUME
+  // par defaut sur un match dont l'organisateur a coupe les reponses (« Les
+  // participants repondent » decochee) : le serveur refuse alors toute reponse
+  // (`EVENT_RSVP_DISABLED`). La charge de composition dit l'option
+  // (`teamComposition.rsvpEnabled`, meme regle que « Tu es convoque ») :
+  // reponses coupees ⇒ l'interrupteur part eteint, verrouille, et le pack part
+  // a `false`. Sans le champ (serveur d'avant), rien ne change.
+  const [requireResponseChoice, setRequireResponse] = useState(true);
+  const reponsesOuvertes = isRsvpEnabled(teamComposition);
+  const requireResponse = reponsesOuvertes && requireResponseChoice;
   const [isBusy, setIsBusy] = useState(false);
   const [activeDragPlayer, setActiveDragPlayer] = useState(null);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
@@ -1322,11 +1332,14 @@ function MatchCompositionBoard() {
                 {t('matchComposition.sheet.requireResponse.title')}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                {t('matchComposition.sheet.requireResponse.subtitle')}
+                {reponsesOuvertes
+                  ? t('matchComposition.sheet.requireResponse.subtitle')
+                  : t('matchComposition.sheet.requireResponse.closedSubtitle')}
               </Text>
             </View>
             <Switch
               accessibilityLabel={t('matchComposition.sheet.requireResponse.title')}
+              disabled={!reponsesOuvertes}
               onValueChange={setRequireResponse}
               thumbColor={Colors.neutral00}
               trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}

@@ -10721,6 +10721,7 @@ export default {
       description: 'La convocation part dans le canal {{teamName}} — seuls les joueurs retenus sont convoqués.',
       kicker: 'Convocation',
       requireResponse: {
+        closedSubtitle: 'Les réponses sont coupées pour ce match.',
         subtitle: 'Présent / absent dans le canal',
         title: 'Demander une réponse',
       },

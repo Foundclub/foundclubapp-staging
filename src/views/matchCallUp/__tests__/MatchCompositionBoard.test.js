@@ -561,6 +561,33 @@ describe('D79 ecran 6 — « Demander une reponse » est BRANCHE, pas simule', (
     // `visibility` voyage avec lui : le serveur lit les deux au meme endroit.
     expect(charge.draft.visibility).toBe('team');
   });
+
+  // FINITIONS5 (tournee 7, defaut 3) — match 3059, « Les participants
+  // repondent » decochee : la feuille proposait « Demander une reponse »
+  // ALLUME. Une reponse que le serveur refuserait ne se demande pas.
+  test('FINITIONS5 · reponses COUPEES : eteint, verrouille, dit pourquoi, part a false', async () => {
+    const arbre = await rendre({ teamComposition: { rsvpEnabled: false } });
+    await appuyerSur(arbre, 'Publier');
+    const interrupteur = arbre.root.findAllByType(Switch)[0];
+
+    expect(interrupteur.props.value).toBe(false);
+    expect(interrupteur.props.disabled).toBe(true);
+    expect(texteVisible(arbre)).toContain('Les réponses sont coupées pour ce match.');
+
+    await appuyerSur(arbre, 'Publier la convocation');
+    const [, charge] = saveEventCompositionDraft.mock.calls[0];
+    expect(charge.draft.requireResponse).toBe(false);
+  });
+
+  test('FINITIONS5 · reponses OUVERTES (dit par le serveur) : allume et manipulable, comme avant', async () => {
+    const arbre = await rendre({ teamComposition: { rsvpEnabled: true } });
+    await appuyerSur(arbre, 'Publier');
+    const interrupteur = arbre.root.findAllByType(Switch)[0];
+
+    expect(interrupteur.props.value).toBe(true);
+    expect(interrupteur.props.disabled).toBeFalsy();
+    expect(texteVisible(arbre)).toContain('Présent / absent dans le canal');
+  });
 });
 
 describe('D79 — enregistrer et publier', () => {

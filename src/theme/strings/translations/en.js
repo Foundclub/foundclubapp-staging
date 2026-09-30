@@ -10076,6 +10076,7 @@ export default {
       description: 'The call-up will be sent to the {{teamName}} channel — only selected players are called up.',
       kicker: 'Call-up',
       requireResponse: {
+        closedSubtitle: 'Answers are turned off for this match.',
         subtitle: 'Present / absent in the channel',
         title: 'Request a response',
       },
