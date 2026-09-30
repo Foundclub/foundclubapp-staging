@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { Text, Vibration } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -62,7 +63,8 @@ jest.mock('@/components/organisms/notificationPopup/NotificationPopup', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN } = jest.requireActual('react-native');
   return function PanneauMock(/** @type {any} */ props) {
-    return props.isVisible ? reactActuel.createElement(TexteRN, null, 'temoin-panneau-ouvert') : null;
+    if (!props.isVisible) return null;
+    return reactActuel.createElement(TexteRN, null, 'temoin-panneau-ouvert');
   };
 });
 
@@ -70,6 +72,7 @@ jest.mock('@/components/organisms/notificationPopup/NotificationPopup', () => {
 const arbresMontes = [];
 
 /**
+ * Monte la cloche et la garde pour le demontage de fin de test.
  * @param {any} [props]
  * @returns {renderer.ReactTestRenderer}
  */
@@ -77,7 +80,7 @@ const monter = (props = {}) => {
   /** @type {renderer.ReactTestRenderer | undefined} */
   let arbre;
   act(() => {
-    arbre = renderer.create(<NotificationBadge {...props} />);
+    arbre = renderer.create(createElement(NotificationBadge, props));
   });
   const monte = /** @type {renderer.ReactTestRenderer} */ (arbre);
   arbresMontes.push(monte);
@@ -85,6 +88,7 @@ const monter = (props = {}) => {
 };
 
 /**
+ * Les textes affiches, dans l'ordre de l'arbre.
  * @param {renderer.ReactTestRenderer} arbre
  * @returns {string[]}
  */
@@ -94,12 +98,14 @@ const textes = (arbre) => arbre.root
   .map(String);
 
 /**
+ * Appuie sur ce qui porte le libelle « Notifications ».
  * @param {renderer.ReactTestRenderer} arbre
  * @returns {void}
  */
 const toucherLaCloche = (arbre) => {
   const cloche = arbre.root.findAll((noeud) => (
-    noeud.props?.accessibilityLabel === 'Notifications' && typeof noeud.props?.onPress === 'function'
+    noeud.props?.accessibilityLabel === 'Notifications'
+    && typeof noeud.props?.onPress === 'function'
   ))[0];
   act(() => {
     cloche.props.onPress();
@@ -127,8 +133,10 @@ describe('NotificationBadge — ce qui ne doit pas bouger', () => {
   it('annonce la cloche et affiche le nombre de non-lues, plafonne a 99+', () => {
     mockEtat.unreadCount = 3;
     const avecTrois = monter();
-    expect(avecTrois.root.findAll((noeud) => noeud.props?.accessibilityLabel === 'Notifications').length)
-      .toBeGreaterThan(0);
+    const cloches = avecTrois.root.findAll(
+      (noeud) => noeud.props?.accessibilityLabel === 'Notifications',
+    );
+    expect(cloches.length).toBeGreaterThan(0);
     expect(textes(avecTrois)).toContain('3');
 
     mockEtat.unreadCount = 150;
@@ -154,7 +162,7 @@ describe('NotificationBadge — ce qui ne doit pas bouger', () => {
     expect(textes(arbre)).not.toContain('temoin-panneau-ouvert');
   });
 
-  it('une notification qui ARRIVE (compteur qui monte) fait vibrer une fois — vibration gardee', () => {
+  it('une notification qui ARRIVE (compteur qui monte) vibre une fois — vibration gardee', () => {
     mockEtat.unreadCount = 2;
     const arbre = monter();
     expect(vibrer).not.toHaveBeenCalled();
