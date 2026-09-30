@@ -173,7 +173,7 @@ const collectText = (node) => {
  * @param {any} tree L'arbre rendu.
  * @returns {string} Le texte.
  */
-const allText = (tree) => collectText(tree.toJSON()).join(' | ').replace(/ /g, ' ');
+const allText = (tree) => collectText(tree.toJSON()).join(' | ').replace(/\u00a0/g, ' ');
 
 const JOUEUR = {
   documentId: 'u-joueur', myTeams: [], role: { name: 'Joueur' }, trainedTeams: [],
