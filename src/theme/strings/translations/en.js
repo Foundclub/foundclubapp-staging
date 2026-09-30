@@ -17770,6 +17770,7 @@ export default {
       markers: 'Before you head out',
       measures_one: '{{count}} measurement',
       measures_other: '{{count}} measurements',
+      openLogbook: 'Open the logbook',
       points_one: '{{count}} point',
       points_other: '{{count}} points',
       prepared_one: '{{done}} done of {{total}}',

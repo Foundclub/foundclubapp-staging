@@ -356,13 +356,23 @@ function TrainingDay({ navigation, route }) {
     const faits = codes.filter((etat) => etat === 'done').length;
     const mesures = /** @type {Record<string, any>[]} */ (tests)
       .reduce((n, test) => n + (Array.isArray(test.measures) ? test.measures.length : 0), 0);
+    /*
+     * 🪤 RETOUR-ONGLET (c) — A22 de l'audit V1 (30/09). `mesures` compte ce que la
+     * journée PRÉVOIT : c'était le chiffre de la porte du carnet. Après « Terminer
+     * la journée » sans un seul test fait, elle promettait « Voir les 128 mesures au
+     * carnet »… et le carnet s'ouvrait vide. La porte compte ce qui a été SAISI.
+     */
+    const codesDuJour = new Set(/** @type {Record<string, any>[]} */ (tests).map((test) => test.code));
+    const mesuresFaites = (Array.isArray(session?.results) ? session.results : [])
+      .filter((row) => codesDuJour.has(row?.test?.code)).length;
     return {
       faits,
       mesures,
+      mesuresFaites,
       ratio: tests.length ? faits / tests.length : 0,
       total: tests.length,
     };
-  }, [etats, tests]);
+  }, [etats, session, tests]);
 
   /** La ligne sous le titre : la date, puis le lieu, reliés par un point médian. */
   const sousTitre = useMemo(() => {
@@ -760,10 +770,15 @@ function TrainingDay({ navigation, route }) {
             {finie ? (
               /* LA TROISIÈME FORME DU PIED. Une ligne « journée terminée » était
                  un cul-de-sac : la seule chose qu'on veut faire après une séance,
-                 c'est aller voir ce qu'elle a produit. */
+                 c'est aller voir ce qu'elle a produit.
+                 RETOUR-ONGLET (c) : à 0 mesure saisie, « Ouvrir le carnet » plutôt
+                 que rien — c'est la seule sortie du pied, et le carnet porte aussi
+                 les séances d'avant (vide, il propose « Voir ma prochaine séance »). */
               <Button
                 onPress={() => navigation.navigate(RouteNames.TrainingLogbook)}
-                title={t('training.day.seeMeasures', { count: chiffres.mesures })}
+                title={chiffres.mesuresFaites > 0
+                  ? t('training.day.seeMeasures', { count: chiffres.mesuresFaites })
+                  : t('training.day.openLogbook')}
                 variant="Secondary"
               />
             ) : (

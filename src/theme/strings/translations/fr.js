@@ -18805,6 +18805,9 @@ export default {
       markers: 'À savoir avant de partir',
       measures_one: '{{count}} mesure',
       measures_other: '{{count}} mesures',
+      // RETOUR-ONGLET (c) : la porte du carnet quand AUCUNE mesure n'a été saisie.
+      // Elle ne promet plus « les 128 mesures » prévues d'une journée non faite.
+      openLogbook: 'Ouvrir le carnet',
       points_one: '{{count}} point',
       points_other: '{{count}} points',
       // Le seul compteur de l ecran comptait les TESTS faits pendant la seance.
