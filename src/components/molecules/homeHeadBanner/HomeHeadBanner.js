@@ -51,11 +51,21 @@ const ACTION_VARIANTS = {
  */
 
 /**
+ * A05 — la reponse qui vient de partir, ecrite sous les boutons :
+ * « ✓ <label> <answerLabel> ».
+ * @typedef {object} HomeHeadBannerConfirmation
+ * @property {'present' | 'absent'} answer - La reponse envoyee.
+ * @property {string} answerLabel - Son mot, celui du bouton (« Présent », « Absent »).
+ * @property {string} label - Le debut de la ligne (« Réponse envoyée : »).
+ */
+
+/**
  * Bandeau de tete de l'accueil.
  * @param {object} props
  * @param {{ disabled?: boolean, isLoading?: boolean, key: string, label: string,
  *   onPress?: () => void, variant?: string }[]} [props.actions]
  *   Boutons pleine largeur de la variante « evenement ».
+ * @param {HomeHeadBannerConfirmation} [props.confirmation] - A05, sous les boutons.
  * @param {string} props.label - Etiquette au-dessus du cadre (ex. « Aujourd'hui »).
  * @param {HomeHeadBannerLine[]} [props.lines] - Variante « liste ».
  * @param {string} [props.subtitle] - Variante « evenement ».
@@ -69,6 +79,7 @@ const ACTION_VARIANTS = {
  */
 function HomeHeadBanner({
   actions = EMPTY_LIST,
+  confirmation,
   label,
   lines = EMPTY_LIST,
   subtitle,
@@ -87,6 +98,8 @@ function HomeHeadBanner({
   } = useTheme();
 
   const resolvedTone = tone || Colors.primary500;
+  // A05 — seul le MOT « Absent » passe en rouge ; tout le reste de la ligne est vert.
+  const couleurDuMot = confirmation?.answer === 'absent' ? Colors.error500 : Colors.success500;
 
   // ⛔ LA REGLE DU BANDEAU VIDE. Elle est ici, en haut, et pas dans l'appelant :
   // un bandeau sait seul s'il a quelque chose a dire.
@@ -262,6 +275,36 @@ function HomeHeadBanner({
                   />
                 ))}
               </View>
+            ) : null}
+
+            {confirmation ? (
+              // ✓ A05 (audit V1, decision d'Adel du 30/09) — « ✓ Réponse envoyée : X »
+              // apres Present COMME apres Absent. « La coche et le texte gardent leur
+              // couleur verte ; apres Absent, le MOT « Absent » est en ROUGE. » Deux
+              // couleurs de la charte, celles que les ecrans de convocation donnent
+              // deja a present / absent (`MatchConvocationPublished.js`) : aucun
+              // vert ni rouge invente.
+              // 📢 Region vivante : un lecteur d'ecran l'annonce sans qu'on la cherche.
+              // 📐 Piege Android 16 (gras de plusieurs mots dans une boite a sa largeur
+              // mesuree : le dernier mot disparait) : la ligne s'ETIRE sur toute la
+              // colonne (`alignSelf: 'stretch'`), la parade n° 1 du piege.
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[
+                  Fonts.small,
+                  {
+                    alignSelf: 'stretch',
+                    color: Colors.success500,
+                    fontSize: 12.5,
+                    fontWeight: '700',
+                  },
+                ]}
+              >
+                {`✓ ${confirmation.label} `}
+                <Text style={{ color: couleurDuMot }}>
+                  {confirmation.answerLabel}
+                </Text>
+              </Text>
             ) : null}
           </View>
         ) : null}

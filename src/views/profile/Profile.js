@@ -696,6 +696,24 @@ function Profile({ navigation, route }) {
     ...(hasEditableProfilePage ? [] : [{
       icon: Images.edit, key: 'edit', label: t('profile.actions.edit'), onPress: handleEditUser,
     }]),
+    // 🏠 A17 (lot ACCUEIL, décision d'Adel du 30/09, option A) — LES DEUX LIGNES QUI
+    // MANQUAIENT. La rubrique « Mon profil » a quitté l'accueil ; ses cases vivent
+    // ici, avec les MÊMES règles de rôle que là-bas : ni historique ni cotisation
+    // pour le parent (P0 — il ne joue pas, il ne cotise pas pour lui), pas de
+    // cotisation pour le super admin (D72 — il ne paie rien).
+    ...(currentRoleKey === 'parent' ? [] : [{
+      icon: Images.clock,
+      key: 'sportsHistory',
+      label: t('profile.actions.sportsHistory'),
+      // Sans `returnRoute`, l'assistant referme sur « Mon compte » (`goBack`).
+      onPress: () => navigation.navigate(RouteNames.HistoryWizardCategory, { resetContext: true }),
+    }]),
+    ...(currentRoleKey === 'parent' || isSuperAdmin ? [] : [{
+      icon: Images.euroCircle,
+      key: 'myLicenses',
+      label: t('profile.actions.myLicenses'),
+      onPress: () => navigation.navigate(RouteNames.MyLicenses),
+    }]),
     ...(canManageClub ? [{
       icon: Images.shield, key: 'manageClub', label: t('profile.actions.manageClub'), onPress: handleOpenClub,
     }] : []),

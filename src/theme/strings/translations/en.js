@@ -8328,6 +8328,7 @@ export default {
       },
       player: {
         absent: 'Absent',
+        answerSent: 'Answer sent:',
         label: 'My week',
         present: 'Present',
       },
@@ -8528,6 +8529,7 @@ export default {
       profile: 'My profile',
       quickNav: 'Quick navigation',
       search: 'Search',
+      subscription: 'Subscription',
       training: 'My training',
     },
     state: {
@@ -12514,9 +12516,11 @@ export default {
       manageTeams: 'Manage my teams',
       myCard: 'My collector card',
       myChildren: 'My children',
+      myLicenses: 'My fees',
       myTeams: 'My teams',
       previewPublic: 'See my profile as others do',
       save: 'Continue',
+      sportsHistory: 'Sporting history',
       superAdminLeagueDashboard: 'LEAGUE dashboard',
       switchAccount: 'Switch account',
       view: 'View my profile',
@@ -12533,6 +12537,7 @@ export default {
         title: 'Delete your account?',
       },
       deleteError: 'An error occurred while deleting the account.',
+      licenseDue: 'a membership fee to pay',
       maxAccounts: {
         message: "You can't sign in with more than {{count}} accounts on this device.",
         title: 'Limit reached',

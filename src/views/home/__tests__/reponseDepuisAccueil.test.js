@@ -7,7 +7,7 @@ import renderer, { act } from 'react-test-renderer';
 
 import { getEventById, respondToEventRsvp } from '@/services/event/eventService';
 
-import { useHomeEventAnswer } from '../useHomeEventAnswer';
+import { DUREE_CONFIRMATION_MS, useHomeEventAnswer } from '../useHomeEventAnswer';
 
 // T02 — SUR L'ACCUEIL, « PRESENT » ET « ABSENT » REPONDENT. ILS N'EMMENENT PLUS.
 //
@@ -97,10 +97,10 @@ const REPONDU_ABSENT = {
  */
 function SondeReponse({ vues }) {
   const {
-    answer, canAnswer, isAnswering, submit,
+    answer, canAnswer, isAnswering, sentAnswer, submit,
   } = useHomeEventAnswer(EVENEMENT_ID);
   vues.push({
-    answer, canAnswer, isAnswering, submit,
+    answer, canAnswer, isAnswering, sentAnswer, submit,
   });
   return null;
 }
@@ -171,6 +171,77 @@ beforeEach(() => {
 
 afterEach(() => {
   /** @type {any} */ (Alert.alert).mockRestore();
+});
+
+// A05 (audit V1, decision d'Adel du 30/09) : « Quand on dit qu'on est present, une
+// info-bulle confirme [...]. Ce n'est pas le cas pour Absent. » Mesure dans le code :
+// le bandeau ne confirmait NI l'un NI l'autre — la « bulle » vue apres Present etait
+// la notification de compo. Desormais, apres une reponse REUSSIE, le hook dit
+// laquelle vient de partir, pendant ~3 s ; le bandeau l'ecrit.
+describe('A05 — apres Present COMME apres Absent, le hook dit « reponse envoyee »', () => {
+  const derniereConfirmation = (/** @type {any[]} */ vues) => vues[vues.length - 1].sentAnswer;
+
+  it('LE TEMOIN : « Présent » accepte par le serveur ⇒ confirmation « present »', async () => {
+    getEventById.mockResolvedValue(SANS_REPONSE);
+    respondToEventRsvp.mockResolvedValue({ success: true });
+    const { demonter, vues } = await monterLaSonde();
+
+    expect(derniereConfirmation(vues)).toBeNull();
+    await act(async () => { vues[vues.length - 1].submit('present'); });
+    await vidangerLaFile();
+
+    expect(derniereConfirmation(vues)).toBe('present');
+    await demonter();
+  });
+
+  it('apres « Absent » — celui que l audit voyait muet — elle vaut « absent »', async () => {
+    getEventById.mockResolvedValue(SANS_REPONSE);
+    respondToEventRsvp.mockResolvedValue({ success: true });
+    const { demonter, vues } = await monterLaSonde();
+
+    await act(async () => { vues[vues.length - 1].submit('absent'); });
+    await vidangerLaFile();
+
+    expect(derniereConfirmation(vues)).toBe('absent');
+    await demonter();
+  });
+
+  it('un REFUS du serveur ne confirme rien : l alerte d erreur reste seule', async () => {
+    getEventById.mockResolvedValue(SANS_REPONSE);
+    respondToEventRsvp.mockRejectedValue(new Error('refus'));
+    const { demonter, vues } = await monterLaSonde();
+
+    await act(async () => { vues[vues.length - 1].submit('absent'); });
+    await vidangerLaFile();
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(derniereConfirmation(vues)).toBeNull();
+    await demonter();
+  });
+
+  it('la confirmation dure ~3 s, puis s efface d elle-meme', async () => {
+    expect(DUREE_CONFIRMATION_MS).toBe(3000);
+    getEventById.mockResolvedValue(SANS_REPONSE);
+    respondToEventRsvp.mockResolvedValue({ success: true });
+    const { demonter, vues } = await monterLaSonde();
+
+    await act(async () => { vues[vues.length - 1].submit('present'); });
+    await vidangerLaFile();
+    expect(derniereConfirmation(vues)).toBe('present');
+
+    await act(async () => {
+      await new Promise((resoudre) => { setTimeout(resoudre, DUREE_CONFIRMATION_MS + 200); });
+    });
+
+    expect(derniereConfirmation(vues)).toBeNull();
+    await demonter();
+  }, 20000);
+
+  it('le CABLAGE : HomeHub passe la confirmation au bandeau, avec le mot de la reponse', () => {
+    expect(SOURCE_HUB).toContain('confirmation={headBanner.confirmation}');
+    expect(SOURCE_HUB).toContain("t('homeHub.banner.player.answerSent')");
+    expect(SOURCE_HUB).toContain('sentAnswer');
+  });
 });
 
 describe('T02 temoin 1 — appuyer sur « Présent » ENVOIE la reponse, et ne navigue pas', () => {

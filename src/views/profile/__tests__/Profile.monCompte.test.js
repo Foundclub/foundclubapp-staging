@@ -2,10 +2,14 @@ import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-// 📌 PREMIER FILET de `Profile.js` — l'écran « Mon compte » ouvert par l'avatar
-// (1 085 lignes, AUCUN témoin jusqu'ici). Posé par le lot ACCUEIL (audit V1,
-// 30/09) en application de E6, AVANT que A17/A21 n'y rangent les cases que
-// l'accueil abandonne.
+// 📌 L'INVENTAIRE DES RANGÉES de `Profile.js` — l'écran « Mon compte » ouvert
+// par l'avatar. Posé par le lot ACCUEIL (audit V1, 30/09), AVANT que A17/A21 n'y
+// rangent les cases que l'accueil abandonne.
+// 🩹 Corrigé le jour même : l'écran avait DÉJÀ six suites (`Profile.menuProfil`,
+// `.roleParent`, `.langue`, `.deleteAccount`, `.maCollectivite`,
+// `.abonnementClubCouvert`) — une recherche par chemin absolu les avait ratées
+// (elles importent `../Profile`). Aucune ne dressait la liste COMPLÈTE des
+// rangées rôle par rôle : c'est ce que celle-ci ajoute.
 //
 // 🎯 CE QUI EST MESURÉ : les RANGÉES du menu, rôle par rôle, dans l'ordre de
 // l'écran, et OÙ chacune mène. C'est la seule chose qui compte pour A17 : une
@@ -73,8 +77,10 @@ jest.mock('@/theme/themeContext', () => {
   const Spaces = jest.requireActual('@/theme/spaces').default;
   const Colors = genererCouleurs();
   const Images = {};
-  ['arrowRight', 'bell', 'check', 'clock', 'edit', 'envelope', 'euroCircle', 'flag', 'shield', 'share2', 'trophy', 'users']
-    .forEach((nom) => { Images[nom] = { testUri: nom }; });
+  [
+    'arrowRight', 'bell', 'check', 'clock', 'edit', 'envelope',
+    'euroCircle', 'flag', 'shield', 'share2', 'trophy', 'users',
+  ].forEach((nom) => { Images[nom] = { testUri: nom }; });
   const theme = {
     Alignments,
     ApplicationStyle: genererStyleApp(Colors),
@@ -102,7 +108,9 @@ jest.mock('@/components/atoms/button/Button', () => {
   return {
     __esModule: true,
     default: (/** @type {any} */ { onPress, title }) => (
-      <TouchableOpacity accessibilityRole="button" onPress={onPress}><Text>{title}</Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" onPress={onPress}>
+        <Text>{title}</Text>
+      </TouchableOpacity>
     ),
   };
 });
@@ -114,9 +122,13 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => ({
   __esModule: true,
   default: (/** @type {any} */ { children, isVisible }) => (isVisible ? children : null),
 }));
-jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => ({ __esModule: true, default: () => null }));
+jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => ({
+  __esModule: true, default: () => null,
+}));
 jest.mock('@/components/molecules/onboardingWrapper/OnboardingWrapper', () => mockPassePlat());
-jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => ({ __esModule: true, default: () => null }));
+jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => ({
+  __esModule: true, default: () => null,
+}));
 jest.mock('@/components/molecules/tutorial/TutorialFlowBoundary', () => mockPassePlat());
 jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => mockPassePlat());
 jest.mock('@/components/templates/ScreenContainer', () => mockPassePlat());
@@ -234,38 +246,10 @@ const appuyerSur = (arbre, libelle) => {
   act(() => { cible.props.onClick?.(); cible.props.onPress?.(); });
 };
 
-describe('E6 — « Mon compte » AUJOURD HUI : les rangées, rôle par rôle', () => {
-  it.each([
-    ['player', [
-      'Ma carte de collection', 'Voir mon profil', 'Mes enfants', 'Gérer mes alertes',
-      'Changer de compte', 'Personnes bloquées', 'Nous contacter', 'Déconnexion',
-    ]],
-    ['coach', [
-      'Voir le détail des offres',
-      'Ma carte de collection', 'Voir mon profil', 'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
-      'Changer de compte', 'Personnes bloquées', 'Nous contacter', 'Déconnexion',
-    ]],
-    ['president', [
-      'Voir le détail des offres',
-      'Ma carte de collection', 'Voir mon profil', 'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
-      'Changer de compte', 'Personnes bloquées', 'Nous contacter', 'Déconnexion',
-    ]],
-    ['superAdmin', [
-      'Voir le détail des offres',
-      'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Mes enfants', 'Gérer mes alertes',
-      'Changer de compte', 'Personnes bloquées', 'Nous contacter',
-      'Dashboard admin classique', 'Dashboard League', 'Déconnexion',
-    ]],
-    ['parent', [
-      'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Mes enfants', 'Gérer mes alertes',
-      'Changer de compte', 'Personnes bloquées', 'Nous contacter', 'Déconnexion',
-    ]],
-  ])('%s', (role, attendu) => {
-    const { arbre } = monter(/** @type {any} */ (role));
-
-    expect(rangees(arbre)).toEqual(attendu);
-  });
-
+// E6 — la liste des rangées d'AVANT le lot (posée et verte sur `62e47c34`, commit
+// `0f8d4357`) est remplacée par celle d'A17, plus bas : seule la ligne des rôles
+// change (deux rangées en plus). Reste ici ce qui ne bouge pas.
+describe('E6 — « Mon compte » : ce qui ne bouge pas', () => {
   it('« Voir mon profil » ouvre la page profil, « Gérer mes alertes » les alertes', () => {
     const { arbre, navigation } = monter('player');
 
@@ -276,5 +260,113 @@ describe('E6 — « Mon compte » AUJOURD HUI : les rangées, rôle par rôle', 
       [RouteNames.UserDetails],
       [RouteNames.SearchAlerts],
     ]);
+  });
+});
+
+// A17 + A21 (décision d'Adel du 30/09, option A) : les rubriques « Mon profil » et
+// « Compte » quittent l'accueil pour « Mon compte ». Celui-ci gagne les deux
+// lignes qui lui manquaient — « Historique sportif » et « Mes cotisations » —,
+// avec les MÊMES règles de rôle qu'à l'accueil : pas d'historique ni de
+// cotisation pour le parent (P0), pas de cotisation pour le super admin (D72).
+describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandonne', () => {
+  const COMPTE = ['Changer de compte', 'Personnes bloquées', 'Nous contacter'];
+
+  it.each([
+    ['player', [
+      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
+      'Mes enfants', 'Gérer mes alertes', ...COMPTE, 'Déconnexion',
+    ]],
+    ['coach', [
+      'Voir le détail des offres',
+      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
+      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion',
+    ]],
+    ['president', [
+      'Voir le détail des offres',
+      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
+      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion',
+    ]],
+    ['superAdmin', [
+      'Voir le détail des offres',
+      'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Historique sportif',
+      'Mes enfants', 'Gérer mes alertes', ...COMPTE,
+      'Dashboard admin classique', 'Dashboard League', 'Déconnexion',
+    ]],
+    // Le parent n'avait ni l'une ni l'autre sur l'accueil (P0) : rien ne change pour lui.
+    ['parent', [
+      'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Mes enfants',
+      'Gérer mes alertes', ...COMPTE, 'Déconnexion',
+    ]],
+  ])('%s', (role, attendu) => {
+    const { arbre } = monter(/** @type {any} */ (role));
+
+    expect(rangees(arbre)).toEqual(attendu);
+  });
+
+  it('« Historique sportif » ouvre l ajout d une expérience, et referme sur « Mon compte »', () => {
+    // Sans `returnRoute`, l'assistant fait `goBack()` en fin de saisie
+    // (`HistoryWizardSingle.js`, handleSuccess) : on retrouve « Mon compte ».
+    const { arbre, navigation } = monter('player');
+
+    appuyerSur(arbre, 'Historique sportif');
+
+    expect(navigation.navigate.mock.calls).toEqual([
+      [RouteNames.HistoryWizardCategory, { resetContext: true }],
+    ]);
+  });
+
+  it('« Mes cotisations » ouvre la liste des cotisations', () => {
+    const { arbre, navigation } = monter('player');
+
+    appuyerSur(arbre, 'Mes cotisations');
+
+    expect(navigation.navigate.mock.calls).toEqual([[RouteNames.MyLicenses]]);
+  });
+});
+
+// 🧾 LE TABLEAU AVANT / APRÈS — une ligne par case que l'accueil a perdue. Chaque
+// ligne dit : la case de l'accueil, les rôles qui l'avaient (`accueilParRole
+// .test.js`, version d'avant le lot), et le geste qui y mène depuis « Mon compte ».
+// FINI QUAND : 0 destination perdue.
+describe('A17 + A21 — aucune destination de l accueil n est perdue', () => {
+  const TOUS = ['player', 'coach', 'president', 'superAdmin', 'parent'];
+
+  /**
+   * La vérification « ce geste a ouvert cette route ».
+   * @param {...any} appel - Les arguments attendus de `navigate`.
+   * @returns {(contexte: { navigation: any }) => void}
+   */
+  const ouvre = (...appel) => (/** @type {any} */ { navigation }) => {
+    expect(navigation.navigate).toHaveBeenCalledWith(...appel);
+  };
+
+  it.each([
+    ['Voir mon profil', TOUS, 'Voir mon profil', ouvre(RouteNames.UserDetails)],
+    // D41 (arbitrage d'Adel du 08/08) : la page profil du staff ÉDITE — sa porte
+    // vers le formulaire est le crayon de la carte d'identité (dirigeant) ou
+    // l'édition sur place (entraîneur, D39). Le super admin garde la rangée.
+    ['Modifier mon profil', ['superAdmin'], 'Modifier mon profil', ouvre(RouteNames.ProfileEdit)],
+    ['Modifier mon profil', ['coach', 'president'], 'Voir mon profil',
+      ouvre(RouteNames.UserDetails)],
+    ['Historique sportif', ['player', 'coach', 'president', 'superAdmin'], 'Historique sportif',
+      ouvre(RouteNames.HistoryWizardCategory, { resetContext: true })],
+    ['Gérer mes alertes', TOUS, 'Gérer mes alertes', ouvre(RouteNames.SearchAlerts)],
+    ['Mes cotisations', ['player', 'coach', 'president'], 'Mes cotisations',
+      ouvre(RouteNames.MyLicenses)],
+    ['Changer de compte', TOUS, 'Changer de compte', ({ arbre }) => {
+      expect(rangees(arbre)).toContain('Ajouter un compte');
+    }],
+    ['Déconnexion', TOUS, 'Déconnexion', ({ role }) => {
+      expect(AUTH_PAR_ROLE[role].logoutMutation.mutate).toHaveBeenCalledTimes(1);
+    }],
+  ])('« %s » (%j) : %s', (_caseDeLAccueil, roles, rangee, verifier) => {
+    roles.forEach((role) => {
+      AUTH_PAR_ROLE[role].logoutMutation.mutate.mockClear();
+      const { arbre, navigation } = monter(/** @type {any} */ (role));
+
+      appuyerSur(arbre, rangee);
+
+      verifier({ arbre, navigation, role });
+    });
   });
 });

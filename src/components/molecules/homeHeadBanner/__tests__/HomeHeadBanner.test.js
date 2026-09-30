@@ -1,4 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
+import {
+  Pressable, StyleSheet, Text, View,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { colors } from '@/theme/colors';
@@ -218,5 +220,82 @@ describe('D72 — la variante « evenement » (entraineur, joueur)', () => {
 
     expect(textes).toContain('Samedi 15 · 14:00');
     expect(tree.toJSON()).not.toBeNull();
+  });
+});
+
+// A05 (audit V1, decision d'Adel du 30/09) : apres Present comme apres Absent, une
+// ligne « ✓ Réponse envoyée : X » sous les boutons. « La coche et le texte gardent
+// leur couleur verte ; apres Absent, le MOT « Absent » est en ROUGE. » Les deux
+// couleurs sont celles de la charte que les ecrans de convocation emploient deja
+// pour present / absent (`MatchConvocationPublished.js`, `PlayerConvocationScreen.js`).
+describe('A05 — la ligne « ✓ Réponse envoyée : X » et ses couleurs', () => {
+  const EVENEMENT = {
+    actions: [
+      { key: 'present', label: 'Présent', onPress: jest.fn() },
+      {
+        key: 'absent', label: 'Absent', onPress: jest.fn(), variant: 'secondary',
+      },
+    ],
+    label: 'Ma semaine',
+    subtitle: 'Entraînement U15 · Gymnase des Tilleuls',
+    title: 'Jeu. 01/10 · 18:00',
+    variant: 'event',
+  };
+
+  /**
+   * La ligne de confirmation : le texte annonce aux lecteurs d'ecran (region vivante).
+   * @param {any} tree
+   * @returns {any[]}
+   */
+  const lignes = (tree) => tree.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+    && n.props.accessibilityLiveRegion === 'polite');
+
+  /**
+   * Le mot de la réponse : le texte imbriqué dans la ligne.
+   * @param {any} ligne
+   * @returns {any}
+   */
+  const motDe = (ligne) => ligne.findAll((/** @type {any} */ n) => (
+    typeof n.type === 'string' && n !== ligne
+  ))[0];
+
+  /**
+   * La couleur de texte d'un nœud, styles aplatis.
+   * @param {any} noeud
+   * @returns {string | undefined}
+   */
+  const couleur = (noeud) => StyleSheet.flatten(noeud.props.style)?.color;
+
+  it('sans confirmation, aucune ligne', async () => {
+    const tree = await monter(EVENEMENT);
+
+    expect(lignes(tree)).toHaveLength(0);
+  });
+
+  it('LE TEMOIN : apres Présent, « ✓ Réponse envoyée : Présent », tout en vert', async () => {
+    const tree = await monter({
+      ...EVENEMENT,
+      confirmation: { answer: 'present', answerLabel: 'Présent', label: 'Réponse envoyée\u00a0:' },
+    });
+    const [ligne] = lignes(tree);
+    const mot = motDe(ligne);
+
+    expect(collecterTexte(ligne).join('')).toBe('✓ Réponse envoyée\u00a0: Présent');
+    expect(couleur(ligne)).toBe(colors.success500);
+    expect(couleur(mot)).toBe(colors.success500);
+  });
+
+  it('apres Absent, coche et texte restent VERTS, le MOT « Absent » passe en ROUGE', async () => {
+    const tree = await monter({
+      ...EVENEMENT,
+      confirmation: { answer: 'absent', answerLabel: 'Absent', label: 'Réponse envoyée\u00a0:' },
+    });
+    const [ligne] = lignes(tree);
+    const mot = motDe(ligne);
+
+    expect(collecterTexte(ligne).join('')).toBe('✓ Réponse envoyée\u00a0: Absent');
+    expect(couleur(ligne)).toBe(colors.success500);
+    expect(collecterTexte(mot).join('')).toBe('Absent');
+    expect(couleur(mot)).toBe(colors.error500);
   });
 });

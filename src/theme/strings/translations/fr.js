@@ -8866,6 +8866,9 @@ export default {
       },
       player: {
         absent: 'Absent',
+        // A05 (audit V1, 30/09) — « ✓ Réponse envoyée : Présent / Absent » sous les
+        // deux boutons. Espace insécable avant le deux-points, comme ailleurs dans ce fichier.
+        answerSent: 'Réponse envoyée :',
         label: 'Ma semaine',
         present: 'Présent',
       },
@@ -9080,6 +9083,8 @@ export default {
       // comparaison des ENSEMBLES de clefs, pas le compte de lignes).
       quickNav: 'Navigation rapide',
       search: 'Rechercher',
+      // A17 (audit V1, 30/09) — la seule case de « Mon profil » restée sur l'accueil (staff).
+      subscription: 'Abonnement',
       training: 'Mon entraînement',
     },
     state: {
@@ -13221,9 +13226,13 @@ export default {
       manageTeams: 'Gérer mes équipes',
       myCard: 'Ma carte de collection',
       myChildren: 'Mes enfants',
+      // A17 (audit V1, 30/09) — venue de la rubrique « Mon profil » de l'accueil.
+      myLicenses: 'Mes cotisations',
       myTeams: 'Mes équipes',
       previewPublic: 'Voir mon profil comme les autres',
       save: 'Continuer',
+      // A17 (audit V1, 30/09) — venue de la rubrique « Mon profil » de l'accueil.
+      sportsHistory: 'Historique sportif',
       superAdminLeagueDashboard: 'Dashboard League',
       switchAccount: 'Changer de compte',
       view: 'Voir mon profil',
@@ -13249,6 +13258,8 @@ export default {
         title: 'Supprimer ton compte ?',
       },
       deleteError: 'Une erreur est survenue lors de la suppression du compte.',
+      // A17 (audit V1, 30/09) — lu à la suite de « Profil » sur l'avatar de l'accueil.
+      licenseDue: 'une cotisation à payer',
       maxAccounts: {
         message: 'Tu ne peux pas connecter plus de {{count}} comptes sur cet appareil.',
         title: 'Limite atteinte',
