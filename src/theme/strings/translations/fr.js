@@ -14567,6 +14567,8 @@ export default {
       comingSoonBody: "La réservation de terrains et d'installations arrive très vite. Reste connecté, on te préviendra dès son ouverture.",
       comingSoonTitle: 'Bientôt disponible',
     },
+    // RETOUR-ONGLET (b) : le titre de l'en-tête « ‹ Rechercher » (SearchStack.js).
+    title: 'Rechercher',
   },
   searchMap: {
     badges: {

@@ -5,6 +5,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import SearchStack from '../SearchStack';
@@ -181,15 +183,12 @@ const monter = () => {
 };
 
 /**
- * Les fleches « Retour » dessinees par la pile (un pressable par fleche).
- * @returns {any[]} les noeuds pressables
+ * Les fleches « Retour » dessinees par la pile : la fleche de la MAISON
+ * (`HeaderBackButton`), comptee par composant — un `TouchableOpacity` expose deux
+ * noeuds `onPress`, les compter doublerait tout.
+ * @returns {any[]} les fleches
  */
-const fleches = () => arbre.root.findAll(
-  (/** @type {any} */ n) => n.props?.accessibilityLabel === 'common.back'
-    && n.props?.accessibilityRole === 'button'
-    && typeof n.props?.onPress === 'function'
-    && typeof n.type !== 'string',
-);
+const fleches = () => arbre.root.findAllByType(HeaderBackButton);
 
 /**
  * Les routes de la pile, dans l'ordre.
@@ -242,6 +241,18 @@ describe('RETOUR-ONGLET (b) — la pile de l onglet d accueil', () => {
     expect(pile()).toEqual([RouteNames.SearchHome, RouteNames.SearchHub]);
 
     expect(flecheVisible()).toBeDefined();
+    // Le titre : la recherche est le seul ecran qui n'ecrit pas le sien en tete.
+    expect(arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'string' && n.props?.children === 'Rechercher',
+    ).length).toBeGreaterThan(0);
+    // Ce que lit le lecteur d'ecran : un BOUTON « Retour » (clef common.back, fr.js
+    // « Retour », en.js « Back »), cible de 44 pt (32 visibles + la marge tactile).
+    const pressable = flecheVisible().findAll(
+      (/** @type {any} */ n) => n.props?.accessibilityRole === 'button' && n.props?.hitSlop,
+    )[0];
+    expect(pressable.props.accessibilityLabel).toBe('common.back');
+    const { bottom, left, right, top } = pressable.props.hitSlop;
+    expect([32 + top + bottom, 32 + left + right]).toEqual([44, 44]);
     act(() => { flecheVisible().props.onPress(); });
 
     expect(pile()).toEqual([RouteNames.SearchHome]);

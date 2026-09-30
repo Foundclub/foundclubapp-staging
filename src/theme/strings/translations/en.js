@@ -13866,6 +13866,7 @@ export default {
       comingSoonBody: "Pitch and facility booking is coming very soon. Stay tuned, we'll let you know as soon as it opens.",
       comingSoonTitle: 'Coming soon',
     },
+    title: 'Search',
   },
   searchMap: {
     badges: {
