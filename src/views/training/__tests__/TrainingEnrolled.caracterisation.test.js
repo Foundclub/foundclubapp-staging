@@ -166,10 +166,12 @@ describe('les deux boutons REMPLACENT la fleche de retour', () => {
     // AUCUN navigateur -- le bouton ne faisait RIEN. Ce temoin affirmait l appel
     // direct, donc il restait vert en figeant la panne. La forme imbriquee passe par
     // l onglet d accueil (src/navigation/allerDansLOnglet.js).
+    // RETOUR-ONGLET (30/09) : et avec `pop`, sinon React Navigation 7 EMPILE un
+    // second onglet d accueil au lieu de revenir au premier (A22 de l audit V1).
     expect(navigate).toHaveBeenCalledWith('HomeTab', {
-      params: { params: undefined, screen: 'TrainingSessions' },
+      params: { params: undefined, pop: true, screen: 'TrainingSessions' },
       screen: 'Search',
-    });
+    }, { pop: true });
     expect(navigate).not.toHaveBeenCalledWith('TrainingSessions');
   });
 
@@ -184,9 +186,9 @@ describe('les deux boutons REMPLACENT la fleche de retour', () => {
 
     // Meme panne, meme remede : « Plus tard » ne faisait rien non plus.
     expect(navigate).toHaveBeenCalledWith('HomeTab', {
-      params: { params: undefined, screen: 'SearchHome' },
+      params: { params: undefined, pop: true, screen: 'SearchHome' },
       screen: 'Search',
-    });
+    }, { pop: true });
     expect(navigate).not.toHaveBeenCalledWith('SearchHome');
   });
 });

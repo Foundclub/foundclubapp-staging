@@ -29,6 +29,18 @@ import { RouteNames } from '@/navigation/routeNames';
  * ⚠️ POURQUOI UN FICHIER PLUTÔT QUE CINQ COPIES : deux niveaux d'imbrication écrits à
  * la main cinq fois, c'est cinq occasions de se tromper — et l'erreur ne se voit qu'à
  * l'exécution, sur le terrain. C'est exactement comme ça que celle-ci est arrivée.
+ *
+ * 🔴 RETOUR-ONGLET (A22 de l'audit V1, 30/09) — « APRÈS LA SÉANCE, JE SUIS BLOQUÉ ».
+ * La forme imbriquée ARRIVAIT bien à l'écran… dans un SECOND onglet d'accueil. En
+ * React Navigation 7, `navigate` ne revient plus en arrière vers une route déjà
+ * empilée (StackRouter, cas 'NAVIGATE' : il ne cherche l'existante que si `pop` est
+ * posé) : depuis la racine, il EMPILAIT un nouveau `HomeTab` dont la pile commençait
+ * directement par l'écran visé. « Accueil » n'y avait plus rien à dépiler, et il
+ * fallait quatre retours pour revoir l'accueil ; chaque « Revenir à ma séance » en
+ * empilait un de plus. `pop` aux DEUX niveaux qui empilent : la racine revient au
+ * `HomeTab` déjà ouvert (l'écran de tâche est retiré), et la pile de l'onglet revient
+ * à l'écran s'il y est déjà, au lieu d'en poser une copie.
+ * Preuve : `__tests__/allerDansLOnglet.pileRacine.test.js` (vrais routeurs).
  */
 
 /**
@@ -39,10 +51,14 @@ import { RouteNames } from '@/navigation/routeNames';
  * @returns {void}
  */
 const allerDansLOnglet = (navigation, ecran, parametres) => {
-  navigation.navigate(RouteNames.HomeTab, {
-    params: { params: parametres, screen: ecran },
-    screen: RouteNames.Search,
-  });
+  navigation.navigate(
+    RouteNames.HomeTab,
+    {
+      params: { params: parametres, pop: true, screen: ecran },
+      screen: RouteNames.Search,
+    },
+    { pop: true },
+  );
 };
 
 export default allerDansLOnglet;
