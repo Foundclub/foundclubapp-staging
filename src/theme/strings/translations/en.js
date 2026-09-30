@@ -13919,6 +13919,7 @@ export default {
       comingSoonBody: "Pitch and facility booking is coming very soon. Stay tuned, we'll let you know as soon as it opens.",
       comingSoonTitle: 'Coming soon',
     },
+    title: 'Search',
   },
   searchMap: {
     badges: {
@@ -17822,6 +17823,7 @@ export default {
       markers: 'Before you head out',
       measures_one: '{{count}} measurement',
       measures_other: '{{count}} measurements',
+      openLogbook: 'Open the logbook',
       points_one: '{{count}} point',
       points_other: '{{count}} points',
       prepared_one: '{{done}} done of {{total}}',
@@ -17837,6 +17839,16 @@ export default {
       testsTitle: 'The tests, in order',
       timeline: 'The schedule, minute by minute',
       warmup: 'Warm-up',
+    },
+    done: {
+      backToProgram: 'Back to my programme',
+      measures_one: '{{count}} measurement in the logbook',
+      measures_other: '{{count}} measurements in the logbook',
+      next: 'Next session: {{title}}, {{date}}.',
+      noMeasures: 'No measurements recorded today',
+      program: 'My programme',
+      seeMeasures: 'View my measurements',
+      title: 'Session complete',
     },
     enroll: {
       confirm: 'Add to my training',

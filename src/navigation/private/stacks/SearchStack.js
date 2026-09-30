@@ -1,9 +1,13 @@
 /* eslint-disable global-require */
 import { createStackNavigator } from '@react-navigation/stack';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import HomeHub from '@/views/home/HomeHub';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { optionsDeLaPileAccueil } from './enTeteRetourAccueil';
 
 const Stack = createStackNavigator();
 
@@ -12,11 +16,20 @@ const Stack = createStackNavigator();
  * @returns {import('react').ReactElement}
  */
 function SearchStack() {
+  const { t } = useTranslation();
+  // RETOUR-ONGLET (b) : seule la recherche n'ecrit pas son titre en tete d'ecran.
+  // Les autres le portent deja en grand juste sous la fleche : il n'est pas repete.
+  const titres = useMemo(() => ({
+    [RouteNames.SearchHub]: t('searchHubScreen.title', 'Rechercher'),
+  }), [t]);
+
   return (
     <Stack.Navigator
       id={undefined}
       initialRouteName={RouteNames.SearchHome}
-      screenOptions={{ headerShown: false }}
+      // RETOUR-ONGLET (b) — la fleche « Retour » sur chaque ecran NON RACINE, posee
+      // ici une fois (enTeteRetourAccueil.js). La racine reste sans en-tete (D07).
+      screenOptions={(ecran) => optionsDeLaPileAccueil(ecran, titres)}
     >
       <Stack.Screen
         component={HomeHub}

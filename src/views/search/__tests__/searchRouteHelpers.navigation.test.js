@@ -16,6 +16,7 @@
  * l'imbrication, ce qui reproduirait exactement le bouton mort.
  */
 import { RouteNames } from '@/navigation/routeNames';
+import { buildWebPath } from '@/navigation/webRoutes';
 
 import { navigateToSearchHub } from '../searchRouteHelpers';
 
@@ -26,13 +27,37 @@ describe('navigateToSearchHub', () => {
     navigateToSearchHub(navigation, 'clubs');
 
     expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    // RETOUR-ONGLET-2 : la forme imbriquee est celle d'`allerDansLOnglet`, avec `pop` aux
+    // deux niveaux qui empilent. Sans lui, depuis un ecran de la RACINE (l'assistant
+    // d'equipe, la page de succes d'abonnement), React Navigation 7 EMPILAIT un second
+    // HomeTab (preuve : navigation/__tests__/retourOnglet2.pileRacine.test.js, F2).
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
       params: {
         params: { activeType: 'clubs' },
+        pop: true,
         screen: RouteNames.SearchHub,
       },
       screen: RouteNames.Search,
-    });
+    }, { pop: true });
+  });
+
+  it('🌐 le SITE ne voit pas `pop` : l adresse est la meme qu avant RETOUR-ONGLET-2', () => {
+    // TeamWizardName et SubscriptionSuccess sont aussi des pages du site ; son
+    // adaptateur ignore le troisieme argument de navigate, et l'adresse ne se
+    // construit qu'a partir de screen/params : `pop` ne doit pas y fuir.
+    const navigation = { navigate: jest.fn() };
+    const autres = { query: 'smuc' };
+
+    navigateToSearchHub(navigation, 'clubs', autres);
+    const [route, parametres] = navigation.navigate.mock.calls[0];
+
+    // Meme ordre de cles qu'avant (les autres parametres, puis le type) : l'adresse
+    // les ecrit dans cet ordre.
+    expect(buildWebPath(route, parametres)).toBe(buildWebPath(RouteNames.HomeTab, {
+      params: { params: { ...autres, activeType: 'clubs' }, screen: RouteNames.SearchHub },
+      screen: RouteNames.Search,
+    }));
+    expect(buildWebPath(route, parametres)).not.toContain('pop');
   });
 
   it('ne vise JAMAIS RouteNames.Search au premier niveau (le defaut R06)', () => {

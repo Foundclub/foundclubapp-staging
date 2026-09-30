@@ -3,6 +3,7 @@ import path from 'path';
 
 import allerDansLOnglet from '../allerDansLOnglet';
 import { RouteNames } from '../routeNames';
+import { buildWebPath } from '../webRoutes';
 
 /**
  * 🔴 LE DEFAUT QUE CE FILET FERME, mesure a l ecran le 2026-09-08.
@@ -39,16 +40,44 @@ const routesDe = (fichier) => {
   return new Set([...source.matchAll(/name=\{RouteNames\.(\w+)\}/g)].map((m) => m[1]));
 };
 
+/*
+ * RETOUR-ONGLET (30/09) — ce temoin figeait la forme d'appel A DEUX arguments, et il
+ * etait VERT sur le defaut A22 de l'audit V1 : en React Navigation 7, cette forme
+ * EMPILE un second `HomeTab` au lieu de revenir a celui qui est deja ouvert. Un espion
+ * ne voit pas l'etat : la preuve vit dans `allerDansLOnglet.pileRacine.test.js`, sur
+ * les vrais routeurs. Ce temoin-ci garde la FORME, desormais avec `pop` aux deux
+ * niveaux qui en ont besoin (la racine, et la pile de l'onglet).
+ */
 describe('la forme imbriquee', () => {
-  it('nomme le chemin complet : onglet d accueil, puis la pile, puis l ecran', () => {
+  it('nomme le chemin complet et REVIENT a ce qui est deja ouvert (pop), sans empiler', () => {
     const navigation = { navigate: jest.fn() };
 
     allerDansLOnglet(navigation, RouteNames.TrainingSessionNow, { sessionId: 'abc' });
 
-    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
-      params: { params: { sessionId: 'abc' }, screen: RouteNames.TrainingSessionNow },
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      RouteNames.HomeTab,
+      {
+        params: { params: { sessionId: 'abc' }, pop: true, screen: RouteNames.TrainingSessionNow },
+        screen: RouteNames.Search,
+      },
+      { pop: true },
+    );
+  });
+
+  it('🌐 le SITE ne voit pas `pop` : l adresse est la meme qu avant RETOUR-ONGLET', () => {
+    // MyChildren est aussi une page du site (dist : MyChildren-*.js porte l'appel).
+    // L'adaptateur du site ignore le troisieme argument de navigate, et l'adresse
+    // ne se construit qu'a partir de screen/params : `pop` ne doit pas y fuir.
+    const navigation = { navigate: jest.fn() };
+
+    allerDansLOnglet(navigation, RouteNames.SearchClubs, { childDocumentId: 'enfant-1' });
+    const [route, parametres] = navigation.navigate.mock.calls[0];
+
+    expect(buildWebPath(route, parametres)).toBe(buildWebPath(RouteNames.HomeTab, {
+      params: { params: { childDocumentId: 'enfant-1' }, screen: RouteNames.SearchClubs },
       screen: RouteNames.Search,
-    });
+    }));
+    expect(buildWebPath(route, parametres)).not.toContain('pop');
   });
 
   it('accepte un ecran sans parametre', () => {

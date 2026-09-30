@@ -14632,6 +14632,8 @@ export default {
       comingSoonBody: "La réservation de terrains et d'installations arrive très vite. Reste connecté, on te préviendra dès son ouverture.",
       comingSoonTitle: 'Bientôt disponible',
     },
+    // RETOUR-ONGLET (b) : le titre de l'en-tête « ‹ Rechercher » (SearchStack.js).
+    title: 'Rechercher',
   },
   searchMap: {
     badges: {
@@ -18868,6 +18870,9 @@ export default {
       markers: 'À savoir avant de partir',
       measures_one: '{{count}} mesure',
       measures_other: '{{count}} mesures',
+      // RETOUR-ONGLET (c) : la porte du carnet quand AUCUNE mesure n'a été saisie.
+      // Elle ne promet plus « les 128 mesures » prévues d'une journée non faite.
+      openLogbook: 'Ouvrir le carnet',
       points_one: '{{count}} point',
       points_other: '{{count}} points',
       // Le seul compteur de l ecran comptait les TESTS faits pendant la seance.
@@ -18886,6 +18891,17 @@ export default {
       testsTitle: 'Les tests, dans l\'ordre',
       timeline: 'Le déroulé, minute par minute',
       warmup: 'Échauffement',
+    },
+    // RETOUR-ONGLET (d) — l'écran « Séance terminée » (A22, maquette validée le 30/09).
+    done: {
+      backToProgram: 'Revenir à mon programme',
+      measures_one: '{{count}} mesure au carnet',
+      measures_other: '{{count}} mesures au carnet',
+      next: 'Prochaine séance : {{title}}, {{date}}.',
+      noMeasures: 'Aucune mesure enregistrée aujourd’hui',
+      program: 'Mon programme',
+      seeMeasures: 'Voir mes mesures',
+      title: 'Séance terminée',
     },
     enroll: {
       confirm: 'Ajouter à mon entraînement',

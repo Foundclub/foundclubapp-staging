@@ -1,5 +1,6 @@
 import { sanitizeRecruitmentTabForRole, VALID_RECRUITMENT_TABS } from '@/domains/search/recruitmentFlow';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 const CANONICAL_SEARCH_TYPES = new Set([
@@ -99,21 +100,22 @@ export function getSearchTypeFromRouteName(routeName) {
  *
  * On vise `SearchHub` avec `activeType` plutot que la route `SearchClubs` :
  * dans SearchStack, `SearchClubs` n'est qu'un alias (`SearchHubRouteAlias`).
+ *
+ * RETOUR-ONGLET-2 (30/09) — les trois niveaux ne suffisaient pas. Depuis un ecran de
+ * la RACINE (l'assistant d'equipe, la page de succes d'abonnement), React Navigation 7
+ * EMPILAIT un second HomeTab au lieu de revenir au premier : `navigate` ne cherche la
+ * route deja empilee que si `pop` est pose. La forme imbriquee passe donc par
+ * `allerDansLOnglet`, qui pose `pop` aux deux niveaux qui empilent.
+ * Preuve : navigation/__tests__/retourOnglet2.pileRacine.test.js (F2).
  * @param {any} navigation
  * @param {unknown} [searchType] type d'onglet vise ; defaut 'events'
  * @param {Record<string, unknown>} [extraParams] parametres additionnels
  * @returns {void}
  */
 export function navigateToSearchHub(navigation, searchType, extraParams) {
-  navigation.navigate(RouteNames.HomeTab, {
-    params: {
-      params: {
-        ...(extraParams || {}),
-        activeType: coerceSearchHubType(searchType),
-      },
-      screen: RouteNames.SearchHub,
-    },
-    screen: RouteNames.Search,
+  allerDansLOnglet(navigation, RouteNames.SearchHub, {
+    ...(extraParams || {}),
+    activeType: coerceSearchHubType(searchType),
   });
 }
 

@@ -268,7 +268,13 @@ function TrainingSessionNow({ navigation, route }) {
       payload: { status: 'done' },
       sessionDocumentId: session.documentId,
     });
-    navigation.navigate(RouteNames.TrainingDay, { sessionId: session.documentId });
+    // RETOUR-ONGLET (d) — A22 : REMPLACER « Ma séance » par « Séance terminée ».
+    // `navigate` empilait une fiche de plus (React Navigation 7), et le retour tournait
+    // en rond jusqu'à cet écran-ci, qui proposait encore de « continuer ».
+    navigation.replace(RouteNames.TrainingDay, {
+      justFinished: true,
+      sessionId: session.documentId,
+    });
   }, [navigation, session, updateSession]);
 
   return (

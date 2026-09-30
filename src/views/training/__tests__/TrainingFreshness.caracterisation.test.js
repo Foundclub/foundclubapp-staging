@@ -376,10 +376,12 @@ describe('les DEUX sorties du cas « on reporte »', () => {
     // « Toutes mes seances » vit dans l onglet, deux niveaux plus bas. L appel
     // direct ne trouvait RIEN — l appareil disait « The action 'NAVIGATE' … was
     // not handled by any navigator » et l ecran ne bougeait pas.
+    // RETOUR-ONGLET (30/09) : et avec `pop`, sinon React Navigation 7 EMPILE un
+    // second onglet d accueil au lieu de revenir au premier (A22 de l audit V1).
     expect(navigate).toHaveBeenCalledWith('HomeTab', {
-      params: { params: { postponeSessionId: 'seance-9' }, screen: 'TrainingSessions' },
+      params: { params: { postponeSessionId: 'seance-9' }, pop: true, screen: 'TrainingSessions' },
       screen: 'Search',
-    });
+    }, { pop: true });
   });
 
   it('🪤 « Je la fais quand meme » passe, MAIS l etat reel part quand meme', async () => {
@@ -442,9 +444,9 @@ describe('ce qui part au serveur', () => {
     // ⛔ Pas la fiche de la journee : elle sert a LIRE. Une seance qui demarre
     // s ouvre sur le seul ecran qui reponde a « je fais quoi maintenant ? ».
     expect(navigate).toHaveBeenCalledWith('HomeTab', {
-      params: { params: { sessionId: 'seance-9' }, screen: 'TrainingSessionNow' },
+      params: { params: { sessionId: 'seance-9' }, pop: true, screen: 'TrainingSessionNow' },
       screen: 'Search',
-    });
+    }, { pop: true });
   });
 
   it('🪤 ne fait PAS partir la personne quand l envoi echoue', async () => {

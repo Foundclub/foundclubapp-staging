@@ -1,4 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useLayoutEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -13,8 +15,10 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import TrainingBlocks, { RichText } from '@/components/organisms/training/TrainingBlocks';
+import TrainingDayDone from '@/components/organisms/training/TrainingDayDone';
 import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -291,7 +295,7 @@ function TrainingDay({ navigation, route }) {
   const sessionId = route?.params?.sessionId;
 
   const {
-    enrollment, error, isLoading, refetch, sessions,
+    enrollment, error, isLoading, nextSession, refetch, sessions,
   } = useMyTraining();
   const updateSession = useUpdateTrainingSession();
 
@@ -356,13 +360,25 @@ function TrainingDay({ navigation, route }) {
     const faits = codes.filter((etat) => etat === 'done').length;
     const mesures = /** @type {Record<string, any>[]} */ (tests)
       .reduce((n, test) => n + (Array.isArray(test.measures) ? test.measures.length : 0), 0);
+    /*
+     * 🪤 RETOUR-ONGLET (c) — A22 de l'audit V1 (30/09). `mesures` compte ce que la
+     * journée PRÉVOIT : c'était le chiffre de la porte du carnet. Après « Terminer
+     * la journée » sans un seul test fait, elle promettait « Voir les 128 mesures au
+     * carnet »… et le carnet s'ouvrait vide. La porte compte ce qui a été SAISI.
+     */
+    const codesDuJour = new Set(/** @type {Record<string, any>[]} */ (tests)
+      .map((test) => test.code));
+    const saisies = session?.results;
+    const mesuresFaites = (Array.isArray(saisies) ? saisies : [])
+      .filter((row) => codesDuJour.has(row?.test?.code)).length;
     return {
       faits,
       mesures,
+      mesuresFaites,
       ratio: tests.length ? faits / tests.length : 0,
       total: tests.length,
     };
-  }, [etats, tests]);
+  }, [etats, session, tests]);
 
   /** La ligne sous le titre : la date, puis le lieu, reliés par un point médian. */
   const sousTitre = useMemo(() => {
@@ -439,6 +455,48 @@ function TrainingDay({ navigation, route }) {
     (/** @type {number} */ index) => openTest(index, 'learn'),
     [openTest],
   );
+
+  /*
+   * RETOUR-ONGLET (d) — « SÉANCE TERMINÉE ✓ » (A22, maquette validée par Adel le 30/09).
+   * « Terminer la journée » REMPLACE « Ma séance » par cet écran (`justFinished`) au
+   * lieu d'empiler une fiche de plus. Sans le paramètre, une journée finie reste la
+   * FICHE : on la relit depuis la liste des séances.
+   */
+  const vientDeFinir = Boolean(route?.params?.justFinished) && Boolean(day);
+  const revenirAuProgramme = useCallback(() => {
+    navigation.popTo(RouteNames.TrainingPlan);
+  }, [navigation]);
+
+  // La flèche de l'en-tête de la pile dit où elle mène : « ‹ Mon programme ».
+  const renderHeaderLeft = useCallback(() => (
+    <HeaderBackButton
+      accessibilityLabel={t('training.done.backToProgram')}
+      onPress={revenirAuProgramme}
+    />
+  ), [revenirAuProgramme, t]);
+
+  useLayoutEffect(() => {
+    if (!vientDeFinir) return;
+    navigation.setOptions?.({
+      headerLeft: renderHeaderLeft,
+      headerTitle: t('training.done.program'),
+      headerTitleAlign: 'left',
+    });
+  }, [navigation, renderHeaderLeft, t, vientDeFinir]);
+
+  if (vientDeFinir) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+        <TrainingDayDone
+          day={day}
+          mesuresFaites={chiffres.mesuresFaites}
+          nextSession={nextSession && nextSession.documentId !== sessionId ? nextSession : null}
+          onBackToProgram={revenirAuProgramme}
+          onSeeMeasures={() => navigation.navigate(RouteNames.TrainingLogbook)}
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
@@ -760,10 +818,15 @@ function TrainingDay({ navigation, route }) {
             {finie ? (
               /* LA TROISIÈME FORME DU PIED. Une ligne « journée terminée » était
                  un cul-de-sac : la seule chose qu'on veut faire après une séance,
-                 c'est aller voir ce qu'elle a produit. */
+                 c'est aller voir ce qu'elle a produit.
+                 RETOUR-ONGLET (c) : à 0 mesure saisie, « Ouvrir le carnet » plutôt
+                 que rien — c'est la seule sortie du pied, et le carnet porte aussi
+                 les séances d'avant (vide, il propose « Voir ma prochaine séance »). */
               <Button
                 onPress={() => navigation.navigate(RouteNames.TrainingLogbook)}
-                title={t('training.day.seeMeasures', { count: chiffres.mesures })}
+                title={chiffres.mesuresFaites > 0
+                  ? t('training.day.seeMeasures', { count: chiffres.mesuresFaites })
+                  : t('training.day.openLogbook')}
                 variant="Secondary"
               />
             ) : (

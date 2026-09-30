@@ -249,14 +249,18 @@ test('P2/7 ⑦ « chercher un club » emmène la recherche AVEC l\'enfant visé'
   // La recherche vit dans `SearchStack`, deux niveaux plus bas : c'est
   // `allerDansLOnglet` qui écrit ce chemin, et le témoin exige la forme
   // COMPLÈTE — un nom nu ne descend jamais chez un voisin (défaut du 08/09).
+  // RETOUR-ONGLET (30/09) : et avec `pop`, sinon React Navigation 7 EMPILE un second
+  // onglet d'accueil au lieu de revenir au premier (A22 de l'audit V1).
   expect(mockNavigate).toHaveBeenCalledWith(
     'HomeTab',
     {
       params: {
         params: { childDocumentId: 'enfant-1', childFirstname: 'Léa' },
+        pop: true,
         screen: 'SearchClubs',
       },
       screen: 'Search',
     },
+    { pop: true },
   );
 });

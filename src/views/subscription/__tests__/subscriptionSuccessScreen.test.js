@@ -387,9 +387,12 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
       findTouchableByLabel(tree, 'Publier un événement ou un match').props.onPress();
     });
     expect(mockInvalidate).toHaveBeenCalled();
+    // RETOUR-ONGLET-2 : l'ecran est monte sur la RACINE. Sans `pop`, React Navigation 7
+    // EMPILE un second HomeTab au lieu de revenir au premier (preuve sur les vrais
+    // routeurs : navigation/__tests__/retourOnglet2.pileRacine.test.js, F3).
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
       screen: RouteNames.MyEventList,
-    });
+    }, { pop: true });
     expect(mockTrackFunnelEvent).toHaveBeenCalledWith('success_resume_clicked', {
       source: 'first-action:events',
     });
@@ -402,7 +405,7 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
     });
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
       screen: RouteNames.MyTeamList,
-    });
+    }, { pop: true });
   });
 
   it('« Publier une annonce de recrutement » passe par les TROIS niveaux (R06)', async () => {
@@ -410,13 +413,16 @@ describe('SubscriptionSuccess — L11, ce que l achat debloque et les premiers p
     await act(async () => {
       findTouchableByLabel(tree, 'Publier une annonce de recrutement').props.onPress();
     });
+    // RETOUR-ONGLET-2 : `navigateToSearchHub` passe par `allerDansLOnglet` — `pop` aux
+    // deux niveaux qui empilent (la racine, puis la pile de l'onglet).
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
       params: {
         params: { activeType: 'recruitment' },
+        pop: true,
         screen: RouteNames.SearchHub,
       },
       screen: RouteNames.Search,
-    });
+    }, { pop: true });
   });
 
   it('« Gérer mon club » ouvre la fiche du club COUVERT par l achat', async () => {

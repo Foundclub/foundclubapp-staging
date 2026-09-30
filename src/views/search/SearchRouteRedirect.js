@@ -5,6 +5,7 @@ import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { remplacerParLOnglet } from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { getSearchTypeFromRouteName } from './searchRouteHelpers';
@@ -27,22 +28,16 @@ function SearchRouteRedirect({ navigation, route }) {
 
   useEffect(() => {
     const targetRoute = route?.name;
+    // RETOUR-ONGLET-2 : revenir au HomeTab deja empile, pas en poser un second
+    // (le pourquoi de `popTo` est ecrit sur `remplacerParLOnglet`).
     if (!SEARCH_ROUTES.has(targetRoute)) {
-      navigation.replace(RouteNames.HomeTab, {
-        screen: RouteNames.Search,
-      });
+      remplacerParLOnglet(navigation, RouteNames.SearchHome);
       return;
     }
 
-    navigation.replace(RouteNames.HomeTab, {
-      params: {
-        params: {
-          ...(route?.params || {}),
-          activeType: getSearchTypeFromRouteName(targetRoute),
-        },
-        screen: RouteNames.SearchHub,
-      },
-      screen: RouteNames.Search,
+    remplacerParLOnglet(navigation, RouteNames.SearchHub, {
+      ...(route?.params || {}),
+      activeType: getSearchTypeFromRouteName(targetRoute),
     });
   }, [navigation, route?.name, route?.params]);
 
