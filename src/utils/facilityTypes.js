@@ -9,88 +9,38 @@ import i18next from 'i18next';
  * `facility/schema.json`, enumeration `type`) : les 5 d'avant restent EN TETE et a
  * l'identique — des lignes existent, un renommage les rendrait illisibles.
  * Seul le LIBELLE suit la langue (accesseur, I18N-4).
- * @type {{ label: string, value: string }[]}
+ *
+ * FINITIONS-AUDIT (30/09) — les valeurs sont ecrites en NOMS DE PROPRIETE : ce sont des
+ * identifiants du contrat serveur, pas du texte affiche. Ecrites en chaines, la porte
+ * `francais-en-dur` les comptait comme du francais a traduire (5 lignes) ; les passer par
+ * `t()` aurait envoye « Video room » au serveur. L'ordre d'insertion d'un objet est garanti
+ * pour des cles non numeriques : c'est l'ordre des pastilles.
  */
-export const FACILITY_TYPES = [
-  {
-    get label() {
-      return i18next.t('facilityForm.types.pitch', 'Terrain');
-    },
-    value: 'Terrain',
+/* eslint-disable perfectionist/sort-objects -- l'ordre EST l'ordre des pastilles */
+const LIBELLE_PAR_VALEUR = {
+  Terrain: () => i18next.t('facilityForm.types.pitch', 'Terrain'),
+  Gymnase: () => i18next.t('facilityForm.types.gym', 'Gymnase'),
+  'Salle vidéo': () => i18next.t('facilityForm.types.videoRoom', 'Salle vidéo'),
+  Vestiaire: () => i18next.t('facilityForm.types.changingRoom', 'Vestiaire'),
+  'Club House': () => i18next.t('facilityForm.types.clubHouse', 'Club House'),
+  Dojo: () => i18next.t('facilityForm.types.dojo', 'Dojo'),
+  "Piste d'athlétisme": () => i18next.t('facilityForm.types.athleticsTrack', 'Piste d’athlétisme'),
+  'Terrain de rugby': () => i18next.t('facilityForm.types.rugbyPitch', 'Terrain de rugby'),
+  Piscine: () => i18next.t('facilityForm.types.pool', 'Piscine'),
+  'Court de tennis': () => i18next.t('facilityForm.types.tennisCourt', 'Court de tennis'),
+  'Salle de sport': () => i18next.t('facilityForm.types.sportsHall', 'Salle de sport'),
+  'Terrain multisport': () => i18next.t('facilityForm.types.multisportPitch', 'Terrain multisport'),
+  Skatepark: () => i18next.t('facilityForm.types.skatepark', 'Skatepark'),
+};
+/* eslint-enable perfectionist/sort-objects */
+
+/** @type {{ label: string, value: string }[]} */
+export const FACILITY_TYPES = Object.keys(LIBELLE_PAR_VALEUR).map((value) => ({
+  get label() {
+    return LIBELLE_PAR_VALEUR[value]();
   },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.gym', 'Gymnase');
-    },
-    value: 'Gymnase',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.videoRoom', 'Salle vidéo');
-    },
-    value: 'Salle vidéo',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.changingRoom', 'Vestiaire');
-    },
-    value: 'Vestiaire',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.clubHouse', 'Club House');
-    },
-    value: 'Club House',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.dojo', 'Dojo');
-    },
-    value: 'Dojo',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.athleticsTrack', 'Piste d’athlétisme');
-    },
-    value: "Piste d'athlétisme",
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.rugbyPitch', 'Terrain de rugby');
-    },
-    value: 'Terrain de rugby',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.pool', 'Piscine');
-    },
-    value: 'Piscine',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.tennisCourt', 'Court de tennis');
-    },
-    value: 'Court de tennis',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.sportsHall', 'Salle de sport');
-    },
-    value: 'Salle de sport',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.multisportPitch', 'Terrain multisport');
-    },
-    value: 'Terrain multisport',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.skatepark', 'Skatepark');
-    },
-    value: 'Skatepark',
-  },
-];
+  value,
+}));
 
 /**
  * Le libelle d'un type d'installation, dans la langue de l'ecran ; une valeur que
