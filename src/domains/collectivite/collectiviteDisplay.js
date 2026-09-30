@@ -75,3 +75,133 @@ export const countLabel = (query) => {
   if (query?.error || !Array.isArray(query?.data)) return '—';
   return String(query.data.length);
 };
+
+// ─── CONSOLE SUPER-ADMIN (D61, 2026-09-29) : « nous » activons, rattachons, nommons ───
+
+/** Les types du serveur (admin collectivite/schema.json), dans l ordre des puces. */
+export const COLLECTIVITE_TYPES = ['commune', 'intercommunalite', 'departement', 'region'];
+
+/**
+ * Le libelle d un type de collectivite (une cle par type : chacune reste lisible par
+ * frClefsAtteignables).
+ * @param {(cle: string, repli: string) => string} t - La traduction de l ecran.
+ * @param {unknown} type - Le type du serveur.
+ * @returns {string} Le libelle, ou le type brut s il est inconnu.
+ */
+export const collectiviteTypeLabel = (t, type) => {
+  switch (type) {
+    case 'commune': return t('adminCollectivites.types.commune', 'Commune');
+    case 'departement': return t('adminCollectivites.types.departement', 'Département');
+    case 'intercommunalite':
+      return t('adminCollectivites.types.intercommunalite', 'Intercommunalité');
+    case 'region': return t('adminCollectivites.types.region', 'Région');
+    default: return String(type || '');
+  }
+};
+
+// D59 — le nom se saisit sous sa forme OFFICIELLE : le bandeau « Offert par la Ville de X »
+// le lit tel quel (formatCollectiviteOfferedBy lui donne son article). Un prefixe par type,
+// majuscule comprise ; le nom propre suit, jamais vide.
+const OFFICIAL_NAME_PATTERNS = {
+  commune: /^(Ville|Commune) (de |d['’]|du |des )\S/u,
+  departement: /^(Département (de |d['’]|du |des )|Conseil départemental (de |d['’]|du |des ))\S/u,
+  intercommunalite: /^(Communauté (de communes |d['’]agglomération |urbaine )|Métropole )\S/u,
+  region: /^(Région |Conseil régional (de |d['’]|du |des ))\S/u,
+};
+
+// Codes officiels, memes regles que le serveur (collectivite service, readCreatePayload).
+const INSEE_PATTERN = /^(\d{2}|2A|2B)\d{3}$/;
+const SIREN_PATTERN = /^\d{9}$/;
+
+/**
+ * Le nom respecte-t-il la forme officielle de son type (D59) ?
+ * @param {unknown} name - Le nom saisi.
+ * @param {unknown} type - `commune`, `intercommunalite`, `departement` ou `region`.
+ * @returns {boolean} Vrai si le nom commence par un prefixe officiel de ce type.
+ */
+export const isOfficialCollectiviteName = (name, type) => {
+  const motif = /** @type {Record<string, RegExp>} */ (OFFICIAL_NAME_PATTERNS)[String(type)];
+  return Boolean(motif) && motif.test(String(name || '').trim());
+};
+
+/**
+ * Lit le formulaire de creation : les champs nettoyes, et la liste des fautes (cles de
+ * traduction sous `adminCollectivites.form.errors`). Vide = pret a partir. Le serveur
+ * reste juge (400, 409) : ce controle evite l aller-retour et porte D59, que lui ignore.
+ * @param {{ codeInsee?: string, email?: string, name?: string, phoneNumber?: string,
+ *   siren?: string, type?: string }} form - Les champs saisis.
+ * @returns {{ data: Record<string, string>, errors: string[] }} Le corps et les fautes.
+ */
+export const readCollectiviteCreateForm = (form) => {
+  const lire = (/** @type {unknown} */ valeur) => String(valeur || '').trim();
+  const type = lire(form?.type);
+  const data = {
+    codeInsee: lire(form?.codeInsee).toUpperCase(),
+    email: lire(form?.email),
+    name: lire(form?.name),
+    phoneNumber: lire(form?.phoneNumber),
+    siren: lire(form?.siren).replace(/\s/g, ''),
+    type,
+  };
+  const errors = [];
+  if (!COLLECTIVITE_TYPES.includes(type)) errors.push('type');
+  else if (!isOfficialCollectiviteName(data.name, type)) errors.push('officialName');
+  if (data.codeInsee && !INSEE_PATTERN.test(data.codeInsee)) errors.push('codeInsee');
+  if (data.siren && !SIREN_PATTERN.test(data.siren)) errors.push('siren');
+  if (!data.codeInsee && !data.siren) errors.push('identifier');
+  return {
+    // Un champ facultatif vide ne part pas : le serveur le lirait comme une valeur.
+    data: Object.fromEntries(Object.entries(data).filter(([, valeur]) => valeur !== '')),
+    errors,
+  };
+};
+
+/**
+ * Une collectivite telle que la liste de la console la lit. `isActive` n est vrai que
+ * s il vaut VRAI : une ligne d avant le lot 1d lit NULL, donc inactive (meme regle que
+ * le serveur, collectivite service `isActive`).
+ * @param {any} entry - Une ligne de `/superadmin/content/.../list`.
+ * @returns {{ clubsCount: number, documentId: string, isActive: boolean, name: string,
+ *   type: string }} La ligne.
+ */
+export const toAdminCollectiviteRow = (entry) => ({
+  clubsCount: Array.isArray(entry?.clubs) ? entry.clubs.length : 0,
+  documentId: String(entry?.documentId || ''),
+  isActive: entry?.isActive === true,
+  name: String(entry?.name || ''),
+  type: String(entry?.type || ''),
+});
+
+/**
+ * Le detail d une collectivite pour la console : ses clubs, ses gestionnaires (nom et
+ * e-mail, rien d autre) et ses installations, tries par nom.
+ * @param {any} entry - La ligne de `/superadmin/content/.../list` filtree sur la collectivite.
+ * @returns {any} Le detail, ou null sans ligne.
+ */
+export const toAdminCollectiviteDetail = (entry) => {
+  if (!entry?.documentId) return null;
+  const liste = (/** @type {unknown} */ valeur) => (Array.isArray(valeur) ? valeur : []);
+  const parNom = (/** @type {any} */ a, /** @type {any} */ b) => String(a.name)
+    .localeCompare(String(b.name), 'fr');
+  return {
+    ...toAdminCollectiviteRow(entry),
+    clubs: liste(entry.clubs).map((club) => ({
+      documentId: String(club?.documentId || ''),
+      logoUrl: club?.logo?.url || null,
+      name: String(club?.name || ''),
+    })).sort(parNom),
+    codeInsee: entry.codeInsee || null,
+    gestionnaires: liste(entry.gestionnaires).map((compte) => ({
+      documentId: String(compte?.documentId || ''),
+      email: compte?.email || null,
+      name: [compte?.firstname, compte?.lastname].filter(Boolean).join(' '),
+    })).sort(parNom),
+    installations: liste(entry.installations).map((installation) => ({
+      documentId: String(installation?.documentId || ''),
+      maxSlots: Number.isInteger(installation?.maxSlots) ? installation.maxSlots : null,
+      name: String(installation?.name || ''),
+      type: installation?.type || null,
+    })).sort(parNom),
+    siren: entry.siren || null,
+  };
+};

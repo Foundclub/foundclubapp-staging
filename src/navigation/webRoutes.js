@@ -199,6 +199,10 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminClubWizardMultisport]: '/admin/clubs/create/multisport',
   [RouteNames.AdminClubWizardSponsors]: '/admin/clubs/create/sponsors',
   [RouteNames.AdminClubWizardRecap]: '/admin/clubs/create/recap',
+  // D61 (29/09) — la console des collectivites (super-admin seulement, AdminStack).
+  [RouteNames.AdminCollectiviteList]: '/admin/collectivites',
+  [RouteNames.AdminCollectiviteForm]: '/admin/collectivites/new',
+  [RouteNames.AdminCollectiviteDetail]: '/admin/collectivites/:collectiviteId',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',

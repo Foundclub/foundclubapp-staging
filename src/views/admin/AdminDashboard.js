@@ -1800,6 +1800,13 @@ function AdminDashboard() {
             value="Clubs"
           />
           <DashboardCard
+            color={Colors.primary200}
+            meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
+            onPress={() => navigation.navigate(RouteNames.AdminCollectiviteList)}
+            title={t('adminDashboard.cards.collectivites', 'Collectivités')}
+            value={t('adminDashboard.cards.collectivitesValue', 'Mairies')}
+          />
+          <DashboardCard
             color={Colors.primary500}
             meta={t('adminDashboard.cards.contentMeta', 'Contenus')}
             onPress={() => navigation.navigate(RouteNames.SuperAdminContentExplorer)}

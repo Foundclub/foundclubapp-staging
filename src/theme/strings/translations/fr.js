@@ -671,6 +671,120 @@ export default {
     titleLabel: 'Titre',
     titlePlaceholder: 'Nom du sponsor',
   },
+  adminCollectivites: {
+    activation: {
+      activate: 'Activer',
+      // eslint-disable-next-line max-len
+      activateMessage_one: 'Le club rattaché recevra l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      // eslint-disable-next-line max-len
+      activateMessage_other: 'Les {{count}} clubs rattachés recevront l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      // eslint-disable-next-line max-len
+      activateMessageNone: 'Aucun club n’est rattaché pour l’instant : chaque club que tu rattacheras recevra l’offre Club offerte.',
+      activateTitle: 'Activer {{name}} ?',
+      cancel: 'Annuler',
+      deactivate: 'Couper',
+      // eslint-disable-next-line max-len
+      deactivateMessage_one: 'Le club rattaché perdra l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      // eslint-disable-next-line max-len
+      deactivateMessage_other: 'Les {{count}} clubs rattachés perdront l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      deactivateMessageNone: 'Aucun club n’est rattaché : rien d’autre ne change.',
+      deactivateTitle: 'Couper {{name}} ?',
+      doneActivated: 'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}}',
+      doneDeactivated: 'Coupée. Offre retirée : {{revoked}}',
+    },
+    detail: {
+      addManager: 'Ajouter',
+      alreadyAttached: 'Déjà rattaché',
+      alreadyManager: 'Déjà gestionnaire',
+      attach: 'Rattacher',
+      // eslint-disable-next-line max-len
+      attachedAlreadyPaid: '{{club}} est rattaché à {{collectivite}} ; il paie déjà son abonnement, rien ne change pour lui.',
+      attachedGranted: '{{club}} est rattaché à {{collectivite}} et reçoit l’offre Club offerte.',
+      // eslint-disable-next-line max-len
+      attachedInactive: '{{club}} est rattaché à {{collectivite}}. Elle est inactive : l’offre Club sera posée à son activation.',
+      detach: 'Détacher',
+      detached: '{{club}} est détaché.',
+      // eslint-disable-next-line max-len
+      detachMessage: 'Le club reste intact : équipes, membres et événements. S’il recevait l’offre Club offerte par {{collectivite}}, elle lui est retirée.',
+      detachTitle: 'Détacher {{club}} ?',
+      installationLine: '{{type}} · capacité : {{nombre}}',
+      installationsCount: 'Installations : {{nombre}}',
+      loading: 'Lecture de la collectivité…',
+      managerAdded: '{{nom}} gère désormais {{collectivite}}.',
+      managerRemoved: '{{nom}} ne gère plus {{collectivite}}.',
+      managersCount: 'Gestionnaires : {{nombre}}',
+      noClub: 'Aucun club rattaché.',
+      // eslint-disable-next-line max-len
+      noInstallation: 'Aucune installation : le gestionnaire les ajoute depuis « Ma collectivité ».',
+      noManager: 'Aucun gestionnaire.',
+      noResult: 'Aucun résultat.',
+      removeManager: 'Retirer',
+      // eslint-disable-next-line max-len
+      removeManagerMessage: 'Son compte reste intact : il perd seulement l’accès à « Ma collectivité » de {{collectivite}}.',
+      removeManagerTitle: 'Retirer {{nom}} ?',
+      searchClub: 'Rattacher un club : son nom',
+      searching: 'Recherche…',
+      searchUser: 'Ajouter un gestionnaire : nom ou e-mail',
+    },
+    form: {
+      codeInsee: 'Code INSEE',
+      email: 'E-mail (facultatif)',
+      errors: {
+        codeInsee: 'Code INSEE : 5 caractères (2A ou 2B en Corse).',
+        identifier: 'Un code INSEE ou un SIREN est obligatoire.',
+        // eslint-disable-next-line max-len
+        officialName: 'Le nom doit suivre la forme officielle, par exemple {{exemple}} : c’est lui qu’affiche le bandeau « Offert par… ».',
+        siren: 'SIREN : 9 chiffres.',
+        type: 'Choisis le type de collectivité.',
+      },
+      examples: {
+        commune: '« Ville de Montrivage » ou « Ville d’Aix »',
+        departement: '« Département du Var »',
+        // eslint-disable-next-line max-len
+        intercommunalite: '« Communauté de communes du Val » ou « Métropole Aix-Marseille-Provence »',
+        region: '« Région Sud »',
+      },
+      hint: 'Elle naît inactive : tu l’actives ensuite, depuis la liste ou sa fiche.',
+      name: 'Nom officiel',
+      // eslint-disable-next-line max-len
+      nameHint: 'Forme officielle, par exemple {{exemple}}. C’est ce nom qu’affiche le bandeau « Offert par… » des clubs.',
+      phone: 'Téléphone (facultatif)',
+      prefixes: {
+        commune: 'Ville de ',
+        departement: 'Département de ',
+        intercommunalite: 'Communauté de communes ',
+        region: 'Région ',
+      },
+      siren: 'SIREN',
+      submit: 'Créer',
+      title: 'Créer une collectivité',
+      type: 'Type',
+    },
+    kicker: 'Console',
+    list: {
+      clubsCount: 'Clubs rattachés : {{nombre}}',
+      create: 'Créer une collectivité',
+      empty: 'Aucune collectivité pour l’instant.',
+      errorTitle: 'Collectivités indisponibles',
+      heading: 'Collectivités : {{nombre}}',
+      hint: 'Activer offre l’offre Club aux clubs rattachés ; couper la leur retire.',
+      loading: 'Lecture des collectivités…',
+      manage: 'Gérer',
+      retry: 'Réessayer',
+      title: 'Collectivités',
+      truncated: '{{shown}} affichées sur {{total}}.',
+    },
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+    },
+    types: {
+      commune: 'Commune',
+      departement: 'Département',
+      intercommunalite: 'Intercommunalité',
+      region: 'Région',
+    },
+  },
   adminDashboard: {
     billing: {
       receivedOn: 'Recu le',
@@ -691,6 +805,8 @@ export default {
       autoAffiliatedCoaches: 'Coachs auto-affilies',
       claims: 'Revendications',
       clubOnboarding: 'Clubs à onboarder',
+      collectivites: 'Collectivités',
+      collectivitesValue: 'Mairies',
       contentExplorer: 'Explorer CM',
       contentMeta: 'Contenus',
       detectionsPending: 'A vérifier',
@@ -1293,6 +1409,9 @@ export default {
       clubDetail: 'Détail Club',
       clubEdit: 'Édition Club',
       clubOnboarding: 'Clubs à onboarder',
+      collectiviteDetail: 'Collectivité',
+      collectiviteForm: 'Nouvelle collectivité',
+      collectivites: 'Collectivités',
       contentExplorer: 'Explorer CM',
       entries: 'Entrées',
       entryDetail: 'Détail',
@@ -1906,12 +2025,21 @@ export default {
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
+    // D61 (29/09) — console super-admin : code INSEE ou SIREN deja pris (409)
+    COLLECTIVITE_ALREADY_EXISTS: 'Une collectivité porte déjà ce code INSEE ou ce SIREN.',
+    // D61 (29/09) — console super-admin : club deja rattache ailleurs (409), club absent
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_CLUB_ALREADY_ATTACHED: 'Ce club est déjà rattaché à une autre collectivité : détache-le d’abord.',
+    COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Tu ne gères pas cette collectivité.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_INSTALLATION_NOT_FOUND: "Cette installation n'est pas l'une de celles de la collectivité.",
     // eslint-disable-next-line max-len
     COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : vérifie le nom, le type, les horaires (HH:MM) et la capacité.',
+    // D61 (29/09) — console super-admin : la collectivite visee n existe pas (ou plus)
+    COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
+    COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',

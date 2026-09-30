@@ -7,6 +7,9 @@ import AdminClubDetail from '@/views/admin/AdminClubDetail';
 import AdminClubForm from '@/views/admin/AdminClubForm';
 import AdminClubList from '@/views/admin/AdminClubList';
 import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
+import AdminCollectiviteDetail from '@/views/admin/AdminCollectiviteDetail';
+import AdminCollectiviteForm from '@/views/admin/AdminCollectiviteForm';
+import AdminCollectiviteList from '@/views/admin/AdminCollectiviteList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
 import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
@@ -268,6 +271,30 @@ function AdminStack() {
           component={AdminClubWizardRecap}
           name={RouteNames.AdminClubWizardRecap}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={AdminCollectiviteList}
+          name={RouteNames.AdminCollectiviteList}
+          options={{
+            ...commonOptions,
+            headerTitle: t('adminStack.titles.collectivites', 'Collectivités'),
+          }}
+        />
+        <Stack.Screen
+          component={AdminCollectiviteDetail}
+          name={RouteNames.AdminCollectiviteDetail}
+          options={{
+            ...commonOptions,
+            headerTitle: t('adminStack.titles.collectiviteDetail', 'Collectivité'),
+          }}
+        />
+        <Stack.Screen
+          component={AdminCollectiviteForm}
+          name={RouteNames.AdminCollectiviteForm}
+          options={{
+            ...commonOptions,
+            headerTitle: t('adminStack.titles.collectiviteForm', 'Nouvelle collectivité'),
+          }}
         />
         <Stack.Screen
           component={AdminLeagueDisputes}

@@ -1,11 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  addAdminCollectiviteGestionnaire,
+  attachAdminCollectiviteClub,
+  createAdminCollectivite,
+  detachAdminCollectiviteClub,
+  getAdminCollectivite,
+  getAdminCollectivites,
   getCollectiviteClubs,
   getCollectiviteInstallations,
   getCollectiviteRequests,
   getMyCollectivites,
+  removeAdminCollectiviteGestionnaire,
   saveCollectiviteInstallation,
+  searchAdminCollectiviteTargets,
+  setAdminCollectiviteActive,
 } from './collectiviteService';
 
 /**
@@ -131,3 +140,140 @@ export const useSaveCollectiviteInstallation = (options = {}) => {
     ...rest,
   });
 };
+
+// ─── CONSOLE SUPER-ADMIN (D61, 2026-09-29) ─────────────────────────────────────────────
+
+/** Prefixe commun a la liste et aux details : un geste les relit tous depuis le serveur. */
+export const ADMIN_COLLECTIVITES_QUERY_KEY = ['superadmin', 'collectivites'];
+
+/**
+ * La clef du detail d une collectivite.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const adminCollectiviteQueryKey = (collectiviteId) => [
+  ...ADMIN_COLLECTIVITES_QUERY_KEY, collectiviteId,
+];
+
+/**
+ * Toutes les collectivites (console super-admin). `data` est la reponse ENTIERE
+ * (`{ data, meta }`) : l ecran lit le total pour dire s il en manque.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query.
+ */
+export const useAdminCollectivites = (options = {}) => useQuery({
+  queryFn: getAdminCollectivites,
+  queryKey: ADMIN_COLLECTIVITES_QUERY_KEY,
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Une collectivite, avec ses clubs, ses gestionnaires et ses installations.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` est la ligne, ou null.
+ */
+export const useAdminCollectivite = (collectiviteId, options = {}) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: () => getAdminCollectivite(String(collectiviteId)),
+  queryKey: adminCollectiviteQueryKey(collectiviteId),
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Chercher un club a rattacher ou un compte a nommer : rien avant 2 lettres.
+ * @param {'club' | 'user'} kind - Ce qu on cherche.
+ * @param {string} query - Le texte tape.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useAdminCollectiviteSearch = (kind, query) => {
+  const texte = String(query || '').trim();
+  return useQuery({
+    enabled: texte.length >= 2,
+    queryFn: async () => unwrapRows(await searchAdminCollectiviteTargets(kind, texte)),
+    queryKey: [...ADMIN_COLLECTIVITES_QUERY_KEY, 'search', kind, texte],
+    staleTime: 30_000,
+  });
+};
+
+/**
+ * Un geste super-admin, puis la RELECTURE de la liste et des details : l ecran affiche
+ * l etat que le serveur rend, jamais celui qu il a demande.
+ * @param {(variables: any) => Promise<any>} mutationFn - Le geste du service.
+ * @param {QueryOptions} [options] - Options react-query (`onSuccess` compris).
+ * @returns {any} La mutation.
+ */
+const useGesteSuperAdmin = (mutationFn, options = {}) => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...rest } = options;
+  return useMutation({
+    mutationFn,
+    onSuccess: async (data, variables, context) => {
+      await queryClient.invalidateQueries({ queryKey: ADMIN_COLLECTIVITES_QUERY_KEY });
+      onSuccess?.(data, variables, context);
+    },
+    ...rest,
+  });
+};
+
+/**
+ * Activer ou couper ; variables `{ collectiviteId, isActive }`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useSetAdminCollectiviteActive = (options) => useGesteSuperAdmin(
+  setAdminCollectiviteActive,
+  options,
+);
+
+/**
+ * Rattacher un club ; variables `{ collectiviteId, clubId }`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useAttachAdminCollectiviteClub = (options) => useGesteSuperAdmin(
+  attachAdminCollectiviteClub,
+  options,
+);
+
+/**
+ * Detacher un club ; variables `{ collectiviteId, clubId }`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useDetachAdminCollectiviteClub = (options) => useGesteSuperAdmin(
+  detachAdminCollectiviteClub,
+  options,
+);
+
+/**
+ * Nommer un gestionnaire ; variables `{ collectiviteId, userId }`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useAddAdminCollectiviteGestionnaire = (options) => useGesteSuperAdmin(
+  addAdminCollectiviteGestionnaire,
+  options,
+);
+
+/**
+ * Retirer un gestionnaire ; variables `{ collectiviteId, userId }`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useRemoveAdminCollectiviteGestionnaire = (options) => useGesteSuperAdmin(
+  removeAdminCollectiviteGestionnaire,
+  options,
+);
+
+/**
+ * Creer une collectivite ; variables = le corps lu par `readCollectiviteCreateForm`.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useCreateAdminCollectivite = (options) => useGesteSuperAdmin(
+  createAdminCollectivite,
+  options,
+);
