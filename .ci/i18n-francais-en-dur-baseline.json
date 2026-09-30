@@ -61,12 +61,12 @@
     "src/views/event/EventEdit.web.js": 1,
     "src/views/event/ParticipantEventList.js": 1,
     "src/views/event/components/EventParticipants.js": 5,
-    "src/views/facility/FacilityForm.js": 5,
+    "src/views/facility/FacilityForm.js": 4,
     "src/views/friendlyMatch/FriendlyMatchAdDetails.js": 4,
     "src/views/friendlyMatch/components/FriendlyMatchApplicationCard.js": 1,
     "src/views/friendlyMatch/components/FriendlyMatchTermsSheet.js": 1,
     "src/views/friendlyMatch/wizard/FriendlyMatchWizardHosting.js": 6,
-    "src/views/home/HomeHub.js": 22,
+    "src/views/home/HomeHub.js": 15,
     "src/views/league/dashboard/LeagueDashboard.js": 1,
     "src/views/league/edit/SquadEditScreen.js": 1,
     "src/views/league/match/LeagueMatchDetails.js": 1,
@@ -92,6 +92,6 @@
   "note": "Compte des LIGNES de production portant du francais hors t() (heuristique : voir scripts/i18n/francais-en-dur.js). Le cliquet ne tourne que dans un sens : une hausse absorbee par --baseline exige un GO d'Adel date (R6).",
   "source": "node scripts/i18n/francais-en-dur.js --baseline",
   "totalFichiers": 88,
-  "totalLignes": 326,
-  "updatedAt": "2026-09-15"
+  "totalLignes": 318,
+  "updatedAt": "2026-09-30"
 }
