@@ -1,6 +1,18 @@
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  chercherUnSport,
+  choisirLeSport,
+  lignesDeSport,
+  POPULAIRES_EN_TETE,
+  SPORTS_A09,
+} from '../../../../testSupport/temoinChoixDuSport';
 import RecruitmentFiltersSheet from '../RecruitmentFiltersSheet';
+
+// A09 — la base de sports que rend la doublure : Football seul par défaut (ce que les tests
+// d'avant attendent), la petite base du témoin A09 dans son bloc.
+const SPORTS_PAR_DEFAUT = [{ documentId: 'a-1', name: 'Football' }];
+let mockSports = SPORTS_PAR_DEFAUT;
 
 // D57 (E6) — la feuille de filtres du pack Rechercher (capture 05). Le bouton
 // qui l'ouvre et sa pastille existaient deja et n'ont PAS ete refaits ; ce
@@ -68,7 +80,7 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({ data: [{ documentId: 'a-1', name: 'Football' }] }),
+  useGetActivities: () => ({ data: mockSports }),
 }));
 jest.mock('@/services/category/categoryQueries', () => ({
   useGetCategories: () => ({ data: [{ documentId: 'c-1', name: 'U17' }] }),
@@ -321,5 +333,25 @@ describe('R07 — le dernier filtre respire avant le pied colle', () => {
     expect(texteDuNoeud(reserve)).not.toContain('Voir les résultats');
     expect(texteDuNoeud(reserve)).not.toContain('Réinitialiser');
     expect(texteVisible(tree)).toContain('Voir les résultats');
+  });
+});
+
+describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports', () => {
+  beforeEach(() => { mockSports = SPORTS_A09; });
+  afterEach(() => { mockSports = SPORTS_PAR_DEFAUT; });
+
+  it('populaires en tête (ordre d Adel), recherche sans accent, et le choix part', async () => {
+    const { onApply, tree } = await rendre();
+    await ouvrirRangee(tree, 'Sport');
+
+    // Décision d'Adel : football, basketball, handball, rugby, volleyball — Tennis attend.
+    expect(lignesDeSport(tree)).toEqual(POPULAIRES_EN_TETE);
+    // « Une recherche à la main dans TOUS les sports », accents compris.
+    await chercherUnSport(tree, 'equit');
+    expect(lignesDeSport(tree)).toEqual(['Équitation']);
+
+    await choisirLeSport(tree, 'Équitation');
+    await appuyerSur(tree, 'Voir les résultats');
+    expect(onApply.mock.calls[0][0].sport).toBe('Équitation');
   });
 });

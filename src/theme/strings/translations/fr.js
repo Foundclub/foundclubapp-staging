@@ -12626,9 +12626,10 @@ export default {
     sport: {
       all: 'Tous les sports, de A à Z',
       current: 'Sport actuel',
+      currentMany: 'Sports choisis',
       none: 'Aucun sport ne correspond.',
       pill: 'Filtrer par sport',
-      popular: 'Les plus cherchés',
+      popular: 'Sports populaires',
       search: 'Rechercher un sport',
       title: 'Choisir un sport',
     },

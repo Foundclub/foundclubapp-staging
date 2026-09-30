@@ -11967,9 +11967,10 @@ export default {
     sport: {
       all: 'All sports, A to Z',
       current: 'Current sport',
+      currentMany: 'Selected sports',
       none: 'No sport matches.',
       pill: 'Filter by sport',
-      popular: 'Most searched',
+      popular: 'Popular sports',
       search: 'Search for a sport',
       title: 'Choose a sport',
     },

@@ -1,7 +1,26 @@
 import { Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  chercherUnSport,
+  choisirLeSport,
+  lignesDeSport,
+  POPULAIRES_EN_TETE,
+  SPORTS_A09,
+} from '../../../../testSupport/temoinChoixDuSport';
 import PastillesFiltresClub from '../PastillesFiltresClub';
+
+// A09 — la base de sports que rend la doublure : celle des tests d'avant par défaut, la petite
+// base du témoin A09 dans son bloc.
+const SPORTS_PAR_DEFAUT = [
+  { documentId: 'sport-foot', name: 'Football' },
+  { documentId: 'sport-basket', name: 'Basketball' },
+  { documentId: 'sport-tennis', name: 'Tennis' },
+  { documentId: 'sport-hand', name: 'Handball' },
+  { documentId: 'sport-rugby', name: 'Rugby' },
+  { documentId: 'sport-escrime', name: 'Escrime' },
+];
+let mockSports = SPORTS_PAR_DEFAUT;
 
 // ANNUAIRE-E1 (maquette validée par Adel le 29/09) — les deux pastilles écrites de la recherche de
 // clubs. Ce que ce filet garde :
@@ -78,16 +97,7 @@ jest.mock('@/domains/places/usePlaces', () => ({
 }));
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({
-    data: [
-      { documentId: 'sport-foot', name: 'Football' },
-      { documentId: 'sport-basket', name: 'Basketball' },
-      { documentId: 'sport-tennis', name: 'Tennis' },
-      { documentId: 'sport-hand', name: 'Handball' },
-      { documentId: 'sport-rugby', name: 'Rugby' },
-      { documentId: 'sport-escrime', name: 'Escrime' },
-    ],
-  }),
+  useGetActivities: () => ({ data: mockSports }),
 }));
 
 jest.mock('@/services/annuaire/annuaireQueries', () => ({
@@ -343,5 +353,23 @@ describe('PastillesFiltresClub — où s ouvre le choix', () => {
     expect(style).toEqual(expect.objectContaining({
       left: 0, position: 'absolute', top: '100%', width: 340,
     }));
+  });
+});
+
+describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports', () => {
+  beforeEach(() => { mockSports = SPORTS_A09; });
+  afterEach(() => { mockSports = SPORTS_PAR_DEFAUT; });
+
+  test('✅ populaires en tête (ordre d Adel), recherche sans accent, un geste applique', async () => {
+    rendre(null);
+    act(() => { pastille('Filtrer par sport — ').props.onPress(); });
+
+    // Décision d'Adel (30/09) : football, basketball, handball, rugby, volleyball.
+    expect(lignesDeSport(arbre)).toEqual(POPULAIRES_EN_TETE);
+    await chercherUnSport(arbre, 'equit');
+    expect(lignesDeSport(arbre)).toEqual(['Équitation']);
+
+    await choisirLeSport(arbre, 'Équitation');
+    expect(onApply).toHaveBeenCalledWith({ activity: 'a-equit' });
   });
 });

@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport, { basculerSport } from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
@@ -93,7 +94,6 @@ function ProfileFiltersSheet({
   const [position, setPosition] = useState(/** @type {string[]} */ ([]));
   const [city, setCity] = useState(/** @type {any} */ (undefined));
   const [radius, setRadius] = useState(RAYON_PAR_DEFAUT);
-  const [rechercheSport, setRechercheSport] = useState('');
   const [rechercheCategorie, setRechercheCategorie] = useState('');
   const [recherchePoste, setRecherchePoste] = useState('');
   const etaitOuverteRef = useRef(false);
@@ -110,7 +110,6 @@ function ProfileFiltersSheet({
     setPosition(enTableau(filters?.position || filters?.positions));
     setCity(filters?.city || undefined);
     setRadius(Number(filters?.radius) || RAYON_PAR_DEFAUT);
-    setRechercheSport('');
     setRechercheCategorie('');
     setRecherchePoste('');
   }, [filters, isVisible]);
@@ -190,20 +189,16 @@ function ProfileFiltersSheet({
   const rows = [
     {
       content: (
-        <AutocompleteSelect
-          isMulti
-          isSearchable
-          options={filtrer(sportOptions, rechercheSport)}
-          placeholder={t('profileFiltersSheet.sportPlaceholder', 'Ex: Football, Tennis...')}
-          searchValue={rechercheSport}
-          setSearchValue={setRechercheSport}
-          setValue={(/** @type {any} */ option) => {
-            setActivity(Array.isArray(option)
-              ? option.map((o) => String(o.value))
-              : (option?.value ? [String(option.value)] : []));
+        // A09 — le choix du sport commun à toute la recherche (plusieurs sports possibles ici).
+        // Changer de sport vide les postes : ils appartenaient à l'autre sport.
+        <ChoixDuSport
+          multiple
+          onChoisir={(cle) => {
+            setActivity((avant) => basculerSport(avant, cle));
             setPosition([]);
           }}
-          value={activity}
+          sports={allActivities}
+          valeurs={activity}
         />
       ),
       key: 'activity',
