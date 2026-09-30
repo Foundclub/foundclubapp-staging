@@ -3,12 +3,14 @@ import {
   useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import usePlaces from '@/domains/places/usePlaces';
+import { StatutAlerte } from '@/domains/searchAlert/alerteEvenement';
 import useTheme from '@/theme/themeContext';
 
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import { ConfirmationAlerte } from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
@@ -18,6 +20,8 @@ import { useGetClubs } from '@/services/club/clubQueries';
 import { useGetEventTypes } from '@/services/event/eventQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
+
+import texteInsecable from '@/utils/texteInsecable';
 
 import coordonneesDeLaVille from './cityCoordinates';
 import FiltersSheet from './FiltersSheet';
@@ -42,6 +46,12 @@ import FiltersSheet from './FiltersSheet';
  * « Type d'evenement », « Club » et « Equipe ». La rangee « Profil » du pack,
  * elle, n'a aucun equivalent cote evenements : le pack demande de RETIRER une
  * rangee sans equivalent plutot que de l'afficher grisee.
+ *
+ * ⭐ ALERTES (audit V1, A20.4) — L'ETOILE « Creer alerte » REVIENT EN HAUT A DROITE.
+ * Elle vivait dans l'en-tete de l'ecran plein (`EventFilters.js:197-216`) ; D82 l'a
+ * perdue en passant a cette feuille. Elle confie le BROUILLON (ce qui est regle
+ * ici, meme non applique) a `onCreateAlert`, et dit ce qu'on lui repond. Sans
+ * `onCreateAlert`, pas d'etoile : la feuille reste celle d'avant.
  */
 
 const RAYON_PAR_DEFAUT = 20;
@@ -85,7 +95,10 @@ const libelleDeLaSelection = (options, valeurs, repli) => {
  *  isVisible: boolean;
  *  onApply: (filters: Record<string, any>) => void;
  *  onClose: () => void;
- * }} props Les props.
+ *  onCreateAlert?: (filters: Record<string, any>) => Promise<string>;
+ *  pourUneAlerte?: boolean;
+ * }} props `pourUneAlerte` : ouverte pour creer une alerte, la feuille s'ouvre
+ *   sur la rangee Ville et dit qu'une ville est necessaire.
  * @returns {import('react').ReactElement} La feuille.
  */
 function EventFiltersSheet({
@@ -93,13 +106,17 @@ function EventFiltersSheet({
   isVisible,
   onApply,
   onClose,
+  onCreateAlert = undefined,
+  pourUneAlerte = false,
 }) {
   const { t } = useTranslation();
   const TOUS_SPORTS = t('eventFiltersSheet.allSports', 'Tous les sports');
   const TOUTES_VILLES = t('eventFiltersSheet.allCities', 'Toutes les villes');
   const TOUTES = t('eventFiltersSheet.allFeminine', 'Toutes');
   const TOUS = t('eventFiltersSheet.allMasculine', 'Tous');
-  const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
 
   const [activity, setActivity] = useState(/** @type {string[]} */ ([]));
@@ -117,6 +134,9 @@ function EventFiltersSheet({
   const [rechercheNiveau, setRechercheNiveau] = useState('');
   const [rechercheType, setRechercheType] = useState('');
   const [rechercheEquipe, setRechercheEquipe] = useState('');
+  // '' | StatutAlerte : la note lue sous le titre apres un appui sur l'etoile.
+  const [noteAlerte, setNoteAlerte] = useState('');
+  const [alerteEnCours, setAlerteEnCours] = useState(false);
 
   const etaitOuverteRef = useRef(false);
 
@@ -141,7 +161,8 @@ function EventFiltersSheet({
     setRechercheNiveau('');
     setRechercheType('');
     setRechercheEquipe('');
-  }, [filters, isVisible]);
+    setNoteAlerte(pourUneAlerte ? StatutAlerte.villeManquante : '');
+  }, [filters, isVisible, pourUneAlerte]);
 
   const { data: allActivities } = useGetActivities();
   const { data: allCategories } = useGetCategories();
@@ -196,7 +217,9 @@ function EventFiltersSheet({
     ? `${String(city.label)} · ${String(radius)} km`
     : TOUTES_VILLES;
 
-  const appliquer = () => {
+  // Ce qui est regle dans la feuille, applique ou non : `appliquer` le range
+  // dans la recherche, l'etoile le confie a la creation d'alerte.
+  const brouillon = () => {
     const coordonnees = coordonneesDeLaVille(city);
     const geohash = coordonnees
       ? getGeohashForPointAndRadius(coordonnees.lat, coordonnees.lon, radius)
@@ -205,7 +228,7 @@ function EventFiltersSheet({
     // Une ville retiree doit RETIRER sa zone : laisser trainer l'ancien
     // `geohash` ferait mentir la pastille et filtrerait sur une zone que plus
     // aucun libelle n'annonce.
-    onApply({
+    return {
       ...filters,
       activity,
       category,
@@ -219,9 +242,67 @@ function EventFiltersSheet({
       team,
       teamIds: team?.value ? [team.value] : null,
       type,
-    });
+    };
+  };
+
+  const appliquer = () => {
+    onApply(brouillon());
     onClose();
   };
+
+  const creerAlerte = async () => {
+    if (!onCreateAlert || alerteEnCours) return;
+    setAlerteEnCours(true);
+    try {
+      setNoteAlerte(await onCreateAlert(brouillon()));
+    } catch {
+      setNoteAlerte(StatutAlerte.erreur);
+    } finally {
+      setAlerteEnCours(false);
+    }
+  };
+
+  const etoile = onCreateAlert ? (
+    <TouchableOpacity
+      accessibilityLabel={t('searchAlerts.sheet.starLabel', 'Créer une alerte avec ces filtres')}
+      accessibilityRole="button"
+      accessibilityState={{ busy: alerteEnCours, disabled: alerteEnCours }}
+      disabled={alerteEnCours}
+      hitSlop={{
+        bottom: 8, left: 8, right: 8, top: 8,
+      }}
+      onPress={creerAlerte}
+      style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44, minWidth: 44 }]}
+    >
+      <Text style={[Fonts.h3Bold, { color: Colors.primary500 }]}>★</Text>
+      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+        {texteInsecable(t('eventFilters.createAlert', 'Créer alerte'))}
+      </Text>
+    </TouchableOpacity>
+  ) : undefined;
+
+  let noteDeLEtoile = null;
+  if (noteAlerte === StatutAlerte.creee) {
+    noteDeLEtoile = <ConfirmationAlerte />;
+  } else if (noteAlerte === StatutAlerte.villeManquante) {
+    noteDeLEtoile = (
+      <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+        {t(
+          'searchAlerts.sheet.needCity',
+          'Choisis une ville, puis touche ★ pour créer ton alerte.',
+        )}
+      </Text>
+    );
+  } else if (noteAlerte === StatutAlerte.erreur) {
+    noteDeLEtoile = (
+      <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+        {t(
+          'searchAlerts.sheet.error',
+          'L\'alerte n\'a pas pu être créée. Réessaie dans un instant.',
+        )}
+      </Text>
+    );
+  }
 
   // « Reinitialiser » vide TOUT, comme le faisait « Effacer les filtres » de
   // l'ecran plein : la barre de recherche partait deja avec le reste.
@@ -402,10 +483,13 @@ function EventFiltersSheet({
 
   return (
     <FiltersSheet
+      headerAction={etoile}
+      headerNote={noteDeLEtoile}
       isVisible={isVisible}
       onApply={appliquer}
       onClose={onClose}
       onReset={reinitialiser}
+      rangeeInitiale={pourUneAlerte ? 'city' : undefined}
       rows={rows}
     />
   );

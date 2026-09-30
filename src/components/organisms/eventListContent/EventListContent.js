@@ -30,6 +30,14 @@ import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
+import {
+  filtresDeLAlerte,
+  PROPOSITION_ALERTE_EVENEMENTS,
+  resumeDeLAlerte,
+  StatutAlerte,
+} from '@/domains/searchAlert/alerteEvenement';
+import useAlerteEvenement from '@/domains/searchAlert/useAlerteEvenement';
+import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -39,6 +47,11 @@ import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import {
+  CarteMePrevenir,
+  GuideAlertes,
+  PropositionAlerte,
+} from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import EventFiltersSheet from '@/components/organisms/filtersSheet/EventFiltersSheet';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
@@ -173,6 +186,10 @@ function EventListContent({
   showFilters = false,
 }) {
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
+  // ALERTES (A20) — ouverte POUR une alerte, la feuille s'ouvre sur la rangée Ville.
+  const [feuillePourAlerte, setFeuillePourAlerte] = useState(false);
+  const [propositionAlerteVisible, setPropositionAlerteVisible] = useState(false);
+  const [guideAlertesVisible, setGuideAlertesVisible] = useState(false);
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(/** @type {FCEvent | undefined} */(undefined));
@@ -208,6 +225,26 @@ function EventListContent({
   const [{ eventFilters, searchMapSessions }, appDispatch] = useAppContext();
   const { userData } = useAuth();
   const userDocumentId = userData?.documentId;
+  // 🔔 ALERTES (audit V1, A20) — « Mes alertes » arrivait trop tard : on ne créait
+  // une alerte qu'en allant la chercher dans « Gérer mes alertes ». Elle se propose
+  // désormais ICI, là où l'on cherche. Une alerte appartient à un COMPTE et guette
+  // les résultats de Rechercher › Événement : ni visiteur, ni annuaire du site, ni
+  // liste fournie par un autre écran (planning, fiche d'équipe).
+  const peutProposerUneAlerte = showFilters && !annuaire && !propEvents && Boolean(userDocumentId);
+  const {
+    creer: creerAlerteEvenement,
+    enCours: alerteEnCours,
+    estDejaCreee: alerteDejaCreee,
+    sports: sportsConnus,
+  } = useAlerteEvenement();
+  const {
+    hasSeen: propositionAlerteDejaVue,
+    markSeen: marquerPropositionAlerteVue,
+  } = useFeatureTutorial({
+    autoStart: false,
+    tutorialId: PROPOSITION_ALERTE_EVENEMENTS,
+    userId: userDocumentId,
+  });
   const viewportSession = searchMapSessions?.events || {};
   const { sceneBottomInset } = useBottomDockLayout();
   const defaultFutureCutoffRef = useRef(startOfMinute(new Date()).toISOString());
@@ -643,6 +680,25 @@ function EventListContent({
     && visibleEvents.length > 0
     && !isListFetchingNext;
   const showDateRefreshBanner = isDateRefreshPending;
+
+  // 🔔 A20.2 — LA PREMIÈRE OUVERTURE propose de créer son alerte, UNE fois par
+  // compte. La mémoire « déjà vu » est celle des tutoriels (`tutorialStorage`,
+  // rangée par compte) ; elle est posée à l'AFFICHAGE, pas à la réponse : un
+  // « Plus tard », un glissement ou une appli tuée ne la font pas revenir. On
+  // attend que la liste ait répondu, pour ne pas couvrir un écran qui charge.
+  useEffect(() => {
+    if (!peutProposerUneAlerte || !screenActive || !hasResolvedActiveQuery) return;
+    if (filtersSheetVisible || propositionAlerteDejaVue) return;
+    marquerPropositionAlerteVue('auto');
+    setPropositionAlerteVisible(true);
+  }, [
+    filtersSheetVisible,
+    hasResolvedActiveQuery,
+    marquerPropositionAlerteVue,
+    peutProposerUneAlerte,
+    propositionAlerteDejaVue,
+    screenActive,
+  ]);
   let activeMode = 'default-list';
   if (isViewportListMode) {
     activeMode = 'viewport-list';
@@ -825,8 +881,20 @@ function EventListContent({
   // L'ecran `EventFilters` reste enregistre : il porte encore la creation et la
   // modification des alertes (`SearchAlerts`) et l'ecran de carte l'ouvre.
   const handleOpenFilters = useCallback(() => {
+    setFeuillePourAlerte(false);
     setFiltersSheetVisible(true);
   }, []);
+
+  // 🔔 A20.1 — « Me prévenir » crée l'alerte avec les filtres AFFICHÉS. Sans ville,
+  // le serveur la refuserait : on ouvre les filtres sur la rangée Ville, où
+  // l'étoile attend.
+  const creerAlerteDepuisLaRecherche = useCallback(async () => {
+    const statut = await creerAlerteEvenement(eventFilters);
+    if (statut === StatutAlerte.villeManquante) {
+      setFeuillePourAlerte(true);
+      setFiltersSheetVisible(true);
+    }
+  }, [creerAlerteEvenement, eventFilters]);
 
   const handleFindEvent = () => {
     // @ts-expect-error because of react navigation type definitions
@@ -1330,6 +1398,23 @@ function EventListContent({
       )
     )
   );
+  // 🔔 A20.1 — SOUS les résultats (et sous l'état vide : c'est là qu'on veut être
+  // prévenu du prochain). Pas pendant le chargement, ni sur la zone de la carte,
+  // qu'une alerte ne sait pas suivre.
+  const piedDeListe = peutProposerUneAlerte && !isViewportListMode && !showLoadingPlaceholder ? (
+    <CarteMePrevenir
+      dejaCreee={alerteDejaCreee(eventFilters)}
+      enCours={alerteEnCours}
+      onCreer={creerAlerteDepuisLaRecherche}
+      onGerer={() => navigation.navigate(/** @type {never} */ (RouteNames.SearchAlerts))}
+      onGuide={() => setGuideAlertesVisible(true)}
+      resume={resumeDeLAlerte(
+        filtresDeLAlerte(eventFilters),
+        sportsConnus,
+        t('eventFiltersSheet.allSports', 'Tous les sports'),
+      )}
+    />
+  ) : null;
   const renderLoadingHint = (label, fullWidth = false) => (
     <View
       style={[
@@ -1525,6 +1610,7 @@ function EventListContent({
               ItemSeparatorComponent={EventListSeparator}
               keyExtractor={(item) => (item?.documentId || 'unknown').toString()}
               ListEmptyComponent={emptyListContent}
+              ListFooterComponent={piedDeListe}
               ListHeaderComponent={listHeader}
               onEndReached={handleEndReached}
               onEndReachedThreshold={0.5}
@@ -1569,7 +1655,23 @@ function EventListContent({
           appDispatch({ payload: filtresChoisis, type: 'SET_EVENT_FILTERS' });
         }}
         onClose={() => setFiltersSheetVisible(false)}
+        onCreateAlert={peutProposerUneAlerte ? creerAlerteEvenement : undefined}
+        pourUneAlerte={feuillePourAlerte}
       />
+
+      {peutProposerUneAlerte ? (
+        <>
+          <PropositionAlerte
+            isVisible={propositionAlerteVisible && screenActive}
+            onCreer={creerAlerteDepuisLaRecherche}
+            onFermer={() => setPropositionAlerteVisible(false)}
+          />
+          <GuideAlertes
+            isVisible={guideAlertesVisible}
+            onClose={() => setGuideAlertesVisible(false)}
+          />
+        </>
+      ) : null}
     </View>
   );
 }

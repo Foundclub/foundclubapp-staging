@@ -116,6 +116,9 @@ jest.mock('@/theme/themeContext', () => {
       Alignments: alignements,
       Colors: couleurs,
       Fonts: genererPolices(couleurs),
+      // ALERTES : la confirmation « Alerte créée » porte l'icône coche. Seules les
+      // images sont bouchonnées, pour ne pas dépendre de la résolution des fichiers.
+      Images: new Proxy({}, { get: () => 1 }),
       Spaces: espaces,
     }),
   };
@@ -505,5 +508,133 @@ describe('EventFiltersSheet — ce qu elle envoie a la recherche', () => {
     const texte = texteVisible(tree);
     expect(texte).toContain('Football');
     expect(texte).toContain('Marseille · 25 km');
+  });
+});
+
+// ALERTES (audit V1, A20.4) — L'ÉTOILE EN HAUT À DROITE DES FILTRES.
+//
+// Elle vivait dans l'en-tête de l'écran plein `EventFilters` (« ★ Créer alerte »,
+// `EventFilters.js:197-216`). D82 (85e300a0, 12/08) a remplacé cet écran par
+// cette feuille comme destination du bouton de filtres, sans reprendre l'étoile :
+// l'écran plein n'est plus ouvert que par « Gérer mes alertes », qui la CACHE en
+// mode alerte. Elle était devenue inatteignable depuis la recherche.
+//
+// La feuille ne parle pas au serveur elle-même : elle confie son BROUILLON à
+// `onCreateAlert` et affiche ce qu'on lui répond. L'appel réel (`POST
+// /search-alerts`) est prouvé par `EventListContent.ALERTES.test.js`.
+describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => {
+  const ETOILE = 'Créer une alerte avec ces filtres';
+
+  /**
+   * Monte la feuille avec ou sans étoile, et rend ses deux sorties espionnées.
+   * @param {{ filters?: any, onCreateAlert?: any, pourUneAlerte?: boolean }} [options] Le décor.
+   * @returns {Promise<{ tree: any, onApply: jest.Mock, onClose: jest.Mock }>} Le rendu.
+   */
+  const rendreAvecEtoile = async ({
+    filters = {}, onCreateAlert = undefined, pourUneAlerte = false,
+  } = {}) => {
+    const onApply = jest.fn();
+    const onClose = jest.fn();
+    /** @type {any} */
+    let tree;
+    await act(async () => {
+      tree = renderer.create(
+        <EventFiltersSheet
+          filters={filters}
+          isVisible
+          onApply={onApply}
+          onClose={onClose}
+          onCreateAlert={onCreateAlert}
+          pourUneAlerte={pourUneAlerte}
+        />,
+      );
+    });
+    return { onApply, onClose, tree };
+  };
+
+  /**
+   * L'étoile de l'entête, lue sur son étiquette d'accessibilité.
+   * @param {any} tree L'arbre.
+   * @returns {any} L'étoile, ou undefined.
+   */
+  const etoile = (tree) => tree.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onPress === 'function'
+      && n.props?.accessibilityLabel === ETOILE,
+    { deep: true },
+  )[0];
+
+  const toucherLEtoile = async (/** @type {any} */ tree) => {
+    await act(async () => { await etoile(tree).props.onPress(); });
+  };
+
+  it('LE TEMOIN : sans `onCreateAlert`, pas d étoile — la feuille est celle d avant', async () => {
+    const { tree } = await rendre();
+    expect(etoile(tree)).toBeUndefined();
+  });
+
+  it('avec `onCreateAlert`, l étoile ★ « Créer alerte » est dans l entête', async () => {
+    const { tree } = await rendreAvecEtoile({
+      onCreateAlert: jest.fn(() => Promise.resolve('creee')),
+    });
+    const bouton = etoile(tree);
+    expect(bouton).toBeDefined();
+    expect(texteDuNoeud(bouton)).toContain('★');
+    expect(texteDuNoeud(bouton).replace(/\s/g, ' ')).toContain('Créer alerte');
+  });
+
+  it('l étoile confie le BROUILLON (ville, zone, sport) sans appliquer ni fermer', async () => {
+    const onCreateAlert = jest.fn(() => Promise.resolve('creee'));
+    const { onApply, onClose, tree } = await rendreAvecEtoile({
+      filters: { activity: ['a-1'], city: MARSEILLE, radius: 25 },
+      onCreateAlert,
+    });
+
+    await toucherLEtoile(tree);
+
+    expect(onCreateAlert).toHaveBeenCalledTimes(1);
+    expect(onCreateAlert.mock.calls[0][0]).toEqual(expect.objectContaining({
+      activity: ['a-1'],
+      city: MARSEILLE,
+      geohash: 'gh(43.2965,5.3698,25)',
+      radius: 25,
+    }));
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('créée : la feuille le dit', async () => {
+    const { tree } = await rendreAvecEtoile({
+      filters: { city: MARSEILLE },
+      onCreateAlert: jest.fn(() => Promise.resolve('creee')),
+    });
+    await toucherLEtoile(tree);
+    expect(texteVisible(tree)).toContain('Alerte créée');
+  });
+
+  it('ville manquante : la feuille dit quoi faire', async () => {
+    const { tree } = await rendreAvecEtoile({
+      onCreateAlert: jest.fn(() => Promise.resolve('ville-manquante')),
+    });
+    await toucherLEtoile(tree);
+    expect(texteVisible(tree)).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+  });
+
+  it('échec : la feuille le dit, sans se fermer', async () => {
+    const { onClose, tree } = await rendreAvecEtoile({
+      filters: { city: MARSEILLE },
+      onCreateAlert: jest.fn(() => Promise.resolve('erreur')),
+    });
+    await toucherLEtoile(tree);
+    expect(texteVisible(tree)).toContain('L\'alerte n\'a pas pu être créée');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('ouverte POUR une alerte : la rangée Ville est dépliée et la note est là', async () => {
+    const { tree } = await rendreAvecEtoile({
+      onCreateAlert: jest.fn(() => Promise.resolve('creee')),
+      pourUneAlerte: true,
+    });
+    expect(trouver(tree, 'adresse')).toBeDefined();
+    expect(texteVisible(tree)).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
   });
 });

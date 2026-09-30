@@ -33,6 +33,17 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * ⚠️ `androidKeyboardInputMode="adjustPan"` n'est pas decoratif : une rangee
  * peut contenir un champ de saisie, et sous Android 15 le mode `adjustResize`
  * ne remonte plus la feuille (constat D31, `SelfProfileUnified.js`).
+ *
+ * ⭐ ALERTES (audit V1, A20.4) — trois options, toutes FACULTATIVES :
+ *   · `headerAction` se range A DROITE du titre (l'etoile « Creer alerte » de la
+ *     feuille des evenements) ;
+ *   · `headerNote` se lit SOUS le titre (ce que l'etoile a produit) ;
+ *   · `rangeeInitiale` ouvre la feuille sur cette rangee DEPLIEE.
+ * Sans elles, l'entete reste le titre seul, au noeud pres : les feuilles club,
+ * profil, reservation et recrutement ne changent pas (temoin dans
+ * `FiltersSheet.test.js`). Le titre ne passe dans une rangee QUE s'il y a une
+ * action, et il y prend `flex: 1` : a sa largeur mesuree, un titre gras de
+ * plusieurs mots perdrait son dernier mot sous Android 16.
  */
 
 /** @typedef {{ key: string, label: string, value: string, content: import('react').ReactNode }} FilterRow */
@@ -48,10 +59,13 @@ const SNAP_POINTS = ['78%'];
 /**
  * @param {{
  *  applyLabel?: string;
+ *  headerAction?: import('react').ReactNode;
+ *  headerNote?: import('react').ReactNode;
  *  isVisible: boolean;
  *  onApply: () => void;
  *  onClose: () => void;
  *  onReset: () => void;
+ *  rangeeInitiale?: string;
  *  resetLabel?: string;
  *  rows: FilterRow[];
  *  title?: string;
@@ -60,10 +74,13 @@ const SNAP_POINTS = ['78%'];
  */
 function FiltersSheet({
   applyLabel = undefined,
+  headerAction = undefined,
+  headerNote = undefined,
   isVisible,
   onApply,
   onClose,
   onReset,
+  rangeeInitiale = undefined,
   resetLabel = undefined,
   rows,
   title = undefined,
@@ -83,11 +100,28 @@ function FiltersSheet({
   useEffect(() => {
     if (isVisible === etaitOuverteRef.current) return;
     etaitOuverteRef.current = isVisible;
-    if (isVisible) setRangeeOuverte('');
-  }, [isVisible]);
+    if (isVisible) setRangeeOuverte(rangeeInitiale || '');
+  }, [isVisible, rangeeInitiale]);
 
   const surface = withAlpha(Colors.primary900, 0.6);
   const bordure = withAlpha(Colors.neutral00, 0.13);
+
+  const libelleDuTitre = title ?? t('filtersSheet.title', 'Filtrer');
+  const titre = <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{libelleDuTitre}</Text>;
+  let entete = titre;
+  if (headerAction || headerNote) {
+    entete = (
+      <View style={[Spaces.gap[8]]}>
+        {headerAction ? (
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, { flex: 1 }]}>{libelleDuTitre}</Text>
+            {headerAction}
+          </View>
+        ) : titre}
+        {headerNote}
+      </View>
+    );
+  }
 
   return (
     <BottomModal
@@ -132,11 +166,7 @@ function FiltersSheet({
           </TouchableOpacity>
         </View>
       )}
-      headerComponent={(
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {title ?? t('filtersSheet.title', 'Filtrer')}
-        </Text>
-      )}
+      headerComponent={entete}
       isVisible={isVisible}
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"

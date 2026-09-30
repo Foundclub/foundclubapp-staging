@@ -403,3 +403,68 @@ describe('ROLES2 — « Voir les » : le libellé du bouton prend toute la large
     expect(style.textAlign).toBe('center');
   });
 });
+
+// ALERTES (audit V1, A20.4) — l'étoile « Créer alerte » revient EN HAUT À DROITE
+// de la feuille des événements. La coquille gagne trois options, toutes
+// facultatives : une ACTION d'entête (à droite du titre), une NOTE sous le titre,
+// et une rangée DÉPLIÉE d'emblée. Sans elles, les autres feuilles (club, profil,
+// réservation, recrutement) restent exactement ce qu'elles étaient — le premier
+// témoin de ce bloc le fige, et il passe sur le code d'avant le lot.
+describe('ALERTES (A20) — action et note dans l entête, rangée ouverte d emblée', () => {
+  /**
+   * Monte la coquille avec les options ALERTES demandées.
+   * @param {any} options Les options de la coquille.
+   * @returns {Promise<any>} L'arbre.
+   */
+  const rendreAvec = async (options) => {
+    /** @type {any} */
+    let tree;
+    await act(async () => {
+      tree = renderer.create(
+        <FiltersSheet
+          isVisible
+          onApply={jest.fn()}
+          onClose={jest.fn()}
+          onReset={jest.fn()}
+          rows={RANGEES}
+          // eslint-disable-next-line react/jsx-props-no-spreading -- fabrique de test
+          {...options}
+        />,
+      );
+    });
+    return tree;
+  };
+
+  it('LE TEMOIN : sans ces options, l entête reste le titre seul, comme avant', async () => {
+    await rendre();
+    expect(proprietesRecues.valeur.headerComponent.type).toBe(Text);
+  });
+
+  it('une action d entête se range À DROITE du titre, sur la même ligne', async () => {
+    const tree = await rendreAvec({ headerAction: <Text>ACTION</Text> });
+    const action = tree.root.findAll(
+      (/** @type {any} */ n) => n.type === Text && n.props.children === 'ACTION',
+    )[0];
+    const rangee = action.parent;
+    const textes = rangee.findAll((/** @type {any} */ n) => n.type === Text)
+      .map((/** @type {any} */ n) => texteDuNoeud(n));
+
+    expect(textes[textes.length - 1]).toBe('ACTION');
+    expect(textes[0]).not.toBe('ACTION');
+    expect(StyleSheet.flatten(rangee.props.style).flexDirection).toBe('row');
+  });
+
+  it('une note se lit SOUS le titre', async () => {
+    const tree = await rendreAvec({ headerNote: <Text>NOTE</Text> });
+    const texte = texteVisible(tree);
+    expect(texte).toContain('NOTE');
+    expect(texte.indexOf('NOTE')).toBeLessThan(texte.indexOf('Sport'));
+  });
+
+  it('`rangeeInitiale` ouvre la feuille sur cette rangée dépliée', async () => {
+    const tree = await rendreAvec({ rangeeInitiale: 'city' });
+    const texte = texteVisible(tree);
+    expect(texte).toContain('le choix de la ville');
+    expect(texte).not.toContain('le choix du sport');
+  });
+});

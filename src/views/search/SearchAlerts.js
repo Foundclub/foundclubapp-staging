@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import { GuideAlertes } from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -45,6 +46,9 @@ function SearchAlerts({ navigation }) {
   const [isTypeModalVisible, setIsTypeModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [alertToDelete, setAlertToDelete] = useState(/** @type {string | null} */ (null));
+  // ALERTES (audit V1, A20.3) — le guide « Comment créer une alerte ? » est aussi
+  // ici : c'est là qu'on vient quand on ne sait pas encore où elles se créent.
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -228,6 +232,15 @@ function SearchAlerts({ navigation }) {
     >
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>{t('searchAlerts.title', 'Mes Alertes')}</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => setIsGuideVisible(true)}
+          style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+            {t('searchAlerts.guide.linkLong', 'Comment créer une alerte ?')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {loading && !refreshing ? (
@@ -352,6 +365,8 @@ function SearchAlerts({ navigation }) {
           variant="Primary"
         />
       </View>
+
+      <GuideAlertes isVisible={isGuideVisible} onClose={() => setIsGuideVisible(false)} />
 
       {/* Type Selection Modal */}
       <BottomModal
