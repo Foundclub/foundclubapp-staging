@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -32,6 +33,7 @@ function SearchComponent({
   placeholder,
   searchDefaultValue = '',
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState(searchDefaultValue);
   const searchHandlerRef = useRef(handleSearchField);
   const isSyncingDefaultValueRef = useRef(false);
@@ -136,7 +138,17 @@ function SearchComponent({
             </Text>
           </View>
         ) : null}
+        {/* RECRUTER-TUNNEL (audit V1) — sans libelle, le lecteur d'ecran
+            annoncait « bouton » tout court (`content-desc` vide), et la pastille
+            du nombre ne se lit pas avec lui. 8 listes partagent ce bouton. */}
         <Button
+          accessibilityLabel={filterNumber
+            ? t('search.filters.buttonActive', {
+              count: filterNumber,
+              defaultValue_one: 'Filtrer, {{count}} filtre actif',
+              defaultValue_other: 'Filtrer, {{count}} filtres actifs',
+            })
+            : t('search.filters.button', 'Filtrer')}
           icon="filter"
           onPress={openFilters}
           size="sm"
