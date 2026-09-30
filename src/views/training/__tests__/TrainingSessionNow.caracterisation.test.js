@@ -359,7 +359,7 @@ describe('l entete et le pied', () => {
    * terminee -> « Ma seance », qui proposait encore de continuer). Reecrit : la seance
    * est REMPLACEE par l'ecran « Seance terminee ».
    */
-  it('« Terminer » enregistre, puis REMPLACE la seance par l ecran « Seance terminee »', async () => {
+  it('« Terminer » enregistre, puis REMPLACE la seance par « Seance terminee »', async () => {
     const mutateAsync = jest.fn().mockResolvedValue(undefined);
     const navigate = jest.fn();
     const replace = jest.fn();
@@ -371,7 +371,10 @@ describe('l entete et le pied', () => {
       payload: { status: 'done' },
       sessionDocumentId: 'seance-9',
     });
-    expect(replace).toHaveBeenCalledWith('TrainingDay', { justFinished: true, sessionId: 'seance-9' });
+    expect(replace).toHaveBeenCalledWith('TrainingDay', {
+      justFinished: true,
+      sessionId: 'seance-9',
+    });
     expect(navigate).not.toHaveBeenCalledWith('TrainingDay', expect.anything());
   });
 

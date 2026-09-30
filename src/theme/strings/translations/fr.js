@@ -18827,6 +18827,17 @@ export default {
       timeline: 'Le déroulé, minute par minute',
       warmup: 'Échauffement',
     },
+    // RETOUR-ONGLET (d) — l'écran « Séance terminée » (A22, maquette validée le 30/09).
+    done: {
+      backToProgram: 'Revenir à mon programme',
+      measures_one: '{{count}} mesure au carnet',
+      measures_other: '{{count}} mesures au carnet',
+      next: 'Prochaine séance : {{title}}, {{date}}.',
+      noMeasures: 'Aucune mesure enregistrée aujourd’hui',
+      program: 'Mon programme',
+      seeMeasures: 'Voir mes mesures',
+      title: 'Séance terminée',
+    },
     enroll: {
       confirm: 'Ajouter à mon entraînement',
       consequence: 'Les {{sessions}} séances seront planifiées à partir de cette date, '

@@ -1,4 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useLayoutEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -13,8 +15,10 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import TrainingBlocks, { RichText } from '@/components/organisms/training/TrainingBlocks';
+import TrainingDayDone from '@/components/organisms/training/TrainingDayDone';
 import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -291,7 +295,7 @@ function TrainingDay({ navigation, route }) {
   const sessionId = route?.params?.sessionId;
 
   const {
-    enrollment, error, isLoading, refetch, sessions,
+    enrollment, error, isLoading, nextSession, refetch, sessions,
   } = useMyTraining();
   const updateSession = useUpdateTrainingSession();
 
@@ -451,6 +455,48 @@ function TrainingDay({ navigation, route }) {
     (/** @type {number} */ index) => openTest(index, 'learn'),
     [openTest],
   );
+
+  /*
+   * RETOUR-ONGLET (d) — « SÉANCE TERMINÉE ✓ » (A22, maquette validée par Adel le 30/09).
+   * « Terminer la journée » REMPLACE « Ma séance » par cet écran (`justFinished`) au
+   * lieu d'empiler une fiche de plus. Sans le paramètre, une journée finie reste la
+   * FICHE : on la relit depuis la liste des séances.
+   */
+  const vientDeFinir = Boolean(route?.params?.justFinished) && Boolean(day);
+  const revenirAuProgramme = useCallback(() => {
+    navigation.popTo(RouteNames.TrainingPlan);
+  }, [navigation]);
+
+  // La flèche de l'en-tête de la pile dit où elle mène : « ‹ Mon programme ».
+  const renderHeaderLeft = useCallback(() => (
+    <HeaderBackButton
+      accessibilityLabel={t('training.done.backToProgram')}
+      onPress={revenirAuProgramme}
+    />
+  ), [revenirAuProgramme, t]);
+
+  useLayoutEffect(() => {
+    if (!vientDeFinir) return;
+    navigation.setOptions?.({
+      headerLeft: renderHeaderLeft,
+      headerTitle: t('training.done.program'),
+      headerTitleAlign: 'left',
+    });
+  }, [navigation, renderHeaderLeft, t, vientDeFinir]);
+
+  if (vientDeFinir) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+        <TrainingDayDone
+          day={day}
+          mesuresFaites={chiffres.mesuresFaites}
+          nextSession={nextSession && nextSession.documentId !== sessionId ? nextSession : null}
+          onBackToProgram={revenirAuProgramme}
+          onSeeMeasures={() => navigation.navigate(RouteNames.TrainingLogbook)}
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">

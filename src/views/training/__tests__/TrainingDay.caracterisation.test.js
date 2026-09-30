@@ -755,7 +755,7 @@ describe('RETOUR-ONGLET (d) — l ecran « Seance terminee »', () => {
     ]);
   });
 
-  it('deux portes ecrites : « Voir mes mesures » (le carnet) et « Revenir a mon programme »', () => {
+  it('deux portes ecrites : « Voir mes mesures » (carnet) et « Revenir a mon programme »', () => {
     const navigate = jest.fn();
     const popTo = jest.fn();
     const arbre = rendre({

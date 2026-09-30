@@ -17787,6 +17787,16 @@ export default {
       timeline: 'The schedule, minute by minute',
       warmup: 'Warm-up',
     },
+    done: {
+      backToProgram: 'Back to my programme',
+      measures_one: '{{count}} measurement in the logbook',
+      measures_other: '{{count}} measurements in the logbook',
+      next: 'Next session: {{title}}, {{date}}.',
+      noMeasures: 'No measurements recorded today',
+      program: 'My programme',
+      seeMeasures: 'View my measurements',
+      title: 'Session complete',
+    },
     enroll: {
       confirm: 'Add to my training',
       consequence: "The {{sessions}} sessions will be scheduled from this date, over {{days}} days. You'll be able to postpone any of them, or start a different one.",
