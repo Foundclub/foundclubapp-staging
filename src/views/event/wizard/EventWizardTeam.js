@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -101,26 +102,19 @@ function EventWizardTeam({ navigation }) {
     () => getRelationDocumentId((userData?.multisportClubs || [])[0]),
     [userData?.multisportClubs],
   );
+  // FINITIONS-AUDIT (30/09) — les equipes que je GERE, pas celles ou je JOUE : `myTeams`
+  // est la liste des equipes ou l'on joue. Le club se deduisait aussi de la premiere
+  // d'entre elles (un entraineur qui joue ailleurs ne se voyait proposer AUCUNE equipe), et
+  // le repli proposait a un joueur l'equipe ou il joue. Regle partagee : GERER-ANNONCE.
+  const managedTeams = useMemo(() => getManagedTeams(userData), [userData]);
   const resolvedClubId = useMemo(
     () => (
       getRelationDocumentId(userData?.club)
-      || getRelationDocumentId((userData?.myTeams || []).find((team) => team?.club)?.club)
-      || getRelationDocumentId((userData?.trainedTeams || []).find((team) => team?.club)?.club)
+      || getRelationDocumentId(managedTeams.find((team) => team?.club)?.club)
     ),
-    [userData?.club, userData?.myTeams, userData?.trainedTeams],
+    [managedTeams, userData?.club],
   );
-  const fallbackTeams = useMemo(
-    () => sortTeamsForDisplay(
-      dedupeIds([
-        ...(Array.isArray(userData?.myTeams) ? userData.myTeams.map((team) => team?.documentId) : []),
-        ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams.map((team) => team?.documentId) : []),
-      ]).map((documentId) => (
-        (userData?.myTeams || []).find((team) => team?.documentId === documentId)
-        || (userData?.trainedTeams || []).find((team) => team?.documentId === documentId)
-      )).filter(Boolean),
-    ),
-    [userData?.myTeams, userData?.trainedTeams],
-  );
+  const fallbackTeams = useMemo(() => sortTeamsForDisplay(managedTeams), [managedTeams]);
 
   const trainedTeamIds = useMemo(() => new Set(
     (userData?.trainedTeams || [])
