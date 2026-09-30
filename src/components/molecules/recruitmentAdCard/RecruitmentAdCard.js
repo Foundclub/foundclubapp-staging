@@ -35,6 +35,16 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
+/**
+ * Nom lisible d'une activite, qu'elle arrive en texte (`ad.sport`) ou en objet
+ * (`team.activities[0]`, `team.sport`).
+ * @param {unknown} value
+ * @returns {string}
+ */
+const readSportName = (value) => String(
+  (typeof value === 'string' ? value : /** @type {any} */ (value)?.name) || '',
+).trim();
+
 const humanizeEnumLabel = (value, fallback = '') => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue) return fallback;
@@ -106,7 +116,12 @@ function RecruitmentAdCard({
     'Catégorie ?',
   );
   const sectionName = ad.section?.name || ad.section || '';
-  const sportName = ad.sport || team?.sport || 'Football';
+  // ANNONCES-SPORT (audit V1, A10) — plus de « Football » invente : une annonce
+  // d'arts martiaux sans sport s'affichait FOOTBALL. Sans sport, on reprend
+  // l'activite de l'equipe quand la reponse la porte ; sinon l'etiquette disparait.
+  const sportName = readSportName(ad.sport)
+    || readSportName(team?.activities?.[0])
+    || readSportName(team?.sport);
   const address = getShortAddress(ad.city || club?.city || '');
   // T8 : 6 annonces portent « Gymnase - [object Object] » ECRIT EN BASE (releve du
   // 26/08). Tant que ces lignes ne sont pas reparees, l'affichage recompose le
@@ -273,14 +288,16 @@ function RecruitmentAdCard({
                   </Text>
                 </View>
 
-                <View style={styles.sportBadge}>
-                  <Text
-                    numberOfLines={1}
-                    style={[Fonts.p4Bold, styles.sportBadgeText]}
-                  >
-                    {sportName}
-                  </Text>
-                </View>
+                {sportName ? (
+                  <View style={styles.sportBadge}>
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p4Bold, styles.sportBadgeText]}
+                    >
+                      {sportName}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
 
               {isDetectionLinked ? (
