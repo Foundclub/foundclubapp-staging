@@ -352,10 +352,18 @@ describe('l entete et le pied', () => {
     expect(vus.some((v) => String(v).startsWith('training.now.elapsed'))).toBe(false);
   });
 
-  it('« Terminer » enregistre ET ramene a la fiche de la journee', async () => {
+  /*
+   * RETOUR-ONGLET (d) — A22 de l'audit V1 (30/09, valide par Adel). Ce temoin exigeait
+   * `navigate('TrainingDay')` : en React Navigation 7, c'est EMPILER une fiche de plus
+   * par-dessus « Ma seance » — le retour tournait ensuite en rond (carnet -> journee
+   * terminee -> « Ma seance », qui proposait encore de continuer). Reecrit : la seance
+   * est REMPLACEE par l'ecran « Seance terminee ».
+   */
+  it('« Terminer » enregistre, puis REMPLACE la seance par l ecran « Seance terminee »', async () => {
     const mutateAsync = jest.fn().mockResolvedValue(undefined);
     const navigate = jest.fn();
-    const arbre = rendre({ miseAJour: { mutateAsync }, navigation: { navigate } });
+    const replace = jest.fn();
+    const arbre = rendre({ miseAJour: { mutateAsync }, navigation: { navigate, replace } });
 
     await act(async () => { arbre.root.findAllByType(Button)[1].props.onPress(); });
 
@@ -363,7 +371,8 @@ describe('l entete et le pied', () => {
       payload: { status: 'done' },
       sessionDocumentId: 'seance-9',
     });
-    expect(navigate).toHaveBeenCalledWith('TrainingDay', { sessionId: 'seance-9' });
+    expect(replace).toHaveBeenCalledWith('TrainingDay', { justFinished: true, sessionId: 'seance-9' });
+    expect(navigate).not.toHaveBeenCalledWith('TrainingDay', expect.anything());
   });
 
   it('pose la phrase qui dit a quoi sert l ecran', () => {

@@ -701,6 +701,112 @@ describe('le pied de page', () => {
   });
 });
 
+/*
+ * RETOUR-ONGLET (d) — A22 de l'audit V1, maquette « Apres » validee par Adel le 30/09.
+ * Apres « Terminer la journee », une ligne d'arrivee avec DEUX portes et une fleche :
+ * le vrai nombre de mesures enregistrees (ou « Aucune mesure enregistree aujourd'hui »),
+ * « Voir mes mesures », « Revenir a mon programme », et « ‹ Mon programme » en haut.
+ * On y arrive par `replace` depuis « Ma seance », avec `justFinished`.
+ */
+describe('RETOUR-ONGLET (d) — l ecran « Seance terminee »', () => {
+  const PROCHAINE = {
+    day: { documentId: 'jour-c', title: 'Jour C - Vitesse' },
+    documentId: 'seance-10',
+    plannedDate: '2026-10-03',
+    status: 'planned',
+  };
+  const FINIE = { ...SEANCE, status: 'done' };
+  const ARRIVEE = { params: { justFinished: true, sessionId: 'seance-9' } };
+
+  /**
+   * Les boutons de l'ecran, par libelle.
+   * @param {any} arbre l arbre rendu
+   * @returns {Record<string, any>} les boutons, ranges par titre
+   */
+  const boutons = (arbre) => Object.fromEntries(
+    arbre.root.findAllByType(Button).map((b) => [b.props.title, b]),
+  );
+
+  it('dit « Seance terminee », la journee, et le VRAI nombre de mesures enregistrees', () => {
+    const arbre = rendre({
+      etat: { ...avec(JOURNEE, FINIE), nextSession: null },
+      route: ARRIVEE,
+    });
+    const vus = textes(arbre);
+
+    expect(vus).toContain('training.done.title');
+    expect(vus).toContain('Jour B - Detente');
+    // S10 x 2 + CMJ x 1 : trois mesures SAISIES (la journee en prevoit six).
+    expect(vus).toContain('training.done.measures|{"count":3}');
+    // Ce n'est plus la fiche : ni onglets, ni liste des tests.
+    expect(vus).not.toContain('training.day.testsTitle');
+  });
+
+  it('a 0 mesure : « Aucune mesure enregistree aujourd hui », et le carnet ne promet rien', () => {
+    const arbre = rendre({
+      etat: { ...avec(JOURNEE, { ...FINIE, results: [] }), nextSession: null },
+      route: ARRIVEE,
+    });
+
+    expect(textes(arbre)).toContain('training.done.noMeasures');
+    expect(Object.keys(boutons(arbre))).toEqual([
+      'training.day.openLogbook',
+      'training.done.backToProgram',
+    ]);
+  });
+
+  it('deux portes ecrites : « Voir mes mesures » (le carnet) et « Revenir a mon programme »', () => {
+    const navigate = jest.fn();
+    const popTo = jest.fn();
+    const arbre = rendre({
+      etat: { ...avec(JOURNEE, FINIE), nextSession: null },
+      navigation: { navigate, popTo },
+      route: ARRIVEE,
+    });
+    const b = boutons(arbre);
+
+    expect(Object.keys(b)).toEqual(['training.done.seeMeasures', 'training.done.backToProgram']);
+    act(() => { b['training.done.seeMeasures'].props.onPress(); });
+    expect(navigate).toHaveBeenCalledWith('TrainingLogbook');
+    act(() => { b['training.done.backToProgram'].props.onPress(); });
+    expect(popTo).toHaveBeenCalledWith('TrainingPlan');
+  });
+
+  it('la fleche du haut dit « ‹ Mon programme » et y ramene', () => {
+    const popTo = jest.fn();
+    const setOptions = jest.fn();
+    rendre({
+      etat: { ...avec(JOURNEE, FINIE), nextSession: null },
+      navigation: { popTo, setOptions },
+      route: ARRIVEE,
+    });
+
+    const options = setOptions.mock.calls[setOptions.mock.calls.length - 1][0];
+    expect(options.headerTitle).toBe('training.done.program');
+    const fleche = options.headerLeft();
+    expect(fleche.props.accessibilityLabel).toBe('training.done.backToProgram');
+    act(() => { fleche.props.onPress(); });
+    expect(popTo).toHaveBeenCalledWith('TrainingPlan');
+  });
+
+  it('annonce la prochaine seance quand il y en a une', () => {
+    const arbre = rendre({
+      etat: { ...avec(JOURNEE, FINIE), nextSession: PROCHAINE },
+      route: ARRIVEE,
+    });
+
+    expect(textes(arbre).some((texte) => texte.startsWith('training.done.next|')
+      && texte.includes('Jour C - Vitesse'))).toBe(true);
+  });
+
+  it('sans `justFinished`, une journee finie reste la FICHE (on la relit depuis la liste)', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, FINIE) });
+
+    expect(textes(arbre)).not.toContain('training.done.title');
+    expect(textes(arbre)).toContain('training.day.testsTitle');
+  });
+});
+
 describe('les mots que le pack interdit devant l utilisateur', () => {
   /**
    * Toutes les phrases du bloc `training` de `fr.js`, a plat.
