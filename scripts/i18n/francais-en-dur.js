@@ -44,7 +44,9 @@ const { parse } = require('@babel/parser');
 const RACINE = path.resolve(__dirname, '..', '..');
 const SRC = path.join(RACINE, 'src');
 const BASELINE = path.join(RACINE, '.ci', 'i18n-francais-en-dur-baseline.json');
-const DOSSIERS_EXCLUS = ['__mocks__', '__tests__', 'node_modules'];
+// `testSupport` (GO d'Adel « testsupport A », 01/10/2026) : les aides des temoins (doublures, donnees
+// de test comme des noms de sports) ne sont pas des textes de l'app, au meme titre que `__tests__`.
+const DOSSIERS_EXCLUS = ['__mocks__', '__tests__', 'node_modules', 'testSupport'];
 const DICTIONNAIRES = path.join(SRC, 'theme', 'strings', 'translations');
 
 const ACCENT = /[àâäçéèêëîïôöûùüÿœæ]/i;
