@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import RecruitmentFiltersSheet from '../RecruitmentFiltersSheet';
@@ -68,7 +69,9 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({ data: [{ documentId: 'a-1', name: 'Football' }] }),
+  useGetActivities: () => ({
+    data: [{ documentId: 'a-1', name: 'Football' }, { documentId: 'a-2', name: 'Arts martiaux' }],
+  }),
 }));
 jest.mock('@/services/category/categoryQueries', () => ({
   useGetCategories: () => ({ data: [{ documentId: 'c-1', name: 'U17' }] }),
@@ -321,5 +324,80 @@ describe('R07 — le dernier filtre respire avant le pied colle', () => {
     expect(texteDuNoeud(reserve)).not.toContain('Voir les résultats');
     expect(texteDuNoeud(reserve)).not.toContain('Réinitialiser');
     expect(texteVisible(tree)).toContain('Voir les résultats');
+  });
+});
+
+// RECRUTER-TUNNEL (audit V1, H4) — ANDROID 16 COUPAIT LE DERNIER MOT.
+//
+// Captures `A09_tous-les-sports_2` et `_3` : « Arts » pour « Arts martiaux »,
+// « Autres » pour « Autres sports », « Voir les » pour « Voir les résultats ».
+// C'est le piege connu `piege-android16-gras-dernier-mot-perdu` : un texte GRAS
+// de plusieurs mots, dans une boite qui epouse sa largeur mesuree, perd son
+// dernier mot. Les parades sont celles DEJA posees ailleurs, pas inventees ici :
+//   · le bouton : son libelle s'etire sur toute sa largeur — ROLES2 l'a fait sur
+//     le socle `FiltersSheet`, pas sur cette jumelle recopiee ;
+//   · une pastille ne peut pas s'etirer : `texteInsecable` (FINITIONS).
+// Aucune porte ne calcule une mise en page : ce filet verrouille la STRUCTURE
+// qui evite la coupure. La preuve a l'ecran reste une photo en recette Android 16.
+describe('RECRUTER-TUNNEL H4 — Android 16 ne coupe plus le dernier mot', () => {
+  const ESPACE_INSECABLE = String.fromCharCode(160);
+
+  /**
+   * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
+   * @param {any} style Le style tel que pose sur l'element.
+   * @returns {Record<string, any>} Le style resolu.
+   */
+  const aplatir = (style) => (Array.isArray(style)
+    ? style.filter(Boolean).reduce((acc, part) => ({ ...acc, ...aplatir(part) }), {})
+    : (style || {}));
+
+  /**
+   * Le texte de chaque `Text` rendu, un par libelle.
+   * @param {any} tree L'arbre rendu.
+   * @returns {string[]} Les libelles.
+   */
+  const libelles = (tree) => tree.root
+    .findAll((/** @type {any} */ node) => node.type === Text)
+    .map(texteDuNoeud);
+
+  it('« Voir les résultats » s etire sur toute la largeur du bouton, centre', async () => {
+    const { tree } = await rendre();
+
+    const [libelle] = tree.root.findAll(
+      (/** @type {any} */ node) => node.type === Text && texteDuNoeud(node) === 'Voir les résultats',
+    );
+
+    expect(aplatir(libelle.props.style)).toEqual(expect.objectContaining({
+      alignSelf: 'stretch',
+      textAlign: 'center',
+    }));
+  });
+
+  it('une pastille de sport garde ses mots ensemble : « Arts martiaux » ne se coupe plus', async () => {
+    const { tree } = await rendre();
+    await ouvrirRangee(tree, 'Sport');
+
+    expect(libelles(tree)).toContain(`Arts${ESPACE_INSECABLE}martiaux`);
+    expect(libelles(tree)).toContain(`Tous${ESPACE_INSECABLE}les${ESPACE_INSECABLE}sports`);
+    expect(libelles(tree)).not.toContain('Arts martiaux');
+  });
+
+  it('les pastilles du profil aussi', async () => {
+    const { tree } = await rendre();
+    await ouvrirRangee(tree, 'Profil');
+
+    expect(libelles(tree)).toContain(`Joueur·se·s${ESPACE_INSECABLE}et${ESPACE_INSECABLE}coachs`);
+  });
+
+  it('la recherche recoit le VRAI nom du sport, sans espace insecable', async () => {
+    const { onApply, tree } = await rendre();
+    await ouvrirRangee(tree, 'Sport');
+    await appuyerSur(tree, `Arts${ESPACE_INSECABLE}martiaux`);
+    await appuyerSur(tree, 'Voir les résultats');
+
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ sport: 'Arts martiaux' }),
+      'all',
+    );
   });
 });

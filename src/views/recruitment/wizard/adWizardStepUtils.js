@@ -67,12 +67,27 @@ export const isAdWizardCoachProfileComplete = (state = {}) => {
   return hasRole && hasOtherRole && hasExperience && hasEngagement && hasQuantity;
 };
 
+/**
+ * Une annonce JOUEUR d'un sport qui ne se joue pas par postes (hors
+ * foot/basket/hand/volley/rugby).
+ *
+ * RECRUTER-TUNNEL (audit V1, H2) — l'étape Postes la laissait passer (C28), puis
+ * le récapitulatif réclamait « au moins un poste » : il avait RECOPIÉ la règle au
+ * lieu de la lire ici. Tout le tunnel lit désormais cette seule fonction.
+ * @param {any} [state] - L'état du tunnel.
+ * @returns {boolean} Vrai si l'annonce part sans poste.
+ */
+export const isAdWizardPlayerAdWithoutPositions = (state = {}) => {
+  if (isCoachAdWizard(state)) return false;
+  const sportName = getAdWizardSportName(state);
+  return Boolean(sportName) && !sportHasPositions(sportName);
+};
+
 export const isAdWizardNeedsComplete = (state = {}) => {
   if (isCoachAdWizard(state)) return isAdWizardCoachProfileComplete(state);
   // C28 — un sport sans postes (hors foot/basket/hand/volley/rugby) ne peut pas
   // exiger de postes, sinon le bouton Suivant ne s'active jamais.
-  const sportName = getAdWizardSportName(state);
-  if (sportName && !sportHasPositions(sportName)) return true;
+  if (isAdWizardPlayerAdWithoutPositions(state)) return true;
   return Array.isArray(state?.positions) && state.positions.length > 0;
 };
 

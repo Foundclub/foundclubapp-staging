@@ -15,57 +15,16 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { COACH_ROLE_OPTIONS } from '@/constants/coachRoles';
+
+/* eslint-disable perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardNeedsStepIndex,
   getAdWizardStepCount,
   isAdWizardCoachProfileComplete,
 } from './adWizardStepUtils';
-
-const COACH_ROLE_OPTIONS = [
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.main', 'Entraîneur principal');
-    },
-    value: 'entraineur_principal',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.assistant', 'Entraîneur adjoint');
-    },
-    value: 'entraineur_adjoint',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.fitness', 'Préparateur physique');
-    },
-    value: 'preparateur_physique',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.goalkeeper', 'Entraîneur gardiens');
-    },
-    value: 'entraineur_gardiens',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.videoAnalyst', 'Analyste vidéo');
-    },
-    value: 'analyste_video',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.teamManager', 'Team manager');
-    },
-    value: 'team_manager',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.coachRoles.other', 'Autre rôle');
-    },
-    value: 'other',
-  },
-];
+/* eslint-enable perfectionist/sort-imports */
 
 const EXPERIENCE_OPTIONS = [
   {

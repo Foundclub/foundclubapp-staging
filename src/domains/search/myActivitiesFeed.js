@@ -21,6 +21,8 @@ import i18next from 'i18next';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { getCoachRoleLabel } from '@/constants/coachRoles';
+
 const PENDING_STATUS = 'pending';
 
 /**
@@ -55,8 +57,10 @@ const nameOf = (/** @type {any} */ value) => {
  */
 export const buildRecruitmentAdTitle = (ad) => {
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
+  // RECRUTER-TUNNEL (audit V1, H3) — « entraineur_adjoint » s'affichait brut ici :
+  // le role se lit par la table du tunnel, jamais par sa valeur technique.
   const role = isCoachAd
-    ? (ad?.coachRoleOther || ad?.coachRole || i18next.t(
+    ? (getCoachRoleLabel(ad?.coachRole, ad?.coachRoleOther) || i18next.t(
       'myActivitiesFeed.coachRole',
       'Rôle entraîneur',
     ))

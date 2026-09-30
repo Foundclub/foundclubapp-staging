@@ -24,6 +24,7 @@ import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
 import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 import { getShortAddress } from '@/utils/location';
 
+import { getCoachRoleLabel } from '@/constants/coachRoles';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 
 /* eslint-disable perfectionist/sort-imports */
@@ -32,6 +33,8 @@ import {
   getAdWizardRecapStepIndex,
   getAdWizardStepCount,
   isAdWizardCoachProfileComplete,
+  isAdWizardNeedsComplete,
+  isAdWizardPlayerAdWithoutPositions,
   isAdWizardSportProfileComplete,
 } from './adWizardStepUtils';
 /* eslint-enable perfectionist/sort-imports */
@@ -173,6 +176,9 @@ function AdWizardRecap({ navigation }) {
     mutationFn: createRecruitmentAd,
   });
   const isCoachAd = state?.audienceType === 'coach';
+  // RECRUTER-TUNNEL (H2) — un sport sans postes (arts martiaux...) : l'annonce
+  // part sans poste, et rien dans ce recapitulatif ne doit en reclamer un.
+  const isPlayerAdWithoutPositions = isAdWizardPlayerAdWithoutPositions(state);
 
   const totalPlayers = useMemo(
     () => state.positions.reduce((sum, position) => sum + position.quantity, 0),
@@ -204,7 +210,7 @@ function AdWizardRecap({ navigation }) {
       if (!isAdWizardCoachProfileComplete(state)) {
         items.push(i18next.t('adWizardRecap.missing.coachProfile', 'un profil entraîneur complet'));
       }
-    } else if (!state.positions?.length) {
+    } else if (!isAdWizardNeedsComplete(state)) {
       items.push(i18next.t('adWizardRecap.missing.position', 'au moins un poste'));
     }
 
@@ -223,7 +229,10 @@ function AdWizardRecap({ navigation }) {
   ].filter(Boolean).join(' · ');
   const coachRoleLabel = state.coachRole === 'other'
     ? (state.coachRoleOther || t('adWizardRecap.coachRole.otherMissing', 'À preciser'))
-    : (state.coachRole || t('adWizardRecap.coachRole.missing', 'À completer'));
+    : (getCoachRoleLabel(state.coachRole) || t('adWizardRecap.coachRole.missing', 'À completer'));
+  const noPositionsLabel = isPlayerAdWithoutPositions
+    ? t('adWizardRecap.overview.noPositionsNeeded', 'Sans poste')
+    : t('adWizardRecap.toComplete', 'À compléter');
   const playerPositionsLabel = state.positions.length > 0
     ? `${t('adWizardRecap.counts.positions', {
       count: state.positions.length,
@@ -234,7 +243,7 @@ function AdWizardRecap({ navigation }) {
       defaultValue_one: '{{count}} joueur',
       defaultValue_other: '{{count}} joueurs',
     })}`
-    : t('adWizardRecap.toComplete', 'À compléter');
+    : noPositionsLabel;
   const coachPositionsLabel = `${t('adWizardRecap.counts.roles', {
     count: totalCoachOpenings,
     defaultValue_one: '{{count}} role',
@@ -261,6 +270,13 @@ function AdWizardRecap({ navigation }) {
     role: coachRoleLabel,
     ...SANS_ECHAPPEMENT,
   });
+  const noPositionsSummary = isPlayerAdWithoutPositions
+    ? t(
+      'adWizardPositions.noPositions.body',
+      '{{sport}} ne nécessite pas de préciser des postes.',
+      { sport: sportName, ...SANS_ECHAPPEMENT },
+    )
+    : t('adWizardRecap.needs.noPositions', "Aucun poste n'a encore été ajouté.");
   const playerNeedsSummary = state.positions.length > 0
     ? t('adWizardRecap.needs.playerSummary', {
       count: totalPlayers,
@@ -273,7 +289,7 @@ function AdWizardRecap({ navigation }) {
       }),
       ...SANS_ECHAPPEMENT,
     })
-    : t('adWizardRecap.needs.noPositions', "Aucun poste n'à encore été ajouté.");
+    : noPositionsSummary;
   const needsSummary = isCoachAd ? coachNeedsSummary : playerNeedsSummary;
   let validationLabel = t('adWizardRecap.validation.direct', 'Publication directe');
 
@@ -300,7 +316,7 @@ function AdWizardRecap({ navigation }) {
       value: overviewLocationLabel,
     },
     {
-      complete: isCoachAd ? isAdWizardCoachProfileComplete(state) : state.positions.length > 0,
+      complete: isAdWizardNeedsComplete(state),
       label: isCoachAd ? t('adWizardRecap.overview.role', 'Role') : t(
         'adWizardRecap.overview.positions',
         'Postes',
@@ -342,6 +358,11 @@ function AdWizardRecap({ navigation }) {
       </View>
     </View>
   ) : null;
+  const addPositionHint = isPlayerAdWithoutPositions ? null : (
+    <Text style={[Fonts.p2, Fonts.primary100]}>
+      {t('adWizardRecap.needs.addPosition', "Ajoute au moins un poste pour publier l'annonce.")}
+    </Text>
+  );
   const playerNeedsCardsContent = state.positions.length > 0 ? state.positions.map((position) => (
     <View
       key={`${position.name}-${position.quantity}`}
@@ -375,11 +396,7 @@ function AdWizardRecap({ navigation }) {
         </Text>
       </View>
     </View>
-  )) : (
-    <Text style={[Fonts.p2, Fonts.primary100]}>
-      {t('adWizardRecap.needs.addPosition', "Ajoute au moins un poste pour publier l'annonce.")}
-    </Text>
-  );
+  )) : addPositionHint;
 
   // R07 point 4 — ON ATTERRIT SUR L'ANNONCE QU'ON VIENT D'ECRIRE.
   //
@@ -478,7 +495,12 @@ function AdWizardRecap({ navigation }) {
           validationMode: 'manual',
         })];
       } else {
-        createdAds = await Promise.all(state.positions.map((position) => createAdMutation
+        // RECRUTER-TUNNEL (H2) — une annonce PAR poste. Sans poste, le seul cas
+        // qui passe `isReadyToSubmit` est un sport sans postes : UNE annonce part,
+        // sans poste ni quantite, et le serveur lui donne sa quantite par defaut (1).
+        // Avant, zero poste faisait zero annonce : rien n'etait publie.
+        const playerSlots = state.positions.length > 0 ? state.positions : [{}];
+        createdAds = await Promise.all(playerSlots.map((position) => createAdMutation
           .mutateAsync({
             ...sharedData,
             event: state.event?.documentId || state.event?.id,
@@ -799,7 +821,7 @@ function AdWizardRecap({ navigation }) {
               <Text style={[Fonts.p2, state.missions ? Fonts.neutral100 : Fonts.neutral300]}>
                 {state.missions || t(
                   'adWizardRecap.text.noMissions',
-                  'Aucune mission détaillée n à encore été ajoutée.',
+                  "Aucune mission détaillée n'a encore été ajoutée.",
                 )}
               </Text>
             ) : null}
