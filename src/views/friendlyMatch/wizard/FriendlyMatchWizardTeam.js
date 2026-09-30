@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -27,10 +28,12 @@ const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
 /**
  * Etape 1/7 — « Mon equipe » (§4.1).
  *
- * La liste est celle des equipes que le lecteur encadre : `myTeams` (dirigeant)
- * + `trainedTeams` (entraineur), la meme paire que la liste des annonces. Le
- * serveur revalide de toute facon avec `canManageTeam` (team/services/auth.ts) :
- * ce filtre est un confort, jamais la securite.
+ * La liste est celle des equipes que le lecteur GERE (`getManagedTeams`, la
+ * meme regle que la liste des annonces) : entrainees, ou dans un club qu'il
+ * dirige. GERER-ANNONCE (30/09) : `myTeams` n'est pas « dirigeant », c'est la
+ * liste des equipes ou l'on JOUE. Le serveur revalide de toute facon avec
+ * `canManageTeam` (team/services/auth.ts) : ce filtre est un confort, jamais
+ * la securite.
  *
  * D24 — c est aussi la porte d entree du tunnel, dans les DEUX chemins (League
  * y arrive par l ecran initial de la pile, le tunnel Evenement le nomme). C est
@@ -50,18 +53,7 @@ function FriendlyMatchWizardTeam({ navigation, route }) {
     dispatch({ payload: entryOrigin, type: 'SET_ENTRY_ORIGIN' });
   }, [dispatch, entryOrigin]);
 
-  const managedTeams = useMemo(() => {
-    const seen = new Set();
-    return [
-      ...(userData?.myTeams || []),
-      ...(userData?.trainedTeams || []),
-    ].filter((team) => {
-      const key = getTeamKey(team);
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [userData?.myTeams, userData?.trainedTeams]);
+  const managedTeams = useMemo(() => getManagedTeams(userData), [userData]);
 
   /**
    * Retient l equipe choisie et enchaine sur l etape suivante.
