@@ -10,6 +10,11 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  criteresPourMoi,
+  requetePourMoi,
+  totalDuServeur,
+} from '@/domains/search/pourMoiAnnonces';
+import {
   getAppliedFilterCount,
   getRecruitmentRoleMode,
   sanitizeRecruitmentTabForRole,
@@ -40,6 +45,7 @@ import SearchComponent from '@/components/organisms/searchComponent/searchCompon
 // Services
 import { useAppContext } from '@/store/appContext';
 
+import { useGetCategories } from '@/services/category/categoryQueries';
 import {
   applyToRecruitmentAd,
   buildDetectionApplicationStatusMap,
@@ -52,6 +58,7 @@ import { getMatchReasonLabel, mapSearchPayload, searchRecruitment } from '@/serv
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 import { markSearchPerf } from '@/utils/performance/searchPerformance';
+import texteInsecable from '@/utils/texteInsecable';
 
 /**
  * @typedef {{ id?: string | number; documentId?: string; [key: string]: any }} MercatoUser
@@ -59,174 +66,56 @@ import { markSearchPerf } from '@/utils/performance/searchPerformance';
  * @typedef {{ id?: string | number; level?: LevelRef; [key: string]: any }} RecruitmentAdItem
  */
 
-const normalizeComparableValue = (/** @type {any} */ value) => {
-  if (value === null || value === undefined) return '';
-  return String(value).trim().toLowerCase();
-};
-
-const extractComparableValue = (/** @type {any} */ value) => {
-  if (!value) return '';
-  if (typeof value === 'string' || typeof value === 'number') {
-    return normalizeComparableValue(value);
-  }
-
-  if (typeof value === 'object') {
-    return normalizeComparableValue(
-      value.name
-      || value.label
-      || value.value
-      || value.documentId
-      || value.id,
-    );
-  }
-
-  return '';
-};
-
-const getUserCity = (/** @type {any} */ userData) => extractComparableValue(
-  userData?.city
-  || userData?.address?.city
-  || userData?.address?.label,
-);
-
-const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData) => {
-  if (!ad || !userData) {
-    return {
-      isMatch: false,
-      reasons: [],
-      score: 0,
-    };
-  }
-
-  const userSport = extractComparableValue(userData?.preferredSport);
-  const adSport = extractComparableValue(ad?.sport || ad?.team?.sport);
-  const userSection = extractComparableValue(userData?.section);
-  const adSection = extractComparableValue(ad?.section);
-  const userCategory = extractComparableValue(userData?.category);
-  const adCategory = extractComparableValue(ad?.category);
-  const userLevel = extractComparableValue(userData?.bestLevel);
-  const adLevel = extractComparableValue(ad?.level);
-  const userCity = getUserCity(userData);
-  const adCity = extractComparableValue(ad?.city || ad?.team?.club?.city || ad?.address?.city);
-
-  const reasons = /** @type {string[]} */ ([]);
-  let score = 0;
-  let hardMismatch = false;
-  let hardMatches = 0;
-
-  if (userSport && adSport) {
-    if (userSport === adSport) {
-      hardMatches += 1;
-      score += 4;
-      reasons.push(i18next.t('recrutementListContent.matchReasons.sport', 'Sport compatible'));
-    } else {
-      hardMismatch = true;
-    }
-  }
-
-  if (userSection && adSection) {
-    if (userSection === adSection) {
-      hardMatches += 1;
-      score += 3;
-      reasons.push(i18next.t('recrutementListContent.matchReasons.section', 'Section compatible'));
-    } else {
-      hardMismatch = true;
-    }
-  }
-
-  if (userCategory && adCategory) {
-    if (userCategory === adCategory) {
-      hardMatches += 1;
-      score += 3;
-      reasons.push(i18next.t(
-        'recrutementListContent.matchReasons.category',
-        'Catégorie compatible',
-      ));
-    } else {
-      hardMismatch = true;
-    }
-  }
-
-  if (userLevel && adLevel && userLevel === adLevel) {
-    score += 2;
-    reasons.push(i18next.t('recrutementListContent.matchReasons.level', 'Niveau compatible'));
-  }
-
-  if (userCity && adCity && userCity === adCity) {
-    score += 1;
-    reasons.push(i18next.t('recrutementListContent.matchReasons.city', 'Même ville'));
-  }
-
-  return {
-    isMatch: !hardMismatch && (hardMatches > 0 || score >= 2),
-    reasons,
-    score,
-  };
-};
-
-const getSortTimestamp = (/** @type {any} */ value) => {
-  const timestamp = value ? new Date(value).getTime() : 0;
-  return Number.isFinite(timestamp) ? timestamp : 0;
-};
-
-const sortPlayerAds = (/** @type {any} */ left, /** @type {any} */ right) => {
-  const rightScore = right?.profileMatchMeta?.score || 0;
-  const leftScore = left?.profileMatchMeta?.score || 0;
-  if (rightScore !== leftScore) return rightScore - leftScore;
-
-  const rightSearchScore = right?.searchMeta?.score || 0;
-  const leftSearchScore = left?.searchMeta?.score || 0;
-  if (rightSearchScore !== leftSearchScore) return rightSearchScore - leftSearchScore;
-
-  return getSortTimestamp(right?.createdAt || right?.publishedAt) - getSortTimestamp(left?.createdAt || left?.publishedAt);
-};
+// LISTE-ANNONCES (A08) — le tri « compatibles avec mon profil » qui vivait ici
+// (`getProfileMatchInfo`, `sortPlayerAds`) comparait DANS LE TELEPHONE les 10
+// annonces chargees. Il est remplace par la recherche du serveur, avec les
+// criteres du profil : `domains/search/pourMoiAnnonces.js`.
 
 /**
- * @param {{ matchingAds: Array<any>, otherAds: Array<any>, showMatchingOnly: boolean }} args
+ * Une rubrique de la liste : son titre et son compte, deja ecrit.
+ * @param {string} key La clef de l'element.
+ * @param {string} title Le titre.
+ * @param {string} countLabel Le compte, tel qu'il s'affiche.
+ * @param {'default' | 'matching'} [variant] La rubrique « Pour moi » est soulignee.
+ * @returns {any} L'element de liste.
  */
-const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
-  /** @type {Array<any>} */
-  const items = [];
+const rubrique = (key, title, countLabel, variant = 'default') => ({
+  countLabel,
+  key,
+  title,
+  type: 'section',
+  variant,
+});
 
-  if (matchingAds.length > 0) {
-    items.push({
-      count: matchingAds.length,
-      key: 'section-matching',
-      title: i18next.t('recrutementListContent.sections.matching', 'Correspondent à ton profil'),
-      type: 'section',
-    });
-    matchingAds.forEach((/** @type {any} */ ad) => {
-      items.push({
-        ad,
-        key: `ad-matching-${String(ad.documentId || ad.id)}`,
-        type: 'ad',
-      });
-    });
-  }
+/**
+ * Les annonces d'une rubrique, en elements de liste.
+ * @param {string} rubriqueCle Le prefixe des clefs.
+ * @param {any[]} annonces Les annonces.
+ * @returns {any[]} Les elements.
+ */
+const elementsDAnnonces = (rubriqueCle, annonces) => annonces.map((ad) => ({
+  ad,
+  key: `ad-${rubriqueCle}-${String(ad.documentId || ad.id)}`,
+  type: 'ad',
+}));
 
-  if (!showMatchingOnly && otherAds.length > 0) {
-    items.push({
-      count: otherAds.length,
-      key: 'section-other',
-      title: matchingAds.length > 0 ? i18next.t(
-        'recrutementListContent.sections.other',
-        'Autres annonces',
-      ) : i18next.t(
-        'recrutementListContent.sections.all',
-        'Toutes les annonces',
-      ),
-      type: 'section',
-    });
-    otherAds.forEach((/** @type {any} */ ad) => {
-      items.push({
-        ad,
-        key: `ad-other-${String(ad.documentId || ad.id)}`,
-        type: 'ad',
-      });
-    });
-  }
-
-  return items;
+/**
+ * Ajoute une page a une liste deja chargee, sans doublon.
+ * @param {any[]} precedentes Ce qui est deja la.
+ * @param {any[]} nouvelles La page qui arrive.
+ * @returns {any[]} La liste complete.
+ */
+const fusionnerSansDoublon = (precedentes, nouvelles) => {
+  const vues = new Set(precedentes.map((item) => String(item.documentId || item.id)));
+  const fusion = [...precedentes];
+  nouvelles.forEach((item) => {
+    const cle = String(item.documentId || item.id);
+    if (!vues.has(cle)) {
+      vues.add(cle);
+      fusion.push(item);
+    }
+  });
+  return fusion;
 };
 
 const formatAdsCountLabel = (/** @type {number} */ count) => i18next.t(
@@ -330,7 +219,22 @@ function RecrutementListContent({
     enCours: alerteEnCours,
     estDejaCreee: alerteDejaCreee,
   } = useAlerteRecherche(SorteAlerte.annonce);
-  const [showProfileMatchesOnly, setShowProfileMatchesOnly] = useState(false);
+  // 🎯 A08 — « POUR MOI » (ex « Compatibles avec mon profil »). Le tri est fait
+  // par le SERVEUR, avec les criteres du profil ecrits a l'ecran, et « Autres
+  // annonces » suit en bas : « la liste ne doit jamais etre vide » (Adel, 30/09).
+  // Allume par defaut des que le profil porte un sport : c'etait deja la vue par
+  // defaut (les compatibles en tete), mais calculee sur les 10 annonces chargees.
+  const { data: categories } = useGetCategories();
+  // Par sa SIGNATURE : une liste de categories rendue sous une nouvelle reference
+  // ne doit pas relancer la recherche.
+  const signatureCriteres = JSON.stringify(criteresPourMoi(userData, categories));
+  const criteres = useMemo(() => JSON.parse(signatureCriteres), [signatureCriteres]);
+  const [pourMoiChoisi, setPourMoiChoisi] = useState(/** @type {boolean | null} */ (null));
+  const pourMoiActif = Boolean(criteres) && pourMoiChoisi !== false;
+  const requeteDuProfil = useMemo(
+    () => (criteres ? requetePourMoi(recruitmentAdFilters, criteres) : null),
+    [criteres, recruitmentAdFilters],
+  );
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
   const adFiltersCount = React.useMemo(
@@ -339,9 +243,9 @@ function RecrutementListContent({
   );
   const hasAdFilters = adFiltersCount > 0;
   // D57 — ce que la PASTILLE annonce, profil compris. Volontairement separe de
-  // `adFiltersCount` : celui-la decide d'aller interroger la recherche serveur,
-  // or le profil se filtre cote client. Les confondre ferait partir une requete
-  // de recherche pour un filtre que le serveur ne connait pas.
+  // `adFiltersCount`, qui ne compte que les filtres de la feuille. Le profil
+  // (public joueurs / entraineurs) part lui aussi au serveur, par `audienceType`
+  // (A11) : voir `chargerUnePage`.
   const badgeFiltersCount = adFiltersCount + (audienceFilter === 'all' ? 0 : 1);
 
   // La regle « quel onglet a-t-on le droit d'afficher », en UN SEUL endroit :
@@ -374,6 +278,46 @@ function RecrutementListContent({
   const [adsPage, setAdsPage] = useState(1);
   const [adsHasMore, setAdsHasMore] = useState(true);
   const [adsLoadingMore, setAdsLoadingMore] = useState(false);
+  // A11 — le TOTAL annonce par le serveur (`meta.pagination.total`). Avant, l'ecran
+  // comptait les annonces deja chargees : 10, puis 20, puis 30 en descendant.
+  const [adsTotal, setAdsTotal] = useState(0);
+  // A08 — « Pour moi » a sa propre liste, son propre total et sa pagination.
+  const [adsPourMoi, setAdsPourMoi] = useState(/** @type {RecruitmentAdItem[]} */ ([]));
+  const [adsPourMoiTotal, setAdsPourMoiTotal] = useState(0);
+  const [pourMoiPage, setPourMoiPage] = useState(1);
+  const [pourMoiHasMore, setPourMoiHasMore] = useState(false);
+
+  // Une page d'annonces. La recherche du serveur des qu'il y a quelque chose a
+  // chercher (texte, filtres, public choisi, criteres « Pour moi ») ; la liste
+  // simple sinon. Le public part au serveur (`audienceType`) : filtre dans le
+  // telephone, il faisait mentir le total (A11).
+  const chargerUnePage = useCallback(async (
+    /** @type {number} */ page,
+    /** @type {Record<string, any> | null | undefined} */ filtresDuProfil,
+  ) => {
+    const searchTerm = adSearchValue?.trim();
+    const avecTexte = Boolean(searchTerm && searchTerm.length >= 2);
+    const audienceType = audienceFilter === 'all' ? undefined : audienceFilter;
+    if (filtresDuProfil || avecTexte || hasAdFilters || audienceType) {
+      const response = await searchRecruitment({
+        ...(filtresDuProfil || recruitmentAdFilters),
+        ...(audienceType ? { audienceType } : {}),
+        page,
+        pageSize: 10,
+        ...(avecTexte ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
+      });
+      return {
+        annonces: filterVisibleRecruitmentAds(mapSearchPayload(response)),
+        meta: response.meta || {},
+      };
+    }
+    const response = await getRecruitmentAds({
+      isActive: true,
+      page,
+      pageSize: 10,
+    });
+    return { annonces: response.data || [], meta: response.meta || {} };
+  }, [adSearchValue, audienceFilter, hasAdFilters, recruitmentAdFilters]);
 
   // Fetch ads for players (smart feed)
   const fetchAdsForPlayer = useCallback(async (page = 1, append = false, isRefresh = false) => {
@@ -381,47 +325,28 @@ function RecrutementListContent({
     else if (page > 1) setAdsLoadingMore(true);
 
     try {
-      const searchTerm = adSearchValue?.trim();
-      let newAds = /** @type {RecruitmentAdItem[]} */ ([]);
-      let meta = /** @type {any} */ ({});
-      if ((searchTerm && searchTerm.length >= 2) || hasAdFilters) {
-        const response = await searchRecruitment({
-          ...recruitmentAdFilters,
-          page,
-          pageSize: 10,
-          ...(searchTerm && searchTerm.length >= 2 ? { q: searchTerm, sort: 'relevance' } : { sort: 'date' }),
-        });
-        newAds = filterVisibleRecruitmentAds(mapSearchPayload(response));
-        meta = response.meta || {};
-      } else {
-        const response = await getRecruitmentAds({
-          isActive: true,
-          page,
-          pageSize: 10,
-        });
-        newAds = response.data || [];
-        meta = response.meta || {};
-      }
+      // A08 — a la premiere page, « Pour moi » part EN MEME TEMPS que la liste
+      // complete : la rubrique « Autres annonces » a besoin du total complet.
+      const filtresDuProfil = page === 1 && pourMoiActif ? requeteDuProfil?.params : null;
+      const [base, pourMoi] = await Promise.all([
+        chargerUnePage(page, null),
+        filtresDuProfil ? chargerUnePage(1, filtresDuProfil) : Promise.resolve(null),
+      ]);
 
-      if (append) {
-        setAds((prev) => {
-          const seen = new Set(prev.map((item) => String(item.documentId || item.id)));
-          const merged = [...prev];
-          newAds.forEach((/** @type {RecruitmentAdItem} */ item) => {
-            const key = String(item.documentId || item.id);
-            if (!seen.has(key)) {
-              seen.add(key);
-              merged.push(item);
-            }
-          });
-          return merged;
-        });
-      } else {
-        setAds(newAds);
+      setAds((prev) => (append ? fusionnerSansDoublon(prev, base.annonces) : base.annonces));
+      setAdsTotal((prev) => totalDuServeur(
+        base.meta,
+        append ? prev + base.annonces.length : base.annonces.length,
+      ));
+      if (page === 1) {
+        setAdsPourMoi(pourMoi ? pourMoi.annonces : []);
+        setAdsPourMoiTotal(pourMoi ? totalDuServeur(pourMoi.meta, pourMoi.annonces.length) : 0);
+        setPourMoiHasMore(Number(pourMoi?.meta?.pagination?.pageCount) > 1);
+        setPourMoiPage(1);
       }
 
       setAdsUnreachable(false);
-      setAdsHasMore(meta.pagination ? page < meta.pagination.pageCount : false);
+      setAdsHasMore(base.meta.pagination ? page < base.meta.pagination.pageCount : false);
       setAdsPage(page);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching ads:', error);
@@ -432,7 +357,7 @@ function RecrutementListContent({
       if (page === 1 && !isRefresh) setLoading(false);
       else if (page > 1) setAdsLoadingMore(false);
     }
-  }, [adSearchValue, hasAdFilters, recruitmentAdFilters]);
+  }, [chargerUnePage, pourMoiActif, requeteDuProfil]);
 
   // 🔔 « Me prevenir » cree l'alerte avec les filtres AFFICHES et le profil
   // choisi. Sans ville, le serveur la refuserait : on ouvre les filtres sur la
@@ -445,12 +370,46 @@ function RecrutementListContent({
     }
   }, [audienceFilter, creerAlerteAnnonce, recruitmentAdFilters]);
 
+  // La page suivante de « Pour moi ».
+  const chargerPlusPourMoi = useCallback(async () => {
+    if (!requeteDuProfil) return;
+    const page = pourMoiPage + 1;
+    setAdsLoadingMore(true);
+    try {
+      const { annonces, meta } = await chargerUnePage(page, requeteDuProfil.params);
+      setAdsPourMoi((prev) => fusionnerSansDoublon(prev, annonces));
+      setPourMoiHasMore(meta.pagination ? page < meta.pagination.pageCount : false);
+      setPourMoiPage(page);
+    } catch (error) {
+      // Comme la liste complete : une page suivante ratee ne condamne pas celles
+      // deja affichees. Elle reste « a charger » : un nouveau defilement la redemande.
+      console.error('[RecrutementListContent] Error fetching more ads for me:', error);
+    } finally {
+      setAdsLoadingMore(false);
+    }
+  }, [chargerUnePage, pourMoiPage, requeteDuProfil]);
+
   // Load more ads Handler
+  // « Pour moi » d'abord, jusqu'au bout ; la liste complete (« Autres annonces »)
+  // ensuite : la rubrique reste EN BAS.
   const handleLoadMoreAds = useCallback(() => {
-    if (!adsLoadingMore && adsHasMore) {
+    if (adsLoadingMore) return;
+    if (pourMoiActif && pourMoiHasMore) {
+      chargerPlusPourMoi();
+      return;
+    }
+    if (adsHasMore) {
       fetchAdsForPlayer(adsPage + 1, true);
     }
-  }, [adsHasMore, adsLoadingMore, adsPage, fetchAdsForPlayer]);
+  }, [
+    adsHasMore,
+    adsLoadingMore,
+    adsPage,
+    chargerPlusPourMoi,
+    fetchAdsForPlayer,
+    pourMoiActif,
+    pourMoiHasMore,
+  ]);
 
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
@@ -851,35 +810,73 @@ function RecrutementListContent({
     </TouchableOpacity>
   );
 
-  const hasProfileSignals = Boolean(
-    userData?.preferredSport
-    || userData?.section
-    || userData?.category
-    || userData?.bestLevel,
-  );
-  const rankedPlayerAds = React.useMemo(() => ads
-    .filter((ad) => matchesAudienceFilter(ad))
-    .map((ad) => {
-      const { __search: searchMeta, ...rest } = ad;
-      return {
-        ...rest,
-        profileMatchMeta: getProfileMatchInfo(ad, userData),
-        searchMeta,
-      };
-    }), [ads, matchesAudienceFilter, userData]);
-  const matchingAds = React.useMemo(
-    () => rankedPlayerAds.filter((ad) => ad.profileMatchMeta?.isMatch).sort(sortPlayerAds),
-    [rankedPlayerAds],
-  );
-  const otherAds = React.useMemo(
-    () => rankedPlayerAds.filter((ad) => !ad.profileMatchMeta?.isMatch).sort(sortPlayerAds),
-    [rankedPlayerAds],
-  );
-  const playerFeedItems = React.useMemo(() => buildPlayerFeedItems({
-    matchingAds,
-    otherAds,
-    showMatchingOnly: showProfileMatchesOnly,
-  }), [matchingAds, otherAds, showProfileMatchesOnly]);
+  const playerFeedItems = React.useMemo(() => {
+    const visibles = (/** @type {any[]} */ liste) => liste
+      .filter((ad) => matchesAudienceFilter(ad))
+      .map((ad) => {
+        const { __search: searchMeta, ...rest } = ad;
+        return { ...rest, searchMeta };
+      });
+    const toutes = visibles(ads);
+
+    if (!pourMoiActif) {
+      if (toutes.length === 0) return [];
+      return [
+        rubrique(
+          'section-all',
+          t('recrutementListContent.sections.all', 'Toutes les annonces'),
+          formatAdsCountLabel(adsTotal),
+        ),
+        ...elementsDAnnonces('all', toutes),
+      ];
+    }
+
+    const pourMoi = visibles(adsPourMoi);
+    const dejaPourMoi = new Set(pourMoi.map(getRecruitmentAdKey));
+    // « Autres annonces » n'arrive qu'une fois « Pour moi » charge jusqu'au bout :
+    // la rubrique reste en bas, et une annonce « pour moi » pas encore chargee ne
+    // peut pas s'y glisser.
+    const autres = pourMoiHasMore
+      ? []
+      : toutes.filter((ad) => !dejaPourMoi.has(getRecruitmentAdKey(ad)));
+    if (pourMoi.length === 0 && autres.length === 0) return [];
+
+    const items = [
+      rubrique(
+        'section-matching',
+        t('recrutementListContent.sections.matching', 'Correspondent à ton profil'),
+        t('recrutementListContent.pourMoi.count', '{{matching}} sur {{total}}', {
+          matching: adsPourMoiTotal,
+          total: adsTotal,
+        }),
+        'matching',
+      ),
+      // Aucune annonce pour moi : on le DIT, et les autres suivent.
+      ...(pourMoi.length > 0
+        ? elementsDAnnonces('matching', pourMoi)
+        : [{ key: 'pour-moi-aucune', type: 'aucune' }]),
+    ];
+    if (autres.length > 0) {
+      items.push(
+        rubrique(
+          'section-other',
+          t('recrutementListContent.sections.other', 'Autres annonces'),
+          formatAdsCountLabel(Math.max(0, adsTotal - adsPourMoiTotal)),
+        ),
+        ...elementsDAnnonces('other', autres),
+      );
+    }
+    return items;
+  }, [
+    ads,
+    adsPourMoi,
+    adsPourMoiTotal,
+    adsTotal,
+    matchesAudienceFilter,
+    pourMoiActif,
+    pourMoiHasMore,
+    t,
+  ]);
   const activeMode = isCoachOrAdmin ? `staff-${activeTab}` : `player-${activeTab}`;
   const activeResultCount = useMemo(() => {
     if (activeTab === 'profils') return 0;
@@ -923,67 +920,11 @@ function RecrutementListContent({
     });
   }, [activeMode, activeResultCount, loading, screenActive]);
 
-  const playerFilterHelperText = React.useMemo(() => {
-    if (!hasProfileSignals) {
-      return i18next.t(
-        'recrutementListContent.helper.completeProfile',
-        'Complète ton profil pour activer un tri personnalisé.',
-      );
-    }
-    if (showProfileMatchesOnly) {
-      return i18next.t(
-        'recrutementListContent.helper.matchesOnly',
-        'Le flux affiche uniquement les annonces compatibles.',
-      );
-    }
-    return i18next.t(
-      'recrutementListContent.helper.matchesFirst',
-      'Les annonces compatibles restent affichées en tête.',
-    );
-  }, [hasProfileSignals, showProfileMatchesOnly]);
-
   const renderPlayerEmptyState = () => {
     // La panne passe AVANT le filtre : sans ca, un serveur muet renverrait
     // l'utilisateur ajuster une recherche qui n'y est pour rien.
     if (adsUnreachable) {
       return renderUnreachableState(() => fetchAdsForPlayer(1, false));
-    }
-
-    if (showProfileMatchesOnly) {
-      return (
-        <View
-          style={[Spaces.padding[24], {
-            alignItems: 'center',
-            backgroundColor: recruitmentSurface,
-            borderColor: recruitmentBorderSoft,
-            borderRadius: 18,
-            borderWidth: 1,
-          }]}
-        >
-          <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-            {hasProfileSignals
-              ? t(
-                'recrutementListContent.empty.noMatch',
-                'Aucune annonce ne correspond exactement à ton profil pour le moment.',
-              )
-              : t(
-                'recrutementListContent.empty.completeProfile',
-                'Complète ton profil pour activer le tri personnalisé des annonces.',
-              )}
-          </Text>
-          <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
-            {hasProfileSignals
-              ? t(
-                'recrutementListContent.empty.disableFilter',
-                'Désactive le filtre pour afficher toutes les annonces disponibles.',
-              )
-              : t(
-                'recrutementListContent.empty.browseAll',
-                "Tu peux déjà consulter toutes les annonces publiées sur l'application.",
-              )}
-          </Text>
-        </View>
-      );
     }
 
     return (
@@ -1009,7 +950,11 @@ function RecrutementListContent({
     );
   };
 
-  const renderPlayerSectionHeader = (/** @type {string} */ title, /** @type {number} */ count, variant = 'default') => {
+  const renderPlayerSectionHeader = (
+    /** @type {string} */ title,
+    /** @type {string} */ countLabel,
+    variant = 'default',
+  ) => {
     const isMatching = variant === 'matching';
     return (
       <View
@@ -1031,11 +976,6 @@ function RecrutementListContent({
           </Text>
         </View>
         <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-          {isMatching ? (
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginRight: 8 }]}>
-              {t('recrutementListContent.priority', 'Prioritaires')}
-            </Text>
-          ) : null}
           <View style={{
             backgroundColor: isMatching ? recruitmentSurfaceSoft : recruitmentSurfaceStrong,
             borderColor: isMatching ? recruitmentBorder : 'transparent',
@@ -1053,7 +993,9 @@ function RecrutementListContent({
               },
             ]}
             >
-              {formatAdsCountLabel(count)}
+              {/* Une pastille epouse son texte : gras, plusieurs mots, Android 16
+                  en perd le dernier (« 2 SUR »). Espaces insecables. */}
+              {texteInsecable(countLabel)}
             </Text>
           </View>
         </View>
@@ -1061,9 +1003,48 @@ function RecrutementListContent({
     );
   };
 
-  const renderPlayerListHeader = () => (
-    <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
-      {renderAudienceTypeTabs()}
+  // A08 — « Aucune annonce ne correspond » : dit a sa place, sous « Pour moi » ;
+  // « Autres annonces » suit juste dessous.
+  const renderAucunePourMoi = () => (
+    <View
+      style={[Spaces.padding[16], {
+        backgroundColor: recruitmentSurface,
+        borderColor: recruitmentBorderSoft,
+        borderRadius: 16,
+        borderWidth: 1,
+      }]}
+    >
+      <Text style={[Fonts.p2, { color: recruitmentMutedText, textAlign: 'center' }]}>
+        {t(
+          'recrutementListContent.empty.noMatch',
+          'Aucune annonce ne correspond exactement à ton profil pour le moment.',
+        )}
+      </Text>
+    </View>
+  );
+
+  // A08 — l'interrupteur « Pour moi » et ses criteres ECRITS. Sans sport au
+  // profil (ou sans compte), il ne s'allume plus — il vidait la liste — et il
+  // dit quoi faire.
+  const renderPourMoi = () => {
+    const desactive = !criteres;
+    let explication = t(
+      'recrutementListContent.pourMoi.criteria',
+      'Selon ton profil. Touche un critère pour le changer.',
+    );
+    if (!isAuthenticated) {
+      explication = t(
+        'recrutementListContent.pourMoi.signIn',
+        'Connecte-toi pour voir les annonces faites pour toi.',
+      );
+    } else if (desactive) {
+      explication = t(
+        'recrutementListContent.pourMoi.addSport',
+        'Ajoute ton sport à ton profil pour voir les annonces faites pour toi.',
+      );
+    }
+    const titrePourMoi = t('recrutementListContent.matchesOnlyToggle', 'Pour moi');
+    return (
       <View style={{
         backgroundColor: recruitmentSurfaceStrong,
         borderColor: recruitmentBorderSoft,
@@ -1081,27 +1062,32 @@ function RecrutementListContent({
         >
           <View style={{ flex: 1, paddingRight: 14 }}>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-              {t('recrutementListContent.matchesOnlyToggle', 'Compatibles avec mon profil')}
+              {titrePourMoi}
             </Text>
             <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
-              {playerFilterHelperText}
+              {explication}
             </Text>
           </View>
           <TouchableOpacity
+            accessibilityLabel={titrePourMoi}
             accessibilityRole="switch"
-            accessibilityState={{ checked: showProfileMatchesOnly }}
-            onPress={() => setShowProfileMatchesOnly(!showProfileMatchesOnly)}
+            accessibilityState={{ checked: pourMoiActif, disabled: desactive }}
+            disabled={desactive}
+            onPress={() => {
+              if (!desactive) setPourMoiChoisi(!pourMoiActif);
+            }}
             style={{
-              backgroundColor: showProfileMatchesOnly ? Colors.primary500 : recruitmentToggleOff,
+              backgroundColor: pourMoiActif ? Colors.primary500 : recruitmentToggleOff,
               borderRadius: 14,
               height: 28,
               justifyContent: 'center',
+              opacity: desactive ? 0.5 : 1,
               paddingHorizontal: 2,
               width: 50,
             }}
           >
             <View style={{
-              alignSelf: showProfileMatchesOnly ? 'flex-end' : 'flex-start',
+              alignSelf: pourMoiActif ? 'flex-end' : 'flex-start',
               backgroundColor: Colors.neutral00,
               borderRadius: 12,
               height: 24,
@@ -1110,8 +1096,46 @@ function RecrutementListContent({
             />
           </TouchableOpacity>
         </View>
+        {requeteDuProfil?.libelles.length ? (
+          <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12], { flexWrap: 'wrap' }]}>
+            {requeteDuProfil.libelles.map((libelle) => (
+              <TouchableOpacity
+                accessibilityLabel={t(
+                  'recrutementListContent.pourMoi.changeCriterion',
+                  'Changer ce critère : {{criterion}}',
+                  { criterion: libelle, ...SANS_ECHAPPEMENT },
+                )}
+                accessibilityRole="button"
+                key={libelle}
+                onPress={() => nav.navigate(RouteNames.ProfileStack, {
+                  screen: RouteNames.ProfileEdit,
+                })}
+                style={{
+                  backgroundColor: recruitmentSurfaceSoft,
+                  borderColor: recruitmentBorder,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  justifyContent: 'center',
+                  minHeight: 36,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                  {texteInsecable(libelle)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
       </View>
-      {isAuthenticated && !hasProfileSignals ? (
+    );
+  };
+
+  const renderPlayerListHeader = () => (
+    <View style={[Spaces.gap[16], Spaces.marginBottom[16]]}>
+      {renderAudienceTypeTabs()}
+      {renderPourMoi()}
+      {isAuthenticated && !criteres ? (
         <TouchableOpacity
           onPress={() => nav.navigate(RouteNames.ProfileStack, {
             screen: RouteNames.Profile,
@@ -1214,11 +1238,10 @@ function RecrutementListContent({
         refreshing={refreshing}
         renderItem={({ item }) => {
           if (item.type === 'section') {
-            return renderPlayerSectionHeader(
-              item.title,
-              item.count,
-              item.key === 'section-matching' ? 'matching' : 'default',
-            );
+            return renderPlayerSectionHeader(item.title, item.countLabel, item.variant);
+          }
+          if (item.type === 'aucune') {
+            return renderAucunePourMoi();
           }
           const { ad } = item;
           const primaryReasonLabel = getMatchReasonLabel(ad?.searchMeta?.matchReasons?.[0]);

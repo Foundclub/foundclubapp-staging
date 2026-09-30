@@ -14109,13 +14109,20 @@ export default {
       matchesFirst: 'Les annonces compatibles restent affichées en tête.',
       matchesOnly: 'Le flux affiche uniquement les annonces compatibles.',
     },
-    matchesOnlyToggle: 'Compatibles avec mon profil',
+    matchesOnlyToggle: 'Pour moi',
     matchReasons: {
       category: 'Catégorie compatible',
       city: 'Même ville',
       level: 'Niveau compatible',
       section: 'Section compatible',
       sport: 'Sport compatible',
+    },
+    pourMoi: {
+      addSport: 'Ajoute ton sport à ton profil pour voir les annonces faites pour toi.',
+      changeCriterion: 'Changer ce critère : {{criterion}}',
+      count: '{{matching}} sur {{total}}',
+      criteria: 'Selon ton profil. Touche un critère pour le changer.',
+      signIn: 'Connecte-toi pour voir les annonces faites pour toi.',
     },
     priority: 'Prioritaires',
     publishOffer: {
