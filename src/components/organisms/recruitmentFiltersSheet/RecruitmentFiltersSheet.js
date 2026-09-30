@@ -14,6 +14,8 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /**
  * La feuille de filtres du pack Rechercher (capture 05).
  *
@@ -248,7 +250,14 @@ function RecruitmentFiltersSheet({
                 { color: actif ? Colors.primary900 : Colors.neutral200 },
               ]}
             >
-              {option.label}
+              {/* RECRUTER-TUNNEL (H4) — une pastille epouse son texte : sous
+                  Android 16, « Arts martiaux » y devenait « Arts ». Espaces
+                  insecables, parade FINITIONS (`texteInsecable`). La VALEUR
+                  envoyee a la recherche, elle, ne change pas.
+                  ponytail: un libelle plus large que la rangee entiere se
+                  coupera au milieu d'un mot ; voie de sortie : corriger la
+                  mesure cote natif, puis retirer `texteInsecable`. */}
+              {texteInsecable(option.label)}
             </Text>
           </TouchableOpacity>
         );
@@ -274,7 +283,16 @@ function RecruitmentFiltersSheet({
               },
             ]}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>
+            {/* RECRUTER-TUNNEL (H4) — MEME PARADE QUE LE SOCLE `FiltersSheet`
+                (ROLES2), oubliee sur cette jumelle recopiee : le libelle prend
+                TOUTE la largeur du bouton, centre. Retreci a sa largeur mesuree,
+                Android 16 le dessinait plus large et coupait « Voir les ». */}
+            <Text
+              style={[
+                Fonts.p1Bold,
+                { alignSelf: 'stretch', color: Colors.primary900, textAlign: 'center' },
+              ]}
+            >
               {t('recruitmentFiltersSheet.apply', 'Voir les résultats')}
             </Text>
           </TouchableOpacity>
@@ -357,7 +375,7 @@ function RecruitmentFiltersSheet({
                         { color: actif ? Colors.primary900 : Colors.neutral200 },
                       ]}
                     >
-                      {option.label}
+                      {texteInsecable(option.label)}
                     </Text>
                   </TouchableOpacity>
                 );
