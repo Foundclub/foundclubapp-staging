@@ -2025,11 +2025,9 @@ export default {
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
-    // eslint-disable-next-line max-len
-    // eslint-disable-next-line max-len
-    // D61 (29/09) — console super-admin : creer une collectivite dont le code INSEE ou le SIREN est pris (409)
+    // D61 (29/09) — console super-admin : code INSEE ou SIREN deja pris (409)
     COLLECTIVITE_ALREADY_EXISTS: 'Une collectivité porte déjà ce code INSEE ou ce SIREN.',
-    // D61 (29/09) — console super-admin : rattacher un club qui a deja sa collectivite (409), club absent
+    // D61 (29/09) — console super-admin : club deja rattache ailleurs (409), club absent
     // eslint-disable-next-line max-len
     COLLECTIVITE_CLUB_ALREADY_ATTACHED: 'Ce club est déjà rattaché à une autre collectivité : détache-le d’abord.',
     COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
