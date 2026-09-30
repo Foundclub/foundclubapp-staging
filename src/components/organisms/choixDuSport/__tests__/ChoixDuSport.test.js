@@ -45,13 +45,13 @@ let arbre = null;
 
 /**
  * Rend le choix du sport.
- * @param {{ cle?: 'documentId' | 'name', multiple?: boolean, onChoisir: any, valeurs?: string[] }}
- *   props Les props.
+ * @param {any} props Les props : cle, multiple, onChoisir, valeurs.
  * @returns {Promise<any>} L'arbre.
  */
-const rendre = async ({
-  cle = 'documentId', multiple = false, onChoisir, valeurs = [],
-}) => {
+const rendre = async (props) => {
+  const {
+    cle = 'documentId', multiple = false, onChoisir, valeurs = [],
+  } = props;
   await act(async () => {
     arbre = renderer.create(
       <ChoixDuSport
@@ -90,7 +90,7 @@ afterEach(() => {
 const texte = (tree) => JSON.stringify(tree.toJSON());
 
 describe('ChoixDuSport — le composant seul', () => {
-  it('sans choix : « Tous les sports » coché, puis les populaires d Adel, rien d autre', async () => {
+  it('sans choix : « Tous les sports » coché, puis les populaires d Adel', async () => {
     const tree = await rendre({ onChoisir: jest.fn() });
     expect(lignesDeSport(tree)).toEqual(POPULAIRES_EN_TETE);
     expect(texte(tree)).toContain('Sports populaires');
@@ -113,7 +113,7 @@ describe('ChoixDuSport — le composant seul', () => {
     expect(ligneHote(tree, 'Tennis').props.accessibilityRole).toBe('checkbox');
   });
 
-  it('« Tous les sports, de A à Z » déplie la liste entière, avec « Tous les sports »', async () => {
+  it('« Tous les sports, de A à Z » déplie tout, avec « Tous les sports »', async () => {
     const onChoisir = jest.fn();
     const tree = await rendre({ onChoisir, valeurs: ['a-1'] });
     const deplier = tree.root.findAll(

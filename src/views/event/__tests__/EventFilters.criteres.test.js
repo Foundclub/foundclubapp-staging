@@ -1,6 +1,18 @@
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  chercherUnSport,
+  choisirLeSport,
+  lignesDeSport,
+  POPULAIRES_EN_TETE,
+  SPORTS_A09,
+} from '../../../testSupport/temoinChoixDuSport';
 import EventFilters from '../EventFilters';
+
+// A09 — la base de sports que rend la doublure : Football seul par défaut (ce que les tests
+// d'avant attendent), la petite base du témoin A09 dans son bloc.
+const SPORTS_PAR_DEFAUT = [{ documentId: 'a-1', name: 'Football' }];
+let mockSports = SPORTS_PAR_DEFAUT;
 
 // D82 (E6) — LE FILET DE L'ECRAN PLEIN `EventFilters`.
 //
@@ -137,7 +149,7 @@ jest.mock('@/store/appContext', () => ({
 }));
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({ data: [{ documentId: 'a-1', name: 'Football' }] }),
+  useGetActivities: () => ({ data: mockSports }),
 }));
 jest.mock('@/services/category/categoryQueries', () => ({
   useGetCategories: () => ({ data: [{ documentId: 'c-1', name: 'U13' }] }),
@@ -286,10 +298,13 @@ describe('EventFilters (ecran plein) — les criteres qu il propose, au 2026-08-
     const tree = await rendre();
     const texte = texteVisible(tree);
 
-    // Les 6 criteres portes par un selecteur, dans l'ordre de l'ecran.
+    // 5 criteres portes par un selecteur, dans l'ordre de l'ecran. A09 (30/09) : le 6e, le
+    // Sport, est passe au choix commun a toute la recherche (populaires, puis la recherche).
     expect(selecteurs(tree).map((/** @type {any} */ node) => node.props.label)).toEqual([
-      'Catégorie', 'Club', 'Équipe', 'Niveau', 'Sport', "Type d'événement",
+      'Catégorie', 'Club', 'Équipe', 'Niveau', "Type d'événement",
     ]);
+    expect(texte).toContain('Sport');
+    expect(lignesDeSport(tree)[0]).toBe('Tous les sports');
 
     // Le 7e et le 8e : la ville (champ d'adresse) et son rayon (curseur a part).
     expect(tree.root.findAll(
@@ -389,9 +404,8 @@ describe('EventFilters (ecran plein) — ce qui part a la recherche', () => {
     await act(async () => {
       selecteur(tree, "Type d'événement").props.setValue([{ value: 't-1' }]);
     });
-    await act(async () => {
-      selecteur(tree, 'Sport').props.setValue([{ value: 'a-1' }]);
-    });
+    // A09 — le sport se coche par sa LIGNE dans le choix commun.
+    await choisirLeSport(tree, 'Football');
     await appuyerSur(tree, 'Appliquer les filtres');
 
     const { payload } = mockDispatch.mock.calls[0][0];
@@ -428,6 +442,27 @@ describe('EventFilters (ecran plein) — ce qui part a la recherche', () => {
     mockEventFilters = { activity: ['a-1'] };
     const tree = await rendre();
 
-    expect(selecteur(tree, 'Sport').props.value).toEqual([]);
+    // (A09 : le sport se lit désormais dans le choix commun — « Tous les sports » reste coché,
+    // Football non.)
+    expect(lignesDeSport(tree)[0]).toBe('Tous les sports');
+  });
+});
+
+describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports', () => {
+  beforeEach(() => { mockSports = SPORTS_A09; });
+  afterEach(() => { mockSports = SPORTS_PAR_DEFAUT; });
+
+  it('populaires en tête (ordre d Adel), recherche sans accent, et le choix part', async () => {
+    const tree = await rendre();
+
+    // Décision d'Adel : football, basketball, handball, rugby, volleyball — Tennis attend.
+    expect(lignesDeSport(tree)).toEqual(POPULAIRES_EN_TETE);
+    // « Une recherche à la main dans TOUS les sports », accents compris.
+    await chercherUnSport(tree, 'equit');
+    expect(lignesDeSport(tree)).toEqual(['Équitation']);
+
+    await choisirLeSport(tree, 'Équitation');
+    await appuyerSur(tree, 'Appliquer les filtres');
+    expect(mockDispatch.mock.calls[0][0].payload.activity).toEqual(['a-equit']);
   });
 });

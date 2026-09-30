@@ -46,14 +46,25 @@ export const compacterNomDeSport = (nom) => String(nom ?? '')
   .replace(/[^a-z0-9]/g, '');
 
 /**
+ * Les sports retenus, toujours en liste : les formulaires rangent tantôt un texte, tantôt une
+ * liste (`''`, `'a-1'`, `['a-1']`).
+ * @param {unknown} valeurs La valeur rangée.
+ * @returns {string[]} Les clefs non vides.
+ */
+export const enListeDeSports = (valeurs) => (Array.isArray(valeurs) ? valeurs : [valeurs])
+  .map((valeur) => String(valeur ?? ''))
+  .filter(Boolean);
+
+/**
  * Coche ou décoche un sport dans un choix multiple ; la clef vide vide tout.
- * @param {string[]} valeurs Les sports cochés.
+ * @param {unknown} valeurs Les sports cochés (texte ou liste).
  * @param {string} cle Le sport touché (`''` = « Tous les sports »).
  * @returns {string[]} Les sports cochés après le geste.
  */
 export const basculerSport = (valeurs, cle) => {
+  const avant = enListeDeSports(valeurs);
   if (!cle) return [];
-  return valeurs.includes(cle) ? valeurs.filter((valeur) => valeur !== cle) : [...valeurs, cle];
+  return avant.includes(cle) ? avant.filter((valeur) => valeur !== cle) : [...avant, cle];
 };
 
 /**
@@ -125,17 +136,19 @@ export function Intertitre({ children }) {
  * @param {{
  *  auFocus?: boolean,
  *  cle?: 'documentId' | 'name',
+ *  libelle?: string,
  *  multiple?: boolean,
  *  onChoisir: (cle: string) => void,
  *  sports: any[] | undefined,
- *  valeurs: string[],
+ *  valeurs: unknown,
  * }} props `cle` : ce qui identifie un sport pour l'appelant — l'identifiant (clubs, événements,
- *   profils, réservations) ou le NOM (les annonces filtrent par nom). `valeurs` : les clefs
- *   choisies (vide = « Tous les sports »).
+ *   profils, réservations) ou le NOM (les annonces filtrent par nom). `valeurs` : la ou les clefs
+ *   choisies, texte ou liste (vide = « Tous les sports »). `libelle` : l'intitulé du champ, dans
+ *   les écrans-formulaires (il est dans la rangée des feuilles « Filtrer »).
  * @returns {import('react').ReactElement} Le choix.
  */
 function ChoixDuSport({
-  auFocus = false, cle = 'documentId', multiple = false, onChoisir, sports, valeurs,
+  auFocus = false, cle = 'documentId', libelle = '', multiple = false, onChoisir, sports, valeurs,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
@@ -154,7 +167,7 @@ function ChoixDuSport({
     .map((nom) => alphabetiques.find((sport) => compacterNomDeSport(sport?.name) === nom))
     .filter(Boolean), [alphabetiques]);
 
-  const choisis = valeurs.filter(Boolean);
+  const choisis = enListeDeSports(valeurs);
   const estChoisi = (/** @type {any} */ sport) => choisis.includes(String(sport[cle]));
   const actuels = alphabetiques.filter(estChoisi);
   const terme = compacterNomDeSport(recherche);
@@ -182,6 +195,7 @@ function ChoixDuSport({
 
   return (
     <View style={[Spaces.gap[12]]}>
+      {libelle ? <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{libelle}</Text> : null}
       <Input
         autoFocus={auFocus}
         density="default"
