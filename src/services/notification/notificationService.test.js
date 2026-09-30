@@ -1,13 +1,15 @@
 const mockGet = jest.fn();
+const mockPut = jest.fn();
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
   default: {
     get: mockGet,
+    put: mockPut,
   },
 }));
 
-const { getNotificationById } = require('./notificationService');
+const { getNotificationById, markApplicationResponsesAsRead } = require('./notificationService');
 
 describe('notificationService', () => {
   beforeEach(() => {
@@ -65,5 +67,19 @@ describe('notificationService', () => {
     });
 
     await expect(getNotificationById('missing-doc')).resolves.toBeNull();
+  });
+
+  // MES-CANDIDATURES (A13) : l'app nomme un PERIMETRE, jamais une liste de types —
+  // c'est le serveur qui sait quelles notifications sont des « reponses a mes
+  // candidatures », et un perimetre qu'il ne connait pas ne marque rien.
+  test('markApplicationResponsesAsRead ne marque que les reponses a mes candidatures', async () => {
+    mockPut.mockResolvedValue({ data: { ok: true, updated: 2 } });
+
+    await expect(markApplicationResponsesAsRead()).resolves.toEqual({ ok: true, updated: 2 });
+
+    expect(mockPut).toHaveBeenCalledTimes(1);
+    expect(mockPut).toHaveBeenCalledWith('/notifications/read-all', {
+      scope: 'application-responses',
+    });
   });
 });

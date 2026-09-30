@@ -77,6 +77,21 @@ export const markAllAsRead = async () => {
 };
 
 /**
+ * MES-CANDIDATURES (audit V1, A13) — marque VUES les reponses a mes candidatures.
+ *
+ * La pastille rouge de « Mes candidatures » compte, cote serveur, les notifications de
+ * reponse a mes candidatures encore non lues (`mesReponsesNonVues` de
+ * `/app/home-summary`). Ouvrir la page les marque lues : la pastille s'eteint, et la
+ * cloche descend d'autant. Le serveur connait la liste des types (`scope`) : l'app
+ * n'en recopie aucun, et un `scope` inconnu ne marque RIEN — jamais tout.
+ * @returns {Promise<{ ok: boolean, updated: number }>}
+ */
+export const markApplicationResponsesAsRead = async () => {
+  const response = await client.put('/notifications/read-all', { scope: 'application-responses' });
+  return response.data;
+};
+
+/**
  * Delete a notification
  * @param {string} id - Notification ID
  * @returns {Promise<any>}

@@ -31,7 +31,9 @@
  * @property {number} reservations
  * @property {number} propositionsMatch
  * @property {number} maCotisationDue
- * @property {number} mesReponses
+ * @property {number} mesReponses - MES candidatures qui attendent encore le club.
+ * @property {number} mesReponsesNonVues - MES-CANDIDATURES (A13) : les reponses d'un club
+ *   que je n'ai pas encore vues (notifications de reponse non lues, cote serveur).
  * @property {{ aLaUne: number, clubsAOnboarder: number, revendications: number,
  *   signalements: number }} moderation
  * @property {null | { id: string, label: string, rsvpEnabled?: boolean,
@@ -49,6 +51,7 @@ export const EMPTY_HOME_COUNTERS = {
   invitationsEquipe: 0,
   maCotisationDue: 0,
   mesReponses: 0,
+  mesReponsesNonVues: 0,
   moderation: {
     aLaUne: 0, clubsAOnboarder: 0, revendications: 0, signalements: 0,
   },
@@ -89,6 +92,7 @@ export const normalizeHomeCounters = (payload) => {
     invitationsEquipe: toCount(payload.invitationsEquipe),
     maCotisationDue: toCount(payload.maCotisationDue),
     mesReponses: toCount(payload.mesReponses),
+    mesReponsesNonVues: toCount(payload.mesReponsesNonVues),
     moderation: {
       aLaUne: toCount(moderation.aLaUne),
       clubsAOnboarder: toCount(moderation.clubsAOnboarder),
@@ -214,7 +218,12 @@ const ALERT_SOURCES = {
   'manage-requests': (/** @type {HomeCounters} */ c) => c.demandes + c.invitationsEquipe,
   'profile-license': (/** @type {HomeCounters} */ c) => c.maCotisationDue,
   'search-amicaux': (/** @type {HomeCounters} */ c) => c.propositionsMatch,
-  'search-my-activities': (/** @type {HomeCounters} */ c) => c.mesReponses,
+  // 🔴 MES-CANDIDATURES (audit V1, A13) : cette pastille suivait `mesReponses`, le
+  // nombre de MES candidatures EN ATTENTE — elle ne s'eteignait donc qu'une fois le
+  // club decide, jamais parce que J'AVAIS regarde. Or le rouge veut dire « a toi
+  // d'agir ». Elle suit desormais les reponses NON VUES ; l'attente, elle, s'ecrit
+  // en gris sous le titre de la case (`selectMyApplicationsStatus`).
+  'search-my-activities': (/** @type {HomeCounters} */ c) => c.mesReponsesNonVues,
   'search-reservations': (/** @type {HomeCounters} */ c) => c.reservations,
 };
 
@@ -226,6 +235,21 @@ const ALERT_SOURCES = {
 export const selectHomeAlerts = (counters) => Object.entries(ALERT_SOURCES).reduce(
   (acc, [cardKey, read]) => ({ ...acc, [cardKey]: read(counters) > 0 }),
   /** @type {Record<string, boolean>} */ ({}),
+);
+
+/**
+ * MES-CANDIDATURES (audit V1, A13) — ce que la case « Mes candidatures » ECRIT sous
+ * son titre, en gris : d'abord les reponses non vues (« 1 nouvelle reponse »), puis
+ * l'attente (« 1 en attente »). Un compteur a zero ne dit rien ; rien du tout, et la
+ * case garde son sous-titre d'origine. Les mots restent a l'ecran (`t`).
+ * @param {HomeCounters} counters
+ * @returns {{ count: number, key: 'pending' | 'unseen' }[]}
+ */
+export const selectMyApplicationsStatus = (counters) => (
+  /** @type {{ count: number, key: 'pending' | 'unseen' }[]} */ ([
+    { count: counters.mesReponsesNonVues, key: 'unseen' },
+    { count: counters.mesReponses, key: 'pending' },
+  ]).filter((part) => part.count > 0)
 );
 
 /**
