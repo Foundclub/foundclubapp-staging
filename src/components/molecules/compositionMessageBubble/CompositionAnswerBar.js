@@ -6,6 +6,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { isRsvpEnabled } from '@/domains/event/presenceRule';
+
 import Button from '@/components/atoms/button/Button';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
@@ -52,12 +54,17 @@ import { useGetEventConvocation } from '@/services/event/eventQueries';
 /**
  * Ce que la carte propose au lecteur, lu dans la convocation EN COURS.
  *
- * ⛔ Aucun bouton (`canAnswer: false`) dans quatre cas, tous lus au serveur :
+ * ⛔ Aucun bouton (`canAnswer: false`) dans cinq cas, tous lus au serveur :
  *   · la convocation n'est pas encore arrivee (on n'invente pas de boutons) ;
  *   · le lecteur n'est pas dans le pack de cette equipe (entraineur, joueur
  *     ecarte, parent) — la meme regle que « Tu es convoque » ;
  *   · la publication n'a pas demande de reponse (`requireResponse === false`,
  *     la valeur par defaut du serveur est `true`) ;
+ *   · FINITIONS5 (tournee 7, defaut 2) — l'organisateur a COUPE les reponses de
+ *     l'evenement (`event.rsvpEnabled === false`). La carte proposait Present /
+ *     Absent et le serveur repondait 400 (`EVENT_RSVP_DISABLED`). Meme regle
+ *     que « Tu es convoque » (`isRsvpEnabled`). Un serveur d'avant FINITIONS5
+ *     ne joint pas le champ : la carte garde alors son comportement d'avant ;
  *   · la carte est DEPASSEE : sa version n'est plus celle publiee. C'est le
  *     choix le plus sur — repondre depuis une compo perimee, c'est repondre a
  *     une convocation qui n'existe plus ; la carte en cours, elle, repond.
@@ -84,6 +91,7 @@ export const resolveCompositionAnswer = ({
 
   const canAnswer = Boolean(published)
     && Boolean(getViewerConvocationRole({ published }, viewerId))
+    && isRsvpEnabled(convocation?.event)
     && published.requireResponse !== false
     && versionEnCours > 0
     && versionEnCours === (Number(publishedVersion) || 0);
