@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
@@ -51,6 +51,15 @@ import { respondToEventRsvp } from '@/services/event/eventService';
 // `app-home-summary.ts:478`). Sans cette relecture, le bandeau ne saurait jamais
 // ce que j'ai deja repondu.
 
+// ✓ A05 (audit V1, decision d'Adel du 30/09) — « QUAND ON DIT QU'ON EST PRESENT,
+// UNE INFO-BULLE CONFIRME. CE N'EST PAS LE CAS POUR ABSENT. » Mesure dans le code :
+// le bandeau ne confirmait NI l'un NI l'autre ; la « bulle » vue apres Present
+// etait la notification de compo (`event-rsvp.ts`), un effet de bord.
+// Desormais, une reponse que le serveur a ACCEPTEE se dit pendant ~3 s :
+// `sentAnswer` vaut la reponse partie, puis revient a `null`. Jamais sur un echec
+// (l'alerte d'erreur reste seule), et remise a zero des qu'une autre part.
+export const DUREE_CONFIRMATION_MS = 3000;
+
 /**
  * Ma reponse a un evenement, et de quoi la changer depuis le bandeau de l'accueil.
  * @param {string | undefined} eventId - L'evenement nomme par le bandeau.
@@ -60,13 +69,23 @@ import { respondToEventRsvp } from '@/services/event/eventService';
  *   answer: string | null,
  *   canAnswer: boolean,
  *   isAnswering: boolean,
+ *   sentAnswer: 'present' | 'absent' | null,
  *   submit: (answer: 'present' | 'absent') => void,
- * }} L'etat confirme par le serveur, et le geste.
+ * }} L'etat confirme par le serveur, la reponse tout juste envoyee (A05), et le geste.
  */
 export const useHomeEventAnswer = (eventId, summary = {}) => {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const queryClient = useQueryClient();
+  const [sentAnswer, setSentAnswer] = useState(/** @type {'present' | 'absent' | null} */ (null));
+
+  // A05 — la confirmation s'efface d'elle-meme. Une nouvelle reponse relance
+  // la minuterie (la valeur change) ; le demontage l'annule.
+  useEffect(() => {
+    if (!sentAnswer) return undefined;
+    const minuterie = setTimeout(() => setSentAnswer(null), DUREE_CONFIRMATION_MS);
+    return () => clearTimeout(minuterie);
+  }, [sentAnswer]);
 
   // `useGetEvent` porte deja `enabled: !!documentId` : sans evenement, aucun
   // appel ne part.
@@ -108,7 +127,14 @@ export const useHomeEventAnswer = (eventId, summary = {}) => {
         )),
       );
     },
-    onSuccess: () => {
+    // A05 — une reponse qui PART efface la confirmation de la precedente : on ne
+    // dit jamais « envoyee » pour une reponse encore en route.
+    onMutate: () => {
+      setSentAnswer(null);
+    },
+    onSuccess: (_resultat, reponseEnvoyee) => {
+      // A05 — le serveur a accepte : on le dit, avec LA reponse qui est partie.
+      setSentAnswer(reponseEnvoyee);
       // La relecture qui allume le bouton. `['event', eventId]` sert AUSSI la
       // fiche : les deux ecrans se remettent a jour ensemble.
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -147,6 +173,7 @@ export const useHomeEventAnswer = (eventId, summary = {}) => {
     answer,
     canAnswer,
     isAnswering: mutation.isPending,
+    sentAnswer,
     submit,
   };
 };

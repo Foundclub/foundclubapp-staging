@@ -77,20 +77,29 @@ const MASQUEES_AU_PARENT = (() => {
   return (bloc.match(/'[a-z-]+'/g) || []).map((occurrence) => occurrence.slice(1, -1));
 })();
 
+/**
+ * A02 + A07 (lot ACCUEIL, 30/09) — les cases que les INTERRUPTEURS retirent a
+ * TOUS les roles (League, Reservations). Lues dans `fonctionsMasquees.js` : la
+ * MEME liste que celle que HomeHub applique, jamais recopiee ici.
+ * @type {ReadonlyArray<string>}
+ */
+const { CARTES_ACCUEIL_MASQUEES } = require('@/config/fonctionsMasquees');
+
+const horsInterrupteurs = (/** @type {string} */ clef) => !CARTES_ACCUEIL_MASQUEES.includes(clef);
+
 const MANAGE = corpsDuMemo('manageSectionCards');
 const SEARCH = corpsDuMemo('searchCards');
-const PROFILE = corpsDuMemo('profileCards');
+const LEAGUE = corpsDuMemo('leagueCards');
 
 const SECTIONS = {
-  account: clefsDeCartes(corpsDuMemo('accountCards')),
-  league: clefsDeCartes(corpsDuMemo('leagueCards')),
+  // A17 — « Mon abonnement » est la SEULE case de l'ancienne rubrique « Mon
+  // profil » qui reste sur l'accueil (staff) : c'est une entree de VENTE, gardee
+  // par le temoin L33 (`subscriptionEntryPoints.test.js`).
+  abonnement: clefsDeCartes(corpsDuMemo('subscriptionCards')),
+  league: clefsDeCartes(LEAGUE),
   manageAdmin: clefsDeCartes(entre(MANAGE, 'if (isSuperAdmin) {', null)),
   manageCoach: clefsDeCartes(entre(MANAGE, 'if (isCoach) {', 'if (isSuperAdmin) {')),
   managePresident: clefsDeCartes(entre(MANAGE, 'if (isPresident) {', 'if (isCoach) {')),
-  profileAbonnement: clefsDeCartes(entre(PROFILE, 'if (canShowSubscriptionExperience) {', null)),
-  profileBase: clefsDeCartes(entre(PROFILE, null, 'if (hasManageSection || isSuperAdmin) {')),
-  profileCotisation: clefsDeCartes(entre(PROFILE, 'if (!isSuperAdmin) {', 'if (canShowSubscriptionExperience) {')),
-  profileEdition: clefsDeCartes(entre(PROFILE, 'if (hasManageSection || isSuperAdmin) {', 'if (!isSuperAdmin) {')),
   searchBase: clefsDeCartes(entre(SEARCH, null, 'if (hasManageSection) {')),
   searchHorsStaff: clefsDeCartes(entre(SEARCH, 'if (!hasManageSection) {', '// Matchs amicaux')),
   // PARENT — la carte d'appel est ECRITE en dernier mais LUE en premier
@@ -125,14 +134,14 @@ const accueilDe = (role) => {
     ...SECTIONS.searchBase,
     ...(estStaff ? SECTIONS.searchStaff : SECTIONS.searchHorsStaff),
     ...SECTIONS.searchQueue,
-  ];
+  ].filter(horsInterrupteurs);
 
-  // `profileBase` = [voir, historique, alertes]. « Modifier » s'insere en 1,
-  // « Ma cotisation » s'ajoute a la fin, « Mon abonnement » passe en tete.
-  const profil = [...SECTIONS.profileBase];
-  if (estStaff || estAdmin) profil.splice(1, 0, ...SECTIONS.profileEdition);
-  if (!estAdmin) profil.push(...SECTIONS.profileCotisation);
-  if (estStaff) profil.unshift(...SECTIONS.profileAbonnement);
+  // A02 — la section League tombe a zero carte quand son interrupteur est eteint.
+  const league = SECTIONS.league.filter(horsInterrupteurs);
+
+  // A17 + A21 — « Mon profil » et « Compte » ont quitte l'accueil pour « Mon
+  // compte » (`Profile.monCompte.test.js`). Reste « Mon abonnement », au staff.
+  const abonnement = estStaff ? SECTIONS.abonnement : [];
 
   // PARENT — l'accueil part de celui du joueur, puis deux gestes seulement :
   // il OTE les cases du masque, et il AJOUTE une case en tete de « Rechercher ».
@@ -162,8 +171,7 @@ const accueilDe = (role) => {
       gerer,
       [...SECTIONS.searchParent, ...rechercher].filter(horsMasque),
       [],
-      profil.filter(horsMasque),
-      SECTIONS.account,
+      [],
       SECTIONS.training,
     ];
   }
@@ -173,7 +181,7 @@ const accueilDe = (role) => {
   // justement pourquoi cette ligne et les tableaux ci-dessous doivent etre
   // corriges A LA MAIN quand une section bouge, sinon ils restent VERTS en
   // decrivant un ecran faux.
-  return [gerer, rechercher, SECTIONS.league, profil, SECTIONS.account, SECTIONS.training];
+  return [gerer, rechercher, league, abonnement, SECTIONS.training];
 };
 
 /**
@@ -184,13 +192,21 @@ const toutesLesCartes = (role) => accueilDe(role).flat();
 
 // Les quatre tableaux du pack, recopies clef par clef. C'est la reference : si
 // un lot futur deplace une case, c'est ICI que la discussion doit avoir lieu.
+//
+// 🏠 LOT ACCUEIL (audit V1, decisions d'Adel du 30/09) — l'ordre des sections est
+// desormais [Gerer, Rechercher, League, Abonnement, Entrainement] :
+//  · A02 (option A) : League retiree de l'accueil, PAR SON INTERRUPTEUR ;
+//  · A07 (option A) : « Reservations » retiree pour tous, PAR SON INTERRUPTEUR ;
+//  · A17 + A21 (option A) : « Mon profil » et « Compte » vivent dans « Mon
+//    compte ». Chaque destination y garde son chemin (`Profile.monCompte.test.js`).
+//  · « Mon abonnement » RESTE sur l'accueil du staff, seul : entree de vente (L33),
+//    question posee au chef d'orchestre plutot que tranchee ici.
 const ATTENDU = {
   coach: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
-    ['league-entry'],
-    ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
-    ['account-switch', 'account-logout'],
+    ['search-events', 'search-clubs', 'search-profiles', 'search-amicaux'],
+    [],
+    ['profile-subscription'],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   // PARENT — le lot P0 lui retire « Offres de recrutement », « Mes reponses »,
@@ -205,34 +221,30 @@ const ATTENDU = {
   // RETIREE — elle ouvrait le MEME ecran que « Club », deux cases plus bas.
   parent: [
     [],
-    ['search-my-children', 'search-events', 'search-clubs', 'search-reservations'],
+    ['search-my-children', 'search-events', 'search-clubs'],
     [],
-    ['profile-view', 'profile-alerts'],
-    ['account-switch', 'account-logout'],
+    [],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   player: [
     [],
-    ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
-    ['league-entry'],
-    ['profile-view', 'profile-history', 'profile-alerts', 'profile-license'],
-    ['account-switch', 'account-logout'],
+    ['search-events', 'search-clubs', 'search-ads', 'search-my-activities', 'search-amicaux'],
+    [],
+    [],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   president: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
-    ['league-entry'],
-    ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
-    ['account-switch', 'account-logout'],
+    ['search-events', 'search-clubs', 'search-profiles', 'search-amicaux'],
+    [],
+    ['profile-subscription'],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
   superAdmin: [
     ['admin-triage', 'admin-users-clubs', 'admin-dashboard', 'admin-league'],
-    ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
-    ['league-entry'],
-    ['profile-view', 'profile-edit', 'profile-history', 'profile-alerts'],
-    ['account-switch', 'account-logout'],
+    ['search-events', 'search-clubs', 'search-ads', 'search-my-activities', 'search-amicaux'],
+    [],
+    [],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
 };
@@ -243,13 +255,16 @@ describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => 
     // 🩹 CORRIGE le meme jour : le parent etait compte a 8, comme s il n avait pas
     // la section Entrainement. Il l a — le rendu ne la garde par AUCUN role.
     // 8 + 3 = 11. Tous les roles la recoivent, EN DERNIER.
-    ['president', 23],
-    ['coach', 23],
-    ['player', 16],
+    // 🏠 LOT ACCUEIL (30/09) : 23 → 14, 23 → 14, 16 → 8, 11 → 6, 20 → 12.
+    // Retirees : League (1), Reservations (1), « Mon profil » sauf « Mon
+    // abonnement », et « Compte » (2) — toutes rangees dans « Mon compte ».
+    ['president', 14],
+    ['coach', 14],
+    ['player', 8],
     // 🧹 11/09 : 12 → 11. La case « Chercher un club pour mon enfant » est
     // retiree : elle doublait « Club ».
-    ['parent', 11],
-    ['superAdmin', 20],
+    ['parent', 6],
+    ['superAdmin', 12],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
   });
@@ -303,12 +318,16 @@ describe('🩹 LE MENSONGE DU 2026-09-08 — ces deux temoins lisent le RENDU, p
     expect(trouves).toEqual([]);
   });
 
-  it('elle est rendue en DERNIER, apres la section Compte', () => {
+  it('elle est rendue en DERNIER, apres la rubrique Abonnement', () => {
     // La decision d Adel du 2026-09-08 : « tout en bas, c est en bonus ».
-    const compte = SOURCE.indexOf('cards={accountCards}');
+    // 🏠 LOT ACCUEIL : la section « Compte » n'existe plus ; la derniere avant
+    // l'entrainement est « Abonnement ». Un repere ABSENT rendrait -1 et le
+    // temoin vert a vide : on exige donc les deux.
+    const abonnement = SOURCE.indexOf('cards={subscriptionCards}');
     const entrainement = SOURCE.indexOf('cards={trainingCards}');
 
-    expect(compte).toBeLessThan(entrainement);
+    expect(abonnement).toBeGreaterThan(-1);
+    expect(abonnement).toBeLessThan(entrainement);
   });
 });
 
@@ -332,13 +351,14 @@ describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', 
     expect(toutesLesCartes('parent')).not.toContain(clef);
   });
 
-  it('mais il garde ce qui le concerne : chercher, son profil, son compte', () => {
+  // 🏠 LOT ACCUEIL (A17 + A21) : son profil et son compte ne sont plus sur
+  // l'accueil — pour PERSONNE. Ils vivent dans « Mon compte », ou le parent les
+  // retrouve (`Profile.monCompte.test.js`, ligne du parent).
+  it('mais il garde ce qui le concerne sur l accueil : chercher', () => {
     const cartes = toutesLesCartes('parent');
 
     expect(cartes).toContain('search-clubs');
     expect(cartes).toContain('search-events');
-    expect(cartes).toContain('profile-view');
-    expect(cartes).toContain('account-logout');
   });
 
   // 🩹 CORRIGE LE 2026-09-10 par PARENT P2 : « Mes enfants » passe devant —
@@ -361,8 +381,10 @@ describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', 
   });
 
   it('LE GARDE-FOU : le masque ne touche AUCUN autre role', () => {
+    // 🏠 LOT ACCUEIL : « league-entry » servait de temoin ici ; son interrupteur
+    // l'ote desormais a TOUS. Les matchs amicaux, eux, ne sont otes qu'au parent.
     ['player', 'coach', 'president', 'superAdmin'].forEach((role) => {
-      expect(toutesLesCartes(/** @type {any} */ (role))).toContain('league-entry');
+      expect(toutesLesCartes(/** @type {any} */ (role))).toContain('search-amicaux');
     });
   });
 });
@@ -379,8 +401,14 @@ describe('D72 — critere 5 : « Navigation rapide » n existe plus', () => {
     expect(SOURCE).not.toContain("t('homeHub.sections.quickNav')");
   });
 
-  it('« Ma cotisation » n est pas perdue : elle a rejoint « Mon profil »', () => {
-    expect(SECTIONS.profileCotisation).toEqual(['profile-license']);
+  it('« Ma cotisation » n est pas perdue : elle a rejoint « Mon compte » (A17)', () => {
+    // Elle etait passee de « Navigation rapide » a « Mon profil » (D72) ; « Mon
+    // profil » a quitte l'accueil (A17), elle l'a suivi. La ligne est prouvee au
+    // rendu par `Profile.monCompte.test.js`.
+    const chemin = path.resolve(__dirname, '..', '..', 'profile', 'Profile.js');
+    const monCompte = fs.readFileSync(chemin, 'utf8');
+
+    expect(monCompte).toContain('navigation.navigate(RouteNames.MyLicenses)');
   });
 
   // Le tour guide chainait « Gerer mes alertes » vers `homehub-quickPlanning`,
@@ -396,8 +424,70 @@ describe('D72 — critere 6 : « Modifier mon profil » au bon endroit', () => {
     expect(toutesLesCartes('player')).not.toContain('profile-edit');
   });
 
-  it('PRESENTE cote super admin — c est sa seule porte d entree', () => {
-    expect(toutesLesCartes('superAdmin')).toContain('profile-edit');
+  it('le super admin garde sa porte, dans « Mon compte » (A17)', () => {
+    // C'etait « sa seule porte d'entree » sur l'accueil (D72). Elle a suivi
+    // « Mon profil » dans « Mon compte », ou la rangee existait deja pour lui
+    // (sa page profil n'est pas editable) — prouve au rendu par
+    // `Profile.monCompte.test.js`.
+    expect(toutesLesCartes('superAdmin')).not.toContain('profile-edit');
+  });
+});
+
+// 🏠 LOT ACCUEIL (audit V1, decisions d'Adel du 30/09).
+describe('A02 + A07 + A17 + A21 — ce que l accueil ne montre plus', () => {
+  const ROLES = ['president', 'coach', 'player', 'parent', 'superAdmin'];
+
+  it('A02 — aucun role ne voit plus la case League', () => {
+    ROLES.forEach((role) => {
+      expect(toutesLesCartes(/** @type {any} */ (role))).not.toContain('league-entry');
+    });
+  });
+
+  it('A07 — aucun role ne voit plus la case « Reservations »', () => {
+    ROLES.forEach((role) => {
+      expect(toutesLesCartes(/** @type {any} */ (role))).not.toContain('search-reservations');
+    });
+  });
+
+  it('A02 + A07 — HomeHub APPLIQUE bien le masque des interrupteurs a chaque liste rendue', () => {
+    // Le temoin ci-dessus simule le masque ; celui-ci verifie que l'ecran le pose
+    // pour de vrai : chaque « return » de ces deux listes passe par le filtre,
+    // sauf la liste vide du parent pour la League.
+    const retours = [SEARCH, LEAGUE]
+      .flatMap((corps) => corps.match(/return [^;]+;/g) || [])
+      .filter((retour) => retour !== 'return [];');
+
+    expect(retours.length).toBeGreaterThan(0);
+    retours.forEach((retour) => {
+      expect(retour).toContain('.filter(estAfficheeSurLAccueil)');
+    });
+    expect(SOURCE).toContain('const CARTES_MASQUEES_A_TOUS = new Set(CARTES_ACCUEIL_MASQUEES);');
+  });
+
+  it('A17 + A21 — « Mon profil » et « Compte » ne sont plus ni construites ni rendues', () => {
+    expect(SOURCE).not.toContain('profileCards');
+    expect(SOURCE).not.toContain('accountCards');
+    expect(SOURCE).not.toContain("t('homeHub.sections.profile')");
+    expect(SOURCE).not.toContain("t('homeHub.sections.account')");
+  });
+
+  it('A17 — le point « cotisation a payer » n est pas perdu : il passe sur l avatar', () => {
+    // La case « Mes cotisations » le portait (`homeAlerts['profile-license']`).
+    // Memes roles que la case : ni le parent ni le super admin ne l'avaient.
+    expect(SOURCE).toContain('<ProfileButton hasAlert={cotisationAPayer} />');
+    expect(SOURCE).toContain("const cotisationAPayer = homeAlerts['profile-license'] === true");
+    expect(SOURCE).toContain('=== true && !isParent && !isSuperAdmin;');
+  });
+
+  it('aucune etape du tour ne vise plus une case retiree', () => {
+    expect(SOURCE).not.toContain('homehub-profileView');
+    expect(SOURCE).not.toContain('homehub-accountSwitch');
+    expect(SOURCE).not.toContain('scrollToProfileSection');
+    expect(SOURCE).not.toContain('scrollToAccountSection');
+    // La descente vers la League n'existe que si son interrupteur est rallume.
+    const descentes = SOURCE.split("nextTargetStepId: 'homehub-league'");
+    expect(descentes).toHaveLength(2);
+    expect(descentes[0].slice(-400)).toContain('LEAGUE_SUR_ACCUEIL ?');
   });
 });
 

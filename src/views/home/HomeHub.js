@@ -41,7 +41,6 @@ import {
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { scrollTutorialTargetIntoViewOnWeb } from '@/domains/tutorial/tutorialWebRuntime';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
-import { useAppContext } from '@/store/appContext';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -72,6 +71,7 @@ import { useHomeSummary } from '@/services/home/homeSummaryQueries';
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 import { markBootStep } from '@/utils/performance/bootPerformance';
 
+import { CARTES_ACCUEIL_MASQUEES, LEAGUE_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { ENABLE_STARTUP_TUTORIALS } from '@/constants/runtimeFlags';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -121,6 +121,24 @@ const CARTES_MASQUEES_AU_PARENT = new Set([
  * @returns {boolean}
  */
 const estVisiblePourLeParent = (card) => !CARTES_MASQUEES_AU_PARENT.has(card.key);
+
+// 🙈 A02 + A07 (lot ACCUEIL, decisions d'Adel du 30/09) — LES CASES QUE LES
+// INTERRUPTEURS RETIRENT A TOUS. FoundClub League et « Reservations » ne sont pas
+// prets : ils quittent l'accueil sans qu'une ligne de leur code soit supprimee.
+// La liste vit dans `fonctionsMasquees.js` (un interrupteur = une ligne a
+// changer) ; le registre humain est `D:/App/fc/FONCTIONS_MASQUEES.md`.
+// Meme motif que le masque du parent : une liste nommee, appliquee en bout de
+// chaine — une garde oubliee ne fait rougir aucun test, une liste nommee si.
+// 🧪 Temoins : `accueilParRole.test.js`, `config/__tests__/fonctionsMasquees.test.js`.
+const CARTES_MASQUEES_A_TOUS = new Set(CARTES_ACCUEIL_MASQUEES);
+
+/**
+ * Vrai si aucun interrupteur éteint ne retire cette case de l'accueil.
+ * Il ne lit que la clef : n'importe quelle carte, typée ou littérale, convient.
+ * @param {{ key: string }} card
+ * @returns {boolean}
+ */
+const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
 
 /**
  * @typedef {{
@@ -362,7 +380,6 @@ function HomeHubContent({ auth, navigation, route }) {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const [{ fcmToken }] = useAppContext();
   const { isGold, toggleMode } = useAppMode();
   const {
     currentStep,
@@ -383,7 +400,6 @@ function HomeHubContent({ auth, navigation, route }) {
     freeUsageSummary,
     governedPublishingBlockReason,
     isPlayerMode,
-    logoutMutation,
     nonPartnerCoachPublishingAccess,
     setPlayerMode,
     subscriptionAccessLevel,
@@ -895,16 +911,10 @@ function HomeHubContent({ auth, navigation, route }) {
     scrollToTutorialTarget('homehub-league', 'league')
   ), [scrollToTutorialTarget]);
 
-  const scrollToProfileSection = useCallback(() => (
-    scrollToTutorialTarget('homehub-profileView', 'profile')
-  ), [scrollToTutorialTarget]);
-
   // D72 — le raccourci de defilement vers « Navigation rapide » est retire avec
   // la section : il visait la premiere etape du tour de ce rayon, disparue.
-
-  const scrollToAccountSection = useCallback(() => (
-    scrollToTutorialTarget('homehub-accountSwitch', 'account')
-  ), [scrollToTutorialTarget]);
+  // 🏠 A17 + A21 (lot ACCUEIL) — meme sort pour ceux de « Mon profil » et de
+  // « Compte » : ces rubriques vivent dans « Mon compte », le tour ne les vise plus.
 
   const getHomeHubSectionForStepId = useCallback((/** @type {string | undefined | null} */ stepId) => {
     if (!stepId || typeof stepId !== 'string') return null;
@@ -1360,10 +1370,6 @@ function HomeHubContent({ auth, navigation, route }) {
     });
   }, [clubId, navigation, showBanner, t]);
 
-  const handleOpenMyLicense = useCallback(() => {
-    navigation.navigate(RouteNames.MyLicenses);
-  }, [navigation]);
-
   const handleOpenRequestsHub = useCallback((/** @type {any} */ initialFilter = 'all') => {
     const hasRequestsContext = Boolean(clubId || cmId || trainedTeamIds.length);
     if (!hasRequestsContext) {
@@ -1402,18 +1408,10 @@ function HomeHubContent({ auth, navigation, route }) {
     });
   }, [clubId, cmId, navigation, showBanner, t]);
 
-  const handleOpenProfile = useCallback(() => {
-    const currentUserId = userData?.documentId || userData?.id;
-    if (!currentUserId) {
-      navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.Profile });
-      return;
-    }
-
-    navigation.navigate(RouteNames.ProfileStack, {
-      params: { userId: currentUserId },
-      screen: RouteNames.UserDetails,
-    });
-  }, [navigation, userData?.documentId, userData?.id]);
+  // 🏠 A17 + A21 (lot ACCUEIL, 30/09) — les gestes de « Mon profil » et de
+  // « Compte » (voir mon profil, le modifier, historique, alertes, cotisations,
+  // changer de compte, deconnexion) sont partis avec leurs cases : ils existent
+  // dans « Mon compte » (`Profile.js`), qui les porte deja ou les a recus.
 
   // L33 — cap sur le CARROUSEL : la carte d'accueil affiche un COMPTEUR
   // (« N événements offerts restants »), c'est un argument de vente. Le hub ne
@@ -1423,21 +1421,6 @@ function HomeHubContent({ auth, navigation, route }) {
     navigation.navigate(RouteNames.ProfileStack, {
       screen: RouteNames.SubscriptionOffers,
     });
-  }, [navigation]);
-
-  const handleEditProfile = useCallback(() => {
-    navigation.navigate(RouteNames.ProfileStack, { screen: RouteNames.ProfileEdit });
-  }, [navigation]);
-
-  const handleOpenHistory = useCallback(() => {
-    navigation.navigate(RouteNames.ProfileStack, {
-      params: { resetContext: true, returnRoute: RouteNames.HomeTab },
-      screen: RouteNames.HistoryWizardCategory,
-    });
-  }, [navigation]);
-
-  const handleOpenSearchAlerts = useCallback(() => {
-    navigation.navigate(RouteNames.SearchAlerts);
   }, [navigation]);
 
   // S06 — OUVRIR L'EVENEMENT QUE LE BANDEAU VIENT DE NOMMER.
@@ -1470,34 +1453,6 @@ function HomeHubContent({ auth, navigation, route }) {
   // D72 — `handleOpenMyTeams` et `handleOpenMessaging` retires avec la section
   // « Navigation rapide » : « Equipes » et « Messages » sont deux onglets de la
   // barre du bas, ces deux raccourcis doublaient donc une destination existante.
-
-  const handleOpenAccountSwitcher = useCallback(() => {
-    navigation.navigate(RouteNames.ProfileStack, {
-      params: { openAccountModal: true },
-      screen: RouteNames.Profile,
-    });
-  }, [navigation]);
-
-  const handleLogout = useCallback(() => {
-    openContextualPrompt({
-      body: t('homeHub.account.logoutDescription', 'Veux-tu te déconnecter de ton compte ?'),
-      primaryAction: {
-        label: t('profile.actions.logout', 'Déconnexion'),
-        onPress: () => {
-          closeContextualPrompt();
-          logoutMutation.mutate(fcmToken || '');
-        },
-        variant: 'Primary',
-      },
-      secondaryAction: {
-        label: t('common.actions.cancel', 'Annuler'),
-        onPress: closeContextualPrompt,
-        variant: 'Secondary',
-      },
-      title: t('homeHub.account.logoutTitle', 'Déconnexion'),
-      tone: 'critical',
-    });
-  }, [closeContextualPrompt, fcmToken, logoutMutation, openContextualPrompt, t]);
 
   const roleLabel = useMemo(() => {
     if (isCoach) return t('homeHub.roles.coach', 'Entraîneur');
@@ -1601,6 +1556,10 @@ function HomeHubContent({ auth, navigation, route }) {
   // qui avait produit 402 rendus sur le board de compo (lot D42).
   const homeCounters = useMemo(() => normalizeHomeCounters(homeSummary), [homeSummary]);
   const homeAlerts = useMemo(() => selectHomeAlerts(homeCounters), [homeCounters]);
+  // 🔴 A17 — le point « cotisation a payer » de la case « Mes cotisations », partie
+  // dans « Mon compte », passe sur l'avatar qui y mene. Memes roles que la case :
+  // ni le parent (P0) ni le super admin (D72) ne l'avaient.
+  const cotisationAPayer = homeAlerts['profile-license'] === true && !isParent && !isSuperAdmin;
 
   // T02 — MA REPONSE AU PROCHAIN EVENEMENT, pour le bandeau du JOUEUR.
   //
@@ -1612,6 +1571,7 @@ function HomeHubContent({ auth, navigation, route }) {
     answer: myAnswer,
     canAnswer: canAnswerMyEvent,
     isAnswering,
+    sentAnswer,
     submit: submitMyAnswer,
   } = useHomeEventAnswer(
     isPlayerBanner ? homeCounters.prochainEvenement?.id : '',
@@ -1795,6 +1755,16 @@ function HomeHubContent({ auth, navigation, route }) {
           variant: answeredAbsent ? 'secondaryLight' : 'secondary',
         },
       ],
+      // A05 (audit V1, decision d'Adel du 30/09) — « ✓ Réponse envoyée : X »
+      // apres Present COMME apres Absent, pendant ~3 s (`useHomeEventAnswer`).
+      // Le mot de la reponse est celui du bouton qu'on vient de toucher.
+      confirmation: sentAnswer ? {
+        answer: sentAnswer,
+        answerLabel: sentAnswer === 'absent'
+          ? t('homeHub.banner.player.absent', 'Absent')
+          : t('homeHub.banner.player.present', 'Présent'),
+        label: t('homeHub.banner.player.answerSent'),
+      } : undefined,
       label: t('homeHub.banner.player.label', 'Ma semaine'),
       subtitle: evenement.label,
       title: formatBannerTitle(evenement.startsAt),
@@ -1819,6 +1789,7 @@ function HomeHubContent({ auth, navigation, route }) {
     myAnswer,
     navigation,
     roleKey,
+    sentAnswer,
     submitMyAnswer,
     t,
   ]);
@@ -2234,6 +2205,15 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [Colors.primary500, navigation, t, trainingEnrollment, trainingNextSession]);
 
   const searchCards = useMemo(() => {
+    // A02 — League masquee : le tour ne descend plus vers une case absente.
+    // Rallumee, la chaine d'avant revient telle quelle.
+    const versLaLeague = LEAGUE_SUR_ACCUEIL ? {
+      nextAction: 'scrollDown',
+      nextLabel: scrollDownLabel,
+      nextTargetStepId: 'homehub-league',
+      onNext: scrollToLeagueSection,
+    } : undefined;
+
     const cards = [
       {
         accentColor: Colors.primary500,
@@ -2286,12 +2266,7 @@ function HomeHubContent({ auth, navigation, route }) {
             'homeHub.tutorial.searchProfiles.description',
             'Accèdes directement aux profils ouverts au recrutement pour tes équipes.',
           ),
-          {
-            nextAction: 'scrollDown',
-            nextLabel: scrollDownLabel,
-            nextTargetStepId: 'homehub-league',
-            onNext: scrollToLeagueSection,
-          },
+          versLaLeague,
         ),
       });
     }
@@ -2311,12 +2286,7 @@ function HomeHubContent({ auth, navigation, route }) {
           14,
           'Rechercher des offres',
           'Consulte les offres de recrutement des clubs.',
-          {
-            nextAction: 'scrollDown',
-            nextLabel: scrollDownLabel,
-            nextTargetStepId: 'homehub-league',
-            onNext: scrollToLeagueSection,
-          },
+          versLaLeague,
         ),
       });
 
@@ -2407,10 +2377,10 @@ function HomeHubContent({ auth, navigation, route }) {
       // la source comme du texte, reste VERT (vu a l ecran le 10/09).
       cards.unshift(carteMesEnfants);
 
-      return cards.filter(estVisiblePourLeParent);
+      return cards.filter(estVisiblePourLeParent).filter(estAfficheeSurLAccueil);
     }
 
-    return cards;
+    return cards.filter(estAfficheeSurLAccueil);
   }, [
     Colors.primary500,
     hasManageSection,
@@ -2430,6 +2400,9 @@ function HomeHubContent({ auth, navigation, route }) {
     // `null` des que la liste est vide, titre compris (HomeHub.js:159).
     if (isParent) return [];
 
+    // A02 (decision d'Adel du 30/09, option A) — masquee pour TOUS par son
+    // interrupteur (`LEAGUE_SUR_ACCUEIL`), code garde. 🏠 A17 : l'etape du tour ne
+    // descend plus vers « Mon profil », qui a quitte l'accueil — c'est la derniere.
     return [{
       accentColor: Colors.gold500,
       icon: 'trophy',
@@ -2443,181 +2416,56 @@ function HomeHubContent({ auth, navigation, route }) {
         20,
         'FoundClub League',
         'Bascule vers FoundClub League pour les fonctionnalités compétitives.',
-        {
-          nextAction: 'scrollDown',
-          nextLabel: scrollDownLabel,
-          nextTargetStepId: 'homehub-profileView',
-          onNext: scrollToProfileSection,
-        },
       ),
-    }];
-  }, [
-    Colors.gold500, handleOpenLeague, isParent, makeTutorial,
-    scrollDownLabel, scrollToProfileSection, t,
-  ]);
+    }].filter(estAfficheeSurLAccueil);
+  }, [Colors.gold500, handleOpenLeague, isParent, makeTutorial, t]);
 
+  // 🏠 A17 + A21 (lot ACCUEIL, decision d'Adel du 30/09, option A) — LES RUBRIQUES
+  // « MON PROFIL » ET « COMPTE » ONT QUITTE L'ACCUEIL. Elles vivent dans « Mon
+  // compte » (l'avatar, `Profile.js`), ou CHAQUE case garde son chemin : voir mon
+  // profil, le modifier, historique sportif, alertes, cotisations, changer de
+  // compte, deconnexion. Le tableau avant/apres, role par role, est un temoin :
+  // `views/profile/__tests__/Profile.monCompte.test.js`.
+  //
+  // 💰 SEULE « MON ABONNEMENT » RESTE ICI, pour le staff. C'est une entree de VENTE
+  // (L33 : elle affiche le compteur d'evenements offerts et ouvre le carrousel),
+  // gardee par `navigation/__tests__/subscriptionEntryPoints.test.js`. La retirer
+  // toucherait a l'argent : c'est une decision d'Adel, pas d'un lot — question
+  // posee au chef d'orchestre le 30/09. La retirer = rendre `[]` ici et mettre a
+  // jour les deux temoins.
   /** @type {HomeCard[]} */
-  const profileCards = useMemo(() => {
-    const cards = [
-      {
-        accentColor: Colors.primary500,
-        icon: 'users',
-        key: 'profile-view',
-        onPress: handleOpenProfile,
-        subtitle: t('homeHub.cards.profile.view.subtitle'),
-        title: t('homeHub.cards.profile.view.title'),
-        tutorial: makeTutorial('profileView', 30, 'Voir mon profil', 'Consulte ta page profil complète.'),
-      },
-      {
-        accentColor: Colors.primary500,
-        icon: 'clock',
-        key: 'profile-history',
-        onPress: handleOpenHistory,
-        subtitle: t('homeHub.cards.profile.history.subtitle'),
-        title: t('homeHub.cards.profile.history.title'),
-        tutorial: makeTutorial('profileHistory', 32, 'Historique sportif', 'Ajoute tes expériences via le wizard historique.'),
-      },
-      {
-        accentColor: Colors.primary500,
-        icon: 'bell',
-        key: 'profile-alerts',
-        onPress: handleOpenSearchAlerts,
-        subtitle: t('homeHub.cards.profile.alerts.subtitle'),
-        title: t('homeHub.cards.profile.alerts.title'),
-        tutorial: makeTutorial(
-          'profileAlerts',
-          33,
-          'Gérer mes alertes',
-          'Configure des alertes personnalisees selon tes recherches.',
-          {
-            nextAction: 'scrollDown',
-            nextLabel: scrollDownLabel,
-            // D72 — la section « Navigation rapide » est supprimee : la chaine du
-            // tour visait sa premiere case, une etape qui n'existe plus. Elle
-            // saute donc directement au rayon Compte, le suivant a l'ecran.
-            nextTargetStepId: 'homehub-accountSwitch',
-            onNext: scrollToAccountSection,
-          },
+  const subscriptionCards = useMemo(() => {
+    // D72 — le super admin ne paie rien : pas d'abonnement (pack accueil, tache 3).
+    if (!canShowSubscriptionExperience) return [];
+
+    const remainingFreeEvents = eventPublishQuotaItem?.remaining ?? 0;
+    return [{
+      accentColor: Colors.primary500,
+      icon: 'euroCircle',
+      key: 'profile-subscription',
+      layout: 'full',
+      onPress: handleOpenSubscriptionOverview,
+      subtitle: eventPublishQuotaItem
+        ? t('homeHub.cards.profile.subscription.quota', {
+          count: remainingFreeEvents,
+          defaultValue_one: '{{status}} · {{count}} événement offert restant',
+          defaultValue_other: '{{status}} · {{count}} événements offerts restants',
+          status: subscriptionStatusMeta.label,
+          ...SANS_ECHAPPEMENT,
+        })
+        : t(
+          'homeHub.cards.profile.subscription.fallbackSubtitle',
+          'Consulte tes offres, quotas gratuits et équipes couvertes.',
         ),
-      },
-    ];
-
-    // D72 — « Modifier mon profil » disparait cote joueur : le crayon de la page
-    // profil la remplace (pack accueil, tache 3). Elle RESTE cote super admin,
-    // ou elle est la seule porte d'entree.
-    if (hasManageSection || isSuperAdmin) {
-      cards.splice(1, 0, {
-        accentColor: Colors.primary500,
-        icon: 'edit',
-        key: 'profile-edit',
-        onPress: handleEditProfile,
-        subtitle: t('homeHub.cards.profile.edit.subtitle'),
-        title: t('homeHub.cards.profile.edit.title'),
-        tutorial: makeTutorial('profileEdit', 31, 'Modifier mon profil', 'Modifie tes informations personnelles et sportives.'),
-      });
-    }
-
-    // D72 — « Ma cotisation » descend de « Navigation rapide » (supprimee) vers
-    // « Mon profil », en derniere position. Le super admin ne cotise pas.
-    // ⛔ Volontairement SANS `tutorial`, exactement comme la case « Mes reponses »
-    // posee par D57 : s'inserer au milieu d'une chaine deja liee la casserait.
-    if (!isSuperAdmin) {
-      cards.push({
-        accentColor: Colors.primary500,
-        hasAlert: homeAlerts['profile-license'],
-        icon: 'euroCircle',
-        key: 'profile-license',
-        onPress: handleOpenMyLicense,
-        // AA07 / K1 — au PLURIEL : on peut cotiser dans plusieurs clubs, et
-        // « Ma cotisation » laissait croire qu il n y en avait qu une.
-        subtitle: t('homeHub.cards.quick.license.subtitle', 'Tes statuts et ton reste à payer.'),
-        title: t('homeHub.cards.quick.license.title', 'Mes cotisations'),
-      });
-    }
-
-    if (canShowSubscriptionExperience) {
-      const remainingFreeEvents = eventPublishQuotaItem?.remaining ?? 0;
-      cards.unshift({
-        accentColor: Colors.primary500,
-        icon: 'euroCircle',
-        key: 'profile-subscription',
-        layout: 'full',
-        onPress: handleOpenSubscriptionOverview,
-        subtitle: eventPublishQuotaItem
-          ? t('homeHub.cards.profile.subscription.quota', {
-            count: remainingFreeEvents,
-            defaultValue_one: '{{status}} · {{count}} événement offert restant',
-            defaultValue_other: '{{status}} · {{count}} événements offerts restants',
-            status: subscriptionStatusMeta.label,
-            ...SANS_ECHAPPEMENT,
-          })
-          : t('homeHub.cards.profile.subscription.fallbackSubtitle', 'Consulte tes offres, quotas gratuits et équipes couvertes.'),
-        subtitleLines: 1,
-        title: t('homeHub.cards.profile.subscription.title', 'Mon abonnement'),
-      });
-    }
-
-    // P0 PARENT — un parent n'a ni historique de joueur ni cotisation a lui.
-    // Le filtre est pose ICI, en bout de chaine, plutot qu'en garde sur chaque
-    // case : une garde oubliee ne fait rougir aucun test, une liste nommee si.
-    if (isParent) return cards.filter(estVisiblePourLeParent);
-
-    return cards;
+      subtitleLines: 1,
+      title: t('homeHub.cards.profile.subscription.title', 'Mon abonnement'),
+    }];
   }, [
     Colors.primary500,
     canShowSubscriptionExperience,
     eventPublishQuotaItem,
-    handleEditProfile,
-    handleOpenHistory,
-    handleOpenMyLicense,
-    handleOpenProfile,
-    handleOpenSearchAlerts,
     handleOpenSubscriptionOverview,
-    hasManageSection,
-    homeAlerts,
-    isParent,
-    isSuperAdmin,
-    makeTutorial,
-    scrollDownLabel,
-    scrollToAccountSection,
     subscriptionStatusMeta.label,
-    t,
-  ]);
-
-  // D72 — LA SECTION « NAVIGATION RAPIDE » EST SUPPRIMEE (pack accueil, tache 3).
-  // Mon planning, Mes equipes et Messagerie vivent deja dans la barre du bas :
-  // les rappeler ici doublait trois destinations sur les quatre. La quatrieme,
-  // « Ma cotisation », a ete deplacee dans « Mon profil ».
-
-  /** @type {HomeCard[]} */
-  const accountCards = useMemo(() => ([
-    {
-      accentColor: Colors.primary500,
-      icon: 'users',
-      key: 'account-switch',
-      onPress: handleOpenAccountSwitcher,
-      subtitle: t('homeHub.cards.account.switch.subtitle'),
-      title: t('homeHub.cards.account.switch.title'),
-      tutorial: makeTutorial('accountSwitch', 50, 'Changer de compte', 'Ouvre la modal pour changer ou ajouter un compte.'),
-    },
-    {
-      accentColor: Colors.error500,
-      disabled: logoutMutation.isPending,
-      icon: 'close',
-      key: 'account-logout',
-      onPress: handleLogout,
-      subtitle: t('homeHub.cards.account.logout.subtitle'),
-      title: t('homeHub.cards.account.logout.title'),
-      tone: 'destructive',
-      tutorial: makeTutorial('accountLogout', 51, 'Déconnexion', 'Déconnecte-te proprement de l\'appareil actuel.'),
-    },
-  ]), [
-    Colors.error500,
-    Colors.primary500,
-    handleLogout,
-    handleOpenAccountSwitcher,
-    logoutMutation.isPending,
-    makeTutorial,
     t,
   ]);
 
@@ -2629,10 +2477,11 @@ function HomeHubContent({ auth, navigation, route }) {
       responsivePadding
     >
       <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-        <LeagueHeaderSwitch />
+        {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
+        <LeagueHeaderSwitch onPress={scrollToTop} />
         <View style={{ alignItems: 'center', flexDirection: 'row' }}>
           <NotificationBadge />
-          <ProfileButton />
+          <ProfileButton hasAlert={cotisationAPayer} />
         </View>
       </View>
 
@@ -2653,6 +2502,7 @@ function HomeHubContent({ auth, navigation, route }) {
         {headBanner ? (
           <HomeHeadBanner
             actions={headBanner.actions}
+            confirmation={headBanner.confirmation}
             label={headBanner.label}
             lines={headBanner.lines}
             subtitle={headBanner.subtitle}
@@ -2720,15 +2570,35 @@ function HomeHubContent({ auth, navigation, route }) {
         <View onLayout={(event) => registerSectionAnchor('search', event)} ref={(node) => registerSectionViewRef('search', node)}>
           <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.search')} />
         </View>
-        <View onLayout={(event) => registerSectionAnchor('league', event)} ref={(node) => registerSectionViewRef('league', node)}>
-          <HomeSection Alignments={Alignments} cards={leagueCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.league')} />
-        </View>
-        <View onLayout={(event) => registerSectionAnchor('profile', event)} ref={(node) => registerSectionViewRef('profile', node)}>
-          <HomeSection Alignments={Alignments} cards={profileCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.profile')} />
-        </View>
-        <View onLayout={(event) => registerSectionAnchor('account', event)} ref={(node) => registerSectionViewRef('account', node)}>
-          <HomeSection Alignments={Alignments} cards={accountCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.account')} />
-        </View>
+        {/*
+          A02 — League masquee : son cadre n'est pas rendu du tout. Une vue vide
+          compterait quand meme dans l'ecart entre sections (`gap`) et creuserait
+          un trou de 24 px entre « Rechercher » et la suite.
+        */}
+        {leagueCards.length ? (
+          <View
+            onLayout={(event) => registerSectionAnchor('league', event)}
+            ref={(node) => registerSectionViewRef('league', node)}
+          >
+            <HomeSection
+              Alignments={Alignments}
+              cards={leagueCards}
+              Fonts={Fonts}
+              registerTutorialTargetNode={registerTutorialTargetNode}
+              Spaces={Spaces}
+              title={t('homeHub.sections.league')}
+            />
+          </View>
+        ) : null}
+        {/* A17 + A21 — ce qui reste de « Mon profil » : l'abonnement (staff). */}
+        <HomeSection
+          Alignments={Alignments}
+          cards={subscriptionCards}
+          Fonts={Fonts}
+          registerTutorialTargetNode={registerTutorialTargetNode}
+          Spaces={Spaces}
+          title={t('homeHub.sections.subscription')}
+        />
 
         {/*
           🏁 « MON ENTRAÎNEMENT » EST LA DERNIÈRE SECTION DE L'ACCUEIL — décision
