@@ -161,6 +161,32 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
   };
 });
 
+// ALERTES (A20) — la liste porte désormais la création d'alerte
+// (`useAlerteEvenement`, qui tire le client HTTP) et la mémoire de la proposition
+// de première ouverture (`useFeatureTutorial`, qui lit le stockage). Hors sujet
+// ici : doublés, avec une identité fixe d'un rendu à l'autre. Leur comportement
+// est prouvé par `EventListContent.ALERTES.test.js`.
+const mockAlerteEvenement = {
+  creer: jest.fn(),
+  enCours: false,
+  estDejaCreee: () => false,
+  sports: [],
+};
+jest.mock('@/domains/searchAlert/useAlerteEvenement', () => ({
+  __esModule: true,
+  default: () => mockAlerteEvenement,
+}));
+const mockPropositionAlerte = { hasSeen: true, markSeen: jest.fn() };
+jest.mock('@/components/organisms/alerteEvenements/AlerteEvenements', () => ({
+  CarteMePrevenir: 'CarteMePrevenir',
+  GuideAlertes: 'GuideAlertes',
+  PropositionAlerte: 'PropositionAlerte',
+}));
+jest.mock('@/domains/tutorial/useFeatureTutorial', () => ({
+  __esModule: true,
+  default: () => mockPropositionAlerte,
+}));
+
 const EventListContent = require('../EventListContent').default;
 
 /** @type {any} */

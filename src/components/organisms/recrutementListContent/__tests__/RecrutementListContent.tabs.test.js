@@ -240,6 +240,16 @@ jest.mock('@/components/organisms/searchComponent/searchComponent', () => {
 
 jest.mock('@/utils/performance/searchPerformance', () => ({ markSearchPerf: jest.fn() }));
 jest.mock('@/navigation/public/publicAuthNavigation', () => ({ openPublicAuthFlow: jest.fn() }));
+// ALERTES-ANNONCES (30/09) — la liste pose la carte « Me prévenir » sous les annonces :
+// son chemin de création charge le client HTTP, qui refuse de se charger sans API_URL.
+// Doublé NEUTRE : ce test parle d'onglets (la carte a son propre témoin,
+// RecrutementListContent.ALERTES-ANNONCES.test.js).
+jest.mock('@/domains/searchAlert/useAlerteRecherche', () => ({
+  __esModule: true,
+  default: () => ({
+    creer: jest.fn(), enCours: false, estDejaCreee: () => false, sports: [],
+  }),
+}));
 
 // MARQUEURS : une phrase que SEUL l'onglet concerne affiche. Le libelle du
 // bouton ne peut pas servir — il est rendu en permanence.

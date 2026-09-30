@@ -4,11 +4,17 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { SorteAlerte, StatutAlerte } from '@/domains/searchAlert/alerteEvenement';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import {
+  EtoileAlerte,
+  NoteAlerte,
+  useEtoileAlerte,
+} from '@/components/organisms/alerteEvenements/AlerteEvenements';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -29,6 +35,12 @@ import texteInsecable from '@/utils/texteInsecable';
  * Le rayon autour de la ville que dessine le pack (« Marseille · 25 km ») n'est
  * PAS rendu : `recruitmentAdFilters` ne porte qu'une ville en texte, et le pack
  * demande explicitement de retirer une rangee plutot que de l'afficher morte.
+ *
+ * ⭐ ALERTES-ANNONCES (30/09) — l'etoile « Creer alerte » en haut a droite, la
+ * MEME que celle des evenements (A20.4, `AlerteEvenements.js`). Elle confie le
+ * BROUILLON (ce qui est regle ici, meme non applique) ET le profil choisi a
+ * `onCreateAlert`. Sans `onCreateAlert`, pas d'etoile : l'entete reste le titre
+ * seul, au noeud pres.
  */
 
 /**
@@ -70,8 +82,11 @@ const SNAP_POINTS = ['78%'];
  *  isVisible: boolean;
  *  onApply: (filters: Record<string, any>, audienceFilter: string) => void;
  *  onClose: () => void;
+ *  onCreateAlert?: (filters: Record<string, any>, audienceFilter: string) => Promise<string>;
+ *  pourUneAlerte?: boolean;
  *  showAudienceRow?: boolean;
- * }} props Les props.
+ * }} props `pourUneAlerte` : ouverte pour creer une alerte, la feuille s'ouvre
+ *   sur la rangee Ville et dit qu'une ville est necessaire.
  * @returns {import('react').ReactElement} La feuille.
  */
 function RecruitmentFiltersSheet({
@@ -80,6 +95,8 @@ function RecruitmentFiltersSheet({
   isVisible,
   onApply,
   onClose,
+  onCreateAlert = undefined,
+  pourUneAlerte = false,
   showAudienceRow = true,
 }) {
   const {
@@ -108,6 +125,12 @@ function RecruitmentFiltersSheet({
   const [audience, setAudience] = useState(audienceFilter);
   const [rangeeOuverte, setRangeeOuverte] = useState('');
   const etaitOuverteRef = useRef(false);
+  const {
+    creer: creerAlerte,
+    enCours: alerteEnCours,
+    note: noteAlerte,
+    setNote: setNoteAlerte,
+  } = useEtoileAlerte(onCreateAlert);
 
   // A chaque OUVERTURE, le brouillon repart de ce que la recherche applique
   // vraiment : sans ca, une feuille fermee sans valider garderait ses choix.
@@ -126,8 +149,9 @@ function RecruitmentFiltersSheet({
     setCategory(premiereValeur(filters?.category));
     setLevel(premiereValeur(filters?.level));
     setAudience(audienceFilter);
-    setRangeeOuverte('');
-  }, [audienceFilter, filters, isVisible]);
+    setRangeeOuverte(pourUneAlerte ? 'city' : '');
+    setNoteAlerte(pourUneAlerte ? StatutAlerte.villeManquante : '');
+  }, [audienceFilter, filters, isVisible, pourUneAlerte, setNoteAlerte]);
 
   const sportOptions = useMemo(() => (activities || []).map((/** @type {any} */ activity) => ({
     label: activity.name,
@@ -147,19 +171,36 @@ function RecruitmentFiltersSheet({
   const surface = withAlpha(Colors.primary900, 0.6);
   const bordure = withAlpha(Colors.neutral00, 0.13);
 
+  // Ce qui est regle dans la feuille, applique ou non : `appliquer` le range
+  // dans la recherche, l'etoile le confie a la creation d'alerte.
+  const brouillon = () => ({
+    ...filters,
+    category: category ? [category] : [],
+    city: city.trim(),
+    level: level ? [level] : [],
+    sport,
+  });
+
   const appliquer = () => {
-    onApply(
-      {
-        ...filters,
-        category: category ? [category] : [],
-        city: city.trim(),
-        level: level ? [level] : [],
-        sport,
-      },
-      audience,
-    );
+    onApply(brouillon(), audience);
     onClose();
   };
+
+  const titre = t('recruitmentFiltersSheet.title', 'Filtrer');
+  // Meme entete que le socle `FiltersSheet` : le titre ne passe dans une rangee
+  // QUE s'il y a une etoile, et il y prend `flex: 1` (un titre gras a sa largeur
+  // mesuree perd son dernier mot sous Android 16).
+  const entete = onCreateAlert ? (
+    <View style={[Spaces.gap[8]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+        <Text style={[Fonts.h3Bold, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
+        <EtoileAlerte enCours={alerteEnCours} onPress={() => creerAlerte(brouillon(), audience)} />
+      </View>
+      {noteAlerte ? <NoteAlerte sorte={SorteAlerte.annonce} statut={noteAlerte} /> : null}
+    </View>
+  ) : (
+    <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{titre}</Text>
+  );
 
   const reinitialiser = () => {
     setSport('');
@@ -308,11 +349,7 @@ function RecruitmentFiltersSheet({
           </TouchableOpacity>
         </View>
       )}
-      headerComponent={(
-        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('recruitmentFiltersSheet.title', 'Filtrer')}
-        </Text>
-      )}
+      headerComponent={entete}
       isVisible={isVisible}
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"
