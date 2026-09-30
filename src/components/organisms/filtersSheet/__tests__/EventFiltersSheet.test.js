@@ -1,6 +1,29 @@
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  chercherUnSport,
+  choisirLeSport,
+  lignesDeSport,
+  POPULAIRES_EN_TETE,
+  SPORTS_A09,
+} from '../../../../testSupport/temoinChoixDuSport';
 import EventFiltersSheet from '../EventFiltersSheet';
+
+// A09 — la base de sports que rend la doublure : Football seul par défaut (ce que les tests
+// d'avant attendent), la petite base du témoin A09 dans son bloc.
+const SPORTS_PAR_DEFAUT = [{ documentId: 'a-1', name: 'Football' }];
+let mockSports = SPORTS_PAR_DEFAUT;
+
+// A09 — le choix du sport porte une case « Rechercher un sport » (`Input`).
+jest.mock('@/components/molecules/input/Input', () => {
+  const { TextInput } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { onChangeText, placeholder, value }) => (
+      <TextInput onChangeText={onChangeText} placeholder={placeholder} value={value} />
+    ),
+  };
+});
 
 // D82 (E6) — LE FILET DU MARCHE EVENEMENT.
 //
@@ -85,7 +108,7 @@ jest.mock('@/domains/places/usePlaces', () => ({
 }));
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({ data: [{ documentId: 'a-1', name: 'Football' }] }),
+  useGetActivities: () => ({ data: mockSports }),
 }));
 jest.mock('@/services/category/categoryQueries', () => ({
   useGetCategories: () => ({ data: [{ documentId: 'c-1', name: 'U13' }] }),
@@ -379,11 +402,15 @@ describe('EventFiltersSheet — ce qu elle envoie a la recherche', () => {
 
     /** @type {[string, string][]} */
     const choix = [
-      ['Sport', 'a-1'],
       ['Catégorie', 'c-1'],
       ['Niveau', 'n-1'],
       ["Type d'événement", 't-1'],
     ];
+
+    // A09 — le sport se choisit par sa LIGNE dans le choix commun, plus par un sélecteur.
+    await ouvrirRangee(tree, 'Sport');
+    await choisirLeSport(tree, 'Football');
+    await ouvrirRangee(tree, 'Sport');
 
     // Une rangee ouverte REPLIE la precedente : on ouvre, on choisit, on
     // referme, sinon le selecteur trouve n'est pas celui qu'on croit.
@@ -636,5 +663,25 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
     });
     expect(trouver(tree, 'adresse')).toBeDefined();
     expect(texteVisible(tree)).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+  });
+});
+
+describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports', () => {
+  beforeEach(() => { mockSports = SPORTS_A09; });
+  afterEach(() => { mockSports = SPORTS_PAR_DEFAUT; });
+
+  it('populaires en tête (ordre d Adel), recherche sans accent, et le choix part', async () => {
+    const { onApply, tree } = await rendre();
+    await ouvrirRangee(tree, 'Sport');
+
+    // Décision d'Adel : football, basketball, handball, rugby, volleyball — Tennis attend.
+    expect(lignesDeSport(tree)).toEqual(POPULAIRES_EN_TETE);
+    // « Une recherche à la main dans TOUS les sports », accents compris.
+    await chercherUnSport(tree, 'equit');
+    expect(lignesDeSport(tree)).toEqual(['Équitation']);
+
+    await choisirLeSport(tree, 'Équitation');
+    await appuyerSur(tree, 'Voir les résultats');
+    expect(onApply.mock.calls[0][0].activity).toEqual(['a-equit']);
   });
 });

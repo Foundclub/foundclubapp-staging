@@ -1,7 +1,19 @@
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  chercherUnSport,
+  choisirLeSport,
+  lignesDeSport,
+  POPULAIRES_EN_TETE,
+  SPORTS_A09,
+} from '../../../../testSupport/temoinChoixDuSport';
 import RecruitmentFiltersSheet from '../RecruitmentFiltersSheet';
+
+// A09 — la base de sports que rend la doublure : Football seul par défaut (ce que les tests
+// d'avant attendent), la petite base du témoin A09 dans son bloc.
+const SPORTS_PAR_DEFAUT = [{ documentId: 'a-1', name: 'Football' }];
+let mockSports = SPORTS_PAR_DEFAUT;
 
 // D57 (E6) — la feuille de filtres du pack Rechercher (capture 05). Le bouton
 // qui l'ouvre et sa pastille existaient deja et n'ont PAS ete refaits ; ce
@@ -69,9 +81,7 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({
-    data: [{ documentId: 'a-1', name: 'Football' }, { documentId: 'a-2', name: 'Arts martiaux' }],
-  }),
+  useGetActivities: () => ({ data: mockSports }),
 }));
 jest.mock('@/services/category/categoryQueries', () => ({
   useGetCategories: () => ({ data: [{ documentId: 'c-1', name: 'U17' }] }),
@@ -373,13 +383,41 @@ describe('RECRUTER-TUNNEL H4 — Android 16 ne coupe plus le dernier mot', () =>
     }));
   });
 
-  it('une pastille de sport garde ses mots ensemble : « Arts martiaux » ne se coupe plus', async () => {
-    const { tree } = await rendre();
-    await ouvrirRangee(tree, 'Sport');
+  // Recolte LISTE-ANNONCES (01/10) : le sport n'est plus une pastille, c'est une LIGNE du choix
+  // du sport (A09). Cochee, son libelle passe en GRAS dans une ligne `row` : il doit s'etirer sur
+  // la largeur libre, sinon Android 16 recoupe « Arts martiaux » comme avant H4.
+  const SPORTS_H4 = [...SPORTS_PAR_DEFAUT, { documentId: 'a-2', name: 'Arts martiaux' }];
 
-    expect(libelles(tree)).toContain(`Arts${ESPACE_INSECABLE}martiaux`);
-    expect(libelles(tree)).toContain(`Tous${ESPACE_INSECABLE}les${ESPACE_INSECABLE}sports`);
-    expect(libelles(tree)).not.toContain('Arts martiaux');
+  /**
+   * Les libelles `Text` de la ligne de choix d'un sport.
+   * @param {any} tree L'arbre rendu.
+   * @param {string} nom Le nom du sport.
+   * @returns {any[]} Les noeuds `Text` du libelle.
+   */
+  const libellesDeLaLigne = (tree, nom) => tree.root.findAll(
+    (/** @type {any} */ n) => typeof n.type === 'string'
+      && ['radio', 'checkbox'].includes(n.props?.accessibilityRole)
+      && n.props?.accessibilityLabel === nom,
+  ).flatMap((/** @type {any} */ ligne) => ligne.findAll(
+    (/** @type {any} */ node) => node.type === Text && texteDuNoeud(node) === nom,
+  ));
+
+  it('une ligne de sport cochee garde ses mots : son libelle GRAS s etire sur la ligne', async () => {
+    mockSports = SPORTS_H4;
+    try {
+      const { tree } = await rendre();
+      await ouvrirRangee(tree, 'Sport');
+      await chercherUnSport(tree, 'arts');
+      await choisirLeSport(tree, 'Arts martiaux');
+
+      const libelles = libellesDeLaLigne(tree, 'Arts martiaux');
+      expect(libelles.length).toBeGreaterThan(0);
+      libelles.forEach((libelle) => {
+        expect(aplatir(libelle.props.style)).toEqual(expect.objectContaining({ flex: 1 }));
+      });
+    } finally {
+      mockSports = SPORTS_PAR_DEFAUT;
+    }
   });
 
   it('les pastilles du profil aussi', async () => {
@@ -389,15 +427,41 @@ describe('RECRUTER-TUNNEL H4 — Android 16 ne coupe plus le dernier mot', () =>
     expect(libelles(tree)).toContain(`Joueur·se·s${ESPACE_INSECABLE}et${ESPACE_INSECABLE}coachs`);
   });
 
-  it('la recherche recoit le VRAI nom du sport, sans espace insecable', async () => {
+  it('la recherche recoit le VRAI nom du sport', async () => {
+    mockSports = SPORTS_H4;
+    try {
+      const { onApply, tree } = await rendre();
+      await ouvrirRangee(tree, 'Sport');
+      await chercherUnSport(tree, 'arts');
+      await choisirLeSport(tree, 'Arts martiaux');
+      await appuyerSur(tree, 'Voir les résultats');
+
+      expect(onApply).toHaveBeenCalledWith(
+        expect.objectContaining({ sport: 'Arts martiaux' }),
+        'all',
+      );
+    } finally {
+      mockSports = SPORTS_PAR_DEFAUT;
+    }
+  });
+});
+
+describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports', () => {
+  beforeEach(() => { mockSports = SPORTS_A09; });
+  afterEach(() => { mockSports = SPORTS_PAR_DEFAUT; });
+
+  it('populaires en tête (ordre d Adel), recherche sans accent, et le choix part', async () => {
     const { onApply, tree } = await rendre();
     await ouvrirRangee(tree, 'Sport');
-    await appuyerSur(tree, `Arts${ESPACE_INSECABLE}martiaux`);
-    await appuyerSur(tree, 'Voir les résultats');
 
-    expect(onApply).toHaveBeenCalledWith(
-      expect.objectContaining({ sport: 'Arts martiaux' }),
-      'all',
-    );
+    // Décision d'Adel : football, basketball, handball, rugby, volleyball — Tennis attend.
+    expect(lignesDeSport(tree)).toEqual(POPULAIRES_EN_TETE);
+    // « Une recherche à la main dans TOUS les sports », accents compris.
+    await chercherUnSport(tree, 'equit');
+    expect(lignesDeSport(tree)).toEqual(['Équitation']);
+
+    await choisirLeSport(tree, 'Équitation');
+    await appuyerSur(tree, 'Voir les résultats');
+    expect(onApply.mock.calls[0][0].sport).toBe('Équitation');
   });
 });

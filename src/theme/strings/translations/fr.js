@@ -12632,9 +12632,10 @@ export default {
     sport: {
       all: 'Tous les sports, de A à Z',
       current: 'Sport actuel',
+      currentMany: 'Sports choisis',
       none: 'Aucun sport ne correspond.',
       pill: 'Filtrer par sport',
-      popular: 'Les plus cherchés',
+      popular: 'Sports populaires',
       search: 'Rechercher un sport',
       title: 'Choisir un sport',
     },
@@ -14121,13 +14122,20 @@ export default {
       matchesFirst: 'Les annonces compatibles restent affichées en tête.',
       matchesOnly: 'Le flux affiche uniquement les annonces compatibles.',
     },
-    matchesOnlyToggle: 'Compatibles avec mon profil',
+    matchesOnlyToggle: 'Pour moi',
     matchReasons: {
       category: 'Catégorie compatible',
       city: 'Même ville',
       level: 'Niveau compatible',
       section: 'Section compatible',
       sport: 'Sport compatible',
+    },
+    pourMoi: {
+      addSport: 'Ajoute ton sport à ton profil pour voir les annonces faites pour toi.',
+      changeCriterion: 'Changer ce critère : {{criterion}}',
+      count: '{{matching}} sur {{total}}',
+      criteria: 'Selon ton profil. Touche un critère pour le changer.',
+      signIn: 'Connecte-toi pour voir les annonces faites pour toi.',
     },
     priority: 'Prioritaires',
     publishOffer: {

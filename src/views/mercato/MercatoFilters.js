@@ -19,6 +19,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport, { basculerSport } from '@/components/organisms/choixDuSport/ChoixDuSport';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -75,7 +76,6 @@ function MercatoFilters({ navigation }) {
   const isAlertMode = createAlertMode || editAlertMode;
 
   // local states
-  const [activitySearchValue, setActivitySearchValue] = useState('');
   const [categorySearchValue, setCategorySearchValue] = useState('');
   const [positionSearchValue, setPositionSearchValue] = useState('');
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -224,22 +224,6 @@ function MercatoFilters({ navigation }) {
       ...(geohash && { geohash }),
     };
   }, [getGeohashForPointAndRadius, resolveActivityNames, toArray]);
-
-  const activities = useMemo(() => {
-    const formattedActivities = allActivities?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId || '',
-    })) || [];
-
-    if (activitySearchValue) {
-      return formattedActivities.filter(
-        (activity) => activity.label.toLowerCase().includes(
-          activitySearchValue.trim().toLowerCase(),
-        ),
-      );
-    }
-    return formattedActivities;
-  }, [allActivities, activitySearchValue]);
 
   const categories = useMemo(() => {
     const formattedCategories = allSections?.map(({ documentId, name }) => ({
@@ -559,23 +543,16 @@ function MercatoFilters({ navigation }) {
           }) => (
             <View>
               {renderLabel('Sport', 'activity')}
-              <AutocompleteSelect
-                error={getFieldError({ errors: formErrors, fieldName: 'activity' })}
-                isMulti
-                isSearchable
-                options={activities}
-                placeholder={t('mercatoFilters.placeholders.activity', 'Ex: Football, Tennis...')}
-                searchValue={activitySearchValue}
-                setSearchValue={setActivitySearchValue}
-                setValue={(/** @type {Option | Option[] | undefined} */ option) => {
-                  const val = Array.isArray(option)
-                    ? option.map((o) => String(o.value))
-                    : (option?.value ? [String(option.value)] : []);
-                  onChange(val);
-                  // Reset position when activity changes
+              {/* A09 — le choix du sport commun à toute la recherche (plusieurs sports
+                  possibles). Changer de sport vide les postes : ils appartenaient à l'autre. */}
+              <ChoixDuSport
+                multiple
+                onChoisir={(cle) => {
+                  onChange(basculerSport(value, cle));
                   setValue('position', []);
                 }}
-                value={Array.isArray(value) ? value : (value ? [String(value)] : [])}
+                sports={allActivities}
+                valeurs={value}
               />
             </View>
           )}

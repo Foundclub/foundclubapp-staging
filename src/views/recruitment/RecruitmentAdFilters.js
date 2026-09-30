@@ -17,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
+import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
@@ -55,7 +56,6 @@ function RecruitmentAdFilters({ navigation }) {
   const [{ recruitmentAdFilters }, appDispatch] = useAppContext();
   const { Alignments, Spaces } = useTheme();
 
-  const [sportSearch, setSportSearch] = useState('');
   const [sectionSearch, setSectionSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [levelSearch, setLevelSearch] = useState('');
@@ -108,16 +108,6 @@ function RecruitmentAdFilters({ navigation }) {
 
   const selectedSport = watch('sport');
   const selectedPosition = watch('position');
-
-  const sportOptions = useMemo(() => {
-    const options = activities?.map((activity) => ({
-      label: activity.name,
-      value: activity.name,
-    })) || [];
-
-    if (!sportSearch.trim()) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(sportSearch.toLowerCase()));
-  }, [activities, sportSearch]);
 
   const sectionOptions = useMemo(() => {
     const options = sections?.map((section) => ({
@@ -225,27 +215,15 @@ function RecruitmentAdFilters({ navigation }) {
         <Controller
           control={control}
           name="sport"
-          render={({
-            field: {
-              name,
-              onBlur,
-              onChange,
-              ref,
-              value,
-            },
-          }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: name })}
-              isSearchable
-              label={t('recruitmentAdFilters.fields.sport.label', 'Sport')}
-              onBlur={onBlur}
-              options={sportOptions}
-              placeholder={t('recruitmentAdFilters.fields.sport.placeholder', 'Sélectionner un sport')}
-              ref={ref}
-              searchValue={sportSearch}
-              setSearchValue={setSportSearch}
-              setValue={(option) => onChange(option?.value || '')}
-              value={getOptionLabel(sportOptions, value)}
+          render={({ field: { onChange, value } }) => (
+            // A09 — le choix du sport commun à toute la recherche. Les annonces se filtrent
+            // par le NOM du sport.
+            <ChoixDuSport
+              cle="name"
+              libelle={t('recruitmentAdFilters.fields.sport.label', 'Sport')}
+              onChoisir={onChange}
+              sports={activities}
+              valeurs={value}
             />
           )}
         />

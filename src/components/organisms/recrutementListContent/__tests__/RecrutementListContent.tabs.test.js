@@ -256,7 +256,9 @@ jest.mock('@/domains/searchAlert/useAlerteRecherche', () => ({
 const MARQUEUR = {
   annonces: 'Consulte et gère les annonces publiées pour tes équipes.',
   candidatures: 'Suivi de tes candidatures',
-  opportunites: 'Compatibles avec mon profil',
+  // LISTE-ANNONCES (A08, 30/09) : l'interrupteur « Compatibles avec mon profil »
+  // s'appelle désormais « Pour moi » (décision d'Adel) — même place, même rôle.
+  opportunites: 'Pour moi',
   profils: 'Profils ouverts au recrutement',
 };
 
@@ -492,7 +494,7 @@ describe('RecrutementListContent — ce que chaque onglet affiche (relevé L35)'
     await appuyerSur(tree, 'Opportunités');
     const rendu = texteVisible(tree);
 
-    expect(rendu).toContain('Compatibles avec mon profil');
+    expect(rendu).toContain('Pour moi');
     expect(rendu).toContain('Olympique Public');
     expect(rendu).toContain('Postuler');
     expect(mockGetRecruitmentAds).toHaveBeenCalled();

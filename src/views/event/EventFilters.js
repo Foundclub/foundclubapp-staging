@@ -21,6 +21,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport, { basculerSport } from '@/components/organisms/choixDuSport/ChoixDuSport';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -101,7 +102,6 @@ function EventFilters({ navigation }) {
   const isAlertMode = createAlertMode || editAlertMode;
 
   // local states
-  const [activitySearchValue, setActivitySearchValue] = useState('');
   const [categorySearchValue, setCategorySearchValue] = useState('');
   const [clubSearchValue, setClubSearchValue] = useState('');
   const [levelSearchValue, setLevelSearchValue] = useState('');
@@ -291,22 +291,6 @@ function EventFilters({ navigation }) {
     { clubId: selectedClub || eventFilters?.club?.value || undefined },
     { enabled: !!selectedClub },
   );
-
-  const activities = useMemo(() => {
-    const formattedActivities = allActivities?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId || '',
-    })) || [];
-
-    if (activitySearchValue) {
-      return formattedActivities.filter(
-        (activity) => activity.label.toLowerCase().includes(
-          activitySearchValue.trim().toLowerCase(),
-        ),
-      );
-    }
-    return formattedActivities;
-  }, [allActivities, activitySearchValue]);
 
   const categories = useMemo(() => {
     const formattedCategories = allCategories?.map(({ documentId, name }) => ({
@@ -735,20 +719,13 @@ function EventFilters({ navigation }) {
           render={({
             field: { onChange, value },
           }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: 'activity' })}
-              isMulti
-              isSearchable
-              label={t('eventFilters.fields.activity.label')}
-              options={activities}
-              placeholder={t('eventFilters.fields.activity.placeholder')}
-              searchValue={activitySearchValue}
-              setSearchValue={setActivitySearchValue}
-              setValue={(/** @type {Option | undefined} */option) => {
-                const val = Array.isArray(option) ? option.map((o) => o.value) : option?.value || '';
-                onChange(val);
-              }}
-              value={/** @type {any} */ (value || '')}
+            // A09 — le choix du sport commun à toute la recherche (plusieurs sports possibles).
+            <ChoixDuSport
+              libelle={t('eventFilters.fields.activity.label')}
+              multiple
+              onChoisir={(cle) => onChange(basculerSport(value, cle))}
+              sports={allActivities}
+              valeurs={value}
             />
           )}
         />

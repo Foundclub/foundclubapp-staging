@@ -15,6 +15,7 @@ import {
   NoteAlerte,
   useEtoileAlerte,
 } from '@/components/organisms/alerteEvenements/AlerteEvenements';
+import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -364,7 +365,9 @@ function RecruitmentFiltersSheet({
           'sport',
           t('recruitmentFiltersSheet.sport', 'Sport'),
           libelleDe(sportOptions, sport, TOUS_SPORTS),
-          rendreChoix(sportOptions, sport, setSport, TOUS_SPORTS),
+          // A09 — le choix du sport commun à toute la recherche. Les annonces se filtrent
+          // par le NOM du sport (`sport` est un texte côté serveur).
+          <ChoixDuSport cle="name" onChoisir={setSport} sports={activities} valeurs={[sport]} />,
         )}
 
         {rendreRangee(

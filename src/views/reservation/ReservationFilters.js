@@ -2,7 +2,7 @@ import { joiResolver } from '@hookform/resolvers/joi';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 
 import Slider from '@react-native-community/slider';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,10 +16,10 @@ import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
@@ -48,7 +48,6 @@ const filtersSchema = Joi.object({
  */
 function ReservationFilters({ navigation }) {
   // local states
-  const [activitySearchValue, setActivitySearchValue] = useState('');
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalContent, setInfoModalContent] = useState({ content: '', title: '' });
 
@@ -82,34 +81,6 @@ function ReservationFilters({ navigation }) {
 
   // computed
   const city = watch('city');
-
-  const activities = useMemo(() => {
-    const formattedActivities = allActivities?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId || '',
-    })) || [];
-
-    if (activitySearchValue) {
-      return formattedActivities.filter(
-        (activity) => activity.label.toLowerCase().includes(
-          activitySearchValue.trim().toLowerCase(),
-        ),
-      );
-    }
-    return formattedActivities;
-  }, [allActivities, activitySearchValue]);
-
-  /**
-   * Get the label for a given option value
-   * @param {Option[]} options - The options
-   * @param {string} value - The value
-   * @returns {Option | null} The option label
-   */
-  const getOptionLabel = (options, value) => {
-    if (!value || !options) return null;
-    const option = options.find((opt) => opt.value === value);
-    return option || null;
-  };
 
   /**
    * Handle apply filters
@@ -262,15 +233,13 @@ function ReservationFilters({ navigation }) {
           control={control}
           name="activity"
           render={({ field: { onChange, value } }) => (
-            <AutocompleteSelect
-              error={getFieldError({ errors: formErrors, fieldName: 'activity' })}
-              label={t('eventFilters.fields.activity.label', 'Sport')}
-              options={activities}
-              placeholder={t('eventFilters.fields.activity.placeholder', 'Sélectionne un sport')}
-              searchValue={activitySearchValue}
-              setSearchValue={setActivitySearchValue}
-              setValue={(option) => onChange(option?.value || '')}
-              value={getOptionLabel(activities, value)}
+            // A09 — le choix du sport commun à toute la recherche : populaires en haut,
+            // puis la recherche dans tous les sports.
+            <ChoixDuSport
+              libelle={t('eventFilters.fields.activity.label', 'Sport')}
+              onChoisir={onChange}
+              sports={allActivities}
+              valeurs={value}
             />
           )}
         />

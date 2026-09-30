@@ -1,6 +1,18 @@
 import renderer, { act } from 'react-test-renderer';
 
+import {
+  chercherUnSport,
+  choisirLeSport,
+  lignesDeSport,
+  POPULAIRES_EN_TETE,
+  SPORTS_A09,
+} from '../../../../testSupport/temoinChoixDuSport';
 import ReservationFiltersSheet from '../ReservationFiltersSheet';
+
+// A09 — la base de sports que rend la doublure : Football seul par défaut (ce que les tests
+// d'avant attendent), la petite base du témoin A09 dans son bloc.
+const SPORTS_PAR_DEFAUT = [{ documentId: 'a-1', name: 'Football' }];
+let mockSports = SPORTS_PAR_DEFAUT;
 
 // D82 (E6) — LE FILET DU MARCHE RESERVATION.
 //
@@ -94,7 +106,7 @@ jest.mock('@/domains/places/usePlaces', () => ({
 }));
 
 jest.mock('@/services/activity/activityQueries', () => ({
-  useGetActivities: () => ({ data: [{ documentId: 'a-1', name: 'Football' }] }),
+  useGetActivities: () => ({ data: mockSports }),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -358,9 +370,8 @@ describe('ReservationFiltersSheet — ce qu elle envoie a la recherche', () => {
     const { onApply, tree } = await rendre();
 
     await ouvrirRangee(tree, 'Sport');
-    await act(async () => {
-      trouver(tree, 'select').props.setValue({ value: 'a-1' });
-    });
+    // A09 — le sport se choisit par sa LIGNE dans le choix commun, plus par un sélecteur.
+    await choisirLeSport(tree, 'Football');
     await appuyerSur(tree, 'Voir les résultats');
 
     expect(onApply.mock.calls[0][0].activity).toBe('a-1');
@@ -439,5 +450,25 @@ describe('ReservationFiltersSheet — ce qu elle envoie a la recherche', () => {
     const texte = texteVisible(tree);
     expect(texte).toContain('Football');
     expect(texte).toContain('Marseille · 30 km');
+  });
+});
+
+describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports', () => {
+  beforeEach(() => { mockSports = SPORTS_A09; });
+  afterEach(() => { mockSports = SPORTS_PAR_DEFAUT; });
+
+  it('populaires en tête (ordre d Adel), recherche sans accent, et le choix part', async () => {
+    const { onApply, tree } = await rendre();
+    await ouvrirRangee(tree, 'Sport');
+
+    // Décision d'Adel : football, basketball, handball, rugby, volleyball — Tennis attend.
+    expect(lignesDeSport(tree)).toEqual(POPULAIRES_EN_TETE);
+    // « Une recherche à la main dans TOUS les sports », accents compris.
+    await chercherUnSport(tree, 'equit');
+    expect(lignesDeSport(tree)).toEqual(['Équitation']);
+
+    await choisirLeSport(tree, 'Équitation');
+    await appuyerSur(tree, 'Voir les résultats');
+    expect(onApply.mock.calls[0][0].activity).toBe('a-equit');
   });
 });
