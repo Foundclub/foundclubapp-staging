@@ -1,6 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import Slider from '@react-native-community/slider';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
@@ -14,10 +14,10 @@ import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import OnboardingOverlay from '@/components/molecules/onboardingOverlay/OnboardingOverlay';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
@@ -103,8 +103,6 @@ function ClubFilters(props) {
  * @param root0.route
  */
 function ClubFiltersContent({ navigation, route }) {
-  // local states
-  const [activitySearchValue, setActivitySearchValue] = useState('');
   const fromOnboardingAffiliation = Boolean(route?.params?.fromOnboardingAffiliation);
 
   // hooks
@@ -124,7 +122,6 @@ function ClubFiltersContent({ navigation, route }) {
   const {
     data: allActivities,
     error: activitiesError,
-    isLoading: isLoadingActivities,
     refetch: refetchActivities,
   } = useGetActivities();
 
@@ -200,30 +197,6 @@ function ClubFiltersContent({ navigation, route }) {
     appDispatch({ payload: {}, type: 'SET_CLUB_FILTERS' });
     navigation.goBack();
   };
-
-  const activities = useMemo(() => {
-    const formattedActivities = allActivities?.map(({ documentId, name }) => ({
-      label: name,
-      value: documentId,
-    })) || [];
-
-    if (activitySearchValue) {
-      return formattedActivities.filter(
-        (activity) => activity.label.toLowerCase().includes(
-          activitySearchValue.trim().toLowerCase(),
-        ),
-      );
-    }
-
-    return formattedActivities;
-  }, [allActivities, activitySearchValue]);
-
-  /**
-   * Get the label of an activity based on its value
-   * @param {string} value
-   * @returns {string} The label of the activity
-   */
-  const getActivityLabel = (value) => activities.find((activity) => activity.value === value)?.label || '';
 
   return (
     <ScreenContainer
@@ -355,28 +328,16 @@ function ClubFiltersContent({ navigation, route }) {
             control={control}
             name="activity"
             render={({
-              field: { onChange, ref, value },
+              field: { onChange, value },
             }) => (
               <View style={[Spaces.gap[12]]}>
-                <AutocompleteSelect
-                  disabled={Boolean(activitiesError)}
-                  isLoading={isLoadingActivities}
-                  isSearchable
-                  label={t('clubFilters.fields.activity.label')}
-                  options={activities}
-                  placeholder={t('clubFilters.fields.activity.placeholder')}
-                  ref={ref}
-                  searchValue={activitySearchValue}
-                  setSearchValue={setActivitySearchValue}
-                  setValue={
-                    /**
-                     * Handles selection of an activity option
-                     * @param {{value: string}} option The selected option
-                     * @returns {void}
-                     */
-                    (option) => onChange(option?.value || '')
-                  }
-                  value={getActivityLabel(value)}
+                {/* A09 — le choix du sport commun à toute la recherche : populaires en haut,
+                    puis la recherche dans tous les sports. */}
+                <ChoixDuSport
+                  libelle={t('clubFilters.fields.activity.label')}
+                  onChoisir={onChange}
+                  sports={allActivities}
+                  valeurs={value}
                 />
                 {activitiesError ? (
                   <View style={[Spaces.gap[8]]}>

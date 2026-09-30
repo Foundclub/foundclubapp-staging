@@ -17,6 +17,7 @@ import {
 } from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport, { basculerSport } from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
@@ -128,7 +129,6 @@ function EventFiltersSheet({
   const [team, setTeam] = useState(/** @type {Option | null} */ (null));
   const [type, setType] = useState(/** @type {string[]} */ ([]));
 
-  const [rechercheSport, setRechercheSport] = useState('');
   const [rechercheCategorie, setRechercheCategorie] = useState('');
   const [rechercheClub, setRechercheClub] = useState('');
   const [rechercheNiveau, setRechercheNiveau] = useState('');
@@ -159,7 +159,6 @@ function EventFiltersSheet({
     setRadius(Number(filters?.radius) || RAYON_PAR_DEFAUT);
     setTeam(filters?.team?.value ? filters.team : null);
     setType(enTableau(filters?.type));
-    setRechercheSport('');
     setRechercheCategorie('');
     setRechercheClub('');
     setRechercheNiveau('');
@@ -309,17 +308,20 @@ function EventFiltersSheet({
   });
 
   const rows = [
-    rangeeMultiple({
-      cle: 'activity',
-      libelle: t('eventFilters.fields.activity.label', 'Sport'),
-      options: sportOptions,
-      placeholder: t('eventFilters.fields.activity.placeholder', 'Sélectionner un sport'),
-      recherche: rechercheSport,
-      repli: TOUS_SPORTS,
-      setRecherche: setRechercheSport,
-      setValeurs: setActivity,
-      valeurs: activity,
-    }),
+    // A09 — le choix du sport commun à toute la recherche (plusieurs sports possibles ici).
+    {
+      content: (
+        <ChoixDuSport
+          multiple
+          onChoisir={(cle) => setActivity((avant) => basculerSport(avant, cle))}
+          sports={allActivities}
+          valeurs={activity}
+        />
+      ),
+      key: 'activity',
+      label: t('eventFilters.fields.activity.label', 'Sport'),
+      value: libelleDeLaSelection(sportOptions, activity, TOUS_SPORTS),
+    },
     {
       content: (
         <View style={[Spaces.gap[12]]}>

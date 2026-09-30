@@ -11971,9 +11971,10 @@ export default {
     sport: {
       all: 'All sports, A to Z',
       current: 'Current sport',
+      currentMany: 'Selected sports',
       none: 'No sport matches.',
       pill: 'Filter by sport',
-      popular: 'Most searched',
+      popular: 'Popular sports',
       search: 'Search for a sport',
       title: 'Choose a sport',
     },
@@ -13353,13 +13354,20 @@ export default {
       matchesFirst: 'Matching ads stay at the top.',
       matchesOnly: 'The feed only shows matching ads.',
     },
-    matchesOnlyToggle: 'Matching my profile',
+    matchesOnlyToggle: 'For me',
     matchReasons: {
       category: 'Matching category',
       city: 'Same city',
       level: 'Matching level',
       section: 'Matching section',
       sport: 'Matching sport',
+    },
+    pourMoi: {
+      addSport: 'Add your sport to your profile to see the ads made for you.',
+      changeCriterion: 'Change this criterion: {{criterion}}',
+      count: '{{matching}} of {{total}}',
+      criteria: 'Based on your profile. Tap a criterion to change it.',
+      signIn: 'Sign in to see the ads made for you.',
     },
     priority: 'Priority',
     publishOffer: {

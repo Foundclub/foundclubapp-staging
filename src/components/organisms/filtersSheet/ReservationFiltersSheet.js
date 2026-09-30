@@ -8,10 +8,10 @@ import { Text, View } from 'react-native';
 import usePlaces from '@/domains/places/usePlaces';
 import useTheme from '@/theme/themeContext';
 
-import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 
@@ -70,7 +70,6 @@ function ReservationFiltersSheet({
   const [city, setCity] = useState(/** @type {any} */ (undefined));
   const [maxPrice, setMaxPrice] = useState('');
   const [radius, setRadius] = useState(RAYON_PAR_DEFAUT);
-  const [rechercheSport, setRechercheSport] = useState('');
   const etaitOuverteRef = useRef(false);
 
   // Le brouillon repart de ce que la recherche applique vraiment a CHAQUE
@@ -86,19 +85,12 @@ function ReservationFiltersSheet({
       ? ''
       : String(filters.maxPrice));
     setRadius(Number(filters?.radius) || RAYON_PAR_DEFAUT);
-    setRechercheSport('');
   }, [filters, isVisible]);
 
   const sportOptions = useMemo(() => (allActivities || []).map((/** @type {any} */ item) => ({
     label: item.name,
     value: item.documentId || '',
   })), [allActivities]);
-
-  const sportOptionsFiltrees = useMemo(() => {
-    const terme = rechercheSport.trim().toLowerCase();
-    if (!terme) return sportOptions;
-    return sportOptions.filter((option) => option.label.toLowerCase().includes(terme));
-  }, [rechercheSport, sportOptions]);
 
   const libelleSport = useMemo(
     () => sportOptions.find((option) => option.value === activity)?.label || '',
@@ -147,17 +139,10 @@ function ReservationFiltersSheet({
 
   const rows = [
     {
+      // A09 — le choix du sport commun à toute la recherche : populaires en haut, puis la
+      // recherche dans tous les sports.
       content: (
-        <AutocompleteSelect
-          isSearchable
-          label={t('eventFilters.fields.activity.label', 'Sport')}
-          options={sportOptionsFiltrees}
-          placeholder={t('eventFilters.fields.activity.placeholder', 'Sélectionne un sport')}
-          searchValue={rechercheSport}
-          setSearchValue={setRechercheSport}
-          setValue={(/** @type {any} */ option) => setActivity(option?.value || '')}
-          value={libelleSport}
-        />
+        <ChoixDuSport onChoisir={setActivity} sports={allActivities} valeurs={[activity]} />
       ),
       key: 'activity',
       label: t('eventFilters.fields.activity.label', 'Sport'),

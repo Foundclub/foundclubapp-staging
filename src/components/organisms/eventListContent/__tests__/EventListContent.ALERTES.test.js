@@ -1,5 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { choisirLeSport } from '../../../../testSupport/temoinChoixDuSport';
+
 // ALERTES (audit V1, A20) — « MES ALERTES ARRIVE TROP TARD ».
 //
 // Constat de l'audit : on ne crée une alerte qu'en allant la chercher dans
@@ -825,9 +827,10 @@ describe('A20.4 — l étoile en haut à droite des filtres', () => {
     await ouvrirLesFiltres(tree);
 
     // On change le sport DANS la feuille, sans appliquer : l'étoile prend le brouillon.
+    // LISTE-ANNONCES (A09) : le sport se coche / décoche par sa LIGNE dans le choix commun.
     await ouvrirRangee(tree, 'Sport');
-    const selecteur = tree.root.findAll((/** @type {any} */ n) => n.props?.testID === 'select')[0];
-    await act(async () => { selecteur.props.setValue([{ value: 'a-hand' }]); });
+    await choisirLeSport(tree, 'Football');
+    await choisirLeSport(tree, 'Handball');
 
     await act(async () => {
       await parEtiquette(tree, 'Créer une alerte avec ces filtres').props.onPress();

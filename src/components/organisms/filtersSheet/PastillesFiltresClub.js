@@ -17,15 +17,18 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import Input from '@/components/molecules/input/Input';
 // eslint-disable-next-line max-len -- un chemin de module ne se coupe pas
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import ChoixDuSport, {
+  Intertitre,
+  LigneDeChoix,
+} from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetTerritoires } from '@/services/annuaire/annuaireQueries';
 
 import {
-  filtresAvecLieu, libelleDuLieu, normaliserLieu, optionsDeTerritoires, RAYON_PAR_DEFAUT,
+  filtresAvecLieu, libelleDuLieu, optionsDeTerritoires, RAYON_PAR_DEFAUT,
 } from './lieuDesFiltresClub';
 
 // Les types de la bibliothèque du curseur ne se lisent pas comme un composant JSX (erreur TS2786,
@@ -48,74 +51,9 @@ const Curseur = /** @type {any} */ (Slider);
 const LARGEUR_LISTE_DEROULANTE = 1024;
 const LARGEUR_PANNEAU = 340;
 
-// « Les plus cherchés » : la planche nomme ceux-là. Sans mesure d'audience à ce jour, l'ordre est
-// celui des sports aux plus gros annuaires (football, basketball, tennis, handball, rugby).
-// ponytail: une liste écrite à la main ; voie de sortie = la trier par les recherches réelles.
-const SPORTS_LES_PLUS_CHERCHES = [
-  'football', 'basketball', 'tennis', 'handball', 'rugby', 'natation',
-];
-const NOMBRE_LES_PLUS_CHERCHES = 4;
-
-/**
- * Une ligne de choix, cochée ou non (rôle « radio » : un seul choix à la fois).
- * @param {{ coche: boolean, libelle: string, onPress: () => void }} props Les props.
- * @returns {import('react').ReactElement} La ligne.
- */
-function LigneDeChoix({ coche, libelle, onPress }) {
-  const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
-  return (
-    <TouchableOpacity
-      accessibilityLabel={libelle}
-      accessibilityRole="radio"
-      activeOpacity={0.8}
-      // `aria-*` et non `accessibilityState` : react-native-web 0.21 ne traduit plus ce dernier
-      // (le site n'aurait su ni la case cochée, ni la pastille ouverte).
-      aria-checked={coche}
-      onPress={onPress}
-      style={[
-        Spaces.paddingHorizontal[12],
-        {
-          alignItems: 'center',
-          backgroundColor: coche ? withAlpha(Colors.primary500, 0.14) : 'transparent',
-          borderColor: coche ? Colors.primary500 : withAlpha(Colors.neutral00, 0.08),
-          borderRadius: 12,
-          borderWidth: 1,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          minHeight: 48,
-        },
-      ]}
-    >
-      <Text
-        numberOfLines={1}
-        style={[coche ? Fonts.p2Bold : Fonts.p2, Fonts.neutral00, { flexShrink: 1 }]}
-      >
-        {libelle}
-      </Text>
-      {coche ? <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>✓</Text> : null}
-    </TouchableOpacity>
-  );
-}
-
-/**
- * Un intertitre en capitales (« SPORT ACTUEL », « LES PLUS CHERCHÉS »).
- * @param {{ children: string }} props Les props.
- * @returns {import('react').ReactElement} L'intertitre.
- */
-function Intertitre({ children }) {
-  const { Colors, Fonts } = /** @type {any} */ (useTheme());
-  return (
-    <Text
-      style={[
-        Fonts.p4Bold,
-        { color: Colors.neutral300, letterSpacing: 1.2, textTransform: 'uppercase' },
-      ]}
-    >
-      {children}
-    </Text>
-  );
-}
-
+// A09 (30/09) — le choix du sport, sa ligne de choix et ses intertitres vivent désormais dans
+// `choixDuSport/ChoixDuSport.js` : LE même choix pour tous les filtres de sport de la recherche.
+// « Les plus cherchés » y sont devenus les sports populaires d'Adel.
 /**
  * Une pastille écrite, avec son chevron.
  * @param {{
@@ -161,109 +99,6 @@ function Pastille({
       </Text>
       <Text style={[Fonts.p3Bold, { color: encre }]}>▾</Text>
     </TouchableOpacity>
-  );
-}
-
-/**
- * Le choix du sport : la recherche du panneau, le sport actuel coché, les plus cherchés, puis tous
- * les sports de A à Z. Un appui = le sport est appliqué.
- * @param {{
- *  activites: any[],
- *  activiteActuelle: string,
- *  auFocus: boolean,
- *  onChoisir: (documentId: string) => void,
- * }} props Les props.
- * @returns {import('react').ReactElement} Le contenu du choix.
- */
-function ChoixDuSport({
-  activiteActuelle, activites, auFocus, onChoisir,
-}) {
-  const { t } = useTranslation();
-  const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
-  const [recherche, setRecherche] = useState('');
-  const [toutAfficher, setToutAfficher] = useState(false);
-  const TOUS_SPORTS = t('clubFiltersSheet.allSports', 'Tous les sports');
-
-  const sportsAlphabetiques = useMemo(
-    () => [...activites].sort(
-      (a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'fr'),
-    ),
-    [activites],
-  );
-  const actuel = activites.find((item) => item?.documentId === activiteActuelle) || null;
-  const lesPlusCherches = useMemo(() => SPORTS_LES_PLUS_CHERCHES
-    .map((slug) => activites.find((item) => normaliserLieu(item?.name) === slug))
-    .filter((item) => item && item.documentId !== activiteActuelle)
-    .slice(0, NOMBRE_LES_PLUS_CHERCHES), [activites, activiteActuelle]);
-  const terme = normaliserLieu(recherche);
-  const trouves = terme
-    ? sportsAlphabetiques.filter((item) => normaliserLieu(item?.name).includes(terme))
-    : [];
-
-  const ligne = (/** @type {any} */ item) => (
-    <LigneDeChoix
-      coche={item.documentId === activiteActuelle}
-      key={item.documentId}
-      libelle={item.name}
-      onPress={() => onChoisir(item.documentId)}
-    />
-  );
-
-  return (
-    <View style={[Spaces.gap[12]]}>
-      <Input
-        autoFocus={auFocus}
-        density="default"
-        icon="search"
-        onChangeText={setRecherche}
-        placeholder={t('pastillesFiltresClub.sport.search', 'Rechercher un sport')}
-        placeholderTextColor={Colors.neutral300}
-        value={recherche}
-      />
-      {terme ? (
-        <View style={[Spaces.gap[8]]}>
-          {trouves.length ? trouves.map(ligne) : (
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {t('pastillesFiltresClub.sport.none', 'Aucun sport ne correspond.')}
-            </Text>
-          )}
-        </View>
-      ) : (
-        <View style={[Spaces.gap[8]]}>
-          <Intertitre>{t('pastillesFiltresClub.sport.current', 'Sport actuel')}</Intertitre>
-          <LigneDeChoix
-            coche
-            libelle={actuel?.name || TOUS_SPORTS}
-            onPress={() => onChoisir(activiteActuelle)}
-          />
-          {lesPlusCherches.length ? (
-            <Intertitre>{t('pastillesFiltresClub.sport.popular', 'Les plus cherchés')}</Intertitre>
-          ) : null}
-          {lesPlusCherches.map(ligne)}
-          {toutAfficher ? (
-            <>
-              <Intertitre>
-                {t('pastillesFiltresClub.sport.all', 'Tous les sports, de A à Z')}
-              </Intertitre>
-              {activiteActuelle ? (
-                <LigneDeChoix coche={false} libelle={TOUS_SPORTS} onPress={() => onChoisir('')} />
-              ) : null}
-              {sportsAlphabetiques.map(ligne)}
-            </>
-          ) : (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => setToutAfficher(true)}
-              style={[Spaces.paddingHorizontal[4], { justifyContent: 'center', minHeight: 44 }]}
-            >
-              <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
-                {t('pastillesFiltresClub.sport.all', 'Tous les sports, de A à Z')}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
   );
 }
 
@@ -411,12 +246,12 @@ function PastillesFiltresClub({ filters, onApply }) {
   if (ouvert === 'sport') {
     contenu = (
       <ChoixDuSport
-        activiteActuelle={activiteActuelle}
-        activites={activites}
         // Sur le téléphone natif, le clavier recouvrirait la liste dès l'ouverture de la feuille :
         // le focus automatique est réservé au site (maquette : « la recherche prend le focus »).
         auFocus={Platform.OS === 'web'}
         onChoisir={choisirSport}
+        sports={activites}
+        valeurs={[activiteActuelle]}
       />
     );
   } else if (ouvert === 'lieu') {
