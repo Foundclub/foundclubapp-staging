@@ -4,6 +4,7 @@ import React, {
 
 import useTheme from '@/theme/themeContext';
 
+import { LEAGUE_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
 import { storageBackend } from '@/platform/storage';
 
 export const storage = {
@@ -38,6 +39,12 @@ export function AppModeProvider({ children }) {
   const { changeTheme } = useTheme();
 
   const getInitialMode = () => {
+    // A02 (audit V1, décision d'Adel du 30/09, option A) — la League disparaît
+    // COMPLÈTEMENT de l'accueil. Or ce mode choisit l'écran d'arrivée
+    // (`PrivateNavigator.js`, `useAuth.js`) : sans cette garde, quiconque avait
+    // touché le logo une fois redémarrerait DANS la League. Le choix mémorisé
+    // n'est pas effacé : rallumer `LEAGUE_SUR_ACCUEIL` le rend tel quel.
+    if (!LEAGUE_SUR_ACCUEIL) return 'classic';
     const storedMode = storage.getString(STORAGE_KEY);
     return storedMode === 'gold' ? 'gold' : 'classic';
   };

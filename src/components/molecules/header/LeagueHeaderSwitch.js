@@ -1,7 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,16 +14,29 @@ import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { LEAGUE_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
 import { useAppMode } from '@/context/AppModeContext';
 
 /**
- * Toggle between the classic FoundClub home and the League home.
+ * Le logo en haut à gauche de l'accueil, de la recherche et des onglets.
+ *
+ * 🏠 A01 + A02 (audit V1, décision d'Adel du 30/09, option A) : « le logo ramène à
+ * l'accueil — le même logo, la même police ». Tant que la League est masquée
+ * (`LEAGUE_SUR_ACCUEIL`, `config/fonctionsMasquees.js`), ce n'est PLUS un
+ * interrupteur FoundClub / League : c'est le logo seul, au format de l'accueil
+ * FoundClub, et un appui ramène en haut de l'accueil. L'interrupteur d'avant est
+ * gardé tel quel plus bas : rallumer la League le rend.
+ * @param {{ onPress?: () => void }} [props] - `onPress` : le geste de l'écran qui
+ *   EST l'accueil (remonter en haut). Absent, le logo ramène à l'accueil.
  * @returns {import('react').ReactElement}
  */
-function LeagueHeaderSwitch() {
+function LeagueHeaderSwitch({ onPress } = {}) {
   const { Colors, Fonts, Images } = useTheme();
-  const { isGold, toggleMode } = useAppMode();
-  const navigation = useNavigation();
+  const { isGold, setMode, toggleMode } = useAppMode();
+  // Les routes de l'app ne sont pas déclarées au typage de React Navigation :
+  // sans cette annotation, chaque `navigate` est une erreur de type (`never`).
+  const navigation = /** @type {any} */ (useNavigation());
+  const { t } = useTranslation();
   const logoWidth = isGold ? 100 : 140;
   const logoHeight = isGold ? 18 : 26;
   const leagueSectionWidth = isGold ? 118 : 92;
@@ -48,6 +63,47 @@ function LeagueHeaderSwitch() {
 
     navigation.navigate(targetRoute);
   }, [isGold, navigation, toggleMode]);
+
+  // A01 — RETOUR À L'ACCUEIL, et à sa RACINE.
+  // 🪤 `navigate('HomeTab')` tout court EMPILE une seconde copie de l'onglet sous
+  // React Navigation 7 dès qu'on n'y est pas (StackRouter, `NAVIGATE` : il ne
+  // revient en arrière qu'avec `pop`) — le défaut A22 de l'audit. D'où `pop`
+  // aux deux étages : la pile racine revient sur l'accueil existant, et la pile
+  // de l'onglet redescend sur `SearchHome` au lieu d'en pousser un second.
+  // Sur le site, l'adresse « / » est l'accueil : il n'y a pas de pile à dépiler.
+  const handleOpenHome = React.useCallback(() => {
+    if (onPress) {
+      onPress();
+      return;
+    }
+    // Un mode League mémorisé (écran de League ouvert par une notification) :
+    // en sortir pour de bon, sans le basculer une seconde fois.
+    if (isGold) setMode('classic');
+    if (Platform.OS === 'web') {
+      navigation.navigate(RouteNames.HomeTab);
+      return;
+    }
+    navigation.navigate(
+      RouteNames.HomeTab,
+      { params: { pop: true, screen: RouteNames.SearchHome }, screen: RouteNames.Search },
+      { pop: true },
+    );
+  }, [isGold, navigation, onPress, setMode]);
+
+  if (!LEAGUE_SUR_ACCUEIL) {
+    return (
+      <TouchableOpacity
+        accessibilityLabel={t('menu.home', 'Accueil')}
+        accessibilityRole="button"
+        activeOpacity={0.8}
+        onPress={handleOpenHome}
+        style={styles.container}
+      >
+        {/* Le logo de l'accueil FoundClub, à son format (140 × 26), sans voile. */}
+        <Image resizeMode="contain" source={Images.logo} style={styles.logoSeul} />
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <TouchableOpacity
@@ -134,6 +190,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  logoSeul: {
+    height: 26,
+    width: 140,
   },
   modeDot: {
     borderRadius: 6,

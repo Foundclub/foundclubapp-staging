@@ -7,11 +7,15 @@ import renderer, { act } from 'react-test-renderer';
 // `useAuth.js`).
 
 const mockMemoire = new Map();
+const mockInterrupteurs = { LEAGUE_SUR_ACCUEIL: true };
+jest.mock('@/config/fonctionsMasquees', () => mockInterrupteurs);
 
 jest.mock('@/platform/storage', () => ({
   storageBackend: {
     getString: (/** @type {string} */ clef) => mockMemoire.get(clef),
-    set: (/** @type {string} */ clef, /** @type {string} */ valeur) => { mockMemoire.set(clef, valeur); },
+    set: (/** @type {string} */ clef, /** @type {string} */ valeur) => {
+      mockMemoire.set(clef, valeur);
+    },
   },
 }));
 
@@ -35,6 +39,10 @@ afterEach(() => {
  */
 const monter = () => {
   const vu = { valeur: /** @type {any} */ (null) };
+  /**
+   * Note ce que voit un écran à chaque rendu.
+   * @returns {null}
+   */
   function Sonde() {
     vu.valeur = useAppMode();
     return null;
@@ -45,7 +53,9 @@ const monter = () => {
   return { vu };
 };
 
-describe('E6 — le mode de l application AUJOURD HUI', () => {
+describe('E6 — le mode de l application AUJOURD HUI (League sur l accueil)', () => {
+  beforeEach(() => { mockInterrupteurs.LEAGUE_SUR_ACCUEIL = true; });
+
   it('sans rien de mémorisé, on démarre en mode FoundClub', () => {
     const { vu } = monter();
 
@@ -66,6 +76,29 @@ describe('E6 — le mode de l application AUJOURD HUI', () => {
     act(() => { vu.valeur.toggleMode(); });
 
     expect(vu.valeur.isGold).toBe(true);
+    expect(mockMemoire.get('user.app_mode')).toBe('gold');
+  });
+});
+
+// A02 (décision d'Adel du 30/09, option A) : la League disparaît COMPLÈTEMENT de
+// l'accueil. Or un mode League mémorisé choisit l'écran d'arrivée : sans ce
+// garde, quiconque avait touché le logo une fois (l'auditeur, justement)
+// redémarrerait DANS la League, sans plus aucune porte pour en sortir.
+describe('A02 — League masquée : un mode League mémorisé est ignoré au lancement', () => {
+  beforeEach(() => { mockInterrupteurs.LEAGUE_SUR_ACCUEIL = false; });
+
+  it('LE TEMOIN : on redémarre en mode FoundClub', () => {
+    mockMemoire.set('user.app_mode', 'gold');
+    const { vu } = monter();
+
+    expect(vu.valeur.isGold).toBe(false);
+    expect(vu.valeur.mode).toBe('classic');
+  });
+
+  it('le choix mémorisé n est PAS effacé : rallumer l interrupteur le rend', () => {
+    mockMemoire.set('user.app_mode', 'gold');
+    monter();
+
     expect(mockMemoire.get('user.app_mode')).toBe('gold');
   });
 });
