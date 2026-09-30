@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -40,32 +41,16 @@ const getNormalizedString = (value) => String(value || '').trim();
 
 /**
  * Filtre les equipes qui doivent encore configurer une source externe.
+ *
+ * FINITIONS-AUDIT (30/09) — parmi les equipes que l'on GERE (regle partagee de
+ * GERER-ANNONCE), plus celles ou l'on JOUE (`myTeams`) : un joueur etait invite a
+ * « Ajouter le classement », et la fiche d'equipe ne lui ouvrait pas la configuration.
  * @param {any} userData
  * @returns {Array<any>}
  */
-const getTeamsNeedingExternalSource = (userData) => {
-  const uniqueTeams = new Map();
-  const allTeams = [
-    ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
-    ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
-  ];
-
-  allTeams.forEach((team) => {
-    const documentId = getNormalizedString(team?.documentId || team?.id);
-    if (!documentId || uniqueTeams.has(documentId)) {
-      return;
-    }
-
-    const hasSource = getNormalizedString(team?.externalStandingUrl).length > 0;
-    if (!team?.externalCompetitionEligible || hasSource) {
-      return;
-    }
-
-    uniqueTeams.set(documentId, team);
-  });
-
-  return Array.from(uniqueTeams.values());
-};
+const getTeamsNeedingExternalSource = (userData) => getManagedTeams(userData).filter((team) => (
+  Boolean(team?.externalCompetitionEligible) && !getNormalizedString(team?.externalStandingUrl)
+));
 
 /**
  * Affiche un rappel global unique par session pour les equipes eligibles
