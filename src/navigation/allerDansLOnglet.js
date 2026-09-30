@@ -44,6 +44,17 @@ import { RouteNames } from '@/navigation/routeNames';
  */
 
 /**
+ * Le chemin imbriqué `HomeTab` → onglet `Search` → l'écran, écrit une fois.
+ * @param {string} ecran le nom de la route visée, dans `SearchStack`
+ * @param {Record<string, any>} [parametres] ses paramètres
+ * @returns {Record<string, any>} les paramètres à donner à `HomeTab`
+ */
+const versLEcranDeLOnglet = (ecran, parametres) => ({
+  params: { params: parametres, pop: true, screen: ecran },
+  screen: RouteNames.Search,
+});
+
+/**
  * Va vers un écran de l'onglet d'accueil depuis n'importe où.
  * @param {Record<string, any>} navigation l'objet de navigation de l'écran appelant
  * @param {string} ecran le nom de la route visée, dans `SearchStack`
@@ -51,14 +62,32 @@ import { RouteNames } from '@/navigation/routeNames';
  * @returns {void}
  */
 const allerDansLOnglet = (navigation, ecran, parametres) => {
-  navigation.navigate(
-    RouteNames.HomeTab,
-    {
-      params: { params: parametres, pop: true, screen: ecran },
-      screen: RouteNames.Search,
-    },
-    { pop: true },
-  );
+  navigation.navigate(RouteNames.HomeTab, versLEcranDeLOnglet(ecran, parametres), { pop: true });
+};
+
+/**
+ * RETOUR-ONGLET-2 — la même destination, depuis un écran de REDIRECTION de la racine
+ * (`SearchHubLegacyRedirect`, `SearchRouteRedirect`), qui doit DISPARAÎTRE derrière lui.
+ *
+ * Ils faisaient `replace(HomeTab, …)` : `replace` remplace l'écran du DESSUS, il ne
+ * revient pas au `HomeTab` du dessous. Depuis les alertes (`SearchAlerts:119`) ou depuis
+ * le Planning (`EventListContent:833`), on obtenait donc [HomeTab, …, HomeTab].
+ *
+ * ⚠️ POURQUOI `popTo` ET PAS `allerDansLOnglet` : les deux reviennent au `HomeTab` déjà
+ * empilé. Mais quand il n'y en a PAS (mode League : la racine commence par
+ * `LeagueHomeTab`), `navigate` l'EMPILERAIT par-dessus l'écran de redirection — le
+ * retour retomberait sur un écran qui tourne à vide, son effet ne se rejouant pas.
+ * `popTo` le REMPLACE, exactement comme le faisait `replace`
+ * (`@react-navigation/routers` StackRouter, cas 'POP_TO').
+ * Sur le site, `popTo` est un `replace` (webNavigationAdapter.js) : rien ne change.
+ * Preuve : `__tests__/retourOnglet2.pileRacine.test.js` (F1, et sa garde « mode League »).
+ * @param {Record<string, any>} navigation l'objet de navigation de l'écran de redirection
+ * @param {string} ecran le nom de la route visée, dans `SearchStack`
+ * @param {Record<string, any>} [parametres] ses paramètres
+ * @returns {void}
+ */
+export const remplacerParLOnglet = (navigation, ecran, parametres) => {
+  navigation.popTo(RouteNames.HomeTab, versLEcranDeLOnglet(ecran, parametres));
 };
 
 export default allerDansLOnglet;

@@ -6,6 +6,7 @@ import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { remplacerParLOnglet } from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveLegacySearchTarget } from './searchRouteHelpers';
@@ -21,26 +22,14 @@ function SearchHubLegacyRedirect({ navigation, route }) {
   useEffect(() => {
     const target = resolveLegacySearchTarget(route?.params, userData);
 
+    // RETOUR-ONGLET-2 : revenir au HomeTab deja empile, pas en poser un second
+    // (le pourquoi de `popTo` est ecrit sur `remplacerParLOnglet`).
     if (!target) {
-      navigation.replace(RouteNames.HomeTab, {
-        params: {
-          params: {
-            activeType: 'events',
-          },
-          screen: RouteNames.SearchHub,
-        },
-        screen: RouteNames.Search,
-      });
+      remplacerParLOnglet(navigation, RouteNames.SearchHub, { activeType: 'events' });
       return;
     }
 
-    navigation.replace(RouteNames.HomeTab, {
-      params: {
-        params: target.params,
-        screen: target.routeName,
-      },
-      screen: RouteNames.Search,
-    });
+    remplacerParLOnglet(navigation, target.routeName, target.params);
   }, [navigation, route?.params, userData]);
 
   return (
