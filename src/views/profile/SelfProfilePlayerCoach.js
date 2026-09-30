@@ -1045,7 +1045,9 @@ function SelfProfilePlayerCoach({ navigation }) {
               value={t('userDetails.historySummary.count', { count: historyCount })}
             />
             {/* Les retours du coach sont une donnee de JOUEUR. Le pack les
-                retire du profil coach — ils restent ici, entiers. */}
+                retire du profil coach — ils restent ici, entiers.
+                A19 — la ligne ouvrait l'APERCU (`preview: true`), la seule page
+                d'ou les retours sont retires : elle ouvre leur vue a eux. */}
             {isPlayer ? (
               <FollowUpRow
                 Colors={Colors}
@@ -1054,8 +1056,8 @@ function SelfProfilePlayerCoach({ navigation }) {
                 Images={Images}
                 label={t('userDetails.sections.coachFeedback', 'Retours du coach')}
                 onPress={() => navigation.navigate(RouteNames.UserDetails, {
-                  preview: true,
                   userId,
+                  view: 'coachFeedback',
                 })}
                 surfaces={surfaces}
                 value={feedbackCount

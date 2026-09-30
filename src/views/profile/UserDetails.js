@@ -24,6 +24,7 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -354,6 +355,100 @@ function InfoItem({
 }
 
 /**
+ * A19 — LES RETOURS DU COACH, un par carte : le match, la date, la note sur 10
+ * (ou « Commentaire » quand il n'y a pas de note) et le commentaire.
+ *
+ * Sorti TEL QUEL du bloc proprietaire de cette page, pour servir aussi la vue
+ * « Suivi › Retours du coach » (`view: 'coachFeedback'`) : un seul dessin des
+ * retours, pas deux qui divergent.
+ * @param {object} props
+ * @param {any[]} props.items - Les retours, dans l'ordre rendu par le serveur.
+ * @param {boolean} [props.showFullComments] - Vue dediee : rien n'est coupe. Le
+ *   bloc resume coupe a 3 lignes ; la vue dont c'est la seule raison d'etre ne
+ *   doit pas cacher la fin d'un long retour.
+ * @returns {import('react').ReactElement}
+ */
+function CoachFeedbackList({ items, showFullComments = false }) {
+  const commentLines = showFullComments ? undefined : 3;
+  const { t } = useTranslation();
+  const {
+    Alignments,
+    ApplicationStyle,
+    Colors,
+    Fonts,
+    Spaces,
+  } = useTheme();
+
+  return (
+    <View style={[Spaces.gap[12]]}>
+      {items.length ? items.map((feedback, index) => {
+        const feedbackDate = feedback?.submittedAt ? parseDate(feedback.submittedAt) : null;
+        return (
+          <View
+            key={`${feedback?.sourceType || 'feedback'}:${feedback?.sourceDocumentId || index}:${feedback?.submittedAt || 'no-date'}`}
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[12],
+              Spaces.gap[8],
+              {
+                backgroundColor: `${Colors.primary700}BF`,
+                borderColor: `${Colors.primary500}52`,
+              },
+            ]}
+          >
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {feedback?.matchLabel || feedback?.teamName || t(
+                    'userDetails.feedback.matchFallback',
+                    'Match',
+                  )}
+                </Text>
+                <Text style={[Fonts.p4, Fonts.neutral200]}>
+                  {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : t(
+                    'userDetails.feedback.dateTbc',
+                    'Date à confirmer',
+                  )}
+                </Text>
+              </View>
+              <View
+                style={[
+                  Alignments.selfStart,
+                  Spaces.paddingHorizontal[10],
+                  Spaces.paddingVertical[6],
+                  ApplicationStyle.borderRadius16,
+                  { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}40`, borderWidth: 1 },
+                ]}
+              >
+                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                  {feedback?.rating != null ? `${feedback.rating}/10` : t(
+                    'userDetails.feedback.comment',
+                    'Commentaire',
+                  )}
+                </Text>
+              </View>
+            </View>
+            <Text numberOfLines={commentLines} style={[Fonts.p3, Fonts.neutral100]}>
+              {feedback?.comment || t(
+                'userDetails.feedback.noComment',
+                'Pas de commentaire détaillé pour ce retour.',
+              )}
+            </Text>
+          </View>
+        );
+      }) : (
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'userDetails.feedback.empty',
+            'Aucun retour individuel du coach pour le moment.',
+          )}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
  * User profile view component for displaying profile details.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User profile screen
@@ -391,6 +486,14 @@ function UserDetails({ navigation, route }) {
   // vrai (on lit son propre profil, sans requete) pendant que l'autre devient
   // faux (on ne montre rien de prive).
   const isOwnerView = isSelfProfile && !isPreview;
+  // A18 — l'APERCU de son propre profil : un bandeau le dit, et aucune action
+  // d'edition n'y survit (l'historique suivait encore `isSelfProfile`).
+  const isSelfPreview = isSelfProfile && isPreview;
+  // A19 — « Suivi › Retours du coach » ouvre cette vue-ci, sur la route du
+  // profil (le site la sert deja : aucune route neuve a declarer). Proprietaire
+  // SEULEMENT : ni un tiers ni l'apercu ne l'obtiennent — et le serveur refuse de
+  // toute facon ces donnees a un tiers (`getPersonalStats` : 403).
+  const isCoachFeedbackView = isOwnerView && route?.params?.view === 'coachFeedback';
   const targetUserId = requestedUserId || currentUserId;
   const [selectedStatsSport, setSelectedStatsSport] = useState('all');
   const [selectedStatsTeamKey, setSelectedStatsTeamKey] = useState('all');
@@ -627,15 +730,19 @@ function UserDetails({ navigation, route }) {
     selectedStatsSport,
     selectedTeamSummary,
   ]);
-  const recentCoachFeedback = useMemo(() => {
-    let items = [];
+  // A19 — la liste ENTIERE (le serveur en rend 10 au plus) : c'est ce nombre
+  // que la ligne « Suivi › Retours du coach » annonce, sa vue doit le tenir.
+  // Le bloc proprietaire plus bas en garde toujours les 5 premiers.
+  const coachFeedback = useMemo(() => {
     if (Array.isArray(personalStats?.recentCoachFeedback)) {
-      items = personalStats.recentCoachFeedback;
-    } else if (Array.isArray(personalStats?.coachComments)) {
-      items = personalStats.coachComments;
+      return personalStats.recentCoachFeedback;
     }
-    return items.slice(0, 5);
+    if (Array.isArray(personalStats?.coachComments)) {
+      return personalStats.coachComments;
+    }
+    return [];
   }, [personalStats?.coachComments, personalStats?.recentCoachFeedback]);
+  const recentCoachFeedback = useMemo(() => coachFeedback.slice(0, 5), [coachFeedback]);
   const shouldShowSportFilter = availableStatSports.length > 1;
 
   const coachedTeams = useMemo(() => {
@@ -836,6 +943,72 @@ function UserDetails({ navigation, route }) {
     });
   };
 
+  // A19 — LA VUE « RETOURS DU COACH ». Avant, la ligne ouvrait l'APERCU, la
+  // seule page d'ou les retours sont retires (ils sont prives), et le bloc
+  // proprietaire plus bas n'etait plus atteint par un joueur depuis D39.
+  // Placee APRES tous les hooks, comme l'aiguillage qui suit.
+  if (isCoachFeedbackView) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[
+          Spaces.gap[24],
+          Spaces.paddingBottom[0],
+          Alignments.column,
+          Alignments.fill,
+        ]}
+      >
+        <View
+          style={[
+            Alignments.justifyCenter,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.marginTop[8],
+          ]}
+        >
+          {/* Etire et centre : un titre gras de plusieurs mots dans une boite a
+              sa largeur mesuree perd son dernier mot sur Android 16. */}
+          <Text
+            style={[
+              Fonts.h3Bold,
+              Fonts.neutral00,
+              { alignSelf: 'stretch', textAlign: 'center' },
+            ]}
+          >
+            {t('userDetails.sections.coachFeedback', 'Retours du coach').toUpperCase()}
+          </Text>
+          <View
+            style={[
+              ApplicationStyle.separator,
+              ApplicationStyle.backgroundColor.neutral00,
+              { width: 88 },
+            ]}
+          />
+        </View>
+
+        <ScrollView
+          contentContainerStyle={[{ paddingBottom: insets.bottom + 24 }]}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={() => refetchPersonalStats?.()}
+              refreshing={isPersonalStatsLoading}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          <WithDataWrapper
+            error={personalStatsError ? getErrorMessage(personalStatsError) : undefined}
+            isLoading={isPersonalStatsLoading}
+            onRetry={() => refetchPersonalStats?.()}
+          >
+            <CoachFeedbackList items={coachFeedback} showFullComments />
+          </WithDataWrapper>
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
+
   // MON profil est rendu par un ecran « voir = modifier », choisi par le ROLE.
   // Le branchement est place APRES tous les hooks : leur ordre reste stable.
   //
@@ -913,6 +1086,41 @@ function UserDetails({ navigation, route }) {
         Alignments.fill,
       ]}
     >
+      {/* A18 — l'apercu le DIT : sans ce bandeau, rien ne distinguait la
+          vitrine de sa propre page. « Quitter » rend la main au profil.
+          Couleurs de la CHARTE seulement (Adel, 30/09 : pas le jaune de la
+          maquette de l'audit) : le cyan `primary500`, teinte par `withAlpha`. */}
+      {isSelfPreview ? (
+        <View
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[12],
+            Spaces.paddingHorizontal[16],
+            Spaces.marginTop[8],
+            ApplicationStyle.borderRadius16,
+            {
+              backgroundColor: withAlpha(Colors.primary500, 0.12),
+              borderColor: withAlpha(Colors.primary500, 0.4),
+              borderWidth: 1,
+            },
+          ]}
+          testID="apercu-bandeau"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {t('userDetails.preview.banner', "Aperçu : c'est ce que voient les autres.")}
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => navigation.goBack()}
+            style={[Alignments.justifyCenter, { minHeight: 44 }]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('userDetails.preview.exit', 'Quitter')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <View
         style={[
           Alignments.justifyCenter,
@@ -1145,83 +1353,23 @@ function UserDetails({ navigation, route }) {
               Spaces={Spaces}
               title={t('userDetails.sections.coachFeedback', 'Retours du coach')}
             >
-              <View style={[Spaces.gap[12]]}>
-                {recentCoachFeedback.length ? recentCoachFeedback.map((feedback, index) => {
-                  const feedbackDate = feedback?.submittedAt ? parseDate(feedback.submittedAt) : null;
-                  return (
-                    <View
-                      key={`${feedback?.sourceType || 'feedback'}:${feedback?.sourceDocumentId || index}:${feedback?.submittedAt || 'no-date'}`}
-                      style={[
-                        ApplicationStyle.card,
-                        Spaces.padding[12],
-                        Spaces.gap[8],
-                        {
-                          backgroundColor: `${Colors.primary700}BF`,
-                          borderColor: `${Colors.primary500}52`,
-                        },
-                      ]}
-                    >
-                      <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                        <View style={{ flex: 1 }}>
-                          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                            {feedback?.matchLabel || feedback?.teamName || t(
-                              'userDetails.feedback.matchFallback',
-                              'Match',
-                            )}
-                          </Text>
-                          <Text style={[Fonts.p4, Fonts.neutral200]}>
-                            {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : t(
-                              'userDetails.feedback.dateTbc',
-                              'Date à confirmer',
-                            )}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            Alignments.selfStart,
-                            Spaces.paddingHorizontal[10],
-                            Spaces.paddingVertical[6],
-                            ApplicationStyle.borderRadius16,
-                            { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}40`, borderWidth: 1 },
-                          ]}
-                        >
-                          <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                            {feedback?.rating != null ? `${feedback.rating}/10` : t(
-                              'userDetails.feedback.comment',
-                              'Commentaire',
-                            )}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral100]}>
-                        {feedback?.comment || t(
-                          'userDetails.feedback.noComment',
-                          'Pas de commentaire detaille pour ce retour.',
-                        )}
-                      </Text>
-                    </View>
-                  );
-                }) : (
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    {t(
-                      'userDetails.feedback.empty',
-                      'Aucun retour individuel du coach pour le moment.',
-                    )}
-                  </Text>
-                )}
-              </View>
+              <CoachFeedbackList items={recentCoachFeedback} />
             </SectionCard>
           ) : null}
 
+          {/* A18 — `isOwnerView`, pas `isSelfProfile` : en APERCU on lit son
+              propre compte (d'ou `userId` ci-dessous, inchange), mais on
+              montre ce que voient les autres. Corbeilles, « + Ajouter » et
+              appui pour modifier y restaient actifs — et marchaient. */}
           <UserHistorySection
             bestLevel={bestLevelValue || undefined}
-            isOwnProfile={isSelfProfile}
+            isOwnProfile={isOwnerView}
             // D40 marche 3 — ces deux boutons vivent DANS la liste : ils
             // doivent y ramener. Ils annoncaient `Profile`, donc on ajoutait
             // depuis sa liste et on atterrissait ailleurs — il fallait
             // retraverser pour en ajouter une seconde.
             onAddPress={
-              isSelfProfile
+              isOwnerView
                 ? () => navigation.navigate(RouteNames.HistoryWizardCategory, {
                   resetContext: true,
                   returnRoute: RouteNames.UserDetails,
@@ -1229,7 +1377,7 @@ function UserDetails({ navigation, route }) {
                 : undefined
             }
             onEditPress={
-              isSelfProfile
+              isOwnerView
                 ? (entry) => navigation.navigate(RouteNames.HistoryWizardCategory, {
                   editingEntry: entry,
                   returnRoute: RouteNames.UserDetails,

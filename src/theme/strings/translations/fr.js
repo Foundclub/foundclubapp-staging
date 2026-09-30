@@ -19595,7 +19595,7 @@ export default {
       dateTbc: 'Date à confirmer',
       empty: 'Aucun retour individuel du coach pour le moment.',
       matchFallback: 'Match',
-      noComment: 'Pas de commentaire detaille pour ce retour.',
+      noComment: 'Pas de commentaire détaillé pour ce retour.',
     },
     fields: {
       address: 'Adresse',
@@ -19630,6 +19630,10 @@ export default {
       view: 'Voir la licence',
     },
     notSet: 'Non renseigné',
+    preview: {
+      banner: "Aperçu : c'est ce que voient les autres.",
+      exit: 'Quitter',
+    },
     private: 'Privé',
     roleLabels: {
       coach: 'Entraîneur',

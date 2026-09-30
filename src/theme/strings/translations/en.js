@@ -18428,6 +18428,10 @@ export default {
       view: 'View the licence',
     },
     notSet: 'Not provided',
+    preview: {
+      banner: 'Preview: this is what others see.',
+      exit: 'Exit',
+    },
     private: 'Private',
     roleLabels: {
       coach: 'Coach',
