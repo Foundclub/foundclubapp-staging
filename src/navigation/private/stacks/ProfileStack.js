@@ -6,6 +6,8 @@ import HistoryWizardSingle from '@/views/historyWizard/HistoryWizardSingle';
 import BlockedUsers from '@/views/profile/BlockedUsers';
 import ChildEdit from '@/views/profile/ChildEdit';
 import MyChildren from '@/views/profile/MyChildren';
+import MyParentLink from '@/views/profile/MyParentLink';
+import ParentLinkInvite from '@/views/profile/ParentLinkInvite';
 import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
@@ -103,6 +105,25 @@ function ProfileStack() {
         <Stack.Screen
           component={ChildEdit}
           name={RouteNames.ChildEdit}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        {/* 🔗 PARENT-LIEN — le parent DEMANDE le lien (ou donne un compte a sa fiche de
+            13 ans), l ENFANT l accepte, le refuse ou le retire. Deux ecrans de compte : ils
+            vivent dans le profil, comme « Mes enfants ». */}
+        <Stack.Screen
+          component={ParentLinkInvite}
+          name={RouteNames.ParentLinkInvite}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={MyParentLink}
+          name={RouteNames.MyParentLink}
           options={{
             ...commonOptions,
             headerTitle: '',

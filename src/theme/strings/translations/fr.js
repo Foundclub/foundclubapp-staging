@@ -13221,6 +13221,8 @@ export default {
       manageTeams: 'Gérer mes équipes',
       myCard: 'Ma carte de collection',
       myChildren: 'Mes enfants',
+      // PARENT-LIEN (30/09) — la porte de l'ENFANT : accepter, refuser, retirer le lien.
+      myParent: 'Mon parent',
       myTeams: 'Mes équipes',
       previewPublic: 'Voir mon profil comme les autres',
       save: 'Continuer',
@@ -19296,7 +19298,21 @@ export default {
       edit: 'Modifier',
       // Le prénom est DANS le libellé : un parent de trois enfants doit voir
       // pour lequel il agit, sans avoir à se souvenir de l'ordre des cartes.
+      // PARENT-LIEN (F20) — à 13 ans, la fiche reçoit la clé : l'enfant crée SON compte.
+      giveAccount: 'Donner un compte à {{firstname}}',
       searchClub: 'Chercher un club pour {{firstname}}',
+    },
+    // PARENT-LIEN (30/09) — « Les comptes de mes enfants » : les ados RELIÉS (ils ont accepté
+    // depuis leur compte), et mes demandes en cours — sans jamais dire si un numéro existe.
+    accounts: {
+      cancel: 'Annuler',
+      empty: 'Ton enfant a 13 ans ou plus et son propre compte ? Relie-le au tien :'
+        + ' tu verras les retours de son coach, jamais ses messages.',
+      link: 'Relier le compte de mon enfant',
+      open: 'Voir son profil',
+      pending: 'Demande envoyée au numéro finissant par {{hint}}.',
+      pendingForChild: 'Demande envoyée au numéro finissant par {{hint}} (pour {{firstname}}).',
+      title: 'Les comptes de mes enfants',
     },
     confirmDelete: {
       cancel: 'Annuler',
@@ -19366,6 +19382,8 @@ export default {
         + ' Tu peux en ajouter autant que tu veux.',
       hint: 'Tu déclares tes enfants depuis TON compte :'
         + ' avant 13 ans, ils n’ont pas de compte à eux.',
+      // PARENT-LIEN (F20) — la fiche a reçu son compte.
+      hasAccount: '{{firstname}} a son propre compte.',
       noTeam: 'Pas encore d’équipe',
       title: 'Mes enfants',
       // Les deux tranches où le parent n'agit plus (E17). Elles ne sont pas des
@@ -19377,6 +19395,78 @@ export default {
       years_other: '{{count}} ans',
       // 18 ans : le lien parental s'éteint tout seul, c'est la loi.
       adultHint: '{{firstname}} est majeur : il gère son compte seul.',
+    },
+  },
+  // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.
+  // 🤐 Aucun texte ne dit si un numéro correspond à un compte : le serveur ne le révèle pas, l'écran
+  // non plus. Et chaque écran dit ce que le parent voit (les retours du coach) et ce qu'il ne voit
+  // JAMAIS (les messages).
+  parentLink: {
+    child: {
+      accept: 'Accepter',
+      emptyHint: 'Si ton parent t’envoie une demande depuis son compte, elle apparaîtra ici.',
+      errors: {
+        alreadyLinked: 'Ton compte est déjà relié à un parent.'
+          + ' Retire ce lien avant d’en accepter un autre.',
+        closed: 'Cette demande n’est plus valable.',
+        generic: 'Impossible de répondre pour le moment.',
+        notEligible: 'Seul un compte de 13 à 17 ans peut être relié à un parent.'
+          + ' Vérifie ta date de naissance.',
+      },
+      linkedTo: 'Ton compte est relié à',
+      noParent: 'Aucun parent n’est relié à ton compte.',
+      refuse: 'Refuser',
+      requestFrom: '{{name}} demande à relier ton compte au sien, comme ton parent.',
+      title: 'Mon parent',
+      unlink: 'Retirer le lien',
+      unlinkConfirm: {
+        cancel: 'Annuler',
+        confirm: 'Retirer',
+        message: '{{name}} ne verra plus les retours de ton coach.'
+          + ' Tu pourras accepter une nouvelle demande plus tard.',
+        title: 'Retirer le lien ?',
+      },
+      whatParentSees: 'Un parent relié à ton compte voit les retours de ton coach.'
+        + ' Il ne voit jamais tes messages. Tu peux retirer le lien quand tu veux.',
+    },
+    invite: {
+      declaration: 'Tu confirmes être son parent ou son représentant légal.'
+        + ' Cette déclaration est enregistrée avec ta demande.',
+      declarationTitle: 'Déclaration parentale',
+      done: 'Revenir à Mes enfants',
+      errors: {
+        adult: '{{firstname}} est majeur : il gère son compte seul.',
+        ageRequired: 'Renseigne ta date de naissance dans ton profil'
+          + ' pour relier le compte d’un enfant.',
+        alreadyHasAccount: '{{firstname}} a déjà son compte.',
+        declaration: 'Coche la déclaration parentale pour continuer.',
+        generic: 'Impossible d’envoyer la demande pour le moment.',
+        notAdult: 'Seul un adulte peut relier le compte d’un enfant.',
+        phone: 'Ce numéro n’est pas valide.',
+        self: 'C’est ton propre numéro.',
+        tooMany: 'Trop de demandes : réessaie dans une heure.',
+        tooYoung: '{{firstname}} aura son compte à 13 ans.',
+      },
+      hint: 'Entre le numéro de ton enfant (13 à 17 ans). Il reçoit ta demande dans son application'
+        + ' et c’est lui qui l’accepte : rien n’est relié sans son accord.',
+      hintForChild: '{{firstname}} crée son compte avec ce numéro (code reçu par SMS).'
+        + ' Ta demande l’attendra, et c’est {{firstname}} qui l’accepte :'
+        + ' rien n’est relié sans son accord.',
+      phoneLabel: 'Numéro de téléphone de ton enfant',
+      phonePlaceholder: '06 12 34 56 78',
+      sendSms: 'Prévenir {{firstname}} par SMS',
+      sentBody: 'Si ce numéro est celui d’un compte FoundClub de 13 à 17 ans,'
+        + ' ton enfant verra ta demande et pourra l’accepter. Sinon, elle l’attendra 30 jours, le temps qu’il crée son compte'
+        + ' avec ce numéro.',
+      sentTitle: 'Demande envoyée',
+      smsMessage: 'Je t’ai préparé un compte FoundClub. Installe l’application'
+        + ' et connecte-toi avec ce numéro : {{url}}',
+      submit: 'Envoyer la demande',
+      title: 'Relier le compte de mon enfant',
+      titleForChild: 'Donner un compte à {{firstname}}',
+      whatYouSee: 'Une fois relié, tu vois les retours de son coach.'
+        + ' Tu ne vois jamais ses messages, et il peut retirer le lien quand il veut.'
+        + ' À ses 18 ans, le lien s’éteint.',
     },
   },
   useAdminClubWizardExit: {

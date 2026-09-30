@@ -947,6 +947,17 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.NEW_WHISPER:
       return adaptDestinationForCurrentPlatform(payload, chatDestination(payload.chatId || payload.conversationId));
 
+    // PARENT-LIEN (30/09) — la demande d un parent ouvre « Mon parent », ou l enfant accepte
+    // ou refuse. Rien dans la charge : c est l ecran qui relit les demandes (et verifie l age).
+    case NOTIFICATION_TYPES.PARENT_LINK_REQUEST:
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: {
+          params: {},
+          screen: RouteNames.MyParentLink,
+        },
+        route: RouteNames.ProfileStack,
+      });
+
     case NOTIFICATION_TYPES.SEARCH_ALERT_MATCH: {
       const alertType = payload.alertType || payload.matchType || payload.dataType || payload.kind || payload.notificationKind || payload.type;
       if (alertType === 'event') {

@@ -139,10 +139,15 @@ export const RouteNames = /** @type {const} */ ({
   MyLicense: 'MyLicense',
   MyLicenses: 'MyLicenses',
   MyLicensesArchive: 'MyLicensesArchive',
+  // PARENT-LIEN (30/09) — l ecran de l ENFANT : accepter, refuser, retirer le lien avec un parent.
+  MyParentLink: 'MyParentLink',
   MyTeamList: 'MyTeamList',
   NewConversation: 'NewConversation',
   NotificationDetails: 'NotificationDetails',
   NotificationList: 'NotificationList',
+  // PARENT-LIEN (30/09) — l ecran du PARENT : relier le compte de son enfant, ou F20 « donner
+  // un compte a Lina » (meme ecran, avec la fiche en parametre).
+  ParentLinkInvite: 'ParentLinkInvite',
   PendingMatchStats: 'PendingMatchStats',
   PlayerCard: 'PlayerCard',
   PlayerMatchResponse: 'PlayerMatchResponse',

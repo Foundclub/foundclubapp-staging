@@ -95,6 +95,20 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.BlockedUsers]:
     'TODO(web) ecran « Personnes bloquees » ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
 
+  // TODO(web) PARENT-LIEN (2026-09-30) — les deux ecrans du lien parent <-> compte d un enfant
+  // sont exemptes par SEQUENCEMENT, exactement comme BlockedUsers : les router cote app ferait
+  // passer `check:routes` au rouge tant que web/src/routes/screenRegistry.tsx (autre depot, hors
+  // du perimetre de ce lot) ne porte pas leurs entrees. D ici la, les deux portes de l app
+  // passent par `navigateOrExplainOnWeb` : sur le site, « Bientot sur le site » au lieu d un
+  // atterrissage muet sur l accueil. A retirer d ici quand le registre web les declare, puis
+  // ajouter leurs motifs dans webRoutes.js (ex. /profile/children/link et /profile/parent).
+  [RouteNames.MyParentLink]:
+    'TODO(web) MyParentLink screen (the child accepts or removes the link) is built and'
+    + ' mounted in the app; waiting for its entry in web/src/routes/screenRegistry.tsx',
+  [RouteNames.ParentLinkInvite]:
+    'TODO(web) ParentLinkInvite screen is built and mounted in the app;'
+    + ' waiting for its entry in web/src/routes/screenRegistry.tsx',
+
   // TODO(web) PERF « Entrainement perso » (2026-09-06) — les six ecrans de la
   // section Entrainement sont exemptes par SEQUENCEMENT, comme les quatre
   // au-dessus, mais avec UNE raison de plus, et elle est technique, pas

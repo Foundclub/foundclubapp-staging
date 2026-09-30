@@ -47,11 +47,17 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { deleteAccount } from '@/services/auth/authService';
 import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
+import {
+  isBirthdateUnderAge,
+  MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE,
+  PARENTAL_POWER_ENDS_AGE,
+} from '@/constants/parentalDeclaration';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
 
@@ -723,6 +729,21 @@ function Profile({ navigation, route }) {
       label: t('profile.actions.myChildren', 'Mes enfants'),
       onPress: () => navigation.navigate(RouteNames.MyChildren),
     },
+    // 🔗 PARENT-LIEN (30/09) — LA PORTE DE L ENFANT. Un parent DEMANDE le lien ; c est ici que
+    // l enfant l accepte, la refuse, voit qui est relie et le retire. Visible de 13 a 17 ans
+    // (age CONNU : sans date, la porte reste fermee), et de quiconque est deja relie — il doit
+    // pouvoir retirer le lien, meme devenu majeur. Un adulte sans lien n a rien a y faire.
+    ...((userData?.parentAccount?.documentId
+      || (
+        Boolean(userData?.birthdate)
+        && !isBirthdateUnderAge(userData?.birthdate, MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE)
+        && isBirthdateUnderAge(userData?.birthdate, PARENTAL_POWER_ENDS_AGE)
+      )) ? [{
+        icon: Images.users,
+        key: 'myParent',
+        label: t('profile.actions.myParent', 'Mon parent'),
+        onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.MyParentLink),
+      }] : []),
     {
       icon: Images.bell,
       key: 'alerts',
