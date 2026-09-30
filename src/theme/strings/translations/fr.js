@@ -4626,7 +4626,7 @@ export default {
       retry: 'Réessayer',
       save: 'Enregistrer',
       search: 'Rechercher',
-      seeMore: 'Voir le detail',
+      seeMore: 'Voir le détail',
     },
     all: 'Tous',
     back: 'Retour',
@@ -5271,7 +5271,7 @@ export default {
       subtitle: 'Recherche un événement public et partage-le directement dans cette conversation.',
       title: 'Partager un événement public',
       unknownTeam: 'Équipe inconnue',
-      viewDetails: 'Voir le detail',
+      viewDetails: 'Voir le détail',
     },
   },
   createAdModal: {
@@ -7465,10 +7465,10 @@ export default {
         addInstallation: 'Ajouter une installation',
         addressMissing: 'Adresse non renseignée',
         // eslint-disable-next-line max-len
-        allowAndNotifyConflict: 'Ce créneau dépasse la capacité, mais il restera autorise et notifiera les dirigeants.',
+        allowAndNotifyConflict: 'Ce créneau dépasse la capacité, mais il restera autorisé et notifiera les dirigeants.',
         // eslint-disable-next-line max-len
         allowAndNotifyHint: "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
-        capacityAvailable: 'Cette installation à encore de la capacité pour ce créneau.',
+        capacityAvailable: 'Cette installation a encore de la capacité pour ce créneau.',
         // eslint-disable-next-line max-len
         disabledNextHint: 'Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.',
         focusSubtitle: "Où se déroule l'événement ?",
@@ -7478,10 +7478,16 @@ export default {
         modeHint: 'Choisis si le lieu est dans ton club ou en extérieur.',
         noInstallations: 'Aucune installation disponible pour ce club.',
         noInstallationsTitle: 'Aucune installation pour le moment',
+        // FINITIONS4 (recette du 29/09) — la ligne d'occupation était écrite en dur dans
+        // FacilitySelector, sans accent ni accord : accordée ici (zéro et un au singulier).
+        occupancy_one: '{{occupied}}/{{max}} place occupée',
+        occupancy_other: '{{occupied}}/{{max}} places occupées',
         // eslint-disable-next-line max-len
-        pendingValidationConflict: "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'a validation d'un dirigeant.",
+        pendingValidationConflict: "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'à validation d'un dirigeant.",
         // eslint-disable-next-line max-len
         pendingValidationHint: "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
+        remaining_one: '{{count}} restante',
+        remaining_other: '{{count}} restantes',
         subtitle: 'Le lieu est obligatoire pour continuer.',
         title: 'Lieu',
       },
@@ -10212,8 +10218,13 @@ export default {
         benchCount: '{{count}} sur le banc',
         calledUp_one: '{{count}} convoqué',
         calledUp_other: '{{count}} convoqués',
-        extras: 'dont {{reinforcements}} renforts · {{offApp}} hors app',
+        // FINITIONS4 (recette du 29/09) — « dont 1 renforts · 0 hors app » : chaque
+        // compteur est accordé À PART, et seuls les compteurs non nuls sont dits.
+        extras: 'dont {{details}}',
         next: 'Suivant',
+        offAppCount: '{{count}} hors app',
+        reinforcementsCount_one: '{{count}} renfort',
+        reinforcementsCount_other: '{{count}} renforts',
         // FINITIONS (28/09) — « 1 titulaires » : un seul `count` par clef pour
         // i18next, donc les deux compteurs sont accordés À PART, puis assemblés.
         split: '{{starters}} · {{bench}}',
@@ -10862,7 +10873,7 @@ export default {
     searchAgain: 'Relancer une recherche',
     streakBonus: ' | Bonus série ',
     title: 'Recap de fin de match',
-    viewDetails: 'Voir le detail',
+    viewDetails: 'Voir le détail',
   },
   matchStatsEditor: {
     actions: 'Actions',
@@ -11300,7 +11311,7 @@ export default {
       card: {
         clubFallback: 'Club',
         date: 'Date',
-        details: 'Voir le detail',
+        details: 'Voir le détail',
         join: 'Rejoindre',
         joining: 'Participation…',
         lineup: 'Composition',
@@ -14005,7 +14016,10 @@ export default {
     willBeNotified: 'Elles vont recevoir une notification pour leur rappeler de repondre.',
   },
   requestFeedItem: {
-    occupancy: '{{occupied}}/{{max}} slots occupes',
+    occupancy: '{{occupied}}/{{max}} places occupées',
+    // FINITIONS4 — même phrase que le choix de l'installation, accordée.
+    occupancy_one: '{{occupied}}/{{max}} place occupée',
+    occupancy_other: '{{occupied}}/{{max}} places occupées',
   },
   requestMappers: {
     club: {

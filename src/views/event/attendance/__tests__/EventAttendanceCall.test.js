@@ -876,3 +876,21 @@ describe('L5-A · un non-pointe passe no_show par le cron reste pointable', () =
     expect(mockCoachArrivalMutate).toHaveBeenCalledTimes(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// FINITIONS4 (D7, recette du 29/09) — TANT QUE LA FEUILLE D APPEL N EST PAS
+// CHARGEE, AUCUNE HEURE : l ecran affichait l heure du REPLI LOCAL (« Ouvre à
+// 17:30 », 30 min avant le debut) alors que l appel s ouvre des la creation.
+// Ecrit ROUGE contre app `12692738`.
+// ---------------------------------------------------------------------------
+describe('FINITIONS4 D7 — la feuille d appel pas encore chargee n invente pas d heure', () => {
+  test('🚨 sans charge : ni « Ouvre à », ni « Fermé depuis »', async () => {
+    mockAttendance = null;
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).not.toContain('Ouvre à');
+    expect(texte).not.toContain('Fermé depuis');
+  });
+});

@@ -17,6 +17,7 @@ import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+import { resolveEventEndedAt } from '@/views/event/eventMatchClock';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -286,6 +287,7 @@ const resolveAttendanceBadge = ({
   colors,
   eventStartAt,
   nowMs,
+  reponseAttendue = true,
   statusKind = 'participating',
   t = (/** @type {string} */ clef, /** @type {any} */ valeurParDefaut) => valeurParDefaut,
 }) => {
@@ -356,7 +358,9 @@ const resolveAttendanceBadge = ({
       textColor: colors.neutral200,
       // POINTAGE (« reponse B ») — l evenement fini, rien repondu, rien
       // constate : ni present ni absent, « pas renseigne ».
-      title: finalOperationalStatus === 'not_reported'
+      // FINITIONS4 (D6) — et des qu aucune reponse n est plus attendue
+      // (reponses decochees, ou evenement termine) : un seul mot a l ecran.
+      title: finalOperationalStatus === 'not_reported' || !reponseAttendue
         ? t('eventDetails.attendanceBadge.notReported', 'Pas renseigné')
         : t('eventParticipants.noAnswer', 'Sans réponse'),
       value: null,
@@ -538,6 +542,27 @@ function EventParticipants({
   });
   const dernierCompteRendu = comptesRendusDeRelance[comptesRendusDeRelance.length - 1];
   const instantCourant = typeof nowMs === 'number' ? nowMs : Date.now();
+  // 🏁 FINITIONS4 (D6, recette du 29/09) — QUAND UNE REPONSE N EST PLUS ATTENDUE.
+  // « Les participants repondent » decochee, ou l evenement termine : on ne dit
+  // plus « Sans réponse » mais « pas renseigné » — le mot du verdict serveur
+  // (`not_reported`) et de la phrase du joueur, UN seul libelle a l ecran — et
+  // « Relancer » n a plus d objet. Reponses decochees : aucun compteur de
+  // reponses non plus (tuiles, pastilles, « N réponses sur M »).
+  const finEvenement = resolveEventEndedAt(event?.endDate, eventStartAt);
+  const evenementTermine = Boolean(finEvenement)
+    && /** @type {Date} */ (finEvenement).getTime() <= instantCourant;
+  const reponseAttendue = reponsesOuvertes && !evenementTermine;
+  const relanceProposee = Boolean(canEdit) && reponseAttendue;
+  const libelleSansReponse = reponseAttendue
+    ? t('eventDetails.participationStatus.notAnswered')
+    : t('eventDetails.attendanceBadge.notReported', 'Pas renseigné');
+  /**
+   * Le message d un groupe vide ne parle que d un evenement ou l on repond :
+   * « Personne n a encore confirmé sa présence » n a pas de sens sinon.
+   * @param {string} clef - La clef du message.
+   * @returns {string} Le message, ou rien (le groupe vide disparait alors).
+   */
+  const messageSiReponses = (clef) => (reponsesOuvertes ? t(clef) : '');
   const prochaineRelanceMs = Date.parse(dernierCompteRendu?.nextReminderAt || '');
   // Une date DEPASSEE n a plus rien a dire : on peut relancer.
   const prochaineRelance = Number.isFinite(prochaineRelanceMs)
@@ -685,6 +710,7 @@ function EventParticipants({
         onPress={options.onPress || handleUserPress}
         paymentStatus={statutPaiement}
         player={player}
+        reponseAttendue={reponseAttendue}
         statusKind={options.statusKind || 'participating'}
         styles={{
           Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -883,7 +909,7 @@ function EventParticipants({
           section.participating,
           {
             allowLiveLate: true,
-            emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
+            emptyMessage: messageSiReponses('eventDetails.emptyStates.noConfirmation'),
             keyPrefix: `${section.key}-present`,
             showCoachActions: section.allowCoachActions ?? canEdit,
             statusKind: 'participating',
@@ -895,7 +921,7 @@ function EventParticipants({
           section.missing,
           {
             allowLiveLate: false,
-            emptyMessage: t('eventDetails.emptyStates.noAbsence'),
+            emptyMessage: messageSiReponses('eventDetails.emptyStates.noAbsence'),
             keyPrefix: `${section.key}-missing`,
             statusKind: 'missing',
             statusLabel: t('eventDetails.participationStatus.missing'),
@@ -906,9 +932,9 @@ function EventParticipants({
           <>
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.spaceBetween, Spaces.gap[16]]}>
               <Text style={[Fonts.h4Bold, Fonts.primary500]}>
-                {t('eventDetails.participationStatus.notAnswered')}
+                {libelleSansReponse}
               </Text>
-              {canEdit && reponsesOuvertes ? (
+              {relanceProposee ? (
                 // 🎯 N4 (D5) — LE BOUTON DIT QUELLE EQUIPE IL VISE. La feuille de
                 // relance s'ouvre avec CETTE equipe deja cochee : le serveur
                 // n'accepte qu'un `teamId` par appel, et c'est ici, et nulle
@@ -916,20 +942,20 @@ function EventParticipants({
                 <Button isLoading={isReminding} isOption onPress={() => handleRemindPlayers(section.key)} title={t('eventDetails.actions.remind')} variant="Primary" />
               ) : null}
             </View>
-            {canEdit && reponsesOuvertes ? renderProchaineRelance() : null}
+            {relanceProposee ? renderProchaineRelance() : null}
             {section.notAnswered.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-not-answered`,
               statusKind: 'not_answered',
-              statusLabel: t('eventDetails.participationStatus.notAnswered'),
+              statusLabel: libelleSansReponse,
             }))}
           </>
         ) : null}
 
         {section.notAnswered?.length ? null : renderStatusGroup(
-          t('eventDetails.participationStatus.notAnswered'),
+          libelleSansReponse,
           [],
-          { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
+          { emptyMessage: messageSiReponses('eventDetails.emptyStates.allAnswered') },
         )}
 
         {renderStaffGroup(section)}
@@ -1194,10 +1220,13 @@ function EventParticipants({
    */
   const renderPastilleDeFiltre = (pastille, compte) => {
     const choisie = filtreStatut === pastille.clef;
-    const libelle = t(
-      `eventDetails.participantsFilter.${pastille.clefTexte}`,
-      pastille.repli,
-    );
+    // FINITIONS4 (D6) — le meme mot que le compteur et le titre du groupe.
+    const libelle = pastille.clef === 'notAnswered' && !reponseAttendue
+      ? libelleSansReponse
+      : t(
+        `eventDetails.participantsFilter.${pastille.clefTexte}`,
+        pastille.repli,
+      );
     return (
       <TouchableOpacity
         key={pastille.clef}
@@ -1433,7 +1462,7 @@ function EventParticipants({
             listesAffichees.participating || [],
             {
               allowLiveLate: true,
-              emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
+              emptyMessage: messageSiReponses('eventDetails.emptyStates.noConfirmation'),
               keyPrefix: 'legacy-present',
               showCoachActions: canEdit,
               statusKind: 'participating',
@@ -1444,7 +1473,7 @@ function EventParticipants({
             listesAffichees.missing || [],
             {
               allowLiveLate: false,
-              emptyMessage: t('eventDetails.emptyStates.noAbsence'),
+              emptyMessage: messageSiReponses('eventDetails.emptyStates.noAbsence'),
               keyPrefix: 'legacy-missing',
               statusKind: 'missing',
               statusLabel: t('eventDetails.participationStatus.missing'),
@@ -1454,25 +1483,25 @@ function EventParticipants({
             <>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.spaceBetween, Spaces.gap[16]]}>
                 <Text style={[Fonts.h4Bold, Fonts.primary500]}>
-                  {t('eventDetails.participationStatus.notAnswered')}
+                  {libelleSansReponse}
                 </Text>
-                {canEdit && reponsesOuvertes ? (
+                {relanceProposee ? (
                   <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
                 ) : null}
               </View>
-              {canEdit && reponsesOuvertes ? renderProchaineRelance() : null}
+              {relanceProposee ? renderProchaineRelance() : null}
               {(listesAffichees.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
                 keyPrefix: 'legacy-not-answered',
                 statusKind: 'not_answered',
-                statusLabel: t('eventDetails.participationStatus.notAnswered'),
+                statusLabel: libelleSansReponse,
               }))}
             </>
           )}
           {(listesAffichees.notAnswered || []).length > 0 ? null : renderStatusGroup(
-            t('eventDetails.participationStatus.notAnswered'),
+            libelleSansReponse,
             [],
-            { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
+            { emptyMessage: messageSiReponses('eventDetails.emptyStates.allAnswered') },
           )}
         </>
       );
@@ -1531,42 +1560,47 @@ function EventParticipants({
         />
       )}
 
-      <View style={[Spaces.gap[12]]}>
-        <View style={[Alignments.row, Spaces.gap[8]]}>
-          {renderCounterTile(
-            'AD06-tuile-participating',
-            t('eventDetails.participationStatus.participating'),
-            capacity ? `${presentsCount} / ${capacity}` : String(presentsCount),
-          )}
-          {renderCounterTile(
-            'AD06-tuile-missing',
-            t('eventDetails.participationStatus.missing'),
-            String(absentsCount),
-          )}
-          {renderCounterTile(
-            'AD06-tuile-notAnswered',
-            t('eventDetails.participationStatus.notAnswered'),
-            String(sansReponseCount),
-          )}
-        </View>
-
-        {/* 📍 P2 (D3) — LES PASTILLES SE RENDENT ICI, ET NULLE PART AILLEURS :
-            AU-DESSUS de la legende « reponses sur ». Cette legende est la COUPE
-            que trois temoins d ordre utilisent — AD06 l.327 et AE02 l.594
-            lisent la liste APRES elle, AD06 l.351 lit l ecran ENTIER. Descendu
-            sous la legende, ce bloc entrerait dans leurs `indexOf` et les
-            ferait tomber. */}
-        {pastillesFiltreVisibles ? (
-          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-            {PASTILLES_DE_FILTRE.map((pastille) => renderPastilleDeFiltre(
-              pastille,
-              comptesParFiltre[pastille.clef] || 0,
-            ))}
+      {/* 🏁 FINITIONS4 (D6) — reponses decochees : aucun compteur de reponses.
+          « 0 réponse sur 1 · 0 % » mesurait des reponses que personne ne peut
+          donner. La liste, elle, reste : on voit toujours qui est convoque. */}
+      {reponsesOuvertes ? (
+        <View style={[Spaces.gap[12]]}>
+          <View style={[Alignments.row, Spaces.gap[8]]}>
+            {renderCounterTile(
+              'AD06-tuile-participating',
+              t('eventDetails.participationStatus.participating'),
+              capacity ? `${presentsCount} / ${capacity}` : String(presentsCount),
+            )}
+            {renderCounterTile(
+              'AD06-tuile-missing',
+              t('eventDetails.participationStatus.missing'),
+              String(absentsCount),
+            )}
+            {renderCounterTile(
+              'AD06-tuile-notAnswered',
+              libelleSansReponse,
+              String(sansReponseCount),
+            )}
           </View>
-        ) : null}
 
-        {renderResponsesBar()}
-      </View>
+          {/* 📍 P2 (D3) — LES PASTILLES SE RENDENT ICI, ET NULLE PART AILLEURS :
+              AU-DESSUS de la legende « reponses sur ». Cette legende est la COUPE
+              que trois temoins d ordre utilisent — AD06 l.327 et AE02 l.594
+              lisent la liste APRES elle, AD06 l.351 lit l ecran ENTIER. Descendu
+              sous la legende, ce bloc entrerait dans leurs `indexOf` et les
+              ferait tomber. */}
+          {pastillesFiltreVisibles ? (
+            <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+              {PASTILLES_DE_FILTRE.map((pastille) => renderPastilleDeFiltre(
+                pastille,
+                comptesParFiltre[pastille.clef] || 0,
+              ))}
+            </View>
+          ) : null}
+
+          {renderResponsesBar()}
+        </View>
+      ) : null}
 
       {/* AE02 (1E partiel) : la barre se place SOUS les compteurs et AU-DESSUS
           des groupes — elle filtre la liste, pas le resume. `withCalendar` et
@@ -1610,6 +1644,7 @@ function EventParticipants({
  * onPress: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * paymentStatus?: string,
+ * reponseAttendue?: boolean,
  * statusKind?: 'participating' | 'missing' | 'not_answered' | 'staff_present',
  * styles: any,
  * t: (clef: string, valeurParDefaut?: string) => string
@@ -1625,6 +1660,7 @@ function ParticipantItem({
   onPress,
   paymentStatus = '',
   player,
+  reponseAttendue = true,
   statusKind = 'participating',
   styles,
   t,
@@ -1638,6 +1674,7 @@ function ParticipantItem({
     colors: Colors,
     eventStartAt,
     nowMs,
+    reponseAttendue,
     statusKind,
     t,
   });

@@ -147,10 +147,17 @@ function RequestFeedItem({
     item?.meta?.windowStart,
     item?.meta?.windowEnd,
   );
-  const occupancyRatioLabel = t('requestFeedItem.occupancy', '{{occupied}}/{{max}} slots occupes', {
-    max: Number(item?.meta?.maxSlots || 1),
-    occupied: Number(item?.meta?.overlapCount || 0),
-  });
+  // FINITIONS4 (recette du 29/09) — le mot anglais sans accent devient « places
+  // occupées », accordé par `count` (zéro et un au singulier).
+  const occupancyRatioLabel = t(
+    'requestFeedItem.occupancy',
+    '{{occupied}}/{{max}} places occupées',
+    {
+      count: Number(item?.meta?.overlapCount || 0),
+      max: Number(item?.meta?.maxSlots || 1),
+      occupied: Number(item?.meta?.overlapCount || 0),
+    },
+  );
   /**
    * @param {import('react').ReactNode} children
    */

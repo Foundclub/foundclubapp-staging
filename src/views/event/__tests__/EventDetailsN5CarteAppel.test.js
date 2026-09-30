@@ -112,7 +112,12 @@ jest.mock('@/services/event/eventQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
-  useGetEventAttendance: () => ({ ...emptyQuery(), data: mockAttendanceQuery.data }),
+  useGetEventAttendance: () => ({
+    ...emptyQuery(),
+    data: mockAttendanceQuery.data,
+    // FINITIONS4 (D7) : une charge d appel en ERREUR ne montre plus de carte.
+    isError: mockAttendanceQuery.isError === true,
+  }),
   useGetEventConvocation: () => emptyQuery(),
   useGetEventTeamComposition: () => emptyQuery(),
 }));
@@ -403,6 +408,7 @@ const montes = [];
 const monter = (/** @type {any} */ options = {}) => {
   const {
     attendance = DANS_LA_FENETRE,
+    attendanceError = false,
     auth = authPour(COACH, true),
     event = MATCH,
   } = options;
@@ -410,6 +416,7 @@ const monter = (/** @type {any} */ options = {}) => {
   mockUseAuth.mockReturnValue(auth);
   mockEventQuery.data = event;
   mockAttendanceQuery.data = attendance;
+  /** @type {any} */ (mockAttendanceQuery).isError = attendanceError;
 
   /** @type {any} */
   let arbre = null;
@@ -525,16 +532,26 @@ describe('N5 — la carte « Faire l appel » sur l Aperçu', () => {
   });
 
   test('D5 — sans la charge d appel, le coach voit la porte mais ne peut pas l ouvrir', () => {
-    // La requete est desactivee ou en vol. La carte se dessine avec le repli
-    // local du modele (30 min avant le debut), et elle n est PAS cliquable :
-    // on n ouvre pas une fenetre que le serveur n a pas confirmee.
+    // La requete est desactivee ou en vol. La carte se dessine, et elle n est
+    // PAS cliquable : on n ouvre pas une fenetre que le serveur n a pas confirmee.
+    // 🕰️ FINITIONS4 (D7, recette du 29/09) — ce temoin exigeait « Ouvre à 17:30 » :
+    // l heure du REPLI LOCAL (30 min avant le debut), affichee au-dessus de
+    // « L’appel est ouvert dès la création ». C etait une heure inventee. La
+    // carte CHARGE desormais, sans heure, tant que le serveur n a rien dit.
     const root = monter({ attendance: null });
 
     expect(laCarte(root)).toBeTruthy();
-    expect(textesVisibles(root)).toContain('Ouvre à 17:30');
+    expect(textesVisibles(root).some((texte) => texte.startsWith('Ouvre à'))).toBe(false);
+    expect(textesVisibles(root)).not.toContain('Pas encore ouvert');
     expect(leBouton(root).props.disabled).toBe(true);
     // Et le compte n est pas invente : on ne sait pas qui est attendu.
     expect(textesVisibles(root).some((texte) => texte.includes('attendus'))).toBe(false);
+  });
+
+  test('FINITIONS4 (D7) — charge d appel en ERREUR : pas de carte, pas d heure fausse', () => {
+    const root = monter({ attendance: null, attendanceError: true });
+
+    expect(laCarte(root)).toBeNull();
   });
 });
 

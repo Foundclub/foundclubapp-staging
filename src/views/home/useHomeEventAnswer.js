@@ -54,6 +54,8 @@ import { respondToEventRsvp } from '@/services/event/eventService';
 /**
  * Ma reponse a un evenement, et de quoi la changer depuis le bandeau de l'accueil.
  * @param {string | undefined} eventId - L'evenement nomme par le bandeau.
+ * @param {{ rsvpEnabled?: boolean | null }} [summary] - Ce que le resume de
+ *   l'accueil dit de l'evenement, AVANT sa relecture (FINITIONS4, D4).
  * @returns {{
  *   answer: string | null,
  *   canAnswer: boolean,
@@ -61,7 +63,7 @@ import { respondToEventRsvp } from '@/services/event/eventService';
  *   submit: (answer: 'present' | 'absent') => void,
  * }} L'etat confirme par le serveur, et le geste.
  */
-export const useHomeEventAnswer = (eventId) => {
+export const useHomeEventAnswer = (eventId, summary = {}) => {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const queryClient = useQueryClient();
@@ -126,12 +128,24 @@ export const useHomeEventAnswer = (eventId) => {
     mutate(nextAnswer);
   }, [eventId, mutate]);
 
+  // POINTAGE (29/09) — l organisateur a pu decocher « Les participants
+  // repondent » : le bandeau ne propose alors pas de reponse.
+  // 🚦 FINITIONS4 (D4, recette du 29/09) — IL LE SAIT DES LE PREMIER AFFICHAGE.
+  // Avant, « tant que l evenement n est pas relu, vrai » : 20 a 40 s de
+  // Present / Absent au lancement, et un appui partait vers un refus du serveur.
+  //   1. l evenement relu tranche — c est la source de la fiche ;
+  //   2. avant lui, le resume de l accueil (`prochainEvenement.rsvpEnabled`) ;
+  //   3. sinon on ne sait pas : AUCUN bouton de reponse (un serveur d avant
+  //      FINITIONS4 ne le dit pas ; les boutons arrivent avec la relecture).
+  const canAnswer = (() => {
+    if (event) return isRsvpEnabled(event);
+    if (typeof summary?.rsvpEnabled === 'boolean') return summary.rsvpEnabled;
+    return false;
+  })();
+
   return {
     answer,
-    // POINTAGE (29/09) — l organisateur a pu decocher « Les participants
-    // repondent » : le bandeau ne propose alors pas de reponse. Tant que
-    // l evenement n est pas relu, on garde le comportement d avant (vrai).
-    canAnswer: isRsvpEnabled(event),
+    canAnswer,
     isAnswering: mutation.isPending,
     submit,
   };

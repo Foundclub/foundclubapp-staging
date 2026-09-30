@@ -326,7 +326,7 @@ function MissingPlayersView({ navigation }) {
                       style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '11px 15px' }}
                       type="button"
                     >
-                      {t('missingPlayersView.web.card.details', 'Voir le detail')}
+                      {t('missingPlayersView.web.card.details', 'Voir le détail')}
                     </button>
                     <button
                       disabled={isJoining}

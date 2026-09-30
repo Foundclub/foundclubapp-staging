@@ -1405,6 +1405,7 @@ function EventDetails({ navigation, route }) {
 
   const {
     data: attendancePayload,
+    isError: isAttendanceError,
     isFetching: isAttendanceFetching,
     refetch: refetchAttendance,
   } = useGetEventAttendance(
@@ -1481,14 +1482,15 @@ function EventDetails({ navigation, route }) {
   );
 
   // D5 — sans charge d appel (requete desactivee ou en vol), la carte se montre
-  // avec le repli local pour que le coach VOIE la porte, mais elle ne s ouvre
-  // pas : `before` est le seul etat honnete tant qu aucune fenetre n a ete
-  // confirmee par le serveur.
+  // pour que le coach VOIE la porte, mais elle ne s ouvre pas.
+  // 🕰️ FINITIONS4 (D7, recette du 29/09) — et elle CHARGE, sans heure : elle
+  // affichait l heure du repli local (« Ouvre à 16:30 ») sous « ouvert dès la
+  // création ». Une charge en erreur ne montre pas de carte du tout.
   const nextActionMode = useMemo(() => {
-    if (!attendancePayload?.data) return 'before';
+    if (!attendancePayload?.data) return isAttendanceError ? 'unavailable' : 'loading';
 
     return resolveCallMode({ serverNowMs: serverClockMs, window: attendanceCallWindow });
-  }, [attendanceCallWindow, attendancePayload?.data, serverClockMs]);
+  }, [attendanceCallWindow, attendancePayload?.data, isAttendanceError, serverClockMs]);
 
   // D2 — « N attendus » = l audience entiere : c est ce que la maquette
   // additionne (18 + 2 + 2). `null` quand la charge n est pas la — on ne dit

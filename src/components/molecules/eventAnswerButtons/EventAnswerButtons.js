@@ -299,7 +299,7 @@ function EventAnswerButtons({
                 <Button
                   onPress={onAbout}
                   style={Alignments.fullWidth}
-                  title={t('common.actions.seeMore', 'Voir le detail')}
+                  title={t('common.actions.seeMore', 'Voir le détail')}
                   variant="SecondaryLight"
                 />
               ) : null}
