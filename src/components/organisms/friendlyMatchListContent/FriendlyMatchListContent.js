@@ -20,6 +20,7 @@ import {
   getFriendlyMatchRoleMode,
   sanitizeFriendlyMatchTabForRole,
 } from '@/domains/search/friendlyMatchFlow';
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -99,10 +100,11 @@ function FriendlyMatchListContent({
   const borderSoft = `${Colors.primary500}26`;
   const mutedText = `${Colors.neutral100}C4`;
 
-  const managedTeamIds = useMemo(() => Array.from(new Set([
-    ...(userData?.myTeams || []),
-    ...(userData?.trainedTeams || []),
-  ].map(getTeamKey).filter(Boolean))), [userData?.myTeams, userData?.trainedTeams]);
+  // GERER-ANNONCE (A15/A16) — les equipes que je GERE, pas celles ou je joue.
+  const managedTeamIds = useMemo(
+    () => getManagedTeams(userData).map(getTeamKey).filter(Boolean),
+    [userData],
+  );
 
   const [activeTab, setActiveTab] = useState(
     () => sanitizeFriendlyMatchTabForRole(initialTab, userData),

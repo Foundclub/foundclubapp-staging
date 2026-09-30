@@ -269,3 +269,52 @@ describe('FriendlyMatchListContent — les boutons mènent quelque part (L5)', (
     expect(mockNavigate).toHaveBeenCalledWith('FriendlyMatchAdDetails', { adId: 'ad-1' });
   });
 });
+
+// GERER-ANNONCE (audit V1, A15/A16, 2026-09-30) — « Mes annonces » et « Mes
+// propositions » filtraient sur `myTeams` + `trainedTeams`. Or `myTeams` liste
+// les equipes ou l'on JOUE : un entraineur qui joue aussi ailleurs recevait les
+// annonces de cette autre equipe, cartes « proprietaire » comprises, que le
+// serveur lui refuse (`canManageTeam`).
+describe('FriendlyMatchListContent — GERER-ANNONCE : « mes » = les equipes que je GERE', () => {
+  const EQUIPE_ENTRAINEE = { club: { documentId: 'club-a' }, documentId: 'team-entrainee' };
+  const EQUIPE_OU_IL_JOUE = { club: { documentId: 'club-b' }, documentId: 'team-ou-il-joue' };
+  const ENTRAINEUR_QUI_JOUE_AILLEURS = {
+    documentId: 'u-1',
+    myTeams: [EQUIPE_OU_IL_JOUE],
+    role: { name: 'Entraineur' },
+    trainedTeams: [EQUIPE_ENTRAINEE],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchAds.mockResolvedValue({ data: [], meta: {} });
+    mockGetMyFriendlyMatchAds.mockResolvedValue([]);
+    mockGetMyFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  /**
+   * Rend la liste ouverte sur un sous-onglet.
+   * @param {string} initialTab
+   * @returns {Promise<void>}
+   */
+  const renderOnTab = async (initialTab) => {
+    mockUseAuth.mockReturnValue({ userData: ENTRAINEUR_QUI_JOUE_AILLEURS });
+    await act(async () => {
+      renderer.create(<FriendlyMatchListContent initialTab={initialTab} />);
+    });
+  };
+
+  it('« Mes annonces » ne lit que les equipes entrainees', async () => {
+    await renderOnTab('mes-annonces');
+
+    expect(mockGetMyFriendlyMatchAds).toHaveBeenCalledWith(
+      expect.objectContaining({ teamIds: ['team-entrainee'] }),
+    );
+  });
+
+  it('« Mes propositions » ne lit que les equipes entrainees', async () => {
+    await renderOnTab('candidatures');
+
+    expect(mockGetMyFriendlyMatchApplications).toHaveBeenCalledWith(['team-entrainee']);
+  });
+});
