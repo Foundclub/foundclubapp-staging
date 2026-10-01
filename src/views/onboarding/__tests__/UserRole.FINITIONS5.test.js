@@ -293,7 +293,7 @@ test('COLL-ACCUEIL · « Je représente une collectivité », sous « Pour une m
   expect(rangee(arbre, 'Je représente une collectivité')).toBeDefined();
 });
 
-test('COLL-ACCUEIL · la choisir mène à l inscription de la mairie, SANS poser de rôle', async () => {
+test('COLL-ACCUEIL · la choisir mène à l inscription de la mairie, sans rôle posé', async () => {
   const arbre = await monter();
   await appuyer(rangee(arbre, 'Je représente une collectivité'));
   expect(bouton(arbre, CONTINUER).props.disabled).toBe(false);
