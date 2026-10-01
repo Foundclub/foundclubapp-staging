@@ -45,6 +45,9 @@ const DEFAULT_HOUR_HEIGHT = 60;
 const DEFAULT_COLLAPSED_HEIGHT = 18;
 const DEFAULT_MIN_EVENT_HEIGHT = 28;
 const DEFAULT_TIME_COLUMN_WIDTH = 56;
+// PLANNING-PORTRAIT (01/10, D6 A) : le mode « jour » (plein ecran tenu droit) montre
+// une colonne ; tout autre mode que ceux-la garde ses 3 jours.
+const PAGE_DAYS_BY_MODE = /** @type {Record<string, number>} */ ({ day: 1, week: 7 });
 const PALETTE = ['#FF4D4D', '#4D79FF', '#FFB34D', '#4DFFB3', '#9D4DFF', '#FF4D94'];
 
 const hexToRgba = (hex, alpha) => {
@@ -110,41 +113,62 @@ const getEventColor = (event, fallbackColor) => {
  * « cliquables ». Les quatre ecrans qui montent cette vue ouvrent un bloc par
  * son `documentId`, et ne font rien sans lui : la regle est donc ici, une fois.
  * Le bloc inerte reste lu d'un seul tenant (`accessible`), sans role de bouton.
+ * PLANNING-PORTRAIT (01/10) — SAUF si l'ecran sait le lire autrement : la mairie
+ * ouvre une fiche en lecture (SPEC Collectivites §2 C), par `onReadOnlyEventPress`.
  * @param {object} props
+ * @param {string} [props.accessibilityLabel]
  * @param {any} props.children
  * @param {any} props.event
  * @param {Function} [props.onEventPress]
+ * @param {Function} [props.onReadOnlyEventPress]
  * @param {any} props.style
  * @returns {JSX.Element}
  */
 function EventBlock({
-  children, event, onEventPress, style,
+  accessibilityLabel, children, event, onEventPress, onReadOnlyEventPress, style,
 }) {
   if (onEventPress && event?.documentId) {
     return (
-      <TouchableOpacity onPress={() => onEventPress(event)} style={style}>
+      <TouchableOpacity
+        accessibilityLabel={accessibilityLabel}
+        onPress={() => onEventPress(event)}
+        style={style}
+      >
         {children}
       </TouchableOpacity>
     );
   }
-  return <View accessible style={style}>{children}</View>;
+  if (onReadOnlyEventPress) {
+    return (
+      <TouchableOpacity
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        onPress={() => onReadOnlyEventPress(event)}
+        style={style}
+      >
+        {children}
+      </TouchableOpacity>
+    );
+  }
+  return <View accessibilityLabel={accessibilityLabel} accessible style={style}>{children}</View>;
 }
 
 /**
- *
- * @param root0
- * @param root0.cardDisplayProfile
- * @param root0.currentDate
- * @param root0.events
- * @param root0.mode
- * @param root0.onDateChange
- * @param root0.onEventPress
- * @param root0.onSummaryPress
- * @param root0.scrollEnabled
- * @param root0.compactFullscreen
- * @param root0.expandToContent
- * @param root0.showHeader
- * @param root0.showUntimedSection
+ * La grille du planning : une semaine, trois jours, ou un jour.
+ * @param {object} root0
+ * @param {string} [root0.cardDisplayProfile] - 'default', 'teamFocused' ou 'clubFocused'.
+ * @param {any} [root0.currentDate]
+ * @param {any[]} [root0.events]
+ * @param {string} [root0.mode] - 'week' (7 jours), 'day' (1 jour) ; sinon 3 jours.
+ * @param {Function} [root0.onDateChange]
+ * @param {Function} [root0.onEventPress]
+ * @param {Function} [root0.onReadOnlyEventPress] - Ouvre en lecture un bloc sans identifiant.
+ * @param {Function} [root0.onSummaryPress]
+ * @param {boolean} [root0.scrollEnabled]
+ * @param {boolean} [root0.compactFullscreen]
+ * @param {boolean} [root0.expandToContent]
+ * @param {boolean} [root0.showHeader]
+ * @param {boolean} [root0.showUntimedSection]
  */
 function PlanningWeekTimelineView({
   cardDisplayProfile = 'default',
@@ -155,6 +179,7 @@ function PlanningWeekTimelineView({
   mode = '3days',
   onDateChange,
   onEventPress,
+  onReadOnlyEventPress,
   onSummaryPress,
   scrollEnabled = true,
   showHeader = true,
@@ -177,6 +202,8 @@ function PlanningWeekTimelineView({
       const start = startOfWeek(currentDate, { weekStartsOn: 1 });
       return Array.from({ length: 7 }, (_, index) => addDays(start, index));
     }
+
+    if (mode === 'day') return [currentDate];
 
     return [currentDate, addDays(currentDate, 1), addDays(currentDate, 2)];
   }, [currentDate, mode]);
@@ -478,8 +505,9 @@ function PlanningWeekTimelineView({
     setInternalDate(nextDate);
   };
 
-  const handlePrevPage = () => handleDateUpdate(subDays(currentDate, mode === 'week' ? 7 : 3));
-  const handleNextPage = () => handleDateUpdate(addDays(currentDate, mode === 'week' ? 7 : 3));
+  const pageDays = PAGE_DAYS_BY_MODE[mode] || 3;
+  const handlePrevPage = () => handleDateUpdate(subDays(currentDate, pageDays));
+  const handleNextPage = () => handleDateUpdate(addDays(currentDate, pageDays));
   const handleOverflowPress = (date) => {
     handleDateUpdate(date);
     onSummaryPress?.();
@@ -517,6 +545,7 @@ function PlanningWeekTimelineView({
     const {
       compactDateTimeLabel,
       contextLabel,
+      isClubFocusedCard,
       isTeamFocusedCard,
       primaryLabel,
       quaternaryMetaLabel,
@@ -541,9 +570,11 @@ function PlanningWeekTimelineView({
 
     const metaLabel = quaternaryMetaLabel;
     const showPrimaryAsType = !isTeamFocusedCard && Boolean(typeLabel);
-    const canShowSecondary = isTeamFocusedCard
-      ? Boolean(secondaryLabel)
-      : !isCompact && Boolean(secondaryLabel);
+    // PLANNING-PORTRAIT : sur un bloc d'installation, l'equipe reste lisible des qu'il y
+    // a deux lignes de place (« AS Montrivage » / « U15 »).
+    let canShowSecondary = !isCompact && Boolean(secondaryLabel);
+    if (isTeamFocusedCard) canShowSecondary = Boolean(secondaryLabel);
+    if (isClubFocusedCard) canShowSecondary = !isTiny && Boolean(secondaryLabel);
     const canShowTertiary = isTeamFocusedCard
       ? !isTiny && Boolean(tertiaryLabel)
       : !isCompact && Boolean(tertiaryLabel);
@@ -573,11 +604,19 @@ function PlanningWeekTimelineView({
       primaryMinimumFontScale = mode === 'week' ? 0.72 : 0.78;
     }
 
+    // Le lecteur d'ecran entend le bloc entier, meme quand une ligne ne tient pas.
+    const blockAccessibilityLabel = isClubFocusedCard
+      ? [[primaryLabel, contextLabel].filter(Boolean).join(' · '), getPlanningTimeLabel(event)]
+        .filter(Boolean).join(', ')
+      : undefined;
+
     return (
       <EventBlock
+        accessibilityLabel={blockAccessibilityLabel}
         event={event}
         key={event.documentId || `${event.dayIndex}-${event.top}`}
         onEventPress={onEventPress}
+        onReadOnlyEventPress={onReadOnlyEventPress}
         style={[styles.eventCard, {
           backgroundColor: hexToRgba(cardAccentColor, isTiny ? 0.22 : 0.18),
           borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
@@ -610,7 +649,11 @@ function PlanningWeekTimelineView({
           numberOfLines={1}
           style={[Fonts.p3Bold, {
             color: showPrimaryAsType ? color : Colors.neutral00,
-            flexShrink: 1,
+            // PLANNING-PORTRAIT (constat T7, capture D1) : seule ligne autorisee a
+            // retrecir, elle tombait a ZERO de hauteur des que le bloc debordait (blocs
+            // d'1 h 30) — on lisait l'equipe sans le club. La premiere ligne garde sa
+            // place ; ce sont les dernieres que le bloc coupe (`overflow: hidden`).
+            flexShrink: 0,
             fontSize: primaryFontSize,
             letterSpacing: showPrimaryAsType ? 0.35 : 0,
             lineHeight: primaryFontSize + 2,
@@ -741,6 +784,7 @@ function PlanningWeekTimelineView({
                   event={event}
                   key={event.documentId || `${getDayKey(weekDays[index])}-${getPlanningDisplayTitle(event)}`}
                   onEventPress={onEventPress}
+                  onReadOnlyEventPress={onReadOnlyEventPress}
                   style={[
                     styles.untimedCard,
                     compactFullscreen ? styles.compactUntimedCard : null,

@@ -1,4 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation, useQueries, useQuery, useQueryClient,
+} from '@tanstack/react-query';
 
 import {
   addAdminCollectiviteGestionnaire,
@@ -106,6 +108,33 @@ export const useCollectiviteInstallations = (collectiviteId, options = {}) => us
   staleTime: 60_000,
   ...options,
 });
+
+/**
+ * PLANNING-PORTRAIT (01/10) — la collectivite que JE gere et qui POSSEDE cette
+ * installation, ou null. Ce sont les deux lectures du serveur (mes collectivites, puis
+ * leurs installations, memes clefs que ci-dessus) : l app ne deduit rien du role du
+ * compte. Un compte qui ne gere aucune collectivite ne fait qu un appel, deja en cache
+ * si « Mon compte » l a fait.
+ * @param {string | null | undefined} facilityId - documentId de l installation.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : aucun appel.
+ * @returns {string | null} documentId de la collectivite, ou null.
+ */
+export const useManagingCollectiviteId = (facilityId, { enabled = true } = {}) => {
+  const mine = useMyCollectivites({ enabled: enabled && Boolean(facilityId) });
+  const collectivites = Array.isArray(mine.data) ? mine.data : [];
+  const installations = useQueries({
+    queries: collectivites.map(({ documentId }) => ({
+      queryFn: async () => unwrapRows(await getCollectiviteInstallations(String(documentId))),
+      queryKey: collectiviteInstallationsQueryKey(documentId),
+      staleTime: 60_000,
+    })),
+  });
+  const index = installations.findIndex((query) => (
+    Array.isArray(query.data)
+    && query.data.some((installation) => installation?.documentId === facilityId)
+  ));
+  return index >= 0 ? collectivites[index]?.documentId || null : null;
+};
 
 /**
  * Les clubs rattaches a une collectivite.

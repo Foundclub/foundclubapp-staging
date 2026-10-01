@@ -130,6 +130,20 @@ jest.mock('@/services/multisportClub/multisportClubService', () => ({
   getCMPlanning: jest.fn(),
 }));
 
+// PLANNING-PORTRAIT (01/10) : la fiche d un bloc (mairie) vit dans une feuille du bas.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
+
+// PLANNING-PORTRAIT (01/10) : l ecran demande si le compte GERE l installation (ici, non).
+jest.mock('@/services/collectivite/collectiviteService', () => ({
+  getCollectiviteClubs: jest.fn(() => Promise.resolve({ data: [] })),
+  getCollectiviteInstallations: jest.fn(() => Promise.resolve({ data: [] })),
+  getMyCollectivites: jest.fn(() => Promise.resolve({ data: [] })),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));

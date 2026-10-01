@@ -8171,7 +8171,7 @@ export default {
     planning: {
       allClubFacilities: 'Toutes installations',
       allSharedFacilities: 'Toutes partagées',
-      capacityAvailable: '{{count}} slot(s) restaient disponibles au pic de charge.',
+      capacityAvailable: 'Places encore libres au moment le plus chargé : {{count}}.',
       // eslint-disable-next-line max-len
       capacityReachedOverflow: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements restent autorises et notifieront les dirigeants.',
       // eslint-disable-next-line max-len
@@ -12770,17 +12770,29 @@ export default {
   },
   personalPlanningWeekFullscreen: {
     backToTheCurrentWeek: 'Revenir à la semaine actuelle',
+    backToToday: 'Revenir à aujourd’hui',
+    blockSheet: {
+      close: 'Fermer',
+      contactTitle: 'Contact du club',
+      email: 'E-mail : {{email}}',
+      noContact: 'Aucun contact renseigné par le club.',
+      phone: 'Téléphone : {{phone}}',
+      title: 'Qui occupe l’installation',
+    },
     // eslint-disable-next-line max-len
     changeWeekToExploreThe: 'Change de semaine pour explorer le planning ou reviens à la semaine actuelle.',
     closeTheFullScreenPlanning: 'Fermer le planning plein écran',
     events_one: '{{count}} événement',
     events_other: '{{count}} événements',
+    nextDay: 'Jour suivant',
     nextWeek: 'Semaine suivante',
     noSlotThisWeek: 'Aucun créneau cette semaine',
-    peak: 'Pic {{peak}}/{{max}}',
+    peak: 'Au plus chargé : {{peak}} sur {{max}}',
+    previousDay: 'Jour précédent',
     previousWeek: 'Semaine précédente',
-    slots_one: '{{count}} slot',
-    slots_other: '{{count}} slots',
+    rotateForWeek: 'Téléphone à l’horizontale : toute la semaine.',
+    slots_one: '{{count}} équipe à la fois',
+    slots_other: '{{count}} équipes à la fois',
     today: 'Aujourd’hui',
     tryAgain: 'Reessayer',
     unableToLoadThePlanning: 'Impossible de charger le planning',

@@ -135,6 +135,27 @@ jest.mock('@/services/multisportClub/multisportClubService', () => ({
   getCMPlanning: jest.fn(),
 }));
 
+// PLANNING-PORTRAIT (01/10, D6 A) : l ecran suit le telephone ; la semaine, c est le
+// telephone TOURNE. Ce fichier fige la semaine : on le tient en paysage.
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({ height: 390, width: 844 }),
+}));
+
+// PLANNING-PORTRAIT : la fiche d un bloc (mairie) vit dans une feuille du bas.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
+
+// PLANNING-PORTRAIT : l ecran demande si le compte GERE l installation (un joueur, non).
+jest.mock('@/services/collectivite/collectiviteService', () => ({
+  getCollectiviteClubs: jest.fn(() => Promise.resolve({ data: [] })),
+  getCollectiviteInstallations: jest.fn(() => Promise.resolve({ data: [] })),
+  getMyCollectivites: jest.fn(() => Promise.resolve({ data: [] })),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));

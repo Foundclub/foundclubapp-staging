@@ -412,6 +412,25 @@ export const resolvePlanningCardContent = (item, { profile = 'default' } = {}) =
     };
   }
 
+  // PLANNING-PORTRAIT (01/10) — le planning d UNE installation (constat T7, capture D1) :
+  // le club en premiere ligne, l equipe en seconde, et ni le gymnase (on sait ou l on
+  // est) ni l equipe une deuxieme fois (« Montrivage FC · Senior B » puis « Senior B »).
+  const clubName = String(item?.club?.name || '').trim();
+  if (profile === 'clubFocused' && clubName) {
+    return {
+      compactDateTimeLabel,
+      contextLabel: teamName && teamName !== clubName ? teamName : null,
+      isClubFocusedCard: true,
+      isMatchCard: Boolean(matchContext?.isMatch || item?.leagueMatch || item?.league_match),
+      isTeamFocusedCard: false,
+      primaryLabel: clubName,
+      quaternaryMetaLabel: '',
+      secondaryDateTimeLabel,
+      tertiaryLocationLabel: null,
+      typeLabel: null,
+    };
+  }
+
   return {
     compactDateTimeLabel,
     contextLabel: defaultContextLabel,
