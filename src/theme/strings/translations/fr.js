@@ -4802,6 +4802,12 @@ export default {
       titre: 'Vos clubs',
       voir: 'Voir les clubs',
     },
+    compte: {
+      gestionnaire: 'Gestionnaire · {{ville}}',
+      rangeeA11y: '{{nom}}, ma collectivité',
+      rangeeA11yDemandes: '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
+      retourMonCompte: 'Mon compte',
+    },
     dock: {
       accueil: 'Accueil',
       demandes: 'Demandes',

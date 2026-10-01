@@ -4481,6 +4481,12 @@ export default {
       titre: 'Your clubs',
       voir: 'See the clubs',
     },
+    compte: {
+      gestionnaire: 'Manager · {{ville}}',
+      rangeeA11y: '{{nom}}, my local authority',
+      rangeeA11yDemandes: '{{nom}}, my local authority, {{nombre}} pending requests',
+      retourMonCompte: 'My account',
+    },
     dock: {
       accueil: 'Home',
       demandes: 'Requests',

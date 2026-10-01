@@ -53,7 +53,10 @@ import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { deleteAccount } from '@/services/auth/authService';
-import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries';
+import {
+  useCollectiviteRequests,
+  useMyCollectivites,
+} from '@/services/collectivite/collectiviteQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import {
@@ -187,6 +190,19 @@ function Profile({ navigation, route }) {
   // n a souvent AUCUN club : la porte ne depend donc ni du club, ni du role.
   const { data: myCollectivites } = useMyCollectivites();
   const managedCollectivites = Array.isArray(myCollectivites) ? myCollectivites : [];
+  // 🏛️ COLL-ACCUEIL (01/10, planche « Mon compte, la porte secondaire ») — la pastille du nombre
+  // de demandes en attente sur la rangée de la Ville (même lecture, même clef que « Demandes » :
+  // elle suit chaque décision). Un compte « Ville seule » (aucun rôle sportif) ne voit que
+  // l'espace de sa Ville et son compte : ni carte d'abonnement, ni rangées sportives.
+  // ponytail: la pastille ne compte que la PREMIÈRE Ville (un hook par Ville serait un hook en
+  // boucle) ; un agent qui gère deux Villes voit le nombre de la première. Voie de sortie : un
+  // total par Ville rendu par /collectivites/mine.
+  const premiereVilleGeree = managedCollectivites[0] || null;
+  const demandesEnAttente = useCollectiviteRequests(premiereVilleGeree?.documentId, 'pending');
+  const nombreDemandesVille = Array.isArray(demandesEnAttente.data)
+    ? demandesEnAttente.data.length
+    : 0;
+  const estVilleSeule = currentRoleKey === 'new' && managedCollectivites.length > 0;
 
   /**
    * Retient la langue choisie et la parle tout de suite.
@@ -380,11 +396,18 @@ function Profile({ navigation, route }) {
     || userData?.myTeams?.[0]?.club?.name
     || userData?.myTeams?.[0]?.name
     || '';
-  const identitySubline = identityClubName
+  let identitySubline = identityClubName
     ? t('profile.identity.roleWithClub', {
       club: identityClubName, role: identityRoleLabel, ...SANS_ECHAPPEMENT,
     })
     : identityRoleLabel;
+  // COLL-ACCUEIL — un compte Ville seule lisait « Membre » : il est GESTIONNAIRE de sa Ville.
+  if (estVilleSeule) {
+    identitySubline = t('collectiviteAccueil.compte.gestionnaire', 'Gestionnaire · {{ville}}', {
+      ville: premiereVilleGeree?.name || '',
+      ...SANS_ECHAPPEMENT,
+    });
+  }
   let identityClub = null;
   let identityClubOnPress = null;
   if (userData?.club) {
@@ -660,12 +683,15 @@ function Profile({ navigation, route }) {
 
   /**
    * @param {{ key: string, icon: any, label: string, onPress: () => void,
-   *   destructive?: boolean, isLast?: boolean }} params
+   *   destructive?: boolean, isLast?: boolean, value?: string, badge?: number,
+   *   a11y?: string }} params
    */
   const renderAccountRow = ({
-    destructive = false, icon, isLast = false, key, label, onPress,
+    a11y = undefined, badge = 0, destructive = false, icon, isLast = false, key, label, onPress,
+    value = undefined,
   }) => (
     <TouchableOpacity
+      accessibilityLabel={a11y}
       accessibilityRole="button"
       key={key}
       onPress={onPress}
@@ -694,17 +720,38 @@ function Profile({ navigation, route }) {
           style={{ height: 16, tintColor: destructive ? Colors.error300 : Colors.primary200, width: 16 }}
         />
       </View>
-      <Text
-        numberOfLines={1}
-        style={{
-          color: destructive ? Colors.error300 : Colors.neutral00,
-          flex: 1,
-          fontFamily: 'Montserrat-Bold',
-          fontSize: 13.5,
-        }}
-      >
-        {label}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            color: destructive ? Colors.error300 : Colors.neutral00,
+            fontFamily: 'Montserrat-Bold',
+            fontSize: 13.5,
+          }}
+        >
+          {label}
+        </Text>
+        {/* COLL-ACCUEIL — la rangée de la Ville : son nom, puis « Ma collectivité » dessous. */}
+        {value ? (
+          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{value}</Text>
+        ) : null}
+      </View>
+      {badge > 0 ? (
+        <View
+          style={{
+            alignItems: 'center',
+            // Même jeton que la pastille de la cloche (NotificationBadge) : 5,2:1.
+            backgroundColor: Colors.error700,
+            borderRadius: 999,
+            justifyContent: 'center',
+            minWidth: 24,
+            paddingHorizontal: 6,
+          }}
+          testID={`${key}-compteur`}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{String(badge)}</Text>
+        </View>
+      ) : null}
       {destructive ? null : (
         <Image source={Images.arrowRight} style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.neutral400]} />
       )}
@@ -713,17 +760,46 @@ function Profile({ navigation, route }) {
 
   const activityRows = [
     // 🏛️ COLLECTIVITES 1c — en tete : pour un agent municipal, c est LA raison d ouvrir l app.
-    ...managedCollectivites.map((collectivite) => ({
-      icon: Images.flag,
-      key: `collectivite-${collectivite?.documentId}`,
-      label: t('collectivite.entry.label', 'Ma collectivité · {{name}}', {
-        name: collectivite?.name || '',
-        ...SANS_ECHAPPEMENT,
-      }),
-      onPress: () => navigation.navigate(RouteNames.CollectiviteHome, {
-        collectiviteId: collectivite?.documentId,
-      }),
-    })),
+    // COLL-ACCUEIL (01/10) — la PORTE SECONDAIRE : le nom de la Ville en titre, « Ma
+    // collectivité » dessous, la pastille des demandes. Elle ouvre l'espace de la Ville (barre
+    // Accueil · Demandes · Planning · Messages) ; sur le site, son accueil (menu latéral).
+    // Un compte mixte y lit « ‹ Mon compte » pour revenir ; un compte Ville seule y REVIENT
+    // (l'espace est déjà sa racine : `pop`).
+    ...managedCollectivites.map((collectivite, index) => {
+      const badge = index === 0 ? nombreDemandesVille : 0;
+      const nom = collectivite?.name || '';
+      return {
+        a11y: badge > 0
+          ? t(
+            'collectiviteAccueil.compte.rangeeA11yDemandes',
+            '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
+            { nom, nombre: badge, ...SANS_ECHAPPEMENT },
+          )
+          : t('collectiviteAccueil.compte.rangeeA11y', '{{nom}}, ma collectivité', {
+            nom,
+            ...SANS_ECHAPPEMENT,
+          }),
+        badge,
+        icon: Images.flag,
+        key: `collectivite-${collectivite?.documentId}`,
+        label: nom,
+        onPress: () => {
+          if (Platform.OS === 'web') {
+            navigation.navigate(RouteNames.CollectiviteHome, {
+              collectiviteId: collectivite?.documentId,
+            });
+            return;
+          }
+          navigation.navigate(RouteNames.CollectiviteSpace, {
+            collectiviteId: collectivite?.documentId,
+            ...(estVilleSeule ? {} : {
+              returnLabel: t('collectiviteAccueil.compte.retourMonCompte', 'Mon compte'),
+            }),
+          }, { pop: true });
+        },
+        value: t('collectivite.home.kicker', 'Ma collectivité'),
+      };
+    }),
     {
       icon: Images.trophy, key: 'myCard', label: t('profile.actions.myCard', 'Ma carte de collection'), onPress: handleOpenMyCard,
     },
@@ -812,13 +888,18 @@ function Profile({ navigation, route }) {
     }] : []),
   ];
 
+  // COLL-ACCUEIL — compte Ville seule : l'espace de la Ville, rien de sportif.
+  const lignesActivite = estVilleSeule
+    ? activityRows.filter((row) => row.key.startsWith('collectivite-'))
+    : activityRows;
+
   const profileActivitySection = (
     <View style={{ gap: 10 }}>
       <Text style={sectionLabelStyle}>{t('profile.sections.profileActivity')}</Text>
       <View style={sectionCardStyle}>
-        {activityRows.map((row, index) => renderAccountRow({
+        {lignesActivite.map((row, index) => renderAccountRow({
           ...row,
-          isLast: index === activityRows.length - 1,
+          isLast: index === lignesActivite.length - 1,
         }))}
       </View>
     </View>
