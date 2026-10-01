@@ -147,6 +147,98 @@ describe('ChoixDuSport — le composant seul', () => {
   });
 });
 
+// SPORTS-DOUBLONS (01/10/2026) — la base garde 4 sports en double tant que la fusion n'est pas
+// lancée : « Volley » / « Volleyball », « Echecs » / « Échecs », « Equitation » / « Équitation »,
+// « Canoë-Kayak » / « Canoë-kayak ». La liste n'en montre qu'un, sous son nom officiel ; le serveur
+// ramène les clubs des deux (admin `tests/authz/SPORTS-DOUBLONS-1-filtre-par-cle.test.js`).
+const SPORTS_AVEC_DOUBLONS = Object.freeze([
+  ...SPORTS_A09,
+  { documentId: 'a-volley-court', name: 'Volley' },
+  { documentId: 'a-echecs-sans', name: 'Echecs' },
+  { documentId: 'a-equit-sans', name: 'Equitation' },
+  { documentId: 'a-canoe-maj', name: 'Canoë-Kayak' },
+  { documentId: 'a-canoe', name: 'Canoë-kayak' },
+  { documentId: 'a-beach', name: 'Beach volley' },
+]);
+
+/**
+ * Rend le choix du sport sur la base avec doublons, liste « de A à Z » dépliée.
+ * @param {any} props Les props : cle, multiple, onChoisir, valeurs.
+ * @returns {Promise<any>} L'arbre.
+ */
+const rendreAvecDoublons = async ({
+  cle = 'documentId', multiple = false, onChoisir, valeurs = [],
+}) => {
+  await act(async () => {
+    arbre = renderer.create(
+      <ChoixDuSport
+        cle={cle}
+        multiple={multiple}
+        onChoisir={onChoisir}
+        sports={SPORTS_AVEC_DOUBLONS}
+        valeurs={valeurs}
+      />,
+    );
+  });
+  const deplier = arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.accessibilityRole === 'button'
+      && typeof n.props?.onPress === 'function',
+  )[0];
+  await act(async () => { deplier.props.onPress(); });
+  return arbre;
+};
+
+describe('ChoixDuSport — un sport en double dans la base n’apparaît qu’une fois', () => {
+  it('« Volleyball », « Échecs », « Équitation », « Canoë-kayak » : une ligne chacun', async () => {
+    const tree = await rendreAvecDoublons({ onChoisir: jest.fn() });
+    const lignes = lignesDeSport(tree);
+    ['Volleyball', 'Échecs', 'Équitation', 'Canoë-kayak'].forEach((nom) => {
+      expect(lignes.filter((ligne) => ligne === nom)).toHaveLength(nom === 'Volleyball' ? 2 : 1);
+    });
+    ['Volley', 'Echecs', 'Equitation', 'Canoë-Kayak'].forEach((nom) => {
+      expect(lignes).not.toContain(nom);
+    });
+    expect(lignes).toContain('Beach volley');
+    // « Volleyball » est deux fois à l'écran : dans les populaires, et dans « de A à Z ».
+    expect(lignes.filter((ligne) => ligne === 'Volleyball')).toHaveLength(2);
+  });
+
+  it('la recherche à la main ne montre qu’un « Échecs »', async () => {
+    const tree = await rendreAvecDoublons({ onChoisir: jest.fn() });
+    await chercherUnSport(tree, 'echec');
+    expect(lignesDeSport(tree)).toEqual(['Échecs']);
+  });
+
+  it('par identifiant : la ligne rend celui de la ligne au nom officiel', async () => {
+    const onChoisir = jest.fn();
+    const tree = await rendreAvecDoublons({ onChoisir });
+    await chercherUnSport(tree, 'equit');
+    await choisirLeSport(tree, 'Équitation');
+    expect(onChoisir).toHaveBeenCalledWith('a-equit');
+  });
+
+  it('par nom (annonces) : le sport envoyé est le nom officiel', async () => {
+    const onChoisir = jest.fn();
+    const tree = await rendreAvecDoublons({ cle: 'name', onChoisir });
+    await chercherUnSport(tree, 'canoe');
+    await choisirLeSport(tree, 'Canoë-kayak');
+    expect(onChoisir).toHaveBeenCalledWith('Canoë-kayak');
+  });
+
+  it('un choix rangé sous « Volley » coche « Volleyball », et le décocher le retire', async () => {
+    const onChoisir = jest.fn();
+    const tree = await rendreAvecDoublons({
+      multiple: true, onChoisir, valeurs: ['a-volley-court'],
+    });
+    expect(lignesDeSport(tree)[0]).toBe('Volleyball');
+    await chercherUnSport(tree, 'volleyball');
+    expect(ligneHote(tree, 'Volleyball').props['aria-checked']).toBe(true);
+    await choisirLeSport(tree, 'Volleyball');
+    expect(onChoisir).toHaveBeenCalledWith('a-volley-court');
+    expect(basculerSport(['a-volley-court'], 'a-volley-court')).toEqual([]);
+  });
+});
+
 describe('basculerSport / compacterNomDeSport', () => {
   it('coche, décoche, et la clef vide vide tout', () => {
     expect(basculerSport([], 'a-1')).toEqual(['a-1']);

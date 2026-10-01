@@ -2,10 +2,13 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { compacterNomDeSport, regrouperLesSports } from '@/domains/activity/cleDeSport';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Input from '@/components/molecules/input/Input';
+
+export { compacterNomDeSport };
 
 /**
  * A09 (audit V1, décision d'Adel du 30/09) — LE choix du sport de TOUTE la recherche : clubs
@@ -23,27 +26,16 @@ import Input from '@/components/molecules/input/Input';
  * dit ce que ce choix veut dire (appliquer aussitôt, retenir dans un brouillon, cocher / décocher
  * avec `basculerSport`). La clef vide `''` veut dire « Tous les sports ».
  *
- * ⚠️ Les doublons de la base (« Canoë-Kayak » / « Canoë-kayak », « Echecs » / « Échecs »,
- * « Equitation » / « Équitation ») restent DEUX lignes : chacun porte ses propres clubs, et la
- * recherche serveur ne sait filtrer que par UN identifiant. Les fondre ici cacherait les clubs de
- * l'autre. La fusion se fait dans la base (lot de données, voir le compte rendu LISTE-ANNONCES).
+ * SPORTS-DOUBLONS (01/10/2026) — les doublons de la base (« Volley » / « Volleyball », « Echecs » /
+ * « Échecs », « Equitation » / « Équitation », « Canoë-Kayak » / « Canoë-kayak ») ne font plus
+ * qu'UNE ligne, sous le nom officiel (`domains/activity/cleDeSport.js`). La ligne rend
+ * l'identifiant de la ligne au nom officiel, ou ce nom ; le serveur ramène les clubs des deux
+ * lignes tant que la base n'est pas fusionnée (admin `search/services/sport-key.ts`).
  */
 
 // ponytail: une liste écrite à la main (décision d'Adel) ; voie de sortie = la trier par les
 // recherches réelles quand on les mesurera.
 export const SPORTS_POPULAIRES = ['football', 'basketball', 'handball', 'rugby', 'volleyball'];
-
-/**
- * Un nom de sport réduit à ses lettres et chiffres, sans accent ni casse : « Volley-ball »,
- * « volleyball » et « VOLLEYBALL » se valent, « équit » trouve « Équitation ».
- * @param {unknown} nom Le nom.
- * @returns {string} Le nom réduit.
- */
-export const compacterNomDeSport = (nom) => String(nom ?? '')
-  .normalize('NFD')
-  .replace(/\p{Diacritic}/gu, '')
-  .toLowerCase()
-  .replace(/[^a-z0-9]/g, '');
 
 /**
  * Les sports retenus, toujours en liste : les formulaires rangent tantôt un texte, tantôt une
@@ -159,9 +151,17 @@ function ChoixDuSport({
   const TOUS_SPORTS = t('clubFiltersSheet.allSports', 'Tous les sports');
   const TOUT_DE_A_A_Z = t('pastillesFiltresClub.sport.all', 'Tous les sports, de A à Z');
 
+  // Un sport par clé : « Volley » et « Volleyball » font UNE ligne « Volleyball ». `clesDuGroupe` :
+  // les clefs de toutes ses lignes, pour cocher un choix rangé sous l'une ou l'autre.
   const alphabetiques = useMemo(
-    () => (Array.isArray(sports) ? sports : [])
-      .filter((sport) => sport?.[cle])
+    () => regrouperLesSports((Array.isArray(sports) ? sports : []).filter((sport) => sport?.[cle]))
+      .map(({ membres, nom, representant }) => {
+        const sport = { ...representant, name: nom };
+        return {
+          ...sport,
+          clesDuGroupe: [...new Set([sport, ...membres].map((ligne) => String(ligne[cle])))],
+        };
+      })
       .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''), 'fr')),
     [cle, sports],
   );
@@ -170,7 +170,8 @@ function ChoixDuSport({
     .filter(Boolean), [alphabetiques]);
 
   const choisis = enListeDeSports(valeurs);
-  const estChoisi = (/** @type {any} */ sport) => choisis.includes(String(sport[cle]));
+  const estChoisi = (/** @type {any} */ sport) => sport.clesDuGroupe
+    .some((/** @type {string} */ clef) => choisis.includes(clef));
   const actuels = alphabetiques.filter(estChoisi);
   const terme = compacterNomDeSport(recherche);
   const trouves = terme
@@ -183,7 +184,10 @@ function ChoixDuSport({
       key={String(sport[cle])}
       libelle={sport.name}
       multiple={multiple}
-      onPress={() => onChoisir(String(sport[cle]))}
+      // Cochée, la ligne rend la clef RANGÉE (celle d'une autre ligne du même sport, peut-être) :
+      // c'est elle que `basculerSport` doit retirer.
+      onPress={() => onChoisir(sport.clesDuGroupe
+        .find((/** @type {string} */ clef) => choisis.includes(clef)) || String(sport[cle]))}
     />
   );
   const ligneTousLesSports = (/** @type {boolean} */ coche) => (
