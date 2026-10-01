@@ -174,7 +174,7 @@ function UserParentalDeclaration({ navigation, route }) {
             : t(
               'userParentalDeclaration.parentLink.app',
               'Ton parent peut aussi donner son accord depuis son propre compte FoundClub : '
-                + 'Profil → Mes enfants. Tu recevras sa demande, et c’est toi qui l’accepteras.',
+                + 'dans Profil, rubrique Mes enfants. Tu recevras sa demande, et c’est toi qui l’accepteras.',
             )}
         </Text>
       </View>

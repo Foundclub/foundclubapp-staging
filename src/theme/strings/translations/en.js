@@ -18795,7 +18795,7 @@ export default {
       title: 'Loading profile',
     },
     parentLink: {
-      app: 'Your parent can also give their consent from their own FoundClub account: Profile → My children. You will receive their request, and you decide whether to accept it.',
+      app: 'Your parent can also give their consent from their own FoundClub account, in Profile, under My children. You will receive their request, and you decide whether to accept it.',
       web: 'Your parent can also give their consent from their own account, in the FoundClub mobile app: this is not available on the website yet.',
     },
     title: 'Your parents’ consent',

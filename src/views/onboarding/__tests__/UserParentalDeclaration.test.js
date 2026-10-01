@@ -285,7 +285,7 @@ test('CONSENTEMENT ⑦ sur le telephone, le lien parent est propose comme autre 
 
   expect(texte)
     .toContain('Ton parent peut aussi donner son accord depuis son propre compte FoundClub');
-  expect(texte).toContain('Profil → Mes enfants');
+  expect(texte).toContain('dans Profil, rubrique Mes enfants');
 });
 
 test('CONSENTEMENT ⑦ bis sur le site, l ecran dit que le lien parent n y est pas', async () => {
@@ -295,7 +295,7 @@ test('CONSENTEMENT ⑦ bis sur le site, l ecran dit que le lien parent n y est p
   expect(texte).toContain('Ton parent peut aussi donner son accord depuis son propre compte');
   expect(texte).toContain('application mobile FoundClub');
   expect(texte).toContain('pas encore possible sur le site');
-  expect(texte).not.toContain('Profil → Mes enfants');
+  expect(texte).not.toContain('dans Profil, rubrique Mes enfants');
 });
 
 // Parcours 7 (carte de collection) et 8 (ProfileEdit natif et web) affichent LA CARTE

@@ -20056,7 +20056,7 @@ export default {
     // Le lien parent n'existe que dans l'application mobile (webRouteExemptions.js).
     parentLink: {
       app: 'Ton parent peut aussi donner son accord depuis son propre compte FoundClub : '
-        + 'Profil → Mes enfants. Tu recevras sa demande, et c’est toi qui l’accepteras.',
+        + 'dans Profil, rubrique Mes enfants. Tu recevras sa demande, et c’est toi qui l’accepteras.',
       web: 'Ton parent peut aussi donner son accord depuis son propre compte, dans '
         + 'l’application mobile FoundClub : ce n’est pas encore possible sur le site.',
     },
