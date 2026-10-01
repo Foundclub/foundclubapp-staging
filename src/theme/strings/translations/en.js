@@ -11997,8 +11997,8 @@ export default {
     title: 'A parent account is required',
   },
   parentalDeclarationCard: {
-    description: 'This profile belongs to a child under 15. To continue, you must confirm that you are their parent or legal guardian.',
-    title: 'Parental declaration required',
+    description: 'You are under 15: one of your parents (or your legal guardian) must agree to you using FoundClub.',
+    title: 'Your parents’ consent',
   },
   parentLink: {
     child: {
@@ -12982,7 +12982,7 @@ export default {
       updateFailed: 'Unable to update your profile.',
     },
     parentalDeclaration: {
-      required: 'This confirmation is required to save a profile of someone under 13.',
+      required: 'Tick the box to save a profile of someone under 15.',
     },
     tutorial: {
       form: {
@@ -18776,23 +18776,29 @@ export default {
     },
     alerts: {
       saveError: {
-        message: 'Unable to save the parental declaration.',
+        message: 'Unable to save your answer.',
         title: 'Error',
       },
     },
     card: {
-      description: "The person using FoundClub for this profile must be the child's parent or legal guardian.",
+      description: 'Only tick it if it is true: your answer is recorded.',
+      title: 'Your statement',
     },
-    intro: 'This profile is for a child under 15. To continue, you must confirm that you are their parent or legal guardian.',
+    intro: 'You are under 15: to continue, one of your parents (or your legal guardian) must agree. If they do, tick the box.',
     loadError: {
       message: 'Unable to load the profile.',
       retry: 'Retry',
       title: 'Unable to load',
     },
     loading: {
-      description: "We're fetching the profile before the parental declaration.",
+      description: "We're fetching your profile.",
       title: 'Loading profile',
     },
+    parentLink: {
+      app: 'Your parent can also give their consent from their own FoundClub account: Profile → My children. You will receive their request, and you decide whether to accept it.',
+      web: 'Your parent can also give their consent from their own account, in the FoundClub mobile app: this is not available on the website yet.',
+    },
+    title: 'Your parents’ consent',
   },
   userPhysique: {
     alerts: {

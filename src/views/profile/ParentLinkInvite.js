@@ -18,6 +18,8 @@ import { parentLinkErrorCode } from '@/services/parentLink/parentLinkErrors';
 import { useRequestParentLink } from '@/services/parentLink/parentLinkQueries';
 import { openInviteSms, resolveInviteLinkOrigin } from '@/services/teamInvite/teamInviteShare';
 
+import { PARENTAL_DECLARATION_SIGNATORIES } from '@/constants/parentalDeclaration';
+
 /**
  * Les refus du serveur que l'écran sait dire, par code. Seuls parlent les refus qui
  * concernent ce que le parent sait déjà (son âge, sa saisie, SA fiche) : le serveur n'en
@@ -165,6 +167,7 @@ function ParentLinkInvite() {
               checked={declarationCochee}
               description={t('parentLink.invite.declaration')}
               onChange={setDeclarationCochee}
+              signatory={PARENTAL_DECLARATION_SIGNATORIES.PARENT}
               title={t('parentLink.invite.declarationTitle')}
             />
 

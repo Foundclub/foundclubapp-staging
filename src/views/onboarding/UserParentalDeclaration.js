@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View } from 'react-native';
+import {
+  Alert, Platform, Text, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -20,7 +22,13 @@ import { updateMe } from '@/services/auth/authService';
 import { buildMinorParentalDeclarationPayload } from '@/constants/parentalDeclaration';
 
 /**
+ * L'ecran de la case, vu par les 8 parcours d'un 13-14 ans (tunnel d'inscription, refus du
+ * serveur, carte de collection).
  *
+ * CONSENTEMENT-PHRASE (2026-10-01, decision d'Adel « 3-A corrige ») — c'est L'ADO qui coche :
+ * il declare qu'un parent est d'accord, il ne declare plus ETRE le parent. Le lien parent est
+ * propose comme autre voie ; il n'existe que dans l'application mobile (`webRouteExemptions.js`,
+ * MyParentLink et ParentLinkInvite), et l'ecran le dit sur le site.
  * @param root0
  * @param root0.navigation
  * @param root0.route
@@ -49,7 +57,7 @@ function UserParentalDeclaration({ navigation, route }) {
         'Erreur',
       ), error?.message || t(
         'userParentalDeclaration.alerts.saveError.message',
-        'Impossible d enregistrer la déclaration parentale.',
+        'Impossible d’enregistrer ta réponse.',
       ));
     },
     onSuccess: (updatedUser) => {
@@ -76,7 +84,7 @@ function UserParentalDeclaration({ navigation, route }) {
       <OnboardingStateView
         description={t(
           'userParentalDeclaration.loading.description',
-          'Nous recuperons le profil avant la déclaration parentale.',
+          'Nous récupérons ton profil.',
         )}
         isLoading
         title={t('userParentalDeclaration.loading.title', 'Chargement du profil')}
@@ -134,13 +142,13 @@ function UserParentalDeclaration({ navigation, route }) {
       <View style={[Spaces.gap[32]]}>
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('profile.titles.birthdate', 'Déclaration parentale obligatoire')}
+            {t('userParentalDeclaration.title', 'L’accord de tes parents')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
             {t(
               'userParentalDeclaration.intro',
-              'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois '
-                + 'confirmer que tu es son parent ou représentant légal.',
+              'Tu as moins de 15 ans : pour continuer, un de tes parents (ou ton représentant '
+                + 'légal) doit être d’accord. Si c’est le cas, coche la case.',
             )}
           </Text>
         </View>
@@ -149,11 +157,26 @@ function UserParentalDeclaration({ navigation, route }) {
           checked={accepted}
           description={t(
             'userParentalDeclaration.card.description',
-            'La personne qui utilise FoundClub pour ce profil doit être le parent ou le '
-              + 'représentant legal de l enfant.',
+            'Coche seulement si c’est vrai : ta réponse est enregistrée.',
           )}
           onChange={setAccepted}
+          // Le titre de l'ecran dit deja « L'accord de tes parents » : la carte ne le repete pas.
+          title={t('userParentalDeclaration.card.title', 'Ta déclaration')}
         />
+
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {Platform.OS === 'web'
+            ? t(
+              'userParentalDeclaration.parentLink.web',
+              'Ton parent peut aussi donner son accord depuis son propre compte, dans '
+                + 'l’application mobile FoundClub : ce n’est pas encore possible sur le site.',
+            )
+            : t(
+              'userParentalDeclaration.parentLink.app',
+              'Ton parent peut aussi donner son accord depuis son propre compte FoundClub : '
+                + 'Profil → Mes enfants. Tu recevras sa demande, et c’est toi qui l’accepteras.',
+            )}
+        </Text>
       </View>
 
       <View style={[Spaces.gap[16]]}>
