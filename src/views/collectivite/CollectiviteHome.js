@@ -13,12 +13,14 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import {
   availableHomeActions,
   clubInitials,
   clubTotals,
   firstFullMoment,
   formatWeekMoment,
+  isOwnClubRequest,
   oldestPendingRequest,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
@@ -92,6 +94,7 @@ function CollectiviteHome() {
   const { width } = useWindowDimensions();
   const enColonnes = width >= LARGEUR_COLONNES;
   const [decision, setDecision] = useState(/** @type {Decision | null} */ (null));
+  const { userData } = useAuth();
 
   const mine = useMyCollectivites();
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
@@ -268,6 +271,24 @@ function CollectiviteHome() {
             </View>
           ) : null}
         </View>
+        {isOwnClubRequest(demande, userData) ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius12,
+              {
+                alignSelf: 'flex-start',
+                backgroundColor: withAlpha(Colors.neutral00, 0.08),
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+              },
+            ]}
+            testID="collectivite-home-votre-club"
+          >
+            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+              {t('collectiviteAccueil.attente.votreClub', 'Demande de votre club')}
+            </Text>
+          </View>
+        ) : null}
         {auteur ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t('collectivite.requests.requestedBy', 'Demandé par {{name}}', {

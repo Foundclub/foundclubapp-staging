@@ -168,6 +168,23 @@ export const formatWeekMoment = (date) => {
 };
 
 /**
+ * D69 (décision d'Adel « conflit A », 01/10) — la demande vient-elle du club de CE compte ?
+ * Un gestionnaire qui dirige aussi un club tranche les demandes de son propre club ; la carte
+ * le dit (« Demande de votre club »).
+ * @param {any} demande - Une demande (son club : club.documentId).
+ * @param {any} userData - Le compte connecté (club, clubs).
+ * @returns {boolean} Vrai si le club demandeur est l'un des clubs du compte.
+ */
+export const isOwnClubRequest = (demande, userData) => {
+  const clubDemandeur = demande?.club?.documentId;
+  if (!clubDemandeur) return false;
+  const siens = [userData?.club, ...(Array.isArray(userData?.clubs) ? userData.clubs : [])]
+    .map((club) => club?.documentId)
+    .filter(Boolean);
+  return siens.includes(clubDemandeur);
+};
+
+/**
  * Un compte « Ville seule » : il gère (ou demande à gérer) une collectivité et n'a AUCUN
  * rôle sportif (rôle « Authenticated », clef `new`). Lui arrive sur l'espace de la Ville ;
  * un compte mixte (dirigeant, joueur, entraîneur, parent qui gère aussi une Ville) garde

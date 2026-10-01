@@ -61,6 +61,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
@@ -2524,6 +2525,8 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {/* COLL-ACCUEIL (01/10) — compte mixte : la porte discrète vers l'espace de sa Ville. */}
+        <CollectivitePorteRow />
         {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour. */}
         <PlayerModeBanner
           accountRoleKey={getUserRoleKey(roleName)}

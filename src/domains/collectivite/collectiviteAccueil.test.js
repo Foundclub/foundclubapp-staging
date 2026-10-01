@@ -7,6 +7,7 @@ import {
   COLLECTIVITE_HOME_ACTIONS,
   firstFullMoment,
   formatWeekMoment,
+  isOwnClubRequest,
   isVilleOnlyAccount,
   oldestPendingRequest,
   summarizeConflict,
@@ -92,6 +93,17 @@ describe('COLL-ACCUEIL — la vision', () => {
   it('le moment s écrit « jeu 18:00 »', () => {
     expect(formatWeekMoment(new Date(2030, 9, 3, 18, 0))).toBe('jeu 18:00');
     expect(formatWeekMoment(null)).toBe('');
+  });
+});
+
+describe('COLL-ACCUEIL — D69 : la demande de son propre club', () => {
+  it('reconnaît le club du compte (club principal ou liste de clubs)', () => {
+    const demande = { club: { documentId: 'club-as' } };
+    expect(isOwnClubRequest(demande, { club: { documentId: 'club-as' } })).toBe(true);
+    expect(isOwnClubRequest(demande, { clubs: [{ documentId: 'club-as' }] })).toBe(true);
+    expect(isOwnClubRequest(demande, { club: { documentId: 'club-fc' } })).toBe(false);
+    expect(isOwnClubRequest({}, { club: { documentId: 'club-as' } })).toBe(false);
+    expect(isOwnClubRequest(demande, null)).toBe(false);
   });
 });
 

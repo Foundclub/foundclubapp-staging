@@ -4469,6 +4469,7 @@ export default {
       unePlaceLibre: '1 free spot',
       voirToutes: 'See the {{nombre}} requests',
       voirUne: 'See the request',
+      votreClub: 'Request from your club',
     },
     clubs: {
       club: 'club',
@@ -4488,6 +4489,13 @@ export default {
       planning: 'Schedule',
     },
     nousContacter: 'Contact us',
+    porte: {
+      a11y: 'My local authority, {{nom}}',
+      a11yDemandes: 'My local authority, {{nom}}: {{nombre}} requests to decide',
+      demandes: 'My local authority · {{nombre}} requests',
+      retourAccueil: 'Home',
+      uneDemande: 'My local authority · 1 request',
+    },
     reessayer: 'Try again',
     refus: {
       texte: 'You do not manage this local authority. If this is a mistake, write to the FoundClub team: they will link you again.',

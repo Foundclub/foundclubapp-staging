@@ -4790,6 +4790,7 @@ export default {
       unePlaceLibre: '1 place libre',
       voirToutes: 'Voir les {{nombre}} demandes',
       voirUne: 'Voir la demande',
+      votreClub: 'Demande de votre club',
     },
     clubs: {
       club: 'club',
@@ -4809,6 +4810,13 @@ export default {
       planning: 'Planning',
     },
     nousContacter: 'Nous contacter',
+    porte: {
+      a11y: 'Ma collectivité, {{nom}}',
+      a11yDemandes: 'Ma collectivité, {{nom}} : {{nombre}} demandes à trancher',
+      demandes: 'Ma collectivité · {{nombre}} demandes',
+      retourAccueil: 'Accueil',
+      uneDemande: 'Ma collectivité · 1 demande',
+    },
     reessayer: 'Réessayer',
     refus: {
       // eslint-disable-next-line max-len

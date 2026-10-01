@@ -31,6 +31,8 @@ let mockSemaine;
 let mockMine;
 /** @type {any} */
 let mockParams;
+/** @type {any} */
+let mockUserData;
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 
@@ -76,6 +78,11 @@ jest.mock('@/theme/themeContext', () => {
     }),
   };
 });
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: mockUserData }),
+}));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
@@ -212,6 +219,7 @@ beforeEach(() => {
   mockNavigate.mockClear();
   mockGoBack.mockClear();
   mockParams = { collectiviteId: 'ville-montrivage' };
+  mockUserData = { club: { documentId: 'club-fc', name: 'Montrivage FC' } };
   mockMine = {
     data: [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage', type: 'commune' }],
     isLoading: false,
@@ -368,6 +376,26 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(lus).not.toContain('Actualités de la Ville');
     const source = readFileSync(join(__dirname, '..', 'CollectiviteHome.js'), 'utf8');
     expect(source).toContain('PLACE RÉSERVÉE AU LOT C4a');
+  });
+
+  // PLANCHE 3 (compte mixte) — D69, décision d'Adel « conflit A » : il tranche, et le sait.
+  it('compte mixte : la demande de SON club porte « Demande de votre club »', async () => {
+    mockUserData = { club: { documentId: 'club-as', name: 'AS Montrivage' } };
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('Demande de votre club');
+  });
+
+  it('la demande d un AUTRE club ne porte pas la mention', async () => {
+    const lus = textes(await monter());
+    expect(lus).not.toContain('Demande de votre club');
+  });
+
+  it('compte mixte : « ‹ AS Montrivage » en haut ramène à son accueil de club', async () => {
+    mockParams = { collectiviteId: 'ville-montrivage', returnLabel: 'AS Montrivage', space: true };
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('AS Montrivage');
+    await appuyer(arbre, 'collectivite-home-retour');
+    expect(mockGoBack).toHaveBeenCalled();
   });
 
   it('refus d accès : « Accès retiré », en clair, et à qui écrire', async () => {
