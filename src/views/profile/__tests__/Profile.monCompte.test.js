@@ -52,6 +52,7 @@ jest.mock('@/domains/subscription/subscriptionDecision', () => ({
   endSentenceAfterName: (/** @type {string} */ texte) => texte,
   formatCollectiviteOfferedBy: (/** @type {string} */ nom) => nom,
   getActiveClubNotCovered: () => null,
+  getActiveClubOfferPayer: () => null,
   getCollectiviteOffer: () => null,
   getSubscriptionBadgeLevel: () => 'FREE',
   getSubscriptionQuotaItems: () => [],

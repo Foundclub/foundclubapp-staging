@@ -12884,6 +12884,12 @@ export default {
         named: 'Your Club plan covers {{coveredClubs}}, not your club {{clubName}}.',
         unnamed: 'Your Club plan covers a club other than your current one.',
       },
+      payer: {
+        paid: 'Paid by your club: Club rights are active across your whole club.',
+        paidUnverified: 'Paid by your club. Your club is being certified by the platform.',
+        trial: 'Club trial in progress.',
+        trialUntil: 'Club trial until {{date}}.',
+      },
       paywall: {
         recommended: 'Recommended plan',
         remaining: 'Free uses remaining: {{count}}.',
@@ -15578,11 +15584,11 @@ export default {
     },
     trialBanner: {
       noCard: 'No card required. Back to the free plan afterwards.',
-      title: '{{scope}} preview · D-{{remainingDays}}',
+      title: '{{scope}} trial · D-{{remainingDays}}',
     },
     trialPlans: {
-      club: 'Club preview (free)',
-      team: 'Team preview (free)',
+      club: 'Club trial',
+      team: 'Team trial',
     },
     trialScope: {
       club: 'Club',

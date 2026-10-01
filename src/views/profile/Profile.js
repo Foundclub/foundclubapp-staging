@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
+import { format as formatDate } from 'date-fns';
 import {
   useCallback,
   useEffect,
@@ -23,7 +24,7 @@ import {
   endSentenceAfterName,
   formatCollectiviteOfferedBy,
   getActiveClubNotCovered,
-  getCollectiviteOffer,
+  getActiveClubOfferPayer,
   getSubscriptionBadgeLevel,
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
@@ -99,6 +100,7 @@ function Profile({ navigation, route }) {
     logoutMutation,
     refetchUserData,
     subscriptionAccessLevel,
+    subscriptionSummary,
     switchAccount,
     userData,
     userDataError,
@@ -161,15 +163,17 @@ function Profile({ navigation, route }) {
     subscriptionAccessLevel: paidSubscriptionAccessLevel,
     userData,
   }), [clubVerificationSummary, entitlementsSummary, paidSubscriptionAccessLevel, userData]);
-  // TEXTES-COLLECTIVITES (01/10) — quand l'offre Club du club vient de la Ville, la carte le
-  // dit (« Offert par la Ville de Montrivage »), au lieu de « en cours de certification ».
-  // Meme juge que « Mon abonnement » et le bandeau de la fiche du club (`offeredBy`).
+  // TEXTES-COLLECTIVITES (01/10) — la carte disait « Tes droits Club sont actifs. Ton club est
+  // en cours de certification » pour un ESSAI, une offre PAYEE et une offre OFFERTE par la
+  // Ville. Elle nomme desormais qui paie (`getActiveClubOfferPayer`, meme `offeredBy` que
+  // « Mon abonnement » et le bandeau de la fiche du club).
   const activeClubDocumentId = clubVerificationSummary?.clubDocumentId
     || userData?.club?.documentId;
-  const collectiviteOffer = useMemo(() => getCollectiviteOffer({
+  const offerPayer = useMemo(() => getActiveClubOfferPayer({
     clubDocumentId: activeClubDocumentId,
     entitlementsSummary,
-  }), [activeClubDocumentId, entitlementsSummary]);
+    subscriptionSummary,
+  }), [activeClubDocumentId, entitlementsSummary, subscriptionSummary]);
 
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
@@ -491,12 +495,29 @@ function Profile({ navigation, route }) {
     TEAM: 'team',
   }[paidSubscriptionAccessLevel] || 'free';
   let subscriptionStatusText = t(`profile.subscription.status.${subscriptionStatusKey}`);
-  if (collectiviteOffer && !uncoveredActiveClub) {
+  if (offerPayer?.kind === 'collectivite' && !uncoveredActiveClub) {
     subscriptionStatusText = t(
       'profile.subscription.offeredBy',
       'Offert par {{who}} : toutes les équipes de ton club sont couvertes.',
-      { who: formatCollectiviteOfferedBy(collectiviteOffer.name), ...SANS_ECHAPPEMENT },
+      { who: formatCollectiviteOfferedBy(offerPayer.name), ...SANS_ECHAPPEMENT },
     );
+  } else if (offerPayer?.kind === 'trial' && !uncoveredActiveClub) {
+    subscriptionStatusText = offerPayer.endsAt
+      ? t('profile.subscription.payer.trialUntil', 'Essai Club jusqu’au {{date}}.', {
+        date: formatDate(new Date(offerPayer.endsAt), 'd MMMM'),
+        ...SANS_ECHAPPEMENT,
+      })
+      : t('profile.subscription.payer.trial', 'Essai Club en cours.');
+  } else if (offerPayer?.kind === 'paid' && !uncoveredActiveClub) {
+    subscriptionStatusText = subscriptionStatusKey === 'clubUnverified'
+      ? t(
+        'profile.subscription.payer.paidUnverified',
+        'Payé par ton club. Ton club est en cours de certification par la plateforme.',
+      )
+      : t(
+        'profile.subscription.payer.paid',
+        'Payé par ton club : les droits Club sont actifs sur tout ton club.',
+      );
   }
   if (uncoveredActiveClub) {
     const [coveredClubName] = uncoveredActiveClub.coveredClubNames;

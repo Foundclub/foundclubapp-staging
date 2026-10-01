@@ -72,10 +72,12 @@ import { RouteNames } from '@/navigation/routeNames';
  */
 const TRIAL_PLAN_LABELS = {
   get fc_trial_club() {
-    return i18next.t('subscriptionOverview.trialPlans.club', 'Aperçu Club (offert)');
+    // TEXTES-COLLECTIVITES (01/10) : un essai n est pas « offert » — ce mot est reserve a
+    // l offre de la Ville (« Offert par la Ville de … »).
+    return i18next.t('subscriptionOverview.trialPlans.club', 'Essai Club');
   },
   get fc_trial_team() {
-    return i18next.t('subscriptionOverview.trialPlans.team', 'Aperçu Équipe (offert)');
+    return i18next.t('subscriptionOverview.trialPlans.team', 'Essai Équipe');
   },
 };
 
@@ -169,7 +171,7 @@ function SubscriptionTrialBanner({ trialSubscription }) {
       <Text style={[Fonts.p1Bold, Fonts.primary700]}>
         {t(
           'subscriptionOverview.trialBanner.title',
-          'Aperçu {{scope}} · J-{{remainingDays}}',
+          'Essai {{scope}} · J-{{remainingDays}}',
           {
             remainingDays,
             scope: getTrialScopeLabel(trialSubscription?.planCode),

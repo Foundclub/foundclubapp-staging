@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { countLabel, findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
@@ -178,8 +179,8 @@ function CollectiviteHome() {
                 ApplicationStyle.card,
                 Spaces.padding[16],
                 {
-                  backgroundColor: `${Colors.primary700}73`,
-                  borderColor: `${Colors.primary500}80`,
+                  backgroundColor: withAlpha(Colors.primary700, 0.45),
+                  borderColor: withAlpha(Colors.primary500, 0.5),
                   flexBasis: 260,
                   flexGrow: 1,
                   gap: 8,
@@ -199,7 +200,9 @@ function CollectiviteHome() {
                       Alignments.alignCenter,
                       Alignments.justifyCenter,
                       {
-                        backgroundColor: Colors.error500,
+                        // TEXTES-COLLECTIVITES : error500 + texte blanc = 3,7:1, illisible ;
+                        // meme jeton que la pastille de la cloche (NotificationBadge), 5,2:1.
+                        backgroundColor: Colors.error700,
                         borderRadius: 999,
                         minWidth: 24,
                         paddingHorizontal: 6,

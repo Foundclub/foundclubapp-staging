@@ -228,12 +228,15 @@ describe('ABOCLUB — carte « Mon abonnement » du Profil', () => {
     expect(texte).not.toContain(`${NOM_AIKI}.`);
   });
 
-  it('ne change RIEN quand l\'offre couvre le club actif', async () => {
+  // TEXTES-COLLECTIVITES (point 7 du chef, 01/10) : la phrase « Tes droits Club sont actifs.
+  // Ton club est en cours de certification » valait pour un essai, une offre payée et une
+  // offre de la Ville. Elle nomme désormais QUI PAIE ; la certification reste dite.
+  it('l offre couvre le club actif : la carte dit qui paie (ici, le club)', async () => {
     const texte = await texteDuProfil({ couvreLeClubActif: true });
 
     expect(texte).toContain('Club · actif');
     expect(texte).toContain(
-      'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
+      'Payé par ton club. Ton club est en cours de certification par la plateforme.',
     );
     expect(texte).not.toContain('pas ton club');
   });
@@ -318,8 +321,43 @@ describe('TEXTES-COLLECTIVITES — carte « Mon abonnement » quand la Ville off
     expect(texte).not.toContain('en cours de certification');
   });
 
-  it('une offre que le club PAIE lui-même : la phrase d avant, sans Ville', async () => {
+  it('une offre que le club PAIE lui-même : « Payé par ton club », sans Ville', async () => {
     const texte = await texteDuProfil({ couvreLeClubActif: true });
+    expect(texte).toContain('Payé par ton club');
     expect(texte).not.toContain('Offert par');
+  });
+
+  it('un ESSAI : « Essai Club jusqu’au … », jamais « offert » ni « certification »', async () => {
+    mockAuthValue = contexteAuth({ couvreLeClubActif: true });
+    mockAuthValue.entitlementsSummary = [{
+      ...mockAuthValue.entitlementsSummary[0],
+      subscriptionPlanCode: 'fc_trial_club',
+    }];
+    mockAuthValue.subscriptionSummary = {
+      payerSubscriptionsSummary: [{
+        // eslint-disable-next-line max-len
+        currentPeriodEnd: '2026-10-08T10:00:00.000Z', isTrial: true, planCode: 'fc_trial_club', status: 'active',
+      }],
+    };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        // eslint-disable-next-line max-len
+        <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    const texte = arbre.root
+      .findAllByType(Text)
+      .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+      .join(' | ');
+    act(() => {
+      arbre.unmount();
+    });
+
+    // Le mois suit la langue de l app (date-fns) : seul le jour est fige ici.
+    expect(texte).toMatch(/Essai Club jusqu’au 8 \S+\./);
+    expect(texte).not.toContain('offert');
+    expect(texte).not.toContain('en cours de certification');
   });
 });

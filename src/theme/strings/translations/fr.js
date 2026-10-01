@@ -13587,6 +13587,15 @@ export default {
         named: 'Ton offre Club couvre {{coveredClubs}}, pas ton club {{clubName}}.',
         unnamed: 'Ton offre Club couvre un autre club que ton club actuel.',
       },
+      // TEXTES-COLLECTIVITES (01/10) — la carte nomme QUI PAIE (essai, club, ou la Ville :
+      // `offeredBy` ci-dessus) au lieu d’une même phrase pour les trois.
+      payer: {
+        paid: 'Payé par ton club : les droits Club sont actifs sur tout ton club.',
+        // eslint-disable-next-line max-len
+        paidUnverified: 'Payé par ton club. Ton club est en cours de certification par la plateforme.',
+        trial: 'Essai Club en cours.',
+        trialUntil: 'Essai Club jusqu’au {{date}}.',
+      },
       paywall: {
         recommended: 'Offre recommandee',
         remaining: 'Usages gratuits restants: {{count}}.',
@@ -16331,11 +16340,12 @@ export default {
     },
     trialBanner: {
       noCard: "Aucune carte requise. Retour à l'offre gratuite ensuite.",
-      title: 'Aperçu {{scope}} · J-{{remainingDays}}',
+      title: 'Essai {{scope}} · J-{{remainingDays}}',
     },
     trialPlans: {
-      club: 'Aperçu Club (offert)',
-      team: 'Aperçu Équipe (offert)',
+      // TEXTES-COLLECTIVITES (01/10) : « offert » est réservé à l’offre de la Ville.
+      club: 'Essai Club',
+      team: 'Essai Équipe',
     },
     trialScope: {
       club: 'Club',

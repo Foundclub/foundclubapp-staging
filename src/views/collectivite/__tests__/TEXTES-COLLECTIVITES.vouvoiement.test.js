@@ -118,6 +118,16 @@ describe('TEXTES-COLLECTIVITES — la mairie est vouvoyée', () => {
   });
 });
 
+describe('TEXTES-COLLECTIVITES — « offert » est réservé à l offre de la Ville (point 6)', () => {
+  it('l essai s appelle « Essai Club » / « Essai Équipe », sans « offert »', () => {
+    expect(lire('subscriptionOverview.trialPlans.club')).toBe('Essai Club');
+    expect(lire('subscriptionOverview.trialPlans.team')).toBe('Essai Équipe');
+    // eslint-disable-next-line max-len
+    expect(lire('subscriptionOverview.trialBanner.title')).toBe('Essai {{scope}} · J-{{remainingDays}}');
+    expect(lireEn('subscriptionOverview.trialPlans.club')).toBe('Club trial');
+  });
+});
+
 describe('TEXTES-COLLECTIVITES — les clubs restent tutoyés (aucun ricochet)', () => {
   it.each([
     ['facilityList.empty.description', 'Ajoute les terrains, gymnases ou salles de ton club.'],
