@@ -16,6 +16,8 @@ import CollectiviteClubs from '../CollectiviteClubs';
 let mockClubs;
 
 jest.mock('@react-navigation/native', () => ({
+  // COLL-CLUBS (01/10) : toute la carte ouvre la fiche du club (temoin COLLCLUBS.liste).
+  useNavigation: () => ({ navigate: jest.fn() }),
   useRoute: () => ({ params: { collectiviteId: 'ville-de-recette' } }),
 }));
 
