@@ -585,3 +585,98 @@ describe('POINTAGE — la carte d appel suit l option « Suivre les arrivees »'
     expect(parTestID(root, 'event-next-action')[0]).toBeDefined();
   });
 });
+
+// ==========================================================================
+// SECU-STATS (01/10) — SUR LE SITE NON PLUS, LA CARTE NE PROPOSE PLUS
+// L EDITEUR DU COACH A UN JOUEUR.
+//
+// 🔒 Meme porte que le telephone : « un rapport publie se RELIT toujours, meme
+// sans le droit de le gerer » ouvrait `MatchStatsEditor` — l avis du coach et
+// l auto-evaluation de CHAQUE joueur — a tout membre de l equipe. La barriere
+// est le serveur (corrige dans le meme lot) ; ceci retire la porte.
+// ==========================================================================
+
+describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose plus l editeur du coach a un joueur', () => {
+  const JOUEUR = { documentId: 'joueur-web', firstname: 'Lea', lastname: 'Joueuse' };
+
+  /**
+   * L ecran tel qu un JOUEUR de l equipe le voit, match fini, rapport publie.
+   * @param {any} [rapport] - Les surcharges du rapport.
+   * @returns {any} - Les options de `mountScreen`.
+   */
+  const vuDuJoueur = (rapport = {}) => ({
+    attendance: buildAttendance(APRES_LE_MATCH),
+    auth: {
+      canEditClub: () => false,
+      canEditEvent: () => false,
+      canManageEvent: () => false,
+      freeUsageSummary: null,
+      subscriptionAccessLevel: 'FREE',
+      userData: { ...JOUEUR, role: { name: 'Joueur' } },
+    },
+    event: buildMatchEvent({
+      team: {
+        club: { documentId: CLUB_ID },
+        documentId: TEAM_ID,
+        name: 'U15',
+        players: [JOUEUR],
+        trainers: [COACH],
+      },
+    }),
+    matchStats: buildMatchStats({
+      permissions: { canManage: false, canView: true },
+      report: {
+        needsReview: false,
+        responseCompletionCount: 4,
+        responseEligibleCount: 12,
+        status: 'final',
+        ...rapport,
+      },
+    }),
+  });
+
+  test.each([
+    ['rapport publie', {}],
+    ['rapport a re-verifier apres un score officiel', { needsReview: true }],
+  ])('🔒 %s : pour un JOUEUR, la porte est fermee et rien n ouvre l editeur', (_cas, rapport) => {
+    const root = mountScreen(vuDuJoueur(rapport));
+
+    expect(parTestID(root, 'post-match-journey')[0]).toBeDefined();
+    const bouton = boutonDe(root, 'post-match-action');
+    expect(bouton.props.disabled).toBe(true);
+    act(() => {
+      bouton.props.onPress?.();
+    });
+    expect(dernierEnvoiVers('MatchStatsEditor')).toBeNull();
+  });
+
+  test('🔒 le joueur lit POURQUOI la porte est fermee : le rapport est publie', () => {
+    const root = mountScreen(vuDuJoueur());
+
+    expect(textOf(parTestID(root, 'post-match-journey')[0])).toContain('Rapport finalise');
+  });
+
+  test('PROTEGE : le COACH, rapport publie, ouvre toujours l editeur', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({
+        report: {
+          needsReview: false,
+          responseCompletionCount: 4,
+          responseEligibleCount: 12,
+          status: 'final',
+        },
+      }),
+    });
+
+    const bouton = boutonDe(root, 'post-match-action');
+    expect(bouton.props.disabled).toBe(false);
+    act(() => {
+      bouton.props.onPress();
+    });
+    expect(dernierEnvoiVers('MatchStatsEditor')).toEqual(
+      expect.objectContaining({ eventId: 'event-1', sourceType: 'event', teamId: TEAM_ID }),
+    );
+  });
+});

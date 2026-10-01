@@ -632,18 +632,20 @@ function EventDetails({ navigation, route }) {
         ),
       };
     }
-    // Un rapport publie ou a re-verifier se RELIT toujours, meme sans le droit
-    // de le gerer : c est pour cela que ce test passe avant le suivant.
-    if (isMatchStatsReviewRequired || isMatchStatsFinal) {
-      return { disabled: false, subtitle: '' };
-    }
+    // 🔒 SECU-STATS — UN TEST LE PRECEDAIT ET ROUVRAIT LA PORTE : « un rapport
+    // publie ou a re-verifier se RELIT toujours, meme sans le droit de le
+    // gerer ». Mais la relecture, c est `MatchStatsEditor`, l outil de
+    // l encadrement : il affiche l avis du coach et l auto-evaluation de CHAQUE
+    // joueur. Un joueur n y entre plus ; il garde sa reponse sur le telephone.
     if (!canManageMatchStats) {
       return {
         disabled: true,
-        subtitle: t(
-          'eventDetails.yourTeamMembersCanStill',
-          'Les membres de ton équipe peuvent encore finaliser ce rapport.',
-        ),
+        subtitle: isMatchStatsFinal
+          ? t('eventDetails.reportFinalised', 'Rapport finalise')
+          : t(
+            'eventDetails.yourTeamMembersCanStill',
+            'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+          ),
       };
     }
 
@@ -652,12 +654,13 @@ function EventDetails({ navigation, route }) {
     canManageMatchStats,
     isMatchFinished,
     isMatchStatsFinal,
-    isMatchStatsReviewRequired,
     matchStatsPayload?.score?.available,
     matchStatsPayload?.score?.waitingOfficial, t,
   ]);
   const openMatchStatsEditor = useCallback(() => {
-    if (!eventId || !compositionTeamId) return;
+    // 🔒 SECU-STATS — la seconde couche. La carte, la rangee du menu et l invite
+    // passent toutes par ici : sans le droit de gerer, l editeur ne s ouvre pas.
+    if (!eventId || !compositionTeamId || !canManageMatchStats) return;
 
     navigation.navigate(RouteNames.MatchStatsEditor, {
       eventId,
@@ -668,6 +671,7 @@ function EventDetails({ navigation, route }) {
       title: t('eventDetails.teamReport', 'Bilan équipe'),
     });
   }, [
+    canManageMatchStats,
     compositionEditorTeam?.name,
     compositionSport,
     compositionTeamId,
