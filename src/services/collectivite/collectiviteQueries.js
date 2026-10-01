@@ -2,6 +2,10 @@ import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
+import { getFacilityPlanning } from '@/services/facility/facilityService';
+
+import { getPlanningDefaultDate, getPlanningRange } from '@/utils/planning/planningSlots';
+
 import {
   addAdminCollectiviteGestionnaire,
   attachAdminCollectiviteClub,
@@ -135,6 +139,34 @@ export const useManagingCollectiviteId = (facilityId, { enabled = true } = {}) =
     && query.data.some((installation) => installation?.documentId === facilityId)
   ));
   return index >= 0 ? collectivites[index]?.documentId || null : null;
+};
+
+/**
+ * COLL-ACCUEIL (01/10) — « Cette semaine » de l accueil de la Ville : le planning de la
+ * semaine en cours de CHAQUE installation, par la lecture du planning d une installation
+ * (lot 1b, `/facilities/:id/planning`, gardee par can-read-facility-planning qui admet le
+ * gestionnaire). Meme clef que l ecran du planning : l accueil et le planning disent la
+ * meme chose, et le second s ouvre sans relire.
+ * ponytail: une lecture par installation — une Ville en a quelques-unes ; au-dela d une
+ * dizaine, une route « semaine de toutes mes installations » (lot C2b) la remplacera.
+ * @param {unknown} installations - Les installations (`useCollectiviteInstallations`).
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : aucun appel.
+ * @returns {Array<{ installation: any, query: any }>} Une lecture par installation.
+ */
+export const useCollectiviteWeek = (installations, { enabled = true } = {}) => {
+  const liste = Array.isArray(installations) ? installations : [];
+  const range = getPlanningRange(getPlanningDefaultDate(), 'week');
+  const queries = useQueries({
+    queries: liste.map((installation) => ({
+      enabled: enabled && Boolean(installation?.documentId),
+      queryFn: () => getFacilityPlanning(String(installation?.documentId), range),
+      queryKey: [
+        'planning', 'fullscreen', 'facility', installation?.documentId, range.from, range.to,
+      ],
+      staleTime: 60_000,
+    })),
+  });
+  return liste.map((installation, index) => ({ installation, query: queries[index] }));
 };
 
 /**

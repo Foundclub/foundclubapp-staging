@@ -4749,6 +4749,78 @@ export default {
       weekly: 'Chaque semaine',
     },
   },
+  collectiviteAccueil: {
+    actions: {
+      addInstallation: {
+        dit: 'Gymnase, terrain, salle.',
+        titre: 'Ajouter une installation',
+      },
+      assignSlot: {
+        dit: 'Une installation, un jour, un club, toute la saison.',
+        titre: 'Attribuer un créneau',
+      },
+      blockSlot: {
+        dit: 'Forum, manifestation de la Ville.',
+        titre: 'Bloquer un créneau',
+      },
+      closeInstallation: {
+        dit: 'Vacances, travaux : les clubs sont prévenus.',
+        titre: 'Fermer une installation',
+      },
+      inviteClub: {
+        dit: 'Un club de la commune absent de FoundClub.',
+        titre: 'Inviter un club',
+      },
+      publishNews: {
+        dit: 'Lue par tous les membres de vos clubs.',
+        titre: 'Publier une actualité',
+      },
+      titre: 'Vos actions',
+    },
+    attente: {
+      accepterMet: 'Accepter met {{equipes}} équipes pour {{places}} places.',
+      complet: 'Complet',
+      compteurA11y: '{{nombre}} demandes en attente',
+      erreurTexte: 'Vérifiez la connexion, puis réessayez. Rien n’a été perdu.',
+      erreurTitre: 'Les demandes n’ont pas pu être lues.',
+      placesLibres: '{{nombre}} places libres',
+      placesPrises: '{{prises}} places prises sur {{total}}',
+      rien: 'Rien ne vous attend : aucune demande, aucune fermeture prévue.',
+      titre: 'Ce qui vous attend',
+      unePlaceLibre: '1 place libre',
+      voirToutes: 'Voir les {{nombre}} demandes',
+      voirUne: 'Voir la demande',
+    },
+    clubs: {
+      club: 'club',
+      clubs: 'clubs',
+      equipe: 'équipe',
+      equipes: 'équipes',
+      membre: 'membre',
+      membres: 'membres',
+      titre: 'Vos clubs',
+      voir: 'Voir les clubs',
+    },
+    nousContacter: 'Nous contacter',
+    reessayer: 'Réessayer',
+    refus: {
+      // eslint-disable-next-line max-len
+      texte: 'Vous ne gérez pas cette collectivité. Si c’est une erreur, écrivez à l’équipe FoundClub : elle vous rattache à nouveau.',
+      titre: 'Accès retiré',
+    },
+    retourA11y: 'Revenir à {{nom}}',
+    semaine: {
+      aucuneInstallation: 'Aucune installation pour l’instant.',
+      aucuneSeance: 'Aucune séance',
+      complet: 'complet {{moment}}',
+      libre: 'libre',
+      planning: 'Planning',
+      seances: '{{nombre}} séances',
+      titre: 'Cette semaine',
+      uneSeance: '1 séance',
+    },
+    sousTitre: 'Vos installations, les demandes des clubs, vos messages aux clubs.',
+  },
   comingSoonLeagueScreen: {
     back: 'Retour',
     backHint: 'Retourne vers FoundClub classique',

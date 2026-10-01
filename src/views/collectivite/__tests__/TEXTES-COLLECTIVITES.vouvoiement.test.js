@@ -50,6 +50,9 @@ const ECRANS_MAIRIE = [
   'views/collectivite/CollectiviteHome.js',
   'views/collectivite/CollectiviteRequests.js',
   'views/collectivite/CollectiviteClubs.js',
+  // COLL-ACCUEIL (01/10) : la fenetre Accepter / Refuser, sortie de CollectiviteRequests et
+  // partagee avec l accueil de la Ville. Ses clefs restent controlees ici.
+  'views/collectivite/components/DecisionCreneauModal.js',
 ];
 
 // Les clefs que la mairie lit dans les écrans PARTAGÉS avec les clubs.
