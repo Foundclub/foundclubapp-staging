@@ -261,6 +261,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.PlayerMatchResponse]: '/league/matches/:matchId/response',
   [RouteNames.PlanningWeekFullscreen]: '/planning/week',
   [RouteNames.PersonalPlanningWeekFullscreen]: '/planning/personal/week',
+  // COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (la collectivite et le
+  // club dans l adresse, comme les autres ecrans de « Ma collectivite »).
+  [RouteNames.CollectiviteClubDetails]: '/collectivite/:collectiviteId/clubs/:clubId',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

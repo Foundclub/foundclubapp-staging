@@ -34,6 +34,20 @@ export const getCollectiviteClubs = async (collectiviteId) => {
 };
 
 /**
+ * COLL-CLUBS (01/10/2026) — la FICHE d UN club rattache : ses dirigeants NOMMES (SPEC §2 G),
+ * ses nombres et noms d equipes, ses demandes sur les installations de la Ville, son contact
+ * general et ses partenaires, son offre. Aucune autre personne. 404 si le club n est pas
+ * rattache a CETTE collectivite.
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<object>} `{ data: fiche }`.
+ */
+export const getCollectiviteClub = async (collectiviteId, clubId) => {
+  const response = await client.get(`/collectivites/${collectiviteId}/clubs/${clubId}`);
+  return response.data;
+};
+
+/**
  * Ses installations (horaires d ouverture et capacite compris).
  * @param {string} collectiviteId - documentId de la collectivite.
  * @returns {Promise<object>} `{ data: [...] }`.

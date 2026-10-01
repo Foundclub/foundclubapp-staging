@@ -1180,6 +1180,17 @@ function PrivateNavigator() {
           }}
         />
 
+        {/* COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (design HY521H1,
+            page 7) : toute la carte de « Clubs rattaches » y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteClubDetails').default}
+          name={RouteNames.CollectiviteClubDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteClubs.detail.header', 'Fiche du club'),
+          }}
+        />
+
       </Stack.Navigator>
     </HistoryWizardProvider>
   ) : null;

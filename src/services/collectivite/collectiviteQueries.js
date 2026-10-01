@@ -9,6 +9,7 @@ import {
   detachAdminCollectiviteClub,
   getAdminCollectivite,
   getAdminCollectivites,
+  getCollectiviteClub,
   getCollectiviteClubs,
   getCollectiviteInstallations,
   getCollectiviteRequests,
@@ -148,6 +149,35 @@ export const useCollectiviteClubs = (collectiviteId, options = {}) => useQuery({
   queryFn: async () => unwrapRows(await getCollectiviteClubs(String(collectiviteId))),
   queryKey: collectiviteClubsQueryKey(collectiviteId),
   staleTime: 5 * 60 * 1000,
+  ...options,
+});
+
+/**
+ * COLL-CLUBS (01/10/2026) — la clef de la fiche d un club rattache. Elle COMMENCE par celle de
+ * la liste (`collectiviteClubsQueryKey`) : relire la liste relit aussi les fiches.
+ * @param {string | null | undefined} collectiviteId - documentId de la collectivite.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteClubQueryKey = (collectiviteId, clubId) => [
+  ...collectiviteClubsQueryKey(collectiviteId), clubId,
+];
+
+/**
+ * COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie.
+ * @param {string | null | undefined} collectiviteId - documentId de la collectivite.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` est la fiche, ou null.
+ */
+export const useCollectiviteClub = (collectiviteId, clubId, options = {}) => useQuery({
+  enabled: Boolean(collectiviteId && clubId),
+  queryFn: async () => {
+    const response = await getCollectiviteClub(String(collectiviteId), String(clubId));
+    return response?.data ?? null;
+  },
+  queryKey: collectiviteClubQueryKey(collectiviteId, clubId),
+  staleTime: 60_000,
   ...options,
 });
 
