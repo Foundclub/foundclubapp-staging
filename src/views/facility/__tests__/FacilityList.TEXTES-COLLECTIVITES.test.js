@@ -26,9 +26,10 @@ let mockCollectiviteInstallations;
 /** @type {any} */
 let mockMesCollectivites;
 
+const mockSetOptions = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
-  useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn() }),
+  useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn(), setOptions: mockSetOptions }),
   useRoute: () => mockRoute,
 }));
 
@@ -66,6 +67,17 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/services/facility/facilityQueries', () => ({
   useClubFacilityContext: () => mockFacilityContext,
 }));
+
+// COLL-C2B (02/10) : la liste de la Ville lit la semaine de chaque installation (son planning) et
+// range ses gestes dans une feuille du bas ; deux doublures, sans effet cote club.
+jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
+  useInstallationsWeekSummary: () => ({}),
+}));
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => mockCollectiviteInstallations,
@@ -168,11 +180,12 @@ describe('TEXTES-COLLECTIVITES — la liste, côté MAIRIE', () => {
     mockRoute = { params: { collectiviteId: 'ville-montrivage' } };
   });
 
-  // eslint-disable-next-line max-len
-  it('un seul titre : la page porte le NOM de la collectivité (l en-tête dit déjà « Installations de la Ville »)', () => {
+  // COLL-C2B (02/10, design P4 « un seul titre ») : la PAGE porte « Installations de la Ville »,
+  // une fois, et l en-tete de navigation se tait. Avant : la page portait le nom de la Ville.
+  it('un seul titre : la page dit « Installations de la Ville » une fois, l en-tête se tait', () => {
     const lus = textes(rendre());
-    expect(lus).not.toContain('Installations de la Ville');
-    expect(lus).toContain('Ville de Montrivage');
+    expect(lus.filter((texte) => texte === 'Installations de la Ville')).toHaveLength(1);
+    expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: '' });
     expect(lus).toContain('1 installation');
   });
 

@@ -4573,6 +4573,33 @@ export default {
       unknown: 'This week: —',
     },
   },
+  // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
+  collectiviteCreneaux: {
+    erreurs: {
+      club: 'This club is not attached to the town.',
+      dejaRetire: 'This slot is already withdrawn.',
+      droits: 'Only the town assigns the slots of its facilities.',
+      equipe: 'This team does not belong to this club.',
+      horaires: 'This slot falls outside the facility’s opening hours.',
+      introuvable: 'This slot no longer exists.',
+      pasRetire: 'This slot is not withdrawn.',
+      plateau: 'This court no longer exists: choose another one.',
+      plateauxInvalides: 'Each court has a short, distinct name, and there are no more of them than teams at a time.',
+      saisie: 'Check the day, the times and the period.',
+    },
+    liste: {
+      capacite_one: '{{count}} team at a time',
+      capacite_other: '{{count}} teams at a time',
+      complet: 'full {{moment}}',
+      modifier: 'Edit the facility',
+      ouvrir: '{{nom}}: see the schedule',
+      plusActions: 'More actions for {{nom}}',
+      semaineAucune: 'This week: no session',
+      semaine_one: 'This week: {{count}} session',
+      semaine_other: 'This week: {{count}} sessions',
+      surtitre: 'My local authority',
+    },
+  },
   comingSoonLeagueScreen: {
     back: 'Back',
     backHint: 'Returns to classic FoundClub',

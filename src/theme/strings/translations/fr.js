@@ -4904,6 +4904,33 @@ export default {
       unknown: 'Cette semaine : —',
     },
   },
+  // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
+  collectiviteCreneaux: {
+    erreurs: {
+      club: 'Ce club n’est pas rattaché à la Ville.',
+      dejaRetire: 'Ce créneau est déjà retiré.',
+      droits: 'Seule la Ville attribue les créneaux de ses installations.',
+      equipe: 'Cette équipe n’appartient pas à ce club.',
+      horaires: 'Ce créneau sort des horaires d’ouverture de l’installation.',
+      introuvable: 'Ce créneau n’existe plus.',
+      pasRetire: 'Ce créneau n’est pas retiré.',
+      plateau: 'Ce plateau n’existe plus : choisissez-en un autre.',
+      plateauxInvalides: 'Chaque plateau a un nom court et différent, et il n’y en a pas plus que d’équipes à la fois.',
+      saisie: 'Vérifiez le jour, les heures et la période.',
+    },
+    liste: {
+      capacite_one: '{{count}} équipe à la fois',
+      capacite_other: '{{count}} équipes à la fois',
+      complet: 'complet {{moment}}',
+      modifier: 'Modifier l’installation',
+      ouvrir: '{{nom}} : voir le planning',
+      plusActions: 'Plus d’actions pour {{nom}}',
+      semaineAucune: 'Cette semaine : aucune séance',
+      semaine_one: 'Cette semaine : {{count}} séance',
+      semaine_other: 'Cette semaine : {{count}} séances',
+      surtitre: 'Ma collectivité',
+    },
+  },
   comingSoonLeagueScreen: {
     back: 'Retour',
     backHint: 'Retourne vers FoundClub classique',
