@@ -1,3 +1,5 @@
+import { RouteNames } from '@/navigation/routeNames';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
 
@@ -176,3 +178,59 @@ export const formatWeekMoment = (date) => {
 export const isVilleOnlyAccount = ({ hasManagerRequest, managedCount, roleKey }) => (
   roleKey === 'new' && (managedCount > 0 || hasManagerRequest === true)
 );
+
+/**
+ * Les quatre onglets de l'espace de la Ville, dans l'ordre de la planche (« Accueil ·
+ * Demandes · Planning · Messages », décision d'Adel du 01/10 : la messagerie reste, les
+ * clubs et les installations passent par l'accueil). Chaque onglet monte un écran qui
+ * EXISTE déjà : l'accueil (COLL-ACCUEIL), « Demandes de la Ville » et les installations
+ * (lot 1c, chacune ouvre son planning), la messagerie.
+ *
+ * ponytail: « Planning » ouvre la liste des installations (chaque carte ouvre SON
+ * planning). La vue de toutes les installations d'un coup d'œil est au lot C2b : elle
+ * remplacera l'écran de cet onglet, sans changer la barre.
+ * @param {{ Images: Record<string, any>, pendingCount: number,
+ *   t: (cle: string, repli: string, options?: object) => string, unreadCount: number }} args
+ * @returns {Array<{ a11y: string, badge: number, icon: any, label: string, name: string }>}
+ *   Les onglets.
+ */
+export const collectiviteTabs = ({
+  Images, pendingCount, t, unreadCount,
+}) => {
+  const demandes = t('collectiviteAccueil.dock.demandes', 'Demandes');
+  return [
+    {
+      a11y: t('collectiviteAccueil.dock.accueil', 'Accueil'),
+      badge: 0,
+      icon: Images.home,
+      label: t('collectiviteAccueil.dock.accueil', 'Accueil'),
+      name: RouteNames.CollectiviteHome,
+    },
+    {
+      a11y: pendingCount > 0
+        ? t('collectiviteAccueil.dock.demandesA11y', 'Demandes, {{nombre}} en attente', {
+          nombre: pendingCount,
+        })
+        : demandes,
+      badge: pendingCount,
+      // ICONES (01/10, « Icone ok ») : l'icône dessinée pour l'onglet « Demandes ».
+      icon: Images.inboxArrowDown,
+      label: demandes,
+      name: RouteNames.CollectiviteRequests,
+    },
+    {
+      a11y: t('collectiviteAccueil.dock.planning', 'Planning'),
+      badge: 0,
+      icon: Images.calendar,
+      label: t('collectiviteAccueil.dock.planning', 'Planning'),
+      name: RouteNames.CollectiviteInstallations,
+    },
+    {
+      a11y: t('collectiviteAccueil.dock.messages', 'Messages'),
+      badge: unreadCount,
+      icon: Images.envelope,
+      label: t('collectiviteAccueil.dock.messages', 'Messages'),
+      name: RouteNames.Chat,
+    },
+  ];
+};

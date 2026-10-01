@@ -4801,6 +4801,13 @@ export default {
       titre: 'Vos clubs',
       voir: 'Voir les clubs',
     },
+    dock: {
+      accueil: 'Accueil',
+      demandes: 'Demandes',
+      demandesA11y: 'Demandes, {{nombre}} en attente',
+      messages: 'Messages',
+      planning: 'Planning',
+    },
     nousContacter: 'Nous contacter',
     reessayer: 'Réessayer',
     refus: {

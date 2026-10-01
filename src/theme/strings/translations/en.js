@@ -4480,6 +4480,13 @@ export default {
       titre: 'Your clubs',
       voir: 'See the clubs',
     },
+    dock: {
+      accueil: 'Home',
+      demandes: 'Requests',
+      demandesA11y: 'Requests, {{nombre}} pending',
+      messages: 'Messages',
+      planning: 'Schedule',
+    },
     nousContacter: 'Contact us',
     reessayer: 'Try again',
     refus: {

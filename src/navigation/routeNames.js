@@ -373,4 +373,8 @@ export const RouteNames = /** @type {const} */ ({
   SquadFilters: 'SquadFilters',
   SquadRequests: 'SquadRequests',
   SquadSearch: 'SquadSearch',
+
+  // COLL-ACCUEIL (01/10/2026) — l espace de la Ville sur telephone : la barre Accueil ·
+  // Demandes · Planning · Messages (CollectiviteTabNavigator). Sur le site, le menu lateral.
+  CollectiviteSpace: 'CollectiviteSpace',
 });

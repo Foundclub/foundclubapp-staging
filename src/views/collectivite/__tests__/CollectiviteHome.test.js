@@ -171,7 +171,7 @@ const CLUBS = [
   },
 ];
 const TILLEULS = {
-  documentId: 'tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: '#F97316',
+  documentId: 'tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls', planningColor: null,
 };
 const DOJO = {
   documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', planningColor: null,
