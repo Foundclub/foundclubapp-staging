@@ -42,6 +42,10 @@ function UserRole({ navigation }) {
   const [role, setRole] = useState(
     /** @type {string} */(userData?.role?.documentId || ''),
   );
+  // 🏛️ COLL-ACCUEIL (01/10, décision d'Adel « accueil A ») — la 5e rangée, « Je représente
+  // une collectivité ». Ce n'est PAS un rôle Strapi : le compte garde son rôle provisoire, et
+  // l'inscription de la mairie (CollectiviteSignup) remplace toutes les questions de sport.
+  const [representeCollectivite, setRepresenteCollectivite] = useState(false);
   // hooks
   const {
     Alignments, Fonts, Spaces,
@@ -97,7 +101,13 @@ function UserRole({ navigation }) {
    */
   const handleSelection = (selectedRole) => {
     const newRole = getRoleDocumentIdByKey(roles, selectedRole);
+    setRepresenteCollectivite(false);
     setRole((currentRole) => (newRole === currentRole ? '' : newRole));
+  };
+
+  const handleSelectCollectivite = () => {
+    setRole('');
+    setRepresenteCollectivite((avant) => !avant);
   };
 
   const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
@@ -115,6 +125,11 @@ function UserRole({ navigation }) {
     .includes(role);
 
   const handleNext = () => {
+    // COLL-ACCUEIL — la mairie : aucun rôle à poser, aucune question de sport.
+    if (representeCollectivite) {
+      navigation.navigate(RouteNames.CollectiviteSignup);
+      return;
+    }
     if (!hasChosenRole) return;
     updateUserMutation.mutate({ role });
   };
@@ -235,11 +250,25 @@ function UserRole({ navigation }) {
                 onPress={() => handleSelection(USER_ROLES.parent)}
               />
             ) : null}
+            {/* COLL-ACCUEIL (01/10) — séparée des rôles sportifs, sous son propre intertitre. */}
+            <Text style={[Fonts.p3Bold, Fonts.neutral300, Spaces.marginTop[12]]}>
+              {t('collectiviteAccueil.statut.intertitre', 'Pour une mairie').toUpperCase()}
+            </Text>
+            <OnboardingRadioRow
+              checked={representeCollectivite}
+              label={t('collectiviteAccueil.statut.libelle', 'Je représente une collectivité')}
+              onPress={handleSelectCollectivite}
+              subtitle={t(
+                'collectiviteAccueil.statut.precision',
+                'Mairie, intercommunalité, département, région.',
+              )}
+              testID="statut-collectivite"
+            />
           </View>
         </WithDataWrapper>
       </ScrollView>
       <Button
-        disabled={!hasChosenRole}
+        disabled={!hasChosenRole && !representeCollectivite}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         style={[Spaces.marginTop[24]]}

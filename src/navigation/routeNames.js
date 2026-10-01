@@ -377,4 +377,7 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-ACCUEIL (01/10/2026) — l espace de la Ville sur telephone : la barre Accueil ·
   // Demandes · Planning · Messages (CollectiviteTabNavigator). Sur le site, le menu lateral.
   CollectiviteSpace: 'CollectiviteSpace',
+  // « Je represente une collectivite » : l inscription de la mairie, puis ou en est sa demande.
+  CollectiviteSignup: 'CollectiviteSignup',
+  CollectiviteSignupStatus: 'CollectiviteSignupStatus',
 });

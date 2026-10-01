@@ -267,3 +267,32 @@ test('FINITIONS5-8 · un refus du serveur se dit UNE fois, en français', async 
   expect(String(message)).not.toMatch(/Failed|Requested|allowed/);
   expect(mockNavigate).not.toHaveBeenCalled();
 });
+
+// 🏛️ COLL-ACCUEIL (01/10/2026) — PLANCHE 5, état 1 (`P1-inscription-tel`) : « Quel est ton
+// statut ? » gagne une 5e rangée, SÉPARÉE des rôles sportifs, sous « Pour une mairie ».
+// La choisir saute toutes les questions de sport : aucun rôle n'est posé, on va à
+// l'inscription de la mairie. ROUGE avant le lot : la rangée n'existait pas.
+test('COLL-ACCUEIL · « Je représente une collectivité », sous « Pour une mairie »', async () => {
+  const arbre = await monter();
+  const textes = arbre.root.findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
+  expect(textes).toContain('POUR UNE MAIRIE');
+  expect(rangee(arbre, 'Je représente une collectivité')).toBeDefined();
+});
+
+test('COLL-ACCUEIL · la choisir mène à l inscription de la mairie, SANS poser de rôle', async () => {
+  const arbre = await monter();
+  await appuyer(rangee(arbre, 'Je représente une collectivité'));
+  expect(bouton(arbre, CONTINUER).props.disabled).toBe(false);
+  await appuyer(bouton(arbre, CONTINUER));
+  expect(updateMe).not.toHaveBeenCalled();
+  expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
+});
+
+test('COLL-ACCUEIL · choisir ensuite un rôle sportif décoche la mairie', async () => {
+  /** @type {any} */ (updateMe).mockResolvedValue({});
+  const arbre = await monter();
+  await appuyer(rangee(arbre, 'Je représente une collectivité'));
+  await appuyer(rangee(arbre, 'Dirigeant·e'));
+  await appuyer(bouton(arbre, CONTINUER));
+  expect(mockNavigate).not.toHaveBeenCalledWith('CollectiviteSignup');
+});

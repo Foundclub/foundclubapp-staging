@@ -38,7 +38,10 @@ import { navigate as navigateRoot, navigationRef } from '@/navigation/navigation
 import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useMyCollectivites } from '@/services/collectivite/collectiviteQueries';
+import {
+  useMyCollectivites,
+  useMyManagerRequests,
+} from '@/services/collectivite/collectiviteQueries';
 
 import PrivateTabNavigator from './PrivateTabNavigator';
 /* eslint-disable-next-line import/order */
@@ -64,14 +67,20 @@ function PrivateNavigator() {
   // ne part que pour un compte sans rôle sportif : les autres n'attendent rien.
   const sansRoleSportif = Boolean(userData?.documentId) && roleKey === 'new';
   const villesGerees = useMyCollectivites({ enabled: sansRoleSportif });
+  // L'inscription « Je représente une collectivité » : une demande envoyée, pas encore (ou
+  // pas) acceptée, ouvre l'écran « où en est ma demande », jamais le tunnel sportif.
+  const demandesGestionnaire = useMyManagerRequests({ enabled: sansRoleSportif });
   const premiereVille = Array.isArray(villesGerees.data) ? villesGerees.data[0] : null;
+  const aDemandeAGerer = Array.isArray(demandesGestionnaire.data)
+    && demandesGestionnaire.data.length > 0;
   const villeSeule = sansRoleSportif && isVilleOnlyAccount({
-    hasManagerRequest: false,
+    hasManagerRequest: aDemandeAGerer,
     managedCount: premiereVille?.documentId ? 1 : 0,
     roleKey,
   });
   // Tant qu'on ne sait pas, on attend : la pile choisit son écran d'arrivée UNE fois.
-  const villeEnLecture = sansRoleSportif && Boolean(villesGerees.isLoading);
+  const villeEnLecture = sansRoleSportif
+    && Boolean(villesGerees.isLoading || demandesGestionnaire.isLoading);
   const pendingSquadInviteNavigationKeyRef = useRef(/** @type {string | null} */(null));
   const onboardingRedirectAttemptRef = useRef(/** @type {string | null} */(null));
 
@@ -105,11 +114,15 @@ function PrivateNavigator() {
     }, { index: 100, route: '' })?.route;
 
     // COLL-ACCUEIL — la Ville d'abord : un compte Ville seule n'a pas de tunnel sportif.
-    if (villeSeule) return RouteNames.CollectiviteSpace;
+    if (villeSeule) {
+      return premiereVille?.documentId
+        ? RouteNames.CollectiviteSpace
+        : RouteNames.CollectiviteSignupStatus;
+    }
     if (route) return route;
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
-  }, [onboardingViews, isGold, villeSeule]);
+  }, [onboardingViews, isGold, villeSeule, premiereVille?.documentId]);
 
   const firstPendingOnboardingRoute = useMemo(() => {
     if (
@@ -117,6 +130,7 @@ function PrivateNavigator() {
       || initialRouteName === RouteNames.HomeTab
       || initialRouteName === RouteNames.LeagueHomeTab
       || initialRouteName === RouteNames.CollectiviteSpace
+      || initialRouteName === RouteNames.CollectiviteSignupStatus
     ) {
       return null;
     }
@@ -425,6 +439,20 @@ function PrivateNavigator() {
           getComponent={() => require('./CollectiviteTabNavigator').default}
           initialParams={{ collectiviteId: premiereVille?.documentId }}
           name={RouteNames.CollectiviteSpace}
+          options={{ headerShown: false }}
+        />
+        {/* COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription de la
+            mairie (2 etapes, aucune question de sport) et l ecran « ou en est ma demande ».
+            Montes SANS CONDITION : le choix du statut (UserRole) y mene, et un compte Ville
+            seule y arrive ; la notification de decision (ctaRoute) aussi. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteSignup').default}
+          name={RouteNames.CollectiviteSignup}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteSignupStatus').default}
+          name={RouteNames.CollectiviteSignupStatus}
           options={{ headerShown: false }}
         />
         {/* COLLECTIVITES 1c — l espace du gestionnaire de mairie, a la RACINE : la porte

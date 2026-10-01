@@ -4808,12 +4808,79 @@ export default {
       rangeeA11yDemandes: '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
       retourMonCompte: 'Mon compte',
     },
+    demande: {
+      acceptee: {
+        ouvrir: 'Ouvrir mon espace',
+        texte: 'Vous gérez désormais la {{nom}} sur FoundClub.',
+        titre: 'Votre espace est ouvert',
+      },
+      attente: {
+        clubs: 'Retrouver le contact général des clubs rattachés.',
+        demandes: 'Trancher les demandes de créneau des clubs, avec un message.',
+        le: 'Demande envoyée le {{date}}',
+        permettra: 'Ce que votre espace permettra',
+        planning: 'Voir qui occupe vos installations, jour par jour.',
+        // eslint-disable-next-line max-len
+        texte: 'L’équipe FoundClub vérifie que vous représentez bien la collectivité. Vous serez prévenu dans l’app dès que votre espace sera ouvert.',
+        titre: 'Demande en cours de vérification',
+      },
+      aucune: 'Aucune demande en cours.',
+      envoyee: {
+        compris: 'Compris',
+        // eslint-disable-next-line max-len
+        texte: 'L’équipe FoundClub vérifie que vous représentez bien la {{nom}}, puis vous nomme gestionnaire. Vous serez prévenu dans l’app.',
+        titre: 'Demande envoyée',
+      },
+      faire: 'Faire une demande',
+      refusee: {
+        le: 'Réponse du {{date}}',
+        refaire: 'Refaire une demande',
+        titre: 'Demande refusée',
+      },
+    },
     dock: {
       accueil: 'Accueil',
       demandes: 'Demandes',
       demandesA11y: 'Demandes, {{nombre}} en attente',
       messages: 'Messages',
       planning: 'Planning',
+    },
+    inscription: {
+      collectivite: {
+        dejaSur: 'Déjà sur FoundClub',
+        dit: 'Laquelle représentez-vous ? FoundClub vérifie, puis vous en confie la gestion.',
+        nom: 'Nom de la collectivité',
+        nomCommune: 'Nom de la commune',
+        // eslint-disable-next-line max-len
+        ouverture: '{{nom}} n’a pas encore d’espace FoundClub. Continuez : votre demande servira à l’ouvrir.',
+        pasEncore: 'Pas encore sur FoundClub',
+        titre: 'Votre collectivité',
+        type: 'Type',
+        typeA11y: 'Type de collectivité',
+      },
+      continuer: 'Continuer',
+      envoyer: 'Envoyer ma demande',
+      erreurs: {
+        email: 'Écrivez une adresse complète, par exemple sports@mairie.fr.',
+        obligatoire: 'Ce champ est obligatoire.',
+      },
+      etape: 'Étape {{numero}} sur 2',
+      refus: {
+        dejaEnCours: 'Une demande pour cette collectivité est déjà en cours de vérification.',
+        dejaGestionnaire: 'Vous gérez déjà cette collectivité.',
+        tropDeDemandes: 'Vous avez déjà plusieurs demandes en cours de vérification.',
+      },
+      retour: 'Retour',
+      vous: {
+        // eslint-disable-next-line max-len
+        dit: 'Pour que FoundClub vérifie votre demande. Aucune question de sport : ce compte sert à gérer les installations et les demandes de la Ville.',
+        email: 'E-mail professionnel',
+        fonction: 'Votre fonction',
+        fonctionIndice: 'Ex. : service des sports',
+        nom: 'Nom',
+        prenom: 'Prénom',
+        titre: 'Vous',
+      },
     },
     nousContacter: 'Nous contacter',
     porte: {
@@ -4841,6 +4908,11 @@ export default {
       uneSeance: '1 séance',
     },
     sousTitre: 'Vos installations, les demandes des clubs, vos messages aux clubs.',
+    statut: {
+      intertitre: 'Pour une mairie',
+      libelle: 'Je représente une collectivité',
+      precision: 'Mairie, intercommunalité, département, région.',
+    },
   },
   comingSoonLeagueScreen: {
     back: 'Retour',

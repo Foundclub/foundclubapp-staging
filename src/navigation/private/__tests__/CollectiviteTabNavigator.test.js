@@ -85,7 +85,10 @@ describe('COLL-ACCUEIL — planche 2 : où arrive un compte « Ville seule »', 
 
   it('Ville seule : l espace de la Ville AVANT le tunnel sportif', () => {
     const memo = racine.slice(racine.indexOf('const initialRouteName = useMemo('));
-    const ville = memo.indexOf('if (villeSeule) return RouteNames.CollectiviteSpace;');
+    // Une Ville gérée : son espace ; une demande seulement (planche 5) : « où en est ma demande ».
+    const ville = memo.indexOf('if (villeSeule) {');
+    expect(memo).toContain('? RouteNames.CollectiviteSpace');
+    expect(memo).toContain(': RouteNames.CollectiviteSignupStatus;');
     const tunnel = memo.indexOf('if (route) return route;');
     expect(ville).toBeGreaterThan(-1);
     expect(ville).toBeLessThan(tunnel);

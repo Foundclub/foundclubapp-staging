@@ -9,7 +9,10 @@ import {
   formatWeekMoment,
   isOwnClubRequest,
   isVilleOnlyAccount,
+  latestManagerRequest,
+  managerRequestPayload,
   oldestPendingRequest,
+  signupContactErrors,
   summarizeConflict,
 } from './collectiviteAccueil';
 
@@ -127,5 +130,44 @@ describe('COLL-ACCUEIL — « Ville seule » ou compte mixte (décision « accue
     expect(isVilleOnlyAccount({
       hasManagerRequest: true, managedCount: 0, roleKey: 'superAdmin',
     })).toBe(false);
+  });
+});
+
+describe('COLL-ACCUEIL — l inscription « Je représente une collectivité »', () => {
+  it('« Vous » : une faute par champ fautif ; l e-mail doit être complet', () => {
+    expect(signupContactErrors({
+      firstname: 'Agnès',
+      jobTitle: 'Service des sports',
+      lastname: 'Mairie',
+      professionalEmail: 'sports@mairie.fr',
+    })).toEqual({});
+    expect(signupContactErrors({ professionalEmail: 'sports@' })).toEqual({
+      firstname: 'required', jobTitle: 'required', lastname: 'required', professionalEmail: 'email',
+    });
+  });
+
+  it('le corps : l id d une Ville existante, ou le nom et le type d une Ville à créer', () => {
+    const vous = { jobTitle: ' Service des sports ', professionalEmail: ' Sports@Mairie.FR ' };
+    const existante = { documentId: 'ville-1', name: 'Ville', type: 'commune' };
+    expect(managerRequestPayload(existante, vous)).toEqual({
+      collectiviteDocumentId: 'ville-1',
+      jobTitle: 'Service des sports',
+      professionalEmail: 'sports@mairie.fr',
+    });
+    const aCreer = { documentId: null, name: ' Valfleuri ', type: 'commune' };
+    expect(managerRequestPayload(aCreer, vous)).toEqual({
+      collectiviteName: 'Valfleuri',
+      collectiviteType: 'commune',
+      jobTitle: 'Service des sports',
+      professionalEmail: 'sports@mairie.fr',
+    });
+  });
+
+  it('la demande la plus récente', () => {
+    expect(latestManagerRequest([
+      { createdAt: '2026-09-01T00:00:00Z', documentId: 'a' },
+      { createdAt: '2026-10-01T00:00:00Z', documentId: 'b' },
+    ])?.documentId).toBe('b');
+    expect(latestManagerRequest([])).toBeNull();
   });
 });

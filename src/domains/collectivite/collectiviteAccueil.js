@@ -251,3 +251,57 @@ export const collectiviteTabs = ({
     },
   ];
 };
+
+// ─── L'INSCRIPTION « JE REPRÉSENTE UNE COLLECTIVITÉ » (planche P1-inscription) ─────────────
+
+// Même règle que le serveur (collectivite-manager-request, EMAIL_PATTERN) : la vérification
+// réelle est HUMAINE (l'équipe appelle la mairie).
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Les fautes du formulaire « Vous » : une clef par champ fautif (chacune a son message sous
+ * son champ). Vide = prêt à partir. Le serveur reste le juge (400).
+ * @param {{ firstname?: string, jobTitle?: string, lastname?: string,
+ *   professionalEmail?: string }} champs - Les champs saisis.
+ * @returns {Record<string, 'required' | 'email'>} Les fautes.
+ */
+export const signupContactErrors = (champs) => {
+  const lire = (/** @type {unknown} */ valeur) => String(valeur || '').trim();
+  /** @type {Record<string, 'required' | 'email'>} */
+  const fautes = {};
+  if (!lire(champs?.firstname)) fautes.firstname = 'required';
+  if (!lire(champs?.lastname)) fautes.lastname = 'required';
+  if (lire(champs?.jobTitle).length < 2) fautes.jobTitle = 'required';
+  const email = lire(champs?.professionalEmail);
+  if (!email) fautes.professionalEmail = 'required';
+  else if (!EMAIL_PATTERN.test(email)) fautes.professionalEmail = 'email';
+  return fautes;
+};
+
+/**
+ * Le corps de la demande : une collectivité EXISTANTE (son identifiant) ou « à créer » (son
+ * nom tel que saisi et son type ; l'équipe pose le nom officiel, D59, en acceptant).
+ * @param {{ documentId?: string | null, name: string, type: string }} collectivite - Le choix.
+ * @param {{ jobTitle?: string, professionalEmail?: string }} contact - « Vous ».
+ * @returns {Record<string, string>} Le corps.
+ */
+export const managerRequestPayload = (collectivite, contact) => ({
+  ...(collectivite?.documentId
+    ? { collectiviteDocumentId: collectivite.documentId }
+    : {
+      collectiviteName: String(collectivite?.name || '').trim(),
+      collectiviteType: String(collectivite?.type || ''),
+    }),
+  jobTitle: String(contact?.jobTitle || '').trim(),
+  professionalEmail: String(contact?.professionalEmail || '').trim().toLowerCase(),
+});
+
+/**
+ * La demande la plus récente (le serveur les rend déjà dans cet ordre ; on ne s'y fie pas).
+ * @param {unknown} demandes - `/collectivite-manager-requests/mine`.
+ * @returns {any | null} La plus récente, ou null.
+ */
+export const latestManagerRequest = (demandes) => {
+  if (!Array.isArray(demandes) || demandes.length === 0) return null;
+  return [...demandes].sort((a, b) => horodatage(b?.createdAt) - horodatage(a?.createdAt))[0];
+};

@@ -10,17 +10,22 @@ import {
   addAdminCollectiviteGestionnaire,
   attachAdminCollectiviteClub,
   createAdminCollectivite,
+  createManagerRequest,
+  decideManagerRequest,
   detachAdminCollectiviteClub,
   getAdminCollectivite,
   getAdminCollectivites,
+  getAdminManagerRequests,
   getCollectiviteClubs,
   getCollectiviteInstallations,
   getCollectiviteRequests,
   getMyCollectivites,
+  getMyManagerRequests,
   previewAdminCollectiviteActive,
   removeAdminCollectiviteGestionnaire,
   saveCollectiviteInstallation,
   searchAdminCollectiviteTargets,
+  searchCollectivitesForSignup,
   setAdminCollectiviteActive,
 } from './collectiviteService';
 
@@ -348,5 +353,88 @@ export const useRemoveAdminCollectiviteGestionnaire = (options) => useGesteSuper
  */
 export const useCreateAdminCollectivite = (options) => useGesteSuperAdmin(
   createAdminCollectivite,
+  options,
+);
+
+// ─── COLL-ACCUEIL (01/10/2026) : LA DEMANDE DE GESTIONNAIRE ────────────────────────────
+
+export const MY_MANAGER_REQUESTS_QUERY_KEY = ['collectivite-manager-requests', 'mine'];
+
+/**
+ * MES demandes de gestionnaire (l ecran d attente, l arrivee d un compte Ville seule).
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useMyManagerRequests = (options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getMyManagerRequests()),
+  queryKey: MY_MANAGER_REQUESTS_QUERY_KEY,
+  staleTime: 30_000,
+  ...options,
+});
+
+/**
+ * Les collectivites DEJA sur FoundClub dont le nom contient le texte (3 lettres au moins).
+ * @param {string} query - Le texte tape.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useCollectiviteSignupSearch = (query) => {
+  const texte = String(query || '').trim();
+  return useQuery({
+    enabled: texte.length >= 3,
+    queryFn: async () => unwrapRows(await searchCollectivitesForSignup(texte)),
+    queryKey: ['collectivite-manager-requests', 'search', texte.toLowerCase()],
+    staleTime: 60_000,
+  });
+};
+
+/**
+ * Envoie MA demande, puis relit mes demandes.
+ * @param {QueryOptions} [options] - Options react-query (`onSuccess` compris).
+ * @returns {any} La mutation.
+ */
+export const useCreateManagerRequest = (options = {}) => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...rest } = options;
+  return useMutation({
+    mutationFn: createManagerRequest,
+    onSuccess: async (data, variables, context) => {
+      await queryClient.invalidateQueries({ queryKey: MY_MANAGER_REQUESTS_QUERY_KEY });
+      onSuccess?.(data, variables, context);
+    },
+    ...rest,
+  });
+};
+
+/**
+ * La clef de la file de la console : sous le prefixe des collectivites de la console, pour
+ * qu accepter (qui peut CREER une collectivite) relise aussi la liste et les fiches.
+ * @param {'pending' | 'decided'} status - L onglet.
+ * @returns {Array<string>} La clef.
+ */
+export const adminManagerRequestsQueryKey = (status) => [
+  ...ADMIN_COLLECTIVITES_QUERY_KEY, 'demandes-de-gestionnaire', status,
+];
+
+/**
+ * La file des demandes de gestionnaire (console super-admin).
+ * @param {'pending' | 'decided'} status - L onglet.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useAdminManagerRequests = (status, options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getAdminManagerRequests(status)),
+  queryKey: adminManagerRequestsQueryKey(status),
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Accepter ou refuser une demande ; variables `{ decision, requestId, data }`. Relit la file,
+ * la liste et les fiches des collectivites.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useDecideManagerRequest = (options) => useGesteSuperAdmin(
+  decideManagerRequest,
   options,
 );
