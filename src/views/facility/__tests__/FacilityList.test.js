@@ -97,6 +97,10 @@ jest.mock('@/services/facility/facilityQueries', () => ({
 let mockCollectiviteInstallations = { data: undefined, isLoading: false, refetch: jest.fn() };
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => mockCollectiviteInstallations,
+  // TEXTES-COLLECTIVITES : en mode collectivite, la page porte le nom de la collectivite.
+  useMyCollectivites: () => ({
+    data: [{ documentId: 'ville-de-recette', name: 'Ville de Recette' }],
+  }),
 }));
 
 // Le service est double ENTIEREMENT, fonctions pures comprises : le module
@@ -593,7 +597,10 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () =
 
   it('liste les installations de la Ville, horaires compris — jamais celles du club', () => {
     const textes = textesVisibles(rendre());
-    expect(textes).toContain('Installations de la Ville');
+    // TEXTES-COLLECTIVITES (01/10) : « Installations de la Ville » est l en-tete de l ecran ;
+    // la page porte le NOM de la collectivite (le titre ne s ecrit plus deux fois).
+    expect(textes).toContain('Ville de Recette');
+    expect(textes).not.toContain('Installations de la Ville');
     expect(textes).toContain('Gymnase de la Recette');
     expect(textes.includes('08:00 – 22:00')).toBe(true);
     expect(textes.includes('2 équipes simultanées')).toBe(true);

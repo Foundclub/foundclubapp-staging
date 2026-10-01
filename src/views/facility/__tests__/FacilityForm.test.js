@@ -1,4 +1,6 @@
-import { Alert, ScrollView, Text } from 'react-native';
+import {
+  Alert, ScrollView, Text, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
@@ -1058,7 +1060,11 @@ describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', 
     expect('address' in charge).toBe(false);
   });
 
-  it('adresse CHANGÉE pour une adresse sans coordonnées ⇒ refus inchangé', async () => {
+  // TEXTES-COLLECTIVITES (01/10, « ton A ») : en mairie, le même refus, VOUVOYÉ.
+  const MESSAGE_MAIRIE = 'Sélectionnez une adresse géolocalisée dans la liste.';
+
+  // eslint-disable-next-line max-len
+  it('adresse CHANGÉE pour une adresse sans coordonnées ⇒ refus inchangé (mairie : au « vous »)', async () => {
     const arbre = await monterEcran({
       params: { collectiviteId: 'ville-de-recette', facilityId: 'gymnase-recette' },
     });
@@ -1067,8 +1073,8 @@ describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', 
     await appuyerSur(arbre, 'Enregistrer');
 
     expect(mockSaveCollectivite).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Erreur', MESSAGE);
-    expect(dernieresProps(mockAddressProps).error).toBe(MESSAGE);
+    expect(Alert.alert).toHaveBeenCalledWith('Erreur', MESSAGE_MAIRIE);
+    expect(dernieresProps(mockAddressProps).error).toBe(MESSAGE_MAIRIE);
   });
 
   it('adresse vidée ⇒ refus inchangé (vider, c est toucher)', async () => {
@@ -1110,5 +1116,73 @@ describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', 
       description: '3 Boulevard Michelet 13008 Marseille',
       geometry: { coordinates: [5.395, 43.269], type: 'Point' },
     });
+  });
+
+  it('club : le refus d adresse reste au « tu » (aucun club vouvoyé par ricochet)', async () => {
+    const arbre = await monterEcran({
+      facility: INSTALLATION_SANS_GPS,
+      params: { facilityId: 'gymnase-recette' },
+    });
+    await choisirAdresse(ADRESSE_SANS_GPS);
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(Alert.alert).toHaveBeenCalledWith('Erreur', MESSAGE);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEXTES-COLLECTIVITES (lot 1, 01/10/2026 — « ton A ») : le formulaire sert au club ET à la
+// mairie. En mairie, il VOUVOIE et dit ce que fait la MAIRIE (pas « un dirigeant valide »,
+// faux pour une installation de la Ville, qui reçoit elle-même la demande). Au club, rien
+// ne change. Et les 10 pastilles de couleur ont chacune leur nom pour un lecteur d’écran.
+// ---------------------------------------------------------------------------
+describe('TEXTES-COLLECTIVITES — le formulaire en mairie, et les couleurs nommées', () => {
+  // eslint-disable-next-line max-len
+  const MAIRIE_ATTENTE = 'Le créneau passe en demande : vous l’acceptez ou la refusez avant qu’il soit confirmé.';
+  // eslint-disable-next-line max-len
+  const MAIRIE_NOTIFIER = 'Le créneau reste confirmé, même au-delà de la capacité : vous n’avez rien à valider.';
+  const CLUB_ATTENTE = 'Le créneau passe en demande, un dirigeant valide avant confirmation.';
+
+  beforeEach(() => {
+    mockCollectiviteInstallations = {
+      data: [], error: null, isLoading: false, refetch: jest.fn(),
+    };
+  });
+
+  // eslint-disable-next-line max-len
+  it('mairie : le mode de conflit dit ce que fait la mairie, au « vous », sans « dirigeant »', async () => {
+    const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
+
+    expect(texteDe(arbre.root)).toContain(MAIRIE_ATTENTE);
+    expect(texteDe(arbre.root)).not.toContain('dirigeant');
+
+    await appuyerSur(arbre, 'notifier');
+
+    expect(texteDe(arbre.root)).toContain(MAIRIE_NOTIFIER);
+    expect(texteDe(arbre.root)).not.toContain('dirigeant');
+  });
+
+  it('club : le mode de conflit garde son texte', async () => {
+    const arbre = await monterEcran();
+    expect(texteDe(arbre.root)).toContain(CLUB_ATTENTE);
+    expect(texteDe(arbre.root)).not.toContain(MAIRIE_ATTENTE);
+  });
+
+  // eslint-disable-next-line max-len
+  it('chaque pastille de couleur dit SA couleur (10 noms distincts) ; le groupe reste « Couleur de planning »', async () => {
+    const arbre = await monterEcran();
+    // Les TouchableOpacity seulement (les vues qu ils rendent portent les memes props).
+    // eslint-disable-next-line max-len
+    const pastilles = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ noeud) => (
+      noeud.props?.accessibilityRole === 'radio'
+      && noeud.props?.accessibilityHint === 'Couleur de planning'
+    ));
+    const noms = pastilles.map((/** @type {any} */ pastille) => pastille.props.accessibilityLabel);
+
+    expect(noms).toHaveLength(FACILITY_PLANNING_PALETTE.length);
+    expect(new Set(noms).size).toBe(FACILITY_PLANNING_PALETTE.length);
+    expect(noms[0]).toBe('Bleu ciel');
+    expect(noms).not.toContain('Couleur de planning');
   });
 });

@@ -243,7 +243,7 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     await appuyer(arbre, 'bouton-Refuser');
     await appuyer(arbre, 'bouton-Refuser', 1);
     expect(mockPost).not.toHaveBeenCalled();
-    expect(textes(arbre)).toContain('Écris le motif : le club le lira.');
+    expect(textes(arbre)).toContain('Écrivez le motif : le club le lira.');
     await act(async () => {
       arbre.root.findByType(TextInput).props.onChangeText('Forum des associations');
     });
@@ -272,7 +272,7 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     await appuyer(arbre, 'onglet-decided');
     await attendre(() => textes(arbre).includes('Acceptée'));
     expect(textes(arbre))
-      .toEqual(expect.arrayContaining(['Acceptée', 'Ton message : Partagez le plateau']));
+      .toEqual(expect.arrayContaining(['Acceptée', 'Votre message : Partagez le plateau']));
   });
 
   it('la notification d une nouvelle demande (ctaRoute du serveur) mène à cet écran', () => {

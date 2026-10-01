@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 
 import { countLabel, findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
@@ -87,7 +86,7 @@ function CollectiviteHome() {
         contentContainerStyle={[Alignments.fill, Alignments.justifyCenter, Spaces.padding[24]]}
       >
         <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
-          {t('collectivite.home.notManaged', 'Tu ne gères pas cette collectivité.')}
+          {t('collectivite.home.notManaged', 'Vous ne gérez pas cette collectivité.')}
         </Text>
       </ScreenContainer>
     );
@@ -156,11 +155,12 @@ function CollectiviteHome() {
           </Text>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>{collectivite?.name}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {/* TEXTES-COLLECTIVITES (01/10, « ton A ») : la mairie est vouvoyee ; le nom, deja */}
+            {/* en titre juste au-dessus, n est plus repete (« de Ville de Montrivage »). */}
             {t(
               'collectivite.home.subtitle',
               // eslint-disable-next-line max-len
-              'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
-              { name: collectivite?.name || '', ...SANS_ECHAPPEMENT },
+              'Votre espace de gestionnaire : vos installations, les demandes des clubs et les clubs rattachés.',
             )}
           </Text>
         </View>

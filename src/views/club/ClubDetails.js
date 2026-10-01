@@ -3188,8 +3188,12 @@ function ClubDetails({ navigation, route }) {
                               <Text style={[Fonts.p3, Fonts.neutral300]}>
                                 {t(
                                   'facilityList.collectiviteOwnerHint',
-                                  'Installation de {{ownerName}} : planning en lecture seule.',
-                                  { ownerName: facility?.ownerName || '', ...SANS_ECHAPPEMENT },
+                                  // eslint-disable-next-line max-len
+                                  'Installation gérée par {{ownerName}} : planning en lecture seule.',
+                                  {
+                                    ownerName: formatCollectiviteOfferedBy(facility?.ownerName),
+                                    ...SANS_ECHAPPEMENT,
+                                  },
                                 )}
                               </Text>
                             ) : null}

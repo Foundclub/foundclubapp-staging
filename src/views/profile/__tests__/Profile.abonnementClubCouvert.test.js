@@ -277,3 +277,49 @@ describe('ABOPARCLUB — carte « Mon abonnement » quand le club affiche est gr
     expect(texte).toContain('Événements');
   });
 });
+
+// TEXTES-COLLECTIVITES (lot 1, 01/10/2026) — quand l offre Club du club vient de la VILLE,
+// la carte « Mon abonnement » ne le disait pas : « Club · actif — Tes droits Club sont actifs.
+// Ton club est en cours de certification » (capture B1b, Karim en dirigeant, 01/10). Le
+// serveur NOMME la collectivite sur le droit (`entitlementsSummary[].offeredBy`, lot 1d) :
+// la carte le dit, au « tu » (c est un club qui lit).
+// eslint-disable-next-line max-len
+describe('TEXTES-COLLECTIVITES — carte « Mon abonnement » quand la Ville offre l offre Club', () => {
+  // eslint-disable-next-line max-len
+  const OFFERT_PAR_LA_VILLE = 'Offert par la Ville de Montrivage : toutes les équipes de ton club sont couvertes.';
+
+  // eslint-disable-next-line max-len
+  it('dit « Offert par la Ville de Montrivage », et plus « en cours de certification »', async () => {
+    mockAuthValue = contexteAuth({ couvreLeClubActif: true });
+    mockAuthValue.entitlementsSummary = [{
+      ...mockAuthValue.entitlementsSummary[0],
+      offeredBy: { documentId: 'ville-montrivage', name: 'Ville de Montrivage' },
+      paidBy: null,
+      subscriptionPlanCode: 'fc_collectivite_club',
+    }];
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        // eslint-disable-next-line max-len
+        <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    const texte = arbre.root
+      .findAllByType(Text)
+      .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+      .join(' | ');
+    act(() => {
+      arbre.unmount();
+    });
+
+    expect(texte).toContain('Club · actif');
+    expect(texte).toContain(OFFERT_PAR_LA_VILLE);
+    expect(texte).not.toContain('en cours de certification');
+  });
+
+  it('une offre que le club PAIE lui-même : la phrase d avant, sans Ville', async () => {
+    const texte = await texteDuProfil({ couvreLeClubActif: true });
+    expect(texte).not.toContain('Offert par');
+  });
+});

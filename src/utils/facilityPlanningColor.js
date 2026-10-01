@@ -15,6 +15,21 @@ export const FACILITY_PLANNING_PALETTE = [
   '#FFB34D',
 ];
 
+// TEXTES-COLLECTIVITES (01/10/2026) — le NOM de chaque couleur (clef sous `facilityForm.colors`) :
+// un lecteur d ecran disait « Couleur de planning » dix fois de suite.
+export const FACILITY_PLANNING_COLOR_NAMES = {
+  '#01B3F4': 'skyBlue',
+  '#27D6A3': 'emerald',
+  '#4D79FF': 'royalBlue',
+  '#4DB3FF': 'lightBlue',
+  '#4DFFB3': 'mint',
+  '#9D4DFF': 'purple',
+  '#FF4D4D': 'red',
+  '#FF4D94': 'pink',
+  '#FFA115': 'orange',
+  '#FFB34D': 'apricot',
+};
+
 /**
  * @param {string | undefined | null} color
  * @returns {string}

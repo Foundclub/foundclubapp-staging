@@ -97,7 +97,7 @@ function CollectiviteRequests() {
     if (decision.kind === 'refuse' && !decisionReason) {
       setErreur(t(
         'collectivite.requests.modal.reasonRequired',
-        'Écris le motif : le club le lira.',
+        'Écrivez le motif : le club le lira.',
       ));
       return;
     }
@@ -221,7 +221,7 @@ function CollectiviteRequests() {
         {estEnAttente ? renderConflit(demande?.conflict) : null}
         {!estEnAttente && demande?.decisionReason ? (
           <Text style={[Fonts.p3, Fonts.neutral100]}>
-            {t('collectivite.requests.decisionReason', 'Ton message : {{message}}', {
+            {t('collectivite.requests.decisionReason', 'Votre message : {{message}}', {
               message: demande.decisionReason,
               ...SANS_ECHAPPEMENT,
             })}
@@ -324,12 +324,12 @@ function CollectiviteRequests() {
               {estRefus
                 ? t(
                   'collectivite.requests.modal.refuseHint',
-                  'Le club reçoit ton motif ; son entraînement est annulé.',
+                  'Le club reçoit votre motif ; son entraînement est annulé.',
                 )
                 : t(
                   'collectivite.requests.modal.approveHint',
                   // eslint-disable-next-line max-len
-                  'Le club reçoit ta réponse et ton message. S’il y avait un occupant, il est prévenu.',
+                  'Le club reçoit votre réponse et votre message. S’il y avait un occupant, il est prévenu.',
                 )}
             </Text>
             <TextInput

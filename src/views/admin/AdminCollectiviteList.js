@@ -136,7 +136,8 @@ function AdminCollectiviteList() {
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t(
               'adminCollectivites.list.hint',
-              'Activer offre l’offre Club aux clubs rattachés ; couper la leur retire.',
+              // eslint-disable-next-line max-len
+              '« Activer » donne l’offre Club aux clubs rattachés, sauf à ceux qui paient déjà ; « Couper » la leur retire.',
             )}
           </Text>
         </View>

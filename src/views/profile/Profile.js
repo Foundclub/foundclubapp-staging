@@ -21,7 +21,9 @@ import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import {
   endSentenceAfterName,
+  formatCollectiviteOfferedBy,
   getActiveClubNotCovered,
+  getCollectiviteOffer,
   getSubscriptionBadgeLevel,
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
@@ -159,6 +161,15 @@ function Profile({ navigation, route }) {
     subscriptionAccessLevel: paidSubscriptionAccessLevel,
     userData,
   }), [clubVerificationSummary, entitlementsSummary, paidSubscriptionAccessLevel, userData]);
+  // TEXTES-COLLECTIVITES (01/10) — quand l'offre Club du club vient de la Ville, la carte le
+  // dit (« Offert par la Ville de Montrivage »), au lieu de « en cours de certification ».
+  // Meme juge que « Mon abonnement » et le bandeau de la fiche du club (`offeredBy`).
+  const activeClubDocumentId = clubVerificationSummary?.clubDocumentId
+    || userData?.club?.documentId;
+  const collectiviteOffer = useMemo(() => getCollectiviteOffer({
+    clubDocumentId: activeClubDocumentId,
+    entitlementsSummary,
+  }), [activeClubDocumentId, entitlementsSummary]);
 
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
@@ -480,6 +491,13 @@ function Profile({ navigation, route }) {
     TEAM: 'team',
   }[paidSubscriptionAccessLevel] || 'free';
   let subscriptionStatusText = t(`profile.subscription.status.${subscriptionStatusKey}`);
+  if (collectiviteOffer && !uncoveredActiveClub) {
+    subscriptionStatusText = t(
+      'profile.subscription.offeredBy',
+      'Offert par {{who}} : toutes les équipes de ton club sont couvertes.',
+      { who: formatCollectiviteOfferedBy(collectiviteOffer.name), ...SANS_ECHAPPEMENT },
+    );
+  }
   if (uncoveredActiveClub) {
     const [coveredClubName] = uncoveredActiveClub.coveredClubNames;
     // Le nom du club finit la phrase : s'il porte deja son point, on n'en

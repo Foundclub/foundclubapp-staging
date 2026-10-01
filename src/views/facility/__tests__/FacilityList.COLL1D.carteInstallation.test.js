@@ -95,6 +95,7 @@ jest.mock('@/services/facility/facilityQueries', () => ({
 const mockCollectiviteInstallations = { data: undefined, isLoading: false, refetch: jest.fn() };
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => mockCollectiviteInstallations,
+  useMyCollectivites: () => ({ data: [] }),
 }));
 
 // Le service est double ENTIEREMENT, fonctions pures comprises : le module
