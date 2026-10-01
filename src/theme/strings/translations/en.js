@@ -12186,7 +12186,7 @@ export default {
       phone: 'Phone: {{phone}}',
       title: 'Who is using the facility',
     },
-    changeWeekToExploreThe: 'Change week to explore the planning or go back to the current week.',
+    changeWeekToExploreThe: 'The arrows lead to other dates.',
     closeTheFullScreenPlanning: 'Close the full-screen planning',
     events_one: '{{count}} event',
     events_other: '{{count}} events',
@@ -12252,7 +12252,7 @@ export default {
     eventFallback: 'Event',
   },
   planningWeekTimelineViewV2: {
-    changeThePeriodToSee: 'Change the period to see other slots.',
+    changeThePeriodToSee: 'The arrows lead to other dates.',
     more: 'more',
     noEventInThisPeriod: 'No event in this period',
     noEventWithATime: 'No event with a time',

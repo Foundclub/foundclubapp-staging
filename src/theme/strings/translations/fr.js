@@ -12779,8 +12779,7 @@ export default {
       phone: 'Téléphone : {{phone}}',
       title: 'Qui occupe l’installation',
     },
-    // eslint-disable-next-line max-len
-    changeWeekToExploreThe: 'Change de semaine pour explorer le planning ou reviens à la semaine actuelle.',
+    changeWeekToExploreThe: 'Les flèches mènent aux autres dates.',
     closeTheFullScreenPlanning: 'Fermer le planning plein écran',
     events_one: '{{count}} événement',
     events_other: '{{count}} événements',
@@ -12797,7 +12796,7 @@ export default {
     tryAgain: 'Reessayer',
     unableToLoadThePlanning: 'Impossible de charger le planning',
     // eslint-disable-next-line max-len
-    weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être récupère. Réessaie ou change de semaine.',
+    weekPlanningLoadError: 'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
   },
   planning: {
     actions: {
@@ -12848,7 +12847,7 @@ export default {
     eventFallback: 'Evenement',
   },
   planningWeekTimelineViewV2: {
-    changeThePeriodToSee: "Change de période pour voir d'autres créneaux.",
+    changeThePeriodToSee: 'Les flèches mènent aux autres dates.',
     more: 'plus',
     noEventInThisPeriod: 'Aucun événement sur cette période',
     noEventWithATime: 'Aucun événement avec horaire',

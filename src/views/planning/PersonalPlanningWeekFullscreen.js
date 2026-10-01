@@ -428,9 +428,10 @@ function PlanningWeekFullscreen() {
             )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
+            {/* « ton A » (01/10) : lu par la mairie ET les clubs, ni « tu » ni « vous ». */}
             {t(
               'personalPlanningWeekFullscreen.weekPlanningLoadError',
-              'Le planning de cette semaine n’a pas pu être récupère. Réessaie ou change de '
+              'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de '
                 + 'semaine.',
             )}
           </Text>
@@ -468,7 +469,7 @@ function PlanningWeekFullscreen() {
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
             {t(
               'personalPlanningWeekFullscreen.changeWeekToExploreThe',
-              'Change de semaine pour explorer le planning ou reviens à la semaine actuelle.',
+              'Les flèches mènent aux autres dates.',
             )}
           </Text>
           <View style={[Alignments.row, Spaces.gap[12]]}>

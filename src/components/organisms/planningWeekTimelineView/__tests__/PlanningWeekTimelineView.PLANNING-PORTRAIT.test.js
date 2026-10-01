@@ -246,3 +246,28 @@ describe('PLANNING-PORTRAIT 4 — chaque bloc dit le club et l equipe, une fois'
     expect(bloc.props.accessibilityLabel).toBe('Montrivage FC · Senior B, 18:00 - 19:30');
   });
 });
+
+// Greffe « planning ton A » (chef, 01/10) : la grille, partagee par la mairie et les clubs,
+// ne dit plus « Change de periode » (tutoiement) quand un jour ou une periode est vide.
+describe('PLANNING-PORTRAIT ton A — l etat vide de la grille est impersonnel', () => {
+  test('un jour sans seance (jeudi) : « Les fleches menent aux autres dates. »', async () => {
+    const arbre = await monter({ mode: 'day' });
+    await act(async () => {
+      arbre.update(
+        <PlanningWeekTimelineView
+          compactFullscreen
+          currentDate={new Date(2026, 9, 8, 12, 0, 0)}
+          events={normalizePlanningItems([BLOC_DU_LUNDI, BLOC_DU_MERCREDI_AUTRE_CLUB])}
+          mode="day"
+          showHeader={false}
+          showUntimedSection={false}
+        />,
+      );
+    });
+    const lus = textes(arbre);
+
+    expect(lus).toContain('Aucun événement sur cette période');
+    expect(lus).toContain('Les flèches mènent aux autres dates.');
+    expect(lus.join(' | ')).not.toMatch(/Change de période/);
+  });
+});

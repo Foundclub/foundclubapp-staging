@@ -378,3 +378,45 @@ describe('PLANNING-PORTRAIT 3 — le bloc d un autre club, sur le planning de la
     });
   });
 });
+
+// PLANNING-PORTRAIT, greffe « planning ton A » (tranche par le chef le 01/10, suite de la
+// decision d Adel « ton A » : on vouvoie la mairie, on tutoie les clubs). Le planning est
+// lu par les DEUX : ses textes ne disent plus ni « tu » ni « vous » (une seule cle chacun).
+// ROUGE avant : « Change de semaine… reviens », « Reessaie ou change », « Change de periode ».
+const TUTOIE_OU_VOUVOIE = /\b(change|reviens|réessaie|tu|te|ton|ta|tes|toi|vous|votre|vos|changez|revenez|réessayez)\b/i;
+
+describe('PLANNING-PORTRAIT ton A — le planning ne tutoie ni ne vouvoie personne', () => {
+  test('les VRAIES traductions (fr.js) des 3 textes sont impersonnelles', () => {
+    const textes = [
+      fr.personalPlanningWeekFullscreen.changeWeekToExploreThe,
+      fr.personalPlanningWeekFullscreen.weekPlanningLoadError,
+      fr.planningWeekTimelineViewV2.changeThePeriodToSee,
+    ];
+
+    textes.forEach((texteFr) => expect(texteFr).not.toMatch(TUTOIE_OU_VOUVOIE));
+    expect(textes).toEqual([
+      'Les flèches mènent aux autres dates.',
+      'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de semaine.',
+      'Les flèches mènent aux autres dates.',
+    ]);
+  });
+
+  test('semaine vide, lue par la mairie : un texte impersonnel', async () => {
+    gereLaVille();
+    getFacilityPlanning.mockResolvedValue({ data: [], meta: installationAvec(2).meta });
+    const lu = texte(await rendre());
+
+    expect(lu).toContain('Aucun créneau cette semaine');
+    expect(lu).toContain('Les flèches mènent aux autres dates.');
+    expect(lu).not.toMatch(/Change de semaine|reviens/);
+  });
+
+  test('planning en erreur : un texte impersonnel', async () => {
+    gereLaVille();
+    getFacilityPlanning.mockRejectedValue(new Error('panne'));
+    const lu = texte(await rendre());
+
+    expect(lu).toContain('Réessayer, ou changer de semaine.');
+    expect(lu).not.toMatch(/Réessaie|récupère/);
+  });
+});

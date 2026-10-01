@@ -720,10 +720,8 @@ function PlanningWeekTimelineView({
     ? t('planningWeekTimelineViewV2.noEventInThisPeriod', 'Aucun événement sur cette période')
     : t('planningWeekTimelineViewV2.noEventWithATime', 'Aucun événement avec horaire');
   const emptyDescription = weekEvents.length === 0
-    ? t(
-      'planningWeekTimelineViewV2.changeThePeriodToSee',
-      "Change de période pour voir d'autres créneaux.",
-    )
+    // « ton A » (01/10) : la grille sert la mairie ET les clubs, ni « tu » ni « vous ».
+    ? t('planningWeekTimelineViewV2.changeThePeriodToSee', 'Les flèches mènent aux autres dates.')
     : t(
       'planningWeekTimelineViewV2.thisPeriodSEventsAre',
       'Les événements de cette période sont uniquement dans la section « Sans horaire ».',
