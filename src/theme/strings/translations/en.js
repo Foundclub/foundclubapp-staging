@@ -653,18 +653,29 @@ export default {
   adminCollectivites: {
     activation: {
       activate: 'Activate',
-      activateMessage_one: 'The attached club will receive the free Club plan. A club that already pays for its subscription is not affected.',
-      activateMessage_other: 'The {{count}} attached clubs will receive the free Club plan. A club that already pays for its subscription is not affected.',
+      activateMessage_one: 'The attached club will receive the free Club plan, unless it already pays for its subscription.',
+      activateMessage_other: 'The {{count}} attached clubs will receive the free Club plan, except those that already pay for their subscription.',
       activateMessageNone: 'No club is attached yet: every club you attach will receive the free Club plan.',
       activateTitle: 'Activate {{name}}?',
       cancel: 'Cancel',
       deactivate: 'Switch off',
-      deactivateMessage_one: 'The attached club will lose the free Club plan offered by the local authority. A club that pays for itself keeps its subscription.',
-      deactivateMessage_other: 'The {{count}} attached clubs will lose the free Club plan offered by the local authority. A club that pays for itself keeps its subscription.',
+      deactivateMessage_one: 'The attached club will lose the free Club plan offered by the local authority, if it had it. A club that pays for itself keeps its subscription.',
+      deactivateMessage_other: 'The attached clubs that had the free Club plan offered by the local authority will lose it. A club that pays for itself keeps its subscription.',
       deactivateMessageNone: 'No club is attached: nothing else changes.',
       deactivateTitle: 'Switch off {{name}}?',
       doneActivated: 'Activated. Plan granted: {{granted}} · Club already paying: {{alreadyPaid}}',
+      doneActivatedNamed: 'Activated. Plan granted: {{granted}} · Club already paying: {{alreadyPaid}} ({{clubs}})',
       doneDeactivated: 'Switched off. Plan removed: {{revoked}}',
+      preview: {
+        alreadyPaid_one: '{{count}} club already pays for its subscription, nothing changes for it: {{clubs}}.',
+        alreadyPaid_other: '{{count}} clubs already pay for their subscription, nothing changes for them: {{clubs}}.',
+        granted_one: '{{count}} club will receive the free Club plan: {{clubs}}.',
+        granted_other: '{{count}} clubs will receive the free Club plan: {{clubs}}.',
+        none_one: '{{count}} club does not have the local authority’s plan, nothing changes for it: {{clubs}}.',
+        none_other: '{{count}} clubs do not have the local authority’s plan, nothing changes for them: {{clubs}}.',
+        revoked_one: '{{count}} club will lose the free Club plan: {{clubs}}.',
+        revoked_other: '{{count}} clubs will lose the free Club plan: {{clubs}}.',
+      },
     },
     detail: {
       addManager: 'Add',
@@ -696,6 +707,7 @@ export default {
       searchUser: 'Add a manager: name or email',
     },
     form: {
+      cancel: 'Cancel',
       codeInsee: 'INSEE code',
       email: 'Email (optional)',
       errors: {
@@ -712,6 +724,12 @@ export default {
         region: '“Région Sud”',
       },
       hint: 'It is created inactive: you activate it afterwards, from the list or its page.',
+      leave: {
+        confirm: 'Leave',
+        message: 'What you entered will be lost.',
+        stay: 'Stay',
+        title: 'Leave without creating the local authority?',
+      },
       name: 'Official name',
       nameHint: 'Official French form, for example {{exemple}}. This is the name shown on the clubs’ “Offered by…” banner.',
       phone: 'Phone (optional)',
@@ -733,7 +751,7 @@ export default {
       empty: 'No local authority yet.',
       errorTitle: 'Local authorities unavailable',
       heading: 'Local authorities: {{nombre}}',
-      hint: 'Activating gives the Club plan to attached clubs; switching off removes it.',
+      hint: '“Activate” gives the Club plan to attached clubs, except those already paying; “Switch off” removes it.',
       loading: 'Loading local authorities…',
       manage: 'Manage',
       retry: 'Try again',
@@ -1804,7 +1822,7 @@ export default {
     COLLECTIVITE_CLUB_NOT_FOUND: 'This club cannot be found.',
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: "You don't manage this local authority.",
     COLLECTIVITE_INSTALLATION_NOT_FOUND: "This facility isn't one of the local authority's facilities.",
-    COLLECTIVITE_INVALID_PAYLOAD: 'Some information is invalid: check the name, type, opening hours (HH:MM) and capacity.',
+    COLLECTIVITE_INVALID_PAYLOAD: 'Some information is invalid: the name, type, opening hours (HH:MM) or capacity.',
     COLLECTIVITE_NOT_FOUND: 'This local authority cannot be found: it may have been deleted.',
     COLLECTIVITE_USER_NOT_FOUND: 'This account cannot be found.',
     DATABASE_ERROR: 'Database error.',
@@ -1842,7 +1860,7 @@ export default {
     EVENT_UPDATE_ERROR: 'Error updating the event.',
     EVENT_USER_ALREADY_IN_EVENT_ERROR: 'The user is already registered for this event.',
     EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR: "This event is reserved for the invited teams, and you're not a member of any of them.",
-    FACILITY_OVERRIDE_CAPACITY_CHANGED: 'No room left: another request was accepted for this time in the meantime. You can refuse this one.',
+    FACILITY_OVERRIDE_CAPACITY_CHANGED: 'No room left: another request was accepted for this time in the meantime. This one can only be refused now.',
     FACILITY_OVERRIDE_OWNER_REQUIRED: 'Only the owner of the facility (club, structure or local authority) decides on this request.',
     FAILED_TO_ACCESS_CHAT: 'Unable to access the chat.',
     FAILED_TO_JOIN_CHAT: 'Unable to join the chat.',
@@ -4364,7 +4382,7 @@ export default {
       header: 'My local authority',
       kicker: 'My local authority',
       notManaged: "You don't manage this local authority.",
-      subtitle: "Your manager space: the facilities of {{name}}, the clubs' requests and the attached clubs.",
+      subtitle: 'Your manager space: your facilities, the clubs’ requests and the attached clubs.',
     },
     installations: {
       header: 'Local authority facilities',
@@ -7534,6 +7552,39 @@ export default {
       teamPlural: 'simultaneous teams',
       teamSingular: 'simultaneous team',
     },
+    collectivite: {
+      conflictModes: {
+        allow: {
+          description: 'The slot stays confirmed, even beyond capacity: you have nothing to approve.',
+        },
+        pending: {
+          description: 'The slot becomes a request: you accept or refuse it before it is confirmed.',
+        },
+      },
+      errors: {
+        addressGeocodeRequired: 'Select a geolocated address from the list.',
+        planningColorInvalid: 'Select a valid colour.',
+      },
+      state: {
+        retryLater: 'Try again in a moment.',
+      },
+      validation: {
+        colorInvalid: 'Select a valid colour',
+        colorRequired: 'Select a colour',
+      },
+    },
+    colors: {
+      apricot: 'Apricot',
+      emerald: 'Emerald green',
+      lightBlue: 'Light blue',
+      mint: 'Mint green',
+      orange: 'Orange',
+      pink: 'Pink',
+      purple: 'Purple',
+      red: 'Red',
+      royalBlue: 'Royal blue',
+      skyBlue: 'Sky blue',
+    },
     conflictModes: {
       allow: {
         description: 'The slot stays confirmed, club managers are notified.',
@@ -7643,8 +7694,16 @@ export default {
       teamSingular: 'simultaneous team',
     },
     collectiviteEmpty: "Add the local authority's gyms, pitches and halls: clubs will see their schedule.",
-    collectiviteOwnerHint: 'Facility of {{ownerName}}: read-only schedule.',
+    collectiviteOwnerHint: 'Facility managed by {{ownerName}}: read-only schedule.',
     collectiviteTitle: 'Local authority facilities',
+    count: {
+      club_one: '{{count}} club facility',
+      club_other: '{{count}} club facilities',
+      collectivite_one: '{{count}} managed by {{who}}',
+      collectivite_other: '{{count}} managed by {{who}}',
+      total_one: '{{count}} facility',
+      total_other: '{{count}} facilities',
+    },
     defaults: {
       addressMissing: 'Address not provided',
       facilityName: 'Facility',
@@ -12829,6 +12888,7 @@ export default {
         usage7: 'Message all your registered players',
       },
       headerTitle: 'Subscription',
+      offeredBy: 'Offered by {{who}}: all your club’s teams are covered.',
       offers: {
         skip: 'Continue for free',
       },
@@ -12837,6 +12897,12 @@ export default {
       otherClub: {
         named: 'Your Club plan covers {{coveredClubs}}, not your club {{clubName}}.',
         unnamed: 'Your Club plan covers a club other than your current one.',
+      },
+      payer: {
+        paid: 'Paid by your club: Club rights are active across your whole club.',
+        paidUnverified: 'Paid by your club. Your club is being certified by the platform.',
+        trial: 'Club trial in progress.',
+        trialUntil: 'Club trial until {{date}}.',
       },
       paywall: {
         recommended: 'Recommended plan',
@@ -15532,11 +15598,11 @@ export default {
     },
     trialBanner: {
       noCard: 'No card required. Back to the free plan afterwards.',
-      title: '{{scope}} preview · D-{{remainingDays}}',
+      title: '{{scope}} trial · D-{{remainingDays}}',
     },
     trialPlans: {
-      club: 'Club preview (free)',
-      team: 'Team preview (free)',
+      club: 'Club trial',
+      team: 'Team trial',
     },
     trialScope: {
       club: 'Club',

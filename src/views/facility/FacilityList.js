@@ -15,8 +15,14 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
-import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import {
+  findManagedCollectivite,
+  formatOpeningHours,
+} from '@/domains/collectivite/collectiviteDisplay';
+import {
+  extractSubscriptionDecisionFromError,
+  formatCollectiviteOfferedBy,
+} from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -33,7 +39,10 @@ import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailabili
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import { useCollectiviteInstallations } from '@/services/collectivite/collectiviteQueries';
+import {
+  useCollectiviteInstallations,
+  useMyCollectivites,
+} from '@/services/collectivite/collectiviteQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
 
@@ -65,8 +74,6 @@ const getAddressCoordinates = (address) => {
 
   return { lat, lng };
 };
-
-const getListSubtitle = (count) => `${count} ${(count === 0 || count > 1) ? 'installations' : 'installation'}`;
 
 // D34 ecran 03 : la couleur du planning devient un LISERE, plus un habillage.
 // 4 pt est la valeur du pack, nommee ici pour qu'on sache pourquoi elle existe.
@@ -101,6 +108,11 @@ function FacilityList() {
   const contextCmId = isCollectiviteMode ? null : routeParams.cmId
     || (!routeParams.clubId ? userData?.club?.parentMultisport?.documentId || null : null);
   const collectiviteInstallations = useCollectiviteInstallations(collectiviteId);
+  // TEXTES-COLLECTIVITES (01/10) — en mode collectivite, la page porte le NOM de la
+  // collectivite : « Installations de la Ville » est deja l en-tete de l ecran, et il
+  // s ecrivait deux fois. Meme lecture que les trois autres ecrans de la mairie.
+  const { data: myCollectivites } = useMyCollectivites({ enabled: isCollectiviteMode });
+  const managedCollectivite = findManagedCollectivite(myCollectivites, collectiviteId);
   const clubFacilities = useClubFacilityContext({
     clubId: contextClubId,
     cmId: contextCmId,
@@ -500,10 +512,14 @@ function FacilityList() {
           <View style={[Spaces.gap[4]]}>
             {isCollectiviteFacility ? (
               <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {/* TEXTES-COLLECTIVITES : « de Ville de Montrivage » manquait son article. */}
                 {t(
                   'facilityList.collectiviteOwnerHint',
-                  'Installation de {{ownerName}} : planning en lecture seule.',
-                  { ownerName: sharedOwnerLabel, ...SANS_ECHAPPEMENT },
+                  'Installation gérée par {{ownerName}} : planning en lecture seule.',
+                  {
+                    ownerName: formatCollectiviteOfferedBy(sharedOwnerLabel),
+                    ...SANS_ECHAPPEMENT,
+                  },
                 )}
               </Text>
             ) : (
@@ -598,7 +614,7 @@ function FacilityList() {
             ? t(
               'facilityList.collectiviteEmpty',
               // eslint-disable-next-line max-len
-              'Ajoute les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
+              'Ajoutez les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
             )
             : t(
               'facilityList.empty.description',
@@ -691,6 +707,38 @@ function FacilityList() {
     );
   }
 
+  // TEXTES-COLLECTIVITES (01/10) — cote club, « Tes installations · 4 » comptait celles de
+  // la Ville comme celles du club : les deux nombres se disent separement.
+  const collectiviteFacilities = isCollectiviteMode
+    ? []
+    : facilities.filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite');
+  const listSubtitle = collectiviteFacilities.length > 0
+    ? [
+      t('facilityList.count.club', {
+        count: facilities.length - collectiviteFacilities.length,
+        defaultValue_one: '{{count}} installation du club',
+        defaultValue_other: '{{count}} installations du club',
+      }),
+      t('facilityList.count.collectivite', {
+        count: collectiviteFacilities.length,
+        defaultValue_one: '{{count}} gérée par {{who}}',
+        defaultValue_other: '{{count}} gérées par {{who}}',
+        who: formatCollectiviteOfferedBy(collectiviteFacilities[0]?.ownerName),
+        ...SANS_ECHAPPEMENT,
+      }),
+    ].join(' · ')
+    // TEXTES-COLLECTIVITES : « 1 installation » etait ecrit en dur, en francais.
+    : t('facilityList.count.total', {
+      count: facilities.length,
+      defaultValue_one: '{{count}} installation',
+      defaultValue_other: '{{count}} installations',
+    });
+  let listTitle = t('facilityList.title', 'Tes installations');
+  if (isCollectiviteMode) {
+    listTitle = managedCollectivite?.name
+      || t('facilityList.collectiviteTitle', 'Installations de la Ville');
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -711,12 +759,10 @@ function FacilityList() {
       >
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {isCollectiviteMode
-              ? t('facilityList.collectiviteTitle', 'Installations de la Ville')
-              : t('facilityList.title', 'Tes installations')}
+            {listTitle}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            {getListSubtitle(facilities.length)}
+            {listSubtitle}
           </Text>
         </View>
         {/* D34 : une SEULE grammaire d'ajout — le bouton plein de l'en-tete a */}

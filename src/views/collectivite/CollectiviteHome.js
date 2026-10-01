@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { countLabel, findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
@@ -87,7 +87,7 @@ function CollectiviteHome() {
         contentContainerStyle={[Alignments.fill, Alignments.justifyCenter, Spaces.padding[24]]}
       >
         <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
-          {t('collectivite.home.notManaged', 'Tu ne gères pas cette collectivité.')}
+          {t('collectivite.home.notManaged', 'Vous ne gérez pas cette collectivité.')}
         </Text>
       </ScreenContainer>
     );
@@ -156,11 +156,12 @@ function CollectiviteHome() {
           </Text>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>{collectivite?.name}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {/* TEXTES-COLLECTIVITES (01/10, « ton A ») : la mairie est vouvoyee ; le nom, deja */}
+            {/* en titre juste au-dessus, n est plus repete (« de Ville de Montrivage »). */}
             {t(
               'collectivite.home.subtitle',
               // eslint-disable-next-line max-len
-              'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
-              { name: collectivite?.name || '', ...SANS_ECHAPPEMENT },
+              'Votre espace de gestionnaire : vos installations, les demandes des clubs et les clubs rattachés.',
             )}
           </Text>
         </View>
@@ -178,8 +179,8 @@ function CollectiviteHome() {
                 ApplicationStyle.card,
                 Spaces.padding[16],
                 {
-                  backgroundColor: `${Colors.primary700}73`,
-                  borderColor: `${Colors.primary500}80`,
+                  backgroundColor: withAlpha(Colors.primary700, 0.45),
+                  borderColor: withAlpha(Colors.primary500, 0.5),
                   flexBasis: 260,
                   flexGrow: 1,
                   gap: 8,
@@ -199,7 +200,9 @@ function CollectiviteHome() {
                       Alignments.alignCenter,
                       Alignments.justifyCenter,
                       {
-                        backgroundColor: Colors.error500,
+                        // TEXTES-COLLECTIVITES : error500 + texte blanc = 3,7:1, illisible ;
+                        // meme jeton que la pastille de la cloche (NotificationBadge), 5,2:1.
+                        backgroundColor: Colors.error700,
                         borderRadius: 999,
                         minWidth: 24,
                         paddingHorizontal: 6,

@@ -1697,6 +1697,57 @@ const getOfferDate = (planCode, payerSubscriptions) => {
 };
 
 /**
+ * QUI PAIE L'OFFRE CLUB DU CLUB ACTIF — TEXTES-COLLECTIVITES (01/10/2026).
+ *
+ * La carte « Mon abonnement » disait la meme phrase (« Tes droits Club sont actifs. Ton club
+ * est en cours de certification ») pour un ESSAI, une offre PAYEE et une offre OFFERTE par
+ * la Ville. Ce juge lit ce que le serveur rend deja : le droit Club du club actif
+ * (`entitlementsSummary`, son plan et `offeredBy`) et, pour un essai, sa date de fin
+ * (`payerSubscriptionsSummary`). Une offre payee passe avant un essai sur le meme club.
+ * Sans reponse sure (une offre de collectivite sans `offeredBy`, rendue par un serveur
+ * d'avant le lot 1d), `null` : on ne dira jamais « paye par ton club » quand la Ville paie.
+ * ⚠️ AFFICHAGE SEULEMENT : aucun droit n'est lu pour decider d'un acces.
+ * @param {object} [params]
+ * @param {string} [params.clubDocumentId] - Le club actif.
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte (bootstrap).
+ * @param {any} [params.subscriptionSummary] - Le resume des abonnements (bootstrap).
+ * @returns {{ kind: 'collectivite', name: string } | { endsAt: string | null, kind: 'trial' }
+ *   | { kind: 'paid' } | null} Qui paie, ou null.
+ */
+export const getActiveClubOfferPayer = ({
+  clubDocumentId, entitlementsSummary, subscriptionSummary,
+} = {}) => {
+  const collectivite = getCollectiviteOffer({ clubDocumentId, entitlementsSummary });
+  if (collectivite) return { kind: 'collectivite', name: collectivite.name };
+
+  const target = trimId(clubDocumentId);
+  if (!target) return null;
+  const planDe = (/** @type {any} */ droit) => String(droit?.subscriptionPlanCode || '')
+    .trim()
+    .toLowerCase();
+  const droits = normalizeDecisionArray(entitlementsSummary).filter((droit) => (
+    droit?.scopeType === 'CLUB' && trimId(droit?.scopeClubDocumentId) === target
+  ));
+  if (droits.length === 0) return null;
+  if (droits.some((droit) => planDe(droit) === 'fc_collectivite_club')) return null;
+
+  if (droits.some((droit) => !planDe(droit).startsWith('fc_trial_'))) return { kind: 'paid' };
+
+  const planEssai = planDe(droits[0]);
+  const essai = normalizeDecisionArray(subscriptionSummary?.payerSubscriptionsSummary).find(
+    (entry) => String(entry?.planCode || '').trim().toLowerCase() === planEssai
+      && ACTIVE_PAYER_SUBSCRIPTION_STATUSES.includes(
+        String(entry?.status || '').trim().toLowerCase(),
+      ),
+  );
+  const fin = String(essai?.currentPeriodEnd || '').trim();
+  return {
+    endsAt: fin && Number.isFinite(new Date(fin).getTime()) ? fin : null,
+    kind: 'trial',
+  };
+};
+
+/**
  * LES OFFRES ACTIVES, UNE PAR UNE, CHACUNE AVEC SA DATE ET SON CLUB — ABOCLUB2.
  *
  * Photo de recette du 28/09 au soir : un essai « Apercu Club » couvre AIKI et se

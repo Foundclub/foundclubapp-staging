@@ -44,6 +44,7 @@ import {
   getFacilityConflictMode,
 } from '@/utils/facilityConflictMode';
 import {
+  FACILITY_PLANNING_COLOR_NAMES,
   FACILITY_PLANNING_PALETTE,
   isValidFacilityPlanningColor,
   resolveFacilityPlanningColor,
@@ -69,7 +70,9 @@ const buildTimeRule = () => Joi.string().allow('').pattern(HEURE).optional()
 
 // I18N-4 : le schema est construit a chaque rendu -- ses messages sont lus dans la langue
 // courante (un schema de module les figeait dans celle du demarrage).
-const buildSchema = () => Joi.object({
+// TEXTES-COLLECTIVITES (01/10, « ton A ») : en mode collectivite, la mairie est VOUVOYEE —
+// ses messages ont leurs propres clefs ; le club garde les siens, au mot pres.
+const buildSchema = (isCollectiviteMode = false) => Joi.object({
   // FINITIONS3 : `null` (installation posee en base sans adresse) passe ici ; c est
   // handleSave qui juge l adresse, avec son message et son alerte.
   address: Joi.alternatives().try(
@@ -95,10 +98,29 @@ const buildSchema = () => Joi.object({
     'string.empty': i18next.t('facilityForm.validation.nameRequired', 'Le nom est requis'),
   }),
   openingTime: buildTimeRule(),
-  planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages({
-    'any.only': i18next.t('facilityForm.validation.colorInvalid', 'Sélectionne une couleur validé'),
-    'string.empty': i18next.t('facilityForm.validation.colorRequired', 'Sélectionne une couleur'),
-  }),
+  planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages(
+    isCollectiviteMode
+      ? {
+        'any.only': i18next.t(
+          'facilityForm.collectivite.validation.colorInvalid',
+          'Sélectionnez une couleur valide',
+        ),
+        'string.empty': i18next.t(
+          'facilityForm.collectivite.validation.colorRequired',
+          'Sélectionnez une couleur',
+        ),
+      }
+      : {
+        'any.only': i18next.t(
+          'facilityForm.validation.colorInvalid',
+          'Sélectionne une couleur valide',
+        ),
+        'string.empty': i18next.t(
+          'facilityForm.validation.colorRequired',
+          'Sélectionne une couleur',
+        ),
+      },
+  ),
   type: Joi.string().required().messages({
     'string.empty': i18next.t('facilityForm.validation.typeRequired', 'Le type est requis'),
   }),
@@ -175,6 +197,29 @@ const FACILITY_CONFLICT_MODE_OPTIONS = [
     value: FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
   },
 ];
+
+/**
+ * TEXTES-COLLECTIVITES (01/10) — le NOM de chaque couleur de la palette, pour un lecteur
+ * d ecran : les 10 pastilles s appelaient toutes « Couleur de planning ».
+ * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {string} couleur - Une couleur de FACILITY_PLANNING_PALETTE.
+ * @returns {string} Son nom, ou la couleur elle-meme si la palette change sans lui.
+ */
+const nomDeCouleur = (t, couleur) => {
+  switch (/** @type {Record<string, string>} */ (FACILITY_PLANNING_COLOR_NAMES)[couleur]) {
+    case 'apricot': return t('facilityForm.colors.apricot', 'Abricot');
+    case 'emerald': return t('facilityForm.colors.emerald', 'Vert émeraude');
+    case 'lightBlue': return t('facilityForm.colors.lightBlue', 'Bleu clair');
+    case 'mint': return t('facilityForm.colors.mint', 'Vert menthe');
+    case 'orange': return t('facilityForm.colors.orange', 'Orange');
+    case 'pink': return t('facilityForm.colors.pink', 'Rose');
+    case 'purple': return t('facilityForm.colors.purple', 'Violet');
+    case 'red': return t('facilityForm.colors.red', 'Rouge');
+    case 'royalBlue': return t('facilityForm.colors.royalBlue', 'Bleu roi');
+    case 'skyBlue': return t('facilityForm.colors.skyBlue', 'Bleu ciel');
+    default: return couleur;
+  }
+};
 
 /**
  * Option de conflit correspondant a une valeur, avec repli sur la premiere.
@@ -322,7 +367,7 @@ function FacilityForm() {
     setError,
   } = useForm({
     defaultValues: DEFAULT_FORM_VALUES,
-    resolver: joiResolver(buildSchema()),
+    resolver: joiResolver(buildSchema(isCollectiviteMode)),
   });
 
   const [loading, setLoading] = useState(false);
@@ -383,6 +428,31 @@ function FacilityForm() {
     'facilityForm.hints.planningColor',
     'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
   );
+  // TEXTES-COLLECTIVITES (01/10, « ton A ») : en mairie, ce que fait la MAIRIE, au « vous » —
+  // « un dirigeant valide » est faux pour une installation de la Ville, qui recoit la demande.
+  const conflictModeDescription = (
+    /** @type {typeof FACILITY_CONFLICT_MODE_OPTIONS[0]} */ option,
+  ) => {
+    if (!isCollectiviteMode) return t(option.descriptionKey, option.descriptionFallback);
+    return option.value === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY
+      ? t(
+        'facilityForm.collectivite.conflictModes.allow.description',
+        'Le créneau reste confirmé, même au-delà de la capacité : vous n’avez rien à valider.',
+      )
+      : t(
+        'facilityForm.collectivite.conflictModes.pending.description',
+        'Le créneau passe en demande : vous l’acceptez ou la refusez avant qu’il soit confirmé.',
+      );
+  };
+  const addressGeocodeRequiredMessage = isCollectiviteMode
+    ? t(
+      'facilityForm.collectivite.errors.addressGeocodeRequired',
+      'Sélectionnez une adresse géolocalisée dans la liste.',
+    )
+    : t(
+      'facilityForm.errors.addressGeocodeRequired',
+      'Sélectionne une adresse géolocalisée dans la liste.',
+    );
 
   const handleSave = async (data) => {
     const facilityDocumentId = facility?.documentId || facility?.id || routedFacilityId;
@@ -404,20 +474,14 @@ function FacilityForm() {
     const normalizedAddress = normalizeAddressPayload(data.address);
     if (!normalizedAddress && !adresseIntacte) {
       setError('address', {
-        message: t(
-          'facilityForm.errors.addressGeocodeRequired',
-          'Sélectionne une adresse géolocalisée dans la liste.',
-        ),
+        message: addressGeocodeRequiredMessage,
         type: 'manual',
       });
       // Le champ adresse peut etre hors ecran au moment du submit : sans alerte,
       // le bouton Creer semble ne rien faire.
       Alert.alert(
         t('common.error', 'Erreur'),
-        t(
-          'facilityForm.errors.addressGeocodeRequired',
-          'Sélectionne une adresse géolocalisée dans la liste.',
-        ),
+        addressGeocodeRequiredMessage,
       );
       return;
     }
@@ -527,10 +591,12 @@ function FacilityForm() {
             {i18next.t('facilityForm.state.loadError', 'Impossible de charger l installation')}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            {facilityError?.message || i18next.t(
-              'facilityForm.state.retryLater',
-              'Réessaie dans quelques instants.',
-            )}
+            {facilityError?.message || (isCollectiviteMode
+              ? i18next.t(
+                'facilityForm.collectivite.state.retryLater',
+                'Réessayez dans quelques instants.',
+              )
+              : i18next.t('facilityForm.state.retryLater', 'Réessaie dans quelques instants.'))}
           </Text>
           <Button
             onPress={() => refetchFacility()}
@@ -780,7 +846,7 @@ function FacilityForm() {
                         CONFLICT_HINT_STYLE,
                       ]}
                     >
-                      {t(activeOption.descriptionKey, activeOption.descriptionFallback)}
+                      {conflictModeDescription(activeOption)}
                     </Text>
                   </View>
                 );
@@ -888,10 +954,11 @@ function FacilityForm() {
                             ]}
                           >
                             <TouchableOpacity
-                              accessibilityLabel={t(
+                              accessibilityHint={t(
                                 'facilityForm.accessibility.planningColor',
                                 'Couleur de planning',
                               )}
+                              accessibilityLabel={nomDeCouleur(t, color)}
                               accessibilityRole="radio"
                               accessibilityState={{ selected: isSelected }}
                               activeOpacity={0.85}
@@ -915,7 +982,15 @@ function FacilityForm() {
                     </Text>
                     {errors.planningColor?.message ? (
                       <Text style={[Fonts.p3, Fonts.error700]}>
-                        {t('facilityForm.errors.planningColorInvalid', errors.planningColor.message)}
+                        {isCollectiviteMode
+                          ? t(
+                            'facilityForm.collectivite.errors.planningColorInvalid',
+                            errors.planningColor.message,
+                          )
+                          : t(
+                            'facilityForm.errors.planningColorInvalid',
+                            errors.planningColor.message,
+                          )}
                       </Text>
                     ) : null}
                   </View>

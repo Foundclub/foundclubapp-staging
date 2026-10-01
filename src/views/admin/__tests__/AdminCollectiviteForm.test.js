@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TextInput } from 'react-native';
+import { Alert, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -19,6 +19,37 @@ import AdminCollectiviteForm from '../AdminCollectiviteForm';
 
 const mockPost = jest.fn();
 const mockReplace = jest.fn();
+// TEXTES-COLLECTIVITES (01/10) — la navigation doublee joue « retirer l ecran » comme React
+// Navigation : chaque ecouteur `beforeRemove` est appele, et l ecran ne part (`mockSortie`)
+// que si personne n a appele `preventDefault`. `dispatch` rejoue une sortie retenue.
+/** @type {Array<(evenement: any) => void>} */
+const mockEcouteurs = [];
+const mockSortie = jest.fn();
+const mockRetirer = (/** @type {any} */ action) => {
+  const evenement = {
+    data: { action },
+    defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; },
+  };
+  mockEcouteurs.forEach((ecouteur) => ecouteur(evenement));
+  if (!evenement.defaultPrevented) mockSortie(action);
+};
+const mockNavigation = {
+  addListener: (/** @type {string} */ nom, /** @type {any} */ ecouteur) => {
+    if (nom === 'beforeRemove') mockEcouteurs.push(ecouteur);
+    return () => {
+      const i = mockEcouteurs.indexOf(ecouteur);
+      if (i >= 0) mockEcouteurs.splice(i, 1);
+    };
+  },
+  dispatch: (/** @type {any} */ action) => mockSortie(action),
+  goBack: () => mockRetirer({ type: 'GO_BACK' }),
+  navigate: jest.fn(),
+  replace: (/** @type {any[]} */ ...args) => {
+    mockRetirer({ type: 'REPLACE' });
+    mockReplace(...args);
+  },
+};
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
@@ -31,7 +62,7 @@ jest.mock('@/services/client', () => ({
 }));
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn(), replace: mockReplace }),
+  useNavigation: () => mockNavigation,
 }));
 
 jest.mock('react-i18next', () => ({
@@ -137,6 +168,14 @@ const creer = async (/** @type {any} */ arbre) => {
 beforeEach(() => {
   mockPost.mockReset();
   mockReplace.mockReset();
+  mockSortie.mockReset();
+  // Les arbres des tests precedents ne sont pas demontes : leurs ecouteurs partent ici.
+  mockEcouteurs.length = 0;
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 describe('D61 — écran 3 : créer une collectivité', () => {
@@ -234,5 +273,71 @@ describe('D61 — écran 3 : créer une collectivité', () => {
     });
     expect(textes(arbre)).toContain(refus);
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TEXTES-COLLECTIVITES (lot 1, 01/10/2026) — le formulaire n avait pas de bouton « Annuler »,
+// et « retour » effaçait une saisie remplie sans rien demander (vu le 01/10, capture A2c).
+// ---------------------------------------------------------------------------
+describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande avant de perdre', () => {
+  const annuler = async (/** @type {any} */ arbre) => {
+    const bouton = arbre.root.find((/** @type {any} */ n) => (
+      n.props?.testID === 'bouton-Annuler' && typeof n.props?.onPress === 'function'));
+    await act(async () => { bouton.props.onPress(); });
+  };
+  const fenetre = () => /** @type {any} */ (Alert.alert).mock.calls.at(-1);
+
+  // eslint-disable-next-line max-len
+  it('formulaire intact (seul le début officiel « Ville de ») : « Annuler » sort, sans question', async () => {
+    const arbre = await monter();
+    await annuler(arbre);
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockSortie).toHaveBeenCalledTimes(1);
+  });
+
+  // eslint-disable-next-line max-len
+  it('saisie commencée : « Annuler » DEMANDE ; « Rester » garde la saisie, « Quitter » sort', async () => {
+    const arbre = await monter();
+    await taper(arbre, 'codeInsee', '13055');
+    await annuler(arbre);
+
+    expect(mockSortie).not.toHaveBeenCalled();
+    const [titre, message, boutons] = fenetre();
+    expect(titre).toBe('Quitter sans créer la collectivité ?');
+    expect(message).toBe('Ce que tu as saisi sera perdu.');
+    expect(boutons.map((/** @type {any} */ b) => b.text)).toEqual(['Rester', 'Quitter']);
+    expect(boutons[0].style).toBe('cancel');
+
+    await act(async () => { boutons[0].onPress?.(); });
+    expect(mockSortie).not.toHaveBeenCalled();
+    expect(champ(arbre, 'codeInsee').props.value).toBe('13055');
+
+    await act(async () => { boutons[1].onPress(); });
+    expect(mockSortie).toHaveBeenCalledTimes(1);
+  });
+
+  it('saisie commencée : le « retour » du téléphone (beforeRemove) DEMANDE aussi', async () => {
+    const arbre = await monter();
+    await taper(arbre, 'name', 'Ville de Valfleuri');
+    await act(async () => { mockNavigation.goBack(); });
+
+    expect(mockSortie).not.toHaveBeenCalled();
+    expect(fenetre()[0]).toBe('Quitter sans créer la collectivité ?');
+    await act(async () => { fenetre()[2][1].onPress(); });
+    expect(mockSortie).toHaveBeenCalledWith({ type: 'GO_BACK' });
+  });
+
+  it('collectivité CRÉÉE : le détail remplace le formulaire sans question', async () => {
+    // eslint-disable-next-line max-len
+    mockPost.mockResolvedValue({ data: { data: { documentId: 'valfleuri', name: 'Ville de Valfleuri' } } });
+    const arbre = await monter();
+    await taper(arbre, 'name', 'Ville de Valfleuri');
+    await taper(arbre, 'codeInsee', '13999');
+    await creer(arbre);
+    await attendre(() => mockReplace.mock.calls.length > 0);
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockSortie).toHaveBeenCalledWith({ type: 'REPLACE' });
   });
 });

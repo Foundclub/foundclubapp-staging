@@ -215,17 +215,26 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     expect(textes(arbre.root)).toContain('Collectivités : 3');
   });
 
+  // TEXTES-COLLECTIVITES (01/10) : la fenêtre disait « Les 3 clubs rattachés recevront
+  // l’offre » quand le serveur n’en touchait que 2. Elle demande désormais l’APERÇU du
+  // serveur (CollectiviteActivation.apercu.test.js) ; ici, la doublure ne répond RIEN à
+  // l’aperçu (serveur d’avant le lot) : la phrase reste VRAIE, sans nombre de clubs touchés.
   // eslint-disable-next-line max-len
-  it('Activer : la confirmation dit le nombre de clubs, puis PUT …/active { isActive: true }', async () => {
+  it('Activer, serveur sans aperçu : une confirmation VRAIE, puis PUT …/active { isActive: true }', async () => {
     const arbre = await monter();
     await act(async () => { bouton(carte(arbre, 'ville-montrivage'), 'Activer').props.onPress(); });
+    await attendre(() => alerte !== null);
 
     expect(alerte.titre).toBe('Activer la Ville de Montrivage ?');
     expect(alerte.message).toBe(
       // eslint-disable-next-line max-len
-      'Les 3 clubs rattachés recevront l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      'Les 3 clubs rattachés recevront l’offre Club offerte, sauf ceux qui paient déjà leur abonnement.',
     );
-    expect(mockPut).not.toHaveBeenCalled();
+    // Seul l aperçu est parti : rien n est écrit avant la confirmation.
+    expect(mockPut).toHaveBeenCalledTimes(1);
+    expect(mockPut).toHaveBeenCalledWith('/superadmin/collectivites/ville-montrivage/active', {
+      data: { previewIsActive: true },
+    });
 
     mockPut.mockImplementation(async () => {
       collectivitesServeur = [{ ...MONTRIVAGE, isActive: true }, VAL, DEPARTEMENT];
@@ -249,8 +258,8 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
     await act(async () => { confirmer.onPress(); });
     await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 7);
 
-    expect(mockPut).toHaveBeenCalledTimes(1);
-    expect(mockPut).toHaveBeenCalledWith('/superadmin/collectivites/ville-montrivage/active', {
+    expect(mockPut).toHaveBeenCalledTimes(2);
+    expect(mockPut).toHaveBeenLastCalledWith('/superadmin/collectivites/ville-montrivage/active', {
       data: { isActive: true },
     });
     // La liste est RELUE depuis le serveur, et c est elle qui dit « Active ».
@@ -276,13 +285,14 @@ describe('D61 — écran 1 : la liste des collectivités', () => {
   });
 
   // eslint-disable-next-line max-len
-  it('Couper : la confirmation dit ce que perd le club, puis PUT …/active { isActive: false }', async () => {
+  it('Couper, serveur sans aperçu : une confirmation VRAIE, puis PUT …/active { isActive: false }', async () => {
     const arbre = await monter();
     await act(async () => { bouton(carte(arbre, 'cc-du-val'), 'Couper').props.onPress(); });
+    await attendre(() => alerte !== null);
     expect(alerte.titre).toBe('Couper la Communauté de communes du Val ?');
     expect(alerte.message).toBe(
       // eslint-disable-next-line max-len
-      'Le club rattaché perdra l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      'Le club rattaché perdra l’offre Club offerte par la collectivité s’il l’avait. Un club qui paie lui-même garde son abonnement.',
     );
     mockPut.mockImplementation(async () => {
       collectivitesServeur = [MONTRIVAGE, { ...VAL, isActive: false }, DEPARTEMENT];

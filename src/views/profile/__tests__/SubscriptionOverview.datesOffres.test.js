@@ -324,7 +324,9 @@ describe('ABOCLUB2 — la photo du soir : essai sur AIKI, Club 100 sur Démo', (
   it('la carte decrit l\'offre qui couvre AIKI, avec SA date de fin', async () => {
     const texte = await texteDeLEcran(PHOTO_DU_SOIR);
 
-    expect(texte).toContain('Aperçu Club (offert) | Club · actif');
+    // TEXTES-COLLECTIVITES (point 6) : l essai s appelle « Essai Club » ; « offert » est
+    // reserve a l offre de la Ville.
+    expect(texte).toContain('Essai Club | Club · actif');
     expect(texte).toContain('Toutes les équipes de ton club sont couvertes.');
     expect(texte).toContain('Se termine le | 31 octobre 2026');
   });
@@ -397,7 +399,8 @@ describe('ABOPARCLUB — recette du 29/09 (tournee 4) : « Renouvellement automa
   it('sous l Apercu Club OFFERT, le pied de page ne parle plus de renouvellement', async () => {
     const texte = await texteDeLEcran(PHOTO_DU_SOIR);
 
-    expect(texte).toContain('Aperçu Club (offert)');
+    expect(texte).toContain('Essai Club');
+    expect(texte).not.toContain('(offert)');
     expect(texte).not.toContain('Renouvellement automatique');
   });
 

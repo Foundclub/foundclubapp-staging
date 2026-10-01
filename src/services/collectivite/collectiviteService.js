@@ -140,6 +140,22 @@ export const setAdminCollectiviteActive = async ({ collectiviteId, isActive }) =
 };
 
 /**
+ * TEXTES-COLLECTIVITES (01/10) — l APERCU d « activer » ou « couper » : ce que le serveur
+ * FERAIT, club par club et par leur nom, sans rien ecrire. Le corps ne porte PAS `isActive` :
+ * un serveur d avant le lot le refuse (400) au lieu de faire le geste — une app neuve face a
+ * un serveur ancien ne peut donc jamais activer ou couper en croyant demander un apercu.
+ * @param {{ collectiviteId: string, isActive: boolean }} params - La cible et l etat vise.
+ * @returns {Promise<any>} `{ data: { clubs: [{ clubDocumentId, name, offer }], isActive,
+ *   preview: true } }`.
+ */
+export const previewAdminCollectiviteActive = async ({ collectiviteId, isActive }) => {
+  const response = await client.put(`${collectiviteRoute(collectiviteId)}/active`, {
+    data: { previewIsActive: isActive === true },
+  });
+  return response.data;
+};
+
+/**
  * Rattache un club existant (un club = une collectivite ; 409 s il en a deja une).
  * @param {{ collectiviteId: string, clubId: string }} params - documentIds.
  * @returns {Promise<any>} `{ data: { attached, changed, offer } }`.

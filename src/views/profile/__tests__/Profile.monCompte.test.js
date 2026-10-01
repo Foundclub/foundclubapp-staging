@@ -50,7 +50,10 @@ jest.mock('@/domains/requests/requestNavigation', () => ({ navigateToRequestsHub
 // carte n'est pas le sujet ici — seulement sa présence.
 jest.mock('@/domains/subscription/subscriptionDecision', () => ({
   endSentenceAfterName: (/** @type {string} */ texte) => texte,
+  formatCollectiviteOfferedBy: (/** @type {string} */ nom) => nom,
   getActiveClubNotCovered: () => null,
+  getActiveClubOfferPayer: () => null,
+  getCollectiviteOffer: () => null,
   getSubscriptionBadgeLevel: () => 'FREE',
   getSubscriptionQuotaItems: () => [],
 }));

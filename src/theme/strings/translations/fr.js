@@ -675,22 +675,40 @@ export default {
     activation: {
       activate: 'Activer',
       // eslint-disable-next-line max-len
-      activateMessage_one: 'Le club rattaché recevra l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      activateMessage_one: 'Le club rattaché recevra l’offre Club offerte, sauf s’il paie déjà son abonnement.',
       // eslint-disable-next-line max-len
-      activateMessage_other: 'Les {{count}} clubs rattachés recevront l’offre Club offerte. Un club qui paie déjà son abonnement n’est pas touché.',
+      activateMessage_other: 'Les {{count}} clubs rattachés recevront l’offre Club offerte, sauf ceux qui paient déjà leur abonnement.',
       // eslint-disable-next-line max-len
       activateMessageNone: 'Aucun club n’est rattaché pour l’instant : chaque club que tu rattacheras recevra l’offre Club offerte.',
       activateTitle: 'Activer {{name}} ?',
       cancel: 'Annuler',
       deactivate: 'Couper',
       // eslint-disable-next-line max-len
-      deactivateMessage_one: 'Le club rattaché perdra l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      deactivateMessage_one: 'Le club rattaché perdra l’offre Club offerte par la collectivité s’il l’avait. Un club qui paie lui-même garde son abonnement.',
       // eslint-disable-next-line max-len
-      deactivateMessage_other: 'Les {{count}} clubs rattachés perdront l’offre Club offerte par la collectivité. Un club qui paie lui-même garde son abonnement.',
+      deactivateMessage_other: 'Les clubs rattachés qui avaient l’offre Club offerte par la collectivité la perdront. Un club qui paie lui-même garde son abonnement.',
       deactivateMessageNone: 'Aucun club n’est rattaché : rien d’autre ne change.',
       deactivateTitle: 'Couper {{name}} ?',
       doneActivated: 'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}}',
+      // eslint-disable-next-line max-len
+      doneActivatedNamed: 'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}} ({{clubs}})',
       doneDeactivated: 'Coupée. Offre retirée : {{revoked}}',
+      // TEXTES-COLLECTIVITES (01/10) — la fenêtre dit, AVANT le geste, ce que le serveur fera
+      // club par club (réponse « à blanc » de PUT …/active), au lieu d’un nombre de clubs faux.
+      preview: {
+        // eslint-disable-next-line max-len
+        alreadyPaid_one: '{{count}} club paie déjà son abonnement, rien ne change pour lui : {{clubs}}.',
+        // eslint-disable-next-line max-len
+        alreadyPaid_other: '{{count}} clubs paient déjà leur abonnement, rien ne change pour eux : {{clubs}}.',
+        granted_one: '{{count}} club recevra l’offre Club offerte : {{clubs}}.',
+        granted_other: '{{count}} clubs recevront l’offre Club offerte : {{clubs}}.',
+        // eslint-disable-next-line max-len
+        none_one: '{{count}} club n’a pas l’offre de la collectivité, rien ne change pour lui : {{clubs}}.',
+        // eslint-disable-next-line max-len
+        none_other: '{{count}} clubs n’ont pas l’offre de la collectivité, rien ne change pour eux : {{clubs}}.',
+        revoked_one: '{{count}} club perdra l’offre Club offerte : {{clubs}}.',
+        revoked_other: '{{count}} clubs perdront l’offre Club offerte : {{clubs}}.',
+      },
     },
     detail: {
       addManager: 'Ajouter',
@@ -727,6 +745,7 @@ export default {
       searchUser: 'Ajouter un gestionnaire : nom ou e-mail',
     },
     form: {
+      cancel: 'Annuler',
       codeInsee: 'Code INSEE',
       email: 'E-mail (facultatif)',
       errors: {
@@ -745,6 +764,12 @@ export default {
         region: '« Région Sud »',
       },
       hint: 'Elle naît inactive : tu l’actives ensuite, depuis la liste ou sa fiche.',
+      leave: {
+        confirm: 'Quitter',
+        message: 'Ce que tu as saisi sera perdu.',
+        stay: 'Rester',
+        title: 'Quitter sans créer la collectivité ?',
+      },
       name: 'Nom officiel',
       // eslint-disable-next-line max-len
       nameHint: 'Forme officielle, par exemple {{exemple}}. C’est ce nom qu’affiche le bandeau « Offert par… » des clubs.',
@@ -767,7 +792,8 @@ export default {
       empty: 'Aucune collectivité pour l’instant.',
       errorTitle: 'Collectivités indisponibles',
       heading: 'Collectivités : {{nombre}}',
-      hint: 'Activer offre l’offre Club aux clubs rattachés ; couper la leur retire.',
+      // eslint-disable-next-line max-len
+      hint: '« Activer » donne l’offre Club aux clubs rattachés, sauf à ceux qui paient déjà ; « Couper » la leur retire.',
       loading: 'Lecture des collectivités…',
       manage: 'Gérer',
       retry: 'Réessayer',
@@ -2033,11 +2059,11 @@ export default {
     COLLECTIVITE_CLUB_ALREADY_ATTACHED: 'Ce club est déjà rattaché à une autre collectivité : détache-le d’abord.',
     COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
-    COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Tu ne gères pas cette collectivité.',
+    COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Vous ne gérez pas cette collectivité.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_INSTALLATION_NOT_FOUND: "Cette installation n'est pas l'une de celles de la collectivité.",
     // eslint-disable-next-line max-len
-    COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : vérifie le nom, le type, les horaires (HH:MM) et la capacité.',
+    COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : le nom, le type, les horaires (HH:MM) ou la capacité.',
     // D61 (29/09) — console super-admin : la collectivite visee n existe pas (ou plus)
     COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
     COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
@@ -2047,7 +2073,7 @@ export default {
     //   COLLECTIVITES 3a/1c — accepter une demande d installation : la place a ete prise par
     //   une autre acceptation depuis la demande (409), ou ce compte n est pas le proprietaire.
     // eslint-disable-next-line max-len
-    FACILITY_OVERRIDE_CAPACITY_CHANGED: 'Plus de place : une autre demande a été acceptée sur ce moment entre-temps. Tu peux refuser celle-ci.',
+    FACILITY_OVERRIDE_CAPACITY_CHANGED: 'Plus de place : une autre demande a été acceptée sur ce moment entre-temps. Celle-ci ne peut plus qu’être refusée.',
     // eslint-disable-next-line max-len
     FACILITY_OVERRIDE_OWNER_REQUIRED: "Seul le propriétaire de l'installation (club, structure ou collectivité) tranche cette demande.",
     generic: 'Une erreur est survenue. Merci de réessayer plus tard.',
@@ -4674,9 +4700,9 @@ export default {
       },
       header: 'Ma collectivité',
       kicker: 'Ma collectivité',
-      notManaged: 'Tu ne gères pas cette collectivité.',
+      notManaged: 'Vous ne gérez pas cette collectivité.',
       // eslint-disable-next-line max-len
-      subtitle: 'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
+      subtitle: 'Votre espace de gestionnaire : vos installations, les demandes des clubs et les clubs rattachés.',
     },
     installations: {
       header: 'Installations de la Ville',
@@ -4691,18 +4717,18 @@ export default {
         occupant: 'Déjà là : {{club}} · {{team}} ({{slot}})',
         remaining: 'Place restante : {{remaining}} sur {{max}}',
       },
-      decisionReason: 'Ton message : {{message}}',
+      decisionReason: 'Votre message : {{message}}',
       emptyDecided: 'Aucune demande traitée pour l’instant.',
       emptyPending: 'Aucune demande en attente.',
       header: 'Demandes de la Ville',
       modal: {
         // eslint-disable-next-line max-len
-        approveHint: 'Le club reçoit ta réponse et ton message. S’il y avait un occupant, il est prévenu.',
+        approveHint: 'Le club reçoit votre réponse et votre message. S’il y avait un occupant, il est prévenu.',
         approvePlaceholder: 'Un mot pour le club (facultatif)',
         approveTitle: 'Accepter la demande',
         cancel: 'Annuler',
-        reasonRequired: 'Écris le motif : le club le lira.',
-        refuseHint: 'Le club reçoit ton motif ; son entraînement est annulé.',
+        reasonRequired: 'Écrivez le motif : le club le lira.',
+        refuseHint: 'Le club reçoit votre motif ; son entraînement est annulé.',
         refusePlaceholder: 'Le motif du refus (obligatoire)',
         refuseTitle: 'Refuser la demande',
       },
@@ -8034,6 +8060,45 @@ export default {
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
+    // TEXTES-COLLECTIVITES (01/10, « ton A ») — le formulaire sert au club ET à la mairie :
+    // la mairie, vouvoyée, a ses propres clefs ; un club n’est jamais vouvoyé par ricochet.
+    collectivite: {
+      conflictModes: {
+        allow: {
+          // eslint-disable-next-line max-len
+          description: 'Le créneau reste confirmé, même au-delà de la capacité : vous n’avez rien à valider.',
+        },
+        pending: {
+          // eslint-disable-next-line max-len
+          description: 'Le créneau passe en demande : vous l’acceptez ou la refusez avant qu’il soit confirmé.',
+        },
+      },
+      errors: {
+        addressGeocodeRequired: 'Sélectionnez une adresse géolocalisée dans la liste.',
+        planningColorInvalid: 'Sélectionnez une couleur valide.',
+      },
+      state: {
+        retryLater: 'Réessayez dans quelques instants.',
+      },
+      validation: {
+        colorInvalid: 'Sélectionnez une couleur valide',
+        colorRequired: 'Sélectionnez une couleur',
+      },
+    },
+    // TEXTES-COLLECTIVITES (01/10) — les 10 pastilles s’appelaient toutes « Couleur de
+    // planning » pour un lecteur d’écran : chacune dit maintenant sa couleur.
+    colors: {
+      apricot: 'Abricot',
+      emerald: 'Vert émeraude',
+      lightBlue: 'Bleu clair',
+      mint: 'Vert menthe',
+      orange: 'Orange',
+      pink: 'Rose',
+      purple: 'Violet',
+      red: 'Rouge',
+      royalBlue: 'Bleu roi',
+      skyBlue: 'Bleu ciel',
+    },
     conflictModes: {
       allow: {
         description: 'Le créneau reste confirmé, les dirigeants sont notifiés.',
@@ -8052,7 +8117,7 @@ export default {
       addressGeocodeRequired: 'Sélectionne une adresse géolocalisée dans la liste.',
       closingBeforeOpening: 'La fermeture doit suivre l’ouverture.',
       contextMissing: 'Impossible de récupérer les informations du club.',
-      planningColorInvalid: 'Sélectionne une couleur validé.',
+      planningColorInvalid: 'Sélectionne une couleur valide.',
       saveFailed: "Une erreur est survenue lors de l'enregistrement.",
     },
     fields: {
@@ -8111,7 +8176,7 @@ export default {
     validation: {
       capacityMin: "La capacité doit être d'au moins 1",
       capacityRequired: 'La capacité est requise',
-      colorInvalid: 'Sélectionne une couleur validé',
+      colorInvalid: 'Sélectionne une couleur valide',
       colorRequired: 'Sélectionne une couleur',
       nameRequired: 'Le nom est requis',
       timeFormat: 'Format attendu : HH:MM (ex. 08:00)',
@@ -8143,9 +8208,19 @@ export default {
       teamSingular: 'équipe simultanée',
     },
     // eslint-disable-next-line max-len
-    collectiviteEmpty: 'Ajoute les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
-    collectiviteOwnerHint: 'Installation de {{ownerName}} : planning en lecture seule.',
+    collectiviteEmpty: 'Ajoutez les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
+    collectiviteOwnerHint: 'Installation gérée par {{ownerName}} : planning en lecture seule.',
     collectiviteTitle: 'Installations de la Ville',
+    // TEXTES-COLLECTIVITES (01/10) — « Tes installations · 4 » comptait celles de la Ville
+    // comme celles du club : les deux nombres se disent séparément.
+    count: {
+      club_one: '{{count}} installation du club',
+      club_other: '{{count}} installations du club',
+      collectivite_one: '{{count}} gérée par {{who}}',
+      collectivite_other: '{{count}} gérées par {{who}}',
+      total_one: '{{count}} installation',
+      total_other: '{{count}} installations',
+    },
     defaults: {
       addressMissing: 'Adresse non renseignée',
       facilityName: 'Installation',
@@ -13515,6 +13590,7 @@ export default {
         usage7: 'Communiquer à tous vos licenciés',
       },
       headerTitle: 'Abonnement',
+      offeredBy: 'Offert par {{who}} : toutes les équipes de ton club sont couvertes.',
       offers: {
         skip: 'Continuer gratuitement',
       },
@@ -13523,6 +13599,15 @@ export default {
       otherClub: {
         named: 'Ton offre Club couvre {{coveredClubs}}, pas ton club {{clubName}}.',
         unnamed: 'Ton offre Club couvre un autre club que ton club actuel.',
+      },
+      // TEXTES-COLLECTIVITES (01/10) — la carte nomme QUI PAIE (essai, club, ou la Ville :
+      // `offeredBy` ci-dessus) au lieu d’une même phrase pour les trois.
+      payer: {
+        paid: 'Payé par ton club : les droits Club sont actifs sur tout ton club.',
+        // eslint-disable-next-line max-len
+        paidUnverified: 'Payé par ton club. Ton club est en cours de certification par la plateforme.',
+        trial: 'Essai Club en cours.',
+        trialUntil: 'Essai Club jusqu’au {{date}}.',
       },
       paywall: {
         recommended: 'Offre recommandee',
@@ -16268,11 +16353,12 @@ export default {
     },
     trialBanner: {
       noCard: "Aucune carte requise. Retour à l'offre gratuite ensuite.",
-      title: 'Aperçu {{scope}} · J-{{remainingDays}}',
+      title: 'Essai {{scope}} · J-{{remainingDays}}',
     },
     trialPlans: {
-      club: 'Aperçu Club (offert)',
-      team: 'Aperçu Équipe (offert)',
+      // TEXTES-COLLECTIVITES (01/10) : « offert » est réservé à l’offre de la Ville.
+      club: 'Essai Club',
+      team: 'Essai Équipe',
     },
     trialScope: {
       club: 'Club',

@@ -1,4 +1,7 @@
-import { Text } from 'react-native';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import CollectiviteHome from '../CollectiviteHome';
@@ -125,6 +128,27 @@ beforeEach(() => {
   mockRequetes = lu([{ documentId: 'd1' }, { documentId: 'd2' }]);
   mockInstallations = lu([{ documentId: 'gymnase' }]);
   mockClubs = lu([{ documentId: 'aiki' }, { documentId: 'testfc' }]);
+});
+
+// TEXTES-COLLECTIVITES (point 8 du chef, 01/10) : la pastille des demandes etait en
+// `error500` avec un texte blanc — contraste 3,7:1, sous le seuil d accessibilite. Celle de la
+// cloche est en `error700` (5,2:1). Le jeton est RELU dans la source de la cloche : si elle
+// change, la pastille de la mairie suit, ou ce temoin le dit.
+// eslint-disable-next-line max-len
+describe('TEXTES-COLLECTIVITES — la pastille des demandes a la couleur de celle de la cloche', () => {
+  it('même jeton que la pastille de la cloche (error700)', async () => {
+    const cloche = readFileSync(
+      // eslint-disable-next-line max-len
+      join(__dirname, '..', '..', '..', 'components', 'molecules', 'notificationBadge', 'NotificationBadge.js'),
+      'utf8',
+    );
+    const jeton = (cloche.match(/styles\.badge,\s*\{\s*backgroundColor: Colors\.(\w+)/) || [])[1];
+    expect(jeton).toBe('error700');
+    const couleurs = jest.requireActual('@/theme/colors').default();
+    const arbre = await monter();
+    const [vue] = pastille(arbre);
+    expect(StyleSheet.flatten(vue.props.style).backgroundColor).toBe(couleurs[jeton]);
+  });
 });
 
 describe('COLLECTIVITES 1c — écran 2 : l accueil « Ma collectivité »', () => {

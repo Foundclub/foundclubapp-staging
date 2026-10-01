@@ -13,6 +13,7 @@ import {
   getCollectiviteInstallations,
   getCollectiviteRequests,
   getMyCollectivites,
+  previewAdminCollectiviteActive,
   removeAdminCollectiviteGestionnaire,
   saveCollectiviteInstallation,
   searchAdminCollectiviteTargets,
@@ -256,6 +257,17 @@ export const useSetAdminCollectiviteActive = (options) => useGesteSuperAdmin(
   setAdminCollectiviteActive,
   options,
 );
+
+/**
+ * TEXTES-COLLECTIVITES (01/10) — l apercu d activer / couper ; variables
+ * `{ collectiviteId, isActive }`. Ne relit rien : il n ecrit rien.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const usePreviewAdminCollectiviteActive = (options = {}) => useMutation({
+  mutationFn: previewAdminCollectiviteActive,
+  ...options,
+});
 
 /**
  * Rattacher un club ; variables `{ collectiviteId, clubId }`.

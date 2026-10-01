@@ -243,7 +243,7 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     await appuyer(arbre, 'bouton-Refuser');
     await appuyer(arbre, 'bouton-Refuser', 1);
     expect(mockPost).not.toHaveBeenCalled();
-    expect(textes(arbre)).toContain('Écris le motif : le club le lira.');
+    expect(textes(arbre)).toContain('Écrivez le motif : le club le lira.');
     await act(async () => {
       arbre.root.findByType(TextInput).props.onChangeText('Forum des associations');
     });
@@ -272,7 +272,7 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     await appuyer(arbre, 'onglet-decided');
     await attendre(() => textes(arbre).includes('Acceptée'));
     expect(textes(arbre))
-      .toEqual(expect.arrayContaining(['Acceptée', 'Ton message : Partagez le plateau']));
+      .toEqual(expect.arrayContaining(['Acceptée', 'Votre message : Partagez le plateau']));
   });
 
   it('la notification d une nouvelle demande (ctaRoute du serveur) mène à cet écran', () => {
@@ -286,5 +286,18 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
       params: { collectiviteId: 'ville-de-recette' },
       route: 'CollectiviteRequests',
     });
+  });
+});
+
+// TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55 : « A ») — « Demandes de la Ville »
+// s ecrivait deux fois : l en-tete de l ecran, puis le titre de la page juste dessous. Meme
+// traitement que les installations : la page porte le NOM de la collectivite.
+describe('TEXTES-COLLECTIVITES — « Demandes de la Ville » ne s écrit plus deux fois', () => {
+  // eslint-disable-next-line max-len
+  it('la page porte le nom de la collectivité, une fois ; l en-tête garde « Demandes de la Ville »', async () => {
+    const lus = textes(await monter());
+    expect(lus).not.toContain('Demandes de la Ville');
+    expect(lus.filter((texte) => texte === 'Ville de Recette')).toHaveLength(1);
+    expect(lus).not.toContain('VILLE DE RECETTE');
   });
 });

@@ -1,7 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -97,6 +98,48 @@ function AdminCollectiviteForm() {
   const [fautes, setFautes] = useState(/** @type {string[]} */ ([]));
   const creer = useCreateAdminCollectivite();
 
+  // TEXTES-COLLECTIVITES (01/10) — « retour » effacait une saisie remplie sans rien demander,
+  // et il n y avait pas de bouton « Annuler ». Une saisie VIDE (seul le debut officiel du nom,
+  // pose par l ecran) part sans question ; sinon, on demande. Apres une creation reussie, le
+  // detail remplace le formulaire sans question (`sortieLibre`).
+  // ponytail: sur le site, le « retour » du NAVIGATEUR ne passe pas par `beforeRemove` (la
+  // couche web de la navigation ne l emet pas) : seul « Annuler » y demande. Voie de sortie :
+  // un `beforeunload` dans la couche web, s il le faut un jour.
+  const sortieLibre = useRef(false);
+  const debutsOfficiels = COLLECTIVITE_TYPES.map((type) => prefixeOfficiel(t, type).trim());
+  const saisieVide = ['codeInsee', 'email', 'phoneNumber', 'siren']
+    .every((cle) => !String(/** @type {any} */ (form)[cle] || '').trim())
+    && ['', ...debutsOfficiels].includes(form.name.trim());
+  const demanderAvantDeQuitter = (/** @type {() => void} */ quitter) => {
+    Alert.alert(
+      t('adminCollectivites.form.leave.title', 'Quitter sans créer la collectivité ?'),
+      t('adminCollectivites.form.leave.message', 'Ce que tu as saisi sera perdu.'),
+      [
+        { style: 'cancel', text: t('adminCollectivites.form.leave.stay', 'Rester') },
+        {
+          onPress: () => {
+            sortieLibre.current = true;
+            quitter();
+          },
+          style: 'destructive',
+          text: t('adminCollectivites.form.leave.confirm', 'Quitter'),
+        },
+      ],
+    );
+  };
+  useEffect(() => navigation.addListener?.('beforeRemove', (/** @type {any} */ evenement) => {
+    if (sortieLibre.current || saisieVide) return;
+    evenement.preventDefault();
+    demanderAvantDeQuitter(() => navigation.dispatch(evenement.data.action));
+  }));
+  const annuler = () => {
+    if (saisieVide) {
+      navigation.goBack?.();
+      return;
+    }
+    demanderAvantDeQuitter(() => navigation.goBack?.());
+  };
+
   const changer = (/** @type {keyof typeof form} */ champ) => (/** @type {string} */ valeur) => {
     setFautes([]);
     setForm((avant) => ({ ...avant, [champ]: valeur }));
@@ -139,6 +182,7 @@ function AdminCollectiviteForm() {
     creer.mutate(data, {
       onSuccess: (/** @type {any} */ reponse) => {
         const collectiviteId = reponse?.data?.documentId;
+        sortieLibre.current = true;
         if (collectiviteId) {
           navigation.replace(RouteNames.AdminCollectiviteDetail, { collectiviteId });
         } else navigation.goBack?.();
@@ -282,6 +326,12 @@ function AdminCollectiviteForm() {
           onPress={envoyer}
           title={t('adminCollectivites.form.submit', 'Créer')}
           variant="Primary"
+        />
+        <Button
+          disabled={creer.isPending}
+          onPress={annuler}
+          title={t('adminCollectivites.form.cancel', 'Annuler')}
+          variant="Secondary"
         />
       </ScrollView>
     </ScreenContainer>
