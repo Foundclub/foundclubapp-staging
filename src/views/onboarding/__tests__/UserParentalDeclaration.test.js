@@ -96,7 +96,11 @@ jest.mock('@/components/atoms/button/Button', () => {
   return function ButtonMock(/** @type {any} */ props) {
     return reactActuel.createElement(
       PressableRN,
-      { accessibilityLabel: props.title, disabled: props.disabled || props.isLoading, onPress: props.onPress },
+      {
+        accessibilityLabel: props.title,
+        disabled: props.disabled || props.isLoading,
+        onPress: props.onPress,
+      },
       reactActuel.createElement(TexteRN, null, props.title),
     );
   };
@@ -225,7 +229,7 @@ test('E6 ② la case cochee envoie la preuve legale et la declaration', async ()
   expect(typeof envoi.legalAcceptance.legalVersion).toBe('string');
 });
 
-test('E6 ③ en inscription, on continue vers l adresse ; depuis la carte, on revient a la carte', async () => {
+test('E6 ③ inscription : on continue vers l adresse ; depuis la carte : retour a la carte', async () => {
   const inscription = await rendre();
   await cocherEtContinuer(inscription);
   expect(mockNavigate).toHaveBeenCalledWith('UserAddress');
@@ -247,10 +251,11 @@ test('E6 ③ en inscription, on continue vers l adresse ; depuis la carte, on re
 // confirmer que tu es son parent », avec le titre d'un AUTRE ecran (« Quelle est ta date
 // de naissance ? », clef `profile.titles.birthdate`). Les temoins ci-dessous le retournent.
 
-const PHRASE_DE_L_ADO = 'Un de mes parents (ou mon représentant légal) m\'a donné son accord pour créer ce compte.';
+const PHRASE_DE_L_ADO = 'Un de mes parents (ou mon représentant légal) m\'a donné son accord '
+  + 'pour créer ce compte.';
 const PHRASE_DU_PARENT = 'Je déclare être le parent';
 
-test('CONSENTEMENT ⑤ l ado lit une phrase VRAIE pour lui, et plus aucun « tu es son parent »', async () => {
+test('CONSENTEMENT ⑤ l ado lit une phrase VRAIE, plus aucun « tu es son parent »', async () => {
   const arbre = await rendre();
   const texte = texteVisible(arbre);
 
@@ -272,15 +277,16 @@ test('CONSENTEMENT ⑥ la preuve envoyee est la NOUVELLE version, celle de l ado
   expect(envoi.parentalDeclarationAccepted).toBe(true);
 });
 
-test('CONSENTEMENT ⑦ sur le telephone, l ecran propose le lien parent comme autre voie', async () => {
+test('CONSENTEMENT ⑦ sur le telephone, le lien parent est propose comme autre voie', async () => {
   Platform.OS = 'android';
   const texte = texteVisible(await rendre());
 
-  expect(texte).toContain('Ton parent peut aussi donner son accord depuis son propre compte FoundClub');
+  expect(texte)
+    .toContain('Ton parent peut aussi donner son accord depuis son propre compte FoundClub');
   expect(texte).toContain('Profil → Mes enfants');
 });
 
-test('CONSENTEMENT ⑦ bis sur le site, l ecran dit honnetement que le lien parent n y est pas', async () => {
+test('CONSENTEMENT ⑦ bis sur le site, l ecran dit que le lien parent n y est pas', async () => {
   Platform.OS = 'web';
   const texte = texteVisible(await rendre());
 
@@ -292,15 +298,19 @@ test('CONSENTEMENT ⑦ bis sur le site, l ecran dit honnetement que le lien pare
 
 // Parcours 7 (carte de collection) et 8 (ProfileEdit natif et web) affichent LA CARTE
 // seule, sans passer par l'ecran : son libelle par defaut est celui de l'ado.
-test('CONSENTEMENT ⑧ la carte affiche par defaut la phrase de l ado ; le parent n a la sienne que sur demande', () => {
+test('CONSENTEMENT ⑧ la carte montre la phrase de l ado ; celle du parent sur demande', () => {
   const { default: ParentalDeclarationCard } = jest.requireActual(
     '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard',
   );
-  const { PARENTAL_DECLARATION_SIGNATORIES } = jest.requireActual('@/constants/parentalDeclaration');
+  const { PARENTAL_DECLARATION_SIGNATORIES } = jest.requireActual(
+    '@/constants/parentalDeclaration',
+  );
 
   /** @type {any} */
   let ado;
-  act(() => { ado = renderer.create(<ParentalDeclarationCard checked={false} onChange={() => {}} />); });
+  act(() => {
+    ado = renderer.create(<ParentalDeclarationCard checked={false} onChange={() => {}} />);
+  });
   const texteAdo = texteVisible(ado);
   expect(texteAdo).toContain(PHRASE_DE_L_ADO);
   expect(texteAdo).toContain('L’accord de tes parents');
@@ -323,7 +333,7 @@ test('CONSENTEMENT ⑧ la carte affiche par defaut la phrase de l ado ; le paren
   expect(texteVisible(parent)).not.toContain(PHRASE_DE_L_ADO);
 });
 
-test('CONSENTEMENT ⑨ ProfileEdit annonce le bon seuil (15 ans), sans « parent » a confirmer', () => {
+test('CONSENTEMENT ⑨ ProfileEdit annonce le bon seuil : 15 ans, plus 13', () => {
   const fr = jest.requireActual('@/theme/strings/translations/fr').default;
 
   expect(fr.profileEdit.parentalDeclaration.required).toContain('15 ans');

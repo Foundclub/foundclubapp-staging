@@ -6,9 +6,27 @@ import useTheme from '@/theme/themeContext';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 
 import {
+  MINOR_SELF_DECLARATION_TEXT,
   PARENTAL_DECLARATION_SIGNATORIES,
-  parentalDeclarationTextFor,
 } from '@/constants/parentalDeclaration';
+
+// La phrase du PARENT (declaration v1, empreinte MINOR_PARENTAL_DECLARATION_TEXT_HASH) : elle
+// n'est affichee qu'au parent qui signe depuis le lien (ParentLinkInvite). ⚠️ Elle n'est pas
+// identique au texte que le serveur empreinte (lui l'ecrit sans accents) : divergence ANTERIEURE
+// a CONSENTEMENT-PHRASE, non corrigee ici car ce serait une nouvelle version du texte du parent.
+const PARENT_DECLARATION_TEXT = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.';
+
+/**
+ * Le texte a afficher a cote de la case : celui dont la preuve portera l'empreinte.
+ * CONSENTEMENT-PHRASE : l'ado par defaut ; le parent seulement quand on le nomme.
+ * @param {string} [signatory] - « minor_self » (defaut) ou « parent ».
+ * @returns {string} Le texte juridique, non traduit.
+ */
+export const parentalDeclarationTextFor = (signatory) => (
+  signatory === PARENTAL_DECLARATION_SIGNATORIES.PARENT
+    ? PARENT_DECLARATION_TEXT
+    : MINOR_SELF_DECLARATION_TEXT
+);
 
 /**
  *
