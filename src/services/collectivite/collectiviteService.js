@@ -342,3 +342,70 @@ export const searchAdminCollectiviteTargets = async (kind, query) => (
     q: String(query || '').trim(),
   })
 );
+
+// ─── COLL-ACCUEIL (01/10/2026) : LA DEMANDE DE GESTIONNAIRE ────────────────────────────
+// L inscription « Je represente une collectivite » n ouvre RIEN : elle envoie une demande que
+// seul le SuperAdmin tranche (decision d Adel « console oui »). Serveur :
+// admin/src/api/collectivite-manager-request (routes sans routeur par defaut).
+
+/**
+ * Cherche une collectivite DEJA sur FoundClub par son nom (3 lettres au moins).
+ * @param {string} query - Le texte tape.
+ * @returns {Promise<any>} `{ data: [{ documentId, name, type }] }` (5 au plus).
+ */
+export const searchCollectivitesForSignup = async (query) => {
+  const response = await client.get('/collectivite-manager-requests/collectivites', {
+    params: { q: String(query || '').trim() },
+  });
+  return response.data;
+};
+
+/**
+ * Envoie MA demande de gestionnaire.
+ * @param {{ codeInsee?: string, collectiviteDocumentId?: string, collectiviteName?: string,
+ *   collectiviteType?: string, jobTitle: string, professionalEmail: string }} data - La demande.
+ * @returns {Promise<any>} `{ data: { documentId, status, collectivite, createdAt, ... } }`.
+ */
+export const createManagerRequest = async (data) => {
+  const response = await client.post('/collectivite-manager-requests', { data });
+  return response.data;
+};
+
+/**
+ * MES demandes de gestionnaire, les plus recentes d abord.
+ * @returns {Promise<any>} `{ data: [{ documentId, status, collectivite, createdAt, decidedAt,
+ *   refusalReason }] }`.
+ */
+export const getMyManagerRequests = async () => {
+  const response = await client.get('/collectivite-manager-requests/mine');
+  return response.data;
+};
+
+/**
+ * La file de la console (SuperAdmin) : en attente, ou traitees.
+ * @param {'pending' | 'decided'} status - L onglet.
+ * @returns {Promise<any>} `{ data: [...] }`.
+ */
+export const getAdminManagerRequests = async (status) => {
+  const response = await client.get('/superadmin/collectivite-manager-requests', {
+    params: { status },
+  });
+  return response.data;
+};
+
+/**
+ * Accepte (la personne devient gestionnaire) ou refuse (avec un motif) une demande.
+ * `data` : `{ reason }` pour refuser, `{ codeInsee, siren, name }` pour accepter une
+ * collectivite a creer.
+ * @param {{ data?: object, decision: string, requestId: string }} decision - La decision.
+ * @returns {Promise<any>} `{ data: la demande tranchee }`.
+ */
+export const decideManagerRequest = async (decision) => {
+  const { data = {}, requestId } = decision;
+  const action = decision.decision === 'accept' ? 'accept' : 'refuse';
+  const response = await client.post(
+    `/superadmin/collectivite-manager-requests/${idSur(requestId)}/${action}`,
+    { data },
+  );
+  return response.data;
+};

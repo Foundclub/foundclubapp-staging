@@ -94,6 +94,8 @@ jest.mock('@/theme/themeContext', () => {
 // COLLECTIVITES 1c — Profil lit `/collectivites/mine` (la porte « Ma collectivite ») :
 // doublure, comme tout service que l ecran importe (le client HTTP ne se charge pas ici).
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
+  useCollectiviteRequests: () => ({ data: [] }),
   useMyCollectivites: () => ({ data: [] }),
 }));
 

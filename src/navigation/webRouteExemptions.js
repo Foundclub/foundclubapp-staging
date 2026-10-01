@@ -172,6 +172,13 @@ const MOBILE_ONLY_SCREENS = {
   // valeur n'a pas change. L'accueil est deja expose cote web par HomeTab (/).
   [RouteNames.SearchHome]:
     'Accueil interne de SearchStack (initialRouteName) ; l\'accueil web est HomeTab (/)',
+
+  // --- COLL-ACCUEIL (01/10/2026) ---
+  // La barre d onglets de la Ville (CollectiviteTabNavigator) : un navigateur, pas un ecran.
+  // Ses quatre onglets ont deja leur adresse (/collectivite/:id, .../requests,
+  // .../installations, /messages) ; sur le site, le menu lateral de l AppShell les porte.
+  [RouteNames.CollectiviteSpace]:
+    'Tab navigator of the town space; on the website, the AppShell side menu carries its tabs',
 };
 
 /**

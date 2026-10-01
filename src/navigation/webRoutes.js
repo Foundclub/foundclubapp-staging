@@ -85,6 +85,10 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CollectiviteInstallations]: '/collectivite/:collectiviteId/installations',
   [RouteNames.CollectiviteInstallationForm]:
     '/collectivite/:collectiviteId/installation/:facilityId?',
+  // COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription, puis ou en est
+  // la demande. Hors de /collectivite/:collectiviteId : « demande » y serait lu comme un id.
+  [RouteNames.CollectiviteSignup]: '/onboarding/collectivite',
+  [RouteNames.CollectiviteSignupStatus]: '/collectivite-demande',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',
@@ -203,6 +207,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminCollectiviteList]: '/admin/collectivites',
   [RouteNames.AdminCollectiviteForm]: '/admin/collectivites/new',
   [RouteNames.AdminCollectiviteDetail]: '/admin/collectivites/:collectiviteId',
+  // COLL-ACCUEIL (01/10) — la file « Demandes de gestionnaire » (hors de /admin/collectivites/:id :
+  // « demandes » y serait lu comme une collectivite).
+  [RouteNames.AdminManagerRequests]: '/admin/demandes-gestionnaire',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',

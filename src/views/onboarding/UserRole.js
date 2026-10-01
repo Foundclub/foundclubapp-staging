@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, RefreshControl, Text, View,
+  Alert, Platform, RefreshControl, Text, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,10 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetRoles } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import {
+  useMyCollectivites,
+  useMyManagerRequests,
+} from '@/services/collectivite/collectiviteQueries';
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
@@ -42,6 +46,10 @@ function UserRole({ navigation }) {
   const [role, setRole] = useState(
     /** @type {string} */(userData?.role?.documentId || ''),
   );
+  // 🏛️ COLL-ACCUEIL (01/10, décision d'Adel « accueil A ») — la 5e rangée, « Je représente
+  // une collectivité ». Ce n'est PAS un rôle Strapi : le compte garde son rôle provisoire, et
+  // l'inscription de la mairie (CollectiviteSignup) remplace toutes les questions de sport.
+  const [representeCollectivite, setRepresenteCollectivite] = useState(false);
   // hooks
   const {
     Alignments, Fonts, Spaces,
@@ -53,6 +61,31 @@ function UserRole({ navigation }) {
     isLoading: rolesLoading,
     refetch: refetchRoles,
   } = useGetRoles();
+
+  // 🏛️ COLL-ACCUEIL (01/10) — SUR LE SITE, un compte « Ville seule » (aucun rôle sportif) qui
+  // gère une Ville, ou qui a déjà demandé à en gérer une, ne refait pas le choix du statut :
+  // l'accueil de sa Ville, ou l'écran de sa demande. Sur téléphone, la pile racine
+  // (PrivateNavigator) l'y emmène déjà au démarrage ; ici, c'est le filet du site, dont le
+  // parcours d'inscription vient de getOnboardingViews.
+  const sansRoleSportif = Platform.OS === 'web' && userData?.role?.type === 'authenticated';
+  const villes = useMyCollectivites({ enabled: sansRoleSportif });
+  const demandesDeGestion = useMyManagerRequests({ enabled: sansRoleSportif });
+  const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
+  const aDemande = Array.isArray(demandesDeGestion.data) && demandesDeGestion.data.length > 0;
+  useEffect(() => {
+    if (!sansRoleSportif) return;
+    if (villeGeree?.documentId) {
+      navigation.reset({
+        index: 0,
+        routes: [{
+          name: RouteNames.CollectiviteHome,
+          params: { collectiviteId: villeGeree.documentId },
+        }],
+      });
+    } else if (aDemande) {
+      navigation.reset({ index: 0, routes: [{ name: RouteNames.CollectiviteSignupStatus }] });
+    }
+  }, [aDemande, navigation, sansRoleSportif, villeGeree?.documentId]);
 
   useEffect(() => {
     if (userData?.role?.documentId) {
@@ -97,7 +130,13 @@ function UserRole({ navigation }) {
    */
   const handleSelection = (selectedRole) => {
     const newRole = getRoleDocumentIdByKey(roles, selectedRole);
+    setRepresenteCollectivite(false);
     setRole((currentRole) => (newRole === currentRole ? '' : newRole));
+  };
+
+  const handleSelectCollectivite = () => {
+    setRole('');
+    setRepresenteCollectivite((avant) => !avant);
   };
 
   const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
@@ -115,6 +154,11 @@ function UserRole({ navigation }) {
     .includes(role);
 
   const handleNext = () => {
+    // COLL-ACCUEIL — la mairie : aucun rôle à poser, aucune question de sport.
+    if (representeCollectivite) {
+      navigation.navigate(RouteNames.CollectiviteSignup);
+      return;
+    }
     if (!hasChosenRole) return;
     updateUserMutation.mutate({ role });
   };
@@ -235,11 +279,25 @@ function UserRole({ navigation }) {
                 onPress={() => handleSelection(USER_ROLES.parent)}
               />
             ) : null}
+            {/* COLL-ACCUEIL (01/10) — séparée des rôles sportifs, sous son propre intertitre. */}
+            <Text style={[Fonts.p3Bold, Fonts.neutral300, Spaces.marginTop[12]]}>
+              {t('collectiviteAccueil.statut.intertitre', 'Pour une mairie').toUpperCase()}
+            </Text>
+            <OnboardingRadioRow
+              checked={representeCollectivite}
+              label={t('collectiviteAccueil.statut.libelle', 'Je représente une collectivité')}
+              onPress={handleSelectCollectivite}
+              subtitle={t(
+                'collectiviteAccueil.statut.precision',
+                'Mairie, intercommunalité, département, région.',
+              )}
+              testID="statut-collectivite"
+            />
           </View>
         </WithDataWrapper>
       </ScrollView>
       <Button
-        disabled={!hasChosenRole}
+        disabled={!hasChosenRole && !representeCollectivite}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         style={[Spaces.marginTop[24]]}
