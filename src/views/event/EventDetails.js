@@ -4373,6 +4373,28 @@ function EventDetails({ navigation, route }) {
         ),
       };
     }
+    const reportFinalisedSubtitle = matchStatsReport?.finalizedAt
+      ? t('eventDetails.reportFinalisedOn', 'Rapport finalise le {{date}}', {
+        date: new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats()),
+        ...SANS_ECHAPPEMENT,
+      })
+      : t('eventDetails.reportFinalised', 'Rapport finalise');
+    // 🔒 SECU-STATS — L EDITEUR EST L OUTIL DE L ENCADREMENT. Il affiche l avis
+    // du coach et l auto-evaluation de CHAQUE joueur : rapport publie ou a
+    // re-verifier, il s ouvrait pourtant a tout membre de l equipe, et c est par
+    // la qu un joueur lisait ces champs. Ce test passe donc AVANT les deux
+    // suivants. Le joueur garde SA reponse (« Mon retour post-match »).
+    if (!canManageMatchStats) {
+      return {
+        disabled: true,
+        subtitle: isMatchStatsFinal
+          ? reportFinalisedSubtitle
+          : t(
+            'eventDetails.yourTeamMembersCanStill',
+            'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+          ),
+      };
+    }
     if (isMatchStatsReviewRequired) {
       return {
         disabled: false,
@@ -4385,21 +4407,7 @@ function EventDetails({ navigation, route }) {
     if (isMatchStatsFinal) {
       return {
         disabled: false,
-        subtitle: matchStatsReport?.finalizedAt
-          ? t('eventDetails.reportFinalisedOn', 'Rapport finalise le {{date}}', {
-            date: new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats()),
-            ...SANS_ECHAPPEMENT,
-          })
-          : t('eventDetails.reportFinalised', 'Rapport finalise'),
-      };
-    }
-    if (!canManageMatchStats) {
-      return {
-        disabled: true,
-        subtitle: t(
-          'eventDetails.yourTeamMembersCanStill',
-          'Les membres de ton équipe peuvent encore finaliser ce rapport.',
-        ),
+        subtitle: reportFinalisedSubtitle,
       };
     }
     if (matchStatsPayload?.score?.available) {
@@ -4868,7 +4876,9 @@ function EventDetails({ navigation, route }) {
   }, [navigation]);
 
   const openMatchStatsEditor = useCallback(() => {
-    if (!eventId || !compositionTeamId) return;
+    // 🔒 SECU-STATS — la seconde couche. La carte, la rangee du menu et l invite
+    // passent toutes par ici : sans le droit de gerer, l editeur ne s ouvre pas.
+    if (!eventId || !compositionTeamId || !canManageMatchStats) return;
 
     navigation.navigate(RouteNames.MatchStatsEditor, {
       eventId,
@@ -4879,6 +4889,7 @@ function EventDetails({ navigation, route }) {
       title: t('eventDetails.teamReport', 'Bilan équipe'),
     });
   }, [
+    canManageMatchStats,
     compositionEditorTeam?.name,
     compositionSport,
     compositionTeamId,
