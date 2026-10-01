@@ -27,6 +27,7 @@ import { hideBlockedChats, toBlockedUserIdSet } from '@/domains/userBlock/userBl
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -325,7 +326,7 @@ function Messaging({ navigation, route }) {
             width: 48,
           }}
           >
-            <Text style={{ fontSize: 20 }}>{'\uD83C\uDFC6'}</Text>
+            <SvgIcon color={Colors.gold500} height={22} name="stadium" width={22} />
           </View>
         );
       case 'multisport':

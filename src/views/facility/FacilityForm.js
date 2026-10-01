@@ -705,7 +705,7 @@ function FacilityForm() {
                       d'erreur existant de l'autocomplete qui parle. */}
                   {getAddressCoordinates(value) ? (
                     <Text style={[Fonts.small, Fonts.success500]}>
-                      {t('facilityForm.hints.gpsActive', '✓ GPS activé')}
+                      {t('facilityForm.hints.gpsActive', 'GPS activé')}
                     </Text>
                   ) : null}
                 </View>

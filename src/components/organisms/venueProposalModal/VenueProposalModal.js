@@ -12,6 +12,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import LeagueModalHeader from '@/components/molecules/header/LeagueModalHeader';
@@ -997,7 +998,7 @@ function VenueProposalModal({
                   }}
                 >
                   {item.checked ? (
-                    <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>✓</Text>
+                    <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
                   ) : null}
                 </View>
                 <Text style={[Fonts.p3, { color: Colors.neutral100, flex: 1, lineHeight: 22 }]}>

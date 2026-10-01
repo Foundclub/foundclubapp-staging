@@ -675,9 +675,12 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
   const etapeDuFil = (/** @type {any} */ root, /** @type {number} */ rang) => {
     const [noeud] = parTestID(root, `tournament-rail-step-${rang}`);
     if (!noeud) throw new Error(`Aucune etape ${rang} dans le fil`);
-    return noeud
+    // SANS-EMOJI (01/10/2026) : la coche est une icône (`SvgIcon` « check »), plus
+    // un caractère. Elle se lit ici comme le mot « [coche] » en tête de l'étape.
+    const coche = noeud.findAll((n) => n.props && n.props.name === 'check').length ? ['[coche]'] : [];
+    return coche.concat(noeud
       .findAllByType(Text)
-      .map((/** @type {any} */ n) => textOf(n))
+      .map((/** @type {any} */ n) => textOf(n)))
       .join(' ');
   };
 
@@ -691,9 +694,9 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
       event: buildTournoi(),
     });
 
-    expect(etapeDuFil(root, 3)).toContain('✓');
-    expect(etapeDuFil(root, 4)).not.toContain('✓');
-    expect(etapeDuFil(root, 5)).not.toContain('✓');
+    expect(etapeDuFil(root, 3)).toContain('[coche]');
+    expect(etapeDuFil(root, 4)).not.toContain('[coche]');
+    expect(etapeDuFil(root, 5)).not.toContain('[coche]');
   });
 
   test('des poules ET des matchs, toujours en brouillon : 3 et 4 cochees, 5 non', () => {
@@ -706,9 +709,9 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
       event: buildTournoi(),
     });
 
-    expect(etapeDuFil(root, 3)).toContain('✓');
-    expect(etapeDuFil(root, 4)).toContain('✓');
-    expect(etapeDuFil(root, 5)).not.toContain('✓');
+    expect(etapeDuFil(root, 3)).toContain('[coche]');
+    expect(etapeDuFil(root, 4)).toContain('[coche]');
+    expect(etapeDuFil(root, 5)).not.toContain('[coche]');
   });
 
   test('le dashboard dit « publie » : la 5e se coche, meme si le cache est en retard', () => {
@@ -723,16 +726,16 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
       event: buildTournoi(),
     });
 
-    expect(etapeDuFil(root, 5)).toContain('✓');
+    expect(etapeDuFil(root, 5)).toContain('[coche]');
   });
 
   test('REPLI sans dashboard : brouillon => 3/4/5 vides, publie => tout coche', () => {
     // Les 15 suites voisines mockent ce hook MUET (`data: undefined`) : leurs
     // temoins du fil (N2Caracterisation) doivent rester verts tels quels.
     const brouillon = monter({ dashboard: undefined, event: buildTournoi() });
-    expect(etapeDuFil(brouillon, 3)).not.toContain('✓');
-    expect(etapeDuFil(brouillon, 4)).not.toContain('✓');
-    expect(etapeDuFil(brouillon, 5)).not.toContain('✓');
+    expect(etapeDuFil(brouillon, 3)).not.toContain('[coche]');
+    expect(etapeDuFil(brouillon, 4)).not.toContain('[coche]');
+    expect(etapeDuFil(brouillon, 5)).not.toContain('[coche]');
 
     const publie = monter({
       dashboard: undefined,
@@ -745,7 +748,7 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
       }),
     });
     [3, 4, 5].forEach((rang) => {
-      expect(etapeDuFil(publie, rang)).toContain('✓');
+      expect(etapeDuFil(publie, rang)).toContain('[coche]');
     });
   });
 });

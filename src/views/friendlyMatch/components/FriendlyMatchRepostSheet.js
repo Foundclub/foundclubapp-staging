@@ -10,6 +10,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 // eslint-disable-next-line max-len -- chemin du selecteur de creneaux, partage avec le tunnel
 import FriendlyMatchSlotEditor from '@/components/molecules/friendlyMatchSlotEditor/FriendlyMatchSlotEditor';
 
@@ -116,7 +117,7 @@ function FriendlyMatchRepostSheet({
                 alignItems: 'center', height: 44, justifyContent: 'center', width: 44,
               }}
             >
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral200 }]}>✕</Text>
+              <SvgIcon color={Colors.neutral200} height={16} name="close" width={16} />
             </TouchableOpacity>
           </View>
 

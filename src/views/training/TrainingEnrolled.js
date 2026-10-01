@@ -6,6 +6,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -66,7 +67,7 @@ function TrainingEnrolled({ navigation, route = undefined }) {
               width: 72,
             }}
             >
-              <Text style={[Fonts.h2Bold, { color: Colors.success500 }]}>✓</Text>
+              <SvgIcon color={Colors.success500} height={32} name="check" width={32} />
             </View>
           </View>
 

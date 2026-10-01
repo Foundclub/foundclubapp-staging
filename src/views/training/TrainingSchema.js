@@ -7,6 +7,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import { familleDuSchema } from '@/components/organisms/training/TrainingBlocks';
 import TrainingSchemaImage from '@/components/organisms/training/TrainingSchemaImage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -95,7 +96,7 @@ function TrainingSchema({ navigation, route }) {
               width: 44,
             }}
           >
-            <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>✕</Text>
+            <SvgIcon color={Colors.neutral00} height={16} name="close" width={16} />
           </TouchableOpacity>
         </View>
 

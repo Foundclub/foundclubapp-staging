@@ -112,17 +112,17 @@ const LICENSE_ICON_TYPES = new Set([
 
 /**
  * @param {string | undefined | null} type
- * @returns {string}
+ * @returns {string} le nom d'une icône de `SvgIcon` (plus d'emoji : décision du 01/10/2026)
  */
 export const getNotificationIcon = (type) => {
-  if (TEAM_ICON_TYPES.has(type)) return '\u{1F465}';
-  if (CLUB_ICON_TYPES.has(type)) return '\u{1F3DB}\u{FE0F}';
-  if (EVENT_ICON_TYPES.has(type)) return '\u{1F4C5}';
-  if (LEAGUE_ICON_TYPES.has(type)) return '\u{26BD}';
-  if (CHAT_ICON_TYPES.has(type)) return '\u{1F4AC}';
-  if (LICENSE_ICON_TYPES.has(type)) return '\u{1F4B3}';
-  if (type === NOTIFICATION_TYPES.SEARCH_ALERT_MATCH) return '\u{1F50E}';
-  return '\u{1F514}';
+  if (TEAM_ICON_TYPES.has(type)) return 'users';
+  if (CLUB_ICON_TYPES.has(type)) return 'shield';
+  if (EVENT_ICON_TYPES.has(type)) return 'calendar';
+  if (LEAGUE_ICON_TYPES.has(type)) return 'stadium';
+  if (CHAT_ICON_TYPES.has(type)) return 'envelope';
+  if (LICENSE_ICON_TYPES.has(type)) return 'euro-circle';
+  if (type === NOTIFICATION_TYPES.SEARCH_ALERT_MATCH) return 'search';
+  return 'bell';
 };
 
 /**

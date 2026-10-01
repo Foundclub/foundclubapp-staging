@@ -19,6 +19,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -299,7 +300,13 @@ function OnboardingGiftScreen({ navigation, route }) {
               <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
                 {USAGE_KEYS.map((usageKey) => (
                   <View key={usageKey} style={[Alignments.row, Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>
+                    <SvgIcon
+                      color={Colors.success500}
+                      height={14}
+                      name="check"
+                      style={{ marginTop: 3 }}
+                      width={14}
+                    />
                     <Text style={[Alignments.fill, Fonts.p2, Fonts.neutral100]}>
                       {t(`profile.subscription.gift.${usageKey}`, usageKey)}
                     </Text>

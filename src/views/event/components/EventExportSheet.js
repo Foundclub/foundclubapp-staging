@@ -7,6 +7,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 /**
@@ -98,7 +99,7 @@ function EventExportSheet({
             },
           ]}
         >
-          <Text style={[Fonts.p2, Fonts.warning900]}>🔒</Text>
+          <GlyphIcon color={Colors.warning900} name="lock" size={16} />
           <Text style={[Fonts.p3Bold, Fonts.warning900, Alignments.grow1]}>
             {t('eventDetails.export.personalDataWarning')}
           </Text>

@@ -186,7 +186,7 @@ export const getFeaturedReservations = async (limit = 10) => {
     return response.data;
   } catch (error) {
     if (__DEV__) {
-      console.warn('⚠️ Featured réservations unavailable, using fallback');
+      console.warn('Featured réservations unavailable, using fallback');
     }
     // Return empty data structure instead of throwing
     return {

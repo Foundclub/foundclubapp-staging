@@ -670,7 +670,7 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
 // (`getSubscriptionAccessLevelForClub`), pas au club affiche. Decor : le club de
 // l'equipe (`club-1`) est couvert par une offre Club, le club affiche ne l'est pas.
 describe('ABOPARCLUB — les verrous violets suivent le club de l equipe', () => {
-  const LIBELLE_VOIR_L_OFFRE_CLUB = "Voir l'offre →";
+  const LIBELLE_VOIR_L_OFFRE_CLUB = "Voir l'offre";
 
   test('equipe d un club couvert, vue depuis un club qui ne l est pas : aucun verrou Club', () => {
     mockAuthCourant = {

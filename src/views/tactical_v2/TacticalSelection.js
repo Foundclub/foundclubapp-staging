@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -602,7 +603,7 @@ function TacticalSelection() {
           },
         ]}
         >
-          {isSelected && <Text style={styles.checkmark}>✓</Text>}
+          {isSelected && <SvgIcon color="#FFF" height={14} name="check" width={14} />}
         </View>
 
         {/* Avatar - Initials for manual players */}
@@ -657,7 +658,7 @@ function TacticalSelection() {
           onPress={() => handleEditPlayer(item)}
           style={[styles.editBtn, { backgroundColor: Colors.neutral700 }]}
         >
-          <Text style={{ color: Colors.neutral00, fontSize: 13 }}>✎</Text>
+          <SvgIcon color={Colors.neutral00} height={14} name="edit" width={14} />
         </TouchableOpacity>
       </TouchableOpacity>
     );

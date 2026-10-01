@@ -319,7 +319,7 @@ describe('UN ESSAI A LA FOIS', () => {
 
     act(() => { touche('1').props.onPress(); });
     act(() => { touche('4').props.onPress(); });
-    act(() => { touche('⌫').props.onPress(); });
+    act(() => { touche('common.delete').props.onPress(); });
 
     expect(textes(arbre)).toContain('1');
   });

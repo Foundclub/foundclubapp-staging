@@ -1196,7 +1196,7 @@ function EventEdit({ navigation, route }) {
                 <Text style={[Fonts.p2, Fonts.warning900]}>
                   {t(
                     'eventEdit.aConflictWasDetectedOn',
-                    '⚠️ Un conflit a été détecté sur ce créneau. Ta demande sera soumise à '
+                    'Un conflit a été détecté sur ce créneau. Ta demande sera soumise à '
                       + 'validation.',
                   )}
                 </Text>

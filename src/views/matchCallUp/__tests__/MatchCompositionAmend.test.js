@@ -310,8 +310,8 @@ describe('C-B ecran 8 — le desistement, et ce qui change', () => {
     expect(texte).toContain('Ce qui change'.toUpperCase());
     expect(texte).toContain('sort');
     expect(texte).toContain('entre');
-    expect(texte).toContain('Titulaire → absent');
-    expect(texte).toContain('Banc → titulaire');
+    expect(texte).toContain('Titulaire vers absent');
+    expect(texte).toContain('Banc vers titulaire');
     // Le remplacant propose est bien le joueur du banc.
     expect(texte).toContain('Malik Cisse');
   });

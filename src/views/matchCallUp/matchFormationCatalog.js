@@ -269,7 +269,7 @@ const HANDBALL = [
 const VOLLEYBALL = [
   {
     key: 'rotation',
-    label: 'Rotation P1→P6',
+    label: 'Rotation P1–P6',
     slots: [
       slot('P4', 22, 28), slot('P3', 50, 22), slot('P2', 78, 28),
       slot('P5', 22, 66), slot('P6', 50, 76), slot('P1', 78, 66),

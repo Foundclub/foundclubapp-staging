@@ -40,6 +40,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -200,7 +201,7 @@ function AcquisCard() {
       <View style={[Alignments.row, { columnGap: 10, flexWrap: 'wrap', rowGap: 4 }]}>
         {acquisProofItems(t).map((item) => (
           <View key={item} style={[Alignments.row, Alignments.alignCenter, { columnGap: 4 }]}>
-            <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>✓</Text>
+            <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
             <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>{item}</Text>
           </View>
         ))}
@@ -635,7 +636,7 @@ function GuideOffersRecap({ navigation }) {
           }}
           >
             {isSelected ? (
-              <Text style={{ color: Colors.primary900, fontSize: 12, fontWeight: '900' }}>✓</Text>
+              <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
             ) : null}
           </View>
         </View>
@@ -692,7 +693,13 @@ function GuideOffersRecap({ navigation }) {
             <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
               {benefits.map((benefit) => (
                 <View key={benefit} style={[Alignments.row, Spaces.gap[8]]}>
-                  <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>
+                  <SvgIcon
+                    color={Colors.success500}
+                    height={14}
+                    name="check"
+                    style={{ marginTop: 3 }}
+                    width={14}
+                  />
                   <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>
                     {benefit}
                   </Text>

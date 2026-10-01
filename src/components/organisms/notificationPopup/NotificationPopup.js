@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -155,12 +157,7 @@ function NotificationPopup({
   } else if (shouldShowEmpty) {
     popupContent = (
       <View style={{ alignItems: 'center', padding: 24 }}>
-        <Text style={{
-          color: textMuted, fontSize: 12, letterSpacing: 1, marginBottom: 8,
-        }}
-        >
-          {'\u{1F514}'}
-        </Text>
+        <SvgIcon color={textMuted} height={14} name="bell" style={{ marginBottom: 8 }} width={14} />
         <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
           {t('notificationPopup.empty.title', 'Aucune notification')}
         </Text>
@@ -210,7 +207,7 @@ function NotificationPopup({
               width: 32,
             }}
           >
-            <Text style={{ fontSize: 14 }}>{icon}</Text>
+            <SvgIcon color={textPrimary} height={16} name={icon} width={16} />
           </View>
 
           <View style={{ flex: 1 }}>

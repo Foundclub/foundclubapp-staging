@@ -284,7 +284,7 @@ describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', ()
   });
 
   it('la reassurance et le pont encadrent le bouton', () => {
-    const reassurance = 'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.';
+    const reassurance = 'Tu retrouveras les offres à tout moment dans Profil, rubrique Mon abonnement.';
     const pont = 'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin';
     const { tree } = rendre();
     const rendus = textes(tree);

@@ -5,6 +5,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 /**
  * N4 (D6) — LA CARTE « APRÈS LE MATCH », maquette 05 · 5C.
@@ -277,9 +278,13 @@ function PostMatchJourneyCard({
                   width: 32,
                 }}
               >
-                <Text style={[Fonts.p3Bold, { color: couleurPastille }]}>
-                  {estFaite ? '✓' : String(index + 1)}
-                </Text>
+                {estFaite ? (
+                  <SvgIcon color={couleurPastille} height={14} name="check" width={14} />
+                ) : (
+                  <Text style={[Fonts.p3Bold, { color: couleurPastille }]}>
+                    {String(index + 1)}
+                  </Text>
+                )}
               </View>
 
               <View style={{ flex: 1 }}>

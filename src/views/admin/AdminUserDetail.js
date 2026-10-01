@@ -373,7 +373,7 @@ function AdminUserDetail() {
               ]}
             >
               <Text style={{ color: !isBlocked ? 'white' : Colors.neutral300, fontWeight: 'bold' }}>
-                {t('adminUserDetail.active', '✓ Actif')}
+                {t('adminUserDetail.active', 'Actif')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -392,7 +392,7 @@ function AdminUserDetail() {
               ]}
             >
               <Text style={{ color: isBlocked ? 'white' : Colors.neutral300, fontWeight: 'bold' }}>
-                {t('adminUserDetail.blocked', '✕ Bloqué')}
+                {t('adminUserDetail.blocked', 'Bloqué')}
               </Text>
             </TouchableOpacity>
           </View>

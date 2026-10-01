@@ -168,7 +168,7 @@ function CreateAdModal({
             {!team && (
               <View style={[styles.warningBox, { backgroundColor: '#F9731620', borderColor: '#F97316' }]}>
                 <Text style={[Fonts.p2Bold, { color: '#F97316', textAlign: 'center' }]}>
-                  {t('createAdModal.noTeam.title', '⚠️ Aucune équipe')}
+                  {t('createAdModal.noTeam.title', 'Aucune équipe')}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
                   {t(
@@ -183,7 +183,7 @@ function CreateAdModal({
             {team && (
               <View style={[styles.infoBox, { backgroundColor: `${Colors.primary500}20`, borderColor: Colors.primary500 }]}>
                 <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-                  {t('createAdModal.teamLabel', '📋 Équipe:')}
+                  {t('createAdModal.teamLabel', 'Équipe:')}
                   {' '}
                   {team.name || t('createAdModal.teamUnspecified', 'Non spécifié')}
                 </Text>

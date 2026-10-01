@@ -23,6 +23,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
@@ -452,7 +453,7 @@ function SubscriptionSuccess({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={{ color: Colors.success500, fontSize: 26, lineHeight: 32 }}>✓</Text>
+                <SvgIcon color={Colors.success500} height={28} name="check" width={28} />
               </View>
             </View>
           </View>
@@ -514,7 +515,7 @@ function SubscriptionSuccess({ navigation, route }) {
             <View style={styles.unlockGrid}>
               {unlockedCapabilities.map((capabilityId) => (
                 <View key={capabilityId} style={styles.unlockCell}>
-                  <Text style={{ color: Colors.success500, fontSize: 12, lineHeight: 16 }}>✓</Text>
+                  <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
                   <Text
                     numberOfLines={2}
                     style={[Fonts.small, Fonts.neutral200, styles.unlockLabel]}

@@ -8,6 +8,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 /**
  * LA SAISIE D'UNE MESURE, SUR LE TERRAIN.
  *
@@ -173,14 +175,12 @@ function AttemptField({
             paddingVertical: 8,
           }}
         >
-          <Text
-            style={[
-              Fonts.caption,
-              { color: isInvalid ? Colors.gold500 : Colors.neutral400 },
-            ]}
-          >
-            ✕
-          </Text>
+          <SvgIcon
+            color={isInvalid ? Colors.gold500 : Colors.neutral400}
+            height={12}
+            name="close"
+            width={12}
+          />
         </TouchableOpacity>
       </View>
 

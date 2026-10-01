@@ -13,6 +13,7 @@ import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -138,7 +139,7 @@ function CollectiviteOfferedHero({ collectiviteOffer }) {
           },
         ]}
       >
-        <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>✓</Text>
+        <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
         <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>
           {t('subscriptionCoveredHero.unlockedChip', 'Tout est débloqué pour toi')}
         </Text>
@@ -297,7 +298,7 @@ function PaidByMemberHero({
           },
         ]}
       >
-        <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>✓</Text>
+        <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
         <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>
           {t('subscriptionCoveredHero.unlockedChip', 'Tout est débloqué pour toi')}
         </Text>

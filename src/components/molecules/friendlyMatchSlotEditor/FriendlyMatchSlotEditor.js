@@ -7,6 +7,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import {
@@ -219,7 +220,7 @@ function FriendlyMatchSlotEditor({
                   alignItems: 'center', height: 44, justifyContent: 'center', width: 44,
                 }}
               >
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral300 }]}>✕</Text>
+                <SvgIcon color={Colors.neutral300} height={16} name="close" width={16} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}

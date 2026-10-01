@@ -257,7 +257,7 @@ function SubscriptionQuotaBanner({
           style={[Spaces.paddingVertical[8], { alignSelf: 'flex-start' }]}
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            {t('subscriptionQuotaBanner.exhausted.cta', "Débloquer l'offre Équipe →")}
+            {t('subscriptionQuotaBanner.exhausted.cta', "Débloquer l'offre Équipe")}
           </Text>
         </TouchableOpacity>
       </View>

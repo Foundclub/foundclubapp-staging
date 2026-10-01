@@ -6,6 +6,7 @@ import { compacterNomDeSport, regrouperLesSports } from '@/domains/activity/cleD
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Input from '@/components/molecules/input/Input';
 
 export { compacterNomDeSport };
@@ -100,7 +101,9 @@ export function LigneDeChoix({
       >
         {libelle}
       </Text>
-      {coche ? <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>✓</Text> : null}
+      {coche ? (
+        <SvgIcon color={Colors.primary500} height={16} name="check" width={16} />
+      ) : null}
     </TouchableOpacity>
   );
 }

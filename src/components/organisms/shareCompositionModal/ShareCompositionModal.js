@@ -132,7 +132,7 @@ function ShareCompositionModal({
 
       const message = t(
         'shareCompositionModal.teamLineUpStartersSee',
-        "📋 Composition d'équipe\n\n⚽ Titulaires ({{playerCount}}):\n- {{starters}}\n\nRetrouve le "
+        "Composition d'équipe\n\nTitulaires ({{playerCount}}):\n- {{starters}}\n\nRetrouve le "
           + 'détail sur FoundClub !',
         { playerCount, starters, ...SANS_ECHAPPEMENT },
       );

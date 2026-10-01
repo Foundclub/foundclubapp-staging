@@ -1685,7 +1685,7 @@ function MatchStatsEditor({ navigation, route }) {
                         ? t('matchStatsEditor.sendingReminder', 'Relance en cours…')
                         : t(
                           'matchStatsEditor.remindMissing',
-                          'Relancer les {{missingResponseCount}} manquant·e·s →',
+                          'Relancer les {{missingResponseCount}} manquant·e·s',
                           { missingResponseCount, ...SANS_ECHAPPEMENT },
                         )}
                     </Text>

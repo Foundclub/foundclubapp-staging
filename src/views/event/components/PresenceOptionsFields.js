@@ -4,6 +4,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 /** @typedef {{ arrivalTrackingEnabled?: boolean, rsvpEnabled?: boolean }} PresenceChange */
 
 /**
@@ -91,7 +93,9 @@ function PresenceOptionsFields({ arrivalTrackingEnabled, onChange, rsvpEnabled }
                 },
               ]}
             >
-              {option.checked ? <Text style={[Fonts.p3Bold, Fonts.neutral900]}>✓</Text> : null}
+              {option.checked ? (
+                <SvgIcon color={Colors.neutral900} height={14} name="check" width={14} />
+              ) : null}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{option.titre}</Text>

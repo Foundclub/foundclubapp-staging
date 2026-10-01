@@ -211,7 +211,7 @@ describe('A20.3 — le guide est aussi là où l on gère ses alertes', () => {
 
     const texte = texteVisible(tree);
     expect(texte).toContain('Choisis tes critères');
-    expect(texte).toContain('Touche ★ ou « Créer l\'alerte »');
+    expect(texte).toContain('Touche « Créer l\'alerte »');
     expect(texte).toContain('Reçois une notification');
 
     await appuyerSur(tree, 'J\'ai compris');

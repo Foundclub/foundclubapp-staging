@@ -228,7 +228,7 @@ describe('D72 — la variante « evenement » (entraineur, joueur)', () => {
 // leur couleur verte ; apres Absent, le MOT « Absent » est en ROUGE. » Les deux
 // couleurs sont celles de la charte que les ecrans de convocation emploient deja
 // pour present / absent (`MatchConvocationPublished.js`, `PlayerConvocationScreen.js`).
-describe('A05 — la ligne « ✓ Réponse envoyée : X » et ses couleurs', () => {
+describe('A05 — la ligne « Réponse envoyée : X » et ses couleurs', () => {
   const EVENEMENT = {
     actions: [
       { key: 'present', label: 'Présent', onPress: jest.fn() },
@@ -272,7 +272,7 @@ describe('A05 — la ligne « ✓ Réponse envoyée : X » et ses couleurs', () 
     expect(lignes(tree)).toHaveLength(0);
   });
 
-  it('LE TEMOIN : apres Présent, « ✓ Réponse envoyée : Présent », tout en vert', async () => {
+  it('LE TEMOIN : apres Présent, « Réponse envoyée : Présent », tout en vert', async () => {
     const tree = await monter({
       ...EVENEMENT,
       confirmation: { answer: 'present', answerLabel: 'Présent', label: 'Réponse envoyée\u00a0:' },
@@ -280,7 +280,7 @@ describe('A05 — la ligne « ✓ Réponse envoyée : X » et ses couleurs', () 
     const [ligne] = lignes(tree);
     const mot = motDe(ligne);
 
-    expect(collecterTexte(ligne).join('')).toBe('✓ Réponse envoyée\u00a0: Présent');
+    expect(collecterTexte(ligne).join('')).toBe('Réponse envoyée\u00a0: Présent');
     expect(couleur(ligne)).toBe(colors.success500);
     expect(couleur(mot)).toBe(colors.success500);
   });
@@ -293,7 +293,7 @@ describe('A05 — la ligne « ✓ Réponse envoyée : X » et ses couleurs', () 
     const [ligne] = lignes(tree);
     const mot = motDe(ligne);
 
-    expect(collecterTexte(ligne).join('')).toBe('✓ Réponse envoyée\u00a0: Absent');
+    expect(collecterTexte(ligne).join('')).toBe('Réponse envoyée\u00a0: Absent');
     expect(couleur(ligne)).toBe(colors.success500);
     expect(collecterTexte(mot).join('')).toBe('Absent');
     expect(couleur(mot)).toBe(colors.error500);

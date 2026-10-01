@@ -302,7 +302,6 @@ function PlayerCardScreen({ navigation, route }) {
               <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>
                 {t('playerCard.editCardCta', 'Modifier mes infos')}
               </Text>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>  ✎</Text>
             </TouchableOpacity>
           ) : null}
         </View>

@@ -126,7 +126,7 @@ function PlayerGoalsModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Fonts.h3, { color: Colors.neutral100 }]}>
-              {t('playerGoalsModal.title', '⚽ Buteurs -')}
+              {t('playerGoalsModal.title', 'Buteurs -')}
               {' '}
               {teamName}
             </Text>

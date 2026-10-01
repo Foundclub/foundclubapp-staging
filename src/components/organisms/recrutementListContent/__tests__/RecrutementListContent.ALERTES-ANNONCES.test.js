@@ -391,7 +391,7 @@ jest.mock('@/context/AppFeedbackContext', () => ({
 
 const CARTE = 'Me prévenir des nouvelles annonces comme celles-ci';
 const ETOILE = 'Créer une alerte avec ces filtres';
-const NOTE_VILLE = 'Choisis une ville, puis touche ★ pour créer ton alerte.';
+const NOTE_VILLE = "Choisis une ville, puis touche « Créer l'alerte ».";
 const CORPS_ANNONCES = 'Tu seras prévenu·e dès qu\'une nouvelle annonce '
   + 'comme celles-ci est publiée.';
 
