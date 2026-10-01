@@ -4,6 +4,7 @@ import { useAppContext } from '@/store/appContext';
 
 import ClubDetails from '@/views/club/ClubDetails';
 import ClubFilters from '@/views/club/ClubFilters';
+import CollectiviteJoin from '@/views/collectivite/CollectiviteJoin';
 import EventDetails from '@/views/event/EventDetails';
 import EventFilters from '@/views/event/EventFilters';
 import SquadDetailsScreen from '@/views/league/details/SquadDetailsScreen';
@@ -131,6 +132,16 @@ function PublicNavigator() {
         options={{
           ...commonOptions,
           headerTitle: 'Paiement cotisation',
+        }}
+      />
+      {/* COLL-CLUBS (01/10/2026) — la page du lien d invitation de la Ville : elle s ouvre SANS
+          compte (comme le paiement de cotisation ci-dessus). */}
+      <Stack.Screen
+        component={CollectiviteJoin}
+        name={RouteNames.CollectiviteJoin}
+        options={{
+          ...commonOptions,
+          headerTitle: '',
         }}
       />
 

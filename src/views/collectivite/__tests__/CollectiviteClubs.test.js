@@ -60,10 +60,13 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
+  // COLL-CLUBS (01/10) : les invitations en cours, sous la liste (temoin COLLCLUBS.inviter).
+  useCollectiviteInvitations: () => ({ data: [] }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Recette' }],
     isLoading: false,
   }),
+  useRemindCollectiviteInvitation: () => ({ mutate: jest.fn() }),
 }));
 
 jest.mock(

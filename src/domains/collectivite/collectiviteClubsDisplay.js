@@ -50,6 +50,48 @@ export const ligneDirigeants = (t, leaders) => {
 };
 
 /**
+ * COLL-CLUBS (01/10/2026) — l etat d une invitation, tel que la mairie le lit : une pastille
+ * (envoyee, inscrit, rattache) et une ligne qui dit ou il en est. L etat vient du serveur, qui
+ * le LIT (club inconnu, club inscrit, club rattache) : l ecran n invente rien.
+ * @param {Traduire} t - La traduction de l ecran.
+ * @param {{ outsideCommune?: boolean | null, status?: string }} invitation - La ligne.
+ * @returns {{ ligne: string, pastille: string, ton: 'neutre' | 'cyan' | 'vert' }} L etat.
+ */
+export const etatDInvitation = (t, invitation) => {
+  if (invitation?.status === 'attached') {
+    return {
+      ligne: t('collectiviteClubs.invitations.attachedLine', 'Il apparaît dans vos clubs.'),
+      pastille: t('collectiviteClubs.invitations.attached', 'Rattaché'),
+      ton: 'vert',
+    };
+  }
+  if (invitation?.status === 'registered') {
+    const ligne = invitation?.outsideCommune === true
+      ? t(
+        'collectiviteClubs.invitations.registeredOutside',
+        'Hors de la commune : l’équipe FoundClub vérifie avec vous avant de le rattacher.',
+      )
+      : t(
+        'collectiviteClubs.invitations.registeredLine',
+        'Rattachement par l’équipe FoundClub en cours.',
+      );
+    return {
+      ligne,
+      pastille: t('collectiviteClubs.invitations.registered', 'Inscrit'),
+      ton: 'cyan',
+    };
+  }
+  return {
+    ligne: t(
+      'collectiviteClubs.invitations.sentLine',
+      'Transmise à l’équipe FoundClub · pas encore inscrit.',
+    ),
+    pastille: t('collectiviteClubs.invitations.sent', 'Envoyée'),
+    ton: 'neutre',
+  };
+};
+
+/**
  * « Cette semaine : 2 séances · Gymnase des Tilleuls » — compte depuis le planning des
  * installations de la Ville. Illisible : « — » ; aucune : on le dit, sans inventer de lieu.
  * Le lieu suit un point median (jamais « au » : « à la Salle annexe » ne s accorderait pas).

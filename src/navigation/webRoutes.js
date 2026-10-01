@@ -264,6 +264,12 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (la collectivite et le
   // club dans l adresse, comme les autres ecrans de « Ma collectivite »).
   [RouteNames.CollectiviteClubDetails]: '/collectivite/:collectiviteId/clubs/:clubId',
+  // COLL-CLUBS (01/10/2026) — inviter un club absent (hors de « /clubs/:clubId » : « inviter »
+  // y serait lu comme un club) ; la page PUBLIQUE du lien de la Ville (le code du lien, aucune
+  // donnee personnelle) ; la demande de rattachement, qui exige un compte.
+  [RouteNames.CollectiviteInviteClub]: '/collectivite/:collectiviteId/inviter-un-club',
+  [RouteNames.CollectiviteJoin]: '/invitation-ville/:token',
+  [RouteNames.CollectiviteJoinRequest]: '/invitation-ville/:token/rattacher',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

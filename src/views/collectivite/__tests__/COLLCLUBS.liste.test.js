@@ -17,6 +17,8 @@ import CollectiviteClubs from '../CollectiviteClubs';
 
 /** @type {any} */
 let mockClubs;
+const mockInvitations = { data: [] };
+const mockRelancer = { isPending: false, mutate: jest.fn(), variables: null };
 const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -63,10 +65,12 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
+  useCollectiviteInvitations: () => mockInvitations,
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Recette' }],
     isLoading: false,
   }),
+  useRemindCollectiviteInvitation: () => mockRelancer,
 }));
 
 jest.mock(

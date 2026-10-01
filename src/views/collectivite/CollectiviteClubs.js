@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import {
+  etatDInvitation,
   ligneDirigeants,
   ligneSeancesDeLaSemaine,
   nombreOuTiret,
@@ -26,9 +27,12 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useCollectiviteClubs,
+  useCollectiviteInvitations,
   useMyCollectivites,
+  useRemindCollectiviteInvitation,
 } from '@/services/collectivite/collectiviteQueries';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 import { useIsDesktop } from '@/responsive';
@@ -45,6 +49,9 @@ import { useIsDesktop } from '@/responsive';
  * ⛔ Jamais une autre personne (SPEC §2 H) : le serveur ne rend ni membre, ni coordonnee
  * personnelle (temoins admin COLL1C C12 et COLL-CLUBS K2) ; cet ecran n affiche que ce qu il
  * recoit. Un nombre illisible s affiche « — », jamais 0.
+ * COLL-CLUBS (planche 3) : « Inviter un club absent de FoundClub » (en bas de liste ; en tete
+ * sur ordinateur ; dans l etat vide), et SOUS la liste, les invitations en cours : envoyee,
+ * inscrit, rattache, avec « Relancer ».
  * « Ecrire aux dirigeants » et « Demander au club de completer sa fiche » ne sont PAS ici :
  * aucune conversation Ville ↔ dirigeants d un club n existe encore (D73, lot C4a).
  * @returns {import('react').ReactElement} L ecran.
@@ -67,6 +74,12 @@ function CollectiviteClubs() {
 
   const ouvrir = (/** @type {string} */ adresse) => {
     Linking.openURL(adresse).catch(() => {});
+  };
+  const invitations = useCollectiviteInvitations(collectiviteId);
+  const relancer = useRemindCollectiviteInvitation();
+  const lesInvitations = Array.isArray(invitations.data) ? invitations.data : [];
+  const inviter = () => {
+    /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, { collectiviteId });
   };
   const ouvrirLaFiche = (/** @type {any} */ club) => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteClubDetails, {
@@ -277,6 +290,13 @@ function CollectiviteClubs() {
             'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Invitez-le.',
           )}
         </Text>
+        <Button
+          isOption
+          onPress={inviter}
+          size="sm"
+          title={t('collectiviteClubs.list.inviteShort', 'Inviter un club')}
+          variant="SecondaryLight"
+        />
       </View>
     );
   } else if (isDesktop) {
@@ -303,8 +323,102 @@ function CollectiviteClubs() {
       </View>
     );
   } else {
-    contenu = <View style={{ gap: 12 }}>{liste.map(renderCarte)}</View>;
+    contenu = (
+      <View style={{ gap: 12 }}>
+        {liste.map(renderCarte)}
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={inviter}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            {
+              backgroundColor: `${Colors.primary500}0F`,
+              borderColor: Colors.primary500,
+              borderRadius: 16,
+              borderStyle: 'dashed',
+              borderWidth: 1.5,
+              gap: 8,
+              justifyContent: 'center',
+              minHeight: 52,
+            },
+          ]}
+          testID="collectivite-clubs-inviter"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {t('collectiviteClubs.list.invite', 'Inviter un club absent de FoundClub')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
+
+  // Les invitations en cours, SOUS la liste (P7v3, etat 2) : ce que le serveur LIT de chacune
+  // (envoyee, inscrit, rattache). « Relancer » seulement pour une demande « Par FoundClub » que
+  // personne n a encore inscrite : elle remonte a l equipe FoundClub (aucun e-mail).
+  const tonDePastille = {
+    cyan: Colors.primary200,
+    neutre: Colors.neutral100,
+    vert: Colors.success200,
+  };
+  const renderInvitation = (/** @type {any} */ invitation) => {
+    const etat = etatDInvitation(t, invitation);
+    const date = formatDateWithDayPrefix(invitation?.createdAt).split(' ').pop();
+    const relancee = Number(invitation?.remindCount) || 0;
+    return (
+      <View
+        key={invitation?.documentId}
+        style={[ApplicationStyle.card, Spaces.padding[16], carteStyle, { gap: 6 }]}
+        testID={`collectivite-invitation-${invitation?.documentId}`}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {invitation?.clubName}
+          </Text>
+          <View
+            style={[
+              ApplicationStyle.borderRadius24,
+              Spaces.paddingHorizontal[8],
+              Spaces.paddingVertical[4],
+              { backgroundColor: `${tonDePastille[etat.ton]}26` },
+            ]}
+          >
+            <Text style={[Fonts.p4Bold, { color: tonDePastille[etat.ton] }]}>{etat.pastille}</Text>
+          </View>
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {date
+            ? t('collectiviteClubs.invitations.since', 'Le {{date}} · {{etat}}', {
+              date,
+              etat: etat.ligne,
+            })
+            : etat.ligne}
+        </Text>
+        {relancee ? (
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t('collectiviteClubs.invitations.reminded', 'Relancée {{nombre}} fois.', {
+              nombre: relancee,
+            })}
+          </Text>
+        ) : null}
+        {invitation?.kind === 'foundclub' && invitation?.status === 'sent' ? (
+          <Button
+            isLoading={relancer.isPending
+              && relancer.variables?.invitationId === invitation?.documentId}
+            isOption
+            onPress={() => relancer.mutate({
+              collectiviteId,
+              invitationId: invitation?.documentId,
+            })}
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            title={t('collectiviteClubs.invitations.remind', 'Relancer')}
+            variant="SecondaryLight"
+          />
+        ) : null}
+      </View>
+    );
+  };
 
   return (
     <ScreenContainer
@@ -329,7 +443,17 @@ function CollectiviteClubs() {
           <Text style={[Fonts.p3Bold, Fonts.primary200]}>
             {(collectivite?.name || t('collectivite.home.kicker', 'Ma collectivité')).toUpperCase()}
           </Text>
-          <Text style={[Fonts.h2Black, Fonts.neutral00]}>{titre}</Text>
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+            <Text style={[Fonts.h2Black, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
+            {isDesktop ? (
+              <Button
+                onPress={inviter}
+                size="sm"
+                title={t('collectiviteClubs.list.inviteDesktop', 'Inviter un club absent')}
+                variant="Secondary"
+              />
+            ) : null}
+          </View>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t(
               'collectivite.clubs.hint',
@@ -338,6 +462,14 @@ function CollectiviteClubs() {
           </Text>
         </View>
         {contenu}
+        {lesInvitations.length ? (
+          <View style={{ gap: 12 }} testID="collectivite-invitations">
+            <Text accessibilityRole="header" style={[Fonts.h4Black, Fonts.neutral00]}>
+              {t('collectiviteClubs.invitations.title', 'Invitations')}
+            </Text>
+            {lesInvitations.map(renderInvitation)}
+          </View>
+        ) : null}
       </ScrollView>
     </ScreenContainer>
   );
