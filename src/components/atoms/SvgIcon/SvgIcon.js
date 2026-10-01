@@ -4,6 +4,9 @@ import { Image } from 'react-native';
 // Import des icônes PNG
 // SANS-EMOJI (01/10/2026) : la table s'élargit aux PNG déjà dessinés qui remplacent les emoji
 // des textes (coche, croix, cloche, loupe…). Aucun dessin neuf : tous viennent de src/assets/icons.
+// ICÔNES (01/10/2026, « icône go » d'Adel) : 8 icônes de plus pour les endroits restés en
+// provisoire (effacer, répondre, trophée, radar, bulle, ballon, épées, blason mystère). Même
+// gabarit que les autres : PNG 96 x 96, encre blanche, grille 24, trait 2, marge 2.
 const icons = {
   'arrow-left': require('@/assets/icons/arrowLeft.png'),
   bell: require('@/assets/icons/bell.png'),
@@ -13,16 +16,24 @@ const icons = {
   'chevron-down': require('@/assets/icons/chevron-down.png'),
   'clock-two-thirty': require('@/assets/icons/clock-two-thirty.png'),
   close: require('@/assets/icons/close.png'),
+  'delete-left': require('@/assets/icons/delete-left.png'),
   edit: require('@/assets/icons/edit.png'),
   envelope: require('@/assets/icons/envelope.png'),
   'euro-circle': require('@/assets/icons/euro-circle.png'),
   'location-pin-alt-1': require('@/assets/icons/location.png'),
+  'message-circle': require('@/assets/icons/message-circle.png'),
   money_bag: require('@/assets/icons/money_bag.png'),
   Player: require('@/assets/icons/Player.png'),
+  radar: require('@/assets/icons/radar.png'),
+  reply: require('@/assets/icons/reply.png'),
   search: require('@/assets/icons/search.png'),
   shield: require('@/assets/icons/shield.png'),
+  'shield-question': require('@/assets/icons/shield-question.png'),
+  'soccer-ball': require('@/assets/icons/soccer-ball.png'),
   stadium: require('@/assets/icons/stadium.png'),
+  swords: require('@/assets/icons/swords.png'),
   trash: require('@/assets/icons/trash.png'),
+  trophy: require('@/assets/icons/trophy.png'),
   users: require('@/assets/icons/users.png'),
 };
 

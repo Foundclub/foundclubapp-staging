@@ -326,7 +326,7 @@ function Messaging({ navigation, route }) {
             width: 48,
           }}
           >
-            <SvgIcon color={Colors.gold500} height={22} name="stadium" width={22} />
+            <SvgIcon color={Colors.gold500} height={22} name="trophy" width={22} />
           </View>
         );
       case 'multisport':

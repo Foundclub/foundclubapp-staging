@@ -77,7 +77,7 @@ function Touche({ libelle, onPress }) {
       }}
     >
       {efface ? (
-        <SvgIcon color={Colors.neutral00} height={20} name="arrow-left" width={20} />
+        <SvgIcon color={Colors.neutral00} height={20} name="delete-left" width={20} />
       ) : (
         <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{libelle}</Text>
       )}

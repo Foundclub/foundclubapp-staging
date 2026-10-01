@@ -59,4 +59,15 @@ describe('SvgIcon — une icône PNG choisie par son nom', () => {
     const image = rendre({ name: nom }).root.findByType(Image);
     expect(image.props.source).toBeTruthy();
   });
+
+  // ICÔNES (01/10/2026, « icône go » d'Adel) — les icônes dessinées pour remplacer
+  // les provisoires de SANS-EMOJI : cinq reprises de l'ancien système d'Adel
+  // (même bibliothèque que la loupe, la cloche et les silhouettes), trois dessins.
+  it.each([
+    'delete-left', 'message-circle', 'radar', 'reply', 'shield-question', 'soccer-ball',
+    'swords', 'trophy',
+  ])('connaît l icône neuve « %s »', (nom) => {
+    const image = rendre({ name: nom }).root.findByType(Image);
+    expect(image.props.source).toBeTruthy();
+  });
 });

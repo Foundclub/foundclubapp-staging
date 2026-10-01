@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 import buildLeagueWorkflowViewModel from '@/views/league/match/utils/leagueWorkflowPresenter';
@@ -510,9 +511,12 @@ function NextMatchCard({
                     alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.24)', borderRadius: 25, borderWidth: 1, height: 50, justifyContent: 'center', width: 50,
                   }}
                   >
-                    <Text style={{ color: Colors.neutral00, fontSize: 24, fontWeight: '700' }}>
-                      ?
-                    </Text>
+                    <SvgIcon
+                      color={Colors.neutral00}
+                      height={24}
+                      name="shield-question"
+                      width={24}
+                    />
                   </View>
                   <Text numberOfLines={1} style={[styles.teamName, { color: '#ADB1B2', fontStyle: 'italic' }]}>
                     {t('nextMatchCard.mysteryOpponent', 'Adversaire Mystère')}

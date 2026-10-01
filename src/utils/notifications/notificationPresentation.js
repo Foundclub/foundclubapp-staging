@@ -118,8 +118,8 @@ export const getNotificationIcon = (type) => {
   if (TEAM_ICON_TYPES.has(type)) return 'users';
   if (CLUB_ICON_TYPES.has(type)) return 'shield';
   if (EVENT_ICON_TYPES.has(type)) return 'calendar';
-  if (LEAGUE_ICON_TYPES.has(type)) return 'stadium';
-  if (CHAT_ICON_TYPES.has(type)) return 'envelope';
+  if (LEAGUE_ICON_TYPES.has(type)) return 'soccer-ball';
+  if (CHAT_ICON_TYPES.has(type)) return 'message-circle';
   if (LICENSE_ICON_TYPES.has(type)) return 'euro-circle';
   if (type === NOTIFICATION_TYPES.SEARCH_ALERT_MATCH) return 'search';
   return 'bell';
