@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, RefreshControl, Text, View,
+  Alert, Platform, RefreshControl, Text, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,10 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetRoles } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
+import {
+  useMyCollectivites,
+  useMyManagerRequests,
+} from '@/services/collectivite/collectiviteQueries';
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
@@ -57,6 +61,31 @@ function UserRole({ navigation }) {
     isLoading: rolesLoading,
     refetch: refetchRoles,
   } = useGetRoles();
+
+  // 🏛️ COLL-ACCUEIL (01/10) — SUR LE SITE, un compte « Ville seule » (aucun rôle sportif) qui
+  // gère une Ville, ou qui a déjà demandé à en gérer une, ne refait pas le choix du statut :
+  // l'accueil de sa Ville, ou l'écran de sa demande. Sur téléphone, la pile racine
+  // (PrivateNavigator) l'y emmène déjà au démarrage ; ici, c'est le filet du site, dont le
+  // parcours d'inscription vient de getOnboardingViews.
+  const sansRoleSportif = Platform.OS === 'web' && userData?.role?.type === 'authenticated';
+  const villes = useMyCollectivites({ enabled: sansRoleSportif });
+  const demandesDeGestion = useMyManagerRequests({ enabled: sansRoleSportif });
+  const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
+  const aDemande = Array.isArray(demandesDeGestion.data) && demandesDeGestion.data.length > 0;
+  useEffect(() => {
+    if (!sansRoleSportif) return;
+    if (villeGeree?.documentId) {
+      navigation.reset({
+        index: 0,
+        routes: [{
+          name: RouteNames.CollectiviteHome,
+          params: { collectiviteId: villeGeree.documentId },
+        }],
+      });
+    } else if (aDemande) {
+      navigation.reset({ index: 0, routes: [{ name: RouteNames.CollectiviteSignupStatus }] });
+    }
+  }, [aDemande, navigation, sansRoleSportif, villeGeree?.documentId]);
 
   useEffect(() => {
     if (userData?.role?.documentId) {
