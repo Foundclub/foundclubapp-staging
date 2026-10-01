@@ -34,6 +34,117 @@ export const getCollectiviteClubs = async (collectiviteId) => {
 };
 
 /**
+ * COLL-CLUBS (01/10/2026) — la FICHE d UN club rattache : ses dirigeants NOMMES (SPEC §2 G),
+ * ses nombres et noms d equipes, ses demandes sur les installations de la Ville, son contact
+ * general et ses partenaires, son offre. Aucune autre personne. 404 si le club n est pas
+ * rattache a CETTE collectivite.
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<object>} `{ data: fiche }`.
+ */
+export const getCollectiviteClub = async (collectiviteId, clubId) => {
+  const response = await client.get(`/collectivites/${collectiviteId}/clubs/${clubId}`);
+  return response.data;
+};
+
+// ─── COLL-CLUBS (01/10/2026) : INVITER UN CLUB ABSENT ──────────────────────────────────
+//
+// Le lien de la Ville, la demande « Par FoundClub » (AUCUN e-mail n est envoye : une demande
+// est enregistree pour l equipe FoundClub), « Relancer », et — cote club qui ouvre le lien —
+// la page publique, « mes clubs » et la demande de rattachement (D70 : FoundClub verifie,
+// puis rattache). Serveur : api::collectivite-invitation (admin fix/COLL-CLUBS-admin).
+
+/**
+ * Le lien d invitation de la Ville (fabrique a la premiere lecture).
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @returns {Promise<object>} `{ data: { token } }`.
+ */
+export const getCollectiviteInvitationLink = async (collectiviteId) => {
+  const response = await client.get(`/collectivites/${collectiviteId}/invitation-link`);
+  return response.data;
+};
+
+/**
+ * « Changer le lien » : l ancien cesse de marcher.
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @returns {Promise<object>} `{ data: { token } }`.
+ */
+export const rotateCollectiviteInvitationLink = async (collectiviteId) => {
+  const response = await client.post(`/collectivites/${collectiviteId}/invitation-link`);
+  return response.data;
+};
+
+/**
+ * Les invitations en cours de la Ville, avec leur etat (envoyee, inscrit, rattache).
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @returns {Promise<object>} `{ data: [...] }`.
+ */
+export const getCollectiviteInvitations = async (collectiviteId) => {
+  const response = await client.get(`/collectivites/${collectiviteId}/invitations`);
+  return response.data;
+};
+
+/**
+ * « Par FoundClub » : le nom et le contact GENERAL d un club absent. Enregistre une demande pour
+ * l equipe FoundClub ; le serveur n envoie rien.
+ * @param {{ clubContact: string, clubName: string, collectiviteId: string }} params - La demande.
+ * @returns {Promise<object>} `{ data: invitation }`.
+ */
+export const inviteClubByFoundClub = async ({ clubContact, clubName, collectiviteId }) => {
+  const response = await client.post(`/collectivites/${collectiviteId}/invitations`, {
+    data: { clubContact, clubName },
+  });
+  return response.data;
+};
+
+/**
+ * « Relancer » : la demande remonte a l equipe FoundClub.
+ * @param {{ collectiviteId: string, invitationId: string }} params - L invitation.
+ * @returns {Promise<object>} `{ data: invitation }`.
+ */
+export const remindCollectiviteInvitation = async ({ collectiviteId, invitationId }) => {
+  const response = await client.post(
+    `/collectivites/${collectiviteId}/invitations/${invitationId}/remind`,
+  );
+  return response.data;
+};
+
+/**
+ * La page PUBLIQUE du lien (sans compte) : la Ville qui invite et ses installations.
+ * @param {string} token - Le code du lien.
+ * @returns {Promise<object>} `{ data: { collectivite, installations } }`.
+ */
+export const getCollectiviteInvitationPreview = async (token) => {
+  const response = await client.get(`/collectivite-invitations/${encodeURIComponent(token)}`);
+  return response.data;
+};
+
+/**
+ * Les clubs que JE dirige, chacun avec « dans la commune ? » et « deja rattache ? ».
+ * @param {string} token - Le code du lien.
+ * @returns {Promise<object>} `{ data: [...] }`.
+ */
+export const getMyClubsForCollectiviteInvitation = async (token) => {
+  const response = await client.get(
+    `/collectivite-invitations/${encodeURIComponent(token)}/my-clubs`,
+  );
+  return response.data;
+};
+
+/**
+ * Un dirigeant demande le rattachement de son club a la Ville du lien.
+ * @param {{ clubId: string, token: string }} params - Le lien et le club.
+ * @returns {Promise<object>} `{ data: { status, outsideCommune } }`.
+ */
+export const requestCollectiviteAttach = async ({ clubId, token }) => {
+  const response = await client.post(
+    `/collectivite-invitations/${encodeURIComponent(token)}/attach-requests`,
+    { data: { clubDocumentId: clubId } },
+  );
+  return response.data;
+};
+
+/**
  * Ses installations (horaires d ouverture et capacite compris).
  * @param {string} collectiviteId - documentId de la collectivite.
  * @returns {Promise<object>} `{ data: [...] }`.

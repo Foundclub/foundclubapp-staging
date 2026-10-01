@@ -1180,6 +1180,45 @@ function PrivateNavigator() {
           }}
         />
 
+        {/* COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (design HY521H1,
+            page 7) : toute la carte de « Clubs rattaches » y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteClubDetails').default}
+          name={RouteNames.CollectiviteClubDetails}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteClubs.detail.header', 'Fiche du club'),
+          }}
+        />
+        {/* COLL-CLUBS (01/10/2026) — inviter un club absent (la mairie), la page du lien de
+            la Ville (aussi publique : PublicMainNavigator), demander le rattachement. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteInviteClub').default}
+          name={RouteNames.CollectiviteInviteClub}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteClubs.invite.header', 'Inviter un club'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteJoin').default}
+          name={RouteNames.CollectiviteJoin}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          getComponent={
+            () => require('@/views/collectivite/CollectiviteJoinRequest').default
+          }
+          name={RouteNames.CollectiviteJoinRequest}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteClubs.join.header', 'Rejoindre la Ville'),
+          }}
+        />
+
       </Stack.Navigator>
     </HistoryWizardProvider>
   ) : null;

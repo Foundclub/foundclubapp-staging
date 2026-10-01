@@ -9,12 +9,21 @@ import {
   detachAdminCollectiviteClub,
   getAdminCollectivite,
   getAdminCollectivites,
+  getCollectiviteClub,
   getCollectiviteClubs,
   getCollectiviteInstallations,
+  getCollectiviteInvitationLink,
+  getCollectiviteInvitationPreview,
+  getCollectiviteInvitations,
   getCollectiviteRequests,
+  getMyClubsForCollectiviteInvitation,
   getMyCollectivites,
+  inviteClubByFoundClub,
   previewAdminCollectiviteActive,
+  remindCollectiviteInvitation,
   removeAdminCollectiviteGestionnaire,
+  requestCollectiviteAttach,
+  rotateCollectiviteInvitationLink,
   saveCollectiviteInstallation,
   searchAdminCollectiviteTargets,
   setAdminCollectiviteActive,
@@ -150,6 +159,175 @@ export const useCollectiviteClubs = (collectiviteId, options = {}) => useQuery({
   staleTime: 5 * 60 * 1000,
   ...options,
 });
+
+/**
+ * COLL-CLUBS (01/10/2026) — la clef de la fiche d un club rattache. Elle COMMENCE par celle de
+ * la liste (`collectiviteClubsQueryKey`) : relire la liste relit aussi les fiches.
+ * @param {string | null | undefined} collectiviteId - documentId de la collectivite.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteClubQueryKey = (collectiviteId, clubId) => [
+  ...collectiviteClubsQueryKey(collectiviteId), clubId,
+];
+
+/**
+ * COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie.
+ * @param {string | null | undefined} collectiviteId - documentId de la collectivite.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` est la fiche, ou null.
+ */
+export const useCollectiviteClub = (collectiviteId, clubId, options = {}) => useQuery({
+  enabled: Boolean(collectiviteId && clubId),
+  queryFn: async () => {
+    const response = await getCollectiviteClub(String(collectiviteId), String(clubId));
+    return response?.data ?? null;
+  },
+  queryKey: collectiviteClubQueryKey(collectiviteId, clubId),
+  staleTime: 60_000,
+  ...options,
+});
+
+// ─── COLL-CLUBS (01/10/2026) : INVITER UN CLUB ABSENT ──────────────────────────────────
+
+/**
+ * La clef du lien d invitation d une collectivite.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteInvitationLinkQueryKey = (collectiviteId) => [
+  'collectivite', collectiviteId, 'invitation-link',
+];
+
+/**
+ * La clef des invitations en cours d une collectivite.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteInvitationsQueryKey = (collectiviteId) => [
+  'collectivite', collectiviteId, 'invitations',
+];
+
+/**
+ * Le lien d invitation de la Ville.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` vaut `{ token }` ou null.
+ */
+export const useCollectiviteInvitationLink = (collectiviteId, options = {}) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: async () => (await getCollectiviteInvitationLink(String(collectiviteId)))?.data ?? null,
+  queryKey: collectiviteInvitationLinkQueryKey(collectiviteId),
+  staleTime: 5 * 60 * 1000,
+  ...options,
+});
+
+/**
+ * « Changer le lien » : le nouveau lien remplace l ancien dans le cache.
+ * @returns {any} La mutation ; variables `{ collectiviteId }`.
+ */
+export const useRotateCollectiviteInvitationLink = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (/** @type {{ collectiviteId: string }} */ { collectiviteId }) => (
+      await rotateCollectiviteInvitationLink(collectiviteId)
+    )?.data ?? null,
+    onSuccess: (data, variables) => {
+      queryClient.setQueryData(collectiviteInvitationLinkQueryKey(variables?.collectiviteId), data);
+    },
+  });
+};
+
+/**
+ * Les invitations en cours de la Ville.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useCollectiviteInvitations = (collectiviteId, options = {}) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: async () => unwrapRows(await getCollectiviteInvitations(String(collectiviteId))),
+  queryKey: collectiviteInvitationsQueryKey(collectiviteId),
+  staleTime: 60_000,
+  ...options,
+});
+
+/**
+ * Un geste sur les invitations, puis la relecture de leur liste.
+ * @param {(variables: any) => Promise<any>} mutationFn - Le geste du service.
+ * @returns {any} La mutation ; variables avec `collectiviteId`.
+ */
+const useGesteInvitation = (mutationFn) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: collectiviteInvitationsQueryKey(variables?.collectiviteId),
+      });
+    },
+  });
+};
+
+/**
+ * « Par FoundClub » : variables `{ collectiviteId, clubName, clubContact }`.
+ * @returns {any} La mutation.
+ */
+export const useInviteClubByFoundClub = () => useGesteInvitation(inviteClubByFoundClub);
+
+/**
+ * « Relancer » : variables `{ collectiviteId, invitationId }`.
+ * @returns {any} La mutation.
+ */
+export const useRemindCollectiviteInvitation = () => useGesteInvitation(
+  remindCollectiviteInvitation,
+);
+
+/**
+ * La page publique du lien : la Ville qui invite et ses installations. Sans compte.
+ * @param {string | null | undefined} token - Le code du lien.
+ * @returns {any} Le resultat react-query ; `data` vaut `{ collectivite, installations }` ou null.
+ */
+export const useCollectiviteInvitationPreview = (token) => useQuery({
+  enabled: Boolean(token),
+  queryFn: async () => (await getCollectiviteInvitationPreview(String(token)))?.data ?? null,
+  queryKey: ['collectivite-invitation', token, 'preview'],
+  retry: false,
+  staleTime: 5 * 60 * 1000,
+});
+
+/**
+ * Les clubs que je dirige, pour demander leur rattachement a la Ville du lien.
+ * @param {string | null | undefined} token - Le code du lien.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useMyClubsForCollectiviteInvitation = (token, options = {}) => useQuery({
+  enabled: Boolean(token),
+  queryFn: async () => unwrapRows(await getMyClubsForCollectiviteInvitation(String(token))),
+  queryKey: ['collectivite-invitation', token, 'my-clubs'],
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Demander le rattachement : variables `{ token, clubId }`.
+ * @returns {any} La mutation ; `data` vaut `{ status, outsideCommune }`.
+ */
+export const useRequestCollectiviteAttach = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (/** @type {{ clubId: string, token: string }} */ variables) => (
+      await requestCollectiviteAttach(variables)
+    )?.data ?? null,
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['collectivite-invitation', variables?.token, 'my-clubs'],
+      });
+    },
+  });
+};
 
 /**
  * Cree (sans `facilityId`) ou modifie une installation, puis relit la liste.

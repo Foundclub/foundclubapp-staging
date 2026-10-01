@@ -16,6 +16,8 @@ import CollectiviteClubs from '../CollectiviteClubs';
 let mockClubs;
 
 jest.mock('@react-navigation/native', () => ({
+  // COLL-CLUBS (01/10) : toute la carte ouvre la fiche du club (temoin COLLCLUBS.liste).
+  useNavigation: () => ({ navigate: jest.fn() }),
   useRoute: () => ({ params: { collectiviteId: 'ville-de-recette' } }),
 }));
 
@@ -58,10 +60,13 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
+  // COLL-CLUBS (01/10) : les invitations en cours, sous la liste (temoin COLLCLUBS.inviter).
+  useCollectiviteInvitations: () => ({ data: [] }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Recette' }],
     isLoading: false,
   }),
+  useRemindCollectiviteInvitation: () => ({ mutate: jest.fn() }),
 }));
 
 jest.mock(

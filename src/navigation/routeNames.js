@@ -373,4 +373,12 @@ export const RouteNames = /** @type {const} */ ({
   SquadFilters: 'SquadFilters',
   SquadRequests: 'SquadRequests',
   SquadSearch: 'SquadSearch',
+
+  // COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (design HY521H1, page 7).
+  CollectiviteClubDetails: 'CollectiviteClubDetails',
+  // COLL-CLUBS (01/10/2026) — inviter un club absent (mairie), la page publique du lien de la
+  // Ville (sans compte), et la demande de rattachement d un club deja inscrit (dirigeant).
+  CollectiviteInviteClub: 'CollectiviteInviteClub',
+  CollectiviteJoin: 'CollectiviteJoin',
+  CollectiviteJoinRequest: 'CollectiviteJoinRequest',
 });
