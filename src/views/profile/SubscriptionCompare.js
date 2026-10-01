@@ -15,6 +15,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -213,7 +214,7 @@ function SubscriptionCompare({ navigation }) {
    */
   const renderCell = (value) => {
     if (value === true) {
-      return <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>;
+      return <SvgIcon color={Colors.success500} height={14} name="check" width={14} />;
     }
     if (value === false) {
       return <Text style={[Fonts.p3, { color: Colors.neutral600 }]}>—</Text>;

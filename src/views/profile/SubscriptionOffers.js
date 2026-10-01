@@ -71,6 +71,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import LicenseeCountField from '@/components/molecules/licenseeCountField/LicenseeCountField';
@@ -1229,7 +1230,13 @@ function SubscriptionOffers({ navigation, route }) {
         {lead ? <Text style={[Fonts.p4, Fonts.neutral300]}>{lead}</Text> : null}
         {items.map((item) => (
           <View key={item} style={[Alignments.row, Spaces.gap[8]]}>
-            <Text style={[Fonts.p3Bold, { color: dim ? Colors.neutral500 : Colors.success500 }]}>✓</Text>
+            <SvgIcon
+              color={dim ? Colors.neutral500 : Colors.success500}
+              height={14}
+              name="check"
+              style={{ marginTop: 3 }}
+              width={14}
+            />
             <Text style={[Alignments.fill, Fonts.p3, dim ? Fonts.neutral300 : Fonts.neutral100]}>
               {item}
             </Text>

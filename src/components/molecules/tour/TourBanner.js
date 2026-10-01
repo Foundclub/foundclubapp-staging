@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 import { useTour } from '@/context/TourContext';
 
 // Hauteur laissée sous le bandeau : dock flottant + marge de respiration.
@@ -122,7 +124,7 @@ function TourBanner() {
           hitSlop={8}
           onPress={exitTour}
         >
-          <Text style={[Fonts.p4Bold, Fonts.neutral400]}>✕</Text>
+          <SvgIcon color={Colors.neutral400} height={12} name="close" width={12} />
         </TouchableOpacity>
       </View>
     );
@@ -210,7 +212,7 @@ function TourBanner() {
             width: 30,
           }}
         >
-          <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>✓</Text>
+          <SvgIcon color={Colors.success500} height={16} name="check" width={16} />
         </View>
         <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
           {currentStep.successMessage}

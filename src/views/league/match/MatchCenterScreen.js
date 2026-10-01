@@ -22,6 +22,7 @@ import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -272,8 +273,6 @@ const withLeagueMatchActionMetadata = (match, payload) => {
  */
 function MatchCenterScreen() {
   const MATCH_CENTER_FOCUS_REFRESH_MIN_INTERVAL_MS = 120000;
-  const swordsIcon = '\u2694\uFE0F';
-  const radarIcon = '\uD83D\uDCE1';
   const navigation = /** @type {any} */ (useNavigation());
   const queryClient = useQueryClient();
   const route = /** @type {any} */ (useRoute());
@@ -1758,7 +1757,9 @@ function MatchCenterScreen() {
           'matchCenterScreen.mission.radar.helper',
           'Nous cherchons une équipe compatible dans ta zone et sur tes plages partagées.',
         ),
-        renderIcon: () => <Text style={{ color: leagueGold, fontSize: 28 }}>{radarIcon}</Text>,
+        renderIcon: () => (
+          <SvgIcon color={leagueGold} height={28} name="search" width={28} />
+        ),
         subtitle: t('matchCenterScreen.mission.radar.subtitle', 'Balayage en cours'),
         title: t('matchCenterScreen.mission.radar.title', 'Recherche active'),
       });
@@ -1771,7 +1772,7 @@ function MatchCenterScreen() {
             borderColor: Colors.gold500, borderRadius: 40, height: 80, marginBottom: 16, width: 80,
           }]}
           >
-            <Text style={{ color: Colors.gold500, fontSize: 24 }}>{radarIcon}</Text>
+            <SvgIcon color={Colors.gold500} height={24} name="search" width={24} />
           </View>
           <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>
             {t('matchCenterScreen.searching.title', 'RECHERCHE EN COURS')}
@@ -1998,8 +1999,6 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  {swordsIcon}
-                  {' '}
                   {t('matchCenterScreen.found.duelConfirmed', 'Duel confirmé')}
                 </Text>
                 <Text style={[Fonts.h2, {
@@ -2511,9 +2510,6 @@ function MatchCenterScreen() {
 
             {/* Stats / Context */}
             <View style={{ alignItems: 'center', width: '100%' }}>
-              <Text style={{ color: Colors.gold500, fontSize: 18, marginBottom: 2 }}>
-                {swordsIcon}
-              </Text>
               <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>
                 {isOpponentAnonymous ? t(
                   'matchCenterScreen.found.opposingTeam',

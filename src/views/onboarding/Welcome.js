@@ -416,7 +416,7 @@ function Welcome({ navigation }) {
             <Text style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter]}>
               {t(
                 'welcome.subscription.hint',
-                'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.',
+                'Tu retrouveras les offres à tout moment dans Profil, rubrique Mon abonnement.',
               )}
             </Text>
             {shouldOfferGuidedTour ? (

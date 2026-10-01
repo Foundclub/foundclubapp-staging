@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 
 /**
@@ -130,7 +131,7 @@ function WizardOptionCard({
           }}
         >
           {selected ? (
-            <Text style={{ color: Colors.primary900, fontSize: 12, fontWeight: '900' }}>✓</Text>
+            <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
           ) : null}
         </View>
       ) : null}

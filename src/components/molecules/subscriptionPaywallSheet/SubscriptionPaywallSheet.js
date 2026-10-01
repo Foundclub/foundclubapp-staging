@@ -61,6 +61,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import LicenseeCountField from '@/components/molecules/licenseeCountField/LicenseeCountField';
@@ -853,7 +854,7 @@ function SubscriptionPaywallSheet({
                 {contextLabel}
               </Text>
               <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
-                {t('subscriptionPaywallSheet.draftKept', '✓ brouillon conservé')}
+                {t('subscriptionPaywallSheet.draftKept', 'brouillon conservé')}
               </Text>
             </View>
           ) : null}
@@ -982,7 +983,13 @@ function SubscriptionPaywallSheet({
                 key={benefit}
                 style={[Alignments.row, Spaces.gap[8]]}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>
+                <SvgIcon
+                  color={Colors.success500}
+                  height={14}
+                  name="check"
+                  style={{ marginTop: 3 }}
+                  width={14}
+                />
                 <Text style={[Fonts.p3, Fonts.neutral100, { flex: 1 }]}>
                   {benefit}
                 </Text>
@@ -1133,9 +1140,7 @@ function SubscriptionPaywallSheet({
                 key={benefit}
                 style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
               >
-                <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>
-                  ✓
-                </Text>
+                <SvgIcon color={Colors.success500} height={16} name="check" width={16} />
                 <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
                   {benefit}
                 </Text>

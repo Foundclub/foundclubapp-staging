@@ -167,9 +167,6 @@ function MissingPlayersView({ navigation }) {
       Spaces.padding[24],
       Spaces.marginVertical[24]]}
     >
-      <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
-        🎉
-      </Text>
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
         {t('reservation.noMissingPlayers', 'Aucune réservation ne cherche de joueurs pour le moment')}
       </Text>
@@ -201,7 +198,7 @@ function MissingPlayersView({ navigation }) {
             {sharedReservations.filter((/** @type {any} */ r) => r.isLastMinuteAlert).length}
           </Text>
           <Text style={styles.statLabel}>
-            {t('missingPlayersView.stats.urgent', '🔥 SOS urgents')}
+            {t('missingPlayersView.stats.urgent', 'SOS urgents')}
           </Text>
         </View>
       </View>

@@ -300,7 +300,7 @@ function HomeHeadBanner({
                   },
                 ]}
               >
-                {`✓ ${confirmation.label} `}
+                {`${confirmation.label} `}
                 <Text style={{ color: couleurDuMot }}>
                   {confirmation.answerLabel}
                 </Text>

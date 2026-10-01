@@ -878,7 +878,7 @@ function EventCardNew({
                   ]}
                 >
                   <Text style={[styles.statusBadgeText, { color: Colors.primary900 }]}>
-                    {t('eventCardNew.lastMinute', '🔥 Dernière minute')}
+                    {t('eventCardNew.lastMinute', 'Dernière minute')}
                   </Text>
                 </View>
               ) : null}
@@ -890,7 +890,7 @@ function EventCardNew({
                   ]}
                 >
                   <Text style={[styles.statusBadgeText, { color: Colors.primary900 }]}>
-                    {t('eventCardNew.playersWanted', '👥 Joueurs recherchés')}
+                    {t('eventCardNew.playersWanted', 'Joueurs recherchés')}
                   </Text>
                 </View>
               ) : null}
@@ -902,7 +902,7 @@ function EventCardNew({
                   ]}
                 >
                   <Text style={[styles.statusBadgeText, { color: Colors.primary900 }]}>
-                    {t('eventCardNew.full', '✅ Complet')}
+                    {t('eventCardNew.full', 'Complet')}
                   </Text>
                 </View>
               ) : null}

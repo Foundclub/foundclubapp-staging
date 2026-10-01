@@ -10,6 +10,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { nomDuFichier, outilDeLaMesure } from '@/views/training/trainingVideo';
@@ -43,7 +44,9 @@ import { useMyTraining, useTrainingResults } from '@/hooks/useTraining';
  */
 
 /** Les touches du pavé, dans l'ordre de la grille. */
-const TOUCHES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', '⌫'];
+/** La touche qui efface le dernier chiffre : une icône, plus le caractère « retour arrière ». */
+const TOUCHE_EFFACER = 'effacer';
+const TOUCHES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', TOUCHE_EFFACER];
 
 /**
  * Une touche du pavé.
@@ -54,9 +57,11 @@ const TOUCHES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', '⌫'];
  */
 function Touche({ libelle, onPress }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
+  const efface = libelle === TOUCHE_EFFACER;
   return (
     <TouchableOpacity
-      accessibilityLabel={libelle}
+      accessibilityLabel={efface ? t('common.delete') : libelle}
       accessibilityRole="button"
       onPress={onPress}
       style={{
@@ -71,7 +76,11 @@ function Touche({ libelle, onPress }) {
         minHeight: 56,
       }}
     >
-      <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{libelle}</Text>
+      {efface ? (
+        <SvgIcon color={Colors.neutral00} height={20} name="arrow-left" width={20} />
+      ) : (
+        <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{libelle}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -208,7 +217,7 @@ function TrainingVideoEntry({ navigation, route }) {
 
   const taper = useCallback((touche) => {
     setSaisie((avant) => {
-      if (touche === '⌫') return avant.slice(0, -1);
+      if (touche === TOUCHE_EFFACER) return avant.slice(0, -1);
       // Une seule virgule : « 1,2,3 » n'est pas un nombre, et le serveur le
       // refuserait après coup, quand la vidéo n'est plus ouverte.
       if (touche === ',' && avant.includes(',')) return avant;

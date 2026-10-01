@@ -10,6 +10,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
@@ -135,12 +136,16 @@ function Pastille({
           width: 24,
         }}
         >
-          <Text style={[Fonts.caption, {
-            color: etape.etat === 'todo' ? Colors.neutral400 : Colors.neutral00,
-          }]}
-          >
-            {etape.etat === 'done' ? '✓' : rang}
-          </Text>
+          {etape.etat === 'done' ? (
+            <SvgIcon color={Colors.neutral00} height={12} name="check" width={12} />
+          ) : (
+            <Text style={[Fonts.caption, {
+              color: etape.etat === 'todo' ? Colors.neutral400 : Colors.neutral00,
+            }]}
+            >
+              {rang}
+            </Text>
+          )}
         </View>
         {/* Le FIL qui relie les pastilles : sans lui, la frise se lit comme une
             pile de cartes sans rapport, et on ne voit pas qu'il y a un ordre. */}

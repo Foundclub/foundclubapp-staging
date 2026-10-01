@@ -3,6 +3,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 /**
  * LE RUBAN D'ÉTAPES — « Prépa · Éch. · 1 · 2 · 3 · 4 · Fin ».
  *
@@ -57,14 +59,18 @@ function TrainingStepRail({ arrets, etats, onPress }) {
               paddingHorizontal: 4,
             }}
           >
-            <Text
-              numberOfLines={1}
-              style={[Fonts.caption, {
-                color: etat === 'todo' ? Colors.neutral400 : teinte,
-              }]}
-            >
-              {passe ? '✓' : arret.court}
-            </Text>
+            {passe ? (
+              <SvgIcon color={teinte} height={12} name="check" width={12} />
+            ) : (
+              <Text
+                numberOfLines={1}
+                style={[Fonts.caption, {
+                  color: etat === 'todo' ? Colors.neutral400 : teinte,
+                }]}
+              >
+                {arret.court}
+              </Text>
+            )}
           </TouchableOpacity>
         );
       })}

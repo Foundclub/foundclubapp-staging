@@ -7,6 +7,8 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 /**
  * Simple SelectPicker component
  * @param {object} props
@@ -50,7 +52,7 @@ function SelectPicker({
             'Sélectionner',
           )}
         </Text>
-        <Text style={[Fonts.p2, Fonts.neutral300]}>▼</Text>
+        <SvgIcon color={Colors.neutral300} height={12} name="chevron-down" width={12} />
       </TouchableOpacity>
 
       <Modal

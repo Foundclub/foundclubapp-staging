@@ -29,6 +29,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -78,19 +79,21 @@ const EMPTY_LIST = [];
 /**
  * AC09 — comment chacun des 4 etats se montre.
  *
- * 🚨 `sign` N'EST PAS UNE DECORATION. La couleur seule laisserait un daltonien
- * (8 % des hommes) convoquer un absent sans le voir : chaque etat porte donc un
- * MOT (le libelle traduit) ET un signe qui n'appartient qu'a lui. L'etat reste
- * lisible en niveaux de gris, et meme sans lire le mot.
+ * 🚨 `icon` / `sign` NE SONT PAS UNE DECORATION. La couleur seule laisserait un
+ * daltonien (8 % des hommes) convoquer un absent sans le voir : chaque etat porte
+ * donc un MOT (le libelle traduit) ET une forme qui n'appartient qu'a lui. L'etat
+ * reste lisible en niveaux de gris, et meme sans lire le mot.
+ * SANS-EMOJI (01/10/2026) : la coche et la croix sont des icones dessinees
+ * (`SvgIcon`), plus des caracteres ; le tiret et les points restent du texte.
  * @type {Readonly<Record<string, {
- *   color: import('@/theme/types').ColorNames, sign: string,
+ *   color: import('@/theme/types').ColorNames, icon: string, sign: string,
  * }>>}
  */
 const RSVP_BADGES = Object.freeze({
-  absent: { color: 'error500', sign: '\u2715' },
-  none: { color: 'neutral400', sign: '\u2013' },
-  pending: { color: 'warning500', sign: '\u2026' },
-  present: { color: 'success500', sign: '\u2713' },
+  absent: { color: 'error500', icon: 'close', sign: '' },
+  none: { color: 'neutral400', icon: '', sign: '\u2013' },
+  pending: { color: 'warning500', icon: '', sign: '\u2026' },
+  present: { color: 'success500', icon: 'check', sign: '' },
 });
 
 const capitalizeFirst = (/** @type {any} */ value) => {
@@ -570,8 +573,11 @@ function MatchCallUpSelection() {
           { backgroundColor: withAlpha(tone, 0.12), borderColor: withAlpha(tone, 0.45) },
         ]}
       >
+        {badge.icon ? (
+          <SvgIcon color={tone} height={10} name={badge.icon} width={10} />
+        ) : null}
         <Text numberOfLines={1} style={[Fonts.p4, { color: tone }]}>
-          {`${badge.sign} ${t(`matchCallUp.selection.rsvp.${answer}`)}`}
+          {`${badge.sign} ${t(`matchCallUp.selection.rsvp.${answer}`)}`.trim()}
         </Text>
       </View>
     );
@@ -1076,8 +1082,11 @@ const styles = StyleSheet.create({
     height: 4,
   },
   rsvpBadge: {
+    alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },

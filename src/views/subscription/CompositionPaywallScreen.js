@@ -17,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -140,7 +141,7 @@ function CompositionPaywallScreen() {
               ]}
             >
               <View style={[styles.benefitCheck, { backgroundColor: Colors.primary500 }]}>
-                <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>✓</Text>
+                <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
               </View>
               <Text style={[Fonts.p3Bold, styles.benefitLabel, { color: Colors.neutral00 }]}>
                 {t(`compositionPaywall.benefits.${key}`)}

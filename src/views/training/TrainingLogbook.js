@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -97,7 +98,7 @@ function LigneLisible({ ligne }) {
             : t('training.logbook.void')}
         </Text>
       ) : (
-        <Text style={[Fonts.caption, { color: Colors.success500 }]}>✓</Text>
+        <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
       )}
     </View>
   );

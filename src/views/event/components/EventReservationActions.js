@@ -80,7 +80,7 @@ function EventReservationActions({
             }}
             >
               <Text style={[Fonts.p2, { color: '#64B5F6' }]}>
-                {t('eventReservationActions.open', '🟢 Ouvert')}
+                {t('eventReservationActions.open', 'Ouvert')}
               </Text>
             </View>
           )}
@@ -90,7 +90,7 @@ function EventReservationActions({
             }}
             >
               <Text style={[Fonts.p2, { color: '#FFC107' }]}>
-                {t('eventReservationActions.playersWanted', '👥 Joueurs recherchés')}
+                {t('eventReservationActions.playersWanted', 'Joueurs recherchés')}
               </Text>
             </View>
           )}
@@ -100,7 +100,7 @@ function EventReservationActions({
             }}
             >
               <Text style={[Fonts.p2, { color: '#4CAF50' }]}>
-                {t('eventReservationActions.full', '✅ Complet')}
+                {t('eventReservationActions.full', 'Complet')}
               </Text>
             </View>
           )}
@@ -110,7 +110,7 @@ function EventReservationActions({
             }}
             >
               <Text style={[Fonts.p2, { color: '#FF6B35' }]}>
-                {t('eventReservationActions.sosActive', '🔥 SOS actif')}
+                {t('eventReservationActions.sosActive', 'SOS actif')}
               </Text>
             </View>
           )}
@@ -156,7 +156,7 @@ function EventReservationActions({
             isLoading={sosAlertMutation.isPending}
             onPress={() => sosAlertMutation.mutate(event.documentId)}
             style={{ backgroundColor: '#FF6B35', flex: 1 }}
-            title={t('reservation.actions.sos', 'SOS 🔥')}
+            title={t('reservation.actions.sos', 'SOS')}
             variant="Primary"
           />
           )}
@@ -178,7 +178,7 @@ function EventReservationActions({
             isLoading={sosAlertMutation.isPending}
             onPress={() => sosAlertMutation.mutate(event.documentId)}
             style={{ backgroundColor: '#FF6B35', flex: 1 }}
-            title={t('reservation.actions.sos', 'SOS 🔥')}
+            title={t('reservation.actions.sos', 'SOS')}
             variant="Primary"
           />
           )}

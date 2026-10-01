@@ -659,7 +659,7 @@ describe('A20.1 — sous les résultats : « Me prévenir des nouveaux événeme
     expect(mockClient.post).not.toHaveBeenCalled();
     const texte = texteVisible(tree);
     expect(texte).toContain('Voir les résultats');
-    expect(texte).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+    expect(texte).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
     // La rangée Ville est DÉJÀ dépliée : son champ d'adresse est là.
     expect(tree.root.findAll((/** @type {any} */ n) => n.props?.testID === 'adresse').length)
       .toBeGreaterThan(0);
@@ -747,7 +747,7 @@ describe('A20.2 — la PREMIÈRE ouverture propose de créer son alerte, une foi
     const texte = texteVisible(tree);
     expect(texte).not.toContain('Ne rate plus aucun événement');
     expect(texte).toContain('Voir les résultats');
-    expect(texte).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+    expect(texte).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
     expect(mockClient.post).not.toHaveBeenCalled();
   });
 
@@ -769,7 +769,7 @@ describe('A20.3 — un guide pour créer une alerte, accessible à chaque fois',
     const texte = texteVisible(tree);
     expect(texte).toContain('Comment créer une alerte ?');
     expect(texte).toContain('Choisis tes critères');
-    expect(texte).toContain('Touche ★ ou « Créer l\'alerte »');
+    expect(texte).toContain('Touche « Créer l\'alerte »');
     expect(texte).toContain('Reçois une notification');
   });
 
@@ -805,13 +805,13 @@ describe('A20.3 — un guide pour créer une alerte, accessible à chaque fois',
 describe('A20.4 — l étoile en haut à droite des filtres', () => {
   beforeEach(() => { propositionDejaVue('u-1'); });
 
-  it('la feuille « Filtrer » porte l étoile ★, sur la ligne du titre, à droite', async () => {
+  it('la feuille « Filtrer » porte le bouton d alerte, sur la ligne du titre, à droite', async () => {
     const tree = await monter();
     await ouvrirLesFiltres(tree);
 
     const etoile = parEtiquette(tree, 'Créer une alerte avec ces filtres');
     expect(etoile).toBeDefined();
-    expect(texteDuNoeud(etoile)).toContain('★');
+    expect(etoile.findAll((n) => n.props && n.props.name === 'bell').length).toBeGreaterThan(0);
     // Même rangée que le titre, et APRÈS lui. ALERTES-ANNONCES : l'étoile est
     // devenue un composant partagé (`EtoileAlerte`), son parent direct est ce
     // composant : on remonte jusqu'au premier ancêtre qui porte le titre.
@@ -819,7 +819,7 @@ describe('A20.4 — l étoile en haut à droite des filtres', () => {
     while (rangee && !texteDuNoeud(rangee).includes('Filtrer')) rangee = rangee.parent;
     const texteDeLaRangee = texteDuNoeud(rangee);
     expect(texteDeLaRangee.indexOf('Filtrer')).toBe(0);
-    expect(texteDeLaRangee.indexOf('★')).toBeGreaterThan(0);
+    expect(texteDeLaRangee.replace(/\s/g, ' ').indexOf('Créer alerte')).toBeGreaterThan(0);
   });
 
   it('l étoile crée l alerte avec les filtres EN COURS de réglage (POST)', async () => {
@@ -869,7 +869,7 @@ describe('A20.4 — l étoile en haut à droite des filtres', () => {
     await laisserFiler();
 
     expect(mockClient.post).not.toHaveBeenCalled();
-    expect(texteVisible(tree)).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+    expect(texteVisible(tree)).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
   });
 
   it('un nom déjà pris reçoit un numéro (les alertes existantes sont lues d abord)', async () => {

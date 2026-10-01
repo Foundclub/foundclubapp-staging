@@ -5232,7 +5232,7 @@ function TeamDetails({ navigation, route }) {
                 {renderTeamActionsGroupHead({
                   actionLabel: isTeamOfferUnlocked ? null : t(
                     'teamDetails.upsell.teamAction',
-                    'Débloquer →',
+                    'Débloquer',
                   ),
                   label: t('teamDetails.upsell.teamLabel', "Avec l'offre Équipe"),
                   onActionPress: openTeamOfferUnlockSheet,
@@ -5268,7 +5268,7 @@ function TeamDetails({ navigation, route }) {
                 {renderTeamActionsGroupHead({
                   actionLabel: isClubOfferUnlocked ? null : t(
                     'teamDetails.upsell.clubAction',
-                    "Voir l'offre →",
+                    "Voir l'offre",
                   ),
                   label: t('teamDetails.upsell.clubLabel', "Avec l'offre Club"),
                   onActionPress: openClubOfferRecap,

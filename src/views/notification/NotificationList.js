@@ -18,6 +18,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
@@ -289,7 +290,7 @@ function NotificationList() {
         width: 80,
       }}
     >
-      <Text style={{ color: '#FFF', fontWeight: '600' }}>{'\u{1F5D1}\u{FE0F}'}</Text>
+      <SvgIcon color={Colors.neutral00} height={20} name="trash" width={20} />
     </TouchableOpacity>
   ), [Colors, handleDelete]);
 
@@ -314,11 +315,10 @@ function NotificationList() {
         width: 80,
       }}
     >
-      <Text style={{ color: '#FFF', fontWeight: '600' }}>
-        {'\u2713'}
-        {' '}
-        Lu
-      </Text>
+      <View style={{ alignItems: 'center', flexDirection: 'row', gap: 4 }}>
+        <SvgIcon color="#FFF" height={14} name="check" width={14} />
+        <Text style={{ color: '#FFF', fontWeight: '600' }}>Lu</Text>
+      </View>
     </TouchableOpacity>
   ), [Colors, markAsRead, showActionError]);
 
@@ -382,7 +382,7 @@ function NotificationList() {
                   width: 40,
                 }}
               >
-                <Text style={{ fontSize: 18 }}>{icon}</Text>
+                <SvgIcon color={Colors.neutral00} height={20} name={icon} width={20} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -536,7 +536,13 @@ function NotificationList() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <Text style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F514}'}</Text>
+              <SvgIcon
+                color={Colors.neutral400}
+                height={48}
+                name="bell"
+                style={{ marginBottom: 16 }}
+                width={48}
+              />
               <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
                 {t('notificationList.empty.title', 'Aucune notification')}
               </Text>

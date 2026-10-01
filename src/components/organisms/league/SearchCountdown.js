@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import useTheme from '@/theme/themeContext';
 
 import LeagueCard from '@/components/atoms/league/LeagueCard';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 /**
  * SearchCountdown component.
@@ -69,7 +70,13 @@ function SearchCountdown({ createdAt, serverNow = null }) {
       ]}
     >
       <View style={styles.header}>
-        <Text style={{ color: Colors.neutral00, fontSize: 16, marginRight: 8 }}>{'\u23F1'}</Text>
+        <SvgIcon
+          color={Colors.neutral00}
+          height={16}
+          name="clock-two-thirty"
+          style={{ marginRight: 8 }}
+          width={16}
+        />
         <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
           {t('searchCountdown.title', 'TEMPS DE RECHERCHE')}
         </Text>

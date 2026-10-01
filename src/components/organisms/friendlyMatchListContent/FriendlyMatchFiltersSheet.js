@@ -16,6 +16,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
@@ -251,7 +252,7 @@ function FriendlyMatchFiltersSheet({
                 width: 44,
               }}
             >
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral200 }]}>✕</Text>
+              <SvgIcon color={Colors.neutral200} height={16} name="close" width={16} />
             </TouchableOpacity>
           </View>
 

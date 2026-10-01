@@ -3860,7 +3860,7 @@ function ClubLicenses({ navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {isHelloAssoReadyForCampaign(clubHelloAssoSnapshot) ? t(
                 'clubLicenses.helloAsso.connected',
-                'Connecté ✓',
+                'Connecté',
               ) : t(
                 'clubLicenses.helloAsso.toConnect',
                 'À connecter',

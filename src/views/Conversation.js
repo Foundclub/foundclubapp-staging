@@ -76,6 +76,7 @@ import Button from '@/components/atoms/button/Button';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ChatReactionsRow from '@/components/molecules/chatReactions/ChatReactionsRow';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
@@ -5056,10 +5057,10 @@ function Conversation({ navigation, route }) {
           paddingVertical: 4,
         }}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>↩</Text>
+        <SvgIcon color={Colors.primary500} height={14} name="arrow-left" width={14} />
       </View>
     </View>
-  ), [Colors.primary500, Fonts.p3Bold]);
+  ), [Colors.primary500]);
 
   const wrapWithMessageInteractions = useCallback((currentMessage, children) => {
     if (!currentMessage) return children;

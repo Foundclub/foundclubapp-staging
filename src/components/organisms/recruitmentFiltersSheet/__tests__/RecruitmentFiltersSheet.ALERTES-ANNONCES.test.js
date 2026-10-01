@@ -77,7 +77,7 @@ jest.mock('@/services/level/levelQueries', () => ({
 }));
 
 const ETOILE = 'Créer une alerte avec ces filtres';
-const NOTE_VILLE = 'Choisis une ville, puis touche ★ pour créer ton alerte.';
+const NOTE_VILLE = "Choisis une ville, puis touche « Créer l'alerte ».";
 const CORPS_ANNONCES = 'Tu seras prévenu·e dès qu\'une nouvelle annonce '
   + 'comme celles-ci est publiée.';
 
@@ -190,15 +190,15 @@ describe('ALERTES-ANNONCES — l étoile de la feuille de filtres du recrutement
     expect(texteVisible(tree)).toContain('Filtrer');
   });
 
-  it('avec `onCreateAlert`, l étoile ★ est sur la ligne du titre, après lui', async () => {
+  it('avec `onCreateAlert`, la cloche d alerte est sur la ligne du titre, après lui', async () => {
     const { tree } = await rendre({ onCreateAlert: repondre('creee') });
     const bouton = etoile(tree);
     expect(bouton).toBeDefined();
-    expect(texteDuNoeud(bouton)).toContain('★');
+    expect(bouton.findAll((n) => n.props && n.props.name === 'bell').length).toBeGreaterThan(0);
     let rangee = bouton.parent;
     while (rangee && !texteDuNoeud(rangee).includes('Filtrer')) rangee = rangee.parent;
     expect(texteDuNoeud(rangee).indexOf('Filtrer')).toBe(0);
-    expect(texteDuNoeud(rangee).indexOf('★')).toBeGreaterThan(0);
+    expect(texteDuNoeud(rangee).replace(/\s/g, ' ').indexOf('Créer alerte')).toBeGreaterThan(0);
   });
 
   it('l étoile confie le BROUILLON et le PROFIL choisis, sans appliquer ni fermer', async () => {

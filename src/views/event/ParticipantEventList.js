@@ -805,7 +805,7 @@ function ParticipantEventList({ navigation }) {
         {shouldLoadSecondaryPlanningData && featuredEvents.length > 0 && (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
-              {t('participantEventList.featuredInMyClub', '⭐ À la une dans mon club')}
+              {t('participantEventList.featuredInMyClub', 'À la une dans mon club')}
             </Text>
             <Suspense fallback={<DeferredFallback height={180} />}>
               <FeaturedEvents events={featuredEvents} useFacilityAccentColorForPublic />

@@ -41,6 +41,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 
@@ -1509,9 +1510,14 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                                 },
                               ]}
                             >
-                              <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
-                                {isConvoked ? '✓' : ' '}
-                              </Text>
+                              {isConvoked ? (
+                                <SvgIcon
+                                  color={Colors.primary900}
+                                  height={12}
+                                  name="check"
+                                  width={12}
+                                />
+                              ) : null}
                             </View>
                             <Text style={[Fonts.p3Bold, Fonts.neutral00, { flex: 1 }]}>
                               {getCompositionPlayerLabel(player)}

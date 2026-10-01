@@ -11,6 +11,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
@@ -307,7 +308,7 @@ function UserTrainedTeams({ navigation, route }) {
                     ]}
                   >
                     {isSelected ? (
-                      <Text style={[Fonts.p2Bold, Fonts.neutral900]}>✓</Text>
+                      <SvgIcon color={Colors.neutral900} height={16} name="check" width={16} />
                     ) : null}
                   </View>
 

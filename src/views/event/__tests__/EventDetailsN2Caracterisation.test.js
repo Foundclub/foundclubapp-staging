@@ -910,9 +910,12 @@ describe('N2 · 4E — « OÙ EN EST LE TOURNOI », LE FIL DES CINQ ETAPES', () 
   const etapeDuFil = (/** @type {any} */ root, /** @type {number} */ rang) => {
     const [noeud] = parTestID(root, `tournament-rail-step-${rang}`);
     if (!noeud) throw new Error(`Aucune etape ${rang} dans le fil`);
-    return noeud
+    // SANS-EMOJI (01/10/2026) : la coche est une icône (`SvgIcon` « check »), plus
+    // un caractère. Elle se lit ici comme le mot « [coche] » en tête de l'étape.
+    const coche = noeud.findAll((n) => n.props && n.props.name === 'check').length ? ['[coche]'] : [];
+    return coche.concat(noeud
       .findAllByType(Text)
-      .map((/** @type {any} */ n) => textOf(n))
+      .map((/** @type {any} */ n) => textOf(n)))
       .join(' ');
   };
 
@@ -921,12 +924,12 @@ describe('N2 · 4E — « OÙ EN EST LE TOURNOI », LE FIL DES CINQ ETAPES', () 
     // validee — il en faut deux pour qu'un tournoi existe.
     const root = monter({ event: buildTournoi() });
 
-    expect(etapeDuFil(root, 1)).toContain('✓');
+    expect(etapeDuFil(root, 1)).toContain('[coche]');
     expect(etapeDuFil(root, 1)).toContain('Réglages');
     // Les quatre suivantes portent leur RANG, pas une coche.
     expect(etapeDuFil(root, 2)).toContain('2');
-    expect(etapeDuFil(root, 2)).not.toContain('✓');
-    expect(etapeDuFil(root, 5)).not.toContain('✓');
+    expect(etapeDuFil(root, 2)).not.toContain('[coche]');
+    expect(etapeDuFil(root, 5)).not.toContain('[coche]');
   });
 
   test('un tournoi PUBLIE a ses cinq etapes cochees', () => {
@@ -952,7 +955,7 @@ describe('N2 · 4E — « OÙ EN EST LE TOURNOI », LE FIL DES CINQ ETAPES', () 
     });
 
     [1, 2, 3, 4, 5].forEach((rang) => {
-      expect(etapeDuFil(root, rang)).toContain('✓');
+      expect(etapeDuFil(root, rang)).toContain('[coche]');
     });
   });
 

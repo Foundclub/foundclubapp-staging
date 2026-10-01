@@ -16,6 +16,7 @@ import usePlaces from '@/domains/places/usePlaces';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 // eslint-disable-next-line max-len -- un chemin de module ne se coupe pas
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -97,7 +98,7 @@ function Pastille({
       >
         {libelle}
       </Text>
-      <Text style={[Fonts.p3Bold, { color: encre }]}>▾</Text>
+      <SvgIcon color={encre} height={10} name="chevron-down" width={10} />
     </TouchableOpacity>
   );
 }
@@ -288,7 +289,7 @@ function PastillesFiltresClub({ filters, onApply }) {
           width: 44,
         }}
       >
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>✕</Text>
+        <SvgIcon color={Colors.neutral00} height={14} name="close" width={14} />
       </TouchableOpacity>
     </View>
   );

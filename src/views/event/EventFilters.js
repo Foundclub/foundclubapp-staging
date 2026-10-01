@@ -17,6 +17,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
@@ -206,7 +207,7 @@ function EventFilters({ navigation }) {
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
+              <SvgIcon color={Colors.primary500} height={22} name="bell" width={22} />
               <Text style={{ color: Colors.primary500, fontSize: 10, marginTop: 2 }}>{t('eventFilters.createAlert', 'Créer alerte')}</Text>
             </TouchableOpacity>
           </View>
@@ -771,7 +772,7 @@ function EventFilters({ navigation }) {
                 'Enregistrer les modifications',
               ) : t(
                 'eventFilters.createTheAlert',
-                "Créer l'alerte ★",
+                "Créer l'alerte",
               )}
               variant="Primary"
             />

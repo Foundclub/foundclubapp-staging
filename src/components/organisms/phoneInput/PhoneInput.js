@@ -37,62 +37,25 @@ const repairCountryLabel = (label) => {
   }
 };
 
-const REGIONAL_INDICATOR_REGEX = /^[\u{1F1E6}-\u{1F1FF}]{2}$/u;
-
-const getCountryLabelParts = (dialCodeOption) => {
-  const repairedLabel = repairCountryLabel(dialCodeOption?.label);
-  const [firstToken = '', ...restTokens] = repairedLabel.split(/\s+/).filter(Boolean);
-
-  return {
-    countryName: restTokens.join(' ').trim(),
-    firstToken,
-    repairedLabel,
-  };
-};
-
-const flagEmojiToCountryCode = (flagEmoji) => {
-  if (!REGIONAL_INDICATOR_REGEX.test(flagEmoji || '')) {
-    return '';
-  }
-
-  return Array.from(flagEmoji)
-    .map((char) => String.fromCharCode(char.codePointAt(0) - 127397))
-    .join('')
-    .toUpperCase();
-};
+// SANS-EMOJI (01/10/2026) : le code pays (« FR ») est ÉCRIT dans `utils/dial_codes.js`.
+// Il se devinait avant en décodant le drapeau emoji placé en tête du libellé ; le
+// bouton fermé du téléphone montrait ce drapeau, il montre désormais « FR +33 ».
+// Le site, lui, garde ses images de drapeaux (flagcdn), qui ne sont pas des emoji.
+const getDialOptionCountryCode = (dialCodeOption) => String(dialCodeOption?.countryCode || '')
+  .toLowerCase();
 
 const getCompactDialCodeLabel = (dialCodeOption) => {
-  const { firstToken } = getCountryLabelParts(dialCodeOption);
   if (Platform.OS === 'web') {
     return String(dialCodeOption?.value || '');
   }
 
-  if (firstToken && !firstToken.startsWith('+')) {
-    return `${firstToken} ${dialCodeOption?.value || ''}`.trim();
-  }
-
-  return String(dialCodeOption?.value || '');
+  const countryCode = getDialOptionCountryCode(dialCodeOption).toUpperCase();
+  return `${countryCode} ${dialCodeOption?.value || ''}`.trim();
 };
 
-const getDialOptionLabel = (dialCodeOption) => {
-  const { countryName, firstToken, repairedLabel } = getCountryLabelParts(dialCodeOption);
-  const countryCode = flagEmojiToCountryCode(firstToken);
-
-  if (Platform.OS === 'web' && countryCode) {
-    return `${countryName || dialCodeOption?.value || ''}`.trim();
-  }
-
-  return repairedLabel;
-};
-
-const getDialOptionCountryCode = (dialCodeOption) => {
-  if (typeof dialCodeOption?.countryCode === 'string') {
-    return dialCodeOption.countryCode.toLowerCase();
-  }
-
-  const { firstToken } = getCountryLabelParts(dialCodeOption);
-  return flagEmojiToCountryCode(firstToken).toLowerCase();
-};
+const getDialOptionLabel = (dialCodeOption) => (
+  repairCountryLabel(dialCodeOption?.label).trim() || String(dialCodeOption?.value || '')
+);
 
 const getFlagUri = (countryCode) => (countryCode
   ? `https://flagcdn.com/w40/${countryCode}.png`

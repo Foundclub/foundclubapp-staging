@@ -1,6 +1,8 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
+
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 /**
  *
@@ -29,7 +31,7 @@ function Checkbox({ disabled, onValueChange, value }) {
         width: 24,
       }}
     >
-      {value && <Text style={{ color: Colors.neutral900, fontSize: 16, fontWeight: 'bold' }}>✓</Text>}
+      {value && <SvgIcon color={Colors.neutral900} height={16} name="check" width={16} />}
     </TouchableOpacity>
   );
 }

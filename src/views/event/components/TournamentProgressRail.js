@@ -3,6 +3,8 @@ import { Text, View } from 'react-native';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
 /**
  * ⚠️ LES PROPRIETES SONT DECRITES DANS UN `typedef`, ET C'EST DELIBERE.
  * Destructurer dans la signature fait nommer le parametre `root0` par
@@ -90,11 +92,13 @@ function TournamentProgressRail(props) {
             ]}
             testID={`tournament-rail-step-${index + 1}`}
           >
-            {/* ✓ pour ce qui est fait, le RANG pour ce qui reste : l'etape en
-                cours se trouve donc sans compter, c'est la premiere chiffree. */}
-            <Text style={[Fonts.p4Bold, step.done ? Fonts.neutral00 : Fonts.neutral300]}>
-              {step.done ? '✓' : String(index + 1)}
-            </Text>
+            {/* Une coche pour ce qui est fait, le RANG pour ce qui reste : l'etape
+                en cours se trouve donc sans compter, c'est la premiere chiffree. */}
+            {step.done ? (
+              <SvgIcon color={Colors.neutral00} height={12} name="check" width={12} />
+            ) : (
+              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>{String(index + 1)}</Text>
+            )}
             <Text style={[Fonts.p4Bold, step.done ? Fonts.neutral00 : Fonts.neutral200]}>
               {step.label}
             </Text>

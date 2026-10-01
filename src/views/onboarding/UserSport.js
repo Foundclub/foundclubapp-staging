@@ -11,6 +11,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
@@ -278,7 +279,7 @@ function UserSport({ navigation }) {
               onPress={() => setSearchQuery('')}
               style={{ padding: 8 }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16 }}>✕</Text>
+              <SvgIcon color="#FFFFFF" height={14} name="close" width={14} />
             </TouchableOpacity>
           )}
         </View>

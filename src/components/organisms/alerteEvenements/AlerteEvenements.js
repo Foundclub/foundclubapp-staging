@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 import texteInsecable from '@/utils/texteInsecable';
@@ -165,7 +166,7 @@ export function EtapesAlerte({ sorte = SorteAlerte.evenement }) {
         // eslint-disable-next-line max-len -- un texte ne se coupe pas
         'L\'étoile en haut à droite des filtres, ou le bouton sous les résultats, enregistre ta recherche en un toucher.',
       ),
-      titre: t('searchAlerts.guide.step2Title', 'Touche ★ ou « Créer l\'alerte »'),
+      titre: t('searchAlerts.guide.step2Title', 'Touche « Créer l\'alerte »'),
     },
     {
       corps: pourAnnonces
@@ -488,7 +489,7 @@ export function EtoileAlerte({ enCours, onPress }) {
       onPress={onPress}
       style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44, minWidth: 44 }]}
     >
-      <Text style={[Fonts.h3Bold, { color: Colors.primary500 }]}>★</Text>
+      <SvgIcon color={Colors.primary500} height={22} name="bell" width={22} />
       <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
         {texteInsecable(t('eventFilters.createAlert', 'Créer alerte'))}
       </Text>
@@ -510,7 +511,7 @@ export function NoteAlerte({ sorte = SorteAlerte.evenement, statut }) {
       <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
         {t(
           'searchAlerts.sheet.needCity',
-          'Choisis une ville, puis touche ★ pour créer ton alerte.',
+          "Choisis une ville, puis touche « Créer l'alerte ».",
         )}
       </Text>
     );

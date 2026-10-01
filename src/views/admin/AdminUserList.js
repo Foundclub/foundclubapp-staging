@@ -9,6 +9,7 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -196,13 +197,11 @@ function AdminUserList() {
                   le tri etait deja bon — il ne pouvait simplement pas le voir. */}
               {formatInscription(item.createdAt) ? (
                 <Text style={[Fonts.p2, { color: Colors.neutral300, fontSize: 12 }]}>
-                  {`📅 ${formatInscription(item.createdAt)}`}
+                  {formatInscription(item.createdAt)}
                 </Text>
               ) : null}
               {club && (
               <Text style={[Fonts.p2, { color: Colors.neutral300, fontSize: 12 }]}>
-                🏟️
-                      {' '}
                 {club.name}
               </Text>
               )}
@@ -263,7 +262,13 @@ function AdminUserList() {
           Spaces.paddingVertical[8],
         ]}
         >
-          <Text style={{ color: Colors.neutral300, marginRight: 8 }}>🔍</Text>
+          <SvgIcon
+            color={Colors.neutral300}
+            height={16}
+            name="search"
+            style={{ marginRight: 8 }}
+            width={16}
+          />
           <TextInput
             onChangeText={setSearchQuery}
             placeholder={t('adminUserList.searchPlaceholder', 'Rechercher un utilisateur...')}
@@ -276,7 +281,7 @@ function AdminUserList() {
           />
           {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Text style={{ color: Colors.neutral300, fontSize: 18 }}>✕</Text>
+            <SvgIcon color={Colors.neutral300} height={16} name="close" width={16} />
           </TouchableOpacity>
           )}
         </View>
@@ -306,8 +311,8 @@ function AdminUserList() {
           <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>
             {newestFirst ? t(
               'adminUserList.sortNewest',
-              '↓ Derniers inscrits',
-            ) : t('adminUserList.sortOldest', '↑ Plus anciens')}
+              'Derniers inscrits',
+            ) : t('adminUserList.sortOldest', 'Plus anciens')}
           </Text>
         </TouchableOpacity>
 

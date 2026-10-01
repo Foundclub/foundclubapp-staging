@@ -599,13 +599,13 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
     expect(etoile(tree)).toBeUndefined();
   });
 
-  it('avec `onCreateAlert`, l étoile ★ « Créer alerte » est dans l entête', async () => {
+  it('avec `onCreateAlert`, la cloche « Créer alerte » est dans l entête', async () => {
     const { tree } = await rendreAvecEtoile({
       onCreateAlert: jest.fn(() => Promise.resolve('creee')),
     });
     const bouton = etoile(tree);
     expect(bouton).toBeDefined();
-    expect(texteDuNoeud(bouton)).toContain('★');
+    expect(bouton.findAll((n) => n.props && n.props.name === 'bell').length).toBeGreaterThan(0);
     expect(texteDuNoeud(bouton).replace(/\s/g, ' ')).toContain('Créer alerte');
   });
 
@@ -643,7 +643,7 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
       onCreateAlert: jest.fn(() => Promise.resolve('ville-manquante')),
     });
     await toucherLEtoile(tree);
-    expect(texteVisible(tree)).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+    expect(texteVisible(tree)).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
   });
 
   it('échec : la feuille le dit, sans se fermer', async () => {
@@ -662,7 +662,7 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
       pourUneAlerte: true,
     });
     expect(trouver(tree, 'adresse')).toBeDefined();
-    expect(texteVisible(tree)).toContain('Choisis une ville, puis touche ★ pour créer ton alerte.');
+    expect(texteVisible(tree)).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
   });
 });
 

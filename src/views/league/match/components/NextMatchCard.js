@@ -355,7 +355,7 @@ function NextMatchCard({
         await markLeagueMatchVenueBooked(matchId);
       }
       Alert.alert(
-        t('nextMatchCard.alerts.venueBookedTitle', 'Terrain Réservé ✅'),
+        t('nextMatchCard.alerts.venueBookedTitle', 'Terrain Réservé'),
         t('nextMatchCard.alerts.venueBookedBody', 'Le terrain est confirmé !'),
       );
       onRefresh && onRefresh();
@@ -390,7 +390,7 @@ function NextMatchCard({
               const result = await cancelMatch(matchIdToUse, teamIdToUse, 'captain_request');
               Alert.alert(
                 result.penalty > 0
-                  ? t('nextMatchCard.cancel.cancelledWithPenalty', 'Match Annulé ⚠️')
+                  ? t('nextMatchCard.cancel.cancelledWithPenalty', 'Match Annulé (pénalité)')
                   : t('nextMatchCard.cancel.cancelled', 'Match Annulé'),
                 result.message || t('nextMatchCard.cancel.cancelledBody', 'Le match a été annulé.'),
               );
@@ -510,7 +510,9 @@ function NextMatchCard({
                     alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.24)', borderRadius: 25, borderWidth: 1, height: 50, justifyContent: 'center', width: 50,
                   }}
                   >
-                    <Text style={{ fontSize: 24 }}>❓</Text>
+                    <Text style={{ color: Colors.neutral00, fontSize: 24, fontWeight: '700' }}>
+                      ?
+                    </Text>
                   </View>
                   <Text numberOfLines={1} style={[styles.teamName, { color: '#ADB1B2', fontStyle: 'italic' }]}>
                     {t('nextMatchCard.mysteryOpponent', 'Adversaire Mystère')}

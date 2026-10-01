@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -399,7 +400,7 @@ function NewConversation({ navigation, route }) {
         }}
         >
           {/* Coche sur fond primary500 : encre primary900 (cf. THEME.md). */}
-          {isSelected && <Text style={{ color: Colors.primary900, fontSize: 14 }}>✓</Text>}
+          {isSelected && <SvgIcon color={Colors.primary900} height={14} name="check" width={14} />}
         </View>
       </TouchableOpacity>
     );

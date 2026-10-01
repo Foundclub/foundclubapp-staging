@@ -1396,8 +1396,8 @@ export default {
   },
   adminUserDetail: {
     accountStatus: 'Account status',
-    active: '✓ Active',
-    blocked: '✕ Blocked',
+    active: 'Active',
+    blocked: 'Blocked',
     cancel: 'Cancel',
     club: 'Linked club',
     confirmSave: 'Do you want to save the changes?',
@@ -1447,8 +1447,8 @@ export default {
     },
     searchPlaceholder: 'Search for a user...',
     sortHint: 'Sort by sign-up date',
-    sortNewest: '↓ Newest sign-ups',
-    sortOldest: '↑ Oldest',
+    sortNewest: 'Newest sign-ups',
+    sortOldest: 'Oldest',
     states: {
       errorDescription: 'Unable to load users.',
       errorTitle: 'Loading failed',
@@ -2073,13 +2073,13 @@ export default {
     },
   },
   bookingConfigModal: {
-    back: '← Back',
+    back: 'Back',
     booking: 'Booking...',
     confirm: 'Confirm booking',
     next: 'Next',
     private: {
       description: 'I am booking the pitch for my group',
-      title: '🔒 PRIVATE',
+      title: 'PRIVATE',
       totalPrice: 'Total price:',
     },
     selectedSlot: 'Selected slot:',
@@ -2090,7 +2090,7 @@ export default {
       missingPlayers_other: '{{count}} players missing',
       pricePerPlayer: '{{price}}€/player',
       targetPlayers: 'Players wanted:',
-      title: '👥 OPEN MATCH',
+      title: 'OPEN MATCH',
     },
     slotCount_one: '({{count}} slot)',
     slotCount_other: '({{count}} slots)',
@@ -2893,7 +2893,7 @@ export default {
       },
       filledCount: '{{filledCount}} filled in',
       helloAsso: {
-        connected: 'Club account connected ✓ — managed in Club settings',
+        connected: 'Club account connected — managed in Club settings',
         label: 'HelloAsso (online)',
         toConnect: 'To connect in Club settings, from the Fees screen',
       },
@@ -3677,7 +3677,7 @@ export default {
     helloAsso: {
       checkFailedMessage: 'The HelloAsso check failed.',
       checkFailedTitle: 'HelloAsso check failed',
-      connected: 'Connected ✓',
+      connected: 'Connected',
       readyTitle: 'HelloAsso ready',
       settingsHint: "Connects the club's HelloAsso account, once and for all.",
       settingsTitle: 'Club settings — HelloAsso',
@@ -5107,10 +5107,10 @@ export default {
     },
     noTeam: {
       description: 'You must belong to a team to create a recruitment ad.',
-      title: '⚠️ No team',
+      title: 'No team',
     },
     submit: 'Create the ad',
-    teamLabel: '📋 Team:',
+    teamLabel: 'Team:',
     teamUnspecified: 'Not specified',
     title: {
       default: 'Create an ad',
@@ -5537,15 +5537,15 @@ export default {
     booking: 'BOOKING',
     detectionTrial: 'TRIAL',
     event: 'EVENT',
-    full: '✅ Full',
+    full: 'Full',
     invitedTeams: 'invited teams: {{teams}}',
-    lastMinute: '🔥 Last minute',
+    lastMinute: 'Last minute',
     locationNotSet: 'Location not set',
     missingPlayers_one: '{{count}} player missing {{countSuffix}}',
     missingPlayers_other: '{{count}} players missing {{countSuffix}}',
     openToExternalPlayersExternal: 'Open to external players · {{externalLimit}} external spots',
     openTraining: 'OPEN training',
-    playersWanted: '👥 Players wanted',
+    playersWanted: 'Players wanted',
     positionsWanted: 'Positions wanted: {{positions}}',
     teamsUnit: ' teams',
     tournament: 'TOURNAMENT',
@@ -6462,7 +6462,7 @@ export default {
     seeThePosition: 'See the position',
   },
   eventEdit: {
-    aConflictWasDetectedOn: '⚠️ A conflict was detected on this slot. Your request will be submitted for approval.',
+    aConflictWasDetectedOn: 'A conflict was detected on this slot. Your request will be submitted for approval.',
     actions: {
       save: 'Save',
     },
@@ -6715,7 +6715,7 @@ export default {
     cityAndRadiusAreRequired: 'City and radius are required to create an alert',
     createAlert: 'Create alert',
     createAnAlert: 'Create an alert',
-    createTheAlert: 'Create the alert ★',
+    createTheAlert: 'Create the alert',
     editTheAlert: 'Edit the alert',
     errorWhileSaving: 'Error while saving',
     event: 'Event · {{cityName}}',
@@ -6841,10 +6841,10 @@ export default {
     rsvpHint: 'Everyone says in advance whether they are coming. Unchecked: no Present / Absent buttons, no reminders.',
   },
   eventReservationActions: {
-    full: '✅ Full',
-    open: '🟢 Open',
-    playersWanted: '👥 Players wanted',
-    sosActive: '🔥 SOS active',
+    full: 'Full',
+    open: 'Open',
+    playersWanted: 'Players wanted',
+    sosActive: 'SOS active',
   },
   eventShareBubble: {
     event: 'Event',
@@ -7618,7 +7618,7 @@ export default {
     },
     hints: {
       addressSelection: 'Select an address from the list to activate GPS.',
-      gpsActive: '✓ GPS active',
+      gpsActive: 'GPS active',
       planningColor: 'It helps spot the facility in the planning — it appears as a dot on its card.',
     },
     placeholders: {
@@ -10242,8 +10242,8 @@ export default {
         title: 'Nothing to change for now',
       },
       moves: {
-        benchToStarter: 'Bench → starter',
-        starterToAbsent: 'Starter → absent',
+        benchToStarter: 'Bench to starter',
+        starterToAbsent: 'Starter to absent',
       },
       noReplacement: 'No substitute available on the bench. Update the line-up manually.',
       resend: {
@@ -10505,7 +10505,7 @@ export default {
     rebounds: 'Rebounds',
     reminderSendError: 'Unable to send the reminder.',
     reminderSent: 'Reminder sent',
-    remindMissing: 'Remind the {{missingResponseCount}} missing →',
+    remindMissing: 'Remind the {{missingResponseCount}} missing',
     reportAlreadyFinalised: 'This report is already finalised. Player and team totals are up to date.',
     reportFinalised: 'Report finalised',
     reportUpdatedAfterSync: 'The report has been updated after the official score sync.',
@@ -10746,7 +10746,7 @@ export default {
       updated: 'Alert updated successfully',
     },
     cancel: 'Cancel',
-    createAlert: 'Create alert ★',
+    createAlert: 'Create alert',
     createAlertShort: 'Create alert',
     editAlertTitle: 'Edit alert',
     headerTitle: 'Profile filters',
@@ -10827,7 +10827,7 @@ export default {
     },
     stats: {
       open: 'Open bookings',
-      urgent: '🔥 Urgent SOS',
+      urgent: 'Urgent SOS',
     },
     web: {
       card: {
@@ -11617,7 +11617,7 @@ export default {
       successTitle: 'Success',
       userNotFound: 'User not found',
       venueBookedBody: 'The pitch is confirmed!',
-      venueBookedTitle: 'Pitch booked ✅',
+      venueBookedTitle: 'Pitch booked',
     },
     attendanceTitle: 'Confirmed player attendance (',
     badges: {
@@ -11630,7 +11630,7 @@ export default {
       body: '{{penaltyMessage}}\n\nThis action cannot be undone.',
       cancelled: 'Match cancelled',
       cancelledBody: 'The match has been cancelled.',
-      cancelledWithPenalty: 'Match cancelled ⚠️',
+      cancelledWithPenalty: 'Match cancelled (penalty)',
       error: 'Unable to cancel the match',
       no: 'No',
       title: 'Cancel the match?',
@@ -12067,7 +12067,7 @@ export default {
     createAnEvent: 'Create an event',
     createYourFirstEventTo: 'Create your first event to see it here.',
     eventsFrom: 'Events from',
-    featuredInMyClub: '⭐ Featured in my club',
+    featuredInMyClub: 'Featured in my club',
     findYourEventsYourCalendar: 'Find your events, your calendar and planning actions.',
     myPlanning: 'My planning',
     noUpcomingEvent: 'No upcoming event',
@@ -12485,7 +12485,7 @@ export default {
     saveError: 'Unable to save the scorers.',
     saving: 'Saving...',
     submit: 'Confirm scorers',
-    title: '⚽ Scorers -',
+    title: 'Scorers -',
     totalMismatch: 'The total goals ({{currentTotal}}) does not match the score ({{totalGoals}}). Please correct it.',
   },
   playerMatchResponseScreen: {
@@ -13787,7 +13787,7 @@ export default {
       participate: 'Book',
       privatize: 'Make private',
       requestFeatured: 'Request featuring',
-      sos: 'SOS 🔥',
+      sos: 'SOS',
     },
     bookFull: {
       error: 'Unable to book the entire slot.',
@@ -14006,7 +14006,7 @@ export default {
       step1BodyAds: 'In Search › Recruitment, open the filters and type a city. Sport, profile, category and level are optional.',
       step1Title: 'Choose your criteria',
       step2Body: 'The star at the top right of the filters, or the button under the results, saves your search in one tap.',
-      step2Title: 'Tap ★ or “Create the alert”',
+      step2Title: 'Tap “Create the alert”',
       step3Body: 'As soon as a matching new event is published, we notify you. Manage your alerts (10 at most) in My account › Manage my alerts.',
       step3BodyAds: 'As soon as a matching new ad is published, we notify you. Manage your alerts (10 at most) in My account › Manage my alerts.',
       step3Title: 'Get a notification',
@@ -14029,7 +14029,7 @@ export default {
     },
     sheet: {
       error: 'The alert could not be created. Try again in a moment.',
-      needCity: 'Choose a city, then tap ★ to create your alert.',
+      needCity: 'Choose a city, then tap “Create the alert”.',
       starLabel: 'Create an alert with these filters',
     },
     title: 'My alerts',
@@ -14300,7 +14300,7 @@ export default {
   },
   shareCompositionModal: {
     player: 'Player',
-    teamLineUpStartersSee: '📋 Team line-up\n\n⚽ Starters ({{playerCount}}):\n- {{starters}}\n\nSee the details on FoundClub!',
+    teamLineUpStartersSee: 'Team line-up\n\nStarters ({{playerCount}}):\n- {{starters}}\n\nSee the details on FoundClub!',
   },
   showcase: {
     ad: {
@@ -15655,7 +15655,7 @@ export default {
       unlockMyTeam: 'Unlock my team',
       unlockTier: 'Unlock {{selectedTierLabel}}',
     },
-    draftKept: '✓ draft saved',
+    draftKept: 'draft saved',
     later: 'Later',
     licenseeHelper: 'Unlimited teams. All club members count: players, coaches and club managers.',
     lockedNotice: '{{lockedNotice}}: paid for by another member. Only a higher plan can replace it.',
@@ -15691,7 +15691,7 @@ export default {
       wholeClub: 'the whole club',
     },
     exhausted: {
-      cta: 'Unlock the Team plan →',
+      cta: 'Unlock the Team plan',
       defaultBody: 'Unlock the Team plan to keep going without limits.',
       title: '{{label}}: free quota used up',
     },
@@ -16918,9 +16918,9 @@ export default {
       trainerFallback: 'The coach',
     },
     upsell: {
-      clubAction: 'See the plan →',
+      clubAction: 'See the plan',
       clubLabel: 'With the Club plan',
-      teamAction: 'Unlock →',
+      teamAction: 'Unlock',
       teamLabel: 'With the Team plan',
     },
   },
@@ -17535,13 +17535,13 @@ export default {
     coachCreateEvent: {
       instruction: "Create your first event — it's free.",
       skipLabel: 'Create later',
-      successMessage: '🎉 Your free event is live!',
+      successMessage: 'Your free event is live!',
       title: 'Your first event',
     },
     coachCreateTeam: {
       instruction: 'Create your team — everything else follows (your 1st team is free).',
       skipLabel: 'Create later',
-      successMessage: '🎉 Your team has been created!',
+      successMessage: 'Your team has been created!',
       title: 'Create your team',
     },
     coachFindEventCard: {
@@ -17565,7 +17565,7 @@ export default {
     coachOffers: {
       instruction: "Here's what each plan unlocks — over to you.",
       manualLabel: 'Finish the tour',
-      successMessage: 'Tour complete 🎉 Make yourself at home.',
+      successMessage: 'Tour complete. Make yourself at home.',
       title: 'FoundClub plans',
     },
     coachPlanning: {
@@ -17601,7 +17601,7 @@ export default {
     playerProfile: {
       instruction: 'Complete your sports profile to get noticed.',
       manualLabel: 'Finish the tour',
-      successMessage: 'Great profile — tour complete 🎉',
+      successMessage: 'Great profile — tour complete',
       title: 'My profile',
     },
     presidentClub: {
@@ -17613,7 +17613,7 @@ export default {
     presidentEvents: {
       instruction: "Create an event for your club — the first one's free.",
       skipLabel: 'Create later',
-      successMessage: '🎉 Your free event is live!',
+      successMessage: 'Your free event is live!',
       title: 'Your first event',
     },
     presidentMessaging: {
@@ -17625,7 +17625,7 @@ export default {
     presidentOffers: {
       instruction: 'The Club plan unlocks all of this at once.',
       manualLabel: 'Finish the tour',
-      successMessage: 'Tour complete 🎉',
+      successMessage: 'Tour complete',
       title: 'The Club plan',
     },
     presidentPlanning: {
@@ -18396,7 +18396,7 @@ export default {
       measureOf: 'measurement {{current}} of {{total}}',
       nothingHere: 'This test has nothing to read from video.',
       notStarted: 'Day not started yet — nothing to read for now.',
-      previous: '← Attempt {{count}}',
+      previous: 'Back to attempt {{count}}',
       remaining_one: '{{count}} measurement to read',
       remaining_other: '{{count}} measurements to read',
       save: 'Save',
@@ -19128,7 +19128,7 @@ export default {
         kicker: 'Today',
         title: 'Start for free',
       },
-      hint: "You'll find these plans anytime in Profile → My subscription.",
+      hint: "You'll find these plans anytime in Profile, under My subscription.",
       team: {
         bullet1: 'Unlimited events and matches',
         bullet2: 'Call-ups in 2 taps',

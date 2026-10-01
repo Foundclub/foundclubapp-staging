@@ -12,6 +12,7 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
@@ -519,7 +520,7 @@ function TrainingProgramDetail({ navigation, route }) {
               }}
               >
                 {depart === quand && (
-                  <Text style={[Fonts.caption, { color: Colors.neutral00 }]}>✓</Text>
+                  <SvgIcon color={Colors.neutral00} height={12} name="check" width={12} />
                 )}
               </View>
               <View style={{ flex: 1 }}>

@@ -1456,8 +1456,8 @@ export default {
   },
   adminUserDetail: {
     accountStatus: 'Statut du Compte',
-    active: '✓ Actif',
-    blocked: '✕ Bloqué',
+    active: 'Actif',
+    blocked: 'Bloqué',
     cancel: 'Annuler',
     club: 'Club Associé',
     confirmSave: 'Veux-tu sauvegarder les modifications ?',
@@ -1508,8 +1508,8 @@ export default {
     },
     searchPlaceholder: 'Rechercher un utilisateur...',
     sortHint: 'Trier par date d inscription',
-    sortNewest: '↓ Derniers inscrits',
-    sortOldest: '↑ Plus anciens',
+    sortNewest: 'Derniers inscrits',
+    sortOldest: 'Plus anciens',
     states: {
       errorDescription: 'Impossible de charger les utilisateurs.',
       errorTitle: 'Chargement impossible',
@@ -2249,13 +2249,13 @@ export default {
     },
   },
   bookingConfigModal: {
-    back: '← Retour',
+    back: 'Retour',
     booking: 'Réservation...',
     confirm: 'Confirmer la réservation',
     next: 'Suivant',
     private: {
       description: 'Je réserve le terrain pour mon groupe',
-      title: '🔒 PRIVATISER',
+      title: 'PRIVATISER',
       totalPrice: 'Prix total:',
     },
     selectedSlot: 'Créneau sélectionné :',
@@ -2266,7 +2266,7 @@ export default {
       missingPlayers_other: 'Il manque {{count}} joueurs',
       pricePerPlayer: '{{price}}€/joueur',
       targetPlayers: 'Joueurs recherchés :',
-      title: '👥 MATCH OUVERT',
+      title: 'MATCH OUVERT',
     },
     slotCount_one: '({{count}} créneau)',
     slotCount_other: '({{count}} créneaux)',
@@ -3148,7 +3148,7 @@ export default {
       },
       filledCount: '{{filledCount}} renseignée(s)',
       helloAsso: {
-        connected: 'Compte du club connecté ✓ — géré dans Réglages du club',
+        connected: 'Compte du club connecté — géré dans Réglages du club',
         label: 'HelloAsso (en ligne)',
         toConnect: 'À connecter dans Réglages du club, depuis l écran Cotisations',
       },
@@ -3971,7 +3971,7 @@ export default {
     helloAsso: {
       checkFailedMessage: 'La vérification HelloAsso a échoué.',
       checkFailedTitle: 'Vérification HelloAsso impossible',
-      connected: 'Connecté ✓',
+      connected: 'Connecté',
       readyTitle: 'HelloAsso prêt',
       settingsHint: 'Connecte le compte HelloAsso du club, une fois pour toutes.',
       settingsTitle: 'Réglages du club — HelloAsso',
@@ -5453,10 +5453,10 @@ export default {
     },
     noTeam: {
       description: 'Tu dois être associé à une équipe pour créer une annonce de recrutement.',
-      title: '⚠️ Aucune équipe',
+      title: 'Aucune équipe',
     },
     submit: "Créer l'annonce",
-    teamLabel: '📋 Équipe:',
+    teamLabel: 'Équipe:',
     teamUnspecified: 'Non spécifié',
     title: {
       default: 'Créer une annonce',
@@ -5903,16 +5903,16 @@ export default {
     booking: 'RÉSERVATION',
     detectionTrial: 'DÉTECTION / ESSAI',
     event: 'ÉVÉNEMENT',
-    full: '✅ Complet',
+    full: 'Complet',
     invitedTeams: 'équipes invitées: {{teams}}',
-    lastMinute: '🔥 Dernière minute',
+    lastMinute: 'Dernière minute',
     locationNotSet: 'Lieu non défini',
     missingPlayers_one: 'Il manque {{count}} joueur {{countSuffix}}',
     missingPlayers_other: 'Il manque {{count}} joueurs {{countSuffix}}',
     // eslint-disable-next-line max-len
     openToExternalPlayersExternal: 'Ouvert aux joueurs externes · {{externalLimit}} places externes',
     openTraining: 'Entraînement OUVERT',
-    playersWanted: '👥 Joueurs recherchés',
+    playersWanted: 'Joueurs recherchés',
     positionsWanted: 'Postes recherchés : {{positions}}',
     teamsUnit: ' équipes',
     tournament: 'TOURNOI',
@@ -6882,7 +6882,7 @@ export default {
   },
   eventEdit: {
     // eslint-disable-next-line max-len
-    aConflictWasDetectedOn: '⚠️ Un conflit a été détecté sur ce créneau. Ta demande sera soumise à validation.',
+    aConflictWasDetectedOn: 'Un conflit a été détecté sur ce créneau. Ta demande sera soumise à validation.',
     actions: {
       save: 'Enregistrer',
     },
@@ -7152,7 +7152,7 @@ export default {
     cityAndRadiusAreRequired: 'La ville et le rayon sont obligatoires pour créer une alerte',
     createAlert: 'Créer alerte',
     createAnAlert: 'Créer une alerte',
-    createTheAlert: "Créer l'alerte ★",
+    createTheAlert: "Créer l'alerte",
     editTheAlert: "Modifier l'alerte",
     errorWhileSaving: 'Erreur lors de la sauvegarde',
     event: 'Événement · {{cityName}}',
@@ -7294,10 +7294,10 @@ export default {
       + 'Décoché : ni boutons Présent / Absent, ni relances.',
   },
   eventReservationActions: {
-    full: '✅ Complet',
-    open: '🟢 Ouvert',
-    playersWanted: '👥 Joueurs recherchés',
-    sosActive: '🔥 SOS actif',
+    full: 'Complet',
+    open: 'Ouvert',
+    playersWanted: 'Joueurs recherchés',
+    sosActive: 'SOS actif',
   },
   eventShareBubble: {
     event: 'Événement',
@@ -8132,7 +8132,7 @@ export default {
     },
     hints: {
       addressSelection: 'Sélectionne une adresse dans la liste pour activer le GPS.',
-      gpsActive: '✓ GPS activé',
+      gpsActive: 'GPS activé',
       planningColor: 'Elle sert à repérer l\'installation dans le planning — elle apparaît en pastille sur sa carte.',
     },
     placeholders: {
@@ -10906,8 +10906,8 @@ export default {
         title: 'Rien à modifier pour l’instant',
       },
       moves: {
-        benchToStarter: 'Banc → titulaire',
-        starterToAbsent: 'Titulaire → absent',
+        benchToStarter: 'Banc vers titulaire',
+        starterToAbsent: 'Titulaire vers absent',
       },
       noReplacement: 'Aucun remplaçant disponible sur le banc. Reprends la composition à la main.',
       resend: {
@@ -11186,7 +11186,7 @@ export default {
     rebounds: 'Rebonds',
     reminderSendError: "Impossible d'envoyer la relance.",
     reminderSent: 'Relance envoyée',
-    remindMissing: 'Relancer les {{missingResponseCount}} manquant·e·s →',
+    remindMissing: 'Relancer les {{missingResponseCount}} manquant·e·s',
     // eslint-disable-next-line max-len
     reportAlreadyFinalised: 'Ce rapport est déjà finalise. Les agregations joueur et équipe sont à jour.',
     reportFinalised: 'Rapport finalise',
@@ -11446,7 +11446,7 @@ export default {
       updated: 'Alerte modifiée avec succès',
     },
     cancel: 'Annuler',
-    createAlert: "Créer l'alerte ★",
+    createAlert: "Créer l'alerte",
     createAlertShort: 'Créer alerte',
     editAlertTitle: "Modifier l'alerte",
     headerTitle: 'Filtres profils',
@@ -11527,7 +11527,7 @@ export default {
     },
     stats: {
       open: 'Réservations ouvertes',
-      urgent: '🔥 SOS urgents',
+      urgent: 'SOS urgents',
     },
     web: {
       card: {
@@ -12267,7 +12267,7 @@ export default {
       successTitle: 'Succès',
       userNotFound: 'Utilisateur introuvable',
       venueBookedBody: 'Le terrain est confirmé !',
-      venueBookedTitle: 'Terrain Réservé ✅',
+      venueBookedTitle: 'Terrain Réservé',
     },
     attendanceTitle: 'Presences joueurs confirmees (',
     badges: {
@@ -12280,7 +12280,7 @@ export default {
       body: '{{penaltyMessage}}\n\nCette action est irréversible.',
       cancelled: 'Match Annulé',
       cancelledBody: 'Le match a été annulé.',
-      cancelledWithPenalty: 'Match Annulé ⚠️',
+      cancelledWithPenalty: 'Match Annulé (pénalité)',
       error: "Impossible d'annuler le match",
       no: 'Non',
       title: 'Annuler le match ?',
@@ -12672,7 +12672,7 @@ export default {
     createAnEvent: 'Créer un événement',
     createYourFirstEventTo: 'Crée ton premier événement pour le voir apparaître ici.',
     eventsFrom: 'Événements à partir de',
-    featuredInMyClub: '⭐ À la une dans mon club',
+    featuredInMyClub: 'À la une dans mon club',
     // eslint-disable-next-line max-len
     findYourEventsYourCalendar: 'Retrouve tes événements, ton calendrier et les actions de planning.',
     myPlanning: 'Mon planning',
@@ -13123,7 +13123,7 @@ export default {
     saveError: 'Impossible de sauvegarder les buteurs.',
     saving: 'Enregistrement...',
     submit: 'Valider les buteurs',
-    title: '⚽ Buteurs -',
+    title: 'Buteurs -',
     // eslint-disable-next-line max-len
     totalMismatch: 'Le total des buts ({{currentTotal}}) ne correspond pas au score ({{totalGoals}}). Merci de corriger.',
   },
@@ -14662,7 +14662,7 @@ export default {
       step1Title: 'Choisis tes critères',
       // eslint-disable-next-line max-len
       step2Body: "L'étoile en haut à droite des filtres, ou le bouton sous les résultats, enregistre ta recherche en un toucher.",
-      step2Title: "Touche ★ ou « Créer l'alerte »",
+      step2Title: "Touche « Créer l'alerte »",
       // eslint-disable-next-line max-len
       step3Body: "Dès qu'un nouvel événement correspondant est publié, on te prévient. Tes alertes (10 au maximum) se gèrent dans Mon compte › Gérer mes alertes.",
       // eslint-disable-next-line max-len
@@ -14689,7 +14689,7 @@ export default {
     },
     sheet: {
       error: "L'alerte n'a pas pu être créée. Réessaie dans un instant.",
-      needCity: 'Choisis une ville, puis touche ★ pour créer ton alerte.',
+      needCity: "Choisis une ville, puis touche « Créer l'alerte ».",
       starLabel: 'Créer une alerte avec ces filtres',
     },
     title: 'Mes Alertes',
@@ -14971,7 +14971,7 @@ export default {
   shareCompositionModal: {
     player: 'Joueur',
     // eslint-disable-next-line max-len
-    teamLineUpStartersSee: "📋 Composition d'équipe\n\n⚽ Titulaires ({{playerCount}}):\n- {{starters}}\n\nRetrouve le détail sur FoundClub !",
+    teamLineUpStartersSee: "Composition d'équipe\n\nTitulaires ({{playerCount}}):\n- {{starters}}\n\nRetrouve le détail sur FoundClub !",
   },
   // L16 — chaque bouton dit CE QU'ON OBTIENT (un fichier, un format), jamais un
   // verbe abstrait. `share` porte desormais le geste principal : envoyer l'AFFICHE.
@@ -16417,7 +16417,7 @@ export default {
       unlockMyTeam: 'Débloquer mon équipe',
       unlockTier: 'Débloquer {{selectedTierLabel}}',
     },
-    draftKept: '✓ brouillon conservé',
+    draftKept: 'brouillon conservé',
     later: 'Plus tard',
     // eslint-disable-next-line max-len
     licenseeHelper: 'Équipes illimitées. Tous les membres du club comptent : joueurs, coachs et dirigeants.',
@@ -16455,7 +16455,7 @@ export default {
       wholeClub: 'tout le club',
     },
     exhausted: {
-      cta: "Débloquer l'offre Équipe →",
+      cta: "Débloquer l'offre Équipe",
       defaultBody: "Débloque l'offre Équipe pour continuer sans limite.",
       title: '{{label}} : quota gratuit épuisé',
     },
@@ -16758,7 +16758,7 @@ export default {
       participate: 'Réserver',
       privatize: 'Privatiser',
       requestFeatured: 'Demander la mise à la une',
-      sos: 'SOS 🔥',
+      sos: 'SOS',
     },
     bookFull: {
       error: 'Impossible de réserver le créneau entier.',
@@ -18002,9 +18002,9 @@ export default {
       trainerFallback: "L'entraîneur",
     },
     upsell: {
-      clubAction: "Voir l'offre →",
+      clubAction: "Voir l'offre",
       clubLabel: "Avec l'offre Club",
-      teamAction: 'Débloquer →',
+      teamAction: 'Débloquer',
       teamLabel: "Avec l'offre Équipe",
     },
   },
@@ -18482,13 +18482,13 @@ export default {
     coachCreateEvent: {
       instruction: 'Crée ton premier événement — il est offert.',
       skipLabel: 'Créer plus tard',
-      successMessage: '🎉 Ton événement offert est en ligne !',
+      successMessage: 'Ton événement offert est en ligne !',
       title: 'Ton premier événement',
     },
     coachCreateTeam: {
       instruction: 'Crée ton équipe — tout le reste en découle (ta 1ʳᵉ équipe est offerte).',
       skipLabel: 'Créer plus tard',
-      successMessage: '🎉 Ton équipe est créée !',
+      successMessage: 'Ton équipe est créée !',
       title: 'Crée ton équipe',
     },
     coachFindEventCard: {
@@ -18514,7 +18514,7 @@ export default {
     coachOffers: {
       instruction: 'Voici ce que chaque offre débloque — à toi de jouer.',
       manualLabel: 'Terminer le tour',
-      successMessage: 'Tour terminé 🎉 Bienvenue chez toi.',
+      successMessage: 'Tour terminé. Bienvenue chez toi.',
       title: 'Les offres FoundClub',
     },
     coachPlanning: {
@@ -18550,7 +18550,7 @@ export default {
     playerProfile: {
       instruction: 'Complète ton profil sportif pour être repéré·e.',
       manualLabel: 'Terminer le tour',
-      successMessage: 'Profil au top — tour terminé 🎉',
+      successMessage: 'Profil au top — tour terminé',
       title: 'Mon profil',
     },
     presidentClub: {
@@ -18562,7 +18562,7 @@ export default {
     presidentEvents: {
       instruction: 'Crée un événement pour ton club — le premier est offert.',
       skipLabel: 'Créer plus tard',
-      successMessage: '🎉 Ton événement offert est en ligne !',
+      successMessage: 'Ton événement offert est en ligne !',
       title: 'Ton premier événement',
     },
     presidentMessaging: {
@@ -18574,7 +18574,7 @@ export default {
     presidentOffers: {
       instruction: "L'offre Club débloque tout ça d'un coup.",
       manualLabel: 'Terminer le tour',
-      successMessage: 'Tour terminé 🎉',
+      successMessage: 'Tour terminé',
       title: "L'offre Club",
     },
     presidentPlanning: {
@@ -19451,7 +19451,7 @@ export default {
       measureOf: 'mesure {{current}} sur {{total}}',
       nothingHere: 'Ce test n’a rien à relever sur la vidéo.',
       notStarted: 'Journée pas encore commencée — rien à relever pour l’instant.',
-      previous: '← Essai {{count}}',
+      previous: "Retour à l'essai {{count}}",
       // 🐞 « en attente » disait la MEME chose que le bandeau d envoi juste au-dessus
       // (« 2 mesures en attente » / « 2 mesures en attente d'envoi ») alors que les
       // deux comptent des choses differentes : le travail restant, et le reseau.
@@ -20410,7 +20410,7 @@ export default {
         kicker: "Aujourd'hui",
         title: 'Commence sans payer',
       },
-      hint: 'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.',
+      hint: 'Tu retrouveras les offres à tout moment dans Profil, rubrique Mon abonnement.',
       team: {
         bullet1: 'Événements et matchs illimités',
         bullet2: 'Convocations en 2 taps',

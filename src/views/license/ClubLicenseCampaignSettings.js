@@ -23,6 +23,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DateTimeSelector from '@/components/molecules/dateTimeSelector/DateTimeSelector';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
@@ -1387,9 +1388,9 @@ function CheckRow({
         <Text style={[Fonts.p2Bold, selected ? Fonts.neutral00 : Fonts.neutral100]}>{label}</Text>
         {hint ? <Text style={[Fonts.p3, Fonts.neutral300]}>{hint}</Text> : null}
       </View>
-      <Text style={[Fonts.p2Bold, { color: selected ? Colors.primary500 : Colors.neutral300 }]}>
-        {selected ? '✓' : ''}
-      </Text>
+      {selected ? (
+        <SvgIcon color={Colors.primary500} height={16} name="check" width={16} />
+      ) : null}
     </Pressable>
   );
 }
@@ -3821,7 +3822,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             hint={helloAssoIsPublishReady
               ? t(
                 'clubLicenseCampaignSettings.payment.helloAsso.connected',
-                'Compte du club connecté ✓ — géré dans Réglages du club',
+                'Compte du club connecté — géré dans Réglages du club',
               )
               : t(
                 'clubLicenseCampaignSettings.payment.helloAsso.toConnect',
@@ -4069,7 +4070,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             label={t('clubLicenseCampaignSettings.review.period', 'Période')}
             value={periodMode === 'season'
               ? currentSeasonOptionLabel
-              : `${isoToPickerDateValue(startDate)} → ${isoToPickerDateValue(endDate)}`}
+              : `${isoToPickerDateValue(startDate)} – ${isoToPickerDateValue(endDate)}`}
           />
         </View>
 

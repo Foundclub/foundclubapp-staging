@@ -15,6 +15,7 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 import { useCreateBooking } from '@/services/facility/facilityQueries';
@@ -258,7 +259,7 @@ function BookingConfigModal({
           <View style={styles.stepContent}>
             <Pressable onPress={handleBack} style={Spaces.marginBottom[16]}>
               <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
-                {t('bookingConfigModal.back', '← Retour')}
+                {t('bookingConfigModal.back', 'Retour')}
               </Text>
             </Pressable>
 
@@ -286,11 +287,11 @@ function BookingConfigModal({
             >
               <View style={styles.modeHeader}>
                 <Text style={[Fonts.h3, Fonts.neutral00]}>
-                  {t('bookingConfigModal.private.title', '🔒 PRIVATISER')}
+                  {t('bookingConfigModal.private.title', 'PRIVATISER')}
                 </Text>
                 {mode === 'private' && (
                   <View style={[styles.checkBadge, { backgroundColor: Colors.primary500 }]}>
-                    <Text style={styles.checkText}>✓</Text>
+                    <SvgIcon color="#FFFFFF" height={14} name="check" width={14} />
                   </View>
                 )}
               </View>
@@ -318,11 +319,11 @@ function BookingConfigModal({
             >
               <View style={styles.modeHeader}>
                 <Text style={[Fonts.h3, Fonts.neutral00]}>
-                  {t('bookingConfigModal.shared.title', '👥 MATCH OUVERT')}
+                  {t('bookingConfigModal.shared.title', 'MATCH OUVERT')}
                 </Text>
                 {mode === 'shared' && (
                   <View style={[styles.checkBadge, { backgroundColor: Colors.success500 }]}>
-                    <Text style={styles.checkText}>✓</Text>
+                    <SvgIcon color="#FFFFFF" height={14} name="check" width={14} />
                   </View>
                 )}
               </View>

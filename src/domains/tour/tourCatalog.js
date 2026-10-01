@@ -129,7 +129,7 @@ const COACH_TOUR_STEPS = [
     },
     success: { key: 'team.created', type: 'action' },
     get successMessage() {
-      return i18next.t('tourCatalog.coachCreateTeam.successMessage', '🎉 Ton équipe est créée !');
+      return i18next.t('tourCatalog.coachCreateTeam.successMessage', 'Ton équipe est créée !');
     },
     get title() {
       return i18next.t('tourCatalog.coachCreateTeam.title', 'Crée ton équipe');
@@ -181,7 +181,7 @@ const COACH_TOUR_STEPS = [
     get successMessage() {
       return i18next.t(
         'tourCatalog.coachCreateEvent.successMessage',
-        '🎉 Ton événement offert est en ligne !',
+        'Ton événement offert est en ligne !',
       );
     },
     get title() {
@@ -312,7 +312,7 @@ const COACH_TOUR_STEPS = [
     get successMessage() {
       return i18next.t(
         'tourCatalog.coachOffers.successMessage',
-        'Tour terminé 🎉 Bienvenue chez toi.',
+        'Tour terminé. Bienvenue chez toi.',
       );
     },
     get title() {
@@ -405,7 +405,7 @@ const PLAYER_TOUR_STEPS = [
     get successMessage() {
       return i18next.t(
         'tourCatalog.playerProfile.successMessage',
-        'Profil au top — tour terminé 🎉',
+        'Profil au top — tour terminé',
       );
     },
     get title() {
@@ -496,7 +496,7 @@ const PRESIDENT_TOUR_STEPS = [
     get successMessage() {
       return i18next.t(
         'tourCatalog.presidentEvents.successMessage',
-        '🎉 Ton événement offert est en ligne !',
+        'Ton événement offert est en ligne !',
       );
     },
     get title() {
@@ -537,7 +537,7 @@ const PRESIDENT_TOUR_STEPS = [
     navTarget: offersRecapTarget,
     success: { type: 'manual' },
     get successMessage() {
-      return i18next.t('tourCatalog.presidentOffers.successMessage', 'Tour terminé 🎉');
+      return i18next.t('tourCatalog.presidentOffers.successMessage', 'Tour terminé');
     },
     get title() {
       return i18next.t('tourCatalog.presidentOffers.title', "L'offre Club");
