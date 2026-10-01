@@ -3,10 +3,9 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
-
-import { isRsvpEnabled } from '@/domains/event/presenceRule';
 
 import Button from '@/components/atoms/button/Button';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';

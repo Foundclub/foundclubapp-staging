@@ -2,9 +2,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { createFoundClubQueryClient } from '@/app/queryClient';
 import { updateMe } from '@/services/auth/authService';
 
+import { createFoundClubQueryClient } from '@/app/queryClient';
 import UserRole from '../UserRole';
 
 // FINITIONS5 (tournee 7, defaut 8) — « QUEL EST TON STATUT ? », L'ECRAN QUI

@@ -11181,7 +11181,7 @@ export default {
   },
   myActivitiesScreen: {
     empty: {
-      applicationsBody: "Apply to an offer from Search › Recruitment: follow its reply here.",
+      applicationsBody: 'Apply to an offer from Search › Recruitment: follow its reply here.',
       applicationsTitle: 'No applications yet.',
       publicationsBody: "Post an offer or a friendly match from Search: you'll manage them here.",
       publicationsTitle: "You haven't posted anything yet.",

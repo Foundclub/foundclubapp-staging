@@ -41,8 +41,6 @@ import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
-
 import { useGetUserById } from '@/services/auth/authQueries';
 import { useUserCurrentLicense } from '@/services/license/licenseQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
@@ -59,6 +57,8 @@ import {
 import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage } from '@/utils/errors/displayError';
 import safeJsonParse from '@/utils/safeJsonParse';
+
+import { PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
 
 const resolveProfileStatValue = ({
   overallValue,
@@ -884,8 +884,8 @@ function UserDetails({ navigation, route }) {
 
     // ⚠️ Le repli reste 18 : un age inconnu ne doit PAS ouvrir la voie du
     // contact direct par erreur, il doit se comporter comme un adulte
-    // (comportement d avant SECU-2, conserve tel quel).
-    const profileAge = readProfileAge(user);
+    // (comportement d avant SECU-2, conserve tel quel). `profileAge` = celui du composant
+    // (meme `readProfileAge(user)`, pose par PARENT-RETOURS), plus de seconde lecture.
     const computedAge = typeof profileAge === 'number' ? profileAge : 18;
 
     if (computedAge < 13) {
