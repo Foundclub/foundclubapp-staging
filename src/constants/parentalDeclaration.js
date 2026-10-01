@@ -6,6 +6,59 @@ export const MINOR_PARENTAL_DECLARATION_TEXT = 'Je déclare être le parent ou l
 export const MINOR_PARENTAL_DECLARATION_TEXT_HASH = '42f52a118fe373ac50160c7676da639696723111fbf9e1c4c412d3f3f6c7adf2';
 export const MINOR_PARENTAL_DECLARATION_MIN_AGE = 15;
 
+// CONSENTEMENT-PHRASE (2026-10-01, decision d'Adel « 3-A corrige ») — DEUX SIGNATAIRES, DEUX TEXTES.
+//
+// ☠️ Le texte ci-dessus (v1) etait aussi celui que cochait un ado de 13-14 ans inscrit SEUL :
+// on lui faisait affirmer qu'il est son propre parent. Il reste celui du PARENT qui signe
+// depuis le lien (PARENT-LIEN). L'ado coche desormais une phrase VRAIE pour lui (v2, modele
+// SportEasy), tournee pour ne pas accorder un participe au genre de l'ado.
+//
+// ⛔ Ce texte est juridique : il ne se traduit pas, et son empreinte (sha256 du texte AFFICHE,
+// en UTF-8) doit rester EGALE a celle du serveur (admin, legal-acceptance.js). Les temoins
+// « parentalDeclaration.signataires.test.js » (S2) et « SECUEVENT/V3 bis » (admin) y veillent.
+// Changer une virgule = une NOUVELLE version, des deux cotes ; les preuves deja enregistrees
+// gardent la leur.
+export const PARENTAL_DECLARATION_SIGNATORIES = Object.freeze({
+  MINOR_SELF: 'minor_self',
+  PARENT: 'parent',
+});
+export const MINOR_SELF_DECLARATION_VERSION = 'minor-parental-declaration-v2-self-2026-10-01';
+export const MINOR_SELF_DECLARATION_TEXT = 'Un de mes parents (ou mon représentant légal) m\'a donné son accord pour créer ce compte.';
+export const MINOR_SELF_DECLARATION_TEXT_HASH = '8bdc055408f8d93f68dfea13bccd4e0402d7afc4299eec467285dca668081ae3';
+
+const DECLARATION_BY_SIGNATORY = {
+  [PARENTAL_DECLARATION_SIGNATORIES.MINOR_SELF]: {
+    consentFlags: { parentalPermissionObtained: true },
+    legalTextHash: MINOR_SELF_DECLARATION_TEXT_HASH,
+    legalVersion: MINOR_SELF_DECLARATION_VERSION,
+    text: MINOR_SELF_DECLARATION_TEXT,
+  },
+  [PARENTAL_DECLARATION_SIGNATORIES.PARENT]: {
+    consentFlags: { parentalAuthorityConfirmation: true },
+    legalTextHash: MINOR_PARENTAL_DECLARATION_TEXT_HASH,
+    legalVersion: MINOR_PARENTAL_DECLARATION_VERSION,
+    text: MINOR_PARENTAL_DECLARATION_TEXT,
+  },
+};
+
+/**
+ * La declaration que signe CETTE personne. Par defaut l'ado : c'est lui qui coche dans 7
+ * appelants sur 8 ; seul le lien parent nomme le parent (temoin S5). Un signataire inconnu
+ * retombe sur l'ado — et le serveur refuse alors le lien parent, bruyamment.
+ * @param {string} [signatory] - « minor_self » ou « parent ».
+ * @returns {{ consentFlags: object, legalTextHash: string, legalVersion: string, text: string }} La declaration.
+ */
+const declarationFor = (signatory) => (
+  DECLARATION_BY_SIGNATORY[signatory] || DECLARATION_BY_SIGNATORY[PARENTAL_DECLARATION_SIGNATORIES.MINOR_SELF]
+);
+
+/**
+ * Le texte a afficher a cote de la case : celui dont la preuve portera l'empreinte.
+ * @param {string} [signatory] - « minor_self » (defaut) ou « parent ».
+ * @returns {string} Le texte juridique, non traduit.
+ */
+export const parentalDeclarationTextFor = (signatory) => declarationFor(signatory).text;
+
 const parseBirthdate = (value) => {
   if (!value || typeof value !== 'string') return null;
 
@@ -155,24 +208,26 @@ export const isMinorParentAccountRequiredError = (error) => [
 
 export const buildMinorParentalDeclarationPayload = ({
   metadata = {},
+  signatory = PARENTAL_DECLARATION_SIGNATORIES.MINOR_SELF,
   sourceScreen = 'minor_parental_declaration',
   targetDocumentId = null,
   targetType = 'user_profile',
-} = {}) => ({
-  accepted: true,
-  consentFlags: {
-    parentalAuthorityConfirmation: true,
-  },
-  devicePlatform: Platform.OS,
-  legalTextHash: MINOR_PARENTAL_DECLARATION_TEXT_HASH,
-  legalVersion: MINOR_PARENTAL_DECLARATION_VERSION,
-  locale: 'fr-FR',
-  metadata,
-  scope: MINOR_PARENTAL_DECLARATION_SCOPE,
-  sourceScreen,
-  targetDocumentId,
-  targetType,
-});
+} = {}) => {
+  const { consentFlags, legalTextHash, legalVersion } = declarationFor(signatory);
+  return {
+    accepted: true,
+    consentFlags,
+    devicePlatform: Platform.OS,
+    legalTextHash,
+    legalVersion,
+    locale: 'fr-FR',
+    metadata,
+    scope: MINOR_PARENTAL_DECLARATION_SCOPE,
+    sourceScreen,
+    targetDocumentId,
+    targetType,
+  };
+};
 
 /**
  * Ce refus du serveur est-il le 400 << declaration parentale >> ?

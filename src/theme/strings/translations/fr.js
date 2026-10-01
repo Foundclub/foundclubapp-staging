@@ -12585,9 +12585,11 @@ export default {
     title: 'Un compte parent est nécessaire',
   },
   parentalDeclarationCard: {
-    // eslint-disable-next-line max-len
-    description: 'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant légal.',
-    title: 'Déclaration parentale obligatoire',
+    // CONSENTEMENT-PHRASE (01/10) : c'est l'ADO qui lit cette carte (inscription, profil, carte
+    // de collection). Le parent qui signe depuis le lien a son propre titre et sa propre phrase.
+    description: 'Tu as moins de 15 ans : un de tes parents (ou ton représentant légal) doit être '
+      + 'd’accord pour que tu utilises FoundClub.',
+    title: 'L’accord de tes parents',
   },
   participantEventList: {
     addAnEvent: 'Ajouter un événement',
@@ -13592,7 +13594,7 @@ export default {
       updateFailed: 'Impossible de mettre à jour ton profil.',
     },
     parentalDeclaration: {
-      required: 'Cette confirmation est obligatoire pour enregistrer un profil de moins de 13 ans.',
+      required: 'Coche la case pour enregistrer un profil de moins de 15 ans.',
     },
     tutorial: {
       form: {
@@ -19933,25 +19935,34 @@ export default {
     },
     alerts: {
       saveError: {
-        message: 'Impossible d enregistrer la déclaration parentale.',
+        message: 'Impossible d’enregistrer ta réponse.',
         title: 'Erreur',
       },
     },
     card: {
-      // eslint-disable-next-line max-len
-      description: 'La personne qui utilise FoundClub pour ce profil doit être le parent ou le représentant legal de l enfant.',
+      description: 'Coche seulement si c’est vrai : ta réponse est enregistrée.',
     },
-    // eslint-disable-next-line max-len
-    intro: 'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant légal.',
+    // CONSENTEMENT-PHRASE (01/10, décision d'Adel « 3-A corrigé ») : l'ado ne confirme plus
+    // qu'il EST le parent ; il dit qu'un parent est d'accord.
+    intro: 'Tu as moins de 15 ans : pour continuer, un de tes parents (ou ton représentant légal) '
+      + 'doit être d’accord. Si c’est le cas, coche la case.',
     loadError: {
       message: 'Impossible de charger le profil.',
       retry: 'Reessayer',
       title: 'Chargement impossible',
     },
     loading: {
-      description: 'Nous recuperons le profil avant la déclaration parentale.',
+      description: 'Nous récupérons ton profil.',
       title: 'Chargement du profil',
     },
+    // Le lien parent n'existe que dans l'application mobile (webRouteExemptions.js).
+    parentLink: {
+      app: 'Ton parent peut aussi donner son accord depuis son propre compte FoundClub : '
+        + 'Profil → Mes enfants. Tu recevras sa demande, et c’est toi qui l’accepteras.',
+      web: 'Ton parent peut aussi donner son accord depuis son propre compte, dans '
+        + 'l’application mobile FoundClub : ce n’est pas encore possible sur le site.',
+    },
+    title: 'L’accord de tes parents',
   },
   userPhysique: {
     alerts: {

@@ -5,29 +5,37 @@ import useTheme from '@/theme/themeContext';
 
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 
+import {
+  PARENTAL_DECLARATION_SIGNATORIES,
+  parentalDeclarationTextFor,
+} from '@/constants/parentalDeclaration';
+
 /**
  *
  * @param root0
- * @param root0.checkboxLabel
  * @param root0.checked
  * @param root0.description
  * @param root0.disabled
  * @param root0.helperText
  * @param root0.onChange
+ * @param root0.signatory - Qui coche : l'ado (defaut) ou le parent (lien parent seulement).
  * @param root0.title
  */
 function ParentalDeclarationCard({
-  // I18N-1 : reste en francais. C'est le texte juridique dont le serveur enregistre
-  // l'empreinte (MINOR_PARENTAL_DECLARATION_TEXT_HASH) et la locale fr-FR : le
-  // traduire enregistrerait un consentement sur un texte que la personne n'a pas lu.
-  checkboxLabel = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.',
   checked,
   description = /** @type {string | undefined} */ (undefined),
   disabled = false,
   helperText = '',
   onChange,
+  signatory = PARENTAL_DECLARATION_SIGNATORIES.MINOR_SELF,
   title = /** @type {string | undefined} */ (undefined),
 }) {
+  // I18N-1 : reste en francais. C'est le texte juridique dont le serveur enregistre
+  // l'empreinte et la locale fr-FR : le traduire enregistrerait un consentement sur un
+  // texte que la personne n'a pas lu.
+  // CONSENTEMENT-PHRASE : plus de libelle libre. Le texte affiche se DEDUIT du signataire,
+  // pour qu'il soit toujours celui dont la preuve porte l'empreinte.
+  const checkboxLabel = parentalDeclarationTextFor(signatory);
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -35,12 +43,12 @@ function ParentalDeclarationCard({
   const shownDescription = description === undefined
     ? t(
       'parentalDeclarationCard.description',
-      'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu '
-        + 'es son parent ou représentant légal.',
+      'Tu as moins de 15 ans : un de tes parents (ou ton représentant légal) doit être d’accord '
+        + 'pour que tu utilises FoundClub.',
     )
     : description;
   const shownTitle = title === undefined
-    ? t('parentalDeclarationCard.title', 'Déclaration parentale obligatoire')
+    ? t('parentalDeclarationCard.title', 'L’accord de tes parents')
     : title;
 
   return (

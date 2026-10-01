@@ -1,7 +1,10 @@
 // @ts-nocheck
 import { buildPreservedApiError } from '@/utils/errors/apiError';
 
-import { buildMinorParentalDeclarationPayload } from '../../constants/parentalDeclaration';
+import {
+  buildMinorParentalDeclarationPayload,
+  PARENTAL_DECLARATION_SIGNATORIES,
+} from '../../constants/parentalDeclaration';
 import client from '../client';
 
 /**
@@ -40,8 +43,9 @@ const unwrap = async (call, prefix) => {
 
 /**
  * POST /parent-links — le parent demande le lien.
- * La déclaration parentale est celle de l'inscription des moins de 15 ans (même texte, même
- * version, même empreinte) : c'est LE PARENT qui la signe ici.
+ * La déclaration parentale v1, celle du parent : c'est LE PARENT qui la signe
+ * ici, et c'est le seul appelant à la signer (CONSENTEMENT-PHRASE, 01/10 : l'ado inscrit seul
+ * coche désormais sa propre phrase, v2).
  * @param {{ declaredChildDocumentId?: string, phoneNumber: string }} params - La saisie.
  * @returns {Promise<any>} La demande, vue du parent.
  */
@@ -51,6 +55,7 @@ export const requestParentLink = ({ declaredChildDocumentId, phoneNumber }) => u
       ...(declaredChildDocumentId ? { declaredChildDocumentId } : {}),
       legalAcceptance: buildMinorParentalDeclarationPayload({
         metadata: { declaredChildDocumentId: declaredChildDocumentId || null },
+        signatory: PARENTAL_DECLARATION_SIGNATORIES.PARENT,
         sourceScreen: 'parent_link_request',
         targetType: 'parent_link_request',
       }),

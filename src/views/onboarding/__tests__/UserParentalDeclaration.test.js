@@ -240,19 +240,92 @@ test('E6 ③ en inscription, on continue vers l adresse ; depuis la carte, on re
 });
 
 // ---------------------------------------------------------------------------
-// LE DEFAUT, FIGE TEL QU IL EST AUJOURD HUI (base app 718b1421)
+// CONSENTEMENT-PHRASE — LE CONSTAT E6 ④ RETOURNE (decision d'Adel « 3-A corrige »)
 // ---------------------------------------------------------------------------
-// Ce temoin decrit l'ecran AVANT le lot : il sera retourne par le lot, pas efface.
-test('E6 ④ CONSTAT : l ado de 14 ans doit affirmer qu il est son propre parent', async () => {
+// E6 ④ figeait, sur la base 718b1421, un ado de 14 ans qui devait cocher « Je déclare
+// être le parent ou le représentant legal de cet enfant », sous l'intro « tu dois
+// confirmer que tu es son parent », avec le titre d'un AUTRE ecran (« Quelle est ta date
+// de naissance ? », clef `profile.titles.birthdate`). Les temoins ci-dessous le retournent.
+
+const PHRASE_DE_L_ADO = 'Un de mes parents (ou mon représentant légal) m\'a donné son accord pour créer ce compte.';
+const PHRASE_DU_PARENT = 'Je déclare être le parent';
+
+test('CONSENTEMENT ⑤ l ado lit une phrase VRAIE pour lui, et plus aucun « tu es son parent »', async () => {
   const arbre = await rendre();
   const texte = texteVisible(arbre);
 
-  expect(texte).toContain('tu dois confirmer que tu es son parent ou représentant légal');
-  expect(texte).toContain('Je déclare être le parent ou le représentant legal de cet enfant');
-  // Le titre emprunte la clef d'un AUTRE ecran : l'ado lit la question de la date.
-  expect(texte).toContain('Quelle est ta date de naissance ?');
+  expect(texte).toContain(PHRASE_DE_L_ADO);
+  expect(texte).toContain('L’accord de tes parents');
+  expect(texte).not.toContain(PHRASE_DU_PARENT);
+  expect(texte).not.toMatch(/tu es son parent|de l enfant|cet enfant|en son nom/);
+  expect(texte).not.toContain('Quelle est ta date de naissance ?');
+});
 
+test('CONSENTEMENT ⑥ la preuve envoyee est la NOUVELLE version, celle de l ado', async () => {
+  const arbre = await rendre();
   const envoi = await cocherEtContinuer(arbre);
-  expect(envoi.legalAcceptance.legalVersion).toBe('minor-parental-declaration-v1-2026-05-14');
-  expect(envoi.legalAcceptance.consentFlags).toEqual({ parentalAuthorityConfirmation: true });
+
+  expect(envoi.legalAcceptance.legalVersion).toBe('minor-parental-declaration-v2-self-2026-10-01');
+  expect(envoi.legalAcceptance.legalTextHash)
+    .toBe('8bdc055408f8d93f68dfea13bccd4e0402d7afc4299eec467285dca668081ae3');
+  expect(envoi.legalAcceptance.consentFlags).toEqual({ parentalPermissionObtained: true });
+  expect(envoi.parentalDeclarationAccepted).toBe(true);
+});
+
+test('CONSENTEMENT ⑦ sur le telephone, l ecran propose le lien parent comme autre voie', async () => {
+  Platform.OS = 'android';
+  const texte = texteVisible(await rendre());
+
+  expect(texte).toContain('Ton parent peut aussi donner son accord depuis son propre compte FoundClub');
+  expect(texte).toContain('Profil → Mes enfants');
+});
+
+test('CONSENTEMENT ⑦ bis sur le site, l ecran dit honnetement que le lien parent n y est pas', async () => {
+  Platform.OS = 'web';
+  const texte = texteVisible(await rendre());
+
+  expect(texte).toContain('Ton parent peut aussi donner son accord depuis son propre compte');
+  expect(texte).toContain('application mobile FoundClub');
+  expect(texte).toContain('pas encore possible sur le site');
+  expect(texte).not.toContain('Profil → Mes enfants');
+});
+
+// Parcours 7 (carte de collection) et 8 (ProfileEdit natif et web) affichent LA CARTE
+// seule, sans passer par l'ecran : son libelle par defaut est celui de l'ado.
+test('CONSENTEMENT ⑧ la carte affiche par defaut la phrase de l ado ; le parent n a la sienne que sur demande', () => {
+  const { default: ParentalDeclarationCard } = jest.requireActual(
+    '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard',
+  );
+  const { PARENTAL_DECLARATION_SIGNATORIES } = jest.requireActual('@/constants/parentalDeclaration');
+
+  /** @type {any} */
+  let ado;
+  act(() => { ado = renderer.create(<ParentalDeclarationCard checked={false} onChange={() => {}} />); });
+  const texteAdo = texteVisible(ado);
+  expect(texteAdo).toContain(PHRASE_DE_L_ADO);
+  expect(texteAdo).toContain('L’accord de tes parents');
+  expect(texteAdo).not.toMatch(/Je déclare être le parent|tu es son parent/);
+
+  /** @type {any} */
+  let parent;
+  act(() => {
+    parent = renderer.create(
+      <ParentalDeclarationCard
+        checked={false}
+        description="Tu confirmes être son parent."
+        onChange={() => {}}
+        signatory={PARENTAL_DECLARATION_SIGNATORIES.PARENT}
+        title="Déclaration parentale"
+      />,
+    );
+  });
+  expect(texteVisible(parent)).toContain(PHRASE_DU_PARENT);
+  expect(texteVisible(parent)).not.toContain(PHRASE_DE_L_ADO);
+});
+
+test('CONSENTEMENT ⑨ ProfileEdit annonce le bon seuil (15 ans), sans « parent » a confirmer', () => {
+  const fr = jest.requireActual('@/theme/strings/translations/fr').default;
+
+  expect(fr.profileEdit.parentalDeclaration.required).toContain('15 ans');
+  expect(fr.profileEdit.parentalDeclaration.required).not.toContain('13 ans');
 });
