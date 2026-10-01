@@ -4471,6 +4471,10 @@ export default {
       voirUne: 'See the request',
       votreClub: 'Request from your club',
     },
+    bienvenue: {
+      texte: "Your facilities, the clubs' requests, the schedule and your messages to the clubs: everything starts from this home.",
+      titre: 'Welcome to your space.',
+    },
     clubs: {
       club: 'club',
       clubs: 'clubs',
@@ -4628,6 +4632,26 @@ export default {
       demandes: 'My local authority · {{nombre}} requests',
       retourAccueil: 'Home',
       uneDemande: 'My local authority · 1 request',
+    },
+    premiersPas: {
+      clubs: {
+        dit: 'The FoundClub team linked {{nombre}} clubs.',
+        ditUn: 'The FoundClub team linked 1 club.',
+        faits: '{{nombre}} clubs checked',
+        faitUn: '1 club checked',
+        titre: 'Check your clubs',
+      },
+      compte: '{{faits}} of {{total}}',
+      fait: 'Done',
+      faits: 'Your first steps are done: {{faits}} of {{total}}.',
+      installations: {
+        dit: 'Gyms, pitches, halls: the base of everything else.',
+        faites: '{{nombre}} facilities added',
+        faiteUne: '1 facility added',
+        titre: 'Add your facilities',
+      },
+      masquer: 'Hide',
+      titre: 'Your first steps',
     },
     reessayer: 'Try again',
     refus: {

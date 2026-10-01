@@ -79,6 +79,15 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// L'appareil : ce que l'accueil retient (mot d'accueil lu, clubs ouverts, guide masqué).
+const mockRetenu = new Map();
+jest.mock('@/platform/storage', () => ({
+  getItem: (/** @type {string} */ cle) => mockRetenu.get(cle),
+  setItem: (/** @type {string} */ cle, /** @type {string} */ valeur) => {
+    mockRetenu.set(cle, valeur);
+  },
+}));
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({ userData: mockUserData }),
@@ -216,10 +225,11 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) =
 };
 
 beforeEach(() => {
+  mockRetenu.clear();
   mockNavigate.mockClear();
   mockGoBack.mockClear();
   mockParams = { collectiviteId: 'ville-montrivage' };
-  mockUserData = { club: { documentId: 'club-fc', name: 'Montrivage FC' } };
+  mockUserData = { club: { documentId: 'club-fc', name: 'Montrivage FC' }, documentId: 'agent' };
   mockMine = {
     data: [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage', type: 'commune' }],
     isLoading: false,
@@ -407,5 +417,55 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     ]));
     expect(lus.some((texte) => texte.startsWith('Vous ne gérez pas cette collectivité.')))
       .toBe(true);
+  });
+});
+
+// 🏛️ COLL-ACCUEIL — PLANCHE 7 : les PREMIERS PAS d'une Ville toute neuve (P1v3-premiers-pas),
+// et le mot d'accueil de la première visite (P2-gestion, état 6). Juste sous le nom de la Ville :
+// les étapes se cochent d'elles-mêmes, une seule porte un bouton, masquables une fois faites.
+// « Attribuer les créneaux » (lot C2a) et « Présentez-vous aux clubs » (lot C4a) sont MASQUÉES.
+describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve', () => {
+  it('Ville toute neuve : 0 sur 2, et SEULE la première étape porte un bouton', async () => {
+    mockInstallations = lu([]);
+    mockClubs = lu([]);
+    mockSemaine = [];
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Vos premiers pas', '0 sur 2', 'Ajoutez vos installations', 'Vérifiez vos clubs',
+    ]));
+    const boutons = arbre.root.findAll((/** @type {any} */ n) => String(n.props?.testID || '')
+      .startsWith('bouton-') && typeof n.props?.onPress === 'function')
+      .map((/** @type {any} */ n) => n.props.testID);
+    expect(boutons).toContain('bouton-Ajouter une installation');
+    expect(boutons).not.toContain('bouton-Voir les clubs');
+    // Les étapes des lots à venir ne sont pas montrées.
+    expect(lus).not.toContain('Attribuez les créneaux de la saison');
+    expect(lus).not.toContain('Présentez-vous aux clubs');
+  });
+
+  it('une étape faite se résume en une ligne ; la suivante prend le bouton', async () => {
+    const arbre = await monter();
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['1 sur 2', '2 installations ajoutées']));
+    await appuyer(arbre, 'bouton-Voir les clubs');
+    expect(mockNavigate)
+      .toHaveBeenCalledWith('CollectiviteClubs', { collectiviteId: 'ville-montrivage' });
+  });
+
+  it('tout est fait : une ligne qu on peut MASQUER, et qui le reste', async () => {
+    const premier = await monter();
+    await appuyer(premier, 'collectivite-home-voir-clubs');
+    const second = await monter();
+    expect(textes(second)).toContain('Vos premiers pas sont faits : 2 sur 2.');
+    await appuyer(second, 'bouton-Masquer');
+    expect(textes(second)).not.toContain('Vos premiers pas sont faits : 2 sur 2.');
+    const troisieme = await monter();
+    expect(textes(troisieme)).not.toContain('Vos premiers pas');
+    expect(textes(troisieme)).not.toContain('Vos premiers pas sont faits : 2 sur 2.');
+  });
+
+  it('le mot d accueil se lit à la PREMIÈRE visite, puis plus jamais', async () => {
+    expect(textes(await monter())).toContain('Bienvenue dans votre espace.');
+    expect(textes(await monter())).not.toContain('Bienvenue dans votre espace.');
   });
 });

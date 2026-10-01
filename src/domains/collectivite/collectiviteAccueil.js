@@ -305,3 +305,48 @@ export const latestManagerRequest = (demandes) => {
   if (!Array.isArray(demandes) || demandes.length === 0) return null;
   return [...demandes].sort((a, b) => horodatage(b?.createdAt) - horodatage(a?.createdAt))[0];
 };
+
+// ─── LES PREMIERS PAS D'UNE VILLE TOUTE NEUVE (planche P1v3-premiers-pas) ─────────────────
+
+/**
+ * Les étapes des premiers pas, dans l'ordre où elles se débloquent. Une étape sans écran
+ * (`route: null`) est MASQUÉE : « attribuer les créneaux » attend le lot C2a (le créneau de
+ * saison n'existe pas encore), « présentez-vous aux clubs » le lot C4a (les actualités). Le
+ * lot qui construit l'écran pose sa route ici, et l'étape apparaît à sa place.
+ * @type {ReadonlyArray<{ key: string, lot: string, route: string | null }>}
+ */
+export const PREMIERS_PAS = Object.freeze([
+  { key: 'installations', lot: 'COLL1C', route: 'CollectiviteInstallationForm' },
+  { key: 'clubs', lot: 'COLL1C', route: 'CollectiviteClubs' },
+  { key: 'creneaux', lot: 'C2a + C2b', route: null },
+  { key: 'actualite', lot: 'C4a', route: null },
+]);
+
+/**
+ * Où en sont les premiers pas. Les étapes se cochent d'elles-mêmes : des installations
+ * existent ; la liste des clubs rattachés a été ouverte. UNE seule étape porte un bouton à la
+ * fois (la première qui n'est pas faite) : on ne se demande jamais par où commencer.
+ * @param {{ clubsVus: boolean, installationsCount: number }} etat - Ce qui est lu et retenu.
+ * @param {ReadonlyArray<{ key: string, route: string | null }>} [etapes] - Le registre.
+ * @returns {{ etapes: Array<{ fait: boolean, key: string, route: string, suivante: boolean }>,
+ *   faits: number, total: number, tousFaits: boolean }} L'état du guide.
+ */
+export const premiersPas = ({ clubsVus, installationsCount }, etapes = PREMIERS_PAS) => {
+  const faitPour = {
+    clubs: clubsVus === true,
+    installations: Number(installationsCount) > 0,
+  };
+  const visibles = etapes.filter((etape) => Boolean(etape.route));
+  const estFaite = (/** @type {string} */ cle) => Boolean(faitPour[/** @type {'clubs'} */ (cle)]);
+  const indexSuivante = visibles.findIndex((etape) => !estFaite(etape.key));
+  const liste = visibles.map((etape, index) => ({
+    fait: Boolean(faitPour[/** @type {'clubs'} */ (etape.key)]),
+    key: etape.key,
+    route: String(etape.route),
+    suivante: index === indexSuivante,
+  }));
+  const faits = liste.filter((etape) => etape.fait).length;
+  return {
+    etapes: liste, faits, total: liste.length, tousFaits: faits === liste.length,
+  };
+};

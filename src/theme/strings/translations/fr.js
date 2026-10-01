@@ -4792,6 +4792,11 @@ export default {
       voirUne: 'Voir la demande',
       votreClub: 'Demande de votre club',
     },
+    bienvenue: {
+      // eslint-disable-next-line max-len
+      texte: 'Vos installations, les demandes des clubs, le planning et vos messages aux clubs : tout part de cet accueil.',
+      titre: 'Bienvenue dans votre espace.',
+    },
     clubs: {
       club: 'club',
       clubs: 'clubs',
@@ -4959,6 +4964,26 @@ export default {
       demandes: 'Ma collectivité · {{nombre}} demandes',
       retourAccueil: 'Accueil',
       uneDemande: 'Ma collectivité · 1 demande',
+    },
+    premiersPas: {
+      clubs: {
+        dit: 'L’équipe FoundClub a rattaché {{nombre}} clubs.',
+        ditUn: 'L’équipe FoundClub a rattaché 1 club.',
+        faits: '{{nombre}} clubs vérifiés',
+        faitUn: '1 club vérifié',
+        titre: 'Vérifiez vos clubs',
+      },
+      compte: '{{faits}} sur {{total}}',
+      fait: 'Fait',
+      faits: 'Vos premiers pas sont faits : {{faits}} sur {{total}}.',
+      installations: {
+        dit: 'Gymnases, terrains, salles : la base de tout le reste.',
+        faites: '{{nombre}} installations ajoutées',
+        faiteUne: '1 installation ajoutée',
+        titre: 'Ajoutez vos installations',
+      },
+      masquer: 'Masquer',
+      titre: 'Vos premiers pas',
     },
     reessayer: 'Réessayer',
     refus: {

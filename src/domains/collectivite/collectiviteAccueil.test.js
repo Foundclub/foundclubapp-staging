@@ -12,6 +12,8 @@ import {
   latestManagerRequest,
   managerRequestPayload,
   oldestPendingRequest,
+  PREMIERS_PAS,
+  premiersPas,
   signupContactErrors,
   summarizeConflict,
 } from './collectiviteAccueil';
@@ -169,5 +171,33 @@ describe('COLL-ACCUEIL — l inscription « Je représente une collectivité »'
       { createdAt: '2026-10-01T00:00:00Z', documentId: 'b' },
     ])?.documentId).toBe('b');
     expect(latestManagerRequest([])).toBeNull();
+  });
+});
+
+describe('COLL-ACCUEIL — les premiers pas (planche P1v3)', () => {
+  it('quatre étapes au registre ; celles des lots à venir sont masquées', () => {
+    expect(PREMIERS_PAS.map((etape) => etape.key))
+      .toEqual(['installations', 'clubs', 'creneaux', 'actualite']);
+    expect(premiersPas({ clubsVus: false, installationsCount: 0 }).total).toBe(2);
+  });
+
+  it('elles se cochent d elles-mêmes ; UNE seule porte le bouton', () => {
+    const neuve = premiersPas({ clubsVus: false, installationsCount: 0 });
+    expect(neuve.etapes.map((etape) => [etape.key, etape.fait, etape.suivante])).toEqual([
+      ['installations', false, true],
+      ['clubs', false, false],
+    ]);
+    const amiChemin = premiersPas({ clubsVus: false, installationsCount: 3 });
+    expect(amiChemin.faits).toBe(1);
+    expect(amiChemin.etapes.find((etape) => etape.suivante)?.key).toBe('clubs');
+    expect(premiersPas({ clubsVus: true, installationsCount: 1 }).tousFaits).toBe(true);
+  });
+
+  it('une étape dont le lot pose sa route apparaît à sa place', () => {
+    const avecCreneaux = PREMIERS_PAS.map((etape) => (
+      etape.key === 'creneaux' ? { ...etape, route: 'CollectiviteSlots' } : etape
+    ));
+    expect(premiersPas({ clubsVus: true, installationsCount: 1 }, avecCreneaux).etapes
+      .map((etape) => etape.key)).toEqual(['installations', 'clubs', 'creneaux']);
   });
 });

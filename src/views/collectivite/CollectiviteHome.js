@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -22,6 +22,7 @@ import {
   formatWeekMoment,
   isOwnClubRequest,
   oldestPendingRequest,
+  premiersPas,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
@@ -47,6 +48,7 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
+import { getItem, setItem } from '@/platform/storage';
 
 // 📰 PLACE RÉSERVÉE AU LOT C4a — « Actualités de la Ville » (planche P3v2-accueil : dernier
 // bloc sur téléphone, troisième colonne sur ordinateur ; contenu : « Publier une actualité »,
@@ -96,6 +98,36 @@ function CollectiviteHome() {
   const [decision, setDecision] = useState(/** @type {Decision | null} */ (null));
   const { userData } = useAuth();
 
+  // Ce que l'accueil retient POUR CE COMPTE ET CETTE VILLE, sur l'appareil : le mot d'accueil
+  // déjà lu, la liste des clubs déjà ouverte (2e premier pas), le guide masqué.
+  // ponytail: retenu sur l'appareil, pas au serveur — un autre téléphone revoit le guide une
+  // fois ; voie de sortie : un champ du compte si les agents changent souvent d'appareil.
+  const cleRetenue = (/** @type {string} */ nom) => (
+    `coll-accueil:${nom}:${userData?.documentId || 'anonyme'}:${collectiviteId || ''}`
+  );
+  const lireRetenu = (/** @type {string} */ nom) => {
+    try {
+      return getItem(cleRetenue(nom)) === '1';
+    } catch {
+      return false;
+    }
+  };
+  const retenir = (/** @type {string} */ nom) => {
+    try {
+      setItem(cleRetenue(nom), '1');
+    } catch {
+      // Sans stockage, l'accueil reste juste : il redira seulement le guide.
+    }
+  };
+  const [bienvenue] = useState(() => !lireRetenu('bienvenue-vue'));
+  const [clubsVus, setClubsVus] = useState(() => lireRetenu('clubs-vus'));
+  const [guideMasque, setGuideMasque] = useState(() => lireRetenu('guide-masque'));
+  // Le mot d'accueil se lit UNE fois : dès son premier affichage, il est retenu.
+  useEffect(() => {
+    if (bienvenue && collectiviteId && userData?.documentId) retenir('bienvenue-vue');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bienvenue, collectiviteId, userData?.documentId]);
+
   const mine = useMyCollectivites();
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
   const pending = useCollectiviteRequests(collectiviteId, 'pending');
@@ -109,7 +141,14 @@ function CollectiviteHome() {
     refetchPending?.();
   }, [refetchPending]));
 
-  const ouvrir = (/** @type {string} */ ecran) => navigation.navigate(ecran, { collectiviteId });
+  const ouvrir = (/** @type {string} */ ecran) => {
+    // Ouvrir la liste des clubs rattachés coche le 2e premier pas (« Vérifiez vos clubs »).
+    if (ecran === RouteNames.CollectiviteClubs && !clubsVus) {
+      retenir('clubs-vus');
+      setClubsVus(true);
+    }
+    navigation.navigate(ecran, { collectiviteId });
+  };
   const contacter = () => {
     Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {});
   };
@@ -826,6 +865,219 @@ function CollectiviteHome() {
     </View>
   );
 
+  // ── PREMIERS PAS (planche P1v3) et MOT D'ACCUEIL (planche P2-gestion, état 6) ─────────────
+  const guide = premiersPas({
+    clubsVus,
+    installationsCount: Array.isArray(installations.data) ? installations.data.length : 0,
+  });
+  const nombreClubs = Array.isArray(clubs.data) ? clubs.data.length : 0;
+  const nombreInstallations = Array.isArray(installations.data) ? installations.data.length : 0;
+  const texteEtape = (/** @type {string} */ cle, /** @type {boolean} */ fait) => {
+    if (cle === 'installations') {
+      if (fait) {
+        return {
+          titre: nombreInstallations === 1
+            ? t('collectiviteAccueil.premiersPas.installations.faiteUne', '1 installation ajoutée')
+            : t(
+              'collectiviteAccueil.premiersPas.installations.faites',
+              '{{nombre}} installations ajoutées',
+              {
+                nombre: nombreInstallations,
+              },
+            ),
+        };
+      }
+      return {
+        bouton: t('collectiviteAccueil.actions.addInstallation.titre', 'Ajouter une installation'),
+        dit: t(
+          'collectiviteAccueil.premiersPas.installations.dit',
+          'Gymnases, terrains, salles : la base de tout le reste.',
+        ),
+        titre: t(
+          'collectiviteAccueil.premiersPas.installations.titre',
+          'Ajoutez vos installations',
+        ),
+      };
+    }
+    if (fait) {
+      return {
+        titre: nombreClubs === 1
+          ? t('collectiviteAccueil.premiersPas.clubs.faitUn', '1 club vérifié')
+          : t('collectiviteAccueil.premiersPas.clubs.faits', '{{nombre}} clubs vérifiés', {
+            nombre: nombreClubs,
+          }),
+      };
+    }
+    return {
+      bouton: t('collectiviteAccueil.clubs.voir', 'Voir les clubs'),
+      dit: nombreClubs === 1
+        ? t('collectiviteAccueil.premiersPas.clubs.ditUn', 'L’équipe FoundClub a rattaché 1 club.')
+        : t(
+          'collectiviteAccueil.premiersPas.clubs.dit',
+          'L’équipe FoundClub a rattaché {{nombre}} clubs.',
+          {
+            nombre: nombreClubs,
+          },
+        ),
+      titre: t('collectiviteAccueil.premiersPas.clubs.titre', 'Vérifiez vos clubs'),
+    };
+  };
+
+  const motDAccueil = bienvenue ? (
+    <View
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.1),
+          borderColor: withAlpha(Colors.primary500, 0.3),
+          gap: 4,
+        },
+      ]}
+      testID="collectivite-home-bienvenue"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('collectiviteAccueil.bienvenue.titre', 'Bienvenue dans votre espace.')}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t(
+          'collectiviteAccueil.bienvenue.texte',
+          // eslint-disable-next-line max-len
+          'Vos installations, les demandes des clubs, le planning et vos messages aux clubs : tout part de cet accueil.',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
+  let premiersPasBloc = null;
+  if (!guideMasque && !installations.isLoading && !clubs.isLoading) {
+    premiersPasBloc = guide.tousFaits ? (
+      <View
+        style={[
+          ApplicationStyle.card,
+          Spaces.padding[16],
+          Alignments.row,
+          Alignments.alignCenter,
+          verreStyle,
+          { gap: 12 },
+        ]}
+        testID="collectivite-home-premiers-pas-faits"
+      >
+        <Image
+          source={Images.check}
+          style={[ApplicationStyle.icon16, { tintColor: Colors.success500 }]}
+        />
+        <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
+          {t(
+            'collectiviteAccueil.premiersPas.faits',
+            'Vos premiers pas sont faits : {{faits}} sur {{total}}.',
+            { faits: guide.faits, total: guide.total },
+          )}
+        </Text>
+        <Button
+          onPress={() => {
+            retenir('guide-masque');
+            setGuideMasque(true);
+          }}
+          size="sm"
+          title={t('collectiviteAccueil.premiersPas.masquer', 'Masquer')}
+          variant="Ghost"
+        />
+      </View>
+    ) : (
+      <View
+        accessibilityLabel={t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
+        style={[ApplicationStyle.card, Spaces.padding[16], carteStyle, { gap: 12 }]}
+        testID="collectivite-home-premiers-pas"
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
+            {t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
+          </Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+            {t('collectiviteAccueil.premiersPas.compte', '{{faits}} sur {{total}}', {
+              faits: guide.faits,
+              total: guide.total,
+            })}
+          </Text>
+        </View>
+        <View
+          accessibilityLabel={t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ max: guide.total, min: 0, now: guide.faits }}
+          style={{ backgroundColor: withAlpha(Colors.neutral00, 0.12), borderRadius: 3, height: 6 }}
+        >
+          <View
+            style={{
+              backgroundColor: Colors.success500,
+              borderRadius: 3,
+              height: 6,
+              width: `${guide.total ? Math.round((guide.faits / guide.total) * 100) : 0}%`,
+            }}
+          />
+        </View>
+        {guide.etapes.map((etape, index) => {
+          const texte = texteEtape(etape.key, etape.fait);
+          return (
+            <View
+              key={etape.key}
+              style={[Alignments.row, { alignItems: 'flex-start', gap: 12 }]}
+              testID={`collectivite-home-pas-${etape.key}`}
+            >
+              <View
+                accessibilityLabel={etape.fait
+                  ? t('collectiviteAccueil.premiersPas.fait', 'Fait')
+                  : undefined}
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  {
+                    backgroundColor: etape.fait
+                      ? withAlpha(Colors.success500, 0.2)
+                      : withAlpha(Colors.neutral00, 0.08),
+                    borderRadius: 12,
+                    height: 24,
+                    width: 24,
+                  },
+                ]}
+              >
+                {etape.fait ? (
+                  <Image
+                    source={Images.check}
+                    style={{ height: 12, tintColor: Colors.success500, width: 12 }}
+                  />
+                ) : (
+                  <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{String(index + 1)}</Text>
+                )}
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text
+                  style={etape.fait
+                    ? [Fonts.p2, Fonts.neutral200]
+                    : [Fonts.p2Bold, Fonts.neutral00]}
+                >
+                  {texte.titre}
+                </Text>
+                {texte.dit ? <Text style={[Fonts.p3, Fonts.neutral200]}>{texte.dit}</Text> : null}
+                {etape.suivante && texte.bouton ? (
+                  <View style={{ alignSelf: 'flex-start' }}>
+                    <Button
+                      onPress={() => ouvrir(etape.route)}
+                      size="sm"
+                      testID={`collectivite-home-pas-${etape.key}-bouton`}
+                      title={texte.bouton}
+                      variant="Primary"
+                    />
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
   const actualites = ActualitesDeLaVille
     ? <ActualitesDeLaVille collectiviteId={String(collectiviteId)} />
     : null;
@@ -876,6 +1128,8 @@ function CollectiviteHome() {
         style={[Alignments.fill]}
       >
         {hautDePage}
+        {motDAccueil}
+        {premiersPasBloc}
         {corps}
       </ScrollView>
     </ScreenContainer>
