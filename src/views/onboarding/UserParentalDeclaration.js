@@ -160,6 +160,8 @@ function UserParentalDeclaration({ navigation, route }) {
             'Coche seulement si c’est vrai : ta réponse est enregistrée.',
           )}
           onChange={setAccepted}
+          // Le titre de l'ecran dit deja « L'accord de tes parents » : la carte ne le repete pas.
+          title={t('userParentalDeclaration.card.title', 'Ta déclaration')}
         />
 
         <Text style={[Fonts.p2, Fonts.neutral200]}>

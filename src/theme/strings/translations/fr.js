@@ -19941,6 +19941,7 @@ export default {
     },
     card: {
       description: 'Coche seulement si c’est vrai : ta réponse est enregistrée.',
+      title: 'Ta déclaration',
     },
     // CONSENTEMENT-PHRASE (01/10, décision d'Adel « 3-A corrigé ») : l'ado ne confirme plus
     // qu'il EST le parent ; il dit qu'un parent est d'accord.

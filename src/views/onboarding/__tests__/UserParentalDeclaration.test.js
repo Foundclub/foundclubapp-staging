@@ -261,6 +261,8 @@ test('CONSENTEMENT ⑤ l ado lit une phrase VRAIE, plus aucun « tu es son paren
 
   expect(texte).toContain(PHRASE_DE_L_ADO);
   expect(texte).toContain('L’accord de tes parents');
+  expect(texte).toContain('Ta déclaration');
+  expect(texte.split('L’accord de tes parents')).toHaveLength(2);
   expect(texte).not.toContain(PHRASE_DU_PARENT);
   expect(texte).not.toMatch(/tu es son parent|de l enfant|cet enfant|en son nom/);
   expect(texte).not.toContain('Quelle est ta date de naissance ?');

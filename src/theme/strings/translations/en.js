@@ -18704,6 +18704,7 @@ export default {
     },
     card: {
       description: 'Only tick it if it is true: your answer is recorded.',
+      title: 'Your statement',
     },
     intro: 'You are under 15: to continue, one of your parents (or your legal guardian) must agree. If they do, tick the box.',
     loadError: {
