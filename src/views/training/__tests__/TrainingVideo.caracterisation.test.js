@@ -2,6 +2,7 @@ import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 import TrainingVideoEntry from '../TrainingVideoEntry';
 import TrainingVideoQueue from '../TrainingVideoQueue';
@@ -322,6 +323,16 @@ describe('UN ESSAI A LA FOIS', () => {
     act(() => { touche('common.delete').props.onPress(); });
 
     expect(textes(arbre)).toContain('1');
+  });
+
+  it('la touche « effacer » montre l icone effacer, pas une fleche', () => {
+    // ICONES (01/10/2026, « icone go » d Adel) : SANS-EMOJI avait remplace le
+    // caractere « retour arriere » par la fleche gauche, en attendant un dessin.
+    const arbre = rendre();
+    const effacer = arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.accessibilityLabel === 'common.delete')[0];
+
+    expect(effacer.findByType(SvgIcon).props.name).toBe('delete-left');
   });
 
   it('garde le bouton d enregistrement ETEINT tant que rien n est tape', () => {

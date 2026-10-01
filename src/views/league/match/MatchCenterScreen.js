@@ -1758,7 +1758,7 @@ function MatchCenterScreen() {
           'Nous cherchons une équipe compatible dans ta zone et sur tes plages partagées.',
         ),
         renderIcon: () => (
-          <SvgIcon color={leagueGold} height={28} name="search" width={28} />
+          <SvgIcon color={leagueGold} height={28} name="radar" width={28} />
         ),
         subtitle: t('matchCenterScreen.mission.radar.subtitle', 'Balayage en cours'),
         title: t('matchCenterScreen.mission.radar.title', 'Recherche active'),
@@ -1772,7 +1772,7 @@ function MatchCenterScreen() {
             borderColor: Colors.gold500, borderRadius: 40, height: 80, marginBottom: 16, width: 80,
           }]}
           >
-            <SvgIcon color={Colors.gold500} height={24} name="search" width={24} />
+            <SvgIcon color={Colors.gold500} height={24} name="radar" width={24} />
           </View>
           <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>
             {t('matchCenterScreen.searching.title', 'RECHERCHE EN COURS')}
@@ -1972,15 +1972,7 @@ function MatchCenterScreen() {
               }}
               >
                 {isOpponentAnonymous ? (
-                  <Text style={{
-                    color: Colors.neutral00,
-                    fontSize: 36,
-                    fontWeight: '700',
-                    lineHeight: 40,
-                  }}
-                  >
-                    ?
-                  </Text>
+                  <SvgIcon color={Colors.neutral00} height={36} name="shield-question" width={36} />
                 ) : (
                   <TeamShield
                     imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(currentMatch?.team_b)}
@@ -1992,15 +1984,23 @@ function MatchCenterScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p3Bold, {
-                  color: leagueGold,
-                  letterSpacing: 1.4,
-                  marginBottom: 6,
-                  textTransform: 'uppercase',
-                }]}
-                >
-                  {t('matchCenterScreen.found.duelConfirmed', 'Duel confirmé')}
-                </Text>
+                <View style={{ alignItems: 'center', flexDirection: 'row', marginBottom: 6 }}>
+                  <SvgIcon
+                    color={leagueGold}
+                    height={16}
+                    name="swords"
+                    style={{ marginRight: 6 }}
+                    width={16}
+                  />
+                  <Text style={[Fonts.p3Bold, {
+                    color: leagueGold,
+                    letterSpacing: 1.4,
+                    textTransform: 'uppercase',
+                  }]}
+                  >
+                    {t('matchCenterScreen.found.duelConfirmed', 'Duel confirmé')}
+                  </Text>
+                </View>
                 <Text style={[Fonts.h2, {
                   color: Colors.neutral00,
                   marginBottom: 6,
@@ -2474,12 +2474,7 @@ function MatchCenterScreen() {
               }}
               >
                 {isOpponentAnonymous ? (
-                  <Text style={{
-                    color: Colors.neutral00, fontSize: 36, fontWeight: '700', lineHeight: 42,
-                  }}
-                  >
-                    ?
-                  </Text>
+                  <SvgIcon color={Colors.neutral00} height={36} name="shield-question" width={36} />
                 ) : (
                   <TeamShield
                     imageUrl={getSquadLogoUri(opponentDetails) || getSquadLogoUri(currentMatch?.team_b)}

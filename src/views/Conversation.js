@@ -5057,7 +5057,7 @@ function Conversation({ navigation, route }) {
           paddingVertical: 4,
         }}
       >
-        <SvgIcon color={Colors.primary500} height={14} name="arrow-left" width={14} />
+        <SvgIcon color={Colors.primary500} height={14} name="reply" width={14} />
       </View>
     </View>
   ), [Colors.primary500]);
