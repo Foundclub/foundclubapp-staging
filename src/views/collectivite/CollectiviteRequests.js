@@ -394,12 +394,12 @@ function CollectiviteRequests() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {/* TEXTES-COLLECTIVITES (01/10) : « Demandes de la Ville » est l en-tete de l ecran, */}
+        {/* et s ecrivait deux fois. La page porte le NOM de la collectivite, comme les */}
+        {/* installations. */}
         <View style={{ gap: 4 }}>
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-            {(collectivite?.name || t('collectivite.home.kicker', 'Ma collectivité')).toUpperCase()}
-          </Text>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('collectivite.requests.title', 'Demandes de la Ville')}
+            {collectivite?.name || t('collectivite.requests.title', 'Demandes de la Ville')}
           </Text>
         </View>
         <SegmentedControl

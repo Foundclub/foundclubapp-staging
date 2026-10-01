@@ -230,3 +230,41 @@ describe('TEXTES-COLLECTIVITES — la liste, côté CLUB', () => {
     expect(textes(rendre())).toContain('1 installation');
   });
 });
+
+// TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55) — « 1 installation » etait ecrit EN DUR
+// en francais (`getListSubtitle`) : un telephone en anglais le lisait en francais. Le compte
+// passe par le dictionnaire ; le temoin le prouve en anglais.
+describe('TEXTES-COLLECTIVITES — le compte des installations passe par le dictionnaire', () => {
+  const i18next = jest.requireActual('i18next');
+
+  beforeAll(() => {
+    i18next.addResourceBundle(
+      'en',
+      'translation',
+      jest.requireActual('@/theme/strings/translations/en').default,
+      true,
+      true,
+    );
+  });
+
+  afterEach(async () => {
+    await i18next.changeLanguage('fr');
+  });
+
+  it('en anglais : « 1 facility », plus « 1 installation »', async () => {
+    mockRoute = { params: { collectiviteId: 'ville-montrivage' } };
+    await i18next.changeLanguage('en');
+    const lus = textes(rendre());
+    expect(lus).toContain('1 facility');
+    expect(lus).not.toContain('1 installation');
+  });
+
+  it('en français, 2 installations : le pluriel du dictionnaire', () => {
+    mockRoute = { params: { collectiviteId: 'ville-montrivage' } };
+    mockCollectiviteInstallations = {
+      ...mockCollectiviteInstallations,
+      data: [GYMNASE_VILLE, { ...GYMNASE_VILLE, documentId: 'gymnase-2', name: 'Gymnase 2' }],
+    };
+    expect(textes(rendre())).toContain('2 installations');
+  });
+});

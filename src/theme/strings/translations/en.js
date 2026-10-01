@@ -7701,6 +7701,8 @@ export default {
       club_other: '{{count}} club facilities',
       collectivite_one: '{{count}} managed by {{who}}',
       collectivite_other: '{{count}} managed by {{who}}',
+      total_one: '{{count}} facility',
+      total_other: '{{count}} facilities',
     },
     defaults: {
       addressMissing: 'Address not provided',

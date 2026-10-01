@@ -75,8 +75,6 @@ const getAddressCoordinates = (address) => {
   return { lat, lng };
 };
 
-const getListSubtitle = (count) => `${count} ${(count === 0 || count > 1) ? 'installations' : 'installation'}`;
-
 // D34 ecran 03 : la couleur du planning devient un LISERE, plus un habillage.
 // 4 pt est la valeur du pack, nommee ici pour qu'on sache pourquoi elle existe.
 const FACILITY_ACCENT_WIDTH = 4;
@@ -729,7 +727,12 @@ function FacilityList() {
         ...SANS_ECHAPPEMENT,
       }),
     ].join(' · ')
-    : getListSubtitle(facilities.length);
+    // TEXTES-COLLECTIVITES : « 1 installation » etait ecrit en dur, en francais.
+    : t('facilityList.count.total', {
+      count: facilities.length,
+      defaultValue_one: '{{count}} installation',
+      defaultValue_other: '{{count}} installations',
+    });
   let listTitle = t('facilityList.title', 'Tes installations');
   if (isCollectiviteMode) {
     listTitle = managedCollectivite?.name

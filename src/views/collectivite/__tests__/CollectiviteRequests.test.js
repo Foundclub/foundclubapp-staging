@@ -288,3 +288,16 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     });
   });
 });
+
+// TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55 : « A ») — « Demandes de la Ville »
+// s ecrivait deux fois : l en-tete de l ecran, puis le titre de la page juste dessous. Meme
+// traitement que les installations : la page porte le NOM de la collectivite.
+describe('TEXTES-COLLECTIVITES — « Demandes de la Ville » ne s écrit plus deux fois', () => {
+  // eslint-disable-next-line max-len
+  it('la page porte le nom de la collectivité, une fois ; l en-tête garde « Demandes de la Ville »', async () => {
+    const lus = textes(await monter());
+    expect(lus).not.toContain('Demandes de la Ville');
+    expect(lus.filter((texte) => texte === 'Ville de Recette')).toHaveLength(1);
+    expect(lus).not.toContain('VILLE DE RECETTE');
+  });
+});

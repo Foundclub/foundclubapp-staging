@@ -8218,6 +8218,8 @@ export default {
       club_other: '{{count}} installations du club',
       collectivite_one: '{{count}} gérée par {{who}}',
       collectivite_other: '{{count}} gérées par {{who}}',
+      total_one: '{{count}} installation',
+      total_other: '{{count}} installations',
     },
     defaults: {
       addressMissing: 'Adresse non renseignée',
