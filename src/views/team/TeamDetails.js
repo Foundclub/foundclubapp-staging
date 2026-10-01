@@ -189,10 +189,17 @@ function TeamDetails({ navigation, route }) {
   );
   const { data: rawClubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId || '');
   const clubData = /** @type {any} */ (rawClubData);
+  const isClubManagerForCurrentTeam = useMemo(
+    () => Boolean(team?.club?.documentId && canEditClub(team.club.documentId)),
+    [canEditClub, team?.club?.documentId],
+  );
   // FINITIONS2 — UNE SEULE PORTE par requete, lue par la requete ET par le retour
   // sur la fiche (`useFocusEffect` plus bas) : `refetch` passe outre `enabled`, et
   // ce retour recoltait des 403 (pas membre) et des 400 (sport sans statistiques).
-  const canLoadTeamStats = Boolean(teamId && isMyTeam);
+  // STATS-ENQUETE (defaut 3) — decision d'Adel du 21/09 (« go a ») : le dirigeant du
+  // club voit les statistiques de toutes ses equipes ; le serveur les lui ouvre
+  // depuis SENTRY-1 (`can-view-team-stats`). Cette porte ouvre aussi l'onglet.
+  const canLoadTeamStats = Boolean(teamId && (isMyTeam || isClubManagerForCurrentTeam));
   const canLoadTeamPerformanceStats = canLoadTeamStats && hasMatchStatsSport(team);
   const reloadGatesRef = useRef({ performance: false, stats: false });
   reloadGatesRef.current = { performance: canLoadTeamPerformanceStats, stats: canLoadTeamStats };
@@ -1292,10 +1299,6 @@ function TeamDetails({ navigation, route }) {
     ),
     [currentUser?.trainedTeams, teamId],
   );
-  const isClubManagerForCurrentTeam = useMemo(
-    () => Boolean(team?.club?.documentId && canEditClub(team.club.documentId)),
-    [canEditClub, team?.club?.documentId],
-  );
   const canManageCurrentTeamExternalSync = useMemo(
     () => isAssignedTrainerForCurrentTeam || isClubManagerForCurrentTeam,
     [isAssignedTrainerForCurrentTeam, isClubManagerForCurrentTeam],
@@ -1345,12 +1348,12 @@ function TeamDetails({ navigation, route }) {
   );
   const showStatsTab = useMemo(
     () => Boolean(
-      isMyTeam
+      canLoadTeamStats
       || teamPerformanceStats?.totals
       || (Array.isArray(teamPerformanceStats?.pendingMatches) && teamPerformanceStats.pendingMatches.length > 0)
       || (Array.isArray(teamPerformanceStats?.players) && teamPerformanceStats.players.length > 0),
     ),
-    [isMyTeam, teamPerformanceStats?.pendingMatches, teamPerformanceStats?.players, teamPerformanceStats?.totals],
+    [canLoadTeamStats, teamPerformanceStats?.pendingMatches, teamPerformanceStats?.players, teamPerformanceStats?.totals],
   );
   const primaryActivityLabel = useMemo(
     () => String(team?.activities?.[0]?.name || '').trim(),
@@ -2108,8 +2111,8 @@ function TeamDetails({ navigation, route }) {
   }, [team?.documentId]);
 
   useEffect(() => {
-    setStatsMode(isMyTeam ? 'attendance' : 'performance');
-  }, [isMyTeam, team?.documentId]);
+    setStatsMode(canLoadTeamStats ? 'attendance' : 'performance');
+  }, [canLoadTeamStats, team?.documentId]);
 
   useEffect(() => {
     setSelectedMonthKey(null);
