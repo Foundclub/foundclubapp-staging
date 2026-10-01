@@ -13,6 +13,7 @@ import AdminCollectiviteList from '@/views/admin/AdminCollectiviteList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
 import AdminLeagueDisputes from '@/views/admin/AdminLeagueDisputes';
+import AdminManagerRequests from '@/views/admin/AdminManagerRequests';
 import AdminNotificationsHealth from '@/views/admin/AdminNotificationsHealth';
 import AdminPopupCampaignDetail from '@/views/admin/AdminPopupCampaignDetail';
 import AdminPopupCampaignForm from '@/views/admin/AdminPopupCampaignForm';
@@ -294,6 +295,15 @@ function AdminStack() {
           options={{
             ...commonOptions,
             headerTitle: t('adminStack.titles.collectiviteForm', 'Nouvelle collectivité'),
+          }}
+        />
+        {/* COLL-ACCUEIL (01/10) — la file « Demandes de gestionnaire » (decision « console oui »). */}
+        <Stack.Screen
+          component={AdminManagerRequests}
+          name={RouteNames.AdminManagerRequests}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteAccueil.console.entete', 'Gestionnaires'),
           }}
         />
         <Stack.Screen

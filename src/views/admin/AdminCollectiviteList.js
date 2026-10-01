@@ -18,6 +18,7 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
+import ManagerRequestsLink from '@/views/admin/components/ManagerRequestsLink';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -141,6 +142,8 @@ function AdminCollectiviteList() {
             )}
           </Text>
         </View>
+        {/* COLL-ACCUEIL (01/10) — l entree de la file « Demandes de gestionnaire ». */}
+        <ManagerRequestsLink />
         <Button
           onPress={() => navigation.navigate(RouteNames.AdminCollectiviteForm)}
           size="sm"

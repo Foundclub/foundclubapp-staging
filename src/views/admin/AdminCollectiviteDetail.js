@@ -23,6 +23,7 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
+import ManagerRequestsLink from '@/views/admin/components/ManagerRequestsLink';
 
 import {
   useAddAdminCollectiviteGestionnaire,
@@ -376,6 +377,9 @@ function AdminCollectiviteDetail() {
           />
           {afficherRetour(retourClubs)}
         </View>
+
+        {/* COLL-ACCUEIL (01/10) — SEULEMENT le lien « Ouvrir dans la file » (le reste : C-CONSOLE). */}
+        <ManagerRequestsLink collectiviteId={collectiviteId} />
 
         <View
           style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}

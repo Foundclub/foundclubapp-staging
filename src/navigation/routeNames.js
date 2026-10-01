@@ -380,4 +380,6 @@ export const RouteNames = /** @type {const} */ ({
   // « Je represente une collectivite » : l inscription de la mairie, puis ou en est sa demande.
   CollectiviteSignup: 'CollectiviteSignup',
   CollectiviteSignupStatus: 'CollectiviteSignupStatus',
+  // La file « Demandes de gestionnaire » de la console super-admin (decision « console oui »).
+  AdminManagerRequests: 'AdminManagerRequests',
 });

@@ -59,8 +59,8 @@ function PrivateNavigator() {
   } = useAuth();
   const { isGold } = useAppMode();
   const { t } = useTranslation();
+  const isSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'superAdmin';
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
-  const isSuperAdmin = roleKey === 'superAdmin';
   // 🏛️ COLL-ACCUEIL (01/10, décision d'Adel « accueil A ») — un compte qui ne gère QU'une
   // Ville (aucun rôle sportif) arrive sur l'espace de sa Ville, sans tunnel sportif. Un
   // compte mixte (dirigeant, joueur… qui gère aussi une Ville) garde son accueil. La lecture

@@ -207,6 +207,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.AdminCollectiviteList]: '/admin/collectivites',
   [RouteNames.AdminCollectiviteForm]: '/admin/collectivites/new',
   [RouteNames.AdminCollectiviteDetail]: '/admin/collectivites/:collectiviteId',
+  // COLL-ACCUEIL (01/10) — la file « Demandes de gestionnaire » (hors de /admin/collectivites/:id :
+  // « demandes » y serait lu comme une collectivite).
+  [RouteNames.AdminManagerRequests]: '/admin/demandes-gestionnaire',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',
