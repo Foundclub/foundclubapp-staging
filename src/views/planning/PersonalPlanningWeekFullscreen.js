@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   addDays,
   format,
+  isSameDay,
   isSameWeek,
   parseISO,
 } from 'date-fns';
@@ -17,8 +18,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Image,
+  Linking,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,11 +32,16 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  useCollectiviteClubs,
+  useManagingCollectiviteId,
+} from '@/services/collectivite/collectiviteQueries';
 import {
   getClubPlanning,
   getMyPlanning,
@@ -45,8 +53,8 @@ import {
 } from '@/services/multisportClub/multisportClubService';
 
 import {
-  lockToLandscape,
   lockToPortrait,
+  unlockAllOrientations,
 } from '@/utils/device/orientation';
 import {
   FACILITY_CONFLICT_MODES,
@@ -55,8 +63,10 @@ import {
 import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
+  getPlanningItemDate,
   getPlanningPeakOccupancy,
   getPlanningRange,
+  getPlanningTimeLabel,
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
@@ -171,10 +181,19 @@ function PlanningWeekFullscreen() {
   const sectionId = route?.params?.sectionId || null;
 
   const [currentDate, setCurrentDate] = useState(getInitialDate(route?.params?.date));
+  // PLANNING-PORTRAIT (01/10, decision d'Adel « D6 A ») : l'ecran SUIT le telephone.
+  // Tenu droit, une semaine ne laissait que ~50 pt par jour (mesure FINITIONS5) : on y
+  // montre UN jour ; tourne, la semaine, comme avant.
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const isLandscape = windowWidth > windowHeight;
+  const pageDays = isLandscape ? 7 : 1;
 
+  // L'orientation n'est plus FORCEE en paysage (V1803) : elle est LIBEREE, et l'app
+  // revient en portrait en sortant. Le module natif savait deja le faire
+  // (`unlockToUserPreference`) : aucune nouvelle construction de l'app n'est requise.
   useFocusEffect(useCallback(() => {
     const timer = setTimeout(() => {
-      lockToLandscape();
+      unlockAllOrientations();
     }, 10);
 
     return () => {
@@ -216,10 +235,29 @@ function PlanningWeekFullscreen() {
   // COLL1D — le texte de capacite parle a CELUI qui lit : les « depassements » et les
   // « demandes en attente » ne regardent que ceux qui posent des evenements (entraineur,
   // dirigeant) ; un joueur ou un parent lit ce qui est libre.
+  // PLANNING-PORTRAIT (01/10) — ET celui qui GERE l'installation : un agent de mairie dont
+  // le compte est « joueur » lisait le texte du membre. C'est le serveur qui dit qu'il la
+  // gere (ses collectivites, puis leurs installations), jamais le role du compte.
   const { userData } = /** @type {any} */ (useAuth()) || {};
-  const readsAsOrganizer = ['coach', 'president', 'superAdmin'].includes(
-    getUserRoleKey(userData?.role?.type || userData?.role?.name),
-  );
+  const isFacilitySource = sourceType === FULLSCREEN_SOURCE_TYPES.facility;
+  const managingCollectiviteId = useManagingCollectiviteId(facilityId, {
+    enabled: isFacilitySource,
+  });
+  const readsAsOrganizer = Boolean(managingCollectiviteId)
+    || ['coach', 'president', 'superAdmin'].includes(
+      getUserRoleKey(userData?.role?.type || userData?.role?.name),
+    );
+  // SPEC Collectivites §2 C : la mairie touche le bloc d'un AUTRE club -> une fiche en
+  // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
+  // lecteur, ce bloc reste inerte (FINITIONS2).
+  const [readOnlyBlock, setReadOnlyBlock] = useState(/** @type {any} */ (null));
+  const attachedClubs = useCollectiviteClubs(readOnlyBlock ? managingCollectiviteId : null);
+  const readOnlyBlockContact = (attachedClubs.data || []).find(
+    (club) => club?.documentId && club.documentId === readOnlyBlock?.club?.documentId,
+  ) || null;
+  const readOnlyBlockDate = readOnlyBlock ? getPlanningItemDate(readOnlyBlock) : null;
+  const showsContact = !attachedClubs.isLoading;
+  const hasContact = Boolean(readOnlyBlockContact?.email || readOnlyBlockContact?.phoneNumber);
   // COLL1B : ouvert par un lien du site (params reduits a l adresse), l ecran d une
   // installation retrouve son nom et sa capacite dans la reponse du serveur.
   const serverFacility = sourceType === FULLSCREEN_SOURCE_TYPES.facility
@@ -251,6 +289,9 @@ function PlanningWeekFullscreen() {
     const toDate = parseISO(planningRange.to);
     return `${format(fromDate, 'd MMM', { locale: fr })} - ${format(toDate, 'd MMM yyyy', { locale: fr })}`;
   }, [planningRange.from, planningRange.to]);
+  const pageLabel = isLandscape
+    ? weekLabel
+    : format(currentDate, 'EEEE d MMMM yyyy', { locale: fr });
   const planningContextLabel = useMemo(() => {
     if (contextLabel) {
       return contextLabel;
@@ -281,6 +322,10 @@ function PlanningWeekFullscreen() {
     () => isSameWeek(currentDate, getPlanningDefaultDate(), { weekStartsOn: 1 }),
     [currentDate],
   );
+  // « Aujourd'hui » ramene a la page du jour : la semaine en paysage, le jour en portrait.
+  const isCurrentPage = isLandscape
+    ? isCurrentWeek
+    : isSameDay(currentDate, getPlanningDefaultDate());
   const facilitySummaryMessage = useMemo(() => {
     if (!facilityPlanningSummary) return '';
 
@@ -314,7 +359,7 @@ function PlanningWeekFullscreen() {
 
     return t(
       'facilityList.planning.capacityAvailable',
-      '{{count}} slot(s) restaient disponibles au pic de charge.',
+      'Places encore libres au moment le plus chargé : {{count}}.',
       { count: facilityPlanningSummary.remainingAtPeak },
     );
   }, [facilityPlanningSummary, readsAsOrganizer, t]);
@@ -332,9 +377,21 @@ function PlanningWeekFullscreen() {
     });
   }, [navigation]);
 
-  const handlePrevWeek = useCallback(() => {
-    setCurrentDate((previousDate) => addDays(previousDate, -7));
-  }, []);
+  // Ne s'ouvre que sur le bloc d'un autre club, et seulement pour celui qui gere.
+  const handleReadOnlyEventPress = useMemo(() => {
+    if (!managingCollectiviteId) return undefined;
+    return (/** @type {any} */ event) => setReadOnlyBlock(event);
+  }, [managingCollectiviteId]);
+  const handleCloseReadOnlyBlock = useCallback(() => setReadOnlyBlock(null), []);
+
+  // Les fleches de l'en-tete : un jour en portrait, une semaine en paysage.
+  const handlePrevPage = useCallback(() => {
+    setCurrentDate((previousDate) => addDays(previousDate, -pageDays));
+  }, [pageDays]);
+
+  const handleNextPage = useCallback(() => {
+    setCurrentDate((previousDate) => addDays(previousDate, pageDays));
+  }, [pageDays]);
 
   const handleNextWeek = useCallback(() => {
     setCurrentDate((previousDate) => addDays(previousDate, 7));
@@ -371,9 +428,10 @@ function PlanningWeekFullscreen() {
             )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
+            {/* « ton A » (01/10) : lu par la mairie ET les clubs, ni « tu » ni « vous ». */}
             {t(
               'personalPlanningWeekFullscreen.weekPlanningLoadError',
-              'Le planning de cette semaine n’a pas pu être récupère. Réessaie ou change de '
+              'Le planning de cette semaine n’a pas pu être chargé. Réessayer, ou changer de '
                 + 'semaine.',
             )}
           </Text>
@@ -411,7 +469,7 @@ function PlanningWeekFullscreen() {
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
             {t(
               'personalPlanningWeekFullscreen.changeWeekToExploreThe',
-              'Change de semaine pour explorer le planning ou reviens à la semaine actuelle.',
+              'Les flèches mènent aux autres dates.',
             )}
           </Text>
           <View style={[Alignments.row, Spaces.gap[12]]}>
@@ -440,12 +498,15 @@ function PlanningWeekFullscreen() {
 
     return (
       <PlanningWeekTimelineView
+        // Planning d'une installation : chaque bloc dit son club, puis son equipe.
+        cardDisplayProfile={isFacilitySource ? 'clubFocused' : 'default'}
         compactFullscreen
         currentDate={currentDate}
         events={events}
-        mode="week"
+        mode={isLandscape ? 'week' : 'day'}
         onDateChange={setCurrentDate}
         onEventPress={handleEventPress}
+        onReadOnlyEventPress={handleReadOnlyEventPress}
         scrollEnabled
         showHeader={false}
         showUntimedSection={false}
@@ -466,9 +527,12 @@ function PlanningWeekFullscreen() {
     handleBackToCurrentWeek,
     handleEventPress,
     handleNextWeek,
+    handleReadOnlyEventPress,
     hasEvents,
     isCurrentWeek,
+    isFacilitySource,
     isFetching,
+    isLandscape,
     isLoading,
     refetch,
     setCurrentDate,
@@ -503,13 +567,12 @@ function PlanningWeekFullscreen() {
           ]}
         >
           <TouchableOpacity
-            accessibilityLabel={t(
-              'personalPlanningWeekFullscreen.previousWeek',
-              'Semaine précédente',
-            )}
+            accessibilityLabel={isLandscape
+              ? t('personalPlanningWeekFullscreen.previousWeek', 'Semaine précédente')
+              : t('personalPlanningWeekFullscreen.previousDay', 'Jour précédent')}
             accessibilityRole="button"
             hitSlop={8}
-            onPress={handlePrevWeek}
+            onPress={handlePrevPage}
             style={{
               alignItems: 'center',
               borderRadius: 10,
@@ -544,15 +607,17 @@ function PlanningWeekFullscreen() {
               numberOfLines={1}
               style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter, { fontSize: 13 }]}
             >
-              {weekLabel}
+              {pageLabel}
             </Text>
           </View>
 
           <TouchableOpacity
-            accessibilityLabel={t('personalPlanningWeekFullscreen.nextWeek', 'Semaine suivante')}
+            accessibilityLabel={isLandscape
+              ? t('personalPlanningWeekFullscreen.nextWeek', 'Semaine suivante')
+              : t('personalPlanningWeekFullscreen.nextDay', 'Jour suivant')}
             accessibilityRole="button"
             hitSlop={8}
-            onPress={handleNextWeek}
+            onPress={handleNextPage}
             style={{
               alignItems: 'center',
               borderRadius: 10,
@@ -593,12 +658,14 @@ function PlanningWeekFullscreen() {
               style={{ height: 12, tintColor: Colors.neutral00, width: 12 }}
             />
           </TouchableOpacity>
-          {!isCurrentWeek ? (
+          {!isCurrentPage ? (
             <TouchableOpacity
-              accessibilityLabel={t(
-                'personalPlanningWeekFullscreen.backToTheCurrentWeek',
-                'Revenir à la semaine actuelle',
-              )}
+              accessibilityLabel={isLandscape
+                ? t(
+                  'personalPlanningWeekFullscreen.backToTheCurrentWeek',
+                  'Revenir à la semaine actuelle',
+                )
+                : t('personalPlanningWeekFullscreen.backToToday', 'Revenir à aujourd’hui')}
               accessibilityRole="button"
               hitSlop={8}
               onPress={handleBackToCurrentWeek}
@@ -621,6 +688,15 @@ function PlanningWeekFullscreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {!isLandscape ? (
+          <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter, Spaces.marginBottom[8]]}>
+            {t(
+              'personalPlanningWeekFullscreen.rotateForWeek',
+              'Téléphone à l’horizontale : toute la semaine.',
+            )}
+          </Text>
+        ) : null}
 
         {facilityPlanningSummary ? (
           <View
@@ -647,21 +723,20 @@ function PlanningWeekFullscreen() {
 
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
               {[
-                // COLL1D — « 2 slots » ne parle qu'a celui qui reserve : le membre lit
-                // la capacite comme sur la carte de l'installation (« 2 equipes simultanees »).
-                readsAsOrganizer ? t(
+                // PLANNING-PORTRAIT (01/10) — « 2 slots » et « Pic 2/2 » etaient du jargon
+                // (COLL1D les cachait au seul membre) : des mots francais, pour tous, ceux
+                // de la maquette de l'ecran 10 (« 2 equipes a la fois »).
+                t(
                   'personalPlanningWeekFullscreen.slots',
                   {
                     count: facilityPlanningSummary.maxSlots,
-                    defaultValue_one: '{{count}} slot',
-                    defaultValue_other: '{{count}} slots',
+                    defaultValue_one: '{{count}} équipe à la fois',
+                    defaultValue_other: '{{count}} équipes à la fois',
                   },
-                ) : `${facilityPlanningSummary.maxSlots} ${facilityPlanningSummary.maxSlots > 1
-                  ? t('facilityList.capacity.teamPlural', 'équipes simultanées')
-                  : t('facilityList.capacity.teamSingular', 'équipe simultanée')}`,
+                ),
                 t(
                   'personalPlanningWeekFullscreen.peak',
-                  'Pic {{peak}}/{{max}}',
+                  'Au plus chargé : {{peak}} sur {{max}}',
                   {
                     max: facilityPlanningSummary.maxSlots,
                     peak: facilityPlanningSummary.peakConcurrent,
@@ -720,6 +795,65 @@ function PlanningWeekFullscreen() {
           {planningContent}
         </View>
       </View>
+
+      <BottomModal close={handleCloseReadOnlyBlock} isVisible={Boolean(readOnlyBlock)}>
+        {readOnlyBlock ? (
+          <View style={[Spaces.gap[8], Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
+            <Text style={[Fonts.p4, Fonts.neutral200]}>
+              {t('personalPlanningWeekFullscreen.blockSheet.title', 'Qui occupe l’installation')}
+            </Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{readOnlyBlock.club?.name || ''}</Text>
+            {readOnlyBlock.team?.name ? (
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{readOnlyBlock.team.name}</Text>
+            ) : null}
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {[
+                readOnlyBlockDate ? format(readOnlyBlockDate, 'EEEE d MMMM', { locale: fr }) : null,
+                getPlanningTimeLabel(readOnlyBlock),
+              ].filter(Boolean).join(' · ')}
+            </Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[8]]}>
+              {t('personalPlanningWeekFullscreen.blockSheet.contactTitle', 'Contact du club')}
+            </Text>
+            {showsContact ? null : <Loader />}
+            {showsContact && readOnlyBlockContact?.email ? (
+              <Text
+                accessibilityRole="link"
+                onPress={() => Linking.openURL(`mailto:${readOnlyBlockContact.email}`)}
+                style={[Fonts.p3, Fonts.primary100]}
+              >
+                {t('personalPlanningWeekFullscreen.blockSheet.email', 'E-mail : {{email}}', {
+                  email: readOnlyBlockContact.email,
+                })}
+              </Text>
+            ) : null}
+            {showsContact && readOnlyBlockContact?.phoneNumber ? (
+              <Text
+                accessibilityRole="link"
+                onPress={() => Linking.openURL(`tel:${readOnlyBlockContact.phoneNumber}`)}
+                style={[Fonts.p3, Fonts.primary100]}
+              >
+                {t('personalPlanningWeekFullscreen.blockSheet.phone', 'Téléphone : {{phone}}', {
+                  phone: readOnlyBlockContact.phoneNumber,
+                })}
+              </Text>
+            ) : null}
+            {showsContact && !hasContact ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'personalPlanningWeekFullscreen.blockSheet.noContact',
+                  'Aucun contact renseigné par le club.',
+                )}
+              </Text>
+            ) : null}
+            <Button
+              onPress={handleCloseReadOnlyBlock}
+              title={t('personalPlanningWeekFullscreen.blockSheet.close', 'Fermer')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
+      </BottomModal>
     </ScreenContainer>
   );
 }
