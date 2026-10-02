@@ -21,10 +21,12 @@ import {
   sanitizeSubscriptionLicenseeCountInput,
 } from '@/domains/subscription/subscriptionBilling';
 import {
+  formatCollectiviteOfferedBy,
   formatSubscriptionPlanLabel,
   getActiveClubNotCovered,
   getActiveOfferDetails,
   getCollectiviteOffer,
+  getCollectiviteOfferDetails,
   getCoveredTeamCount,
   getCoveringEntitlement,
   getSubscriptionBadgeLevel,
@@ -48,6 +50,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import LicenseeCountField from '@/components/molecules/licenseeCountField/LicenseeCountField';
@@ -759,32 +762,6 @@ function SubscriptionOverview({ navigation, route }) {
     return null;
   }
 
-  if (collectiviteOffer && !paysInAStore) {
-    return (
-      <ScreenContainer
-        bgImage="bg2"
-        contentContainerStyle={[Spaces.paddingBottom[12], Spaces.paddingTop[0]]}
-      >
-        <SubscriptionCoveredHero collectiviteOffer={collectiviteOffer} navigation={navigation} />
-      </ScreenContainer>
-    );
-  }
-
-  if (coveringEntitlement) {
-    return (
-      <ScreenContainer
-        bgImage="bg2"
-        contentContainerStyle={[Spaces.paddingBottom[12], Spaces.paddingTop[0]]}
-      >
-        <SubscriptionCoveredHero
-          coveredTeamNames={coveredByOtherTeamNames}
-          coveringEntitlement={coveringEntitlement}
-          navigation={navigation}
-        />
-      </ScreenContainer>
-    );
-  }
-
   /**
    * Ligne d'information de la carte statut (Certification, Renouvellement…).
    * @param {{ icon: string; label: string; value: string; valueColor?: any }} props
@@ -895,6 +872,124 @@ function SubscriptionOverview({ navigation, route }) {
       </View>
     </View>
   );
+
+  // COLL-C2C (02/10) — planche P8-abonnement-tel, etat 1 (D63) : QUI paie (la Ville), POUR quel
+  // club, DEPUIS quand, ce qui est inclus, qui contacter, et ce qui se passe si la Ville arrete.
+  // Rien a acheter ni a resilier : ni « Changer d offre », ni « Restaurer mes achats », ni « Gerer
+  // ou resilier », ni « Augmenter mes licencies ». « Comparer les offres » et « Voir mon club »
+  // restent (planche validee le 01/10).
+  if (collectiviteOffer && !paysInAStore) {
+    const ville = formatCollectiviteOfferedBy(collectiviteOffer.name);
+    const inclus = [
+      t(
+        'subscriptionCoveredHero.collectivite.inclus.equipes',
+        'Créer tes équipes et ajouter tes membres',
+      ),
+      t(
+        'subscriptionCoveredHero.collectivite.inclus.evenements',
+        'Publier tes événements, sans limite',
+      ),
+      t(
+        'subscriptionCoveredHero.collectivite.inclus.cotisations',
+        'Créer tes campagnes de cotisations',
+      ),
+      t(
+        'subscriptionCoveredHero.collectivite.inclus.matchs',
+        'Rechercher des matchs',
+      ),
+      t(
+        'subscriptionCoveredHero.collectivite.inclus.communiquer',
+        'Communiquer à tous tes licenciés',
+      ),
+    ];
+    const paragraphe = (/** @type {string} */ titre, /** @type {string} */ corps) => renderSection(
+      titre,
+      <Text style={[Fonts.p2, Fonts.neutral100, Spaces.paddingVertical[12]]}>{corps}</Text>,
+    );
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingBottom[12], Spaces.paddingTop[0]]}
+      >
+        <ScrollView
+          contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[24]]}
+          showsVerticalScrollIndicator={false}
+        >
+          <SubscriptionCoveredHero
+            collectiviteDetails={getCollectiviteOfferDetails({
+              clubDocumentId: currentClubDocumentId,
+              entitlementsSummary,
+            })}
+            collectiviteOffer={collectiviteOffer}
+            navigation={navigation}
+          />
+          {renderSection(
+            t('subscriptionCoveredHero.collectivite.inclus.titre', 'Ce qui est inclus'),
+            <View style={[Spaces.paddingVertical[12], Spaces.gap[8]]}>
+              {inclus.map((ligne) => (
+                <View key={ligne} style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                  <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
+                  <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>{ligne}</Text>
+                </View>
+              ))}
+            </View>,
+          )}
+          {paragraphe(
+            t('subscriptionCoveredHero.collectivite.questionTitre', 'Une question sur cette offre'),
+            t(
+              'subscriptionCoveredHero.collectivite.question',
+              'Adresse-toi à {{ville}}, pas à la boutique.',
+              { ville, ...SANS_ECHAPPEMENT },
+            ),
+          )}
+          {paragraphe(
+            t('subscriptionCoveredHero.collectivite.arretTitre', 'Si la Ville arrête'),
+            t(
+              'subscriptionCoveredHero.collectivite.arret',
+              // eslint-disable-next-line max-len
+              'Ton club repasse à l’offre gratuite. Tes équipes, membres et événements restent. Tu pourras alors t’abonner toi-même.',
+            ),
+          )}
+          {renderSection(
+            t('subscriptionOverview.sections.plan', 'Offre'),
+            <>
+              {renderActionRow({
+                glyph: 'chartColumn',
+                label: t('profile.subscription.actions.compareOffers', 'Comparer les offres'),
+                onPress: () => navigation.navigate(RouteNames.SubscriptionCompare),
+              })}
+              {currentClubDocumentId ? renderActionRow({
+                icon: 'shield',
+                label: t('profile.subscription.actions.viewClub', 'Voir mon club'),
+                onPress: () => navigation.navigate(RouteNames.ClubStack, {
+                  params: { clubId: currentClubDocumentId },
+                  screen: RouteNames.Club,
+                }),
+                right: t('profile.subscription.actions.viewClubHint', 'Demandes · certification'),
+                withDivider: true,
+              }) : null}
+            </>,
+          )}
+          <LegalFooter pricesNotice={false} restore={false} />
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
+
+  if (coveringEntitlement) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.paddingBottom[12], Spaces.paddingTop[0]]}
+      >
+        <SubscriptionCoveredHero
+          coveredTeamNames={coveredByOtherTeamNames}
+          coveringEntitlement={coveringEntitlement}
+          navigation={navigation}
+        />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer

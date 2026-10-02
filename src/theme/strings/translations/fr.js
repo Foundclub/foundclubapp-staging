@@ -2765,6 +2765,8 @@ export default {
     },
     collectiviteOffer: {
       banner: 'Offert par {{who}}',
+      ouvrir: '{{offert}} : voir ses installations',
+      voir: 'Voir les installations de la Ville',
     },
     facilities: {
       nameFallback: 'Installation',
@@ -16901,6 +16903,22 @@ export default {
       },
     },
     collectivite: {
+      // eslint-disable-next-line max-len
+      arret: 'Ton club repasse à l’offre gratuite. Tes équipes, membres et événements restent. Tu pourras alors t’abonner toi-même.',
+      arretTitre: 'Si la Ville arrête',
+      depuis: 'Depuis le {{date}}',
+      ecusson: 'Écusson de {{ville}}',
+      inclus: {
+        communiquer: 'Communiquer à tous tes licenciés',
+        cotisations: 'Créer tes campagnes de cotisations',
+        equipes: 'Créer tes équipes et ajouter tes membres',
+        evenements: 'Publier tes événements, sans limite',
+        matchs: 'Rechercher des matchs',
+        titre: 'Ce qui est inclus',
+      },
+      pour: 'Pour {{club}}',
+      question: 'Adresse-toi à {{ville}}, pas à la boutique.',
+      questionTitre: 'Une question sur cette offre',
       subtitle: 'Toutes les équipes de ton club sont couvertes, sans limite.',
       title: 'Offre Club offerte par {{who}}',
     },

@@ -1519,15 +1519,44 @@ export const getClubDisplayName = (documentId, entitlements, userData) => {
  * @returns {{ documentId: string, name: string } | null} La collectivite qui offre, ou null.
  */
 export const getCollectiviteOffer = ({ clubDocumentId, entitlementsSummary } = {}) => {
+  const entry = findCollectiviteOfferEntry({ clubDocumentId, entitlementsSummary });
+  return entry
+    ? { documentId: trimId(entry.offeredBy.documentId), name: String(entry.offeredBy.name).trim() }
+    : null;
+};
+
+/**
+ * COLL-C2C (02/10) — le droit Club offert par une collectivité sur CE club (le juge partagé de
+ * `getCollectiviteOffer` et de `getCollectiviteOfferDetails`).
+ * @param {{ clubDocumentId?: string | null, entitlementsSummary?: any }} [contexte] - Le club
+ *   affiché et le résumé des droits du bootstrap.
+ * @returns {any | null} L entrée du résumé, ou null.
+ */
+function findCollectiviteOfferEntry({ clubDocumentId = null, entitlementsSummary = [] } = {}) {
   const target = trimId(clubDocumentId);
   if (!target) return null;
-  const entry = normalizeDecisionArray(entitlementsSummary).find((droit) => (
+  return normalizeDecisionArray(entitlementsSummary).find((/** @type {any} */ droit) => (
     droit?.scopeType === 'CLUB'
     && trimId(droit?.scopeClubDocumentId) === target
     && String(droit?.offeredBy?.name || '').trim() !== ''
-  ));
+  )) || null;
+}
+
+/**
+ * COLL-C2C (02/10) — « Mon abonnement » quand la Ville paie (planche P8-abonnement-tel) : POUR
+ * quel club, et DEPUIS quand (`offeredBy.since`, posé par le serveur sur un droit offert qui en
+ * a une). Même droit que `getCollectiviteOffer` ; null sans offre de la Ville.
+ * @param {{ clubDocumentId?: string | null, entitlementsSummary?: any }} [contexte] - Le club
+ *   affiché et le résumé des droits du bootstrap.
+ * @returns {{ clubName: string | null, since: string | null } | null} Le détail, ou null.
+ */
+export const getCollectiviteOfferDetails = ({ clubDocumentId, entitlementsSummary } = {}) => {
+  const entry = findCollectiviteOfferEntry({ clubDocumentId, entitlementsSummary });
   return entry
-    ? { documentId: trimId(entry.offeredBy.documentId), name: String(entry.offeredBy.name).trim() }
+    ? {
+      clubName: String(entry.scopeClubName || '').trim() || null,
+      since: entry.offeredBy?.since || null,
+    }
     : null;
 };
 

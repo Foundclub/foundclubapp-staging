@@ -20,7 +20,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { countClubTrainers } from '@/domains/club/clubStaff';
-import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  collectiviteInitial,
+  formatOpeningHours,
+} from '@/domains/collectivite/collectiviteDisplay';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -1248,6 +1251,12 @@ function ClubDetails({ navigation, route }) {
     clubDocumentId: club?.documentId || clubId,
     entitlementsSummary,
   }), [club?.documentId, clubId, entitlementsSummary]);
+  const offertParLaVille = collectiviteOffer
+    ? t('clubDetails.collectiviteOffer.banner', 'Offert par {{who}}', {
+      who: formatCollectiviteOfferedBy(collectiviteOffer.name),
+      ...SANS_ECHAPPEMENT,
+    })
+    : '';
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
@@ -2726,35 +2735,79 @@ function ClubDetails({ navigation, route }) {
                     {clubCertificationLabel}
                   </Text>
                 </View>
-                {/* COLL1D — le bandeau qui valorise la mairie (SPEC §3), sur la carte du
-                    club : une pastille sous celle de la certification, rien de plus. */}
-                {collectiviteOffer ? (
-                  <View
-                    style={[
-                      ApplicationStyle.borderRadius24,
-                      Spaces.paddingVertical[4],
-                      Spaces.paddingHorizontal[12],
-                      {
-                        backgroundColor: withAlpha(Colors.success500, 0.12),
-                        borderColor: withAlpha(Colors.success500, 0.45),
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, Fonts.textCenter, { color: Colors.success200 }]}>
-                      {t('clubDetails.collectiviteOffer.banner', 'Offert par {{who}}', {
-                        who: formatCollectiviteOfferedBy(collectiviteOffer.name),
-                        ...SANS_ECHAPPEMENT,
-                      })}
-                    </Text>
-                  </View>
-                ) : null}
                 <Text style={[Fonts.p2, Fonts.primary100]}>
                   {(() => {
                     const parsedAddress = safeJsonParse(club?.addressDetails, null);
                     return parsedAddress?.address || club?.addressDetails || '';
                   })()}
                 </Text>
+                {/* COLL-C2C (02/10) — planche P8-club-tel (écran 15) : le bandeau qui valorise
+                    la mairie (SPEC §3) devient un vrai bandeau en CARTE sous la carte du club —
+                    l écusson de la Ville (son initiale, faute de logo), « Offert par … », et ses
+                    installations à un appui. Dirigeant et entraîneur (leur droit porte la Ville) ;
+                    le joueur, non. « Gérer mon club » ne bouge pas (décision du 01/10). */}
+                {collectiviteOffer ? (
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'clubDetails.collectiviteOffer.ouvrir',
+                      '{{offert}} : voir ses installations',
+                      { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
+                    )}
+                    accessibilityRole="link"
+                    onPress={handleOpenFacilityList}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[12],
+                      Spaces.padding[12],
+                      {
+                        alignSelf: 'stretch',
+                        backgroundColor: withAlpha(Colors.success500, 0.08),
+                        borderColor: withAlpha(Colors.success500, 0.4),
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        marginTop: 8,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        Alignments.alignCenter,
+                        Alignments.justifyCenter,
+                        {
+                          backgroundColor: withAlpha(Colors.success500, 0.16),
+                          borderBottomLeftRadius: 18,
+                          borderBottomRightRadius: 18,
+                          borderColor: withAlpha(Colors.success500, 0.6),
+                          borderTopLeftRadius: 6,
+                          borderTopRightRadius: 6,
+                          borderWidth: 1,
+                          height: 40,
+                          width: 36,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p1Bold, { color: Colors.success200 }]}>
+                        {collectiviteInitial(collectiviteOffer.name)}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={[Fonts.p2Bold, { color: Colors.success200 }]}>
+                        {offertParLaVille}
+                      </Text>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {t(
+                          'clubDetails.collectiviteOffer.voir',
+                          'Voir les installations de la Ville',
+                        )}
+                      </Text>
+                    </View>
+                    <Image
+                      source={Images.arrowRight}
+                      style={{ height: 14, tintColor: Colors.success200, width: 14 }}
+                    />
+                  </TouchableOpacity>
+                ) : null}
               </View>
               <View style={[
                 Spaces.gap[4],

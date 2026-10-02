@@ -7,6 +7,7 @@ import {
   Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { collectiviteInitial } from '@/domains/collectivite/collectiviteDisplay';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
@@ -94,24 +95,62 @@ const getHeroOfferLabel = (planCode) => {
  * COLL1D (29/09) — la variante « offerte par la collectivite » (SPEC §3, §4) : le nom de
  * la Ville au centre, « Offre Club offerte par la Ville de X ». Ni date, ni prix, ni
  * bouton : personne ne paie dans l'app, et la mairie n'a pas de messagerie de payeur.
- * @param {{ collectiviteOffer: { name: string } }} props
+ *
+ * COLL-C2C (02/10) — planche P8-abonnement-tel, état 1 : l ÉCUSSON de la Ville (son initiale,
+ * faute de logo), puis, sous la pastille, POUR quel club et DEPUIS quand.
+ * @param {{
+ *   collectiviteDetails?: { clubName?: string | null, since?: string | null } | null,
+ *   collectiviteOffer: { name: string },
+ * }} props
  * @returns {import('react').ReactElement}
  */
-function CollectiviteOfferedHero({ collectiviteOffer }) {
+function CollectiviteOfferedHero({ collectiviteDetails = null, collectiviteOffer }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const ville = formatCollectiviteOfferedBy(collectiviteOffer?.name);
+  const debut = collectiviteDetails?.since ? new Date(collectiviteDetails.since) : null;
+  const depuis = debut && !Number.isNaN(debut.getTime())
+    ? format(debut, 'd MMM yyyy', { locale: fr })
+    : '';
 
   return (
     <View
       style={[
-        Alignments.fill,
         Alignments.alignCenter,
         Alignments.justifyCenter,
         Spaces.padding[24],
       ]}
     >
+      <View
+        accessibilityLabel={t(
+          'subscriptionCoveredHero.collectivite.ecusson',
+          'Écusson de {{ville}}',
+          { ville, ...SANS_ECHAPPEMENT },
+        )}
+        accessibilityRole="image"
+        accessible
+        style={[
+          Alignments.alignCenter,
+          Alignments.justifyCenter,
+          {
+            backgroundColor: withAlpha(Colors.success500, 0.16),
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            borderColor: withAlpha(Colors.success500, 0.6),
+            borderTopLeftRadius: 10,
+            borderTopRightRadius: 10,
+            borderWidth: 1,
+            height: 72,
+            width: 64,
+          },
+        ]}
+      >
+        <Text style={[Fonts.h2Bold, { color: Colors.success200 }]}>
+          {collectiviteInitial(collectiviteOffer?.name)}
+        </Text>
+      </View>
       <Text style={[Fonts.h2Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginTop[16]]}>
         {t('subscriptionCoveredHero.collectivite.title', 'Offre Club offerte par {{who}}', {
           who: formatCollectiviteOfferedBy(collectiviteOffer?.name),
@@ -144,6 +183,22 @@ function CollectiviteOfferedHero({ collectiviteOffer }) {
           {t('subscriptionCoveredHero.unlockedChip', 'Tout est débloqué pour toi')}
         </Text>
       </View>
+      {collectiviteDetails?.clubName ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral100, Fonts.textCenter, Spaces.marginTop[16]]}>
+          {t('subscriptionCoveredHero.collectivite.pour', 'Pour {{club}}', {
+            club: collectiviteDetails.clubName,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+      {depuis ? (
+        <Text style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter, Spaces.marginTop[4]]}>
+          {t('subscriptionCoveredHero.collectivite.depuis', 'Depuis le {{date}}', {
+            date: depuis,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -155,6 +210,8 @@ function CollectiviteOfferedHero({ collectiviteOffer }) {
  * @param {object} props
  * @param {any} [props.collectiviteOffer] - COLL1D : la collectivite qui offre l'offre
  *   Club du club affiche (`getCollectiviteOffer`) ; la page devient sa variante.
+ * @param {any} [props.collectiviteDetails] - COLL-C2C : pour quel club, depuis quand
+ *   (`getCollectiviteOfferDetails`).
  * @param {any} [props.coveringEntitlement] - Entitlement couvrant l'utilisateur
  *   (expose paidBy, scopeType, scopeTeamName, subscriptionPlanCode,
  *   subscriptionCurrentPeriodEnd).
@@ -163,13 +220,19 @@ function CollectiviteOfferedHero({ collectiviteOffer }) {
  * @returns {import('react').ReactElement}
  */
 function SubscriptionCoveredHero({
+  collectiviteDetails = null,
   collectiviteOffer = null,
   coveredTeamNames = [],
   coveringEntitlement = null,
   navigation,
 }) {
   if (collectiviteOffer) {
-    return <CollectiviteOfferedHero collectiviteOffer={collectiviteOffer} />;
+    return (
+      <CollectiviteOfferedHero
+        collectiviteDetails={collectiviteDetails}
+        collectiviteOffer={collectiviteOffer}
+      />
+    );
   }
   return (
     <PaidByMemberHero

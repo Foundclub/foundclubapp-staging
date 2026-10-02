@@ -2537,6 +2537,8 @@ export default {
     },
     collectiviteOffer: {
       banner: 'Offered by {{who}}',
+      ouvrir: '{{offert}}: see its facilities',
+      voir: 'See the town facilities',
     },
     facilities: {
       nameFallback: 'Facility',
@@ -16127,6 +16129,21 @@ export default {
       },
     },
     collectivite: {
+      arret: 'Your club goes back to the free plan. Your teams, members and events stay. You can then subscribe yourself.',
+      arretTitre: 'If the town stops',
+      depuis: 'Since {{date}}',
+      ecusson: 'Crest of {{ville}}',
+      inclus: {
+        communiquer: 'Reach all your members',
+        cotisations: 'Create your fee campaigns',
+        equipes: 'Create your teams and add your members',
+        evenements: 'Publish your events, with no limit',
+        matchs: 'Search for matches',
+        titre: 'What is included',
+      },
+      pour: 'For {{club}}',
+      question: 'Ask {{ville}}, not the store.',
+      questionTitre: 'A question about this plan',
       subtitle: 'All your club’s teams are covered, with no limit.',
       title: 'Club plan offered by {{who}}',
     },
