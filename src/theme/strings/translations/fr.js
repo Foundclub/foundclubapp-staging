@@ -5455,6 +5455,15 @@ export default {
       ouvrir: '{{nom}} : voir le planning',
       supprimer: 'Supprimer l’installation',
     },
+    attente: {
+      accepter: 'Accepter',
+      dit: 'Tes créneaux sont déjà pleins à ces heures : accepte ou refuse.',
+      ligne: '{{team}} · {{day}} {{hours}}',
+      refuser: 'Refuser',
+      refuserTexte: 'Elle est annulée, et son entraîneur est prévenu.',
+      refuserTitre: 'Refuser la séance ?',
+      titre: 'Séances à valider ({{count}})',
+    },
     compte: {
       aDemander: '{{count}} à demander',
       auClub: '{{count}} au club',
@@ -5479,6 +5488,13 @@ export default {
       avecCreneaux: 'Tes créneaux de la Ville',
       avecCreneauxDit: '{{ville}} t’a attribué ces créneaux pour la saison.',
       nombre: '({{count}})',
+    },
+    lieu: {
+      aide: 'Choisis une installation de ton club, ou de la Ville où ton club a un créneau.',
+      creneaux: 'Tes créneaux de la Ville : {{liste}}',
+      // eslint-disable-next-line max-len
+      dansLeCreneau: 'Dans ton créneau {{creneau}} : la séance est validée directement. Si ton club y est déjà au complet à cette heure, ton dirigeant décide.',
+      horsCreneau: 'Hors de tes créneaux de la Ville à cette heure.',
     },
   },
   collectiviteCreneaux: {

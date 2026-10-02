@@ -5099,6 +5099,15 @@ export default {
       ouvrir: '{{nom}}: see the schedule',
       supprimer: 'Delete the facility',
     },
+    attente: {
+      accepter: 'Accept',
+      dit: 'Your slots are already full at these times: accept or decline.',
+      ligne: '{{team}} · {{day}} {{hours}}',
+      refuser: 'Decline',
+      refuserTexte: 'It is cancelled, and its coach is notified.',
+      refuserTitre: 'Decline the session?',
+      titre: 'Sessions to approve ({{count}})',
+    },
     compte: {
       aDemander: '{{count}} to request',
       auClub: '{{count}} at the club',
@@ -5122,6 +5131,12 @@ export default {
       avecCreneaux: 'Your town slots',
       avecCreneauxDit: '{{ville}} gave you these slots for the season.',
       nombre: '({{count}})',
+    },
+    lieu: {
+      aide: 'Pick a facility of your club, or of the town where your club has a slot.',
+      creneaux: 'Your town slots: {{liste}}',
+      dansLeCreneau: 'In your slot {{creneau}}: the session is approved right away. If your club is already full at that time, your club manager decides.',
+      horsCreneau: 'Outside your town slots at this time.',
     },
   },
   collectiviteCreneaux: {

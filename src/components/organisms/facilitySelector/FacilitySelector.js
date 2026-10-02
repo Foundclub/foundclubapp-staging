@@ -11,6 +11,8 @@ import {
   View,
 } from 'react-native';
 
+import { clubSlotParts, creneauDeLaSeance } from '@/domains/seasonSlot/clubInstallations';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -18,7 +20,11 @@ import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
-import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
+import {
+  getClubVilleFacilitiesWithSlots,
+  getCMFacilities,
+  getFacilities,
+} from '@/services/facility/facilityService';
 
 import { getAddressText, getFacilityAddressLabel } from '@/utils/facilityAddressLabel';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
@@ -35,6 +41,9 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
  * @param {Function} [props.onAddFacility] - Optional callback when pressing "add facility"
  * @param {Function} [props.onOccupancyResolved] - Optional callback with occupancy payload
  * @param {{ start?: string | null, end?: string | null, excludeEventId?: string | null }} [props.occupancyWindow]
+ * @param {boolean} [props.withVilleSlots] - COLL-C2C : propose aussi les installations de la Ville
+ *   ou le club a un creneau (l etape « Lieu » d un evenement ; les autres appelants : rien).
+ * @param {string | null} [props.teamId] - COLL-C2C : l equipe de l evenement (son creneau).
  */
 function FacilitySelector({
   clubId,
@@ -46,6 +55,8 @@ function FacilitySelector({
   onAddFacility,
   onChange,
   onOccupancyResolved,
+  teamId = null,
+  withVilleSlots = false,
 }) {
   const { t } = useTranslation();
   const {
@@ -112,6 +123,13 @@ function FacilitySelector({
     queryKey: ['cm-facilities', cmId],
   });
 
+  // COLL-C2C (02/10) — D32 : sur demande seulement. Sans `withVilleSlots`, aucune lecture de plus.
+  const { data: villeFacilitiesData } = useQuery({
+    enabled: withVilleSlots && Boolean(clubId),
+    queryFn: () => getClubVilleFacilitiesWithSlots(clubId),
+    queryKey: ['facilities-ville-creneaux', clubId],
+  });
+
   const isLoadingFacilities = (
     (Boolean(clubId) && (isLoadingClubFacilities || isFetchingClubFacilities))
     || (Boolean(cmId) && (isLoadingCmFacilities || isFetchingCmFacilities))
@@ -128,14 +146,44 @@ function FacilitySelector({
       }
     });
 
+    // COLL-C2C — les installations de la Ville ou le club a un creneau, apres les siennes.
+    (Array.isArray(villeFacilitiesData) ? villeFacilitiesData : []).forEach((villeFacility) => {
+      if (!allFacilities.some((facility) => facility.documentId === villeFacility.documentId)) {
+        allFacilities.push({ ...villeFacility, isVilleSlot: true });
+      }
+    });
+
     return allFacilities;
-  }, [clubFacilitiesData, cmFacilitiesData]);
+  }, [clubFacilitiesData, cmFacilitiesData, villeFacilitiesData]);
+  // COLL-C2C — D32 : la seance tombe-t-elle dans un creneau du club ? Alors le creneau porte la
+  // place : la carte d occupation de l installation ne s applique pas (le serveur en juge pareil).
+  const facilitePourCreneau = facilities.find(
+    (facility) => (facility.documentId || facility.id) === facilityId,
+  );
+  const creneauChoisi = facilitePourCreneau?.isVilleSlot
+    ? creneauDeLaSeance(facilitePourCreneau.clubSeasonSlots, {
+      start: occupancyWindow?.start || null,
+      teamId,
+    })
+    : null;
+  const ligneDeCreneau = (/** @type {any} */ slot) => {
+    const morceaux = clubSlotParts(slot);
+    return t('clubInstallations.creneau.ligne', '{{team}} · chaque {{day}} {{hours}}', {
+      day: morceaux.day,
+      hours: morceaux.hours,
+      team: morceaux.team || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
+      ...SANS_ECHAPPEMENT,
+    });
+  };
+  const aDesInstallationsDeLaVille = facilities.some((facility) => facility.isVilleSlot);
   const isFocused = useIsFocused();
   const {
     data: occupancyData,
     isFetching: isFetchingOccupancy,
   } = useGetFacilityOccupancy(facilityId, occupancyWindow, {
-    enabled: mode === 'club' && Boolean(facilityId && occupancyWindow?.start && occupancyWindow?.end),
+    enabled: mode === 'club'
+      && Boolean(facilityId && occupancyWindow?.start && occupancyWindow?.end)
+      && !creneauChoisi,
   });
 
   const addressMissingLabel = t(
@@ -313,7 +361,15 @@ function FacilitySelector({
                 {t('eventEdit.fields.facility.label', 'Installation')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t('eventWizard.steps.location.installationHelper', 'Choisis une installation de ton club.')}
+                {aDesInstallationsDeLaVille
+                  ? t(
+                    'clubInstallations.lieu.aide',
+                    'Choisis une installation de ton club, ou de la Ville où ton club a un créneau.',
+                  )
+                  : t(
+                    'eventWizard.steps.location.installationHelper',
+                    'Choisis une installation de ton club.',
+                  )}
               </Text>
             </View>
 
@@ -409,7 +465,9 @@ function FacilitySelector({
                         <MarqueeText
                           containerStyle={{ flex: 1, marginRight: 12 }}
                           style={[Fonts.p2Bold, Fonts.neutral00]}
-                          text={facility.isShared ? `${facility.name} (CM)` : facility.name}
+                          text={facility.isShared && !facility.isVilleSlot
+                            ? `${facility.name} (CM)`
+                            : facility.name}
                         />
                         {isSelected ? (
                           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
@@ -430,6 +488,18 @@ function FacilitySelector({
                       <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>
                         {getFacilityAddressLabel(facility.address, addressMissingLabel)}
                       </Text>
+                      {facility.isVilleSlot ? (
+                        <Text numberOfLines={2} style={[Fonts.p3, Fonts.primary200]}>
+                          {t(
+                            'clubInstallations.lieu.creneaux',
+                            'Tes créneaux de la Ville : {{liste}}',
+                            {
+                              liste: facility.clubSeasonSlots.map(ligneDeCreneau).join(' · '),
+                              ...SANS_ECHAPPEMENT,
+                            },
+                          )}
+                        </Text>
+                      ) : null}
                     </TouchableOpacity>
                   );
                 })}
@@ -437,7 +507,39 @@ function FacilitySelector({
             ) : null}
           </View>
 
-          {selectedFacility && occupancyWindow?.start && occupancyWindow?.end ? (
+          {creneauChoisi && occupancyWindow?.start ? (
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                {
+                  backgroundColor: 'rgba(1, 179, 244, 0.12)',
+                  borderColor: `${Colors.primary500}88`,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t(
+                  'clubInstallations.lieu.dansLeCreneau',
+                  // eslint-disable-next-line max-len
+                  'Dans ton créneau {{creneau}} : la séance est validée directement. Si ton club y est déjà au complet à cette heure, ton dirigeant décide.',
+                  { creneau: ligneDeCreneau(creneauChoisi), ...SANS_ECHAPPEMENT },
+                )}
+              </Text>
+            </View>
+          ) : null}
+
+          {facilitePourCreneau?.isVilleSlot && !creneauChoisi && occupancyWindow?.start ? (
+            <Text style={[Fonts.p3, Fonts.warning500]}>
+              {t(
+                'clubInstallations.lieu.horsCreneau',
+                'Hors de tes créneaux de la Ville à cette heure.',
+              )}
+            </Text>
+          ) : null}
+
+          {!creneauChoisi && selectedFacility && occupancyWindow?.start && occupancyWindow?.end ? (
             <View
               style={[
                 ApplicationStyle.card,

@@ -260,6 +260,32 @@ const attachClubSeasonSlots = (facilities, reponse) => {
   });
 };
 
+// COLL-C2C (02/10) — D32 : les installations de la Ville ou le club a un creneau, chacune avec
+// SES creneaux. L etape « Lieu » de la creation d un evenement les propose a cote de celles du club
+// (constate en recette le 29/09 : elle ne proposait QUE celles du club). Un refus : aucune de plus.
+const getClubVilleFacilitiesWithSlots = async (clubId) => {
+  if (!clubId) return [];
+  const [ville, creneaux] = await Promise.all([
+    getClubCollectiviteFacilitiesOrNone(clubId),
+    getClubSeasonSlotsOrNone(clubId),
+  ]);
+  const installations = Array.isArray(ville?.data)
+    ? ville.data.map(normalizeCollectiviteFacility)
+    : [];
+  return attachClubSeasonSlots(installations, creneaux).filter((facility) => (
+    Array.isArray(facility.clubSeasonSlots) && facility.clubSeasonSlots.length > 0
+  ));
+};
+
+// COLL-C2C — D32 : le dirigeant accepte (approve) ou refuse (refuse) la seance posee au-dela de la
+// place de ses creneaux (POST /season-slots/sessions/:id/decision, contrat du depot admin).
+const decideClubSession = async (eventId, decision) => {
+  const response = await client.post(`/season-slots/sessions/${eventId}/decision`, {
+    data: { decision },
+  });
+  return response.data;
+};
+
 const getClubFacilityContext = async (clubId, cmId, options = {}) => {
   const { includeClubSlots = false, includeCollectivite = false, resolveCmId = true } = options;
   const resolvedCmId = cmId || (resolveCmId ? await resolveParentMultisportId(clubId) : null);
@@ -294,8 +320,14 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
     hasSharedFacilities: sharedFacilities.length > 0,
     sharedFacilities,
     // COLL-C2C : le compte dirige-t-il le club (repartir ses creneaux entre ses equipes, D32) ?
+    // COLL-C2C planche 3 : les seances qui attendent sa decision (D32), lues par lui seul.
     ...(includeClubSlots
-      ? { canManageClubSlots: Boolean(clubSlotsResponse?.meta?.canManage) }
+      ? {
+        canManageClubSlots: Boolean(clubSlotsResponse?.meta?.canManage),
+        pendingClubSessions: Array.isArray(clubSlotsResponse?.meta?.pendingSessions)
+          ? clubSlotsResponse.meta.pendingSessions
+          : [],
+      }
       : {}),
   };
 };
@@ -471,10 +503,12 @@ export {
   approveFacilityOverrideRequest,
   createBooking,
   createFacility,
+  decideClubSession,
   deleteFacility,
   getAvailability,
   getBookableFacilities,
   getClubFacilityContext,
+  getClubVilleFacilitiesWithSlots,
   getCMFacilities,
   getFacilities,
   getFacility,

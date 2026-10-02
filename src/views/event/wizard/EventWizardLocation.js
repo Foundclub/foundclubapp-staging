@@ -114,6 +114,9 @@ function EventWizardLocation({ navigation, route }) {
             }
           }}
           onOccupancyResolved={setSelectedOccupancy}
+          // COLL-C2C (02/10) — D32 : les installations de la Ville ou le club a un creneau.
+          teamId={state.team?.documentId || null}
+          withVilleSlots
         />
         {!canGoNext ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>

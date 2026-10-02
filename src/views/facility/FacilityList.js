@@ -24,7 +24,12 @@ import {
   groupClubInstallations,
   ouvrirDemandeALaVille,
 } from '@/domains/seasonSlot/clubInstallations';
-import { capitalize, momentLabel } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  capitalize,
+  formatDay,
+  momentLabel,
+  timeRange,
+} from '@/domains/seasonSlot/seasonSlotDisplay';
 import {
   extractSubscriptionDecisionFromError,
   formatCollectiviteOfferedBy,
@@ -49,7 +54,11 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useCollectiviteInstallations } from '@/services/collectivite/collectiviteQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
-import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
+import {
+  decideClubSession,
+  deleteFacility,
+  getFacilitySections,
+} from '@/services/facility/facilityService';
 import { useInstallationsWeekSummary } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -219,6 +228,42 @@ function FacilityList() {
       ],
     );
   }, [refetchFacilities, t]);
+
+  // COLL-C2C (02/10) — D32 : la seance posee au-dela de la place des creneaux du club attend le
+  // DIRIGEANT. Lui seul la voit ici (`canManageClubSlots`, juge par le serveur), et decide ; le
+  // serveur previent l entraineur. Refuser l annule : on le confirme d abord.
+  const [decisionEnCours, setDecisionEnCours] = useState(/** @type {string | null} */ (null));
+  const seancesEnAttente = !isCollectiviteMode
+    && facilityContext?.canManageClubSlots
+    && Array.isArray(facilityContext?.pendingClubSessions)
+    ? facilityContext.pendingClubSessions
+    : [];
+  const deciderSeance = useCallback(async (
+    /** @type {any} */ seance,
+    /** @type {'approve' | 'refuse'} */ decision,
+  ) => {
+    setDecisionEnCours(seance?.documentId || null);
+    try {
+      await decideClubSession(seance?.documentId, decision);
+      refetchFacilities();
+    } catch (decisionError) {
+      Alert.alert(t('common.error', 'Erreur'), getErrorMessage(decisionError));
+    } finally {
+      setDecisionEnCours(null);
+    }
+  }, [refetchFacilities, t]);
+  const refuserSeance = (/** @type {any} */ seance) => Alert.alert(
+    t('clubInstallations.attente.refuserTitre', 'Refuser la séance ?'),
+    t('clubInstallations.attente.refuserTexte', 'Elle est annulée, et son entraîneur est prévenu.'),
+    [
+      { style: 'cancel', text: t('common.cancel', 'Annuler') },
+      {
+        onPress: () => deciderSeance(seance, 'refuse'),
+        style: 'destructive',
+        text: t('clubInstallations.attente.refuser', 'Refuser'),
+      },
+    ],
+  );
 
   const handleEdit = useCallback((facility) => {
     if (isCollectiviteMode) {
@@ -1108,6 +1153,65 @@ function FacilityList() {
     section.kind === 'auClub' ? boutonAjouter : null
   );
 
+  const blocEnAttente = seancesEnAttente.length ? (
+    <View style={[Spaces.gap[8], Spaces.marginBottom[16]]}>
+      <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.warning500]}>
+        {t('clubInstallations.attente.titre', 'Séances à valider ({{count}})', {
+          count: seancesEnAttente.length,
+        })}
+      </Text>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {t(
+          'clubInstallations.attente.dit',
+          'Tes créneaux sont déjà pleins à ces heures : accepte ou refuse.',
+        )}
+      </Text>
+      {seancesEnAttente.map((/** @type {any} */ seance) => (
+        <View
+          key={seance.documentId}
+          style={[
+            Spaces.padding[12],
+            Spaces.gap[8],
+            {
+              backgroundColor: withAlpha(Colors.warning500, 0.08),
+              borderColor: withAlpha(Colors.warning500, 0.4),
+              borderRadius: 16,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('clubInstallations.attente.ligne', '{{team}} · {{day}} {{hours}}', {
+              day: formatDay(seance.date, { withYear: false }),
+              hours: timeRange(seance.startTime, seance.endTime),
+              team: seance.team?.name || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+          {seance.facility?.name ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>{seance.facility.name}</Text>
+          ) : null}
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+            <Button
+              disabled={decisionEnCours === seance.documentId}
+              onPress={() => deciderSeance(seance, 'approve')}
+              size="small"
+              title={t('clubInstallations.attente.accepter', 'Accepter')}
+              variant="Primary"
+            />
+            <Button
+              disabled={decisionEnCours === seance.documentId}
+              onPress={() => refuserSeance(seance)}
+              size="small"
+              title={t('clubInstallations.attente.refuser', 'Refuser')}
+              variant="Secondary"
+            />
+          </View>
+        </View>
+      ))}
+    </View>
+  ) : null;
+
   const etatVide = (
     <EmptyState
       actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
@@ -1161,6 +1265,7 @@ function FacilityList() {
       keyExtractor={getFacilityKey}
       ListEmptyComponent={etatVide}
       ListFooterComponent={!enGroupes && facilities.length > 0 ? boutonAjouter : null}
+      ListHeaderComponent={blocEnAttente}
       refreshControl={(
         <RefreshControl
           colors={[Colors.primary500]}

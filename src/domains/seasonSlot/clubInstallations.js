@@ -1,6 +1,11 @@
 import { RouteNames } from '@/navigation/routeNames';
 
-import { timeRange, weekdayName } from './seasonSlotDisplay';
+import {
+  isoWeekdayOf,
+  timeRange,
+  toMinutes,
+  weekdayName,
+} from './seasonSlotDisplay';
 
 /**
  * COLL-C2C (02/10) — « Tes installations », côté CLUB, en 3 groupes (planche
@@ -53,6 +58,35 @@ export const clubSlotParts = (slot) => ({
   hours: timeRange(slot?.startTime, slot?.endTime),
   team: slot?.team?.name || null,
 });
+
+const deuxChiffres = (/** @type {number} */ nombre) => String(nombre).padStart(2, '0');
+
+/**
+ * COLL-C2C (02/10) — D32 : le créneau du club où tombe une séance, avec la même règle que le
+ * serveur (`isSessionInSlot`) : ce jour de la semaine, dans la période, le début dans la plage,
+ * et l équipe du créneau s il en nomme une. Heure de l appareil. Le serveur reste le seul juge (il
+ * compte aussi les autres séances du club) : ceci ne sert qu à prévenir pendant la saisie.
+ * @param {any[] | null | undefined} slots - Les créneaux du club sur une installation.
+ * @param {{ start?: string | null, teamId?: string | null }} seance - Le début (ISO) et l équipe.
+ * @returns {any | null} Le créneau, ou null.
+ */
+export const creneauDeLaSeance = (slots, { start = null, teamId = null } = {}) => {
+  if (!start || !Array.isArray(slots)) return null;
+  const debut = new Date(start);
+  if (Number.isNaN(debut.getTime())) return null;
+  const mois = deuxChiffres(debut.getMonth() + 1);
+  const jour = `${debut.getFullYear()}-${mois}-${deuxChiffres(debut.getDate())}`;
+  const minutes = (debut.getHours() * 60) + debut.getMinutes();
+  return slots.find((slot) => {
+    const de = toMinutes(slot?.startTime);
+    const a = toMinutes(slot?.endTime);
+    return Number(slot?.weekday) === isoWeekdayOf(debut)
+      && (!slot?.validFrom || slot.validFrom <= jour)
+      && (!slot?.validUntil || jour <= slot.validUntil)
+      && (!slot?.team?.documentId || slot.team.documentId === teamId)
+      && de !== null && a !== null && de <= minutes && minutes < a;
+  }) || null;
+};
 
 // POINT D ACCROCHE NOMMÉ (lot C3B) : l écran où le club DEMANDE un créneau à la Ville. Tant qu il
 // n est pas récolté, la route n existe pas : « Demander » ouvre le planning de l installation,

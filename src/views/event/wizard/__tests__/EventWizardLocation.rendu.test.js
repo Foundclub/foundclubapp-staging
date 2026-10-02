@@ -201,3 +201,16 @@ describe('D09 — l ecran « Lieu », etat du 2026-08-06', () => {
     );
   });
 });
+
+// COLL-C2C (02/10) — D32 : l etape « Lieu » demande AUSSI les installations de la Ville ou le
+// club a un creneau (constate en recette le 29/09 : elle ne proposait que celles du club). Le
+// selecteur, double ici, a son propre temoin :
+// FacilitySelector.COLL-C2C.creneauxDeLaVille.test.js.
+describe('COLL-C2C — l etape « Lieu » et les creneaux du club', () => {
+  test('elle demande les installations de la Ville ou le club a un creneau', () => {
+    afficherLEcran();
+
+    expect(mockSelecteurs[mockSelecteurs.length - 1].withVilleSlots).toBe(true);
+    expect('teamId' in mockSelecteurs[mockSelecteurs.length - 1]).toBe(true);
+  });
+});
