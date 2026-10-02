@@ -16348,6 +16348,17 @@ export default {
       },
       versus: 'VS',
     },
+    gerer: {
+      managerWho: "Entered by the team's coach, {{name}}",
+      managerWhoUnnamed: "Entered by the team's coach",
+      opensAt: 'Opens at the end of the match, {{when}}',
+      opensAtEnd: 'Opens at the end of the match',
+      published: 'Sheet published',
+      publishedOn: 'Sheet published on {{date}} at {{time}}',
+      review: 'Official score changed: check the sheet',
+      stepScore: 'Step 1 of 3: the score',
+      stepSheet: 'Step 2 of 3: the sheet',
+    },
     rappel: {
       close: 'Close',
       coachStep1: 'After the match · step 1 of 3',

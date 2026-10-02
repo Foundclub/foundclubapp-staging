@@ -17125,6 +17125,17 @@ export default {
       },
       versus: 'VS',
     },
+    gerer: {
+      managerWho: 'Saisies par l’entraîneur de l’équipe, {{name}}',
+      managerWhoUnnamed: 'Saisies par l’entraîneur de l’équipe',
+      opensAt: 'S’ouvre à la fin du match, {{when}}',
+      opensAtEnd: 'S’ouvre à la fin du match',
+      published: 'Feuille publiée',
+      publishedOn: 'Feuille publiée le {{date}} à {{time}}',
+      review: 'Score officiel changé : vérifie la feuille',
+      stepScore: 'Étape 1 sur 3 : le score',
+      stepSheet: 'Étape 2 sur 3 : la feuille',
+    },
     rappel: {
       close: 'Fermer',
       coachStep1: 'Après le match · étape 1 sur 3',

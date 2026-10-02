@@ -1624,7 +1624,11 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
     // cherche la phrase exacte — increvable a l'ajout d'un ornement.
     const chip = chipWithLabel(root, 'Stats du match');
     const textesDeLaRangee = chip.findAllByType(Text).map((/** @type {any} */ n) => textOf(n));
-    expect(textesDeLaRangee).toContain('Les stats seront disponibles à la fin du match.');
+    // 🎯 ST-MATCH (écran 8) — ADAPTÉ : la note dit désormais QUAND la puce s'ouvre
+    // (« S’ouvre à la fin du match, sam. 5 sept. à 20:00 ») ; la règle tient : elle est
+    // DANS la rangée, et nulle part ailleurs.
+    expect(textesDeLaRangee.some((texte) => texte.startsWith('S’ouvre à la fin du match')))
+      .toBe(true);
   });
 
   test('avant la fin du match, la chip est grisee — comme le bouton l etait', () => {
@@ -1773,7 +1777,8 @@ describe('AC10 — le match est fini quand le SERVEUR le dit, pas le telephone',
     const root = monterLeMatch(new Date(FIN_DU_MATCH_MS - (60 * 60 * 1000)).toISOString());
 
     expect(chipStatsEstGrisee(root)).toBe(true);
-    expect(hasText(root, 'Les stats seront disponibles à la fin du match.')).toBe(true);
+    // 🎯 ST-MATCH (écran 8) — ADAPTÉ : la note d'avant la fin dit QUAND elle s'ouvre.
+    expect(hasText(root, 'S’ouvre à la fin du match')).toBe(true);
   });
 
   test('un telephone en RETARD de 3 h les ouvre si le serveur dit fini', () => {

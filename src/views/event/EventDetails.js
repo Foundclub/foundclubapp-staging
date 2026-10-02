@@ -4391,6 +4391,18 @@ function EventDetails({ navigation, route }) {
   // bouton de composition (« Brouillon enregistre le ... »). Ce bouton est
   // devenu la chip « Convocation » ; le bloc n'avait plus aucun lecteur.
 
+  // 🎯 ST-MATCH (écrans 7 et 8) — « Tout s'ouvre à la fin du match, sam. 5 sept. à 20:00 ».
+  const matchEndLabel = useMemo(() => {
+    if (!eventEndedAt || Number.isNaN(eventEndedAt.getTime())) return '';
+    return t('stMatch.carte.endLabel', '{{day}} à {{time}}', {
+      day: eventEndedAt.toLocaleDateString(localeDesFormats(), {
+        day: 'numeric', month: 'short', weekday: 'short',
+      }),
+      time: eventEndedAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
+      ...SANS_ECHAPPEMENT,
+    });
+  }, [eventEndedAt, t]);
+
   // 🗣️ N4 (D6) — LES SEPT TITRES ONT DISPARU, L'ETAT EST RESTE.
   //
   // Ce bloc decidait AUSSI le libelle du bouton : sept mots differents
@@ -4404,14 +4416,21 @@ function EventDetails({ navigation, route }) {
   // en entier, dans `PostMatchJourneyCard`.
   // ⛔ `disabled` et `isScoreEntry` NE BOUGENT PAS : ce sont eux qui portent le
   // droit et l'aiguillage, et ils vivent ici, a un seul endroit.
+  //
+  // 🎯 ST-MATCH (écran 8, design validé le 02/10) — la note parle le langage de la carte :
+  // « Étape 1 sur 3 : le score », « Feuille publiée le 1 oct. à 22:39 », « S'ouvre à la
+  // fin du match, sam. 5 sept. à 20:00 », et au dirigeant qui n'entraîne pas (« score A »)
+  // QUI saisit. Retirés : « Commence par enregistrer le score du match. », « Rapport
+  // finalise », « Les membres de ton équipe peuvent encore finaliser ce rapport. ».
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
       return {
         disabled: true,
-        subtitle: t(
-          'eventDetails.statsWillBeAvailableAt',
-          'Les stats seront disponibles à la fin du match.',
-        ),
+        subtitle: matchEndLabel
+          ? t('stMatch.gerer.opensAt', 'S’ouvre à la fin du match, {{when}}', {
+            when: matchEndLabel, ...SANS_ECHAPPEMENT,
+          })
+          : t('stMatch.gerer.opensAtEnd', 'S’ouvre à la fin du match'),
       };
     }
     if (matchStatsPayload?.score?.waitingOfficial) {
@@ -4423,35 +4442,37 @@ function EventDetails({ navigation, route }) {
         ),
       };
     }
-    const reportFinalisedSubtitle = matchStatsReport?.finalizedAt
-      ? t('eventDetails.reportFinalisedOn', 'Rapport finalise le {{date}}', {
-        date: new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats()),
+    const publiee = matchStatsReport?.finalizedAt ? new Date(matchStatsReport.finalizedAt) : null;
+    const reportFinalisedSubtitle = publiee && !Number.isNaN(publiee.getTime())
+      ? t('stMatch.gerer.publishedOn', 'Feuille publiée le {{date}} à {{time}}', {
+        date: publiee.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+        time: publiee.toLocaleTimeString(localeDesFormats(), {
+          hour: '2-digit', minute: '2-digit',
+        }),
         ...SANS_ECHAPPEMENT,
       })
-      : t('eventDetails.reportFinalised', 'Rapport finalise');
+      : t('stMatch.gerer.published', 'Feuille publiée');
     // 🔒 SECU-STATS — L EDITEUR EST L OUTIL DE L ENCADREMENT. Il affiche l avis
     // du coach et l auto-evaluation de CHAQUE joueur : rapport publie ou a
     // re-verifier, il s ouvrait pourtant a tout membre de l equipe, et c est par
     // la qu un joueur lisait ces champs. Ce test passe donc AVANT les deux
     // suivants. Le joueur garde SA reponse (« Mon retour post-match »).
+    // 🏛️ « score A » (Adel, 02/10) : le dirigeant qui n'entraîne pas ne saisit pas ; la
+    // note lui dit QUI saisit (le prénom vient de l'équipe, pas de la feuille).
     if (!canManageMatchStats) {
       return {
         disabled: true,
-        subtitle: isMatchStatsFinal
-          ? reportFinalisedSubtitle
-          : t(
-            'eventDetails.yourTeamMembersCanStill',
-            'Les membres de ton équipe peuvent encore finaliser ce rapport.',
-          ),
+        subtitle: teamCoachFirstname
+          ? t('stMatch.gerer.managerWho', 'Saisies par l’entraîneur de l’équipe, {{name}}', {
+            name: teamCoachFirstname, ...SANS_ECHAPPEMENT,
+          })
+          : t('stMatch.gerer.managerWhoUnnamed', 'Saisies par l’entraîneur de l’équipe'),
       };
     }
     if (isMatchStatsReviewRequired) {
       return {
         disabled: false,
-        subtitle: t(
-          'eventDetails.theOfficialScoreChangedCheck',
-          'Le score officiel a changé. Vérifie puis republie cette version.',
-        ),
+        subtitle: t('stMatch.gerer.review', 'Score officiel changé : vérifie la feuille'),
       };
     }
     if (isMatchStatsFinal) {
@@ -4463,10 +4484,7 @@ function EventDetails({ navigation, route }) {
     if (matchStatsPayload?.score?.available) {
       return {
         disabled: false,
-        subtitle: t(
-          'eventDetails.completePlayingTimeAndYour',
-          'Complète le temps de jeu et les stats clés de ton équipe.',
-        ),
+        subtitle: t('stMatch.gerer.stepSheet', 'Étape 2 sur 3 : la feuille'),
       };
     }
     // AD01 (✍️) — LE SEUL CAS QUE LA FEUILLE COURTE DETOURNE. Ce drapeau vit
@@ -4475,19 +4493,19 @@ function EventDetails({ navigation, route }) {
     return {
       disabled: false,
       isScoreEntry: true,
-      subtitle: t(
-        'eventDetails.startBySavingTheMatch',
-        'Commence par enregistrer le score du match.',
-      ),
+      subtitle: t('stMatch.gerer.stepScore', 'Étape 1 sur 3 : le score'),
     };
   }, [
     isMatchFinished,
-    isMatchStatsFinal,
     canManageMatchStats,
     isMatchStatsReviewRequired,
+    isMatchStatsFinal,
+    matchEndLabel,
     matchStatsPayload?.score?.available,
     matchStatsPayload?.score?.waitingOfficial,
-    matchStatsReport?.finalizedAt, t,
+    matchStatsReport?.finalizedAt,
+    t,
+    teamCoachFirstname,
   ]);
   const myMatchResponseStatusMeta = useMemo(() => {
     if (myMatchResponse?.status === 'draft') {
@@ -5062,18 +5080,6 @@ function EventDetails({ navigation, route }) {
     setDetailsTab('overview');
     requestAnimationFrame(() => scrollToAnchor(matchStatsAnchorRef));
   }, [scrollToAnchor]);
-
-  // 🎯 ST-MATCH (écran 7) — « Tout s'ouvre à la fin du match, sam. 5 sept. à 20:00 ».
-  const matchEndLabel = useMemo(() => {
-    if (!eventEndedAt || Number.isNaN(eventEndedAt.getTime())) return '';
-    return t('stMatch.carte.endLabel', '{{day}} à {{time}}', {
-      day: eventEndedAt.toLocaleDateString(localeDesFormats(), {
-        day: 'numeric', month: 'short', weekday: 'short',
-      }),
-      time: eventEndedAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
-      ...SANS_ECHAPPEMENT,
-    });
-  }, [eventEndedAt, t]);
 
   // 🎯 ST-MATCH (écran 7, amélioration 3) — l'étape 3 NOMME qui manque. La feuille de
   // l'encadrement porte la liste (le joueur n'en reçoit que le compte : SECU-STATS).
@@ -7010,7 +7016,10 @@ function EventDetails({ navigation, route }) {
               {chip.label}
             </Text>
             {subtitle ? (
-              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              <Text
+                style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}
+                testID={`event-manage-note-${chip.key}`}
+              >
                 {subtitle}
               </Text>
             ) : null}

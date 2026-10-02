@@ -1,5 +1,5 @@
 /* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
-import { Alert, Text } from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
@@ -1102,5 +1102,144 @@ describe('ST-MATCH écran 7 — la carte et le bilan, sur la page du match', () 
     expect(textesVisibles(root).some((texte) => texte.startsWith(
       'Score, statistiques et retours s’ouvriront à la fin du match, ',
     ))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 🎯 ST-MATCH (écran 8) — LA PUCE « STATS DU MATCH » DU MENU « GÉRER »
+// ---------------------------------------------------------------------------
+//
+// Design validé le 02/10 : la puce garde son nom ; sa NOTE dit l'étape, dans le langage
+// de la carte. Retirés : « Commence par enregistrer le score du match. », « Rapport
+// finalise », et chez le dirigeant « Les membres de ton équipe peuvent encore finaliser
+// ce rapport. ».
+describe('ST-MATCH écran 8 — la note de la puce « Stats du match » du menu Gérer', () => {
+  const AVEC_KARIM = {
+    ...MATCH_FINI,
+    team: { ...MATCH_FINI.team, trainers: [{ documentId: COACH, firstname: 'Karim' }] },
+  };
+  const SCORE_SAISI = {
+    available: true,
+    locked: false,
+    scoreAgainst: 1,
+    scoreFor: 3,
+    source: 'manual',
+    waitingOfficial: false,
+  };
+
+  /**
+   * Cherche un élément dans un arbre NON monté (le `headerRight` remis à `setOptions`).
+   * @param {any} element - Racine.
+   * @param {(noeud: any) => boolean} predicat - Le test.
+   * @returns {any} - Le premier élément trouvé, ou null.
+   */
+  const chercher = (element, predicat) => {
+    if (!element || typeof element !== 'object') return null;
+    if (Array.isArray(element)) {
+      return element.reduce(
+        (/** @type {any} */ trouve, /** @type {any} */ enfant) => trouve || chercher(enfant, predicat),
+        null,
+      );
+    }
+    if (element.props && predicat(element)) return element;
+    return chercher(element.props?.children, predicat);
+  };
+
+  const ouvrirGerer = () => {
+    const appels = mockSetOptions.mock.calls.filter((/** @type {any} */ appel) => appel[0]?.headerRight);
+    const bouton = chercher(
+      appels[appels.length - 1][0].headerRight(),
+      (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+    );
+    act(() => { bouton.props.onPress(); });
+  };
+
+  const laPuce = (/** @type {any} */ root) => {
+    ouvrirGerer();
+    const [note] = root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'event-manage-note-matchStats',
+      { deep: false },
+    );
+    const [etiquette] = root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'event-manage-label-matchStats',
+      { deep: false },
+    );
+    let rangee = etiquette?.parent;
+    while (rangee && rangee.type !== TouchableOpacity) rangee = rangee.parent;
+    return {
+      eteinte: Boolean(rangee?.props?.disabled),
+      libelle: etiquette ? textOf(etiquette.props.children).trim() : '',
+      note: note ? textOf(note.props.children).trim() : '',
+    };
+  };
+
+  test('1 · étape 1 : la puce garde son nom, sa note dit « Étape 1 sur 3 : le score »', () => {
+    const puce = laPuce(monter());
+
+    expect(puce).toEqual({ eteinte: false, libelle: 'Stats du match', note: 'Étape 1 sur 3 : le score' });
+  });
+
+  test('étape 2 : le score saisi, la note dit « Étape 2 sur 3 : la feuille »', () => {
+    const puce = laPuce(monter({ matchStats: statsAvec({ score: SCORE_SAISI }) }));
+
+    expect(puce.note).toBe('Étape 2 sur 3 : la feuille');
+  });
+
+  test('2 · feuille publiée : « Rapport finalise » devient une date en mots', () => {
+    const publiee = '2020-01-01T12:39:00.000Z';
+    const puce = laPuce(monter({
+      matchStats: statsAvec({
+        report: { finalizedAt: publiee, needsReview: false, status: 'final' },
+        score: SCORE_SAISI,
+      }),
+    }));
+    const jour = new Date(publiee).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const heure = new Date(publiee).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    expect(puce.note).toBe(`Feuille publiée le ${jour} à ${heure}`);
+  });
+
+  test('score officiel changé : la note le dit, dans le langage de la carte', () => {
+    const puce = laPuce(monter({
+      matchStats: statsAvec({
+        report: { finalizedAt: '2020-01-01T12:39:00.000Z', needsReview: true, status: 'final' },
+        score: SCORE_SAISI,
+      }),
+    }));
+
+    expect(puce).toEqual(expect.objectContaining({ eteinte: false, note: 'Score officiel changé : vérifie la feuille' }));
+  });
+
+  test('3 · avant la fin : éteinte, la note dit QUAND elle s ouvrira', () => {
+    const puce = laPuce(monter({
+      event: { ...MATCH_FINI, date: '2099-01-01T10:00:00.000Z', endDate: '2099-01-01T12:00:00.000Z' },
+    }));
+
+    expect(puce.eteinte).toBe(true);
+    expect(puce.note.startsWith('S’ouvre à la fin du match, ')).toBe(true);
+    expect(puce.note).not.toContain('{{');
+  });
+
+  test('4 · dirigeant qui n entraîne pas (« score A ») : éteinte, la note dit QUI saisit', () => {
+    const puce = laPuce(monter({
+      auth: authPour('dirigeant-1', true),
+      event: AVEC_KARIM,
+      matchStats: statsAvec({ permissions: { canManage: false, canView: false } }),
+    }));
+
+    expect(puce).toEqual({
+      eteinte: true,
+      libelle: 'Stats du match',
+      note: 'Saisies par l’entraîneur de l’équipe, Karim',
+    });
+  });
+
+  test('🪤 dirigeant, entraîneur sans prénom connu : la phrase ne laisse pas de trou', () => {
+    const puce = laPuce(monter({
+      auth: authPour('dirigeant-1', true),
+      matchStats: statsAvec({ permissions: { canManage: false, canView: false } }),
+    }));
+
+    expect(puce.note).toBe('Saisies par l’entraîneur de l’équipe');
   });
 });
