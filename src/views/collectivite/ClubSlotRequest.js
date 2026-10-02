@@ -80,8 +80,9 @@ const versChamp = (valeur) => {
  * de personne (D71, D2). Complet ⇒ on ne bloque pas (« Tu peux demander quand même : la mairie
  * décidera »), et les heures libres du même jour se choisissent d'un appui. Seul blocage : hors
  * des heures d'ouverture. L'envoi pose l'entraînement (une date, ou chaque semaine jusqu'à la fin
- * de la saison) ; le serveur en fait une demande si la place est prise, « Un mot pour la mairie »
- * en est le motif. Puis l'accusé de réception, et « Tes demandes à la Ville ».
+ * de la saison) ; hors des créneaux du club, le serveur en fait une demande à la mairie, place
+ * libre ou non (SPEC-PLACE, DECISIONS-SOIR 02/10), « Un mot pour la mairie » en est le motif. Puis
+ * l'accusé de réception, qui dit qui décide, et « Tes demandes à la Ville ».
  * Au « tu » : c'est un club qui lit.
  * @returns {import('react').ReactElement} L'écran.
  */
@@ -205,8 +206,15 @@ function ClubSlotRequest() {
         return;
       }
       const statut = (/** @type {any} */ c) => c?.response?.data?.status || c?.response?.status;
+      // 🏛️ DECISIONS-SOIR (02/10) — QUI DÉCIDE, le serveur le dit (`pendingReason`) : la mairie
+      // hors des créneaux du club, place libre ou non (SPEC-PLACE) ; le dirigeant du club quand son
+      // créneau est déjà au complet (D32). Confirmée : elle tombait dans un créneau du club.
+      // eslint-disable-next-line max-len
+      const raison = (/** @type {any} */ c) => c?.response?.data?.pendingReason || c?.response?.pendingReason;
+      const enAttente = created.filter((c) => statut(c) === 'pending_validation');
       setResultat({
-        enAttente: created.some((c) => statut(c) === 'pending_validation'),
+        enAttente: enAttente.some((c) => raison(c) !== 'club_slot_overflow'),
+        enAttenteDuDirigeant: enAttente.some((c) => raison(c) === 'club_slot_overflow'),
         posees: created.length,
         ratees: failed.length,
       });
@@ -264,37 +272,51 @@ function ClubSlotRequest() {
 
   // ─── L'accusé de réception (P8v2, état 4) ────────────────────────────────────────────────
   if (resultat) {
+    let titreAccuse = t('collectiviteDemandes.club.posee', 'C’est posé : c’est dans ton créneau');
+    let suiteAccuse = t(
+      'collectiviteDemandes.club.confirme',
+      'Ton entraînement est confirmé : la Ville a déjà attribué ce créneau à ton club.',
+    );
+    if (resultat.enAttente) {
+      titreAccuse = t('collectiviteDemandes.club.envoyee', 'Demande envoyée à la {{ville}}', {
+        ville: nomDeLaVille || t('collectiviteDemandes.club.laVille', 'Ville'),
+        ...SANS_ECHAPPEMENT,
+      });
+      suiteAccuse = t(
+        'collectiviteDemandes.club.ensuite',
+        'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
+      );
+    } else if (resultat.enAttenteDuDirigeant) {
+      titreAccuse = t(
+        'collectiviteDemandes.club.envoyeeDirigeant',
+        'Demande envoyée à ton dirigeant',
+      );
+      suiteAccuse = t(
+        'collectiviteDemandes.club.ensuiteDirigeant',
+        // eslint-disable-next-line max-len
+        'Ton club est déjà au complet dans son créneau à ce moment : ton dirigeant l’accepte ou la refuse. Tu reçois sa réponse en notification.',
+      );
+    }
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
         <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 16 }}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]} testID="demande-accuse-titre">
-            {resultat.enAttente
-              ? t('collectiviteDemandes.club.envoyee', 'Demande envoyée à la {{ville}}', {
-                ville: nomDeLaVille || t('collectiviteDemandes.club.laVille', 'Ville'),
-                ...SANS_ECHAPPEMENT,
-              })
-              : t('collectiviteDemandes.club.posee', 'C’est posé : il restait de la place')}
+            {titreAccuse}
           </Text>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{leMoment()}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {resultat.enAttente
-              ? t(
-                'collectiviteDemandes.club.ensuite',
-                // eslint-disable-next-line max-len
-                'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
-              )
-              : t(
-                'collectiviteDemandes.club.confirme',
-                'Ton entraînement est confirmé : la Ville n’a pas à décider.',
-              )}
-          </Text>
-          {resultat.enAttente ? (
+          <Text style={[Fonts.p2, Fonts.neutral200]}>{suiteAccuse}</Text>
+          {resultat.enAttente || resultat.enAttenteDuDirigeant ? (
             <View
               style={[carte, { borderColor: Colors.warning500, borderStyle: 'dashed' }]}
               testID="demande-accuse-attente"
             >
               <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-                {t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie')}
+                {resultat.enAttente
+                  ? t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie')
+                  : t(
+                    'collectiviteDemandes.club.enAttenteDuDirigeant',
+                    'En attente de ton dirigeant',
+                  )}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
                 {`${nomDeLEquipe} · ${debut} – ${fin}`}

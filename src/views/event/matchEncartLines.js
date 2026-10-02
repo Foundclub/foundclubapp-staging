@@ -27,6 +27,24 @@ const shortPlayerName = (line) => {
 };
 
 /**
+ * 👪 DECISIONS-SOIR (02/10, « parents encart B », registre des mineurs ligne 15) — L'ÉQUIPE DE
+ * SON ENFANT, pour un parent. Le SERVEUR la nomme sur la fiche d'un match
+ * (`viewerParentTeamDocumentIds` : sa règle du parent, lien et âge lus en base). L'app ne juge
+ * rien : elle choisit seulement l'équipe dont elle demande l'encart, et le serveur rejuge.
+ * @param {any} event - L'événement : son équipe, ses équipes invitées, la clé du serveur.
+ * @returns {string | null} L'équipe de ce match où joue un enfant du lecteur, ou null.
+ */
+export const findParentTeamId = (event) => {
+  const ids = Array.isArray(event?.viewerParentTeamDocumentIds)
+    ? event.viewerParentTeamDocumentIds
+    : [];
+  if (!ids.length) return null;
+  const invitees = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
+  const team = [event?.team, ...invitees].find((t) => t?.documentId && ids.includes(t.documentId));
+  return team?.documentId || null;
+};
+
+/**
  * Les buteurs d'une feuille PUBLIÉE, et les buts que personne n'a marqués.
  * « 1 but sans buteur » est l'écart entre le score et la somme des buts de la
  * feuille : la feuille ne le nomme pas, l'encart le dit.
