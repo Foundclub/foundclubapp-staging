@@ -25,7 +25,7 @@ const dateLocale = () => (localeDesFormats() === 'en-GB' ? enGB : fr);
 
 /**
  * Le motif d une fermeture, dans la langue de l app.
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {string | null | undefined} reason - travaux, vacances, manifestation, autre.
  * @returns {string} Le libelle (« Travaux »), ou vide.
  */
@@ -59,7 +59,7 @@ export const closureDay = (jour, { long = false } = {}) => {
 
 /**
  * Les jours d une fermeture : « ven. 2 oct. » ou « du sam. 17 oct. au dim. 25 oct. ».
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {{ startDate?: string|null, endDate?: string|null }} fermeture - Les bornes.
  * @param {{ long?: boolean }} [options] - Long : « vendredi 2 octobre ».
  * @returns {string} Les jours.
@@ -77,7 +77,7 @@ export const closureDaysLabel = (t, fermeture, { long = false } = {}) => {
 
 /**
  * « Toute la journée » ou « 09:00 – 13:00 ».
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {{ kind?: string, startTime?: string|null, endTime?: string|null }} fermeture - La
  *   fermeture.
  * @returns {string} Les heures.
@@ -92,7 +92,7 @@ export const closureHoursLabel = (t, fermeture) => {
 /**
  * La pastille d une fermeture (onglet « Fermetures ») : « Fermeture · travaux », « Blocage ·
  * Ville ».
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {{ kind?: string, reason?: string|null }} fermeture - La fermeture.
  * @returns {string} La pastille.
  */
@@ -111,7 +111,7 @@ export const closureTagLabel = (t, fermeture) => {
 
 /**
  * Ce que la plage dit dans le planning : « Fermé · travaux », « Bloqué par la Ville · Forum ».
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {{ kind?: string, reason?: string|null, label?: string|null }} fermeture - La fermeture.
  * @returns {string} Le libelle de la plage.
  */
@@ -151,7 +151,7 @@ export const touchedSessionLine = (seance, { withDay = false } = {}) => {
 
 /**
  * Le refus du serveur, dit a la mairie (`error.details.code`, contrat §13).
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {unknown} erreur - L erreur de la requete.
  * @returns {string | null} Le message, ou null si le code est inconnu.
  */
@@ -243,7 +243,7 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
 /**
  * Le bandeau d une seance ou d une installation : « Le gymnase est fermé ce jour-là ».
  * Le premier mot du nom (« Gymnase », « Dojo ») porte la phrase ; le genre n est pas devine ici.
- * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {any} fermeture - La fermeture (`facility`, `kind`, `startDate`, `endDate`).
  * @param {{ withDays?: boolean }} [options] - Le jour dans le titre (fiche de l installation,
  *   planning) ; sans : « ce jour-la » (la fiche d une seance porte deja son jour).
