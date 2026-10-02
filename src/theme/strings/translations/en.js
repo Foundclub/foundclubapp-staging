@@ -17819,6 +17819,9 @@ export default {
     matchStats: 'Match stats',
     previewLine: 'Your match stats are only visible to you and your coach.',
   },
+  clubStatsView: {
+    eachTeamStats: 'Each team\'s stats',
+  },
   myStats: {
     assists_one: 'Assist',
     assists_other: 'Assists',

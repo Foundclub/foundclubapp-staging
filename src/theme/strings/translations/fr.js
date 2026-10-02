@@ -18778,6 +18778,9 @@ export default {
     matchStats: 'Stats de match',
     previewLine: 'Tes stats de match ne sont visibles que par toi et ton entraîneur.',
   },
+  clubStatsView: {
+    eachTeamStats: 'Les stats de chaque équipe',
+  },
   myStats: {
     assists_one: 'Passe déc.',
     assists_other: 'Passes déc.',
