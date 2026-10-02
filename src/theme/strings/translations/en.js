@@ -8237,6 +8237,14 @@ export default {
         visibilityPublicHint: 'Discoverable by everyone — recommended for a trial.',
       },
       description: {
+        // FINITIONS7 (02/10) — one example per event type (the trial keeps placeholderExample).
+        examples: {
+          match: 'E.g.: league match — meet 1 h before in the changing room, shirt provided.',
+          other: 'E.g.: pre-season meeting at the clubhouse — we present the calendar and the teams.',
+          stage: 'E.g.: 3-day camp during the holidays — 9 am to 5 pm, lunch included.',
+          tournament: 'E.g.: 8-team tournament, 15-minute games — bring a packed lunch, prizes at 5 pm.',
+          training: 'E.g.: technical session then small-sided games — arrive 15 min early with water and sports kit.',
+        },
         label: 'Description',
         placeholder: 'Add useful details for participants.',
         placeholderExample: 'E.g.: come try football with the U15s — bring sports kit, the trial is free.',
@@ -8244,6 +8252,7 @@ export default {
         subtitleShort: 'What players will read before signing up.',
         title: 'Description',
         valueHint: 'A clear description doubles sign-ups for a trial.',
+        valueHintGeneric: 'A clear description answers questions before they are asked.',
       },
       detectionSlots: {
         capacityWarning: "The total places per position exceeds the event's capacity.",

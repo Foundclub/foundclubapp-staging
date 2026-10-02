@@ -8749,6 +8749,16 @@ export default {
         visibilityPublicHint: 'Découvrable par tous — recommandé pour une détection.',
       },
       description: {
+        // FINITIONS7 (02/10) — un exemple par type d evenement (la detection garde placeholderExample).
+        examples: {
+          match: 'Ex. : match de championnat — rendez-vous 1 h avant au vestiaire, maillot fourni.',
+          other: 'Ex. : réunion d’avant-saison au club-house — on présente le calendrier et les équipes.',
+          stage: 'Ex. : stage de 3 jours pendant les vacances — de 9 h à 17 h, repas du midi compris.',
+          // eslint-disable-next-line max-len
+          tournament: 'Ex. : tournoi à 8 équipes, matchs de 15 min — prévois ton pique-nique, remise des prix à 17 h.',
+          // eslint-disable-next-line max-len
+          training: 'Ex. : séance technique puis jeu réduit — arrive 15 min avant, avec une gourde et une tenue de sport.',
+        },
         label: 'Description',
         placeholder: 'Ajoute des détails utiles pour les participants.',
         // eslint-disable-next-line max-len
@@ -8757,6 +8767,7 @@ export default {
         subtitleShort: "Ce que les joueurs liront avant de s'inscrire.",
         title: 'Description',
         valueHint: 'Une description claire double les inscriptions sur une détection.',
+        valueHintGeneric: 'Une description claire répond aux questions avant qu’on les pose.',
       },
       detectionSlots: {
         capacityWarning: 'Le total des places par poste dépasse la capacité de l événement.',

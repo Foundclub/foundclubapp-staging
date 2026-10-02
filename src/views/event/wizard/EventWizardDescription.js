@@ -10,10 +10,12 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getEventDescriptionExample,
   getEventWizardDescriptionStepIndex,
   getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardStepCount,
+  isDetectionEventType,
 } from './eventWizardDetectionUtils';
 
 /**
@@ -31,6 +33,9 @@ function EventWizardDescription({ navigation, route }) {
   const { t } = useTranslation();
   const { dispatch, state } = useEventWizard();
   const [description, setDescription] = useState(state.description || '');
+  // FINITIONS7 — l exemple et la phrase sous le champ suivent le type choisi.
+  const [exempleCle, exempleRepli] = getEventDescriptionExample(state.type?.name);
+  const estUneDetection = isDetectionEventType(state.type?.name);
   const fieldSurfaceStyle = {
     backgroundColor: 'rgba(1, 179, 244, 0.08)',
     borderColor: 'rgba(1, 179, 244, 0.26)',
@@ -75,11 +80,7 @@ function EventWizardDescription({ navigation, route }) {
           onChangeText={setDescription}
           // L'exemple concret remplace la consigne. Le pack le pose comme sa
           // regle : montrer ce qu'on attend coute moins qu'expliquer.
-          placeholder={t(
-            'eventWizard.steps.description.placeholderExample',
-            'Ex. : viens essayer le foot avec les U15 — prévois une tenue de sport, '
-            + "l'essai est gratuit.",
-          )}
+          placeholder={t(exempleCle, exempleRepli)}
           placeholderTextColor={Colors.neutral500}
           scrollEnabled
           style={[
@@ -97,9 +98,12 @@ function EventWizardDescription({ navigation, route }) {
           value={description}
         />
         <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
-          {t(
+          {estUneDetection ? t(
             'eventWizard.steps.description.valueHint',
             'Une description claire double les inscriptions sur une détection.',
+          ) : t(
+            'eventWizard.steps.description.valueHintGeneric',
+            'Une description claire répond aux questions avant qu’on les pose.',
           )}
         </Text>
       </View>
