@@ -52,6 +52,9 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
+import WeekendResultsCard, {
+  weekendRowKey,
+} from '@/views/multisportClub/components/WeekendResultsCard';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -66,7 +69,12 @@ import {
 } from '@/services/auth/authService';
 import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
-import { claimClub, updateClub } from '@/services/club/clubService';
+import {
+  claimClub,
+  getClubWeekendResults,
+  remindClubWeekendScore,
+  updateClub,
+} from '@/services/club/clubService';
 import { useGetMyClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestQueries';
 import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
@@ -84,6 +92,7 @@ import {
   getClubCertificationPalette,
   isPartnerClub,
 } from '@/utils/clubCertification';
+import { displayErrorAlert } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 import safeJsonParse from '@/utils/safeJsonParse';
@@ -1828,6 +1837,43 @@ function ClubDetails({ navigation, route }) {
   const isClubSubPage = canEdit && Boolean(hubSection);
   const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
 
+  // STATS-FIX2 · point 2 (T10, ecran 18) — « Résultats du week-end » n'existait que dans
+  // `CMDashboard` (club omnisport) : le dirigeant d'un club SIMPLE n'y avait aucune porte.
+  // La meme carte vit maintenant sur SON hub, lue par la route du club (policy
+  // is-club-manager, droit du seul Dirigeant : la meme regle que `canEdit`).
+  const {
+    data: weekendResults,
+    error: weekendError,
+    isLoading: weekendLoading,
+    refetch: refetchWeekend,
+  } = useQuery({
+    enabled: isClubHub && Boolean(clubId),
+    queryFn: () => getClubWeekendResults(clubId),
+    queryKey: ['club-weekend-results', clubId],
+  });
+  // « score A » : le dirigeant qui n'entraine pas l'equipe relance son entraineur. La ligne
+  // relancee le dit pour la session ; le serveur, lui, n'envoie qu'une relance par jour.
+  const [remindedWeekendKeys, setRemindedWeekendKeys] = useState(() => new Set());
+  const remindWeekendMutation = useMutation({
+    mutationFn: (row) => remindClubWeekendScore(clubId, {
+      eventId: row.eventId,
+      teamId: row.teamId,
+    }),
+    onError: (err) => {
+      displayErrorAlert(err);
+    },
+    onSuccess: (_result, row) => {
+      setRemindedWeekendKeys((previous) => new Set(previous).add(weekendRowKey(row)));
+    },
+  });
+  const handleOpenWeekendMatch = useCallback((row) => {
+    if (!row?.eventId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: row.eventId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
   // Les compteurs se lisent sur les MEMES sources que les sections qu'ils
   // annoncent : un compteur ecrit en dur ment des la premiere modification.
   const clubSportsCount = club?.activites?.length || 0;
@@ -2943,6 +2989,23 @@ function ClubDetails({ navigation, route }) {
 
           {isClubHub ? (
             <View style={[Spaces.gap[16]]}>
+              <WeekendResultsCard
+                data={weekendResults}
+                emptyAction={{
+                  label: t('weekendResults.createTeam', 'Créer une équipe'),
+                  onPress: handleCreateTeam,
+                }}
+                error={weekendError}
+                isLoading={weekendLoading}
+                onEnterScore={handleOpenWeekendMatch}
+                onOpenMatch={handleOpenWeekendMatch}
+                onRemind={(row) => remindWeekendMutation.mutate(row)}
+                onRetry={refetchWeekend}
+                remindedKeys={remindedWeekendKeys}
+                remindingKey={remindWeekendMutation.isPending && remindWeekendMutation.variables
+                  ? weekendRowKey(remindWeekendMutation.variables)
+                  : null}
+              />
               <ClubHubGroup label={t('clubDetails.hub.groups.manage', 'Gérer')}>
                 <ClubHubRow
                   icon={Images.stadium}
