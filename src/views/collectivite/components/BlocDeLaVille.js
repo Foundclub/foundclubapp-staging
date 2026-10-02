@@ -9,6 +9,7 @@ import {
 import { villeInitiale } from '@/domains/collectivite/collectiviteActualites';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ActualiteCarte from '@/views/collectivite/components/ActualiteCarte';
@@ -79,6 +80,7 @@ function BlocDeLaVille({ clubId, encadrant = false, onOuvrirCanal }) {
   const active = donnees?.notify === true;
   const titre = t('collectiviteActualites.bloc.titre', 'De {{ville}}', {
     ville: formatCollectiviteOfferedBy(collectivite.name),
+    ...SANS_ECHAPPEMENT,
   });
   const libelleInterrupteur = t(
     'collectiviteActualites.bloc.interrupteur',

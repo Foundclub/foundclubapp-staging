@@ -14,6 +14,7 @@ import {
 } from '@/domains/collectivite/collectiviteActualites';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
@@ -134,18 +135,24 @@ export function BandeauActualiteMembre({ onOuvrir }) {
     ? t('collectiviteActualites.bandeau.fermeture', '{{type}} · {{ville}}', {
       type: categoryLabel(t, 'fermeture'),
       ville: nomVille,
+      ...SANS_ECHAPPEMENT,
     })
     : t('collectiviteActualites.bandeau.etiquette', 'Actualité de la Ville');
   let precision = t('collectiviteActualites.bandeau.precision', '{{ville}} · {{date}}', {
     date,
     ville: nomVille,
+    ...SANS_ECHAPPEMENT,
   });
   if (autres === 1) {
-    precision = t('collectiviteActualites.bandeau.etUneAutre', '{{date}} · et 1 autre', { date });
+    precision = t('collectiviteActualites.bandeau.etUneAutre', '{{date}} · et 1 autre', {
+      date,
+      ...SANS_ECHAPPEMENT,
+    });
   } else if (autres > 1) {
     precision = t('collectiviteActualites.bandeau.etAutres', '{{date}} · et {{nombre}} autres', {
       date,
       nombre: autres,
+      ...SANS_ECHAPPEMENT,
     });
   }
   const marquer = () => vues.mutate([collectiviteId]);
@@ -160,7 +167,11 @@ export function BandeauActualiteMembre({ onOuvrir }) {
       libelleLien={t(
         'collectiviteActualites.bandeau.lien',
         'Actualité de {{ville}} : {{titre}}. Ouvrir',
-        { titre: actualite.title, ville: formatCollectiviteOfferedBy(nomVille) },
+        {
+          titre: actualite.title,
+          ville: formatCollectiviteOfferedBy(nomVille),
+          ...SANS_ECHAPPEMENT,
+        },
       )}
       nomVille={nomVille}
       ouvre={() => {
@@ -221,18 +232,19 @@ export function BandeauActualiteMairie({
       libelleLien={t(
         'collectiviteActualites.bandeau.mairieLien',
         'Votre actualité en ligne : {{titre}}. Ouvrir',
-        { titre: actualite.title },
+        { titre: actualite.title, ...SANS_ECHAPPEMENT },
       )}
       nomVille={nomVille}
       ouvre={onOuvrir}
       precision={nombre === 1
         ? t('collectiviteActualites.bandeau.mairiePrecisionUn', 'Depuis {{date}}, pour 1 club', {
           date,
+          ...SANS_ECHAPPEMENT,
         })
         : t(
           'collectiviteActualites.bandeau.mairiePrecision',
           'Depuis {{date}}, pour les {{nombre}} clubs',
-          { date, nombre },
+          { date, nombre, ...SANS_ECHAPPEMENT },
         )}
       testID="bandeau-actualite-mairie"
       titre={String(actualite.title || '')}

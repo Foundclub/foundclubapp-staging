@@ -10,6 +10,7 @@ import {
 
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -127,7 +128,7 @@ function CollectiviteActualitesCanal() {
     ? t(
       'collectiviteActualites.canal.presentation',
       'Les actualités de {{ville}}, pour les clubs rattachés. Seule la Ville y écrit.',
-      { ville: formatCollectiviteOfferedBy(ville.name) },
+      { ville: formatCollectiviteOfferedBy(ville.name), ...SANS_ECHAPPEMENT },
     )
     : t(
       'collectiviteActualites.canal.presentationToutes',

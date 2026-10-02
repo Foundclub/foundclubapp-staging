@@ -10,6 +10,7 @@ import { publicationDateLabel } from '@/domains/collectivite/collectiviteActuali
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -100,6 +101,7 @@ function CanauxDeLaMairie({ collectiviteId, navigation }) {
         testID="canal-actualites-mairie"
         titre={t('collectiviteActualites.canaux.mairieTitre', 'Actualités de {{ville}}', {
           ville: formatCollectiviteOfferedBy(String(collectivite.name || '')),
+          ...SANS_ECHAPPEMENT,
         })}
       />
       <Button
@@ -145,6 +147,7 @@ function CanauxDuMembre({ navigation }) {
           ? t('collectiviteActualites.canaux.derniere', '{{date}} · {{titre}}', {
             date: publicationDateLabel(t, derniere.publishedAt),
             titre: derniere.title,
+            ...SANS_ECHAPPEMENT,
           })
           : t('collectiviteActualites.canaux.aucune', 'Aucune actualité pour l’instant');
         return (

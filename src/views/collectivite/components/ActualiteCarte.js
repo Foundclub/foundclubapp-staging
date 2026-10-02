@@ -15,6 +15,7 @@ import {
   recipientsLine,
 } from '@/domains/collectivite/collectiviteActualites';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -84,6 +85,7 @@ export function PieceJointeActualite({ fichier, onRetirer, sousTitre }) {
       <TouchableOpacity
         accessibilityLabel={t('collectiviteActualites.pieceJointe.ouvrir', 'Ouvrir {{nom}}', {
           nom: fichier?.name || '',
+          ...SANS_ECHAPPEMENT,
         })}
         accessibilityRole="link"
         disabled={!url}
