@@ -422,6 +422,7 @@ function PlanningWeekTimelineView({
     return byDay.flatMap((dayEvents, dayIndex) => {
       // T9 (C29_2) : quand deux blocs ne tiennent pas cote a cote, une plage fermee (COLL-C4B) ne
       // prend pas de place : elle se pose en FOND, sur toute la largeur du jour, sous les seances.
+      /** @type {any[]} */
       const enFond = tropEtroit(2)
         ? dayEvents.filter((/** @type {any} */ event) => event.raw?.closureBand)
         : [];
@@ -477,7 +478,7 @@ function PlanningWeekTimelineView({
             dayDate: weekDays[dayIndex],
             dayIndex,
             displayType: 'grappe',
-            events: laidOutEvents,
+            events: cluster.events,
             height: Math.max(cluster.end - cluster.start, minEventHeight),
             key: `grappe-${getDayKey(weekDays[dayIndex])}-${Math.round(cluster.start)}`,
             leftPercent: 0,
@@ -623,7 +624,11 @@ function PlanningWeekTimelineView({
 
   // COLL-FIX-PLANNING (T9_C29_2) — des seances qui se chevauchent dans une colonne trop etroite :
   // UNE carte, la pastille de chaque club et « 2 séances » ; l appui ouvre ce jour (comme « +n »).
-  const renderGrappeCard = (event, left, width) => {
+  const renderGrappeCard = (
+    /** @type {any} */ event,
+    /** @type {number} */ left,
+    /** @type {number} */ width,
+  ) => {
     const seances = event.events.filter((/** @type {any} */ e) => !e.raw?.closureBand);
     const nombre = seances.length || event.events.length;
     const mot = t('planningWeekTimelineViewV2.grappe', {
