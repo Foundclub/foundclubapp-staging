@@ -13,21 +13,59 @@ import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { NewPill } from '@/views/profile/coachFeedback/CoachFeedbackList';
+import {
+  newFeedbackKeys,
+  seenFeedbackKeys,
+} from '@/views/profile/coachFeedback/coachFeedbackModel';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
+import { useGetCoachFeedbackFollow } from '@/services/coachFeedback/coachFeedbackQueries';
 import {
   useDeleteDeclaredChild,
   useGetMyDeclaredChildren,
 } from '@/services/declaredChild/declaredChildQueries';
+import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
   useCancelParentLink,
   useParentLinksAsParent,
 } from '@/services/parentLink/parentLinkQueries';
 
 import { parentalPowerForAge } from '@/constants/parentalDeclaration';
+
+/**
+ * ST-RETOURS (02/10, planche 22 etat 1) — sur la carte d un enfant RELIE, les retours de son
+ * entraineur que le parent n a pas encore lus. Le parent sait s il y a du neuf sans ouvrir.
+ * Rien tant que « ce que j ai deja lu » n est pas arrive : on n annonce pas tout comme neuf.
+ * @param {object} props - Les proprietes.
+ * @param {string} props.childDocumentId - L enfant relie.
+ * @param {any} props.follow - Ce que le parent a deja lu
+ *   (`/firebase-auth/me/coach-feedback-follow`).
+ * @returns {import('react').ReactElement | null} - La ligne, ou rien.
+ */
+function NouveauxRetoursDeLEnfant({ childDocumentId, follow }) {
+  const { t } = useTranslation();
+  const { Alignments, Fonts } = useTheme();
+  const { data } = useGetPersonalStats(childDocumentId, { enabled: Boolean(childDocumentId) });
+  if (!follow) return null;
+  const retours = Array.isArray(data?.recentCoachFeedback) ? data.recentCoachFeedback : [];
+  const count = newFeedbackKeys(retours, seenFeedbackKeys(follow, childDocumentId)).size;
+  if (!count) return null;
+  return (
+    <View
+      style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
+      testID={`linked-child-new-feedback-${childDocumentId}`}
+    >
+      <NewPill label={t('stRetours.parent.newCount', { count })} />
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t('stRetours.parent.newCountHint', { count })}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * PARENT P2 — ÉCRAN 7 : « MES ENFANTS ».
@@ -77,6 +115,10 @@ function MyChildren() {
   const { isPending: annulationEnCours, mutate: annulerDemande } = useCancelParentLink();
   const comptesRelies = Array.isArray(liens?.children) ? liens.children : [];
   const demandesEnvoyees = Array.isArray(liens?.requests) ? liens.requests : [];
+  // ST-RETOURS — ce que j ai deja lu des retours de mes enfants (une lecture pour tous).
+  const { data: suiviDesRetours } = useGetCoachFeedbackFollow({
+    enabled: comptesRelies.length > 0,
+  });
 
   const relierUnCompte = useCallback((enfant) => {
     // Ecran pas encore route sur le site (webRouteExemptions) : le site EXPLIQUE au lieu
@@ -246,6 +288,22 @@ function MyChildren() {
                       </TouchableOpacity>
                     ) : null}
 
+                    {/* ST-RETOURS (planche 22, etat 6) — moins de 13 ans : pas de compte, donc ni
+                        questionnaire, ni stats, ni retours de match. La carte le dit. */}
+                    {pouvoir === 'full' ? (
+                      <View style={{ gap: 2 }}>
+                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                          {t('stRetours.parent.under13Title')}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {t('stRetours.parent.under13Hint', {
+                            firstname: prenom,
+                            ...SANS_ECHAPPEMENT,
+                          })}
+                        </Text>
+                      </View>
+                    ) : null}
+
                     {/* On EXPLIQUE l'absence du bouton, on ne la subit pas. */}
                     {pouvoir === 'view' ? (
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -365,6 +423,10 @@ function MyChildren() {
                         {t('myChildren.accounts.open', 'Voir son profil')}
                       </Text>
                     </View>
+                    <NouveauxRetoursDeLEnfant
+                      childDocumentId={compte?.documentId}
+                      follow={suiviDesRetours}
+                    />
                   </TouchableOpacity>
                 );
               })}

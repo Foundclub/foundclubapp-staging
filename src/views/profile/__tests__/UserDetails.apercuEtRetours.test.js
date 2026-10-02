@@ -729,7 +729,9 @@ describe('PARENT-RETOURS — le parent d\'un mineur lit les retours du coach de 
   const entreeRetours = (arbre) => arbre.root
     .findAllByType(TouchableOpacity)
     .find((/** @type {any} */ noeud) => String(noeud.props.accessibilityLabel || '')
-      .startsWith('Voir les retours du coach'));
+      // ST-RETOURS (planche 22) : le lien seul « Voir les retours du coach de Léa » devient
+      // « Tous ses retours · n », sous le dernier retour affiche sur la fiche.
+      .startsWith('Tous ses retours'));
 
   it('sur la fiche de son enfant mineur, l\'entrée ouvre la vue des retours SUR L\'ENFANT', async () => {
     mockFetchedUser = enfant();
