@@ -13521,6 +13521,8 @@ export default {
   },
   planningWeekTimelineViewV2: {
     changeThePeriodToSee: 'The arrows lead to other dates.',
+    grappe_one: 'session',
+    grappe_other: 'sessions',
     more: 'more',
     noEventInThisPeriod: 'No event in this period',
     noEventWithATime: 'No event with a time',

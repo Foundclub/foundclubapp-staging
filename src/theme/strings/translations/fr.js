@@ -14184,6 +14184,9 @@ export default {
   },
   planningWeekTimelineViewV2: {
     changeThePeriodToSee: 'Les flèches mènent aux autres dates.',
+    // COLL-FIX-PLANNING (T9) : la carte des séances regroupées d une colonne trop étroite.
+    grappe_one: 'séance',
+    grappe_other: 'séances',
     more: 'plus',
     noEventInThisPeriod: 'Aucun événement sur cette période',
     noEventWithATime: 'Aucun événement avec horaire',

@@ -1055,6 +1055,9 @@ function PlanningWeekFullscreen() {
         onEventPress={handleEventPress}
         onFreeSlotPress={toucherUneHeureLibre}
         onReadOnlyEventPress={handleReadOnlyEventPress}
+        // COLL-FIX-PLANNING (T9_C29_2) : dans la semaine tenue droite, une grappe de seances
+        // trop serrees ouvre ce jour en vue Jour (tourne, la semaine est imposee).
+        onSummaryPress={isFacilitySource && !isLandscape ? () => choisirVue(VUES.jour) : undefined}
         scrollEnabled
         showHeader={false}
         showUntimedSection={false}

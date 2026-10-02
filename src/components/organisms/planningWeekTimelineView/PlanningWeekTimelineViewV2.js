@@ -11,7 +11,7 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  memo, useEffect, useMemo, useRef, useState,
+  memo, useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,6 +45,10 @@ const DEFAULT_HOUR_HEIGHT = 60;
 const DEFAULT_COLLAPSED_HEIGHT = 18;
 const DEFAULT_MIN_EVENT_HEIGHT = 28;
 const DEFAULT_TIME_COLUMN_WIDTH = 56;
+// COLL-FIX-PLANNING (tournee T9, capture T9_C29_2) — sous cette largeur (en points), un bloc ne
+// montre plus que deux ou trois lettres par ligne (« AS / … / 1… ») : les seances qui se
+// chevauchent se REGROUPENT alors en une seule carte (« 2 séances », voir layoutEvents).
+const LARGEUR_LISIBLE_MIN = 44;
 // PLANNING-PORTRAIT (01/10, D6 A) : le mode « jour » (plein ecran tenu droit) montre
 // une colonne ; tout autre mode que ceux-la garde ses 3 jours.
 const PAGE_DAYS_BY_MODE = /** @type {Record<string, number>} */ ({ day: 1, week: 7 });
@@ -203,6 +207,11 @@ function PlanningWeekTimelineView({
   const currentDate = propDate || internalDate;
   const nowReference = getPlanningDefaultDate();
   const scrollViewRef = useRef(null);
+  // La largeur MESUREE de la grille ; 0 tant qu elle ne l est pas (alors rien ne se regroupe).
+  const [largeurGrille, setLargeurGrille] = useState(0);
+  const mesurerLaGrille = useCallback((/** @type {any} */ evenement) => {
+    setLargeurGrille(Math.round(evenement?.nativeEvent?.layout?.width || 0));
+  }, []);
   const hourHeight = compactFullscreen ? 44 : DEFAULT_HOUR_HEIGHT;
   const collapsedHeight = compactFullscreen ? 12 : DEFAULT_COLLAPSED_HEIGHT;
   const minEventHeight = compactFullscreen ? 22 : DEFAULT_MIN_EVENT_HEIGHT;
@@ -334,6 +343,10 @@ function PlanningWeekTimelineView({
 
   const layoutEvents = useMemo(() => {
     const overflowLimit = mode === 'week' ? 2 : 3;
+    // T9 (C29_2) : la colonne d un jour est-elle trop etroite pour n blocs cote a cote ?
+    const largeurDuJour = largeurGrille > 0 ? largeurGrille / weekDays.length : 0;
+    const tropEtroit = (/** @type {number} */ colonnes) => largeurDuJour > 0
+      && colonnes > 1 && largeurDuJour / colonnes < LARGEUR_LISIBLE_MIN;
     const byDay = weekDays.map(() => []);
 
     timedEvents.forEach((event) => {
@@ -406,10 +419,25 @@ function PlanningWeekTimelineView({
     }
 
     return byDay.flatMap((dayEvents, dayIndex) => {
-      const sortedEvents = dayEvents.sort((left, right) => {
-        if (left.top === right.top) return left.bottom - right.bottom;
-        return left.top - right.top;
-      });
+      // T9 (C29_2) : quand deux blocs ne tiennent pas cote a cote, une plage fermee (COLL-C4B) ne
+      // prend pas de place : elle se pose en FOND, sur toute la largeur du jour, sous les seances.
+      const enFond = tropEtroit(2)
+        ? dayEvents.filter((/** @type {any} */ event) => event.raw?.closureBand)
+        : [];
+      const fond = enFond.map((/** @type {any} */ event) => ({
+        ...event,
+        colIndex: 0,
+        displayType: 'event',
+        height: event.bottom - event.top,
+        leftPercent: 0,
+        widthPercent: 100,
+      }));
+      const sortedEvents = dayEvents
+        .filter((event) => !enFond.includes(event))
+        .sort((left, right) => {
+          if (left.top === right.top) return left.bottom - right.bottom;
+          return left.top - right.top;
+        });
 
       const clusters = [];
       sortedEvents.forEach((event) => {
@@ -422,7 +450,7 @@ function PlanningWeekTimelineView({
         }
       });
 
-      return clusters.flatMap((cluster) => {
+      return [...fond, ...clusters.flatMap((cluster) => {
         const columns = [];
         const laidOutEvents = [];
 
@@ -441,6 +469,21 @@ function PlanningWeekTimelineView({
         const hiddenEvents = laidOutEvents.filter((event) => event.colIndex >= overflowLimit);
         const visibleEvents = laidOutEvents.filter((event) => event.colIndex < overflowLimit);
         const columnsToRender = hiddenEvents.length > 0 ? overflowLimit + 1 : Math.max(columns.length, 1);
+
+        // T9 (C29_2) : trop etroit pour les poser cote a cote — UNE carte pour la grappe.
+        if (tropEtroit(columnsToRender)) {
+          return [{
+            dayDate: weekDays[dayIndex],
+            dayIndex,
+            displayType: 'grappe',
+            events: laidOutEvents,
+            height: Math.max(cluster.end - cluster.start, minEventHeight),
+            key: `grappe-${getDayKey(weekDays[dayIndex])}-${Math.round(cluster.start)}`,
+            leftPercent: 0,
+            top: cluster.start,
+            widthPercent: 100,
+          }];
+        }
 
         const visibleLayout = visibleEvents.map((event) => ({
           ...event,
@@ -468,11 +511,11 @@ function PlanningWeekTimelineView({
             widthPercent: 100 / columnsToRender,
           },
         ];
-      });
+      })];
     });
   }, [
     Colors.primary500, activeHours, collapsedHeight, colonnesDePlateaux, hourHeight, hourPositions,
-    laneOf, minEventHeight, mode, timedEvents, totalHeight, weekDays,
+    largeurGrille, laneOf, minEventHeight, mode, timedEvents, totalHeight, weekDays,
   ]);
 
   const untimedByDay = useMemo(() => weekDays.map((day) => (
@@ -576,6 +619,55 @@ function PlanningWeekTimelineView({
       </Text>
     </TouchableOpacity>
   );
+
+  // COLL-FIX-PLANNING (T9_C29_2) — des seances qui se chevauchent dans une colonne trop etroite :
+  // UNE carte, la pastille de chaque club et « 2 séances » ; l appui ouvre ce jour (comme « +n »).
+  const renderGrappeCard = (event, left, width) => {
+    const seances = event.events.filter((/** @type {any} */ e) => !e.raw?.closureBand);
+    const nombre = seances.length || event.events.length;
+    const mot = t('planningWeekTimelineViewV2.grappe', {
+      count: nombre,
+      defaultValue_one: 'séance',
+      defaultValue_other: 'séances',
+    });
+    const aDeplacer = event.events.some((/** @type {any} */ e) => e.raw?.closure);
+    return (
+      <TouchableOpacity
+        accessibilityLabel={[`${nombre} ${mot}`, ...seances.map((/** @type {any} */ e) => (
+          [e.title, getPlanningTimeLabel(e)].filter(Boolean).join(', ')
+        ))].join(' ; ')}
+        accessibilityRole="button"
+        key={event.key}
+        onPress={() => handleOverflowPress(event.dayDate)}
+        style={[styles.overflowCard, {
+          borderColor: aDeplacer ? pendingAccentColor : 'rgba(255,255,255,0.18)',
+          height: Math.max(event.height - 2, minEventHeight),
+          left: `${left}%`,
+          top: event.top + 1,
+          width: `${width}%`,
+        }]}
+        testID="planning-grappe"
+      >
+        <View style={styles.grappeDots}>
+          {seances.map((/** @type {any} */ e) => (
+            <View
+              key={`${e.documentId || e.title}-${e.top}`}
+              style={[styles.grappeDot, { backgroundColor: e.color || Colors.primary500 }]}
+            />
+          ))}
+        </View>
+        <Text style={[Fonts.p3Bold, { color: Colors.neutral00, fontSize: 12 }]}>{nombre}</Text>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          numberOfLines={1}
+          style={[Fonts.p3, { color: Colors.neutral200, fontSize: 9 }]}
+        >
+          {mot}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderTimedEventCard = (event, left, width) => {
     // COLL-C4B (02/10, design P4v3-fermer ecran 4) — une plage FERMEE ou BLOQUEE par la Ville :
@@ -1136,7 +1228,7 @@ function PlanningWeekTimelineView({
                     ))}
                   </View>
 
-                  <View style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]}>
+                  <View onLayout={mesurerLaGrille} style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]} testID="planning-grille">
                     <View style={[StyleSheet.absoluteFillObject, styles.dayBackgroundRow]}>
                       {weekDays.map((day) => (
                         <View
@@ -1179,6 +1271,9 @@ function PlanningWeekTimelineView({
                       if (event.displayType === 'overflow') {
                         return renderOverflowCard(event, left, width);
                       }
+                      if (event.displayType === 'grappe') {
+                        return renderGrappeCard(event, left, width);
+                      }
 
                       return renderTimedEventCard(event, left, width);
                     })}
@@ -1209,7 +1304,7 @@ function PlanningWeekTimelineView({
                   ))}
                 </View>
 
-                <View style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]}>
+                <View onLayout={mesurerLaGrille} style={[styles.gridContainer, { borderRightColor: 'rgba(255,255,255,0.10)', borderTopColor: 'rgba(255,255,255,0.10)' }]} testID="planning-grille">
                   <View style={[StyleSheet.absoluteFillObject, styles.dayBackgroundRow]}>
                     {weekDays.map((day) => (
                       <View
@@ -1251,6 +1346,9 @@ function PlanningWeekTimelineView({
 
                     if (event.displayType === 'overflow') {
                       return renderOverflowCard(event, left, width);
+                    }
+                    if (event.displayType === 'grappe') {
+                      return renderGrappeCard(event, left, width);
                     }
 
                     return renderTimedEventCard(event, left, width);
@@ -1311,6 +1409,8 @@ const styles = StyleSheet.create({
   eventCard: {
     borderRadius: 8, borderWidth: 1, overflow: 'hidden', position: 'absolute',
   },
+  grappeDot: { borderRadius: 999, height: 6, width: 6 },
+  grappeDots: { flexDirection: 'row', gap: 3, marginBottom: 2 },
   gridContainer: {
     borderRightWidth: 1, borderTopWidth: 1, flex: 1, position: 'relative',
   },
