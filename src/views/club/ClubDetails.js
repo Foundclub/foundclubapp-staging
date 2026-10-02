@@ -2838,8 +2838,10 @@ function ClubDetails({ navigation, route }) {
                     <Image source={Images.envelope} style={[ApplicationStyle.icon20]} />
                     <TouchableOpacity
                       accessibilityLabel={t('clubDetails.a11y.emailClub', {
-                        defaultValue: 'Envoyer un e-mail a {{email}}',
+                        defaultValue: 'Envoyer un e-mail à {{email}}',
                         email: club?.email,
+                        // FINITIONS7 : l adresse vient du serveur, elle sort telle quelle.
+                        ...SANS_ECHAPPEMENT,
                       })}
                       accessibilityRole="link"
                       onPress={() => { Linking.openURL(`mailto:${club?.email}`); }}

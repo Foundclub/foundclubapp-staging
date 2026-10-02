@@ -95,7 +95,7 @@ const TEAM_FILTER_OPTIONS = [
     value: 'accepted',
   },
   {
-    get label() { return i18next.t('tournamentManagement.filterDeclined', 'Refusees'); },
+    get label() { return i18next.t('tournamentManagement.filterDeclined', 'Refusées'); },
     value: 'declined',
   },
   {

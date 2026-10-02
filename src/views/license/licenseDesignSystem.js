@@ -102,7 +102,7 @@ export const licenseStatusLabels = {
     return i18next.t('licenseDesignSystem.statusLabels.refunded', 'Remboursee');
   },
   get refused() {
-    return i18next.t('licenseDesignSystem.statusLabels.refused', 'Refuse');
+    return i18next.t('licenseDesignSystem.statusLabels.refused', 'Refusé');
   },
   get rejected() {
     return i18next.t('licenseDesignSystem.statusLabels.rejected', 'Rejete');

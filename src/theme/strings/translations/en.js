@@ -12791,6 +12791,8 @@ export default {
       rsvp: 'Unable to save your reply.',
     },
     markAll: 'Mark all as read',
+    // FINITIONS7 (02/10) — the button under the finger that swipes a notification.
+    markReadSwipe: 'Read',
     rsvp: {
       absent: 'Absence saved.',
       present: 'Attendance saved.',

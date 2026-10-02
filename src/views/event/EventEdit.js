@@ -1167,7 +1167,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  {t('eventEdit.thisSlotExceedsTheFacility', 'Ce créneau dépasse la capacité de l installation. L événement restera en demande en attente jusqu au traitement d un dirigeant.')}
+                  {t('eventEdit.thisSlotExceedsTheFacility', 'Ce créneau dépasse la capacité de l’installation. L’événement restera en demande en attente jusqu’au traitement d’un dirigeant.')}
                 </Text>
               </View>
             ) : null}
@@ -1180,7 +1180,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.primary200]}>
-                  {t('eventEdit.thisSlotExceedsTheFacility2', 'Ce créneau dépasse la capacité de l installation, mais ce club est configure en Autorise et notifier. L événement restera confirme et les dirigeants seront prevenus.')}
+                  {t('eventEdit.thisSlotExceedsTheFacility2', 'Ce créneau dépasse la capacité de l’installation, mais ce club est configuré en Autorise et notifier. L’événement restera confirmé et les dirigeants seront prévenus.')}
                 </Text>
               </View>
             ) : null}

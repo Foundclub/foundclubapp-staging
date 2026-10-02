@@ -87,7 +87,7 @@ const getAssignmentStatusLabel = (status) => {
   const normalizedStatus = String(status || '').toUpperCase();
   if (normalizedStatus === 'APPROVED') return i18next.t('eventTasksSection.approved', 'Valide');
   if (normalizedStatus === 'PENDING') return i18next.t('eventTasksSection.pending', 'En attente');
-  if (normalizedStatus === 'REJECTED') return i18next.t('eventTasksSection.declined', 'Refuse');
+  if (normalizedStatus === 'REJECTED') return i18next.t('eventTasksSection.declined', 'Refusé');
   if (normalizedStatus === 'CANCELLED') return i18next.t('eventTasksSection.cancelled', 'Annule');
   return normalizedStatus || i18next.t('eventTasksSection.unknown', 'Inconnu');
 };

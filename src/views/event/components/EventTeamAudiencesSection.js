@@ -38,7 +38,7 @@ const getAudienceLabel = (audience) => {
 const getStatusLabel = (status) => {
   const normalized = String(status || '').toUpperCase();
   if (normalized === 'ACCEPTED') return i18next.t('eventTeamAudiencesSection.accepted', 'Acceptee');
-  if (normalized === 'REFUSED') return i18next.t('eventTeamAudiencesSection.declined', 'Refusee');
+  if (normalized === 'REFUSED') return i18next.t('eventTeamAudiencesSection.declined', 'Refusée');
   if (normalized === 'CANCELLED') {
     return i18next.t(
       'eventTeamAudiencesSection.cancelled',
