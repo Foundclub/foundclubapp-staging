@@ -59,7 +59,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
 import TeamInviteSheet from '@/views/team/invite/TeamInviteSheet';
-import TeamRecordTiles from '@/views/team/performance/TeamRecordTiles';
+import TeamPerformancePanel from '@/views/team/performance/TeamPerformancePanel';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -201,6 +201,14 @@ function TeamDetails({ navigation, route }) {
   // depuis SENTRY-1 (`can-view-team-stats`). Cette porte ouvre aussi l'onglet.
   const canLoadTeamStats = Boolean(teamId && (isMyTeam || isClubManagerForCurrentTeam));
   const canLoadTeamPerformanceStats = canLoadTeamStats && hasMatchStatsSport(team);
+  // ST-VUES (planches 13 et 14) — l ENTRAINEUR de cette equipe. Le dirigeant qui
+  // n'entraine pas lit les memes stats, sous un bandeau qui dit a quel titre.
+  const isTeamTrainer = useMemo(
+    () => Boolean(currentUser?.documentId) && (team?.trainers || []).some(
+      (/** @type {any} */ trainer) => trainer?.documentId === currentUser?.documentId,
+    ),
+    [currentUser?.documentId, team?.trainers],
+  );
   const reloadGatesRef = useRef({ performance: false, stats: false });
   reloadGatesRef.current = { performance: canLoadTeamPerformanceStats, stats: canLoadTeamStats };
   const {
@@ -4393,42 +4401,70 @@ function TeamDetails({ navigation, route }) {
 
           {showStatsTab && activeTab === 'stats' && (
           <View style={[Spaces.padding[16], Spaces.gap[16]]}>
-            <View style={[Alignments.row, Spaces.gap[8]]}>
-              <TouchableOpacity
-                onPress={() => setStatsMode('attendance')}
+            {/* ST-VUES (planches 13 et 14, etat « dirigeant ») — le dirigeant qui n'entraine
+                pas lit les stats de l equipe ; le bandeau dit a quel titre. */}
+            {isClubManagerForCurrentTeam && !isTeamTrainer ? (
+              <View
                 style={[
+                  Alignments.row,
                   Alignments.alignCenter,
-                  Alignments.justifyCenter,
-                  Spaces.paddingVertical[8],
-                  { borderRadius: 18, flex: 1 },
-                  statsMode === 'attendance'
-                    ? ApplicationStyle.backgroundColor.primary500
-                    : ApplicationStyle.backgroundColor.primary700,
+                  Spaces.gap[12],
+                  Spaces.padding[12],
+                  ApplicationStyle.borderRadius16,
+                  { backgroundColor: withAlpha(Colors.primary500, 0.12) },
                 ]}
+                testID="team-stats-manager-banner"
               >
-                <Text style={[statsMode === 'attendance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
-                  {t('teamDetails.statsModes.attendance', "Vie d'équipe")}
+                <TeamLocationIcon color={Colors.primary200} height={20} name="shield" width={20} />
+                <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
+                  {t(
+                    'teamStatsPanel.managerBanner',
+                    'Tu lis ces stats en dirigeant du club {{club}}.',
+                    { club: team?.club?.name || '', ...SANS_ECHAPPEMENT },
+                  )}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setStatsMode('performance')}
-                style={[
-                  Alignments.alignCenter,
-                  Alignments.justifyCenter,
-                  Spaces.paddingVertical[8],
-                  { borderRadius: 18, flex: 1 },
-                  statsMode === 'performance'
-                    ? ApplicationStyle.backgroundColor.primary500
-                    : ApplicationStyle.backgroundColor.primary700,
-                ]}
-              >
-                <Text style={[statsMode === 'performance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
-                  {t('teamDetails.statsModes.performance', 'Performance')}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            ) : null}
+            {/* ST-VUES (planche 13, etat 7) — un sport sans stats de match n'a pas
+                « Performance » : l onglet Stats ouvre directement la vie d equipe. */}
+            {canLoadTeamPerformanceStats ? (
+              <View style={[Alignments.row, Spaces.gap[8]]}>
+                <TouchableOpacity
+                  onPress={() => setStatsMode('attendance')}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    Spaces.paddingVertical[8],
+                    { borderRadius: 18, flex: 1 },
+                    statsMode === 'attendance'
+                      ? ApplicationStyle.backgroundColor.primary500
+                      : ApplicationStyle.backgroundColor.primary700,
+                  ]}
+                >
+                  <Text style={[statsMode === 'attendance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                    {t('teamDetails.statsModes.attendance', "Vie d'équipe")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setStatsMode('performance')}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    Spaces.paddingVertical[8],
+                    { borderRadius: 18, flex: 1 },
+                    statsMode === 'performance'
+                      ? ApplicationStyle.backgroundColor.primary500
+                      : ApplicationStyle.backgroundColor.primary700,
+                  ]}
+                >
+                  <Text style={[statsMode === 'performance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                    {t('teamDetails.statsModes.performance', 'Performance')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
-            {statsMode === 'attendance' ? (
+            {statsMode === 'attendance' || !canLoadTeamPerformanceStats ? (
               <>
                 {(() => {
                   const presenceTotal = statsSummary.attendanceCount + statsSummary.absenceCount;
@@ -4644,163 +4680,26 @@ function TeamDetails({ navigation, route }) {
               </>
             ) : (
               <View style={[Spaces.gap[16]]}>
-                <View
-                  style={[
-                    ApplicationStyle.backgroundColor.primary700,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                    Spaces.gap[8],
-                  ]}
-                >
-                  <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                    {t('teamDetails.perf.eyebrow', 'Performance équipe')}
+                {/* ST-VUES — PLANCHE 13 DU DESIGN VALIDE (« FoundClub — Statistiques », 02/10) :
+                    forme, V / N / D, buts, notes, joueurs tries. Le panneau ne decide rien :
+                    « moyenne B » vient du serveur. Retires (notes de la planche) : la carte
+                    « Recap du groupe », « d apres N retours », la ligne des clean sheets ; et la
+                    liste « Derniers matchs renseignes », que la forme remplace.
+                    VA1 — un refus du serveur se dit, il ne devient pas « aucune performance ». */}
+                {isAccessRefusalError(teamPerformanceError) && !teamPerformancePlayers.length ? (
+                  <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                    {accessReservedMessage}
                   </Text>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                    {t('teamDetails.perf.title', 'Récap du groupe')}
-                  </Text>
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {t(
-                      'teamDetails.perf.body',
-                      "Lecture des stats publiées de l'équipe, avec prise en compte des réponses joueur quand elles sont disponibles.", // eslint-disable-line max-len
-                    )}
-                  </Text>
-                  {performanceSummary.playerCollectiveRatingCount > 0 ? (
-                    <Text style={[Fonts.p4, Fonts.neutral400]}>
-                      {t('teamDetails.perf.feedbackCount', {
-                        count: performanceSummary.playerCollectiveRatingCount,
-                        defaultValue_one: "d'après {{count}} retour post-match",
-                        defaultValue_other: "d'après {{count}} retours post-match",
-                      })}
-                    </Text>
-                  ) : null}
-                </View>
-
-                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                  {[
-                    {
-                      label: t('teamDetails.perf.stats.matches', 'Matchs'),
-                      value: performanceSummary.matches,
-                    },
-                    {
-                      label: t('teamDetails.perf.stats.minutes', 'Minutes'),
-                      value: performanceSummary.minutesPlayed,
-                    },
-                    {
-                      label: performanceSummary.sport === 'basketball'
-                        ? t('teamDetails.perf.stats.points', 'Points')
-                        : t('teamDetails.perf.stats.goals', 'Buts'),
-                      value: performanceSummary.sport === 'basketball'
-                        ? performanceSummary.points
-                        : performanceSummary.goals,
-                    },
-                    {
-                      label: t('teamDetails.perf.stats.assists', 'Passes décisives'),
-                      value: performanceSummary.assists,
-                    },
-                  ].map((stat) => (
-                    <View
-                      key={stat.label}
-                      style={[
-                        ApplicationStyle.backgroundColor.primary700,
-                        ApplicationStyle.borderRadius24,
-                        Spaces.padding[16],
-                        Spaces.gap[4],
-                        { flexGrow: 1, minWidth: '47%' },
-                      ]}
-                    >
-                      <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
-                      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
-                    </View>
-                  ))}
-                </View>
-                {/* STATS-VND — le bilan victoires / nuls / defaites (decision B d Adel, 24/09). */}
-                <TeamRecordTiles totals={teamPerformanceStats?.totals} />
-
-                <View
-                  style={[
-                    ApplicationStyle.backgroundColor.primary700,
-                    ApplicationStyle.borderRadius24,
-                    Spaces.padding[16],
-                    Spaces.gap[8],
-                  ]}
-                >
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {t(
-                      'teamDetails.perf.cumulativeScore',
-                      'Score cumule: {{scoreFor}} - {{scoreAgainst}}',
-                      {
-                        scoreAgainst: performanceSummary.scoreAgainstTotal,
-                        scoreFor: performanceSummary.scoreForTotal,
-                        ...SANS_ECHAPPEMENT,
-                      },
-                    )}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    {performanceSummary.sport === 'basketball'
-                      ? t(
-                        'teamDetails.perf.basketballLine',
-                        '{{rebounds}} rebonds - {{threePointers}} tirs à 3 points',
-                        {
-                          rebounds: performanceSummary.rebounds,
-                          threePointers: performanceSummary.threePointsMade,
-                          ...SANS_ECHAPPEMENT,
-                        },
-                      )
-                      : t(
-                        'teamDetails.perf.footballLine',
-                        '{{cleanSheets}} clean sheets - {{conceded}} buts encaissés',
-                        {
-                          cleanSheets: performanceSummary.cleanSheets,
-                          conceded: performanceSummary.scoreAgainstTotal,
-                          ...SANS_ECHAPPEMENT,
-                        },
-                      )}
-                  </Text>
-                </View>
-
-                {(performanceSummary.averageCollectiveRating !== null || performanceSummary.playerCollectiveRatingAverage !== null) ? (
-                  <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                    {performanceSummary.averageCollectiveRating !== null ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius24,
-                          Spaces.padding[16],
-                          Spaces.gap[4],
-                          { flexGrow: 1, minWidth: '47%' },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                          {t('teamDetails.perf.coachRating', 'Coach')}
-                        </Text>
-                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{`${performanceSummary.averageCollectiveRating}/10`}</Text>
-                      </View>
-                    ) : null}
-                    {performanceSummary.playerCollectiveRatingAverage !== null ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius24,
-                          Spaces.padding[16],
-                          Spaces.gap[4],
-                          { flexGrow: 1, minWidth: '47%' },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                          {t('teamDetails.perf.playersRating', 'Joueurs')}
-                        </Text>
-                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{`${performanceSummary.playerCollectiveRatingAverage}/10`}</Text>
-                        <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {t('teamDetails.perf.ratingCount', {
-                            count: performanceSummary.playerCollectiveRatingCount,
-                            defaultValue_one: '{{count}} note',
-                            defaultValue_other: '{{count}} notes',
-                          })}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                ) : null}
+                ) : (
+                  <TeamPerformancePanel
+                    currentUserDocumentId={currentUser?.documentId || ''}
+                    isLoading={isTeamPerformanceLoading}
+                    onPressPlayer={isTeamTrainer || isClubManagerForCurrentTeam
+                      ? (/** @type {any} */ player) => handleUserPress(player)
+                      : undefined}
+                    stats={teamPerformanceStats}
+                  />
+                )}
 
                 {pendingPerformanceMatches.length ? (
                   <View style={[Spaces.gap[8]]}>
@@ -4888,210 +4787,6 @@ function TeamDetails({ navigation, route }) {
                     ))}
                   </View>
                 ) : null}
-
-                {performanceSummary.recentReports.length ? (
-                  <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {t('teamDetails.perf.recentTitle', 'Derniers matchs renseignes')}
-                    </Text>
-                    {performanceSummary.recentReports.map((/** @type {any} */ report) => (
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        disabled={!report?.sourceDocumentId}
-                        key={
-                          report?.documentId
-                          || [report?.sourceType, report?.sourceDocumentId, report?.finalizedAt]
-                            .filter(Boolean)
-                            .join(':')
-                          || report?.matchLabel
-                          || 'recent-report'
-                        }
-                        onPress={() => handleOpenPerformanceMatch(report?.sourceType, report?.sourceDocumentId)}
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius24,
-                          Spaces.padding[16],
-                          Spaces.gap[8],
-                          !report?.sourceDocumentId ? { opacity: 0.94 } : null,
-                        ]}
-                      >
-                        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                              {report?.matchLabel || t('teamDetails.perf.matchFallback', 'Match')}
-                            </Text>
-                            <Text style={[Fonts.p4, Fonts.neutral100]}>
-                              {`${Number(report?.scoreFor || 0)} - ${Number(report?.scoreAgainst || 0)}`}
-                            </Text>
-                          </View>
-                          <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                                {report?.finalizedAt
-                                  ? new Date(report.finalizedAt)
-                                    .toLocaleDateString(localeDesFormats())
-                                  : t('teamDetails.perf.published', 'Publie')}
-                              </Text>
-                            </View>
-                            {report?.hasNewResponsesSincePublication ? (
-                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                                  {report?.newResponsesCount > 1
-                                    ? t(
-                                      'teamDetails.perf.newResponses',
-                                      '{{total}} nouvelles réponses',
-                                      { total: report.newResponsesCount, ...SANS_ECHAPPEMENT },
-                                    )
-                                    : t('teamDetails.perf.newResponse', 'Nouvelle réponse')}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                        <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                          {report?.collectiveRating !== null && report?.collectiveRating !== undefined ? (
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                                {t(
-                                  'teamDetails.perf.coachScore',
-                                  'Coach {{rating}}/10',
-                                  { rating: report.collectiveRating, ...SANS_ECHAPPEMENT },
-                                )}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                                {t(
-                                  'teamDetails.perf.playersScore',
-                                  'Joueurs {{rating}}/10',
-                                  {
-                                    rating: report.playerCollectiveRatingAverage,
-                                    ...SANS_ECHAPPEMENT,
-                                  },
-                                )}
-                              </Text>
-                            </View>
-                          ) : null}
-                        </View>
-                        <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {t(
-                            'teamDetails.perf.responses',
-                            '{{submitted}}/{{eligible}} joueurs ont répondu',
-                            {
-                              eligible: Number(report?.responseEligibleCount || 0),
-                              submitted: Number(report?.responseCompletionCount || 0),
-                              ...SANS_ECHAPPEMENT,
-                            },
-                          )}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
-
-                {(() => {
-                  if (isTeamPerformanceLoading) {
-                    return (
-                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                        {t('teamDetails.perf.loading', 'Chargement des performances...')}
-                      </Text>
-                    );
-                  }
-
-                  // VA1 — refusé par le serveur : le dire, pas « aucune performance ».
-                  const isPerformanceRefused = isAccessRefusalError(teamPerformanceError)
-                    && !teamPerformancePlayers.length;
-                  if (isPerformanceRefused) {
-                    return (
-                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                        {accessReservedMessage}
-                      </Text>
-                    );
-                  }
-
-                  if (teamPerformancePlayers.length) {
-                    return (
-                      <View style={[Spaces.gap[8]]}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                          {t('teamDetails.perf.playersTitle', 'Joueurs')}
-                        </Text>
-                        {teamPerformancePlayers.map((/** @type {any} */ player, /** @type {number} */ index) => (
-                          <View
-                            key={player?.documentId || player?.manualPlayerName || `performance-${index}`}
-                            style={[
-                              ApplicationStyle.backgroundColor.primary700,
-                              ApplicationStyle.borderRadius24,
-                              Spaces.padding[16],
-                              Spaces.gap[8],
-                            ]}
-                          >
-                            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
-                              <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                                {player?.manualPlayerName
-                                  || `${player?.firstname || ''} ${player?.lastname || ''}`.trim()
-                                  || t('teamDetails.perf.playerFallback', 'Joueur')}
-                              </Text>
-                              <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}>
-                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                                  {t(
-                                    'teamDetails.perf.playerMatches',
-                                    '{{matches}} matchs',
-                                    { matches: Number(player?.matches || 0), ...SANS_ECHAPPEMENT },
-                                  )}
-                                </Text>
-                              </View>
-                            </View>
-                            <Text style={[Fonts.p3, Fonts.neutral100]}>
-                              {performanceSummary.sport === 'basketball'
-                                ? t(
-                                  'teamDetails.perf.playerBasketballLine',
-                                  '{{points}} points - {{assists}} passes - {{rebounds}} rebonds',
-                                  {
-                                    assists: Number(player?.assists || 0),
-                                    points: Number(player?.points || 0),
-                                    rebounds: Number(player?.rebounds || 0),
-                                    ...SANS_ECHAPPEMENT,
-                                  },
-                                )
-                                : t(
-                                  'teamDetails.perf.playerFootballLine',
-                                  '{{goals}} buts - {{assists}} passes - {{minutes}} min',
-                                  {
-                                    assists: Number(player?.assists || 0),
-                                    goals: Number(player?.goals || 0),
-                                    minutes: Number(player?.minutesPlayed || 0),
-                                    ...SANS_ECHAPPEMENT,
-                                  },
-                                )}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    );
-                  }
-
-                  if (pendingPerformanceMatches.length) {
-                    return (
-                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                        {t(
-                          'teamDetails.perf.pendingOnly',
-                          'Des réponses joueur existent déjà pour des matchs en attente de publication équipe.', // eslint-disable-line max-len
-                        )}
-                      </Text>
-                    );
-                  }
-
-                  return (
-                    <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                      {t(
-                        'teamDetails.perf.empty',
-                        'Aucune performance de match disponible pour le moment.',
-                      )}
-                    </Text>
-                  );
-                })()}
               </View>
             )}
           </View>
