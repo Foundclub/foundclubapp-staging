@@ -258,6 +258,8 @@ export const getChatMessages = async (chatId = '', page = 1, pageSize = 20) => {
  * @param {object} [params.composition] - The composition object (optional)
  * @param {Array<{ id?: number; documentId?: string }>} [params.attachments] - Attachments relation payload
  * @param {{ documentId?: string; id?: string | number } | null} [params.replyTo] - Reply target
+ * @param {{ voix?: string }} [params.senderSignature] - COLL-C4A2 : la voix DEMANDÉE dans un fil
+ *   de la Ville (« ville ») ; le serveur décide et écrit la signature.
  * @returns {Promise<ChatMessage>}
  */
 export const createChatMessage = async ({

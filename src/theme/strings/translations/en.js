@@ -4718,9 +4718,13 @@ export default {
       titrePrivee: 'In this conversation',
     },
     privee: {
+      annuler: 'Cancel',
       brouillonFiche: 'Hello, could you complete your club’s contact details on its FoundClub page? Thank you.',
       demanderFiche: 'Ask the club to complete its page',
       ecrire: 'Write to the club managers',
+      envoyer: 'Send',
+      premierMessageAide: 'The conversation opens when you send this message.',
+      premierMessageTitre: 'First message to the managers of {{club}}',
     },
     quitte: {
       retour: 'Back to messages',

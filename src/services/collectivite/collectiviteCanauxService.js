@@ -35,12 +35,50 @@ export const getMembresDuFil = async (chatId) => (
 );
 
 /**
- * « Écrire aux dirigeants » (D73) : la conversation privée de la Ville avec CE club, ouverte ou
- * retrouvée (deux appuis rendent la même).
+ * L'adresse de la conversation privée de la Ville avec CE club.
+ * @param {{ clubId: string, collectiviteId: string }} args - La Ville et le club (documentId).
+ * @returns {string} Le chemin.
+ */
+const cheminDeLaConversation = ({ clubId, collectiviteId }) => (
+  `/collectivites/${collectiviteId}/clubs/${clubId}/conversation`
+);
+
+/**
+ * 🧯 COLL-FIX-DEMANDES (02/10) — « Écrire aux dirigeants » RETROUVE la conversation sans jamais
+ * la créer (GET) : un appui sans message ne pose plus de conversation vide chez les deux.
+ * @param {{ clubId: string, collectiviteId: string }} args - La Ville et le club (documentId).
+ * @returns {Promise<any>} `{ data: { club, collectivite, documentId } }`, documentId null si
+ *   elle n'existe pas encore.
+ */
+export const trouverConversationAvecLeClub = async (args) => (
+  (await (await client()).get(cheminDeLaConversation(args))).data
+);
+
+/**
+ * « Écrire aux dirigeants » (D73) : la conversation privée de la Ville avec CE club, créée ou
+ * retrouvée (deux appuis rendent la même). Appelée au PREMIER message seulement.
  * @param {{ clubId: string, collectiviteId: string }} args - La Ville et le club (documentId).
  * @returns {Promise<any>} `{ data: { club, collectivite, documentId } }`.
  */
-export const ouvrirConversationAvecLeClub = async ({ clubId, collectiviteId }) => {
-  const chemin = `/collectivites/${collectiviteId}/clubs/${clubId}/conversation`;
-  return (await (await client()).post(chemin)).data;
+export const ouvrirConversationAvecLeClub = async (args) => (
+  (await (await client()).post(cheminDeLaConversation(args))).data
+);
+
+/**
+ * Le premier message de la Ville à CE club : la conversation naît, puis le message y part au
+ * nom de la Ville, par le chemin de tous les messages (POST /chat-messages).
+ * ponytail: deux appels, pas une transaction. Si le second échoue juste après le premier, la
+ * conversation existe vide ; l'appui suivant la retrouve et l'ouvre. Voie de sortie : un POST
+ * de la conversation qui porte le message, si le cas se voit.
+ * @param {{ clubId: string, collectiviteId: string, message: string }} args - La Ville, le
+ *   club (documentId) et le texte.
+ * @returns {Promise<any>} `{ data: { club, collectivite, documentId } }`.
+ */
+export const ecrireLePremierMessageAuClub = async ({ clubId, collectiviteId, message }) => {
+  const ouverte = await ouvrirConversationAvecLeClub({ clubId, collectiviteId });
+  const chatId = ouverte?.data?.documentId;
+  if (!chatId) return ouverte;
+  const { createChatMessage } = await import('../chat/chatService');
+  await createChatMessage({ chatId, message, senderSignature: { voix: 'ville' } });
+  return ouverte;
 };

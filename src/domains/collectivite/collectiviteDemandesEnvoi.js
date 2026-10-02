@@ -24,6 +24,10 @@ export const payloadsDeLaDemande = ({
     endTime: fin,
     facility: facilityId,
     name: '',
+    // 🧯 COLL-FIX-DEMANDES (02/10) — la séance de l'ÉQUIPE, FERMÉE au dehors. Sans ce champ, un
+    // entraînement est « ouvert » (défaut du schéma et de resolveTrainingOpenConfig) : il lui
+    // faut au moins une place externe, et le serveur refusait TOUTE demande (400, tournée G3).
+    sessionStatus: 'closed',
     startTime: debut,
     team: teamId,
     type,

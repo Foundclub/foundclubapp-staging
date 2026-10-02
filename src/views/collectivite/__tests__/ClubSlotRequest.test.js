@@ -165,6 +165,25 @@ const APERCU_COMPLET = {
 let mockApercu = APERCU_LIBRE;
 let mockStatut = 'pending_validation';
 
+// 🧯 COLL-FIX-DEMANDES (02/10) — LE DOUBLE DU SERVEUR APPLIQUE SA RÈGLE DES ENTRAÎNEMENTS.
+// Tournée G3 : aucune demande ne partait, POST /api/events répondait 400 « Les entrainements
+// ouverts exigent au moins une place externe ». Ce témoin était vert parce que son POST acceptait
+// tout. Copie de la règle d'admin (src/api/event/controllers/event.ts,
+// applyTrainingOpenMutationRules) : un entraînement sans `sessionStatus` est OUVERT, et un
+// entraînement ouvert exige au moins une place pour le dehors.
+const regleDesEntrainementsDuServeur = (/** @type {any} */ corps) => {
+  const entrainement = corps?.data?.type === 'type-entr';
+  const ouvert = String(corps?.data?.sessionStatus || 'open').trim().toLowerCase() !== 'closed';
+  if (entrainement && ouvert && !(Number(corps?.data?.externalParticipantLimit) >= 1)) {
+    const refus = /** @type {any} */ (new Error('Request failed with status code 400'));
+    refus.response = {
+      data: { error: { message: 'Les entrainements ouverts exigent au moins une place externe.' } },
+      status: 400,
+    };
+    throw refus;
+  }
+};
+
 const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
@@ -236,9 +255,12 @@ beforeEach(() => {
     }
     throw new Error(`GET inattendu ${url}`);
   });
-  mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => ({
-    data: { corps, data: { documentId: `ev-${mockPost.mock.calls.length}`, status: mockStatut } },
-  }));
+  mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
+    if (url === '/events') regleDesEntrainementsDuServeur(corps);
+    return {
+      data: { corps, data: { documentId: `ev-${mockPost.mock.calls.length}`, status: mockStatut } },
+    };
+  });
 });
 
 describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
@@ -303,6 +325,12 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
       team: 'u13',
       type: 'type-entr',
     }));
+    // COLL-FIX-DEMANDES : une demande à la Ville est la séance de l'équipe, FERMÉE au dehors ;
+    // aucune place externe n'est inventée : le serveur refusait la limite 0 d'un entraînement
+    // ouvert.
+    expect(corps.data.sessionStatus).toBe('closed');
+    expect('externalParticipantLimit' in corps.data).toBe(false);
+    expect('externalParticipantValidationMode' in corps.data).toBe(false);
     // eslint-disable-next-line max-len
     expect(new Date(corps.data.endDate).getTime() - new Date(corps.data.date).getTime()).toBe(90 * 60 * 1000);
     expect('recurrenceGroupId' in corps.data).toBe(false);
@@ -326,6 +354,9 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     expect(mockPost).toHaveBeenCalledTimes(39);
     const groupes = new Set(mockPost.mock.calls.map(([, corps]) => corps.data.recurrenceGroupId));
     expect(groupes.size).toBe(1);
+    // COLL-FIX-DEMANDES : chaque séance de la série est fermée au dehors.
+    // eslint-disable-next-line max-len
+    expect(mockPost.mock.calls.every(([, corps]) => corps.data.sessionStatus === 'closed')).toBe(true);
     expect([...groupes][0]).toBeTruthy();
     // eslint-disable-next-line max-len
     expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 30 juin · Gymnase des Tilleuls');
