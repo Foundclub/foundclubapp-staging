@@ -5065,6 +5065,15 @@ export default {
       presentationToutes: 'Les actualités des Villes de tes clubs. Seules les Villes y écrivent.',
       vide: 'Aucune actualité de la Ville pour l’instant.',
     },
+    canaux: {
+      aucune: 'Aucune actualité pour l’instant',
+      conversations: 'Conversations',
+      derniere: '{{date}} · {{titre}}',
+      mairieLu: 'Lu par les membres de {{nombre}} clubs · eux ne répondent pas',
+      mairieLuUn: 'Lu par les membres d’1 club · eux ne répondent pas',
+      mairieTitre: 'Actualités de {{ville}}',
+      membreTitre: 'Actualités de la Ville',
+    },
     categories: {
       autre: 'Autre',
       fermeture: 'Fermeture',

@@ -33,7 +33,7 @@ const REPLIS_TYPES = {
 
 /**
  * Le libellé d'un type d'actualité.
- * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {unknown} categorie - Le type rendu par le serveur.
  * @returns {string} Le libellé.
  */
@@ -44,7 +44,7 @@ export const categoryLabel = (t, categorie) => {
 
 /**
  * Le libellé d'un choix de destinataires (« Pour qui »).
- * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {unknown} audience - `membres`, `dirigeants` ou `installation`.
  * @returns {string} Le libellé.
  */
@@ -74,7 +74,7 @@ export const categoryTone = (categorie) => {
 /**
  * « Envoyée aux membres des 3 clubs » : à qui elle est partie, en NOMBRES (jamais une personne,
  * et jamais « lue par n » : ce compteur n'existe pas).
- * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {{ audience?: unknown, clubsCount?: unknown }} actualite - `audience`, et
  *   `recipients.clubsCount`.
  * @returns {string} La ligne.
@@ -115,7 +115,7 @@ export const recipientsLine = (t, { audience, clubsCount }) => {
 /**
  * La phrase AVANT de publier (planche P3b-actu-tel, écran 1) : qui la recevra, qui est prévenu,
  * et que personne n'y répond.
- * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {{ audience: string, clubsCount: number | null }} cible - Les destinataires choisis.
  * @returns {string} La phrase ; « … » tant que le nombre n'est pas connu.
  */
@@ -159,7 +159,7 @@ export const audiencePreview = (t, { audience, clubsCount }) => {
 
 /**
  * La date de publication : « aujourd'hui », ou le jour (« mar 29/09/2026 »).
- * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @param {any} t - La traduction (i18next).
  * @param {unknown} valeur - `publishedAt`.
  * @param {Date} [maintenant] - Maintenant (témoins).
  * @returns {string} Le libellé, ou ''.

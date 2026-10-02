@@ -4732,6 +4732,15 @@ export default {
       presentationToutes: 'News from your clubs’ cities. Only the cities post here.',
       vide: 'No city news yet.',
     },
+    canaux: {
+      aucune: 'No news yet',
+      conversations: 'Conversations',
+      derniere: '{{date}} · {{titre}}',
+      mairieLu: 'Read by the members of {{nombre}} clubs · they do not reply',
+      mairieLuUn: 'Read by the members of 1 club · they do not reply',
+      mairieTitre: 'News from {{ville}}',
+      membreTitre: 'City news',
+    },
     categories: {
       autre: 'Other',
       fermeture: 'Closure',

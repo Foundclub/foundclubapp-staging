@@ -62,10 +62,10 @@ function CollectiviteActualitesCanal() {
     ? lecture.data.collectivites
     : [];
   const ville = collectiviteId
-    ? collectivites.find((c) => c?.documentId === collectiviteId) || null
+    ? collectivites.find((/** @type {any} */ c) => c?.documentId === collectiviteId) || null
     : (collectivites.length === 1 && collectivites[0]) || null;
   const actualites = (Array.isArray(lecture.data?.actualites) ? lecture.data.actualites : [])
-    .filter((actualite) => (
+    .filter((/** @type {any} */ actualite) => (
       !collectiviteId || actualite?.collectivite?.documentId === collectiviteId
     ))
     .slice()
@@ -113,7 +113,7 @@ function CollectiviteActualitesCanal() {
       </Text>
     );
   } else {
-    contenu = actualites.map((actualite) => (
+    contenu = actualites.map((/** @type {any} */ actualite) => (
       <View
         key={actualite?.documentId}
         style={{ alignSelf: 'flex-start', maxWidth: 560, width: '92%' }}

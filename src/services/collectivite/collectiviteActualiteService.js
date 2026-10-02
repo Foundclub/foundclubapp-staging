@@ -38,7 +38,7 @@ const lire = async (chemin, options) => (await (await client()).get(chemin, opti
 /**
  * Les actualités EN LIGNE de la collectivité, les plus récentes d'abord.
  * @param {string} collectiviteId - documentId.
- * @returns {Promise<object>} `{ data: [...] }`.
+ * @returns {Promise<any>} `{ data: [...] }`.
  */
 export const getCollectiviteActualites = (collectiviteId) => lire(
   `/collectivites/${collectiviteId}/actualites`,
@@ -48,7 +48,7 @@ export const getCollectiviteActualites = (collectiviteId) => lire(
  * Combien de clubs recevraient l'actualité, AVANT de publier.
  * @param {string} collectiviteId - documentId.
  * @param {{ audience: string, facilityId?: string | null }} cible - Les destinataires choisis.
- * @returns {Promise<object>} `{ data: { audience, clubsCount } }`.
+ * @returns {Promise<any>} `{ data: { audience, clubsCount } }`.
  */
 export const getActualiteRecipients = (collectiviteId, { audience, facilityId }) => lire(
   `/collectivites/${collectiviteId}/actualites-destinataires`,
@@ -58,7 +58,7 @@ export const getActualiteRecipients = (collectiviteId, { audience, facilityId })
 /**
  * Publier.
  * @param {{ collectiviteId: string, data: Record<string, unknown> }} args
- * @returns {Promise<object>} `{ data: actualite }`.
+ * @returns {Promise<any>} `{ data: actualite }`.
  */
 export const publishActualite = async ({ collectiviteId, data }) => {
   const http = await client();
@@ -69,7 +69,7 @@ export const publishActualite = async ({ collectiviteId, data }) => {
 /**
  * Modifier (aucune nouvelle notification ne part).
  * @param {{ actualiteId: string, collectiviteId: string, data: Record<string, unknown> }} args
- * @returns {Promise<object>} `{ data: actualite }`.
+ * @returns {Promise<any>} `{ data: actualite }`.
  */
 export const modifyActualite = async ({ actualiteId, collectiviteId, data }) => {
   const http = await client();
@@ -83,7 +83,7 @@ export const modifyActualite = async ({ actualiteId, collectiviteId, data }) => 
 /**
  * Retirer : elle disparaît pour tous ses lecteurs.
  * @param {{ actualiteId: string, collectiviteId: string }} args
- * @returns {Promise<object>} `{ data: { documentId, retired } }`.
+ * @returns {Promise<any>} `{ data: { documentId, retired } }`.
  */
 export const retireActualite = async ({ actualiteId, collectiviteId }) => {
   const http = await client();
@@ -95,7 +95,7 @@ export const retireActualite = async ({ actualiteId, collectiviteId }) => {
  * Le bloc « De la Ville de … » de la fiche d'UN club : la Ville du club (ou null), ses dernières
  * actualités que CE membre peut lire, et s'il a activé la notification (D68).
  * @param {string} clubId - documentId du club.
- * @returns {Promise<object>} `{ data: { actualites, collectivite, notify } }`.
+ * @returns {Promise<any>} `{ data: { actualites, collectivite, notify } }`.
  */
 export const getClubCollectiviteActualites = (clubId) => lire(
   `/clubs/${clubId}/collectivite-actualites`,
@@ -104,7 +104,7 @@ export const getClubCollectiviteActualites = (clubId) => lire(
 /**
  * « Me prévenir des actualités de la Ville » (D68) : désactivé par défaut.
  * @param {{ clubId: string, notify: boolean }} args
- * @returns {Promise<object>} `{ data: { notify } }`.
+ * @returns {Promise<any>} `{ data: { notify } }`.
  */
 export const setClubCollectiviteActualitesNotify = async ({ clubId, notify }) => {
   const http = await client();
@@ -117,14 +117,14 @@ export const setClubCollectiviteActualitesNotify = async ({ clubId, notify }) =>
 
 /**
  * Le canal de la Ville d'un membre : toutes les actualités que SES clubs peuvent lire.
- * @returns {Promise<object>} `{ data: { actualites, collectivites } }`.
+ * @returns {Promise<any>} `{ data: { actualites, collectivites } }`.
  */
 export const getMesActualitesDeLaVille = () => lire('/collectivite-actualites/mine');
 
 /**
  * Le bandeau part (ouvert ou masqué) : la date de lecture de CES Villes passe à maintenant.
  * @param {string[] | null} collectiviteIds - Les Villes concernées ; null : toutes les siennes.
- * @returns {Promise<object>} `{ data: { collectiviteIds, seenUntil } }`.
+ * @returns {Promise<any>} `{ data: { collectiviteIds, seenUntil } }`.
  */
 export const markActualitesVues = async (collectiviteIds) => {
   const http = await client();

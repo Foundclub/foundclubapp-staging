@@ -191,7 +191,7 @@ function ActualiteCarte({
           {actualite.body}
         </Text>
       ) : null}
-      {compact ? null : pieces.map((fichier) => (
+      {compact ? null : pieces.map((/** @type {any} */ fichier) => (
         <PieceJointeActualite fichier={fichier} key={String(fichier?.id || fichier?.url)} />
       ))}
       {actualite?.editedAt ? (
