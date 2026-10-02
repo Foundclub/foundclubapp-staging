@@ -166,6 +166,8 @@ const mockGetMyApplications = jest.fn();
 jest.mock('@/services/recruitment/recruitmentService', () => ({
   applyToRecruitmentAd: jest.fn(),
   buildDetectionApplicationStatusMap: () => ({}),
+  // FINITIONS8 (point 6) : la liste range « mes candidatures » par annonce.
+  buildOwnApplicationStatusMap: () => ({}),
   filterVisibleRecruitmentAds: (/** @type {any[]} */ ads) => ads,
   getMyApplications: (/** @type {any} */ user) => mockGetMyApplications(user),
   getMyRecruitmentAds: jest.fn(),
