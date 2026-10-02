@@ -4822,6 +4822,34 @@ export default {
     },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
+  // COLL-C2C (02/10) — the club's facilities in 3 groups (design P8v2, D32).
+  clubInstallations: {
+    actions: {
+      demanderCreneau: 'Request a slot',
+      demanderHeure: 'Request an hour',
+      ouvrir: '{{nom}}: see the schedule',
+    },
+    compte: {
+      aDemander: '{{count}} to request',
+      auClub: '{{count}} at the club',
+      avecCreneaux: '{{count}} with your town slots',
+    },
+    creneau: {
+      ligne: '{{team}} · every {{day}} {{hours}}',
+      toutLeClub: 'Whole club',
+    },
+    groupes: {
+      aDemander: 'To request from the town',
+      aDemanderDit: 'Your club has no slot there: check the free hours and request one.',
+      aDemanderDitVille: '{{ville}}: your club has no slot there. Check the free hours and request one.',
+      auClub: 'At the club',
+      auClubDit: 'Your club’s own: you manage its schedule.',
+      auClubVide: 'No facility at your club yet.',
+      avecCreneaux: 'Your town slots',
+      avecCreneauxDit: '{{ville}} gave you these slots for the season.',
+      nombre: '({{count}})',
+    },
+  },
   collectiviteCreneaux: {
     attribuer: {
       aPartirDu: 'From',

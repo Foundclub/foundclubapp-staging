@@ -226,14 +226,20 @@ describe('TEXTES-COLLECTIVITES — la liste, côté CLUB', () => {
     const lus = textes(rendre());
     expect(lus).toContain('Tes installations');
     expect(lus).not.toContain('3 installations');
-    expect(lus).toContain('1 installation du club · 2 gérées par la Ville de Montrivage');
+    // COLL-C2C (02/10) — design P8v2 valide (vague 2) : les installations de la Ville se rangent
+    // en groupes ; le compte dit « au club » et « à demander » (aucune n a de créneau du club ici).
+    expect(lus).toContain('1 au club · 2 à demander');
   });
 
   // eslint-disable-next-line max-len
   it('la carte d une installation de la Ville dit « gérée par la Ville de … » (l article ne manque plus)', () => {
     const lus = textes(rendre());
+    // COLL-C2C (02/10) — design P8v2 : la phrase n est plus REPETEE sur chaque carte ; la Ville est
+    // nommee une fois, dans la ligne du groupe, AVEC son article.
     // eslint-disable-next-line max-len
-    expect(lus).toContain('Installation gérée par la Ville de Montrivage : planning en lecture seule.');
+    expect(lus).not.toContain('Installation gérée par la Ville de Montrivage : planning en lecture seule.');
+    // eslint-disable-next-line max-len
+    expect(lus).toContain('La Ville de Montrivage : ton club n’y a pas de créneau. Regarde les heures libres et demande.');
     expect(lus.join(' ')).not.toMatch(/de Ville de Montrivage/);
   });
 

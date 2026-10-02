@@ -19,7 +19,12 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
-import { momentLabel } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  clubSlotParts,
+  groupClubInstallations,
+  ouvrirDemandeALaVille,
+} from '@/domains/seasonSlot/clubInstallations';
+import { capitalize, momentLabel } from '@/domains/seasonSlot/seasonSlotDisplay';
 import {
   extractSubscriptionDecisionFromError,
   formatCollectiviteOfferedBy,
@@ -87,6 +92,8 @@ const getFacilityKey = (item, index) => (item.documentId || item.id?.toString() 
 // COLL-C2B (02/10) — design P4 : sur ordinateur, les cartes de la Ville vont en grille de 3, et
 // l ajout est la DERNIERE case de la grille (D34 : une seule grammaire d ajout, en pointille).
 const CASE_AJOUT = { documentId: '__ajout__', isAddCard: true };
+// COLL-C2C (02/10) — design P8v2 : un groupe « Au club » vide garde sa ligne et « Ajouter ».
+const GROUPE_VIDE = { documentId: '__groupe_vide__', isEmptyGroup: true };
 const COLONNES_ORDINATEUR = 3;
 const SQUELETTES = ['a', 'b'];
 
@@ -121,6 +128,8 @@ function FacilityList() {
     clubId: contextClubId,
     cmId: contextCmId,
   }, {
+    // COLL-C2C (02/10) — et les creneaux du club, pour les 3 groupes (design P8v2).
+    includeClubSlots: Boolean(contextClubId),
     // COLL1B (29/09) — l onglet Installations montre aussi celles de la collectivite du
     // club (SPEC §3), en lecture seule. Le serveur en juge (is-member-of-club).
     includeCollectivite: Boolean(contextClubId),
@@ -319,13 +328,42 @@ function FacilityList() {
       });
   }, []);
 
+  // COLL-C2C (02/10) — design P8v2 (D32) : cote club, des qu il y a une installation de la Ville,
+  // 3 groupes dans l ordre ou le dirigeant s en sert : au club ; tes creneaux de la Ville ; a
+  // demander. « Pretees par la Ville » disparait. Sans installation de la Ville : l ecran d avant.
+  const groupes = useMemo(
+    () => groupClubInstallations(isCollectiviteMode ? [] : facilities),
+    [facilities, isCollectiviteMode],
+  );
+  const enGroupes = !isCollectiviteMode && groupes.hasVille;
+  const villeNommee = capitalize(formatCollectiviteOfferedBy(groupes.collectiviteName));
   const sections = useMemo(() => {
     if (isCollectiviteMode) return facilities.length ? [{ data: facilities, title: '' }] : [];
+    if (enGroupes) {
+      return [
+        {
+          data: groupes.auClub.length ? groupes.auClub : [GROUPE_VIDE],
+          key: 'auClub',
+          kind: 'auClub',
+          title: '',
+        },
+        ...(groupes.avecCreneaux.length
+          ? [{
+            data: groupes.avecCreneaux, key: 'avecCreneaux', kind: 'avecCreneaux', title: '',
+          }]
+          : []),
+        ...(groupes.aDemander.length
+          ? [{
+            data: groupes.aDemander, key: 'aDemander', kind: 'aDemander', title: '',
+          }]
+          : []),
+      ];
+    }
     return getFacilitySections(facilityContext?.allFacilities || [], {
       clubTitle: t('facilityList.sections.club', 'Installations du club'),
       sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
     });
-  }, [facilities, facilityContext, isCollectiviteMode, t]);
+  }, [enGroupes, facilities, facilityContext, groupes, isCollectiviteMode, t]);
   const hasMultipleSections = sections.length > 1;
   const isMissingContext = !isCollectiviteMode && !contextClubId && !contextCmId;
 
@@ -850,6 +888,202 @@ function FacilityList() {
     ) : null
   ), [Fonts.p2Bold, Fonts.primary200, Spaces.marginBottom, Spaces.marginTop, hasMultipleSections]);
 
+  // COLL-C2C (02/10) — l ajout en pointille (D34) : en pied de liste, ou sous « Au club ».
+  const boutonAjouter = (
+    <TouchableOpacity
+      accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+      accessibilityRole="button"
+      disabled={isMissingContext}
+      onPress={handleCreate}
+      style={[
+        Alignments.alignCenter,
+        Alignments.justifyCenter,
+        Spaces.marginTop[12],
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.06),
+          borderColor: withAlpha(Colors.primary500, 0.4),
+          borderRadius: 16,
+          borderStyle: 'dashed',
+          borderWidth: 1.5,
+          minHeight: 52,
+        },
+      ]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+        {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // COLL-C2C — la tete d un groupe : son titre, son nombre, puis UNE ligne : ce qu on y fait.
+  // La Ville n est nommee qu une fois (design P8v2).
+  const renderSectionHeaderGroupes = (/** @type {{ section: any }} */ { section }) => {
+    const nombre = section.data.filter((/** @type {any} */ item) => !item?.isEmptyGroup).length;
+    const titres = {
+      aDemander: t('clubInstallations.groupes.aDemander', 'À demander à la Ville'),
+      auClub: t('clubInstallations.groupes.auClub', 'Au club'),
+      avecCreneaux: t('clubInstallations.groupes.avecCreneaux', 'Tes créneaux de la Ville'),
+    };
+    const dits = {
+      aDemander: groupes.avecCreneaux.length
+        ? t(
+          'clubInstallations.groupes.aDemanderDit',
+          'Ton club n’y a pas de créneau : regarde les heures libres et demande.',
+        )
+        : t(
+          'clubInstallations.groupes.aDemanderDitVille',
+          '{{ville}} : ton club n’y a pas de créneau. Regarde les heures libres et demande.',
+          {
+            ville: villeNommee,
+            ...SANS_ECHAPPEMENT,
+          },
+        ),
+      auClub: nombre
+        ? t('clubInstallations.groupes.auClubDit', 'À ton club : tu gères son planning.')
+        : null,
+      avecCreneaux: t(
+        'clubInstallations.groupes.avecCreneauxDit',
+        '{{ville}} t’a attribué ces créneaux pour la saison.',
+        {
+          ville: villeNommee,
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+    };
+    return (
+      <View style={[Spaces.marginBottom[8], Spaces.marginTop[12], { gap: 2 }]}>
+        <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.primary200]}>
+          {nombre
+            ? `${titres[section.kind]} ${t('clubInstallations.groupes.nombre', '({{count}})', {
+              count: nombre,
+            })}`
+            : titres[section.kind]}
+        </Text>
+        {dits[section.kind] ? (
+          <Text style={[Fonts.p3, Fonts.neutral300]}>{dits[section.kind]}</Text>
+        ) : null}
+      </View>
+    );
+  };
+
+  // COLL-C2C — la carte d une installation de la Ville, cote club : son nom ; ce qu elle est ; les
+  // creneaux du club (« U15 · chaque mardi 17:30 – 19:00 ») ; « Voir le planning » et « Demander ».
+  const renderCarteVille = (/** @type {any} */ item, /** @type {string} */ kind) => {
+    const nom = item?.name || t('facilityList.defaults.facilityName', 'Installation');
+    const equipes = Math.max(1, Number(item?.maxSlots || 1));
+    const couleur = resolveFacilityPlanningColor(item) || Colors.primary500;
+    const meta = [
+      getFacilityTypeLabel(item?.type),
+      t('collectiviteCreneaux.liste.capacite', {
+        count: equipes,
+        defaultValue_one: '{{count}} équipe à la fois',
+        defaultValue_other: '{{count}} équipes à la fois',
+      }),
+      kind === 'aDemander'
+        ? formatOpeningHours(item?.openingTime, item?.closingTime)
+        : getAddressLabel(item?.address, '').trim(),
+    ].filter(Boolean).join(' · ');
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius24,
+          Spaces.padding[16],
+          {
+            backgroundColor: withAlpha(Colors.primary800, 0.6),
+            borderColor: withAlpha(Colors.neutral00, 0.13),
+            borderLeftColor: couleur,
+            borderLeftWidth: FACILITY_ACCENT_WIDTH,
+            borderWidth: 1,
+            gap: 10,
+            marginBottom: 12,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          accessibilityLabel={t('clubInstallations.actions.ouvrir', '{{nom}} : voir le planning', {
+            nom,
+            ...SANS_ECHAPPEMENT,
+          })}
+          accessibilityRole="button"
+          onPress={() => handleOpenPlanning(item)}
+          style={{ gap: 4 }}
+        >
+          <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
+          {meta ? <Text style={[Fonts.p3, Fonts.neutral200]}>{meta}</Text> : null}
+        </TouchableOpacity>
+        {kind === 'avecCreneaux' ? (
+          <View style={{ gap: 2 }}>
+            {item.clubSeasonSlots.map((/** @type {any} */ creneau) => {
+              const morceaux = clubSlotParts(creneau);
+              return (
+                <View
+                  key={creneau.documentId}
+                  style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
+                >
+                  <View style={{
+                    backgroundColor: couleur, borderRadius: 3, height: 6, width: 6,
+                  }}
+                  />
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
+                    {t('clubInstallations.creneau.ligne', '{{team}} · chaque {{day}} {{hours}}', {
+                      day: morceaux.day,
+                      hours: morceaux.hours,
+                      team: morceaux.team
+                        || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
+                      ...SANS_ECHAPPEMENT,
+                    })}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+        <View style={[Alignments.row, { gap: 8 }]}>
+          <View style={{ flex: 1 }}>
+            <Button
+              onPress={() => handleOpenPlanning(item)}
+              size="sm"
+              title={t('facilityList.actions.openPlanning', 'Voir le planning')}
+              variant="Secondary"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              onPress={() => ouvrirDemandeALaVille(navigation, {
+                clubId: contextClubId,
+                facility: item,
+              })}
+              size="sm"
+              title={kind === 'avecCreneaux'
+                ? t('clubInstallations.actions.demanderHeure', 'Demander une heure')
+                : t('clubInstallations.actions.demanderCreneau', 'Demander un créneau')}
+              variant={kind === 'avecCreneaux' ? 'Secondary' : 'Primary'}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderItemGroupes = (/** @type {{ item: any, section: any }} */ { item, section }) => {
+    if (item?.isEmptyGroup) {
+      return (
+        <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginBottom[4]]}>
+          {t(
+            'clubInstallations.groupes.auClubVide',
+            'Aucune installation à ton club pour l’instant.',
+          )}
+        </Text>
+      );
+    }
+    if (section.kind === 'auClub') return renderItem({ item });
+    return renderCarteVille(item, section.kind);
+  };
+
+  const renderSectionFooterGroupes = (/** @type {{ section: any }} */ { section }) => (
+    section.kind === 'auClub' ? boutonAjouter : null
+  );
+
   const etatVide = (
     <EmptyState
       actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
@@ -902,31 +1136,7 @@ function FacilityList() {
       ]}
       keyExtractor={getFacilityKey}
       ListEmptyComponent={etatVide}
-      ListFooterComponent={facilities.length > 0 ? (
-        <TouchableOpacity
-          accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-          accessibilityRole="button"
-          disabled={isMissingContext}
-          onPress={handleCreate}
-          style={[
-            Alignments.alignCenter,
-            Alignments.justifyCenter,
-            Spaces.marginTop[12],
-            {
-              backgroundColor: withAlpha(Colors.primary500, 0.06),
-              borderColor: withAlpha(Colors.primary500, 0.4),
-              borderRadius: 16,
-              borderStyle: 'dashed',
-              borderWidth: 1.5,
-              minHeight: 52,
-            },
-          ]}
-        >
-          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-            {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
-          </Text>
-        </TouchableOpacity>
-      ) : null}
+      ListFooterComponent={!enGroupes && facilities.length > 0 ? boutonAjouter : null}
       refreshControl={(
         <RefreshControl
           colors={[Colors.primary500]}
@@ -935,8 +1145,9 @@ function FacilityList() {
           tintColor={Colors.primary500}
         />
       )}
-      renderItem={renderItem}
-      renderSectionHeader={renderSectionHeader}
+      renderItem={enGroupes ? renderItemGroupes : renderItem}
+      renderSectionFooter={enGroupes ? renderSectionFooterGroupes : undefined}
+      renderSectionHeader={enGroupes ? renderSectionHeaderGroupes : renderSectionHeader}
       sections={sections}
       showsVerticalScrollIndicator={false}
       stickySectionHeadersEnabled={false}
@@ -1026,7 +1237,24 @@ function FacilityList() {
   const collectiviteFacilities = isCollectiviteMode
     ? []
     : facilities.filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite');
-  const listSubtitle = collectiviteFacilities.length > 0
+  // COLL-C2C (02/10) — design P8v2 : « 1 au club · 1 avec tes creneaux de la Ville · 2 a
+  // demander ».
+  const sousTitreGroupes = enGroupes
+    ? [
+      t('clubInstallations.compte.auClub', '{{count}} au club', { count: groupes.auClub.length }),
+      groupes.avecCreneaux.length
+        ? t('clubInstallations.compte.avecCreneaux', '{{count}} avec tes créneaux de la Ville', {
+          count: groupes.avecCreneaux.length,
+        })
+        : null,
+      groupes.aDemander.length
+        ? t('clubInstallations.compte.aDemander', '{{count}} à demander', {
+          count: groupes.aDemander.length,
+        })
+        : null,
+    ].filter(Boolean).join(' · ')
+    : null;
+  const listSubtitle = sousTitreGroupes || (collectiviteFacilities.length > 0
     ? [
       t('facilityList.count.club', {
         count: facilities.length - collectiviteFacilities.length,
@@ -1046,7 +1274,7 @@ function FacilityList() {
       count: facilities.length,
       defaultValue_one: '{{count}} installation',
       defaultValue_other: '{{count}} installations',
-    });
+    }));
   let listTitle = t('facilityList.title', 'Tes installations');
   if (isCollectiviteMode) {
     // COLL-C2B (02/10) — design P4 : « Ma collectivite » au-dessus, « Installations de la

@@ -74,15 +74,23 @@ export const useGetFacilities = (clubId, options = {}) => useQuery({
  */
 export const useClubFacilityContext = (context = {}, options = {}) => {
   const { clubId = null, cmId = null } = context;
-  const { includeCollectivite = false, resolveCmId = true, ...queryOptions } = options;
+  const {
+    includeClubSlots = false, includeCollectivite = false, resolveCmId = true, ...queryOptions
+  } = options;
   return useQuery({
     enabled: Boolean(clubId || cmId),
-    queryFn: () => getClubFacilityContext(clubId, cmId, { includeCollectivite, resolveCmId }),
+    queryFn: () => getClubFacilityContext(clubId, cmId, {
+      includeClubSlots,
+      includeCollectivite,
+      resolveCmId,
+    }),
     queryKey: [
       'club-facility-context',
       clubId || 'none',
       cmId || 'auto',
       includeCollectivite ? 'collectivite' : 'club',
+      // COLL-C2C : les creneaux du club joints (« Tes installations » en 3 groupes).
+      ...(includeClubSlots ? ['creneaux'] : []),
     ],
     staleTime: 1000 * 60 * 5,
     ...queryOptions,

@@ -5165,6 +5165,35 @@ export default {
     },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
+  // COLL-C2C (02/10) — « Tes installations » cote club, en 3 groupes (design P8v2, D32).
+  clubInstallations: {
+    actions: {
+      demanderCreneau: 'Demander un créneau',
+      demanderHeure: 'Demander une heure',
+      ouvrir: '{{nom}} : voir le planning',
+    },
+    compte: {
+      aDemander: '{{count}} à demander',
+      auClub: '{{count}} au club',
+      avecCreneaux: '{{count}} avec tes créneaux de la Ville',
+    },
+    creneau: {
+      ligne: '{{team}} · chaque {{day}} {{hours}}',
+      toutLeClub: 'Tout le club',
+    },
+    groupes: {
+      aDemander: 'À demander à la Ville',
+      aDemanderDit: 'Ton club n’y a pas de créneau : regarde les heures libres et demande.',
+      // eslint-disable-next-line max-len
+      aDemanderDitVille: '{{ville}} : ton club n’y a pas de créneau. Regarde les heures libres et demande.',
+      auClub: 'Au club',
+      auClubDit: 'À ton club : tu gères son planning.',
+      auClubVide: 'Aucune installation à ton club pour l’instant.',
+      avecCreneaux: 'Tes créneaux de la Ville',
+      avecCreneauxDit: '{{ville}} t’a attribué ces créneaux pour la saison.',
+      nombre: '({{count}})',
+    },
+  },
   collectiviteCreneaux: {
     attribuer: {
       aPartirDu: 'À partir du',

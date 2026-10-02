@@ -193,17 +193,23 @@ const getClubCollectiviteFacilities = async (clubId) => {
 
 // Un refus (visiteur, pas membre) ou une panne ne doit pas emporter les installations du
 // club avec lui : la liste de la collectivite est un AJOUT a l onglet, jamais sa condition.
-const getClubCollectiviteFacilitiesOrNone = async (clubId) => {
+// COLL-C2C (02/10) : la meme tolerance sert aux creneaux du club (une seule ecriture).
+const readOrNone = async (lecture, libelle) => {
   try {
-    return await getClubCollectiviteFacilities(clubId);
+    return await lecture();
   } catch (error) {
     const status = error?.status || error?.response?.status || error?.error?.status || null;
     if (status !== 403 && status !== 401) {
-      console.error('Error fetching collectivite facilities:', error);
+      console.error(`Error fetching ${libelle}:`, error);
     }
     return null;
   }
 };
+
+const getClubCollectiviteFacilitiesOrNone = (clubId) => readOrNone(
+  () => getClubCollectiviteFacilities(clubId),
+  'collectivite facilities',
+);
 
 /**
  * COLL1B (29/09) — le planning d UNE installation, en lecture seule (route du lot 1b).
@@ -220,15 +226,42 @@ const getFacilityPlanning = async (facilityId, { from, to }) => {
   return response.data;
 };
 
+// COLL-C2C (02/10) — les creneaux de saison DU CLUB, toutes installations
+// (GET /clubs/:id/season-slots, contrat `docs/CONTRAT_CRENEAUX_SAISON.md` du depot admin).
+// Meme tolerance que la liste de la Ville : un refus ou une panne rend `null`.
+const getClubSeasonSlotsOrNone = (clubId) => readOrNone(
+  async () => (await client.get(`/clubs/${clubId}/season-slots`)).data,
+  'club season slots',
+);
+
+/**
+ * COLL-C2C — joint a chaque installation les creneaux du club qui s y trouvent (`clubSeasonSlots`).
+ * @param {any[]} facilities - Les installations.
+ * @param {any} reponse - `{ data: creneaux }`, ou null.
+ * @returns {any[]} Les memes installations ; celles ou le club a un creneau le portent.
+ */
+const attachClubSeasonSlots = (facilities, reponse) => {
+  const creneaux = Array.isArray(reponse?.data) ? reponse.data : [];
+  if (!creneaux.length) return facilities;
+  return facilities.map((facility) => {
+    const id = facility?.documentId || facility?.id;
+    const siens = creneaux.filter((creneau) => creneau?.facility?.documentId === id);
+    return siens.length ? { ...facility, clubSeasonSlots: siens } : facility;
+  });
+};
+
 const getClubFacilityContext = async (clubId, cmId, options = {}) => {
-  const { includeCollectivite = false, resolveCmId = true } = options;
+  const { includeClubSlots = false, includeCollectivite = false, resolveCmId = true } = options;
   const resolvedCmId = cmId || (resolveCmId ? await resolveParentMultisportId(clubId) : null);
-  const [clubResponse, cmResponse, collectiviteResponse] = await Promise.all([
+  const [clubResponse, cmResponse, collectiviteResponse, clubSlotsResponse] = await Promise.all([
     clubId ? getPlanningFacilities(clubId) : Promise.resolve(null),
     resolvedCmId ? getCMFacilities(resolvedCmId) : Promise.resolve(null),
     clubId && includeCollectivite
       ? getClubCollectiviteFacilitiesOrNone(clubId)
       : Promise.resolve(null),
+    // COLL-C2C : SEULEMENT si l ecran le demande (« Tes installations » du club) ; sans l option,
+    // aucune lecture de plus et la reponse est celle d avant, a l identique.
+    clubId && includeClubSlots ? getClubSeasonSlotsOrNone(clubId) : Promise.resolve(null),
   ]);
   const clubFacilities = Array.isArray(clubResponse?.data)
     ? clubResponse.data.map(normalizeClubFacility)
@@ -239,7 +272,10 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
   const collectiviteFacilities = Array.isArray(collectiviteResponse?.data)
     ? collectiviteResponse.data.map(normalizeCollectiviteFacility)
     : [];
-  const allFacilities = [...clubFacilities, ...sharedFacilities, ...collectiviteFacilities];
+  const allFacilities = attachClubSeasonSlots(
+    [...clubFacilities, ...sharedFacilities, ...collectiviteFacilities],
+    clubSlotsResponse,
+  );
 
   return {
     allFacilities,
@@ -247,6 +283,10 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
     cmId: resolvedCmId || null,
     hasSharedFacilities: sharedFacilities.length > 0,
     sharedFacilities,
+    // COLL-C2C : le compte dirige-t-il le club (repartir ses creneaux entre ses equipes, D32) ?
+    ...(includeClubSlots
+      ? { canManageClubSlots: Boolean(clubSlotsResponse?.meta?.canManage) }
+      : {}),
   };
 };
 

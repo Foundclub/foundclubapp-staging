@@ -555,7 +555,9 @@ describe('FacilityList — COLL1B : les installations de la collectivite du club
     const textes = textesVisibles(arbre);
 
     expect(textes).toContain('Gymnase de la Ville');
-    expect(textes).toContain('Ville de Demo');
+    // COLL-C2C (02/10) — design P8v2 : la Ville est nommee UNE fois, interpolee dans la ligne du
+    // groupe « A demander a la Ville » (ce temoin double `t()` sans interpolation).
+    expect(textes).toContain('À demander à la Ville');
     expect(textes.includes('Multisport')).toBe(false);
   });
 
