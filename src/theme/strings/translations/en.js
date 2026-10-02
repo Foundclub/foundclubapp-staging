@@ -5623,6 +5623,11 @@ export default {
       ferme: 'Closed · {{motif}}',
       fermeSeul: 'Closed',
     },
+    seance: {
+      annuler: 'Cancel the training session',
+      deplacer: 'Change the time or place',
+      joueurs: 'Players are only notified if the club moves or cancels.',
+    },
   },
   comingSoonLeagueScreen: {
     back: 'Back',

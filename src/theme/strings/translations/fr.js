@@ -5994,6 +5994,11 @@ export default {
       ferme: 'Fermé · {{motif}}',
       fermeSeul: 'Fermé',
     },
+    seance: {
+      annuler: 'Annuler l’entraînement',
+      deplacer: 'Changer l’heure ou le lieu',
+      joueurs: 'Les joueurs ne sont prévenus que si le club déplace ou annule.',
+    },
   },
   comingSoonLeagueScreen: {
     back: 'Retour',

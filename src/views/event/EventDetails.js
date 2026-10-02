@@ -67,6 +67,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
@@ -8075,6 +8076,16 @@ function EventDetails({ navigation, route }) {
               event={event}
               matchScoreSummary={matchHeaderScoreSummary}
             />
+            {/* COLL-C4B (02/10) — D16 : la Ville a ferme l installation ce jour-la
+                (`facilityClosure` de la fiche). Le bandeau et les deux gestes du CLUB
+                (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}
+            {event?.facilityClosure && canEdit ? (
+              <FacilityClosureBanner
+                closure={event.facilityClosure}
+                onCancel={handleCancelEvent}
+                onMove={handleEditEvent}
+              />
+            ) : null}
             {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
                 ne concerne que l'entrainement ouvert : les onglets du match ne
                 la voient jamais, donc rien a brancher sur `showOverviewTab`. */}
