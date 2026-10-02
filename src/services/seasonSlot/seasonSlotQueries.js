@@ -106,6 +106,11 @@ export const useClubTeamsForSlot = (clubId) => useQuery({
 const useGesteCreneau = (mutationFn) => {
   const queryClient = useQueryClient();
   return useMutation({
+    // COLL-FIX-PLANNING (T9_C23_6) — les 4 gestes disent LEUR refus dans l ecran, traduit : un 409
+    // de capacite y ouvre la confirmation « Attribuer quand même » / « Changer l’heure ». Le filet
+    // global (app/queryClient.js) posait en plus, par-dessus, une alerte « Erreur » au texte brut
+    // du serveur avec un seul « OK » : la mairie ne voyait plus comment confirmer.
+    meta: { preventToastError: true },
     mutationFn,
     onSuccess: async () => {
       await Promise.all([
