@@ -270,8 +270,8 @@ describe('COLL1B — le planning d une installation, lu par un membre', () => {
   test('l entete dit de quelle installation il s agit', async () => {
     const arbre = await rendre();
 
-    expect(texte(arbre)).toContain('Gymnase de la Ville');
-    expect(texte(arbre)).toContain('Planning de l’installation');
+    // COLL-C2B (02/10, design P5) : la barre dit « Planning · Gymnase de la Ville ».
+    expect(texte(arbre)).toContain('Planning · Gymnase de la Ville');
   });
 
   test('le bloc d un AUTRE club ne s ouvre pas ; celui de MON club s ouvre comme avant', async () => {

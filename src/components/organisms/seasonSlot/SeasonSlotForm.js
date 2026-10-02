@@ -22,6 +22,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
+import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 
 import {
   useAttributeSeasonSlot,
@@ -65,46 +66,6 @@ export function PuceDeChoix({
     >
       <Text style={[Fonts.p3Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>{libelle}</Text>
     </TouchableOpacity>
-  );
-}
-
-/**
- * Les places d une installation en image : un rond par place, plein quand elle est prise.
- * @param {{ capacite: number, prises: number, pleine: boolean }} props
- * @returns {import('react').ReactElement} Les ronds.
- */
-export function RondsDePlaces({ capacite, pleine, prises }) {
-  const { t } = useTranslation();
-  const { Colors } = useTheme();
-  const couleur = pleine ? Colors.warning500 : Colors.success500;
-  const nombre = Math.max(1, Math.min(10, Number(capacite) || 1));
-  return (
-    <View
-      accessibilityLabel={t(
-        'collectiviteCreneaux.attribuer.places',
-        'Places prises : {{prises}} sur {{capacite}}',
-        {
-          capacite: nombre,
-          prises: Math.min(prises, nombre),
-        },
-      )}
-      accessibilityRole="image"
-      style={{ flexDirection: 'row', gap: 4 }}
-    >
-      {Array.from({ length: nombre }, (_, index) => (
-        <View
-          key={`place-${index + 1}`}
-          style={{
-            backgroundColor: index < prises ? couleur : 'transparent',
-            borderColor: couleur,
-            borderRadius: 999,
-            borderWidth: 1.5,
-            height: 10,
-            width: 10,
-          }}
-        />
-      ))}
-    </View>
   );
 }
 

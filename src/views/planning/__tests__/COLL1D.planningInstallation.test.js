@@ -269,7 +269,9 @@ describe('COLL1D — planning d une installation : couleur par club, texte du me
     mockAuth = { userData: { role: { name: 'Joueur', type: 'joueur' } } };
     const lu = texte(await rendre());
 
-    expect(lu).toContain('place');
+    // COLL-C2B (02/10, design P5-jour, RETIRE) : un membre n a plus de bloc capacite, « ses
+    // phrases ne le concernent pas » ; il lit son club en couleur, les autres en gris.
+    expect(lu).not.toMatch(/équipes? à la fois|place libre|complet/i);
     expect(lu).not.toMatch(/dirigeant|dépassement|slot/i);
   });
 
@@ -281,7 +283,8 @@ describe('COLL1D — planning d une installation : couleur par club, texte du me
     });
     const lu = texte(await rendre());
 
-    expect(lu).toContain('Complet');
+    // COLL-C2B (02/10, design P5-jour, RETIRE) : plus aucune phrase de capacite pour un membre.
+    expect(lu).not.toMatch(/complet|équipes? à la fois/i);
     expect(lu).not.toMatch(/dirigeant|dépassement|demande en attente/i);
   });
 

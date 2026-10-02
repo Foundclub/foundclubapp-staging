@@ -235,13 +235,14 @@ afterEach(() => {
   });
 });
 
+// COLL-C2B (02/10, design P5) : la barre dit « Mer. 7 oct. », ou « 5 – 11 oct. 2026 » tourne.
 describe('PLANNING-PORTRAIT — tenu droit : UN jour', () => {
   test('portrait : la grille recoit le mode « jour », sur le jour ouvert', async () => {
     const { arbre } = await rendre();
 
     expect(derniereGrille().mode).toBe('day');
     expect(derniereGrille().currentDate.getDate()).toBe(7);
-    expect(texte(arbre)).toContain('mercredi 7 octobre 2026');
+    expect(texte(arbre)).toMatch(/mer\. 7 oct\./i);
   });
 
   test('portrait : les fleches changent de JOUR, pas de semaine', async () => {
@@ -249,7 +250,7 @@ describe('PLANNING-PORTRAIT — tenu droit : UN jour', () => {
 
     await appuyer(arbre, 'Jour suivant');
     expect(derniereGrille().currentDate.getDate()).toBe(8);
-    expect(texte(arbre)).toContain('jeudi 8 octobre 2026');
+    expect(texte(arbre)).toMatch(/jeu\. 8 oct\./i);
 
     await appuyer(arbre, 'Jour précédent');
     await appuyer(arbre, 'Jour précédent');
@@ -273,7 +274,7 @@ describe('PLANNING-PORTRAIT — tourne : la semaine', () => {
     const { arbre } = await rendre();
 
     expect(derniereGrille().mode).toBe('week');
-    expect(texte(arbre)).toContain('5 oct. - 11 oct. 2026');
+    expect(texte(arbre)).toContain('5 – 11 oct. 2026');
   });
 
   test('le faux telephone tourne : portrait, paysage, portrait, sans perdre le jour', async () => {
@@ -283,11 +284,11 @@ describe('PLANNING-PORTRAIT — tourne : la semaine', () => {
 
     await tourner(PAYSAGE);
     expect(derniereGrille().mode).toBe('week');
-    expect(texte(arbre)).toContain('5 oct. - 11 oct. 2026');
+    expect(texte(arbre)).toContain('5 – 11 oct. 2026');
 
     await tourner(PORTRAIT);
     expect(derniereGrille().mode).toBe('day');
-    expect(texte(arbre)).toContain('jeudi 8 octobre 2026');
+    expect(texte(arbre)).toMatch(/jeu\. 8 oct\./i);
   });
 
   test('paysage : les fleches changent de semaine', async () => {
@@ -295,7 +296,7 @@ describe('PLANNING-PORTRAIT — tourne : la semaine', () => {
     const { arbre } = await rendre();
 
     await appuyer(arbre, 'Semaine suivante');
-    expect(texte(arbre)).toContain('12 oct. - 18 oct. 2026');
+    expect(texte(arbre)).toContain('12 – 18 oct. 2026');
   });
 });
 
