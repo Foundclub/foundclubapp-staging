@@ -144,7 +144,10 @@ function PendingMatchStatsScreen({ navigation }) {
     isFetching,
     isLoading,
     refetch,
-  } = useGetPendingMatchStatsPrompts();
+    // 🐞 T9 (02/10) — l'écran RELIT la liste à chaque ouverture : le démarrage ne range sous
+    // cette clé qu'un RÉSUMÉ (`items: []`, `totalPending`), et la requête ne relit pas d'elle-même
+    // (`refetchOnMount: false`, FINITIONS6, pour la fenêtre de rappel qui n'en lit que le compte).
+  } = useGetPendingMatchStatsPrompts({ refetchOnMount: 'always' });
 
   const promptItems = useMemo(
     () => (Array.isArray(pendingPayload?.items) ? pendingPayload.items : []),
@@ -377,8 +380,12 @@ function PendingMatchStatsScreen({ navigation }) {
     </View>
   );
 
+  // Le résumé du démarrage annonce des matchs sans les lister : tant que la liste n'est pas
+  // là, c'est un chargement — jamais « aucune action » (capture T9_S06_1).
+  const isSummaryOnly = !promptItems.length && Number(pendingPayload?.totalPending) > 0;
+
   let body;
-  if (isLoading && !promptItems.length) {
+  if ((isLoading || (isSummaryOnly && !error)) && !promptItems.length) {
     // Le squelette garde la forme des cartes (amélioration 4) : rien ne saute à l'arrivée.
     body = (
       <View

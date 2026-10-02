@@ -21,8 +21,14 @@ const mockRequete = {
   refetch: jest.fn(),
 };
 
+// T9 — les réglages que l'écran demande à la requête sont relevés (relire à l'ouverture).
+/** @type {any[]} */
+const mockReglagesRequete = [];
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
-  useGetPendingMatchStatsPrompts: () => mockRequete,
+  useGetPendingMatchStatsPrompts: (/** @type {any} */ reglages) => {
+    mockReglagesRequete.push(reglages);
+    return mockRequete;
+  },
 }));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
@@ -148,7 +154,10 @@ const jour = (/** @type {string} */ iso) => {
   return texte.charAt(0).toUpperCase() + texte.slice(1);
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockReglagesRequete.length = 0;
+});
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
   arbre = null;
@@ -230,5 +239,44 @@ describe('ST-MATCH écran 6 — Matchs en attente (ordinateur)', () => {
     expect(parId(racine, 'st-match-attente-tableau')).toBeUndefined();
     const sections = parId(racine, 'st-match-attente-sections');
     expect([].concat(sections.props.style).filter(Boolean).some((s) => s.flexDirection === 'row')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 🐞 T9 (02/10, captures T9_S06_1 / T9_S06_2) — OUVERT DEPUIS LE RAPPEL, L'ÉCRAN
+// S'AFFICHAIT VIDE ; « tirer pour rafraîchir » faisait apparaître 7 actions.
+// ---------------------------------------------------------------------------
+// Cause mesurée : l'amorçage (app-bootstrap.ts, buildBootstrapMatchStatsSummary) envoie un
+// RÉSUMÉ (`items: []`, `totalPending: 7`) que useAuth range sous la même clé que la liste
+// complète ; la requête ne relit pas à l'ouverture (`refetchOnMount: false`, FINITIONS6).
+describe('T9 · Matchs en attente ouvert depuis le rappel', () => {
+  const RESUME_DU_DEMARRAGE = { items: [], nextPrompt: { eventId: 'e1' }, totalPending: 7 };
+
+  test('🐞 le cache ne tient que le résumé : squelette de chargement, jamais « aucune action »', () => {
+    const racine = monter({ data: RESUME_DU_DEMARRAGE, isFetching: true });
+
+    expect(parId(racine, 'st-match-attente-chargement')).toBeTruthy();
+    expect(parId(racine, 'st-match-attente-vide')).toBeUndefined();
+    expect(textes(racine)).not.toContain('Aucune action en attente');
+  });
+
+  test('🐞 l écran relit la liste à CHAQUE ouverture (le rappel la montre déjà)', () => {
+    monter({ data: RESUME_DU_DEMARRAGE, isFetching: true });
+
+    expect(mockReglagesRequete[0]).toEqual(expect.objectContaining({ refetchOnMount: 'always' }));
+  });
+
+  test('la relecture échoue sur un résumé : l erreur se dit, avec « Réessayer »', () => {
+    const racine = monter({ data: RESUME_DU_DEMARRAGE, error: new Error('réseau') });
+
+    expect(parId(racine, 'st-match-attente-erreur')).toBeTruthy();
+    expect(parId(racine, 'st-match-attente-chargement')).toBeUndefined();
+  });
+
+  test('un vrai « rien en attente » (0 en attente) reste vide, sans squelette', () => {
+    const racine = monter({ data: { emptyReason: 'nothing_pending', items: [], totalPending: 0 } });
+
+    expect(parId(racine, 'st-match-attente-vide')).toBeTruthy();
+    expect(parId(racine, 'st-match-attente-chargement')).toBeUndefined();
   });
 });
