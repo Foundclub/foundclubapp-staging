@@ -545,7 +545,7 @@ function ProfileEdit({ navigation, route }) {
                       <Input
                         enterKeyHint="next"
                         error={getFieldError({ errors: formErrors, fieldName: name })}
-                        inputMode="decimal"
+                        inputMode="numeric"
                         keyboardType="number-pad"
                         label={t('profile.fields.height.label')}
                         onBlur={onBlur}

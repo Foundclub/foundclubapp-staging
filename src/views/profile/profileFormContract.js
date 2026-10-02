@@ -1,5 +1,7 @@
 import { Joi } from '@/theme/strings';
 
+import { parseHeightCm } from '@/utils/heightCentimeters';
+
 // D39 — le contrat du formulaire de profil, extrait de `ProfileEdit.js` pour
 // que la page « Mon profil » du joueur et de l'entraineur s'en serve SANS le
 // recopier (§1 bis barreau 2 : reutiliser avant de reecrire).
@@ -36,7 +38,13 @@ export const profileSchema = Joi.object({
   documentId: Joi.string().allow(null, '').optional(),
   email: Joi.string().allow(null, '').optional(),
   firstname: Joi.string().required(),
-  height: Joi.string().allow(null, '').optional(),
+  // FINITIONS8 (point 4) : des centimetres, entre 100 et 250 ; ce qui part est toujours en cm.
+  height: Joi.string().allow(null, '').optional().custom((value, helpers) => {
+    const centimeters = parseHeightCm(value);
+    return centimeters === null
+      ? helpers.message('profile.fields.height.invalid')
+      : String(centimeters);
+  }),
   isLookingForClub: Joi.boolean().optional(),
   jerseyNumber: Joi.string().pattern(/^([0-9]{1,2})?$/).allow('').optional(),
   lastname: Joi.string().required(),
@@ -63,7 +71,9 @@ export const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
   bestLevel: userData?.bestLevel || '',
   birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
   category: userData?.category || '',
-  height: userData?.height ? String(userData.height) : '',
+  // FINITIONS8 (point 4) : une ancienne valeur en metres se pre-remplit en centimetres ;
+  // une valeur illisible reste telle quelle, pour que la personne la voie et la corrige.
+  height: userData?.height ? String(parseHeightCm(userData.height) ?? userData.height) : '',
   jerseyNumber: userData?.jerseyNumber != null ? String(userData.jerseyNumber) : '',
   nationality: userData?.nationality || '',
   preferredSport: userData?.preferredSport || '',

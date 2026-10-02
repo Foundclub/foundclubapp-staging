@@ -14811,8 +14811,9 @@ export default {
         placeholder: 'Luc',
       },
       height: {
-        label: 'Taille (m)',
-        placeholder: '1,80',
+        invalid: 'Entre 100 et 250 cm (ex : 182)',
+        label: 'Taille (cm)',
+        placeholder: 'Ex : 180',
       },
       isLookingForClub: {
         helper: 'Ton profil apparaît dans la recherche des clubs et des coachs.',
@@ -21796,7 +21797,7 @@ export default {
       birthYear: 'Année de naissance',
       category: 'Catégorie',
       email: 'Email',
-      height: 'Taille (m)',
+      height: 'Taille',
       history: 'Historique sportif',
       phone: 'Téléphone',
       position: 'Poste',

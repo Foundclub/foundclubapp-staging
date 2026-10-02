@@ -955,7 +955,7 @@ function SelfProfilePlayerCoach({ navigation }) {
           <View style={[Alignments.row, { gap: 12 }]}>
             <View style={{ flex: 1 }}>
               {renderTextField({
-                inputMode: 'decimal',
+                inputMode: 'numeric',
                 keyboardType: 'number-pad',
                 label: t('profile.fields.height.label'),
                 name: 'height',

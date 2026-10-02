@@ -71,6 +71,7 @@ import {
 } from '@/services/userHistory/userHistoryQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { formatHeight } from '@/utils/heightCentimeters';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 import { PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
@@ -197,11 +198,9 @@ const formatNullableValue = (value, fallback) => {
   return asString || fallback;
 };
 
-const normalizeHeight = (value, fallback) => {
-  const normalized = formatNullableValue(value, fallback);
-  if (normalized === fallback) return fallback;
-  return String(normalized).includes('m') ? normalized : `${normalized} m`;
-};
+// FINITIONS8 (point 4) : la taille enregistree est en cm (« 182 ») ou en m (« 1,80 ») ; la fiche
+// l'ecrit toujours en metres. Illisible : « Non renseigne », jamais « 182 m » ni « grand m ».
+const normalizeHeight = (value, fallback) => formatHeight(value) || fallback;
 
 const normalizeWeight = (value, fallback) => {
   const normalized = formatNullableValue(value, fallback);

@@ -43,6 +43,8 @@ import {
 } from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
+import { parseHeightCm } from '@/utils/heightCentimeters';
+
 import {
   buildMinorParentalDeclarationPayload,
   isBirthdateUnderParentalAge,
@@ -72,7 +74,8 @@ const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
   bestLevel: userData?.bestLevel || '',
   birthdate: formatBirthdateToDisplay(userData?.birthdate || ''),
   category: userData?.category || '',
-  height: userData?.height ? String(userData.height) : '',
+  // FINITIONS8 (point 4) : en centimetres, comme le telephone (profileFormContract).
+  height: userData?.height ? String(parseHeightCm(userData.height) ?? userData.height) : '',
   preferredSport: userData?.preferredSport || '',
   section: userData?.section?.documentId || '',
   weight: userData?.weight ? String(userData.weight) : '',
@@ -107,6 +110,14 @@ const validateValues = (values) => {
     nextErrors.birthdate = i18next.t(
       'profileEdit.errors.birthdateFormat',
       'Format attendu: JJ/MM/AAAA',
+    );
+  }
+
+  // FINITIONS8 (point 4) : la taille, en centimetres, entre 100 et 250.
+  if (String(values?.height || '').trim() && parseHeightCm(values.height) === null) {
+    nextErrors.height = i18next.t(
+      'profile.fields.height.invalid',
+      'Entre 100 et 250 cm (ex : 182)',
     );
   }
 
@@ -300,7 +311,7 @@ function ProfileEditWeb({ navigation, route }) {
       category: formValues.category,
       firstname: formValues.firstname,
       geohash,
-      height: formValues.height,
+      height: formValues.height ? String(parseHeightCm(formValues.height)) : formValues.height,
       isLookingForClub: formValues.isLookingForClub,
       lastname: formValues.lastname,
       ...(requiresParentalDeclaration ? {
