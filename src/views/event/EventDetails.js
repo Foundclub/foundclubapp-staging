@@ -75,7 +75,9 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
+import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
+  peutRelireSaNote,
   peutVoirLesAvisDEntrainement,
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ConvocationFieldPreview from '@/components/tactical/ConvocationFieldPreview';
@@ -3987,6 +3989,9 @@ function EventDetails({ navigation, route }) {
       verdict,
     };
   }, [
+    // `isMatchFinished` a QUITTE cette liste avec D5, puis y est REVENU avec FINITIONS7 ;
+    // depuis ST-MATCH (écran 1), il choisit le centre du face-à-face : « VS 19:00 » avant
+    // le coup d'envoi, « – – Score en attente » après (la règle de FINITIONS7 tient).
     canEdit,
     canManageMatchStats,
     event?.externalAutoSource,
@@ -8071,6 +8076,8 @@ function EventDetails({ navigation, route }) {
     () => (
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
         <Button
+          // FINITIONS7 — tournee 8 : un drapeau sans nom pour le lecteur d ecran.
+          accessibilityLabel={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
           icon="flag"
           isOption
           onPress={() => setIsReportModalVisible(true)}
@@ -8099,6 +8106,9 @@ function EventDetails({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      // FINITIONS7 — la fleche de la pile s annoncait « Go back » (repli anglais de
+      // @react-navigation/elements, HeaderBackButton.tsx:35) : elle dit « Retour ».
+      headerBackAccessibilityLabel: t('common.back', 'Retour'),
       headerBackground: renderHeaderBackground,
       headerLeft: fromEventCreation ? renderHeaderLeft : undefined,
       headerRight: renderHeaderRight,
@@ -8109,6 +8119,7 @@ function EventDetails({ navigation, route }) {
     renderHeaderBackground,
     renderHeaderLeft,
     renderHeaderRight,
+    t,
   ]);
 
   const isCoachLateModal = lateModalMode === 'coach_mark' || lateModalMode === 'coach_edit';
@@ -8873,6 +8884,18 @@ function EventDetails({ navigation, route }) {
               {showOverviewTab && peutVoirLesAvisDEntrainementIci && avisDEntrainement ? (
                 <TrainingReviewsCard donnees={avisDEntrainement} />
               ) : null}
+              {/* ST-RETOURS (planche 21, etat 4) — le joueur relit SA note, jamais les autres. */}
+              {showOverviewTab && peutRelireSaNote({
+                canEdit,
+                isFinished: isMatchFinished,
+                isTeamMember,
+                isTraining: trainingOpenConfig.isTraining,
+              }) ? (
+                <MyTrainingReviewBlock
+                  eventId={eventId}
+                  trainerFirstname={(event?.team?.trainers || [])[0]?.firstname || null}
+                />
+                ) : null}
 
               {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>
@@ -9828,10 +9851,10 @@ function EventDetails({ navigation, route }) {
                 ))}
               </View>
 
-              {/* 🗣️ Une porte fermee DIT pourquoi — en orange, avec le cadenas (plus en or). */}
+              {/* 🗣️ Une porte fermee DIT pourquoi — en orange (plus en or). ⚠️ Le cadenas du design
+                  manque : l'app n'a AUCUNE icône cadenas (ni SvgIcon, ni Images). */}
               {isMatchScoreLocked ? (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                  <SvgIcon color={Colors.warning500} height={14} name="lock" width={14} />
                   <Text style={[Fonts.p3, Fonts.warning500, { flexShrink: 1 }]}>
                     {t(
                       'stMatch.score.locked',

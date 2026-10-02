@@ -610,7 +610,8 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     // est temoignee la-bas (EventHeaderN3CarteMatch, temoin 2).
     expect(resultat.opponentName).toBe(ADVERSAIRE);
     // 🆚 ST-MATCH (02/10) — ADAPTE : « Score en attente » devient « VS » et l'heure du coup
-    // d'envoi au centre du face-à-face (design valide, ecran 1, etat 1).
+    // d'envoi au centre du face-à-face (design valide, ecran 1, etat 1). La regle de
+    // FINITIONS7 (tournee 8) tient : « Score en attente » ne se dit jamais avant le match.
     expect(resultat.value).toBe('VS');
     expect(resultat.centerLabel).toBe('10:00');
     expect(resultat.verdict).toBeNull();
@@ -965,5 +966,43 @@ describe('ST-MATCH - l encart du score, branché sur l écran', () => {
     expect(resume().scorersLine).toBe('Hugo L.');
     expect(resume().authorLine).toBe(auteurAttendu());
     expect(typeof resume().onSeeStats).toBe('function');
+  });
+});
+
+// FINITIONS7 · POINT 7 (tournee 8) — « Score en attente » sur un match du 10/10 A VENIR. Il ne
+// se dit qu apres le match : la fin se lit sur la MEME horloge serveur que la pastille « TERMINÉ »
+// (`isMatchFinished`, AC10 — sans horloge serveur, le match n est jamais declare fini).
+describe('FINITIONS7 · point 7 — « Score en attente » seulement apres le match', () => {
+  // 🆚 ST-MATCH (écran 1) — ADAPTÉ : le design dit « VS » et l'heure du coup d'envoi ; la
+  // règle tient (« Score en attente » n'apparaît pas avant le match).
+  test('🚨 un match a venir, sans score : « VS » et l heure, jamais « Score en attente »', () => {
+    monter({ attendance: HORLOGE_SERVEUR('2098-12-31T10:00:00.000Z'), event: buildMatch() });
+
+    expect(resume().value).toBe('VS');
+    expect(resume().centerLabel).not.toBe('Score en attente');
+  });
+
+  test('un match FINI, sans score : « Score en attente » — l entraineur doit le saisir', () => {
+    const matchPasse = buildMatch({
+      date: '2026-01-01T10:00:00.000Z',
+      endDate: '2026-01-01T12:00:00.000Z',
+    });
+    monter({ attendance: HORLOGE_SERVEUR('2026-01-02T10:00:00.000Z'), event: matchPasse });
+
+    // 🆚 ST-MATCH (écran 1) — ADAPTÉ : « – – » au centre, « Score en attente » dessous.
+    expect(resume().value).toBe('– –');
+    expect(resume().centerLabel).toBe('Score en attente');
+  });
+
+  test('un match avec son score garde son score, fini ou non', () => {
+    monter({
+      event: buildMatch({
+        matchResult: {
+          isFinal: true, scoreAgainst: 1, scoreFor: 3, source: 'manual',
+        },
+      }),
+    });
+
+    expect(resume().value).toBe('3 - 1');
   });
 });

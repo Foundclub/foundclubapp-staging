@@ -263,7 +263,7 @@ describe('R9 - une detection propose ses postes meme quand l appelant ne les a p
     );
 
     expect(flow.canAct).toBe(false);
-    expect(flow.blockedReason).toBe('Cet événement est déjà passe.');
+    expect(flow.blockedReason).toBe('Cet événement est déjà passé.');
     expect(flow.submitMode).toBe('createEventParticipation');
     expect(flow.kind).toBe(ParticipationFlowKind.eventOpen);
   });

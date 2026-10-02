@@ -49,3 +49,16 @@ export const getTrainingReviews = async (eventId) => {
   const response = await client.get(`/events/${eventId}/training-reviews`);
   return unwrapResponse(response);
 };
+
+/**
+ * ST-RETOURS (02/10) — SA note sur un entrainement, pour « Tu as noté cette séance ».
+ * Le serveur ne rend que l avis dont le porteur du jeton est l auteur, ou rien.
+ * @param {string} eventId - L entrainement.
+ * @returns {Promise<any>} - Sa note (la note, le mot, la date), ou null.
+ */
+export const getMyTrainingReview = async (eventId) => {
+  const response = await client.get(`/events/${eventId}/training-review`);
+  const body = response?.data;
+  // `{ data: null }` veut dire « pas encore note » : `unwrapResponse` rendrait l enveloppe.
+  return body && typeof body === 'object' && 'data' in body ? body.data : null;
+};

@@ -77,7 +77,7 @@ function FacilitySelector({
       },
       {
         description: t('eventEdit.locationMode.externalHint', 'Adresse extérieure'),
-        title: t('eventEdit.locationMode.external', 'Exterieur'),
+        title: t('eventEdit.locationMode.external', 'Extérieur'),
         value: 'external',
       },
     ],

@@ -137,7 +137,7 @@ function NotificationDetails() {
     'Événement non renseigne',
   );
   const statusText = details.status === 'declined'
-    ? t('notifications.details.participationDeclined.statusDeclined', 'Refusee')
+    ? t('notifications.details.participationDeclined.statusDeclined', 'Refusée')
     : details.status;
   const screenTitle = isParticipationDeclined
     ? t('notifications.details.participationDeclined.screenTitle', 'Notification')

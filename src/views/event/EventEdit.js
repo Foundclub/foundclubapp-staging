@@ -50,6 +50,7 @@ import safeJsonParse from '@/utils/safeJsonParse';
 import EventTasksEditor from './components/EventTasksEditor';
 import EventTeamAudiencesEditor from './components/EventTeamAudiencesEditor';
 import PresenceOptionsFields from './components/PresenceOptionsFields';
+import { getEventDescriptionExample } from './wizard/eventWizardDetectionUtils';
 
 // R5 (b) — LES EQUIPES DU CLUB SONT RELUES AU PLUS UNE FOIS PAR MINUTE.
 // Elles ne changent pas d'une ouverture de l'ecran a l'autre, et elles etaient
@@ -595,6 +596,8 @@ function EventEdit({ navigation, route }) {
     [isTrainingEventType, selectedTypeData?.name],
   );
   const isOpenTrainingType = isTrainingType && selectedSessionStatus !== 'closed';
+  // FINITIONS7 — l exemple de description suit le type (il disait « détection » pour tous).
+  const descriptionExample = getEventDescriptionExample(selectedTypeData?.name, t);
 
   // R8 (D1) — UN REGLAGE QUI NE COMMANDE PERSONNE NE SE PROPOSE PAS.
   //
@@ -1167,7 +1170,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  {t('eventEdit.thisSlotExceedsTheFacility', 'Ce créneau dépasse la capacité de l installation. L événement restera en demande en attente jusqu au traitement d un dirigeant.')}
+                  {t('eventEdit.thisSlotExceedsTheFacility', 'Ce créneau dépasse la capacité de l’installation. L’événement restera en demande en attente jusqu’au traitement d’un dirigeant.')}
                 </Text>
               </View>
             ) : null}
@@ -1180,7 +1183,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.primary200]}>
-                  {t('eventEdit.thisSlotExceedsTheFacility2', 'Ce créneau dépasse la capacité de l installation, mais ce club est configure en Autorise et notifier. L événement restera confirme et les dirigeants seront prevenus.')}
+                  {t('eventEdit.thisSlotExceedsTheFacility2', 'Ce créneau dépasse la capacité de l’installation, mais ce club est configuré en Autorise et notifier. L’événement restera confirmé et les dirigeants seront prévenus.')}
                 </Text>
               </View>
             ) : null}
@@ -1218,7 +1221,7 @@ function EventEdit({ navigation, route }) {
                   multiline
                   onBlur={onBlur}
                   onChangeText={onChange}
-                  placeholder={t('eventEdit.fields.description.placeholder')}
+                  placeholder={descriptionExample}
                   ref={ref}
                   value={value || ''}
                 />

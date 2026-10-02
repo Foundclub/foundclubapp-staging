@@ -430,6 +430,10 @@ function PlanningCalendarView({
         markingType="custom"
         onDayPress={(day) => handleDateChange(day.dateString)}
         onMonthChange={(month) => handleDateChange(month.dateString)}
+        // FINITIONS7 — sans lui, la bibliotheque nomme ses fleches « undefined.header.leftArrow »
+        // (tournee 8). Elle les cache elle-meme au lecteur d ecran : l en-tete, « ajustable »,
+        // change de mois d un balayage vers le haut ou le bas.
+        testID="planning-calendar"
         theme={{
           arrowColor: Colors.primary500,
           calendarBackground: 'transparent',

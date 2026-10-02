@@ -185,7 +185,7 @@ function AdWizardInfo({ navigation }) {
         )
         : t(
           'adWizardInfo.subtitle',
-          'Précise la cible sportive recherchee avant de passer au lieu de publication.',
+          'Précise la cible sportive recherchée avant de passer au lieu de publication.',
         )}
       title={t('adWizardInfo.title', 'Ciblage sportif')}
     >

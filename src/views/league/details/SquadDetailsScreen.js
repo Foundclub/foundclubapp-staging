@@ -2793,7 +2793,7 @@ function SquadDetailsScreen({ navigation, route }) {
                               <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                                 {t(
                                   'squadDetailsScreen.reports.responses',
-                                  '{{responded}}/{{eligible}} joueurs ont repondu',
+                                  '{{responded}}/{{eligible}} joueurs ont répondu',
                                   {
                                     eligible: Number(pendingMatch?.eligibleCount || 0),
                                     responded: Number(pendingMatch?.submittedResponses || 0),
@@ -2948,7 +2948,7 @@ function SquadDetailsScreen({ navigation, route }) {
                           <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                             {t(
                               'squadDetailsScreen.reports.responses',
-                              '{{responded}}/{{eligible}} joueurs ont repondu',
+                              '{{responded}}/{{eligible}} joueurs ont répondu',
                               {
                                 eligible: Number(report?.responseEligibleCount || 0),
                                 responded: Number(report?.responseCompletionCount || 0),

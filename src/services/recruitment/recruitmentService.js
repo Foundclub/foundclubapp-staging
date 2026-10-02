@@ -47,10 +47,19 @@ const normalizeRecruitmentAd = (/** @type {any} */ ad) => {
     candidates = ad.candidates;
   }
 
+  // FINITIONS7 (tournee 8) — « 0 candidature » dans Mes activites, « Candidatures (1) » sur la
+  // fiche : la liste des annonces n apporte plus `applications` au proprietaire (aucun role n a
+  // `recruitment-application.find`, Strapi retire la relation en silence). Le serveur pose
+  // `applicationsCount` sur les annonces du lecteur, a la source de la fiche : on le LIT. Sans lui
+  // (ancien serveur, annonce d un autre), on compte ce qui est arrive, comme avant.
+  const serverCount = Number(ad.applicationsCount);
   return {
     ...ad,
     applications,
-    applicationsCount: applications.length,
+    applicationsCount: ad.applicationsCount !== undefined && ad.applicationsCount !== null
+      && Number.isFinite(serverCount)
+      ? serverCount
+      : applications.length,
     audienceType: normalizeAudienceType(ad.audienceType),
     candidates,
     candidatesCount: candidates.length,

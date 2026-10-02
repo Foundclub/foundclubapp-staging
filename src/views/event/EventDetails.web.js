@@ -113,7 +113,7 @@ const getParticipationLabel = (effectiveStatus) => {
 
 const getTournamentTeamStatusLabel = (status) => {
   if (status === 'accepted') return i18next.t('eventDetails.approved', 'Validee');
-  if (status === 'declined') return i18next.t('eventDetails.declined', 'Refusee');
+  if (status === 'declined') return i18next.t('eventDetails.declined', 'Refusée');
   if (status === 'archived') return i18next.t('eventDetails.archived', 'Archivee');
   return i18next.t('eventDetails.pending', 'En attente');
 };

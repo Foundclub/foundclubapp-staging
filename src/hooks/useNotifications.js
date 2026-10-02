@@ -87,7 +87,11 @@ import {
   usePopupEligibility,
   usePopupManager,
 } from '@/context/PopupManagerContext';
-import { NOTIFICATIONS_QUERY_KEY, UNREAD_COUNT_QUERY_KEY } from '@/hooks/useNotificationController';
+import {
+  NOTIFICATIONS_QUERY_KEY,
+  refreshUnreadCountIfStale,
+  UNREAD_COUNT_QUERY_KEY,
+} from '@/hooks/useNotificationController';
 import useSafeTimers from '@/hooks/useSafeTimers';
 
 const notificationsLogger = createLogger('notifications');
@@ -487,8 +491,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
    * @returns {void}
    */
   const invalidateNotificationQueries = useCallback((notificationType) => {
-    queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
-    queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+    // FINITIONS7 — `exact` : `['notifications']` couvre aussi le compteur par
+    // prefixe ; la seconde ligne annulait sa lecture en vol et en relancait une.
+    // Journal T8 : chaque notification et chaque retour lisaient le compteur 2 fois.
+    queryClient.invalidateQueries({ exact: true, queryKey: NOTIFICATIONS_QUERY_KEY });
+    queryClient.invalidateQueries({ exact: true, queryKey: UNREAD_COUNT_QUERY_KEY });
 
     const refreshAction = resolveNotificationRefreshAction(notificationType);
     if (!refreshAction) return;
@@ -1100,7 +1107,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         // et nulle part ailleurs, qu'on redonne une chance a l'enregistrement.
         clearTokenSyncMute();
         syncTokenIfNeeded('app_active');
-        invalidateNotificationQueries();
+        // FINITIONS7 — revenir n'est pas recevoir : la liste (relue seulement si elle
+        // est a l'ecran) et le compteur, UNE fois et seulement s'il a plus de 45 s.
+        queryClient.invalidateQueries({ exact: true, queryKey: NOTIFICATIONS_QUERY_KEY });
+        refreshUnreadCountIfStale(queryClient);
       }
     });
 
@@ -1116,6 +1126,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     isTokenSyncMuted,
     dispatch,
     invalidateNotificationQueries,
+    queryClient,
     saveToken,
     scheduleTokenSyncRetry,
     syncTokenIfNeeded,

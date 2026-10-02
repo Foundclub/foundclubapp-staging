@@ -58,7 +58,7 @@ const getProposalMeta = (/** @type {any} */ { isMe, status, t }) => {
   }
   if (status === 'declined') {
     return {
-      badgeLabel: t('proposalMessageBubble.badge.declined', 'Refusee'),
+      badgeLabel: t('proposalMessageBubble.badge.declined', 'Refusée'),
       title: isMe ? t('proposalMessageBubble.title.mine', 'Ta proposition') : t(
         'proposalMessageBubble.title.opponent',
         'Proposition adverse',

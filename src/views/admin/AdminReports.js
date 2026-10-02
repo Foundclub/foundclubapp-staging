@@ -61,7 +61,7 @@ const STATUS_FILTERS = [
   },
   {
     get label() {
-      return i18next.t('adminReports.filters.rejected', 'Refuses');
+      return i18next.t('adminReports.filters.rejected', 'Refusés');
     },
     value: 'rejected',
   },
@@ -90,7 +90,7 @@ const getStatusLabel = (value) => {
     return i18next.t('adminReports.status.resolved', 'Resolu');
   }
   if (value === 'rejected') {
-    return i18next.t('adminReports.status.rejected', 'Refuse');
+    return i18next.t('adminReports.status.rejected', 'Refusé');
   }
   return i18next.t('adminReports.status.pending', 'En attente');
 };

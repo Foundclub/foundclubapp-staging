@@ -224,3 +224,48 @@ describe('A20.3 — le guide est aussi là où l on gère ses alertes', () => {
     expect(texteVisible(tree)).toContain('Choisis tes critères');
   });
 });
+
+// FINITIONS7 · POINT 4 (tournee 8, « 🟡 lecteur d ecran ») — sur « Gérer mes alertes », le
+// crayon, la corbeille et l interrupteur de chaque alerte etaient des boutons SANS NOM :
+// TalkBack disait « bouton », sans dire lequel ni pour quelle alerte.
+describe('FINITIONS7 · point 4 — chaque commande d une alerte a un nom', () => {
+  it('🚨 crayon, corbeille et interrupteur nomment l alerte qu ils touchent', async () => {
+    const tree = await monter([ALERTE_FOOT]);
+    const noms = tree.root
+      .findAll(
+        (/** @type {any} */ node) => typeof node.props?.accessibilityLabel === 'string',
+        { deep: false },
+      )
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
+
+    // La doublure de ce temoin rend le repli tel quel ({{label}} non remplace) : le rendu
+    // interpole, par le vrai i18next, est prouve dans textesFINITIONS7.test.js.
+    expect(noms).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^Modifier l’alerte/),
+      expect.stringMatching(/^Supprimer l’alerte/),
+      expect.stringMatching(/^Alerte .* active$/),
+    ]));
+  });
+
+  it('🚨 aucun element pressable n est muet : il a un texte, ou un nom', async () => {
+    const tree = await monter([ALERTE_FOOT]);
+    const muets = tree.root.findAll(
+      (/** @type {any} */ node) => (
+        typeof node.type !== 'string'
+        && (
+          typeof node.props?.onPress === 'function'
+          || typeof node.props?.onValueChange === 'function'
+        )
+        && !String(node.props?.title || '').trim()
+        && !String(node.props?.accessibilityLabel || '').trim()
+        && !texteDuNoeud(node).trim()
+      ),
+      { deep: false },
+    );
+
+    expect(muets.map((/** @type {any} */ node) => (
+      node.props?.icon || node.type?.displayName || node.type?.name
+    )))
+      .toEqual([]);
+  });
+});
