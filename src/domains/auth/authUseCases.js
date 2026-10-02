@@ -624,7 +624,8 @@ export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSAN
  * @param {string | null} [params.birthdate] - La date de naissance connue.
  * @param {boolean | null} [params.parentalDeclarationAccepted] - La declaration faite.
  * @param {Role} [params.role] - Le role du compte.
- * @returns {{isEntryCheckpoint?: boolean, totalViews: number, views: object[]}} Le parcours.
+ * @returns {{isEntryCheckpoint?: boolean, totalViews: number,
+ *   views: {index: number, route: string, canShow: boolean}[]}} Le parcours.
  */
 const getEntryCheckpointViews = ({ birthdate, parentalDeclarationAccepted, role }) => {
   const roleKey = getUserRoleKey(role?.name || USER_ROLES.new);
