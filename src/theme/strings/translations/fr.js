@@ -4978,6 +4978,12 @@ export default {
       plateauxInvalides: 'Chaque plateau a un nom court et différent, et il n’y en a pas plus que d’équipes à la fois.',
       saisie: 'Vérifiez le jour, les heures et la période.',
     },
+    fiche: {
+      attribuer: 'Attribuer un créneau à ce club',
+      aucun: 'Aucun créneau de la Ville pour ce club.',
+      aucuneInstallation: 'La Ville n’a encore aucune installation : ajoutez-en une, puis attribuez-y un créneau.',
+      titre: 'Attribuer un créneau à {{club}}',
+    },
     formulaire: {
       aCorriger_one: '{{count}} champ à corriger',
       aCorriger_other: '{{count}} champs à corriger',

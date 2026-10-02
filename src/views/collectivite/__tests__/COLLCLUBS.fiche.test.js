@@ -65,6 +65,7 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClub: () => mockFiche,
+  useCollectiviteInstallations: () => ({ data: [] }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Montrivage' }],
     isLoading: false,
@@ -83,6 +84,17 @@ jest.mock(
 jest.mock(
   '@/components/atoms/sponsorLogoTile/SponsorLogoTile',
   () => function SponsorLogoTileMock() { return null; },
+);
+// COLL-C2B (02/10) : la fiche ouvre desormais « Attribuer un creneau a ce club » dans une
+// feuille du bas (module natif, illisible par jest) avec le formulaire d attribution (service
+// HTTP). Ce temoin ne l ouvre pas : on les double ; le geste est fige par
+// CollectiviteClubDetails.COLL-C2B.creneaux.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock() {
+  return null;
+});
+jest.mock(
+  '@/components/organisms/seasonSlot/SeasonSlotForm',
+  () => function SeasonSlotFormMock() { return null; },
 );
 
 const AS_MONTRIVAGE = {

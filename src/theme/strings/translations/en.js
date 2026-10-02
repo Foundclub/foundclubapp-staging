@@ -4647,6 +4647,12 @@ export default {
       plateauxInvalides: 'Each court has a short, distinct name, and there are no more of them than teams at a time.',
       saisie: 'Check the day, the times and the period.',
     },
+    fiche: {
+      attribuer: 'Assign a slot to this club',
+      aucun: 'No town slot for this club.',
+      aucuneInstallation: 'The town has no facility yet: add one, then assign a slot in it.',
+      titre: 'Assign a slot to {{club}}',
+    },
     formulaire: {
       aCorriger_one: '{{count}} field to fix',
       aCorriger_other: '{{count}} fields to fix',
