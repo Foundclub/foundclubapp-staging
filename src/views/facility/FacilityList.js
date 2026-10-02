@@ -271,6 +271,17 @@ function FacilityList() {
     });
   }, [contextClubId, isCollectiviteMode, navigation]);
 
+  // COLL-C2B (02/10) — design P4v2-creneaux : toute la carte d une installation de la Ville
+  // ouvre l installation, sur son onglet « Creneaux » ; son planning est dans le menu « Plus
+  // d actions » et dans l onglet « Planning ».
+  const ouvrirInstallation = useCallback((/** @type {any} */ facility) => {
+    if (!facility?.documentId) return;
+    /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInstallation, {
+      collectiviteId,
+      facilityId: facility.documentId,
+    });
+  }, [collectiviteId, navigation]);
+
   const handleOpenFacilityMap = useCallback((facility) => {
     const addressLabel = getAddressLabel(facility?.address, '').trim() || facility?.name || '';
     if (!addressLabel) return;
@@ -691,11 +702,11 @@ function FacilityList() {
             <TouchableOpacity
               accessibilityLabel={t(
                 'collectiviteCreneaux.liste.ouvrir',
-                '{{nom}} : voir le planning',
+                '{{nom}} : ses créneaux et son planning',
                 { nom, ...SANS_ECHAPPEMENT },
               )}
               accessibilityRole="button"
-              onPress={() => handleOpenPlanning(item)}
+              onPress={() => ouvrirInstallation(item)}
               style={{ flex: 1, gap: 4, minWidth: 0 }}
             >
               <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
@@ -747,8 +758,8 @@ function FacilityList() {
     Spaces.marginTop,
     Spaces.padding,
     handleCreate,
-    handleOpenPlanning,
     isDesktop,
+    ouvrirInstallation,
     renderMetaChip,
     semaines,
     t,

@@ -237,13 +237,16 @@ describe('COLL-C2B planche 1 — la carte d une installation de la Ville', () =>
     expect(lus.filter((texte) => /autoriser et notifier/i.test(texte))).toHaveLength(1);
   });
 
-  it('toute la carte ouvre le planning de CETTE installation', () => {
+  // Planche 3 (P4v2-creneaux) : la carte ouvre l INSTALLATION, sur son onglet « Creneaux » ;
+  // le planning reste dans le menu « Plus d actions » (temoin suivant).
+  it('toute la carte ouvre l installation (ses creneaux et son planning)', () => {
     const arbre = rendre();
-    act(() => { parLibelle(arbre, 'Gymnase des Tilleuls : voir le planning').props.onPress(); });
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
-      contextDetailLabel: 'Gymnase des Tilleuls',
+    act(() => {
+      parLibelle(arbre, 'Gymnase des Tilleuls : ses créneaux et son planning').props.onPress();
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage',
       facilityId: 'gym-tilleuls',
-      sourceType: 'facility',
     });
   });
 
@@ -259,6 +262,14 @@ describe('COLL-C2B planche 1 — la carte d une installation de la Ville', () =>
     expect(lus).toContain('Ouvrir dans le GPS');
     expect(lus.join(' | ')).not.toMatch(/Supprimer/);
 
+    act(() => { parTexte(arbre, 'Voir le planning').props.onPress(); });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
+      contextDetailLabel: 'Gymnase des Tilleuls',
+      facilityId: 'gym-tilleuls',
+      sourceType: 'facility',
+    });
+
+    act(() => { parLibelle(arbre, 'Plus d’actions pour Gymnase des Tilleuls').props.onPress(); });
     act(() => { parTexte(arbre, 'Modifier l’installation').props.onPress(); });
     expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInstallationForm', {
       collectiviteId: 'ville-montrivage',

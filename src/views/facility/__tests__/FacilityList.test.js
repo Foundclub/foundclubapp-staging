@@ -655,12 +655,15 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () =
 
   it('« Voir le planning » ouvre le planning de CETTE installation (lot 1b)', () => {
     const arbre = rendre();
-    // COLL-C2B (02/10, design P4) : toute la carte ouvre le planning.
+    // COLL-C2B (02/10, design P4) : « Voir le planning » est range dans « Plus d actions ».
     act(() => {
       arbre.root.findAll((/** @type {any} */ noeud) => (
-        String(noeud.props?.accessibilityLabel || '').endsWith(': voir le planning')
+        String(noeud.props?.accessibilityLabel || '').startsWith('Plus d’actions')
         && typeof noeud.props?.onPress === 'function'
       ))[0].props.onPress();
+    });
+    act(() => {
+      pressableAvecTexte(arbre, 'Voir le planning').props.onPress();
     });
     expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
       contextDetailLabel: 'Gymnase de la Recette',
