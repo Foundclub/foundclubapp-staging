@@ -134,7 +134,6 @@ function EcrireAuxDirigeants({
           icon="send"
           isLoading={enCours}
           onPress={envoyer}
-          testID={`${testID}-envoyer`}
           title={t('collectiviteCanaux.privee.envoyer', 'Envoyer')}
           variant="Primary"
         />
@@ -143,7 +142,6 @@ function EcrireAuxDirigeants({
           isOption
           onPress={annuler}
           size="sm"
-          testID={`${testID}-annuler`}
           title={t('collectiviteCanaux.privee.annuler', 'Annuler')}
           variant="SecondaryLight"
         />

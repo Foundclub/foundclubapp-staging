@@ -111,6 +111,16 @@ const monter = async (/** @type {any} */ element) => {
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
+// Envoyer / Annuler de la saisie : un Button ne porte pas de testID (il ne le transmet pas) ;
+// on le trouve par son libellé.
+const appuyerSur = async (/** @type {any} */ arbre, /** @type {string} */ titre) => {
+  const noeud = arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.title === titre && typeof n.props?.onPress === 'function',
+  )[0];
+  await act(async () => {
+    await noeud.props.onPress();
+  });
+};
 const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
   const noeud = arbre.root.findAll(
     (/** @type {any} */ n) => n.props?.testID === testID && typeof n.props?.onPress === 'function',
@@ -237,7 +247,7 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     await appuyer(arbre, 'ecrire-aux-dirigeants');
     const texte = 'Bonjour, une question sur vos créneaux';
     await saisir(arbre, 'ecrire-aux-dirigeants-premier-message', `  ${texte}  `);
-    await appuyer(arbre, 'ecrire-aux-dirigeants-envoyer');
+    await appuyerSur(arbre, 'Envoyer');
     expect(mockPremier).toHaveBeenCalledWith({
       clubId: 'club-as', collectiviteId: 'ville-1', message: texte,
     });
@@ -254,7 +264,7 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
     await appuyer(arbre, 'ecrire-aux-dirigeants');
     await saisir(arbre, 'ecrire-aux-dirigeants-premier-message', '   ');
-    await appuyer(arbre, 'ecrire-aux-dirigeants-envoyer');
+    await appuyerSur(arbre, 'Envoyer');
     expect(mockPremier).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
@@ -273,7 +283,7 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     await appuyer(arbre, 'fiche');
     expect(valeurDe(arbre, 'fiche-premier-message'))
       .toEqual(expect.stringContaining('compléter les coordonnées'));
-    await appuyer(arbre, 'fiche-envoyer');
+    await appuyerSur(arbre, 'Envoyer');
     expect(mockPremier).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('compléter les coordonnées'),
     }));
@@ -285,7 +295,7 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     mockTrouver.mockResolvedValue(AUCUNE);
     const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
     await appuyer(arbre, 'ecrire-aux-dirigeants');
-    await appuyer(arbre, 'ecrire-aux-dirigeants-annuler');
+    await appuyerSur(arbre, 'Annuler');
     expect(textes(arbre)).toContain('Écrire aux dirigeants');
     expect(textes(arbre)).not.toContain('Envoyer');
     expect(mockPremier).not.toHaveBeenCalled();
@@ -297,7 +307,7 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
     await appuyer(arbre, 'ecrire-aux-dirigeants');
     await saisir(arbre, 'ecrire-aux-dirigeants-premier-message', 'Bonjour');
-    await appuyer(arbre, 'ecrire-aux-dirigeants-envoyer');
+    await appuyerSur(arbre, 'Envoyer');
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(arbre.root.findAllByProps({ testID: 'ecrire-aux-dirigeants-erreur' }).length)
       .toBeGreaterThan(0);
