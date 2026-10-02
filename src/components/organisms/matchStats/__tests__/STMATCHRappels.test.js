@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- titres et attendus en francais, lus tels quels (ST-MATCH) */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
@@ -80,7 +81,13 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
-/** Le repli de t(), interpolé, avec les pluriels de i18next. */
+/**
+ * Le repli de t(), interpolé, avec les pluriels de i18next.
+ * @param {string} cle - La clé.
+ * @param {any} a - Le repli, ou les options.
+ * @param {any} b - Les options, quand un repli est donné.
+ * @returns {string} Le texte rendu.
+ */
 const mockTraduire = (/** @type {string} */ cle, /** @type {any} */ a, /** @type {any} */ b) => {
   const options = typeof a === 'string' ? b : a;
   let modele = typeof a === 'string' ? a : cle;
@@ -124,7 +131,9 @@ const rappelJoueur = (/** @type {any} */ champs = {}) => ({
   key: 'event:match-19h:u15:self',
   label: 'AS Montrivage — Test-COMPO',
   personalResponse: null,
-  score: { available: true, scoreAgainst: 1, scoreFor: 2, source: 'manual' },
+  score: {
+    available: true, scoreAgainst: 1, scoreFor: 2, source: 'manual',
+  },
   sourceType: 'event',
   sport: 'football',
   state: 'todo',
@@ -245,7 +254,9 @@ describe('ST-MATCH écran 3 — la fenêtre du JOUEUR', () => {
 
   test('état 3 — brouillon : 90 · 1 · 0 · —, ce qui reste, et « Reprendre ma réponse »', async () => {
     const racine = await monter(charge([rappelJoueur({
-      personalResponse: { minutesPlayed: 90, selfRating: null, sportPayload: { assists: 0, goals: 1 }, teamRating: null },
+      personalResponse: {
+        minutesPlayed: 90, selfRating: null, sportPayload: { assists: 0, goals: 1 }, teamRating: null,
+      },
       state: 'draft',
     })]));
     const vus = textes(racine);
@@ -297,7 +308,9 @@ describe('ST-MATCH écran 4 — la fenêtre de l ENTRAÎNEUR', () => {
       actionType: 'coach_team_review',
       key: 'event:match-21h:u15:team',
       reviewRequired: true,
-      score: { available: true, scoreAgainst: 2, scoreFor: 2, source: 'external_sync' },
+      score: {
+        available: true, scoreAgainst: 2, scoreFor: 2, source: 'external_sync',
+      },
       state: 'review_required',
     })]));
 

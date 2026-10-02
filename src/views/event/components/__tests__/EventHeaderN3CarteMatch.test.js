@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- titres et attendus en francais, lus tels quels (ST-MATCH) */
 import renderer, { act } from 'react-test-renderer';
 
 import EventHeader from '../EventHeader';

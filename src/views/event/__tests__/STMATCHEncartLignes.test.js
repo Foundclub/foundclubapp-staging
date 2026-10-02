@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- titres et attendus en francais, lus tels quels (ST-MATCH) */
 import { buildMatchEncartLines, buildScorersLine } from '../matchEncartLines';
 
 // ==========================================================================
@@ -11,7 +12,13 @@ import { buildMatchEncartLines, buildScorersLine } from '../matchEncartLines';
 // pour un visiteur (des mineurs jouent en U15).
 // ==========================================================================
 
-/** Le `t` des témoins : rend le repli, interpolé, et sait les pluriels de i18next. */
+/**
+ * Le `t` des témoins : rend le repli, interpolé, et sait les pluriels de i18next.
+ * @param {string} key - La clé.
+ * @param {any} a - Le repli, ou les options.
+ * @param {any} b - Les options, quand un repli est donné.
+ * @returns {string} Le texte rendu.
+ */
 const t = (/** @type {string} */ key, /** @type {any} */ a, /** @type {any} */ b) => {
   const options = typeof a === 'string' ? b : a;
   let modele = typeof a === 'string' ? a : key;
@@ -25,7 +32,7 @@ const SAISI_LE = '2026-10-01T20:35:00.000Z';
 const KARIM = { documentId: 'karim', firstname: 'Karim' };
 const HUGO_ID = 'hugo';
 
-/** Ce que l'écran passe, pour un JOUEUR de l'équipe, match U15 du 05/09. */
+// Ce que l'écran passe, pour un JOUEUR de l'équipe, match U15 du 05/09.
 const base = {
   available: false,
   canManage: false,

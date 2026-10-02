@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- titres et attendus en francais, lus tels quels (ST-MATCH) */
 import renderer, { act } from 'react-test-renderer';
 
 // Lot N3 — CE QUE L'ECRAN CALCULE POUR LA CARTE DU MATCH (planche 03, A/B/I).
@@ -909,7 +910,9 @@ describe('ST-MATCH - l encart du score, branché sur l écran', () => {
       matchStats: {
         permissions: { canManage: true, canView: true },
         report: null,
-        score: { available: false, locked: false, scoreAgainst: null, scoreFor: null, waitingOfficial: false },
+        score: {
+          available: false, locked: false, scoreAgainst: null, scoreFor: null, waitingOfficial: false,
+        },
         sport: 'football',
       },
     });
