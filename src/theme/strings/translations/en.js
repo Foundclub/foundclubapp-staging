@@ -4471,6 +4471,7 @@ export default {
       accepterMet: 'Accepting puts {{equipes}} teams in {{places}} spots.',
       complet: 'Full',
       compteurA11y: '{{nombre}} pending requests',
+      compteurA11yUne: '1 pending request',
       erreurTexte: 'Check your connection, then try again. Nothing has been lost.',
       erreurTitre: 'The requests could not be read.',
       placesLibres: '{{nombre}} free spots',
@@ -4499,6 +4500,7 @@ export default {
     compte: {
       gestionnaire: 'Manager · {{ville}}',
       rangeeA11y: '{{nom}}, my local authority',
+      rangeeA11yDemande: '{{nom}}, my local authority, 1 pending request',
       rangeeA11yDemandes: '{{nom}}, my local authority, {{nombre}} pending requests',
       retourMonCompte: 'My account',
     },
@@ -4639,6 +4641,8 @@ export default {
     nousContacter: 'Contact us',
     porte: {
       a11y: 'My local authority, {{nom}}',
+      // COLL-FIX2 (03/10) — the singular of the three counters (board 31).
+      a11yDemande: 'My local authority, {{nom}}: 1 request to decide',
       a11yDemandes: 'My local authority, {{nom}}: {{nombre}} requests to decide',
       demandes: 'My local authority · {{nombre}} requests',
       retourAccueil: 'Home',
@@ -5193,6 +5197,8 @@ export default {
     },
     creneau: {
       ligne: '{{team}} · every {{day}} {{hours}}',
+      // COLL-FIX2 (03/10) — a slot over part of the season (board 42).
+      lignePeriode: '{{team}} · every {{day}} {{hours}} · {{periode}}',
       toutLeClub: 'Whole club',
     },
     fiche: {
@@ -5374,6 +5380,8 @@ export default {
       enAttenteJour_other: '{{count}} pending requests on this day.',
       enAttenteSemaine_one: '{{count}} pending request this week.',
       enAttenteSemaine_other: '{{count}} pending requests this week.',
+      // COLL-FIX2 (03/10) — a closed day (board 25).
+      fermeJour: 'closed that day',
       libreJour: 'free all day',
       libreSemaine: 'free all week',
       origineAttente: 'Request awaiting a decision',
@@ -5504,6 +5512,10 @@ export default {
       et: ' and ',
     },
     lieu: {
+      // COLL-FIX2 (03/10) — the place with its article (board 25).
+      articleFeminin: '{{nom}}',
+      articleMasculin: '{{nom}}',
+      articleVoyelle: '{{nom}}',
       feminin: 'at {{nom}}',
       masculin: 'at {{nom}}',
       voyelle: 'at {{nom}}',
@@ -5586,6 +5598,8 @@ export default {
       fermer: 'Close',
       le: 'on {{jour}}',
       personne: 'No session is affected: no club is notified.',
+      // COLL-FIX2 (03/10) — a single club notified (board 25).
+      prevenu: '{{clubs}} will be notified. Its sessions remain its responsibility.',
       prevenus: '{{clubs}} will be notified. Their sessions remain their responsibility.',
       titreBloquer: 'Block {{installation}} {{jours}}, from {{debut}} to {{fin}}?',
       titreFermer: 'Close {{installation}} {{jours}}?',

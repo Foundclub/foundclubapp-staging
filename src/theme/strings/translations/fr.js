@@ -4792,6 +4792,7 @@ export default {
       accepterMet: 'Accepter met {{equipes}} équipes pour {{places}} places.',
       complet: 'Complet',
       compteurA11y: '{{nombre}} demandes en attente',
+      compteurA11yUne: '1 demande en attente',
       erreurTexte: 'Vérifiez la connexion, puis réessayez. Rien n’a été perdu.',
       erreurTitre: 'Les demandes n’ont pas pu être lues.',
       placesLibres: '{{nombre}} places libres',
@@ -4821,6 +4822,7 @@ export default {
     compte: {
       gestionnaire: 'Gestionnaire · {{ville}}',
       rangeeA11y: '{{nom}}, ma collectivité',
+      rangeeA11yDemande: '{{nom}}, ma collectivité, 1 demande en attente',
       rangeeA11yDemandes: '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
       retourMonCompte: 'Mon compte',
     },
@@ -4971,6 +4973,8 @@ export default {
     nousContacter: 'Nous contacter',
     porte: {
       a11y: 'Ma collectivité, {{nom}}',
+      // COLL-FIX2 (03/10) — le singulier des trois compteurs (planche 31).
+      a11yDemande: 'Ma collectivité, {{nom}} : 1 demande à trancher',
       a11yDemandes: 'Ma collectivité, {{nom}} : {{nombre}} demandes à trancher',
       demandes: 'Ma collectivité · {{nombre}} demandes',
       retourAccueil: 'Accueil',
@@ -5555,6 +5559,8 @@ export default {
     },
     creneau: {
       ligne: '{{team}} · chaque {{day}} {{hours}}',
+      // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
+      lignePeriode: '{{team}} · chaque {{day}} {{hours}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {
@@ -5738,6 +5744,8 @@ export default {
       enAttenteJour_other: '{{count}} demandes en attente sur ce jour.',
       enAttenteSemaine_one: '{{count}} demande en attente cette semaine.',
       enAttenteSemaine_other: '{{count}} demandes en attente cette semaine.',
+      // COLL-FIX2 (03/10) — un jour fermé (planche 25).
+      fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
       libreSemaine: 'libre toute la semaine',
       origineAttente: 'Demande en attente de décision',
@@ -5874,6 +5882,10 @@ export default {
       et: ' et ',
     },
     lieu: {
+      // COLL-FIX2 (03/10) — le lieu avec son article (planche 25).
+      articleFeminin: 'la {{nom}}',
+      articleMasculin: 'le {{nom}}',
+      articleVoyelle: 'l’{{nom}}',
       feminin: 'à la {{nom}}',
       masculin: 'au {{nom}}',
       voyelle: 'à l’{{nom}}',
@@ -5961,6 +5973,8 @@ export default {
       fermer: 'Fermer',
       le: 'le {{jour}}',
       personne: 'Aucune séance n’est touchée : aucun club n’est prévenu.',
+      // COLL-FIX2 (03/10) — un seul club prévenu (planche 25).
+      prevenu: '{{clubs}} sera prévenu. Ses séances restent à sa charge.',
       prevenus: '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
       titreBloquer: 'Bloquer {{installation}} {{jours}}, de {{debut}} à {{fin}} ?',
       titreFermer: 'Fermer {{installation}} {{jours}} ?',

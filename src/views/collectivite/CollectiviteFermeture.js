@@ -6,6 +6,7 @@ import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
 import {
   CLOSURE_REASONS,
   closureDaysLabel,
@@ -474,7 +475,7 @@ function FormulaireDeFermeture({ existante, params }) {
       {
         debut: heureDebut,
         fin: heureFin,
-        installation: nom,
+        installation: lieuAvecArticle(nom, t) || nom,
         jours: joursLongs
           ? t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
             jour: joursLongs,
@@ -485,7 +486,8 @@ function FormulaireDeFermeture({ existante, params }) {
       },
     )
     : t('collectiviteFermetures.confirmer.titreFermer', 'Fermer {{installation}} {{jours}} ?', {
-      installation: nom,
+      // COLL-FIX2 (T10) : « Fermer le Gymnase des Tilleuls … », comme la maquette.
+      installation: lieuAvecArticle(nom, t) || nom,
       jours: plusieursJours
         ? joursLongs
         : t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
@@ -494,10 +496,15 @@ function FormulaireDeFermeture({ existante, params }) {
         }),
       ...SANS_ECHAPPEMENT,
     });
+  // COLL-FIX2 (T10) : « AS Montrivage seront prévenus. Leurs séances » pour UN club.
   const quiEstPrevenu = nomsDesClubs.length
     ? t(
-      'collectiviteFermetures.confirmer.prevenus',
-      '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
+      nomsDesClubs.length === 1
+        ? 'collectiviteFermetures.confirmer.prevenu'
+        : 'collectiviteFermetures.confirmer.prevenus',
+      nomsDesClubs.length === 1
+        ? '{{clubs}} sera prévenu. Ses séances restent à sa charge.'
+        : '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
       {
         clubs:
             nomsDesClubs.length > 1
