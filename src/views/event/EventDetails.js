@@ -155,10 +155,6 @@ import {
 
 import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
-import {
-  dismissMatchStatsPromptForSession,
-  isMatchStatsPromptDismissedForSession,
-} from '@/utils/matchStatsPromptSession';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 import texteInsecable from '@/utils/texteInsecable';
 
@@ -736,8 +732,6 @@ function EventDetails({ navigation, route }) {
   // clef ferait deux etats a garder d'accord — et un jour ils divergeraient.
   /** @type {[string | null, (v: string | null) => void]} */
   const [remindSheetTeamKey, setRemindSheetTeamKey] = useState(null);
-  const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
-  const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
   const [isSubscriptionFollowUpVisible, setIsSubscriptionFollowUpVisible] = useState(false);
   const firstFocusRefreshRef = useRef(true);
@@ -3816,7 +3810,6 @@ function EventDetails({ navigation, route }) {
     : (!isMyMatchResponseFetching && Boolean(isTeamMember));
   const isMatchStatsFinal = matchStatsReport?.status === 'final';
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
-  const isMatchStatsCompleted = isMatchStatsFinal && !isMatchStatsReviewRequired;
   const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
   const matchStatsScoreLabel = useMemo(() => {
@@ -4652,56 +4645,12 @@ function EventDetails({ navigation, route }) {
     if (myMatchResponse?.status === 'submitted') return t('eventDetails.view', 'Voir');
     return t('eventDetails.fillIn', 'Renseigner');
   }, [myMatchResponse, t]);
-  const matchStatsPromptMessage = useMemo(() => {
-    if (matchStatsPayload?.score?.available) {
-      if (isMatchStatsReviewRequired) {
-        return t(
-          'eventDetails.theOfficialScoreChangedCheck2',
-          'Le score officiel a changé. Vérifie les lignes puis republie ce rapport.',
-        );
-      }
-
-      return t(
-        'eventDetails.theScoreIsReadyYou',
-        'Le score est prêt. Tu peux maintenant compléter le temps de jeu et les stats clés de '
-          + 'ton équipe.',
-      );
-    }
-
-    return t(
-      'eventDetails.theMatchIsOverSave',
-      'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton '
-        + 'équipe.',
-    );
-  }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available, t]);
-  const matchStatsPromptSessionKey = useMemo(() => {
-    if (!eventId || !compositionTeamId) return '';
-
-    return [
-      'event',
-      eventId,
-      compositionTeamId,
-      String(matchStatsReport?.documentId || matchStatsReport?.id || 'report'),
-      `version:${Number(matchStatsReport?.version || 0)}`,
-      `review:${isMatchStatsReviewRequired ? 'yes' : 'no'}`,
-      `score:${matchStatsPayload?.score?.available ? 'ready' : 'pending'}`,
-    ].join(':');
-  }, [
-    compositionTeamId,
-    eventId,
-    isMatchStatsReviewRequired,
-    matchStatsPayload?.score?.available,
-    matchStatsReport?.documentId,
-    matchStatsReport?.id,
-    matchStatsReport?.version,
-  ]);
-  const dismissMatchStatsPrompt = useCallback(() => {
-    if (matchStatsPromptSessionKey) {
-      dismissMatchStatsPromptForSession(matchStatsPromptSessionKey);
-      setDismissedMatchStatsPromptKey(matchStatsPromptSessionKey);
-    }
-    setIsMatchStatsPromptVisible(false);
-  }, [matchStatsPromptSessionKey]);
+  // 🎯 ST-MATCH (écran 5, ABANDONNÉ par le design validé le 02/10) — la fenêtre « Stats de
+  // fin de match » qui s'ouvrait toute seule par-dessus la page est RETIRÉE, avec son
+  // message, sa clef de session et son effet. Elle recouvrait la carte « Après le match »,
+  // qui dit la même chose avec le bon bouton, et revenait à chaque étape. Le rappel hors de
+  // la page reste celui de `MatchStatsPromptHost` (écrans 3 et 4) ;
+  // `utils/matchStatsPromptSession` reste, LeagueMatchDetails s'en sert.
 
   // @ts-ignore: FIXME: Baseline TS regression
   const openCompositionBoard = useCallback((composition, options = {}) => {
@@ -5357,45 +5306,6 @@ function EventDetails({ navigation, route }) {
     myMatchResponsePayload?.sport,
     myMatchResponsePayload?.team?.name,
     navigation, t,
-  ]);
-
-  useFocusEffect(useCallback(() => () => {
-    setIsMatchStatsPromptVisible(false);
-  }, []));
-
-  useEffect(() => {
-    if (!canManageMatchStats || !isMatchEvent || !compositionTeamId || !isMatchFinished) {
-      setIsMatchStatsPromptVisible(false);
-      return;
-    }
-
-    if (matchStatsPayload?.score?.waitingOfficial) {
-      setIsMatchStatsPromptVisible(false);
-      return;
-    }
-
-    if (isMatchStatsCompleted) {
-      setIsMatchStatsPromptVisible(false);
-      return;
-    }
-
-    if (
-      matchStatsPayload
-      && !isMatchStatsFetching
-      && dismissedMatchStatsPromptKey !== matchStatsPromptSessionKey
-      && !isMatchStatsPromptDismissedForSession(matchStatsPromptSessionKey)
-    ) {
-      setIsMatchStatsPromptVisible(true);
-    }
-  }, [canManageMatchStats, compositionTeamId,
-    dismissedMatchStatsPromptKey,
-    isMatchEvent,
-    isMatchFinished,
-    isMatchStatsFetching,
-    isMatchStatsCompleted,
-    matchStatsPayload,
-    matchStatsPayload?.score?.waitingOfficial,
-    matchStatsPromptSessionKey,
   ]);
 
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'coach_mark' | 'coach_edit'} */ mode) => {
@@ -9778,55 +9688,6 @@ function EventDetails({ navigation, route }) {
               variant="Secondary"
             />
           </View>
-        </View>
-      </BottomModal>
-
-      <BottomModal
-        close={dismissMatchStatsPrompt}
-        isVisible={isMatchStatsPromptVisible}
-        snapPoints={['42%']}
-      >
-        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.endOfMatchStats', 'Stats de fin de match')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {matchStatsPromptMessage}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary900,
-              { borderRadius: 20 },
-              Spaces.padding[16],
-              Spaces.gap[8],
-            ]}
-          >
-            <Text style={[Fonts.p3, Fonts.neutral300]}>Match</Text>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{compositionEventLabel}</Text>
-            <Text style={[Fonts.p3, Fonts.primary100]}>
-              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || t(
-                'eventDetails.teamFallback',
-                'Equipe',
-              )}
-            </Text>
-          </View>
-
-          <Button
-            onPress={() => {
-              dismissMatchStatsPrompt();
-              openMatchStatsEditor();
-            }}
-            title={t('eventDetails.matchStats', 'Stats du match')}
-            variant="Primary"
-          />
-          <Button
-            onPress={dismissMatchStatsPrompt}
-            title={t('eventDetails.later', 'Plus tard')}
-            variant="Secondary"
-          />
         </View>
       </BottomModal>
 

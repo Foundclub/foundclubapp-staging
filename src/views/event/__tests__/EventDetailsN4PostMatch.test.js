@@ -1245,3 +1245,45 @@ describe('ST-MATCH écran 8 — la note de la puce « Stats du match » du menu 
     expect(puce.note).toBe('Saisies par l’entraîneur de l’équipe');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 🎯 ST-MATCH (écran 5, ABANDONNÉ) — RIEN PAR-DESSUS LA PAGE DU MATCH
+// ---------------------------------------------------------------------------
+//
+// Design validé le 02/10 : la fenêtre « Stats de fin de match » qui s'ouvrait toute
+// seule par-dessus la page est RETIRÉE. Elle recouvrait la carte « Après le match », qui
+// dit la même chose avec le bon bouton, et revenait à chaque étape.
+describe('ST-MATCH écran 5 — la fenêtre « Stats de fin de match » est retirée', () => {
+  const SCORE_SAISI = {
+    available: true,
+    locked: false,
+    scoreAgainst: 1,
+    scoreFor: 3,
+    source: 'manual',
+    waitingOfficial: false,
+  };
+
+  test.each([
+    ['sans score (étape 1)', statsAvec()],
+    ['score saisi (étape 2)', statsAvec({ score: SCORE_SAISI })],
+    ['score officiel changé', statsAvec({
+      report: { finalizedAt: '2020-01-01T12:39:00.000Z', needsReview: true, status: 'final' },
+      score: SCORE_SAISI,
+    })],
+  ])('🚫 %s : l entraîneur arrive sur la page, aucune fenêtre ne la recouvre', (_cas, matchStats) => {
+    const textes = textesVisibles(monter({ matchStats }));
+
+    expect(textes).not.toEqual(expect.arrayContaining(['Stats de fin de match']));
+    expect(textes.some((texte) => texte.includes('Enregistre d abord le score'))).toBe(false);
+    expect(textes.some((texte) => texte.includes('Le score est prêt'))).toBe(false);
+    // …et la carte, elle, est là : c'est elle qui porte l'étape et le geste.
+    expect(textes.some((texte) => texte.startsWith('Après le match · '))).toBe(true);
+  });
+
+  test('la carte « Après le match » porte l étape et le geste, sans doublon « Plus tard »', () => {
+    const textes = textesVisibles(monter({ matchStats: statsAvec({ score: SCORE_SAISI }) }));
+
+    expect(textes).toEqual(expect.arrayContaining(['Après le match · étape 2 sur 3', 'Saisir la feuille']));
+    expect(textes.filter((texte) => texte === 'Plus tard')).toHaveLength(0);
+  });
+});
