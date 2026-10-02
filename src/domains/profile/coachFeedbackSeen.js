@@ -1,49 +1,29 @@
+import {
+  newFeedbackKeys,
+  seenFeedbackKeys,
+} from '@/views/profile/coachFeedback/coachFeedbackModel';
+
 /**
- * ST-VUES2 — LE « LU » DES RETOURS DU COACH (écran 16, « 1 nouveau » sur « Retours du coach »).
+ * ST-VUES2 — « 1 NOUVEAU » SUR « RETOURS DU COACH » (écran 16, section Suivi de mon profil).
  *
- * La marque existe côté serveur : la carte des visites du compte (`guidanceState.routeVisits`,
- * JSON PRIVÉ du compte, admin `app-guidance`). On y pose la visite `coachFeedback` quand le
- * joueur ouvre ses retours (`updateMyGuidance` de `authService`) ; `/app/bootstrap` la rend ;
- * un retour publié après elle est « nouveau ». La plus récente gagne côté serveur : deux
- * téléphones ne se contredisent pas.
- * ⚠️ ST-RETOURS (écran 19, « Nouveau » sur chaque retour) lit la MÊME marque : ne pas en créer
- * une seconde. Module PUR (aucun appel réseau) : l'écran qui l'importe reste testable.
+ * UNE SEULE marque « lu » (« lu A », tranché par le chef d'orchestre le 02/10) : celle de
+ * ST-RETOURS, `coachFeedbackFollow` — rangée sur MON compte, une clé par feuille publiée
+ * (`feedbackKey` de chaque retour) ; un retour corrigé et republié redevient nouveau. La vue
+ * des retours (`UserDetails`, vue `coachFeedback`) marque les clés lues en s'ouvrant. Les
+ * deux aides viennent de ST-RETOURS (`coachFeedbackModel`) : rien n'est réécrit ici.
  */
 
-/** La clé de la visite, dans `guidanceState.routeVisits`. */
-export const COACH_FEEDBACK_VISIT_KEY = 'coachFeedback';
-
 /**
- * Quand le joueur a ouvert ses retours pour la dernière fois.
- * @param {any} bootstrapData - La réponse de `/app/bootstrap` (`useAuth().appBootstrapData`).
- * @returns {string | null} La date ISO, ou rien s'il ne les a jamais ouverts.
- */
-export const readCoachFeedbackSeenAt = (bootstrapData) => {
-  const value = bootstrapData?.guidanceState?.routeVisits?.[COACH_FEEDBACK_VISIT_KEY];
-  return typeof value === 'string' && value ? value : null;
-};
-
-/**
- * Combien de retours du coach ont paru depuis la dernière ouverture.
- * Jamais ouverts : tous les retours datés sont nouveaux.
- * @param {Array<{ submittedAt?: string | null }> | null | undefined} items - Les retours
- *   (`personal-stats`, `recentCoachFeedback` : `submittedAt` est la publication de la feuille).
- * @param {string | null} seenAt - La dernière ouverture.
+ * Combien de retours du coach ce lecteur n'a pas encore lus.
+ * Tant que le suivi n'est pas chargé, rien n'est annoncé : sinon la pastille montrerait
+ * « 3 nouveaux » le temps d'une requête, puis disparaîtrait.
+ * @param {Array<{ feedbackKey?: string }> | null | undefined} items - Les retours
+ *   (`personal-stats`, `recentCoachFeedback`).
+ * @param {any} follow - La réponse de `/firebase-auth/me/coach-feedback-follow`.
+ * @param {string | null | undefined} playerDocumentId - Le lecteur (le joueur lui-même).
  * @returns {number} Le nombre de retours nouveaux.
  */
-export const countUnseenCoachFeedback = (items, seenAt) => {
-  const seenMs = seenAt ? new Date(seenAt).getTime() : Number.NEGATIVE_INFINITY;
-  return (Array.isArray(items) ? items : []).filter((item) => {
-    const publishedMs = new Date(item?.submittedAt || '').getTime();
-    return Number.isFinite(publishedMs) && publishedMs > seenMs;
-  }).length;
+export const countNewCoachFeedback = (items, follow, playerDocumentId) => {
+  if (!follow || !playerDocumentId) return 0;
+  return newFeedbackKeys(items, seenFeedbackKeys(follow, playerDocumentId)).size;
 };
-
-/**
- * Ce qu'on envoie au serveur pour dire « ouverts maintenant ».
- * @param {Date} [now] - L'instant de l'ouverture.
- * @returns {{ routeVisits: Record<string, string> }} Le corps de PATCH /app-guidance/me.
- */
-export const buildCoachFeedbackVisit = (now = new Date()) => ({
-  routeVisits: { [COACH_FEEDBACK_VISIT_KEY]: now.toISOString() },
-});

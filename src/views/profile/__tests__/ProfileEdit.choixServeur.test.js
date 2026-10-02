@@ -124,6 +124,14 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 }));
 
 jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn() }));
+
+// ST-VUES2 (02/10) — l ecran lit « ce que j ai deja lu » des retours du coach (pastille de
+// l ecran 16, marque de ST-RETOURS). Le service importe le client HTTP, qui refuse de se
+// charger sans .env : double ici comme dans les autres temoins de l ecran.
+jest.mock('@/services/coachFeedback/coachFeedbackQueries', () => ({
+  useGetCoachFeedbackFollow: () => ({ data: {}, isSuccess: true }),
+  useUpdateCoachFeedbackFollow: () => ({ mutate: jest.fn() }),
+}));
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({
   emitCelebrationBanner: jest.fn(),
 }));

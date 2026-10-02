@@ -449,18 +449,6 @@ export const getMe = async () => {
 };
 
 /**
- * ST-VUES2 — la carte des visites du compte (`guidanceState`, JSON PRIVÉ, admin app-guidance) :
- * la marque « lu » des retours du coach (domains/profile/coachFeedbackSeen). Le serveur
- * fusionne, la plus récente gagne.
- * @param {{ routeVisits?: Record<string, string> }} payload - Les visites à poser.
- * @returns {Promise<any>} La carte à jour (`guidanceState`), ou rien.
- */
-export const updateMyGuidance = async (payload) => {
-  const response = await client.patch('/app-guidance/me', payload);
-  return response?.data?.data?.guidanceState || null;
-};
-
-/**
  * Update user by ID
  * @param {User} userData - The user data to update
  * @returns {Promise<User>} Updated user data

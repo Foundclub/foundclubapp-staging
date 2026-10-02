@@ -90,8 +90,6 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('@/services/auth/authService', () => ({
   updateMe: jest.fn(),
-  // ST-VUES2 — la marque « lu » des retours du coach, posee quand la rangee s ouvre.
-  updateMyGuidance: jest.fn(() => Promise.resolve(null)),
 }));
 
 jest.mock('@/domains/auth/useAuth', () => ({

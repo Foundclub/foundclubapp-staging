@@ -1,7 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useEffect, useMemo, useRef, useState,
 } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -17,11 +17,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
-import {
-  buildCoachFeedbackVisit,
-  countUnseenCoachFeedback,
-  readCoachFeedbackSeenAt,
-} from '@/domains/profile/coachFeedbackSeen';
+import { countNewCoachFeedback } from '@/domains/profile/coachFeedbackSeen';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -47,9 +43,10 @@ import NewItemsPill from '@/views/profile/stats/NewItemsPill';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { updateMe, updateMyGuidance } from '@/services/auth/authService';
+import { updateMe } from '@/services/auth/authService';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
+import { useGetCoachFeedbackFollow } from '@/services/coachFeedback/coachFeedbackQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
@@ -252,7 +249,6 @@ function SelfProfilePlayerCoach({ navigation }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
-    appBootstrapData,
     formatBirthdateToDisplay,
     formatBirthdateToSend,
     getAuthTokens,
@@ -391,31 +387,17 @@ function SelfProfilePlayerCoach({ navigation }) {
   const feedbackCount = Array.isArray(personalStats?.recentCoachFeedback)
     ? personalStats.recentCoachFeedback.length
     : 0;
-  // ST-VUES2 (planche 16, etat 2) — « 1 nouveau » sur « Retours du coach » : les retours parus
-  // depuis la derniere ouverture (la marque vit sur le serveur, domains/profile/coachFeedbackSeen).
-  const coachFeedbackSeenAt = readCoachFeedbackSeenAt(appBootstrapData);
-  const unseenCoachFeedbackCount = countUnseenCoachFeedback(
+  // ST-VUES2 (planche 16, etat 2) — « 1 nouveau » sur « Retours du coach » : les retours que je
+  // n'ai pas encore lus, d'apres la marque de ST-RETOURS (`coachFeedbackFollow`, « lu A »). La vue
+  // des retours les marque lus en s'ouvrant ; la pastille suit, par le cache de la requete.
+  const { data: coachFeedbackFollow } = useGetCoachFeedbackFollow({
+    enabled: Boolean(userData?.documentId) && isPlayer,
+  });
+  const unseenCoachFeedbackCount = countNewCoachFeedback(
     personalStats?.recentCoachFeedback,
-    coachFeedbackSeenAt,
+    coachFeedbackFollow,
+    userData?.documentId,
   );
-  const openCoachFeedback = useCallback(() => {
-    // L'ancienne marque part avec la vue : elle sait encore ce qui etait nouveau (ecran 19).
-    navigation.navigate(RouteNames.UserDetails, {
-      ...(coachFeedbackSeenAt ? { coachFeedbackSeenBefore: coachFeedbackSeenAt } : {}),
-      userId,
-      view: 'coachFeedback',
-    });
-    updateMyGuidance(buildCoachFeedbackVisit())
-      .then((guidanceState) => {
-        if (!guidanceState) return;
-        queryClient.setQueriesData(
-          { queryKey: ['app-bootstrap'] },
-          (/** @type {any} */ previous) => (previous ? { ...previous, guidanceState } : previous),
-        );
-      })
-      // Un echec laisse la pastille : rien n'est perdu, elle partira a la prochaine ouverture.
-      .catch(() => undefined);
-  }, [coachFeedbackSeenAt, navigation, queryClient, userId]);
 
   const sectionOptions = useMemo(
     () => (sections || []).map((/** @type {any} */ section) => ({
@@ -1051,7 +1033,10 @@ function SelfProfilePlayerCoach({ navigation }) {
                 icon={Images.users}
                 Images={Images}
                 label={t('userDetails.sections.coachFeedback', 'Retours du coach')}
-                onPress={openCoachFeedback}
+                onPress={() => navigation.navigate(RouteNames.UserDetails, {
+                  userId,
+                  view: 'coachFeedback',
+                })}
                 surfaces={surfaces}
                 value={feedbackCount
                   ? String(feedbackCount)

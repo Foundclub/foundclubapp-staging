@@ -4,23 +4,17 @@ import { join } from 'path';
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import {
-  buildCoachFeedbackVisit,
-  COACH_FEEDBACK_VISIT_KEY,
-  countUnseenCoachFeedback,
-  readCoachFeedbackSeenAt,
-} from '@/domains/profile/coachFeedbackSeen';
+import { countNewCoachFeedback } from '@/domains/profile/coachFeedbackSeen';
 
 import NewItemsPill from '../stats/NewItemsPill';
 
 // ST-VUES2 (02/10) — ÉCRAN 16, « SUIVI » : « 1 NOUVEAU » SUR « RETOURS DU COACH ».
 //
-// Le design valide (planche 16, état 2) pose une pastille cyan « 1 nouveau » sur la rangée
-// « Retours du coach » de mon profil. Le relevé disait : « aucune marque de lecture côté
-// serveur ». Il y en a une, inutilisée : la carte des visites du compte
-// (`guidanceState.routeVisits`, JSON privé, PATCH /app-guidance/me, rendue par
-// /app/bootstrap). La rangée pose la visite `coachFeedback` quand on l'ouvre, et compte
-// les retours publiés depuis. Aucune migration, aucune route neuve.
+// UNE SEULE marque « lu » (« lu A », tranché par le chef d'orchestre le 02/10) : celle de
+// ST-RETOURS, `coachFeedbackFollow` (une clé par feuille publiée, `feedbackKey` ; un retour
+// corrigé et republié redevient nouveau). La pastille compte les retours dont la clé n'est
+// pas dans les clés lues du LECTEUR. La vue des retours (ST-RETOURS) les marque lus en
+// s'ouvrant. L'ancienne marque de ST-VUES2 (`guidanceState.routeVisits`) sort de ce chemin.
 
 jest.mock(
   'react-i18next',
@@ -39,45 +33,36 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 const RETOURS = [
-  { comment: 'Bien placé', submittedAt: '2026-10-01T20:39:00.000Z' },
-  { comment: 'Plus de voix', submittedAt: '2026-09-20T18:00:00.000Z' },
-  { comment: 'Sans date' },
+  { comment: 'Bien placé', feedbackKey: 'event:m3:u15:v1' },
+  { comment: 'Plus de voix', feedbackKey: 'event:m2:u15:v1' },
+  { comment: 'Corrigé puis republié', feedbackKey: 'event:m1:u15:v2' },
+  { comment: 'Sans clé' },
 ];
 
-describe('ST-VUES2 écran 16 — combien de retours du coach sont nouveaux', () => {
-  test('jamais ouverts : tous les retours datés sont nouveaux', () => {
-    expect(countUnseenCoachFeedback(RETOURS, null)).toBe(2);
+describe('ST-VUES2 écran 16 — les retours du coach nouveaux (marque de ST-RETOURS)', () => {
+  test('les retours dont la clé n est pas dans MES clés lues', () => {
+    const suivi = { hugo: { seen: ['event:m2:u15:v1', 'event:m1:u15:v1'] } };
+
+    // m3 jamais lu ; m1 lu en v1 mais republié en v2 : nouveau à nouveau.
+    expect(countNewCoachFeedback(RETOURS, suivi, 'hugo')).toBe(2);
   });
 
-  test('ouverts le 25/09 : seul le retour publié depuis est nouveau', () => {
-    expect(countUnseenCoachFeedback(RETOURS, '2026-09-25T10:00:00.000Z')).toBe(1);
+  test('tout lu : rien ; un retour sans clé ne compte jamais', () => {
+    const suivi = { hugo: { seen: ['event:m3:u15:v1', 'event:m2:u15:v1', 'event:m1:u15:v2'] } };
+
+    expect(countNewCoachFeedback(RETOURS, suivi, 'hugo')).toBe(0);
   });
 
-  test('ouverts après le dernier : aucun ; une liste absente : aucun', () => {
-    expect(countUnseenCoachFeedback(RETOURS, '2026-10-02T08:00:00.000Z')).toBe(0);
-    expect(countUnseenCoachFeedback(undefined, null)).toBe(0);
+  test('ce qu un PARENT a lu pour son enfant ne compte pas pour moi', () => {
+    const suivi = { 'enfant-1': { seen: ['event:m3:u15:v1'] } };
+
+    expect(countNewCoachFeedback(RETOURS, suivi, 'hugo')).toBe(3);
   });
 
-  test('la marque se lit dans la réponse de /app/bootstrap', () => {
-    const bootstrap = {
-      guidanceState: { routeVisits: { coachFeedback: '2026-09-25T10:00:00.000Z' } },
-    };
-
-    expect(COACH_FEEDBACK_VISIT_KEY).toBe('coachFeedback');
-    expect(readCoachFeedbackSeenAt(bootstrap)).toBe('2026-09-25T10:00:00.000Z');
-    expect(readCoachFeedbackSeenAt(null)).toBeNull();
-  });
-
-  test('ouvrir la rangée pose la visite « coachFeedback » sur la carte du serveur', () => {
-    expect(buildCoachFeedbackVisit(new Date('2026-10-02T09:00:00.000Z'))).toEqual({
-      routeVisits: { coachFeedback: '2026-10-02T09:00:00.000Z' },
-    });
-    const service = readFileSync(
-      join(__dirname, '..', '..', '..', 'services', 'auth', 'authService.js'),
-      'utf8',
-    );
-    expect(service).toContain('export const updateMyGuidance = async (payload) => {');
-    expect(service).toContain("client.patch('/app-guidance/me', payload)");
+  test('suivi pas encore chargé : la pastille n annonce rien (pas de faux « 3 nouveaux »)', () => {
+    expect(countNewCoachFeedback(RETOURS, undefined, 'hugo')).toBe(0);
+    expect(countNewCoachFeedback(RETOURS, {}, '')).toBe(0);
+    expect(countNewCoachFeedback(undefined, {}, 'hugo')).toBe(0);
   });
 });
 
@@ -96,14 +81,20 @@ describe('ST-VUES2 écran 16 — la pastille et son branchement', () => {
     act(() => arbre.unmount());
   });
 
-  test('« Retours du coach » compte, pose la marque, et passe l ancienne à la vue', () => {
+  test('« Retours du coach » lit la marque de ST-RETOURS, et UNE seule', () => {
     const page = readFileSync(join(__dirname, '..', 'SelfProfilePlayerCoach.js'), 'utf8');
+    const service = readFileSync(
+      join(__dirname, '..', '..', '..', 'services', 'auth', 'authService.js'),
+      'utf8',
+    );
 
-    expect(page).toContain('countUnseenCoachFeedback(');
-    expect(page).toContain('personalStats?.recentCoachFeedback');
-    expect(page).toContain('readCoachFeedbackSeenAt(appBootstrapData)');
-    expect(page).toContain('coachFeedbackSeenBefore: coachFeedbackSeenAt');
-    expect(page).toContain('updateMyGuidance(buildCoachFeedbackVisit())');
+    expect(page).toContain('useGetCoachFeedbackFollow(');
+    expect(page).toContain('countNewCoachFeedback(');
     expect(page).toContain('badge={unseenCoachFeedbackCount}');
+    // L'ancienne marque (guidanceState) sort de ce chemin.
+    expect(page).not.toContain('updateMyGuidance');
+    expect(page).not.toContain('coachFeedbackSeenBefore');
+    expect(page).not.toContain('readCoachFeedbackSeenAt');
+    expect(service).not.toContain('updateMyGuidance');
   });
 });
