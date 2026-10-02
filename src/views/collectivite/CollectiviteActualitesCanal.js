@@ -17,7 +17,10 @@ import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ActualiteCarte from '@/views/collectivite/components/ActualiteCarte';
 
-import { useMesActualitesDeLaVille } from '@/services/collectivite/collectiviteActualiteQueries';
+import {
+  useMarquerActualitesVues,
+  useMesActualitesDeLaVille,
+} from '@/services/collectivite/collectiviteActualiteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -45,7 +48,15 @@ function CollectiviteActualitesCanal() {
   const collectiviteId = /** @type {{ collectiviteId?: string } | undefined} */ (route?.params)
     ?.collectiviteId || null;
   const lecture = useMesActualitesDeLaVille();
+  const vues = useMarquerActualitesVues();
   const defilement = useRef(/** @type {any} */ (null));
+  const enAttente = lecture.data?.bandeau?.actualite?.documentId || null;
+  const marquer = vues.mutate;
+
+  // Ouvrir le canal, c'est ouvrir l'actualité : le bandeau de l'accueil part (planche 3).
+  useEffect(() => {
+    if (enAttente) marquer(collectiviteId ? [collectiviteId] : null);
+  }, [collectiviteId, enAttente, marquer]);
 
   const collectivites = Array.isArray(lecture.data?.collectivites)
     ? lecture.data.collectivites

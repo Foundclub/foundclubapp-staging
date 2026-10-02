@@ -5,6 +5,7 @@ import {
   getClubCollectiviteActualites,
   getCollectiviteActualites,
   getMesActualitesDeLaVille,
+  markActualitesVues,
   modifyActualite,
   publishActualite,
   retireActualite,
@@ -160,3 +161,25 @@ export const useMesActualitesDeLaVille = (options = {}) => useQuery({
   staleTime: 60_000,
   ...options,
 });
+
+/**
+ * Le bandeau part (ouvert ou masqué) : il disparaît TOUT DE SUITE de l'écran, puis le canal est
+ * relu (le serveur dit s'il en reste un plus récent).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, Error, string[] | null>} La
+ *   mutation (argument : les Villes, ou null pour toutes).
+ */
+export const useMarquerActualitesVues = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (/** @type {string[] | null} */ collectiviteIds) => (
+      markActualitesVues(collectiviteIds)
+    ),
+    onMutate: () => {
+      queryClient.setQueryData(
+        MES_ACTUALITES_QUERY_KEY,
+        (/** @type {any} */ avant) => (avant ? { ...avant, bandeau: null } : avant),
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: MES_ACTUALITES_QUERY_KEY }),
+  });
+};

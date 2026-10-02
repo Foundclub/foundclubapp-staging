@@ -173,6 +173,26 @@ export const publicationDateLabel = (t, valeur, maintenant = new Date()) => {
   return formatDateWithDayPrefix(date, { fallback: '' });
 };
 
+// Le bandeau de l'accueil : une actualité de moins de 7 jours (planche P3b-bandeau-tel, écran 6).
+export const BANDEAU_JOURS = 7;
+const JOUR_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Le bandeau de la MAIRIE (« Votre actualité · en ligne ») : sa dernière actualité, en ligne
+ * depuis moins de 7 jours, et pas celle qu'elle a masquée. Une plus récente le fait revenir.
+ * @param {unknown} actualites - `/collectivites/:id/actualites` (les plus récentes d'abord).
+ * @param {string | null} masquee - documentId de l'actualité masquée sur cet appareil.
+ * @param {Date} [maintenant] - Maintenant (témoins).
+ * @returns {any | null} L'actualité à montrer, ou null.
+ */
+export const bandeauMairie = (actualites, masquee, maintenant = new Date()) => {
+  const derniere = Array.isArray(actualites) ? actualites[0] : null;
+  if (!derniere?.documentId || derniere.documentId === masquee) return null;
+  const publiee = new Date(String(derniere.publishedAt || '')).getTime();
+  if (!Number.isFinite(publiee)) return null;
+  return maintenant.getTime() - publiee <= BANDEAU_JOURS * JOUR_MS ? derniere : null;
+};
+
 /**
  * L'initiale d'une Ville pour son écusson, faute de blason : « Ville de Montrivage » ⇒ « M ».
  * @param {unknown} nom - Le nom de la collectivité.

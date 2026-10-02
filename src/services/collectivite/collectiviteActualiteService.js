@@ -122,6 +122,19 @@ export const setClubCollectiviteActualitesNotify = async ({ clubId, notify }) =>
 export const getMesActualitesDeLaVille = () => lire('/collectivite-actualites/mine');
 
 /**
+ * Le bandeau part (ouvert ou masqué) : la date de lecture de CES Villes passe à maintenant.
+ * @param {string[] | null} collectiviteIds - Les Villes concernées ; null : toutes les siennes.
+ * @returns {Promise<object>} `{ data: { collectiviteIds, seenUntil } }`.
+ */
+export const markActualitesVues = async (collectiviteIds) => {
+  const http = await client();
+  const response = await http.put('/collectivite-actualites/mine/seen', {
+    data: collectiviteIds ? { collectiviteIds } : {},
+  });
+  return response.data;
+};
+
+/**
  * La pièce choisie (sélecteur natif, `File` du navigateur, ou réponse de l'appareil photo),
  * ramenée à ce que `FormData` attend. Même lecture que le dépôt d'une pièce de licence
  * (`licenseService.normalizePickedFile`), qui la garde privée.

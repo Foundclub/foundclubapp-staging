@@ -35,8 +35,10 @@ import Loader from '@/components/atoms/loader/Loader';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-// 📰 COLL-C4A (02/10) — « Actualités de la Ville », à la place laissée par COLL-ACCUEIL.
+// 📰 COLL-C4A (02/10) — « Actualités de la Ville », à la place laissée par COLL-ACCUEIL, et
+// le bandeau « Votre actualité · en ligne » (planche P3b-bandeau-tel, écran 1).
 import ActualitesDeLaVille from '@/views/collectivite/components/ActualitesDeLaVille';
+import { BandeauActualiteMairie } from '@/views/collectivite/components/BandeauActualiteVille';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1099,6 +1101,16 @@ function CollectiviteHome() {
   }
 
   const actualites = <ActualitesDeLaVille collectiviteId={String(collectiviteId)} />;
+  // COLL-C4A planche 3 — sous le titre : l'accueil validé n'est pas modifié, le bandeau se pose
+  // au-dessus. Il mène à « Actualités de la Ville ».
+  const bandeauActualite = (
+    <BandeauActualiteMairie
+      collectiviteId={String(collectiviteId)}
+      nomVille={String(collectivite?.name || '')}
+      onOuvrir={() => ouvrir(RouteNames.CollectiviteActualites)}
+      userId={userData?.documentId || null}
+    />
+  );
 
   // Téléphone : une colonne, dans l'ordre de la planche. Ordinateur : les actions en tête,
   // puis trois colonnes — ce qui attend · la vision (semaine, clubs) · les actualités.
@@ -1146,6 +1158,7 @@ function CollectiviteHome() {
         style={[Alignments.fill]}
       >
         {hautDePage}
+        {bandeauActualite}
         {motDAccueil}
         {premiersPasBloc}
         {corps}

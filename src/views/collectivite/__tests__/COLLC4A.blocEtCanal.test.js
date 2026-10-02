@@ -30,6 +30,7 @@ let mockParams;
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockActiver = jest.fn();
+const mockMarquer = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, setOptions: mockSetOptions }),
@@ -76,6 +77,7 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
   useClubActualitesNotify: () => ({ isPending: false, mutate: mockActiver }),
   useClubCollectiviteActualites: () => mockBloc,
+  useMarquerActualitesVues: () => ({ mutate: mockMarquer }),
   useMesActualitesDeLaVille: () => mockCanal,
 }));
 jest.mock(
@@ -144,7 +146,7 @@ beforeEach(() => {
     isLoading: false,
     refetch: jest.fn(),
   };
-  [mockNavigate, mockSetOptions, mockActiver].forEach((fn) => fn.mockReset());
+  [mockNavigate, mockSetOptions, mockActiver, mockMarquer].forEach((fn) => fn.mockReset());
 });
 
 describe('COLL-C4A — planche 2 : le bloc « De la Ville » de la fiche du club', () => {
@@ -240,6 +242,18 @@ describe('COLL-C4A — planche 2 : le canal de la Ville, côté membre', () => {
       'Les actualités de la Ville de Montrivage, pour les clubs rattachés. Seule la Ville y écrit.',
     );
     expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: 'Ville de Montrivage' });
+  });
+
+  // COLL-C4A planche 3 : ouvrir le canal, c'est ouvrir l'actualité — le bandeau de l'accueil part.
+  it('ouvrir le canal fait partir le bandeau de l accueil (s il y en a un)', async () => {
+    mockParams = { collectiviteId: 'ville-de-recette' };
+    mockCanal = { data: { ...mockCanal.data, bandeau: { actualite: FERMETURE, autres: 0 } } };
+    await monter(<CollectiviteActualitesCanal />);
+    expect(mockMarquer).toHaveBeenCalledWith(['ville-de-recette']);
+    mockMarquer.mockReset();
+    mockCanal = { data: { ...mockCanal.data, bandeau: null } };
+    await monter(<CollectiviteActualitesCanal />);
+    expect(mockMarquer).not.toHaveBeenCalled();
   });
 
   it('aucune actualité : une phrase calme', async () => {
