@@ -95,3 +95,53 @@ describe('FINITIONS9 · point 3 — « Profil d\'entraîneur recherché »', () 
     expect(textesDuCodeEgauxA(['Profil entraîneur recherche'])).toEqual([]);
   });
 });
+
+/**
+ * Les feuilles du dictionnaire.
+ * @param {any} noeud
+ * @param {string[]} [prefixe]
+ * @returns {Array<[string, any]>}
+ */
+const feuilles = (noeud, prefixe = []) => Object.entries(noeud).flatMap(([clef, valeur]) => {
+  const chemin = prefixe.concat(clef);
+  if (valeur !== null && typeof valeur === 'object') return feuilles(valeur, chemin);
+  return [[chemin.join('.'), valeur]];
+});
+
+// Les mots de la liste du chef (03/10), sans leur accent, en mot entier. Les jetons
+// d'interpolation (`{{equipes}}`, `{{numero}}`, `{{acceptees}}`…) sont des NOMS DE VARIABLES :
+// ils sont retirés avant la recherche, et ne doivent jamais être « corrigés ».
+const LISTE = [
+  'equipes?', 'Equipes?', '[Dd]eja', 'a ete', '[Nn]umeros?', '[Gg]enerale?s?', '[Ee]ntraineurs?',
+  '[Pp]arametres', '[Ss]electionnee?s?', '[Tt]elechargee?s?', '[Aa]cceptees?', '[Rr]efusees?',
+  '[Aa]nnulees?', '[Tt]erminees?', '[Mm]odifiees?', '[Ee]venements?',
+];
+const FAUTIVES = new RegExp(`(?<![\\p{L}])(?:${LISTE.join('|')})(?![\\p{L}])`, 'u');
+
+describe('FINITIONS9 · point 5 — le balayage des valeurs de fr.js', () => {
+  it('aucune valeur de fr.js ne porte plus un mot de la liste sans son accent', () => {
+    const fautives = feuilles(fr)
+      .filter(([, valeur]) => typeof valeur === 'string' && FAUTIVES.test(valeur.replace(/\{\{[^}]*\}\}/g, '')))
+      .map(([chemin, valeur]) => `${chemin} = ${valeur}`);
+
+    expect(fautives).toEqual([]);
+  });
+
+  it.each([
+    ['remindReport.alreadyRemindedOn', 'Déjà relancé le {{date}}.'],
+    ['remindReport.nobodyReminded', "Personne n'a été relancé"],
+    ['eventDetails.theTeamSMatch10', "Le match de l'équipe : {{teamRating}}/10"],
+    ['eventDetails.temporaryTeams', 'Équipes éphémères:'],
+    ['clubLicenses.actions.settings', 'Paramètres'],
+    ['teamDetails.alerts.invitePlayers.downloadApp', "Télécharge l'application ici"],
+    ['downloadRemoteFile.errors.empty', 'Le fichier téléchargé est vide.'],
+  ])('%s vaut « %s »', (chemin, attendu) => {
+    expect(lire(chemin)).toBe(attendu);
+  });
+
+  it('les jetons d interpolation n ont pas bougé', () => {
+    expect(lire('collectiviteClubs.detail.season')).toBe('Cette saison : {{acceptees}}, {{refusees}}.');
+    expect(lire('collectiviteDemandes.place.complet')).toContain('{{equipes}}');
+    expect(lire('collectiviteCreneaux.formulaire.plateauNumero')).toBe('Plateau {{numero}}');
+  });
+});
