@@ -2,6 +2,15 @@ import { POPUP_DISMISS_SCOPES, POPUP_KINDS } from '@/constants/popupRegistry';
 
 export const POPUP_DAILY_DISMISS_MS = 24 * 60 * 60 * 1000;
 
+// FINITIONS8 (tournee 9, point 7) — « Plus tard » se retient PAR COMPTE. La cle d une
+// fenetre (« training:<seance>:review », « event:<match>:<equipe>:team ») est la meme pour
+// tous les participants : sans le compte, la fermer chez Karim la fermait chez Hugo.
+export const buildAccountCooldownKey = (accountDocumentId, promptKey) => {
+  if (!promptKey) return 'default';
+  const compte = String(accountDocumentId || '').trim() || 'anonyme';
+  return `${compte}:${promptKey}`;
+};
+
 export const buildPopupDismissKey = (popupId, cooldownKey = 'default') => (
   `popup.dismiss.${String(popupId || '').trim()}.${String(cooldownKey || 'default').trim() || 'default'}`
 );

@@ -44,6 +44,7 @@ import {
   useBlockingOverlayPrompt,
 } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
+import { buildAccountCooldownKey } from '@/context/popupManagerUtils';
 
 /**
  * LOT AVIS — le pop-up « note ton entrainement ».
@@ -115,6 +116,8 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
+  // FINITIONS8 (point 7) : la fenetre fermee est retenue sous `<compte>:<fenetre>`, ici aussi.
+  const accountDocumentId = auth?.user?.documentId;
   const [dismissedPromptKey, setDismissedPromptKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
   const [isNavigationReady, setIsNavigationReady] = useState(navigationRef.isReady());
@@ -162,15 +165,23 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
     && (activePrompt || thanks)
     && isNavigationReady
     && !isBlockedRoute
-    && (thanks || !dismissedPromptKey || dismissedPromptKey !== activePrompt?.key),
+    && (
+      thanks
+      || !dismissedPromptKey
+      || dismissedPromptKey !== buildAccountCooldownKey(accountDocumentId, activePrompt?.key)
+    ),
   );
 
+  // FINITIONS8 (tournee 9, point 7) — « Plus tard » se retenait EN MEMOIRE, pour la session, et
+  // sous une cle commune a tous les participants : la fenetre revenait a chaque demarrage, et
+  // la fermer chez Karim la fermait chez Hugo. Elle se retient PAR COMPTE, 24 h, dans le
+  // stockage du telephone. Test : __tests__/TrainingReviewPromptHost.FINITIONS8.test.js.
   const trainingReviewPopup = usePopupEligibility(
     POPUP_IDS.TRAINING_REVIEW_PROMPT,
     shouldShowPrompt,
     {
-      cooldownKey: activePrompt?.key || 'default',
-      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+      cooldownKey: buildAccountCooldownKey(accountDocumentId, activePrompt?.key),
+      dismissScope: POPUP_DISMISS_SCOPES.DAY,
     },
   );
   const canShowPrompt = useBlockingOverlayPrompt(
@@ -196,12 +207,12 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
 
   const dismissPromptForSession = useCallback(() => {
     const cle = nextPrompt?.key || activePrompt?.key;
-    if (cle) setDismissedPromptKey(cle);
+    if (cle) setDismissedPromptKey(buildAccountCooldownKey(accountDocumentId, cle));
     setThanks(null);
     setSelectedKey(null);
     setPhase('form');
-    trainingReviewPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
-  }, [activePrompt?.key, nextPrompt?.key, trainingReviewPopup]);
+    trainingReviewPopup.dismiss(POPUP_DISMISS_SCOPES.DAY);
+  }, [accountDocumentId, activePrompt?.key, nextPrompt?.key, trainingReviewPopup]);
 
   useEffect(() => {
     if (!isVisible || !activePrompt?.key) {
