@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
 import { Alert, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -50,14 +51,32 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   }),
 }));
 
-jest.mock('react-i18next', () => ({
-  ...jest.requireActual('react-i18next'),
-  useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
+// ST-MATCH (écran 9) — la doublure INTERPOLE les {{…}} et sait les pluriels de i18next :
+// « Enregistrer 2 - 1 », « Un but de plus pour AS Montrivage ». Aucun témoin d'avant ne
+// lisait un {{…}} brut.
+jest.mock('react-i18next', () => {
+  const remplir = (/** @type {string} */ modele, /** @type {any} */ valeurs) => modele.replace(
+    /\{\{(\w+)\}\}/g,
+    (/** @type {string} */ tout, /** @type {string} */ nom) => (
+      valeurs && nom in valeurs ? String(valeurs[nom]) : tout
     ),
-  }),
-}));
+  );
+  return {
+    ...jest.requireActual('react-i18next'),
+    useTranslation: () => ({
+      t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => {
+        if (typeof fallback === 'string') return remplir(fallback, options);
+        if (fallback && fallback.defaultValue_one) {
+          const modele = Number(fallback.count) <= 1
+            ? fallback.defaultValue_one
+            : fallback.defaultValue_other;
+          return remplir(String(modele), fallback);
+        }
+        return key;
+      },
+    }),
+  };
+});
 
 jest.mock('@/theme/themeContext', () => {
   const generateColors = jest.requireActual('@/theme/colors').default;
@@ -539,20 +558,6 @@ const appuyer = (/** @type {any} */ root, /** @type {string} */ libelle) => {
   });
 };
 
-const saisir = (
-  /** @type {any} */ root,
-  /** @type {number} */ rang,
-  /** @type {string} */ valeur,
-) => {
-  const champs = root.findAllByType(TextInput);
-  if (champs.length <= rang) {
-    throw new Error(`La feuille ne porte que ${champs.length} champ(s), rang ${rang} demande.`);
-  }
-  act(() => {
-    champs[rang].props.onChangeText(valeur);
-  });
-};
-
 // L'envoi du score est asynchrone : la feuille ne se referme qu'au tour
 // suivant. Sans ce vidage, React se plaint d'une mise a jour hors `act`.
 const viderLaFile = async () => {
@@ -560,6 +565,20 @@ const viderLaFile = async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
+};
+
+// ST-MATCH (écran 9) — la feuille du score se remplit au − / +, chaque bouton NOMMÉ.
+const compteur = (/** @type {any} */ root, /** @type {string} */ nom) => root.findAll(
+  (/** @type {any} */ node) => node.props?.accessibilityLabel === nom
+    && typeof node.props?.onPress === 'function',
+)[0];
+
+const toucher = (/** @type {any} */ root, /** @type {string} */ nom, fois = 1) => {
+  for (let i = 0; i < fois; i += 1) {
+    const bouton = compteur(root, nom);
+    if (!bouton) throw new Error(`Aucun compteur ne s'appelle « ${nom} »`);
+    act(() => { bouton.props.onPress(); });
+  }
 };
 
 const routesEmpruntees = () => mockNavigate.mock.calls.map((/** @type {any} */ call) => call[0]);
@@ -899,9 +918,12 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
     // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
     presserLaRangee(root, 'matchStats');
 
-    saisir(root, 0, '3');
-    saisir(root, 1, '1');
-    appuyer(root, 'Valider le score');
+    // 🎯 ST-MATCH (écran 9) — ADAPTÉ : plus de clavier, des compteurs − / + NOMMÉS ; le
+    // bouton DIT le score qu'il enregistre ; après, la suite DANS la feuille (plus
+    // d'alerte système qui ferme tout).
+    toucher(root, 'Un but de plus pour U15', 3);
+    toucher(root, 'Un but de plus pour l’adversaire');
+    appuyer(root, 'Enregistrer 3 - 1');
     await viderLaFile();
 
     expect(mockSaveEventMatchResult).toHaveBeenCalledWith({
@@ -911,15 +933,16 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
       teamId: TEAM_ID,
     });
     expect(routesEmpruntees()).not.toContain('MatchStatsEditor');
-    // ⛔ Pas de silence apres coup : la feuille se referme, la page relit le
-    // score, et l'ecran le DIT.
+    // ⛔ Pas de silence apres coup : la page relit le score, et la feuille le DIT.
     expect(root.findAllByType(TextInput)).toHaveLength(0);
     expect(mockRefetchMatchStats).toHaveBeenCalled();
-    expect(jest.mocked(Alert.alert).mock.calls.map((appel) => appel[0]))
-      .toContain('Score enregistré');
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['Score enregistré : 3 - 1']));
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
-  test('un seul champ rempli : le bouton reste ferme, et il DIT pourquoi', () => {
+  // 🎯 ST-MATCH (écran 9) — ADAPTÉ : « Les deux scores sont obligatoires » DISPARAÎT (design
+  // validé) ; les compteurs partent de 0 et le bouton dit ce qu'il enregistre.
+  test('un seul compteur touche : le bouton DIT ce qu il enregistre, rien ne part seul', () => {
     const root = coachDevantUnMatchFini(statsSansScore());
 
     ouvrirLaFeuilleDeGestion();
@@ -927,10 +950,10 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
     // bouton de l'etape 1 de la carte-parcours, qui porte le meme libelle et
     // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
     presserLaRangee(root, 'matchStats');
-    saisir(root, 0, '3');
+    toucher(root, 'Un but de plus pour U15', 3);
 
-    expect(boutonPortant(root, 'Valider le score').props.disabled).toBe(true);
-    expect(textesVisibles(root).join(' | ')).toContain('Les deux scores sont obligatoires.');
+    expect(boutonPortant(root, 'Enregistrer 3 - 0').props.disabled).toBe(false);
+    expect(textesVisibles(root).join(' | ')).not.toContain('Les deux scores sont obligatoires.');
     expect(mockSaveEventMatchResult).not.toHaveBeenCalled();
   });
 
@@ -959,9 +982,11 @@ describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () =
     // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
     presserLaRangee(root, 'matchStats');
 
-    expect(boutonPortant(root, 'Valider le score').props.disabled).toBe(true);
+    // 🎯 ST-MATCH (écran 9) — ADAPTÉ : plus de bouton d'enregistrement du tout ; le
+    // motif dit « la fédération », et la suite reste proposée (« Saisir la feuille »).
+    expect(boutonPortant(root, 'Enregistrer')).toBeUndefined();
     expect(textesVisibles(root).join(' | '))
-      .toContain('Ce score vient de la source officielle : il ne se modifie pas ici.');
+      .toContain('Ce score vient de la fédération ; il ne se modifie pas ici.');
   });
 
   test('et meme en forcant la saisie, rien ne part au serveur', () => {
@@ -972,9 +997,182 @@ describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () =
     // bouton de l'etape 1 de la carte-parcours, qui porte le meme libelle et
     // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
     presserLaRangee(root, 'matchStats');
-    const champs = root.findAllByType(TextInput);
+    // 🎯 ST-MATCH (écran 9) — ADAPTÉ : les compteurs sont ÉTEINTS ; un appui forcé ne
+    // change rien et rien ne part.
+    const plus = compteur(root, 'Un but de plus pour U15');
+    expect(plus.props.disabled).toBe(true);
+    expect(root.findAllByType(TextInput)).toHaveLength(0);
+    expect(boutonPortant(root, 'Enregistrer')).toBeUndefined();
+    expect(mockSaveEventMatchResult).not.toHaveBeenCalled();
+  });
+});
 
-    expect(champs.every((/** @type {any} */ champ) => champ.props.editable === false)).toBe(true);
+// ---------------------------------------------------------------------------
+// 🎯 ST-MATCH (écran 9) — LA FEUILLE DU SCORE, ÉTAT PAR ÉTAT
+// ---------------------------------------------------------------------------
+//
+// Design validé le 02/10 (« 05D Saisir le score ») : « Score final », les DEUX équipes
+// nommées (plus de « Nous / Eux »), − et + de 44 px d'une main, le bouton qui dit le
+// score (« Enregistrer 2 - 1 »), la suite DANS la feuille, le verrou en orange.
+describe('ST-MATCH écran 9 — la feuille du score', () => {
+  const MATCH_NOMME = {
+    ...MATCH_FINI,
+    club: { ...MATCH_FINI.club, name: 'AS Montrivage' },
+    opponentName: 'Test-COMPO',
+    team: { ...MATCH_FINI.team, club: { ...MATCH_FINI.team.club, name: 'AS Montrivage' } },
+  };
+  const NOUS_PLUS = 'Un but de plus pour AS Montrivage';
+  const NOUS_MOINS = 'Un but de moins pour AS Montrivage';
+  const EUX_PLUS = 'Un but de plus pour Test-COMPO';
+
+  const ouvrir = (/** @type {any} */ matchStats = statsSansScore()) => {
+    const root = monter({
+      attendance: HORLOGE,
+      auth: authPour(COACH, true),
+      event: MATCH_NOMME,
+      matchStats,
+    });
+    ouvrirLaFeuilleDeGestion();
+    presserLaRangee(root, 'matchStats');
+    return root;
+  };
+
+  const laFeuille = (/** @type {any} */ root) => root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === 'st-match-feuille-score',
+    { deep: false },
+  )[0];
+  // Un bouton DE LA FEUILLE : la page porte d'autres « Plus tard » et « Saisir la feuille ».
+  const appuyerDansLaFeuille = (/** @type {any} */ root, /** @type {string} */ libelle) => {
+    const [bouton] = laFeuille(root).findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+        && typeof node.props?.onPress === 'function'
+        && textOf(node).includes(libelle),
+    );
+    if (!bouton) throw new Error(`La feuille ne porte aucun bouton « ${libelle} »`);
+    act(() => { bouton.props.onPress(); });
+  };
+  const textesDeLaFeuille = (/** @type {any} */ root) => laFeuille(root)
+    .findAllByType(Text)
+    .map((/** @type {any} */ node) => textOf(node))
+    .filter(Boolean);
+
+  test('1 · ouverte : « Score final », les deux équipes NOMMÉES, 0 - 0, le bouton dit le score', () => {
+    const root = ouvrir();
+    const textes = textesDeLaFeuille(root);
+
+    expect(textes).toEqual(expect.arrayContaining([
+      'Score final',
+      'AS Montrivage — Test-COMPO',
+      'AS Montrivage',
+      'Test-COMPO',
+    ]));
+    expect(textes.some((texte) => /· fin à \d{2}:\d{2}$/.test(texte))).toBe(true);
+    expect(textes).not.toEqual(expect.arrayContaining(['Nous']));
+    expect(textes).not.toEqual(expect.arrayContaining(['Eux']));
+    expect(root.findAllByType(TextInput)).toHaveLength(0);
+    expect(boutonPortant(root, 'Enregistrer 0 - 0').props.disabled).toBe(false);
+    // On ne descend pas sous 0.
+    expect(compteur(root, NOUS_MOINS).props.disabled).toBe(true);
+  });
+
+  test('2 · rempli d une main : + + pour nous, + pour eux, et le bouton suit', () => {
+    const root = ouvrir();
+
+    toucher(root, NOUS_PLUS, 2);
+    toucher(root, EUX_PLUS);
+
+    expect(boutonPortant(root, 'Enregistrer 2 - 1')).toBeTruthy();
+    toucher(root, NOUS_MOINS);
+    expect(boutonPortant(root, 'Enregistrer 1 - 1')).toBeTruthy();
+  });
+
+  test('4 · enregistrement : le bouton dit « Enregistrement… » et ne se touche plus', async () => {
+    mockSaveEventMatchResult.mockReturnValueOnce(new Promise(() => {}));
+    const root = ouvrir();
+    toucher(root, NOUS_PLUS, 2);
+    toucher(root, EUX_PLUS);
+
+    appuyer(root, 'Enregistrer 2 - 1');
+    await viderLaFile();
+
+    expect(boutonPortant(root, 'Enregistrement…').props.disabled).toBe(true);
+    expect(mockSaveEventMatchResult).toHaveBeenCalledTimes(1);
+  });
+
+  test('5 · enregistré : la suite DANS la feuille, aucune alerte système', async () => {
+    const root = ouvrir();
+    toucher(root, NOUS_PLUS, 2);
+    toucher(root, EUX_PLUS);
+
+    appuyer(root, 'Enregistrer 2 - 1');
+    await viderLaFile();
+
+    expect(mockSaveEventMatchResult).toHaveBeenCalledWith({
+      eventId: 'event-1', scoreAgainst: 1, scoreFor: 2, teamId: TEAM_ID,
+    });
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockRefetchMatchStats).toHaveBeenCalled();
+    expect(textesDeLaFeuille(root)).toEqual(expect.arrayContaining([
+      'Score enregistré : 2 - 1',
+      'Les joueurs le voient sur la page du match.',
+      'Ensuite : la feuille de match',
+    ]));
+
+    appuyerDansLaFeuille(root, 'Saisir la feuille');
+    expect(routesEmpruntees()).toContain('MatchStatsEditor');
+  });
+
+  test('5 · « Plus tard » referme la feuille, sans rien ouvrir', async () => {
+    const root = ouvrir();
+    toucher(root, NOUS_PLUS);
+    appuyer(root, 'Enregistrer 1 - 0');
+    await viderLaFile();
+
+    appuyerDansLaFeuille(root, 'Plus tard');
+
+    expect(laFeuille(root)).toBeUndefined();
+    expect(routesEmpruntees()).not.toContain('MatchStatsEditor');
+  });
+
+  test('6 · erreur : le score RESTE, la phrase dit quoi faire, « Réessayer » renvoie le MÊME score', async () => {
+    mockSaveEventMatchResult.mockRejectedValueOnce(new Error('réseau'));
+    const root = ouvrir();
+    toucher(root, NOUS_PLUS, 2);
+    toucher(root, EUX_PLUS);
+
+    appuyer(root, 'Enregistrer 2 - 1');
+    await viderLaFile();
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(textesDeLaFeuille(root)).toEqual(expect.arrayContaining([
+      'Le score n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie. Rien n’a été perdu.',
+      'AS Montrivage',
+    ]));
+    appuyerDansLaFeuille(root, 'Réessayer');
+    await viderLaFile();
+
+    expect(mockSaveEventMatchResult).toHaveBeenCalledTimes(2);
+    expect(mockSaveEventMatchResult.mock.calls[1][0]).toEqual(mockSaveEventMatchResult.mock.calls[0][0]);
+    expect(textesDeLaFeuille(root)).toEqual(expect.arrayContaining(['Score enregistré : 2 - 1']));
+  });
+
+  test('3 · verrouillé : compteurs éteints, le motif en ORANGE, « Saisir la feuille » et « Fermer »', () => {
+    const root = ouvrir(statsSansScore({
+      locked: true, scoreAgainst: 1, scoreFor: 2, source: 'external_sync',
+    }));
+    const [motif] = laFeuille(root).findAll(
+      (/** @type {any} */ node) => node.type === Text
+        && textOf(node) === 'Ce score vient de la fédération ; il ne se modifie pas ici.',
+    );
+    const couleurs = [motif.props.style].flat(Infinity).map((/** @type {any} */ st) => st?.color).filter(Boolean);
+
+    // L'orange du thème (warning500), lu dans le thème et non recopié.
+    expect(couleurs).toContain(jest.requireActual('@/theme/colors').default().warning500);
+    expect(compteur(root, NOUS_PLUS).props.disabled).toBe(true);
+    expect(boutonPortant(root, 'Enregistrer')).toBeUndefined();
+    expect(boutonPortant(root, 'Fermer')).toBeTruthy();
+    appuyerDansLaFeuille(root, 'Saisir la feuille');
+    expect(routesEmpruntees()).toContain('MatchStatsEditor');
     expect(mockSaveEventMatchResult).not.toHaveBeenCalled();
   });
 });

@@ -627,7 +627,9 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
       'MatchStatsEditor',
       expect.anything(),
     );
-    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['Valider le score']));
+    // 🎯 ST-MATCH (écran 9) — ADAPTÉ : la feuille dit « Score final », et son bouton dit
+    // le score qu'il enregistre (0 - 0 à l'ouverture).
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['Score final', 'Enregistrer 0 - 0']));
   });
 
   test('🎯 avec un score, son bouton ouvre l EDITEUR complet', () => {

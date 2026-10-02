@@ -68,6 +68,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
@@ -5053,24 +5054,86 @@ function EventDetails({ navigation, route }) {
   // 💡 Le score courant est DEJA dans la charge de la page
   // (`matchStatsPayload.score`) : la feuille se pre-remplit sans une requete
   // de plus.
+  //
+  // 🎯 ST-MATCH (écran 9, design validé le 02/10) — des COMPTEURS − / + de 44 px, d'une
+  // main, sans clavier ; ils partent de 0, donc « Les deux scores sont obligatoires »
+  // disparaît et le bouton DIT le score qu'il enregistre. Après l'envoi, la suite vit
+  // DANS la feuille (`matchScoreSheetStep`), plus dans une alerte système qui fermait tout.
   const [isMatchScoreSheetVisible, setIsMatchScoreSheetVisible] = useState(false);
-  const [matchScoreForDraft, setMatchScoreForDraft] = useState('');
-  const [matchScoreAgainstDraft, setMatchScoreAgainstDraft] = useState('');
+  const [matchScoreDraft, setMatchScoreDraft] = useState({ against: 0, for: 0 });
   const [isMatchScoreSaving, setIsMatchScoreSaving] = useState(false);
+  const [matchScoreSheetStep, setMatchScoreSheetStep] = useState('saisie');
+  const [hasMatchScoreSaveError, setHasMatchScoreSaveError] = useState(false);
 
   const isMatchScoreLocked = Boolean(matchStatsPayload?.score?.locked);
-  const isMatchScoreComplete = matchScoreForDraft.trim() !== ''
-    && matchScoreAgainstDraft.trim() !== '';
 
   const openMatchScoreSheet = useCallback(() => {
-    const asDraft = (/** @type {any} */ value) => (
-      value === null || value === undefined ? '' : String(value)
-    );
+    const asCount = (/** @type {any} */ value) => {
+      const count = Number(value);
+      return Number.isFinite(count) && count > 0 ? Math.min(99, Math.floor(count)) : 0;
+    };
 
-    setMatchScoreForDraft(asDraft(matchStatsPayload?.score?.scoreFor));
-    setMatchScoreAgainstDraft(asDraft(matchStatsPayload?.score?.scoreAgainst));
+    setMatchScoreDraft({
+      against: asCount(matchStatsPayload?.score?.scoreAgainst),
+      for: asCount(matchStatsPayload?.score?.scoreFor),
+    });
+    setMatchScoreSheetStep('saisie');
+    setHasMatchScoreSaveError(false);
     setIsMatchScoreSheetVisible(true);
   }, [matchStatsPayload?.score?.scoreAgainst, matchStatsPayload?.score?.scoreFor]);
+
+  const changeMatchScore = useCallback((
+    /** @type {'against' | 'for'} */ side,
+    /** @type {number} */ step,
+  ) => {
+    setMatchScoreDraft((draft) => ({
+      ...draft,
+      [side]: Math.min(99, Math.max(0, draft[side] + step)),
+    }));
+  }, []);
+
+  // 🎯 ST-MATCH (écran 9, amélioration 1) — les deux équipes NOMMÉES, du côté de QUI marque :
+  // `scoreFor` est celui de l'équipe de la feuille (`compositionTeamId`). L'équipe de
+  // l'événement : son club (le camp de gauche de l'encart) contre l'adversaire. Une équipe
+  // invitée : elle contre le club qui reçoit — aucune inversion possible.
+  const matchScoreSides = useMemo(() => {
+    const hostClub = String(event?.team?.club?.name || event?.club?.name || '').trim();
+    const ourTeam = String(
+      compositionEditorTeam?.name || matchStatsPayload?.team?.name || '',
+    ).trim();
+    const isEventTeam = !compositionTeamId || compositionTeamId === event?.team?.documentId;
+    const forName = (isEventTeam ? hostClub || ourTeam : ourTeam)
+      || t('stMatch.score.us', 'Mon équipe');
+    const againstName = isEventTeam
+      ? matchOpponentName
+      : hostClub || String(event?.team?.name || '').trim();
+    return { againstName: againstName || '', forName };
+  }, [
+    compositionEditorTeam?.name,
+    compositionTeamId,
+    event?.club?.name,
+    event?.team?.club?.name,
+    event?.team?.documentId,
+    event?.team?.name,
+    matchOpponentName,
+    matchStatsPayload?.team?.name,
+    t,
+  ]);
+
+  // « Sam. 5 sept. · fin à 20:00 ».
+  const matchScoreWhen = useMemo(() => {
+    if (!eventEndedAt || Number.isNaN(eventEndedAt.getTime())) return '';
+    const day = eventEndedAt.toLocaleDateString(localeDesFormats(), {
+      day: 'numeric', month: 'short', weekday: 'short',
+    });
+    return t('stMatch.score.when', '{{day}} · fin à {{time}}', {
+      day: day.charAt(0).toUpperCase() + day.slice(1),
+      time: eventEndedAt.toLocaleTimeString(localeDesFormats(), {
+        hour: '2-digit', minute: '2-digit',
+      }),
+      ...SANS_ECHAPPEMENT,
+    });
+  }, [eventEndedAt, t]);
 
   // 🆚 ST-MATCH (écran 1, amélioration 2) — « Voir les stats du match » DESCEND au
   // bloc, depuis l'endroit qu'on regarde. Le bloc ne vit que dans l'Aperçu : on y
@@ -5159,43 +5222,36 @@ function EventDetails({ navigation, route }) {
 
   const handleSaveMatchScore = useCallback(async () => {
     if (!eventId || !compositionTeamId) return;
-    if (isMatchScoreLocked || !isMatchScoreComplete || isMatchScoreSaving) return;
+    if (isMatchScoreLocked || isMatchScoreSaving) return;
 
     setIsMatchScoreSaving(true);
+    setHasMatchScoreSaveError(false);
     try {
       await mutations.saveMatchResultMutation.mutateAsync({
         eventId,
-        scoreAgainst: Number(matchScoreAgainstDraft),
-        scoreFor: Number(matchScoreForDraft),
+        scoreAgainst: matchScoreDraft.against,
+        scoreFor: matchScoreDraft.for,
         teamId: compositionTeamId,
       });
-      setIsMatchScoreSheetVisible(false);
-      // Le meme rafraichissement que le reste de la page (`:4775`) : sans lui,
-      // l'entete continuerait d'afficher « Score en attente ».
+      // 🎯 ST-MATCH (écran 9, état 5) — la suite DANS la feuille. Le meme
+      // rafraichissement que le reste de la page : sans lui, l'entete continuerait
+      // d'afficher « Score en attente ».
+      setMatchScoreSheetStep('enregistre');
       refetchMatchStats();
-      Alert.alert(
-        t('eventDetails.matchScore.savedTitle', 'Score enregistré'),
-        t('eventDetails.matchScore.savedMessage', 'Le score du match est enregistré.'),
-      );
     } catch (scoreError) {
-      Alert.alert(
-        t('common.error'),
-        t('eventDetails.matchScore.error', 'Le score n’a pas pu être enregistré. Réessaie.'),
-      );
+      // État 6 — le score saisi RESTE en place ; la feuille dit quoi faire.
+      setHasMatchScoreSaveError(true);
     } finally {
       setIsMatchScoreSaving(false);
     }
   }, [
     compositionTeamId,
     eventId,
-    isMatchScoreComplete,
     isMatchScoreLocked,
     isMatchScoreSaving,
-    matchScoreAgainstDraft,
-    matchScoreForDraft,
+    matchScoreDraft,
     mutations.saveMatchResultMutation,
     refetchMatchStats,
-    t,
   ]);
 
   // AD01 (🚪) — LA PORTE DU TERRAIN DE DETECTION.
@@ -9774,97 +9830,203 @@ function EventDetails({ navigation, route }) {
         </View>
       </BottomModal>
 
-      {/* AD01 (✍️) — LA FEUILLE DU SCORE : deux champs, et c'est tout.
+      {/* AD01 (✍️) — LA FEUILLE DU SCORE.
+          🎯 ST-MATCH (écran 9, design validé le 02/10, « 05D Saisir le score ») : « Score
+          final », les deux équipes NOMMÉES (plus de « Nous / Eux »), − et + de 44 px, le
+          bouton qui dit le score, la suite DANS la feuille, le verrou en orange.
           ⚠️ `snapPoints` est OBLIGATOIRE : sans lui, une `BottomModal` ne peut
           pas porter a la fois un en-tete et un pied (piege D19, deja paye). */}
       <BottomModal
         close={() => setIsMatchScoreSheetVisible(false)}
         isVisible={isMatchScoreSheetVisible}
-        snapPoints={['52%']}
+        snapPoints={['62%']}
       >
-        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.matchScore.title', 'Score du match')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || t(
-                'eventDetails.yourTeam',
-                'Ton équipe',
-              )}
-            </Text>
-          </View>
-
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-            {[
-              {
-                key: 'for',
-                label: t('eventDetails.matchScore.us', 'Nous'),
-                onChangeText: setMatchScoreForDraft,
-                value: matchScoreForDraft,
-              },
-              {
-                key: 'against',
-                label: t('eventDetails.matchScore.them', 'Eux'),
-                onChangeText: setMatchScoreAgainstDraft,
-                value: matchScoreAgainstDraft,
-              },
-            ].map((champ) => (
-              <View key={champ.key} style={[Spaces.gap[8], { flex: 1 }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{champ.label}</Text>
-                <TextInput
-                  editable={!isMatchScoreLocked}
-                  keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
-                  maxLength={3}
-                  onChangeText={(value) => champ.onChangeText(value.replace(/[^0-9]/g, ''))}
-                  placeholder="0"
-                  placeholderTextColor={Colors.neutral400}
-                  selectionColor={Colors.primary500}
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]} testID="st-match-feuille-score">
+          {matchScoreSheetStep === 'enregistre' ? (
+            <>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {t('stMatch.score.saved', 'Score enregistré : {{score}}', {
+                    score: `${matchScoreDraft.for} - ${matchScoreDraft.against}`,
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  {t('stMatch.score.savedBody', 'Les joueurs le voient sur la page du match.')}
+                </Text>
+              </View>
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View
                   style={[
-                    ApplicationStyle.input,
-                    ApplicationStyle.backgroundColor.neutral800,
-                    ApplicationStyle.borderColor.neutral600,
-                    Fonts.h3Bold,
-                    Fonts.neutral00,
-                    { textAlign: 'center' },
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      backgroundColor: withAlpha(Colors.primary500, 0.14),
+                      borderColor: Colors.primary500,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      height: 32,
+                      width: 32,
+                    },
                   ]}
-                  value={champ.value}
+                >
+                  <Text style={[Fonts.p2Bold, Fonts.primary200]}>2</Text>
+                </View>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                    {t('stMatch.score.nextSheet', 'Ensuite : la feuille de match')}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {Number(matchStatsReport?.responseEligibleCount) > 0
+                      ? t('stMatch.score.responses', {
+                        count: Number(matchStatsReport?.responseCompletionCount || 0),
+                        defaultValue_one: '{{count}} sur {{total}} a déjà répondu',
+                        defaultValue_other: '{{count}} sur {{total}} ont déjà répondu',
+                        total: Number(matchStatsReport?.responseEligibleCount),
+                        ...SANS_ECHAPPEMENT,
+                      })
+                      : t('stMatch.carte.sheetDetail', 'Ta note, les buteurs, le temps de jeu')}
+                  </Text>
+                </View>
+              </View>
+              <View style={[Spaces.gap[12]]}>
+                <Button
+                  onPress={() => {
+                    setIsMatchScoreSheetVisible(false);
+                    openMatchStatsEditor();
+                  }}
+                  title={t('stMatch.score.openSheet', 'Saisir la feuille')}
+                  variant="Primary"
+                />
+                <Button
+                  onPress={() => setIsMatchScoreSheetVisible(false)}
+                  title={t('stMatch.score.later', 'Plus tard')}
+                  variant="Secondary"
                 />
               </View>
-            ))}
-          </View>
+            </>
+          ) : (
+            <>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {t('stMatch.score.title', 'Score final')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`${matchScoreSides.forName} — ${matchScoreSides.againstName
+                    || t('stMatch.score.opponent', 'Adversaire')}`}
+                </Text>
+                {matchScoreWhen ? (
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>{matchScoreWhen}</Text>
+                ) : null}
+              </View>
 
-          {/* 🗣️ Une porte fermee DIT pourquoi. Le serveur refuserait de toute
-              facon (`match-stats-report.ts:1921-1937`) — autant l'ecrire ici,
-              en francais, avant l'aller-retour. */}
-          {isMatchScoreLocked ? (
-            <Text style={[Fonts.p3, Fonts.gold500]}>
-              {t(
-                'eventDetails.matchScore.lockedHint',
-                'Ce score vient de la source officielle : il ne se modifie pas ici.',
-              )}
-            </Text>
-          ) : null}
-          {!isMatchScoreLocked && !isMatchScoreComplete ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('eventDetails.matchScore.bothRequired', 'Les deux scores sont obligatoires.')}
-            </Text>
-          ) : null}
+              {/* 🔒 Verrouillé : les compteurs s'éteignent (min = max = la valeur), sans
+                  toucher au composant partagé par 4 autres écrans. */}
+              <View style={[Spaces.gap[8]]}>
+                {[
+                  {
+                    name: matchScoreSides.forName,
+                    side: /** @type {'for'} */ ('for'),
+                    spoken: matchScoreSides.forName,
+                  },
+                  {
+                    name: matchScoreSides.againstName || t('stMatch.score.opponent', 'Adversaire'),
+                    side: /** @type {'against'} */ ('against'),
+                    spoken: matchScoreSides.againstName
+                      || t('stMatch.score.theOpponent', 'l’adversaire'),
+                  },
+                ].map((row, index) => (
+                  <View key={row.side} style={[Spaces.gap[8]]}>
+                    {index === 1 ? (
+                      <Text style={[Fonts.h3Black, Fonts.neutral300, Fonts.textCenter]}>-</Text>
+                    ) : null}
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                      <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
+                        {row.name}
+                      </Text>
+                      <View style={{ width: 168 }}>
+                        <InputStepper
+                          decrementLabel={t(
+                            'stMatch.score.minus',
+                            'Un but de moins pour {{team}}',
+                            { team: row.spoken, ...SANS_ECHAPPEMENT },
+                          )}
+                          incrementLabel={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
+                            team: row.spoken, ...SANS_ECHAPPEMENT,
+                          })}
+                          max={isMatchScoreLocked ? matchScoreDraft[row.side] : 99}
+                          min={isMatchScoreLocked ? matchScoreDraft[row.side] : 0}
+                          onDecrement={() => changeMatchScore(row.side, -1)}
+                          onIncrement={() => changeMatchScore(row.side, 1)}
+                          tone="tunnel"
+                          value={matchScoreDraft[row.side]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
 
-          <View style={[Spaces.gap[12]]}>
-            <Button
-              disabled={isMatchScoreLocked || !isMatchScoreComplete || isMatchScoreSaving}
-              isLoading={isMatchScoreSaving}
-              onPress={handleSaveMatchScore}
-              title={t('eventDetails.matchScore.submit', 'Valider le score')}
-              variant="Primary"
-            />
-            <Button
-              onPress={() => setIsMatchScoreSheetVisible(false)}
-              title={t('common.cancel', 'Annuler')}
-              variant="Secondary"
-            />
-          </View>
+              {/* 🗣️ Une porte fermee DIT pourquoi — en orange, avec le cadenas (plus en or). */}
+              {isMatchScoreLocked ? (
+                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                  <SvgIcon color={Colors.warning500} height={14} name="lock" width={14} />
+                  <Text style={[Fonts.p3, Fonts.warning500, { flexShrink: 1 }]}>
+                    {t(
+                      'stMatch.score.locked',
+                      'Ce score vient de la fédération ; il ne se modifie pas ici.',
+                    )}
+                  </Text>
+                </View>
+              ) : null}
+              {!isMatchScoreLocked && hasMatchScoreSaveError ? (
+                <Text style={[Fonts.p3, Fonts.error500]}>
+                  {t(
+                    'stMatch.score.error',
+                    'Le score n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie. '
+                      + 'Rien n’a été perdu.',
+                  )}
+                </Text>
+              ) : null}
+
+              <View style={[Spaces.gap[12]]}>
+                {isMatchScoreLocked ? (
+                  <>
+                    <Button
+                      onPress={() => {
+                        setIsMatchScoreSheetVisible(false);
+                        openMatchStatsEditor();
+                      }}
+                      title={t('stMatch.score.openSheet', 'Saisir la feuille')}
+                      variant="Primary"
+                    />
+                    <Button
+                      onPress={() => setIsMatchScoreSheetVisible(false)}
+                      title={t('stMatch.score.close', 'Fermer')}
+                      variant="Secondary"
+                    />
+                  </>
+                ) : (
+                  // ponytail: « Enregistrement… » s'écrit, la roue ne tourne pas — l'atome
+                  // `Button` n'affiche que la roue OU le texte. Voie de sortie : une roue à
+                  // côté du libellé dans l'atome.
+                  <Button
+                    disabled={isMatchScoreSaving}
+                    onPress={handleSaveMatchScore}
+                    title={(() => {
+                      if (isMatchScoreSaving) return t('stMatch.score.saving', 'Enregistrement…');
+                      if (hasMatchScoreSaveError) return t('stMatch.score.retry', 'Réessayer');
+                      return t('stMatch.score.save', 'Enregistrer {{score}}', {
+                        score: `${matchScoreDraft.for} - ${matchScoreDraft.against}`,
+                        ...SANS_ECHAPPEMENT,
+                      });
+                    })()}
+                    variant="Primary"
+                  />
+                )}
+              </View>
+            </>
+          )}
         </View>
       </BottomModal>
 
