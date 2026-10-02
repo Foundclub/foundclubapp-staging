@@ -581,6 +581,9 @@ function PlanningWeekTimelineView({
     const color = event.color || Colors.primary500;
     const isPendingParticipation = isPlanningPendingParticipation(event);
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
+    // COLL-C3B (02/10, design P8v2-demande-ordi) — une place DEMANDEE a la Ville et en attente
+    // de sa decision (contrat C2A §7 : origin « request », pending) : pointilles orange.
+    const isPendingRequest = event?.raw?.origin === 'request' && event?.raw?.pending === true;
     const isCompact = event.height < 62;
     const isTiny = event.height < 38;
     const cardContent = resolvePlanningCardContent(event, { profile: cardDisplayProfile });
@@ -664,6 +667,9 @@ function PlanningWeekTimelineView({
           borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
           borderLeftColor: cardAccentColor,
           borderLeftWidth: mode === 'week' ? 2 : 3,
+          ...(isPendingRequest ? {
+            borderColor: pendingAccentColor, borderStyle: 'dashed', borderWidth: 1,
+          } : {}),
           height: event.height - 2,
           justifyContent: isTiny ? 'center' : 'flex-start',
           left: `${left}%`,

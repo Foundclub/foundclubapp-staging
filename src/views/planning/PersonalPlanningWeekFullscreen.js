@@ -341,7 +341,9 @@ function PlanningWeekFullscreen() {
         displayColor: readsAsOrganizer || duClubDuLecteur
           ? evenement.displayColor
           : Colors.neutral500,
-        participationStatus: readsAsOrganizer && brut.pending === true
+        // COLL-C3B (02/10) — et le club qui DEMANDE voit sa demande « en attente de la mairie »,
+        // a sa place (P8v2-demande, etat 4 : « Comme dans ton planning »).
+        participationStatus: (readsAsOrganizer || duClubDuLecteur) && brut.pending === true
           ? 'pending'
           : evenement.participationStatus,
       };
