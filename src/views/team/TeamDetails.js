@@ -92,6 +92,8 @@ import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
+import { useIsDesktop } from '@/responsive';
+
 const TeamLocationIconView = /** @type {any} */ (TeamLocationIcon);
 
 /**
@@ -212,6 +214,8 @@ function TeamDetails({ navigation, route }) {
     ),
     [currentUser?.documentId, team?.trainers],
   );
+  // ST-VUES (ordinateur) — sur grand ecran, les deux lectures cote a cote.
+  const isDesktopStats = useIsDesktop();
   const reloadGatesRef = useRef({ performance: false, stats: false });
   reloadGatesRef.current = { performance: canLoadTeamPerformanceStats, stats: canLoadTeamStats };
   const {
@@ -4399,173 +4403,212 @@ function TeamDetails({ navigation, route }) {
                 </Text>
               </View>
             ) : null}
-            {/* ST-VUES (planche 13, etat 7) — un sport sans stats de match n'a pas
-                « Performance » : l onglet Stats ouvre directement la vie d equipe. */}
-            {canLoadTeamPerformanceStats ? (
-              <View style={[Alignments.row, Spaces.gap[8]]}>
-                <TouchableOpacity
-                  onPress={() => setStatsMode('attendance')}
-                  style={[
-                    Alignments.alignCenter,
-                    Alignments.justifyCenter,
-                    Spaces.paddingVertical[8],
-                    { borderRadius: 18, flex: 1 },
-                    statsMode === 'attendance'
-                      ? ApplicationStyle.backgroundColor.primary500
-                      : ApplicationStyle.backgroundColor.primary700,
-                  ]}
-                >
-                  <Text style={[statsMode === 'attendance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
-                    {t('teamDetails.statsModes.attendance', "Vie d'équipe")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setStatsMode('performance')}
-                  style={[
-                    Alignments.alignCenter,
-                    Alignments.justifyCenter,
-                    Spaces.paddingVertical[8],
-                    { borderRadius: 18, flex: 1 },
-                    statsMode === 'performance'
-                      ? ApplicationStyle.backgroundColor.primary500
-                      : ApplicationStyle.backgroundColor.primary700,
-                  ]}
-                >
-                  <Text style={[statsMode === 'performance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
-                    {t('teamDetails.statsModes.performance', 'Performance')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {/* ST-VUES — PLANCHE 14 DU DESIGN VALIDE : la presence. L encadrement lit les
-                tuiles, « À surveiller » et « Les autres » ; le JOUEUR lit SA presence et la
-                moyenne (« a non », decide par le SERVEUR : `viewerScope`). « Remettre a zero »
-                part dans le menu ⋯ (etat 4). VA1 — un refus se dit, il ne devient pas une
-                liste vide. */}
-            {statsMode === 'attendance' || !canLoadTeamPerformanceStats ? (
-              <TeamAttendancePanel
-                isLoading={isTeamStatsLoading}
-                onPressPlayer={(/** @type {any} */ entry) => setSelectedStatsPlayer({
-                  ...entry,
-                  playerName: entry.name,
-                })}
-                refusedMessage={isAccessRefusalError(teamStatsError) && !teamStatsRows.length
-                  ? accessReservedMessage
-                  : ''}
-                sportWithoutMatchStats={!hasMatchStatsSport(team)}
-                stats={teamStatsData}
-              />
-            ) : (
-              <View style={[Spaces.gap[16]]}>
-                {/* ST-VUES — PLANCHE 13 DU DESIGN VALIDE (« FoundClub — Statistiques », 02/10) :
-                    forme, V / N / D, buts, notes, joueurs tries. Le panneau ne decide rien :
-                    « moyenne B » vient du serveur. Retires (notes de la planche) : la carte
-                    « Recap du groupe », « d apres N retours », la ligne des clean sheets ; et la
-                    liste « Derniers matchs renseignes », que la forme remplace.
-                    VA1 — un refus du serveur se dit, il ne devient pas « aucune performance ». */}
-                {isAccessRefusalError(teamPerformanceError) && !teamPerformancePlayers.length ? (
-                  <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                    {accessReservedMessage}
-                  </Text>
-                ) : (
-                  <TeamPerformancePanel
-                    currentUserDocumentId={currentUser?.documentId || ''}
-                    isLoading={isTeamPerformanceLoading}
-                    onPressPlayer={isTeamTrainer || isClubManagerForCurrentTeam
-                      ? (/** @type {any} */ player) => handleUserPress(player)
-                      : undefined}
-                    stats={teamPerformanceStats}
+            {/* ST-VUES (ordinateur, etats 1 et 2) — sur grand ecran, Performance et Vie
+                d equipe COTE A COTE : l entraineur lit les deux sans basculer, en tableaux.
+                Un sport sans stats de match garde la lecture du telephone (une colonne). */}
+            {isDesktopStats && canLoadTeamPerformanceStats ? (
+              <View style={[Alignments.row, Spaces.gap[24], { alignItems: 'flex-start' }]} testID="team-stats-columns">
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  {isAccessRefusalError(teamPerformanceError) && !teamPerformancePlayers.length ? (
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>{accessReservedMessage}</Text>
+                  ) : (
+                    <TeamPerformancePanel
+                      currentUserDocumentId={currentUser?.documentId || ''}
+                      isLoading={isTeamPerformanceLoading}
+                      onPressPlayer={isTeamTrainer || isClubManagerForCurrentTeam
+                        ? (/** @type {any} */ player) => handleUserPress(player)
+                        : undefined}
+                      stats={teamPerformanceStats}
+                      variant="wide"
+                    />
+                  )}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <TeamAttendancePanel
+                    isLoading={isTeamStatsLoading}
+                    onPressPlayer={(/** @type {any} */ entry) => setSelectedStatsPlayer({
+                      ...entry,
+                      playerName: entry.name,
+                    })}
+                    refusedMessage={isAccessRefusalError(teamStatsError) && !teamStatsRows.length
+                      ? accessReservedMessage
+                      : ''}
+                    stats={teamStatsData}
+                    variant="wide"
                   />
-                )}
-
-                {pendingPerformanceMatches.length ? (
-                  <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {t(
-                        'teamDetails.perf.pendingTitle',
-                        'Réponses joueur en attente de validation équipe',
-                      )}
-                    </Text>
-                    {pendingPerformanceMatches.map((/** @type {any} */ pendingMatch) => (
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        disabled={!pendingMatch?.sourceDocumentId}
-                        key={
-                          [pendingMatch?.sourceType, pendingMatch?.sourceDocumentId, pendingMatch?.lastSubmittedAt]
-                            .filter(Boolean)
-                            .join(':')
-                          || pendingMatch?.matchLabel
-                          || 'pending-match'
-                        }
-                        onPress={() => handleOpenPerformanceMatch(pendingMatch?.sourceType, pendingMatch?.sourceDocumentId)}
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius24,
-                          Spaces.padding[16],
-                          Spaces.gap[8],
-                          !pendingMatch?.sourceDocumentId ? { opacity: 0.92 } : null,
-                        ]}
-                      >
-                        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                              {pendingMatch?.matchLabel || t(
-                                'teamDetails.perf.matchFallback',
-                                'Match',
-                              )}
-                            </Text>
-                            <Text style={[Fonts.p4, Fonts.neutral100]}>
-                              {t(
-                                'teamDetails.perf.responses',
-                                '{{submitted}}/{{eligible}} joueurs ont répondu',
-                                {
-                                  eligible: Number(pendingMatch?.eligibleCount || 0),
-                                  submitted: Number(pendingMatch?.submittedResponses || 0),
-                                  ...SANS_ECHAPPEMENT,
-                                },
-                              )}
-                            </Text>
-                          </View>
-                          <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
-                            <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                                {pendingMatch?.reportStatus === 'draft' ? t(
-                                  'teamDetails.perf.pendingDraft',
-                                  'Brouillon équipe',
-                                ) : t(
-                                  'teamDetails.perf.pendingReport',
-                                  'En attente du bilan équipe',
-                                )}
-                              </Text>
-                            </View>
-                            {pendingMatch?.sourceDocumentId ? (
-                              <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                                  {t('teamDetails.perf.open', 'Ouvrir')}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                        {pendingMatch?.lastSubmittedAt ? (
-                          <Text style={[Fonts.p4, Fonts.neutral100]}>
-                            {t(
-                              'teamDetails.perf.lastResponse',
-                              'Dernière réponse le {{date}}',
-                              {
-                                date: new Date(pendingMatch.lastSubmittedAt)
-                                  .toLocaleString(localeDesFormats()),
-                                ...SANS_ECHAPPEMENT,
-                              },
-                            )}
-                          </Text>
-                        ) : null}
-                      </TouchableOpacity>
-                    ))}
+                </View>
+              </View>
+            ) : (
+              <>
+                {/* ST-VUES (planche 13, etat 7) — un sport sans stats de match n'a pas
+                    « Performance » : l onglet Stats ouvre directement la vie d equipe. */}
+                {canLoadTeamPerformanceStats ? (
+                  <View style={[Alignments.row, Spaces.gap[8]]}>
+                    <TouchableOpacity
+                      onPress={() => setStatsMode('attendance')}
+                      style={[
+                        Alignments.alignCenter,
+                        Alignments.justifyCenter,
+                        Spaces.paddingVertical[8],
+                        { borderRadius: 18, flex: 1 },
+                        statsMode === 'attendance'
+                          ? ApplicationStyle.backgroundColor.primary500
+                          : ApplicationStyle.backgroundColor.primary700,
+                      ]}
+                    >
+                      <Text style={[statsMode === 'attendance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                        {t('teamDetails.statsModes.attendance', "Vie d'équipe")}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setStatsMode('performance')}
+                      style={[
+                        Alignments.alignCenter,
+                        Alignments.justifyCenter,
+                        Spaces.paddingVertical[8],
+                        { borderRadius: 18, flex: 1 },
+                        statsMode === 'performance'
+                          ? ApplicationStyle.backgroundColor.primary500
+                          : ApplicationStyle.backgroundColor.primary700,
+                      ]}
+                    >
+                      <Text style={[statsMode === 'performance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                        {t('teamDetails.statsModes.performance', 'Performance')}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 ) : null}
-              </View>
+
+                {/* ST-VUES — PLANCHE 14 DU DESIGN VALIDE : la presence. L encadrement lit les
+                    tuiles, « À surveiller » et « Les autres » ; le JOUEUR lit SA presence et la
+                    moyenne (« a non », decide par le SERVEUR : `viewerScope`). « Remettre a zero »
+                    part dans le menu ⋯ (etat 4). VA1 — un refus se dit, il ne devient pas une
+                    liste vide. */}
+                {statsMode === 'attendance' || !canLoadTeamPerformanceStats ? (
+                  <TeamAttendancePanel
+                    isLoading={isTeamStatsLoading}
+                    onPressPlayer={(/** @type {any} */ entry) => setSelectedStatsPlayer({
+                      ...entry,
+                      playerName: entry.name,
+                    })}
+                    refusedMessage={isAccessRefusalError(teamStatsError) && !teamStatsRows.length
+                      ? accessReservedMessage
+                      : ''}
+                    sportWithoutMatchStats={!hasMatchStatsSport(team)}
+                    stats={teamStatsData}
+                  />
+                ) : (
+                  <View style={[Spaces.gap[16]]}>
+                    {/* ST-VUES — PLANCHE 13 DU DESIGN VALIDE (« FoundClub — Statistiques », 02/10) :
+                        forme, V / N / D, buts, notes, joueurs tries. Le panneau ne decide rien :
+                        « moyenne B » vient du serveur. Retires (notes de la planche) : la carte
+                        « Recap du groupe », « d apres N retours », la ligne des clean sheets ; et la
+                        liste « Derniers matchs renseignes », que la forme remplace.
+                        VA1 — un refus du serveur se dit, il ne devient pas « aucune performance ». */}
+                    {isAccessRefusalError(teamPerformanceError) && !teamPerformancePlayers.length ? (
+                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                        {accessReservedMessage}
+                      </Text>
+                    ) : (
+                      <TeamPerformancePanel
+                        currentUserDocumentId={currentUser?.documentId || ''}
+                        isLoading={isTeamPerformanceLoading}
+                        onPressPlayer={isTeamTrainer || isClubManagerForCurrentTeam
+                          ? (/** @type {any} */ player) => handleUserPress(player)
+                          : undefined}
+                        stats={teamPerformanceStats}
+                      />
+                    )}
+
+                    {pendingPerformanceMatches.length ? (
+                      <View style={[Spaces.gap[8]]}>
+                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                          {t(
+                            'teamDetails.perf.pendingTitle',
+                            'Réponses joueur en attente de validation équipe',
+                          )}
+                        </Text>
+                        {pendingPerformanceMatches.map((/** @type {any} */ pendingMatch) => (
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            disabled={!pendingMatch?.sourceDocumentId}
+                            key={
+                              [pendingMatch?.sourceType, pendingMatch?.sourceDocumentId, pendingMatch?.lastSubmittedAt]
+                                .filter(Boolean)
+                                .join(':')
+                              || pendingMatch?.matchLabel
+                              || 'pending-match'
+                            }
+                            onPress={() => handleOpenPerformanceMatch(pendingMatch?.sourceType, pendingMatch?.sourceDocumentId)}
+                            style={[
+                              ApplicationStyle.backgroundColor.primary700,
+                              ApplicationStyle.borderRadius24,
+                              Spaces.padding[16],
+                              Spaces.gap[8],
+                              !pendingMatch?.sourceDocumentId ? { opacity: 0.92 } : null,
+                            ]}
+                          >
+                            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                                  {pendingMatch?.matchLabel || t(
+                                    'teamDetails.perf.matchFallback',
+                                    'Match',
+                                  )}
+                                </Text>
+                                <Text style={[Fonts.p4, Fonts.neutral100]}>
+                                  {t(
+                                    'teamDetails.perf.responses',
+                                    '{{submitted}}/{{eligible}} joueurs ont répondu',
+                                    {
+                                      eligible: Number(pendingMatch?.eligibleCount || 0),
+                                      submitted: Number(pendingMatch?.submittedResponses || 0),
+                                      ...SANS_ECHAPPEMENT,
+                                    },
+                                  )}
+                                </Text>
+                              </View>
+                              <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
+                                <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
+                                  <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                                    {pendingMatch?.reportStatus === 'draft' ? t(
+                                      'teamDetails.perf.pendingDraft',
+                                      'Brouillon équipe',
+                                    ) : t(
+                                      'teamDetails.perf.pendingReport',
+                                      'En attente du bilan équipe',
+                                    )}
+                                  </Text>
+                                </View>
+                                {pendingMatch?.sourceDocumentId ? (
+                                  <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
+                                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                                      {t('teamDetails.perf.open', 'Ouvrir')}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            </View>
+                            {pendingMatch?.lastSubmittedAt ? (
+                              <Text style={[Fonts.p4, Fonts.neutral100]}>
+                                {t(
+                                  'teamDetails.perf.lastResponse',
+                                  'Dernière réponse le {{date}}',
+                                  {
+                                    date: new Date(pendingMatch.lastSubmittedAt)
+                                      .toLocaleString(localeDesFormats()),
+                                    ...SANS_ECHAPPEMENT,
+                                  },
+                                )}
+                              </Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+              </>
             )}
           </View>
           )}

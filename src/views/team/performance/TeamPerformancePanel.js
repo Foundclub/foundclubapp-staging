@@ -66,10 +66,11 @@ const playerNameOf = (entry) => (
  * @param {string} [props.currentUserDocumentId] - Qui regarde, pour ecrire « toi ».
  * @param {(player: { documentId: string }) => void} [props.onPressPlayer] - Ouvrir un joueur.
  *   Absent : les lignes ne se touchent pas (le joueur lit sans ouvrir ses coequipiers).
+ * @param {'stacked' | 'wide'} [props.variant] - `wide` : la colonne du site, avec un tableau.
  * @returns {import('react').ReactElement} - La carte.
  */
 function TeamPerformancePanel({
-  currentUserDocumentId = '', isLoading = false, onPressPlayer, stats,
+  currentUserDocumentId = '', isLoading = false, onPressPlayer, stats, variant = 'stacked',
 }) {
   const { t } = useTranslation();
   const {
@@ -197,6 +198,88 @@ function TeamPerformancePanel({
     }
     return t('teamStatsPanel.playersRating', 'Note des joueurs');
   };
+
+  // ST-VUES (ordinateur, etats 1 et 2) — une colonne : le titre et la forme, quatre
+  // tuiles (V, N, D, la difference), les notes, et le classement en TABLEAU.
+  if (variant === 'wide') {
+    const wideTile = (/** @type {string} */ key, /** @type {string} */ value, /** @type {string} */ label, /** @type {string} */ color) => (
+      <View key={key} style={tileStyle}>
+        <Text style={[Fonts.h3Bold, { color }]}>{value}</Text>
+        <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>{label}</Text>
+      </View>
+    );
+    const columns = [
+      { flex: 2, key: 'name', label: t('teamStatsPanel.columnPlayer', 'Joueur') },
+      ...sorts.map((sort) => ({ flex: 1, key: sort.key, label: t(sort.labelKey, sort.fallback) })),
+    ];
+    return (
+      <View style={[Spaces.gap[16]]} testID="team-performance-wide">
+        <View style={rowBetween}>
+          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+            {t('teamStatsPanel.performanceTitle', 'Performance · {{count}} match', { count: matches })}
+          </Text>
+          {knownForm.length ? (
+            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+              {knownForm.map((/** @type {string} */ result) => formLetter[result].letter).join(' ')}
+            </Text>
+          ) : null}
+        </View>
+        <View style={[Alignments.row, Spaces.gap[8]]}>
+          {wideTile('wins', String(Number(totals?.wins || 0)), t('teamStatsPanel.recordWins', 'Victoire', { count: Number(totals?.wins || 0) }), Colors.success200)}
+          {wideTile('draws', String(Number(totals?.draws || 0)), t('teamStatsPanel.recordDraws', 'Nul', { count: Number(totals?.draws || 0) }), Colors.neutral00)}
+          {wideTile('losses', String(Number(totals?.losses || 0)), t('teamStatsPanel.recordLosses', 'Défaite', { count: Number(totals?.losses || 0) }), Colors.error300)}
+          {wideTile('difference', differenceLabel, `${scoreFor} - ${scoreAgainst}`, Colors.neutral00)}
+        </View>
+        <View style={[Alignments.row, Spaces.gap[8]]}>
+          {wideTile('coach', coachRating !== null && coachRating !== undefined ? formatRating(coachRating) : '—', t('teamStatsPanel.coachRating', 'Note du coach'), Colors.neutral00)}
+          {wideTile('players', playersRating !== null && playersRating !== undefined ? formatRating(playersRating) : '—', playersRatingLabel(), Colors.neutral00)}
+        </View>
+        {players.length ? (
+          <View testID="team-performance-table">
+            <View style={[Alignments.row, Spaces.paddingVertical[8]]}>
+              {columns.map((column) => (
+                <Text
+                  key={column.key}
+                  style={[Fonts.p4Bold, Fonts.neutral300, { flex: column.flex, textAlign: column.key === 'name' ? 'left' : 'right' }]}
+                >
+                  {column.label}
+                </Text>
+              ))}
+            </View>
+            {players.map((/** @type {any} */ entry, /** @type {number} */ index) => {
+              const documentId = String(entry?.documentId || '');
+              const name = playerNameOf(entry) || t('teamStatsPanel.playerFallback', 'Joueur');
+              const canOpen = Boolean(onPressPlayer && documentId && documentId !== currentUserDocumentId);
+              const Row = canOpen ? TouchableOpacity : View;
+              return (
+                <Row
+                  accessibilityRole={canOpen ? 'button' : undefined}
+                  key={entry?.key || documentId || `ligne-${index}`}
+                  onPress={canOpen ? () => onPressPlayer?.({ documentId }) : undefined}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.paddingVertical[8],
+                    { borderTopColor: withAlpha(Colors.neutral00, 0.08), borderTopWidth: 1, minHeight: 44 },
+                  ]}
+                >
+                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 2 }]}>{name}</Text>
+                  {sorts.map((sort) => (
+                    <Text
+                      key={sort.key}
+                      style={[sort.key === activeSort.key ? Fonts.p2Bold : Fonts.p2, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}
+                    >
+                      {String(Number(entry?.[sort.key] || 0))}
+                    </Text>
+                  ))}
+                </Row>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <View style={[Spaces.gap[16]]} testID="team-performance">

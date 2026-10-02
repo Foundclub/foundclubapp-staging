@@ -88,10 +88,11 @@ const formatDay = (value, month) => {
  * @param {string} [props.refusedMessage] - Le serveur a refuse : on le dit (VA1).
  * @param {boolean} [props.sportWithoutMatchStats] - Un sport sans stats de match.
  * @param {(entry: any) => void} [props.onPressPlayer] - Ouvrir la feuille d un joueur.
+ * @param {'stacked' | 'wide'} [props.variant] - `wide` : la colonne du site, avec un tableau.
  * @returns {import('react').ReactElement} - L onglet.
  */
 function TeamAttendancePanel({
-  isLoading = false, onPressPlayer, refusedMessage = '', sportWithoutMatchStats = false, stats,
+  isLoading = false, onPressPlayer, refusedMessage = '', sportWithoutMatchStats = false, stats, variant = 'stacked',
 }) {
   const { t } = useTranslation();
   const {
@@ -309,6 +310,80 @@ function TeamAttendancePanel({
       </TouchableOpacity>
     );
   };
+
+  // ST-VUES (ordinateur, etat 1) — une colonne : les tuiles, puis un TABLEAU trie du
+  // plus bas au plus haut (Presence, Entr., Matchs, Retards), et ce qu il compte.
+  if (variant === 'wide') {
+    const columns = [
+      { flex: 2, key: 'name', label: t('teamStatsPanel.columnPlayer', 'Joueur') },
+      { flex: 1, key: 'presence', label: t('teamStatsPanel.presence', 'Présence') },
+      { flex: 1, key: 'trainings', label: t('teamStatsPanel.columnTrainings', 'Entr.') },
+      { flex: 1, key: 'matches', label: t('teamStatsPanel.matches', 'Matchs') },
+      { flex: 1, key: 'late', label: t('teamStatsPanel.columnLate', 'Retards') },
+    ];
+    const fraction = (/** @type {number} */ attended, /** @type {number} */ total) => (total > 0 ? `${attended}/${total}` : '—');
+    return (
+      <View style={[Spaces.gap[16]]} testID="team-attendance-wide">
+        {sportSentence}
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{t('teamStatsPanel.attendanceTitle', 'Vie d’équipe')}</Text>
+        <View style={[Alignments.row, Spaces.gap[8]]}>
+          {tile(percent(average?.presenceRate), t('teamStatsPanel.presence', 'Présence'), 'presence')}
+          {tile(percent(average?.trainingRate), t('teamStatsPanel.trainings', 'Entraînements'), 'trainings')}
+          {tile(percent(average?.matchRate), t('teamStatsPanel.matches', 'Matchs'), 'matches')}
+        </View>
+        <View testID="team-attendance-table">
+          <View style={[Alignments.row, Spaces.paddingVertical[8]]}>
+            {columns.map((column) => (
+              <Text
+                key={column.key}
+                style={[Fonts.p4Bold, Fonts.neutral300, { flex: column.flex, textAlign: column.key === 'name' ? 'left' : 'right' }]}
+              >
+                {column.label}
+              </Text>
+            ))}
+          </View>
+          {sorted.map((/** @type {any} */ entry, /** @type {number} */ index) => (
+            <TouchableOpacity
+              accessibilityRole="button"
+              disabled={!onPressPlayer}
+              key={entry.user?.documentId || `presence-${index}`}
+              onPress={() => onPressPlayer?.(entry)}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Spaces.paddingVertical[8],
+                { borderTopColor: withAlpha(Colors.neutral00, 0.08), borderTopWidth: 1, minHeight: 44 },
+              ]}
+            >
+              <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 2 }]}>
+                {entry.name || t('teamStatsPanel.playerFallback', 'Joueur')}
+              </Text>
+              <Text style={[Fonts.p2Bold, { color: presenceToneOf(Colors, entry.ratio), flex: 1, textAlign: 'right' }]}>
+                {percent(entry.ratio)}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}>
+                {fraction(entry.trainingAttended, entry.trainingTotal)}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}>
+                {fraction(entry.matchAttended, entry.matchTotal)}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}>
+                {String(entry.lateCount)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {sinceLong
+            ? t('teamStatsPanel.sortedSince', 'Triée du plus bas au plus haut · depuis le {{date}}.', {
+              date: sinceLong,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('teamStatsPanel.sorted', 'Triée du plus bas au plus haut.')}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[Spaces.gap[16]]} testID="team-attendance">
