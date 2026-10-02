@@ -85,11 +85,14 @@ export const useGetLeagueTeamPerformanceStats = (teamId, options = {}) => useQue
   ...options,
 });
 
+// FINITIONS6 — lue aussi par MatchStatsPromptHost au retour au premier plan.
+export const PENDING_MATCH_STATS_STALE_MS = 1000 * 30;
+
 export const useGetPendingMatchStatsPrompts = (options = {}) => useQuery({
   queryFn: () => getPendingMatchStatsPrompts(),
   queryKey: ['pendingMatchStatsPrompts'],
   refetchOnMount: options?.refetchOnMount ?? false,
   refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
-  staleTime: options?.staleTime ?? 1000 * 30,
+  staleTime: options?.staleTime ?? PENDING_MATCH_STATS_STALE_MS,
   ...options,
 });

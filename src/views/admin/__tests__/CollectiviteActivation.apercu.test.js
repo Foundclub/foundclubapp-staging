@@ -1,8 +1,34 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Alert, Text } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import AdminCollectiviteList from '../AdminCollectiviteList';
+import { toAdminCollectiviteRow } from '@/domains/collectivite/collectiviteDisplay';
+
+import { useAdminCollectivites } from '@/services/collectivite/collectiviteQueries';
+
+import CollectiviteActivation from '../components/CollectiviteActivation';
+
+// COLL-CONSOLE (02/10) — « Activer / Couper » a QUITTE la liste (planche P2-liste) : ce temoin
+// monte desormais le composant lui-meme, nourri par la MEME lecture que la console (le geste
+// relit la liste, l etat affiche est celui du serveur). Ses garanties ne changent pas.
+/**
+ * Les collectivites de la console, chacune avec son « Activer / Couper ».
+ * @returns {import('react').ReactElement} Le banc.
+ */
+function BancActivation() {
+  const lecture = useAdminCollectivites();
+  const lignes = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
+    .map(toAdminCollectiviteRow);
+  return (
+    <View>
+      {lignes.map((ligne) => (
+        <View key={ligne.documentId} testID={`admin-collectivite-${ligne.documentId}`}>
+          <CollectiviteActivation collectivite={ligne} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // 🏛️ TEXTES-COLLECTIVITES (lot 1, 01/10/2026) — LES FENÊTRES « ACTIVER » ET « COUPER ».
 //
@@ -18,12 +44,20 @@ import AdminCollectiviteList from '../AdminCollectiviteList';
 //   - le compte rendu après le geste nomme le club qui paie déjà ;
 //   - un serveur qui ne sait pas faire l’aperçu (serveur d’avant le lot : 400) ne bloque
 //     rien : la fenêtre dit une phrase VRAIE sans détail, et le geste reste possible.
+// COLL-CONSOLE (02/10, planche P2-fenetres) : la fenêtre est désormais une FENÊTRE DE L APP
+// (ConsoleSheet) qui LISTE les clubs, et non plus la fenêtre système ; son bouton dit le résultat
+// (« Offrir l’offre Club à 2 clubs ») ; un échec s y écrit et « Réessayer » relance ; le compte
+// rendu nomme tous les clubs.
 // Le client HTTP est doublé ; le VRAI i18next (fr.js, pluriels compris) écrit les phrases.
 
 const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockPut = jest.fn();
 const mockDelete = jest.fn();
+
+// COLL-CONSOLE (02/10) — un écran entier monté avec react-query : sous charge (suite complète,
+// PC occupé), le premier cas paie le chargement des modules et dépassait les 5 s par défaut.
+jest.setTimeout(30000);
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
@@ -114,8 +148,6 @@ const VERDICTS_COUPER = [
 
 /** @type {any[]} */
 let collectivitesServeur;
-/** @type {any} */
-let alerte;
 
 const reponseListe = () => ({
   data: {
@@ -154,11 +186,12 @@ const monter = async () => {
   await act(async () => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
-        <AdminCollectiviteList />
+        <BancActivation />
       </QueryClientProvider>,
     );
   });
-  await attendre(() => !textes(arbre.root).includes('Lecture des collectivités…'));
+  // eslint-disable-next-line max-len
+  await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-ville-montrivage').length > 0);
   return arbre;
 };
 
@@ -182,13 +215,10 @@ const serveur = ({ apercu, geste = async () => ({ data: { data: {} } }) }) => {
 
 beforeEach(() => {
   collectivitesServeur = [MONTRIVAGE, VAL];
-  alerte = null;
   // eslint-disable-next-line max-len
   [mockGet, mockPost, mockPut, mockDelete, mockNavigate].forEach((doublure) => doublure.mockReset());
   mockPost.mockImplementation(async () => reponseListe());
-  jest.spyOn(Alert, 'alert').mockImplementation((titre, message, boutons) => {
-    alerte = { boutons, message, titre };
-  });
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -196,26 +226,42 @@ afterEach(() => {
 });
 
 // eslint-disable-next-line max-len
-describe('TEXTES-COLLECTIVITES — « Activer » dit, club par club, ce que le serveur va faire', () => {
+describe('TEXTES-COLLECTIVITES — « Activer » dit, club par club, ce que le serveur va faire (fenêtre de l app, P2-fenetres)', () => {
+  const fenetre = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.testID === 'collectivite-fenetre-etat' && n.props?.accessibilityViewIsModal))[0];
+  const appuyerDansLaFenetre = async (/** @type {any} */ arbre, /** @type {string} */ titre) => {
+    await act(async () => { bouton(fenetre(arbre), titre).props.onPress(); });
+  };
   // eslint-disable-next-line max-len
-  it('l aperçu est demandé AVANT la fenêtre, sans rien écrire ; la fenêtre nomme chaque club', async () => {
+  const ouvrir = async (/** @type {any} */ arbre, /** @type {string} */ id, /** @type {string} */ geste) => {
+    await act(async () => { bouton(carte(arbre, id), geste).props.onPress(); });
+    await attendre(() => Boolean(fenetre(arbre)));
+  };
+
+  // eslint-disable-next-line max-len
+  it('l aperçu est demandé AVANT la fenêtre, sans rien écrire ; la fenêtre liste chaque club et ce qui change pour lui', async () => {
     // eslint-disable-next-line max-len
     serveur({ apercu: async () => ({ data: { data: { clubs: VERDICTS_ACTIVER, isActive: true, preview: true } } }) });
     const arbre = await monter();
-    await act(async () => { bouton(carte(arbre, 'ville-montrivage'), 'Activer').props.onPress(); });
-    await attendre(() => alerte !== null);
+    await ouvrir(arbre, 'ville-montrivage', 'Activer');
 
     expect(mockPut).toHaveBeenCalledTimes(1);
     expect(mockPut).toHaveBeenCalledWith(ROUTE_ACTIVE, { data: { previewIsActive: true } });
-    expect(alerte.titre).toBe('Activer la Ville de Montrivage ?');
-    expect(alerte.message).toBe([
-      '2 clubs recevront l’offre Club offerte : AS Montrivage, Montrivage Basket.',
-      '1 club paie déjà son abonnement, rien ne change pour lui : Montrivage FC.',
-    ].join('\n'));
-    expect(alerte.message).not.toMatch(/Les 3 clubs/);
+    expect(Alert.alert).not.toHaveBeenCalled();
+    const lus = textes(fenetre(arbre));
+    expect(lus).toEqual(expect.arrayContaining([
+      'Activer la Ville de Montrivage ?',
+      '2 clubs recevront l’offre Club offerte :',
+      'AS Montrivage', 'Montrivage Basket', 'Offerte',
+      '1 club paie déjà son abonnement, rien ne change pour lui :',
+      'Montrivage FC', 'Paie lui-même',
+      'Offrir l’offre Club à 2 clubs', 'Annuler',
+    ]));
+    expect(lus.join(' ')).not.toMatch(/Les 3 clubs/);
   });
 
-  it('confirmer fait le VRAI geste ; le compte rendu nomme le club qui paie déjà', async () => {
+  // eslint-disable-next-line max-len
+  it('confirmer fait le VRAI geste ; la fenêtre se ferme ; le bandeau garde le compte rendu, avec les noms', async () => {
     serveur({
       // eslint-disable-next-line max-len
       apercu: async () => ({ data: { data: { clubs: VERDICTS_ACTIVER, isActive: true, preview: true } } }),
@@ -225,45 +271,44 @@ describe('TEXTES-COLLECTIVITES — « Activer » dit, club par club, ce que le s
       },
     });
     const arbre = await monter();
-    await act(async () => { bouton(carte(arbre, 'ville-montrivage'), 'Activer').props.onPress(); });
-    await attendre(() => alerte !== null);
-    const confirmer = alerte.boutons.find((/** @type {any} */ b) => b.style !== 'cancel');
-    expect(confirmer.text).toBe('Activer');
-    await act(async () => { confirmer.onPress(); });
-    await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 7);
+    await ouvrir(arbre, 'ville-montrivage', 'Activer');
+    await appuyerDansLaFenetre(arbre, 'Offrir l’offre Club à 2 clubs');
+    // eslint-disable-next-line max-len
+    const compteRendu = 'Activée. Offre posée : 2 (AS Montrivage, Montrivage Basket) · Club qui paie déjà : 1 (Montrivage FC)';
+    await attendre(() => textes(carte(arbre, 'ville-montrivage')).includes(compteRendu));
 
     expect(mockPut).toHaveBeenCalledTimes(2);
     expect(mockPut).toHaveBeenLastCalledWith(ROUTE_ACTIVE, { data: { isActive: true } });
-    expect(textes(carte(arbre, 'ville-montrivage'))).toContain(
-      'Activée. Offre posée : 2 · Club qui paie déjà : 1 (Montrivage FC)',
-    );
+    expect(fenetre(arbre)).toBeUndefined();
+    expect(textes(carte(arbre, 'ville-montrivage'))).toContain(compteRendu);
   });
 
-  it('« Annuler » après l aperçu : aucun geste', async () => {
+  it('« Annuler » après l aperçu : aucun geste, la fenêtre se ferme', async () => {
     // eslint-disable-next-line max-len
     serveur({ apercu: async () => ({ data: { data: { clubs: VERDICTS_ACTIVER, isActive: true, preview: true } } }) });
     const arbre = await monter();
-    await act(async () => { bouton(carte(arbre, 'ville-montrivage'), 'Activer').props.onPress(); });
-    await attendre(() => alerte !== null);
-    const annuler = alerte.boutons.find((/** @type {any} */ b) => b.style === 'cancel');
-    await act(async () => { annuler.onPress?.(); });
+    await ouvrir(arbre, 'ville-montrivage', 'Activer');
+    await appuyerDansLaFenetre(arbre, 'Annuler');
     await attendre(() => false);
+    expect(fenetre(arbre)).toBeUndefined();
     expect(mockPut).toHaveBeenCalledTimes(1);
   });
 
-  it('« Couper » : qui perd l offre, et qui n avait rien à perdre', async () => {
+  // eslint-disable-next-line max-len
+  it('« Couper » : qui perd l offre, qui n avait rien à perdre ; le bouton ROUGE dit combien', async () => {
     // eslint-disable-next-line max-len
     serveur({ apercu: async () => ({ data: { data: { clubs: VERDICTS_COUPER, isActive: false, preview: true } } }) });
     const arbre = await monter();
-    await act(async () => { bouton(carte(arbre, 'cc-du-val'), 'Couper').props.onPress(); });
-    await attendre(() => alerte !== null);
+    await ouvrir(arbre, 'cc-du-val', 'Couper');
     expect(mockPut).toHaveBeenCalledWith('/superadmin/collectivites/cc-du-val/active', {
       data: { previewIsActive: false },
     });
-    expect(alerte.message).toBe([
-      '1 club perdra l’offre Club offerte : Club du Val.',
-      '1 club n’a pas l’offre de la collectivité, rien ne change pour lui : Val Tennis.',
-    ].join('\n'));
+    expect(textes(fenetre(arbre))).toEqual(expect.arrayContaining([
+      'Couper la Communauté de communes du Val ?',
+      '1 club perdra l’offre Club offerte :', 'Club du Val', 'Perd l’offre',
+      '1 club n’a pas l’offre de la collectivité, rien ne change pour lui :', 'Val Tennis',
+      'Retirer l’offre à 1 club',
+    ]));
   });
 
   // eslint-disable-next-line max-len
@@ -282,18 +327,42 @@ describe('TEXTES-COLLECTIVITES — « Activer » dit, club par club, ce que le s
       geste: async () => ({ data: { data: { changed: true, clubs: [], isActive: true } } }),
     });
     const arbre = await monter();
-    await act(async () => { bouton(carte(arbre, 'ville-montrivage'), 'Activer').props.onPress(); });
-    await attendre(() => alerte !== null);
-    expect(alerte.message).toBe(
+    await ouvrir(arbre, 'ville-montrivage', 'Activer');
+    expect(textes(fenetre(arbre))).toContain(
       // eslint-disable-next-line max-len
       'Les 3 clubs rattachés recevront l’offre Club offerte, sauf ceux qui paient déjà leur abonnement.',
     );
-    // eslint-disable-next-line max-len
-    await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style !== 'cancel').onPress(); });
+    await appuyerDansLaFenetre(arbre, 'Activer');
     await attendre(() => mockPut.mock.calls.length === 2);
     // L aperçu a bien été DEMANDÉ (et refusé) avant la fenêtre ; puis le vrai geste.
     expect(mockPut).toHaveBeenCalledTimes(2);
     expect(mockPut).toHaveBeenNthCalledWith(1, ROUTE_ACTIVE, { data: { previewIsActive: true } });
     expect(mockPut).toHaveBeenLastCalledWith(ROUTE_ACTIVE, { data: { isActive: true } });
+  });
+
+  // eslint-disable-next-line max-len
+  it('COLL-CONSOLE — un geste refusé s écrit DANS la fenêtre, qui reste ouverte ; « Réessayer » relance', async () => {
+    let essais = 0;
+    serveur({
+      // eslint-disable-next-line max-len
+      apercu: async () => ({ data: { data: { clubs: VERDICTS_ACTIVER, isActive: true, preview: true } } }),
+      geste: async () => {
+        essais += 1;
+        // eslint-disable-next-line no-throw-literal, max-len
+        if (essais === 1) throw { response: { data: { error: { message: 'Serveur indisponible', status: 503 } }, status: 503 } };
+        return { data: { data: { changed: true, clubs: VERDICTS_ACTIVER, isActive: true } } };
+      },
+    });
+    const arbre = await monter();
+    await ouvrir(arbre, 'ville-montrivage', 'Activer');
+    await appuyerDansLaFenetre(arbre, 'Offrir l’offre Club à 2 clubs');
+    await attendre(() => textes(fenetre(arbre)).includes('Réessayer'));
+    expect(fenetre(arbre)).toBeDefined();
+    expect(textes(fenetre(arbre)).some((texte) => /indisponible|serveur/i.test(texte))).toBe(true);
+
+    await appuyerDansLaFenetre(arbre, 'Réessayer');
+    await attendre(() => !fenetre(arbre));
+    expect(essais).toBe(2);
+    expect(fenetre(arbre)).toBeUndefined();
   });
 });

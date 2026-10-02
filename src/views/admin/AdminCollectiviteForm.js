@@ -1,12 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useRef, useState } from 'react';
+import {
+  useEffect, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -15,17 +17,24 @@ import {
   collectiviteTypeLabel,
   readCollectiviteCreateForm,
 } from '@/domains/collectivite/collectiviteDisplay';
+import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ConsoleSheet from '@/views/admin/components/ConsoleSheet';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useCreateAdminCollectivite } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+// Au-dela de cette largeur (site), le formulaire a gauche et l apercu a droite (P2-creer-ordi).
+const LARGEUR_DEUX_COLONNES = 768;
 
 /**
  * Le debut officiel du nom, pose dans le champ quand on choisit le type (D59). Ce sont des
@@ -69,17 +78,36 @@ const exempleOfficiel = (t, type) => {
   }
 };
 
+// Le champ sous lequel chaque faute s ecrit (planche P2-creer, etat 4 : « chaque erreur sous
+// son champ ») ; « un code INSEE ou un SIREN » s ecrit sous la ligne des deux codes.
+const CHAMP_DE_LA_FAUTE = {
+  codeInsee: 'codeInsee',
+  identifier: 'identifiants',
+  officialName: 'name',
+  siren: 'siren',
+  type: 'type',
+};
+
 /**
- * 🏛️ CONSOLE › COLLECTIVITES › CREER (D61, 2026-09-29).
+ * 🏛️ CONSOLE › COLLECTIVITÉS › CRÉER (D61, 2026-09-29), restylé par COLL-CONSOLE (02/10/2026)
+ * selon la planche P2-creer (design HY521H1, page 2, écran 3).
  *
  * Le nom se saisit sous sa FORME OFFICIELLE (D59) : le bandeau « Offert par la Ville de X »
- * le lit tel quel. Aide : choisir le type pose son debut officiel dans le champ (s il est
- * vide ou ne porte qu un autre debut) et montre un exemple. Controle : le formulaire ne part
- * pas tant que le nom ne commence pas par un debut officiel de son type (le serveur, lui,
- * ne le controle pas) ; code INSEE ou SIREN obligatoire, formats du serveur.
- * La collectivite nait INACTIVE : l activer reste un geste a part (liste ou detail).
- * Creee : on ouvre son detail, a la place du formulaire.
- * @returns {import('react').ReactElement} L ecran.
+ * le lit tel quel. Choisir le type pose son début officiel dans le champ (s'il est vide ou ne
+ * porte qu'un autre début). Ce qui change avec la planche :
+ *   - chaque erreur s'écrit SOUS SON CHAMP, dès qu'on le quitte (et toutes à l'envoi) — plus
+ *     de liste groupée sous le dernier champ ;
+ *   - l'APERÇU en direct de ce que liront les clubs : la pastille « Offert par … » (et, sur le
+ *     site, la ligne de « Mon abonnement ») ;
+ *   - « Créer — elle naîtra inactive » fixé en bas, éteint tant qu'il manque un code INSEE ou
+ *     un SIREN ; pendant l'envoi, la roue et un formulaire qui ne bouge plus ; l'erreur du
+ *     serveur s'écrit au-dessus du bouton ;
+ *   - « Annuler » ou le retour, saisie commencée : une FEUILLE de l'app demande avant de perdre
+ *     (textes du lot TEXTES-COLLECTIVITÉS) ;
+ *   - créée : la fiche remplace le formulaire et dit les gestes qui restent (`justCreated`).
+ * ⛔ PAS FAIT : chercher la commune dans le fichier des communes (il existe hors de l'app,
+ * non branché) ; les codes se saisissent à la main, contrôlés comme avant.
+ * @returns {import('react').ReactElement} L'écran.
  */
 function AdminCollectiviteForm() {
   const { t } = useTranslation();
@@ -87,6 +115,8 @@ function AdminCollectiviteForm() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { width } = useWindowDimensions();
+  const deuxColonnes = width >= LARGEUR_DEUX_COLONNES;
   const [form, setForm] = useState(() => ({
     codeInsee: '',
     email: '',
@@ -95,13 +125,19 @@ function AdminCollectiviteForm() {
     siren: '',
     type: 'commune',
   }));
-  const [fautes, setFautes] = useState(/** @type {string[]} */ ([]));
+  // Les champs QUITTES (une erreur ne s affiche qu une fois le champ quitte), ou tous apres un
+  // envoi.
+  const [touches, setTouches] = useState(/** @type {Set<string>} */ (new Set()));
+  const [envoye, setEnvoye] = useState(false);
+  // La sortie en attente de la feuille « Quitter sans créer ? » (rangée dans un objet : une
+  // fonction passée à useState serait prise pour un initialiseur).
+  const [quitter, setQuitter] = useState(/** @type {{ sortir: () => void } | null} */ (null));
   const creer = useCreateAdminCollectivite();
+  const enCours = Boolean(creer.isPending);
 
-  // TEXTES-COLLECTIVITES (01/10) — « retour » effacait une saisie remplie sans rien demander,
-  // et il n y avait pas de bouton « Annuler ». Une saisie VIDE (seul le debut officiel du nom,
-  // pose par l ecran) part sans question ; sinon, on demande. Apres une creation reussie, le
-  // detail remplace le formulaire sans question (`sortieLibre`).
+  // TEXTES-COLLECTIVITES (01/10) — une saisie VIDE (seul le debut officiel du nom, pose par
+  // l ecran) part sans question ; sinon, on demande. Apres une creation reussie, le detail
+  // remplace le formulaire sans question (`sortieLibre`).
   // ponytail: sur le site, le « retour » du NAVIGATEUR ne passe pas par `beforeRemove` (la
   // couche web de la navigation ne l emet pas) : seul « Annuler » y demande. Voie de sortie :
   // un `beforeunload` dans la couche web, s il le faut un jour.
@@ -110,23 +146,7 @@ function AdminCollectiviteForm() {
   const saisieVide = ['codeInsee', 'email', 'phoneNumber', 'siren']
     .every((cle) => !String(/** @type {any} */ (form)[cle] || '').trim())
     && ['', ...debutsOfficiels].includes(form.name.trim());
-  const demanderAvantDeQuitter = (/** @type {() => void} */ quitter) => {
-    Alert.alert(
-      t('adminCollectivites.form.leave.title', 'Quitter sans créer la collectivité ?'),
-      t('adminCollectivites.form.leave.message', 'Ce que tu as saisi sera perdu.'),
-      [
-        { style: 'cancel', text: t('adminCollectivites.form.leave.stay', 'Rester') },
-        {
-          onPress: () => {
-            sortieLibre.current = true;
-            quitter();
-          },
-          style: 'destructive',
-          text: t('adminCollectivites.form.leave.confirm', 'Quitter'),
-        },
-      ],
-    );
-  };
+  const demanderAvantDeQuitter = (/** @type {() => void} */ sortir) => setQuitter({ sortir });
   useEffect(() => navigation.addListener?.('beforeRemove', (/** @type {any} */ evenement) => {
     if (sortieLibre.current || saisieVide) return;
     evenement.preventDefault();
@@ -140,12 +160,23 @@ function AdminCollectiviteForm() {
     demanderAvantDeQuitter(() => navigation.goBack?.());
   };
 
+  const { data, errors } = readCollectiviteCreateForm(form);
+  const sansIdentifiant = !form.codeInsee.trim() && !form.siren.trim();
+  const visible = (/** @type {string} */ champ) => {
+    if (envoye) return true;
+    if (champ === 'identifiants') return touches.has('codeInsee') && touches.has('siren');
+    return touches.has(champ);
+  };
+  const fautesDe = (/** @type {string} */ champ) => errors
+    .filter((faute) => /** @type {any} */ (CHAMP_DE_LA_FAUTE)[faute] === champ && visible(champ));
+
   const changer = (/** @type {keyof typeof form} */ champ) => (/** @type {string} */ valeur) => {
-    setFautes([]);
     setForm((avant) => ({ ...avant, [champ]: valeur }));
   };
+  const quitterLeChamp = (/** @type {string} */ champ) => () => setTouches(
+    (avant) => new Set([champ, ...avant]),
+  );
   const choisirType = (/** @type {string} */ type) => {
-    setFautes([]);
     setForm((avant) => {
       const prefixes = COLLECTIVITE_TYPES.map((autre) => prefixeOfficiel(t, autre).trim());
       const nomVide = !avant.name.trim() || prefixes.includes(avant.name.trim());
@@ -174,49 +205,203 @@ function AdminCollectiviteForm() {
       default: return t('adminCollectivites.form.errors.type', 'Choisis le type de collectivité.');
     }
   };
+  const afficherFautes = (/** @type {string} */ champ) => fautesDe(champ).map((faute) => (
+    <Text
+      accessibilityRole="alert"
+      key={faute}
+      nativeID={`admin-collectivite-form-${champ}-erreur`}
+      style={[Fonts.p3Bold, Fonts.error300]}
+      testID={`admin-collectivite-form-${champ}-erreur`}
+    >
+      {libelleFaute(faute)}
+    </Text>
+  ));
 
   const envoyer = () => {
-    const { data, errors } = readCollectiviteCreateForm(form);
-    setFautes(errors);
+    setEnvoye(true);
     if (errors.length > 0) return;
     creer.mutate(data, {
       onSuccess: (/** @type {any} */ reponse) => {
         const collectiviteId = reponse?.data?.documentId;
         sortieLibre.current = true;
         if (collectiviteId) {
-          navigation.replace(RouteNames.AdminCollectiviteDetail, { collectiviteId });
+          navigation.replace(RouteNames.AdminCollectiviteDetail, {
+            collectiviteId,
+            justCreated: true,
+          });
         } else navigation.goBack?.();
       },
     });
   };
 
-  const champStyle = { borderColor: `${Colors.primary500}80`, color: Colors.neutral00 };
   const champ = (/**
      @type {{ autoCapitalize?: 'characters' | 'none' | 'sentences',
     cle: keyof typeof form, keyboardType?: import('react-native').KeyboardTypeOptions,
     label: string, maxLength?: number }} */ {
       autoCapitalize = 'sentences', cle, keyboardType = 'default', label, maxLength = undefined,
     },
-  ) => (
-    <View style={{ gap: 6 }}>
-      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{label}</Text>
-      <TextInput
-        autoCapitalize={autoCapitalize}
-        autoCorrect={false}
-        keyboardType={keyboardType}
-        maxLength={maxLength}
-        onChangeText={changer(cle)}
-        placeholderTextColor={Colors.neutral400}
+  ) => {
+    const enFaute = fautesDe(cle).length > 0;
+    return (
+      <View style={{ flex: 1, gap: 6 }}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{label}</Text>
+        <TextInput
+          accessibilityLabel={label}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+          editable={!enCours}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          onBlur={quitterLeChamp(cle)}
+          onChangeText={changer(cle)}
+          placeholderTextColor={Colors.neutral400}
+          style={[
+            ApplicationStyle.borderRadius16,
+            ApplicationStyle.borderWidth1,
+            Fonts.p2,
+            Spaces.padding[12],
+            {
+              borderColor: enFaute ? Colors.error500 : withAlpha(Colors.primary500, 0.5),
+              color: Colors.neutral00,
+              opacity: enCours ? 0.6 : 1,
+            },
+          ]}
+          testID={`admin-collectivite-form-${cle}`}
+          value={form[cle]}
+        />
+        {afficherFautes(cle)}
+      </View>
+    );
+  };
+
+  // L apercu : ce que liront les clubs rattaches, des que le nom depasse son debut officiel.
+  const nomSaisi = !['', ...debutsOfficiels].includes(form.name.trim());
+  const offertPar = t('collectiviteConsole.creer.offertPar', 'Offert par {{collectivite}}', {
+    collectivite: formatCollectiviteOfferedBy(form.name.trim()), ...SANS_ECHAPPEMENT,
+  });
+  const nomDuClub = t('collectiviteConsole.creer.apercuClub', 'Ton club');
+  const apercu = nomSaisi ? (
+    <View
+      style={[
+        ApplicationStyle.borderRadius16,
+        Spaces.padding[16],
+        Alignments.alignCenter,
+        {
+          backgroundColor: withAlpha(Colors.primary700, 0.45),
+          borderColor: withAlpha(Colors.primary500, 0.5),
+          borderWidth: 1,
+          gap: 12,
+        },
+      ]}
+      testID="admin-collectivite-form-apercu"
+    >
+      <Text style={[Fonts.p3Bold, Fonts.primary200, Alignments.selfStart]}>
+        {t('collectiviteConsole.creer.apercuTitre', 'Ce que liront les clubs').toUpperCase()}
+      </Text>
+      <ClubLogoMark name={nomDuClub} size={60} />
+      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{nomDuClub}</Text>
+      <View
         style={[
-          ApplicationStyle.borderRadius16,
-          ApplicationStyle.borderWidth1,
-          Fonts.p2,
-          Spaces.padding[12],
-          champStyle,
+          Spaces.paddingHorizontal[12],
+          Spaces.paddingVertical[4],
+          { backgroundColor: withAlpha(Colors.success500, 0.18), borderRadius: 999 },
         ]}
-        testID={`admin-collectivite-form-${cle}`}
-        value={form[cle]}
-      />
+      >
+        <Text style={[Fonts.p3Bold, Fonts.success500]}>{offertPar}</Text>
+      </View>
+      {deuxColonnes ? (
+        <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
+          {t(
+            'collectiviteConsole.creer.apercuAbonnement',
+            'Dans « Mon abonnement » : Offre Club offerte par {{collectivite}}',
+            { collectivite: formatCollectiviteOfferedBy(form.name.trim()), ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+    </View>
+  ) : null;
+
+  const rangeeDuPied = deuxColonnes ? [Alignments.row, Alignments.justifyEnd] : null;
+  const formulaire = (
+    <View style={{ gap: 16 }}>
+      <View style={{ gap: 6 }}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+          {t('adminCollectivites.form.type', 'Type')}
+        </Text>
+        <View
+          accessibilityLabel={t('collectiviteConsole.creer.typeGroupe', 'Type de collectivité')}
+          accessibilityRole="radiogroup"
+          style={[Alignments.row, Alignments.wrap, { gap: 8 }]}
+        >
+          {COLLECTIVITE_TYPES.map((type) => {
+            const choisi = form.type === type;
+            return (
+              <TouchableOpacity
+                accessibilityRole="radio"
+                accessibilityState={{ checked: choisi, disabled: enCours, selected: choisi }}
+                disabled={enCours}
+                key={type}
+                onPress={() => choisirType(type)}
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  ApplicationStyle.borderWidth1,
+                  Spaces.paddingHorizontal[12],
+                  Spaces.paddingVertical[8],
+                  {
+                    backgroundColor: choisi ? Colors.primary500 : 'transparent',
+                    borderColor: Colors.primary500,
+                    justifyContent: 'center',
+                    minHeight: 44,
+                  },
+                ]}
+                testID={`admin-collectivite-form-type-${type}`}
+              >
+                <Text style={[Fonts.p3Bold, choisi ? Fonts.neutral900 : Fonts.neutral00]}>
+                  {collectiviteTypeLabel(t, type)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+      {champ({ cle: 'name', label: t('adminCollectivites.form.name', 'Nom officiel') })}
+      {fautesDe('name').length === 0 ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('adminCollectivites.form.nameHint', {
+            exemple: exempleOfficiel(t, form.type),
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+      {deuxColonnes ? null : apercu}
+      <View style={{ gap: 6 }}>
+        <View style={[Alignments.row, { gap: 12 }]}>
+          {champ({
+            autoCapitalize: 'characters',
+            cle: 'codeInsee',
+            label: t('adminCollectivites.form.codeInsee', 'Code INSEE'),
+            maxLength: 5,
+          })}
+          {champ({
+            cle: 'siren',
+            keyboardType: 'number-pad',
+            label: t('adminCollectivites.form.siren', 'SIREN'),
+            maxLength: 11,
+          })}
+        </View>
+        {afficherFautes('identifiants')}
+      </View>
+      {champ({
+        autoCapitalize: 'none',
+        cle: 'email',
+        keyboardType: 'email-address',
+        label: t('adminCollectivites.form.email', 'E-mail (facultatif)'),
+      })}
+      {champ({
+        cle: 'phoneNumber',
+        keyboardType: 'phone-pad',
+        label: t('adminCollectivites.form.phone', 'Téléphone (facultatif)'),
+      })}
     </View>
   );
 
@@ -224,7 +409,7 @@ function AdminCollectiviteForm() {
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
         contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 12 }}
@@ -236,104 +421,97 @@ function AdminCollectiviteForm() {
           <Text style={[Fonts.p3Bold, Fonts.primary200]}>
             {t('adminCollectivites.list.title', 'Collectivités').toUpperCase()}
           </Text>
-          <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('adminCollectivites.form.title', 'Créer une collectivité')}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t(
-              'adminCollectivites.form.hint',
-              'Elle naît inactive : tu l’actives ensuite, depuis la liste ou sa fiche.',
+              'collectiviteConsole.creer.dit',
+              'Elle naît inactive : tu l’actives ensuite, depuis sa fiche.',
             )}
           </Text>
         </View>
-
-        <View style={{ gap: 6 }}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-            {t('adminCollectivites.form.type', 'Type')}
-          </Text>
-          <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-            {COLLECTIVITE_TYPES.map((type) => {
-              const choisi = form.type === type;
-              return (
-                <TouchableOpacity
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: choisi }}
-                  key={type}
-                  onPress={() => choisirType(type)}
-                  style={[
-                    ApplicationStyle.borderRadius16,
-                    ApplicationStyle.borderWidth1,
-                    Spaces.paddingHorizontal[12],
-                    Spaces.paddingVertical[8],
-                    {
-                      backgroundColor: choisi ? Colors.primary500 : 'transparent',
-                      borderColor: Colors.primary500,
-                    },
-                  ]}
-                  testID={`admin-collectivite-form-type-${type}`}
-                >
-                  <Text style={[Fonts.p3Bold, choisi ? Fonts.neutral900 : Fonts.neutral00]}>
-                    {collectiviteTypeLabel(t, type)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        {deuxColonnes ? (
+          <View style={[Alignments.row, Alignments.alignStart, { gap: 24 }]}>
+            <View style={{ flex: 3 }}>{formulaire}</View>
+            <View style={{ flex: 2 }}>
+              {apercu || (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'collectiviteConsole.creer.apercuVide',
+                    'L’aperçu suit le nom officiel à chaque frappe.',
+                  )}
+                </Text>
+              )}
+            </View>
           </View>
-        </View>
-
-        {champ({ cle: 'name', label: t('adminCollectivites.form.name', 'Nom officiel') })}
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('adminCollectivites.form.nameHint', {
-            exemple: exempleOfficiel(t, form.type),
-            ...SANS_ECHAPPEMENT,
-          })}
-        </Text>
-        {champ({
-          autoCapitalize: 'characters',
-          cle: 'codeInsee',
-          label: t('adminCollectivites.form.codeInsee', 'Code INSEE'),
-          maxLength: 5,
-        })}
-        {champ({
-          cle: 'siren',
-          keyboardType: 'number-pad',
-          label: t('adminCollectivites.form.siren', 'SIREN'),
-          maxLength: 11,
-        })}
-        {champ({
-          autoCapitalize: 'none',
-          cle: 'email',
-          keyboardType: 'email-address',
-          label: t('adminCollectivites.form.email', 'E-mail (facultatif)'),
-        })}
-        {champ({
-          cle: 'phoneNumber',
-          keyboardType: 'phone-pad',
-          label: t('adminCollectivites.form.phone', 'Téléphone (facultatif)'),
-        })}
-
-        {fautes.map((faute) => (
-          <Text key={faute} style={[Fonts.p3Bold, Fonts.error500]}>{libelleFaute(faute)}</Text>
-        ))}
+        ) : formulaire}
+      </ScrollView>
+      {/* La barre du bas reste visible : l erreur du serveur au-dessus, puis les deux gestes. */}
+      <View
+        style={[
+          Spaces.paddingTop[12],
+          Spaces.paddingBottom[16],
+          {
+            borderTopColor: withAlpha(Colors.primary500, 0.3),
+            borderTopWidth: 1,
+            gap: 12,
+          },
+        ]}
+        testID="admin-collectivite-form-pied"
+      >
         {creer.error ? (
-          <Text style={[Fonts.p3Bold, Fonts.error500]}>
+          <Text accessibilityRole="alert" style={[Fonts.p3Bold, Fonts.error300]}>
             {getErrorMessage(/** @type {any} */ (creer.error))}
           </Text>
         ) : null}
-        <Button
-          disabled={creer.isPending}
-          isLoading={creer.isPending}
-          onPress={envoyer}
-          title={t('adminCollectivites.form.submit', 'Créer')}
-          variant="Primary"
-        />
-        <Button
-          disabled={creer.isPending}
-          onPress={annuler}
-          title={t('adminCollectivites.form.cancel', 'Annuler')}
-          variant="Secondary"
-        />
-      </ScrollView>
+        <View style={[rangeeDuPied, { gap: 12 }]}>
+          {deuxColonnes ? (
+            <Button
+              disabled={enCours}
+              onPress={annuler}
+              title={t('adminCollectivites.form.cancel', 'Annuler')}
+              variant="Secondary"
+            />
+          ) : null}
+          <Button
+            disabled={enCours || sansIdentifiant}
+            isLoading={enCours}
+            onPress={envoyer}
+            title={t('collectiviteConsole.creer.envoyer', 'Créer — elle naîtra inactive')}
+            variant="Primary"
+          />
+          {deuxColonnes ? null : (
+            <Button
+              disabled={enCours}
+              onPress={annuler}
+              title={t('adminCollectivites.form.cancel', 'Annuler')}
+              variant="Ghost"
+            />
+          )}
+        </View>
+      </View>
+      <ConsoleSheet
+        onClose={() => setQuitter(null)}
+        primary={{
+          label: t('adminCollectivites.form.leave.stay', 'Rester'),
+          onPress: () => setQuitter(null),
+        }}
+        secondary={{
+          label: t('adminCollectivites.form.leave.confirm', 'Quitter'),
+          onPress: () => {
+            const sortir = quitter?.sortir;
+            setQuitter(null);
+            sortieLibre.current = true;
+            sortir?.();
+          },
+          variant: 'Danger',
+        }}
+        subtitle={t('adminCollectivites.form.leave.message', 'Ce que tu as saisi sera perdu.')}
+        testID="admin-collectivite-form-quitter"
+        title={t('adminCollectivites.form.leave.title', 'Quitter sans créer la collectivité ?')}
+        visible={Boolean(quitter)}
+      />
     </ScreenContainer>
   );
 }

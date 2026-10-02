@@ -323,8 +323,10 @@ export const createAdminCollectivite = async (data) => {
 };
 
 // Ce que chaque recherche lit : un club par son nom, un compte par son nom et son e-mail.
+// COLL-CONSOLE (02/10) — et l adresse du club (publique, celle de sa fiche) : la recherche dit
+// sa ville, pour rattacher le bon club (planche P2-fiche, « chaque résultat dit sa ville »).
 const SEARCH_FIELDS = {
-  club: ['documentId', 'name'],
+  club: ['documentId', 'name', 'addressDetails'],
   user: ['documentId', 'firstname', 'lastname', 'email'],
 };
 const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.user' };
@@ -406,6 +408,36 @@ export const decideManagerRequest = async (decision) => {
   const response = await client.post(
     `/superadmin/collectivite-manager-requests/${idSur(requestId)}/${action}`,
     { data },
+  );
+  return response.data;
+};
+
+// ─── COLL-CONSOLE (02/10/2026) : CE QUE L EQUIPE FOUNDCLUB A A TRAITER ───────────────────
+// Les demandes « Par FoundClub » (une mairie a donne le nom et le contact GENERAL d un club
+// absent) et les demandes de rattachement (un dirigeant a ouvert le lien de sa Ville), lues
+// par la console (serveur : api::collectivite-invitation, lot COLL-CLUBS). L etat d une
+// demande se LIT (envoyee, inscrit, rattache) : rattacher reste le geste de la fiche.
+
+/**
+ * Les demandes, avec leur Ville, leur club et leur etat (500 au plus, les plus recentes d abord).
+ * @returns {Promise<any>} `{ data: [{ documentId, kind, status, clubName, clubContact, club,
+ *   collectivite, outsideCommune, remindCount, remindedAt, createdAt }] }`.
+ */
+export const getAdminCollectiviteInvitations = async () => {
+  const response = await client.get('/superadmin/collectivite-invitations');
+  return response.data;
+};
+
+/**
+ * Relie une demande « Par FoundClub » au club qui s est inscrit depuis (ou la delie, avec
+ * `clubId` vide : une erreur de liaison se corrige).
+ * @param {{ clubId?: string | null, invitationId: string }} params - documentIds.
+ * @returns {Promise<any>} `{ data: la demande relue }`.
+ */
+export const linkAdminCollectiviteInvitationClub = async ({ clubId = null, invitationId }) => {
+  const response = await client.put(
+    `/superadmin/collectivite-invitations/${idSur(invitationId)}/club`,
+    { data: { clubDocumentId: clubId ? String(clubId) : null } },
   );
   return response.data;
 };

@@ -14,6 +14,8 @@ const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
+// FINITIONS6 · F6-2 — la charge de composition de l'equipe (lecture du staff).
+const mockTeamCompositionQuery = { data: null };
 
 // 🧨 R9 — CE MOCK N EST PAS DECORATIF. `teamMembershipRequestService`
 // importe `@/services/client`, qui JETTE AU CHARGEMENT quand `.env` est absent
@@ -109,7 +111,7 @@ jest.mock('@/services/event/eventQueries', () => ({
   }),
   useGetEventAttendance: () => emptyQuery(),
   useGetEventConvocation: () => ({ ...emptyQuery(), data: mockConvocationQuery.data }),
-  useGetEventTeamComposition: () => emptyQuery(),
+  useGetEventTeamComposition: () => ({ ...emptyQuery(), data: mockTeamCompositionQuery.data }),
 }));
 
 jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
@@ -474,6 +476,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockEventQuery.data = null;
   mockConvocationQuery.data = null;
+  mockTeamCompositionQuery.data = null;
 });
 
 afterEach(() => {
@@ -607,5 +610,53 @@ describe('COMPOMODIF · M1 — « Modifier » dans l onglet Convocation', () => 
     expect(derniereRoute()).toBe('MatchCompositionBoard');
     expect(derniersParametres()?.readOnly).toBe(true);
     expect(derniersParametres()?.canEdit).toBe(true);
+  });
+});
+
+// ==========================================================================
+// FINITIONS6 · F6-2 — D3 SUR « Modifier » (tournee 8, defaut 2).
+//
+// Match aux reponses coupees : le serveur le dit (`rsvpEnabled: false`,
+// composition ET convocation, corps captures en T8). A la PREMIERE compo, le
+// plateau le sait (`openCompositionEditor` transmet `teamComposition`) et
+// « Demander une reponse » part eteint. En MODIFIANT une compo deja publiee,
+// `publishedBoardTarget` ne portait pas `teamComposition` : le plateau recevait
+// `null`, et `isRsvpEnabled(null) === true` rallumait l'interrupteur.
+// Les deux portes partent de cet objet : « Modifier » de l'onglet, et le plein
+// ecran (dont le propre « Modifier » retransmet `...params`).
+// ==========================================================================
+describe('FINITIONS6 · F6-2 — un match aux reponses coupees le reste en modifiant la compo', () => {
+  const REPONSES_COUPEES = { draft: null, published: PACK, rsvpEnabled: false };
+
+  test('🚨 « Modifier » transmet la charge de composition : reponses coupees', () => {
+    mockTeamCompositionQuery.data = REPONSES_COUPEES;
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'Modifier');
+
+    expect(derniereRoute()).toBe('MatchCallUpSelection');
+    expect(derniersParametres()?.teamComposition?.rsvpEnabled).toBe(false);
+  });
+
+  test('🚨 le plein ecran aussi (son « Modifier » retransmet ses parametres)', () => {
+    mockTeamCompositionQuery.data = REPONSES_COUPEES;
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchCompositionBoard');
+    expect(derniersParametres()?.teamComposition?.rsvpEnabled).toBe(false);
+  });
+
+  test('🔒 un match aux reponses ouvertes reste ouvert', () => {
+    mockTeamCompositionQuery.data = { ...REPONSES_COUPEES, rsvpEnabled: true };
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'Modifier');
+
+    expect(derniersParametres()?.teamComposition?.rsvpEnabled).toBe(true);
   });
 });

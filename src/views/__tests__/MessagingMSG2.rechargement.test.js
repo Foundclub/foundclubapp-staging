@@ -140,6 +140,8 @@ jest.mock(
   () => (/** @type {any} */ props) => props.children || null,
 );
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => () => null);
+// COLL-C4A (02/10) — les canaux de la Ville lisent le serveur : hors du sujet de ce témoin.
+jest.mock('@/views/collectivite/components/CanauxDeLaVille', () => () => null);
 jest.mock('@/components/molecules/header/LeagueHeaderSwitch', () => () => null);
 jest.mock('@/components/molecules/notificationBadge/NotificationBadge', () => () => null);
 jest.mock(

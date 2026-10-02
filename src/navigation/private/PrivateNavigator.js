@@ -1277,6 +1277,38 @@ function PrivateNavigator() {
             headerTitle: t('collectiviteClubs.join.header', 'Rejoindre la Ville'),
           }}
         />
+        {/* COLL-C4A (02/10/2026) — les actualites de la Ville, cote mairie (design HY521H1,
+            page 3) : la liste (« Actualites de la Ville ») et le formulaire publier / modifier.
+            L accueil de la Ville (bloc et action « Publier une actualite ») y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteActualites').default}
+          name={RouteNames.CollectiviteActualites}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteActualites.header', 'Actualités de la Ville'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteActualiteForm').default}
+          name={RouteNames.CollectiviteActualiteForm}
+          options={({ route }) => ({
+            ...commonOptions,
+            headerTitle: /** @type {any} */ (route?.params)?.actualiteId
+              ? t('collectiviteActualites.form.headerModifier', 'Modifier l’actualité')
+              : t('collectiviteActualites.form.header', 'Nouvelle actualité'),
+          })}
+        />
+        {/* COLL-C4A planche 2 — le canal de la Ville, cote membre (lecture seule) : la
+            notification d une actualite (ctaRoute), le bloc « De la Ville » de la fiche du club,
+            le bandeau de l accueil et la messagerie y menent. Monte a la RACINE. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteActualitesCanal').default}
+          name={RouteNames.CollectiviteActualitesCanal}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteActualites.canal.header', 'Actualités de la Ville'),
+          }}
+        />
         {/* COLL-C2B (02/10/2026) — une installation de la Ville et son onglet « Creneaux »
             (design HY521H1, page 4) : toute la carte de « Installations de la Ville » y mene. */}
         <Stack.Screen

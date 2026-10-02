@@ -185,95 +185,110 @@ const normalizeStoredFcmToken = (rawValue) => {
   return trimmed;
 };
 
-const storedAuth = sanitizePersistedSession(getStoredJson('auth', undefined));
-const storedAuthSessionsRaw = getStoredJson('authSessions', []);
-const storedAuthSessions = Array.isArray(storedAuthSessionsRaw)
-  ? storedAuthSessionsRaw.map(sanitizePersistedSession).filter(Boolean)
-  : [];
-const storedActiveSessionDocumentId = normalizeDocumentId(
-  storage.contains('activeSessionDocumentId') ? storage.getString('activeSessionDocumentId') : undefined,
-);
-const rawStoredFcmToken = storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined;
-const storedFcmToken = normalizeStoredFcmToken(rawStoredFcmToken);
-if (storage.contains('fcmToken') && !storedFcmToken) {
-  storage.delete('fcmToken');
-}
-
-const initialAuthSessions = (() => {
-  const sessions = [];
-  const seenDocumentIds = new Set();
-
-  const pushSession = (session) => {
-    const documentId = getSessionDocumentId(session);
-    if (!documentId || seenDocumentIds.has(documentId)) {
-      return;
-    }
-    seenDocumentIds.add(documentId);
-    sessions.push(session);
-  };
-
-  storedAuthSessions.forEach(pushSession);
-  pushSession(storedAuth);
-
-  return sessions;
-})();
-
-const resolvedInitialActiveSessionDocumentId = (() => {
-  if (storedActiveSessionDocumentId) {
-    return storedActiveSessionDocumentId;
-  }
-
-  const storedAuthDocumentId = getSessionDocumentId(storedAuth);
-  if (storedAuthDocumentId) {
-    return storedAuthDocumentId;
-  }
-
-  return getSessionDocumentId(initialAuthSessions[0]);
-})();
-
-const orderedInitialAuthSessions = orderSessionsByActive(
-  initialAuthSessions,
-  resolvedInitialActiveSessionDocumentId,
-);
-const initialAuth = orderedInitialAuthSessions[0];
-const initialActiveSessionDocumentId = getSessionDocumentId(initialAuth);
-
-markBootStep('session_hydrated', {
-  hasStoredSession: Boolean(initialAuth?.token),
-  sessionCount: orderedInitialAuthSessions.length,
-});
-
 /**
- * Initial state for the global application context.
- * @type {Store}
+ * L'ETAT INITIAL DU CONTEXTE, LU DANS LE STOCKAGE A CHAQUE MONTAGE DU FOURNISSEUR.
+ *
+ * FINITIONS6 · F6-1 (tournee 8, constate 3 fois) — « Changer de compte » etait perdu apres
+ * une sortie par « retour » : la reouverture revenait au compte actif au DEMARRAGE de l'app.
+ * Sur Android, « retour » a la racine detruit l'ecran mais garde le moteur JS : a la
+ * reouverture, l'arbre React se REMONTE sans que les modules soient relus. Cet etat etait
+ * une constante calculee une fois, au chargement du module : le remontage repartait de
+ * cette photo du demarrage, alors que le stockage avait bien enregistre le compte choisi.
+ * Lu au montage (initialiseur paresseux de `useReducer`), il dit ce que dit le stockage.
+ * Temoin : src/store/__tests__/appContext.FINITIONS6.retourAChaud.test.js.
+ * @returns {Store} L'etat initial du contexte global.
  */
-const initStore = {
-  activeSessionDocumentId: initialActiveSessionDocumentId,
-  auth: initialAuth,
-  authSessions: orderedInitialAuthSessions,
-  clubFilters: undefined,
-  eventFilters: undefined,
-  fcmToken: storedFcmToken,
-  isAddingAccount: false,
-  mercatoFilters: undefined,
-  onboardingViews: undefined,
-  pendingNotification: null,
-  recruitmentAdFilters: undefined,
-  reservationFilters: undefined,
-  returnSessionDocumentId: undefined,
-  searchMapModes: {
-    clubs: false,
-    events: false,
-    reservations: false,
-  },
-  searchMapSessions: {
-    clubs: {},
-    events: {},
-    reservations: {},
-  },
-  squadFilters: undefined,
-  teamFilters: undefined,
-  theme: storage.contains('theme') ? storage.getString('theme') : undefined,
+const readInitialStore = () => {
+  const storedAuth = sanitizePersistedSession(getStoredJson('auth', undefined));
+  const storedAuthSessionsRaw = getStoredJson('authSessions', []);
+  const storedAuthSessions = Array.isArray(storedAuthSessionsRaw)
+    ? storedAuthSessionsRaw.map(sanitizePersistedSession).filter(Boolean)
+    : [];
+  const storedActiveSessionDocumentId = normalizeDocumentId(
+    storage.contains('activeSessionDocumentId')
+      ? storage.getString('activeSessionDocumentId')
+      : undefined,
+  );
+  const rawStoredFcmToken = storage.contains('fcmToken')
+    ? storage.getString('fcmToken')
+    : undefined;
+  const storedFcmToken = normalizeStoredFcmToken(rawStoredFcmToken);
+  if (storage.contains('fcmToken') && !storedFcmToken) {
+    storage.delete('fcmToken');
+  }
+
+  const initialAuthSessions = (() => {
+    const sessions = [];
+    const seenDocumentIds = new Set();
+
+    const pushSession = (session) => {
+      const documentId = getSessionDocumentId(session);
+      if (!documentId || seenDocumentIds.has(documentId)) {
+        return;
+      }
+      seenDocumentIds.add(documentId);
+      sessions.push(session);
+    };
+
+    storedAuthSessions.forEach(pushSession);
+    pushSession(storedAuth);
+
+    return sessions;
+  })();
+
+  const resolvedInitialActiveSessionDocumentId = (() => {
+    if (storedActiveSessionDocumentId) {
+      return storedActiveSessionDocumentId;
+    }
+
+    const storedAuthDocumentId = getSessionDocumentId(storedAuth);
+    if (storedAuthDocumentId) {
+      return storedAuthDocumentId;
+    }
+
+    return getSessionDocumentId(initialAuthSessions[0]);
+  })();
+
+  const orderedInitialAuthSessions = orderSessionsByActive(
+    initialAuthSessions,
+    resolvedInitialActiveSessionDocumentId,
+  );
+  const initialAuth = orderedInitialAuthSessions[0];
+  const initialActiveSessionDocumentId = getSessionDocumentId(initialAuth);
+
+  markBootStep('session_hydrated', {
+    hasStoredSession: Boolean(initialAuth?.token),
+    sessionCount: orderedInitialAuthSessions.length,
+  });
+
+  return {
+    activeSessionDocumentId: initialActiveSessionDocumentId,
+    auth: initialAuth,
+    authSessions: orderedInitialAuthSessions,
+    clubFilters: undefined,
+    eventFilters: undefined,
+    fcmToken: storedFcmToken,
+    isAddingAccount: false,
+    mercatoFilters: undefined,
+    onboardingViews: undefined,
+    pendingNotification: null,
+    recruitmentAdFilters: undefined,
+    reservationFilters: undefined,
+    returnSessionDocumentId: undefined,
+    searchMapModes: {
+      clubs: false,
+      events: false,
+      reservations: false,
+    },
+    searchMapSessions: {
+      clubs: {},
+      events: {},
+      reservations: {},
+    },
+    squadFilters: undefined,
+    teamFilters: undefined,
+    theme: storage.contains('theme') ? storage.getString('theme') : undefined,
+  };
 };
 
 /**
@@ -298,7 +313,7 @@ const setPersistantState = (key, newValue) => {
  * @returns {import('react').ReactElement} The rendered component.
  */
 function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(appReducer, initStore);
+  const [state, dispatch] = useReducer(appReducer, undefined, readInitialStore);
   syncAuthRuntimeState(state);
 
   useEffect(() => {

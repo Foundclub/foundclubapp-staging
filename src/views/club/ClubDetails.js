@@ -47,6 +47,8 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+// COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
+import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -1893,11 +1895,14 @@ function ClubDetails({ navigation, route }) {
   // haut des boutons au bas de l'ecran — la recette du pied de l'annuaire du
   // site ci-dessous (`primary900` a 0,92). Les boutons ne bougent pas : le
   // retrait bas devient une marge interieure.
+  // FINITIONS6 · F6-5 (tournee 8) — a 0,92 le fond restait TRANSLUCIDE : les cartes
+  // d'equipe et « Sports / Football » se devinaient a travers les deux « Demande en
+  // attente » grises. Meme couleur, OPAQUE.
   let styleDuPiedDesActions = [
     Alignments.absolute,
     Spaces.gap[12],
     {
-      backgroundColor: withAlpha(Colors.primary900, 0.92),
+      backgroundColor: Colors.primary900,
       bottom: 0,
       elevation: 24,
       left: 0,
@@ -2962,6 +2967,19 @@ function ClubDetails({ navigation, route }) {
             />
           ) : (
             <>
+              {/* COLL-C4A (02/10) — « De la Ville de … » : la dernière actualité de la Ville
+                  d'un club rattaché, pour SES membres, et l'interrupteur D68. Rien pour un club
+                  rattaché à personne (le bloc ne s'affiche pas). */}
+              {isMember && clubId ? (
+                <BlocDeLaVille
+                  clubId={String(clubId)}
+                  encadrant={isClubStaffRole}
+                  onOuvrirCanal={(collectiviteId) => navigation.navigate(
+                    RouteNames.CollectiviteActualitesCanal,
+                    { collectiviteId },
+                  )}
+                />
+              ) : null}
               {/* Facilities */}
               {/* D50 : cette section reste la page PUBLIQUE du club, pour un
                   visiteur. Le dirigeant l'atteint par la rangee du hub, qui
