@@ -130,6 +130,8 @@ function TeamDetails({ navigation, route }) {
     // D33 - l'etape du tunnel d'ou cette fiche a ete ouverte. Absente pour tous
     // les autres appelants : `resolveAffiliationOriginRoute` retombe alors sur
     // l'etape club, le comportement d'avant D33.
+    // ST-VUES (planche 15) — l ancienne adresse de TeamStats arrive avec `initialTab: 'stats'`.
+    initialTab,
     onboardingOriginRoute,
     openExternalSourceSetup = false,
     teamId,
@@ -2084,6 +2086,15 @@ function TeamDetails({ navigation, route }) {
   useEffect(() => {
     setStatsMode(canLoadTeamStats ? 'attendance' : 'performance');
   }, [canLoadTeamStats, team?.documentId]);
+
+  // ST-VUES (planche 15) — « /teams/:teamId/stats » (l ecran « Statistiques » abandonne
+  // par le design) arrive ici : l onglet Stats, sur « Vie d'équipe », des qu il existe.
+  useEffect(() => {
+    if (initialTab !== 'stats' || !showStatsTab) return;
+    setActiveTab('stats');
+    setStatsMode('attendance');
+    navigation.setParams({ ...route?.params, initialTab: undefined });
+  }, [initialTab, navigation, route?.params, showStatsTab]);
 
   useEffect(() => {
     setSelectedMonthKey(null);

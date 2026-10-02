@@ -65,7 +65,10 @@ describe('Le vocabulaire des statistiques ne s abrege plus (D59 ④)', () => {
   //  -> { label: 'Passes décisives', value: assists }
   // Quand elle sera faite, CE TEST TOMBERA et demandera de vider la liste.
   // C'est voulu : une dette qui se solde en silence est une dette qu'on oublie.
-  it('la seule abreviation restante est celle qu une autre session tenait', () => {
-    expect(offenders).toEqual(['views/profile/UserDetails.js']);
+  // ✅ SOLDEE le 02/10 par ST-VUES (planche 17) : les tuiles du profil d autrui, dont
+  // « Passes D », sont retirees avec leur carte. La liste est vide, comme ce temoin
+  // le demandait : toute abreviation qui reviendrait le fera tomber.
+  it('plus aucune abreviation « Passes D » dans le code', () => {
+    expect(offenders).toEqual([]);
   });
 });
