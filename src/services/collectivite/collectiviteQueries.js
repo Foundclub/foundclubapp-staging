@@ -14,6 +14,7 @@ import {
   decideManagerRequest,
   detachAdminCollectiviteClub,
   getAdminCollectivite,
+  getAdminCollectiviteInvitations,
   getAdminCollectivites,
   getAdminManagerRequests,
   getCollectiviteClub,
@@ -27,6 +28,7 @@ import {
   getMyCollectivites,
   getMyManagerRequests,
   inviteClubByFoundClub,
+  linkAdminCollectiviteInvitationClub,
   previewAdminCollectiviteActive,
   remindCollectiviteInvitation,
   removeAdminCollectiviteGestionnaire,
@@ -614,5 +616,38 @@ export const useAdminManagerRequests = (status, options = {}) => useQuery({
  */
 export const useDecideManagerRequest = (options) => useGesteSuperAdmin(
   decideManagerRequest,
+  options,
+);
+
+// ─── COLL-CONSOLE (02/10/2026) : LES DEMANDES DE RATTACHEMENT ET « PAR FOUNDCLUB » ───────
+
+/**
+ * La clef des demandes de la console : sous le prefixe des collectivites, pour que RATTACHER
+ * un club (geste de la fiche) relise aussi l etat des demandes qui le visaient.
+ */
+export const ADMIN_COLLECTIVITE_INVITATIONS_QUERY_KEY = [
+  ...ADMIN_COLLECTIVITES_QUERY_KEY, 'invitations',
+];
+
+/**
+ * Les demandes de rattachement et les invitations « Par FoundClub » (console super-admin).
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useAdminCollectiviteInvitations = (options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getAdminCollectiviteInvitations()),
+  queryKey: ADMIN_COLLECTIVITE_INVITATIONS_QUERY_KEY,
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Relier (ou delier) une demande « Par FoundClub » a son club ; variables
+ * `{ invitationId, clubId }`. Relit les demandes, la liste et les fiches.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useLinkAdminCollectiviteInvitationClub = (options) => useGesteSuperAdmin(
+  linkAdminCollectiviteInvitationClub,
   options,
 );

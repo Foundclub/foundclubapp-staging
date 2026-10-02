@@ -9,6 +9,7 @@ import AdminClubList from '@/views/admin/AdminClubList';
 import AdminClubOnboardingList from '@/views/admin/AdminClubOnboardingList';
 import AdminCollectiviteDetail from '@/views/admin/AdminCollectiviteDetail';
 import AdminCollectiviteForm from '@/views/admin/AdminCollectiviteForm';
+import AdminCollectiviteInvitations from '@/views/admin/AdminCollectiviteInvitations';
 import AdminCollectiviteList from '@/views/admin/AdminCollectiviteList';
 import AdminDashboard from '@/views/admin/AdminDashboard';
 import AdminEvents from '@/views/admin/AdminEvents';
@@ -304,6 +305,15 @@ function AdminStack() {
           options={{
             ...commonOptions,
             headerTitle: t('collectiviteAccueil.console.entete', 'Gestionnaires'),
+          }}
+        />
+        {/* COLL-CONSOLE (02/10) — les demandes de rattachement et « Par FoundClub ». */}
+        <Stack.Screen
+          component={AdminCollectiviteInvitations}
+          name={RouteNames.AdminCollectiviteInvitations}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteConsole.demandes.entete', 'Rattachements'),
           }}
         />
         <Stack.Screen

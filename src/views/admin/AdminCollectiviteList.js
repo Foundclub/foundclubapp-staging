@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -7,6 +8,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  filterAdminCollectivites,
+  summarizeAdminCollectivites,
+} from '@/domains/collectivite/collectiviteConsole';
 import {
   collectiviteTypeLabel,
   toAdminCollectiviteRow,
@@ -18,7 +23,7 @@ import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
-import ManagerRequestsLink from '@/views/admin/components/ManagerRequestsLink';
+import CollectivitesATraiter from '@/views/admin/components/CollectivitesATraiter';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -44,6 +49,9 @@ function AdminCollectiviteList() {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const collectivites = useAdminCollectivites();
+  // COLL-CONSOLE (02/10) — « Mairies à activer » (bloc « À traiter ») filtre la liste sur les
+  // inactives.
+  const [filtre, setFiltre] = useState(/** @type {'all' | 'inactive'} */ ('all'));
 
   if (collectivites.isLoading) {
     return (
@@ -65,9 +73,10 @@ function AdminCollectiviteList() {
     );
   }
 
-  const lignes = (Array.isArray(collectivites.data?.data) ? collectivites.data.data : [])
+  const toutes = (Array.isArray(collectivites.data?.data) ? collectivites.data.data : [])
     .map(toAdminCollectiviteRow);
-  const total = Number(collectivites.data?.meta?.pagination?.total) || lignes.length;
+  const total = Number(collectivites.data?.meta?.pagination?.total) || toutes.length;
+  const lignes = filterAdminCollectivites(toutes, { filter: filtre });
   const carteStyle = {
     backgroundColor: `${Colors.primary700}73`,
     borderColor: `${Colors.primary500}80`,
@@ -142,8 +151,20 @@ function AdminCollectiviteList() {
             )}
           </Text>
         </View>
-        {/* COLL-ACCUEIL (01/10) — l entree de la file « Demandes de gestionnaire ». */}
-        <ManagerRequestsLink />
+        {/* COLL-CONSOLE (02/10) — « À traiter » : mairies à activer, demandes de gestionnaire
+            (la porte posée par COLL-ACCUEIL, telle quelle), rattachements, « Par FoundClub ». */}
+        <CollectivitesATraiter
+          onShowToActivate={() => setFiltre('inactive')}
+          toActivate={summarizeAdminCollectivites(toutes).toActivate}
+        />
+        {filtre === 'inactive' ? (
+          <Button
+            onPress={() => setFiltre('all')}
+            size="sm"
+            title={t('collectiviteConsole.liste.voirToutes', 'Voir toutes les collectivités')}
+            variant="Ghost"
+          />
+        ) : null}
         <Button
           onPress={() => navigation.navigate(RouteNames.AdminCollectiviteForm)}
           size="sm"
@@ -155,7 +176,7 @@ function AdminCollectiviteList() {
             {t('adminCollectivites.list.empty', 'Aucune collectivité pour l’instant.')}
           </Text>
         ) : lignes.map(renderCollectivite)}
-        {total > lignes.length ? (
+        {filtre === 'all' && total > lignes.length ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t('adminCollectivites.list.truncated', '{{shown}} affichées sur {{total}}.', {
               shown: lignes.length,

@@ -389,4 +389,7 @@ export const RouteNames = /** @type {const} */ ({
   CollectiviteSignupStatus: 'CollectiviteSignupStatus',
   // La file « Demandes de gestionnaire » de la console super-admin (decision « console oui »).
   AdminManagerRequests: 'AdminManagerRequests',
+  // COLL-CONSOLE (02/10/2026) — les demandes de rattachement et les invitations « Par
+  // FoundClub » de la console super-admin (lot COLL-CLUBS cote serveur).
+  AdminCollectiviteInvitations: 'AdminCollectiviteInvitations',
 });

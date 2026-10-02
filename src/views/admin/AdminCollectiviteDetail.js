@@ -6,7 +6,6 @@ import {
   RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -23,12 +22,12 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
+import CollectiviteTargetSearch from '@/views/admin/components/CollectiviteTargetSearch';
 import ManagerRequestsLink from '@/views/admin/components/ManagerRequestsLink';
 
 import {
   useAddAdminCollectiviteGestionnaire,
   useAdminCollectivite,
-  useAdminCollectiviteSearch,
   useAttachAdminCollectiviteClub,
   useDetachAdminCollectiviteClub,
   useRemoveAdminCollectiviteGestionnaire,
@@ -37,100 +36,6 @@ import {
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /** @typedef {{ ok: boolean, texte: string } | null} Retour */
-
-/**
- * Chercher un club a rattacher, ou un compte a nommer gestionnaire (2 lettres au moins).
- * Ce qui est deja pris se lit « deja » et ne se choisit pas.
- * @param {{ deja: Set<string>, dejaTexte: string, enCours: boolean, kind: 'club' | 'user',
- *   libelleAction: string, onChoisir: (cible: any) => void, placeholder: string,
- *   testID: string }} props - La recherche.
- * @returns {import('react').ReactElement} Le champ et ses resultats.
- */
-function Recherche({
-  deja, dejaTexte, enCours, kind, libelleAction, onChoisir, placeholder, testID,
-}) {
-  const { t } = useTranslation();
-  const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
-  } = useTheme();
-  const [texte, setTexte] = useState('');
-  const resultats = useAdminCollectiviteSearch(kind, texte);
-  const lignes = Array.isArray(resultats.data) ? resultats.data : [];
-  const champStyle = { borderColor: `${Colors.primary500}80`, color: Colors.neutral00 };
-
-  let contenu = null;
-  if (texte.trim().length >= 2) {
-    if (resultats.isLoading) {
-      contenu = (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('adminCollectivites.detail.searching', 'Recherche…')}
-        </Text>
-      );
-    } else if (resultats.error) {
-      contenu = (
-        <Text style={[Fonts.p3Bold, Fonts.error500]}>
-          {getErrorMessage(/** @type {any} */ (resultats.error))}
-        </Text>
-      );
-    } else if (lignes.length === 0) {
-      contenu = (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('adminCollectivites.detail.noResult', 'Aucun résultat.')}
-        </Text>
-      );
-    } else {
-      contenu = lignes.map((/** @type {any} */ cible) => {
-        const pris = deja.has(String(cible?.documentId));
-        return (
-          <View
-            key={cible?.documentId}
-            style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
-            testID={`${testID}-resultat-${cible?.documentId}`}
-          >
-            <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{cible?.label}</Text>
-              {cible?.subtitle ? (
-                <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{cible.subtitle}</Text>
-              ) : null}
-            </View>
-            <Button
-              disabled={pris || enCours}
-              onPress={() => {
-                onChoisir(cible);
-                setTexte('');
-              }}
-              size="sm"
-              title={pris ? dejaTexte : libelleAction}
-              variant="Secondary"
-            />
-          </View>
-        );
-      });
-    }
-  }
-
-  return (
-    <View style={{ gap: 8 }}>
-      <TextInput
-        autoCapitalize="none"
-        autoCorrect={false}
-        onChangeText={setTexte}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.neutral400}
-        style={[
-          ApplicationStyle.borderRadius16,
-          ApplicationStyle.borderWidth1,
-          Fonts.p2,
-          Spaces.padding[12],
-          champStyle,
-        ]}
-        testID={testID}
-        value={texte}
-      />
-      {contenu}
-    </View>
-  );
-}
 
 /**
  * 🏛️ CONSOLE › COLLECTIVITES › UNE COLLECTIVITE (D61, 2026-09-29).
@@ -365,7 +270,7 @@ function AdminCollectiviteDetail() {
               />
             </View>
           ))}
-          <Recherche
+          <CollectiviteTargetSearch
             deja={new Set(detail.clubs.map((/** @type {any} */ club) => club.documentId))}
             dejaTexte={t('adminCollectivites.detail.alreadyAttached', 'Déjà rattaché')}
             enCours={rattacher.isPending}
@@ -418,7 +323,7 @@ function AdminCollectiviteDetail() {
               />
             </View>
           ))}
-          <Recherche
+          <CollectiviteTargetSearch
             deja={new Set(detail.gestionnaires.map((/** @type {any} */ c) => c.documentId))}
             dejaTexte={t('adminCollectivites.detail.alreadyManager', 'Déjà gestionnaire')}
             enCours={nommer.isPending}
