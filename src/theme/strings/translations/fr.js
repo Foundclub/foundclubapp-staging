@@ -21759,6 +21759,11 @@ export default {
     unableToSaveYourArrival: "Impossible d'enregistrer ton arrivée.",
     unableToSaveYourDelay: "Impossible d'enregistrer ton retard.",
     unableToSaveYourParticipation: "Impossible d'enregistrer ta participation pour le moment.",
+    // COLL-FIX2 (03/10) — D33 : la Ville prévenue d'une annulation, dit au club (planche 46).
+    villePrevenue: {
+      corps: 'La {{ville}} est prévenue : la place se libère.',
+      titre: 'C’est annulé',
+    },
   },
   useEventShowcase: {
     variants: {

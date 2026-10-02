@@ -20438,6 +20438,11 @@ export default {
     unableToSaveYourArrival: 'Unable to save your arrival.',
     unableToSaveYourDelay: 'Unable to save your delay.',
     unableToSaveYourParticipation: 'Unable to save your participation for now.',
+    // COLL-FIX2 (03/10) — D33: the town told about a cancellation, said to the club (board 46).
+    villePrevenue: {
+      corps: '{{ville}} has been told: the slot is free again.',
+      titre: 'Cancelled',
+    },
   },
   useEventShowcase: {
     variants: {
