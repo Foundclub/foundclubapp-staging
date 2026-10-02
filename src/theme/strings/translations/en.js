@@ -10653,6 +10653,9 @@ export default {
         startersCount_one: '{{count}} starter',
         startersCount_other: '{{count}} starters',
       },
+      // FINITIONS6 (02/10) — a called-up player who left the team: the server drops them.
+      leftTeam_one: '{{names}} is no longer in the team: they will be removed from the line-up.',
+      leftTeam_other: '{{names}} are no longer in the team: they will be removed from the line-up.',
       meta: {
         number: '#{{number}}',
         numberAndPosition: '#{{number}} · {{position}}',

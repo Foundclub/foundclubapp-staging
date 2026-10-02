@@ -11333,6 +11333,9 @@ export default {
         startersCount_one: '{{count}} titulaire',
         startersCount_other: '{{count}} titulaires',
       },
+      // FINITIONS6 (02/10) — un convoque qui n'est plus dans l'equipe : le serveur l'ecarte.
+      leftTeam_one: '{{names}} n’est plus dans l’équipe : il sera retiré de la compo.',
+      leftTeam_other: '{{names}} ne sont plus dans l’équipe : ils seront retirés de la compo.',
       meta: {
         number: 'N°{{number}}',
         numberAndPosition: 'N°{{number}} · {{position}}',

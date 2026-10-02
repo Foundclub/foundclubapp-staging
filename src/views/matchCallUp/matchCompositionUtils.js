@@ -329,6 +329,16 @@ export const buildStartFromOptions = ({
   const lastMatchPlacements = bootstrapSource === START_FROM_LAST_MATCH
     ? keepPlacementsOfCalledUpPlayers(readPlacementsFromPack(bootstrap?.composition), players)
     : [];
+  // FINITIONS6 · F6-4 — D1, « D1 A » (Adel, 01/10) : LE BANC SEUL. Des convoques
+  // qui etaient tous AU BANC du dernier match n'y ont aucun placement : la rangee
+  // etait grisee, « Aucune compo deja publiee a reprendre » — faux, elle les nomme.
+  // Le banc se reprend tout seul (un convoque non place part du banc du plateau) :
+  // la rangee est disponible des que le dernier match NOMME un convoque.
+  const lastMatchCalledUpIds = new Set(bootstrapSource === START_FROM_LAST_MATCH
+    ? readCalledUpIdsFromPack(bootstrap?.composition)
+    : []);
+  const lastMatchAvailable = lastMatchPlacements.length > 0
+    || calledUpPlayers.some((player) => lastMatchCalledUpIds.has(getCompositionPlayerId(player)));
 
   // Le pack ecrit « Compo type · 4-3-3 » et « La compo de samedi dernier » : ces
   // deux precisions sont des DONNEES, pas du decor. Le schema vient du pack
@@ -360,11 +370,11 @@ export const buildStartFromOptions = ({
       unavailableReason: defaultPlacements.length > 0 ? null : 'noDefaultComposition',
     },
     {
-      available: lastMatchPlacements.length > 0,
+      available: lastMatchAvailable,
       detail: lastMatchDate,
       key: START_FROM_LAST_MATCH,
       placements: lastMatchPlacements,
-      unavailableReason: lastMatchPlacements.length > 0 ? null : 'noLastMatch',
+      unavailableReason: lastMatchAvailable ? null : 'noLastMatch',
     },
     ...buildFormationOptions({
       autoPlaceByPosition, category, players: calledUpPlayers, sport,
