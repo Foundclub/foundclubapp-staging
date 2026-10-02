@@ -3,6 +3,10 @@ import renderer, { act } from 'react-test-renderer';
 
 import TrainingReviewPromptHost from '../TrainingReviewPromptHost';
 
+// Le premier rendu charge l ecran entier : sous charge (les portes admin en parallele), il
+// depasse les 5 s par defaut. Meme reglage que 93 temoins du depot.
+jest.setTimeout(30000);
+
 // ST-RETOURS (02/10) — PLANCHE 20 DU DESIGN VALIDE : « COMMENT S EST PASSE TON ENTRAINEMENT ? »
 //
 // Ce composant n avait AUCUN temoin (E6). Ce fichier fige d abord ce qui marchait — la note

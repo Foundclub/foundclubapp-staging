@@ -73,7 +73,9 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
+import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
+  peutRelireSaNote,
   peutVoirLesAvisDEntrainement,
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ConvocationFieldPreview from '@/components/tactical/ConvocationFieldPreview';
@@ -8762,6 +8764,18 @@ function EventDetails({ navigation, route }) {
               {showOverviewTab && peutVoirLesAvisDEntrainementIci && avisDEntrainement ? (
                 <TrainingReviewsCard donnees={avisDEntrainement} />
               ) : null}
+              {/* ST-RETOURS (planche 21, etat 4) — le joueur relit SA note, jamais les autres. */}
+              {showOverviewTab && peutRelireSaNote({
+                canEdit,
+                isFinished: isMatchFinished,
+                isTeamMember,
+                isTraining: trainingOpenConfig.isTraining,
+              }) ? (
+                <MyTrainingReviewBlock
+                  eventId={eventId}
+                  trainerFirstname={(event?.team?.trainers || [])[0]?.firstname || null}
+                />
+                ) : null}
 
               {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>

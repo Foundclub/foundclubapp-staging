@@ -5,6 +5,10 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import UserDetails from '../UserDetails';
 
+// Le premier rendu charge l ecran entier : sous charge (les portes admin en parallele), il
+// depasse les 5 s par defaut. Meme reglage que 93 temoins du depot.
+jest.setTimeout(30000);
+
 // ST-RETOURS (02/10) — PLANCHE 19 DU DESIGN VALIDE : « RETOURS DU COACH ».
 //
 // Ce que la planche demande, et que ce fichier tient : chaque retour dit QUI l a ecrit
