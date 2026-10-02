@@ -248,60 +248,66 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     expect(textes.join(' ')).not.toMatch(/Domicile|Exterieur/);
   });
 
-  test('N3 · temoin 2 — l\'encart « Club — Adversaire » et le « Score en attente » (D5)', () => {
+  // 🆚 ST-MATCH (02/10) — ADAPTE : l'encart « Club — Adversaire » devient le FACE-À-FACE du
+  // design valide (pack 05C) : deux camps, le score au centre. Le temoin garde son sujet (D5 :
+  // l'encart existe avant le match, l'adversaire y est nomme) sur la nouvelle mise en page.
+  test('N3 · temoin 2 — le face-à-face : le club, l\'adversaire, « Score en attente » au centre (D5)', () => {
     const arbre = renderHeader(matchEvent(), {
-      badgeLabel: 'Score du match',
+      centerLabel: 'Score en attente',
       opponentName: ADVERSAIRE,
-      value: 'Score en attente',
+      value: '– –',
     });
 
-    const encart = nodeByTestId(arbre, ENCART);
-    expect(encart).not.toBeNull();
-
-    const texte = texteDe(encart);
-    expect(texte).toContain(`${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`);
-    expect(texte).toContain('Score en attente');
+    expect(nodeByTestId(arbre, ENCART)).not.toBeNull();
+    expect(texteDe(nodeByTestId(arbre, 'event-header-camp-club'))).toBe(CLUB_NAME);
+    expect(texteDe(nodeByTestId(arbre, 'event-header-camp-adversaire'))).toBe(ADVERSAIRE);
+    expect(texteDe(nodeByTestId(arbre, 'event-header-score'))).toBe('– – Score en attente');
     // ⛔ Aucun mot entre les deux noms : ni « vs », ni « contre ».
-    expect(texte).not.toMatch(/\bvs\b/i);
+    expect(texteDe(nodeByTestId(arbre, ENCART))).not.toMatch(/\bvs\b/i);
+    // Le tiret cadratin « Club — Adversaire » n'a plus lieu d'etre : les camps le disent.
+    expect(texteDe(nodeByTestId(arbre, ENCART))).not.toContain(TIRET_CADRATIN);
   });
 
-  test('N3 · temoin 3 — le verdict colore le badge ET la bordure de l\'encart (D6/D7)', () => {
-    const avecVerdict = (/** @type {any} */ verdict) => renderHeader(matchEvent(), {
-      badgeLabel: 'Score du match',
-      opponentName: ADVERSAIRE,
-      value: '3 - 1',
-      verdict,
+  // 🆚 ST-MATCH (02/10) — ADAPTE : D6/D7 sont REMPLACES par le design valide. Le verdict ne
+  // peint plus le badge ni la bordure de l'encart : il est DIT par la pastille de type
+  // (« MATCH · TERMINÉ · VICTOIRE », temoignee dans EventDetailsN3CarteMatch). L'encart montre
+  // le score, une seule fois, au centre.
+  test('N3 · temoin 3 — le verdict ne peint plus l\'encart : le score est au centre (ST-MATCH)', () => {
+    ['win', 'loss', 'draw'].forEach((verdict) => {
+      const arbre = renderHeader(matchEvent(), {
+        centerLabel: 'Score saisi',
+        isScoreShown: true,
+        opponentName: ADVERSAIRE,
+        value: '3 - 1',
+        verdict,
+      });
+      const encart = nodeByTestId(arbre, ENCART);
+      expect(texteDe(nodeByTestId(arbre, 'event-header-score'))).toBe('3 - 1 Score saisi');
+      expect(texteDe(encart)).not.toMatch(/Victoire|Défaite|Nul|Score du match/);
+      expect(styleDe(encart).borderColor).toBeUndefined();
     });
-
-    const victoire = avecVerdict('win');
-    expect(texteDe(nodeByTestId(victoire, ENCART))).toContain('Score du match · Victoire');
-    expect(styleDe(nodeByTestId(victoire, ENCART)).borderColor)
-      .toBe(jest.requireActual('@/theme/colors').withAlpha(COULEURS.success500, 0.4));
-
-    const defaite = avecVerdict('loss');
-    expect(texteDe(nodeByTestId(defaite, ENCART))).toContain('Score du match · Défaite');
-    expect(styleDe(nodeByTestId(defaite, ENCART)).borderColor)
-      .toBe(jest.requireActual('@/theme/colors').withAlpha(COULEURS.error300, 0.4));
-
-    const nul = avecVerdict('draw');
-    expect(texteDe(nodeByTestId(nul, ENCART))).toContain('Score du match · Nul');
-    expect(styleDe(nodeByTestId(nul, ENCART)).borderColor)
-      .toBe(jest.requireActual('@/theme/colors').withAlpha(COULEURS.primary100, 0.4));
   });
 
-  test('N3 · temoin 4 — sans verdict, l\'encart garde la couleur du LIEU', () => {
-    // La non-regression du cadre A : un match a venir n'est ni gagne ni perdu,
-    // son encart doit rester exactement ce qu'il etait avant ce lot.
-    const arbre = renderHeader(matchEvent(), {
-      badgeLabel: 'Score du match',
+  // 🆚 ST-MATCH (02/10) — ADAPTE : l'encart n'a plus de bordure ; la couleur du LIEU reste sur
+  // le lisere (temoin 5) et sur la pastille du lieu, que le face-à-face porte sous les camps.
+  test('N3 · temoin 4 — la couleur du LIEU reste sur la pastille du lieu, dans l\'encart', () => {
+    const facility = { documentId: 'facility-nord', name: 'Stade Nord' };
+    const couleurDuLieu = jest
+      .requireActual('@/utils/facilityPlanningColor')
+      .resolveFacilityPlanningColor(facility);
+    const arbre = renderHeader(matchEvent({ facility }), {
+      centerLabel: 'Score en attente',
       opponentName: ADVERSAIRE,
-      value: 'Score en attente',
+      value: '– –',
       verdict: null,
     });
 
     const { withAlpha } = jest.requireActual('@/theme/colors');
-    expect(styleDe(nodeByTestId(arbre, ENCART)).borderColor)
-      .toBe(withAlpha(COULEURS.primary500, 0.33));
+    const pastille = findAll(
+      nodeByTestId(arbre, ENCART),
+      (/** @type {any} */ c) => c?.type === 'View' && texteDe(c) === 'Stade Nord',
+    )[0];
+    expect(styleDe(pastille).backgroundColor).toBe(withAlpha(couleurDuLieu, 0.14));
     expect(texteDe(nodeByTestId(arbre, ENCART))).not.toMatch(/Victoire|Défaite|Nul/);
   });
 
@@ -335,35 +341,41 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     expect(styleDe(carte).borderLeftColor).not.toBe(COULEURS.success500);
   });
 
+  // 🆚 ST-MATCH (02/10) — ADAPTE : « Nommer l'adversaire » prend la MEME emprise que l'autre
+  // camp (design 05C, etat 2). Chez l'organisateur, le bouton REMPLACE le camp de droite ; chez
+  // le spectateur, le camp de droite dit « Adversaire à confirmer », en pointille (D10).
   test('N3 · temoin 6 — « Nommer l\'adversaire », seulement si permis (D9/D10)', () => {
     const onNameOpponent = jest.fn();
 
-    // L'organisateur d'un match sans adversaire : l'encart l'invite a le nommer.
     const organisateur = renderHeader(matchEvent({ name: 'Match', opponentName: null }), {
       awaitingOpponent: true,
+      centerLabel: 'Score en attente',
       onNameOpponent,
-      value: 'Score en attente',
+      value: '– –',
     });
-    const encartOrganisateur = nodeByTestId(organisateur, ENCART);
-    expect(texteDe(encartOrganisateur)).toContain('Adversaire à confirmer');
     const bouton = nodeByTestId(organisateur, BOUTON_ADVERSAIRE);
     expect(bouton).not.toBeNull();
     expect(texteDe(bouton)).toContain('Nommer l\'adversaire');
+    expect(styleDe(bouton).borderStyle).toBe('dashed');
+    expect(nodeByTestId(organisateur, 'event-header-camp-adversaire')).toBeNull();
 
     // D10 — le lecteur qui n'organise pas voit le meme etat, en POINTILLE,
     // et SANS bouton : lui proposer une action qu'il n'a pas le droit de faire
     // serait un bouton muet (regle 5 du pack).
     const spectateur = renderHeader(matchEvent({ name: 'Match', opponentName: null }), {
       awaitingOpponent: true,
+      centerLabel: 'Score en attente',
       onNameOpponent: null,
-      value: 'Score en attente',
+      value: '– –',
     });
-    const encartSpectateur = nodeByTestId(spectateur, ENCART);
-    expect(texteDe(encartSpectateur)).toContain('Adversaire à confirmer');
+    const campSpectateur = nodeByTestId(spectateur, 'event-header-camp-adversaire');
+    expect(texteDe(campSpectateur)).toBe('Adversaire à confirmer');
     expect(nodeByTestId(spectateur, BOUTON_ADVERSAIRE)).toBeNull();
-    expect(styleDe(encartSpectateur).borderStyle).toBe('dashed');
+    expect(styleDe(campSpectateur).borderStyle).toBe('dashed');
   });
 
+  // 🆚 ST-MATCH (02/10) — ADAPTE : les cles du verdict ne sont plus demandees par l'entete
+  // (la pastille de type les porte). Les libelles neufs de l'encart passent par t().
   test('N3 · temoin 7 — les libelles neufs passent tous par t()', () => {
     const { askedKeys } = jest.requireMock('react-i18next');
     askedKeys.length = 0;
@@ -371,18 +383,27 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     renderHeader(matchEvent({ name: 'Match', opponentName: null }), {
       awaitingOpponent: true,
       onNameOpponent: jest.fn(),
-      value: 'Score en attente',
+      value: '– –',
     });
-    expect(askedKeys).toContain('eventDetails.matchCard.opponentToConfirm');
     expect(askedKeys).toContain('eventDetails.matchCard.nameOpponent');
 
     askedKeys.length = 0;
+    renderHeader(matchEvent({ name: 'Match', opponentName: null }), {
+      awaitingOpponent: true,
+      onEnterScore: jest.fn(),
+      value: '– –',
+    });
+    expect(askedKeys).toContain('eventDetails.matchCard.opponentToConfirm');
+    expect(askedKeys).toContain('stMatch.encart.enterScore');
+
+    askedKeys.length = 0;
     renderHeader(matchEvent(), {
-      badgeLabel: 'Score du match',
+      isScoreShown: true,
+      onSeeStats: jest.fn(),
       opponentName: ADVERSAIRE,
       value: '3 - 1',
       verdict: 'win',
     });
-    expect(askedKeys).toContain('eventDetails.matchCard.verdict.win');
+    expect(askedKeys).toContain('stMatch.encart.seeMatchStats');
   });
 });

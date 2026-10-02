@@ -16225,6 +16225,31 @@ export default {
   stepper: {
     progress: 'Step {{filled}} of {{total}}',
   },
+  // ST-MATCH (02/10) — the validated stats design: the match is played, the reminders,
+  // the coach enters. One block for the batch.
+  stMatch: {
+    encart: {
+      coachHasNotEntered: "{{name}} hasn't entered the score yet.",
+      coachHasNotEnteredUnnamed: "The coach hasn't entered the score yet.",
+      enteredBy: 'Entered by {{name}} on {{date}} at {{time}}',
+      enteredByYou: 'Entered by you on {{date}} at {{time}}',
+      enteredOn: 'Entered on {{date}} at {{time}}',
+      enterScore: 'Enter the score',
+      federationPending: "The federation hasn't published the score yet.",
+      goalsWithoutScorer_one: '{{count}} goal without a scorer',
+      goalsWithoutScorer_other: '{{count}} goals without a scorer',
+      officialScore: 'Official score',
+      scoreEntered: 'Score entered',
+      scorePending: 'Score pending',
+      seeMatchStats: 'See the match stats',
+      verdictTag: {
+        draw: 'DRAW',
+        loss: 'LOSS',
+        win: 'WIN',
+      },
+      versus: 'VS',
+    },
+  },
   subscriptionBilling: {
     clubCoverage: {
       unlimited: 'an unlimited number of members',

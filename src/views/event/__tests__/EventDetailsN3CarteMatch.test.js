@@ -27,6 +27,7 @@ const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockAttendance = { data: null };
+const mockMatchStats = { data: /** @type {any} */ (null) };
 const mockHeaderProps = { value: null };
 const mockTagProps = { value: null };
 const mockUpdateNoNav = jest.fn();
@@ -167,8 +168,10 @@ jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () =>
   useGetTournamentDashboard: () => ({ data: undefined, isLoading: false }),
 }));
 
+// ST-MATCH (02/10) — la feuille de stats devient pilotable par un temoin. `null` par
+// defaut : les temoins N3 et R2 lisent la meme chose qu'avant.
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
-  useGetEventMatchStats: () => emptyQuery(),
+  useGetEventMatchStats: () => ({ ...emptyQuery(), data: mockMatchStats.data }),
   useGetEventMyMatchResponse: () => emptyQuery(),
 }));
 
@@ -442,9 +445,12 @@ const demonter = () => {
   monte = null;
 };
 
-const monter = (/** @type {any} */ { attendance = null, auth, event } = {}) => {
+const monter = (/** @type {any} */ {
+  attendance = null, auth, event, matchStats = null,
+} = {}) => {
   mockEventQuery.data = event === undefined ? buildMatch() : event;
   mockAttendance.data = attendance;
+  mockMatchStats.data = matchStats;
   mockUseAuth.mockReturnValue(auth || ORGANISATEUR());
 
   demonter();
@@ -602,7 +608,10 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     // compose dans l'entete, ou `clubName` est deja resolu. La chaine rendue
     // est temoignee la-bas (EventHeaderN3CarteMatch, temoin 2).
     expect(resultat.opponentName).toBe(ADVERSAIRE);
-    expect(resultat.value).toBe('Score en attente');
+    // 🆚 ST-MATCH (02/10) — ADAPTE : « Score en attente » devient « VS » et l'heure du coup
+    // d'envoi au centre du face-à-face (design valide, ecran 1, etat 1).
+    expect(resultat.value).toBe('VS');
+    expect(resultat.centerLabel).toBe('10:00');
     expect(resultat.verdict).toBeNull();
   });
 
@@ -837,5 +846,121 @@ describe('R2 - une equipe de mon propre club n est pas un adversaire', () => {
 
     monter({ auth: COACH_DE_L_INVITEE(), event: ancienParc });
     expect(pastille()).toBe('MATCH · À L\'EXTÉRIEUR');
+  });
+});
+
+// ==========================================================================
+// 🆚 ST-MATCH (02/10, design des statistiques validé) — L'ENCART DU SCORE,
+// BRANCHÉ SUR L'ÉCRAN : ce que la page passe à l'entête, pour chaque lecteur.
+// La règle de lecture elle-même est témoignée dans STMATCHEncartLignes.test.js ;
+// ici on prouve que l'écran lui donne les BONNES données (rôle, auteur, horloge).
+// ==========================================================================
+describe('ST-MATCH - l encart du score, branché sur l écran', () => {
+  const JOUEUR = 'joueur-hugo';
+  const SAISI_LE = '2026-01-01T21:35:00.000Z';
+  const KARIM = { documentId: COACH, firstname: 'Karim' };
+  const FINI = HORLOGE_SERVEUR('2026-01-02T10:00:00.000Z');
+  const matchFini = (/** @type {any} */ overrides = {}) => buildMatch({
+    date: '2026-01-01T10:00:00.000Z',
+    endDate: '2026-01-01T12:00:00.000Z',
+    team: {
+      club: { documentId: CLUB_ID, name: CLUB_NAME },
+      documentId: TEAM_ID,
+      name: 'U15 A',
+      players: [{ documentId: JOUEUR }],
+      trainers: [KARIM],
+    },
+    ...overrides,
+  });
+  const avecScore = (/** @type {any} */ overrides = {}) => matchFini({
+    matchResult: {
+      isFinal: true,
+      savedAt: SAISI_LE,
+      savedBy: KARIM,
+      scoreAgainst: 1,
+      scoreFor: 2,
+      source: 'manual',
+      teamDocumentId: TEAM_ID,
+    },
+    ...overrides,
+  });
+  const auteurAttendu = () => {
+    const at = new Date(SAISI_LE);
+    const date = at.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const heure = at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `Saisi par Karim le ${date} à ${heure}`;
+  };
+
+  test('ST-MATCH écran 1 · état 3 — le JOUEUR lit « Karim n a pas encore saisi le score. »', () => {
+    monter({ attendance: FINI, auth: authPour(JOUEUR, false), event: matchFini() });
+
+    expect(resume().value).toBe('– –');
+    expect(resume().centerLabel).toBe('Score en attente');
+    expect(resume().statusLine).toEqual({ text: 'Karim n\'a pas encore saisi le score.', tone: 'neutral' });
+    expect(resume().onEnterScore).toBeNull();
+    expect(pastille()).toBe('MATCH · TERMINÉ');
+  });
+
+  test('ST-MATCH écran 1 · état 2 — l ENTRAÎNEUR a « Saisir le score » dans l encart, et l ouvre', () => {
+    monter({
+      attendance: FINI,
+      auth: ORGANISATEUR(),
+      event: matchFini(),
+      matchStats: {
+        permissions: { canManage: true, canView: true },
+        report: null,
+        score: { available: false, locked: false, scoreAgainst: null, scoreFor: null, waitingOfficial: false },
+        sport: 'football',
+      },
+    });
+
+    expect(typeof resume().onEnterScore).toBe('function');
+    expect(resume().statusLine).toBeNull();
+  });
+
+  test('ST-MATCH écran 1 · état 4 — score saisi : « 2 - 1 », « Score saisi », qui et quand ; la pastille dit VICTOIRE', () => {
+    monter({ attendance: FINI, auth: authPour(JOUEUR, false), event: avecScore() });
+
+    expect(resume().value).toBe('2 - 1');
+    expect(resume().centerLabel).toBe('Score saisi');
+    expect(resume().authorLine).toBe(auteurAttendu());
+    expect(pastille()).toBe('MATCH · TERMINÉ · VICTOIRE');
+  });
+
+  test('ST-MATCH écran 1 · 🔒 état 7 — le VISITEUR voit le score et le résultat, jamais qui l a saisi', () => {
+    monter({ attendance: FINI, auth: SPECTATEUR(), event: avecScore() });
+
+    expect(resume().value).toBe('2 - 1');
+    expect(pastille()).toBe('MATCH · TERMINÉ · VICTOIRE');
+    expect(resume().authorLine).toBeNull();
+    expect(resume().scorersLine).toBeNull();
+    expect(resume().statusLine).toBeNull();
+    expect(resume().onSeeStats).toBeNull();
+  });
+
+  test('ST-MATCH écran 1 · état 5 — feuille publiée : les buteurs ; « Voir les stats du match » existe', () => {
+    monter({
+      attendance: FINI,
+      auth: authPour(JOUEUR, false),
+      event: avecScore(),
+      matchStats: {
+        permissions: { canManage: false, canView: true },
+        report: {
+          playerLines: [{ sportPayload: { goals: 1 }, user: { firstname: 'Hugo', lastname: 'Lemaire' } }],
+          status: 'final',
+        },
+        score: {
+          available: true, recordedAt: SAISI_LE, recordedBy: KARIM, scoreAgainst: 0, scoreFor: 1, source: 'manual',
+        },
+        sport: 'football',
+      },
+    });
+
+    // (« 1 but sans buteur » : témoigné dans STMATCHEncartLignes, la doublure de t() d'ici
+    // ne sait pas les pluriels de i18next.)
+    expect(resume().value).toBe('1 - 0');
+    expect(resume().scorersLine).toBe('Hugo L.');
+    expect(resume().authorLine).toBe(auteurAttendu());
+    expect(typeof resume().onSeeStats).toBe('function');
   });
 });

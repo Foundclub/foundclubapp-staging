@@ -180,6 +180,7 @@ import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
+import { buildMatchEncartLines } from './matchEncartLines';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
@@ -767,9 +768,11 @@ function EventDetails({ navigation, route }) {
   // defilement REEL ne se voit qu'a la recette.
   const overviewScrollRef = useRef(null);
   const participantsAnchorRef = useRef(null);
-  const scrollToParticipants = useCallback(() => {
+  // ST-MATCH (écran 1) — l'ancre du bloc « Stats du match », visée par l'encart.
+  const matchStatsAnchorRef = useRef(null);
+  const scrollToAnchor = useCallback((/** @type {any} */ ancreRef) => {
     const defileur = overviewScrollRef.current;
-    const ancre = participantsAnchorRef.current;
+    const ancre = ancreRef.current;
     if (!defileur || typeof defileur.scrollTo !== 'function') return;
 
     const contenu = typeof defileur.getInnerViewNode === 'function'
@@ -787,6 +790,10 @@ function EventDetails({ navigation, route }) {
       () => {},
     );
   }, []);
+  const scrollToParticipants = useCallback(
+    () => scrollToAnchor(participantsAnchorRef),
+    [scrollToAnchor],
+  );
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
@@ -3867,6 +3874,16 @@ function EventDetails({ navigation, route }) {
     }
   }, [eventId, mutations.updateEventNoNavMutation, opponentNameDraft, t]);
 
+  // ST-MATCH (écran 1, état 1) — « VS » et l'heure du coup d'envoi, au centre.
+  const matchStartTimeLabel = useMemo(() => {
+    if (event?.startTime) return String(event.startTime).substring(0, 5);
+    if (!event?.date) return null;
+    const startAt = new Date(event.date);
+    return Number.isNaN(startAt.getTime())
+      ? null
+      : startAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' });
+  }, [event?.date, event?.startTime]);
+
   const matchHeaderScoreSummary = useMemo(() => {
     if (!isMatchEvent) return null;
 
@@ -3929,62 +3946,86 @@ function EventDetails({ navigation, route }) {
     // dans EventEdit, ou vit le champ complet.
     const onNameOpponent = canEdit && awaitingOpponent ? handleOpenOpponentSheet : null;
 
-    if (!available) {
-      return {
-        awaitingOpponent,
-        badgeLabel: waitingOfficial ? t(
-          'eventDetails.officialScore',
-          'Score officiel',
-        ) : t(
-          'eventDetails.matchScore2',
-          'Score du match',
-        ),
-        // Le repli disait « Score en attente » ICI ET dans `value` : la meme
-        // phrase deux fois dans un encart de 172 px. Une seule suffit.
-        helperText: waitingOfficial ? t(
-          'eventDetails.scoreWaitingToSync',
-          'Score en attente de synchronisation',
-        ) : null,
-        onNameOpponent,
-        opponentName: matchOpponentName,
-        value: 'Score en attente',
-        verdict: null,
-      };
-    }
-
-    let badgeLabel = t('eventDetails.matchScore2', 'Score du match');
-    if (resolvedSource === 'external_sync') {
-      badgeLabel = 'Score officiel';
-    } else if (resolvedSource === 'manual') {
-      badgeLabel = 'Score manuel';
-    }
+    // 🆚 ST-MATCH (écran 1) — le centre du face-à-face (« VS 19:00 », « – – Score en
+    // attente », « 2 - 1 Score saisi ») et les lignes de l'encart, calculés par
+    // `buildMatchEncartLines` pour CE lecteur. ⛔ Les badges « Score du match »,
+    // « Score manuel » et le texte d'aide sont RETIRÉS : le face-à-face et la pastille
+    // de type les disent (« manuel » devient « Score saisi » et le nom de qui l'a saisi).
+    // L'auteur vient de la feuille (`score.recordedBy`) ou, pour qui ne la lit pas (le
+    // dirigeant), du score enregistré sur l'événement (`matchResult.savedBy`).
+    const lignes = buildMatchEncartLines({
+      available,
+      canManage: canManageMatchStats,
+      // 🔒 L'équipe et son encadrement ; jamais un visiteur (mineurs en U15).
+      canSeeDetails: Boolean(isTeamMember || canEdit),
+      coachFirstname: String(
+        (compositionEditorTeam || event?.team)?.trainers?.[0]?.firstname || '',
+      ).trim() || null,
+      isFinished: isMatchFinished,
+      locale: localeDesFormats(),
+      publishedLines: isMatchStatsFinal && matchStatsPayload?.sport !== 'basketball'
+        ? matchStatsReport?.playerLines || null
+        : null,
+      recordedAt: scoreState?.available
+        ? scoreState?.recordedAt || null
+        : storedMatchResult?.savedAt || null,
+      recordedBy: scoreState?.available
+        ? scoreState?.recordedBy || null
+        : storedMatchResult?.savedBy || null,
+      scoreAgainst: resolvedScoreAgainst,
+      scoreFor: resolvedScoreFor,
+      source: resolvedSource,
+      startTimeLabel: matchStartTimeLabel,
+      t,
+      viewerDocumentId: userData?.documentId || null,
+      waitingOfficial,
+    });
 
     return {
+      ...lignes,
       awaitingOpponent,
-      badgeLabel,
-      helperText: waitingOfficial ? t(
-        'eventDetails.syncedAutomaticallyFromTheOfficial',
-        'Synchronise automatiquement depuis la source officielle',
-      ) : null,
       onNameOpponent,
       opponentName: matchOpponentName,
-      value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
       verdict,
     };
   }, [
-    // `isMatchFinished` a QUITTE cette liste avec D5 : l'encart ne dependait de
-    // lui que pour se CACHER avant le coup d'envoi (`!available && !isMatchFinished`
-    // rendait null). Il s'affiche desormais des qu'il s'agit d'un match, donc
-    // le calcul ne lit plus l'etat de fin. La pastille, elle, le lit toujours (D8).
     canEdit,
+    canManageMatchStats,
+    compositionEditorTeam,
     event?.externalAutoSource,
     event?.matchResult,
+    event?.team,
     handleOpenOpponentSheet,
     isMatchEvent,
+    isMatchFinished,
+    isMatchStatsFinal,
+    isTeamMember,
     isViewerFromInvitedTeam,
     matchOpponentName,
-    matchStatsPayload?.score, t,
+    matchStartTimeLabel,
+    matchStatsPayload?.score,
+    matchStatsPayload?.sport,
+    matchStatsReport?.playerLines,
+    t,
+    userData?.documentId,
   ]);
+
+  // 🏷️ ST-MATCH (écran 1) — la pastille de type porte le VERDICT une fois le score
+  // connu : « MATCH · TERMINÉ · VICTOIRE ». Le badge de l'encart qui le disait est
+  // retiré : une seule place pour le résultat.
+  const matchVerdictTagSegment = useMemo(() => {
+    const verdict = matchHeaderScoreSummary?.verdict;
+    if (!isMatchFinished || !verdict) return '';
+    return {
+      draw: t('stMatch.encart.verdictTag.draw', 'NUL'),
+      loss: t('stMatch.encart.verdictTag.loss', 'DÉFAITE'),
+      win: t('stMatch.encart.verdictTag.win', 'VICTOIRE'),
+    }[verdict] || '';
+  }, [isMatchFinished, matchHeaderScoreSummary?.verdict, t]);
+  const typeTagSegmentsAvecVerdict = useMemo(
+    () => [...typeTagSegmentsComplets, matchVerdictTagSegment],
+    [matchVerdictTagSegment, typeTagSegmentsComplets],
+  );
   // N4 (D6) : `matchStatsSummaryText`, `matchStatsStatusMeta` et
   // `matchStatsCardButtonTitle` ont QUITTE ce fichier. Ils decrivaient l'entete
   // du bloc « Stats du match » — une phrase de resume, une pastille d'etat et le
@@ -4943,6 +4984,41 @@ function EventDetails({ navigation, route }) {
     setMatchScoreAgainstDraft(asDraft(matchStatsPayload?.score?.scoreAgainst));
     setIsMatchScoreSheetVisible(true);
   }, [matchStatsPayload?.score?.scoreAgainst, matchStatsPayload?.score?.scoreFor]);
+
+  // 🆚 ST-MATCH (écran 1, amélioration 2) — « Voir les stats du match » DESCEND au
+  // bloc, depuis l'endroit qu'on regarde. Le bloc ne vit que dans l'Aperçu : on y
+  // revient d'abord, puis on mesure l'ancre au tour suivant (elle n'existe qu'une fois
+  // l'onglet rendu). ⛔ Jest ne sait pas mesurer : le défilement se voit à la recette.
+  const scrollToMatchStats = useCallback(() => {
+    setDetailsTab('overview');
+    requestAnimationFrame(() => scrollToAnchor(matchStatsAnchorRef));
+  }, [scrollToAnchor]);
+
+  // 🆚 ST-MATCH (écran 1) — ce que l'encart PERMET, posé ici parce que ses deux gestes
+  // sont déclarés plus bas que lui. « Saisir le score » (amélioration 4, état 2) suit
+  // le SEUL juge de l'aiguillage, `matchStatsPrimaryAction.isScoreEntry` : le droit
+  // (`canManage`), la fin du match et l'absence de score officiel attendu y vivent.
+  // « Voir les stats du match » n'existe que pour qui lit le bloc, une fois le score là.
+  const matchEncartSummary = useMemo(() => {
+    if (!matchHeaderScoreSummary) return null;
+    return {
+      ...matchHeaderScoreSummary,
+      onEnterScore: matchStatsPrimaryAction.isScoreEntry && !matchStatsPrimaryAction.disabled
+        ? openMatchScoreSheet
+        : null,
+      onSeeStats: matchHeaderScoreSummary.isScoreShown && canViewMatchStats && compositionTeamId
+        ? scrollToMatchStats
+        : null,
+    };
+  }, [
+    canViewMatchStats,
+    compositionTeamId,
+    matchHeaderScoreSummary,
+    matchStatsPrimaryAction.disabled,
+    matchStatsPrimaryAction.isScoreEntry,
+    openMatchScoreSheet,
+    scrollToMatchStats,
+  ]);
 
   const handleSaveMatchScore = useCallback(async () => {
     if (!eventId || !compositionTeamId) return;
@@ -8023,7 +8099,7 @@ function EventDetails({ navigation, route }) {
       >
         <Tag
           style={{}}
-          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsComplets)}
+          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
           textStyle={Fonts.p2}
         />
         {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
@@ -8073,7 +8149,7 @@ function EventDetails({ navigation, route }) {
             <EventHeader
               detectionSummary={detectionHeaderSummary}
               event={event}
-              matchScoreSummary={matchHeaderScoreSummary}
+              matchScoreSummary={matchEncartSummary}
             />
             {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
                 ne concerne que l'entrainement ouvert : les onglets du match ne
@@ -8543,7 +8619,7 @@ function EventDetails({ navigation, route }) {
               ) : null}
 
               {showOverviewTab && isMatchEvent && compositionTeamId && canViewMatchStats ? (
-                <View style={[Spaces.gap[12]]}>
+                <View collapsable={false} ref={matchStatsAnchorRef} style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
                     {t('eventDetails.matchStats', 'Stats du match')}
                   </Text>

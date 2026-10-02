@@ -17000,6 +17000,31 @@ export default {
   stepper: {
     progress: 'Étape {{filled}} sur {{total}}',
   },
+  // ST-MATCH (02/10) — design des statistiques validé : le match se joue, les rappels,
+  // l'entraîneur saisit. Un seul bloc, pour le lot.
+  stMatch: {
+    encart: {
+      coachHasNotEntered: "{{name}} n'a pas encore saisi le score.",
+      coachHasNotEnteredUnnamed: "L'entraîneur n'a pas encore saisi le score.",
+      enteredBy: 'Saisi par {{name}} le {{date}} à {{time}}',
+      enteredByYou: 'Saisi par toi le {{date}} à {{time}}',
+      enteredOn: 'Saisi le {{date}} à {{time}}',
+      enterScore: 'Saisir le score',
+      federationPending: "La fédération n'a pas encore publié le score.",
+      goalsWithoutScorer_one: '{{count}} but sans buteur',
+      goalsWithoutScorer_other: '{{count}} buts sans buteur',
+      officialScore: 'Score officiel',
+      scoreEntered: 'Score saisi',
+      scorePending: 'Score en attente',
+      seeMatchStats: 'Voir les stats du match',
+      verdictTag: {
+        draw: 'NUL',
+        loss: 'DÉFAITE',
+        win: 'VICTOIRE',
+      },
+      versus: 'VS',
+    },
+  },
   subscriptionBilling: {
     clubCoverage: {
       unlimited: 'un nombre illimité de licenciés',
