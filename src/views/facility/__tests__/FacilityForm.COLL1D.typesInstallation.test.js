@@ -105,6 +105,13 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useSaveCollectiviteInstallation: () => ({ mutateAsync: mockSaveCollectivite }),
 }));
 
+// COLL-C2B (02/10) : en mairie, le type se choisit dans une feuille du bas (design P4-form).
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
+
 jest.mock('@/services/facility/facilityService', () => ({
   createFacility: jest.fn(),
   updateFacility: jest.fn(),
@@ -347,9 +354,18 @@ describe('COLL1D — les types d installation des mairies (D28), dans les DEUX f
     expect(pastillesDeType()).toEqual(LIBELLES_ATTENDUS);
   });
 
-  it('le formulaire de la MAIRIE propose les memes 13 types', async () => {
-    await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
-    expect(pastillesDeType()).toEqual(LIBELLES_ATTENDUS);
+  // COLL-C2B (02/10, design P4-form, ecran 2) : en mairie, le type se choisit dans une FEUILLE,
+  // limitee aux 11 types d une mairie (« Salle video » et « Club House » sont des types de club).
+  it('le formulaire de la MAIRIE propose ses 11 types, dans une feuille', async () => {
+    const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
+    expect(pastillesDeType()).toEqual([]);
+    await appuyerSur(arbre, 'Choisir le type');
+    const lu = texteDe(arbre.root);
+    LIBELLES_ATTENDUS
+      .filter((libelle) => libelle !== 'Salle vidéo' && libelle !== 'Club House')
+      .forEach((libelle) => expect(lu).toContain(libelle));
+    expect(lu).not.toContain('Salle vidéo');
+    expect(lu).not.toContain('Club House');
   });
 
   it('la mairie cree un « Dojo » : la valeur envoyee est celle du serveur', async () => {
@@ -365,6 +381,7 @@ describe('COLL1D — les types d installation des mairies (D28), dans les DEUX f
       champNom.onChangeText('Dojo municipal');
     });
     await choisirAdresse(ADRESSE_GEOCODEE);
+    await appuyerSur(arbre, 'Choisir le type');
     await appuyerSur(arbre, 'Dojo');
     await appuyerSur(arbre, 'Créer');
 
