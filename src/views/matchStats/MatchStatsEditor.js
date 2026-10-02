@@ -930,15 +930,20 @@ function MatchStatsEditor({ navigation, route }) {
       available: true,
       canManage: true,
       canSeeDetails: true,
+      // Seule la ligne « Saisi par … » est lue ici : le reste de l'encart ne sert pas.
+      coachFirstname: null,
       isFinished: true,
       locale: localeDesFormats(),
+      publishedLines: null,
       recordedAt: statsPayload?.score?.recordedAt || null,
       recordedBy: statsPayload?.score?.recordedBy || null,
       scoreAgainst: statsPayload?.score?.scoreAgainst,
       scoreFor: statsPayload?.score?.scoreFor,
       source: scoreSource,
+      startTimeLabel: null,
       t,
       viewerDocumentId: userData?.documentId || null,
+      waitingOfficial: isWaitingOfficial,
     }).authorLine
     : null;
   const ourTeam = teamName || t('stMatch.score.us', 'Mon équipe');

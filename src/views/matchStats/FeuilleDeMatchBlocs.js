@@ -262,6 +262,7 @@ export function TableauDesJoueurs({
   const cles = sport === 'basketball'
     ? ['points', 'assists', 'rebounds', 'threePointsMade']
     : ['goals', 'assists', 'goalsConceded'];
+  /** @type {Record<string, string>} */
   const entetes = {
     assists: t('stMatch.feuille.col.assists', 'Pas.'),
     goals: t('stMatch.feuille.col.goals', 'Buts'),
@@ -441,6 +442,7 @@ export function FicheDuJoueur({
     });
   }
 
+  /** @type {Record<string, string[]>} */
   const libelles = {
     assists: [
       t('stMatch.feuille.counter.assists', 'Passes'),
