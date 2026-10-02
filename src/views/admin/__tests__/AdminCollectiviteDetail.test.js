@@ -34,9 +34,11 @@ jest.mock('@/services/client', () => ({
   },
 }));
 
+/** @type {any} */
+let mockParams = { collectiviteId: 'ville-montrivage' };
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
-  useRoute: () => ({ params: { collectiviteId: 'ville-montrivage' } }),
+  useRoute: () => ({ params: mockParams }),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -198,6 +200,7 @@ const chercher = async (arbre, testID, texte) => {
 };
 
 beforeEach(() => {
+  mockParams = { collectiviteId: 'ville-montrivage' };
   serveur = {
     clubs: [
       { documentId: 'montrivage-fc', logo: null, name: 'Montrivage FC' },
@@ -445,5 +448,25 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     // eslint-disable-next-line max-len
     await attendre(() => lus().includes('Cette collectivité est introuvable : elle a peut-être été supprimée.'));
     expect(lus()).toContain('Cette collectivité est introuvable : elle a peut-être été supprimée.');
+  });
+});
+
+// COLL-CONSOLE (02/10) — planche P2-creer, état 7 : la fiche REMPLACE le formulaire de création
+// et dit les trois gestes qui restent, dans l ordre ; ouverte autrement, elle ne le dit pas.
+describe('COLL-CONSOLE — la fiche ouverte juste après la création', () => {
+  // eslint-disable-next-line max-len
+  it('« … est créée, inactive. Ensuite : rattache ses clubs, nomme un gestionnaire, puis active-la. »', async () => {
+    mockParams = { collectiviteId: 'ville-montrivage', justCreated: true };
+    const arbre = await monter();
+    expect(textes(parTestID(arbre.root, 'admin-collectivite-creee'))).toEqual([
+      'Ville de Montrivage est créée, inactive.',
+      'Ensuite : rattache ses clubs, nomme un gestionnaire, puis active-la.',
+    ]);
+  });
+
+  it('ouverte depuis la liste : pas de bandeau', async () => {
+    const arbre = await monter();
+    // eslint-disable-next-line max-len
+    expect(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-creee')).toHaveLength(0);
   });
 });

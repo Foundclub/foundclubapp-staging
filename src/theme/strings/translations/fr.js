@@ -5174,6 +5174,18 @@ export default {
       rattachements: 'Demandes de rattachement',
       titre: 'À traiter',
     },
+    creer: {
+      apercuAbonnement: 'Dans « Mon abonnement » : Offre Club offerte par {{collectivite}}',
+      apercuClub: 'Ton club',
+      apercuTitre: 'Ce que liront les clubs',
+      apercuVide: 'L’aperçu suit le nom officiel à chaque frappe.',
+      creee: '{{name}} est créée, inactive.',
+      dit: 'Elle naît inactive : tu l’actives ensuite, depuis sa fiche.',
+      ensuite: 'Ensuite : rattache ses clubs, nomme un gestionnaire, puis active-la.',
+      envoyer: 'Créer — elle naîtra inactive',
+      offertPar: 'Offert par {{collectivite}}',
+      typeGroupe: 'Type de collectivité',
+    },
     demandes: {
       chargement: 'Lecture des demandes…',
       chercherClub: 'Le club inscrit : son nom',

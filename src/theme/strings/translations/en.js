@@ -4831,6 +4831,18 @@ export default {
       rattachements: 'Attach requests',
       titre: 'To handle',
     },
+    creer: {
+      apercuAbonnement: 'In "My subscription": Club plan offered by {{collectivite}}',
+      apercuClub: 'Your club',
+      apercuTitre: 'What the clubs will read',
+      apercuVide: 'The preview follows the official name as you type.',
+      creee: '{{name}} has been created, inactive.',
+      dit: 'It starts inactive: you activate it afterwards, from its record.',
+      ensuite: 'Next: attach its clubs, appoint a manager, then activate it.',
+      envoyer: 'Create — it will start inactive',
+      offertPar: 'Offered by {{collectivite}}',
+      typeGroupe: 'Type of local authority',
+    },
     demandes: {
       chargement: 'Loading requests…',
       chercherClub: 'The registered club: its name',

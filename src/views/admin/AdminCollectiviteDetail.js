@@ -56,8 +56,11 @@ function AdminCollectiviteDetail() {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const route = useRoute();
-  const routeParams = /** @type {{ collectiviteId?: string } | undefined} */ (route?.params);
+  /** @type {{ collectiviteId?: string, justCreated?: boolean } | undefined} */
+  const routeParams = /** @type {any} */ (route?.params);
   const collectiviteId = routeParams?.collectiviteId || null;
+  // COLL-CONSOLE (02/10) — la fiche qui remplace le formulaire de creation dit ce qui reste.
+  const justCreated = routeParams?.justCreated === true;
 
   const lecture = useAdminCollectivite(collectiviteId);
   const [retourClubs, setRetourClubs] = useState(/** @type {Retour} */ (null));
@@ -239,6 +242,34 @@ function AdminCollectiviteDetail() {
           </View>
           <CollectiviteActivation collectivite={detail} />
         </View>
+
+        {justCreated ? (
+          <View
+            accessibilityRole="summary"
+            style={[
+              ApplicationStyle.card,
+              Spaces.padding[16],
+              {
+                backgroundColor: `${Colors.success500}1F`,
+                borderColor: `${Colors.success500}66`,
+                gap: 4,
+              },
+            ]}
+            testID="admin-collectivite-creee"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('collectiviteConsole.creer.creee', '{{name}} est créée, inactive.', {
+                name: detail.name, ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'collectiviteConsole.creer.ensuite',
+                'Ensuite : rattache ses clubs, nomme un gestionnaire, puis active-la.',
+              )}
+            </Text>
+          </View>
+        ) : null}
 
         <View
           style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}

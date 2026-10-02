@@ -16,8 +16,16 @@ import AdminCollectiviteForm from '../AdminCollectiviteForm';
 //   - CRÉER : POST /superadmin/collectivites { data } avec les seuls champs remplis, puis
 //     le détail de la collectivité créée REMPLACE le formulaire ;
 //   - un refus du serveur (409 : code déjà pris) s affiche, on reste sur le formulaire.
+// COLL-CONSOLE (02/10) — RESTYLÉ selon la planche P2-creer (design HY521H1, page 2, écran 3) :
+//   - chaque erreur SOUS SON CHAMP, dès qu on le quitte (plus de liste groupée) ;
+//   - l APERÇU en direct de la pastille « Offert par … » ;
+//   - « Créer — elle naîtra inactive » fixé en bas, éteint sans code INSEE ni SIREN ; la roue
+//     et un formulaire qui ne bouge plus pendant l envoi ; l erreur du serveur au-dessus ;
+//   - « Quitter sans créer ? » : une FEUILLE de l app, plus la fenêtre système ;
+//   - créée : la fiche s ouvre avec `justCreated` (elle dit les gestes qui restent).
 
 const mockPost = jest.fn();
+const COULEURS = jest.requireActual('@/theme/colors').default();
 const mockReplace = jest.fn();
 // TEXTES-COLLECTIVITES (01/10) — la navigation doublee joue « retirer l ecran » comme React
 // Navigation : chaque ecouteur `beforeRemove` est appele, et l ecran ne part (`mockSortie`)
@@ -159,11 +167,21 @@ const choisir = async (/** @type {any} */ arbre, /** @type {string} */ type) => 
     n.props?.testID === `admin-collectivite-form-type-${type}` && typeof n.props?.onPress === 'function'));
   await act(async () => { puce.props.onPress(); });
 };
+const boutonCreer = (/** @type {any} */ arbre) => arbre.root.find((/** @type {any} */ n) => (
+  // eslint-disable-next-line max-len
+  n.props?.testID === 'bouton-Créer — elle naîtra inactive' && typeof n.props?.onPress === 'function'));
 const creer = async (/** @type {any} */ arbre) => {
-  const bouton = arbre.root.find((/** @type {any} */ n) => (
-    n.props?.testID === 'bouton-Créer' && typeof n.props?.onPress === 'function'));
-  await act(async () => { bouton.props.onPress(); });
+  await act(async () => { boutonCreer(arbre).props.onPress(); });
 };
+const quitter = async (/** @type {any} */ arbre, /** @type {string} */ cle) => {
+  await act(async () => { champ(arbre, cle).props.onBlur(); });
+};
+// eslint-disable-next-line max-len
+const textesSous = (/** @type {any} */ noeud) => noeud.findAllByType(Text).map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
+const erreur = (/** @type {any} */ arbre, /** @type {string} */ cle) => arbre.root
+  .findAll((/** @type {any} */ n) => n.props?.testID === `admin-collectivite-form-${cle}-erreur`)
+  .filter((/** @type {any} */ n) => n.type === Text)
+  .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
 
 beforeEach(() => {
   mockPost.mockReset();
@@ -178,7 +196,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('D61 — écran 3 : créer une collectivité', () => {
+describe('D61 — écran 3 : créer une collectivité (planche P2-creer)', () => {
   // eslint-disable-next-line max-len
   it('AIDE : le début officiel est posé selon le type, avec un exemple ; un nom tapé est gardé', async () => {
     const arbre = await monter();
@@ -201,29 +219,69 @@ describe('D61 — écran 3 : créer une collectivité', () => {
     await taper(arbre, 'name', 'Métropole Aix-Marseille-Provence');
     await choisir(arbre, 'region');
     expect(champ(arbre, 'name').props.value).toBe('Métropole Aix-Marseille-Provence');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'COLLECTIVITÉS',
+      'Créer une collectivité',
+      'Elle naît inactive : tu l’actives ensuite, depuis sa fiche.',
+    ]));
   });
 
   // eslint-disable-next-line max-len
-  it('CONTRÔLE : nom hors forme officielle, ni INSEE ni SIREN → rien ne part, chaque faute est dite', async () => {
+  it('CONTRÔLE : chaque erreur s écrit SOUS SON CHAMP, dès qu on le quitte ; rien ne part tant qu il en reste', async () => {
     const arbre = await monter();
+    expect(erreur(arbre, 'name')).toEqual([]);
     await taper(arbre, 'name', 'Montrivage');
-    await creer(arbre);
-    expect(mockPost).not.toHaveBeenCalled();
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
+    await quitter(arbre, 'name');
+    expect(erreur(arbre, 'name')).toEqual([
       // eslint-disable-next-line max-len
       'Le nom doit suivre la forme officielle, par exemple « Ville de Montrivage » ou « Ville d’Aix » : c’est lui qu’affiche le bandeau « Offert par… ».',
-      'Un code INSEE ou un SIREN est obligatoire.',
-    ]));
+    ]);
+    // L aide cède la place à l erreur, au même endroit.
+    expect(textes(arbre).some((texte) => texte.startsWith('Forme officielle'))).toBe(false);
+
+    // INSEE et SIREN quittés vides : « l un ou l autre » s écrit sous LEUR ligne.
+    await quitter(arbre, 'codeInsee');
+    expect(erreur(arbre, 'identifiants')).toEqual([]);
+    await quitter(arbre, 'siren');
+    expect(erreur(arbre, 'identifiants')).toEqual(['Un code INSEE ou un SIREN est obligatoire.']);
 
     await taper(arbre, 'name', 'Ville de Montrivage');
     await taper(arbre, 'codeInsee', '9901');
     await creer(arbre);
     expect(mockPost).not.toHaveBeenCalled();
-    expect(textes(arbre)).toContain('Code INSEE : 5 caractères (2A ou 2B en Corse).');
+    expect(erreur(arbre, 'name')).toEqual([]);
+    expect(erreur(arbre, 'codeInsee')).toEqual(['Code INSEE : 5 caractères (2A ou 2B en Corse).']);
+    expect(champ(arbre, 'codeInsee').props.style.flat().find((s) => s?.borderColor).borderColor)
+      .toBe(COULEURS.error500);
   });
 
   // eslint-disable-next-line max-len
-  it('CRÉER : POST /superadmin/collectivites { data }, puis le détail remplace le formulaire', async () => {
+  it('LE PIED : « Créer — elle naîtra inactive », éteint tant qu il manque un code INSEE ou un SIREN', async () => {
+    const arbre = await monter();
+    expect(boutonCreer(arbre).props.disabled).toBe(true);
+    await taper(arbre, 'siren', '123456789');
+    expect(boutonCreer(arbre).props.disabled).toBe(false);
+    // eslint-disable-next-line max-len
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Créer — elle naîtra inactive', 'Annuler']));
+  });
+
+  // eslint-disable-next-line max-len
+  it('L APERÇU : ce que liront les clubs, la pastille « Offert par … », dès que le nom dépasse son début', async () => {
+    const arbre = await monter();
+    // eslint-disable-next-line max-len
+    expect(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')).toHaveLength(0);
+    await taper(arbre, 'name', 'Ville de Valfleuri');
+    // eslint-disable-next-line max-len
+    const apercu = arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0];
+    expect(textesSous(apercu)).toEqual(expect.arrayContaining([
+      'CE QUE LIRONT LES CLUBS', 'Ton club', 'Offert par la Ville de Valfleuri',
+    ]));
+    await taper(arbre, 'name', 'Département du Var');
+    expect(textes(arbre)).toContain('Offert par le Département du Var');
+  });
+
+  // eslint-disable-next-line max-len
+  it('CRÉER : POST /superadmin/collectivites { data }, puis la fiche remplace le formulaire et dit ce qui reste', async () => {
     mockPost.mockResolvedValue({
       data: {
         data: {
@@ -250,10 +308,23 @@ describe('D61 — écran 3 : créer une collectivité', () => {
     });
     expect(mockReplace).toHaveBeenCalledWith(RouteNames.AdminCollectiviteDetail, {
       collectiviteId: 'nouvelle-ville',
+      justCreated: true,
     });
   });
 
-  it('un code déjà pris (409) : le refus s affiche, on reste sur le formulaire', async () => {
+  it('L ENVOI : le bouton porte la roue, le formulaire ne bouge plus', async () => {
+    mockPost.mockImplementation(() => new Promise(() => {}));
+    const arbre = await monter();
+    await taper(arbre, 'name', 'Ville de Valfleuri');
+    await taper(arbre, 'codeInsee', '13999');
+    await creer(arbre);
+    await attendre(() => champ(arbre, 'codeInsee').props.editable === false);
+    expect(champ(arbre, 'name').props.editable).toBe(false);
+    expect(boutonCreer(arbre).props.disabled).toBe(true);
+  });
+
+  // eslint-disable-next-line max-len
+  it('un code déjà pris (409) : le refus s affiche au-dessus du bouton, on reste sur le formulaire', async () => {
     mockPost.mockRejectedValue({
       response: {
         data: { error: { details: { code: 'COLLECTIVITE_ALREADY_EXISTS' }, status: 409 } },
@@ -271,7 +342,8 @@ describe('D61 — écran 3 : créer une collectivité', () => {
     expect(mockPost).toHaveBeenCalledWith('/superadmin/collectivites', {
       data: { name: 'Région Sud', siren: '200053403', type: 'region' },
     });
-    expect(textes(arbre)).toContain(refus);
+    const pied = arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-form-pied')[0];
+    expect(textesSous(pied)[0]).toBe(refus);
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });
@@ -279,6 +351,8 @@ describe('D61 — écran 3 : créer une collectivité', () => {
 // ---------------------------------------------------------------------------
 // TEXTES-COLLECTIVITES (lot 1, 01/10/2026) — le formulaire n avait pas de bouton « Annuler »,
 // et « retour » effaçait une saisie remplie sans rien demander (vu le 01/10, capture A2c).
+// COLL-CONSOLE (02/10) : la question est désormais une FEUILLE de l app (planche P2-creer,
+// état 6), plus la fenêtre système : « Rester » d abord, « Quitter » en rouge.
 // ---------------------------------------------------------------------------
 describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande avant de perdre', () => {
   const annuler = async (/** @type {any} */ arbre) => {
@@ -286,13 +360,21 @@ describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande av
       n.props?.testID === 'bouton-Annuler' && typeof n.props?.onPress === 'function'));
     await act(async () => { bouton.props.onPress(); });
   };
-  const fenetre = () => /** @type {any} */ (Alert.alert).mock.calls.at(-1);
+  const feuille = (/** @type {any} */ arbre) => arbre.root
+    .findAll((/** @type {any} */ n) => (
+      // eslint-disable-next-line max-len
+      n.props?.testID === 'admin-collectivite-form-quitter' && n.props?.accessibilityViewIsModal))[0];
+  const appuyerDansLaFeuille = async (/** @type {any} */ arbre, /** @type {string} */ titre) => {
+    const bouton = feuille(arbre).find((/** @type {any} */ n) => (
+      n.props?.testID === `bouton-${titre}` && typeof n.props?.onPress === 'function'));
+    await act(async () => { bouton.props.onPress(); });
+  };
 
   // eslint-disable-next-line max-len
   it('formulaire intact (seul le début officiel « Ville de ») : « Annuler » sort, sans question', async () => {
     const arbre = await monter();
     await annuler(arbre);
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(feuille(arbre)).toBeUndefined();
     expect(mockSortie).toHaveBeenCalledTimes(1);
   });
 
@@ -303,17 +385,18 @@ describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande av
     await annuler(arbre);
 
     expect(mockSortie).not.toHaveBeenCalled();
-    const [titre, message, boutons] = fenetre();
-    expect(titre).toBe('Quitter sans créer la collectivité ?');
-    expect(message).toBe('Ce que tu as saisi sera perdu.');
-    expect(boutons.map((/** @type {any} */ b) => b.text)).toEqual(['Rester', 'Quitter']);
-    expect(boutons[0].style).toBe('cancel');
+    expect(textesSous(feuille(arbre))).toEqual([
+      'Quitter sans créer la collectivité ?', 'Ce que tu as saisi sera perdu.', 'Rester', 'Quitter',
+    ]);
+    expect(Alert.alert).not.toHaveBeenCalled();
 
-    await act(async () => { boutons[0].onPress?.(); });
+    await appuyerDansLaFeuille(arbre, 'Rester');
+    expect(feuille(arbre)).toBeUndefined();
     expect(mockSortie).not.toHaveBeenCalled();
     expect(champ(arbre, 'codeInsee').props.value).toBe('13055');
 
-    await act(async () => { boutons[1].onPress(); });
+    await annuler(arbre);
+    await appuyerDansLaFeuille(arbre, 'Quitter');
     expect(mockSortie).toHaveBeenCalledTimes(1);
   });
 
@@ -323,12 +406,12 @@ describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande av
     await act(async () => { mockNavigation.goBack(); });
 
     expect(mockSortie).not.toHaveBeenCalled();
-    expect(fenetre()[0]).toBe('Quitter sans créer la collectivité ?');
-    await act(async () => { fenetre()[2][1].onPress(); });
+    expect(textesSous(feuille(arbre))[0]).toBe('Quitter sans créer la collectivité ?');
+    await appuyerDansLaFeuille(arbre, 'Quitter');
     expect(mockSortie).toHaveBeenCalledWith({ type: 'GO_BACK' });
   });
 
-  it('collectivité CRÉÉE : le détail remplace le formulaire sans question', async () => {
+  it('collectivité CRÉÉE : la fiche remplace le formulaire sans question', async () => {
     // eslint-disable-next-line max-len
     mockPost.mockResolvedValue({ data: { data: { documentId: 'valfleuri', name: 'Ville de Valfleuri' } } });
     const arbre = await monter();
@@ -337,7 +420,7 @@ describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande av
     await creer(arbre);
     await attendre(() => mockReplace.mock.calls.length > 0);
 
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(feuille(arbre)).toBeUndefined();
     expect(mockSortie).toHaveBeenCalledWith({ type: 'REPLACE' });
   });
 });
