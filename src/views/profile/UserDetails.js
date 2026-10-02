@@ -38,6 +38,7 @@ import UserHistorySection from '@/components/organisms/userHistorySection/UserHi
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
+import MyStatsPage from '@/views/profile/stats/MyStatsPage';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -523,6 +524,10 @@ function UserDetails({ navigation, route }) {
   // l'obtiennent — et le serveur leur refuse ces donnees (`getPersonalStats` : 403).
   const isCoachFeedbackView = (isOwnerView || isParentOfMinorViewer)
     && route?.params?.view === 'coachFeedback';
+  // ST-VUES (planche 16, etats 4 et 5) — « Suivi › Mes stats » et « Tout voir » de
+  // « Ma saison » ouvrent la page « Mes stats », sur la route du profil, comme les
+  // retours du coach : aucune route neuve. Le proprietaire seulement.
+  const isMyStatsView = isOwnerView && route?.params?.view === 'myStats';
 
   const { refetch: refetchOwnHistories } = useGetMyHistories({
     enabled: isSelfProfile,
@@ -965,6 +970,40 @@ function UserDetails({ navigation, route }) {
   // seule page d'ou les retours sont retires (ils sont prives), et le bloc
   // proprietaire plus bas n'etait plus atteint par un joueur depuis D39.
   // Placee APRES tous les hooks, comme l'aiguillage qui suit.
+  // ST-VUES — LA PAGE « MES STATS ». Placee apres tous les hooks, comme la vue
+  // des retours du coach qui la suit.
+  if (isMyStatsView) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[0], Alignments.column, Alignments.fill]}
+      >
+        <Text style={[Fonts.h3Bold, Fonts.neutral00, { alignSelf: 'stretch', textAlign: 'center' }]}>
+          {t('myStats.pageTitle', 'Mes stats').toUpperCase()}
+        </Text>
+        <ScrollView
+          contentContainerStyle={[{ paddingBottom: insets.bottom + 24 }]}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={() => refetchPersonalStats?.()}
+              refreshing={isPersonalStatsLoading}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          <WithDataWrapper
+            error={personalStatsError ? getErrorMessage(personalStatsError) : undefined}
+            isLoading={isPersonalStatsLoading}
+            onRetry={() => refetchPersonalStats?.()}
+          >
+            <MyStatsPage onOpenTeam={handleTeamPress} stats={personalStats} teams={playerTeams} />
+          </WithDataWrapper>
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
+
   if (isCoachFeedbackView) {
     return (
       <ScreenContainer

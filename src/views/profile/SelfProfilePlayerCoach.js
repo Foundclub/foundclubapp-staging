@@ -36,6 +36,7 @@ import {
   profileSchema,
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
+import MySeasonCard from '@/views/profile/stats/MySeasonCard';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -407,27 +408,6 @@ function SelfProfilePlayerCoach({ navigation }) {
     return [teamName, clubName].filter(Boolean).join(' · ');
   }, [coachedTeams, isPlayer, playerTeams, userData?.club?.name]);
 
-  const statCards = useMemo(() => {
-    const overall = personalStats?.overall || {};
-    return [
-      { label: t('userDetails.stats.matches', 'Matchs'), value: Number(overall.matches || 0) },
-      { label: t('userDetails.stats.wins', 'Victoires'), value: Number(overall.wins || 0) },
-      { label: t('userDetails.stats.losses', 'Défaites'), value: Number(overall.losses || 0) },
-      {
-        label: t('userDetails.stats.minutes', 'Minutes'),
-        value: Number(overall.minutesPlayed || 0),
-      },
-      {
-        label: t('userDetails.stats.goals', 'Buts'),
-        value: Number(overall.football?.goals || 0),
-      },
-      {
-        label: t('userDetails.stats.assists', 'Passes déc.'),
-        value: Number(overall.football?.assists || 0),
-      },
-    ];
-  }, [personalStats?.overall, t]);
-
   /**
    * Enregistre le profil. Chaque champ n'est envoye que s'il est ATTEIGNABLE
    * pour ce role : un coach ne poste jamais un poste ni une taille, meme si la
@@ -702,37 +682,15 @@ function SelfProfilePlayerCoach({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        {/* ── Stats de match — JOUEUR uniquement ─────────────────────── */}
+        {/* ── Ma saison — JOUEUR uniquement (ST-VUES, planche 16 du design valide) :
+            un titre, « Tout voir », V · N · D avec les nuls, « Ma note », la rangee qui
+            suit le sport, et ce qu elle compte. L entraineur n a pas de rangee (PE-1). */}
         {isPlayer ? (
-          <View
-            accessibilityLabel={t('userDetails.sections.matchStats', 'Stats de match')}
-            style={[sectionCardStyle, {
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              paddingVertical: 12,
-            }]}
-          >
-            {statCards.map((stat) => (
-              <View key={stat.label} style={{ alignItems: 'center', flex: 1, gap: 4 }}>
-                <Text style={{
-                  color: Colors.neutral00, fontFamily: 'Montserrat-Black', fontSize: 15,
-                }}
-                >
-                  {String(stat.value)}
-                </Text>
-                <Text
-                  style={{
-                    color: Colors.neutral300,
-                    fontFamily: 'Montserrat-Regular',
-                    fontSize: 10.5,
-                    textAlign: 'center',
-                  }}
-                >
-                  {stat.label}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <MySeasonCard
+            onPressSeeAll={() => navigation.navigate(RouteNames.UserDetails, { userId, view: 'myStats' })}
+            sportHint={playerTeams[0]?.activities?.[0]?.name || ''}
+            stats={personalStats}
+          />
         ) : null}
 
         {/* ── Identite ───────────────────────────────────────────────── */}
@@ -1063,6 +1021,21 @@ function SelfProfilePlayerCoach({ navigation }) {
                 value={feedbackCount
                   ? String(feedbackCount)
                   : t('userDetails.empty.coachFeedback', 'Aucun')}
+              />
+            ) : null}
+            {/* ST-VUES (planche 16, etat 2) — « Mes stats » : la page entiere de ma saison. */}
+            {isPlayer ? (
+              <FollowUpRow
+                Colors={Colors}
+                divider
+                icon={Images.trophy}
+                Images={Images}
+                label={t('myStats.rowLabel', 'Mes stats')}
+                onPress={() => navigation.navigate(RouteNames.UserDetails, { userId, view: 'myStats' })}
+                surfaces={surfaces}
+                value={t('myStats.rowValue', '{{count}} match', {
+                  count: Number(personalStats?.overall?.matches || 0),
+                })}
               />
             ) : null}
             <FollowUpRow
