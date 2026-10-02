@@ -353,13 +353,19 @@ const getPendingFacilityOverrideRequests = async (clubId) => {
   }
 };
 
-const approveFacilityOverrideRequest = async (requestId, decisionReason = '') => {
+// COLL-C3B (02/10) — `series` : « Accepter la série » / « Refuser la série » (toutes les dates en
+// attente d une demande « chaque semaine » ; acceptée, la série devient un créneau de saison).
+// Sans lui, le corps est celui d avant, au mot près.
+const decisionBody = (decisionReason, series) => ({
+  data: series ? { decisionReason, series: true } : { decisionReason },
+});
+
+const approveFacilityOverrideRequest = async (requestId, decisionReason = '', series = false) => {
   try {
-    const response = await client.post(`/facility-override-requests/${requestId}/approve`, {
-      data: {
-        decisionReason,
-      },
-    });
+    const response = await client.post(
+      `/facility-override-requests/${requestId}/approve`,
+      decisionBody(decisionReason, series),
+    );
     return response.data;
   } catch (error) {
     console.error('Error approving facility override request:', error);
@@ -367,18 +373,29 @@ const approveFacilityOverrideRequest = async (requestId, decisionReason = '') =>
   }
 };
 
-const refuseFacilityOverrideRequest = async (requestId, decisionReason = '') => {
+const refuseFacilityOverrideRequest = async (requestId, decisionReason = '', series = false) => {
   try {
-    const response = await client.post(`/facility-override-requests/${requestId}/refuse`, {
-      data: {
-        decisionReason,
-      },
-    });
+    const response = await client.post(
+      `/facility-override-requests/${requestId}/refuse`,
+      decisionBody(decisionReason, series),
+    );
     return response.data;
   } catch (error) {
     console.error('Error refusing facility override request:', error);
     throw error;
   }
+};
+
+/**
+ * COLL-C3B (02/10) — « Tes demandes a la Ville » : les demandes de creneau que le club a
+ * ENVOYEES aux Villes (GET /facility-override-requests/sent?clubId=), la reponse et le mot de
+ * la mairie. Jamais une personne : le serveur ne rend ni le demandeur, ni l agent.
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<{ data: any[] }>} Les demandes, une serie par ligne.
+ */
+const getSentFacilityOverrideRequests = async (clubId) => {
+  const response = await client.get('/facility-override-requests/sent', { params: { clubId } });
+  return response.data;
 };
 
 /**
@@ -424,6 +441,7 @@ export {
   deleteFacility,
   getAvailability,
   getBookableFacilities,
+  getClubCollectiviteFacilities,
   getClubFacilityContext,
   getCMFacilities,
   getFacilities,
@@ -432,6 +450,7 @@ export {
   getFacilitySections,
   getOccupancy,
   getPendingFacilityOverrideRequests,
+  getSentFacilityOverrideRequests,
   refuseFacilityOverrideRequest,
   updateFacility,
 };

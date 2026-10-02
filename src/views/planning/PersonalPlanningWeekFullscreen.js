@@ -73,6 +73,7 @@ import {
   getClubPlanning,
   getMyPlanning,
 } from '@/services/event/eventService';
+import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import {
   getClubSharedPlanning,
@@ -341,7 +342,9 @@ function PlanningWeekFullscreen() {
         displayColor: readsAsOrganizer || duClubDuLecteur
           ? evenement.displayColor
           : Colors.neutral500,
-        participationStatus: readsAsOrganizer && brut.pending === true
+        // COLL-C3B (02/10) — et le club qui DEMANDE voit sa demande « en attente de la mairie »,
+        // a sa place (P8v2-demande, etat 4 : « Comme dans ton planning »).
+        participationStatus: (readsAsOrganizer || duClubDuLecteur) && brut.pending === true
           ? 'pending'
           : evenement.participationStatus,
       };
@@ -697,13 +700,38 @@ function PlanningWeekFullscreen() {
       type: 'attribuer',
     });
   }, []);
-  const toucherUneHeureLibre = peutAttribuer
-    ? (/** @type {Date} */ jour, /** @type {number} */ heure) => attribuerA(
+  // COLL-C3B (02/10, design P8v2-demande) — un DIRIGEANT ou un ENTRAINEUR d un club rattache
+  // touche une heure libre du planning d une installation de la Ville ⇒ « Demander ce creneau »,
+  // deja rempli du jour et de l heure. La Ville decide (le serveur fait la demande).
+  const clubDuLecteur = userData?.club?.documentId || null;
+  const villesDuClub = useClubCollectiviteFacilities(
+    isFacilitySource && !managingCollectiviteId && readsAsOrganizer ? clubDuLecteur : null,
+  );
+  const peutDemander = !peutAttribuer && Boolean(clubDuLecteur)
+    && (Array.isArray(villesDuClub.data) ? villesDuClub.data : [])
+      .some((/** @type {any} */ installation) => installation?.documentId === facilityId);
+  const demanderA = (/** @type {Date | null} */ jour, /** @type {number | null} */ heure) => {
+    /** @type {Record<string, any>} */
+    const params = { clubId: clubDuLecteur, facilityId };
+    if (jour) params.date = format(jour, 'yyyy-MM-dd');
+    if (heure !== null) {
+      params.startTime = fromMinutes(heure * 60);
+      params.endTime = fromMinutes(Math.min(heure * 60 + 90, fermetureDuJour));
+    }
+    /** @type {any} */ (navigation).navigate(RouteNames.ClubSlotRequest, params);
+  };
+  let toucherUneHeureLibre;
+  if (peutAttribuer) {
+    toucherUneHeureLibre = (/** @type {Date} */ jour, /** @type {number} */ heure) => attribuerA(
       jour,
       heure * 60,
       heure * 60 + 90,
-    )
-    : undefined;
+    );
+  } else if (peutDemander) {
+    toucherUneHeureLibre = (/** @type {Date} */ jour, /** @type {number} */ heure) => (
+      demanderA(jour, heure)
+    );
+  }
   // Un bloc venu d un creneau attribue (contrat C2A §7, `slot`) se gere comme dans l onglet
   // « Creneaux » : le meme formulaire, la meme feuille.
   const creneauDuBloc = (/** @type {any} */ bloc) => {
@@ -1427,6 +1455,15 @@ function PlanningWeekFullscreen() {
             {/* depassement (COLL1D) ; la mairie, qui tranche, lit « n demandes » plus bas. */}
             {readsAsOrganizer && !managingCollectiviteId && facilitySummaryMessage ? (
               <Text style={[Fonts.p4, Fonts.neutral200]}>{facilitySummaryMessage}</Text>
+            ) : null}
+            {/* COLL-C3B (02/10) — « Demander un creneau » (P8v2) : le club demande a la Ville. */}
+            {peutDemander ? (
+              <Button
+                onPress={() => demanderA(currentDate, null)}
+                size="sm"
+                title={t('collectiviteDemandes.club.demanderCeCreneau', 'Demander un créneau')}
+                variant="Secondary"
+              />
             ) : null}
             {legende.length ? (
               <View style={[Alignments.row, Alignments.wrap, { columnGap: 12, rowGap: 4 }]}>

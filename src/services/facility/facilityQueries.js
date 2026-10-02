@@ -5,11 +5,13 @@ import {
   createBooking,
   getAvailability,
   getBookableFacilities,
+  getClubCollectiviteFacilities,
   getClubFacilityContext,
   getFacilities,
   getFacility,
   getOccupancy,
   getPendingFacilityOverrideRequests,
+  getSentFacilityOverrideRequests,
   refuseFacilityOverrideRequest,
 } from './facilityService';
 
@@ -135,16 +137,54 @@ export const useGetPendingFacilityOverrideRequests = (clubId, options = {}) => u
   ...options,
 });
 
+/**
+ * COLL-C3B (02/10) — « Tes demandes a la Ville » du club `clubId`.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {Record<string, any>} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` est un tableau.
+ */
+export const useSentFacilityOverrideRequests = (clubId, options = {}) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: async () => {
+    const reponse = await getSentFacilityOverrideRequests(String(clubId));
+    return Array.isArray(reponse?.data) ? reponse.data : [];
+  },
+  queryKey: ['facility-override-requests', 'sent', clubId],
+  staleTime: 15_000,
+  ...options,
+});
+
+/**
+ * COLL-C3B (02/10) — les installations des Villes auxquelles le club est rattache (COLL1B),
+ * chacune avec `collectivite: { documentId, name }` : « Demander un creneau » y choisit.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @returns {any} Le resultat react-query ; `data` est un tableau.
+ */
+export const useClubCollectiviteFacilities = (clubId) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: async () => {
+    const reponse = await getClubCollectiviteFacilities(String(clubId));
+    return Array.isArray(reponse?.data) ? reponse.data : [];
+  },
+  queryKey: ['facilities', 'collectivite', clubId],
+  staleTime: 5 * 60 * 1000,
+});
+
 export const useApproveFacilityOverrideRequest = (options = {}) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ decisionReason, requestId }) => approveFacilityOverrideRequest(requestId, decisionReason),
+    mutationFn: ({ decisionReason, requestId, series = false }) => (
+      approveFacilityOverrideRequest(requestId, decisionReason, series)
+    ),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['requestsHub'] }),
         queryClient.invalidateQueries({ queryKey: ['events'] }),
+        // COLL-C3B : une série acceptée devient un créneau de saison ; le planning le montre.
+        queryClient.invalidateQueries({ queryKey: ['season-slots'] }),
+        queryClient.invalidateQueries({ queryKey: ['planning'] }),
       ]);
     },
     ...options,
@@ -155,7 +195,9 @@ export const useRefuseFacilityOverrideRequest = (options = {}) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ decisionReason, requestId }) => refuseFacilityOverrideRequest(requestId, decisionReason),
+    mutationFn: ({ decisionReason, requestId, series = false }) => (
+      refuseFacilityOverrideRequest(requestId, decisionReason, series)
+    ),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),

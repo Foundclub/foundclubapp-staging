@@ -441,6 +441,25 @@ function PrivateNavigator() {
           name={RouteNames.CollectiviteSpace}
           options={{ headerShown: false }}
         />
+        {/* COLL-C3B (02/10) — le CLUB demande un creneau a la Ville (P8v2-demande) : depuis une
+            heure libre du planning d une installation de la Ville, ou depuis « Tes demandes a la
+            Ville », que l accuse de reception ouvre. Montes sans condition : le serveur juge. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/ClubSlotRequest').default}
+          name={RouteNames.ClubSlotRequest}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteDemandes.club.titre', 'Demander un créneau'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/ClubSlotRequests').default}
+          name={RouteNames.ClubSlotRequests}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteDemandes.club.tesDemandes', 'Tes demandes à la Ville'),
+          }}
+        />
         {/* COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription de la
             mairie (2 etapes, aucune question de sport) et l ecran « ou en est ma demande ».
             Montes SANS CONDITION : le choix du statut (UserRole) y mene, et un compte Ville

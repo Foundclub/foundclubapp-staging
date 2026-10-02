@@ -2,11 +2,21 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Modal,
+  Pressable,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
+import {
+  estDemandeHebdo,
+  etatDeLaPlace,
+  momentDeLaDemande,
+  MOTIFS_DE_REFUS,
+  prevenusDe,
+} from '@/domains/collectivite/collectiviteDemandes';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -20,14 +30,22 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 
 /** @typedef {{ kind: 'approve' | 'refuse', request: any }} Decision */
 
+// Au-delà de cette largeur (ordinateur), la feuille devient une fenêtre centrée (P6-ordi, état 3).
+const LARGEUR_FENETRE = 1024;
+const PLACE_PRISE_ENTRE_TEMPS = 'FACILITY_OVERRIDE_CAPACITY_CHANGED';
+
 /**
  * 🏛️ LA FENÊTRE « ACCEPTER / REFUSER » D'UNE DEMANDE DE CRÉNEAU, côté mairie.
  *
- * COLL-ACCUEIL (01/10) : sortie TELLE QUELLE de « Demandes de la Ville »
- * (CollectiviteRequests, lot 1c), pour que l'accueil de la Ville tranche la demande qu'il
- * montre en tête avec la MÊME fenêtre, les mêmes routes (lot 3a) et les mêmes textes. Le
- * message est facultatif pour accepter, obligatoire pour refuser (c'est le motif que le
- * club lira). Le serveur juge et prévient le demandeur, et l'occupant s'il y en avait un.
+ * COLL-ACCUEIL (01/10) : sortie de « Demandes de la Ville » (lot 1c) pour que l'accueil de la
+ * Ville tranche avec la MÊME fenêtre, les mêmes routes (lot 3a) et les mêmes textes.
+ * COLL-C3B (02/10) — planche P6-fenetre : la feuille RAPPELLE la demande (club · équipe, qui
+ * demande, où, quand, la conséquence) ; pour accepter, elle dit QUI SERA PRÉVENU (l'encadrant
+ * qui demande et les clubs déjà là) ; pour refuser, TROIS MOTIFS EN UN APPUI remplissent le
+ * champ, qu'on peut compléter, et le bouton rouge dit la conséquence (« Refuser et annuler
+ * l'entraînement »). Une série se tranche d'un geste (`series: true` : contrat §10, elle devient
+ * un créneau de saison). Si la place a été prise entre-temps (409), la fenêtre le dit et ne
+ * propose plus que de refuser. Sur téléphone, une feuille du bas ; sur ordinateur, centrée.
  * @param {{ decision: Decision | null, onClose: () => void }} props - La décision en cours
  *   (null : fenêtre fermée) et sa fermeture.
  * @returns {import('react').ReactElement} La fenêtre.
@@ -37,8 +55,12 @@ function DecisionCreneauModal({ decision, onClose }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { width } = useWindowDimensions();
+  const centree = width >= LARGEUR_FENETRE;
   const [message, setMessage] = useState('');
   const [erreur, setErreur] = useState('');
+  const [placePrise, setPlacePrise] = useState(false);
+  const [refusForce, setRefusForce] = useState(false);
   const approve = /** @type {any} */ (useApproveFacilityOverrideRequest());
   const refuse = /** @type {any} */ (useRefuseFacilityOverrideRequest());
   const enCours = Boolean(approve.isPending || refuse.isPending);
@@ -47,7 +69,13 @@ function DecisionCreneauModal({ decision, onClose }) {
   useEffect(() => {
     setMessage('');
     setErreur('');
+    setPlacePrise(false);
+    setRefusForce(false);
   }, [decision]);
+
+  const demande = decision?.request;
+  const serie = estDemandeHebdo(demande) && Boolean(demande?.series);
+  const estRefus = decision?.kind === 'refuse' || refusForce;
 
   const fermer = () => {
     if (enCours) return;
@@ -57,84 +85,243 @@ function DecisionCreneauModal({ decision, onClose }) {
   const confirmer = async () => {
     if (!decision) return;
     const decisionReason = message.trim();
-    if (decision.kind === 'refuse' && !decisionReason) {
+    if (estRefus && !decisionReason) {
       setErreur(t(
         'collectivite.requests.modal.reasonRequired',
         'Écrivez le motif : le club le lira.',
       ));
       return;
     }
-    const mutation = decision.kind === 'approve' ? approve : refuse;
+    const mutation = estRefus ? refuse : approve;
     try {
-      await mutation.mutateAsync({ decisionReason, requestId: decision.request?.documentId });
+      await mutation.mutateAsync({ decisionReason, requestId: demande?.documentId, series: serie });
       onClose();
     } catch (error) {
+      const code = /** @type {any} */ (error)?.details?.code
+        || /** @type {any} */ (error)?.response?.data?.error?.details?.code;
+      if (!estRefus && code === PLACE_PRISE_ENTRE_TEMPS) {
+        // P6-fenetre, état 4 : la place est prise ; la demande ne peut plus qu'être refusée.
+        setPlacePrise(true);
+        setRefusForce(true);
+        setErreur('');
+        return;
+      }
       setErreur(getErrorMessage(/** @type {any} */ (error)));
     }
   };
 
-  const estRefus = decision?.kind === 'refuse';
-  const fenetreStyle = {
-    borderColor: `${Colors.primary500}66`,
-    maxWidth: 520,
-    padding: 20,
-    width: /** @type {const} */ ('100%'),
+  // ─── Le rappel de la demande ─────────────────────────────────────────────────────────────
+  const moment = momentDeLaDemande(demande);
+  const place = etatDeLaPlace(demande?.conflict);
+  const prevenus = prevenusDe(demande);
+  const qui = [demande?.club?.name, demande?.team?.name].filter(Boolean).join(' · ');
+  // eslint-disable-next-line max-len
+  const ou = [demande?.facility?.name, moment?.jourCourt, moment ? `${moment.debut} – ${moment.fin}` : '']
+    .filter(Boolean).join(' · ');
+  const nombreDEquipes = (/** @type {number} */ nombre) => (nombre === 1
+    ? t('collectiviteDemandes.nombre.uneEquipe', '1 équipe')
+    : t('collectiviteDemandes.nombre.equipes', '{{nombre}} équipes', { nombre }));
+  const nombreDePlaces = (/** @type {number} */ nombre) => (nombre === 1
+    ? t('collectiviteDemandes.nombre.unePlace', '1 place')
+    : t('collectiviteDemandes.nombre.places', '{{nombre}} places', { nombre }));
+
+  let titre = t('collectivite.requests.modal.approveTitle', 'Accepter la demande');
+  if (estRefus) {
+    titre = serie
+      ? t('collectiviteDemandes.fenetre.refuserSerie', 'Refuser la série')
+      : t('collectivite.requests.modal.refuseTitle', 'Refuser la demande');
+  } else if (serie) {
+    titre = t('collectiviteDemandes.fenetre.accepterSerie', 'Accepter la série');
+  }
+  let boutonPrincipal = serie
+    ? t('collectiviteDemandes.actions.accepterSerie', 'Accepter la série')
+    : t('collectivite.requests.actions.approve', 'Accepter');
+  if (estRefus) {
+    boutonPrincipal = serie
+      // eslint-disable-next-line max-len
+      ? t('collectiviteDemandes.fenetre.refuserSerieEtAnnuler', 'Refuser et annuler les entraînements')
+      : t('collectiviteDemandes.fenetre.refuserEtAnnuler', 'Refuser et annuler l’entraînement');
+  }
+
+  const rappel = (
+    <View
+      style={[
+        ApplicationStyle.borderRadius12,
+        Spaces.padding[12],
+        {
+          // eslint-disable-next-line max-len
+          backgroundColor: `${Colors.neutral00}0D`, borderColor: `${Colors.neutral00}1A`, borderWidth: 1, gap: 4,
+        },
+      ]}
+      testID="fenetre-rappel"
+    >
+      {qui ? <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{qui}</Text> : null}
+      {prevenus.personne ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('collectiviteDemandes.fenetre.demandePar', 'Demandé par {{personne}}', {
+            personne: prevenus.personne, ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+      {ou ? <Text style={[Fonts.p3, Fonts.neutral200]}>{ou}</Text> : null}
+      {!estRefus && place?.depasse ? (
+        <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+          {t('collectiviteDemandes.fenetre.depasse', '{{equipes}} pour {{places}} à ce moment.', {
+            // eslint-disable-next-line max-len
+            equipes: nombreDEquipes(place.apres), places: nombreDePlaces(place.capacite), ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
+    </View>
+  );
+
+  // Les motifs en un appui, chacun par sa clé (le texte vit dans les traductions).
+  const texteDuMotif = (/** @type {string} */ motif) => {
+    if (motif === 'fermeture') return t('collectiviteDemandes.motifs.fermeture', 'Fermeture');
+    if (motif === 'manifestation') {
+      return t('collectiviteDemandes.motifs.manifestation', 'Manifestation de la Ville');
+    }
+    return t('collectiviteDemandes.motifs.complet', 'Installation complète');
   };
+
+  const quiSeraPrevenu = () => {
+    const morceaux = [];
+    if (prevenus.personne || prevenus.club) {
+      // eslint-disable-next-line max-len
+      morceaux.push(t('collectiviteDemandes.fenetre.prevenuDemandeur', '{{personne}} ({{club}}), qui demande', {
+        club: prevenus.club, personne: prevenus.personne || prevenus.club, ...SANS_ECHAPPEMENT,
+      }));
+    }
+    if (prevenus.clubsDejaLa.length) {
+      // eslint-disable-next-line max-len
+      morceaux.push(t('collectiviteDemandes.fenetre.prevenusDejaLa', 'et les clubs déjà là : {{clubs}}', {
+        clubs: prevenus.clubsDejaLa.join(', '), ...SANS_ECHAPPEMENT,
+      }));
+    }
+    return morceaux.length ? `${morceaux.join(' ; ')}.` : '';
+  };
+
   const champStyle = {
-    borderColor: `${Colors.primary500}44`,
-    minHeight: 110,
+    borderColor: erreur ? Colors.error500 : `${Colors.primary500}44`,
+    minHeight: 96,
     textAlignVertical: /** @type {const} */ ('top'),
   };
+  const fenetreStyle = centree
+    ? [ApplicationStyle.borderRadius16, { maxWidth: 560, width: /** @type {const} */ ('100%') }]
+    : [{ borderTopLeftRadius: 24, borderTopRightRadius: 24, width: /** @type {const} */ ('100%') }];
 
   return (
     <Modal animationType="fade" onRequestClose={fermer} transparent visible={Boolean(decision)}>
       <View
         style={[
           Alignments.fill,
-          Alignments.justifyCenter,
+          centree ? Alignments.justifyCenter : { justifyContent: 'flex-end' },
           Alignments.alignCenter,
-          Spaces.padding[24],
+          centree ? Spaces.padding[24] : null,
           { backgroundColor: `${Colors.neutral900}B3` },
         ]}
       >
         <View
+          accessibilityViewIsModal
           style={[
             ApplicationStyle.backgroundColor.primary700,
-            ApplicationStyle.borderRadius16,
             ApplicationStyle.borderWidth1,
             Spaces.gap[16],
-            fenetreStyle,
+            { borderColor: `${Colors.primary500}66`, padding: 20 },
+            ...fenetreStyle,
           ]}
         >
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {estRefus
-              ? t('collectivite.requests.modal.refuseTitle', 'Refuser la demande')
-              : t('collectivite.requests.modal.approveTitle', 'Accepter la demande')}
-          </Text>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {estRefus
-              ? t(
-                'collectivite.requests.modal.refuseHint',
-                'Le club reçoit votre motif ; son entraînement est annulé.',
-              )
-              : t(
-                'collectivite.requests.modal.approveHint',
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
+          {demande ? rappel : null}
+
+          {placePrise ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius12,
+                Spaces.padding[12],
+                { backgroundColor: `${Colors.error500}1F` },
+              ]}
+              testID="fenetre-place-prise"
+            >
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {t(
+                  'APIerrors.FACILITY_OVERRIDE_CAPACITY_CHANGED',
+                  // eslint-disable-next-line max-len
+                  'Plus de place : une autre demande a été acceptée sur ce moment entre-temps. Celle-ci ne peut plus qu’être refusée.',
+                )}
+              </Text>
+            </View>
+          ) : null}
+
+          {!estRefus ? (
+            <View style={{ gap: 4 }}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                {t('collectiviteDemandes.fenetre.serontPrevenus', 'Seront prévenus')}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral200]}>{quiSeraPrevenu()}</Text>
+            </View>
+          ) : (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {serie
                 // eslint-disable-next-line max-len
-                'Le club reçoit votre réponse et votre message. S’il y avait un occupant, il est prévenu.',
-              )}
-          </Text>
+                ? t('collectiviteDemandes.fenetre.refusAideSerie', 'Le club reçoit votre motif ; les entraînements de la série sont annulés.')
+                // eslint-disable-next-line max-len
+                : t('collectivite.requests.modal.refuseHint', 'Le club reçoit votre motif ; son entraînement est annulé.')}
+            </Text>
+          )}
+
+          {estRefus ? (
+            <View style={{ gap: 8 }}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                {t('collectiviteDemandes.fenetre.motifsFrequents', 'Motifs fréquents')}
+              </Text>
+              <View
+                accessibilityRole="radiogroup"
+                style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}
+              >
+                {MOTIFS_DE_REFUS.map((motif) => {
+                  const texte = texteDuMotif(motif);
+                  const choisi = message.trim() === texte;
+                  return (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: choisi }}
+                      key={motif}
+                      onPress={() => { setMessage(texte); setErreur(''); }}
+                      style={[
+                        ApplicationStyle.borderRadius16,
+                        {
+                          // eslint-disable-next-line max-len
+                          backgroundColor: choisi ? `${Colors.primary500}33` : `${Colors.neutral00}0D`,
+                          borderColor: choisi ? Colors.primary500 : `${Colors.neutral00}26`,
+                          borderWidth: 1,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                        },
+                      ]}
+                      testID={`motif-${motif}`}
+                    >
+                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{texte}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+
           <TextInput
+            accessibilityLabel={estRefus
+              // eslint-disable-next-line max-len
+              ? t('collectivite.requests.modal.refusePlaceholder', 'Le motif du refus (obligatoire)')
+              // eslint-disable-next-line max-len
+              : t('collectivite.requests.modal.approvePlaceholder', 'Un mot pour le club (facultatif)')}
             multiline
-            onChangeText={setMessage}
+            onChangeText={(texte) => { setMessage(texte); if (erreur) setErreur(''); }}
             placeholder={estRefus
-              ? t(
-                'collectivite.requests.modal.refusePlaceholder',
-                'Le motif du refus (obligatoire)',
-              )
-              : t(
-                'collectivite.requests.modal.approvePlaceholder',
-                'Un mot pour le club (facultatif)',
-              )}
+              // eslint-disable-next-line max-len
+              ? t('collectivite.requests.modal.refusePlaceholder', 'Le motif du refus (obligatoire)')
+              // eslint-disable-next-line max-len
+              : t('collectivite.requests.modal.approvePlaceholder', 'Un mot pour le club (facultatif)')}
             placeholderTextColor={Colors.neutral400}
             style={[
               ApplicationStyle.borderRadius16,
@@ -148,25 +335,24 @@ function DecisionCreneauModal({ decision, onClose }) {
             value={message}
           />
           {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
-          <View style={[Alignments.row, { gap: 12 }]}>
-            <View style={{ flex: 1 }}>
-              <Button
-                disabled={enCours}
-                onPress={fermer}
-                title={t('collectivite.requests.modal.cancel', 'Annuler')}
-                variant="Secondary"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button
-                disabled={enCours}
-                onPress={confirmer}
-                title={estRefus
-                  ? t('collectivite.requests.actions.refuse', 'Refuser')
-                  : t('collectivite.requests.actions.approve', 'Accepter')}
-                variant="Primary"
-              />
-            </View>
+
+          {/* Deux boutons EMPILÉS, libellés entiers (P6-fenetre). */}
+          <View style={{ gap: 12 }}>
+            <Button
+              disabled={enCours}
+              isLoading={enCours}
+              onPress={confirmer}
+              title={boutonPrincipal}
+              variant={estRefus ? 'Danger' : 'Primary'}
+            />
+            <Button
+              disabled={enCours}
+              onPress={fermer}
+              title={placePrise
+                ? t('collectiviteDemandes.fenetre.fermer', 'Fermer')
+                : t('collectivite.requests.modal.cancel', 'Annuler')}
+              variant="Ghost"
+            />
           </View>
         </View>
       </View>

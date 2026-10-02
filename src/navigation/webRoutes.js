@@ -292,6 +292,9 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-C4A2 (02/10/2026) — « Dans ce canal » (sur ordinateur, la colonne de droite de la
   // conversation le montre deja ; l adresse sert le telephone et un lien direct).
   [RouteNames.CollectiviteCanalMembres]: '/messages/:chatId/membres-de-la-ville',
+  // COLL-C3B (02/10/2026) — le club demande un creneau a la Ville, puis suit ses demandes.
+  [RouteNames.ClubSlotRequest]: '/demander-un-creneau',
+  [RouteNames.ClubSlotRequests]: '/mes-demandes-a-la-ville',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();
