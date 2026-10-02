@@ -4,9 +4,10 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
-import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import StatsIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 import TeamRecordTiles from '@/views/team/performance/TeamRecordTiles';
 
@@ -135,7 +136,7 @@ function TeamPerformancePanel({
         style={[Alignments.alignCenter, Spaces.gap[8], Spaces.paddingVertical[24]]}
         testID="team-performance-empty"
       >
-        <SvgIcon color={Colors.primary200} height={40} name="trophy" width={40} />
+        <StatsIcon color={Colors.primary200} height={40} name="trophy" width={40} />
         <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
           {t('teamStatsPanel.emptyTitle', 'Pas encore de résultat')}
         </Text>
@@ -347,7 +348,12 @@ function TeamPerformancePanel({
                 />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {isMe ? t('teamStatsPanel.playerIsMe', '{{name}} · toi', { name }) : name}
+                    {isMe
+                      ? t('teamStatsPanel.playerIsMe', '{{name}} · toi', {
+                        name,
+                        ...SANS_ECHAPPEMENT,
+                      })
+                      : name}
                   </Text>
                   <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>
                     {`${t('teamStatsPanel.minutes', '{{count}} min', { count: minutes })} · ${t(

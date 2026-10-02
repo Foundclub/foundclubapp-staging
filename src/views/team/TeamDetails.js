@@ -48,7 +48,6 @@ import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
-import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
@@ -59,6 +58,9 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
 import TeamInviteSheet from '@/views/team/invite/TeamInviteSheet';
+import TeamAttendancePanel, {
+  TeamAttendanceSheetSummary,
+} from '@/views/team/performance/TeamAttendancePanel';
 import TeamPerformancePanel from '@/views/team/performance/TeamPerformancePanel';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -86,7 +88,6 @@ import {
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { isVerifiedClub } from '@/utils/clubCertification';
-import { formatDateTimeWithDayPrefix } from '@/utils/date';
 import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
@@ -1426,48 +1427,6 @@ function TeamDetails({ navigation, route }) {
     }));
   }, [teamStatsData?.data]);
 
-  const statsSummary = useMemo(() => {
-    const rowCount = teamStatsRows.length;
-    const fallbackTotals = teamStatsRows.reduce((/** @type {any} */ acc, /** @type {any} */ row) => ({
-      absenceCount: acc.absenceCount + Number(row.absenceCount || 0),
-      attendanceCount: acc.attendanceCount + Number(row.attendanceCount || 0),
-      lateCount: acc.lateCount + Number(row.lateCount || 0),
-      lateMinutesTotal: acc.lateMinutesTotal + Number(row.lateMinutesTotal || 0),
-    }), {
-      absenceCount: 0,
-      attendanceCount: 0,
-      lateCount: 0,
-      lateMinutesTotal: 0,
-    });
-
-    const totals = teamStatsData?.totals || fallbackTotals;
-    const lateMinutesAvg = Number(totals?.lateMinutesAvg)
-      || (Number(totals?.lateCount || 0) > 0
-        ? Math.round(Number(totals?.lateMinutesTotal || 0) / Number(totals?.lateCount || 0))
-        : 0);
-
-    return {
-      absenceCount: Number(totals?.absenceCount || 0),
-      attendanceCount: Number(totals?.attendanceCount || 0),
-      baselineAt: teamStatsData?.baselineAt || null,
-      lateCount: Number(totals?.lateCount || 0),
-      lateMinutesAvg,
-      lateMinutesTotal: Number(totals?.lateMinutesTotal || 0),
-      rowCount,
-      totalEvents: Number(teamStatsData?.totalEvents || 0),
-    };
-  }, [teamStatsData?.baselineAt, teamStatsData?.totalEvents, teamStatsData?.totals, teamStatsRows]);
-
-  // 🕐 D8c — « 26/08/2026 19:28:52 » : les secondes d une date de REFERENCE ne
-  // servent a personne. Le depot a deja son formateur, qui rend
-  // « mer 26/08/2026 a 19h28 » — c est lui, pas un troisieme.
-  const statsBaselineLabel = useMemo(() => {
-    if (!statsSummary.baselineAt) return '';
-    const parsed = new Date(statsSummary.baselineAt);
-    if (Number.isNaN(parsed.getTime())) return '';
-    return formatDateTimeWithDayPrefix(parsed);
-  }, [statsSummary.baselineAt]);
-
   const teamPerformancePlayers = useMemo(
     () => (Array.isArray(teamPerformanceStats?.players) ? teamPerformanceStats.players : []),
     [teamPerformanceStats?.players],
@@ -1829,8 +1788,11 @@ function TeamDetails({ navigation, route }) {
     if (!teamId || !canResetTeamStats) return;
 
     Alert.alert(
-      t('teamDetails.stats.resetTitle', 'Réinitialiser les statistiques ?'),
-      t('teamDetails.stats.resetDescription', 'Les compteurs repartiront de zéro à partir de maintenant. L\'historique est conservé.'),
+      t('teamStatsPanel.resetTitle', 'Remettre la présence à zéro ?'),
+      t(
+        'teamStatsPanel.resetBody',
+        'La présence de chaque joueur repartira d’aujourd’hui. Les événements et leurs appels ne sont pas effacés.',
+      ),
       [
         { style: 'cancel', text: t('common.cancel', 'Annuler') },
         {
@@ -1840,7 +1802,7 @@ function TeamDetails({ navigation, route }) {
             });
           },
           style: 'destructive',
-          text: t('common.confirm', 'Confirmer'),
+          text: t('teamStatsPanel.resetConfirm', 'Remettre à zéro'),
         },
       ],
     );
@@ -1972,7 +1934,8 @@ function TeamDetails({ navigation, route }) {
     || showTeamChatAction
     || showContactTrainersAction
     || showDefaultCompositionAction
-    || showLeaveAction;
+    || showLeaveAction
+    || canResetTeamStats;
 
   useEffect(() => {
     if (!hasTeamActionsPanel) {
@@ -4464,220 +4427,24 @@ function TeamDetails({ navigation, route }) {
               </View>
             ) : null}
 
+            {/* ST-VUES — PLANCHE 14 DU DESIGN VALIDE : la presence. L encadrement lit les
+                tuiles, « À surveiller » et « Les autres » ; le JOUEUR lit SA presence et la
+                moyenne (« a non », decide par le SERVEUR : `viewerScope`). « Remettre a zero »
+                part dans le menu ⋯ (etat 4). VA1 — un refus se dit, il ne devient pas une
+                liste vide. */}
             {statsMode === 'attendance' || !canLoadTeamPerformanceStats ? (
-              <>
-                {(() => {
-                  const presenceTotal = statsSummary.attendanceCount + statsSummary.absenceCount;
-                  const attendanceRatio = presenceTotal > 0
-                    ? statsSummary.attendanceCount / presenceTotal
-                    : null;
-                  /**
-                   * Ton de couleur presence (handoff 9e).
-                   * @param {number} ratio
-                   * @returns {string}
-                   */
-                  const getPresenceTone = (ratio) => {
-                    if (ratio >= 0.85) return Colors.success500;
-                    if (ratio >= 0.65) return Colors.warning400;
-                    return Colors.error500;
-                  };
-                  return (
-                    <>
-                      <View
-                        style={[
-                          Alignments.row,
-                          Alignments.justifySpaceBetween,
-                          {
-                            backgroundColor: 'rgba(4,31,44,0.82)',
-                            borderColor: 'rgba(1,179,244,0.24)',
-                            borderRadius: 18,
-                            borderWidth: 1,
-                            paddingHorizontal: 6,
-                            paddingVertical: 14,
-                          },
-                        ]}
-                      >
-                        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                          <Text style={[Fonts.h3Bold, Fonts.primary500]}>
-                            {attendanceRatio === null ? '—' : `${Math.round(attendanceRatio * 100)} %`}
-                          </Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>
-                            {t('teamDetails.attendance.ratio', 'Assiduité')}
-                          </Text>
-                        </View>
-                        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>
-                            {t('teamDetails.attendance.late', 'Retards')}
-                          </Text>
-                        </View>
-                        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-                          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                            {t(
-                              'teamDetails.attendance.lateMinutes',
-                              '{{minutes}} min',
-                              { minutes: statsSummary.lateMinutesAvg, ...SANS_ECHAPPEMENT },
-                            )}
-                          </Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>
-                            {t('teamDetails.attendance.lateAverage', 'Retard moyen')}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={[Spaces.gap[8]]}>
-                        <View style={[Alignments.row, Alignments.justifySpaceBetween, { alignItems: 'baseline' }]}>
-                          <Text
-                            style={[
-                              Fonts.p4Bold,
-                              Fonts.neutral300,
-                              { letterSpacing: 1, textTransform: 'uppercase' },
-                            ]}
-                          >
-                            {t('teamDetails.attendance.title', 'Présences')}
-                          </Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>
-                            {t(
-                              'teamDetails.attendance.summary',
-                              '{{players}} joueur·se·s · {{events}} événements',
-                              {
-                                events: statsSummary.totalEvents,
-                                players: statsSummary.rowCount,
-                                ...SANS_ECHAPPEMENT,
-                              },
-                            )}
-                          </Text>
-                        </View>
-
-                        {isTeamStatsLoading ? (
-                          <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                            {t('common.loading', 'Chargement...')}
-                          </Text>
-                        ) : teamStatsRows.length ? (
-                          teamStatsRows.map((/** @type {any} */ row, /** @type {number} */ index) => {
-                            const attendance = Number(row?.attendanceCount || 0);
-                            const denominator = statsSummary.totalEvents > 0
-                              ? statsSummary.totalEvents
-                              : attendance + Number(row?.absenceCount || 0);
-                            const presenceRatio = denominator > 0 ? attendance / denominator : 0;
-                            const rowTone = getPresenceTone(presenceRatio);
-                            const lateCount = Number(row?.lateCount || 0);
-                            const playerName = `${row?.user?.firstname || ''} ${row?.user?.lastname || ''}`.trim()
-                              || t('teamDetails.attendance.playerFallback', 'Joueur·se');
-                            return (
-                              <TouchableOpacity
-                                key={row?.user?.documentId || `stats-${index}`}
-                                onPress={() => setSelectedStatsPlayer({
-                                  attendance,
-                                  denominator,
-                                  lateCount,
-                                  playerName,
-                                  presenceRatio,
-                                  row,
-                                  rowTone,
-                                })}
-                                style={[
-                                  Alignments.row,
-                                  Alignments.alignCenter,
-                                  {
-                                    backgroundColor: 'rgba(255,255,255,0.04)',
-                                    borderColor: 'rgba(255,255,255,0.09)',
-                                    borderRadius: 14,
-                                    borderWidth: 1,
-                                    columnGap: 11,
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 9,
-                                  },
-                                ]}
-                              >
-                                <MemberAvatar
-                                  avatarUrl={row?.user?.avatar?.url ? getImageUrl(row.user.avatar.url) : null}
-                                  firstname={row?.user?.firstname}
-                                  lastname={row?.user?.lastname}
-                                  size={36}
-                                />
-                                <View style={[Alignments.fill, { minWidth: 0 }]}>
-                                  <View style={[Alignments.row, { alignItems: 'baseline', columnGap: 7 }]}>
-                                    {/* MARQUEE — le nom du joueur se lit en entier. */}
-                                    <MarqueeText
-                                      style={[Fonts.p2Bold, Fonts.neutral00]}
-                                      text={playerName}
-                                    />
-                                    {lateCount > 0 ? (
-                                      <Text style={[Fonts.p4Bold, Fonts.warning400]}>
-                                        {t('teamDetails.attendance.lateCount', {
-                                          count: lateCount,
-                                          defaultValue_one: '{{count}} retard',
-                                          defaultValue_other: '{{count}} retards',
-                                        })}
-                                      </Text>
-                                    ) : null}
-                                  </View>
-                                  <View
-                                    style={{
-                                      backgroundColor: 'rgba(255,255,255,0.08)',
-                                      borderRadius: 999,
-                                      height: 5,
-                                      marginTop: 7,
-                                      overflow: 'hidden',
-                                    }}
-                                  >
-                                    <View
-                                      style={{
-                                        backgroundColor: rowTone,
-                                        borderRadius: 999,
-                                        height: '100%',
-                                        width: `${Math.min(100, Math.round(presenceRatio * 100))}%`,
-                                      }}
-                                    />
-                                  </View>
-                                </View>
-                                <Text style={[Fonts.p3Bold, { color: rowTone }]}>
-                                  {`${attendance}/${denominator}`}
-                                </Text>
-                                <Text style={[Fonts.p2, Fonts.neutral400]}>›</Text>
-                              </TouchableOpacity>
-                            );
-                          })
-                        ) : (
-                          <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                            {/* VA1 — un refus n'est pas une liste vide. */}
-                            {isAccessRefusalError(teamStatsError)
-                              ? accessReservedMessage
-                              : t(
-                                'teamDetails.stats.noData',
-                                'Aucune statistique disponible pour le moment.',
-                              )}
-                          </Text>
-                        )}
-                      </View>
-                    </>
-                  );
-                })()}
-
-                {statsBaselineLabel ? (
-                  <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {/* 🔤 D8b — la date NE passe PAS par le 3e argument de `t()` :
-                        i18next echappe les valeurs interpolees et chaque `/`
-                        ressortait en `&#x2F;`. Motif maison, comme les 5 autres
-                        phrases a date du depot. ⛔ Surtout pas `escapeValue: false`,
-                        qui l ouvrirait pour TOUTES les interpolations. */}
-                    {t(
-                      'teamDetails.stats.baselineLabel',
-                      'Depuis le {{date}}',
-                    ).replace('{{date}}', statsBaselineLabel)}
-                  </Text>
-                ) : null}
-
-                {canResetTeamStats ? (
-                  <Button
-                    isLoading={resetTeamStatsMutation.isPending}
-                    onPress={handleResetStats}
-                    title={t('teamDetails.stats.resetAction', 'Réinitialiser les statistiques')}
-                    variant="Secondary"
-                  />
-                ) : null}
-              </>
+              <TeamAttendancePanel
+                isLoading={isTeamStatsLoading}
+                onPressPlayer={(/** @type {any} */ entry) => setSelectedStatsPlayer({
+                  ...entry,
+                  playerName: entry.name,
+                })}
+                refusedMessage={isAccessRefusalError(teamStatsError) && !teamStatsRows.length
+                  ? accessReservedMessage
+                  : ''}
+                sportWithoutMatchStats={!hasMatchStatsSport(team)}
+                stats={teamStatsData}
+              />
             ) : (
               <View style={[Spaces.gap[16]]}>
                 {/* ST-VUES — PLANCHE 13 DU DESIGN VALIDE (« FoundClub — Statistiques », 02/10) :
@@ -4998,6 +4765,24 @@ function TeamDetails({ navigation, route }) {
               </>
             ) : null}
 
+            {/* ST-VUES (planche 14, etat 4) — un geste rare, qui efface la lecture de la
+                saison : il quitte le bas de l onglet pour ce menu, et se confirme en deux
+                boutons. Le dirigeant qui n entraine pas ne l a pas (etat 7). */}
+            {canResetTeamStats && showStatsTab ? (
+              <View style={[teamActionsListStyle, Spaces.marginTop[8]]}>
+                {renderTeamActionRow({
+                  destructive: true,
+                  icon: 'trash',
+                  label: t('teamStatsPanel.resetAction', 'Remettre la présence à zéro'),
+                  last: true,
+                  onPress: () => {
+                    setIsTeamActionsPanelOpen(false);
+                    handleResetStats();
+                  },
+                })}
+              </View>
+            ) : null}
+
             {showLeaveAction ? (
               <View style={[teamActionsListStyle, Spaces.marginTop[8]]}>
                 {renderTeamActionRow({
@@ -5112,94 +4897,15 @@ function TeamDetails({ navigation, route }) {
       >
         {selectedStatsPlayer ? (
           <View style={[Spaces.gap[16], Spaces.paddingBottom[16]]}>
-            <View style={[Alignments.alignCenter, Spaces.gap[8]]}>
-              <MemberAvatar
-                avatarUrl={selectedStatsPlayer.row?.user?.avatar?.url
-                  ? getImageUrl(selectedStatsPlayer.row.user.avatar.url)
-                  : null}
-                firstname={selectedStatsPlayer.row?.user?.firstname}
-                lastname={selectedStatsPlayer.row?.user?.lastname}
-                outlined
-                size={74}
-              />
-              <Text style={[Fonts.h3Bold, Fonts.neutral00, Fonts.textCenter]}>
-                {selectedStatsPlayer.playerName}
-              </Text>
-              {team?.category?.name ? (
-                <View
-                  style={{
-                    backgroundColor: `${Colors.primary500}1F`,
-                    borderRadius: 999,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <Text style={[Fonts.p4Bold, Fonts.primary200]}>
-                    {team.category.name}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-
-            <View style={[Spaces.gap[8]]}>
-              <Text
-                style={[
-                  Fonts.p4Bold,
-                  Fonts.neutral300,
-                  { letterSpacing: 1, textTransform: 'uppercase' },
-                ]}
-              >
-                {t('teamDetails.playerSheet.attendanceTitle', "Vie d'équipe")}
-              </Text>
-              <View
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  borderColor: 'rgba(255,255,255,0.09)',
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                }}
-              >
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-                  <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-                    {t('teamDetails.playerSheet.presence', 'Présences')}
-                  </Text>
-                  <Text style={[Fonts.p3Bold, { color: selectedStatsPlayer.rowTone }]}>
-                    {`${selectedStatsPlayer.attendance}/${selectedStatsPlayer.denominator} · ${Math.round(selectedStatsPlayer.presenceRatio * 100)} %`}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    borderRadius: 999,
-                    height: 6,
-                    marginTop: 9,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: selectedStatsPlayer.rowTone,
-                      borderRadius: 999,
-                      height: '100%',
-                      width: `${Math.min(100, Math.round(selectedStatsPlayer.presenceRatio * 100))}%`,
-                    }}
-                  />
-                </View>
-                <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[8]]}>
-                  {`${t('teamDetails.playerSheet.lateCount', {
-                    count: selectedStatsPlayer.lateCount,
-                    defaultValue_one: '{{count}} retard',
-                    defaultValue_other: '{{count}} retards',
-                  })} · ${t('teamDetails.playerSheet.absenceCount', {
-                    count: Number(selectedStatsPlayer.row?.absenceCount || 0),
-                    defaultValue_one: '{{count}} absence',
-                    defaultValue_other: '{{count}} absences',
-                  })}`}
-                </Text>
-              </View>
-            </View>
+            {/* ST-VUES (planche 14, etat 2) — entrainements et matchs SEPARES, les retards et
+                leurs minutes, les dernieres absences ; « Écrire à … » reste ci-dessous. */}
+            <TeamAttendanceSheetSummary
+              avatarUrl={selectedStatsPlayer.row?.user?.avatar?.url
+                ? getImageUrl(selectedStatsPlayer.row.user.avatar.url)
+                : null}
+              entry={selectedStatsPlayer}
+              periodStartAt={teamStatsData?.periodStartAt || null}
+            />
 
             {(() => {
               const perfEntry = teamPerformancePlayers.find(
@@ -5289,7 +4995,7 @@ function TeamDetails({ navigation, route }) {
                       ...SANS_ECHAPPEMENT,
                     },
                   )}
-                  variant="Secondary"
+                  variant="Primary"
                 />
               ) : null}
           </View>
