@@ -46,6 +46,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
@@ -233,6 +234,10 @@ function FacilityList() {
   // DIRIGEANT. Lui seul la voit ici (`canManageClubSlots`, juge par le serveur), et decide ; le
   // serveur previent l entraineur. Refuser l annule : on le confirme d abord.
   const [decisionEnCours, setDecisionEnCours] = useState(/** @type {string | null} */ (null));
+  // COLL-C2C (02/10) — D32 : le dirigeant repartit ses creneaux de la Ville entre ses equipes,
+  // avec le panneau de C2B (mode `repartition` : seule l equipe change).
+  const [creneauARepartir, setCreneauARepartir] = useState(/** @type {any} */ (null));
+  const peutRepartir = !isCollectiviteMode && Boolean(facilityContext?.canManageClubSlots);
   const seancesEnAttente = !isCollectiviteMode
     && facilityContext?.canManageClubSlots
     && Array.isArray(facilityContext?.pendingClubSessions)
@@ -1084,6 +1089,17 @@ function FacilityList() {
           <View style={{ gap: 2 }}>
             {item.clubSeasonSlots.map((/** @type {any} */ creneau) => {
               const morceaux = clubSlotParts(creneau);
+              const ligne = t(
+                'clubInstallations.creneau.ligne',
+                '{{team}} · chaque {{day}} {{hours}}',
+                {
+                  day: morceaux.day,
+                  hours: morceaux.hours,
+                  team: morceaux.team
+                    || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
+                  ...SANS_ECHAPPEMENT,
+                },
+              );
               return (
                 <View
                   key={creneau.documentId}
@@ -1093,15 +1109,23 @@ function FacilityList() {
                     backgroundColor: couleur, borderRadius: 3, height: 6, width: 6,
                   }}
                   />
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {t('clubInstallations.creneau.ligne', '{{team}} · chaque {{day}} {{hours}}', {
-                      day: morceaux.day,
-                      hours: morceaux.hours,
-                      team: morceaux.team
-                        || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
-                      ...SANS_ECHAPPEMENT,
-                    })}
-                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>{ligne}</Text>
+                  {peutRepartir ? (
+                    <TouchableOpacity
+                      accessibilityLabel={t(
+                        'clubInstallations.repartir.ouvrir',
+                        'Répartir : {{ligne}}',
+                        { ligne, ...SANS_ECHAPPEMENT },
+                      )}
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      onPress={() => setCreneauARepartir(creneau)}
+                    >
+                      <Text style={[Fonts.p3Bold, Fonts.primary300]}>
+                        {t('clubInstallations.repartir.action', 'Répartir')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               );
             })}
@@ -1453,6 +1477,31 @@ function FacilityList() {
       {content}
 
       {menuDesInstallations}
+
+      {peutRepartir ? (
+        <BottomModal
+          close={() => setCreneauARepartir(null)}
+          isVisible={Boolean(creneauARepartir)}
+          webPresentation="dialog"
+        >
+          {creneauARepartir ? (
+            <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>
+              <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('clubInstallations.repartir.titre', 'Quelle équipe sur ce créneau ?')}
+              </Text>
+              <SeasonSlotForm
+                onCancel={() => setCreneauARepartir(null)}
+                onDone={() => {
+                  setCreneauARepartir(null);
+                  refetchFacilities();
+                }}
+                repartition
+                slot={creneauARepartir}
+              />
+            </View>
+          ) : null}
+        </BottomModal>
+      ) : null}
 
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}

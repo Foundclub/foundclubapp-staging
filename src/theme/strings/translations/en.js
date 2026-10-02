@@ -5138,6 +5138,12 @@ export default {
       dansLeCreneau: 'In your slot {{creneau}}: the session is approved right away. If your club is already full at that time, your club manager decides.',
       horsCreneau: 'Outside your town slots at this time.',
     },
+    repartir: {
+      action: 'Assign',
+      ouvrir: 'Assign: {{ligne}}',
+      prevenu: 'The coaches of the chosen team are notified.',
+      titre: 'Which team on this slot?',
+    },
   },
   collectiviteCreneaux: {
     attribuer: {

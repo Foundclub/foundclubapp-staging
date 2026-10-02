@@ -5496,6 +5496,12 @@ export default {
       dansLeCreneau: 'Dans ton créneau {{creneau}} : la séance est validée directement. Si ton club y est déjà au complet à cette heure, ton dirigeant décide.',
       horsCreneau: 'Hors de tes créneaux de la Ville à cette heure.',
     },
+    repartir: {
+      action: 'Répartir',
+      ouvrir: 'Répartir : {{ligne}}',
+      prevenu: 'Les entraîneurs de l’équipe choisie sont prévenus.',
+      titre: 'Quelle équipe sur ce créneau ?',
+    },
   },
   collectiviteCreneaux: {
     attribuer: {

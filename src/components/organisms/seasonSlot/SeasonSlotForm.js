@@ -94,6 +94,10 @@ const prochainJour = (jour) => {
  *
  * ⛔ Aucun nom de personne : la carte dit des clubs et des equipes (SPEC §2 H).
  * Le champ « Plateau » n existe que si l installation a des plateaux nommes (D66).
+ *
+ * COLL-C2C (02/10) — D32 : `repartition` = le DIRIGEANT repartit un creneau de son club entre ses
+ * equipes. Seule l equipe change (et la date d effet) : ni jour, ni heures, ni plateau, ni carte
+ * de place ; le serveur refuse tout le reste (admin tests/authz/COLL-C2C-repartition.test.js).
  * @param {{
  *   clubs?: Array<{ documentId: string, name: string }>,
  *   compact?: boolean,
@@ -103,6 +107,7 @@ const prochainJour = (jour) => {
  *   initial?: { weekday?: number, startTime?: string, endTime?: string, plateau?: number | null },
  *   onCancel?: () => void,
  *   onDone: (creneau: any) => void,
+ *   repartition?: boolean,
  *   slot?: any,
  * }} props
  * @returns {import('react').ReactElement} Le formulaire.
@@ -116,6 +121,7 @@ function SeasonSlotForm({
   initial = {},
   onCancel,
   onDone,
+  repartition = false,
   slot = null,
 }) {
   const { t } = useTranslation();
@@ -156,7 +162,7 @@ function SeasonSlotForm({
   const [conflit, setConflit] = useState(/** @type {any} */ (null));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
 
-  const equipes = useClubTeamsForSlot(modification ? null : club);
+  const equipes = useClubTeamsForSlot(modification && !repartition ? null : club);
   const attribuer = useAttributeSeasonSlot();
   const modifier = useModifySeasonSlot();
   const envoiEnCours = attribuer.isPending || modifier.isPending;
@@ -165,13 +171,16 @@ function SeasonSlotForm({
   const finLisible = isTime(fin);
   const ordreJuste = debutLisible && finLisible
     && Number(toMinutes(fin)) > Number(toMinutes(debut));
-  const parametresApercu = useMemo(() => (facilityId && jour && ordreJuste ? {
+  // COLL-C2C : en repartition, la place ne change pas (meme jour, memes heures) : rien a lire.
+  const parametresApercu = useMemo(() => (facilityId && jour && ordreJuste && !repartition ? {
     endTime: fin,
     excludeSlot: slot?.documentId || undefined,
     plateau: plateau || undefined,
     startTime: debut,
     weekday: jour,
-  } : null), [debut, facilityId, fin, jour, ordreJuste, plateau, slot?.documentId]);
+  } : null), [
+    debut, facilityId, fin, jour, ordreJuste, plateau, repartition, slot?.documentId,
+  ]);
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
   const place = conflit || apercu.data?.data || null;
 
@@ -206,14 +215,17 @@ function SeasonSlotForm({
       if (modification) {
         const date = parse(aPartirDu, 'dd/MM/yyyy', new Date());
         reponse = await modifier.mutateAsync({
-          data: {
-            effectiveFrom: format(date, 'yyyy-MM-dd'),
-            endTime: fin,
-            startTime: debut,
-            weekday: jour,
-            ...champPlateau,
-            ...confirmation,
-          },
+          // COLL-C2C — en repartition : l equipe et la date d effet, rien d autre (le serveur).
+          data: repartition
+            ? { effectiveFrom: format(date, 'yyyy-MM-dd'), team: equipe || null }
+            : {
+              effectiveFrom: format(date, 'yyyy-MM-dd'),
+              endTime: fin,
+              startTime: debut,
+              weekday: jour,
+              ...champPlateau,
+              ...confirmation,
+            },
           slotId: slot.documentId,
         });
       } else {
@@ -413,7 +425,7 @@ function SeasonSlotForm({
         </View>
       )}
 
-      {!modification && club ? (
+      {(!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
           {rangee([
@@ -435,7 +447,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {compact ? null : (
+      {compact || repartition ? null : (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
           {rangee(SEASON_SLOT_WEEKDAYS.map((numero) => (
@@ -453,7 +465,7 @@ function SeasonSlotForm({
         </View>
       )}
 
-      {compact ? null : (
+      {compact || repartition ? null : (
         <View style={[Alignments.row, { gap: 12 }]}>
           <View style={{ flex: 1 }}>
             <Input
@@ -505,7 +517,7 @@ function SeasonSlotForm({
       )}
 
       {/* D66 : le champ « Plateau » n existe que si l installation a des plateaux nommes. */}
-      {plateaux.length ? (
+      {plateaux.length && !repartition ? (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.plateau', 'Plateau'))}
           {rangee([
@@ -548,7 +560,15 @@ function SeasonSlotForm({
           )}
         </Text>
       ) : null}
-      {!compact && nomDuClub ? (
+      {repartition ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'clubInstallations.repartir.prevenu',
+            'Les entraîneurs de l’équipe choisie sont prévenus.',
+          )}
+        </Text>
+      ) : null}
+      {!compact && !repartition && nomDuClub ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {modification
             ? t(
