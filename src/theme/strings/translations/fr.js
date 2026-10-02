@@ -15260,6 +15260,7 @@ export default {
       acceptedCoach: 'Candidature acceptée',
       apply: 'Postuler',
       applyCoach: 'Candidater',
+      declined: 'Candidature refusée',
       inactive: 'Annonce inactive',
       pending: 'Demande en attente',
       sending: 'Envoi...',
@@ -15374,7 +15375,9 @@ export default {
     footer: {
       applicationAccepted: 'Candidature acceptée',
       apply: 'Postuler',
+      applyAgain: 'Postuler à nouveau',
       applyAsCoach: 'Candidater comme entraîneur',
+      declinedNote: 'Ta candidature a été refusée par le club.',
       inactive: 'Annonce inactive',
       participating: 'Je participe',
       pending: 'Demande en attente',

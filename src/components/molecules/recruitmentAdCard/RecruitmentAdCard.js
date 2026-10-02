@@ -53,6 +53,7 @@ const humanizeEnumLabel = (value, fallback = '') => {
  * @param {object} props
  * @param {object} props.ad
  * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [props.detectionApplicationStatusByEvent]
+ * @param {Record<string, string>} [props.ownApplicationStatusByAd] FINITIONS8 : mes candidatures
  * @param {boolean} [props.isOwner]
  * @param {boolean} [props.isApplying]
  * @param {(ad: object) => void} [props.onApply]
@@ -66,6 +67,7 @@ function RecruitmentAdCard({
   isOwner = false,
   onApply,
   onPress,
+  ownApplicationStatusByAd = {},
 }) {
   const navigation = useNavigation();
   const {
@@ -128,7 +130,9 @@ function RecruitmentAdCard({
     ad,
     userData,
     detectionApplicationStatusByEvent,
+    ownApplicationStatusByAd,
   );
+  const isDeclined = applicationState.status === 'declined';
 
   let playerCtaBackgroundColor = Colors.primary500;
   let playerCtaBorderColor = 'transparent';
@@ -160,6 +164,13 @@ function RecruitmentAdCard({
     playerCtaBorderColor = `${Colors.primary500}35`;
     playerCtaTextColor = Colors.primary100;
     playerCtaBorderWidth = 1;
+  } else if (isDeclined) {
+    // FINITIONS8 (point 1) : la carte dit le refus ; on repostule depuis la fiche.
+    playerCtaLabel = t('recruitmentAdCard.cta.declined', 'Candidature refusée');
+    playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
+    playerCtaBorderColor = 'rgba(255,255,255,0.12)';
+    playerCtaTextColor = Colors.neutral300;
+    playerCtaBorderWidth = 1;
   } else if (isApplying) {
     playerCtaLabel = t('recruitmentAdCard.cta.sending', 'Envoi...');
   }
@@ -188,7 +199,8 @@ function RecruitmentAdCard({
     onApply(ad);
   };
 
-  const isPlayerCtaDisabled = !ad.isActive || applicationState.hasApplied || isApplying;
+  const isPlayerCtaDisabled = !ad.isActive || applicationState.hasApplied || isApplying
+    || isDeclined;
   const shouldRenderInteractiveCta = Boolean(onApply) && !isPlayerCtaDisabled;
   const playerCtaStyles = [
     styles.ctaBadge,

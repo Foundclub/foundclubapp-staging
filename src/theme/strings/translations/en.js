@@ -14493,6 +14493,7 @@ export default {
       acceptedCoach: 'Application accepted',
       apply: 'Apply',
       applyCoach: 'Apply',
+      declined: 'Application declined',
       inactive: 'Inactive ad',
       pending: 'Request pending',
       sending: 'Sending...',
@@ -14605,7 +14606,9 @@ export default {
     footer: {
       applicationAccepted: 'Application accepted',
       apply: 'Apply',
+      applyAgain: 'Apply again',
       applyAsCoach: 'Apply as a coach',
+      declinedNote: 'The club declined your application.',
       inactive: 'Inactive ad',
       participating: "I'm taking part",
       pending: 'Request pending',
