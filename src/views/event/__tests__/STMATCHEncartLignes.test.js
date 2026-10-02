@@ -115,7 +115,7 @@ describe('ST-MATCH · écran 1 — ce que dit l\'encart du score', () => {
     expect(lignes.scorersLine).toBe('Hugo L. · 1 but sans buteur');
     expect(buildScorersLine([
       { manualPlayerName: 'Sami', sportPayload: { goals: 2 } },
-    ], 2, t)).toBe('Sami (2)');
+    ], 2, t)).toBe('Sami ×2');
     expect(buildScorersLine([], 3, t)).toBe('3 buts sans buteur');
     expect(buildScorersLine([], 0, t)).toBeNull();
   });

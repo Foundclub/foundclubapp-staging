@@ -33,7 +33,7 @@ const shortPlayerName = (line) => {
  * @param {any[]} lines - Les lignes de la feuille de l'équipe du lecteur.
  * @param {number | null} scoreFor - Les buts de cette équipe.
  * @param {Function} t - La traduction.
- * @returns {string | null} « Hugo L. · Sami D. (2) · 1 but sans buteur », ou rien.
+ * @returns {string | null} « Hugo L. · Léo D. ×2 · 1 but sans buteur », ou rien (design 02/10).
  */
 export const buildScorersLine = (lines, scoreFor, t) => {
   const scorers = (Array.isArray(lines) ? lines : [])
@@ -43,7 +43,7 @@ export const buildScorersLine = (lines, scoreFor, t) => {
   const withoutScorer = Number.isFinite(Number(scoreFor)) ? Number(scoreFor) - counted : 0;
   const parts = [
     ...scorers.map((scorer) => (
-      scorer.goals > 1 ? `${scorer.name} (${scorer.goals})` : scorer.name
+      scorer.goals > 1 ? `${scorer.name} ×${scorer.goals}` : scorer.name
     )),
     withoutScorer > 0 ? t('stMatch.encart.goalsWithoutScorer', {
       count: withoutScorer,
