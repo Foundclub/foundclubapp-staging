@@ -1893,11 +1893,14 @@ function ClubDetails({ navigation, route }) {
   // haut des boutons au bas de l'ecran — la recette du pied de l'annuaire du
   // site ci-dessous (`primary900` a 0,92). Les boutons ne bougent pas : le
   // retrait bas devient une marge interieure.
+  // FINITIONS6 · F6-5 (tournee 8) — a 0,92 le fond restait TRANSLUCIDE : les cartes
+  // d'equipe et « Sports / Football » se devinaient a travers les deux « Demande en
+  // attente » grises. Meme couleur, OPAQUE.
   let styleDuPiedDesActions = [
     Alignments.absolute,
     Spaces.gap[12],
     {
-      backgroundColor: withAlpha(Colors.primary900, 0.92),
+      backgroundColor: Colors.primary900,
       bottom: 0,
       elevation: 24,
       left: 0,
