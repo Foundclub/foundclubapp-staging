@@ -1638,6 +1638,26 @@ function AdminDashboard() {
       </View>
 
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[32]]}>
+        {/* FINITIONS8 (tournee 9, point 8) — la porte de la console des collectivites passe EN
+            TETE. Elle etait la 12e tuile de « Pilotage general », sous deux blocs a boutons
+            reels : la tournee ne l a pas trouvee en 18 defilements. Deplacee, pas retiree.
+            Test : __tests__/AdminDashboard.FINITIONS8.tuileEnTete.test.js. */}
+        <View style={styles.dashboardGrid}>
+          {/* COLL-CONSOLE (02/10) — la tuile porte ses chiffres (planche P2-console). */}
+          <DashboardCard
+            accessibilityLabel={collectivitesTuile.accessibilityLabel}
+            busy={collectivitesTuile.busy}
+            color={collectivitesTuile.color}
+            detail={collectivitesTuile.detail}
+            detailColor={collectivitesTuile.detailColor}
+            meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
+            onPress={() => navigation.navigate(RouteNames.AdminCollectiviteList)}
+            testID="admin-tuile-collectivites"
+            title={t('adminDashboard.cards.collectivites', 'Collectivités')}
+            value={collectivitesTuile.value}
+          />
+        </View>
+
         <View
           style={[
             styles.flagBanner,
@@ -1816,19 +1836,7 @@ function AdminDashboard() {
             title="Clubs"
             value="Clubs"
           />
-          {/* COLL-CONSOLE (02/10) — la tuile porte ses chiffres (planche P2-console). */}
-          <DashboardCard
-            accessibilityLabel={collectivitesTuile.accessibilityLabel}
-            busy={collectivitesTuile.busy}
-            color={collectivitesTuile.color}
-            detail={collectivitesTuile.detail}
-            detailColor={collectivitesTuile.detailColor}
-            meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
-            onPress={() => navigation.navigate(RouteNames.AdminCollectiviteList)}
-            testID="admin-tuile-collectivites"
-            title={t('adminDashboard.cards.collectivites', 'Collectivités')}
-            value={collectivitesTuile.value}
-          />
+          {/* FINITIONS8 (point 8) : la tuile « Collectivités » est montee en tete de l ecran. */}
           <DashboardCard
             color={Colors.primary500}
             meta={t('adminDashboard.cards.contentMeta', 'Contenus')}
