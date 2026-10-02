@@ -1,4 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -6,24 +8,36 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 
 import CollectiviteRequests from '../CollectiviteRequests';
 
-// 🏛️ COLLECTIVITES 1c — ECRAN 3 : « Demandes de la Ville » (SPEC §2 E).
+// 🏛️ « Demandes de la Ville » — COLLECTIVITES 1c (écran 3), puis COLL-C3B (02/10) : planches
+// P6v2-phrase (tel, ordi), P6-demandes, P6-fenetre (artefact HY521H1).
 //
-// De bout en bout cote app : les VRAIES lectures (collectiviteQueries) et les VRAIES
-// mutations du lot 3a (facilityQueries -> facilityService). Seul le client HTTP est
-// double : c est lui qui dit QUELLE route est appelee, avec QUEL corps.
-// Ce que ce temoin fige (ROUGE avant l ecran 3 : l ecran n existait pas) :
-//   - une demande en attente dit qui (club, equipe, la personne), quoi (installation,
-//     moment, chaque semaine), le motif, et le conflit (qui occupe, place restante) ;
-//   - accepter AVEC un message -> POST /facility-override-requests/:id/approve,
-//     { data: { decisionReason: <message> } } ;
-//   - refuser exige un motif ; avec lui -> POST .../refuse ;
-//   - une place prise entre-temps (409 FACILITY_OVERRIDE_CAPACITY_CHANGED) se dit en
-//     francais, pas en code ;
-//   - l onglet « Traitees » montre la decision et le message ;
-//   - la notification d une nouvelle demande (ctaRoute pose par le serveur) mene ICI.
+// De bout en bout côté app : les VRAIES lectures (collectiviteQueries) et les VRAIES mutations
+// du lot 3a (facilityQueries -> facilityService). Seul le client HTTP est doublé.
+// Ce que ce témoin fige (ROUGE avant COLL-C3B : la carte empilait « Club · équipe », le lieu,
+// « Chaque semaine », « Motif : … », « Place restante : 0 sur 1 ») :
+//   - chaque demande est UNE PHRASE (« Test Fc demande le lundi 7 oct., de 18:00 à 19:30, au
+//     Gymnase de la Recette, pour ses U15. »), puis ce qu'il y a sur place en une phrase, qui
+//     est déjà là, la conséquence, et le motif avec l'encadrant ET SA FONCTION (« nom B ») ;
+//   - les pastilles : Complet / N place(s) libre(s), Une fois / Chaque semaine ; D69 « Demande de
+//     votre club » ;
+//   - une série « chaque semaine » se lit « … jusqu'au 30 juin » et se tranche par « Accepter la
+//     série » (corps `series: true`) ;
+//   - la fenêtre rappelle la demande, dit qui sera prévenu, propose 3 motifs de refus en un
+//     appui, et son bouton rouge dit la conséquence ; une place prise entre-temps (409) se dit
+//     et ne laisse que refuser ;
+//   - « Traitées » : l'issue, votre message en citation, « Le club a été prévenu · … le … » ;
+//   - vide, erreur, refus d'accès ; sur ordinateur, la file à gauche et la demande à droite.
 
 const mockGet = jest.fn();
 const mockPost = jest.fn();
+const PORTRAIT = {
+  fontScale: 1, height: 812, scale: 2, width: 375,
+};
+const ORDINATEUR = {
+  fontScale: 1, height: 900, scale: 1, width: 1280,
+};
+let mockDimensions = PORTRAIT;
+let mockUserData = { club: null, clubs: [], documentId: 'u-mairie' };
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
@@ -32,6 +46,16 @@ jest.mock('@/services/client', () => ({
     post: (...args) => mockPost(...args),
     put: jest.fn(),
   },
+}));
+
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => mockDimensions,
+}));
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: mockUserData }),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -51,7 +75,8 @@ jest.mock('react-i18next', () => {
         let texte = cle;
         if (typeof valeur === 'string') texte = valeur;
         else if (typeof repli === 'string') texte = repli;
-        return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(options?.[nom] ?? ''));
+        const valeurs = typeof repli === 'object' && repli ? repli : options;
+        return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(valeurs?.[nom] ?? ''));
       },
     }),
   };
@@ -113,6 +138,10 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   };
 });
 
+// Les heures se lisent dans le fuseau de l'appareil : le témoin les calcule comme l'écran.
+const heure = (/** @type {string} */ iso) => format(new Date(iso), 'HH:mm');
+const jourLong = (/** @type {string} */ iso) => format(new Date(iso), 'EEEE d MMM', { locale: fr });
+
 const VILLE = { documentId: 'ville-de-recette', name: 'Ville de Recette', type: 'commune' };
 const EN_ATTENTE = {
   club: { documentId: 'club-b', name: 'Test Fc' },
@@ -128,15 +157,41 @@ const EN_ATTENTE = {
   },
   documentId: 'rq-1',
   event: {
-    documentId: 'ev-1', isRecurring: true, name: '', type: { name: 'Entraînement' },
+    documentId: 'ev-1', isRecurring: false, name: null, type: { name: 'Entraînement' },
   },
   facility: { documentId: 'gymnase', name: 'Gymnase de la Recette' },
   reason: 'Match de coupe avancé',
   requestedBy: { documentId: 'u-paul', firstname: 'Paul', lastname: 'Veuillet' },
   requestedEnd: '2030-10-07T17:30:00.000Z',
   requestedStart: '2030-10-07T16:00:00.000Z',
+  requesterFunction: 'manager',
+  series: null,
+  seriesCount: 1,
   status: 'pending',
   team: { documentId: 'team-b', name: 'U15' },
+};
+const SERIE = {
+  ...EN_ATTENTE,
+  club: { documentId: 'club-c', name: 'Montrivage Basket' },
+  conflict: { maxSlots: 2, occupants: [], remaining: 2 },
+  documentId: 'rq-serie',
+  event: { ...EN_ATTENTE.event, documentId: 'ev-s', isRecurring: true },
+  reason: null,
+  requestedEnd: '2030-10-09T17:00:00.000Z',
+  requestedStart: '2030-10-09T15:30:00.000Z',
+  requesterFunction: 'trainer',
+  series: {
+    endTime: '19:00',
+    pendingCount: 30,
+    startTime: '17:30',
+    until: '2031-06-30',
+    untilLabel: '30 juin',
+    validFrom: '2030-10-09',
+    weekday: 3,
+    weekdayLabel: 'mercredi',
+  },
+  seriesCount: 30,
+  team: { documentId: 'team-c', name: 'Seniors Basket' },
 };
 const TRAITEE = {
   ...EN_ATTENTE,
@@ -144,6 +199,7 @@ const TRAITEE = {
   decisionReason: 'Partagez le plateau',
   documentId: 'rq-0',
   status: 'approved',
+  updatedAt: '2030-10-01T09:00:00.000Z',
 };
 
 /**
@@ -161,7 +217,7 @@ const aplatirTexte = (enfants) => {
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
 
-// Le composant pressable (TouchableOpacity) porte `onPress` ; ses vues natives, non.
+// Le composant pressable porte `onPress` ; ses vues natives, non.
 const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID, index = 0) => {
   const pressables = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === testID
     && typeof n.props?.onPress === 'function');
@@ -170,8 +226,6 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID, i
   });
 };
 
-// Les lectures react-query se livrent sur un tour d horloge ; sur un PC charge, UN tour ne
-// suffit pas. On attend donc que l ecran AFFICHE ce qu on attend, borne a 3 s.
 jest.setTimeout(20000);
 const attendre = async (/** @type {() => boolean} */ condition) => {
   for (let essai = 0; essai < 150 && !condition(); essai += 1) {
@@ -180,7 +234,11 @@ const attendre = async (/** @type {() => boolean} */ condition) => {
   }
 };
 
-const monter = async () => {
+// eslint-disable-next-line max-len
+const PHRASE_1 = `Test Fc demande le ${jourLong(EN_ATTENTE.requestedStart)}, de ${heure(EN_ATTENTE.requestedStart)} à ${heure(EN_ATTENTE.requestedEnd)}, au Gymnase de la Recette, pour ses U15.`;
+
+let mockEnAttente = [EN_ATTENTE];
+const monter = async (attendu = (/** @type {string[]} */ lus) => lus.includes(PHRASE_1)) => {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
@@ -193,41 +251,91 @@ const monter = async () => {
       </QueryClientProvider>,
     );
   });
-  await attendre(() => textes(arbre).includes('Test Fc · U15'));
+  await attendre(() => attendu(textes(arbre)));
   return arbre;
 };
 
 beforeEach(() => {
+  mockDimensions = PORTRAIT;
+  mockUserData = { club: null, clubs: [], documentId: 'u-mairie' };
+  mockEnAttente = [EN_ATTENTE];
   mockGet.mockReset();
   mockPost.mockReset();
   mockGet.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ config) => {
     if (url === '/collectivites/mine') return { data: { data: [VILLE] } };
     if (url === '/collectivites/ville-de-recette/requests') {
-      return { data: { data: config?.params?.status === 'decided' ? [TRAITEE] : [EN_ATTENTE] } };
+      return { data: { data: config?.params?.status === 'decided' ? [TRAITEE] : mockEnAttente } };
     }
     throw new Error(`GET inattendu ${url}`);
   });
   mockPost.mockResolvedValue({ data: { data: { documentId: 'rq-1' } } });
 });
 
-describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
-  it('une demande en attente dit qui, quoi, le motif, et le conflit', async () => {
+describe('COLL-C3B — planche P6v2 : chaque demande est une phrase', () => {
+  // eslint-disable-next-line max-len
+  it('la carte : la phrase, la place en une phrase, qui est déjà là, la conséquence, le motif et la fonction', async () => {
     const lus = textes(await monter());
     expect(lus).toEqual(expect.arrayContaining([
-      'Test Fc · U15',
-      'Demandé par Paul Veuillet',
-      'Chaque semaine',
-      'Motif : Match de coupe avancé',
-      'Place restante : 0 sur 1',
+      PHRASE_1,
+      'Complet',
+      'Une fois',
+      'Il y a déjà 1 équipe : c’est complet.',
+      // eslint-disable-next-line max-len
+      `AIKI · Seniors, de ${heure('2030-10-07T16:00:00.000Z')} à ${heure('2030-10-07T17:30:00.000Z')}.`,
+      'Accepter met 2 équipes pour 1 place.',
+      '« Match de coupe avancé » · Paul Veuillet, dirigeant',
     ]));
-    expect(lus.some((texte) => texte.startsWith('Gymnase de la Recette · '))).toBe(true);
-    expect(lus.some((texte) => texte.startsWith('Déjà là : AIKI · Seniors ('))).toBe(true);
+    // RETIRÉ par la planche : le titre « club · équipe » (la phrase le contient), « Ponctuel ».
+    expect(lus).not.toContain('Test Fc · U15');
+    expect(lus).not.toContain('Ponctuel');
     expect(lus).toContain('En attente (1)');
   });
 
-  it('accepter AVEC un message appelle la route du propriétaire, message compris', async () => {
+  // eslint-disable-next-line max-len
+  it('une série « chaque semaine » : « … jusqu’au 30 juin », place libre, « Accepter la série » ⇒ series: true', async () => {
+    mockEnAttente = [SERIE];
+    // eslint-disable-next-line max-len
+    const phrase = `Montrivage Basket demande chaque mercredi, de ${heure(SERIE.requestedStart)} à ${heure(SERIE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket, jusqu’au 30 juin.`;
+    const arbre = await monter((lus) => lus.includes(phrase));
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      phrase,
+      'Chaque semaine',
+      '2 places libres',
+      'Personne n’y est : il reste 2 places.',
+      'Accepter ne gêne personne.',
+      'Paul Veuillet, entraîneur',
+    ]));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    expect(textes(arbre)).toContain('Accepter la série');
+    await appuyer(arbre, 'bouton-Accepter la série', 1);
+    expect(mockPost).toHaveBeenCalledWith(
+      '/facility-override-requests/rq-serie/approve',
+      { data: { decisionReason: '', series: true } },
+    );
+  });
+
+  // eslint-disable-next-line max-len
+  it('D69 : la demande du club du gestionnaire porte « Demande de votre club », sur la liste', async () => {
+    mockUserData = { club: { documentId: 'club-b' }, clubs: [], documentId: 'u-mixte' };
+    const lus = textes(await monter());
+    expect(lus).toContain('Demande de votre club');
+  });
+});
+
+describe('COLL-C3B — planche P6-fenetre : accepter ou refuser', () => {
+  // eslint-disable-next-line max-len
+  it('accepter : la fenêtre rappelle la demande et dit qui sera prévenu ; le corps reste celui du lot 3a', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'bouton-Accepter');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Accepter la demande',
+      'Test Fc · U15',
+      'Demandé par Paul Veuillet',
+      '2 équipes pour 1 place à ce moment.',
+      'Seront prévenus',
+      'Paul Veuillet (Test Fc), qui demande ; et les clubs déjà là : AIKI · Seniors.',
+    ]));
     await act(async () => {
       arbre.root.findByType(TextInput).props.onChangeText('Partagez le plateau');
     });
@@ -238,23 +346,25 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     );
   });
 
-  it('refuser exige un motif ; avec lui, la route de refus', async () => {
+  // eslint-disable-next-line max-len
+  it('refuser : motif exigé ; un motif en un appui ; le bouton rouge dit la conséquence', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'bouton-Refuser');
-    await appuyer(arbre, 'bouton-Refuser', 1);
+    const bouton = 'bouton-Refuser et annuler l’entraînement';
+    await appuyer(arbre, bouton);
     expect(mockPost).not.toHaveBeenCalled();
     expect(textes(arbre)).toContain('Écrivez le motif : le club le lira.');
-    await act(async () => {
-      arbre.root.findByType(TextInput).props.onChangeText('Forum des associations');
-    });
-    await appuyer(arbre, 'bouton-Refuser', 1);
+    await appuyer(arbre, 'motif-complet');
+    expect(arbre.root.findByType(TextInput).props.value).toBe('Installation complète');
+    await appuyer(arbre, bouton);
     expect(mockPost).toHaveBeenCalledWith(
       '/facility-override-requests/rq-1/refuse',
-      { data: { decisionReason: 'Forum des associations' } },
+      { data: { decisionReason: 'Installation complète' } },
     );
   });
 
-  it('une place prise entre-temps (409) se dit en français, pas en code', async () => {
+  // eslint-disable-next-line max-len
+  it('une place prise entre-temps (409) : la fenêtre le dit et ne laisse plus que refuser', async () => {
     mockPost.mockRejectedValue({
       details: { code: 'FACILITY_OVERRIDE_CAPACITY_CHANGED' },
       message: 'Plus de place',
@@ -264,18 +374,61 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
     await appuyer(arbre, 'bouton-Accepter');
     await appuyer(arbre, 'bouton-Accepter', 1);
     const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
-    expect(textes(arbre)).toContain(catalogue.APIerrors.FACILITY_OVERRIDE_CAPACITY_CHANGED);
+    const lus = textes(arbre);
+    expect(lus).toContain(catalogue.APIerrors.FACILITY_OVERRIDE_CAPACITY_CHANGED);
+    expect(lus).toEqual(expect.arrayContaining(['Refuser et annuler l’entraînement', 'Fermer']));
   });
+});
 
-  it('l onglet « Traitées » montre la décision et le message', async () => {
+// eslint-disable-next-line max-len
+describe('COLL-C3B — planche P6-demandes : traitées, vide, erreur, refus d’accès, ordinateur', () => {
+  // eslint-disable-next-line max-len
+  it('« Traitées » : l’issue, votre message en citation, « Le club a été prévenu · acceptée le … »', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'onglet-decided');
     await attendre(() => textes(arbre).includes('Acceptée'));
-    expect(textes(arbre))
-      .toEqual(expect.arrayContaining(['Acceptée', 'Votre message : Partagez le plateau']));
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Acceptée',
+      'Votre message',
+      '« Partagez le plateau »',
+      // eslint-disable-next-line max-len
+      `Le club a été prévenu · acceptée le ${format(new Date(TRAITEE.updatedAt), 'd MMM', { locale: fr })}`,
+    ]));
   });
 
-  it('la notification d une nouvelle demande (ctaRoute du serveur) mène à cet écran', () => {
+  it('en attente, vide : l’écran explique d’où viennent les demandes', async () => {
+    mockEnAttente = [];
+    const lus = textes(await monter((l) => l.includes('Aucune demande en attente.')));
+    // eslint-disable-next-line max-len
+    expect(lus).toContain('Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.');
+  });
+
+  it('refus d’accès (403) : « Accès retiré »', async () => {
+    mockGet.mockImplementation(async (/** @type {string} */ url) => {
+      if (url === '/collectivites/mine') return { data: { data: [] } };
+      throw Object.assign(new Error('Forbidden'), { status: 403 });
+    });
+    const lus = textes(await monter((l) => l.includes('Accès retiré')));
+    // eslint-disable-next-line max-len
+    expect(lus).toEqual(expect.arrayContaining(['Accès retiré', 'Vous ne gérez pas cette collectivité.']));
+  });
+
+  it('sur ordinateur : la file (phrase courte) à gauche, la demande ouverte à droite', async () => {
+    mockDimensions = ORDINATEUR;
+    mockEnAttente = [EN_ATTENTE, SERIE];
+    const arbre = await monter((l) => l.includes(PHRASE_1));
+    const file = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.testID === 'string'
+      && n.props.testID.startsWith('demande-file-') && typeof n.props?.onPress === 'function');
+    // eslint-disable-next-line max-len
+    expect(file.map((/** @type {any} */ n) => n.props.testID)).toEqual(['demande-file-rq-1', 'demande-file-rq-serie']);
+    // eslint-disable-next-line max-len
+    const courte = `Test Fc demande le ${format(new Date(EN_ATTENTE.requestedStart), 'EEE d MMM', { locale: fr })}, ${heure(EN_ATTENTE.requestedStart)} – ${heure(EN_ATTENTE.requestedEnd)}, au Gymnase de la Recette (U15).`;
+    expect(textes(arbre)).toContain(courte);
+    await appuyer(arbre, 'demande-file-rq-serie');
+    expect(textes(arbre)).toContain('Accepter la série');
+  });
+
+  it('la notification d’une nouvelle demande (ctaRoute du serveur) mène à cet écran', () => {
     const destination = resolveNotificationDestination({
       ctaParams: { collectiviteId: 'ville-de-recette' },
       ctaRoute: 'CollectiviteRequests',
@@ -290,11 +443,9 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
 });
 
 // TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55 : « A ») — « Demandes de la Ville »
-// s ecrivait deux fois : l en-tete de l ecran, puis le titre de la page juste dessous. Meme
-// traitement que les installations : la page porte le NOM de la collectivite.
+// s'écrivait deux fois : l'en-tête de l'écran, puis le titre de la page. La page porte le NOM.
 describe('TEXTES-COLLECTIVITES — « Demandes de la Ville » ne s écrit plus deux fois', () => {
-  // eslint-disable-next-line max-len
-  it('la page porte le nom de la collectivité, une fois ; l en-tête garde « Demandes de la Ville »', async () => {
+  it('la page porte le nom de la collectivité, une fois', async () => {
     const lus = textes(await monter());
     expect(lus).not.toContain('Demandes de la Ville');
     expect(lus.filter((texte) => texte === 'Ville de Recette')).toHaveLength(1);

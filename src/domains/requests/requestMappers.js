@@ -18,6 +18,10 @@
 
 import i18next from 'i18next';
 
+import {
+  lieuAvecPreposition,
+  momentDeLaDemande,
+} from '@/domains/collectivite/collectiviteDemandes';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 export const REQUEST_HUB_FILTERS = /** @type {const} */ ([
@@ -582,20 +586,51 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
       windowStart: startDate,
     },
     status: 'pending',
-    subtitle: i18next.t(
-      'requestMappers.facility.subtitle',
-      '{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).', // eslint-disable-line max-len
-      {
-        facility: facilityName,
-        max: maxSlots,
-        overlap: overlapCount,
-        team: teamName,
-        ...SANS_ECHAPPEMENT,
-      },
-    ),
+    // COLL-C3B (02/10, planche P6v2) — la MÊME phrase que la mairie lit : « AS Montrivage
+    // demande le jeudi 1 oct., de 18:00 à 19:30, au Gymnase des Tilleuls, pour ses U13. Il y a
+    // déjà 2 équipes : c est complet. » (avant : « … (2/2 slots deja pris). »).
+    subtitle: phraseDeLaDemandeDuHub(request, {
+      facilityName, maxSlots, overlapCount, teamName,
+    }),
     title: i18next.t('requestMappers.facility.title', 'Exception installation'),
     type: 'installation',
   };
+};
+
+/**
+ * COLL-C3B — la phrase d une demande d installation, et ce qu il y a sur place.
+ * @param {Record<string, any>} request - La demande (club, installation, fenetre).
+ * @param {{ facilityName: string, maxSlots: number, overlapCount: number, teamName: string }} mots
+ * @returns {string} « X demande le …, de … à …, au …, pour ses …. Il y a deja … : c est complet. »
+ */
+const phraseDeLaDemandeDuHub = (request, {
+  facilityName, maxSlots, overlapCount, teamName,
+}) => {
+  // Les clés et leurs replis vivent avec « Demandes de la Ville » (CollectiviteRequests.js).
+  const t = i18next.t.bind(i18next);
+  const moment = momentDeLaDemande(request);
+  const valeurs = {
+    club: normalizeString(request?.club?.name) || teamName,
+    equipe: teamName,
+    lieu: lieuAvecPreposition(facilityName, t),
+    ...SANS_ECHAPPEMENT,
+  };
+  const demande = moment
+    ? t('collectiviteDemandes.phrase.unique', {
+      ...valeurs, debut: moment.debut, fin: moment.fin, jour: moment.jour,
+    })
+    : t('collectiviteDemandes.hub.sansMoment', valeurs);
+  const equipes = overlapCount === 1
+    ? t('collectiviteDemandes.nombre.uneEquipe')
+    : t('collectiviteDemandes.nombre.equipes', { nombre: overlapCount });
+  const libres = Math.max(0, maxSlots - overlapCount);
+  const places = libres === 1
+    ? t('collectiviteDemandes.nombre.unePlace')
+    : t('collectiviteDemandes.nombre.places', { nombre: libres });
+  const place = overlapCount >= maxSlots
+    ? t('collectiviteDemandes.place.complet', { equipes, ...SANS_ECHAPPEMENT })
+    : t('collectiviteDemandes.hub.reste', 'Il reste {{places}}.', { places, ...SANS_ECHAPPEMENT });
+  return `${demande} ${place}`;
 };
 
 /**

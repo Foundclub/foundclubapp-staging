@@ -5348,6 +5348,100 @@ export default {
       troisJours: '3 jours',
     },
   },
+  collectiviteDemandes: {
+    acces: {
+      texte: 'Vous ne gérez pas cette collectivité.',
+      titre: 'Accès retiré',
+    },
+    actions: {
+      accepterSerie: 'Accepter la série',
+    },
+    consequence: {
+      depasse: 'Accepter met {{equipes}} pour {{places}}.',
+      libre: 'Accepter ne gêne personne.',
+    },
+    erreur: {
+      titre: 'Les demandes n’ont pas pu être lues.',
+    },
+    fenetre: {
+      accepterSerie: 'Accepter la série',
+      demandePar: 'Demandé par {{personne}}',
+      depasse: '{{equipes}} pour {{places}} à ce moment.',
+      fermer: 'Fermer',
+      motifsFrequents: 'Motifs fréquents',
+      prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
+      prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
+      refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
+      refuserEtAnnuler: 'Refuser et annuler l’entraînement',
+      refuserSerie: 'Refuser la série',
+      refuserSerieEtAnnuler: 'Refuser et annuler les entraînements',
+      serontPrevenus: 'Seront prévenus',
+    },
+    fonction: {
+      manager: 'dirigeant',
+      trainer: 'entraîneur',
+    },
+    hub: {
+      reste: 'Il reste {{places}}.',
+      sansMoment: '{{club}} demande une place {{lieu}}, pour ses {{equipe}}.',
+    },
+    liaison: {
+      et: ' et ',
+    },
+    lieu: {
+      feminin: 'à la {{nom}}',
+      masculin: 'au {{nom}}',
+      voyelle: 'à l’{{nom}}',
+    },
+    motifs: {
+      complet: 'Installation complète',
+      fermeture: 'Fermeture',
+      manifestation: 'Manifestation de la Ville',
+    },
+    nombre: {
+      equipes: '{{nombre}} équipes',
+      places: '{{nombre}} places',
+      uneEquipe: '1 équipe',
+      unePlace: '1 place',
+    },
+    pastille: {
+      chaqueSemaine: 'Chaque semaine',
+      complet: 'Complet',
+      placesLibres: '{{nombre}} places libres',
+      uneFois: 'Une fois',
+      unePlaceLibre: '1 place libre',
+      votreClub: 'Demande de votre club',
+    },
+    phrase: {
+      // eslint-disable-next-line max-len
+      serie: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
+      // eslint-disable-next-line max-len
+      serieSansFin: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
+      // eslint-disable-next-line max-len
+      unique: '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
+    },
+    phraseCourte: {
+      serie: '{{club}} demande chaque {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+      unique: '{{club}} demande le {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+    },
+    place: {
+      complet: 'Il y a déjà {{equipes}} : c’est complet.',
+      dejaLa: '{{noms}}, de {{debut}} à {{fin}}.',
+      personne: 'Personne n’y est : il reste {{places}}.',
+      premiereDate: 'Pour la première date, le {{jour}} :',
+      reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
+    },
+    traitee: {
+      prevenu: 'Le club a été prévenu.',
+      prevenuAcceptee: 'Le club a été prévenu · acceptée le {{date}}',
+      prevenuRefusee: 'Le club a été prévenu · refusée le {{date}}',
+      votreMessage: 'Votre message',
+    },
+    vide: {
+      // eslint-disable-next-line max-len
+      attente: 'Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
+    },
+  },
   comingSoonLeagueScreen: {
     back: 'Retour',
     backHint: 'Retourne vers FoundClub classique',

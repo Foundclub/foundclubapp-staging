@@ -353,13 +353,19 @@ const getPendingFacilityOverrideRequests = async (clubId) => {
   }
 };
 
-const approveFacilityOverrideRequest = async (requestId, decisionReason = '') => {
+// COLL-C3B (02/10) — `series` : « Accepter la série » / « Refuser la série » (toutes les dates en
+// attente d une demande « chaque semaine » ; acceptée, la série devient un créneau de saison).
+// Sans lui, le corps est celui d avant, au mot près.
+const decisionBody = (decisionReason, series) => ({
+  data: series ? { decisionReason, series: true } : { decisionReason },
+});
+
+const approveFacilityOverrideRequest = async (requestId, decisionReason = '', series = false) => {
   try {
-    const response = await client.post(`/facility-override-requests/${requestId}/approve`, {
-      data: {
-        decisionReason,
-      },
-    });
+    const response = await client.post(
+      `/facility-override-requests/${requestId}/approve`,
+      decisionBody(decisionReason, series),
+    );
     return response.data;
   } catch (error) {
     console.error('Error approving facility override request:', error);
@@ -367,13 +373,12 @@ const approveFacilityOverrideRequest = async (requestId, decisionReason = '') =>
   }
 };
 
-const refuseFacilityOverrideRequest = async (requestId, decisionReason = '') => {
+const refuseFacilityOverrideRequest = async (requestId, decisionReason = '', series = false) => {
   try {
-    const response = await client.post(`/facility-override-requests/${requestId}/refuse`, {
-      data: {
-        decisionReason,
-      },
-    });
+    const response = await client.post(
+      `/facility-override-requests/${requestId}/refuse`,
+      decisionBody(decisionReason, series),
+    );
     return response.data;
   } catch (error) {
     console.error('Error refusing facility override request:', error);

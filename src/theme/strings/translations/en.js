@@ -5005,6 +5005,96 @@ export default {
       troisJours: '3 days',
     },
   },
+  collectiviteDemandes: {
+    acces: {
+      texte: 'You do not manage this local authority.',
+      titre: 'Access removed',
+    },
+    actions: {
+      accepterSerie: 'Accept the series',
+    },
+    consequence: {
+      depasse: 'Accepting puts {{equipes}} for {{places}}.',
+      libre: 'Accepting bothers nobody.',
+    },
+    erreur: {
+      titre: 'The requests could not be loaded.',
+    },
+    fenetre: {
+      accepterSerie: 'Accept the series',
+      demandePar: 'Requested by {{personne}}',
+      depasse: '{{equipes}} for {{places}} at that time.',
+      fermer: 'Close',
+      motifsFrequents: 'Common reasons',
+      prevenuDemandeur: '{{personne}} ({{club}}), who asks',
+      prevenusDejaLa: 'and the clubs already there: {{clubs}}',
+      refusAideSerie: 'The club receives your reason; the trainings of the series are cancelled.',
+      refuserEtAnnuler: 'Refuse and cancel the training',
+      refuserSerie: 'Refuse the series',
+      refuserSerieEtAnnuler: 'Refuse and cancel the trainings',
+      serontPrevenus: 'Will be notified',
+    },
+    fonction: {
+      manager: 'manager',
+      trainer: 'coach',
+    },
+    hub: {
+      reste: '{{places}} left.',
+      sansMoment: '{{club}} asks for a spot {{lieu}}, for its {{equipe}}.',
+    },
+    liaison: {
+      et: ' and ',
+    },
+    lieu: {
+      feminin: 'at {{nom}}',
+      masculin: 'at {{nom}}',
+      voyelle: 'at {{nom}}',
+    },
+    motifs: {
+      complet: 'Facility full',
+      fermeture: 'Closure',
+      manifestation: 'Town event',
+    },
+    nombre: {
+      equipes: '{{nombre}} teams',
+      places: '{{nombre}} spots',
+      uneEquipe: '1 team',
+      unePlace: '1 spot',
+    },
+    pastille: {
+      chaqueSemaine: 'Every week',
+      complet: 'Full',
+      placesLibres: '{{nombre}} spots free',
+      uneFois: 'Once',
+      unePlaceLibre: '1 spot free',
+      votreClub: 'Request from your club',
+    },
+    phrase: {
+      serie: '{{club}} asks for every {{jourSemaine}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}, until {{jusquAu}}.',
+      serieSansFin: '{{club}} asks for every {{jourSemaine}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}.',
+      unique: '{{club}} asks for {{jour}}, from {{debut}} to {{fin}}, {{lieu}}, for its {{equipe}}.',
+    },
+    phraseCourte: {
+      serie: '{{club}} asks for every {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+      unique: '{{club}} asks for {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+    },
+    place: {
+      complet: 'There are already {{equipes}}: it is full.',
+      dejaLa: '{{noms}}, from {{debut}} to {{fin}}.',
+      personne: 'Nobody is there: {{places}} left.',
+      premiereDate: 'For the first date, {{jour}}:',
+      reste: 'There are already {{equipes}}: {{places}} left.',
+    },
+    traitee: {
+      prevenu: 'The club has been notified.',
+      prevenuAcceptee: 'The club has been notified · accepted on {{date}}',
+      prevenuRefusee: 'The club has been notified · refused on {{date}}',
+      votreMessage: 'Your message',
+    },
+    vide: {
+      attente: 'When a club wants a spot on a facility that is already full, its request arrives here. You accept or refuse it, with a note; the club is notified.',
+    },
+  },
   comingSoonLeagueScreen: {
     back: 'Back',
     backHint: 'Returns to classic FoundClub',

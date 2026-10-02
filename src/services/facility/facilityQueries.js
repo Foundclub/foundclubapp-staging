@@ -139,12 +139,17 @@ export const useApproveFacilityOverrideRequest = (options = {}) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ decisionReason, requestId }) => approveFacilityOverrideRequest(requestId, decisionReason),
+    mutationFn: ({ decisionReason, requestId, series = false }) => (
+      approveFacilityOverrideRequest(requestId, decisionReason, series)
+    ),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['requestsHub'] }),
         queryClient.invalidateQueries({ queryKey: ['events'] }),
+        // COLL-C3B : une série acceptée devient un créneau de saison ; le planning le montre.
+        queryClient.invalidateQueries({ queryKey: ['season-slots'] }),
+        queryClient.invalidateQueries({ queryKey: ['planning'] }),
       ]);
     },
     ...options,
@@ -155,7 +160,9 @@ export const useRefuseFacilityOverrideRequest = (options = {}) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ decisionReason, requestId }) => refuseFacilityOverrideRequest(requestId, decisionReason),
+    mutationFn: ({ decisionReason, requestId, series = false }) => (
+      refuseFacilityOverrideRequest(requestId, decisionReason, series)
+    ),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
