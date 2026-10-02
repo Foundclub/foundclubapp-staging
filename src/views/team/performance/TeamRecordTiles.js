@@ -6,10 +6,12 @@ import useTheme from '@/theme/themeContext';
 // STATS-VND (24/09) — LE BILAN DE L EQUIPE : VICTOIRES, NULS, DEFAITES.
 //
 // Decision B d Adel (24/09) : un match compte des que son score est saisi. Le
-// serveur sert `totals.wins / draws / losses` depuis STATS-SCORE ; la carte
-// « Performance » ne les montrait nulle part. Trois tuiles au style exact des
-// tuiles voisines (Matchs, Buts...), pour qu elles se lisent comme une seule
-// famille.
+// serveur sert `totals.wins / draws / losses` depuis STATS-SCORE.
+//
+// ST-VUES (02/10, planche 13 du design valide) : le CHIFFRE d abord, le mot
+// dessous, au singulier ou au pluriel (« 1 Victoire », « 0 Nul », « 2 Défaites ») ;
+// la victoire en vert et la defaite en rouge, le mot disant AUSSI ce que la
+// couleur dit (« V, N, D distincts par la lettre ET la couleur »).
 //
 // ⚠️ Un serveur plus ancien n envoie pas ces champs : on n affiche alors RIEN,
 // plutot qu un « 0 victoire » qui mentirait.
@@ -24,15 +26,30 @@ import useTheme from '@/theme/themeContext';
 function TeamRecordTiles({ totals }) {
   const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { draws, losses, wins } = totals || {};
   if (![wins, draws, losses].every((value) => typeof value === 'number')) return null;
 
   const tiles = [
-    { key: 'wins', label: t('teamDetails.perf.stats.wins', 'Victoires'), value: Number(wins) },
-    { key: 'draws', label: t('teamDetails.perf.stats.draws', 'Nuls'), value: Number(draws) },
-    { key: 'losses', label: t('teamDetails.perf.stats.losses', 'Défaites'), value: Number(losses) },
+    {
+      color: Colors.success200,
+      key: 'wins',
+      label: t('teamStatsPanel.recordWins', 'Victoire', { count: Number(wins) }),
+      value: Number(wins),
+    },
+    {
+      color: Colors.neutral00,
+      key: 'draws',
+      label: t('teamStatsPanel.recordDraws', 'Nul', { count: Number(draws) }),
+      value: Number(draws),
+    },
+    {
+      color: Colors.error300,
+      key: 'losses',
+      label: t('teamStatsPanel.recordLosses', 'Défaite', { count: Number(losses) }),
+      value: Number(losses),
+    },
   ];
 
   return (
@@ -44,14 +61,14 @@ function TeamRecordTiles({ totals }) {
           key={tile.key}
           style={[
             ApplicationStyle.backgroundColor.primary700,
-            ApplicationStyle.borderRadius24,
-            Spaces.padding[16],
+            ApplicationStyle.borderRadius16,
+            Spaces.padding[12],
             Spaces.gap[4],
             { flex: 1 },
           ]}
         >
-          <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary100]}>{tile.label}</Text>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{tile.value}</Text>
+          <Text style={[Fonts.h3Bold, { color: tile.color }]}>{tile.value}</Text>
+          <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>{tile.label}</Text>
         </View>
       ))}
     </View>

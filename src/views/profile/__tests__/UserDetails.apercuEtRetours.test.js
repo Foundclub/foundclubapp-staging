@@ -754,8 +754,13 @@ describe('PARENT-RETOURS — le parent d\'un mineur lit les retours du coach de 
     mockPersonalStats = statsDuParent;
     const arbre = await rendre(parent, { userId: 'user-enfant' });
 
-    expect(texteVisible(arbre))
-      .toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
+    // ST-VUES (02/10, planche 17, « profil A ») : la carte « Ces statistiques ne sont
+    // visibles que par la personne elle-même » DISPARAIT (note « retiré »). Ce que ce
+    // temoin protegeait tient toujours : aucun chiffre, aucun zero, sur la fiche.
+    const texte = texteVisible(arbre);
+    expect(texte).not.toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
+    expect(texte).not.toContain('Stats de match');
+    expect(texte).not.toContain('Minutes');
   });
 
   it('enfant MAJEUR : ni entrée, ni vue — le lien parental s\'éteint à 18 ans', async () => {

@@ -1,256 +1,37 @@
-import i18next from 'i18next';
-import React, { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  FlatList, RefreshControl, Text, View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import useTheme from '@/theme/themeContext';
-
-import Button from '@/components/atoms/button/Button';
-import Loader from '@/components/atoms/loader/Loader';
-import StatRow from '@/components/molecules/statRow/StatRow';
-import ScreenContainer from '@/components/templates/ScreenContainer';
+import { useEffect } from 'react';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetTeamStats } from '@/services/stats/statsQueries';
-
 /**
- * Get dynamic columns based on sport type
- * @param {string} sport - The sport name (normalized to lowercase)
- * @returns {Array<{key: string, label: string, isPrimary?: boolean}>}
- */
-const getColumnsForSport = (sport) =>
-  // We only show Presence, Absence, Retard for ALL sports as requested
-  [
-    { key: 'attendanceCount', label: i18next.t('teamStatsScreen.columns.attendance', 'Prés.') },
-    { key: 'absenceCount', label: i18next.t('teamStatsScreen.columns.absence', 'Abs.') },
-    { key: 'retardCount', label: i18next.t('teamStatsScreen.columns.late', 'Ret.') }, // Retard
-  ]
-;
-
-/**
- * TeamStatsScreen - Displays attendance and performance stats for team players
- * @param {import('@react-navigation/stack').StackScreenProps<any>} props
+ * ST-VUES — L ECRAN « STATISTIQUES » (TeamStats) EST ABANDONNE PAR LE DESIGN VALIDE
+ * (« FoundClub — Statistiques », planche 15, 02/10).
+ *
+ * Il etait un doublon pauvre de « Vie d'équipe » (presences, absences, retards en
+ * colonnes), sans porte depuis le 21/02/2026. Son ADRESSE reste — un lien profond, un
+ * favori, `/teams/:teamId/stats` sur le site — et ouvre desormais la fiche de
+ * l equipe, onglet Stats, sur « Vie d'équipe » : jamais un ecran mort.
+ *
+ * ⛔ La route `TeamStats` n est PAS retiree : ses fichiers (`routeNames.js`,
+ * `webRoutes.js`, `TeamStack.js`) sont des fichiers-carrefour partages par les
+ * autres lots, et la retirer casserait les adresses deja distribuees. Ce composant
+ * est son seul occupant : il ne dessine rien, il redirige.
+ * @param {object} props - Les proprietes de l ecran.
+ * @param {any} props.navigation - La navigation de la pile Equipe.
+ * @param {any} props.route - Les parametres : `teamId`.
+ * @returns {null} - Rien : l ecran est remplace avant d etre vu.
  */
 function TeamStatsScreen({ navigation, route }) {
-  const { teamId, teamName: routeTeamName } = route.params || {};
-  const { t } = useTranslation();
-  const {
-    Alignments, Colors, Fonts, Spaces,
-  } = useTheme();
-  const insets = useSafeAreaInsets();
+  const teamId = route?.params?.teamId;
 
-  const {
-    data: statsData,
-    error,
-    isFetching,
-    isLoading,
-    refetch,
-  } = useGetTeamStats(teamId, { enabled: Boolean(teamId) });
+  useEffect(() => {
+    if (teamId) {
+      navigation.replace(RouteNames.TeamDetails, { initialTab: 'stats', teamId });
+      return;
+    }
+    navigation.replace(RouteNames.MyTeamList);
+  }, [navigation, teamId]);
 
-  const columns = useMemo(() => getColumnsForSport(statsData?.sport), [statsData?.sport]);
-
-  const teamName = statsData?.teamName || routeTeamName || 'Équipe';
-
-  const isMissingTeamId = !teamId;
-  const isRefreshing = isFetching && !isLoading;
-
-  const renderHeader = () => (
-    <View style={[Spaces.marginBottom[24], Spaces.paddingHorizontal[4]]}>
-      {/* Stats Summary Card with Glass effect */}
-      <View
-        style={[
-          Alignments.row,
-          Alignments.justifySpaceBetween,
-          Spaces.paddingHorizontal[24],
-          Spaces.paddingVertical[16],
-          {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: 16,
-            borderWidth: 1,
-          },
-        ]}
-      >
-        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h1, {
-            color: Colors.primary500, fontSize: 32, lineHeight: 40, textAlign: 'center',
-          }]}
-          >
-            {statsData?.data?.length || 0}
-          </Text>
-          <Text style={[Fonts.p2, {
-            color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
-          }]}
-          >
-            {t('teamStatsScreen.header.players', 'Joueurs')}
-          </Text>
-        </View>
-
-        <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', height: '100%', width: 1 }} />
-
-        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h1, {
-            color: Colors.neutral00, fontSize: 32, lineHeight: 40, textAlign: 'center',
-          }]}
-          >
-            {statsData?.totalEvents || 0}
-          </Text>
-          <Text
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            style={[Fonts.p2, {
-              color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
-            }]}
-          >
-            {t('teamStatsScreen.header.events', 'Événements')}
-          </Text>
-        </View>
-
-        <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', height: '100%', width: 1 }} />
-
-        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center', textTransform: 'capitalize' }]}
-          >
-            {statsData?.sport || '-'}
-          </Text>
-          <Text style={[Fonts.p2, {
-            color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
-          }]}
-          >
-            {t('teamStatsScreen.header.sport', 'Sport')}
-          </Text>
-        </View>
-      </View>
-
-      {/* Column Headers */}
-      <View
-        style={[
-          Alignments.row,
-          Alignments.alignCenter,
-          Spaces.paddingHorizontal[16],
-          Spaces.paddingVertical[12],
-          Spaces.marginTop[24],
-        ]}
-      >
-        <Text style={[Fonts.p3Bold, {
-          color: Colors.neutral300, flex: 1, letterSpacing: 0.5, textTransform: 'uppercase',
-        }]}
-        >
-          {t('teamStatsScreen.table.player', 'Joueur')}
-        </Text>
-        <View style={[Alignments.row, Spaces.gap[8]]}>
-          {columns.map((col) => (
-            <View key={col.key} style={[Alignments.alignCenter, { justifyContent: 'center', width: 44 }]}>
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral300, textAlign: 'center', textTransform: 'uppercase' }]}>
-                {col.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-
-  if (isMissingTeamId) {
-    return (
-      <ScreenContainer bgImage="bg2">
-        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('teamStatsScreen.states.notFoundTitle', 'Équipe introuvable')}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t(
-              'teamStatsScreen.states.missingIdBody',
-              'Aucun identifiant d équipe n a été fourni.',
-            )}
-          </Text>
-          <Button
-            onPress={() => navigation.navigate(RouteNames.TeamList)}
-            title={t('teamStatsScreen.states.backToTeams', 'Retour aux équipes')}
-            variant="Secondary"
-          />
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <ScreenContainer bgImage="bg2">
-        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
-          <Loader />
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  if (error) {
-    return (
-      <ScreenContainer bgImage="bg2">
-        <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('teamStatsScreen.states.loadError', 'Impossible de charger les statistiques')}
-          </Text>
-          <Text style={[Fonts.p1, { color: Colors.error500 }]}>
-            {error?.message || t('common.errors.generic', 'Une erreur est survenue')}
-          </Text>
-          <Button
-            onPress={() => refetch()}
-            title={t('teamStatsScreen.states.retry', 'Réessayer')}
-            variant="Secondary"
-          />
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  return (
-    <ScreenContainer
-      bgImage="bg2"
-      // Retrait bas systeme deja applique au contenu ci-dessous : pas de plancher
-      // conteneur, sinon insets.bottom serait compte deux fois.
-      bottomInsetMode="edge-to-edge"
-      contentContainerStyle={[
-        Spaces.paddingVertical[16],
-        { paddingBottom: insets.bottom + 16 },
-      ]}
-    >
-      <FlatList
-        contentContainerStyle={[Spaces.gap[0]]}
-        data={statsData?.data || []}
-        keyExtractor={(item, index) => item.user?.documentId || `team-stat-row-${index}`}
-        ListEmptyComponent={(
-          <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-            <Text style={[Fonts.p1, { color: Colors.neutral400 }]}>
-              {t('teamStats.empty', 'Aucun joueur dans cette équipe')}
-            </Text>
-          </View>
-        )}
-        ListHeaderComponent={renderHeader}
-        refreshControl={(
-          <RefreshControl
-            colors={[Colors.primary500]}
-            onRefresh={() => refetch()}
-            refreshing={isRefreshing}
-            tintColor={Colors.primary500}
-          />
-        )}
-        renderItem={({ index, item }) => (
-          <View style={[Spaces.marginBottom[8]]}>
-            <StatRow columns={columns} isEven={index % 2 === 0} player={item} />
-          </View>
-        )}
-        showsVerticalScrollIndicator={false}
-      />
-    </ScreenContainer>
-  );
+  return null;
 }
 
 export default TeamStatsScreen;

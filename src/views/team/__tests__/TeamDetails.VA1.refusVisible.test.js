@@ -337,7 +337,10 @@ jest.mock(
 );
 
 const LIBELLE_REFUS = "Tu n'as pas accès à cette partie : elle est réservée aux membres.";
-const LIBELLE_VIDE_PRESENCES = 'Aucune statistique disponible pour le moment.';
+// ST-VUES (02/10, planche 14, etat 6) : une presence vraiment vide se dit desormais
+// « Pas encore de présence » (et une phrase dit d ou elle viendra). Le garde-fou ne bouge pas :
+// une liste vide n est jamais annoncee comme un refus.
+const LIBELLE_VIDE_PRESENCES = 'Pas encore de présence';
 const LIBELLE_VIDE_PERF = 'Aucune performance de match disponible pour le moment.';
 
 /** @type {any} */

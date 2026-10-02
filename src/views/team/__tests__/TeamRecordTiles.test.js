@@ -60,15 +60,17 @@ afterEach(() => {
 });
 
 describe('STATS-VND — trois tuiles : victoires, nuls, defaites', () => {
-  test('le bilan servi s affiche, chaque chiffre sous son libelle', () => {
+  // ST-VUES (02/10, planche 13 du design valide) : le CHIFFRE d abord, le mot dessous,
+  // au singulier ou au pluriel. Ces trois temoins disaient l inverse avant ce lot.
+  test('le bilan servi s affiche, chaque libelle sous son chiffre', () => {
     const arbre = rendre({ draws: 2, losses: 1, wins: 5 });
 
-    expect(textes(arbre)).toEqual(['Victoires', '5', 'Nuls', '2', 'Défaites', '1']);
+    expect(textes(arbre)).toEqual(['5', 'Victoires', '2', 'Nuls', '1', 'Défaite']);
   });
 
   test('un bilan vierge montre ses zeros : c est une vraie information', () => {
     expect(textes(rendre({ draws: 0, losses: 0, wins: 0 })))
-      .toEqual(['Victoires', '0', 'Nuls', '0', 'Défaites', '0']);
+      .toEqual(['0', 'Victoire', '0', 'Nul', '0', 'Défaite']);
   });
 
   test('un lecteur d ecran entend le chiffre avec son libelle', () => {
@@ -76,7 +78,7 @@ describe('STATS-VND — trois tuiles : victoires, nuls, defaites', () => {
       .findAll((/** @type {any} */ n) => n.props.accessible === true && typeof n.type === 'string');
 
     expect(tuiles.map((/** @type {any} */ n) => n.props.accessibilityLabel))
-      .toEqual(['5 Victoires', '2 Nuls', '1 Défaites']);
+      .toEqual(['5 Victoires', '2 Nuls', '1 Défaite']);
   });
 
   test('🔒 un serveur plus ancien (champs absents) : rien, plutot qu un « 0 » qui mentirait', () => {
@@ -87,15 +89,17 @@ describe('STATS-VND — trois tuiles : victoires, nuls, defaites', () => {
 });
 
 describe('STATS-VND — la carte « Performance » branche le bilan', () => {
-  const SOURCE = readFileSync(join(__dirname, '..', 'TeamDetails.js'), 'utf8');
+  // ST-VUES (02/10) : la carte vit desormais dans `performance/TeamPerformancePanel.js`
+  // (planche 13) ; le bilan y suit « Saison · N matchs » et precede la ligne des buts.
+  const SOURCE = readFileSync(join(__dirname, '..', 'performance', 'TeamPerformancePanel.js'), 'utf8');
 
-  test('juste sous les quatre tuiles Matchs / Minutes / Buts / Passes', () => {
-    const tuiles = SOURCE.indexOf("t('teamDetails.perf.stats.assists', 'Passes décisives')");
-    const bilan = SOURCE.indexOf('<TeamRecordTiles totals={teamPerformanceStats?.totals} />');
-    const score = SOURCE.indexOf("'teamDetails.perf.cumulativeScore'");
+  test('juste sous « Saison · N matchs », avant les buts marques', () => {
+    const saison = SOURCE.indexOf("'teamStatsPanel.season'");
+    const bilan = SOURCE.indexOf('<TeamRecordTiles totals={totals} />');
+    const buts = SOURCE.indexOf("'teamStatsPanel.goalsScored'");
 
-    expect(tuiles).toBeGreaterThan(-1);
-    expect(bilan).toBeGreaterThan(tuiles);
-    expect(bilan).toBeLessThan(score);
+    expect(saison).toBeGreaterThan(-1);
+    expect(bilan).toBeGreaterThan(saison);
+    expect(bilan).toBeLessThan(buts);
   });
 });

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getPendingTrainingReviews, getTrainingReviews } from './trainingReviewService';
 
-const TRAINING_REVIEW_STALE_MS = 30_000;
+// FINITIONS6 — lue aussi par TrainingReviewPromptHost au retour au premier plan.
+export const TRAINING_REVIEW_STALE_MS = 30_000;
 
 export const PENDING_TRAINING_REVIEWS_QUERY_KEY = ['pendingTrainingReviews'];
 
