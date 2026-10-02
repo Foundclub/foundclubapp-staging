@@ -715,7 +715,7 @@ function RequestsHub({ navigation, route }) {
     { key: 'event', label: t('requestsHub.filters.event', 'Événement') },
     { key: 'featured', label: t('requestsHub.filters.featured', 'À la une') },
     { key: 'installation', label: t('requestsHub.filters.installation', 'Installation') },
-    { key: 'interest', label: t('requestsHub.filters.interest', 'Interets') },
+    { key: 'interest', label: t('requestsHub.filters.interest', 'Intérêts') },
     { key: 'friendly', label: t('requestsHub.filters.friendly', 'Amicaux') },
     { key: 'teamInvite', label: t('requestsHub.filters.teamInvite', 'Invitations') },
   ]).filter((chip) => availableFilters.includes(/** @type {any} */ (chip.key))), [availableFilters, t]);

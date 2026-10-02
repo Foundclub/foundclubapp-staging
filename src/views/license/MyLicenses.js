@@ -334,7 +334,7 @@ function MyLicenses({ navigation }) {
         <LicenseEmptyState
           description={t(
             'myLicenses.empty.description',
-            'Aucune cotisation n est encore rattachée à ton compte.',
+            'Aucune cotisation n’est encore rattachée à ton compte.',
           )}
           title={t('myLicenses.title', 'Mes cotisations')}
         />

@@ -73,7 +73,9 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
+import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
+  peutRelireSaNote,
   peutVoirLesAvisDEntrainement,
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ConvocationFieldPreview from '@/components/tactical/ConvocationFieldPreview';
@@ -3947,7 +3949,11 @@ function EventDetails({ navigation, route }) {
         ) : null,
         onNameOpponent,
         opponentName: matchOpponentName,
-        value: 'Score en attente',
+        // FINITIONS7 (tournee 8) — « Score en attente » sur un match du 10/10 A VENIR : il ne se
+        // dit qu apres le match, lu sur la meme horloge serveur que la pastille « TERMINÉ ».
+        value: isMatchFinished
+          ? t('eventDetails.scorePending', 'Score en attente')
+          : t('eventDetails.scoreUpcoming', 'À venir'),
         verdict: null,
       };
     }
@@ -3972,15 +3978,15 @@ function EventDetails({ navigation, route }) {
       verdict,
     };
   }, [
-    // `isMatchFinished` a QUITTE cette liste avec D5 : l'encart ne dependait de
-    // lui que pour se CACHER avant le coup d'envoi (`!available && !isMatchFinished`
-    // rendait null). Il s'affiche desormais des qu'il s'agit d'un match, donc
-    // le calcul ne lit plus l'etat de fin. La pastille, elle, le lit toujours (D8).
+    // `isMatchFinished` a QUITTE cette liste avec D5 (l'encart s'affiche des qu'il
+    // s'agit d'un match), puis y est REVENU avec FINITIONS7 : il ne cache plus
+    // l'encart, il choisit seulement entre « À venir » et « Score en attente ».
     canEdit,
     event?.externalAutoSource,
     event?.matchResult,
     handleOpenOpponentSheet,
     isMatchEvent,
+    isMatchFinished,
     isViewerFromInvitedTeam,
     matchOpponentName,
     matchStatsPayload?.score, t,
@@ -7884,6 +7890,8 @@ function EventDetails({ navigation, route }) {
     () => (
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
         <Button
+          // FINITIONS7 — tournee 8 : un drapeau sans nom pour le lecteur d ecran.
+          accessibilityLabel={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
           icon="flag"
           isOption
           onPress={() => setIsReportModalVisible(true)}
@@ -7912,6 +7920,9 @@ function EventDetails({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      // FINITIONS7 — la fleche de la pile s annoncait « Go back » (repli anglais de
+      // @react-navigation/elements, HeaderBackButton.tsx:35) : elle dit « Retour ».
+      headerBackAccessibilityLabel: t('common.back', 'Retour'),
       headerBackground: renderHeaderBackground,
       headerLeft: fromEventCreation ? renderHeaderLeft : undefined,
       headerRight: renderHeaderRight,
@@ -7922,6 +7933,7 @@ function EventDetails({ navigation, route }) {
     renderHeaderBackground,
     renderHeaderLeft,
     renderHeaderRight,
+    t,
   ]);
 
   const isCoachLateModal = lateModalMode === 'coach_mark' || lateModalMode === 'coach_edit';
@@ -8762,6 +8774,18 @@ function EventDetails({ navigation, route }) {
               {showOverviewTab && peutVoirLesAvisDEntrainementIci && avisDEntrainement ? (
                 <TrainingReviewsCard donnees={avisDEntrainement} />
               ) : null}
+              {/* ST-RETOURS (planche 21, etat 4) — le joueur relit SA note, jamais les autres. */}
+              {showOverviewTab && peutRelireSaNote({
+                canEdit,
+                isFinished: isMatchFinished,
+                isTeamMember,
+                isTraining: trainingOpenConfig.isTraining,
+              }) ? (
+                <MyTrainingReviewBlock
+                  eventId={eventId}
+                  trainerFirstname={(event?.team?.trainers || [])[0]?.firstname || null}
+                />
+                ) : null}
 
               {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>

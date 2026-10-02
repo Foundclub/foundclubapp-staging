@@ -16,6 +16,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingAccountExits from '@/views/onboarding/components/OnboardingAccountExits';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -33,10 +34,10 @@ import {
 // D15 - ECRAN FUSIONNE « Qui es-tu ? ».
 // Prenom, nom et date de naissance tenaient sur DEUX etapes (UserName puis
 // l'ancien ecran `UserBirthdate`, supprime par D22 une fois prouve qu'aucun
-// parcours ne l'atteignait plus). Ils tiennent desormais sur celle-ci. Le
-// dirigeant, lui, n'a
-// jamais eu d'etape date de naissance : il ne voit que prenom + nom, et c'est sa
-// seule etape obligatoire.
+// parcours ne l'atteignait plus). Ils tiennent desormais sur celle-ci. Seul le
+// super-admin ne voit que prenom + nom. Le dirigeant voit les trois champs
+// depuis AGE-OBLIGATOIRE (02/10/2026, decision d'Adel « 3- C ») : c'est
+// toujours sa seule etape obligatoire, mais elle porte maintenant sa date.
 //
 // Qui a droit aux trois champs est decide par `onboardingCollectsBirthdate`,
 // dans authUseCases.js, a cote de la machine a etapes qui insere la declaration
@@ -149,6 +150,8 @@ function UserName({ navigation }) {
   const { t } = useTranslation();
   const {
     getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    onboardingViews,
     refetchUserData,
     userData,
     userDataError,
@@ -159,6 +162,11 @@ function UserName({ navigation }) {
 
   const collectsBirthdate = onboardingCollectsBirthdate(userData?.role);
   const isPresident = getUserRoleKey(userData?.role?.name || userData?.role?.type) === 'president';
+  // AGE-OBLIGATOIRE ② (02/10/2026) - un ancien compte qui n'avait jamais donne sa
+  // date (`getEntryCheckpointViews`, authUseCases.js). Meme ecran, memes champs,
+  // memes regles ; trois differences : une phrase qui dit pourquoi, deux sorties
+  // de compte, et la main rendue a l'accueil au lieu de l'etape suivante.
+  const isEntryCheckpoint = onboardingViews?.isEntryCheckpoint === true;
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -191,7 +199,7 @@ function UserName({ navigation }) {
         'Impossible de mettre à jour ton profil.',
       ));
     },
-    onSuccess: (unused, submitted) => {
+    onSuccess: (updatedUser, submitted) => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
       // Le piege de la fusion : `needsParentalDeclaration` se calcule A PARTIR
@@ -203,6 +211,25 @@ function UserName({ navigation }) {
         && userData?.parentalDeclarationAccepted !== true
       ) {
         navigation.navigate(RouteNames.UserParentalDeclaration);
+        return;
+      }
+
+      // AGE-OBLIGATOIRE ② - le tunnel de ce compte est deja fini : la date
+      // donnee (15 ans ou plus) le fait entrer, sans repasser par les etapes.
+      if (isEntryCheckpoint) {
+        // AGE-OBLIGATOIRE-2 a - le profil en memoire porte la date AVANT le depart. Sur le
+        // site, l'accueil relit ce profil pour savoir s'il manque l'age : parti avant le
+        // rafraichissement, il renvoyait sur ce formulaire. Le profil d'un AUTRE compte
+        // enregistre n'est jamais touche.
+        queryClient.setQueriesData(
+          { queryKey: ['get-me'] },
+          (/** @type {any} */ ancien) => (
+            ancien?.documentId && ancien.documentId === updatedUser?.documentId
+              ? { ...ancien, ...updatedUser }
+              : ancien
+          ),
+        );
+        navigation.navigate(getPostOnboardingHomeRoute());
         return;
       }
 
@@ -237,7 +264,7 @@ function UserName({ navigation }) {
     const parsedDate = userData?.birthdate ? new Date(userData.birthdate) : null;
     const hasParsedDate = parsedDate && !Number.isNaN(parsedDate.getTime());
 
-    // Le `collectsBirthdate` de la condition n'est PAS decoratif : un dirigeant
+    // Le `collectsBirthdate` de la condition n'est PAS decoratif : un super-admin
     // qui porte deja une date en base (changement de role, compte migre) se
     // verrait sinon reinjecter les trois clefs ici, et le defaut D66
     // reviendrait par ce chemin-la.
@@ -321,6 +348,27 @@ function UserName({ navigation }) {
       'Vérifie les informations saisies pour continuer.',
     );
 
+  // Le sous-titre : au point de controle, il dit POURQUOI la date est demandee
+  // maintenant ; sinon, c'est celui du parcours d'inscription.
+  const identitySubtitle = (() => {
+    if (isEntryCheckpoint) {
+      return t(
+        'ageObligatoire.subtitle',
+        'Il nous manque ta date de naissance. On la demande désormais à chaque membre.',
+      );
+    }
+    if (isPresident) {
+      return t(
+        'profile.subtitles.identityPresident',
+        'La seule étape obligatoire du parcours dirigeant.',
+      );
+    }
+    return t(
+      'profile.subtitles.identity',
+      'Renseigne ton nom, ton prénom et ta date de naissance.',
+    );
+  })();
+
   return (
     <FormScreenContainer
       bgImage="bg2"
@@ -350,12 +398,7 @@ function UserName({ navigation }) {
             {t('profile.titles.identity', 'Qui es-tu ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {isPresident
-              ? t(
-                'profile.subtitles.identityPresident',
-                'La seule étape obligatoire du parcours dirigeant.',
-              )
-              : t('profile.subtitles.identity', 'Renseigne ton nom, ton prénom et ta date de naissance.')}
+            {identitySubtitle}
           </Text>
         </View>
 
@@ -520,6 +563,7 @@ function UserName({ navigation }) {
           title={t('profile.actions.save')}
           variant="Primary"
         />
+        {isEntryCheckpoint ? <OnboardingAccountExits /> : null}
       </View>
     </FormScreenContainer>
   );

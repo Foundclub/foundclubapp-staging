@@ -304,15 +304,123 @@ describe('authUseCases', () => {
       expect(result.views.map((vue) => vue.route)).not.toContain(RouteNames.UserChild);
     });
 
+    // AGE-OBLIGATOIRE ② - ce test montait un joueur SANS date de naissance et
+    // attendait un parcours vide : c'est exactement le trou que la decision
+    // d'Adel du 02/10 ferme (« un ancien compte sans date ne la donne jamais »).
+    // Il garde son sens avec une date : un compte complet n'a rien a refaire.
     it('returns empty views when onboarding is marked completed', () => {
       storage.getBoolean.mockReturnValue(true);
       const result = getOnboardingViews({
+        birthdate: '1990-01-01',
         documentId: 'user-doc',
         role: { name: USER_ROLES.player },
       });
 
       expect(result.totalViews).toBe(0);
       expect(result.views).toEqual([]);
+    });
+
+    // ------------------------------------------------------------------
+    // AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape
+    // obligatoire ») - LE POINT DE CONTROLE D'ENTREE.
+    //
+    // Un compte qui a DEJA fini son inscription sur cet appareil sautait tout
+    // le parcours, date manquante comprise : 45 comptes sans date en prod le
+    // 02/10. Il la donne desormais a sa prochaine ouverture, sans rouvrir le
+    // reste du tunnel. `PrivateNavigator` (initialRouteName) et le site
+    // (`getPostAuthWebPath`) prennent tous deux la premiere vue `canShow` :
+    // c'est elle que ces temoins mesurent.
+    // ------------------------------------------------------------------
+    describe('AGE-OBLIGATOIRE ② - le point de controle d entree', () => {
+      // 14 ans revolus quel que soit le jour ou la suite tourne : nee le
+      // 1er janvier il y a 14 ans.
+      const DATE_14_ANS = `${new Date().getUTCFullYear() - 14}-01-01`;
+      const premiereVue = (result) => result.views.find((vue) => vue.canShow)?.route;
+      const routes = (result) => result.views.map((vue) => vue.route);
+
+      beforeEach(() => {
+        storage.getBoolean.mockReturnValue(true);
+      });
+
+      it.each([
+        USER_ROLES.player,
+        USER_ROLES.coach,
+        USER_ROLES.president,
+        USER_ROLES.parent,
+      ])('%s sans date : « Qui es-tu ? » s ouvre, et rien d autre du tunnel', (roleName) => {
+        const result = getOnboardingViews({
+          avatar: { url: 'https://exemple.test/a.png' },
+          documentId: 'ancien-compte',
+          firstname: 'Ancien',
+          lastname: 'Compte',
+          role: { name: roleName },
+        });
+
+        expect(premiereVue(result)).toBe(RouteNames.UserName);
+        expect(result.isEntryCheckpoint).toBe(true);
+        // Ce n'est pas le tunnel rouvert : seules les deux etapes qui decident
+        // de l'age peuvent y figurer, et aucune n'est numerotee.
+        expect(routes(result)).toEqual([
+          RouteNames.UserName,
+          RouteNames.UserParentalDeclaration,
+        ]);
+        expect(result.totalViews).toBe(0);
+      });
+
+      it('13-14 ans sans declaration : la declaration s ouvre, comme a l inscription', () => {
+        const result = getOnboardingViews({
+          birthdate: DATE_14_ANS,
+          documentId: 'ancien-compte',
+          firstname: 'Ado',
+          lastname: 'Quatorze',
+          role: { name: USER_ROLES.player },
+        });
+
+        expect(premiereVue(result)).toBe(RouteNames.UserParentalDeclaration);
+        expect(result.isEntryCheckpoint).toBe(true);
+      });
+
+      it('13-14 ans AVEC declaration : on entre', () => {
+        const result = getOnboardingViews({
+          birthdate: DATE_14_ANS,
+          documentId: 'ancien-compte',
+          parentalDeclarationAccepted: true,
+          role: { name: USER_ROLES.player },
+        });
+
+        expect(result.views).toEqual([]);
+        expect(result.isEntryCheckpoint).toBeUndefined();
+      });
+
+      it('le super-admin reste dispense, meme sans date', () => {
+        const result = getOnboardingViews({
+          documentId: 'ancien-compte',
+          role: { name: USER_ROLES.superAdmin },
+        });
+
+        expect(result.views).toEqual([]);
+      });
+
+      // Son tunnel complet demande deja la date ; un compte « Ville seule » a son accueil.
+      it('un compte sans role sportif (new) n est pas arrete', () => {
+        const result = getOnboardingViews({
+          documentId: 'ancien-compte',
+          role: { name: USER_ROLES.new },
+        });
+
+        expect(result.views).toEqual([]);
+      });
+
+      it('le tunnel d une inscription NEUVE ne porte pas la marque du point de controle', () => {
+        storage.getBoolean.mockReturnValue(false);
+        const result = getOnboardingViews({
+          documentId: 'compte-neuf',
+          role: { name: USER_ROLES.player },
+        });
+
+        expect(result.isEntryCheckpoint).toBeUndefined();
+        expect(result.totalViews).toBe(13);
+      });
     });
 
     it('returns full default flow for new authenticated user', () => {
@@ -515,15 +623,43 @@ describe('authUseCases', () => {
       expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
     });
 
-    // ... mais le dirigeant, lui, n'a jamais de date de naissance a saisir :
-    // son ecran doit bien se sauter des que nom et prenom sont connus.
-    it('hides the merged identity step for a president once the name is known', () => {
+    // AGE-OBLIGATOIRE ① (02/10, decision d'Adel « 3- C ») - ce test figeait
+    // l'inverse : « le dirigeant n'a jamais de date de naissance a saisir, son
+    // ecran se saute des que nom et prenom sont connus ». C'est exactement la
+    // regle que la decision retourne : 15 dirigeants en prod n'avaient pas de
+    // date, et rien dans l'app ne pouvait la leur demander.
+    it('AGE-OBLIGATOIRE ① l ecran reste visible pour un dirigeant qui n a que son nom', () => {
       const result = getOnboardingViews({
         firstname: 'John',
         lastname: 'Doe',
         role: { name: USER_ROLES.president },
       });
 
+      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
+    });
+
+    it('AGE-OBLIGATOIRE ① saute l ecran du dirigeant une fois nom, prenom ET date connus', () => {
+      const result = getOnboardingViews({
+        birthdate: '1980-04-02',
+        firstname: 'John',
+        lastname: 'Doe',
+        role: { name: USER_ROLES.president },
+      });
+
+      expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
+    });
+
+    it('AGE-OBLIGATOIRE ① le dirigeant donne sa date ; le super-admin reste dispense', () => {
+      expect(onboardingCollectsBirthdate({ name: USER_ROLES.president })).toBe(true);
+      expect(onboardingCollectsBirthdate({ name: USER_ROLES.superAdmin })).toBe(false);
+
+      // Le super-admin n'est pas un compte de terrain : son ecran se saute
+      // toujours des que nom et prenom sont connus, date ou pas.
+      const result = getOnboardingViews({
+        firstname: 'Adel',
+        lastname: 'F',
+        role: { name: USER_ROLES.superAdmin },
+      });
       expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
     });
 
@@ -729,10 +865,11 @@ describe('authUseCases', () => {
             RouteNames.UserAvatar,
             RouteNames.UserAffiliationGuide,
           ],
-          // Le dirigeant n'a pas d'etape date de naissance : pas de
-          // declaration parentale possible, le total ne bouge pas.
+          // AGE-OBLIGATOIRE (02/10, decision d'Adel « 3- C ») - le dirigeant
+          // donne sa date de naissance comme les autres roles : sous 15 ans,
+          // la declaration parentale s'insere donc aussi dans SON parcours.
           totalViews: 4,
-          totalViewsMineur: 4,
+          totalViewsMineur: 5,
         },
         {
           roleName: USER_ROLES.superAdmin,

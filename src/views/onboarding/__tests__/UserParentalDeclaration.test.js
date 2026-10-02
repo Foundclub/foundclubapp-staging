@@ -14,6 +14,8 @@ import UserParentalDeclaration from '../UserParentalDeclaration';
 // qui part, c'est ce que le serveur ENREGISTRE comme preuve.
 
 let mockUserData;
+/** @type {any} */
+let mockOnboardingViews;
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
 
@@ -65,7 +67,13 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
+    addAccount: jest.fn(),
+    authSessions: [],
+    getPostOnboardingHomeRoute: () => 'HomeTab',
+    logoutMutation: { isPending: false, mutate: jest.fn() },
+    onboardingViews: mockOnboardingViews,
     refetchUserData: jest.fn(),
+    switchAccount: jest.fn(),
     userData: mockUserData,
     userDataError: null,
     userDataLoading: false,
@@ -195,6 +203,7 @@ const OS_D_ORIGINE = Platform.OS;
 beforeEach(() => {
   jest.clearAllMocks();
   Platform.OS = OS_D_ORIGINE;
+  mockOnboardingViews = undefined;
   mockUserData = { birthdate: '2012-03-01', documentId: 'ado-14' };
   updateMe.mockResolvedValue({ documentId: 'ado-14', parentalDeclarationAccepted: true });
 });
@@ -341,3 +350,112 @@ test('CONSENTEMENT ⑨ ProfileEdit annonce le bon seuil : 15 ans, plus 13', () =
   expect(fr.profileEdit.parentalDeclaration.required).toContain('15 ans');
   expect(fr.profileEdit.parentalDeclaration.required).not.toContain('13 ans');
 });
+
+// ---------------------------------------------------------------------------
+// AGE-OBLIGATOIRE ② (02/10/2026) — L'ANCIEN COMPTE QUI VIENT DE DONNER SA DATE
+// ---------------------------------------------------------------------------
+// Un ancien compte qui donne 13-14 ans au point de controle d'entree arrive ici,
+// comme a l'inscription. Mais son tunnel est deja fini : apres la case, la main
+// revient a l'ACCUEIL. Avant ce lot, l'ecran visait toujours « UserAddress »,
+// une etape que le point de controle ne monte pas : l'ado restait sur la case
+// cochee, sans suite. Et comme a l'ecran « Qui es-tu ? », les sorties de compte
+// sont la : aucun compte ne reste enferme.
+const POINT_DE_CONTROLE = {
+  isEntryCheckpoint: true,
+  totalViews: 0,
+  views: [
+    { canShow: false, index: 1, route: 'UserName' },
+    { canShow: true, index: 2, route: 'UserParentalDeclaration' },
+  ],
+};
+
+/**
+ * Le pressable portant ce libelle.
+ * @param {any} arbre - L'arbre rendu.
+ * @param {string} libelle - Le libelle.
+ * @returns {any} Le noeud, ou `undefined`.
+ */
+const boutonNomme = (arbre, libelle) => arbre.root
+  .findAllByType(TouchableOpacity)
+  .find((/** @type {any} */ noeud) => noeud.props.accessibilityLabel === libelle);
+
+test('AGE-OBLIGATOIRE ② ancien compte : apres la case, retour a l accueil', async () => {
+  mockOnboardingViews = POINT_DE_CONTROLE;
+  const arbre = await rendre();
+  await cocherEtContinuer(arbre);
+
+  expect(mockNavigate).toHaveBeenCalledWith('HomeTab');
+  expect(mockNavigate).not.toHaveBeenCalledWith('UserAddress');
+});
+
+test('AGE-OBLIGATOIRE ② ancien compte : les deux sorties de compte sont la', async () => {
+  mockOnboardingViews = POINT_DE_CONTROLE;
+  const arbre = await rendre();
+
+  expect(boutonNomme(arbre, 'Changer de compte')).toBeDefined();
+  expect(boutonNomme(arbre, 'Se déconnecter')).toBeDefined();
+});
+
+test('AGE-OBLIGATOIRE ② inscription neuve : aucune sortie de compte', async () => {
+  const arbre = await rendre();
+
+  expect(boutonNomme(arbre, 'Changer de compte')).toBeUndefined();
+  expect(boutonNomme(arbre, 'Se déconnecter')).toBeUndefined();
+});
+
+// ---------------------------------------------------------------------------
+// AGE-OBLIGATOIRE-2 c (02/10/2026, « parent 13 corriger » du chef d'orchestre)
+// ---------------------------------------------------------------------------
+// Apres la case, l'inscription visait TOUJOURS « UserAddress ». Le parcours du Parent n'a pas
+// d'adresse (nom, photo, « declare ton enfant ») : sur le telephone l'ecran n'etait pas monte,
+// la navigation ne menait nulle part, et un Parent de 13-14 ans restait sur la case cochee.
+// Les parcours sont construits par la VRAIE `getOnboardingViews`.
+const { getOnboardingViews: vraiParcours } = jest.requireActual('@/domains/auth/authUseCases');
+const DATE_14_ANS = `${new Date().getUTCFullYear() - 14}-01-01`;
+
+/**
+ * Le profil d'un compte de 14 ans, qui vient de donner son nom et sa date.
+ * @param {string} nomDuRole - Le role cote serveur.
+ * @param {object} [plus] - Des champs de plus.
+ * @returns {any} Le profil.
+ */
+const ado = (nomDuRole, plus = {}) => ({
+  birthdate: DATE_14_ANS,
+  documentId: 'ado-14',
+  firstname: 'Ado',
+  lastname: 'Quatorze',
+  parentalDeclarationAccepted: false,
+  role: { name: nomDuRole },
+  ...plus,
+});
+
+test('AGE-OBLIGATOIRE-2 c Parent de 14 ans : apres la case, la photo', async () => {
+  mockUserData = ado('Parent');
+  mockOnboardingViews = vraiParcours(mockUserData);
+  const arbre = await rendre();
+  await cocherEtContinuer(arbre);
+
+  expect(mockNavigate).toHaveBeenCalledWith('UserAvatar');
+  expect(mockNavigate).not.toHaveBeenCalledWith('UserAddress');
+});
+
+test('AGE-OBLIGATOIRE-2 c Parent de 14 ans avec photo : « declare ton enfant »', async () => {
+  mockUserData = ado('Parent', { avatar: { url: 'https://exemple.test/a.png' } });
+  mockOnboardingViews = vraiParcours(mockUserData);
+  const arbre = await rendre();
+  await cocherEtContinuer(arbre);
+
+  expect(mockNavigate).toHaveBeenCalledWith('UserChild');
+});
+
+test.each(['Joueur', 'Entraineur', 'Dirigeant'])(
+  'AGE-OBLIGATOIRE-2 c %s : son parcours a une adresse, il n en change pas',
+  async (nomDuRole) => {
+    mockUserData = ado(nomDuRole);
+    mockOnboardingViews = vraiParcours(mockUserData);
+    const arbre = await rendre();
+    await cocherEtContinuer(arbre);
+
+    expect(mockNavigate).toHaveBeenCalledWith('UserAddress');
+  },
+);

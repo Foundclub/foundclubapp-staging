@@ -17,6 +17,60 @@ export const isTrainingEventType = (typeName = '') => normalizeTypeLabel(typeNam
 // aussi a un adversaire.
 export const isMatchEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
 
+/**
+ * FINITIONS7 (tournee 8, 01/10) — L EXEMPLE DE DESCRIPTION, PROPRE AU TYPE D EVENEMENT.
+ *
+ * En creant ou en modifiant un ENTRAINEMENT, le champ proposait un exemple de DETECTION
+ * (« viens essayer le foot avec les U15 … l'essai est gratuit », et « Événement de détection
+ * ouvert à tous » sur l ecran Modifier). Chaque type a desormais le sien. L ordre compte comme
+ * ailleurs dans le tunnel : la detection d abord, le match en dernier (`includes('match')`
+ * attrape aussi « Match amical »).
+ * ⚠️ La fonction APPELLE `t` elle-meme : un texte de repli rendu hors d un appel `t()` serait
+ * compte comme du francais ecrit en dur (`scripts/i18n/francais-en-dur.js`).
+ * Temoin : wizard/__tests__/EventWizardDescription.FINITIONS7.exempleParType.test.js.
+ * @param {string | undefined} typeName Le nom du type, tel que le serveur le donne.
+ * @param {any} t La fonction de traduction (`t` de i18next).
+ * @returns {string} L exemple, traduit.
+ */
+export const getEventDescriptionExample = (typeName, t) => {
+  if (isDetectionEventType(typeName)) {
+    return t(
+      'eventWizard.steps.description.placeholderExample',
+      "Ex. : viens essayer le foot avec les U15 — prévois une tenue de sport, l'essai est gratuit.",
+    );
+  }
+  if (isTrainingEventType(typeName)) {
+    return t(
+      'eventWizard.steps.description.examples.training',
+      'Ex. : séance technique puis jeu réduit — arrive 15 min avant, '
+        + 'avec une gourde et une tenue de sport.',
+    );
+  }
+  if (isTournamentEventType(typeName)) {
+    return t(
+      'eventWizard.steps.description.examples.tournament',
+      'Ex. : tournoi à 8 équipes, matchs de 15 min — prévois ton pique-nique, '
+        + 'remise des prix à 17 h.',
+    );
+  }
+  if (isStageEventType(typeName)) {
+    return t(
+      'eventWizard.steps.description.examples.stage',
+      'Ex. : stage de 3 jours pendant les vacances — de 9 h à 17 h, repas du midi compris.',
+    );
+  }
+  if (isMatchEventType(typeName)) {
+    return t(
+      'eventWizard.steps.description.examples.match',
+      'Ex. : match de championnat — rendez-vous 1 h avant au vestiaire, maillot fourni.',
+    );
+  }
+  return t(
+    'eventWizard.steps.description.examples.other',
+    'Ex. : réunion d’avant-saison au club-house — on présente le calendrier et les équipes.',
+  );
+};
+
 const hasNonEmptyValue = (/** @type {any} */ value) => {
   if (!value) return false;
   if (typeof value === 'string') return value.trim().length > 0;

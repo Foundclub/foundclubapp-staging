@@ -317,7 +317,9 @@ function NotificationList() {
     >
       <View style={{ alignItems: 'center', flexDirection: 'row', gap: 4 }}>
         <SvgIcon color="#FFF" height={14} name="check" width={14} />
-        <Text style={{ color: '#FFF', fontWeight: '600' }}>Lu</Text>
+        <Text style={{ color: '#FFF', fontWeight: '600' }}>
+          {i18next.t('notificationList.markReadSwipe', 'Lu')}
+        </Text>
       </View>
     </TouchableOpacity>
   ), [Colors, markAsRead, showActionError]);

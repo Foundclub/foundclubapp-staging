@@ -30,6 +30,9 @@ jest.mock('@/store/appContext', () => ({
     getString: jest.fn(),
     set: jest.fn(),
   },
+  // AGE-OBLIGATOIRE ② - « Se deconnecter » rend le jeton de notifications,
+  // comme le fait le Profil.
+  useAppContext: () => [{ fcmToken: 'jeton-fcm' }, jest.fn()],
 }));
 
 // Doublure de `t` branchee sur la VRAIE fr.js : un `t` qui rend toujours son
@@ -103,12 +106,25 @@ jest.mock('@/theme/strings', () => {
 
 /** @type {any} */
 let mockUserData;
+/** @type {any} */
+let mockOnboardingViews;
+/** @type {any[]} */
+let mockAuthSessions = [];
+const mockLogout = jest.fn();
+const mockSwitchAccount = jest.fn();
+const mockAddAccount = jest.fn();
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
+    addAccount: mockAddAccount,
+    authSessions: mockAuthSessions,
     getNextOnboardingRoute: () => 'UserAvatar',
+    getPostOnboardingHomeRoute: () => 'HomeTab',
+    logoutMutation: { isPending: false, mutate: mockLogout },
+    onboardingViews: mockOnboardingViews,
     refetchUserData: jest.fn(),
+    switchAccount: mockSwitchAccount,
     userData: mockUserData,
     userDataError: null,
     userDataLoading: false,
@@ -125,8 +141,13 @@ jest.mock('@tanstack/react-query', () => ({
       .then((/** @type {any} */ data) => options.onSuccess?.(data, variables))
       .catch((/** @type {any} */ error) => options.onError?.(error, variables)),
   }),
-  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn(),
+    setQueriesData: (/** @type {any[]} */ ...args) => mockSetQueriesData(...args),
+  }),
 }));
+
+const mockSetQueriesData = jest.fn();
 
 jest.mock('@/services/auth/authService', () => ({
   updateMe: jest.fn(),
@@ -287,12 +308,19 @@ const rendre = (nomDuRole) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockOnboardingViews = undefined;
+  mockAuthSessions = [];
   /** @type {any} */ (updateMe).mockResolvedValue({ documentId: 'user-1' });
 });
 
-describe('UserName — le dirigeant peut finir son inscription (D66)', () => {
-  it('un dirigeant qui remplit prenom et nom peut appuyer sur Continuer', async () => {
-    const arbre = rendre('Dirigeant');
+// AGE-OBLIGATOIRE (02/10, decision d'Adel « 3- C ») — le formulaire « nom seul »
+// n'a plus qu'un seul role : le super-admin. Les temoins D66 ci-dessous le
+// montent donc lui, et non plus le dirigeant, qui donne desormais sa date de
+// naissance comme les autres. Le defaut D66 (bouton mort sur des champs NON
+// rendus) reste garde : c'est le schema « nom seul » qu'il protege.
+describe('UserName — le formulaire « nom seul » reste vivant (D66, super-admin)', () => {
+  it('un super-admin qui remplit prenom et nom peut appuyer sur Continuer', async () => {
+    const arbre = rendre('SuperAdmin');
 
     await saisir(arbre, 'Prénom', 'Adel');
     await saisir(arbre, 'Nom', 'Ferchichi');
@@ -307,7 +335,7 @@ describe('UserName — le dirigeant peut finir son inscription (D66)', () => {
   });
 
   it('le bouton reste vivant apres un premier appui : plus de cul-de-sac', async () => {
-    const arbre = rendre('Dirigeant');
+    const arbre = rendre('SuperAdmin');
 
     await saisir(arbre, 'Prénom', 'Adel');
     await saisir(arbre, 'Nom', 'Ferchichi');
@@ -326,12 +354,53 @@ describe('UserName — le dirigeant peut finir son inscription (D66)', () => {
     expect(updateMe).toHaveBeenCalledWith({ firstname: 'Adel', lastname: 'Ferchichi' });
   });
 
-  it('le dirigeant ne voit AUCUN champ de date de naissance', () => {
-    const arbre = rendre('Dirigeant');
+  it('le super-admin ne voit AUCUN champ de date de naissance', () => {
+    const arbre = rendre('SuperAdmin');
 
     expect(champ(arbre, 'JJ')).toBeUndefined();
     expect(champ(arbre, 'MM')).toBeUndefined();
     expect(champ(arbre, 'AAAA')).toBeUndefined();
+  });
+});
+
+// AGE-OBLIGATOIRE ① — le dirigeant donne sa date de naissance, comme les
+// autres roles. Avant ce lot, « le dirigeant ne voit AUCUN champ de date »
+// etait fige ici : c'est la regle que la decision d'Adel du 02/10 retourne.
+describe('UserName — le dirigeant donne sa date de naissance (AGE-OBLIGATOIRE ①)', () => {
+  it('le dirigeant voit les trois champs de date', () => {
+    const arbre = rendre('Dirigeant');
+
+    expect(champ(arbre, 'JJ')).toBeDefined();
+    expect(champ(arbre, 'MM')).toBeDefined();
+    expect(champ(arbre, 'AAAA')).toBeDefined();
+  });
+
+  it('sans date, rien ne part', async () => {
+    const arbre = rendre('Dirigeant');
+
+    await saisir(arbre, 'Prénom', 'Adel');
+    await saisir(arbre, 'Nom', 'Ferchichi');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(updateMe).not.toHaveBeenCalled();
+  });
+
+  it('avec sa date, il avance, date comprise', async () => {
+    const arbre = rendre('Dirigeant');
+
+    await saisir(arbre, 'Prénom', 'Adel');
+    await saisir(arbre, 'Nom', 'Ferchichi');
+    await saisir(arbre, 'JJ', '02');
+    await saisir(arbre, 'MM', '04');
+    await saisir(arbre, 'AAAA', '1980');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(updateMe).toHaveBeenCalledWith({
+      birthdate: '1980-04-02',
+      firstname: 'Adel',
+      lastname: 'Ferchichi',
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserAvatar');
   });
 });
 
@@ -503,5 +572,134 @@ describe('UserName — un moins de 13 ans est envoye vers « compte parent requi
     expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserParentalDeclaration');
     expect(alerte).not.toHaveBeenCalled();
     alerte.mockRestore();
+  });
+});
+
+// AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire »)
+// — L'ANCIEN COMPTE SANS DATE, A SA PROCHAINE OUVERTURE.
+//
+// `getOnboardingViews` marque ce parcours `isEntryCheckpoint` (temoins dans
+// authUseCases.test.js). L'ecran est le MEME « Qui es-tu ? », avec les memes
+// champs et les memes regles ; trois choses seulement changent :
+//   · une phrase dit pourquoi on demande la date maintenant ;
+//   · « Changer de compte » et « Se deconnecter » sont la : aucun compte ne
+//     reste enferme sur un ecran sans sortie ;
+//   · la date donnee rend la main a l'ACCUEIL, pas a l'etape suivante d'un
+//     tunnel que ce compte a deja fini.
+describe('UserName — point de controle d entree d un ancien compte (AGE-OBLIGATOIRE ②)', () => {
+  const PHRASE_POINT_DE_CONTROLE = 'Il nous manque ta date de naissance';
+
+  /**
+   * Monte l'ecran pour un ancien compte sans date.
+   * @param {string} nomDuRole - Le nom du role cote serveur.
+   * @returns {any} L'arbre rendu.
+   */
+  const rendreAncienCompte = (nomDuRole) => {
+    mockOnboardingViews = {
+      isEntryCheckpoint: true,
+      totalViews: 0,
+      views: [{ canShow: true, index: 1, route: 'UserName' }],
+    };
+    return rendre(nomDuRole);
+  };
+
+  const donnerSaDate = async (/** @type {any} */ arbre, /** @type {string} */ annee) => {
+    await saisir(arbre, 'Prénom', 'Ancien');
+    await saisir(arbre, 'Nom', 'Compte');
+    await saisir(arbre, 'JJ', '01');
+    await saisir(arbre, 'MM', '01');
+    await saisir(arbre, 'AAAA', annee);
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+  };
+
+  it('l ecran dit pourquoi il demande la date maintenant', () => {
+    const arbre = rendreAncienCompte('Dirigeant');
+
+    expect(textes(arbre).join(' | ')).toContain(PHRASE_POINT_DE_CONTROLE);
+  });
+
+  it('adulte : la date part, et la main revient a l accueil', async () => {
+    const arbre = rendreAncienCompte('Dirigeant');
+
+    await donnerSaDate(arbre, '1980');
+
+    expect(updateMe).toHaveBeenCalledWith({
+      birthdate: '1980-01-01',
+      firstname: 'Ancien',
+      lastname: 'Compte',
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('HomeTab');
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserAvatar');
+  });
+
+  // AGE-OBLIGATOIRE-2 a — LE PROFIL A JOUR AVANT LE DEPART. Sur le site, l'accueil relit le
+  // profil en memoire (['get-me', jeton]) pour savoir s'il manque l'age : parti avant le
+  // rafraichissement, il renvoyait sur ce formulaire (temoin web age-obligatoire-accueil ④).
+  it('adulte : le profil en memoire porte la date AVANT le retour a l accueil', async () => {
+    /** @type {any} */ (updateMe).mockResolvedValue({
+      birthdate: '1980-01-01', documentId: 'user-1', firstname: 'Ancien',
+    });
+    const arbre = rendreAncienCompte('Dirigeant');
+
+    await donnerSaDate(arbre, '1980');
+
+    expect(mockSetQueriesData).toHaveBeenCalledTimes(1);
+    const [filtre, miseAJour] = mockSetQueriesData.mock.calls[0];
+    expect(filtre).toEqual({ queryKey: ['get-me'] });
+    expect(miseAJour({ birthdate: null, documentId: 'user-1', lastname: 'Compte' }))
+      .toEqual({
+        birthdate: '1980-01-01', documentId: 'user-1', firstname: 'Ancien', lastname: 'Compte',
+      });
+    // ⛔ Le profil d'un AUTRE compte enregistre n'est jamais ecrase.
+    const autre = { birthdate: null, documentId: 'autre-compte' };
+    expect(miseAJour(autre)).toBe(autre);
+    expect(mockSetQueriesData.mock.invocationCallOrder[0])
+      .toBeLessThan(mockNavigation.navigate.mock.invocationCallOrder[0]);
+  });
+
+  it('13-14 ans : la declaration parentale, comme a l inscription', async () => {
+    const arbre = rendreAncienCompte('Joueur');
+
+    await donnerSaDate(arbre, String(new Date().getUTCFullYear() - 14));
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserParentalDeclaration');
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('HomeTab');
+  });
+
+  it('« Se deconnecter » deconnecte en rendant le jeton de notifications', async () => {
+    const arbre = rendreAncienCompte('Joueur');
+
+    await act(async () => { bouton(arbre, 'Se déconnecter').props.onPress(); });
+
+    expect(mockLogout).toHaveBeenCalledWith('jeton-fcm');
+  });
+
+  it('« Changer de compte » passe sur l autre compte enregistre', async () => {
+    const autreCompte = { user: { documentId: 'autre-compte', firstname: 'Autre' } };
+    mockAuthSessions = [{ user: { documentId: 'user-1' } }, autreCompte];
+    const arbre = rendreAncienCompte('Joueur');
+
+    await act(async () => { bouton(arbre, 'Changer de compte').props.onPress(); });
+
+    expect(mockSwitchAccount).toHaveBeenCalledWith(autreCompte);
+    expect(mockAddAccount).not.toHaveBeenCalled();
+  });
+
+  it('« Changer de compte » sans autre compte ouvre la connexion d un autre compte', async () => {
+    mockAuthSessions = [{ user: { documentId: 'user-1' } }];
+    const arbre = rendreAncienCompte('Joueur');
+
+    await act(async () => { bouton(arbre, 'Changer de compte').props.onPress(); });
+
+    expect(mockAddAccount).toHaveBeenCalled();
+    expect(mockSwitchAccount).not.toHaveBeenCalled();
+  });
+
+  it('une inscription NEUVE garde son ecran : ni phrase, ni sorties de compte', () => {
+    const arbre = rendre('Joueur');
+
+    expect(textes(arbre).join(' | ')).not.toContain(PHRASE_POINT_DE_CONTROLE);
+    expect(bouton(arbre, 'Se déconnecter')).toBeUndefined();
+    expect(bouton(arbre, 'Changer de compte')).toBeUndefined();
   });
 });

@@ -72,6 +72,21 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
+// ST-RETOURS (02/10) — la carte d un enfant relie compte ses retours du coach pas encore lus :
+// elle lit ses retours (personal-stats, la reponse REDUITE au parent) et ce que le parent a deja
+// lu. Doubles ici comme les autres services (le client HTTP refuse de se charger sans .env).
+/** @type {any} */
+let mockSuivi;
+/** @type {Record<string, any>} */
+let mockStatsParEnfant = {};
+jest.mock('@/services/coachFeedback/coachFeedbackQueries', () => ({
+  useGetCoachFeedbackFollow: () => ({ data: mockSuivi, isSuccess: mockSuivi !== undefined }),
+  useUpdateCoachFeedbackFollow: () => ({ mutate: jest.fn() }),
+}));
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetPersonalStats: (/** @type {string} */ id) => ({ data: mockStatsParEnfant[id] }),
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;
@@ -381,5 +396,83 @@ describe('PARENT-LIEN — les comptes de mes enfants', () => {
     expect(texte).toContain('Demande envoyée au numéro finissant par 78 (pour Léa).');
     await act(async () => { pressable(arbre, 'Annuler').props.onPress(); });
     expect(mockAnnuler).toHaveBeenCalledWith('dem-1');
+  });
+});
+
+// ===========================================================================
+// ST-RETOURS (02/10) — PLANCHE 22 DU DESIGN VALIDE, ETATS 1 ET 6.
+//
+// Etat 1 : sur la carte de l enfant RELIE, le nombre de retours de son entraineur que le parent
+// n a pas encore lus — il sait s il y a du neuf sans ouvrir.
+// Etat 6 : un enfant de moins de 13 ans n a pas de compte, donc ni questionnaire, ni stats, ni
+// retours de match : sa carte le dit simplement, au lieu de laisser chercher.
+// ===========================================================================
+
+describe('ST-RETOURS — Mes enfants : le neuf, et le moins de 13 ans', () => {
+  const HUGO = {
+    age: 14, documentId: 'hugo', firstname: 'Hugo', lastname: 'Lemaire',
+  };
+  const retour = (/** @type {string} */ cle) => ({ comment: 'Bien.', feedbackKey: cle, rating: 7 });
+
+  beforeEach(() => {
+    mockLiens = { children: [HUGO], requests: [] };
+    mockSuivi = {};
+    mockStatsParEnfant = { hugo: { recentCoachFeedback: [retour('event:m1:u15:v1')] } };
+  });
+
+  afterEach(() => {
+    mockSuivi = undefined;
+    mockStatsParEnfant = {};
+  });
+
+  test('etat 1 — 🔴 la carte de l enfant relie dit « 1 nouveau · retour de son… »', async () => {
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('1 nouveau');
+    expect(texte).toContain('retour de son entraîneur');
+  });
+
+  test('etat 1 — deux retours pas encore lus : « 2 nouveaux »', async () => {
+    mockStatsParEnfant = {
+      hugo: { recentCoachFeedback: [retour('event:m1:u15:v1'), retour('event:m0:u15:v1')] },
+    };
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('2 nouveaux');
+    expect(texteVisible(arbre)).toContain('retours de son entraîneur');
+  });
+
+  test('etat 1 — tout est lu : la carte ne dit rien de plus', async () => {
+    mockSuivi = { hugo: { seen: ['event:m1:u15:v1'] } };
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).not.toContain('nouveau');
+  });
+
+  test('etat 1 — ce que le parent a lu n est pas encore arrive : rien n est invente', async () => {
+    mockSuivi = undefined;
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).not.toContain('nouveau');
+  });
+
+  test('etat 6 — 🔴 moins de 13 ans : « Stats et retours de match », et quand', async () => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant({ age: 7, firstname: 'Lea', lastname: 'Test' })];
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Stats et retours de match');
+    expect(texte).toContain('Ils arrivent quand Lea a 13 ans et son propre compte, relié au tien.');
+    expect(texte).toContain('Chercher un club pour Lea');
+  });
+
+  test('etat 6 — une fiche de 13 ans ou plus ne porte pas cette phrase', async () => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant({ age: 15 })];
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).not.toContain('Stats et retours de match');
   });
 });

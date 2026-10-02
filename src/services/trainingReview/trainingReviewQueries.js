@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getPendingTrainingReviews, getTrainingReviews } from './trainingReviewService';
+import {
+  getMyTrainingReview,
+  getPendingTrainingReviews,
+  getTrainingReviews,
+} from './trainingReviewService';
 
 // FINITIONS6 — lue aussi par TrainingReviewPromptHost au retour au premier plan.
 export const TRAINING_REVIEW_STALE_MS = 30_000;
@@ -26,6 +30,20 @@ export const useGetPendingTrainingReviews = (options = {}) => useQuery({
  * @param {object} [options] - Les options react-query de l appelant.
  * @returns {any} - Le resultat de la requete.
  */
+/**
+ * ST-RETOURS — SA note sur un entrainement termine (le joueur, jamais l encadrant).
+ * @param {string | null | undefined} eventId - L entrainement.
+ * @param {object} [options] - Les options react-query de l appelant.
+ * @returns {any} - Le resultat de la requete.
+ */
+export const useGetMyTrainingReview = (eventId, options = {}) => useQuery({
+  enabled: Boolean(eventId),
+  queryFn: () => getMyTrainingReview(eventId),
+  queryKey: ['myTrainingReview', eventId],
+  staleTime: options?.staleTime ?? TRAINING_REVIEW_STALE_MS,
+  ...options,
+});
+
 export const useGetTrainingReviews = (eventId, options = {}) => useQuery({
   enabled: Boolean(eventId),
   queryFn: () => getTrainingReviews(eventId),

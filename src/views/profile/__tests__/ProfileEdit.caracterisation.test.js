@@ -374,3 +374,45 @@ describe('ProfileEdit — le gating par role est deja branche ici', () => {
     expect(mockChampsFormulaire.Catégorie).toBeDefined();
   });
 });
+
+// AGE-OBLIGATOIRE-2 b (02/10/2026, « profil dirigeant oui » du chef d'orchestre) — le dirigeant
+// donne sa date a l'inscription depuis AGE-OBLIGATOIRE 1, mais « Modifier le profil » ne la lui
+// montrait pas (`profileFieldToDisplay('president')` = prenom, nom, photo) : une faute de frappe
+// ne se corrigeait plus, alors que les autres roles le peuvent. Memes regles qu'eux : le meme
+// champ, la meme carte de declaration parentale sous 15 ans.
+describe('ProfileEdit — le DIRIGEANT voit et corrige sa date (AGE-OBLIGATOIRE-2 b)', () => {
+  const dirigeant = { ...joueurComplet, birthdate: '15/01/1975', role: { name: 'Dirigeant' } };
+
+  it('le champ « Date de naissance » est la, avec sa date', async () => {
+    await rendre(dirigeant);
+
+    expect(mockChampsFormulaire['Date de naissance']).toBeDefined();
+    expect(mockChampsFormulaire['Date de naissance'].value).toBe('15/01/1975');
+  });
+
+  it('une date corrigee part au serveur', async () => {
+    const arbre = await rendre(dirigeant);
+
+    await act(async () => {
+      mockChampsFormulaire['Date de naissance'].onChangeText('02/04/1980');
+    });
+    await appuyerSur(arbre, 'Continuer');
+
+    expect(mockUpdateMe).toHaveBeenCalledTimes(1);
+    expect(mockUpdateMe.mock.calls[0][0].birthdate).toBe('02/04/1980');
+  });
+
+  it('moins de 15 ans : la declaration parentale, comme pour les autres roles', async () => {
+    const { formatBirthdateToSend } = jest.requireActual('@/domains/auth/authUseCases');
+    const arbre = await rendre({ ...dirigeant, parentalDeclarationAccepted: false });
+    // La regle des 15 ans lit une date ISO : le vrai convertisseur JJ/MM/AAAA -> AAAA-MM-JJ.
+    mockAuthValue.formatBirthdateToSend = formatBirthdateToSend;
+
+    await act(async () => {
+      mockChampsFormulaire['Date de naissance']
+        .onChangeText(`01/01/${new Date().getUTCFullYear() - 14}`);
+    });
+
+    expect(texteVisible(arbre)).toContain('DECLARATION PARENTALE');
+  });
+});

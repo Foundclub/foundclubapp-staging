@@ -20,6 +20,7 @@ import {
   getLocationCoordinates as resolveLocationCoordinates,
 } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
+import texteInsecable from '@/utils/texteInsecable';
 
 // Assets — imports statiques (pas require) : require n'existe pas sur le rendu web ESM.
 import BG_OTHER from '@/assets/background-card-event/card-autre.png';
@@ -547,8 +548,11 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                   source={Images.calendar}
                   style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
                 />
+                {/* FINITIONS7 (tournee 8) — la date s affichait « jeu » seul : un texte de
+                    plusieurs mots a sa largeur mesuree perd son dernier mot sous Android 16
+                    (piege paye par FINITIONS le 29/09). Insecable, il tient comme un mot. */}
                 <Text style={[Fonts.p2, Fonts.neutral00]}>
-                  {formatDateWithDayPrefix(event.date)}
+                  {texteInsecable(formatDateWithDayPrefix(event.date))}
                 </Text>
               </View>
 
@@ -568,7 +572,9 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
             <View style={[{ height: 45, width: 1 }, ApplicationStyle.backgroundColor.neutral00]} />
 
             {(categoryName || levelName || activityName) && (
-              <View style={[Spaces.gap[8]]}>
+              // FINITIONS7 — c est cette colonne qui retrecit (ses textes ont deja leur « … ») :
+              // une longue categorie (« SÉNIOR (+18 ANS) ») ne pousse plus la date hors de l ecran.
+              <View style={[Spaces.gap[8], { flexShrink: 1 }]}>
                 {categoryName ? (
                   <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
                     {categoryName}

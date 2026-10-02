@@ -1798,6 +1798,15 @@ export default {
     subtitle: 'Choose how applications linked to this trial will be handled.',
     title: 'Validation mode',
   },
+  // AGE-OBLIGATOIRE (02/10/2026) - entry checkpoint for an existing account
+  // that never gave its date of birth.
+  ageObligatoire: {
+    exits: {
+      logout: 'Log out',
+      switchAccount: 'Switch account',
+    },
+    subtitle: 'We are missing your date of birth. We now ask every member for it.',
+  },
   APIerrors: {
     AUTHENTICATION_FAILED: 'Authentication failed.',
     CHAT_ID_NOT_PROVIDED: 'Chat ID not provided.',
@@ -6652,6 +6661,10 @@ export default {
     trainingCamp: 'TRAINING CAMP',
   },
   eventDetails: {
+    // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
+    a11y: {
+      reportEvent: 'Report the event',
+    },
     absenceConfirmed: 'Absence confirmed',
     absenceRecorded: 'Absence recorded',
     absencesMissing: 'Absences / missing',
@@ -7335,7 +7348,10 @@ export default {
     saving: 'Saving...',
     sayHowManyExternalSpots: 'Say how many external spots you want to open for this training session.',
     scheduleResultsAndStandingsAre: 'Schedule, results and standings are ready to be managed.',
+    // FINITIONS7 (02/10) — the match box: « Upcoming » before, « Score pending » after.
+    scorePending: 'Score pending',
     scoreToComplete: 'Score to complete',
+    scoreUpcoming: 'Upcoming',
     scoreWaitingToSync: 'Score waiting to sync',
     seeAllMyPendingMatches: 'See all my pending matches',
     seeMyCallUp: 'See my call-up',
@@ -8230,6 +8246,14 @@ export default {
         visibilityPublicHint: 'Discoverable by everyone — recommended for a trial.',
       },
       description: {
+        // FINITIONS7 (02/10) — one example per event type (the trial keeps placeholderExample).
+        examples: {
+          match: 'E.g.: league match — meet 1 h before in the changing room, shirt provided.',
+          other: 'E.g.: pre-season meeting at the clubhouse — we present the calendar and the teams.',
+          stage: 'E.g.: 3-day camp during the holidays — 9 am to 5 pm, lunch included.',
+          tournament: 'E.g.: 8-team tournament, 15-minute games — bring a packed lunch, prizes at 5 pm.',
+          training: 'E.g.: technical session then small-sided games — arrive 15 min early with water and sports kit.',
+        },
         label: 'Description',
         placeholder: 'Add useful details for participants.',
         placeholderExample: 'E.g.: come try football with the U15s — bring sports kit, the trial is free.',
@@ -8237,6 +8261,7 @@ export default {
         subtitleShort: 'What players will read before signing up.',
         title: 'Description',
         valueHint: 'A clear description doubles sign-ups for a trial.',
+        valueHintGeneric: 'A clear description answers questions before they are asked.',
       },
       detectionSlots: {
         capacityWarning: "The total places per position exceeds the event's capacity.",
@@ -12791,6 +12816,8 @@ export default {
       rsvp: 'Unable to save your reply.',
     },
     markAll: 'Mark all as read',
+    // FINITIONS7 (02/10) — the button under the finger that swipes a notification.
+    markReadSwipe: 'Read',
     rsvp: {
       absent: 'Absence saved.',
       present: 'Attendance saved.',
@@ -15199,8 +15226,12 @@ export default {
       title: 'How do I create an alert?',
     },
     item: {
+      // FINITIONS7 (02/10) — the names of an alert's controls, for the screen reader.
+      deleteLabel: 'Delete the alert “{{label}}”',
+      editLabel: 'Edit the alert “{{label}}”',
       search: 'Search',
       staffOnly: 'Only available on a manager or coach account.',
+      toggleLabel: 'Alert “{{label}}” on',
     },
     offer: {
       body: 'Choose a city and a sport: we notify you as soon as a matching new event is published near you.',
@@ -19788,6 +19819,86 @@ export default {
     submit: 'Send my feedback',
     subtitle: '{{team}} · finished {{date}}',
     title: 'How did your training go?',
+  },
+  // ST-RETOURS (02/10) — validated stats design, journeys 6 and 7.
+  stRetours: {
+    card: {
+      anonymous: 'Anonymous: you see the ratings, never who gave them.',
+      averageHint: 'average rating out of 10',
+      bucketA11y: '{{low}} to {{high}}, {{count}} reviews',
+      distributionA11y: 'Distribution: {{parts}}',
+      // eslint-disable-next-line max-len
+      empty: 'No reviews yet. Your players who attended get the invitation when the session ends, and can rate it for 7 days.',
+      mineHint: 'Anonymous: {{trainer}} doesn’t know who gave it.',
+      mineHintNoName: 'Anonymous: your coach doesn’t know who gave it.',
+      mineTitle: 'You rated this session: {{rating}}/10',
+      noCommentCount_one: '+ {{count}} rating without a comment',
+      noCommentCount_other: '+ {{count}} ratings without a comment',
+      outOfTenSuffix: ' /10',
+      reviewsCount: '{{count}} reviews',
+      reviewsOfPresent_one: '{{reviews}} reviews from {{count}} attendee',
+      reviewsOfPresent_other: '{{reviews}} reviews from {{count}} attendees',
+      singleQuote: '“{{text}}”',
+      title: 'Player reviews',
+    },
+    feedback: {
+      byAuthor: 'by {{name}}',
+      cardLabel: 'Feedback on {{match}} {{status}}',
+      // eslint-disable-next-line max-len
+      emptyHint: 'After a match, your coach can write you a rating and a note. They arrive here, and you get notified.',
+      emptyTitle: 'No feedback yet',
+      errorHint: 'Check your connection, then try again.',
+      errorTitle: 'The feedback could not be loaded.',
+      matchFallback: 'Match',
+      new: 'New',
+      openMatch: 'Open the match',
+      resultDraw: 'draw {{score}}',
+      resultLoss: 'loss {{score}}',
+      resultWin: 'win {{score}}',
+      retry: 'Try again',
+      visibleSelfAndParents: 'Visible to you and your parents.',
+      visibleSelfOnly: 'Visible to you only.',
+    },
+    parent: {
+      alertLabel: 'Notify me of new feedback',
+      allFeedback: 'All their feedback · {{count}}',
+      // eslint-disable-next-line max-len
+      emptyHint: 'No feedback yet. After a match, their coach can write them a rating and a note: you will read them here.',
+      emptyTitle: 'Feedback from their coach',
+      forChild: 'for',
+      latestTitle: 'Latest feedback from their coach',
+      myChild: 'My child',
+      newCount_one: '{{count}} new',
+      newCount_other: '{{count}} new',
+      newCountHint_one: 'feedback from their coach',
+      newCountHint_other: 'pieces of feedback from their coach',
+      privacy: 'You read their coach’s feedback. Never their messages, nor their own notes.',
+      // eslint-disable-next-line max-len
+      under13Hint: 'They arrive when {{firstname}} turns 13 and has their own account, linked to yours.',
+      under13Title: 'Match stats and feedback',
+      visibleChildAndYou: 'Visible to {{firstname}} and you.',
+    },
+    prompt: {
+      anonymous: 'Anonymous: {{trainer}} sees the rating, never who gave it.',
+      anonymousNoName: 'Anonymous: your coach sees the rating, never who gave it.',
+      close: 'Close',
+      commentPlaceholder: 'A word about the session? (optional)',
+      errorHint: 'Check your connection, then try again. Your rating is kept.',
+      errorTitle: 'Your review was not sent.',
+      later: 'Later',
+      nextCount_one: '{{count}} more session to rate',
+      nextCount_other: '{{count}} more sessions to rate',
+      ratingGroup: 'Your rating of the session out of 10',
+      retry: 'Try again',
+      sending: 'Sending…',
+      sessionEnd: '{{day}}, ends at {{time}}',
+      sessionLabel: 'Training {{team}}',
+      submit: 'Send my review',
+      thanksHint: '{{trainer}} will see your rating, not your name.',
+      thanksHintNoName: 'Your coach will see your rating, not your name.',
+      thanksTitle: 'Thanks, your review was sent.',
+      title: 'How did your training go?',
+    },
   },
   useAdminClubWizardExit: {
     body: 'The club creation flow will be closed and unsaved information will be lost.',
