@@ -19614,6 +19614,8 @@ export default {
     coachBadge: 'Entraîneur',
     coachLine: 'Visible par toi, son entraîneur, pour l’équipe {{teams}} seulement.',
     inYourTeam: 'Dans ton équipe · {{teams}}',
+    // ST-VUES2 (02/10) — écran 17, chez l'entraîneur : la feuille du dernier match du joueur.
+    matchSheetLink: 'Ses retours de match dans la feuille',
     matchStats: 'Stats de match',
     previewLine: 'Tes stats de match ne sont visibles que par toi et ton entraîneur.',
   },

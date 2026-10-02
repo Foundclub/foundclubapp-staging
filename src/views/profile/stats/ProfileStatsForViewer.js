@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import {
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -38,23 +43,54 @@ export const resolveProfileStatsMode = ({ isSelfPreview = false, stats }) => {
 };
 
 /**
+ * @typedef {{ eventId: string, sport: string | null, teamId: string, teamName: string | null }}
+ *   MatchSheetTarget
+ */
+
+/**
+ * ST-VUES2 (planche 17) — la feuille vers laquelle mene « Ses retours de match dans la feuille » :
+ * le dernier match du joueur (le serveur trie du plus recent au plus ancien) dans une equipe que
+ * le lecteur entraine (`scope.teams`). Un match de League n a pas cette feuille-la.
+ * @param {any} [stats] - La reponse de `personal-stats`, vue par l entraineur.
+ * @returns {MatchSheetTarget | null} La feuille a ouvrir, ou rien.
+ */
+export const resolveMatchSheetTarget = (stats) => {
+  const teams = Array.isArray(stats?.scope?.teams) ? stats.scope.teams : [];
+  const match = (Array.isArray(stats?.recentMatches) ? stats.recentMatches : [])
+    .find((/** @type {any} */ entry) => entry?.documentId && entry?.sourceType === 'event');
+  if (!match) return null;
+  const team = teams.find((/** @type {any} */ entry) => entry?.name === match.teamName)
+    || (teams.length === 1 ? teams[0] : null);
+  if (!team?.documentId) return null;
+  return {
+    eventId: String(match.documentId),
+    sport: match.sport || null,
+    teamId: String(team.documentId),
+    teamName: team.name || match.teamName || null,
+  };
+};
+
+/**
  * Le bloc stats du profil d un joueur, pour celui qui le regarde.
  * @param {object} props - Les proprietes du composant.
  * @param {any} [props.stats] - La reponse de `personal-stats`.
  * @param {boolean} [props.isLoading] - La lecture est en cours.
  * @param {boolean} [props.isSelfPreview] - Mon profil, en apercu.
  * @param {boolean} [props.mayBeCoach] - Le lecteur entraine une equipe du joueur (squelette).
+ * @param {(target: MatchSheetTarget) => void} [props.onOpenMatchSheet] - ST-VUES2 : ouvrir la
+ *   feuille du match (entraineur seulement).
  * @returns {import('react').ReactElement | null} - Le bloc, ou rien.
  */
 function ProfileStatsForViewer({
   isLoading = false,
   isSelfPreview = false,
   mayBeCoach = false,
+  onOpenMatchSheet,
   stats,
 }) {
   const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const lockLine = (/** @type {string} */ text, /** @type {string} */ testID) => (
     <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]} testID={testID}>
@@ -115,7 +151,7 @@ function ProfileStatsForViewer({
     },
   ];
 
-  return (
+  const card = (
     <View
       style={[
         ApplicationStyle.backgroundColor.primary700,
@@ -181,6 +217,32 @@ function ProfileStatsForViewer({
           'profile-stats-coach-line',
         )
         : null}
+    </View>
+  );
+
+  // ST-VUES2 (planche 17, etat 1) — « Ses retours de match dans la feuille », sous la carte,
+  // chez l entraineur seulement : la ou il lit les retours de son joueur.
+  const sheet = mode === 'coach' && onOpenMatchSheet ? resolveMatchSheetTarget(stats) : null;
+  if (!sheet || !onOpenMatchSheet) return card;
+  return (
+    <View style={Spaces.gap[16]}>
+      {card}
+      <TouchableOpacity
+        accessibilityRole="link"
+        onPress={() => onOpenMatchSheet(sheet)}
+        style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { minHeight: 44 }]}
+        testID="profile-stats-match-sheet-link"
+      >
+        <Text style={[Fonts.p2Bold, Fonts.primary500, { flex: 1 }]}>
+          {t('profileStats.matchSheetLink', 'Ses retours de match dans la feuille')}
+        </Text>
+        {Images?.arrowRight ? (
+          <Image
+            source={Images.arrowRight}
+            style={{ height: 14, tintColor: Colors.primary500, width: 14 }}
+          />
+        ) : null}
+      </TouchableOpacity>
     </View>
   );
 }

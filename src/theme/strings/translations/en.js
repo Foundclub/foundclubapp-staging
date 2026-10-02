@@ -18626,6 +18626,8 @@ export default {
     coachBadge: 'Coach',
     coachLine: 'Visible to you, their coach, for the {{teams}} team only.',
     inYourTeam: 'In your team · {{teams}}',
+    // ST-VUES2 (02/10) — screen 17, for the coach: the sheet of the player's latest match.
+    matchSheetLink: 'Their match feedback in the sheet',
     matchStats: 'Match stats',
     previewLine: 'Your match stats are only visible to you and your coach.',
   },

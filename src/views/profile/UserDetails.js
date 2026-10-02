@@ -669,6 +669,21 @@ function UserDetails({ navigation, route }) {
     return playerTeams.some((team) => coached.has(toComparableId(team?.documentId)));
   }, [currentUser?.trainedTeams, isSelfProfile, playerTeams]);
 
+  // ST-VUES2 (planche 17) — « Ses retours de match dans la feuille » : la feuille du dernier
+  // match du joueur, pour l equipe que le lecteur entraine (elle vit dans la pile des evenements).
+  const openMatchSheet = useCallback((/** @type {any} */ target) => {
+    navigation.navigate(RouteNames.EventStack, {
+      params: {
+        eventId: target.eventId,
+        sourceType: 'event',
+        sport: target.sport || undefined,
+        teamId: target.teamId,
+        teamName: target.teamName,
+      },
+      screen: RouteNames.MatchStatsEditor,
+    });
+  }, [navigation]);
+
   const handleRefresh = useCallback(() => {
     if (isSelfProfile) {
       refetchUserData?.();
@@ -1152,6 +1167,7 @@ function UserDetails({ navigation, route }) {
               isLoading={isPersonalStatsLoading}
               isSelfPreview={isSelfPreview}
               mayBeCoach={mayCoachThisPlayer}
+              onOpenMatchSheet={openMatchSheet}
               stats={personalStats}
             />
           ) : null}
