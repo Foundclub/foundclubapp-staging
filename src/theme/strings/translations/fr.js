@@ -14871,10 +14871,11 @@ export default {
       count: '{{count}} expérience(s)',
       deleteConfirmation: 'Veux-tu vraiment supprimer cette expérience ?',
       empty: 'Ajoute ton parcours sportif pour enrichir ton profil',
-      emptyOther: 'Aucun historique renseigne',
+      emptyOther: 'Aucun historique renseigné',
       periodNotSet: 'Période non renseignée',
       tapToEdit: 'Touche la carte pour modifier',
       title: 'Historique sportif',
+      unavailable: 'Historique indisponible pour le moment',
       unknownClub: 'Club inconnu',
     },
     identity: {

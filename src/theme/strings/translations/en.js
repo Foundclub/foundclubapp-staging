@@ -14140,6 +14140,7 @@ export default {
       periodNotSet: 'Period not specified',
       tapToEdit: 'Tap the card to edit',
       title: 'Sporting history',
+      unavailable: 'History unavailable right now',
       unknownClub: 'Unknown club',
     },
     identity: {
