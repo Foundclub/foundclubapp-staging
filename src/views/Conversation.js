@@ -102,6 +102,12 @@ import VoiceComposerZone, {
   VoiceRestFade,
   VoiceSendAppear,
 } from '@/components/organisms/voiceComposer/VoiceComposerZone';
+import {
+  BoutonMembresDuFil,
+  FilDeLaVilleQuitte,
+  useFilDeLaVille,
+  VideDuFilDeLaVille,
+} from '@/views/collectivite/components/FilDeLaVille';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -547,7 +553,7 @@ function Conversation({ navigation, route }) {
     reactToMessage,
     removeGroupMember,
     retryFailedMessage,
-    sendMessage,
+    sendMessage: sendMessageSansVoix,
     sendReadReceipt,
     sendTypingStart,
     sendTypingStop,
@@ -795,6 +801,25 @@ function Conversation({ navigation, route }) {
   const messagesPages = /** @type {any} */ (rawMessagesPages);
   const { data: rawChatData } = useGetChatById(chatId);
   const chatData = /** @type {any} */ (rawChatData);
+  // 🏛️ COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privée) :
+  // titre, ligne sous le titre, signature de l'expéditeur, voix demandée au serveur, et « Tu ne
+  // fais plus partie de ce canal ». Hors de ces fils tout est vide : la conversation ne change pas.
+  const filDeLaVille = useFilDeLaVille({
+    chatData,
+    chatId,
+    espaceVille: route?.params?.espace === 'ville',
+    messagesError,
+    navigation,
+    routeChatType: route?.params?.chatType || null,
+  });
+  const sendMessage = useCallback((
+    /** @type {string} */ id,
+    /** @type {string} */ texte,
+    /** @type {Record<string, any>} */ extra = {},
+  ) => sendMessageSansVoix(id, texte, { ...filDeLaVille.voix, ...extra }), [
+    filDeLaVille.voix,
+    sendMessageSansVoix,
+  ]);
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match;
     if (!match) return i18n.t('conversation.calendar.eventTitle', 'Match FoundClub League');
@@ -1112,6 +1137,12 @@ function Conversation({ navigation, route }) {
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
+  // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
+  // avec une phrase prête à envoyer : on la relit, on l'envoie ou on la change.
+  const brouillonDuFil = route?.params?.brouillon;
+  useEffect(() => {
+    if (brouillonDuFil) setComposerText((actuel) => actuel || String(brouillonDuFil));
+  }, [brouillonDuFil]);
   const [pendingMediaDraft, setPendingMediaDraft] = useState(
     /** @type {{ asset: AttachmentAsset } | null} */ (null),
   );
@@ -3421,10 +3452,10 @@ function Conversation({ navigation, route }) {
         meId: userData?.documentId,
       });
     }
-    return displayTitle || safeRouteTitle || t('common.chat', 'Conversation');
-  }, [chatData, route.params, getConversationName, userData, t]);
+    return filDeLaVille.titre || displayTitle || safeRouteTitle || t('common.chat', 'Conversation');
+  }, [chatData, filDeLaVille.titre, route.params, getConversationName, userData, t]);
 
-  const subtitle = route.params?.subTitle || '';
+  const subtitle = route.params?.subTitle || filDeLaVille.sousTitre || '';
   const proposalDefaults = useMemo(
     () => buildProposalDefaultsFromMatch(chatData?.league_match || null),
     [chatData?.league_match],
@@ -3578,16 +3609,19 @@ function Conversation({ navigation, route }) {
         readBy: msg.readBy,
         replyTo: msg.replyTo,
         senderDocumentId: senderEntityId,
+        // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : ligne centrée, sans bulle.
+        ...(filDeLaVille.estLigneSysteme(msg) ? { system: true } : {}),
         text: msg.message,
         user: {
           _id: senderEntityId,
           avatar: avatarUrl,
-          name: getAnonymizedName(msg.sender),
+          // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
+          name: filDeLaVille.nomDeLExpediteur(msg) || getAnonymizedName(msg.sender),
         },
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
@@ -5547,7 +5581,7 @@ function Conversation({ navigation, route }) {
    * @returns {React.ReactNode} Rendered composer component
    */
   const renderComposer = (props) => {
-    let composerPlaceholder = t('conversation.messagePlaceholder');
+    let composerPlaceholder = filDeLaVille.placeholder || t('conversation.messagePlaceholder');
     if (pendingMediaDraft?.asset?.uri) {
       composerPlaceholder = t('conversation.attachments.captionPlaceholder', 'Ajouter une légende');
     }
@@ -5603,6 +5637,9 @@ function Conversation({ navigation, route }) {
     const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
     const isManagerRole = roleKey === 'president';
 
+    // COLL-C4A2 — un fil de la Ville : ses membres (calculés par le serveur) écrivent tous.
+    if (filDeLaVille.estFil) return true;
+
     // Whisper, Team, League Match and Friendly Match chats: all participants write.
     // D92 — `friendly_match` manquait ici alors que son jumeau `league_match` y
     // etait : le fil ouvert par une proposition tombait donc dans le `return
@@ -5637,7 +5674,7 @@ function Conversation({ navigation, route }) {
     }
 
     return false;
-  }, [chatData, hasClubAccess, isLeagueConversation, userData]);
+  }, [chatData, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
 
   /**
    * Render custom actions (attachment buttons)
@@ -5811,7 +5848,16 @@ function Conversation({ navigation, route }) {
    * dans une FlatList retournee : on retourne le bloc a notre tour.
    * @returns {React.ReactElement} Rendered empty state
    */
-  const renderChatEmpty = () => (
+  const renderChatEmpty = () => (filDeLaVille.estFil ? (
+    // COLL-C4A2 — la première phrase d'un fil de la Ville : à quoi il sert, qui le lit.
+    <View style={[Alignments.fill, Alignments.justifyCenter, { transform: [{ scaleY: -1 }] }]}>
+      <VideDuFilDeLaVille
+        chat={chatData}
+        clubsCount={filDeLaVille.clubsCount}
+        espaceVille={route?.params?.espace === 'ville'}
+      />
+    </View>
+  ) : (
     <View style={[
       Alignments.fill,
       Alignments.justifyCenter,
@@ -5835,7 +5881,7 @@ function Conversation({ navigation, route }) {
         )}
       </Text>
     </View>
-  );
+  ));
 
   /**
    * Render a custom input toolbar component
@@ -6141,34 +6187,50 @@ function Conversation({ navigation, route }) {
         </View>
 
         <View style={{ alignItems: 'flex-end', width: HEADER_SIDE_WIDTH }}>
-          <TouchableOpacity
-            onPress={() => setIsMenuVisible(true)}
-            style={{
-              alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              borderRadius: 20,
-              height: 40,
-              justifyContent: 'center',
-              width: 40,
-            }}
-          >
-            <Text
+          {/* COLL-C4A2 — un fil de la Ville : « Qui est dans ce canal » remplace le menu ⋮ (la
+              liste se calcule, elle ne se tient pas à la main). */}
+          {filDeLaVille.estFil ? (
+            <BoutonMembresDuFil
+              estCanal={filDeLaVille.estCanal}
+              onPress={filDeLaVille.ouvrirMembres}
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={() => setIsMenuVisible(true)}
               style={{
-                color: Colors.neutral00,
-                fontSize: 20,
-                fontWeight: 'bold',
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                borderRadius: 20,
+                height: 40,
+                justifyContent: 'center',
+                width: 40,
               }}
             >
-              {'\u22EE'}
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={{
+                  color: Colors.neutral00,
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                }}
+              >
+                {'\u22EE'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       <View style={[Alignments.fill]}>
         {renderClubReadNotice()}
         {renderLeagueNegotiationBanner()}
-        {hasMessagesLoadingError ? (
+        {/* COLL-C4A2 — club détaché : « Tu ne fais plus partie de ce canal » (écran 6). */}
+        {filDeLaVille.estQuitte ? (
+          <FilDeLaVilleQuitte
+            estCanal={filDeLaVille.estCanal}
+            onRetour={() => navigation.goBack()}
+          />
+        ) : null}
+        {hasMessagesLoadingError && !filDeLaVille.estQuitte ? (
           <ErrorWrapper
             error={messagesError}
             onRetry={handleRetryMessages}
@@ -6194,7 +6256,7 @@ function Conversation({ navigation, route }) {
             </WithDataWrapper>
           </View>
         ) : null}
-        {!hasMessagesLoadingError && !isMessagesFirstLoad ? (
+        {!hasMessagesLoadingError && !isMessagesFirstLoad && !filDeLaVille.estQuitte ? (
           <GiftedChat
             bottomOffset={giftedChatBottomOffset}
             dateFormat="DD MMMM"

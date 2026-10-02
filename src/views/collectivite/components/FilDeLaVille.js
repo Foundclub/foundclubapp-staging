@@ -1,0 +1,249 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Text, TouchableOpacity, View } from 'react-native';
+
+import {
+  CANAL_DIRIGEANTS,
+  CONVERSATION_CLUB,
+  estFilDeLaVille,
+  estRefusDuFilDeLaVille,
+  placeholderDuFil,
+  signatureDuMessage,
+  sousTitreDuFil,
+  titreDuFil,
+  voixDuFil,
+} from '@/domains/collectivite/collectiviteCanaux';
+import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+import useTheme from '@/theme/themeContext';
+
+import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
+import { RouteNames } from '@/navigation/routeNames';
+
+import { useMembresDuFil } from '@/services/collectivite/collectiviteCanauxQueries';
+
+/**
+ * 🏛️ COLL-C4A2 (02/10/2026) — LES FILS DE LA VILLE DANS UNE CONVERSATION : le canal des
+ * dirigeants (D72) et la conversation privée Ville ↔ club (D73). Design HY521H1 page 3,
+ * P3c-canal-tel (écrans 1, 4, 6, 8) et P3c-canal-ordi.
+ *
+ * Ce fichier porte ce que la conversation (Conversation.js ET Conversation.web.js) ajoute pour
+ * ces deux fils, et seulement pour eux : l'icône du canal, l'écran « Tu ne fais plus partie de
+ * ce canal », la première phrase d'un fil vide, le bouton « Qui est dans ce canal », et le crochet
+ * qui dit le titre, la ligne sous le titre, le texte du champ et la voix demandée au serveur.
+ */
+
+/**
+ * L'icône du canal des dirigeants : une tuile, des personnes (« hcard-tuile i-personnes »).
+ * @param {{ taille?: number }} props
+ * @returns {import('react').ReactElement} La tuile.
+ */
+export function IconeDuCanal({ taille = 40 }) {
+  const { Colors } = useTheme();
+  return (
+    <View
+      style={{
+        alignItems: 'center',
+        backgroundColor: withAlpha(Colors.primary500, 0.16),
+        borderRadius: Math.round(taille * 0.3),
+        height: taille,
+        justifyContent: 'center',
+        width: taille,
+      }}
+    >
+      <SvgIcon
+        color={Colors.primary200}
+        height={Math.round(taille * 0.5)}
+        name="users"
+        width={Math.round(taille * 0.5)}
+      />
+    </View>
+  );
+}
+
+/**
+ * Le bouton de l'en-tête « Qui est dans ce canal » (icône seule, libellé pour le lecteur
+ * d'écran). Il remplace le menu « ⋮ » : la liste ne se tient pas à la main.
+ * @param {{ estCanal?: boolean, onPress: () => void }} props
+ * @returns {import('react').ReactElement} Le bouton.
+ */
+export function BoutonMembresDuFil({ estCanal = true, onPress }) {
+  const { t } = useTranslation();
+  const { Colors } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityLabel={estCanal
+        ? t('collectiviteCanaux.membres.ouvrirCanal', 'Qui est dans ce canal')
+        : t('collectiviteCanaux.membres.ouvrirPrivee', 'Qui est dans cette conversation')}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={{
+        alignItems: 'center',
+        backgroundColor: withAlpha(Colors.neutral00, 0.1),
+        borderRadius: 20,
+        height: 40,
+        justifyContent: 'center',
+        width: 40,
+      }}
+      testID="fil-de-la-ville-membres"
+    >
+      <SvgIcon color={Colors.neutral00} height={20} name="users" width={20} />
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * « Tu ne fais plus partie de ce canal » (écran 6) : le club n'est plus rattaché à la Ville.
+ * L'ancien dirigeant ne voit plus le canal ; s'il l'ouvre par une vieille notification, il lit
+ * pourquoi. Ses anciens messages restent pour les autres.
+ * @param {{ estCanal?: boolean, onRetour: () => void }} props
+ * @returns {import('react').ReactElement} L'écran.
+ */
+export function FilDeLaVilleQuitte({ estCanal = true, onRetour }) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  return (
+    <View
+      style={{
+        alignItems: 'center', flex: 1, gap: 12, justifyContent: 'center', padding: 24,
+      }}
+      testID="fil-de-la-ville-quitte"
+    >
+      <IconeDuCanal taille={56} />
+      <Text
+        accessibilityRole="header"
+        style={[Fonts.h4Bold, Fonts.neutral00, { textAlign: 'center' }]}
+      >
+        {estCanal
+          ? t('collectiviteCanaux.quitte.titreCanal', 'Tu ne fais plus partie de ce canal')
+          : t(
+            'collectiviteCanaux.quitte.titrePrivee',
+            'Tu ne fais plus partie de cette conversation',
+          )}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>
+        {estCanal
+          ? t(
+            'collectiviteCanaux.quitte.texteCanal',
+            // eslint-disable-next-line max-len
+            'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
+          )
+          : t(
+            'collectiviteCanaux.quitte.textePrivee',
+            // eslint-disable-next-line max-len
+            'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+          )}
+      </Text>
+      <Button
+        onPress={onRetour}
+        testID="fil-de-la-ville-retour"
+        title={t('collectiviteCanaux.quitte.retour', 'Retour à la messagerie')}
+        variant="Primary"
+      />
+    </View>
+  );
+}
+
+/**
+ * La première phrase d'un fil de la Ville encore vide (écrans 4 et 8) : à quoi il sert, et qui
+ * le lit. « Vous » pour la mairie, « tu » pour le dirigeant.
+ * @param {{ chat: any, clubsCount?: number, espaceVille?: boolean }} props
+ * @returns {import('react').ReactElement | null} Le bloc, ou rien hors d'un fil de la Ville.
+ */
+export function VideDuFilDeLaVille({ chat, clubsCount = 0, espaceVille = false }) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  if (!estFilDeLaVille(chat)) return null;
+  const ville = formatCollectiviteOfferedBy(String(chat?.collectivite?.name || ''));
+  let titre = '';
+  let texte = '';
+  if (chat.type === CANAL_DIRIGEANTS && espaceVille) {
+    titre = t(
+      'collectiviteCanaux.vide.mairieTitre',
+      'Les dirigeants des {{nombre}} clubs et vous',
+      { nombre: clubsCount },
+    );
+    texte = t(
+      'collectiviteCanaux.vide.mairieTexte',
+      // eslint-disable-next-line max-len
+      'Pour les échanges de créneaux, les questions sur une installation, un forum à préparer. Les joueurs n’y sont pas.',
+    );
+  } else if (chat.type === CANAL_DIRIGEANTS) {
+    titre = t('collectiviteCanaux.vide.dirigeantTitre', 'Le canal des dirigeants');
+    texte = t(
+      'collectiviteCanaux.vide.dirigeantTexte',
+      // eslint-disable-next-line max-len
+      'Ici, tu échanges avec {{ville}} et les dirigeants des autres clubs rattachés : un créneau à céder, un tournoi à caler. Les joueurs et les parents n’y sont pas.',
+      { ville, ...SANS_ECHAPPEMENT },
+    );
+  } else if (espaceVille) {
+    titre = String(chat?.collectiviteClub?.name || '');
+    texte = t(
+      'collectiviteCanaux.vide.priveeMairie',
+      'Conversation privée : seuls les dirigeants de {{club}} la lisent.',
+      { club: String(chat?.collectiviteClub?.name || ''), ...SANS_ECHAPPEMENT },
+    );
+  } else {
+    titre = String(chat?.collectivite?.name || '');
+    texte = t(
+      'collectiviteCanaux.vide.priveeClub',
+      'Conversation privée : seuls la Ville et les dirigeants de ton club la lisent.',
+    );
+  }
+  return (
+    <View style={{ alignItems: 'center', gap: 12, padding: 24 }} testID="fil-de-la-ville-vide">
+      <IconeDuCanal taille={56} />
+      <Text style={[Fonts.h4Bold, Fonts.neutral00, { textAlign: 'center' }]}>{titre}</Text>
+      <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>{texte}</Text>
+    </View>
+  );
+}
+
+/**
+ * Ce que la conversation fait de différent pour un fil de la Ville. Hors d'un tel fil, tout est
+ * vide ou nul, et la conversation reste exactement ce qu'elle était.
+ * @param {{ chatData: any, chatId: string, espaceVille?: boolean, messagesError?: unknown,
+ *   navigation: any, routeChatType?: string | null }} params
+ * @returns {{ clubsCount: number, estCanal: boolean, estFil: boolean,
+ *   estLigneSysteme: (message: any) => boolean, estQuitte: boolean, membres: any,
+ *   nomDeLExpediteur: (message: any) => string | null, ouvrirMembres: () => void,
+ *   placeholder: string | null, sousTitre: string, titre: string,
+ *   voix: { senderSignature?: { voix: 'ville' } } }} Le fil, vu par la conversation.
+ */
+export const useFilDeLaVille = ({
+  chatData, chatId, espaceVille = false, messagesError = null, navigation, routeChatType = null,
+}) => {
+  const { t } = useTranslation();
+  const estQuitte = estRefusDuFilDeLaVille(messagesError);
+  const estFil = estFilDeLaVille(chatData);
+  const membres = useMembresDuFil(chatId, { enabled: estFil && !estQuitte });
+  const clubsCount = Number(membres.data?.clubsCount) || 0;
+  return useMemo(() => {
+    const contexte = { chat: chatData, clubsCount, espaceVille };
+    return {
+      clubsCount,
+      estCanal: (chatData?.type || routeChatType) !== CONVERSATION_CLUB,
+      estFil,
+      estLigneSysteme: (/** @type {any} */ message) => estFil && !message?.sender,
+      estQuitte,
+      membres: membres.data || null,
+      nomDeLExpediteur: (/** @type {any} */ message) => (
+        estFil ? signatureDuMessage(t, message) : null
+      ),
+      ouvrirMembres: () => navigation.navigate(RouteNames.CollectiviteCanalMembres, {
+        chatId,
+        ...(espaceVille ? { espace: 'ville' } : {}),
+      }),
+      placeholder: placeholderDuFil(t, contexte),
+      sousTitre: sousTitreDuFil(t, contexte),
+      titre: titreDuFil(t, contexte),
+      voix: voixDuFil(contexte),
+    };
+  }, [
+    chatData, chatId, clubsCount, espaceVille, estFil, estQuitte, membres.data, navigation,
+    routeChatType, t,
+  ]);
+};
