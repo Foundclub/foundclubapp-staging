@@ -280,7 +280,10 @@ describe('COLL1D — « Mon abonnement » d un club rattache a une collectivite 
     expect(texte).not.toMatch(/renouvel/i);
     expect(texte).not.toMatch(/€|\beur\b/i);
     expect(texte).not.toMatch(/se termine/i);
-    expect(pressablesPortant(arbre, 'Comparer les offres')).toHaveLength(0);
+    // COLL-C2C (02/10) — planche P8-abonnement-tel (validee le 01/10) : « Comparer les offres »
+    // reste (ce n est pas un achat) ; ce qui disparait, ce sont les gestes d achat et de gestion.
+    expect(pressablesPortant(arbre, "Changer d'offre")).toHaveLength(0);
+    expect(pressablesPortant(arbre, 'Restaurer mes achats')).toHaveLength(0);
     expect(texte).not.toMatch(/Écrire à/);
   });
 

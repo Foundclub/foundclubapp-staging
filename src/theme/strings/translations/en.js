@@ -2537,6 +2537,8 @@ export default {
     },
     collectiviteOffer: {
       banner: 'Offered by {{who}}',
+      ouvrir: '{{offert}}: see its facilities',
+      voir: 'See the town facilities',
     },
     facilities: {
       nameFallback: 'Facility',
@@ -5154,6 +5156,60 @@ export default {
     },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
+  // COLL-C2C (02/10) — the club's facilities in 3 groups (design P8v2, D32).
+  clubInstallations: {
+    actions: {
+      demanderCreneau: 'Request a slot',
+      demanderHeure: 'Request an hour',
+      ouvrir: '{{nom}}: see the schedule',
+      supprimer: 'Delete the facility',
+    },
+    attente: {
+      accepter: 'Accept',
+      dit: 'Your slots are already full at these times: accept or decline.',
+      ligne: '{{team}} · {{day}} {{hours}}',
+      refuser: 'Decline',
+      refuserTexte: 'It is cancelled, and its coach is notified.',
+      refuserTitre: 'Decline the session?',
+      titre: 'Sessions to approve ({{count}})',
+    },
+    compte: {
+      aDemander: '{{count}} to request',
+      auClub: '{{count}} at the club',
+      avecCreneaux: '{{count}} with your town slots',
+    },
+    creneau: {
+      ligne: '{{team}} · every {{day}} {{hours}}',
+      toutLeClub: 'Whole club',
+    },
+    fiche: {
+      gps: 'GPS',
+      villeTitre: 'Managed by {{ville}}',
+    },
+    groupes: {
+      aDemander: 'To request from the town',
+      aDemanderDit: 'Your club has no slot there: check the free hours and request one.',
+      aDemanderDitVille: '{{ville}}: your club has no slot there. Check the free hours and request one.',
+      auClub: 'At the club',
+      auClubDit: 'Your club’s own: you manage its schedule.',
+      auClubVide: 'No facility at your club yet.',
+      avecCreneaux: 'Your town slots',
+      avecCreneauxDit: '{{ville}} gave you these slots for the season.',
+      nombre: '({{count}})',
+    },
+    lieu: {
+      aide: 'Pick a facility of your club, or of the town where your club has a slot.',
+      creneaux: 'Your town slots: {{liste}}',
+      dansLeCreneau: 'In your slot {{creneau}}: the session is approved right away. If your club is already full at that time, your club manager decides.',
+      horsCreneau: 'Outside your town slots at this time.',
+    },
+    repartir: {
+      action: 'Assign',
+      ouvrir: 'Assign: {{ligne}}',
+      prevenu: 'The coaches of the chosen team are notified.',
+      titre: 'Which team on this slot?',
+    },
+  },
   collectiviteCreneaux: {
     attribuer: {
       aPartirDu: 'From',
@@ -16270,6 +16326,21 @@ export default {
       },
     },
     collectivite: {
+      arret: 'Your club goes back to the free plan. Your teams, members and events stay. You can then subscribe yourself.',
+      arretTitre: 'If the town stops',
+      depuis: 'Since {{date}}',
+      ecusson: 'Crest of {{ville}}',
+      inclus: {
+        communiquer: 'Reach all your members',
+        cotisations: 'Create your fee campaigns',
+        equipes: 'Create your teams and add your members',
+        evenements: 'Publish your events, with no limit',
+        matchs: 'Search for matches',
+        titre: 'What is included',
+      },
+      pour: 'For {{club}}',
+      question: 'Ask {{ville}}, not the store.',
+      questionTitre: 'A question about this plan',
       subtitle: 'All your club’s teams are covered, with no limit.',
       title: 'Club plan offered by {{who}}',
     },

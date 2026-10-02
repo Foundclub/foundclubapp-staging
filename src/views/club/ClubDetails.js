@@ -20,7 +20,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { countClubTrainers } from '@/domains/club/clubStaff';
-import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  collectiviteInitial,
+  formatOpeningHours,
+} from '@/domains/collectivite/collectiviteDisplay';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -112,13 +115,9 @@ const getFacilityAddressLabel = (address) => {
   return '';
 };
 
-const getFacilityCapacityChipLabel = (maxSlots, t) => {
-  const teams = Number(maxSlots || 1);
-  const unit = teams > 1
-    ? t('facilityList.capacity.teamPlural', 'équipes simultanées')
-    : t('facilityList.capacity.teamSingular', 'équipe simultanée');
-  return `${teams} ${unit}`;
-};
+// COLL-C2C (02/10) — une installation de la Ville : son groupe se titre toujours (seule mention
+// de la Ville sur la fiche).
+const estDeLaVille = (facility) => facility?.ownerType === 'collectivite';
 
 const getFacilityCoordinates = (address) => {
   if (!address || typeof address !== 'object') return null;
@@ -867,8 +866,16 @@ function ClubDetails({ navigation, route }) {
     if (duContexte.length || isAuthenticated) return duContexte;
     return Array.isArray(club?.publicFacilities) ? club.publicFacilities : [];
   }, [club?.publicFacilities, facilityContext?.allFacilities, isAuthenticated]);
+  // COLL-C2C (02/10) — planche P8-installations-tel, etat 3 (le membre) : « Au club », puis la
+  // Ville nommee UNE fois, dans le titre de son groupe. « Pretees » est retire (vague 2) : le club
+  // n a que des creneaux, la Ville gere.
   const facilitySections = useMemo(() => getFacilitySections(facilities, {
-    clubTitle: t('facilityList.sections.club', 'Installations du club'),
+    clubTitle: t('clubInstallations.groupes.auClub', 'Au club'),
+    collectiviteTitle: (/** @type {string} */ ville) => t(
+      'clubInstallations.fiche.villeTitre',
+      'Gérées par {{ville}}',
+      { ville: formatCollectiviteOfferedBy(ville), ...SANS_ECHAPPEMENT },
+    ),
     sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
   }), [facilities, t]);
   const resolvedFacilityCmId = facilityContext?.cmId || clubParentMultisportId || null;
@@ -1244,6 +1251,12 @@ function ClubDetails({ navigation, route }) {
     clubDocumentId: club?.documentId || clubId,
     entitlementsSummary,
   }), [club?.documentId, clubId, entitlementsSummary]);
+  const offertParLaVille = collectiviteOffer
+    ? t('clubDetails.collectiviteOffer.banner', 'Offert par {{who}}', {
+      who: formatCollectiviteOfferedBy(collectiviteOffer.name),
+      ...SANS_ECHAPPEMENT,
+    })
+    : '';
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
@@ -2722,35 +2735,79 @@ function ClubDetails({ navigation, route }) {
                     {clubCertificationLabel}
                   </Text>
                 </View>
-                {/* COLL1D — le bandeau qui valorise la mairie (SPEC §3), sur la carte du
-                    club : une pastille sous celle de la certification, rien de plus. */}
-                {collectiviteOffer ? (
-                  <View
-                    style={[
-                      ApplicationStyle.borderRadius24,
-                      Spaces.paddingVertical[4],
-                      Spaces.paddingHorizontal[12],
-                      {
-                        backgroundColor: withAlpha(Colors.success500, 0.12),
-                        borderColor: withAlpha(Colors.success500, 0.45),
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p4Bold, Fonts.textCenter, { color: Colors.success200 }]}>
-                      {t('clubDetails.collectiviteOffer.banner', 'Offert par {{who}}', {
-                        who: formatCollectiviteOfferedBy(collectiviteOffer.name),
-                        ...SANS_ECHAPPEMENT,
-                      })}
-                    </Text>
-                  </View>
-                ) : null}
                 <Text style={[Fonts.p2, Fonts.primary100]}>
                   {(() => {
                     const parsedAddress = safeJsonParse(club?.addressDetails, null);
                     return parsedAddress?.address || club?.addressDetails || '';
                   })()}
                 </Text>
+                {/* COLL-C2C (02/10) — planche P8-club-tel (écran 15) : le bandeau qui valorise
+                    la mairie (SPEC §3) devient un vrai bandeau en CARTE sous la carte du club —
+                    l écusson de la Ville (son initiale, faute de logo), « Offert par … », et ses
+                    installations à un appui. Dirigeant et entraîneur (leur droit porte la Ville) ;
+                    le joueur, non. « Gérer mon club » ne bouge pas (décision du 01/10). */}
+                {collectiviteOffer ? (
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'clubDetails.collectiviteOffer.ouvrir',
+                      '{{offert}} : voir ses installations',
+                      { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
+                    )}
+                    accessibilityRole="link"
+                    onPress={handleOpenFacilityList}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[12],
+                      Spaces.padding[12],
+                      {
+                        alignSelf: 'stretch',
+                        backgroundColor: withAlpha(Colors.success500, 0.08),
+                        borderColor: withAlpha(Colors.success500, 0.4),
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        marginTop: 8,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        Alignments.alignCenter,
+                        Alignments.justifyCenter,
+                        {
+                          backgroundColor: withAlpha(Colors.success500, 0.16),
+                          borderBottomLeftRadius: 18,
+                          borderBottomRightRadius: 18,
+                          borderColor: withAlpha(Colors.success500, 0.6),
+                          borderTopLeftRadius: 6,
+                          borderTopRightRadius: 6,
+                          borderWidth: 1,
+                          height: 40,
+                          width: 36,
+                        },
+                      ]}
+                    >
+                      <Text style={[Fonts.p1Bold, { color: Colors.success200 }]}>
+                        {collectiviteInitial(collectiviteOffer.name)}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={[Fonts.p2Bold, { color: Colors.success200 }]}>
+                        {offertParLaVille}
+                      </Text>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {t(
+                          'clubDetails.collectiviteOffer.voir',
+                          'Voir les installations de la Ville',
+                        )}
+                      </Text>
+                    </View>
+                    <Image
+                      source={Images.arrowRight}
+                      style={{ height: 14, tintColor: Colors.success200, width: 14 }}
+                    />
+                  </TouchableOpacity>
+                ) : null}
               </View>
               <View style={[
                 Spaces.gap[4],
@@ -3022,25 +3079,31 @@ function ClubDetails({ navigation, route }) {
 
                   {facilitySections.map((section) => (
                     <View key={section.title} style={[Spaces.gap[12]]}>
-                      {facilitySections.length > 1 ? (
+                      {facilitySections.length > 1 || section.data.some(estDeLaVille) ? (
                         <Text style={[Fonts.p2Bold, Fonts.primary200]}>
                           {section.title}
                         </Text>
                       ) : null}
                       {section.data.map((/** @type {any} */ facility) => {
                         const facilityId = facility?.documentId || facility?.id;
-                        const capacityChipLabel = getFacilityCapacityChipLabel(
-                          facility?.maxSlots,
-                          t,
-                        );
-                        const typeLabel = getFacilityTypeLabel(facility?.type)
-                          || t('facilityList.defaults.unknownType', 'Type inconnu');
                         // COLL1D — horaires d'ouverture, recus depuis le lot 1b, jamais affiches.
                         const openingHoursLabel = formatOpeningHours(
                           facility?.openingTime,
                           facility?.closingTime,
                         );
                         const addressLabel = getFacilityAddressLabel(facility?.address);
+                        // COLL-C2C (02/10) — planche P8-installations-tel : UNE ligne
+                        // « Gymnase · 2 équipes à la fois · 12 rue des Tilleuls » au lieu des
+                        // pastilles ; ni « Type inconnu » ni « Adresse non renseignée ».
+                        const metaLabel = [
+                          getFacilityTypeLabel(facility?.type),
+                          t('collectiviteCreneaux.liste.capacite', {
+                            count: Math.max(1, Number(facility?.maxSlots || 1)),
+                            defaultValue_one: '{{count}} équipe à la fois',
+                            defaultValue_other: '{{count}} équipes à la fois',
+                          }),
+                          addressLabel,
+                        ].filter(Boolean).join(' · ');
                         const planningColor = resolveFacilityPlanningColor(facility);
                         const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
                         // COLL1B : l installation de la collectivite se lit par tout MEMBRE du club
@@ -3118,82 +3181,11 @@ function ClubDetails({ navigation, route }) {
                                 'Installation',
                               )}
                             />
-                            <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                              <View
-                                style={[
-                                  ApplicationStyle.borderRadius12,
-                                  Spaces.paddingHorizontal[8],
-                                  Spaces.paddingVertical[4],
-                                  {
-                                    alignSelf: 'flex-start',
-                                    backgroundColor: `${planningColor}1F`,
-                                    borderColor: planningColor,
-                                    borderWidth: 1,
-                                  },
-                                ]}
-                              >
-                                <Text style={[Fonts.p3Bold, { color: planningColor }]}>
-                                  {capacityChipLabel}
-                                </Text>
-                              </View>
-                              <View
-                                style={[
-                                  ApplicationStyle.borderRadius12,
-                                  Spaces.paddingHorizontal[8],
-                                  Spaces.paddingVertical[4],
-                                  {
-                                    alignSelf: 'flex-start',
-                                    backgroundColor: Colors.neutral800,
-                                    borderColor: Colors.neutral500,
-                                    borderWidth: 1,
-                                  },
-                                ]}
-                              >
-                                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-                                  {typeLabel}
-                                </Text>
-                              </View>
-                              {facility?.isShared ? (
-                                <>
-                                  <View
-                                    style={[
-                                      ApplicationStyle.borderRadius12,
-                                      Spaces.paddingHorizontal[8],
-                                      Spaces.paddingVertical[4],
-                                      {
-                                        alignSelf: 'flex-start',
-                                        backgroundColor: `${Colors.primary500}1F`,
-                                        borderColor: Colors.primary500,
-                                        borderWidth: 1,
-                                      },
-                                    ]}
-                                  >
-                                    <Text style={[Fonts.p3Bold, Fonts.primary300]}>
-                                      {t('facilityList.badges.shared', 'Partagee')}
-                                    </Text>
-                                  </View>
-                                  <View
-                                    style={[
-                                      ApplicationStyle.borderRadius12,
-                                      Spaces.paddingHorizontal[8],
-                                      Spaces.paddingVertical[4],
-                                      {
-                                        alignSelf: 'flex-start',
-                                        backgroundColor: `${Colors.warning500}1F`,
-                                        borderColor: Colors.warning500,
-                                        borderWidth: 1,
-                                      },
-                                    ]}
-                                  >
-                                    <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-                                      {isCollectiviteFacility
-                                        ? facility?.ownerName
-                                        : t('facilityList.badges.multisport', 'Multisport')}
-                                    </Text>
-                                  </View>
-                                </>
-                              ) : null}
-                            </View>
+                            {metaLabel ? (
+                              <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+                                {metaLabel}
+                              </Text>
+                            ) : null}
                             {openingHoursLabel ? (
                               <Text style={[Fonts.p3, Fonts.neutral200]}>
                                 {t('facilityList.openingHours', 'Ouvert {{hours}}', {
@@ -3202,19 +3194,8 @@ function ClubDetails({ navigation, route }) {
                                 })}
                               </Text>
                             ) : null}
-                            {isCollectiviteFacility ? (
-                              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                                {t(
-                                  'facilityList.collectiviteOwnerHint',
-                                  // eslint-disable-next-line max-len
-                                  'Installation gérée par {{ownerName}} : planning en lecture seule.',
-                                  {
-                                    ownerName: formatCollectiviteOfferedBy(facility?.ownerName),
-                                    ...SANS_ECHAPPEMENT,
-                                  },
-                                )}
-                              </Text>
-                            ) : null}
+                            {/* COLL-C2C — la Ville est nommee dans le titre du groupe : plus de
+                                phrase « lecture seule » sur chaque carte. */}
                             {facility?.isShared && !isCollectiviteFacility ? (
                               <Text style={[Fonts.p3, Fonts.neutral300]}>
                                 {t(
@@ -3228,59 +3209,26 @@ function ClubDetails({ navigation, route }) {
                                 )}
                               </Text>
                             ) : null}
-                            {addressLabel ? (
-                              <View
-                                style={[
-                                  ApplicationStyle.borderRadius16,
-                                  Spaces.padding[12],
-                                  Spaces.gap[8],
-                                  {
-                                    backgroundColor: `${Colors.primary900}BB`,
-                                    borderColor: `${Colors.primary500}2E`,
-                                    borderWidth: 1,
-                                  },
-                                ]}
-                              >
-                                <View
-                                  style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
-                                >
-                                  <Image
-                                    source={Images.pin}
-                                    style={[
-                                      ApplicationStyle.icon16,
-                                      ApplicationStyle.tintColor.primary200,
-                                      { marginTop: 1 },
-                                    ]}
-                                  />
-                                  <Text numberOfLines={2} style={[Fonts.p2, Fonts.primary100, { flex: 1 }]}>
-                                    {addressLabel}
-                                  </Text>
-                                </View>
-                              </View>
-                            ) : (
-                              <Text style={[Fonts.p2, Fonts.neutral300]}>
-                                {t(
-                                  'facilityList.defaults.addressMissing',
-                                  'Adresse non renseignée',
-                                )}
-                              </Text>
-                            )}
                             {(addressLabel || canOpenPlanning || canOpenFacilityEdit) ? (
                               <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, Spaces.gap[8], { marginTop: 2 }]}>
-                                {addressLabel ? (
-                                  <Button
-                                    onPress={() => handleOpenFacilityMap(facility)}
-                                    size="small"
-                                    title={t('common.actions.openInGps', 'Ouvrir dans le GPS')}
-                                    variant="Secondary"
-                                  />
-                                ) : null}
                                 {canOpenPlanning ? (
                                   <Button
                                     onPress={handleOpenPlanning}
                                     size="small"
                                     title={t('facilityList.actions.viewPlanning', 'Voir planning')}
                                     variant={facility?.isShared ? 'Primary' : 'Secondary'}
+                                  />
+                                ) : null}
+                                {addressLabel ? (
+                                  <Button
+                                    accessibilityLabel={t(
+                                      'common.actions.openInGps',
+                                      'Ouvrir dans le GPS',
+                                    )}
+                                    onPress={() => handleOpenFacilityMap(facility)}
+                                    size="small"
+                                    title={t('clubInstallations.fiche.gps', 'GPS')}
+                                    variant="Secondary"
                                   />
                                 ) : null}
                                 {canOpenFacilityEdit ? (

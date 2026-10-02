@@ -57,6 +57,23 @@ export const formatOpeningHours = (openingTime, closingTime) => {
   return open && close ? `${open} – ${close}` : '';
 };
 
+// COLL-C2C (02/10) — l ÉCUSSON d une collectivité, faute de logo (planches P8-club-tel et
+// P8-abonnement-tel) : l initiale de son nom propre, « Ville de Montrivage » => « M ».
+// ponytail: seuls les noms communs ci-dessous sont sautés (« Communauté de communes du Val »
+// donne « C ») ; voie de sortie : un logo de collectivité, champ à créer.
+const NOM_COMMUN_DE_COLLECTIVITE = /^(ville|commune|mairie|m[ée]tropole|r[ée]gion|d[ée]partement|collectivit[ée])\s+(de\s+(la\s+|l['’])?|du\s+|des\s+|d['’])?/i;
+
+/**
+ * L initiale d une collectivité, pour son écusson.
+ * @param {string | null | undefined} name - Son nom (« Ville de Montrivage »).
+ * @returns {string} Une lettre capitale, ou vide.
+ */
+export const collectiviteInitial = (name) => {
+  const nom = String(name || '').trim();
+  const propre = nom.replace(NOM_COMMUN_DE_COLLECTIVITE, '').trim() || nom;
+  return propre.charAt(0).toLocaleUpperCase();
+};
+
 /**
  * « HH:MM » depuis la valeur du serveur (« 08:00:00.000 »), pour un champ de saisie.
  * @param {string | null | undefined} value - L horaire.

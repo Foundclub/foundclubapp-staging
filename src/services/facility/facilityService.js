@@ -100,6 +100,15 @@ const normalizeCollectiviteFacility = (facility) => ({
 
 const isCollectiviteFacility = (facility) => facility?.ownerType === 'collectivite';
 
+/**
+ * Range les installations en sections : celles du club, celles de l omnisport, puis une par
+ * collectivite.
+ * @param {any[]} facilities - Les installations.
+ * @param {{
+ *   clubTitle?: string, collectiviteTitle?: (nom: string) => string, sharedTitle?: string,
+ * }} [labels] - Les titres choisis par l ecran (COLL-C2C : celui de la Ville, par la fiche).
+ * @returns {Array<{ data: any[], title: string }>} Les sections, dans l ordre d affichage.
+ */
 const getFacilitySections = (facilities, labels = {}) => {
   if (!Array.isArray(facilities) || facilities.length === 0) return [];
 
@@ -129,7 +138,8 @@ const getFacilitySections = (facilities, labels = {}) => {
     collectiviteSections.push({
       data: [facility],
       name,
-      title: i18next.t(
+      // COLL-C2C (02/10) : l appelant peut nommer le groupe lui-meme (fiche du club).
+      title: labels.collectiviteTitle ? labels.collectiviteTitle(name) : i18next.t(
         'facilityService.sections.collectivite',
         'Installations · {{name}}',
         { name, ...SANS_ECHAPPEMENT },
@@ -193,17 +203,23 @@ const getClubCollectiviteFacilities = async (clubId) => {
 
 // Un refus (visiteur, pas membre) ou une panne ne doit pas emporter les installations du
 // club avec lui : la liste de la collectivite est un AJOUT a l onglet, jamais sa condition.
-const getClubCollectiviteFacilitiesOrNone = async (clubId) => {
+// COLL-C2C (02/10) : la meme tolerance sert aux creneaux du club (une seule ecriture).
+const readOrNone = async (lecture, libelle) => {
   try {
-    return await getClubCollectiviteFacilities(clubId);
+    return await lecture();
   } catch (error) {
     const status = error?.status || error?.response?.status || error?.error?.status || null;
     if (status !== 403 && status !== 401) {
-      console.error('Error fetching collectivite facilities:', error);
+      console.error(`Error fetching ${libelle}:`, error);
     }
     return null;
   }
 };
+
+const getClubCollectiviteFacilitiesOrNone = (clubId) => readOrNone(
+  () => getClubCollectiviteFacilities(clubId),
+  'collectivite facilities',
+);
 
 /**
  * COLL1B (29/09) — le planning d UNE installation, en lecture seule (route du lot 1b).
@@ -220,15 +236,68 @@ const getFacilityPlanning = async (facilityId, { from, to }) => {
   return response.data;
 };
 
+// COLL-C2C (02/10) — les creneaux de saison DU CLUB, toutes installations
+// (GET /clubs/:id/season-slots, contrat `docs/CONTRAT_CRENEAUX_SAISON.md` du depot admin).
+// Meme tolerance que la liste de la Ville : un refus ou une panne rend `null`.
+const getClubSeasonSlotsOrNone = (clubId) => readOrNone(
+  async () => (await client.get(`/clubs/${clubId}/season-slots`)).data,
+  'club season slots',
+);
+
+/**
+ * COLL-C2C — joint a chaque installation les creneaux du club qui s y trouvent (`clubSeasonSlots`).
+ * @param {any[]} facilities - Les installations.
+ * @param {any} reponse - `{ data: creneaux }`, ou null.
+ * @returns {any[]} Les memes installations ; celles ou le club a un creneau le portent.
+ */
+const attachClubSeasonSlots = (facilities, reponse) => {
+  const creneaux = Array.isArray(reponse?.data) ? reponse.data : [];
+  if (!creneaux.length) return facilities;
+  return facilities.map((facility) => {
+    const id = facility?.documentId || facility?.id;
+    const siens = creneaux.filter((creneau) => creneau?.facility?.documentId === id);
+    return siens.length ? { ...facility, clubSeasonSlots: siens } : facility;
+  });
+};
+
+// COLL-C2C (02/10) — D32 : les installations de la Ville ou le club a un creneau, chacune avec
+// SES creneaux. L etape « Lieu » de la creation d un evenement les propose a cote de celles du club
+// (constate en recette le 29/09 : elle ne proposait QUE celles du club). Un refus : aucune de plus.
+const getClubVilleFacilitiesWithSlots = async (clubId) => {
+  if (!clubId) return [];
+  const [ville, creneaux] = await Promise.all([
+    getClubCollectiviteFacilitiesOrNone(clubId),
+    getClubSeasonSlotsOrNone(clubId),
+  ]);
+  const installations = Array.isArray(ville?.data)
+    ? ville.data.map(normalizeCollectiviteFacility)
+    : [];
+  return attachClubSeasonSlots(installations, creneaux).filter((facility) => (
+    Array.isArray(facility.clubSeasonSlots) && facility.clubSeasonSlots.length > 0
+  ));
+};
+
+// COLL-C2C — D32 : le dirigeant accepte (approve) ou refuse (refuse) la seance posee au-dela de la
+// place de ses creneaux (POST /season-slots/sessions/:id/decision, contrat du depot admin).
+const decideClubSession = async (eventId, decision) => {
+  const response = await client.post(`/season-slots/sessions/${eventId}/decision`, {
+    data: { decision },
+  });
+  return response.data;
+};
+
 const getClubFacilityContext = async (clubId, cmId, options = {}) => {
-  const { includeCollectivite = false, resolveCmId = true } = options;
+  const { includeClubSlots = false, includeCollectivite = false, resolveCmId = true } = options;
   const resolvedCmId = cmId || (resolveCmId ? await resolveParentMultisportId(clubId) : null);
-  const [clubResponse, cmResponse, collectiviteResponse] = await Promise.all([
+  const [clubResponse, cmResponse, collectiviteResponse, clubSlotsResponse] = await Promise.all([
     clubId ? getPlanningFacilities(clubId) : Promise.resolve(null),
     resolvedCmId ? getCMFacilities(resolvedCmId) : Promise.resolve(null),
     clubId && includeCollectivite
       ? getClubCollectiviteFacilitiesOrNone(clubId)
       : Promise.resolve(null),
+    // COLL-C2C : SEULEMENT si l ecran le demande (« Tes installations » du club) ; sans l option,
+    // aucune lecture de plus et la reponse est celle d avant, a l identique.
+    clubId && includeClubSlots ? getClubSeasonSlotsOrNone(clubId) : Promise.resolve(null),
   ]);
   const clubFacilities = Array.isArray(clubResponse?.data)
     ? clubResponse.data.map(normalizeClubFacility)
@@ -239,7 +308,10 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
   const collectiviteFacilities = Array.isArray(collectiviteResponse?.data)
     ? collectiviteResponse.data.map(normalizeCollectiviteFacility)
     : [];
-  const allFacilities = [...clubFacilities, ...sharedFacilities, ...collectiviteFacilities];
+  const allFacilities = attachClubSeasonSlots(
+    [...clubFacilities, ...sharedFacilities, ...collectiviteFacilities],
+    clubSlotsResponse,
+  );
 
   return {
     allFacilities,
@@ -247,6 +319,16 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
     cmId: resolvedCmId || null,
     hasSharedFacilities: sharedFacilities.length > 0,
     sharedFacilities,
+    // COLL-C2C : le compte dirige-t-il le club (repartir ses creneaux entre ses equipes, D32) ?
+    // COLL-C2C planche 3 : les seances qui attendent sa decision (D32), lues par lui seul.
+    ...(includeClubSlots
+      ? {
+        canManageClubSlots: Boolean(clubSlotsResponse?.meta?.canManage),
+        pendingClubSessions: Array.isArray(clubSlotsResponse?.meta?.pendingSessions)
+          ? clubSlotsResponse.meta.pendingSessions
+          : [],
+      }
+      : {}),
   };
 };
 
@@ -438,11 +520,13 @@ export {
   approveFacilityOverrideRequest,
   createBooking,
   createFacility,
+  decideClubSession,
   deleteFacility,
   getAvailability,
   getBookableFacilities,
   getClubCollectiviteFacilities,
   getClubFacilityContext,
+  getClubVilleFacilitiesWithSlots,
   getCMFacilities,
   getFacilities,
   getFacility,

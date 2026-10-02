@@ -2765,6 +2765,8 @@ export default {
     },
     collectiviteOffer: {
       banner: 'Offert par {{who}}',
+      ouvrir: '{{offert}} : voir ses installations',
+      voir: 'Voir les installations de la Ville',
     },
     facilities: {
       nameFallback: 'Installation',
@@ -5516,6 +5518,62 @@ export default {
     },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
+  // COLL-C2C (02/10) — « Tes installations » cote club, en 3 groupes (design P8v2, D32).
+  clubInstallations: {
+    actions: {
+      demanderCreneau: 'Demander un créneau',
+      demanderHeure: 'Demander une heure',
+      ouvrir: '{{nom}} : voir le planning',
+      supprimer: 'Supprimer l’installation',
+    },
+    attente: {
+      accepter: 'Accepter',
+      dit: 'Tes créneaux sont déjà pleins à ces heures : accepte ou refuse.',
+      ligne: '{{team}} · {{day}} {{hours}}',
+      refuser: 'Refuser',
+      refuserTexte: 'Elle est annulée, et son entraîneur est prévenu.',
+      refuserTitre: 'Refuser la séance ?',
+      titre: 'Séances à valider ({{count}})',
+    },
+    compte: {
+      aDemander: '{{count}} à demander',
+      auClub: '{{count}} au club',
+      avecCreneaux: '{{count}} avec tes créneaux de la Ville',
+    },
+    creneau: {
+      ligne: '{{team}} · chaque {{day}} {{hours}}',
+      toutLeClub: 'Tout le club',
+    },
+    fiche: {
+      gps: 'GPS',
+      villeTitre: 'Gérées par {{ville}}',
+    },
+    groupes: {
+      aDemander: 'À demander à la Ville',
+      aDemanderDit: 'Ton club n’y a pas de créneau : regarde les heures libres et demande.',
+      // eslint-disable-next-line max-len
+      aDemanderDitVille: '{{ville}} : ton club n’y a pas de créneau. Regarde les heures libres et demande.',
+      auClub: 'Au club',
+      auClubDit: 'À ton club : tu gères son planning.',
+      auClubVide: 'Aucune installation à ton club pour l’instant.',
+      avecCreneaux: 'Tes créneaux de la Ville',
+      avecCreneauxDit: '{{ville}} t’a attribué ces créneaux pour la saison.',
+      nombre: '({{count}})',
+    },
+    lieu: {
+      aide: 'Choisis une installation de ton club, ou de la Ville où ton club a un créneau.',
+      creneaux: 'Tes créneaux de la Ville : {{liste}}',
+      // eslint-disable-next-line max-len
+      dansLeCreneau: 'Dans ton créneau {{creneau}} : la séance est validée directement. Si ton club y est déjà au complet à cette heure, ton dirigeant décide.',
+      horsCreneau: 'Hors de tes créneaux de la Ville à cette heure.',
+    },
+    repartir: {
+      action: 'Répartir',
+      ouvrir: 'Répartir : {{ligne}}',
+      prevenu: 'Les entraîneurs de l’équipe choisie sont prévenus.',
+      titre: 'Quelle équipe sur ce créneau ?',
+    },
+  },
   collectiviteCreneaux: {
     attribuer: {
       aPartirDu: 'À partir du',
@@ -17054,6 +17112,22 @@ export default {
       },
     },
     collectivite: {
+      // eslint-disable-next-line max-len
+      arret: 'Ton club repasse à l’offre gratuite. Tes équipes, membres et événements restent. Tu pourras alors t’abonner toi-même.',
+      arretTitre: 'Si la Ville arrête',
+      depuis: 'Depuis le {{date}}',
+      ecusson: 'Écusson de {{ville}}',
+      inclus: {
+        communiquer: 'Communiquer à tous tes licenciés',
+        cotisations: 'Créer tes campagnes de cotisations',
+        equipes: 'Créer tes équipes et ajouter tes membres',
+        evenements: 'Publier tes événements, sans limite',
+        matchs: 'Rechercher des matchs',
+        titre: 'Ce qui est inclus',
+      },
+      pour: 'Pour {{club}}',
+      question: 'Adresse-toi à {{ville}}, pas à la boutique.',
+      questionTitre: 'Une question sur cette offre',
       subtitle: 'Toutes les équipes de ton club sont couvertes, sans limite.',
       title: 'Offre Club offerte par {{who}}',
     },

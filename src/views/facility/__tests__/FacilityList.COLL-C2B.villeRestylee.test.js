@@ -325,7 +325,10 @@ describe('COLL-C2B planche 1 — le mode CLUB ne change pas', () => {
     expect(lus).toContain('Conflits : demande à valider');
     expect(parTexte(arbre, 'Voir le planning')).toBeDefined();
     expect(parTexte(arbre, 'Modifier')).toBeDefined();
-    expect(parTexte(arbre, 'Supprimer')).toBeDefined();
+    // COLL-C2C (02/10) — planche P8-installations-tel (lot C2C, proprietaire du mode club) : le
+    // « Supprimer » rouge est range dans « Plus d actions ».
+    expect(parTexte(arbre, 'Supprimer')).toBeUndefined();
+    expect(arbre.root.findAll((/** @type {any} */ n) => /^Plus d’actions/.test(String(n.props?.accessibilityLabel || '')), { deep: false }).length).toBeGreaterThan(0);
     expect(lus.join(' | ')).not.toMatch(/Cette semaine/);
     expect(lus).not.toContain('Ma collectivité');
     expect(mockNavigation.setOptions).not.toHaveBeenCalled();
