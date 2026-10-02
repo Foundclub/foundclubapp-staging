@@ -1,4 +1,5 @@
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
  * ST-RETOURS (02/10) — CE QUE DIT UN RETOUR DU COACH, sans React : les lignes que la carte
@@ -54,7 +55,9 @@ export const feedbackMetaLine = (t, item, variant = 'list') => {
     String(head || '').trim(),
     formatFeedbackDay(item?.matchDate || item?.publishedAt || item?.submittedAt),
     feedbackResultLabel(t, item),
-    author && (variant === 'latest' ? author : t('stRetours.feedback.byAuthor', { name: author })),
+    author && (variant === 'latest'
+      ? author
+      : t('stRetours.feedback.byAuthor', { name: author, ...SANS_ECHAPPEMENT })),
   ].filter(Boolean).join(' · ');
 };
 
