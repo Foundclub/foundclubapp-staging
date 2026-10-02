@@ -53,10 +53,8 @@ const SORTS_BY_SPORT = {
  * @param {any} entry - La ligne servie par le serveur.
  * @returns {string} - « Prenom Nom », ou le nom saisi a la main.
  */
-const playerNameOf = (entry) => (
-  `${entry?.firstname || ''} ${entry?.lastname || ''}`.trim()
-  || String(entry?.manualPlayerName || '').trim()
-);
+const playerNameOf = (entry) => `${entry?.firstname || ''} ${entry?.lastname || ''}`.trim()
+  || String(entry?.manualPlayerName || '').trim();
 
 /**
  * La carte « Performance » de l onglet Stats de l equipe.
@@ -70,7 +68,11 @@ const playerNameOf = (entry) => (
  * @returns {import('react').ReactElement} - La carte.
  */
 function TeamPerformancePanel({
-  currentUserDocumentId = '', isLoading = false, onPressPlayer, stats, variant = 'stacked',
+  currentUserDocumentId = '',
+  isLoading = false,
+  onPressPlayer,
+  stats,
+  variant = 'stacked',
 }) {
   const { t } = useTranslation();
   const {
@@ -86,10 +88,10 @@ function TeamPerformancePanel({
   const form = Array.isArray(stats?.form) ? stats.form : [];
   const players = useMemo(() => {
     const list = Array.isArray(stats?.players) ? stats.players : [];
-    return [...list].sort((left, right) => (
-      Number(right?.[activeSort.key] || 0) - Number(left?.[activeSort.key] || 0)
-      || playerNameOf(left).localeCompare(playerNameOf(right), 'fr')
-    ));
+    return [...list].sort(
+      (left, right) => Number(right?.[activeSort.key] || 0) - Number(left?.[activeSort.key] || 0)
+        || playerNameOf(left).localeCompare(playerNameOf(right), 'fr'),
+    );
   }, [activeSort.key, stats?.players]);
 
   const rowBetween = [
@@ -121,10 +123,14 @@ function TeamPerformancePanel({
       >
         <View style={skeleton(22, { borderRadius: 8, width: '50%' })} />
         <View style={[Alignments.row, Spaces.gap[8]]}>
-          {[0, 1, 2].map((index) => <View key={index} style={skeleton(76, { flex: 1 })} />)}
+          {[0, 1, 2].map((index) => (
+            <View key={index} style={skeleton(76, { flex: 1 })} />
+          ))}
         </View>
         <View style={[Alignments.row, Spaces.gap[8]]}>
-          {[0, 1].map((index) => <View key={index} style={skeleton(76, { flex: 1 })} />)}
+          {[0, 1].map((index) => (
+            <View key={index} style={skeleton(76, { flex: 1 })} />
+          ))}
         </View>
         <View style={skeleton(160)} />
       </View>
@@ -151,6 +157,7 @@ function TeamPerformancePanel({
     );
   }
 
+  /** @type {Record<string, {background: string, color: string, label: string, letter: string}>} */
   const formLetter = {
     draw: {
       background: withAlpha(Colors.neutral00, 0.1),
@@ -190,11 +197,9 @@ function TeamPerformancePanel({
       return t('teamStatsPanel.playersRatingHidden', 'Joueurs : dès 3 réponses');
     }
     if (playersRatingCount > 0) {
-      return t(
-        'teamStatsPanel.playersRatingCount',
-        'Note des joueurs · {{count}}',
-        { count: playersRatingCount },
-      );
+      return t('teamStatsPanel.playersRatingCount', 'Note des joueurs · {{count}}', {
+        count: playersRatingCount,
+      });
     }
     return t('teamStatsPanel.playersRating', 'Note des joueurs');
   };
@@ -202,10 +207,17 @@ function TeamPerformancePanel({
   // ST-VUES (ordinateur, etats 1 et 2) — une colonne : le titre et la forme, quatre
   // tuiles (V, N, D, la difference), les notes, et le classement en TABLEAU.
   if (variant === 'wide') {
-    const wideTile = (/** @type {string} */ key, /** @type {string} */ value, /** @type {string} */ label, /** @type {string} */ color) => (
+    const wideTile = (
+      /** @type {string} */ key,
+      /** @type {string} */ value,
+      /** @type {string} */ label,
+      /** @type {string} */ color,
+    ) => (
       <View key={key} style={tileStyle}>
         <Text style={[Fonts.h3Bold, { color }]}>{value}</Text>
-        <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>{label}</Text>
+        <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>
+          {label}
+        </Text>
       </View>
     );
     const columns = [
@@ -216,7 +228,9 @@ function TeamPerformancePanel({
       <View style={[Spaces.gap[16]]} testID="team-performance-wide">
         <View style={rowBetween}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-            {t('teamStatsPanel.performanceTitle', 'Performance · {{count}} match', { count: matches })}
+            {t('teamStatsPanel.performanceTitle', 'Performance · {{count}} match', {
+              count: matches,
+            })}
           </Text>
           {knownForm.length ? (
             <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
@@ -225,14 +239,46 @@ function TeamPerformancePanel({
           ) : null}
         </View>
         <View style={[Alignments.row, Spaces.gap[8]]}>
-          {wideTile('wins', String(Number(totals?.wins || 0)), t('teamStatsPanel.recordWins', 'Victoire', { count: Number(totals?.wins || 0) }), Colors.success200)}
-          {wideTile('draws', String(Number(totals?.draws || 0)), t('teamStatsPanel.recordDraws', 'Nul', { count: Number(totals?.draws || 0) }), Colors.neutral00)}
-          {wideTile('losses', String(Number(totals?.losses || 0)), t('teamStatsPanel.recordLosses', 'Défaite', { count: Number(totals?.losses || 0) }), Colors.error300)}
-          {wideTile('difference', differenceLabel, `${scoreFor} - ${scoreAgainst}`, Colors.neutral00)}
+          {wideTile(
+            'wins',
+            String(Number(totals?.wins || 0)),
+            t('teamStatsPanel.recordWins', 'Victoire', { count: Number(totals?.wins || 0) }),
+            Colors.success200,
+          )}
+          {wideTile(
+            'draws',
+            String(Number(totals?.draws || 0)),
+            t('teamStatsPanel.recordDraws', 'Nul', { count: Number(totals?.draws || 0) }),
+            Colors.neutral00,
+          )}
+          {wideTile(
+            'losses',
+            String(Number(totals?.losses || 0)),
+            t('teamStatsPanel.recordLosses', 'Défaite', { count: Number(totals?.losses || 0) }),
+            Colors.error300,
+          )}
+          {wideTile(
+            'difference',
+            differenceLabel,
+            `${scoreFor} - ${scoreAgainst}`,
+            Colors.neutral00,
+          )}
         </View>
         <View style={[Alignments.row, Spaces.gap[8]]}>
-          {wideTile('coach', coachRating !== null && coachRating !== undefined ? formatRating(coachRating) : '—', t('teamStatsPanel.coachRating', 'Note du coach'), Colors.neutral00)}
-          {wideTile('players', playersRating !== null && playersRating !== undefined ? formatRating(playersRating) : '—', playersRatingLabel(), Colors.neutral00)}
+          {wideTile(
+            'coach',
+            coachRating !== null && coachRating !== undefined ? formatRating(coachRating) : '—',
+            t('teamStatsPanel.coachRating', 'Note du coach'),
+            Colors.neutral00,
+          )}
+          {wideTile(
+            'players',
+            playersRating !== null && playersRating !== undefined
+              ? formatRating(playersRating)
+              : '—',
+            playersRatingLabel(),
+            Colors.neutral00,
+          )}
         </View>
         {players.length ? (
           <View testID="team-performance-table">
@@ -240,7 +286,11 @@ function TeamPerformancePanel({
               {columns.map((column) => (
                 <Text
                   key={column.key}
-                  style={[Fonts.p4Bold, Fonts.neutral300, { flex: column.flex, textAlign: column.key === 'name' ? 'left' : 'right' }]}
+                  style={[
+                    Fonts.p4Bold,
+                    Fonts.neutral300,
+                    { flex: column.flex, textAlign: column.key === 'name' ? 'left' : 'right' },
+                  ]}
                 >
                   {column.label}
                 </Text>
@@ -249,7 +299,9 @@ function TeamPerformancePanel({
             {players.map((/** @type {any} */ entry, /** @type {number} */ index) => {
               const documentId = String(entry?.documentId || '');
               const name = playerNameOf(entry) || t('teamStatsPanel.playerFallback', 'Joueur');
-              const canOpen = Boolean(onPressPlayer && documentId && documentId !== currentUserDocumentId);
+              const canOpen = Boolean(
+                onPressPlayer && documentId && documentId !== currentUserDocumentId,
+              );
               const Row = canOpen ? TouchableOpacity : View;
               return (
                 <Row
@@ -260,14 +312,24 @@ function TeamPerformancePanel({
                     Alignments.row,
                     Alignments.alignCenter,
                     Spaces.paddingVertical[8],
-                    { borderTopColor: withAlpha(Colors.neutral00, 0.08), borderTopWidth: 1, minHeight: 44 },
+                    {
+                      borderTopColor: withAlpha(Colors.neutral00, 0.08),
+                      borderTopWidth: 1,
+                      minHeight: 44,
+                    },
                   ]}
                 >
-                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 2 }]}>{name}</Text>
+                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 2 }]}>
+                    {name}
+                  </Text>
                   {sorts.map((sort) => (
                     <Text
                       key={sort.key}
-                      style={[sort.key === activeSort.key ? Fonts.p2Bold : Fonts.p2, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}
+                      style={[
+                        sort.key === activeSort.key ? Fonts.p2Bold : Fonts.p2,
+                        Fonts.neutral00,
+                        { flex: 1, textAlign: 'right' },
+                      ]}
                     >
                       {String(Number(entry?.[sort.key] || 0))}
                     </Text>
@@ -350,7 +412,9 @@ function TeamPerformancePanel({
               ? formatRating(playersRating)
               : '—'}
           </Text>
-          <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>{playersRatingLabel()}</Text>
+          <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>
+            {playersRatingLabel()}
+          </Text>
         </View>
       </View>
 

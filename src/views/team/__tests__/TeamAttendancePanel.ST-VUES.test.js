@@ -16,9 +16,10 @@ import TeamAttendancePanel, { TeamAttendanceSheetSummary } from '../performance/
 // 🧪 Meme compromis que la planche 13 : le panneau est rendu pour de vrai, son
 // branchement dans `TeamDetails.js` (6 000 lignes) est verifie dans la source.
 
-jest.mock('react-i18next', () => (
-  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
-));
+jest.mock(
+  'react-i18next',
+  () => jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next,
+);
 
 jest.mock('@/theme/themeContext', () => {
   const colors = jest.requireActual('@/theme/colors').default();
@@ -71,14 +72,15 @@ const texteDe = (/** @type {any} */ noeud) => {
   return morceaux.join('');
 };
 
-const textes = (/** @type {any} */ arbre) => arbre.root
-  .findAll((/** @type {any} */ n) => n.type === Text, { deep: false })
-  .map(texteDe);
+const textes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === Text, { deep: false }).map(texteDe);
 
-const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
-  .findAll((/** @type {any} */ n) => n.props?.testID === id, { deep: false });
+const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === id, { deep: false });
 
-const ligne = (/** @type {string} */ id, /** @type {string} */ prenom, /** @type {any} */ chiffres) => ({
+const ligne = (
+  /** @type {string} */ id,
+  /** @type {string} */ prenom,
+  /** @type {any} */ chiffres,
+) => ({
   absenceCount: chiffres.absent,
   attendanceCount: chiffres.present,
   lateCount: chiffres.retards || 0,
@@ -119,7 +121,14 @@ describe('ST-VUES planche 14 — l encadrement', () => {
     const lus = textes(monter(<TeamAttendancePanel stats={EQUIPE} />));
     const rang = (/** @type {string} */ texte) => lus.indexOf(texte);
 
-    expect(lus.slice(0, 6)).toEqual(['87 %', 'Présence', '84 %', 'Entraînements', '96 %', 'Matchs']);
+    expect(lus.slice(0, 6)).toEqual([
+      '87 %',
+      'Présence',
+      '84 %',
+      'Entraînements',
+      '96 %',
+      'Matchs',
+    ]);
     expect(rang('À surveiller · 2')).toBeGreaterThan(rang('Matchs'));
     expect(rang('Leo Fictif')).toBeLessThan(rang('Nino Fictif'));
     expect(rang('Les autres · 1')).toBeGreaterThan(rang('Nino Fictif'));
@@ -131,8 +140,12 @@ describe('ST-VUES planche 14 — l encadrement', () => {
     const ouvert = jest.fn();
     const arbre = monter(<TeamAttendancePanel onPressPlayer={ouvert} stats={EQUIPE} />);
 
-    act(() => { parTestID(arbre, 'team-attendance-player-leo')[0].props.onPress(); });
-    expect(ouvert).toHaveBeenCalledWith(expect.objectContaining({ lateCount: 3, name: 'Leo Fictif', trainingTotal: 18 }));
+    act(() => {
+      parTestID(arbre, 'team-attendance-player-leo')[0].props.onPress();
+    });
+    expect(ouvert).toHaveBeenCalledWith(
+      expect.objectContaining({ lateCount: 3, name: 'Leo Fictif', trainingTotal: 18 }),
+    );
   });
 });
 
@@ -150,10 +163,15 @@ describe('ST-VUES planche 14 — « a non » : le joueur', () => {
     const lus = textes(arbre);
 
     expect(parTestID(arbre, 'team-attendance-self')).toHaveLength(1);
-    expect(lus).toEqual(expect.arrayContaining([
-      'Ma présence', '96 %', '22 sur 23 événements · 1 retard', 'L’équipe : 87 % en moyenne.',
-      'Le détail joueur par joueur est réservé à l’encadrement.',
-    ]));
+    expect(lus).toEqual(
+      expect.arrayContaining([
+        'Ma présence',
+        '96 %',
+        '22 sur 23 événements · 1 retard',
+        'L’équipe : 87 % en moyenne.',
+        'Le détail joueur par joueur est réservé à l’encadrement.',
+      ]),
+    );
     expect(lus.some((texte) => texte.startsWith('À surveiller'))).toBe(false);
     expect(arbre.root.findAllByType(TouchableOpacity)).toHaveLength(0);
   });
@@ -161,7 +179,9 @@ describe('ST-VUES planche 14 — « a non » : le joueur', () => {
 
 describe('ST-VUES planche 14 — les etats', () => {
   test('aucun appel : une phrase, pas de 0 %', () => {
-    const arbre = monter(<TeamAttendancePanel stats={{ data: [], totals: {}, viewerScope: 'team' }} />);
+    const arbre = monter(
+      <TeamAttendancePanel stats={{ data: [], totals: {}, viewerScope: 'team' }} />,
+    );
 
     expect(parTestID(arbre, 'team-attendance-empty')).toHaveLength(1);
     expect(textes(arbre)).toEqual(expect.arrayContaining(['Pas encore de présence']));
@@ -169,10 +189,16 @@ describe('ST-VUES planche 14 — les etats', () => {
   });
 
   test('juste apres une remise a zero : « Depuis le … » en tete, et des tirets', () => {
-    const arbre = monter(<TeamAttendancePanel stats={{
-      baselineAt: '2026-10-02T08:00:00.000Z', data: [], totals: {}, viewerScope: 'team',
-    }}
-    />);
+    const arbre = monter(
+      <TeamAttendancePanel
+        stats={{
+          baselineAt: '2026-10-02T08:00:00.000Z',
+          data: [],
+          totals: {},
+          viewerScope: 'team',
+        }}
+      />,
+    );
     const lus = textes(arbre);
 
     expect(parTestID(arbre, 'team-attendance-after-reset')).toHaveLength(1);
@@ -187,8 +213,12 @@ describe('ST-VUES planche 14 — les etats', () => {
   });
 
   test('chargement : des formes ; refus du serveur : la phrase du refus (VA1)', () => {
-    expect(parTestID(monter(<TeamAttendancePanel isLoading />), 'team-attendance-loading')).toHaveLength(1);
-    expect(textes(monter(<TeamAttendancePanel refusedMessage="Réservé" stats={EQUIPE} />))).toEqual(['Réservé']);
+    expect(
+      parTestID(monter(<TeamAttendancePanel isLoading />), 'team-attendance-loading'),
+    ).toHaveLength(1);
+    expect(textes(monter(<TeamAttendancePanel refusedMessage="Réservé" stats={EQUIPE} />))).toEqual(
+      ['Réservé'],
+    );
   });
 });
 
@@ -206,12 +236,27 @@ describe('ST-VUES planche 14 — la feuille d un joueur (etat 2)', () => {
       trainingTotal: 18,
       user: { firstname: 'Leo', lastname: 'Fictif' },
     };
-    const lus = textes(monter(<TeamAttendanceSheetSummary entry={entree} periodStartAt="2026-09-01T18:00:00.000Z" />));
+    const lus = textes(
+      monter(
+        <TeamAttendanceSheetSummary entry={entree} periodStartAt="2026-09-01T18:00:00.000Z" />,
+      ),
+    );
 
-    expect(lus).toEqual(expect.arrayContaining([
-      'Leo Fictif', 'Depuis le 1 septembre', '58 %', '10/18', 'Entraînements', '5/6', 'Matchs', '3',
-      'Retards · 12 min', 'Dernières absences', 'Entraînement',
-    ]));
+    expect(lus).toEqual(
+      expect.arrayContaining([
+        'Leo Fictif',
+        'Depuis le 1 septembre',
+        '58 %',
+        '10/18',
+        'Entraînements',
+        '5/6',
+        'Matchs',
+        '3',
+        'Retards · 12 min',
+        'Dernières absences',
+        'Entraînement',
+      ]),
+    );
   });
 });
 
@@ -225,8 +270,12 @@ describe('ST-VUES planche 14 — TeamDetails branche la planche', () => {
   });
 
   test('« Remettre à zéro » quitte le bas de l onglet pour le menu ⋯, confirme en deux boutons', () => {
-    expect(SOURCE).not.toContain("title={t('teamDetails.stats.resetAction', 'Réinitialiser les statistiques')}");
-    expect(SOURCE).toContain("label: t('teamStatsPanel.resetAction', 'Remettre la présence à zéro')");
+    expect(SOURCE).not.toContain(
+      "title={t('teamDetails.stats.resetAction', 'Réinitialiser les statistiques')}",
+    );
+    expect(SOURCE).toContain(
+      "label: t('teamStatsPanel.resetAction', 'Remettre la présence à zéro')",
+    );
     expect(SOURCE).toContain("text: t('teamStatsPanel.resetConfirm', 'Remettre à zéro')");
   });
 });

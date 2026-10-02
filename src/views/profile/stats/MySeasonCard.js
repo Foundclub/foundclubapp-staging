@@ -27,7 +27,9 @@ import useTheme from '@/theme/themeContext';
  */
 export const pickSeasonSport = (stats, sportHint = '') => {
   const bySport = Array.isArray(stats?.bySport) ? stats.bySport : [];
-  const [entry] = [...bySport].sort((left, right) => Number(right?.matches || 0) - Number(left?.matches || 0));
+  const [entry] = [...bySport].sort(
+    (left, right) => Number(right?.matches || 0) - Number(left?.matches || 0),
+  );
   const raw = String(entry?.sport || sportHint || '').toLowerCase();
   const sport = raw.includes('basket') ? 'basketball' : 'football';
   if (entry) return { entry, sport };
@@ -72,24 +74,66 @@ function MySeasonCard({ onPressSeeAll, sportHint = '', stats }) {
   } = useTheme();
   const { entry, sport } = pickSeasonSport(stats, sportHint);
   const matches = Number(entry?.matches || 0);
-  const record = `${Number(entry?.wins || 0)}·${Number(entry?.draws || 0)}·${Number(entry?.losses || 0)}`;
+  const record = `${Number(entry?.wins || 0)}·${Number(entry?.draws || 0)}·${Number(
+    entry?.losses || 0,
+  )}`;
 
   const cells = sport === 'basketball'
     ? [
-      { key: 'matches', label: t('myStats.matches', 'Match', { count: matches }), value: String(matches) },
+      {
+        key: 'matches',
+        label: t('myStats.matches', 'Match', { count: matches }),
+        value: String(matches),
+      },
       { key: 'record', label: t('myStats.record', 'V · N · D'), value: record },
-      { key: 'points', label: t('myStats.points', 'Point', { count: Number(entry?.points || 0) }), value: String(Number(entry?.points || 0)) },
-      { key: 'rebounds', label: t('myStats.rebounds', 'Rebond', { count: Number(entry?.rebounds || 0) }), value: String(Number(entry?.rebounds || 0)) },
-      { key: 'assists', label: t('myStats.assists', 'Passe déc.', { count: Number(entry?.assists || 0) }), value: String(Number(entry?.assists || 0)) },
-      { key: 'rating', label: t('myStats.myRating', 'Ma note'), value: formatAverage(entry?.averageSelfRating) },
+      {
+        key: 'points',
+        label: t('myStats.points', 'Point', { count: Number(entry?.points || 0) }),
+        value: String(Number(entry?.points || 0)),
+      },
+      {
+        key: 'rebounds',
+        label: t('myStats.rebounds', 'Rebond', { count: Number(entry?.rebounds || 0) }),
+        value: String(Number(entry?.rebounds || 0)),
+      },
+      {
+        key: 'assists',
+        label: t('myStats.assists', 'Passe déc.', { count: Number(entry?.assists || 0) }),
+        value: String(Number(entry?.assists || 0)),
+      },
+      {
+        key: 'rating',
+        label: t('myStats.myRating', 'Ma note'),
+        value: formatAverage(entry?.averageSelfRating),
+      },
     ]
     : [
-      { key: 'matches', label: t('myStats.matches', 'Match', { count: matches }), value: String(matches) },
+      {
+        key: 'matches',
+        label: t('myStats.matches', 'Match', { count: matches }),
+        value: String(matches),
+      },
       { key: 'record', label: t('myStats.record', 'V · N · D'), value: record },
-      { key: 'minutes', label: t('myStats.minutes', 'Minutes'), value: String(Number(entry?.minutesPlayed || 0)) },
-      { key: 'goals', label: t('myStats.goals', 'But', { count: Number(entry?.goals || 0) }), value: String(Number(entry?.goals || 0)) },
-      { key: 'assists', label: t('myStats.assists', 'Passe déc.', { count: Number(entry?.assists || 0) }), value: String(Number(entry?.assists || 0)) },
-      { key: 'rating', label: t('myStats.myRating', 'Ma note'), value: formatAverage(entry?.averageSelfRating) },
+      {
+        key: 'minutes',
+        label: t('myStats.minutes', 'Minutes'),
+        value: String(Number(entry?.minutesPlayed || 0)),
+      },
+      {
+        key: 'goals',
+        label: t('myStats.goals', 'But', { count: Number(entry?.goals || 0) }),
+        value: String(Number(entry?.goals || 0)),
+      },
+      {
+        key: 'assists',
+        label: t('myStats.assists', 'Passe déc.', { count: Number(entry?.assists || 0) }),
+        value: String(Number(entry?.assists || 0)),
+      },
+      {
+        key: 'rating',
+        label: t('myStats.myRating', 'Ma note'),
+        value: formatAverage(entry?.averageSelfRating),
+      },
     ];
 
   return (
@@ -126,14 +170,19 @@ function MySeasonCard({ onPressSeeAll, sportHint = '', stats }) {
         {cells.map((cell) => (
           <View key={cell.key} style={{ alignItems: 'center', width: '33.33%' }}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>{cell.value}</Text>
-            <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>{cell.label}</Text>
+            <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>
+              {cell.label}
+            </Text>
           </View>
         ))}
       </View>
       <Text style={[Fonts.p4, Fonts.neutral300]}>
         {matches > 0
           ? t('myStats.countedHint', 'Comptés : les matchs où tu as répondu au questionnaire.')
-          : t('myStats.emptyHint', 'Ta saison se remplit à chaque retour de match que tu envoies.')}
+          : t(
+            'myStats.emptyHint',
+            'Ta saison se remplit à chaque retour de match que tu envoies.',
+          )}
       </Text>
     </View>
   );

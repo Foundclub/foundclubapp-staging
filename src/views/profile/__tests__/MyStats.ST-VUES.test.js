@@ -14,9 +14,10 @@ import MyStatsPage from '../stats/MyStatsPage';
 // page « Mes stats » montre ce que le serveur calculait sans le montrer : mes derniers
 // matchs, mes chiffres, mon mot. Un sport sans stats de match le dit franchement.
 
-jest.mock('react-i18next', () => (
-  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
-));
+jest.mock(
+  'react-i18next',
+  () => jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next,
+);
 
 jest.mock('@/theme/themeContext', () => {
   const colors = jest.requireActual('@/theme/colors').default();
@@ -78,33 +79,42 @@ const texteDe = (/** @type {any} */ noeud) => {
   parcourir(noeud?.props?.children);
   return morceaux.join('');
 };
-const textes = (/** @type {any} */ arbre) => arbre.root
-  .findAll((/** @type {any} */ n) => n.type === Text, { deep: false })
-  .map(texteDe);
-const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
-  .findAll((/** @type {any} */ n) => n.props?.testID === id, { deep: false });
+const textes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === Text, { deep: false }).map(texteDe);
+const parTestID = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === id, { deep: false });
 
 // Hugo, U15 : 1 match, 2 - 1, 90 min, 1 but, sa note 8 (planche 16, etats 1 et 4).
 const HUGO = {
-  bySport: [{
-    assists: 0, averageSelfRating: 8, draws: 0, goals: 1, losses: 0, matches: 1, minutesPlayed: 90, sport: 'football', wins: 1,
-  }],
+  bySport: [
+    {
+      assists: 0,
+      averageSelfRating: 8,
+      draws: 0,
+      goals: 1,
+      losses: 0,
+      matches: 1,
+      minutesPlayed: 90,
+      sport: 'football',
+      wins: 1,
+    },
+  ],
   overall: { matches: 1 },
-  recentMatches: [{
-    assists: 0,
-    documentId: 'm1',
-    goals: 1,
-    matchDate: '2026-09-05T13:00:00.000Z',
-    matchLabel: 'AS Montrivage — Test-COMPO',
-    minutesPlayed: 90,
-    result: 'win',
-    scoreAgainst: 1,
-    scoreFor: 2,
-    selfComment: 'Bon match',
-    selfRating: 8,
-    sport: 'football',
-    teamName: 'U15',
-  }],
+  recentMatches: [
+    {
+      assists: 0,
+      documentId: 'm1',
+      goals: 1,
+      matchDate: '2026-09-05T13:00:00.000Z',
+      matchLabel: 'AS Montrivage — Test-COMPO',
+      minutesPlayed: 90,
+      result: 'win',
+      scoreAgainst: 1,
+      scoreFor: 2,
+      selfComment: 'Bon match',
+      selfRating: 8,
+      sport: 'football',
+      teamName: 'U15',
+    },
+  ],
 };
 
 describe('ST-VUES planche 16 — « Ma saison » sur mon profil', () => {
@@ -113,36 +123,78 @@ describe('ST-VUES planche 16 — « Ma saison » sur mon profil', () => {
     const arbre = monter(<MySeasonCard onPressSeeAll={voir} stats={HUGO} />);
 
     expect(textes(arbre)).toEqual([
-      'Ma saison · football', 'Tout voir',
-      '1', 'Match', '1·0·0', 'V · N · D', '90', 'Minutes', '1', 'But', '0', 'Passe déc.', '8', 'Ma note',
+      'Ma saison · football',
+      'Tout voir',
+      '1',
+      'Match',
+      '1·0·0',
+      'V · N · D',
+      '90',
+      'Minutes',
+      '1',
+      'But',
+      '0',
+      'Passe déc.',
+      '8',
+      'Ma note',
       'Comptés : les matchs où tu as répondu au questionnaire.',
     ]);
-    act(() => { parTestID(arbre, 'my-season-see-all')[0].props.onPress(); });
+    act(() => {
+      parTestID(arbre, 'my-season-see-all')[0].props.onPress();
+    });
     expect(voir).toHaveBeenCalled();
   });
 
   test('les NULS comptent : « 1·1·0 »', () => {
-    const lus = textes(monter(<MySeasonCard stats={{ bySport: [{ ...HUGO.bySport[0], draws: 1, matches: 2 }] }} />));
+    const lus = textes(
+      monter(<MySeasonCard stats={{ bySport: [{ ...HUGO.bySport[0], draws: 1, matches: 2 }] }} />),
+    );
 
     expect(lus).toEqual(expect.arrayContaining(['1·1·0', 'Matchs']));
   });
 
   test('aucun match : la rangee reste, dit comment elle se remplit, sans « Tout voir »', () => {
-    const arbre = monter(<MySeasonCard onPressSeeAll={jest.fn()} sportHint="Football" stats={{ bySport: [] }} />);
+    const arbre = monter(
+      <MySeasonCard onPressSeeAll={jest.fn()} sportHint="Football" stats={{ bySport: [] }} />,
+    );
 
-    expect(textes(arbre)).toEqual(expect.arrayContaining(['0', '0·0·0', '—', 'Ta saison se remplit à chaque retour de match que tu envoies.']));
+    expect(textes(arbre)).toEqual(
+      expect.arrayContaining([
+        '0',
+        '0·0·0',
+        '—',
+        'Ta saison se remplit à chaque retour de match que tu envoies.',
+      ]),
+    );
     expect(parTestID(arbre, 'my-season-see-all')).toHaveLength(0);
   });
 
   test('un basketteur : points et rebonds, jamais « Buts »', () => {
-    const lus = textes(monter(<MySeasonCard stats={{
-      bySport: [{
-        assists: 21, averageSelfRating: 7.1, draws: 0, losses: 4, matches: 12, points: 148, rebounds: 37, sport: 'basketball', wins: 8,
-      }],
-    }}
-    />));
+    const lus = textes(
+      monter(
+        <MySeasonCard
+          stats={{
+            bySport: [
+              {
+                assists: 21,
+                averageSelfRating: 7.1,
+                draws: 0,
+                losses: 4,
+                matches: 12,
+                points: 148,
+                rebounds: 37,
+                sport: 'basketball',
+                wins: 8,
+              },
+            ],
+          }}
+        />,
+      ),
+    );
 
-    expect(lus).toEqual(expect.arrayContaining(['Ma saison · basket', '148', 'Points', '37', 'Rebonds', '7,1']));
+    expect(lus).toEqual(
+      expect.arrayContaining(['Ma saison · basket', '148', 'Points', '37', 'Rebonds', '7,1']),
+    );
     expect(lus.some((texte) => texte.startsWith('But'))).toBe(false);
   });
 });
@@ -151,12 +203,22 @@ describe('ST-VUES planche 16 — la page « Mes stats »', () => {
   test('mes chiffres, puis mes derniers matchs, avec mon mot', () => {
     const lus = textes(monter(<MyStatsPage stats={HUGO} />));
 
-    expect(lus).toEqual(expect.arrayContaining([
-      '1', 'Match', '1·0·0', 'V · N · D', '8', 'Ma note moy.', 'Mes derniers matchs',
-      'AS Montrivage — Test-COMPO', 'V', 'U15 · sam. 5 sept. · 2 - 1',
-      '90 minutes · 1 but · 0 passe · 8 ma note',
-      'Mon mot : « Bon match » — lu par toi et ton entraîneur.',
-    ]));
+    expect(lus).toEqual(
+      expect.arrayContaining([
+        '1',
+        'Match',
+        '1·0·0',
+        'V · N · D',
+        '8',
+        'Ma note moy.',
+        'Mes derniers matchs',
+        'AS Montrivage — Test-COMPO',
+        'V',
+        'U15 · sam. 5 sept. · 2 - 1',
+        '90 minutes · 1 but · 0 passe · 8 ma note',
+        'Mon mot : « Bon match » — lu par toi et ton entraîneur.',
+      ]),
+    );
   });
 
   test('un sport sans stats de match le dit, et ouvre la fiche de l equipe', () => {
@@ -164,9 +226,15 @@ describe('ST-VUES planche 16 — la page « Mes stats »', () => {
     const u13 = { activities: [{ name: 'Arts martiaux' }], documentId: 'u13', name: 'U13' };
     const arbre = monter(<MyStatsPage onOpenTeam={ouvrir} stats={HUGO} teams={[u13]} />);
 
-    act(() => { parTestID(arbre, 'my-stats-filter-arts martiaux')[0].props.onPress(); });
-    expect(textes(arbre)).toEqual(expect.arrayContaining(['Pas de stats de match en arts martiaux', 'Ouvrir les U13']));
-    act(() => { parTestID(arbre, 'bouton')[0].props.onPress(); });
+    act(() => {
+      parTestID(arbre, 'my-stats-filter-arts martiaux')[0].props.onPress();
+    });
+    expect(textes(arbre)).toEqual(
+      expect.arrayContaining(['Pas de stats de match en arts martiaux', 'Ouvrir les U13']),
+    );
+    act(() => {
+      parTestID(arbre, 'bouton')[0].props.onPress();
+    });
     expect(ouvrir).toHaveBeenCalledWith(u13);
   });
 });
@@ -183,7 +251,9 @@ describe('ST-VUES planche 16 — les ecrans branchent la planche', () => {
   });
 
   test('la page « Mes stats » vit sur la route du profil, pour le proprietaire', () => {
-    expect(FICHE).toContain("const isMyStatsView = isOwnerView && route?.params?.view === 'myStats';");
+    expect(FICHE).toContain(
+      "const isMyStatsView = isOwnerView && route?.params?.view === 'myStats';",
+    );
     expect(FICHE).toContain('<MyStatsPage');
   });
 });

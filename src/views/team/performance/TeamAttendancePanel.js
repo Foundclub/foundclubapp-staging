@@ -92,7 +92,12 @@ const formatDay = (value, month) => {
  * @returns {import('react').ReactElement} - L onglet.
  */
 function TeamAttendancePanel({
-  isLoading = false, onPressPlayer, refusedMessage = '', sportWithoutMatchStats = false, stats, variant = 'stacked',
+  isLoading = false,
+  onPressPlayer,
+  refusedMessage = '',
+  sportWithoutMatchStats = false,
+  stats,
+  variant = 'stacked',
 }) {
   const { t } = useTranslation();
   const {
@@ -102,7 +107,10 @@ function TeamAttendancePanel({
   const rows = (Array.isArray(stats?.data) ? stats.data : []).map(readAttendanceRow);
   const isSelfView = stats?.viewerScope === 'self';
   const average = stats?.teamAverage || {};
-  const pointedTotal = rows.reduce((total, entry) => total + entry.pointed, 0);
+  const pointedTotal = rows.reduce(
+    (/** @type {number} */ total, /** @type {any} */ entry) => total + entry.pointed,
+    0,
+  );
   const teamPointed = isSelfView
     ? Number(stats?.totals?.attendanceCount || 0) + Number(stats?.totals?.absenceCount || 0)
     : pointedTotal;
@@ -130,7 +138,11 @@ function TeamAttendancePanel({
       />
     </View>
   );
-  const tile = (/** @type {string} */ value, /** @type {string} */ label, /** @type {string} */ key) => (
+  const tile = (
+    /** @type {string} */ value,
+    /** @type {string} */ label,
+    /** @type {string} */ key,
+  ) => (
     <View
       key={key}
       style={[
@@ -142,13 +154,16 @@ function TeamAttendancePanel({
       ]}
     >
       <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{value}</Text>
-      <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>{label}</Text>
+      <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>
+        {label}
+      </Text>
     </View>
   );
   const sportSentence = sportWithoutMatchStats ? (
     <Text style={[Fonts.p3, Fonts.neutral300]}>
       {t(
         'teamStatsPanel.noMatchStatsSport',
+        // eslint-disable-next-line max-len
         'Pour ce sport, l’app suit la présence ; les scores et stats de match couvrent le football et le basket.',
       )}
     </Text>
@@ -156,18 +171,31 @@ function TeamAttendancePanel({
 
   if (isLoading) {
     return (
-      <View accessibilityState={{ busy: true }} style={[Spaces.gap[12]]} testID="team-attendance-loading">
+      <View
+        accessibilityState={{ busy: true }}
+        style={[Spaces.gap[12]]}
+        testID="team-attendance-loading"
+      >
         <View style={[Alignments.row, Spaces.gap[8]]}>
           {[0, 1, 2].map((index) => (
             <View
               key={index}
               style={{
-                backgroundColor: withAlpha(Colors.neutral00, 0.06), borderRadius: 16, flex: 1, height: 76,
+                backgroundColor: withAlpha(Colors.neutral00, 0.06),
+                borderRadius: 16,
+                flex: 1,
+                height: 76,
               }}
             />
           ))}
         </View>
-        <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.06), borderRadius: 16, height: 160 }} />
+        <View
+          style={{
+            backgroundColor: withAlpha(Colors.neutral00, 0.06),
+            borderRadius: 16,
+            height: 160,
+          }}
+        />
       </View>
     );
   }
@@ -176,14 +204,18 @@ function TeamAttendancePanel({
     return <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>{refusedMessage}</Text>;
   }
 
-  // Aucun appel. Apres une remise a zero, la periode le dit ; sinon une phrase dit d ou viendra la presence.
+  // Aucun appel. Apres une remise a zero, la periode le dit ; sinon une phrase dit d ou viendra la
+  // presence.
   if (teamPointed === 0) {
     if (resetDay) {
       return (
         <View style={[Spaces.gap[16]]} testID="team-attendance-after-reset">
           {sportSentence}
           <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-            {t('teamStatsPanel.since', 'Depuis le {{date}}', { date: resetDay, ...SANS_ECHAPPEMENT })}
+            {t('teamStatsPanel.since', 'Depuis le {{date}}', {
+              date: resetDay,
+              ...SANS_ECHAPPEMENT,
+            })}
           </Text>
           <View style={[Alignments.row, Spaces.gap[8]]}>
             {tile('—', t('teamStatsPanel.presence', 'Présence'), 'presence')}
@@ -193,6 +225,7 @@ function TeamAttendancePanel({
           <Text style={[Fonts.p2, Fonts.neutral300]}>
             {t(
               'teamStatsPanel.afterResetBody',
+              // eslint-disable-next-line max-len
               'Aucun appel depuis la remise à zéro. La présence se recalcule au prochain entraînement.',
             )}
           </Text>
@@ -202,13 +235,19 @@ function TeamAttendancePanel({
     return (
       <View style={[Spaces.gap[16]]}>
         {sportSentence}
-        <View style={[Alignments.alignCenter, Spaces.gap[8], Spaces.paddingVertical[24]]} testID="team-attendance-empty">
+        <View
+          style={[Alignments.alignCenter, Spaces.gap[8], Spaces.paddingVertical[24]]}
+          testID="team-attendance-empty"
+        >
           <StatsIcon color={Colors.primary200} height={40} name="users" width={40} />
           <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
             {t('teamStatsPanel.attendanceEmptyTitle', 'Pas encore de présence')}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter]}>
-            {t('teamStatsPanel.attendanceEmptyBody', 'Elle se calcule à chaque appel, à l’entraînement comme au match.')}
+            {t(
+              'teamStatsPanel.attendanceEmptyBody',
+              'Elle se calcule à chaque appel, à l’entraînement comme au match.',
+            )}
           </Text>
         </View>
       </View>
@@ -223,15 +262,26 @@ function TeamAttendancePanel({
         {sportSentence}
         <View
           accessibilityLabel={t('teamStatsPanel.myPresence', 'Ma présence')}
-          style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16], Spaces.gap[8]]}
+          style={[
+            ApplicationStyle.backgroundColor.primary700,
+            ApplicationStyle.borderRadius24,
+            Spaces.padding[16],
+            Spaces.gap[8],
+          ]}
         >
-          <Text style={[Fonts.p4Bold, Fonts.primary200]}>{t('teamStatsPanel.myPresence', 'Ma présence')}</Text>
+          <Text style={[Fonts.p4Bold, Fonts.primary200]}>
+            {t('teamStatsPanel.myPresence', 'Ma présence')}
+          </Text>
           <Text
-            style={[Fonts.h1Bold, {
-              color: mine?.ratio === null || mine?.ratio === undefined
-                ? Colors.neutral00
-                : presenceToneOf(Colors, mine.ratio),
-            }]}
+            style={[
+              Fonts.h1Bold,
+              {
+                color:
+                  mine?.ratio === null || mine?.ratio === undefined
+                    ? Colors.neutral00
+                    : presenceToneOf(Colors, mine.ratio),
+              },
+            ]}
           >
             {percent(mine?.ratio)}
           </Text>
@@ -240,11 +290,21 @@ function TeamAttendancePanel({
               {`${t('teamStatsPanel.eventsOutOf', '{{attended}} sur {{count}} événement', {
                 attended: mine.attended,
                 count: mine.pointed,
-              })} · ${t('teamStatsPanel.lateCount', '{{count}} retard', { count: mine.lateCount })}`}
+              })} · ${t('teamStatsPanel.lateCount', '{{count}} retard', {
+                count: mine.lateCount,
+              })}`}
             </Text>
           ) : null}
-          {mine?.ratio !== null && mine?.ratio !== undefined ? gauge(mine.ratio, presenceToneOf(Colors, mine.ratio)) : null}
-          <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.1), height: 1, marginVertical: 4 }} />
+          {mine?.ratio !== null && mine?.ratio !== undefined
+            ? gauge(mine.ratio, presenceToneOf(Colors, mine.ratio))
+            : null}
+          <View
+            style={{
+              backgroundColor: withAlpha(Colors.neutral00, 0.1),
+              height: 1,
+              marginVertical: 4,
+            }}
+          />
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('teamStatsPanel.teamAverageLead', 'L’équipe :')}
             {' '}
@@ -255,7 +315,10 @@ function TeamAttendancePanel({
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <StatsIcon color={Colors.neutral300} height={16} name="shield" width={16} />
           <Text style={[Fonts.p3, Fonts.neutral300, { flex: 1 }]}>
-            {t('teamStatsPanel.staffOnly', 'Le détail joueur par joueur est réservé à l’encadrement.')}
+            {t(
+              'teamStatsPanel.staffOnly',
+              'Le détail joueur par joueur est réservé à l’encadrement.',
+            )}
           </Text>
         </View>
       </View>
@@ -264,22 +327,28 @@ function TeamAttendancePanel({
 
   // ------------------------------------------------------------ L ENCADREMENT
   const sorted = rows
-    .filter((entry) => entry.ratio !== null)
-    .sort((left, right) => left.ratio - right.ratio || left.name.localeCompare(right.name, 'fr'));
-  const toWatch = sorted.filter((entry) => entry.ratio < WATCH_BELOW);
-  const others = sorted.filter((entry) => entry.ratio >= WATCH_BELOW);
+    .filter((/** @type {any} */ entry) => entry.ratio !== null)
+    .sort((/** @type {any} */ left, /** @type {any} */ right) => (
+      left.ratio - right.ratio || left.name.localeCompare(right.name, 'fr')
+    ));
+  const toWatch = sorted.filter((/** @type {any} */ entry) => entry.ratio < WATCH_BELOW);
+  const others = sorted.filter((/** @type {any} */ entry) => entry.ratio >= WATCH_BELOW);
   const playerRow = (/** @type {any} */ entry, /** @type {number} */ index) => {
     const tone = presenceToneOf(Colors, entry.ratio);
     const name = entry.name || t('teamStatsPanel.playerFallback', 'Joueur');
     const lateLabel = t('teamStatsPanel.lateCount', '{{count}} retard', { count: entry.lateCount });
     return (
       <TouchableOpacity
-        accessibilityLabel={t('teamStatsPanel.playerRowLabel', '{{name}}, {{percent}} de présence, {{late}}', {
-          late: lateLabel,
-          name,
-          percent: percent(entry.ratio),
-          ...SANS_ECHAPPEMENT,
-        })}
+        accessibilityLabel={t(
+          'teamStatsPanel.playerRowLabel',
+          '{{name}}, {{percent}} de présence, {{late}}',
+          {
+            late: lateLabel,
+            name,
+            percent: percent(entry.ratio),
+            ...SANS_ECHAPPEMENT,
+          },
+        )}
         accessibilityRole="button"
         disabled={!onPressPlayer}
         key={entry.user?.documentId || `presence-${index}`}
@@ -298,9 +367,15 @@ function TeamAttendancePanel({
         ]}
         testID={`team-attendance-player-${entry.user?.documentId || index}`}
       >
-        <MemberAvatar firstname={entry.user?.firstname || name} lastname={entry.user?.lastname} size={36} />
+        <MemberAvatar
+          firstname={entry.user?.firstname || name}
+          lastname={entry.user?.lastname}
+          size={36}
+        />
         <View style={[Spaces.gap[4], { flex: 1, minWidth: 0 }]}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{name}</Text>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {name}
+          </Text>
           {gauge(entry.ratio, tone)}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
@@ -321,14 +396,26 @@ function TeamAttendancePanel({
       { flex: 1, key: 'matches', label: t('teamStatsPanel.matches', 'Matchs') },
       { flex: 1, key: 'late', label: t('teamStatsPanel.columnLate', 'Retards') },
     ];
-    const fraction = (/** @type {number} */ attended, /** @type {number} */ total) => (total > 0 ? `${attended}/${total}` : '—');
+    const fraction = (/** @type {number} */ attended, /** @type {number} */ total) => (
+      total > 0 ? `${attended}/${total}` : '—'
+    );
     return (
       <View style={[Spaces.gap[16]]} testID="team-attendance-wide">
         {sportSentence}
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{t('teamStatsPanel.attendanceTitle', 'Vie d’équipe')}</Text>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {t('teamStatsPanel.attendanceTitle', 'Vie d’équipe')}
+        </Text>
         <View style={[Alignments.row, Spaces.gap[8]]}>
-          {tile(percent(average?.presenceRate), t('teamStatsPanel.presence', 'Présence'), 'presence')}
-          {tile(percent(average?.trainingRate), t('teamStatsPanel.trainings', 'Entraînements'), 'trainings')}
+          {tile(
+            percent(average?.presenceRate),
+            t('teamStatsPanel.presence', 'Présence'),
+            'presence',
+          )}
+          {tile(
+            percent(average?.trainingRate),
+            t('teamStatsPanel.trainings', 'Entraînements'),
+            'trainings',
+          )}
           {tile(percent(average?.matchRate), t('teamStatsPanel.matches', 'Matchs'), 'matches')}
         </View>
         <View testID="team-attendance-table">
@@ -336,7 +423,11 @@ function TeamAttendancePanel({
             {columns.map((column) => (
               <Text
                 key={column.key}
-                style={[Fonts.p4Bold, Fonts.neutral300, { flex: column.flex, textAlign: column.key === 'name' ? 'left' : 'right' }]}
+                style={[
+                  Fonts.p4Bold,
+                  Fonts.neutral300,
+                  { flex: column.flex, textAlign: column.key === 'name' ? 'left' : 'right' },
+                ]}
               >
                 {column.label}
               </Text>
@@ -352,13 +443,22 @@ function TeamAttendancePanel({
                 Alignments.row,
                 Alignments.alignCenter,
                 Spaces.paddingVertical[8],
-                { borderTopColor: withAlpha(Colors.neutral00, 0.08), borderTopWidth: 1, minHeight: 44 },
+                {
+                  borderTopColor: withAlpha(Colors.neutral00, 0.08),
+                  borderTopWidth: 1,
+                  minHeight: 44,
+                },
               ]}
             >
               <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 2 }]}>
                 {entry.name || t('teamStatsPanel.playerFallback', 'Joueur')}
               </Text>
-              <Text style={[Fonts.p2Bold, { color: presenceToneOf(Colors, entry.ratio), flex: 1, textAlign: 'right' }]}>
+              <Text
+                style={[
+                  Fonts.p2Bold,
+                  { color: presenceToneOf(Colors, entry.ratio), flex: 1, textAlign: 'right' },
+                ]}
+              >
                 {percent(entry.ratio)}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1, textAlign: 'right' }]}>
@@ -375,10 +475,14 @@ function TeamAttendancePanel({
         </View>
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {sinceLong
-            ? t('teamStatsPanel.sortedSince', 'Triée du plus bas au plus haut · depuis le {{date}}.', {
-              date: sinceLong,
-              ...SANS_ECHAPPEMENT,
-            })
+            ? t(
+              'teamStatsPanel.sortedSince',
+              'Triée du plus bas au plus haut · depuis le {{date}}.',
+              {
+                date: sinceLong,
+                ...SANS_ECHAPPEMENT,
+              },
+            )
             : t('teamStatsPanel.sorted', 'Triée du plus bas au plus haut.')}
         </Text>
       </View>
@@ -389,8 +493,16 @@ function TeamAttendancePanel({
     <View style={[Spaces.gap[16]]} testID="team-attendance">
       {sportSentence}
       <View style={[Alignments.row, Spaces.gap[8]]}>
-        {tile(percent(average?.presenceRate), t('teamStatsPanel.presence', 'Présence'), 'presence')}
-        {tile(percent(average?.trainingRate), t('teamStatsPanel.trainings', 'Entraînements'), 'trainings')}
+        {tile(
+          percent(average?.presenceRate),
+          t('teamStatsPanel.presence', 'Présence'),
+          'presence',
+        )}
+        {tile(
+          percent(average?.trainingRate),
+          t('teamStatsPanel.trainings', 'Entraînements'),
+          'trainings',
+        )}
         {tile(percent(average?.matchRate), t('teamStatsPanel.matches', 'Matchs'), 'matches')}
       </View>
 
@@ -414,7 +526,10 @@ function TeamAttendancePanel({
 
       {sinceLong ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('teamStatsPanel.sinceSentence', 'Depuis le {{date}}.', { date: sinceLong, ...SANS_ECHAPPEMENT })}
+          {t('teamStatsPanel.sinceSentence', 'Depuis le {{date}}.', {
+            date: sinceLong,
+            ...SANS_ECHAPPEMENT,
+          })}
         </Text>
       ) : null}
     </View>
@@ -451,8 +566,11 @@ export function TeamAttendanceSheetSummary({ avatarUrl = null, entry, periodStar
   const absenceDay = (/** @type {unknown} */ value) => {
     const date = new Date(String(value || ''));
     if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(localeDesFormats(), { day: 'numeric', month: 'short', weekday: 'short' })
-      .format(date);
+    return new Intl.DateTimeFormat(localeDesFormats(), {
+      day: 'numeric',
+      month: 'short',
+      weekday: 'short',
+    }).format(date);
   };
   const tiles = [
     {
@@ -485,14 +603,24 @@ export function TeamAttendanceSheetSummary({ avatarUrl = null, entry, periodStar
           size={40}
         />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[Fonts.h4Bold, Fonts.neutral00]}>{name}</Text>
+          <Text numberOfLines={1} style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {name}
+          </Text>
           {since ? (
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('teamStatsPanel.since', 'Depuis le {{date}}', { date: since, ...SANS_ECHAPPEMENT })}
+              {t('teamStatsPanel.since', 'Depuis le {{date}}', {
+                date: since,
+                ...SANS_ECHAPPEMENT,
+              })}
             </Text>
           ) : null}
         </View>
-        <Text style={[Fonts.h3Bold, { color: hasRatio ? presenceToneOf(Colors, entry.ratio) : Colors.neutral00 }]}>
+        <Text
+          style={[
+            Fonts.h3Bold,
+            { color: hasRatio ? presenceToneOf(Colors, entry.ratio) : Colors.neutral00 },
+          ]}
+        >
           {hasRatio ? `${Math.round(entry.ratio * 100)} %` : '—'}
         </Text>
       </View>
@@ -510,7 +638,9 @@ export function TeamAttendanceSheetSummary({ avatarUrl = null, entry, periodStar
             ]}
           >
             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{tile.value}</Text>
-            <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>{tile.label}</Text>
+            <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary100]}>
+              {tile.label}
+            </Text>
           </View>
         ))}
       </View>

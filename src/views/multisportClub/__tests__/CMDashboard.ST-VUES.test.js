@@ -42,9 +42,24 @@ describe('ST-VUES planche 18 — les trois chiffres se touchent tous', () => {
       arbre = renderer.create(
         <MultisportStatsRow
           items={[
-            { key: 'sections', label: 'Sections', onPress: appui, value: 2 },
-            { key: 'teams', label: 'Équipes', onPress: appui, value: 2 },
-            { key: 'members', label: 'Membres', onPress: appui, value: 9 },
+            {
+              key: 'sections',
+              label: 'Sections',
+              onPress: appui,
+              value: 2,
+            },
+            {
+              key: 'teams',
+              label: 'Équipes',
+              onPress: appui,
+              value: 2,
+            },
+            {
+              key: 'members',
+              label: 'Membres',
+              onPress: appui,
+              value: 9,
+            },
           ]}
         />,
       );
@@ -55,7 +70,10 @@ describe('ST-VUES planche 18 — les trois chiffres se touchent tous', () => {
   });
 
   test('« Sections » a enfin sa destination : la liste « Mes sections », sur la page', () => {
-    const sections = SOURCE.slice(SOURCE.indexOf("key: 'sections'"), SOURCE.indexOf("key: 'teams'"));
+    const sections = SOURCE.slice(
+      SOURCE.indexOf("key: 'sections'"),
+      SOURCE.indexOf("key: 'teams'"),
+    );
 
     expect(sections).toContain('onPress: () => scrollRef.current?.scrollTo(');
     expect(SOURCE).toContain('sectionsOffsetRef.current = event?.nativeEvent?.layout?.y || 0;');
@@ -63,6 +81,8 @@ describe('ST-VUES planche 18 — les trois chiffres se touchent tous', () => {
 
   test('« Les stats de chaque équipe » mene a la liste des equipes du club', () => {
     expect(SOURCE).toContain("{t('clubStatsView.eachTeamStats', 'Les stats de chaque équipe')}");
-    expect(SOURCE).toContain('onPress={() => navigation.navigate(RouteNames.CMTeams, { cmId: resolvedCmId })}');
+    expect(SOURCE).toContain(
+      'onPress={() => navigation.navigate(RouteNames.CMTeams, { cmId: resolvedCmId })}',
+    );
   });
 });

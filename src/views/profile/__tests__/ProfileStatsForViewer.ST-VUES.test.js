@@ -14,9 +14,10 @@ import ProfileStatsForViewer, { resolveProfileStatsMode } from '../stats/Profile
 // visibles que par la personne elle-meme » DISPARAIT. Mon apercu ne montre plus mes
 // chiffres (defaut 8) et dit qui les voit.
 
-jest.mock('react-i18next', () => (
-  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
-));
+jest.mock(
+  'react-i18next',
+  () => jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next,
+);
 
 jest.mock('@/theme/themeContext', () => {
   const colors = jest.requireActual('@/theme/colors').default();
@@ -48,7 +49,8 @@ afterEach(() => {
     montes.splice(0).forEach((arbre) => arbre.unmount());
   });
 });
-const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+const textes = (/** @type {any} */ arbre) => arbre.root
+  .findAllByType(Text)
   .map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
 
 // Hugo, 14 ans, U15 : 1 match, 1 but, 90 minutes — vu par Karim, son entraineur.
@@ -62,7 +64,14 @@ describe('ST-VUES planche 17 — qui voit quoi', () => {
     const arbre = monter(<ProfileStatsForViewer stats={VU_PAR_SON_ENTRAINEUR} />);
 
     expect(textes(arbre)).toEqual([
-      'Dans ton équipe · U15', 'Entraîneur', '1', 'Match', '1', 'But', '90', 'Minutes',
+      'Dans ton équipe · U15',
+      'Entraîneur',
+      '1',
+      'Match',
+      '1',
+      'But',
+      '90',
+      'Minutes',
       'Visible par toi, son entraîneur, pour l’équipe U15 seulement.',
     ]);
   });
@@ -80,12 +89,18 @@ describe('ST-VUES planche 17 — qui voit quoi', () => {
   test('mon apercu : PAS mes chiffres, une ligne dit qui les voit', () => {
     const arbre = monter(<ProfileStatsForViewer isSelfPreview stats={{ overall: { matches: 3 } }} />);
 
-    expect(textes(arbre)).toEqual(['Tes stats de match ne sont visibles que par toi et ton entraîneur.']);
+    expect(textes(arbre)).toEqual([
+      'Tes stats de match ne sont visibles que par toi et ton entraîneur.',
+    ]);
   });
 
   test('chargement : un squelette seulement pour celui qui pourrait etre son entraineur', () => {
-    expect(monter(<ProfileStatsForViewer isLoading mayBeCoach />).root
-      .findAll((/** @type {any} */ n) => n.props?.testID === 'profile-stats-loading', { deep: false })).toHaveLength(1);
+    expect(
+      monter(<ProfileStatsForViewer isLoading mayBeCoach />).root.findAll(
+        (/** @type {any} */ n) => n.props?.testID === 'profile-stats-loading',
+        { deep: false },
+      ),
+    ).toHaveLength(1);
     expect(monter(<ProfileStatsForViewer isLoading />).toJSON()).toBeNull();
   });
 });

@@ -47,7 +47,10 @@ export const resolveProfileStatsMode = ({ isSelfPreview = false, stats }) => {
  * @returns {import('react').ReactElement | null} - Le bloc, ou rien.
  */
 function ProfileStatsForViewer({
-  isLoading = false, isSelfPreview = false, mayBeCoach = false, stats,
+  isLoading = false,
+  isSelfPreview = false,
+  mayBeCoach = false,
+  stats,
 }) {
   const { t } = useTranslation();
   const {
@@ -62,7 +65,10 @@ function ProfileStatsForViewer({
 
   if (isSelfPreview) {
     return lockLine(
-      t('profileStats.previewLine', 'Tes stats de match ne sont visibles que par toi et ton entraîneur.'),
+      t(
+        'profileStats.previewLine',
+        'Tes stats de match ne sont visibles que par toi et ton entraîneur.',
+      ),
       'profile-stats-preview',
     );
   }
@@ -70,7 +76,11 @@ function ProfileStatsForViewer({
   if (isLoading) {
     return mayBeCoach ? (
       <View
-        style={{ backgroundColor: withAlpha(Colors.neutral00, 0.06), borderRadius: 24, height: 180 }}
+        style={{
+          backgroundColor: withAlpha(Colors.neutral00, 0.06),
+          borderRadius: 24,
+          height: 180,
+        }}
         testID="profile-stats-loading"
       />
     ) : null;
@@ -80,29 +90,50 @@ function ProfileStatsForViewer({
   if (mode === 'hidden') return null;
 
   const overall = stats?.overall || {};
-  const isBasketball = Number(overall?.basketball?.points || 0) > 0 && !Number(overall?.football?.goals || 0);
-  const scoring = isBasketball ? Number(overall?.basketball?.points || 0) : Number(overall?.football?.goals || 0);
+  const isBasketball = Number(overall?.basketball?.points || 0) > 0
+    && !Number(overall?.football?.goals || 0);
+  const scoring = isBasketball
+    ? Number(overall?.basketball?.points || 0)
+    : Number(overall?.football?.goals || 0);
   const teamNames = (Array.isArray(stats?.scope?.teams) ? stats.scope.teams : [])
-    .map((team) => team?.name)
+    .map((/** @type {any} */ team) => team?.name)
     .filter(Boolean)
     .join(', ');
   const tiles = [
-    { key: 'matches', label: t('myStats.matches', 'Match', { count: Number(overall.matches || 0) }), value: Number(overall.matches || 0) },
+    {
+      key: 'matches',
+      label: t('myStats.matches', 'Match', { count: Number(overall.matches || 0) }),
+      value: Number(overall.matches || 0),
+    },
     isBasketball
       ? { key: 'points', label: t('myStats.points', 'Point', { count: scoring }), value: scoring }
       : { key: 'goals', label: t('myStats.goals', 'But', { count: scoring }), value: scoring },
-    { key: 'minutes', label: t('myStats.minutes', 'Minutes'), value: Number(overall.minutesPlayed || 0) },
+    {
+      key: 'minutes',
+      label: t('myStats.minutes', 'Minutes'),
+      value: Number(overall.minutesPlayed || 0),
+    },
   ];
 
   return (
     <View
-      style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, Spaces.padding[16], Spaces.gap[12]]}
+      style={[
+        ApplicationStyle.backgroundColor.primary700,
+        ApplicationStyle.borderRadius24,
+        Spaces.padding[16],
+        Spaces.gap[12],
+      ]}
       testID={`profile-stats-${mode}`}
     >
-      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyBetween, Spaces.gap[8]]}>
+      <View
+        style={[Alignments.row, Alignments.alignCenter, Alignments.justifyBetween, Spaces.gap[8]]}
+      >
         <Text style={[Fonts.p4Bold, Fonts.primary200, { flex: 1 }]}>
           {mode === 'coach'
-            ? t('profileStats.inYourTeam', 'Dans ton équipe · {{teams}}', { teams: teamNames, ...SANS_ECHAPPEMENT })
+            ? t('profileStats.inYourTeam', 'Dans ton équipe · {{teams}}', {
+              teams: teamNames,
+              ...SANS_ECHAPPEMENT,
+            })
             : t('profileStats.matchStats', 'Stats de match')}
         </Text>
         {mode === 'coach' ? (
@@ -114,7 +145,9 @@ function ProfileStatsForViewer({
               paddingVertical: 4,
             }}
           >
-            <Text style={[Fonts.p4Bold, Fonts.neutral100]}>{t('profileStats.coachBadge', 'Entraîneur')}</Text>
+            <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
+              {t('profileStats.coachBadge', 'Entraîneur')}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -129,16 +162,22 @@ function ProfileStatsForViewer({
             ]}
           >
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{String(tile.value)}</Text>
-            <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>{tile.label}</Text>
+            <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>
+              {tile.label}
+            </Text>
           </View>
         ))}
       </View>
       {mode === 'coach'
         ? lockLine(
-          t('profileStats.coachLine', 'Visible par toi, son entraîneur, pour l’équipe {{teams}} seulement.', {
-            teams: teamNames,
-            ...SANS_ECHAPPEMENT,
-          }),
+          t(
+            'profileStats.coachLine',
+            'Visible par toi, son entraîneur, pour l’équipe {{teams}} seulement.',
+            {
+              teams: teamNames,
+              ...SANS_ECHAPPEMENT,
+            },
+          ),
           'profile-stats-coach-line',
         )
         : null}

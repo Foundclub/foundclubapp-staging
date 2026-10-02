@@ -31,7 +31,10 @@ describe('ST-VUES planche 15 — l adresse de TeamStats mene a l onglet Stats', 
   test('/teams/:teamId/stats ouvre la fiche de l equipe, onglet Stats, et ne dessine RIEN', () => {
     const { arbre, navigation } = monter({ teamId: 'u15' });
 
-    expect(navigation.replace).toHaveBeenCalledWith('TeamDetails', { initialTab: 'stats', teamId: 'u15' });
+    expect(navigation.replace).toHaveBeenCalledWith('TeamDetails', {
+      initialTab: 'stats',
+      teamId: 'u15',
+    });
     expect(arbre.toJSON()).toBeNull();
   });
 

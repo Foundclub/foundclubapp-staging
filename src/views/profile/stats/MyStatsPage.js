@@ -31,8 +31,9 @@ const STATS_SPORTS = ['football', 'basketball'];
  * @param {any} team - Une equipe du joueur.
  * @returns {string} - Le nom de son activite, ou vide.
  */
-const teamSportName = (team) => String(team?.activities?.[0]?.name || team?.activity?.name || team?.sport || '')
-  .trim();
+const teamSportName = (team) => String(
+  team?.activities?.[0]?.name || team?.activity?.name || team?.sport || '',
+).trim();
 
 /**
  * La page « Mes stats ».
@@ -51,9 +52,9 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
   const filters = useMemo(() => {
     const bySport = Array.isArray(stats?.bySport) ? stats.bySport : [];
     const withStats = bySport
-      .filter((entry) => STATS_SPORTS.includes(String(entry?.sport || '')))
-      .map((entry) => ({ entry, key: String(entry.sport), team: null }));
-    const known = new Set(withStats.map((filter) => filter.key));
+      .filter((/** @type {any} */ entry) => STATS_SPORTS.includes(String(entry?.sport || '')))
+      .map((/** @type {any} */ entry) => ({ entry, key: String(entry.sport), team: null }));
+    const known = new Set(withStats.map((/** @type {any} */ filter) => filter.key));
     (Array.isArray(teams) ? teams : []).forEach((team) => {
       const name = teamSportName(team);
       const normalized = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -61,13 +62,18 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
       if (!name || hasMatchStats || known.has(normalized)) return;
       known.add(normalized);
       withStats.push({
-        entry: null, key: normalized, label: name, team,
+        entry: null,
+        key: normalized,
+        label: name,
+        team,
       });
     });
     return withStats;
   }, [stats?.bySport, teams]);
   const [selectedKey, setSelectedKey] = useState(/** @type {string | null} */ (null));
-  const selected = filters.find((filter) => filter.key === selectedKey) || filters[0] || null;
+  const selected = filters.find((/** @type {any} */ filter) => filter.key === selectedKey)
+    || filters[0]
+    || null;
 
   const sportLabel = (/** @type {any} */ filter) => {
     if (filter.key === 'football') return t('myStats.sportFootball', 'Football');
@@ -75,16 +81,25 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
     return filter.label;
   };
   const letter = (/** @type {string | null} */ result) => {
-    if (result === 'win') return { color: Colors.success200, text: t('teamStatsPanel.formWinLetter', 'V') };
-    if (result === 'loss') return { color: Colors.error300, text: t('teamStatsPanel.formLossLetter', 'D') };
-    if (result === 'draw') return { color: Colors.neutral100, text: t('teamStatsPanel.formDrawLetter', 'N') };
+    if (result === 'win') {
+      return { color: Colors.success200, text: t('teamStatsPanel.formWinLetter', 'V') };
+    }
+    if (result === 'loss') {
+      return { color: Colors.error300, text: t('teamStatsPanel.formLossLetter', 'D') };
+    }
+    if (result === 'draw') {
+      return { color: Colors.neutral100, text: t('teamStatsPanel.formDrawLetter', 'N') };
+    }
     return null;
   };
   const matchDay = (/** @type {unknown} */ value) => {
     const date = new Date(String(value || ''));
     if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(localeDesFormats(), { day: 'numeric', month: 'short', weekday: 'short' })
-      .format(date);
+    return new Intl.DateTimeFormat(localeDesFormats(), {
+      day: 'numeric',
+      month: 'short',
+      weekday: 'short',
+    }).format(date);
   };
 
   if (!selected) {
@@ -96,14 +111,15 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
   }
 
   const { entry } = selected;
-  const matches = (Array.isArray(stats?.recentMatches) ? stats.recentMatches : [])
-    .filter((match) => String(match?.sport || '') === selected.key);
+  const matches = (Array.isArray(stats?.recentMatches) ? stats.recentMatches : []).filter(
+    (/** @type {any} */ match) => String(match?.sport || '') === selected.key,
+  );
 
   return (
     <View style={[Spaces.gap[16]]} testID="my-stats">
       {filters.length > 1 ? (
         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-          {filters.map((filter) => {
+          {filters.map((/** @type {any} */ filter) => {
             const isSelected = filter.key === selected.key;
             return (
               <TouchableOpacity
@@ -112,7 +128,9 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
                 key={filter.key}
                 onPress={() => setSelectedKey(filter.key)}
                 style={{
-                  backgroundColor: isSelected ? Colors.primary500 : withAlpha(Colors.neutral00, 0.06),
+                  backgroundColor: isSelected
+                    ? Colors.primary500
+                    : withAlpha(Colors.neutral00, 0.06),
                   borderRadius: 999,
                   justifyContent: 'center',
                   minHeight: 36,
@@ -120,7 +138,9 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
                 }}
                 testID={`my-stats-filter-${filter.key}`}
               >
-                <Text style={[isSelected ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>{sportLabel(filter)}</Text>
+                <Text style={[isSelected ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
+                  {sportLabel(filter)}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -138,6 +158,7 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t(
               'myStats.noMatchStatsBody',
+              // eslint-disable-next-line max-len
               'La saisie des scores et des stats couvre le football et le basket. Ta présence aux séances des {{team}} se lit dans la fiche de l’équipe.',
               { team: selected.team?.name || '', ...SANS_ECHAPPEMENT },
             )}
@@ -145,7 +166,10 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
           {onOpenTeam && selected.team ? (
             <Button
               onPress={() => onOpenTeam(selected.team)}
-              title={t('myStats.openTeam', 'Ouvrir les {{team}}', { team: selected.team?.name || '', ...SANS_ECHAPPEMENT })}
+              title={t('myStats.openTeam', 'Ouvrir les {{team}}', {
+                team: selected.team?.name || '',
+                ...SANS_ECHAPPEMENT,
+              })}
               variant="Secondary"
             />
           ) : null}
@@ -154,13 +178,23 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
         <>
           <View style={[Alignments.row, Spaces.gap[8]]}>
             {[
-              { key: 'matches', label: t('myStats.matches', 'Match', { count: Number(entry.matches || 0) }), value: String(Number(entry.matches || 0)) },
+              {
+                key: 'matches',
+                label: t('myStats.matches', 'Match', { count: Number(entry.matches || 0) }),
+                value: String(Number(entry.matches || 0)),
+              },
               {
                 key: 'record',
                 label: t('myStats.record', 'V · N · D'),
-                value: `${Number(entry.wins || 0)}·${Number(entry.draws || 0)}·${Number(entry.losses || 0)}`,
+                value: `${Number(entry.wins || 0)}·${Number(entry.draws || 0)}·${Number(
+                  entry.losses || 0,
+                )}`,
               },
-              { key: 'rating', label: t('myStats.myAverageRating', 'Ma note moy.'), value: formatAverage(entry.averageSelfRating) },
+              {
+                key: 'rating',
+                label: t('myStats.myAverageRating', 'Ma note moy.'),
+                value: formatAverage(entry.averageSelfRating),
+              },
             ].map((tile) => (
               <View
                 key={tile.key}
@@ -173,28 +207,42 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
                 ]}
               >
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{tile.value}</Text>
-                <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>{tile.label}</Text>
+                <Text numberOfLines={1} style={[Fonts.p4, Fonts.primary100]}>
+                  {tile.label}
+                </Text>
               </View>
             ))}
           </View>
 
           {matches.length ? (
             <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{t('myStats.recentMatches', 'Mes derniers matchs')}</Text>
-              {matches.map((match, index) => {
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('myStats.recentMatches', 'Mes derniers matchs')}
+              </Text>
+              {matches.map((/** @type {any} */ match, /** @type {number} */ index) => {
                 const chip = letter(match?.result || null);
                 const score = match?.scoreFor !== null && match?.scoreFor !== undefined
                   ? `${match.scoreFor} - ${match.scoreAgainst}`
                   : '';
                 const figures = [
-                  t('myStats.matchMinutes', '{{count}} minutes', { count: Number(match?.minutesPlayed || 0) }),
+                  t('myStats.matchMinutes', '{{count}} minutes', {
+                    count: Number(match?.minutesPlayed || 0),
+                  }),
                   selected.key === 'basketball'
-                    ? t('myStats.matchPoints', '{{count}} point', { count: Number(match?.points || 0) })
-                    : t('myStats.matchGoals', '{{count}} but', { count: Number(match?.goals || 0) }),
-                  t('myStats.matchAssists', '{{count}} passe', { count: Number(match?.assists || 0) }),
+                    ? t('myStats.matchPoints', '{{count}} point', {
+                      count: Number(match?.points || 0),
+                    })
+                    : t('myStats.matchGoals', '{{count}} but', {
+                      count: Number(match?.goals || 0),
+                    }),
+                  t('myStats.matchAssists', '{{count}} passe', {
+                    count: Number(match?.assists || 0),
+                  }),
                 ];
                 if (match?.selfRating !== null && match?.selfRating !== undefined) {
-                  figures.push(t('myStats.matchRating', '{{rating}} ma note', { rating: match.selfRating }));
+                  figures.push(
+                    t('myStats.matchRating', '{{rating}} ma note', { rating: match.selfRating }),
+                  );
                 }
                 return (
                   <View
@@ -210,19 +258,26 @@ function MyStatsPage({ onOpenTeam, stats, teams = [] }) {
                       <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
                         {match?.matchLabel || t('myStats.matchFallback', 'Match')}
                       </Text>
-                      {chip ? <Text style={[Fonts.p3Bold, { color: chip.color }]}>{chip.text}</Text> : null}
+                      {chip ? (
+                        <Text style={[Fonts.p3Bold, { color: chip.color }]}>{chip.text}</Text>
+                      ) : null}
                     </View>
                     <Text style={[Fonts.p4, Fonts.neutral300]}>
                       {[match?.teamName, matchDay(match?.matchDate || match?.finalizedAt), score]
-                        .filter(Boolean).join(' · ')}
+                        .filter(Boolean)
+                        .join(' · ')}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200]}>{figures.join(' · ')}</Text>
                     {match?.selfComment ? (
                       <Text style={[Fonts.p4, Fonts.neutral300]}>
-                        {t('myStats.myWord', 'Mon mot : « {{comment}} » — lu par toi et ton entraîneur.', {
-                          comment: match.selfComment,
-                          ...SANS_ECHAPPEMENT,
-                        })}
+                        {t(
+                          'myStats.myWord',
+                          'Mon mot : « {{comment}} » — lu par toi et ton entraîneur.',
+                          {
+                            comment: match.selfComment,
+                            ...SANS_ECHAPPEMENT,
+                          },
+                        )}
                       </Text>
                     ) : null}
                   </View>

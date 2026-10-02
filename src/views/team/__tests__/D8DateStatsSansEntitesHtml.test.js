@@ -95,15 +95,23 @@ describe('D8 · temoin 2 — la ligne « Depuis le … » de l onglet Vie d equi
   // comme MEILLEUR que `.replace()` : un gabarit qui perdrait son `{{date}}` ne la
   // ferait pas disparaitre en silence. Ce temoin garde ce qu il protegeait : aucune
   // entite HTML a l ecran.
+  // Aplati (espaces et retours a la ligne reduits a un blanc, virgule finale retiree) : la
+  // mise en forme de Prettier ne doit pas faire tomber le temoin, seul l appel compte.
   const SOURCE_PANNEAU = readFileSync(
     join(RACINE_SRC, 'views', 'team', 'performance', 'TeamAttendancePanel.js'),
     'utf8',
-  );
+  )
+    .replace(/\s+/g, ' ')
+    .replace(/, \}/g, ' }');
 
   test('elle ne passe plus AUCUNE valeur echappee a travers i18next', () => {
     expect(SOURCE_ECRAN).not.toContain('{ date: statsBaselineLabel }');
-    expect(SOURCE_PANNEAU).toContain("'Depuis le {{date}}', { date: resetDay, ...SANS_ECHAPPEMENT }");
-    expect(SOURCE_PANNEAU).toContain("'Depuis le {{date}}.', { date: sinceLong, ...SANS_ECHAPPEMENT }");
+    expect(SOURCE_PANNEAU).toContain(
+      "'Depuis le {{date}}', { date: resetDay, ...SANS_ECHAPPEMENT }",
+    );
+    expect(SOURCE_PANNEAU).toContain(
+      "'Depuis le {{date}}.', { date: sinceLong, ...SANS_ECHAPPEMENT }",
+    );
   });
 
   test('sur le VRAI i18next, la date passe sans entite', () => {
