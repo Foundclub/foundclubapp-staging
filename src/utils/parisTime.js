@@ -121,4 +121,5 @@ export const toDeviceDateFromParisInstant = (instantLike) => {
 
 export const getParisNowAsDeviceDate = () => toDeviceDateFromParisInstant(new Date()) || new Date();
 
-export { LEAGUE_TIMEZONE };
+// STATS-FIX2 · point 8 : la fin d un evenement se lit a l heure de Paris (eventMatchClock).
+export { getZonedDateParts, LEAGUE_TIMEZONE, toUtcFromZonedLocal };

@@ -1444,8 +1444,9 @@ function EventDetails({ navigation, route }) {
   }, [attendancePayload?.data?.eventStartAt, event]);
 
   const eventEndedAt = useMemo(
-    () => resolveEventEndedAt(event?.endDate, eventStartAt),
-    [event?.endDate, eventStartAt],
+    // STATS-FIX2 · point 8 : l heure de fin SAISIE (endTime) decide, comme au serveur.
+    () => resolveEventEndedAt(event?.endDate, eventStartAt, event?.endTime),
+    [event?.endDate, event?.endTime, eventStartAt],
   );
 
   // AC10 — l'horloge du SERVEUR, ou rien : `null` quand il ne l'a pas donnee.
