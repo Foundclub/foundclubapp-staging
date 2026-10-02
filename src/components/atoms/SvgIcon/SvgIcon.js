@@ -9,6 +9,9 @@ import { Image } from 'react-native';
 // gabarit que les autres : PNG 96 x 96, encre blanche, grille 24, trait 2, marge 2.
 const icons = {
   'arrow-left': require('@/assets/icons/arrowLeft.png'),
+  // COLL-CONSOLE (02/10) — la console des collectivites : le chevron d une ligne, l etat vide,
+  // et « Plus d actions » (icone 10 dessinee et validee par Adel le 01/10, app da8181e5).
+  'arrow-right': require('@/assets/icons/arrowRight.png'),
   bell: require('@/assets/icons/bell.png'),
   calendar: require('@/assets/icons/calendar.png'),
   'calendar-days': require('@/assets/icons/calendar-days.png'),
@@ -17,9 +20,11 @@ const icons = {
   'clock-two-thirty': require('@/assets/icons/clock-two-thirty.png'),
   close: require('@/assets/icons/close.png'),
   'delete-left': require('@/assets/icons/delete-left.png'),
+  'dots-horizontal': require('@/assets/icons/dots-horizontal.png'),
   edit: require('@/assets/icons/edit.png'),
   envelope: require('@/assets/icons/envelope.png'),
   'euro-circle': require('@/assets/icons/euro-circle.png'),
+  flag: require('@/assets/icons/flag.png'),
   'location-pin-alt-1': require('@/assets/icons/location.png'),
   'message-circle': require('@/assets/icons/message-circle.png'),
   money_bag: require('@/assets/icons/money_bag.png'),

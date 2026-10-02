@@ -5205,6 +5205,22 @@ export default {
       videRattachements: 'Aucune demande de rattachement en attente.',
     },
     liste: {
+      actives: 'Actives ({{nombre}})',
+      aucuneActive: 'Aucune collectivité active.',
+      aucuneInactive: 'Aucune collectivité inactive.',
+      aucuneTrouvee: 'Aucune collectivité ne porte ce nom.',
+      chercher: 'Chercher une collectivité',
+      clubs_one: '{{count}} club rattaché',
+      clubs_other: '{{count}} clubs rattachés',
+      colonneClubs: 'Clubs rattachés',
+      colonneCollectivite: 'Collectivité',
+      colonneEtat: 'État',
+      // eslint-disable-next-line max-len
+      dit: 'Une collectivité active offre l’offre Club à ses clubs rattachés, sauf à ceux qui paient déjà. Ouvre sa fiche pour l’activer ou la couper.',
+      inactives: 'Inactives ({{nombre}})',
+      toutes: 'Toutes ({{nombre}})',
+      tronquee: '{{shown}} affichées sur {{total}}. Cherche par le nom pour trouver les autres.',
+      videDit: 'Crée la première mairie cliente : elle naîtra inactive.',
       voirToutes: 'Voir toutes les collectivités',
     },
     tuile: {

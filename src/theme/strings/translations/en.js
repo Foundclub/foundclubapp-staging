@@ -4862,6 +4862,22 @@ export default {
       videRattachements: 'No attach request waiting.',
     },
     liste: {
+      actives: 'Active ({{nombre}})',
+      aucuneActive: 'No active local authority.',
+      aucuneInactive: 'No inactive local authority.',
+      aucuneTrouvee: 'No local authority has this name.',
+      chercher: 'Search a local authority',
+      clubs_one: '{{count}} attached club',
+      clubs_other: '{{count}} attached clubs',
+      colonneClubs: 'Attached clubs',
+      colonneCollectivite: 'Local authority',
+      colonneEtat: 'Status',
+      // eslint-disable-next-line max-len
+      dit: 'An active local authority gives the Club plan to its attached clubs, except those already paying. Open its record to activate or switch it off.',
+      inactives: 'Inactive ({{nombre}})',
+      toutes: 'All ({{nombre}})',
+      tronquee: '{{shown}} shown out of {{total}}. Search by name to find the others.',
+      videDit: 'Create the first client town hall: it will start inactive.',
       voirToutes: 'See all local authorities',
     },
     tuile: {

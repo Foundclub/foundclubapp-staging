@@ -1,8 +1,34 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Alert, Text } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import AdminCollectiviteList from '../AdminCollectiviteList';
+import { toAdminCollectiviteRow } from '@/domains/collectivite/collectiviteDisplay';
+
+import { useAdminCollectivites } from '@/services/collectivite/collectiviteQueries';
+
+import CollectiviteActivation from '../components/CollectiviteActivation';
+
+// COLL-CONSOLE (02/10) — « Activer / Couper » a QUITTE la liste (planche P2-liste) : ce temoin
+// monte desormais le composant lui-meme, nourri par la MEME lecture que la console (le geste
+// relit la liste, l etat affiche est celui du serveur). Ses garanties ne changent pas.
+/**
+ * Les collectivites de la console, chacune avec son « Activer / Couper ».
+ * @returns {import('react').ReactElement} Le banc.
+ */
+function BancActivation() {
+  const lecture = useAdminCollectivites();
+  const lignes = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
+    .map(toAdminCollectiviteRow);
+  return (
+    <View>
+      {lignes.map((ligne) => (
+        <View key={ligne.documentId} testID={`admin-collectivite-${ligne.documentId}`}>
+          <CollectiviteActivation collectivite={ligne} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // 🏛️ TEXTES-COLLECTIVITES (lot 1, 01/10/2026) — LES FENÊTRES « ACTIVER » ET « COUPER ».
 //
@@ -154,11 +180,12 @@ const monter = async () => {
   await act(async () => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
-        <AdminCollectiviteList />
+        <BancActivation />
       </QueryClientProvider>,
     );
   });
-  await attendre(() => !textes(arbre.root).includes('Lecture des collectivités…'));
+  // eslint-disable-next-line max-len
+  await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-ville-montrivage').length > 0);
   return arbre;
 };
 
@@ -230,7 +257,8 @@ describe('TEXTES-COLLECTIVITES — « Activer » dit, club par club, ce que le s
     const confirmer = alerte.boutons.find((/** @type {any} */ b) => b.style !== 'cancel');
     expect(confirmer.text).toBe('Activer');
     await act(async () => { confirmer.onPress(); });
-    await attendre(() => textes(carte(arbre, 'ville-montrivage')).length === 7);
+    // eslint-disable-next-line max-len
+    await attendre(() => textes(carte(arbre, 'ville-montrivage')).some((texte) => texte.startsWith('Activée.')));
 
     expect(mockPut).toHaveBeenCalledTimes(2);
     expect(mockPut).toHaveBeenLastCalledWith(ROUTE_ACTIVE, { data: { isActive: true } });

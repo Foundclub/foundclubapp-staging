@@ -237,12 +237,12 @@ describe('COLL-CONSOLE — « À traiter » en tête de la console des collectiv
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminCollectiviteInvitations, { onglet: 'foundclub' });
   });
 
-  it('A2 — « Mairies à activer » filtre la liste sur les inactives ; on revient à toutes', async () => {
+  it('A2 — « Mairies à activer » filtre la liste sur les inactives ; « Toutes » y ramène', async () => {
     const arbre = await monter(AdminCollectiviteList, (a) => textes(a.root).includes('Ville de Montrivage'));
     await appuyer(parTestID(arbre.root, 'a-traiter-mairies'));
     expect(textes(arbre.root)).toContain('Ville de Montrivage');
     expect(textes(arbre.root)).not.toContain('Communauté de communes du Val');
-    await appuyer(bouton(arbre.root, 'Voir toutes les collectivités'));
+    await appuyer(parTestID(arbre.root, 'onglet-all'));
     expect(textes(arbre.root)).toContain('Communauté de communes du Val');
   });
 
