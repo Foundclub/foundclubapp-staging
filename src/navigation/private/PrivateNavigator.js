@@ -1277,6 +1277,16 @@ function PrivateNavigator() {
             headerTitle: t('collectiviteClubs.join.header', 'Rejoindre la Ville'),
           }}
         />
+        {/* COLL-C2B (02/10/2026) — une installation de la Ville et son onglet « Creneaux »
+            (design HY521H1, page 4) : toute la carte de « Installations de la Ville » y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/facility/InstallationCreneaux').default}
+          name={RouteNames.CollectiviteInstallation}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

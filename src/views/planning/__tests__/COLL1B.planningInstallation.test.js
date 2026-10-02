@@ -156,6 +156,23 @@ jest.mock('@/services/collectivite/collectiviteService', () => ({
   getMyCollectivites: jest.fn(() => Promise.resolve({ data: [] })),
 }));
 
+// COLL-C2B (02/10) : le planning d une installation a desormais 5 vues (Mois = le calendrier) et
+// les gestes de la mairie (le service des creneaux) : deux doublures, sans effet sur ce temoin.
+jest.mock(
+  '@/components/organisms/planningCalendarView',
+  () => function CalendarMock() { return null; },
+);
+jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
+  attributeSeasonSlot: jest.fn(),
+  getClubTeamsForSlot: jest.fn(),
+  getSeasonSlot: jest.fn(),
+  listFacilitySeasonSlots: jest.fn(),
+  modifySeasonSlot: jest.fn(),
+  previewFacilitySeasonSlot: jest.fn(),
+  restoreSeasonSlot: jest.fn(),
+  withdrawSeasonSlot: jest.fn(),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));
@@ -270,8 +287,8 @@ describe('COLL1B — le planning d une installation, lu par un membre', () => {
   test('l entete dit de quelle installation il s agit', async () => {
     const arbre = await rendre();
 
-    expect(texte(arbre)).toContain('Gymnase de la Ville');
-    expect(texte(arbre)).toContain('Planning de l’installation');
+    // COLL-C2B (02/10, design P5) : la barre dit « Planning · Gymnase de la Ville ».
+    expect(texte(arbre)).toContain('Planning · Gymnase de la Ville');
   });
 
   test('le bloc d un AUTRE club ne s ouvre pas ; celui de MON club s ouvre comme avant', async () => {

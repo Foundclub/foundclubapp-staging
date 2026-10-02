@@ -93,6 +93,17 @@ jest.mock('@/services/facility/facilityQueries', () => ({
 // COLL1C — le mode collectivite lit les installations de LA collectivite.
 /** @type {any} */
 const mockCollectiviteInstallations = { data: undefined, isLoading: false, refetch: jest.fn() };
+// COLL-C2B (02/10) : la liste de la Ville lit la semaine de chaque installation (son planning) et
+// range ses gestes dans une feuille du bas ; deux doublures, sans effet cote club.
+jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
+  useInstallationsWeekSummary: () => ({}),
+}));
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
+
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => mockCollectiviteInstallations,
   useMyCollectivites: () => ({ data: [] }),

@@ -3,13 +3,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -17,11 +18,16 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { toTimeInput } from '@/domains/collectivite/collectiviteDisplay';
+import { seasonSlotErrorMessage } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import SubscriptionPaywallSheet
@@ -51,10 +57,21 @@ import {
 } from '@/utils/facilityPlanningColor';
 // COLL1D (D28) : la liste des types (5 d'avant + 8 des mairies) vit dans utils : les
 // cartes des installations y lisent aussi le libelle.
-import { FACILITY_TYPES } from '@/utils/facilityTypes';
+import { FACILITY_TYPES, getFacilityTypeLabel } from '@/utils/facilityTypes';
 
 // COLL1C : un horaire d ouverture tel qu un agent le tape (« 08:00 »).
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// COLL-C2B (02/10) — design P4-form, ecran 2 : la feuille « Type » d une MAIRIE propose ses 11
+// types ; « Salle video » et « Club House » sont des types de club. Ecrits en NOMS DE PROPRIETE :
+// ce sont des valeurs du serveur (meme raison que dans utils/facilityTypes).
+const RESERVES_AU_CLUB = { 'Club House': true, 'Salle vidéo': true };
+const TYPES_DE_MAIRIE = FACILITY_TYPES.filter(
+  (type) => !(/** @type {Record<string, boolean>} */ (RESERVES_AU_CLUB))[type.value],
+);
+// D66, contrat C2A §8 : un nom par plateau, court (le cycle de vie du serveur refuse au-dela).
+const PLATEAU_NOM_MAX = 40;
+const LETTRES_DE_PLATEAU = 'ABCDEFGHIJ';
 
 /**
  * Un horaire facultatif « HH:MM » (COLL1C, mode collectivite).
@@ -98,6 +115,7 @@ const buildSchema = (isCollectiviteMode = false) => Joi.object({
     'string.empty': i18next.t('facilityForm.validation.nameRequired', 'Le nom est requis'),
   }),
   openingTime: buildTimeRule(),
+  // COLL-C2B (02/10) — les plateaux nommes (mairie seulement) : juges dans handleSave.
   planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages(
     isCollectiviteMode
       ? {
@@ -121,6 +139,8 @@ const buildSchema = (isCollectiviteMode = false) => Joi.object({
         ),
       },
   ),
+  plateaux: Joi.array().items(Joi.string().allow('')).optional(),
+  plateauxActifs: Joi.boolean().optional(),
   type: Joi.string().required().messages({
     'string.empty': i18next.t('facilityForm.validation.typeRequired', 'Le type est requis'),
   }),
@@ -290,7 +310,8 @@ const CONFLICT_HINT_STYLE = {
 
 /**
  * @type {{ address: any, capacityConflictMode: string, closingTime: string, maxSlots: number,
- *   name: string, openingTime: string, planningColor: string, type: string }}
+ *   name: string, openingTime: string, planningColor: string, plateaux: string[],
+ *   plateauxActifs: boolean, type: string }}
  */
 const DEFAULT_FORM_VALUES = {
   address: null,
@@ -301,8 +322,15 @@ const DEFAULT_FORM_VALUES = {
   name: '',
   openingTime: '',
   planningColor: FACILITY_PLANNING_PALETTE[0],
+  // COLL-C2B (02/10) : les plateaux nommes ne se saisissent qu en mode collectivite.
+  plateaux: [],
+  plateauxActifs: false,
   type: 'Terrain',
 };
+
+// COLL-C2B (02/10) — design P4-form, ecran 3 : une installation NEUVE de la Ville n a pas de
+// type choisi d avance (« Choisir le type ») ; « Creer » s allume quand il l est.
+const DEFAULT_VILLE_VALUES = { ...DEFAULT_FORM_VALUES, type: '' };
 
 /**
  * Facility create/update screen.
@@ -358,6 +386,7 @@ function FacilityForm() {
     || facility?.multisportClub?.id
     || null;
 
+  const valeursParDefaut = isCollectiviteMode ? DEFAULT_VILLE_VALUES : DEFAULT_FORM_VALUES;
   const {
     clearErrors,
     control,
@@ -365,10 +394,21 @@ function FacilityForm() {
     handleSubmit,
     reset,
     setError,
+    setValue,
   } = useForm({
-    defaultValues: DEFAULT_FORM_VALUES,
+    defaultValues: valeursParDefaut,
     resolver: joiResolver(buildSchema(isCollectiviteMode)),
   });
+  // COLL-C2B (02/10) — ce que la Ville a deja saisi : « Creer » s allume quand le nom, le type
+  // et l adresse sont la ; les plateaux suivent le nombre d equipes a la fois.
+  const [nomSaisi, typeChoisi, adresseSaisie, equipesALaFois, plateauxActifs, plateaux] = useWatch({
+    control,
+    name: ['name', 'type', 'address', 'maxSlots', 'plateauxActifs', 'plateaux'],
+  });
+  const plateauxPossibles = isCollectiviteMode && Number(equipesALaFois || 1) >= 2;
+  const [feuilleTypeOuverte, setFeuilleTypeOuverte] = useState(false);
+  // Un refus du serveur, dit au-dessus du bouton (design P4-form, ecran 5) : plus de fenetre.
+  const [erreurServeur, setErreurServeur] = useState(/** @type {string | null} */ (null));
 
   const [loading, setLoading] = useState(false);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
@@ -396,15 +436,17 @@ function FacilityForm() {
         name: facility?.name || '',
         openingTime: toTimeInput(facility?.openingTime),
         planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
+        plateaux: Array.isArray(facility?.plateaux) ? facility.plateaux.map(String) : [],
+        plateauxActifs: Array.isArray(facility?.plateaux) && facility.plateaux.length > 0,
         type: facility?.type || 'Terrain',
       });
       return;
     }
 
     if (!isEdit) {
-      reset(DEFAULT_FORM_VALUES);
+      reset(isCollectiviteMode ? DEFAULT_VILLE_VALUES : DEFAULT_FORM_VALUES);
     }
-  }, [facility, isEdit, reset]);
+  }, [facility, isCollectiviteMode, isEdit, reset]);
 
   const conflictModeOptions = useMemo(() => FACILITY_CONFLICT_MODE_OPTIONS.map((option) => ({
     label: t(option.labelKey, option.labelFallback),
@@ -454,6 +496,42 @@ function FacilityForm() {
       'Sélectionne une adresse géolocalisée dans la liste.',
     );
 
+  // D66 : chaque plateau a un nom, court, different des autres. Le serveur juge aussi (cycle de
+  // vie de l installation, 400 FACILITY_PLATEAUX_INVALID) ; ici, on le dit avant l envoi.
+  const messagePlateaux = (/** @type {string[]} */ noms) => {
+    if (noms.some((nom) => !nom)) {
+      return t('collectiviteCreneaux.formulaire.plateauVide', 'Nommez chaque plateau.');
+    }
+    if (noms.some((nom) => nom.length > PLATEAU_NOM_MAX)) {
+      return t(
+        'collectiviteCreneaux.formulaire.plateauLong',
+        'Un nom de plateau tient en {{max}} caractères.',
+        { max: PLATEAU_NOM_MAX },
+      );
+    }
+    if (new Set(noms.map((nom) => nom.toLocaleLowerCase())).size < noms.length) {
+      return t(
+        'collectiviteCreneaux.formulaire.plateauDouble',
+        'Deux plateaux portent le même nom.',
+      );
+    }
+    return null;
+  };
+
+  // Allumer « Nommer les plateaux » propose « Plateau A », « Plateau B »… a renommer.
+  const basculerPlateaux = (/** @type {boolean} */ allume) => {
+    setValue('plateauxActifs', allume);
+    clearErrors('plateaux');
+    if (!allume) return;
+    const deja = Array.isArray(plateaux) ? plateaux : [];
+    const nombre = Math.max(2, Number(equipesALaFois) || 2);
+    setValue('plateaux', Array.from({ length: nombre }, (_, index) => (
+      deja[index] || t('collectiviteCreneaux.formulaire.plateauDefaut', 'Plateau {{lettre}}', {
+        lettre: LETTRES_DE_PLATEAU.charAt(index),
+      })
+    )));
+  };
+
   const handleSave = async (data) => {
     const facilityDocumentId = facility?.documentId || facility?.id || routedFacilityId;
 
@@ -472,25 +550,39 @@ function FacilityForm() {
     const adresseIntacte = isEdit
       && JSON.stringify(data.address ?? null) === JSON.stringify(facility?.address ?? null);
     const normalizedAddress = normalizeAddressPayload(data.address);
+    setErreurServeur(null);
+    // COLL-C2B (02/10) — design P4-form, ecran 4 : en mairie, chaque erreur se dit sous son
+    // champ ET se compte en haut (« 2 champs a corriger ») ; plus de fenetre systeme en double.
+    // Le club garde son alerte, au mot pres.
+    let refus = 0;
     if (!normalizedAddress && !adresseIntacte) {
       setError('address', {
         message: addressGeocodeRequiredMessage,
         type: 'manual',
       });
-      // Le champ adresse peut etre hors ecran au moment du submit : sans alerte,
-      // le bouton Creer semble ne rien faire.
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        addressGeocodeRequiredMessage,
-      );
-      return;
+      if (!isCollectiviteMode) {
+        // Le champ adresse peut etre hors ecran au moment du submit : sans alerte,
+        // le bouton Creer semble ne rien faire.
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          addressGeocodeRequiredMessage,
+        );
+        return;
+      }
+      refus += 1;
+    } else {
+      clearErrors('address');
     }
-    clearErrors('address');
 
     // COLL1C : les horaires ne partent QUE par la route de la collectivite ; le chemin
-    // club garde exactement le corps d avant.
+    // club garde exactement le corps d avant (les plateaux non plus ne partent pas).
     const {
-      address, closingTime, openingTime, ...clubFields
+      address,
+      closingTime,
+      openingTime,
+      plateaux: plateauxSaisis,
+      plateauxActifs: plateauxAllumes,
+      ...clubFields
     } = data;
     const addressField = normalizedAddress ? { address: normalizedAddress } : {};
     if (isCollectiviteMode && openingTime && closingTime && openingTime >= closingTime) {
@@ -501,14 +593,41 @@ function FacilityForm() {
         ),
         type: 'manual',
       });
-      return;
+      refus += 1;
     }
+    // D66 (contrat C2A §8) : autant de plateaux que d equipes a la fois, chacun nomme.
+    const nombreDePlateaux = Number(data.maxSlots) || 1;
+    const nomsDePlateaux = isCollectiviteMode && plateauxAllumes && nombreDePlateaux >= 2
+      ? Array.from(
+        { length: nombreDePlateaux },
+        (_, index) => String((plateauxSaisis || [])[index] || '').trim(),
+      )
+      : null;
+    if (nomsDePlateaux) {
+      const refusPlateaux = messagePlateaux(nomsDePlateaux);
+      if (refusPlateaux) {
+        setError('plateaux', { message: refusPlateaux, type: 'manual' });
+        refus += 1;
+      } else {
+        clearErrors('plateaux');
+      }
+    }
+    if (refus) return;
     const formattedData = {
       ...clubFields,
       ...addressField,
       allowOverflowRequests: true,
       capacityConflictMode: data.capacityConflictMode || FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     };
+
+    // Plateaux : les noms s ils sont allumes ; une liste VIDE pour effacer ceux d avant ; rien
+    // du tout sinon (un serveur d avant C2A ne les connait pas).
+    let champPlateaux = {};
+    if (nomsDePlateaux) {
+      champPlateaux = { plateaux: nomsDePlateaux };
+    } else if (Array.isArray(facility?.plateaux) && facility.plateaux.length > 0) {
+      champPlateaux = { plateaux: [] };
+    }
 
     setLoading(true);
     try {
@@ -524,6 +643,7 @@ function FacilityForm() {
             openingTime: openingTime || null,
             planningColor: data.planningColor,
             type: data.type,
+            ...champPlateaux,
           },
           facilityId: isEdit ? facilityDocumentId : null,
         });
@@ -550,14 +670,18 @@ function FacilityForm() {
         return;
       }
 
+      if (isCollectiviteMode) {
+        // COLL-C2B (02/10) — design P4-form, ecran 5 : le refus se lit au-dessus du bouton.
+        setErreurServeur(seasonSlotErrorMessage(t, error)
+          || getErrorMessage(/** @type {any} */ (error)));
+        return;
+      }
       Alert.alert(
         t('common.error', 'Erreur'),
-        isCollectiviteMode
-          ? getErrorMessage(/** @type {any} */ (error))
-          : error?.message || t(
-            'facilityForm.errors.saveFailed',
-            'Une erreur est survenue lors de l\'enregistrement.',
-          ),
+        error?.message || t(
+          'facilityForm.errors.saveFailed',
+          'Une erreur est survenue lors de l\'enregistrement.',
+        ),
       );
     } finally {
       setLoading(false);
@@ -636,22 +760,576 @@ function FacilityForm() {
                 'Impossible de determiner pour quel club créer cette installation.',
               )}
           </Text>
+          {/* COLL-C2B — design P4-form, ecran 6 : en mairie, « Retour aux installations » */}
+          {/* est le geste principal ; « Reessayer » le suit. */}
           <Button
             onPress={retourALaListe}
             title={i18next.t('facilityForm.state.backToList', 'Retour aux installations')}
-            variant="Secondary"
+            variant={isCollectiviteMode ? 'Primary' : 'Secondary'}
           />
           {isFacilityNotFound ? (
             <Button
               onPress={() => refetchFacility()}
               title={i18next.t('facilityForm.state.retry', 'Réessayer')}
-              variant="Primary"
+              variant={isCollectiviteMode ? 'Secondary' : 'Primary'}
             />
           ) : null}
         </View>
       </ScreenContainer>
     );
   }
+
+  // COLL-C2B (02/10) — design P4-form : la mairie lit SIX groupes nommes, dans l ordre ou l on
+  // pense (l essentiel, ou, quand, combien, quand c est plein, la couleur), « Enregistrer » fixe
+  // en bas. Le club garde sa page d avant, a l identique : memes blocs, meme ordre, memes textes.
+  const blocNom = (
+    <Controller
+      control={control}
+      name="name"
+      render={({ field: { onChange, value } }) => (
+        <Input
+          density="compact"
+          error={errors.name?.message}
+          label={t('facilityForm.fields.name', 'Nom de l\'installation')}
+          onChangeText={onChange}
+          placeholder={t('facilityForm.placeholders.name', 'Ex: Terrain Honneur, Salle A...')}
+          value={value}
+        />
+      )}
+    />
+  );
+
+  const blocTypeDuClub = (
+    <Controller
+      control={control}
+      name="type"
+      render={({ field: { onChange, value } }) => (
+        <View style={[Spaces.gap[8]]}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+            {t('facilityForm.fields.type', 'Type — requis')}
+          </Text>
+          <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+            {FACILITY_TYPES.map((typeItem) => {
+              const isActive = value === typeItem.value;
+              return (
+                <Button
+                  key={typeItem.value}
+                  onPress={() => onChange(typeItem.value)}
+                  size="small"
+                  style={[
+                    TYPE_CHIP_STYLE,
+                    !isActive ? { borderColor: Colors.primary200 } : null,
+                  ]}
+                  textStyle={!isActive ? { color: Colors.primary200 } : undefined}
+                  title={typeItem.label}
+                  variant={isActive ? 'Primary' : 'SecondaryLight'}
+                />
+              );
+            })}
+          </View>
+          {errors.type?.message ? (
+            <Text style={[Fonts.p3, Fonts.error700]}>
+              {errors.type.message}
+            </Text>
+          ) : null}
+        </View>
+      )}
+    />
+  );
+
+  // COLL-C2B — design P4-form, ecran 2 : en mairie, le type se choisit dans une FEUILLE, en
+  // liste, chacun sur sa ligne (la pastille « Terrain de » perdait « rugby », capture C2b).
+  const blocTypeDeLaVille = (
+    <View style={[Spaces.gap[8]]}>
+      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+        {t('collectiviteCreneaux.formulaire.type', 'Type')}
+      </Text>
+      <TouchableOpacity
+        accessibilityHint={t('collectiviteCreneaux.formulaire.typeAide', 'Ouvre la liste des types')}
+        accessibilityLabel={typeChoisi
+          ? t('collectiviteCreneaux.formulaire.typeChoisi', 'Type : {{type}}. Changer de type', {
+            type: getFacilityTypeLabel(typeChoisi),
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('collectiviteCreneaux.formulaire.typeAChoisir', 'Type : à choisir')}
+        accessibilityRole="button"
+        onPress={() => setFeuilleTypeOuverte(true)}
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.paddingHorizontal[16],
+          {
+            borderColor: errors.type ? Colors.error500 : withAlpha(Colors.neutral00, 0.18),
+            borderRadius: 14,
+            borderWidth: 1,
+            gap: 12,
+            minHeight: 52,
+          },
+        ]}
+      >
+        {typeChoisi ? <SvgIcon color={Colors.primary200} name="stadium" /> : null}
+        <Text style={[Fonts.p2, typeChoisi ? Fonts.neutral00 : Fonts.neutral400, { flex: 1 }]}>
+          {typeChoisi
+            ? getFacilityTypeLabel(typeChoisi)
+            : t('collectiviteCreneaux.formulaire.choisirType', 'Choisir le type')}
+        </Text>
+        <SvgIcon color={Colors.neutral300} name="chevron-down" />
+      </TouchableOpacity>
+      {errors.type?.message ? (
+        <Text style={[Fonts.p3, Fonts.error700]}>{errors.type.message}</Text>
+      ) : null}
+    </View>
+  );
+
+  const feuilleDesTypes = isCollectiviteMode ? (
+    <BottomModal
+      close={() => setFeuilleTypeOuverte(false)}
+      isVisible={feuilleTypeOuverte}
+      webPresentation="dialog"
+    >
+      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>
+        <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {t('collectiviteCreneaux.formulaire.typeTitre', 'Type d’installation')}
+        </Text>
+        {TYPES_DE_MAIRIE.map((type) => {
+          const choisi = typeChoisi === type.value;
+          return (
+            <TouchableOpacity
+              accessibilityRole="radio"
+              accessibilityState={{ checked: choisi }}
+              key={type.value}
+              onPress={() => {
+                setValue('type', type.value);
+                clearErrors('type');
+                setFeuilleTypeOuverte(false);
+              }}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Spaces.paddingHorizontal[16],
+                {
+                  backgroundColor: withAlpha(Colors.neutral00, choisi ? 0.08 : 0.03),
+                  borderColor: withAlpha(Colors.neutral00, 0.1),
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  gap: 12,
+                  minHeight: 52,
+                },
+              ]}
+              testID={`type-${type.value}`}
+            >
+              <SvgIcon color={Colors.primary200} name="stadium" />
+              <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{type.label}</Text>
+              {choisi ? <SvgIcon color={Colors.primary500} name="check" /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </BottomModal>
+  ) : null;
+
+  const blocAdresse = (
+    <Controller
+      control={control}
+      name="address"
+      render={({ field: { onChange, value } }) => (
+        <View style={[Spaces.gap[4]]}>
+          <AutocompleteAddressInput
+            address={value}
+            error={errors.address?.message}
+            label={t('facilityForm.fields.address', 'Adresse (lieu exact)')}
+            placeholder={t('facilityForm.placeholders.address', 'Ex: 12 Rue du Stade...')}
+            setAddress={onChange}
+          />
+          {/* L'astuce d'aide a disparu : elle ne servait qu'a annoncer ce
+              que cette ligne CONSTATE. Sans GPS, c'est le message
+              d'erreur existant de l'autocomplete qui parle. */}
+          {getAddressCoordinates(value) ? (
+            <View style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
+              {/* COLL-C2B : la coche du systeme de design (decision « aucun emoji »). */}
+              {isCollectiviteMode ? (
+                <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
+              ) : null}
+              <Text style={[Fonts.small, Fonts.success500]}>
+                {t('facilityForm.hints.gpsActive', 'GPS activé')}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      )}
+    />
+  );
+
+  // COLL1C : les horaires d ouverture (SPEC §2 B), en mode collectivite seulement.
+  const blocHoraires = isCollectiviteMode ? (
+    <View style={[Alignments.row, Spaces.gap[12]]}>
+      <View style={{ flex: 1 }}>
+        <Controller
+          control={control}
+          name="openingTime"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              density="compact"
+              error={errors.openingTime?.message}
+              label={t('facilityForm.fields.openingTime', 'Ouverture')}
+              onChangeText={onChange}
+              placeholder="08:00"
+              value={value}
+            />
+          )}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Controller
+          control={control}
+          name="closingTime"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              density="compact"
+              error={errors.closingTime?.message}
+              label={t('facilityForm.fields.closingTime', 'Fermeture')}
+              onChangeText={onChange}
+              placeholder="22:00"
+              value={value}
+            />
+          )}
+        />
+      </View>
+    </View>
+  ) : null;
+
+  const blocConflit = (
+    <Controller
+      control={control}
+      name="capacityConflictMode"
+      render={({ field: { onChange, value } }) => {
+        const activeOption = getConflictModeOption(value);
+        return (
+          <View style={[Spaces.gap[8]]}>
+            {/* COLL-C2B : en mairie, la legende du groupe tient lieu de libelle. */}
+            {isCollectiviteMode ? null : (
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {conflictModeFieldLabel}
+              </Text>
+            )}
+            {/* D63 : « Demande a valider » s'affichait « Demande a */}
+            {/* valid... ». Ce sont des libelles SYSTEME — le pack les */}
+            {/* veut entiers, l'ellipse est reservee aux donnees. */}
+            <SegmentedControl
+              centerContent
+              fullLabels
+              onChange={onChange}
+              options={conflictModeOptions}
+              value={value}
+            />
+            {/* Hauteur reservee : les deux explications ne font pas la */}
+            {/* meme longueur, et sans plancher le formulaire sautait a */}
+            {/* chaque bascule de pilule. 38 pt = 2 lignes de p3. */}
+            <Text
+              style={[
+                Fonts.p3,
+                Fonts.neutral300,
+                CONFLICT_HINT_STYLE,
+              ]}
+            >
+              {conflictModeDescription(activeOption)}
+            </Text>
+          </View>
+        );
+      }}
+    />
+  );
+
+  const blocCapacite = (
+    <Controller
+      control={control}
+      name="maxSlots"
+      render={({ field: { onChange, value } }) => {
+        const safeValue = Number(value || 1);
+        return (
+          <View style={[Spaces.gap[8]]}>
+            {/* D63 : le libelle partageait la ligne des boutons, qui */}
+            {/* devaient donc rester a 30 pt. Sorti au-dessus comme */}
+            {/* les autres groupes de l'ecran, il rend la rangee au */}
+            {/* nombre — gros, centre, son unite juste dessous. */}
+            {isCollectiviteMode ? null : (
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {capacityFieldLabel}
+              </Text>
+            )}
+            <View
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                ApplicationStyle.backgroundColor.primary900,
+                ApplicationStyle.borderRadius16,
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
+                Spaces.gap[12],
+                { borderColor: `${Colors.primary500}55`, borderWidth: 1 },
+              ]}
+            >
+              <Button
+                onPress={() => onChange(Math.max(1, safeValue - 1))}
+                size="small"
+                style={STEPPER_BUTTON_STYLE}
+                title="-"
+                variant="Secondary"
+              />
+              <View style={[Alignments.fill]}>
+                <Text
+                  style={[Fonts.h4Black, Fonts.neutral00, STEPPER_VALUE_STYLE]}
+                >
+                  {safeValue}
+                </Text>
+                <Text
+                  style={[Fonts.small, Fonts.neutral300, STEPPER_VALUE_STYLE]}
+                >
+                  {safeValue > 1
+                    ? t('facilityForm.capacity.plural', 'équipes à la fois')
+                    : t('facilityForm.capacity.singular', 'équipe à la fois')}
+                </Text>
+              </View>
+              <Button
+                onPress={() => onChange(Math.min(10, safeValue + 1))}
+                size="small"
+                style={STEPPER_BUTTON_STYLE}
+                title="+"
+                variant="Primary"
+              />
+            </View>
+            {isCollectiviteMode ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t(
+                  'collectiviteCreneaux.formulaire.capaciteAide',
+                  'Un gymnase coupé en 2 plateaux reçoit 2 équipes en même temps. Au-delà, '
+                    + 'l’installation est complète.',
+                )}
+              </Text>
+            ) : null}
+            {errors.maxSlots?.message ? (
+              <Text style={[Fonts.p3, Fonts.error700]}>
+                {errors.maxSlots.message}
+              </Text>
+            ) : null}
+          </View>
+        );
+      }}
+    />
+  );
+
+  // COLL-C2B — design P4v3-plateaux, ecran 1 (D66) : juste sous « equipes a la fois », un
+  // interrupteur, puis un nom par plateau. Autant de plateaux que d equipes a la fois ; ne
+  // rien nommer garde l installation telle qu aujourd hui. Un plateau suppose 2 equipes.
+  const nombreDePlateauxAffiches = Math.max(2, Number(equipesALaFois) || 2);
+  const blocPlateaux = plateauxPossibles ? (
+    <View style={[Spaces.gap[12]]}>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('collectiviteCreneaux.formulaire.plateaux', 'Nommer les plateaux')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t(
+              'collectiviteCreneaux.formulaire.plateauxAide',
+              'Pour attribuer un côté précis du gymnase.',
+            )}
+          </Text>
+        </View>
+        <Switch
+          accessibilityLabel={t('collectiviteCreneaux.formulaire.plateaux', 'Nommer les plateaux')}
+          accessibilityRole="switch"
+          onValueChange={basculerPlateaux}
+          thumbColor={plateauxActifs ? Colors.primary900 : Colors.neutral300}
+          trackColor={{ false: withAlpha(Colors.neutral00, 0.16), true: Colors.primary500 }}
+          value={Boolean(plateauxActifs)}
+        />
+      </View>
+      {plateauxActifs ? Array.from({ length: nombreDePlateauxAffiches }, (_, index) => (
+        <Input
+          density="compact"
+          key={`plateau-${index + 1}`}
+          label={t('collectiviteCreneaux.formulaire.plateauNumero', 'Plateau {{numero}}', {
+            numero: index + 1,
+          })}
+          maxLength={PLATEAU_NOM_MAX}
+          onChangeText={(/** @type {string} */ nom) => {
+            const suivants = Array.isArray(plateaux) ? [...plateaux] : [];
+            suivants[index] = nom;
+            setValue('plateaux', suivants);
+          }}
+          value={(Array.isArray(plateaux) ? plateaux[index] : '') || ''}
+        />
+      )) : null}
+      {plateauxActifs ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteCreneaux.formulaire.plateauxExemple',
+            'Un nom court que les clubs reconnaissent, par exemple « côté tribune ».',
+          )}
+        </Text>
+      ) : null}
+      {errors.plateaux?.message ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error700]}>
+          {String(errors.plateaux.message)}
+        </Text>
+      ) : null}
+    </View>
+  ) : null;
+
+  const blocCouleur = (
+    <Controller
+      control={control}
+      name="planningColor"
+      render={({ field: { onChange, value } }) => {
+        const selectedColor = isValidFacilityPlanningColor(value)
+          ? String(value).toUpperCase()
+          : FACILITY_PLANNING_PALETTE[0];
+
+        return (
+          <View style={[Spaces.gap[8]]}>
+            {isCollectiviteMode ? null : (
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {planningColorFieldLabel}
+              </Text>
+            )}
+            <View
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.wrap,
+                Spaces.gap[12],
+              ]}
+            >
+              {FACILITY_PLANNING_PALETTE.map((color) => {
+                const isSelected = selectedColor === color;
+                return (
+                  <View
+                    key={color}
+                    style={[
+                      PLANNING_SWATCH_RING_STYLE,
+                      {
+                        borderColor: isSelected
+                          ? Colors.neutral00
+                          : Colors.transparent,
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      accessibilityHint={t(
+                        'facilityForm.accessibility.planningColor',
+                        'Couleur de planning',
+                      )}
+                      accessibilityLabel={nomDeCouleur(t, color)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      activeOpacity={0.85}
+                      hitSlop={PLANNING_SWATCH_HIT_SLOP}
+                      onPress={() => onChange(color)}
+                      style={[
+                        PLANNING_SWATCH_STYLE,
+                        {
+                          backgroundColor: color,
+                          borderColor: `${Colors.neutral00}66`,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {isCollectiviteMode
+                // COLL-C2B — design P4-form : chaque couleur dit son nom, sous la grille.
+                ? t(
+                  'collectiviteCreneaux.formulaire.couleurAide',
+                  '{{couleur}} — sa couleur dans le planning et sur sa carte.',
+                  { couleur: nomDeCouleur(t, selectedColor), ...SANS_ECHAPPEMENT },
+                )
+                : planningColorHint}
+            </Text>
+            {errors.planningColor?.message ? (
+              <Text style={[Fonts.p3, Fonts.error700]}>
+                {isCollectiviteMode
+                  ? t(
+                    'facilityForm.collectivite.errors.planningColorInvalid',
+                    errors.planningColor.message,
+                  )
+                  : t(
+                    'facilityForm.errors.planningColorInvalid',
+                    errors.planningColor.message,
+                  )}
+              </Text>
+            ) : null}
+          </View>
+        );
+      }}
+    />
+  );
+
+  /**
+   * Un groupe du formulaire de la Ville : sa legende, puis ses champs.
+   * @param {string} legende - Le nom du groupe.
+   * @param {import('react').ReactNode} contenu - Ses champs.
+   * @returns {import('react').ReactElement} Le groupe.
+   */
+  const groupe = (legende, contenu) => (
+    <View
+      key={legende}
+      style={[
+        Spaces.gap[12],
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(Colors.neutral00, 0.03),
+          borderColor: withAlpha(Colors.neutral00, 0.08),
+          borderRadius: 16,
+          borderWidth: 1,
+        },
+      ]}
+    >
+      <Text
+        accessibilityRole="header"
+        style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5, textTransform: 'uppercase' }]}
+      >
+        {legende}
+      </Text>
+      {contenu}
+    </View>
+  );
+
+  // « Creer » s allume quand le nom, le type et l adresse sont la (design P4-form, ecran 3).
+  const adresseRenseignee = typeof adresseSaisie === 'string'
+    ? Boolean(adresseSaisie.trim())
+    : Boolean(adresseSaisie);
+  const peutEnvoyer = !isCollectiviteMode
+    || isEdit
+    || Boolean(String(nomSaisi || '').trim() && typeChoisi && adresseRenseignee);
+  const nombreDErreurs = Object.keys(errors).length;
+
+  const boutons = (
+    <View style={[Spaces.gap[4]]}>
+      {isCollectiviteMode && erreurServeur ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+          {erreurServeur}
+        </Text>
+      ) : null}
+      <Button
+        disabled={!peutEnvoyer}
+        isLoading={loading}
+        onPress={handleSubmit(handleSave)}
+        title={isEdit
+          ? t('facilityForm.actions.save', 'Enregistrer')
+          : t('facilityForm.actions.create', 'Créer')}
+        variant="Primary"
+      />
+      <Button
+        onPress={() => navigation.goBack()}
+        title={t('common.cancel', 'Annuler')}
+        variant="Ghost"
+      />
+    </View>
+  );
 
   return (
     <ScreenContainer
@@ -692,6 +1370,32 @@ function FacilityForm() {
             </Text>
           </View>
 
+          {/* COLL-C2B — design P4-form, ecran 4 : le recapitulatif des erreurs, en haut (le */}
+          {/* champ fautif peut etre hors de l ecran) ; il remplace la fenetre systeme. */}
+          {isCollectiviteMode && nombreDErreurs > 0 ? (
+            <View
+              accessibilityRole="alert"
+              style={[
+                Spaces.paddingHorizontal[16],
+                Spaces.paddingVertical[12],
+                {
+                  backgroundColor: withAlpha(Colors.error500, 0.12),
+                  borderColor: withAlpha(Colors.error500, 0.45),
+                  borderRadius: 14,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('collectiviteCreneaux.formulaire.aCorriger', {
+                  count: nombreDErreurs,
+                  defaultValue_one: '{{count}} champ à corriger',
+                  defaultValue_other: '{{count}} champs à corriger',
+                })}
+              </Text>
+            </View>
+          ) : null}
+
           {/* D63 : ce conteneur etait une CARTE (fond, bordure, rayon 24) qui */}
           {/* enfermait tout le formulaire. Or la rangee de capacite porte deja */}
           {/* sa propre bordure : ca faisait une carte dans une carte, que le */}
@@ -703,323 +1407,60 @@ function FacilityForm() {
               Spaces.gap[16],
             ]}
           >
-            <Controller
-              control={control}
-              name="name"
-              render={({ field: { onChange, value } }) => (
-                <Input
-                  density="compact"
-                  error={errors.name?.message}
-                  label={t('facilityForm.fields.name', 'Nom de l\'installation')}
-                  onChangeText={onChange}
-                  placeholder={t('facilityForm.placeholders.name', 'Ex: Terrain Honneur, Salle A...')}
-                  value={value}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="type"
-              render={({ field: { onChange, value } }) => (
-                <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                    {t('facilityForm.fields.type', 'Type — requis')}
-                  </Text>
-                  <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
-                    {FACILITY_TYPES.map((typeItem) => {
-                      const isActive = value === typeItem.value;
-                      return (
-                        <Button
-                          key={typeItem.value}
-                          onPress={() => onChange(typeItem.value)}
-                          size="small"
-                          style={[
-                            TYPE_CHIP_STYLE,
-                            !isActive ? { borderColor: Colors.primary200 } : null,
-                          ]}
-                          textStyle={!isActive ? { color: Colors.primary200 } : undefined}
-                          title={typeItem.label}
-                          variant={isActive ? 'Primary' : 'SecondaryLight'}
-                        />
-                      );
-                    })}
-                  </View>
-                  {errors.type?.message ? (
-                    <Text style={[Fonts.p3, Fonts.error700]}>
-                      {errors.type.message}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="address"
-              render={({ field: { onChange, value } }) => (
-                <View style={[Spaces.gap[4]]}>
-                  <AutocompleteAddressInput
-                    address={value}
-                    error={errors.address?.message}
-                    label={t('facilityForm.fields.address', 'Adresse (lieu exact)')}
-                    placeholder={t('facilityForm.placeholders.address', 'Ex: 12 Rue du Stade...')}
-                    setAddress={onChange}
-                  />
-                  {/* L'astuce d'aide a disparu : elle ne servait qu'a annoncer ce
-                      que cette ligne CONSTATE. Sans GPS, c'est le message
-                      d'erreur existant de l'autocomplete qui parle. */}
-                  {getAddressCoordinates(value) ? (
-                    <Text style={[Fonts.small, Fonts.success500]}>
-                      {t('facilityForm.hints.gpsActive', 'GPS activé')}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
-            />
-
-            {/* COLL1C : les horaires d ouverture (SPEC §2 B), en mode collectivite seulement. */}
-            {isCollectiviteMode ? (
-              <View style={[Alignments.row, Spaces.gap[12]]}>
-                <View style={{ flex: 1 }}>
-                  <Controller
-                    control={control}
-                    name="openingTime"
-                    render={({ field: { onChange, value } }) => (
-                      <Input
-                        density="compact"
-                        error={errors.openingTime?.message}
-                        label={t('facilityForm.fields.openingTime', 'Ouverture')}
-                        onChangeText={onChange}
-                        placeholder="08:00"
-                        value={value}
-                      />
-                    )}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Controller
-                    control={control}
-                    name="closingTime"
-                    render={({ field: { onChange, value } }) => (
-                      <Input
-                        density="compact"
-                        error={errors.closingTime?.message}
-                        label={t('facilityForm.fields.closingTime', 'Fermeture')}
-                        onChangeText={onChange}
-                        placeholder="22:00"
-                        value={value}
-                      />
-                    )}
-                  />
-                </View>
-              </View>
-            ) : null}
-
-            <Controller
-              control={control}
-              name="capacityConflictMode"
-              render={({ field: { onChange, value } }) => {
-                const activeOption = getConflictModeOption(value);
-                return (
-                  <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {conflictModeFieldLabel}
-                    </Text>
-                    {/* D63 : « Demande a valider » s'affichait « Demande a */}
-                    {/* valid... ». Ce sont des libelles SYSTEME — le pack les */}
-                    {/* veut entiers, l'ellipse est reservee aux donnees. */}
-                    <SegmentedControl
-                      centerContent
-                      fullLabels
-                      onChange={onChange}
-                      options={conflictModeOptions}
-                      value={value}
-                    />
-                    {/* Hauteur reservee : les deux explications ne font pas la */}
-                    {/* meme longueur, et sans plancher le formulaire sautait a */}
-                    {/* chaque bascule de pilule. 38 pt = 2 lignes de p3. */}
-                    <Text
-                      style={[
-                        Fonts.p3,
-                        Fonts.neutral300,
-                        CONFLICT_HINT_STYLE,
-                      ]}
-                    >
-                      {conflictModeDescription(activeOption)}
-                    </Text>
-                  </View>
-                );
-              }}
-            />
-
-            <Controller
-              control={control}
-              name="maxSlots"
-              render={({ field: { onChange, value } }) => {
-                const safeValue = Number(value || 1);
-                return (
-                  <View style={[Spaces.gap[8]]}>
-                    {/* D63 : le libelle partageait la ligne des boutons, qui */}
-                    {/* devaient donc rester a 30 pt. Sorti au-dessus comme */}
-                    {/* les autres groupes de l'ecran, il rend la rangee au */}
-                    {/* nombre — gros, centre, son unite juste dessous. */}
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {capacityFieldLabel}
-                    </Text>
-                    <View
-                      style={[
-                        Alignments.row,
-                        Alignments.alignCenter,
-                        ApplicationStyle.backgroundColor.primary900,
-                        ApplicationStyle.borderRadius16,
-                        Spaces.paddingHorizontal[12],
-                        Spaces.paddingVertical[8],
-                        Spaces.gap[12],
-                        { borderColor: `${Colors.primary500}55`, borderWidth: 1 },
-                      ]}
-                    >
-                      <Button
-                        onPress={() => onChange(Math.max(1, safeValue - 1))}
-                        size="small"
-                        style={STEPPER_BUTTON_STYLE}
-                        title="-"
-                        variant="Secondary"
-                      />
-                      <View style={[Alignments.fill]}>
-                        <Text
-                          style={[Fonts.h4Black, Fonts.neutral00, STEPPER_VALUE_STYLE]}
-                        >
-                          {safeValue}
-                        </Text>
-                        <Text
-                          style={[Fonts.small, Fonts.neutral300, STEPPER_VALUE_STYLE]}
-                        >
-                          {safeValue > 1
-                            ? t('facilityForm.capacity.plural', 'équipes à la fois')
-                            : t('facilityForm.capacity.singular', 'équipe à la fois')}
-                        </Text>
-                      </View>
-                      <Button
-                        onPress={() => onChange(Math.min(10, safeValue + 1))}
-                        size="small"
-                        style={STEPPER_BUTTON_STYLE}
-                        title="+"
-                        variant="Primary"
-                      />
-                    </View>
-                    {errors.maxSlots?.message ? (
-                      <Text style={[Fonts.p3, Fonts.error700]}>
-                        {errors.maxSlots.message}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              }}
-            />
-
-            <Controller
-              control={control}
-              name="planningColor"
-              render={({ field: { onChange, value } }) => {
-                const selectedColor = isValidFacilityPlanningColor(value)
-                  ? String(value).toUpperCase()
-                  : FACILITY_PLANNING_PALETTE[0];
-
-                return (
-                  <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      {planningColorFieldLabel}
-                    </Text>
-                    <View
-                      style={[
-                        Alignments.row,
-                        Alignments.alignCenter,
-                        Alignments.wrap,
-                        Spaces.gap[12],
-                      ]}
-                    >
-                      {FACILITY_PLANNING_PALETTE.map((color) => {
-                        const isSelected = selectedColor === color;
-                        return (
-                          <View
-                            key={color}
-                            style={[
-                              PLANNING_SWATCH_RING_STYLE,
-                              {
-                                borderColor: isSelected
-                                  ? Colors.neutral00
-                                  : Colors.transparent,
-                              },
-                            ]}
-                          >
-                            <TouchableOpacity
-                              accessibilityHint={t(
-                                'facilityForm.accessibility.planningColor',
-                                'Couleur de planning',
-                              )}
-                              accessibilityLabel={nomDeCouleur(t, color)}
-                              accessibilityRole="radio"
-                              accessibilityState={{ selected: isSelected }}
-                              activeOpacity={0.85}
-                              hitSlop={PLANNING_SWATCH_HIT_SLOP}
-                              onPress={() => onChange(color)}
-                              style={[
-                                PLANNING_SWATCH_STYLE,
-                                {
-                                  backgroundColor: color,
-                                  borderColor: `${Colors.neutral00}66`,
-                                  borderWidth: 1,
-                                },
-                              ]}
-                            />
-                          </View>
-                        );
-                      })}
-                    </View>
-                    <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {planningColorHint}
-                    </Text>
-                    {errors.planningColor?.message ? (
-                      <Text style={[Fonts.p3, Fonts.error700]}>
-                        {isCollectiviteMode
-                          ? t(
-                            'facilityForm.collectivite.errors.planningColorInvalid',
-                            errors.planningColor.message,
-                          )
-                          : t(
-                            'facilityForm.errors.planningColorInvalid',
-                            errors.planningColor.message,
-                          )}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              }}
-            />
+            {isCollectiviteMode ? [
+              groupe(
+                t('collectiviteCreneaux.formulaire.essentiel', 'L’essentiel'), (
+                  <>
+                    {blocNom}
+                    {blocTypeDeLaVille}
+                  </>
+                ),
+              ),
+              groupe(t('collectiviteCreneaux.formulaire.ou', 'Où'), blocAdresse),
+              groupe(t('collectiviteCreneaux.formulaire.quand', 'Quand'), blocHoraires),
+              groupe(
+                t('collectiviteCreneaux.formulaire.combien', 'Combien d’équipes à la fois'), (
+                  <>
+                    {blocCapacite}
+                    {blocPlateaux}
+                  </>
+                ),
+              ),
+              groupe(t('collectiviteCreneaux.formulaire.plein', 'Quand c’est plein'), blocConflit),
+              groupe(planningColorFieldLabel, blocCouleur),
+            ] : (
+              <>
+                {blocNom}
+                {blocTypeDuClub}
+                {blocAdresse}
+                {blocConflit}
+                {blocCapacite}
+                {blocCouleur}
+              </>
+            )}
           </View>
 
           {/* D51 : l'apercu qui repetait nom, capacite, type, mode de conflit */}
           {/* et adresse a ete retire. Chaque reglage annonce son propre etat */}
           {/* juste au-dessus ; le redire en bas ne faisait qu'allonger la page. */}
 
-          <View style={[Spaces.gap[4]]}>
-            <Button
-              isLoading={loading}
-              onPress={handleSubmit(handleSave)}
-              title={isEdit
-                ? t('facilityForm.actions.save', 'Enregistrer')
-                : t('facilityForm.actions.create', 'Créer')}
-              variant="Primary"
-            />
-            <Button
-              onPress={() => navigation.goBack()}
-              title={t('common.cancel', 'Annuler')}
-              variant="Ghost"
-            />
-          </View>
+          {isCollectiviteMode ? null : boutons}
         </ScrollView>
+        {/* COLL-C2B — design P4-form : en mairie, « Enregistrer » reste fixe en bas. */}
+        {isCollectiviteMode ? (
+          <View
+            style={[
+              Spaces.paddingHorizontal[16],
+              Spaces.paddingTop[8],
+              { borderTopColor: withAlpha(Colors.neutral00, 0.08), borderTopWidth: 1 },
+            ]}
+          >
+            {boutons}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
+
+      {feuilleDesTypes}
 
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
