@@ -13,6 +13,7 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
+import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
 import {
   formatChatTimestamp,
   getChatLastMessage,
@@ -40,7 +41,9 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — les canaux de la Ville, épinglés en tête de la messagerie.
+import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
+import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -72,6 +75,10 @@ function Messaging({ navigation, route }) {
   } = useTheme();
   const { allMyTeams, userData } = useAuth();
   const routeChatScope = route?.params?.chatScope || route?.params?.initialChatScope;
+  // COLL-C4A2 (02/10) — l'onglet « Messages » de la Ville (`espace: 'ville'`) ne montre que ses
+  // conversations privées avec ses clubs ; ailleurs, le canal des dirigeants est épinglé en tête.
+  const espaceVille = route?.params?.espace === 'ville';
+  const villeId = route?.params?.collectiviteId || null;
   const [chatScopeFilter, setChatScopeFilter] = useState(
     () => normalizeChatScopeFilter(routeChatScope),
   );
@@ -245,7 +252,7 @@ function Messaging({ navigation, route }) {
     const chatId = chat?.documentId;
     if (!chatId) return;
 
-    const title = getConversationName({
+    const title = titreDuFil(t, { chat, espaceVille }) || getConversationName({
       chatClub: chat?.club,
       chatGroupName: chat?.groupName,
       chatLeagueMatch: chat?.league_match,
@@ -260,7 +267,9 @@ function Messaging({ navigation, route }) {
     navigation.navigate(RouteNames.Conversation, {
       chatId,
       chatScope: chatScopeFilter,
+      chatType: chat?.type,
       title,
+      ...(espaceVille ? { espace: 'ville' } : {}),
     });
   };
 
@@ -279,6 +288,14 @@ function Messaging({ navigation, route }) {
             size={48}
           />
         );
+      // COLL-C4A2 — la conversation privée porte l'écusson d'en face (le club côté Ville, la Ville
+      // côté club) ; le canal des dirigeants, sa tuile.
+      case 'collectivite_club':
+        return espaceVille
+          ? <ClubLogoMark club={chat?.collectiviteClub} isNeutral size={48} />
+          : <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={48} />;
+      case 'collectivite_dirigeants':
+        return <IconeDuCanal taille={48} />;
       case 'friendly_match': {
         // AC05 constat 3 — « ça doit afficher le logo adverse ou l'écusson
         // adverse ». Le fil d'amical n'a AUCUNE équipe attachée côté serveur
@@ -379,7 +396,12 @@ function Messaging({ navigation, route }) {
   };
 
   const filteredChats = useMemo(() => {
-    const scopeFilteredChats = allChats.filter((chat) => {
+    const filsAffiches = filsDeLaMessagerie(allChats, {
+      collectiviteId: villeId,
+      espaceVille,
+      monClubId: userData?.club?.documentId || null,
+    });
+    const scopeFilteredChats = filsAffiches.filter((chat) => {
       if (chatScopeFilter === 'league') return isLeagueChat(chat);
       if (chatScopeFilter === 'classic') return !isLeagueChat(chat);
       return true;
@@ -389,7 +411,7 @@ function Messaging({ navigation, route }) {
     const lowerQuery = searchQuery.toLowerCase();
 
     return scopeFilteredChats.filter((chat) => {
-      const name = getConversationName({
+      const name = titreDuFil(t, { chat, espaceVille }) || getConversationName({
         chatClub: chat.club,
         chatGroupName: chat.groupName,
         chatLeagueMatch: chat.league_match,
@@ -401,11 +423,20 @@ function Messaging({ navigation, route }) {
       });
       return name?.toLowerCase()?.includes(lowerQuery);
     });
-  }, [allChats, chatScopeFilter, searchQuery, getConversationName, userData]);
+  }, [
+    allChats, chatScopeFilter, espaceVille, searchQuery, getConversationName, t, userData, villeId,
+  ]);
 
   const getEmptyListMessage = () => {
     if (searchQuery.trim()) {
       return t('messaging.noSearchResults', 'Aucune conversation trouvée.');
+    }
+
+    if (espaceVille) {
+      return t(
+        'collectiviteCanaux.conversationsVides',
+        'Aucune conversation. Un dirigeant qui vous écrit apparaîtra ici.',
+      );
     }
 
     if (chatScopeFilter === 'league') {
@@ -718,7 +749,7 @@ function Messaging({ navigation, route }) {
                     Fonts.neutral00,
                     hasUnread && Fonts.neutral00,
                   ]}
-                  text={getConversationName({
+                  text={titreDuFil(t, { chat, espaceVille }) || getConversationName({
                     chatClub: chat.club,
                     chatGroupName: chat.groupName,
                     chatLeagueMatch: chat.league_match,
@@ -873,11 +904,12 @@ function Messaging({ navigation, route }) {
           title="Messagerie"
         >
           <View style={[Alignments.fill]}>
-            {renderChatScopeFilter()}
+            {espaceVille ? null : renderChatScopeFilter()}
             {renderSearch()}
             {/* COLL-C4A (02/10) — en tête : le canal des actualités de la Ville (le membre d'un
                 club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ». */}
             <CanauxDeLaVille
+              chats={allChats}
               collectiviteId={route?.params?.collectiviteId || null}
               espaceVille={route?.params?.espace === 'ville'}
               navigation={navigation}

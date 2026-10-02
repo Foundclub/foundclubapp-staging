@@ -44,8 +44,20 @@ const chatSchema = Joi.object({
   // matchs amicaux (chat/schema.json). Sans lui, TOUTE liste de discussions
   // contenant un fil d amical tombait dans le repli non valide de getChats() —
   // silencieux, mais la liste entiere perdait sa validation au passage.
+  // COLL-C4A2 (02/10) : le canal des dirigeants (D72) et la conversation privée Ville ↔ club
+  // (D73). Sans eux, une liste qui en contient un tombait dans le repli non valide de getChats().
   type: Joi.string()
-    .valid('whisper', 'club', 'team', 'multisport', 'league_match', 'friendly_match', 'group')
+    .valid(
+      'whisper',
+      'club',
+      'team',
+      'multisport',
+      'league_match',
+      'friendly_match',
+      'group',
+      'collectivite_dirigeants',
+      'collectivite_club',
+    )
     .required(),
   updatedAt: Joi.date().required(),
 }).required();
@@ -255,6 +267,7 @@ export const createChatMessage = async ({
   event,
   message,
   replyTo,
+  senderSignature,
 }) => {
   const response = await client.post('/chat-messages', {
     data: {
@@ -264,6 +277,8 @@ export const createChatMessage = async ({
       event,
       message: message || '',
       replyTo,
+      // COLL-C4A2 (02/10) — la voix DEMANDÉE dans un fil de la Ville ; le serveur décide.
+      ...(senderSignature ? { senderSignature } : {}),
     },
   });
 

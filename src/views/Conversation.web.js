@@ -29,6 +29,13 @@ import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import ScreenContainer from '@/components/templates/ScreenContainer'
+// COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
+import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
+import {
+  FilDeLaVilleQuitte,
+  useFilDeLaVille,
+  VideDuFilDeLaVille,
+} from '@/views/collectivite/components/FilDeLaVille';
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
 import media from '@/platform/media'
@@ -309,7 +316,7 @@ function Conversation({ navigation, route }) {
     reactToMessage,
     respondToProposal,
     retryFailedMessage,
-    sendMessage,
+    sendMessage: sendMessageSansVoix,
     sendReadReceipt,
     sendTypingStart,
     sendTypingStop,
@@ -377,6 +384,25 @@ function Conversation({ navigation, route }) {
     isLoading: isMessagesLoading,
     refetch: refetchMessages,
   } = useGetChatMessages({ chatId, pageSize: 30 })
+  // 🏛️ COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privée) : le
+  // titre, la ligne sous le titre, qui écrit et pour quel club, la voix demandée au serveur, et
+  // « Tu ne fais plus partie de ce canal » (voir Conversation.js). Ailleurs, rien ne change.
+  const filDeLaVille = useFilDeLaVille({
+    chatData,
+    chatId,
+    espaceVille: route?.params?.espace === 'ville',
+    messagesError,
+    navigation,
+    routeChatType: route?.params?.chatType || null,
+  });
+  const sendMessage = useCallback((
+    /** @type {string} */ id,
+    /** @type {string} */ texte,
+    /** @type {Record<string, any>} */ extra = {},
+  ) => sendMessageSansVoix(id, texte, { ...filDeLaVille.voix, ...extra }), [
+    filDeLaVille.voix,
+    sendMessageSansVoix,
+  ]);
   const { data: sharedEventsPages } = useGetEvents({
     compact: true,
     excludeType: 'Reservation',
@@ -421,7 +447,7 @@ function Conversation({ navigation, route }) {
     ))
   }, [chatData?.participants, userData?.documentId])
 
-  const conversationName = useMemo(() => getConversationName({
+  const conversationName = useMemo(() => filDeLaVille.titre || getConversationName({
     chatClub: chatData?.club,
     chatGroupName: chatData?.groupName,
     chatLeagueMatch: chatData?.league_match,
@@ -431,7 +457,7 @@ function Conversation({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     chatType: chatData?.type,
     meId: userData?.documentId,
-  }) || 'Conversation', [chatData, userData?.documentId])
+  }) || 'Conversation', [chatData, filDeLaVille.titre, userData?.documentId]);
 
   const latestMessageId = messages.length > 0 ? getMessageId(messages[messages.length - 1]) : ''
   const leagueMatchId = getEntityDocumentId(chatData?.league_match)
@@ -604,6 +630,7 @@ function Conversation({ navigation, route }) {
       event,
       message: trimmedMessage,
       replyTo: replyPayload,
+      ...filDeLaVille.voix,
     })
     await invalidateConversationQueries()
     setReplyTarget(null)
@@ -612,7 +639,7 @@ function Conversation({ navigation, route }) {
     }
     // @ts-ignore: FIXME: Baseline TS regression
     return getEntityDocumentId(response?.data || response)
-  }, [chatId, invalidateConversationQueries, sendMessage, userData])
+  }, [chatId, filDeLaVille.voix, invalidateConversationQueries, sendMessage, userData]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const uploadAttachment = useCallback(async (file) => {
@@ -1620,7 +1647,21 @@ function Conversation({ navigation, route }) {
 
   // @ts-ignore: FIXME: Baseline TS regression
   const renderMessageCard = useCallback((message) => {
-    const senderName = getDisplayName(message?.sender)
+    // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : une ligne centrée, sans bulle.
+    if (filDeLaVille.estLigneSysteme(message)) {
+      return (
+        <div
+          key={getMessageId(message)}
+          style={{
+            color: mutedTextColor, fontSize: 13, justifySelf: 'center', textAlign: 'center',
+          }}
+        >
+          {String(message?.message || '')}
+        </div>
+      );
+    }
+    // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
+    const senderName = filDeLaVille.nomDeLExpediteur(message) || getDisplayName(message?.sender);
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
@@ -2026,6 +2067,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
+    filDeLaVille,
     handleReportMessage,
     handleRetryFailedMessage,
     handleToggleReaction,
@@ -2188,7 +2230,9 @@ function Conversation({ navigation, route }) {
                   'conversation.web.loading.conversation',
                   'Chargement de la conversation...',
                 )
-                : `${Array.isArray(chatData?.participants) ? chatData.participants.length : 0} participants`}
+                : (filDeLaVille.sousTitre || `${
+                  Array.isArray(chatData?.participants) ? chatData.participants.length : 0
+                } participants`)}
             </div>
           </header>
 
@@ -2228,7 +2272,13 @@ function Conversation({ navigation, route }) {
               </div>
             ) : null}
 
-            {!isMessagesLoading && messagesError ? (
+            {!isMessagesLoading && filDeLaVille.estQuitte ? (
+              <FilDeLaVilleQuitte
+                estCanal={filDeLaVille.estCanal}
+                onRetour={() => navigation.navigate(RouteNames.Chat)}
+              />
+            ) : null}
+            {!isMessagesLoading && messagesError && !filDeLaVille.estQuitte ? (
               <div style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: `1px solid ${borderColor}`,
@@ -2263,7 +2313,14 @@ function Conversation({ navigation, route }) {
               </div>
             ) : null}
 
-            {!isMessagesLoading && !messagesError && messages.length === 0 ? (
+            {!isMessagesLoading && !messagesError && !messages.length && filDeLaVille.estFil ? (
+              <VideDuFilDeLaVille
+                chat={chatData}
+                clubsCount={filDeLaVille.clubsCount}
+                espaceVille={route?.params?.espace === 'ville'}
+              />
+            ) : null}
+            {!isMessagesLoading && !messagesError && !messages.length && !filDeLaVille.estFil ? (
               <div style={{ color: mutedTextColor }}>
                 {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
               </div>
@@ -2316,7 +2373,9 @@ function Conversation({ navigation, route }) {
                   }
                 }
               }}
-              placeholder={t('conversation.placeholder', 'Ecris ton message...')}
+              placeholder={
+                filDeLaVille.placeholder || t('conversation.placeholder', 'Ecris ton message...')
+              }
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: `1px solid ${borderColor}`,
@@ -2397,6 +2456,29 @@ function Conversation({ navigation, route }) {
         </section>
 
         <aside style={{ display: 'grid', gap: 20 }}>
+          {/* COLL-C4A2 — P3c-canal-ordi : « Dans ce canal », liste calculée, sans « Ajouter ». */}
+          {filDeLaVille.estFil && filDeLaVille.membres ? (
+            <section
+              style={{
+                background: panelBackground,
+                border: `1px solid ${borderColor}`,
+                borderRadius: 24,
+                display: 'grid',
+                gap: 14,
+                padding: 22,
+              }}
+            >
+              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>
+                {filDeLaVille.estCanal
+                  ? t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal')
+                  : t('collectiviteCanaux.membres.titrePrivee', 'Dans cette conversation')}
+              </h2>
+              <ListeDesMembresDuFil
+                espaceVille={route?.params?.espace === 'ville'}
+                fil={filDeLaVille.membres}
+              />
+            </section>
+          ) : null}
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22 }}>
             <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Partager</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>

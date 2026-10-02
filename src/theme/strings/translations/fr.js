@@ -5010,6 +5010,69 @@ export default {
     },
   },
   // COLL-CLUBS (01/10/2026) — les clubs rattachés, la fiche d'un club côté mairie, l'invitation.
+  // COLL-C4A2 (02/10/2026) — les canaux de la Ville dans la messagerie : canal des dirigeants
+  // (D72) et conversation privee Ville <-> club (D73). Design HY521H1 page 3.
+  collectiviteCanaux: {
+    conversationsVides: 'Aucune conversation. Un dirigeant qui vous écrit apparaîtra ici.',
+    dernierMessage: '{{qui}} : {{texte}}',
+    dirigeantLigne: '{{ville}} et {{nombre}} clubs',
+    ecrire: {
+      dirigeant: 'Écris aux autres dirigeants…',
+      mairie: 'Écrire aux dirigeants…',
+      priveeClub: 'Écris à la Ville…',
+      priveeMairie: 'Écrire à {{club}}…',
+    },
+    mairieLigne: 'Vous et les dirigeants des {{nombre}} clubs · échanges de créneaux',
+    mairieLigneUn: 'Vous et les dirigeants d’1 club · échanges de créneaux',
+    membres: {
+      aucunDirigeant: 'Aucun dirigeant sur l’app pour l’instant.',
+      dirigeant: 'dirigeant',
+      gestionnaire: 'gestionnaire',
+      moiToi: '{{nom}} (toi)',
+      moiVous: '{{nom}} (vous)',
+      ouvrirCanal: 'Qui est dans ce canal',
+      ouvrirPrivee: 'Qui est dans cette conversation',
+      // eslint-disable-next-line max-len
+      regleCanal: 'Un club rattaché y entre avec ses dirigeants ; un club détaché en sort. Les entraîneurs, les joueurs et les parents n’y sont pas.',
+      reglePrivee: 'Seuls la Ville et les dirigeants de ce club lisent cette conversation.',
+      sousTitreCanal: 'Dirigeants des clubs · {{ville}}',
+      sousTitrePrivee: '{{club}} · {{ville}}',
+      titreCanal: 'Dans ce canal',
+      titrePrivee: 'Dans cette conversation',
+    },
+    quitte: {
+      retour: 'Retour à la messagerie',
+      // eslint-disable-next-line max-len
+      texteCanal: 'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
+      // eslint-disable-next-line max-len
+      textePrivee: 'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+      titreCanal: 'Tu ne fais plus partie de ce canal',
+      titrePrivee: 'Tu ne fais plus partie de cette conversation',
+    },
+    signature: {
+      club: '{{prenom}} {{nom}} · {{club}}',
+      ville: '{{ville}} · {{prenom}} {{initiale}}',
+    },
+    sousTitre: {
+      dirigeant: '{{ville}} et {{nombre}} clubs',
+      dirigeantUn: '{{ville}} et 1 club',
+      mairie: 'Vous et les dirigeants des {{nombre}} clubs',
+      mairieUn: 'Vous et les dirigeants d’1 club',
+      priveeClub: 'Conversation privée avec la Ville',
+      priveeMairie: 'Vous et les dirigeants du club',
+    },
+    titre: 'Dirigeants des clubs',
+    vide: {
+      // eslint-disable-next-line max-len
+      dirigeantTexte: 'Ici, tu échanges avec {{ville}} et les dirigeants des autres clubs rattachés : un créneau à céder, un tournoi à caler. Les joueurs et les parents n’y sont pas.',
+      dirigeantTitre: 'Le canal des dirigeants',
+      // eslint-disable-next-line max-len
+      mairieTexte: 'Pour les échanges de créneaux, les questions sur une installation, un forum à préparer. Les joueurs n’y sont pas.',
+      mairieTitre: 'Les dirigeants des {{nombre}} clubs et vous',
+      priveeClub: 'Conversation privée : seuls la Ville et les dirigeants de ton club la lisent.',
+      priveeMairie: 'Conversation privée : seuls les dirigeants de {{club}} la lisent.',
+    },
+  },
   collectiviteActualites: {
     accueil: {
       erreur: 'Les actualités n’ont pas pu être lues.',

@@ -64,6 +64,11 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
   useMesActualitesDeLaVille: () => mockMine,
 }));
+// COLL-C4A2 (02/10) : la section porte aussi le canal des dirigeants (son propre témoin :
+// COLLC4A2.canal.test.js). Ici, aucun canal : ce témoin reste celui des actualités.
+jest.mock('@/services/collectivite/collectiviteCanauxQueries', () => ({
+  useMesCanauxDeLaVille: () => ({ data: [] }),
+}));
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => ({
     data: [{ documentId: 'a' }, { documentId: 'b' }, { documentId: 'c' }],

@@ -82,6 +82,10 @@ export const getConversationName = ({
   switch (chatType) {
     case 'club':
       return chatClub?.name || '';
+    // COLL-C4A2 (02/10) — le canal des dirigeants de la Ville (D72). La conversation privee
+    // Ville <-> club (D73) se nomme par collectiviteCanaux.titreDuFil (qui sait de quel cote).
+    case 'collectivite_dirigeants':
+      return i18next.t('collectiviteCanaux.titre', 'Dirigeants des clubs');
     case 'friendly_match':
       // Le serveur pose deja « Match amical : A vs B » dans groupName
       // (friendly-match-workflow.ts:279). Sans ce cas, le `default` rendait ''

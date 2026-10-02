@@ -1319,6 +1319,17 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
+        {/* COLL-C4A2 (02/10/2026) — « Dans ce canal » : la liste calculee du canal des dirigeants
+            ou de la conversation privee Ville <-> club. Le bouton de l en-tete de la conversation
+            y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteCanalMembres').default}
+          name={RouteNames.CollectiviteCanalMembres}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal'),
+          }}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

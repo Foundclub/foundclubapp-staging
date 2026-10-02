@@ -4677,6 +4677,64 @@ export default {
     },
   },
   // COLL-CLUBS (01/10/2026) — attached clubs, a club's page for the town hall, the invitation.
+  // COLL-C4A2 (02/10/2026) — les canaux de la Ville dans la messagerie : canal des dirigeants
+  // (D72) et conversation privee Ville <-> club (D73). Design HY521H1 page 3.
+  collectiviteCanaux: {
+    conversationsVides: 'No conversation yet. A club manager who writes to you will appear here.',
+    dernierMessage: '{{qui}}: {{texte}}',
+    dirigeantLigne: '{{ville}} and {{nombre}} clubs',
+    ecrire: {
+      dirigeant: 'Write to the other club managers…',
+      mairie: 'Write to the club managers…',
+      priveeClub: 'Write to the city…',
+      priveeMairie: 'Write to {{club}}…',
+    },
+    mairieLigne: 'You and the managers of {{nombre}} clubs · slot swaps',
+    mairieLigneUn: 'You and the managers of 1 club · slot swaps',
+    membres: {
+      aucunDirigeant: 'No club manager on the app yet.',
+      dirigeant: 'club manager',
+      gestionnaire: 'city manager',
+      moiToi: '{{nom}} (you)',
+      moiVous: '{{nom}} (you)',
+      ouvrirCanal: 'Who is in this channel',
+      ouvrirPrivee: 'Who is in this conversation',
+      regleCanal: 'An attached club joins with its managers; a detached club leaves. Coaches, players and parents are not in it.',
+      reglePrivee: 'Only the city and this club’s managers read this conversation.',
+      sousTitreCanal: 'Club managers · {{ville}}',
+      sousTitrePrivee: '{{club}} · {{ville}}',
+      titreCanal: 'In this channel',
+      titrePrivee: 'In this conversation',
+    },
+    quitte: {
+      retour: 'Back to messages',
+      texteCanal: 'Your club is no longer attached to this city, so you are no longer in its managers’ channel. Your past messages stay there.',
+      textePrivee: 'Your club is no longer attached to this city: this private conversation is closed to you. Your past messages stay there.',
+      titreCanal: 'You are no longer in this channel',
+      titrePrivee: 'You are no longer in this conversation',
+    },
+    signature: {
+      club: '{{prenom}} {{nom}} · {{club}}',
+      ville: '{{ville}} · {{prenom}} {{initiale}}',
+    },
+    sousTitre: {
+      dirigeant: '{{ville}} and {{nombre}} clubs',
+      dirigeantUn: '{{ville}} and 1 club',
+      mairie: 'You and the managers of {{nombre}} clubs',
+      mairieUn: 'You and the managers of 1 club',
+      priveeClub: 'Private conversation with the city',
+      priveeMairie: 'You and the club’s managers',
+    },
+    titre: 'Club managers',
+    vide: {
+      dirigeantTexte: 'Here you talk with {{ville}} and the managers of the other attached clubs: a slot to give up, a tournament to set. Players and parents are not in it.',
+      dirigeantTitre: 'The club managers’ channel',
+      mairieTexte: 'For slot swaps, questions about a facility, a forum to prepare. Players are not in it.',
+      mairieTitre: 'The managers of the {{nombre}} clubs and you',
+      priveeClub: 'Private conversation: only the city and your club’s managers read it.',
+      priveeMairie: 'Private conversation: only the managers of {{club}} read it.',
+    },
+  },
   collectiviteActualites: {
     accueil: {
       erreur: 'The news could not be loaded.',
