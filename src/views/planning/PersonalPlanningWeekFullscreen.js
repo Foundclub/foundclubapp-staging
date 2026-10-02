@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 import {
-  useCallback, useMemo, useState,
+  useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -367,6 +367,14 @@ function PlanningWeekFullscreen() {
   const [fermetureOuverte, setFermetureOuverte] = useState(/** @type {any} */ (null));
   // COLL-C2B (02/10) — ce que la mairie a ouvert : « attribuer », « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
+  // COLL-FIX-PLANNING (G4) — ces trois fenetres du bas s affichent par un PORTAIL pose AU-DESSUS
+  // de la navigation : en quittant l ecran (Ecrire aux dirigeants, Modifier, une seance), elles
+  // resteraient par-dessus l ecran suivant. Elles se ferment quand l ecran perd la main (« blur »).
+  useEffect(() => /** @type {any} */ (navigation).addListener?.('blur', () => {
+    setReadOnlyBlock(null);
+    setFermetureOuverte(null);
+    setPanneau(null);
+  }), [navigation]);
   const attachedClubs = useCollectiviteClubs(
     readOnlyBlock || panneau ? managingCollectiviteId : null,
   );
@@ -1211,12 +1219,13 @@ function PlanningWeekFullscreen() {
         </Text>
         {/* COLL-C2B (02/10) — design P5-jour, etat 2 : l ORIGINE de la place (contrat C2A §7). */}
         {/* COLL-C4A2 — « Ecrire aux dirigeants » (D73) : la mairie ecrit en prive au club qui */}
-        {/* occupe ce bloc. */}
+        {/* occupe ce bloc. G4 : la fenetre du bas est hors navigation, l ecran passe la sienne. */}
         {peutAttribuer ? (
           <EcrireAuxDirigeants
             club={readOnlyBlock.club}
             collectiviteId={managingCollectiviteId}
             compact
+            navigation={navigation}
             testID="planning-ecrire-aux-dirigeants"
           />
         ) : null}
