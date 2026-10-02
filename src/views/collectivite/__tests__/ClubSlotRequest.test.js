@@ -164,6 +164,9 @@ const APERCU_COMPLET = {
 
 let mockApercu = APERCU_LIBRE;
 let mockStatut = 'pending_validation';
+// DECISIONS-SOIR (02/10) — qui décide d'une séance en attente : la mairie (`facility_overbooking`)
+// ou le dirigeant du club (`club_slot_overflow`, D32). Le serveur le dit dans `pendingReason`.
+let mockRaison = 'facility_overbooking';
 
 // 🧯 COLL-FIX-DEMANDES (02/10) — LE DOUBLE DU SERVEUR APPLIQUE SA RÈGLE DES ENTRAÎNEMENTS.
 // Tournée G3 : aucune demande ne partait, POST /api/events répondait 400 « Les entrainements
@@ -233,6 +236,7 @@ const monter = async (/** @type {(lus: string[]) => boolean} */ pret) => {
 beforeEach(() => {
   mockApercu = APERCU_LIBRE;
   mockStatut = 'pending_validation';
+  mockRaison = 'facility_overbooking';
   mockParams = {
     clubId: 'club-A', date: JOUR, endTime: '19:30', facilityId: 'gym-ville', startTime: '18:00',
   };
@@ -258,7 +262,14 @@ beforeEach(() => {
   mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
     if (url === '/events') regleDesEntrainementsDuServeur(corps);
     return {
-      data: { corps, data: { documentId: `ev-${mockPost.mock.calls.length}`, status: mockStatut } },
+      data: {
+        corps,
+        data: {
+          documentId: `ev-${mockPost.mock.calls.length}`,
+          pendingReason: mockStatut === 'pending_validation' ? mockRaison : 'none',
+          status: mockStatut,
+        },
+      },
     };
   });
 });
@@ -362,14 +373,49 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 30 juin · Gymnase des Tilleuls');
   });
 
+  // DECISIONS-SOIR (02/10) — SPEC-PLACE, règle d'Adel : « Si c'est une place libre attribuée au
+  // club, ça se valide seul ; sinon, si c'est hors attribution au club, ça demande une validation
+  // à la mairie. » Le serveur ne confirme d'office QUE dans un créneau du club : l'accusé le dit.
   // eslint-disable-next-line max-len
-  it('il restait de la place : l’accusé dit que c’est posé, la Ville n’a pas à décider', async () => {
+  it('SPEC-PLACE : le serveur confirme (créneau du club) : l’accusé dit que c’est posé DANS son créneau', async () => {
     mockStatut = 'confirmed';
     const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
     await appuyer(arbre, 'demande-equipe-u13');
     await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
     await appuyer(arbre, 'bouton-Envoyer la demande');
-    await attendre(() => textes(arbre).includes('C’est posé : il restait de la place'));
-    expect(textes(arbre)).toContain('Ton entraînement est confirmé : la Ville n’a pas à décider.');
+    await attendre(() => textes(arbre).includes('C’est posé : c’est dans ton créneau'));
+    // eslint-disable-next-line max-len
+    expect(textes(arbre)).toContain('Ton entraînement est confirmé : la Ville a déjà attribué ce créneau à ton club.');
+    expect(textes(arbre)).not.toContain('C’est posé : il restait de la place');
+  });
+
+  // eslint-disable-next-line max-len
+  it('SPEC-PLACE : hors créneau, place LIBRE, le serveur met en attente : « Demande envoyée à la Ville »', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
+    await appuyer(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
+      'En attente de la mairie',
+    ]));
+  });
+
+  // eslint-disable-next-line max-len
+  it('D32 : dans le créneau du club mais déjà au complet : l’accusé dit que c’est le DIRIGEANT qui décide', async () => {
+    mockRaison = 'club_slot_overflow';
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
+    await appuyer(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => textes(arbre).includes('Demande envoyée à ton dirigeant'));
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      // eslint-disable-next-line max-len
+      'Ton club est déjà au complet dans son créneau à ce moment : ton dirigeant l’accepte ou la refuse. Tu reçois sa réponse en notification.',
+      'En attente de ton dirigeant',
+    ]));
+    expect(textes(arbre)).not.toContain('En attente de la mairie');
+    expect(textes(arbre)).not.toContain('Demande envoyée à la Ville de Montrivage');
   });
 });
