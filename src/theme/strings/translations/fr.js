@@ -7068,6 +7068,10 @@ export default {
     trainingCamp: 'STAGE',
   },
   eventDetails: {
+    // FINITIONS7 (02/10) — les noms que le lecteur d ecran annonce dans la barre du haut.
+    a11y: {
+      reportEvent: 'Signaler l’événement',
+    },
     absenceConfirmed: 'Absence confirmée',
     absenceRecorded: 'Absence enregistrée',
     absencesMissing: 'Absences / manques',
@@ -15909,8 +15913,12 @@ export default {
       title: 'Comment créer une alerte ?',
     },
     item: {
+      // FINITIONS7 (02/10) — les noms des commandes d une alerte, pour le lecteur d ecran.
+      deleteLabel: 'Supprimer l’alerte « {{label}} »',
+      editLabel: 'Modifier l’alerte « {{label}} »',
       search: 'Rechercher',
       staffOnly: 'Disponible uniquement sur un compte dirigeant ou entraîneur.',
+      toggleLabel: 'Alerte « {{label}} » active',
     },
     offer: {
       // eslint-disable-next-line max-len

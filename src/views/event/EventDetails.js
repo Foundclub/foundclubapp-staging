@@ -7884,6 +7884,8 @@ function EventDetails({ navigation, route }) {
     () => (
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
         <Button
+          // FINITIONS7 — tournee 8 : un drapeau sans nom pour le lecteur d ecran.
+          accessibilityLabel={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
           icon="flag"
           isOption
           onPress={() => setIsReportModalVisible(true)}
@@ -7912,6 +7914,9 @@ function EventDetails({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      // FINITIONS7 — la fleche de la pile s annoncait « Go back » (repli anglais de
+      // @react-navigation/elements, HeaderBackButton.tsx:35) : elle dit « Retour ».
+      headerBackAccessibilityLabel: t('common.back', 'Retour'),
       headerBackground: renderHeaderBackground,
       headerLeft: fromEventCreation ? renderHeaderLeft : undefined,
       headerRight: renderHeaderRight,
@@ -7922,6 +7927,7 @@ function EventDetails({ navigation, route }) {
     renderHeaderBackground,
     renderHeaderLeft,
     renderHeaderRight,
+    t,
   ]);
 
   const isCoachLateModal = lateModalMode === 'coach_mark' || lateModalMode === 'coach_edit';

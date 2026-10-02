@@ -6652,6 +6652,10 @@ export default {
     trainingCamp: 'TRAINING CAMP',
   },
   eventDetails: {
+    // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
+    a11y: {
+      reportEvent: 'Report the event',
+    },
     absenceConfirmed: 'Absence confirmed',
     absenceRecorded: 'Absence recorded',
     absencesMissing: 'Absences / missing',
@@ -15201,8 +15205,12 @@ export default {
       title: 'How do I create an alert?',
     },
     item: {
+      // FINITIONS7 (02/10) — the names of an alert's controls, for the screen reader.
+      deleteLabel: 'Delete the alert “{{label}}”',
+      editLabel: 'Edit the alert “{{label}}”',
       search: 'Search',
       staffOnly: 'Only available on a manager or coach account.',
+      toggleLabel: 'Alert “{{label}}” on',
     },
     offer: {
       body: 'Choose a city and a sport: we notify you as soon as a matching new event is published near you.',

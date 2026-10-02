@@ -7,6 +7,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { canAccessRecruitmentProfiles } from '@/domains/search/recruitmentFlow';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -337,6 +338,11 @@ function SearchAlerts({ navigation }) {
                       ) : null}
                     </View>
                 <Switch
+                      // FINITIONS7 — tournee 8 : interrupteur, crayon et corbeille etaient muets.
+                      accessibilityLabel={t('searchAlerts.item.toggleLabel', 'Alerte « {{label}} » active', {
+                        label: item.label,
+                        ...SANS_ECHAPPEMENT,
+                      })}
                       disabled={isProfileAlertUnavailable}
                       onValueChange={() => handleToggleActive(item)}
                       thumbColor={Colors.neutral00}
@@ -354,6 +360,10 @@ function SearchAlerts({ navigation }) {
                     />
                 {item.type === 'recruitment' ? null : (
                   <Button
+                      accessibilityLabel={t('searchAlerts.item.editLabel', 'Modifier l’alerte « {{label}} »', {
+                        label: item.label,
+                        ...SANS_ECHAPPEMENT,
+                      })}
                       disabled={isProfileAlertUnavailable}
                       icon="edit"
                       onPress={() => handleEditAlert(item)}
@@ -361,6 +371,10 @@ function SearchAlerts({ navigation }) {
                     />
                 )}
                 <Button
+                      accessibilityLabel={t('searchAlerts.item.deleteLabel', 'Supprimer l’alerte « {{label}} »', {
+                        label: item.label,
+                        ...SANS_ECHAPPEMENT,
+                      })}
                       icon="trash"
                       onPress={() => handleDeletePress(item.documentId)}
                       variant="Secondary"

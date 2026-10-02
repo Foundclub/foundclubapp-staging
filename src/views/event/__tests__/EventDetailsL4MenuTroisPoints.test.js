@@ -758,3 +758,48 @@ describe('N7 item 4 (vague P, 23/08) — la bascule d entrainement vit dans la f
     expect(rangeeBascule(root, "l'entraînement")).toBeUndefined();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINITIONS7 · POINT 4 (tournee 8, 01/10, « 🟡 lecteur d ecran ») — sur la fiche
+// d un evenement, la fleche retour, le drapeau et le ⋮ etaient introuvables par
+// TalkBack. Ce que le CODE donne au lecteur d ecran se prouve ici : un NOM en
+// francais, un ROLE, et rien qui ne cache l element. Leur presence dans l arbre
+// d accessibilite du telephone, elle, se constate a la tournee (Jest n a pas de
+// TalkBack).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Toutes les options remises a `setOptions`, fusionnees dans l ordre.
+ * @returns {Record<string, any>} - Les options de la barre du haut.
+ */
+const optionsDeLaBarre = () => Object.assign(
+  {},
+  ...mockSetOptions.mock.calls.map((/** @type {any} */ appel) => appel[0] || {}),
+);
+
+describe('FINITIONS7 · point 4 — la barre du haut de la fiche a un nom pour le lecteur d ecran', () => {
+  test('🚨 le drapeau : « Signaler l’événement », un bouton', () => {
+    monter();
+    const drapeau = boutonSignaler();
+
+    expect(drapeau).not.toBeNull();
+    expect(drapeau.props.accessibilityLabel).toBe('Signaler l’événement');
+    expect(drapeau.props.accessibilityRole ?? 'button').toBe('button');
+  });
+
+  test('le ⋮ : « Gérer l’événement », un bouton que rien ne cache', () => {
+    monter();
+    const menu = boutonDuMenu();
+
+    expect(menu.props.accessibilityLabel).toBe("Gérer l'événement");
+    expect(menu.props.accessibilityRole).toBe('button');
+    expect(menu.props.accessible).not.toBe(false);
+    expect(menu.props.importantForAccessibility ?? 'auto').toBe('auto');
+  });
+
+  test('🚨 la fleche retour s annonce en francais : « Retour », jamais « Go back »', () => {
+    monter();
+
+    expect(optionsDeLaBarre().headerBackAccessibilityLabel).toBe('Retour');
+  });
+});

@@ -147,3 +147,23 @@ describe('FINITIONS7 point 3 — les textes de secours', () => {
     expect(libelles).not.toEqual(expect.arrayContaining(['Charniere']));
   });
 });
+
+// FINITIONS7 · POINT 4 — les noms donnes au lecteur d ecran, rendus par le VRAI i18next (les
+// temoins des ecrans montent une doublure qui n interpole pas toujours).
+describe('FINITIONS7 point 4 — les noms pour le lecteur d ecran', () => {
+  const ALERTE = { label: 'Foot / U15 · L’Estaque', ...SANS_ECHAPPEMENT };
+
+  test.each([
+    ['fr', 'eventDetails.a11y.reportEvent', {}, 'Signaler l’événement'],
+    ['fr', 'searchAlerts.item.editLabel', ALERTE, 'Modifier l’alerte « Foot / U15 · L’Estaque »'],
+    ['fr', 'searchAlerts.item.deleteLabel', ALERTE, 'Supprimer l’alerte « Foot / U15 · L’Estaque »'],
+    ['fr', 'searchAlerts.item.toggleLabel', ALERTE, 'Alerte « Foot / U15 · L’Estaque » active'],
+    ['en', 'eventDetails.a11y.reportEvent', {}, 'Report the event'],
+    ['en', 'searchAlerts.item.editLabel', ALERTE, 'Edit the alert “Foot / U15 · L’Estaque”'],
+    ['en', 'searchAlerts.item.deleteLabel', ALERTE, 'Delete the alert “Foot / U15 · L’Estaque”'],
+    ['en', 'searchAlerts.item.toggleLabel', ALERTE, 'Alert “Foot / U15 · L’Estaque” on'],
+  ])('🚨 [%s] %s', async (langue, clef, valeurs, attendu) => {
+    await i18n.changeLanguage(langue);
+    expect(i18n.t(clef, valeurs)).toBe(attendu);
+  });
+});
