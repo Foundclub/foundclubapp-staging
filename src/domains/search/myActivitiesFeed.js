@@ -202,7 +202,11 @@ export const buildMyActivitiesReceivedResponses = ({
         key: `candidature-${documentKey(ad)}-${documentKey(application)}`,
         market: 'recruitment',
         meta: buildRecruitmentAdTitle(ad),
-        title: joinMeta([applicant?.firstName, applicant?.lastName]).replace(' · ', ' ')
+        // FINITIONS8 (point 2) : le serveur rend `firstname` / `lastname` (toReviewerPayload).
+        title: joinMeta([
+          applicant?.firstname || applicant?.firstName,
+          applicant?.lastname || applicant?.lastName,
+        ]).replace(' · ', ' ')
           || nameOf(applicant) || i18next.t('myActivitiesFeed.applicant', 'Candidat'),
         type: 'response',
       });
