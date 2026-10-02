@@ -141,8 +141,13 @@ jest.mock('@tanstack/react-query', () => ({
       .then((/** @type {any} */ data) => options.onSuccess?.(data, variables))
       .catch((/** @type {any} */ error) => options.onError?.(error, variables)),
   }),
-  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn(),
+    setQueriesData: (/** @type {any[]} */ ...args) => mockSetQueriesData(...args),
+  }),
 }));
+
+const mockSetQueriesData = jest.fn();
 
 jest.mock('@/services/auth/authService', () => ({
   updateMe: jest.fn(),
@@ -625,6 +630,31 @@ describe('UserName — point de controle d entree d un ancien compte (AGE-OBLIGA
     });
     expect(mockNavigation.navigate).toHaveBeenCalledWith('HomeTab');
     expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserAvatar');
+  });
+
+  // AGE-OBLIGATOIRE-2 a — LE PROFIL A JOUR AVANT LE DEPART. Sur le site, l'accueil relit le
+  // profil en memoire (['get-me', jeton]) pour savoir s'il manque l'age : parti avant le
+  // rafraichissement, il renvoyait sur ce formulaire (temoin web age-obligatoire-accueil ④).
+  it('adulte : le profil en memoire porte la date AVANT le retour a l accueil', async () => {
+    /** @type {any} */ (updateMe).mockResolvedValue({
+      birthdate: '1980-01-01', documentId: 'user-1', firstname: 'Ancien',
+    });
+    const arbre = rendreAncienCompte('Dirigeant');
+
+    await donnerSaDate(arbre, '1980');
+
+    expect(mockSetQueriesData).toHaveBeenCalledTimes(1);
+    const [filtre, miseAJour] = mockSetQueriesData.mock.calls[0];
+    expect(filtre).toEqual({ queryKey: ['get-me'] });
+    expect(miseAJour({ birthdate: null, documentId: 'user-1', lastname: 'Compte' }))
+      .toEqual({
+        birthdate: '1980-01-01', documentId: 'user-1', firstname: 'Ancien', lastname: 'Compte',
+      });
+    // ⛔ Le profil d'un AUTRE compte enregistre n'est jamais ecrase.
+    const autre = { birthdate: null, documentId: 'autre-compte' };
+    expect(miseAJour(autre)).toBe(autre);
+    expect(mockSetQueriesData.mock.invocationCallOrder[0])
+      .toBeLessThan(mockNavigation.navigate.mock.invocationCallOrder[0]);
   });
 
   it('13-14 ans : la declaration parentale, comme a l inscription', async () => {

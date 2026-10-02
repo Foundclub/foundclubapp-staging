@@ -199,7 +199,7 @@ function UserName({ navigation }) {
         'Impossible de mettre à jour ton profil.',
       ));
     },
-    onSuccess: (unused, submitted) => {
+    onSuccess: (updatedUser, submitted) => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
       // Le piege de la fusion : `needsParentalDeclaration` se calcule A PARTIR
@@ -217,6 +217,18 @@ function UserName({ navigation }) {
       // AGE-OBLIGATOIRE ② - le tunnel de ce compte est deja fini : la date
       // donnee (15 ans ou plus) le fait entrer, sans repasser par les etapes.
       if (isEntryCheckpoint) {
+        // AGE-OBLIGATOIRE-2 a - le profil en memoire porte la date AVANT le depart. Sur le
+        // site, l'accueil relit ce profil pour savoir s'il manque l'age : parti avant le
+        // rafraichissement, il renvoyait sur ce formulaire. Le profil d'un AUTRE compte
+        // enregistre n'est jamais touche.
+        queryClient.setQueriesData(
+          { queryKey: ['get-me'] },
+          (/** @type {any} */ ancien) => (
+            ancien?.documentId && ancien.documentId === updatedUser?.documentId
+              ? { ...ancien, ...updatedUser }
+              : ancien
+          ),
+        );
         navigation.navigate(getPostOnboardingHomeRoute());
         return;
       }
