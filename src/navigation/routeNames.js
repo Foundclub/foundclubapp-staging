@@ -389,6 +389,9 @@ export const RouteNames = /** @type {const} */ ({
   CollectiviteSignupStatus: 'CollectiviteSignupStatus',
   // La file « Demandes de gestionnaire » de la console super-admin (decision « console oui »).
   AdminManagerRequests: 'AdminManagerRequests',
+  // COLL-CONSOLE (02/10/2026) — les demandes de rattachement et les invitations « Par
+  // FoundClub » de la console super-admin (lot COLL-CLUBS cote serveur).
+  AdminCollectiviteInvitations: 'AdminCollectiviteInvitations',
   // COLL-C2B (02/10/2026) — une installation de la Ville et son onglet « Creneaux » (design
   // HY521H1, page 4, P4v2-creneaux) : attribuer, gerer, retirer, retablir un creneau de saison.
   CollectiviteInstallation: 'CollectiviteInstallation',

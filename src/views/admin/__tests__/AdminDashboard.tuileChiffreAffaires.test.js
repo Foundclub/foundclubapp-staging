@@ -102,6 +102,12 @@ jest.mock('@/services/inAppPopupCampaign/inAppPopupCampaignQueries', () => ({
   useGetInAppPopupCampaigns: () => mockRequeteVide,
 }));
 
+// COLL-CONSOLE (02/10) — la tuile « Collectivités » lit la liste des collectivites : doublee ici
+// (sans elle, le vrai service charge le client HTTP, qui exige un .env absent des copies).
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useAdminCollectivites: () => mockRequeteVide,
+}));
+
 jest.mock('@/utils/errors/displayError', () => ({
   getErrorMessage: () => 'erreur',
 }));

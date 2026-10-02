@@ -210,6 +210,9 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-ACCUEIL (01/10) — la file « Demandes de gestionnaire » (hors de /admin/collectivites/:id :
   // « demandes » y serait lu comme une collectivite).
   [RouteNames.AdminManagerRequests]: '/admin/demandes-gestionnaire',
+  // COLL-CONSOLE (02/10) — les demandes de rattachement et « Par FoundClub » (hors de
+  // /admin/collectivites/:id, pour la meme raison que la file des gestionnaires).
+  [RouteNames.AdminCollectiviteInvitations]: '/admin/rattachements-collectivites',
   [RouteNames.AdminLeagueDisputes]: '/admin/league/disputes',
   [RouteNames.AdminNotificationsHealth]: '/admin/notifications-health',
   [RouteNames.FeaturedRequestsList]: '/admin/featured-requests',
