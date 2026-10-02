@@ -141,8 +141,9 @@ describe('collectiviteService — la console super-admin (D61)', () => {
     expect(mockPost).toHaveBeenCalledWith('/superadmin/collectivites', { data });
   });
 
-  // COLL-CONSOLE (02/10) — un club se cherche aussi avec son adresse publique : la console dit sa ville.
-  it('chercher : un club par son nom (et sa ville), un compte par son nom et son e-mail', async () => {
+  // COLL-CONSOLE (02/10) — un club se cherche aussi avec son adresse publique : la console dit
+  // sa ville.
+  it('chercher : un club par son nom (et sa ville), un compte par nom et e-mail', async () => {
     await searchAdminCollectiviteTargets('club', ' mont ');
     await searchAdminCollectiviteTargets('user', 'karim');
     expect(mockPost).toHaveBeenNthCalledWith(1, '/superadmin/relations/api%3A%3Aclub.club/search', {
