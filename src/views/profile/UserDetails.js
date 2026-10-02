@@ -517,7 +517,18 @@ function UserDetails({ navigation, route }) {
   }, [targetUserId, unblockTargetUser]);
 
   const isCompactScreen = screenWidth <= 375;
-  const scrollBottomPadding = canContact || canBlock ? insets.bottom + 128 : insets.bottom + 24;
+  // FINITIONS8 (tournee 9, point 3) — le pied « Contacter / Bloquer » recouvrait « Historique
+  // sportif » : la place reservee sous le defilement etait un nombre fixe (128), plus court que
+  // le pied a deux boutons. Elle suit desormais la hauteur MESUREE du pied (`onLayout`) ; le
+  // nombre fixe ne sert plus qu'au premier affichage, avant la mesure.
+  // Test : __tests__/UserDetails.FINITIONS8.pied.test.js.
+  const [footerHeight, setFooterHeight] = useState(0);
+  const handleFooterLayout = useCallback((/** @type {any} */ event) => {
+    setFooterHeight(Math.ceil(Number(event?.nativeEvent?.layout?.height) || 0));
+  }, []);
+  const scrollBottomPadding = canContact || canBlock
+    ? Math.max(footerHeight + 16, insets.bottom + 128)
+    : insets.bottom + 24;
 
   const birthdate = parseDate(user?.birthdate);
   const age = readProfileAge(user);
@@ -1640,16 +1651,23 @@ function UserDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
 
+      {/* FINITIONS8 (point 3) : le pied flottait SANS FOND, la carte se lisait a travers
+          « Bloquer ». Meme fond que le pied de la fiche club (FINITIONS5 / F6-5) : `primary900`,
+          OPAQUE, du haut des boutons au bas de l'ecran. Les boutons ne bougent pas : leur
+          retrait bas devient une marge interieure. */}
       {canContact || canBlock ? (
         <View
+          onLayout={handleFooterLayout}
           style={[
             Alignments.absolute,
-            Spaces.padding[16],
+            Spaces.paddingHorizontal[16],
             Spaces.gap[12],
             {
-              backgroundColor: Colors.transparent,
-              bottom: insets.bottom + 8,
+              backgroundColor: Colors.primary900,
+              bottom: 0,
               left: 0,
+              paddingBottom: insets.bottom + 24,
+              paddingTop: 12,
               right: 0,
             },
           ]}
