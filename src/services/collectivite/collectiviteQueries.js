@@ -2,6 +2,8 @@ import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
+import { readClubOfferStates } from '@/domains/collectivite/collectiviteConsole';
+
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 
 import { getPlanningDefaultDate, getPlanningRange } from '@/utils/planning/planningSlots';
@@ -14,6 +16,7 @@ import {
   decideManagerRequest,
   detachAdminCollectiviteClub,
   getAdminCollectivite,
+  getAdminCollectiviteInvitations,
   getAdminCollectivites,
   getAdminManagerRequests,
   getCollectiviteClub,
@@ -27,6 +30,7 @@ import {
   getMyCollectivites,
   getMyManagerRequests,
   inviteClubByFoundClub,
+  linkAdminCollectiviteInvitationClub,
   previewAdminCollectiviteActive,
   remindCollectiviteInvitation,
   removeAdminCollectiviteGestionnaire,
@@ -428,6 +432,31 @@ export const useAdminCollectivite = (collectiviteId, options = {}) => useQuery({
 });
 
 /**
+ * COLL-CONSOLE (02/10) — L ETAT DE L OFFRE CLUB PAR CLUB d une collectivite (planche P2-fiche :
+ * « À l'activation », « Offerte par la Ville », « Paie lui-même »), lu dans l APERCU du geste
+ * contraire (`PUT …/active` avec `previewIsActive`, TEXTES-COLLECTIVITES : meme juge que le
+ * geste, rien d ecrit). Sous la clef de la fiche : chaque geste super-admin le relit.
+ * Sans club, rien n est demande.
+ * @param {{ clubsCount?: number, documentId?: string, isActive?: boolean } | null} collectivite
+ *   - La collectivite telle que la fiche l a lue.
+ * @returns {any} Le resultat react-query ; `data` est `{ [clubDocumentId]: etat }`.
+ */
+export const useAdminCollectiviteOfferStates = (collectivite) => useQuery({
+  enabled: Boolean(collectivite?.documentId) && Number(collectivite?.clubsCount) > 0,
+  queryFn: async () => Object.fromEntries(readClubOfferStates(await previewAdminCollectiviteActive({
+    collectiviteId: String(collectivite?.documentId),
+    isActive: collectivite?.isActive !== true,
+  }))),
+  queryKey: [
+    ...adminCollectiviteQueryKey(collectivite?.documentId),
+    'offre',
+    collectivite?.isActive === true,
+    Number(collectivite?.clubsCount) || 0,
+  ],
+  staleTime: 0,
+});
+
+/**
  * Chercher un club a rattacher ou un compte a nommer : rien avant 2 lettres.
  * @param {'club' | 'user'} kind - Ce qu on cherche.
  * @param {string} query - Le texte tape.
@@ -614,5 +643,38 @@ export const useAdminManagerRequests = (status, options = {}) => useQuery({
  */
 export const useDecideManagerRequest = (options) => useGesteSuperAdmin(
   decideManagerRequest,
+  options,
+);
+
+// ─── COLL-CONSOLE (02/10/2026) : LES DEMANDES DE RATTACHEMENT ET « PAR FOUNDCLUB » ───────
+
+/**
+ * La clef des demandes de la console : sous le prefixe des collectivites, pour que RATTACHER
+ * un club (geste de la fiche) relise aussi l etat des demandes qui le visaient.
+ */
+export const ADMIN_COLLECTIVITE_INVITATIONS_QUERY_KEY = [
+  ...ADMIN_COLLECTIVITES_QUERY_KEY, 'invitations',
+];
+
+/**
+ * Les demandes de rattachement et les invitations « Par FoundClub » (console super-admin).
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useAdminCollectiviteInvitations = (options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getAdminCollectiviteInvitations()),
+  queryKey: ADMIN_COLLECTIVITE_INVITATIONS_QUERY_KEY,
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Relier (ou delier) une demande « Par FoundClub » a son club ; variables
+ * `{ invitationId, clubId }`. Relit les demandes, la liste et les fiches.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useLinkAdminCollectiviteInvitationClub = (options) => useGesteSuperAdmin(
+  linkAdminCollectiviteInvitationClub,
   options,
 );

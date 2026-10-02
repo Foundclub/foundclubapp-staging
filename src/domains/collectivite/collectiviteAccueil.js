@@ -27,9 +27,9 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
   {
     icon: 'calendar', key: 'assignSlot', lot: 'C2a + C2b', route: null,
   },
-  // Les actualités de la Ville (lot C4a).
+  // Les actualités de la Ville (lot C4a, 02/10 : le formulaire « Nouvelle actualité »).
   {
-    icon: 'send', key: 'publishNews', lot: 'C4a', route: null,
+    icon: 'send', key: 'publishNews', lot: 'C4a', route: 'CollectiviteActualiteForm',
   },
   // Fermer une installation, bloquer un créneau (lot C4b).
   {
@@ -311,28 +311,35 @@ export const latestManagerRequest = (demandes) => {
 /**
  * Les étapes des premiers pas, dans l'ordre où elles se débloquent. Une étape sans écran
  * (`route: null`) est MASQUÉE : « attribuer les créneaux » attend le lot C2a (le créneau de
- * saison n'existe pas encore), « présentez-vous aux clubs » le lot C4a (les actualités). Le
- * lot qui construit l'écran pose sa route ici, et l'étape apparaît à sa place.
+ * saison n'existe pas encore). « Présentez-vous aux clubs » mène, depuis le lot C4a (02/10), au
+ * formulaire « Nouvelle actualité ». Le lot qui construit l'écran pose sa route ici, et l'étape
+ * apparaît à sa place.
  * @type {ReadonlyArray<{ key: string, lot: string, route: string | null }>}
  */
 export const PREMIERS_PAS = Object.freeze([
   { key: 'installations', lot: 'COLL1C', route: 'CollectiviteInstallationForm' },
   { key: 'clubs', lot: 'COLL1C', route: 'CollectiviteClubs' },
   { key: 'creneaux', lot: 'C2a + C2b', route: null },
-  { key: 'actualite', lot: 'C4a', route: null },
+  { key: 'actualite', lot: 'C4a', route: 'CollectiviteActualiteForm' },
 ]);
 
 /**
  * Où en sont les premiers pas. Les étapes se cochent d'elles-mêmes : des installations
- * existent ; la liste des clubs rattachés a été ouverte. UNE seule étape porte un bouton à la
- * fois (la première qui n'est pas faite) : on ne se demande jamais par où commencer.
- * @param {{ clubsVus: boolean, installationsCount: number }} etat - Ce qui est lu et retenu.
+ * existent ; la liste des clubs rattachés a été ouverte ; une actualité est en ligne (C4a). UNE
+ * seule étape porte un bouton à la fois (la première qui n'est pas faite) : on ne se demande
+ * jamais par où commencer.
+ * @param {{ actualitesCount?: number, clubsVus: boolean, installationsCount: number }} etat - Ce
+ *   qui est lu et retenu.
  * @param {ReadonlyArray<{ key: string, route: string | null }>} [etapes] - Le registre.
  * @returns {{ etapes: Array<{ fait: boolean, key: string, route: string, suivante: boolean }>,
  *   faits: number, total: number, tousFaits: boolean }} L'état du guide.
  */
-export const premiersPas = ({ clubsVus, installationsCount }, etapes = PREMIERS_PAS) => {
+export const premiersPas = (
+  { actualitesCount = 0, clubsVus, installationsCount },
+  etapes = PREMIERS_PAS,
+) => {
   const faitPour = {
+    actualite: Number(actualitesCount) > 0,
     clubs: clubsVus === true,
     installations: Number(installationsCount) > 0,
   };

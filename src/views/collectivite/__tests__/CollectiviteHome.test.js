@@ -33,6 +33,8 @@ let mockMine;
 let mockParams;
 /** @type {any} */
 let mockUserData;
+/** @type {any} */
+let mockActualites;
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 
@@ -99,6 +101,12 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteRequests: () => mockRequetes,
   useCollectiviteWeek: () => mockSemaine,
   useMyCollectivites: () => mockMine,
+}));
+
+// COLL-C4A (02/10) — le bloc « Actualités de la Ville » et le 4e premier pas lisent le serveur :
+// doublés ici (une liste pilotée par mockActualites, vide par défaut).
+jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
+  useCollectiviteActualites: () => mockActualites,
 }));
 
 jest.mock('@/services/facility/facilityQueries', () => ({
@@ -237,6 +245,7 @@ beforeEach(() => {
   mockRequetes = lu([DEMANDE_RECENTE, DEMANDE_ANCIENNE]);
   mockInstallations = lu([TILLEULS, DOJO]);
   mockClubs = lu(CLUBS);
+  mockActualites = lu([]);
   mockSemaine = [
     {
       installation: TILLEULS,
@@ -331,11 +340,18 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     const lus = textes(arbre);
     expect(lus).toContain('Vos actions');
     expect(lus).toContain('Ajouter une installation');
-    // Leurs écrans n'existent pas encore (lots C2a/C2b, C4a, C4b, C-CLUBS) : aucun bouton mort.
-    ['Attribuer un créneau', 'Publier une actualité', 'Fermer une installation',
+    // COLL-C4A (02/10) : « Publier une actualité » a son écran (« Nouvelle actualité »).
+    expect(lus).toContain('Publier une actualité');
+    // Leurs écrans n'existent pas encore (lots C2a/C2b, C4b, C-CLUBS) : aucun bouton mort.
+    ['Attribuer un créneau', 'Fermer une installation',
       'Bloquer un créneau', 'Inviter un club'].forEach((action) => {
       expect(lus).not.toContain(action);
     });
+    await appuyer(arbre, 'collectivite-home-action-publishNews');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'CollectiviteActualiteForm',
+      { collectiviteId: 'ville-montrivage' },
+    );
     await appuyer(arbre, 'collectivite-home-action-addInstallation');
     expect(mockNavigate).toHaveBeenCalledWith(
       'CollectiviteInstallationForm',
@@ -381,11 +397,21 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(lus).toContain('—');
   });
 
-  it('les actualités de la Ville ne sont pas dessinées ici (lot C4a)', async () => {
-    const lus = textes(await monter());
-    expect(lus).not.toContain('Actualités de la Ville');
+  // COLL-C4A (02/10) : le bloc « Actualités de la Ville » est posé à la place réservée.
+  it('les actualités de la Ville : le bloc du lot C4a (aucune : « la première »)', async () => {
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toContain('Actualités de la Ville');
+    expect(lus).toContain(
+      'Aucune actualité publiée. Les membres de vos 3 clubs la liront dans leurs messages.',
+    );
+    await appuyer(arbre, 'bouton-Publier la première');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'CollectiviteActualiteForm',
+      { collectiviteId: 'ville-montrivage' },
+    );
     const source = readFileSync(join(__dirname, '..', 'CollectiviteHome.js'), 'utf8');
-    expect(source).toContain('PLACE RÉSERVÉE AU LOT C4a');
+    expect(source).not.toContain('PLACE RÉSERVÉE AU LOT C4a');
   });
 
   // PLANCHE 3 (compte mixte) — D69, décision d'Adel « conflit A » : il tranche, et le sait.
@@ -423,45 +449,55 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
 // 🏛️ COLL-ACCUEIL — PLANCHE 7 : les PREMIERS PAS d'une Ville toute neuve (P1v3-premiers-pas),
 // et le mot d'accueil de la première visite (P2-gestion, état 6). Juste sous le nom de la Ville :
 // les étapes se cochent d'elles-mêmes, une seule porte un bouton, masquables une fois faites.
-// « Attribuer les créneaux » (lot C2a) et « Présentez-vous aux clubs » (lot C4a) sont MASQUÉES.
+// « Attribuer les créneaux » (lot C2a) est MASQUÉE ; « Présentez-vous aux clubs » paraît depuis
+// le lot C4a (02/10) et se coche à la première actualité.
 describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve', () => {
-  it('Ville toute neuve : 0 sur 2, et SEULE la première étape porte un bouton', async () => {
+  it('Ville toute neuve : 0 sur 3, et SEULE la première étape porte un bouton', async () => {
     mockInstallations = lu([]);
     mockClubs = lu([]);
     mockSemaine = [];
     const arbre = await monter();
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
-      'Vos premiers pas', '0 sur 2', 'Ajoutez vos installations', 'Vérifiez vos clubs',
+      'Vos premiers pas', '0 sur 3', 'Ajoutez vos installations', 'Vérifiez vos clubs',
+      'Présentez-vous aux clubs', 'Une première actualité, lue par leurs membres.',
     ]));
     const boutons = arbre.root.findAll((/** @type {any} */ n) => String(n.props?.testID || '')
       .startsWith('bouton-') && typeof n.props?.onPress === 'function')
       .map((/** @type {any} */ n) => n.props.testID);
     expect(boutons).toContain('bouton-Ajouter une installation');
     expect(boutons).not.toContain('bouton-Voir les clubs');
-    // Les étapes des lots à venir ne sont pas montrées.
+    // L étape du lot à venir (C2b) n est pas montrée.
     expect(lus).not.toContain('Attribuez les créneaux de la saison');
-    expect(lus).not.toContain('Présentez-vous aux clubs');
   });
 
   it('une étape faite se résume en une ligne ; la suivante prend le bouton', async () => {
     const arbre = await monter();
-    expect(textes(arbre)).toEqual(expect.arrayContaining(['1 sur 2', '2 installations ajoutées']));
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['1 sur 3', '2 installations ajoutées']));
     await appuyer(arbre, 'bouton-Voir les clubs');
     expect(mockNavigate)
       .toHaveBeenCalledWith('CollectiviteClubs', { collectiviteId: 'ville-montrivage' });
   });
 
   it('tout est fait : une ligne qu on peut MASQUER, et qui le reste', async () => {
+    // COLL-C4A : la 3e étape se coche d elle-même, à la première actualité en ligne.
+    mockActualites = lu([{
+      audience: 'membres',
+      category: 'forum',
+      documentId: 'actu-forum',
+      publishedAt: '2026-10-01T08:00:00.000Z',
+      recipients: { clubsCount: 3 },
+      title: 'Forum des associations',
+    }]);
     const premier = await monter();
     await appuyer(premier, 'collectivite-home-voir-clubs');
     const second = await monter();
-    expect(textes(second)).toContain('Vos premiers pas sont faits : 2 sur 2.');
+    expect(textes(second)).toContain('Vos premiers pas sont faits : 3 sur 3.');
     await appuyer(second, 'bouton-Masquer');
-    expect(textes(second)).not.toContain('Vos premiers pas sont faits : 2 sur 2.');
+    expect(textes(second)).not.toContain('Vos premiers pas sont faits : 3 sur 3.');
     const troisieme = await monter();
     expect(textes(troisieme)).not.toContain('Vos premiers pas');
-    expect(textes(troisieme)).not.toContain('Vos premiers pas sont faits : 2 sur 2.');
+    expect(textes(troisieme)).not.toContain('Vos premiers pas sont faits : 3 sur 3.');
   });
 
   it('le mot d accueil se lit à la PREMIÈRE visite, puis plus jamais', async () => {

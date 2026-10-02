@@ -4138,6 +4138,11 @@ function EventDetails({ navigation, route }) {
       ],
       sport: branch.sportContext || compositionSport,
       startPlacements: branch.starters.map((/** @type {any} */ token) => token.placement),
+      // FINITIONS6 · F6-2 — la charge de composition, comme a la premiere compo
+      // (`openCompositionEditor`). Sans elle, « Modifier » (ici ou depuis le plein
+      // ecran, qui retransmet ses parametres) rallumait « Demander une reponse »
+      // sur un match aux reponses coupees : `isRsvpEnabled(null) === true`.
+      teamComposition: staffCompositionPayload || null,
       teamName: branch.teamName || compositionEditorTeam?.name || '',
     };
   }, [
@@ -4145,6 +4150,7 @@ function EventDetails({ navigation, route }) {
     compositionSport,
     convocationBranches,
     publishedConvocationRoster,
+    staffCompositionPayload,
   ]);
 
   // AC08 — « SUIS-JE CONVOQUE ? », enfin repondu SUR LA PAGE.

@@ -24,6 +24,7 @@ import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
+import useCollectivitesTile from '@/views/admin/components/useCollectivitesTile';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -207,6 +208,10 @@ function AdminDashboard() {
     refetch: refetchSubscriptionOps,
   } = useGetSubscriptionOps();
 
+  // COLL-CONSOLE (02/10) — la tuile « Collectivités » lit ses chiffres SEULE : elle n entre pas
+  // dans l attente de l ecran (« … » dans la tuile), et son echec ecrit « — » (jamais 0).
+  const collectivitesTuile = useCollectivitesTile();
+
   const {
     data: claimsData,
     error: claimsError,
@@ -256,6 +261,7 @@ function AdminDashboard() {
     leagueDisputesError,
     popupCampaignsError,
     subscriptionOpsError,
+    collectivitesTuile.error,
   ].filter(Boolean);
 
   const partialDashboardDescription = secondaryDashboardErrors.length > 0
@@ -882,9 +888,14 @@ function AdminDashboard() {
 
   // eslint-disable-next-line react/no-unstable-nested-components
   const DashboardCard = ({
+    accessibilityLabel = undefined,
+    busy = false,
     color = Colors.primary500,
+    detail = '',
+    detailColor = Colors.neutral300,
     meta,
     onPress,
+    testID = undefined,
     title,
     value,
   }) => (
@@ -892,8 +903,9 @@ function AdminDashboard() {
       accessibilityHint={onPress
         ? t('adminDashboard.card.openHint', 'Ouvrir {{title}}', { title, ...SANS_ECHAPPEMENT })
         : undefined}
-      accessibilityLabel={`${title}: ${value}`}
+      accessibilityLabel={accessibilityLabel || `${title}: ${value}`}
       accessibilityRole={onPress ? 'button' : 'summary'}
+      accessibilityState={busy ? { busy: true } : undefined}
       activeOpacity={0.82}
       disabled={!onPress}
       onPress={onPress}
@@ -905,6 +917,7 @@ function AdminDashboard() {
           shadowColor: color,
         },
       ]}
+      testID={testID}
     >
       <View style={[styles.cardHalo, { backgroundColor: `${color}18` }]} />
       <View style={[styles.cardAccent, { backgroundColor: color }]} />
@@ -925,6 +938,10 @@ function AdminDashboard() {
         <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral00, styles.cardTitle]}>
           {title}
         </Text>
+        {/* COLL-CONSOLE (02/10) — une ligne de detail sous le titre (tuile « Collectivités »). */}
+        {detail ? (
+          <Text numberOfLines={2} style={[Fonts.p3Bold, { color: detailColor }]}>{detail}</Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -1799,12 +1816,18 @@ function AdminDashboard() {
             title="Clubs"
             value="Clubs"
           />
+          {/* COLL-CONSOLE (02/10) — la tuile porte ses chiffres (planche P2-console). */}
           <DashboardCard
-            color={Colors.primary200}
+            accessibilityLabel={collectivitesTuile.accessibilityLabel}
+            busy={collectivitesTuile.busy}
+            color={collectivitesTuile.color}
+            detail={collectivitesTuile.detail}
+            detailColor={collectivitesTuile.detailColor}
             meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
             onPress={() => navigation.navigate(RouteNames.AdminCollectiviteList)}
+            testID="admin-tuile-collectivites"
             title={t('adminDashboard.cards.collectivites', 'Collectivités')}
-            value={t('adminDashboard.cards.collectivitesValue', 'Mairies')}
+            value={collectivitesTuile.value}
           />
           <DashboardCard
             color={Colors.primary500}

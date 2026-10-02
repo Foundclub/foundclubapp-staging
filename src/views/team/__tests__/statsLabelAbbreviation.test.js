@@ -40,12 +40,21 @@ const offenders = listCodeFiles(SOURCE_ROOT)
   .sort();
 
 describe('Le vocabulaire des statistiques ne s abrege plus (D59 ④)', () => {
-  it('l ecran d une equipe ecrit « Passes décisives » en toutes lettres', () => {
-    const source = readFileSync(join(SOURCE_ROOT, 'views', 'team', 'TeamDetails.js'), 'utf8');
+  // ST-VUES (02/10) : la tuile « Passes décisives » de la carte « Récap du groupe » est
+  // RETIREE avec cette carte (planche 13 du design valide). Le vocabulaire de l onglet
+  // vit dans `performance/TeamPerformancePanel.js` : « Passes » (le tri) et « 3 passes »
+  // (la ligne d un joueur), en toutes lettres. Ce temoin garde ce qu il protegeait :
+  // l abreviation ne revient ni dans la page de l equipe, ni dans son onglet Stats.
+  it('l ecran d une equipe et son onglet Performance n abregent pas « Passes »', () => {
+    const fiche = readFileSync(join(SOURCE_ROOT, 'views', 'team', 'TeamDetails.js'), 'utf8');
+    const onglet = readFileSync(
+      join(SOURCE_ROOT, 'views', 'team', 'performance', 'TeamPerformancePanel.js'),
+      'utf8',
+    );
 
-    // I18N-4 : le libelle est desormais le repli francais de t() -- meme mot, en toutes lettres.
-    expect(source).toMatch(/label: (t\('[\w.]+', )?'Passes décisives'/);
-    expect(ABBREVIATION.test(source)).toBe(false);
+    expect(onglet).toContain("{ fallback: 'Passes', key: 'assists', labelKey: 'teamStatsPanel.sortAssists' }");
+    expect(ABBREVIATION.test(fiche)).toBe(false);
+    expect(ABBREVIATION.test(onglet)).toBe(false);
   });
 
   // ⚠️ DETTE NOMMEE, PAS OUBLIEE. `views/profile/` appartenait a une autre
@@ -56,7 +65,10 @@ describe('Le vocabulaire des statistiques ne s abrege plus (D59 ④)', () => {
   //  -> { label: 'Passes décisives', value: assists }
   // Quand elle sera faite, CE TEST TOMBERA et demandera de vider la liste.
   // C'est voulu : une dette qui se solde en silence est une dette qu'on oublie.
-  it('la seule abreviation restante est celle qu une autre session tenait', () => {
-    expect(offenders).toEqual(['views/profile/UserDetails.js']);
+  // ✅ SOLDEE le 02/10 par ST-VUES (planche 17) : les tuiles du profil d autrui, dont
+  // « Passes D », sont retirees avec leur carte. La liste est vide, comme ce temoin
+  // le demandait : toute abreviation qui reviendrait le fera tomber.
+  it('plus aucune abreviation « Passes D » dans le code', () => {
+    expect(offenders).toEqual([]);
   });
 });

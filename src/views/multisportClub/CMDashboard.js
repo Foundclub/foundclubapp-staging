@@ -1,12 +1,13 @@
 /* eslint-disable indent */
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -362,10 +363,15 @@ function CMDashboard({ navigation, route }) {
     t,
   ]);
 
+  // ST-VUES (planche 18) — « les trois chiffres se touchent tous » : « Sections » descend a
+  // « Mes sections », sur cette page ; « Équipes » et « Membres » ouvraient deja leur liste.
+  const scrollRef = useRef(/** @type {any} */ (null));
+  const sectionsOffsetRef = useRef(0);
   const statsItems = useMemo(() => ([
     {
       key: 'sections',
       label: t('multisport.stats.sections', 'Sections'),
+      onPress: () => scrollRef.current?.scrollTo({ animated: true, y: sectionsOffsetRef.current }),
       value: globalStats.sections,
     },
     {
@@ -478,6 +484,7 @@ function CMDashboard({ navigation, route }) {
         >
           <ScrollView
             contentContainerStyle={[Spaces.gap[24], Spaces.paddingBottom[40]]}
+            ref={scrollRef}
             refreshControl={<RefreshControl onRefresh={refetch} refreshing={isLoading} />}
             showsVerticalScrollIndicator={false}
           >
@@ -495,21 +502,40 @@ function CMDashboard({ navigation, route }) {
 
               <MultisportStatsRow items={statsItems} />
 
+              {/* ST-VUES (planche 18, etat 2) — chaque fiche d equipe a son onglet Stats pour
+                  le dirigeant (STATS-ENQUETE, defaut 3) : un lien y mene, par la liste. */}
+              <TouchableOpacity
+                accessibilityRole="link"
+                onPress={() => navigation.navigate(RouteNames.CMTeams, { cmId: resolvedCmId })}
+                style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
+                testID="cm-team-stats-link"
+              >
+                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                  {t('clubStatsView.eachTeamStats', 'Les stats de chaque équipe')}
+                </Text>
+              </TouchableOpacity>
+
               <MultisportSponsorsSection
                 canEdit={isCmAdmin}
                 onAddSponsor={handleCreateSponsor}
                 sponsors={sponsors}
               />
 
-              <MultisportSectionsList
-                canEdit={isCmAdmin}
-                getClubInitials={getClubInitials}
-                onAddSection={isCmAdmin ? handleCreateSection : undefined}
-                onDeleteSection={isCmAdmin ? handleDeleteSection : undefined}
-                onSectionPress={handleSectionPress}
-                sections={sections}
-                title={t('multisport.titles.sections', 'Mes sections')}
-              />
+              <View
+                onLayout={(/** @type {any} */ event) => {
+                  sectionsOffsetRef.current = event?.nativeEvent?.layout?.y || 0;
+                }}
+              >
+                <MultisportSectionsList
+                  canEdit={isCmAdmin}
+                  getClubInitials={getClubInitials}
+                  onAddSection={isCmAdmin ? handleCreateSection : undefined}
+                  onDeleteSection={isCmAdmin ? handleDeleteSection : undefined}
+                  onSectionPress={handleSectionPress}
+                  sections={sections}
+                  title={t('multisport.titles.sections', 'Mes sections')}
+                />
+              </View>
 
               <MultisportAdminsSection admins={admins} onAdminPress={handleAdminPress} />
 
