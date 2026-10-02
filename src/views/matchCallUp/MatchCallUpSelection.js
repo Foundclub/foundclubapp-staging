@@ -401,9 +401,10 @@ function MatchCallUpSelection() {
   const partisDeLEquipe = useMemo(() => {
     const eligiblesDuServeur = teamComposition?.eligiblePlayers;
     if (!Array.isArray(eligiblesDuServeur) || isClubTeamsLoading) return EMPTY_LIST;
+    const renfortsDuServeur = teamComposition?.reinforcementPlayers;
     const gardes = new Set([
       ...eligiblesDuServeur,
-      ...(Array.isArray(teamComposition?.reinforcementPlayers) ? teamComposition.reinforcementPlayers : EMPTY_LIST),
+      ...(Array.isArray(renfortsDuServeur) ? renfortsDuServeur : EMPTY_LIST),
       ...squadPlayers,
       ...reinforcementPlayers,
       ...manualPlayers,
@@ -925,7 +926,10 @@ function MatchCallUpSelection() {
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <View style={styles.footerTexts}>
           {partisDeLEquipe.length > 0 ? (
-            <Text style={[Fonts.p3Bold, { color: Colors.warning400 }]} testID="matchcallup-left-team">
+            <Text
+              style={[Fonts.p3Bold, { color: Colors.warning400 }]}
+              testID="matchcallup-left-team"
+            >
               {t('matchCallUp.selection.leftTeam', {
                 count: partisDeLEquipe.length,
                 names: partisDeLEquipe.map(getCompositionPlayerLabel).join(', '),

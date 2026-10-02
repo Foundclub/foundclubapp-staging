@@ -242,7 +242,8 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
         // relancait deja la lecture (requete observee), puis `refetch()` une seconde ;
         // journal T8 : 386 appels, toujours par paires, a chaque retour — et des retours
         // toutes les 1 a 3 s (fenetre systeme, permission) relisaient a chaque fois.
-        const requete = queryClient.getQueryCache().find({ queryKey: PENDING_TRAINING_REVIEWS_QUERY_KEY });
+        const requete = queryClient.getQueryCache()
+          .find({ queryKey: PENDING_TRAINING_REVIEWS_QUERY_KEY });
         if (!requete || requete.isStaleByTime(TRAINING_REVIEW_STALE_MS)) refetch();
       }
     });

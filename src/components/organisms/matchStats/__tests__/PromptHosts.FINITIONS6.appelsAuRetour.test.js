@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { AppState } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import MatchStatsPromptHost from '../MatchStatsPromptHost';
 import TrainingReviewPromptHost from '../../trainingReview/TrainingReviewPromptHost';
+import MatchStatsPromptHost from '../MatchStatsPromptHost';
 
 // ==========================================================================
 // FINITIONS6 · POINT 7 (tournee 8, 🟡 reseau) — LES RAPPELS RELISAIENT LE
@@ -23,8 +22,9 @@ import TrainingReviewPromptHost from '../../trainingReview/TrainingReviewPromptH
 // (la fraicheur que la requete declare deja).
 // ==========================================================================
 
-const mockLireRappelsDeMatch = jest.fn(async () => ({ items: [], nextPrompt: null, totalPending: 0 }));
-const mockLireAvisEnAttente = jest.fn(async () => ({ items: [], nextPrompt: null, totalPending: 0 }));
+const RIEN_EN_ATTENTE = { items: [], nextPrompt: null, totalPending: 0 };
+const mockLireRappelsDeMatch = jest.fn(async () => RIEN_EN_ATTENTE);
+const mockLireAvisEnAttente = jest.fn(async () => RIEN_EN_ATTENTE);
 
 jest.mock('@/services/matchStats/matchStatsService', () => ({
   getPendingMatchStatsPrompts: () => mockLireRappelsDeMatch(),
@@ -34,7 +34,10 @@ jest.mock('@/services/trainingReview/trainingReviewService', () => ({
   getTrainingReviews: jest.fn(),
   submitTrainingReview: jest.fn(),
 }));
-jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => ({ isBootstrapResolved: true }) }));
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ isBootstrapResolved: true }),
+}));
 jest.mock('@/store/appContext', () => ({
   useAppContext: () => [{ auth: { token: 'jeton-test-adel' } }, () => {}],
 }));
@@ -45,7 +48,10 @@ jest.mock('@/navigation/navigationService', () => ({
 }));
 jest.mock('@/context/PopupManagerContext', () => ({
   usePopupEligibility: () => ({
-    canShow: false, descriptor: { id: 'rappel', priority: 1 }, dismiss: () => {}, markShown: () => {},
+    canShow: false,
+    descriptor: { id: 'rappel', priority: 1 },
+    dismiss: () => {},
+    markShown: () => {},
   }),
 }));
 jest.mock('@/context/BlockingOverlayContext', () => ({
@@ -67,7 +73,9 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
   }),
 }));
 jest.mock('@/theme/themeContext', () => {
@@ -137,7 +145,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('FINITIONS6 · point 7 — une lecture au retour au premier plan, pas deux, pas toutes les secondes', () => {
+describe('FINITIONS6 · point 7 — une lecture au retour au premier plan, pas deux', () => {
   test('au demarrage : une lecture de chaque', () => {
     expect(mockLireRappelsDeMatch).toHaveBeenCalledTimes(1);
     expect(mockLireAvisEnAttente).toHaveBeenCalledTimes(1);
@@ -150,7 +158,7 @@ describe('FINITIONS6 · point 7 — une lecture au retour au premier plan, pas d
     expect(mockLireAvisEnAttente).toHaveBeenCalledTimes(2);
   });
 
-  test('🚨 dix retours en 20 s (toutes les 2 s) : aucune relecture, la donnee a moins de 30 s', async () => {
+  test('🚨 dix retours en 20 s : aucune relecture, la donnee a moins de 30 s', async () => {
     for (let i = 0; i < 10; i += 1) {
       // eslint-disable-next-line no-await-in-loop
       await sortirEtRevenir(2);

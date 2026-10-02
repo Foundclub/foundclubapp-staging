@@ -1,4 +1,3 @@
-import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
@@ -98,7 +97,7 @@ beforeAll(() => {
 beforeEach(remplirLeTelephone);
 
 describe('FINITIONS6 · F6-1 — le compte choisi survit a une sortie par « retour »', () => {
-  test('🚨 changer de compte, sortir par « retour », rouvrir a chaud : on est TOUJOURS sur Karim', () => {
+  test('🚨 changer de compte, sortir par « retour », rouvrir : TOUJOURS Karim', () => {
     const premier = monter();
     expect(vu.auth.user.documentId).toBe('test-adel');
 
@@ -124,11 +123,12 @@ describe('FINITIONS6 · F6-1 — le compte choisi survit a une sortie par « ret
     act(() => premier.unmount());
     const second = monter();
 
-    expect(vu.authSessions.map((/** @type {any} */ s) => s.user.documentId)).toEqual(['karim-benali', 'test-adel']);
+    expect(vu.authSessions.map((/** @type {any} */ s) => s.user.documentId))
+      .toEqual(['karim-benali', 'test-adel']);
     act(() => second.unmount());
   });
 
-  test('🔒 au premier montage (demarrage a froid), rien ne change : le compte enregistre comme actif', () => {
+  test('🔒 premier montage (demarrage a froid) : le compte enregistre comme actif', () => {
     const arbre = monter();
 
     expect(vu.auth.user.documentId).toBe('test-adel');

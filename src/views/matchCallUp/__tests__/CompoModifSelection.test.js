@@ -436,7 +436,7 @@ describe('COMPOMODIF · M2 — modifier n est pas repartir de zero', () => {
 // 🔒 La liste qui fait foi est celle DU SERVEUR (`teamComposition.eligiblePlayers`
 // et ses renforts) ; sans elle, rien ne change.
 // ==========================================================================
-describe('FINITIONS6 · F6-3 — un convoque qui n est plus dans l equipe est annonce, pas perdu en silence', () => {
+describe('FINITIONS6 · F6-3 — un convoque parti de l equipe est annonce, pas perdu', () => {
   const KARIM = joueur('k1', 'Karim', 'Benali');
   const RENFORT = joueur('r1', 'Ines', 'Renfort');
   const PACK_AVEC_KARIM = {
@@ -468,7 +468,7 @@ describe('FINITIONS6 · F6-3 — un convoque qui n est plus dans l equipe est an
     expect(texteVisible(arbre)).toContain(PHRASE_KARIM);
   });
 
-  test('🚨 « Suivant » ne l emmene plus : le terrain et le compte sont ceux que le serveur publiera', async () => {
+  test('🚨 « Suivant » ne l emmene plus : ce que publiera le serveur', async () => {
     const arbre = await rendre({
       existingComposition: PACK_AVEC_KARIM,
       selectedPlayers: [KARIM, EFFECTIF[1]],
@@ -479,7 +479,8 @@ describe('FINITIONS6 · F6-3 — un convoque qui n est plus dans l equipe est an
 
     expect(convoquesEnvoyes()).toEqual(['p2']);
     const appel = [...mockNavigate.mock.calls].pop();
-    expect((appel?.[1]?.startPlacements || []).map((/** @type {any} */ p) => p.playerId)).toEqual(['p2']);
+    expect((appel?.[1]?.startPlacements || []).map((/** @type {any} */ p) => p.playerId))
+      .toEqual(['p2']);
   });
 
   test('🔒 un renfort d une autre equipe du club n est PAS annonce comme parti', async () => {
@@ -504,7 +505,11 @@ describe('FINITIONS6 · F6-3 — un convoque qui n est plus dans l equipe est an
 
   test('🔒 un joueur hors app du pack n est PAS annonce comme parti', async () => {
     const arbre = await rendre({
-      existingComposition: { ...PACK_PUBLIE, manualPlayers: [HORS_APP], selectedPlayerIds: ['p1', 'p2', 'p3', 'm1'] },
+      existingComposition: {
+        ...PACK_PUBLIE,
+        manualPlayers: [HORS_APP],
+        selectedPlayerIds: ['p1', 'p2', 'p3', 'm1'],
+      },
       selectedPlayers: [...CONVOQUES_PUBLIES, HORS_APP],
       teamComposition: COMPO_SERVEUR,
     });
@@ -512,7 +517,7 @@ describe('FINITIONS6 · F6-3 — un convoque qui n est plus dans l equipe est an
     expect(texteVisible(arbre)).not.toContain('n’est plus dans l’équipe');
   });
 
-  test('🔒 sans la liste du serveur, rien ne change (il reste emmene, rien n est dit)', async () => {
+  test('🔒 sans la liste du serveur, rien ne change (emmene, rien n est dit)', async () => {
     const arbre = await rendre({
       existingComposition: PACK_AVEC_KARIM,
       selectedPlayers: [KARIM, EFFECTIF[1]],

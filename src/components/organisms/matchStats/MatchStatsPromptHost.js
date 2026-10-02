@@ -460,7 +460,8 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
         // relancait deja la lecture (requete observee), puis `refetch()` une seconde ;
         // journal T8 : 386 appels, toujours par paires, a chaque retour — et des retours
         // toutes les 1 a 3 s (fenetre systeme, permission) relisaient a chaque fois.
-        const requete = queryClient.getQueryCache().find({ queryKey: ['pendingMatchStatsPrompts'] });
+        const requete = queryClient.getQueryCache()
+          .find({ queryKey: ['pendingMatchStatsPrompts'] });
         if (!requete || requete.isStaleByTime(PENDING_MATCH_STATS_STALE_MS)) refetch();
       }
     });

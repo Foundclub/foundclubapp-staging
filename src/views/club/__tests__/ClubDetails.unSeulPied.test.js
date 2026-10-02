@@ -708,7 +708,7 @@ describe('FINITIONS5 · le pied ne laisse plus voir la fiche, et ses libelles re
   // (`primary900` a 0,92) : « Mixte · Sénior (+18 ans) · National 1 » et
   // « Sports / Football » se devinaient entre et a travers les deux « Demande en
   // attente » grises. Meme couleur, sans transparence.
-  it('FINITIONS6 · 🚨 le fond du pied est OPAQUE : rien de la fiche ne se devine au travers', () => {
+  it('FINITIONS6 · 🚨 le fond du pied est OPAQUE : rien ne se devine au travers', () => {
     devenirEntraineur();
     mockClubQuery.data = CLUB_AVEC_EQUIPE;
     const arbre = monter();

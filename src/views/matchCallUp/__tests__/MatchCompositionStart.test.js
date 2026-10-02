@@ -358,7 +358,7 @@ describe('D79 ecran 4 — l ecran et ses 3 rangees', () => {
     },
   };
 
-  test('FINITIONS6 · 🚨 convoques seulement AU BANC du dernier match : la rangee est active, datee', async () => {
+  test('FINITIONS6 · 🚨 convoques seulement AU BANC du dernier match : rangee active', async () => {
     const arbre = await rendre(repriseAuBanc);
     const texte = texteVisible(arbre);
 
@@ -367,7 +367,7 @@ describe('D79 ecran 4 — l ecran et ses 3 rangees', () => {
     expect(texte).not.toContain('Aucune compo déjà publiée à reprendre.');
   });
 
-  test('FINITIONS6 · 🚨 la choisir rouvre le dernier match tel quel : personne sur le terrain, tous au banc', async () => {
+  test('FINITIONS6 · 🚨 la choisir : terrain vide, tous au banc', async () => {
     const arbre = await rendre(repriseAuBanc);
     // Appuyable pour de vrai : appeler `onPress` a la main passerait outre le grise.
     expect(rangee(arbre, 'Dernier match').props.disabled).toBe(false);

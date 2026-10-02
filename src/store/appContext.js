@@ -205,9 +205,13 @@ const readInitialStore = () => {
     ? storedAuthSessionsRaw.map(sanitizePersistedSession).filter(Boolean)
     : [];
   const storedActiveSessionDocumentId = normalizeDocumentId(
-    storage.contains('activeSessionDocumentId') ? storage.getString('activeSessionDocumentId') : undefined,
+    storage.contains('activeSessionDocumentId')
+      ? storage.getString('activeSessionDocumentId')
+      : undefined,
   );
-  const rawStoredFcmToken = storage.contains('fcmToken') ? storage.getString('fcmToken') : undefined;
+  const rawStoredFcmToken = storage.contains('fcmToken')
+    ? storage.getString('fcmToken')
+    : undefined;
   const storedFcmToken = normalizeStoredFcmToken(rawStoredFcmToken);
   if (storage.contains('fcmToken') && !storedFcmToken) {
     storage.delete('fcmToken');
