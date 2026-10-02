@@ -151,7 +151,7 @@ const ENGAGEMENT_OPTIONS = [
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.engagement.toBeDefined', 'A définir');
+      return i18next.t('recruitmentAdEdit.engagement.toBeDefined', 'À définir');
     },
     value: 'a_definir',
   },

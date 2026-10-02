@@ -1559,7 +1559,7 @@ export default {
     engagement: {
       expenses: 'Indemnisé',
       salaried: 'Salarié',
-      toBeDefined: 'A définir',
+      toBeDefined: 'À définir',
       volunteer: 'Bénévole',
     },
     engagementLabel: "Type d'engagement *",
@@ -15455,7 +15455,7 @@ export default {
     engagement: {
       expenses: 'Indemnisé',
       salaried: 'Salarié',
-      toBeDefined: 'A définir',
+      toBeDefined: 'À définir',
       volunteer: 'Bénévole',
     },
     form: {
@@ -20561,7 +20561,7 @@ export default {
     teamB: 'Équipe B',
     teamFallback: 'Equipe',
     timeToBeSet: 'Horaire à définir',
-    toBeDecided: 'A définir',
+    toBeDecided: 'À définir',
     tournamentMatch: 'Match tournoi',
     winShort: 'V',
   },
@@ -22297,7 +22297,7 @@ export default {
     thisProposalFallsInThe: 'Cette proposition tombe dans le passé. Reviens en arrière pour choisir une date ou une heure future.',
     thisSlotIsAlreadyIn: 'Ce créneau est déjà passé. Choisis une date ou une heure future.',
     time: 'Heure',
-    toBeDecided: 'A définir',
+    toBeDecided: 'À définir',
     today: 'Aujourd hui',
     tomorrow: 'Demain',
     unableToConvertTheSelected: 'Impossible de convertir le créneau sélectionne.',
