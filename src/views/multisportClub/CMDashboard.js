@@ -1,6 +1,11 @@
 /* eslint-disable indent */
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo, useRef } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -30,7 +35,9 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   deleteCMSection,
   getCMClubs,
+  getCMWeekendResults,
   getMultisportClubById,
+  remindCMWeekendScore,
 } from '@/services/multisportClub/multisportClubService';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
@@ -41,6 +48,7 @@ import MultisportHeroCard from './components/MultisportHeroCard';
 import MultisportSectionsList from './components/MultisportSectionsList';
 import MultisportSponsorsSection from './components/MultisportSponsorsSection';
 import MultisportStatsRow from './components/MultisportStatsRow';
+import WeekendResultsCard, { weekendRowKey } from './components/WeekendResultsCard';
 
 /** @param {any} error */
 const normalizeErrorMessage = (error) => String(
@@ -209,10 +217,38 @@ function CMDashboard({ navigation, route }) {
     [admins, canFallbackToManagedSummary, isManagedCmByAuth, userData?.documentId],
   );
 
+  // ST-VUES2 (planche 18) — « Résultats du week-end » : la route est reservee au dirigeant
+  // DU club (politique is-dirigeant-omnisport) ; on ne la demande qu'a lui.
+  const {
+    data: weekendResults,
+    error: weekendError,
+    isLoading: weekendLoading,
+    refetch: refetchWeekend,
+  } = useQuery({
+    enabled: Boolean(resolvedCmId) && isCmAdmin,
+    queryFn: () => getCMWeekendResults(resolvedCmId),
+    queryKey: ['cm-weekend-results', resolvedCmId],
+  });
+  // « score A » : le dirigeant qui n'entraine pas l'equipe relance son entraineur. La ligne
+  // relancee le dit pour la session ; le serveur, lui, n'envoie qu'une relance par jour.
+  const [remindedKeys, setRemindedKeys] = useState(() => new Set());
+  const remindMutation = useMutation({
+    mutationFn: (/** @type {{ eventId: string, teamId: string }} */ row) => (
+      remindCMWeekendScore(resolvedCmId, { eventId: row.eventId, teamId: row.teamId })
+    ),
+    onError: (err) => {
+      displayErrorAlert(err);
+    },
+    onSuccess: (_result, row) => {
+      setRemindedKeys((previous) => new Set(previous).add(weekendRowKey(row)));
+    },
+  });
+
   const refetch = useCallback(() => {
     refetchCM();
     refetchSections();
-  }, [refetchCM, refetchSections]);
+    if (isCmAdmin) refetchWeekend();
+  }, [isCmAdmin, refetchCM, refetchSections, refetchWeekend]);
 
   const globalStats = useMemo(() => {
     let totalTeams = 0;
@@ -305,6 +341,35 @@ function CMDashboard({ navigation, route }) {
       ],
     );
   }, [deleteMutation, t]);
+
+  // ST-VUES2 (planche 18) — un score saisi ouvre le match ; « Saisir » aussi : c'est sur la
+  // page du match que l'entraineur saisit le score.
+  const handleOpenWeekendMatch = useCallback((/** @type {{ eventId: string }} */ row) => {
+    if (!row?.eventId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: row.eventId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
+  // Etat 4 — un club sans equipe : une equipe dans sa premiere section, ou d'abord une section.
+  const weekendEmptyAction = useMemo(() => {
+    if (!isCmAdmin) return null;
+    const firstSectionId = sections[0]?.documentId;
+    if (!firstSectionId) {
+      return {
+        label: t('weekendResults.createSection', 'Créer une section'),
+        onPress: handleCreateSection,
+      };
+    }
+    return {
+      label: t('weekendResults.createTeam', 'Créer une équipe'),
+      onPress: () => navigation.navigate(RouteNames.TeamStack, {
+        params: { clubId: firstSectionId },
+        screen: RouteNames.TeamWizardName,
+      }),
+    };
+  }, [handleCreateSection, isCmAdmin, navigation, sections, t]);
 
   const handleAdminPress = useCallback((/** @type {CMAdmin} */ admin) => {
     if (!admin?.documentId) return;
@@ -501,6 +566,23 @@ function CMDashboard({ navigation, route }) {
               />
 
               <MultisportStatsRow items={statsItems} />
+
+              {isCmAdmin ? (
+                <WeekendResultsCard
+                  data={weekendResults}
+                  emptyAction={weekendEmptyAction}
+                  error={weekendError}
+                  isLoading={weekendLoading}
+                  onEnterScore={handleOpenWeekendMatch}
+                  onOpenMatch={handleOpenWeekendMatch}
+                  onRemind={(row) => remindMutation.mutate(row)}
+                  onRetry={refetchWeekend}
+                  remindedKeys={remindedKeys}
+                  remindingKey={remindMutation.isPending && remindMutation.variables
+                    ? weekendRowKey(remindMutation.variables)
+                    : null}
+                />
+              ) : null}
 
               {/* ST-VUES (planche 18, etat 2) — chaque fiche d equipe a son onglet Stats pour
                   le dirigeant (STATS-ENQUETE, defaut 3) : un lien y mene, par la liste. */}

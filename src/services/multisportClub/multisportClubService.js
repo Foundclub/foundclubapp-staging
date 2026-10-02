@@ -258,6 +258,28 @@ export const getCMMembers = async (cmId) => {
 };
 
 /**
+ * ST-VUES2 (ecran 18) — la carte « Résultats du week-end » du dirigeant du club.
+ * @param {string} cmId - MultisportClub documentId
+ * @returns {Promise<any>} Le week-end, une ligne par match d'equipe, le prochain match.
+ */
+export const getCMWeekendResults = async (cmId) => {
+  const result = await client.get(`/cm/${cmId}/weekend-results`);
+  return result.data?.data ?? null;
+};
+
+/**
+ * ST-VUES2 (ecran 18) — « Relancer » : le dirigeant demande le score aux entraineurs.
+ * @param {string} cmId - MultisportClub documentId
+ * @param {{ eventId: string, teamId: string }} payload - Le match, et l'equipe sans score.
+ * @returns {Promise<{ alreadyRemindedCount?: number, remindedCount?: number,
+ *   trainerCount?: number } | null>} Combien d'entraineurs, combien relances.
+ */
+export const remindCMWeekendScore = async (cmId, { eventId, teamId }) => {
+  const result = await client.post(`/cm/${cmId}/weekend-results/remind`, { eventId, teamId });
+  return result.data?.data ?? null;
+};
+
+/**
  * Update a multisport club
  * @param {string} cmId - MultisportClub documentId
  * @param {MultisportClubUpdatePayload} data - Update data (name, email, phone, addressLabel, coordinates, logo)
