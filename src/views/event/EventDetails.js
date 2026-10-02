@@ -182,7 +182,7 @@ import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
-import { buildMatchEncartLines } from './matchEncartLines';
+import { buildMatchEncartLines, findParentTeamId } from './matchEncartLines';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
@@ -3566,8 +3566,22 @@ function EventDetails({ navigation, route }) {
     const playerTeam = teams.find((team) => (team?.players || []).some((player) => player?.documentId === userDocumentId));
     if (playerTeam?.documentId) return playerTeam.documentId;
 
+    // 👪 DECISIONS-SOIR (02/10) — le parent : l'équipe de SON enfant, que le serveur nomme.
+    const parentTeamId = findParentTeamId({
+      invitedTeams: event?.invitedTeams,
+      team: event?.team,
+      viewerParentTeamDocumentIds: event?.viewerParentTeamDocumentIds,
+    });
+    if (parentTeamId) return parentTeamId;
+
     return teams[0]?.documentId || null;
-  }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
+  }, [
+    event?.invitedTeams,
+    event?.team,
+    event?.viewerParentTeamDocumentIds,
+    userData?.documentId,
+    userData?.trainedTeams,
+  ]);
 
   // 🔄 N3 (D3) — QUI REGARDE CE MATCH ? Un evenement a UNE equipe organisatrice
   // et des equipes invitees ; le meme match est donc « a domicile » pour l'une
@@ -3703,6 +3717,9 @@ function EventDetails({ navigation, route }) {
     },
   );
 
+  // 👪 DECISIONS-SOIR (02/10, « parents encart B ») — le parent d'un joueur de CETTE équipe
+  // demande aussi la feuille : le serveur ne lui rend que l'encart (score, auteur, buteurs).
+  const isTeamParent = Boolean(compositionTeamId) && compositionTeamId === findParentTeamId(event);
   const {
     data: matchStatsPayload,
     isFetching: isMatchStatsFetching,
@@ -3716,7 +3733,7 @@ function EventDetails({ navigation, route }) {
           && eventId
           && isMatchEvent
           && compositionTeamId
-          && (canEdit || isTeamMember),
+          && (canEdit || isTeamMember || isTeamParent),
       ),
     },
   );
@@ -3959,8 +3976,12 @@ function EventDetails({ navigation, route }) {
     const lignes = buildMatchEncartLines({
       available,
       canManage: canManageMatchStats,
-      // 🔒 L'équipe et son encadrement ; jamais un visiteur (mineurs en U15).
-      canSeeDetails: Boolean(isTeamMember || canEdit),
+      // 🔒 L'équipe et son encadrement ; jamais un visiteur (mineurs en U15). 👪 Et le parent d'un
+      // joueur que le SERVEUR a reconnu (DECISIONS-SOIR, « parents encart B ») : l'app ne le
+      // décide jamais seule.
+      canSeeDetails: Boolean(
+        isTeamMember || canEdit || matchStatsPayload?.permissions?.actorRole === 'parent',
+      ),
       coachFirstname: teamCoachFirstname,
       isFinished: isMatchFinished,
       locale: localeDesFormats(),
@@ -4005,6 +4026,7 @@ function EventDetails({ navigation, route }) {
     isViewerFromInvitedTeam,
     matchOpponentName,
     matchStartTimeLabel,
+    matchStatsPayload?.permissions?.actorRole,
     matchStatsPayload?.score,
     matchStatsPayload?.sport,
     matchStatsReport?.playerLines,

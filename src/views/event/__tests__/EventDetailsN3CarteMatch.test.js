@@ -28,7 +28,7 @@ const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockAttendance = { data: null };
-const mockMatchStats = { data: /** @type {any} */ (null) };
+const mockMatchStats = { appels: /** @type {any[]} */ ([]), data: /** @type {any} */ (null) };
 const mockHeaderProps = { value: null };
 const mockTagProps = { value: null };
 const mockUpdateNoNav = jest.fn();
@@ -172,7 +172,11 @@ jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () =>
 // ST-MATCH (02/10) — la feuille de stats devient pilotable par un temoin. `null` par
 // defaut : les temoins N3 et R2 lisent la meme chose qu'avant.
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
-  useGetEventMatchStats: () => ({ ...emptyQuery(), data: mockMatchStats.data }),
+  // DECISIONS-SOIR — la doublure retient ce que l'écran DEMANDE (équipe, `enabled`).
+  useGetEventMatchStats: (/** @type {any[]} */ ...args) => {
+    mockMatchStats.appels.push(args);
+    return { ...emptyQuery(), data: mockMatchStats.data };
+  },
   useGetEventMyMatchResponse: () => emptyQuery(),
 }));
 
@@ -452,6 +456,7 @@ const monter = (/** @type {any} */ {
   mockEventQuery.data = event === undefined ? buildMatch() : event;
   mockAttendance.data = attendance;
   mockMatchStats.data = matchStats;
+  mockMatchStats.appels = [];
   mockUseAuth.mockReturnValue(auth || ORGANISATEUR());
 
   demonter();
@@ -966,6 +971,111 @@ describe('ST-MATCH - l encart du score, branché sur l écran', () => {
     expect(resume().scorersLine).toBe('Hugo L.');
     expect(resume().authorLine).toBe(auteurAttendu());
     expect(typeof resume().onSeeStats).toBe('function');
+  });
+});
+
+// DECISIONS-SOIR (02/10, « parents encart B », registre des mineurs ligne 15) — LE PARENT D'UN
+// JOUEUR LIT L'ENCART DU SCORE COMME UN MEMBRE : buteurs et auteur compris. Le SERVEUR dit, sur la
+// fiche d'un match, où joue son enfant (`viewerParentTeamDocumentIds`, sa règle du parent) et
+// rejuge la lecture (`permissions.actorRole: 'parent'`) : l'app ne décide rien seule.
+describe('DECISIONS-SOIR — le parent lit l encart du score comme un membre', () => {
+  const SAISI_LE = '2026-01-01T21:35:00.000Z';
+  const KARIM = { documentId: COACH, firstname: 'Karim' };
+  const FINI = HORLOGE_SERVEUR('2026-01-02T10:00:00.000Z');
+  const PARENT = () => authPour('parent-de-hugo', false);
+  const match = (/** @type {any} */ overrides = {}) => buildMatch({
+    date: '2026-01-01T10:00:00.000Z',
+    endDate: '2026-01-01T12:00:00.000Z',
+    matchResult: {
+      isFinal: true, savedAt: SAISI_LE, savedBy: KARIM, scoreAgainst: 0, scoreFor: 1, source: 'manual', teamDocumentId: TEAM_ID,
+    },
+    team: {
+      club: { documentId: CLUB_ID, name: CLUB_NAME },
+      documentId: TEAM_ID,
+      name: 'U15 A',
+      players: [{ documentId: 'joueur-hugo' }],
+      trainers: [KARIM],
+    },
+    ...overrides,
+  });
+  // Ce que GET /events/:id/match-stats rend au parent (admin DECISIONS-SOIR 2/2) : l'encart, rien d'autre.
+  const ENCART_DU_PARENT = {
+    availablePlayers: [],
+    permissions: {
+      actorRole: 'parent', canManage: false, canRespond: false, canView: false,
+    },
+    playerResponses: [],
+    report: {
+      playerLines: [{ sportPayload: { goals: 1 }, user: { firstname: 'Hugo', lastname: 'L' } }],
+      status: 'final',
+    },
+    score: {
+      available: true, recordedAt: SAISI_LE, recordedBy: KARIM, scoreAgainst: 0, scoreFor: 1, source: 'manual',
+    },
+    sport: 'football',
+  };
+  const auteurAttendu = () => {
+    const at = new Date(SAISI_LE);
+    const date = at.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const heure = at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `Saisi par Karim le ${date} à ${heure}`;
+  };
+  const dernierAppel = () => mockMatchStats.appels[mockMatchStats.appels.length - 1] || [];
+  // Les lectures secondaires (dont la feuille) partent après les interactions
+  // (`InteractionManager.runAfterInteractions`) : on les laisse partir.
+  const apresLesInteractions = async () => {
+    await act(async () => { await new Promise((fin) => { setTimeout(fin, 0); }); });
+  };
+
+  test('le parent d un joueur : l ecran DEMANDE l encart pour l equipe de son enfant, et le lit en membre', async () => {
+    monter({
+      attendance: FINI, auth: PARENT(), event: match({ viewerParentTeamDocumentIds: [TEAM_ID] }), matchStats: ENCART_DU_PARENT,
+    });
+    await apresLesInteractions();
+
+    const [eventId, teamId, options] = dernierAppel();
+    expect([eventId, teamId, options?.enabled]).toEqual(['event-1', TEAM_ID, true]);
+    expect(resume().value).toBe('1 - 0');
+    expect(resume().authorLine).toBe(auteurAttendu());
+    expect(resume().scorersLine).toBe('Hugo L.');
+    // Rien d'autre : les stats du match restent aux membres de l'équipe.
+    expect(resume().onSeeStats).toBeNull();
+  });
+
+  test('son enfant joue dans l equipe INVITEE : l encart est demande pour CETTE equipe', async () => {
+    monter({
+      attendance: FINI,
+      auth: PARENT(),
+      event: match({
+        invitedTeams: [{
+          documentId: TEAM_INVITEE_ID, name: 'FC Voisin', players: [], trainers: [],
+        }],
+        viewerParentTeamDocumentIds: [TEAM_INVITEE_ID],
+      }),
+      matchStats: ENCART_DU_PARENT,
+    });
+    await apresLesInteractions();
+
+    const [, teamId, options] = dernierAppel();
+    expect([teamId, options?.enabled]).toEqual([TEAM_INVITEE_ID, true]);
+  });
+
+  test('🔒 un visiteur : rien n est demande, l encart reste celui d un visiteur', async () => {
+    monter({ attendance: FINI, auth: SPECTATEUR(), event: match() });
+    await apresLesInteractions();
+
+    expect(dernierAppel()[2]?.enabled).toBe(false);
+    expect(resume().authorLine).toBeNull();
+    expect(resume().scorersLine).toBeNull();
+  });
+
+  test('🔒 le serveur n a pas reconnu le parent (pas de lecture « parent ») : l app ne decide rien seule', () => {
+    monter({
+      attendance: FINI, auth: PARENT(), event: match({ viewerParentTeamDocumentIds: [TEAM_ID] }), matchStats: null,
+    });
+
+    expect(resume().authorLine).toBeNull();
+    expect(resume().scorersLine).toBeNull();
   });
 });
 
