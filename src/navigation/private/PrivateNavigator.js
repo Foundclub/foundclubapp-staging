@@ -1349,6 +1349,17 @@ function PrivateNavigator() {
             headerTitle: t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal'),
           }}
         />
+        {/* COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau, modifier une
+            fermeture (design HY521H1, page 4) : l onglet « Fermetures », l accueil de la Ville et
+            le planning (« Bloquer pour la Ville ») y menent. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteFermeture').default}
+          name={RouteNames.CollectiviteFermeture}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteFermetures.form.titreFermer', 'Fermer une installation'),
+          }}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

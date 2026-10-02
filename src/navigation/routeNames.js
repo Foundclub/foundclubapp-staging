@@ -409,4 +409,8 @@ export const RouteNames = /** @type {const} */ ({
   // P8v2-demande), puis suit « Tes demandes a la Ville ».
   ClubSlotRequest: 'ClubSlotRequest',
   ClubSlotRequests: 'ClubSlotRequests',
+  // COLL-C4B (02/10/2026) — fermer une installation de la Ville, bloquer un creneau, modifier une
+  // fermeture (design HY521H1, page 4, P4v3-fermer). D16 : les clubs sont prevenus, rien n est
+  // annule.
+  CollectiviteFermeture: 'CollectiviteFermeture',
 });

@@ -295,6 +295,9 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-C3B (02/10/2026) — le club demande un creneau a la Ville, puis suit ses demandes.
   [RouteNames.ClubSlotRequest]: '/demander-un-creneau',
   [RouteNames.ClubSlotRequests]: '/mes-demandes-a-la-ville',
+  // COLL-C4B (02/10/2026) — fermer, bloquer, modifier (l installation, le mode, la fermeture et le
+  // jour d un blocage voyagent en parametres).
+  [RouteNames.CollectiviteFermeture]: '/collectivite/:collectiviteId/fermeture',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();
