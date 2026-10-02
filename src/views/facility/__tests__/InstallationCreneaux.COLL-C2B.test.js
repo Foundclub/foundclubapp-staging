@@ -94,7 +94,7 @@ jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: j
 // COLL-C4B (02/10) : l ecran a gagne l onglet « Fermetures » ; son service est double ici aussi
 // (sans doublure, le client HTTP charge sans .env fait echouer la suite dans une copie de travail).
 jest.mock('@/services/facilityClosure/facilityClosureService', () => ({
-  listFacilityClosures: jest.fn(),
+  listFacilityClosures: jest.fn(() => Promise.resolve({ data: [], meta: {} })),
 }));
 
 /** @type {any} */

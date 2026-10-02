@@ -5529,9 +5529,14 @@ export default {
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
   collectiviteFermetures: {
+    accueil: {
+      aVenir: 'Upcoming closure',
+    },
     bandeau: {
-      bloque: 'The facility is blocked from {{heures}}',
+      bloque: 'Blocked by the town, {{heures}}',
+      bloqueLe: 'Blocked by the town on {{jour}}, {{heures}}',
       fermeJour: 'The facility is closed that day',
+      fermeLe: 'The facility is closed on {{jour}}',
       fermePeriode: 'The facility is closed {{jours}}',
       mot: 'Note from the town: “{{mot}}”.',
     },

@@ -82,11 +82,12 @@ export const closureDaysLabel = (t, fermeture, { long = false } = {}) => {
  *   fermeture.
  * @returns {string} Les heures.
  */
-export const closureHoursLabel = (t, fermeture) => (fermeture?.kind === 'block'
-  && fermeture.startTime
-  && fermeture.endTime
-  ? `${String(fermeture.startTime).slice(0, 5)} – ${String(fermeture.endTime).slice(0, 5)}`
-  : t('collectiviteFermetures.jours.journee', 'Toute la journée'));
+export const closureHoursLabel = (t, fermeture) => {
+  if (fermeture?.kind !== 'block' || !fermeture.startTime || !fermeture.endTime) {
+    return t('collectiviteFermetures.jours.journee', 'Toute la journée');
+  }
+  return `${String(fermeture.startTime).slice(0, 5)} – ${String(fermeture.endTime).slice(0, 5)}`;
+};
 
 /**
  * La pastille d une fermeture (onglet « Fermetures ») : « Fermeture · travaux », « Blocage ·
@@ -244,9 +245,11 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
  * Le premier mot du nom (« Gymnase », « Dojo ») porte la phrase ; le genre n est pas devine ici.
  * @param {(key: string, fallback?: any, options?: any) => string} t - i18next.
  * @param {any} fermeture - La fermeture (`facility`, `kind`, `startDate`, `endDate`).
+ * @param {{ withDays?: boolean }} [options] - Le jour dans le titre (fiche de l installation,
+ *   planning) ; sans : « ce jour-la » (la fiche d une seance porte deja son jour).
  * @returns {{ titre: string, texte: string }} Le titre et la ligne du bandeau.
  */
-export const closureBannerText = (t, fermeture) => {
+export const closureBannerText = (t, fermeture, { withDays = false } = {}) => {
   const motif = fermeture?.kind === 'block'
     ? fermeture.label || ''
     : reasonLabel(t, fermeture?.reason);
@@ -256,14 +259,30 @@ export const closureBannerText = (t, fermeture) => {
       mot: fermeture.message,
     })
     : '';
+  const jour = closureDay(fermeture?.startDate, { long: true });
   let titre;
   if (fermeture?.kind === 'block') {
-    titre = t('collectiviteFermetures.bandeau.bloque', 'L’installation est bloquée de {{heures}}', {
-      heures: closureHoursLabel(t, fermeture),
-      ...SANS_ECHAPPEMENT,
-    });
+    titre = withDays && jour
+      ? t(
+        'collectiviteFermetures.bandeau.bloqueLe',
+        'Bloquée par la Ville le {{jour}}, {{heures}}',
+        {
+          ...SANS_ECHAPPEMENT,
+          heures: closureHoursLabel(t, fermeture),
+          jour,
+        },
+      )
+      : t('collectiviteFermetures.bandeau.bloque', 'Bloquée par la Ville, {{heures}}', {
+        ...SANS_ECHAPPEMENT,
+        heures: closureHoursLabel(t, fermeture),
+      });
   } else if (fermeture?.startDate && fermeture.startDate === fermeture.endDate) {
-    titre = t('collectiviteFermetures.bandeau.fermeJour', 'L’installation est fermée ce jour-là');
+    titre = withDays && jour
+      ? t('collectiviteFermetures.bandeau.fermeLe', 'L’installation est fermée le {{jour}}', {
+        ...SANS_ECHAPPEMENT,
+        jour,
+      })
+      : t('collectiviteFermetures.bandeau.fermeJour', 'L’installation est fermée ce jour-là');
   } else {
     titre = t(
       'collectiviteFermetures.bandeau.fermePeriode',

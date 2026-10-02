@@ -60,6 +60,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import FacilityPlanningList from '@/components/organisms/planning/FacilityPlanningList';
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
@@ -1534,6 +1535,12 @@ function PlanningWeekFullscreen() {
 
         {isFacilitySource && facilityPlanningSummary ? (
           <View style={[Spaces.marginBottom[8], { gap: 6 }]}>
+            {/* COLL-C4B (02/10) — la fermeture de la page, pour TOUS les lecteurs (P3b). */}
+            <FacilityClosureBanner
+              closure={Array.isArray(data?.meta?.closures) ? data.meta.closures[0] : null}
+              testID="planning-bandeau-fermeture"
+              withDays
+            />
             {ligneDeCapacite ? (
               <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
                 <RondsDePlaces

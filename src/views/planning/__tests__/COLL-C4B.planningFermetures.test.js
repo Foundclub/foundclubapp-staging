@@ -432,4 +432,11 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
     expect(bande().title).toBe('Fermé · travaux');
     expect(vues).toBeDefined();
   });
+
+  it('7. le planning porte le bandeau de la fermeture de la page, pour un membre aussi (planche 4)', async () => {
+    avecFermeture();
+    const lus = textes(await rendre());
+    expect(lus).toContain('L’installation est fermée le mercredi 4 mars');
+    expect(lus).toContain('Travaux.');
+  });
 });

@@ -30,6 +30,7 @@ import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
@@ -42,6 +43,7 @@ import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
 } from '@/services/collectivite/collectiviteQueries';
+import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useFacilitySeasonSlots,
   useRestoreSeasonSlot,
@@ -202,6 +204,9 @@ function InstallationCreneaux() {
   const canManage = meta.canManage === true;
   const retires = useFacilitySeasonSlots(facilityId, 'withdrawn', { enabled: canManage });
   const clubs = useCollectiviteClubs(canManage ? collectiviteId : null);
+  // COLL-C4B (02/10) — le bandeau de la fiche, tant que la fermeture dure ou approche (P3b).
+  const fermeturesDeLInstallation = useFacilityClosures(facilityId);
+  const bandeau = fermeturesDeLInstallation.data?.meta?.bandeau || null;
 
   const ligne = (Array.isArray(installations.data) ? installations.data : [])
     .find((installation) => installation?.documentId === facilityId) || null;
@@ -523,6 +528,8 @@ function InstallationCreneaux() {
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>{nom}</Text>
         {metaLigne ? <Text style={[Fonts.p2, Fonts.neutral200]}>{metaLigne}</Text> : null}
       </View>
+
+      <FacilityClosureBanner closure={bandeau} testID="installation-bandeau-fermeture" withDays />
 
       <SegmentedControl
         onChange={choisirOnglet}

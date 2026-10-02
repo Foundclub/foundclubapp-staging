@@ -26,6 +26,11 @@ import {
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  closureDaysLabel,
+  closureHoursLabel,
+  closureTagLabel,
+} from '@/domains/facilityClosure/facilityClosureDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -51,6 +56,7 @@ import {
   useCollectiviteWeek,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
+import { useCollectiviteClosures } from '@/services/facilityClosure/facilityClosureQueries';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import { getItem, setItem } from '@/platform/storage';
@@ -132,6 +138,11 @@ function CollectiviteHome() {
   const semaine = useCollectiviteWeek(installations.data, { enabled: Boolean(collectivite) });
   // COLL-C4A : le 4e premier pas (« Présentez-vous aux clubs ») se coche à la 1re actualité.
   const actualitesEnLigne = useCollectiviteActualites(collectiviteId);
+  // COLL-C4B (02/10) — « Fermeture à venir » (P3v2-accueil, point d accroche de COLL-ACCUEIL) :
+  // ce qui dure ou vient, toutes installations ; les deux premières.
+  const fermetures = useCollectiviteClosures(collectiviteId);
+  const fermeturesAVenir = (Array.isArray(fermetures.data?.data) ? fermetures.data.data : [])
+    .slice(0, 2);
 
   const refetchPending = pending.refetch;
   // Au retour d'une demande tranchée, le compteur doit déjà être juste.
@@ -139,13 +150,13 @@ function CollectiviteHome() {
     refetchPending?.();
   }, [refetchPending]));
 
-  const ouvrir = (/** @type {string} */ ecran) => {
+  const ouvrir = (/** @type {string} */ ecran, /** @type {Record<string, any>} */ extra = {}) => {
     // Ouvrir la liste des clubs rattachés coche le 2e premier pas (« Vérifiez vos clubs »).
     if (ecran === RouteNames.CollectiviteClubs && !clubsVus) {
       retenir('clubs-vus');
       setClubsVus(true);
     }
-    navigation.navigate(ecran, { collectiviteId });
+    navigation.navigate(ecran, { collectiviteId, ...extra });
   };
   const contacter = () => {
     Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {});
@@ -398,6 +409,45 @@ function CollectiviteHome() {
     );
   };
 
+  // COLL-C4B — une fermeture à venir : la toucher ouvre l onglet « Fermetures » de l installation.
+  const carteDeFermeture = (/** @type {any} */ fermeture) => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      key={fermeture.documentId}
+      onPress={() => ouvrir(RouteNames.CollectiviteInstallation, {
+        facilityId: fermeture.facility?.documentId,
+        onglet: 'fermetures',
+      })}
+      style={[
+        ApplicationStyle.card,
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(Colors.warning500, 0.08),
+          borderColor: withAlpha(Colors.warning500, 0.45),
+          gap: 4,
+        },
+      ]}
+      testID={`collectivite-home-fermeture-${fermeture.documentId}`}
+    >
+      <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+        {t('collectiviteFermetures.accueil.aVenir', 'Fermeture à venir')}
+      </Text>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{fermeture.facility?.name || ''}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {[
+          closureDaysLabel(t, fermeture),
+          closureHoursLabel(t, fermeture),
+          closureTagLabel(t, fermeture),
+        ].filter(Boolean).join(' · ')}
+      </Text>
+    </TouchableOpacity>
+  );
+  const blocDesFermetures = fermeturesAVenir.length ? (
+    <View style={{ gap: 8 }} testID="collectivite-home-fermetures">
+      {fermeturesAVenir.map(carteDeFermeture)}
+    </View>
+  ) : null;
+
   const renderAttente = () => {
     if (pending.isLoading) {
       return (
@@ -440,6 +490,15 @@ function CollectiviteHome() {
               />
             </View>
           </View>
+        </View>
+      );
+    }
+    // COLL-C4B — aucune demande, mais une fermeture à venir : elle seule attend.
+    if (!enTete && blocDesFermetures) {
+      return (
+        <View style={{ gap: 12 }}>
+          {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
+          {blocDesFermetures}
         </View>
       );
     }
@@ -507,6 +566,7 @@ function CollectiviteHome() {
             () => ouvrir(RouteNames.CollectiviteRequests),
           )}
         </View>
+        {blocDesFermetures}
       </View>
     );
   };
@@ -572,7 +632,7 @@ function CollectiviteHome() {
             <TouchableOpacity
               accessibilityRole="button"
               key={action.key}
-              onPress={() => ouvrir(String(action.route))}
+              onPress={() => ouvrir(String(action.route), action.params)}
               style={[
                 ApplicationStyle.card,
                 Spaces.padding[16],

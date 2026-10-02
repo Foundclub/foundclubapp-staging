@@ -442,4 +442,20 @@ describe('COLL-C4B planche 1 — l onglet « Fermetures »', () => {
     expect(lus).not.toContain('Fermer l’installation');
     expect(lus.join(' ')).not.toMatch(/prévenu/);
   });
+
+  it('5. la fiche porte un bandeau tant que la fermeture dure ou approche (planche 4)', async () => {
+    /** @type {any} */ (listFacilityClosures).mockResolvedValue({
+      data: [FERMETURE],
+      meta: { bandeau: FERMETURE, canManage: true, facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' } },
+    });
+    const lus = textes(await rendre());
+    expect(lus).toContain('L’installation est fermée le vendredi 2 octobre');
+    expect(lus).toContain('Travaux. Mot de la Ville : « Réfection du sol ».');
+  });
+
+  it('6. rien ne dure ni n approche : aucun bandeau', async () => {
+    fermetures(true);
+    const lus = textes(await rendre());
+    expect(lus.join(' ')).not.toMatch(/est fermée/);
+  });
 });

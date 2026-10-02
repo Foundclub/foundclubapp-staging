@@ -21,16 +21,17 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  *   onMove?: () => void,
  *   onCancel?: () => void,
  *   testID?: string,
+ *   withDays?: boolean,
  * }} props
  * @returns {import('react').ReactElement | null} Le bandeau.
  */
 function FacilityClosureBanner({
-  closure, onCancel, onMove, testID = 'bandeau-fermeture',
+  closure, onCancel, onMove, testID = 'bandeau-fermeture', withDays = false,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   if (!closure) return null;
-  const { texte, titre } = closureBannerText(t, closure);
+  const { texte, titre } = closureBannerText(t, closure, { withDays });
   const gestes = Boolean(onMove || onCancel);
   return (
     <View style={{ gap: 8 }} testID={testID}>
