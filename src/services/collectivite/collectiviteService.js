@@ -323,8 +323,10 @@ export const createAdminCollectivite = async (data) => {
 };
 
 // Ce que chaque recherche lit : un club par son nom, un compte par son nom et son e-mail.
+// COLL-CONSOLE (02/10) — et l adresse du club (publique, celle de sa fiche) : la recherche dit
+// sa ville, pour rattacher le bon club (planche P2-fiche, « chaque résultat dit sa ville »).
 const SEARCH_FIELDS = {
-  club: ['documentId', 'name'],
+  club: ['documentId', 'name', 'addressDetails'],
   user: ['documentId', 'firstname', 'lastname', 'email'],
 };
 const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.user' };

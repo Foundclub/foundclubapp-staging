@@ -2,6 +2,8 @@ import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
+import { readClubOfferStates } from '@/domains/collectivite/collectiviteConsole';
+
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 
 import { getPlanningDefaultDate, getPlanningRange } from '@/utils/planning/planningSlots';
@@ -427,6 +429,31 @@ export const useAdminCollectivite = (collectiviteId, options = {}) => useQuery({
   queryKey: adminCollectiviteQueryKey(collectiviteId),
   staleTime: 0,
   ...options,
+});
+
+/**
+ * COLL-CONSOLE (02/10) — L ETAT DE L OFFRE CLUB PAR CLUB d une collectivite (planche P2-fiche :
+ * « À l'activation », « Offerte par la Ville », « Paie lui-même »), lu dans l APERCU du geste
+ * contraire (`PUT …/active` avec `previewIsActive`, TEXTES-COLLECTIVITES : meme juge que le
+ * geste, rien d ecrit). Sous la clef de la fiche : chaque geste super-admin le relit.
+ * Sans club, rien n est demande.
+ * @param {{ clubsCount?: number, documentId?: string, isActive?: boolean } | null} collectivite
+ *   - La collectivite telle que la fiche l a lue.
+ * @returns {any} Le resultat react-query ; `data` est `{ [clubDocumentId]: etat }`.
+ */
+export const useAdminCollectiviteOfferStates = (collectivite) => useQuery({
+  enabled: Boolean(collectivite?.documentId) && Number(collectivite?.clubsCount) > 0,
+  queryFn: async () => Object.fromEntries(readClubOfferStates(await previewAdminCollectiviteActive({
+    collectiviteId: String(collectivite?.documentId),
+    isActive: collectivite?.isActive !== true,
+  }))),
+  queryKey: [
+    ...adminCollectiviteQueryKey(collectivite?.documentId),
+    'offre',
+    collectivite?.isActive === true,
+    Number(collectivite?.clubsCount) || 0,
+  ],
+  staleTime: 0,
 });
 
 /**

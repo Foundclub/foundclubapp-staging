@@ -9,6 +9,7 @@ import Button from '@/components/atoms/button/Button';
 import { useAdminCollectiviteSearch } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { getShortAddress } from '@/utils/location';
 
 /**
  * 🏛️ CHERCHER UN CLUB OU UN COMPTE DANS LA CONSOLE — sortie telle quelle de la fiche d une
@@ -47,14 +48,25 @@ function CollectiviteTargetSearch({
         </Text>
       );
     } else if (lignes.length === 0) {
+      // COLL-CONSOLE (02/10) — « Aucun résultat » dit la suite (planche P2-fiche, état 5).
       contenu = (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('adminCollectivites.detail.noResult', 'Aucun résultat.')}
+          {kind === 'club'
+            ? t(
+              'collectiviteConsole.fiche.aucunClubTrouve',
+              // eslint-disable-next-line max-len
+              'Aucun résultat. Vérifie l’orthographe. Un club absent de FoundClub se crée d’abord dans la console, rubrique « Clubs ».',
+            )
+            : t('adminCollectivites.detail.noResult', 'Aucun résultat.')}
         </Text>
       );
     } else {
       contenu = lignes.map((/** @type {any} */ cible) => {
         const pris = deja.has(String(cible?.documentId));
+        // Un club dit sa ville (son adresse publique) ; un compte, son e-mail.
+        const sousTitre = kind === 'club'
+          ? getShortAddress(cible?.raw?.addressDetails) || null
+          : cible?.subtitle;
         return (
           <View
             key={cible?.documentId}
@@ -63,8 +75,8 @@ function CollectiviteTargetSearch({
           >
             <View style={{ flex: 1 }}>
               <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{cible?.label}</Text>
-              {cible?.subtitle ? (
-                <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{cible.subtitle}</Text>
+              {sousTitre ? (
+                <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{sousTitre}</Text>
               ) : null}
             </View>
             <Button

@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { PastilleAPoint } from '@/views/admin/components/CollectiviteBadges';
 
 import {
   usePreviewAdminCollectiviteActive,
@@ -65,8 +67,82 @@ const lireApercu = (response) => (
 );
 
 /**
+ * COLL-CONSOLE (02/10) — ce que le bandeau dit de l offre, club par club, d apres l etat lu par
+ * l apercu du serveur (useAdminCollectiviteOfferStates). Sans etat lu (serveur ancien, panne,
+ * lecture en cours), une phrase VRAIE sans nombre.
+ * @param {(cle: string, options?: any) => string} t - La traduction.
+ * @param {{ clubs?: Array<{ documentId: string, name: string }>, clubsCount: number,
+ *   isActive: boolean }} collectivite - La collectivite.
+ * @param {Record<string, string> | null | undefined} etats - L etat de l offre par club.
+ * @returns {string} La phrase du bandeau.
+ */
+const phraseDuBandeau = (t, collectivite, etats) => {
+  const actif = collectivite.isActive === true;
+  if ((Number(collectivite.clubsCount) || 0) === 0) {
+    return actif
+      ? t('collectiviteConsole.fiche.bandeau.activeSansClub', {
+        // eslint-disable-next-line max-len
+        defaultValue: 'Aucun club n’est rattaché : chaque club que tu rattacheras recevra l’offre Club offerte.',
+      })
+      : t('collectiviteConsole.fiche.bandeau.inactiveSansClub', {
+        // eslint-disable-next-line max-len
+        defaultValue: 'Aucun club n’est rattaché : chaque club que tu rattacheras recevra l’offre Club offerte, une fois la Ville activée.',
+      });
+  }
+  const clubs = Array.isArray(collectivite.clubs) ? collectivite.clubs : [];
+  const connus = etats ? clubs.filter((club) => etats[club.documentId]) : [];
+  if (connus.length === 0) {
+    return actif
+      ? t('collectiviteConsole.fiche.bandeau.activeSansDetail', {
+        // eslint-disable-next-line max-len
+        defaultValue: 'Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.',
+      })
+      : t('collectiviteConsole.fiche.bandeau.inactiveSansDetail', {
+        // eslint-disable-next-line max-len
+        defaultValue: 'L’activer offrira l’offre Club à ses clubs rattachés, sauf à ceux qui paient déjà.',
+      });
+  }
+  const etatsLus = /** @type {Record<string, string>} */ (etats);
+  const attendu = actif ? 'offered' : 'atActivation';
+  const offerts = connus.filter((club) => etatsLus[club.documentId] === attendu);
+  const payeurs = connus.filter((club) => etatsLus[club.documentId] === 'paysItself')
+    .map((club) => club.name);
+  const valeurs = { count: offerts.length, ...SANS_ECHAPPEMENT };
+  const debut = actif
+    ? t('collectiviteConsole.fiche.bandeau.recoivent', {
+      ...valeurs,
+      defaultValue_one: '{{count}} club reçoit l’offre Club offerte.',
+      defaultValue_other: '{{count}} clubs reçoivent l’offre Club offerte.',
+    })
+    : t('collectiviteConsole.fiche.bandeau.offrira', {
+      ...valeurs,
+      defaultValue_one: 'L’activer offrira l’offre Club à {{count}} club.',
+      defaultValue_other: 'L’activer offrira l’offre Club à {{count}} clubs.',
+    });
+  if (payeurs.length === 0) return debut;
+  const noms = { count: payeurs.length, noms: payeurs.join(', '), ...SANS_ECHAPPEMENT };
+  const suite = actif
+    ? t('collectiviteConsole.fiche.bandeau.paieLuiMeme', {
+      ...noms,
+      defaultValue_one: '{{noms}} paie lui-même.',
+      defaultValue_other: '{{noms}} paient eux-mêmes.',
+    })
+    : t('collectiviteConsole.fiche.bandeau.paieDeja', {
+      ...noms,
+      defaultValue_one: '{{noms}} paie déjà : rien ne change pour lui.',
+      defaultValue_other: '{{noms}} paient déjà : rien ne change pour eux.',
+    });
+  return `${debut} ${suite}`;
+};
+
+/**
  * 🏛️ ACTIVER / COUPER UNE COLLECTIVITE (D61, 2026-09-29) — le bouton, sa confirmation et
  * le compte rendu, pour la liste ET le detail de la console.
+ *
+ * COLL-CONSOLE (02/10) — devient le BANDEAU D ETAT de la fiche (planche P2-fiche, bloc 1) :
+ * la pastille « Active » / « Inactive », ce que l activation changera (ou ce que l offre
+ * couvre), club par club quand le serveur l a dit, puis le bouton : « Activer » en bleu,
+ * « Couper » en ROUGE, car il retire. Le compte rendu reste dans le bandeau.
  *
  * TEXTES-COLLECTIVITES (01/10) — la fenetre annoncait « Les 3 clubs rattaches recevront
  * l offre », quand le serveur n en touchait que 2 (un payait deja). Elle demande desormais
@@ -75,13 +151,17 @@ const lireApercu = (response) => (
  * ancien, panne), elle dit une phrase vraie sans detail, et le geste reste possible.
  * Apres le geste, la liste et le detail sont RELUS depuis le serveur
  * (useSetAdminCollectiviteActive) : l etat affiche est celui qu il rend.
- * @param {{ collectivite: { clubsCount: number, documentId: string, isActive: boolean,
- *   name: string } }} props - La collectivite telle que le serveur l a lue.
- * @returns {import('react').ReactElement} Le bouton et son compte rendu.
+ * @param {{ collectivite: { clubs?: Array<{ documentId: string, name: string }>,
+ *   clubsCount: number, documentId: string, isActive: boolean, name: string },
+ *   etats?: Record<string, string> | null }} props - La collectivite telle que le serveur l a
+ *   lue, et l etat de l offre de chacun de ses clubs (s il est connu).
+ * @returns {import('react').ReactElement} Le bandeau, son bouton et son compte rendu.
  */
-function CollectiviteActivation({ collectivite }) {
+function CollectiviteActivation({ collectivite, etats = null }) {
   const { t } = useTranslation();
-  const { Fonts } = useTheme();
+  const {
+    ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const [bilan, setBilan] = useState(/** @type {ReturnType<typeof lireBilan> | null} */ (null));
   const mutation = useSetAdminCollectiviteActive({
     onSuccess: (/** @type {any} */ response) => setBilan(lireBilan(response)),
@@ -209,19 +289,38 @@ function CollectiviteActivation({ collectivite }) {
   }
 
   const enCours = mutation.isPending || apercu.isPending;
+  const teinte = activer ? Colors.warning500 : Colors.success500;
   return (
-    <View style={{ gap: 8 }}>
+    <View
+      style={[
+        ApplicationStyle.borderRadius16,
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(teinte, 0.1),
+          borderColor: withAlpha(teinte, 0.45),
+          borderWidth: 1,
+          gap: 12,
+        },
+      ]}
+      testID="collectivite-bandeau-etat"
+    >
+      <PastilleAPoint
+        color={teinte}
+        label={activer
+          ? t('adminCollectivites.status.inactive', 'Inactive')
+          : t('adminCollectivites.status.active', 'Active')}
+      />
+      <Text style={[Fonts.p2, Fonts.neutral100]}>{phraseDuBandeau(t, collectivite, etats)}</Text>
+      {compteRendu}
       <Button
         disabled={enCours}
         isLoading={enCours}
         onPress={confirmer}
-        size="sm"
         title={activer
           ? t('adminCollectivites.activation.activate', 'Activer')
           : t('adminCollectivites.activation.deactivate', 'Couper')}
-        variant={activer ? 'Primary' : 'Secondary'}
+        variant={activer ? 'Primary' : 'Danger'}
       />
-      {compteRendu}
     </View>
   );
 }

@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Alert, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { ADMIN_COLLECTIVITE_DETAIL_POPULATE } from '@/services/collectivite/collectiviteService';
 
 import AdminCollectiviteDetail from '../AdminCollectiviteDetail';
@@ -36,8 +38,9 @@ jest.mock('@/services/client', () => ({
 
 /** @type {any} */
 let mockParams = { collectiviteId: 'ville-montrivage' };
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate }),
   useRoute: () => ({ params: mockParams }),
 }));
 
@@ -166,6 +169,24 @@ const bouton = (/** @type {any} */ noeud, /** @type {string} */ titre) => noeud.
   (/** @type {any} */ n) => n.props?.testID === `bouton-${titre}` && typeof n.props?.onPress === 'function',
 );
 
+/**
+ * Ouvre le menu « Plus d actions » d une ligne, puis choisit l une de ses actions.
+ * @param {any} arbre - L écran.
+ * @param {string} testID - Le bouton du menu.
+ * @param {string} libelle - L action.
+ * @returns {Promise<void>}
+ */
+const choisirAction = async (arbre, testID, libelle) => {
+  const bouton3Points = arbre.root
+    .findAll((n) => n.props?.testID === testID && typeof n.props?.onPress === 'function')[0];
+  await act(async () => { bouton3Points.props.onPress(); });
+  const menu = arbre.root.findAll((n) => n.props?.testID === `${testID}-menu`)[0];
+  const action = menu.findAll((n) => typeof n.props?.onPress === 'function'
+    // eslint-disable-next-line max-len
+    && n.findAllByType(Text).some((texte) => aplatirTexte(texte.props.children).trim() === libelle))[0];
+  await act(async () => { action.props.onPress(); });
+};
+
 const monter = async () => {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { gcTime: 0, retry: false } },
@@ -215,7 +236,8 @@ beforeEach(() => {
     postPersonnalise: null,
   };
   alerte = null;
-  [mockGet, mockPost, mockPut, mockDelete].forEach((doublure) => doublure.mockReset());
+  // eslint-disable-next-line max-len
+  [mockGet, mockPost, mockPut, mockDelete, mockNavigate].forEach((doublure) => doublure.mockReset());
   mockPost.mockImplementation(repondrePost);
   mockDelete.mockResolvedValue({ data: { data: {} } });
   jest.spyOn(Alert, 'alert').mockImplementation((titre, message, boutons) => {
@@ -244,10 +266,11 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     ]));
     expect(textes(parTestID(arbre.root, 'admin-collectivite-installations'))).toEqual([
       'Installations : 2',
-      'Gymnase des Tilleuls', 'Gymnase · capacité : 3',
-      'Stade municipal de Montrivage', 'Terrain · capacité : 2',
+      'Gymnase des Tilleuls', 'Gymnase · 3 équipes à la fois',
+      'Stade municipal de Montrivage', 'Terrain · 2 équipes à la fois',
     ]);
-    expect(textes(arbre.root)).toEqual(expect.arrayContaining(['Commune', 'Active', 'Couper']));
+    // eslint-disable-next-line max-len
+    expect(textes(arbre.root)).toEqual(expect.arrayContaining(['Commune · INSEE 99001', 'Active', 'Couper']));
   });
 
   // eslint-disable-next-line max-len
@@ -271,7 +294,7 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     const arbre = await monter();
     await chercher(arbre, 'admin-collectivite-recherche-club', 'mont');
     // eslint-disable-next-line max-len
-    expect(mockPost).toHaveBeenCalledWith(RECHERCHE_CLUB, { fields: ['documentId', 'name'], pageSize: 10, q: 'mont' });
+    expect(mockPost).toHaveBeenCalledWith(RECHERCHE_CLUB, { fields: ['documentId', 'name', 'addressDetails'], pageSize: 10, q: 'mont' });
 
     // Un club déjà rattaché ici ne se rattache pas deux fois.
     // eslint-disable-next-line max-len
@@ -287,7 +310,8 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     expect(clubs()).toEqual(expect.arrayContaining([
       'Clubs rattachés : 3',
       'Montrivage Basket',
-      'Montrivage Basket est rattaché à la Ville de Montrivage et reçoit l’offre Club offerte.',
+      // eslint-disable-next-line max-len
+      'Montrivage Basket est rattaché à la Ville de Montrivage et reçoit l’offre Club offerte. Ses dirigeants sont prévenus.',
     ]));
   });
 
@@ -337,8 +361,8 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
 
   it('DÉTACHER : confirmation (le club reste intact), puis DELETE …/clubs/:clubId', async () => {
     const arbre = await monter();
-    const ligne = parTestID(arbre.root, 'admin-collectivite-club-as-montrivage');
-    await act(async () => { bouton(ligne, 'Détacher').props.onPress(); });
+    // eslint-disable-next-line max-len
+    await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Détacher de la Ville');
     expect(alerte.titre).toBe('Détacher AS Montrivage ?');
     expect(alerte.message).toBe(
       // eslint-disable-next-line max-len
@@ -394,8 +418,7 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
 
   it('RETIRER un gestionnaire : confirmation (le compte reste intact), puis DELETE', async () => {
     const arbre = await monter();
-    const ligne = parTestID(arbre.root, 'admin-collectivite-gestionnaire-karim');
-    await act(async () => { bouton(ligne, 'Retirer').props.onPress(); });
+    await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
     expect(alerte.titre).toBe('Retirer Karim Benali ?');
     expect(alerte.message).toBe(
       // eslint-disable-next-line max-len
@@ -418,16 +441,11 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
 
   it('« Annuler » ne détache ni ne retire rien', async () => {
     const arbre = await monter();
-    await act(async () => {
-      // eslint-disable-next-line max-len
-      bouton(parTestID(arbre.root, 'admin-collectivite-club-as-montrivage'), 'Détacher').props.onPress();
-    });
+    // eslint-disable-next-line max-len
+    await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Détacher de la Ville');
     // eslint-disable-next-line max-len
     await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style === 'cancel').onPress?.(); });
-    await act(async () => {
-      // eslint-disable-next-line max-len
-      bouton(parTestID(arbre.root, 'admin-collectivite-gestionnaire-karim'), 'Retirer').props.onPress();
-    });
+    await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
     // eslint-disable-next-line max-len
     await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style === 'cancel').onPress?.(); });
     await attendre(() => false);
@@ -468,5 +486,153 @@ describe('COLL-CONSOLE — la fiche ouverte juste après la création', () => {
     const arbre = await monter();
     // eslint-disable-next-line max-len
     expect(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-creee')).toHaveLength(0);
+  });
+});
+
+// COLL-CONSOLE (02/10) — planche P2-fiche (design HY521H1, page 2, écran 4).
+describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () => {
+  const VERDICTS_COUPER = [
+    { clubDocumentId: 'as-montrivage', name: 'AS Montrivage', offer: 'revoked' },
+    { clubDocumentId: 'montrivage-fc', name: 'Montrivage FC', offer: 'none' },
+  ];
+  const VERDICTS_ACTIVER = [
+    { clubDocumentId: 'as-montrivage', name: 'AS Montrivage', offer: 'granted' },
+    { clubDocumentId: 'montrivage-fc', name: 'Montrivage FC', offer: 'already-paid' },
+  ];
+  const apercu = (clubs, isActive) => mockPut.mockImplementation(async (url, corps) => {
+    // eslint-disable-next-line max-len
+    if (url !== `${ROUTE}/active` || !('previewIsActive' in (corps?.data || {}))) throw new Error(`PUT ${url}`);
+    return { data: { data: { clubs, isActive, preview: true } } };
+  });
+  // eslint-disable-next-line max-len
+  const offre = (arbre, club) => textes(arbre.root.findAll((n) => n.props?.testID === `admin-collectivite-offre-${club}`)[0]);
+  // eslint-disable-next-line max-len
+  const bandeau = (arbre) => textes(arbre.root.findAll((n) => n.props?.testID === 'collectivite-bandeau-etat')[0]);
+
+  // eslint-disable-next-line max-len
+  it('F1 — en tête : le type, l INSEE ; le bandeau d une Ville ACTIVE dit qui reçoit l offre et qui paie lui-même', async () => {
+    apercu(VERDICTS_COUPER, false);
+    const arbre = await monter();
+    // eslint-disable-next-line max-len
+    await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-offre-as-montrivage').length > 0);
+    expect(mockPut).toHaveBeenCalledWith(`${ROUTE}/active`, { data: { previewIsActive: false } });
+    expect(textes(arbre.root)).toContain('Commune · INSEE 99001');
+    expect(bandeau(arbre)).toEqual([
+      'Active', '1 club reçoit l’offre Club offerte. Montrivage FC paie lui-même.', 'Couper',
+    ]);
+    expect(offre(arbre, 'as-montrivage')).toEqual(['Offerte par la Ville']);
+    expect(offre(arbre, 'montrivage-fc')).toEqual(['Paie lui-même']);
+  });
+
+  // eslint-disable-next-line max-len
+  it('F2 — une Ville INACTIVE : « L activer offrira l offre Club à 1 club. Montrivage FC paie déjà … » ; « À l activation »', async () => {
+    serveur.isActive = false;
+    apercu(VERDICTS_ACTIVER, true);
+    const arbre = await monter();
+    // eslint-disable-next-line max-len
+    await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-offre-as-montrivage').length > 0);
+    expect(mockPut).toHaveBeenCalledWith(`${ROUTE}/active`, { data: { previewIsActive: true } });
+    expect(bandeau(arbre)).toEqual([
+      // eslint-disable-next-line max-len
+      'Inactive', 'L’activer offrira l’offre Club à 1 club. Montrivage FC paie déjà : rien ne change pour lui.', 'Activer',
+    ]);
+    expect(offre(arbre, 'as-montrivage')).toEqual(['À l’activation']);
+  });
+
+  // eslint-disable-next-line max-len
+  it('F3 — sans aperçu (serveur ancien, panne) : aucune pastille inventée, une phrase vraie sans nombre', async () => {
+    mockPut.mockRejectedValue({ response: { data: { error: { status: 400 } }, status: 400 } });
+    const arbre = await monter();
+    await attendre(() => mockPut.mock.calls.length > 0);
+    await attendre(() => false);
+    // eslint-disable-next-line max-len
+    expect(arbre.root.findAll((n) => String(n.props?.testID || '').startsWith('admin-collectivite-offre-'))).toHaveLength(0);
+    // eslint-disable-next-line max-len
+    expect(bandeau(arbre)[1]).toBe('Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.');
+  });
+
+  // eslint-disable-next-line max-len
+  it('F4 — aucun club : la fiche le dit et invite à chercher ; rien n est demandé au serveur', async () => {
+    serveur.clubs = [];
+    serveur.isActive = false;
+    const arbre = await monter();
+    expect(textes(parTestID(arbre.root, 'admin-collectivite-clubs'))).toContain(
+      'Aucun club rattaché. Cherche les clubs de la commune par leur nom.',
+    );
+    expect(bandeau(arbre)[1]).toBe(
+      // eslint-disable-next-line max-len
+      'Aucun club n’est rattaché : chaque club que tu rattacheras recevra l’offre Club offerte, une fois la Ville activée.',
+    );
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  // eslint-disable-next-line max-len
+  it('F5 — « Plus d actions » : « Voir la fiche du club » ouvre sa fiche de la console ; « Détacher » est en rouge', async () => {
+    const arbre = await monter();
+    const actions = arbre.root.findAll((n) => (
+      // eslint-disable-next-line max-len
+      n.props?.testID === 'admin-collectivite-club-as-montrivage-actions' && typeof n.props?.onPress === 'function'))[0];
+    expect(actions.props.accessibilityLabel).toBe('Plus d’actions : AS Montrivage');
+    expect(actions.props.accessibilityState).toEqual({ expanded: false });
+    // eslint-disable-next-line max-len
+    await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Voir la fiche du club');
+    // eslint-disable-next-line max-len
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminClubDetail, { clubId: 'as-montrivage' });
+  });
+
+  // eslint-disable-next-line max-len
+  it('F6 — la recherche dit la VILLE de chaque club ; « Aucun résultat » dit la suite', async () => {
+    serveur.clubsTrouves = [{
+      // eslint-disable-next-line max-len
+      documentId: 'recette-fc', label: 'Recette Stripe FC', raw: { addressDetails: '10 Rue de Rivoli, 75001 Paris' }, subtitle: null,
+    }];
+    const arbre = await monter();
+    await chercher(arbre, 'admin-collectivite-recherche-club', 'recette');
+    expect(textes(parTestID(arbre.root, 'admin-collectivite-recherche-club-resultat-recette-fc')))
+      .toEqual(expect.arrayContaining(['Recette Stripe FC', '75001 Paris']));
+
+    serveur.clubsTrouves = [];
+    // eslint-disable-next-line max-len
+    const champ = arbre.root.findAllByType(TextInput).find((n) => n.props.testID === 'admin-collectivite-recherche-club');
+    await act(async () => { champ.props.onChangeText('judo'); });
+    // eslint-disable-next-line max-len
+    const message = 'Aucun résultat. Vérifie l’orthographe. Un club absent de FoundClub se crée d’abord dans la console, rubrique « Clubs ».';
+    // eslint-disable-next-line max-len
+    await attendre(() => textes(parTestID(arbre.root, 'admin-collectivite-clubs')).includes(message));
+    expect(textes(parTestID(arbre.root, 'admin-collectivite-clubs'))).toContain(message);
+  });
+
+  // eslint-disable-next-line max-len
+  it('F7 — les demandes de clubs de CETTE Ville ont leur porte, vers l écran des demandes', async () => {
+    mockGet.mockImplementation(async (route) => {
+      if (route === '/superadmin/collectivite-invitations') {
+        return {
+          data: {
+            data: [
+              {
+                collectivite: { documentId: 'ville-montrivage' },
+                documentId: 'd1',
+                kind: 'attach_request',
+                status: 'registered',
+              },
+              {
+                collectivite: { documentId: 'autre-ville' },
+                documentId: 'd2',
+                kind: 'attach_request',
+                status: 'registered',
+              },
+            ],
+          },
+        };
+      }
+      return { data: { data: [] } };
+    });
+    const arbre = await monter();
+    await attendre(() => textes(arbre.root).includes('1 demande de club pour cette collectivité'));
+    // eslint-disable-next-line max-len
+    await act(async () => { bouton(arbre.root, '1 demande de club pour cette collectivité').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminCollectiviteInvitations, {
+      collectiviteId: 'ville-montrivage', onglet: 'rattachements',
+    });
   });
 });
