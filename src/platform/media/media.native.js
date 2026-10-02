@@ -1,4 +1,4 @@
-import { pick } from '@react-native-documents/picker';
+import { keepLocalCopy, pick } from '@react-native-documents/picker';
 import i18next from 'i18next';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -15,7 +15,33 @@ export const pickImage = async (options = {}) => launchImageLibrary({
   ...options,
 });
 
-export const pickDocument = async (options = {}) => pick(options);
+/**
+ * Le sélecteur de documents.
+ *
+ * 🐞 COLL-FIX-PLANNING (02/10/2026, tournée T9) — `localCopy: true` : chaque document choisi est
+ * d'abord COPIÉ dans le cache de l'app, et le fichier rendu porte l'adresse de la copie
+ * (`file://`) au lieu de l'adresse `content://` du sélecteur. C'est le chemin de la messagerie
+ * (Conversation.js, handlePickFile), qui envoie des documents ; l'actualité de la Ville, qui
+ * envoyait l'adresse du sélecteur, échouait sans qu'aucune requête parte. Une copie ratée garde
+ * l'adresse d'origine (même repli que la messagerie). Sans l'option, rien ne change.
+ * @param {Record<string, any> & { localCopy?: boolean }} [options]
+ * @returns {Promise<any[]>} Les documents choisis.
+ */
+export const pickDocument = async ({ localCopy = false, ...options } = {}) => {
+  const choisis = await pick(/** @type {any} */ (options));
+  if (!localCopy) return choisis;
+  const copies = await keepLocalCopy({
+    destination: 'cachesDirectory',
+    files: /** @type {any} */ (choisis.map((fichier) => ({
+      fileName: fichier.name || `document-${Date.now()}`,
+      uri: fichier.uri,
+    }))),
+  });
+  return choisis.map((fichier, rang) => {
+    const copie = copies[rang];
+    return copie?.status === 'success' ? { ...fichier, uri: copie.localUri } : fichier;
+  });
+};
 
 export const capturePhoto = async (options = {}) => launchCamera({
   mediaType: 'photo',
