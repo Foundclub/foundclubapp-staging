@@ -45,6 +45,7 @@ import {
   declineEventParticipation,
   getEventParticipations,
 } from '@/services/eventParticipation/eventParticipationService';
+import { applicationStatusFromApplyRejection } from '@/services/recruitment/applyRejection';
 import {
   applyToRecruitmentAd,
   buildOwnApplicationStatusMap,
@@ -334,14 +335,9 @@ function RecruitmentAdDetails() {
           "Impossible d'envoyer la candidature pour le moment.",
         );
 
-      if (
-        /deja candidate|deja une candidature en attente|deja postule/i.test(message)
-      ) {
-        setOptimisticApplicationStatus('pending');
-      } else if (
-        /deja acceptee|deja validee|deja ete ajoute/i.test(message)
-      ) {
-        setOptimisticApplicationStatus('accepted');
+      const revealedStatus = applicationStatusFromApplyRejection(message);
+      if (revealedStatus) {
+        setOptimisticApplicationStatus(revealedStatus);
       }
 
       Alert.alert(t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'), message);
