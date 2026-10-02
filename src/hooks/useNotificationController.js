@@ -81,6 +81,25 @@ const getQueryAgeMs = (queryClient, queryKey) => {
   return Math.max(0, Date.now() - updatedAt);
 };
 
+/**
+ * FINITIONS7 (02/10) — LE COMPTEUR DE LA CLOCHE NE SE RELIT QUE S'IL EST PERIME.
+ *
+ * Journal T8 : 409 lectures de `count-unread` pour 200 retours au premier plan,
+ * toujours par paires. Une seule regle pour tous ceux qui « reviennent » (un
+ * ecran qui reprend le focus, l'app qui repasse au premier plan) : plus de 45 s,
+ * on relit UNE fois ; sinon, rien.
+ * `exact` : `['notifications']` couvre aussi le compteur par prefixe — une
+ * invalidation large suivie de celle-ci relancerait la lecture deux fois.
+ * Temoin : hooks/__tests__/useNotifications.FINITIONS7.compteurAuRetour.test.js.
+ * @param {import('@tanstack/react-query').QueryClient} queryClient - Le cache de l'app.
+ * @returns {boolean} Vrai si une lecture a ete demandee.
+ */
+export const refreshUnreadCountIfStale = (queryClient) => {
+  if (getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY) < UNREAD_FOCUS_REFRESH_MIN_AGE_MS) return false;
+  queryClient.invalidateQueries({ exact: true, queryKey: UNREAD_COUNT_QUERY_KEY });
+  return true;
+};
+
 export const useNotificationController = (options = {}) => {
   const {
     notificationsEnabled = true,
@@ -132,9 +151,11 @@ export const useNotificationController = (options = {}) => {
     staleTime: UNREAD_COUNT_STALE_MS,
   });
 
+  // FINITIONS7 — `exact` : sans lui, la premiere ligne relancait AUSSI le compteur
+  // (prefixe), et la seconde annulait cette lecture pour en relancer une autre.
   const invalidateNotificationQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
-    queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+    queryClient.invalidateQueries({ exact: true, queryKey: NOTIFICATIONS_QUERY_KEY });
+    queryClient.invalidateQueries({ exact: true, queryKey: UNREAD_COUNT_QUERY_KEY });
   }, [queryClient]);
 
   // Refetch on focus
@@ -158,10 +179,7 @@ export const useNotificationController = (options = {}) => {
         refetch();
       }
       if (unreadCountEnabled) {
-        const unreadCountAgeMs = getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY);
-        if (unreadCountAgeMs >= UNREAD_FOCUS_REFRESH_MIN_AGE_MS) {
-          queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
-        }
+        refreshUnreadCountIfStale(queryClient);
       }
       return undefined;
     }, [
@@ -318,10 +336,7 @@ export const useNotificationController = (options = {}) => {
         refetch();
       }
       if (unreadCountEnabled) {
-        const unreadCountAgeMs = getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY);
-        if (unreadCountAgeMs >= UNREAD_FOCUS_REFRESH_MIN_AGE_MS) {
-          queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
-        }
+        refreshUnreadCountIfStale(queryClient);
       }
     },
     unreadCount: (/** @type {UnreadCountData | undefined} */ (unreadCountData))?.count || 0,
