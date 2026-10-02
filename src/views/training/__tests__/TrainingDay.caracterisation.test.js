@@ -624,7 +624,10 @@ describe('le pied de page', () => {
     const arbre = rendre({ navigation: { navigate } });
     const [, secondaire] = arbre.root.findAllByType(Button);
 
-    expect(secondaire.props.title).toBe('training.day.later|{"date":"mer. 9 sept."}');
+    // COLL-FIX-PLANNING (T9_C37_3) : une date interpolee porte SANS_ECHAPPEMENT (pas de &#x2F;).
+    expect(secondaire.props.title).toBe(
+      'training.day.later|{"date":"mer. 9 sept.","interpolation":{"escapeValue":false}}',
+    );
     act(() => { secondaire.props.onPress(); });
     expect(navigate).toHaveBeenCalledWith('TrainingPlan');
   });

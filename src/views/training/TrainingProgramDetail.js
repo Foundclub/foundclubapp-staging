@@ -9,6 +9,7 @@ import {
 
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -533,6 +534,7 @@ function TrainingProgramDetail({ navigation, route }) {
                     {t('training.enroll.until', {
                       end: finPrevue(quand),
                       start: formatSessionDate(dateDeDepart(quand)),
+                      ...SANS_ECHAPPEMENT,
                     })}
                   </Text>
                 )}

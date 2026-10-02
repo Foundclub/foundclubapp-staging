@@ -27,6 +27,7 @@ import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handl
 import { runOnJS } from 'react-native-reanimated';
 
 import { images as Images } from '@/theme/images';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
@@ -1036,6 +1037,7 @@ function PlanningWeekTimelineView({
           {
             heure: `${String(heure).padStart(2, '0')}:00`,
             jour: format(day, 'EEEE d MMMM', { locale: fr }),
+            ...SANS_ECHAPPEMENT,
           },
         )}
         accessibilityRole="button"

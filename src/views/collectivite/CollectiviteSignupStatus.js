@@ -226,6 +226,7 @@ function CollectiviteSignupStatus() {
         </View>
         {carteDemande(derniere, t('collectiviteAccueil.demande.refusee.le', 'Réponse du {{date}}', {
           date: formatDateWithDayPrefix(derniere?.decidedAt, { fallback: '' }),
+          ...SANS_ECHAPPEMENT,
         }))}
         <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
           <Button
@@ -284,6 +285,7 @@ function CollectiviteSignupStatus() {
           'Demande envoyée le {{date}}',
           {
             date: formatDateWithDayPrefix(derniere?.createdAt, { fallback: '' }),
+            ...SANS_ECHAPPEMENT,
           },
         ))}
         <View style={{ gap: 12 }}>

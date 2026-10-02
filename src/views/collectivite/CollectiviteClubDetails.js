@@ -611,7 +611,10 @@ function CollectiviteClubDetails() {
         <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne}</Text>
         {depuis ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {t('collectiviteClubs.detail.offerSince', 'Depuis le {{date}}.', { date: depuis })}
+            {t('collectiviteClubs.detail.offerSince', 'Depuis le {{date}}.', {
+              date: depuis,
+              ...SANS_ECHAPPEMENT,
+            })}
           </Text>
         ) : null}
         <TouchableOpacity

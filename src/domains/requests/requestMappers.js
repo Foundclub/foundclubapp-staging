@@ -617,7 +617,7 @@ const phraseDeLaDemandeDuHub = (request, {
   };
   const demande = moment
     ? t('collectiviteDemandes.phrase.unique', {
-      ...valeurs, debut: moment.debut, fin: moment.fin, jour: moment.jour,
+      ...valeurs, debut: moment.debut, fin: moment.fin, jour: moment.jour, ...SANS_ECHAPPEMENT,
     })
     : t('collectiviteDemandes.hub.sansMoment', valeurs);
   const equipes = overlapCount === 1

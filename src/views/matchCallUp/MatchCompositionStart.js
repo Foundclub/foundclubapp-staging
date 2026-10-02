@@ -199,6 +199,7 @@ function MatchCompositionStart() {
       if (!Number.isNaN(parsed.getTime())) {
         return t('matchComposition.start.options.last_match.subtitleDated', {
           date: format(parsed, 'EEEE d MMMM', { locale: fr }),
+          ...SANS_ECHAPPEMENT,
         });
       }
     }

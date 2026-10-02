@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -193,6 +194,7 @@ function TrainingPlan({ navigation }) {
                       ? t('training.plan.today')
                       : t('training.plan.nextUp', {
                         date: formatSessionDate(nextSession.plannedDate),
+                        ...SANS_ECHAPPEMENT,
                       })}
                   </Text>
                   <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
@@ -236,7 +238,7 @@ function TrainingPlan({ navigation }) {
                   </Text>
                   {Boolean(chiffres.fin) && (
                     <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                      {t('training.plan.endsOn', { date: chiffres.fin })}
+                      {t('training.plan.endsOn', { date: chiffres.fin, ...SANS_ECHAPPEMENT })}
                     </Text>
                   )}
                 </View>

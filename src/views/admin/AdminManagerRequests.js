@@ -341,6 +341,7 @@ function AdminManagerRequests() {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('collectiviteAccueil.console.inscrite', 'Inscrite le {{date}}', {
               date: dateDe(demande?.createdAt),
+              ...SANS_ECHAPPEMENT,
             })}
           </Text>
         </View>

@@ -19,6 +19,7 @@ import {
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import HostingIcon from '@/components/atoms/hostingIcon/HostingIcon';
@@ -143,7 +144,10 @@ function FriendlyMatchAdCard({
   // c est la seule donnee du fichier qui peut traverser une interpolation sans
   // risquer l echappement HTML d i18next.
   else if (firstSlot?.start) {
-    timeLabel = t('friendlyMatch.adCard.timeFrom', 'dès {{start}}', { start: firstSlot.start });
+    timeLabel = t('friendlyMatch.adCard.timeFrom', 'dès {{start}}', {
+      start: firstSlot.start,
+      ...SANS_ECHAPPEMENT,
+    });
   }
 
   const cityLabel = getShortAddress(ad?.city || ad?.location?.city || club?.city || '')
