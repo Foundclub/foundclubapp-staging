@@ -117,6 +117,13 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useSaveCollectiviteInstallation: () => ({ mutateAsync: mockSaveCollectivite }),
 }));
 
+// COLL-C2B (02/10) : en mairie, le type se choisit dans une feuille du bas (design P4-form).
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
+
 jest.mock('@/services/facility/facilityService', () => ({
   createFacility: jest.fn(),
   updateFacility: jest.fn(),
@@ -912,6 +919,10 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
     const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
     await saisir('Nom de l\'installation', 'Gymnase Jean Bouin');
     await choisirAdresse(ADRESSE_GEOCODEE);
+    // COLL-C2B (02/10, design P4-form) : en mairie, aucun type n est choisi d avance ; il se
+    // choisit dans une feuille.
+    await appuyerSur(arbre, 'Choisir le type');
+    await appuyerSur(arbre, 'Gymnase');
     await saisir('Ouverture', '07:45');
     await saisir('Fermeture', '22:30');
 
@@ -931,7 +942,7 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
         name: 'Gymnase Jean Bouin',
         openingTime: '07:45',
         planningColor: FACILITY_PLANNING_PALETTE[0],
-        type: 'Terrain',
+        type: 'Gymnase',
       },
       facilityId: null,
     });
@@ -975,6 +986,8 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
     const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
     await saisir('Nom de l\'installation', 'Salle');
     await choisirAdresse(ADRESSE_GEOCODEE);
+    await appuyerSur(arbre, 'Choisir le type');
+    await appuyerSur(arbre, 'Gymnase');
     await saisir('Ouverture', '20:00');
     await saisir('Fermeture', '08:00');
 
@@ -1073,7 +1086,9 @@ describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', 
     await appuyerSur(arbre, 'Enregistrer');
 
     expect(mockSaveCollectivite).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Erreur', MESSAGE_MAIRIE);
+    // COLL-C2B (02/10, design P4-form, ecran 4) : en mairie, plus de fenetre systeme en double ;
+    // le refus se lit sous le champ, et se compte en haut de la page.
+    expect(Alert.alert).not.toHaveBeenCalled();
     expect(dernieresProps(mockAddressProps).error).toBe(MESSAGE_MAIRIE);
   });
 

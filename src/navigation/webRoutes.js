@@ -277,6 +277,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CollectiviteInviteClub]: '/collectivite/:collectiviteId/inviter-un-club',
   [RouteNames.CollectiviteJoin]: '/invitation-ville/:token',
   [RouteNames.CollectiviteJoinRequest]: '/invitation-ville/:token/rattacher',
+  // COLL-C2B (02/10/2026) — une installation de la Ville, ses creneaux (la collectivite et
+  // l installation dans l adresse ; « /installation/:facilityId? » reste le formulaire).
+  [RouteNames.CollectiviteInstallation]: '/collectivite/:collectiviteId/installations/:facilityId',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

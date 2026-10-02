@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Linking,
@@ -14,6 +15,7 @@ import {
   nombreOuTiret,
 } from '@/domains/collectivite/collectiviteClubsDisplay';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
+import { timeRange, weekdayName } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -22,13 +24,16 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useCollectiviteClub,
+  useCollectiviteInstallations,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 
@@ -75,6 +80,54 @@ function BlocDeFiche({
 }
 
 /**
+ * COLL-C2B (02/10) — « Attribuer un creneau a ce club » : le formulaire d attribution, le club
+ * DEJA choisi ; l installation se choisit parmi celles de la Ville. Une Ville sans installation
+ * le dit, plutot qu un formulaire qui ne mene nulle part.
+ * @param {{
+ *   club: { documentId: string, name: string },
+ *   collectiviteId: string | null,
+ *   onCancel: () => void,
+ *   onDone: () => void,
+ * }} props
+ * @returns {import('react').ReactElement} Le formulaire, ou ce qui l empeche.
+ */
+function AttribuerAuClub({
+  club, collectiviteId, onCancel, onDone,
+}) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  const installations = useCollectiviteInstallations(collectiviteId);
+  if (installations.isLoading) return <Loader />;
+  if (installations.error) {
+    return (
+      <Text style={[Fonts.p2, Fonts.neutral200]}>
+        {getErrorMessage(/** @type {any} */ (installations.error))}
+      </Text>
+    );
+  }
+  const liste = Array.isArray(installations.data) ? installations.data : [];
+  if (liste.length === 0) {
+    return (
+      <Text style={[Fonts.p2, Fonts.neutral200]}>
+        {t(
+          'collectiviteCreneaux.fiche.aucuneInstallation',
+          'La Ville n’a encore aucune installation : ajoutez-en une, puis attribuez-y un créneau.',
+        )}
+      </Text>
+    );
+  }
+  return (
+    <SeasonSlotForm
+      clubs={[club]}
+      facilities={liste}
+      fixedClubId={club.documentId}
+      onCancel={onCancel}
+      onDone={onDone}
+    />
+  );
+}
+
+/**
  * 🏛️ LA FICHE D UN CLUB, COTE MAIRIE — COLL-CLUBS (01/10/2026), design HY521H1 page 7
  * (« P7v2-fiche-tel » et « P7v2-fiche-ordi »), SPEC §2 G.
  *
@@ -93,8 +146,9 @@ function BlocDeFiche({
  *   - « Ecrire aux dirigeants » : aucune conversation Ville ↔ dirigeants d UN club n existe
  *     (D73 : conversation privee, membres calcules, comme le canal des dirigeants D72, lot C4a) ;
  *     le bouton n est pas pose, plutot qu un bouton qui ne fait rien ;
- *   - « Ses creneaux de la Ville » : A BRANCHER SUR C2a (le creneau de saison n existe pas
- *     encore) ; C2b le remplit en vague 2. Le bloc est la, vide et nomme ;
+ *   - (« Ses creneaux de la Ville » : BRANCHE par COLL-C2B le 02/10 — les creneaux de saison
+ *     du club, et « Attribuer un creneau a ce club » pour le gestionnaire ; temoins
+ *     CollectiviteClubDetails.COLL-C2B.creneaux et, cote serveur, COLL-C2B-fiche-club-creneaux) ;
  *   - « Utilisation » : plus tard (lot C5) ;
  *   - « Demander au club de completer sa fiche » : aucun envoi n existe (meme canal que D73).
  * @returns {import('react').ReactElement} L ecran.
@@ -123,6 +177,39 @@ function CollectiviteClubDetails() {
   const voirLesDemandes = () => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteRequests, { collectiviteId });
   };
+  // COLL-C2B (02/10) : un creneau se gere sur SON installation (onglet « Creneaux »).
+  const ouvrirInstallation = (/** @type {string | undefined} */ facilityId) => {
+    if (!facilityId) return;
+    /** @type {any} */ (navigation).navigate(
+      RouteNames.CollectiviteInstallation,
+      { collectiviteId, facilityId },
+    );
+  };
+  const [attribuer, setAttribuer] = useState(false);
+  const fermerAttribuer = () => setAttribuer(false);
+  const apresAttribution = () => {
+    setAttribuer(false);
+    fiche.refetch?.();
+  };
+  // Le geste est au gestionnaire : la collectivite doit etre l une des SIENNES.
+  const peutAttribuer = Boolean(collectivite && club?.documentId);
+  const panneauAttribuer = attribuer && peutAttribuer ? (
+    <View style={{ gap: 12 }}>
+      <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+        {t(
+          'collectiviteCreneaux.fiche.titre',
+          'Attribuer un créneau à {{club}}',
+          { club: club?.name, ...SANS_ECHAPPEMENT },
+        )}
+      </Text>
+      <AttribuerAuClub
+        club={{ documentId: club.documentId, name: club.name }}
+        collectiviteId={collectiviteId}
+        onCancel={fermerAttribuer}
+        onDone={apresAttribution}
+      />
+    </View>
+  ) : null;
 
   const nonRenseigne = t('collectiviteClubs.detail.notProvided', 'non renseigné');
 
@@ -223,21 +310,75 @@ function CollectiviteClubDetails() {
     );
   };
 
-  // A BRANCHER SUR C2a : le creneau de saison n existe pas encore. C2b (vague 2) remplit ce bloc
-  // avec les creneaux attribues a ce club et « Attribuer un creneau a ce club ».
-  const renderCreneaux = () => (
-    <BlocDeFiche
-      testID="fiche-club-creneaux"
-      titre={t('collectiviteClubs.detail.slots', 'Ses créneaux de la Ville')}
-    >
-      <Text style={[Fonts.p3, Fonts.neutral300]}>
-        {t(
-          'collectiviteClubs.detail.slotsSoon',
-          'Les créneaux que la Ville attribue à ce club s’afficheront ici.',
-        )}
-      </Text>
-    </BlocDeFiche>
-  );
+  // COLL-C2B (02/10) : les creneaux de saison du club sur les installations de la Ville (le
+  // serveur les range par jour puis par heure), et « Attribuer un creneau a ce club ». Un serveur
+  // d avant C2B ne rend pas `seasonSlots` : la phrase d attente reste, rien n est invente.
+  const renderCreneaux = () => {
+    const creneaux = Array.isArray(club?.seasonSlots) ? club.seasonSlots : null;
+    let liste;
+    if (creneaux === null) {
+      liste = (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteClubs.detail.slotsSoon',
+            'Les créneaux que la Ville attribue à ce club s’afficheront ici.',
+          )}
+        </Text>
+      );
+    } else if (creneaux.length === 0) {
+      liste = (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('collectiviteCreneaux.fiche.aucun', 'Aucun créneau de la Ville pour ce club.')}
+        </Text>
+      );
+    } else {
+      liste = creneaux.map((/** @type {any} */ creneau) => (
+        <TouchableOpacity
+          accessibilityLabel={t(
+            'collectiviteCreneaux.liste.ouvrir',
+            '{{nom}} : ses créneaux et son planning',
+            { nom: creneau?.facility?.name, ...SANS_ECHAPPEMENT },
+          )}
+          accessibilityRole="button"
+          key={creneau?.documentId}
+          onPress={() => ouvrirInstallation(creneau?.facility?.documentId)}
+          style={{ gap: 2, justifyContent: 'center', minHeight: 44 }}
+          testID={`fiche-club-creneau-${creneau?.documentId}`}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {`${weekdayName(creneau?.weekday)} ${timeRange(creneau?.startTime, creneau?.endTime)}`}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {[
+              creneau?.facility?.name,
+              creneau?.team?.name || t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club'),
+              creneau?.plateau?.name,
+            ].filter(Boolean).join(' · ')}
+          </Text>
+        </TouchableOpacity>
+      ));
+    }
+    return (
+      <BlocDeFiche
+        testID="fiche-club-creneaux"
+        titre={t('collectiviteClubs.detail.slots', 'Ses créneaux de la Ville')}
+      >
+        {liste}
+        {peutAttribuer && !(isDesktop && panneauAttribuer) ? (
+          <Button
+            isOption
+            onPress={() => setAttribuer(true)}
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            testID="fiche-club-attribuer"
+            title={t('collectiviteCreneaux.fiche.attribuer', 'Attribuer un créneau à ce club')}
+            variant="SecondaryLight"
+          />
+        ) : null}
+        {isDesktop ? panneauAttribuer : null}
+      </BlocDeFiche>
+    );
+  };
 
   const renderDemandes = () => {
     const demandes = club?.requests || {};
@@ -612,6 +753,13 @@ function CollectiviteClubDetails() {
         ) : null}
         {contenu}
       </ScrollView>
+      {isDesktop ? null : (
+        <BottomModal close={fermerAttribuer} isVisible={Boolean(panneauAttribuer)}>
+          <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
+            {panneauAttribuer}
+          </View>
+        </BottomModal>
+      )}
     </ScreenContainer>
   );
 }
