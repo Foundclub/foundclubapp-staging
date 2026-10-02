@@ -28,6 +28,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -142,15 +143,15 @@ function AttribuerAuClub({
  * message, ni presence. L ecran n affiche que ce que le serveur rend ; le serveur ne rend que ca
  * (temoin admin COLL-CLUBS K10, secrets semes).
  *
+ * COLL-C4A2 (02/10) : « Ecrire aux dirigeants » (D73, « ecrire A ») est le bouton principal, en
+ * tete : la conversation PRIVEE de la Ville avec les dirigeants de CE club. Sans contact general,
+ * « Demander au club de completer sa fiche » ouvre la meme conversation, une phrase prete.
+ *
  * CE QUI MANQUE, NOMME :
- *   - « Ecrire aux dirigeants » : aucune conversation Ville ↔ dirigeants d UN club n existe
- *     (D73 : conversation privee, membres calcules, comme le canal des dirigeants D72, lot C4a) ;
- *     le bouton n est pas pose, plutot qu un bouton qui ne fait rien ;
  *   - (« Ses creneaux de la Ville » : BRANCHE par COLL-C2B le 02/10 — les creneaux de saison
  *     du club, et « Attribuer un creneau a ce club » pour le gestionnaire ; temoins
  *     CollectiviteClubDetails.COLL-C2B.creneaux et, cote serveur, COLL-C2B-fiche-club-creneaux) ;
  *   - « Utilisation » : plus tard (lot C5) ;
- *   - « Demander au club de completer sa fiche » : aucun envoi n existe (meme canal que D73).
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteClubDetails() {
@@ -492,11 +493,22 @@ function CollectiviteClubDetails() {
         valeur: club?.websiteUrl,
       },
     ];
+    // COLL-C4A2 — sans contact general (ni telephone ni e-mail), la Ville le demande au club.
+    const sansContact = !club?.phoneNumber && !club?.email;
     return (
       <BlocDeFiche
         testID="fiche-club-coordonnees"
         titre={t('collectiviteClubs.detail.contact', 'Coordonnées du club')}
       >
+        {sansContact && peutAttribuer ? (
+          <EcrireAuxDirigeants
+            club={club}
+            collectiviteId={collectiviteId}
+            compact
+            demanderFiche
+            testID="fiche-club-demander-fiche"
+          />
+        ) : null}
         {lignes.map((ligne) => (
           <View key={ligne.cle} style={[Alignments.row, { gap: 12 }]}>
             <Text style={[Fonts.p3, Fonts.neutral300, { width: 96 }]}>{ligne.libelle}</Text>
@@ -750,6 +762,15 @@ function CollectiviteClubDetails() {
               {renderPastilleOffre()}
             </View>
           </View>
+        ) : null}
+        {/* COLL-C4A2 — « Ecrire aux dirigeants », le bouton principal, en tete (D73). */}
+        {club && peutAttribuer ? (
+          <EcrireAuxDirigeants
+            club={club}
+            collectiviteId={collectiviteId}
+            compact={isDesktop}
+            testID="fiche-club-ecrire"
+          />
         ) : null}
         {contenu}
       </ScrollView>

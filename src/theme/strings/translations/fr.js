@@ -5012,6 +5012,75 @@ export default {
     },
   },
   // COLL-CLUBS (01/10/2026) — les clubs rattachés, la fiche d'un club côté mairie, l'invitation.
+  // COLL-C4A2 (02/10/2026) — les canaux de la Ville dans la messagerie : canal des dirigeants
+  // (D72) et conversation privee Ville <-> club (D73). Design HY521H1 page 3.
+  collectiviteCanaux: {
+    conversationsVides: 'Aucune conversation. Un dirigeant qui vous écrit apparaîtra ici.',
+    dernierMessage: '{{qui}} : {{texte}}',
+    dirigeantLigne: '{{ville}} et {{nombre}} clubs',
+    ecrire: {
+      dirigeant: 'Écris aux autres dirigeants…',
+      mairie: 'Écrire aux dirigeants…',
+      priveeClub: 'Écris à la Ville…',
+      priveeMairie: 'Écrire à {{club}}…',
+    },
+    mairieLigne: 'Vous et les dirigeants des {{nombre}} clubs · échanges de créneaux',
+    mairieLigneUn: 'Vous et les dirigeants d’1 club · échanges de créneaux',
+    membres: {
+      aucunDirigeant: 'Aucun dirigeant sur l’app pour l’instant.',
+      dirigeant: 'dirigeant',
+      gestionnaire: 'gestionnaire',
+      moiToi: '{{nom}} (toi)',
+      moiVous: '{{nom}} (vous)',
+      ouvrirCanal: 'Qui est dans ce canal',
+      ouvrirPrivee: 'Qui est dans cette conversation',
+      // eslint-disable-next-line max-len
+      regleCanal: 'Un club rattaché y entre avec ses dirigeants ; un club détaché en sort. Les entraîneurs, les joueurs et les parents n’y sont pas.',
+      reglePrivee: 'Seuls la Ville et les dirigeants de ce club lisent cette conversation.',
+      sousTitreCanal: 'Dirigeants des clubs · {{ville}}',
+      sousTitrePrivee: '{{club}} · {{ville}}',
+      titreCanal: 'Dans ce canal',
+      titrePrivee: 'Dans cette conversation',
+    },
+    privee: {
+      // eslint-disable-next-line max-len
+      brouillonFiche: 'Bonjour, pourriez-vous compléter les coordonnées de votre club sur sa fiche FoundClub ? Merci.',
+      demanderFiche: 'Demander au club de compléter sa fiche',
+      ecrire: 'Écrire aux dirigeants',
+    },
+    quitte: {
+      retour: 'Retour à la messagerie',
+      // eslint-disable-next-line max-len
+      texteCanal: 'Ton club n’est plus rattaché à cette Ville, donc tu n’es plus dans le canal de ses dirigeants. Tes anciens messages y restent.',
+      // eslint-disable-next-line max-len
+      textePrivee: 'Ton club n’est plus rattaché à cette Ville : cette conversation privée est close pour toi. Tes anciens messages y restent.',
+      titreCanal: 'Tu ne fais plus partie de ce canal',
+      titrePrivee: 'Tu ne fais plus partie de cette conversation',
+    },
+    signature: {
+      club: '{{prenom}} {{nom}} · {{club}}',
+      ville: '{{ville}} · {{prenom}} {{initiale}}',
+    },
+    sousTitre: {
+      dirigeant: '{{ville}} et {{nombre}} clubs',
+      dirigeantUn: '{{ville}} et 1 club',
+      mairie: 'Vous et les dirigeants des {{nombre}} clubs',
+      mairieUn: 'Vous et les dirigeants d’1 club',
+      priveeClub: 'Conversation privée avec la Ville',
+      priveeMairie: 'Vous et les dirigeants du club',
+    },
+    titre: 'Dirigeants des clubs',
+    vide: {
+      // eslint-disable-next-line max-len
+      dirigeantTexte: 'Ici, tu échanges avec {{ville}} et les dirigeants des autres clubs rattachés : un créneau à céder, un tournoi à caler. Les joueurs et les parents n’y sont pas.',
+      dirigeantTitre: 'Le canal des dirigeants',
+      // eslint-disable-next-line max-len
+      mairieTexte: 'Pour les échanges de créneaux, les questions sur une installation, un forum à préparer. Les joueurs n’y sont pas.',
+      mairieTitre: 'Les dirigeants des {{nombre}} clubs et vous',
+      priveeClub: 'Conversation privée : seuls la Ville et les dirigeants de ton club la lisent.',
+      priveeMairie: 'Conversation privée : seuls les dirigeants de {{club}} la lisent.',
+    },
+  },
   collectiviteActualites: {
     accueil: {
       erreur: 'Les actualités n’ont pas pu être lues.',
@@ -5686,6 +5755,146 @@ export default {
       ouvrirJournee: 'Ouvrir la journée',
       semaine: 'Semaine',
       troisJours: '3 jours',
+    },
+  },
+  collectiviteDemandes: {
+    acces: {
+      texte: 'Vous ne gérez pas cette collectivité.',
+      titre: 'Accès retiré',
+    },
+    actions: {
+      accepterSerie: 'Accepter la série',
+    },
+    club: {
+      aucuneDemande: 'Aucune demande envoyée à une Ville pour l’instant.',
+      aucuneInstallation: 'Ton club n’est rattaché à aucune Ville pour l’instant.',
+      autreHeure: 'Demander une autre heure',
+      choisirInstallation: 'Installation de la Ville',
+      colEquipe: 'Équipe',
+      colInstallation: 'Installation',
+      colMoment: 'Moment',
+      colMot: 'Mot de la mairie',
+      colReponse: 'Réponse',
+      combienDeFois: 'Combien de fois',
+      commeDansTonPlanning: 'Comme dans ton planning.',
+      completALEnvoi: 'c’était complet à l’envoi',
+      confirme: 'Ton entraînement est confirmé : la Ville n’a pas à décider.',
+      dejaLa: '{{nom}}{{tonClub}}, de {{debut}} à {{fin}}',
+      dejaLaListe: 'Déjà là : {{noms}}.',
+      demanderCeCreneau: 'Demander un créneau',
+      enAttente: 'En attente',
+      enAttenteDeLaMairie: 'En attente de la mairie',
+      // eslint-disable-next-line max-len
+      ensuite: 'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
+      entrainementAnnule: 'l’entraînement est annulé',
+      envoyee: 'Demande envoyée à la {{ville}}',
+      envoyer: 'Envoyer la demande',
+      envoyerQuandMeme: 'Envoyer quand même',
+      equipe: 'Équipe',
+      ferme: 'L’installation ferme à {{heure}}. Termine à {{heure}}, ou commence plus tôt.',
+      installation: '{{ville}} · {{equipes}} à la fois',
+      jour: 'Jour',
+      laVille: 'Ville',
+      libreCeJour: 'Libre ce {{jour}} :',
+      ligneSerie: 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
+      // eslint-disable-next-line max-len
+      momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
+      momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
+      motPourLaMairie: 'Un mot pour la mairie (facultatif)',
+      ouvre: 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.',
+      posee: 'C’est posé : il restait de la place',
+      quandMeme: 'Tu peux demander quand même : la mairie décidera.',
+      quiDecide: 'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
+      ratees: '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
+      tesDemandes: 'Tes demandes à la Ville',
+      titre: 'Demander un créneau',
+      tonClub: ' (ton club)',
+      voirMesDemandes: 'Voir mes demandes',
+    },
+    consequence: {
+      depasse: 'Accepter met {{equipes}} pour {{places}}.',
+      libre: 'Accepter ne gêne personne.',
+    },
+    erreur: {
+      titre: 'Les demandes n’ont pas pu être lues.',
+    },
+    fenetre: {
+      accepterSerie: 'Accepter la série',
+      demandePar: 'Demandé par {{personne}}',
+      depasse: '{{equipes}} pour {{places}} à ce moment.',
+      fermer: 'Fermer',
+      motifsFrequents: 'Motifs fréquents',
+      prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
+      prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
+      refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
+      refuserEtAnnuler: 'Refuser et annuler l’entraînement',
+      refuserSerie: 'Refuser la série',
+      refuserSerieEtAnnuler: 'Refuser et annuler les entraînements',
+      serontPrevenus: 'Seront prévenus',
+    },
+    fonction: {
+      manager: 'dirigeant',
+      trainer: 'entraîneur',
+    },
+    hub: {
+      reste: 'Il reste {{places}}.',
+      sansMoment: '{{club}} demande une place {{lieu}}, pour ses {{equipe}}.',
+    },
+    liaison: {
+      et: ' et ',
+    },
+    lieu: {
+      feminin: 'à la {{nom}}',
+      masculin: 'au {{nom}}',
+      voyelle: 'à l’{{nom}}',
+    },
+    motifs: {
+      complet: 'Installation complète',
+      fermeture: 'Fermeture',
+      manifestation: 'Manifestation de la Ville',
+    },
+    nombre: {
+      equipes: '{{nombre}} équipes',
+      places: '{{nombre}} places',
+      uneEquipe: '1 équipe',
+      unePlace: '1 place',
+    },
+    pastille: {
+      chaqueSemaine: 'Chaque semaine',
+      complet: 'Complet',
+      placesLibres: '{{nombre}} places libres',
+      uneFois: 'Une fois',
+      unePlaceLibre: '1 place libre',
+      votreClub: 'Demande de votre club',
+    },
+    phrase: {
+      // eslint-disable-next-line max-len
+      serie: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}, jusqu’au {{jusquAu}}.',
+      // eslint-disable-next-line max-len
+      serieSansFin: '{{club}} demande chaque {{jourSemaine}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
+      // eslint-disable-next-line max-len
+      unique: '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.',
+    },
+    phraseCourte: {
+      serie: '{{club}} demande chaque {{jourSemaine}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+      unique: '{{club}} demande le {{jour}}, {{debut}} – {{fin}}, {{lieu}} ({{equipe}}).',
+    },
+    place: {
+      complet: 'Il y a déjà {{equipes}} : c’est complet.',
+      dejaLa: '{{noms}}, de {{debut}} à {{fin}}.',
+      personne: 'Personne n’y est : il reste {{places}}.',
+      premiereDate: 'Pour la première date, le {{jour}} :',
+      reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
+    },
+    traitee: {
+      prevenu: 'Le club a été prévenu.',
+      prevenuAcceptee: 'Le club a été prévenu · acceptée le {{date}}',
+      prevenuRefusee: 'Le club a été prévenu · refusée le {{date}}',
+      votreMessage: 'Votre message',
+    },
+    vide: {
+      // eslint-disable-next-line max-len
+      attente: 'Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
     },
   },
   comingSoonLeagueScreen: {

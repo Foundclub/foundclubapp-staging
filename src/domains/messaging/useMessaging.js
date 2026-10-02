@@ -1104,6 +1104,9 @@ const useMessaging = (currentChatId) => {
       event: extraData.event,
       message,
       replyTo: extraData.replyTo || null,
+      // COLL-C4A2 (02/10) — dans un fil de la Ville, la voix DEMANDÉE (« ville » depuis l'espace
+      // de la Ville). Le serveur décide et écrit la signature ; ailleurs, rien n'est envoyé.
+      ...(extraData.senderSignature ? { senderSignature: extraData.senderSignature } : {}),
     }, (/** @type {any} */ ackPayload) => {
       const ackError = ackPayload?.ok === false ? ackPayload?.error : null;
       const ackMessage = ackPayload?.ok ? ackPayload?.message : null;

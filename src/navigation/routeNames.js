@@ -402,4 +402,11 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-C2B (02/10/2026) — une installation de la Ville et son onglet « Creneaux » (design
   // HY521H1, page 4, P4v2-creneaux) : attribuer, gerer, retirer, retablir un creneau de saison.
   CollectiviteInstallation: 'CollectiviteInstallation',
+  // COLL-C4A2 (02/10/2026) — « Dans ce canal » : qui est dans le canal des dirigeants (D72) ou la
+  // conversation privee Ville <-> club (D73), liste calculee par le serveur (HY521H1 page 3).
+  CollectiviteCanalMembres: 'CollectiviteCanalMembres',
+  // COLL-C3B (02/10/2026) — le CLUB demande un creneau a la Ville (design HY521H1, page 8,
+  // P8v2-demande), puis suit « Tes demandes a la Ville ».
+  ClubSlotRequest: 'ClubSlotRequest',
+  ClubSlotRequests: 'ClubSlotRequests',
 });

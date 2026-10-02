@@ -22,6 +22,7 @@ import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -52,8 +53,8 @@ import { useIsDesktop } from '@/responsive';
  * COLL-CLUBS (planche 3) : « Inviter un club absent de FoundClub » (en bas de liste ; en tete
  * sur ordinateur ; dans l etat vide), et SOUS la liste, les invitations en cours : envoyee,
  * inscrit, rattache, avec « Relancer ».
- * « Ecrire aux dirigeants » et « Demander au club de completer sa fiche » ne sont PAS ici :
- * aucune conversation Ville ↔ dirigeants d un club n existe encore (D73, lot C4a).
+ * COLL-C4A2 (02/10) : sur chaque club, « Ecrire aux dirigeants » (D73, la conversation privee de
+ * la Ville avec CE club) ; sans contact, « Demander au club de completer sa fiche ».
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteClubs() {
@@ -105,9 +106,18 @@ function CollectiviteClubs() {
     ].filter(Boolean);
     if (liens.length === 0) {
       return (
-        <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {t('collectivite.clubs.noContact', 'Pas de contact renseigné par le club.')}
-        </Text>
+        <View style={{ gap: 6 }}>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t('collectivite.clubs.noContact', 'Pas de contact renseigné par le club.')}
+          </Text>
+          <EcrireAuxDirigeants
+            club={club}
+            collectiviteId={collectiviteId}
+            compact
+            demanderFiche
+            testID={`collectivite-club-${club?.documentId}-demander-fiche`}
+          />
+        </View>
       );
     }
     return liens.map((/** @type {any} */ lien) => (
@@ -161,6 +171,12 @@ function CollectiviteClubs() {
         {dirigeants ? <Text style={[Fonts.p3, Fonts.neutral200]}>{dirigeants}</Text> : null}
         {renderSeances(club)}
         {renderContact(club)}
+        <EcrireAuxDirigeants
+          club={club}
+          collectiviteId={collectiviteId}
+          compact
+          testID={`collectivite-club-${club?.documentId}-ecrire`}
+        />
       </TouchableOpacity>
     );
   };
@@ -206,7 +222,15 @@ function CollectiviteClubs() {
           {nombreOuTiret(club?.membersCount)}
         </Text>
         <View style={{ flex: colonnes[3].flex }}>{renderSeances(club)}</View>
-        <View style={{ flex: colonnes[4].flex, gap: 2 }}>{renderContact(club)}</View>
+        <View style={{ flex: colonnes[4].flex, gap: 6 }}>
+          {renderContact(club)}
+          <EcrireAuxDirigeants
+            club={club}
+            collectiviteId={collectiviteId}
+            compact
+            testID={`collectivite-club-${club?.documentId}-ecrire`}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
