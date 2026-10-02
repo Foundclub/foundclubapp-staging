@@ -369,8 +369,10 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     // eslint-disable-next-line max-len
     expect(mockPost.mock.calls.every(([, corps]) => corps.data.sessionStatus === 'closed')).toBe(true);
     expect([...groupes][0]).toBeTruthy();
+    // COLL-FIX2 (T10) : la fin dite est la DERNIÈRE séance (le jeudi 26 juin), comme côté Ville et
+    // dans « Tes demandes à la Ville » — plus la fin de saison (30 juin), qui n'est pas un jeudi.
     // eslint-disable-next-line max-len
-    expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 30 juin · Gymnase des Tilleuls');
+    expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 26 juin · Gymnase des Tilleuls');
   });
 
   // DECISIONS-SOIR (02/10) — SPEC-PLACE, règle d'Adel : « Si c'est une place libre attribuée au

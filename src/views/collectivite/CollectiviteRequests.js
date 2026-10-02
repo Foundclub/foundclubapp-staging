@@ -253,9 +253,17 @@ function CollectiviteRequests() {
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{phrasePlace}</Text>
         {groupes.map((groupe) => (
           <Text key={`${groupe.debut}-${groupe.fin}`} style={[Fonts.p2, Fonts.neutral100]}>
-            {t('collectiviteDemandes.place.dejaLa', '{{noms}}, de {{debut}} à {{fin}}.', {
-              debut: groupe.debut, fin: groupe.fin, noms: groupe.noms.join(et), ...SANS_ECHAPPEMENT,
-            })}
+            {groupe.fin
+              ? t('collectiviteDemandes.place.dejaLa', '{{noms}}, de {{debut}} à {{fin}}.', {
+                debut: groupe.debut,
+                fin: groupe.fin,
+                noms: groupe.noms.join(et),
+                ...SANS_ECHAPPEMENT,
+              })
+              // COLL-FIX2 (T10) : une fin inconnue ne s'écrit plus « à . ».
+              : t('collectiviteDemandes.place.dejaLaDes', '{{noms}}, dès {{debut}}.', {
+                debut: groupe.debut, noms: groupe.noms.join(et), ...SANS_ECHAPPEMENT,
+              })}
           </Text>
         ))}
         <Text

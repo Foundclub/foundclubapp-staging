@@ -5539,6 +5539,8 @@ export default {
     place: {
       complet: 'There are already {{equipes}}: it is full.',
       dejaLa: '{{noms}}, from {{debut}} to {{fin}}.',
+      // COLL-FIX2 (03/10) — an occupant whose end is unknown (board 31).
+      dejaLaDes: '{{noms}}, from {{debut}}.',
       personne: 'Nobody is there: {{places}} left.',
       premiereDate: 'For the first date, {{jour}}:',
       reste: 'There are already {{equipes}}: {{places}} left.',

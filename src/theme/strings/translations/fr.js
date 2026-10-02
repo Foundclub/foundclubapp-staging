@@ -5912,6 +5912,8 @@ export default {
     place: {
       complet: 'Il y a déjà {{equipes}} : c’est complet.',
       dejaLa: '{{noms}}, de {{debut}} à {{fin}}.',
+      // COLL-FIX2 (03/10) — un occupant dont la fin est inconnue (planche 31).
+      dejaLaDes: '{{noms}}, dès {{debut}}.',
       personne: 'Personne n’y est : il reste {{places}}.',
       premiereDate: 'Pour la première date, le {{jour}} :',
       reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',

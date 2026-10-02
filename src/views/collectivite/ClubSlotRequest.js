@@ -265,8 +265,10 @@ function ClubSlotRequest() {
           equipe: nomDeLEquipe,
           fin,
           jour: format(date, 'EEEE', { locale: fr }),
+          // COLL-FIX2 (T10) : la DERNIÈRE séance de la série (celle que le serveur et la Ville
+          // disent), pas la fin de saison : « 30 juin » ici, « 24 juin » chez la Ville.
           // eslint-disable-next-line max-len
-          jusquAu: format(parse(finDeSaison(jourIso), 'yyyy-MM-dd', new Date()), 'd MMMM', { locale: fr }),
+          jusquAu: format(parse(datesDeLaDemande(jourIso, true).at(-1) || finDeSaison(jourIso), 'yyyy-MM-dd', new Date()), 'd MMMM', { locale: fr }),
           lieu: installation?.name || '',
           ...SANS_ECHAPPEMENT,
         },
