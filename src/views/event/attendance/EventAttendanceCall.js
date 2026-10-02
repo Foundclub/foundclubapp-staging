@@ -17,6 +17,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import {
   buildArrivedAtIso,
   countAnswers,
@@ -326,8 +328,9 @@ function EventAttendanceCall() {
       : `${t('eventDetails.attendanceCall.before.opensAt', 'Ouvre à')} ${heureOuverture}`;
     const phraseFenetre = estFerme
       ? t(
-        'eventDetails.attendanceCall.closed.explain',
-        "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin du match.",
+        // 🐞 T9 — l'appel sert aussi aux entraînements : pas de « du match ».
+        'stMatch.appel.closedExplain',
+        "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin.",
       )
       : t(
         'eventDetails.attendanceCall.before.explain',
@@ -495,7 +498,8 @@ function EventAttendanceCall() {
           }]}
           >
             <Text style={[Fonts.p3Black, { color: Colors.neutral200 }]}>
-              {`${markedCount} / ${items.length}`}
+              {/* 🐞 T9 (T9_P1_2a) — Android 16 coupait « 2 / 2 » en « 2 / » : insécables. */}
+              {texteInsecable(`${markedCount} / ${items.length}`)}
             </Text>
           </View>
         )}

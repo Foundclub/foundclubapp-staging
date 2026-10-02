@@ -40,14 +40,30 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ params: { eventId: 'evt-1' } }),
 }));
 
-jest.mock('react-i18next', () => ({
-  initReactI18next: { init: jest.fn(), type: '3rdParty' },
-  useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
-      typeof repli === 'string' ? repli : cle
+// T9 (02/10) — la doublure sait les pluriels de i18next (0 et 1 au singulier) et interpole.
+jest.mock('react-i18next', () => {
+  const remplir = (/** @type {string} */ modele, /** @type {any} */ valeurs) => modele.replace(
+    /\{\{(\w+)\}\}/g,
+    (/** @type {string} */ tout, /** @type {string} */ nom) => (
+      valeurs && nom in valeurs ? String(valeurs[nom]) : tout
     ),
-  }),
-}));
+  );
+  return {
+    initReactI18next: { init: jest.fn(), type: '3rdParty' },
+    useTranslation: () => ({
+      t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
+        if (typeof repli === 'string') return remplir(repli, options);
+        if (repli && repli.defaultValue_one) {
+          return remplir(
+            Number(repli.count) <= 1 ? repli.defaultValue_one : repli.defaultValue_other,
+            repli,
+          );
+        }
+        return cle;
+      },
+    }),
+  };
+});
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
@@ -298,8 +314,11 @@ describe('L5-A · 2D — la cloture ne ment pas sur ce qu elle fait', () => {
     expect(texte).toContain('2 pointés · 2 jamais vus');
 
     // Les deux compteurs de la maquette (l.255-258).
-    expect(texte).toContain('Arrivé·e·s');
-    expect(texte).toContain('Arrivé·e·s en retard');
+    // 🎯 T9 (02/10) — ADAPTÉ : le nombre s'accorde (« 1 arrivé·e », plus « 1 Arrivé·e·s ») et
+    // la phrase ne dit plus « du match » : l'appel sert aussi aux entraînements.
+    expect(texte).toContain('1 arrivé·e à l’heure');
+    expect(texte).toContain('1 arrivé·e en retard');
+    expect(texte).not.toContain('fin du match');
 
     // 🗣️ LES PERSONNES SONT NOMMEES — rien d irreversible en silence.
     expect(texte).toContain('Malo');
@@ -523,5 +542,25 @@ describe('L5-A · 2F — defaire un pointage', () => {
     expect(mockResetMutate).not.toHaveBeenCalled();
     expect(mockCoachArrivalMutate).toHaveBeenCalledTimes(1);
     expect(mockCoachArrivalMutate.mock.calls[0][0].payload.lateMinutes).toBe(0);
+  });
+});
+
+// 🐞 T9 (02/10, captures T9_P1_2a / T9_P1_2b) — « 1 pointés · 1 jamais vus », « 1 Arrivé·e·s »,
+// et « après la fin du match » sur un ENTRAÎNEMENT.
+describe('T9 · la clôture de l appel s accorde, et vaut pour tout événement', () => {
+  test('🐞 un pointé, un jamais vu : le singulier', async () => {
+    const arbre = await monter([
+      ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Hugo', userId: 'u1' }),
+      ligne({ firstname: 'Recette', userId: 'u2' }),
+    ]);
+
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('1 pointé · 1 jamais vu');
+    expect(texte).not.toContain('1 pointés');
+    expect(texte).toContain('1 arrivé·e à l’heure');
+    expect(texte).toContain('0 arrivé·e en retard');
+    expect(texte).toContain('Le serveur les passera en « Non pointé » après la fin, vers 20:13.');
   });
 });

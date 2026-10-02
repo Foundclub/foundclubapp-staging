@@ -64,10 +64,12 @@ import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
@@ -156,10 +158,6 @@ import {
 
 import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
-import {
-  dismissMatchStatsPromptForSession,
-  isMatchStatsPromptDismissedForSession,
-} from '@/utils/matchStatsPromptSession';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 import texteInsecable from '@/utils/texteInsecable';
 
@@ -176,6 +174,7 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import MatchBilanCard from './components/MatchBilanCard';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentPeopleList from './components/TournamentPeopleList';
@@ -183,6 +182,7 @@ import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
+import { buildMatchEncartLines } from './matchEncartLines';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
@@ -735,8 +735,6 @@ function EventDetails({ navigation, route }) {
   // clef ferait deux etats a garder d'accord — et un jour ils divergeraient.
   /** @type {[string | null, (v: string | null) => void]} */
   const [remindSheetTeamKey, setRemindSheetTeamKey] = useState(null);
-  const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
-  const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
   const [isSubscriptionFollowUpVisible, setIsSubscriptionFollowUpVisible] = useState(false);
   const firstFocusRefreshRef = useRef(true);
@@ -770,9 +768,11 @@ function EventDetails({ navigation, route }) {
   // defilement REEL ne se voit qu'a la recette.
   const overviewScrollRef = useRef(null);
   const participantsAnchorRef = useRef(null);
-  const scrollToParticipants = useCallback(() => {
+  // ST-MATCH (écran 1) — l'ancre du bloc « Stats du match », visée par l'encart.
+  const matchStatsAnchorRef = useRef(null);
+  const scrollToAnchor = useCallback((/** @type {any} */ ancreRef) => {
     const defileur = overviewScrollRef.current;
-    const ancre = participantsAnchorRef.current;
+    const ancre = ancreRef.current;
     if (!defileur || typeof defileur.scrollTo !== 'function') return;
 
     const contenu = typeof defileur.getInnerViewNode === 'function'
@@ -790,6 +790,10 @@ function EventDetails({ navigation, route }) {
       () => {},
     );
   }, []);
+  const scrollToParticipants = useCallback(
+    () => scrollToAnchor(participantsAnchorRef),
+    [scrollToAnchor],
+  );
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
@@ -820,7 +824,7 @@ function EventDetails({ navigation, route }) {
     subscriptionAccessLevel,
     userData,
   } = useAuth();
-  const { sendMessage } = useMessaging();
+  const { sendMessage, startWhisperChat } = /** @type {any} */ (useMessaging());
   const currentEventPublishQuotaItem = useMemo(
     () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
     [freeUsageSummary, subscriptionAccessLevel],
@@ -3799,8 +3803,6 @@ function EventDetails({ navigation, route }) {
 
   const matchStatsReport = matchStatsPayload?.report || null;
   const playerCollectiveRating = matchStatsPayload?.playerCollectiveRating || null;
-  const hasCollectiveRatings = Boolean(matchStatsReport?.collectiveRating)
-    || playerCollectiveRating?.average != null;
   const myCoachReview = matchStatsPayload?.myCoachReview || null;
   const myMatchResponse = myMatchResponsePayload?.response || null;
   const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
@@ -3811,7 +3813,6 @@ function EventDetails({ navigation, route }) {
     : (!isMyMatchResponseFetching && Boolean(isTeamMember));
   const isMatchStatsFinal = matchStatsReport?.status === 'final';
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
-  const isMatchStatsCompleted = isMatchStatsFinal && !isMatchStatsReviewRequired;
   const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
   const matchStatsScoreLabel = useMemo(() => {
@@ -3869,6 +3870,22 @@ function EventDetails({ navigation, route }) {
       setIsOpponentSaving(false);
     }
   }, [eventId, mutations.updateEventNoNavMutation, opponentNameDraft, t]);
+
+  // ST-MATCH (écrans 1 et 7) — le prénom de l'entraîneur de l'équipe : « Karim n'a pas
+  // encore saisi le score », « Le bilan de Karim ».
+  const teamCoachFirstname = useMemo(() => String(
+    (compositionEditorTeam || event?.team)?.trainers?.[0]?.firstname || '',
+  ).trim() || null, [compositionEditorTeam, event?.team]);
+
+  // ST-MATCH (écran 1, état 1) — « VS » et l'heure du coup d'envoi, au centre.
+  const matchStartTimeLabel = useMemo(() => {
+    if (event?.startTime) return String(event.startTime).substring(0, 5);
+    if (!event?.date) return null;
+    const startAt = new Date(event.date);
+    return Number.isNaN(startAt.getTime())
+      ? null
+      : startAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' });
+  }, [event?.date, event?.startTime]);
 
   const matchHeaderScoreSummary = useMemo(() => {
     if (!isMatchEvent) return null;
@@ -3932,66 +3949,86 @@ function EventDetails({ navigation, route }) {
     // dans EventEdit, ou vit le champ complet.
     const onNameOpponent = canEdit && awaitingOpponent ? handleOpenOpponentSheet : null;
 
-    if (!available) {
-      return {
-        awaitingOpponent,
-        badgeLabel: waitingOfficial ? t(
-          'eventDetails.officialScore',
-          'Score officiel',
-        ) : t(
-          'eventDetails.matchScore2',
-          'Score du match',
-        ),
-        // Le repli disait « Score en attente » ICI ET dans `value` : la meme
-        // phrase deux fois dans un encart de 172 px. Une seule suffit.
-        helperText: waitingOfficial ? t(
-          'eventDetails.scoreWaitingToSync',
-          'Score en attente de synchronisation',
-        ) : null,
-        onNameOpponent,
-        opponentName: matchOpponentName,
-        // FINITIONS7 (tournee 8) — « Score en attente » sur un match du 10/10 A VENIR : il ne se
-        // dit qu apres le match, lu sur la meme horloge serveur que la pastille « TERMINÉ ».
-        value: isMatchFinished
-          ? t('eventDetails.scorePending', 'Score en attente')
-          : t('eventDetails.scoreUpcoming', 'À venir'),
-        verdict: null,
-      };
-    }
-
-    let badgeLabel = t('eventDetails.matchScore2', 'Score du match');
-    if (resolvedSource === 'external_sync') {
-      badgeLabel = 'Score officiel';
-    } else if (resolvedSource === 'manual') {
-      badgeLabel = 'Score manuel';
-    }
+    // 🆚 ST-MATCH (écran 1) — le centre du face-à-face (« VS 19:00 », « – – Score en
+    // attente », « 2 - 1 Score saisi ») et les lignes de l'encart, calculés par
+    // `buildMatchEncartLines` pour CE lecteur. ⛔ Les badges « Score du match »,
+    // « Score manuel » et le texte d'aide sont RETIRÉS : le face-à-face et la pastille
+    // de type les disent (« manuel » devient « Score saisi » et le nom de qui l'a saisi).
+    // L'auteur vient de la feuille (`score.recordedBy`) ou, pour qui ne la lit pas (le
+    // dirigeant), du score enregistré sur l'événement (`matchResult.savedBy`).
+    const lignes = buildMatchEncartLines({
+      available,
+      canManage: canManageMatchStats,
+      // 🔒 L'équipe et son encadrement ; jamais un visiteur (mineurs en U15).
+      canSeeDetails: Boolean(isTeamMember || canEdit),
+      coachFirstname: teamCoachFirstname,
+      isFinished: isMatchFinished,
+      locale: localeDesFormats(),
+      publishedLines: isMatchStatsFinal && matchStatsPayload?.sport !== 'basketball'
+        ? matchStatsReport?.playerLines || null
+        : null,
+      recordedAt: scoreState?.available
+        ? scoreState?.recordedAt || null
+        : storedMatchResult?.savedAt || null,
+      recordedBy: scoreState?.available
+        ? scoreState?.recordedBy || null
+        : storedMatchResult?.savedBy || null,
+      scoreAgainst: resolvedScoreAgainst,
+      scoreFor: resolvedScoreFor,
+      source: resolvedSource,
+      startTimeLabel: matchStartTimeLabel,
+      t,
+      viewerDocumentId: userData?.documentId || null,
+      waitingOfficial,
+    });
 
     return {
+      ...lignes,
       awaitingOpponent,
-      badgeLabel,
-      helperText: waitingOfficial ? t(
-        'eventDetails.syncedAutomaticallyFromTheOfficial',
-        'Synchronise automatiquement depuis la source officielle',
-      ) : null,
       onNameOpponent,
       opponentName: matchOpponentName,
-      value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
       verdict,
     };
   }, [
-    // `isMatchFinished` a QUITTE cette liste avec D5 (l'encart s'affiche des qu'il
-    // s'agit d'un match), puis y est REVENU avec FINITIONS7 : il ne cache plus
-    // l'encart, il choisit seulement entre « À venir » et « Score en attente ».
+    // `isMatchFinished` a QUITTE cette liste avec D5, puis y est REVENU avec FINITIONS7 ;
+    // depuis ST-MATCH (écran 1), il choisit le centre du face-à-face : « VS 19:00 » avant
+    // le coup d'envoi, « – – Score en attente » après (la règle de FINITIONS7 tient).
     canEdit,
+    canManageMatchStats,
     event?.externalAutoSource,
     event?.matchResult,
     handleOpenOpponentSheet,
     isMatchEvent,
     isMatchFinished,
+    isMatchStatsFinal,
+    isTeamMember,
     isViewerFromInvitedTeam,
     matchOpponentName,
-    matchStatsPayload?.score, t,
+    matchStartTimeLabel,
+    matchStatsPayload?.score,
+    matchStatsPayload?.sport,
+    matchStatsReport?.playerLines,
+    t,
+    teamCoachFirstname,
+    userData?.documentId,
   ]);
+
+  // 🏷️ ST-MATCH (écran 1) — la pastille de type porte le VERDICT une fois le score
+  // connu : « MATCH · TERMINÉ · VICTOIRE ». Le badge de l'encart qui le disait est
+  // retiré : une seule place pour le résultat.
+  const matchVerdictTagSegment = useMemo(() => {
+    const verdict = matchHeaderScoreSummary?.verdict;
+    if (!isMatchFinished || !verdict) return '';
+    return {
+      draw: t('stMatch.encart.verdictTag.draw', 'NUL'),
+      loss: t('stMatch.encart.verdictTag.loss', 'DÉFAITE'),
+      win: t('stMatch.encart.verdictTag.win', 'VICTOIRE'),
+    }[verdict] || '';
+  }, [isMatchFinished, matchHeaderScoreSummary?.verdict, t]);
+  const typeTagSegmentsAvecVerdict = useMemo(
+    () => [...typeTagSegmentsComplets, matchVerdictTagSegment],
+    [matchVerdictTagSegment, typeTagSegmentsComplets],
+  );
   // N4 (D6) : `matchStatsSummaryText`, `matchStatsStatusMeta` et
   // `matchStatsCardButtonTitle` ont QUITTE ce fichier. Ils decrivaient l'entete
   // du bloc « Stats du match » — une phrase de resume, une pastille d'etat et le
@@ -4354,6 +4391,18 @@ function EventDetails({ navigation, route }) {
   // bouton de composition (« Brouillon enregistre le ... »). Ce bouton est
   // devenu la chip « Convocation » ; le bloc n'avait plus aucun lecteur.
 
+  // 🎯 ST-MATCH (écrans 7 et 8) — « Tout s'ouvre à la fin du match, sam. 5 sept. à 20:00 ».
+  const matchEndLabel = useMemo(() => {
+    if (!eventEndedAt || Number.isNaN(eventEndedAt.getTime())) return '';
+    return t('stMatch.carte.endLabel', '{{day}} à {{time}}', {
+      day: eventEndedAt.toLocaleDateString(localeDesFormats(), {
+        day: 'numeric', month: 'short', weekday: 'short',
+      }),
+      time: eventEndedAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
+      ...SANS_ECHAPPEMENT,
+    });
+  }, [eventEndedAt, t]);
+
   // 🗣️ N4 (D6) — LES SEPT TITRES ONT DISPARU, L'ETAT EST RESTE.
   //
   // Ce bloc decidait AUSSI le libelle du bouton : sept mots differents
@@ -4367,14 +4416,21 @@ function EventDetails({ navigation, route }) {
   // en entier, dans `PostMatchJourneyCard`.
   // ⛔ `disabled` et `isScoreEntry` NE BOUGENT PAS : ce sont eux qui portent le
   // droit et l'aiguillage, et ils vivent ici, a un seul endroit.
+  //
+  // 🎯 ST-MATCH (écran 8, design validé le 02/10) — la note parle le langage de la carte :
+  // « Étape 1 sur 3 : le score », « Feuille publiée le 1 oct. à 22:39 », « S'ouvre à la
+  // fin du match, sam. 5 sept. à 20:00 », et au dirigeant qui n'entraîne pas (« score A »)
+  // QUI saisit. Retirés : « Commence par enregistrer le score du match. », « Rapport
+  // finalise », « Les membres de ton équipe peuvent encore finaliser ce rapport. ».
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
       return {
         disabled: true,
-        subtitle: t(
-          'eventDetails.statsWillBeAvailableAt',
-          'Les stats seront disponibles à la fin du match.',
-        ),
+        subtitle: matchEndLabel
+          ? t('stMatch.gerer.opensAt', 'S’ouvre à la fin du match, {{when}}', {
+            when: matchEndLabel, ...SANS_ECHAPPEMENT,
+          })
+          : t('stMatch.gerer.opensAtEnd', 'S’ouvre à la fin du match'),
       };
     }
     if (matchStatsPayload?.score?.waitingOfficial) {
@@ -4386,35 +4442,37 @@ function EventDetails({ navigation, route }) {
         ),
       };
     }
-    const reportFinalisedSubtitle = matchStatsReport?.finalizedAt
-      ? t('eventDetails.reportFinalisedOn', 'Rapport finalise le {{date}}', {
-        date: new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats()),
+    const publiee = matchStatsReport?.finalizedAt ? new Date(matchStatsReport.finalizedAt) : null;
+    const reportFinalisedSubtitle = publiee && !Number.isNaN(publiee.getTime())
+      ? t('stMatch.gerer.publishedOn', 'Feuille publiée le {{date}} à {{time}}', {
+        date: publiee.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+        time: publiee.toLocaleTimeString(localeDesFormats(), {
+          hour: '2-digit', minute: '2-digit',
+        }),
         ...SANS_ECHAPPEMENT,
       })
-      : t('eventDetails.reportFinalised', 'Rapport finalise');
+      : t('stMatch.gerer.published', 'Feuille publiée');
     // 🔒 SECU-STATS — L EDITEUR EST L OUTIL DE L ENCADREMENT. Il affiche l avis
     // du coach et l auto-evaluation de CHAQUE joueur : rapport publie ou a
     // re-verifier, il s ouvrait pourtant a tout membre de l equipe, et c est par
     // la qu un joueur lisait ces champs. Ce test passe donc AVANT les deux
     // suivants. Le joueur garde SA reponse (« Mon retour post-match »).
+    // 🏛️ « score A » (Adel, 02/10) : le dirigeant qui n'entraîne pas ne saisit pas ; la
+    // note lui dit QUI saisit (le prénom vient de l'équipe, pas de la feuille).
     if (!canManageMatchStats) {
       return {
         disabled: true,
-        subtitle: isMatchStatsFinal
-          ? reportFinalisedSubtitle
-          : t(
-            'eventDetails.yourTeamMembersCanStill',
-            'Les membres de ton équipe peuvent encore finaliser ce rapport.',
-          ),
+        subtitle: teamCoachFirstname
+          ? t('stMatch.gerer.managerWho', 'Saisies par l’entraîneur de l’équipe, {{name}}', {
+            name: teamCoachFirstname, ...SANS_ECHAPPEMENT,
+          })
+          : t('stMatch.gerer.managerWhoUnnamed', 'Saisies par l’entraîneur de l’équipe'),
       };
     }
     if (isMatchStatsReviewRequired) {
       return {
         disabled: false,
-        subtitle: t(
-          'eventDetails.theOfficialScoreChangedCheck',
-          'Le score officiel a changé. Vérifie puis republie cette version.',
-        ),
+        subtitle: t('stMatch.gerer.review', 'Score officiel changé : vérifie la feuille'),
       };
     }
     if (isMatchStatsFinal) {
@@ -4426,10 +4484,7 @@ function EventDetails({ navigation, route }) {
     if (matchStatsPayload?.score?.available) {
       return {
         disabled: false,
-        subtitle: t(
-          'eventDetails.completePlayingTimeAndYour',
-          'Complète le temps de jeu et les stats clés de ton équipe.',
-        ),
+        subtitle: t('stMatch.gerer.stepSheet', 'Étape 2 sur 3 : la feuille'),
       };
     }
     // AD01 (✍️) — LE SEUL CAS QUE LA FEUILLE COURTE DETOURNE. Ce drapeau vit
@@ -4438,19 +4493,19 @@ function EventDetails({ navigation, route }) {
     return {
       disabled: false,
       isScoreEntry: true,
-      subtitle: t(
-        'eventDetails.startBySavingTheMatch',
-        'Commence par enregistrer le score du match.',
-      ),
+      subtitle: t('stMatch.gerer.stepScore', 'Étape 1 sur 3 : le score'),
     };
   }, [
     isMatchFinished,
-    isMatchStatsFinal,
     canManageMatchStats,
     isMatchStatsReviewRequired,
+    isMatchStatsFinal,
+    matchEndLabel,
     matchStatsPayload?.score?.available,
     matchStatsPayload?.score?.waitingOfficial,
-    matchStatsReport?.finalizedAt, t,
+    matchStatsReport?.finalizedAt,
+    t,
+    teamCoachFirstname,
   ]);
   const myMatchResponseStatusMeta = useMemo(() => {
     if (myMatchResponse?.status === 'draft') {
@@ -4525,61 +4580,83 @@ function EventDetails({ navigation, route }) {
       'Renseigne ton retour individuel, puis ajoute une note sur 10.',
     );
   }, [myMatchResponse, t]);
+  // 🚩 ST-MATCH (écran 2, design validé le 02/10) — « MARQUÉ ABSENT À L'APPEL ».
+  // QUI a pointé et QUAND viennent du serveur (`attendanceRestrictionBy/At`, admin
+  // ST-MATCH) ; sans eux (serveur plus ancien), la phrase reste vraie sans les nommer.
+  const absenceMarker = myMatchResponsePayload?.attendanceRestrictionBy || null;
+  const absenceMarkerName = String(absenceMarker?.firstname || '').trim();
+  const absenceMarkedLine = useMemo(() => {
+    const markedAt = myMatchResponsePayload?.attendanceRestrictionAt
+      ? new Date(myMatchResponsePayload.attendanceRestrictionAt)
+      : null;
+    if (!markedAt || Number.isNaN(markedAt.getTime())) {
+      return absenceMarkerName
+        ? t('stMatch.absent.markedBy', '{{name}} t\'a marqué absent à l\'appel.', {
+          name: absenceMarkerName, ...SANS_ECHAPPEMENT,
+        })
+        : t('stMatch.absent.markedByStaff', 'Un encadrant t\'a marqué absent à l\'appel.');
+    }
+    const day = markedAt.toLocaleDateString(localeDesFormats(), { weekday: 'long' });
+    const time = markedAt.toLocaleTimeString(localeDesFormats(), {
+      hour: '2-digit', minute: '2-digit',
+    });
+    return absenceMarkerName
+      ? t('stMatch.absent.markedByAt', '{{name}} t\'a marqué absent {{day}} à {{time}}.', {
+        day, name: absenceMarkerName, time, ...SANS_ECHAPPEMENT,
+      })
+      : t('stMatch.absent.markedAt', 'Tu as été marqué absent {{day}} à {{time}}.', {
+        day, time, ...SANS_ECHAPPEMENT,
+      });
+  }, [absenceMarkerName, myMatchResponsePayload?.attendanceRestrictionAt, t]);
+  // « Écrire à Karim » (amélioration 2) : la conversation privée avec celui qui a pointé ;
+  // une erreur d'appel se règle en un message. Même geste que « Écrire à … » de l'équipe.
+  const canWriteToAbsenceMarker = Boolean(
+    absenceMarker?.documentId && absenceMarker.documentId !== userData?.documentId,
+  );
+  const absenceClosedText = t(
+    'stMatch.absent.closed',
+    'Ton questionnaire de match est fermé tant que ta présence n\'est pas corrigée.',
+  );
+  const absenceReopensText = absenceMarkerName
+    ? t(
+      'stMatch.absent.reopens',
+      'Si tu étais là, {{name}} corrige l\'appel et ton questionnaire se rouvre tout seul.',
+      { name: absenceMarkerName, ...SANS_ECHAPPEMENT },
+    )
+    : t(
+      'stMatch.absent.reopensUnnamed',
+      'Si tu étais là, l\'encadrant corrige l\'appel et ton questionnaire se rouvre tout seul.',
+    );
+  const writeToAbsenceMarkerTitle = t('stMatch.absent.writeTo', 'Écrire à {{name}}', {
+    name: absenceMarkerName || t('stMatch.absent.writeToFallback', 'l\'encadrant'),
+    ...SANS_ECHAPPEMENT,
+  });
+  const writeToAbsenceMarker = useCallback(async () => {
+    if (!absenceMarker?.documentId) return;
+    try {
+      const chat = await startWhisperChat([absenceMarker.documentId]);
+      if (chat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      }
+    } catch (_error) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('stMatch.absent.writeError', 'Impossible d\'ouvrir la conversation pour le moment.'),
+      );
+    }
+  }, [absenceMarker?.documentId, navigation, startWhisperChat, t]);
+
   const myMatchResponseButtonTitle = useMemo(() => {
     if (myMatchResponse?.status === 'draft') return t('eventDetails.resume', 'Reprendre');
     if (myMatchResponse?.status === 'submitted') return t('eventDetails.view', 'Voir');
     return t('eventDetails.fillIn', 'Renseigner');
   }, [myMatchResponse, t]);
-  const matchStatsPromptMessage = useMemo(() => {
-    if (matchStatsPayload?.score?.available) {
-      if (isMatchStatsReviewRequired) {
-        return t(
-          'eventDetails.theOfficialScoreChangedCheck2',
-          'Le score officiel a changé. Vérifie les lignes puis republie ce rapport.',
-        );
-      }
-
-      return t(
-        'eventDetails.theScoreIsReadyYou',
-        'Le score est prêt. Tu peux maintenant compléter le temps de jeu et les stats clés de '
-          + 'ton équipe.',
-      );
-    }
-
-    return t(
-      'eventDetails.theMatchIsOverSave',
-      'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton '
-        + 'équipe.',
-    );
-  }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available, t]);
-  const matchStatsPromptSessionKey = useMemo(() => {
-    if (!eventId || !compositionTeamId) return '';
-
-    return [
-      'event',
-      eventId,
-      compositionTeamId,
-      String(matchStatsReport?.documentId || matchStatsReport?.id || 'report'),
-      `version:${Number(matchStatsReport?.version || 0)}`,
-      `review:${isMatchStatsReviewRequired ? 'yes' : 'no'}`,
-      `score:${matchStatsPayload?.score?.available ? 'ready' : 'pending'}`,
-    ].join(':');
-  }, [
-    compositionTeamId,
-    eventId,
-    isMatchStatsReviewRequired,
-    matchStatsPayload?.score?.available,
-    matchStatsReport?.documentId,
-    matchStatsReport?.id,
-    matchStatsReport?.version,
-  ]);
-  const dismissMatchStatsPrompt = useCallback(() => {
-    if (matchStatsPromptSessionKey) {
-      dismissMatchStatsPromptForSession(matchStatsPromptSessionKey);
-      setDismissedMatchStatsPromptKey(matchStatsPromptSessionKey);
-    }
-    setIsMatchStatsPromptVisible(false);
-  }, [matchStatsPromptSessionKey]);
+  // 🎯 ST-MATCH (écran 5, ABANDONNÉ par le design validé le 02/10) — la fenêtre « Stats de
+  // fin de match » qui s'ouvrait toute seule par-dessus la page est RETIRÉE, avec son
+  // message, sa clef de session et son effet. Elle recouvrait la carte « Après le match »,
+  // qui dit la même chose avec le bon bouton, et revenait à chaque étape. Le rappel hors de
+  // la page reste celui de `MatchStatsPromptHost` (écrans 3 et 4) ;
+  // `utils/matchStatsPromptSession` reste, LeagueMatchDetails s'en sert.
 
   // @ts-ignore: FIXME: Baseline TS regression
   const openCompositionBoard = useCallback((composition, options = {}) => {
@@ -4932,64 +5009,211 @@ function EventDetails({ navigation, route }) {
   // 💡 Le score courant est DEJA dans la charge de la page
   // (`matchStatsPayload.score`) : la feuille se pre-remplit sans une requete
   // de plus.
+  //
+  // 🎯 ST-MATCH (écran 9, design validé le 02/10) — des COMPTEURS − / + de 44 px, d'une
+  // main, sans clavier ; ils partent de 0, donc « Les deux scores sont obligatoires »
+  // disparaît et le bouton DIT le score qu'il enregistre. Après l'envoi, la suite vit
+  // DANS la feuille (`matchScoreSheetStep`), plus dans une alerte système qui fermait tout.
   const [isMatchScoreSheetVisible, setIsMatchScoreSheetVisible] = useState(false);
-  const [matchScoreForDraft, setMatchScoreForDraft] = useState('');
-  const [matchScoreAgainstDraft, setMatchScoreAgainstDraft] = useState('');
+  const [matchScoreDraft, setMatchScoreDraft] = useState({ against: 0, for: 0 });
   const [isMatchScoreSaving, setIsMatchScoreSaving] = useState(false);
+  const [matchScoreSheetStep, setMatchScoreSheetStep] = useState('saisie');
+  const [hasMatchScoreSaveError, setHasMatchScoreSaveError] = useState(false);
 
   const isMatchScoreLocked = Boolean(matchStatsPayload?.score?.locked);
-  const isMatchScoreComplete = matchScoreForDraft.trim() !== ''
-    && matchScoreAgainstDraft.trim() !== '';
 
   const openMatchScoreSheet = useCallback(() => {
-    const asDraft = (/** @type {any} */ value) => (
-      value === null || value === undefined ? '' : String(value)
-    );
+    const asCount = (/** @type {any} */ value) => {
+      const count = Number(value);
+      return Number.isFinite(count) && count > 0 ? Math.min(99, Math.floor(count)) : 0;
+    };
 
-    setMatchScoreForDraft(asDraft(matchStatsPayload?.score?.scoreFor));
-    setMatchScoreAgainstDraft(asDraft(matchStatsPayload?.score?.scoreAgainst));
+    setMatchScoreDraft({
+      against: asCount(matchStatsPayload?.score?.scoreAgainst),
+      for: asCount(matchStatsPayload?.score?.scoreFor),
+    });
+    setMatchScoreSheetStep('saisie');
+    setHasMatchScoreSaveError(false);
     setIsMatchScoreSheetVisible(true);
   }, [matchStatsPayload?.score?.scoreAgainst, matchStatsPayload?.score?.scoreFor]);
 
+  const changeMatchScore = useCallback((
+    /** @type {'against' | 'for'} */ side,
+    /** @type {number} */ step,
+  ) => {
+    setMatchScoreDraft((draft) => ({
+      ...draft,
+      [side]: Math.min(99, Math.max(0, draft[side] + step)),
+    }));
+  }, []);
+
+  // 🎯 ST-MATCH (écran 9, amélioration 1) — les deux équipes NOMMÉES, du côté de QUI marque :
+  // `scoreFor` est celui de l'équipe de la feuille (`compositionTeamId`). L'équipe de
+  // l'événement : son club (le camp de gauche de l'encart) contre l'adversaire. Une équipe
+  // invitée : elle contre le club qui reçoit — aucune inversion possible.
+  const matchScoreSides = useMemo(() => {
+    const hostClub = String(event?.team?.club?.name || event?.club?.name || '').trim();
+    const ourTeam = String(
+      compositionEditorTeam?.name || matchStatsPayload?.team?.name || '',
+    ).trim();
+    const isEventTeam = !compositionTeamId || compositionTeamId === event?.team?.documentId;
+    const forName = (isEventTeam ? hostClub || ourTeam : ourTeam)
+      || t('stMatch.score.us', 'Mon équipe');
+    const againstName = isEventTeam
+      ? matchOpponentName
+      : hostClub || String(event?.team?.name || '').trim();
+    return { againstName: againstName || '', forName };
+  }, [
+    compositionEditorTeam?.name,
+    compositionTeamId,
+    event?.club?.name,
+    event?.team?.club?.name,
+    event?.team?.documentId,
+    event?.team?.name,
+    matchOpponentName,
+    matchStatsPayload?.team?.name,
+    t,
+  ]);
+
+  // « Sam. 5 sept. · fin à 20:00 ».
+  const matchScoreWhen = useMemo(() => {
+    if (!eventEndedAt || Number.isNaN(eventEndedAt.getTime())) return '';
+    const day = eventEndedAt.toLocaleDateString(localeDesFormats(), {
+      day: 'numeric', month: 'short', weekday: 'short',
+    });
+    return t('stMatch.score.when', '{{day}} · fin à {{time}}', {
+      day: day.charAt(0).toUpperCase() + day.slice(1),
+      time: eventEndedAt.toLocaleTimeString(localeDesFormats(), {
+        hour: '2-digit', minute: '2-digit',
+      }),
+      ...SANS_ECHAPPEMENT,
+    });
+  }, [eventEndedAt, t]);
+
+  // 🆚 ST-MATCH (écran 1, amélioration 2) — « Voir les stats du match » DESCEND au
+  // bloc, depuis l'endroit qu'on regarde. Le bloc ne vit que dans l'Aperçu : on y
+  // revient d'abord, puis on mesure l'ancre au tour suivant (elle n'existe qu'une fois
+  // l'onglet rendu). ⛔ Jest ne sait pas mesurer : le défilement se voit à la recette.
+  const scrollToMatchStats = useCallback(() => {
+    setDetailsTab('overview');
+    requestAnimationFrame(() => scrollToAnchor(matchStatsAnchorRef));
+  }, [scrollToAnchor]);
+
+  // 🎯 ST-MATCH (écran 7, amélioration 3) — l'étape 3 NOMME qui manque. La feuille de
+  // l'encadrement porte la liste (le joueur n'en reçoit que le compte : SECU-STATS).
+  const matchMissingResponders = useMemo(() => {
+    const items = Array.isArray(matchStatsPayload?.playerResponses) ? matchStatsPayload.playerResponses : [];
+    const prenoms = items
+      .filter((/** @type {any} */ item) => item?.status !== 'submitted')
+      .map((/** @type {any} */ item) => String(item?.label || '').trim().split(/\s+/)[0])
+      .filter(Boolean);
+    return prenoms.length > 5 ? [...prenoms.slice(0, 5), `+${prenoms.length - 5}`] : prenoms;
+  }, [matchStatsPayload?.playerResponses]);
+
+  // 🎯 ST-MATCH (écran 7) — « Relancer », depuis la carte : la route existe (remind-responses,
+  // celle de l'éditeur) ; le serveur ne relance que les convoqués (« c oui », 02/10).
+  // ⚠️ Par `useEventMutations` et non par un import de service : chaque service importé ici
+  // doit être doublé dans chacun des témoins de l'écran (piège AD01).
+  const remindResponsesMutation = mutations.remindMatchResponsesMutation;
+  const isRemindingResponders = Boolean(remindResponsesMutation?.isPending);
+  const remindMissingResponders = useMemo(() => {
+    if (!remindResponsesMutation || !eventId || !compositionTeamId) return null;
+    return async () => {
+      try {
+        const resultat = await remindResponsesMutation.mutateAsync({ eventId, teamId: compositionTeamId });
+        const relances = Number(resultat?.remindedCount || 0);
+        // 🔁 ST-VUES2 (02/10) — la relance est idempotente PAR JOUR côté serveur : au 2e appui le
+        // même jour, personne n'est relancé et le serveur le dit (`alreadyRemindedCount`). Dire
+        // « aucune relance nécessaire » serait faux : il en manque toujours.
+        if (relances === 0 && Number(resultat?.alreadyRemindedCount || 0) > 0) {
+          Alert.alert(t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui'));
+          return;
+        }
+        Alert.alert(
+          t('stMatch.carte.remindedTitle', 'Relance envoyée'),
+          relances > 0
+            ? t('stMatch.carte.reminded', {
+              count: relances,
+              defaultValue_one: '{{count}} joueur relancé.',
+              defaultValue_other: '{{count}} joueurs relancés.',
+            })
+            : t('matchStatsEditor.noReminderNeeded', 'Aucune relance nécessaire pour ce match.'),
+        );
+      } catch (_error) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          t('stMatch.carte.remindError', 'La relance n’a pas pu partir. Réessaie.'),
+        );
+      }
+    };
+  }, [compositionTeamId, eventId, remindResponsesMutation, t]);
+
+  // 🎯 ST-MATCH (écran 7, état 4) — le dirigeant trouve les résultats dans la fiche de
+  // l'équipe, onglet Stats (même entrée que l'ancienne adresse de TeamStats, ST-VUES).
+  const resultsTeamId = compositionTeamId || event?.team?.documentId || null;
+  const openTeamResults = useMemo(() => (resultsTeamId ? () => navigation.navigate(
+    RouteNames.TeamStack,
+    { params: { initialTab: 'stats', teamId: resultsTeamId }, screen: RouteNames.TeamDetails },
+  ) : null), [navigation, resultsTeamId]);
+
+  // 🆚 ST-MATCH (écran 1) — ce que l'encart PERMET, posé ici parce que ses deux gestes
+  // sont déclarés plus bas que lui. « Saisir le score » (amélioration 4, état 2) suit
+  // le SEUL juge de l'aiguillage, `matchStatsPrimaryAction.isScoreEntry` : le droit
+  // (`canManage`), la fin du match et l'absence de score officiel attendu y vivent.
+  // « Voir les stats du match » n'existe que pour qui lit le bloc, une fois le score là.
+  const matchEncartSummary = useMemo(() => {
+    if (!matchHeaderScoreSummary) return null;
+    return {
+      ...matchHeaderScoreSummary,
+      onEnterScore: matchStatsPrimaryAction.isScoreEntry && !matchStatsPrimaryAction.disabled
+        ? openMatchScoreSheet
+        : null,
+      onSeeStats: matchHeaderScoreSummary.isScoreShown && canViewMatchStats && compositionTeamId
+        ? scrollToMatchStats
+        : null,
+    };
+  }, [
+    canViewMatchStats,
+    compositionTeamId,
+    matchHeaderScoreSummary,
+    matchStatsPrimaryAction.disabled,
+    matchStatsPrimaryAction.isScoreEntry,
+    openMatchScoreSheet,
+    scrollToMatchStats,
+  ]);
+
   const handleSaveMatchScore = useCallback(async () => {
     if (!eventId || !compositionTeamId) return;
-    if (isMatchScoreLocked || !isMatchScoreComplete || isMatchScoreSaving) return;
+    if (isMatchScoreLocked || isMatchScoreSaving) return;
 
     setIsMatchScoreSaving(true);
+    setHasMatchScoreSaveError(false);
     try {
       await mutations.saveMatchResultMutation.mutateAsync({
         eventId,
-        scoreAgainst: Number(matchScoreAgainstDraft),
-        scoreFor: Number(matchScoreForDraft),
+        scoreAgainst: matchScoreDraft.against,
+        scoreFor: matchScoreDraft.for,
         teamId: compositionTeamId,
       });
-      setIsMatchScoreSheetVisible(false);
-      // Le meme rafraichissement que le reste de la page (`:4775`) : sans lui,
-      // l'entete continuerait d'afficher « Score en attente ».
+      // 🎯 ST-MATCH (écran 9, état 5) — la suite DANS la feuille. Le meme
+      // rafraichissement que le reste de la page : sans lui, l'entete continuerait
+      // d'afficher « Score en attente ».
+      setMatchScoreSheetStep('enregistre');
       refetchMatchStats();
-      Alert.alert(
-        t('eventDetails.matchScore.savedTitle', 'Score enregistré'),
-        t('eventDetails.matchScore.savedMessage', 'Le score du match est enregistré.'),
-      );
     } catch (scoreError) {
-      Alert.alert(
-        t('common.error'),
-        t('eventDetails.matchScore.error', 'Le score n’a pas pu être enregistré. Réessaie.'),
-      );
+      // État 6 — le score saisi RESTE en place ; la feuille dit quoi faire.
+      setHasMatchScoreSaveError(true);
     } finally {
       setIsMatchScoreSaving(false);
     }
   }, [
     compositionTeamId,
     eventId,
-    isMatchScoreComplete,
     isMatchScoreLocked,
     isMatchScoreSaving,
-    matchScoreAgainstDraft,
-    matchScoreForDraft,
+    matchScoreDraft,
     mutations.saveMatchResultMutation,
     refetchMatchStats,
-    t,
   ]);
 
   // AD01 (🚪) — LA PORTE DU TERRAIN DE DETECTION.
@@ -5095,45 +5319,6 @@ function EventDetails({ navigation, route }) {
     myMatchResponsePayload?.sport,
     myMatchResponsePayload?.team?.name,
     navigation, t,
-  ]);
-
-  useFocusEffect(useCallback(() => () => {
-    setIsMatchStatsPromptVisible(false);
-  }, []));
-
-  useEffect(() => {
-    if (!canManageMatchStats || !isMatchEvent || !compositionTeamId || !isMatchFinished) {
-      setIsMatchStatsPromptVisible(false);
-      return;
-    }
-
-    if (matchStatsPayload?.score?.waitingOfficial) {
-      setIsMatchStatsPromptVisible(false);
-      return;
-    }
-
-    if (isMatchStatsCompleted) {
-      setIsMatchStatsPromptVisible(false);
-      return;
-    }
-
-    if (
-      matchStatsPayload
-      && !isMatchStatsFetching
-      && dismissedMatchStatsPromptKey !== matchStatsPromptSessionKey
-      && !isMatchStatsPromptDismissedForSession(matchStatsPromptSessionKey)
-    ) {
-      setIsMatchStatsPromptVisible(true);
-    }
-  }, [canManageMatchStats, compositionTeamId,
-    dismissedMatchStatsPromptKey,
-    isMatchEvent,
-    isMatchFinished,
-    isMatchStatsFetching,
-    isMatchStatsCompleted,
-    matchStatsPayload,
-    matchStatsPayload?.score?.waitingOfficial,
-    matchStatsPromptSessionKey,
   ]);
 
   const openCoachLateModal = useCallback((/** @type {User | null | undefined} */ targetUser, /** @type {'coach_mark' | 'coach_edit'} */ mode) => {
@@ -5724,6 +5909,11 @@ function EventDetails({ navigation, route }) {
   const showDetectionSplitTab = isOnTab('detectionSplit');
   const showStageDaysTab = isOnTab('stageDays');
   const showTournamentTeamsTab = isOnTab('tournamentTeams');
+  // 🎯 ST-MATCH (écran 7) — le bloc « Stats du match » : l'équipe qui lit la feuille, et le
+  // dirigeant (« score A ») une fois le match fini, à qui il dit qui saisit.
+  const showMatchStatsBlock = showOverviewTab && isMatchEvent && Boolean(
+    (compositionTeamId && canViewMatchStats) || (canEdit && isMatchFinished),
+  );
 
   // D3 — QUI VOIT LA PORTE. La grille d acces (`eventAttendanceGate`) inclut
   // `canEdit` depuis L5-0 (vague P, 23/08) : un dirigeant organisateur hors
@@ -6805,7 +6995,10 @@ function EventDetails({ navigation, route }) {
               {chip.label}
             </Text>
             {subtitle ? (
-              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+              <Text
+                style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}
+                testID={`event-manage-note-${chip.key}`}
+              >
                 {subtitle}
               </Text>
             ) : null}
@@ -8036,7 +8229,7 @@ function EventDetails({ navigation, route }) {
       >
         <Tag
           style={{}}
-          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsComplets)}
+          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
           textStyle={Fonts.p2}
         />
         {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
@@ -8086,7 +8279,7 @@ function EventDetails({ navigation, route }) {
             <EventHeader
               detectionSummary={detectionHeaderSummary}
               event={event}
-              matchScoreSummary={matchHeaderScoreSummary}
+              matchScoreSummary={matchEncartSummary}
             />
             {/* COLL-C4B (02/10) — D16 : la Ville a ferme l installation ce jour-la
                 (`facilityClosure` de la fiche). Le bandeau et les deux gestes du CLUB
@@ -8358,33 +8551,56 @@ function EventDetails({ navigation, route }) {
             && isTeamMember
             && isMatchFinished
             && myMatchResponsePayload?.attendanceRestriction === 'no_show' ? (
-              <View style={[Spaces.gap[12]]}>
+              /* 🚩 ST-MATCH (écran 2, état 1) — l'ORANGE de l'avertissement au lieu du
+                 rouge de l'erreur : l'erreur peut venir de l'appel, pas du joueur (le titre
+                 rouge gras « Absent à l'appel » l'accusait). Le bloc s'appelle « Mon match ».
+                 Il dit QUI a pointé et QUAND, et « Écrire à Karim » ouvre la conversation. */
+              <View style={[Spaces.gap[12]]} testID="st-match-absent-a-l-appel">
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                  {t('eventDetails.myStats', 'Mes stats')}
+                  {t('stMatch.absent.blockTitle', 'Mon match')}
                 </Text>
                 <View
                   style={[
-                    ApplicationStyle.backgroundColor.primary900,
                     ApplicationStyle.borderRadius24,
                     Spaces.padding[16],
                     Spaces.gap[12],
                     {
-                      borderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}55`,
+                      backgroundColor: withAlpha(Colors.primary700, 0.55),
+                      borderColor: withAlpha(Colors.primary500, 0.24),
                       borderWidth: 1,
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.error500 || 'rgb(248, 113, 113)' }]}>
-                    {t('eventDetails.checkInToCorrect', 'Absent à l’appel')}
-                  </Text>
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {t(
-                      'eventDetails.arrivalNotConfirmed',
-                      "Un encadrant t'a marqué absent à l'appel de ce match. "
-                        + "S'il s'est trompé, il corrige ta présence "
-                        + 'et ton questionnaire se débloque.',
-                    )}
-                  </Text>
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius12,
+                      Spaces.paddingHorizontal[16],
+                      Spaces.paddingVertical[12],
+                      Spaces.gap[8],
+                      {
+                        backgroundColor: withAlpha(Colors.warning500, 0.1),
+                        borderColor: withAlpha(Colors.warning500, 0.4),
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                      <SvgIcon color={Colors.warning400} height={16} name="flag" width={16} />
+                      <Text style={[Fonts.p2Bold, { color: Colors.warning400, flexShrink: 1 }]}>
+                        {t('stMatch.absent.title', 'Marqué absent à l\'appel')}
+                      </Text>
+                    </View>
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>{absenceMarkedLine}</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>{absenceClosedText}</Text>
+                  </View>
+                  {canWriteToAbsenceMarker ? (
+                    <Button
+                      onPress={writeToAbsenceMarker}
+                      title={writeToAbsenceMarkerTitle}
+                      variant="Secondary"
+                    />
+                  ) : null}
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>{absenceReopensText}</Text>
                 </View>
               </View>
                 ) : null}
@@ -8565,215 +8781,116 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {showOverviewTab && isMatchEvent && compositionTeamId && canViewMatchStats ? (
-                <View style={[Spaces.gap[12]]}>
+              {/* 🎯 ST-MATCH (écran 7, design des statistiques validé le 02/10) — « STATS DU
+                  MATCH ». Trois lecteurs, trois cartes :
+                  · l'ENCADREMENT (`canManage`) : la carte des trois étapes, qui porte
+                    désormais l'auteur du score, le brouillon, la publication, qui manque
+                    (et « Relancer »), les deux notes et le mot de l'entraîneur ;
+                  · le JOUEUR : « Le bilan de Karim », la lecture déjà filtrée par le serveur
+                    (SECU-STATS, moyenne B) — plus de bouton éteint ;
+                  · le DIRIGEANT qui n'entraîne pas (« score A ») : qui saisit, et où trouver
+                    les résultats (le serveur lui refuse la feuille).
+                  Retirés : « Version v1 », la date brute, « 1 note collective prise en
+                  compte » (tout est dans la carte). */}
+              {showMatchStatsBlock ? (
+                <View collapsable={false} ref={matchStatsAnchorRef} style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
                     {t('eventDetails.matchStats', 'Stats du match')}
                   </Text>
 
-                  {/* 🎯 N4 (D6) — LA CARTE-PARCOURS « APRÈS LE MATCH » (maquette 05 · 5C).
-                      Elle remplace l'entete de ce bloc : une pastille d'etat, un score et
-                      une phrase de resume disaient TROIS fois « ou on en est » sans jamais
-                      nommer les etapes. Le parcours les nomme, et le seul bouton qui reste
-                      est celui de l'etape COURANTE.
-                      ⛔ Rien n'est perdu : le motif d'une porte fermee (le sous-titre de
-                      `matchStatsPrimaryAction`) descend DANS la carte, et le detail du
-                      rapport reste juste dessous. */}
-                  <PostMatchJourneyCard
-                    boutonDesactive={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
-                    motif={matchStatsPrimaryAction.subtitle}
-                    onPressEtape={(/** @type {string} */ etape) => (etape === 'score'
-                      ? openMatchScoreSheet()
-                      : openMatchStatsEditor())}
-                    reponsesAttendues={Number(
-                      matchStatsReport?.responseEligibleCount
-                      ?? playerCollectiveRating?.eligibleCount
-                      ?? 0,
-                    )}
-                    reponsesRecues={Number(
-                      matchStatsReport?.responseCompletionCount
-                      ?? playerCollectiveRating?.count
-                      ?? 0,
-                    )}
-                    scoreDisponible={Boolean(matchStatsPayload?.score?.available)}
-                    scoreLibelle={matchStatsScoreLabel}
-                    scoreOrigine={matchStatsPayload?.score?.source || ''}
-                    statsFinalisees={isMatchStatsFinal}
-                    verificationRequise={isMatchStatsReviewRequired}
-                  />
+                  {canManageMatchStats ? (
+                    <PostMatchJourneyCard
+                      avantLaFin={!isMatchFinished}
+                      boutonDesactive={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+                      feuilleBrouillonDepuis={matchStatsReport?.status === 'draft'
+                        ? matchStatsReport?.updatedAt || matchStatsReport?.createdAt || ''
+                        : ''}
+                      feuillePublieeLe={matchStatsReport?.finalizedAt || ''}
+                      finDuMatch={matchEndLabel}
+                      manquants={matchMissingResponders}
+                      monDocumentId={userData?.documentId || ''}
+                      motDuCoach={matchStatsReport?.collectiveComment || ''}
+                      motif={matchStatsPrimaryAction.subtitle}
+                      moyenneJoueurs={playerCollectiveRating}
+                      noteEquipe={matchStatsReport?.collectiveRating ?? null}
+                      onPressEtape={(/** @type {string} */ etape) => (etape === 'score'
+                        ? openMatchScoreSheet()
+                        : openMatchStatsEditor())}
+                      onRelancer={remindMissingResponders}
+                      relanceEnCours={isRemindingResponders}
+                      reponsesAttendues={Number(
+                        matchStatsReport?.responseEligibleCount
+                        ?? playerCollectiveRating?.eligibleCount
+                        ?? 0,
+                      )}
+                      reponsesRecues={Number(
+                        matchStatsReport?.responseCompletionCount
+                        ?? playerCollectiveRating?.count
+                        ?? 0,
+                      )}
+                      scoreAuteur={matchStatsPayload?.score?.recordedBy || null}
+                      scoreDeLaFeuille={matchStatsReport
+                        && Number.isFinite(Number(matchStatsReport?.scoreFor))
+                        ? `${matchStatsReport.scoreFor} - ${matchStatsReport.scoreAgainst}`
+                        : ''}
+                      scoreDisponible={Boolean(matchStatsPayload?.score?.available)}
+                      scoreLibelle={matchStatsScoreLabel}
+                      scoreOfficiel={matchStatsPayload?.score?.available
+                        ? `${matchStatsPayload.score.scoreFor} - ${matchStatsPayload.score.scoreAgainst}`
+                        : ''}
+                      scoreOrigine={matchStatsPayload?.score?.source || ''}
+                      scoreSaisiA={matchStatsPayload?.score?.recordedAt || ''}
+                      statsFinalisees={isMatchStatsFinal}
+                      verificationRequise={isMatchStatsReviewRequired}
+                    />
+                  ) : (
+                    <MatchBilanCard
+                      avantLaFin={!isMatchFinished}
+                      buteurs={matchEncartSummary?.scorersLine || ''}
+                      entraineur={teamCoachFirstname || ''}
+                      equipe={compositionEditorTeam?.name || event?.team?.name || ''}
+                      finDuMatch={matchEndLabel}
+                      mode={compositionTeamId && canViewMatchStats ? 'joueur' : 'dirigeant'}
+                      motDuCoach={matchStatsReport?.collectiveComment || ''}
+                      moyenneJoueurs={playerCollectiveRating}
+                      noteEquipe={matchStatsReport?.collectiveRating ?? null}
+                      onVoirLesResultats={openTeamResults}
+                      publiee={isMatchStatsFinal}
+                      publieeLe={matchStatsReport?.finalizedAt || ''}
+                    />
+                  )}
 
-                  {/* 🚪 H8 — LA DEUXIEME PORTE VERS « MATCHS EN ATTENTE ».
-                      Jusqu ici l ecran (378 lignes) n avait qu UNE entree, dans la
-                      fenetre de rappel, et elle ne s affichait qu a partir de DEUX
-                      matchs en retard : avec un seul, l ecran etait physiquement
-                      inatteignable. Celle-ci part de la page du match, la ou on est
-                      quand on se demande « et mes autres matchs ? ».
-                      Elle NOMME le brouillon : le mot n apparaissait nulle part sur
-                      cette page, alors que c est l etat le plus frequent. */}
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    onPress={openPendingMatchStatsList}
-                    style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[8]]}
-                  >
-                    {/* FINITIONS (recette Android 16 du 28/09) — « Voir tous mes
-                        matchs en » : rétréci à sa largeur mesurée, le texte perdait
-                        son dernier mot. Il remplit désormais le lien, centré
-                        (`flexGrow`, jamais `flex: 1`). */}
-                    <Text
+                  {/* 🚪 H8 — LA DEUXIEME PORTE VERS « MATCHS EN ATTENTE ». Le design la
+                      retire (« l'accueil et la fenêtre y mènent ») ; ST-MATCH la GARDE :
+                      l'accueil n'a aucune porte vers cet écran, et la fenêtre de rappel n'y
+                      mène qu'à partir de DEUX matchs en attente. Sans elle, avec un seul
+                      match, l'écran redeviendrait inatteignable (la régression H8). */}
+                  {compositionTeamId && canViewMatchStats ? (
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      onPress={openPendingMatchStatsList}
                       style={[
-                        Fonts.p3Bold,
-                        Fonts.primary200,
-                        { flexGrow: 1, textAlign: 'center' },
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Alignments.justifyCenter,
+                        Spaces.gap[8],
+                        { minHeight: 44 },
                       ]}
                     >
-                      {matchStatsReport?.status === 'draft'
-                        ? t(
-                          'eventDetails.thisReportIsADraft',
-                          'Ce bilan est un brouillon — voir tous mes matchs en attente',
-                        )
-                        : t(
+                      <Text
+                        style={[
+                          Fonts.p3Bold,
+                          Fonts.primary200,
+                          { flexGrow: 1, textAlign: 'center' },
+                        ]}
+                      >
+                        {t(
                           'eventDetails.seeAllMyPendingMatches',
                           'Voir tous mes matchs en attente',
                         )}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Le DETAIL du rapport, sous le parcours. Son cadre disparait quand il
-                      n'y a encore rien a detailler : une boite bordee et vide se lit comme
-                      un contenu qui n'a pas charge. */}
-                  <View
-                    style={matchStatsReport || hasCollectiveRatings ? [
-                      ApplicationStyle.backgroundColor.primary900,
-                      ApplicationStyle.borderRadius24,
-                      Spaces.padding[16],
-                      Spaces.gap[12],
-                    ] : null}
-                  >
-                    {hasCollectiveRatings ? (
-                      <View style={[Alignments.row, Spaces.gap[12]]}>
-                        {matchStatsReport?.collectiveRating ? (
-                          <View
-                            style={[
-                              ApplicationStyle.backgroundColor.primary700,
-                              ApplicationStyle.borderRadius16,
-                              Spaces.padding[12],
-                              Spaces.gap[4],
-                              { flex: 1 },
-                            ]}
-                          >
-                            <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                              {t('eventDetails.coachRating', 'Note coach')}
-                            </Text>
-                            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${matchStatsReport.collectiveRating}/10`}</Text>
-                          </View>
-                        ) : null}
-                        {playerCollectiveRating?.average != null ? (
-                          <View
-                            style={[
-                              ApplicationStyle.backgroundColor.primary700,
-                              ApplicationStyle.borderRadius16,
-                              Spaces.padding[12],
-                              Spaces.gap[4],
-                              { flex: 1 },
-                            ]}
-                          >
-                            <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                              {t('eventDetails.playersFeeling', 'Ressenti joueurs')}
-                            </Text>
-                            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${playerCollectiveRating.average}/10`}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-                    ) : null}
-
-                    {matchStatsReport?.collectiveComment ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                        ]}
-                      >
-                        <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
-                          {matchStatsReport.collectiveComment}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {/* N4 (D6) : « 4/12 joueurs ont repondu » est devenu l'ETAPE 3 de la
-                        carte, juste au-dessus. Le repeter ici serait le meme chiffre a
-                        trois centimetres de lui-meme. Le nombre de notes collectives
-                        prises en compte, lui, reste — il ne dit pas la meme chose. */}
-                    {playerCollectiveRating?.count ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                          Spaces.gap[4],
-                        ]}
-                      >
-                        <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {`${playerCollectiveRating.count} note${playerCollectiveRating.count > 1 ? 's' : ''} collective${playerCollectiveRating.count > 1 ? 's' : ''} prise${playerCollectiveRating.count > 1 ? 's' : ''} en compte`}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {matchStatsReport ? (
-                      <View style={[Alignments.row, Spaces.gap[12]]}>
-                        <View
-                          style={[
-                            ApplicationStyle.backgroundColor.primary700,
-                            ApplicationStyle.borderRadius16,
-                            Spaces.padding[12],
-                            { flex: 1 },
-                          ]}
-                        >
-                          <Text style={[Fonts.p4, Fonts.neutral300]}>Version</Text>
-                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                            {`v${Number(matchStatsReport?.version || 1)}`}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            ApplicationStyle.backgroundColor.primary700,
-                            ApplicationStyle.borderRadius16,
-                            Spaces.padding[12],
-                            { flex: 2 },
-                          ]}
-                        >
-                          <Text style={[Fonts.p4, Fonts.neutral300]}>
-                            {t('eventDetails.publication', 'Publication')}
-                          </Text>
-                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                            {matchStatsReport?.finalizedAt
-                              ? new Date(matchStatsReport.finalizedAt)
-                                .toLocaleString(localeDesFormats())
-                              : '-'}
-                          </Text>
-                        </View>
-                      </View>
-                    ) : null}
-
-                    {isMatchStatsReviewRequired ? (
-                      <View
-                        style={[
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                          {
-                            backgroundColor: `${Colors.warning500}14`,
-                            borderColor: `${Colors.warning500}45`,
-                            borderWidth: 1,
-                          },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4, Fonts.warning500]}>
-                          {t('eventDetails.theOfficialScoreChangedAfter', 'Le score officiel a changé après la première publication. Une mise à jour est requise.')}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                  </View>
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -9615,146 +9732,203 @@ function EventDetails({ navigation, route }) {
         </View>
       </BottomModal>
 
-      <BottomModal
-        close={dismissMatchStatsPrompt}
-        isVisible={isMatchStatsPromptVisible}
-        snapPoints={['42%']}
-      >
-        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.endOfMatchStats', 'Stats de fin de match')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {matchStatsPromptMessage}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary900,
-              { borderRadius: 20 },
-              Spaces.padding[16],
-              Spaces.gap[8],
-            ]}
-          >
-            <Text style={[Fonts.p3, Fonts.neutral300]}>Match</Text>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{compositionEventLabel}</Text>
-            <Text style={[Fonts.p3, Fonts.primary100]}>
-              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || t(
-                'eventDetails.teamFallback',
-                'Equipe',
-              )}
-            </Text>
-          </View>
-
-          <Button
-            onPress={() => {
-              dismissMatchStatsPrompt();
-              openMatchStatsEditor();
-            }}
-            title={t('eventDetails.matchStats', 'Stats du match')}
-            variant="Primary"
-          />
-          <Button
-            onPress={dismissMatchStatsPrompt}
-            title={t('eventDetails.later', 'Plus tard')}
-            variant="Secondary"
-          />
-        </View>
-      </BottomModal>
-
-      {/* AD01 (✍️) — LA FEUILLE DU SCORE : deux champs, et c'est tout.
+      {/* AD01 (✍️) — LA FEUILLE DU SCORE.
+          🎯 ST-MATCH (écran 9, design validé le 02/10, « 05D Saisir le score ») : « Score
+          final », les deux équipes NOMMÉES (plus de « Nous / Eux »), − et + de 44 px, le
+          bouton qui dit le score, la suite DANS la feuille, le verrou en orange.
           ⚠️ `snapPoints` est OBLIGATOIRE : sans lui, une `BottomModal` ne peut
           pas porter a la fois un en-tete et un pied (piege D19, deja paye). */}
       <BottomModal
         close={() => setIsMatchScoreSheetVisible(false)}
         isVisible={isMatchScoreSheetVisible}
-        snapPoints={['52%']}
+        snapPoints={['62%']}
       >
-        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventDetails.matchScore.title', 'Score du match')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || t(
-                'eventDetails.yourTeam',
-                'Ton équipe',
-              )}
-            </Text>
-          </View>
-
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-            {[
-              {
-                key: 'for',
-                label: t('eventDetails.matchScore.us', 'Nous'),
-                onChangeText: setMatchScoreForDraft,
-                value: matchScoreForDraft,
-              },
-              {
-                key: 'against',
-                label: t('eventDetails.matchScore.them', 'Eux'),
-                onChangeText: setMatchScoreAgainstDraft,
-                value: matchScoreAgainstDraft,
-              },
-            ].map((champ) => (
-              <View key={champ.key} style={[Spaces.gap[8], { flex: 1 }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{champ.label}</Text>
-                <TextInput
-                  editable={!isMatchScoreLocked}
-                  keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
-                  maxLength={3}
-                  onChangeText={(value) => champ.onChangeText(value.replace(/[^0-9]/g, ''))}
-                  placeholder="0"
-                  placeholderTextColor={Colors.neutral400}
-                  selectionColor={Colors.primary500}
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]} testID="st-match-feuille-score">
+          {matchScoreSheetStep === 'enregistre' ? (
+            <>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {t('stMatch.score.saved', 'Score enregistré : {{score}}', {
+                    score: `${matchScoreDraft.for} - ${matchScoreDraft.against}`,
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  {t('stMatch.score.savedBody', 'Les joueurs le voient sur la page du match.')}
+                </Text>
+              </View>
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                <View
                   style={[
-                    ApplicationStyle.input,
-                    ApplicationStyle.backgroundColor.neutral800,
-                    ApplicationStyle.borderColor.neutral600,
-                    Fonts.h3Bold,
-                    Fonts.neutral00,
-                    { textAlign: 'center' },
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      backgroundColor: withAlpha(Colors.primary500, 0.14),
+                      borderColor: Colors.primary500,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      height: 32,
+                      width: 32,
+                    },
                   ]}
-                  value={champ.value}
+                >
+                  <Text style={[Fonts.p2Bold, Fonts.primary200]}>2</Text>
+                </View>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                    {t('stMatch.score.nextSheet', 'Ensuite : la feuille de match')}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {Number(matchStatsReport?.responseEligibleCount) > 0
+                      ? t('stMatch.score.responses', {
+                        count: Number(matchStatsReport?.responseCompletionCount || 0),
+                        defaultValue_one: '{{count}} sur {{total}} a déjà répondu',
+                        defaultValue_other: '{{count}} sur {{total}} ont déjà répondu',
+                        total: Number(matchStatsReport?.responseEligibleCount),
+                        ...SANS_ECHAPPEMENT,
+                      })
+                      : t('stMatch.carte.sheetDetail', 'Ta note, les buteurs, le temps de jeu')}
+                  </Text>
+                </View>
+              </View>
+              <View style={[Spaces.gap[12]]}>
+                <Button
+                  onPress={() => {
+                    setIsMatchScoreSheetVisible(false);
+                    openMatchStatsEditor();
+                  }}
+                  title={t('stMatch.score.openSheet', 'Saisir la feuille')}
+                  variant="Primary"
+                />
+                <Button
+                  onPress={() => setIsMatchScoreSheetVisible(false)}
+                  title={t('stMatch.score.later', 'Plus tard')}
+                  variant="Secondary"
                 />
               </View>
-            ))}
-          </View>
+            </>
+          ) : (
+            <>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {t('stMatch.score.title', 'Score final')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {`${matchScoreSides.forName} — ${matchScoreSides.againstName
+                    || t('stMatch.score.opponent', 'Adversaire')}`}
+                </Text>
+                {matchScoreWhen ? (
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>{matchScoreWhen}</Text>
+                ) : null}
+              </View>
 
-          {/* 🗣️ Une porte fermee DIT pourquoi. Le serveur refuserait de toute
-              facon (`match-stats-report.ts:1921-1937`) — autant l'ecrire ici,
-              en francais, avant l'aller-retour. */}
-          {isMatchScoreLocked ? (
-            <Text style={[Fonts.p3, Fonts.gold500]}>
-              {t(
-                'eventDetails.matchScore.lockedHint',
-                'Ce score vient de la source officielle : il ne se modifie pas ici.',
-              )}
-            </Text>
-          ) : null}
-          {!isMatchScoreLocked && !isMatchScoreComplete ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('eventDetails.matchScore.bothRequired', 'Les deux scores sont obligatoires.')}
-            </Text>
-          ) : null}
+              {/* 🔒 Verrouillé : les compteurs s'éteignent (min = max = la valeur), sans
+                  toucher au composant partagé par 4 autres écrans. */}
+              <View style={[Spaces.gap[8]]}>
+                {[
+                  {
+                    name: matchScoreSides.forName,
+                    side: /** @type {'for'} */ ('for'),
+                    spoken: matchScoreSides.forName,
+                  },
+                  {
+                    name: matchScoreSides.againstName || t('stMatch.score.opponent', 'Adversaire'),
+                    side: /** @type {'against'} */ ('against'),
+                    spoken: matchScoreSides.againstName
+                      || t('stMatch.score.theOpponent', 'l’adversaire'),
+                  },
+                ].map((row, index) => (
+                  <View key={row.side} style={[Spaces.gap[8]]}>
+                    {index === 1 ? (
+                      <Text style={[Fonts.h3Black, Fonts.neutral300, Fonts.textCenter]}>-</Text>
+                    ) : null}
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+                      <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
+                        {row.name}
+                      </Text>
+                      <View style={{ width: 168 }}>
+                        <InputStepper
+                          decrementLabel={t(
+                            'stMatch.score.minus',
+                            'Un but de moins pour {{team}}',
+                            { team: row.spoken, ...SANS_ECHAPPEMENT },
+                          )}
+                          incrementLabel={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
+                            team: row.spoken, ...SANS_ECHAPPEMENT,
+                          })}
+                          max={isMatchScoreLocked ? matchScoreDraft[row.side] : 99}
+                          min={isMatchScoreLocked ? matchScoreDraft[row.side] : 0}
+                          onDecrement={() => changeMatchScore(row.side, -1)}
+                          onIncrement={() => changeMatchScore(row.side, 1)}
+                          tone="tunnel"
+                          value={matchScoreDraft[row.side]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
 
-          <View style={[Spaces.gap[12]]}>
-            <Button
-              disabled={isMatchScoreLocked || !isMatchScoreComplete || isMatchScoreSaving}
-              isLoading={isMatchScoreSaving}
-              onPress={handleSaveMatchScore}
-              title={t('eventDetails.matchScore.submit', 'Valider le score')}
-              variant="Primary"
-            />
-            <Button
-              onPress={() => setIsMatchScoreSheetVisible(false)}
-              title={t('common.cancel', 'Annuler')}
-              variant="Secondary"
-            />
-          </View>
+              {/* 🗣️ Une porte fermee DIT pourquoi — en orange (plus en or). ⚠️ Le cadenas du design
+                  manque : l'app n'a AUCUNE icône cadenas (ni SvgIcon, ni Images). */}
+              {isMatchScoreLocked ? (
+                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                  <Text style={[Fonts.p3, Fonts.warning500, { flexShrink: 1 }]}>
+                    {t(
+                      'stMatch.score.locked',
+                      'Ce score vient de la fédération ; il ne se modifie pas ici.',
+                    )}
+                  </Text>
+                </View>
+              ) : null}
+              {!isMatchScoreLocked && hasMatchScoreSaveError ? (
+                <Text style={[Fonts.p3, Fonts.error500]}>
+                  {t(
+                    'stMatch.score.error',
+                    'Le score n’a pas pu être enregistré. Vérifie ta connexion, puis réessaie. '
+                      + 'Rien n’a été perdu.',
+                  )}
+                </Text>
+              ) : null}
+
+              <View style={[Spaces.gap[12]]}>
+                {isMatchScoreLocked ? (
+                  <>
+                    <Button
+                      onPress={() => {
+                        setIsMatchScoreSheetVisible(false);
+                        openMatchStatsEditor();
+                      }}
+                      title={t('stMatch.score.openSheet', 'Saisir la feuille')}
+                      variant="Primary"
+                    />
+                    <Button
+                      onPress={() => setIsMatchScoreSheetVisible(false)}
+                      title={t('stMatch.score.close', 'Fermer')}
+                      variant="Secondary"
+                    />
+                  </>
+                ) : (
+                  // ponytail: « Enregistrement… » s'écrit, la roue ne tourne pas — l'atome
+                  // `Button` n'affiche que la roue OU le texte. Voie de sortie : une roue à
+                  // côté du libellé dans l'atome.
+                  <Button
+                    disabled={isMatchScoreSaving}
+                    onPress={handleSaveMatchScore}
+                    title={(() => {
+                      if (isMatchScoreSaving) return t('stMatch.score.saving', 'Enregistrement…');
+                      if (hasMatchScoreSaveError) return t('stMatch.score.retry', 'Réessayer');
+                      return t('stMatch.score.save', 'Enregistrer {{score}}', {
+                        score: `${matchScoreDraft.for} - ${matchScoreDraft.against}`,
+                        ...SANS_ECHAPPEMENT,
+                      });
+                    })()}
+                    variant="Primary"
+                  />
+                )}
+              </View>
+            </>
+          )}
         </View>
       </BottomModal>
 

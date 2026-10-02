@@ -28,7 +28,10 @@ import {
   deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
-import { saveEventMatchResult } from '@/services/matchStats/matchStatsService';
+import {
+  remindEventMatchResponses,
+  saveEventMatchResult,
+} from '@/services/matchStats/matchStatsService';
 import {
   bookFullReservation,
   joinReservation,
@@ -185,6 +188,15 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       scoreFor: variables?.scoreFor,
       teamId: variables?.teamId,
     }),
+  });
+
+  // 🎯 ST-MATCH (écran 7) — « Relancer » depuis la carte « Après le match » : la même route
+  // que l'éditeur (remind-responses) ; le serveur ne relance que les convoqués (« c oui »).
+  const remindMatchResponsesMutation = useMutation({
+    mutationFn: (/** @type {any} */ variables) => remindEventMatchResponses(
+      variables?.eventId,
+      variables?.teamId,
+    ),
   });
 
   const respondToEventRsvpMutation = useMutation({
@@ -554,6 +566,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     missingEventMutation,
     openForPlayersMutation,
     remindEventMutation,
+    remindMatchResponsesMutation,
     reportEventMutation,
     requestFeaturedMutation,
     resetAttendanceMutation,

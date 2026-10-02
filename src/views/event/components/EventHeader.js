@@ -7,6 +7,8 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
@@ -63,23 +65,6 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
 };
 
 /**
- * 🏁 N3 (D7) — LES TROIS COULEURS DU VERDICT, en jetons de theme.
- *
- * Un objet plutot que trois ternaires : la couleur du badge et celle de la
- * bordure se lisent alors au meme endroit, et un quatrieme etat (forfait,
- * report…) s'ajoute par une ligne. ⛔ Aucun hex : `verify:theme-contract`
- * les compte, y compris dans les tests.
- */
-const VERDICT_COLOR_TOKENS = {
-  draw: 'primary100',
-  loss: 'error300',
-  win: 'success500',
-};
-
-/** L'opacite de la bordure quand un verdict la colore (planche 03, cadre B). */
-const VERDICT_BORDER_ALPHA = 0.4;
-
-/**
  * @param {unknown} value
  * @returns {string}
  */
@@ -124,11 +109,18 @@ const toDisplayText = (value) => {
  *   } | null;
  *   event: any;
  *   matchScoreSummary?: {
+ *     authorLine?: string | null;
  *     awaitingOpponent?: boolean;
  *     badgeLabel?: string;
+ *     centerLabel?: string | null;
  *     helperText?: string | null;
+ *     isScoreShown?: boolean;
+ *     onEnterScore?: (() => void) | null;
  *     onNameOpponent?: (() => void) | null;
+ *     onSeeStats?: (() => void) | null;
  *     opponentName?: string;
+ *     scorersLine?: string | null;
+ *     statusLine?: { text: string, tone: 'neutral' | 'warning' } | null;
  *     value: string;
  *     verdict?: 'win' | 'draw' | 'loss' | null;
  *   } | null;
@@ -138,7 +130,6 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
-  const SpacesAny = /** @type {any} */ (Spaces);
   const { t } = useTranslation();
 
   const backgroundImage = getBackgroundImage(event?.type?.name, event?.eventFormat);
@@ -269,27 +260,16 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
     });
   };
 
-  // 🏁 N3 (D5/D6/D7) — CE QUE L'ENCART AFFICHE, calcule une fois.
-  // L'ecran fournit la DONNEE (`opponentName`, `verdict`) ; la carte fournit la
-  // MISE EN FORME. C'est la meme separation que pour l'orientation (D3), a
-  // l'envers : l'ecran sait qui regarde, la carte sait comment le dire.
-  const verdictColorToken = matchScoreSummary?.verdict
-    ? VERDICT_COLOR_TOKENS[matchScoreSummary.verdict]
-    : null;
-  const verdictColor = verdictColorToken ? Colors[verdictColorToken] : null;
-  const verdictFontStyle = verdictColorToken ? Fonts[verdictColorToken] : Fonts.primary100;
-  const verdictLabel = {
-    draw: t('eventDetails.matchCard.verdict.draw', 'Nul'),
-    loss: t('eventDetails.matchCard.verdict.loss', 'Défaite'),
-    win: t('eventDetails.matchCard.verdict.win', 'Victoire'),
-  }[matchScoreSummary?.verdict || ''] || '';
-  const badgeLabelWithVerdict = [matchScoreSummary?.badgeLabel, verdictLabel]
-    .filter(Boolean)
-    .join(' · ');
+  // 🏁 N3 (D5) / ST-MATCH (écran 1) — L'ecran fournit la DONNEE (`opponentName`,
+  // la pastille d'etape qui porte le verdict) ; la carte fournit la MISE EN FORME.
+  // ST-MATCH : le verdict ne colore plus le badge ni la bordure — il est DIT dans la
+  // pastille (« Match · terminé · victoire »), le face-à-face est celui du pack 05C.
   const opponentDisplayName = toDisplayText(matchScoreSummary?.opponentName);
-  const matchupLabel = opponentDisplayName
-    ? [clubName, opponentDisplayName].filter(Boolean).join(' — ')
-    : t('eventDetails.matchCard.opponentToConfirm', 'Adversaire à confirmer');
+  // ST-MATCH (écran 1, état 6) — l'attente du score officiel se dit en ORANGE, plus
+  // en or (l'or est réservé à la League) ; les autres attentes, en gris.
+  const statusLineColor = matchScoreSummary?.statusLine?.tone === 'warning'
+    ? Colors.warning400
+    : Colors.neutral300;
 
   return (
     <ImageBackground
@@ -313,53 +293,259 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
       ]}
     >
       {/* Header: Logo + Main label */}
-      <View
-        style={[
-          Spaces.gap[4],
-          Alignments.alignCenter,
-          Alignments.fullWidth,
-          Alignments.row,
-        ]}
-      >
-        <ClubLogoMark
-          club={eventClub}
-          logoStyle={[
-            ApplicationStyle.borderWidth1,
-            ApplicationStyle.borderColor.neutral00,
-            { borderRadius: 60 },
+      {/* 🆚 ST-MATCH (écran 1) — un match n'a plus de rangée de titre : le face-à-face,
+          plus bas, porte l'écusson et le nom du club (le camp de gauche). Les écrire
+          aussi en titre disait la même chose deux fois. */}
+      {matchScoreSummary ? null : (
+        <View
+          style={[
+            Spaces.gap[4],
+            Alignments.alignCenter,
+            Alignments.fullWidth,
+            Alignments.row,
           ]}
-          logoUrl={logoUrl}
-          name={clubName}
-          size={60}
-        />
-        <View style={[Spaces.gap[4], { maxWidth: '75%' }]}>
-          {/* N3 — un match affiche desormais son club en titre, avec ou sans
-              adversaire. Sans ce `isMatchLikeEvent`, le MEME nom de club
-              s'ecrirait en gros quand l'adversaire est connu et en petit
-              sinon : une difference de taille que rien a l'ecran n'explique. */}
-          {/* R9 — BORNE A DEUX LIGNES. La barre de navigation est transparente
-              pour toute la pile (`commonOptions.js`) et le contenu passe dessous :
-              sans limite, un titre long grimpait DANS les boutons du haut (le
-              drapeau et le ⋯), constate en recette le 24/08. */}
-          <Text
-            numberOfLines={2}
-            style={[
-              showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold,
-              Fonts.neutral00,
+        >
+          <ClubLogoMark
+            club={eventClub}
+            logoStyle={[
+              ApplicationStyle.borderWidth1,
+              ApplicationStyle.borderColor.neutral00,
+              { borderRadius: 60 },
             ]}
+            logoUrl={logoUrl}
+            name={clubName}
+            size={60}
+          />
+          <View style={[Spaces.gap[4], { maxWidth: '75%' }]}>
+            {/* N3 — un match affiche desormais son club en titre, avec ou sans
+                adversaire. Sans ce `isMatchLikeEvent`, le MEME nom de club
+                s'ecrirait en gros quand l'adversaire est connu et en petit
+                sinon : une difference de taille que rien a l'ecran n'explique. */}
+            {/* R9 — BORNE A DEUX LIGNES. La barre de navigation est transparente
+                pour toute la pile (`commonOptions.js`) et le contenu passe dessous :
+                sans limite, un titre long grimpait DANS les boutons du haut (le
+                drapeau et le ⋯), constate en recette le 24/08. */}
+            <Text
+              numberOfLines={2}
+              style={[
+                showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold,
+                Fonts.neutral00,
+              ]}
+            >
+              {headerPrimaryTitle}
+            </Text>
+            {headerSecondaryTitle ? (
+              <Text style={[Fonts.p2, Fonts.primary100]}>
+                {headerSecondaryTitle}
+              </Text>
+            ) : null}
+            {facilityName ? (
+              <View
+                style={[
+                  ApplicationStyle.borderRadius100,
+                  Alignments.selfStart,
+                  Spaces.paddingHorizontal[8],
+                  Spaces.paddingVertical[4],
+                  { backgroundColor: withAlpha(accentColor, 0.14) },
+                ]}
+              >
+                <Text style={[Fonts.p4, Fonts.neutral00]}>
+                  {facilityName}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      )}
+
+      {/* 🆚 ST-MATCH (écran 1, design des statistiques validé le 02/10) — LE FACE-À-FACE.
+          Reprise du pack « Détail d'un événement » (05C) : le score monte au centre,
+          entre les deux camps, avec « Score saisi » ou « Score officiel » dessous. La
+          pastille de type, au-dessus de la carte, porte l'étape et le verdict
+          (« MATCH · TERMINÉ · VICTOIRE »).
+          Dessous, une ligne par chose à savoir (qui a saisi, les buteurs, ce qu'on
+          attend). ⛔ L'ÉCRAN les fournit DÉJÀ FILTRÉES selon le lecteur : un visiteur
+          ne les reçoit pas, la carte n'a donc rien à oublier de cacher (mineurs en U15).
+          Retirés : le badge « Score du match · Victoire », la couleur du verdict sur la
+          bordure (la pastille dit le verdict), et le mot « manuel ». */}
+      {matchScoreSummary ? (
+        <View style={[Alignments.fullWidth, Spaces.gap[16]]} testID="event-header-match-encart">
+          <View
+            style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+            testID="event-header-face-a-face"
           >
-            {headerPrimaryTitle}
-          </Text>
-          {headerSecondaryTitle ? (
-            <Text style={[Fonts.p2, Fonts.primary100]}>
-              {headerSecondaryTitle}
+            <View
+              style={[Alignments.fill, Alignments.alignCenter, Spaces.gap[8]]}
+              testID="event-header-camp-club"
+            >
+              <ClubLogoMark club={eventClub} logoUrl={logoUrl} name={clubName} size={44} />
+              <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+                {clubName}
+              </Text>
+            </View>
+
+            <View style={[Alignments.alignCenter, { minWidth: 88 }]} testID="event-header-score">
+              <Text
+                style={[
+                  matchScoreSummary.isScoreShown ? Fonts.h1Black : Fonts.h3Black,
+                  matchScoreSummary.isScoreShown ? Fonts.neutral00 : Fonts.neutral300,
+                ]}
+              >
+                {matchScoreSummary.value}
+              </Text>
+              {matchScoreSummary.centerLabel ? (
+                <Text style={[Fonts.p4Bold, Fonts.neutral300, Fonts.uppercase]}>
+                  {matchScoreSummary.centerLabel}
+                </Text>
+              ) : null}
+            </View>
+
+            {/* D9/D10 — la PRESENCE du rappel porte le droit. Un lecteur qui n'organise
+                pas ne recoit pas `onNameOpponent` : aucun bouton n'est monte. Le camp
+                « Nommer l'adversaire » prend la MEME emprise que l'autre camp (05C). */}
+            {matchScoreSummary.onNameOpponent ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                activeOpacity={0.8}
+                onPress={matchScoreSummary.onNameOpponent}
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  Alignments.fill,
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  Spaces.gap[4],
+                  Spaces.paddingVertical[8],
+                  {
+                    borderColor: Colors.primary500,
+                    borderStyle: 'dashed',
+                    borderWidth: 1,
+                    minHeight: 92,
+                  },
+                ]}
+                testID="event-header-nommer-adversaire"
+              >
+                <Image
+                  source={Images.plus}
+                  style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.primary500]}
+                />
+                <Text style={[Fonts.p3Bold, Fonts.primary500, Fonts.textCenter]}>
+                  {t('eventDetails.matchCard.nameOpponent', 'Nommer l\'adversaire')}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View
+                style={[
+                  Alignments.fill,
+                  Alignments.alignCenter,
+                  Spaces.gap[8],
+                  // D10 — le POINTILLE dit « il manque quelque chose », sans un mot de plus.
+                  matchScoreSummary.awaitingOpponent
+                    ? [ApplicationStyle.borderRadius16, Spaces.paddingVertical[8], {
+                      borderColor: withAlpha(Colors.neutral00, 0.24),
+                      borderStyle: 'dashed',
+                      borderWidth: 1,
+                    }]
+                    : null,
+                ]}
+                testID="event-header-camp-adversaire"
+              >
+                {opponentDisplayName ? (
+                  <ClubLogoMark name={opponentDisplayName} size={44} />
+                ) : null}
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    Fonts.p2Bold,
+                    opponentDisplayName ? Fonts.neutral00 : Fonts.neutral300,
+                    Fonts.textCenter,
+                  ]}
+                >
+                  {opponentDisplayName
+                    || t('eventDetails.matchCard.opponentToConfirm', 'Adversaire à confirmer')}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {matchScoreSummary.onEnterScore ? (
+            <Button
+              onPress={matchScoreSummary.onEnterScore}
+              title={t('stMatch.encart.enterScore', 'Saisir le score')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {matchScoreSummary.statusLine ? (
+            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
+              <SvgIcon
+                color={statusLineColor}
+                height={14}
+                name="clock-two-thirty"
+                style={/** @type {any} */ (Spaces.marginTop[4])}
+                width={14}
+              />
+              <Text
+                style={[Fonts.p3, Fonts.textCenter, { color: statusLineColor, flexShrink: 1 }]}
+                testID="event-header-match-attente"
+              >
+                {matchScoreSummary.statusLine.text}
+              </Text>
+            </View>
+          ) : null}
+
+          {matchScoreSummary.authorLine ? (
+            <Text
+              style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter]}
+              testID="event-header-match-auteur"
+            >
+              {matchScoreSummary.authorLine}
             </Text>
           ) : null}
+
+          {matchScoreSummary.scorersLine ? (
+            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[4]]}>
+              <SvgIcon
+                color={Colors.neutral300}
+                height={14}
+                name="soccer-ball"
+                style={/** @type {any} */ (Spaces.marginTop[4])}
+                width={14}
+              />
+              <Text
+                style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter, { flexShrink: 1 }]}
+                testID="event-header-match-buteurs"
+              >
+                {matchScoreSummary.scorersLine}
+              </Text>
+            </View>
+          ) : null}
+
+          {matchScoreSummary.onSeeStats ? (
+            <TouchableOpacity
+              accessibilityRole="link"
+              activeOpacity={0.8}
+              onPress={matchScoreSummary.onSeeStats}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.selfCenter,
+                Spaces.gap[8],
+                { minHeight: 44 },
+              ]}
+              testID="event-header-voir-les-stats"
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('stMatch.encart.seeMatchStats', 'Voir les stats du match')}
+              </Text>
+              <SvgIcon color={Colors.primary500} height={12} name="arrow-right" width={12} />
+            </TouchableOpacity>
+          ) : null}
+
           {facilityName ? (
             <View
               style={[
                 ApplicationStyle.borderRadius100,
-                Alignments.selfStart,
+                Alignments.selfCenter,
                 Spaces.paddingHorizontal[8],
                 Spaces.paddingVertical[4],
                 { backgroundColor: withAlpha(accentColor, 0.14) },
@@ -369,74 +555,6 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                 {facilityName}
               </Text>
             </View>
-          ) : null}
-        </View>
-      </View>
-
-      {matchScoreSummary ? (
-        <View
-          style={[
-            ApplicationStyle.borderRadius24,
-            Alignments.alignCenter,
-            Spaces.paddingVertical[12],
-            SpacesAny.paddingHorizontal[18],
-            Spaces.gap[8],
-            {
-              backgroundColor: withAlpha(accentColor, 0.09),
-              borderColor: verdictColor
-                ? withAlpha(verdictColor, VERDICT_BORDER_ALPHA)
-                : withAlpha(accentColor, 0.33),
-              borderWidth: 1,
-              minWidth: 172,
-            },
-            // D10 — le POINTILLE dit « il manque quelque chose » sans ecrire un
-            // mot de plus. Un trait plein annoncerait un encart complet.
-            matchScoreSummary.awaitingOpponent ? { borderStyle: 'dashed' } : null,
-          ]}
-          testID="event-header-match-encart"
-        >
-          {/* D5 — LE FACE-A-FACE, en tete de l'encart : « Test FC — FC Bonneveine ».
-              Le tiret cadratin et AUCUN mot entre les deux noms (Q1 = C) : la
-              mise en page dit deja « contre ».
-              ⚠️ Le libelle se compose ICI et non dans l'ecran : le nom du club
-              est deja resolu a cet endroit (`clubName`), le refaire au-dessus
-              serait la meme regle ecrite deux fois. */}
-          <Text style={[Fonts.p3Bold, Fonts.neutral00, Fonts.textCenter]}>
-            {matchupLabel}
-          </Text>
-          {badgeLabelWithVerdict ? (
-            <Text style={[Fonts.p4Bold, verdictFontStyle]}>
-              {badgeLabelWithVerdict}
-            </Text>
-          ) : null}
-          <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-            {matchScoreSummary.value}
-          </Text>
-          {matchScoreSummary.helperText ? (
-            <Text style={[Fonts.p4, Fonts.primary100, Fonts.textCenter]}>
-              {matchScoreSummary.helperText}
-            </Text>
-          ) : null}
-          {/* D9/D10 — la PRESENCE du rappel porte le droit. Un lecteur qui
-              n'organise pas ne recoit pas `onNameOpponent`, donc aucun bouton
-              n'est monte : impossible d'afficher une action interdite en
-              oubliant de lire un drapeau. */}
-          {matchScoreSummary.onNameOpponent ? (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={matchScoreSummary.onNameOpponent}
-              style={[
-                ApplicationStyle.borderRadius100,
-                Spaces.paddingHorizontal[12],
-                Spaces.paddingVertical[4],
-                { backgroundColor: withAlpha(accentColor, 0.18) },
-              ]}
-              testID="event-header-nommer-adversaire"
-            >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                {t('eventDetails.matchCard.nameOpponent', 'Nommer l\'adversaire')}
-              </Text>
-            </TouchableOpacity>
           ) : null}
         </View>
       ) : null}

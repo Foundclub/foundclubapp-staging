@@ -407,6 +407,8 @@ describe('L5-A · fenetre DEJA FERMEE — le bouton ne raconte pas l ouverture',
     expect(texte).toContain('Fermé depuis 22:00');
     expect(texte).not.toContain('Ouvre à');
     expect(texte).toContain("L'appel est clos");
+    // 🐞 T9 — l'appel sert aussi aux entraînements : pas de « match » ici.
+    expect(texte).not.toContain('fin du match');
 
     // Et on ne bascule pas non plus dans le mode d appel.
     expect(texte).not.toContain('Tout le monde est là');
@@ -454,7 +456,10 @@ describe('L5-A · 2B — dans la fenetre, le depart', () => {
     const arbre = await monter();
     const texte = aplatirTexte(arbre.toJSON());
 
-    expect(texte).toContain('0 / 22');
+    // 🎯 T9 (02/10, T9_P1_2a) — ADAPTÉ : espaces INSÉCABLES dans la pastille, sans quoi
+    // Android 16 coupait « 2 / 2 » en « 2 / » (piège du gras qui perd son dernier mot).
+    expect(texte).toContain('0\u00a0/\u00a022');
+    expect(texte).not.toContain('0 / 22');
     // Le mot « APPEL » est le TITRE de l ecran, il ne disparait pas.
     expect(texte).toContain('APPEL');
 
@@ -754,7 +759,8 @@ describe('L5-A · 🔴 D7bis — l encadrant declare quelqu un absent', () => {
 
     expect(pastilles).toEqual(['attendance-dot-absent', 'attendance-dot-none']);
     // Et l absence COMPTE dans le pointage : 1 sur 2.
-    expect(texte).toContain('1 / 2');
+    // 🎯 T9 (02/10) — ADAPTÉ : la pastille est en espaces insécables (Android 16).
+    expect(texte).toContain('1\u00a0/\u00a02');
   });
 
   test('re-taper la croix DEPOINTE (D2), il ne repose pas une absence', async () => {

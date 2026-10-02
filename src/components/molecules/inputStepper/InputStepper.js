@@ -13,7 +13,12 @@ import useTheme from '@/theme/themeContext';
  * ⚠️ Ce composant est partage par 4 ecrans — la fiche Tache, les licences et
  * deux ecrans de recrutement. Changer le defaut les repeindrait tous les
  * quatre ; seul l'appelant concerne demande l'autre registre.
+ * ST-MATCH (02/10) — `decrementLabel` / `incrementLabel` : un nom pour CHAQUE bouton
+ * quand « Précédent / Suivant » ne dit pas ce qu'il fait (« Un but de plus pour
+ * AS Montrivage », la saisie du score). Absents, rien ne change pour les 4 écrans.
  * @param {object} root0 Proprietes.
+ * @param {string} [root0.decrementLabel] Nom du bouton « - » pour les lecteurs d'écran.
+ * @param {string} [root0.incrementLabel] Nom du bouton « + » pour les lecteurs d'écran.
  * @param {string} [root0.label] Intitule affiche au-dessus du compteur.
  * @param {number} [root0.max] Valeur maximale atteignable.
  * @param {number} [root0.min] Valeur minimale atteignable.
@@ -24,7 +29,8 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement} Le compteur rendu.
  */
 function InputStepper({
-  label, max = 100, min = 0, onDecrement, onIncrement, tone = 'surface', value,
+  decrementLabel, incrementLabel, label, max = 100, min = 0, onDecrement, onIncrement,
+  tone = 'surface', value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -64,7 +70,7 @@ function InputStepper({
       ]}
       >
         <TouchableOpacity
-          accessibilityLabel={`${t('common.previous')} ${label || ''}`.trim()}
+          accessibilityLabel={decrementLabel || `${t('common.previous')} ${label || ''}`.trim()}
           accessibilityRole="button"
           accessibilityState={{ disabled: value <= min }}
           disabled={value <= min}
@@ -82,7 +88,7 @@ function InputStepper({
         <Text style={[Fonts.h3, valueStyle]}>{value}</Text>
 
         <TouchableOpacity
-          accessibilityLabel={`${t('common.next')} ${label || ''}`.trim()}
+          accessibilityLabel={incrementLabel || `${t('common.next')} ${label || ''}`.trim()}
           accessibilityRole="button"
           accessibilityState={{ disabled: value >= max }}
           disabled={value >= max}

@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
 import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -451,13 +452,15 @@ describe('P9 · ecran 2 — la carte « APRES LE MATCH » sur l Apercu du site',
     expect(carte).toBeDefined();
 
     const texte = textOf(carte);
-    expect(texte).toContain('APRÈS LE MATCH');
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : la carte est PARTAGÉE avec le téléphone, ses
+    // libellés suivent le design (« Après le match · étape 2 sur 3 », « Feuille de
+    // match ») ; « saisi à la main » est retiré, sans auteur on lit le score seul.
+    expect(texte).toContain('Après le match · étape 2 sur 3');
     expect(texte).toContain('Score');
-    expect(texte).toContain('Statistiques de l’équipe');
+    expect(texte).toContain('Feuille de match');
     expect(texte).toContain('Retours des joueurs');
-    // Le score enregistre se lit avec son origine, comme sur le telephone.
     expect(texte).toContain('3 - 1');
-    expect(texte).toContain('saisi à la main');
+    expect(texte).not.toContain('saisi à la main');
     expect(texte).toContain('4 sur 12 ont répondu');
   });
 
@@ -513,8 +516,9 @@ describe('P9 · ecran 2 — la carte « APRES LE MATCH » sur l Apercu du site',
     const carte = parTestID(root, 'post-match-journey')[0];
     expect(carte).toBeDefined();
     // Le parcours designe bien l etape 1, et la carte le dit en toutes lettres.
-    expect(textOf(carte)).toContain('Étape 1 sur 3');
-    expect(textOf(carte)).toContain('À enregistrer');
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : l'étape dans le surtitre ; « À saisir ».
+    expect(textOf(carte)).toContain('Après le match · étape 1 sur 3');
+    expect(textOf(carte)).toContain('À saisir');
     // ⛔ LE POINT DU TEMOIN : le telephone ouvre ici une feuille que ce fichier
     // n a pas. Un bouton qui ne ferait RIEN serait un menteur ; il se ferme.
     expect(textOf(carte)).toContain('Le score s’enregistre depuis l’application mobile.');
@@ -653,7 +657,9 @@ describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose p
   test('🔒 le joueur lit POURQUOI la porte est fermee : le rapport est publie', () => {
     const root = mountScreen(vuDuJoueur());
 
-    expect(textOf(parTestID(root, 'post-match-journey')[0])).toContain('Rapport finalise');
+    // 🎯 T9 (02/10) — ADAPTÉ : « Rapport finalise » (sans accent) devient « Feuille publiée ».
+    expect(textOf(parTestID(root, 'post-match-journey')[0])).toContain('Feuille publiée');
+    expect(textOf(parTestID(root, 'post-match-journey')[0])).not.toContain('Rapport finalise');
   });
 
   test('PROTEGE : le COACH, rapport publie, ouvre toujours l editeur', () => {
