@@ -16,6 +16,7 @@ import {
   nombreOuTiret,
 } from '@/domains/collectivite/collectiviteClubsDisplay';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -415,6 +416,7 @@ function CollectiviteClubs() {
             ? t('collectiviteClubs.invitations.since', 'Le {{date}} · {{etat}}', {
               date,
               etat: etat.ligne,
+              ...SANS_ECHAPPEMENT,
             })
             : etat.ligne}
         </Text>

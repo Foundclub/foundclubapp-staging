@@ -31,7 +31,10 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
   it('seules celles dont l écran EXISTE sont affichées, et leur route est une vraie route', () => {
     const affichees = availableHomeActions();
     // COLL-C4A (02/10) : « Publier une actualité » a son écran.
-    expect(affichees.map((action) => action.key)).toEqual(['publishNews', 'addInstallation']);
+    // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » aussi.
+    expect(affichees.map((action) => action.key)).toEqual([
+      'publishNews', 'closeInstallation', 'blockSlot', 'addInstallation',
+    ]);
     affichees.forEach((action) => {
       expect(RouteNames[/** @type {keyof typeof RouteNames} */ (action.route)]).toBe(action.route);
     });

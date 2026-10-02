@@ -328,7 +328,10 @@ describe('la feuille de decalage', () => {
     ouvrir(arbre, 0);
     act(() => { rangees(arbre)[0].props.onPress(); });
 
-    expect(pied(arbre).props.title).toBe('training.postpone.confirm|{"date":"lun. 7 sept."}');
+    // COLL-FIX-PLANNING (T9_C37_3) : une date interpolee porte SANS_ECHAPPEMENT (pas de &#x2F;).
+    expect(pied(arbre).props.title).toBe(
+      'training.postpone.confirm|{"date":"lun. 7 sept.","interpolation":{"escapeValue":false}}',
+    );
   });
 
   it('ANNONCE la nouvelle date de fin du programme AVANT le geste', () => {

@@ -348,9 +348,9 @@ function CollectiviteRequests() {
     if (date) {
       prevenu = acceptee
         // eslint-disable-next-line max-len
-        ? t('collectiviteDemandes.traitee.prevenuAcceptee', 'Le club a été prévenu · acceptée le {{date}}', { date })
+        ? t('collectiviteDemandes.traitee.prevenuAcceptee', 'Le club a été prévenu · acceptée le {{date}}', { date, ...SANS_ECHAPPEMENT })
         // eslint-disable-next-line max-len
-        : t('collectiviteDemandes.traitee.prevenuRefusee', 'Le club a été prévenu · refusée le {{date}}', { date });
+        : t('collectiviteDemandes.traitee.prevenuRefusee', 'Le club a été prévenu · refusée le {{date}}', { date, ...SANS_ECHAPPEMENT });
     }
     return (
       <View

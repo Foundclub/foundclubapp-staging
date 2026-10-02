@@ -35,6 +35,8 @@ let mockParams;
 let mockUserData;
 /** @type {any} */
 let mockActualites;
+/** @type {any} */
+let mockFermetures;
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 
@@ -107,6 +109,11 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 // doublés ici (une liste pilotée par mockActualites, vide par défaut).
 jest.mock('@/services/collectivite/collectiviteActualiteQueries', () => ({
   useCollectiviteActualites: () => mockActualites,
+}));
+
+// COLL-C4B (02/10) — « Fermeture a venir » lit le serveur : double ici (vide par defaut).
+jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
+  useCollectiviteClosures: () => mockFermetures,
 }));
 
 jest.mock('@/services/facility/facilityQueries', () => ({
@@ -246,6 +253,7 @@ beforeEach(() => {
   mockInstallations = lu([TILLEULS, DOJO]);
   mockClubs = lu(CLUBS);
   mockActualites = lu([]);
+  mockFermetures = lu({ data: [] });
   mockSemaine = [
     {
       installation: TILLEULS,
@@ -342,9 +350,11 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(lus).toContain('Ajouter une installation');
     // COLL-C4A (02/10) : « Publier une actualité » a son écran (« Nouvelle actualité »).
     expect(lus).toContain('Publier une actualité');
-    // Leurs écrans n'existent pas encore (lots C2a/C2b, C4b, C-CLUBS) : aucun bouton mort.
-    ['Attribuer un créneau', 'Fermer une installation',
-      'Bloquer un créneau', 'Inviter un club'].forEach((action) => {
+    // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » ont leur écran.
+    expect(lus).toContain('Fermer une installation');
+    expect(lus).toContain('Bloquer un créneau');
+    // Leurs écrans n'existent pas encore (lots C2a/C2b, C-CLUBS) : aucun bouton mort.
+    ['Attribuer un créneau', 'Inviter un club'].forEach((action) => {
       expect(lus).not.toContain(action);
     });
     await appuyer(arbre, 'collectivite-home-action-publishNews');
@@ -503,5 +513,68 @@ describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve'
   it('le mot d accueil se lit à la PREMIÈRE visite, puis plus jamais', async () => {
     expect(textes(await monter())).toContain('Bienvenue dans votre espace.');
     expect(textes(await monter())).not.toContain('Bienvenue dans votre espace.');
+  });
+});
+
+// 🚧 COLL-C4B (02/10/2026) — « FERMETURE A VENIR » (P3v2-accueil : « en haut, la plus ancienne
+// demande a trancher et les fermetures a venir ») et les deux actions « Fermer une installation »,
+// « Bloquer un créneau » (design HY521H1 page 4). ROUGES avant le lot.
+describe('COLL-C4B — « Fermeture à venir » et les deux actions de fermeture', () => {
+  const FERMETURE = {
+    documentId: 'f1',
+    endDate: '2030-10-04',
+    endTime: null,
+    facility: { documentId: 'tilleuls', name: 'Gymnase des Tilleuls' },
+    kind: 'closure',
+    reason: 'travaux',
+    startDate: '2030-10-04',
+    startTime: null,
+  };
+  const BLOCAGE = {
+    documentId: 'f2',
+    endDate: '2030-10-05',
+    endTime: '13:00',
+    facility: { documentId: 'dojo', name: 'Dojo municipal' },
+    kind: 'block',
+    label: 'Forum des associations',
+    reason: null,
+    startDate: '2030-10-05',
+    startTime: '09:00',
+  };
+
+  it('les fermetures à venir s ajoutent à « Ce qui vous attend » ; chacune s ouvre', async () => {
+    mockFermetures = lu({ data: [FERMETURE, BLOCAGE] });
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus.filter((texte) => texte === 'Fermeture à venir')).toHaveLength(2);
+    expect(lus).toContain('Gymnase des Tilleuls');
+    expect(lus).toContain('ven. 4 oct. · Toute la journée · Fermeture · travaux');
+    expect(lus).toContain('sam. 5 oct. · 09:00 – 13:00 · Blocage · Ville');
+    await appuyer(arbre, 'collectivite-home-fermeture-f1');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'tilleuls', onglet: 'fermetures',
+    });
+  });
+
+  it('aucune demande, une fermeture : le bloc, sans « Rien ne vous attend »', async () => {
+    mockRequetes = lu([]);
+    mockFermetures = lu({ data: [FERMETURE] });
+    const lus = textes(await monter());
+    expect(lus).toContain('Ce qui vous attend');
+    expect(lus).toContain('Fermeture à venir');
+    const calme = 'Rien ne vous attend : aucune demande, aucune fermeture prévue.';
+    expect(lus).not.toContain(calme);
+  });
+
+  it('« Fermer une installation » et « Bloquer un créneau » ouvrent le formulaire', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'collectivite-home-action-closeInstallation');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteFermeture', {
+      collectiviteId: 'ville-montrivage', mode: 'fermer',
+    });
+    await appuyer(arbre, 'collectivite-home-action-blockSlot');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteFermeture', {
+      collectiviteId: 'ville-montrivage', mode: 'bloquer',
+    });
   });
 });

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -291,7 +292,10 @@ function TrainingSessions({ navigation, route }) {
       <BottomModal close={fermer} isVisible={Boolean(aDecaler)}>
         <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
           <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-            {t('training.postpone.title', { date: formatSessionDate(aDecaler?.plannedDate) })}
+            {t('training.postpone.title', {
+              date: formatSessionDate(aDecaler?.plannedDate),
+              ...SANS_ECHAPPEMENT,
+            })}
           </Text>
 
           {/*
@@ -365,7 +369,7 @@ function TrainingSessions({ navigation, route }) {
           {choix !== 'skip' && dateChoisie && (
             <Text style={[Fonts.caption, { color: Colors.neutral300 }]}>
               {finApres
-                ? t('training.postpone.consequence', { date: finApres })
+                ? t('training.postpone.consequence', { date: finApres, ...SANS_ECHAPPEMENT })
                 : t('training.postpone.consequenceAlone')}
             </Text>
           )}
@@ -380,6 +384,7 @@ function TrainingSessions({ navigation, route }) {
               ? t('training.postpone.confirmSkip')
               : t('training.postpone.confirm', {
                 date: dateChoisie ? formatSessionDate(dateChoisie) : '…',
+                ...SANS_ECHAPPEMENT,
               })}
             variant={choix === 'skip' ? 'Secondary' : 'Primary'}
           />

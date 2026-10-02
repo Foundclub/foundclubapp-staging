@@ -13,6 +13,7 @@ import {
   useGetFacility,
   useGetFacilityAvailability,
 } from '@/services/facility/facilityQueries';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 import { getEntityDocumentId } from '@/utils/entityId';
 import { getShortAddress, normalizeLocationInput } from '@/utils/location';
@@ -459,7 +460,7 @@ function BookingCalendar({ navigation, route }) {
                     ? t(
                       'bookingCalendar.web.finalize',
                       'Finalise ta réservation du {{date}}.',
-                      { date: formatFullDate(selectedDate) },
+                      { date: formatFullDate(selectedDate), ...SANS_ECHAPPEMENT },
                     )
                     : t(
                       'bookingCalendar.web.selectSlot',

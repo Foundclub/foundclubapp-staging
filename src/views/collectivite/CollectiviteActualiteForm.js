@@ -52,6 +52,7 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { createLogger } from '@/utils/logger/logger';
 
 import MediaPlatform from '@/platform/media';
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
@@ -63,6 +64,9 @@ import { useIsDesktop } from '@/responsive';
  * @returns {boolean} Vrai pour une annulation.
  */
 const estAnnulation = (erreur) => /cancel/i.test(String(erreur?.code || erreur?.message || ''));
+
+// T9 (C18) : l'échec d'une pièce jointe ne disait que « Réessayez » — sa cause part au journal.
+const journal = createLogger('collectivite-actualite');
 
 /**
  * 📰 PUBLIER (OU MODIFIER) UNE ACTUALITÉ DE LA VILLE — COLL-C4A (02/10/2026).
@@ -147,11 +151,17 @@ function CollectiviteActualiteForm() {
 
   const ajouterPiece = async (/** @type {'photos' | 'camera' | 'document'} */ cle) => {
     setFeuille(false);
+    // T9 (C18) : un nouvel essai efface le message d'un échec précédent.
+    setErreurServeur('');
     if (pieces.length >= ACTUALITE_ATTACHMENTS_MAX) return;
     try {
       let choisi = null;
       if (cle === 'document') {
-        choisi = await MediaPlatform.pickDocument(getDocumentPickerOptions());
+        // T9 (C18) : la COPIE du document part, comme dans la messagerie (platform/media).
+        choisi = await MediaPlatform.pickDocument({
+          ...getDocumentPickerOptions(),
+          localCopy: true,
+        });
       } else if (cle === 'camera') {
         if (Platform.OS === 'android') {
           const accord = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
@@ -167,6 +177,7 @@ function CollectiviteActualiteForm() {
       if (fichier?.id) setPieces((avant) => [...avant, fichier]);
     } catch (erreur) {
       if (!estAnnulation(erreur)) {
+        journal.warn('Piece jointe non envoyee', erreur);
         setErreurServeur(t(
           'collectiviteActualites.form.pieceEchec',
           'La pièce jointe n’a pas pu être envoyée. Réessayez.',

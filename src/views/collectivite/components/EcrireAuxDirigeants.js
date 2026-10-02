@@ -20,6 +20,20 @@ import {
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
+ * La navigation de l'écran, ou `null` hors navigation (une fenêtre du bas, voir plus bas).
+ * L'appel reste INCONDITIONNEL — même motif que `useIsFocusedSafely` (hooks/useMarqueeLoop.js) :
+ * l'absence de navigateur ne change pas pendant la vie du composant, ni l'ordre des crochets.
+ * @returns {unknown} La navigation, ou null.
+ */
+const useNavigationSiPresente = () => {
+  try {
+    return useNavigation();
+  } catch {
+    return null;
+  }
+};
+
+/**
  * 🏛️ « ÉCRIRE AUX DIRIGEANTS » — COLL-C4A2 (02/10/2026), décision d'Adel « écrire A » (D73) :
  * une conversation PRIVÉE entre la Ville et les dirigeants de CE club (design HY521H1 page 3,
  * P3c-canal-tel écran 8). Ce qui concerne un seul club (sa fiche, ses demandes, son offre) n'a
@@ -35,22 +49,33 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * Un appel direct au service, sans react-query : le bouton se pose sur des écrans (fiche du
  * club, liste, planning) dont les témoins n'ont pas de client de requêtes. « Demander au club de
  * compléter sa fiche » ouvre la MÊME conversation, avec une phrase prête à envoyer.
+ *
+ * Posé sur la fiche d'un club (côté mairie), sur chaque carte de « Clubs rattachés » et dans la
+ * fiche d'un bloc du planning d'une installation de la Ville.
+ *
+ * 🐞 COLL-FIX-PLANNING (G4, tournée T9) : la fiche d'un bloc du planning est une fenêtre du bas
+ * (BottomModal), affichée par un PORTAIL posé AU-DESSUS du NavigationContainer
+ * (src/app/AppProviders.native.js). Là, `useNavigation()` JETTE (« Couldn't find a navigation
+ * object ») : écran rouge en développement, plantage en production. L'écran qui le pose dans une
+ * fenêtre lui passe donc SA navigation (`navigation`) ; sans navigation du tout, rien.
  * @param {{ club: { documentId?: string, name?: string } | null | undefined,
  *   collectiviteId: string | null | undefined, compact?: boolean, demanderFiche?: boolean,
- *   testID?: string }} props
- * @returns {import('react').ReactElement | null} Le bouton, ou rien sans club ni Ville.
+ *   navigation?: { navigate: Function } | null, testID?: string }} props
+ * @returns {import('react').ReactElement | null} Le bouton, ou rien sans club, Ville ou navigation.
  */
 function EcrireAuxDirigeants({
-  club, collectiviteId, compact = false, demanderFiche = false, testID = 'ecrire-aux-dirigeants',
+  club, collectiviteId, compact = false, demanderFiche = false, navigation: navigationRecue = null,
+  testID = 'ecrire-aux-dirigeants',
 }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
-  const navigation = /** @type {any} */ (useNavigation());
+  const navigationDeLEcran = useNavigationSiPresente();
+  const navigation = /** @type {any} */ (navigationRecue || navigationDeLEcran);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState(/** @type {unknown} */ (null));
   // null : le bouton ; un texte : le premier message, en cours d'écriture.
   const [premierMessage, setPremierMessage] = useState(/** @type {string | null} */ (null));
-  if (!club?.documentId || !collectiviteId) return null;
+  if (!club?.documentId || !collectiviteId || !navigation) return null;
 
   const ids = { clubId: String(club.documentId), collectiviteId: String(collectiviteId) };
   const brouillon = demanderFiche ? t(

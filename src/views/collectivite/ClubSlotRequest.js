@@ -337,9 +337,9 @@ function ClubSlotRequest() {
         <Text style={[Fonts.p2Bold, Fonts.error500]}>
           {horsHeures.cas === 'ferme'
             // eslint-disable-next-line max-len
-            ? t('collectiviteDemandes.club.ferme', 'L’installation ferme à {{heure}}. Termine à {{heure}}, ou commence plus tôt.', { heure })
+            ? t('collectiviteDemandes.club.ferme', 'L’installation ferme à {{heure}}. Termine à {{heure}}, ou commence plus tôt.', { heure, ...SANS_ECHAPPEMENT })
             // eslint-disable-next-line max-len
-            : t('collectiviteDemandes.club.ouvre', 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.', { heure })}
+            : t('collectiviteDemandes.club.ouvre', 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.', { heure, ...SANS_ECHAPPEMENT })}
         </Text>
       </View>
     );

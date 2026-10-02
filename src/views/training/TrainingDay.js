@@ -12,6 +12,7 @@ import {
 
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -389,7 +390,7 @@ function TrainingDay({ navigation, route }) {
       })
       : '';
     const lieu = day?.place ? String(day.place).toLowerCase() : '';
-    if (date && lieu) return t('training.day.heading', { date, place: lieu });
+    if (date && lieu) return t('training.day.heading', { date, place: lieu, ...SANS_ECHAPPEMENT });
     return date || lieu;
   }, [day, session, t]);
 
@@ -857,6 +858,7 @@ function TrainingDay({ navigation, route }) {
                     onPress={() => navigation.navigate(RouteNames.TrainingPlan)}
                     title={t('training.day.later', {
                       date: formatSessionDate(session?.plannedDate),
+                      ...SANS_ECHAPPEMENT,
                     })}
                     variant="Ghost"
                   />

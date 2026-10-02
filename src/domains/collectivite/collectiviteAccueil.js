@@ -31,12 +31,20 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
   {
     icon: 'send', key: 'publishNews', lot: 'C4a', route: 'CollectiviteActualiteForm',
   },
-  // Fermer une installation, bloquer un créneau (lot C4b).
+  // Fermer une installation, bloquer un créneau (lot C4b, 02/10 : le formulaire de la fermeture).
   {
-    icon: 'close', key: 'closeInstallation', lot: 'C4b', route: null,
+    icon: 'close',
+    key: 'closeInstallation',
+    lot: 'C4b',
+    params: { mode: 'fermer' },
+    route: 'CollectiviteFermeture',
   },
   {
-    icon: 'flag', key: 'blockSlot', lot: 'C4b', route: null,
+    icon: 'flag',
+    key: 'blockSlot',
+    lot: 'C4b',
+    params: { mode: 'bloquer' },
+    route: 'CollectiviteFermeture',
   },
   // Inviter un club absent de FoundClub (lot C-CLUBS).
   {

@@ -2,6 +2,7 @@ import i18next from 'i18next';
 
 import { storage } from '@/store/appContext';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import {
   getDocumentPreviewText,
@@ -108,7 +109,7 @@ export const getConversationName = ({
           ? i18next.t(
             'messagingUseCases.conversationName.leagueMatchOn',
             'Match du {{date}}',
-            { date },
+            { date, ...SANS_ECHAPPEMENT },
           )
           : i18next.t('messagingUseCases.conversationName.leagueMatch', 'Match de Ligue');
       }

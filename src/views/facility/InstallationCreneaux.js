@@ -30,7 +30,9 @@ import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -41,6 +43,7 @@ import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
 } from '@/services/collectivite/collectiviteQueries';
+import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   useFacilitySeasonSlots,
   useRestoreSeasonSlot,
@@ -57,7 +60,10 @@ const LIGNE_D_INFO = /** @type {const} */ ({
   flexDirection: 'row', gap: 12, justifyContent: 'space-between',
 });
 const LIGNE_DE_SAISON = /** @type {const} */ ({ gap: 8, justifyContent: 'space-between' });
-const ONGLETS = { creneaux: 'creneaux', infos: 'infos', planning: 'planning' };
+// COLL-C4B (02/10) : + « Fermetures » (design P4v3-fermer, ecran 6).
+const ONGLETS = {
+  creneaux: 'creneaux', fermetures: 'fermetures', infos: 'infos', planning: 'planning',
+};
 
 /**
  * Un jour civil « AAAA-MM-JJ » en « 1 sept. » (pour « du 1 sept. au 30 juin »).
@@ -185,7 +191,10 @@ function InstallationCreneaux() {
     navigation.setOptions?.({ headerTitle: '' });
   }, [navigation]);
 
-  const [onglet, setOnglet] = useState(ONGLETS.creneaux);
+  // COLL-C4B : l accueil de la Ville (« Fermeture a venir ») ouvre l onglet « Fermetures ».
+  const [onglet, setOnglet] = useState(
+    params.onglet === ONGLETS.fermetures ? ONGLETS.fermetures : ONGLETS.creneaux,
+  );
   // Ce qui est ouvert : « attribuer » (avec un jour pre-rempli), « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
 
@@ -195,6 +204,9 @@ function InstallationCreneaux() {
   const canManage = meta.canManage === true;
   const retires = useFacilitySeasonSlots(facilityId, 'withdrawn', { enabled: canManage });
   const clubs = useCollectiviteClubs(canManage ? collectiviteId : null);
+  // COLL-C4B (02/10) — le bandeau de la fiche, tant que la fermeture dure ou approche (P3b).
+  const fermeturesDeLInstallation = useFacilityClosures(facilityId);
+  const bandeau = fermeturesDeLInstallation.data?.meta?.bandeau || null;
 
   const ligne = (Array.isArray(installations.data) ? installations.data : [])
     .find((installation) => installation?.documentId === facilityId) || null;
@@ -223,6 +235,16 @@ function InstallationCreneaux() {
       return;
     }
     setOnglet(valeur);
+  };
+
+  // COLL-C4B (02/10) — fermer, bloquer, modifier : le formulaire plein ecran (P4v3-fermer).
+  const ouvrirLaFermeture = (/** @type {Record<string, any>} */ extra) => {
+    navigation.navigate(RouteNames.CollectiviteFermeture, {
+      collectiviteId,
+      facilityId,
+      facilityName: nom || null,
+      ...extra,
+    });
   };
 
   const metaLigne = [
@@ -507,6 +529,8 @@ function InstallationCreneaux() {
         {metaLigne ? <Text style={[Fonts.p2, Fonts.neutral200]}>{metaLigne}</Text> : null}
       </View>
 
+      <FacilityClosureBanner closure={bandeau} testID="installation-bandeau-fermeture" withDays />
+
       <SegmentedControl
         onChange={choisirOnglet}
         options={[
@@ -515,12 +539,25 @@ function InstallationCreneaux() {
             label: t('collectiviteCreneaux.creneaux.ongletPlanning', 'Planning'),
             value: ONGLETS.planning,
           },
+          {
+            label: t('collectiviteFermetures.liste.onglet', 'Fermetures'),
+            value: ONGLETS.fermetures,
+          },
           { label: t('collectiviteCreneaux.creneaux.ongletInfos', 'Infos'), value: ONGLETS.infos },
         ]}
         value={onglet}
       />
 
-      {onglet === ONGLETS.infos ? ongletInfos : (
+      {onglet === ONGLETS.fermetures ? (
+        <FacilityClosureList
+          facilityId={facilityId}
+          onBlock={() => ouvrirLaFermeture({ mode: 'bloquer' })}
+          onClose={() => ouvrirLaFermeture({ mode: 'fermer' })}
+          onModify={(fermeture) => ouvrirLaFermeture({ closureId: fermeture.documentId })}
+        />
+      ) : null}
+      {onglet === ONGLETS.infos ? ongletInfos : null}
+      {onglet === ONGLETS.creneaux ? (
         <View style={{ gap: 12 }}>
           {annees ? (
             <View style={[Alignments.row, Alignments.alignCenter, LIGNE_DE_SAISON]}>
@@ -558,7 +595,7 @@ function InstallationCreneaux() {
             </View>
           ) : null}
         </View>
-      )}
+      ) : null}
     </View>
   );
 
