@@ -424,12 +424,18 @@ describe('D39 · temoin 1 — un compte JOUEUR ne voit aucun bloc de coach', () 
 
     // Les six valeurs de la rangee compacte, avec leurs accents corriges :
     // le pack interdit « Passes D » et « Defaites ».
-    expect(texte).toContain('Matchs');
-    expect(texte).toContain('Victoires');
-    expect(texte).toContain('Défaites');
+    // ST-VUES (02/10, planche 16 du design valide) : « Victoires » et « Défaites »
+    // separees deviennent UNE case « V · N · D » qui compte aussi les nuls (note
+    // « retiré » de la planche : « Défaites » seules, sans les nuls).
+    // ⚠️ La doublure de traduction de CE banc ne decline pas le pluriel (« Match »
+    // pour 24) : « Matchs », « Buts », « Passes déc. » au pluriel sont prouves par
+    // MyStats.ST-VUES.test.js, sur la doublure francaise ; « Passes D » reste interdit
+    // partout par statsLabelAbbreviation.test.js. Ici : les VALEURS et le titre.
+    expect(texte).toContain('Ma saison · football');
+    expect(texte).toContain('V · N · D');
+    expect(texte).toContain('14·0·7');
     expect(texte).toContain('Minutes');
-    expect(texte).toContain('Buts');
-    expect(texte).toContain('Passes déc.');
+    expect(texte).toContain('1620');
     expect(texte).toContain('24');
     // Les deux rangees de « Suivi » qui remplacent les blocs de D06.
     expect(texte).toContain('Retours du coach');

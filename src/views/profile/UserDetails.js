@@ -1,12 +1,7 @@
 // @ts-nocheck
 import { differenceInYears, format } from 'date-fns';
 import i18next from 'i18next';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -30,7 +25,6 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
-import TabButton from '@/components/atoms/tabButton/TabButton';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -38,6 +32,8 @@ import UserHistorySection from '@/components/organisms/userHistorySection/UserHi
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
+import MyStatsPage from '@/views/profile/stats/MyStatsPage';
+import ProfileStatsForViewer from '@/views/profile/stats/ProfileStatsForViewer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -54,28 +50,10 @@ import {
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
 
-import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage } from '@/utils/errors/displayError';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 import { PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
-
-const resolveProfileStatValue = ({
-  overallValue,
-  selectedStatsSport,
-  sportValue,
-  teamValue,
-}) => {
-  if (teamValue !== null && teamValue !== undefined) {
-    return Number(teamValue || 0);
-  }
-
-  if (selectedStatsSport === 'all') {
-    return Number(overallValue || 0);
-  }
-
-  return Number(sportValue || 0);
-};
 
 const isFlagEnabled = (rawValue, defaultValue = false) => {
   if (rawValue === undefined || rawValue === null || rawValue === '') return defaultValue;
@@ -492,8 +470,6 @@ function UserDetails({ navigation, route }) {
   // d'edition n'y survit (l'historique suivait encore `isSelfProfile`).
   const isSelfPreview = isSelfProfile && isPreview;
   const targetUserId = requestedUserId || currentUserId;
-  const [selectedStatsSport, setSelectedStatsSport] = useState('all');
-  const [selectedStatsTeamKey, setSelectedStatsTeamKey] = useState('all');
 
   const {
     data: fetchedUser,
@@ -523,6 +499,10 @@ function UserDetails({ navigation, route }) {
   // l'obtiennent — et le serveur leur refuse ces donnees (`getPersonalStats` : 403).
   const isCoachFeedbackView = (isOwnerView || isParentOfMinorViewer)
     && route?.params?.view === 'coachFeedback';
+  // ST-VUES (planche 16, etats 4 et 5) — « Suivi › Mes stats » et « Tout voir » de
+  // « Ma saison » ouvrent la page « Mes stats », sur la route du profil, comme les
+  // retours du coach : aucune route neuve. Le proprietaire seulement.
+  const isMyStatsView = isOwnerView && route?.params?.view === 'myStats';
 
   const { refetch: refetchOwnHistories } = useGetMyHistories({
     enabled: isSelfProfile,
@@ -610,9 +590,6 @@ function UserDetails({ navigation, route }) {
     unblockTargetUser(targetUserId);
   }, [targetUserId, unblockTargetUser]);
 
-  // Au parent, le serveur ne rend QUE les retours : les statistiques restent a
-  // l'enfant, comme pour un tiers — on le dit au lieu d'afficher des zeros.
-  const areMatchStatsPrivate = isAccessRefusalError(personalStatsError) || isParentOfMinorViewer;
   const isCompactScreen = screenWidth <= 375;
   const scrollBottomPadding = canContact || canBlock ? insets.bottom + 128 : insets.bottom + 24;
 
@@ -633,121 +610,6 @@ function UserDetails({ navigation, route }) {
   const bestLevelValue = toTextLabel(user?.bestLevel);
 
   const addressLabel = useMemo(() => parseAddressLabel(user?.address), [user?.address]);
-  const availableStatSports = useMemo(() => {
-    const sports = Array.isArray(personalStats?.bySport) ? personalStats.bySport : [];
-    return sports.map((entry) => entry?.sport).filter(Boolean);
-  }, [personalStats?.bySport]);
-  const filteredPersonalTeamStats = useMemo(() => {
-    const items = Array.isArray(personalStats?.byTeam) ? personalStats.byTeam : [];
-    if (selectedStatsSport === 'all') return items;
-    return items.filter((entry) => entry?.sport === selectedStatsSport);
-  }, [personalStats?.byTeam, selectedStatsSport]);
-  const availableStatTeams = useMemo(() => {
-    const seen = new Set();
-    return filteredPersonalTeamStats.reduce((accumulator, entry) => {
-      const key = `${entry?.teamType || 'team'}:${entry?.teamDocumentId || entry?.teamName || 'team'}`;
-      if (seen.has(key)) return accumulator;
-      seen.add(key);
-      accumulator.push({
-        key,
-        label: entry?.teamName || i18next.t('userDetails.stats.teamFallback', 'Equipe'),
-      });
-      return accumulator;
-    }, []);
-  }, [filteredPersonalTeamStats]);
-  const filteredStatsByTeamSelection = useMemo(() => {
-    if (selectedStatsTeamKey === 'all') return filteredPersonalTeamStats;
-
-    return filteredPersonalTeamStats.filter((entry) => (
-      `${entry?.teamType || 'team'}:${entry?.teamDocumentId || entry?.teamName || 'team'}`
-      === selectedStatsTeamKey
-    ));
-  }, [filteredPersonalTeamStats, selectedStatsTeamKey]);
-  const selectedTeamSummary = useMemo(
-    () => (selectedStatsTeamKey === 'all' ? null : filteredStatsByTeamSelection[0] || null),
-    [filteredStatsByTeamSelection, selectedStatsTeamKey],
-  );
-  const filteredSportSummary = useMemo(() => {
-    if (selectedStatsSport === 'all') return null;
-    const items = Array.isArray(personalStats?.bySport) ? personalStats.bySport : [];
-    return items.find((entry) => entry?.sport === selectedStatsSport) || null;
-  }, [personalStats?.bySport, selectedStatsSport]);
-  const profileSummaryCards = useMemo(() => {
-    const matches = resolveProfileStatValue({
-      overallValue: personalStats?.overall?.matches,
-      selectedStatsSport,
-      sportValue: filteredSportSummary?.matches,
-      teamValue: selectedTeamSummary?.matches,
-    });
-    const wins = resolveProfileStatValue({
-      overallValue: personalStats?.overall?.wins,
-      selectedStatsSport,
-      sportValue: filteredSportSummary?.wins,
-      teamValue: selectedTeamSummary?.wins,
-    });
-    const losses = resolveProfileStatValue({
-      overallValue: personalStats?.overall?.losses,
-      selectedStatsSport,
-      sportValue: filteredSportSummary?.losses,
-      teamValue: selectedTeamSummary?.losses,
-    });
-    const minutes = resolveProfileStatValue({
-      overallValue: personalStats?.overall?.minutesPlayed,
-      selectedStatsSport,
-      sportValue: filteredSportSummary?.minutesPlayed,
-      teamValue: selectedTeamSummary?.minutesPlayed,
-    });
-    const primaryLabel = selectedStatsSport === 'basketball' ? i18next.t(
-      'userDetails.stats.points',
-      'Points',
-    ) : i18next.t(
-      'userDetails.stats.goals',
-      'Buts',
-    );
-    let primaryValue;
-    if (selectedTeamSummary) {
-      primaryValue = Number(
-        selectedTeamSummary?.sport === 'basketball'
-          ? selectedTeamSummary?.points || 0
-          : selectedTeamSummary?.goals || 0,
-      );
-    } else {
-      primaryValue = resolveProfileStatValue({
-        overallValue: personalStats?.overall?.football?.goals,
-        selectedStatsSport,
-        sportValue: selectedStatsSport === 'basketball'
-          ? filteredSportSummary?.points
-          : filteredSportSummary?.goals,
-      });
-    }
-    const assists = resolveProfileStatValue({
-      overallValue: personalStats?.overall?.football?.assists,
-      selectedStatsSport,
-      sportValue: filteredSportSummary?.assists,
-      teamValue: selectedTeamSummary?.assists,
-    });
-
-    return [
-      { label: i18next.t('userDetails.stats.matches', 'Matchs'), value: matches },
-      { label: i18next.t('userDetails.stats.wins', 'Victoires'), value: wins },
-      { label: i18next.t('userDetails.stats.losses', 'Défaites'), value: losses },
-      { label: i18next.t('userDetails.stats.minutes', 'Minutes'), value: minutes },
-      { label: primaryLabel, value: primaryValue },
-      // D54 — le pack l'ecrit noir sur blanc : « Passes decisives », jamais
-      // « Passes D ». Un libelle systeme ne se tronque pas.
-      { label: i18next.t('userDetails.stats.assistsLong', 'Passes décisives'), value: assists },
-    ];
-  }, [
-    filteredSportSummary,
-    personalStats?.overall?.football?.assists,
-    personalStats?.overall?.football?.goals,
-    personalStats?.overall?.losses,
-    personalStats?.overall?.matches,
-    personalStats?.overall?.minutesPlayed,
-    personalStats?.overall?.wins,
-    selectedStatsSport,
-    selectedTeamSummary,
-  ]);
   // A19 — la liste ENTIERE (le serveur en rend 10 au plus) : c'est ce nombre
   // que la ligne « Suivi › Retours du coach » annonce, sa vue doit le tenir.
   // Le bloc proprietaire plus bas en garde toujours les 5 premiers.
@@ -761,7 +623,6 @@ function UserDetails({ navigation, route }) {
     return [];
   }, [personalStats?.coachComments, personalStats?.recentCoachFeedback]);
   const recentCoachFeedback = useMemo(() => coachFeedback.slice(0, 5), [coachFeedback]);
-  const shouldShowSportFilter = availableStatSports.length > 1;
 
   const coachedTeams = useMemo(() => {
     const teams = Array.isArray(user?.trainedTeams) ? user.trainedTeams : [];
@@ -799,17 +660,14 @@ function UserDetails({ navigation, route }) {
   }, [coachedTeamIds, user?.myTeams]);
   const shouldShowTeamsSection = isOwnerView || playerTeams.length > 0 || coachedTeams.length > 0;
 
-  useEffect(() => {
-    if (selectedStatsSport === 'all') return;
-    if (availableStatSports.includes(selectedStatsSport)) return;
-    setSelectedStatsSport('all');
-  }, [availableStatSports, selectedStatsSport]);
-
-  useEffect(() => {
-    if (selectedStatsTeamKey === 'all') return;
-    if (availableStatTeams.some((entry) => entry.key === selectedStatsTeamKey)) return;
-    setSelectedStatsTeamKey('all');
-  }, [availableStatTeams, selectedStatsTeamKey]);
+  // ST-VUES (planche 17, etat 4) — le squelette de la carte d equipe ne se montre qu a
+  // celui qui POURRAIT etre son entraineur : un autre ne verrait qu une forme disparaitre.
+  const mayCoachThisPlayer = useMemo(() => {
+    if (isSelfProfile) return false;
+    const coached = new Set((Array.isArray(currentUser?.trainedTeams) ? currentUser.trainedTeams : [])
+      .map((team) => toComparableId(team?.documentId)).filter(Boolean));
+    return playerTeams.some((team) => coached.has(toComparableId(team?.documentId)));
+  }, [currentUser?.trainedTeams, isSelfProfile, playerTeams]);
 
   const handleRefresh = useCallback(() => {
     if (isSelfProfile) {
@@ -965,6 +823,40 @@ function UserDetails({ navigation, route }) {
   // seule page d'ou les retours sont retires (ils sont prives), et le bloc
   // proprietaire plus bas n'etait plus atteint par un joueur depuis D39.
   // Placee APRES tous les hooks, comme l'aiguillage qui suit.
+  // ST-VUES — LA PAGE « MES STATS ». Placee apres tous les hooks, comme la vue
+  // des retours du coach qui la suit.
+  if (isMyStatsView) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[0], Alignments.column, Alignments.fill]}
+      >
+        <Text style={[Fonts.h3Bold, Fonts.neutral00, { alignSelf: 'stretch', textAlign: 'center' }]}>
+          {t('myStats.pageTitle', 'Mes stats').toUpperCase()}
+        </Text>
+        <ScrollView
+          contentContainerStyle={[{ paddingBottom: insets.bottom + 24 }]}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={() => refetchPersonalStats?.()}
+              refreshing={isPersonalStatsLoading}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          <WithDataWrapper
+            error={personalStatsError ? getErrorMessage(personalStatsError) : undefined}
+            isLoading={isPersonalStatsLoading}
+            onRetry={() => refetchPersonalStats?.()}
+          >
+            <MyStatsPage onOpenTeam={handleTeamPress} stats={personalStats} teams={playerTeams} />
+          </WithDataWrapper>
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
+
   if (isCoachFeedbackView) {
     return (
       <ScreenContainer
@@ -1251,119 +1143,17 @@ function UserDetails({ navigation, route }) {
           </View>
 
           {/* D54 — les stats de match sont un bloc JOUEUR : le pack les
-              range en « heritage joueur » et les interdit sur un profil
-              d'entraineur. Le composant reste, seul le rendu est coupe. */}
+              range en « heritage joueur » et les interdit sur un profil d'entraineur.
+              ST-VUES (planche 17, decisions d Adel du 02/10 « profil A » et « b oui ») :
+              PRIVEES, sauf pour l entraineur de son equipe, pour CETTE equipe ; mon apercu
+              ne montre plus mes chiffres et dit qui les voit. Le serveur decide (scope). */}
           {showsPlayerBlocks ? (
-            <SectionCard
-              ApplicationStyle={ApplicationStyle}
-              Colors={Colors}
-              Fonts={Fonts}
-              Spaces={Spaces}
-              title={t('userDetails.sections.matchStats', 'Stats de match')}
-            >
-              <View style={[Spaces.gap[12]]}>
-                {shouldShowSportFilter ? (
-                  <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                      {t('userDetails.fields.sport', 'Sport')}
-                    </Text>
-                    <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                      <TabButton
-                        isFocused={selectedStatsSport === 'all'}
-                        onPress={() => setSelectedStatsSport('all')}
-                        title={t('userDetails.filters.allSports', 'Tous')}
-                      />
-                      {availableStatSports.map((sportKey) => (
-                        <TabButton
-                          isFocused={selectedStatsSport === sportKey}
-                          key={sportKey}
-                          onPress={() => {
-                            setSelectedStatsSport(sportKey);
-                            setSelectedStatsTeamKey('all');
-                          }}
-                          title={sportKey === 'basketball' ? t(
-                            'userDetails.sports.basketball',
-                            'Basket',
-                          ) : t(
-                            'userDetails.sports.football',
-                            'Football',
-                          )}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-
-                {availableStatTeams.length > 1 ? (
-                  <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                      {t('userDetails.filters.team', 'Équipe')}
-                    </Text>
-                    <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                      <TabButton
-                        isFocused={selectedStatsTeamKey === 'all'}
-                        onPress={() => setSelectedStatsTeamKey('all')}
-                        title={t('userDetails.filters.allTeams', 'Toutes')}
-                      />
-                      {availableStatTeams.map((teamOption) => (
-                        <TabButton
-                          isFocused={selectedStatsTeamKey === teamOption.key}
-                          key={teamOption.key}
-                          onPress={() => setSelectedStatsTeamKey(teamOption.key)}
-                          title={teamOption.label}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-
-                {/* VA1 — le serveur refuse ces stats a qui n'est pas la personne :
-                    le dire, au lieu d'afficher des zeros. */}
-                {!isPersonalStatsLoading && areMatchStatsPrivate ? (
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    {t(
-                      'userDetails.stats.privateToOwner',
-                      'Ces statistiques ne sont visibles que par la personne elle-même.',
-                    )}
-                  </Text>
-                ) : null}
-                {isPersonalStatsLoading ? (
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    {t('userDetails.stats.loading', 'Chargement des statistiques...')}
-                  </Text>
-                ) : !areMatchStatsPrivate && (
-                  <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
-                    {profileSummaryCards.map((stat) => (
-                      <View
-                        key={stat.label}
-                        style={[
-                          ApplicationStyle.card,
-                          Spaces.padding[12],
-                          Spaces.gap[8],
-                          {
-                            backgroundColor: `${Colors.primary700}BF`,
-                            borderColor: `${Colors.primary500}52`,
-                            marginBottom: 12,
-                            minHeight: isCompactScreen ? 92 : 98,
-                            width: '48%',
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            ApplicationStyle.backgroundColor.primary500,
-                            ApplicationStyle.borderRadius16,
-                            { height: 4, width: isCompactScreen ? 26 : 32 },
-                          ]}
-                        />
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>{stat.label}</Text>
-                        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{stat.value}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </SectionCard>
+            <ProfileStatsForViewer
+              isLoading={isPersonalStatsLoading}
+              isSelfPreview={isSelfPreview}
+              mayBeCoach={mayCoachThisPlayer}
+              stats={personalStats}
+            />
           ) : null}
 
           {/* Les retours du coach sont PRIVES : jamais sur une vue publique,

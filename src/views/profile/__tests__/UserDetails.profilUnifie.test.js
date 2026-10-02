@@ -665,7 +665,8 @@ describe('D06 · regle 3 — les champs JOUEUR disparaissent pour un dirigeant',
     expect(texte).toContain('Poids');
     expect(texte).toContain('Poste');
     // Les trois blocs que D06 protegeait ont chacun leur destination.
-    expect(texte).toContain('Matchs');
+    // ST-VUES (02/10) : la rangee porte desormais le titre « Ma saison » (planche 16).
+    expect(texte).toContain('Ma saison · football');
     expect(texte).toContain('Retours du coach');
     expect(texte).toContain('Mes équipes');
   });

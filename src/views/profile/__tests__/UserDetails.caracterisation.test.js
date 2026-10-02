@@ -391,7 +391,9 @@ describe('UserDetails — profil d\'AUTRUI : le garde-fou que D06 ne doit pas ca
     const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Stats de match');
+    // ST-VUES (02/10, planche 17, « profil A ») : les stats d un joueur sont PRIVEES ;
+    // un dirigeant qui n entraine pas son equipe ne les voit plus sur sa fiche.
+    expect(texte).not.toContain('Stats de match');
     expect(texte).toContain('Profil sportif');
     expect(texte).toContain('Taille');
     expect(texte).toContain('Poids');
@@ -416,8 +418,10 @@ describe('UserDetails — profil d\'AUTRUI : le garde-fou que D06 ne doit pas ca
     const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Stats de match');
-    expect(texte).toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
+    // ST-VUES (02/10, planche 17) : le refus ne se DIT plus par une carte « privé » —
+    // la carte disparait (note « retiré »). Toujours aucun zero.
+    expect(texte).not.toContain('Stats de match');
+    expect(texte).not.toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
     expect(texte).not.toContain('Victoires');
     expect(texte).not.toContain('Passes décisives');
   });
@@ -426,11 +430,20 @@ describe('UserDetails — profil d\'AUTRUI : le garde-fou que D06 ne doit pas ca
     mockFetchedUser = {
       documentId: 'autre-1', firstname: 'Autre', lastname: 'Joueur', role: { name: 'Joueur' },
     };
+    // ST-VUES (02/10, planche 17, « b oui ») : quand le serveur ACCORDE les stats
+    // (ici : a l entraineur de l equipe du joueur, `scope`), elles sont la.
+    mockPersonalStats = {
+      overall: { football: { goals: 2 }, matches: 4, minutesPlayed: 300 },
+      scope: { teams: [{ documentId: 'u15', name: 'U15' }], viewer: 'coach' },
+    };
 
     const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('Victoires');
+    // (La doublure de traduction de ce banc n interpole pas : « {{teams}} » reste tel quel.)
+    expect(texte).toContain('Entraîneur');
+    expect(texte).toContain('300');
+    expect(texte).toContain('Minutes');
     expect(texte).not.toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
   });
 
