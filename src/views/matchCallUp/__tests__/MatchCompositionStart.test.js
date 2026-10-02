@@ -338,6 +338,47 @@ describe('D79 ecran 4 — l ecran et ses 3 rangees', () => {
     expect(texte).toContain('Aucune compo déjà publiée à reprendre.');
     expect(texte).not.toContain('2026-10-10');
   });
+
+  // FINITIONS6 · F6-4 — D1, decision d'Adel « D1 A » (01/10) : on GARDE le saut
+  // de « Partir de… » ; on corrige seulement le cas « banc seul ». Tournee 8 :
+  // Hugo, seul convocable, etait AU BANC du 3059 ⇒ « Dernier match » grise avec
+  // « Aucune compo déjà publiée à reprendre. » — faux : il y en a une, et elle
+  // le nomme. Le banc se reprend tout seul (un convoque non place part du banc).
+  const repriseAuBanc = {
+    teamComposition: {
+      bootstrap: {
+        composition: {
+          reservePlayerIds: ['p0'],
+          selectedPlayerIds: ['p0'],
+          teams: [{ placements: [{ playerId: 'joueur-parti', positionX: 50, positionY: 90 }] }],
+        },
+        event: { date: '2026-10-10T16:00:00.000Z' },
+        source: 'last_match',
+      },
+    },
+  };
+
+  test('FINITIONS6 · 🚨 convoques seulement AU BANC du dernier match : la rangee est active, datee', async () => {
+    const arbre = await rendre(repriseAuBanc);
+    const texte = texteVisible(arbre);
+
+    expect(rangee(arbre, 'Dernier match').props.accessibilityState.disabled).toBe(false);
+    expect(texte).toContain('La compo de samedi 10 octobre, telle quelle.');
+    expect(texte).not.toContain('Aucune compo déjà publiée à reprendre.');
+  });
+
+  test('FINITIONS6 · 🚨 la choisir rouvre le dernier match tel quel : personne sur le terrain, tous au banc', async () => {
+    const arbre = await rendre(repriseAuBanc);
+    // Appuyable pour de vrai : appeler `onPress` a la main passerait outre le grise.
+    expect(rangee(arbre, 'Dernier match').props.disabled).toBe(false);
+    await act(async () => { rangee(arbre, 'Dernier match').props.onPress(); });
+    await appuyerSur(arbre, 'Ouvrir le terrain');
+
+    const [, parametres] = mockNavigate.mock.calls[0];
+    expect(parametres.startFrom).toBe('last_match');
+    expect(parametres.startPlacements).toHaveLength(0);
+    expect(parametres.selectedPlayers).toHaveLength(11);
+  });
 });
 
 describe('D79 ecran 4 — l aimantation suit le point de depart', () => {
