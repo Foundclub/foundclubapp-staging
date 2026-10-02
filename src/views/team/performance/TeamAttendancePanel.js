@@ -111,9 +111,12 @@ function TeamAttendancePanel({
     (/** @type {number} */ total, /** @type {any} */ entry) => total + entry.pointed,
     0,
   );
-  const teamPointed = isSelfView
-    ? Number(stats?.totals?.attendanceCount || 0) + Number(stats?.totals?.absenceCount || 0)
+  // ST-VUES2 — sous 3 joueurs pointes, le serveur ne rend au joueur ni la moyenne ni les
+  // totaux (`teamAverageHidden`, `totals: null`) : sa propre ligne dit alors s il y a eu un appel.
+  const selfPointed = stats?.totals
+    ? Number(stats.totals.attendanceCount || 0) + Number(stats.totals.absenceCount || 0)
     : pointedTotal;
+  const teamPointed = isSelfView ? selfPointed : pointedTotal;
   const percent = (/** @type {number | null | undefined} */ ratio) => (
     ratio === null || ratio === undefined ? '—' : `${Math.round(Number(ratio) * 100)} %`
   );
@@ -305,12 +308,22 @@ function TeamAttendancePanel({
               marginVertical: 4,
             }}
           />
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('teamStatsPanel.teamAverageLead', 'L’équipe :')}
-            {' '}
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{percent(average?.presenceRate)}</Text>
-            {` ${t('teamStatsPanel.teamAverageTail', 'en moyenne.')}`}
-          </Text>
+          {stats?.teamAverageHidden ? (
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t(
+                'teamStatsPanel.teamAverageHidden',
+                'L’équipe : moyenne dès {{min}} joueurs pointés.',
+                { min: Number(stats?.teamAverageMinPlayers || 3) },
+              )}
+            </Text>
+          ) : (
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t('teamStatsPanel.teamAverageLead', 'L’équipe :')}
+              {' '}
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{percent(average?.presenceRate)}</Text>
+              {` ${t('teamStatsPanel.teamAverageTail', 'en moyenne.')}`}
+            </Text>
+          )}
         </View>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <StatsIcon color={Colors.neutral300} height={16} name="shield" width={16} />
