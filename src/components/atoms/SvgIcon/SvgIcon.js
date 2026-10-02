@@ -17,6 +17,8 @@ const icons = {
   'clock-two-thirty': require('@/assets/icons/clock-two-thirty.png'),
   close: require('@/assets/icons/close.png'),
   'delete-left': require('@/assets/icons/delete-left.png'),
+  // COLL-C2B (02/10) : « Plus d actions » (icone 10 dessinee et validee le 01/10, da8181e5).
+  'dots-horizontal': require('@/assets/icons/dots-horizontal.png'),
   edit: require('@/assets/icons/edit.png'),
   envelope: require('@/assets/icons/envelope.png'),
   'euro-circle': require('@/assets/icons/euro-circle.png'),

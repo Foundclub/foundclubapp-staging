@@ -139,6 +139,23 @@ jest.mock('@/services/multisportClub/multisportClubService', () => ({
   getCMPlanning: jest.fn(),
 }));
 
+// COLL-C2B (02/10) : le planning d une installation a desormais 5 vues (Mois = le calendrier) et
+// les gestes de la mairie (le service des creneaux) : deux doublures, sans effet sur ce temoin.
+jest.mock(
+  '@/components/organisms/planningCalendarView',
+  () => function CalendarMock() { return null; },
+);
+jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
+  attributeSeasonSlot: jest.fn(),
+  getClubTeamsForSlot: jest.fn(),
+  getSeasonSlot: jest.fn(),
+  listFacilitySeasonSlots: jest.fn(),
+  modifySeasonSlot: jest.fn(),
+  previewFacilitySeasonSlot: jest.fn(),
+  restoreSeasonSlot: jest.fn(),
+  withdrawSeasonSlot: jest.fn(),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));
@@ -278,7 +295,10 @@ describe('PLANNING-PORTRAIT 2 — le texte « organisateur » suit le GESTIONNAI
     getFacilityPlanning.mockResolvedValue(installationAvec(1));
     const lu = texte(await rendre());
 
-    expect(lu).toContain('demande en attente');
+    // COLL-C2B (02/10, design P5) : la mairie lit la capacite en UNE ligne (et « n demandes en
+    // attente » quand il y en a) ; le texte d organisateur suit toujours le GESTIONNAIRE.
+    // (La doublure de t() d ici prend toujours le pluriel ; le vrai i18next dit « 1 equipe ».)
+    expect(lu).toMatch(/1 équipes? à la fois · complet/);
   });
 
   test('gestionnaire d une AUTRE ville : texte du membre (gerer ne suffit pas)', async () => {
@@ -289,7 +309,8 @@ describe('PLANNING-PORTRAIT 2 — le texte « organisateur » suit le GESTIONNAI
     getFacilityPlanning.mockResolvedValue(installationAvec(1));
     const lu = texte(await rendre());
 
-    expect(lu).toContain('Complet');
+    // COLL-C2B (02/10, design P5) : un membre n a plus de bloc capacite du tout.
+    expect(lu).not.toMatch(/équipes? à la fois|complet/i);
     expect(lu).not.toMatch(/demande en attente|dépassement/i);
   });
 
@@ -297,8 +318,8 @@ describe('PLANNING-PORTRAIT 2 — le texte « organisateur » suit le GESTIONNAI
     mockAuth = DIRIGEANT;
     const lu = texte(await rendre());
 
-    expect(lu).toContain('2 équipes à la fois');
-    expect(lu).toContain('Au plus chargé : 2 sur 2');
+    // COLL-C2B (02/10, design P5) : une seule ligne, « 2 equipes a la fois · complet … ».
+    expect(lu).toContain('2 équipes à la fois · complet');
     expect(lu).not.toMatch(/slot|Pic \d/i);
   });
 

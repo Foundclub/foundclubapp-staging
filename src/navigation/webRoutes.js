@@ -283,6 +283,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CollectiviteActualiteForm]: '/collectivite/:collectiviteId/actualite/:actualiteId?',
   // COLL-C4A planche 2 — le canal de la Ville d un membre (une Ville, ou toutes les siennes).
   [RouteNames.CollectiviteActualitesCanal]: '/actualites-ville/:collectiviteId?',
+  // COLL-C2B (02/10/2026) — une installation de la Ville, ses creneaux (la collectivite et
+  // l installation dans l adresse ; « /installation/:facilityId? » reste le formulaire).
+  [RouteNames.CollectiviteInstallation]: '/collectivite/:collectiviteId/installations/:facilityId',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

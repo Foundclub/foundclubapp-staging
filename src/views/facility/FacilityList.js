@@ -1,9 +1,12 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useLayoutEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  FlatList,
   Image,
   Linking,
   Platform,
@@ -15,10 +18,8 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import {
-  findManagedCollectivite,
-  formatOpeningHours,
-} from '@/domains/collectivite/collectiviteDisplay';
+import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
+import { momentLabel } from '@/domains/seasonSlot/seasonSlotDisplay';
 import {
   extractSubscriptionDecisionFromError,
   formatCollectiviteOfferedBy,
@@ -31,6 +32,8 @@ import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -39,17 +42,17 @@ import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailabili
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
-import {
-  useCollectiviteInstallations,
-  useMyCollectivites,
-} from '@/services/collectivite/collectiviteQueries';
+import { useCollectiviteInstallations } from '@/services/collectivite/collectiviteQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
+import { useInstallationsWeekSummary } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getFacilityTypeLabel } from '@/utils/facilityTypes';
+
+import { useIsDesktop } from '@/responsive';
 
 const getAddressLabel = (address, fallback = i18next.t(
   'facilityList.noAddress',
@@ -81,6 +84,12 @@ const FACILITY_ACCENT_WIDTH = 4;
 
 const getFacilityKey = (item, index) => (item.documentId || item.id?.toString() || `${item?.name || 'facility'}-${index}`);
 
+// COLL-C2B (02/10) — design P4 : sur ordinateur, les cartes de la Ville vont en grille de 3, et
+// l ajout est la DERNIERE case de la grille (D34 : une seule grammaire d ajout, en pointille).
+const CASE_AJOUT = { documentId: '__ajout__', isAddCard: true };
+const COLONNES_ORDINATEUR = 3;
+const SQUELETTES = ['a', 'b'];
+
 /**
  * Facility list screen.
  * @returns {import('react').ReactElement}
@@ -108,11 +117,6 @@ function FacilityList() {
   const contextCmId = isCollectiviteMode ? null : routeParams.cmId
     || (!routeParams.clubId ? userData?.club?.parentMultisport?.documentId || null : null);
   const collectiviteInstallations = useCollectiviteInstallations(collectiviteId);
-  // TEXTES-COLLECTIVITES (01/10) — en mode collectivite, la page porte le NOM de la
-  // collectivite : « Installations de la Ville » est deja l en-tete de l ecran, et il
-  // s ecrivait deux fois. Meme lecture que les trois autres ecrans de la mairie.
-  const { data: myCollectivites } = useMyCollectivites({ enabled: isCollectiviteMode });
-  const managedCollectivite = findManagedCollectivite(myCollectivites, collectiviteId);
   const clubFacilities = useClubFacilityContext({
     clubId: contextClubId,
     cmId: contextCmId,
@@ -141,6 +145,19 @@ function FacilityList() {
   }, [facilityContext, isCollectiviteMode]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  const isDesktop = useIsDesktop();
+
+  // COLL-C2B (02/10) — design P4 (« un seul titre », REPRIS e8 n°5) : en mairie, la PAGE porte
+  // « Installations de la Ville » ; l en-tete de navigation se tait (le bouton retour reste).
+  useLayoutEffect(() => {
+    if (!isCollectiviteMode) return;
+    /** @type {any} */ (navigation).setOptions?.({ headerTitle: '' });
+  }, [isCollectiviteMode, navigation]);
+  // « Cette semaine : 9 seances · complet jeu. 18:00 – 19:30 » : la semaine de chaque
+  // installation de la Ville, lue dans son planning. Cote club, rien n est lu.
+  const semaines = useInstallationsWeekSummary(isCollectiviteMode ? facilities : []);
+  // Le menu « Plus d actions » d une carte de la Ville : l installation ouverte, ou null.
+  const [menuInstallation, setMenuInstallation] = useState(/** @type {any} */ (null));
 
   useFocusEffect(
     useCallback(() => {
@@ -253,6 +270,17 @@ function FacilityList() {
       stack: RouteNames.ClubStack,
     });
   }, [contextClubId, isCollectiviteMode, navigation]);
+
+  // COLL-C2B (02/10) — design P4v2-creneaux : toute la carte d une installation de la Ville
+  // ouvre l installation, sur son onglet « Creneaux » ; son planning est dans le menu « Plus
+  // d actions » et dans l onglet « Planning ».
+  const ouvrirInstallation = useCallback((/** @type {any} */ facility) => {
+    if (!facility?.documentId) return;
+    /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInstallation, {
+      collectiviteId,
+      facilityId: facility.documentId,
+    });
+  }, [collectiviteId, navigation]);
 
   const handleOpenFacilityMap = useCallback((facility) => {
     const addressLabel = getAddressLabel(facility?.address, '').trim() || facility?.name || '';
@@ -589,6 +617,229 @@ function FacilityList() {
     renderMetaChip,
     t,
   ]);
+  // COLL-C2B (02/10) — design P4-liste et P4-ordi : la carte d une installation de la VILLE.
+  // REPRIS e8 : toute la carte ouvre le planning (n°1) ; le nom sur 2 lignes, sans defilement
+  // (n°3) ; plus de pastille « demande a valider », le reglage par defaut (n°4) ; « Modifier »
+  // et « GPS » dans le menu « Plus d actions » (3 boutons par carte debordaient, capture C1).
+  // AMELIORE e8 n°2 : « Cette semaine », lu dans le planning. La carte du CLUB est `renderItem`,
+  // inchangee.
+  const renderCollectiviteItem = useCallback((/** @type {{ item: any }} */ { item }) => {
+    if (item?.isAddCard) {
+      return (
+        <View style={isDesktop ? { flex: 1 / COLONNES_ORDINATEUR, padding: 6 } : null}>
+          <TouchableOpacity
+            accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+            accessibilityRole="button"
+            onPress={handleCreate}
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              {
+                backgroundColor: withAlpha(Colors.primary500, 0.06),
+                borderColor: withAlpha(Colors.primary500, 0.4),
+                borderRadius: isDesktop ? 24 : 16,
+                borderStyle: 'dashed',
+                borderWidth: 1.5,
+                minHeight: isDesktop ? 140 : 52,
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    const nom = item?.name || t('facilityList.defaults.facilityName', 'Installation');
+    const equipes = Math.max(1, Number(item?.maxSlots || 1));
+    const meta = [
+      getFacilityTypeLabel(item?.type),
+      t('collectiviteCreneaux.liste.capacite', {
+        count: equipes,
+        defaultValue_one: '{{count}} équipe à la fois',
+        defaultValue_other: '{{count}} équipes à la fois',
+      }),
+      formatOpeningHours(item?.openingTime, item?.closingTime),
+    ].filter(Boolean).join(' · ');
+    const adresse = getAddressLabel(item?.address, '').trim();
+    const semaine = semaines[item?.documentId];
+    let ligneSemaine = null;
+    if (semaine && !semaine.count) {
+      ligneSemaine = t('collectiviteCreneaux.liste.semaineAucune', 'Cette semaine : aucune séance');
+    } else if (semaine) {
+      const seances = t('collectiviteCreneaux.liste.semaine', {
+        count: semaine.count,
+        defaultValue_one: 'Cette semaine : {{count}} séance',
+        defaultValue_other: 'Cette semaine : {{count}} séances',
+      });
+      ligneSemaine = semaine.full
+        ? [seances, t('collectiviteCreneaux.liste.complet', 'complet {{moment}}', {
+          moment: momentLabel(semaine.full),
+          ...SANS_ECHAPPEMENT,
+        })].join(' · ')
+        : seances;
+    }
+
+    return (
+      <View style={isDesktop ? { flex: 1 / COLONNES_ORDINATEUR, padding: 6 } : null}>
+        <View
+          style={[
+            ApplicationStyle.borderRadius24,
+            Spaces.padding[16],
+            {
+              backgroundColor: withAlpha(Colors.primary800, 0.6),
+              borderColor: withAlpha(Colors.neutral00, 0.13),
+              borderLeftColor: resolveFacilityPlanningColor(item) || Colors.primary500,
+              borderLeftWidth: FACILITY_ACCENT_WIDTH,
+              borderWidth: 1,
+              marginBottom: isDesktop ? 0 : 12,
+            },
+          ]}
+        >
+          <View style={[Alignments.row, { alignItems: 'flex-start', gap: 8 }]}>
+            <TouchableOpacity
+              accessibilityLabel={t(
+                'collectiviteCreneaux.liste.ouvrir',
+                '{{nom}} : ses créneaux et son planning',
+                { nom, ...SANS_ECHAPPEMENT },
+              )}
+              accessibilityRole="button"
+              onPress={() => ouvrirInstallation(item)}
+              style={{ flex: 1, gap: 4, minWidth: 0 }}
+            >
+              <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{meta}</Text>
+              {adresse ? <Text style={[Fonts.p3, Fonts.neutral300]}>{adresse}</Text> : null}
+              {ligneSemaine ? (
+                <Text
+                  style={semaine?.full
+                    ? [Fonts.p3Bold, Fonts.warning500]
+                    : [Fonts.p3, Fonts.neutral300]}
+                >
+                  {ligneSemaine}
+                </Text>
+              ) : null}
+              {getFacilityConflictMode(item) === FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY ? (
+                <View style={[Alignments.row, Spaces.marginTop[4]]}>
+                  {renderMetaChip(
+                    t('facilityList.badges.overflowAllowed', 'Conflits : autoriser et notifier'),
+                    'neutral',
+                  )}
+                </View>
+              ) : null}
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityLabel={t(
+                'collectiviteCreneaux.liste.plusActions',
+                'Plus d’actions pour {{nom}}',
+                { nom, ...SANS_ECHAPPEMENT },
+              )}
+              accessibilityRole="button"
+              hitSlop={4}
+              onPress={() => setMenuInstallation(item)}
+              style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
+            >
+              <SvgIcon color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }, [
+    Alignments,
+    ApplicationStyle.borderRadius24,
+    Colors.neutral00,
+    Colors.primary200,
+    Colors.primary500,
+    Colors.primary800,
+    Fonts,
+    Spaces.marginTop,
+    Spaces.padding,
+    handleCreate,
+    isDesktop,
+    ouvrirInstallation,
+    renderMetaChip,
+    semaines,
+    t,
+  ]);
+
+  // Le menu « Plus d actions » : les gestes secondaires, ranges. Pas de « Supprimer » pour la
+  // mairie (decision du 29/09) ; pas de GPS pour une installation sans adresse.
+  /** @type {Array<{ cle: string, icone: string, libelle: string, onPress: () => void }>} */
+  const menuGestes = [];
+  if (menuInstallation) {
+    menuGestes.push({
+      cle: 'planning',
+      icone: 'calendar',
+      libelle: t('facilityList.actions.openPlanning', 'Voir le planning'),
+      onPress: () => handleOpenPlanning(menuInstallation),
+    }, {
+      cle: 'modifier',
+      icone: 'edit',
+      libelle: t('collectiviteCreneaux.liste.modifier', 'Modifier l’installation'),
+      onPress: () => handleEdit(menuInstallation),
+    });
+    if (getAddressLabel(menuInstallation?.address, '').trim()) {
+      menuGestes.push({
+        cle: 'gps',
+        icone: 'location-pin-alt-1',
+        libelle: t('common.actions.openInGps', 'Ouvrir dans le GPS'),
+        onPress: () => handleOpenFacilityMap(menuInstallation),
+      });
+    }
+  }
+  const fermerMenu = () => setMenuInstallation(null);
+  const menuDesInstallations = isCollectiviteMode ? (
+    <BottomModal close={fermerMenu} isVisible={Boolean(menuInstallation)} webPresentation="dialog">
+      {menuInstallation ? (
+        <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>
+          <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {menuInstallation?.name}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginBottom[8]]}>
+            {[
+              getFacilityTypeLabel(menuInstallation?.type),
+              t('collectiviteCreneaux.liste.capacite', {
+                count: Math.max(1, Number(menuInstallation?.maxSlots || 1)),
+                defaultValue_one: '{{count}} équipe à la fois',
+                defaultValue_other: '{{count}} équipes à la fois',
+              }),
+            ].filter(Boolean).join(' · ')}
+          </Text>
+          {menuGestes.map((geste) => (
+            <TouchableOpacity
+              accessibilityRole="button"
+              key={geste.cle}
+              onPress={() => {
+                fermerMenu();
+                geste.onPress();
+              }}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Spaces.paddingHorizontal[16],
+                {
+                  backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                  borderColor: withAlpha(Colors.neutral00, 0.1),
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  gap: 12,
+                  minHeight: 52,
+                },
+              ]}
+            >
+              <SvgIcon color={Colors.primary200} name={geste.icone} />
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{geste.libelle}</Text>
+            </TouchableOpacity>
+          ))}
+          <Button onPress={fermerMenu} title={t('common.close', 'Fermer')} variant="Ghost" />
+        </View>
+      ) : null}
+    </BottomModal>
+  ) : null;
+
   const renderSectionHeader = useCallback(({ section }) => (
     hasMultipleSections ? (
       <View style={[Spaces.marginBottom[8], Spaces.marginTop[4]]}>
@@ -599,7 +850,50 @@ function FacilityList() {
     ) : null
   ), [Fonts.p2Bold, Fonts.primary200, Spaces.marginBottom, Spaces.marginTop, hasMultipleSections]);
 
-  let content = (
+  const etatVide = (
+    <EmptyState
+      actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+      description={isCollectiviteMode
+        ? t(
+          'facilityList.collectiviteEmpty',
+
+          'Ajoutez les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
+        )
+        : t(
+          'facilityList.empty.description',
+          'Ajoute les terrains, gymnases ou salles de ton club.',
+        )}
+      onAction={handleCreate}
+      title={t('facilityList.empty.title', 'Aucune installation')}
+    />
+  );
+
+  // COLL-C2B (02/10) — la Ville : une liste (une colonne sur telephone, trois sur ordinateur),
+  // l ajout en derniere case. Le club garde sa liste a sections, ci-dessous.
+  let content = isCollectiviteMode ? (
+    <FlatList
+      contentContainerStyle={[
+        { paddingBottom: sceneBottomInset },
+        facilities.length === 0 && Alignments.fill,
+        facilities.length === 0 && Alignments.mainCenter,
+      ]}
+      data={facilities.length ? [...facilities, CASE_AJOUT] : []}
+      key={isDesktop ? 'grille' : 'liste'}
+      keyExtractor={getFacilityKey}
+      ListEmptyComponent={etatVide}
+      numColumns={isDesktop ? COLONNES_ORDINATEUR : 1}
+      refreshControl={(
+        <RefreshControl
+          colors={[Colors.primary500]}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          tintColor={Colors.primary500}
+        />
+      )}
+      renderItem={renderCollectiviteItem}
+      showsVerticalScrollIndicator={false}
+    />
+  ) : (
     <SectionList
       contentContainerStyle={[
         { paddingBottom: sceneBottomInset },
@@ -607,23 +901,7 @@ function FacilityList() {
         facilities.length === 0 && Alignments.mainCenter,
       ]}
       keyExtractor={getFacilityKey}
-      ListEmptyComponent={(
-        <EmptyState
-          actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-          description={isCollectiviteMode
-            ? t(
-              'facilityList.collectiviteEmpty',
-              // eslint-disable-next-line max-len
-              'Ajoutez les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
-            )
-            : t(
-              'facilityList.empty.description',
-              'Ajoute les terrains, gymnases ou salles de ton club.',
-            )}
-          onAction={handleCreate}
-          title={t('facilityList.empty.title', 'Aucune installation')}
-        />
-      )}
+      ListEmptyComponent={etatVide}
       ListFooterComponent={facilities.length > 0 ? (
         <TouchableOpacity
           accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
@@ -687,6 +965,42 @@ function FacilityList() {
         />
       </View>
     );
+  } else if (loading && !refreshing && isCollectiviteMode) {
+    // COLL-C2B (02/10) — design P4, etat 4 : le titre reste, les cartes en squelette.
+    content = (
+      <View accessibilityState={{ busy: true }} style={{ gap: 12 }}>
+        {SQUELETTES.map((cle) => (
+          <View
+            key={cle}
+            style={[
+              ApplicationStyle.borderRadius24,
+              Spaces.padding[16],
+              {
+                backgroundColor: withAlpha(Colors.primary800, 0.6),
+                borderColor: withAlpha(Colors.neutral00, 0.13),
+                borderLeftColor: Colors.neutral700,
+                borderLeftWidth: FACILITY_ACCENT_WIDTH,
+                borderWidth: 1,
+                gap: 8,
+              },
+            ]}
+            testID="installation-squelette"
+          >
+            {['60%', '85%', '50%'].map((largeur, index) => (
+              <View
+                key={largeur}
+                style={{
+                  backgroundColor: withAlpha(Colors.neutral00, 0.08),
+                  borderRadius: 8,
+                  height: index === 0 ? 22 : 14,
+                  width: /** @type {import('react-native').DimensionValue} */ (largeur),
+                }}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+    );
   } else if (loading && !refreshing) {
     content = <Loader />;
   } else if (error) {
@@ -735,9 +1049,14 @@ function FacilityList() {
     });
   let listTitle = t('facilityList.title', 'Tes installations');
   if (isCollectiviteMode) {
-    listTitle = managedCollectivite?.name
-      || t('facilityList.collectiviteTitle', 'Installations de la Ville');
+    // COLL-C2B (02/10) — design P4 : « Ma collectivite » au-dessus, « Installations de la
+    // Ville » en titre, UNE fois (l en-tete de navigation se tait, voir plus haut). Le nom de
+    // la Ville (TEXTES-COLLECTIVITES) n est plus le titre : le menu du site le porte deja.
+    listTitle = t('facilityList.collectiviteTitle', 'Installations de la Ville');
   }
+  const surtitre = isCollectiviteMode
+    ? t('collectiviteCreneaux.liste.surtitre', 'Ma collectivité')
+    : null;
 
   return (
     <ScreenContainer
@@ -758,7 +1077,12 @@ function FacilityList() {
         ]}
       >
         <View style={{ flex: 1 }}>
-          <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+          {surtitre ? (
+            <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+              {surtitre}
+            </Text>
+          ) : null}
+          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
             {listTitle}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
@@ -770,6 +1094,8 @@ function FacilityList() {
       </View>
 
       {content}
+
+      {menuDesInstallations}
 
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
