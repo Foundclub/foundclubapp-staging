@@ -387,6 +387,18 @@ const refuseFacilityOverrideRequest = async (requestId, decisionReason = '', ser
 };
 
 /**
+ * COLL-C3B (02/10) — « Tes demandes a la Ville » : les demandes de creneau que le club a
+ * ENVOYEES aux Villes (GET /facility-override-requests/sent?clubId=), la reponse et le mot de
+ * la mairie. Jamais une personne : le serveur ne rend ni le demandeur, ni l agent.
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<{ data: any[] }>} Les demandes, une serie par ligne.
+ */
+const getSentFacilityOverrideRequests = async (clubId) => {
+  const response = await client.get('/facility-override-requests/sent', { params: { clubId } });
+  return response.data;
+};
+
+/**
  * Create a booking from the Smart Slots system
  * @param {object} data - Booking data
  * @param {string} data.facilityId - Facility document ID
@@ -429,6 +441,7 @@ export {
   deleteFacility,
   getAvailability,
   getBookableFacilities,
+  getClubCollectiviteFacilities,
   getClubFacilityContext,
   getCMFacilities,
   getFacilities,
@@ -437,6 +450,7 @@ export {
   getFacilitySections,
   getOccupancy,
   getPendingFacilityOverrideRequests,
+  getSentFacilityOverrideRequests,
   refuseFacilityOverrideRequest,
   updateFacility,
 };

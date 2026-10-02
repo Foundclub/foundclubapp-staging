@@ -58,7 +58,7 @@ const genreDuLieu = (libelle) => {
  * Le lieu précédé de sa préposition, dans la langue de l'app : « au Gymnase des Tilleuls »,
  * « à la Salle Jean Moulin », « à l’Espace Mistral » (en anglais, « at … »).
  * @param {unknown} nom - Le nom de l'installation.
- * @param {(cle: string, repli: string, options: object) => string} t - La traduction.
+ * @param {any} t - La traduction (`t` de react-i18next, ou `i18next.t`).
  * @returns {string} Le lieu, ou '' sans nom.
  */
 export const lieuAvecPreposition = (nom, t) => {
@@ -153,6 +153,7 @@ export const occupantsParHoraire = (conflit) => {
 export const prevenusDe = (demande) => {
   const personne = [demande?.requestedBy?.firstname, demande?.requestedBy?.lastname]
     .filter(Boolean).join(' ');
+  /** @type {string[]} */
   const clubsDejaLa = [];
   occupantsParHoraire(demande?.conflict).forEach((groupe) => {
     groupe.noms.forEach((nom) => { if (!clubsDejaLa.includes(nom)) clubsDejaLa.push(nom); });
@@ -170,4 +171,52 @@ export const prevenusDe = (demande) => {
 export const dateDeDecision = (demande) => {
   const date = lireDate(demande?.updatedAt);
   return date ? format(date, 'd MMM', { locale: localeDesDates() }) : '';
+};
+
+// ─── COLL-C3B — LE CLUB DEMANDE (planches P8v2-demande, tel et ordi) ─────────────────────────
+
+/**
+ * La fin de la saison qui contient un jour : le 30 juin (contrat C2A §2 : du 1er septembre au
+ * 30 juin ; juillet et août préparent la saison qui vient).
+ * @param {string} jour - AAAA-MM-JJ.
+ * @returns {string} AAAA-06-30.
+ */
+export const finDeSaison = (jour) => {
+  const annee = Number(String(jour).slice(0, 4));
+  const mois = Number(String(jour).slice(5, 7));
+  return `${mois >= 7 ? annee + 1 : annee}-06-30`;
+};
+
+/**
+ * Les dates d'une demande : le jour choisi, ou chaque semaine jusqu'à la fin de la saison.
+ * @param {string} jour - AAAA-MM-JJ.
+ * @param {boolean} chaqueSemaine - « Chaque semaine ».
+ * @returns {string[]} Les jours, AAAA-MM-JJ.
+ */
+export const datesDeLaDemande = (jour, chaqueSemaine) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(jour || ''))) return [];
+  if (!chaqueSemaine) return [jour];
+  const fin = finDeSaison(jour);
+  const dates = [];
+  const curseur = new Date(`${jour}T12:00:00Z`);
+  while (curseur.toISOString().slice(0, 10) <= fin && dates.length < 53) {
+    dates.push(curseur.toISOString().slice(0, 10));
+    curseur.setUTCDate(curseur.getUTCDate() + 7);
+  }
+  return dates;
+};
+
+/**
+ * Hors des heures d'ouverture ? Le seul cas où l'envoi est impossible (P8v2, état 3).
+ * @param {{ debut: number | null, fin: number | null, ouverture: number | null,
+ *   fermeture: number | null }} heures - En minutes ; null si inconnu.
+ * @returns {{ cas: 'ferme' | 'ouvre', heure: number } | null} La borne dépassée, ou null.
+ */
+export const horsOuverture = ({
+  debut, fermeture, fin, ouverture,
+}) => {
+  if (debut === null || fin === null) return null;
+  if (fermeture !== null && fin > fermeture) return { cas: 'ferme', heure: fermeture };
+  if (ouverture !== null && debut < ouverture) return { cas: 'ouvre', heure: ouverture };
+  return null;
 };

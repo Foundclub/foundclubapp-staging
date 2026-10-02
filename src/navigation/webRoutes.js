@@ -280,6 +280,9 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-C2B (02/10/2026) — une installation de la Ville, ses creneaux (la collectivite et
   // l installation dans l adresse ; « /installation/:facilityId? » reste le formulaire).
   [RouteNames.CollectiviteInstallation]: '/collectivite/:collectiviteId/installations/:facilityId',
+  // COLL-C3B (02/10/2026) — le club demande un creneau a la Ville, puis suit ses demandes.
+  [RouteNames.ClubSlotRequest]: '/demander-un-creneau',
+  [RouteNames.ClubSlotRequests]: '/mes-demandes-a-la-ville',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

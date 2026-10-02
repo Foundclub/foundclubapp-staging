@@ -5,11 +5,13 @@ import {
   createBooking,
   getAvailability,
   getBookableFacilities,
+  getClubCollectiviteFacilities,
   getClubFacilityContext,
   getFacilities,
   getFacility,
   getOccupancy,
   getPendingFacilityOverrideRequests,
+  getSentFacilityOverrideRequests,
   refuseFacilityOverrideRequest,
 } from './facilityService';
 
@@ -133,6 +135,39 @@ export const useGetPendingFacilityOverrideRequests = (clubId, options = {}) => u
   queryKey: ['facility-override-requests', clubId],
   staleTime: 15_000,
   ...options,
+});
+
+/**
+ * COLL-C3B (02/10) — « Tes demandes a la Ville » du club `clubId`.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {Record<string, any>} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` est un tableau.
+ */
+export const useSentFacilityOverrideRequests = (clubId, options = {}) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: async () => {
+    const reponse = await getSentFacilityOverrideRequests(String(clubId));
+    return Array.isArray(reponse?.data) ? reponse.data : [];
+  },
+  queryKey: ['facility-override-requests', 'sent', clubId],
+  staleTime: 15_000,
+  ...options,
+});
+
+/**
+ * COLL-C3B (02/10) — les installations des Villes auxquelles le club est rattache (COLL1B),
+ * chacune avec `collectivite: { documentId, name }` : « Demander un creneau » y choisit.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @returns {any} Le resultat react-query ; `data` est un tableau.
+ */
+export const useClubCollectiviteFacilities = (clubId) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: async () => {
+    const reponse = await getClubCollectiviteFacilities(String(clubId));
+    return Array.isArray(reponse?.data) ? reponse.data : [];
+  },
+  queryKey: ['facilities', 'collectivite', clubId],
+  staleTime: 5 * 60 * 1000,
 });
 
 export const useApproveFacilityOverrideRequest = (options = {}) => {
