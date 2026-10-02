@@ -1339,7 +1339,8 @@ function MatchStatsEditor({ navigation, route }) {
   ) : (
     <View style={[Alignments.row, SpacesAny.gap[16], { alignItems: 'flex-start' }]}>
       {renderColumn('feuille-colonne-score', tabLabels.score, renderScoreAndReview())}
-      {renderColumn('feuille-colonne-joueurs', tabLabels.players, renderPlayers())}
+      {/* Le tableau porte 5 colonnes de chiffres : un peu plus large que ses voisines. */}
+      {renderColumn('feuille-colonne-joueurs', tabLabels.players, renderPlayers(), 1.4)}
       {renderColumn('feuille-colonne-retours', tabLabels.feedback, renderFeedback())}
     </View>
   ));
