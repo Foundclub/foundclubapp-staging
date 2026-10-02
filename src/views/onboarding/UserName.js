@@ -16,6 +16,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingAccountExits from '@/views/onboarding/components/OnboardingAccountExits';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -149,6 +150,8 @@ function UserName({ navigation }) {
   const { t } = useTranslation();
   const {
     getNextOnboardingRoute,
+    getPostOnboardingHomeRoute,
+    onboardingViews,
     refetchUserData,
     userData,
     userDataError,
@@ -159,6 +162,11 @@ function UserName({ navigation }) {
 
   const collectsBirthdate = onboardingCollectsBirthdate(userData?.role);
   const isPresident = getUserRoleKey(userData?.role?.name || userData?.role?.type) === 'president';
+  // AGE-OBLIGATOIRE ② (02/10/2026) - un ancien compte qui n'avait jamais donne sa
+  // date (`getEntryCheckpointViews`, authUseCases.js). Meme ecran, memes champs,
+  // memes regles ; trois differences : une phrase qui dit pourquoi, deux sorties
+  // de compte, et la main rendue a l'accueil au lieu de l'etape suivante.
+  const isEntryCheckpoint = onboardingViews?.isEntryCheckpoint === true;
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -203,6 +211,13 @@ function UserName({ navigation }) {
         && userData?.parentalDeclarationAccepted !== true
       ) {
         navigation.navigate(RouteNames.UserParentalDeclaration);
+        return;
+      }
+
+      // AGE-OBLIGATOIRE ② - le tunnel de ce compte est deja fini : la date
+      // donnee (15 ans ou plus) le fait entrer, sans repasser par les etapes.
+      if (isEntryCheckpoint) {
+        navigation.navigate(getPostOnboardingHomeRoute());
         return;
       }
 
@@ -321,6 +336,27 @@ function UserName({ navigation }) {
       'Vérifie les informations saisies pour continuer.',
     );
 
+  // Le sous-titre : au point de controle, il dit POURQUOI la date est demandee
+  // maintenant ; sinon, c'est celui du parcours d'inscription.
+  const identitySubtitle = (() => {
+    if (isEntryCheckpoint) {
+      return t(
+        'ageObligatoire.subtitle',
+        'Il nous manque ta date de naissance. On la demande désormais à chaque membre.',
+      );
+    }
+    if (isPresident) {
+      return t(
+        'profile.subtitles.identityPresident',
+        'La seule étape obligatoire du parcours dirigeant.',
+      );
+    }
+    return t(
+      'profile.subtitles.identity',
+      'Renseigne ton nom, ton prénom et ta date de naissance.',
+    );
+  })();
+
   return (
     <FormScreenContainer
       bgImage="bg2"
@@ -350,12 +386,7 @@ function UserName({ navigation }) {
             {t('profile.titles.identity', 'Qui es-tu ?')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {isPresident
-              ? t(
-                'profile.subtitles.identityPresident',
-                'La seule étape obligatoire du parcours dirigeant.',
-              )
-              : t('profile.subtitles.identity', 'Renseigne ton nom, ton prénom et ta date de naissance.')}
+            {identitySubtitle}
           </Text>
         </View>
 
@@ -520,6 +551,7 @@ function UserName({ navigation }) {
           title={t('profile.actions.save')}
           variant="Primary"
         />
+        {isEntryCheckpoint ? <OnboardingAccountExits /> : null}
       </View>
     </FormScreenContainer>
   );

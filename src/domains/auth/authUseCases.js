@@ -592,9 +592,71 @@ export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSAN
   .includes(getUserRoleKey(role?.name || role?.type));
 
 /**
+ * AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire de
+ * l'onboarding », `docs/DECISIONS_MINEURS.md` ligne 10) - LE POINT DE CONTROLE
+ * D'ENTREE d'un compte qui a DEJA fini son inscription sur cet appareil.
+ *
+ * `getOnboardingViews` sautait tout le parcours des que
+ * `hasCompletedOnboarding_<documentId>` etait vrai : un ancien compte sans date
+ * de naissance ne la donnait jamais (45 comptes en prod le 02/10), et un age
+ * inconnu ne declenche aucune regle « mineur ».
+ *
+ * Il ne rouvre PAS le tunnel : il garde les deux seules etapes qui decident de
+ * l'age, dans l'ordre de l'inscription -
+ *   1. « Qui es-tu ? » (`UserName`), tant que la date manque ;
+ *   2. la declaration parentale, quand la date donne moins de 15 ans et qu'elle
+ *      n'est pas faite. Sans elle, quitter l'app sur la case suffirait a entrer
+ *      sans declarer, alors que le tunnel d'inscription, lui, la redemande.
+ * Sous 13 ans, c'est le serveur qui refuse et `UserName` qui ouvre « compte
+ * parent requis » : le meme chemin qu'a l'inscription.
+ *
+ * `totalViews` vaut 0 : ce ne sont pas des etapes numerotees (pas de « 1/2 »
+ * dans l'en-tete). `isEntryCheckpoint` dit aux deux ecrans d'offrir « Changer
+ * de compte » et « Se deconnecter », et de rendre la main a l'accueil plutot
+ * qu'a l'etape suivante d'un tunnel deja fini.
+ *
+ * ⛔ Hors du point de controle : le super-admin (pas un compte de terrain) et le
+ * compte sans role sportif (`new` : son tunnel complet demande deja la date, et
+ * un compte « Ville seule » a son propre accueil).
+ * ⛔ Aucun refus serveur ne l'accompagne : les versions en ligne (2.6.65)
+ * doivent continuer a marcher. C'est une etape de l'app, pas un verrou.
+ * @param {object} params - Les champs du profil qui decident.
+ * @param {string | null} [params.birthdate] - La date de naissance connue.
+ * @param {boolean | null} [params.parentalDeclarationAccepted] - La declaration faite.
+ * @param {Role} [params.role] - Le role du compte.
+ * @returns {{isEntryCheckpoint?: boolean, totalViews: number, views: object[]}} Le parcours.
+ */
+const getEntryCheckpointViews = ({ birthdate, parentalDeclarationAccepted, role }) => {
+  const roleKey = getUserRoleKey(role?.name || USER_ROLES.new);
+  if (roleKey === 'new' || ROLES_SANS_DATE_DE_NAISSANCE.includes(roleKey)) {
+    return { totalViews: 0, views: [] };
+  }
+
+  const views = [
+    { canShow: !birthdate, index: 1, route: RouteNames.UserName },
+    {
+      canShow: Boolean(
+        birthdate
+        && isBirthdateUnderParentalAge(birthdate)
+        && parentalDeclarationAccepted !== true,
+      ),
+      index: 2,
+      route: RouteNames.UserParentalDeclaration,
+    },
+  ];
+
+  if (!views.some((view) => view.canShow)) {
+    return { totalViews: 0, views: [] };
+  }
+
+  return { isEntryCheckpoint: true, totalViews: 0, views };
+};
+
+/**
  * Get the onboarding view to show based on user type and existing user data
  * @param {User} params - The user data parameters
- * @returns {{totalViews: number, views: {index: number, route: string, canShow: boolean}[]}}
+ * @returns {{isEntryCheckpoint?: boolean, totalViews: number,
+ *   views: {index: number, route: string, canShow: boolean}[]}} Le parcours.
  */
 export const getOnboardingViews = ({
   address, avatar, bestLevel, birthdate, category, club, clubAffiliations,
@@ -611,12 +673,11 @@ export const getOnboardingViews = ({
     } catch (e) { return false; }
   })();
 
-  // If onboarding was already completed once, skip all onboarding
+  // If onboarding was already completed once, skip all onboarding - SAUF le
+  // point de controle d'entree (AGE-OBLIGATOIRE ②) : la date de naissance, puis
+  // la declaration parentale quand elle est due.
   if (hasCompletedOnboarding) {
-    return {
-      totalViews: 0,
-      views: [],
-    };
+    return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
   }
 
   const roleName = role?.name || USER_ROLES.new;

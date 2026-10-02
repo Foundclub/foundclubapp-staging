@@ -1875,6 +1875,15 @@ export default {
     subtitle: 'Choisis comment les candidatures liées à cette détection seront traitées.',
     title: 'Mode de validation',
   },
+  // AGE-OBLIGATOIRE (02/10/2026, decision d'Adel « 3- C ») - le point de controle
+  // d'entree d'un ancien compte sans date de naissance.
+  ageObligatoire: {
+    exits: {
+      logout: 'Se déconnecter',
+      switchAccount: 'Changer de compte',
+    },
+    subtitle: 'Il nous manque ta date de naissance. On la demande désormais à chaque membre.',
+  },
   APIerrors: {
     // Authentication errors
     AUTHENTICATION_FAILED: "Échec d'authentification.",

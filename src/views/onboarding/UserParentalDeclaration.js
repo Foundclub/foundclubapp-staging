@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingAccountExits from '@/views/onboarding/components/OnboardingAccountExits';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -43,11 +44,18 @@ function UserParentalDeclaration({ navigation, route }) {
   const queryClient = useQueryClient();
   const [, appDispatch] = useAppContext();
   const {
+    getPostOnboardingHomeRoute,
+    onboardingViews,
     refetchUserData,
     userData,
     userDataError,
     userDataLoading,
   } = useAuth();
+  // AGE-OBLIGATOIRE ② (02/10/2026) - un ANCIEN compte qui vient de donner 13-14 ans
+  // au point de controle d'entree (`getEntryCheckpointViews`, authUseCases.js).
+  // Hors carte de collection : celle-ci a son propre retour.
+  const isEntryCheckpoint = onboardingViews?.isEntryCheckpoint === true
+    && !route?.params?.returnRoute;
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -73,6 +81,11 @@ function UserParentalDeclaration({ navigation, route }) {
       // revient a l'ecran appelant au lieu de poursuivre le flux onboarding.
       if (route?.params?.returnRoute) {
         navigation.goBack();
+      } else if (isEntryCheckpoint) {
+        // AGE-OBLIGATOIRE ② - son tunnel est deja fini : la case cochee le fait
+        // entrer. « UserAddress » n'est pas monte au point de controle : y aller
+        // laissait l'ado sur la case cochee, sans suite.
+        navigation.navigate(getPostOnboardingHomeRoute());
       } else {
         navigation.navigate(RouteNames.UserAddress);
       }
@@ -187,6 +200,7 @@ function UserParentalDeclaration({ navigation, route }) {
           title={t('userParentalDeclaration.actions.continue', 'Continuer')}
           variant="Primary"
         />
+        {isEntryCheckpoint ? <OnboardingAccountExits /> : null}
       </View>
     </FormScreenContainer>
   );
