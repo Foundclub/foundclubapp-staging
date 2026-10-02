@@ -5832,6 +5832,19 @@ export default {
       depasse: 'Accepter met {{equipes}} pour {{places}}.',
       libre: 'Accepter ne gêne personne.',
     },
+    // COLL-FIX2 (03/10) — ce que le serveur fera de la séance, dit pendant la saisie (planche 43).
+    decision: {
+      // eslint-disable-next-line max-len
+      complet: 'C’est complet : l’installation n’accepte pas d’équipe en plus. Choisis une autre heure.',
+      // eslint-disable-next-line max-len
+      creneauDuClub: 'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+      dirigeant: 'Ton club est déjà au complet dans son créneau : ton dirigeant décidera.',
+      // eslint-disable-next-line max-len
+      mairieLibre: 'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+      posee: 'Ton entraînement sera posé tout de suite.',
+      poser: 'Poser l’entraînement',
+      quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
+    },
     erreur: {
       titre: 'Les demandes n’ont pas pu être lues.',
     },

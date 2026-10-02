@@ -419,3 +419,83 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     expect(textes(arbre)).not.toContain('Demande envoyée à la Ville de Montrivage');
   });
 });
+
+// 🧭 COLL-FIX2 (03/10) — point 2, planche 43 (tournée T10) : L'APERÇU DIT CE QUE LE SERVEUR FERA.
+// Le formulaire disait « c'est complet · Tu peux demander quand même : la mairie décidera », puis
+// l'accusé « C'est posé » : le club avait SON créneau ce jour-là (D32). L'aperçu ne lisait que la
+// place de l'installation. Le serveur (admin COLL-FIX2, `judgeSession`) rend désormais `decision`
+// quand l'app lui donne le club et l'équipe : les mêmes juges, dans le même ordre qu'event.create.
+describe('COLL-FIX2 — l’aperçu dit qui décidera (D32, SPEC-PLACE)', () => {
+  const apercusDemandes = () => mockGet.mock.calls
+    .filter(([url]) => url === '/facilities/gym-ville/season-slots/preview')
+    .map(([, options]) => options?.params || {});
+  const MAIRIE_DECIDE = 'Tu peux demander quand même : la mairie décidera.';
+  // eslint-disable-next-line max-len
+  const LA_VILLE_REPOND = 'La Ville de Montrivage accepte ou refuse ; tu reçois sa réponse en notification.';
+
+  it('l’aperçu est demandé au nom du club et de l’équipe choisie', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await attendre(() => apercusDemandes().some((p) => p.team === 'u13'));
+    expect(apercusDemandes().at(-1))
+      .toEqual(expect.objectContaining({ club: 'club-A', team: 'u13' }));
+  });
+
+  // eslint-disable-next-line max-len
+  it('dans le créneau du club, gymnase complet : posé tout de suite, pas « la mairie décidera »', async () => {
+    mockApercu = { ...APERCU_COMPLET, decision: { inClubSlot: true, outcome: 'direct' } };
+    const phrase = 'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.';
+    const arbre = await monter((l) => l.includes(phrase));
+    const lus = textes(arbre);
+    expect(lus).toContain(phrase);
+    expect(lus).toContain('Il y a déjà 2 équipes : c’est complet.');
+    expect(lus).not.toContain(MAIRIE_DECIDE);
+    expect(lus).not.toContain(LA_VILLE_REPOND);
+    expect(lus).not.toContain('Libre ce jeudi :');
+    expect(lus).toContain('Poser l’entraînement');
+    expect(lus).not.toContain('Envoyer quand même');
+  });
+
+  // eslint-disable-next-line max-len
+  it('le club déjà au complet dans son créneau : son dirigeant décidera, pas la mairie', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: true, outcome: 'dirigeant' } };
+    const phrase = 'Ton club est déjà au complet dans son créneau : ton dirigeant décidera.';
+    const arbre = await monter((l) => l.includes(phrase));
+    const lus = textes(arbre);
+    expect(lus).toContain(phrase);
+    // eslint-disable-next-line max-len
+    expect(lus).toContain('Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.');
+    expect(lus).not.toContain(LA_VILLE_REPOND);
+    expect(lus).not.toContain(MAIRIE_DECIDE);
+    expect(lus).toContain('Envoyer la demande');
+  });
+
+  // eslint-disable-next-line max-len
+  it('hors des créneaux du club, place libre : la mairie décidera quand même (SPEC-PLACE)', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    // eslint-disable-next-line max-len
+    const phrase = 'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.';
+    const arbre = await monter((l) => l.includes(phrase));
+    expect(textes(arbre))
+      .toEqual(expect.arrayContaining([phrase, LA_VILLE_REPOND, 'Envoyer la demande']));
+  });
+
+  it('complet, et l’installation n’accepte aucune équipe en plus : l’envoi est fermé', async () => {
+    mockApercu = { ...APERCU_COMPLET, decision: { inClubSlot: false, outcome: 'complet' } };
+    // eslint-disable-next-line max-len
+    const phrase = 'C’est complet : l’installation n’accepte pas d’équipe en plus. Choisis une autre heure.';
+    const arbre = await monter((l) => l.includes(phrase));
+    await appuyer(arbre, 'demande-equipe-u13');
+    expect(textes(arbre)).toContain(phrase);
+    expect(textes(arbre)).not.toContain(MAIRIE_DECIDE);
+    expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(true);
+  });
+
+  it('qui tranche lui-même, place libre : posé tout de suite', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'direct' } };
+    const arbre = await monter((l) => l.includes('Ton entraînement sera posé tout de suite.'));
+    expect(textes(arbre)).toContain('Ton entraînement sera posé tout de suite.');
+    expect(textes(arbre)).toContain('Poser l’entraînement');
+    expect(textes(arbre)).not.toContain(LA_VILLE_REPOND);
+  });
+});

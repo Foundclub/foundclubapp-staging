@@ -132,19 +132,29 @@ function ClubSlotRequest() {
     })
     : null;
 
+  // 🧭 COLL-FIX2 (03/10) — l'aperçu est demandé AU NOM du club et de l'équipe : le serveur dit
+  // alors ce qu'il fera de la séance (`decision`, mêmes juges qu'event.create : D32, la place,
+  // SPEC-PLACE). Tournée T10 : « complet, la mairie décidera », puis « C'est posé ».
   const parametresApercu = useMemo(() => (
     installationId && jourIso && heuresLisibles
       ? {
+        ...(clubId ? { club: clubId } : {}),
         endTime: fin,
         startTime: debut,
+        ...(equipe ? { team: equipe } : {}),
         validFrom: jourIso,
         validUntil: hebdo ? finDeSaison(jourIso) : jourIso,
         weekday: isoWeekdayOf(parse(jourIso, 'yyyy-MM-dd', new Date())),
       }
       : null
-  ), [debut, fin, hebdo, heuresLisibles, installationId, jourIso]);
+  ), [clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso]);
   const apercu = useSeasonSlotPreview(installationId, parametresApercu);
   const place = apercu.data?.data || null;
+  // Ce que le serveur fera : `direct`, `dirigeant`, `mairie`, `complet` ; absent (serveur
+  // ancien, juge en panne) : la phrase prudente d'avant.
+  /** @type {{ inClubSlot?: boolean, outcome?: string } | null} */
+  const decision = place?.decision || null;
+  const issue = decision?.outcome || null;
 
   // Les heures libres du même jour (P8v2, état 2) : l'ouverture moins les moments complets.
   const planningDuJour = useQuery({
@@ -180,10 +190,13 @@ function ClubSlotRequest() {
   const listeDEquipes = Array.isArray(equipes.data) ? equipes.data : [];
   const nomDeLEquipe = listeDEquipes.find((e) => e?.documentId === equipe)?.name || '';
   const complet = Boolean(place && Number(place.remaining) === 0);
+  const posee = issue === 'direct';
+  const refusee = issue === 'complet';
+  const pourLaMairie = !posee && issue !== 'dirigeant';
 
   const envoyer = async () => {
     // eslint-disable-next-line max-len
-    if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || horsHeures) return;
+    if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || horsHeures || refusee) return;
     setEnvoi(true);
     setErreur('');
     try {
@@ -394,9 +407,43 @@ function ClubSlotRequest() {
         debut: occupant?.startTime || '', fin: occupant?.endTime || '', nom, tonClub, ...SANS_ECHAPPEMENT,
       });
     });
+    let suite = complet
+      ? t(
+        'collectiviteDemandes.club.quandMeme',
+        'Tu peux demander quand même : la mairie décidera.',
+      )
+      : null;
+    let couleurDeLaSuite = Colors.warning500;
+    if (posee) {
+      couleurDeLaSuite = Colors.success500;
+      suite = decision?.inClubSlot
+        ? t(
+          'collectiviteDemandes.decision.creneauDuClub',
+          'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+        )
+        : t('collectiviteDemandes.decision.posee', 'Ton entraînement sera posé tout de suite.');
+    } else if (issue === 'dirigeant') {
+      suite = t(
+        'collectiviteDemandes.decision.dirigeant',
+        'Ton club est déjà au complet dans son créneau : ton dirigeant décidera.',
+      );
+    } else if (refusee) {
+      couleurDeLaSuite = Colors.error500;
+      suite = t(
+        'collectiviteDemandes.decision.complet',
+        'C’est complet : l’installation n’accepte pas d’équipe en plus. Choisis une autre heure.',
+      );
+    } else if (issue === 'mairie' && !complet) {
+      suite = t(
+        'collectiviteDemandes.decision.mairieLibre',
+        'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+      );
+    }
+    let bordure = complet ? Colors.warning500 : Colors.success500;
+    if (issue) bordure = couleurDeLaSuite;
     carteDeLaPlace = (
       <View
-        style={[carte, { borderColor: complet ? Colors.warning500 : Colors.success500 }]}
+        style={[carte, { borderColor: bordure }]}
         testID="demande-place"
       >
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{phrase}</Text>
@@ -407,16 +454,19 @@ function ClubSlotRequest() {
             })}
           </Text>
         ) : null}
-        {complet ? (
-          <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-            {t(
-              'collectiviteDemandes.club.quandMeme',
-              'Tu peux demander quand même : la mairie décidera.',
-            )}
+        {suite ? (
+          <Text style={[Fonts.p3Bold, { color: couleurDeLaSuite }]} testID="demande-decision">
+            {suite}
           </Text>
         ) : null}
       </View>
     );
+  }
+
+  let titreDuBouton = t('collectiviteDemandes.club.envoyer', 'Envoyer la demande');
+  if (posee) titreDuBouton = t('collectiviteDemandes.decision.poser', 'Poser l’entraînement');
+  else if (complet && pourLaMairie && !refusee) {
+    titreDuBouton = t('collectiviteDemandes.club.envoyerQuandMeme', 'Envoyer quand même');
   }
 
   const saisie = (
@@ -527,7 +577,7 @@ function ClubSlotRequest() {
   const placeEtEnvoi = (
     <View style={{ gap: 16 }}>
       {carteDeLaPlace}
-      {jourIso && heuresLibres.length && complet ? (
+      {jourIso && heuresLibres.length && complet && !posee ? (
         <View style={{ gap: 8 }} testID="demande-heures-libres">
           {titreDuChamp(t('collectiviteDemandes.club.libreCeJour', 'Libre ce {{jour}} :', {
             jour: format(parse(jourIso, 'yyyy-MM-dd', new Date()), 'EEEE', { locale: fr }),
@@ -549,30 +599,41 @@ function ClubSlotRequest() {
           </View>
         </View>
       ) : null}
-      <Input
-        label={t('collectiviteDemandes.club.motPourLaMairie', 'Un mot pour la mairie (facultatif)')}
-        multiline
-        onChangeText={(/** @type {string} */ valeur) => setMot(valeur)}
-        testID="demande-mot"
-        value={mot}
-      />
-      <Text style={[Fonts.p3, Fonts.neutral300]}>
-        {t(
-          'collectiviteDemandes.club.quiDecide',
-          'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
+      {pourLaMairie ? (
+        <Input
           // eslint-disable-next-line max-len
-          { ville: nomDeLaVille || t('collectiviteDemandes.club.laVille', 'Ville'), ...SANS_ECHAPPEMENT },
-        )}
-      </Text>
+          label={t('collectiviteDemandes.club.motPourLaMairie', 'Un mot pour la mairie (facultatif)')}
+          multiline
+          onChangeText={(/** @type {string} */ valeur) => setMot(valeur)}
+          testID="demande-mot"
+          value={mot}
+        />
+      ) : null}
+      {pourLaMairie ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteDemandes.club.quiDecide',
+            'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
+            // eslint-disable-next-line max-len
+            { ville: nomDeLaVille || t('collectiviteDemandes.club.laVille', 'Ville'), ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+      {issue === 'dirigeant' ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteDemandes.decision.quiDecideDirigeant',
+            'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
+          )}
+        </Text>
+      ) : null}
       {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
       <Button
         // eslint-disable-next-line max-len
-        disabled={envoi || Boolean(horsHeures) || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
+        disabled={envoi || Boolean(horsHeures) || refusee || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
         isLoading={envoi}
         onPress={envoyer}
-        title={complet
-          ? t('collectiviteDemandes.club.envoyerQuandMeme', 'Envoyer quand même')
-          : t('collectiviteDemandes.club.envoyer', 'Envoyer la demande')}
+        title={titreDuBouton}
         variant="Primary"
       />
     </View>

@@ -5465,6 +5465,16 @@ export default {
       depasse: 'Accepting puts {{equipes}} for {{places}}.',
       libre: 'Accepting bothers nobody.',
     },
+    // COLL-FIX2 (03/10) — what the server will do with the session, said while typing (board 43).
+    decision: {
+      complet: 'It’s full: the facility doesn’t accept another team. Pick another time.',
+      creneauDuClub: 'It’s in your club’s slot: your training will be set right away.',
+      dirigeant: 'Your club is already full in its slot: your club manager will decide.',
+      mairieLibre: 'Outside your club’s slots: the town hall will decide, even if there’s room left.',
+      posee: 'Your training will be set right away.',
+      poser: 'Set the training',
+      quiDecideDirigeant: 'Your club manager accepts or refuses; you get the answer as a notification.',
+    },
     erreur: {
       titre: 'The requests could not be loaded.',
     },
