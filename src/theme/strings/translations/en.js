@@ -18632,6 +18632,11 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Each team\'s stats',
   },
+  // ST-VUES2 (02/10) — the cyan "1 new" pill (screen 16, "Coach feedback").
+  newItemsPill: {
+    count_one: '{{count}} new',
+    count_other: '{{count}} new',
+  },
   // ST-VUES2 (02/10) — the "Weekend results" card of "Club management" (screen 18).
   weekendResults: {
     createSection: 'Create a section',

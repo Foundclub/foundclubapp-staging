@@ -19620,6 +19620,11 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Les stats de chaque équipe',
   },
+  // ST-VUES2 (02/10) — la pastille cyan « 1 nouveau » (écran 16, « Retours du coach »).
+  newItemsPill: {
+    count_one: '{{count}} nouveau',
+    count_other: '{{count}} nouveaux',
+  },
   // ST-VUES2 (02/10) — la carte « Résultats du week-end » de « Gestion du club » (écran 18).
   weekendResults: {
     createSection: 'Créer une section',

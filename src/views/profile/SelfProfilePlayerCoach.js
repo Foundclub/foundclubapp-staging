@@ -1,7 +1,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,11 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
+import {
+  buildCoachFeedbackVisit,
+  countUnseenCoachFeedback,
+  readCoachFeedbackSeenAt,
+} from '@/domains/profile/coachFeedbackSeen';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -37,11 +42,12 @@ import {
   resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
 import MySeasonCard from '@/views/profile/stats/MySeasonCard';
+import NewItemsPill from '@/views/profile/stats/NewItemsPill';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
-import { updateMe } from '@/services/auth/authService';
+import { updateMe, updateMyGuidance } from '@/services/auth/authService';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
@@ -123,15 +129,17 @@ const TOUCH_TARGET = 44;
  * @param {string} props.value
  * @param {(() => void)} props.onPress
  * @param {boolean} [props.divider]
+ * @param {number} [props.badge] - ST-VUES2 : des éléments nouveaux, dits par une pastille.
+ * @param {string} [props.badgeLabel] - Ce que la pastille dit, pour le lecteur d'écran.
  * @param {Record<string, string>} props.surfaces
  * @returns {import('react').ReactElement}
  */
 function FollowUpRow({
-  Colors, divider, icon, Images, label, onPress, surfaces, value,
+  badge = 0, badgeLabel = '', Colors, divider, icon, Images, label, onPress, surfaces, value,
 }) {
   return (
     <TouchableOpacity
-      accessibilityLabel={`${label} : ${value}`}
+      accessibilityLabel={`${label} : ${badge > 0 ? badgeLabel : value}`}
       accessibilityRole="button"
       onPress={onPress}
       style={{
@@ -161,17 +169,19 @@ function FollowUpRow({
       >
         {label}
       </Text>
-      <Text
-        numberOfLines={1}
-        style={{
-          color: Colors.neutral400,
-          fontFamily: 'Montserrat-Bold',
-          fontSize: 12,
-          maxWidth: 160,
-        }}
-      >
-        {value}
-      </Text>
+      {badge > 0 ? <NewItemsPill count={badge} /> : (
+        <Text
+          numberOfLines={1}
+          style={{
+            color: Colors.neutral400,
+            fontFamily: 'Montserrat-Bold',
+            fontSize: 12,
+            maxWidth: 160,
+          }}
+        >
+          {value}
+        </Text>
+      )}
       <Image
         source={Images.arrowRight}
         style={{ height: 14, tintColor: Colors.neutral400, width: 14 }}
@@ -242,6 +252,7 @@ function SelfProfilePlayerCoach({ navigation }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
+    appBootstrapData,
     formatBirthdateToDisplay,
     formatBirthdateToSend,
     getAuthTokens,
@@ -380,6 +391,31 @@ function SelfProfilePlayerCoach({ navigation }) {
   const feedbackCount = Array.isArray(personalStats?.recentCoachFeedback)
     ? personalStats.recentCoachFeedback.length
     : 0;
+  // ST-VUES2 (planche 16, etat 2) — « 1 nouveau » sur « Retours du coach » : les retours parus
+  // depuis la derniere ouverture (la marque vit sur le serveur, domains/profile/coachFeedbackSeen).
+  const coachFeedbackSeenAt = readCoachFeedbackSeenAt(appBootstrapData);
+  const unseenCoachFeedbackCount = countUnseenCoachFeedback(
+    personalStats?.recentCoachFeedback,
+    coachFeedbackSeenAt,
+  );
+  const openCoachFeedback = useCallback(() => {
+    // L'ancienne marque part avec la vue : elle sait encore ce qui etait nouveau (ecran 19).
+    navigation.navigate(RouteNames.UserDetails, {
+      ...(coachFeedbackSeenAt ? { coachFeedbackSeenBefore: coachFeedbackSeenAt } : {}),
+      userId,
+      view: 'coachFeedback',
+    });
+    updateMyGuidance(buildCoachFeedbackVisit())
+      .then((guidanceState) => {
+        if (!guidanceState) return;
+        queryClient.setQueriesData(
+          { queryKey: ['app-bootstrap'] },
+          (/** @type {any} */ previous) => (previous ? { ...previous, guidanceState } : previous),
+        );
+      })
+      // Un echec laisse la pastille : rien n'est perdu, elle partira a la prochaine ouverture.
+      .catch(() => undefined);
+  }, [coachFeedbackSeenAt, navigation, queryClient, userId]);
 
   const sectionOptions = useMemo(
     () => (sections || []).map((/** @type {any} */ section) => ({
@@ -1008,15 +1044,14 @@ function SelfProfilePlayerCoach({ navigation }) {
                 d'ou les retours sont retires : elle ouvre leur vue a eux. */}
             {isPlayer ? (
               <FollowUpRow
+                badge={unseenCoachFeedbackCount}
+                badgeLabel={t('newItemsPill.count', { count: unseenCoachFeedbackCount })}
                 Colors={Colors}
                 divider
                 icon={Images.users}
                 Images={Images}
                 label={t('userDetails.sections.coachFeedback', 'Retours du coach')}
-                onPress={() => navigation.navigate(RouteNames.UserDetails, {
-                  userId,
-                  view: 'coachFeedback',
-                })}
+                onPress={openCoachFeedback}
                 surfaces={surfaces}
                 value={feedbackCount
                   ? String(feedbackCount)
