@@ -194,14 +194,19 @@ function ClubCard({
                 </Text>
               </View>
             ) : null}
+            {/*
+              FINITIONS7 (tournee 8) — RECRUTE etait en BOUT de rangee, donc a droite : le
+              bouton flottant « carte » de l annuaire (bas droit) le couvrait. Sous le nom et
+              l adresse, aligne a gauche, il ne passe plus jamais dessous.
+            */}
+            {isRecruiting ? (
+              <View style={[styles.recruitBadge, { borderColor: Colors.success500 }]}>
+                <Text style={[styles.recruitText, { color: Colors.success500 }]}>
+                  {t('clubCard.recruitingBadge', 'RECRUTE')}
+                </Text>
+              </View>
+            ) : null}
           </View>
-          {isRecruiting ? (
-            <View style={[styles.recruitBadge, { borderColor: Colors.success500 }]}>
-              <Text style={[styles.recruitText, { color: Colors.success500 }]}>
-                {t('clubCard.recruitingBadge', 'RECRUTE')}
-              </Text>
-            </View>
-          ) : null}
         </View>
 
         {/* Chips sections sportives */}
@@ -330,8 +335,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   recruitBadge: {
+    alignSelf: 'flex-start',
     borderRadius: 999,
     borderWidth: 1,
+    marginTop: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },

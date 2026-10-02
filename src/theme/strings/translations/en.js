@@ -6652,6 +6652,10 @@ export default {
     trainingCamp: 'TRAINING CAMP',
   },
   eventDetails: {
+    // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
+    a11y: {
+      reportEvent: 'Report the event',
+    },
     absenceConfirmed: 'Absence confirmed',
     absenceRecorded: 'Absence recorded',
     absencesMissing: 'Absences / missing',
@@ -7335,7 +7339,10 @@ export default {
     saving: 'Saving...',
     sayHowManyExternalSpots: 'Say how many external spots you want to open for this training session.',
     scheduleResultsAndStandingsAre: 'Schedule, results and standings are ready to be managed.',
+    // FINITIONS7 (02/10) — the match box: « Upcoming » before, « Score pending » after.
+    scorePending: 'Score pending',
     scoreToComplete: 'Score to complete',
+    scoreUpcoming: 'Upcoming',
     scoreWaitingToSync: 'Score waiting to sync',
     seeAllMyPendingMatches: 'See all my pending matches',
     seeMyCallUp: 'See my call-up',
@@ -8230,6 +8237,14 @@ export default {
         visibilityPublicHint: 'Discoverable by everyone — recommended for a trial.',
       },
       description: {
+        // FINITIONS7 (02/10) — one example per event type (the trial keeps placeholderExample).
+        examples: {
+          match: 'E.g.: league match — meet 1 h before in the changing room, shirt provided.',
+          other: 'E.g.: pre-season meeting at the clubhouse — we present the calendar and the teams.',
+          stage: 'E.g.: 3-day camp during the holidays — 9 am to 5 pm, lunch included.',
+          tournament: 'E.g.: 8-team tournament, 15-minute games — bring a packed lunch, prizes at 5 pm.',
+          training: 'E.g.: technical session then small-sided games — arrive 15 min early with water and sports kit.',
+        },
         label: 'Description',
         placeholder: 'Add useful details for participants.',
         placeholderExample: 'E.g.: come try football with the U15s — bring sports kit, the trial is free.',
@@ -8237,6 +8252,7 @@ export default {
         subtitleShort: 'What players will read before signing up.',
         title: 'Description',
         valueHint: 'A clear description doubles sign-ups for a trial.',
+        valueHintGeneric: 'A clear description answers questions before they are asked.',
       },
       detectionSlots: {
         capacityWarning: "The total places per position exceeds the event's capacity.",
@@ -12791,6 +12807,8 @@ export default {
       rsvp: 'Unable to save your reply.',
     },
     markAll: 'Mark all as read',
+    // FINITIONS7 (02/10) — the button under the finger that swipes a notification.
+    markReadSwipe: 'Read',
     rsvp: {
       absent: 'Absence saved.',
       present: 'Attendance saved.',
@@ -15199,8 +15217,12 @@ export default {
       title: 'How do I create an alert?',
     },
     item: {
+      // FINITIONS7 (02/10) — the names of an alert's controls, for the screen reader.
+      deleteLabel: 'Delete the alert “{{label}}”',
+      editLabel: 'Edit the alert “{{label}}”',
       search: 'Search',
       staffOnly: 'Only available on a manager or coach account.',
+      toggleLabel: 'Alert “{{label}}” on',
     },
     offer: {
       body: 'Choose a city and a sport: we notify you as soon as a matching new event is published near you.',

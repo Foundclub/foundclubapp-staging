@@ -107,7 +107,7 @@ function AdWizardAudienceType({ navigation, route }) {
         <AudienceCard
           description={t(
             'adWizardAudienceType.players.description',
-            'Publie une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l’équipe.', // eslint-disable-line max-len
+            'Publie une annonce par poste recherché, avec le volume de recrutement et les informations sportives de l’équipe.', // eslint-disable-line max-len
           )}
           isSelected={state.audienceType === 'player'}
           onPress={() => handleSelect('player')}
@@ -117,7 +117,7 @@ function AdWizardAudienceType({ navigation, route }) {
         <AudienceCard
           description={t(
             'adWizardAudienceType.coach.description',
-            "Publie une annonce dédiée a un rôle d'encadrement: entraîneur principal, adjoint, préparateur physique ou autre besoin staff.", // eslint-disable-line max-len
+            'Publie une annonce dédiée à un rôle d’encadrement : entraîneur principal, adjoint, préparateur physique ou autre besoin staff.', // eslint-disable-line max-len
           )}
           isSelected={state.audienceType === 'coach'}
           onPress={() => handleSelect('coach')}
@@ -128,7 +128,7 @@ function AdWizardAudienceType({ navigation, route }) {
           <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 22 }]}>
             {t(
               'adWizardAudienceType.footnote',
-              'Le tunnel adapte ensuite automatiquement les etapes, les libelles et l’affichage final de l’annonce.', // eslint-disable-line max-len
+              'Le tunnel adapte ensuite automatiquement les étapes, les libellés et l’affichage final de l’annonce.', // eslint-disable-line max-len
             )}
           </Text>
         </View>

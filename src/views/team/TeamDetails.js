@@ -2195,7 +2195,7 @@ function TeamDetails({ navigation, route }) {
           const homeAwayLabel = item?.homeAway === 'home'
             ? t('teamDetails.external.report.home', 'Domicile')
             : item?.homeAway === 'away'
-              ? t('teamDetails.external.report.away', 'Exterieur')
+              ? t('teamDetails.external.report.away', 'Extérieur')
               : null;
 
           return (

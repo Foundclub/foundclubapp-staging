@@ -1297,7 +1297,7 @@ export default {
     filters: {
       all: 'Tous',
       events: 'Evenements',
-      rejected: 'Refuses',
+      rejected: 'Refusés',
       resolved: 'Resolus',
     },
     noDetail: 'Signalement sans detail.',
@@ -1316,7 +1316,7 @@ export default {
     },
     status: {
       pending: 'En attente',
-      rejected: 'Refuse',
+      rejected: 'Refusé',
       resolved: 'Resolu',
     },
     statusLabel: 'Statut',
@@ -1526,15 +1526,15 @@ export default {
   adWizardAudienceType: {
     coach: {
       // eslint-disable-next-line max-len
-      description: "Publie une annonce dédiée a un rôle d'encadrement: entraîneur principal, adjoint, préparateur physique ou autre besoin staff.",
+      description: 'Publie une annonce dédiée à un rôle d’encadrement : entraîneur principal, adjoint, préparateur physique ou autre besoin staff.',
       title: 'Je recrute un entraîneur',
     },
     // eslint-disable-next-line max-len
-    footnote: 'Le tunnel adapte ensuite automatiquement les etapes, les libelles et l’affichage final de l’annonce.',
+    footnote: 'Le tunnel adapte ensuite automatiquement les étapes, les libellés et l’affichage final de l’annonce.',
     next: 'Suivant',
     players: {
       // eslint-disable-next-line max-len
-      description: 'Publie une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l’équipe.',
+      description: 'Publie une annonce par poste recherché, avec le volume de recrutement et les informations sportives de l’équipe.',
       title: 'Je recrute des joueurs',
     },
     quotaLabel: 'Annonces',
@@ -1603,7 +1603,7 @@ export default {
       canSkip: 'Tu peux aussi continuer sans description.',
       optional: 'Optionnel',
       // eslint-disable-next-line max-len
-      placeholder: 'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui evolue en régional. Entraînements les mardis et jeudis soir, ambiance serieuse et bienveillante.',
+      placeholder: 'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui évolue en régional. Entraînements les mardis et jeudis soir, ambiance sérieuse et bienveillante.',
       // eslint-disable-next-line max-len
       placeholderCoach: 'Ex. Nous recherchons un entraîneur adjoint pour accompagner notre groupe senior régional. Projet formateur, équipe staff engagee, rythme de deux séances par semaine.',
       ready: 'Ta description est prête à être publiée.',
@@ -1651,7 +1651,7 @@ export default {
       title: 'Profil requis',
     },
     sportUndefined: 'Non défini',
-    subtitle: 'Précise la cible sportive recherchee avant de passer au lieu de publication.',
+    subtitle: 'Précise la cible sportive recherchée avant de passer au lieu de publication.',
     subtitleCoach: 'Précise le cadre sportif dans lequel tu recherches un profil coach.',
     taxonomy: {
       // eslint-disable-next-line max-len
@@ -2514,7 +2514,7 @@ export default {
     a11y: {
       callClub: 'Appeler le club au {{phoneNumber}}',
       deleteSponsor: 'Supprimer le sponsor {{sponsorName}}',
-      emailClub: 'Envoyer un e-mail a {{email}}',
+      emailClub: 'Envoyer un e-mail à {{email}}',
     },
     about: {
       createdIn: 'Créée en {{year}}.',
@@ -7068,6 +7068,10 @@ export default {
     trainingCamp: 'STAGE',
   },
   eventDetails: {
+    // FINITIONS7 (02/10) — les noms que le lecteur d ecran annonce dans la barre du haut.
+    a11y: {
+      reportEvent: 'Signaler l’événement',
+    },
     absenceConfirmed: 'Absence confirmée',
     absenceRecorded: 'Absence enregistrée',
     absencesMissing: 'Absences / manques',
@@ -7282,7 +7286,7 @@ export default {
     // eslint-disable-next-line max-len
     createSeveralTeamsByHand: 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.',
     decline: 'Refuser',
-    declined: 'Refusee',
+    declined: 'Refusée',
     declineTheRequest: 'Refuser la demande ?',
     detection: {
       candidateAccept: 'Accepter',
@@ -7779,7 +7783,10 @@ export default {
     sayHowManyExternalSpots: 'Indique combien de places externes tu veux ouvrir pour cet entraînement.',
     // eslint-disable-next-line max-len
     scheduleResultsAndStandingsAre: 'Calendrier, résultats et classement sont prêts à être pilotés.',
+    // FINITIONS7 (02/10) — l encart du match : « À venir » avant, « Score en attente » apres.
+    scorePending: 'Score en attente',
     scoreToComplete: 'Score à compléter',
+    scoreUpcoming: 'À venir',
     scoreWaitingToSync: 'Score en attente de synchronisation',
     seeAllMyPendingMatches: 'Voir tous mes matchs en attente',
     seeMyCallUp: 'Voir ma convocation',
@@ -8208,7 +8215,7 @@ export default {
     locationMode: {
       club: 'Club',
       clubHint: 'Installation du club',
-      external: 'Exterieur',
+      external: 'Extérieur',
       externalHint: 'Adresse extérieure',
     },
     manual: 'Manuelle',
@@ -8273,9 +8280,9 @@ export default {
     thisEventNoLongerExists: 'Cet événement n existe plus ou ne peut pas être modifie depuis ce lien.',
     thisPageCanTEdit: "Cette fiche ne permet pas encore d'éditer ce type d'événement.",
     // eslint-disable-next-line max-len
-    thisSlotExceedsTheFacility: 'Ce créneau dépasse la capacité de l installation. L événement restera en demande en attente jusqu au traitement d un dirigeant.',
+    thisSlotExceedsTheFacility: 'Ce créneau dépasse la capacité de l’installation. L’événement restera en demande en attente jusqu’au traitement d’un dirigeant.',
     // eslint-disable-next-line max-len
-    thisSlotExceedsTheFacility2: 'Ce créneau dépasse la capacité de l installation, mais ce club est configure en Autorise et notifier. L événement restera confirme et les dirigeants seront prevenus.',
+    thisSlotExceedsTheFacility2: 'Ce créneau dépasse la capacité de l’installation, mais ce club est configuré en Autorise et notifier. L’événement restera confirmé et les dirigeants seront prévenus.',
     title: 'Créer un événement',
     titleEdit: 'Modifier l\'événement',
     trainingOpen: {
@@ -8493,7 +8500,7 @@ export default {
     chooseThePeopleToAdd: 'Choisis les personnes à ajouter.',
     confirmedAssignments: 'Affectations confirmées',
     decline: 'Refuser',
-    declined: 'Refuse',
+    declined: 'Refusé',
     extraTasks: 'Tâches annexes',
     iLlTakeIt: "Je m'assigne",
     iVolunteer: 'Je me porte volontaire',
@@ -8557,7 +8564,7 @@ export default {
     cancelled: 'Annulee',
     cancelTheInvitation: "Annuler l'invitation",
     decline: 'Refuser',
-    declined: 'Refusee',
+    declined: 'Refusée',
     externalTeam: 'Équipe externe',
     internalTeam: 'Équipe interne',
     organiser: 'Organisateur',
@@ -8742,6 +8749,18 @@ export default {
         visibilityPublicHint: 'Découvrable par tous — recommandé pour une détection.',
       },
       description: {
+        // FINITIONS7 (02/10) — un exemple par type d evenement (detection : placeholderExample).
+        examples: {
+          match: 'Ex. : match de championnat — rendez-vous 1 h avant au vestiaire, maillot fourni.',
+          // eslint-disable-next-line max-len
+          other: 'Ex. : réunion d’avant-saison au club-house — on présente le calendrier et les équipes.',
+          // eslint-disable-next-line max-len
+          stage: 'Ex. : stage de 3 jours pendant les vacances — de 9 h à 17 h, repas du midi compris.',
+          // eslint-disable-next-line max-len
+          tournament: 'Ex. : tournoi à 8 équipes, matchs de 15 min — prévois ton pique-nique, remise des prix à 17 h.',
+          // eslint-disable-next-line max-len
+          training: 'Ex. : séance technique puis jeu réduit — arrive 15 min avant, avec une gourde et une tenue de sport.',
+        },
         label: 'Description',
         placeholder: 'Ajoute des détails utiles pour les participants.',
         // eslint-disable-next-line max-len
@@ -8750,6 +8769,7 @@ export default {
         subtitleShort: "Ce que les joueurs liront avant de s'inscrire.",
         title: 'Description',
         valueHint: 'Une description claire double les inscriptions sur une détection.',
+        valueHintGeneric: 'Une description claire répond aux questions avant qu’on les pose.',
       },
       detectionSlots: {
         capacityWarning: 'Le total des places par poste dépasse la capacité de l événement.',
@@ -11464,7 +11484,7 @@ export default {
       pending: 'En attente',
       ready: 'Pret',
       refunded: 'Remboursee',
-      refused: 'Refuse',
+      refused: 'Refusé',
       rejected: 'Rejete',
       scheduled: 'Programmee',
       submitted: 'Depose',
@@ -13343,7 +13363,7 @@ export default {
       instalments_other: '{{count}} échéances',
     },
     empty: {
-      description: 'Aucune cotisation n est encore rattachée à ton compte.',
+      description: 'Aucune cotisation n’est encore rattachée à ton compte.',
     },
     error: {
       description: 'Impossible de charger tes cotisations pour le moment.',
@@ -13490,6 +13510,8 @@ export default {
       rsvp: "Impossible d'enregistrer ta réponse.",
     },
     markAll: 'Tout lire',
+    // FINITIONS7 (02/10) — le bouton qui apparait sous le doigt qui glisse une notification.
+    markReadSwipe: 'Lu',
     rsvp: {
       absent: 'Absence enregistrée.',
       present: 'Présence enregistrée.',
@@ -13852,9 +13874,9 @@ export default {
     theExternalPlayerQuotaFor: 'Le quota de joueurs externes pour cet entraînement est déjà atteint.',
     thisBookingDoesnTAccept: 'Cette réservation n accepte pas de nouveaux joueurs.',
     thisBookingIsAlreadyFull: 'Cette réservation est déjà complété.',
-    thisBookingIsAlreadyOver: 'Cette réservation est déjà passee.',
+    thisBookingIsAlreadyOver: 'Cette réservation est déjà passée.',
     thisClosedEventIsReserved: 'Cet événement fermé est réservé aux équipes concernées.',
-    thisEventIsAlreadyOver: 'Cet événement est déjà passe.',
+    thisEventIsAlreadyOver: 'Cet événement est déjà passé.',
     thisEventIsFull: 'Cet événement est complet.',
     thisListingIsNoLonger: 'Cette annonce n est plus active.',
     thisTrainingSessionDoesnT: 'Cet entraînement n accepte pas de joueurs externes pour le moment.',
@@ -14963,7 +14985,7 @@ export default {
     },
     badge: {
       accepted: 'Acceptee',
-      declined: 'Refusee',
+      declined: 'Refusée',
       pendingMine: 'En attente de réponse',
       pendingTheirs: 'En attente de ta réponse',
     },
@@ -15263,7 +15285,7 @@ export default {
     },
     status: {
       accepted: 'Accepte',
-      declined: 'Refuse',
+      declined: 'Refusé',
       pending: 'En attente',
     },
     tags: {
@@ -15694,7 +15716,7 @@ export default {
       featured: 'À la une',
       friendly: 'Amicaux',
       installation: 'Installation',
-      interest: 'Interets',
+      interest: 'Intérêts',
       team: 'Équipe',
       teamInvite: 'Invitations',
     },
@@ -15907,8 +15929,12 @@ export default {
       title: 'Comment créer une alerte ?',
     },
     item: {
+      // FINITIONS7 (02/10) — les noms des commandes d une alerte, pour le lecteur d ecran.
+      deleteLabel: 'Supprimer l’alerte « {{label}} »',
+      editLabel: 'Modifier l’alerte « {{label}} »',
       search: 'Rechercher',
       staffOnly: 'Disponible uniquement sur un compte dirigeant ou entraîneur.',
+      toggleLabel: 'Alerte « {{label}} » active',
     },
     offer: {
       // eslint-disable-next-line max-len
@@ -16606,7 +16632,7 @@ export default {
       pendingTitle: 'Réponses joueur en attente de validation équipe',
       playersRating: 'Joueurs {{rating}}/10',
       published: 'Publie',
-      responses: '{{responded}}/{{eligible}} joueurs ont repondu',
+      responses: '{{responded}}/{{eligible}} joueurs ont répondu',
     },
     requestPending: 'Demande en attente',
     requestToJoin: 'Demander à rejoindre',
@@ -18992,7 +19018,7 @@ export default {
       replaceTitle: 'Remplacer la source externe ?',
       report: {
         archivedSection: 'Événements archivés',
-        away: 'Exterieur',
+        away: 'Extérieur',
         createdSection: 'Événements créés',
         dateUnknown: 'Date à confirmer',
         home: 'Domicile',
@@ -20023,7 +20049,7 @@ export default {
     filterAccepted: 'Validees',
     filterAll: 'Toutes',
     filterArchived: 'Archivees',
-    filterDeclined: 'Refusees',
+    filterDeclined: 'Refusées',
     filterPending: 'En attente',
     filterWarning: 'Warnings roster',
     fromTeam: 'Depuis {{teamName}}',

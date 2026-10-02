@@ -213,7 +213,7 @@ function AdWizardDescription({ navigation }) {
               )
               : t(
                 'adWizardDescription.need.placeholder',
-                'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui evolue en régional. Entraînements les mardis et jeudis soir, ambiance serieuse et bienveillante.', // eslint-disable-line max-len
+                'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui évolue en régional. Entraînements les mardis et jeudis soir, ambiance sérieuse et bienveillante.', // eslint-disable-line max-len
               )}
             placeholderTextColor={Colors.neutral500}
             style={[

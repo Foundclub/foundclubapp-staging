@@ -222,7 +222,7 @@ const buildReservationFlow = (entity, context) => {
   } else if (!isFutureDatedEntity(entity)) {
     blockedReason = i18next.t(
       'participationFlow.thisBookingIsAlreadyOver',
-      'Cette réservation est déjà passee.',
+      'Cette réservation est déjà passée.',
     );
   } else if (!isRecruiting || !isShared) {
     blockedReason = i18next.t(
@@ -355,7 +355,7 @@ const buildEventFlow = (entity, context) => {
   } else if (!isFutureDatedEntity(entity) && !entity?.league_match) {
     blockedReason = i18next.t(
       'participationFlow.thisEventIsAlreadyOver',
-      'Cet événement est déjà passe.',
+      'Cet événement est déjà passé.',
     );
   } else if (
     isExternalTrainingParticipant

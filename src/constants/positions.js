@@ -74,7 +74,7 @@ export const POSITION_GROUPS_BY_SPORT = {
   ],
   football: [
     { label: 'Gardien', positions: ['Gardien'] },
-    { label: 'Defense', positions: ['Défenseur central', 'Latéral droit', 'Latéral gauche'] },
+    { label: 'Défense', positions: ['Défenseur central', 'Latéral droit', 'Latéral gauche'] },
     { label: 'Milieu', positions: ['Milieu défensif', 'Milieu central', 'Milieu offensif'] },
     { label: 'Attaque', positions: ['Ailier droit', 'Ailier gauche', 'Attaquant', 'Avant-centre'] },
   ],
@@ -86,7 +86,7 @@ export const POSITION_GROUPS_BY_SPORT = {
   ],
   rugby: [
     { label: 'Avants', positions: ['Pilier', 'Talonneur', 'Deuxième ligne', 'Troisième ligne aile', 'Troisième ligne centre'] },
-    { label: 'Charniere', positions: ['Demi de mêlée', "Demi d'ouverture"] },
+    { label: 'Charnière', positions: ['Demi de mêlée', "Demi d'ouverture"] },
     { label: 'Ligne arrière', positions: ['Centre', 'Ailier', 'Arrière'] },
   ],
   volleyball: [
