@@ -457,3 +457,40 @@ describe('ClubCard — ANNUAIRE-E1 : le lien vers la fiche, sur le site', () => 
     expect(carte.props.accessibilityRole).toBe('button');
   });
 });
+
+// FINITIONS7 · POINT 5 (tournee 8, T8_DEFAUT_annuaire_bouton_carte_couvre_badge_recrute) —
+// le bouton flottant « carte » de l annuaire (SearchMapFab : bas DROIT, 64 de large, a 20 du
+// bord) couvrait le badge RECRUTE, pose en BOUT de la rangee d en-tete, donc a droite.
+// Le badge rejoint la colonne de texte, sous le nom et l adresse, aligne a GAUCHE : il ne
+// passe plus jamais sous le bouton, quelle que soit la position de defilement.
+// ⚠️ Jest ne mesure aucun pixel : ce temoin lit la PARENTE et l ALIGNEMENT. Le rendu se
+// photographie a la tournee.
+describe('FINITIONS7 · point 5 — RECRUTE hors de la colonne du bouton carte', () => {
+  const ancetres = (/** @type {any} */ noeud) => {
+    const chaine = [];
+    let courant = noeud?.parent;
+    while (courant) {
+      chaine.push(courant);
+      courant = courant.parent;
+    }
+    return chaine;
+  };
+  const style = (/** @type {any} */ noeud) => StyleSheet.flatten(noeud?.props?.style) || {};
+
+  it('🚨 le badge vit dans la colonne de texte de l en-tete, aligne a gauche', () => {
+    const tree = renderCard({ item: { ...baseClub, recruitmentAds: [{ documentId: 'ad-1' }] } });
+    const libelle = tree.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'string' && n.props.children === 'RECRUTE',
+    )[0];
+    const hotes = ancetres(libelle).filter((/** @type {any} */ n) => typeof n.type === 'string');
+    const badge = hotes[0];
+    const colonneDeTexte = hotes.find((/** @type {any} */ n) => style(n).flex === 1 && style(n).minWidth === 0);
+
+    expect(colonneDeTexte).toBeDefined();
+    expect(style(badge).alignSelf).toBe('flex-start');
+  });
+
+  it('il ne s affiche toujours qu avec une annonce ouverte', () => {
+    expect(textsOf(renderCard({ item: baseClub }))).not.toContain('RECRUTE');
+  });
+});
