@@ -131,7 +131,9 @@ function CollectiviteTabNavigator() {
       />
       <Tab.Screen
         getComponent={() => require('@/views/Messaging').default}
-        initialParams={{ chatScope: 'classic' }}
+        // COLL-C4A (02/10) : la messagerie sait qu'elle est dans l'espace de la Ville (son canal
+        // des actualités et « Publier » en tête, planche P3v2-messages-tel).
+        initialParams={{ chatScope: 'classic', collectiviteId, espace: 'ville' }}
         listeners={createFocusedTabResetListener}
         name={RouteNames.Chat}
         options={optionsDe(RouteNames.Chat)}

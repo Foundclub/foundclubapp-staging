@@ -39,6 +39,8 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+// COLL-C4A (02/10) — les canaux de la Ville, épinglés en tête de la messagerie.
+import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -873,6 +875,13 @@ function Messaging({ navigation, route }) {
           <View style={[Alignments.fill]}>
             {renderChatScopeFilter()}
             {renderSearch()}
+            {/* COLL-C4A (02/10) — en tête : le canal des actualités de la Ville (le membre d'un
+                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ». */}
+            <CanauxDeLaVille
+              collectiviteId={route?.params?.collectiviteId || null}
+              espaceVille={route?.params?.espace === 'ville'}
+              navigation={navigation}
+            />
             {isLoading && (
               <WithDataWrapper
                 isLoading

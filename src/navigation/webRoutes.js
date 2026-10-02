@@ -280,6 +280,12 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CollectiviteInviteClub]: '/collectivite/:collectiviteId/inviter-un-club',
   [RouteNames.CollectiviteJoin]: '/invitation-ville/:token',
   [RouteNames.CollectiviteJoinRequest]: '/invitation-ville/:token/rattacher',
+  // COLL-C4A (02/10/2026) — les actualites de la Ville, cote mairie : la liste, et le formulaire
+  // (sans identifiant : publier ; avec : modifier).
+  [RouteNames.CollectiviteActualites]: '/collectivite/:collectiviteId/actualites',
+  [RouteNames.CollectiviteActualiteForm]: '/collectivite/:collectiviteId/actualite/:actualiteId?',
+  // COLL-C4A planche 2 — le canal de la Ville d un membre (une Ville, ou toutes les siennes).
+  [RouteNames.CollectiviteActualitesCanal]: '/actualites-ville/:collectiviteId?',
   // COLL-C2B (02/10/2026) — une installation de la Ville, ses creneaux (la collectivite et
   // l installation dans l adresse ; « /installation/:facilityId? » reste le formulaire).
   [RouteNames.CollectiviteInstallation]: '/collectivite/:collectiviteId/installations/:facilityId',

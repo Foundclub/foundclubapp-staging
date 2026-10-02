@@ -61,6 +61,8 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+// COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
+import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
@@ -2525,6 +2527,14 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière
+            actualité de la Ville qu'il n'a ni ouverte ni masquée (le serveur la choisit). */}
+        <BandeauActualiteMembre
+          onOuvrir={(collectiviteId) => navigation.navigate(
+            RouteNames.CollectiviteActualitesCanal,
+            { collectiviteId },
+          )}
+        />
         {/* COLL-ACCUEIL (01/10) — compte mixte : la porte discrète vers l'espace de sa Ville. */}
         <CollectivitePorteRow />
         {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour. */}
