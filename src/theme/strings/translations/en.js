@@ -4850,7 +4850,6 @@ export default {
       delie: 'Request unlinked: it is waiting for its club again.',
       delier: 'Unlink this club',
       dirigeantsPrevenus: 'Its managers have been notified.',
-      // eslint-disable-next-line max-len
       dit: 'An attach request comes from a club manager who opened their town\'s link. A "Via FoundClub" invitation comes from a town hall: the club is not registered yet. Check, then attach.',
       entete: 'Attach requests',
       horsCommune: 'Outside the municipality: check that the club really plays in {{ville}} before attaching it.',
@@ -4876,9 +4875,7 @@ export default {
     fenetres: {
       activee: 'Activated. Plan given: {{granted}}{{offerts}} · Club already paying: {{alreadyPaid}}{{payeurs}}',
       detacherBouton: 'Detach {{club}}',
-      // eslint-disable-next-line max-len
       detacherOffre: 'The club stays intact: teams, members and events. It received the Club plan offered by {{collectivite}}: it is withdrawn.',
-      // eslint-disable-next-line max-len
       detacherSansOffre: 'The club stays intact: teams, members and events. It did not receive the plan from {{collectivite}}: nothing changes for its subscription.',
       offerte: 'Offered',
       offrir_one: 'Give the Club plan to {{count}} club',
@@ -4895,18 +4892,15 @@ export default {
       retirerBouton: 'Remove {{nom}}',
       sansOffre_one: '{{count}} club does not have the local authority’s plan, nothing changes for it:',
       sansOffre_other: '{{count}} clubs do not have the local authority’s plan, nothing changes for them:',
-      // eslint-disable-next-line max-len
       seulGestionnaire: 'This is the only manager. Without a manager, the clubs’ slot requests will wait without an answer.',
     },
     fiche: {
       ajouterGestionnaire: 'Add: name or e-mail',
       aucunClub: 'No attached club. Search the municipality’s clubs by name.',
-      // eslint-disable-next-line max-len
       aucunClubTrouve: 'No result. Check the spelling. A club that is not on FoundClub must first be created in the console, under “Clubs”.',
       bandeau: {
         activeSansClub: 'No club is attached: every club you attach will receive the Club plan for free.',
         activeSansDetail: 'Its attached clubs receive the Club plan for free, except those already paying.',
-        // eslint-disable-next-line max-len
         inactiveSansClub: 'No club is attached: every club you attach will receive the Club plan for free, once the town is active.',
         inactiveSansDetail: 'Activating it will give the Club plan to its attached clubs, except those already paying.',
         offrira_one: 'Activating it will give the Club plan to {{count}} club.',
@@ -4942,7 +4936,6 @@ export default {
       colonneClubs: 'Attached clubs',
       colonneCollectivite: 'Local authority',
       colonneEtat: 'Status',
-      // eslint-disable-next-line max-len
       dit: 'An active local authority gives the Club plan to its attached clubs, except those already paying. Open its record to activate or switch it off.',
       inactives: 'Inactive ({{nombre}})',
       toutes: 'All ({{nombre}})',

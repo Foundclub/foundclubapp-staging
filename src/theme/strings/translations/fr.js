@@ -5196,6 +5196,7 @@ export default {
       // eslint-disable-next-line max-len
       dit: 'Une demande de rattachement vient d’un dirigeant qui a ouvert le lien de sa Ville. Une invitation « Par FoundClub » vient d’une mairie : le club n’est pas encore inscrit. Vérifie, puis rattache.',
       entete: 'Rattachements',
+      // eslint-disable-next-line max-len
       horsCommune: 'Hors de la commune : vérifie que le club joue bien à {{ville}} avant de le rattacher.',
       indisponibles: 'Demandes indisponibles',
       inscrit: 'Inscrit sur FoundClub : {{club}}',
@@ -5217,6 +5218,7 @@ export default {
       videRattachements: 'Aucune demande de rattachement en attente.',
     },
     fenetres: {
+      // eslint-disable-next-line max-len
       activee: 'Activée. Offre posée : {{granted}}{{offerts}} · Club qui paie déjà : {{alreadyPaid}}{{payeurs}}',
       detacherBouton: 'Détacher {{club}}',
       // eslint-disable-next-line max-len
@@ -5237,6 +5239,7 @@ export default {
       retirer_other: 'Retirer l’offre à {{count}} clubs',
       retirerBouton: 'Retirer {{nom}}',
       sansOffre_one: '{{count}} club n’a pas l’offre de la collectivité, rien ne change pour lui :',
+      // eslint-disable-next-line max-len
       sansOffre_other: '{{count}} clubs n’ont pas l’offre de la collectivité, rien ne change pour eux :',
       // eslint-disable-next-line max-len
       seulGestionnaire: 'C’est le seul gestionnaire. Sans gestionnaire, les demandes de créneau des clubs attendront sans réponse.',
@@ -5247,10 +5250,13 @@ export default {
       // eslint-disable-next-line max-len
       aucunClubTrouve: 'Aucun résultat. Vérifie l’orthographe. Un club absent de FoundClub se crée d’abord dans la console, rubrique « Clubs ».',
       bandeau: {
+        // eslint-disable-next-line max-len
         activeSansClub: 'Aucun club n’est rattaché : chaque club que tu rattacheras recevra l’offre Club offerte.',
+        // eslint-disable-next-line max-len
         activeSansDetail: 'Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.',
         // eslint-disable-next-line max-len
         inactiveSansClub: 'Aucun club n’est rattaché : chaque club que tu rattacheras recevra l’offre Club offerte, une fois la Ville activée.',
+        // eslint-disable-next-line max-len
         inactiveSansDetail: 'L’activer offrira l’offre Club à ses clubs rattachés, sauf à ceux qui paient déjà.',
         offrira_one: 'L’activer offrira l’offre Club à {{count}} club.',
         offrira_other: 'L’activer offrira l’offre Club à {{count}} clubs.',
