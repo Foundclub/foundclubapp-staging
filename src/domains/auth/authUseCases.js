@@ -1158,10 +1158,14 @@ export const profileFieldToDisplay = (role) => {
         'nationality',
         'jerseyNumber',
       ];
+    // AGE-OBLIGATOIRE-2 b (02/10/2026, « profil dirigeant oui ») - le dirigeant donne sa date
+    // a l'inscription depuis AGE-OBLIGATOIRE 1 : il doit pouvoir la corriger ici, avec les
+    // memes regles que les autres roles (meme champ, declaration parentale sous 15 ans).
     case 'president':
       return [
         'firstname',
         'lastname',
+        'birthdate',
         'avatar',
       ];
     default:
