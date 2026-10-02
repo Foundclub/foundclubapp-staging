@@ -25,7 +25,10 @@ import useNotifications from '../useNotifications';
 // ==========================================================================
 
 const mockLireCompteur = jest.fn(async () => ({ count: 2 }));
-const mockLireListe = jest.fn(async () => ({ data: [], meta: { pagination: { page: 1, pageCount: 1 } } }));
+const mockLireListe = jest.fn(async () => ({
+  data: [],
+  meta: { pagination: { page: 1, pageCount: 1 } },
+}));
 const mockAddDeviceTokenForSession = jest.fn();
 const mockGetToken = jest.fn();
 /** @type {((message: any) => void) | null} */
@@ -139,7 +142,9 @@ jest.mock('@/store/appContext', () => {
   };
   const reducteur = (/** @type {any} */ state, /** @type {any} */ action) => {
     if (action.type === 'SET_FCM_TOKEN') return { ...state, fcmToken: action.payload };
-    if (action.type === 'SET_PENDING_NOTIFICATION') return { ...state, pendingNotification: action.payload };
+    if (action.type === 'SET_PENDING_NOTIFICATION') {
+      return { ...state, pendingNotification: action.payload };
+    }
     return state;
   };
   return {
@@ -214,9 +219,13 @@ beforeEach(async () => {
   ecouteurs = [];
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, ecouter) => {
     ecouteurs.push(/** @type {any} */ (ecouter));
-    return /** @type {any} */ ({ remove: () => { ecouteurs = ecouteurs.filter((e) => e !== ecouter); } });
+    return /** @type {any} */ ({
+      remove: () => { ecouteurs = ecouteurs.filter((e) => e !== ecouter); },
+    });
   });
-  const client = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+  });
   await act(async () => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
@@ -233,7 +242,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('FINITIONS7 · point 2 — le compteur de la cloche : une lecture au retour, pas deux', () => {
+describe('FINITIONS7 · point 2 — la cloche : une lecture au retour, pas deux', () => {
   test('au demarrage : une lecture du compteur, et l ecouteur de retour est pose', () => {
     expect(mockLireCompteur).toHaveBeenCalledTimes(1);
     expect(ecouteurs.length).toBeGreaterThan(0);
@@ -250,7 +259,7 @@ describe('FINITIONS7 · point 2 — le compteur de la cloche : une lecture au re
     expect(mockLireCompteur).toHaveBeenCalledTimes(2);
   });
 
-  test('🚨 une notification ouverte depuis la barre du telephone : UNE lecture du compteur', async () => {
+  test('🚨 une notification ouverte depuis la barre : UNE lecture du compteur', async () => {
     expect(typeof mockOuvrirUneNotification).toBe('function');
     await act(async () => {
       /** @type {any} */ (mockOuvrirUneNotification)({ data: { type: 'event_reminder' } });

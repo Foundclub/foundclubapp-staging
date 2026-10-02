@@ -20,7 +20,9 @@ import { getEventDescriptionExample } from '../eventWizardDetectionUtils';
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
   }),
 }));
 
@@ -50,9 +52,12 @@ jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => func
   return props.children;
 });
 
-/** Le dispatch du tunnel, capte pour semer le type d'evenement. */
-let semer = (/** @type {any} */ _action) => {};
-/** @returns {null} Rien : il ne fait que capter le dispatch. */
+// Le dispatch du tunnel, capte pour semer le type d'evenement.
+let semer = (/** @type {any} */ action) => action;
+/**
+ * Capte le dispatch du tunnel, pour semer le type d evenement.
+ * @returns {null} Rien : il ne rend aucun element.
+ */
 function PriseDeCourant() {
   const { dispatch } = useEventWizard();
   semer = dispatch;
@@ -119,7 +124,10 @@ describe('FINITIONS7 · point 8 — un exemple de description par type d eveneme
 
   test('🚨 six types, six exemples differents (et un repli pour un type inconnu)', () => {
     const exemples = ['Détection', 'Entraînement', 'Match', 'Tournoi', 'Stage', 'Réunion']
-      .map((nom) => getEventDescriptionExample(nom)[1]);
+      .map((nom) => getEventDescriptionExample(nom, (
+        /** @type {string} */ cle,
+        /** @type {string} */ repli,
+      ) => repli || cle));
 
     expect(new Set(exemples).size).toBe(6);
   });

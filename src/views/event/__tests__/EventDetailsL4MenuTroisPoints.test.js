@@ -777,7 +777,7 @@ const optionsDeLaBarre = () => Object.assign(
   ...mockSetOptions.mock.calls.map((/** @type {any} */ appel) => appel[0] || {}),
 );
 
-describe('FINITIONS7 · point 4 — la barre du haut de la fiche a un nom pour le lecteur d ecran', () => {
+describe('FINITIONS7 · point 4 — la barre du haut de la fiche a un nom pour TalkBack', () => {
   test('🚨 le drapeau : « Signaler l’événement », un bouton', () => {
     monter();
     const drapeau = boutonSignaler();

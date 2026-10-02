@@ -55,7 +55,7 @@ jest.mock('@shopify/flash-list', () => {
 });
 
 describe('FINITIONS7 · point 4 — le calendrier du planning', () => {
-  test('🚨 le calendrier porte un testID nomme : plus de « undefined.header.leftArrow »', async () => {
+  test('🚨 le calendrier a un testID nomme : plus de « undefined.header.leftArrow »', async () => {
     /** @type {any} */
     let arbre;
     await act(async () => {

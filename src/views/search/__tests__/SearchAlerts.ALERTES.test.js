@@ -232,7 +232,10 @@ describe('FINITIONS7 · point 4 — chaque commande d une alerte a un nom', () =
   it('🚨 crayon, corbeille et interrupteur nomment l alerte qu ils touchent', async () => {
     const tree = await monter([ALERTE_FOOT]);
     const noms = tree.root
-      .findAll((/** @type {any} */ node) => typeof node.props?.accessibilityLabel === 'string', { deep: false })
+      .findAll(
+        (/** @type {any} */ node) => typeof node.props?.accessibilityLabel === 'string',
+        { deep: false },
+      )
       .map((/** @type {any} */ node) => node.props.accessibilityLabel);
 
     // La doublure de ce temoin rend le repli tel quel ({{label}} non remplace) : le rendu
@@ -249,7 +252,10 @@ describe('FINITIONS7 · point 4 — chaque commande d une alerte a un nom', () =
     const muets = tree.root.findAll(
       (/** @type {any} */ node) => (
         typeof node.type !== 'string'
-        && (typeof node.props?.onPress === 'function' || typeof node.props?.onValueChange === 'function')
+        && (
+          typeof node.props?.onPress === 'function'
+          || typeof node.props?.onValueChange === 'function'
+        )
         && !String(node.props?.title || '').trim()
         && !String(node.props?.accessibilityLabel || '').trim()
         && !texteDuNoeud(node).trim()
@@ -257,7 +263,9 @@ describe('FINITIONS7 · point 4 — chaque commande d une alerte a un nom', () =
       { deep: false },
     );
 
-    expect(muets.map((/** @type {any} */ node) => node.props?.icon || node.type?.displayName || node.type?.name))
+    expect(muets.map((/** @type {any} */ node) => (
+      node.props?.icon || node.type?.displayName || node.type?.name
+    )))
       .toEqual([]);
   });
 });

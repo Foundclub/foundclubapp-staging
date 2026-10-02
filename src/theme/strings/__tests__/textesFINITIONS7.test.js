@@ -1,9 +1,10 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
 
-import { POSITION_GROUPS_BY_SPORT } from '@/constants/positions';
 import i18n from '@/theme/strings';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
+import { POSITION_GROUPS_BY_SPORT } from '@/constants/positions';
 
 // FINITIONS7 — POINT 3 (recette emulateur, tournee 8, 01/10, « 🟡 finitions ») : LES TEXTES.
 //
@@ -56,12 +57,16 @@ const CORRIGEES = [
   ['eventEdit.locationMode.external', 'Extérieur'],
   ['teamDetails.external.report.away', 'Extérieur'],
   ['adWizardAudienceType.players.description',
-    'Publie une annonce par poste recherché, avec le volume de recrutement et les informations sportives de l’équipe.'],
+    'Publie une annonce par poste recherché, avec le volume de recrutement et les informations '
+    + 'sportives de l’équipe.'],
   ['adWizardAudienceType.coach.description',
-    'Publie une annonce dédiée à un rôle d’encadrement : entraîneur principal, adjoint, préparateur physique ou autre besoin staff.'],
+    'Publie une annonce dédiée à un rôle d’encadrement : entraîneur principal, adjoint, '
+    + 'préparateur physique ou autre besoin staff.'],
   ['adWizardAudienceType.footnote',
-    'Le tunnel adapte ensuite automatiquement les étapes, les libellés et l’affichage final de l’annonce.'],
-  ['adWizardInfo.subtitle', 'Précise la cible sportive recherchée avant de passer au lieu de publication.'],
+    'Le tunnel adapte ensuite automatiquement les étapes, les libellés et l’affichage final '
+    + 'de l’annonce.'],
+  ['adWizardInfo.subtitle',
+    'Précise la cible sportive recherchée avant de passer au lieu de publication.'],
   ['adWizardDescription.need.placeholder',
     'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui évolue en régional. '
     + 'Entraînements les mardis et jeudis soir, ambiance sérieuse et bienveillante.'],
@@ -69,7 +74,8 @@ const CORRIGEES = [
     'Ce créneau dépasse la capacité de l’installation. L’événement restera en demande en attente '
     + 'jusqu’au traitement d’un dirigeant.'],
   ['eventEdit.thisSlotExceedsTheFacility2',
-    'Ce créneau dépasse la capacité de l’installation, mais ce club est configuré en Autorise et notifier. '
+    'Ce créneau dépasse la capacité de l’installation, mais ce club est configuré en '
+    + 'Autorise et notifier. '
     + 'L’événement restera confirmé et les dirigeants seront prévenus.'],
   ['notificationList.markReadSwipe', 'Lu'],
 ];
@@ -93,7 +99,8 @@ describe('FINITIONS7 point 3 — les textes, en francais', () => {
   });
 
   test('🚨 lecteur d ecran : « Envoyer un e-mail à », l adresse du club sortie TELLE QUELLE', () => {
-    expect(i18n.t('clubDetails.a11y.emailClub', { email: 'contact/o\'neil@club.fr', ...SANS_ECHAPPEMENT }))
+    const adresse = { email: 'contact/o\'neil@club.fr', ...SANS_ECHAPPEMENT };
+    expect(i18n.t('clubDetails.a11y.emailClub', adresse))
       .toBe('Envoyer un e-mail à contact/o\'neil@club.fr');
     // L ecran passe bien l option (sans elle, « / » ressort en « &#x2F; », lecon de COLL-C4A).
     const ecran = readFileSync(join(RACINE_SRC, 'views', 'club', 'ClubDetails.js'), 'utf8');
@@ -156,7 +163,8 @@ describe('FINITIONS7 point 4 — les noms pour le lecteur d ecran', () => {
   test.each([
     ['fr', 'eventDetails.a11y.reportEvent', {}, 'Signaler l’événement'],
     ['fr', 'searchAlerts.item.editLabel', ALERTE, 'Modifier l’alerte « Foot / U15 · L’Estaque »'],
-    ['fr', 'searchAlerts.item.deleteLabel', ALERTE, 'Supprimer l’alerte « Foot / U15 · L’Estaque »'],
+    ['fr', 'searchAlerts.item.deleteLabel', ALERTE,
+      'Supprimer l’alerte « Foot / U15 · L’Estaque »'],
     ['fr', 'searchAlerts.item.toggleLabel', ALERTE, 'Alerte « Foot / U15 · L’Estaque » active'],
     ['en', 'eventDetails.a11y.reportEvent', {}, 'Report the event'],
     ['en', 'searchAlerts.item.editLabel', ALERTE, 'Edit the alert “Foot / U15 · L’Estaque”'],

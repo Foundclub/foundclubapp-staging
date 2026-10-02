@@ -34,7 +34,7 @@ function EventWizardDescription({ navigation, route }) {
   const { dispatch, state } = useEventWizard();
   const [description, setDescription] = useState(state.description || '');
   // FINITIONS7 — l exemple et la phrase sous le champ suivent le type choisi.
-  const [exempleCle, exempleRepli] = getEventDescriptionExample(state.type?.name);
+  const exemple = getEventDescriptionExample(state.type?.name, t);
   const estUneDetection = isDetectionEventType(state.type?.name);
   const fieldSurfaceStyle = {
     backgroundColor: 'rgba(1, 179, 244, 0.08)',
@@ -80,7 +80,7 @@ function EventWizardDescription({ navigation, route }) {
           onChangeText={setDescription}
           // L'exemple concret remplace la consigne. Le pack le pose comme sa
           // regle : montrer ce qu'on attend coute moins qu'expliquer.
-          placeholder={t(exempleCle, exempleRepli)}
+          placeholder={exemple}
           placeholderTextColor={Colors.neutral500}
           scrollEnabled
           style={[

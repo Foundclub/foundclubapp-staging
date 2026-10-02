@@ -8749,10 +8749,12 @@ export default {
         visibilityPublicHint: 'Découvrable par tous — recommandé pour une détection.',
       },
       description: {
-        // FINITIONS7 (02/10) — un exemple par type d evenement (la detection garde placeholderExample).
+        // FINITIONS7 (02/10) — un exemple par type d evenement (detection : placeholderExample).
         examples: {
           match: 'Ex. : match de championnat — rendez-vous 1 h avant au vestiaire, maillot fourni.',
+          // eslint-disable-next-line max-len
           other: 'Ex. : réunion d’avant-saison au club-house — on présente le calendrier et les équipes.',
+          // eslint-disable-next-line max-len
           stage: 'Ex. : stage de 3 jours pendant les vacances — de 9 h à 17 h, repas du midi compris.',
           // eslint-disable-next-line max-len
           tournament: 'Ex. : tournoi à 8 équipes, matchs de 15 min — prévois ton pique-nique, remise des prix à 17 h.',

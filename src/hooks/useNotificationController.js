@@ -95,7 +95,8 @@ const getQueryAgeMs = (queryClient, queryKey) => {
  * @returns {boolean} Vrai si une lecture a ete demandee.
  */
 export const refreshUnreadCountIfStale = (queryClient) => {
-  if (getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY) < UNREAD_FOCUS_REFRESH_MIN_AGE_MS) return false;
+  const ageMs = getQueryAgeMs(queryClient, UNREAD_COUNT_QUERY_KEY);
+  if (ageMs < UNREAD_FOCUS_REFRESH_MIN_AGE_MS) return false;
   queryClient.invalidateQueries({ exact: true, queryKey: UNREAD_COUNT_QUERY_KEY });
   return true;
 };

@@ -412,7 +412,8 @@ describe('FINITIONS7 · point 7 — la date de la fiche reste entiere', () => {
 
   test('🚨 « jeu 01/10/2026 » est pose d un seul tenant (espace insecable)', () => {
     const arbre = renderHeader(ENTRAINEMENT);
-    const textes = findAll(arbre, (/** @type {any} */ c) => c?.type === 'Text').map((c) => textContentOf(c.children).join(''));
+    const textes = findAll(arbre, (/** @type {any} */ c) => c?.type === 'Text')
+      .map((c) => textContentOf(c.children).join(''));
 
     expect(textes).toContain(`jeu${String.fromCharCode(160)}01/10/2026`);
     expect(textes).not.toContain('jeu 01/10/2026');

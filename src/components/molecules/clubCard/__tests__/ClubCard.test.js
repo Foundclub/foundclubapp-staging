@@ -484,7 +484,9 @@ describe('FINITIONS7 · point 5 — RECRUTE hors de la colonne du bouton carte',
     )[0];
     const hotes = ancetres(libelle).filter((/** @type {any} */ n) => typeof n.type === 'string');
     const badge = hotes[0];
-    const colonneDeTexte = hotes.find((/** @type {any} */ n) => style(n).flex === 1 && style(n).minWidth === 0);
+    const colonneDeTexte = hotes.find(
+      (/** @type {any} */ n) => style(n).flex === 1 && style(n).minWidth === 0,
+    );
 
     expect(colonneDeTexte).toBeDefined();
     expect(style(badge).alignSelf).toBe('flex-start');

@@ -604,7 +604,7 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     expect(resultat.opponentName).toBe(ADVERSAIRE);
     // FINITIONS7 (tournee 8) — « Score en attente » ne se dit qu APRES le match : avant le coup
     // d envoi, l encart annonce un match « À venir ». (Avant FINITIONS7, ce temoin attendait
-    // « Score en attente » ici : c est exactement ce que la tournee a releve sur le match du 10/10.)
+    // « Score en attente » ici : c est ce que la tournee a releve sur le match du 10/10.)
     expect(resultat.value).toBe('À venir');
     expect(resultat.verdict).toBeNull();
   });
@@ -865,7 +865,11 @@ describe('FINITIONS7 · point 7 — « Score en attente » seulement apres le ma
 
   test('un match avec son score garde son score, fini ou non', () => {
     monter({
-      event: buildMatch({ matchResult: { isFinal: true, scoreAgainst: 1, scoreFor: 3, source: 'manual' } }),
+      event: buildMatch({
+        matchResult: {
+          isFinal: true, scoreAgainst: 1, scoreFor: 3, source: 'manual',
+        },
+      }),
     });
 
     expect(resume().value).toBe('3 - 1');

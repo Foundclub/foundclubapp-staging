@@ -1,5 +1,4 @@
 import '@/theme/strings';
-
 import { buildMyActivitiesPublications } from '@/domains/search/myActivitiesFeed';
 
 import { getMyRecruitmentAds } from '../recruitmentService';
@@ -52,10 +51,15 @@ describe('FINITIONS7 · point 6 — le nombre de candidatures de Mes activites',
     expect(publication.countLabel).toBe('1 candidature');
   });
 
-  test('sans nombre du serveur (ancien serveur, lecteur non proprietaire) : on compte ce qui est arrive', async () => {
+  test('sans nombre du serveur (ancien, non proprietaire) : on compte ce qui arrive', async () => {
     const { applicationsCount: _ignore, ...sansNombre } = ANNONCE_DU_SERVEUR;
     mockGet.mockResolvedValue({
-      data: { data: [{ ...sansNombre, applications: [{ documentId: 'cand-1' }, { documentId: 'cand-2' }] }] },
+      data: {
+        data: [{
+          ...sansNombre,
+          applications: [{ documentId: 'cand-1' }, { documentId: 'cand-2' }],
+        }],
+      },
     });
     const [annonce] = await getMyRecruitmentAds({ authorDocumentId: 'karim' });
 

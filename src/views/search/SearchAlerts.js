@@ -301,6 +301,13 @@ function SearchAlerts({ navigation }) {
                     )}
           renderItem={({ item }) => {
             const isProfileAlertUnavailable = item.type === 'mercato' && !canUseProfileAlerts;
+            // FINITIONS7 — tournee 8 : interrupteur, crayon et corbeille etaient muets. Ils
+            // nomment l alerte qu ils touchent (son nom vient du serveur : sans echappement).
+            const nommer = (/** @type {string} */ cle, /** @type {string} */ repli) => t(
+              cle,
+              repli,
+              { label: item.label, ...SANS_ECHAPPEMENT },
+            );
 
             return (
             <TouchableOpacity
@@ -338,17 +345,16 @@ function SearchAlerts({ navigation }) {
                       ) : null}
                     </View>
                 <Switch
-                      // FINITIONS7 — tournee 8 : interrupteur, crayon et corbeille etaient muets.
-                      accessibilityLabel={t('searchAlerts.item.toggleLabel', 'Alerte « {{label}} » active', {
-                        label: item.label,
-                        ...SANS_ECHAPPEMENT,
-                      })}
-                      disabled={isProfileAlertUnavailable}
-                      onValueChange={() => handleToggleActive(item)}
-                      thumbColor={Colors.neutral00}
-                      trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
-                      value={item.isActive}
-                    />
+                  accessibilityLabel={nommer(
+                    'searchAlerts.item.toggleLabel',
+                    'Alerte « {{label}} » active',
+                  )}
+                  disabled={isProfileAlertUnavailable}
+                  onValueChange={() => handleToggleActive(item)}
+                  thumbColor={Colors.neutral00}
+                  trackColor={{ false: Colors.neutral500, true: Colors.primary500 }}
+                  value={item.isActive}
+                />
               </View>
               <View style={[Alignments.row, Spaces.marginTop[12], Spaces.gap[8]]}>
                 <Button
@@ -360,25 +366,25 @@ function SearchAlerts({ navigation }) {
                     />
                 {item.type === 'recruitment' ? null : (
                   <Button
-                      accessibilityLabel={t('searchAlerts.item.editLabel', 'Modifier l’alerte « {{label}} »', {
-                        label: item.label,
-                        ...SANS_ECHAPPEMENT,
-                      })}
-                      disabled={isProfileAlertUnavailable}
-                      icon="edit"
-                      onPress={() => handleEditAlert(item)}
-                      variant="Secondary"
-                    />
+                    accessibilityLabel={nommer(
+                      'searchAlerts.item.editLabel',
+                      'Modifier l’alerte « {{label}} »',
+                    )}
+                    disabled={isProfileAlertUnavailable}
+                    icon="edit"
+                    onPress={() => handleEditAlert(item)}
+                    variant="Secondary"
+                  />
                 )}
                 <Button
-                      accessibilityLabel={t('searchAlerts.item.deleteLabel', 'Supprimer l’alerte « {{label}} »', {
-                        label: item.label,
-                        ...SANS_ECHAPPEMENT,
-                      })}
-                      icon="trash"
-                      onPress={() => handleDeletePress(item.documentId)}
-                      variant="Secondary"
-                    />
+                  accessibilityLabel={nommer(
+                    'searchAlerts.item.deleteLabel',
+                    'Supprimer l’alerte « {{label}} »',
+                  )}
+                  icon="trash"
+                  onPress={() => handleDeletePress(item.documentId)}
+                  variant="Secondary"
+                />
               </View>
             </TouchableOpacity>
             );

@@ -597,7 +597,7 @@ function EventEdit({ navigation, route }) {
   );
   const isOpenTrainingType = isTrainingType && selectedSessionStatus !== 'closed';
   // FINITIONS7 — l exemple de description suit le type (il disait « détection » pour tous).
-  const [descriptionExampleKey, descriptionExampleFallback] = getEventDescriptionExample(selectedTypeData?.name);
+  const descriptionExample = getEventDescriptionExample(selectedTypeData?.name, t);
 
   // R8 (D1) — UN REGLAGE QUI NE COMMANDE PERSONNE NE SE PROPOSE PAS.
   //
@@ -1221,7 +1221,7 @@ function EventEdit({ navigation, route }) {
                   multiline
                   onBlur={onBlur}
                   onChangeText={onChange}
-                  placeholder={t(descriptionExampleKey, descriptionExampleFallback)}
+                  placeholder={descriptionExample}
                   ref={ref}
                   value={value || ''}
                 />
