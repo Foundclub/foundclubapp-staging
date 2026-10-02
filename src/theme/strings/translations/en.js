@@ -18615,8 +18615,6 @@ export default {
     sorted: 'Sorted from lowest to highest.',
     sortedSince: 'Sorted from lowest to highest · since {{date}}.',
     staffOnly: 'The player-by-player detail is reserved for the staff.',
-    // ST-VUES2 (02/10) — for a player, the average only once 3 players have been checked in.
-    teamAverageHidden: 'The team: average shown once {{min}} players are checked in.',
     teamAverageLead: 'The team:',
     teamAverageTail: 'on average.',
     toWatch: 'To watch · {{count}}',

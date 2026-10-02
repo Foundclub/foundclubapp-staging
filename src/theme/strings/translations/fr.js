@@ -19603,8 +19603,6 @@ export default {
     sorted: 'Triée du plus bas au plus haut.',
     sortedSince: 'Triée du plus bas au plus haut · depuis le {{date}}.',
     staffOnly: 'Le détail joueur par joueur est réservé à l’encadrement.',
-    // ST-VUES2 (02/10) — chez le joueur, la moyenne seulement à partir de 3 joueurs pointés.
-    teamAverageHidden: 'L’équipe : moyenne dès {{min}} joueurs pointés.',
     teamAverageLead: 'L’équipe :',
     teamAverageTail: 'en moyenne.',
     toWatch: 'À surveiller · {{count}}',
