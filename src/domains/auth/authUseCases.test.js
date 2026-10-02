@@ -411,6 +411,72 @@ describe('authUseCases', () => {
         expect(result.views).toEqual([]);
       });
 
+      // AGE-OBLIGATOIRE-3 (02/10/2026, constat de la tournee T9) — LE DRAPEAU EST PAR APPAREIL.
+      //
+      // Karim (dirigeant, club offert par la Ville) n'avait pas de date. Sur l'emulateur de la
+      // tournee, son compte n'avait JAMAIS fait le tunnel : il ne lui manquait rien avant que la
+      // date devienne obligatoire, donc `hasCompletedOnboarding_<id>` n'y etait pas pose. Il
+      // passait par le tunnel ORDINAIRE, qui ne reclamait que la date... puis debouchait sur le
+      // sas de sortie (`resolveOnboardingExitRoute`) : « Bienvenue · Commence gratuitement ».
+      // Meme chose sur un telephone neuf ou apres une reinstallation.
+      // ⇒ Quand il ne manque QUE l'age a un compte dont le nom est deja connu, c'est le point de
+      // controle, drapeau ou pas : il rend la main a l'accueil, jamais au sas.
+      describe('AGE-OBLIGATOIRE-3 — appareil sans drapeau, il ne manque que l age', () => {
+        const KARIM = {
+          address: { city: 'Montrivage' },
+          avatar: { url: 'https://exemple.test/karim.png' },
+          club: { documentId: 'club-as-montrivage' },
+          documentId: 'karim',
+          firstname: 'Karim',
+          lastname: 'Dirigeant',
+          role: { name: USER_ROLES.president },
+        };
+
+        beforeEach(() => {
+          storage.getBoolean.mockReturnValue(false);
+        });
+
+        it('dirigeant complet sans date : le point de controle, pas le tunnel', () => {
+          const result = getOnboardingViews(KARIM);
+
+          expect(premiereVue(result)).toBe(RouteNames.UserName);
+          expect(result.isEntryCheckpoint).toBe(true);
+          expect(result.totalViews).toBe(0);
+        });
+
+        it('a 13-14 ans, date connue sans declaration : le point de controle aussi', () => {
+          const result = getOnboardingViews({ ...KARIM, birthdate: DATE_14_ANS });
+
+          expect(premiereVue(result)).toBe(RouteNames.UserParentalDeclaration);
+          expect(result.isEntryCheckpoint).toBe(true);
+        });
+
+        it('s il manque AUSSI une autre etape (pas de club), c est le tunnel ordinaire', () => {
+          const result = getOnboardingViews({ ...KARIM, club: null });
+
+          expect(result.isEntryCheckpoint).toBeUndefined();
+          expect(result.views.filter((vue) => vue.canShow).map((vue) => vue.route))
+            .toEqual([RouteNames.UserName, RouteNames.UserAffiliationGuide]);
+        });
+
+        it('une inscription NEUVE (nom inconnu) reste le tunnel ordinaire', () => {
+          const result = getOnboardingViews({ ...KARIM, firstname: null, lastname: null });
+
+          expect(result.isEntryCheckpoint).toBeUndefined();
+          expect(premiereVue(result)).toBe(RouteNames.UserName);
+        });
+
+        it('un joueur a qui il manque des etapes facultatives reste dans le tunnel', () => {
+          const result = getOnboardingViews({ ...KARIM, role: { name: USER_ROLES.player } });
+
+          expect(result.isEntryCheckpoint).toBeUndefined();
+        });
+
+        it('rien ne manque : aucun parcours', () => {
+          expect(getOnboardingViews({ ...KARIM, birthdate: '1980-04-02' }).views).toEqual([]);
+        });
+      });
+
       it('le tunnel d une inscription NEUVE ne porte pas la marque du point de controle', () => {
         storage.getBoolean.mockReturnValue(false);
         const result = getOnboardingViews({

@@ -627,6 +627,9 @@ export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSAN
  * @returns {{isEntryCheckpoint?: boolean, totalViews: number,
  *   views: {index: number, route: string, canShow: boolean}[]}} Le parcours.
  */
+// Les deux seules etapes qui decident de l'age : celles du point de controle d'entree.
+const ENTRY_CHECKPOINT_ROUTES = [RouteNames.UserName, RouteNames.UserParentalDeclaration];
+
 const getEntryCheckpointViews = ({ birthdate, parentalDeclarationAccepted, role }) => {
   const roleKey = getUserRoleKey(role?.name || USER_ROLES.new);
   if (roleKey === 'new' || ROLES_SANS_DATE_DE_NAISSANCE.includes(roleKey)) {
@@ -906,8 +909,24 @@ export const getOnboardingViews = ({
     return view;
   });
 
-  const views = filteredViews?.filter((view) => view.canShow)?.length > 0 ? filteredViews
-    : [];
+  // AGE-OBLIGATOIRE-3 (02/10/2026, tournee T9) - LE DRAPEAU `hasCompletedOnboarding_<id>`
+  // EST PAR APPAREIL. Un ancien compte qui n'a jamais fait le tunnel sur CET appareil (rien
+  // ne lui manquait avant que la date devienne obligatoire ; telephone neuf ; reinstallation)
+  // arrivait ici sans drapeau : le tunnel ordinaire ne reclamait que la date, puis debouchait
+  // sur le sas de sortie (`resolveOnboardingExitRoute` : « Bienvenue », les offres). Quand il
+  // ne manque QUE l'age a un compte dont le nom est deja connu - une inscription neuve donne
+  // nom et date ensemble -, c'est le point de controle : il rend la main a l'accueil.
+  const pendingRoutes = filteredViews.filter((view) => view.canShow).map((view) => view.route);
+  if (
+    firstname
+    && lastname
+    && pendingRoutes.length > 0
+    && pendingRoutes.every((route) => ENTRY_CHECKPOINT_ROUTES.includes(route))
+  ) {
+    return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
+  }
+
+  const views = pendingRoutes.length > 0 ? filteredViews : [];
   return {
     totalViews,
     views,
