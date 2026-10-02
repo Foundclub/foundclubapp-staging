@@ -10,7 +10,10 @@ import {
   isSameDay,
   isSameMonth,
   isSameWeek,
+  isWithinInterval,
   parseISO,
+  startOfDay,
+  startOfWeek,
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 import {
@@ -20,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Image,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,8 +37,12 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   capitalize,
+  fromMinutes,
   fullMomentsOfPlanning,
+  isoWeekdayOf,
   momentLabel,
+  timeRange,
+  toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -45,8 +53,12 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import FacilityPlanningList from '@/components/organisms/planning/FacilityPlanningList';
+import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
+import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
+import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -75,6 +87,15 @@ import {
   getFacilityConflictMode,
 } from '@/utils/facilityConflictMode';
 import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
+import {
+  lireVueRetenue,
+  pageDAujourdhui,
+  pageSuivante,
+  plageDeLaVue,
+  retenirVue,
+  VUES,
+  vuesProposees,
+} from '@/utils/planning/installationPlanningViews';
 import {
   getPlanningDefaultDate,
   getPlanningItemDate,
@@ -230,7 +251,22 @@ function PlanningWeekFullscreen() {
   // montre UN jour ; tourne, la semaine, comme avant.
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
-  const pageDays = isLandscape ? 7 : 1;
+  const isFacilitySource = sourceType === FULLSCREEN_SOURCE_TYPES.facility;
+  // COLL-C2B (02/10) — design P5v2-vues : 5 vues sur le planning d une installation. Jour par
+  // defaut sur telephone, Semaine sur le site, la vue choisie RETENUE ; telephone tourne : la
+  // semaine (D6 A). Les autres plannings gardent leur regle : le jour tenu droit, la semaine
+  // tourne.
+  const [vueChoisie, setVueChoisie] = useState(() => lireVueRetenue(Platform.OS));
+  /** @type {string} */
+  let vue = isLandscape ? VUES.semaine : VUES.jour;
+  if (isFacilitySource) {
+    vue = isLandscape && Platform.OS !== 'web' ? VUES.semaine : vueChoisie;
+  }
+  const choisirVue = useCallback((/** @type {string} */ nouvelle) => {
+    setVueChoisie(nouvelle);
+    retenirVue(nouvelle);
+  }, []);
+  const pageDays = vue === VUES.semaine ? 7 : 1;
 
   // L'orientation n'est plus FORCEE en paysage (V1803) : elle est LIBEREE, et l'app
   // revient en portrait en sortant. Le module natif savait deja le faire
@@ -247,8 +283,10 @@ function PlanningWeekFullscreen() {
   }, []));
 
   const planningRange = useMemo(
-    () => getPlanningRange(currentDate, 'week'),
-    [currentDate],
+    () => (isFacilitySource
+      ? plageDeLaVue(vue, currentDate)
+      : getPlanningRange(currentDate, 'week')),
+    [currentDate, isFacilitySource, vue],
   );
   const planningQuery = useMemo(() => getPlanningQuery({
     clubId,
@@ -258,7 +296,6 @@ function PlanningWeekFullscreen() {
     sectionId,
     sourceType,
   }), [clubId, cmId, facilityId, planningRange, sectionId, sourceType]);
-  const isFacilitySource = sourceType === FULLSCREEN_SOURCE_TYPES.facility;
   const {
     data,
     error,
@@ -314,7 +351,11 @@ function PlanningWeekFullscreen() {
   // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
   // lecteur, ce bloc reste inerte (FINITIONS2).
   const [readOnlyBlock, setReadOnlyBlock] = useState(/** @type {any} */ (null));
-  const attachedClubs = useCollectiviteClubs(readOnlyBlock ? managingCollectiviteId : null);
+  // COLL-C2B (02/10) — ce que la mairie a ouvert : « attribuer », « gerer » ou « modifier ».
+  const [panneau, setPanneau] = useState(/** @type {any} */ (null));
+  const attachedClubs = useCollectiviteClubs(
+    readOnlyBlock || panneau ? managingCollectiviteId : null,
+  );
   const readOnlyBlockContact = (attachedClubs.data || []).find(
     (club) => club?.documentId && club.documentId === readOnlyBlock?.club?.documentId,
   ) || null;
@@ -359,8 +400,16 @@ function PlanningWeekFullscreen() {
     ? weekLabel
     : format(currentDate, 'EEEE d MMMM yyyy', { locale: fr });
   if (isFacilitySource) {
-    pageLabel = isLandscape ? semaineCourte(planningRange) : jourDeLaBarre;
-    if (!isLandscape && isSameDay(currentDate, getPlanningDefaultDate())) {
+    const locale = localeDesDates();
+    if (vue === VUES.mois) {
+      pageLabel = capitalize(format(currentDate, 'MMMM yyyy', { locale }));
+    } else if (vue === VUES.troisJours) {
+      pageLabel = `${capitalize(format(addDays(currentDate, -1), 'EEE d MMM', { locale }))} – ${
+        format(addDays(currentDate, 1), 'EEE d MMM', { locale })}`;
+    } else {
+      pageLabel = vue === VUES.jour ? jourDeLaBarre : semaineCourte(planningRange);
+    }
+    if (vue === VUES.jour && isSameDay(currentDate, getPlanningDefaultDate())) {
       pageLabel = t('collectiviteCreneaux.planning.aujourdhui', 'Aujourd’hui, {{jour}}', {
         jour: format(currentDate, 'EEE d MMM', { locale: localeDesDates() }),
         ...SANS_ECHAPPEMENT,
@@ -405,9 +454,30 @@ function PlanningWeekFullscreen() {
     [currentDate],
   );
   // « Aujourd'hui » ramene a la page du jour : la semaine en paysage, le jour en portrait.
-  const isCurrentPage = isLandscape
+  let isCurrentPage = isLandscape
     ? isCurrentWeek
     : isSameDay(currentDate, getPlanningDefaultDate());
+  if (isFacilitySource) isCurrentPage = pageDAujourdhui(vue, currentDate, getPlanningDefaultDate());
+  // Le nom des fleches dit ce qu elles font (lecteur d ecran).
+  /** @type {Record<string, string[]>} */
+  const nomsDesFleches = {
+    [VUES.jour]: [
+      t('personalPlanningWeekFullscreen.previousDay', 'Jour précédent'),
+      t('personalPlanningWeekFullscreen.nextDay', 'Jour suivant'),
+    ],
+    [VUES.mois]: [
+      t('collectiviteCreneaux.vues.moisPrecedent', 'Mois précédent'),
+      t('collectiviteCreneaux.vues.moisSuivant', 'Mois suivant'),
+    ],
+    [VUES.troisJours]: [
+      t('collectiviteCreneaux.vues.joursPrecedents', 'Jours précédents'),
+      t('collectiviteCreneaux.vues.joursSuivants', 'Jours suivants'),
+    ],
+  };
+  const [flecheGauche, flecheDroite] = nomsDesFleches[vue] || [
+    t('personalPlanningWeekFullscreen.previousWeek', 'Semaine précédente'),
+    t('personalPlanningWeekFullscreen.nextWeek', 'Semaine suivante'),
+  ];
   const facilitySummaryMessage = useMemo(() => {
     if (!facilityPlanningSummary) return '';
 
@@ -450,17 +520,30 @@ function PlanningWeekFullscreen() {
   // La capacite en UNE ligne, la place en image (REPRIS e10 n°3) ; la legende par club (n°5) ;
   // la demande en attente a sa place (NOUVEAU). Le jour tenu droit, la semaine tourne.
   // Pour un membre (joueur, parent) : ni capacite ni demande (RETIRE, « ne le concerne pas »).
-  const blocsDeLaPage = useMemo(() => (isLandscape
-    ? events
-    : events.filter((/** @type {any} */ evenement) => {
-      const jour = getPlanningItemDate(evenement);
-      return jour ? isSameDay(jour, currentDate) : false;
-    })), [currentDate, events, isLandscape]);
+  const blocsDeLaPage = useMemo(() => {
+    if (vue === VUES.jour) {
+      return events.filter((/** @type {any} */ evenement) => {
+        const jour = getPlanningItemDate(evenement);
+        return jour ? isSameDay(jour, currentDate) : false;
+      });
+    }
+    if (vue === VUES.troisJours) {
+      const debut = startOfDay(addDays(currentDate, -1));
+      const fin = startOfDay(addDays(currentDate, 2));
+      return events.filter((/** @type {any} */ evenement) => {
+        const jour = getPlanningItemDate(evenement);
+        return jour ? isWithinInterval(jour, { end: fin, start: debut }) && jour < fin : false;
+      });
+    }
+    return events;
+  }, [currentDate, events, vue]);
   const blocsEnAttente = readsAsOrganizer
     ? blocsDeLaPage.filter((/** @type {any} */ evenement) => evenement.raw?.pending === true)
     : [];
   const ligneDeCapacite = useMemo(() => {
     if (!isFacilitySource || !facilityPlanningSummary || !readsAsOrganizer) return null;
+    // Le mois n a pas de « moment complet » lisible ; la Liste le dit jour par jour.
+    if (vue === VUES.mois || vue === VUES.liste) return null;
     // Une demande EN ATTENTE ne prend pas encore de place.
     const confirmes = blocsDeLaPage.filter(nEstPasEnAttente);
     const capacite = facilityPlanningSummary.maxSlots;
@@ -469,15 +552,15 @@ function PlanningWeekFullscreen() {
     let suite;
     if (plein) {
       suite = t('collectiviteCreneaux.liste.complet', 'complet {{moment}}', {
-        moment: isLandscape
-          ? momentLabel(plein)
-          : `${format(plein.start, 'HH:mm')} – ${format(plein.end, 'HH:mm')}`,
+        moment: vue === VUES.jour
+          ? `${format(plein.start, 'HH:mm')} – ${format(plein.end, 'HH:mm')}`
+          : momentLabel(plein),
         ...SANS_ECHAPPEMENT,
       });
     } else if (pic === 0) {
-      suite = isLandscape
-        ? t('collectiviteCreneaux.planning.libreSemaine', 'libre toute la semaine')
-        : t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée');
+      suite = vue === VUES.jour
+        ? t('collectiviteCreneaux.planning.libreJour', 'libre toute la journée')
+        : t('collectiviteCreneaux.planning.libreSemaine', 'libre toute la semaine');
     } else {
       suite = t('collectiviteCreneaux.planning.placesLibres', {
         count: capacite - pic,
@@ -496,7 +579,7 @@ function PlanningWeekFullscreen() {
       plein: Boolean(plein),
       texte: `${equipes} · ${suite}`,
     };
-  }, [blocsDeLaPage, facilityPlanningSummary, isFacilitySource, isLandscape, readsAsOrganizer, t]);
+  }, [blocsDeLaPage, facilityPlanningSummary, isFacilitySource, readsAsOrganizer, t, vue]);
   const legende = useMemo(() => {
     if (!isFacilitySource) return [];
     const parClub = new Map();
@@ -540,7 +623,7 @@ function PlanningWeekFullscreen() {
     readsAsOrganizer, t]);
   // « Trancher » : seulement pour la mairie, et vers SES demandes (lot 3a).
   const nombreEnAttente = managingCollectiviteId ? blocsEnAttente.length : 0;
-  const ligneEnAttente = isLandscape
+  const ligneEnAttente = vue !== VUES.jour
     ? t('collectiviteCreneaux.planning.enAttenteSemaine', {
       count: nombreEnAttente,
       defaultValue_one: '{{count}} demande en attente cette semaine.',
@@ -552,8 +635,8 @@ function PlanningWeekFullscreen() {
       defaultValue_other: '{{count}} demandes en attente sur ce jour.',
     });
   // Contrat C2A §7 : d ou vient la place (creneau attribue, demande, seance du club).
-  const origineDuBloc = (() => {
-    const brut = readOnlyBlock?.raw || {};
+  const origineDe = (/** @type {any} */ bloc) => {
+    const brut = bloc?.raw || {};
     if (brut.origin === 'slot') {
       if (brut.slot?.source === 'request') {
         return t(
@@ -585,7 +668,110 @@ function PlanningWeekFullscreen() {
       return t('collectiviteCreneaux.planning.origineClub', 'Séance du club');
     }
     return null;
-  })();
+  };
+  const origineDuBloc = origineDe(readOnlyBlock);
+
+  // ─── COLL-C2B (02/10) — design P5v2-vues : la MAIRIE touche pour agir ───────────────────
+  // Une heure libre ⇒ « Attribuer pour la saison », deja remplie du jour et de l heure ; un
+  // creneau attribue ⇒ « Modifier le creneau », « Retirer le creneau ». Tout autre lecteur
+  // consulte (D2 : le planning d une installation de la Ville se LIT).
+  // PAS ENCORE, aucun bouton tant qu ils n existent pas (points d accroche nommes) :
+  // « Bloquer pour la Ville » et « Bloquer ce jeudi seulement » (C4b) ; « Demander ce
+  // creneau » du dirigeant (C3b) ; « Ecrire aux dirigeants » (D73, C-CLUBS ou C4a).
+  const peutAttribuer = isFacilitySource && Boolean(managingCollectiviteId);
+  const ouvertureDuJour = toMinutes(facilityMeta?.openingTime) ?? 8 * 60;
+  const fermetureDuJour = toMinutes(facilityMeta?.closingTime) ?? 22 * 60;
+  const attribuerA = useCallback((
+    /** @type {Date} */ jour,
+    /** @type {number} */ debut,
+    /** @type {number} */ fin,
+  ) => {
+    const debutTexte = fromMinutes(debut);
+    const finTexte = fromMinutes(Math.min(debut + 90, fin > debut ? fin : debut + 90));
+    setReadOnlyBlock(null);
+    setPanneau({
+      compact: true,
+      initial: { endTime: finTexte, startTime: debutTexte, weekday: isoWeekdayOf(jour) },
+      titre: `${weekdayName(isoWeekdayOf(jour))} ${timeRange(debutTexte, finTexte)}`,
+      type: 'attribuer',
+    });
+  }, []);
+  const toucherUneHeureLibre = peutAttribuer
+    ? (/** @type {Date} */ jour, /** @type {number} */ heure) => attribuerA(
+      jour,
+      heure * 60,
+      heure * 60 + 90,
+    )
+    : undefined;
+  // Un bloc venu d un creneau attribue (contrat C2A §7, `slot`) se gere comme dans l onglet
+  // « Creneaux » : le meme formulaire, la meme feuille.
+  const creneauDuBloc = (/** @type {any} */ bloc) => {
+    const brut = bloc?.raw || {};
+    return {
+      club: bloc?.club || null,
+      documentId: brut.slot?.documentId,
+      endTime: String(bloc?.endTime || '').slice(0, 5),
+      facility: { documentId: facilityId, name: contextDetailLabel },
+      plateau: brut.plateau || null,
+      source: brut.slot?.source || 'attribution',
+      startTime: String(bloc?.startTime || '').slice(0, 5),
+      team: bloc?.team || null,
+      validFrom: brut.slot?.validFrom || null,
+      validUntil: brut.slot?.validUntil || null,
+      weekday: Number(brut.slot?.weekday) || null,
+    };
+  };
+  const creneauOuvert = peutAttribuer && readOnlyBlock?.raw?.slot?.documentId
+    ? creneauDuBloc(readOnlyBlock)
+    : null;
+  const fermerPanneau = useCallback(() => setPanneau(null), []);
+  const ouvrirUnBloc = (/** @type {any} */ bloc) => {
+    if (bloc?.documentId) {
+      /** @type {any} */ (navigation).navigate(RouteNames.EventStack, {
+        params: { eventId: bloc.documentId },
+        screen: RouteNames.EventDetails,
+      });
+      return;
+    }
+    if (managingCollectiviteId) setReadOnlyBlock(bloc);
+  };
+  // D66 (design P4v3-plateaux ecran 3) : en vue Jour, une colonne par plateau ; un bloc sans
+  // plateau va dans « Indifferent ». Rien en vue Semaine (les jours sont trop etroits).
+  const plateauxDuPlanning = Array.isArray(facilityMeta?.plateaux)
+    ? facilityMeta.plateaux.map(String)
+    : [];
+  const colonneDuBloc = (/** @type {any} */ bloc) => {
+    const numero = Number(bloc?.raw?.plateau?.number);
+    const connu = numero >= 1 && numero <= plateauxDuPlanning.length;
+    return connu ? numero - 1 : plateauxDuPlanning.length;
+  };
+  let colonnesDePlateaux;
+  if (isFacilitySource && vue === VUES.jour && plateauxDuPlanning.length) {
+    colonnesDePlateaux = plateauxDuPlanning.map((
+      /** @type {string} */ nom,
+      /** @type {number} */ index,
+    ) => ({
+      key: `plateau-${index + 1}`,
+      label: nom,
+    }));
+    if (blocsDeLaPage.some((bloc) => colonneDuBloc(bloc) === plateauxDuPlanning.length)) {
+      colonnesDePlateaux.push({
+        key: 'indifferent',
+        label: t('collectiviteCreneaux.attribuer.indifferent', 'Indifférent'),
+      });
+    }
+  }
+  /** @type {Record<string, string>} */
+  const libellesDesVues = {
+    [VUES.jour]: t('collectiviteCreneaux.vues.jour', 'Jour'),
+    [VUES.liste]: t('collectiviteCreneaux.vues.liste', 'Liste'),
+    [VUES.mois]: t('collectiviteCreneaux.vues.mois', 'Mois'),
+    [VUES.semaine]: t('collectiviteCreneaux.vues.semaine', 'Semaine'),
+    [VUES.troisJours]: t('collectiviteCreneaux.vues.troisJours', '3 jours'),
+  };
+  const clubsPourAttribuer = (Array.isArray(attachedClubs.data) ? attachedClubs.data : [])
+    .filter((club) => club?.documentId && club?.name)
+    .map((club) => ({ documentId: club.documentId, name: club.name }));
 
   // Design P5-semaine-ordi : sur le site, la mairie choisit l installation en haut (une
   // pastille a la couleur de chacune) ; un bloc ouvert = un panneau a droite.
@@ -619,12 +805,16 @@ function PlanningWeekFullscreen() {
 
   // Les fleches de l'en-tete : un jour en portrait, une semaine en paysage.
   const handlePrevPage = useCallback(() => {
-    setCurrentDate((previousDate) => addDays(previousDate, -pageDays));
-  }, [pageDays]);
+    setCurrentDate((previousDate) => (isFacilitySource
+      ? pageSuivante(vue, previousDate, -1)
+      : addDays(previousDate, -pageDays)));
+  }, [isFacilitySource, pageDays, vue]);
 
   const handleNextPage = useCallback(() => {
-    setCurrentDate((previousDate) => addDays(previousDate, pageDays));
-  }, [pageDays]);
+    setCurrentDate((previousDate) => (isFacilitySource
+      ? pageSuivante(vue, previousDate, 1)
+      : addDays(previousDate, pageDays)));
+  }, [isFacilitySource, pageDays, vue]);
 
   const handleNextWeek = useCallback(() => {
     setCurrentDate((previousDate) => addDays(previousDate, 7));
@@ -633,7 +823,9 @@ function PlanningWeekFullscreen() {
   const handleBackToCurrentWeek = useCallback(() => {
     setCurrentDate(getPlanningDefaultDate());
   }, []);
-  const planningContent = useMemo(() => {
+  // COLL-C2B (02/10) : plus de useMemo ici — la moitie de ses dependances (les gestes de la
+  // mairie) se recree a chaque rendu ; la grille, elle, reste memorisee.
+  const planningContent = (() => {
     // COLL-C2B (02/10) — l installation garde sa grille pendant la lecture (voile, plus bas).
     if (isLoading || (isFetching && !isFacilitySource)) {
       return <Loader />;
@@ -678,6 +870,40 @@ function PlanningWeekFullscreen() {
             variant="Primary"
           />
         </View>
+      );
+    }
+
+    if (isFacilitySource && vue === VUES.mois) {
+      return (
+        <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
+          <PlanningCalendarView
+            currentDate={currentDate}
+            events={events}
+            onDateSelect={setCurrentDate}
+            onEventPress={ouvrirUnBloc}
+          />
+          <Button
+            onPress={() => choisirVue(VUES.jour)}
+            title={t('collectiviteCreneaux.vues.ouvrirJournee', 'Ouvrir la journée')}
+            variant="Secondary"
+          />
+        </ScrollView>
+      );
+    }
+
+    if (isFacilitySource && vue === VUES.liste) {
+      return (
+        <FacilityPlanningList
+          capacite={facilityPlanningSummary?.maxSlots || 1}
+          debutDeSemaine={startOfWeek(currentDate, { weekStartsOn: 1 })}
+          evenements={events}
+          fermeture={fromMinutes(fermetureDuJour)}
+          onBlockPress={ouvrirUnBloc}
+          onFreePress={peutAttribuer ? attribuerA : undefined}
+          origineDe={readsAsOrganizer ? origineDe : undefined}
+          ouverture={fromMinutes(ouvertureDuJour)}
+          ouvreLesAutresClubs={Boolean(managingCollectiviteId)}
+        />
       );
     }
 
@@ -726,6 +952,20 @@ function PlanningWeekFullscreen() {
               variant="Primary"
             />
           </View>
+          {/* COLL-C2B : une semaine vide se remplit aussi (la mairie attribue). */}
+          {peutAttribuer ? (
+            <View style={Spaces.marginTop[12]}>
+              <Button
+                onPress={() => setPanneau({
+                  compact: false,
+                  initial: { weekday: isoWeekdayOf(currentDate) },
+                  type: 'attribuer',
+                })}
+                title={t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
         </View>
       );
     }
@@ -735,11 +975,17 @@ function PlanningWeekFullscreen() {
         // Planning d'une installation : chaque bloc dit son club, puis son equipe.
         cardDisplayProfile={isFacilitySource ? 'clubFocused' : 'default'}
         compactFullscreen
-        currentDate={currentDate}
+        currentDate={vue === VUES.troisJours ? addDays(currentDate, -1) : currentDate}
         events={events}
-        mode={isLandscape ? 'week' : 'day'}
-        onDateChange={setCurrentDate}
+        firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
+        laneOf={colonnesDePlateaux ? colonneDuBloc : undefined}
+        lanes={colonnesDePlateaux}
+        mode={vue}
+        onDateChange={vue === VUES.troisJours
+          ? (/** @type {Date} */ ancre) => setCurrentDate(addDays(ancre, 1))
+          : setCurrentDate}
         onEventPress={handleEventPress}
+        onFreeSlotPress={toucherUneHeureLibre}
         onReadOnlyEventPress={handleReadOnlyEventPress}
         scrollEnabled
         showHeader={false}
@@ -769,35 +1015,43 @@ function PlanningWeekFullscreen() {
         ) : null}
       </View>
     );
-  }, [
-    Alignments.alignCenter,
-    Alignments.justifyCenter,
-    Alignments.row,
-    Colors.primary900,
-    Fonts.h4Bold,
-    Fonts.neutral00,
-    Fonts.neutral100,
-    Fonts.p2,
-    Fonts.textCenter,
-    Spaces.gap,
-    Spaces.marginBottom,
-    currentDate,
-    error,
-    events,
-    handleBackToCurrentWeek,
-    handleEventPress,
-    handleNextWeek,
-    handleReadOnlyEventPress,
-    hasEvents,
-    isCurrentWeek,
-    isFacilitySource,
-    isFetching,
-    isLandscape,
-    isLoading,
-    refetch,
-    setCurrentDate,
-    t,
-  ]);
+  })();
+
+  let panneauRendu = null;
+  if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {
+    const titre = panneau.type === 'modifier'
+      ? t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')
+      : panneau.titre || t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau');
+    panneauRendu = (
+      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}>
+        <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
+        <SeasonSlotForm
+          clubs={clubsPourAttribuer}
+          compact={panneau.type === 'attribuer' && panneau.compact !== false}
+          facilityId={facilityId}
+          initial={panneau.initial}
+          key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
+          onCancel={fermerPanneau}
+          onDone={fermerPanneau}
+          slot={panneau.type === 'modifier' ? panneau.creneau : null}
+        />
+      </View>
+    );
+  } else if (panneau?.type === 'gerer') {
+    panneauRendu = (
+      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
+        <SeasonSlotManage
+          canManage={peutAttribuer}
+          etapeInitiale={panneau.etape || 'detail'}
+          installationName={contextDetailLabel}
+          key={`gerer-${panneau.creneau?.documentId}`}
+          onClose={fermerPanneau}
+          onModify={(/** @type {any} */ creneau) => setPanneau({ creneau, type: 'modifier' })}
+          slot={panneau.creneau}
+        />
+      </View>
+    );
+  }
 
   // « Trancher » : la file des demandes de la Ville (lot 3a).
   const ouvrirLesDemandes = () => {
@@ -876,6 +1130,26 @@ function PlanningWeekFullscreen() {
               'Aucun contact renseigné par le club.',
             )}
           </Text>
+        ) : null}
+        {creneauOuvert ? (
+          <View style={{ gap: 4 }}>
+            <Button
+              onPress={() => {
+                setReadOnlyBlock(null);
+                setPanneau({ creneau: creneauOuvert, type: 'modifier' });
+              }}
+              title={t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
+              variant="Secondary"
+            />
+            <Button
+              onPress={() => {
+                setReadOnlyBlock(null);
+                setPanneau({ creneau: creneauOuvert, etape: 'retirer', type: 'gerer' });
+              }}
+              title={t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
+              variant="Danger"
+            />
+          </View>
         ) : null}
         <Button
           onPress={handleCloseReadOnlyBlock}
@@ -957,9 +1231,7 @@ function PlanningWeekFullscreen() {
           ]}
         >
           <TouchableOpacity
-            accessibilityLabel={isLandscape
-              ? t('personalPlanningWeekFullscreen.previousWeek', 'Semaine précédente')
-              : t('personalPlanningWeekFullscreen.previousDay', 'Jour précédent')}
+            accessibilityLabel={flecheGauche}
             accessibilityRole="button"
             hitSlop={8}
             onPress={handlePrevPage}
@@ -1002,9 +1274,7 @@ function PlanningWeekFullscreen() {
           </View>
 
           <TouchableOpacity
-            accessibilityLabel={isLandscape
-              ? t('personalPlanningWeekFullscreen.nextWeek', 'Semaine suivante')
-              : t('personalPlanningWeekFullscreen.nextDay', 'Jour suivant')}
+            accessibilityLabel={flecheDroite}
             accessibilityRole="button"
             hitSlop={8}
             onPress={handleNextPage}
@@ -1078,6 +1348,42 @@ function PlanningWeekFullscreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {isFacilitySource && !(isLandscape && Platform.OS !== 'web') ? (
+          <View style={[Alignments.row, Spaces.marginBottom[8], { gap: 6 }]}>
+            {vuesProposees(Platform.OS).map((option) => {
+              const active = option === vue;
+              return (
+                <TouchableOpacity
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  key={option}
+                  onPress={() => choisirVue(option)}
+                  style={[
+                    Alignments.alignCenter,
+                    Alignments.justifyCenter,
+                    {
+                      backgroundColor: active ? withAlpha(Colors.primary500, 0.18) : 'transparent',
+                      borderColor: active ? Colors.primary500 : withAlpha(Colors.neutral00, 0.12),
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      flex: 1,
+                      minHeight: 36,
+                    },
+                  ]}
+                  testID={`vue-${option}`}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p3Bold, active ? Fonts.primary200 : Fonts.neutral200]}
+                  >
+                    {libellesDesVues[option]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
 
         {!isLandscape ? (
           <Text style={[Fonts.p4, Fonts.neutral200, Fonts.textCenter, Spaces.marginBottom[8]]}>
@@ -1260,7 +1566,7 @@ function PlanningWeekFullscreen() {
           <View style={{ flex: 1 }}>
             {planningContent}
           </View>
-          {isDesktop && readOnlyBlock ? (
+          {isDesktop && (readOnlyBlock || panneauRendu) ? (
             <ScrollView
               style={{
                 backgroundColor: withAlpha(Colors.primary800, 0.85),
@@ -1271,7 +1577,7 @@ function PlanningWeekFullscreen() {
                 width: 380,
               }}
             >
-              {ficheDuBloc}
+              {panneauRendu || ficheDuBloc}
             </ScrollView>
           ) : null}
         </View>
@@ -1282,6 +1588,9 @@ function PlanningWeekFullscreen() {
         isVisible={Boolean(readOnlyBlock) && !isDesktop}
       >
         {ficheDuBloc}
+      </BottomModal>
+      <BottomModal close={fermerPanneau} isVisible={Boolean(panneauRendu) && !isDesktop}>
+        {panneauRendu}
       </BottomModal>
     </ScreenContainer>
   );

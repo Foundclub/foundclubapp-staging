@@ -139,6 +139,23 @@ jest.mock('@/services/multisportClub/multisportClubService', () => ({
   getCMPlanning: jest.fn(),
 }));
 
+// COLL-C2B (02/10) : le planning d une installation a desormais 5 vues (Mois = le calendrier) et
+// les gestes de la mairie (le service des creneaux) : deux doublures, sans effet sur ce temoin.
+jest.mock(
+  '@/components/organisms/planningCalendarView',
+  () => function CalendarMock() { return null; },
+);
+jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
+  attributeSeasonSlot: jest.fn(),
+  getClubTeamsForSlot: jest.fn(),
+  getSeasonSlot: jest.fn(),
+  listFacilitySeasonSlots: jest.fn(),
+  modifySeasonSlot: jest.fn(),
+  previewFacilitySeasonSlot: jest.fn(),
+  restoreSeasonSlot: jest.fn(),
+  withdrawSeasonSlot: jest.fn(),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));

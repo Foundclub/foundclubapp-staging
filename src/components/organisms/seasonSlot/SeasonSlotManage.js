@@ -34,6 +34,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * ⛔ Aucun nom de personne : un club, une equipe, des heures.
  * @param {{
  *   canManage: boolean,
+ *   etapeInitiale?: 'detail' | 'retirer',
  *   installationName?: string | null,
  *   onClose: () => void,
  *   onModify: (creneau: any) => void,
@@ -43,13 +44,20 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @returns {import('react').ReactElement} La feuille.
  */
 function SeasonSlotManage({
-  canManage, installationName = null, onClose, onModify, onWithdrawn, slot,
+  canManage,
+  etapeInitiale = 'detail',
+  installationName = null,
+  onClose,
+  onModify,
+  onWithdrawn,
+  slot,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   const detail = useSeasonSlot(slot?.documentId);
   const retirer = useWithdrawSeasonSlot();
-  const [etape, setEtape] = useState(/** @type {'detail' | 'retirer'} */ ('detail'));
+  // Depuis le planning, « Retirer le creneau » ouvre directement la confirmation.
+  const [etape, setEtape] = useState(/** @type {'detail' | 'retirer'} */ (etapeInitiale));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   // Le serveur a le dernier mot : s il dit que ce compte ne gere pas, aucun geste.
   const gere = canManage && detail.data?.meta?.canManage !== false;
