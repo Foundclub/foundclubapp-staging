@@ -92,10 +92,10 @@ const formatDay = (date) => formatDate(date, { day: 'numeric', month: 'short', w
  * @param {WeekendRow[]} rows - Les lignes.
  * @returns {Set<string>} Un jour par clé.
  */
-const daysOf = (rows) => new Set(rows
-  .map((row) => asDate(row.date))
-  .filter((date) => date !== null)
-  .map((date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`));
+const daysOf = (rows) => new Set(rows.flatMap((row) => {
+  const date = asDate(row.date);
+  return date ? [`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`] : [];
+}));
 
 /**
  * « Sam. 5 sept. » quand tous les matchs tombent le même jour ; sinon le week-end,
