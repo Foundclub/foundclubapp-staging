@@ -5043,10 +5043,14 @@ export default {
       titrePrivee: 'Dans cette conversation',
     },
     privee: {
+      annuler: 'Annuler',
       // eslint-disable-next-line max-len
       brouillonFiche: 'Bonjour, pourriez-vous compléter les coordonnées de votre club sur sa fiche FoundClub ? Merci.',
       demanderFiche: 'Demander au club de compléter sa fiche',
       ecrire: 'Écrire aux dirigeants',
+      envoyer: 'Envoyer',
+      premierMessageAide: 'La conversation s’ouvre quand tu envoies ce message.',
+      premierMessageTitre: 'Premier message aux dirigeants de {{club}}',
     },
     quitte: {
       retour: 'Retour à la messagerie',

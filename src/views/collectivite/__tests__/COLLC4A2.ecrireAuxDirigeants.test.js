@@ -16,9 +16,16 @@ import EcrireAuxDirigeants from '../components/EcrireAuxDirigeants';
 //   - un refus du serveur (club non rattaché) se dit, sans ouvrir de conversation ;
 //   - le bouton est posé là où les lots précédents l'avaient promis : fiche du club, liste des
 //     clubs, fiche d'un bloc du planning.
+//
+// 🧯 COLL-FIX-DEMANDES (02/10) — ELLE NAÎT AU PREMIER MESSAGE. L'appui la créait côté serveur
+// avant tout message (tournée de recette : POST …/conversation 200 à la simple ouverture). L'appui
+// la RETROUVE désormais (GET) : elle s'ouvre si elle existe ; sinon le bouton devient la saisie
+// du premier message, et c'est l'envoi qui la crée.
 
 const mockNavigate = jest.fn();
 const mockOuvrir = jest.fn();
+const mockTrouver = jest.fn();
+const mockPremier = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
@@ -59,8 +66,22 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/services/collectivite/collectiviteCanauxService', () => ({
+  ecrireLePremierMessageAuClub: (/** @type {any} */ args) => mockPremier(args),
   ouvrirConversationAvecLeClub: (/** @type {any} */ args) => mockOuvrir(args),
+  trouverConversationAvecLeClub: (/** @type {any} */ args) => mockTrouver(args),
 }));
+jest.mock('@/components/molecules/input/Input', () => {
+  const reactActuel = jest.requireActual('react');
+  const { TextInput: SaisieRN } = jest.requireActual('react-native');
+  return function InputMock(/** @type {any} */ props) {
+    return reactActuel.createElement(SaisieRN, {
+      multiline: props.multiline,
+      onChangeText: props.onChangeText,
+      testID: props.testID,
+      value: props.value,
+    });
+  };
+});
 
 const CLUB = { documentId: 'club-as', name: 'AS Montrivage' };
 const REFUS = {
@@ -102,12 +123,33 @@ const lire = (/** @type {string} */ chemin) => (
   readFileSync(join(__dirname, '..', '..', chemin), 'utf8')
 );
 
+const champDe = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root.findAll(
+  (/** @type {any} */ n) => n.props?.testID === testID
+    && typeof n.props?.onChangeText === 'function',
+)[0];
+const saisir = async (
+  /** @type {any} */ arbre,
+  /** @type {string} */ testID,
+  /** @type {string} */ texte,
+) => {
+  await act(async () => { champDe(arbre, testID).props.onChangeText(texte); });
+};
+const valeurDe = (/** @type {any} */ arbre, /** @type {string} */ testID) => (
+  champDe(arbre, testID)?.props.value
+);
+const VILLE = { documentId: 'ville-1' };
+const OUVERTE = { data: { club: CLUB, collectivite: VILLE, documentId: 'privee-1' } };
+const AUCUNE = { data: { club: CLUB, collectivite: VILLE, documentId: null } };
+
 beforeEach(() => {
   mockNavigate.mockReset();
   mockOuvrir.mockReset();
-  mockOuvrir.mockResolvedValue({
-    data: { club: CLUB, collectivite: { documentId: 'ville-1' }, documentId: 'privee-1' },
-  });
+  mockTrouver.mockReset();
+  mockPremier.mockReset();
+  mockOuvrir.mockResolvedValue(OUVERTE);
+  // Par défaut, la conversation EXISTE déjà : l'appui l'ouvre.
+  mockTrouver.mockResolvedValue(OUVERTE);
+  mockPremier.mockResolvedValue(OUVERTE);
 });
 
 describe('COLL-C4A2 — planche 3 : « Écrire aux dirigeants »', () => {
@@ -115,7 +157,10 @@ describe('COLL-C4A2 — planche 3 : « Écrire aux dirigeants »', () => {
     const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
     expect(textes(arbre)).toContain('Écrire aux dirigeants');
     await appuyer(arbre, 'ecrire-aux-dirigeants');
-    expect(mockOuvrir).toHaveBeenCalledWith({ clubId: 'club-as', collectiviteId: 'ville-1' });
+    // COLL-FIX-DEMANDES : l'appui RETROUVE (lecture), il ne crée rien.
+    expect(mockTrouver).toHaveBeenCalledWith({ clubId: 'club-as', collectiviteId: 'ville-1' });
+    expect(mockOuvrir).not.toHaveBeenCalled();
+    expect(mockPremier).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('Conversation', {
       chatId: 'privee-1',
       chatType: 'collectivite_club',
@@ -143,7 +188,7 @@ describe('COLL-C4A2 — planche 3 : « Écrire aux dirigeants »', () => {
   });
 
   it('un refus du serveur se dit, et aucune conversation ne s’ouvre', async () => {
-    mockOuvrir.mockRejectedValue(REFUS);
+    mockTrouver.mockRejectedValue(REFUS);
     const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
     await appuyer(arbre, 'ecrire-aux-dirigeants');
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -166,5 +211,96 @@ describe('COLL-C4A2 — planche 3 : « Écrire aux dirigeants »', () => {
     const planning = lire('planning/PersonalPlanningWeekFullscreen.js');
     expect(planning).toMatch(/testID="planning-ecrire-aux-dirigeants"/);
     expect(planning).not.toMatch(/POINT D ACCROCHE, aucun bouton tant que la conversation/);
+  });
+});
+
+describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message', () => {
+  it('pas encore de conversation : l’appui ne crée rien, le bouton devient la saisie', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    expect(mockOuvrir).not.toHaveBeenCalled();
+    expect(mockPremier).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Premier message aux dirigeants de AS Montrivage',
+      'La conversation s’ouvre quand tu envoies ce message.',
+      'Envoyer',
+      'Annuler',
+    ]));
+    expect(valeurDe(arbre, 'ecrire-aux-dirigeants-premier-message')).toBe('');
+  });
+
+  it('l’envoi la crée, y pose le message, puis l’ouvre au nom de la Ville', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    const texte = 'Bonjour, une question sur vos créneaux';
+    await saisir(arbre, 'ecrire-aux-dirigeants-premier-message', `  ${texte}  `);
+    await appuyer(arbre, 'ecrire-aux-dirigeants-envoyer');
+    expect(mockPremier).toHaveBeenCalledWith({
+      clubId: 'club-as', collectiviteId: 'ville-1', message: texte,
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('Conversation', {
+      chatId: 'privee-1',
+      chatType: 'collectivite_club',
+      espace: 'ville',
+      title: 'AS Montrivage',
+    });
+  });
+
+  it('un message vide ne part pas', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    await saisir(arbre, 'ecrire-aux-dirigeants-premier-message', '   ');
+    await appuyer(arbre, 'ecrire-aux-dirigeants-envoyer');
+    expect(mockPremier).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('« compléter sa fiche » sans conversation : la phrase prête est dans la saisie', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(
+      <EcrireAuxDirigeants
+        club={CLUB}
+        collectiviteId="ville-1"
+        compact
+        demanderFiche
+        testID="fiche"
+      />,
+    );
+    await appuyer(arbre, 'fiche');
+    expect(valeurDe(arbre, 'fiche-premier-message'))
+      .toEqual(expect.stringContaining('compléter les coordonnées'));
+    await appuyer(arbre, 'fiche-envoyer');
+    expect(mockPremier).toHaveBeenCalledWith(expect.objectContaining({
+      message: expect.stringContaining('compléter les coordonnées'),
+    }));
+    // Le message est parti : la conversation s'ouvre sans le reproposer en brouillon.
+    expect(mockNavigate.mock.calls[0][1].brouillon).toBeUndefined();
+  });
+
+  it('Annuler : retour au bouton, rien n’est créé', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    await appuyer(arbre, 'ecrire-aux-dirigeants-annuler');
+    expect(textes(arbre)).toContain('Écrire aux dirigeants');
+    expect(textes(arbre)).not.toContain('Envoyer');
+    expect(mockPremier).not.toHaveBeenCalled();
+  });
+
+  it('un échec de l’envoi se dit, la saisie reste, aucune conversation ne s’ouvre', async () => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    mockPremier.mockRejectedValue(REFUS);
+    const arbre = await monter(<EcrireAuxDirigeants club={CLUB} collectiviteId="ville-1" />);
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    await saisir(arbre, 'ecrire-aux-dirigeants-premier-message', 'Bonjour');
+    await appuyer(arbre, 'ecrire-aux-dirigeants-envoyer');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(arbre.root.findAllByProps({ testID: 'ecrire-aux-dirigeants-erreur' }).length)
+      .toBeGreaterThan(0);
+    expect(valeurDe(arbre, 'ecrire-aux-dirigeants-premier-message')).toBe('Bonjour');
   });
 });
