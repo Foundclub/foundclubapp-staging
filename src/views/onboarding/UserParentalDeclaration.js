@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingAccountExits from '@/views/onboarding/components/OnboardingAccountExits';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -43,11 +44,41 @@ function UserParentalDeclaration({ navigation, route }) {
   const queryClient = useQueryClient();
   const [, appDispatch] = useAppContext();
   const {
+    getPostOnboardingHomeRoute,
+    onboardingViews,
     refetchUserData,
     userData,
     userDataError,
     userDataLoading,
   } = useAuth();
+  // AGE-OBLIGATOIRE ② (02/10/2026) - un ANCIEN compte qui vient de donner 13-14 ans
+  // au point de controle d'entree (`getEntryCheckpointViews`, authUseCases.js).
+  // Hors carte de collection : celle-ci a son propre retour.
+  const isEntryCheckpoint = onboardingViews?.isEntryCheckpoint === true
+    && !route?.params?.returnRoute;
+
+  /**
+   * AGE-OBLIGATOIRE-2 c (02/10/2026, « parent 13 corriger ») - L'ETAPE APRES LA CASE, a
+   * l'inscription. Elle visait toujours « UserAddress » ; le parcours du Parent n'a pas
+   * d'adresse (nom, photo, « declare ton enfant ») : l'ecran n'etait pas monte et un Parent
+   * de 13-14 ans restait sur la case cochee. On lit le PARCOURS (le meme sur le site, qui
+   * ne sait pas lister ses ecrans montes) :
+   *   - il a une adresse, ou on ne le connait pas : « UserAddress », comme avant ;
+   *   - sinon, sa premiere etape restante hors identite et declaration (deja faites, meme si
+   *     le profil en memoire ne le sait pas encore) ; a defaut, l'accueil.
+   * @returns {string} La route ou continuer.
+   */
+  const resolveRouteApresLaCase = () => {
+    const views = onboardingViews?.views || [];
+    if (views.length === 0 || views.some((view) => view.route === RouteNames.UserAddress)) {
+      return RouteNames.UserAddress;
+    }
+
+    return views.find((view) => view.canShow
+      && view.route !== RouteNames.UserName
+      && view.route !== RouteNames.UserParentalDeclaration)?.route
+      || getPostOnboardingHomeRoute();
+  };
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
@@ -73,8 +104,13 @@ function UserParentalDeclaration({ navigation, route }) {
       // revient a l'ecran appelant au lieu de poursuivre le flux onboarding.
       if (route?.params?.returnRoute) {
         navigation.goBack();
+      } else if (isEntryCheckpoint) {
+        // AGE-OBLIGATOIRE ② - son tunnel est deja fini : la case cochee le fait
+        // entrer. « UserAddress » n'est pas monte au point de controle : y aller
+        // laissait l'ado sur la case cochee, sans suite.
+        navigation.navigate(getPostOnboardingHomeRoute());
       } else {
-        navigation.navigate(RouteNames.UserAddress);
+        navigation.navigate(resolveRouteApresLaCase());
       }
     },
   });
@@ -187,6 +223,7 @@ function UserParentalDeclaration({ navigation, route }) {
           title={t('userParentalDeclaration.actions.continue', 'Continuer')}
           variant="Primary"
         />
+        {isEntryCheckpoint ? <OnboardingAccountExits /> : null}
       </View>
     </FormScreenContainer>
   );

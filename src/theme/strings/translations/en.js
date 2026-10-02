@@ -1798,6 +1798,15 @@ export default {
     subtitle: 'Choose how applications linked to this trial will be handled.',
     title: 'Validation mode',
   },
+  // AGE-OBLIGATOIRE (02/10/2026) - entry checkpoint for an existing account
+  // that never gave its date of birth.
+  ageObligatoire: {
+    exits: {
+      logout: 'Log out',
+      switchAccount: 'Switch account',
+    },
+    subtitle: 'We are missing your date of birth. We now ask every member for it.',
+  },
   APIerrors: {
     AUTHENTICATION_FAILED: 'Authentication failed.',
     CHAT_ID_NOT_PROVIDED: 'Chat ID not provided.',
