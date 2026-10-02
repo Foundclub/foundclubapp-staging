@@ -82,3 +82,16 @@ describe('FINITIONS9 · point 2 — « Confirmé », « Expérimenté », « Dip
     expect(textesDuCodeEgauxA(['Experimente', 'Diplome'])).toEqual([]);
   });
 });
+
+describe('FINITIONS9 · point 3 — « Profil d\'entraîneur recherché »', () => {
+  it.each([
+    ['adWizardCoachProfile.title'],
+    ['recruitmentAdDetails.coachProfile.title'],
+  ])('%s vaut « Profil d\'entraîneur recherché »', (chemin) => {
+    expect(lire(chemin)).toBe("Profil d'entraîneur recherché");
+  });
+
+  it('aucun texte du code (repli compris) ne vaut plus « Profil entraîneur recherche »', () => {
+    expect(textesDuCodeEgauxA(['Profil entraîneur recherche'])).toEqual([]);
+  });
+});

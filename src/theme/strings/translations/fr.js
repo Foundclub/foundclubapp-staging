@@ -1579,7 +1579,7 @@ export default {
     roleOtherPlaceholder: 'Ex. Responsable gardiens, coordinateur sportif...',
     rolePlaceholder: 'Sélectionner un rôle',
     subtitle: 'Définis le rôle encadrement recherche et le cadre de la mission.',
-    title: 'Profil entraîneur recherche',
+    title: "Profil d'entraîneur recherché",
   },
   adWizardDescription: {
     context: {
@@ -15341,7 +15341,7 @@ export default {
     coachProfile: {
       availability: 'Disponibilites',
       certifications: 'Certifications souhaitées',
-      title: 'Profil entraîneur recherche',
+      title: "Profil d'entraîneur recherché",
     },
     declineConfirm: {
       body: 'Veux-tu vraiment refuser cette candidature ?',

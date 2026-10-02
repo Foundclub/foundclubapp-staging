@@ -907,7 +907,7 @@ function RecruitmentAdDetails() {
         }}
       >
         <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 14 }]}>
-          {t('recruitmentAdDetails.coachProfile.title', 'Profil entraîneur recherche')}
+          {t('recruitmentAdDetails.coachProfile.title', "Profil d'entraîneur recherché")}
         </Text>
 
         <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginBottom: 14 }]}>
