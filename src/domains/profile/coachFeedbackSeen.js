@@ -25,5 +25,5 @@ import {
  */
 export const countNewCoachFeedback = (items, follow, playerDocumentId) => {
   if (!follow || !playerDocumentId) return 0;
-  return newFeedbackKeys(items, seenFeedbackKeys(follow, playerDocumentId)).size;
+  return newFeedbackKeys(items || [], seenFeedbackKeys(follow, playerDocumentId)).size;
 };
