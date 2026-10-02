@@ -1015,6 +1015,31 @@ describe('ST-MATCH écran 7 — la carte et le bilan, sur la page du match', () 
     alerte.mockRestore();
   });
 
+  // STATS-FIX2 · 8-7 (tournee T10, ecran 7) — apres la relance, le bouton restait « Relancer
+  // les 2 » : rien ne disait que c etait fait. Le serveur ne relance qu une fois par jour.
+  test('🔴 STATS-FIX2 — apres la relance, le bouton dit « Déjà relancés aujourd’hui »', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockRemindMatchMutateAsync.mockResolvedValue({ missingCount: 2, remindedCount: 2 });
+    const root = monter({ matchStats: feuillePubliee() });
+
+    await appuyerSous(root, 'post-match-relancer');
+
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['Déjà relancés aujourd’hui']));
+    expect(textesVisibles(root)).not.toContain('Relancer les 2');
+    alerte.mockRestore();
+  });
+
+  test('🔴 STATS-FIX2 — deja relances ce jour (2e appui) : le bouton le dit aussi', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockRemindMatchMutateAsync.mockResolvedValue({ alreadyRemindedCount: 2, missingCount: 2, remindedCount: 0 });
+    const root = monter({ matchStats: feuillePubliee() });
+
+    await appuyerSous(root, 'post-match-relancer');
+
+    expect(textesVisibles(root)).not.toContain('Relancer les 2');
+    alerte.mockRestore();
+  });
+
   test('🔔 une relance qui échoue le DIT, elle ne se tait pas', async () => {
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockRemindMatchMutateAsync.mockRejectedValue(new Error('réseau'));

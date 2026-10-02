@@ -5151,16 +5151,23 @@ function EventDetails({ navigation, route }) {
   // doit être doublé dans chacun des témoins de l'écran (piège AD01).
   const remindResponsesMutation = mutations.remindMatchResponsesMutation;
   const isRemindingResponders = Boolean(remindResponsesMutation?.isPending);
+  // STATS-FIX2 · 8-7 (T10, ecran 7) — apres la relance, le bouton restait « Relancer les 2 » :
+  // rien ne disait que c etait fait. La relance faite (ou deja faite ce jour) est retenue pour
+  // CE match et CETTE equipe ; la carte le dit (« Déjà relancés aujourd’hui »).
+  const [relanceDuJourCle, setRelanceDuJourCle] = useState(/** @type {string | null} */ (null));
+  const relanceCle = `${eventId || ''}:${compositionTeamId || ''}`;
   const remindMissingResponders = useMemo(() => {
     if (!remindResponsesMutation || !eventId || !compositionTeamId) return null;
     return async () => {
       try {
         const resultat = await remindResponsesMutation.mutateAsync({ eventId, teamId: compositionTeamId });
         const relances = Number(resultat?.remindedCount || 0);
+        const dejaRelances = Number(resultat?.alreadyRemindedCount || 0);
+        if (relances > 0 || dejaRelances > 0) setRelanceDuJourCle(relanceCle);
         // 🔁 ST-VUES2 (02/10) — la relance est idempotente PAR JOUR côté serveur : au 2e appui le
         // même jour, personne n'est relancé et le serveur le dit (`alreadyRemindedCount`). Dire
         // « aucune relance nécessaire » serait faux : il en manque toujours.
-        if (relances === 0 && Number(resultat?.alreadyRemindedCount || 0) > 0) {
+        if (relances === 0 && dejaRelances > 0) {
           Alert.alert(t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui'));
           return;
         }
@@ -5181,7 +5188,7 @@ function EventDetails({ navigation, route }) {
         );
       }
     };
-  }, [compositionTeamId, eventId, remindResponsesMutation, t]);
+  }, [compositionTeamId, eventId, relanceCle, remindResponsesMutation, t]);
 
   // 🎯 ST-MATCH (écran 7, état 4) — le dirigeant trouve les résultats dans la fiche de
   // l'équipe, onglet Stats (même entrée que l'ancienne adresse de TeamStats, ST-VUES).
@@ -8853,6 +8860,7 @@ function EventDetails({ navigation, route }) {
                         : openMatchStatsEditor())}
                       onRelancer={remindMissingResponders}
                       relanceEnCours={isRemindingResponders}
+                      relanceFaite={relanceDuJourCle === relanceCle}
                       reponsesAttendues={Number(
                         matchStatsReport?.responseEligibleCount
                         ?? playerCollectiveRating?.eligibleCount

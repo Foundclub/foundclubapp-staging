@@ -16477,6 +16477,7 @@ export default {
       responsesBefore: 'They get the questionnaire at the end of the match',
       responsesCount_one: '{{count}} of {{total}} answered',
       responsesCount_other: '{{count}} of {{total}} answered',
+      responsesCount_zero: 'No answers out of {{total}}',
       scoreBefore: 'You, at the end of the match',
       scoreBy: 'entered by {{name}} on {{date}} at {{time}}',
       scoreByMe: 'entered by you on {{date}} at {{time}}',
@@ -16606,6 +16607,7 @@ export default {
       republish: 'Republish',
       responsesSentence_one: '{{count}} of {{total}} answered.',
       responsesSentence_other: '{{count}} of {{total}} answered.',
+      responsesSentence_zero: 'No answers out of {{total}}.',
       reviewChanged: "{{official}} instead of {{sheet}}. Check each player's goals, then republish.",
       row: {
         a11y: '{{name}}: {{figures}}. {{state}}.',
@@ -16735,6 +16737,7 @@ export default {
       plus: 'One more goal for {{team}}',
       responses_one: '{{count}} of {{total}} has already answered',
       responses_other: '{{count}} of {{total}} have already answered',
+      responses_zero: 'No answers out of {{total}}',
       retry: 'Try again',
       save: 'Save {{score}}',
       saved: 'Score saved: {{score}}',

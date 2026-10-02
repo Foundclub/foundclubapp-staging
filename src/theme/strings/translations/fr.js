@@ -17261,6 +17261,7 @@ export default {
       responsesBefore: 'Ils reçoivent le questionnaire à la fin du match',
       responsesCount_one: '{{count}} sur {{total}} a répondu',
       responsesCount_other: '{{count}} sur {{total}} ont répondu',
+      responsesCount_zero: 'Aucune réponse sur {{total}}',
       scoreBefore: 'Toi, à la fin du match',
       scoreBy: 'saisi par {{name}} le {{date}} à {{time}}',
       scoreByMe: 'saisi par toi le {{date}} à {{time}}',
@@ -17395,6 +17396,7 @@ export default {
       republish: 'Republier',
       responsesSentence_one: '{{count}} sur {{total}} a répondu.',
       responsesSentence_other: '{{count}} sur {{total}} ont répondu.',
+      responsesSentence_zero: 'Aucune réponse sur {{total}}.',
       // eslint-disable-next-line max-len
       reviewChanged: '{{official}} au lieu de {{sheet}}. Vérifie les buts de chaque joueur, puis republie.',
       row: {
@@ -17528,6 +17530,7 @@ export default {
       plus: 'Un but de plus pour {{team}}',
       responses_one: '{{count}} sur {{total}} a déjà répondu',
       responses_other: '{{count}} sur {{total}} ont déjà répondu',
+      responses_zero: 'Aucune réponse sur {{total}}',
       retry: 'Réessayer',
       save: 'Enregistrer {{score}}',
       saved: 'Score enregistré : {{score}}',
