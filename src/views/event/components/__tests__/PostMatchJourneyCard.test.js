@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -17,13 +18,28 @@ import renderer, { act } from 'react-test-renderer';
 //   · un seul bouton, sur l etape courante, et il ouvre CETTE etape.
 // ==========================================================================
 
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
+// ST-MATCH (écran 7) — la doublure INTERPOLE les {{…}} et sait les pluriels de i18next
+// (règle française : 0 et 1 au singulier), comme la vraie.
+jest.mock('react-i18next', () => {
+  const remplir = (/** @type {string} */ modele, /** @type {any} */ valeurs) => modele.replace(
+    /\{\{(\w+)\}\}/g,
+    (/** @type {string} */ tout, /** @type {string} */ nom) => (
+      valeurs && nom in valeurs ? String(valeurs[nom]) : tout
     ),
-  }),
-}));
+  );
+  return {
+    useTranslation: () => ({
+      t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => {
+        if (typeof fallback === 'string') return remplir(fallback, options);
+        if (fallback && fallback.defaultValue_one) {
+          const modele = Number(fallback.count) <= 1 ? fallback.defaultValue_one : fallback.defaultValue_other;
+          return remplir(String(modele), fallback);
+        }
+        return key;
+      },
+    }),
+  };
+});
 
 jest.mock('@/theme/themeContext', () => {
   const generateColors = jest.requireActual('@/theme/colors').default;
@@ -196,7 +212,8 @@ describe('N4/D6 — etape 1 : le score', () => {
   test('l en-tete dit ou on en est, en toutes lettres', () => {
     const root = monter();
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['APRÈS LE MATCH', 'Étape 1 sur 3']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : l'étape monte dans le surtitre, en une ligne.
+    expect(textes(root)).toEqual(expect.arrayContaining(['Après le match · étape 1 sur 3']));
   });
 
   test('les trois etapes sont TOUJOURS visibles, meme celles a venir', () => {
@@ -205,19 +222,22 @@ describe('N4/D6 — etape 1 : le score', () => {
     expect(parTestID(root, 'post-match-step-score')).toBeTruthy();
     expect(parTestID(root, 'post-match-step-stats')).toBeTruthy();
     expect(parTestID(root, 'post-match-step-responses')).toBeTruthy();
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : l'étape 2 s'appelle « Feuille de match » ; avant le
+    // score, elle dit « Après le score ».
     expect(textes(root)).toEqual(expect.arrayContaining([
       'Score',
-      'Statistiques de l’équipe',
-      'Buteurs, passeurs, temps de jeu',
+      'Feuille de match',
+      'Après le score',
       'Retours des joueurs',
     ]));
   });
 
-  test('sans score, l etape 1 dit qu il reste a l enregistrer', () => {
+  // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « Enregistrer » devient « Saisir » (le mot du design).
+  test('sans score, l etape 1 dit qu il reste a le saisir', () => {
     const root = monter();
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['À enregistrer']));
-    expect(libelleDuBouton(root)).toBe('Enregistrer le score');
+    expect(textes(root)).toEqual(expect.arrayContaining(['À saisir']));
+    expect(libelleDuBouton(root)).toBe('Saisir le score');
   });
 
   test('🎯 le bouton ouvre l etape COURANTE, nommee', () => {
@@ -231,11 +251,14 @@ describe('N4/D6 — etape 1 : le score', () => {
 });
 
 describe('N4/D6 — etape 2 : les statistiques', () => {
-  test('🔢 le score enregistre s affiche AVEC son origine', () => {
+  // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « saisi à la main » est RETIRÉ (design : « saisi par toi le
+  // 1 oct. à 22:35 » le remplace) ; sans auteur connu, le score seul.
+  test('🔢 le score enregistre s affiche, sans « saisi à la main »', () => {
     const root = monter(AVEC_SCORE);
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
-    expect(textes(root)).toEqual(expect.arrayContaining(['Étape 2 sur 3']));
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1']));
+    expect(textes(root).some((texte) => texte.includes('saisi à la main'))).toBe(false);
+    expect(textes(root)).toEqual(expect.arrayContaining(['Après le match · étape 2 sur 3']));
   });
 
   test('un score officiel le dit autrement', () => {
@@ -254,7 +277,8 @@ describe('N4/D6 — etape 2 : les statistiques', () => {
     const onPressEtape = jest.fn();
     const root = monter({ ...AVEC_SCORE, onPressEtape });
 
-    expect(libelleDuBouton(root)).toBe('Saisir les stats');
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « Saisir les stats » devient « Saisir la feuille ».
+    expect(libelleDuBouton(root)).toBe('Saisir la feuille');
     act(() => { boutonSous(root, 'post-match-action').props.onPress(); });
 
     expect(onPressEtape).toHaveBeenCalledWith('stats');
@@ -274,6 +298,8 @@ describe('N4/D6 — etape 2 : les statistiques', () => {
   // la machine, et il rougirait ailleurs qu ici.
   const SAISI_A_2012 = new Date(2026, 7, 20, 20, 12).toISOString();
   const CAMILLE = { documentId: 'coach-doc', firstname: 'Camille' };
+  // ST-MATCH (écran 7) — le jour s'ajoute à l'heure : « le 20 août à 20:12 ».
+  const JOUR = new Date(SAISI_A_2012).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
   test('👤 quand c est MOI qui ai saisi, la carte dit « par toi »', () => {
     const root = monter({
@@ -283,7 +309,8 @@ describe('N4/D6 — etape 2 : les statistiques', () => {
       scoreSaisiA: SAISI_A_2012,
     });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi par toi à 20:12']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « saisi par toi le <jour> à 20:12 ».
+    expect(textes(root)).toEqual(expect.arrayContaining([`3 - 1 · saisi par toi le ${JOUR} à 20:12`]));
   });
 
   test('👤 quand c est QUELQU UN D AUTRE, elle le nomme par son prenom', () => {
@@ -294,38 +321,45 @@ describe('N4/D6 — etape 2 : les statistiques', () => {
       scoreSaisiA: SAISI_A_2012,
     });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi par Camille à 20:12']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « saisi par Camille le <jour> à 20:12 ».
+    expect(textes(root)).toEqual(expect.arrayContaining([`3 - 1 · saisi par Camille le ${JOUR} à 20:12`]));
   });
 
   test('🪤 sans auteur, elle retombe sur l origine — elle n invente personne', () => {
     const root = monter({ ...AVEC_SCORE, scoreAuteur: null, scoreSaisiA: '' });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : le score seul — « saisi à la main » est retiré.
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1']));
   });
 
   test('🪤 un auteur SANS horodatage ne rend pas une phrase a moitie', () => {
     const root = monter({ ...AVEC_SCORE, scoreAuteur: CAMILLE, scoreSaisiA: '' });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : le score seul — « saisi à la main » est retiré.
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1']));
   });
 
   test('🪤 un horodatage illisible ne casse pas la carte', () => {
     const root = monter({ ...AVEC_SCORE, scoreAuteur: CAMILLE, scoreSaisiA: 'pas-une-date' });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : le score seul — « saisi à la main » est retiré.
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1']));
   });
 
   test('🪤 un auteur sans documentId ni prenom ne dit rien de plus', () => {
     const root = monter({ ...AVEC_SCORE, scoreAuteur: {}, scoreSaisiA: SAISI_A_2012 });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : le score seul — « saisi à la main » est retiré.
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1']));
   });
 
-  test('🔒 verification requise : le bouton dit « Mettre à jour »', () => {
+  // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « Mettre à jour » devient « Vérifier la feuille », et le
+  // surtitre dit « à vérifier ».
+  test('🔒 verification requise : le bouton dit « Vérifier la feuille »', () => {
     const root = monter({ ...AVEC_SCORE, statsFinalisees: true, verificationRequise: true });
 
-    expect(libelleDuBouton(root)).toBe('Mettre à jour');
-    expect(textes(root)).toEqual(expect.arrayContaining(['Étape 2 sur 3']));
+    expect(libelleDuBouton(root)).toBe('Vérifier la feuille');
+    expect(textes(root)).toEqual(expect.arrayContaining(['Après le match · à vérifier']));
   });
 });
 
@@ -339,8 +373,9 @@ describe('N4/D6 — etape 3 : les retours des joueurs', () => {
     });
 
     expect(textes(root)).toEqual(expect.arrayContaining(['4 sur 12 ont répondu']));
-    expect(textes(root)).toEqual(expect.arrayContaining(['Étape 3 sur 3']));
-    expect(libelleDuBouton(root)).toBe('Voir les retours');
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : le surtitre, et un seul mot pour la feuille publiée.
+    expect(textes(root)).toEqual(expect.arrayContaining(['Après le match · étape 3 sur 3']));
+    expect(libelleDuBouton(root)).toBe('Voir la feuille');
   });
 
   test('personne d attendu : la carte le dit plutot que d afficher « 0 sur 0 »', () => {
@@ -357,8 +392,9 @@ describe('N4/D6 — etape 3 : les retours des joueurs', () => {
       statsFinalisees: true,
     });
 
-    expect(textes(root)).toEqual(expect.arrayContaining(['C’est complet']));
-    expect(libelleDuBouton(root)).toBe('Voir les stats du match');
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « c'est complet » dans le surtitre ; le bouton ouvre la feuille.
+    expect(textes(root)).toEqual(expect.arrayContaining(['Après le match · c’est complet']));
+    expect(libelleDuBouton(root)).toBe('Voir la feuille');
   });
 });
 

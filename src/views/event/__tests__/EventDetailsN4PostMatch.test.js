@@ -1,4 +1,5 @@
-import { Text } from 'react-native';
+/* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
@@ -21,6 +22,7 @@ import renderer, { act } from 'react-test-renderer';
 const mockUseAuth = jest.fn();
 const mockSetOptions = jest.fn();
 const mockRemindMutate = jest.fn();
+const mockRemindMatchMutateAsync = jest.fn();
 const mockNavigate = jest.fn();
 const mockStartWhisperChat = jest.fn();
 const mockEventQuery = { data: null };
@@ -49,8 +51,15 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
   useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => (
-      typeof fallback === 'string'
+    t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => {
+      // ST-MATCH (écran 7) — les pluriels de i18next (`count`, defaultValue_one/_other).
+      if (fallback && typeof fallback === 'object' && fallback.defaultValue_one) {
+        const modele = Number(fallback.count) <= 1 ? fallback.defaultValue_one : fallback.defaultValue_other;
+        return String(modele).replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ tout, /** @type {string} */ nom) => (
+          nom in fallback ? String(fallback[nom]) : tout
+        ));
+      }
+      return (typeof fallback === 'string'
         ? fallback.replace(
           /\{\{(\w+)\}\}/g,
           (/** @type {string} */ tout, /** @type {string} */ nom) => (
@@ -58,7 +67,8 @@ jest.mock('react-i18next', () => ({
           ),
         )
         : key
-    ),
+      );
+    },
   }),
 }));
 
@@ -189,6 +199,8 @@ jest.mock('../hooks/useEventMutations', () => {
       missingEventMutation: idleMutation(),
       openForPlayersMutation: idleMutation(),
       remindEventMutation: { isPending: false, mutate: mockRemindMutate },
+      // ST-MATCH (écran 7) — « Relancer » depuis la carte (remind-responses).
+      remindMatchResponsesMutation: { isPending: false, mutateAsync: mockRemindMatchMutateAsync },
       reportEventMutation: idleMutation(),
       requestFeaturedMutation: idleMutation(),
       resetAttendanceMutation: idleMutation(),
@@ -495,11 +507,13 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
   // meme chose se dit a sa place — l ETAPE 1 du parcours, qui la nomme
   // (« Score ») et dit ce qu il reste a faire (« À enregistrer »).
   // L information n a pas disparu : elle a un titre.
-  test('sans score, l etape 1 dit qu il reste a l enregistrer', () => {
+  // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « À enregistrer » devient « À saisir » (le langage du
+  // design validé : « Saisir le score »).
+  test('sans score, l etape 1 dit qu il reste a le saisir', () => {
     const textes = textesVisibles(monter());
 
     expect(rangDe(textes, 'Score')).toBeGreaterThanOrEqual(0);
-    expect(rangDe(textes, 'À enregistrer')).toBeGreaterThanOrEqual(0);
+    expect(rangDe(textes, 'À saisir')).toBeGreaterThanOrEqual(0);
   });
 
   test('🔢 avec un score, elle affiche le score DU SERVEUR', () => {
@@ -534,7 +548,9 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
     expect(textes.some((texte) => texte.includes('4') && texte.includes('12'))).toBe(true);
   });
 
-  test('la version du rapport et sa date de publication se lisent', () => {
+  // 🎯 ST-MATCH (écran 7) — ADAPTÉ : « Version v3 » et la date brute sont RETIRÉS par le
+  // design validé ; la carte dit « Feuille publiée — le 20 août à 20:30 ».
+  test('la date de publication se lit en mots, sans « Version »', () => {
     const textes = textesVisibles(monter({
       matchStats: statsAvec({
         report: {
@@ -542,11 +558,19 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
           status: 'final',
           version: 3,
         },
+        score: {
+          available: true, locked: false, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
       }),
     }));
+    const publiee = new Date('2026-08-20T18:30:00.000Z');
+    const jour = publiee.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const heure = publiee.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-    expect(rangDe(textes, 'v3')).toBeGreaterThanOrEqual(0);
-    expect(rangDe(textes, 'Publication')).toBeGreaterThanOrEqual(0);
+    expect(rangDe(textes, 'Feuille publiée')).toBeGreaterThanOrEqual(0);
+    expect(rangDe(textes, `Le ${jour} à ${heure}`)).toBeGreaterThanOrEqual(0);
+    expect(rangDe(textes, 'v3')).toBe(-1);
+    expect(rangDe(textes, 'Publication')).toBe(-1);
   });
 
   test('⚠️ le motif d une verification requise ne disparait pas', () => {
@@ -556,7 +580,8 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
       }),
     }));
 
-    expect(rangDe(textes, 'score officiel a changé')).toBeGreaterThanOrEqual(0);
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : l'étape 1 passe en orange et le dit.
+    expect(rangDe(textes, 'Score officiel changé')).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -587,7 +612,8 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
     const root = monter();
 
     expect(parTestID(root, 'post-match-journey')).toBeTruthy();
-    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['APRÈS LE MATCH']));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : l'étape dans le surtitre, en une ligne.
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['Après le match · étape 1 sur 3']));
   });
 
   test('🎯 sans score, son bouton ouvre la FEUILLE DE SCORE, pas l editeur', () => {
@@ -636,9 +662,11 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
       },
     });
 
-    expect(textesVisibles(root)).toEqual(expect.arrayContaining([
-      'Les stats seront disponibles à la fin du match.',
-    ]));
+    // 🎯 ST-MATCH (écran 7) — ADAPTÉ : avant la fin, plus de bouton éteint ; la carte dit
+    // QUAND tout s'ouvre (« Tout s'ouvre à la fin du match, … »).
+    expect(textesVisibles(root).some((texte) => texte.startsWith('Tout s’ouvre à la fin du match, ')))
+      .toBe(true);
+    expect(root.findAll((/** @type {any} */ n) => n.props?.testID === 'post-match-action')).toHaveLength(0);
   });
 });
 
@@ -773,22 +801,28 @@ describe('SECU-STATS — la carte « APRÈS LE MATCH » ne propose plus l editeu
     },
   });
 
+  // 🎯 ST-MATCH (écran 7) — ADAPTÉ : le joueur n'a plus la carte de l'encadrement (et son
+  // bouton éteint) mais « Le bilan de … », SANS AUCUNE porte vers l'éditeur. La règle de
+  // SECU-STATS tient plus fort : il n'y a plus rien à appuyer qui y mène.
   test.each([
     ['rapport publie', {}],
     ['rapport a re-verifier apres un score officiel', { needsReview: true }],
-  ])('🔒 %s : pour un JOUEUR, la porte est fermee et rien n ouvre l editeur', (_cas, rapport) => {
+  ])('🔒 %s : pour un JOUEUR, aucune porte vers l editeur', (_cas, rapport) => {
     const root = monter(vuDuJoueur(rapport));
-    const bouton = boutonDeLaCarte(root);
 
-    expect(bouton.props.disabled).toBe(true);
-    // La seconde couche : meme un appui qui passerait outre la porte grisee
-    // n ouvre pas l editeur.
-    act(() => { bouton.props.onPress(); });
+    expect(root.findAll((/** @type {any} */ n) => n.props?.testID === 'post-match-action')).toHaveLength(0);
+    const bilan = root.findAll((/** @type {any} */ n) => n.props?.testID === 'st-match-bilan-publie')[0];
+    expect(bilan).toBeTruthy();
+    bilan.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')
+      .forEach((/** @type {any} */ n) => act(() => { n.props.onPress(); }));
     expect(mockNavigate).not.toHaveBeenCalledWith('MatchStatsEditor', expect.anything());
   });
 
-  test('🔒 le joueur lit POURQUOI la porte est fermee : le rapport est publie', () => {
-    expect(textesVisibles(monter(vuDuJoueur()))).toEqual(expect.arrayContaining(['Rapport finalise']));
+  test('🔒 le joueur lit le bilan publié, sans bouton éteint ; la moyenne attend 3 réponses', () => {
+    const textes = textesVisibles(monter(vuDuJoueur()));
+
+    expect(textes).toEqual(expect.arrayContaining(['Le bilan de l’entraîneur', 'Vos notes : dès 3 réponses']));
+    expect(rangDe(textes, 'Rapport finalise')).toBe(-1);
   });
 
   test('le joueur garde SA reponse : « Mon retour post-match » ouvre son propre questionnaire', () => {
@@ -907,5 +941,166 @@ describe('ST-MATCH écran 2 — marqué absent à l appel', () => {
     const texte = textesDe(bloc).join(' | ');
     expect(texte).toContain('Un encadrant t\'a marqué absent à l\'appel.');
     expect(boutonNomme(bloc, 'Écrire à')).toBeFalsy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 🎯 ST-MATCH (écran 7) — LA CARTE ET LE BILAN, SUR LA PAGE DU MATCH
+// ---------------------------------------------------------------------------
+//
+// Les états de la carte se testent seuls (STMATCHCarteApresLeMatch.test.js). Ici, ce
+// que SEULE la page peut prouver : qu'elle passe les bons faits, et que ses gestes
+// partent au bon endroit.
+describe('ST-MATCH écran 7 — la carte et le bilan, sur la page du match', () => {
+  const SCORE_SAISI = {
+    available: true,
+    locked: false,
+    scoreAgainst: 1,
+    scoreFor: 3,
+    source: 'manual',
+    waitingOfficial: false,
+  };
+  const AVEC_KARIM = {
+    ...MATCH_FINI,
+    team: { ...MATCH_FINI.team, trainers: [{ documentId: COACH, firstname: 'Karim' }] },
+  };
+  const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
+    .findAll((/** @type {any} */ node) => node.props?.testID === id, { deep: false })[0];
+  const appuyerSous = async (/** @type {any} */ root, /** @type {string} */ id) => {
+    const bouton = parTestID(root, id).findAll(
+      (/** @type {any} */ node) => typeof node.props?.onPress === 'function',
+      { deep: false },
+    )[0];
+    await act(async () => { await bouton.props.onPress(); });
+  };
+
+  /**
+   * La feuille publiée, 1 réponse sur 3 : Léo et Nina manquent.
+   * @returns {any} - Le contenu de la requête des stats.
+   */
+  const feuillePubliee = () => statsAvec({
+    playerResponses: [
+      { label: 'Hugo Lefèvre', status: 'submitted' },
+      { label: 'Léo Durand', status: 'pending' },
+      { label: 'Nina Roux', status: 'draft' },
+    ],
+    report: {
+      finalizedAt: '2020-01-01T12:39:00.000Z',
+      needsReview: false,
+      responseCompletionCount: 1,
+      responseEligibleCount: 3,
+      status: 'final',
+    },
+    score: SCORE_SAISI,
+  });
+
+  test('🔔 étape 3 : la carte NOMME qui manque, et « Relancer les 2 » part par la page', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockRemindMatchMutateAsync.mockResolvedValue({ missingCount: 2, remindedCount: 2 });
+    const root = monter({ matchStats: feuillePubliee() });
+
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining([
+      'Après le match · étape 3 sur 3',
+      '1 sur 3 a répondu · manquent Léo, Nina',
+      'Relancer les 2',
+    ]));
+    await appuyerSous(root, 'post-match-relancer');
+
+    expect(mockRemindMatchMutateAsync).toHaveBeenCalledWith({ eventId: 'event-1', teamId: TEAM_ID });
+    expect(alerte).toHaveBeenCalledWith('Relance envoyée', '2 joueurs relancés.');
+    // La relance des CONVOCATIONS (l'ancienne cloche) n'est pas celle-ci.
+    expect(mockRemindMutate).not.toHaveBeenCalled();
+    alerte.mockRestore();
+  });
+
+  test('🔔 une relance qui échoue le DIT, elle ne se tait pas', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockRemindMatchMutateAsync.mockRejectedValue(new Error('réseau'));
+    const root = monter({ matchStats: feuillePubliee() });
+
+    await appuyerSous(root, 'post-match-relancer');
+
+    expect(alerte).toHaveBeenCalledWith('Erreur', 'La relance n’a pas pu partir. Réessaie.');
+    alerte.mockRestore();
+  });
+
+  test('👤 le joueur lit « Le bilan de Karim », publié, la moyenne attend 3 réponses (moyenne B)', () => {
+    const root = monter({
+      auth: authPour(JOUEUR),
+      event: AVEC_KARIM,
+      matchStats: statsAvec({
+        permissions: { canManage: false, canRespond: true, canView: true },
+        // Ce que le serveur rend à un joueur sous 3 réponses (moyenne B) : pas de moyenne.
+        playerCollectiveRating: { average: null, count: 2, hidden: true },
+        report: { collectiveRating: 7, finalizedAt: '2020-01-01T12:39:00.000Z', status: 'final' },
+        score: SCORE_SAISI,
+      }),
+    });
+
+    expect(parTestID(root, 'st-match-bilan-publie')).toBeTruthy();
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining([
+      'Le bilan de Karim',
+      'L’équipe, selon Karim',
+      '7/10',
+      'Vos notes : dès 3 réponses',
+      '—',
+    ]));
+    expect(parTestID(root, 'post-match-journey')).toBeUndefined();
+  });
+
+  test('📝 feuille pas encore publiée : le joueur lit qu elle se prépare, sans bouton éteint', () => {
+    const root = monter({
+      auth: authPour(JOUEUR),
+      event: AVEC_KARIM,
+      matchStats: statsAvec({
+        permissions: { canManage: false, canRespond: true, canView: true },
+        score: SCORE_SAISI,
+      }),
+    });
+
+    expect(parTestID(root, 'st-match-bilan-preparation')).toBeTruthy();
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining([
+      'En préparation',
+      'Karim prépare la feuille du match. Tu la liras ici dès qu’il la publie.',
+    ]));
+  });
+
+  test('🏛️ « score A » : le dirigeant qui n entraîne pas lit QUI saisit, et trouve les résultats', () => {
+    const root = monter({
+      auth: authPour('dirigeant-1', true),
+      event: AVEC_KARIM,
+      // Le serveur ne lui ouvre pas la feuille (aucun droit nouveau, « score A »).
+      matchStats: statsAvec({ permissions: { canManage: false, canView: false } }),
+    });
+
+    expect(parTestID(root, 'st-match-bilan-dirigeant')).toBeTruthy();
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining([
+      'Le score et la feuille sont saisis par l’entraîneur de l’équipe, Karim.',
+      'Les résultats de U15',
+    ]));
+    const lien = parTestID(root, 'st-match-bilan-dirigeant').findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'link'
+        && typeof node.props?.onPress === 'function',
+    )[0];
+    act(() => { lien.props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('TeamStack', {
+      params: { initialTab: 'stats', teamId: TEAM_ID },
+      screen: 'TeamDetails',
+    });
+    expect(parTestID(root, 'post-match-journey')).toBeUndefined();
+  });
+
+  test('⏳ avant la fin, le joueur lit QUAND tout s ouvre', () => {
+    const root = monter({
+      auth: authPour(JOUEUR),
+      event: { ...AVEC_KARIM, date: '2099-01-01T10:00:00.000Z', endDate: '2099-01-01T12:00:00.000Z' },
+      matchStats: statsAvec({ permissions: { canManage: false, canRespond: true, canView: true } }),
+    });
+
+    expect(parTestID(root, 'st-match-bilan-avant')).toBeTruthy();
+    expect(textesVisibles(root).some((texte) => texte.startsWith(
+      'Score, statistiques et retours s’ouvriront à la fin du match, ',
+    ))).toBe(true);
   });
 });

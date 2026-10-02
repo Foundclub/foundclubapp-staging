@@ -2,57 +2,53 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 /**
- * N4 (D6) — LA CARTE « APRÈS LE MATCH », maquette 05 · 5C.
+ * N4 (D6) puis ST-MATCH (écran 7, design des statistiques validé le 02/10) — LA
+ * CARTE « APRÈS LE MATCH », CÔTÉ ENCADREMENT.
  *
- * 🧨 CE QU ELLE REPARE : apres un match, la page proposait SEPT libelles
- * differents pour un seul et meme bouton (« Enregistrer le score », « Saisir
- * les stats du match », « Mettre à jour après score officiel », « En attente
- * de l'équipe »…), decides par un `useMemo` de sept branches. Le coach lisait
- * un mot different a chaque visite sans jamais voir OU il en etait : il y a
- * trois etapes apres un match, et rien ne les nommait.
+ * Trois étapes — le score, la feuille de match, les retours des joueurs — et UN
+ * bouton, celui de l'étape courante (pack « Détail d'un événement », 05C).
  *
- * ⇒ Les sept libelles se fondent en UNE chaine (« Stats du match ») pour la
- * rangee du menu et la modale d invite ; l ETAT, lui, devient ce parcours :
- *   1. le Score           — « 3 - 1 · saisi à la main »
- *   2. les Statistiques   — « Buteurs, passeurs, temps de jeu »
- *   3. les Retours        — « 4 sur 12 ont répondu »
- * Un seul bouton, sur l etape courante : c est la prochaine chose a faire.
+ * ST-MATCH y ajoute ce que le design demande :
+ *   · avant la fin, plus de bouton éteint : « Tout s'ouvre à la fin du match, … » ;
+ *   · l'étape dans le surtitre (« Après le match · étape 2 sur 3 ») ;
+ *   · « saisi par toi le 1 oct. à 22:35 » au lieu de « saisi à la main » ;
+ *   · « Brouillon commencé à 22:36 », « Feuille publiée le 1 oct. à 22:39 » (au lieu
+ *     de « Version v1 » et d'une date brute) ;
+ *   · l'étape 3 nomme qui manque et porte « Relancer » ;
+ *   · les deux notes sur une ligne (« Ta note », « Les joueurs · 1 note »), le mot de
+ *     l'entraîneur dessous ;
+ *   · la vérification dit CE QUI a changé (« La fédération indique 2 - 2 ; ta feuille
+ *     dit 2 - 1 »), en orange.
+ * Retirés : « Version v1 », la date brute, « 1 note collective prise en compte »,
+ * les boutons éteints sans motif.
  *
- * ✅ « SAISI PAR TOI À 20:12 » DE LA MAQUETTE EST RENDU DEPUIS LE LOT P5. Il a
- * manque longtemps, et c etait un manque de DONNEE, pas un oubli : la charge
- * `matchStats.score` ne portait ni auteur ni horodatage. Le serveur les avait
- * pourtant en base (`savedBy` / `savedAt`) et ne les exposait pas ; sa projection
- * rend maintenant `recordedBy` et `recordedAt`, pour une saisie A LA MAIN
- * uniquement.
- *
- * ⚠️ Quand l auteur manque — score officiel d une federation, ou score saisi
- * AVANT que le serveur ne l expose — la carte retombe sur l ORIGINE du score
- * (`source`), son affichage d avant. On ne devine pas un auteur.
- *
- * ⛔ ELLE EST PUREMENT PRESENTIELLE : aucune requete, aucun service. Elle recoit
- * des faits et rend un dessin — c est ce qui permet de la tester seule, sans
- * monter les 8 000 lignes de `EventDetails`.
+ * ⛔ ELLE EST PUREMENT PRÉSENTIELLE : aucune requête, aucun service. Elle reçoit des
+ * faits et rend un dessin — c'est ce qui permet de la tester seule. Le site
+ * (`EventDetails.web.js`) la rend aussi, avec moins de faits : chaque nouvelle
+ * propriété est facultative et se tait quand elle manque.
  */
 
-/** Les trois etapes, dans l ordre du parcours. Cet ordre EST le sens. */
+/** Les trois étapes, dans l'ordre du parcours. Cet ordre EST le sens. */
 const ETAPES = ['score', 'stats', 'responses'];
 
 /**
- * Ou en est-on du parcours.
+ * Où en est-on du parcours.
  *
- * 🔒 `verificationRequise` RENVOIE a l etape 2, meme quand le rapport est
- * finalise : le score officiel a change apres la publication, et les stats
- * publiees ne correspondent plus. Se dire « complet » a ce moment-la serait
- * exactement le mensonge que la carte doit empecher.
+ * 🔒 `verificationRequise` RENVOIE à l'étape 2, même quand le rapport est
+ * finalisé : le score officiel a changé après la publication, et les stats
+ * publiées ne correspondent plus. Se dire « complet » à ce moment-là serait
+ * exactement le mensonge que la carte doit empêcher.
  * @param {{ scoreDisponible: boolean, statsFinalisees: boolean,
- *  verificationRequise: boolean, toutesLesReponses: boolean }} faits - L etat mesure.
- * @returns {{ courante: string, faites: string[] }} - L etape courante et celles finies.
+ *  verificationRequise: boolean, toutesLesReponses: boolean }} faits - L'état mesuré.
+ * @returns {{ courante: string, faites: string[] }} - L'étape courante et celles finies.
  */
 export const resoudreLeParcours = ({
   scoreDisponible,
@@ -63,8 +59,22 @@ export const resoudreLeParcours = ({
   if (!scoreDisponible) return { courante: 'score', faites: [] };
   if (verificationRequise || !statsFinalisees) return { courante: 'stats', faites: ['score'] };
   if (!toutesLesReponses) return { courante: 'responses', faites: ['score', 'stats'] };
-
   return { courante: '', faites: ETAPES };
+};
+
+/**
+ * « le 1 oct. à 22:35 » — un moment raconté au lecteur, dans SON heure.
+ * @param {string} iso - Une date ISO.
+ * @returns {{ date: string, time: string } | null} - Le jour et l'heure, ou rien.
+ */
+const lireLeMoment = (iso) => {
+  if (!iso) return null;
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return null;
+  return {
+    date: instant.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+    time: instant.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
+  };
 };
 
 /**
@@ -72,33 +82,58 @@ export const resoudreLeParcours = ({
  */
 
 /**
- * La carte-parcours de l apres-match.
- * @param {object} props - Les proprietes du composant.
- * @param {boolean} [props.boutonDesactive] - La porte est-elle fermee.
- * @param {string} [props.monDocumentId] - Qui regarde, pour ecrire « toi ».
- * @param {string} [props.motif] - POURQUOI elle est fermee, quand elle l est.
- * @param {(cle: string) => void} props.onPressEtape - Ouvrir l etape courante.
+ * La carte-parcours de l'après-match.
+ * @param {object} props - Les propriétés du composant.
+ * @param {boolean} [props.avantLaFin] - Le match n'est pas fini : rien ne s'ouvre encore.
+ * @param {boolean} [props.boutonDesactive] - La porte est-elle fermée.
+ * @param {string} [props.feuilleBrouillonDepuis] - Le brouillon a été commencé (ISO).
+ * @param {string} [props.feuillePublieeLe] - La feuille a été publiée (ISO).
+ * @param {string} [props.finDuMatch] - « sam. 5 sept. à 20:00 », pour dire quand tout s'ouvre.
+ * @param {string[]} [props.manquants] - Les prénoms de ceux qui n'ont pas répondu.
+ * @param {string} [props.monDocumentId] - Qui regarde, pour écrire « toi ».
+ * @param {{ average: number | null, count: number } | null} [props.moyenneJoueurs]
+ *   - La moyenne des notes des joueurs.
+ * @param {string} [props.motDuCoach] - Le mot de l'entraîneur sur le collectif.
+ * @param {string} [props.motif] - POURQUOI la porte est fermée, quand elle l'est.
+ * @param {number | null} [props.noteEquipe] - La note de l'entraîneur sur le collectif.
+ * @param {(cle: string) => void} props.onPressEtape - Ouvrir l'étape courante.
+ * @param {(() => void) | null} [props.onRelancer] - Relancer ceux qui manquent.
+ * @param {boolean} [props.relanceEnCours] - Une relance part.
  * @param {number} [props.reponsesAttendues] - Combien de joueur·se·s sont attendus.
- * @param {number} [props.reponsesRecues] - Combien ont repondu.
- * @param {ScoreAuteur} [props.scoreAuteur] - L auteur de la saisie.
- * @param {boolean} [props.scoreDisponible] - Le score est-il enregistre.
- * @param {string} [props.scoreLibelle] - Le score, tel que l ecran l affiche deja.
+ * @param {number} [props.reponsesRecues] - Combien ont répondu.
+ * @param {ScoreAuteur} [props.scoreAuteur] - L'auteur de la saisie.
+ * @param {string} [props.scoreDeLaFeuille] - Le score que dit la feuille publiée.
+ * @param {boolean} [props.scoreDisponible] - Le score est-il enregistré.
+ * @param {string} [props.scoreLibelle] - Le score, tel que l'écran l'affiche déjà.
+ * @param {string} [props.scoreOfficiel] - Le score officiel, quand il a changé.
  * @param {string} [props.scoreOrigine] - `manual`, `external_sync`, ou rien.
- * @param {string} [props.scoreSaisiA] - Quand il a ete saisi (date ISO).
- * @param {boolean} [props.statsFinalisees] - Le rapport est-il publie.
- * @param {boolean} [props.verificationRequise] - Le score officiel a-t-il change depuis.
+ * @param {string} [props.scoreSaisiA] - Quand il a été saisi (date ISO).
+ * @param {boolean} [props.statsFinalisees] - Le rapport est-il publié.
+ * @param {boolean} [props.verificationRequise] - Le score officiel a-t-il changé depuis.
  * @returns {import('react').ReactElement} - La carte.
  */
 function PostMatchJourneyCard({
+  avantLaFin = false,
   boutonDesactive = false,
+  feuilleBrouillonDepuis = '',
+  feuillePublieeLe = '',
+  finDuMatch = '',
+  manquants = [],
   monDocumentId = '',
+  motDuCoach = '',
   motif = '',
+  moyenneJoueurs = null,
+  noteEquipe = null,
   onPressEtape,
+  onRelancer = null,
+  relanceEnCours = false,
   reponsesAttendues = 0,
   reponsesRecues = 0,
   scoreAuteur = null,
+  scoreDeLaFeuille = '',
   scoreDisponible = false,
   scoreLibelle = '',
+  scoreOfficiel = '',
   scoreOrigine = '',
   scoreSaisiA = '',
   statsFinalisees = false,
@@ -110,155 +145,248 @@ function PostMatchJourneyCard({
   const { t } = useTranslation();
 
   const toutesLesReponses = reponsesAttendues > 0 && reponsesRecues >= reponsesAttendues;
-  const { courante, faites } = resoudreLeParcours({
-    scoreDisponible,
-    statsFinalisees,
-    toutesLesReponses,
-    verificationRequise,
-  });
+  const { courante, faites } = avantLaFin
+    ? { courante: '', faites: [] }
+    : resoudreLeParcours({
+      scoreDisponible,
+      statsFinalisees,
+      toutesLesReponses,
+      verificationRequise,
+    });
+  const estComplet = !avantLaFin && !courante;
+  const estCalme = avantLaFin || estComplet;
 
-  const origineDuScore = () => {
-    if (scoreOrigine === 'external_sync') {
-      return t('eventDetails.postMatch.scoreOfficial', 'score officiel');
-    }
-    if (scoreOrigine === 'manual') {
-      return t('eventDetails.postMatch.scoreManual', 'saisi à la main');
-    }
-
-    return '';
-  };
-
-  /**
-   * L heure de la saisie, en HH:MM.
-   *
-   * Horloge LOCALE, volontairement : ce n est pas une decision de droit (celles-la
-   * lisent `serverNow`, cf. `eventMatchClock.js`), c est un moment raconte au
-   * lecteur, dans son heure a lui.
-   * @returns {string} - `20:12`, ou vide si l horodatage est illisible.
-   */
-  const heureDeSaisie = () => {
-    if (!scoreSaisiA) return '';
-    const instant = new Date(scoreSaisiA);
-    if (Number.isNaN(instant.getTime())) return '';
-
-    const heures = String(instant.getHours()).padStart(2, '0');
-    const minutes = String(instant.getMinutes()).padStart(2, '0');
-
-    return `${heures}:${minutes}`;
-  };
-
-  /**
-   * « saisi par toi a 20:12 », ou « saisi par Camille a 20:12 ».
-   *
-   * Rend une chaine VIDE des qu il manque de quoi la dire honnetement : pas
-   * d heure, ou personne a nommer. L appelant retombe alors sur l origine.
-   * @returns {string} - La phrase, ou vide.
-   */
-  const auteurDuScore = () => {
-    const heure = heureDeSaisie();
-    if (!heure) return '';
-
+  // « 2 - 1 · saisi par toi le 1 oct. à 22:35 » — l'auteur prime sur l'origine ; sans
+  // auteur, on n'invente personne : le score seul, ou « score officiel ».
+  const detailDuScore = () => {
+    if (avantLaFin) return t('stMatch.carte.scoreBefore', 'Toi, à la fin du match');
+    if (!scoreDisponible) return t('stMatch.carte.scoreTodo', 'À saisir');
+    const moment = lireLeMoment(scoreSaisiA);
     const documentId = scoreAuteur?.documentId || '';
-    if (documentId && documentId === monDocumentId) {
-      return t('eventDetails.postMatch.scoreRecordedByMe', 'saisi par toi à {{time}}')
-        .replace('{{time}}', heure);
+    const prenom = String(scoreAuteur?.firstname || '').trim();
+    let complement = '';
+    if (moment && documentId && documentId === monDocumentId) {
+      complement = t('stMatch.carte.scoreByMe', 'saisi par toi le {{date}} à {{time}}', {
+        ...moment, ...SANS_ECHAPPEMENT,
+      });
+    } else if (moment && prenom) {
+      complement = t('stMatch.carte.scoreBy', 'saisi par {{name}} le {{date}} à {{time}}', {
+        ...moment, name: prenom, ...SANS_ECHAPPEMENT,
+      });
+    } else if (scoreOrigine === 'external_sync') {
+      complement = t('stMatch.carte.scoreOfficial', 'score officiel');
     }
-
-    const prenom = scoreAuteur?.firstname || '';
-    if (!prenom) return '';
-
-    return t('eventDetails.postMatch.scoreRecordedBy', 'saisi par {{name}} à {{time}}')
-      .replace('{{name}}', prenom)
-      .replace('{{time}}', heure);
-  };
-
-  const sousTitreDuScore = () => {
-    if (!scoreDisponible) return t('eventDetails.postMatch.scoreTodo', 'À enregistrer');
-    // L auteur prime sur l origine : « saisi par toi a 20:12 » dit deja que c est
-    // une saisie a la main, et il dit QUI, ce que l origine ne pouvait pas dire.
-    const complement = auteurDuScore() || origineDuScore();
-
     return complement ? `${scoreLibelle} · ${complement}` : scoreLibelle;
   };
 
-  const sousTitreDesReponses = () => {
+  const detailDeLaFeuille = () => {
+    if (avantLaFin) return t('stMatch.carte.sheetDetail', 'Ta note, les buteurs, le temps de jeu');
+    if (!scoreDisponible) return t('stMatch.carte.sheetAfterScore', 'Après le score');
+    if (faites.includes('stats')) {
+      const publiee = lireLeMoment(feuillePublieeLe);
+      return publiee
+        ? t('stMatch.carte.sheetPublishedOn', 'Le {{date}} à {{time}}', {
+          ...publiee, ...SANS_ECHAPPEMENT,
+        })
+        : t('stMatch.carte.sheetPublished', 'Publiée');
+    }
+    if (verificationRequise) {
+      return t('stMatch.carte.sheetRepublish', 'À vérifier, puis republier');
+    }
+    const brouillon = lireLeMoment(feuilleBrouillonDepuis);
+    return brouillon
+      ? t('stMatch.carte.sheetDraftSince', 'Brouillon commencé à {{time}}', {
+        time: brouillon.time, ...SANS_ECHAPPEMENT,
+      })
+      : t('stMatch.carte.sheetDetail', 'Ta note, les buteurs, le temps de jeu');
+  };
+
+  const detailDesReponses = () => {
+    if (avantLaFin) {
+      return t(
+        'stMatch.carte.responsesBefore',
+        'Ils reçoivent le questionnaire à la fin du match',
+      );
+    }
     if (!reponsesAttendues) {
       return t('eventDetails.postMatch.responsesNone', 'Personne n’a encore répondu');
     }
-
-    return t('eventDetails.postMatch.responsesCount', '{{received}} sur {{total}} ont répondu')
-      .replace('{{received}}', String(reponsesRecues))
-      .replace('{{total}}', String(reponsesAttendues));
+    // L'accord suit ceux qui ONT répondu : « 1 sur 3 a répondu », « 4 sur 12 ont répondu ».
+    const compte = t('stMatch.carte.responsesCount', {
+      count: reponsesRecues,
+      defaultValue_one: '{{count}} sur {{total}} a répondu',
+      defaultValue_other: '{{count}} sur {{total}} ont répondu',
+      total: reponsesAttendues,
+      ...SANS_ECHAPPEMENT,
+    });
+    if (courante !== 'responses' || !manquants.length) return compte;
+    return `${compte} · ${t('stMatch.carte.missing', 'manquent {{names}}', {
+      names: manquants.join(', '),
+      ...SANS_ECHAPPEMENT,
+    })}`;
   };
 
-  /** @type {Record<string, { sousTitre: string, titre: string }>} */
+  /** @type {Record<string, { detail: string, titre: string }>} */
   const CONTENU = {
     responses: {
-      sousTitre: sousTitreDesReponses(),
+      detail: detailDesReponses(),
       titre: t('eventDetails.postMatch.responsesTitle', 'Retours des joueurs'),
     },
     score: {
-      sousTitre: sousTitreDuScore(),
-      titre: t('eventDetails.postMatch.scoreTitle', 'Score'),
+      detail: verificationRequise && scoreOfficiel && scoreDeLaFeuille
+        ? t(
+          'stMatch.carte.officialChangedDetail',
+          'La fédération indique {{official}} ; ta feuille dit {{sheet}}',
+          { official: scoreOfficiel, sheet: scoreDeLaFeuille, ...SANS_ECHAPPEMENT },
+        )
+        : detailDuScore(),
+      titre: verificationRequise
+        ? t('stMatch.carte.officialChanged', 'Score officiel changé')
+        : t('eventDetails.postMatch.scoreTitle', 'Score'),
     },
     stats: {
-      sousTitre: t('eventDetails.postMatch.statsSubtitle', 'Buteurs, passeurs, temps de jeu'),
-      titre: t('eventDetails.postMatch.statsTitle', 'Statistiques de l’équipe'),
+      detail: detailDeLaFeuille(),
+      titre: faites.includes('stats')
+        ? t('stMatch.carte.sheetPublishedTitle', 'Feuille publiée')
+        : t('stMatch.carte.sheetTitle', 'Feuille de match'),
     },
   };
 
-  const libelleDuBouton = () => {
-    if (courante === 'score') {
-      return t('eventDetails.postMatch.actionScore', 'Enregistrer le score');
-    }
-    if (courante === 'stats') {
-      return verificationRequise
-        ? t('eventDetails.postMatch.actionReview', 'Mettre à jour')
-        : t('eventDetails.postMatch.actionStats', 'Saisir les stats');
-    }
-    if (courante === 'responses') {
-      return t('eventDetails.postMatch.actionResponses', 'Voir les retours');
-    }
+  const rangCourant = ETAPES.indexOf(courante) + 1;
+  let surtitre = t('stMatch.carte.header', 'Après le match');
+  if (verificationRequise && !avantLaFin) {
+    surtitre = t('stMatch.carte.headerReview', 'Après le match · à vérifier');
+  } else if (estComplet) {
+    surtitre = t('stMatch.carte.headerComplete', 'Après le match · c’est complet');
+  } else if (rangCourant) {
+    surtitre = t('stMatch.carte.headerStep', 'Après le match · étape {{n}} sur 3', {
+      n: rangCourant, ...SANS_ECHAPPEMENT,
+    });
+  }
 
-    // Le parcours est fini : le bouton ne demande plus rien, il donne acces.
-    return t('eventDetails.postMatch.actionDone', 'Voir les stats du match');
+  const libelleDuBouton = () => {
+    if (courante === 'score') return t('stMatch.carte.actionScore', 'Saisir le score');
+    if (courante === 'stats') {
+      if (verificationRequise) return t('stMatch.carte.actionReview', 'Vérifier la feuille');
+      if (feuilleBrouillonDepuis) return t('stMatch.carte.actionResume', 'Reprendre la feuille');
+      return t('stMatch.carte.actionSheet', 'Saisir la feuille');
+    }
+    return t('stMatch.carte.actionSeeSheet', 'Voir la feuille');
   };
 
-  // L en-tete dit OU on en est, en toutes lettres. « Étape 2 sur 3 » se lit
-  // sans avoir a compter les pastilles.
-  const rangCourant = ETAPES.indexOf(courante) + 1;
-  const enTete = rangCourant
-    ? t('eventDetails.postMatch.step', 'Étape {{n}} sur 3').replace('{{n}}', String(rangCourant))
-    : t('eventDetails.postMatch.complete', 'C’est complet');
+  const notes = [];
+  if (statsFinalisees && Number(noteEquipe) > 0) {
+    notes.push({
+      cle: 'coach',
+      libelle: t('stMatch.carte.myRating', 'Ta note'),
+      valeur: `${noteEquipe}/10`,
+    });
+  }
+  if (statsFinalisees && Number(moyenneJoueurs?.count) > 0) {
+    notes.push({
+      cle: 'joueurs',
+      libelle: t('stMatch.carte.playersRating', {
+        count: Number(moyenneJoueurs?.count),
+        defaultValue_one: 'Les joueurs · {{count}} note',
+        defaultValue_other: 'Les joueurs · {{count}} notes',
+      }),
+      valeur: moyenneJoueurs?.average != null ? `${moyenneJoueurs.average}/10` : '—',
+    });
+  }
+
+  const avecRelance = courante === 'responses' && Boolean(onRelancer) && manquants.length > 0;
+
+  // 🪤 LE `testID` VIT SUR CE `View`, PAS SUR LE `Button` : l'atome `Button` ne
+  // déclare NI ne transmet `testID`.
+  const blocDAction = (
+    <View
+      style={avecRelance ? [Alignments.row, Spaces.gap[8]] : null}
+      testID="post-match-action"
+    >
+      <View style={avecRelance ? { flex: 1 } : null}>
+        <Button
+          disabled={boutonDesactive}
+          onPress={() => onPressEtape(courante || 'stats')}
+          size="sm"
+          title={libelleDuBouton()}
+          variant={courante && courante !== 'responses' ? 'Primary' : 'Secondary'}
+        />
+      </View>
+      {avecRelance ? (
+        <View style={{ flex: 1 }} testID="post-match-relancer">
+          <Button
+            disabled={relanceEnCours}
+            isLoading={relanceEnCours}
+            onPress={() => onRelancer?.()}
+            size="sm"
+            title={t('stMatch.carte.remind', {
+              count: manquants.length,
+              defaultValue_one: 'Relancer {{count}} joueur',
+              defaultValue_other: 'Relancer les {{count}}',
+            })}
+            variant="Primary"
+          />
+        </View>
+      ) : null}
+    </View>
+  );
 
   return (
     <View
       style={[
-        ApplicationStyle.backgroundColor.primary900,
         ApplicationStyle.borderRadius24,
-        ApplicationStyle.borderColor.primary500,
-        ApplicationStyle.borderWidth1,
         Spaces.padding[16],
         Spaces.gap[16],
+        {
+          backgroundColor: withAlpha(Colors.primary900, 0.7),
+          borderColor: estCalme ? withAlpha(Colors.primary500, 0.4) : Colors.primary500,
+          borderWidth: 1,
+        },
       ]}
       testID="post-match-journey"
     >
-      <View style={[Spaces.gap[4]]}>
-        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-          {t('eventDetails.postMatch.header', 'APRÈS LE MATCH')}
+      <Text style={[Fonts.p4Bold, Fonts.primary500, Fonts.uppercase]} testID="post-match-step">
+        {surtitre}
+      </Text>
+
+      {avantLaFin && finDuMatch ? (
+        <Text style={[Fonts.p2, Fonts.neutral200]} testID="post-match-avant-la-fin">
+          {t('stMatch.carte.opensAt', 'Tout s’ouvre à la fin du match, {{when}}.', {
+            when: finDuMatch, ...SANS_ECHAPPEMENT,
+          })}
         </Text>
-        <Text style={[Fonts.h4Bold, Fonts.neutral00]} testID="post-match-step">
-          {enTete}
-        </Text>
-      </View>
+      ) : null}
 
       <View style={[Spaces.gap[12]]}>
         {ETAPES.map((cle, index) => {
           const estFaite = faites.includes(cle);
           const estCourante = cle === courante;
-          let couleurPastille = Colors.neutral300;
-          if (estFaite) couleurPastille = Colors.success500;
-          else if (estCourante) couleurPastille = Colors.primary500;
+          const enAlerte = cle === 'score' && verificationRequise && !avantLaFin;
+          let couleurPastille = Colors.neutral600;
+          let couleurTexte = Colors.neutral300;
+          if (enAlerte) {
+            couleurPastille = Colors.warning500;
+            couleurTexte = Colors.warning400;
+          } else if (estFaite) {
+            couleurPastille = Colors.success500;
+            couleurTexte = Colors.success500;
+          } else if (estCourante) {
+            couleurPastille = Colors.primary500;
+            couleurTexte = Colors.primary200;
+          }
+          let pastille = (
+            <Text style={[Fonts.p2Bold, { color: couleurTexte }]}>{String(index + 1)}</Text>
+          );
+          if (enAlerte || estFaite) {
+            pastille = (
+              <SvgIcon
+                color={couleurTexte}
+                height={14}
+                name={enAlerte ? 'flag' : 'check'}
+                width={14}
+              />
+            );
+          }
 
           return (
             <View
@@ -269,35 +397,27 @@ function PostMatchJourneyCard({
               <View
                 style={{
                   alignItems: 'center',
-                  backgroundColor: withAlpha(couleurPastille, 0.16),
-                  borderColor: withAlpha(couleurPastille, 0.45),
-                  borderRadius: 999,
+                  backgroundColor: estFaite || estCourante || enAlerte
+                    ? withAlpha(couleurPastille, 0.14)
+                    : 'transparent',
+                  borderColor: estFaite || enAlerte
+                    ? withAlpha(couleurPastille, 0.45)
+                    : couleurPastille,
+                  borderRadius: 16,
                   borderWidth: 1,
                   height: 32,
                   justifyContent: 'center',
                   width: 32,
                 }}
               >
-                {estFaite ? (
-                  <SvgIcon color={couleurPastille} height={14} name="check" width={14} />
-                ) : (
-                  <Text style={[Fonts.p3Bold, { color: couleurPastille }]}>
-                    {String(index + 1)}
-                  </Text>
-                )}
+                {pastille}
               </View>
-
               <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    Fonts.p2Bold,
-                    { color: estCourante || estFaite ? Colors.neutral00 : Colors.neutral300 },
-                  ]}
-                >
+                <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
                   {CONTENU[cle].titre}
                 </Text>
-                <Text style={[Fonts.p4, Fonts.neutral300]}>
-                  {CONTENU[cle].sousTitre}
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {CONTENU[cle].detail}
                 </Text>
               </View>
             </View>
@@ -305,30 +425,51 @@ function PostMatchJourneyCard({
         })}
       </View>
 
-      {/* ⛔ LE MOTIF D UNE PORTE FERMEE NE DISPARAIT PAS. C est l etat le plus
-          frequent avant la fin du match (« Les stats seront disponibles à la
-          fin du match »), et une porte grisee qui ne dit pas POURQUOI ne se
-          comprend pas. Il vivait sous l ancien bouton ; il vit ici. */}
-      {boutonDesactive && motif ? (
-        <Text style={[Fonts.p4, Fonts.neutral200]} testID="post-match-motif">
+      {/* ⛔ LE MOTIF D'UNE PORTE FERMÉE NE DISPARAÎT PAS (score officiel attendu,
+          lecteur qui ne gère pas l'équipe…). Avant la fin du match, ce n'est plus une
+          porte fermée : la carte dit quand tout s'ouvre, sans bouton. */}
+      {boutonDesactive && motif && !avantLaFin ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]} testID="post-match-motif">
           {motif}
         </Text>
       ) : null}
 
-      {/* 🪤 LE `testID` VIT SUR CE `View`, PAS SUR LE `Button` : l'atome
-          `Button` ne declare NI ne transmet `testID` (son JSDoc s'arrete a
-          `accessibilityRole`). Le poser dessus ne l'aurait mis nulle part dans
-          la vraie app — seules les doublures de test l'auraient vu, et les
-          temoins seraient passes au vert sur une fiction. */}
-      <View testID="post-match-action">
-        <Button
-          disabled={boutonDesactive}
-          onPress={() => onPressEtape(courante || 'responses')}
-          size="sm"
-          title={libelleDuBouton()}
-          variant={courante ? 'Primary' : 'Secondary'}
-        />
-      </View>
+      {avantLaFin || estComplet ? null : blocDAction}
+
+      {notes.length ? (
+        <View style={[Spaces.gap[12]]} testID="post-match-notes">
+          <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.08), height: 1 }} />
+          <View style={[Alignments.row, Spaces.gap[8]]}>
+            {notes.map((note) => (
+              <View
+                key={note.cle}
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  Spaces.padding[12],
+                  Spaces.gap[4],
+                  {
+                    backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                    borderColor: withAlpha(Colors.neutral00, 0.09),
+                    borderWidth: 1,
+                    flex: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>{note.valeur}</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>{note.libelle}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+      {statsFinalisees && motDuCoach ? (
+        <Text style={[Fonts.p2, Fonts.neutral100]} testID="post-match-mot">
+          {motDuCoach}
+        </Text>
+      ) : null}
+
+      {/* C'est complet : « Voir la feuille » vient APRÈS le bilan (planche, état 5). */}
+      {estComplet ? blocDAction : null}
     </View>
   );
 }
