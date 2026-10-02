@@ -416,3 +416,62 @@ describe('ST-RETOURS · planche 22 etat 3 — le parent lit la meme vue', () => 
     expect(t).toContain('Ouvrir le match');
   });
 });
+
+// STATS-FIX2 · POINT 3 (tournee T10, ecran 17) — « Ses retours de match dans la feuille »
+// « ne fait rien » chez l entraineur. NON REPRODUIT dans le code : ce temoin fige le chemin de
+// bout en bout sur le VRAI ecran (UserDetails -> ProfileStatsForViewer -> l appui), et
+// l action rendue est celle que la pile des evenements sait servir (EventStack >
+// MatchStatsEditor, route.params lus par l editeur : eventId, sourceType, teamId).
+// Journal du relais de la tournee : le profil s ouvre a 20:21:04 UTC, puis le relais est
+// RELANCE (relay-t10e s arrete, relay-t10f repart a 20:22:11) : « aucune requete » ne se
+// mesurait pas dans cette fenetre. A rephotographier a la T11 (capture avant ET apres l appui).
+describe('STATS-FIX2 · point 3 — « Ses retours de match dans la feuille » (entraineur)', () => {
+  const KARIM = {
+    documentId: 'karim',
+    firstname: 'Karim',
+    role: { name: 'Entraineur' },
+    trainedTeams: [{ documentId: 'u13', name: 'U13' }, { documentId: 'u15', name: 'U15' }],
+  };
+  const STATS_VUES_PAR_KARIM = {
+    overall: { goals: 2, matches: 2, minutes: 180 },
+    recentMatches: [
+      {
+        documentId: 'kf57', sourceType: 'event', sport: 'football', teamName: 'U15',
+      },
+      {
+        documentId: 'm-ancien', sourceType: 'event', sport: 'football', teamName: 'U13',
+      },
+    ],
+    scope: {
+      teams: [{ documentId: 'u13', name: 'U13' }, { documentId: 'u15', name: 'U15' }],
+      viewer: 'coach',
+    },
+  };
+
+  it('l appui ouvre la feuille du DERNIER match, pour l equipe que Karim entraine', async () => {
+    mockFetchedUser = {
+      ...HUGO,
+      myTeams: [{ documentId: 'u13', name: 'U13' }, { documentId: 'u15', name: 'U15' }],
+    };
+    mockStatsQuery = { ...mockStatsQuery, data: STATS_VUES_PAR_KARIM };
+    const arbre = await rendre(KARIM, { userId: 'hugo' });
+    const lien = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props.testID === 'profile-stats-match-sheet-link' && typeof n.props.onPress === 'function'
+    ))[0];
+
+    expect(lien).toBeDefined();
+    await act(async () => {
+      lien.props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
+      params: {
+        eventId: 'kf57',
+        sourceType: 'event',
+        sport: 'football',
+        teamId: 'u15',
+        teamName: 'U15',
+      },
+      screen: RouteNames.MatchStatsEditor,
+    });
+  });
+});
