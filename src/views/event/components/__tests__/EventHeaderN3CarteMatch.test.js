@@ -386,3 +386,47 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     expect(askedKeys).toContain('eventDetails.matchCard.verdict.win');
   });
 });
+
+// FINITIONS7 · POINT 7 (tournee 8) — sur la fiche d un entrainement, la date s affichait « jeu »
+// seul (le texte etait « jeu 01/10/2026 »). C est le piege d Android 16 deja paye par les
+// FINITIONS du 29/09 : un texte de plusieurs mots, dans une boite a sa largeur mesuree, perd son
+// DERNIER mot. Parade du depot : `texteInsecable` — le texte se comporte comme un mot seul. Et la
+// colonne de droite (categorie, niveau) peut desormais retrecir au lieu de pousser la date.
+// ⚠️ Jest ne mesure aucun pixel : ce temoin lit le TEXTE pose et la CONTRAINTE de la colonne.
+describe('FINITIONS7 · point 7 — la date de la fiche reste entiere', () => {
+  const ENTRAINEMENT = {
+    date: '2026-10-01T12:00:00.000Z',
+    documentId: 'evt-f7',
+    endTime: '19:00:00',
+    name: 'Entrainement',
+    startTime: '18:00:00',
+    team: {
+      category: { name: 'SÉNIOR (+18 ANS)' },
+      club: { documentId: 'club-1', name: CLUB_NAME },
+      documentId: 'team-1',
+      level: { name: 'Régional' },
+      name: 'U13',
+    },
+    type: { documentId: 'type-2', name: 'Entraînement' },
+  };
+
+  test('🚨 « jeu 01/10/2026 » est pose d un seul tenant (espace insecable)', () => {
+    const arbre = renderHeader(ENTRAINEMENT);
+    const textes = findAll(arbre, (/** @type {any} */ c) => c?.type === 'Text').map((c) => textContentOf(c.children).join(''));
+
+    expect(textes).toContain(`jeu${String.fromCharCode(160)}01/10/2026`);
+    expect(textes).not.toContain('jeu 01/10/2026');
+  });
+
+  test('🚨 la colonne categorie / niveau peut retrecir : elle ne pousse plus la date', () => {
+    const arbre = renderHeader(ENTRAINEMENT);
+    const colonne = findAll(arbre, (/** @type {any} */ c) => (
+      c?.type === 'View' && findAll(c.children, (/** @type {any} */ t) => (
+        t?.type === 'Text' && t?.props?.numberOfLines === 1 && /SÉNIOR/i.test(texteDe(t.children))
+      )).length > 0 && !findAll(c.children, (/** @type {any} */ t) => /01\/10\/2026/.test(texteDe(t?.children))).length
+    )).pop();
+
+    expect(colonne).toBeDefined();
+    expect(styleDe(colonne).flexShrink).toBe(1);
+  });
+});

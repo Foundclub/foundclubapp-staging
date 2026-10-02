@@ -3947,7 +3947,11 @@ function EventDetails({ navigation, route }) {
         ) : null,
         onNameOpponent,
         opponentName: matchOpponentName,
-        value: 'Score en attente',
+        // FINITIONS7 (tournee 8) — « Score en attente » sur un match du 10/10 A VENIR : il ne se
+        // dit qu apres le match, lu sur la meme horloge serveur que la pastille « TERMINÉ ».
+        value: isMatchFinished
+          ? t('eventDetails.scorePending', 'Score en attente')
+          : t('eventDetails.scoreUpcoming', 'À venir'),
         verdict: null,
       };
     }
@@ -3972,15 +3976,15 @@ function EventDetails({ navigation, route }) {
       verdict,
     };
   }, [
-    // `isMatchFinished` a QUITTE cette liste avec D5 : l'encart ne dependait de
-    // lui que pour se CACHER avant le coup d'envoi (`!available && !isMatchFinished`
-    // rendait null). Il s'affiche desormais des qu'il s'agit d'un match, donc
-    // le calcul ne lit plus l'etat de fin. La pastille, elle, le lit toujours (D8).
+    // `isMatchFinished` a QUITTE cette liste avec D5 (l'encart s'affiche des qu'il
+    // s'agit d'un match), puis y est REVENU avec FINITIONS7 : il ne cache plus
+    // l'encart, il choisit seulement entre « À venir » et « Score en attente ».
     canEdit,
     event?.externalAutoSource,
     event?.matchResult,
     handleOpenOpponentSheet,
     isMatchEvent,
+    isMatchFinished,
     isViewerFromInvitedTeam,
     matchOpponentName,
     matchStatsPayload?.score, t,

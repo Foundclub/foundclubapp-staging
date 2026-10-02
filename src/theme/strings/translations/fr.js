@@ -7783,7 +7783,10 @@ export default {
     sayHowManyExternalSpots: 'Indique combien de places externes tu veux ouvrir pour cet entraînement.',
     // eslint-disable-next-line max-len
     scheduleResultsAndStandingsAre: 'Calendrier, résultats et classement sont prêts à être pilotés.',
+    // FINITIONS7 (02/10) — l encart du match : « À venir » avant, « Score en attente » apres.
+    scorePending: 'Score en attente',
     scoreToComplete: 'Score à compléter',
+    scoreUpcoming: 'À venir',
     scoreWaitingToSync: 'Score en attente de synchronisation',
     seeAllMyPendingMatches: 'Voir tous mes matchs en attente',
     seeMyCallUp: 'Voir ma convocation',

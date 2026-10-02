@@ -7339,7 +7339,10 @@ export default {
     saving: 'Saving...',
     sayHowManyExternalSpots: 'Say how many external spots you want to open for this training session.',
     scheduleResultsAndStandingsAre: 'Schedule, results and standings are ready to be managed.',
+    // FINITIONS7 (02/10) — the match box: « Upcoming » before, « Score pending » after.
+    scorePending: 'Score pending',
     scoreToComplete: 'Score to complete',
+    scoreUpcoming: 'Upcoming',
     scoreWaitingToSync: 'Score waiting to sync',
     seeAllMyPendingMatches: 'See all my pending matches',
     seeMyCallUp: 'See my call-up',

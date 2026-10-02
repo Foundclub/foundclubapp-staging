@@ -602,7 +602,10 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     // compose dans l'entete, ou `clubName` est deja resolu. La chaine rendue
     // est temoignee la-bas (EventHeaderN3CarteMatch, temoin 2).
     expect(resultat.opponentName).toBe(ADVERSAIRE);
-    expect(resultat.value).toBe('Score en attente');
+    // FINITIONS7 (tournee 8) — « Score en attente » ne se dit qu APRES le match : avant le coup
+    // d envoi, l encart annonce un match « À venir ». (Avant FINITIONS7, ce temoin attendait
+    // « Score en attente » ici : c est exactement ce que la tournee a releve sur le match du 10/10.)
+    expect(resultat.value).toBe('À venir');
     expect(resultat.verdict).toBeNull();
   });
 
@@ -837,5 +840,34 @@ describe('R2 - une equipe de mon propre club n est pas un adversaire', () => {
 
     monter({ auth: COACH_DE_L_INVITEE(), event: ancienParc });
     expect(pastille()).toBe('MATCH · À L\'EXTÉRIEUR');
+  });
+});
+
+// FINITIONS7 · POINT 7 (tournee 8) — « Score en attente » sur un match du 10/10 A VENIR. Il ne
+// se dit qu apres le match : la fin se lit sur la MEME horloge serveur que la pastille « TERMINÉ »
+// (`isMatchFinished`, AC10 — sans horloge serveur, le match n est jamais declare fini).
+describe('FINITIONS7 · point 7 — « Score en attente » seulement apres le match', () => {
+  test('🚨 un match a venir, sans score : « À venir »', () => {
+    monter({ attendance: HORLOGE_SERVEUR('2098-12-31T10:00:00.000Z'), event: buildMatch() });
+
+    expect(resume().value).toBe('À venir');
+  });
+
+  test('un match FINI, sans score : « Score en attente » — l entraineur doit le saisir', () => {
+    const matchPasse = buildMatch({
+      date: '2026-01-01T10:00:00.000Z',
+      endDate: '2026-01-01T12:00:00.000Z',
+    });
+    monter({ attendance: HORLOGE_SERVEUR('2026-01-02T10:00:00.000Z'), event: matchPasse });
+
+    expect(resume().value).toBe('Score en attente');
+  });
+
+  test('un match avec son score garde son score, fini ou non', () => {
+    monter({
+      event: buildMatch({ matchResult: { isFinal: true, scoreAgainst: 1, scoreFor: 3, source: 'manual' } }),
+    });
+
+    expect(resume().value).toBe('3 - 1');
   });
 });
