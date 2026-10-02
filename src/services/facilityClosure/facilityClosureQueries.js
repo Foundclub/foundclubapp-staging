@@ -71,6 +71,10 @@ export const useCollectiviteClosures = (collectiviteId) => useQuery({
 const useGesteFermeture = (mutationFn) => {
   const queryClient = useQueryClient();
   return useMutation({
+    // COLL-FIX-PLANNING (meme defaut que T9_C23_6) — fermer, modifier et rouvrir disent LEUR refus
+    // dans l ecran, traduit (closureErrorMessage) : le filet global (app/queryClient.js) ne pose
+    // pas, par-dessus, une alerte « Erreur » au texte brut du serveur.
+    meta: { preventToastError: true },
     mutationFn,
     onSuccess: async () => {
       await Promise.all([
