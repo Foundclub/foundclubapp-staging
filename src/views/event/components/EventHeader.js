@@ -480,7 +480,7 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                 color={statusLineColor}
                 height={14}
                 name="clock-two-thirty"
-                style={Spaces.marginTop[4]}
+                style={/** @type {any} */ (Spaces.marginTop[4])}
                 width={14}
               />
               <Text
@@ -507,7 +507,7 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                 color={Colors.neutral300}
                 height={14}
                 name="soccer-ball"
-                style={Spaces.marginTop[4]}
+                style={/** @type {any} */ (Spaces.marginTop[4])}
                 width={14}
               />
               <Text

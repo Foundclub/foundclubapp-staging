@@ -119,7 +119,7 @@ export const buildMatchEncartLines = ({
 
   // 🕰️ FINI, SANS SCORE (états 2, 3 et 6).
   if (!available) {
-    let statusLine = null;
+    let statusLine = /** @type {{ text: string, tone: 'neutral' | 'warning' } | null} */ (null);
     if (canSeeDetails && waitingOfficial) {
       // État 6 — en orange, plus en or (défaut 15 : l'or est réservé à la League).
       statusLine = {
