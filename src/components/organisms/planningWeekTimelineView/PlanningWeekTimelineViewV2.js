@@ -578,6 +578,43 @@ function PlanningWeekTimelineView({
   );
 
   const renderTimedEventCard = (event, left, width) => {
+    // COLL-C4B (02/10, design P4v3-fermer ecran 4) — une plage FERMEE ou BLOQUEE par la Ville :
+    // orange (attention), en pointilles, avec ce qu elle dit ; la mairie la touche (lecture seule
+    // ailleurs). Elle n est jamais une seance : ni club, ni equipe.
+    if (event?.raw?.closureBand) {
+      return (
+        <EventBlock
+          accessibilityLabel={[event.title, getPlanningTimeLabel(event)].filter(Boolean).join(', ')}
+          event={event}
+          key={event.id || `fermeture-${event.dayIndex}-${event.top}`}
+          onReadOnlyEventPress={onReadOnlyEventPress}
+          style={[styles.eventCard, {
+            backgroundColor: hexToRgba(pendingAccentColor, 0.12),
+            borderColor: hexToRgba(pendingAccentColor, 0.6),
+            borderStyle: 'dashed',
+            borderWidth: 1,
+            height: event.height - 2,
+            left: `${left}%`,
+            paddingHorizontal: mode === 'week' ? 3 : 6,
+            paddingVertical: 4,
+            top: event.top + 1,
+            width: `${width}%`,
+          }]}
+        >
+          <Text
+            numberOfLines={4}
+            style={[
+              Fonts.p3Bold,
+              { color: pendingAccentColor, fontSize: mode === 'week' ? 9 : 11 },
+            ]}
+          >
+            {event.title}
+          </Text>
+        </EventBlock>
+      );
+    }
+    // COLL-C4B — une seance que la fermeture touche GARDE sa place (D16), cernee d orange.
+    const aDeplacer = Boolean(event?.raw?.closure);
     const color = event.color || Colors.primary500;
     const isPendingParticipation = isPlanningPendingParticipation(event);
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
@@ -667,8 +704,8 @@ function PlanningWeekTimelineView({
           borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
           borderLeftColor: cardAccentColor,
           borderLeftWidth: mode === 'week' ? 2 : 3,
-          ...(isPendingRequest ? {
-            borderColor: pendingAccentColor, borderStyle: 'dashed', borderWidth: 1,
+          ...(isPendingRequest || aDeplacer ? {
+            borderColor: pendingAccentColor, borderStyle: 'dashed', borderWidth: aDeplacer ? 2 : 1,
           } : {}),
           height: event.height - 2,
           justifyContent: isTiny ? 'center' : 'flex-start',
@@ -747,6 +784,18 @@ function PlanningWeekTimelineView({
         ) : null}
         {event.leagueMatch || event.league_match ? (
           <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
+        ) : null}
+        {aDeplacer && !isTiny ? (
+          <Text
+            numberOfLines={1}
+            style={[
+              Fonts.p3Bold,
+              { color: pendingAccentColor, fontSize: mode === 'week' ? 8 : 10 },
+            ]}
+            testID="a-deplacer"
+          >
+            {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
+          </Text>
         ) : null}
       </EventBlock>
     );

@@ -5617,6 +5617,7 @@ export default {
       vacances: 'Holidays',
     },
     planning: {
+      aDeplacer: 'to move',
       bloque: 'Blocked by the town · {{motif}}',
       bloqueSeul: 'Blocked by the town',
       ferme: 'Closed · {{motif}}',

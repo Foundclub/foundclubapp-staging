@@ -107,6 +107,8 @@ function FacilityPlanningList({
             <Text accessibilityRole="header" style={[Fonts.p2Bold, Fonts.primary200]}>{titre}</Text>
             {duJour.map((bloc, index) => {
               const enAttente = bloc?.raw?.pending === true;
+              // COLL-C4B (02/10) — touchee par une fermeture : elle garde sa place (D16), cernee.
+              const aDeplacer = Boolean(bloc?.raw?.closure);
               const qui = slotWho(bloc);
               const origine = origineDe ? origineDe(bloc) : null;
               const contenu = (
@@ -124,6 +126,11 @@ function FacilityPlanningList({
                       {timeRange(bloc.startTime, bloc.endTime)}
                     </Text>
                     {origine ? <Text style={[Fonts.p4, Fonts.neutral300]}>{origine}</Text> : null}
+                    {aDeplacer ? (
+                      <Text style={[Fonts.p4, Fonts.warning500]}>
+                        {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
+                      </Text>
+                    ) : null}
                   </View>
                 </>
               );
@@ -132,13 +139,15 @@ function FacilityPlanningList({
                 {
                   alignItems: 'center',
                   backgroundColor: withAlpha(Colors.primary800, 0.6),
-                  borderColor: enAttente ? Colors.warning500 : withAlpha(Colors.neutral00, 0.12),
+                  borderColor: enAttente || aDeplacer
+                    ? Colors.warning500
+                    : withAlpha(Colors.neutral00, 0.12),
                   borderLeftColor: enAttente
                     ? Colors.warning500
                     : bloc.displayColor || Colors.primary500,
                   borderLeftWidth: 3,
                   borderRadius: 12,
-                  borderStyle: enAttente ? 'dashed' : 'solid',
+                  borderStyle: enAttente || aDeplacer ? 'dashed' : 'solid',
                   borderWidth: 1,
                   flexDirection: 'row',
                   gap: 8,

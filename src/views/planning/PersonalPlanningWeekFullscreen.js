@@ -36,6 +36,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  closureBandLabel,
+  closureBandsForRange,
+  closureDaysLabel,
+  closureHoursLabel,
+  closureTagLabel,
+} from '@/domains/facilityClosure/facilityClosureDisplay';
+import {
   capitalize,
   fromMinutes,
   fullMomentsOfPlanning,
@@ -355,6 +362,8 @@ function PlanningWeekFullscreen() {
   // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
   // lecteur, ce bloc reste inerte (FINITIONS2).
   const [readOnlyBlock, setReadOnlyBlock] = useState(/** @type {any} */ (null));
+  // COLL-C4B (02/10) — la plage FERMEE ou BLOQUEE que la mairie a touchee (Modifier, Rouvrir).
+  const [fermetureOuverte, setFermetureOuverte] = useState(/** @type {any} */ (null));
   // COLL-C2B (02/10) — ce que la mairie a ouvert : « attribuer », « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
   const attachedClubs = useCollectiviteClubs(
@@ -685,6 +694,15 @@ function PlanningWeekFullscreen() {
   const peutAttribuer = isFacilitySource && Boolean(managingCollectiviteId);
   const ouvertureDuJour = toMinutes(facilityMeta?.openingTime) ?? 8 * 60;
   const fermetureDuJour = toMinutes(facilityMeta?.closingTime) ?? 22 * 60;
+  // COLL-C4B (02/10) — les plages fermees ou bloquees de la fenetre (`meta.closures`, contrat §13).
+  const bandesDeFermeture = isFacilitySource
+    ? normalizePlanningItems(closureBandsForRange(
+      data?.meta?.closures,
+      planningRange,
+      { closing: fermetureDuJour, opening: ouvertureDuJour },
+      (/** @type {any} */ fermeture) => closureBandLabel(t, fermeture),
+    ))
+    : [];
   const attribuerA = useCallback((
     /** @type {Date} */ jour,
     /** @type {number} */ debut,
@@ -695,6 +713,8 @@ function PlanningWeekFullscreen() {
     setReadOnlyBlock(null);
     setPanneau({
       compact: true,
+      // COLL-C4B : le jour exact, pour « Bloquer pour la Ville » (un blocage tient en UN jour).
+      date: format(jour, 'yyyy-MM-dd'),
       initial: { endTime: finTexte, startTime: debutTexte, weekday: isoWeekdayOf(jour) },
       titre: `${weekdayName(isoWeekdayOf(jour))} ${timeRange(debutTexte, finTexte)}`,
       type: 'attribuer',
@@ -826,9 +846,17 @@ function PlanningWeekFullscreen() {
   }, [navigation]);
 
   // Ne s'ouvre que sur le bloc d'un autre club, et seulement pour celui qui gere.
+  // COLL-C4B (02/10) — la plage fermee ou bloquee s ouvre aussi, pour la mairie seule.
   const handleReadOnlyEventPress = useMemo(() => {
     if (!managingCollectiviteId) return undefined;
-    return (/** @type {any} */ event) => setReadOnlyBlock(event);
+    return (/** @type {any} */ event) => {
+      if (event?.raw?.closureBand) {
+        setReadOnlyBlock(null);
+        setFermetureOuverte(event.raw.closureBand);
+        return;
+      }
+      setReadOnlyBlock(event);
+    };
   }, [managingCollectiviteId]);
   const handleCloseReadOnlyBlock = useCallback(() => setReadOnlyBlock(null), []);
 
@@ -1005,7 +1033,9 @@ function PlanningWeekFullscreen() {
         cardDisplayProfile={isFacilitySource ? 'clubFocused' : 'default'}
         compactFullscreen
         currentDate={vue === VUES.troisJours ? addDays(currentDate, -1) : currentDate}
-        events={events}
+        // COLL-C4B (02/10) — design P4v3-fermer ecran 4 : les plages fermees ou bloquees, posees
+        // a cote des seances (jamais comptees comme une seance). Pas en colonnes de plateaux.
+        events={colonnesDePlateaux ? events : [...bandesDeFermeture, ...events]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
         laneOf={colonnesDePlateaux ? colonneDuBloc : undefined}
         lanes={colonnesDePlateaux}
@@ -1046,6 +1076,60 @@ function PlanningWeekFullscreen() {
     );
   })();
 
+  // ─── COLL-C4B (02/10) — design P4v3-fermer : la plage touchee, et « Bloquer pour la Ville » ───
+  const ouvrirLaFermeture = (/** @type {Record<string, any>} */ extra) => {
+    /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteFermeture, {
+      collectiviteId: managingCollectiviteId,
+      facilityId,
+      ...extra,
+    });
+  };
+  const ficheDeFermeture = fermetureOuverte ? (
+    <View
+      style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}
+      testID="planning-fermeture"
+    >
+      <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+        {closureTagLabel(t, fermetureOuverte)}
+      </Text>
+      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{closureDaysLabel(t, fermetureOuverte)}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral100]}>
+        {[closureHoursLabel(t, fermetureOuverte), fermetureOuverte.label]
+          .filter(Boolean)
+          .join(' · ')}
+      </Text>
+      <Button
+        onPress={() => {
+          setFermetureOuverte(null);
+          ouvrirLaFermeture({
+            closureId: fermetureOuverte.documentId,
+            facilityName: contextDetailLabel,
+          });
+        }}
+        title={t('collectiviteFermetures.liste.modifier', 'Modifier')}
+        variant="Secondary"
+      />
+      <Button
+        onPress={() => {
+          setFermetureOuverte(null);
+          // « Rouvrir » se confirme dans l onglet « Fermetures » de l installation.
+          /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInstallation, {
+            collectiviteId: managingCollectiviteId,
+            facilityId,
+            onglet: 'fermetures',
+          });
+        }}
+        title={t('collectiviteFermetures.liste.rouvrir', 'Rouvrir')}
+        variant="Secondary"
+      />
+      <Button
+        onPress={() => setFermetureOuverte(null)}
+        title={t('personalPlanningWeekFullscreen.blockSheet.close', 'Fermer')}
+        variant="Ghost"
+      />
+    </View>
+  ) : null;
+
   let panneauRendu = null;
   if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {
     const titre = panneau.type === 'modifier'
@@ -1064,6 +1148,23 @@ function PlanningWeekFullscreen() {
           onDone={fermerPanneau}
           slot={panneau.type === 'modifier' ? panneau.creneau : null}
         />
+        {/* COLL-C4B (02/10) — une heure libre : « Bloquer pour la Ville », deja rempli (P5v2). */}
+        {panneau.type === 'attribuer' && panneau.date && peutAttribuer ? (
+          <Button
+            onPress={() => {
+              fermerPanneau();
+              ouvrirLaFermeture({
+                date: panneau.date,
+                endTime: panneau.initial?.endTime,
+                facilityName: contextDetailLabel,
+                mode: 'bloquer',
+                startTime: panneau.initial?.startTime,
+              });
+            }}
+            title={t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville')}
+            variant="Secondary"
+          />
+        ) : null}
       </View>
     );
   } else if (panneau?.type === 'gerer') {
@@ -1612,7 +1713,7 @@ function PlanningWeekFullscreen() {
           <View style={{ flex: 1 }}>
             {planningContent}
           </View>
-          {isDesktop && (readOnlyBlock || panneauRendu) ? (
+          {isDesktop && (readOnlyBlock || panneauRendu || ficheDeFermeture) ? (
             <ScrollView
               style={{
                 backgroundColor: withAlpha(Colors.primary800, 0.85),
@@ -1623,7 +1724,7 @@ function PlanningWeekFullscreen() {
                 width: 380,
               }}
             >
-              {panneauRendu || ficheDuBloc}
+              {panneauRendu || ficheDeFermeture || ficheDuBloc}
             </ScrollView>
           ) : null}
         </View>
@@ -1637,6 +1738,12 @@ function PlanningWeekFullscreen() {
       </BottomModal>
       <BottomModal close={fermerPanneau} isVisible={Boolean(panneauRendu) && !isDesktop}>
         {panneauRendu}
+      </BottomModal>
+      <BottomModal
+        close={() => setFermetureOuverte(null)}
+        isVisible={Boolean(ficheDeFermeture) && !isDesktop}
+      >
+        {ficheDeFermeture}
       </BottomModal>
     </ScreenContainer>
   );

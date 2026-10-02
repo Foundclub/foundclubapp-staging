@@ -5988,6 +5988,7 @@ export default {
       vacances: 'Vacances',
     },
     planning: {
+      aDeplacer: 'à déplacer',
       bloque: 'Bloqué par la Ville · {{motif}}',
       bloqueSeul: 'Bloqué par la Ville',
       ferme: 'Fermé · {{motif}}',
