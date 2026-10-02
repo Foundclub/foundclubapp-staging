@@ -30,6 +30,10 @@ const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockPut = jest.fn();
 const mockDelete = jest.fn();
+// COLL-CONSOLE (02/10) — un écran entier monté avec react-query : sous charge (suite complète,
+// PC occupé), le premier cas paie le chargement des modules et dépassait les 5 s par défaut.
+jest.setTimeout(30000);
+
 jest.mock('@/services/client', () => ({
   __esModule: true,
   default: {

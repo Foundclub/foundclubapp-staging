@@ -4873,6 +4873,31 @@ export default {
       videFoundClub: 'No "Via FoundClub" invitation waiting.',
       videRattachements: 'No attach request waiting.',
     },
+    fenetres: {
+      activee: 'Activated. Plan given: {{granted}}{{offerts}} · Club already paying: {{alreadyPaid}}{{payeurs}}',
+      detacherBouton: 'Detach {{club}}',
+      // eslint-disable-next-line max-len
+      detacherOffre: 'The club stays intact: teams, members and events. It received the Club plan offered by {{collectivite}}: it is withdrawn.',
+      // eslint-disable-next-line max-len
+      detacherSansOffre: 'The club stays intact: teams, members and events. It did not receive the plan from {{collectivite}}: nothing changes for its subscription.',
+      offerte: 'Offered',
+      offrir_one: 'Give the Club plan to {{count}} club',
+      offrir_other: 'Give the Club plan to {{count}} clubs',
+      paientDeja_one: '{{count}} club already pays its subscription, nothing changes for it:',
+      paientDeja_other: '{{count}} clubs already pay their subscription, nothing changes for them:',
+      perd: 'Loses the plan',
+      perdront_one: '{{count}} club will lose the Club plan:',
+      perdront_other: '{{count}} clubs will lose the Club plan:',
+      recevront_one: '{{count}} club will receive the Club plan for free:',
+      recevront_other: '{{count}} clubs will receive the Club plan for free:',
+      retirer_one: 'Withdraw the plan from {{count}} club',
+      retirer_other: 'Withdraw the plan from {{count}} clubs',
+      retirerBouton: 'Remove {{nom}}',
+      sansOffre_one: '{{count}} club does not have the local authority’s plan, nothing changes for it:',
+      sansOffre_other: '{{count}} clubs do not have the local authority’s plan, nothing changes for them:',
+      // eslint-disable-next-line max-len
+      seulGestionnaire: 'This is the only manager. Without a manager, the clubs’ slot requests will wait without an answer.',
+    },
     fiche: {
       ajouterGestionnaire: 'Add: name or e-mail',
       aucunClub: 'No attached club. Search the municipality’s clubs by name.',

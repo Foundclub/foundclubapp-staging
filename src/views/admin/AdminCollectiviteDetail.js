@@ -2,7 +2,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -28,6 +27,7 @@ import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
 import { PastilleAPoint } from '@/views/admin/components/CollectiviteBadges';
 import CollectiviteTargetSearch from '@/views/admin/components/CollectiviteTargetSearch';
+import ConsoleSheet from '@/views/admin/components/ConsoleSheet';
 import ManagerRequestsLink from '@/views/admin/components/ManagerRequestsLink';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -45,6 +45,10 @@ import {
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /** @typedef {{ ok: boolean, texte: string } | null} Retour */
+/**
+ * @typedef {{ cible: { documentId: string, logoUrl?: string | null, name: string },
+ *   kind: 'detacher' | 'retirer' } | null} AConfirmer
+ */
 
 /**
  * Le bouton « Plus d'actions » d'une ligne (icône dots-horizontal, validée par Adel le 01/10) et
@@ -148,6 +152,8 @@ function AdminCollectiviteDetail() {
   const [retourClubs, setRetourClubs] = useState(/** @type {Retour} */ (null));
   const [retourGestionnaires, setRetourGestionnaires] = useState(/** @type {Retour} */ (null));
   const [menuOuvert, setMenuOuvert] = useState(/** @type {string | null} */ (null));
+  // COLL-CONSOLE (02/10) — le geste qui retire, en attente de sa fenetre (planche P2-fenetres).
+  const [aConfirmer, setAConfirmer] = useState(/** @type {AConfirmer} */ (null));
   const erreur = (/** @type {any} */ e) => ({ ok: false, texte: getErrorMessage(e) });
 
   const rattacher = useAttachAdminCollectiviteClub();
@@ -234,30 +240,29 @@ function AdminCollectiviteDetail() {
     });
   };
 
-  const onDetacher = (/** @type {{ documentId: string, name: string }} */ club) => {
+  // « Détacher » et « Retirer » ouvrent la fenetre de l app (planche P2-fenetres, etats 3 et 4) ;
+  // un echec s ecrit DANS la fenetre, qui reste ouverte (« Réessayer »).
+  const ouvrirConfirmation = (/** @type {NonNullable<AConfirmer>} */ geste) => {
     setMenuOuvert(null);
+    detacher.reset?.();
+    retirer.reset?.();
+    setAConfirmer(geste);
+  };
+  const onDetacher = (/** @type {{ documentId: string, name: string }} */ club) => (
+    ouvrirConfirmation({ cible: club, kind: 'detacher' })
+  );
+  const detacherConfirme = (/** @type {{ documentId: string, name: string }} */ club) => {
     const valeurs = { club: club.name, ...ville };
-    Alert.alert(
-      t('adminCollectivites.detail.detachTitle', 'Détacher {{club}} ?', valeurs),
-      t('adminCollectivites.detail.detachMessage', valeurs),
-      [
-        { style: 'cancel', text: t('adminCollectivites.activation.cancel', 'Annuler') },
-        {
-          onPress: () => {
-            setRetourClubs(null);
-            detacher.mutate({ ...ids, clubId: club.documentId }, {
-              onError: (/** @type {any} */ e) => setRetourClubs(erreur(e)),
-              onSuccess: () => setRetourClubs({
-                ok: true,
-                texte: t('adminCollectivites.detail.detached', '{{club}} est détaché.', valeurs),
-              }),
-            });
-          },
-          style: 'destructive',
-          text: t('adminCollectivites.detail.detach', 'Détacher'),
-        },
-      ],
-    );
+    setRetourClubs(null);
+    detacher.mutate({ ...ids, clubId: club.documentId }, {
+      onSuccess: () => {
+        setAConfirmer(null);
+        setRetourClubs({
+          ok: true,
+          texte: t('adminCollectivites.detail.detached', '{{club}} est détaché.', valeurs),
+        });
+      },
+    });
   };
 
   const onNommer = (/** @type {any} */ cible) => {
@@ -272,34 +277,106 @@ function AdminCollectiviteDetail() {
     });
   };
 
-  const onRetirer = (/** @type {{ documentId: string, name: string }} */ compte) => {
-    setMenuOuvert(null);
+  const onRetirer = (/** @type {{ documentId: string, name: string }} */ compte) => (
+    ouvrirConfirmation({ cible: compte, kind: 'retirer' })
+  );
+  const retirerConfirme = (/** @type {{ documentId: string, name: string }} */ compte) => {
     const valeurs = { nom: compte.name, ...ville };
-    Alert.alert(
-      t('adminCollectivites.detail.removeManagerTitle', 'Retirer {{nom}} ?', valeurs),
-      t('adminCollectivites.detail.removeManagerMessage', valeurs),
-      [
-        { style: 'cancel', text: t('adminCollectivites.activation.cancel', 'Annuler') },
-        {
-          onPress: () => {
-            setRetourGestionnaires(null);
-            retirer.mutate({ ...ids, userId: compte.documentId }, {
-              onError: (/** @type {any} */ e) => setRetourGestionnaires(erreur(e)),
-              onSuccess: () => setRetourGestionnaires({
-                ok: true,
-                texte: t(
-                  'adminCollectivites.detail.managerRemoved',
-                  '{{nom}} ne gère plus {{collectivite}}.',
-                  valeurs,
-                ),
-              }),
-            });
-          },
-          style: 'destructive',
-          text: t('adminCollectivites.detail.removeManager', 'Retirer'),
-        },
-      ],
-    );
+    setRetourGestionnaires(null);
+    retirer.mutate({ ...ids, userId: compte.documentId }, {
+      onSuccess: () => {
+        setAConfirmer(null);
+        setRetourGestionnaires({
+          ok: true,
+          texte: t(
+            'adminCollectivites.detail.managerRemoved',
+            '{{nom}} ne gère plus {{collectivite}}.',
+            valeurs,
+          ),
+        });
+      },
+    });
+  };
+
+  // La fenetre du geste qui retire : ce que le club (ou le compte) garde, ce qu il perd.
+  const fenetreDuGeste = () => {
+    if (!aConfirmer) {
+      return {
+        corps: null, geste: () => {}, libelle: '', mutation: null, titre: '',
+      };
+    }
+    const { cible, kind } = aConfirmer;
+    if (kind === 'detacher') {
+      const etat = etats?.[cible.documentId];
+      let message = t('adminCollectivites.detail.detachMessage', { club: cible.name, ...ville });
+      if (etat === 'offered') {
+        message = t(
+          'collectiviteConsole.fenetres.detacherOffre',
+          // eslint-disable-next-line max-len
+          'Le club reste intact : équipes, membres et événements. Il recevait l’offre Club offerte par {{collectivite}} : elle lui est retirée.',
+          ville,
+        );
+      } else if (etat) {
+        message = t(
+          'collectiviteConsole.fenetres.detacherSansOffre',
+          // eslint-disable-next-line max-len
+          'Le club reste intact : équipes, membres et événements. Il ne recevait pas l’offre de {{collectivite}} : rien ne change pour son abonnement.',
+          ville,
+        );
+      }
+      return {
+        corps: (
+          <>
+            <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+              <ClubLogoMark logoUrl={cible.logoUrl || undefined} name={cible.name} size={36} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{cible.name}</Text>
+                {pastilleOffre(cible.documentId)}
+              </View>
+            </View>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>{message}</Text>
+          </>
+        ),
+        geste: () => detacherConfirme(cible),
+        libelle: t('collectiviteConsole.fenetres.detacherBouton', 'Détacher {{club}}', {
+          club: cible.name, ...SANS_ECHAPPEMENT,
+        }),
+        mutation: detacher,
+        titre: t('adminCollectivites.detail.detachTitle', 'Détacher {{club}} ?', {
+          club: cible.name, ...ville, ...SANS_ECHAPPEMENT,
+        }),
+      };
+    }
+    const seul = detail.gestionnaires.length === 1;
+    return {
+      corps: (
+        <>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('adminCollectivites.detail.removeManagerMessage', { nom: cible.name, ...ville })}
+          </Text>
+          {seul ? (
+            <Text
+              style={[Fonts.p2Bold, Fonts.warning500]}
+              testID="admin-collectivite-seul-gestionnaire"
+            >
+              {t(
+                'collectiviteConsole.fenetres.seulGestionnaire',
+                // eslint-disable-next-line max-len
+                'C’est le seul gestionnaire. Sans gestionnaire, les demandes de créneau des clubs attendront sans réponse.',
+              )}
+            </Text>
+          ) : null}
+        </>
+      ),
+      geste: () => retirerConfirme(cible),
+      libelle: t('collectiviteConsole.fenetres.retirerBouton', 'Retirer {{nom}}', {
+        nom: cible.name, ...SANS_ECHAPPEMENT,
+      }),
+      mutation: retirer,
+      titre: t('adminCollectivites.detail.removeManagerTitle', 'Retirer {{nom}} ?', {
+        nom: cible.name, ...ville, ...SANS_ECHAPPEMENT,
+      }),
+    };
   };
 
   const afficherRetour = (/** @type {Retour} */ retour) => (retour ? (
@@ -315,9 +392,13 @@ function AdminCollectiviteDetail() {
     <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{texte}</Text>
   );
 
-  // L'état de l'offre de CHAQUE club, tel que l'aperçu du serveur l'a dit (rien s'il ne l'a pas
-  // dit).
-  const pastilleOffre = (/** @type {string} */ clubId) => {
+  /**
+   * L'état de l'offre de CHAQUE club, tel que l'aperçu du serveur l'a dit (rien s'il ne l'a pas
+   * dit). Une déclaration de fonction : la fenêtre « Détacher » (plus haut) s'en sert aussi.
+   * @param {string} clubId - Le documentId du club.
+   * @returns {import('react').ReactElement | null} La pastille, ou rien.
+   */
+  function pastilleOffre(clubId) {
     const etat = etats?.[clubId];
     if (etat === 'offered') {
       return (
@@ -347,7 +428,10 @@ function AdminCollectiviteDetail() {
       );
     }
     return null;
-  };
+  }
+
+  const geste = fenetreDuGeste();
+  const echecDuGeste = geste.mutation?.error;
 
   const identite = [
     collectiviteTypeLabel(t, detail.type),
@@ -586,6 +670,22 @@ function AdminCollectiviteDetail() {
           ))}
         </View>
       </ScrollView>
+      <ConsoleSheet
+        error={echecDuGeste ? getErrorMessage(/** @type {any} */ (echecDuGeste)) : null}
+        onClose={() => setAConfirmer(null)}
+        primary={{
+          isLoading: Boolean(geste.mutation?.isPending),
+          label: echecDuGeste ? t('adminCollectivites.list.retry', 'Réessayer') : geste.libelle,
+          onPress: geste.geste,
+          variant: 'Danger',
+        }}
+        secondary={{ label: t('adminCollectivites.activation.cancel', 'Annuler') }}
+        testID={`admin-collectivite-fenetre-${aConfirmer?.kind || 'geste'}`}
+        title={geste.titre}
+        visible={Boolean(aConfirmer)}
+      >
+        {geste.corps}
+      </ConsoleSheet>
     </ScreenContainer>
   );
 }

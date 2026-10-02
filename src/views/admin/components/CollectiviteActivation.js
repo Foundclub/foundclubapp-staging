@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
@@ -8,7 +8,9 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import { PastilleAPoint } from '@/views/admin/components/CollectiviteBadges';
+import ConsoleSheet from '@/views/admin/components/ConsoleSheet';
 
 import {
   usePreviewAdminCollectiviteActive,
@@ -19,7 +21,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
  * Les clubs d un verdict, par leur nom (l identifiant si le nom manque : un club ne disparait
- * jamais de la phrase, sinon le nombre mentirait).
+ * jamais de la liste, sinon le nombre mentirait).
  * @param {any[]} verdicts - `[{ clubDocumentId, name, offer }]` rendus par le serveur.
  * @param {string} offre - `granted`, `already-paid`, `revoked` ou `none`.
  * @returns {string[]} Les noms.
@@ -31,10 +33,11 @@ const nommer = (verdicts, offre) => verdicts
 /**
  * Le compte rendu du serveur apres le geste : combien de clubs ont recu, gardent ou
  * perdent l offre (verdicts de `PUT /superadmin/collectivites/:id/active`), et LESQUELS
- * paient deja (TEXTES-COLLECTIVITES, 01/10 : le serveur nomme chaque club).
+ * (TEXTES-COLLECTIVITES, 01/10 : le serveur nomme chaque club ; COLL-CONSOLE, 02/10 : le
+ * compte rendu les nomme tous, planche P2-fenetres etat 6).
  * @param {any} response - La reponse du service.
- * @returns {{ alreadyPaid: number, alreadyPaidNames: string, granted: number, isActive: boolean,
- *   revoked: number }} Le bilan.
+ * @returns {{ alreadyPaid: number, alreadyPaidNames: string, granted: number,
+ *   grantedNames: string, isActive: boolean, revoked: number }} Le bilan.
  */
 const lireBilan = (response) => {
   const verdicts = Array.isArray(response?.data?.clubs) ? response.data.clubs : [];
@@ -42,13 +45,17 @@ const lireBilan = (response) => {
     .filter((/** @type {any} */ club) => club?.offer === offre).length;
   // Les NOMS seulement (un serveur d avant le lot n en rend pas) : sans le nom de chacun, le
   // bilan reste chiffre — jamais un identifiant technique a l ecran.
-  const payeurs = verdicts
-    .filter((/** @type {any} */ club) => club?.offer === 'already-paid')
-    .map((/** @type {any} */ club) => String(club?.name || '').trim());
+  const noms = (/** @type {string} */ offre) => {
+    const liste = verdicts
+      .filter((/** @type {any} */ club) => club?.offer === offre)
+      .map((/** @type {any} */ club) => String(club?.name || '').trim());
+    return liste.every(Boolean) ? liste.join(', ') : '';
+  };
   return {
     alreadyPaid: compter('already-paid'),
-    alreadyPaidNames: payeurs.every(Boolean) ? payeurs.join(', ') : '',
+    alreadyPaidNames: noms('already-paid'),
     granted: compter('granted'),
+    grantedNames: noms('granted'),
     isActive: response?.data?.isActive === true,
     revoked: compter('revoked'),
   };
@@ -137,7 +144,7 @@ const phraseDuBandeau = (t, collectivite, etats) => {
 
 /**
  * 🏛️ ACTIVER / COUPER UNE COLLECTIVITE (D61, 2026-09-29) — le bouton, sa confirmation et
- * le compte rendu, pour la liste ET le detail de la console.
+ * le compte rendu.
  *
  * COLL-CONSOLE (02/10) — devient le BANDEAU D ETAT de la fiche (planche P2-fiche, bloc 1) :
  * la pastille « Active » / « Inactive », ce que l activation changera (ou ce que l offre
@@ -149,22 +156,33 @@ const phraseDuBandeau = (t, collectivite, etats) => {
  * au serveur son APERCU (meme juge que le geste, rien d ecrit) et dit, club par club et par
  * leur NOM, qui recoit, qui paie deja, qui perd, qui ne bouge pas. Sans apercu (serveur
  * ancien, panne), elle dit une phrase vraie sans detail, et le geste reste possible.
- * Apres le geste, la liste et le detail sont RELUS depuis le serveur
- * (useSetAdminCollectiviteActive) : l etat affiche est celui qu il rend.
+ *
+ * COLL-CONSOLE (02/10), planche P2-fenetres (ecran 5) — la confirmation est une FENETRE DE
+ * L APP (ConsoleSheet), plus la fenetre systeme : elle LISTE les clubs, chacun avec ce qui
+ * change pour lui ; son bouton dit le resultat (« Offrir l'offre Club à 2 clubs », « Retirer
+ * l'offre à 2 clubs », en rouge) ; pendant l envoi ses boutons sont inertes ; un echec s ecrit
+ * au-dessus des boutons, et « Réessayer » relance. Apres le geste, la fenetre se ferme et le
+ * bandeau garde le compte rendu, avec les noms. La liste et la fiche sont RELUES depuis le
+ * serveur (useSetAdminCollectiviteActive) : l etat affiche est celui qu il rend.
  * @param {{ collectivite: { clubs?: Array<{ documentId: string, name: string }>,
  *   clubsCount: number, documentId: string, isActive: boolean, name: string },
  *   etats?: Record<string, string> | null }} props - La collectivite telle que le serveur l a
  *   lue, et l etat de l offre de chacun de ses clubs (s il est connu).
- * @returns {import('react').ReactElement} Le bandeau, son bouton et son compte rendu.
+ * @returns {import('react').ReactElement} Le bandeau, son bouton, sa fenetre et son compte rendu.
  */
 function CollectiviteActivation({ collectivite, etats = null }) {
   const { t } = useTranslation();
   const {
-    ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const [bilan, setBilan] = useState(/** @type {ReturnType<typeof lireBilan> | null} */ (null));
+  // La fenetre ouverte : les verdicts de l apercu (null : sans apercu), ou rien.
+  const [fenetre, setFenetre] = useState(/** @type {{ verdicts: any[] | null } | null} */ (null));
   const mutation = useSetAdminCollectiviteActive({
-    onSuccess: (/** @type {any} */ response) => setBilan(lireBilan(response)),
+    onSuccess: (/** @type {any} */ response) => {
+      setFenetre(null);
+      setBilan(lireBilan(response));
+    },
   });
   const apercu = usePreviewAdminCollectiviteActive();
 
@@ -192,75 +210,135 @@ function CollectiviteActivation({ collectivite, etats = null }) {
     ? t('adminCollectivites.activation.activateMessage', valeurs)
     : t('adminCollectivites.activation.deactivateMessage', valeurs));
 
-  /**
-   * Une ligne par verdict, dans l ordre du geste, chaque club par son nom.
-   * @param {any[]} verdicts - Les verdicts de l apercu.
-   * @returns {string} Les lignes, ou '' si aucun club.
-   */
-  const messageApercu = (verdicts) => (activer ? ['granted', 'already-paid'] : ['revoked', 'none'])
-    .map((offre) => {
-      const noms = nommer(verdicts, offre);
-      if (noms.length === 0) return null;
-      const phrase = { clubs: noms.join(', '), count: noms.length, ...SANS_ECHAPPEMENT };
-      switch (offre) {
-        case 'already-paid': return t('adminCollectivites.activation.preview.alreadyPaid', phrase);
-        case 'granted': return t('adminCollectivites.activation.preview.granted', phrase);
-        case 'revoked': return t('adminCollectivites.activation.preview.revoked', phrase);
-        default: return t('adminCollectivites.activation.preview.none', phrase);
-      }
-    })
-    .filter(Boolean)
-    .join('\n');
-
-  const ouvrirFenetre = (/** @type {string} */ message) => {
-    Alert.alert(
-      activer
-        ? t('adminCollectivites.activation.activateTitle', 'Activer {{name}} ?', valeurs)
-        : t('adminCollectivites.activation.deactivateTitle', 'Couper {{name}} ?', valeurs),
-      message,
-      [
-        { style: 'cancel', text: t('adminCollectivites.activation.cancel', 'Annuler') },
-        {
-          onPress: () => mutation.mutate({
-            collectiviteId: collectivite.documentId,
-            isActive: activer,
-          }),
-          style: activer ? 'default' : 'destructive',
-          text: activer
-            ? t('adminCollectivites.activation.activate', 'Activer')
-            : t('adminCollectivites.activation.deactivate', 'Couper'),
-        },
-      ],
-    );
-  };
-
   const confirmer = () => {
     setBilan(null);
+    mutation.reset?.();
     if (count === 0) {
-      ouvrirFenetre(messageSansClub());
+      setFenetre({ verdicts: [] });
       return;
     }
     apercu.mutate({ collectiviteId: collectivite.documentId, isActive: activer }, {
-      onError: () => ouvrirFenetre(messageSansApercu()),
-      onSuccess: (/** @type {any} */ response) => {
-        const verdicts = lireApercu(response);
-        if (!verdicts) {
-          ouvrirFenetre(messageSansApercu());
-          return;
-        }
-        ouvrirFenetre(messageApercu(verdicts) || messageSansClub());
-      },
+      onError: () => setFenetre({ verdicts: null }),
+      onSuccess: (/** @type {any} */ response) => setFenetre({ verdicts: lireApercu(response) }),
     });
   };
+  const faireLeGeste = () => mutation.mutate({
+    collectiviteId: collectivite.documentId,
+    isActive: activer,
+  });
+
+  // Les groupes de la fenetre, dans l ordre du geste : qui change, puis qui ne bouge pas.
+  const verdicts = fenetre?.verdicts || [];
+  const groupes = (activer ? ['granted', 'already-paid'] : ['revoked', 'none'])
+    .map((offre) => ({
+      clubs: verdicts.filter((/** @type {any} */ club) => club?.offer === offre),
+      offre,
+    }))
+    .filter((groupe) => groupe.clubs.length > 0);
+  const nbTouches = nommer(verdicts, activer ? 'granted' : 'revoked').length;
+
+  const enTeteDeGroupe = (/** @type {string} */ offre, /** @type {number} */ nombre) => {
+    const options = { count: nombre, ...SANS_ECHAPPEMENT };
+    switch (offre) {
+      case 'already-paid':
+        return t('collectiviteConsole.fenetres.paientDeja', {
+          ...options,
+          defaultValue_one: '{{count}} club paie déjà son abonnement, rien ne change pour lui :',
+          // eslint-disable-next-line max-len
+          defaultValue_other: '{{count}} clubs paient déjà leur abonnement, rien ne change pour eux :',
+        });
+      case 'granted':
+        return t('collectiviteConsole.fenetres.recevront', {
+          ...options,
+          defaultValue_one: '{{count}} club recevra l’offre Club offerte :',
+          defaultValue_other: '{{count}} clubs recevront l’offre Club offerte :',
+        });
+      case 'revoked':
+        return t('collectiviteConsole.fenetres.perdront', {
+          ...options,
+          defaultValue_one: '{{count}} club perdra l’offre Club offerte :',
+          defaultValue_other: '{{count}} clubs perdront l’offre Club offerte :',
+        });
+      default:
+        return t('collectiviteConsole.fenetres.sansOffre', {
+          ...options,
+          // eslint-disable-next-line max-len
+          defaultValue_one: '{{count}} club n’a pas l’offre de la collectivité, rien ne change pour lui :',
+          // eslint-disable-next-line max-len
+          defaultValue_other: '{{count}} clubs n’ont pas l’offre de la collectivité, rien ne change pour eux :',
+        });
+    }
+  };
+  const pastilleDuVerdict = (/** @type {string} */ offre) => {
+    if (offre === 'granted') {
+      return {
+        color: Colors.success500,
+        label: t('collectiviteConsole.fenetres.offerte', 'Offerte'),
+      };
+    }
+    if (offre === 'revoked') {
+      return {
+        color: Colors.error300,
+        label: t('collectiviteConsole.fenetres.perd', 'Perd l’offre'),
+      };
+    }
+    return {
+      color: Colors.neutral300,
+      label: t('collectiviteConsole.fiche.offrePaieLuiMeme', 'Paie lui-même'),
+    };
+  };
+
+  /** @type {import('react').ReactNode} */
+  let corps = <Text style={[Fonts.p2, Fonts.neutral100]}>{messageSansClub()}</Text>;
+  if (fenetre?.verdicts === null) {
+    corps = <Text style={[Fonts.p2, Fonts.neutral100]}>{messageSansApercu()}</Text>;
+  } else if (groupes.length > 0) {
+    corps = groupes.map((groupe) => (
+      <View key={groupe.offre} style={{ gap: 8 }} testID={`collectivite-fenetre-${groupe.offre}`}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
+          {enTeteDeGroupe(groupe.offre, groupe.clubs.length)}
+        </Text>
+        {groupe.clubs.map((/** @type {any} */ club) => {
+          const nom = String(club?.name || club?.clubDocumentId || '');
+          const pastille = pastilleDuVerdict(groupe.offre);
+          return (
+            <View
+              key={club?.clubDocumentId || nom}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+            >
+              <ClubLogoMark name={nom} size={32} />
+              <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                {nom}
+              </Text>
+              <PastilleAPoint color={pastille.color} label={pastille.label} />
+            </View>
+          );
+        })}
+      </View>
+    ));
+  }
+
+  let libelleGeste = activer
+    ? t('adminCollectivites.activation.activate', 'Activer')
+    : t('adminCollectivites.activation.deactivate', 'Couper');
+  if (nbTouches > 0) {
+    libelleGeste = activer
+      ? t('collectiviteConsole.fenetres.offrir', {
+        count: nbTouches,
+        defaultValue_one: 'Offrir l’offre Club à {{count}} club',
+        defaultValue_other: 'Offrir l’offre Club à {{count}} clubs',
+      })
+      : t('collectiviteConsole.fenetres.retirer', {
+        count: nbTouches,
+        defaultValue_one: 'Retirer l’offre à {{count}} club',
+        defaultValue_other: 'Retirer l’offre à {{count}} clubs',
+      });
+  }
+  if (mutation.error) libelleGeste = t('adminCollectivites.list.retry', 'Réessayer');
 
   let compteRendu = null;
-  if (mutation.error) {
-    compteRendu = (
-      <Text style={[Fonts.p3Bold, Fonts.error500]}>
-        {getErrorMessage(/** @type {any} */ (mutation.error))}
-      </Text>
-    );
-  } else if (bilan) {
+  if (bilan) {
+    const entreParentheses = (/** @type {string} */ noms) => (noms ? ` (${noms})` : '');
     let texteBilan;
     if (!bilan.isActive) {
       texteBilan = t(
@@ -268,27 +346,24 @@ function CollectiviteActivation({ collectivite, etats = null }) {
         'Coupée. Offre retirée : {{revoked}}',
         bilan,
       );
-    } else if (bilan.alreadyPaidNames) {
-      texteBilan = t(
-        'adminCollectivites.activation.doneActivatedNamed',
-        'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}} ({{clubs}})',
-        { ...bilan, clubs: bilan.alreadyPaidNames, ...SANS_ECHAPPEMENT },
-      );
     } else {
-      texteBilan = t(
-        'adminCollectivites.activation.doneActivated',
-        'Activée. Offre posée : {{granted}} · Club qui paie déjà : {{alreadyPaid}}',
-        bilan,
-      );
+      texteBilan = t('collectiviteConsole.fenetres.activee', {
+        // eslint-disable-next-line max-len
+        defaultValue: 'Activée. Offre posée : {{granted}}{{offerts}} · Club qui paie déjà : {{alreadyPaid}}{{payeurs}}',
+        offerts: entreParentheses(bilan.grantedNames),
+        payeurs: entreParentheses(bilan.alreadyPaidNames),
+        ...bilan,
+        ...SANS_ECHAPPEMENT,
+      });
     }
     compteRendu = (
-      <Text style={[Fonts.p3Bold, Fonts.success500]}>
+      <Text style={[Fonts.p3Bold, Fonts.success500]} testID="collectivite-compte-rendu">
         {texteBilan}
       </Text>
     );
   }
 
-  const enCours = mutation.isPending || apercu.isPending;
+  const enCours = Boolean(mutation.isPending || apercu.isPending);
   const teinte = activer ? Colors.warning500 : Colors.success500;
   return (
     <View
@@ -314,13 +389,34 @@ function CollectiviteActivation({ collectivite, etats = null }) {
       {compteRendu}
       <Button
         disabled={enCours}
-        isLoading={enCours}
+        isLoading={Boolean(apercu.isPending)}
         onPress={confirmer}
         title={activer
           ? t('adminCollectivites.activation.activate', 'Activer')
           : t('adminCollectivites.activation.deactivate', 'Couper')}
         variant={activer ? 'Primary' : 'Danger'}
       />
+      <ConsoleSheet
+        error={mutation.error ? getErrorMessage(/** @type {any} */ (mutation.error)) : null}
+        onClose={() => {
+          setFenetre(null);
+          mutation.reset?.();
+        }}
+        primary={{
+          isLoading: Boolean(mutation.isPending),
+          label: libelleGeste,
+          onPress: faireLeGeste,
+          variant: activer ? 'Primary' : 'Danger',
+        }}
+        secondary={{ label: t('adminCollectivites.activation.cancel', 'Annuler') }}
+        testID="collectivite-fenetre-etat"
+        title={activer
+          ? t('adminCollectivites.activation.activateTitle', 'Activer {{name}} ?', valeurs)
+          : t('adminCollectivites.activation.deactivateTitle', 'Couper {{name}} ?', valeurs)}
+        visible={Boolean(fenetre)}
+      >
+        {corps}
+      </ConsoleSheet>
     </View>
   );
 }

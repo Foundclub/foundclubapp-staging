@@ -5216,6 +5216,31 @@ export default {
       videFoundClub: 'Aucune invitation « Par FoundClub » en attente.',
       videRattachements: 'Aucune demande de rattachement en attente.',
     },
+    fenetres: {
+      activee: 'Activée. Offre posée : {{granted}}{{offerts}} · Club qui paie déjà : {{alreadyPaid}}{{payeurs}}',
+      detacherBouton: 'Détacher {{club}}',
+      // eslint-disable-next-line max-len
+      detacherOffre: 'Le club reste intact : équipes, membres et événements. Il recevait l’offre Club offerte par {{collectivite}} : elle lui est retirée.',
+      // eslint-disable-next-line max-len
+      detacherSansOffre: 'Le club reste intact : équipes, membres et événements. Il ne recevait pas l’offre de {{collectivite}} : rien ne change pour son abonnement.',
+      offerte: 'Offerte',
+      offrir_one: 'Offrir l’offre Club à {{count}} club',
+      offrir_other: 'Offrir l’offre Club à {{count}} clubs',
+      paientDeja_one: '{{count}} club paie déjà son abonnement, rien ne change pour lui :',
+      paientDeja_other: '{{count}} clubs paient déjà leur abonnement, rien ne change pour eux :',
+      perd: 'Perd l’offre',
+      perdront_one: '{{count}} club perdra l’offre Club offerte :',
+      perdront_other: '{{count}} clubs perdront l’offre Club offerte :',
+      recevront_one: '{{count}} club recevra l’offre Club offerte :',
+      recevront_other: '{{count}} clubs recevront l’offre Club offerte :',
+      retirer_one: 'Retirer l’offre à {{count}} club',
+      retirer_other: 'Retirer l’offre à {{count}} clubs',
+      retirerBouton: 'Retirer {{nom}}',
+      sansOffre_one: '{{count}} club n’a pas l’offre de la collectivité, rien ne change pour lui :',
+      sansOffre_other: '{{count}} clubs n’ont pas l’offre de la collectivité, rien ne change pour eux :',
+      // eslint-disable-next-line max-len
+      seulGestionnaire: 'C’est le seul gestionnaire. Sans gestionnaire, les demandes de créneau des clubs attendront sans réponse.',
+    },
     fiche: {
       ajouterGestionnaire: 'Ajouter : nom ou e-mail',
       aucunClub: 'Aucun club rattaché. Cherche les clubs de la commune par leur nom.',

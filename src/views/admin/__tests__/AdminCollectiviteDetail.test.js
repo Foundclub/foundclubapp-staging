@@ -26,6 +26,10 @@ const mockPost = jest.fn();
 const mockPut = jest.fn();
 const mockDelete = jest.fn();
 
+// COLL-CONSOLE (02/10) — un écran entier monté avec react-query : sous charge (suite complète,
+// PC occupé), le premier cas paie le chargement des modules et dépassait les 5 s par défaut.
+jest.setTimeout(30000);
+
 jest.mock('@/services/client', () => ({
   __esModule: true,
   default: {
@@ -98,8 +102,6 @@ const ROUTE = '/superadmin/collectivites/ville-montrivage';
 
 /** @type {any} */
 let serveur;
-/** @type {any} */
-let alerte;
 
 const ligneServeur = () => ({
   clubs: serveur.clubs,
@@ -187,6 +189,16 @@ const choisirAction = async (arbre, testID, libelle) => {
   await act(async () => { action.props.onPress(); });
 };
 
+/**
+ * La fenêtre d un geste qui retire (« detacher » ou « retirer »), si elle est ouverte.
+ * @param {any} arbre - L écran.
+ * @param {string} geste - Le geste.
+ * @returns {any} La fenêtre, ou undefined.
+ */
+const fenetreGeste = (arbre, geste) => arbre.root.findAll((n) => (
+  // eslint-disable-next-line max-len
+  n.props?.testID === `admin-collectivite-fenetre-${geste}` && n.props?.accessibilityViewIsModal))[0];
+
 const monter = async () => {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { gcTime: 0, retry: false } },
@@ -235,14 +247,11 @@ beforeEach(() => {
     isActive: true,
     postPersonnalise: null,
   };
-  alerte = null;
   // eslint-disable-next-line max-len
   [mockGet, mockPost, mockPut, mockDelete, mockNavigate].forEach((doublure) => doublure.mockReset());
   mockPost.mockImplementation(repondrePost);
   mockDelete.mockResolvedValue({ data: { data: {} } });
-  jest.spyOn(Alert, 'alert').mockImplementation((titre, message, boutons) => {
-    alerte = { boutons, message, titre };
-  });
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -359,15 +368,21 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     expect(clubs()).toContain(refus);
   });
 
-  it('DÉTACHER : confirmation (le club reste intact), puis DELETE …/clubs/:clubId', async () => {
+  // eslint-disable-next-line max-len
+  it('DÉTACHER : une fenêtre de l app (le club reste intact), puis DELETE …/clubs/:clubId', async () => {
     const arbre = await monter();
     // eslint-disable-next-line max-len
     await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Détacher de la Ville');
-    expect(alerte.titre).toBe('Détacher AS Montrivage ?');
-    expect(alerte.message).toBe(
+    const fenetre = () => fenetreGeste(arbre, 'detacher');
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(textes(fenetre())).toEqual(expect.arrayContaining([
+      'Détacher AS Montrivage ?',
+      'AS Montrivage',
       // eslint-disable-next-line max-len
       'Le club reste intact : équipes, membres et événements. S’il recevait l’offre Club offerte par la Ville de Montrivage, elle lui est retirée.',
-    );
+      'Détacher AS Montrivage',
+      'Annuler',
+    ]));
     expect(mockDelete).not.toHaveBeenCalled();
 
     mockDelete.mockImplementation(async () => {
@@ -375,12 +390,12 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
       serveur.clubs = serveur.clubs.filter((/** @type {any} */ club) => club.documentId !== 'as-montrivage');
       return { data: { data: { attached: false, changed: true, offer: 'revoked' } } };
     });
-    // eslint-disable-next-line max-len
-    await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style === 'destructive').onPress(); });
+    await act(async () => { bouton(fenetre(), 'Détacher AS Montrivage').props.onPress(); });
     const clubs = () => textes(parTestID(arbre.root, 'admin-collectivite-clubs'));
     await attendre(() => clubs().includes('Clubs rattachés : 1'));
 
     expect(mockDelete).toHaveBeenCalledWith(`${ROUTE}/clubs/as-montrivage`);
+    expect(fenetre()).toBeUndefined();
     expect(clubs()).toContain('AS Montrivage est détaché.');
     expect(clubs()).not.toContain('AS Montrivage');
   });
@@ -416,38 +431,44 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     expect(gestionnaires()).toContain('Hugo Lemaire gère désormais la Ville de Montrivage.');
   });
 
-  it('RETIRER un gestionnaire : confirmation (le compte reste intact), puis DELETE', async () => {
+  // eslint-disable-next-line max-len
+  it('RETIRER un gestionnaire : une fenêtre (le compte reste intact ; « seul gestionnaire »), puis DELETE', async () => {
     const arbre = await monter();
     await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
-    expect(alerte.titre).toBe('Retirer Karim Benali ?');
-    expect(alerte.message).toBe(
+    const fenetre = () => fenetreGeste(arbre, 'retirer');
+    expect(textes(fenetre())).toEqual([
+      'Retirer Karim Benali ?',
       // eslint-disable-next-line max-len
       'Son compte reste intact : il perd seulement l’accès à « Ma collectivité » de la Ville de Montrivage.',
-    );
+      // eslint-disable-next-line max-len
+      'C’est le seul gestionnaire. Sans gestionnaire, les demandes de créneau des clubs attendront sans réponse.',
+      'Retirer Karim Benali',
+      'Annuler',
+    ]);
     mockDelete.mockImplementation(async () => {
       serveur.gestionnaires = [];
       return { data: { data: { changed: true, gestionnaire: false } } };
     });
-    // eslint-disable-next-line max-len
-    await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style === 'destructive').onPress(); });
+    await act(async () => { bouton(fenetre(), 'Retirer Karim Benali').props.onPress(); });
     const gestionnaires = () => textes(parTestID(arbre.root, 'admin-collectivite-gestionnaires'));
     await attendre(() => gestionnaires().includes('Gestionnaires : 0'));
 
     expect(mockDelete).toHaveBeenCalledWith(`${ROUTE}/gestionnaires/karim`);
+    expect(fenetre()).toBeUndefined();
     expect(gestionnaires()).toEqual(expect.arrayContaining([
       'Aucun gestionnaire.', 'Karim Benali ne gère plus la Ville de Montrivage.',
     ]));
   });
 
-  it('« Annuler » ne détache ni ne retire rien', async () => {
+  it('« Annuler » ne détache ni ne retire rien ; la fenêtre se ferme', async () => {
     const arbre = await monter();
     // eslint-disable-next-line max-len
     await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Détacher de la Ville');
-    // eslint-disable-next-line max-len
-    await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style === 'cancel').onPress?.(); });
+    await act(async () => { bouton(fenetreGeste(arbre, 'detacher'), 'Annuler').props.onPress(); });
+    expect(fenetreGeste(arbre, 'detacher')).toBeUndefined();
     await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
-    // eslint-disable-next-line max-len
-    await act(async () => { alerte.boutons.find((/** @type {any} */ b) => b.style === 'cancel').onPress?.(); });
+    await act(async () => { bouton(fenetreGeste(arbre, 'retirer'), 'Annuler').props.onPress(); });
+    expect(fenetreGeste(arbre, 'retirer')).toBeUndefined();
     await attendre(() => false);
     expect(mockDelete).not.toHaveBeenCalled();
   });
@@ -634,5 +655,78 @@ describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () 
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminCollectiviteInvitations, {
       collectiviteId: 'ville-montrivage', onglet: 'rattachements',
     });
+  });
+});
+
+// COLL-CONSOLE (02/10) — planche P2-fenetres (design HY521H1, page 2, écran 5).
+describe('COLL-CONSOLE — les fenêtres de la fiche (planche P2-fenetres)', () => {
+  // eslint-disable-next-line max-len
+  it('G1 — Détacher un club qui recevait l offre de la Ville : la fenêtre dit précisément ce qu il perd', async () => {
+    mockPut.mockImplementation(async () => ({
+      data: {
+        data: {
+          clubs: [
+            { clubDocumentId: 'as-montrivage', name: 'AS Montrivage', offer: 'revoked' },
+            { clubDocumentId: 'montrivage-fc', name: 'Montrivage FC', offer: 'none' },
+          ],
+          isActive: false,
+          preview: true,
+        },
+      },
+    }));
+    const arbre = await monter();
+    // eslint-disable-next-line max-len
+    await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-offre-as-montrivage').length > 0);
+    // eslint-disable-next-line max-len
+    await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Détacher de la Ville');
+    expect(textes(fenetreGeste(arbre, 'detacher'))).toEqual(expect.arrayContaining([
+      'Offerte par la Ville',
+      // eslint-disable-next-line max-len
+      'Le club reste intact : équipes, membres et événements. Il recevait l’offre Club offerte par la Ville de Montrivage : elle lui est retirée.',
+    ]));
+    await act(async () => { bouton(fenetreGeste(arbre, 'detacher'), 'Annuler').props.onPress(); });
+    // eslint-disable-next-line max-len
+    await choisirAction(arbre, 'admin-collectivite-club-montrivage-fc-actions', 'Détacher de la Ville');
+    expect(textes(fenetreGeste(arbre, 'detacher'))).toEqual(expect.arrayContaining([
+      // eslint-disable-next-line max-len
+      'Le club reste intact : équipes, membres et événements. Il ne recevait pas l’offre de la Ville de Montrivage : rien ne change pour son abonnement.',
+    ]));
+  });
+
+  // eslint-disable-next-line max-len
+  it('G2 — un refus du serveur s écrit DANS la fenêtre, qui reste ouverte ; « Réessayer » relance', async () => {
+    let essais = 0;
+    mockDelete.mockImplementation(async () => {
+      essais += 1;
+      if (essais === 1) {
+        // eslint-disable-next-line no-throw-literal, max-len
+        throw { response: { data: { error: { details: { code: 'COLLECTIVITE_NOT_FOUND' }, status: 404 } }, status: 404 } };
+      }
+      serveur.clubs = serveur.clubs.filter((club) => club.documentId !== 'as-montrivage');
+      return { data: { data: { attached: false, changed: true, offer: 'revoked' } } };
+    });
+    const arbre = await monter();
+    // eslint-disable-next-line max-len
+    await choisirAction(arbre, 'admin-collectivite-club-as-montrivage-actions', 'Détacher de la Ville');
+    // eslint-disable-next-line max-len
+    await act(async () => { bouton(fenetreGeste(arbre, 'detacher'), 'Détacher AS Montrivage').props.onPress(); });
+    await attendre(() => textes(fenetreGeste(arbre, 'detacher')).includes('Réessayer'));
+    expect(textes(fenetreGeste(arbre, 'detacher'))).toContain(
+      'Cette collectivité est introuvable : elle a peut-être été supprimée.',
+    );
+    // eslint-disable-next-line max-len
+    await act(async () => { bouton(fenetreGeste(arbre, 'detacher'), 'Réessayer').props.onPress(); });
+    await attendre(() => !fenetreGeste(arbre, 'detacher'));
+    expect(essais).toBe(2);
+  });
+
+  it('G3 — deux gestionnaires : pas d avertissement « seul gestionnaire »', async () => {
+    serveur.gestionnaires = [...serveur.gestionnaires, {
+      documentId: 'hugo', email: 'hugo@example.invalid', firstname: 'Hugo', lastname: 'Lemaire',
+    }];
+    const arbre = await monter();
+    await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
+    // eslint-disable-next-line max-len
+    expect(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-seul-gestionnaire')).toHaveLength(0);
   });
 });
