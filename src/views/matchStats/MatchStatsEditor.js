@@ -616,6 +616,13 @@ function MatchStatsEditor({ navigation, route }) {
     },
     onSuccess: (/** @type {any} */ result) => {
       const remindedCount = Number(result?.remindedCount || 0);
+      // 🔁 ST-VUES2 (02/10) — la relance est idempotente PAR JOUR côté serveur : au 2e appui le
+      // même jour, personne n'est relancé et le serveur le dit (`alreadyRemindedCount`). Dire
+      // « aucune relance nécessaire » serait faux : il en manque toujours.
+      if (remindedCount === 0 && Number(result?.alreadyRemindedCount || 0) > 0) {
+        Alert.alert(t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui'));
+        return;
+      }
       Alert.alert(
         t('matchStatsEditor.reminderSent', 'Relance envoyée'),
         remindedCount > 0
@@ -667,7 +674,8 @@ function MatchStatsEditor({ navigation, route }) {
   }, [isReviewRequired, t]);
 
   const submitButtonTitle = useMemo(() => {
-    if (isReadOnly) return t('matchStatsEditor.reportFinalised', 'Rapport finalise');
+    // T9 (02/10) — « Rapport finalise » (sans accent) : le mot de la carte et du menu Gérer.
+    if (isReadOnly) return t('stMatch.gerer.published', 'Feuille publiée');
     if (isReviewRequired) {
       return t(
         'matchStatsEditor.updateAfterOfficialScore',

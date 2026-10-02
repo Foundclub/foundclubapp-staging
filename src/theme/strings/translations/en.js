@@ -16273,6 +16273,18 @@ export default {
       writeTo: 'Write to {{name}}',
       writeToFallback: 'the staff member',
     },
+    appel: {
+      arrived_one: '{{count}} arrived on time',
+      arrived_other: '{{count}} arrived on time',
+      arrivedLate_one: '{{count}} arrived late',
+      arrivedLate_other: '{{count}} arrived late',
+      closedExplain: 'Roll call is closed. It stayed open until 2 h after the end.',
+      marked_one: '{{count}} checked',
+      marked_other: '{{count}} checked',
+      neverSeen_one: '{{count}} never seen',
+      neverSeen_other: '{{count}} never seen',
+      serverWill: 'The server will mark them « Not checked » after the end, around',
+    },
     attente: {
       colEnd: 'End of match',
       colLeft: "What's left",
@@ -16458,6 +16470,9 @@ export default {
       us: 'My team',
       validateScore: 'Confirm the score',
       win: 'Win',
+    },
+    relance: {
+      alreadyToday: 'Already reminded today',
     },
     score: {
       close: 'Close',

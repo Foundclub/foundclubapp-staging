@@ -193,11 +193,28 @@ describe('MatchStatsEditor — une feuille déjà publiée (caractérisation)', 
     const racine = await monter(feuille({ finalizedAt: '2026-10-01T20:39:00.000Z', status: 'final' }));
     const [bouton] = racine.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button'
       && typeof n.props?.onPress === 'function'
-      && n.findAllByType(Text).some((/** @type {any} */ x) => x.props.children === 'Rapport finalise'));
+      // 🎯 T9 (02/10) — ADAPTÉ : « Rapport finalise » (sans accent) devient « Feuille publiée »,
+      // le mot de la carte et du menu Gérer.
+      && n.findAllByType(Text).some((/** @type {any} */ x) => x.props.children === 'Feuille publiée'));
 
     expect(bouton).toBeTruthy();
     expect(bouton.props.disabled).toBe(true);
     // Une feuille publiée ne se relance plus d ici.
     expect(textes(racine).some((texte) => texte.startsWith('Relancer les'))).toBe(false);
+  });
+});
+
+// 🔁 ST-VUES2 (relance idempotente par jour, côté serveur) : au 2e appui le même jour, personne
+// n'est relancé et le serveur le dit (`alreadyRemindedCount`). « Aucune relance nécessaire »
+// serait FAUX : il en manque toujours deux.
+describe('MatchStatsEditor — déjà relancés aujourd hui', () => {
+  test('2e appui le même jour : « Déjà relancés aujourd’hui », jamais « aucune relance nécessaire »', async () => {
+    mockRemind.mockResolvedValue({ alreadyRemindedCount: 2, missingCount: 2, remindedCount: 0 });
+    const racine = await monter(feuille());
+
+    await appuyerSur(racine, 'Relancer les 2 manquant·e·s');
+
+    expect(Alert.alert).toHaveBeenCalledWith('Déjà relancés aujourd’hui');
+    expect(jest.mocked(Alert.alert).mock.calls.flat()).not.toContain('Aucune relance nécessaire pour ce match.');
   });
 });

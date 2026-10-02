@@ -1333,3 +1333,38 @@ describe('T9 · moyenne B sur la page du match, serveur en retard', () => {
     expect(textes).toEqual(expect.arrayContaining(['7.3/10', 'Vos notes · 3 réponses']));
   });
 });
+
+// 🔁 ST-VUES2 — la relance depuis la carte, 2e appui le même jour.
+describe('ST-MATCH écran 7 — déjà relancés aujourd hui', () => {
+  test('« Relancer les 2 » au 2e appui : « Déjà relancés aujourd’hui »', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockRemindMatchMutateAsync.mockResolvedValue({ alreadyRemindedCount: 2, missingCount: 2, remindedCount: 0 });
+    const root = monter({
+      matchStats: statsAvec({
+        playerResponses: [
+          { label: 'Hugo Lefèvre', status: 'submitted' },
+          { label: 'Léo Durand', status: 'pending' },
+          { label: 'Nina Roux', status: 'draft' },
+        ],
+        report: {
+          finalizedAt: '2020-01-01T12:39:00.000Z',
+          needsReview: false,
+          responseCompletionCount: 1,
+          responseEligibleCount: 3,
+          status: 'final',
+        },
+        score: {
+          available: true, locked: false, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+    const [conteneur] = root.findAll((/** @type {any} */ n) => n.props?.testID === 'post-match-relancer', { deep: false });
+    const [bouton] = conteneur.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function', { deep: false });
+
+    await act(async () => { await bouton.props.onPress(); });
+
+    expect(alerte).toHaveBeenCalledWith('Déjà relancés aujourd’hui');
+    expect(alerte.mock.calls.flat()).not.toContain('Aucune relance nécessaire pour ce match.');
+    alerte.mockRestore();
+  });
+});

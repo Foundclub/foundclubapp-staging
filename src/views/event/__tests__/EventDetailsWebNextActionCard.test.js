@@ -657,7 +657,9 @@ describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose p
   test('🔒 le joueur lit POURQUOI la porte est fermee : le rapport est publie', () => {
     const root = mountScreen(vuDuJoueur());
 
-    expect(textOf(parTestID(root, 'post-match-journey')[0])).toContain('Rapport finalise');
+    // 🎯 T9 (02/10) — ADAPTÉ : « Rapport finalise » (sans accent) devient « Feuille publiée ».
+    expect(textOf(parTestID(root, 'post-match-journey')[0])).toContain('Feuille publiée');
+    expect(textOf(parTestID(root, 'post-match-journey')[0])).not.toContain('Rapport finalise');
   });
 
   test('PROTEGE : le COACH, rapport publie, ouvre toujours l editeur', () => {

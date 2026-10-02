@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
  * @param {any} props.payloadData - La reponse de `list`.
  * @param {number | null} props.sweepAtMs - Le premier passage du cron.
  * @param {number | null} props.closesAtMs - La fermeture de la fenetre.
- * @param {(key: string, fallback: string) => string} props.t - Le traducteur.
+ * @param {any} props.t - Le traducteur (celui de i18next : repli ou pluriels).
  * @returns {import('react').ReactElement} - La feuille.
  */
 export function AttendanceCloseSheet({
@@ -104,16 +104,34 @@ export function AttendanceCloseSheet({
   // 🗣️ Toutes les chaines de la feuille, au meme endroit.
   const mots = {
     anonymous: t('eventDetails.attendanceCall.row.anonymous', 'Participant·e'),
-    arrived: t('eventDetails.attendanceCall.presence.arrived', 'Arrivé·e·s'),
-    arrivedLate: t('eventDetails.attendanceCall.close.arrivedLate', 'Arrivé·e·s en retard'),
+    // 🐞 T9 (02/10, T9_P1_2b) — « 1 Arrivé·e·s », « 1 pointés · 1 jamais vus » : chaque nombre
+    // s'accorde (0 et 1 au singulier).
+    arrived: t('stMatch.appel.arrived', {
+      count: presence.arrived,
+      defaultValue_one: '{{count}} arrivé·e à l’heure',
+      defaultValue_other: '{{count}} arrivé·e·s à l’heure',
+    }),
+    arrivedLate: t('stMatch.appel.arrivedLate', {
+      count: presence.late,
+      defaultValue_one: '{{count}} arrivé·e en retard',
+      defaultValue_other: '{{count}} arrivé·e·s en retard',
+    }),
     confirm: t('eventDetails.attendanceCall.close.confirm', 'Clôturer'),
     confirmLabel: t(
       'eventDetails.attendanceCall.close.confirmLabel',
       "Clôturer l'appel maintenant",
     ),
     keepGoing: t('eventDetails.attendanceCall.close.keepGoing', "Continuer l'appel"),
-    marked: t('eventDetails.attendanceCall.close.marked', 'pointés'),
-    neverSeen: t('eventDetails.attendanceCall.close.neverSeen', 'jamais vus'),
+    marked: t('stMatch.appel.marked', {
+      count: markedCount,
+      defaultValue_one: '{{count}} pointé',
+      defaultValue_other: '{{count}} pointés',
+    }),
+    neverSeen: t('stMatch.appel.neverSeen', {
+      count: neverSeen.length,
+      defaultValue_one: '{{count}} jamais vu',
+      defaultValue_other: '{{count}} jamais vus',
+    }),
     title: t('eventDetails.attendanceCall.close.title', "CLÔTURER L'APPEL"),
   };
 
@@ -155,7 +173,7 @@ export function AttendanceCloseSheet({
             {mots.title}
           </Text>
           <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-            {`${markedCount} ${mots.marked} · ${neverSeen.length} ${mots.neverSeen}`}
+            {`${mots.marked} · ${mots.neverSeen}`}
           </Text>
         </View>
       )}
@@ -164,18 +182,19 @@ export function AttendanceCloseSheet({
     >
       <View style={styles.body}>
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-          {`${presence.arrived} ${mots.arrived}`}
+          {mots.arrived}
         </Text>
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-          {`${presence.late} ${mots.arrivedLate}`}
+          {mots.arrivedLate}
         </Text>
 
         {/* 🗣️ LA VERITE, PAS UNE PROMESSE : qui le fait, quand, et jusqu a
             quand on peut revenir dessus. */}
         <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+          {/* 🐞 T9 — l'appel sert aussi aux entraînements : « après la fin », sans « du match ». */}
           {`${t(
-            'eventDetails.attendanceCall.close.serverWill',
-            'Le serveur les passera en « Non pointé » après la fin du match, vers',
+            'stMatch.appel.serverWill',
+            'Le serveur les passera en « Non pointé » après la fin, vers',
           )} ${heureBalayage}.`}
         </Text>
         <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>

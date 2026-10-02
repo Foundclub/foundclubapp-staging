@@ -17053,6 +17053,18 @@ export default {
       writeTo: 'Écrire à {{name}}',
       writeToFallback: "l'encadrant",
     },
+    appel: {
+      arrived_one: '{{count}} arrivé·e à l’heure',
+      arrived_other: '{{count}} arrivé·e·s à l’heure',
+      arrivedLate_one: '{{count}} arrivé·e en retard',
+      arrivedLate_other: '{{count}} arrivé·e·s en retard',
+      closedExplain: "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin.",
+      marked_one: '{{count}} pointé',
+      marked_other: '{{count}} pointés',
+      neverSeen_one: '{{count}} jamais vu',
+      neverSeen_other: '{{count}} jamais vus',
+      serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
+    },
     attente: {
       colEnd: 'Fin du match',
       colLeft: 'Ce qui reste',
@@ -17241,6 +17253,9 @@ export default {
       us: 'Mon équipe',
       validateScore: 'Valider le score',
       win: 'Victoire',
+    },
+    relance: {
+      alreadyToday: 'Déjà relancés aujourd’hui',
     },
     score: {
       close: 'Fermer',

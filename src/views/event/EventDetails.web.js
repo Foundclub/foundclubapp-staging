@@ -641,7 +641,8 @@ function EventDetails({ navigation, route }) {
       return {
         disabled: true,
         subtitle: isMatchStatsFinal
-          ? t('eventDetails.reportFinalised', 'Rapport finalise')
+          // T9 (02/10) — « Rapport finalise » (sans accent) : le mot du téléphone.
+          ? t('stMatch.gerer.published', 'Feuille publiée')
           : t(
             'eventDetails.yourTeamMembersCanStill',
             'Les membres de ton équipe peuvent encore finaliser ce rapport.',

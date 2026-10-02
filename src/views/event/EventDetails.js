@@ -5121,6 +5121,13 @@ function EventDetails({ navigation, route }) {
       try {
         const resultat = await remindResponsesMutation.mutateAsync({ eventId, teamId: compositionTeamId });
         const relances = Number(resultat?.remindedCount || 0);
+        // 🔁 ST-VUES2 (02/10) — la relance est idempotente PAR JOUR côté serveur : au 2e appui le
+        // même jour, personne n'est relancé et le serveur le dit (`alreadyRemindedCount`). Dire
+        // « aucune relance nécessaire » serait faux : il en manque toujours.
+        if (relances === 0 && Number(resultat?.alreadyRemindedCount || 0) > 0) {
+          Alert.alert(t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui'));
+          return;
+        }
         Alert.alert(
           t('stMatch.carte.remindedTitle', 'Relance envoyée'),
           relances > 0
