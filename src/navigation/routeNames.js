@@ -393,4 +393,7 @@ export const RouteNames = /** @type {const} */ ({
   // mairie (« Actualites de la Ville ») et le formulaire publier / modifier.
   CollectiviteActualiteForm: 'CollectiviteActualiteForm',
   CollectiviteActualites: 'CollectiviteActualites',
+  // COLL-C4A planche 2 — le canal de la Ville, cote membre (lecture seule). C est aussi le
+  // `ctaRoute` que le SERVEUR pose sur la notification d une actualite.
+  CollectiviteActualitesCanal: 'CollectiviteActualitesCanal',
 });

@@ -281,6 +281,8 @@ const WEB_ROUTE_PATTERNS = {
   // (sans identifiant : publier ; avec : modifier).
   [RouteNames.CollectiviteActualites]: '/collectivite/:collectiviteId/actualites',
   [RouteNames.CollectiviteActualiteForm]: '/collectivite/:collectiviteId/actualite/:actualiteId?',
+  // COLL-C4A planche 2 — le canal de la Ville d un membre (une Ville, ou toutes les siennes).
+  [RouteNames.CollectiviteActualitesCanal]: '/actualites-ville/:collectiviteId?',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

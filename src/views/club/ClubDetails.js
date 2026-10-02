@@ -47,6 +47,8 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+// COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
+import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -2962,6 +2964,19 @@ function ClubDetails({ navigation, route }) {
             />
           ) : (
             <>
+              {/* COLL-C4A (02/10) — « De la Ville de … » : la dernière actualité de la Ville
+                  d'un club rattaché, pour SES membres, et l'interrupteur D68. Rien pour un club
+                  rattaché à personne (le bloc ne s'affiche pas). */}
+              {isMember && clubId ? (
+                <BlocDeLaVille
+                  clubId={String(clubId)}
+                  encadrant={isClubStaffRole}
+                  onOuvrirCanal={(collectiviteId) => navigation.navigate(
+                    RouteNames.CollectiviteActualitesCanal,
+                    { collectiviteId },
+                  )}
+                />
+              ) : null}
               {/* Facilities */}
               {/* D50 : cette section reste la page PUBLIQUE du club, pour un
                   visiteur. Le dirigeant l'atteint par la rangee du hub, qui

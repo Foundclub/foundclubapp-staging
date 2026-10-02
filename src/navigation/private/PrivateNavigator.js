@@ -1298,6 +1298,17 @@ function PrivateNavigator() {
               : t('collectiviteActualites.form.header', 'Nouvelle actualité'),
           })}
         />
+        {/* COLL-C4A planche 2 — le canal de la Ville, cote membre (lecture seule) : la
+            notification d une actualite (ctaRoute), le bloc « De la Ville » de la fiche du club,
+            le bandeau de l accueil et la messagerie y menent. Monte a la RACINE. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteActualitesCanal').default}
+          name={RouteNames.CollectiviteActualitesCanal}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteActualites.canal.header', 'Actualités de la Ville'),
+          }}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

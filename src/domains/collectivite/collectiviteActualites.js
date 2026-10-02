@@ -174,6 +174,17 @@ export const publicationDateLabel = (t, valeur, maintenant = new Date()) => {
 };
 
 /**
+ * L'initiale d'une Ville pour son écusson, faute de blason : « Ville de Montrivage » ⇒ « M ».
+ * @param {unknown} nom - Le nom de la collectivité.
+ * @returns {string} Une lettre majuscule, ou « ? ».
+ */
+export const villeInitiale = (nom) => {
+  const mots = String(nom || '').trim().split(/[\s\-']+/u).filter((mot) => /\p{L}/u.test(mot));
+  const dernier = mots[mots.length - 1] || '';
+  return (dernier.match(/\p{L}/u) || ['?'])[0].toUpperCase();
+};
+
+/**
  * Une pièce jointe est-elle une image ?
  * @param {any} fichier - La pièce (`mime`, `ext`, `name`).
  * @returns {boolean} Vrai pour une photo.

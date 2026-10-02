@@ -1,7 +1,3 @@
-import { getAuthTokens } from '@/domains/auth/authUseCases';
-
-import client from '@/services/client';
-
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 
 /**
@@ -9,19 +5,44 @@ import { getApiBaseUrl } from '@/config/runtimeUrls';
  * (admin fix/COLL-C4A-admin).
  *
  * Les gestes de la MAIRIE (`/collectivites/:id/actualites...`) sont gardés par la policy
- * `is-gestionnaire-collectivite` : la relation `gestionnaires`, jamais le rôle. L'app ne déduit
- * rien : elle affiche ce que le serveur rend, ou son refus. Aucune réponse ne porte une personne.
+ * `is-gestionnaire-collectivite` : la relation `gestionnaires`, jamais le rôle. Les lectures du
+ * MEMBRE (`/clubs/:id/collectivite-actualites`, `/collectivite-actualites/mine`) ne rendent que
+ * ce que SES clubs peuvent lire. L'app ne déduit rien : elle affiche ce que le serveur rend.
+ *
+ * ⚠️ Le client HTTP et la session sont chargés À L'APPEL (import dynamique, comme
+ * MatchCenterScreen pour leagueMatchService) et non à l'import : la fiche du club (ClubDetails,
+ * 10 témoins) et les accueils importent ce module sans doubler le client, qui exige l'adresse du
+ * serveur dès son chargement (mémoire piege-env-absent-worktree-import-service).
  */
+
+/**
+ * Le client HTTP de l'app, chargé à l'appel.
+ * @returns {Promise<any>} Le client axios.
+ */
+const client = async () => (await import('../client')).default;
+
+/**
+ * La session (le jeton) du compte connecté, chargée à l'appel.
+ * @returns {Promise<any>} Les jetons, ou null.
+ */
+const session = async () => (await import('../../domains/auth/authUseCases')).getAuthTokens();
+
+/**
+ * Lit une route du serveur.
+ * @param {string} chemin - La route.
+ * @param {object} [options] - Options axios (`params`).
+ * @returns {Promise<any>} Le corps de la réponse.
+ */
+const lire = async (chemin, options) => (await (await client()).get(chemin, options)).data;
 
 /**
  * Les actualités EN LIGNE de la collectivité, les plus récentes d'abord.
  * @param {string} collectiviteId - documentId.
  * @returns {Promise<object>} `{ data: [...] }`.
  */
-export const getCollectiviteActualites = async (collectiviteId) => {
-  const response = await client.get(`/collectivites/${collectiviteId}/actualites`);
-  return response.data;
-};
+export const getCollectiviteActualites = (collectiviteId) => lire(
+  `/collectivites/${collectiviteId}/actualites`,
+);
 
 /**
  * Combien de clubs recevraient l'actualité, AVANT de publier.
@@ -29,12 +50,10 @@ export const getCollectiviteActualites = async (collectiviteId) => {
  * @param {{ audience: string, facilityId?: string | null }} cible - Les destinataires choisis.
  * @returns {Promise<object>} `{ data: { audience, clubsCount } }`.
  */
-export const getActualiteRecipients = async (collectiviteId, { audience, facilityId }) => {
-  const response = await client.get(`/collectivites/${collectiviteId}/actualites-destinataires`, {
-    params: { audience, ...(facilityId ? { facilityId } : {}) },
-  });
-  return response.data;
-};
+export const getActualiteRecipients = (collectiviteId, { audience, facilityId }) => lire(
+  `/collectivites/${collectiviteId}/actualites-destinataires`,
+  { params: { audience, ...(facilityId ? { facilityId } : {}) } },
+);
 
 /**
  * Publier.
@@ -42,7 +61,8 @@ export const getActualiteRecipients = async (collectiviteId, { audience, facilit
  * @returns {Promise<object>} `{ data: actualite }`.
  */
 export const publishActualite = async ({ collectiviteId, data }) => {
-  const response = await client.post(`/collectivites/${collectiviteId}/actualites`, { data });
+  const http = await client();
+  const response = await http.post(`/collectivites/${collectiviteId}/actualites`, { data });
   return response.data;
 };
 
@@ -52,7 +72,8 @@ export const publishActualite = async ({ collectiviteId, data }) => {
  * @returns {Promise<object>} `{ data: actualite }`.
  */
 export const modifyActualite = async ({ actualiteId, collectiviteId, data }) => {
-  const response = await client.put(
+  const http = await client();
+  const response = await http.put(
     `/collectivites/${collectiviteId}/actualites/${actualiteId}`,
     { data },
   );
@@ -65,11 +86,40 @@ export const modifyActualite = async ({ actualiteId, collectiviteId, data }) => 
  * @returns {Promise<object>} `{ data: { documentId, retired } }`.
  */
 export const retireActualite = async ({ actualiteId, collectiviteId }) => {
-  const response = await client.delete(
-    `/collectivites/${collectiviteId}/actualites/${actualiteId}`,
+  const http = await client();
+  const response = await http.delete(`/collectivites/${collectiviteId}/actualites/${actualiteId}`);
+  return response.data;
+};
+
+/**
+ * Le bloc « De la Ville de … » de la fiche d'UN club : la Ville du club (ou null), ses dernières
+ * actualités que CE membre peut lire, et s'il a activé la notification (D68).
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<object>} `{ data: { actualites, collectivite, notify } }`.
+ */
+export const getClubCollectiviteActualites = (clubId) => lire(
+  `/clubs/${clubId}/collectivite-actualites`,
+);
+
+/**
+ * « Me prévenir des actualités de la Ville » (D68) : désactivé par défaut.
+ * @param {{ clubId: string, notify: boolean }} args
+ * @returns {Promise<object>} `{ data: { notify } }`.
+ */
+export const setClubCollectiviteActualitesNotify = async ({ clubId, notify }) => {
+  const http = await client();
+  const response = await http.put(
+    `/clubs/${clubId}/collectivite-actualites/preference`,
+    { data: { notify } },
   );
   return response.data;
 };
+
+/**
+ * Le canal de la Ville d'un membre : toutes les actualités que SES clubs peuvent lire.
+ * @returns {Promise<object>} `{ data: { actualites, collectivites } }`.
+ */
+export const getMesActualitesDeLaVille = () => lire('/collectivite-actualites/mine');
 
 /**
  * La pièce choisie (sélecteur natif, `File` du navigateur, ou réponse de l'appareil photo),
@@ -108,7 +158,7 @@ export const uploadActualiteFile = async (brut) => {
   } else {
     formData.append('files', /** @type {any} */ (fichier));
   }
-  const token = getAuthTokens()?.token;
+  const token = (await session())?.token;
   // `fetch` plutôt qu'axios : Android perd le FormData d'axios (Conversation.js, même choix).
   const response = await fetch(`${getApiBaseUrl()}/upload`, {
     body: formData,

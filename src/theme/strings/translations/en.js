@@ -4701,6 +4701,22 @@ export default {
       membres: 'All members',
     },
     aujourdhui: 'today',
+    bloc: {
+      encadrant: 'You are notified of every post: managers and coaches always are.',
+      interrupteur: 'Notify me of city news',
+      parDefaut: 'Off by default. You can turn it on whenever you want.',
+      titre: 'From {{ville}}',
+      toutes: 'All city news',
+      vide: 'No city news yet.',
+    },
+    canal: {
+      erreur: 'The news could not be loaded.',
+      header: 'City news',
+      lectureSeule: 'Read only',
+      presentation: 'News from {{ville}}, for attached clubs. Only the city posts here.',
+      presentationToutes: 'News from your clubs’ cities. Only the cities post here.',
+      vide: 'No city news yet.',
+    },
     categories: {
       autre: 'Other',
       fermeture: 'Closure',

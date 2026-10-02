@@ -2,10 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   getActualiteRecipients,
+  getClubCollectiviteActualites,
   getCollectiviteActualites,
+  getMesActualitesDeLaVille,
   modifyActualite,
   publishActualite,
   retireActualite,
+  setClubCollectiviteActualitesNotify,
 } from './collectiviteActualiteService';
 
 /**
@@ -93,3 +96,67 @@ export const useActualiteMutations = (collectiviteId) => {
   });
   return { modifier, publier, retirer };
 };
+
+// ─── LES MEMBRES (planche 2) ──────────────────────────────────────────────────────────────
+
+/**
+ * La clef du bloc « De la Ville » de la fiche d'un club.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const clubCollectiviteActualitesQueryKey = (clubId) => [
+  'club', clubId, 'collectivite-actualites',
+];
+
+/** La clef du canal de la Ville du membre connecté. */
+export const MES_ACTUALITES_QUERY_KEY = ['collectivite-actualites', 'mine'];
+
+/**
+ * Le bloc « De la Ville » : {actualites, collectivite, notify} ; collectivite null : aucun bloc.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {Record<string, any>} [options] - Options react-query (`enabled`).
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>} La lecture.
+ */
+export const useClubCollectiviteActualites = (clubId, options = {}) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: async () => (await getClubCollectiviteActualites(String(clubId)))?.data || null,
+  queryKey: clubCollectiviteActualitesQueryKey(clubId),
+  staleTime: 60_000,
+  ...options,
+});
+
+/**
+ * L'interrupteur D68 : la réponse du serveur remplace la valeur affichée (rien n'est deviné).
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, Error, boolean>} La mutation.
+ */
+export const useClubActualitesNotify = (clubId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (/** @type {boolean} */ notify) => setClubCollectiviteActualitesNotify({
+      clubId: String(clubId),
+      notify,
+    }),
+    onSuccess: (/** @type {any} */ reponse) => {
+      queryClient.setQueryData(
+        clubCollectiviteActualitesQueryKey(clubId),
+        (/** @type {any} */ avant) => (avant
+          ? { ...avant, notify: reponse?.data?.notify === true }
+          : avant),
+      );
+    },
+  });
+};
+
+/**
+ * Le canal de la Ville du membre : `{ actualites, collectivites }`.
+ * @param {Record<string, any>} [options] - Options react-query.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>} La lecture.
+ */
+export const useMesActualitesDeLaVille = (options = {}) => useQuery({
+  queryFn: async () => (await getMesActualitesDeLaVille())?.data
+    || { actualites: [], collectivites: [] },
+  queryKey: MES_ACTUALITES_QUERY_KEY,
+  staleTime: 60_000,
+  ...options,
+});

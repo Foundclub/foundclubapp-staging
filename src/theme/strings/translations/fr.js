@@ -5034,6 +5034,22 @@ export default {
       membres: 'Tous les membres',
     },
     aujourdhui: 'aujourd’hui',
+    bloc: {
+      encadrant: 'Tu es prévenu de chaque actualité : dirigeants et entraîneurs le sont toujours.',
+      interrupteur: 'Me prévenir des actualités de la Ville',
+      parDefaut: 'Désactivé par défaut. Tu peux l’activer quand tu veux.',
+      titre: 'De {{ville}}',
+      toutes: 'Toutes les actualités de la Ville',
+      vide: 'Aucune actualité de la Ville pour l’instant.',
+    },
+    canal: {
+      erreur: 'Les actualités n’ont pas pu être lues.',
+      header: 'Actualités de la Ville',
+      lectureSeule: 'Lecture seule',
+      presentation: 'Les actualités de {{ville}}, pour les clubs rattachés. Seule la Ville y écrit.',
+      presentationToutes: 'Les actualités des Villes de tes clubs. Seules les Villes y écrivent.',
+      vide: 'Aucune actualité de la Ville pour l’instant.',
+    },
     categories: {
       autre: 'Autre',
       fermeture: 'Fermeture',
