@@ -421,7 +421,6 @@ function FacilityList() {
   ]);
 
   const renderItem = useCallback(({ item }) => {
-    const facilityId = item?.documentId || item?.id;
     const teams = Number(item?.maxSlots || 1);
     const capacityLabel = `${teams} ${teams > 1
       ? t('facilityList.capacity.teamPlural', 'équipes simultanées')
@@ -553,6 +552,23 @@ function FacilityList() {
               variant="Secondary"
             />
           ) : null}
+          {/* COLL-C2C (02/10) — planche P8-installations-tel : le « Supprimer » rouge ne se voit
+              plus sur la carte ; il est range dans « Plus d actions » (le menu de C2B). */}
+          {isEditable && !isCollectiviteMode ? (
+            <TouchableOpacity
+              accessibilityLabel={t(
+                'collectiviteCreneaux.liste.plusActions',
+                'Plus d’actions pour {{nom}}',
+                { nom: item?.name || '', ...SANS_ECHAPPEMENT },
+              )}
+              accessibilityRole="button"
+              hitSlop={4}
+              onPress={() => setMenuInstallation(item)}
+              style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
+            >
+              <SvgIcon color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {hasAddress ? (
@@ -606,35 +622,19 @@ function FacilityList() {
               </>
             )}
           </View>
-        ) : (
-          <View style={[Alignments.row, Alignments.justifyEnd, Alignments.wrap, Spaces.gap[8]]}>
-            {/* COLL1C : pas de « Supprimer » pour le gestionnaire (le serveur ne le fait pas). */}
-            {isCollectiviteMode ? null : (
-              <Button
-                icon="trash"
-                iconColor={Colors.error500}
-                onPress={() => handleDelete(facilityId, item?.name)}
-                size="small"
-                style={{ borderColor: Colors.error500 }}
-                textStyle={{ color: Colors.error500 }}
-                title={t('common.delete', 'Supprimer')}
-                variant="Secondary"
-              />
-            )}
-          </View>
-        )}
+        ) : null}
       </View>
     );
   }, [
     Alignments.alignCenter,
-    Alignments.justifyEnd,
+    Alignments.justifyCenter,
     Alignments.row,
     Alignments.wrap,
     ApplicationStyle.borderRadius24,
     ApplicationStyle.icon16,
     ApplicationStyle.tintColor.primary200,
-    Colors.error500,
     Colors.neutral00,
+    Colors.primary200,
     Colors.primary500,
     Colors.primary800,
     Fonts.neutral00,
@@ -647,7 +647,6 @@ function FacilityList() {
     Spaces.gap,
     Spaces.marginTop,
     Spaces.padding,
-    handleDelete,
     handleEdit,
     handleOpenFacilityMap,
     handleOpenPlanning,
@@ -805,9 +804,13 @@ function FacilityList() {
 
   // Le menu « Plus d actions » : les gestes secondaires, ranges. Pas de « Supprimer » pour la
   // mairie (decision du 29/09) ; pas de GPS pour une installation sans adresse.
-  /** @type {Array<{ cle: string, icone: string, libelle: string, onPress: () => void }>} */
+  /**
+   * @type {Array<{
+   *   cle: string, danger?: boolean, icone: string, libelle: string, onPress: () => void
+   * }>}
+   */
   const menuGestes = [];
-  if (menuInstallation) {
+  if (menuInstallation && isCollectiviteMode) {
     menuGestes.push({
       cle: 'planning',
       icone: 'calendar',
@@ -829,7 +832,20 @@ function FacilityList() {
     }
   }
   const fermerMenu = () => setMenuInstallation(null);
-  const menuDesInstallations = isCollectiviteMode ? (
+  // COLL-C2C (02/10) — cote club, le menu range le geste qu on ne doit pas faire par megarde.
+  if (menuInstallation && !isCollectiviteMode) {
+    menuGestes.push({
+      cle: 'supprimer',
+      danger: true,
+      icone: 'trash',
+      libelle: t('clubInstallations.actions.supprimer', 'Supprimer l’installation'),
+      onPress: () => handleDelete(
+        menuInstallation?.documentId || menuInstallation?.id,
+        menuInstallation?.name,
+      ),
+    });
+  }
+  const menuDesInstallations = (
     <BottomModal close={fermerMenu} isVisible={Boolean(menuInstallation)} webPresentation="dialog">
       {menuInstallation ? (
         <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>
@@ -868,15 +884,22 @@ function FacilityList() {
                 },
               ]}
             >
-              <SvgIcon color={Colors.primary200} name={geste.icone} />
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{geste.libelle}</Text>
+              <SvgIcon
+                color={geste.danger ? Colors.error500 : Colors.primary200}
+                name={geste.icone}
+              />
+              <Text
+                style={[Fonts.p2Bold, geste.danger ? { color: Colors.error500 } : Fonts.neutral00]}
+              >
+                {geste.libelle}
+              </Text>
             </TouchableOpacity>
           ))}
           <Button onPress={fermerMenu} title={t('common.close', 'Fermer')} variant="Ghost" />
         </View>
       ) : null}
     </BottomModal>
-  ) : null;
+  );
 
   const renderSectionHeader = useCallback(({ section }) => (
     hasMultipleSections ? (
@@ -918,6 +941,7 @@ function FacilityList() {
   // COLL-C2C — la tete d un groupe : son titre, son nombre, puis UNE ligne : ce qu on y fait.
   // La Ville n est nommee qu une fois (design P8v2).
   const renderSectionHeaderGroupes = (/** @type {{ section: any }} */ { section }) => {
+    const groupe = /** @type {'aDemander' | 'auClub' | 'avecCreneaux'} */ (section.kind);
     const nombre = section.data.filter((/** @type {any} */ item) => !item?.isEmptyGroup).length;
     const titres = {
       aDemander: t('clubInstallations.groupes.aDemander', 'À demander à la Ville'),
@@ -954,13 +978,13 @@ function FacilityList() {
       <View style={[Spaces.marginBottom[8], Spaces.marginTop[12], { gap: 2 }]}>
         <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.primary200]}>
           {nombre
-            ? `${titres[section.kind]} ${t('clubInstallations.groupes.nombre', '({{count}})', {
+            ? `${titres[groupe]} ${t('clubInstallations.groupes.nombre', '({{count}})', {
               count: nombre,
             })}`
-            : titres[section.kind]}
+            : titres[groupe]}
         </Text>
-        {dits[section.kind] ? (
-          <Text style={[Fonts.p3, Fonts.neutral300]}>{dits[section.kind]}</Text>
+        {dits[groupe] ? (
+          <Text style={[Fonts.p3, Fonts.neutral300]}>{dits[groupe]}</Text>
         ) : null}
       </View>
     );

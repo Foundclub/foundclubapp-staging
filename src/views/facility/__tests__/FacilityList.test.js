@@ -257,6 +257,16 @@ const texteDe = (noeud) => noeud
   .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children))
   .join(' ');
 
+// COLL-C2C (02/10) — le menu « Plus d actions » de la carte du club : depuis la planche
+// P8-installations-tel, c est le seul chemin vers « Supprimer ».
+const ouvrirPlusDActions = (/** @type {any} */ arbre) => {
+  const [menu] = arbre.root.findAll((/** @type {any} */ noeud) => (
+    typeof noeud.props?.onPress === 'function'
+    && /^Plus d’actions/.test(String(noeud.props.accessibilityLabel || ''))
+  ), { deep: false });
+  act(() => { menu.props.onPress(); });
+};
+
 /**
  * Trouve le pressable le plus profond qui porte ce libelle, ou undefined.
  * @param {any} arbre - L'arbre rendu.
@@ -366,8 +376,11 @@ describe('FacilityList — ce que l ecran fait (fige avant la refonte D34)', () 
   it('demande confirmation avant de supprimer, et n appelle le reseau qu apres', async () => {
     const arbre = rendre();
 
+    // COLL-C2C (02/10) — « Supprimer » est range dans « Plus d actions » ; la confirmation, elle,
+    // ne change pas.
+    ouvrirPlusDActions(arbre);
     act(() => {
-      pressableAvecTexte(arbre, 'Supprimer').props.onPress();
+      pressableAvecTexte(arbre, 'Supprimer l’installation').props.onPress();
     });
 
     expect(Alert.alert).toHaveBeenCalled();
@@ -392,8 +405,11 @@ describe('FacilityList — ce que l ecran fait (fige avant la refonte D34)', () 
 
     const arbre = rendre();
 
+    // COLL-C2C (02/10) — « Supprimer » est range dans « Plus d actions » ; la confirmation, elle,
+    // ne change pas.
+    ouvrirPlusDActions(arbre);
     act(() => {
-      pressableAvecTexte(arbre, 'Supprimer').props.onPress();
+      pressableAvecTexte(arbre, 'Supprimer l’installation').props.onPress();
     });
 
     const boutons = /** @type {any} */ (Alert.alert).mock.calls[0][2];

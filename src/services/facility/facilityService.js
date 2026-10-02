@@ -100,6 +100,15 @@ const normalizeCollectiviteFacility = (facility) => ({
 
 const isCollectiviteFacility = (facility) => facility?.ownerType === 'collectivite';
 
+/**
+ * Range les installations en sections : celles du club, celles de l omnisport, puis une par
+ * collectivite.
+ * @param {any[]} facilities - Les installations.
+ * @param {{
+ *   clubTitle?: string, collectiviteTitle?: (nom: string) => string, sharedTitle?: string,
+ * }} [labels] - Les titres choisis par l ecran (COLL-C2C : celui de la Ville, par la fiche).
+ * @returns {Array<{ data: any[], title: string }>} Les sections, dans l ordre d affichage.
+ */
 const getFacilitySections = (facilities, labels = {}) => {
   if (!Array.isArray(facilities) || facilities.length === 0) return [];
 
@@ -129,7 +138,8 @@ const getFacilitySections = (facilities, labels = {}) => {
     collectiviteSections.push({
       data: [facility],
       name,
-      title: i18next.t(
+      // COLL-C2C (02/10) : l appelant peut nommer le groupe lui-meme (fiche du club).
+      title: labels.collectiviteTitle ? labels.collectiviteTitle(name) : i18next.t(
         'facilityService.sections.collectivite',
         'Installations · {{name}}',
         { name, ...SANS_ECHAPPEMENT },

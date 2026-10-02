@@ -4828,6 +4828,7 @@ export default {
       demanderCreneau: 'Request a slot',
       demanderHeure: 'Request an hour',
       ouvrir: '{{nom}}: see the schedule',
+      supprimer: 'Delete the facility',
     },
     compte: {
       aDemander: '{{count}} to request',
@@ -4837,6 +4838,10 @@ export default {
     creneau: {
       ligne: '{{team}} · every {{day}} {{hours}}',
       toutLeClub: 'Whole club',
+    },
+    fiche: {
+      gps: 'GPS',
+      villeTitre: 'Managed by {{ville}}',
     },
     groupes: {
       aDemander: 'To request from the town',

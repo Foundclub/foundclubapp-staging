@@ -477,13 +477,17 @@ describe('COLL1B — l onglet Installations d un club rattache', () => {
     expect(mockFacilityContextCalls[mockFacilityContextCalls.length - 1].options).toMatchObject({ includeCollectivite: false });
   });
 
-  it('le gymnase de la Ville est liste, avec le nom de la Ville, sans « Multisport »', () => {
+  // COLL-C2C (02/10) — planche P8-installations-tel : la Ville n est plus repetee sur chaque
+  // carte, elle est nommee UNE fois dans le titre du groupe (temoin
+  // ClubDetails.COLL-C2C.installationsDuMembre, avec le vrai `getFacilitySections` ; ici, il
+  // est double).
+  it('le gymnase de la Ville est liste, sans « Multisport » ni la Ville sur la carte', () => {
     devenirJoueurMembre();
     const arbre = monter();
     const carte = carteDe(arbre, 'Gymnase de la Ville');
 
     expect(carte).toBeTruthy();
-    expect(texteDe(carte)).toContain('Ville de Demo');
+    expect(texteDe(carte)).not.toContain('Ville de Demo');
     expect(texteDe(carte)).not.toContain('Multisport');
   });
 

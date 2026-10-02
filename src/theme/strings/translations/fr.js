@@ -5171,6 +5171,7 @@ export default {
       demanderCreneau: 'Demander un créneau',
       demanderHeure: 'Demander une heure',
       ouvrir: '{{nom}} : voir le planning',
+      supprimer: 'Supprimer l’installation',
     },
     compte: {
       aDemander: '{{count}} à demander',
@@ -5180,6 +5181,10 @@ export default {
     creneau: {
       ligne: '{{team}} · chaque {{day}} {{hours}}',
       toutLeClub: 'Tout le club',
+    },
+    fiche: {
+      gps: 'GPS',
+      villeTitre: 'Gérées par {{ville}}',
     },
     groupes: {
       aDemander: 'À demander à la Ville',
