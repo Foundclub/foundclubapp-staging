@@ -30,3 +30,17 @@ describe('STATS-FIX2 · 8-7 — « 0 sur 2 a répondu »', () => {
     expect([0, 1, 2].map((count) => i18n.t(cle, { count, total: 2 }))).toEqual(attendus);
   });
 });
+
+// 8-22 · ecran 22 : « 0 expérience(s) ». Le zero venait d un refus du serveur (corrige par
+// FINITIONS8 (5) : le droit du Parent, et « Historique indisponible » sur une panne). Reste la
+// parenthese : un vrai pluriel, comme partout ailleurs dans l app.
+describe('STATS-FIX2 · 8-22 — « expérience(s) »', () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage('fr');
+  });
+
+  test('🔴 profile.history.count : 0 et 1 au singulier, 2 au pluriel', () => {
+    expect([0, 1, 2].map((count) => i18n.t('profile.history.count', { count })))
+      .toEqual(['0 expérience', '1 expérience', '2 expériences']);
+  });
+});

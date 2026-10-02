@@ -14137,6 +14137,8 @@ export default {
       add: 'Add an experience',
       bestLevel: 'Best level',
       count: '{{count}} experience(s)',
+      count_one: '{{count}} experience',
+      count_other: '{{count}} experiences',
       deleteConfirmation: 'Are you sure you want to delete this experience?',
       empty: 'Add your sporting background to enrich your profile',
       emptyOther: 'No history provided',

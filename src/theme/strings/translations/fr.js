@@ -14873,6 +14873,8 @@ export default {
       add: 'Ajouter une expérience',
       bestLevel: 'Meilleur niveau',
       count: '{{count}} expérience(s)',
+      count_one: '{{count}} expérience',
+      count_other: '{{count}} expériences',
       deleteConfirmation: 'Veux-tu vraiment supprimer cette expérience ?',
       empty: 'Ajoute ton parcours sportif pour enrichir ton profil',
       emptyOther: 'Aucun historique renseigné',

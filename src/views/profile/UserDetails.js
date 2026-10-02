@@ -478,7 +478,11 @@ function UserDetails({ navigation, route }) {
   // premier) ; bloquer ne peut pas l'être — un joueur qui reçoit des messages
   // déplacés doit pouvoir se protéger. Apple 1.2 et Google Play l'exigent pour
   // TOUT utilisateur.
-  const canBlock = Boolean(currentUser && user && !isSelfProfile && targetUserId);
+  // STATS-FIX2 · 8-22 (T10, ecran 22) — sauf sur la fiche de SON enfant mineur : le parent ne
+  // « bloque » pas son enfant (le lien parent se retire depuis « Mes enfants »).
+  const canBlock = Boolean(
+    currentUser && user && !isSelfProfile && targetUserId && !isParentOfMinorViewer,
+  );
   const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: canBlock });
   const isTargetBlocked = useMemo(
     () => toBlockedUserIdSet(myBlockedRows).has(String(targetUserId || '').trim()),
@@ -1165,8 +1169,12 @@ function UserDetails({ navigation, route }) {
           Spaces.marginTop[8],
         ]}
       >
+        {/* STATS-FIX2 · 8-22 (T10, ecran 22) — la fiche de SON enfant porte son prenom (planche
+            22 : « Hugo », et « Mon enfant » sur la carte), pas « INFOS PROFIL · JOUEUR ». */}
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-          {t('userDetails.title', 'Infos profil').toUpperCase()}
+          {isParentOfMinorViewer && user?.firstname
+            ? String(user.firstname).toUpperCase()
+            : t('userDetails.title', 'Infos profil').toUpperCase()}
         </Text>
         <View
           style={[
@@ -1175,7 +1183,9 @@ function UserDetails({ navigation, route }) {
             { width: 88 },
           ]}
         />
-        <Text style={[Fonts.p2Bold, Fonts.primary500]}>{roleLabel}</Text>
+        {isParentOfMinorViewer ? null : (
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>{roleLabel}</Text>
+        )}
       </View>
 
       <ScrollView

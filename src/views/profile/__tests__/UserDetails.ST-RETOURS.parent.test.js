@@ -462,6 +462,39 @@ describe('STATS-FIX2 · point 7 — la fiche de l enfant ne marque « lu » qu e
   });
 });
 
+// STATS-FIX2 · 8-22 (tournee T10, ecran 22) — LA FICHE DE SON ENFANT, VUE PAR LE PARENT :
+// l en-tete disait « INFOS PROFIL · JOUEUR » (planche 22 : le prenom de l enfant, et « Mon
+// enfant ») ; « Bloquer cette personne » s offrait sur la fiche de son propre enfant.
+describe('STATS-FIX2 · 8-22 — l en-tete et le pied de la fiche de son enfant', () => {
+  beforeEach(() => {
+    mockFetchedUser = HUGO_VU_PAR_PAPA;
+    mockFollow = { hugo: { seen: ['event:m1:u15:v1', 'event:m0:u15:v1'] } };
+  });
+
+  it('🔴 l en-tete : le prenom de l enfant, plus « INFOS PROFIL · JOUEUR »', async () => {
+    const t = texte(await rendre(PAPA, FICHE_DE_HUGO));
+
+    expect(t).toContain('HUGO');
+    expect(t).not.toContain('INFOS PROFIL');
+    expect(t).not.toContain('JOUEUR');
+    expect(t).toContain('Mon enfant');
+  });
+
+  it('🔴 pas de « Bloquer cette personne » sur la fiche de son propre enfant', async () => {
+    const t = texte(await rendre(PAPA, FICHE_DE_HUGO));
+
+    expect(t).not.toContain('Bloquer cette personne');
+  });
+
+  it('🔒 un AUTRE adulte garde l en-tete et « Bloquer »', async () => {
+    mockFetchedUser = { ...HUGO_VU_PAR_PAPA, parentAccount: { documentId: 'un-autre' } };
+    const t = texte(await rendre(PAPA, FICHE_DE_HUGO));
+
+    expect(t).toContain('INFOS PROFIL');
+    expect(t).toContain('Bloquer cette personne');
+  });
+});
+
 // STATS-FIX2 · POINT 1 (tournee T10, « Protections » P4) — LA PORTE DU MATCH, POUR LE PARENT.
 //
 // Adel a decide « parents encart B » (registre des mineurs, ligne 15) : le parent lit l encart du
