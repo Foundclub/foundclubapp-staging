@@ -8,6 +8,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { isVilleOnlyAccount } from '@/domains/collectivite/collectiviteAccueil';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
@@ -37,6 +38,11 @@ import { navigate as navigateRoot, navigationRef } from '@/navigation/navigation
 import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  useMyCollectivites,
+  useMyManagerRequests,
+} from '@/services/collectivite/collectiviteQueries';
+
 import PrivateTabNavigator from './PrivateTabNavigator';
 /* eslint-disable-next-line import/order */
 import { useAppMode } from '@/context/AppModeContext';
@@ -54,6 +60,27 @@ function PrivateNavigator() {
   const { isGold } = useAppMode();
   const { t } = useTranslation();
   const isSuperAdmin = getUserRoleKey(userData?.role?.type || userData?.role?.name) === 'superAdmin';
+  const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  // 🏛️ COLL-ACCUEIL (01/10, décision d'Adel « accueil A ») — un compte qui ne gère QU'une
+  // Ville (aucun rôle sportif) arrive sur l'espace de sa Ville, sans tunnel sportif. Un
+  // compte mixte (dirigeant, joueur… qui gère aussi une Ville) garde son accueil. La lecture
+  // ne part que pour un compte sans rôle sportif : les autres n'attendent rien.
+  const sansRoleSportif = Boolean(userData?.documentId) && roleKey === 'new';
+  const villesGerees = useMyCollectivites({ enabled: sansRoleSportif });
+  // L'inscription « Je représente une collectivité » : une demande envoyée, pas encore (ou
+  // pas) acceptée, ouvre l'écran « où en est ma demande », jamais le tunnel sportif.
+  const demandesGestionnaire = useMyManagerRequests({ enabled: sansRoleSportif });
+  const premiereVille = Array.isArray(villesGerees.data) ? villesGerees.data[0] : null;
+  const aDemandeAGerer = Array.isArray(demandesGestionnaire.data)
+    && demandesGestionnaire.data.length > 0;
+  const villeSeule = sansRoleSportif && isVilleOnlyAccount({
+    hasManagerRequest: aDemandeAGerer,
+    managedCount: premiereVille?.documentId ? 1 : 0,
+    roleKey,
+  });
+  // Tant qu'on ne sait pas, on attend : la pile choisit son écran d'arrivée UNE fois.
+  const villeEnLecture = sansRoleSportif
+    && Boolean(villesGerees.isLoading || demandesGestionnaire.isLoading);
   const pendingSquadInviteNavigationKeyRef = useRef(/** @type {string | null} */(null));
   const onboardingRedirectAttemptRef = useRef(/** @type {string | null} */(null));
 
@@ -86,16 +113,24 @@ function PrivateNavigator() {
       return acc;
     }, { index: 100, route: '' })?.route;
 
+    // COLL-ACCUEIL — la Ville d'abord : un compte Ville seule n'a pas de tunnel sportif.
+    if (villeSeule) {
+      return premiereVille?.documentId
+        ? RouteNames.CollectiviteSpace
+        : RouteNames.CollectiviteSignupStatus;
+    }
     if (route) return route;
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
-  }, [onboardingViews, isGold]);
+  }, [onboardingViews, isGold, villeSeule, premiereVille?.documentId]);
 
   const firstPendingOnboardingRoute = useMemo(() => {
     if (
       !initialRouteName
       || initialRouteName === RouteNames.HomeTab
       || initialRouteName === RouteNames.LeagueHomeTab
+      || initialRouteName === RouteNames.CollectiviteSpace
+      || initialRouteName === RouteNames.CollectiviteSignupStatus
     ) {
       return null;
     }
@@ -187,7 +222,7 @@ function PrivateNavigator() {
     return !!view?.canShow;
   }, [onboardingViews]);
 
-  if (userDataLoading) {
+  if (userDataLoading || villeEnLecture) {
     return (
       <View style={{
         alignItems: 'center', backgroundColor: '#ffffff', flex: 1, justifyContent: 'center',
@@ -395,6 +430,30 @@ function PrivateNavigator() {
             ...commonOptions,
             headerTitle: t('privateNavigator.headers.multisportManagement', 'Gestion CM'),
           }}
+        />
+        {/* COLL-ACCUEIL (01/10) — L ESPACE DE LA VILLE sur telephone : la barre Accueil ·
+            Demandes · Planning · Messages. Ecran d arrivee d un compte Ville seule ; la porte
+            de « Mon compte » et celle de l accueil d un compte mixte y menent. Les ecrans
+            ci-dessous restent montes a la racine (notifications, liens, ecrans de detail). */}
+        <Stack.Screen
+          getComponent={() => require('./CollectiviteTabNavigator').default}
+          initialParams={{ collectiviteId: premiereVille?.documentId }}
+          name={RouteNames.CollectiviteSpace}
+          options={{ headerShown: false }}
+        />
+        {/* COLL-ACCUEIL (01/10) — « Je represente une collectivite » : l inscription de la
+            mairie (2 etapes, aucune question de sport) et l ecran « ou en est ma demande ».
+            Montes SANS CONDITION : le choix du statut (UserRole) y mene, et un compte Ville
+            seule y arrive ; la notification de decision (ctaRoute) aussi. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteSignup').default}
+          name={RouteNames.CollectiviteSignup}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteSignupStatus').default}
+          name={RouteNames.CollectiviteSignupStatus}
+          options={{ headerShown: false }}
         />
         {/* COLLECTIVITES 1c — l espace du gestionnaire de mairie, a la RACINE : la porte
             (Profil) et la notification d une nouvelle demande (ctaRoute) y menent. */}

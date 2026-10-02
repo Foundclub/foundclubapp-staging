@@ -74,8 +74,12 @@ const mockOptionsPerformances = [];
 /** @type {Set<Function>} */
 const mockRetoursSurLaFiche = new Set();
 
+// STATS-ENQUETE (defaut 3) — dirigeant du club de l'equipe, ou pas : le serveur ouvre les stats
+// d'equipe au dirigeant de son club depuis le 21/09 (decision d'Adel « go a », SENTRY-1).
+let mockDirigeantDuClub = true;
+
 const AUTH_DIRIGEANT = Object.freeze({
-  canEditClub: () => true,
+  canEditClub: () => mockDirigeantDuClub,
   canJoinTeam: () => false,
   canManageTeam: true,
   entitlementsSummary: [],
@@ -394,6 +398,7 @@ afterEach(() => {
   }
   arbre = null;
   mockEstMonEquipe = true;
+  mockDirigeantDuClub = true;
   mockReponseEquipeCourante = mockReponseFoot;
   mockRetoursSurLaFiche.clear();
   mockOptionsPerformances.splice(0);
@@ -411,8 +416,9 @@ describe('FINITIONS2 6 — aucune requete dont la reponse est un refus connu d a
     expect(mockRefetchPerformances).not.toHaveBeenCalled();
   });
 
-  test('pas MON equipe : ni presences ni performances au retour sur la fiche (403)', () => {
+  test('pas MON equipe, ni dirigeant de son club : ni presences ni performances au retour sur la fiche (403)', () => {
     mockEstMonEquipe = false;
+    mockDirigeantDuClub = false;
     monterPuisRevenirSurLaFiche();
 
     expect(optionsPerformances()?.enabled).toBe(false);
@@ -428,5 +434,54 @@ describe('FINITIONS2 6 — aucune requete dont la reponse est un refus connu d a
     expect(optionsPresences()?.enabled).toBe(true);
     expect(mockRefetchPerformances).toHaveBeenCalledTimes(1);
     expect(mockRefetchPresences).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Les onglets « Stats » rendus par la fiche.
+ * @returns {any[]}
+ */
+const ongletsStats = () => arbre.root.findAll(
+  (/** @type {any} */ noeud) => noeud.props?.accessibilityRole === 'tab' && noeud.props?.accessibilityLabel === 'Stats',
+);
+
+// STATS-ENQUETE (01/10, defaut 3 de la tournee ECRANS-STATS) — LE DIRIGEANT N'AVAIT PAS L'ONGLET STATS.
+// Decision d'Adel du 21/09 (« go a », RELAIS.md) : le dirigeant voit les statistiques de toutes les
+// equipes de son club. Le serveur l'applique depuis SENTRY-1 (`can-view-team-stats`, admin) ; l'app
+// ne laissait passer que les membres (`canLoadTeamStats = teamId && isMyTeam`) : ni requete, ni onglet.
+describe('STATS-ENQUETE 3 — le dirigeant du club voit l onglet Stats de ses equipes', () => {
+  test('🚨 dirigeant du club, pas membre de l equipe : presences et performances se chargent', () => {
+    mockEstMonEquipe = false;
+    monterPuisRevenirSurLaFiche();
+
+    expect(optionsPresences()?.enabled).toBe(true);
+    expect(optionsPerformances()?.enabled).toBe(true);
+    expect(mockRefetchPresences).toHaveBeenCalledTimes(1);
+    expect(mockRefetchPerformances).toHaveBeenCalledTimes(1);
+  });
+
+  test('🚨 dirigeant du club, pas membre de l equipe : l onglet Stats est la', () => {
+    mockEstMonEquipe = false;
+    monterPuisRevenirSurLaFiche();
+
+    expect(ongletsStats().length).toBeGreaterThan(0);
+  });
+
+  test('🔒 ni membre ni dirigeant : pas d onglet Stats', () => {
+    mockEstMonEquipe = false;
+    mockDirigeantDuClub = false;
+    monterPuisRevenirSurLaFiche();
+
+    expect(ongletsStats()).toHaveLength(0);
+  });
+
+  test('🔒 dirigeant, equipe de HANDBALL : les presences oui, les performances toujours pas (400)', () => {
+    mockEstMonEquipe = false;
+    mockReponseEquipeCourante = mockReponseHand;
+    monterPuisRevenirSurLaFiche();
+
+    expect(optionsPresences()?.enabled).toBe(true);
+    expect(optionsPerformances()?.enabled).toBe(false);
+    expect(mockRefetchPerformances).not.toHaveBeenCalled();
   });
 });

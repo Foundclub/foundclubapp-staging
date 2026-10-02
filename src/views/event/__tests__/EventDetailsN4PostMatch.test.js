@@ -692,3 +692,125 @@ describe('N4/E6 — la relance, et ce que D5 y change', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// SECU-STATS (01/10) — LA CARTE NE PROPOSE PLUS L EDITEUR DU COACH A UN JOUEUR
+// ---------------------------------------------------------------------------
+//
+// 🔒 `MatchStatsEditor` est l outil de l encadrement : il affiche l avis du
+// coach et l auto-evaluation de CHAQUE joueur. Rapport publie ou a re-verifier,
+// la carte l ouvrait pourtant a tout membre de l equipe — c est par la qu un
+// joueur LISAIT ces champs. La vraie barriere est le serveur (corrige dans le
+// meme lot, `admin` SECU-STATS) ; ceci retire la porte. Le joueur garde SA
+// reponse, par « Mon retour post-match ».
+
+describe('SECU-STATS — la carte « APRÈS LE MATCH » ne propose plus l editeur du coach a un joueur', () => {
+  const SCORE_SAISI = {
+    available: true,
+    locked: false,
+    scoreAgainst: 1,
+    scoreFor: 3,
+    source: 'manual',
+    waitingOfficial: false,
+  };
+
+  const boutonDeLaCarte = (/** @type {any} */ root) => {
+    const [conteneur] = root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'post-match-action',
+      { deep: false },
+    );
+
+    return conteneur.findAll(
+      (/** @type {any} */ node) => typeof node.props?.onPress === 'function',
+      { deep: false },
+    )[0];
+  };
+
+  // Un bouton qui ne porte QUE ce titre : un conteneur appuyable qui
+  // engloberait plusieurs textes ne doit pas passer pour lui.
+  const boutonNomme = (/** @type {any} */ root, /** @type {string} */ titre) => root.findAll(
+    (/** @type {any} */ node) => {
+      if (typeof node.props?.onPress !== 'function') return false;
+      const textes = node.findAllByType(Text);
+
+      return textes.length === 1 && textOf(textes[0].props.children).trim() === titre;
+    },
+    { deep: false },
+  )[0];
+
+  /**
+   * L ecran tel qu un JOUEUR de l equipe le voit, rapport publie.
+   * @param {object} [rapport] - Les surcharges du rapport.
+   * @returns {any} - Les options de `monter`.
+   */
+  const vuDuJoueur = (rapport = {}) => ({
+    auth: authPour(JOUEUR),
+    matchStats: statsAvec({
+      permissions: { canManage: false, canRespond: true, canView: true },
+      report: {
+        needsReview: false,
+        responseCompletionCount: 1,
+        responseEligibleCount: 2,
+        status: 'final',
+        ...rapport,
+      },
+      score: SCORE_SAISI,
+    }),
+    myMatchResponse: {
+      permissions: { canRespond: true },
+      response: { selfComment: 'Mon propre ressenti', selfRating: 6, status: 'submitted' },
+    },
+  });
+
+  test.each([
+    ['rapport publie', {}],
+    ['rapport a re-verifier apres un score officiel', { needsReview: true }],
+  ])('🔒 %s : pour un JOUEUR, la porte est fermee et rien n ouvre l editeur', (_cas, rapport) => {
+    const root = monter(vuDuJoueur(rapport));
+    const bouton = boutonDeLaCarte(root);
+
+    expect(bouton.props.disabled).toBe(true);
+    // La seconde couche : meme un appui qui passerait outre la porte grisee
+    // n ouvre pas l editeur.
+    act(() => { bouton.props.onPress(); });
+    expect(mockNavigate).not.toHaveBeenCalledWith('MatchStatsEditor', expect.anything());
+  });
+
+  test('🔒 le joueur lit POURQUOI la porte est fermee : le rapport est publie', () => {
+    expect(textesVisibles(monter(vuDuJoueur()))).toEqual(expect.arrayContaining(['Rapport finalise']));
+  });
+
+  test('le joueur garde SA reponse : « Mon retour post-match » ouvre son propre questionnaire', () => {
+    const root = monter(vuDuJoueur());
+
+    act(() => { boutonNomme(root, 'Voir').props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'PlayerMatchResponse',
+      expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith('MatchStatsEditor', expect.anything());
+  });
+
+  test('PROTEGE : le COACH, rapport publie, ouvre toujours l editeur', () => {
+    const root = monter({
+      matchStats: statsAvec({
+        report: {
+          needsReview: false,
+          responseCompletionCount: 1,
+          responseEligibleCount: 2,
+          status: 'final',
+        },
+        score: SCORE_SAISI,
+      }),
+    });
+    const bouton = boutonDeLaCarte(root);
+
+    expect(bouton.props.disabled).toBe(false);
+    act(() => { bouton.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'MatchStatsEditor',
+      expect.objectContaining({ eventId: 'event-1' }),
+    );
+  });
+});

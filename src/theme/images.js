@@ -33,6 +33,8 @@ export const images = {
   filter: require('../assets/icons/filter.png'),
   flag: require('../assets/icons/flag.png'),
   home: require('../assets/icons/home.png'),
+  // COLL-ACCUEIL (01/10) — l onglet « Demandes » de l espace de la Ville (ICONES, « Icone ok »).
+  inboxArrowDown: require('../assets/icons/inbox-arrow-down.png'),
   phone: require('../assets/icons/phone.png'),
   pin: require('../assets/icons/pin.png'),
   plus: require('../assets/icons/plus.png'),

@@ -2,13 +2,20 @@ import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
+import { getFacilityPlanning } from '@/services/facility/facilityService';
+
+import { getPlanningDefaultDate, getPlanningRange } from '@/utils/planning/planningSlots';
+
 import {
   addAdminCollectiviteGestionnaire,
   attachAdminCollectiviteClub,
   createAdminCollectivite,
+  createManagerRequest,
+  decideManagerRequest,
   detachAdminCollectiviteClub,
   getAdminCollectivite,
   getAdminCollectivites,
+  getAdminManagerRequests,
   getCollectiviteClub,
   getCollectiviteClubs,
   getCollectiviteInstallations,
@@ -18,6 +25,7 @@ import {
   getCollectiviteRequests,
   getMyClubsForCollectiviteInvitation,
   getMyCollectivites,
+  getMyManagerRequests,
   inviteClubByFoundClub,
   previewAdminCollectiviteActive,
   remindCollectiviteInvitation,
@@ -26,6 +34,7 @@ import {
   rotateCollectiviteInvitationLink,
   saveCollectiviteInstallation,
   searchAdminCollectiviteTargets,
+  searchCollectivitesForSignup,
   setAdminCollectiviteActive,
 } from './collectiviteService';
 
@@ -144,6 +153,34 @@ export const useManagingCollectiviteId = (facilityId, { enabled = true } = {}) =
     && query.data.some((installation) => installation?.documentId === facilityId)
   ));
   return index >= 0 ? collectivites[index]?.documentId || null : null;
+};
+
+/**
+ * COLL-ACCUEIL (01/10) — « Cette semaine » de l accueil de la Ville : le planning de la
+ * semaine en cours de CHAQUE installation, par la lecture du planning d une installation
+ * (lot 1b, `/facilities/:id/planning`, gardee par can-read-facility-planning qui admet le
+ * gestionnaire). Meme clef que l ecran du planning : l accueil et le planning disent la
+ * meme chose, et le second s ouvre sans relire.
+ * ponytail: une lecture par installation — une Ville en a quelques-unes ; au-dela d une
+ * dizaine, une route « semaine de toutes mes installations » (lot C2b) la remplacera.
+ * @param {unknown} installations - Les installations (`useCollectiviteInstallations`).
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : aucun appel.
+ * @returns {Array<{ installation: any, query: any }>} Une lecture par installation.
+ */
+export const useCollectiviteWeek = (installations, { enabled = true } = {}) => {
+  const liste = Array.isArray(installations) ? installations : [];
+  const range = getPlanningRange(getPlanningDefaultDate(), 'week');
+  const queries = useQueries({
+    queries: liste.map((installation) => ({
+      enabled: enabled && Boolean(installation?.documentId),
+      queryFn: () => getFacilityPlanning(String(installation?.documentId), range),
+      queryKey: [
+        'planning', 'fullscreen', 'facility', installation?.documentId, range.from, range.to,
+      ],
+      staleTime: 60_000,
+    })),
+  });
+  return liste.map((installation, index) => ({ installation, query: queries[index] }));
 };
 
 /**
@@ -494,5 +531,88 @@ export const useRemoveAdminCollectiviteGestionnaire = (options) => useGesteSuper
  */
 export const useCreateAdminCollectivite = (options) => useGesteSuperAdmin(
   createAdminCollectivite,
+  options,
+);
+
+// ─── COLL-ACCUEIL (01/10/2026) : LA DEMANDE DE GESTIONNAIRE ────────────────────────────
+
+export const MY_MANAGER_REQUESTS_QUERY_KEY = ['collectivite-manager-requests', 'mine'];
+
+/**
+ * MES demandes de gestionnaire (l ecran d attente, l arrivee d un compte Ville seule).
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useMyManagerRequests = (options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getMyManagerRequests()),
+  queryKey: MY_MANAGER_REQUESTS_QUERY_KEY,
+  staleTime: 30_000,
+  ...options,
+});
+
+/**
+ * Les collectivites DEJA sur FoundClub dont le nom contient le texte (3 lettres au moins).
+ * @param {string} query - Le texte tape.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useCollectiviteSignupSearch = (query) => {
+  const texte = String(query || '').trim();
+  return useQuery({
+    enabled: texte.length >= 3,
+    queryFn: async () => unwrapRows(await searchCollectivitesForSignup(texte)),
+    queryKey: ['collectivite-manager-requests', 'search', texte.toLowerCase()],
+    staleTime: 60_000,
+  });
+};
+
+/**
+ * Envoie MA demande, puis relit mes demandes.
+ * @param {QueryOptions} [options] - Options react-query (`onSuccess` compris).
+ * @returns {any} La mutation.
+ */
+export const useCreateManagerRequest = (options = {}) => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...rest } = options;
+  return useMutation({
+    mutationFn: createManagerRequest,
+    onSuccess: async (data, variables, context) => {
+      await queryClient.invalidateQueries({ queryKey: MY_MANAGER_REQUESTS_QUERY_KEY });
+      onSuccess?.(data, variables, context);
+    },
+    ...rest,
+  });
+};
+
+/**
+ * La clef de la file de la console : sous le prefixe des collectivites de la console, pour
+ * qu accepter (qui peut CREER une collectivite) relise aussi la liste et les fiches.
+ * @param {'pending' | 'decided'} status - L onglet.
+ * @returns {Array<string>} La clef.
+ */
+export const adminManagerRequestsQueryKey = (status) => [
+  ...ADMIN_COLLECTIVITES_QUERY_KEY, 'demandes-de-gestionnaire', status,
+];
+
+/**
+ * La file des demandes de gestionnaire (console super-admin).
+ * @param {'pending' | 'decided'} status - L onglet.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useAdminManagerRequests = (status, options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getAdminManagerRequests(status)),
+  queryKey: adminManagerRequestsQueryKey(status),
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * Accepter ou refuser une demande ; variables `{ decision, requestId, data }`. Relit la file,
+ * la liste et les fiches des collectivites.
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} La mutation.
+ */
+export const useDecideManagerRequest = (options) => useGesteSuperAdmin(
+  decideManagerRequest,
   options,
 );

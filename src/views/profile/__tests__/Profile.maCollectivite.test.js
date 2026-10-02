@@ -21,6 +21,8 @@ import Profile from '../Profile';
 let mockUserData;
 /** @type {any} */
 let mockCollectivites;
+/** @type {any} */
+let mockRequetes = [];
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
@@ -100,7 +102,9 @@ jest.mock('@/services/auth/authService', () => ({
 }));
 
 // La lecture de la porte : `/collectivites/mine`, telle que le hook la rend.
+// COLL-ACCUEIL (01/10) : la pastille de la rangee lit les demandes en attente.
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useCollectiviteRequests: () => ({ data: mockRequetes }),
   useMyCollectivites: () => ({ data: mockCollectivites, isLoading: false }),
 }));
 
@@ -196,20 +200,65 @@ const rangeePortant = (/** @type {any} */ arbre, /** @type {string} */ libelle) 
     .findAllByType(Text)
     .some((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim() === libelle));
 
-describe('COLLECTIVITES 1c — écran 1 : la porte « Ma collectivité »', () => {
-  it('un GESTIONNAIRE sans club voit « Ma collectivité · Ville de Recette »', async () => {
+// 🏛️ COLL-ACCUEIL (01/10/2026) — PLANCHE 4 « Mon compte, la porte secondaire » (P1-porte-tel).
+// La rangée de la Ville reste en tête de « Profil & activité » : le NOM de la Ville en titre,
+// « Ma collectivité » dessous, la PASTILLE des demandes. Elle ouvre l'espace de la Ville
+// (barre Accueil · Demandes · Planning · Messages). Compte « Ville seule » : « Gestionnaire ·
+// Ville de … » sous le nom, aucune rangée sportive. Compte mixte : tout reste, la rangée en plus.
+// ROUGE avant le lot (rangée « Ma collectivité · <nom> » vers l'accueil seul, « Membre »).
+const CATALOGUE = jest.requireActual('@/theme/strings/translations/fr').default;
+const SPORTIVES = ['myCard', 'sportsHistory', 'myLicenses', 'myChildren', 'manageAlerts']
+  .map((cle) => CATALOGUE.profile.actions[cle]);
+
+describe('COLL-ACCUEIL — planche 4 : « Mon compte », la porte secondaire', () => {
+  beforeEach(() => { mockRequetes = []; });
+
+  it('la rangée porte le NOM de la Ville, « Ma collectivité » dessous', async () => {
     const { libelles } = await monterProfil(ROLE_AUTHENTICATED, [VILLE]);
-    expect(libelles).toContain('Ma collectivité · Ville de Recette');
+    expect(libelles).toEqual(expect.arrayContaining(['Ville de Recette', 'Ma collectivité']));
   });
 
-  it('l appui ouvre l accueil de CETTE collectivité', async () => {
+  it('la pastille dit le nombre de demandes en attente', async () => {
+    mockRequetes = [{ documentId: 'rq-1' }, { documentId: 'rq-2' }];
+    const { arbre } = await monterProfil(ROLE_AUTHENTICATED, [VILLE]);
+    const [pastille] = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && n.props?.testID === 'collectivite-ville-de-recette-compteur');
+    expect(pastille).toBeDefined();
+    expect(aplatirTexte(pastille.props.children)).toBe('2');
+  });
+
+  it('compte Ville seule : l appui REVIENT à l espace de la Ville (sa racine)', async () => {
     const { arbre, navigate } = await monterProfil(ROLE_AUTHENTICATED, [VILLE]);
     await act(async () => {
-      rangeePortant(arbre, 'Ma collectivité · Ville de Recette').props.onPress();
+      rangeePortant(arbre, 'Ville de Recette').props.onPress();
     });
-    expect(navigate).toHaveBeenCalledWith('CollectiviteHome', {
-      collectiviteId: 'ville-de-recette',
+    expect(navigate).toHaveBeenCalledWith(
+      'CollectiviteSpace',
+      { collectiviteId: 'ville-de-recette' },
+      { pop: true },
+    );
+  });
+
+  it('Ville seule : « Gestionnaire · Ville de Recette », AUCUNE rangée sportive', async () => {
+    const { libelles } = await monterProfil(ROLE_AUTHENTICATED, [VILLE]);
+    expect(libelles).toContain('Gestionnaire · Ville de Recette');
+    SPORTIVES.forEach((rangee) => expect(libelles).not.toContain(rangee));
+    // Le compte, lui, reste : changer de compte, nous contacter.
+    expect(libelles).toContain(CATALOGUE.profile.actions.contactSupport);
+  });
+
+  it('compte mixte : tout reste ; la rangée ouvre la Ville avec « ‹ Mon compte »', async () => {
+    const { arbre, libelles, navigate } = await monterProfil(ROLE_DIRIGEANT, [VILLE]);
+    expect(libelles).toContain(CATALOGUE.profile.actions.myCard);
+    expect(libelles).not.toContain('Gestionnaire · Ville de Recette');
+    await act(async () => {
+      rangeePortant(arbre, 'Ville de Recette').props.onPress();
     });
+    expect(navigate).toHaveBeenCalledWith(
+      'CollectiviteSpace',
+      { collectiviteId: 'ville-de-recette', returnLabel: 'Mon compte' },
+      { pop: true },
+    );
   });
 
   it.each([
@@ -218,6 +267,7 @@ describe('COLLECTIVITES 1c — écran 1 : la porte « Ma collectivité »', () =
     ['une lecture pas encore arrivée', ROLE_AUTHENTICATED, undefined],
   ])('%s ne voit AUCUNE porte', async (_nom, role, collectivites) => {
     const { libelles } = await monterProfil(role, collectivites);
+    expect(libelles).not.toContain('Ville de Recette');
     expect(libelles.some((libelle) => libelle.startsWith('Ma collectivité'))).toBe(false);
   });
 });

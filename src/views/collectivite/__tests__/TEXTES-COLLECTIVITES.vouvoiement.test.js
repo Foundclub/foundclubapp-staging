@@ -33,8 +33,10 @@ const lireEn = (/** @type {string} */ clef) => clef.split('.').reduce(
 // « tu », « ton », « ta », « tes », « toi », « te », « t' », et les impératifs en -e/-s de
 // 2e personne que ces écrans emploient (« Écris », « Ajoute », « Sélectionne », « Réessaie »).
 const TUTOIEMENT = new RegExp(
+  // COLL-ACCUEIL (01/10) : « FoundClub vérifie » (3e personne, texte de la planche validée)
+  // n'est pas un impératif ; « Vérifie la connexion » en reste un.
   // eslint-disable-next-line max-len
-  '(^|[^\\p{L}])(tu|ton|ta|tes|toi|te|t[\'’]\\p{L}+|écris|ajoute|sélectionne|choisis|réessaie|vérifie|'
+  '(^|[^\\p{L}])(tu|ton|ta|tes|toi|te|t[\'’]\\p{L}+|écris|ajoute|sélectionne|choisis|réessaie|(?<!FoundClub )vérifie|'
   + 'détache-le)(?=$|[^\\p{L}])',
   'iu',
 );
@@ -50,6 +52,12 @@ const ECRANS_MAIRIE = [
   'views/collectivite/CollectiviteHome.js',
   'views/collectivite/CollectiviteRequests.js',
   'views/collectivite/CollectiviteClubs.js',
+  // COLL-ACCUEIL (01/10) : la fenetre Accepter / Refuser, sortie de CollectiviteRequests et
+  // partagee avec l accueil de la Ville. Ses clefs restent controlees ici.
+  'views/collectivite/components/DecisionCreneauModal.js',
+  // COLL-ACCUEIL (01/10) : l inscription de la mairie et l ecran « ou en est ma demande ».
+  'views/collectivite/CollectiviteSignup.js',
+  'views/collectivite/CollectiviteSignupStatus.js',
 ];
 
 // Les clefs que la mairie lit dans les écrans PARTAGÉS avec les clubs.
@@ -78,6 +86,10 @@ describe('TEXTES-COLLECTIVITES — la mairie est vouvoyée', () => {
     expect('Écris le motif : le club le lira.').toMatch(TUTOIEMENT);
     expect('Ton message : {{message}}').toMatch(TUTOIEMENT);
     expect('Tu ne gères pas cette collectivité.').toMatch(TUTOIEMENT);
+    // COLL-ACCUEIL (01/10) : avec « FoundClub » pour sujet, « vérifie » est une 3e personne.
+    expect('Vérifie la connexion, puis réessaie.').toMatch(TUTOIEMENT);
+    expect('Laquelle représentez-vous ? FoundClub vérifie, puis vous en confie la gestion.')
+      .not.toMatch(TUTOIEMENT);
     expect('Le club reçoit ta réponse.').toMatch(TUTOIEMENT);
     expect('Écrivez le motif : le club le lira.').not.toMatch(TUTOIEMENT);
     expect('Votre message : {{message}}').not.toMatch(TUTOIEMENT);

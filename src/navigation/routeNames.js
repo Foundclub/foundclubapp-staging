@@ -381,6 +381,14 @@ export const RouteNames = /** @type {const} */ ({
   CollectiviteInviteClub: 'CollectiviteInviteClub',
   CollectiviteJoin: 'CollectiviteJoin',
   CollectiviteJoinRequest: 'CollectiviteJoinRequest',
+  // COLL-ACCUEIL (01/10/2026) — l espace de la Ville sur telephone : la barre Accueil ·
+  // Demandes · Planning · Messages (CollectiviteTabNavigator). Sur le site, le menu lateral.
+  CollectiviteSpace: 'CollectiviteSpace',
+  // « Je represente une collectivite » : l inscription de la mairie, puis ou en est sa demande.
+  CollectiviteSignup: 'CollectiviteSignup',
+  CollectiviteSignupStatus: 'CollectiviteSignupStatus',
+  // La file « Demandes de gestionnaire » de la console super-admin (decision « console oui »).
+  AdminManagerRequests: 'AdminManagerRequests',
   // COLL-C2B (02/10/2026) — une installation de la Ville et son onglet « Creneaux » (design
   // HY521H1, page 4, P4v2-creneaux) : attribuer, gerer, retirer, retablir un creneau de saison.
   CollectiviteInstallation: 'CollectiviteInstallation',

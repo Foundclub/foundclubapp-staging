@@ -2,11 +2,9 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Modal,
   RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -18,15 +16,12 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
 
 import {
   useCollectiviteRequests,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
-import {
-  useApproveFacilityOverrideRequest,
-  useRefuseFacilityOverrideRequest,
-} from '@/services/facility/facilityQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -44,6 +39,8 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * previent : le demandeur, et l occupant s il y en avait un.
  *
  * Reutilise : les mutations du hub « Demandes » (facilityQueries) et sa fenetre de motif.
+ * COLL-ACCUEIL (01/10) : la fenetre vit dans components/DecisionCreneauModal, partagee avec
+ * l accueil de la Ville, qui tranche la demande qu il montre en tete.
  * Ecran neuf plutot que le hub : le hub est celui d UN CLUB (8 sources, filtres par equipe),
  * sans onglet « traitees », sans message a l acceptation, sans le detail du conflit.
  * @returns {import('react').ReactElement} L ecran.
@@ -59,8 +56,6 @@ function CollectiviteRequests() {
 
   const [onglet, setOnglet] = useState(/** @type {'pending' | 'decided'} */ ('pending'));
   const [decision, setDecision] = useState(/** @type {Decision | null} */ (null));
-  const [message, setMessage] = useState('');
-  const [erreur, setErreur] = useState('');
 
   const mine = useMyCollectivites();
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
@@ -68,9 +63,6 @@ function CollectiviteRequests() {
   const decided = useCollectiviteRequests(collectiviteId, 'decided', {
     enabled: Boolean(collectiviteId) && onglet === 'decided',
   });
-  const approve = /** @type {any} */ (useApproveFacilityOverrideRequest());
-  const refuse = /** @type {any} */ (useRefuseFacilityOverrideRequest());
-  const enCours = Boolean(approve.isPending || refuse.isPending);
 
   const refetchPending = pending.refetch;
   useFocusEffect(useCallback(() => {
@@ -83,31 +75,6 @@ function CollectiviteRequests() {
 
   const ouvrir = (/** @type {'approve' | 'refuse'} */ kind, /** @type {any} */ request) => {
     setDecision({ kind, request });
-    setMessage('');
-    setErreur('');
-  };
-  const fermer = () => {
-    if (enCours) return;
-    setDecision(null);
-    setErreur('');
-  };
-  const confirmer = async () => {
-    if (!decision) return;
-    const decisionReason = message.trim();
-    if (decision.kind === 'refuse' && !decisionReason) {
-      setErreur(t(
-        'collectivite.requests.modal.reasonRequired',
-        'Écrivez le motif : le club le lira.',
-      ));
-      return;
-    }
-    const mutation = decision.kind === 'approve' ? approve : refuse;
-    try {
-      await mutation.mutateAsync({ decisionReason, requestId: decision.request?.documentId });
-      setDecision(null);
-    } catch (error) {
-      setErreur(getErrorMessage(/** @type {any} */ (error)));
-    }
   };
 
   const nomDe = (/** @type {any} */ personne) => (
@@ -277,109 +244,13 @@ function CollectiviteRequests() {
     contenu = demandes.map(renderDemande);
   }
 
-  const estRefus = decision?.kind === 'refuse';
-  const fenetreStyle = {
-    borderColor: `${Colors.primary500}66`,
-    maxWidth: 520,
-    padding: 20,
-    width: /** @type {const} */ ('100%'),
-  };
-  const champStyle = {
-    borderColor: `${Colors.primary500}44`,
-    minHeight: 110,
-    textAlignVertical: /** @type {const} */ ('top'),
-  };
-
   return (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
     >
-      <Modal animationType="fade" onRequestClose={fermer} transparent visible={Boolean(decision)}>
-        <View
-          style={[
-            Alignments.fill,
-            Alignments.justifyCenter,
-            Alignments.alignCenter,
-            Spaces.padding[24],
-            { backgroundColor: `${Colors.neutral900}B3` },
-          ]}
-        >
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary700,
-              ApplicationStyle.borderRadius16,
-              ApplicationStyle.borderWidth1,
-              Spaces.gap[16],
-              fenetreStyle,
-            ]}
-          >
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-              {estRefus
-                ? t('collectivite.requests.modal.refuseTitle', 'Refuser la demande')
-                : t('collectivite.requests.modal.approveTitle', 'Accepter la demande')}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {estRefus
-                ? t(
-                  'collectivite.requests.modal.refuseHint',
-                  'Le club reçoit votre motif ; son entraînement est annulé.',
-                )
-                : t(
-                  'collectivite.requests.modal.approveHint',
-                  // eslint-disable-next-line max-len
-                  'Le club reçoit votre réponse et votre message. S’il y avait un occupant, il est prévenu.',
-                )}
-            </Text>
-            <TextInput
-              multiline
-              onChangeText={setMessage}
-              placeholder={estRefus
-                ? t(
-                  'collectivite.requests.modal.refusePlaceholder',
-                  'Le motif du refus (obligatoire)',
-                )
-                : t(
-                  'collectivite.requests.modal.approvePlaceholder',
-                  'Un mot pour le club (facultatif)',
-                )}
-              placeholderTextColor={Colors.neutral400}
-              style={[
-                ApplicationStyle.borderRadius16,
-                ApplicationStyle.borderWidth1,
-                Fonts.p2,
-                Fonts.neutral00,
-                Spaces.padding[16],
-                champStyle,
-              ]}
-              testID="collectivite-request-message"
-              value={message}
-            />
-            {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
-            <View style={[Alignments.row, { gap: 12 }]}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  disabled={enCours}
-                  onPress={fermer}
-                  title={t('collectivite.requests.modal.cancel', 'Annuler')}
-                  variant="Secondary"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  disabled={enCours}
-                  onPress={confirmer}
-                  title={estRefus
-                    ? t('collectivite.requests.actions.refuse', 'Refuser')
-                    : t('collectivite.requests.actions.approve', 'Accepter')}
-                  variant="Primary"
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <DecisionCreneauModal decision={decision} onClose={() => setDecision(null)} />
 
       <ScrollView
         contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}

@@ -153,6 +153,18 @@ jest.mock('@/services/auth/authService', () => ({
   updateMe: jest.fn(),
 }));
 
+// COLL-ACCUEIL (01/10) : sur le site, un compte Ville seule saute le choix du statut. Ici, un
+// compte neuf qui ne gere rien et n a rien demande : il choisit.
+/** @type {any[]} */
+let mockVilles = [];
+/** @type {any[]} */
+let mockDemandesGestion = [];
+const mockReset = jest.fn();
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useMyCollectivites: () => ({ data: mockVilles }),
+  useMyManagerRequests: () => ({ data: mockDemandesGestion }),
+}));
+
 /** @type {any} */
 let mockUserData;
 
@@ -184,7 +196,7 @@ const monter = async () => {
   await act(async () => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
-        <UserRole navigation={/** @type {any} */ ({ navigate: mockNavigate })} />
+        <UserRole navigation={/** @type {any} */ ({ navigate: mockNavigate, reset: mockReset })} />
       </QueryClientProvider>,
     );
   });
@@ -208,6 +220,8 @@ const CONTINUER = 'Continuer';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockVilles = [];
+  mockDemandesGestion = [];
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   // Un compte NEUF : son role est le role provisoire.
   mockUserData = { documentId: 'u-139', role: { documentId: 'role-authenticated', type: 'authenticated' } };
@@ -266,4 +280,75 @@ test('FINITIONS5-8 · un refus du serveur se dit UNE fois, en français', async 
   expect(message).toBe('Accès refusé.');
   expect(String(message)).not.toMatch(/Failed|Requested|allowed/);
   expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+// 🏛️ COLL-ACCUEIL (01/10/2026) — PLANCHE 5, état 1 (`P1-inscription-tel`) : « Quel est ton
+// statut ? » gagne une 5e rangée, SÉPARÉE des rôles sportifs, sous « Pour une mairie ».
+// La choisir saute toutes les questions de sport : aucun rôle n'est posé, on va à
+// l'inscription de la mairie. ROUGE avant le lot : la rangée n'existait pas.
+test('COLL-ACCUEIL · « Je représente une collectivité », sous « Pour une mairie »', async () => {
+  const arbre = await monter();
+  const textes = arbre.root.findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
+  expect(textes).toContain('POUR UNE MAIRIE');
+  expect(rangee(arbre, 'Je représente une collectivité')).toBeDefined();
+});
+
+test('COLL-ACCUEIL · la choisir mène à l inscription de la mairie, sans rôle posé', async () => {
+  const arbre = await monter();
+  await appuyer(rangee(arbre, 'Je représente une collectivité'));
+  expect(bouton(arbre, CONTINUER).props.disabled).toBe(false);
+  await appuyer(bouton(arbre, CONTINUER));
+  expect(updateMe).not.toHaveBeenCalled();
+  expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
+});
+
+test('COLL-ACCUEIL · choisir ensuite un rôle sportif décoche la mairie', async () => {
+  /** @type {any} */ (updateMe).mockResolvedValue({});
+  const arbre = await monter();
+  await appuyer(rangee(arbre, 'Je représente une collectivité'));
+  await appuyer(rangee(arbre, 'Dirigeant·e'));
+  await appuyer(bouton(arbre, CONTINUER));
+  expect(mockNavigate).not.toHaveBeenCalledWith('CollectiviteSignup');
+});
+
+// COLL-ACCUEIL (01/10) — SUR LE SITE, un compte « Ville seule » ne refait pas le choix du statut.
+describe('COLL-ACCUEIL · sur le site, un compte Ville seule saute le statut', () => {
+  const surLeSite = async (/** @type {() => Promise<void>} */ corps) => {
+    const { Platform } = jest.requireActual('react-native');
+    const avant = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      await corps();
+    } finally {
+      Platform.OS = avant;
+    }
+  };
+
+  test('il gère une Ville : l accueil de SA Ville', async () => {
+    await surLeSite(async () => {
+      mockVilles = [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage' }];
+      await monter();
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: 'CollectiviteHome', params: { collectiviteId: 'ville-montrivage' } }],
+      });
+    });
+  });
+
+  test('il a demandé à en gérer une : l écran de sa demande', async () => {
+    await surLeSite(async () => {
+      mockDemandesGestion = [{ documentId: 'dm-1', status: 'pending' }];
+      await monter();
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0, routes: [{ name: 'CollectiviteSignupStatus' }],
+      });
+    });
+  });
+
+  test('un compte neuf sans Ville ni demande choisit son statut', async () => {
+    await surLeSite(async () => {
+      await monter();
+      expect(mockReset).not.toHaveBeenCalled();
+    });
+  });
 });
