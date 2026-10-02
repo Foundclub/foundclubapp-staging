@@ -154,6 +154,7 @@ function MatchCallUpSelection() {
     players: playersParam = EMPTY_LIST,
     selectedPlayers: convoquesRecus = null,
     sport = 'football',
+    teamComposition = null,
     teamId,
     teamName = '',
   } = params;
@@ -367,7 +368,7 @@ function MatchCallUpSelection() {
   // ⚠️ Elles arrivent EN DERNIER et on ne garde que la premiere occurrence de
   // chaque identifiant : l'ordre des listes connues — donc le terrain et le banc
   // qui en decoulent — ne bouge pas d'un pouce.
-  const selectedPlayers = useMemo(() => {
+  const convoquesCoches = useMemo(() => {
     /** @type {Map<string, any>} */
     const parIdentifiant = new Map();
     [
@@ -384,6 +385,45 @@ function MatchCallUpSelection() {
     return [...parIdentifiant.values()]
       .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
   }, [convoquesRecus, manualPlayers, reinforcementPlayers, selectedIds, squadPlayers]);
+
+  // FINITIONS6 · F6-3 (tournee 8) — LE CONVOQUE QUI N'EST PLUS DANS L'EQUIPE.
+  //
+  // Il n'arrive que par la liste des convoques PUBLIES (`convoquesRecus`) : aucune
+  // liste que le serveur accepte ne le porte. A la publication, le serveur
+  // l'ecartait (`sanitizeTeamPack`, « hors_effectif ») et la feuille « Publier »
+  // l'avait compte titulaire : « 2 sur le terrain », carte publiee a 1, sans un mot.
+  // ⇒ On le DIT ici, avant « Suivant », et on ne l'emmene plus : le terrain et le
+  // compte sont ceux que le serveur publiera.
+  // 🔒 La liste qui fait foi est celle DU SERVEUR (`teamComposition.eligiblePlayers`
+  // et ses renforts), plus ce que cet ecran connait (effectif, renforts du club,
+  // hors app). Sans elle, ou tant que les equipes du club se chargent (un renfort
+  // passerait pour un parti), on ne juge personne : rien ne change.
+  const partisDeLEquipe = useMemo(() => {
+    const eligiblesDuServeur = teamComposition?.eligiblePlayers;
+    if (!Array.isArray(eligiblesDuServeur) || isClubTeamsLoading) return EMPTY_LIST;
+    const gardes = new Set([
+      ...eligiblesDuServeur,
+      ...(Array.isArray(teamComposition?.reinforcementPlayers) ? teamComposition.reinforcementPlayers : EMPTY_LIST),
+      ...squadPlayers,
+      ...reinforcementPlayers,
+      ...manualPlayers,
+    ].map(getCompositionPlayerId).filter(Boolean));
+    return convoquesCoches.filter((player) => !gardes.has(getCompositionPlayerId(player)));
+  }, [
+    convoquesCoches,
+    isClubTeamsLoading,
+    manualPlayers,
+    reinforcementPlayers,
+    squadPlayers,
+    teamComposition?.eligiblePlayers,
+    teamComposition?.reinforcementPlayers,
+  ]);
+
+  const selectedPlayers = useMemo(() => {
+    if (partisDeLEquipe.length === 0) return convoquesCoches;
+    const partis = new Set(partisDeLEquipe.map(getCompositionPlayerId));
+    return convoquesCoches.filter((player) => !partis.has(getCompositionPlayerId(player)));
+  }, [convoquesCoches, partisDeLEquipe]);
 
   // COMPODBL — LE TERRAIN QUE « Suivant » VA ROUVRIR, calcule UNE fois : le
   // bouton s'en sert pour y aller, le compteur du bas pour annoncer combien de
@@ -884,6 +924,15 @@ function MatchCallUpSelection() {
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <View style={styles.footerTexts}>
+          {partisDeLEquipe.length > 0 ? (
+            <Text style={[Fonts.p3Bold, { color: Colors.warning400 }]} testID="matchcallup-left-team">
+              {t('matchCallUp.selection.leftTeam', {
+                count: partisDeLEquipe.length,
+                names: partisDeLEquipe.map(getCompositionPlayerLabel).join(', '),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
             {t('matchCallUp.selection.footer.calledUp', { count: counters.calledUp })}
           </Text>

@@ -419,3 +419,107 @@ describe('COMPOMODIF · M2 — modifier n est pas repartir de zero', () => {
       .toEqual(['p1', 'p2']);
   });
 });
+
+// ==========================================================================
+// FINITIONS6 · F6-3 — UN TITULAIRE DISPARAISSAIT A LA REPUBLICATION SANS UN MOT.
+//
+// 🔍 Tournee 8 (defaut 3) : republication du 3059, la feuille « Publier »
+// annonce « Titulaires : 2 sur le terrain » (Karim + Hugo) ; la carte publiee
+// « Version 2 » n'a que Hugo. Karim n'est plus joueur de l'U15 : le serveur
+// l'ecarte a la publication (`sanitizeTeamPack`, `hors_effectif`, une ligne
+// de journal et rien d'autre).
+// 🧭 Il arrivait ici par la liste des convoques PUBLIES (`selectedPlayers`,
+// la 4e source de M4), sans etre dans aucune liste que le serveur accepte.
+// ✅ L'ecran le DIT, des la selection (avant « Suivant », donc avant
+// « Publier »), et ne l'emmene plus sur le terrain : le compte annonce est
+// celui que le serveur publiera.
+// 🔒 La liste qui fait foi est celle DU SERVEUR (`teamComposition.eligiblePlayers`
+// et ses renforts) ; sans elle, rien ne change.
+// ==========================================================================
+describe('FINITIONS6 · F6-3 — un convoque qui n est plus dans l equipe est annonce, pas perdu en silence', () => {
+  const KARIM = joueur('k1', 'Karim', 'Benali');
+  const RENFORT = joueur('r1', 'Ines', 'Renfort');
+  const PACK_AVEC_KARIM = {
+    ...PACK_PUBLIE,
+    reservePlayerIds: [],
+    selectedPlayerIds: ['k1', 'p2'],
+    teams: [{
+      ...PACK_PUBLIE.teams[0],
+      placements: [
+        {
+          playerId: 'k1', positionX: 50, positionY: 90, slotId: 'team_1:slot_1',
+        },
+        {
+          playerId: 'p2', positionX: 30, positionY: 60, slotId: 'team_1:slot_2',
+        },
+      ],
+    }],
+  };
+  const COMPO_SERVEUR = { eligiblePlayers: EFFECTIF, reinforcementPlayers: [], rsvpEnabled: true };
+  const PHRASE_KARIM = 'Karim Benali n’est plus dans l’équipe : il sera retiré de la compo.';
+
+  test('🚨 la selection le dit, nom compris', async () => {
+    const arbre = await rendre({
+      existingComposition: PACK_AVEC_KARIM,
+      selectedPlayers: [KARIM, EFFECTIF[1]],
+      teamComposition: COMPO_SERVEUR,
+    });
+
+    expect(texteVisible(arbre)).toContain(PHRASE_KARIM);
+  });
+
+  test('🚨 « Suivant » ne l emmene plus : le terrain et le compte sont ceux que le serveur publiera', async () => {
+    const arbre = await rendre({
+      existingComposition: PACK_AVEC_KARIM,
+      selectedPlayers: [KARIM, EFFECTIF[1]],
+      teamComposition: COMPO_SERVEUR,
+    });
+
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(convoquesEnvoyes()).toEqual(['p2']);
+    const appel = [...mockNavigate.mock.calls].pop();
+    expect((appel?.[1]?.startPlacements || []).map((/** @type {any} */ p) => p.playerId)).toEqual(['p2']);
+  });
+
+  test('🔒 un renfort d une autre equipe du club n est PAS annonce comme parti', async () => {
+    mockClubTeams = {
+      pages: [{
+        data: [
+          { documentId: 'team_1', name: 'Senior 1', players: EFFECTIF },
+          { documentId: 'team_2', name: 'Senior 2', players: [RENFORT] },
+        ],
+      }],
+    };
+    const arbre = await rendre({
+      existingComposition: { ...PACK_PUBLIE, selectedPlayerIds: ['p1', 'p2', 'p3', 'r1'] },
+      selectedPlayers: [...CONVOQUES_PUBLIES, RENFORT],
+      teamComposition: COMPO_SERVEUR,
+    });
+
+    expect(texteVisible(arbre)).not.toContain('n’est plus dans l’équipe');
+    await appuyerSur(arbre, 'Suivant');
+    expect(convoquesEnvoyes()).toContain('r1');
+  });
+
+  test('🔒 un joueur hors app du pack n est PAS annonce comme parti', async () => {
+    const arbre = await rendre({
+      existingComposition: { ...PACK_PUBLIE, manualPlayers: [HORS_APP], selectedPlayerIds: ['p1', 'p2', 'p3', 'm1'] },
+      selectedPlayers: [...CONVOQUES_PUBLIES, HORS_APP],
+      teamComposition: COMPO_SERVEUR,
+    });
+
+    expect(texteVisible(arbre)).not.toContain('n’est plus dans l’équipe');
+  });
+
+  test('🔒 sans la liste du serveur, rien ne change (il reste emmene, rien n est dit)', async () => {
+    const arbre = await rendre({
+      existingComposition: PACK_AVEC_KARIM,
+      selectedPlayers: [KARIM, EFFECTIF[1]],
+    });
+
+    expect(texteVisible(arbre)).not.toContain('n’est plus dans l’équipe');
+    await appuyerSur(arbre, 'Suivant');
+    expect(convoquesEnvoyes().sort()).toEqual(['k1', 'p2']);
+  });
+});
