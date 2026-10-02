@@ -60,6 +60,7 @@ import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -677,7 +678,7 @@ function PlanningWeekFullscreen() {
   // consulte (D2 : le planning d une installation de la Ville se LIT).
   // PAS ENCORE, aucun bouton tant qu ils n existent pas (points d accroche nommes) :
   // « Bloquer pour la Ville » et « Bloquer ce jeudi seulement » (C4b) ; « Demander ce
-  // creneau » du dirigeant (C3b) ; « Ecrire aux dirigeants » (D73, C-CLUBS ou C4a).
+  // creneau » du dirigeant (C3b). « Ecrire aux dirigeants » (D73) : BRANCHE par COLL-C4A2.
   const peutAttribuer = isFacilitySource && Boolean(managingCollectiviteId);
   const ouvertureDuJour = toMinutes(facilityMeta?.openingTime) ?? 8 * 60;
   const fermetureDuJour = toMinutes(facilityMeta?.closingTime) ?? 22 * 60;
@@ -1079,8 +1080,16 @@ function PlanningWeekFullscreen() {
           ].filter(Boolean).join(' · ')}
         </Text>
         {/* COLL-C2B (02/10) — design P5-jour, etat 2 : l ORIGINE de la place (contrat C2A §7). */}
-        {/* « Ecrire aux dirigeants » (D73, conversation privee Ville ↔ club) : lot C-CLUBS ou */}
-        {/* C4a — POINT D ACCROCHE, aucun bouton tant que la conversation n existe pas. */}
+        {/* COLL-C4A2 — « Ecrire aux dirigeants » (D73) : la mairie ecrit en prive au club qui */}
+        {/* occupe ce bloc. */}
+        {peutAttribuer ? (
+          <EcrireAuxDirigeants
+            club={readOnlyBlock.club}
+            collectiviteId={managingCollectiviteId}
+            compact
+            testID="planning-ecrire-aux-dirigeants"
+          />
+        ) : null}
         {origineDuBloc ? (
           <View style={[Spaces.marginTop[8], { gap: 2 }]}>
             <Text style={[Fonts.p4, Fonts.neutral300]}>

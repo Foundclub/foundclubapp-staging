@@ -5040,6 +5040,12 @@ export default {
       titreCanal: 'Dans ce canal',
       titrePrivee: 'Dans cette conversation',
     },
+    privee: {
+      // eslint-disable-next-line max-len
+      brouillonFiche: 'Bonjour, pourriez-vous compléter les coordonnées de votre club sur sa fiche FoundClub ? Merci.',
+      demanderFiche: 'Demander au club de compléter sa fiche',
+      ecrire: 'Écrire aux dirigeants',
+    },
     quitte: {
       retour: 'Retour à la messagerie',
       // eslint-disable-next-line max-len

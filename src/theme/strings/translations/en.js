@@ -4706,6 +4706,11 @@ export default {
       titreCanal: 'In this channel',
       titrePrivee: 'In this conversation',
     },
+    privee: {
+      brouillonFiche: 'Hello, could you complete your club’s contact details on its FoundClub page? Thank you.',
+      demanderFiche: 'Ask the club to complete its page',
+      ecrire: 'Write to the club managers',
+    },
     quitte: {
       retour: 'Back to messages',
       texteCanal: 'Your club is no longer attached to this city, so you are no longer in its managers’ channel. Your past messages stay there.',

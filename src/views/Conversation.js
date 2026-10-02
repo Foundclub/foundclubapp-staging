@@ -1137,6 +1137,12 @@ function Conversation({ navigation, route }) {
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
+  // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
+  // avec une phrase prête à envoyer : on la relit, on l'envoie ou on la change.
+  const brouillonDuFil = route?.params?.brouillon;
+  useEffect(() => {
+    if (brouillonDuFil) setComposerText((actuel) => actuel || String(brouillonDuFil));
+  }, [brouillonDuFil]);
   const [pendingMediaDraft, setPendingMediaDraft] = useState(
     /** @type {{ asset: AttachmentAsset } | null} */ (null),
   );

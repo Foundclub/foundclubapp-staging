@@ -324,6 +324,12 @@ function Conversation({ navigation, route }) {
   } = useMessaging(chatId)
 
   const [composerText, setComposerText] = useState('')
+  // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
+  // avec une phrase prête à envoyer : on la relit, on l'envoie ou on la change.
+  const brouillonDuFil = route?.params?.brouillon;
+  useEffect(() => {
+    if (brouillonDuFil) setComposerText((actuel) => actuel || String(brouillonDuFil));
+  }, [brouillonDuFil]);
   const [replyTarget, setReplyTarget] = useState(null)
   const [isSending, setIsSending] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
