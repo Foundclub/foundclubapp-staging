@@ -277,6 +277,10 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.CollectiviteInviteClub]: '/collectivite/:collectiviteId/inviter-un-club',
   [RouteNames.CollectiviteJoin]: '/invitation-ville/:token',
   [RouteNames.CollectiviteJoinRequest]: '/invitation-ville/:token/rattacher',
+  // COLL-C4A (02/10/2026) — les actualites de la Ville, cote mairie : la liste, et le formulaire
+  // (sans identifiant : publier ; avec : modifier).
+  [RouteNames.CollectiviteActualites]: '/collectivite/:collectiviteId/actualites',
+  [RouteNames.CollectiviteActualiteForm]: '/collectivite/:collectiviteId/actualite/:actualiteId?',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

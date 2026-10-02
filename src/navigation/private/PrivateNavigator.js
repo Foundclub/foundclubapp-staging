@@ -1277,6 +1277,27 @@ function PrivateNavigator() {
             headerTitle: t('collectiviteClubs.join.header', 'Rejoindre la Ville'),
           }}
         />
+        {/* COLL-C4A (02/10/2026) — les actualites de la Ville, cote mairie (design HY521H1,
+            page 3) : la liste (« Actualites de la Ville ») et le formulaire publier / modifier.
+            L accueil de la Ville (bloc et action « Publier une actualite ») y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteActualites').default}
+          name={RouteNames.CollectiviteActualites}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectiviteActualites.header', 'Actualités de la Ville'),
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteActualiteForm').default}
+          name={RouteNames.CollectiviteActualiteForm}
+          options={({ route }) => ({
+            ...commonOptions,
+            headerTitle: /** @type {any} */ (route?.params)?.actualiteId
+              ? t('collectiviteActualites.form.headerModifier', 'Modifier l’actualité')
+              : t('collectiviteActualites.form.header', 'Nouvelle actualité'),
+          })}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

@@ -35,10 +35,13 @@ import Loader from '@/components/atoms/loader/Loader';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+// 📰 COLL-C4A (02/10) — « Actualités de la Ville », à la place laissée par COLL-ACCUEIL.
+import ActualitesDeLaVille from '@/views/collectivite/components/ActualitesDeLaVille';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useCollectiviteActualites } from '@/services/collectivite/collectiviteActualiteQueries';
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
@@ -49,15 +52,6 @@ import {
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import { getItem, setItem } from '@/platform/storage';
-
-// 📰 PLACE RÉSERVÉE AU LOT C4a — « Actualités de la Ville » (planche P3v2-accueil : dernier
-// bloc sur téléphone, troisième colonne sur ordinateur ; contenu : « Publier une actualité »,
-// les deux dernières actualités envoyées aux clubs, « Toutes les actualités »).
-// COLL-ACCUEIL (01/10) ne dessine RIEN dedans : les actualités n'existent pas encore côté
-// serveur, et un exemple affiché à une vraie mairie serait faux. Le lot C4a pose ici son
-// composant (props : `{ collectiviteId }`) ; il apparaît alors à sa place, sur les deux formats.
-/** @type {null | ((props: { collectiviteId: string }) => any)} */
-const ActualitesDeLaVille = null;
 
 // Largeur à partir de laquelle l'accueil passe en colonnes (planche « ordinateur », 900 px de
 // contenu utile à côté du menu latéral du site).
@@ -134,6 +128,8 @@ function CollectiviteHome() {
   const installations = useCollectiviteInstallations(collectiviteId);
   const clubs = useCollectiviteClubs(collectiviteId);
   const semaine = useCollectiviteWeek(installations.data, { enabled: Boolean(collectivite) });
+  // COLL-C4A : le 4e premier pas (« Présentez-vous aux clubs ») se coche à la 1re actualité.
+  const actualitesEnLigne = useCollectiviteActualites(collectiviteId);
 
   const refetchPending = pending.refetch;
   // Au retour d'une demande tranchée, le compteur doit déjà être juste.
@@ -867,12 +863,36 @@ function CollectiviteHome() {
 
   // ── PREMIERS PAS (planche P1v3) et MOT D'ACCUEIL (planche P2-gestion, état 6) ─────────────
   const guide = premiersPas({
+    actualitesCount: Array.isArray(actualitesEnLigne.data) ? actualitesEnLigne.data.length : 0,
     clubsVus,
     installationsCount: Array.isArray(installations.data) ? installations.data.length : 0,
   });
+  const nombreActualites = Array.isArray(actualitesEnLigne.data)
+    ? actualitesEnLigne.data.length
+    : 0;
   const nombreClubs = Array.isArray(clubs.data) ? clubs.data.length : 0;
   const nombreInstallations = Array.isArray(installations.data) ? installations.data.length : 0;
   const texteEtape = (/** @type {string} */ cle, /** @type {boolean} */ fait) => {
+    // COLL-C4A (02/10) — « Présentez-vous aux clubs » (planche P1v3, étape 4).
+    if (cle === 'actualite') {
+      if (fait) {
+        return {
+          titre: nombreActualites === 1
+            ? t('collectiviteActualites.premiersPas.faiteUne', '1 actualité publiée')
+            : t('collectiviteActualites.premiersPas.faites', '{{nombre}} actualités publiées', {
+              nombre: nombreActualites,
+            }),
+        };
+      }
+      return {
+        bouton: t('collectiviteActualites.publier', 'Publier une actualité'),
+        dit: t(
+          'collectiviteActualites.premiersPas.dit',
+          'Une première actualité, lue par leurs membres.',
+        ),
+        titre: t('collectiviteActualites.premiersPas.titre', 'Présentez-vous aux clubs'),
+      };
+    }
     if (cle === 'installations') {
       if (fait) {
         return {
@@ -1078,9 +1098,7 @@ function CollectiviteHome() {
     );
   }
 
-  const actualites = ActualitesDeLaVille
-    ? <ActualitesDeLaVille collectiviteId={String(collectiviteId)} />
-    : null;
+  const actualites = <ActualitesDeLaVille collectiviteId={String(collectiviteId)} />;
 
   // Téléphone : une colonne, dans l'ordre de la planche. Ordinateur : les actions en tête,
   // puis trois colonnes — ce qui attend · la vision (semaine, clubs) · les actualités.
@@ -1093,7 +1111,7 @@ function CollectiviteHome() {
           {renderSemaine()}
           {renderClubs()}
         </View>
-        {actualites ? <View style={{ flex: 1 }}>{actualites}</View> : null}
+        <View style={{ flex: 1 }}>{actualites}</View>
       </View>
     </>
   ) : (

@@ -389,4 +389,8 @@ export const RouteNames = /** @type {const} */ ({
   CollectiviteSignupStatus: 'CollectiviteSignupStatus',
   // La file « Demandes de gestionnaire » de la console super-admin (decision « console oui »).
   AdminManagerRequests: 'AdminManagerRequests',
+  // COLL-C4A (02/10/2026) — les actualites de la Ville (design HY521H1, page 3) : la liste de la
+  // mairie (« Actualites de la Ville ») et le formulaire publier / modifier.
+  CollectiviteActualiteForm: 'CollectiviteActualiteForm',
+  CollectiviteActualites: 'CollectiviteActualites',
 });
