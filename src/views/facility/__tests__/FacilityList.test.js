@@ -95,6 +95,17 @@ jest.mock('@/services/facility/facilityQueries', () => ({
 // COLL1C — le mode collectivite lit les installations de LA collectivite.
 /** @type {any} */
 let mockCollectiviteInstallations = { data: undefined, isLoading: false, refetch: jest.fn() };
+// COLL-C2B (02/10) : la liste de la Ville lit la semaine de chaque installation (son planning) et
+// range ses gestes dans une feuille du bas ; deux doublures, sans effet cote club.
+jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
+  useInstallationsWeekSummary: () => ({}),
+}));
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
+  /** @type {any} */ { children, isVisible },
+) {
+  return isVisible ? children : null;
+});
+
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => mockCollectiviteInstallations,
   // TEXTES-COLLECTIVITES : en mode collectivite, la page porte le nom de la collectivite.
@@ -277,7 +288,7 @@ beforeEach(() => {
   mockEmptyStateProps.length = 0;
   mockFacilityContextCalls.length = 0;
 
-  mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
+  mockNavigation = { goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
   mockRoute = { params: { clubId: 'club-1', cmId: null } };
   mockUserData = { club: { documentId: 'club-1' } };
   mockFacilityContext = {
@@ -597,13 +608,13 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () =
 
   it('liste les installations de la Ville, horaires compris — jamais celles du club', () => {
     const textes = textesVisibles(rendre());
-    // TEXTES-COLLECTIVITES (01/10) : « Installations de la Ville » est l en-tete de l ecran ;
-    // la page porte le NOM de la collectivite (le titre ne s ecrit plus deux fois).
-    expect(textes).toContain('Ville de Recette');
-    expect(textes).not.toContain('Installations de la Ville');
+    // COLL-C2B (02/10, design P4) : la PAGE porte « Installations de la Ville », une fois ;
+    // l en-tete de navigation se tait (avant : le nom de la Ville, TEXTES-COLLECTIVITES). La
+    // capacite se dit « 2 equipes a la fois » (temoin FacilityList.COLL-C2B, vrai i18next).
+    expect(textes).toContain('Installations de la Ville');
+    expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
     expect(textes).toContain('Gymnase de la Recette');
     expect(textes.includes('08:00 – 22:00')).toBe(true);
-    expect(textes.includes('2 équipes simultanées')).toBe(true);
     expect(textes).not.toContain('Terrain Honneur');
     // Aucune lecture du club : le contexte club est demande SANS club ni structure.
     expect(mockFacilityContextCalls.every(({ contexte }) => !contexte.clubId && !contexte.cmId))
@@ -616,6 +627,13 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () =
 
   it('« Modifier » ouvre le formulaire de la COLLECTIVITE, avec l identifiant', () => {
     const arbre = rendre();
+    // COLL-C2B (02/10, design P4) : « Modifier » est range dans le menu « Plus d actions ».
+    act(() => {
+      arbre.root.findAll((/** @type {any} */ noeud) => (
+        String(noeud.props?.accessibilityLabel || '').startsWith('Plus d’actions')
+        && typeof noeud.props?.onPress === 'function'
+      ))[0].props.onPress();
+    });
     act(() => {
       pressableAvecTexte(arbre, 'Modifier').props.onPress();
     });
@@ -637,6 +655,13 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () =
 
   it('« Voir le planning » ouvre le planning de CETTE installation (lot 1b)', () => {
     const arbre = rendre();
+    // COLL-C2B (02/10, design P4) : « Voir le planning » est range dans « Plus d actions ».
+    act(() => {
+      arbre.root.findAll((/** @type {any} */ noeud) => (
+        String(noeud.props?.accessibilityLabel || '').startsWith('Plus d’actions')
+        && typeof noeud.props?.onPress === 'function'
+      ))[0].props.onPress();
+    });
     act(() => {
       pressableAvecTexte(arbre, 'Voir le planning').props.onPress();
     });

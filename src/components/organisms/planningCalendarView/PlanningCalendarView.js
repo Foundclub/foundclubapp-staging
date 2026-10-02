@@ -139,7 +139,10 @@ function PlanningCalendarDay({
   const hasPendingEvent = dayEvents.some((event) => isPlanningPendingParticipation(event));
   const uniqueColors = [...new Set(
     dayEvents
-      .map((event) => resolveFacilityPlanningColor(event?.facility) || colors.primary500)
+      // COLL-C2B (02/10) : sur le planning d une installation, la couleur du CLUB (displayColor,
+      // COLL1D) passe avant celle, commune, de l installation — comme dans la grille.
+      .map((event) => event?.displayColor || resolveFacilityPlanningColor(event?.facility)
+        || colors.primary500)
       .filter(Boolean),
   )].slice(0, 3);
   const extraCount = Math.max(0, dayEvents.length - 3);
@@ -274,7 +277,9 @@ function PlanningCalendarView({
   );
 
   const renderPlanningListCard = useCallback(({ item }) => {
-    const accentColor = resolveFacilityPlanningColor(item?.facility) || Colors.primary500;
+    const accentColor = item?.displayColor
+      || resolveFacilityPlanningColor(item?.facility)
+      || Colors.primary500;
     const typeLabel = getPlanningTypeLabel(item);
     const facilityName = item?.facility?.name || null;
     const isPendingParticipation = isPlanningPendingParticipation(item);
