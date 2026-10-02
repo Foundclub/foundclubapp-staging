@@ -290,9 +290,14 @@ beforeEach(() => {
   /** @type {any} */ (updateMe).mockResolvedValue({ documentId: 'user-1' });
 });
 
-describe('UserName — le dirigeant peut finir son inscription (D66)', () => {
-  it('un dirigeant qui remplit prenom et nom peut appuyer sur Continuer', async () => {
-    const arbre = rendre('Dirigeant');
+// AGE-OBLIGATOIRE (02/10, decision d'Adel « 3- C ») — le formulaire « nom seul »
+// n'a plus qu'un seul role : le super-admin. Les temoins D66 ci-dessous le
+// montent donc lui, et non plus le dirigeant, qui donne desormais sa date de
+// naissance comme les autres. Le defaut D66 (bouton mort sur des champs NON
+// rendus) reste garde : c'est le schema « nom seul » qu'il protege.
+describe('UserName — le formulaire « nom seul » reste vivant (D66, porte par le super-admin)', () => {
+  it('un super-admin qui remplit prenom et nom peut appuyer sur Continuer', async () => {
+    const arbre = rendre('SuperAdmin');
 
     await saisir(arbre, 'Prénom', 'Adel');
     await saisir(arbre, 'Nom', 'Ferchichi');
@@ -307,7 +312,7 @@ describe('UserName — le dirigeant peut finir son inscription (D66)', () => {
   });
 
   it('le bouton reste vivant apres un premier appui : plus de cul-de-sac', async () => {
-    const arbre = rendre('Dirigeant');
+    const arbre = rendre('SuperAdmin');
 
     await saisir(arbre, 'Prénom', 'Adel');
     await saisir(arbre, 'Nom', 'Ferchichi');
@@ -326,12 +331,53 @@ describe('UserName — le dirigeant peut finir son inscription (D66)', () => {
     expect(updateMe).toHaveBeenCalledWith({ firstname: 'Adel', lastname: 'Ferchichi' });
   });
 
-  it('le dirigeant ne voit AUCUN champ de date de naissance', () => {
-    const arbre = rendre('Dirigeant');
+  it('le super-admin ne voit AUCUN champ de date de naissance', () => {
+    const arbre = rendre('SuperAdmin');
 
     expect(champ(arbre, 'JJ')).toBeUndefined();
     expect(champ(arbre, 'MM')).toBeUndefined();
     expect(champ(arbre, 'AAAA')).toBeUndefined();
+  });
+});
+
+// AGE-OBLIGATOIRE ① — le dirigeant donne sa date de naissance, comme les
+// autres roles. Avant ce lot, « le dirigeant ne voit AUCUN champ de date »
+// etait fige ici : c'est la regle que la decision d'Adel du 02/10 retourne.
+describe('UserName — le dirigeant donne sa date de naissance (AGE-OBLIGATOIRE ①)', () => {
+  it('le dirigeant voit les trois champs de date', () => {
+    const arbre = rendre('Dirigeant');
+
+    expect(champ(arbre, 'JJ')).toBeDefined();
+    expect(champ(arbre, 'MM')).toBeDefined();
+    expect(champ(arbre, 'AAAA')).toBeDefined();
+  });
+
+  it('sans date, rien ne part', async () => {
+    const arbre = rendre('Dirigeant');
+
+    await saisir(arbre, 'Prénom', 'Adel');
+    await saisir(arbre, 'Nom', 'Ferchichi');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(updateMe).not.toHaveBeenCalled();
+  });
+
+  it('avec sa date, il avance, date comprise', async () => {
+    const arbre = rendre('Dirigeant');
+
+    await saisir(arbre, 'Prénom', 'Adel');
+    await saisir(arbre, 'Nom', 'Ferchichi');
+    await saisir(arbre, 'JJ', '02');
+    await saisir(arbre, 'MM', '04');
+    await saisir(arbre, 'AAAA', '1980');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(updateMe).toHaveBeenCalledWith({
+      birthdate: '1980-04-02',
+      firstname: 'Adel',
+      lastname: 'Ferchichi',
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserAvatar');
   });
 });
 

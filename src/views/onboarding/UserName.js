@@ -33,10 +33,10 @@ import {
 // D15 - ECRAN FUSIONNE « Qui es-tu ? ».
 // Prenom, nom et date de naissance tenaient sur DEUX etapes (UserName puis
 // l'ancien ecran `UserBirthdate`, supprime par D22 une fois prouve qu'aucun
-// parcours ne l'atteignait plus). Ils tiennent desormais sur celle-ci. Le
-// dirigeant, lui, n'a
-// jamais eu d'etape date de naissance : il ne voit que prenom + nom, et c'est sa
-// seule etape obligatoire.
+// parcours ne l'atteignait plus). Ils tiennent desormais sur celle-ci. Seul le
+// super-admin ne voit que prenom + nom. Le dirigeant voit les trois champs
+// depuis AGE-OBLIGATOIRE (02/10/2026, decision d'Adel « 3- C ») : c'est
+// toujours sa seule etape obligatoire, mais elle porte maintenant sa date.
 //
 // Qui a droit aux trois champs est decide par `onboardingCollectsBirthdate`,
 // dans authUseCases.js, a cote de la machine a etapes qui insere la declaration
@@ -237,7 +237,7 @@ function UserName({ navigation }) {
     const parsedDate = userData?.birthdate ? new Date(userData.birthdate) : null;
     const hasParsedDate = parsedDate && !Number.isNaN(parsedDate.getTime());
 
-    // Le `collectsBirthdate` de la condition n'est PAS decoratif : un dirigeant
+    // Le `collectsBirthdate` de la condition n'est PAS decoratif : un super-admin
     // qui porte deja une date en base (changement de role, compte migre) se
     // verrait sinon reinjecter les trois clefs ici, et le defaut D66
     // reviendrait par ce chemin-la.

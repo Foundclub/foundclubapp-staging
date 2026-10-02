@@ -567,10 +567,15 @@ export const activateSessionForNotificationPayload = (payload) => {
 
 /**
  * Roles dont le parcours d'inscription ne demande PAS la date de naissance.
- * Le dirigeant n'a qu'une seule etape obligatoire (nom + prenom) ; le
- * superadmin n'est pas un compte de terrain.
+ * Le superadmin n'est pas un compte de terrain.
+ *
+ * AGE-OBLIGATOIRE (02/10/2026, decision d'Adel « 3- C ») - le dirigeant en
+ * est SORTI : il donne sa date comme les autres roles. Mesure du 02/10 en
+ * prod : 15 dirigeants sans date, et aucun ecran pour la leur demander. Un age
+ * inconnu ne declenche aucune regle « mineur » (`docs/DECISIONS_MINEURS.md`,
+ * ligne 10) : la question se pose donc a l'inscription, pas apres.
  */
-const ROLES_SANS_DATE_DE_NAISSANCE = ['president', 'superAdmin'];
+const ROLES_SANS_DATE_DE_NAISSANCE = ['superAdmin'];
 
 /**
  * L'ecran « Qui es-tu ? » demande-t-il la date de naissance a ce role ?
@@ -721,13 +726,22 @@ export const getOnboardingViews = ({
       case 'president':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
+          // AGE-OBLIGATOIRE - le dirigeant donne sa date depuis le 02/10 : la
+          // declaration parentale s'insere chez lui comme chez l'entraineur.
+          ...(needsParentalDeclaration
+            ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
+            : []),
           // D16 - « Ville ». Elle alimente les suggestions de club
           // (« PRES DE CHEZ TOI ») : elle doit donc arriver AVANT l'etape
           // club, sinon son ajout n'a aucun interet. `Welcome` n'est plus
           // une etape comptee.
-          { canShow: true, index: 2, route: RouteNames.UserAddress },
-          { canShow: true, index: 3, route: RouteNames.UserAvatar },
-          { canShow: shouldShowAffiliationGuide, index: 4, route: RouteNames.UserAffiliationGuide },
+          { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserAddress },
+          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserAvatar },
+          {
+            canShow: shouldShowAffiliationGuide,
+            index: needsParentalDeclaration ? 5 : 4,
+            route: RouteNames.UserAffiliationGuide,
+          },
         ];
       case 'superAdmin':
         return [

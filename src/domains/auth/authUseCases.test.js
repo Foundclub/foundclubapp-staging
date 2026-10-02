@@ -515,15 +515,43 @@ describe('authUseCases', () => {
       expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
     });
 
-    // ... mais le dirigeant, lui, n'a jamais de date de naissance a saisir :
-    // son ecran doit bien se sauter des que nom et prenom sont connus.
-    it('hides the merged identity step for a president once the name is known', () => {
+    // AGE-OBLIGATOIRE ① (02/10, decision d'Adel « 3- C ») - ce test figeait
+    // l'inverse : « le dirigeant n'a jamais de date de naissance a saisir, son
+    // ecran se saute des que nom et prenom sont connus ». C'est exactement la
+    // regle que la decision retourne : 15 dirigeants en prod n'avaient pas de
+    // date, et rien dans l'app ne pouvait la leur demander.
+    it('AGE-OBLIGATOIRE ① garde l ecran fusionne visible pour un dirigeant qui n a que son nom', () => {
       const result = getOnboardingViews({
         firstname: 'John',
         lastname: 'Doe',
         role: { name: USER_ROLES.president },
       });
 
+      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
+    });
+
+    it('AGE-OBLIGATOIRE ① saute l ecran du dirigeant une fois nom, prenom ET date connus', () => {
+      const result = getOnboardingViews({
+        birthdate: '1980-04-02',
+        firstname: 'John',
+        lastname: 'Doe',
+        role: { name: USER_ROLES.president },
+      });
+
+      expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
+    });
+
+    it('AGE-OBLIGATOIRE ① le dirigeant donne sa date ; le super-admin reste dispense', () => {
+      expect(onboardingCollectsBirthdate({ name: USER_ROLES.president })).toBe(true);
+      expect(onboardingCollectsBirthdate({ name: USER_ROLES.superAdmin })).toBe(false);
+
+      // Le super-admin n'est pas un compte de terrain : son ecran se saute
+      // toujours des que nom et prenom sont connus, date ou pas.
+      const result = getOnboardingViews({
+        firstname: 'Adel',
+        lastname: 'F',
+        role: { name: USER_ROLES.superAdmin },
+      });
       expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
     });
 
@@ -729,10 +757,11 @@ describe('authUseCases', () => {
             RouteNames.UserAvatar,
             RouteNames.UserAffiliationGuide,
           ],
-          // Le dirigeant n'a pas d'etape date de naissance : pas de
-          // declaration parentale possible, le total ne bouge pas.
+          // AGE-OBLIGATOIRE (02/10, decision d'Adel « 3- C ») - le dirigeant
+          // donne sa date de naissance comme les autres roles : sous 15 ans,
+          // la declaration parentale s'insere donc aussi dans SON parcours.
           totalViews: 4,
-          totalViewsMineur: 4,
+          totalViewsMineur: 5,
         },
         {
           roleName: USER_ROLES.superAdmin,
