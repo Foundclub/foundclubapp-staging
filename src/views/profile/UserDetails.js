@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { differenceInYears, format } from 'date-fns';
 import i18next from 'i18next';
-import { useCallback, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -30,6 +32,13 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import CoachFeedbackList, {
+  CoachFeedbackViewBody,
+} from '@/views/profile/coachFeedback/CoachFeedbackList';
+import {
+  newFeedbackKeys,
+  seenFeedbackKeys,
+} from '@/views/profile/coachFeedback/coachFeedbackModel';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 import MyStatsPage from '@/views/profile/stats/MyStatsPage';
@@ -38,6 +47,10 @@ import ProfileStatsForViewer from '@/views/profile/stats/ProfileStatsForViewer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetUserById } from '@/services/auth/authQueries';
+import {
+  useGetCoachFeedbackFollow,
+  useUpdateCoachFeedbackFollow,
+} from '@/services/coachFeedback/coachFeedbackQueries';
 import { useUserCurrentLicense } from '@/services/license/licenseQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
@@ -335,100 +348,6 @@ function InfoItem({
 }
 
 /**
- * A19 — LES RETOURS DU COACH, un par carte : le match, la date, la note sur 10
- * (ou « Commentaire » quand il n'y a pas de note) et le commentaire.
- *
- * Sorti TEL QUEL du bloc proprietaire de cette page, pour servir aussi la vue
- * « Suivi › Retours du coach » (`view: 'coachFeedback'`) : un seul dessin des
- * retours, pas deux qui divergent.
- * @param {object} props
- * @param {any[]} props.items - Les retours, dans l'ordre rendu par le serveur.
- * @param {boolean} [props.showFullComments] - Vue dediee : rien n'est coupe. Le
- *   bloc resume coupe a 3 lignes ; la vue dont c'est la seule raison d'etre ne
- *   doit pas cacher la fin d'un long retour.
- * @returns {import('react').ReactElement}
- */
-function CoachFeedbackList({ items, showFullComments = false }) {
-  const commentLines = showFullComments ? undefined : 3;
-  const { t } = useTranslation();
-  const {
-    Alignments,
-    ApplicationStyle,
-    Colors,
-    Fonts,
-    Spaces,
-  } = useTheme();
-
-  return (
-    <View style={[Spaces.gap[12]]}>
-      {items.length ? items.map((feedback, index) => {
-        const feedbackDate = feedback?.submittedAt ? parseDate(feedback.submittedAt) : null;
-        return (
-          <View
-            key={`${feedback?.sourceType || 'feedback'}:${feedback?.sourceDocumentId || index}:${feedback?.submittedAt || 'no-date'}`}
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[12],
-              Spaces.gap[8],
-              {
-                backgroundColor: `${Colors.primary700}BF`,
-                borderColor: `${Colors.primary500}52`,
-              },
-            ]}
-          >
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {feedback?.matchLabel || feedback?.teamName || t(
-                    'userDetails.feedback.matchFallback',
-                    'Match',
-                  )}
-                </Text>
-                <Text style={[Fonts.p4, Fonts.neutral200]}>
-                  {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : t(
-                    'userDetails.feedback.dateTbc',
-                    'Date à confirmer',
-                  )}
-                </Text>
-              </View>
-              <View
-                style={[
-                  Alignments.selfStart,
-                  Spaces.paddingHorizontal[10],
-                  Spaces.paddingVertical[6],
-                  ApplicationStyle.borderRadius16,
-                  { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}40`, borderWidth: 1 },
-                ]}
-              >
-                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                  {feedback?.rating != null ? `${feedback.rating}/10` : t(
-                    'userDetails.feedback.comment',
-                    'Commentaire',
-                  )}
-                </Text>
-              </View>
-            </View>
-            <Text numberOfLines={commentLines} style={[Fonts.p3, Fonts.neutral100]}>
-              {feedback?.comment || t(
-                'userDetails.feedback.noComment',
-                'Pas de commentaire détaillé pour ce retour.',
-              )}
-            </Text>
-          </View>
-        );
-      }) : (
-        <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t(
-            'userDetails.feedback.empty',
-            'Aucun retour individuel du coach pour le moment.',
-          )}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-/**
  * User profile view component for displaying profile details.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User profile screen
@@ -624,6 +543,39 @@ function UserDetails({ navigation, route }) {
   }, [personalStats?.coachComments, personalStats?.recentCoachFeedback]);
   const recentCoachFeedback = useMemo(() => coachFeedback.slice(0, 5), [coachFeedback]);
 
+  // ST-RETOURS (02/10, planche 19) — « NOUVEAU » : ce que le LECTEUR a deja lu, range sur
+  // SON compte (moi, ou le parent pour son enfant). Fige a l ouverture de la vue : la pastille
+  // reste le temps de la lecture, puis tout ce qui s y affiche est marque lu.
+  const {
+    data: coachFeedbackFollow,
+    isSuccess: isCoachFeedbackFollowLoaded,
+  } = useGetCoachFeedbackFollow({
+    enabled: Boolean(targetUserId) && (isCoachFeedbackView || isParentOfMinorViewer),
+  });
+  const { mutate: markCoachFeedbackSeen } = useUpdateCoachFeedbackFollow();
+  const [openedFeedbackNewKeys, setOpenedFeedbackNewKeys] = useState(
+    /** @type {Set<string> | null} */ (null),
+  );
+  useEffect(() => {
+    if (!isCoachFeedbackView || openedFeedbackNewKeys) return;
+    if (!isCoachFeedbackFollowLoaded || !personalStats) return;
+    const seen = seenFeedbackKeys(coachFeedbackFollow, targetUserId);
+    const keys = newFeedbackKeys(coachFeedback, seen);
+    setOpenedFeedbackNewKeys(keys);
+    if (keys.size) {
+      markCoachFeedbackSeen({ playerDocumentId: targetUserId, seenKeys: Array.from(keys) });
+    }
+  }, [
+    coachFeedback,
+    coachFeedbackFollow,
+    isCoachFeedbackFollowLoaded,
+    isCoachFeedbackView,
+    markCoachFeedbackSeen,
+    openedFeedbackNewKeys,
+    personalStats,
+    targetUserId,
+  ]);
+
   const coachedTeams = useMemo(() => {
     const teams = Array.isArray(user?.trainedTeams) ? user.trainedTeams : [];
     const seen = new Set();
@@ -802,6 +754,24 @@ function UserDetails({ navigation, route }) {
     });
   }, [currentLicenseAssignment?.documentId, currentLicenseAssignment?.id, navigation]);
 
+  // ST-RETOURS (planche 19) — « Ouvrir le match » mene a la fiche, sur le retour du coach
+  // (meme destination que la notification « Retour du coach disponible »).
+  const handleOpenFeedbackMatch = useCallback((item) => {
+    const sourceId = item?.sourceDocumentId;
+    if (!sourceId) return;
+    if (item?.sourceType === 'league_match') {
+      navigation.navigate(RouteNames.LeagueMatchDetails, {
+        focusSection: 'coachFeedback',
+        matchId: sourceId,
+      });
+      return;
+    }
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: sourceId, focusSection: 'coachFeedback' },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
   const handleOpenClub = () => {
     if (!user?.club?.documentId) return;
     navigation.navigate(RouteNames.ClubStack, {
@@ -895,9 +865,14 @@ function UserDetails({ navigation, route }) {
             ]}
           />
           {/* PARENT-RETOURS — les retours de QUI : un parent de deux enfants
-              doit le lire sans deviner. */}
+              doit le lire sans deviner. ST-RETOURS (planche 22, etat 3) :
+              « pour Hugo Lemaire ». */}
           {!isSelfProfile ? (
-            <Text style={[Fonts.p2Bold, Fonts.neutral200]}>{displayName}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
+              {t('stRetours.parent.forChild')}
+              {' '}
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{displayName}</Text>
+            </Text>
           ) : null}
         </View>
 
@@ -912,13 +887,20 @@ function UserDetails({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-          <WithDataWrapper
-            error={personalStatsError ? getErrorMessage(personalStatsError) : undefined}
+          {/* ST-RETOURS (planche 19) — les etats dessines : chargement en squelette, panne
+              dite avec « Reessayer », vide qui dit d ou viennent les retours, puis la liste et
+              qui peut la lire. */}
+          <CoachFeedbackViewBody
+            childFirstname={user?.firstname || displayName}
+            hasError={Boolean(personalStatsError)}
+            hasParentLink={Boolean(currentUser?.parentAccount?.documentId)}
             isLoading={isPersonalStatsLoading}
+            items={coachFeedback}
+            newKeys={openedFeedbackNewKeys || undefined}
+            onOpenMatch={handleOpenFeedbackMatch}
             onRetry={() => refetchPersonalStats?.()}
-          >
-            <CoachFeedbackList items={coachFeedback} showFullComments />
-          </WithDataWrapper>
+            viewer={isSelfProfile ? 'self' : 'parent'}
+          />
         </ScrollView>
       </ScreenContainer>
     );

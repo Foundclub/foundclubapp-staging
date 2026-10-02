@@ -47,6 +47,13 @@ jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useUnblockUser: () => ({ isPending: false, mutate: jest.fn() }),
 }));
 
+// ST-RETOURS (02/10) — le profil lit « ce que j ai deja lu » des retours du coach. Le service
+// importe le client HTTP, qui refuse de se charger sans .env : il est double ici comme les autres.
+jest.mock('@/services/coachFeedback/coachFeedbackQueries', () => ({
+  useGetCoachFeedbackFollow: () => ({ data: {}, isSuccess: true }),
+  useUpdateCoachFeedbackFollow: () => ({ mutate: jest.fn() }),
+}));
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
