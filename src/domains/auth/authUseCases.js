@@ -591,6 +591,10 @@ const ROLES_SANS_DATE_DE_NAISSANCE = ['superAdmin'];
 export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSANCE
   .includes(getUserRoleKey(role?.name || role?.type));
 
+// Les deux seules etapes qui decident de l'age : celles du point de controle d'entree.
+/** @type {string[]} */
+const ENTRY_CHECKPOINT_ROUTES = [RouteNames.UserName, RouteNames.UserParentalDeclaration];
+
 /**
  * AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire de
  * l'onboarding », `docs/DECISIONS_MINEURS.md` ligne 10) - LE POINT DE CONTROLE
@@ -627,9 +631,6 @@ export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSAN
  * @returns {{isEntryCheckpoint?: boolean, totalViews: number,
  *   views: {index: number, route: string, canShow: boolean}[]}} Le parcours.
  */
-// Les deux seules etapes qui decident de l'age : celles du point de controle d'entree.
-const ENTRY_CHECKPOINT_ROUTES = [RouteNames.UserName, RouteNames.UserParentalDeclaration];
-
 const getEntryCheckpointViews = ({ birthdate, parentalDeclarationAccepted, role }) => {
   const roleKey = getUserRoleKey(role?.name || USER_ROLES.new);
   if (roleKey === 'new' || ROLES_SANS_DATE_DE_NAISSANCE.includes(roleKey)) {
