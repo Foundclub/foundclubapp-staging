@@ -1287,3 +1287,49 @@ describe('ST-MATCH écran 5 — la fenêtre « Stats de fin de match » est reti
     expect(textes.filter((texte) => texte === 'Plus tard')).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 🔒 T9 (02/10, capture T9_P1_4c) — « MOYENNE B » SUR LA PAGE DU MATCH, MÊME FACE À UN
+// SERVEUR QUI NE LA CACHE PAS
+// ---------------------------------------------------------------------------
+//
+// La tournée T9 a vu Hugo, simple joueur, lire « Ressenti joueurs 7/10 · 1 note
+// collective » : la recette tournait alors sur un serveur SANS la règle (77852bff), et
+// la prod n'a pas ST-MATCH. Avec UNE réponse, la moyenne EST la note d'un coéquipier :
+// l'app ne l'affiche pas sous 3 réponses, quoi que le serveur envoie.
+describe('T9 · moyenne B sur la page du match, serveur en retard', () => {
+  const SCORE_SAISI = {
+    available: true,
+    locked: false,
+    scoreAgainst: 1,
+    scoreFor: 3,
+    source: 'manual',
+    waitingOfficial: false,
+  };
+  const vuParHugo = (/** @type {any} */ moyenne) => monter({
+    auth: authPour(JOUEUR),
+    matchStats: statsAvec({
+      permissions: { canManage: false, canRespond: true, canView: true },
+      playerCollectiveRating: moyenne,
+      report: { finalizedAt: '2020-01-01T12:39:00.000Z', status: 'final' },
+      score: SCORE_SAISI,
+    }),
+  });
+
+  test.each([
+    ['1 réponse', { average: 7, count: 1 }],
+    ['2 réponses', { average: 6.5, count: 2 }],
+  ])('🔒 %s, moyenne envoyée SANS « hidden » : le joueur ne la lit pas', (_cas, moyenne) => {
+    const textes = textesVisibles(vuParHugo(moyenne));
+
+    expect(textes).toEqual(expect.arrayContaining(['Vos notes : dès 3 réponses', '—']));
+    expect(textes.some((texte) => texte.includes(`${moyenne.average}/10`))).toBe(false);
+    expect(textes.some((texte) => /note collective/.test(texte))).toBe(false);
+  });
+
+  test('à partir de 3 réponses, la moyenne se lit', () => {
+    const textes = textesVisibles(vuParHugo({ average: 7.3, count: 3 }));
+
+    expect(textes).toEqual(expect.arrayContaining(['7.3/10', 'Vos notes · 3 réponses']));
+  });
+});

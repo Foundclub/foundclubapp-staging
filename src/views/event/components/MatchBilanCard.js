@@ -47,6 +47,9 @@ const lireLeMoment = (iso) => {
  * @typedef {{ average: number | null, count: number, hidden?: boolean }} MoyenneJoueurs
  */
 
+/** Le seuil de « moyenne B », le même que `PLAYER_RATING_MIN_COUNT` côté serveur. */
+const MOYENNE_MIN_REPONSES = 3;
+
 /**
  * La carte du bilan, côté joueur ou dirigeant.
  * @param {object} props - Les propriétés.
@@ -222,8 +225,12 @@ function MatchBilanCard({
       valeur: `${noteEquipe}/10`,
     });
   }
+  // 🔒 « moyenne B » (Adel, 02/10) : sous 3 réponses, la moyenne EST la note d'un coéquipier.
+  // Le serveur la cache (`hidden`) ; l'app tient AUSSI le seuil, parce qu'un serveur plus
+  // ancien la rend encore (recette du 02/10 au matin, capture T9_P1_4c ; la prod sans ST-MATCH).
   const moyenneVisible = moyenneJoueurs?.average !== null && moyenneJoueurs?.average !== undefined
-    && !moyenneJoueurs?.hidden;
+    && !moyenneJoueurs?.hidden
+    && Number(moyenneJoueurs?.count) >= MOYENNE_MIN_REPONSES;
   tuiles.push({
     cle: 'joueurs',
     libelle: moyenneVisible
