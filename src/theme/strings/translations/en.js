@@ -17804,6 +17804,13 @@ export default {
     toWatch: 'To watch · {{count}}',
     trainings: 'Trainings',
   },
+  profileStats: {
+    coachBadge: 'Coach',
+    coachLine: 'Visible to you, their coach, for the {{teams}} team only.',
+    inYourTeam: 'In your team · {{teams}}',
+    matchStats: 'Match stats',
+    previewLine: 'Your match stats are only visible to you and your coach.',
+  },
   myStats: {
     assists_one: 'Assist',
     assists_other: 'Assists',

@@ -18763,6 +18763,13 @@ export default {
     toWatch: 'À surveiller · {{count}}',
     trainings: 'Entraînements',
   },
+  profileStats: {
+    coachBadge: 'Entraîneur',
+    coachLine: 'Visible par toi, son entraîneur, pour l’équipe {{teams}} seulement.',
+    inYourTeam: 'Dans ton équipe · {{teams}}',
+    matchStats: 'Stats de match',
+    previewLine: 'Tes stats de match ne sont visibles que par toi et ton entraîneur.',
+  },
   myStats: {
     assists_one: 'Passe déc.',
     assists_other: 'Passes déc.',
