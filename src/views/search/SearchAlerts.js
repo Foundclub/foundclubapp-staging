@@ -303,11 +303,7 @@ function SearchAlerts({ navigation }) {
             const isProfileAlertUnavailable = item.type === 'mercato' && !canUseProfileAlerts;
             // FINITIONS7 — tournee 8 : interrupteur, crayon et corbeille etaient muets. Ils
             // nomment l alerte qu ils touchent (son nom vient du serveur : sans echappement).
-            const nommer = (/** @type {string} */ cle, /** @type {string} */ repli) => t(
-              cle,
-              repli,
-              { label: item.label, ...SANS_ECHAPPEMENT },
-            );
+            const nomOpts = { label: item.label, ...SANS_ECHAPPEMENT };
 
             return (
             <TouchableOpacity
@@ -345,9 +341,10 @@ function SearchAlerts({ navigation }) {
                       ) : null}
                     </View>
                 <Switch
-                  accessibilityLabel={nommer(
+                  accessibilityLabel={t(
                     'searchAlerts.item.toggleLabel',
                     'Alerte « {{label}} » active',
+                    nomOpts,
                   )}
                   disabled={isProfileAlertUnavailable}
                   onValueChange={() => handleToggleActive(item)}
@@ -366,9 +363,10 @@ function SearchAlerts({ navigation }) {
                     />
                 {item.type === 'recruitment' ? null : (
                   <Button
-                    accessibilityLabel={nommer(
+                    accessibilityLabel={t(
                       'searchAlerts.item.editLabel',
                       'Modifier l’alerte « {{label}} »',
+                      nomOpts,
                     )}
                     disabled={isProfileAlertUnavailable}
                     icon="edit"
@@ -377,9 +375,10 @@ function SearchAlerts({ navigation }) {
                   />
                 )}
                 <Button
-                  accessibilityLabel={nommer(
+                  accessibilityLabel={t(
                     'searchAlerts.item.deleteLabel',
                     'Supprimer l’alerte « {{label}} »',
+                    nomOpts,
                   )}
                   icon="trash"
                   onPress={() => handleDeletePress(item.documentId)}
