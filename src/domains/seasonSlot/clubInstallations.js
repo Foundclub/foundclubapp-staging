@@ -88,11 +88,9 @@ export const creneauDeLaSeance = (slots, { start = null, teamId = null } = {}) =
   }) || null;
 };
 
-// POINT D ACCROCHE NOMMÉ (lot C3B) : l écran où le club DEMANDE un créneau à la Ville. Tant qu il
-// n est pas récolté, la route n existe pas : « Demander » ouvre le planning de l installation,
-// où l on voit les heures libres. Le jour où `RouteNames.ClubDemandeCreneau` existe, ce seul
-// endroit bascule, avec { clubId, facilityId, facilityName }.
-export const ROUTE_DEMANDE_A_LA_VILLE = 'ClubDemandeCreneau';
+// « DEMANDER » À LA VILLE : l écran du lot C3B (`ClubSlotRequest`, récolté le 02/10), avec
+// l installation déjà choisie (ses paramètres : clubId, facilityId, teamId, date, heures).
+export const ROUTE_DEMANDE_A_LA_VILLE = RouteNames.ClubSlotRequest;
 
 /**
  * « Demander un créneau » / « Demander une heure » à la Ville.
@@ -103,18 +101,5 @@ export const ROUTE_DEMANDE_A_LA_VILLE = 'ClubDemandeCreneau';
 export const ouvrirDemandeALaVille = (navigation, { clubId = null, facility }) => {
   const facilityId = idOf(facility);
   if (!facilityId) return;
-  const routes = /** @type {Record<string, string>} */ (RouteNames);
-  if (routes[ROUTE_DEMANDE_A_LA_VILLE]) {
-    navigation.navigate(routes[ROUTE_DEMANDE_A_LA_VILLE], {
-      clubId,
-      facilityId,
-      facilityName: facility?.name || null,
-    });
-    return;
-  }
-  navigation.navigate(RouteNames.PlanningWeekFullscreen, {
-    contextDetailLabel: facility?.name || null,
-    facilityId,
-    sourceType: 'facility',
-  });
+  navigation.navigate(ROUTE_DEMANDE_A_LA_VILLE, { clubId, facilityId });
 };

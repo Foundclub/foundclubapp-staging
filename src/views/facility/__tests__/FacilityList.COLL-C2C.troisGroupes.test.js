@@ -14,7 +14,7 @@ import FacilityList from '../FacilityList';
 //   - « Prêtées par la Ville » et la phrase répétée sur chaque carte disparaissent ; la Ville est
 //     nommée UNE fois ;
 //   - un groupe 2 vide se cache ; un groupe 1 vide garde sa ligne et « Ajouter » ;
-//   - « Demander » passe par le point d accroche nommé (écran du lot C3B ; d ici là, le planning) ;
+//   - « Demander » ouvre l écran du lot C3B (`ClubSlotRequest`), l installation déjà choisie ;
 //   - sans installation de la Ville, l écran d avant ; le mode Ville (C2B) ne bouge pas.
 
 /** @type {any} */
@@ -231,16 +231,17 @@ describe('COLL-C2C — Tes installations en 3 groupes', () => {
     }));
   });
 
-  it('« Demander » passe par le point d accroche nommé (écran du lot C3B ; d ici là, le planning)', () => {
+  // COLL-C2C (02/10) — l écran de C3B est récolté (staging 34d22001) : le point d accroche y mène.
+  it('« Demander » ouvre l écran du lot C3B, l installation déjà choisie', () => {
     const arbre = rendre();
     appuyer(arbre, 'Demander une heure');
     appuyer(arbre, 'Demander un créneau');
-    expect(mockNavigate.mock.calls.map(([route, params]) => `${route}:${params.facilityId}`)).toEqual([
-      'PlanningWeekFullscreen:gym-tilleuls',
-      'PlanningWeekFullscreen:dojo',
+    expect(mockNavigate.mock.calls).toEqual([
+      ['ClubSlotRequest', { clubId: 'as-montrivage', facilityId: 'gym-tilleuls' }],
+      ['ClubSlotRequest', { clubId: 'as-montrivage', facilityId: 'dojo' }],
     ]);
     const { ROUTE_DEMANDE_A_LA_VILLE } = jest.requireActual('@/domains/seasonSlot/clubInstallations');
-    expect(ROUTE_DEMANDE_A_LA_VILLE).toBe('ClubDemandeCreneau');
+    expect(ROUTE_DEMANDE_A_LA_VILLE).toBe('ClubSlotRequest');
   });
 
   it('sans installation de la Ville : l écran d avant, sans groupes', () => {
