@@ -117,15 +117,19 @@ describe('peutVoirLesAvisDEntrainement', () => {
 // ---------------------------------------------------------------------------
 
 describe('TrainingReviewsCard', () => {
+  // ST-RETOURS (02/10, planche 21 du design valide) : la carte a change de dessin. Chaque
+  // temoin garde son intention ; seules les CLEFS ont change (`stRetours.card.*`), et
+  // l attente « Il en faut 2 » est retiree par le design (le seuil vaut 1 depuis le 10/09).
+  // Les textes rendus en clair sont temoignes dans TrainingReviewsCard.ST-RETOURS.test.js.
   test('AVIS-APP/3 — sans avis, le message « vide » sort et aucune note ne s affiche', () => {
     const texte = texteAffiche({ average: null, count: 0, thresholdReached: false });
 
-    expect(texte).toContain('eventDetails.trainingReview.empty');
-    expect(texte).not.toContain('eventDetails.trainingReview.outOfTen');
-    expect(texte).not.toContain('eventDetails.trainingReview.average');
+    expect(texte).toContain('stRetours.card.empty');
+    expect(texte).not.toContain('/10');
+    expect(texte).not.toContain('stRetours.card.averageHint');
   });
 
-  test('AVIS-APP/4 — avec UN avis, la carte attend et ne montre NI note NI moyenne', () => {
+  test('AVIS-APP/4 — ST-RETOURS : des avis sans la liste disent leur nombre, sans attente', () => {
     const texte = texteAffiche({
       average: null,
       count: 1,
@@ -133,16 +137,14 @@ describe('TrainingReviewsCard', () => {
       thresholdReached: false,
     });
 
-    // La forme SINGULIERE, et les deux nombres qui atteignent vraiment l ecran.
-    expect(texte).toContain('eventDetails.trainingReview.waiting_one');
+    // Plus de « Il en faut 2 » (planche 21, « retire ») : le nombre, et rien d invente.
+    expect(texte).toContain('stRetours.card.reviewsCount');
     expect(texte).toContain('count=1');
-    expect(texte).toContain('minimum=2');
+    expect(texte).not.toContain('waiting');
     // Le serveur ne rend PAS `reviews` sous le seuil : la carte ne doit donc
-    // afficher aucune note, ni la moyenne (qui vaudrait l avis unique). Si un
-    // jour elle en affiche une, c est que quelqu un aura rebranche la liste —
-    // et l anonymat tombera avec.
-    expect(texte).not.toContain('eventDetails.trainingReview.outOfTen');
-    expect(texte).not.toContain('eventDetails.trainingReview.average');
+    // afficher ni note ni moyenne.
+    expect(texte).not.toContain('/10');
+    expect(texte).not.toContain('stRetours.card.averageHint');
   });
 
   test('AVIS-APP/5 — des DEUX avis, la moyenne et les commentaires apparaissent', () => {
@@ -157,11 +159,10 @@ describe('TrainingReviewsCard', () => {
       thresholdReached: true,
     });
 
-    expect(texte).toContain('eventDetails.trainingReview.average');
-    expect(texte).toContain('7.5');
+    expect(texte).toContain('stRetours.card.averageHint');
+    expect(texte).toContain('7,5');
     expect(texte).toContain('Trop court');
-    expect(texte).toContain('rating=7');
-    expect(texte).toContain('rating=8');
+    expect(texte).toContain('7/10');
   });
 
   test('AVIS-APP/6 — un avis sans commentaire ne fabrique pas de ligne vide', () => {
@@ -176,10 +177,9 @@ describe('TrainingReviewsCard', () => {
       thresholdReached: true,
     });
 
-    expect(texte).toContain('rating=8');
-    // Le repli explicite, jamais un trou : deux avis sans commentaire donnent
-    // deux fois « note laissee sans commentaire », pas deux lignes vides.
-    expect(texte.split('eventDetails.trainingReview.noComment').length - 1).toBe(2);
+    // ST-RETOURS : les notes sans mot sont REGROUPEES (« + 2 notes sans commentaire »),
+    // jamais une carte par avis, jamais une ligne vide.
+    expect(texte).toContain('stRetours.card.noCommentCount_other count=2');
     expect(texte).not.toContain('| undefined');
     expect(texte).not.toContain('| null');
   });
@@ -192,16 +192,21 @@ describe('TrainingReviewsCard', () => {
       thresholdReached: false,
     });
 
-    // count 0 : c est le message « vide » qui sort, pas l attente.
-    expect(texte).toContain('eventDetails.trainingReview.empty');
+    // count 0 : c est le message « vide » qui sort.
+    expect(texte).toContain('stRetours.card.empty');
 
-    const attente = texteAffiche({
-      average: null,
-      count: 2,
-      minimumReviews: 3,
-      thresholdReached: false,
+    const unSeul = texteAffiche({
+      average: 6,
+      count: 3,
+      presentCount: 4,
+      reviews: [
+        { comment: 'Bien', rating: 6, submittedAt: '2026-03-10T20:30:00.000Z' },
+        { comment: null, rating: 6, submittedAt: '2026-03-10T20:31:00.000Z' },
+        { comment: 'Long', rating: 6, submittedAt: '2026-03-10T20:32:00.000Z' },
+      ],
+      thresholdReached: true,
     });
-    expect(attente).toContain('eventDetails.trainingReview.waiting_other');
-    expect(attente).toContain('count=2');
+    expect(unSeul).toContain('stRetours.card.noCommentCount_one count=1');
+    expect(unSeul).toContain('stRetours.card.reviewsOfPresent_other');
   });
 });

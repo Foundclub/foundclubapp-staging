@@ -1,13 +1,16 @@
 // @ts-nocheck
 import { differenceInYears, format } from 'date-fns';
 import i18next from 'i18next';
-import { useCallback, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
   RefreshControl,
   ScrollView,
+  Switch,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -30,6 +33,19 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import CoachFeedbackList, {
+  CoachFeedbackViewBody,
+  CoachWords,
+  feedbackCardStyle,
+  NewPill,
+  WhoCanReadLine,
+} from '@/views/profile/coachFeedback/CoachFeedbackList';
+import {
+  feedbackMetaLine,
+  newFeedbackKeys,
+  seenFeedbackKeys,
+  wantsChildFeedbackAlert,
+} from '@/views/profile/coachFeedback/coachFeedbackModel';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 import MyStatsPage from '@/views/profile/stats/MyStatsPage';
@@ -38,6 +54,10 @@ import ProfileStatsForViewer from '@/views/profile/stats/ProfileStatsForViewer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetUserById } from '@/services/auth/authQueries';
+import {
+  useGetCoachFeedbackFollow,
+  useUpdateCoachFeedbackFollow,
+} from '@/services/coachFeedback/coachFeedbackQueries';
 import { useUserCurrentLicense } from '@/services/license/licenseQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
@@ -335,100 +355,6 @@ function InfoItem({
 }
 
 /**
- * A19 — LES RETOURS DU COACH, un par carte : le match, la date, la note sur 10
- * (ou « Commentaire » quand il n'y a pas de note) et le commentaire.
- *
- * Sorti TEL QUEL du bloc proprietaire de cette page, pour servir aussi la vue
- * « Suivi › Retours du coach » (`view: 'coachFeedback'`) : un seul dessin des
- * retours, pas deux qui divergent.
- * @param {object} props
- * @param {any[]} props.items - Les retours, dans l'ordre rendu par le serveur.
- * @param {boolean} [props.showFullComments] - Vue dediee : rien n'est coupe. Le
- *   bloc resume coupe a 3 lignes ; la vue dont c'est la seule raison d'etre ne
- *   doit pas cacher la fin d'un long retour.
- * @returns {import('react').ReactElement}
- */
-function CoachFeedbackList({ items, showFullComments = false }) {
-  const commentLines = showFullComments ? undefined : 3;
-  const { t } = useTranslation();
-  const {
-    Alignments,
-    ApplicationStyle,
-    Colors,
-    Fonts,
-    Spaces,
-  } = useTheme();
-
-  return (
-    <View style={[Spaces.gap[12]]}>
-      {items.length ? items.map((feedback, index) => {
-        const feedbackDate = feedback?.submittedAt ? parseDate(feedback.submittedAt) : null;
-        return (
-          <View
-            key={`${feedback?.sourceType || 'feedback'}:${feedback?.sourceDocumentId || index}:${feedback?.submittedAt || 'no-date'}`}
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[12],
-              Spaces.gap[8],
-              {
-                backgroundColor: `${Colors.primary700}BF`,
-                borderColor: `${Colors.primary500}52`,
-              },
-            ]}
-          >
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {feedback?.matchLabel || feedback?.teamName || t(
-                    'userDetails.feedback.matchFallback',
-                    'Match',
-                  )}
-                </Text>
-                <Text style={[Fonts.p4, Fonts.neutral200]}>
-                  {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : t(
-                    'userDetails.feedback.dateTbc',
-                    'Date à confirmer',
-                  )}
-                </Text>
-              </View>
-              <View
-                style={[
-                  Alignments.selfStart,
-                  Spaces.paddingHorizontal[10],
-                  Spaces.paddingVertical[6],
-                  ApplicationStyle.borderRadius16,
-                  { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}40`, borderWidth: 1 },
-                ]}
-              >
-                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                  {feedback?.rating != null ? `${feedback.rating}/10` : t(
-                    'userDetails.feedback.comment',
-                    'Commentaire',
-                  )}
-                </Text>
-              </View>
-            </View>
-            <Text numberOfLines={commentLines} style={[Fonts.p3, Fonts.neutral100]}>
-              {feedback?.comment || t(
-                'userDetails.feedback.noComment',
-                'Pas de commentaire détaillé pour ce retour.',
-              )}
-            </Text>
-          </View>
-        );
-      }) : (
-        <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t(
-            'userDetails.feedback.empty',
-            'Aucun retour individuel du coach pour le moment.',
-          )}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-/**
  * User profile view component for displaying profile details.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} User profile screen
@@ -624,6 +550,80 @@ function UserDetails({ navigation, route }) {
   }, [personalStats?.coachComments, personalStats?.recentCoachFeedback]);
   const recentCoachFeedback = useMemo(() => coachFeedback.slice(0, 5), [coachFeedback]);
 
+  // ST-RETOURS (02/10, planche 19) — « NOUVEAU » : ce que le LECTEUR a deja lu, range sur
+  // SON compte (moi, ou le parent pour son enfant). Fige a l ouverture de la vue : la pastille
+  // reste le temps de la lecture, puis tout ce qui s y affiche est marque lu.
+  const {
+    data: coachFeedbackFollow,
+    isSuccess: isCoachFeedbackFollowLoaded,
+  } = useGetCoachFeedbackFollow({
+    enabled: Boolean(targetUserId) && (isCoachFeedbackView || isParentOfMinorViewer),
+  });
+  const { mutate: saveCoachFeedbackFollow } = useUpdateCoachFeedbackFollow();
+  const [openedFeedbackNewKeys, setOpenedFeedbackNewKeys] = useState(
+    /** @type {Set<string> | null} */ (null),
+  );
+  useEffect(() => {
+    if (!isCoachFeedbackView || openedFeedbackNewKeys) return;
+    if (!isCoachFeedbackFollowLoaded || !personalStats) return;
+    const seen = seenFeedbackKeys(coachFeedbackFollow, targetUserId);
+    const keys = newFeedbackKeys(coachFeedback, seen);
+    setOpenedFeedbackNewKeys(keys);
+    if (keys.size) {
+      saveCoachFeedbackFollow({ playerDocumentId: targetUserId, seenKeys: Array.from(keys) });
+    }
+  }, [
+    coachFeedback,
+    coachFeedbackFollow,
+    isCoachFeedbackFollowLoaded,
+    isCoachFeedbackView,
+    openedFeedbackNewKeys,
+    personalStats,
+    saveCoachFeedbackFollow,
+    targetUserId,
+  ]);
+
+  // ST-RETOURS (02/10, planche 22 etat 2) — LA FICHE DE L ENFANT, VUE PAR SON PARENT : le
+  // DERNIER retour de l entraineur, directement. « Nouveau » s il ne l a pas encore vu — fige a
+  // l ouverture — puis CE retour-la (et lui seul) est marque lu : les autres gardent leur
+  // pastille jusqu a « Tous ses retours ».
+  const latestFeedback = coachFeedback[0] || null;
+  const [latestFeedbackWasNew, setLatestFeedbackWasNew] = useState(
+    /** @type {boolean | null} */ (null),
+  );
+  useEffect(() => {
+    if (!isParentOfMinorViewer || isCoachFeedbackView || latestFeedbackWasNew !== null) return;
+    if (!isCoachFeedbackFollowLoaded || !personalStats) return;
+    const key = String(latestFeedback?.feedbackKey || '');
+    const isNew = Boolean(key) && !seenFeedbackKeys(coachFeedbackFollow, targetUserId).has(key);
+    setLatestFeedbackWasNew(isNew);
+    if (isNew) saveCoachFeedbackFollow({ playerDocumentId: targetUserId, seenKeys: [key] });
+  }, [
+    coachFeedbackFollow,
+    isCoachFeedbackFollowLoaded,
+    isCoachFeedbackView,
+    isParentOfMinorViewer,
+    latestFeedback?.feedbackKey,
+    latestFeedbackWasNew,
+    personalStats,
+    saveCoachFeedbackFollow,
+    targetUserId,
+  ]);
+  // L alerte du parent : allumee par defaut, coupee d un geste. Le choix s affiche tout de
+  // suite ; un refus du serveur le remet comme avant.
+  const [childAlertOverride, setChildAlertOverride] = useState(
+    /** @type {boolean | null} */ (null),
+  );
+  const childAlertOn = childAlertOverride
+    ?? wantsChildFeedbackAlert(coachFeedbackFollow, targetUserId);
+  const handleChildAlertChange = useCallback((/** @type {boolean} */ notify) => {
+    setChildAlertOverride(notify);
+    saveCoachFeedbackFollow(
+      { notify, playerDocumentId: targetUserId },
+      { onError: () => setChildAlertOverride(null) },
+    );
+  }, [saveCoachFeedbackFollow, targetUserId]);
+
   const coachedTeams = useMemo(() => {
     const teams = Array.isArray(user?.trainedTeams) ? user.trainedTeams : [];
     const seen = new Set();
@@ -802,6 +802,24 @@ function UserDetails({ navigation, route }) {
     });
   }, [currentLicenseAssignment?.documentId, currentLicenseAssignment?.id, navigation]);
 
+  // ST-RETOURS (planche 19) — « Ouvrir le match » mene a la fiche, sur le retour du coach
+  // (meme destination que la notification « Retour du coach disponible »).
+  const handleOpenFeedbackMatch = useCallback((item) => {
+    const sourceId = item?.sourceDocumentId;
+    if (!sourceId) return;
+    if (item?.sourceType === 'league_match') {
+      navigation.navigate(RouteNames.LeagueMatchDetails, {
+        focusSection: 'coachFeedback',
+        matchId: sourceId,
+      });
+      return;
+    }
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: sourceId, focusSection: 'coachFeedback' },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+
   const handleOpenClub = () => {
     if (!user?.club?.documentId) return;
     navigation.navigate(RouteNames.ClubStack, {
@@ -895,9 +913,14 @@ function UserDetails({ navigation, route }) {
             ]}
           />
           {/* PARENT-RETOURS — les retours de QUI : un parent de deux enfants
-              doit le lire sans deviner. */}
+              doit le lire sans deviner. ST-RETOURS (planche 22, etat 3) :
+              « pour Hugo Lemaire ». */}
           {!isSelfProfile ? (
-            <Text style={[Fonts.p2Bold, Fonts.neutral200]}>{displayName}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
+              {t('stRetours.parent.forChild')}
+              {' '}
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{displayName}</Text>
+            </Text>
           ) : null}
         </View>
 
@@ -912,13 +935,20 @@ function UserDetails({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
-          <WithDataWrapper
-            error={personalStatsError ? getErrorMessage(personalStatsError) : undefined}
+          {/* ST-RETOURS (planche 19) — les etats dessines : chargement en squelette, panne
+              dite avec « Reessayer », vide qui dit d ou viennent les retours, puis la liste et
+              qui peut la lire. */}
+          <CoachFeedbackViewBody
+            childFirstname={user?.firstname || displayName}
+            hasError={Boolean(personalStatsError)}
+            hasParentLink={Boolean(currentUser?.parentAccount?.documentId)}
             isLoading={isPersonalStatsLoading}
+            items={coachFeedback}
+            newKeys={openedFeedbackNewKeys || undefined}
+            onOpenMatch={handleOpenFeedbackMatch}
             onRetry={() => refetchPersonalStats?.()}
-          >
-            <CoachFeedbackList items={coachFeedback} showFullComments />
-          </WithDataWrapper>
+            viewer={isSelfProfile ? 'self' : 'parent'}
+          />
         </ScrollView>
       </ScreenContainer>
     );
@@ -1125,6 +1155,24 @@ function UserDetails({ navigation, route }) {
               </View>
             </View>
 
+            {/* ST-RETOURS (planche 22) — le parent sait que c est SON enfant. */}
+            {isParentOfMinorViewer ? (
+              <View
+                style={[
+                  Alignments.selfStart,
+                  {
+                    borderColor: Colors.primary500,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3, Fonts.primary500]}>{t('stRetours.parent.myChild')}</Text>
+              </View>
+            ) : null}
+
             {user?.isLookingForClub ? (
               <View
                 style={[
@@ -1170,38 +1218,108 @@ function UserDetails({ navigation, route }) {
             </SectionCard>
           ) : null}
 
-          {/* PARENT-RETOURS — le parent declare d'un mineur n'a pas le bloc :
-              une ENTREE vers la vue des retours, sur l'enfant. Meme ecran, meme
-              `CoachFeedbackList`, rien de duplique. */}
+          {/* PARENT-RETOURS — le parent declare d'un mineur lit les retours du coach de son
+              enfant. ST-RETOURS (planche 22, etats 2 et 4) : le DERNIER retour directement sur
+              la fiche (le lien seul cachait ce que le parent vient chercher), « Tous ses
+              retours · n » vers la vue (meme ecran, meme `CoachFeedbackList`), l alerte, et ce
+              qu il lit — jamais les messages ni les propres notes de l enfant. */}
           {isParentOfMinorViewer ? (
-            <SectionCard
-              ApplicationStyle={ApplicationStyle}
-              Colors={Colors}
-              Fonts={Fonts}
-              Spaces={Spaces}
-              title={t('userDetails.sections.coachFeedback', 'Retours du coach')}
-            >
-              <TouchableOpacity
-                accessibilityLabel={t(
-                  'userDetails.feedback.openForChild',
-                  'Voir les retours du coach de {{firstname}}',
-                  { firstname: user?.firstname || displayName, ...SANS_ECHAPPEMENT },
-                )}
-                accessibilityRole="button"
-                onPress={() => navigation.navigate(RouteNames.UserDetails, {
-                  userId: targetUserId,
-                  view: 'coachFeedback',
-                })}
+            <View style={[Spaces.gap[16]]} testID="parent-child-feedback">
+              {latestFeedback ? (
+                <View style={feedbackCardStyle(Colors, Boolean(latestFeedbackWasNew))}>
+                  <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+                    <Text
+                      style={[
+                        Fonts.p3Bold,
+                        Fonts.primary200,
+                        { flex: 1, letterSpacing: 0.4, textTransform: 'uppercase' },
+                      ]}
+                    >
+                      {t('stRetours.parent.latestTitle')}
+                    </Text>
+                    {latestFeedbackWasNew ? <NewPill label={t('stRetours.feedback.new')} /> : null}
+                  </View>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {feedbackMetaLine(t, latestFeedback, 'latest')}
+                  </Text>
+                  {typeof latestFeedback?.rating === 'number' ? (
+                    <Text style={[Fonts.h1Black, Fonts.neutral00]}>
+                      {`${latestFeedback.rating}/10`}
+                    </Text>
+                  ) : null}
+                  {latestFeedback?.comment ? <CoachWords text={latestFeedback.comment} /> : null}
+                  <TouchableOpacity
+                    accessibilityLabel={t('stRetours.parent.allFeedback', {
+                      count: coachFeedback.length,
+                    })}
+                    accessibilityRole="link"
+                    onPress={() => navigation.navigate(RouteNames.UserDetails, {
+                      userId: targetUserId,
+                      view: 'coachFeedback',
+                    })}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Alignments.justifySpaceBetween,
+                      { minHeight: 44 },
+                    ]}
+                  >
+                    <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                      {t('stRetours.parent.allFeedback', { count: coachFeedback.length })}
+                    </Text>
+                    <Image
+                      source={Images.arrowRight}
+                      style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={feedbackCardStyle(Colors, false)}>
+                  <Text
+                    style={[
+                      Fonts.p3Bold,
+                      Fonts.primary200,
+                      { letterSpacing: 0.4, textTransform: 'uppercase' },
+                    ]}
+                  >
+                    {t('stRetours.parent.emptyTitle')}
+                  </Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {t('stRetours.parent.emptyHint')}
+                  </Text>
+                </View>
+              )}
+
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  {
+                    backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                    borderColor: withAlpha(Colors.neutral00, 0.09),
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    gap: 12,
+                    minHeight: 52,
+                    paddingHorizontal: 14,
+                  },
+                ]}
               >
-                <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
-                  {t(
-                    'userDetails.feedback.openForChild',
-                    'Voir les retours du coach de {{firstname}}',
-                    { firstname: user?.firstname || displayName, ...SANS_ECHAPPEMENT },
-                  )}
+                <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                  {t('stRetours.parent.alertLabel')}
                 </Text>
-              </TouchableOpacity>
-            </SectionCard>
+                <Switch
+                  accessibilityLabel={t('stRetours.parent.alertLabel')}
+                  accessibilityRole="switch"
+                  onValueChange={handleChildAlertChange}
+                  thumbColor={Colors.neutral00}
+                  trackColor={{ false: Colors.neutral600, true: Colors.primary500 }}
+                  value={childAlertOn}
+                />
+              </View>
+
+              <WhoCanReadLine text={t('stRetours.parent.privacy')} />
+            </View>
           ) : null}
 
           {/* A18 — `isOwnerView`, pas `isSelfProfile` : en APERCU on lit son

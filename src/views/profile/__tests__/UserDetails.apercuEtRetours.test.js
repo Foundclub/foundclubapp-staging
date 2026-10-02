@@ -50,6 +50,13 @@ jest.mock('@/services/userBlock/userBlockQueries', () => ({
   useUnblockUser: () => ({ isPending: false, mutate: jest.fn() }),
 }));
 
+// ST-RETOURS (02/10) — le profil lit « ce que j ai deja lu » des retours du coach. Le service
+// importe le client HTTP, qui refuse de se charger sans .env : il est double ici comme les autres.
+jest.mock('@/services/coachFeedback/coachFeedbackQueries', () => ({
+  useGetCoachFeedbackFollow: () => ({ data: {}, isSuccess: true }),
+  useUpdateCoachFeedbackFollow: () => ({ mutate: jest.fn() }),
+}));
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
@@ -598,12 +605,15 @@ describe('PROFIL-JOUEUR · A19 — « Retours du coach » s\'ouvre sur les retou
 
     expect(texte).toContain('RETOURS DU COACH');
     expect(texte).toContain('Match U15 contre ES Val');
-    expect(texte).toContain('27/09/2026');
+    // ST-RETOURS (planche 19, defaut 26) : le JOUR du match, court (« dim. 27 sept. »), plus
+    // une date numerique ; sans date de match, celle du retour.
+    expect(texte).toContain('dim. 27 sept.');
     expect(texte).toContain('7/10');
     expect(texte).toContain('Bon placement, pense a parler davantage a ta defense.');
-    // Un retour sans note garde son commentaire, et le dit.
+    // Un retour sans note garde son commentaire. ST-RETOURS (planche 19, « retiré ») : plus le
+    // mot « Commentaire » a la place de la note — la carte montre le mot, c est assez.
     expect(texte).toContain('Entrainement U15');
-    expect(texte).toContain('Commentaire');
+    expect(texte).not.toContain('Commentaire');
     expect(texte).toContain('Tres bonne seance de vitesse.');
     expect(texte).toContain('6/10');
   });
@@ -655,7 +665,8 @@ describe('PROFIL-JOUEUR · A19 — « Retours du coach » s\'ouvre sur les retou
     mockPersonalStats = { recentCoachFeedback: [] };
     const arbre = await rendre(joueur, VUE_RETOURS);
 
-    expect(texteVisible(arbre)).toContain('Aucun retour individuel du coach pour le moment.');
+    // ST-RETOURS (planche 19, etat 3) : le vide dit d ou viennent les retours.
+    expect(texteVisible(arbre)).toContain('Pas encore de retour');
   });
 
   it('vie privee : sur le profil de QUELQU\'UN D\'AUTRE, le parametre est ignore', async () => {
@@ -718,7 +729,9 @@ describe('PARENT-RETOURS — le parent d\'un mineur lit les retours du coach de 
   const entreeRetours = (arbre) => arbre.root
     .findAllByType(TouchableOpacity)
     .find((/** @type {any} */ noeud) => String(noeud.props.accessibilityLabel || '')
-      .startsWith('Voir les retours du coach'));
+      // ST-RETOURS (planche 22) : le lien seul « Voir les retours du coach de Léa » devient
+      // « Tous ses retours · n », sous le dernier retour affiche sur la fiche.
+      .startsWith('Tous ses retours'));
 
   it('sur la fiche de son enfant mineur, l\'entrée ouvre la vue des retours SUR L\'ENFANT', async () => {
     mockFetchedUser = enfant();
