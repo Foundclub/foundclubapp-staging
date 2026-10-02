@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -228,6 +228,58 @@ const rendre = async (moi, parametres) => {
   return arbre;
 };
 
+/**
+ * STATS-FIX2 · point 7 — ce que le telephone mesure : la hauteur de l ecran de la liste, et
+ * la place de chaque carte de retour (dans l ordre de la liste).
+ * @param {any} arbre
+ * @param {{ cartes: Array<{ height: number, y: number }>, ecran: number }} mesures
+ * @returns {void}
+ */
+const disposer = (arbre, { cartes, ecran }) => {
+  const [defilement] = arbre.root.findAllByType(ScrollView)
+    .filter((n) => typeof n.props.onScroll === 'function');
+  const vues = arbre.root.findAll((n) => (
+    n.props.testID === 'coach-feedback-card' && typeof n.props.onLayout === 'function'
+    && typeof n.type !== 'string'
+  ));
+  act(() => {
+    defilement?.props.onLayout?.({
+      nativeEvent: {
+        layout: {
+          height: ecran, width: 400, x: 0, y: 0,
+        },
+      },
+    });
+    cartes.forEach((boite, index) => {
+      vues[index]?.props.onLayout({ nativeEvent: { layout: { ...boite, width: 360, x: 0 } } });
+    });
+  });
+};
+/**
+ * Le doigt fait defiler la liste jusqu a cette hauteur.
+ * @param {any} arbre
+ * @param {number} y
+ * @returns {void}
+ */
+const defiler = (arbre, y) => {
+  const [defilement] = arbre.root.findAllByType(ScrollView)
+    .filter((n) => typeof n.props.onScroll === 'function');
+  act(() => {
+    defilement.props.onScroll({ nativeEvent: { contentOffset: { x: 0, y } } });
+  });
+};
+/**
+ * On quitte l ecran (retour) : il se demonte.
+ * @param {any} arbre
+ * @returns {void}
+ */
+const quitter = (arbre) => {
+  act(() => {
+    arbre.unmount();
+  });
+  montes.splice(montes.indexOf(arbre), 1);
+};
+
 const HUGO = {
   documentId: 'hugo',
   firstname: 'Hugo',
@@ -332,6 +384,7 @@ describe('ST-RETOURS · planche 19 — un retour dit qui, quand, quel score', ()
     });
   });
 
+  // STATS-FIX2 · point 7 : le « lu » s ecrit en QUITTANT l ecran, pour ce qui a ete affiche.
   it('« Nouveau » sur ce qui n a pas ete lu, et seulement la — puis c est marque lu', async () => {
     mockFollow = { hugo: { seen: ['event:m0:u15:v1'] } };
     const arbre = await rendre(HUGO, VUE);
@@ -343,6 +396,8 @@ describe('ST-RETOURS · planche 19 — un retour dit qui, quand, quel score', ()
       .some((x) => aplatir(x.props.children) === 'Nouveau'));
     expect(nouvelles).toHaveLength(1);
     expect(texte(arbre).split('Nouveau').length - 1).toBe(1);
+    disposer(arbre, { cartes: [{ height: 300, y: 0 }, { height: 300, y: 316 }], ecran: 800 });
+    quitter(arbre);
     expect(mockMarquerLu).toHaveBeenCalledTimes(1);
     expect(mockMarquerLu).toHaveBeenCalledWith({
       playerDocumentId: 'hugo',
@@ -355,6 +410,8 @@ describe('ST-RETOURS · planche 19 — un retour dit qui, quand, quel score', ()
     const arbre = await rendre(HUGO, VUE);
 
     expect(texte(arbre)).not.toContain('Nouveau');
+    disposer(arbre, { cartes: [{ height: 300, y: 0 }, { height: 300, y: 316 }], ecran: 800 });
+    quitter(arbre);
     expect(mockMarquerLu).not.toHaveBeenCalled();
   });
 
@@ -414,6 +471,55 @@ describe('ST-RETOURS · planche 22 etat 3 — le parent lit la meme vue', () => 
     expect(t).toContain('Visible par Hugo et toi.');
     expect(t).toContain('7/10');
     expect(t).toContain('Ouvrir le match');
+  });
+});
+
+// STATS-FIX2 · POINT 7 (tournee T10, « Autres ») — `PUT …/me/coach-feedback-follow` PARTAIT
+// SEUL A L OUVERTURE (une lecture qui ecrit), et marquait lus MEME les retours jamais montres
+// (sous le pli). Le « lu » = ce qui a ete REELLEMENT affiche (une carte dont le milieu est passe
+// a l ecran), ecrit UNE fois, en QUITTANT l ecran. La planche n a pas de geste « marquer lu ».
+describe('STATS-FIX2 · point 7 — « lu » = ce qui a ete affiche, ecrit en quittant', () => {
+  beforeEach(() => {
+    mockFollow = {};
+  });
+
+  it('🔴 ouvrir « Retours du coach » n ecrit RIEN', async () => {
+    const arbre = await rendre(HUGO, VUE);
+
+    disposer(arbre, { cartes: [{ height: 300, y: 0 }, { height: 300, y: 1200 }], ecran: 800 });
+    expect(mockMarquerLu).not.toHaveBeenCalled();
+  });
+
+  it('🔴 en quittant : seule la carte passee a l ecran est marquee lue', async () => {
+    const arbre = await rendre(HUGO, VUE);
+
+    disposer(arbre, { cartes: [{ height: 300, y: 0 }, { height: 300, y: 1200 }], ecran: 800 });
+    quitter(arbre);
+    expect(mockMarquerLu).toHaveBeenCalledTimes(1);
+    expect(mockMarquerLu).toHaveBeenCalledWith({
+      playerDocumentId: 'hugo',
+      seenKeys: ['event:m1:u15:v1'],
+    });
+  });
+
+  it('defiler jusqu a la 2e carte la marque aussi', async () => {
+    const arbre = await rendre(HUGO, VUE);
+
+    disposer(arbre, { cartes: [{ height: 300, y: 0 }, { height: 300, y: 1200 }], ecran: 800 });
+    defiler(arbre, 700);
+    quitter(arbre);
+    expect(mockMarquerLu).toHaveBeenCalledTimes(1);
+    expect(mockMarquerLu).toHaveBeenCalledWith({
+      playerDocumentId: 'hugo',
+      seenKeys: ['event:m1:u15:v1', 'event:m0:u15:v1'],
+    });
+  });
+
+  it('🔒 rien n a ete affiche (ecran jamais mesure) : rien n est marque lu', async () => {
+    const arbre = await rendre(HUGO, VUE);
+
+    quitter(arbre);
+    expect(mockMarquerLu).not.toHaveBeenCalled();
   });
 });
 

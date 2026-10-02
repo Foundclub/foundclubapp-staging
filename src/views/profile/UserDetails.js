@@ -2,7 +2,7 @@
 import { differenceInYears, format } from 'date-fns';
 import i18next from 'i18next';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -562,8 +562,16 @@ function UserDetails({ navigation, route }) {
   const recentCoachFeedback = useMemo(() => coachFeedback.slice(0, 5), [coachFeedback]);
 
   // ST-RETOURS (02/10, planche 19) — « NOUVEAU » : ce que le LECTEUR a deja lu, range sur
-  // SON compte (moi, ou le parent pour son enfant). Fige a l ouverture de la vue : la pastille
-  // reste le temps de la lecture, puis tout ce qui s y affiche est marque lu.
+  // SON compte (moi, ou le parent pour son enfant).
+  // STATS-FIX2 · point 7 (T10) — « LU » = CE QUI A ETE AFFICHE, ECRIT EN QUITTANT L ECRAN.
+  // Avant : `PUT …/coach-feedback-follow` partait SEUL a l ouverture (une lecture qui ecrit), et
+  // « Retours du coach » marquait lus meme les retours jamais montres (sous le pli). Maintenant :
+  //   · « Nouveau » se fige a la PREMIERE lecture, pour toute la visite — la fiche de l enfant
+  //     PUIS « Tous ses retours », c est le meme ecran : le dernier retour y garde sa pastille ;
+  //   · on retient chaque retour REELLEMENT affiche : la carte « Dernier retour » de la fiche,
+  //     et dans la vue, chaque carte dont le milieu est passe a l ecran ;
+  //   · on ecrit UNE fois, en quittant (l ecran perd le premier plan, ou se demonte).
+  // La planche n a pas de geste « marquer lu ».
   const {
     data: coachFeedbackFollow,
     isSuccess: isCoachFeedbackFollowLoaded,
@@ -571,55 +579,92 @@ function UserDetails({ navigation, route }) {
     enabled: Boolean(targetUserId) && (isCoachFeedbackView || isParentOfMinorViewer),
   });
   const { mutate: saveCoachFeedbackFollow } = useUpdateCoachFeedbackFollow();
-  const [openedFeedbackNewKeys, setOpenedFeedbackNewKeys] = useState(
-    /** @type {Set<string> | null} */ (null),
+  const [feedbackNewKeysAtOpen, setFeedbackNewKeysAtOpen] = useState(
+    /** @type {{ keys: Set<string>, target: string } | null} */ (null),
   );
+  const openedFeedbackNewKeys = feedbackNewKeysAtOpen?.target === targetUserId
+    ? feedbackNewKeysAtOpen.keys
+    : null;
   useEffect(() => {
-    if (!isCoachFeedbackView || openedFeedbackNewKeys) return;
-    if (!isCoachFeedbackFollowLoaded || !personalStats) return;
-    const seen = seenFeedbackKeys(coachFeedbackFollow, targetUserId);
-    const keys = newFeedbackKeys(coachFeedback, seen);
-    setOpenedFeedbackNewKeys(keys);
-    if (keys.size) {
-      saveCoachFeedbackFollow({ playerDocumentId: targetUserId, seenKeys: Array.from(keys) });
-    }
+    if (!(isCoachFeedbackView || isParentOfMinorViewer) || openedFeedbackNewKeys) return;
+    if (!isCoachFeedbackFollowLoaded || !personalStats || !targetUserId) return;
+    setFeedbackNewKeysAtOpen({
+      keys: newFeedbackKeys(coachFeedback, seenFeedbackKeys(coachFeedbackFollow, targetUserId)),
+      target: targetUserId,
+    });
   }, [
     coachFeedback,
     coachFeedbackFollow,
     isCoachFeedbackFollowLoaded,
     isCoachFeedbackView,
+    isParentOfMinorViewer,
     openedFeedbackNewKeys,
     personalStats,
-    saveCoachFeedbackFollow,
     targetUserId,
   ]);
+  // Les retours nouveaux REELLEMENT affiches, par joueur, en attente d etre ecrits.
+  const displayedFeedbackRef = useRef(/** @type {Map<string, Set<string>>} */ (new Map()));
+  const markFeedbackDisplayed = useCallback((/** @type {string[]} */ keys) => {
+    if (!openedFeedbackNewKeys || !targetUserId) return;
+    const pending = displayedFeedbackRef.current.get(targetUserId) || new Set();
+    keys.forEach((key) => {
+      if (openedFeedbackNewKeys.has(String(key))) pending.add(String(key));
+    });
+    if (pending.size) displayedFeedbackRef.current.set(targetUserId, pending);
+  }, [openedFeedbackNewKeys, targetUserId]);
+  useEffect(() => {
+    const ecrireCeQuiAEteVu = () => {
+      displayedFeedbackRef.current.forEach((keys, playerDocumentId) => {
+        if (keys.size) saveCoachFeedbackFollow({ playerDocumentId, seenKeys: Array.from(keys) });
+      });
+      displayedFeedbackRef.current = new Map();
+    };
+    const unsubscribe = navigation?.addListener?.('blur', ecrireCeQuiAEteVu);
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      ecrireCeQuiAEteVu();
+    };
+  }, [navigation, saveCoachFeedbackFollow]);
 
   // ST-RETOURS (02/10, planche 22 etat 2) — LA FICHE DE L ENFANT, VUE PAR SON PARENT : le
-  // DERNIER retour de l entraineur, directement. « Nouveau » s il ne l a pas encore vu — fige a
-  // l ouverture — puis CE retour-la (et lui seul) est marque lu : les autres gardent leur
-  // pastille jusqu a « Tous ses retours ».
+  // DERNIER retour de l entraineur, directement. « Nouveau » s il ne l a pas encore vu ; CE
+  // retour-la (et lui seul : c est le seul affiche) sera marque lu en quittant la fiche.
   const latestFeedback = coachFeedback[0] || null;
-  const [latestFeedbackWasNew, setLatestFeedbackWasNew] = useState(
-    /** @type {boolean | null} */ (null),
+  const latestFeedbackWasNew = Boolean(
+    openedFeedbackNewKeys?.has(String(latestFeedback?.feedbackKey || '')),
   );
+  const showsParentLatestFeedback = isParentOfMinorViewer && !isCoachFeedbackView;
   useEffect(() => {
-    if (!isParentOfMinorViewer || isCoachFeedbackView || latestFeedbackWasNew !== null) return;
-    if (!isCoachFeedbackFollowLoaded || !personalStats) return;
-    const key = String(latestFeedback?.feedbackKey || '');
-    const isNew = Boolean(key) && !seenFeedbackKeys(coachFeedbackFollow, targetUserId).has(key);
-    setLatestFeedbackWasNew(isNew);
-    if (isNew) saveCoachFeedbackFollow({ playerDocumentId: targetUserId, seenKeys: [key] });
-  }, [
-    coachFeedbackFollow,
-    isCoachFeedbackFollowLoaded,
-    isCoachFeedbackView,
-    isParentOfMinorViewer,
-    latestFeedback?.feedbackKey,
-    latestFeedbackWasNew,
-    personalStats,
-    saveCoachFeedbackFollow,
-    targetUserId,
-  ]);
+    if (showsParentLatestFeedback && latestFeedback?.feedbackKey) {
+      markFeedbackDisplayed([latestFeedback.feedbackKey]);
+    }
+  }, [latestFeedback?.feedbackKey, markFeedbackDisplayed, showsParentLatestFeedback]);
+
+  // Dans la vue « Retours du coach » : une carte est affichee quand son milieu passe a l ecran
+  // (ce que la liste mesure : la hauteur de l ecran, le defilement, la place de chaque carte).
+  const feedbackViewportRef = useRef({ height: 0, y: 0 });
+  const feedbackCardBoxesRef = useRef(/** @type {Map<string, { height: number, y: number }>} */ (
+    new Map()
+  ));
+  const recordVisibleFeedback = useCallback(() => {
+    const { height, y } = feedbackViewportRef.current;
+    if (!height) return;
+    const visibles = [];
+    feedbackCardBoxesRef.current.forEach((box, key) => {
+      const milieu = box.y + (box.height / 2);
+      if (milieu >= y && milieu <= y + height) visibles.push(key);
+    });
+    markFeedbackDisplayed(visibles);
+  }, [markFeedbackDisplayed]);
+  const handleFeedbackCardLayout = useCallback((item, layout) => {
+    const key = String(item?.feedbackKey || '');
+    if (!key) return;
+    feedbackCardBoxesRef.current.set(key, { height: layout?.height || 0, y: layout?.y || 0 });
+    recordVisibleFeedback();
+  }, [recordVisibleFeedback]);
+  useEffect(() => {
+    recordVisibleFeedback();
+  }, [recordVisibleFeedback]);
   // L alerte du parent : allumee par defaut, coupee d un geste. Le choix s affiche tout de
   // suite ; un refus du serveur le remet comme avant.
   const [childAlertOverride, setChildAlertOverride] = useState(
@@ -962,12 +1007,21 @@ function UserDetails({ navigation, route }) {
 
         <ScrollView
           contentContainerStyle={[{ paddingBottom: insets.bottom + 24 }]}
+          onLayout={(event) => {
+            feedbackViewportRef.current.height = event?.nativeEvent?.layout?.height || 0;
+            recordVisibleFeedback();
+          }}
+          onScroll={(event) => {
+            feedbackViewportRef.current.y = event?.nativeEvent?.contentOffset?.y || 0;
+            recordVisibleFeedback();
+          }}
           refreshControl={(
             <RefreshControl
               onRefresh={() => refetchPersonalStats?.()}
               refreshing={isPersonalStatsLoading}
             />
           )}
+          scrollEventThrottle={100}
           showsVerticalScrollIndicator={false}
           style={[Alignments.fill]}
         >
@@ -981,6 +1035,7 @@ function UserDetails({ navigation, route }) {
             isLoading={isPersonalStatsLoading}
             items={coachFeedback}
             newKeys={openedFeedbackNewKeys || undefined}
+            onCardLayout={handleFeedbackCardLayout}
             onOpenMatch={handleOpenFeedbackMatch}
             onRetry={() => refetchPersonalStats?.()}
             viewer={isSelfProfile ? 'self' : 'parent'}

@@ -122,6 +122,8 @@ export function CoachWords({ numberOfLines, text }) {
  * @param {object} props - Les proprietes.
  * @param {any} props.item - Le retour, tel que le serveur le rend.
  * @param {boolean} [props.isNew] - Pas encore lu.
+ * @param {(item: any, layout: any) => void} [props.onLayout] - STATS-FIX2 · point 7 : la place
+ *   de la carte (pour savoir si elle est passee a l ecran).
  * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match ».
  * @param {boolean} [props.showFullComment] - Ne rien couper.
  * @returns {import('react').ReactElement} - La carte.
@@ -129,6 +131,7 @@ export function CoachWords({ numberOfLines, text }) {
 export function CoachFeedbackCard({
   isNew = false,
   item,
+  onLayout,
   onOpenMatch,
   showFullComment = false,
 }) {
@@ -148,6 +151,7 @@ export function CoachFeedbackCard({
         status: isNew ? t('stRetours.feedback.new') : '',
         ...SANS_ECHAPPEMENT,
       }).trim()}
+      onLayout={onLayout ? (event) => onLayout(item, event?.nativeEvent?.layout) : undefined}
       style={feedbackCardStyle(Colors, isNew)}
       testID="coach-feedback-card"
     >
@@ -183,6 +187,7 @@ export function CoachFeedbackCard({
  * @param {object} props - Les proprietes.
  * @param {any[]} props.items - Les retours, le plus recent en haut.
  * @param {Set<string>} [props.newKeys] - Les clefs pas encore lues.
+ * @param {(item: any, layout: any) => void} [props.onCardLayout] - La place de chaque carte.
  * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match ».
  * @param {boolean} [props.parentView] - Le parent lit : la porte, vers un match d evenement.
  * @param {boolean} [props.showFullComments] - Vue dediee : rien n est coupe.
@@ -191,6 +196,7 @@ export function CoachFeedbackCard({
 function CoachFeedbackList({
   items,
   newKeys,
+  onCardLayout,
   onOpenMatch,
   parentView = false,
   showFullComments = false,
@@ -202,6 +208,7 @@ function CoachFeedbackList({
           isNew={Boolean(newKeys?.has(String(item?.feedbackKey || '')))}
           item={item}
           key={String(item?.feedbackKey || `${item?.sourceDocumentId || 'retour'}-${index}`)}
+          onLayout={onCardLayout}
           onOpenMatch={parentView && !parentCanOpenMatch(item) ? undefined : onOpenMatch}
           showFullComment={showFullComments}
         />
@@ -219,6 +226,7 @@ function CoachFeedbackList({
  * @param {boolean} props.hasError - La lecture a echoue.
  * @param {() => void} props.onRetry - « Reessayer ».
  * @param {Set<string>} [props.newKeys] - Les clefs pas encore lues.
+ * @param {(item: any, layout: any) => void} [props.onCardLayout] - La place de chaque carte.
  * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match » (parent : evenement).
  * @param {'parent' | 'self'} props.viewer - Qui lit.
  * @param {string} [props.childFirstname] - L enfant (vue du parent).
@@ -232,6 +240,7 @@ export function CoachFeedbackViewBody({
   isLoading,
   items,
   newKeys,
+  onCardLayout,
   onOpenMatch,
   onRetry,
   viewer,
@@ -317,6 +326,7 @@ export function CoachFeedbackViewBody({
       <CoachFeedbackList
         items={list}
         newKeys={newKeys}
+        onCardLayout={onCardLayout}
         onOpenMatch={onOpenMatch}
         parentView={isParent}
         showFullComments

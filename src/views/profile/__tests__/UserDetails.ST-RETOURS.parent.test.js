@@ -331,11 +331,16 @@ describe('ST-RETOURS · planche 22 — la fiche de l enfant, vue par son parent'
     });
   });
 
+  // STATS-FIX2 · point 7 : CE retour-la (le seul affiche) est marque lu — en QUITTANT la fiche.
   it('etat 2 — « Nouveau » sur le dernier retour pas lu, puis CE retour-la marque lu', async () => {
     mockFollow = {};
     const arbre = await rendre(PAPA, FICHE_DE_HUGO);
 
     expect(texte(arbre)).toContain('Nouveau');
+    act(() => {
+      arbre.unmount();
+    });
+    montes.splice(montes.indexOf(arbre), 1);
     expect(mockMarquerLu).toHaveBeenCalledWith({
       playerDocumentId: 'hugo',
       seenKeys: ['event:m1:u15:v1'],
@@ -347,6 +352,10 @@ describe('ST-RETOURS · planche 22 — la fiche de l enfant, vue par son parent'
     const arbre = await rendre(PAPA, FICHE_DE_HUGO);
 
     expect(texte(arbre)).not.toContain('Nouveau');
+    act(() => {
+      arbre.unmount();
+    });
+    montes.splice(montes.indexOf(arbre), 1);
     expect(mockMarquerLu).not.toHaveBeenCalled();
   });
 
@@ -396,6 +405,60 @@ describe('ST-RETOURS · planche 22 — la fiche de l enfant, vue par son parent'
     expect(texte(arbre)).not.toContain('Dernier retour de son entraîneur');
     expect(interrupteur(arbre)).toBeUndefined();
     expect(mockMarquerLu).not.toHaveBeenCalled();
+  });
+});
+
+// STATS-FIX2 · POINT 7 (tournee T10, « Autres ») — LA FICHE DE L ENFANT N ECRIT PLUS RIEN A
+// L OUVERTURE : `PUT …/coach-feedback-follow` partait seul (18:49 chez Papa Test). Le dernier
+// retour, affiche sur la fiche, est marque lu en QUITTANT l ecran. Et « Nouveau » se fige a la
+// premiere lecture pour toute la visite : la fiche PUIS « Tous ses retours » (le MEME ecran,
+// d autres parametres) — la T10 n y voyait plus « Nouveau » (ecran 22).
+describe('STATS-FIX2 · point 7 — la fiche de l enfant ne marque « lu » qu en la quittant', () => {
+  beforeEach(() => {
+    mockFetchedUser = HUGO_VU_PAR_PAPA;
+    mockFollow = {};
+    // La vraie mutation range la reponse dans le cache (`setQueryData`) : la lecture suivante
+    // la voit. La doublure fait pareil.
+    mockMarquerLu.mockImplementation((/** @type {any} */ envoi) => {
+      if (!envoi?.seenKeys) return;
+      const avant = mockFollow?.[envoi.playerDocumentId]?.seen || [];
+      mockFollow = {
+        ...mockFollow,
+        [envoi.playerDocumentId]: { seen: [...avant, ...envoi.seenKeys] },
+      };
+    });
+  });
+
+  afterEach(() => {
+    mockMarquerLu.mockImplementation(() => {});
+  });
+
+  it('🔴 ouvrir la fiche de l enfant n ecrit RIEN', async () => {
+    await rendre(PAPA, FICHE_DE_HUGO);
+
+    expect(mockMarquerLu).not.toHaveBeenCalled();
+  });
+
+  it('🔴 la fiche, puis « Tous ses retours » : le dernier retour y garde « Nouveau »', async () => {
+    const arbre = await rendre(PAPA, FICHE_DE_HUGO);
+    await act(async () => {
+      arbre.update(
+        <UserDetails
+          navigation={arbre.root.props.navigation}
+          route={/** @type {any} */ ({ params: { userId: 'hugo', view: 'coachFeedback' } })}
+        />,
+      );
+    });
+
+    const carteDuDernier = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props.testID === 'coach-feedback-card' && typeof n.type !== 'string'
+    )).find((/** @type {any} */ carte) => carte.findAllByType(Text).some((/** @type {any} */ x) => (
+      aplatir(x.props.children) === RETOUR_KARIM.matchLabel
+    )));
+    expect(carteDuDernier).toBeDefined();
+    expect(carteDuDernier.findAllByType(Text).some((/** @type {any} */ x) => (
+      aplatir(x.props.children) === 'Nouveau'
+    ))).toBe(true);
   });
 });
 
