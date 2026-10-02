@@ -63,3 +63,22 @@ describe('FINITIONS9 · point 1 — « À définir », avec sa capitale accentu�
     expect(textesDuCodeEgauxA(['A définir'])).toEqual([]);
   });
 });
+
+// « Confirme » est dans la MÊME liste d'options (l'expérience attendue d'un entraîneur) : même
+// défaut, corrigé avec ses deux voisins.
+describe('FINITIONS9 · point 2 — « Confirmé », « Expérimenté », « Diplômé »', () => {
+  it.each([
+    ['adWizardCoachProfile.experience.confirmed', 'Confirmé'],
+    ['adWizardCoachProfile.experience.expert', 'Expérimenté'],
+    ['adWizardCoachProfile.experience.qualified', 'Diplômé'],
+    ['recruitmentAdEdit.coachExperience.confirmed', 'Confirmé'],
+    ['recruitmentAdEdit.coachExperience.expert', 'Expérimenté'],
+    ['recruitmentAdEdit.coachExperience.qualified', 'Diplômé'],
+  ])('%s vaut « %s »', (chemin, attendu) => {
+    expect(lire(chemin)).toBe(attendu);
+  });
+
+  it('aucun texte du code (repli compris) ne vaut plus « Experimente » ni « Diplome »', () => {
+    expect(textesDuCodeEgauxA(['Experimente', 'Diplome'])).toEqual([]);
+  });
+});

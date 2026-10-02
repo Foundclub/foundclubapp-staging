@@ -35,19 +35,19 @@ const EXPERIENCE_OPTIONS = [
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.experience.confirmed', 'Confirme');
+      return i18next.t('adWizardCoachProfile.experience.confirmed', 'Confirmé');
     },
     value: 'confirme',
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.experience.expert', 'Experimente');
+      return i18next.t('adWizardCoachProfile.experience.expert', 'Expérimenté');
     },
     value: 'experimente',
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.experience.qualified', 'Diplome');
+      return i18next.t('adWizardCoachProfile.experience.qualified', 'Diplômé');
     },
     value: 'diplome',
   },

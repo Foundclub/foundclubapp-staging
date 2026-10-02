@@ -1565,10 +1565,10 @@ export default {
     engagementLabel: "Type d'engagement *",
     engagementPlaceholder: 'Sélectionner un cadre',
     experience: {
-      confirmed: 'Confirme',
-      expert: 'Experimente',
+      confirmed: 'Confirmé',
+      expert: 'Expérimenté',
       junior: 'Junior',
-      qualified: 'Diplome',
+      qualified: 'Diplômé',
     },
     experienceLabel: 'Expérience attendue *',
     experiencePlaceholder: "Sélectionner un niveau d'expérience",
@@ -15438,10 +15438,10 @@ export default {
       updateSuccess: "L'annonce a été mise à jour avec succès.",
     },
     coachExperience: {
-      confirmed: 'Confirme',
-      expert: 'Experimente',
+      confirmed: 'Confirmé',
+      expert: 'Expérimenté',
       junior: 'Junior',
-      qualified: 'Diplome',
+      qualified: 'Diplômé',
     },
     coachRoles: {
       assistant: 'Entraîneur adjoint',
