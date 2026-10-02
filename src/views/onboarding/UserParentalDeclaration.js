@@ -57,6 +57,29 @@ function UserParentalDeclaration({ navigation, route }) {
   const isEntryCheckpoint = onboardingViews?.isEntryCheckpoint === true
     && !route?.params?.returnRoute;
 
+  /**
+   * AGE-OBLIGATOIRE-2 c (02/10/2026, « parent 13 corriger ») - L'ETAPE APRES LA CASE, a
+   * l'inscription. Elle visait toujours « UserAddress » ; le parcours du Parent n'a pas
+   * d'adresse (nom, photo, « declare ton enfant ») : l'ecran n'etait pas monte et un Parent
+   * de 13-14 ans restait sur la case cochee. On lit le PARCOURS (le meme sur le site, qui
+   * ne sait pas lister ses ecrans montes) :
+   *   - il a une adresse, ou on ne le connait pas : « UserAddress », comme avant ;
+   *   - sinon, sa premiere etape restante hors identite et declaration (deja faites, meme si
+   *     le profil en memoire ne le sait pas encore) ; a defaut, l'accueil.
+   * @returns {string} La route ou continuer.
+   */
+  const resolveRouteApresLaCase = () => {
+    const views = onboardingViews?.views || [];
+    if (views.length === 0 || views.some((view) => view.route === RouteNames.UserAddress)) {
+      return RouteNames.UserAddress;
+    }
+
+    return views.find((view) => view.canShow
+      && view.route !== RouteNames.UserName
+      && view.route !== RouteNames.UserParentalDeclaration)?.route
+      || getPostOnboardingHomeRoute();
+  };
+
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
@@ -87,7 +110,7 @@ function UserParentalDeclaration({ navigation, route }) {
         // laissait l'ado sur la case cochee, sans suite.
         navigation.navigate(getPostOnboardingHomeRoute());
       } else {
-        navigation.navigate(RouteNames.UserAddress);
+        navigation.navigate(resolveRouteApresLaCase());
       }
     },
   });
