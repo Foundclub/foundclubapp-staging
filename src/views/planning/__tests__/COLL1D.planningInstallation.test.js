@@ -144,6 +144,23 @@ jest.mock('@/services/collectivite/collectiviteService', () => ({
   getMyCollectivites: jest.fn(() => Promise.resolve({ data: [] })),
 }));
 
+// COLL-C2B (02/10) : le planning d une installation a desormais 5 vues (Mois = le calendrier) et
+// les gestes de la mairie (le service des creneaux) : deux doublures, sans effet sur ce temoin.
+jest.mock(
+  '@/components/organisms/planningCalendarView',
+  () => function CalendarMock() { return null; },
+);
+jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
+  attributeSeasonSlot: jest.fn(),
+  getClubTeamsForSlot: jest.fn(),
+  getSeasonSlot: jest.fn(),
+  listFacilitySeasonSlots: jest.fn(),
+  modifySeasonSlot: jest.fn(),
+  previewFacilitySeasonSlot: jest.fn(),
+  restoreSeasonSlot: jest.fn(),
+  withdrawSeasonSlot: jest.fn(),
+}));
+
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));
@@ -269,7 +286,9 @@ describe('COLL1D — planning d une installation : couleur par club, texte du me
     mockAuth = { userData: { role: { name: 'Joueur', type: 'joueur' } } };
     const lu = texte(await rendre());
 
-    expect(lu).toContain('place');
+    // COLL-C2B (02/10, design P5-jour, RETIRE) : un membre n a plus de bloc capacite, « ses
+    // phrases ne le concernent pas » ; il lit son club en couleur, les autres en gris.
+    expect(lu).not.toMatch(/équipes? à la fois|place libre|complet/i);
     expect(lu).not.toMatch(/dirigeant|dépassement|slot/i);
   });
 
@@ -281,7 +300,8 @@ describe('COLL1D — planning d une installation : couleur par club, texte du me
     });
     const lu = texte(await rendre());
 
-    expect(lu).toContain('Complet');
+    // COLL-C2B (02/10, design P5-jour, RETIRE) : plus aucune phrase de capacite pour un membre.
+    expect(lu).not.toMatch(/complet|équipes? à la fois/i);
     expect(lu).not.toMatch(/dirigeant|dépassement|demande en attente/i);
   });
 

@@ -169,6 +169,13 @@ function EventBlock({
  * @param {boolean} [root0.expandToContent]
  * @param {boolean} [root0.showHeader]
  * @param {boolean} [root0.showUntimedSection]
+ * @param {number} [root0.firstHour] - COLL-C2B : la grille commence au plus tard a cette heure
+ *   (l ouverture de l installation), pour qu une heure libre du matin se touche.
+ * @param {(jour: Date, heure: number) => void} [root0.onFreeSlotPress] - COLL-C2B : toucher une
+ *   heure de la grille (la mairie attribue). Sans elle, rien ne se touche hors des blocs.
+ * @param {Array<{ key: string, label: string }>} [root0.lanes] - COLL-C2B (D66) : en mode
+ *   « jour », une colonne par plateau, nommee en tete.
+ * @param {(evenement: any) => number} [root0.laneOf] - La colonne d un bloc (0 a lanes.length-1).
  */
 function PlanningWeekTimelineView({
   cardDisplayProfile = 'default',
@@ -176,9 +183,13 @@ function PlanningWeekTimelineView({
   currentDate: propDate,
   events = [],
   expandToContent = false,
+  firstHour,
+  laneOf,
+  lanes,
   mode = '3days',
   onDateChange,
   onEventPress,
+  onFreeSlotPress,
   onReadOnlyEventPress,
   onSummaryPress,
   scrollEnabled = true,
@@ -229,13 +240,19 @@ function PlanningWeekTimelineView({
   );
 
   const displayStartHour = useMemo(() => {
-    if (!timedEvents.length) return 8;
+    // COLL-C2B : avec `firstHour`, la grille ouvre au plus tard a l ouverture de l installation.
+    const ouverture = typeof firstHour === 'number' ? firstHour : 23;
+    if (!timedEvents.length) return typeof firstHour === 'number' ? firstHour : 8;
     return timedEvents.reduce((hour, event) => {
       const eventTime = extractTime(event);
       if (!eventTime) return hour;
       return Math.min(hour, eventTime.startHour);
-    }, 23);
-  }, [timedEvents]);
+    }, ouverture);
+  }, [firstHour, timedEvents]);
+  // COLL-C2B (D66) : les colonnes de plateaux ne valent qu en mode « jour ».
+  const colonnesDePlateaux = mode === 'day' && Array.isArray(lanes) && lanes.length > 0
+    ? lanes
+    : null;
 
   const activeHours = useMemo(() => {
     const values = new Set();
@@ -366,6 +383,28 @@ function PlanningWeekTimelineView({
       byDay[dayIndex].push(positionedEvent);
     });
 
+    // COLL-C2B (D66, design P4v3-plateaux ecran 3) : une colonne PAR PLATEAU, nommee en tete ;
+    // chaque bloc va dans la sienne. ponytail: deux blocs du meme plateau a la meme heure se
+    // superposent (c est un depassement, que l attribution a deja signale) ; sortie : les
+    // decaler dans leur colonne comme les grappes ci-dessous.
+    if (colonnesDePlateaux) {
+      const largeur = 100 / colonnesDePlateaux.length;
+      return byDay.flatMap((dayEvents) => dayEvents.map((/** @type {any} */ event) => {
+        const colonne = Math.max(0, Math.min(
+          colonnesDePlateaux.length - 1,
+          Number(laneOf ? laneOf(event) : 0) || 0,
+        ));
+        return {
+          ...event,
+          colIndex: colonne,
+          displayType: 'event',
+          height: event.bottom - event.top,
+          leftPercent: colonne * largeur,
+          widthPercent: largeur,
+        };
+      }));
+    }
+
     return byDay.flatMap((dayEvents, dayIndex) => {
       const sortedEvents = dayEvents.sort((left, right) => {
         if (left.top === right.top) return left.bottom - right.bottom;
@@ -431,7 +470,10 @@ function PlanningWeekTimelineView({
         ];
       });
     });
-  }, [Colors.primary500, activeHours, collapsedHeight, hourHeight, hourPositions, minEventHeight, mode, timedEvents, totalHeight, weekDays]);
+  }, [
+    Colors.primary500, activeHours, collapsedHeight, colonnesDePlateaux, hourHeight, hourPositions,
+    laneOf, minEventHeight, mode, timedEvents, totalHeight, weekDays,
+  ]);
 
   const untimedByDay = useMemo(() => weekDays.map((day) => (
     untimedEvents.filter((event) => {
@@ -834,6 +876,51 @@ function PlanningWeekTimelineView({
     </View>
   ) : null;
 
+  // COLL-C2B (02/10, design P5v2-vues) : la mairie touche une heure libre ⇒ « Attribuer pour
+  // la saison ». Les cases sont rendues AVANT les blocs : un bloc garde son propre geste.
+  const cellulesLibres = onFreeSlotPress ? timelineBlocks.flatMap((block) => {
+    const heure = block.type === 'hour' ? block.value : block.start;
+    const hauteur = block.type === 'hour' ? hourHeight : collapsedHeight;
+    return weekDays.map((day, dayIndex) => (
+      <TouchableOpacity
+        accessibilityLabel={t(
+          'collectiviteCreneaux.vues.heureLibre',
+          'Heure libre, {{jour}} {{heure}} : attribuer',
+          {
+            heure: `${String(heure).padStart(2, '0')}:00`,
+            jour: format(day, 'EEEE d MMMM', { locale: fr }),
+          },
+        )}
+        accessibilityRole="button"
+        key={`libre-${getDayKey(day)}-${heure}`}
+        onPress={() => onFreeSlotPress(day, heure)}
+        style={{
+          height: hauteur,
+          left: `${(dayIndex * 100) / weekDays.length}%`,
+          position: 'absolute',
+          top: /** @type {Record<number, number>} */ (hourPositions)[heure] ?? 0,
+          width: `${100 / weekDays.length}%`,
+        }}
+        testID={`heure-libre-${getDayKey(day)}-${heure}`}
+      />
+    ));
+  }) : null;
+  // COLL-C2B (D66) : le nom de chaque plateau, en tete de sa colonne (mode « jour »).
+  const tetesDePlateaux = colonnesDePlateaux ? (
+    <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+      <View style={{ width: timeColumnWidth }} />
+      {colonnesDePlateaux.map((colonne) => (
+        <Text
+          key={colonne.key}
+          numberOfLines={1}
+          style={[Fonts.p3Bold, { color: Colors.neutral200, flex: 1, textAlign: 'center' }]}
+        >
+          {colonne.label}
+        </Text>
+      ))}
+    </View>
+  ) : null;
+
   const timelineBody = (
     <View style={styles.container}>
       {showHeader ? (
@@ -960,6 +1047,8 @@ function PlanningWeekTimelineView({
           })}
         </View>
 
+        {tetesDePlateaux}
+
         {!compactFullscreen ? untimedSection : null}
 
         {(() => {
@@ -1015,6 +1104,8 @@ function PlanningWeekTimelineView({
                         }]}
                       />
                     ))}
+
+                    {cellulesLibres}
 
                     {nowLine ? (
                       <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>
@@ -1086,6 +1177,8 @@ function PlanningWeekTimelineView({
                       }]}
                     />
                   ))}
+
+                  {cellulesLibres}
 
                   {nowLine ? (
                     <View style={[styles.nowLineContainer, { left: `${(nowLine.dayIndex * 100) / weekDays.length}%`, top: nowLine.top, width: `${100 / weekDays.length}%` }]}>
