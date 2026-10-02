@@ -28,6 +28,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   PENDING_TRAINING_REVIEWS_QUERY_KEY,
+  TRAINING_REVIEW_STALE_MS,
   useGetPendingTrainingReviews,
 } from '@/services/trainingReview/trainingReviewQueries';
 import { submitTrainingReview } from '@/services/trainingReview/trainingReviewService';
@@ -236,8 +237,13 @@ function TrainingReviewPromptHost({ skipInitialFetch = false } = {}) {
 
       if (wasBackground && nextState === 'active' && isBootstrapResolved) {
         setDismissedPromptKey(null);
-        queryClient.invalidateQueries({ queryKey: PENDING_TRAINING_REVIEWS_QUERY_KEY });
-        refetch();
+        // FINITIONS6 · point 7 (tournee 8, reseau) — UNE lecture au retour, et seulement
+        // si la donnee a plus que sa fraicheur (30 s). Avant : `invalidateQueries`
+        // relancait deja la lecture (requete observee), puis `refetch()` une seconde ;
+        // journal T8 : 386 appels, toujours par paires, a chaque retour — et des retours
+        // toutes les 1 a 3 s (fenetre systeme, permission) relisaient a chaque fois.
+        const requete = queryClient.getQueryCache().find({ queryKey: PENDING_TRAINING_REVIEWS_QUERY_KEY });
+        if (!requete || requete.isStaleByTime(TRAINING_REVIEW_STALE_MS)) refetch();
       }
     });
 

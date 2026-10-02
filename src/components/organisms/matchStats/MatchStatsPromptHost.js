@@ -29,7 +29,10 @@ import {
 } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetPendingMatchStatsPrompts } from '@/services/matchStats/matchStatsQueries';
+import {
+  PENDING_MATCH_STATS_STALE_MS,
+  useGetPendingMatchStatsPrompts,
+} from '@/services/matchStats/matchStatsQueries';
 
 import { getWebBackgroundPollMs } from '@/utils/webRuntime';
 
@@ -452,8 +455,13 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
 
       if (wasBackground && nextState === 'active' && (isBootstrapResolved || allowPromptFallbackFetch)) {
         setDismissedPromptKey(null);
-        queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] });
-        refetch();
+        // FINITIONS6 · point 7 (tournee 8, reseau) — UNE lecture au retour, et seulement
+        // si la donnee a plus que sa fraicheur (30 s). Avant : `invalidateQueries`
+        // relancait deja la lecture (requete observee), puis `refetch()` une seconde ;
+        // journal T8 : 386 appels, toujours par paires, a chaque retour — et des retours
+        // toutes les 1 a 3 s (fenetre systeme, permission) relisaient a chaque fois.
+        const requete = queryClient.getQueryCache().find({ queryKey: ['pendingMatchStatsPrompts'] });
+        if (!requete || requete.isStaleByTime(PENDING_MATCH_STATS_STALE_MS)) refetch();
       }
     });
 
