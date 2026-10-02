@@ -28,6 +28,7 @@ import { getShortAddress } from '@/utils/location';
 import { getRecruitmentAdPlayerTitle, getRecruitmentAdSportName } from '@/utils/recruitmentAdTitle';
 
 import CARD_BACKGROUND from '@/assets/background-card-event/card-autre.png';
+import { getCoachRoleLabel, getEngagementLabel } from '@/constants/coachRoles';
 import { getRecruitAthleteNoun } from '@/constants/positions';
 
 const normalizeTypeLabel = (value = '') => String(value || '')
@@ -35,18 +36,6 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
-
-const humanizeEnumLabel = (value, fallback = '') => {
-  const normalizedValue = String(value || '').trim();
-  if (!normalizedValue) return fallback;
-
-  return normalizedValue
-    .replace(/_/g, ' ')
-    .split(' ')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
 
 /**
  * RecruitmentAdCard component.
@@ -94,8 +83,10 @@ function RecruitmentAdCard({
   const clubName = club?.name || team?.name || t('recruitmentAdCard.unknownClub', 'Club inconnu');
   const clubLogo = getImageUrl(club?.logo?.url);
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
+  // FINITIONS8 (point 9) : le role et l'engagement se lisent par leurs tables, jamais bruts
+  // (« ENTRAINEUR ADJOINT », « benevole »). Test : __tests__/RecruitmentAdCard.FINITIONS8.test.js.
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+    ? (getCoachRoleLabel(ad?.coachRole, ad?.coachRoleOther) || t(
       'recruitmentAdCard.coachRole',
       'Rôle entraîneur',
     ))
@@ -322,7 +313,7 @@ function RecruitmentAdCard({
               <View style={styles.detailItem}>
                 <Image source={Images.filter} style={[styles.icon, { tintColor: Colors.primary500 }]} />
                 <Text numberOfLines={1} style={styles.detailText}>
-                  {isCoachAd ? (ad?.engagementType || levelName) : levelName}
+                  {isCoachAd ? (getEngagementLabel(ad?.engagementType) || levelName) : levelName}
                 </Text>
               </View>
 

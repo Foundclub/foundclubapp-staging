@@ -289,7 +289,7 @@ describe('subscriptionDecision', () => {
     // lignes renvoyees par un serveur pas a jour ne doivent jamais s'afficher.
     expect(getSubscriptionQuotaItems(freeUsageSummary, 'FREE')).toEqual([
       {
-        label: 'Evenements',
+        label: 'Événements', // FINITIONS8 (point 9) : la valeur de fr.js prend son accent
         quotaType: 'EVENT_PUBLISH',
         remaining: 0,
         total: 1,
@@ -305,7 +305,7 @@ describe('subscriptionDecision', () => {
       .toEqual(getSubscriptionQuotaItems(freeUsageSummary, 'CLUB'));
     expect(getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', 'CLUB_UNVERIFIED')).toBeNull();
     expect(getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', 'FREE')).toEqual({
-      label: 'Evenements',
+      label: 'Événements', // FINITIONS8 (point 9) : la valeur de fr.js prend son accent
       quotaType: 'EVENT_PUBLISH',
       remaining: 0,
       total: 1,

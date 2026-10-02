@@ -337,7 +337,7 @@ export default {
     relationFailed: 'Relation impossible',
     relations: {
       activities: 'Activites',
-      events: 'Evenements',
+      events: 'Événements',
       facilities: 'Terrains',
       members: 'Membres',
       parentMultisport: 'Club multisport parent',
@@ -360,7 +360,7 @@ export default {
       retry: 'Reessayer',
     },
     stats: {
-      events: 'Evenements',
+      events: 'Événements',
       facilities: 'Terrains',
       members: 'Membres',
       requests: 'Demandes',
@@ -878,7 +878,7 @@ export default {
     firstEvent: {
       badge: '1er event',
       createdOn: 'Cree le',
-      defaultName: 'Evenement',
+      defaultName: 'Événement',
       organizer: 'Organisateur:',
     },
     firstEvents: {
@@ -1296,7 +1296,7 @@ export default {
     },
     filters: {
       all: 'Tous',
-      events: 'Evenements',
+      events: 'Événements',
       rejected: 'Refusés',
       resolved: 'Resolus',
     },
@@ -1305,7 +1305,7 @@ export default {
     openEvent: "Ouvrir l'événement",
     shownCount: 'signalement(s) affiche(s)',
     source: {
-      event: 'Evenement',
+      event: 'Événement',
     },
     states: {
       errorDescription: 'Impossible de charger les signalements admin.',
@@ -1423,7 +1423,7 @@ export default {
       conversationFallback: 'Conversation',
       conversationWith: 'Conversation avec {{person}}',
       eventFallback: "Signalement d'événement",
-      eventTargetFallback: 'Evenement',
+      eventTargetFallback: 'Événement',
       messageFallback: 'Signalement de message',
     },
     unknownUser: 'Utilisateur inconnu',
@@ -1557,10 +1557,10 @@ export default {
       videoAnalyst: 'Analyste vidéo',
     },
     engagement: {
-      expenses: 'Indemnise',
-      salaried: 'Salarie',
+      expenses: 'Indemnisé',
+      salaried: 'Salarié',
       toBeDefined: 'A définir',
-      volunteer: 'Benevole',
+      volunteer: 'Bénévole',
     },
     engagementLabel: "Type d'engagement *",
     engagementPlaceholder: 'Sélectionner un cadre',
@@ -2405,8 +2405,8 @@ export default {
     },
     fallbacks: {
       externalTeamCap: 'Une équipe externe',
-      theEvent: "l'evenement",
-      theEventCap: "L'evenement",
+      theEvent: "l'événement",
+      theEventCap: "L'événement",
       theOpponent: "l'adversaire",
       thisClub: 'ce club',
       thisEvent: 'cet événement',
@@ -4327,7 +4327,7 @@ export default {
     loadMore: 'Voir plus',
     refreshing: 'Actualisation des clubs...',
     relevanceReason: 'Tri pertinence: {{reason}}',
-    sortedByRelevance: 'Trie par pertinence',
+    sortedByRelevance: 'Trié par pertinence',
     viewport: {
       count: '{{total}}{{plus}} clubs dans la zone visible',
       exit: 'Quitter',
@@ -6697,7 +6697,7 @@ export default {
         title: 'Aucun événement disponible',
       },
       error: 'Impossible de charger les événements publics.',
-      loading: 'Chargement des evenements…',
+      loading: 'Chargement des événements…',
       minChars: 'Saisis au moins 2 caractères pour lancer une recherche précise.',
       share: 'Partager dans la conversation',
       subtitle: 'Recherche un événement public et partage-le directement dans cette conversation.',
@@ -7162,7 +7162,7 @@ export default {
       withoutEvent: 'Participation {{typeLabel}}',
     },
     typeLabels: {
-      event: 'evenement',
+      event: 'événement',
       internship: 'stage',
       tournament: 'tournoi',
     },
@@ -7486,7 +7486,7 @@ export default {
     eventAttendance: 'Présence événement',
     eventCampaign: 'Campagne événement',
     eventCreatedCheckTheLast: 'Événement crée. Vérifie les derniers détails avant de le partager.',
-    eventFallback: 'Evenement',
+    eventFallback: 'Événement',
     eventGone: 'Cet événement n’est plus disponible ou a été supprimé.',
     eventNotFound: 'Événement introuvable',
     expectedPlayers: 'Joueurs attendus',
@@ -8006,7 +8006,7 @@ export default {
     teamToCreate: 'Équipe à créer : {{teamName}}.',
     temporaryTeam: 'Équipe éphémère',
     temporaryTeams: 'Equipes ephemeres:',
-    theCoachHasnTLeft: "Le coach n'a pas encore laisse d'avis individuel pour ce match.",
+    theCoachHasnTLeft: "Le coach n'a pas encore laissé d'avis individuel pour ce match.",
     theCoachPublishedIndividualFeedback: 'Le coach a publié un retour individuel pour ton match.',
     // eslint-disable-next-line max-len
     theEventIsOverAnd: "Un encadrant t'a marqué absent à l'appel. S'il s'est trompé, il peut corriger ton pointage.",
@@ -8187,7 +8187,7 @@ export default {
     extraTasks: 'Tâches annexes',
     featured: 'Mise à la une',
     // eslint-disable-next-line max-len
-    featuringRequestFromEventPage: "La demande de mise a la une se fait depuis la fiche de l'evenement une fois enregistre.",
+    featuringRequestFromEventPage: "La demande de mise à la une se fait depuis la fiche de l'événement une fois enregistré.",
     fields: {
       address: {
         label: 'Adresse',
@@ -8550,7 +8550,7 @@ export default {
     eventsInThisArea_one: '{{count}} événement dans cette zone',
     eventsInThisArea_other: '{{count}} événements dans cette zone',
     opensTheEventsMapView: 'Ouvre la vue carte des événements.',
-    sortedByRelevance: 'Trie par pertinence',
+    sortedByRelevance: 'Trié par pertinence',
     switchToMapView: 'Passer en mode carte',
     zoomInOnTheMap: 'Zoome sur la carte pour afficher tous les événements de cette zone.',
   },
@@ -8756,7 +8756,7 @@ export default {
       capacityValue: '{{count}} joueurs',
       completedCount: '{{done}}/5 infos clés complétées',
       creationProgress: {
-        description: '{{completed}}/{{total}} evenements traites',
+        description: '{{completed}}/{{total}} événements traités',
         partialFailures: '{{count}} création(s) à vérifier',
         title: 'Création en cours',
       },
@@ -9311,7 +9311,7 @@ export default {
     bookingDescription: "Bloque un créneau d'installation",
     chooseTheEventTypeBefore: 'Choisis le type d événement avant de continuer le wizard.',
     detectionDescription: 'Ouvre ton équipe à de nouveaux joueurs',
-    events: 'Evenements',
+    events: 'Événements',
     matchDescription: 'Rencontre de championnat ou de coupe',
     otherDescription: 'Réunion, sortie, animation du club…',
     reload: 'Recharger',
@@ -9603,7 +9603,7 @@ export default {
       history: 'Aucun historique',
       pending: 'Aucune demande en attente',
     },
-    eventFallback: 'Evenement',
+    eventFallback: 'Événement',
     filters: {
       history: 'Historique',
       pending: 'En attente',
@@ -9615,7 +9615,7 @@ export default {
   featuredRequestsScreen: {
     request: {
       date: 'Date:{{date}}',
-      eventFallback: 'Evenement',
+      eventFallback: 'Événement',
     },
     tutorial: {
       description: 'Analyse les demandes et valide les événements à la une.',
@@ -11045,7 +11045,7 @@ export default {
       notAvailable: 'Retour pas encore disponible',
       notShared: 'Pas encore partage',
       pending: 'En attente',
-      pendingBody: "Le capitaine n'a pas encore laisse d'avis individuel pour ce match.",
+      pendingBody: "Le capitaine n'a pas encore laissé d'avis individuel pour ce match.",
       published: 'Évaluation publiée',
       publishedBody: 'Le capitaine a publié un retour individuel pour ton match.',
     },
@@ -12549,7 +12549,7 @@ export default {
     endOfMatchReport: 'Bilan de fin de match',
     enterMyStats: 'Renseigner mes stats',
     enterTheMatchStats: 'Saisir les stats du match',
-    event: 'Evenement',
+    event: 'Événement',
     iDonTKnowMy: 'Je ne sais pas mes stats',
     later: 'Plus tard',
     league: 'Ligue',
@@ -13131,7 +13131,7 @@ export default {
     draftSaveError: "Impossible d'enregistrer ce brouillon.",
     // eslint-disable-next-line max-len
     dragHint: 'Fais glisser un joueur des remplaçants vers le terrain : appui long, puis tu le déposes où tu veux. Tu peux aussi le sélectionner puis toucher un poste.',
-    event: 'Evenement',
+    event: 'Événement',
     external: 'Externe',
     firstNameRequired: 'Prénom *',
     freeLineup: 'Composition libre',
@@ -14215,7 +14215,7 @@ export default {
   },
   planningSlots: {
     event: 'Événement',
-    eventFallback: 'Evenement',
+    eventFallback: 'Événement',
   },
   planningWeekTimelineViewV2: {
     changeThePeriodToSee: 'Les flèches mènent aux autres dates.',
@@ -15449,10 +15449,10 @@ export default {
       videoAnalyst: 'Analyste vidéo',
     },
     engagement: {
-      expenses: 'Indemnise',
-      salaried: 'Salarie',
+      expenses: 'Indemnisé',
+      salaried: 'Salarié',
       toBeDefined: 'A définir',
-      volunteer: 'Benevole',
+      volunteer: 'Bénévole',
     },
     form: {
       availability: 'Disponibilites',
@@ -15655,7 +15655,7 @@ export default {
       matching: 'Correspondent à ton profil',
       other: 'Autres annonces',
     },
-    sortedByRelevance: 'Trie par pertinence',
+    sortedByRelevance: 'Trié par pertinence',
     tabs: {
       applications: 'Candidatures',
       opportunities: 'Opportunités',
@@ -15714,7 +15714,7 @@ export default {
     event: {
       validationTitle: 'Validation événement',
     },
-    eventFallback: 'Evenement',
+    eventFallback: 'Événement',
     facility: {
       // eslint-disable-next-line max-len
       subtitle: '{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).',
@@ -15756,11 +15756,11 @@ export default {
       waitForManagers: 'Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
       wantsToJoin: '{{requester}} souhaite rejoindre {{team}}.',
     },
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     teamInvite: {
-      invited: '{{team}} est invitee a cet evenement.',
+      invited: '{{team}} est invitée à cet événement.',
       invites: '{{organizer}} invite {{team}}.',
-      myTeamFallback: 'Ton equipe',
+      myTeamFallback: 'Ton équipe',
       title: 'Invitation - {{event}}',
     },
   },
@@ -15852,7 +15852,7 @@ export default {
     forbidden: 'Cet onglet est réservé aux entraîneur·e·s et aux dirigeant·e·s.',
     installation: {
       defaultRefusalReason: 'Créneau complet, dépassement refuse par le dirigeant.',
-      eventLabel: 'Evenement',
+      eventLabel: 'Événement',
       refusalModalDescription: 'Explique pourquoi cette exception installation est refusée.',
       refusalModalPlaceholder: 'Exemple: capacité déjà atteinte pour ce créneau.',
       refusalModalTitle: 'Refuser la demande',
@@ -16272,7 +16272,7 @@ export default {
     },
     heading: {
       clubs: 'Clubs',
-      events: 'Evenements',
+      events: 'Événements',
       reservations: 'Reservations',
     },
     hints: {
@@ -16753,7 +16753,7 @@ export default {
       captainRating: 'Capitaine {{rating}}/10',
       draft: 'Brouillon équipe',
       lastResponse: 'Dernière réponse le {{date}}',
-      latestTitle: 'Derniers matchs renseignes',
+      latestTitle: 'Derniers matchs renseignés',
       matchFallback: 'Match League',
       newResponseOne: 'Nouvelle réponse',
       newResponsesMany: '{{count}} nouvelles réponses',
@@ -16853,8 +16853,8 @@ export default {
       cleanSheets: '{{cleanSheets}} clean sheets - {{goalsAgainst}} buts encaissés',
       competition: 'Compétition League',
       competitionRecord: 'Bilan compétition',
-      cumulativeScore: 'Score cumule',
-      cumulativeScoreValue: 'Score cumule: {{scoreFor}} - {{scoreAgainst}}',
+      cumulativeScore: 'Score cumulé',
+      cumulativeScoreValue: 'Score cumulé : {{scoreFor}} - {{scoreAgainst}}',
       goals: 'Buts',
       // eslint-disable-next-line max-len
       hintFootball: 'La squad suit ici sa compétition League, ses derniers matchs et les retours post-match publiés.',
@@ -17682,7 +17682,7 @@ export default {
       year: 'an',
     },
     quotaLabels: {
-      events: 'Evenements',
+      events: 'Événements',
       matches: 'Matchs',
       recruitment: 'Recrutement',
       teams: 'Equipes',
@@ -18888,7 +18888,7 @@ export default {
     // eslint-disable-next-line max-len
     defaultLineupEmptyHint: 'Place les joueurs sur le terrain puis enregistre cette composition type pour répartir plus vite ensuite.',
     // eslint-disable-next-line max-len
-    defaultLineupHint: 'Composition type : reutilise cette composition comme base de depart sur les prochains evenements.',
+    defaultLineupHint: 'Composition type : réutilise cette composition comme base de départ sur les prochains événements.',
     defaultLineupSaved: 'Composition type enregistrée',
     defaultLineupSavedAlert: 'Composition type enregistrée.',
     delete: 'Supprimer',
@@ -19526,7 +19526,7 @@ export default {
       body: "Lecture des stats publiées de l'équipe, avec prise en compte des réponses joueur quand elles sont disponibles.",
       coachRating: 'Coach',
       coachScore: 'Coach {{rating}}/10',
-      cumulativeScore: 'Score cumule: {{scoreFor}} - {{scoreAgainst}}',
+      cumulativeScore: 'Score cumulé : {{scoreFor}} - {{scoreAgainst}}',
       empty: 'Aucune performance de match disponible pour le moment.',
       eyebrow: 'Performance équipe',
       feedbackCount_one: "d'après {{count}} retour post-match",
@@ -19553,7 +19553,7 @@ export default {
       published: 'Publie',
       ratingCount_one: '{{count}} note',
       ratingCount_other: '{{count}} notes',
-      recentTitle: 'Derniers matchs renseignes',
+      recentTitle: 'Derniers matchs renseignés',
       responses: '{{submitted}}/{{eligible}} joueurs ont répondu',
       stats: {
         assists: 'Passes décisives',

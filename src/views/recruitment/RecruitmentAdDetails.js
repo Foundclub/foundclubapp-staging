@@ -72,9 +72,10 @@ import { getShortAddress } from '@/utils/location';
 import { getRecruitmentAdPlayerTitle } from '@/utils/recruitmentAdTitle';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
-const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (
-  require('@/assets/background-card-event/card-match.png')
-);
+import CARD_MATCH from '@/assets/background-card-event/card-match.png';
+import { getCoachRoleLabel, getEngagementLabel } from '@/constants/coachRoles';
+
+const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (CARD_MATCH);
 
 const BottomModalView = /** @type {any} */ (BottomModal);
 const InputView = /** @type {any} */ (Input);
@@ -520,8 +521,9 @@ function RecruitmentAdDetails() {
   const clubLogo = getImageUrl(club?.logo?.url);
   const clubCertificationPalette = getClubCertificationPalette(club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(club);
+  // FINITIONS8 (point 9) : le role et l'engagement se lisent par leurs tables, jamais bruts.
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+    ? (getCoachRoleLabel(ad?.coachRole, ad?.coachRoleOther) || t(
       'recruitmentAdDetails.fallback.coachRole',
       'Rôle entraîneur',
     ))
@@ -537,7 +539,7 @@ function RecruitmentAdDetails() {
   const address = getShortAddress(ad?.city || club?.city || '');
   const sectionName = ad?.section?.name || ad?.section;
   const coachExperienceLabel = humanizeEnumLabel(ad?.coachExperienceLevel, '');
-  const engagementLabel = humanizeEnumLabel(ad?.engagementType, '');
+  const engagementLabel = getEngagementLabel(ad?.engagementType);
   const availabilityLabel = String(ad?.availabilityText || '').trim();
   const missionsLabel = String(ad?.missions || '').trim();
   const certificationsWanted = Array.isArray(ad?.certificationsWanted)
@@ -1167,9 +1169,9 @@ function RecruitmentAdDetails() {
                 const candidateMessage = String(application?.message || '').trim();
                 const applicationStatus = String(application?.status || '').trim().toLowerCase();
                 const applicationSnapshot = application?.profileSnapshot || {};
-                const coachApplicationRole = humanizeEnumLabel(
-                  applicationSnapshot?.coachRoleOther || applicationSnapshot?.coachRole,
-                  '',
+                const coachApplicationRole = getCoachRoleLabel(
+                  applicationSnapshot?.coachRole,
+                  applicationSnapshot?.coachRoleOther,
                 );
                 const coachApplicationExperience = humanizeEnumLabel(
                   applicationSnapshot?.coachExperienceLevel,

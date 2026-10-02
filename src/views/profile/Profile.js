@@ -1023,9 +1023,19 @@ function Profile({ navigation, route }) {
         const displayName = user?.firstname && user?.lastname
           ? `${user.firstname} ${user.lastname}`
           : user?.phone || user?.username || t('profile.accountSwitcher.fallbackName', 'Compte');
-        const roleName = user?.role?.name === 'Authenticated'
-          ? t('profile.identity.roles.president', 'Dirigeant')
-          : user?.role?.name || t('profile.accountSwitcher.fallbackRole', 'Utilisateur');
+        // FINITIONS8 (point 9) : le NOM du role en base (« Entraineur », « SuperAdmin »)
+        // s'affichait tel quel ; il se lit par profile.identity.roles, comme la carte
+        // d'identite de cet ecran.
+        let roleName = t('profile.accountSwitcher.fallbackRole', 'Utilisateur');
+        if (user?.role?.name === 'Authenticated') {
+          roleName = t('profile.identity.roles.president', 'Dirigeant');
+        } else if (user?.role?.name) {
+          const sessionRoleKey = getUserRoleKey(user.role.type || user.role.name);
+          roleName = t(
+            `profile.identity.roles.${sessionRoleKey}`,
+            t('profile.identity.roles.new'),
+          );
+        }
         const avatarUrl = isCurrent ? userData?.avatar?.url : session?.user?.avatar?.url;
 
         return (
