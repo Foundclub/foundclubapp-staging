@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { Text, TouchableOpacity } from 'react-native';
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TeamAttendancePanel, { TeamAttendanceSheetSummary } from '../performance/TeamAttendancePanel';
@@ -149,31 +149,15 @@ describe('ST-VUES planche 14 — l encadrement', () => {
   });
 });
 
-describe('ST-VUES planche 14 — « a non » : le joueur', () => {
-  const MOI = {
-    data: [ligne('hugo', 'Hugo', { absent: 1, present: 22, retards: 1 })],
-    periodStartAt: '2026-09-01T18:00:00.000Z',
-    teamAverage: { matchRate: 0.96, presenceRate: 0.87, trainingRate: 0.84 },
-    totals: { absenceCount: 18, attendanceCount: 51 },
-    viewerScope: 'self',
-  };
+// ST-VUES2 bis (02/10) — « a revenir » (decision d Adel du 02/10 vers 13 h 05) REMPLACE « a non » :
+// le joueur de l equipe lit la MEME vue que l encadrement. La vue « joueur seul » est retiree.
+// Temoin : TeamAttendancePanel.aRevenir.test.js.
+describe('ST-VUES planche 14 — « a revenir » : le joueur', () => {
+  test('le joueur lit la vue de l equipe, coequipiers compris', () => {
+    const arbre = monter(<TeamAttendancePanel onPressPlayer={jest.fn()} stats={EQUIPE} />);
 
-  test('🔒 sa carte « Ma présence » et la moyenne de l equipe ; aucune liste', () => {
-    const arbre = monter(<TeamAttendancePanel onPressPlayer={jest.fn()} stats={MOI} />);
-    const lus = textes(arbre);
-
-    expect(parTestID(arbre, 'team-attendance-self')).toHaveLength(1);
-    expect(lus).toEqual(
-      expect.arrayContaining([
-        'Ma présence',
-        '96 %',
-        '22 sur 23 événements · 1 retard',
-        'L’équipe : 87 % en moyenne.',
-        'Le détail joueur par joueur est réservé à l’encadrement.',
-      ]),
-    );
-    expect(lus.some((texte) => texte.startsWith('À surveiller'))).toBe(false);
-    expect(arbre.root.findAllByType(TouchableOpacity)).toHaveLength(0);
+    expect(parTestID(arbre, 'team-attendance-self')).toHaveLength(0);
+    expect(textes(arbre).some((texte) => texte.startsWith('À surveiller'))).toBe(true);
   });
 });
 

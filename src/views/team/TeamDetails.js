@@ -4479,9 +4479,10 @@ function TeamDetails({ navigation, route }) {
                   </View>
                 ) : null}
 
-                {/* ST-VUES — PLANCHE 14 DU DESIGN VALIDE : la presence. L encadrement lit les
-                    tuiles, « À surveiller » et « Les autres » ; le JOUEUR lit SA presence et la
-                    moyenne (« a non », decide par le SERVEUR : `viewerScope`). « Remettre a zero »
+                {/* ST-VUES — PLANCHE 14 DU DESIGN VALIDE : la presence. L encadrement ET les
+                    joueurs de l equipe lisent les tuiles, « À surveiller » et « Les autres »
+                    (ST-VUES2 bis, « a revenir », qui remplace « a non » ; la porte du serveur
+                    garde l equipe et le club). « Remettre a zero »
                     part dans le menu ⋯ (etat 4). VA1 — un refus se dit, il ne devient pas une
                     liste vide. */}
                 {statsMode === 'attendance' || !canLoadTeamPerformanceStats ? (

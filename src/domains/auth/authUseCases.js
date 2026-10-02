@@ -1326,6 +1326,10 @@ export const NOTIFICATION_TYPES = {
   FEATURED_APPROVED: 'featuredApproved',
   FEATURED_REJECTED: 'featuredRejected',
   FEATURED_REQUEST: 'featuredRequest',
+  // ST-VUES2 (02/10) — « Karim attend le score de U15 B » : le dirigeant relance l'entraineur
+  // depuis « Résultats du week-end ». Jumeau serveur : admin/src/api/user-fcm-token/types/index.ts
+  // (MATCH_SCORE_REMINDER). Le toucher ouvre le match par `ctaRoute` : aucune aiguille ici.
+  MATCH_SCORE_REMINDER: 'matchScoreReminder',
   NEW_PARTICIPATION: 'newParticipation',
   OVERBOOKING_REQUEST: 'overbookingRequest',
   // PARENT-LIEN (30/09) — « Un parent demande a relier ton compte au sien ». Jumeau serveur :

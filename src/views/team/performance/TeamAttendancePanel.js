@@ -18,9 +18,10 @@ import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
  *   2. « À surveiller · N » : sous 85 %, du plus bas au plus haut ;
  *   3. « Les autres · N », dans le meme ordre ;
  *   4. « Depuis le … ».
- * LE JOUEUR lit SA presence et la moyenne de l equipe, jamais la ligne d un
- * coequipier (decision d Adel du 02/10, « a non ») : c est le SERVEUR qui ne la
- * lui envoie pas (`viewerScope: 'self'`) ; ce composant ne fait que la dire.
+ * LE JOUEUR de l equipe lit la MEME vue : ST-VUES2 bis, « a revenir » (decision d Adel
+ * du 02/10 vers 13 h 05, qui remplace « a non ») — la presence, les absences et les retards
+ * de chaque coequipier de SON equipe. C est la porte du serveur (`can-view-team-stats`) qui
+ * garde l equipe et le club ; la vue « joueur seul » de « a non » est retiree.
  *
  * Un pourcentage se dit en chiffre ET en couleur. Sans appel : une phrase, jamais
  * « 0 % ». Apres une remise a zero : « Depuis le 2 oct. » et des tirets.
@@ -105,15 +106,11 @@ function TeamAttendancePanel({
   } = useTheme();
 
   const rows = (Array.isArray(stats?.data) ? stats.data : []).map(readAttendanceRow);
-  const isSelfView = stats?.viewerScope === 'self';
   const average = stats?.teamAverage || {};
   const pointedTotal = rows.reduce(
     (/** @type {number} */ total, /** @type {any} */ entry) => total + entry.pointed,
     0,
   );
-  const teamPointed = isSelfView
-    ? Number(stats?.totals?.attendanceCount || 0) + Number(stats?.totals?.absenceCount || 0)
-    : pointedTotal;
   const percent = (/** @type {number | null | undefined} */ ratio) => (
     ratio === null || ratio === undefined ? '—' : `${Math.round(Number(ratio) * 100)} %`
   );
@@ -206,7 +203,7 @@ function TeamAttendancePanel({
 
   // Aucun appel. Apres une remise a zero, la periode le dit ; sinon une phrase dit d ou viendra la
   // presence.
-  if (teamPointed === 0) {
+  if (pointedTotal === 0) {
     if (resetDay) {
       return (
         <View style={[Spaces.gap[16]]} testID="team-attendance-after-reset">
@@ -247,77 +244,6 @@ function TeamAttendancePanel({
             {t(
               'teamStatsPanel.attendanceEmptyBody',
               'Elle se calcule à chaque appel, à l’entraînement comme au match.',
-            )}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // ---------------------------------------------------------------- LE JOUEUR
-  if (isSelfView) {
-    const mine = rows[0] || null;
-    return (
-      <View style={[Spaces.gap[16]]} testID="team-attendance-self">
-        {sportSentence}
-        <View
-          accessibilityLabel={t('teamStatsPanel.myPresence', 'Ma présence')}
-          style={[
-            ApplicationStyle.backgroundColor.primary700,
-            ApplicationStyle.borderRadius24,
-            Spaces.padding[16],
-            Spaces.gap[8],
-          ]}
-        >
-          <Text style={[Fonts.p4Bold, Fonts.primary200]}>
-            {t('teamStatsPanel.myPresence', 'Ma présence')}
-          </Text>
-          <Text
-            style={[
-              Fonts.h1Bold,
-              {
-                color:
-                  mine?.ratio === null || mine?.ratio === undefined
-                    ? Colors.neutral00
-                    : presenceToneOf(Colors, mine.ratio),
-              },
-            ]}
-          >
-            {percent(mine?.ratio)}
-          </Text>
-          {mine ? (
-            <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {`${t('teamStatsPanel.eventsOutOf', '{{attended}} sur {{count}} événement', {
-                attended: mine.attended,
-                count: mine.pointed,
-              })} · ${t('teamStatsPanel.lateCount', '{{count}} retard', {
-                count: mine.lateCount,
-              })}`}
-            </Text>
-          ) : null}
-          {mine?.ratio !== null && mine?.ratio !== undefined
-            ? gauge(mine.ratio, presenceToneOf(Colors, mine.ratio))
-            : null}
-          <View
-            style={{
-              backgroundColor: withAlpha(Colors.neutral00, 0.1),
-              height: 1,
-              marginVertical: 4,
-            }}
-          />
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('teamStatsPanel.teamAverageLead', 'L’équipe :')}
-            {' '}
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{percent(average?.presenceRate)}</Text>
-            {` ${t('teamStatsPanel.teamAverageTail', 'en moyenne.')}`}
-          </Text>
-        </View>
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-          <StatsIcon color={Colors.neutral300} height={16} name="shield" width={16} />
-          <Text style={[Fonts.p3, Fonts.neutral300, { flex: 1 }]}>
-            {t(
-              'teamStatsPanel.staffOnly',
-              'Le détail joueur par joueur est réservé à l’encadrement.',
             )}
           </Text>
         </View>
