@@ -403,7 +403,9 @@ describe('ST-RETOURS · planche 19 — les etats', () => {
 });
 
 describe('ST-RETOURS · planche 22 etat 3 — le parent lit la meme vue', () => {
-  it('« pour Hugo Lemaire », « Visible par Hugo et toi. », pas de lien vers le match', async () => {
+  // STATS-FIX2 · point 1 : la planche 22 (dessinee AVANT « parents encart B ») n avait pas de
+  // lien vers le match. Le parent lit maintenant l encart du score : la porte s ouvre pour lui.
+  it('« pour Hugo Lemaire », « Visible par Hugo et toi. », et la porte du match', async () => {
     mockFetchedUser = { ...HUGO, age: 14 };
     const arbre = await rendre(PAPA, VUE);
     const t = texte(arbre);
@@ -411,6 +413,6 @@ describe('ST-RETOURS · planche 22 etat 3 — le parent lit la meme vue', () => 
     expect(t).toContain('pour Hugo Lemaire');
     expect(t).toContain('Visible par Hugo et toi.');
     expect(t).toContain('7/10');
-    expect(t).not.toContain('Ouvrir le match');
+    expect(t).toContain('Ouvrir le match');
   });
 });

@@ -38,6 +38,7 @@ import CoachFeedbackList, {
   CoachWords,
   feedbackCardStyle,
   NewPill,
+  parentCanOpenMatch,
   WhoCanReadLine,
 } from '@/views/profile/coachFeedback/CoachFeedbackList';
 import {
@@ -829,9 +830,19 @@ function UserDetails({ navigation, route }) {
 
   // ST-RETOURS (planche 19) — « Ouvrir le match » mene a la fiche, sur le retour du coach
   // (meme destination que la notification « Retour du coach disponible »).
+  // STATS-FIX2 · point 1 — le PARENT y entre aussi (« parents encart B ») : la fiche du match
+  // seule, sans viser « Mon retour coach », qui est le bloc du joueur ; jamais un match de League.
   const handleOpenFeedbackMatch = useCallback((item) => {
     const sourceId = item?.sourceDocumentId;
     if (!sourceId) return;
+    if (isParentOfMinorViewer) {
+      if (!parentCanOpenMatch(item)) return;
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: sourceId },
+        screen: RouteNames.EventDetails,
+      });
+      return;
+    }
     if (item?.sourceType === 'league_match') {
       navigation.navigate(RouteNames.LeagueMatchDetails, {
         focusSection: 'coachFeedback',
@@ -843,7 +854,7 @@ function UserDetails({ navigation, route }) {
       params: { eventId: sourceId, focusSection: 'coachFeedback' },
       screen: RouteNames.EventDetails,
     });
-  }, [navigation]);
+  }, [isParentOfMinorViewer, navigation]);
 
   const handleOpenClub = () => {
     if (!user?.club?.documentId) return;
@@ -1274,6 +1285,29 @@ function UserDetails({ navigation, route }) {
                     </Text>
                   ) : null}
                   {latestFeedback?.comment ? <CoachWords text={latestFeedback.comment} /> : null}
+                  {/* STATS-FIX2 · point 1 (T10, P4) — la porte du match : le parent y lit
+                      l encart du score (« parents encart B »), et rien de plus. */}
+                  {parentCanOpenMatch(latestFeedback) ? (
+                    <TouchableOpacity
+                      accessibilityRole="link"
+                      onPress={() => handleOpenFeedbackMatch(latestFeedback)}
+                      style={[
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        Alignments.justifySpaceBetween,
+                        { minHeight: 44 },
+                      ]}
+                      testID="parent-child-feedback-open-match"
+                    >
+                      <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                        {t('stRetours.feedback.openMatch')}
+                      </Text>
+                      <Image
+                        source={Images.arrowRight}
+                        style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
+                      />
+                    </TouchableOpacity>
+                  ) : null}
                   <TouchableOpacity
                     accessibilityLabel={t('stRetours.parent.allFeedback', {
                       count: coachFeedback.length,

@@ -398,3 +398,73 @@ describe('ST-RETOURS · planche 22 — la fiche de l enfant, vue par son parent'
     expect(mockMarquerLu).not.toHaveBeenCalled();
   });
 });
+
+// STATS-FIX2 · POINT 1 (tournee T10, « Protections » P4) — LA PORTE DU MATCH, POUR LE PARENT.
+//
+// Adel a decide « parents encart B » (registre des mineurs, ligne 15) : le parent lit l encart du
+// score du match de son enfant. DECISIONS-SOIR l a construit DANS la fiche du match, mais aucun
+// chemin n y menait : le parent ne lisait « victoire 2 - 1 » que dans la carte du retour.
+// La porte la plus courte : « Ouvrir le match » sur le retour du coach, la ou le parent le lit deja
+// (fiche de l enfant, « Tous ses retours »). Elle ouvre la fiche du match, et RIEN de plus : ce que
+// cette fiche montre a un parent, le serveur le decide (EventDetailsN3CarteMatch, DECISIONS-SOIR).
+describe('STATS-FIX2 · point 1 — le parent ouvre le match depuis le retour du coach', () => {
+  beforeEach(() => {
+    mockFetchedUser = HUGO_VU_PAR_PAPA;
+    mockFollow = { hugo: { seen: ['event:m1:u15:v1', 'event:m0:u15:v1'] } };
+  });
+
+  /**
+   * Les « Ouvrir le match » de l ecran.
+   * @param {any} arbre
+   * @returns {any[]}
+   */
+  const portesDuMatch = (arbre) => arbre.root.findAllByType(TouchableOpacity)
+    .filter((n) => n.findAllByType(Text)
+      .some((t) => aplatir(t.props.children).trim() === 'Ouvrir le match'));
+  /**
+   * La fiche du match, sans « focusSection » : le bloc « Mon retour coach » est celui du joueur.
+   * @param {string} eventId
+   * @returns {any[]}
+   */
+  const versLaFicheDuMatch = (eventId) => [RouteNames.EventStack, {
+    params: { eventId },
+    screen: RouteNames.EventDetails,
+  }];
+
+  it('🔴 la fiche de l enfant : « Ouvrir le match » sous le dernier retour', async () => {
+    const arbre = await rendre(PAPA, FICHE_DE_HUGO);
+
+    expect(portesDuMatch(arbre)).toHaveLength(1);
+    await act(async () => {
+      portesDuMatch(arbre)[0].props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(...versLaFicheDuMatch('m1'));
+  });
+
+  it('🔴 « Tous ses retours » : chaque retour d un match porte « Ouvrir le match »', async () => {
+    const arbre = await rendre(PAPA, { userId: 'hugo', view: 'coachFeedback' });
+
+    expect(portesDuMatch(arbre)).toHaveLength(2);
+    await act(async () => {
+      portesDuMatch(arbre)[1].props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(...versLaFicheDuMatch('m0'));
+  });
+
+  it('🔒 un retour d un match de League : pas de porte pour le parent', async () => {
+    mockStatsQuery = {
+      ...mockStatsQuery,
+      data: { recentCoachFeedback: [{ ...RETOUR_KARIM, sourceType: 'league_match' }] },
+    };
+
+    expect(portesDuMatch(await rendre(PAPA, FICHE_DE_HUGO))).toHaveLength(0);
+    const vue = await rendre(PAPA, { userId: 'hugo', view: 'coachFeedback' });
+    expect(portesDuMatch(vue)).toHaveLength(0);
+  });
+
+  it('🔒 un AUTRE adulte : aucune porte', async () => {
+    mockFetchedUser = { ...HUGO_VU_PAR_PAPA, parentAccount: { documentId: 'un-autre' } };
+
+    expect(portesDuMatch(await rendre(PAPA, FICHE_DE_HUGO))).toHaveLength(0);
+  });
+});
