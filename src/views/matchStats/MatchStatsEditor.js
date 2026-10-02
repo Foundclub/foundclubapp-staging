@@ -10,23 +10,28 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
+import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { buildMatchEncartLines } from '@/views/event/matchEncartLines';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -37,6 +42,7 @@ import {
 } from '@/services/matchStats/matchStatsQueries';
 import {
   remindEventMatchResponses,
+  saveEventMatchResult,
   saveEventMatchStatsDraft,
   saveLeagueMatchStatsDraft,
   submitEventMatchStats,
@@ -49,6 +55,29 @@ import {
   MAX_MATCH_SCORE,
   MAX_STAT_VALUE,
 } from '@/utils/matchStatsBounds';
+
+// Même motif que `EventDetails.web.js` : `import/order` veut `@/responsive` AVANT les voisins,
+// `perfectionist` APRÈS ; les deux règles se contredisent sur ce seul bloc.
+/* eslint-disable perfectionist/sort-imports */
+import { useIsDesktop } from '@/responsive';
+import {
+  AlerteFeuille,
+  BilanPublie,
+  BlocRetours,
+  Compteur,
+  FicheDuJoueur,
+  NotesSurDix,
+  TableauDesJoueurs,
+  useSurfacesFeuille,
+} from './FeuilleDeMatchBlocs';
+import {
+  corrigerLaFeuille,
+  direLeCompte,
+  estUneLigneVide,
+  joindreLesNoms,
+  MOYENNE_MIN_REPONSES,
+} from './feuilleDeMatchModel';
+/* eslint-enable perfectionist/sort-imports */
 
 /**
  * @typedef {Record<string, any>} MatchStatsLine
@@ -108,8 +137,6 @@ const normalizeSport = (/** @type {any} */ value) => {
   return 'football';
 };
 
-const getSportLabel = (/** @type {any} */ sport) => (normalizeSport(sport) === 'basketball' ? 'Basketball' : 'Football');
-
 const getFieldConfig = (/** @type {any} */ sport) => (normalizeSport(sport) === 'basketball'
   ? BASKETBALL_FIELDS
   : FOOTBALL_FIELDS);
@@ -129,24 +156,51 @@ const getLineKey = (/** @type {any} */ line) => (
   || (line?.key ? String(line.key) : null)
 );
 
-const buildInitialLines = (/** @type {any[]} */ players, /** @type {any} */ report, /** @type {any} */ sport) => {
+/**
+ * Les lignes de la feuille, une par joueur.
+ *
+ * 🧨 ST-MATCH10 — DÉFAUT 19 (planche, état 2) : un brouillon enregistré AVANT la
+ * réponse du joueur porte une ligne VIDE, et elle écrasait sa réponse (« la ligne
+ * de Hugo reste vide alors qu'il a envoyé 90 min et 1 but »). Une ligne vide cède
+ * désormais la place aux chiffres que le joueur a ENVOYÉS ; une ligne que
+ * l'entraîneur a remplie garde ses chiffres (il a pu corriger la réponse).
+ * @param {any[]} players - Les joueurs de la feuille (`availablePlayers`).
+ * @param {any} report - La feuille enregistrée, s'il y en a une.
+ * @param {any} sport - Le sport.
+ * @param {any[]} responses - Les réponses des joueurs (`playerResponses`).
+ * @returns {MatchStatsLine[]} Les lignes, en texte (comme les compteurs).
+ */
+const buildInitialLines = (players, report, sport, responses) => {
   const fields = getFieldConfig(sport);
   const existingLines = Array.isArray(report?.playerLines) ? report.playerLines : [];
   const existingMap = new Map(existingLines.map((/** @type {any} */ line) => [getLineKey(line), line]));
+  const submitted = new Set((Array.isArray(responses) ? responses : [])
+    .filter((/** @type {any} */ response) => response?.status === 'submitted')
+    .map((/** @type {any} */ response) => response?.userDocumentId)
+    .filter(Boolean));
 
   return (Array.isArray(players) ? players : []).map((/** @type {any} */ player) => {
     const playerKey = getLineKey(player);
     const existing = existingMap.get(playerKey) || null;
-    const suggestedPayload = player?.suggestedStats?.sportPayload || {};
-    const payload = existing?.sportPayload || suggestedPayload;
+    const hasSentFigures = Boolean(player?.suggestedStats && player?.documentId)
+      && submitted.has(player.documentId);
+    const takesSentFigures = Boolean(player?.suggestedStats)
+      && (!existing || (hasSentFigures && estUneLigneVide(existing)));
+    const source = takesSentFigures ? player.suggestedStats : existing;
+    const payload = source?.sportPayload || {};
     const baseLine = /** @type {MatchStatsLine} */ ({
+      firstname: player?.firstname || null,
       key: playerKey || `player:${Math.random().toString(36).slice(2)}`,
       label: player?.label || [player?.firstname, player?.lastname].filter(Boolean).join(' ').trim() || player?.manualPlayerName || i18next.t(
         'matchStatsEditor.player',
         'Joueur',
       ),
+      lastname: player?.lastname || null,
       manualPlayerName: player?.isManual ? (player?.label || player?.manualPlayerName || '') : (existing?.manualPlayerName || null),
-      minutesPlayed: String(existing?.minutesPlayed ?? player?.suggestedStats?.minutesPlayed ?? 0),
+      minutesPlayed: String(source?.minutesPlayed ?? 0),
+      // Ce que le joueur a envoyé : la ligne dit « repris de sa réponse » tant qu'elle
+      // les garde.
+      responseFigures: hasSentFigures ? player.suggestedStats : null,
       userDocumentId: player?.documentId || existing?.userDocumentId || null,
     });
 
@@ -196,9 +250,7 @@ const buildInitialCoachReviews = (/** @type {any[]} */ players, /** @type {any} 
       comment: existing?.comment || '',
       key: reviewKey,
       label: player?.label || i18next.t('matchStatsEditor.player', 'Joueur'),
-      playerResponse: Array.isArray(report?.playerResponses)
-        ? report.playerResponses.find((/** @type {any} */ entry) => entry?.userDocumentId === player?.documentId) || null
-        : null,
+      lineKey: getLineKey(player),
       rating: existing?.rating ?? null,
       userDocumentId: player?.documentId || null,
     };
@@ -212,29 +264,6 @@ const serializeCoachReview = (/** @type {any} */ review) => {
     rating: review?.rating ?? null,
     userDocumentId: review?.userDocumentId || undefined,
   };
-};
-
-const isLineCompleted = (/** @type {MatchStatsLine} */ line, /** @type {any} */ sport) => {
-  if ((Number.parseInt(String(line?.minutesPlayed || '0'), 10) || 0) > 0) {
-    return true;
-  }
-
-  return getFieldConfig(sport).some((field) => (Number.parseInt(String(line?.[field.key] || '0'), 10) || 0) > 0);
-};
-
-const buildScoreSummary = (/** @type {any} */ score) => {
-  if (score?.scoreFor === null || score?.scoreAgainst === null || score?.scoreFor === undefined || score?.scoreAgainst === undefined) {
-    return i18next.t('matchStatsEditor.scoreToComplete', 'Score à compléter');
-  }
-  return `${score.scoreFor} - ${score.scoreAgainst}`;
-};
-
-const chunkFields = (/** @type {any[]} */ fields, size = 2) => {
-  const rows = [];
-  for (let index = 0; index < fields.length; index += size) {
-    rows.push(fields.slice(index, index + size));
-  }
-  return rows;
 };
 
 const getNumericStatValue = (/** @type {any} */ value) => Number.parseInt(String(value || '0'), 10) || 0;
@@ -262,206 +291,53 @@ const getApiErrorMessage = (/** @type {any} */ error, /** @type {string} */ fall
   || fallbackMessage
 );
 
-const getScoreSourceLabel = (/** @type {any} */ score) => {
-  if (score?.source === 'league_validated') {
-    return i18next.t(
-      'matchStatsEditor.leagueValidatedScore',
-      'Score ligue validé',
-    );
-  }
-  if (score?.source === 'external_sync') {
-    return i18next.t(
-      'matchStatsEditor.officialScoreSynced',
-      'Score officiel synchronise',
-    );
-  }
-  if (score?.source === 'manual') {
-    return i18next.t(
-      'matchStatsEditor.manualScore',
-      'Score saisi dans FoundClub',
-    );
-  }
-  return i18next.t('matchStatsEditor.scorePending', 'Score en attente');
-};
-
 /**
- * @param {{ isFinalized?: boolean; isReviewRequired?: boolean; isWaitingOfficial?: boolean }} status
- * @param {Record<string, any>} Colors
+ * « le 1 oct. à 22:39 ».
+ * @param {string | null | undefined} iso - Une date ISO.
+ * @returns {{ date: string, time: string } | null} Le jour et l'heure, ou rien.
  */
-const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial }, Colors) => {
-  if (isReviewRequired) {
-    return {
-      backgroundColor: `${Colors.warning500}20`,
-      borderColor: `${Colors.warning500}45`,
-      label: i18next.t('matchStatsEditor.checkRequired', 'Vérification requise'),
-      textColor: Colors.warning500,
-    };
-  }
-
-  if (isFinalized) {
-    return {
-      backgroundColor: `${Colors.success500}20`,
-      borderColor: `${Colors.success500}45`,
-      label: i18next.t('matchStatsEditor.statsPublished', 'Stats publiées'),
-      textColor: Colors.success500,
-    };
-  }
-
-  if (isWaitingOfficial) {
-    return {
-      backgroundColor: `${Colors.gold500}20`,
-      borderColor: `${Colors.gold500}45`,
-      label: i18next.t('matchStatsEditor.officialScorePending', 'Score officiel en attente'),
-      textColor: Colors.gold500,
-    };
-  }
-
+const lireLeMoment = (iso) => {
+  if (!iso) return null;
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return null;
   return {
-    backgroundColor: `${Colors.primary500}20`,
-    borderColor: `${Colors.primary500}45`,
-    label: i18next.t('matchStatsEditor.draftInProgress', 'Brouillon en cours'),
-    textColor: Colors.primary500,
+    date: instant.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+    time: instant.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
   };
 };
 
 /**
- * @param {{
- *   playerLines?: MatchStatsLine[];
- *   scoreAgainst?: any;
- *   scoreFor?: any;
- *   sport?: any;
- * }} params
+ * « sam. 5 sept. ».
+ * @param {string | null | undefined} iso - Une date ISO.
+ * @returns {string} Le jour, ou rien.
  */
-const buildMatchStatsConsistencyIssues = ({
-  playerLines,
-  scoreAgainst,
-  scoreFor,
-  sport,
-}) => {
-  const lines = Array.isArray(playerLines) ? playerLines : [];
-  if (!lines.length) return [];
-
-  const normalizedSport = normalizeSport(sport);
-  const resolvedScoreFor = getNullableNumericStatValue(scoreFor);
-  const resolvedScoreAgainst = getNullableNumericStatValue(scoreAgainst);
-  const issues = [];
-
-  if (normalizedSport === 'basketball') {
-    const totalPoints = lines.reduce(
-      (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.points),
-      0,
-    );
-    const totalThreePointPoints = lines.reduce(
-      (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + (getNumericStatValue(line?.threePointsMade) * 3),
-      0,
-    );
-
-    if (resolvedScoreFor !== null && totalPoints > resolvedScoreFor) {
-      issues.push(i18next.t(
-        'matchStatsEditor.pointsExceedScore',
-        'Les points saisis ({{totalPoints}}) dépassent le score final ({{resolvedScoreFor}}).',
-        { resolvedScoreFor, totalPoints, ...SANS_ECHAPPEMENT },
-      ));
-    }
-
-    if (totalThreePointPoints > totalPoints) {
-      issues.push(i18next.t(
-        'matchStatsEditor.threePointersExceedPoints',
-        'Les tirs a 3 points saisis dépassent le total des points marques.',
-      ));
-    }
-
-    const invalidThreePointLine = lines.find((/** @type {MatchStatsLine} */ line) => (
-      (getNumericStatValue(line?.threePointsMade) * 3) > getNumericStatValue(line?.points)
-    ));
-    if (invalidThreePointLine) {
-      issues.push(i18next.t(
-        'matchStatsEditor.playerThreePointersExceedPoints',
-        'Les 3 points de {{label}} dépassent ses points marques.',
-        {
-          label: invalidThreePointLine?.label || i18next.t(
-            'matchStatsEditor.thisPlayer',
-            'ce joueur',
-          ),
-          ...SANS_ECHAPPEMENT,
-        },
-      ));
-    }
-
-    return issues;
-  }
-
-  const totalGoals = lines.reduce(
-    (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.goals),
-    0,
-  );
-  const totalAssists = lines.reduce(
-    (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.assists),
-    0,
-  );
-
-  if (resolvedScoreFor !== null && totalGoals > resolvedScoreFor) {
-    issues.push(i18next.t(
-      'matchStatsEditor.goalsExceedScore',
-      'Les buts saisis ({{totalGoals}}) dépassent le score final ({{resolvedScoreFor}}).',
-      { resolvedScoreFor, totalGoals, ...SANS_ECHAPPEMENT },
-    ));
-  }
-
-  if (totalAssists > totalGoals) {
-    issues.push(i18next.t(
-      'matchStatsEditor.assistsExceedGoals',
-      'Les passes decisives ({{totalAssists}}) dépassent les buts marques ({{totalGoals}}).',
-      { totalAssists, totalGoals, ...SANS_ECHAPPEMENT },
-    ));
-  }
-
-  if (resolvedScoreAgainst !== null) {
-    const invalidConcededLine = lines.find((/** @type {MatchStatsLine} */ line) => (
-      getNumericStatValue(line?.goalsConceded) > resolvedScoreAgainst
-    ));
-    if (invalidConcededLine) {
-      issues.push(i18next.t(
-        'matchStatsEditor.playerConcededExceedsOpponentScore',
-        'Les buts encaissés de {{label}} dépassent le score adverse ({{resolvedScoreAgainst}}).',
-        {
-          label: invalidConcededLine?.label || i18next.t(
-            'matchStatsEditor.thisPlayer',
-            'ce joueur',
-          ),
-          resolvedScoreAgainst,
-          ...SANS_ECHAPPEMENT,
-        },
-      ));
-    }
-
-    if (resolvedScoreAgainst > 0 && lines.some((/** @type {MatchStatsLine} */ line) => Boolean(line?.cleanSheet))) {
-      issues.push(i18next.t(
-        'matchStatsEditor.cleanSheetNeedsZero',
-        'Le clean sheet n est possible que si le score adverse est a 0.',
-      ));
-    }
-  }
-
-  const invalidCleanSheetLine = lines.find((/** @type {MatchStatsLine} */ line) => (
-    Boolean(line?.cleanSheet) && getNumericStatValue(line?.goalsConceded) > 0
-  ));
-  if (invalidCleanSheetLine) {
-    issues.push(i18next.t(
-      'matchStatsEditor.playerCleanSheetNeedsZeroConceded',
-      'Le clean sheet de {{label}} impose 0 but encaissé.',
-      {
-        label: invalidCleanSheetLine?.label || i18next.t(
-          'matchStatsEditor.thisPlayer',
-          'ce joueur',
-        ),
-        ...SANS_ECHAPPEMENT,
-      },
-    ));
-  }
-
-  return issues;
+const lireLeJour = (iso) => {
+  if (!iso) return '';
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return '';
+  return instant.toLocaleDateString(localeDesFormats(), {
+    day: 'numeric', month: 'short', weekday: 'short',
+  });
 };
+
+const ONGLETS = /** @type {const} */ (['score', 'players', 'feedback']);
+
+// ==========================================================================
+// 📐 ST-MATCH10 — LA FEUILLE DE MATCH DE L'ENTRAÎNEUR (écran 10 du design des
+// statistiques validé le 02/10 ; planches P3-editeur-tel et P3-editeur-ordi).
+//
+// Avant : onze blocs empilés sur plusieurs milliers de points (60 compteurs pour 15
+// joueurs de football), « Publier » tout en bas, l'incohérence dite trois fois.
+// Maintenant :
+//   · au TÉLÉPHONE, trois onglets « Score et bilan · Joueurs · Retours » ;
+//   · sur ORDINATEUR (≥ 1 024 points), les trois côte à côte ; un joueur ouvert
+//     prend la place de deux colonnes (le tableau à gauche, son panneau à droite) ;
+//   · une ligne par joueur, et le détail dans SA feuille ;
+//   · une barre d'action collante, une seule alerte qui nomme le joueur, une
+//     confirmation à deux boutons qui dit qui recevra quoi.
+// 🔒 L'état SECU-STATS est la base : l'écran est réservé à l'encadrement (le joueur
+// n'y entre plus, le serveur refuse le dirigeant qui n'entraîne pas).
+// ==========================================================================
 
 /**
  * @param {{ navigation: any; route: any }} props
@@ -469,17 +345,18 @@ const buildMatchStatsConsistencyIssues = ({
 function MatchStatsEditor({ navigation, route }) {
   const { t } = useTranslation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const SpacesAny = /** @type {any} */ (Spaces);
-  const { height, width } = useWindowDimensions();
+  const surfaces = useSurfacesFeuille();
+  const { userData } = useAuth();
+  const ordinateur = useIsDesktop();
   const { sceneBottomInset } = useBottomDockLayout();
   const queryClient = useQueryClient();
   const sourceType = route?.params?.sourceType === 'league' ? 'league' : 'event';
   const eventId = route?.params?.eventId || null;
   const matchId = route?.params?.matchId || null;
   const requestedTeamId = route?.params?.teamId || null;
-  const initialTitle = route?.params?.title || t('matchStatsEditor.matchStats', 'Stats du match');
   const hydratedReportKeyRef = useRef(/** @type {string | null} */ (null));
 
   const eventStatsQuery = useGetEventMatchStats(eventId || '', requestedTeamId || undefined, {
@@ -498,27 +375,11 @@ function MatchStatsEditor({ navigation, route }) {
   const reportStatus = statsPayload?.report?.status || 'draft';
   const isFinalized = reportStatus === 'final';
   const isReviewRequired = Boolean(statsPayload?.report?.needsReview);
-  const isReadOnly = isFinalized && !isReviewRequired;
-  const isCompactMobile = width < 390 || height < 760;
-  const sectionPadding = isCompactMobile ? 14 : 16;
-  const sectionGap = isCompactMobile ? 10 : 12;
-  const scoreInputHeight = isCompactMobile ? 64 : 72;
-  const statInputHeight = isCompactMobile ? 48 : 52;
-  const scrollBottomPadding = Math.max(sceneBottomInset, 24);
+  // « Modifier » rouvre une feuille publiée (états 8 et 3 ordinateur) ; la republier
+  // prévient les joueurs. Tant qu'on ne republie pas, rien ne change côté serveur.
+  const [isEditingPublished, setIsEditingPublished] = useState(false);
+  const isReadOnly = isFinalized && !isReviewRequired && !isEditingPublished;
   const teamName = statsPayload?.team?.name || route?.params?.teamName || '';
-  const headerSurfaceColor = `${Colors.primary700}D9`;
-  const heroSurfaceColor = `${Colors.primary700}F0`;
-  const counterBorderColor = `${Colors.primary500}3D`;
-  const counterButtonColor = `${Colors.primary500}24`;
-  const counterSurfaceColor = `${Colors.primary500}16`;
-  const pillSurfaceColor = `${Colors.primary500}1A`;
-  const playerCardSurfaceColor = `${Colors.primary500}14`;
-  const statusMeta = useMemo(() => getReportStatusMeta({
-    isFinalized,
-    isReviewRequired,
-    isWaitingOfficial,
-  }, Colors), [Colors, isFinalized, isReviewRequired, isWaitingOfficial]);
-  const playerStatRows = useMemo(() => chunkFields(getFieldConfig(sport), 2), [sport]);
   const excludedNoShowPlayers = useMemo(
     () => (Array.isArray(statsPayload?.excludedNoShowPlayers) ? statsPayload.excludedNoShowPlayers : []),
     [statsPayload?.excludedNoShowPlayers],
@@ -530,6 +391,31 @@ function MatchStatsEditor({ navigation, route }) {
   const [collectiveRating, setCollectiveRating] = useState(/** @type {number | null} */ (null));
   const [collectiveComment, setCollectiveComment] = useState('');
   const [coachReviews, setCoachReviews] = useState(/** @type {any[]} */ ([]));
+  const [activeTab, setActiveTab] = useState(/** @type {typeof ONGLETS[number]} */ ('score'));
+  const [openLineKey, setOpenLineKey] = useState(/** @type {string | null} */ (null));
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const hydrate = useCallback((/** @type {any} */ payload) => {
+    setScoreFor(
+      payload?.score?.scoreFor === null || payload?.score?.scoreFor === undefined
+        ? ''
+        : String(payload.score.scoreFor),
+    );
+    setScoreAgainst(
+      payload?.score?.scoreAgainst === null || payload?.score?.scoreAgainst === undefined
+        ? ''
+        : String(payload.score.scoreAgainst),
+    );
+    setPlayerLines(buildInitialLines(
+      payload?.availablePlayers,
+      payload?.report,
+      sport,
+      payload?.playerResponses,
+    ));
+    setCollectiveRating(payload?.report?.collectiveRating ?? null);
+    setCollectiveComment(payload?.report?.collectiveComment || '');
+    setCoachReviews(buildInitialCoachReviews(payload?.availablePlayers, payload?.report));
+  }, [sport]);
 
   useEffect(() => {
     const reportKey = [
@@ -547,58 +433,24 @@ function MatchStatsEditor({ navigation, route }) {
     }
 
     hydratedReportKeyRef.current = reportKey;
-    setScoreFor(
-      statsPayload?.score?.scoreFor === null || statsPayload?.score?.scoreFor === undefined
-        ? ''
-        : String(statsPayload.score.scoreFor),
-    );
-    setScoreAgainst(
-      statsPayload?.score?.scoreAgainst === null || statsPayload?.score?.scoreAgainst === undefined
-        ? ''
-        : String(statsPayload.score.scoreAgainst),
-    );
-    setPlayerLines(buildInitialLines(statsPayload?.availablePlayers, statsPayload?.report, sport));
-    setCollectiveRating(statsPayload?.report?.collectiveRating ?? null);
-    setCollectiveComment(statsPayload?.report?.collectiveComment || '');
-    setCoachReviews(buildInitialCoachReviews(
-      statsPayload?.availablePlayers,
-      {
-        ...(statsPayload?.report || {}),
-        playerResponses: statsPayload?.playerResponses || [],
-      },
-    ));
-  }, [requestedTeamId, sport, statsPayload]);
+    hydrate(statsPayload);
+  }, [hydrate, requestedTeamId, statsPayload]);
 
-  const completedPlayers = useMemo(
-    () => playerLines.filter((line) => isLineCompleted(line, sport)).length,
-    [playerLines, sport],
-  );
-
-  // Resume des retours joueur (handoff 10c).
+  // Les réponses des joueurs : LE compte, le même que la carte « Après le match »
+  // (défaut 19).
   const responseItems = useMemo(
     () => (Array.isArray(statsPayload?.playerResponses) ? statsPayload.playerResponses : []),
     [statsPayload?.playerResponses],
+  );
+  const responsesByPlayer = useMemo(
+    () => new Map(responseItems.map((/** @type {any} */ item) => [item?.userDocumentId, item])),
+    [responseItems],
   );
   const responseEligibleCount = responseItems.length;
   const responseCompletionCount = useMemo(
     () => responseItems.filter((/** @type {any} */ item) => item?.status === 'submitted').length,
     [responseItems],
   );
-  const missingResponseCount = Math.max(0, responseEligibleCount - responseCompletionCount);
-
-  // Buteur·se·s / marqueur·se·s a partir des lignes en cours (handoff 10c).
-  const topScorers = useMemo(() => {
-    const scorerField = normalizeSport(sport) === 'basketball' ? 'points' : 'goals';
-    return playerLines
-      .map((line) => ({
-        key: line?.key || line?.label,
-        label: String(line?.label || t('matchStatsEditor.playerInclusive', 'Joueur·se')),
-        value: getNumericStatValue(line?.[scorerField]),
-      }))
-      .filter((entry) => entry.value > 0)
-      .sort((left, right) => right.value - left.value)
-      .slice(0, 5);
-  }, [playerLines, sport, t]);
 
   const remindResponsesMutation = useMutation({
     mutationFn: () => remindEventMatchResponses(
@@ -636,80 +488,28 @@ function MatchStatsEditor({ navigation, route }) {
     },
   });
 
-  const consistencyIssues = useMemo(() => buildMatchStatsConsistencyIssues({
-    playerLines,
-    scoreAgainst,
-    scoreFor,
+  // 📐 L'ALERTE UNIQUE (état 6) : chaque incohérence dite une fois, le joueur nommé.
+  const corrections = useMemo(() => corrigerLaFeuille({
+    lignes: playerLines,
+    scoreAdverse: scoreAgainst,
+    scorePour: scoreFor,
     sport,
-  }), [playerLines, scoreAgainst, scoreFor, sport]);
-
-  const hasConsistencyIssues = consistencyIssues.length > 0;
+    t,
+  }), [playerLines, scoreAgainst, scoreFor, sport, t]);
+  const hasConsistencyIssues = corrections.length > 0;
+  const linesToCheck = useMemo(
+    () => new Set(corrections.flatMap((correction) => correction.lignes)),
+    [corrections],
+  );
 
   const hasScore = useMemo(
     () => scoreFor.trim() !== '' && scoreAgainst.trim() !== '',
     [scoreAgainst, scoreFor],
   );
 
-  const matchLabel = useMemo(() => {
-    if (sourceType === 'league') {
-      return route?.params?.matchLabel || initialTitle;
-    }
-    return statsPayload?.event?.name || initialTitle;
-  }, [initialTitle, route?.params?.matchLabel, sourceType, statsPayload?.event?.name]);
-
-  const submitConfirmationMessage = useMemo(() => {
-    if (isReviewRequired) {
-      return t(
-        'matchStatsEditor.reviewConfirmMessage',
-        'Le score officiel a changé. Cette publication confirme la nouvelle version des stats '
-          + 'pour ton équipe.',
-      );
-    }
-
-    return t(
-      'matchStatsEditor.publishConfirmMessage',
-      'Après publication, ce rapport devient la version officielle des statistiques pour cette '
-        + 'équipe.',
-    );
-  }, [isReviewRequired, t]);
-
-  const submitButtonTitle = useMemo(() => {
-    // T9 (02/10) — « Rapport finalise » (sans accent) : le mot de la carte et du menu Gérer.
-    if (isReadOnly) return t('stMatch.gerer.published', 'Feuille publiée');
-    if (isReviewRequired) {
-      return t(
-        'matchStatsEditor.updateAfterOfficialScore',
-        'Mettre à jour après score officiel',
-      );
-    }
-    return t('matchStatsEditor.publishTheStats', 'Publier les stats');
-  }, [isReadOnly, isReviewRequired, t]);
-
-  const submitHelperText = useMemo(() => {
-    if (isReadOnly) {
-      return t(
-        'matchStatsEditor.reportAlreadyFinalised',
-        'Ce rapport est déjà finalise. Les agregations joueur et équipe sont à jour.',
-      );
-    }
-
-    if (isReviewRequired) {
-      return t(
-        'matchStatsEditor.officialScoreChangedCheckLines',
-        'Le score officiel a changé. Vérifie les lignes puis republie directement cette '
-          + 'version.',
-      );
-    }
-
-    if (hasConsistencyIssues) {
-      return t('matchStatsEditor.fixInconsistencies', 'Corrige les incoherences entre le score final et les statistiques joueur avant de continuer.');
-    }
-
-    return t(
-      'matchStatsEditor.draftStaysEditable',
-      'Le brouillon reste modifiable tant que tu ne publies pas ce rapport.',
-    );
-  }, [hasConsistencyIssues, isReadOnly, isReviewRequired, t]);
+  const matchLabel = sourceType === 'league'
+    ? route?.params?.matchLabel || ''
+    : statsPayload?.event?.name || '';
 
   // H9 — UNE SEULE LISTE DE CLES, PARTAGEE AVEC L ECRAN JOUEUR.
   // Cet ecran tenait sa propre liste, `PlayerMatchResponseScreen` la sienne, et
@@ -733,6 +533,31 @@ function MatchStatsEditor({ navigation, route }) {
     ...(requestedTeamId ? { teamId: requestedTeamId } : {}),
   }), [coachReviews, collectiveComment, collectiveRating, hasScore, playerLines, requestedTeamId, scoreAgainst, scoreFor, sourceType, sport]);
 
+  // 🧨 ST-MATCH10 — LE SCORE CORRIGÉ DANS LA FEUILLE ÉTAIT PERDU. Le serveur n'écrit le
+  // score reçu avec la feuille que s'il n'en a encore AUCUN (`saveEventMatchStatsDraft` :
+  // `if (!scoreState.available …)`) : une fois le score saisi (écran 9), les compteurs de
+  // la feuille ne changeaient plus rien, et une feuille corrigée de 2 - 1 à 3 - 1 se
+  // faisait refuser « 3 buts pour un score de 2 ». Un score changé passe donc d'abord par
+  // la route du score (`PUT /events/:id/match-result`, celle de l'écran 9).
+  const saveScoreIfChanged = useCallback(async () => {
+    const savedScore = statsPayload?.score;
+    if (sourceType !== 'event' || !eventId || !hasScore || isScoreLocked) return;
+    if (!savedScore?.available) return;
+    const nextFor = Number.parseInt(scoreFor, 10);
+    const nextAgainst = Number.parseInt(scoreAgainst, 10);
+    const isUnchanged = nextFor === Number(savedScore.scoreFor)
+      && nextAgainst === Number(savedScore.scoreAgainst);
+    if (isUnchanged) return;
+    await saveEventMatchResult(eventId, {
+      scoreAgainst: nextAgainst,
+      scoreFor: nextFor,
+      teamId: statsPayload?.team?.documentId || requestedTeamId || undefined,
+    });
+  }, [
+    eventId, hasScore, isScoreLocked, requestedTeamId, scoreAgainst, scoreFor, sourceType,
+    statsPayload?.score, statsPayload?.team?.documentId,
+  ]);
+
   const redirectToReviewScreen = useCallback(() => {
     if (sourceType === 'event' && eventId) {
       navigation.replace(RouteNames.EventDetails, { eventId });
@@ -748,7 +573,8 @@ function MatchStatsEditor({ navigation, route }) {
   }, [eventId, matchId, navigation, sourceType]);
 
   const saveDraftMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      await saveScoreIfChanged();
       const payload = buildPayload();
       if (sourceType === 'event') {
         return saveEventMatchStatsDraft(eventId, payload);
@@ -756,23 +582,27 @@ function MatchStatsEditor({ navigation, route }) {
       return saveLeagueMatchStatsDraft(matchId, payload);
     },
     onError: (error) => {
-      Alert.alert(t('common.error', 'Erreur'), getApiErrorMessage(error, t('matchStatsEditor.draftSaveError', 'Impossible d enregistrer ce brouillon de stats.')));
+      Alert.alert(t('common.error', 'Erreur'), getApiErrorMessage(error, t(
+        'stMatch.feuille.draftError',
+        'Le brouillon n’a pas pu être enregistré. Réessaie.',
+      )));
     },
     onSuccess: async () => {
       await invalidateRelatedQueries();
       await statsQuery.refetch();
-      Alert.alert(t(
-        'matchStatsEditor.draftSaved',
-        'Brouillon enregistre',
-      ), t(
-        'matchStatsEditor.draftSavedMessage',
-        'Le brouillon des stats du match a bien été enregistre.',
-      ));
+      Alert.alert(
+        t('stMatch.feuille.draftSaved', 'Brouillon enregistré'),
+        t(
+          'stMatch.feuille.draftSavedBody',
+          'Les joueurs ne voient rien tant que tu ne publies pas.',
+        ),
+      );
     },
   });
 
   const submitMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      await saveScoreIfChanged();
       const payload = buildPayload();
       if (sourceType === 'event') {
         return submitEventMatchStats(eventId, payload);
@@ -780,18 +610,21 @@ function MatchStatsEditor({ navigation, route }) {
       return submitLeagueMatchStats(matchId, payload);
     },
     onError: (error) => {
+      setIsConfirming(false);
       Alert.alert(t(
         'common.error',
         'Erreur',
       ), getApiErrorMessage(error, t(
-        'matchStatsEditor.publishError',
-        'Impossible de publier ces statistiques.',
+        'stMatch.feuille.publishError',
+        'La feuille n’a pas pu être publiée. Réessaie.',
       )));
     },
     onSuccess: async () => {
+      setIsConfirming(false);
+      setIsEditingPublished(false);
       await invalidateRelatedQueries();
       Alert.alert(
-        t('matchStatsEditor.statsPublished', 'Stats publiées'),
+        t('stMatch.gerer.published', 'Feuille publiée'),
         isReviewRequired
           ? t(
             'matchStatsEditor.reportUpdatedAfterSync',
@@ -848,7 +681,7 @@ function MatchStatsEditor({ navigation, route }) {
         return Math.max(0, Math.min(maxByLinePoints, maxByScore));
       }
 
-      return MAX_STAT_VALUE;
+      return getMatchStatsFieldMax(field);
     }
 
     if (field === 'goals') {
@@ -927,955 +760,853 @@ function MatchStatsEditor({ navigation, route }) {
     setScoreAgainst(clampMatchStatsValue(value, MAX_MATCH_SCORE));
   }, []);
 
-  /**
-   * @param {{
-   *   containerStyle?: any;
-   *   disabled?: boolean;
-   *   label?: string;
-   *   large?: boolean;
-   *   onChangeText: (value: string) => void;
-   *   onDecrement: () => void;
-   *   onIncrement: () => void;
-   *   value: any;
-   * }} props
-   */
-  const renderCounterField = ({
-    containerStyle,
-    disabled = false,
-    label,
-    large = false,
-    onChangeText,
-    onDecrement,
-    onIncrement,
-    value,
-  }) => {
-    const fieldHeight = large ? scoreInputHeight : statInputHeight;
-    const fieldRadius = large ? 18 : 16;
-    const valueTextStyle = large ? Fonts.h2Bold : Fonts.p1Bold;
-    const actionTextStyle = large ? Fonts.h3Bold : Fonts.h4Bold;
-    let actionWidth = isCompactMobile ? 28 : 30;
-    if (large) {
-      actionWidth = isCompactMobile ? 34 : 38;
-    }
+  const alertMissingScore = useCallback((/** @type {string} */ message) => {
+    setActiveTab('score');
+    Alert.alert(t('stMatch.feuille.scoreMissing', 'Score manquant'), message);
+  }, [t]);
 
+  const handleSaveDraft = useCallback(() => {
+    if (sourceType === 'event' && !hasScore && !isScoreLocked) {
+      alertMissingScore(t(
+        'stMatch.feuille.scoreMissingDraft',
+        'Saisis le score du match avant d’enregistrer le brouillon.',
+      ));
+      return;
+    }
+    // L'alerte unique est déjà affichée : le bouton est éteint, rien de plus à dire.
+    if (hasConsistencyIssues) return;
+    saveDraftMutation.mutate();
+  }, [
+    alertMissingScore, hasConsistencyIssues, hasScore, isScoreLocked, saveDraftMutation, sourceType, t,
+  ]);
+
+  const handleSubmit = useCallback(() => {
+    if (sourceType === 'event' && !hasScore) {
+      alertMissingScore(t(
+        'stMatch.feuille.scoreMissingPublish',
+        'Saisis le score du match avant de publier la feuille.',
+      ));
+      return;
+    }
+    if (hasConsistencyIssues) return;
+    // 📐 État 7 — plus de fenêtre du système (`window.confirm` sur le site) : une fenêtre
+    // de la feuille, à deux boutons, qui dit qui recevra quoi.
+    setIsConfirming(true);
+  }, [alertMissingScore, hasConsistencyIssues, hasScore, sourceType, t]);
+
+  const cancelEditing = useCallback(() => {
+    setIsEditingPublished(false);
+    setOpenLineKey(null);
+    if (statsPayload) hydrate(statsPayload);
+  }, [hydrate, statsPayload]);
+
+  // ── Ce que l'écran dit ──
+  const isLoading = Boolean(statsQuery.isLoading);
+  const hasError = Boolean(statsQuery.error) && !isLoading;
+  const isReady = !isLoading && !hasError && Boolean(statsPayload);
+  const responsesLine = responseEligibleCount > 0
+    ? direLeCompte(responseCompletionCount, responseEligibleCount, t)
+    : '';
+  const metaLine = [teamName, responsesLine].filter(Boolean).join(' · ');
+  // Ordinateur (planche P3-editeur-ordi) : « le match · l'équipe · le jour », sous le titre.
+  const matchDay = lireLeJour(statsPayload?.event?.date);
+  const desktopSubtitle = [matchLabel, teamName, matchDay].filter(Boolean).join(' · ');
+  const publishedAt = lireLeMoment(statsPayload?.report?.finalizedAt);
+  const firstNameOf = (/** @type {any} */ line) => String(
+    line?.firstname || String(line?.label || '').split(' ')[0] || '',
+  ).trim();
+
+  /** @type {{ texte: string, ton: 'primary' | 'success' | 'warning' } | null} */
+  let statusPill = null;
+  if (isReady) {
+    if (isReviewRequired) {
+      statusPill = { texte: t('stMatch.feuille.statusReview', 'À vérifier'), ton: 'warning' };
+    } else if (isFinalized) {
+      statusPill = {
+        texte: publishedAt
+          ? t('stMatch.feuille.statusPublishedOn', 'Publiée le {{date}} à {{time}}', {
+            ...publishedAt, ...SANS_ECHAPPEMENT,
+          })
+          : t('stMatch.carte.sheetPublished', 'Publiée'),
+        ton: 'success',
+      };
+    } else if (isWaitingOfficial) {
+      statusPill = {
+        texte: t('stMatch.feuille.statusWaitingOfficial', 'Score officiel attendu'),
+        ton: 'warning',
+      };
+    } else {
+      statusPill = { texte: t('stMatch.feuille.statusDraft', 'Brouillon'), ton: 'primary' };
+    }
+  }
+  const pillColors = {
+    primary: Colors.primary500,
+    success: Colors.success500,
+    warning: Colors.warning500,
+  };
+  const renderPill = () => (statusPill ? (
+    <View
+      style={[
+        SpacesAny.paddingHorizontal[12],
+        SpacesAny.paddingVertical[4],
+        {
+          backgroundColor: withAlpha(pillColors[statusPill.ton], 0.16),
+          borderColor: withAlpha(pillColors[statusPill.ton], 0.45),
+          borderRadius: 999,
+          borderWidth: 1,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          Fonts.p4Bold,
+          statusPill.ton === 'primary' ? Fonts.primary200 : { color: pillColors[statusPill.ton] },
+        ]}
+      >
+        {statusPill.texte}
+      </Text>
+    </View>
+  ) : null);
+
+  // Ton retour : qui le recevra à la publication (état 7), qui l'a reçu (état 8).
+  const receivers = coachReviews
+    .filter((review) => Boolean(String(review?.comment || '').trim())
+      || (review?.rating !== null && review?.rating !== undefined))
+    .map((review) => firstNameOf(
+      playerLines.find((line) => line.key === review.lineKey) || review,
+    ));
+
+  // « moyenne B » (Adel, 02/10) : sous 3 réponses, la moyenne des joueurs EST la note d'un
+  // coéquipier ; elle reste cachée, pour l'entraîneur aussi (même seuil que la carte).
+  const playersAverage = statsPayload?.playerCollectiveRating || null;
+  const isAverageVisible = playersAverage?.average !== null && playersAverage?.average !== undefined
+    && !playersAverage?.hidden
+    && Number(playersAverage?.count) >= MOYENNE_MIN_REPONSES;
+
+  // ── Les alertes, en haut, une de chaque au plus ──
+  const savedReportScore = statsPayload?.report
+    && Number.isFinite(Number(statsPayload.report.scoreFor))
+    && statsPayload.report.scoreFor !== null
+    ? `${statsPayload.report.scoreFor} - ${statsPayload.report.scoreAgainst}`
+    : '';
+  const officialScore = statsPayload?.score?.available
+    ? `${statsPayload.score.scoreFor} - ${statsPayload.score.scoreAgainst}`
+    : '';
+  const renderAlerts = () => (
+    <>
+      {isReviewRequired ? (
+        <AlerteFeuille
+          lignes={[officialScore && savedReportScore && officialScore !== savedReportScore
+            ? t(
+              'stMatch.feuille.reviewChanged',
+              // eslint-disable-next-line max-len
+              '{{official}} au lieu de {{sheet}}. Vérifie les buts de chaque joueur, puis republie.',
+              { official: officialScore, sheet: savedReportScore, ...SANS_ECHAPPEMENT },
+            )
+            : t(
+              'stMatch.rappel.reviewGeneric',
+              'Le score officiel ne correspond plus à ta feuille. Vérifie les buts, puis republie.',
+            )]}
+          titre={t('stMatch.rappel.reviewTitle', 'Le score officiel a changé')}
+        />
+      ) : null}
+      {hasConsistencyIssues && !isReadOnly ? (
+        <AlerteFeuille
+          lignes={corrections.map((correction) => correction.texte)}
+          titre={t('stMatch.feuille.corrections', {
+            count: corrections.length,
+            defaultValue_one: '{{count}} correction',
+            defaultValue_other: '{{count}} corrections',
+          })}
+        />
+      ) : null}
+    </>
+  );
+
+  // ── Onglet 1 : Score et bilan ──
+  const scoreSource = statsPayload?.score?.source;
+  const scoreAuthorLine = statsPayload?.score?.available
+    ? buildMatchEncartLines({
+      available: true,
+      canManage: true,
+      canSeeDetails: true,
+      // Seule la ligne « Saisi par … » est lue ici : le reste de l'encart ne sert pas.
+      coachFirstname: null,
+      isFinished: true,
+      locale: localeDesFormats(),
+      publishedLines: null,
+      recordedAt: statsPayload?.score?.recordedAt || null,
+      recordedBy: statsPayload?.score?.recordedBy || null,
+      scoreAgainst: statsPayload?.score?.scoreAgainst,
+      scoreFor: statsPayload?.score?.scoreFor,
+      source: scoreSource,
+      startTimeLabel: null,
+      t,
+      viewerDocumentId: userData?.documentId || null,
+      waitingOfficial: isWaitingOfficial,
+    }).authorLine
+    : null;
+  const ourTeam = teamName || t('stMatch.score.us', 'Mon équipe');
+  const theOpponent = t('stMatch.score.opponent', 'Adversaire');
+  const scoreDisabled = isScoreLocked || isReadOnly;
+
+  const renderScoreAndReview = () => {
+    if (isReadOnly) {
+      const receivedLine = receivers.length === 1
+        ? t('stMatch.feuille.receivedOne', '{{name}} a reçu ton retour.', {
+          name: receivers[0], ...SANS_ECHAPPEMENT,
+        })
+        : t('stMatch.feuille.receivedMany', {
+          count: receivers.length,
+          defaultValue_one: '{{count}} joueur a reçu ton retour.',
+          defaultValue_other: '{{count}} joueurs ont reçu ton retour.',
+        });
+      const answeredLine = responseEligibleCount > 0
+        ? t('stMatch.feuille.responsesSentence', {
+          count: responseCompletionCount,
+          defaultValue_one: '{{count}} sur {{total}} a répondu.',
+          defaultValue_other: '{{count}} sur {{total}} ont répondu.',
+          total: responseEligibleCount,
+        })
+        : '';
+      return (
+        <BilanPublie
+          adversaire={theOpponent}
+          equipe={ourTeam}
+          etiquetteDuScore={scoreSource === 'external_sync' || scoreSource === 'league_validated'
+            ? t('stMatch.encart.officialScore', 'Score officiel')
+            : t('stMatch.encart.scoreEntered', 'Score saisi')}
+          ligneOk={[receivers.length ? receivedLine : '', answeredLine].filter(Boolean).join(' ')}
+          motDuCoach={collectiveComment}
+          moyenne={isAverageVisible
+            ? {
+              libelle: t('stMatch.carte.playersRating', {
+                count: Number(playersAverage?.count || 0),
+                defaultValue_one: 'Les joueurs · {{count}} note',
+                defaultValue_other: 'Les joueurs · {{count}} notes',
+              }),
+              valeur: `${playersAverage?.average}/10`,
+            }
+            : {
+              libelle: t('stMatch.feuille.playersRatingHidden', 'Les joueurs : dès 3 réponses'),
+              valeur: '—',
+            }}
+          noteEquipe={collectiveRating}
+          score={hasScore ? `${scoreFor} - ${scoreAgainst}` : '– –'}
+        />
+      );
+    }
+    const isOfficial = scoreSource === 'external_sync' || scoreSource === 'league_validated';
     return (
-      <View style={containerStyle}>
-        {label ? (
-          <Text style={[Fonts.p4Bold, Fonts.neutral100, SpacesAny.marginBottom[8]]}>{label}</Text>
-        ) : null}
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            {
-              backgroundColor: counterSurfaceColor,
-              borderColor: counterBorderColor,
-              borderRadius: fieldRadius,
-              borderWidth: 1,
-              minHeight: fieldHeight,
-              overflow: 'hidden',
-            },
-          ]}
-        >
-          <Pressable
-            android_ripple={{ borderless: false, color: `${Colors.primary200}22` }}
-            disabled={disabled}
-            hitSlop={8}
-            onPress={() => onDecrement?.()}
-            style={[
-              Alignments.justifyCenter,
-              Alignments.alignCenter,
-              {
-                alignSelf: 'stretch',
-                backgroundColor: counterButtonColor,
-                borderRightColor: counterBorderColor,
-                borderRightWidth: 1,
-                opacity: disabled ? 0.45 : 1,
-                width: actionWidth,
-              },
-            ]}
-          >
-            <Text style={[actionTextStyle, { color: Colors.primary200 }]}>-</Text>
-          </Pressable>
-          <TextInput
-            editable={!disabled}
-            keyboardType="number-pad"
-            maxLength={3}
-            onChangeText={(nextValue) => onChangeText(sanitizeNumericInput(nextValue))}
-            placeholder="0"
-            placeholderTextColor={Colors.primary200}
-            selectTextOnFocus
-            style={[
-              valueTextStyle,
-              Fonts.neutral00,
-              Fonts.textCenter,
-              {
-                flex: 1,
-                minHeight: fieldHeight,
-                minWidth: large ? 56 : 34,
-                paddingHorizontal: large ? 10 : 6,
-                paddingVertical: 0,
-              },
-            ]}
-            value={String(value || '')}
+      <View style={SpacesAny.gap[16]}>
+        <View style={[Alignments.row, Alignments.alignEnd, SpacesAny.gap[8]]}>
+          <Compteur
+            desactive={scoreDisabled}
+            descriptionMoins={t('stMatch.score.minus', 'Un but de moins pour {{team}}', {
+              team: ourTeam, ...SANS_ECHAPPEMENT,
+            })}
+            descriptionPlus={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
+              team: ourTeam, ...SANS_ECHAPPEMENT,
+            })}
+            grand
+            libelle={ourTeam}
+            onChangeText={updateScoreFor}
+            onMoins={() => adjustScoreValue('scoreFor', -1)}
+            onPlus={() => adjustScoreValue('scoreFor', 1)}
+            valeur={scoreFor}
           />
-          <Pressable
-            android_ripple={{ borderless: false, color: `${Colors.primary200}22` }}
-            disabled={disabled}
-            hitSlop={8}
-            onPress={() => onIncrement?.()}
-            style={[
-              Alignments.justifyCenter,
-              Alignments.alignCenter,
-              {
-                alignSelf: 'stretch',
-                backgroundColor: counterButtonColor,
-                borderLeftColor: counterBorderColor,
-                borderLeftWidth: 1,
-                opacity: disabled ? 0.45 : 1,
-                width: actionWidth,
-              },
-            ]}
+          <Text style={[Fonts.h3Bold, Fonts.neutral200, { lineHeight: 56 }]}>-</Text>
+          <Compteur
+            desactive={scoreDisabled}
+            descriptionMoins={t('stMatch.score.minus', 'Un but de moins pour {{team}}', {
+              team: t('stMatch.score.theOpponent', 'l’adversaire'), ...SANS_ECHAPPEMENT,
+            })}
+            descriptionPlus={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
+              team: t('stMatch.score.theOpponent', 'l’adversaire'), ...SANS_ECHAPPEMENT,
+            })}
+            grand
+            libelle={theOpponent}
+            onChangeText={updateScoreAgainst}
+            onMoins={() => adjustScoreValue('scoreAgainst', -1)}
+            onPlus={() => adjustScoreValue('scoreAgainst', 1)}
+            valeur={scoreAgainst}
+          />
+        </View>
+        {scoreAuthorLine && !isOfficial ? (
+          <Text style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter]}>{scoreAuthorLine}</Text>
+        ) : null}
+        {isOfficial ? (
+          <View
+            style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, SpacesAny.gap[8]]}
           >
-            <Text style={[actionTextStyle, { color: Colors.primary200 }]}>+</Text>
-          </Pressable>
+            <GlyphIcon color={Colors.warning400} name="lock" size={16} />
+            <Text style={[Fonts.p3, Fonts.warning400]}>
+              {scoreSource === 'league_validated'
+                ? t('stMatch.feuille.leagueLock', 'Score validé par la ligue')
+                : t('stMatch.feuille.officialLock', 'Score officiel de la fédération')}
+            </Text>
+          </View>
+        ) : null}
+        {isWaitingOfficial && !statsPayload?.score?.available ? (
+          <Text style={[Fonts.p3, Fonts.warning400, Fonts.textCenter]}>
+            {t(
+              'stMatch.encart.federationPending',
+              "La fédération n'a pas encore publié le score.",
+            )}
+          </Text>
+        ) : null}
+        <View style={SpacesAny.gap[8]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('stMatch.feuille.teamRating', 'Ta note de l’équipe')}
+          </Text>
+          <NotesSurDix
+            libelle={t('stMatch.feuille.teamRating', 'Ta note de l’équipe')}
+            onChoisir={setCollectiveRating}
+            valeur={collectiveRating}
+          />
+        </View>
+        <View style={SpacesAny.gap[8]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('stMatch.feuille.teamWord', 'Ton mot à l’équipe')}
+          </Text>
+          <TextInput
+            accessibilityLabel={t('stMatch.feuille.teamWord', 'Ton mot à l’équipe')}
+            maxLength={1200}
+            multiline
+            onChangeText={setCollectiveComment}
+            placeholder={t(
+              'matchStatsEditor.teamCommentPlaceholder',
+              'Ressenti collectif, dynamique du groupe, points forts, points à travailler...',
+            )}
+            placeholderTextColor={Colors.neutral400}
+            style={[
+              surfaces.champ,
+              Fonts.p2,
+              Fonts.neutral00,
+              SpacesAny.padding[12],
+              { minHeight: 96, textAlignVertical: 'top' },
+            ]}
+            value={collectiveComment}
+          />
+          <View style={[Alignments.row, Alignments.alignCenter, SpacesAny.gap[8]]}>
+            <SvgIcon color={Colors.neutral300} height={14} name="users" width={14} />
+            <Text style={[Fonts.p3, Fonts.neutral300, Alignments.fill]}>
+              {teamName
+                ? t('stMatch.feuille.readByTeam', 'Lu par les joueurs de l’équipe {{team}}.', {
+                  team: teamName, ...SANS_ECHAPPEMENT,
+                })
+                : t('stMatch.feuille.readByTeamUnnamed', 'Lu par les joueurs de l’équipe.')}
+            </Text>
+          </View>
         </View>
       </View>
     );
   };
 
-  const handleSaveDraft = useCallback(() => {
-    if (isReviewRequired) {
-      Alert.alert(
-        t('matchStatsEditor.reviewRequired', 'Revision requise'),
-        t(
-          'matchStatsEditor.officialScoreChangedCheckLines',
-          'Le score officiel a changé. Vérifie les lignes puis republie directement cette '
-            + 'version.',
-        ),
+  // ── Onglet 2 : Joueurs ──
+  const coachRatingByLine = useMemo(
+    () => new Map(coachReviews.map((review) => [review.lineKey, review.rating ?? null])),
+    [coachReviews],
+  );
+  const scoredGoals = playerLines
+    .reduce((total, line) => total + getNumericStatValue(line?.goals), 0);
+  const knownScoreFor = getNullableNumericStatValue(scoreFor);
+
+  const renderPlayers = () => {
+    if (!playerLines.length) {
+      return (
+        <View style={[Alignments.alignCenter, SpacesAny.gap[12], SpacesAny.paddingVertical[24]]}>
+          <SvgIcon color={Colors.primary200} height={40} name="users" width={40} />
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {t('stMatch.feuille.emptyTitle', 'Aucun joueur sur cette feuille')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
+            {sourceType === 'event'
+              ? t(
+                'stMatch.feuille.emptyText',
+                // eslint-disable-next-line max-len
+                'Les joueurs viennent de la convocation du match. Publie-la, ou ajoute l’équipe au match.',
+              )
+              : t(
+                'stMatch.feuille.emptyTextLeague',
+                'Les joueurs viennent de l’effectif de l’équipe.',
+              )}
+          </Text>
+          {sourceType === 'event' && eventId ? (
+            <Button
+              onPress={() => navigation.navigate(RouteNames.EventDetails, { eventId })}
+              title={t('stMatch.feuille.emptyAction', 'Ouvrir la page du match')}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
       );
-      return;
     }
-
-    if (sourceType === 'event' && !hasScore && !isScoreLocked) {
-      Alert.alert(t('matchStatsEditor.missingScore', 'Score manquant'), t('matchStatsEditor.enterScoreBeforeDraft', 'Renseigne le score du match avant d enregistrer ce brouillon.'));
-      return;
-    }
-
-    if (hasConsistencyIssues) {
-      Alert.alert(t(
-        'matchStatsEditor.correctionsRequired',
-        'Corrections requises',
-      ), consistencyIssues.join('\n'));
-      return;
-    }
-
-    saveDraftMutation.mutate();
-  }, [consistencyIssues, hasConsistencyIssues, hasScore, isReviewRequired, isScoreLocked, saveDraftMutation, sourceType, t]);
-
-  const handleSubmit = useCallback(() => {
-    if (sourceType === 'event' && !hasScore) {
-      Alert.alert(t('matchStatsEditor.scoreRequired', 'Score requis'), t('matchStatsEditor.finalScoreRequiredBeforePublish', 'Le score final doit être enregistre avant de publier les stats.'));
-      return;
-    }
-
-    if (hasConsistencyIssues) {
-      Alert.alert(t(
-        'matchStatsEditor.correctionsRequired',
-        'Corrections requises',
-      ), consistencyIssues.join('\n'));
-      return;
-    }
-
-    Alert.alert(
-      isReviewRequired ? t(
-        'matchStatsEditor.updateAfterOfficialScoreQuestion',
-        'Mettre à jour après score officiel ?',
-      ) : t(
-        'matchStatsEditor.publishMatchStatsQuestion',
-        'Publier les stats du match ?',
-      ),
-      submitConfirmationMessage,
-      [
-        { style: 'cancel', text: t('matchStatsEditor.cancel', 'Annuler') },
-        {
-          onPress: () => submitMutation.mutate(),
-          text: isReviewRequired
-            ? t('matchStatsEditor.update', 'Mettre à jour')
-            : t('matchStatsEditor.publish', 'Publier'),
-        },
-      ],
+    return (
+      <View style={SpacesAny.gap[12]}>
+        {excludedNoShowPlayers.length ? (
+          <View style={[surfaces.encart, SpacesAny.padding[12], SpacesAny.gap[4]]}>
+            <Text style={[Fonts.p3Bold, Fonts.warning400]}>
+              {t('stMatch.feuille.noShowTitle', 'Non pointés à l’appel')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {excludedNoShowPlayers
+                .map((/** @type {any} */ player) => player?.label || player?.manualPlayerName)
+                .filter(Boolean)
+                .join(', ')}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {t(
+                'stMatch.feuille.noShowText',
+                'Ils ne comptent pas dans la feuille tant que l’appel n’est pas corrigé.',
+              )}
+            </Text>
+          </View>
+        ) : null}
+        <TableauDesJoueurs
+          aVerifier={linesToCheck}
+          lignes={playerLines}
+          notesDuCoach={coachRatingByLine}
+          onOuvrir={setOpenLineKey}
+          ordinateur={ordinateur}
+          reponses={responsesByPlayer}
+          selection={ordinateur ? openLineKey : null}
+          sport={sport}
+        />
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {ordinateur
+            ? t('stMatch.feuille.clickHint', 'Clique une ligne pour ses chiffres et ton retour.')
+            : t(
+              'stMatch.feuille.tapHint',
+              'Touche un joueur pour ses chiffres et ton retour individuel.',
+            )}
+        </Text>
+        {sport === 'football' && knownScoreFor !== null && scoredGoals < knownScoreFor ? (
+          <View
+            style={[
+              Alignments.row, Alignments.alignCenter, SpacesAny.gap[8],
+              surfaces.encart, SpacesAny.padding[12],
+            ]}
+          >
+            <SvgIcon color={Colors.primary200} height={18} name="soccer-ball" width={18} />
+            <Text style={[Fonts.p2, Fonts.neutral200, Alignments.fill]}>
+              {[
+                t('stMatch.feuille.scorersInfo', {
+                  count: scoredGoals,
+                  defaultValue_one: '{{count}} but sur {{total}} a un buteur.',
+                  defaultValue_other: '{{count}} buts sur {{total}} ont un buteur.',
+                  total: knownScoreFor,
+                }),
+                t('stMatch.feuille.scorersMissing', {
+                  count: knownScoreFor - scoredGoals,
+                  defaultValue_one: '{{count}} but restera « sans buteur ».',
+                  defaultValue_other: '{{count}} buts resteront « sans buteur ».',
+                }),
+              ].join(' ')}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     );
-  }, [consistencyIssues, hasConsistencyIssues, hasScore, isReviewRequired, sourceType, submitConfirmationMessage, submitMutation, t]);
+  };
+
+  // ── La feuille d'un joueur (état 4 ; panneau de droite sur ordinateur) ──
+  const openLine = openLineKey
+    ? playerLines.find((line) => line.key === openLineKey) || null
+    : null;
+  const openReview = openLine
+    ? coachReviews.find((review) => review.lineKey === openLine.key) || null
+    : null;
+  const openResponse = openLine ? responsesByPlayer.get(openLine.userDocumentId) || null : null;
+  const closePlayer = useCallback(() => setOpenLineKey(null), []);
+  const renderPlayerSheet = () => (openLine ? (
+    <FicheDuJoueur
+      lectureSeule={isReadOnly}
+      ligne={openLine}
+      maximum={(/** @type {string} */ field) => getLineFieldMaxValue(
+        playerLines,
+        openLine.key,
+        field,
+      )}
+      moment={lireLeMoment(openResponse?.submittedAt)}
+      onAjuster={(/** @type {string} */ field, /** @type {number} */ delta) => (
+        adjustLineValue(openLine.key, field, delta)
+      )}
+      onChiffre={(/** @type {string} */ field, /** @type {string} */ value) => (
+        updateLineNumericValue(openLine.key, field, value)
+      )}
+      onCleanSheet={(/** @type {boolean} */ value) => (
+        updateLineValue(openLine.key, 'cleanSheet', value)
+      )}
+      onCommentaire={(/** @type {string} */ value) => (
+        openReview && updateCoachReview(openReview.key, 'comment', value)
+      )}
+      onFermer={closePlayer}
+      onNote={(/** @type {number} */ value) => (
+        openReview && updateCoachReview(openReview.key, 'rating', value)
+      )}
+      reponse={openResponse}
+      retour={openReview}
+      sport={sport}
+    />
+  ) : null);
+  const validateButton = (
+    <Button
+      onPress={closePlayer}
+      title={t('stMatch.feuille.validate', 'Valider')}
+      variant="Primary"
+    />
+  );
+
+  // ── Onglet 3 : Retours ──
+  const renderFeedback = () => (
+    <BlocRetours
+      attendues={responseEligibleCount}
+      onRelancer={sourceType === 'event' && eventId ? () => remindResponsesMutation.mutate() : null}
+      recues={responseCompletionCount}
+      relanceEnCours={remindResponsesMutation.isPending}
+      reponses={responseItems}
+    />
+  );
+
+  const tabLabels = {
+    feedback: t('stMatch.feuille.tabFeedback', 'Retours'),
+    players: t('stMatch.feuille.tabPlayers', 'Joueurs · {{n}}', { n: playerLines.length }),
+    score: t('stMatch.feuille.tabScore', 'Score et bilan'),
+  };
+
+  const renderSkeleton = () => (
+    <SkeletonLoader isActive wrapperStyle={[SpacesAny.gap[16]]}>
+      {[120, 72, 160].map((hauteur) => (
+        <View key={hauteur} style={[surfaces.carte, { height: hauteur }]} />
+      ))}
+    </SkeletonLoader>
+  );
+
+  const renderError = () => (
+    <View
+      accessibilityRole="alert"
+      style={[surfaces.carte, SpacesAny.padding[16], SpacesAny.gap[8]]}
+    >
+      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+        {t('stMatch.feuille.errorTitle', 'La feuille n’a pas pu être lue.')}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral200]}>
+        {t(
+          'stMatch.feuille.errorBody',
+          'Vérifie ta connexion, puis réessaie. Ton brouillon est gardé.',
+        )}
+      </Text>
+      <View style={Alignments.selfStart}>
+        <Button
+          onPress={() => statsQuery.refetch()}
+          title={t('stMatch.score.retry', 'Réessayer')}
+          variant="Secondary"
+        />
+      </View>
+    </View>
+  );
+
+  /**
+   * Une colonne de la feuille sur ordinateur.
+   * @param {string} testID - Son nom pour les témoins.
+   * @param {string} titre - Son titre (celui de l'onglet du téléphone).
+   * @param {any} contenu - Ce qu'elle porte.
+   * @param {number} [flex] - Sa part de la largeur.
+   * @returns {import('react').ReactElement} La colonne.
+   */
+  const renderColumn = (testID, titre, contenu, flex = 1) => (
+    <View
+      style={[surfaces.carte, SpacesAny.padding[16], SpacesAny.gap[16], { flex, minWidth: 0 }]}
+      testID={testID}
+    >
+      <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
+      {contenu}
+    </View>
+  );
+
+  const renderDesktopColumns = () => (openLine ? (
+    <View style={[Alignments.row, SpacesAny.gap[16], { alignItems: 'flex-start' }]}>
+      {renderColumn('feuille-colonne-joueurs', tabLabels.players, renderPlayers(), 3)}
+      <View
+        style={[surfaces.carte, SpacesAny.padding[16], SpacesAny.gap[16], { flex: 2, minWidth: 0 }]}
+        testID="feuille-panneau-joueur"
+      >
+        {renderPlayerSheet()}
+        {validateButton}
+      </View>
+    </View>
+  ) : (
+    <View style={[Alignments.row, SpacesAny.gap[16], { alignItems: 'flex-start' }]}>
+      {renderColumn('feuille-colonne-score', tabLabels.score, renderScoreAndReview())}
+      {/* Le tableau porte 5 colonnes de chiffres : un peu plus large que ses voisines. */}
+      {renderColumn('feuille-colonne-joueurs', tabLabels.players, renderPlayers(), 1.4)}
+      {renderColumn('feuille-colonne-retours', tabLabels.feedback, renderFeedback())}
+    </View>
+  ));
+
+  const renderPhoneTab = () => {
+    if (activeTab === 'players') return renderPlayers();
+    if (activeTab === 'feedback') return renderFeedback();
+    return renderScoreAndReview();
+  };
+
+  // ── La barre d'action collante (amélioration 4) ──
+  const isBusy = saveDraftMutation.isPending || submitMutation.isPending;
+  const republish = isReviewRequired || isEditingPublished;
+  let actions = null;
+  if (isReady) {
+    if (isReadOnly) {
+      actions = (
+        <Button
+          icon="edit"
+          onPress={() => setIsEditingPublished(true)}
+          title={t('stMatch.feuille.edit', 'Modifier')}
+          variant="Secondary"
+        />
+      );
+    } else {
+      const publishButton = (
+        <View style={Alignments.fill}>
+          <Button
+            disabled={hasConsistencyIssues || isBusy}
+            isLoading={submitMutation.isPending}
+            onPress={handleSubmit}
+            title={(() => {
+              if (republish) return t('stMatch.feuille.republish', 'Republier');
+              return ordinateur
+                ? t('stMatch.feuille.publishLong', 'Publier la feuille')
+                : t('stMatch.feuille.publish', 'Publier');
+            })()}
+            variant="Primary"
+          />
+        </View>
+      );
+      let secondButton = null;
+      if (isEditingPublished && !isReviewRequired) {
+        secondButton = (
+          <View style={Alignments.fill}>
+            <Button
+              onPress={cancelEditing}
+              title={t('matchStatsEditor.cancel', 'Annuler')}
+              variant="Secondary"
+            />
+          </View>
+        );
+      } else if (!isReviewRequired) {
+        secondButton = (
+          <View style={Alignments.fill}>
+            <Button
+              disabled={hasConsistencyIssues || isBusy}
+              isLoading={saveDraftMutation.isPending}
+              onPress={handleSaveDraft}
+              title={ordinateur
+                ? t('stMatch.feuille.saveDraftLong', 'Enregistrer le brouillon')
+                : t('stMatch.feuille.saveDraft', 'Brouillon')}
+              variant="Secondary"
+            />
+          </View>
+        );
+      }
+      actions = (
+        <>
+          {secondButton}
+          {publishButton}
+        </>
+      );
+    }
+  }
+
+  // ── La confirmation à deux boutons (état 7) ──
+  let receiversSentence = '';
+  if (receivers.length === 1) {
+    receiversSentence = t(
+      'stMatch.feuille.confirmReceiverOne',
+      '{{name}} recevra ton retour individuel.',
+      { name: receivers[0], ...SANS_ECHAPPEMENT },
+    );
+  } else if (receivers.length > 1) {
+    receiversSentence = t('stMatch.feuille.confirmReceiversMany', {
+      count: receivers.length,
+      defaultValue_one: '{{count}} joueur recevra ton retour individuel.',
+      defaultValue_other: '{{names}} recevront leur retour individuel.',
+      names: joindreLesNoms(receivers, t),
+      ...SANS_ECHAPPEMENT,
+    });
+  }
+  const confirmationText = [
+    receiversSentence,
+    teamName
+      ? t(
+        'stMatch.feuille.confirmTeam',
+        'Les joueurs de l’équipe {{team}} verront le score, ta note de l’équipe et ton mot.',
+        { team: teamName, ...SANS_ECHAPPEMENT },
+      )
+      : t(
+        'stMatch.feuille.confirmTeamUnnamed',
+        'Les joueurs de l’équipe verront le score, ta note de l’équipe et ton mot.',
+      ),
+    t('stMatch.feuille.confirmEditable', 'Tu pourras la modifier et la republier.'),
+  ].filter(Boolean).join(' ');
 
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[SpacesAny.paddingBottom[24], SpacesAny.paddingTop[0], Alignments.fill]}
+      boundedHeight
+      contentContainerStyle={[SpacesAny.paddingTop[0], SpacesAny.paddingBottom[0], Alignments.fill]}
     >
       <View
         style={[
-          SpacesAny.marginHorizontal[16],
-          SpacesAny.marginTop[isCompactMobile ? 8 : 12],
-          SpacesAny.marginBottom[8],
-          SpacesAny.paddingHorizontal[12],
-          SpacesAny.paddingVertical[10],
-          Alignments.row,
-          Alignments.alignCenter,
-          {
-            backgroundColor: headerSurfaceColor,
-            borderColor: counterBorderColor,
-            borderRadius: 22,
-            borderWidth: 1,
-          },
+          Alignments.row, Alignments.alignCenter, SpacesAny.gap[8],
+          SpacesAny.paddingHorizontal[16], SpacesAny.paddingTop[8],
         ]}
       >
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-        <View style={[Alignments.alignCenter, { flex: 1 }, SpacesAny.gap[4]]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{initialTitle}</Text>
-          {teamName ? <Text style={[Fonts.p2, Fonts.neutral100]}>{teamName}</Text> : null}
-        </View>
-        <View style={{ width: 44 }} />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          SpacesAny.paddingHorizontal[16],
-          { paddingBottom: scrollBottomPadding },
-          SpacesAny.gap[isCompactMobile ? 12 : 16],
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View
+        <HeaderBackButton onPress={() => navigation.goBack()} withDefaultMargin={false} />
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
           style={[
-            ApplicationStyle.borderRadius24,
-            SpacesAny.padding[sectionPadding],
-            SpacesAny.gap[sectionGap],
-            {
-              backgroundColor: heroSurfaceColor,
-              borderColor: counterBorderColor,
-              borderWidth: 1,
-            },
+            ordinateur ? Fonts.h2Bold : Fonts.h4Bold,
+            Fonts.neutral00,
+            Alignments.fill,
+            ordinateur ? null : Fonts.textCenter,
           ]}
         >
-          <View style={[SpacesAny.gap[4]]}>
-            <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-              {t('matchStatsEditor.teamReport', 'Bilan équipe')}
-            </Text>
-            <Text style={[Fonts.h2Bold, Fonts.neutral00]}>{matchLabel}</Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {sourceType === 'event' ? t('matchStatsEditor.eventTeamReview', "Bilan collectif de l'événement") : t('matchStatsEditor.leagueMatchTeamReview', 'Bilan collectif du match ligue')}
-            </Text>
-          </View>
+          {t('stMatch.feuille.title', 'Feuille de match')}
+        </Text>
+        {ordinateur ? renderPill() : <View style={{ width: 44 }} />}
+      </View>
 
-          <View style={[Alignments.row, SpacesAny.gap[8], { flexWrap: 'wrap' }]}>
-            <View
-              style={[
-                SpacesAny.paddingHorizontal[12],
-                SpacesAny.paddingVertical[6],
-                {
-                  backgroundColor: statusMeta.backgroundColor,
-                  borderColor: statusMeta.borderColor,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p4Bold, { color: statusMeta.textColor }]}>{statusMeta.label}</Text>
-            </View>
-            <View style={[ApplicationStyle.backgroundColor.primary500, ApplicationStyle.borderRadius16, SpacesAny.paddingHorizontal[12], SpacesAny.paddingVertical[6]]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{buildScoreSummary(statsPayload?.score)}</Text>
-            </View>
-            <View
-              style={[
-                SpacesAny.paddingHorizontal[12],
-                SpacesAny.paddingVertical[6],
-                {
-                  backgroundColor: pillSurfaceColor,
-                  borderColor: counterBorderColor,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{`${completedPlayers}/${playerLines.length} joueurs completes`}</Text>
-            </View>
-            <View
-              style={[
-                SpacesAny.paddingHorizontal[12],
-                SpacesAny.paddingVertical[6],
-                {
-                  backgroundColor: pillSurfaceColor,
-                  borderColor: counterBorderColor,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{getSportLabel(sport)}</Text>
-            </View>
+      <View
+        style={[
+          ordinateur ? null : Alignments.alignCenter,
+          SpacesAny.gap[8],
+          SpacesAny.paddingHorizontal[16],
+          SpacesAny.paddingTop[8],
+        ]}
+      >
+        {ordinateur && desktopSubtitle ? (
+          <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>{desktopSubtitle}</Text>
+        ) : null}
+        {!ordinateur && matchLabel ? (
+          <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {matchLabel}
+          </Text>
+        ) : null}
+        {!ordinateur && isReady ? (
+          <View
+            style={[
+              Alignments.row, Alignments.alignCenter, Alignments.wrap, SpacesAny.gap[8],
+              Alignments.justifyCenter,
+            ]}
+          >
+            {renderPill()}
+            {metaLine ? <Text style={[Fonts.p3, Fonts.neutral300]}>{metaLine}</Text> : null}
           </View>
+        ) : null}
+      </View>
+
+      {!ordinateur && !hasError ? (
+        <View style={[SpacesAny.paddingHorizontal[16], SpacesAny.paddingTop[8]]}>
+          <SegmentedControl
+            centerContent
+            fitLabels
+            onChange={(/** @type {any} */ value) => setActiveTab(value)}
+            options={ONGLETS.map((value) => ({ label: tabLabels[value], value }))}
+            value={activeTab}
+          />
         </View>
+      ) : null}
 
-        {statsQuery.isLoading ? (
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[24]]}>
-            <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>{t('matchStatsEditor.loadingMatchStats', 'Chargement des stats du match...')}</Text>
-          </View>
-        ) : null}
-
-        {statsQuery.error ? (
-          <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[24], SpacesAny.gap[8]]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('matchStatsEditor.loadReportError', 'Impossible de charger ce rapport.')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {String(statsQuery.error?.message || t(
-                'matchStatsEditor.anErrorOccurred',
-                'Une erreur est survenue.',
-              ))}
-            </Text>
-            <Button
-              onPress={() => statsQuery.refetch()}
-              title={t(
-                'matchStatsEditor.tryAgain',
-                'Réessayer',
-              )}
-              variant="Secondary"
-            />
-          </View>
-        ) : null}
-
-        {!statsQuery.isLoading && !statsQuery.error ? (
+      <ScrollView
+        contentContainerStyle={[SpacesAny.padding[16], SpacesAny.gap[16]]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        style={Alignments.fill}
+      >
+        {isLoading ? renderSkeleton() : null}
+        {hasError ? renderError() : null}
+        {isReady ? (
           <>
-            {isReviewRequired ? (
-              <View
-                style={[
-                  ApplicationStyle.borderRadius24,
-                  SpacesAny.padding[sectionPadding],
-                  SpacesAny.gap[8],
-                  {
-                    backgroundColor: `${Colors.warning500}14`,
-                    borderColor: `${Colors.warning500}45`,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>{t('matchStatsEditor.officialScoreUpdated', 'Score officiel mis à jour')}</Text>
-                <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {t('matchStatsEditor.officialScoreUpdatedHint', 'Le score synchronise depuis la compétition officielle a changé après une saisie précédente. Vérifie les statistiques joueur puis republie ce rapport.')}
-                </Text>
-              </View>
-            ) : null}
-
-            {hasConsistencyIssues ? (
-              <View
-                style={[
-                  ApplicationStyle.borderRadius24,
-                  SpacesAny.padding[sectionPadding],
-                  SpacesAny.gap[8],
-                  {
-                    backgroundColor: `${Colors.warning500}14`,
-                    borderColor: `${Colors.warning500}45`,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>{t('matchStatsEditor.correctionsRequired', 'Corrections requises')}</Text>
-                {consistencyIssues.map((issue) => (
-                  <Text key={issue} style={[Fonts.p3, Fonts.neutral100]}>
-                    {`\u2022 ${issue}`}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                    {t('matchStatsEditor.finalScore', 'Score final')}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral100]}>{getScoreSourceLabel(statsPayload?.score)}</Text>
-                </View>
-                <View
-                  style={[
-                    SpacesAny.paddingHorizontal[12],
-                    SpacesAny.paddingVertical[8],
-                    {
-                      backgroundColor: pillSurfaceColor,
-                      borderColor: counterBorderColor,
-                      borderRadius: 16,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, isScoreLocked ? Fonts.primary100 : Fonts.neutral00]}>
-                    {isScoreLocked
-                      ? t('matchStatsEditor.locked', 'Verrouille')
-                      : t('matchStatsEditor.editable', 'Editable')}
-                  </Text>
-                </View>
-              </View>
-
-              {isWaitingOfficial ? (
-                <Text style={[Fonts.p2, Fonts.primary100]}>
-                  {t(
-                    'matchStatsEditor.officialScoreAwaited',
-                    'Le score officiel est encore attendu depuis la synchronisation externe.',
-                  )}
-                </Text>
-              ) : null}
-
-              <View style={[Alignments.row, Alignments.alignCenter, SpacesAny.gap[12]]}>
-                {renderCounterField({
-                  containerStyle: { flex: 1 },
-                  disabled: isScoreLocked || isReadOnly,
-                  label: t('matchStatsEditor.ourScore', 'Notre score'),
-                  large: true,
-                  onChangeText: updateScoreFor,
-                  onDecrement: () => adjustScoreValue('scoreFor', -1),
-                  onIncrement: () => adjustScoreValue('scoreFor', 1),
-                  value: scoreFor,
-                })}
-                <Text style={[Fonts.h2Bold, Fonts.neutral00]}>-</Text>
-                {renderCounterField({
-                  containerStyle: { flex: 1 },
-                  disabled: isScoreLocked || isReadOnly,
-                  label: t('matchStatsEditor.opponentScore', 'Score adverse'),
-                  large: true,
-                  onChangeText: updateScoreAgainst,
-                  onDecrement: () => adjustScoreValue('scoreAgainst', -1),
-                  onIncrement: () => adjustScoreValue('scoreAgainst', 1),
-                  value: scoreAgainst,
-                })}
-              </View>
-
-              {sourceType === 'league' ? (
-                <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  {t(
-                    'matchStatsEditor.leagueScoreIsOfficial',
-                    'Le score ligue validé reste la source officielle pour ce rapport.',
-                  )}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
-              <View style={[SpacesAny.gap[4]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                  {t('matchStatsEditor.teamReview', 'Bilan collectif')}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  {t(
-                    'matchStatsEditor.teamRatingHint',
-                    'Donne une note d équipe sur 10 et un commentaire collectif visible par '
-                      + 'ton groupe.',
-                  )}
-                </Text>
-              </View>
-              <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
-                {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
-                  const isActive = collectiveRating === value;
-                  return (
-                    <TouchableOpacity
-                      key={value}
-                      onPress={() => setCollectiveRating(value)}
-                      style={[
-                        SpacesAny.paddingHorizontal[12],
-                        SpacesAny.paddingVertical[10],
-                        {
-                          backgroundColor: isActive ? `${Colors.primary500}24` : pillSurfaceColor,
-                          borderColor: isActive ? `${Colors.primary200}CC` : counterBorderColor,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          minWidth: 44,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p3Bold, isActive ? Fonts.primary100 : Fonts.neutral00, Fonts.textCenter]}>
-                        {value}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              <TextInput
-                multiline
-                numberOfLines={4}
-                onChangeText={setCollectiveComment}
-                placeholder={t('matchStatsEditor.teamCommentPlaceholder', 'Ressenti collectif, dynamique du groupe, points forts, points à travailler...')}
-                placeholderTextColor={Colors.neutral400}
-                style={[
-                  Fonts.p2,
-                  Fonts.neutral00,
-                  ApplicationStyle.backgroundColor.primary900,
-                  { borderRadius: 20 },
-                  SpacesAny.padding[16],
-                  {
-                    borderColor: counterBorderColor,
-                    borderWidth: 1,
-                    minHeight: 120,
-                    textAlignVertical: 'top',
-                  },
-                ]}
-                value={collectiveComment}
-              />
-              <View
-                style={[
-                  ApplicationStyle.backgroundColor.primary900,
-                  { borderRadius: 20 },
-                  SpacesAny.padding[12],
-                  {
-                    borderColor: counterBorderColor,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                  {`${statsPayload?.report?.responseCompletionCount ?? 0}/${statsPayload?.report?.responseEligibleCount ?? playerLines.length} joueurs ont repondu`}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
-              <View style={[SpacesAny.gap[4]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                  {t(
-                    'matchStatsEditor.optionalIndividualFeedback',
-                    'Retours individuels optionnels',
-                  )}
-                </Text>
-                <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  {t('matchStatsEditor.individualFeedbackHint', 'Tu peux ajouter une note et un commentaire prive à chaque joueur si tu le souhaites.')}
-                </Text>
-              </View>
-              {coachReviews.length ? coachReviews.map((review) => (
-                <View
-                  key={review.key}
-                  style={[
-                    SpacesAny.padding[sectionPadding],
-                    SpacesAny.gap[12],
-                    {
-                      backgroundColor: playerCardSurfaceColor,
-                      borderColor: counterBorderColor,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{review.label}</Text>
-                      <Text style={[Fonts.p4, Fonts.neutral100]}>
-                        {review?.playerResponse?.stateLabel || t(
-                          'matchStatsEditor.noPlayerFeedbackYet',
-                          'Pas encore de retour joueur',
-                        )}
-                      </Text>
-                    </View>
-                    <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[6], { justifyContent: 'flex-end', maxWidth: 180 }]}>
-                      {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
-                        const isActive = review.rating === value;
-                        return (
-                          <TouchableOpacity
-                            key={`${review.key}-${value}`}
-                            onPress={() => updateCoachReview(review.key, 'rating', value)}
-                            style={[
-                              SpacesAny.paddingHorizontal[10],
-                              SpacesAny.paddingVertical[6],
-                              {
-                                backgroundColor: isActive ? `${Colors.primary500}24` : pillSurfaceColor,
-                                borderColor: isActive ? `${Colors.primary200}CC` : counterBorderColor,
-                                borderRadius: 14,
-                                borderWidth: 1,
-                                minWidth: 36,
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p4Bold, isActive ? Fonts.primary100 : Fonts.neutral00, Fonts.textCenter]}>
-                              {value}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                  <TextInput
-                    multiline
-                    numberOfLines={3}
-                    onChangeText={(value) => updateCoachReview(review.key, 'comment', value)}
-                    placeholder={t(
-                      'matchStatsEditor.privateCommentPlaceholder',
-                      'Commentaire prive pour ce joueur',
-                    )}
-                    placeholderTextColor={Colors.neutral400}
-                    style={[
-                      Fonts.p3,
-                      Fonts.neutral00,
-                      ApplicationStyle.backgroundColor.primary900,
-                      { borderRadius: 20 },
-                      SpacesAny.padding[14],
-                      {
-                        borderColor: counterBorderColor,
-                        borderWidth: 1,
-                        minHeight: 94,
-                        textAlignVertical: 'top',
-                      },
-                    ]}
-                    value={review.comment}
-                  />
-                </View>
-              )) : (
-                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>{t('matchStatsEditor.noPlayerAvailable', 'Aucun joueur disponible.')}</Text>
-                  <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    {t('matchStatsEditor.individualFeedbackEmptyHint', 'Les retours individuels apparaîtront ici des que la liste joueur sera disponible.')}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {excludedNoShowPlayers.length ? (
-              <View
-                style={[
-                  ApplicationStyle.backgroundColor.primary700,
-                  ApplicationStyle.borderRadius24,
-                  SpacesAny.padding[sectionPadding],
-                  SpacesAny.gap[12],
-                  {
-                    borderColor: `${Colors.warning500}40`,
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>{t('matchStatsEditor.playersNotCheckedIn', 'Joueurs non pointes')}</Text>
-                <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  {t(
-                    'matchStatsEditor.unmarkedPlayersHint',
-                    "Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n'a pas ete corrigee.",
-                  )}
-                </Text>
-                <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
-                  {excludedNoShowPlayers.map((/** @type {any} */ player) => (
-                    <View
-                      key={player?.documentId || player?.label || player?.manualPlayerName}
-                      style={[
-                        SpacesAny.paddingHorizontal[10],
-                        SpacesAny.paddingVertical[6],
-                        {
-                          backgroundColor: `${Colors.warning500}18`,
-                          borderColor: `${Colors.warning500}3A`,
-                          borderRadius: 999,
-                          borderWidth: 1,
-                        },
-                      ]}
-                    >
-                      <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                        {player?.label || player?.manualPlayerName || t(
-                          'matchStatsEditor.player',
-                          'Joueur',
-                        )}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {topScorers.length ? (
-              <View style={[SpacesAny.gap[8]]}>
-                <Text
-                  style={[
-                    Fonts.p4Bold,
-                    Fonts.neutral300,
-                    { letterSpacing: 1, textTransform: 'uppercase' },
-                  ]}
-                >
-                  {normalizeSport(sport) === 'basketball' ? t(
-                    'matchStatsEditor.scorers',
-                    'Marqueur·se·s',
-                  ) : t(
-                    'matchStatsEditor.goalScorers',
-                    'Buteur·se·s',
-                  )}
-                </Text>
-                {topScorers.map((scorer) => (
-                  <View
-                    key={scorer.key}
-                    style={[Alignments.row, Alignments.alignCenter, { columnGap: 11 }]}
-                  >
-                    <MemberAvatar
-                      firstname={scorer.label.split(' ')[0]}
-                      lastname={scorer.label.split(' ').slice(1).join(' ')}
-                      size={32}
-                    />
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral100, { flex: 1 }]}>
-                      {scorer.label}
-                    </Text>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                      {`×${scorer.value}`}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.08)',
-                        borderRadius: 999,
-                        height: 5,
-                        overflow: 'hidden',
-                        width: 90,
-                      }}
-                    >
-                      <View
-                        style={{
-                          backgroundColor: Colors.primary500,
-                          borderRadius: 999,
-                          height: '100%',
-                          width: `${Math.min(100, Math.round((scorer.value / (topScorers[0]?.value || 1)) * 100))}%`,
-                        }}
-                      />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            {sourceType === 'event' && responseEligibleCount > 0 ? (
-              <View
-                style={[
-                  SpacesAny.gap[8],
-                  {
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    borderColor: 'rgba(255,255,255,0.10)',
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                  },
-                ]}
-              >
-                <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {t('matchStatsEditor.postMatchFeedback', 'Retours post-match')}
-                  </Text>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                    {t(
-                      'matchStatsEditor.responsesReceived',
-                      '{{responseCompletionCount}}/{{responseEligibleCount}} reçus',
-                      { responseCompletionCount, responseEligibleCount, ...SANS_ECHAPPEMENT },
-                    )}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    borderRadius: 999,
-                    height: 6,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <View
-                    style={{
-                      backgroundColor: Colors.success500,
-                      borderRadius: 999,
-                      height: '100%',
-                      width: `${Math.round((responseCompletionCount / responseEligibleCount) * 100)}%`,
-                    }}
-                  />
-                </View>
-                {missingResponseCount > 0 && !isReadOnly ? (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    disabled={remindResponsesMutation.isPending}
-                    onPress={() => remindResponsesMutation.mutate()}
-                  >
-                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                      {remindResponsesMutation.isPending
-                        ? t('matchStatsEditor.sendingReminder', 'Relance en cours…')
-                        : t(
-                          'matchStatsEditor.remindMissing',
-                          'Relancer les {{missingResponseCount}} manquant·e·s',
-                          { missingResponseCount, ...SANS_ECHAPPEMENT },
-                        )}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            ) : null}
-
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
-              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
-                <View style={[SpacesAny.gap[4], { flex: 1 }]}>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                    {t('matchStatsEditor.playerStats', 'Stats joueurs')}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    {t(
-                      'matchStatsEditor.playerStatsHint',
-                      'Temps de jeu et statistiques clés adaptees au sport du match.',
-                    )}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    SpacesAny.paddingHorizontal[10],
-                    SpacesAny.paddingVertical[6],
-                    {
-                      backgroundColor: pillSurfaceColor,
-                      borderColor: counterBorderColor,
-                      borderRadius: 16,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                    {`${playerLines.length} ${playerLines.length > 1 ? 'lignes' : 'ligne'}`}
-                  </Text>
-                </View>
-              </View>
-
-              {playerLines.length ? playerLines.map((line) => {
-                const isQuantitativeLockedByPlayer = Boolean(
-                  line?.playerResponse?.status === 'submitted'
-                  && line?.playerResponse?.quantitativeState === 'completed',
-                );
-                const lineInputsDisabled = isReadOnly || isQuantitativeLockedByPlayer;
-
-                return (
-                  <View
-                    key={line.key}
-                    style={[
-                      SpacesAny.padding[sectionPadding],
-                      SpacesAny.gap[14],
-                      {
-                        backgroundColor: playerCardSurfaceColor,
-                        borderColor: counterBorderColor,
-                        borderRadius: 20,
-                        borderWidth: 1,
-                      },
-                    ]}
-                  >
-                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{line.label}</Text>
-                        <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {line.userDocumentId ? t(
-                            'matchStatsEditor.foundClubPlayer',
-                            'Joueur FoundClub',
-                          ) : t(
-                            'matchStatsEditor.manualPlayer',
-                            'Joueur manuel',
-                          )}
-                        </Text>
-                      </View>
-                      {normalizeSport(sport) === 'football' ? (
-                        <TouchableOpacity
-                          disabled={lineInputsDisabled}
-                          onPress={() => updateLineValue(line.key, 'cleanSheet', !line.cleanSheet)}
-                          style={[
-                            SpacesAny.paddingHorizontal[10],
-                            SpacesAny.paddingVertical[6],
-                            {
-                              backgroundColor: line.cleanSheet ? `${Colors.primary500}2B` : pillSurfaceColor,
-                              borderColor: line.cleanSheet ? `${Colors.primary200}C7` : counterBorderColor,
-                              borderRadius: 14,
-                              borderWidth: 1,
-                              opacity: lineInputsDisabled ? 0.55 : 1,
-                            },
-                          ]}
-                        >
-                          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                            {t('matchStatsEditor.cleanSheet', 'Clean sheet')}
-                          </Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-
-                    {isQuantitativeLockedByPlayer ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary900,
-                          ApplicationStyle.borderRadius16,
-                          SpacesAny.padding[12],
-                          SpacesAny.gap[4],
-                          {
-                            borderColor: counterBorderColor,
-                            borderWidth: 1,
-                          },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                          {t('matchStatsEditor.quantitiesLocked', 'Quantités verrouillees')}
-                        </Text>
-                        <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {t('matchStatsEditor.quantitiesLockedHint', 'Ce joueur a déjà validé ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.')}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    <View>
-                      {renderCounterField({
-                        containerStyle: { flex: 1 },
-                        disabled: lineInputsDisabled,
-                        label: t('matchStatsEditor.minutesPlayed', 'Minutes jouees'),
-                        onChangeText: (/** @type {string} */ value) => updateLineNumericValue(line.key, 'minutesPlayed', value),
-                        onDecrement: () => adjustLineValue(line.key, 'minutesPlayed', -1),
-                        onIncrement: () => adjustLineValue(line.key, 'minutesPlayed', 1),
-                        value: line.minutesPlayed,
-                      })}
-                    </View>
-
-                    {playerStatRows.map((row) => (
-                      <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, SpacesAny.gap[12]]}>
-                        {row.map((field) => (
-                          <View key={field.key} style={{ flex: 1 }}>
-                            {renderCounterField({
-                              containerStyle: { flex: 1 },
-                              disabled: lineInputsDisabled,
-                              label: field.label,
-                              onChangeText: (/** @type {string} */ value) => updateLineNumericValue(line.key, field.key, value),
-                              onDecrement: () => adjustLineValue(line.key, field.key, -1),
-                              onIncrement: () => adjustLineValue(line.key, field.key, 1),
-                              value: line[field.key],
-                            })}
-                          </View>
-                        ))}
-                      </View>
-                    ))}
-                  </View>
-                );
-              }) : (
-                <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>{t('matchStatsEditor.noPlayerForReport', 'Aucun joueur disponible pour ce rapport.')}</Text>
-                  <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    {t('matchStatsEditor.noPlayerForReportHint', 'Publie d abord la composition d équipe ou vérifie le roster de l équipe pour alimenter cette liste.')}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                {t('matchStatsEditor.actions', 'Actions')}
-              </Text>
-              <Button
-                disabled={isReadOnly || isReviewRequired || hasConsistencyIssues || saveDraftMutation.isPending || submitMutation.isPending}
-                isLoading={saveDraftMutation.isPending}
-                onPress={handleSaveDraft}
-                title={t('matchStatsEditor.saveTheDraft', 'Sauvegarder le brouillon')}
-                variant="Secondary"
-              />
-              <Button
-                disabled={hasConsistencyIssues || isReadOnly || submitMutation.isPending}
-                isLoading={submitMutation.isPending}
-                onPress={handleSubmit}
-                title={submitButtonTitle}
-                variant="Primary"
-              />
-              <Text style={[Fonts.p3, Fonts.neutral100]}>{submitHelperText}</Text>
-            </View>
+            {renderAlerts()}
+            {ordinateur ? renderDesktopColumns() : renderPhoneTab()}
           </>
         ) : null}
       </ScrollView>
+
+      {actions ? (
+        <View
+          style={[
+            Alignments.row,
+            SpacesAny.gap[12],
+            SpacesAny.paddingHorizontal[16],
+            SpacesAny.paddingTop[12],
+            {
+              alignSelf: ordinateur ? 'flex-end' : 'stretch',
+              borderTopColor: withAlpha(Colors.neutral300, 0.18),
+              borderTopWidth: ordinateur ? 0 : 1,
+              minWidth: ordinateur ? 420 : undefined,
+              paddingBottom: Math.max(sceneBottomInset, 12),
+            },
+          ]}
+          testID="feuille-barre"
+        >
+          {actions}
+        </View>
+      ) : null}
+
+      {!ordinateur ? (
+        <BottomModal
+          close={closePlayer}
+          footerComponent={(
+            <View style={[SpacesAny.paddingHorizontal[16], SpacesAny.paddingBottom[16]]}>
+              {validateButton}
+            </View>
+          )}
+          isVisible={Boolean(openLine)}
+          maxContentHeightRatio={0.85}
+        >
+          <View style={[SpacesAny.paddingHorizontal[16], SpacesAny.paddingBottom[16]]}>
+            {renderPlayerSheet()}
+          </View>
+        </BottomModal>
+      ) : null}
+
+      <BottomModal
+        close={() => setIsConfirming(false)}
+        isVisible={isConfirming}
+        webPresentation="dialog"
+      >
+        <View
+          accessibilityRole="alert"
+          style={[SpacesAny.paddingHorizontal[16], SpacesAny.paddingBottom[16], SpacesAny.gap[12]]}
+          testID="feuille-confirmation"
+        >
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {republish
+              ? t('stMatch.feuille.confirmRepublishTitle', 'Republier la feuille ?')
+              : t('stMatch.feuille.confirmTitle', 'Publier la feuille ?')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>{confirmationText}</Text>
+          <View style={[Alignments.row, SpacesAny.gap[8], { justifyContent: 'flex-end' }]}>
+            <Button
+              onPress={() => setIsConfirming(false)}
+              size="small"
+              title={t('matchStatsEditor.cancel', 'Annuler')}
+              variant="Ghost"
+            />
+            <Button
+              isLoading={submitMutation.isPending}
+              onPress={() => submitMutation.mutate()}
+              size="small"
+              title={republish
+                ? t('stMatch.feuille.republish', 'Republier')
+                : t('stMatch.feuille.publish', 'Publier')}
+              variant="Primary"
+            />
+          </View>
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }
