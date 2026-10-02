@@ -64,6 +64,7 @@ import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
@@ -824,7 +825,7 @@ function EventDetails({ navigation, route }) {
     subscriptionAccessLevel,
     userData,
   } = useAuth();
-  const { sendMessage } = useMessaging();
+  const { sendMessage, startWhisperChat } = /** @type {any} */ (useMessaging());
   const currentEventPublishQuotaItem = useMemo(
     () => getSubscriptionQuotaItem(freeUsageSummary, 'EVENT_PUBLISH', subscriptionAccessLevel),
     [freeUsageSummary, subscriptionAccessLevel],
@@ -4559,6 +4560,72 @@ function EventDetails({ navigation, route }) {
       'Renseigne ton retour individuel, puis ajoute une note sur 10.',
     );
   }, [myMatchResponse, t]);
+  // 🚩 ST-MATCH (écran 2, design validé le 02/10) — « MARQUÉ ABSENT À L'APPEL ».
+  // QUI a pointé et QUAND viennent du serveur (`attendanceRestrictionBy/At`, admin
+  // ST-MATCH) ; sans eux (serveur plus ancien), la phrase reste vraie sans les nommer.
+  const absenceMarker = myMatchResponsePayload?.attendanceRestrictionBy || null;
+  const absenceMarkerName = String(absenceMarker?.firstname || '').trim();
+  const absenceMarkedLine = useMemo(() => {
+    const markedAt = myMatchResponsePayload?.attendanceRestrictionAt
+      ? new Date(myMatchResponsePayload.attendanceRestrictionAt)
+      : null;
+    if (!markedAt || Number.isNaN(markedAt.getTime())) {
+      return absenceMarkerName
+        ? t('stMatch.absent.markedBy', '{{name}} t\'a marqué absent à l\'appel.', {
+          name: absenceMarkerName, ...SANS_ECHAPPEMENT,
+        })
+        : t('stMatch.absent.markedByStaff', 'Un encadrant t\'a marqué absent à l\'appel.');
+    }
+    const day = markedAt.toLocaleDateString(localeDesFormats(), { weekday: 'long' });
+    const time = markedAt.toLocaleTimeString(localeDesFormats(), {
+      hour: '2-digit', minute: '2-digit',
+    });
+    return absenceMarkerName
+      ? t('stMatch.absent.markedByAt', '{{name}} t\'a marqué absent {{day}} à {{time}}.', {
+        day, name: absenceMarkerName, time, ...SANS_ECHAPPEMENT,
+      })
+      : t('stMatch.absent.markedAt', 'Tu as été marqué absent {{day}} à {{time}}.', {
+        day, time, ...SANS_ECHAPPEMENT,
+      });
+  }, [absenceMarkerName, myMatchResponsePayload?.attendanceRestrictionAt, t]);
+  // « Écrire à Karim » (amélioration 2) : la conversation privée avec celui qui a pointé ;
+  // une erreur d'appel se règle en un message. Même geste que « Écrire à … » de l'équipe.
+  const canWriteToAbsenceMarker = Boolean(
+    absenceMarker?.documentId && absenceMarker.documentId !== userData?.documentId,
+  );
+  const absenceClosedText = t(
+    'stMatch.absent.closed',
+    'Ton questionnaire de match est fermé tant que ta présence n\'est pas corrigée.',
+  );
+  const absenceReopensText = absenceMarkerName
+    ? t(
+      'stMatch.absent.reopens',
+      'Si tu étais là, {{name}} corrige l\'appel et ton questionnaire se rouvre tout seul.',
+      { name: absenceMarkerName, ...SANS_ECHAPPEMENT },
+    )
+    : t(
+      'stMatch.absent.reopensUnnamed',
+      'Si tu étais là, l\'encadrant corrige l\'appel et ton questionnaire se rouvre tout seul.',
+    );
+  const writeToAbsenceMarkerTitle = t('stMatch.absent.writeTo', 'Écrire à {{name}}', {
+    name: absenceMarkerName || t('stMatch.absent.writeToFallback', 'l\'encadrant'),
+    ...SANS_ECHAPPEMENT,
+  });
+  const writeToAbsenceMarker = useCallback(async () => {
+    if (!absenceMarker?.documentId) return;
+    try {
+      const chat = await startWhisperChat([absenceMarker.documentId]);
+      if (chat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      }
+    } catch (_error) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t('stMatch.absent.writeError', 'Impossible d\'ouvrir la conversation pour le moment.'),
+      );
+    }
+  }, [absenceMarker?.documentId, navigation, startWhisperChat, t]);
+
   const myMatchResponseButtonTitle = useMemo(() => {
     if (myMatchResponse?.status === 'draft') return t('eventDetails.resume', 'Reprendre');
     if (myMatchResponse?.status === 'submitted') return t('eventDetails.view', 'Voir');
@@ -8411,33 +8478,56 @@ function EventDetails({ navigation, route }) {
             && isTeamMember
             && isMatchFinished
             && myMatchResponsePayload?.attendanceRestriction === 'no_show' ? (
-              <View style={[Spaces.gap[12]]}>
+              /* 🚩 ST-MATCH (écran 2, état 1) — l'ORANGE de l'avertissement au lieu du
+                 rouge de l'erreur : l'erreur peut venir de l'appel, pas du joueur (le titre
+                 rouge gras « Absent à l'appel » l'accusait). Le bloc s'appelle « Mon match ».
+                 Il dit QUI a pointé et QUAND, et « Écrire à Karim » ouvre la conversation. */
+              <View style={[Spaces.gap[12]]} testID="st-match-absent-a-l-appel">
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                  {t('eventDetails.myStats', 'Mes stats')}
+                  {t('stMatch.absent.blockTitle', 'Mon match')}
                 </Text>
                 <View
                   style={[
-                    ApplicationStyle.backgroundColor.primary900,
                     ApplicationStyle.borderRadius24,
                     Spaces.padding[16],
                     Spaces.gap[12],
                     {
-                      borderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}55`,
+                      backgroundColor: withAlpha(Colors.primary700, 0.55),
+                      borderColor: withAlpha(Colors.primary500, 0.24),
                       borderWidth: 1,
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.error500 || 'rgb(248, 113, 113)' }]}>
-                    {t('eventDetails.checkInToCorrect', 'Absent à l’appel')}
-                  </Text>
-                  <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {t(
-                      'eventDetails.arrivalNotConfirmed',
-                      "Un encadrant t'a marqué absent à l'appel de ce match. "
-                        + "S'il s'est trompé, il corrige ta présence "
-                        + 'et ton questionnaire se débloque.',
-                    )}
-                  </Text>
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius12,
+                      Spaces.paddingHorizontal[16],
+                      Spaces.paddingVertical[12],
+                      Spaces.gap[8],
+                      {
+                        backgroundColor: withAlpha(Colors.warning500, 0.1),
+                        borderColor: withAlpha(Colors.warning500, 0.4),
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                      <SvgIcon color={Colors.warning400} height={16} name="flag" width={16} />
+                      <Text style={[Fonts.p2Bold, { color: Colors.warning400, flexShrink: 1 }]}>
+                        {t('stMatch.absent.title', 'Marqué absent à l\'appel')}
+                      </Text>
+                    </View>
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>{absenceMarkedLine}</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral100]}>{absenceClosedText}</Text>
+                  </View>
+                  {canWriteToAbsenceMarker ? (
+                    <Button
+                      onPress={writeToAbsenceMarker}
+                      title={writeToAbsenceMarkerTitle}
+                      variant="Secondary"
+                    />
+                  ) : null}
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>{absenceReopensText}</Text>
                 </View>
               </View>
                 ) : null}

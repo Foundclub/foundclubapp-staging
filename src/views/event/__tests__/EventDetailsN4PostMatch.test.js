@@ -22,6 +22,7 @@ const mockUseAuth = jest.fn();
 const mockSetOptions = jest.fn();
 const mockRemindMutate = jest.fn();
 const mockNavigate = jest.fn();
+const mockStartWhisperChat = jest.fn();
 const mockEventQuery = { data: null };
 const mockMatchStatsQuery = { data: null };
 const mockMyMatchResponseQuery = { data: null };
@@ -43,11 +44,20 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   }),
 }));
 
+// ST-MATCH (écran 2) — la doublure INTERPOLE les {{…}} quand on lui en donne : « Karim
+// t'a marqué absent samedi à 18:55. ». Aucun témoin d'avant ne lisait un {{…}} brut.
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
   useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
+    t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => (
+      typeof fallback === 'string'
+        ? fallback.replace(
+          /\{\{(\w+)\}\}/g,
+          (/** @type {string} */ tout, /** @type {string} */ nom) => (
+            options && nom in options ? String(options[nom]) : tout
+          ),
+        )
+        : key
     ),
   }),
 }));
@@ -92,9 +102,10 @@ jest.mock('react-native-blob-util', () => ({
 
 jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => mockUseAuth() }));
 
+// ST-MATCH (écran 2) — « Écrire à Karim » passe par `startWhisperChat`.
 jest.mock('@/domains/messaging/useMessaging', () => ({
   __esModule: true,
-  default: () => ({ sendMessage: jest.fn() }),
+  default: () => ({ sendMessage: jest.fn(), startWhisperChat: mockStartWhisperChat }),
 }));
 
 const emptyQuery = () => ({
@@ -812,5 +823,89 @@ describe('SECU-STATS — la carte « APRÈS LE MATCH » ne propose plus l editeu
       'MatchStatsEditor',
       expect.objectContaining({ eventId: 'event-1' }),
     );
+  });
+});
+
+// ==========================================================================
+// 🚩 ST-MATCH (écran 2, design des statistiques validé le 02/10) — « ABSENT À
+// L'APPEL » : orange (et non plus rouge), QUI a pointé et QUAND, et « Écrire à
+// Karim » qui ouvre la conversation privée avec lui.
+// ==========================================================================
+describe('ST-MATCH écran 2 — marqué absent à l appel', () => {
+  const POINTE_A = '2026-09-05T16:55:00.000Z';
+  const absent = (/** @type {any} */ champs = {}) => ({
+    attendanceRestriction: 'no_show',
+    attendanceRestrictionAt: POINTE_A,
+    attendanceRestrictionBy: { documentId: COACH, firstname: 'Karim' },
+    permissions: { canRespond: false, canView: true },
+    response: null,
+    ...champs,
+  });
+  const lePointage = () => {
+    const at = new Date(POINTE_A);
+    const jour = at.toLocaleDateString('fr-FR', { weekday: 'long' });
+    const heure = at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `Karim t'a marqué absent ${jour} à ${heure}.`;
+  };
+  const textesDe = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
+    .map((/** @type {any} */ n) => textOf(n.props.children).trim())
+    .filter(Boolean);
+  const boutonNomme = (/** @type {any} */ noeud, /** @type {string} */ fragment) => noeud.findAll(
+    (/** @type {any} */ n) => n.props?.accessibilityRole === 'button'
+      && typeof n.props.onPress === 'function'
+      && n.findAllByType(Text)
+        .some((/** @type {any} */ x) => textOf(x.props.children).includes(fragment)),
+  )[0];
+  const leBloc = (/** @type {any} */ racine) => racine
+    .findAll((/** @type {any} */ n) => n.props?.testID === 'st-match-absent-a-l-appel')[0];
+
+  test('🚨 état 1 — QUI l a pointé et QUAND, dans un bloc « Mon match » en orange', () => {
+    const racine = monter({
+      auth: authPour(JOUEUR, false),
+      matchStats: statsAvec({ permissions: { canManage: false, canView: true } }),
+      myMatchResponse: absent(),
+    });
+
+    const bloc = leBloc(racine);
+    expect(bloc).toBeTruthy();
+    const texte = textesDe(bloc).join(' | ');
+    expect(texte).toContain('Mon match');
+    expect(texte).toContain('Marqué absent à l\'appel');
+    expect(texte).toContain(lePointage());
+    expect(texte).toContain('fermé tant que ta présence n\'est pas corrigée.');
+    expect(texte).toContain('Karim corrige l\'appel et ton questionnaire se rouvre');
+    // Le titre rouge qui accusait le joueur est parti.
+    expect(texte).not.toContain('Absent à l’appel');
+  });
+
+  test('« Écrire à Karim » ouvre la conversation privée avec lui', async () => {
+    mockStartWhisperChat.mockResolvedValue({ documentId: 'chat-karim' });
+    const racine = monter({
+      auth: authPour(JOUEUR, false),
+      matchStats: statsAvec({ permissions: { canManage: false, canView: true } }),
+      myMatchResponse: absent(),
+    });
+
+    const bouton = boutonNomme(leBloc(racine), 'Écrire à Karim');
+    expect(bouton).toBeTruthy();
+    await act(async () => {
+      await bouton.props.onPress();
+    });
+
+    expect(mockStartWhisperChat).toHaveBeenCalledWith([COACH]);
+    expect(mockNavigate).toHaveBeenCalledWith('Conversation', { chatId: 'chat-karim' });
+  });
+
+  test('🔒 serveur ancien (ni auteur ni heure) : phrase vraie, aucun bouton muet', () => {
+    const racine = monter({
+      auth: authPour(JOUEUR, false),
+      matchStats: statsAvec({ permissions: { canManage: false, canView: true } }),
+      myMatchResponse: absent({ attendanceRestrictionAt: null, attendanceRestrictionBy: null }),
+    });
+
+    const bloc = leBloc(racine);
+    const texte = textesDe(bloc).join(' | ');
+    expect(texte).toContain('Un encadrant t\'a marqué absent à l\'appel.');
+    expect(boutonNomme(bloc, 'Écrire à')).toBeFalsy();
   });
 });

@@ -16228,6 +16228,20 @@ export default {
   // ST-MATCH (02/10) — the validated stats design: the match is played, the reminders,
   // the coach enters. One block for the batch.
   stMatch: {
+    absent: {
+      blockTitle: 'My match',
+      closed: 'Your match questionnaire is closed until your attendance is corrected.',
+      markedAt: 'You were marked absent on {{day}} at {{time}}.',
+      markedBy: '{{name}} marked you absent at roll call.',
+      markedByAt: '{{name}} marked you absent on {{day}} at {{time}}.',
+      markedByStaff: 'A staff member marked you absent at roll call.',
+      reopens: 'If you were there, {{name}} corrects the roll call and your questionnaire reopens by itself.',
+      reopensUnnamed: 'If you were there, the staff corrects the roll call and your questionnaire reopens by itself.',
+      title: 'Marked absent at roll call',
+      writeError: "The conversation can't be opened right now.",
+      writeTo: 'Write to {{name}}',
+      writeToFallback: 'the staff member',
+    },
     encart: {
       coachHasNotEntered: "{{name}} hasn't entered the score yet.",
       coachHasNotEnteredUnnamed: "The coach hasn't entered the score yet.",

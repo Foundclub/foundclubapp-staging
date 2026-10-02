@@ -17003,6 +17003,21 @@ export default {
   // ST-MATCH (02/10) — design des statistiques validé : le match se joue, les rappels,
   // l'entraîneur saisit. Un seul bloc, pour le lot.
   stMatch: {
+    absent: {
+      blockTitle: 'Mon match',
+      closed: "Ton questionnaire de match est fermé tant que ta présence n'est pas corrigée.",
+      markedAt: 'Tu as été marqué absent {{day}} à {{time}}.',
+      markedBy: "{{name}} t'a marqué absent à l'appel.",
+      markedByAt: "{{name}} t'a marqué absent {{day}} à {{time}}.",
+      markedByStaff: "Un encadrant t'a marqué absent à l'appel.",
+      reopens: "Si tu étais là, {{name}} corrige l'appel et ton questionnaire se rouvre tout seul.",
+      // eslint-disable-next-line max-len
+      reopensUnnamed: "Si tu étais là, l'encadrant corrige l'appel et ton questionnaire se rouvre tout seul.",
+      title: "Marqué absent à l'appel",
+      writeError: "Impossible d'ouvrir la conversation pour le moment.",
+      writeTo: 'Écrire à {{name}}',
+      writeToFallback: "l'encadrant",
+    },
     encart: {
       coachHasNotEntered: "{{name}} n'a pas encore saisi le score.",
       coachHasNotEnteredUnnamed: "L'entraîneur n'a pas encore saisi le score.",
