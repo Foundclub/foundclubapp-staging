@@ -49,6 +49,7 @@ import { useGetCategories } from '@/services/category/categoryQueries';
 import {
   applyToRecruitmentAd,
   buildDetectionApplicationStatusMap,
+  buildOwnApplicationStatusMap,
   filterVisibleRecruitmentAds,
   getMyApplications,
   getRecruitmentAds,
@@ -477,6 +478,14 @@ function RecrutementListContent({
     () => buildDetectionApplicationStatusMap(myApplications, userData),
     [myApplications, userData],
   );
+  // FINITIONS8 (tournee 9, point 6) — « Postuler » restait apres l'envoi : la carte cherchait
+  // « ai-je postule ? » dans l'annonce (`applications`, retire depuis D10, puis `candidates`,
+  // absent des annonces de la recherche). « Mes candidatures », relue apres l'envoi, fait foi.
+  // Test : __tests__/RecrutementListContent.FINITIONS8.postuler.test.js.
+  const ownApplicationStatusByAd = useMemo(
+    () => buildOwnApplicationStatusMap(myApplications),
+    [myApplications],
+  );
 
   const matchesAudienceFilter = useCallback((/** @type {any} */ ad) => (
     audienceFilter === 'all' || normalizeAudienceType(ad?.audienceType) === audienceFilter
@@ -565,6 +574,7 @@ function RecrutementListContent({
       ad,
       userData,
       detectionApplicationStatusByEvent,
+      ownApplicationStatusByAd,
     );
     const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
 
@@ -650,6 +660,7 @@ function RecrutementListContent({
     handleAdCardPress,
     isAuthenticated,
     openRecruitmentAuthFlow,
+    ownApplicationStatusByAd,
     userData,
   ]);
 
@@ -1273,6 +1284,7 @@ function RecrutementListContent({
                 isApplying={applyingAdId === getRecruitmentAdKey(ad)}
                 onApply={handleAdApply}
                 onPress={handleAdCardPress}
+                ownApplicationStatusByAd={ownApplicationStatusByAd}
               />
             </View>
           );
@@ -1326,6 +1338,7 @@ function RecrutementListContent({
             ad={item}
             detectionApplicationStatusByEvent={detectionApplicationStatusByEvent}
             onPress={handleAdCardPress}
+            ownApplicationStatusByAd={ownApplicationStatusByAd}
           />
         )}
         showsVerticalScrollIndicator={false}

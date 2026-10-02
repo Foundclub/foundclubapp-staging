@@ -266,14 +266,62 @@ export const buildDetectionApplicationStatusMap = (ads, userRef) => {
   }, {});
 };
 
+// FINITIONS8 (tournee 9, points 1 et 6) — LE STATUT DE MA CANDIDATURE, ANNONCE PAR ANNONCE.
+//
+// Depuis D10 (29/07), aucun role n'a `recruitment-application.find` : Strapi retire
+// `applications` de l'annonce en silence. Il ne reste au candidat que `candidates` (sa seule
+// entree), qui ne porte AUCUN statut — une candidature REFUSEE s'y lisait « en attente »
+// (T9_DEFAUT_annonce_refusee_affiche_demande_en_attente). Et la recherche (« Pour moi ») ne
+// porte meme pas `candidates` : « Postuler » restait apres l'envoi.
+// La seule source du statut est « mes candidatures » (GET /me/recruitment-applications,
+// `listForApplicant`), deja lue par la liste : on la range par annonce.
+const ACTIVE_APPLICATION_STATUSES = ['accepted', 'pending'];
+
+/**
+ * Le statut de MA candidature, par documentId d'annonce.
+ * @param {Array<any>} myApplications les lignes de getMyApplications
+ *   (des annonces qui portent `applicationStatus`)
+ * @returns {Record<string, string>} documentId de l'annonce => statut normalise
+ */
+export const buildOwnApplicationStatusMap = (myApplications) => {
+  if (!Array.isArray(myApplications)) return {};
+
+  /** @type {Record<string, string>} */
+  const statusByAd = {};
+  myApplications.forEach((/** @type {any} */ entry) => {
+    const adDocumentId = String(entry?.documentId || '').trim();
+    if (!adDocumentId || !entry?.applicationStatus) return;
+
+    const status = normalizeApplicationStatus(entry.applicationStatus);
+    const known = statusByAd[adDocumentId];
+    const isActive = ACTIVE_APPLICATION_STATUSES.includes(status);
+    // Le serveur les rend de la plus recente a la plus ancienne : la premiere gagne, sauf
+    // qu'une candidature encore active passe devant une ancienne refusee ou retiree.
+    if (!known || (isActive && !ACTIVE_APPLICATION_STATUSES.includes(known))) {
+      statusByAd[adDocumentId] = status;
+    }
+  });
+  return statusByAd;
+};
+
 /**
  * Resolve the application state for a recruitment ad, including detection-wide shared status.
  * @param {any} ad
  * @param {string | number | { id?: string | number, documentId?: string }} userRef
  * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [sharedDetectionStatusByEvent]
- * @returns {{ hasApplied: boolean, linkedRecruitmentAdDocumentId: string, status: 'accepted' | 'pending' | null }}
+ * @param {Record<string, string>} [ownApplicationStatusByAd] buildOwnApplicationStatusMap
+ * @returns {{
+ *   hasApplied: boolean,
+ *   linkedRecruitmentAdDocumentId: string,
+ *   status: 'accepted' | 'pending' | 'declined' | null,
+ * }}
  */
-export const resolveRecruitmentAdApplicationState = (ad, userRef, sharedDetectionStatusByEvent = {}) => {
+export const resolveRecruitmentAdApplicationState = (
+  ad,
+  userRef,
+  sharedDetectionStatusByEvent = {},
+  ownApplicationStatusByAd = {},
+) => {
   const eventDocumentId = getRecruitmentEventDocumentId(ad);
   const sharedStatus = eventDocumentId ? sharedDetectionStatusByEvent[eventDocumentId] : null;
   const normalizedSharedStatus = normalizeParticipationStatus(sharedStatus?.status);
@@ -298,6 +346,28 @@ export const resolveRecruitmentAdApplicationState = (ad, userRef, sharedDetectio
         || '',
       ).trim(),
       status: /** @type {'accepted' | 'pending'} */ (normalizeParticipationStatus(activeParticipation?.participationStatus)),
+    };
+  }
+
+  // FINITIONS8 : « mes candidatures » fait foi, avant `candidates` qui ne dit pas le statut.
+  // Les annonces de l'onglet « Candidatures » portent leur statut (`applicationStatus`).
+  const adDocumentId = String(ad?.documentId || '').trim();
+  const ownStatus = (adDocumentId && ownApplicationStatusByAd?.[adDocumentId])
+    || (ad?.applicationStatus ? normalizeApplicationStatus(ad.applicationStatus) : '');
+  if (ownStatus) {
+    if (ACTIVE_APPLICATION_STATUSES.includes(ownStatus)) {
+      return {
+        hasApplied: true,
+        linkedRecruitmentAdDocumentId: adDocumentId,
+        status: /** @type {'accepted' | 'pending'} */ (ownStatus),
+      };
+    }
+    // Refusee : dite telle quelle, et l'on peut repostuler. Retiree ou annulee : comme
+    // si l'on n'avait jamais postule (l'entree de `candidates` peut etre restee).
+    return {
+      hasApplied: false,
+      linkedRecruitmentAdDocumentId: '',
+      status: ownStatus === 'declined' ? 'declined' : null,
     };
   }
 

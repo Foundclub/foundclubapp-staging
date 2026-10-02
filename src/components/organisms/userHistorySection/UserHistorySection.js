@@ -63,10 +63,18 @@ function UserHistorySection({
   const { t } = useTranslation();
   const shouldUseUserHistory = Boolean(userId);
 
-  const { data: myHistoriesData, isLoading: isLoadingMyHistories } = useGetMyHistories({
+  const {
+    data: myHistoriesData,
+    isError: isMyHistoriesError,
+    isLoading: isLoadingMyHistories,
+  } = useGetMyHistories({
     enabled: !shouldUseUserHistory,
   });
-  const { data: userHistoriesData, isLoading: isLoadingUserHistories } = useGetUserHistories(
+  const {
+    data: userHistoriesData,
+    isError: isUserHistoriesError,
+    isLoading: isLoadingUserHistories,
+  } = useGetUserHistories(
     userId || '',
     {
       enabled: shouldUseUserHistory,
@@ -75,6 +83,11 @@ function UserHistorySection({
 
   const historiesData = shouldUseUserHistory ? userHistoriesData : myHistoriesData;
   const isLoading = shouldUseUserHistory ? isLoadingUserHistories : isLoadingMyHistories;
+  // FINITIONS8 (tournee 9, point 5) — une lecture REFUSEE se rendait comme une liste VIDE :
+  // « 0 expérience(s) · Aucun historique » chez le parent de Hugo, qui en a une (le serveur
+  // refusait le role Parent). Elle se dit desormais indisponible.
+  // Test : __tests__/UserHistorySection.FINITIONS8.test.js.
+  const isUnavailable = shouldUseUserHistory ? isUserHistoriesError : isMyHistoriesError;
   const sortedHistories = useMemo(() => {
     const source = Array.isArray(historiesData) ? historiesData : [];
     return [...source].sort((left, right) => {
@@ -219,7 +232,9 @@ function UserHistorySection({
             {t('profile.history.title', 'Historique sportif')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('profile.history.count', '{{count}} expérience(s)', { count: sortedHistories.length })}
+            {isUnavailable
+              ? t('profile.history.unavailable', 'Historique indisponible pour le moment')
+              : t('profile.history.count', '{{count}} expérience(s)', { count: sortedHistories.length })}
           </Text>
         </View>
 
@@ -264,11 +279,13 @@ function UserHistorySection({
 
       {sortedHistories.length === 0 ? (
         <View style={[Spaces.gap[12]]}>
-          <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
-            {isOwnProfile
-              ? t('profile.history.empty', 'Ajoute ton parcours sportif pour enrichir ton profil')
-              : t('profile.history.emptyOther', 'Aucun historique renseigne')}
-          </Text>
+          {isUnavailable ? null : (
+            <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
+              {isOwnProfile
+                ? t('profile.history.empty', 'Ajoute ton parcours sportif pour enrichir ton profil')
+                : t('profile.history.emptyOther', 'Aucun historique renseigné')}
+            </Text>
+          )}
 
           {/* D54 — la MEME carte qu'en pied de liste. L'ancienne version
               enfermait la phrase et le lien dans un cadre pointille GRIS et

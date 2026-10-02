@@ -106,7 +106,10 @@ const mockGetRecruitmentAd = jest.fn();
 const mockGetRecruitmentApplications = jest.fn();
 jest.mock('@/services/recruitment/recruitmentService', () => ({
   applyToRecruitmentAd: jest.fn(),
+  // FINITIONS8 (point 1) : la fiche lit le statut de MA candidature dans « mes candidatures ».
+  buildOwnApplicationStatusMap: () => ({}),
   deleteRecruitmentAd: jest.fn(),
+  getMyApplications: jest.fn(async () => []),
   getRecruitmentAd: (/** @type {any} */ id) => mockGetRecruitmentAd(id),
   getRecruitmentApplications: (/** @type {any} */ id) => mockGetRecruitmentApplications(id),
   resolveRecruitmentAdApplicationState: () => ({

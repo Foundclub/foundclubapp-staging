@@ -41,6 +41,7 @@ import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntim
 import { buildProfileSaveConfirmation } from '@/services/profile/profileSaveConfirmation';
 import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 
+import { formatHeight } from '@/utils/heightCentimeters';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 // D06 — « voir » et « modifier » ne font plus qu'un (pack design du 2026-08-05,
@@ -402,8 +403,9 @@ function SelfProfileUnified({ navigation }) {
     ...(allowedFields.includes('height') ? [{
       icon: Images.check,
       key: 'height',
-      label: t('userDetails.fields.height', 'Taille (m)'),
-      value: userData?.height ? String(userData.height) : '',
+      label: t('userDetails.fields.height', 'Taille'),
+      // FINITIONS8 (point 4) : en metres, quelle que soit l'unite enregistree.
+      value: formatHeight(userData?.height),
     }] : []),
     ...(allowedFields.includes('weight') ? [{
       icon: Images.check,

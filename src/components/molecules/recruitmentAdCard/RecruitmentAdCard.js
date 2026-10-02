@@ -28,6 +28,7 @@ import { getShortAddress } from '@/utils/location';
 import { getRecruitmentAdPlayerTitle, getRecruitmentAdSportName } from '@/utils/recruitmentAdTitle';
 
 import CARD_BACKGROUND from '@/assets/background-card-event/card-autre.png';
+import { getCoachRoleLabel, getEngagementLabel } from '@/constants/coachRoles';
 import { getRecruitAthleteNoun } from '@/constants/positions';
 
 const normalizeTypeLabel = (value = '') => String(value || '')
@@ -36,23 +37,12 @@ const normalizeTypeLabel = (value = '') => String(value || '')
   .replace(/[\u0300-\u036f]/g, '')
   .trim();
 
-const humanizeEnumLabel = (value, fallback = '') => {
-  const normalizedValue = String(value || '').trim();
-  if (!normalizedValue) return fallback;
-
-  return normalizedValue
-    .replace(/_/g, ' ')
-    .split(' ')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
 /**
  * RecruitmentAdCard component.
  * @param {object} props
  * @param {object} props.ad
  * @param {Record<string, { status?: string, recruitmentAdDocumentId?: string }>} [props.detectionApplicationStatusByEvent]
+ * @param {Record<string, string>} [props.ownApplicationStatusByAd] FINITIONS8 : mes candidatures
  * @param {boolean} [props.isOwner]
  * @param {boolean} [props.isApplying]
  * @param {(ad: object) => void} [props.onApply]
@@ -66,6 +56,7 @@ function RecruitmentAdCard({
   isOwner = false,
   onApply,
   onPress,
+  ownApplicationStatusByAd = {},
 }) {
   const navigation = useNavigation();
   const {
@@ -92,8 +83,10 @@ function RecruitmentAdCard({
   const clubName = club?.name || team?.name || t('recruitmentAdCard.unknownClub', 'Club inconnu');
   const clubLogo = getImageUrl(club?.logo?.url);
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
+  // FINITIONS8 (point 9) : le role et l'engagement se lisent par leurs tables, jamais bruts
+  // (« ENTRAINEUR ADJOINT », « benevole »). Test : __tests__/RecruitmentAdCard.FINITIONS8.test.js.
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+    ? (getCoachRoleLabel(ad?.coachRole, ad?.coachRoleOther) || t(
       'recruitmentAdCard.coachRole',
       'Rôle entraîneur',
     ))
@@ -128,7 +121,9 @@ function RecruitmentAdCard({
     ad,
     userData,
     detectionApplicationStatusByEvent,
+    ownApplicationStatusByAd,
   );
+  const isDeclined = applicationState.status === 'declined';
 
   let playerCtaBackgroundColor = Colors.primary500;
   let playerCtaBorderColor = 'transparent';
@@ -160,6 +155,13 @@ function RecruitmentAdCard({
     playerCtaBorderColor = `${Colors.primary500}35`;
     playerCtaTextColor = Colors.primary100;
     playerCtaBorderWidth = 1;
+  } else if (isDeclined) {
+    // FINITIONS8 (point 1) : la carte dit le refus ; on repostule depuis la fiche.
+    playerCtaLabel = t('recruitmentAdCard.cta.declined', 'Candidature refusée');
+    playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
+    playerCtaBorderColor = 'rgba(255,255,255,0.12)';
+    playerCtaTextColor = Colors.neutral300;
+    playerCtaBorderWidth = 1;
   } else if (isApplying) {
     playerCtaLabel = t('recruitmentAdCard.cta.sending', 'Envoi...');
   }
@@ -188,7 +190,8 @@ function RecruitmentAdCard({
     onApply(ad);
   };
 
-  const isPlayerCtaDisabled = !ad.isActive || applicationState.hasApplied || isApplying;
+  const isPlayerCtaDisabled = !ad.isActive || applicationState.hasApplied || isApplying
+    || isDeclined;
   const shouldRenderInteractiveCta = Boolean(onApply) && !isPlayerCtaDisabled;
   const playerCtaStyles = [
     styles.ctaBadge,
@@ -310,7 +313,7 @@ function RecruitmentAdCard({
               <View style={styles.detailItem}>
                 <Image source={Images.filter} style={[styles.icon, { tintColor: Colors.primary500 }]} />
                 <Text numberOfLines={1} style={styles.detailText}>
-                  {isCoachAd ? (ad?.engagementType || levelName) : levelName}
+                  {isCoachAd ? (getEngagementLabel(ad?.engagementType) || levelName) : levelName}
                 </Text>
               </View>
 

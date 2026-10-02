@@ -71,3 +71,43 @@ export const getCoachRoleLabel = (role, roleOther) => {
   return COACH_ROLE_OPTIONS.find((option) => option.value === role)?.label
     || String(role || '').trim();
 };
+
+// FINITIONS8 (tournee 9, point 9) — « benevole » s'affichait BRUT sur la carte d'une annonce
+// entraineur, « Benevole » sur sa fiche. La table du tunnel en sort, comme celle des roles.
+export const ENGAGEMENT_OPTIONS = [
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.volunteer', 'Bénévole');
+    },
+    value: 'benevole',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.expenses', 'Indemnisé');
+    },
+    value: 'indemnise',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.salaried', 'Salarié');
+    },
+    value: 'salarie',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.toBeDefined', 'A définir');
+    },
+    value: 'a_definir',
+  },
+];
+
+/**
+ * Ce qu'on lit à l'écran pour un type d'engagement — jamais la valeur technique.
+ * Une valeur que la table ne connaît pas reste affichée telle quelle.
+ * @param {unknown} engagementType - La valeur enregistrée (`engagementType`).
+ * @returns {string} Le libellé ; chaîne vide si aucun.
+ */
+export const getEngagementLabel = (engagementType) => (
+  ENGAGEMENT_OPTIONS.find((option) => option.value === engagementType)?.label
+  || String(engagementType || '').trim()
+);

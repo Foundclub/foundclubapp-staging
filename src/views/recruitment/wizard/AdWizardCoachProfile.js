@@ -15,7 +15,7 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { COACH_ROLE_OPTIONS } from '@/constants/coachRoles';
+import { COACH_ROLE_OPTIONS, ENGAGEMENT_OPTIONS } from '@/constants/coachRoles';
 
 /* eslint-disable perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
@@ -50,33 +50,6 @@ const EXPERIENCE_OPTIONS = [
       return i18next.t('adWizardCoachProfile.experience.qualified', 'Diplome');
     },
     value: 'diplome',
-  },
-];
-
-const ENGAGEMENT_OPTIONS = [
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.engagement.volunteer', 'Benevole');
-    },
-    value: 'benevole',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.engagement.expenses', 'Indemnise');
-    },
-    value: 'indemnise',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.engagement.salaried', 'Salarie');
-    },
-    value: 'salarie',
-  },
-  {
-    get label() {
-      return i18next.t('adWizardCoachProfile.engagement.toBeDefined', 'A définir');
-    },
-    value: 'a_definir',
   },
 ];
 

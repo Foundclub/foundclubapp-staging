@@ -65,6 +65,7 @@ import {
   useBlockingOverlayPrompt,
 } from '@/context/BlockingOverlayContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
+import { buildAccountCooldownKey } from '@/context/popupManagerUtils';
 
 // ==========================================================================
 // 🔔 ST-MATCH (écrans 3 et 4, design des statistiques validé le 02/10) — LA
@@ -153,6 +154,8 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const [{ auth }] = useAppContext();
   const { isBootstrapResolved } = useAuth();
   const queryClient = useQueryClient();
+  // FINITIONS8 (point 7) : la fenetre fermee est retenue sous `<compte>:<fenetre>`, ici aussi.
+  const accountDocumentId = auth?.user?.documentId;
   const [dismissedPromptKey, setDismissedPromptKey] = useState(/** @type {string | null} */ (null));
   const [currentRouteName, setCurrentRouteName] = useState(/** @type {string | null} */ (null));
   const [isNavigationReady, setIsNavigationReady] = useState(navigationRef.isReady());
@@ -210,14 +213,20 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     && shownPrompt
     && isNavigationReady
     && !isBlockedRoute
-    && (!dismissedPromptKey || dismissedPromptKey !== shownPrompt.key),
+    && (
+      !dismissedPromptKey
+      || dismissedPromptKey !== buildAccountCooldownKey(accountDocumentId, shownPrompt.key)
+    ),
   );
+  // FINITIONS8 (tournee 9, point 7) — « Plus tard » par compte, 24 h, dans le stockage du
+  // telephone (meme regle que l avis d entrainement).
+  // Test : __tests__/MatchStatsPromptHost.FINITIONS8.test.js.
   const matchStatsPopup = usePopupEligibility(
     POPUP_IDS.MATCH_STATS_PROMPT,
     shouldShowPrompt,
     {
-      cooldownKey: shownPrompt?.key || 'default',
-      dismissScope: POPUP_DISMISS_SCOPES.SESSION,
+      cooldownKey: buildAccountCooldownKey(accountDocumentId, shownPrompt?.key),
+      dismissScope: POPUP_DISMISS_SCOPES.DAY,
     },
   );
   const canShowPrompt = useBlockingOverlayPrompt(
@@ -249,12 +258,12 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
 
   const dismissPromptForSession = useCallback(() => {
     if (shownPrompt?.key) {
-      setDismissedPromptKey(shownPrompt.key);
+      setDismissedPromptKey(buildAccountCooldownKey(accountDocumentId, shownPrompt.key));
     }
     setSentAnswer(null);
     setSavedScore(null);
-    matchStatsPopup.dismiss(POPUP_DISMISS_SCOPES.SESSION);
-  }, [matchStatsPopup, shownPrompt?.key]);
+    matchStatsPopup.dismiss(POPUP_DISMISS_SCOPES.DAY);
+  }, [accountDocumentId, matchStatsPopup, shownPrompt?.key]);
 
   useEffect(() => {
     if (!isVisible || !shownPrompt?.key) {

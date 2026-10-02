@@ -47,7 +47,9 @@ import {
 } from '@/services/eventParticipation/eventParticipationService';
 import {
   applyToRecruitmentAd,
+  buildOwnApplicationStatusMap,
   deleteRecruitmentAd,
+  getMyApplications,
   getRecruitmentAd,
   getRecruitmentApplications,
   resolveRecruitmentAdApplicationState,
@@ -70,9 +72,10 @@ import { getShortAddress } from '@/utils/location';
 import { getRecruitmentAdPlayerTitle } from '@/utils/recruitmentAdTitle';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
-const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (
-  require('@/assets/background-card-event/card-match.png')
-);
+import CARD_MATCH from '@/assets/background-card-event/card-match.png';
+import { getCoachRoleLabel, getEngagementLabel } from '@/constants/coachRoles';
+
+const BG_MATCH = /** @type {import('react-native').ImageSourcePropType} */ (CARD_MATCH);
 
 const BottomModalView = /** @type {any} */ (BottomModal);
 const InputView = /** @type {any} */ (Input);
@@ -212,22 +215,44 @@ function RecruitmentAdDetails() {
     () => /** @type {any[]} */ (Array.isArray(ad?.applications) ? ad.applications : []),
     [ad?.applications],
   );
+  // GERER-ANNONCE (A15/A16) — « je gere cette equipe », la regle du serveur.
+  // Avant, `myTeams` (les equipes ou l'on JOUE) donnait les outils du club a un
+  // joueur ; Test : __tests__/RecruitmentAdDetails.gererAnnonce.test.js.
+  const isOwner = useMemo(() => canManageTeamAd(ad, userData), [userData, ad]);
+
+  // FINITIONS8 (tournee 9, point 1) — le statut de MA candidature vient de « mes
+  // candidatures » : l'annonce ne l'apporte plus (D10), et `candidates` disait « en attente »
+  // d'une candidature REFUSEE. Les mutations de cet ecran invalident deja `['myApplications']`.
+  // Test : __tests__/RecruitmentAdDetails.FINITIONS8.refusee.test.js.
+  const myApplicationsQuery = /** @type {any} */ (useQuery({
+    enabled: Boolean(isAuthenticated && !isOwner),
+    queryFn: () => getMyApplications(userData),
+    queryKey: ['myApplications', userData?.documentId],
+  }));
+  const myApplications = myApplicationsQuery.data;
+  const ownApplicationStatusByAd = useMemo(
+    () => buildOwnApplicationStatusMap(myApplications),
+    [myApplications],
+  );
+  const ownApplication = useMemo(() => (
+    (Array.isArray(myApplications) ? myApplications : []).find((/** @type {any} */ entry) => (
+      String(entry?.documentId || '') === recruitmentAdDocumentId
+    ))?.myApplication || null
+  ), [myApplications, recruitmentAdDocumentId]);
+
   const applicationState = useMemo(
-    () => resolveRecruitmentAdApplicationState(ad, userData),
-    [ad, userData],
+    () => resolveRecruitmentAdApplicationState(ad, userData, {}, ownApplicationStatusByAd),
+    [ad, ownApplicationStatusByAd, userData],
   );
   const effectiveApplicationStatus = optimisticApplicationStatus || applicationState.status;
-  const hasApplied = Boolean(effectiveApplicationStatus);
+  const hasApplied = effectiveApplicationStatus === 'accepted'
+    || effectiveApplicationStatus === 'pending';
+  const isDeclined = effectiveApplicationStatus === 'declined';
   const isAppliedOnAnotherDetectionSlot = Boolean(
     isDetectionLinked
     && applicationState.linkedRecruitmentAdDocumentId
     && applicationState.linkedRecruitmentAdDocumentId !== recruitmentAdDocumentId,
   );
-
-  // GERER-ANNONCE (A15/A16) — « je gere cette equipe », la regle du serveur.
-  // Avant, `myTeams` (les equipes ou l'on JOUE) donnait les outils du club a un
-  // joueur ; Test : __tests__/RecruitmentAdDetails.gererAnnonce.test.js.
-  const isOwner = useMemo(() => canManageTeamAd(ad, userData), [userData, ad]);
 
   const slotParticipationsQuery = /** @type {any} */ (useQuery({
     enabled: Boolean(isOwner && eventDocumentId && recruitmentAdDocumentId),
@@ -496,8 +521,9 @@ function RecruitmentAdDetails() {
   const clubLogo = getImageUrl(club?.logo?.url);
   const clubCertificationPalette = getClubCertificationPalette(club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(club);
+  // FINITIONS8 (point 9) : le role et l'engagement se lisent par leurs tables, jamais bruts.
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+    ? (getCoachRoleLabel(ad?.coachRole, ad?.coachRoleOther) || t(
       'recruitmentAdDetails.fallback.coachRole',
       'Rôle entraîneur',
     ))
@@ -513,15 +539,16 @@ function RecruitmentAdDetails() {
   const address = getShortAddress(ad?.city || club?.city || '');
   const sectionName = ad?.section?.name || ad?.section;
   const coachExperienceLabel = humanizeEnumLabel(ad?.coachExperienceLevel, '');
-  const engagementLabel = humanizeEnumLabel(ad?.engagementType, '');
+  const engagementLabel = getEngagementLabel(ad?.engagementType);
   const availabilityLabel = String(ad?.availabilityText || '').trim();
   const missionsLabel = String(ad?.missions || '').trim();
   const certificationsWanted = Array.isArray(ad?.certificationsWanted)
     ? ad.certificationsWanted.filter(Boolean)
     : [];
+  // FINITIONS8 : `applications` n'arrive plus (D10) ; « mes candidatures » porte la mienne.
   const currentUserApplication = useMemo(() => applications.find((/** @type {any} */ application) => (
     userMatchesReference(application?.applicant, userData)
-  )) || null, [applications, userData]);
+  )) || ownApplication, [applications, ownApplication, userData]);
   const canWithdrawCurrentApplication = Boolean(
     !isOwner
     && !isDetectionLinked
@@ -814,6 +841,8 @@ function RecruitmentAdDetails() {
     applyButtonTitle = t('recruitmentAdDetails.footer.pending', 'Demande en attente');
   } else if (!ad.isActive) {
     applyButtonTitle = t('recruitmentAdDetails.footer.inactive', 'Annonce inactive');
+  } else if (isDeclined) {
+    applyButtonTitle = t('recruitmentAdDetails.footer.applyAgain', 'Postuler à nouveau');
   }
 
   let footerActionNode = (
@@ -843,6 +872,21 @@ function RecruitmentAdDetails() {
           title={t('recruitmentAdDetails.footer.withdraw', 'Retirer ma candidature')}
           variant="Secondary"
         />
+      </View>
+    );
+  }
+
+  // FINITIONS8 (point 1) : la candidature refusee se DIT, au-dessus du bouton.
+  if (isDeclined) {
+    footerActionNode = (
+      <View style={{ gap: 12 }}>
+        <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
+          {t(
+            'recruitmentAdDetails.footer.declinedNote',
+            'Ta candidature a été refusée par le club.',
+          )}
+        </Text>
+        {footerActionNode}
       </View>
     );
   }
@@ -1125,9 +1169,9 @@ function RecruitmentAdDetails() {
                 const candidateMessage = String(application?.message || '').trim();
                 const applicationStatus = String(application?.status || '').trim().toLowerCase();
                 const applicationSnapshot = application?.profileSnapshot || {};
-                const coachApplicationRole = humanizeEnumLabel(
-                  applicationSnapshot?.coachRoleOther || applicationSnapshot?.coachRole,
-                  '',
+                const coachApplicationRole = getCoachRoleLabel(
+                  applicationSnapshot?.coachRole,
+                  applicationSnapshot?.coachRoleOther,
                 );
                 const coachApplicationExperience = humanizeEnumLabel(
                   applicationSnapshot?.coachExperienceLevel,

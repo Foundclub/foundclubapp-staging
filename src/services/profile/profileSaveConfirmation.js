@@ -41,7 +41,7 @@ const PROFILE_FIELD_LABELS = /** @type {Record<string, { fallback: string, key: 
   category: { fallback: 'Catégorie', key: 'profile.fields.category.label' },
   email: { fallback: 'Email', key: 'profile.fields.email.label' },
   firstname: { fallback: 'Prénom', key: 'profile.fields.firstname.label' },
-  height: { fallback: 'Taille (m)', key: 'profile.fields.height.label' },
+  height: { fallback: 'Taille (cm)', key: 'profile.fields.height.label' },
   isLookingForClub: { fallback: 'Profil visible', key: 'profile.fields.isLookingForClub.label' },
   jerseyNumber: { fallback: 'Numéro de maillot', key: 'profile.fields.jerseyNumber.label' },
   lastname: { fallback: 'Nom', key: 'profile.fields.lastname.label' },

@@ -321,7 +321,8 @@ describe('ProfileEdit — ce que le formulaire ENVOIE aujourd\'hui', () => {
     expect(charge.firstname).toBe('Lucien');
     // ...mais TOUS les autres repartent avec lui, y compris ceux jamais touches.
     expect(charge.lastname).toBe('Harne');
-    expect(charge.height).toBe('1.80');
+    // FINITIONS8 (point 4) : la taille part en CENTIMETRES (« 1.80 » enregistre => « 180 »).
+    expect(charge.height).toBe('180');
     expect(charge.weight).toBe('75');
     expect(charge.position).toBe('Ailier');
     expect(charge.preferredSport).toBe('football');
@@ -352,7 +353,8 @@ describe('ProfileEdit — le gating par role est deja branche ici', () => {
   it('cache taille, poids, poste et section a un DIRIGEANT', async () => {
     await rendre({ ...joueurComplet, role: { name: 'Dirigeant' } });
 
-    expect(mockChampsFormulaire['Taille (m)']).toBeUndefined();
+    // FINITIONS8 (point 4) : le champ s'appelle « Taille (cm) ».
+    expect(mockChampsFormulaire['Taille (cm)']).toBeUndefined();
     expect(mockChampsFormulaire['Poids (kg)']).toBeUndefined();
     expect(mockChampsFormulaire.Poste).toBeUndefined();
     expect(mockChampsFormulaire.Section).toBeUndefined();
@@ -361,7 +363,7 @@ describe('ProfileEdit — le gating par role est deja branche ici', () => {
   it('les montre a un JOUEUR', async () => {
     await rendre(joueurComplet);
 
-    expect(mockChampsFormulaire['Taille (m)']).toBeDefined();
+    expect(mockChampsFormulaire['Taille (cm)']).toBeDefined();
     expect(mockChampsFormulaire['Poids (kg)']).toBeDefined();
     expect(mockChampsFormulaire.Poste).toBeDefined();
     expect(mockChampsFormulaire.Section).toBeDefined();

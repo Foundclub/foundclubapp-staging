@@ -741,11 +741,11 @@ export const mapEventTeamInvitationToHubItem = (audience = {}) => {
   const typeName = normalizeString(event?.typeName);
   const eventName = normalizeString(event?.name) || typeName || i18next.t(
     'requestMappers.eventFallback',
-    'Evenement',
+    'Événement',
   );
   const invitedTeamName = normalizeString(invitedTeam?.name) || i18next.t(
     'requestMappers.teamInvite.myTeamFallback',
-    'Ton equipe',
+    'Ton équipe',
   );
   const organizerTeamName = normalizeString(event?.teamName);
 

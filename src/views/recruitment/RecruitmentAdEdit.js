@@ -133,19 +133,19 @@ const COACH_EXPERIENCE_OPTIONS = [
 const ENGAGEMENT_OPTIONS = [
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.engagement.volunteer', 'Benevole');
+      return i18next.t('recruitmentAdEdit.engagement.volunteer', 'Bénévole');
     },
     value: 'benevole',
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.engagement.expenses', 'Indemnise');
+      return i18next.t('recruitmentAdEdit.engagement.expenses', 'Indemnisé');
     },
     value: 'indemnise',
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.engagement.salaried', 'Salarie');
+      return i18next.t('recruitmentAdEdit.engagement.salaried', 'Salarié');
     },
     value: 'salarie',
   },

@@ -14079,8 +14079,9 @@ export default {
         placeholder: 'Luc',
       },
       height: {
-        label: 'Height (m)',
-        placeholder: '1.80',
+        invalid: 'Between 100 and 250 cm (e.g. 182)',
+        label: 'Height (cm)',
+        placeholder: 'e.g. 180',
       },
       isLookingForClub: {
         helper: 'Your profile appears in club and coach searches.',
@@ -14142,6 +14143,7 @@ export default {
       periodNotSet: 'Period not specified',
       tapToEdit: 'Tap the card to edit',
       title: 'Sporting history',
+      unavailable: 'History unavailable right now',
       unknownClub: 'Unknown club',
     },
     identity: {
@@ -14496,6 +14498,7 @@ export default {
       acceptedCoach: 'Application accepted',
       apply: 'Apply',
       applyCoach: 'Apply',
+      declined: 'Application declined',
       inactive: 'Inactive ad',
       pending: 'Request pending',
       sending: 'Sending...',
@@ -14608,7 +14611,9 @@ export default {
     footer: {
       applicationAccepted: 'Application accepted',
       apply: 'Apply',
+      applyAgain: 'Apply again',
       applyAsCoach: 'Apply as a coach',
+      declinedNote: 'The club declined your application.',
       inactive: 'Inactive ad',
       participating: "I'm taking part",
       pending: 'Request pending',
@@ -20606,7 +20611,7 @@ export default {
       birthYear: 'Year of birth',
       category: 'Category',
       email: 'Email',
-      height: 'Height (m)',
+      height: 'Height',
       history: 'Sporting history',
       phone: 'Phone',
       position: 'Position',

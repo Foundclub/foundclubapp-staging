@@ -170,10 +170,26 @@ const aplatirTexte = (/** @type {any} */ enfants) => {
 const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
   .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
 
-const attendre = async (/** @type {() => boolean} */ condition) => {
-  for (let i = 0; i < 80 && !condition(); i += 1) {
+// FINITIONS8 (point 10, temoin instable : ~1 echec sur 5 sous charge, chef 02/10 ~19h).
+// L attente se comptait en TOURS (80 `setImmediate`), pas en TEMPS : un tour vide prend une
+// fraction de milliseconde, et React Query publie ses resultats par minuteur. Quand la chaine
+// (apercu, geste, relecture de la liste) depassait ~80 tours — machine chargee, ou serveur lent
+// (100 ms suffisent, mesure le 02/10) —, l attente abandonnait EN SILENCE et les verifications
+// tombaient trop tot (« la fenetre est encore ouverte »). Elle est desormais bornee en TEMPS
+// (5 s), par minuteur ; une condition qui leve (le noeud pas encore la) vaut « pas encore ».
+// Rien n est retire aux verifications. Garde : le cas « un serveur LENT » plus bas.
+const attendre = async (/** @type {() => boolean} */ condition, delaiMs = 5000) => {
+  const verifier = () => {
+    try {
+      return Boolean(condition());
+    } catch {
+      return false;
+    }
+  };
+  const limite = Date.now() + delaiMs;
+  while (!verifier() && Date.now() < limite) {
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((fin) => { setTimeout(fin, 5); }); });
   }
 };
 
@@ -283,13 +299,39 @@ describe('TEXTES-COLLECTIVITES — « Activer » dit, club par club, ce que le s
     expect(textes(carte(arbre, 'ville-montrivage'))).toContain(compteRendu);
   });
 
+  // FINITIONS8 (point 10) — le meme geste avec un serveur qui met 300 ms a repondre : c est la
+  // situation qui faisait echouer le cas ci-dessus sous charge. Il doit passer a l identique.
+  // eslint-disable-next-line max-len
+  it('un serveur LENT (300 ms) : le compte rendu arrive quand même, la fenêtre se ferme', async () => {
+    serveur({
+      // eslint-disable-next-line max-len
+      apercu: async () => ({ data: { data: { clubs: VERDICTS_ACTIVER, isActive: true, preview: true } } }),
+      geste: async () => {
+        await new Promise((fin) => { setTimeout(fin, 300); });
+        collectivitesServeur = [{ ...MONTRIVAGE, isActive: true }, VAL];
+        return { data: { data: { changed: true, clubs: VERDICTS_ACTIVER, isActive: true } } };
+      },
+    });
+    const arbre = await monter();
+    await ouvrir(arbre, 'ville-montrivage', 'Activer');
+    await appuyerDansLaFenetre(arbre, 'Offrir l’offre Club à 2 clubs');
+    // eslint-disable-next-line max-len
+    const compteRendu = 'Activée. Offre posée : 2 (AS Montrivage, Montrivage Basket) · Club qui paie déjà : 1 (Montrivage FC)';
+    await attendre(() => textes(carte(arbre, 'ville-montrivage')).includes(compteRendu));
+
+    expect(mockPut).toHaveBeenCalledTimes(2);
+    expect(fenetre(arbre)).toBeUndefined();
+    expect(textes(carte(arbre, 'ville-montrivage'))).toContain(compteRendu);
+  });
+
   it('« Annuler » après l aperçu : aucun geste, la fenêtre se ferme', async () => {
     // eslint-disable-next-line max-len
     serveur({ apercu: async () => ({ data: { data: { clubs: VERDICTS_ACTIVER, isActive: true, preview: true } } }) });
     const arbre = await monter();
     await ouvrir(arbre, 'ville-montrivage', 'Activer');
     await appuyerDansLaFenetre(arbre, 'Annuler');
-    await attendre(() => false);
+    // 200 ms de vrai temps : aucun geste ne doit partir pendant ce temps.
+    await attendre(() => false, 200);
     expect(fenetre(arbre)).toBeUndefined();
     expect(mockPut).toHaveBeenCalledTimes(1);
   });
