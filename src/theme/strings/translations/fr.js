@@ -17321,9 +17321,12 @@ export default {
         team: 'Éq.',
       },
       confirmEditable: 'Tu pourras la modifier et la republier.',
-      confirmReceiverOne: '{{name}} recevra ton retour individuel.',
-      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel.',
-      confirmReceiversMany_other: '{{names}} recevront leur retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiverOne: '{{name}} et, s’il est mineur, ses parents recevront ton retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel ; s’il est mineur, ses parents aussi.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_other: '{{names}} recevront leur retour individuel ; pour un mineur, ses parents aussi.',
       confirmRepublishTitle: 'Republier la feuille ?',
       // eslint-disable-next-line max-len
       confirmTeam: 'Les joueurs de l’équipe {{team}} verront le score, ta note de l’équipe et ton mot.',

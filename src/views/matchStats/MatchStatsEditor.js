@@ -1433,18 +1433,23 @@ function MatchStatsEditor({ navigation, route }) {
   }
 
   // ── La confirmation à deux boutons (état 7) ──
+  // 📐 ST-MATCH10-BIS (point 2) — qui est prévenu de quoi : le parent d'un mineur reçoit SON
+  // retour (`sendCoachFeedbackToParents`, ST-RETOURS). L'éditeur ne connaît pas l'âge : la
+  // phrase dit « s'il est mineur », comme la fiche du joueur (phrase A, tranchée par le chef).
   let receiversSentence = '';
   if (receivers.length === 1) {
     receiversSentence = t(
       'stMatch.feuille.confirmReceiverOne',
-      '{{name}} recevra ton retour individuel.',
+      '{{name}} et, s’il est mineur, ses parents recevront ton retour individuel.',
       { name: receivers[0], ...SANS_ECHAPPEMENT },
     );
   } else if (receivers.length > 1) {
     receiversSentence = t('stMatch.feuille.confirmReceiversMany', {
       count: receivers.length,
-      defaultValue_one: '{{count}} joueur recevra ton retour individuel.',
-      defaultValue_other: '{{names}} recevront leur retour individuel.',
+      // eslint-disable-next-line max-len
+      defaultValue_one: '{{count}} joueur recevra ton retour individuel ; s’il est mineur, ses parents aussi.',
+      // eslint-disable-next-line max-len
+      defaultValue_other: '{{names}} recevront leur retour individuel ; pour un mineur, ses parents aussi.',
       names: joindreLesNoms(receivers, t),
       ...SANS_ECHAPPEMENT,
     });

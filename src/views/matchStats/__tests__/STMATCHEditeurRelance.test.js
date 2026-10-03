@@ -577,9 +577,11 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
     await appuyerSur(racine, 'Publier');
     const [fenetre] = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-confirmation');
     expect(fenetre).toBeTruthy();
+    // 📐 ADAPTÉ (ST-MATCH10-BIS, point 2) : la fenêtre dit aussi que les parents d'un mineur
+    // reçoivent son retour (le serveur les prévient : `sendCoachFeedbackToParents`).
     expect(textes(fenetre)).toEqual([
       'Publier la feuille ?',
-      'Hugo recevra ton retour individuel. Les joueurs de l’équipe U15 verront le score, ta note de l’équipe et ton mot. Tu pourras la modifier et la republier.',
+      'Hugo et, s’il est mineur, ses parents recevront ton retour individuel. Les joueurs de l’équipe U15 verront le score, ta note de l’équipe et ton mot. Tu pourras la modifier et la republier.',
       'Annuler',
       'Publier',
     ]);
@@ -811,5 +813,27 @@ describe('ST-MATCH10-BIS · 1 — l adversaire nommé (le serveur le rend avec l
   test('Serveur d avant (pas de champ) : le nom de l événement reste', async () => {
     const racine = await monter(feuilleU15());
     expect(textes(racine)).toContain('AS Montrivage — Test-COMPO');
+  });
+});
+
+describe('ST-MATCH10-BIS · 2 — « s il est mineur, ses parents » : qui est prévenu de quoi', () => {
+  test('Plusieurs retours : la fenêtre les nomme, et dit que les parents d un mineur les reçoivent aussi', async () => {
+    const donnees = feuilleEffectifComplet();
+    donnees.report.coachPlayerReviews = [
+      { comment: 'Bon pressing.', rating: 7, userDocumentId: 'j0' },
+      { comment: 'Belle passe.', rating: 8, userDocumentId: 'j1' },
+    ];
+    const racine = await monter(donnees);
+
+    await appuyerSur(racine, 'Publier');
+    const [fenetre] = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-confirmation');
+    expect(textes(fenetre)[1]).toBe('Léo et Hugo recevront leur retour individuel ; pour un mineur, ses parents aussi. Les joueurs de l’équipe U15 verront le score, ta note de l’équipe et ton mot. Tu pourras la modifier et la republier.');
+  });
+
+  test('La fiche du joueur garde la même règle (décision du chef, phrase A)', async () => {
+    const racine = await monter(feuilleU15());
+    await appuyerSur(racine, 'Joueurs · 1');
+    await appuyerSurDescription(racine, 'Hugo Lemaire : 90 minutes, 1 but, 0 passe. A répondu.');
+    expect(textes(racine)).toContain('Lu par Hugo et, s’il est mineur, ses parents. Jamais par ses coéquipiers.');
   });
 });
