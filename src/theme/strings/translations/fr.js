@@ -6201,9 +6201,14 @@ export default {
     // COLL-AFFICHE (03/10/2026) — « Une affiche pour l’installation » (planche 30 B).
     affiche: {
       detail: 'PDF · une semaine · {{installation}}',
+      // COLL-AFFICHE-2 (03/10/2026, décision d’Adel « saison A ») — l’affiche de toute la saison.
+      detailSaison: 'PDF · la saison · {{installation}}',
       erreur: 'L’affiche n’a pas pu être téléchargée.',
       installation: 'Installation',
+      laSaison: 'La saison',
+      laSemaine: 'La semaine',
       ok: 'Affiche enregistrée : {{fichier}}',
+      periode: 'Période',
       sansInstallation: 'PDF · une semaine · aucune installation pour l’instant',
       semaine: 'Semaine',
       semainePrecedente: 'Semaine précédente',
