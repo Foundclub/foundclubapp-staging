@@ -5175,6 +5175,10 @@ export default {
   // COLL-CONSOLE-BIS (03/10/2026) — what was left of the local-authority console and sign-up
   // (design HY521H1, pages 1 and 2: boards 7, 8, 12 to 17).
   collectiviteConsoleBis: {
+    accueil: {
+      demandesGestionnaire: 'Manager requests',
+      mairiesAActiver: 'Town halls to activate',
+    },
     commune: {
       aide: 'The official name, INSEE code and SIREN are filled in from it.',
       aucune: 'No municipality found: type its official name and codes below.',

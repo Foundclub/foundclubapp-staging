@@ -5537,6 +5537,10 @@ export default {
   // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
   // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
   collectiviteConsoleBis: {
+    accueil: {
+      demandesGestionnaire: 'Demandes de gestionnaire',
+      mairiesAActiver: 'Mairies à activer',
+    },
     commune: {
       aide: 'Nom officiel, code INSEE et SIREN se remplissent à partir d’elle.',
       aucune: 'Aucune commune trouvée : saisis son nom officiel et ses codes ci-dessous.',

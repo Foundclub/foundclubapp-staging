@@ -70,6 +70,7 @@ import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useAdminCollectivitesATraiter } from '@/services/collectivite/collectiviteQueries';
 import { useHomeSummary } from '@/services/home/homeSummaryQueries';
 
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
@@ -1583,8 +1584,16 @@ function HomeHubContent({ auth, navigation, route }) {
     { rsvpEnabled: homeCounters.prochainEvenement?.rsvpEnabled },
   );
 
+  // COLL-CONSOLE-BIS (03/10/2026), planche 12 — les deux lignes « Collectivités » de « À traiter »,
+  // comptées par les lectures de la console (aucune lecture neuve), pour le SuperAdmin seul.
+  const { demandesGestionnaire, mairiesAActiver } = useAdminCollectivitesATraiter(isSuperAdmin);
+  const collectivitesATraiter = useMemo(
+    () => ({ demandesGestionnaire, mairiesAActiver }),
+    [demandesGestionnaire, mairiesAActiver],
+  );
+
   const headBanner = useMemo(() => {
-    const descriptors = selectBannerLines(homeCounters, roleKey);
+    const descriptors = selectBannerLines(homeCounters, roleKey, collectivitesATraiter);
     /**
      * @param {string} screen
      * @returns {() => void}
@@ -1602,6 +1611,20 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'users',
           label: t('homeHub.banner.superAdmin.onboarding', 'Clubs à onboarder'),
           onPress: openAdmin(RouteNames.AdminClubOnboardingList),
+        },
+        // COLL-CONSOLE-BIS (03/10) — planche 12.
+        demandesGestionnaire: {
+          icon: 'users',
+          label: t(
+            'collectiviteConsoleBis.accueil.demandesGestionnaire',
+            'Demandes de gestionnaire',
+          ),
+          onPress: openAdmin(RouteNames.AdminManagerRequests),
+        },
+        mairiesAActiver: {
+          icon: 'flag',
+          label: t('collectiviteConsoleBis.accueil.mairiesAActiver', 'Mairies à activer'),
+          onPress: openAdmin(RouteNames.AdminCollectiviteList),
         },
         revendications: {
           icon: 'shield',
@@ -1786,6 +1809,7 @@ function HomeHubContent({ auth, navigation, route }) {
     handleOpenRequestsHub,
     homeCounters,
     canAnswerMyEvent,
+    collectivitesATraiter,
     isAnswering,
     isCoach,
     isPresident,
