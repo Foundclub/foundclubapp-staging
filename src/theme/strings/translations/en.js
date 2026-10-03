@@ -12531,6 +12531,8 @@ export default {
       title: "Delete {{firstname}}'s profile?",
     },
     declared: {
+      notFound: 'This profile no longer exists.',
+      open: 'See their page',
       title: 'My children under 13',
     },
     errors: {

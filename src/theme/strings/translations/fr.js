@@ -21570,6 +21570,8 @@ export default {
     },
     // ST-RETOURS2 (03/10, planche 22) — la section des FICHES : les enfants sans compte.
     declared: {
+      notFound: 'Cette fiche n’existe plus.',
+      open: 'Voir sa fiche',
       title: 'Mes enfants de moins de 13 ans',
     },
     errors: {

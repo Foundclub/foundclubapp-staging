@@ -18,6 +18,7 @@ import {
   newFeedbackKeys,
   seenFeedbackKeys,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
+import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
@@ -86,9 +87,14 @@ function NouveauxRetoursDeLEnfant({ childDocumentId, follow }) {
  * ⛔ CE QUE CET ÉCRAN NE MONTRE PAS, et c'est voulu : la date de naissance. Le
  * serveur ne la rend jamais — il rend un âge calculé, exactement comme le profil
  * public d'un compte.
+ *
+ * 📄 ST-RETOURS2 (planche 22, état 6) — avec `childDocumentId`, la route montre la PAGE
+ * d'un enfant de moins de 13 ans, au lieu de la liste.
+ * @param {object} [props] - Les propriétés de la route.
+ * @param {any} [props.route] - La route ; `params.childDocumentId` ouvre une fiche.
  * @returns {import('react').ReactElement} L'écran.
  */
-function MyChildren() {
+function MyChildren({ route } = {}) {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const {
@@ -131,6 +137,12 @@ function MyChildren() {
   const ouvrirLeProfil = useCallback((compte) => {
     // C'est SUR SON PROFIL que vit « Retours du coach » (lot PARENT-RETOURS).
     navigation.navigate(RouteNames.UserDetails, { userId: compte.documentId });
+  }, [navigation]);
+
+  // ST-RETOURS2 · point 4 — la page d un enfant de moins de 13 ans : la MEME route, une
+  // fiche ouverte (`push`, pour que « retour » ramene a la liste).
+  const ouvrirLaFiche = useCallback((enfant) => {
+    navigation.push(RouteNames.MyChildren, { childDocumentId: enfant?.documentId });
   }, [navigation]);
 
   const ouvrirFormulaire = useCallback((enfant) => {
@@ -187,6 +199,37 @@ function MyChildren() {
       gap: 12,
     },
   ];
+
+  // ST-RETOURS2 · point 4 (planche 22, etat 6) — LA PAGE D UN ENFANT DE MOINS DE 13 ANS. Une
+  // vue de cette route, comme « Retours du coach » sur celle du profil : aucune route neuve,
+  // le site la sert deja. Les donnees : la liste deja lue. Placee apres tous les hooks.
+  const ficheOuverte = route?.params?.childDocumentId;
+  if (ficheOuverte) {
+    const enfantOuvert = enfants.find((enfant) => enfant?.documentId === ficheOuverte);
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        bottomInsetMode="screen"
+        contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
+            {enfantOuvert ? (
+              <DeclaredChildPage enfant={enfantOuvert} onSearchClub={chercherUnClub} />
+            ) : (
+              <Text style={[Fonts.p2, Fonts.neutral200]}>
+                {t('myChildren.declared.notFound')}
+              </Text>
+            )}
+          </WithDataWrapper>
+        </ScrollView>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer
@@ -360,10 +403,24 @@ function MyChildren() {
                 const nomComplet = `${prenom} ${enfant?.lastname || ''}`.trim();
                 const pouvoir = parentalPowerForAge(enfant?.age);
                 const aUnAge = typeof enfant?.age === 'number';
+                // ST-RETOURS2 · point 4 — moins de 13 ans : la rangee ouvre SA page.
+                const aSaPage = pouvoir === 'full';
+                const Rangee = aSaPage ? TouchableOpacity : View;
+                const porte = aSaPage
+                  ? {
+                    accessibilityRole: 'button',
+                    onPress: () => ouvrirLaFiche(enfant),
+                    testID: `declared-child-${enfant?.documentId}`,
+                  }
+                  : {};
 
                 return (
                   <View key={enfant?.documentId} style={carteStyle}>
-                    <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+                    <Rangee
+                      // eslint-disable-next-line react/jsx-props-no-spreading
+                      {...porte}
+                      style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+                    >
                       <ProfileAvatar
                         enablePreview={false}
                         imageUrl={enfant?.photo?.url}
@@ -383,7 +440,12 @@ function MyChildren() {
                             || t('myChildren.screen.noTeam', 'Pas encore d’équipe')}
                         </Text>
                       </View>
-                    </View>
+                      {aSaPage ? (
+                        <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
+                          {t('myChildren.declared.open')}
+                        </Text>
+                      ) : null}
+                    </Rangee>
 
                     {/* 🔒 E17 — la SEULE tranche où le parent agit encore. */}
                     {pouvoir === 'full' ? (

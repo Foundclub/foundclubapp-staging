@@ -24,6 +24,7 @@ let mockEnfants;
 /** @type {any} */
 let mockIsLoading;
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 const mockSupprimer = jest.fn();
 
 jest.mock('react-i18next', () => {
@@ -69,7 +70,7 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
 }));
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate }),
+  useNavigation: () => ({ navigate: mockNavigate, push: mockPush }),
 }));
 
 // ST-RETOURS (02/10) — la carte d un enfant relie compte ses retours du coach pas encore lus :
@@ -528,5 +529,103 @@ describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
     const titre = texte.indexOf('Mes enfants de moins de 13 ans');
     expect(titre).toBeGreaterThan(-1);
     expect(titre).toBeLessThan(texte.indexOf('Tu n’as pas encore déclaré d’enfant.'));
+  });
+});
+
+// ===========================================================================
+// ST-RETOURS2 (03/10) — PLANCHE 22, ETAT 6 : LA PAGE D UN ENFANT DE MOINS DE 13 ANS.
+//
+// Point 4 : Lea n a pas de compte (une fiche declaree par son parent). La planche lui donne SA
+// page : le titre « Lea », la carte centree (« Lea Test », « 7 ans · pas encore d equipe »,
+// « Mon enfant »), « Stats et retours de match — Ils arrivent quand Lea a 13 ans et son propre
+// compte, relie au tien. », et « Chercher un club pour Lea ». Rien ne menait a une page : la
+// fiche n etait qu une carte de la liste.
+//
+// 🧭 La page est une VUE de la route « Mes enfants » (`childDocumentId`), comme « Retours du
+// coach » et « Mes stats » sur la route du profil : aucune route neuve, le site la sert deja
+// (`/profile/children?childDocumentId=…`). Les donnees : la liste deja lue, rien de plus.
+// ===========================================================================
+
+describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, etat 6)', () => {
+  const LEA = unEnfant({
+    age: 7, documentId: 'lea', firstname: 'Lea', lastname: 'Test',
+  });
+
+  /**
+   * Monte la VUE « fiche de l enfant » de l ecran.
+   * @param {string} childDocumentId - La fiche ouverte.
+   * @returns {Promise<any>} L arbre rendu.
+   */
+  const rendreLaFiche = async (childDocumentId) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params: { childDocumentId } }} />);
+    });
+    return arbre;
+  };
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [LEA];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  test('🔴 point 4 — la carte de Lea, dans « Mes enfants », ouvre SA page', async () => {
+    const arbre = await rendre();
+
+    const porte = pressable(arbre, 'Voir sa fiche');
+    expect(porte).toBeTruthy();
+    await act(async () => { porte.props.onPress(); });
+    expect(mockPush).toHaveBeenCalledWith('MyChildren', { childDocumentId: 'lea' });
+  });
+
+  test('🔴 point 4 — la page : « LEA », la carte, ce qui viendra a 13 ans, le club', async () => {
+    const texte = texteVisible(await rendreLaFiche('lea'));
+
+    expect(texte).toContain('LEA');
+    expect(texte)
+      .toContain('AVATAR:Lea Test | Lea Test | 7 ans · Pas encore d’équipe | Mon enfant');
+    expect(texte).toContain('Stats et retours de match');
+    expect(texte).toContain('Ils arrivent quand Lea a 13 ans et son propre compte, relié au tien.');
+    expect(texte).toContain('Chercher un club pour Lea');
+    // C est SA page, pas la liste.
+    expect(texte).not.toContain('Les comptes de mes enfants');
+    expect(texte).not.toContain('MES ENFANTS');
+  });
+
+  test('🔴 point 4 — « Chercher un club pour Lea » emmene la recherche AVEC Lea', async () => {
+    const arbre = await rendreLaFiche('lea');
+
+    await act(async () => { pressable(arbre, 'Chercher un club pour Lea').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'HomeTab',
+      {
+        params: {
+          params: { childDocumentId: 'lea', childFirstname: 'Lea' },
+          pop: true,
+          screen: 'SearchClubs',
+        },
+        screen: 'Search',
+      },
+      { pop: true },
+    );
+  });
+
+  test('🔴 point 4 — une fiche qui n existe plus : la page le dit', async () => {
+    const texte = texteVisible(await rendreLaFiche('effacee'));
+
+    expect(texte).toContain('Cette fiche n’existe plus.');
+    expect(texte).not.toContain('Chercher un club');
+  });
+
+  test('🔒 point 4 — la fiche d un enfant de 13 ans ou plus n a pas cette porte', async () => {
+    mockEnfants = [unEnfant({ age: 15 })];
+    const arbre = await rendre();
+
+    expect(pressable(arbre, 'Voir sa fiche')).toBeUndefined();
   });
 });
