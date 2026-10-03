@@ -47,6 +47,7 @@ import {
   seenFeedbackKeys,
   wantsChildFeedbackAlert,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
+import ChildIdentityCard from '@/views/profile/parent/ChildIdentityCard';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 import MyStatsPage from '@/views/profile/stats/MyStatsPage';
@@ -1116,6 +1117,36 @@ function UserDetails({ navigation, route }) {
     </TouchableOpacity>
   );
 
+  // ST-RETOURS2 · point 3 (planche 22, etat 2) — sous le nom de SON enfant, la ligne
+  // « 14 ans · U15 · AS Montrivage » : son age, sa premiere equipe, son club.
+  const ligneDeLEnfant = [
+    typeof age === 'number'
+      ? t('userDetails.fields.ageValue', {
+        count: age,
+        defaultValue_one: '{{count}} ans',
+        defaultValue_other: '{{count}} ans',
+      })
+      : '',
+    playerTeams[0]?.name,
+    user?.club?.name,
+  ].filter(Boolean).join(' · ');
+  const badgeRechercheDeClub = user?.isLookingForClub ? (
+    <View
+      style={[
+        // Dans la carte centree du parent, le badge se centre avec elle.
+        isParentOfMinorViewer ? null : Alignments.selfStart,
+        Spaces.paddingHorizontal[12],
+        Spaces.paddingVertical[6],
+        ApplicationStyle.borderRadius16,
+        { backgroundColor: Colors.primary500 },
+      ]}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('userDetails.badges.lookingForClub', 'En recherche de club')}
+      </Text>
+    </View>
+  ) : null;
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -1207,89 +1238,72 @@ function UserDetails({ navigation, route }) {
           isLoading={isProfileLoading}
           wrapperStyle={[Spaces.gap[24]]}
         >
-          <View
-            style={[
-              ApplicationStyle.card,
-              Spaces.padding[16],
-              Spaces.gap[16],
-              {
-                backgroundColor: `${Colors.primary700}73`,
-                borderColor: `${Colors.primary500}80`,
-              },
-            ]}
-          >
-            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-              <ProfileAvatar
-                enablePreview
-                imageStyle={{ borderRadius: 72 }}
-                imageUrl={user?.avatar?.url}
-                name={displayName}
-                size={72}
-                style={[
-                  ApplicationStyle.borderColor.primary500,
-                  ApplicationStyle.borderWidth1,
-                  { borderRadius: 72 },
-                ]}
-              />
-              <View style={[Spaces.gap[8], { flex: 1, paddingLeft: 2 }]}>
-                <Text numberOfLines={2} style={[Fonts.h4Black, Fonts.neutral00]}>
-                  {displayName}
-                </Text>
-                {user?.club?.name ? (
-                  <TouchableOpacity
-                    onPress={handleOpenClub}
-                    style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
-                  >
-                    <ClubLogoMark club={user.club} size={60} />
-                    {/* MARQUEE — le nom du club se lit en entier */}
-                    <MarqueeText
-                      containerStyle={{ flex: 1 }}
-                      style={[Fonts.p2, Fonts.neutral200]}
-                      text={user.club.name}
-                    />
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    {t('userDetails.empty.club', 'Aucun club renseigne')}
+          {/* ST-RETOURS2 · point 3 (planche 22, etat 2) — la fiche de SON enfant : la carte
+              CENTREE de la planche (l avatar, le nom, « 14 ans · U15 · AS Montrivage », « Mon
+              enfant »). Tout autre lecteur garde la carte de tout profil. */}
+          {isParentOfMinorViewer ? (
+            <ChildIdentityCard
+              avatarUrl={user?.avatar?.url}
+              enablePreview
+              line={ligneDeLEnfant}
+              name={displayName}
+              testID="parent-child-identity"
+            >
+              {badgeRechercheDeClub}
+            </ChildIdentityCard>
+          ) : (
+            <View
+              style={[
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                Spaces.gap[16],
+                {
+                  backgroundColor: `${Colors.primary700}73`,
+                  borderColor: `${Colors.primary500}80`,
+                },
+              ]}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+                <ProfileAvatar
+                  enablePreview
+                  imageStyle={{ borderRadius: 72 }}
+                  imageUrl={user?.avatar?.url}
+                  name={displayName}
+                  size={72}
+                  style={[
+                    ApplicationStyle.borderColor.primary500,
+                    ApplicationStyle.borderWidth1,
+                    { borderRadius: 72 },
+                  ]}
+                />
+                <View style={[Spaces.gap[8], { flex: 1, paddingLeft: 2 }]}>
+                  <Text numberOfLines={2} style={[Fonts.h4Black, Fonts.neutral00]}>
+                    {displayName}
                   </Text>
-                )}
+                  {user?.club?.name ? (
+                    <TouchableOpacity
+                      onPress={handleOpenClub}
+                      style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
+                    >
+                      <ClubLogoMark club={user.club} size={60} />
+                      {/* MARQUEE — le nom du club se lit en entier */}
+                      <MarqueeText
+                        containerStyle={{ flex: 1 }}
+                        style={[Fonts.p2, Fonts.neutral200]}
+                        text={user.club.name}
+                      />
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={[Fonts.p2, Fonts.neutral300]}>
+                      {t('userDetails.empty.club', 'Aucun club renseigne')}
+                    </Text>
+                  )}
+                </View>
               </View>
+
+              {badgeRechercheDeClub}
             </View>
-
-            {/* ST-RETOURS (planche 22) — le parent sait que c est SON enfant. */}
-            {isParentOfMinorViewer ? (
-              <View
-                style={[
-                  Alignments.selfStart,
-                  {
-                    borderColor: Colors.primary500,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p3, Fonts.primary500]}>{t('stRetours.parent.myChild')}</Text>
-              </View>
-            ) : null}
-
-            {user?.isLookingForClub ? (
-              <View
-                style={[
-                  Alignments.selfStart,
-                  Spaces.paddingHorizontal[12],
-                  Spaces.paddingVertical[6],
-                  ApplicationStyle.borderRadius16,
-                  { backgroundColor: Colors.primary500 },
-                ]}
-              >
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {t('userDetails.badges.lookingForClub', 'En recherche de club')}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+          )}
 
           {/* D54 — les stats de match sont un bloc JOUEUR : le pack les
               range en « heritage joueur » et les interdit sur un profil d'entraineur.
