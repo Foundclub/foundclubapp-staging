@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Modal,
+  PanResponder,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   useWindowDimensions,
@@ -20,6 +22,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 import {
   useApproveFacilityOverrideRequest,
@@ -46,6 +49,10 @@ const PLACE_PRISE_ENTRE_TEMPS = 'FACILITY_OVERRIDE_CAPACITY_CHANGED';
  * l'entraînement »). Une série se tranche d'un geste (`series: true` : contrat §10, elle devient
  * un créneau de saison). Si la place a été prise entre-temps (409), la fenêtre le dit et ne
  * propose plus que de refuser. Sur téléphone, une feuille du bas ; sur ordinateur, centrée.
+ * COLL-C3B-BIS (03/10) — planche 33 : la feuille du téléphone a sa POIGNÉE (la glisser vers le bas,
+ * ou l'appuyer, la ferme) ; « Demandé par Karim Benali, dirigeant » ; et une série s'accepte DATE
+ * PAR DATE : chaque date en attente se coche, avec sa place ; une partie cochée envoie `dates`, et
+ * le serveur refuse les autres (« Date non retenue »).
  * @param {{ decision: Decision | null, onClose: () => void }} props - La décision en cours
  *   (null : fenêtre fermée) et sa fermeture.
  * @returns {import('react').ReactElement} La fenêtre.
@@ -61,6 +68,8 @@ function DecisionCreneauModal({ decision, onClose }) {
   const [erreur, setErreur] = useState('');
   const [placePrise, setPlacePrise] = useState(false);
   const [refusForce, setRefusForce] = useState(false);
+  // COLL-C3B-BIS : les dates d'une série que la mairie a DÉCOCHÉES (toutes cochées à l'ouverture).
+  const [decochees, setDecochees] = useState(/** @type {string[]} */ ([]));
   const approve = /** @type {any} */ (useApproveFacilityOverrideRequest());
   const refuse = /** @type {any} */ (useRefuseFacilityOverrideRequest());
   const enCours = Boolean(approve.isPending || refuse.isPending);
@@ -71,6 +80,7 @@ function DecisionCreneauModal({ decision, onClose }) {
     setErreur('');
     setPlacePrise(false);
     setRefusForce(false);
+    setDecochees([]);
   }, [decision]);
 
   const demande = decision?.request;
@@ -82,8 +92,33 @@ function DecisionCreneauModal({ decision, onClose }) {
     setErreur('');
     onClose();
   };
+  // La poignée : glisser la feuille vers le bas la ferme (planche 33, « poignee »).
+  const fermerRef = useRef(fermer);
+  fermerRef.current = fermer;
+  const glisser = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_evt, geste) => geste.dy > 8,
+    onPanResponderRelease: (_evt, geste) => { if (geste.dy > 60) fermerRef.current(); },
+  })).current;
+
+  // Les dates d'une série, chacune avec sa place (serveur, `seriesDates`) : à cocher pour accepter.
+  const datesDeLaSerie = !estRefus && serie && Array.isArray(demande?.seriesDates)
+    && demande.seriesDates.length > 1
+    ? demande.seriesDates
+    : [];
+  const cochees = datesDeLaSerie
+    .map((/** @type {any} */ date) => String(date?.documentId || ''))
+    .filter((documentId) => documentId && !decochees.includes(documentId));
+  const enPartie = datesDeLaSerie.length > 0 && cochees.length < datesDeLaSerie.length;
+  const aucuneCochee = datesDeLaSerie.length > 0 && cochees.length === 0;
+  const basculer = (/** @type {string} */ documentId) => {
+    setDecochees((avant) => (avant.includes(documentId)
+      ? avant.filter((id) => id !== documentId)
+      : [...avant, documentId]));
+  };
+
   const confirmer = async () => {
     if (!decision) return;
+    if (aucuneCochee) return;
     const decisionReason = message.trim();
     if (estRefus && !decisionReason) {
       setErreur(t(
@@ -94,7 +129,12 @@ function DecisionCreneauModal({ decision, onClose }) {
     }
     const mutation = estRefus ? refuse : approve;
     try {
-      await mutation.mutateAsync({ decisionReason, requestId: demande?.documentId, series: serie });
+      await mutation.mutateAsync({
+        decisionReason,
+        requestId: demande?.documentId,
+        series: serie,
+        ...(!estRefus && enPartie ? { dates: cochees } : {}),
+      });
       onClose();
     } catch (error) {
       const code = /** @type {any} */ (error)?.details?.code
@@ -114,6 +154,15 @@ function DecisionCreneauModal({ decision, onClose }) {
   const moment = momentDeLaDemande(demande);
   const place = etatDeLaPlace(demande?.conflict);
   const prevenus = prevenusDe(demande);
+  // COLL-C3B-BIS (planche 33) : l'encadrant qui demande, AVEC sa fonction (décision « nom B »).
+  let fonction = '';
+  if (demande?.requesterFunction === 'manager') {
+    fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
+  }
+  if (demande?.requesterFunction === 'trainer') {
+    fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+  }
+  const demandeur = [prevenus.personne, fonction].filter(Boolean).join(', ');
   const qui = [demande?.club?.name, demande?.team?.name].filter(Boolean).join(' · ');
   // eslint-disable-next-line max-len
   const ou = [demande?.facility?.name, moment?.jourCourt, moment ? `${moment.debut} – ${moment.fin}` : '']
@@ -136,6 +185,16 @@ function DecisionCreneauModal({ decision, onClose }) {
   let boutonPrincipal = serie
     ? t('collectiviteDemandes.actions.accepterSerie', 'Accepter la série')
     : t('collectivite.requests.actions.approve', 'Accepter');
+  if (enPartie && !aucuneCochee) {
+    boutonPrincipal = cochees.length === 1
+      ? t('collectiviteDemandes.dates.accepterUne', 'Accepter 1 date sur {{total}}', {
+        total: datesDeLaSerie.length,
+      })
+      // eslint-disable-next-line max-len
+      : t('collectiviteDemandes.dates.accepterCertaines', 'Accepter {{nombre}} dates sur {{total}}', {
+        nombre: cochees.length, total: datesDeLaSerie.length,
+      });
+  }
   if (estRefus) {
     boutonPrincipal = serie
       // eslint-disable-next-line max-len
@@ -156,10 +215,10 @@ function DecisionCreneauModal({ decision, onClose }) {
       testID="fenetre-rappel"
     >
       {qui ? <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{qui}</Text> : null}
-      {prevenus.personne ? (
+      {demandeur ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t('collectiviteDemandes.fenetre.demandePar', 'Demandé par {{personne}}', {
-            personne: prevenus.personne, ...SANS_ECHAPPEMENT,
+            personne: demandeur, ...SANS_ECHAPPEMENT,
           })}
         </Text>
       ) : null}
@@ -201,6 +260,94 @@ function DecisionCreneauModal({ decision, onClose }) {
     return morceaux.length ? `${morceaux.join(' ; ')}.` : '';
   };
 
+  // COLL-C3B-BIS (planche 33) — les dates de la série, chacune avec sa place, à cocher.
+  const placeDeLaDate = (/** @type {any} */ date) => {
+    const places = Number(date?.maxSlots || 1);
+    const pris = Number(date?.taken || 0);
+    if (pris >= places) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('collectiviteDemandes.dates.complet', 'Complet · {{pris}} sur {{places}}', {
+          places, pris,
+        }),
+      };
+    }
+    const restantes = Math.max(0, Number(date?.remaining ?? places - pris));
+    return {
+      couleur: Colors.success500,
+      texte: restantes === 1
+        ? t('collectiviteDemandes.pastille.unePlaceLibre', '1 place libre')
+        : t('collectiviteDemandes.pastille.placesLibres', '{{nombre}} places libres', {
+          nombre: restantes,
+        }),
+    };
+  };
+  const refusees = datesDeLaSerie.length - cochees.length;
+  let sortDesAutres = '';
+  if (enPartie && !aucuneCochee) {
+    sortDesAutres = refusees === 1
+      // eslint-disable-next-line max-len
+      ? t('collectiviteDemandes.dates.refusUne', 'L’autre date sera refusée : le club lira « Date non retenue ».')
+      // eslint-disable-next-line max-len
+      : t('collectiviteDemandes.dates.refusPlusieurs', 'Les {{nombre}} autres dates seront refusées : le club lira « Date non retenue ».', {
+        nombre: refusees,
+      });
+  }
+  const choixDesDates = datesDeLaSerie.length ? (
+    <View style={{ gap: 8 }} testID="fenetre-dates">
+      <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+        {t('collectiviteDemandes.dates.titre', 'Les dates de la série')}
+      </Text>
+      <ScrollView nestedScrollEnabled style={{ maxHeight: 220 }}>
+        {datesDeLaSerie.map((/** @type {any} */ date) => {
+          const documentId = String(date?.documentId || '');
+          const cochee = cochees.includes(documentId);
+          const jour = momentDeLaDemande(date)?.jourCourt || '';
+          const placeDuJour = placeDeLaDate(date);
+          return (
+            <Pressable
+              accessibilityLabel={`${jour}, ${placeDuJour.texte}`}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: cochee }}
+              key={documentId}
+              onPress={() => basculer(documentId)}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 12, paddingVertical: 8 }]}
+              testID={`date-serie-${documentId}`}
+            >
+              <View
+                style={[
+                  Alignments.center,
+                  {
+                    backgroundColor: cochee ? Colors.primary500 : 'transparent',
+                    borderColor: cochee ? Colors.primary500 : `${Colors.neutral00}66`,
+                    borderRadius: 6,
+                    borderWidth: 1.5,
+                    height: 20,
+                    width: 20,
+                  },
+                ]}
+              >
+                {cochee ? (
+                  <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
+                ) : null}
+              </View>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{jour}</Text>
+              <Text style={[Fonts.p3Bold, { color: placeDuJour.couleur }]}>
+                {placeDuJour.texte}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      {sortDesAutres ? <Text style={[Fonts.p3, Fonts.neutral200]}>{sortDesAutres}</Text> : null}
+      {aucuneCochee ? (
+        <Text style={[Fonts.p3Bold, Fonts.warning500]}>
+          {t('collectiviteDemandes.dates.aucune', 'Cochez au moins une date.')}
+        </Text>
+      ) : null}
+    </View>
+  ) : null;
+
   const champStyle = {
     borderColor: erreur ? Colors.error500 : `${Colors.primary500}44`,
     minHeight: 96,
@@ -231,8 +378,28 @@ function DecisionCreneauModal({ decision, onClose }) {
             ...fenetreStyle,
           ]}
         >
+          {centree ? null : (
+            // La poignée (planche 33) : glisser vers le bas, ou l'appuyer, ferme la feuille.
+            // eslint-disable-next-line react/jsx-props-no-spreading
+            <View style={[Alignments.alignCenter, { marginTop: -8 }]} {...glisser.panHandlers}>
+              <Pressable
+                accessibilityLabel={t('collectiviteDemandes.fenetre.poignee', 'Fermer la fenêtre')}
+                accessibilityRole="button"
+                hitSlop={12}
+                onPress={fermer}
+                testID="fenetre-poignee"
+              >
+                <View
+                  style={{
+                    backgroundColor: `${Colors.neutral00}4D`, borderRadius: 2, height: 4, width: 40,
+                  }}
+                />
+              </Pressable>
+            </View>
+          )}
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{titre}</Text>
           {demande ? rappel : null}
+          {choixDesDates}
 
           {placePrise ? (
             <View
@@ -339,7 +506,7 @@ function DecisionCreneauModal({ decision, onClose }) {
           {/* Deux boutons EMPILÉS, libellés entiers (P6-fenetre). */}
           <View style={{ gap: 12 }}>
             <Button
-              disabled={enCours}
+              disabled={enCours || aucuneCochee}
               isLoading={enCours}
               onPress={confirmer}
               title={boutonPrincipal}

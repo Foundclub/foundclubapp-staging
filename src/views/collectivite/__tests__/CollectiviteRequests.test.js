@@ -354,7 +354,8 @@ describe('COLL-C3B — planche P6-fenetre : accepter ou refuser', () => {
     expect(textes(arbre)).toEqual(expect.arrayContaining([
       'Accepter la demande',
       'Test Fc · U15',
-      'Demandé par Paul Veuillet',
+      // COLL-C3B-BIS (planche 33) : l'encadrant AVEC sa fonction, comme la planche.
+      'Demandé par Paul Veuillet, dirigeant',
       '2 équipes pour 1 place à ce moment.',
       'Seront prévenus',
       'Paul Veuillet (Test Fc), qui demande ; et les clubs déjà là : AIKI · Seniors.',
@@ -577,6 +578,105 @@ describe('COLL-C3B-BIS — planche 32 : la file, la demande ouverte, « Traitée
     await appuyer(telephone, 'onglet-decided');
     await attendre(() => textes(telephone).includes('Acceptée'));
     expect(trouver(telephone, 'demandes-traitees-grille')).toHaveLength(0);
+  });
+});
+
+// COLL-C3B-BIS (03/10) — planche 33 (P6-fenetre ; liste du plan, ligne 33). ROUGE avant : la
+// feuille posée en bas sans poignée, et « Accepter la série » en tout ou rien (le serveur ne
+// recevait jamais de dates).
+describe('COLL-C3B-BIS — planche 33 : la poignée, et accepter une série date par date', () => {
+  const trouver = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === testID
+      && typeof n.props?.onPress === 'function');
+  const jourCourt = (/** @type {string} */ iso) => format(new Date(iso), 'EEE d MMM', {
+    locale: fr,
+  });
+  // Une date de la série, comme le serveur la rend (`seriesDates`) : le mercredi, 17:30 - 19:00.
+  const date = (/** @type {string} */ documentId, /** @type {string} */ jour, taken = 0) => ({
+    documentId,
+    maxSlots: 2,
+    remaining: 2 - taken,
+    requestedEnd: `${jour}T17:00:00.000Z`,
+    requestedStart: `${jour}T15:30:00.000Z`,
+    taken,
+  });
+  const SERIE_DATES = {
+    ...SERIE,
+    seriesDates: [
+      date('rq-serie', '2030-10-09'),
+      date('rq-serie-2', '2030-10-16', 2),
+      date('rq-serie-3', '2030-10-23', 1),
+    ],
+  };
+
+  // eslint-disable-next-line max-len
+  it('au téléphone, la feuille a sa poignée ; l’appuyer la ferme ; sur ordinateur, pas de poignée', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'bouton-Accepter');
+    expect(textes(arbre)).toContain('Accepter la demande');
+    expect(trouver(arbre, 'fenetre-poignee')).toHaveLength(1);
+    await appuyer(arbre, 'fenetre-poignee');
+    expect(textes(arbre)).not.toContain('Accepter la demande');
+
+    mockDimensions = ORDINATEUR;
+    const ordinateur = await monter();
+    await appuyer(ordinateur, 'bouton-Accepter');
+    expect(trouver(ordinateur, 'fenetre-poignee')).toHaveLength(0);
+  });
+
+  // eslint-disable-next-line max-len
+  it('une série : chaque date se coche, avec sa place ; toutes cochées, « Accepter la série »', async () => {
+    mockEnAttente = [SERIE_DATES];
+    const arbre = await monter((lus) => lus.includes('Accepter la série'));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Les dates de la série',
+      jourCourt('2030-10-09T15:30:00.000Z'),
+      '2 places libres',
+      jourCourt('2030-10-16T15:30:00.000Z'),
+      'Complet · 2 sur 2',
+      '1 place libre',
+    ]));
+    const cases = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'checkbox' && typeof n.props?.onPress === 'function'
+    ));
+    expect(cases).toHaveLength(3);
+    expect(cases.every((/** @type {any} */ c) => c.props.accessibilityState?.checked)).toBe(true);
+  });
+
+  // eslint-disable-next-line max-len
+  it('décocher une date : « Accepter 2 dates sur 3 », la feuille dit le sort de l’autre, le serveur reçoit les dates', async () => {
+    mockEnAttente = [SERIE_DATES];
+    const arbre = await monter((lus) => lus.includes('Accepter la série'));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    await appuyer(arbre, 'date-serie-rq-serie-2');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Accepter 2 dates sur 3',
+      'L’autre date sera refusée : le club lira « Date non retenue ».',
+    ]));
+    await appuyer(arbre, 'bouton-Accepter 2 dates sur 3');
+    expect(mockPost).toHaveBeenCalledWith(
+      '/facility-override-requests/rq-serie/approve',
+      { data: { dates: ['rq-serie', 'rq-serie-3'], decisionReason: '', series: true } },
+    );
+  });
+
+  it('aucune date cochée : le bouton se tait et la feuille le dit', async () => {
+    mockEnAttente = [SERIE_DATES];
+    const arbre = await monter((lus) => lus.includes('Accepter la série'));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    await appuyer(arbre, 'date-serie-rq-serie');
+    await appuyer(arbre, 'date-serie-rq-serie-2');
+    await appuyer(arbre, 'date-serie-rq-serie-3');
+    expect(textes(arbre)).toContain('Cochez au moins une date.');
+    // La carte et la feuille portent chacune « Accepter la série » : celle de la feuille (la seule
+    // qui reçoit `disabled`) se tait, et l'appuyer quand même n'envoie rien.
+    const enFenetre = trouver(arbre, 'bouton-Accepter la série')
+      .filter((/** @type {any} */ b) => b.props.disabled !== undefined);
+    expect(enFenetre.length).toBeGreaterThan(0);
+    expect(enFenetre.every((/** @type {any} */ b) => b.props.disabled === true)).toBe(true);
+    await act(async () => { await enFenetre[0].props.onPress(); });
+    expect(mockPost).not.toHaveBeenCalled();
   });
 });
 

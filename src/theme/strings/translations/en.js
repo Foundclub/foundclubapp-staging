@@ -5473,6 +5473,16 @@ export default {
       depasse: 'Accepting puts {{equipes}} for {{places}}.',
       libre: 'Accepting bothers nobody.',
     },
+    // COLL-C3B-BIS (03/10) — accepting a series date by date (board 33).
+    dates: {
+      accepterCertaines: 'Accept {{nombre}} dates out of {{total}}',
+      accepterUne: 'Accept 1 date out of {{total}}',
+      aucune: 'Tick at least one date.',
+      complet: 'Full · {{pris}} of {{places}}',
+      refusPlusieurs: 'The {{nombre}} other dates will be refused: the club will read “Date not kept”.',
+      refusUne: 'The other date will be refused: the club will read “Date not kept”.',
+      titre: 'The dates of the series',
+    },
     // COLL-FIX2 (03/10) — what the server will do with the session, said while typing (board 43).
     decision: {
       complet: 'It’s full: the facility doesn’t accept another team. Pick another time.',
@@ -5492,6 +5502,8 @@ export default {
       depasse: '{{equipes}} for {{places}} at that time.',
       fermer: 'Close',
       motifsFrequents: 'Common reasons',
+      // COLL-C3B-BIS (03/10) — the sheet handle (board 33).
+      poignee: 'Close the window',
       prevenuDemandeur: '{{personne}} ({{club}}), who asks',
       prevenusDejaLa: 'and the clubs already there: {{clubs}}',
       refusAideSerie: 'The club receives your reason; the trainings of the series are cancelled.',

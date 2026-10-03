@@ -182,8 +182,11 @@ export const useApproveFacilityOverrideRequest = (options = {}) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ decisionReason, requestId, series = false }) => (
-      approveFacilityOverrideRequest(requestId, decisionReason, series)
+    // COLL-C3B-BIS : `dates`, les dates choisies d'une série (planche 33).
+    mutationFn: ({
+      dates = null, decisionReason, requestId, series = false,
+    }) => (
+      approveFacilityOverrideRequest(requestId, decisionReason, series, dates)
     ),
     onSuccess: async () => {
       await Promise.all([

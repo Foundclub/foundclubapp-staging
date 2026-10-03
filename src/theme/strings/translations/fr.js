@@ -5840,6 +5840,17 @@ export default {
       depasse: 'Accepter met {{equipes}} pour {{places}}.',
       libre: 'Accepter ne gêne personne.',
     },
+    // COLL-C3B-BIS (03/10) — accepter une série date par date (planche 33).
+    dates: {
+      accepterCertaines: 'Accepter {{nombre}} dates sur {{total}}',
+      accepterUne: 'Accepter 1 date sur {{total}}',
+      aucune: 'Cochez au moins une date.',
+      complet: 'Complet · {{pris}} sur {{places}}',
+      // eslint-disable-next-line max-len
+      refusPlusieurs: 'Les {{nombre}} autres dates seront refusées : le club lira « Date non retenue ».',
+      refusUne: 'L’autre date sera refusée : le club lira « Date non retenue ».',
+      titre: 'Les dates de la série',
+    },
     // COLL-FIX2 (03/10) — ce que le serveur fera de la séance, dit pendant la saisie (planche 43).
     decision: {
       // eslint-disable-next-line max-len
@@ -5862,6 +5873,8 @@ export default {
       depasse: '{{equipes}} pour {{places}} à ce moment.',
       fermer: 'Fermer',
       motifsFrequents: 'Motifs fréquents',
+      // COLL-C3B-BIS (03/10) — la poignée de la feuille (planche 33).
+      poignee: 'Fermer la fenêtre',
       prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
       prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
       refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
