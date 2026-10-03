@@ -680,6 +680,67 @@ describe('COLL-C3B-BIS — planche 33 : la poignée, et accepter une série date
   });
 });
 
+// COLL-C3B-BIS (03/10) — planche 34 (P6v2-phrase ; liste du plan, ligne 34). ROUGE avant : une
+// série se lisait sur sa PREMIÈRE date (« Pour la première date, le mercredi 9 oct. : … »).
+// Elle se lit EN ENTIER : combien de semaines, du … au …, et combien sont pleines.
+describe('COLL-C3B-BIS — planche 34 : une série se lit en entier', () => {
+  const semaine = (/** @type {string} */ documentId, /** @type {string} */ jour, taken = 0) => ({
+    documentId,
+    maxSlots: 2,
+    remaining: 2 - taken,
+    requestedEnd: `${jour}T17:00:00.000Z`,
+    requestedStart: `${jour}T15:30:00.000Z`,
+    taken,
+  });
+  const serieDe = (/** @type {number[]} */ pris) => ({
+    ...SERIE,
+    seriesDates: ['2030-10-09', '2030-10-16', '2030-10-23']
+      .map((jour, rang) => semaine(rang ? `rq-serie-${rang + 1}` : 'rq-serie', jour, pris[rang])),
+  });
+  const PHRASE_SERIE = (/** @type {any} */ demande) => [
+    `Montrivage Basket demande chaque mercredi, de ${heure(demande.requestedStart)}`,
+    `à ${heure(demande.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket,`,
+    'jusqu’au 30 juin.',
+  ].join(' ');
+  const SEIZE_OCT = format(new Date('2030-10-16T15:30:00.000Z'), 'EEE d MMM', { locale: fr });
+
+  it('une semaine pleine sur trois : laquelle, et ce que coûte accepter ces jours-là', async () => {
+    const demande = serieDe([0, 2, 1]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      '3 mercredis du 9 octobre au 23 octobre :',
+      `Complet 1 fois sur 3 : ${SEIZE_OCT}`,
+      'Accepter met 3 équipes pour 2 places ces jours-là.',
+      'Complet 1 fois sur 3',
+    ]));
+    expect(lus.some((texte) => texte.startsWith('Pour la première date'))).toBe(false);
+  });
+
+  it('aucune semaine pleine : « … aucune semaine », la pastille « Place libre »', async () => {
+    const demande = serieDe([0, 0, 0]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      '3 mercredis du 9 octobre au 23 octobre :',
+      'Personne n’y est : il reste 2 places.',
+      'Accepter ne gêne personne, aucune semaine.',
+      'Place libre',
+    ]));
+  });
+
+  it('toutes pleines : « Complet chaque semaine », la conséquence chaque semaine', async () => {
+    const demande = serieDe([2, 2, 2]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      'Complet chaque semaine : il y a déjà 2 équipes.',
+      'Accepter met 3 équipes pour 2 places, chaque semaine.',
+      'Complet',
+    ]));
+  });
+});
+
 // TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55 : « A ») — « Demandes de la Ville »
 // s'écrivait deux fois : l'en-tête de l'écran, puis le titre de la page. La page porte le NOM.
 describe('TEXTES-COLLECTIVITES — « Demandes de la Ville » ne s écrit plus deux fois', () => {

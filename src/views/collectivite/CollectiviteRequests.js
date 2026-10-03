@@ -17,6 +17,7 @@ import {
   dateDeDecision,
   estDemandeHebdo,
   etatDeLaPlace,
+  lectureDeLaSerie,
   lieuAvecPreposition,
   momentDeLaDemande,
   occupantsParHoraire,
@@ -153,8 +154,36 @@ function CollectiviteRequests() {
     return t('collectiviteDemandes.phrase.unique', '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.', valeurs);
   };
 
+  // COLL-C3B-BIS (planche 34) — la pastille d'une SÉRIE dit toutes ses semaines : « Complet »
+  // (toutes pleines), « Complet 3 fois sur 12 », ou « Place libre ».
+  const pastilleDeSerie = (/** @type {any} */ demande) => {
+    const lecture = lectureDeLaSerie(demande);
+    if (!lecture) return null;
+    if (lecture.completes.length === lecture.nombre) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('collectiviteDemandes.pastille.complet', 'Complet'),
+      };
+    }
+    if (lecture.completes.length) {
+      return {
+        couleur: Colors.warning500,
+        // eslint-disable-next-line max-len
+        texte: t('collectiviteDemandes.serie.pastilleCertaines', 'Complet {{nombre}} fois sur {{total}}', {
+          nombre: lecture.completes.length, total: lecture.nombre,
+        }),
+      };
+    }
+    return {
+      couleur: Colors.success500,
+      texte: t('collectiviteDemandes.serie.pastilleLibre', 'Place libre'),
+    };
+  };
+
   // La pastille d'état : « Complet » (orange) ou « 1 place libre » (vert).
   const pastilleDePlace = (/** @type {any} */ demande) => {
+    const serie = pastilleDeSerie(demande);
+    if (serie) return serie;
     const place = etatDeLaPlace(demande?.conflict);
     if (!place) return null;
     if (place.complet) {
@@ -194,6 +223,16 @@ function CollectiviteRequests() {
   // COLL-C3B-BIS (planche 32, P6v2-ordi) : dans la file, la pastille dit la place en mots
   // (« Complet · déjà 2 équipes », « Il reste 1 place »), sur un fond, comme la planche.
   const pastilleDeFile = (/** @type {any} */ demande) => {
+    const lecture = lectureDeLaSerie(demande);
+    if (lecture && lecture.completes.length === lecture.nombre) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('collectiviteDemandes.file.complet', 'Complet · déjà {{equipes}}', {
+          equipes: nombreDEquipes(lecture.prisMax), ...SANS_ECHAPPEMENT,
+        }),
+      };
+    }
+    if (lecture) return pastilleDeSerie(demande);
     const place = etatDeLaPlace(demande?.conflict);
     if (!place) return null;
     if (place.complet) {
@@ -233,8 +272,87 @@ function CollectiviteRequests() {
     );
   };
 
+  // COLL-C3B-BIS (planche 34) — UNE SÉRIE SE LIT EN ENTIER : « 3 mercredis du 9 octobre au
+  // 23 octobre : », puis ce qu'il y a sur place CHAQUE semaine (« Complet 1 fois sur 3 : mer.
+  // 16 oct. »), et la conséquence. Avant : la première date seule.
+  const surPlaceDeLaSerie = (/** @type {any} */ lecture) => {
+    const toutes = lecture.completes.length === lecture.nombre;
+    const certaines = lecture.completes.length > 0 && !toutes;
+    let phrasePlace;
+    if (toutes) {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.serie.completesToutes', 'Complet chaque semaine : il y a déjà {{equipes}}.', {
+        equipes: nombreDEquipes(lecture.prisMax), ...SANS_ECHAPPEMENT,
+      });
+    } else if (certaines) {
+      const premieres = lecture.completes.slice(0, 4).join(', ');
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.serie.completesCertaines', 'Complet {{nombre}} fois sur {{total}} : {{dates}}', {
+        dates: lecture.completes.length > 4 ? `${premieres} …` : premieres,
+        nombre: lecture.completes.length,
+        total: lecture.nombre,
+        ...SANS_ECHAPPEMENT,
+      });
+    } else if (lecture.prisUniforme === 0) {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.place.personne', 'Personne n’y est : il reste {{places}}.', {
+        places: nombreDePlaces(lecture.restantes), ...SANS_ECHAPPEMENT,
+      });
+    } else if (lecture.prisUniforme !== null) {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.place.reste', 'Il y a déjà {{equipes}} : il reste {{places}}.', {
+        // eslint-disable-next-line max-len
+        equipes: nombreDEquipes(lecture.prisUniforme), places: nombreDePlaces(lecture.restantes), ...SANS_ECHAPPEMENT,
+      });
+    } else {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.serie.libreVariable', 'Il reste de la place chaque semaine.');
+    }
+    // eslint-disable-next-line max-len
+    let consequence = t('collectiviteDemandes.serie.consequenceLibre', 'Accepter ne gêne personne, aucune semaine.');
+    if (toutes || certaines) {
+      const valeurs = {
+        equipes: nombreDEquipes(lecture.prisMax + 1),
+        places: nombreDePlaces(lecture.capacite),
+        ...SANS_ECHAPPEMENT,
+      };
+      consequence = toutes
+        // eslint-disable-next-line max-len
+        ? t('collectiviteDemandes.serie.consequenceToutes', 'Accepter met {{equipes}} pour {{places}}, chaque semaine.', valeurs)
+        // eslint-disable-next-line max-len
+        : t('collectiviteDemandes.serie.consequenceCertaines', 'Accepter met {{equipes}} pour {{places}} ces jours-là.', valeurs);
+    }
+    const couleur = toutes || certaines ? Colors.warning500 : Colors.success500;
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius12,
+          Spaces.padding[12],
+          {
+            backgroundColor: `${couleur}1F`, borderColor: `${couleur}66`, borderWidth: 1, gap: 4,
+          },
+        ]}
+        testID="collectivite-request-conflict"
+      >
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('collectiviteDemandes.serie.entete', '{{nombre}} {{jours}} du {{du}} au {{au}} :', {
+            au: lecture.au,
+            du: lecture.du,
+            jours: `${lecture.jourSemaine}s`,
+            nombre: lecture.nombre,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{phrasePlace}</Text>
+        <Text style={[Fonts.p3Bold, { color: couleur }]}>{consequence}</Text>
+      </View>
+    );
+  };
+
   // Ce qu'il y a sur place, en une phrase ; qui est déjà là ; la conséquence.
   const surPlace = (/** @type {any} */ demande) => {
+    const lecture = lectureDeLaSerie(demande);
+    if (lecture) return surPlaceDeLaSerie(lecture);
     const place = etatDeLaPlace(demande?.conflict);
     if (!place) return null;
     let phrasePlace;

@@ -5954,6 +5954,18 @@ export default {
       premiereDate: 'Pour la première date, le {{jour}} :',
       reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
     },
+    // COLL-C3B-BIS (03/10) — une série se lit en entier (planche 34).
+    serie: {
+      completesCertaines: 'Complet {{nombre}} fois sur {{total}} : {{dates}}',
+      completesToutes: 'Complet chaque semaine : il y a déjà {{equipes}}.',
+      consequenceCertaines: 'Accepter met {{equipes}} pour {{places}} ces jours-là.',
+      consequenceLibre: 'Accepter ne gêne personne, aucune semaine.',
+      consequenceToutes: 'Accepter met {{equipes}} pour {{places}}, chaque semaine.',
+      entete: '{{nombre}} {{jours}} du {{du}} au {{au}} :',
+      libreVariable: 'Il reste de la place chaque semaine.',
+      pastilleCertaines: 'Complet {{nombre}} fois sur {{total}}',
+      pastilleLibre: 'Place libre',
+    },
     traitee: {
       prevenu: 'Le club a été prévenu.',
       prevenuAcceptee: 'Le club a été prévenu · acceptée le {{date}}',

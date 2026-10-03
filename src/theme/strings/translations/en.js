@@ -5580,6 +5580,18 @@ export default {
       premiereDate: 'For the first date, {{jour}}:',
       reste: 'There are already {{equipes}}: {{places}} left.',
     },
+    // COLL-C3B-BIS (03/10) — a series reads as a whole (board 34).
+    serie: {
+      completesCertaines: 'Full {{nombre}} times out of {{total}}: {{dates}}',
+      completesToutes: 'Full every week: there are already {{equipes}}.',
+      consequenceCertaines: 'Accepting puts {{equipes}} for {{places}} on those days.',
+      consequenceLibre: 'Accepting bothers nobody, any week.',
+      consequenceToutes: 'Accepting puts {{equipes}} for {{places}}, every week.',
+      entete: '{{nombre}} {{jours}} from {{du}} to {{au}}:',
+      libreVariable: 'There is room every week.',
+      pastilleCertaines: 'Full {{nombre}} times out of {{total}}',
+      pastilleLibre: 'Spot free',
+    },
     traitee: {
       prevenu: 'The club has been notified.',
       prevenuAcceptee: 'The club has been notified · accepted on {{date}}',
