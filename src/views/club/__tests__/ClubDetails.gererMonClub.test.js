@@ -34,6 +34,14 @@ let mockNavigation;
 let mockRoute;
 
 const mockHasClubAccess = jest.fn(() => true);
+/** @type {jest.Mock<any, any[]>} */
+const mockWeekendQuery = jest.fn(() => ({
+  data: undefined, error: null, isLoading: false, refetch: jest.fn(),
+}));
+const mockGetClubWeekendResults = jest.fn();
+const mockRemindClubWeekendScore = jest.fn(() => Promise.resolve({
+  alreadyRemindedCount: 0, remindedCount: 1, trainerCount: 1,
+}));
 const mockStartClubChat = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -52,7 +60,13 @@ jest.mock('@tanstack/react-query', () => ({
         .catch((erreur) => options?.onError?.(erreur, variables));
     },
   }),
-  useQuery: () => ({ data: [], isLoading: false, refetch: jest.fn() }),
+  // STATS-FIX2 · point 2 : la carte « Résultats du week-end » a sa propre lecture,
+  // observee par `mockWeekendQuery` ; toutes les autres gardent la reponse vide.
+  useQuery: (/** @type {any} */ options) => (
+    options?.queryKey?.[0] === 'club-weekend-results'
+      ? mockWeekendQuery(options)
+      : { data: [], isLoading: false, refetch: jest.fn() }
+  ),
   // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
   // rafraichir « Demandes », « Accueil » et « Mes equipes » apres une demande
   // d'adhesion (`joinClub`). Sans cette doublure, le rendu jette.
@@ -200,6 +214,8 @@ jest.mock('@/services/club/clubQueries', () => ({
 
 jest.mock('@/services/club/clubService', () => ({
   claimClub: jest.fn(),
+  getClubWeekendResults: (/** @type {any[]} */ ...args) => mockGetClubWeekendResults(...args),
+  remindClubWeekendScore: (/** @type {any[]} */ ...args) => mockRemindClubWeekendScore(...args),
   updateClub: jest.fn(),
 }));
 
@@ -1002,5 +1018,111 @@ describe('ClubDetails — ROLES2 — « Staff » compte ceux qui entraînent vra
     };
 
     expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 2 entraîneurs')).toBeDefined();
+  });
+});
+
+// STATS-FIX2 · POINT 2 (tournee T10, ecran 18) — « RESULTATS DU WEEK-END » POUR UN CLUB SIMPLE.
+// La carte n existait que dans `CMDashboard` (club omnisport) : le dirigeant d un club simple
+// comme AS Montrivage (celui de la planche 18) n y avait aucune porte. Elle entre dans son hub
+// « Gérer mon club », lue par la route du club simple (admin STATS-FIX2 :
+// GET /clubs/:id/weekend-results, policy is-club-manager, droit du seul Dirigeant).
+describe('STATS-FIX2 · point 2 — « Résultats du week-end » dans le hub d un club simple', () => {
+  const WEEKEND = {
+    nextMatch: null,
+    rows: [
+      {
+        canRemind: false,
+        date: '2026-09-05T17:00:00.000Z',
+        eventId: 'e1',
+        opponentName: 'Test-COMPO',
+        result: 'win',
+        scoreAgainst: 1,
+        scoreFor: 2,
+        sport: 'Football',
+        status: 'scored',
+        teamId: 't-1',
+        teamName: 'U15 Filles',
+        trainers: [{ documentId: 'u-1', firstname: 'Philippe' }],
+        viewerIsTrainer: true,
+      },
+      {
+        canRemind: true,
+        date: '2026-09-05T19:00:00.000Z',
+        eventId: 'e2',
+        opponentName: null,
+        result: null,
+        scoreAgainst: null,
+        scoreFor: null,
+        sport: 'Football',
+        status: 'missing',
+        teamId: 't-2',
+        teamName: 'Seniors A',
+        trainers: [{ documentId: 'u-3', firstname: 'Karim' }],
+        viewerIsTrainer: false,
+      },
+    ],
+    teamCount: 2,
+    teamsWithoutMatchScores: [],
+    weekend: {
+      endAt: '2026-09-06T22:00:00.000Z',
+      saturday: '2026-09-05',
+      startAt: '2026-09-04T22:00:00.000Z',
+      sunday: '2026-09-06',
+    },
+  };
+
+  beforeEach(() => {
+    mockWeekendQuery.mockImplementation(() => ({
+      data: WEEKEND, error: null, isLoading: false, refetch: jest.fn(),
+    }));
+  });
+
+  it('🔴 le hub du dirigeant porte la carte, lue par la route DU club', () => {
+    const arbre = monter();
+
+    expect(texteDe(arbre.root)).toContain('Résultats du week-end');
+    expect(texteDe(arbre.root)).toContain('2 - 1');
+    const [options] = mockWeekendQuery.mock.calls[mockWeekendQuery.mock.calls.length - 1];
+    expect(options.queryKey).toEqual(['club-weekend-results', 'club-1']);
+    expect(options.enabled).toBe(true);
+    options.queryFn();
+    expect(mockGetClubWeekendResults).toHaveBeenCalledWith('club-1');
+  });
+
+  it('🔴 « Relancer » demande le score par la route du club, et la ligne le dit', async () => {
+    const arbre = monter();
+
+    await act(async () => {
+      pressableAvecTexte(arbre, 'Relancer').props.onPress();
+    });
+    expect(mockRemindClubWeekendScore)
+      .toHaveBeenCalledWith('club-1', { eventId: 'e2', teamId: 't-2' });
+    expect(texteDe(arbre.root)).toContain('Relancé');
+  });
+
+  it('🔴 un match de la carte s ouvre', () => {
+    const arbre = monter();
+    const ligne = pressableAvecTexte(arbre, 'U15 Filles — Test-COMPO');
+
+    act(() => {
+      ligne.props.onPress();
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EventStack', {
+      params: { eventId: 'e1' },
+      screen: 'EventDetails',
+    });
+  });
+
+  it('🔒 un joueur de passage : ni carte, ni lecture', () => {
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+    const arbre = monter();
+
+    expect(texteDe(arbre.root)).not.toContain('Résultats du week-end');
+    expect(mockWeekendQuery.mock.calls.every(([options]) => options.enabled === false)).toBe(true);
+  });
+
+  it('🔒 une sous-page du hub : pas de carte (elle vit sur le hub seul)', () => {
+    expect(texteDe(monter('teams').root)).not.toContain('Résultats du week-end');
   });
 });

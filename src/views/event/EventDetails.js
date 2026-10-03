@@ -1381,6 +1381,18 @@ function EventDetails({ navigation, route }) {
     return players.some((player) => player?.documentId === userDocId)
       || trainers.some((trainer) => trainer?.documentId === userDocId);
   }, [event?.invitedTeams, event?.team, userData?.documentId]);
+  // STATS-FIX2 · point 4 (T10, ecran 7) — JOUEUR d une equipe du match. « Ma réponse de match »,
+  // « Mes stats » et « Mon retour coach » sont les blocs du JOUEUR : le serveur refuse la
+  // réponse perso a un entraineur pur (403, `canRespond: isPlayer`). `isTeamMember`, qui compte
+  // aussi les entraineurs, les ouvrait a Karim sur son propre match.
+  const isTeamPlayer = useMemo(() => {
+    const userDocId = userData?.documentId;
+    if (!userDocId) return false;
+    return [event?.team, ...(event?.invitedTeams || [])]
+      .filter(Boolean)
+      .flatMap((team) => team?.players || [])
+      .some((player) => player?.documentId === userDocId);
+  }, [event?.invitedTeams, event?.team, userData?.documentId]);
   // Seuls les deux champs lus sont passes : le memo se recalcule sur les memes
   // dependances qu avant l extraction (PARTWEB).
   const trainerKeysForEvent = useMemo(
@@ -1432,8 +1444,9 @@ function EventDetails({ navigation, route }) {
   }, [attendancePayload?.data?.eventStartAt, event]);
 
   const eventEndedAt = useMemo(
-    () => resolveEventEndedAt(event?.endDate, eventStartAt),
-    [event?.endDate, eventStartAt],
+    // STATS-FIX2 · point 8 : l heure de fin SAISIE (endTime) decide, comme au serveur.
+    () => resolveEventEndedAt(event?.endDate, eventStartAt, event?.endTime),
+    [event?.endDate, event?.endTime, eventStartAt],
   );
 
   // AC10 — l'horloge du SERVEUR, ou rien : `null` quand il ne l'a pas donnee.
@@ -3748,7 +3761,7 @@ function EventDetails({ navigation, route }) {
     eventId
       && isMatchEvent
       && compositionTeamId
-      && isTeamMember
+      && isTeamPlayer
       && isMatchFinished,
   );
   const {
@@ -3827,7 +3840,7 @@ function EventDetails({ navigation, route }) {
   const hasExplicitMyMatchResponsePermission = typeof myMatchResponsePayload?.permissions?.canRespond === 'boolean';
   const canRespondMyMatchStats = hasExplicitMyMatchResponsePermission
     ? Boolean(myMatchResponsePayload?.permissions?.canRespond)
-    : (!isMyMatchResponseFetching && Boolean(isTeamMember));
+    : (!isMyMatchResponseFetching && Boolean(isTeamPlayer));
   const isMatchStatsFinal = matchStatsReport?.status === 'final';
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
   const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
@@ -5138,16 +5151,23 @@ function EventDetails({ navigation, route }) {
   // doit être doublé dans chacun des témoins de l'écran (piège AD01).
   const remindResponsesMutation = mutations.remindMatchResponsesMutation;
   const isRemindingResponders = Boolean(remindResponsesMutation?.isPending);
+  // STATS-FIX2 · 8-7 (T10, ecran 7) — apres la relance, le bouton restait « Relancer les 2 » :
+  // rien ne disait que c etait fait. La relance faite (ou deja faite ce jour) est retenue pour
+  // CE match et CETTE equipe ; la carte le dit (« Déjà relancés aujourd’hui »).
+  const [relanceDuJourCle, setRelanceDuJourCle] = useState(/** @type {string | null} */ (null));
+  const relanceCle = `${eventId || ''}:${compositionTeamId || ''}`;
   const remindMissingResponders = useMemo(() => {
     if (!remindResponsesMutation || !eventId || !compositionTeamId) return null;
     return async () => {
       try {
         const resultat = await remindResponsesMutation.mutateAsync({ eventId, teamId: compositionTeamId });
         const relances = Number(resultat?.remindedCount || 0);
+        const dejaRelances = Number(resultat?.alreadyRemindedCount || 0);
+        if (relances > 0 || dejaRelances > 0) setRelanceDuJourCle(relanceCle);
         // 🔁 ST-VUES2 (02/10) — la relance est idempotente PAR JOUR côté serveur : au 2e appui le
         // même jour, personne n'est relancé et le serveur le dit (`alreadyRemindedCount`). Dire
         // « aucune relance nécessaire » serait faux : il en manque toujours.
-        if (relances === 0 && Number(resultat?.alreadyRemindedCount || 0) > 0) {
+        if (relances === 0 && dejaRelances > 0) {
           Alert.alert(t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui'));
           return;
         }
@@ -5168,7 +5188,7 @@ function EventDetails({ navigation, route }) {
         );
       }
     };
-  }, [compositionTeamId, eventId, remindResponsesMutation, t]);
+  }, [compositionTeamId, eventId, relanceCle, remindResponsesMutation, t]);
 
   // 🎯 ST-MATCH (écran 7, état 4) — le dirigeant trouve les résultats dans la fiche de
   // l'équipe, onglet Stats (même entrée que l'ancienne adresse de TeamStats, ST-VUES).
@@ -8627,7 +8647,7 @@ function EventDetails({ navigation, route }) {
               </View>
                 ) : null}
 
-              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamPlayer && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
                     {t('eventDetails.myStats', 'Mes stats')}
@@ -8721,7 +8741,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamPlayer && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
                     {t('eventDetails.myCoachFeedback', 'Mon retour coach')}
@@ -8840,6 +8860,7 @@ function EventDetails({ navigation, route }) {
                         : openMatchStatsEditor())}
                       onRelancer={remindMissingResponders}
                       relanceEnCours={isRemindingResponders}
+                      relanceFaite={relanceDuJourCle === relanceCle}
                       reponsesAttendues={Number(
                         matchStatsReport?.responseEligibleCount
                         ?? playerCollectiveRating?.eligibleCount

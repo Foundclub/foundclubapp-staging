@@ -223,8 +223,8 @@ describe('AC07/3 — le 2e appui en 48 h dit « deja relance », avec la date', 
     });
 
     expect(message.outcome).toBe('blocked');
-    expect(message.title).toBe('Personne n a ete relance');
-    expect(message.description).toMatch(/^Deja relance le /);
+    expect(message.title).toBe("Personne n'a été relancé");
+    expect(message.description).toMatch(/^Déjà relancé le /);
     expect(message.description).toMatch(/Tu pourras relancer a partir du /);
     // La DATE, pas un « recemment » : l anti-spam se compte en heures.
     expect(message.description).toMatch(/[0-9]{2}\/[0-9]{2}\/[0-9]{4}/);
@@ -253,8 +253,8 @@ describe('AC07/3 — le 2e appui en 48 h dit « deja relance », avec la date', 
 
     const modale = await relancerEtLireLaModale();
 
-    expect(modale.titre).toBe('Personne n a ete relance');
-    expect(modale.corps).toMatch(/^Deja relance le /);
+    expect(modale.titre).toBe("Personne n'a été relancé");
+    expect(modale.corps).toMatch(/^Déjà relancé le /);
     expect(modale.corps).toMatch(/Tu pourras relancer a partir du /);
     expect(`${modale.titre} ${modale.corps}`.toLowerCase()).not.toMatch(/envoy/);
   });
@@ -263,7 +263,7 @@ describe('AC07/3 — le 2e appui en 48 h dit « deja relance », avec la date', 
     const personne = buildRemindMessage({ blockedCount: 0, remindedCount: 0, unansweredCount: 0 });
 
     expect(personne.outcome).toBe('nobody');
-    expect(personne.description).toMatch(/Tout le monde a deja repondu/);
+    expect(personne.description).toMatch(/Tout le monde a déjà répondu/);
     expect(personne.description.toLowerCase()).not.toMatch(/envoy/);
   });
 
@@ -278,7 +278,7 @@ describe('AC07/3 — le 2e appui en 48 h dit « deja relance », avec la date', 
 
     expect(message.outcome).toBe('sent');
     expect(message.title).toBe('1 personne relancee');
-    expect(message.description).toMatch(/2 autres personnes ont deja ete relancees/);
+    expect(message.description).toMatch(/2 autres personnes ont déjà été relancées/);
   });
 });
 

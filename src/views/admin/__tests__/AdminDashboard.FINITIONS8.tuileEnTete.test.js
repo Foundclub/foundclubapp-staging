@@ -174,7 +174,7 @@ test('🚨 la tuile « Collectivités » est la PREMIERE de l ecran, avant « Go
   expect(titresDesTuiles(arbre)[0]).toBe('Collectivités');
   expect(texte.indexOf('Collectivités')).toBeGreaterThan(-1);
   expect(texte.indexOf('Collectivités')).toBeLessThan(texte.indexOf('Gouvernance'));
-  expect(texte.indexOf('Collectivités')).toBeLessThan(texte.indexOf('Pilotage general'));
+  expect(texte.indexOf('Collectivités')).toBeLessThan(texte.indexOf('Pilotage général'));
 });
 
 test('rien n est retire : les 12 autres tuiles du pilotage restent, et « Collectivités » n est pas en double', () => {

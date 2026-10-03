@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 
 import client from '@/services/client';
+import { isExpectedApplyRejection } from '@/services/recruitment/applyRejection';
 
 const normalizeApplicationStatus = (/** @type {any} */ value) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -636,8 +637,7 @@ export const applyToRecruitmentAd = async (adId, payload = {}) => {
       || requestError?.message
       || '',
     ).trim();
-    const isExpectedBusinessRejection = status === 400
-      && /deja candidate|deja une candidature en attente|deja postule|deja validee|deja acceptee|declaration de responsabilite|poste est deja complet|candidature active|detection fermee/i.test(backendMessage);
+    const isExpectedBusinessRejection = status === 400 && isExpectedApplyRejection(backendMessage);
 
     if (!isExpectedBusinessRejection) {
       console.error('[recruitmentService] Error applying to ad:', requestError);

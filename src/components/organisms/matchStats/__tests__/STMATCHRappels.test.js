@@ -284,12 +284,16 @@ describe('ST-MATCH écran 4 — la fenêtre de l ENTRAÎNEUR', () => {
 
     expect(textes(racine)).toContain('Après le match · étape 1 sur 3');
     expect(textes(racine)).toContain('0 sur 1 joueur a répondu');
+    // STATS-FIX2 · 8-9 (T10, ecran 9) : le bouton dit le score qu il enregistre (planche « La
+    // feuille du score » : « Enregistrer 2 - 1 »), plus « Valider le score ».
+    expect(bouton(racine, 'Enregistrer 0 - 0')).toBeTruthy();
+    expect(bouton(racine, 'Valider le score')).toBeFalsy();
     const plusPourNous = racine.findAll((n) => n.props?.accessibilityLabel === 'Un but de plus pour U15')[0];
     const plusPourEux = racine.findAll((n) => n.props?.accessibilityLabel === 'Un but de plus pour l\'adversaire')[0];
     act(() => { plusPourNous.props.onPress(); });
     act(() => { plusPourNous.props.onPress(); });
     act(() => { plusPourEux.props.onPress(); });
-    await act(async () => { await bouton(racine, 'Valider le score').props.onPress(); });
+    await act(async () => { await bouton(racine, 'Enregistrer 2 - 1').props.onPress(); });
     await vider();
 
     expect(mockEnregistrerScore).toHaveBeenCalledWith('match-21h', { scoreAgainst: 1, scoreFor: 2, teamId: 'u15' });

@@ -1,15 +1,21 @@
 import { Platform } from 'react-native';
 
 export const MINOR_PARENTAL_DECLARATION_SCOPE = 'minor_parental_declaration';
-export const MINOR_PARENTAL_DECLARATION_VERSION = 'minor-parental-declaration-v1-2026-05-14';
-export const MINOR_PARENTAL_DECLARATION_TEXT_HASH = '42f52a118fe373ac50160c7676da639696723111fbf9e1c4c412d3f3f6c7adf2';
+// MINEURS-SUITE (2026-10-03, decision d'Adel « 3- B », registre des mineurs ligne 16) : la
+// declaration du PARENT passe en version CORRIGEE (accents, apostrophe). Adel l'appelle « version 2
+// du parent » ; l'identifiant v2 etant deja celui de l'ado (plus bas), elle s'appelle v3. Sa phrase
+// vit dans la carte (ParentalDeclarationCard.js) et son empreinte est enfin celle du texte AFFICHE
+// (la v1, « 42f52a11… », empreintait une phrase sans accents que l'app n'affichait pas). Le serveur
+// accepte encore la v1 des applis installees. ⚠️ Deploiement : le SERVEUR AVANT cette app.
+export const MINOR_PARENTAL_DECLARATION_VERSION = 'minor-parental-declaration-v3-parent-2026-10-03';
+export const MINOR_PARENTAL_DECLARATION_TEXT_HASH = '490d56e62970f7ded2339dfe7227720b4aa15b0cbc35d6b707455d84afef7ebf';
 export const MINOR_PARENTAL_DECLARATION_MIN_AGE = 15;
 
 // CONSENTEMENT-PHRASE (2026-10-01, decision d'Adel « 3-A corrige ») — 2 SIGNATAIRES, 2 TEXTES.
 //
 // ☠️ La declaration v1, celle du parent, etait aussi celle que cochait un ado
 // de 13-14 ans inscrit SEUL : on lui faisait affirmer qu'il est son propre parent. Elle reste
-// celle du PARENT qui signe depuis le lien (PARENT-LIEN) ; sa phrase vit dans la carte
+// celle du PARENT qui signe depuis le lien (PARENT-LIEN), corrigee en v3 le 03/10 ; sa phrase vit dans la carte
 // (ParentalDeclarationCard.js), seul endroit qui l'affiche — elle etait AUSSI recopiee ici,
 // sans aucun lecteur. L'ado coche desormais une phrase VRAIE pour lui (v2, modele SportEasy),
 // tournee pour ne pas accorder un participe au genre de l'ado.

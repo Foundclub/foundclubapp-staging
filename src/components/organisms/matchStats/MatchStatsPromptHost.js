@@ -932,11 +932,16 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
             />
           </View>
         </View>
+        {/* STATS-FIX2 · 8-9 (T10, ecran 9) — le bouton dit le score qu il enregistre, comme la
+            feuille du score de la fiche du match (planche : « Enregistrer 2 - 1 »). */}
         <Button
           disabled={isSending}
           isLoading={isSending}
           onPress={saveScoreFromPrompt}
-          title={t('stMatch.rappel.validateScore', 'Valider le score')}
+          title={t('stMatch.score.save', 'Enregistrer {{score}}', {
+            score: `${scoreDraft.for} - ${scoreDraft.against}`,
+            ...SANS_ECHAPPEMENT,
+          })}
           variant="Primary"
         />
         {renderStep(

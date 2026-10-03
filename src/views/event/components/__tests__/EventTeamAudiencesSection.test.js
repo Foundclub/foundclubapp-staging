@@ -225,7 +225,7 @@ describe('S10-C / D5 — la section des invitations d equipe', () => {
       userData: { documentId: 'coach-invite' },
     });
 
-    expect(textesVisibles(root)).toContain('Acceptee');
+    expect(textesVisibles(root)).toContain('Acceptée');
     expect(boutons(root)).toEqual([]);
   });
 });

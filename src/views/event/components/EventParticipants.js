@@ -548,7 +548,8 @@ function EventParticipants({
   // (`not_reported`) et de la phrase du joueur, UN seul libelle a l ecran — et
   // « Relancer » n a plus d objet. Reponses decochees : aucun compteur de
   // reponses non plus (tuiles, pastilles, « N réponses sur M »).
-  const finEvenement = resolveEventEndedAt(event?.endDate, eventStartAt);
+  // STATS-FIX2 · point 8 : l heure de fin SAISIE (endTime) decide, comme au serveur.
+  const finEvenement = resolveEventEndedAt(event?.endDate, eventStartAt, event?.endTime);
   const evenementTermine = Boolean(finEvenement)
     && /** @type {Date} */ (finEvenement).getTime() <= instantCourant;
   const reponseAttendue = reponsesOuvertes && !evenementTermine;

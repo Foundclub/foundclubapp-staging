@@ -553,8 +553,13 @@ function EventDetails({ navigation, route }) {
   // inconnue, `resolveIsMatchFinished` repond NON, et la porte reste fermee :
   // l erreur va donc toujours dans le sens sur.
   const eventEndedAt = useMemo(
-    () => resolveEventEndedAt(event?.endDate, attendancePayload?.data?.eventStartAt),
-    [attendancePayload?.data?.eventStartAt, event?.endDate],
+    // STATS-FIX2 · point 8 : l heure de fin SAISIE (endTime) decide, comme au serveur.
+    () => resolveEventEndedAt(
+      event?.endDate,
+      attendancePayload?.data?.eventStartAt,
+      event?.endTime,
+    ),
+    [attendancePayload?.data?.eventStartAt, event?.endDate, event?.endTime],
   );
   const isMatchFinished = useMemo(
     () => resolveIsMatchFinished({ eventEndedAt, serverNowMs: serverClockMs }),
