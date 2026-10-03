@@ -506,3 +506,22 @@ describe('COLL-C4B-BIS point 4 — le mois connait les fermetures', () => {
     expect(mockCalendarProps[mockCalendarProps.length - 1].closures).toEqual([FERMETURE_DU_JOUR]);
   });
 });
+
+// 🖥️ COLL-C4B-BIS (03/10/2026), point 5 — « un jour ferme dit 1 place libre » (T10) : la Liste du
+// planning recoit les fermetures ; le mercredi ferme n est plus « Libre toute la journee ».
+describe('COLL-C4B-BIS point 5 — un jour ferme n a aucune place', () => {
+  it('10. la Liste : le jour ferme se dit ferme, sans « Attribuer »', async () => {
+    gereLaVille();
+    avecFermeture();
+    mockOrdinateur = false;
+    const arbre = await rendre();
+    const liste = arbre.root.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ noeud) => noeud.props.testID === 'vue-list');
+    await act(async () => { liste.props.onPress(); });
+    await attendre();
+    const ferme = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'fermeture-2026-03-04');
+    expect(ferme).toHaveLength(1);
+    const libre = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'libre-2026-03-04');
+    expect(libre).toHaveLength(0);
+  });
+});

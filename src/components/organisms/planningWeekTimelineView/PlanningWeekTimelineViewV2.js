@@ -1078,11 +1078,43 @@ function PlanningWeekTimelineView({
   // sa colonne ; la toucher dit la colonne, et « Attribuer » s ouvre avec ce plateau.
   const colonnesDesCases = colonnesDePlateaux || [null];
   const largeurDUneCase = 100 / (weekDays.length * colonnesDesCases.length);
+  // COLL-C4B-BIS (03/10, tournee T10 : « un jour ferme dit 1 place libre ») : sous une plage
+  // fermee ou bloquee, aucune heure n est libre — ni au doigt, ni au lecteur d ecran.
+  const plagesFermeesParJour = new Map();
+  timedEvents.forEach((/** @type {any} */ event) => {
+    const fermeture = event?.raw?.closureBand;
+    const date = getPlanningItemDate(event);
+    if (!fermeture || !date) return;
+    const temps = extractTime(event);
+    const plage = fermeture.kind === 'block' && temps
+      ? {
+        end: temps.endHour * 60 + temps.endMinute,
+        start: temps.startHour * 60 + temps.startMinute,
+      }
+      : { end: 24 * 60, start: 0 };
+    const cle = getDayKey(date);
+    plagesFermeesParJour.set(cle, [...(plagesFermeesParJour.get(cle) || []), plage]);
+  });
+  const estFermee = (
+    /** @type {Date} */ jour,
+    /** @type {number} */ debut,
+    /** @type {number} */ fin,
+  ) => (
+    (plagesFermeesParJour.get(getDayKey(jour)) || [])
+      .some((/** @type {any} */ plage) => plage.start < fin && debut < plage.end)
+  );
   const cellulesLibres = onFreeSlotPress ? timelineBlocks.flatMap((block) => {
     const heure = block.type === 'hour' ? block.value : block.start;
     const hauteur = block.type === 'hour' ? hourHeight : collapsedHeight;
     const heureLue = `${String(heure).padStart(2, '0')}:00`;
-    return weekDays.flatMap((day, dayIndex) => colonnesDesCases.map((colonne, colonneIndex) => (
+    const finDeLaCase = (block.type === 'hour' ? block.value + 1 : block.end + 1) * 60;
+    const joursOuverts = weekDays
+      .map((day, dayIndex) => ({ day, dayIndex }))
+      .filter(({ day }) => !estFermee(day, heure * 60, finDeLaCase));
+    return joursOuverts.flatMap(({ day, dayIndex }) => colonnesDesCases.map((
+      colonne,
+      colonneIndex,
+    ) => (
       <TouchableOpacity
         accessibilityLabel={colonne
           ? t(

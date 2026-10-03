@@ -1055,6 +1055,8 @@ function PlanningWeekFullscreen() {
           debutDeSemaine={startOfWeek(currentDate, { weekStartsOn: 1 })}
           evenements={events}
           fermeture={fromMinutes(fermetureDuJour)}
+          // COLL-C4B-BIS : un jour ferme n a aucune place libre (T10, planche 25).
+          fermetures={fermeturesDessinees}
           onBlockPress={ouvrirUnBloc}
           onFreePress={peutAttribuer ? attribuerA : undefined}
           origineDe={readsAsOrganizer ? origineDe : undefined}

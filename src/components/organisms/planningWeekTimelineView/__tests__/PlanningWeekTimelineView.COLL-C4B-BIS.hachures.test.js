@@ -169,3 +169,68 @@ describe('COLL-C4B-BIS point 3 — de vraies hachures, et des pointilles qui se 
     expect(lignes.slice(0, aDeplacer)).toEqual(['Montrivage FC', 'Senior B']);
   });
 });
+
+// Point 5 (tournee T10 : « un jour ferme dit 1 place libre ») : sous une plage fermee, aucune
+// « heure libre » ne se propose — ni au doigt, ni au lecteur d ecran.
+describe('COLL-C4B-BIS point 5 — un jour ferme n a aucune heure libre', () => {
+  const casesLibres = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.type === 'string' && String(n.props.testID || '').startsWith('heure-libre-')
+  )).map((/** @type {any} */ n) => n.props.testID);
+
+  it('journee fermee : aucune case libre ce jour-la', async () => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <PlanningWeekTimelineView
+          cardDisplayProfile="clubFocused"
+          compactFullscreen
+          currentDate={MERCREDI}
+          events={normalizePlanningItems([plageDuMercredi, toucheeDuMercredi])}
+          firstHour={8}
+          mode="day"
+          onFreeSlotPress={jest.fn()}
+          showHeader={false}
+          showUntimedSection={false}
+        />,
+      );
+    });
+    arbresMontes.push(arbre);
+    expect(casesLibres(arbre)).toEqual([]);
+  });
+
+  it('blocage de 17:00 a 19:00 : ses heures ne sont pas libres, les autres oui', async () => {
+    const blocage = {
+      closureBand: {
+        documentId: 'b1', endTime: '19:00', kind: 'block', label: 'Forum', startTime: '17:00',
+      },
+      documentId: null,
+      endAt: new Date(2026, 9, 7, 19, 0).toISOString(),
+      hasExplicitTime: true,
+      startAt: new Date(2026, 9, 7, 17, 0).toISOString(),
+      title: 'Bloqué par la Ville · Forum',
+    };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <PlanningWeekTimelineView
+          cardDisplayProfile="clubFocused"
+          compactFullscreen
+          currentDate={MERCREDI}
+          events={normalizePlanningItems([blocage, toucheeDuMercredi])}
+          firstHour={8}
+          mode="day"
+          onFreeSlotPress={jest.fn()}
+          showHeader={false}
+          showUntimedSection={false}
+        />,
+      );
+    });
+    arbresMontes.push(arbre);
+    const cases = casesLibres(arbre);
+    expect(cases).not.toContain('heure-libre-2026-10-07-17');
+    expect(cases).not.toContain('heure-libre-2026-10-07-18');
+    expect(cases).toContain('heure-libre-2026-10-07-19');
+  });
+});

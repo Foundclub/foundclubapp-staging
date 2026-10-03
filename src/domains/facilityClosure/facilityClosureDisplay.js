@@ -143,9 +143,11 @@ export const closureBandLabel = (t, fermeture) => {
  */
 export const touchedSessionLine = (seance, { withDay = false } = {}) => {
   const qui = [seance?.club?.name, seance?.team?.name].filter(Boolean).join(' · ');
-  const heures = seance?.startTime && seance?.endTime
-    ? `${String(seance.startTime).slice(0, 5)} – ${String(seance.endTime).slice(0, 5)}`
-    : '';
+  // COLL-C4B-BIS (03/10, tournee T10) : une seance SANS heure de fin (`endTime: null`) garde son
+  // heure de debut — la carte perdait les deux (« AS Montrivage · U15 »).
+  const debut = seance?.startTime ? String(seance.startTime).slice(0, 5) : '';
+  const fin = seance?.endTime ? String(seance.endTime).slice(0, 5) : '';
+  const heures = debut && fin ? `${debut} – ${fin}` : debut;
   const quand = [withDay ? closureDay(seance?.date) : '', heures].filter(Boolean).join(' ');
   return [qui, quand].filter(Boolean).join(', ');
 };

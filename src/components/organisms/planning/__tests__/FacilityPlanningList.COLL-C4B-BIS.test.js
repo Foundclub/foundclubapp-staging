@@ -10,7 +10,10 @@ import FacilityPlanningList from '../FacilityPlanningList';
 // planning d une installation face a une fermeture.
 //   point 3 : la seance touchee se cerne de POINTILLES — sur Android, seulement si ses quatre bords
 //             ont la meme epaisseur et la meme couleur (bord gauche de 3 px : trait plein) ;
-// ROUGE avant le lot : bord gauche de 3 px a la couleur du club.
+//   point 5 : UN JOUR FERME N A AUCUNE PLACE (tournee T10 : « 1 place libre ») — la Liste ne dit plus
+//             « Libre toute la journee : attribuer » un jour ferme ; un blocage retire ses heures du libre ;
+//             la plage se lit, hachuree, a sa place dans le jour.
+// ROUGES avant le lot : bord gauche de 3 px a la couleur du club ; un jour ferme se disait libre.
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -99,5 +102,37 @@ describe('COLL-C4B-BIS — la Liste face a une fermeture', () => {
     expect(style.borderStyle).toBe('dashed');
     expect(style.borderLeftWidth).toBe(style.borderWidth);
     expect(style.borderLeftColor).toBe(COULEURS.warning500);
+  });
+
+  it('point 5 : un jour ferme n a aucune place libre ; la plage hachuree se lit a sa place', async () => {
+    const onFreePress = jest.fn();
+    const arbre = await monter({
+      evenements: normalizePlanningItems([TOUCHEE]),
+      fermetures: [{
+        documentId: 'f1', endDate: '2026-10-09', kind: 'closure', reason: 'travaux', startDate: '2026-10-09',
+      }],
+      onFreePress,
+    });
+    const parID = (/** @type {string} */ id) => arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === id);
+    expect(parID('libre-2026-10-09')).toHaveLength(0);
+    const plage = parID('fermeture-2026-10-09')[0];
+    expect(plage.findAllByType(Text).map((/** @type {any} */ n) => n.props.children)).toEqual(['Fermé · travaux', 'Toute la journée']);
+    expect(plage.findAll((/** @type {any} */ n) => n.props.testID === 'hachures' && typeof n.type === 'string')).toHaveLength(1);
+    // La seance touchee reste listee (D16), et le jeudi voisin reste libre.
+    expect(ligneDe(arbre, 'Montrivage FC · Senior B')).toBeDefined();
+    expect(parID('libre-2026-10-08')).toHaveLength(1);
+  });
+
+  it('point 5 : un blocage retire ses heures du libre, et se lit', async () => {
+    const arbre = await monter({
+      evenements: [],
+      fermetures: [{
+        documentId: 'b1', endDate: '2026-10-10', endTime: '13:00', kind: 'block', label: 'Forum des associations', startDate: '2026-10-10', startTime: '09:00',
+      }],
+      onFreePress: jest.fn(),
+    });
+    const lus = arbre.root.findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children));
+    expect(lus).toContain('Libre 08:00 – 09:00 · 13:00 – 22:00');
+    expect(lus).toContain('Bloqué par la Ville · Forum des associations');
   });
 });
