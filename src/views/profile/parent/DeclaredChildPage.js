@@ -6,7 +6,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { feedbackCardStyle } from '@/views/profile/coachFeedback/CoachFeedbackList';
-import ChildIdentityCard from '@/views/profile/parent/ChildIdentityCard';
+import ChildIdentityCard, { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
 
 import { parentalPowerForAge } from '@/constants/parentalDeclaration';
 
@@ -33,13 +33,11 @@ function DeclaredChildPage({ enfant, onSearchClub }) {
 
   const prenom = enfant?.firstname || '';
   const nomComplet = `${prenom} ${enfant?.lastname || ''}`.trim();
-  const ligne = [
-    typeof enfant?.age === 'number'
-      ? t('myChildren.screen.years', '{{count}} ans', { count: enfant.age })
-      : '',
-    enfant?.team?.name || t('myChildren.screen.noTeam', 'Pas encore d’équipe'),
-    enfant?.club?.name,
-  ].filter(Boolean).join(' · ');
+  const ligne = ligneDIdentite(t, {
+    age: enfant?.age,
+    clubName: enfant?.club?.name,
+    teamName: enfant?.team?.name || t('myChildren.screen.noTeam', 'Pas encore d’équipe'),
+  });
   const moinsDe13Ans = parentalPowerForAge(enfant?.age) === 'full';
 
   return (

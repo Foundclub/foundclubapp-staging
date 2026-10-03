@@ -18,12 +18,14 @@ import {
   newFeedbackKeys,
   seenFeedbackKeys,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
+import { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
 import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
+import { useGetUserById } from '@/services/auth/authQueries';
 import { useGetCoachFeedbackFollow } from '@/services/coachFeedback/coachFeedbackQueries';
 import {
   useDeleteDeclaredChild,
@@ -65,6 +67,33 @@ function NouveauxRetoursDeLEnfant({ childDocumentId, follow }) {
         {t('stRetours.parent.newCountHint', { count })}
       </Text>
     </View>
+  );
+}
+
+/**
+ * ST-RETOURS2 · point 2 bis (planche 22, etat 1) — sous le nom d un enfant RELIE :
+ * « 14 ans · U15 · AS Montrivage ». L age vient du lien ; l equipe et le club, de son profil
+ * public — la lecture que fait deja SA fiche (`UserDetails`, meme cle de cache : la fiche
+ * s ouvre donc deja remplie). Profil pas encore lu : l age seul, sans trou.
+ * @param {object} props - Les proprietes.
+ * @param {any} props.compte - L enfant relie (`/parent-links/as-parent`).
+ * @returns {import('react').ReactElement} - La ligne.
+ */
+function LigneDuCompteRelie({ compte }) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  const { data: profil } = useGetUserById(compte?.documentId, {
+    enabled: Boolean(compte?.documentId),
+  });
+  const equipes = Array.isArray(profil?.myTeams) ? profil.myTeams : [];
+  return (
+    <Text style={[Fonts.p3, Fonts.neutral200]}>
+      {ligneDIdentite(t, {
+        age: compte?.age,
+        clubName: profil?.club?.name,
+        teamName: equipes[0]?.name,
+      })}
+    </Text>
   );
 }
 
@@ -291,11 +320,7 @@ function MyChildren({ route } = {}) {
                         <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
                           {nomDuCompte}
                         </Text>
-                        <Text style={[Fonts.p3, Fonts.neutral200]}>
-                          {typeof compte?.age === 'number'
-                            ? t('myChildren.screen.years', '{{count}} ans', { count: compte.age })
-                            : ''}
-                        </Text>
+                        <LigneDuCompteRelie compte={compte} />
                       </View>
                       <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
                         {t('myChildren.accounts.open', 'Voir son profil')}

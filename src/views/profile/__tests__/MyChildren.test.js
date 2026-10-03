@@ -522,6 +522,24 @@ describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
     expect(titre).toBeLessThan(texte.indexOf('Lea Test'));
   });
 
+  // Point 2 bis — la carte de Hugo dit, comme la planche, « 14 ans · U15 · AS Montrivage » : son
+  // age (le lien), son equipe et son club (son profil public, la lecture que fait deja SA fiche).
+  test('🔴 point 2 bis — la carte de Hugo : « 14 ans · U15 · AS Montrivage »', async () => {
+    mockProfils = {
+      hugo: { club: { name: 'AS Montrivage' }, myTeams: [{ documentId: 'u15', name: 'U15' }] },
+    };
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Hugo Lemaire | 14 ans · U15 · AS Montrivage');
+  });
+
+  test('point 2 bis — profil pas encore lu : la carte dit l age seul, sans trou', async () => {
+    mockProfils = {};
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Hugo Lemaire | 14 ans |');
+  });
+
   test('🔴 point 2 — sans fiche, la section garde son titre et dit qu il n y en a pas', async () => {
     mockEnfants = [];
     const texte = texteVisible(await rendre());
@@ -629,3 +647,11 @@ describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, et
     expect(pressable(arbre, 'Voir sa fiche')).toBeUndefined();
   });
 });
+
+// ST-RETOURS2 · point 2 bis — le profil public d un enfant relie (son equipe, son club), lu par
+// la carte de « Mes enfants ». Double comme les autres services (pas de client HTTP sans `.env`).
+/** @type {Record<string, any>} */
+let mockProfils = {};
+jest.mock('@/services/auth/authQueries', () => ({
+  useGetUserById: (/** @type {string} */ id) => ({ data: mockProfils[id] }),
+}));

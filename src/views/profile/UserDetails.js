@@ -47,7 +47,7 @@ import {
   seenFeedbackKeys,
   wantsChildFeedbackAlert,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
-import ChildIdentityCard from '@/views/profile/parent/ChildIdentityCard';
+import ChildIdentityCard, { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
 import MyStatsPage from '@/views/profile/stats/MyStatsPage';
@@ -1119,17 +1119,11 @@ function UserDetails({ navigation, route }) {
 
   // ST-RETOURS2 · point 3 (planche 22, etat 2) — sous le nom de SON enfant, la ligne
   // « 14 ans · U15 · AS Montrivage » : son age, sa premiere equipe, son club.
-  const ligneDeLEnfant = [
-    typeof age === 'number'
-      ? t('userDetails.fields.ageValue', {
-        count: age,
-        defaultValue_one: '{{count}} ans',
-        defaultValue_other: '{{count}} ans',
-      })
-      : '',
-    playerTeams[0]?.name,
-    user?.club?.name,
-  ].filter(Boolean).join(' · ');
+  const ligneDeLEnfant = ligneDIdentite(t, {
+    age,
+    clubName: user?.club?.name,
+    teamName: playerTeams[0]?.name,
+  });
   const badgeRechercheDeClub = user?.isLookingForClub ? (
     <View
       style={[
