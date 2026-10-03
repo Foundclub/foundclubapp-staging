@@ -5777,6 +5777,8 @@ export default {
     vues: {
       enAttente: 'En attente : {{qui}}',
       heureLibre: 'Heure libre, {{jour}} {{heure}} : attribuer',
+      // COLL-C2B-BIS (03/10) — planches 24 et 29 : l'heure libre d'un plateau, en vue Jour.
+      heureLibrePlateau: 'Heure libre, {{plateau}}, {{jour}} {{heure}} : attribuer',
       jour: 'Jour',
       joursPrecedents: 'Jours précédents',
       joursSuivants: 'Jours suivants',

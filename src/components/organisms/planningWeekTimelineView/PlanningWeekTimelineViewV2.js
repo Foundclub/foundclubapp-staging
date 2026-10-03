@@ -176,8 +176,10 @@ function EventBlock({
  * @param {boolean} [root0.showUntimedSection]
  * @param {number} [root0.firstHour] - COLL-C2B : la grille commence au plus tard a cette heure
  *   (l ouverture de l installation), pour qu une heure libre du matin se touche.
- * @param {(jour: Date, heure: number) => void} [root0.onFreeSlotPress] - COLL-C2B : toucher une
- *   heure de la grille (la mairie attribue). Sans elle, rien ne se touche hors des blocs.
+ * @param {(jour: Date, heure: number, colonne?: number) => void} [root0.onFreeSlotPress] -
+ *   COLL-C2B : toucher une heure de la grille (la mairie attribue). Sans elle, rien ne se touche
+ *   hors des blocs. COLL-C2B-BIS : avec des colonnes de plateaux, la case dit aussi SA colonne
+ *   (0 a n-1).
  * @param {Array<{ key: string, label: string }>} [root0.lanes] - COLL-C2B (D66) : en mode
  *   « jour », une colonne par plateau, nommee en tete.
  * @param {(evenement: any) => number} [root0.laneOf] - La colonne d un bloc (0 a lanes.length-1).
@@ -1031,33 +1033,51 @@ function PlanningWeekTimelineView({
 
   // COLL-C2B (02/10, design P5v2-vues) : la mairie touche une heure libre ⇒ « Attribuer pour
   // la saison ». Les cases sont rendues AVANT les blocs : un bloc garde son propre geste.
+  // COLL-C2B-BIS (03/10, planches 24 et 29) : en colonnes de plateaux, UNE case par plateau, dans
+  // sa colonne ; la toucher dit la colonne, et « Attribuer » s ouvre avec ce plateau.
+  const colonnesDesCases = colonnesDePlateaux || [null];
+  const largeurDUneCase = 100 / (weekDays.length * colonnesDesCases.length);
   const cellulesLibres = onFreeSlotPress ? timelineBlocks.flatMap((block) => {
     const heure = block.type === 'hour' ? block.value : block.start;
     const hauteur = block.type === 'hour' ? hourHeight : collapsedHeight;
-    return weekDays.map((day, dayIndex) => (
+    const heureLue = `${String(heure).padStart(2, '0')}:00`;
+    return weekDays.flatMap((day, dayIndex) => colonnesDesCases.map((colonne, colonneIndex) => (
       <TouchableOpacity
-        accessibilityLabel={t(
-          'collectiviteCreneaux.vues.heureLibre',
-          'Heure libre, {{jour}} {{heure}} : attribuer',
-          {
-            heure: `${String(heure).padStart(2, '0')}:00`,
-            jour: format(day, 'EEEE d MMMM', { locale: fr }),
-            ...SANS_ECHAPPEMENT,
-          },
-        )}
+        accessibilityLabel={colonne
+          ? t(
+            'collectiviteCreneaux.vues.heureLibrePlateau',
+            'Heure libre, {{plateau}}, {{jour}} {{heure}} : attribuer',
+            {
+              heure: heureLue,
+              jour: format(day, 'EEEE d MMMM', { locale: fr }),
+              plateau: colonne.label,
+              ...SANS_ECHAPPEMENT,
+            },
+          )
+          : t(
+            'collectiviteCreneaux.vues.heureLibre',
+            'Heure libre, {{jour}} {{heure}} : attribuer',
+            {
+              heure: heureLue,
+              jour: format(day, 'EEEE d MMMM', { locale: fr }),
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
         accessibilityRole="button"
-        key={`libre-${getDayKey(day)}-${heure}`}
-        onPress={() => onFreeSlotPress(day, heure)}
+        key={`libre-${getDayKey(day)}-${heure}${colonne ? `-${colonne.key}` : ''}`}
+        onPress={() => (colonne
+          ? onFreeSlotPress(day, heure, colonneIndex)
+          : onFreeSlotPress(day, heure))}
         style={{
           height: hauteur,
-          left: `${(dayIndex * 100) / weekDays.length}%`,
+          left: `${((dayIndex * colonnesDesCases.length) + colonneIndex) * largeurDUneCase}%`,
           position: 'absolute',
           top: /** @type {Record<number, number>} */ (hourPositions)[heure] ?? 0,
-          width: `${100 / weekDays.length}%`,
+          width: `${largeurDUneCase}%`,
         }}
-        testID={`heure-libre-${getDayKey(day)}-${heure}`}
+        testID={`heure-libre-${getDayKey(day)}-${heure}${colonne ? `-${colonne.key}` : ''}`}
       />
-    ));
+    )));
   }) : null;
   // COLL-C2B (D66) : le nom de chaque plateau, en tete de sa colonne (mode « jour »).
   const tetesDePlateaux = colonnesDePlateaux ? (

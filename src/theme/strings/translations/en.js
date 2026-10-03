@@ -5413,6 +5413,8 @@ export default {
     vues: {
       enAttente: 'Pending: {{qui}}',
       heureLibre: 'Free hour, {{jour}} {{heure}}: assign',
+      // COLL-C2B-BIS (03/10) — boards 24 and 29: a court's free hour, in Day view.
+      heureLibrePlateau: 'Free hour, {{plateau}}, {{jour}} {{heure}}: assign',
       jour: 'Day',
       joursPrecedents: 'Previous days',
       joursSuivants: 'Next days',
