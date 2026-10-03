@@ -6143,6 +6143,9 @@ export default {
       mot: 'Un mot pour les clubs (facultatif)',
       motExemple: 'Réfection du sol',
       motif: 'Motif',
+      // FINITIONS12-COLL (03/10) — décision d’Adel « férié B » : le nom d’une journée fermée.
+      nom: 'Nom (facultatif)',
+      nomExemple: 'Ascension',
       ordreDates: 'La fin suit le début.',
       ordreHeures: 'L’heure de fin suit l’heure de début.',
       pourQuoi: 'Pour quoi',

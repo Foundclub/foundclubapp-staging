@@ -5763,6 +5763,9 @@ export default {
       mot: 'A note for the clubs (optional)',
       motExemple: 'Floor renovation',
       motif: 'Reason',
+      // FINITIONS12-COLL (03/10) — the name of a closed day.
+      nom: 'Name (optional)',
+      nomExemple: 'Ascension Day',
       ordreDates: 'The end follows the start.',
       ordreHeures: 'The end time follows the start time.',
       pourQuoi: 'What for',

@@ -94,3 +94,27 @@ describe('facilityClosureDisplay — COLL-C4B-BIS', () => {
     expect(closureOfDay([blocage], '2026-10-03')).toBeNull();
   });
 });
+
+// 🏷️ FINITIONS12-COLL (03/10, décision d'Adel « férié B ») — UNE FERMETURE PEUT AVOIR UN NOM
+// (« Ascension ») : il passe avant le motif partout où le motif s'affiche — la plage du planning, la
+// pastille (listes, accueil), le bandeau (fiche de l'installation, séance). Sans nom : le motif, comme
+// avant. Le serveur le garde désormais (admin FIN12-COLL point 12). ROUGE avant le lot.
+describe('FINITIONS12-COLL point 12 — le nom d’une fermeture passe avant son motif', () => {
+  // eslint-disable-next-line global-require
+  const { closureBannerText, closureTagLabel } = require('./facilityClosureDisplay');
+  const ASCENSION = {
+    endDate: '2027-05-13', kind: 'closure', label: 'Ascension', reason: 'vacances', startDate: '2027-05-13',
+  };
+
+  it('la plage, la pastille, le bandeau : « Ascension »', () => {
+    expect(closureBandLabel(t, ASCENSION)).toBe('Fermé · Ascension');
+    expect(closureTagLabel(t, ASCENSION)).toBe('Fermeture · Ascension');
+    expect(closureBannerText(t, ASCENSION, { withDays: true }).texte).toContain('Ascension');
+  });
+
+  it('sans nom : le motif, comme avant', () => {
+    const sansNom = { ...ASCENSION, label: null };
+    expect(closureBandLabel(t, sansNom)).toBe('Fermé · vacances');
+    expect(closureTagLabel(t, sansNom)).toBe('Fermeture · vacances');
+  });
+});
