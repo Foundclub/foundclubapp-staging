@@ -31,6 +31,11 @@ const CLUB_ICON_TYPES = new Set([
   'newSelfServiceClub',
 ]);
 
+// COLL-C4A3 (03/10) — une actualité de la Ville a SON icône, le bâtiment à colonnes (planche 19).
+// Le type est celui du serveur (admin/src/api/user-fcm-token/types/index.ts,
+// COLLECTIVITE_NEWS_PUBLISHED) : l'app ne le déclare pas ailleurs, il n'a pas d'autre usage ici.
+const COLLECTIVITE_NEWS_TYPE = 'collectiviteNewsPublished';
+
 const EVENT_ICON_TYPES = new Set([
   NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED,
   NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL,
@@ -122,6 +127,7 @@ export const getNotificationIcon = (type) => {
   if (CHAT_ICON_TYPES.has(type)) return 'message-circle';
   if (LICENSE_ICON_TYPES.has(type)) return 'euro-circle';
   if (type === NOTIFICATION_TYPES.SEARCH_ALERT_MATCH) return 'search';
+  if (type === COLLECTIVITE_NEWS_TYPE) return 'building-columns';
   return 'bell';
 };
 

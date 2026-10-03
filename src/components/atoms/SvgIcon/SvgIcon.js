@@ -13,6 +13,9 @@ const icons = {
   // et « Plus d actions » (icone 10 dessinee et validee par Adel le 01/10, app da8181e5).
   'arrow-right': require('@/assets/icons/arrowRight.png'),
   bell: require('@/assets/icons/bell.png'),
+  // COLL-C4A3 (03/10) : une actualité de la Ville (notification). Repris tel quel de l'ancien
+  // système d'Adel (« Bank »), au gabarit du jeu validé le 01/10.
+  'building-columns': require('@/assets/icons/building-columns.png'),
   calendar: require('@/assets/icons/calendar.png'),
   'calendar-days': require('@/assets/icons/calendar-days.png'),
   check: require('@/assets/icons/check.png'),
