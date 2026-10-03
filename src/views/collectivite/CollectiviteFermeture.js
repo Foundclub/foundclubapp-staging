@@ -14,6 +14,7 @@ import {
   CLOSURE_REASONS,
   closureDaysLabel,
   closureErrorMessage,
+  phraseForFacilityType,
   reasonLabel,
   touchedSessionLine,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -41,6 +42,7 @@ import {
 } from '@/services/facilityClosure/facilityClosureQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { getFacilityTypeNoun } from '@/utils/facilityTypes';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -620,9 +622,42 @@ function FormulaireDeFermeture({
   } else if (bloquer) {
     boutonPrincipal = t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville');
   } else {
+    // FINITIONS11-COLL (03/10, planche 25) : « Fermer le gymnase ce jour-là » (type connu).
+    const lieu = getFacilityTypeNoun(installation?.type);
+    const valeursDuLieu = { ...SANS_ECHAPPEMENT, lieu: lieu?.nom };
     boutonPrincipal = plusieursJours
-      ? t('collectiviteFermetures.form.boutonFermerJours', 'Fermer l’installation ces jours-là')
-      : t('collectiviteFermetures.form.boutonFermerJour', 'Fermer l’installation ce jour-là');
+      ? phraseForFacilityType(lieu, {
+        feminine: t(
+          'collectiviteFermetures.form.boutonFermerJoursFeminin',
+          'Fermer la {{lieu}} ces jours-là',
+          valeursDuLieu,
+        ),
+        generic: t(
+          'collectiviteFermetures.form.boutonFermerJours',
+          'Fermer l’installation ces jours-là',
+        ),
+        masculine: t(
+          'collectiviteFermetures.form.boutonFermerJoursMasculin',
+          'Fermer le {{lieu}} ces jours-là',
+          valeursDuLieu,
+        ),
+      })
+      : phraseForFacilityType(lieu, {
+        feminine: t(
+          'collectiviteFermetures.form.boutonFermerJourFeminin',
+          'Fermer la {{lieu}} ce jour-là',
+          valeursDuLieu,
+        ),
+        generic: t(
+          'collectiviteFermetures.form.boutonFermerJour',
+          'Fermer l’installation ce jour-là',
+        ),
+        masculine: t(
+          'collectiviteFermetures.form.boutonFermerJourMasculin',
+          'Fermer le {{lieu}} ce jour-là',
+          valeursDuLieu,
+        ),
+      });
   }
 
   const questionDeConfirmation = bloquer

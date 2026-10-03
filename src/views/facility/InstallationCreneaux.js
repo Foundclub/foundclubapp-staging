@@ -504,7 +504,12 @@ function InstallationCreneaux() {
         {metaLigne ? <Text style={[Fonts.p2, Fonts.neutral200]}>{metaLigne}</Text> : null}
       </View>
 
-      <FacilityClosureBanner closure={bandeau} testID="installation-bandeau-fermeture" withDays />
+      <FacilityClosureBanner
+        closure={bandeau}
+        facilityType={installation.type}
+        testID="installation-bandeau-fermeture"
+        withDays
+      />
 
       <SegmentedControl
         onChange={choisirOnglet}

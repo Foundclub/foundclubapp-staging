@@ -449,7 +449,8 @@ describe('COLL-C4B planche 1 — l onglet « Fermetures »', () => {
       meta: { bandeau: FERMETURE, canManage: true, facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' } },
     });
     const lus = textes(await rendre());
-    expect(lus).toContain('L’installation est fermée le vendredi 2 octobre');
+    // FINITIONS11-COLL (03/10, planche 25) : le type de l installation nomme le lieu.
+    expect(lus).toContain('Le gymnase est fermé le vendredi 2 octobre');
     expect(lus).toContain('Travaux. Mot de la Ville : « Réfection du sol ».');
   });
 

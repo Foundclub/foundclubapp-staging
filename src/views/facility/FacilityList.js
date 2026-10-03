@@ -164,16 +164,18 @@ function BoutonPlusDActions({
  * (design HY521H1 « P3b-actu-tel » ecran 6 : « la fiche de l installation porte un bandeau tant
  * que la fermeture dure ou approche »). Le serveur choisit laquelle (`meta.bandeau` : en cours, ou
  * dans les 14 jours) ; un membre d un club rattache la lit (contrat C2A §13.2). Rien sinon.
- * @param {{ facilityId?: string | null }} props
+ * FINITIONS11-COLL (03/10) : `facilityType` nomme le lieu (« Le dojo est fermé… »).
+ * @param {{ facilityId?: string | null, facilityType?: string | null }} props
  * @returns {import('react').ReactElement | null} Le bandeau, ou rien.
  */
-function BandeauDeFermetureDeLaVille({ facilityId }) {
+function BandeauDeFermetureDeLaVille({ facilityId, facilityType = null }) {
   const fermetures = useFacilityClosures(facilityId || null);
   const bandeau = fermetures.data?.meta?.bandeau || null;
   if (!bandeau) return null;
   return (
     <FacilityClosureBanner
       closure={bandeau}
+      facilityType={facilityType}
       testID={`carte-ville-bandeau-${facilityId}`}
       withDays
     />
@@ -1230,7 +1232,7 @@ function FacilityList() {
           <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
           {meta ? <Text style={[Fonts.p3, Fonts.neutral200]}>{meta}</Text> : null}
         </TouchableOpacity>
-        <BandeauDeFermetureDeLaVille facilityId={item?.documentId} />
+        <BandeauDeFermetureDeLaVille facilityId={item?.documentId} facilityType={item?.type} />
         {kind === 'avecCreneaux' ? (
           <View style={{ gap: 2 }}>
             {item.clubSeasonSlots.map((/** @type {any} */ creneau) => {

@@ -8139,6 +8139,7 @@ function EventDetails({ navigation, route }) {
             {event?.facilityClosure && canEdit ? (
               <FacilityClosureBanner
                 closure={event.facilityClosure}
+                facilityType={event?.facility?.type}
                 onCancel={handleCancelEvent}
                 onMove={handleEditEvent}
               />

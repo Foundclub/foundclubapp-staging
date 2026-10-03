@@ -174,7 +174,8 @@ describe('COLL-C4B-BIS point 6 — la carte d une installation de la Ville porte
     };
     const arbre = rendre();
     const lus = textes(arbre);
-    expect(lus).toContain('L’installation est fermée du samedi 17 octobre au dimanche 25 octobre');
+    // FINITIONS11-COLL (03/10, planche 25) : le type de l installation nomme le lieu.
+    expect(lus).toContain('Le dojo est fermé du samedi 17 octobre au dimanche 25 octobre');
     expect(lus).toContain('Vacances.');
     const bandeaux = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'carte-ville-bandeau-dojo');
     expect(bandeaux).toHaveLength(1);

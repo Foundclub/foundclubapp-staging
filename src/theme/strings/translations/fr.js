@@ -6072,8 +6072,15 @@ export default {
       bloque: 'Bloquée par la Ville, {{heures}}',
       bloqueLe: 'Bloquée par la Ville le {{jour}}, {{heures}}',
       fermeJour: 'L’installation est fermée ce jour-là',
+      // FINITIONS11-COLL (03/10) — planche 25 : accordé au type de l’installation.
+      fermeJourFeminin: 'La {{lieu}} est fermée ce jour-là',
+      fermeJourMasculin: 'Le {{lieu}} est fermé ce jour-là',
       fermeLe: 'L’installation est fermée le {{jour}}',
+      fermeLeFeminin: 'La {{lieu}} est fermée le {{jour}}',
+      fermeLeMasculin: 'Le {{lieu}} est fermé le {{jour}}',
       fermePeriode: 'L’installation est fermée {{jours}}',
+      fermePeriodeFeminin: 'La {{lieu}} est fermée {{jours}}',
+      fermePeriodeMasculin: 'Le {{lieu}} est fermé {{jours}}',
       mot: 'Mot de la Ville : « {{mot}} ».',
     },
     carte: {
@@ -6112,7 +6119,12 @@ export default {
       au: 'Au',
       boutonBloquer: 'Bloquer pour la Ville',
       boutonFermerJour: 'Fermer l’installation ce jour-là',
+      // FINITIONS11-COLL (03/10) — planche 25 : accordé au type de l’installation.
+      boutonFermerJourFeminin: 'Fermer la {{lieu}} ce jour-là',
+      boutonFermerJourMasculin: 'Fermer le {{lieu}} ce jour-là',
       boutonFermerJours: 'Fermer l’installation ces jours-là',
+      boutonFermerJoursFeminin: 'Fermer la {{lieu}} ces jours-là',
+      boutonFermerJoursMasculin: 'Fermer le {{lieu}} ces jours-là',
       changer: 'Changer',
       choisirInstallation: 'Choisissez l’installation',
       de: 'De',

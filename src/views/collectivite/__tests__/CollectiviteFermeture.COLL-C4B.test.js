@@ -91,9 +91,17 @@ jest.mock('@/services/seasonSlot/seasonSlotService', () => ({}));
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => ({
+    // FINITIONS11-COLL (03/10) : le serveur rend le type (`INSTALLATION_FIELDS` de collectivite).
     data: [
-      { documentId: 'gym-tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls' },
-      { documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal' },
+      {
+        documentId: 'gym-tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls', type: 'Gymnase',
+      },
+      {
+        documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal', type: 'Dojo',
+      },
+      {
+        documentId: 'piscine', maxSlots: 1, name: 'Piscine Jean Taris', type: 'Piscine',
+      },
     ],
   }),
 }));
@@ -321,7 +329,8 @@ test('C4B-A1/4 decochee, la case n envoie pas d actualite ; plusieurs jours : «
   await choisirDate('Au', '25/10/2026');
   await appuyer(parTestID(arbre, 'fermeture-motif-vacances'));
   await appuyer(parTestID(arbre, 'fermeture-publier'));
-  expect(textes(arbre)).toContain('Fermer l’installation ces jours-là');
+  // FINITIONS11-COLL (03/10, planche 25) : le type de l installation nomme le lieu.
+  expect(textes(arbre)).toContain('Fermer le gymnase ces jours-là');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre)).toContain(
     'Fermer le Gymnase des Tilleuls du samedi 17 octobre au dimanche 25 octobre ?',
@@ -461,4 +470,24 @@ test('C4B-A1/7 sans installation, on la choisit ; un refus du serveur se dit, l 
   await appuyer(parTestID(arbre, 'fermeture-confirmer'));
   expect(textes(arbre)).toContain('Seule la Ville ferme ou bloque ses installations.');
   expect(mockNavigation.goBack).not.toHaveBeenCalled();
+});
+
+// 🧪 FINITIONS11-COLL (03/10), planche 25 (« P4v3-fermer-tel » ecran 1) : le bouton nomme le lieu
+// par son TYPE, accorde (le / la) ; sans type connu, « l installation ». ROUGE avant le lot.
+test('FIN11-COLL/1 « Fermer le gymnase ce jour-là », « Fermer la piscine ce jour-là » ; sans type, l installation', async () => {
+  let arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  expect(textes(arbre)).toContain('Fermer le gymnase ce jour-là');
+
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'piscine', mode: 'fermer' };
+  arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  expect(textes(arbre)).toContain('Fermer la piscine ce jour-là');
+
+  mockParams = {
+    collectiviteId: 'ville-montrivage', facilityId: 'ailleurs', facilityName: 'Halle des sports', mode: 'fermer',
+  };
+  arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  expect(textes(arbre)).toContain('Fermer l’installation ce jour-là');
 });

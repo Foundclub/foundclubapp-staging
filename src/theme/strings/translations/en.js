@@ -5695,8 +5695,15 @@ export default {
       bloque: 'Blocked by the town, {{heures}}',
       bloqueLe: 'Blocked by the town on {{jour}}, {{heures}}',
       fermeJour: 'The facility is closed that day',
+      // FINITIONS11-COLL (03/10) — board 25: worded after the facility type.
+      fermeJourFeminin: 'The {{lieu}} is closed that day',
+      fermeJourMasculin: 'The {{lieu}} is closed that day',
       fermeLe: 'The facility is closed on {{jour}}',
+      fermeLeFeminin: 'The {{lieu}} is closed on {{jour}}',
+      fermeLeMasculin: 'The {{lieu}} is closed on {{jour}}',
       fermePeriode: 'The facility is closed {{jours}}',
+      fermePeriodeFeminin: 'The {{lieu}} is closed {{jours}}',
+      fermePeriodeMasculin: 'The {{lieu}} is closed {{jours}}',
       mot: 'Note from the town: “{{mot}}”.',
     },
     carte: {
@@ -5734,7 +5741,12 @@ export default {
       au: 'To',
       boutonBloquer: 'Block for the town',
       boutonFermerJour: 'Close the facility that day',
+      // FINITIONS11-COLL (03/10) — board 25: worded after the facility type.
+      boutonFermerJourFeminin: 'Close the {{lieu}} that day',
+      boutonFermerJourMasculin: 'Close the {{lieu}} that day',
       boutonFermerJours: 'Close the facility on those days',
+      boutonFermerJoursFeminin: 'Close the {{lieu}} on those days',
+      boutonFermerJoursMasculin: 'Close the {{lieu}} on those days',
       changer: 'Change',
       choisirInstallation: 'Choose the facility',
       de: 'From',

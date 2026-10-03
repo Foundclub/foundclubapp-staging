@@ -517,4 +517,18 @@ describe('COLL-C4B · le bandeau de la seance touchee par une fermeture', () => 
     expect(parTestID(racine, 'bandeau-fermeture')).toHaveLength(0);
     expect(contient(racine, 'L’installation est fermée')).toBe(false);
   });
+
+  // FINITIONS11-COLL (03/10), planche 25 (« P4v3-fermer-tel » ecran 5) : la fiche lit le TYPE de
+  // l installation (`facility.type`, peuple par findOne) ; ROUGE avant le lot.
+  test('FIN11-COLL/1 le type de l installation nomme le lieu : « Le gymnase est fermé ce jour-là »', () => {
+    const racine = monter({
+      auth: ORGANISATEUR(),
+      event: buildEvent({
+        facility: { documentId: 'gym-1', name: 'Gymnase des Tilleuls', type: 'Gymnase' },
+        facilityClosure: FERMETURE,
+      }),
+    });
+    expect(contient(racine, 'Le gymnase est fermé ce jour-là')).toBe(true);
+    expect(contient(racine, 'L’installation est fermée')).toBe(false);
+  });
 });
