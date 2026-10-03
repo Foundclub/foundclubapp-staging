@@ -214,6 +214,44 @@ export const countPlayersToRemind = (playerResponses) => (
 );
 
 /**
+ * 📋 FINITIONS11 · point 6 bis — « Convoqués : » ne se dit que si une convocation est
+ * publiée : le serveur marque alors chaque ligne `convoked` vrai ou faux (`null` sans
+ * convocation, rien chez un serveur d'avant).
+ * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
+ * @returns {boolean} Vrai si une convocation est publiée.
+ */
+export const hasPublishedConvocation = (playerResponses) => (
+  Array.isArray(playerResponses) ? playerResponses : []
+).some((/** @type {any} */ item) => typeof item?.convoked === 'boolean');
+
+/**
+ * 📋 FINITIONS11 · point 6 bis — « listes ok » (Adel, 03/10) : « Aussi présents, sans
+ * convocation : Lucas, Nathan ». Un joueur NON convoqué (`convoked === false`, avec un compte :
+ * un joueur ajouté à la main est DANS la convocation) qui est VENU : sa réponse le dit
+ * (« j'ai joué », « présent sans jouer ») ou l'entraîneur lui a mis des minutes sur la feuille.
+ * Aucune lecture neuve : tout est dans la charge de la feuille. 5 prénoms au plus, puis « +N ».
+ * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
+ * @param {unknown} playerLines - `matchStatsPayload.report.playerLines`.
+ * @returns {string[]} Les prénoms, et « +N » s'il y en a plus de 5.
+ */
+export const listPresentWithoutConvocation = (playerResponses, playerLines) => {
+  const avecMinutes = new Set((Array.isArray(playerLines) ? playerLines : [])
+    .filter((/** @type {any} */ ligne) => Number(ligne?.minutesPlayed) > 0)
+    .map((/** @type {any} */ ligne) => String(
+      ligne?.userDocumentId || ligne?.user?.documentId || ligne?.player?.documentId || '',
+    ))
+    .filter(Boolean));
+  const prenoms = (Array.isArray(playerResponses) ? playerResponses : [])
+    .filter((/** @type {any} */ item) => item?.convoked === false
+      && Boolean(item?.userDocumentId)
+      && (['played', 'present_no_play'].includes(item?.participation)
+        || avecMinutes.has(String(item.userDocumentId))))
+    .map((/** @type {any} */ item) => String(item?.label || '').trim().split(/\s+/)[0])
+    .filter(Boolean);
+  return prenoms.length > 5 ? [...prenoms.slice(0, 5), `+${prenoms.length - 5}`] : prenoms;
+};
+
+/**
  * 🎯 ST-MATCH (écran 7, amélioration 3) — l'étape 3 NOMME qui manque : 5 prénoms au plus,
  * puis « +N ». La feuille de l'encadrement porte la liste (le joueur n'en reçoit que le
  * compte : SECU-STATS). FINITIONS11 · point 4 : les mêmes que la relance (convoqués, avec

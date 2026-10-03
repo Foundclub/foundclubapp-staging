@@ -85,12 +85,14 @@ const lireLeMoment = (iso) => {
  * La carte-parcours de l'après-match.
  * @param {object} props - Les propriétés du composant.
  * @param {boolean} [props.avantLaFin] - Le match n'est pas fini : rien ne s'ouvre encore.
+ * @param {boolean} [props.avecConvocation] - FINITIONS11 6 bis : une convocation est publiée.
  * @param {boolean} [props.boutonDesactive] - La porte est-elle fermée.
  * @param {string} [props.feuilleBrouillonDepuis] - Le brouillon a été commencé (ISO).
  * @param {string} [props.feuillePublieeLe] - La feuille a été publiée (ISO).
  * @param {string} [props.finDuMatch] - « sam. 5 sept. à 20:00 », pour dire quand tout s'ouvre.
  * @param {string[]} [props.manquants] - Les prénoms de ceux qui n'ont pas répondu.
  * @param {number | null} [props.nombreARelancer] - FINITIONS11 : combien le serveur relancera.
+ * @param {string[]} [props.presentsSansConvocation] - FINITIONS11 6 bis : venus sans convocation.
  * @param {string} [props.monDocumentId] - Qui regarde, pour écrire « toi ».
  * @param {{ average: number | null, count: number } | null} [props.moyenneJoueurs]
  *   - La moyenne des notes des joueurs.
@@ -116,6 +118,7 @@ const lireLeMoment = (iso) => {
  */
 function PostMatchJourneyCard({
   avantLaFin = false,
+  avecConvocation = false,
   boutonDesactive = false,
   feuilleBrouillonDepuis = '',
   feuillePublieeLe = '',
@@ -129,6 +132,7 @@ function PostMatchJourneyCard({
   noteEquipe = null,
   onPressEtape,
   onRelancer = null,
+  presentsSansConvocation = [],
   relanceEnCours = false,
   relanceFaite = false,
   reponsesAttendues = 0,
@@ -216,13 +220,19 @@ function PostMatchJourneyCard({
       return t('eventDetails.postMatch.responsesNone', 'Personne n’a encore répondu');
     }
     // L'accord suit ceux qui ONT répondu : « 1 sur 3 a répondu », « 4 sur 12 ont répondu ».
-    const compte = t('stMatch.carte.responsesCount', {
+    const nombres = t('stMatch.carte.responsesCount', {
       count: reponsesRecues,
       defaultValue_one: '{{count}} sur {{total}} a répondu',
       defaultValue_other: '{{count}} sur {{total}} ont répondu',
       total: reponsesAttendues,
       ...SANS_ECHAPPEMENT,
     });
+    // 📋 FINITIONS11 · point 6 bis (« listes ok ») — la première liste dit qui elle compte.
+    const compte = avecConvocation
+      ? t('stMatch.carte.convokedResponses', 'Convoqués : {{responses}}', {
+        responses: nombres, ...SANS_ECHAPPEMENT,
+      })
+      : nombres;
     if (courante !== 'responses' || !manquants.length) return compte;
     return `${compte} · ${t('stMatch.carte.missing', 'manquent {{names}}', {
       names: manquants.join(', '),
@@ -430,6 +440,20 @@ function PostMatchJourneyCard({
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {CONTENU[cle].detail}
                 </Text>
+                {/* 📋 FINITIONS11 · point 6 bis — la seconde liste : ceux qui sont venus sans
+                    être convoqués, nommés à part (« listes ok », Adel 03/10). */}
+                {cle === 'responses' && !avantLaFin && presentsSansConvocation.length ? (
+                  <Text
+                    style={[Fonts.p3, Fonts.neutral300]}
+                    testID="post-match-presents-sans-convocation"
+                  >
+                    {t(
+                      'stMatch.carte.presentWithoutConvocation',
+                      'Aussi présents, sans convocation : {{names}}',
+                      { names: presentsSansConvocation.join(', '), ...SANS_ECHAPPEMENT },
+                    )}
+                  </Text>
+                ) : null}
               </View>
             </View>
           );

@@ -17494,6 +17494,7 @@ export default {
       actionScore: 'Saisir le score',
       actionSeeSheet: 'Voir la feuille',
       actionSheet: 'Saisir la feuille',
+      convokedResponses: 'Convoqués : {{responses}}',
       endLabel: '{{day}} à {{time}}',
       header: 'Après le match',
       headerComplete: 'Après le match · c’est complet',
@@ -17506,6 +17507,8 @@ export default {
       opensAt: 'Tout s’ouvre à la fin du match, {{when}}.',
       playersRating_one: 'Les joueurs · {{count}} note',
       playersRating_other: 'Les joueurs · {{count}} notes',
+      // FINITIONS11 6 bis (« listes ok », Adel 03/10) : les deux listes de la carte.
+      presentWithoutConvocation: 'Aussi présents, sans convocation : {{names}}',
       remind_one: 'Relancer {{count}} joueur',
       remind_other: 'Relancer les {{count}}',
       reminded_one: '{{count}} joueur relancé.',

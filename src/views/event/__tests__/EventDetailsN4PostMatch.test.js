@@ -1673,3 +1673,42 @@ describe('FINITIONS11 · point 4 — sur le téléphone, « Relancer les N » = 
     expect(textes.join(' ')).not.toContain('Yanis');
   });
 });
+// FINITIONS11-STATS · point 6 bis — « listes ok » (Adel, 03/10 ~13h20) : la carte « Après le
+// match » dit les deux listes, sur le téléphone, avec le juge partagé (`matchPageModel.js`).
+describe('FINITIONS11 · point 6 bis — sur le téléphone, « Convoqués : … » et « Aussi présents, sans convocation : … »', () => {
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    label, participation: null, status: null, userDocumentId: `compte-${label.split(' ')[0]}`, ...champs,
+  });
+
+  test('🔴 les convoqués comptés, et les deux joueurs venus sans convocation nommés à part', () => {
+    const root = monter({
+      matchStats: statsAvec({
+        playerResponses: [
+          reponse('Léa Martin', { convoked: true, participation: 'played', status: 'submitted' }),
+          reponse('Sami Diallo', { convoked: true }),
+          reponse('Lucas Petit', { convoked: false, participation: 'played', status: 'submitted' }),
+          reponse('Nathan Roux', { convoked: false }),
+          reponse('Yanis Kader', { convoked: false }),
+        ],
+        report: {
+          finalizedAt: '2020-01-01T12:39:00.000Z',
+          needsReview: false,
+          playerLines: [{ minutesPlayed: 30, userDocumentId: 'compte-Nathan' }],
+          responseCompletionCount: 1,
+          responseEligibleCount: 2,
+          status: 'final',
+        },
+        score: {
+          available: true, locked: false, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+    const textes = textesVisibles(root);
+
+    expect(textes).toEqual(expect.arrayContaining([
+      'Convoqués : 1 sur 2 a répondu · manquent Sami',
+      'Aussi présents, sans convocation : Lucas, Nathan',
+    ]));
+    expect(textes.join(' ')).not.toContain('Yanis');
+  });
+});

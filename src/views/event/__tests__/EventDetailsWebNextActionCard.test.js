@@ -917,3 +917,45 @@ describe('FINITIONS11 · point 4 — sur le site, « Relancer les N » = les con
     expect(texteRendu(parTestID(bloc, 'post-match-journey')[0])).not.toContain('Yanis');
   });
 });
+// FINITIONS11-STATS · point 6 bis — le site lit le MÊME juge : les deux listes de la carte.
+describe('FINITIONS11 · point 6 bis — sur le site, « Convoqués : … » et « Aussi présents, sans convocation : … »', () => {
+  const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
+    .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
+    .join(' ').replace(/\s+/g, ' ').trim();
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    label, participation: null, status: null, userDocumentId: `compte-${label.split(' ')[0]}`, ...champs,
+  });
+
+  test('🔴 les convoqués comptés, et les deux joueurs venus sans convocation nommés à part', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({
+        playerResponses: [
+          reponse('Léa M.', { convoked: true, participation: 'played', status: 'submitted' }),
+          reponse('Sami D.', { convoked: true }),
+          reponse('Lucas P.', { convoked: false, participation: 'played', status: 'submitted' }),
+          reponse('Nathan R.', { convoked: false }),
+          reponse('Yanis K.', { convoked: false }),
+        ],
+        report: {
+          finalizedAt: '2099-01-01T21:39:00.000Z',
+          needsReview: false,
+          playerLines: [{ minutesPlayed: 30, userDocumentId: 'compte-Nathan' }],
+          responseCompletionCount: 1,
+          responseEligibleCount: 2,
+          status: 'final',
+        },
+        score: {
+          available: true, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+
+    const [bloc] = root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'match-stats');
+    const carte = texteRendu(parTestID(bloc, 'post-match-journey')[0]);
+    expect(carte).toContain('Convoqués : 1 sur 2 a répondu · manquent Sami');
+    expect(carte).toContain('Aussi présents, sans convocation : Lucas, Nathan');
+    expect(carte).not.toContain('Yanis');
+  });
+});

@@ -187,7 +187,9 @@ import {
   buildMatchHeaderScoreSummary,
   countPlayersToRemind,
   formatMatchEndLabel,
+  hasPublishedConvocation,
   listMissingResponders,
+  listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchVerdictTag,
@@ -4945,6 +4947,16 @@ function EventDetails({ navigation, route }) {
     () => countPlayersToRemind(matchStatsPayload?.playerResponses),
     [matchStatsPayload?.playerResponses],
   );
+  // 📋 FINITIONS11 · point 6 bis (« listes ok ») — « Convoqués : … » et « Aussi présents, sans
+  // convocation : … », lus dans la charge de la feuille (aucune lecture neuve).
+  const matchHasConvocation = hasPublishedConvocation(matchStatsPayload?.playerResponses);
+  const matchPresentWithoutConvocation = useMemo(
+    () => listPresentWithoutConvocation(
+      matchStatsPayload?.playerResponses,
+      matchStatsPayload?.report?.playerLines,
+    ),
+    [matchStatsPayload?.playerResponses, matchStatsPayload?.report?.playerLines],
+  );
 
   // 🎯 ST-MATCH (écran 7) — « Relancer », depuis la carte : la route existe (remind-responses,
   // celle de l'éditeur) ; le serveur ne relance que les convoqués (« c oui », 02/10).
@@ -8503,6 +8515,7 @@ function EventDetails({ navigation, route }) {
                   {canManageMatchStats ? (
                     <PostMatchJourneyCard
                       avantLaFin={!isMatchFinished}
+                      avecConvocation={matchHasConvocation}
                       boutonDesactive={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
                       feuilleBrouillonDepuis={matchStatsReport?.status === 'draft'
                         ? matchStatsReport?.updatedAt || matchStatsReport?.createdAt || ''
@@ -8520,6 +8533,7 @@ function EventDetails({ navigation, route }) {
                         ? openMatchScoreSheet()
                         : openMatchStatsEditor())}
                       onRelancer={remindMissingResponders}
+                      presentsSansConvocation={matchPresentWithoutConvocation}
                       relanceEnCours={isRemindingResponders}
                       relanceFaite={relanceDuJourCle === relanceCle}
                       reponsesAttendues={Number(

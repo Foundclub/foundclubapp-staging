@@ -104,7 +104,9 @@ import {
   buildMatchHeaderScoreSummary,
   countPlayersToRemind,
   formatMatchEndLabel,
+  hasPublishedConvocation,
   listMissingResponders,
+  listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchVerdictTag,
@@ -713,6 +715,16 @@ function EventDetails({ navigation, route }) {
   const matchPlayersToRemind = useMemo(
     () => countPlayersToRemind(matchStatsPayload?.playerResponses),
     [matchStatsPayload?.playerResponses],
+  );
+  // 📋 FINITIONS11 · point 6 bis (« listes ok ») — « Convoqués : … » et « Aussi présents, sans
+  // convocation : … », lus dans la charge de la feuille (aucune lecture neuve).
+  const matchHasConvocation = hasPublishedConvocation(matchStatsPayload?.playerResponses);
+  const matchPresentWithoutConvocation = useMemo(
+    () => listPresentWithoutConvocation(
+      matchStatsPayload?.playerResponses,
+      matchStatsPayload?.report?.playerLines,
+    ),
+    [matchStatsPayload?.playerResponses, matchStatsPayload?.report?.playerLines],
   );
   // 🎯 ST-MATCH (écran 7) — « Relancer les N », comme au téléphone : la route remind-responses
   // (le serveur ne relance que les convoqués, « c oui »). STATS-FIX2 · 8-7 : la relance faite
@@ -2833,6 +2845,7 @@ function EventDetails({ navigation, route }) {
                   {canManageMatchStats ? (
                     <PostMatchJourneyCard
                       avantLaFin={!isMatchFinished}
+                      avecConvocation={matchHasConvocation}
                       boutonDesactive={isPostMatchDoorClosed}
                       feuilleBrouillonDepuis={matchStatsReport?.status === 'draft'
                         ? matchStatsReport?.updatedAt || matchStatsReport?.createdAt || ''
@@ -2854,6 +2867,7 @@ function EventDetails({ navigation, route }) {
                         openMatchStatsEditor();
                       }}
                       onRelancer={remindMissingResponders}
+                      presentsSansConvocation={matchPresentWithoutConvocation}
                       relanceEnCours={Boolean(remindResponsesMutation.isPending)}
                       relanceFaite={relanceDuJourCle === relanceCle}
                       reponsesAttendues={Number(
