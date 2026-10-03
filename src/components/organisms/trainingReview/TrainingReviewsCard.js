@@ -122,9 +122,12 @@ function LigneAnonymat({ text }) {
  * les notes sans mot regroupees ; plus de « Il en faut 2 » (le seuil vaut 1 depuis le 10/09).
  * @param {object} props - Les proprietes.
  * @param {any} props.donnees - La reponse de `GET /events/:id/training-reviews`.
+ * @param {boolean} [props.titleInside] - ST-RETOURS2 (planche 21, ordinateur) : le titre
+ *   DANS la carte, comme les autres cartes de la colonne de droite du site. Le telephone le
+ *   garde au-dessus (planche 21, telephone).
  * @returns {import('react').ReactElement} - Le bloc.
  */
-function TrainingReviewsCard({ donnees }) {
+function TrainingReviewsCard({ donnees, titleInside = false }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts,
@@ -279,9 +282,11 @@ function TrainingReviewsCard({ donnees }) {
     corps = <Text style={[Fonts.p2, Fonts.neutral200]}>{tauxDeReponse}</Text>;
   }
 
+  const titre = <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('stRetours.card.title')}</Text>;
+
   return (
     <View style={{ gap: 12 }}>
-      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('stRetours.card.title')}</Text>
+      {titleInside ? null : titre}
       <View
         style={{
           backgroundColor: withAlpha(Colors.primary700, 0.55),
@@ -292,6 +297,7 @@ function TrainingReviewsCard({ donnees }) {
           padding: 16,
         }}
       >
+        {titleInside ? titre : null}
         {corps}
         <LigneAnonymat text={t('stRetours.card.anonymous')} />
       </View>
