@@ -872,6 +872,29 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload, t,
   ]);
 
+  // 📐 ST-MATCH10-BIS (écran 10 des stats, état 10) — « Ouvrir la convocation » depuis la
+  // feuille de match VIDE, jumeau de `EventDetails.js` (mêmes conditions). Le site ne sait
+  // pas effacer un paramètre d'adresse sans l'écrire « undefined » : l'entrée d'historique
+  // est REMPLACÉE par l'adresse propre, puis la convocation s'ouvre par-dessus. Le retour du
+  // navigateur ramène donc à la page du match, sans rouvrir la convocation. Le verrou tient
+  // UNE ouverture par arrivée (même raison qu'au téléphone).
+  const convocationOuverteRef = useRef(false);
+  useEffect(() => {
+    if (highlightedSection !== 'convocation') {
+      convocationOuverteRef.current = false;
+      return;
+    }
+    if (convocationOuverteRef.current) return;
+    if (!canEdit || !supportsEventComposition) return;
+    if (isStaffCompositionFetching || !staffCompositionPayload) return;
+    convocationOuverteRef.current = true;
+    navigation.replace(RouteNames.EventDetails, { eventId });
+    handleManageComposition();
+  }, [
+    canEdit, eventId, handleManageComposition, highlightedSection, isStaffCompositionFetching,
+    navigation, staffCompositionPayload, supportsEventComposition,
+  ]);
+
   // 🚪 COMPO-WEB — LA PORTE « CONVOCATION PUBLIEE » DE L'ENTRAINEUR, SUR LE SITE.
   //
   // Sur le site, l'entraineur n'avait que l'ANCIEN terrain en lecture seule

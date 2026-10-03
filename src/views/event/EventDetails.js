@@ -4931,6 +4931,31 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload, t,
   ]);
 
+  // 📐 ST-MATCH10-BIS (écran 10 des stats, état 10) — « Ouvrir la convocation » depuis la
+  // feuille de match VIDE. La feuille ne sait pas bâtir une convocation : elle revient ici
+  // avec `focusSection: 'convocation'`, et la page ouvre SA porte — celle de la puce
+  // « Convocation » du menu Gérer, mêmes conditions — dès que la compo du staff est lue
+  // (jamais avant : on ouvrirait une compo vide par-dessus un brouillon). Le paramètre est
+  // effacé aussitôt : revenir de la convocation ne la rouvre pas. Le verrou tient UNE
+  // ouverture par arrivée : l'effacement du paramètre n'est pas immédiat, et un rendu
+  // intermédiaire rouvrirait la convocation par-dessus elle-même.
+  const convocationOuverteRef = useRef(false);
+  useEffect(() => {
+    if (highlightedSection !== 'convocation') {
+      convocationOuverteRef.current = false;
+      return;
+    }
+    if (convocationOuverteRef.current) return;
+    if (!canEdit || !supportsEventComposition) return;
+    if (isStaffCompositionFetching || !staffCompositionPayload) return;
+    convocationOuverteRef.current = true;
+    navigation.setParams?.({ focusSection: undefined });
+    handleManageComposition();
+  }, [
+    canEdit, handleManageComposition, highlightedSection, isStaffCompositionFetching, navigation,
+    staffCompositionPayload, supportsEventComposition,
+  ]);
+
   // H8 — la liste des bilans en attente, atteignable depuis la page du match.
   const openPendingMatchStatsList = useCallback(() => {
     navigation.navigate(RouteNames.PendingMatchStats);

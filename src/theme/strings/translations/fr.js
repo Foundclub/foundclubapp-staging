@@ -17366,6 +17366,7 @@ export default {
       answeredTitle: 'Ont répondu · {{n}}',
       clickHint: 'Clique une ligne pour ses chiffres et ton retour.',
       col: {
+        answer: 'Réponse',
         assists: 'Pas.',
         goals: 'Buts',
         minutes: 'Min',
@@ -17376,9 +17377,12 @@ export default {
         team: 'Éq.',
       },
       confirmEditable: 'Tu pourras la modifier et la republier.',
-      confirmReceiverOne: '{{name}} recevra ton retour individuel.',
-      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel.',
-      confirmReceiversMany_other: '{{names}} recevront leur retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiverOne: '{{name}} et, s’il est mineur, ses parents recevront ton retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel ; s’il est mineur, ses parents aussi.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_other: '{{names}} recevront leur retour individuel ; pour un mineur, ses parents aussi.',
       confirmRepublishTitle: 'Republier la feuille ?',
       // eslint-disable-next-line max-len
       confirmTeam: 'Les joueurs de l’équipe {{team}} verront le score, ta note de l’équipe et ton mot.',
@@ -17391,6 +17395,8 @@ export default {
         assists: 'Passes',
         minutes: 'Minutes',
       },
+      crumbMatch: 'Match',
+      crumbPlanning: 'Planning',
       draftError: 'Le brouillon n’a pas pu être enregistré. Réessaie.',
       draftSaved: 'Brouillon enregistré',
       draftSavedBody: 'Les joueurs ne voient rien tant que tu ne publies pas.',
@@ -17434,7 +17440,13 @@ export default {
       noPlayersToAnswer: 'Aucun joueur n’attend de questionnaire pour ce match.',
       noShowText: 'Ils ne comptent pas dans la feuille tant que l’appel n’est pas corrigé.',
       noShowTitle: 'Non pointés à l’appel',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
       officialLock: 'Score officiel de la fédération',
+      openConvocation: 'Ouvrir la convocation',
+      opponentUnknown: 'adversaire à confirmer',
       playersRatingHidden: 'Les joueurs : dès 3 réponses',
       // eslint-disable-next-line max-len
       privacyPlayer: 'Lu par {{name}} et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
@@ -17461,6 +17473,7 @@ export default {
         answered: 'A répondu',
         answeredTaken: 'A répondu · repris de sa réponse',
         notAnswered: 'Pas encore répondu',
+        notConvoked: 'Hors convocation',
         toCheck: 'À vérifier',
       },
       saveDraft: 'Brouillon',
@@ -17488,6 +17501,8 @@ export default {
       },
       title: 'Feuille de match',
       validate: 'Valider',
+      waitsForFixBoth: '« {{draft}} » et « {{publish}} » attendent la correction.',
+      waitsForFixOne: '« {{publish}} » attend la correction.',
     },
     gerer: {
       managerWho: 'Saisies par l’entraîneur de l’équipe, {{name}}',
