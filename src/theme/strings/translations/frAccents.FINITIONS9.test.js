@@ -145,3 +145,51 @@ describe('FINITIONS9 · point 5 — le balayage des valeurs de fr.js', () => {
     expect(lire('collectiviteCreneaux.formulaire.plateauNumero')).toBe('Plateau {{numero}}');
   });
 });
+
+// FINITIONS10 (03/10) — LE BALAYAGE 2, même méthode. Les mots dont la forme sans accent est
+// TOUJOURS fautive ; « bracket » est de l'anglais (« tableau final », le terme de l'app).
+const LISTE2 = [
+  '[Dd]etails?', '[Rr]eessayer', '[Cc]ategories?', '[Pp]eriodes?', '[Dd]etections?', '[Ee]lements?',
+  '[Rr]ecue?s?', '[Dd]ebuts?', '[Ee]nvoyee?s?', '[Cc]reee?s?', '[Tt]elecharger', '[Rr]epondue?s?',
+  '[Ee]tapes?', '[Ee]te', '[Cc]onfirmees?', '[Bb]rackets?',
+];
+const FAUTIVES2 = new RegExp(`(?<![\\p{L}])(?:${LISTE2.join('|')})(?![\\p{L}])`, 'u');
+
+describe('FINITIONS10 · point 2 — le balayage 2 des valeurs de fr.js', () => {
+  it('aucune valeur de fr.js ne porte plus un mot du balayage 2 sans son accent', () => {
+    const fautives = feuilles(fr)
+      .filter(([, valeur]) => typeof valeur === 'string' && FAUTIVES2.test(valeur.replace(/\{\{[^}]*\}\}/g, '')))
+      .map(([chemin, valeur]) => `${chemin} = ${valeur}`);
+
+    expect(fautives).toEqual([]);
+  });
+
+  // « Confirme / Publie / Invite » : l'impératif est correct (« Confirme ta présence »). Seuls
+  // les PARTICIPES (un statut, un état) sont relus à la main et corrigés.
+  it.each([
+    ['celebrationCatalog.licensePaymentConfirmed.title', 'Paiement confirmé'],
+    ['conversation.calendar.title', 'Match confirmé'],
+    ['eventDetails.noConfirmedParticipantYet', 'Aucun participant confirmé pour le moment.'],
+    ['leagueMatchDetails.workflow.confirmed', 'Confirmé'],
+    ['squadDetailsScreen.slots.confirmed', 'Confirmés'],
+    ['superAdminLicensesDashboard.paymentStats.confirmed', 'Confirmés'],
+    ['celebrationCatalog.eventPublished.title', 'Événement publié'],
+    ['squadDetailsScreen.reports.published', 'Publié'],
+    ['teamDetails.perf.published', 'Publié'],
+    ['eventWizard.steps.participants.internalInvitesAllMembers', 'Tous les membres invités'],
+    ['eventWizard.steps.participants.internalInvitesSelectedCount', '{{count}} membre(s) invité(s)'],
+    ['requestMappers.facility.subtitle', '{{team}} demande une place supplémentaire sur {{facility}} ({{overlap}}/{{max}} créneaux déjà pris).'],
+    ['tournamentManagement.bracketGenerated', 'Tableau final généré'],
+  ])('%s vaut « %s »', (chemin, attendu) => {
+    expect(lire(chemin)).toBe(attendu);
+  });
+
+  it.each([
+    ['squadDetailsScreen.actionCard.member.confirm', 'Confirme ta présence sur {{nextSlotLongLabel}}.'],
+    ['otp.title', 'Confirme ton numéro'],
+    ['tacticalBoard.publishYourLineup', 'Publie ta compo'],
+    ['teamDetails.invite.emptyTeamHint', "Invite un membre du club, ou partage un lien d'invitation."],
+  ])('JUMEAU : l impératif %s reste « %s »', (chemin, attendu) => {
+    expect(lire(chemin)).toBe(attendu);
+  });
+});
