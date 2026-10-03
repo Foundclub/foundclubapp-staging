@@ -5370,6 +5370,8 @@ export default {
       capacite_one: '{{count}} team at a time',
       capacite_other: '{{count}} teams at a time',
       complet: 'full {{moment}}',
+      // COLL-C2B-BIS (03/10) — board 21: the small "…" menu on desktop.
+      fermerMenu: 'Close the menu',
       modifier: 'Edit the facility',
       ouvrir: '{{nom}}: its slots and its schedule',
       plusActions: 'More actions for {{nom}}',

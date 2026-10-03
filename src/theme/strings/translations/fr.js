@@ -5734,6 +5734,8 @@ export default {
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
       complet: 'complet {{moment}}',
+      // COLL-C2B-BIS (03/10) — planche 21 : le petit menu « … » sur ordinateur.
+      fermerMenu: 'Fermer le menu',
       modifier: 'Modifier l’installation',
       ouvrir: '{{nom}} : ses créneaux et son planning',
       plusActions: 'Plus d’actions pour {{nom}}',
