@@ -154,6 +154,29 @@ export const resolveCoachStep = (prompt) => {
 };
 
 /**
+ * FINITIONS11 · point 2 (écran 1, planche « Rappel d'après-match de l'entraîneur ») — le titre
+ * de la fenêtre de l'entraîneur : « AS Montrivage — Test-COMPO », et « AS Montrivage —
+ * adversaire à confirmer » tant qu'il est inconnu. Le serveur nomme l'adversaire
+ * (`opponentName`, `null` s'il est inconnu). Un serveur d'avant ne rend pas le champ : le titre
+ * d'avant (`label`) reste. Même règle que la feuille de match (`MatchStatsEditor`).
+ * @param {any} prompt - Le rappel d'entraîneur.
+ * @param {string} ourSide - Le camp de gauche : le club, sinon l'équipe.
+ * @returns {string} Le titre.
+ */
+export const describeCoachPromptTitle = (prompt, ourSide) => {
+  const label = prompt?.label || 'Match';
+  const serverNamesOpponent = prompt?.sourceType === 'event'
+    && Object.prototype.hasOwnProperty.call(prompt || {}, 'opponentName');
+  const side = String(ourSide || '').trim();
+  if (!serverNamesOpponent || !side) return label;
+  const opponent = String(prompt?.opponentName || '').trim();
+  return [
+    side,
+    opponent || i18next.t('stMatch.feuille.opponentUnknown', 'adversaire à confirmer'),
+  ].join(' — ');
+};
+
+/**
  * « 0 sur 1 joueur a répondu ». Le rappel ne porte pas ce compte (le serveur le
  * calcule pour la feuille) : la fenêtre le lit dans la feuille de l'entraîneur
  * (`match-stats`, liste `playerResponses`), lue seulement quand elle s'ouvre.
