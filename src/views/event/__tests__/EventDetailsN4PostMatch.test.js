@@ -25,6 +25,8 @@ const mockRemindMutate = jest.fn();
 const mockRemindMatchMutateAsync = jest.fn();
 const mockNavigate = jest.fn();
 const mockStartWhisperChat = jest.fn();
+// ST-MONMATCH (écran 2, état 3) — « Présent » sur la ligne d'un absent à l'appel.
+const mockUpdateLateMutate = jest.fn();
 const mockEventQuery = { data: null };
 const mockMatchStatsQuery = { data: null };
 const mockMyMatchResponseQuery = { data: null };
@@ -211,7 +213,7 @@ jest.mock('../hooks/useEventMutations', () => {
       sosAlertMutation: idleMutation(),
       updateEventMutation: idleMutation(),
       updateEventNoNavMutation: idleMutation(),
-      updateLateMinutesMutation: idleMutation(),
+      updateLateMinutesMutation: { isPending: false, mutate: mockUpdateLateMutate },
     }),
   };
 });
@@ -1098,6 +1100,28 @@ describe('ST-MONMATCH écran 12 — « Mon match » sur la fiche du match', () =
     expect(parTestID(root, 'st-match-absent-a-l-appel')).toHaveLength(1);
     expect(parTestID(root, 'st-monmatch')).toHaveLength(0);
     expect(root.findAll((/** @type {any} */ n) => n.props?.title === 'Donner mon retour')).toHaveLength(0);
+  });
+
+  test('écran 2, état 3 — l entraîneur corrige l appel d un geste : « Présent » passe le joueur à l heure', () => {
+    allerSurLOnglet(monter({ matchStats: statsAvec({ score: SCORE }) }), 'participants');
+    const liste = propsDesParticipants[propsDesParticipants.length - 1];
+
+    expect(liste.rouvreLeQuestionnaire).toBe(true);
+    act(() => { liste.onCoachMarkPresent({ documentId: JOUEUR }); });
+    expect(mockUpdateLateMutate).toHaveBeenCalledWith({
+      eventId: 'event-1',
+      payload: { lateMinutes: 0, note: null },
+      userId: JOUEUR,
+    });
+  });
+
+  test('écran 2, état 3 — avant la fin du match, la liste ne parle pas de questionnaire', () => {
+    allerSurLOnglet(monter({
+      event: { ...MATCH_FINI, date: '2099-01-01T10:00:00.000Z', endDate: '2099-01-01T12:00:00.000Z' },
+      matchStats: statsAvec({ score: SCORE }),
+    }), 'participants');
+
+    expect(propsDesParticipants[propsDesParticipants.length - 1].rouvreLeQuestionnaire).toBe(false);
   });
 
   test('🔒 FUITE — le joueur ne voit QUE lui, même si une feuille d ancien serveur lui en envoyait plus', () => {

@@ -17187,8 +17187,12 @@ export default {
       closedExplain: "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin.",
       marked_one: '{{count}} pointé',
       marked_other: '{{count}} pointés',
+      markPresent: 'Présent',
+      markPresentA11y: 'Passer {{name}} présent',
       neverSeen_one: '{{count}} jamais vu',
       neverSeen_other: '{{count}} jamais vus',
+      reopens: 'Passer un joueur présent rouvre son questionnaire de match.',
+      reopensNamed: 'Passer {{name}} présent rouvre son questionnaire de match.',
       serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
     },
     attente: {

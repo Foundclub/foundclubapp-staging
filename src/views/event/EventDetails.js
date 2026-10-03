@@ -5350,6 +5350,19 @@ function EventDetails({ navigation, route }) {
     openCoachLateModal(targetUser, 'coach_edit');
   }, [openCoachLateModal]);
 
+  // 🚪 ST-MONMATCH (écran 2, état 3) — « Présent » sur la ligne d'un absent à l'appel : la
+  // correction SANS fenêtre du serveur (`patchLate`, retard 0 ⇒ arrivé à l'heure, au coup
+  // d'envoi). L'absence signée n'existe plus : sur un match fini, le serveur rouvre son
+  // questionnaire tout seul (`findSignedAbsenceForUser`).
+  const handleCoachMarkPresent = useCallback((/** @type {User | undefined} */ targetUser) => {
+    if (!eventId || !targetUser?.documentId) return;
+    /** @type {any} */ (mutations.updateLateMinutesMutation).mutate({
+      eventId,
+      payload: { lateMinutes: 0, note: null },
+      userId: targetUser.documentId,
+    });
+  }, [eventId, mutations.updateLateMinutesMutation]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleSetLatePreset = useCallback((value) => {
     setLateModalMinutes(String(value));
@@ -8511,9 +8524,11 @@ function EventDetails({ navigation, route }) {
                   nowMs={serverNowMs}
                   onCandidatePress={handleOpenDetectionCandidate}
                   onCoachEditLate={handleCoachEditLate}
+                  onCoachMarkPresent={handleCoachMarkPresent}
                   participantsSummary={participantsSummary}
                   participationsByStatus={participationsByStatus}
                   pendingParticipations={pendingParticipations}
+                  rouvreLeQuestionnaire={Boolean(isMatchEvent && isMatchFinished)}
                   teamParticipationSections={teamParticipationSections}
                 />
               ) : null}

@@ -16404,8 +16404,12 @@ export default {
       closedExplain: 'Roll call is closed. It stayed open until 2 h after the end.',
       marked_one: '{{count}} checked',
       marked_other: '{{count}} checked',
+      markPresent: 'Present',
+      markPresentA11y: 'Mark {{name}} present',
       neverSeen_one: '{{count}} never seen',
       neverSeen_other: '{{count}} never seen',
+      reopens: 'Marking a player present reopens their match questionnaire.',
+      reopensNamed: 'Marking {{name}} present reopens their match questionnaire.',
       serverWill: 'The server will mark them « Not checked » after the end, around',
     },
     attente: {
