@@ -564,3 +564,30 @@ describe('T9 · la clôture de l appel s accorde, et vaut pour tout événement'
     expect(texte).toContain('Le serveur les passera en « Non pointé » après la fin, vers 20:13.');
   });
 });
+
+// FINITIONS12-STATS · POINT 8 (tournee T11, S02_2) — Hugo pointe ABSENT, Recette sans rien : le
+// compteur du haut disait « 1/2 », la cloture « 0 pointé · 2 jamais vus » et nommait Hugo. Une
+// absence posee a la main EST un pointage (`countCalled`, la regle du compteur du haut) : la
+// cloture compte et nomme avec la meme.
+describe('FINITIONS12-STATS · point 8 — la cloture compte comme le compteur du haut', () => {
+  test('🐞 un absent pointe, un jamais vu : « 1 pointé · 1 jamais vu », un seul nomme', async () => {
+    const absentALAppel = {
+      ...ligne({ firstname: 'Hugo', userId: 'u1' }),
+      attendance: {
+        arrivedAt: null, lateMinutes: 0, note: null, source: 'coach_manual',
+      },
+      attendanceStatus: 'no_show',
+    };
+    const arbre = await monter([absentALAppel, ligne({ firstname: 'Recette', userId: 'u2' })]);
+
+    await act(async () => { appuyable(arbre, "Clôturer l'appel").props.onPress(); });
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('1 pointé · 1 jamais vu');
+    expect(texte).not.toContain('0 pointé');
+    expect(texte).toContain('0 arrivé·e à l’heure');
+    const liste = texte.slice(texte.indexOf('vers 20:13'));
+    expect(liste).toContain('Recette');
+    expect(liste).not.toContain('Hugo');
+  });
+});
