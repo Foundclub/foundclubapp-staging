@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
+import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import {
   CLOSURE_REASONS,
   closureDaysLabel,
@@ -485,11 +486,17 @@ function FormulaireDeFermeture({
           </Text>
           {installation?.maxSlots ? (
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('collectiviteCreneaux.liste.capacite', {
-                count: Number(installation.maxSlots) || 1,
-                defaultValue_one: '{{count}} équipe à la fois',
-                defaultValue_other: '{{count}} équipes à la fois',
-              })}
+              {[
+                t('collectiviteCreneaux.liste.capacite', {
+                  count: Number(installation.maxSlots) || 1,
+                  defaultValue_one: '{{count}} équipe à la fois',
+                  defaultValue_other: '{{count}} équipes à la fois',
+                }),
+                // COLL-C4B-BIS : fermer = des journees ; la planche (etat 1) dit les horaires.
+                bloquer
+                  ? null
+                  : formatOpeningHours(installation.openingTime, installation.closingTime),
+              ].filter(Boolean).join(' · ')}
             </Text>
           ) : null}
         </View>

@@ -77,7 +77,9 @@ jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: j
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteInstallations: () => ({
     data: [
-      { documentId: 'gym-tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls' },
+      {
+        closingTime: '22:00:00.000', documentId: 'gym-tilleuls', maxSlots: 2, name: 'Gymnase des Tilleuls', openingTime: '08:00:00.000',
+      },
       { documentId: 'dojo', maxSlots: 1, name: 'Dojo municipal' },
     ],
   }),
@@ -269,4 +271,14 @@ test('C4B-BIS-1/5 le PANNEAU : titre de la planche, sans choix d installation ; 
   expect(croix.props.accessibilityLabel).toBe('Fermer le panneau');
   await act(async () => { croix.props.onPress(); });
   expect(onCancel).toHaveBeenCalled();
+});
+
+test('C4B-BIS-5/1 telephone, « Fermer » : la boite de l installation dit aussi ses horaires (etat 1) ; « Bloquer », la capacite seule (etat 3)', async () => {
+  mockOrdinateur = false;
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' };
+  const arbre = await rendre(<CollectiviteFermeture />);
+  expect(textes(arbre)).toContain('2 équipes à la fois · 08:00 – 22:00');
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'bloquer' };
+  const arbreBloquer = await rendre(<CollectiviteFermeture />);
+  expect(textes(arbreBloquer)).toContain('2 équipes à la fois');
 });
