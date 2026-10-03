@@ -46,6 +46,7 @@ import {
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
   capitalize,
+  finDuCreneau,
   fromMinutes,
   fullMomentsOfPlanning,
   isoWeekdayOf,
@@ -743,8 +744,11 @@ function PlanningWeekFullscreen() {
           debut: brut.slot?.validFrom
             ? format(parseISO(brut.slot.validFrom), 'd MMM', { locale: localeDesDates() })
             : '',
-          fin: brut.slot?.validUntil
-            ? format(parseISO(brut.slot.validUntil), 'd MMM', { locale: localeDesDates() })
+          // FINITIONS12-COLL : le dernier jour où il a lieu (retiré : la veille ; T11, C23).
+          fin: finDuCreneau(brut.slot)
+            ? format(parseISO(String(finDuCreneau(brut.slot))), 'd MMM', {
+              locale: localeDesDates(),
+            })
             : '',
           jour: weekdayName(brut.slot?.weekday).toLocaleLowerCase(),
           ...SANS_ECHAPPEMENT,

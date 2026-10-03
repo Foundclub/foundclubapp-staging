@@ -9,6 +9,7 @@ import {
 
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import {
+  finDuCreneau,
   formatDay,
   fromMinutes,
   fullRangesOfSlots,
@@ -265,11 +266,12 @@ function InstallationCreneaux() {
   const libelleDuCreneau = (/** @type {any} */ creneau) => [
     timeRange(creneau.startTime, creneau.endTime),
     creneau.plateau?.name || null,
+    // FINITIONS12-COLL (03/10) — la fin écrite : le dernier jour où il a lieu (T11, C23).
     meta.season && (creneau.validFrom !== meta.season.validFrom
-      || creneau.validUntil !== meta.season.validUntil)
+      || finDuCreneau(creneau) !== meta.season.validUntil)
       ? t('collectiviteCreneaux.creneaux.du', 'du {{debut}} au {{fin}}', {
         debut: jourCourt(creneau.validFrom),
-        fin: jourCourt(creneau.validUntil),
+        fin: jourCourt(finDuCreneau(creneau)),
         ...SANS_ECHAPPEMENT,
       })
       : null,
