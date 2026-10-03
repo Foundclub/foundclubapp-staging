@@ -413,4 +413,7 @@ export const RouteNames = /** @type {const} */ ({
   // fermeture (design HY521H1, page 4, P4v3-fermer). D16 : les clubs sont prevenus, rien n est
   // annule.
   CollectiviteFermeture: 'CollectiviteFermeture',
+  // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
+  // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
+  CollectiviteChiffres: 'CollectiviteChiffres',
 });

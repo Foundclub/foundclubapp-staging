@@ -23,6 +23,7 @@ import {
   getAdminCollectiviteInvitations,
   getAdminCollectivites,
   getAdminManagerRequests,
+  getCollectiviteChiffres,
   getCollectiviteClub,
   getCollectiviteClubs,
   getCollectiviteInstallations,
@@ -231,6 +232,42 @@ export const useCollectiviteClub = (collectiviteId, clubId, options = {}) => use
     return response?.data ?? null;
   },
   queryKey: collectiviteClubQueryKey(collectiviteId, clubId),
+  staleTime: 60_000,
+  ...options,
+});
+
+// ─── COLL-C5 (03/10/2026) : LES CHIFFRES DE LA VILLE ────────────────────────────────────
+
+/**
+ * La clef des chiffres d une collectivite sur une periode.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {string} periode - semaine | mois | saison.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteChiffresQueryKey = (collectiviteId, periode) => [
+  'collectivite', collectiviteId, 'chiffres', periode,
+];
+
+/**
+ * Les chiffres de la Ville (contrat admin/docs/CONTRAT_CHIFFRES_VILLE.md) : la page « Chiffres »,
+ * la jauge de l accueil (`semaine`) et l « Utilisation » de la fiche d un club (`saison`) lisent
+ * la meme clef : une periode deja lue n est pas redemandee.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {'semaine' | 'mois' | 'saison'} [periode] - La periode (`semaine` par defaut).
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {any} Le resultat react-query ; `data` est la reponse, ou null.
+ */
+export const useCollectiviteChiffres = (
+  collectiviteId,
+  periode = 'semaine',
+  options = {},
+) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: async () => {
+    const reponse = await getCollectiviteChiffres(String(collectiviteId), periode);
+    return reponse?.data ?? null;
+  },
+  queryKey: collectiviteChiffresQueryKey(collectiviteId, periode),
   staleTime: 60_000,
   ...options,
 });

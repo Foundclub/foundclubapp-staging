@@ -11,6 +11,11 @@ import {
 } from 'react-native';
 
 import {
+  dureeLisible,
+  tauxLisible,
+  tauxTenues,
+} from '@/domains/collectivite/collectiviteChiffres';
+import {
   ligneSeancesDeLaSemaine,
   nombreOuTiret,
 } from '@/domains/collectivite/collectiviteClubsDisplay';
@@ -33,6 +38,7 @@ import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirige
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  useCollectiviteChiffres,
   useCollectiviteClub,
   useCollectiviteInstallations,
   useMyCollectivites,
@@ -151,7 +157,9 @@ function AttribuerAuClub({
  *   - (« Ses creneaux de la Ville » : BRANCHE par COLL-C2B le 02/10 — les creneaux de saison
  *     du club, et « Attribuer un creneau a ce club » pour le gestionnaire ; temoins
  *     CollectiviteClubDetails.COLL-C2B.creneaux et, cote serveur, COLL-C2B-fiche-club-creneaux) ;
- *   - « Utilisation » : plus tard (lot C5) ;
+ *   - (« Utilisation » : BRANCHE par COLL-C5 le 03/10 — la saison du club lue dans les chiffres
+ *     de la Ville, contrat admin/docs/CONTRAT_CHIFFRES_VILLE.md §6 ; temoin
+ *     CollectiviteClubDetails.COLL-C5.utilisation) ;
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteClubDetails() {
@@ -171,6 +179,8 @@ function CollectiviteClubDetails() {
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
   const fiche = useCollectiviteClub(collectiviteId, clubId);
   const club = /** @type {any} */ (fiche.data) || null;
+  // COLL-C5 (03/10) : « Utilisation » lit la SAISON de la Ville (la clef de la page « Chiffres »).
+  const saison = useCollectiviteChiffres(collectiviteId, 'saison');
 
   const ouvrir = (/** @type {string} */ adresse) => {
     Linking.openURL(adresse).catch(() => {});
@@ -571,21 +581,82 @@ function CollectiviteClubDetails() {
     );
   };
 
-  const renderUtilisation = () => (
-    <BlocDeFiche
-      etiquette={t('collectiviteClubs.detail.usageLater', 'plus tard')}
-      testID="fiche-club-utilisation"
-      titre={t('collectiviteClubs.detail.usage', 'Utilisation')}
-    >
-      <Text style={[Fonts.p3, Fonts.neutral300]}>
-        {t(
-          'collectiviteClubs.detail.usageSoon',
-          // eslint-disable-next-line max-len
-          'Bientôt : les heures réservées, les séances tenues et annulées, de quoi répondre au conseil municipal.',
-        )}
-      </Text>
-    </BlocDeFiche>
-  );
+  // COLL-C5 (03/10) — planche 37 : la saison de CE club (contrat §6). Un club sans seance n a pas
+  // de ligne : 0 h, pas de pourcentage. En lecture « … », en panne « — » : jamais un 0 invente.
+  const renderUtilisation = () => {
+    const lignes = /** @type {any} */ (saison.data)?.clubs;
+    const ligne = Array.isArray(lignes)
+      ? (lignes.find((/** @type {any} */ l) => l?.documentId === club?.documentId) || {
+        annulees: 0, fermeture: 0, minutes: 0, tenues: 0,
+      })
+      : null;
+    let valeurs = { annulees: '—', heures: '—', tenues: '—' };
+    if (saison.isLoading) valeurs = { annulees: '…', heures: '…', tenues: '…' };
+    else if (ligne) {
+      valeurs = {
+        annulees: String(Number(ligne.annulees) || 0),
+        heures: dureeLisible(Number(ligne.minutes) || 0),
+        tenues: tauxLisible(tauxTenues(ligne)),
+      };
+    }
+    const chiffres = [
+      {
+        cle: 'heures',
+        libelle: t('collectiviteChiffres.utilisation.heures', 'réservées cette saison'),
+        valeur: valeurs.heures,
+      },
+      {
+        cle: 'tenues',
+        libelle: t('collectiviteChiffres.utilisation.tenues', 'séances tenues'),
+        valeur: valeurs.tenues,
+      },
+      {
+        cle: 'annulees',
+        libelle: t('collectiviteChiffres.utilisation.annulees', 'annulées'),
+        valeur: valeurs.annulees,
+      },
+    ];
+    const fermeture = Number(ligne?.fermeture) || 0;
+    return (
+      <BlocDeFiche
+        testID="fiche-club-utilisation"
+        titre={t('collectiviteClubs.detail.usage', 'Utilisation')}
+      >
+        <View style={[Alignments.row, { gap: 8 }]}>
+          {chiffres.map((chiffre) => (
+            <View key={chiffre.cle} style={{ flex: 1 }}>
+              <Text style={[Fonts.h3Black, Fonts.neutral00]}>{chiffre.valeur}</Text>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>{chiffre.libelle}</Text>
+            </View>
+          ))}
+        </View>
+        {fermeture > 0 ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('collectiviteChiffres.utilisation.fermeture', {
+              count: fermeture,
+              defaultValue_one:
+                '{{count}} séance touchée par une fermeture de la Ville : '
+                + 'elle n’est pas comptée comme annulée.',
+              defaultValue_other:
+                '{{count}} séances touchées par une fermeture de la Ville : '
+                + 'elles ne sont pas comptées comme annulées.',
+            })}
+          </Text>
+        ) : null}
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {saison.error
+            ? t(
+              'collectiviteChiffres.utilisation.erreur',
+              'Les chiffres de la saison n’ont pas pu être lus.',
+            )
+            : t(
+              'collectiviteChiffres.utilisation.pourquoi',
+              'De quoi répondre au conseil municipal : qui utilise vraiment quoi.',
+            )}
+        </Text>
+      </BlocDeFiche>
+    );
+  };
 
   // « la Ville de Montrivage » : le nom officiel avec son article (bandeau « Offert par », 1d).
   const ville = collectivite?.name

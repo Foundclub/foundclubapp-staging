@@ -298,6 +298,8 @@ const WEB_ROUTE_PATTERNS = {
   // COLL-C4B (02/10/2026) — fermer, bloquer, modifier (l installation, le mode, la fermeture et le
   // jour d un blocage voyagent en parametres).
   [RouteNames.CollectiviteFermeture]: '/collectivite/:collectiviteId/fermeture',
+  // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export.
+  [RouteNames.CollectiviteChiffres]: '/collectivite/:collectiviteId/chiffres',
 };
 
 const normalizePathValue = (value) => String(value || '').trim();

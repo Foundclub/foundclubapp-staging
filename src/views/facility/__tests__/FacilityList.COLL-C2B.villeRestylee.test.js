@@ -335,3 +335,16 @@ describe('COLL-C2B planche 1 — le mode CLUB ne change pas', () => {
     expect(mockSemainesDemandees.at(-1) || []).toEqual([]);
   });
 });
+
+// COLL-C5 (03/10/2026) — design P5v3 : la page « Chiffres » se range sous le planning de la Ville.
+describe('COLL-C5 — « Chiffres et export » depuis le planning de la Ville', () => {
+  it('le lien ouvre les chiffres de CETTE Ville ; un club ne le voit pas', () => {
+    const arbre = rendre();
+    act(() => { parTexte(arbre, 'Chiffres et export').props.onPress(); });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteChiffres', {
+      collectiviteId: 'ville-montrivage',
+    });
+    mockRoute = { params: {} };
+    expect(textes(rendre())).not.toContain('Chiffres et export');
+  });
+});

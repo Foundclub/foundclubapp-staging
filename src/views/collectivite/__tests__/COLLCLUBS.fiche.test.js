@@ -64,6 +64,8 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  // COLL-C5 (03/10) : « Utilisation » lit la saison (temoin COLL-C5.utilisation).
+  useCollectiviteChiffres: () => ({ data: null, error: null, isLoading: false }),
   useCollectiviteClub: () => mockFiche,
   useCollectiviteInstallations: () => ({ data: [] }),
   useMyCollectivites: () => ({
