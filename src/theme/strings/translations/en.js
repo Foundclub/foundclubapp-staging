@@ -5802,6 +5802,18 @@ export default {
   },
   // COLL-C5 (03/10/2026) — the City's figures (same keys as fr.js).
   collectiviteChiffres: {
+    // COLL-AFFICHE (03/10/2026) — "A poster for the facility" (board 30 B, Adel's decision "affiche A").
+    affiche: {
+      detail: 'PDF · one week · {{installation}}',
+      erreur: 'The poster could not be downloaded.',
+      installation: 'Facility',
+      ok: 'Poster saved: {{fichier}}',
+      sansInstallation: 'PDF · one week · no facility yet',
+      semaine: 'Week',
+      semainePrecedente: 'Previous week',
+      semaineSuivante: 'Next week',
+      titre: 'A poster for the facility',
+    },
     clubs: {
       aucune: 'No session in this period.',
       surPlusieurs: '{{total}} sessions across {{installations}} facilities.',

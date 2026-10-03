@@ -5,13 +5,19 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
 import {
   avecMarqueUtf8,
+  dimancheDe,
   dureeLisible,
+  installationParDefaut,
   largeurBarre,
+  lundiDecale,
+  lundiDeMaintenant,
+  nomDuFichierAffiche,
   nomDuFichierExporte,
   PERIODES_CHIFFRES,
   phraseDelai,
@@ -21,12 +27,14 @@ import {
   tauxLisible,
 } from '@/domains/collectivite/collectiviteChiffres';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import { formatPeriod } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -35,10 +43,15 @@ import {
   useCollectiviteChiffres,
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
-import { getCollectiviteChiffresExport } from '@/services/collectivite/collectiviteService';
+import {
+  getCollectiviteChiffresExport,
+  requeteAfficheInstallation,
+} from '@/services/collectivite/collectiviteService';
 
 // Résolution par suffixe de plateforme (`.native.js` / `.web.js`), comme `downloadRemoteFile` :
 // le contrôle de types ne voit aucun fichier à ce chemin exact.
+// @ts-ignore -- cf. ci-dessus
+import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 // @ts-ignore -- cf. ci-dessus
 import { saveTextFile } from '@/platform/media/saveTextFile';
 import { useIsDesktop } from '@/responsive';
@@ -130,6 +143,70 @@ function LigneABarre({
 }
 
 /**
+ * Une sortie du panneau « Exporter le planning » (design P5v3, écran B : `.radio-row`).
+ * @param {{
+ *   coche: boolean, detail: string, inactif?: boolean, onPress: () => void, testID: string,
+ *   titre: string,
+ * }} props
+ * @returns {import('react').ReactElement} La sortie.
+ */
+function ChoixDeSortie({
+  coche, detail, inactif = false, onPress, testID, titre,
+}) {
+  const { Colors, Fonts, Spaces } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityRole="radio"
+      accessibilityState={{ checked: coche, disabled: inactif }}
+      disabled={inactif}
+      onPress={onPress}
+      style={[
+        Spaces.padding[12],
+        {
+          borderColor: coche ? Colors.primary500 : withAlpha(Colors.neutral00, 0.12),
+          borderRadius: 12,
+          borderWidth: 1,
+          gap: 2,
+          opacity: inactif ? 0.5 : 1,
+        },
+      ]}
+      testID={testID}
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titre}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>{detail}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * La flèche « Semaine précédente » / « Semaine suivante » de l'affiche (COLL-AFFICHE).
+ * @param {{ etiquette: string, icone: string, onPress: () => void }} props
+ * @returns {import('react').ReactElement} Le bouton.
+ */
+function BoutonDeSemaine({ etiquette, icone, onPress }) {
+  const { Alignments, Colors } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityLabel={etiquette}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[
+        Alignments.center,
+        {
+          borderColor: withAlpha(Colors.neutral00, 0.12),
+          borderRadius: 12,
+          borderWidth: 1,
+          height: 44,
+          width: 44,
+        },
+      ]}
+    >
+      <SvgIcon color={Colors.neutral00} height={14} name={icone} width={14} />
+    </TouchableOpacity>
+  );
+}
+
+/**
  * 🏛️ LES CHIFFRES DE LA VILLE — COLL-C5 (03/10/2026), design HY521H1, page 5, point E
  * (« P5v3-chiffres », écrans A et B). Ce que le service des sports doit pouvoir dire au conseil
  * municipal : qui utilise quoi, combien d'heures.
@@ -143,8 +220,11 @@ function LigneABarre({
  * admin/docs/CONTRAT_CHIFFRES_VILLE.md) ; l'écran met en mots, il ne recalcule rien. 🔒 Aucune
  * personne : des installations, des clubs, des nombres.
  *
- * CE QUI MANQUE, NOMMÉ : « Une affiche pour l'installation » (PDF d'une semaine, écran B) n'est pas
- * construite — il lui faut un gabarit du service de rendu des affiches (question posée au chef).
+ * COLL-AFFICHE (03/10/2026, décision d'Adel « affiche A ») — l'autre sortie de l'écran B, « Une
+ * affiche pour l'installation » : le PDF du planning d'UNE installation pour UNE semaine, que le
+ * serveur fabrique (`GET /collectivites/:id/chiffres/affiche`, contrat §7 bis). Elle vient en
+ * premier, cochée, comme sur la planche ; on choisit l'installation et la semaine, puis
+ * « Télécharger ».
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteChiffres() {
@@ -165,29 +245,83 @@ function CollectiviteChiffres() {
 
   const [exportOuvert, setExportOuvert] = useState(false);
   const [exportEtat, setExportEtat] = useState(
-    /** @type {{ enCours: boolean, erreur: string | null, fichier: string | null }} */ ({
-      enCours: false, erreur: null, fichier: null,
+    /** @type {{ enCours: boolean, erreur: string | null, ok: string | null }} */ ({
+      enCours: false, erreur: null, ok: null,
     }),
   );
+  // COLL-AFFICHE (03/10) — la sortie choisie, l'installation et le lundi de la semaine.
+  const [sortie, setSortie] = useState(/** @type {'affiche' | 'tableau'} */ ('affiche'));
+  const [installationChoisie, setInstallationChoisie] = useState(
+    /** @type {string | null} */ (null),
+  );
+  const [lundi, setLundi] = useState(/** @type {string | null} */ (null));
+  const installations = Array.isArray(data?.installations) ? data.installations : [];
+  const installation = installations.find(
+    (/** @type {any} */ i) => i?.documentId === installationChoisie,
+  ) || null;
   const ouvrirExport = () => {
-    setExportEtat({ enCours: false, erreur: null, fichier: null });
+    setExportEtat({ enCours: false, erreur: null, ok: null });
+    // L'affiche d'abord, comme la planche, sur l'installation la plus utilisée ; le tableau seul
+    // s'il n'y a aucune installation. La semaine : celle des chiffres (lue à Paris par le
+    // serveur) quand la page lit une semaine, sinon celle où l'on est.
+    const parDefaut = installationParDefaut(data?.installations);
+    setSortie(parDefaut ? 'affiche' : 'tableau');
+    setInstallationChoisie(parDefaut?.documentId || null);
+    setLundi((periode === 'semaine' && lundiDecale(data?.from)) || lundiDeMaintenant());
     setExportOuvert(true);
   };
-  const telecharger = async () => {
+  const telechargerTableau = async () => {
     const fichier = nomDuFichierExporte(collectivite?.name, periode, data?.from);
-    setExportEtat({ enCours: true, erreur: null, fichier: null });
+    setExportEtat({ enCours: true, erreur: null, ok: null });
     try {
       const csv = await getCollectiviteChiffresExport(String(collectiviteId), periode);
       await saveTextFile({ contenu: avecMarqueUtf8(csv), fileName: fichier, mimeType: 'text/csv' });
-      setExportEtat({ enCours: false, erreur: null, fichier });
+      setExportEtat({
+        enCours: false,
+        erreur: null,
+        ok: t('collectiviteChiffres.export.ok', 'Tableau enregistré : {{fichier}}', {
+          fichier,
+          ...SANS_ECHAPPEMENT,
+        }),
+      });
     } catch {
       setExportEtat({
         enCours: false,
         erreur: t('collectiviteChiffres.export.erreur', 'Le tableau n’a pas pu être téléchargé.'),
-        fichier: null,
+        ok: null,
       });
     }
   };
+  // Le PDF vient d'une route GARDÉE : `downloadRemoteFile` le rapatrie avec le jeton du compte.
+  const telechargerAffiche = async () => {
+    if (!installation || !lundi) return;
+    const fichier = nomDuFichierAffiche(installation.name, lundi);
+    setExportEtat({ enCours: true, erreur: null, ok: null });
+    try {
+      const { headers, url } = requeteAfficheInstallation(String(collectiviteId), {
+        installation: installation.documentId,
+        semaine: lundi,
+      });
+      await downloadRemoteFile({
+        fileName: fichier, headers, mimeType: 'application/pdf', url,
+      });
+      setExportEtat({
+        enCours: false,
+        erreur: null,
+        ok: t('collectiviteChiffres.affiche.ok', 'Affiche enregistrée : {{fichier}}', {
+          fichier,
+          ...SANS_ECHAPPEMENT,
+        }),
+      });
+    } catch {
+      setExportEtat({
+        enCours: false,
+        erreur: t('collectiviteChiffres.affiche.erreur', 'L’affiche n’a pas pu être téléchargée.'),
+        ok: null,
+      });
+    }
+  };
+  const telecharger = () => (sortie === 'affiche' ? telechargerAffiche() : telechargerTableau());
 
   const libellesPeriode = {
     mois: t('collectiviteChiffres.periodes.mois', 'Ce mois'),
@@ -412,45 +546,119 @@ function CollectiviteChiffres() {
           <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
             {t('collectiviteChiffres.export.pourQuoi', 'Pour quoi faire')}
           </Text>
-          <View
-            accessibilityRole="radio"
-            accessibilityState={{ checked: true }}
-            style={[
-              Spaces.padding[12],
-              {
-                borderColor: Colors.primary500,
-                borderRadius: 12,
-                borderWidth: 1,
-                gap: 2,
-              },
-            ]}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t('collectiviteChiffres.export.tableau', 'Un tableau pour le service')}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'collectiviteChiffres.export.tableauDetail',
-                'Tableur · toutes les séances · {{periode}}',
-                { periode: intervalle, ...SANS_ECHAPPEMENT },
+          <ChoixDeSortie
+            coche={sortie === 'affiche'}
+            detail={installation
+              ? t('collectiviteChiffres.affiche.detail', 'PDF · une semaine · {{installation}}', {
+                installation: installation.name,
+                ...SANS_ECHAPPEMENT,
+              })
+              : t(
+                'collectiviteChiffres.affiche.sansInstallation',
+                'PDF · une semaine · aucune installation pour l’instant',
               )}
-            </Text>
-          </View>
+            inactif={installations.length === 0}
+            onPress={() => setSortie('affiche')}
+            testID="export-affiche"
+            titre={t('collectiviteChiffres.affiche.titre', 'Une affiche pour l’installation')}
+          />
+          <ChoixDeSortie
+            coche={sortie === 'tableau'}
+            detail={t(
+              'collectiviteChiffres.export.tableauDetail',
+              'Tableur · toutes les séances · {{periode}}',
+              { periode: intervalle, ...SANS_ECHAPPEMENT },
+            )}
+            onPress={() => setSortie('tableau')}
+            testID="export-tableau"
+            titre={t('collectiviteChiffres.export.tableau', 'Un tableau pour le service')}
+          />
+          {sortie === 'affiche' && installation ? (
+            <View style={{ gap: 8 }}>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                {t('collectiviteChiffres.affiche.installation', 'Installation')}
+              </Text>
+              <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
+                {installations.map((/** @type {any} */ i) => {
+                  const choisie = i?.documentId === installationChoisie;
+                  return (
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: choisie }}
+                      key={i?.documentId}
+                      onPress={() => setInstallationChoisie(i?.documentId)}
+                      style={{
+                        backgroundColor: choisie
+                          ? withAlpha(Colors.primary500, 0.22)
+                          : withAlpha(Colors.neutral00, 0.05),
+                        borderColor: choisie
+                          ? Colors.primary500
+                          : withAlpha(Colors.neutral00, 0.12),
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        justifyContent: 'center',
+                        minHeight: 36,
+                        paddingHorizontal: 14,
+                      }}
+                      testID={`affiche-installation-${i?.documentId}`}
+                    >
+                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{i?.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                {t('collectiviteChiffres.affiche.semaine', 'Semaine')}
+              </Text>
+              <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+                <BoutonDeSemaine
+                  etiquette={t(
+                    'collectiviteChiffres.affiche.semainePrecedente',
+                    'Semaine précédente',
+                  )}
+                  icone="arrow-left"
+                  onPress={() => setLundi((l) => lundiDecale(l, -1))}
+                />
+                <View
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    {
+                      borderColor: withAlpha(Colors.neutral00, 0.12),
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      flex: 1,
+                      gap: 8,
+                      minHeight: 44,
+                      paddingHorizontal: 12,
+                    },
+                  ]}
+                >
+                  <SvgIcon color={Colors.primary200} height={14} name="calendar" width={14} />
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {lundi ? formatPeriod(lundi, dimancheDe(lundi), { withYear: false }) : ''}
+                  </Text>
+                </View>
+                <BoutonDeSemaine
+                  etiquette={t('collectiviteChiffres.affiche.semaineSuivante', 'Semaine suivante')}
+                  icone="arrow-right"
+                  onPress={() => setLundi((l) => lundiDecale(l, 1))}
+                />
+              </View>
+            </View>
+          ) : null}
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t(
               'collectiviteChiffres.export.prive',
               'On y lit le club et l’équipe, jamais le nom d’un membre.',
             )}
           </Text>
-          {exportEtat.fichier ? (
+          {exportEtat.ok ? (
             <Text
               accessibilityLiveRegion="polite"
               style={[Fonts.p3Bold, { color: Colors.success200 }]}
             >
-              {t('collectiviteChiffres.export.ok', 'Tableau enregistré : {{fichier}}', {
-                fichier: exportEtat.fichier,
-                ...SANS_ECHAPPEMENT,
-              })}
+              {exportEtat.ok}
             </Text>
           ) : null}
           {exportEtat.erreur ? (

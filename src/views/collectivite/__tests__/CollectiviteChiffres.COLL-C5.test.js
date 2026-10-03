@@ -289,6 +289,8 @@ describe('COLL-C5 — planche 30 : « Chiffres et export »', () => {
       'Tableur · toutes les séances · du 28/09/2026 au 04/10/2026',
       'On y lit le club et l’équipe, jamais le nom d’un membre.',
     ]));
+    // COLL-AFFICHE (03/10) : l'affiche vient d'abord, cochée (planche 30 B) ; choisir le tableau.
+    await act(async () => { parTestID(arbre, 'export-tableau').props.onPress(); });
     await act(async () => { parTitre(arbre, 'Télécharger').props.onPress(); });
     expect(mockExport).toHaveBeenCalledWith('ville-de-recette', 'semaine');
     expect(mockEnregistrer).toHaveBeenCalledWith({
@@ -305,6 +307,7 @@ describe('COLL-C5 — planche 30 : « Chiffres et export »', () => {
     mockExport.mockRejectedValue(new Error('Panne réseau'));
     const arbre = await monter();
     await act(async () => { parTitre(arbre, 'Exporter le planning…').props.onPress(); });
+    await act(async () => { parTestID(arbre, 'export-tableau').props.onPress(); });
     await act(async () => { parTitre(arbre, 'Télécharger').props.onPress(); });
     expect(mockEnregistrer).not.toHaveBeenCalled();
     expect(textes(arbre)).toContain('Le tableau n’a pas pu être téléchargé.');

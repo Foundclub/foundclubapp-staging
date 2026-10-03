@@ -90,9 +90,13 @@ export const extensionDeLUrl = (url, secours = 'pdf') => {
  * @param {string} params.url adresse du fichier sur le serveur
  * @param {string} [params.fileName] nom souhaite dans le telephone
  * @param {string} [params.mimeType] type du fichier, pour le selecteur Android
+ * @param {Record<string, string>} [params.headers] en-tetes de la requete — COLL-AFFICHE (03/10) :
+ *   le jeton du compte, pour un fichier qu une route GARDEE fabrique (l affiche de l installation)
  * @returns {Promise<{ opened: boolean, outcome: string }>} l issue, nommee
  */
-export const downloadRemoteFile = async ({ fileName, mimeType, url }) => {
+export const downloadRemoteFile = async ({
+  fileName, headers, mimeType, url,
+}) => {
   const adresse = String(url || '').trim();
   if (!adresse) {
     const erreur = new Error(i18next.t(
@@ -112,7 +116,7 @@ export const downloadRemoteFile = async ({ fileName, mimeType, url }) => {
 
   const reponse = await blob
     .config({ fileCache: true, overwrite: true, path: cheminCible })
-    .fetch('GET', adresse);
+    .fetch('GET', adresse, headers || {});
 
   const infos = reponse?.info?.() || {};
   const code = Number(infos?.status || 0);
