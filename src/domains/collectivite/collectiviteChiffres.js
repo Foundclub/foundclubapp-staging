@@ -298,7 +298,8 @@ export const dimancheDe = (lundi) => {
  */
 export const aujourdhui = (maintenant = new Date()) => {
   const deux = (/** @type {number} */ n) => String(n).padStart(2, '0');
-  return `${maintenant.getFullYear()}-${deux(maintenant.getMonth() + 1)}-${deux(maintenant.getDate())}`;
+  const mois = deux(maintenant.getMonth() + 1);
+  return `${maintenant.getFullYear()}-${mois}-${deux(maintenant.getDate())}`;
 };
 
 /**

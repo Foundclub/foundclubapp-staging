@@ -15,7 +15,9 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 
 describe('COLL-AFFICHE-2 — requeteAfficheInstallation, la saison', () => {
   it('l’affiche de la saison : `periode=saison`, aucune semaine', () => {
-    expect(requeteAfficheInstallation('ville', { installation: 'gymnase', periode: 'saison' })).toEqual({
+    expect(requeteAfficheInstallation('ville', {
+      installation: 'gymnase', periode: 'saison',
+    })).toEqual({
       headers: { Authorization: 'Bearer jeton-de-test' },
       url: 'https://api.exemple/api/collectivites/ville/chiffres/affiche?installation=gymnase&periode=saison',
     });

@@ -8,8 +8,10 @@ import CollectiviteChiffres from '../CollectiviteChiffres';
 // Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md §7 ter et §8 (`periode=saison`).
 //
 // Ce que ce témoin fige (ROUGE avant le lot : l'affiche ne connaissait que la semaine) :
-//   - le choix « La semaine » / « La saison », la semaine par défaut, et de nouveau à chaque ouverture ;
-//   - la saison n'a pas de flèches de semaine ; le sous-titre dit « PDF · la saison · <installation> » ;
+//   - le choix « La semaine » / « La saison », la semaine par défaut, et de nouveau à chaque
+//     ouverture ;
+//   - la saison n'a pas de flèches de semaine ; le sous-titre dit
+//     « PDF · la saison · <installation> » ;
 //   - « Télécharger » demande la saison à la route gardée, sous le nom du serveur
 //     (« affiche-<installation>-saison-2026-2027.pdf ») ; le même choix sur ordinateur.
 // Les montages sont ceux du témoin COLL-AFFICHE (même écran, même panneau).
@@ -198,8 +200,6 @@ const sorties = (arbre) => {
     }));
 };
 const AFFICHE = 'Une affiche pour l’installation';
-const TABLEAU = 'Un tableau pour le service'
-  + 'Tableur · toutes les séances · du 28/09/2026 au 04/10/2026';
 
 const ouvrir = async () => {
   const arbre = await monter();
@@ -222,7 +222,8 @@ beforeEach(() => {
 // figé, les minuteries restent vraies (act et les promesses en dépendent).
 const FIGER_LA_DATE = {
   doNotFake: [
-    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+    'cancelAnimationFrame',
     'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval',
     'clearInterval', 'setTimeout', 'clearTimeout',
   ],
@@ -254,13 +255,15 @@ describe('COLL-AFFICHE-2 — « La semaine » ou « La saison » (décision d’
   beforeEach(() => { jest.useFakeTimers(FIGER_LA_DATE); });
   afterEach(() => { jest.useRealTimers(); });
 
-  it('l’affiche propose sa période : « La semaine » choisie par défaut, avec ses flèches', async () => {
+  it('l’affiche propose sa période : « La semaine » par défaut, avec ses flèches', async () => {
     const arbre = await ouvrir();
     expect(periodes(arbre)).toEqual([
       { choisie: true, texte: 'La semaine' },
       { choisie: false, texte: 'La saison' },
     ]);
-    expect(textes(arbre)).toEqual(expect.arrayContaining(['Période', 'Semaine', '28 sept. – 4 oct.']));
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Période', 'Semaine', '28 sept. – 4 oct.',
+    ]));
     expect(parEtiquette(arbre, 'Semaine suivante')).toBeDefined();
     expect(sorties(arbre)[0].texte).toBe(`${AFFICHE}PDF · une semaine · Gymnase des Tilleuls`);
   });
@@ -296,7 +299,9 @@ describe('COLL-AFFICHE-2 — « La semaine » ou « La saison » (décision d’
     await act(async () => { parTestID(arbre, 'affiche-installation-dojo').props.onPress(); });
     expect(sorties(arbre)[0].texte).toBe(`${AFFICHE}PDF · la saison · Dojo municipal`);
     await act(async () => { parTitre(arbre, 'Télécharger').props.onPress(); });
-    expect(mockRequete).toHaveBeenCalledWith('ville-de-recette', { installation: 'dojo', periode: 'saison' });
+    expect(mockRequete).toHaveBeenCalledWith('ville-de-recette', {
+      installation: 'dojo', periode: 'saison',
+    });
     expect(mockTelecharger).toHaveBeenCalledWith(expect.objectContaining({
       fileName: 'affiche-dojo-municipal-saison-2026-2027.pdf',
     }));

@@ -18,6 +18,7 @@ describe('COLL-AFFICHE-2 — le nom du PDF de la saison', () => {
   });
 
   it('sans nom, l’installation', () => {
-    expect(nomDuFichierAfficheSaison('', '2026-10-03')).toBe('affiche-installation-saison-2026-2027.pdf');
+    expect(nomDuFichierAfficheSaison('', '2026-10-03'))
+      .toBe('affiche-installation-saison-2026-2027.pdf');
   });
 });
