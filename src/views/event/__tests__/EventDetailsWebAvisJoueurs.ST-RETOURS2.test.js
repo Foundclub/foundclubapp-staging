@@ -359,6 +359,31 @@ describe('ST-RETOURS2 · point 1 — « Avis des joueurs » sur la fiche d’un 
     expect(texte).not.toContain('Avis des joueurs');
   });
 
+  test('⑨ la planche ordinateur : le titre « Avis des joueurs » est DANS la carte, avec la moyenne', () => {
+    mockAvis.data = NEUF_AVIS;
+    const arbre = monter();
+
+    /** @type {any[]} */
+    const cartes = [];
+    const parcourir = (/** @type {any} */ noeud) => {
+      if (!noeud || typeof noeud !== 'object') return;
+      if (Array.isArray(noeud)) {
+        noeud.forEach(parcourir);
+        return;
+      }
+      const style = Object.assign({}, ...[noeud.props?.style].flat(Infinity).filter(Boolean));
+      if (style.borderRadius === 24 && style.borderWidth === 1 && style.padding === 16) {
+        cartes.push(noeud);
+      }
+      (noeud.children || []).forEach(parcourir);
+    };
+    parcourir(arbre.toJSON());
+
+    const carteDesAvis = cartes.find((carte) => texteRendu({ toJSON: () => carte }).includes('7,6'));
+    expect(carteDesAvis).toBeDefined();
+    expect(texteRendu({ toJSON: () => carteDesAvis })).toContain('Avis des joueurs');
+  });
+
   test('⑧ un visiteur sans compte : ni les avis, ni la lecture', () => {
     mockAvis.data = NEUF_AVIS;
     const texte = texteRendu(monter({ auth: { canManageEvent: () => false, userData: null } }));

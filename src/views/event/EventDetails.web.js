@@ -2297,7 +2297,7 @@ function EventDetails({ navigation, route }) {
                   avis a DROITE. Le composant du telephone, servi tel quel ; `avisDEntrainement`
                   gate le rendu (sans lui, la carte dirait « aucun avis » en chargeant). */}
               {peutVoirLesAvisIci && avisDEntrainement ? (
-                <TrainingReviewsCard donnees={avisDEntrainement} />
+                <TrainingReviewsCard donnees={avisDEntrainement} titleInside />
               ) : null}
               {peutRelireSaNoteIci ? (
                 <MyTrainingReviewBlock
