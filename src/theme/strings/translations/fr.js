@@ -6042,6 +6042,8 @@ export default {
       personne: 'Personne n’y est : il reste {{places}}.',
       premiereDate: 'Pour la première date, le {{jour}} :',
       reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
+      // FINITIONS12-COLL (03/10) — l'aperçu d'une série côté club (tournée T11, C43_6).
+      serieCompleteCertaines: 'Complet {{nombre}} fois sur {{total}} dates : {{dates}}',
     },
     // COLL-C3B-BIS (03/10) — une série se lit en entier (planche 34).
     serie: {

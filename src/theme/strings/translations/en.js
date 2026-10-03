@@ -5665,6 +5665,8 @@ export default {
       personne: 'Nobody is there: {{places}} left.',
       premiereDate: 'For the first date, {{jour}}:',
       reste: 'There are already {{equipes}}: {{places}} left.',
+      // FINITIONS12-COLL (03/10) — the club's preview of a series (round T11, C43_6).
+      serieCompleteCertaines: 'Full {{nombre}} times out of {{total}} dates: {{dates}}',
     },
     // COLL-C3B-BIS (03/10) — a series reads as a whole (board 34).
     serie: {
