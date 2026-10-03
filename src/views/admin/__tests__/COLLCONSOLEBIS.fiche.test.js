@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
+
 import AdminCollectiviteDetail from '../AdminCollectiviteDetail';
 
 // 🏛️ COLL-CONSOLE-BIS (03/10/2026), point 4 — LA FICHE D'UNE COLLECTIVITÉ (planche 15,
@@ -81,7 +83,8 @@ jest.mock('@/components/atoms/button/Button', () => {
 
 const EXPLORATEUR = '/superadmin/content/api%3A%3Acollectivite.collectivite/list';
 const RECHERCHE_CLUB = '/superadmin/relations/api%3A%3Aclub.club/search';
-const COULEUR_DOJO = '#4D79FF';
+// Une couleur de la palette des installations (le contrat de thème refuse un hexa en dur).
+const COULEUR_DOJO = FACILITY_PLANNING_PALETTE[1];
 
 const ligneServeur = () => ({
   activatedAt: null,
