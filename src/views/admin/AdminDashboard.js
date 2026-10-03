@@ -811,8 +811,8 @@ function AdminDashboard() {
                     t('adminDashboard.teamSync.doneTitle', 'Resync terminée'),
                     t('adminDashboard.teamSync.doneMessage', {
                       count: syncedCount,
-                      defaultValue_one: '{{count}} slot resynchronise.',
-                      defaultValue_other: '{{count}} slots resynchronises.',
+                      defaultValue_one: '{{count}} place resynchronisée.',
+                      defaultValue_other: '{{count}} places resynchronisées.',
                     }),
                   );
                 },
@@ -1385,7 +1385,7 @@ function AdminDashboard() {
             </Text>
             {item?.sourceTeamSlot?.documentId ? (
               <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-                {t('adminDashboard.entitlement.sourceSlot', 'Slot source:')} #{item?.sourceTeamSlot?.slotNumber || 0}
+                {t('adminDashboard.entitlement.sourceSlot', 'Place source :')} #{item?.sourceTeamSlot?.slotNumber || 0}
               </Text>
             ) : null}
           </View>

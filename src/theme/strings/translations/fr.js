@@ -871,7 +871,8 @@ export default {
     },
     entitlement: {
       correct: 'Corriger',
-      sourceSlot: 'Slot source:',
+      // FINITIONS11-COLL (03/10) — « place », pas « slot » (FINITIONS10, question 2).
+      sourceSlot: 'Place source :',
       team: 'Équipe',
       unknownScope: 'Scope inconnu',
     },
@@ -1044,8 +1045,8 @@ export default {
       confirm: 'Resynchroniser',
       confirmMessage: 'Cela va recalculer les entitlements TEAM de la subscription {{plan}}.',
       confirmTitle: 'Resynchroniser les droits Team ?',
-      doneMessage_one: '{{count}} slot resynchronise.',
-      doneMessage_other: '{{count}} slots resynchronises.',
+      doneMessage_one: '{{count}} place resynchronisée.',
+      doneMessage_other: '{{count}} places resynchronisées.',
       doneTitle: 'Resync terminée',
       failedMessage: 'Impossible de resynchroniser cette subscription.',
       failedTitle: 'Resync impossible',
