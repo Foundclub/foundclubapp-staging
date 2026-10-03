@@ -17,6 +17,7 @@ import i18next from 'i18next';
  * pour des cles non numeriques : c'est l'ordre des pastilles.
  */
 /* eslint-disable perfectionist/sort-objects -- l'ordre EST l'ordre des pastilles */
+/** @type {Record<string, () => string>} */
 const LIBELLE_PAR_VALEUR = {
   Terrain: () => i18next.t('facilityForm.types.pitch', 'Terrain'),
   Gymnase: () => i18next.t('facilityForm.types.gym', 'Gymnase'),
@@ -35,6 +36,7 @@ const LIBELLE_PAR_VALEUR = {
 
 // FINITIONS11-COLL (03/10, planche 25) — le GENRE du nom de chaque type, pour accorder une phrase :
 // « le gymnase est fermé », « la piscine est fermée ». Même ordre, mêmes clés que ci-dessus.
+/** @type {Record<string, 'feminin' | 'masculin'>} */
 const GENRE_PAR_VALEUR = {
   Terrain: 'masculin',
   Gymnase: 'masculin',
