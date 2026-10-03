@@ -2,6 +2,7 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -25,7 +26,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import Loader from '@/components/atoms/loader/Loader';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
@@ -36,6 +38,8 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
 /** @typedef {{ kind: 'approve' | 'refuse', request: any }} Decision */
 
@@ -92,6 +96,10 @@ function CollectiviteRequests() {
 
   const ouvrir = (/** @type {'approve' | 'refuse'} */ kind, /** @type {any} */ request) => {
     setDecision({ kind, request });
+  };
+  // COLL-C3B-BIS (planche 31, état 6) : le compte qui n'est plus gestionnaire sait à qui écrire.
+  const contacter = () => {
+    Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {});
   };
 
   // ─── Les mots ────────────────────────────────────────────────────────────────────────────
@@ -391,7 +399,12 @@ function CollectiviteRequests() {
             <Text style={[Fonts.p2, Fonts.neutral100]}>{`« ${demande.decisionReason} »`}</Text>
           </View>
         ) : null}
-        <Text style={[Fonts.p3, Fonts.neutral300]}>{prevenu}</Text>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          <View testID="demande-prevenu-coche">
+            <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
+          </View>
+          <Text style={[Fonts.p3, Fonts.neutral300, { flex: 1 }]}>{prevenu}</Text>
+        </View>
       </View>
     );
   };
@@ -425,20 +438,26 @@ function CollectiviteRequests() {
 
   const refusDAcces = Number(/** @type {any} */ (liste.error)?.status) === 403;
 
+  // COLL-C3B-BIS (planche 31, état 5) : pendant la lecture, une carte en squelette, à la forme
+  // des cartes (titre, ligne, encadré de la place), au lieu d'un rond qui tourne.
+  const blocSquelette = [ApplicationStyle.borderRadius12, { backgroundColor: Colors.primary700 }];
+  const squelette = (
+    <View
+      accessibilityState={{ busy: true }}
+      style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}
+      testID="demandes-squelette"
+    >
+      <SkeletonLoader isActive wrapperStyle={[{ gap: 10 }]}>
+        <View style={[...blocSquelette, { height: 22, width: '60%' }]} />
+        <View style={[...blocSquelette, { height: 14, width: '80%' }]} />
+        <View style={[...blocSquelette, { height: 90 }]} />
+      </SkeletonLoader>
+    </View>
+  );
+
   let contenu;
   if (liste.isLoading) {
-    contenu = <Loader />;
-  } else if (refusDAcces) {
-    contenu = (
-      <View style={{ gap: 8 }} testID="demandes-acces-retire">
-        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {t('collectiviteDemandes.acces.titre', 'Accès retiré')}
-        </Text>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t('collectiviteDemandes.acces.texte', 'Vous ne gérez pas cette collectivité.')}
-        </Text>
-      </View>
-    );
+    contenu = squelette;
   } else if (liste.error) {
     contenu = (
       <View style={{ gap: 12 }} testID="demandes-erreur">
@@ -458,6 +477,9 @@ function CollectiviteRequests() {
   } else if (demandes.length === 0) {
     contenu = onglet === 'pending' ? (
       <View style={{ gap: 8 }} testID="demandes-vide">
+        <View testID="demandes-vide-icone">
+          <SvgIcon color={Colors.primary200} height={40} name="envelope" width={40} />
+        </View>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
           {t('collectivite.requests.emptyPending', 'Aucune demande en attente.')}
         </Text>
@@ -488,6 +510,37 @@ function CollectiviteRequests() {
     );
   } else {
     contenu = demandes.map(renderEnAttente);
+  }
+
+  // COLL-C3B-BIS (planche 31, état 6) — refus d'accès : ni onglets ni liste, il n'y a rien à
+  // lire ici ; le drapeau, la raison, et « Nous contacter ».
+  if (refusDAcces) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Alignments.fill, Alignments.justifyCenter, Spaces.padding[24]]}
+      >
+        <View
+          style={[ApplicationStyle.card, Spaces.padding[24], Alignments.alignCenter, carteStyle]}
+          testID="demandes-acces-retire"
+        >
+          <View testID="demandes-acces-icone">
+            <SvgIcon color={Colors.primary200} height={40} name="flag" width={40} />
+          </View>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {t('collectiviteDemandes.acces.titre', 'Accès retiré')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
+            {t('collectiviteDemandes.acces.texte', 'Vous ne gérez pas cette collectivité.')}
+          </Text>
+          <Button
+            onPress={contacter}
+            title={t('collectiviteAccueil.nousContacter', 'Nous contacter')}
+            variant="Secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
   }
 
   return (
@@ -526,8 +579,9 @@ function CollectiviteRequests() {
           options={[
             {
               // `nombre`, pas `count` : `count` ferait chercher a i18next une forme plurielle.
+              // COLL-C3B-BIS (planche 31, état 5) : « En attente (…) » tant que la file se lit.
               label: t('collectivite.requests.tabs.pending', 'En attente ({{nombre}})', {
-                nombre: nbEnAttente,
+                nombre: pending.isLoading ? '…' : nbEnAttente,
               }),
               value: 'pending',
             },

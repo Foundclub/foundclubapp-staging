@@ -107,6 +107,14 @@ jest.mock(
   () => function ScreenContainerMock({ children }) { return children; },
 );
 jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { return null; });
+// La lueur du squelette (Reanimated, MaskedView) n'est pas l'objet du témoin : ses blocs, si.
+jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return function SkeletonLoaderMock(/** @type {any} */ props) {
+    return reactActuel.createElement(VueRN, { testID: 'squelette-lueur' }, props.children);
+  };
+});
 jest.mock('@/components/atoms/button/Button', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
@@ -454,6 +462,57 @@ describe('COLL-C3B — planche P6-demandes : traitées, vide, erreur, refus d’
       params: { collectiviteId: 'ville-de-recette' },
       route: 'CollectiviteRequests',
     });
+  });
+});
+
+// COLL-C3B-BIS (03/10) — planche 31 (P6-demandes, états 3, 5 et 6 ; liste du plan, ligne 31) :
+// ce que la tournée T10 a laissé. ROUGE avant : un rond de chargement au lieu des cartes, un
+// « Accès retiré » sans personne à qui écrire, un écran vide et un « prévenu » sans icône.
+// (Le pluriel « 1 demande à trancher » de la porte est déjà corrigé par COLL-FIX2.)
+describe('COLL-C3B-BIS — planche 31 : squelettes, « Nous contacter », icônes', () => {
+  const trouver = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === testID);
+
+  // eslint-disable-next-line max-len
+  it('pendant la lecture : des squelettes à la forme des cartes, et l’onglet « En attente (…) »', async () => {
+    mockGet.mockImplementation(async (/** @type {string} */ url) => {
+      if (url === '/collectivites/mine') return { data: { data: [VILLE] } };
+      return new Promise(() => {});
+    });
+    const arbre = await monter((l) => l.includes('Ville de Recette'));
+    expect(trouver(arbre, 'demandes-squelette').length).toBeGreaterThanOrEqual(1);
+    expect(textes(arbre)).toContain('En attente (…)');
+  });
+
+  // eslint-disable-next-line max-len
+  it('refus d’accès : le drapeau, « Accès retiré », et « Nous contacter » écrit à l’équipe', async () => {
+    const { Linking } = jest.requireActual('react-native');
+    const ouvrirLien = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    mockGet.mockImplementation(async (/** @type {string} */ url) => {
+      if (url === '/collectivites/mine') return { data: { data: [] } };
+      throw Object.assign(new Error('Forbidden'), { status: 403 });
+    });
+    const arbre = await monter((l) => l.includes('Accès retiré'));
+    expect(trouver(arbre, 'demandes-acces-icone').length).toBeGreaterThanOrEqual(1);
+    // La planche n'a plus d'onglets : il n'y a rien à lire ici.
+    expect(textes(arbre)).not.toContain('Traitées');
+    await appuyer(arbre, 'bouton-Nous contacter');
+    const { SUPPORT_CONTACT_MAILTO } = jest.requireActual('@/config/legalUrls');
+    expect(ouvrirLien).toHaveBeenCalledWith(SUPPORT_CONTACT_MAILTO);
+    ouvrirLien.mockRestore();
+  });
+
+  it('en attente, vide : l’enveloppe au-dessus du texte', async () => {
+    mockEnAttente = [];
+    const arbre = await monter((l) => l.includes('Aucune demande en attente.'));
+    expect(trouver(arbre, 'demandes-vide-icone').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('« Traitées » : la coche devant « Le club a été prévenu »', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'onglet-decided');
+    await attendre(() => textes(arbre).includes('Acceptée'));
+    expect(trouver(arbre, 'demande-prevenu-coche').length).toBeGreaterThanOrEqual(1);
   });
 });
 
