@@ -1032,6 +1032,8 @@ function PlanningWeekFullscreen() {
       return (
         <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
           <PlanningCalendarView
+            // COLL-C4B-BIS : les jours fermes du mois, marques (et le brouillon du panneau).
+            closures={fermeturesDessinees}
             currentDate={currentDate}
             events={events}
             onDateSelect={setCurrentDate}

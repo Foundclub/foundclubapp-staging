@@ -191,6 +191,19 @@ export const closureCoversDay = (fermeture, jour) => Boolean(
 );
 
 /**
+ * 🖥️ COLL-C4B-BIS (03/10) — la fermeture d UN jour (vue Mois, Liste) : celle de toute la journee
+ * d abord (elle ferme tout), sinon le premier blocage du jour.
+ * @param {any[]} fermetures - `meta.closures` (et le brouillon du panneau).
+ * @param {string} jour - AAAA-MM-JJ.
+ * @returns {any | null} La fermeture, ou null si le jour est ouvert.
+ */
+export const closureOfDay = (fermetures, jour) => {
+  const couvrantes = (Array.isArray(fermetures) ? fermetures : [])
+    .filter((fermeture) => closureCoversDay(fermeture, jour));
+  return couvrantes.find((fermeture) => fermeture?.kind !== 'block') || couvrantes[0] || null;
+};
+
+/**
  * « 09:30 » en minutes depuis minuit, ou null si l heure manque.
  * @param {string | null | undefined} heure - HH:MM.
  * @returns {number | null} Les minutes.

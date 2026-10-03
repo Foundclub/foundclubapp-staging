@@ -492,3 +492,17 @@ describe('COLL-C4B-BIS point 2 — la plage dans toutes les vues', () => {
     expect(bandes()).toHaveLength(1);
   });
 });
+
+// 🖥️ COLL-C4B-BIS (03/10/2026), point 4 — la vue Mois recoit les fermetures du mois.
+describe('COLL-C4B-BIS point 4 — le mois connait les fermetures', () => {
+  it('9. la vue Mois recoit les fermetures (et le brouillon du panneau) a marquer', async () => {
+    avecFermeture();
+    mockOrdinateur = false;
+    const arbre = await rendre();
+    const mois = arbre.root.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ noeud) => noeud.props.testID === 'vue-month');
+    await act(async () => { mois.props.onPress(); });
+    await attendre();
+    expect(mockCalendarProps[mockCalendarProps.length - 1].closures).toEqual([FERMETURE_DU_JOUR]);
+  });
+});
