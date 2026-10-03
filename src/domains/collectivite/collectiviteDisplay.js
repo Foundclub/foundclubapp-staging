@@ -220,7 +220,8 @@ export const readCollectiviteCreateForm = (form) => {
  * @param {any} entry - Une ligne de `/superadmin/content/.../list`.
  * COLL-C6-DEMO (03/10) — + `isDemo` : la Ville de démonstration (vrai seulement s il vaut VRAI).
  * @returns {{ activatedAt: string | null, clubsCount: number, documentId: string,
- *   isActive: boolean, isDemo: boolean, membersCount: number | null, name: string, type: string }} La ligne.
+ *   isActive: boolean, isDemo: boolean, membersCount: number | null, name: string,
+ *   type: string }} La ligne.
  */
 export const toAdminCollectiviteRow = (entry) => ({
   activatedAt: typeof entry?.activatedAt === 'string' ? entry.activatedAt : null,

@@ -54,7 +54,7 @@ function useCollectivitesTile() {
   const lignes = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
     .map(toAdminCollectiviteRow);
   // COLL-C6-DEMO (03/10) — la Ville de démonstration est dans la liste, pas dans le compte.
-  const demos = lignes.filter((ligne) => ligne.isDemo).length;
+  const demos = lignes.filter((/** @type {{ isDemo?: boolean }} */ ligne) => ligne.isDemo).length;
   const total = (Number(lecture.data?.meta?.pagination?.total) || lignes.length) - demos;
   if (total === 0) {
     const aucune = t('collectiviteConsole.tuile.aucune', 'Aucune mairie pour l’instant');

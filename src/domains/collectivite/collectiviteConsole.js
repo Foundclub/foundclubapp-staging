@@ -11,8 +11,9 @@
 import { getShortAddress } from '@/utils/location';
 
 /**
- * @typedef {{ activatedAt?: string | null, clubsCount: number, documentId: string, isActive: boolean,
- *   isDemo?: boolean, membersCount?: number | null, name: string, type: string }} AdminCollectiviteRow
+ * @typedef {{ activatedAt?: string | null, clubsCount: number, documentId: string,
+ *   isActive: boolean, isDemo?: boolean, membersCount?: number | null, name: string,
+ *   type: string }} AdminCollectiviteRow
  */
 
 /**
