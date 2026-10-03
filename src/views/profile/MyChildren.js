@@ -206,6 +206,111 @@ function MyChildren() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {/* STATS-FIX2 · 8-22 (tournee T10, ecran 22) — les comptes relies D ABORD (planche 22,
+            etat 1) : c est la que vivent les retours de l entraineur ; les fiches declarees
+            (moins de 13 ans surtout) viennent ensuite. */}
+        {/* 🔗 PARENT-LIEN — « LES COMPTES DE MES ENFANTS ». Une rangée par ado relié : elle
+            ouvre SON profil, où vit « Retours du coach ». Le lien ne s'écrit qu'avec SON
+            accord, et il peut le retirer. */}
+        <View style={[Spaces.marginTop[12], { gap: 12 }]} testID="my-children-accounts">
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('myChildren.accounts.title', 'Les comptes de mes enfants')}
+          </Text>
+          <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>
+            <View style={{ gap: 12 }}>
+              {comptesRelies.length === 0 ? (
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'myChildren.accounts.empty',
+                    'Ton enfant a 13 ans ou plus et son propre compte ? Relie-le au tien :'
+                    + ' tu verras les retours de son coach, jamais ses messages.',
+                  )}
+                </Text>
+              ) : null}
+
+              {comptesRelies.map((compte) => {
+                const nomDuCompte = `${compte?.firstname || ''} ${compte?.lastname || ''}`.trim();
+                return (
+                  <TouchableOpacity
+                    key={compte?.documentId}
+                    onPress={() => ouvrirLeProfil(compte)}
+                    style={carteStyle}
+                    testID={`linked-child-${compte?.documentId}`}
+                  >
+                    <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+                      <ProfileAvatar
+                        enablePreview={false}
+                        imageUrl={compte?.avatar?.url}
+                        name={nomDuCompte}
+                        size={44}
+                      />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                          {nomDuCompte}
+                        </Text>
+                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                          {typeof compte?.age === 'number'
+                            ? t('myChildren.screen.years', '{{count}} ans', { count: compte.age })
+                            : ''}
+                        </Text>
+                      </View>
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
+                        {t('myChildren.accounts.open', 'Voir son profil')}
+                      </Text>
+                    </View>
+                    <NouveauxRetoursDeLEnfant
+                      childDocumentId={compte?.documentId}
+                      follow={suiviDesRetours}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* 🤐 Une demande s'affiche « envoyée » jusqu'à sa réponse ou son échéance :
+                  le numéro ne dit jamais s'il existe un compte derrière. */}
+              {demandesEnvoyees.map((demande) => (
+                <View
+                  key={demande?.documentId}
+                  style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+                >
+                  <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
+                    {demande?.declaredChild?.firstname
+                      ? t(
+                        'myChildren.accounts.pendingForChild',
+                        'Demande envoyée au numéro finissant par {{hint}} (pour {{firstname}}).',
+                        {
+                          firstname: demande.declaredChild.firstname,
+                          hint: demande?.phoneHint || '··',
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )
+                      : t(
+                        'myChildren.accounts.pending',
+                        'Demande envoyée au numéro finissant par {{hint}}.',
+                        { hint: demande?.phoneHint || '··', ...SANS_ECHAPPEMENT },
+                      )}
+                  </Text>
+                  <TouchableOpacity
+                    disabled={annulationEnCours}
+                    onPress={() => annulerDemande(demande.documentId)}
+                    testID={`cancel-link-${demande?.documentId}`}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                      {t('myChildren.accounts.cancel', 'Annuler')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <Button
+                onPress={() => relierUnCompte(null)}
+                testID="my-children-link-account"
+                title={t('myChildren.accounts.link', 'Relier le compte de mon enfant')}
+                variant="Secondary"
+              />
+            </View>
+          </WithDataWrapper>
+        </View>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t(
             'myChildren.screen.hint',
@@ -373,109 +478,6 @@ function MyChildren() {
             </View>
           )}
         </WithDataWrapper>
-
-        {/* 🔗 PARENT-LIEN — « LES COMPTES DE MES ENFANTS ». Une rangée par ado relié : elle
-            ouvre SON profil, où vit « Retours du coach ». Le lien ne s'écrit qu'avec SON
-            accord, et il peut le retirer. */}
-        <View style={[Spaces.marginTop[12], { gap: 12 }]} testID="my-children-accounts">
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('myChildren.accounts.title', 'Les comptes de mes enfants')}
-          </Text>
-          <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>
-            <View style={{ gap: 12 }}>
-              {comptesRelies.length === 0 ? (
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t(
-                    'myChildren.accounts.empty',
-                    'Ton enfant a 13 ans ou plus et son propre compte ? Relie-le au tien :'
-                    + ' tu verras les retours de son coach, jamais ses messages.',
-                  )}
-                </Text>
-              ) : null}
-
-              {comptesRelies.map((compte) => {
-                const nomDuCompte = `${compte?.firstname || ''} ${compte?.lastname || ''}`.trim();
-                return (
-                  <TouchableOpacity
-                    key={compte?.documentId}
-                    onPress={() => ouvrirLeProfil(compte)}
-                    style={carteStyle}
-                    testID={`linked-child-${compte?.documentId}`}
-                  >
-                    <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
-                      <ProfileAvatar
-                        enablePreview={false}
-                        imageUrl={compte?.avatar?.url}
-                        name={nomDuCompte}
-                        size={44}
-                      />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                          {nomDuCompte}
-                        </Text>
-                        <Text style={[Fonts.p3, Fonts.neutral200]}>
-                          {typeof compte?.age === 'number'
-                            ? t('myChildren.screen.years', '{{count}} ans', { count: compte.age })
-                            : ''}
-                        </Text>
-                      </View>
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
-                        {t('myChildren.accounts.open', 'Voir son profil')}
-                      </Text>
-                    </View>
-                    <NouveauxRetoursDeLEnfant
-                      childDocumentId={compte?.documentId}
-                      follow={suiviDesRetours}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
-
-              {/* 🤐 Une demande s'affiche « envoyée » jusqu'à sa réponse ou son échéance :
-                  le numéro ne dit jamais s'il existe un compte derrière. */}
-              {demandesEnvoyees.map((demande) => (
-                <View
-                  key={demande?.documentId}
-                  style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
-                >
-                  <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
-                    {demande?.declaredChild?.firstname
-                      ? t(
-                        'myChildren.accounts.pendingForChild',
-                        'Demande envoyée au numéro finissant par {{hint}} (pour {{firstname}}).',
-                        {
-                          firstname: demande.declaredChild.firstname,
-                          hint: demande?.phoneHint || '··',
-                          ...SANS_ECHAPPEMENT,
-                        },
-                      )
-                      : t(
-                        'myChildren.accounts.pending',
-                        'Demande envoyée au numéro finissant par {{hint}}.',
-                        { hint: demande?.phoneHint || '··', ...SANS_ECHAPPEMENT },
-                      )}
-                  </Text>
-                  <TouchableOpacity
-                    disabled={annulationEnCours}
-                    onPress={() => annulerDemande(demande.documentId)}
-                    testID={`cancel-link-${demande?.documentId}`}
-                  >
-                    <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                      {t('myChildren.accounts.cancel', 'Annuler')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              <Button
-                onPress={() => relierUnCompte(null)}
-                testID="my-children-link-account"
-                title={t('myChildren.accounts.link', 'Relier le compte de mon enfant')}
-                variant="Secondary"
-              />
-            </View>
-          </WithDataWrapper>
-        </View>
       </ScrollView>
     </ScreenContainer>
   );
