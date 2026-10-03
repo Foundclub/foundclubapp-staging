@@ -51,7 +51,7 @@ export const groupClubInstallations = (facilities) => {
 /**
  * Les morceaux d une ligne « U15 · chaque mardi 17:30 – 19:00 ».
  * @param {any} slot - Un créneau du club (vue du contrat §4.1).
- * @returns {{ day: string, hours: string, team: string | null }} Le jour en minuscules, la plage,
+ * @returns {{ day: string, hours: string, period: string, team: string | null }} Le jour en minuscules, la plage,
  *   l équipe (null : « tout le club »).
  */
 export const clubSlotParts = (slot) => ({

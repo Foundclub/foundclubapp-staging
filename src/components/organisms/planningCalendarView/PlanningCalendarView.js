@@ -14,9 +14,15 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
+import {
+  closureBandLabel,
+  closureHoursLabel,
+  closureOfDay,
+} from '@/domains/facilityClosure/facilityClosureDisplay';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
+import Hachures from '@/components/atoms/hachures/Hachures';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
@@ -117,7 +123,9 @@ const hexToRgba = (hex, alpha) => {
  * @param root0.colors
  * @param root0.date
  * @param root0.eventsByDate
+ * @param {any} [root0.fermetureDuJour] - COLL-C4B-BIS : la fermeture du jour, ou null.
  * @param root0.fonts
+ * @param {string | null} [root0.libelleDeFermeture] - Ce que dit la plage (lecteur d ecran).
  * @param root0.onPress
  * @param root0.selectedDate
  * @param root0.state
@@ -126,7 +134,9 @@ function PlanningCalendarDay({
   colors,
   date,
   eventsByDate,
+  fermetureDuJour = null,
   fonts,
+  libelleDeFermeture = null,
   onPress,
   selectedDate,
   state,
@@ -134,6 +144,13 @@ function PlanningCalendarDay({
 }) {
   const dateString = date?.dateString;
   if (!dateString) return null;
+  // COLL-C4B-BIS (03/10) : un jour ferme toute la journee se HACHURE (comme la grille, planche
+  // P4v3-fermer) ; un jour bloque (une plage) se cerne d orange.
+  const journeeFermee = Boolean(fermetureDuJour) && fermetureDuJour.kind !== 'block';
+  const jourBloque = Boolean(fermetureDuJour) && !journeeFermee;
+  let testIDDuJour;
+  if (journeeFermee) testIDDuJour = `jour-ferme-${dateString}`;
+  else if (jourBloque) testIDDuJour = `jour-bloque-${dateString}`;
 
   const dayEvents = eventsByDate.get(dateString) || [];
   const hasPendingEvent = dayEvents.some((event) => isPlanningPendingParticipation(event));
@@ -156,19 +173,29 @@ function PlanningCalendarDay({
   } else if (isCurrentDay) {
     dayColor = colors.primary500;
   }
+  let borderColor = isCurrentDay ? colors.primary500 : 'transparent';
+  if (fermetureDuJour) borderColor = colors.warning500;
 
   return (
-    <TouchableOpacity onPress={() => onPress(dateString)} style={styles.dayCellTouch}>
+    <TouchableOpacity
+      accessibilityLabel={libelleDeFermeture ? `${date.day}, ${libelleDeFermeture}` : undefined}
+      onPress={() => onPress(dateString)}
+      style={styles.dayCellTouch}
+    >
       <View
         style={[
           styles.dayCell,
           {
             backgroundColor: isSelected ? colors.primary500 : 'transparent',
-            borderColor: isCurrentDay ? colors.primary500 : 'transparent',
+            borderColor,
+            borderStyle: jourBloque ? 'dashed' : 'solid',
             opacity: isDisabled ? 0.4 : 1,
+            overflow: 'hidden',
           },
         ]}
+        testID={testIDDuJour}
       >
+        {journeeFermee ? <Hachures color={colors.warning500} /> : null}
         <Text
           style={[
             fonts.p3Bold,
@@ -217,6 +244,7 @@ function PlanningCalendarDay({
 /**
  * Monthly planning view with colored day markers and a daily event list.
  * @param {{
+ *   closures?: Array<any>;
  *   currentDate?: Date;
  *   events?: Array<any>;
  *   onDateSelect?: (date: Date) => void;
@@ -225,6 +253,7 @@ function PlanningCalendarDay({
  * @returns {import('react').ReactElement}
  */
 function PlanningCalendarView({
+  closures = [],
   currentDate: propDate,
   events = [],
   onDateSelect,
@@ -387,18 +416,29 @@ function PlanningCalendarView({
 
   const todayKey = format(getPlanningDefaultDate(), 'yyyy-MM-dd');
 
-  const renderDayComponent = useCallback(({ date, state }) => (
-    <PlanningCalendarDay
-      colors={Colors}
-      date={date}
-      eventsByDate={eventsByDate}
-      fonts={Fonts}
-      onPress={handleDateChange}
-      selectedDate={selectedDate}
-      state={state}
-      todayKey={todayKey}
-    />
-  ), [Colors, Fonts, eventsByDate, handleDateChange, selectedDate, todayKey]);
+  // COLL-C4B-BIS (03/10) — les fermetures du mois (`meta.closures` du planning d une installation).
+  const fermetureDe = useCallback(
+    (/** @type {string | undefined} */ jour) => (jour ? closureOfDay(closures, jour) : null),
+    [closures],
+  );
+  const renderDayComponent = useCallback(({ date, state }) => {
+    const fermetureDuJour = fermetureDe(date?.dateString);
+    return (
+      <PlanningCalendarDay
+        colors={Colors}
+        date={date}
+        eventsByDate={eventsByDate}
+        fermetureDuJour={fermetureDuJour}
+        fonts={Fonts}
+        libelleDeFermeture={fermetureDuJour ? closureBandLabel(t, fermetureDuJour) : null}
+        onPress={handleDateChange}
+        selectedDate={selectedDate}
+        state={state}
+        todayKey={todayKey}
+      />
+    );
+  }, [Colors, Fonts, eventsByDate, fermetureDe, handleDateChange, selectedDate, t, todayKey]);
+  const fermetureDuJourChoisi = fermetureDe(selectedDate);
 
   return (
     <View style={Alignments.fill}>
@@ -456,6 +496,32 @@ function PlanningCalendarView({
         <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[16]]}>
           {format(parseISO(selectedDate), 'EEEE d MMMM yyyy', { locale: fr })}
         </Text>
+
+        {/* COLL-C4B-BIS : le jour choisi est ferme ou bloque — la liste commence par la plage. */}
+        {fermetureDuJourChoisi ? (
+          <View
+            style={[
+              Spaces.padding[16],
+              Spaces.marginBottom[12],
+              {
+                borderColor: hexToRgba(Colors.warning500, 0.55),
+                borderRadius: 24,
+                borderWidth: 1,
+                gap: 4,
+                overflow: 'hidden',
+              },
+            ]}
+            testID="mois-fermeture-du-jour"
+          >
+            <Hachures color={Colors.warning500} />
+            <Text style={[Fonts.p1Bold, { color: Colors.warning400 }]}>
+              {closureBandLabel(t, fermetureDuJourChoisi)}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {closureHoursLabel(t, fermetureDuJourChoisi)}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={Alignments.fill}>
           <FlashList

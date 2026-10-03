@@ -47,6 +47,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
@@ -63,6 +64,7 @@ import {
   deleteFacility,
   getFacilitySections,
 } from '@/services/facility/facilityService';
+import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import { useInstallationsWeekSummary } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -154,6 +156,27 @@ function BoutonPlusDActions({
         <SvgIcon color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
       </TouchableOpacity>
     </View>
+  );
+}
+
+/**
+ * 🖥️ COLL-C4B-BIS (03/10) — LE BANDEAU D UNE INSTALLATION DE LA VILLE, sur sa carte cote club
+ * (design HY521H1 « P3b-actu-tel » ecran 6 : « la fiche de l installation porte un bandeau tant
+ * que la fermeture dure ou approche »). Le serveur choisit laquelle (`meta.bandeau` : en cours, ou
+ * dans les 14 jours) ; un membre d un club rattache la lit (contrat C2A §13.2). Rien sinon.
+ * @param {{ facilityId?: string | null }} props
+ * @returns {import('react').ReactElement | null} Le bandeau, ou rien.
+ */
+function BandeauDeFermetureDeLaVille({ facilityId }) {
+  const fermetures = useFacilityClosures(facilityId || null);
+  const bandeau = fermetures.data?.meta?.bandeau || null;
+  if (!bandeau) return null;
+  return (
+    <FacilityClosureBanner
+      closure={bandeau}
+      testID={`carte-ville-bandeau-${facilityId}`}
+      withDays
+    />
   );
 }
 
@@ -1163,6 +1186,7 @@ function FacilityList() {
 
   // COLL-C2C — la carte d une installation de la Ville, cote club : son nom ; ce qu elle est ; les
   // creneaux du club (« U15 · chaque mardi 17:30 – 19:00 ») ; « Voir le planning » et « Demander ».
+  // COLL-C4B-BIS (03/10) : et le bandeau de sa fermeture, tant qu elle dure ou approche (P3b-6).
   const renderCarteVille = (/** @type {any} */ item, /** @type {string} */ kind) => {
     const nom = item?.name || t('facilityList.defaults.facilityName', 'Installation');
     const equipes = Math.max(1, Number(item?.maxSlots || 1));
@@ -1206,6 +1230,7 @@ function FacilityList() {
           <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
           {meta ? <Text style={[Fonts.p3, Fonts.neutral200]}>{meta}</Text> : null}
         </TouchableOpacity>
+        <BandeauDeFermetureDeLaVille facilityId={item?.documentId} />
         {kind === 'avecCreneaux' ? (
           <View style={{ gap: 2 }}>
             {item.clubSeasonSlots.map((/** @type {any} */ creneau) => {

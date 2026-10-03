@@ -1,12 +1,15 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format, isValid, parse } from 'date-fns';
-import { useLayoutEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useLayoutEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
+import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import {
   CLOSURE_REASONS,
   closureDaysLabel,
@@ -27,6 +30,8 @@ import Input from '@/components/molecules/input/Input';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useCollectiviteInstallations } from '@/services/collectivite/collectiviteQueries';
 import {
   useCloseFacility,
@@ -36,6 +41,8 @@ import {
 } from '@/services/facilityClosure/facilityClosureQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import { useIsDesktop } from '@/responsive';
 
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const SAISIE = 'dd/MM/yyyy';
@@ -84,12 +91,60 @@ const versSaisie = (jour) => {
  * Parametres : `facilityId` (ou un choix parmi les installations de `collectiviteId`), `mode`
  * (`fermer` | `bloquer`), `closureId` (Modifier : relue au serveur, une adresse du site ne porte
  * pas d objet), et pour un blocage venu du planning : `date`, `startTime`, `endTime`.
+ *
+ * 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») — SUR ORDINATEUR, le formulaire vit dans le
+ * PANNEAU DE DROITE du planning de l installation (« le panneau a droite, la semaine a gauche ») :
+ * des que l installation est connue, l ecran cede la place a ce planning, panneau ouvert. Toutes
+ * les entrees (accueil, fiche de l installation) passent par ici : aucune n a a changer. Les
+ * parametres sont SCALAIRES, l adresse du site les porte.
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteFermeture() {
-  const params = /** @type {any} */ (useRoute().params) || {};
-  const fermetures = useFacilityClosures(params.closureId ? params.facilityId : null);
-  if (!params.closureId) return <FormulaireDeFermeture existante={null} params={params} />;
+  const parametresDeLaRoute = useRoute().params;
+  const params = useMemo(
+    () => /** @type {any} */ (parametresDeLaRoute) || {},
+    [parametresDeLaRoute],
+  );
+  const navigation = /** @type {any} */ (useNavigation());
+  const isDesktop = useIsDesktop();
+  const versLePlanning = isDesktop && Boolean(params.facilityId);
+  const ouvrirLePanneau = useCallback((
+    /** @type {string} */ facilityId,
+    /** @type {string | null | undefined} */ facilityName,
+  ) => {
+    let fermeture = params.mode === 'bloquer' ? 'bloquer' : 'fermer';
+    if (params.closureId) fermeture = 'modifier';
+    /** @type {Record<string, string>} */
+    const parametres = { facilityId, fermeture, sourceType: 'facility' };
+    if (facilityName) parametres.contextDetailLabel = facilityName;
+    ['closureId', 'date', 'startTime', 'endTime'].forEach((cle) => {
+      if (params[cle]) parametres[cle] = String(params[cle]);
+    });
+    navigation.replace?.(RouteNames.PlanningWeekFullscreen, parametres);
+  }, [navigation, params]);
+  useEffect(() => {
+    if (versLePlanning) ouvrirLePanneau(params.facilityId, params.facilityName);
+  }, [ouvrirLePanneau, params.facilityId, params.facilityName, versLePlanning]);
+
+  const fermetures = useFacilityClosures(
+    params.closureId && !versLePlanning ? params.facilityId : null,
+  );
+  if (versLePlanning) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+        <Loader />
+      </ScreenContainer>
+    );
+  }
+  if (!params.closureId) {
+    return (
+      <FormulaireDeFermeture
+        existante={null}
+        onFacilityChange={isDesktop ? ouvrirLePanneau : undefined}
+        params={params}
+      />
+    );
+  }
   const lignes = Array.isArray(fermetures.data?.data) ? fermetures.data.data : [];
   const existante = lignes
     .find((/** @type {any} */ ligne) => ligne?.documentId === params.closureId) || null;
@@ -104,11 +159,80 @@ function CollectiviteFermeture() {
 }
 
 /**
+ * 🖥️ COLL-C4B-BIS (03/10) — LE PANNEAU DE DROITE du planning d une installation, sur ordinateur
+ * (« P4v3-fermer-ordi ») : le meme formulaire, sans ecran autour ni choix d installation (le
+ * planning la nomme deja). Pour « Modifier », la fermeture est relue au serveur, comme l ecran.
+ * Pendant la saisie, `onDraftChange` dit au planning ce qui serait ferme : il le hachure, et cerne
+ * les seances touchees.
+ * @param {{
+ *   closureId?: string | null,
+ *   collectiviteId?: string | null,
+ *   date?: string | null,
+ *   endTime?: string | null,
+ *   facilityId: string,
+ *   facilityName?: string | null,
+ *   mode?: string | null,
+ *   onCancel: () => void,
+ *   onDone: () => void,
+ *   onDraftChange?: (brouillon: any) => void,
+ *   startTime?: string | null,
+ * }} props
+ * @returns {import('react').ReactElement} Le panneau.
+ */
+export function PanneauDeFermeture({
+  closureId = null,
+  collectiviteId = null,
+  date = null,
+  endTime = null,
+  facilityId,
+  facilityName = null,
+  mode = null,
+  onCancel,
+  onDone,
+  onDraftChange,
+  startTime = null,
+}) {
+  const fermetures = useFacilityClosures(closureId ? facilityId : null);
+  const params = {
+    collectiviteId, date, endTime, facilityId, facilityName, mode, startTime,
+  };
+  const lignes = Array.isArray(fermetures.data?.data) ? fermetures.data.data : [];
+  const existante = closureId
+    ? lignes.find((/** @type {any} */ ligne) => ligne?.documentId === closureId) || null
+    : null;
+  if (closureId && !existante) return <Loader />;
+  return (
+    <FormulaireDeFermeture
+      enPanneau
+      existante={existante}
+      key={existante?.documentId || mode || 'fermer'}
+      onCancel={onCancel}
+      onDone={onDone}
+      onDraftChange={onDraftChange}
+      params={params}
+    />
+  );
+}
+
+/**
  * Le formulaire lui-meme (creation ou modification), monte une fois la fermeture connue.
- * @param {{ existante: any, params: any }} props
+ * COLL-C4B-BIS : en panneau (ordinateur), il rend la main par `onDone` / `onCancel` au lieu de
+ * revenir en arriere, et dit sa saisie par `onDraftChange`. `onFacilityChange` : l installation
+ * choisie (ordinateur, depuis l accueil : on part alors vers le planning).
+ * @param {{
+ *   enPanneau?: boolean,
+ *   existante: any,
+ *   onCancel?: () => void,
+ *   onDone?: () => void,
+ *   onDraftChange?: (brouillon: any) => void,
+ *   onFacilityChange?: (facilityId: string, facilityName: string | null) => void,
+ *   params: any,
+ * }} props
  * @returns {import('react').ReactElement} Le formulaire.
  */
-function FormulaireDeFermeture({ existante, params }) {
+function FormulaireDeFermeture({
+  enPanneau = false, existante, onCancel, onDone, onDraftChange, onFacilityChange, params,
+}) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -123,12 +247,14 @@ function FormulaireDeFermeture({ existante, params }) {
     ? t('collectiviteFermetures.form.titreBloquer', 'Bloquer un créneau')
     : t('collectiviteFermetures.form.titreFermer', 'Fermer une installation');
   useLayoutEffect(() => {
+    // COLL-C4B-BIS : en panneau, l en-tete est celui du planning ; il ne se reecrit pas.
+    if (enPanneau) return;
     navigation.setOptions?.({
       headerTitle: modification
         ? t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture')
         : titre,
     });
-  }, [modification, navigation, t, titre]);
+  }, [enPanneau, modification, navigation, t, titre]);
 
   const installations = useCollectiviteInstallations(collectiviteId);
   const liste = (Array.isArray(installations.data) ? installations.data : []).filter(
@@ -179,6 +305,29 @@ function FormulaireDeFermeture({ existante, params }) {
   const apercu = useFacilityClosurePreview(facilityId, apercuParams);
   const carte = apercu.data?.data || null;
 
+  // COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») : la saisie, dite au planning (panneau), qui la
+  // hachure et cerne les seances touchees « pendant la saisie ». Rien quand elle ne se lit pas.
+  const motDuBlocage = pourQuoi.trim() || null;
+  const motifRetenu = bloquer ? null : motif;
+  const idDeLaFermeture = existante?.documentId || null;
+  useEffect(() => {
+    if (!onDraftChange) return;
+    onDraftChange(apercuParams
+      ? {
+        documentId: idDeLaFermeture,
+        endDate: apercuParams.endDate,
+        endTime: apercuParams.endTime || null,
+        kind: apercuParams.kind,
+        label: motDuBlocage,
+        reason: motifRetenu,
+        startDate: apercuParams.startDate,
+        startTime: apercuParams.startTime || null,
+      }
+      : null);
+  }, [apercuParams, idDeLaFermeture, motDuBlocage, motifRetenu, onDraftChange]);
+  // En partant (envoye, annule, autre panneau), le planning efface le brouillon.
+  useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
+
   const fermer = useCloseFacility();
   const modifier = useModifyFacilityClosure();
   const enCours = fermer.isPending || modifier.isPending;
@@ -228,7 +377,8 @@ function FormulaireDeFermeture({ existante, params }) {
         });
       }
       setConfirmer(false);
-      navigation.goBack?.();
+      if (onDone) onDone();
+      else navigation.goBack?.();
     } catch (refus) {
       setConfirmer(false);
       setErreur(closureErrorMessage(t, refus) || getErrorMessage(/** @type {any} */ (refus)));
@@ -336,11 +486,17 @@ function FormulaireDeFermeture({ existante, params }) {
           </Text>
           {installation?.maxSlots ? (
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('collectiviteCreneaux.liste.capacite', {
-                count: Number(installation.maxSlots) || 1,
-                defaultValue_one: '{{count}} équipe à la fois',
-                defaultValue_other: '{{count}} équipes à la fois',
-              })}
+              {[
+                t('collectiviteCreneaux.liste.capacite', {
+                  count: Number(installation.maxSlots) || 1,
+                  defaultValue_one: '{{count}} équipe à la fois',
+                  defaultValue_other: '{{count}} équipes à la fois',
+                }),
+                // COLL-C4B-BIS : fermer = des journees ; la planche (etat 1) dit les horaires.
+                bloquer
+                  ? null
+                  : formatOpeningHours(installation.openingTime, installation.closingTime),
+              ].filter(Boolean).join(' · ')}
             </Text>
           ) : null}
         </View>
@@ -367,6 +523,7 @@ function FormulaireDeFermeture({ existante, params }) {
               onPress={() => {
                 setFacilityId(ligne.documentId);
                 setChoisir(false);
+                onFacilityChange?.(ligne.documentId, ligne.name || null);
               }}
               testID={`fermeture-installation-${ligne.documentId}`}
             />
@@ -521,6 +678,158 @@ function FormulaireDeFermeture({ existante, params }) {
       'Aucune séance n’est touchée : aucun club n’est prévenu.',
     );
 
+  // COLL-C4B-BIS : le corps du formulaire, le meme dans l ecran (telephone) et le panneau
+  // (ordinateur) ; le panneau n a pas le choix de l installation (le planning la nomme).
+  const corps = (
+    <>
+      {enPanneau ? null : choixDeLInstallation}
+      {champsDeDates}
+      {erreurDeSaisie ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurDeSaisie}</Text> : null}
+      {facilityId ? carteDesSeances : null}
+      {apercu.error ? (
+        <Text style={[Fonts.p3, Fonts.error500]}>
+          {closureErrorMessage(t, apercu.error)
+              || getErrorMessage(/** @type {any} */ (apercu.error))}
+        </Text>
+      ) : null}
+      <Input
+        density="compact"
+        label={t('collectiviteFermetures.form.mot', 'Un mot pour les clubs (facultatif)')}
+        onChangeText={setMot}
+        placeholder={t('collectiviteFermetures.form.motExemple', 'Réfection du sol')}
+        testID="fermeture-mot"
+        value={mot}
+      />
+      {bloquer || modification ? null : (
+        <TouchableOpacity
+          accessibilityLabel={t(
+            'collectiviteFermetures.form.publier',
+            'Publier aussi une actualité « Fermeture »',
+          )}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: publier }}
+          onPress={() => setPublier(!publier)}
+          style={[
+            Alignments.row,
+            {
+              alignItems: 'flex-start',
+              gap: 12,
+              minHeight: 44,
+              paddingVertical: 4,
+            },
+          ]}
+          testID="fermeture-publier"
+        >
+          <View
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              {
+                backgroundColor: publier ? Colors.primary500 : 'transparent',
+                borderColor: publier ? Colors.primary500 : Colors.neutral300,
+                borderRadius: 6,
+                borderWidth: 1.5,
+                height: 22,
+                width: 22,
+              },
+            ]}
+          >
+            {publier ? (
+              <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
+            ) : null}
+          </View>
+          <View style={{ flex: 1, gap: 0 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t(
+                'collectiviteFermetures.form.publier',
+                'Publier aussi une actualité « Fermeture »',
+              )}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t(
+                'collectiviteFermetures.form.publierPourQui',
+                'Pour tous les membres des clubs rattachés.',
+              )}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      {erreur ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
+          {erreur}
+        </Text>
+      ) : null}
+      <Button
+        disabled={!pret || enCours}
+        isLoading={enCours}
+        onPress={() => (modification ? envoyer() : setConfirmer(true))}
+        testID="fermeture-envoyer"
+        title={boutonPrincipal}
+        variant="Primary"
+      />
+    </>
+  );
+  const confirmation = (
+    <BottomModal close={() => setConfirmer(false)} isVisible={confirmer} webPresentation="dialog">
+      <View
+        accessibilityRole="alert"
+        style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}
+        testID="fermeture-confirmation"
+      >
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{questionDeConfirmation}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>{quiEstPrevenu}</Text>
+        <View style={[Alignments.row, { gap: 8, justifyContent: 'flex-end' }]}>
+          <Button
+            onPress={() => setConfirmer(false)}
+            size="small"
+            title={t('collectiviteFermetures.confirmer.annuler', 'Annuler')}
+            variant="Ghost"
+          />
+          <Button
+            isLoading={enCours}
+            onPress={envoyer}
+            size="small"
+            testID="fermeture-confirmer"
+            title={
+                bloquer
+                  ? t('collectiviteFermetures.confirmer.bloquer', 'Bloquer')
+                  : t('collectiviteFermetures.confirmer.fermer', 'Fermer')
+              }
+            variant="Primary"
+          />
+        </View>
+      </View>
+    </BottomModal>
+  );
+
+  if (enPanneau) {
+    let titreDuPanneau = t('collectiviteFermetures.panneau.titreFermer', 'Fermer l’installation');
+    if (modification) {
+      titreDuPanneau = t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture');
+    } else if (bloquer) {
+      titreDuPanneau = titre;
+    }
+    return (
+      <View style={{ gap: 12 }} testID="fermeture-panneau">
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1 }]}>
+            {titreDuPanneau}
+          </Text>
+          <TouchableOpacity
+            accessibilityLabel={t('collectiviteFermetures.panneau.fermer', 'Fermer le panneau')}
+            accessibilityRole="button"
+            onPress={onCancel}
+            style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
+            testID="fermeture-panneau-fermer"
+          >
+            <SvgIcon color={Colors.neutral200} height={14} name="close" width={14} />
+          </TouchableOpacity>
+        </View>
+        {corps}
+        {confirmation}
+      </View>
+    );
+  }
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
       <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 16 }}>
@@ -529,122 +838,9 @@ function FormulaireDeFermeture({ existante, params }) {
             ? t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture')
             : titre}
         </Text>
-        {choixDeLInstallation}
-        {champsDeDates}
-        {erreurDeSaisie ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurDeSaisie}</Text> : null}
-        {facilityId ? carteDesSeances : null}
-        {apercu.error ? (
-          <Text style={[Fonts.p3, Fonts.error500]}>
-            {closureErrorMessage(t, apercu.error)
-              || getErrorMessage(/** @type {any} */ (apercu.error))}
-          </Text>
-        ) : null}
-        <Input
-          density="compact"
-          label={t('collectiviteFermetures.form.mot', 'Un mot pour les clubs (facultatif)')}
-          onChangeText={setMot}
-          placeholder={t('collectiviteFermetures.form.motExemple', 'Réfection du sol')}
-          testID="fermeture-mot"
-          value={mot}
-        />
-        {bloquer || modification ? null : (
-          <TouchableOpacity
-            accessibilityLabel={t(
-              'collectiviteFermetures.form.publier',
-              'Publier aussi une actualité « Fermeture »',
-            )}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: publier }}
-            onPress={() => setPublier(!publier)}
-            style={[
-              Alignments.row,
-              {
-                alignItems: 'flex-start',
-                gap: 12,
-                minHeight: 44,
-                paddingVertical: 4,
-              },
-            ]}
-            testID="fermeture-publier"
-          >
-            <View
-              style={[
-                Alignments.alignCenter,
-                Alignments.justifyCenter,
-                {
-                  backgroundColor: publier ? Colors.primary500 : 'transparent',
-                  borderColor: publier ? Colors.primary500 : Colors.neutral300,
-                  borderRadius: 6,
-                  borderWidth: 1.5,
-                  height: 22,
-                  width: 22,
-                },
-              ]}
-            >
-              {publier ? (
-                <SvgIcon color={Colors.primary900} height={12} name="check" width={12} />
-              ) : null}
-            </View>
-            <View style={{ flex: 1, gap: 0 }}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t(
-                  'collectiviteFermetures.form.publier',
-                  'Publier aussi une actualité « Fermeture »',
-                )}
-              </Text>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {t(
-                  'collectiviteFermetures.form.publierPourQui',
-                  'Pour tous les membres des clubs rattachés.',
-                )}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        {erreur ? (
-          <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
-            {erreur}
-          </Text>
-        ) : null}
-        <Button
-          disabled={!pret || enCours}
-          isLoading={enCours}
-          onPress={() => (modification ? envoyer() : setConfirmer(true))}
-          testID="fermeture-envoyer"
-          title={boutonPrincipal}
-          variant="Primary"
-        />
+        {corps}
       </ScrollView>
-      <BottomModal close={() => setConfirmer(false)} isVisible={confirmer} webPresentation="dialog">
-        <View
-          accessibilityRole="alert"
-          style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}
-          testID="fermeture-confirmation"
-        >
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{questionDeConfirmation}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>{quiEstPrevenu}</Text>
-          <View style={[Alignments.row, { gap: 8, justifyContent: 'flex-end' }]}>
-            <Button
-              onPress={() => setConfirmer(false)}
-              size="small"
-              title={t('collectiviteFermetures.confirmer.annuler', 'Annuler')}
-              variant="Ghost"
-            />
-            <Button
-              isLoading={enCours}
-              onPress={envoyer}
-              size="small"
-              testID="fermeture-confirmer"
-              title={
-                bloquer
-                  ? t('collectiviteFermetures.confirmer.bloquer', 'Bloquer')
-                  : t('collectiviteFermetures.confirmer.fermer', 'Fermer')
-              }
-              variant="Primary"
-            />
-          </View>
-        </View>
-      </BottomModal>
+      {confirmation}
     </ScreenContainer>
   );
 }

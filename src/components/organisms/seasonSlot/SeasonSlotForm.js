@@ -209,6 +209,7 @@ function SeasonSlotForm({
     && Number(toMinutes(fin)) > Number(toMinutes(debut));
   // COLL-C2C : en repartition, la place ne change pas (meme jour, memes heures) : rien a lire.
   // COLL-C2B-BIS : en modification, la place se lit sur la periode choisie, a partir d aujourd hui.
+  /** @type {string | null} */
   let apercuDu = null;
   if (avecPeriode && periodeJuste && nouveauDebut && nouvelleFin) {
     apercuDu = nouveauDebut < aujourdhui ? aujourdhui : nouveauDebut;

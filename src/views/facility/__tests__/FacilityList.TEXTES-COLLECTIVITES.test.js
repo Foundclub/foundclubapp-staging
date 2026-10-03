@@ -86,6 +86,10 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 
 // Le service est double ENTIEREMENT (il importe le client HTTP, qui refuse de se charger
 // sans `API_URL`) ; les sections sont celles de la source, recopiees au plus court.
+// COLL-C4B-BIS (03/10) : la carte d une installation de la Ville lit sa fermeture (bandeau).
+jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
+  useFacilityClosures: () => ({ data: null }),
+}));
 jest.mock('@/services/facility/facilityService', () => ({
   deleteFacility: jest.fn(),
   getFacilitySections: (/** @type {any[]} */ installations) => (

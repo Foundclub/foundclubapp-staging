@@ -10,7 +10,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
  * ST-RETOURS2 (planche 22) — LA LIGNE SOUS LE NOM D UN ENFANT : « 14 ans · U15 · AS Montrivage ».
  * L age, l equipe, le club ; ce qui manque est saute, sans trou. UNE regle pour les trois
  * endroits ou le parent lit son enfant : « Mes enfants », sa fiche, la page d un moins de 13 ans.
- * @param {(cle: string, repli?: any, options?: any) => string} t - La traduction.
+ * @param {any} t - La traduction (TFunction d i18next).
  * @param {object} enfant - Ce qu on sait de l enfant.
  * @param {number | null} [enfant.age] - Son age (calcule par le serveur).
  * @param {string | null} [enfant.clubName] - Son club.
@@ -61,7 +61,7 @@ function ChildIdentityCard({
     >
       <ProfileAvatar
         enablePreview={enablePreview}
-        imageUrl={avatarUrl}
+        imageUrl={avatarUrl || undefined}
         name={name}
         size={56}
       />

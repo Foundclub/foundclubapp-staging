@@ -107,7 +107,7 @@ function DecisionCreneauModal({ decision, onClose }) {
     : [];
   const cochees = datesDeLaSerie
     .map((/** @type {any} */ date) => String(date?.documentId || ''))
-    .filter((documentId) => documentId && !decochees.includes(documentId));
+    .filter((/** @type {string} */ documentId) => documentId && !decochees.includes(documentId));
   const enPartie = datesDeLaSerie.length > 0 && cochees.length < datesDeLaSerie.length;
   const aucuneCochee = datesDeLaSerie.length > 0 && cochees.length === 0;
   const basculer = (/** @type {string} */ documentId) => {

@@ -82,6 +82,10 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   }),
 }));
 const mockDecider = jest.fn();
+// COLL-C4B-BIS (03/10) : la carte d une installation de la Ville lit sa fermeture (bandeau).
+jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
+  useFacilityClosures: () => ({ data: null }),
+}));
 jest.mock('@/services/facility/facilityService', () => ({
   decideClubSession: (/** @type {any[]} */ ...args) => mockDecider(...args),
   deleteFacility: jest.fn(),

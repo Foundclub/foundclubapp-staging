@@ -32,9 +32,12 @@ jest.mock('@/services/matchStats/matchStatsService', () => ({
   saveEventMyMatchResponse: (...args) => mockEnvoyerReponse(...args),
   saveLeagueMyMatchResponse: (...args) => mockEnvoyerReponseLigue(...args),
 }));
+// ST-VUES3-ORDI : les équipes que le lecteur entraîne (le club du camp de gauche).
+/** @type {any} */
+let mockUtilisateur = null;
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ isBootstrapResolved: true }),
+  default: () => ({ isBootstrapResolved: true, userData: mockUtilisateur }),
 }));
 jest.mock('@/store/appContext', () => ({
   useAppContext: () => [{ auth: { token: 'jeton-test' } }, () => {}],
@@ -196,6 +199,7 @@ const bouton = (/** @type {any} */ racine, /** @type {string} */ titre) => racin
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUtilisateur = null;
 });
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
@@ -301,6 +305,25 @@ describe('ST-MATCH écran 4 — la fenêtre de l ENTRAÎNEUR', () => {
     expect(vus).toContain('Score enregistré : 2 - 1');
     expect(vus).toContain('Après le match · étape 2 sur 3');
     expect(bouton(racine, 'Saisir la feuille')).toBeTruthy();
+  });
+
+  test('🔴 ST-VUES3-ORDI — le camp de gauche porte le CLUB, « AS Montrivage », plus « U15 »', async () => {
+    mockUtilisateur = {
+      documentId: 'karim',
+      trainedTeams: [{ club: { name: 'AS Montrivage' }, documentId: 'u15', name: 'U15' }],
+    };
+    mockLireFeuille.mockResolvedValue({
+      playerResponses: [{ status: null }],
+      report: null,
+      score: { available: false },
+    });
+    const racine = await monter(charge([rappelEntraineur()]));
+
+    expect(textes(racine)).toContain('AS Montrivage');
+    expect(textes(racine)).toContain('Adversaire');
+    expect(textes(racine)).not.toContain('U15');
+    expect(racine.findAll((n) => n.props?.accessibilityLabel === 'Un but de plus pour AS Montrivage'))
+      .not.toHaveLength(0);
   });
 
   test('état 4 — la vérification dit CE QUI a changé (2 - 2 au lieu de 2 - 1)', async () => {

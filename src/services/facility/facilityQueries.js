@@ -183,7 +183,7 @@ export const useApproveFacilityOverrideRequest = (options = {}) => {
 
   return useMutation({
     // COLL-C3B-BIS : `dates`, les dates choisies d'une série (planche 33).
-    mutationFn: ({
+    mutationFn: (/** @type {any} */ {
       dates = null, decisionReason, requestId, series = false,
     }) => (
       approveFacilityOverrideRequest(requestId, decisionReason, series, dates)

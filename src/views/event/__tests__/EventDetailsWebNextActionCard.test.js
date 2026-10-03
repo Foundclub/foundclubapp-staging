@@ -32,6 +32,8 @@ const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
 const mockAttendanceQuery = { data: null };
 const mockMatchStatsQuery = { data: null };
+// ST-VUES3-ORDI — la relance « Relancer les N » de la carte, observée.
+const mockRelancer = jest.fn(() => Promise.resolve({ alreadyRemindedCount: 0, remindedCount: 2 }));
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
@@ -114,6 +116,8 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
+  // ST-VUES3-ORDI — « Relancer les N » de la carte « Après le match », sur le site.
+  useRemindEventMatchResponses: () => ({ isPending: false, mutateAsync: mockRelancer }),
 }));
 
 // ST-RETOURS2 · point 1 — la fiche du site lit les avis d entrainement : doublure, comme
@@ -501,17 +505,16 @@ describe('P9 · ecran 2 — la carte « APRES LE MATCH » sur l Apercu du site',
     // match. Elle sert a montrer ce qui vient, pas seulement ce qui est du.
     const carte = parTestID(root, 'post-match-journey')[0];
     expect(carte).toBeDefined();
-    expect(textOf(carte)).toContain('Les stats seront disponibles à la fin du match.');
-
-    const bouton = boutonDe(root, 'post-match-action');
-    expect(bouton.props.disabled).toBe(true);
-    act(() => {
-      bouton.props.onPress?.();
-    });
+    // 🎯 ST-VUES3-ORDI (écran 7) — ADAPTÉ : le site sert la carte du TÉLÉPHONE (ST-MATCH,
+    // écran 7) : avant la fin, plus de bouton éteint ni « Les stats seront disponibles à la
+    // fin du match. » ; elle dit QUAND tout s'ouvre.
+    expect(textOf(carte)).toContain('Tout s’ouvre à la fin du match');
+    expect(textOf(carte)).not.toContain('Les stats seront disponibles à la fin du match.');
+    expect(parTestID(root, 'post-match-action')).toHaveLength(0);
     expect(dernierEnvoiVers('MatchStatsEditor')).toBeNull();
   });
 
-  test('etape « Score » : sans destination sur le site, la porte se ferme et le DIT', () => {
+  test('etape « Score » : sur le site, elle ouvre la feuille de match, ou le score se saisit', () => {
     const root = mountScreen({
       attendance: buildAttendance(APRES_LE_MATCH),
       event: buildMatchEvent(),
@@ -526,16 +529,20 @@ describe('P9 · ecran 2 — la carte « APRES LE MATCH » sur l Apercu du site',
     // 🎯 ST-MATCH (écran 7) — ADAPTÉ : l'étape dans le surtitre ; « À saisir ».
     expect(textOf(carte)).toContain('Après le match · étape 1 sur 3');
     expect(textOf(carte)).toContain('À saisir');
-    // ⛔ LE POINT DU TEMOIN : le telephone ouvre ici une feuille que ce fichier
-    // n a pas. Un bouton qui ne ferait RIEN serait un menteur ; il se ferme.
-    expect(textOf(carte)).toContain('Le score s’enregistre depuis l’application mobile.');
+    // 🎯 ST-VUES3-ORDI (écrans 7 et 8) — ADAPTÉ : la porte est celle du TÉLÉPHONE
+    // (`resolveMatchStatsDoor`). Elle n'est plus fermée sur « Le score s’enregistre depuis
+    // l’application mobile. » : depuis ST-MATCH10, la feuille de match du site saisit aussi
+    // le score (le serveur l'écrit avec la feuille tant qu'il n'en a pas).
+    expect(textOf(carte)).not.toContain('Le score s’enregistre depuis l’application mobile.');
 
     const bouton = boutonDe(root, 'post-match-action');
-    expect(bouton.props.disabled).toBe(true);
+    expect(bouton.props.disabled).toBe(false);
     act(() => {
-      bouton.props.onPress?.();
+      bouton.props.onPress();
     });
-    expect(dernierEnvoiVers('MatchStatsEditor')).toBeNull();
+    expect(dernierEnvoiVers('MatchStatsEditor')).toEqual(
+      expect.objectContaining({ eventId: 'event-1', sourceType: 'event', teamId: TEAM_ID }),
+    );
   });
 
   test('un visiteur sans compte ne voit RIEN de la carte (AD02)', () => {
@@ -649,24 +656,26 @@ describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose p
   test.each([
     ['rapport publie', {}],
     ['rapport a re-verifier apres un score officiel', { needsReview: true }],
-  ])('🔒 %s : pour un JOUEUR, la porte est fermee et rien n ouvre l editeur', (_cas, rapport) => {
+  ])('🔒 %s : pour un JOUEUR, aucune porte vers l editeur', (_cas, rapport) => {
     const root = mountScreen(vuDuJoueur(rapport));
 
-    expect(parTestID(root, 'post-match-journey')[0]).toBeDefined();
-    const bouton = boutonDe(root, 'post-match-action');
-    expect(bouton.props.disabled).toBe(true);
-    act(() => {
-      bouton.props.onPress?.();
-    });
+    // 🎯 ST-VUES3-ORDI (écran 7) — ADAPTÉ : comme au téléphone (ST-MATCH, « le joueur n a
+    // plus AUCUNE porte vers l éditeur »), le joueur lit « Le bilan de … » : ni la carte de
+    // l'encadrement, ni aucun bouton qui mène à l'éditeur.
+    expect(parTestID(root, 'post-match-journey')).toHaveLength(0);
+    expect(parTestID(root, 'post-match-action')).toHaveLength(0);
+    expect(parTestID(root, 'st-match-bilan-publie')[0]).toBeDefined();
     expect(dernierEnvoiVers('MatchStatsEditor')).toBeNull();
   });
 
-  test('🔒 le joueur lit POURQUOI la porte est fermee : le rapport est publie', () => {
-    const root = mountScreen(vuDuJoueur());
+  test('🔒 le joueur lit que la feuille est publiée, jamais « Rapport finalise »', () => {
+    const root = mountScreen(vuDuJoueur({ finalizedAt: '2099-01-01T21:39:00.000Z' }));
 
-    // 🎯 T9 (02/10) — ADAPTÉ : « Rapport finalise » (sans accent) devient « Feuille publiée ».
-    expect(textOf(parTestID(root, 'post-match-journey')[0])).toContain('Feuille publiée');
-    expect(textOf(parTestID(root, 'post-match-journey')[0])).not.toContain('Rapport finalise');
+    // 🎯 ST-VUES3-ORDI — ADAPTÉ : « Feuille publiée » devient « Le bilan de Ada · Publié le … ».
+    const bilan = parTestID(root, 'st-match-bilan-publie')[0];
+    expect(textOf(bilan)).toContain('Le bilan de Ada');
+    expect(textOf(bilan)).toContain('Publié le');
+    expect(textOf(bilan)).not.toContain('Rapport finalise');
   });
 
   test('PROTEGE : le COACH, rapport publie, ouvre toujours l editeur', () => {
@@ -691,5 +700,171 @@ describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose p
     expect(dernierEnvoiVers('MatchStatsEditor')).toEqual(
       expect.objectContaining({ eventId: 'event-1', sourceType: 'event', teamId: TEAM_ID }),
     );
+  });
+});
+
+// ==========================================================================
+// ST-VUES3-ORDI (03/10) — LA PAGE DU MATCH SUR ORDINATEUR (planche P3-match-ordi) : écrans
+// 1, 7 et 8 du design des statistiques, sur le site.
+//   · point 2 — la ligne d'infos sous le titre : « U15 · jeu. 1 janv. · 18:00 » ;
+//   · point 3 — l'encart du score du téléphone, ses états, l'auteur, les buteurs ;
+//   · point 4 — la carte « Après le match » du téléphone, À DROITE, avec « Relancer les N » ;
+//   · point 5 — « Gérer l'événement » : Modifier, Convocation, « Stats du match » et sa note.
+// Avant ce lot, le site n'avait rien de tout cela (titre, date longue, ancienne carte à
+// gauche, un seul bouton « Modifier »).
+// ==========================================================================
+
+describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
+  // Les boutons DOM (pas les boutons natifs) dont le texte contient ce libellé.
+  const boutonsDOM = (/** @type {any} */ root, /** @type {string} */ libelle) => root
+    .findAll((/** @type {any} */ n) => n.type === 'button' && textOf(n).includes(libelle));
+  // Le texte RENDU (les composants natifs servis par react-native-web compris), pas celui du JSX.
+  const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
+    .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
+    .join(' ').replace(/\s+/g, ' ').trim();
+  const parSection = (/** @type {any} */ root, /** @type {string} */ nom) => root
+    .findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === nom);
+
+  const FEUILLE_PUBLIEE = buildMatchStats({
+    playerResponses: [
+      { label: 'Hugo L.', status: 'submitted' },
+      { label: 'Léa M.', status: 'pending' },
+      { label: 'Max P.', status: 'pending' },
+    ],
+    report: {
+      collectiveComment: 'Bon bloc en première mi-temps.',
+      collectiveRating: 8,
+      finalizedAt: '2099-01-01T21:39:00.000Z',
+      needsReview: false,
+      playerLines: [{ goals: 2, label: 'Hugo L.', player: { firstname: 'Hugo', lastname: 'Lemaire' } }],
+      responseCompletionCount: 1,
+      responseEligibleCount: 3,
+      scoreAgainst: 1,
+      scoreFor: 3,
+      status: 'final',
+    },
+    score: {
+      available: true,
+      recordedAt: '2099-01-01T21:35:00.000Z',
+      recordedBy: { documentId: 'karim', firstname: 'Karim' },
+      scoreAgainst: 1,
+      scoreFor: 3,
+      source: 'manual',
+      waitingOfficial: false,
+    },
+  });
+
+  test('🔴 point 3 — l encart du score : la pastille, le face-à-face, le score et qui l a saisi', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent({ opponentName: 'Test-COMPO', team: { ...buildEvent().team, club: { documentId: CLUB_ID, name: 'AS Montrivage' } } }),
+      matchStats: FEUILLE_PUBLIEE,
+    });
+
+    const [encart] = parSection(root, 'match-encart');
+    expect(encart).toBeDefined();
+    const texte = texteRendu(encart);
+    expect(texte).toContain('Match · TERMINÉ · VICTOIRE');
+    expect(texte).toContain('AS Montrivage');
+    expect(texte).toContain('Test-COMPO');
+    expect(texte).toContain('3 - 1');
+    expect(texte).toContain('Score saisi');
+    expect(texte).toContain('Saisi par Karim le');
+    expect(parTestID(encart, 'event-header-match-encart')[0]).toBeDefined();
+  });
+
+  test('🔴 point 3 — un visiteur lit le score, jamais qui l a saisi (mineurs en U15)', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      auth: { canManageEvent: () => false, userData: null },
+      event: buildMatchEvent({
+        matchResult: {
+          savedAt: '2099-01-01T21:35:00.000Z',
+          savedBy: { firstname: 'Karim' },
+          scoreAgainst: 1,
+          scoreFor: 3,
+          source: 'manual',
+        },
+        opponentName: 'Test-COMPO',
+      }),
+      matchStats: null,
+    });
+
+    const texte = texteRendu(parSection(root, 'match-encart')[0]);
+    expect(texte).toContain('3 - 1');
+    expect(texte).not.toContain('Saisi par');
+  });
+
+  test('🔴 point 2 — la ligne d infos du match, comme la planche : l équipe, le jour et l heure', () => {
+    const root = mountScreen({ event: buildMatchEvent() });
+
+    const jour = new Date('2099-01-01T17:00:00.000Z')
+      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', weekday: 'short' });
+    const [ligne] = root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-match-info-line');
+    expect(textOf(ligne)).toBe(`U15 · ${jour} · 18:00`);
+  });
+
+  test('🔴 point 4 — la carte du téléphone est À DROITE, nomme qui manque et relance', async () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: FEUILLE_PUBLIEE,
+    });
+
+    const [bloc] = parSection(root, 'match-stats');
+    expect(bloc).toBeDefined();
+    const carte = parTestID(bloc, 'post-match-journey')[0];
+    expect(texteRendu(carte)).toContain('Léa');
+    expect(texteRendu(carte)).toContain('Max');
+    const relancer = parTestID(bloc, 'post-match-relancer')[0].findAllByType(TouchableOpacity)[0];
+    window.alert = jest.fn();
+    await act(async () => {
+      relancer.props.onPress();
+    });
+    expect(mockRelancer).toHaveBeenCalledWith({ eventId: 'event-1', teamId: TEAM_ID });
+    expect(texteRendu(parTestID(bloc, 'post-match-relancer')[0])).toContain('Déjà relancés aujourd’hui');
+  });
+
+  test('🔴 point 5 — « Gérer l événement » : Modifier, Convocation, « Stats du match » et sa note', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(PENDANT_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    const [gerer] = boutonsDOM(root, "Gérer l'événement");
+    expect(gerer).toBeDefined();
+    act(() => gerer.props.onClick());
+    const menu = root.findAll((/** @type {any} */ n) => n.props?.role === 'menu')[0];
+    const items = menu.findAll((/** @type {any} */ n) => n.props?.role === 'menuitem');
+    expect(items.map((/** @type {any} */ item) => textOf(item).split(' S’ouvre')[0]))
+      .toEqual(['Modifier', 'Convocation', 'Stats du match']);
+    // Avant la fin du match : la puce est éteinte et dit QUAND elle s'ouvrira.
+    expect(textOf(items[2])).toContain('S’ouvre à la fin du match');
+    expect(items[2].props.disabled).toBe(true);
+  });
+
+  test('🔴 point 5 — après la fin, « Stats du match » ouvre la feuille de match', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    act(() => boutonsDOM(root, "Gérer l'événement")[0].props.onClick());
+    const stats = root.findAll((/** @type {any} */ n) => n.props?.role === 'menuitem')
+      .find((/** @type {any} */ item) => textOf(item).includes('Stats du match'));
+    expect(textOf(stats)).toContain('Étape 2 sur 3 : la feuille');
+    act(() => stats.props.onClick());
+    expect(dernierEnvoiVers('MatchStatsEditor')).toEqual(
+      expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
+    );
+  });
+
+  test('protégé — un entraînement garde son seul bouton « Modifier », sans menu', () => {
+    const root = mountScreen({});
+
+    expect(boutonsDOM(root, "Gérer l'événement")).toHaveLength(0);
+    expect(boutonsDOM(root, 'Modifier')).not.toHaveLength(0);
   });
 });

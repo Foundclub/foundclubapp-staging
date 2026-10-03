@@ -6160,6 +6160,11 @@ export default {
       travaux: 'Travaux',
       vacances: 'Vacances',
     },
+    // COLL-C4B-BIS (03/10) — le panneau de droite du planning, sur ordinateur (planche 25).
+    panneau: {
+      fermer: 'Fermer le panneau',
+      titreFermer: 'Fermer l’installation',
+    },
     planning: {
       aDeplacer: 'à déplacer',
       bloque: 'Bloqué par la Ville · {{motif}}',

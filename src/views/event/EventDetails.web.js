@@ -6,10 +6,13 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWindowDimensions } from 'react-native';
+import { Image, useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
+import {
+  resolveEventDisplayName,
+  resolveEventOpponentName,
+} from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
@@ -56,7 +59,10 @@ import {
   createEventParticipation,
   deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
-import { useGetEventMatchStats } from '@/services/matchStats/matchStatsQueries';
+import {
+  useGetEventMatchStats,
+  useRemindEventMatchResponses,
+} from '@/services/matchStats/matchStatsQueries';
 import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
@@ -85,9 +91,23 @@ import {
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import MatchBilanCard from './components/MatchBilanCard';
+import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
+import { formatEventPlaceShort, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
+import { findParentTeamId } from './matchEncartLines';
+import {
+  buildMatchHeaderScoreSummary,
+  formatMatchEndLabel,
+  listMissingResponders,
+  resolveMatchStartTimeLabel,
+  resolveMatchStatsDoor,
+  resolveMatchVerdictTag,
+  resolveTeamCoachFirstname,
+  resolveViewerFromInvitedTeam,
+} from './matchPageModel';
 /* eslint-enable perfectionist/sort-imports */
 
 const flattenPages = (pages) => {
@@ -180,6 +200,7 @@ function EventDetails({ navigation, route }) {
   const queryClient = useQueryClient();
   const {
     Colors,
+    Images,
   } = useTheme();
   const {
     canManageEvent,
@@ -321,8 +342,23 @@ function EventDetails({ navigation, route }) {
     const playerTeam = teams.find((team) => Array.isArray(team?.players) && team.players.some((player) => player?.documentId === userDocumentId));
     if (playerTeam?.documentId) return playerTeam.documentId;
 
+    // 👪 ST-VUES3-ORDI — comme le telephone (DECISIONS-SOIR, « parents encart B ») : le
+    // parent lit l equipe de SON enfant, que le serveur nomme.
+    const parentTeamId = findParentTeamId({
+      invitedTeams: event?.invitedTeams,
+      team: event?.team,
+      viewerParentTeamDocumentIds: event?.viewerParentTeamDocumentIds,
+    });
+    if (parentTeamId) return parentTeamId;
+
     return teams[0]?.documentId || null;
-  }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
+  }, [
+    event?.invitedTeams,
+    event?.team,
+    event?.viewerParentTeamDocumentIds,
+    userData?.documentId,
+    userData?.trainedTeams,
+  ]);
   const compositionEditorTeam = useMemo(() => {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     return teams.find((team) => team?.documentId === compositionTeamId) || event?.team || null;
@@ -551,6 +587,9 @@ function EventDetails({ navigation, route }) {
   // telle quelle — y mettre « match termine » serait un contresens.
   // ==========================================================================
   const isMatchEvent = normalizeTypeName(event?.type?.name).includes('match');
+  // 👪 ST-VUES3-ORDI — le parent d un joueur de CETTE equipe demande aussi la feuille : le
+  // serveur ne lui rend que l encart (score, auteur, buteurs). Meme porte que le telephone.
+  const isTeamParent = Boolean(compositionTeamId) && compositionTeamId === findParentTeamId(event);
   // ⛔ LE DEBUT VIENT DU SERVEUR, IL NE SE DEDUIT PAS DE `event.date` : quand la
   // date est a minuit et que l heure vit dans `startTime`, la deduction placerait
   // la fin du match a 02:00 et ouvrirait l apres-match AVANT le coup d envoi
@@ -601,7 +640,9 @@ function EventDetails({ navigation, route }) {
     data: matchStatsPayload,
     isFetching: isMatchStatsFetching,
   } = useGetEventMatchStats(eventId || '', compositionTeamId || undefined, {
-    enabled: Boolean(eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember)),
+    enabled: Boolean(
+      eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember || isTeamParent),
+    ),
   });
   const matchStatsReport = matchStatsPayload?.report || null;
   const playerCollectiveRating = matchStatsPayload?.playerCollectiveRating || null;
@@ -609,6 +650,8 @@ function EventDetails({ navigation, route }) {
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
   const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
+  // ST-MATCH (écrans 1 et 7) — « Karim n'a pas encore saisi le score », « Le bilan de Karim ».
+  const teamCoachFirstname = resolveTeamCoachFirstname(compositionEditorTeam || event?.team);
   const matchStatsScoreLabel = useMemo(() => {
     const score = matchStatsPayload?.score;
     if (!score?.available) return t('eventDetails.scoreToComplete', 'Score à compléter');
@@ -616,75 +659,38 @@ function EventDetails({ navigation, route }) {
     return `${score.scoreFor ?? '-'} - ${score.scoreAgainst ?? '-'}`;
   }, [matchStatsPayload?.score, t]);
 
-  // 🚪 LA PORTE DE LA CARTE : ouverte ou fermee, et POURQUOI quand elle est
-  // fermee. L ordre des branches suit celui du telephone
-  // (EventDetails.js:3596), a UNE difference pres, nommee plus bas.
-  //
-  // 🧾 Seules les branches FERMEES portent une phrase, et ce n est pas un
-  // oubli : la carte ne dessine le motif que porte close
-  // (`boutonDesactive && motif`). Les etats ouverts du telephone ont bien un
-  // sous-titre, mais il n est JAMAIS affiche — le recopier ici aurait ajoute du
-  // texte que personne ne lit, et un second juge a maintenir.
-  const postMatchAction = useMemo(() => {
-    if (!isMatchFinished) {
-      return {
-        disabled: true,
-        subtitle: t(
-          'eventDetails.statsWillBeAvailableAt',
-          'Les stats seront disponibles à la fin du match.',
-        ),
-      };
-    }
-    if (matchStatsPayload?.score?.waitingOfficial) {
-      return {
-        disabled: true,
-        subtitle: t(
-          'eventDetails.waitingForTheSyncedOfficial',
-          'En attente du score officiel synchronise.',
-        ),
-      };
-    }
-    // ⛔ LA DIFFERENCE ANNONCEE — L ETAPE « SCORE » N A PAS DE DESTINATION ICI.
-    // Le telephone l ouvre dans une feuille (`openMatchScoreSheet`) que ce
-    // fichier n a pas. Un bouton qui ne ferait RIEN serait un menteur : il
-    // rendrait la main sans avoir rien ecrit. La porte se ferme donc, et elle
-    // DIT ou aller. Ce test passe AVANT les suivants pour tenir une regle
-    // simple : quand le parcours designe l etape 1, la porte est close.
-    // Voie de sortie : un ecran de saisie du score au registre web.
-    if (!matchStatsPayload?.score?.available) {
-      return {
-        disabled: true,
-        subtitle: t(
-          'eventDetails.theScoreIsSavedFrom',
-          'Le score s’enregistre depuis l’application mobile.',
-        ),
-      };
-    }
-    // 🔒 SECU-STATS — UN TEST LE PRECEDAIT ET ROUVRAIT LA PORTE : « un rapport
-    // publie ou a re-verifier se RELIT toujours, meme sans le droit de le
-    // gerer ». Mais la relecture, c est `MatchStatsEditor`, l outil de
-    // l encadrement : il affiche l avis du coach et l auto-evaluation de CHAQUE
-    // joueur. Un joueur n y entre plus ; il garde sa reponse sur le telephone.
-    if (!canManageMatchStats) {
-      return {
-        disabled: true,
-        subtitle: isMatchStatsFinal
-          // T9 (02/10) — « Rapport finalise » (sans accent) : le mot du téléphone.
-          ? t('stMatch.gerer.published', 'Feuille publiée')
-          : t(
-            'eventDetails.yourTeamMembersCanStill',
-            'Les membres de ton équipe peuvent encore finaliser ce rapport.',
-          ),
-      };
-    }
-
-    return { disabled: false, subtitle: '' };
-  }, [
+  // 🚪 ST-VUES3-ORDI (écrans 7 et 8 sur ordinateur) — LA PORTE « STATS DU MATCH » DU
+  // TÉLÉPHONE, lue dans `matchPageModel.js` : un seul juge pour les deux surfaces. Elle
+  // remplace la copie d'avant, qui disait « Les stats seront disponibles à la fin du
+  // match. », « Les membres de ton équipe peuvent encore finaliser ce rapport. », et
+  // fermait l'étape « Score » (« Le score s'enregistre depuis l'application mobile. ») :
+  // depuis ST-MATCH10, la feuille de match du site saisit aussi le score (le serveur
+  // l'écrit avec la feuille tant qu'il n'en a pas), l'étape 1 l'ouvre donc.
+  // 🔒 SECU-STATS tient toujours : sans le droit de gérer, la porte est fermée, et
+  // `openMatchStatsEditor` refuse de toute façon.
+  const matchEndLabel = useMemo(() => formatMatchEndLabel({ eventEndedAt, t }), [eventEndedAt, t]);
+  const postMatchAction = useMemo(() => resolveMatchStatsDoor({
+    canManage: canManageMatchStats,
+    coachFirstname: teamCoachFirstname,
+    endLabel: matchEndLabel,
+    finalizedAt: matchStatsReport?.finalizedAt || null,
+    isFinal: isMatchStatsFinal,
+    isFinished: isMatchFinished,
+    isReviewRequired: isMatchStatsReviewRequired,
+    scoreAvailable: Boolean(matchStatsPayload?.score?.available),
+    t,
+    waitingOfficial: Boolean(matchStatsPayload?.score?.waitingOfficial),
+  }), [
     canManageMatchStats,
     isMatchFinished,
     isMatchStatsFinal,
+    isMatchStatsReviewRequired,
+    matchEndLabel,
     matchStatsPayload?.score?.available,
-    matchStatsPayload?.score?.waitingOfficial, t,
+    matchStatsPayload?.score?.waitingOfficial,
+    matchStatsReport?.finalizedAt,
+    t,
+    teamCoachFirstname,
   ]);
   const openMatchStatsEditor = useCallback(() => {
     // 🔒 SECU-STATS — la seconde couche. La carte, la rangee du menu et l invite
@@ -710,8 +716,153 @@ function EventDetails({ navigation, route }) {
     navigation, t,
   ]);
   const isPostMatchDoorClosed = Boolean(postMatchAction.disabled || isMatchStatsFetching);
-  // Comme pour l ecran 1, `showOverviewTab` tombe : le site n a pas d onglets.
-  const showPostMatchCard = Boolean(isMatchEvent && compositionTeamId && canViewMatchStats);
+  // 🎯 ST-VUES3-ORDI (écran 7 sur ordinateur) — LE BLOC « STATS DU MATCH » DU TÉLÉPHONE,
+  // même porte : l'équipe qui lit la feuille, ou l'organisateur une fois le match fini (le
+  // dirigeant qui n'entraîne pas y lit QUI saisit, « score A »). Le site n'a pas d'onglets.
+  const showPostMatchCard = Boolean(
+    isMatchEvent && ((compositionTeamId && canViewMatchStats) || (canEdit && isMatchFinished)),
+  );
+  const matchMissingResponders = useMemo(
+    () => listMissingResponders(matchStatsPayload?.playerResponses),
+    [matchStatsPayload?.playerResponses],
+  );
+  // 🎯 ST-MATCH (écran 7) — « Relancer les N », comme au téléphone : la route remind-responses
+  // (le serveur ne relance que les convoqués, « c oui »). STATS-FIX2 · 8-7 : la relance faite
+  // (ou déjà faite ce jour) est retenue pour CE match et CETTE équipe, la carte le dit.
+  const remindResponsesMutation = useRemindEventMatchResponses();
+  const [relanceDuJourCle, setRelanceDuJourCle] = useState(null);
+  const relanceCle = `${eventId || ''}:${compositionTeamId || ''}`;
+  const remindMissingResponders = useCallback(async () => {
+    if (!eventId || !compositionTeamId) return;
+    try {
+      const resultat = await remindResponsesMutation.mutateAsync({
+        eventId,
+        teamId: compositionTeamId,
+      });
+      const relances = Number(resultat?.remindedCount || 0);
+      const dejaRelances = Number(resultat?.alreadyRemindedCount || 0);
+      if (relances > 0 || dejaRelances > 0) setRelanceDuJourCle(relanceCle);
+      if (relances === 0 && dejaRelances > 0) {
+        window.alert(t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui'));
+        return;
+      }
+      window.alert(relances > 0
+        ? t('stMatch.carte.reminded', {
+          count: relances,
+          defaultValue_one: '{{count}} joueur relancé.',
+          defaultValue_other: '{{count}} joueurs relancés.',
+        })
+        : t('matchStatsEditor.noReminderNeeded', 'Aucune relance nécessaire pour ce match.'));
+    } catch (_error) {
+      window.alert(t('stMatch.carte.remindError', 'La relance n’a pas pu partir. Réessaie.'));
+    }
+  }, [compositionTeamId, eventId, relanceCle, remindResponsesMutation, t]);
+  // 🎯 ST-MATCH (écran 7, état 4) — le dirigeant trouve les résultats dans la fiche de
+  // l'équipe, onglet Stats.
+  const resultsTeamId = compositionTeamId || event?.team?.documentId || null;
+  const openTeamResults = useMemo(() => (resultsTeamId ? () => navigation.navigate(
+    RouteNames.TeamStack,
+    { params: { initialTab: 'stats', teamId: resultsTeamId }, screen: RouteNames.TeamDetails },
+  ) : null), [navigation, resultsTeamId]);
+
+  // 🆚 ST-VUES3-ORDI (écran 1 sur ordinateur) — L'ENCART DU SCORE DU TÉLÉPHONE, avec ses
+  // 7 états, les buteurs et l'auteur : MÊME calcul (`buildMatchHeaderScoreSummary`), MÊMES
+  // portes (l'équipe, l'organisateur, et le parent que le serveur reconnaît — « parents
+  // encart B » ; un visiteur ne lit que le score). « Nommer l'adversaire » ouvre ici la
+  // modification de l'événement, où vit le champ ; « Saisir le score », la feuille de match.
+  const matchOpponentName = isMatchEvent ? resolveEventOpponentName(event) : '';
+  const isViewerFromInvitedTeam = useMemo(
+    () => resolveViewerFromInvitedTeam({ compositionTeamId, event }),
+    [compositionTeamId, event],
+  );
+  const matchStartTimeLabel = useMemo(() => resolveMatchStartTimeLabel(event), [event]);
+  const scrollToMatchStats = useCallback(() => {
+    document.querySelector('[data-event-section="match-stats"]')
+      ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, []);
+  const openOpponentEdit = useCallback(() => {
+    navigation.navigate(RouteNames.EventEdit, { eventId });
+  }, [eventId, navigation]);
+  const matchEncartSummary = useMemo(() => {
+    if (!isMatchEvent) return null;
+    const summary = buildMatchHeaderScoreSummary({
+      canEdit,
+      canManage: canManageMatchStats,
+      canSeeDetails: Boolean(
+        isTeamMember || canEdit || matchStatsPayload?.permissions?.actorRole === 'parent',
+      ),
+      coachFirstname: teamCoachFirstname,
+      event,
+      isFinal: isMatchStatsFinal,
+      isFinished: isMatchFinished,
+      isViewerFromInvitedTeam,
+      onNameOpponent: openOpponentEdit,
+      opponentName: matchOpponentName,
+      playerLines: matchStatsReport?.playerLines,
+      scoreState: matchStatsPayload?.score || null,
+      sport: matchStatsPayload?.sport,
+      startTimeLabel: matchStartTimeLabel,
+      t,
+      viewerDocumentId: userData?.documentId || null,
+    });
+    return {
+      ...summary,
+      onEnterScore: postMatchAction.isScoreEntry && !postMatchAction.disabled
+        ? openMatchStatsEditor
+        : null,
+      onSeeStats: summary.isScoreShown && canViewMatchStats && compositionTeamId
+        ? scrollToMatchStats
+        : null,
+    };
+  }, [
+    canEdit,
+    canManageMatchStats,
+    canViewMatchStats,
+    compositionTeamId,
+    event,
+    isMatchEvent,
+    isMatchFinished,
+    isMatchStatsFinal,
+    isTeamMember,
+    isViewerFromInvitedTeam,
+    matchOpponentName,
+    matchStartTimeLabel,
+    matchStatsPayload?.permissions?.actorRole,
+    matchStatsPayload?.score,
+    matchStatsPayload?.sport,
+    matchStatsReport?.playerLines,
+    openMatchStatsEditor,
+    openOpponentEdit,
+    postMatchAction.disabled,
+    postMatchAction.isScoreEntry,
+    scrollToMatchStats,
+    t,
+    teamCoachFirstname,
+    userData?.documentId,
+  ]);
+  // 🏷️ ST-MATCH (écran 1) — la pastille porte l'étape et le verdict : « MATCH · TERMINÉ ·
+  // VICTOIRE » (mêmes mots que le téléphone).
+  const matchTypeTag = isMatchEvent
+    ? [
+      event?.type?.name || 'Match',
+      isMatchFinished ? t('eventDetails.typeTag.matchFinished', 'TERMINÉ') : '',
+      resolveMatchVerdictTag({
+        isFinished: isMatchFinished,
+        t,
+        verdict: matchEncartSummary?.verdict,
+      }),
+    ].filter(Boolean).join(' · ')
+    : '';
+  // 📅 ST-VUES3-ORDI (écran 1, point 2, planche P3-match-ordi) — la ligne d'infos du match,
+  // sous le titre : « U15 · sam. 5 sept. · 19:00 – 20:00 · Lyon (69001) ».
+  const matchWhenLine = isMatchEvent ? formatEventWhenLine(event) : '';
+  const matchInfoLine = isMatchEvent
+    ? [
+      String(event?.team?.name || '').trim(),
+      matchWhenLine ? `${matchWhenLine.charAt(0).toLowerCase()}${matchWhenLine.slice(1)}` : '',
+      formatEventPlaceShort(event),
+    ].filter(Boolean).join(' · ')
+    : '';
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -1089,6 +1240,73 @@ function EventDetails({ navigation, route }) {
   const softTextColor = Colors?.neutral100 || '#e6eef2';
   const softSurfaceColor = 'rgba(255,255,255,0.04)';
   const pillSurfaceColor = 'rgba(255,255,255,0.06)';
+  // 🧰 ST-VUES3-ORDI (écran 8 sur ordinateur, planche P3-match-ordi, état 4) — « GÉRER
+  // L'ÉVÉNEMENT » : le menu se déplie sous son bouton, avec les puces du téléphone et leurs
+  // conditions (`buildManageChips`, EventDetails.js) : « Modifier », « Convocation »
+  // (« Répartition » pour une détection), et « Stats du match » avec sa note — la porte du
+  // téléphone, éteinte avant la fin du match (« S'ouvre à la fin du match, … ») ou pour le
+  // dirigeant qui n'entraîne pas (« Saisies par l'entraîneur de l'équipe, Karim »). Le menu
+  // est celui de la page du MATCH (la planche) ; les autres types gardent leur bouton
+  // « Modifier », comme avant.
+  const [isManageMenuOpen, setIsManageMenuOpen] = useState(false);
+  // 🪤 L'en-tête de la page coupe ce qui dépasse (`overflow: hidden`, pour ses coins
+  // arrondis) : le menu se pose donc en position FIXE, sous son bouton, et se referme quand la
+  // page défile, change de taille, ou qu'on clique à côté (constaté au banc de capture).
+  const manageButtonRef = useRef(null);
+  const manageMenuRef = useRef(null);
+  const [manageMenuPosition, setManageMenuPosition] = useState(null);
+  const toggleManageMenu = useCallback(() => {
+    const cadre = manageButtonRef.current?.getBoundingClientRect?.();
+    setManageMenuPosition(cadre && typeof window !== 'undefined'
+      ? { right: Math.max(16, window.innerWidth - cadre.right), top: cadre.bottom + 8 }
+      : null);
+    setIsManageMenuOpen((ouvert) => !ouvert);
+  }, []);
+  useEffect(() => {
+    if (!isManageMenuOpen || typeof window?.addEventListener !== 'function') return undefined;
+    const fermer = () => setIsManageMenuOpen(false);
+    const dehors = (/** @type {any} */ evenement) => {
+      if (manageMenuRef.current?.contains?.(evenement.target)) return;
+      if (manageButtonRef.current?.contains?.(evenement.target)) return;
+      fermer();
+    };
+    window.addEventListener('scroll', fermer, true);
+    window.addEventListener('resize', fermer);
+    window.addEventListener('mousedown', dehors);
+    return () => {
+      window.removeEventListener('scroll', fermer, true);
+      window.removeEventListener('resize', fermer);
+      window.removeEventListener('mousedown', dehors);
+    };
+  }, [isManageMenuOpen]);
+  const manageMenuItems = [
+    ...(canEdit ? [{
+      icon: 'edit',
+      key: 'edit',
+      label: t('eventDetails.managePanel.edit', 'Modifier'),
+      onPress: () => navigation.navigate(RouteNames.EventEdit, { eventId }),
+    }] : []),
+    ...(canEdit && supportsEventComposition ? [{
+      disabled: isStaffCompositionFetching,
+      icon: 'users',
+      key: 'lineup',
+      label: isDetectionEvent
+        ? t('eventDetails.managePanel.lineupDetection', 'Répartition')
+        : t('eventDetails.managePanel.lineup', 'Convocation'),
+      onPress: handleManageComposition,
+    }] : []),
+    ...(canEdit && supportsEventComposition && isMatchEvent ? [{
+      disabled: isPostMatchDoorClosed,
+      icon: 'running',
+      key: 'matchStats',
+      label: isMatchStatsFetching
+        ? t('common.loading', 'Chargement...')
+        : t('eventDetails.matchStats', 'Stats du match'),
+      note: postMatchAction.subtitle,
+      onPress: openMatchStatsEditor,
+    }] : []),
+  ];
+  const showManageMenu = Boolean(canEdit && isMatchEvent && manageMenuItems.length > 1);
   const clubCertificationPalette = getClubCertificationPalette(event?.team?.club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(event?.team?.club);
   const sectionTitleStyle = {
@@ -1356,6 +1574,26 @@ function EventDetails({ navigation, route }) {
     ...teamParticipationSections,
     ...(externalParticipationSection ? [externalParticipationSection] : []),
   ];
+  // 🔢 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur) — les trois tuiles de la colonne de
+  // gauche (« 14 Présent·e·s · 2 Absent·e·s · 0 Sans réponse ») comptent les MÊMES listes que
+  // celles affichées plus bas : aucune lecture neuve, aucune règle de plus.
+  const participantTotals = participantSections.reduce((totaux, section) => ({
+    missing: totaux.missing + (section.missing?.length || 0),
+    notAnswered: totaux.notAnswered + (section.notAnswered?.length || 0),
+    participating: totaux.participating + (section.participating?.length || 0),
+  }), { missing: 0, notAnswered: 0, participating: 0 });
+  const showTrainingParticipants = Boolean(
+    trainingOpenConfig.isTraining && canViewParticipantNames && participantSections.length > 0,
+  );
+  // Le petit titre des cartes de la colonne de gauche (« Participants », « Description »).
+  const miniTitreStyle = {
+    color: mutedTextColor,
+    fontFamily: 'Montserrat-Bold, sans-serif',
+    fontSize: 13,
+  };
+  const trainingDescription = trainingOpenConfig.isTraining
+    ? String(event?.description || '').trim()
+    : '';
   // 🔢 « Joueurs attendus » DIT LE NOMBRE DE L APPEL. Il affichait
   // `event.totalPlayers`, un champ de saisie qui vaut 0 par defaut au schema :
   // « 0 » a cote de « 15 attendus ». Quand l evenement a des equipes, on prend
@@ -1674,7 +1912,92 @@ function EventDetails({ navigation, route }) {
                         ? t('eventDetails.sharing', 'Partage...')
                         : t('eventDetails.share', 'Partager')}
                     </button>
-                    {canEdit ? (
+                    {showManageMenu ? (
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          aria-expanded={isManageMenuOpen}
+                          aria-haspopup="menu"
+                          onClick={toggleManageMenu}
+                          ref={manageButtonRef}
+                          style={primaryButtonStyle}
+                          type="button"
+                        >
+                          {t('eventDetails.managePanel.title', 'Gérer l’événement')}
+                        </button>
+                        {isManageMenuOpen ? (
+                          <div
+                            aria-label={t('eventDetails.managePanel.title', 'Gérer l’événement')}
+                            ref={manageMenuRef}
+                            role="menu"
+                            style={{
+                              background: '#0b2530',
+                              border: `1px solid ${borderColor}`,
+                              borderRadius: 16,
+                              boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
+                              display: 'grid',
+                              gap: 4,
+                              maxWidth: 'calc(100vw - 32px)',
+                              padding: 8,
+                              position: manageMenuPosition ? 'fixed' : 'absolute',
+                              right: manageMenuPosition ? manageMenuPosition.right : 0,
+                              top: manageMenuPosition ? manageMenuPosition.top : 'calc(100% + 8px)',
+                              width: 380,
+                              zIndex: 20,
+                            }}
+                          >
+                            {manageMenuItems.map((item) => (
+                              <button
+                                aria-disabled={Boolean(item.disabled)}
+                                disabled={Boolean(item.disabled)}
+                                key={item.key}
+                                onClick={() => {
+                                  setIsManageMenuOpen(false);
+                                  item.onPress();
+                                }}
+                                role="menuitem"
+                                style={{
+                                  alignItems: 'center',
+                                  background: 'transparent',
+                                  border: 0,
+                                  borderRadius: 12,
+                                  color: textColor,
+                                  cursor: item.disabled ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  fontFamily: 'Montserrat-Bold, sans-serif',
+                                  fontSize: 15,
+                                  gap: 12,
+                                  minHeight: item.note ? 64 : 48,
+                                  opacity: item.disabled ? 0.6 : 1,
+                                  padding: '8px 12px',
+                                  textAlign: 'left',
+                                }}
+                                type="button"
+                              >
+                                <Image
+                                  source={Images[item.icon]}
+                                  style={{ height: 20, tintColor: accentColor, width: 20 }}
+                                />
+                                <span style={{ display: 'grid', gap: 2 }}>
+                                  <span>{item.label}</span>
+                                  {item.note ? (
+                                    <span
+                                      style={{
+                                        color: mutedTextColor,
+                                        fontFamily: 'Montserrat-Regular, Montserrat, sans-serif',
+                                        fontSize: 13,
+                                      }}
+                                    >
+                                      {item.note}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {canEdit && !showManageMenu ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
                         style={primaryButtonStyle}
@@ -1713,17 +2036,23 @@ function EventDetails({ navigation, route }) {
                       color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
                     }}
                     >
-                      <span>{formatDateTimeLabel(event?.date)}</span>
-                      {event?.startTime ? (
-                        <span>
-                          {formatTimeLabel(event?.startTime)}
-                          {' '}
-                          -
-                          {' '}
-                          {formatTimeLabel(event?.endTime)}
-                        </span>
-                      ) : null}
-                      {event?.team?.name ? <span>{event.team.name}</span> : null}
+                      {matchInfoLine ? (
+                        <span data-testid="event-match-info-line">{matchInfoLine}</span>
+                      ) : (
+                        <>
+                          <span>{formatDateTimeLabel(event?.date)}</span>
+                          {event?.startTime ? (
+                            <span>
+                              {formatTimeLabel(event?.startTime)}
+                              {' '}
+                              -
+                              {' '}
+                              {formatTimeLabel(event?.endTime)}
+                            </span>
+                          ) : null}
+                          {event?.team?.name ? <span>{event.team.name}</span> : null}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1758,7 +2087,9 @@ function EventDetails({ navigation, route }) {
                     ) : null}
                   </div>
 
-                  {String(event?.description || '').trim() ? (
+                  {/* ST-VUES3-ORDI · point 6 — la description d'un entraînement a sa carte, à
+                      gauche (écran 21) : elle ne s'écrit plus aussi dans l'en-tête. */}
+                  {String(event?.description || '').trim() && !trainingOpenConfig.isTraining ? (
                     <p style={{
                       color: softTextColor, fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 840,
                     }}
@@ -1953,6 +2284,46 @@ function EventDetails({ navigation, route }) {
               {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
                   le telephone : c est la seule chose a FAIRE maintenant, tout
                   le reste de la page est de la consultation. */}
+              {/* 🆚 ST-VUES3-ORDI (écran 1 sur ordinateur, planche P3-match-ordi) — L'ENCART
+                  DU SCORE du téléphone (`MatchScoreEncart`, le même composant) : la pastille
+                  « MATCH · TERMINÉ · VICTOIRE », le face-à-face, qui a saisi, les buteurs, ce
+                  qu'on attend. Les lignes arrivent déjà filtrées pour CE lecteur. */}
+              {matchEncartSummary ? (
+                <div data-event-section="match-encart" style={{ display: 'grid', gap: 14 }}>
+                  {matchTypeTag ? (
+                    <span
+                      style={{
+                        border: `1px solid ${accentColor}`,
+                        borderRadius: 8,
+                        color: accentColor,
+                        fontSize: 13,
+                        justifySelf: 'center',
+                        letterSpacing: '0.04em',
+                        padding: '6px 12px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {matchTypeTag}
+                    </span>
+                  ) : null}
+                  <div
+                    style={{
+                      background: 'rgba(23, 56, 68, 0.55)',
+                      border: '1px solid rgba(1, 179, 244, 0.24)',
+                      borderRadius: 24,
+                      padding: '20px 16px',
+                    }}
+                  >
+                    <MatchScoreEncart
+                      clubName={event?.team?.club?.name || event?.club?.name || ''}
+                      eventClub={event?.team?.club || event?.club || null}
+                      logoUrl={(event?.team?.club || event?.club)?.logo?.url}
+                      matchScoreSummary={matchEncartSummary}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
               {showNextActionCard ? (
                 <EventNextActionCard
                   expectedCount={nextActionExpectedCount}
@@ -1960,6 +2331,100 @@ function EventDetails({ navigation, route }) {
                   onPress={openAttendanceCall}
                   opensAtLabel={nextActionOpensAtLabel}
                 />
+              ) : null}
+
+              {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
+                  ordinateur ») — LA SÉANCE À GAUCHE : la carte « Participants » et ses trois
+                  tuiles, puis la « Description ». Les avis sont à droite (ST-RETOURS2). Mêmes
+                  portes que la liste : des noms visibles et des équipes. */}
+              {showTrainingParticipants ? (
+                <div
+                  data-event-section="training-participants"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 12,
+                    padding: 16,
+                  }}
+                >
+                  <span style={miniTitreStyle}>
+                    {t('eventDetails.participants', 'Participants')}
+                  </span>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 8,
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    }}
+                  >
+                    {[
+                      {
+                        cle: 'participating',
+                        couleur: Colors?.success200 || '#8ae9cd',
+                        libelle: t('eventDetails.participationStatus.participating', 'Présent·e·s'),
+                        valeur: participantTotals.participating,
+                      },
+                      {
+                        cle: 'missing',
+                        couleur: textColor,
+                        libelle: t('eventDetails.participationStatus.missing', 'Absent·e·s'),
+                        valeur: participantTotals.missing,
+                      },
+                      {
+                        cle: 'notAnswered',
+                        couleur: textColor,
+                        libelle: libelleSansReponse,
+                        valeur: participantTotals.notAnswered,
+                      },
+                    ].map((tuile) => (
+                      <div
+                        key={tuile.cle}
+                        style={{
+                          background: 'rgba(23, 56, 68, 0.5)',
+                          border: `1px solid ${borderColor}`,
+                          borderRadius: 16,
+                          display: 'grid',
+                          gap: 2,
+                          minWidth: 0,
+                          padding: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: tuile.couleur,
+                            fontFamily: 'Montserrat-Black, sans-serif',
+                            fontSize: 24,
+                          }}
+                        >
+                          {tuile.valeur}
+                        </span>
+                        <span style={{ color: mutedTextColor, fontSize: 12 }}>{tuile.libelle}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {trainingDescription ? (
+                <div
+                  data-event-section="training-description"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 8,
+                    padding: 16,
+                  }}
+                >
+                  <span style={miniTitreStyle}>
+                    {t('eventDetails.fields.description', 'Description')}
+                  </span>
+                  <p style={{ color: softTextColor, fontSize: 15, lineHeight: 1.6, margin: 0 }}>
+                    {trainingDescription}
+                  </p>
+                </div>
               ) : null}
 
               {hasVisibleEventTasks ? (
@@ -2216,46 +2681,6 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              {/* 🎯 P9 · ECRAN 2 — LE PARCOURS D APRES-MATCH, juste apres la
-                  composition : les deux parlent du meme match. */}
-              {showPostMatchCard ? (
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <h2 style={sectionTitleStyle}>
-                    {t('eventDetails.matchStats', 'Stats du match')}
-                  </h2>
-                  <PostMatchJourneyCard
-                    boutonDesactive={isPostMatchDoorClosed}
-                    motif={postMatchAction.subtitle}
-                    onPressEtape={(/** @type {string} */ etape) => {
-                      // 🔒 DEUX COUCHES, ET C EST VOULU. Contrairement a la carte
-                      // d appel (N5), qui RETIRE son `onPress` porte close, cette
-                      // carte-ci le garde toujours : seul `TouchableOpacity` bloque
-                      // alors l appui. Une seule couche ne suffit pas devant une
-                      // porte qui protege l apres-match — ouvrir l editeur avant la
-                      // fin du match est exactement la faute d AC10, et l etape
-                      // « Score » n a de toute facon aucune destination ici.
-                      if (isPostMatchDoorClosed || etape === 'score') return;
-                      openMatchStatsEditor();
-                    }}
-                    reponsesAttendues={Number(
-                      matchStatsReport?.responseEligibleCount
-                      ?? playerCollectiveRating?.eligibleCount
-                      ?? 0,
-                    )}
-                    reponsesRecues={Number(
-                      matchStatsReport?.responseCompletionCount
-                      ?? playerCollectiveRating?.count
-                      ?? 0,
-                    )}
-                    scoreDisponible={Boolean(matchStatsPayload?.score?.available)}
-                    scoreLibelle={matchStatsScoreLabel}
-                    scoreOrigine={matchStatsPayload?.score?.source || ''}
-                    statsFinalisees={isMatchStatsFinal}
-                    verificationRequise={isMatchStatsReviewRequired}
-                  />
-                </div>
-              ) : null}
-
               <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
               {renderParticipantsSection()}
 
@@ -2316,6 +2741,107 @@ function EventDetails({ navigation, route }) {
             </section>
 
             <section style={{ alignContent: 'start', display: 'grid', gap: 24 }}>
+              {/* 🎯 ST-VUES3-ORDI (écran 7 sur ordinateur, planche P3-match-ordi) — « STATS DU
+                  MATCH », À DROITE du match : les cartes du téléphone, servies telles quelles.
+                  · l'ENCADREMENT (`canManage`) : les trois étapes, l'auteur du score, qui
+                    manque et « Relancer les N », les deux notes, le mot de l'entraîneur ;
+                  · le JOUEUR (et le parent) : « Le bilan de Karim », déjà filtré par le serveur ;
+                  · le DIRIGEANT qui n'entraîne pas (« score A ») : qui saisit, et les résultats
+                    de l'équipe. Elle remplace l'ancienne carte, à gauche. */}
+              {showPostMatchCard ? (
+                <div
+                  data-event-section="match-stats"
+                  style={{
+                    background: sectionBackground,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 24,
+                    display: 'grid',
+                    gap: 12,
+                    padding: 22,
+                  }}
+                >
+                  <h2 style={sectionTitleStyle}>
+                    {t('eventDetails.matchStats', 'Stats du match')}
+                  </h2>
+                  {canManageMatchStats ? (
+                    <PostMatchJourneyCard
+                      avantLaFin={!isMatchFinished}
+                      boutonDesactive={isPostMatchDoorClosed}
+                      feuilleBrouillonDepuis={matchStatsReport?.status === 'draft'
+                        ? matchStatsReport?.updatedAt || matchStatsReport?.createdAt || ''
+                        : ''}
+                      feuillePublieeLe={matchStatsReport?.finalizedAt || ''}
+                      finDuMatch={matchEndLabel}
+                      manquants={matchMissingResponders}
+                      monDocumentId={userData?.documentId || ''}
+                      motDuCoach={matchStatsReport?.collectiveComment || ''}
+                      motif={postMatchAction.subtitle}
+                      moyenneJoueurs={playerCollectiveRating}
+                      noteEquipe={matchStatsReport?.collectiveRating ?? null}
+                      onPressEtape={() => {
+                        // 🔒 DEUX COUCHES : la carte bloque l'appui porte close, et
+                        // `openMatchStatsEditor` refuse sans le droit de gérer. L'étape
+                        // « Score » ouvre la feuille, où le score se saisit sur le site.
+                        if (isPostMatchDoorClosed) return;
+                        openMatchStatsEditor();
+                      }}
+                      onRelancer={remindMissingResponders}
+                      relanceEnCours={Boolean(remindResponsesMutation.isPending)}
+                      relanceFaite={relanceDuJourCle === relanceCle}
+                      reponsesAttendues={Number(
+                        matchStatsReport?.responseEligibleCount
+                        ?? playerCollectiveRating?.eligibleCount
+                        ?? 0,
+                      )}
+                      reponsesRecues={Number(
+                        matchStatsReport?.responseCompletionCount
+                        ?? playerCollectiveRating?.count
+                        ?? 0,
+                      )}
+                      scoreAuteur={matchStatsPayload?.score?.recordedBy || null}
+                      scoreDeLaFeuille={matchStatsReport
+                        && Number.isFinite(Number(matchStatsReport?.scoreFor))
+                        ? `${matchStatsReport.scoreFor} - ${matchStatsReport.scoreAgainst}`
+                        : ''}
+                      scoreDisponible={Boolean(matchStatsPayload?.score?.available)}
+                      scoreLibelle={matchStatsScoreLabel}
+                      scoreOfficiel={matchStatsPayload?.score?.available
+                        ? [matchStatsPayload.score.scoreFor, matchStatsPayload.score.scoreAgainst]
+                          .join(' - ')
+                        : ''}
+                      scoreOrigine={matchStatsPayload?.score?.source || ''}
+                      scoreSaisiA={matchStatsPayload?.score?.recordedAt || ''}
+                      statsFinalisees={isMatchStatsFinal}
+                      verificationRequise={isMatchStatsReviewRequired}
+                    />
+                  ) : (
+                    <MatchBilanCard
+                      avantLaFin={!isMatchFinished}
+                      buteurs={matchEncartSummary?.scorersLine || ''}
+                      entraineur={teamCoachFirstname || ''}
+                      equipe={compositionEditorTeam?.name || event?.team?.name || ''}
+                      finDuMatch={matchEndLabel}
+                      mode={compositionTeamId && canViewMatchStats ? 'joueur' : 'dirigeant'}
+                      motDuCoach={matchStatsReport?.collectiveComment || ''}
+                      moyenneJoueurs={playerCollectiveRating}
+                      noteEquipe={matchStatsReport?.collectiveRating ?? null}
+                      onVoirLesResultats={openTeamResults}
+                      publiee={isMatchStatsFinal}
+                      publieeLe={matchStatsReport?.finalizedAt || ''}
+                    />
+                  )}
+                  {/* 🚪 H8 — comme au téléphone, la porte vers « Matchs en attente » reste. */}
+                  {compositionTeamId && canViewMatchStats ? (
+                    <button
+                      onClick={() => navigation.navigate(RouteNames.PendingMatchStats)}
+                      style={{ ...outlineButtonStyle, justifySelf: 'center' }}
+                      type="button"
+                    >
+                      {t('eventDetails.seeAllMyPendingMatches', 'Voir tous mes matchs en attente')}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               {/* ST-RETOURS2 · point 1 — la planche ordinateur : la seance a gauche, les
                   avis a DROITE. Le composant du telephone, servi tel quel ; `avisDEntrainement`
                   gate le rendu (sans lui, la carte dirait « aucun avis » en chargeant). */}
