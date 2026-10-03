@@ -198,7 +198,9 @@ export const COLLECTIVITE_UID = 'api::collectivite.collectivite';
 // (`meta.pagination.total`) ; voie de sortie : paginer comme AdminClubList.
 // COLL-CONSOLE-BIS (03/10) — + `activatedAt` : « Activée le » (planche 13).
 export const ADMIN_COLLECTIVITES_LIST_PAYLOAD = {
-  fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt'],
+  // COLL-C6-DEMO (03/10) — + `isDemo` : la Ville de démonstration ne compte pas comme un client.
+  // ⚠️ SERVEUR AVANT L'APP : un serveur d'avant le lot refuse ce champ inconnu (400).
+  fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt', 'isDemo'],
   pagination: { page: 1, pageSize: 100 },
   populate: { clubs: { fields: ['documentId'] } },
   sort: ['name:asc'],

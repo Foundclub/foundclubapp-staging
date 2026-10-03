@@ -12,7 +12,7 @@ import { getShortAddress } from '@/utils/location';
 
 /**
  * @typedef {{ activatedAt?: string | null, clubsCount: number, documentId: string, isActive: boolean,
- *   membersCount?: number | null, name: string, type: string }} AdminCollectiviteRow
+ *   isDemo?: boolean, membersCount?: number | null, name: string, type: string }} AdminCollectiviteRow
  */
 
 /**
@@ -22,12 +22,14 @@ import { getShortAddress } from '@/utils/location';
  *   - `toActivate` et `clubsWaiting` : les INACTIVES qui ont deja des clubs (elles passent la
  *     tuile en orange), et les clubs qui attendent leur activation.
  * Une collectivite inactive SANS club n attend rien : elle ne compte que dans `total`.
+ * COLL-C6-DEMO (03/10) — la Ville de DEMONSTRATION ne compte nulle part : ce n est pas un client.
  * @param {AdminCollectiviteRow[]} rows - Les lignes de `toAdminCollectiviteRow`.
  * @returns {{ actives: number, clubsCovered: number, clubsWaiting: number, toActivate: number,
  *   total: number }} Le bilan.
  */
 export const summarizeAdminCollectivites = (rows) => (Array.isArray(rows) ? rows : [])
   .reduce((bilan, ligne) => {
+    if (ligne?.isDemo === true) return bilan;
     const clubs = Number(ligne?.clubsCount) || 0;
     if (ligne?.isActive === true) {
       return {

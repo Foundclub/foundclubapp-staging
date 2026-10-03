@@ -84,7 +84,8 @@ describe('collectiviteService — la console super-admin (D61)', () => {
     await getAdminCollectivites();
     expect(mockPost).toHaveBeenCalledWith(EXPLORATEUR, {
       // COLL-CONSOLE-BIS (03/10) — + la date d activation (« Activée le »).
-      fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt'],
+      // COLL-C6-DEMO (03/10) — + `isDemo` (la Ville de démonstration ne compte pas comme un client).
+      fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt', 'isDemo'],
       pagination: { page: 1, pageSize: 100 },
       populate: { clubs: { fields: ['documentId'] } },
       sort: ['name:asc'],
