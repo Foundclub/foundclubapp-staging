@@ -449,8 +449,9 @@ const authCoach = () => ({
   userData: { documentId: COACH, role: { name: 'Dirigeant' } },
 });
 
-// STATS-FIX2 · point 4 — un JOUEUR de l equipe : c est lui, et lui seul, qui a « Mes stats »
-// et « Mon retour coach » sur la fiche du match.
+// STATS-FIX2 · point 4 — un JOUEUR de l equipe : c est lui, et lui seul, qui a « Mon match »
+// sur la fiche du match (ST-MONMATCH : la carte unique qui remplace « Mes stats » et
+// « Mon retour coach »).
 const authJoueur = () => ({
   canEditClub: () => false,
   canEditEvent: () => false,
@@ -596,19 +597,19 @@ describe('FINITIONS 1b — les libellés de la fiche ne perdent plus leur dernie
       .toEqual({ flexGrow: 1, textAlign: 'center' });
   });
 
-  // STATS-FIX2 · point 4 : ces deux blocs sont ceux du JOUEUR — c est lui qui les lit.
-  test('pastilles « Mes stats » et « Mon retour coach » : aucun point de coupure', () => {
+  // STATS-FIX2 · point 4 : ce bloc est celui du JOUEUR — c est lui qui le lit.
+  // ST-MONMATCH : « Mes stats » et « Mon retour coach » ne font plus qu'une carte, « Mon
+  // match » ; sa pastille « À répondre » garde la parade (plus de « Pas encore partagé »).
+  test('pastille « À répondre » de « Mon match » : aucun point de coupure', () => {
     const root = monter({
       attendance: HORLOGE_APRES_LE_MATCH, auth: authJoueur(), event: MATCH_FINI,
     });
 
-    const aFaire = texteNommé(root, 'À faire');
-    const pasEncore = texteNommé(root, 'Pas encore partagé');
+    const aRepondre = texteNommé(root, 'À répondre');
 
-    expect(aFaire).toBeDefined();
-    expect(pasEncore).toBeDefined();
-    expect(texteBrut(aFaire)).not.toContain(' ');
-    expect(texteBrut(pasEncore)).not.toContain(' ');
+    expect(aRepondre).toBeDefined();
+    expect(texteBrut(aRepondre)).not.toContain(' ');
+    expect(texteNommé(root, 'Pas encore partagé')).toBeUndefined();
   });
 });
 
@@ -749,7 +750,9 @@ describe('FINITIONS 4 — la réponse perso n est plus demandée avant la fin du
 // entraineurs ; la fiche demandait donc la réponse perso d un entraineur, le serveur la
 // refusait (403, `canRespond: isPlayer`), et sans réponse l ecran retombait sur
 // `isTeamMember` — vrai pour l entraineur.
-describe('STATS-FIX2 · point 4 — « Mes stats » et « Mon retour coach » : au joueur seul', () => {
+// ST-MONMATCH (écran 12, état 7) — la carte unique « Mon match » garde la même porte : pas
+// de « Mon match » chez l'entraîneur, il n'est pas joueur.
+describe('STATS-FIX2 · point 4 — « Mon match » : au joueur seul', () => {
   /** @type {any} */
   let interactions = null;
 
@@ -772,9 +775,10 @@ describe('STATS-FIX2 · point 4 — « Mes stats » et « Mon retour coach » : 
     mockMyMatchResponseCalls[mockMyMatchResponseCalls.length - 1] || []
   );
 
-  test('🔴 l entraineur pur : ni « Mes stats », ni « Mon retour coach »', () => {
+  test('🔴 l entraineur pur : ni « Mon match », ni « Mes stats », ni « Mon retour coach »', () => {
     const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
 
+    expect(texteNommé(root, 'Mon match')).toBeUndefined();
     expect(texteNommé(root, 'Mes stats')).toBeUndefined();
     expect(texteNommé(root, 'Mon retour coach')).toBeUndefined();
   });
@@ -785,13 +789,13 @@ describe('STATS-FIX2 · point 4 — « Mes stats » et « Mon retour coach » : 
     expect(derniereDemande()[2]?.enabled).toBe(false);
   });
 
-  test('🔒 le joueur : ses deux blocs, et sa réponse perso est demandée', () => {
+  test('🔒 le joueur : sa carte « Mon match », et sa réponse perso est demandée', () => {
     const root = monter({
       attendance: HORLOGE_APRES_LE_MATCH, auth: authJoueur(), event: MATCH_FINI,
     });
 
-    expect(texteNommé(root, 'Mes stats')).toBeDefined();
-    expect(texteNommé(root, 'Mon retour coach')).toBeDefined();
+    expect(texteNommé(root, 'Mon match')).toBeDefined();
+    expect(texteNommé(root, 'Mes stats')).toBeUndefined();
     expect(derniereDemande()[2]?.enabled).toBe(true);
   });
 
@@ -802,7 +806,7 @@ describe('STATS-FIX2 · point 4 — « Mes stats » et « Mon retour coach » : 
     };
     const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: joueEtEntraine });
 
-    expect(texteNommé(root, 'Mes stats')).toBeDefined();
+    expect(texteNommé(root, 'Mon match')).toBeDefined();
     expect(derniereDemande()[2]?.enabled).toBe(true);
   });
 });
