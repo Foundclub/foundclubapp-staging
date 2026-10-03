@@ -62,7 +62,12 @@ import validations from '@/theme/strings/translations/validations';
 
 const DefaultJoi = JoiModule?.default || JoiModule;
 
-i18n.use(initReactI18next).init({
+// COLL-C3B-BIS (03/10) — le branchement React d'i18next SEULEMENT s'il existe. En production il
+// existe toujours : rien ne change. Une doublure de test partielle de react-i18next (sans
+// initReactI18next, ex. les témoins du planning) faisait échouer le CHARGEMENT de tout écran qui
+// lit les règles des événements (event/eventUseCases importe ce module) : « Demander un créneau »,
+// ouvert en panneau dans le planning (planche 43), en est un.
+(initReactI18next ? i18n.use(initReactI18next) : i18n).init({
   compatibilityJSON: 'v4',
   fallbackLng: 'fr',
   // 🔤 I18N-0 : la langue du téléphone, ou celle choisie dans le profil (voir

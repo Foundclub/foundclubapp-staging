@@ -274,6 +274,57 @@ beforeEach(() => {
   });
 });
 
+// COLL-C3B-BIS (03/10) — planche 43 (P8v2-demande, tel et ordi ; liste du plan, ligne 43). ROUGE
+// avant : l'installation choisie ne se changeait pas, et la saisie n'existait qu'en écran entier
+// (sur ordinateur, la planche l'ouvre en PANNEAU à droite du planning, qui dessine la place
+// demandée en pointillé pendant la saisie).
+describe('COLL-C3B-BIS — planche 43 : « Changer » d’installation, et la saisie en panneau', () => {
+  it('« Changer » rend le choix de l’installation', async () => {
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    expect(textes(arbre)).toContain('Changer');
+    await appuyer(arbre, 'demande-installation-changer');
+    const puces = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'demande-installation-gym-ville' && typeof n.props?.onPress === 'function'
+    ));
+    expect(puces.length).toBeGreaterThan(0);
+  });
+
+  // eslint-disable-next-line max-len
+  it('en panneau : « Demander ce créneau », rempli par le planning ; le brouillon remonte au planning', async () => {
+    mockParams = {};
+    const brouillon = jest.fn();
+    const fermer = jest.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <ClubSlotRequest
+            enPanneau
+            initial={{
+              clubId: 'club-A',
+              date: JOUR,
+              endTime: '19:30',
+              facilityId: 'gym-ville',
+              startTime: '18:00',
+            }}
+            onBrouillon={brouillon}
+            onFermer={fermer}
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await attendre(() => textes(arbre).includes('Gymnase des Tilleuls'));
+    expect(textes(arbre)).toContain('Demander ce créneau');
+    expect(textes(arbre)).not.toContain('Demander un créneau');
+    await appuyer(arbre, 'demande-equipe-u13');
+    expect(brouillon).toHaveBeenLastCalledWith({
+      date: JOUR, endTime: '19:30', equipe: 'U13', facilityId: 'gym-ville', startTime: '18:00',
+    });
+  });
+});
+
 describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
   // eslint-disable-next-line max-len
   it('la place se lit pendant la saisie : il reste 1 place, « AS Montrivage · U15 (ton club) »', async () => {

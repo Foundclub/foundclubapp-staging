@@ -48,7 +48,19 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => mockDimensions,
 }));
-jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
+// COLL-C3B-BIS (planche 43) : l'ordinateur ouvre la demande en panneau ; le téléphone, en écran.
+let mockDesktop = false;
+jest.mock('@/responsive', () => ({ useIsDesktop: () => mockDesktop }));
+// Le panneau est l'écran « Demander un créneau » (témoin à part : ClubSlotRequest.test.js) :
+// ici, ce que le planning lui passe, et ce qu'il fait du brouillon qu'il rend.
+/** @type {any[]} */
+const mockPanneaux = [];
+jest.mock('@/views/collectivite/ClubSlotRequest', () => function ClubSlotRequestMock(
+  /** @type {any} */ props,
+) {
+  mockPanneaux.push(props);
+  return null;
+});
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockAuth,
@@ -251,6 +263,8 @@ const grille = () => mockTimelineProps[mockTimelineProps.length - 1];
 beforeEach(() => {
   jest.clearAllMocks();
   mockTimelineProps.length = 0;
+  mockPanneaux.length = 0;
+  mockDesktop = false;
   mockDimensions = PORTRAIT;
   mockAuth = JOUEUR;
   mockNavigation = {
@@ -293,6 +307,73 @@ const installationsDeLaVille = (/** @type {string[]} */ ids) => {
     data: ids.map((id) => ({ collectivite: { name: 'Ville de Montrivage' }, documentId: id, name: id })),
   });
 };
+
+// COLL-C3B-BIS (03/10) — planche 43, P8v2-demande-ordi (états A et B). ROUGE avant : sur
+// ordinateur aussi, l'heure touchée quittait le planning pour un écran entier, et rien ne se
+// dessinait dans la grille pendant la saisie.
+// eslint-disable-next-line max-len
+describe('COLL-C3B-BIS — planche 43 : sur ordinateur, la demande en panneau, la place en pointillé', () => {
+  const ouvrir = async () => {
+    mockAuth = DIRIGEANT_DU_CLUB;
+    mockDesktop = true;
+    installationsDeLaVille(['gym-ville']);
+    await rendre();
+    await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4, 12, 0, 0), 18); });
+    await attendre();
+    return mockPanneaux[mockPanneaux.length - 1];
+  };
+  const brouillonsDeLaGrille = () => (grille().events || [])
+    .filter((/** @type {any} */ evenement) => evenement?.raw?.brouillon === true);
+
+  // eslint-disable-next-line max-len
+  it('une heure libre ouvre le PANNEAU, rempli du jour et de l heure ; on reste sur le planning', async () => {
+    const panneau = await ouvrir();
+    expect(mockNavigation.navigate).not.toHaveBeenCalled();
+    expect(panneau).toEqual(expect.objectContaining({
+      enPanneau: true,
+      initial: {
+        clubId: 'club-A',
+        date: '2026-03-04',
+        endTime: '19:30',
+        facilityId: 'gym-ville',
+        startTime: '18:00',
+      },
+    }));
+  });
+
+  // eslint-disable-next-line max-len
+  it('pendant la saisie, « U13 ? » en pointillé dans la grille ; fermer le panneau l efface', async () => {
+    const panneau = await ouvrir();
+    await act(async () => {
+      panneau.onBrouillon({
+        date: '2026-03-04',
+        endTime: '19:30',
+        equipe: 'U13',
+        facilityId: 'gym-ville',
+        startTime: '18:00',
+      });
+    });
+    await attendre();
+    const [brouillon] = brouillonsDeLaGrille();
+    expect(brouillon).toBeDefined();
+    // Les pointillés orange de la grille : une place demandée, en attente (contrat C2A §7).
+    expect(brouillon.raw).toEqual(expect.objectContaining({ origin: 'request', pending: true }));
+    expect(brouillon.title).toBe('U13 ?');
+    expect(brouillon.startTime).toBe('18:00');
+    await act(async () => { mockPanneaux[mockPanneaux.length - 1].onFermer(); });
+    await attendre();
+    expect(brouillonsDeLaGrille()).toHaveLength(0);
+  });
+
+  it('au téléphone, rien ne change : l écran « Demander un créneau »', async () => {
+    mockAuth = DIRIGEANT_DU_CLUB;
+    installationsDeLaVille(['gym-ville']);
+    await rendre();
+    act(() => { grille().onFreeSlotPress(new Date(2026, 2, 4, 12, 0, 0), 18); });
+    const attendu = expect.objectContaining({ facilityId: 'gym-ville', startTime: '18:00' });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ClubSlotRequest', attendu);
+  });
+});
 
 describe('COLL-C3B — le club demande depuis le planning d une installation de la Ville', () => {
   // eslint-disable-next-line max-len

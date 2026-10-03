@@ -5790,6 +5790,8 @@ export default {
       aucuneDemande: 'Aucune demande envoyée à une Ville pour l’instant.',
       aucuneInstallation: 'Ton club n’est rattaché à aucune Ville pour l’instant.',
       autreHeure: 'Demander une autre heure',
+      // COLL-C3B-BIS (03/10) — planche 43 : changer d’installation ; le titre du panneau.
+      changer: 'Changer',
       choisirInstallation: 'Installation de la Ville',
       colEquipe: 'Équipe',
       colInstallation: 'Installation',
@@ -5833,6 +5835,7 @@ export default {
       ratees: '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
       tesDemandes: 'Tes demandes à la Ville',
       titre: 'Demander un créneau',
+      titrePanneau: 'Demander ce créneau',
       tonClub: ' (ton club)',
       voirMesDemandes: 'Voir mes demandes',
     },

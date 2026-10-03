@@ -5426,6 +5426,8 @@ export default {
       aucuneDemande: 'No request sent to a town yet.',
       aucuneInstallation: 'Your club is not attached to any town yet.',
       autreHeure: 'Ask for another time',
+      // COLL-C3B-BIS (03/10) — board 43: change facility; the panel title.
+      changer: 'Change',
       choisirInstallation: 'Town facility',
       colEquipe: 'Team',
       colInstallation: 'Facility',
@@ -5466,6 +5468,7 @@ export default {
       ratees: '{{nombre}} date(s) could not be sent: try again from your planning.',
       tesDemandes: 'Your requests to the town',
       titre: 'Request a slot',
+      titrePanneau: 'Request this slot',
       tonClub: ' (your club)',
       voirMesDemandes: 'See my requests',
     },
