@@ -30,6 +30,7 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import {
   formatNotificationRelativeTime,
   getNotificationIcon,
+  getNotificationTone,
 } from '@/utils/notifications/notificationPresentation';
 import { normalizeNotificationType, NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
@@ -339,7 +340,12 @@ function NotificationList() {
     }
 
     const notification = item.data;
-    const icon = getNotificationIcon(notification.type);
+    // COLL-C3B-BIS (planche 35) : une icône par famille ; acceptée en vert, refusée en rouge.
+    const icon = getNotificationIcon(notification.type, notification.data);
+    const ton = getNotificationTone(notification.type, notification.data);
+    let couleurIcone = Colors.neutral00;
+    if (ton === 'succes') couleurIcone = Colors.success500;
+    if (ton === 'refus') couleurIcone = Colors.error300;
     const isDeclinedParticipation = isDeclinedParticipationNotification(notification);
     const isRsvpReminder = isRsvpReminderNotification(notification);
 
@@ -384,7 +390,7 @@ function NotificationList() {
                   width: 40,
                 }}
               >
-                <SvgIcon color={Colors.neutral00} height={20} name={icon} width={20} />
+                <SvgIcon color={couleurIcone} height={20} name={icon} width={20} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -419,6 +425,11 @@ function NotificationList() {
                     ]}
                   >
                     {t('notifications.labels.participationDeclined')}
+                  </Text>
+                ) : null}
+                {ton === 'refus' ? (
+                  <Text style={[Fonts.p3Bold, { color: Colors.error500, marginTop: 8 }]}>
+                    {t('collectiviteDemandes.notification.refusee', 'Refusée')}
                   </Text>
                 ) : null}
               </View>
@@ -539,7 +550,7 @@ function NotificationList() {
           !isLoading ? (
             <View style={{ alignItems: 'center', marginTop: 60 }}>
               <SvgIcon
-                color={Colors.neutral400}
+                color={Colors.primary200}
                 height={48}
                 name="bell"
                 style={{ marginBottom: 16 }}

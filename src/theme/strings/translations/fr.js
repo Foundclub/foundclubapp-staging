@@ -5919,6 +5919,10 @@ export default {
       uneEquipe: '1 équipe',
       unePlace: '1 place',
     },
+    // COLL-C3B-BIS (03/10) — la liste « Notifications » d'une demande refusée (planche 35).
+    notification: {
+      refusee: 'Refusée',
+    },
     // COLL-C3B-BIS (03/10) — la demande ouverte, sur ordinateur (planche 32).
     ouverte: {
       demandePar: 'Demandé par',

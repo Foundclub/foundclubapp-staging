@@ -5548,6 +5548,10 @@ export default {
       uneEquipe: '1 team',
       unePlace: '1 spot',
     },
+    // COLL-C3B-BIS (03/10) — the « Notifications » list of a refused request (board 35).
+    notification: {
+      refusee: 'Refused',
+    },
     // COLL-C3B-BIS (03/10) — the open request, on desktop (board 32).
     ouverte: {
       demandePar: 'Requested by',

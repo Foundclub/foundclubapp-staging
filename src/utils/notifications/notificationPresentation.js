@@ -111,10 +111,27 @@ const LICENSE_ICON_TYPES = new Set([
 ]);
 
 /**
+ * COLL-C3B-BIS (03/10), planche 35 — LA DEMANDE DE CRÉNEAU porte quatre messages sous un seul type
+ * serveur : la demande (à la mairie), l'acceptation et le refus (au club), l'installation partagée
+ * (au club déjà là). Chacun a SON icône du système de design, sans emoji.
+ * @param {Record<string, any> | null | undefined} data - Les données de la notification.
+ * @returns {string} calendrier, coche, croix ou stade.
+ */
+const iconeDUneDemande = (data) => {
+  if (data?.audience === 'occupant') return 'stadium';
+  if (data?.decision === 'approved') return 'check';
+  if (data?.decision === 'refused') return 'close';
+  return 'calendar';
+};
+
+/**
  * @param {string | undefined | null} type
+ * @param {Record<string, any> | null} [data] - Les données de la notification (COLL-C3B-BIS :
+ *   la famille d'une demande de créneau s'y lit).
  * @returns {string} le nom d'une icône de `SvgIcon` (plus d'emoji : décision du 01/10/2026)
  */
-export const getNotificationIcon = (type) => {
+export const getNotificationIcon = (type, data = null) => {
+  if (type === NOTIFICATION_TYPES.OVERBOOKING_REQUEST) return iconeDUneDemande(data);
   if (TEAM_ICON_TYPES.has(type)) return 'users';
   if (CLUB_ICON_TYPES.has(type)) return 'shield';
   if (EVENT_ICON_TYPES.has(type)) return 'calendar';
@@ -123,6 +140,20 @@ export const getNotificationIcon = (type) => {
   if (LICENSE_ICON_TYPES.has(type)) return 'euro-circle';
   if (type === NOTIFICATION_TYPES.SEARCH_ALERT_MATCH) return 'search';
   return 'bell';
+};
+
+/**
+ * COLL-C3B-BIS (03/10), planche 35 — la couleur de l'icône : une demande ACCEPTÉE en vert, REFUSÉE
+ * en rouge. Toutes les autres notifications gardent l'icône blanche d'avant.
+ * @param {string | undefined | null} type
+ * @param {Record<string, any> | null} [data] - Les données de la notification.
+ * @returns {'succes' | 'refus' | null} Le ton, ou null.
+ */
+export const getNotificationTone = (type, data = null) => {
+  if (type !== NOTIFICATION_TYPES.OVERBOOKING_REQUEST || data?.audience === 'occupant') return null;
+  if (data?.decision === 'approved') return 'succes';
+  if (data?.decision === 'refused') return 'refus';
+  return null;
 };
 
 /**

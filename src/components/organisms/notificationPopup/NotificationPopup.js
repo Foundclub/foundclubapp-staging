@@ -25,6 +25,7 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import {
   formatNotificationRelativeTime,
   getNotificationIcon,
+  getNotificationTone,
 } from '@/utils/notifications/notificationPresentation';
 
 /**
@@ -173,7 +174,12 @@ function NotificationPopup({
     );
   } else {
     popupContent = recentNotifications.map((notif, index) => {
-      const icon = getNotificationIcon(notif.type);
+      // COLL-C3B-BIS (planche 35) : la même icône par famille que la liste, et sa couleur.
+      const icon = getNotificationIcon(notif.type, notif.data);
+      const ton = getNotificationTone(notif.type, notif.data);
+      let couleurIcone = textPrimary;
+      if (ton === 'succes') couleurIcone = Colors?.success500 || textPrimary;
+      if (ton === 'refus') couleurIcone = Colors?.error300 || textPrimary;
       return (
         <TouchableOpacity
           accessibilityLabel={`${notif.title || t(
@@ -207,7 +213,7 @@ function NotificationPopup({
               width: 32,
             }}
           >
-            <SvgIcon color={textPrimary} height={16} name={icon} width={16} />
+            <SvgIcon color={couleurIcone} height={16} name={icon} width={16} />
           </View>
 
           <View style={{ flex: 1 }}>
