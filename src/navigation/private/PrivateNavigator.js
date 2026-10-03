@@ -1360,6 +1360,16 @@ function PrivateNavigator() {
             headerTitle: t('collectiviteFermetures.form.titreFermer', 'Fermer une installation'),
           }}
         />
+        {/* COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
+            point E) : le planning de la Ville (« Chiffres et export ») y mene. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteChiffres').default}
+          name={RouteNames.CollectiviteChiffres}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
 
       </Stack.Navigator>
     </HistoryWizardProvider>

@@ -441,3 +441,38 @@ export const linkAdminCollectiviteInvitationClub = async ({ clubId = null, invit
   );
   return response.data;
 };
+
+// ─── COLL-C5 (03/10/2026) : LES CHIFFRES DE LA VILLE ─────────────────────────────────────
+// La page « Chiffres » (planche 30), la jauge de l accueil et l « Utilisation » d un club lisent
+// la MEME route ; le contrat de chaque nombre est admin/docs/CONTRAT_CHIFFRES_VILLE.md. Le serveur
+// garde la porte : le gestionnaire de CETTE Ville et le super-admin. Aucune personne.
+
+/**
+ * Les chiffres de la Ville sur une periode.
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @param {'semaine' | 'mois' | 'saison'} periode - La periode.
+ * @returns {Promise<any>} `{ data: { periode, from, to, installations, clubs, seances, ville,
+ *   demandes } }`.
+ */
+export const getCollectiviteChiffres = async (collectiviteId, periode) => {
+  const response = await client.get(`/collectivites/${idSur(collectiviteId)}/chiffres`, {
+    params: { periode },
+  });
+  return response.data;
+};
+
+/**
+ * « Un tableau pour le service » : le CSV des seances de la periode (une ligne par seance).
+ * Lu en TEXTE, tel quel : aucune transformation JSON.
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @param {'semaine' | 'mois' | 'saison'} periode - La periode.
+ * @returns {Promise<string>} Le CSV.
+ */
+export const getCollectiviteChiffresExport = async (collectiviteId, periode) => {
+  const response = await client.get(`/collectivites/${idSur(collectiviteId)}/chiffres/export`, {
+    params: { periode },
+    responseType: 'text',
+    transformResponse: [(/** @type {any} */ brut) => brut],
+  });
+  return String(response.data ?? '');
+};

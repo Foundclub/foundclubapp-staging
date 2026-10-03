@@ -1478,6 +1478,22 @@ function FacilityList() {
         </View>
         {/* D34 : une SEULE grammaire d'ajout — le bouton plein de l'en-tete a */}
         {/* laisse la place au pointille en pied de liste (ListFooterComponent). */}
+        {/* COLL-C5 (03/10) — design P5v3 : la page « Chiffres » se range sous le planning. */}
+        {isCollectiviteMode ? (
+          <TouchableOpacity
+            accessibilityRole="link"
+            onPress={() => /** @type {any} */ (navigation).navigate(
+              RouteNames.CollectiviteChiffres,
+              { collectiviteId },
+            )}
+            style={{ justifyContent: 'center', minHeight: 44 }}
+            testID="facility-list-chiffres"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {t('collectiviteChiffres.lien', 'Chiffres et export')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {content}
