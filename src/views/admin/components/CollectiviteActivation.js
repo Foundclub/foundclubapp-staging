@@ -17,6 +17,7 @@ import {
   useSetAdminCollectiviteActive,
 } from '@/services/collectivite/collectiviteQueries';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
@@ -164,8 +165,11 @@ const phraseDuBandeau = (t, collectivite, etats) => {
  * au-dessus des boutons, et « Réessayer » relance. Apres le geste, la fenetre se ferme et le
  * bandeau garde le compte rendu, avec les noms. La liste et la fiche sont RELUES depuis le
  * serveur (useSetAdminCollectiviteActive) : l etat affiche est celui qu il rend.
- * @param {{ collectivite: { clubs?: Array<{ documentId: string, name: string }>,
- *   clubsCount: number, documentId: string, isActive: boolean, name: string },
+ * COLL-CONSOLE-BIS (03/10) — une Ville active dit DEPUIS QUAND (planche 15) : « Depuis le … »,
+ * la date posée par le serveur à l'activation, ou « — » (activée avant le lot).
+ * @param {{ collectivite: { activatedAt?: string | null,
+ *   clubs?: Array<{ documentId: string, name: string }>, clubsCount: number,
+ *   documentId: string, isActive: boolean, name: string },
  *   etats?: Record<string, string> | null }} props - La collectivite telle que le serveur l a
  *   lue, et l etat de l offre de chacun de ses clubs (s il est connu).
  * @returns {import('react').ReactElement} Le bandeau, son bouton, sa fenetre et son compte rendu.
@@ -385,7 +389,15 @@ function CollectiviteActivation({ collectivite, etats = null }) {
           ? t('adminCollectivites.status.inactive', 'Inactive')
           : t('adminCollectivites.status.active', 'Active')}
       />
-      <Text style={[Fonts.p2, Fonts.neutral100]}>{phraseDuBandeau(t, collectivite, etats)}</Text>
+      <Text style={[Fonts.p2, Fonts.neutral100]}>
+        {[
+          activer ? null : t('collectiviteConsoleBis.fiche.depuis', 'Depuis le {{date}}', {
+            date: formatDateWithDayPrefix(collectivite.activatedAt, { fallback: '—' }),
+            ...SANS_ECHAPPEMENT,
+          }),
+          phraseDuBandeau(t, collectivite, etats),
+        ].filter(Boolean).join(' · ')}
+      </Text>
       {compteRendu}
       <Button
         disabled={enCours}

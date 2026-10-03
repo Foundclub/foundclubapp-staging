@@ -39,6 +39,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdminCollectivites } from '@/services/collectivite/collectiviteQueries';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
@@ -62,8 +63,10 @@ const LARGEUR_TABLEAU = 768;
  *     vu ce qu'il change ;
  *   - sur le site (large), un vrai tableau ;
  *   - chargement, vide (qui porte la création), erreur, liste tronquée, filtre sans résultat.
- * ⛔ PAS FAIT (planche P2-liste-ordi) : les colonnes « Adhérents couverts » et « Activée le » —
- * le serveur ne rend ni la somme des membres, ni de date d'activation (aucun champ).
+ * COLL-CONSOLE-BIS (03/10/2026) — la colonne « Activée le » du tableau (planche 13) : la date
+ * posée par le serveur à l'activation, ou « — » (une Ville activée avant le lot, ou inactive).
+ * ⛔ PAS FAIT (planche P2-liste-ordi) : la colonne « Adhérents couverts » (le serveur ne rend pas
+ * la somme des membres).
  * Seul un SuperAdmin arrive ici : la pile AdminStack n'est montée que pour lui
  * (PrivateNavigator) et le serveur refuse la lecture à tout autre compte (403, affiché).
  * @returns {import('react').ReactElement} L'écran.
@@ -212,6 +215,9 @@ function AdminCollectiviteList() {
         </View>
         <View style={{ flex: 1 }}><EtatCollectivite isActive={ligne.isActive} /></View>
         <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>{String(ligne.clubsCount)}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
+          {ligne.isActive ? formatDateWithDayPrefix(ligne.activatedAt, { fallback: '—' }) : '—'}
+        </Text>
       </>
     );
     const contenuCarte = (
@@ -386,6 +392,7 @@ function AdminCollectiviteList() {
               {enTeteColonne(t('collectiviteConsole.liste.colonneCollectivite', 'Collectivité'), 3)}
               {enTeteColonne(t('collectiviteConsole.liste.colonneEtat', 'État'), 1)}
               {enTeteColonne(t('collectiviteConsole.liste.colonneClubs', 'Clubs rattachés'), 1)}
+              {enTeteColonne(t('collectiviteConsoleBis.liste.colonneActivee', 'Activée le'), 1)}
               <View style={{ width: 18 }} />
             </View>
             {lignes.map(renderLigne)}

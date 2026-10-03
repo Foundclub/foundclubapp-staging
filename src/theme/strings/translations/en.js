@@ -5186,6 +5186,12 @@ export default {
       nomDu: 'Ville du {{nom}}',
       nomElide: 'Ville d’{{nom}}',
     },
+    fiche: {
+      depuis: 'Since {{date}}',
+    },
+    liste: {
+      colonneActivee: 'Activated on',
+    },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — the club's facilities in 3 groups (design P8v2, D32).

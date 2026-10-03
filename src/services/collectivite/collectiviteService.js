@@ -194,8 +194,9 @@ export const COLLECTIVITE_UID = 'api::collectivite.collectivite';
 // La liste : une ligne par collectivite, ses clubs reduits a leur identifiant (on les compte).
 // ponytail: 100 collectivites par page, sans page suivante — au-dela, l ecran le dit
 // (`meta.pagination.total`) ; voie de sortie : paginer comme AdminClubList.
+// COLL-CONSOLE-BIS (03/10) — + `activatedAt` : « Activée le » (planche 13).
 export const ADMIN_COLLECTIVITES_LIST_PAYLOAD = {
-  fields: ['documentId', 'name', 'type', 'isActive'],
+  fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt'],
   pagination: { page: 1, pageSize: 100 },
   populate: { clubs: { fields: ['documentId'] } },
   sort: ['name:asc'],
@@ -229,7 +230,8 @@ export const getAdminCollectivites = async () => (
  */
 export const getAdminCollectivite = async (collectiviteId) => {
   const response = await listSuperadminEntries(COLLECTIVITE_UID, {
-    fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren'],
+    // COLL-CONSOLE-BIS (03/10) — + `activatedAt` : « Depuis le … » (planche 15).
+    fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt'],
     filters: { documentId: { $eq: String(collectiviteId || '').trim() } },
     pagination: { page: 1, pageSize: 1 },
     populate: ADMIN_COLLECTIVITE_DETAIL_POPULATE,

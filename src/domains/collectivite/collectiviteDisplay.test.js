@@ -54,8 +54,14 @@ describe('collectiviteDisplay — console super-admin (D61)', () => {
       // eslint-disable-next-line max-len
       clubs: [{ documentId: 'a' }, { documentId: 'b' }], documentId: 'v', isActive, name: 'Ville de V', type: 'commune',
     });
+    // COLL-CONSOLE-BIS (03/10) — + la date d activation (null : le serveur n en a pas).
     expect(ligne(null)).toEqual({
-      clubsCount: 2, documentId: 'v', isActive: false, name: 'Ville de V', type: 'commune',
+      activatedAt: null,
+      clubsCount: 2,
+      documentId: 'v',
+      isActive: false,
+      name: 'Ville de V',
+      type: 'commune',
     });
     expect(ligne(undefined).isActive).toBe(false);
     expect(ligne('true').isActive).toBe(false);

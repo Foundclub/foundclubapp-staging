@@ -538,8 +538,11 @@ describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () 
     await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-offre-as-montrivage').length > 0);
     expect(mockPut).toHaveBeenCalledWith(`${ROUTE}/active`, { data: { previewIsActive: false } });
     expect(textes(arbre.root)).toContain('Commune · INSEE 99001');
+    // COLL-CONSOLE-BIS (03/10) — une Ville active dit depuis quand (« — » : sans date au serveur).
     expect(bandeau(arbre)).toEqual([
-      'Active', '1 club reçoit l’offre Club offerte. Montrivage FC paie lui-même.', 'Couper',
+      'Active',
+      'Depuis le — · 1 club reçoit l’offre Club offerte. Montrivage FC paie lui-même.',
+      'Couper',
     ]);
     expect(offre(arbre, 'as-montrivage')).toEqual(['Offerte par la Ville']);
     expect(offre(arbre, 'montrivage-fc')).toEqual(['Paie lui-même']);
@@ -569,7 +572,7 @@ describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () 
     // eslint-disable-next-line max-len
     expect(arbre.root.findAll((n) => String(n.props?.testID || '').startsWith('admin-collectivite-offre-'))).toHaveLength(0);
     // eslint-disable-next-line max-len
-    expect(bandeau(arbre)[1]).toBe('Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.');
+    expect(bandeau(arbre)[1]).toBe('Depuis le — · Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.');
   });
 
   // eslint-disable-next-line max-len
