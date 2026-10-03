@@ -6067,6 +6067,8 @@ export default {
   collectiviteFermetures: {
     accueil: {
       aVenir: 'Fermeture à venir',
+      // FINITIONS11-COLL (03/10) — planches 2-3.
+      personneAPrevenir: 'Aucun club n’y a de séance : personne à prévenir.',
     },
     bandeau: {
       bloque: 'Bloquée par la Ville, {{heures}}',

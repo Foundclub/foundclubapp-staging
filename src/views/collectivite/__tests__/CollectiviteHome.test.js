@@ -63,13 +63,20 @@ jest.mock('react-i18next', () => {
   return {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-        const valeur = String(cle || '')
+        // FINITIONS11-COLL (03/10) : `t(cle, { count })` lit `cle_one` / `cle_other`, comme
+        // i18next (règle du pluriel français : 0 et 1 au singulier).
+        const valeurs = typeof repli === 'object' && repli !== null ? repli : options;
+        const suffixe = typeof valeurs?.count === 'number'
+          ? `_${new Intl.PluralRules('fr').select(valeurs.count)}`
+          : '';
+        const lire = (/** @type {string} */ chemin) => chemin
           .split('.')
           .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
+        const valeur = (suffixe ? lire(`${cle}${suffixe}`) : undefined) ?? lire(String(cle || ''));
         let texte = cle;
         if (typeof valeur === 'string') texte = valeur;
         else if (typeof repli === 'string') texte = repli;
-        return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(options?.[nom] ?? ''));
+        return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(valeurs?.[nom] ?? ''));
       },
     }),
   };
@@ -803,5 +810,47 @@ describe('COLL-C4B — « Fermeture à venir » et les deux actions de fermeture
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteFermeture', {
       collectiviteId: 'ville-montrivage', mode: 'bloquer',
     });
+  });
+});
+
+// 🧪 FINITIONS11-COLL (03/10), point 2 — planches 2-3 (« P3v2-accueil ») : la fermeture a venir dit
+// « aucun club n y a de seance : personne a prevenir » quand le serveur compte 0 seance touchee
+// (`touchedSessionsCount`, admin FINITIONS11-COLL) ; « n seances touchees » sinon ; rien si le
+// serveur ne le dit pas (ancien serveur, ou lecture en panne : null). ROUGE avant le lot.
+describe('FINITIONS11-COLL (2) — la fermeture a venir dit qui est a prevenir', () => {
+  const VACANCES = {
+    documentId: 'f-dojo',
+    endDate: '2030-10-25',
+    endTime: null,
+    facility: { documentId: 'dojo', name: 'Dojo municipal' },
+    kind: 'closure',
+    reason: 'vacances',
+    startDate: '2030-10-17',
+    startTime: null,
+  };
+  const personne = 'Aucun club n’y a de séance : personne à prévenir.';
+
+  it('0 seance touchee : personne a prevenir', async () => {
+    mockFermetures = lu({ data: [{ ...VACANCES, touchedSessionsCount: 0 }] });
+    const lus = textes(await monter());
+    expect(lus).toContain('Dojo municipal');
+    expect(lus).toContain(personne);
+  });
+
+  it('des seances touchees : leur nombre, et jamais « personne a prevenir »', async () => {
+    mockFermetures = lu({ data: [{ ...VACANCES, touchedSessionsCount: 3 }] });
+    const lus = textes(await monter());
+    expect(lus).toContain('3 séances touchées');
+    expect(lus).not.toContain(personne);
+  });
+
+  it('le serveur ne le dit pas (null, ou absent) : la carte n en dit rien', async () => {
+    mockFermetures = lu({
+      data: [{ ...VACANCES, touchedSessionsCount: null }, { ...VACANCES, documentId: 'f-2' }],
+    });
+    const lus = textes(await monter());
+    expect(lus.filter((texte) => texte === 'Fermeture à venir')).toHaveLength(2);
+    expect(lus).not.toContain(personne);
+    expect(lus.join(' ')).not.toMatch(/touchée/);
   });
 });

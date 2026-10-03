@@ -477,6 +477,22 @@ function CollectiviteHome() {
           closureTagLabel(t, fermeture),
         ].filter(Boolean).join(' · ')}
       </Text>
+      {/* FINITIONS11-COLL (03/10, planches 2-3) : qui est à prévenir, compté par le serveur
+          (`touchedSessionsCount`) ; il ne dit rien (null) : la carte non plus. */}
+      {typeof fermeture.touchedSessionsCount === 'number' ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {fermeture.touchedSessionsCount === 0
+            ? t(
+              'collectiviteFermetures.accueil.personneAPrevenir',
+              'Aucun club n’y a de séance : personne à prévenir.',
+            )
+            : t('collectiviteFermetures.carte.seances', {
+              count: fermeture.touchedSessionsCount,
+              defaultValue_one: '{{count}} séance touchée',
+              defaultValue_other: '{{count}} séances touchées',
+            })}
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
   const blocDesFermetures = fermeturesAVenir.length ? (

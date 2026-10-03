@@ -5690,6 +5690,8 @@ export default {
   collectiviteFermetures: {
     accueil: {
       aVenir: 'Upcoming closure',
+      // FINITIONS11-COLL (03/10) — boards 2-3.
+      personneAPrevenir: 'No club has a session there: nobody to notify.',
     },
     bandeau: {
       bloque: 'Blocked by the town, {{heures}}',
