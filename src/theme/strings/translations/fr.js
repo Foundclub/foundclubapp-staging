@@ -6181,6 +6181,18 @@ export default {
   // COLL-C5 (03/10/2026) — les chiffres de la Ville : la page « Chiffres et export » (planche 30),
   // la jauge de l'accueil, l'« Utilisation » d'un club (admin/docs/CONTRAT_CHIFFRES_VILLE.md).
   collectiviteChiffres: {
+    // COLL-AFFICHE (03/10/2026) — « Une affiche pour l’installation » (planche 30 B).
+    affiche: {
+      detail: 'PDF · une semaine · {{installation}}',
+      erreur: 'L’affiche n’a pas pu être téléchargée.',
+      installation: 'Installation',
+      ok: 'Affiche enregistrée : {{fichier}}',
+      sansInstallation: 'PDF · une semaine · aucune installation pour l’instant',
+      semaine: 'Semaine',
+      semainePrecedente: 'Semaine précédente',
+      semaineSuivante: 'Semaine suivante',
+      titre: 'Une affiche pour l’installation',
+    },
     clubs: {
       aucune: 'Aucune séance sur la période.',
       surPlusieurs: '{{total}} séances sur {{installations}} installations.',

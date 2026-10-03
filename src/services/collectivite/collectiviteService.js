@@ -1,3 +1,5 @@
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import {
   listSuperadminEntries,
   searchSuperadminRelations,
@@ -505,4 +507,24 @@ export const getCollectiviteChiffresExport = async (collectiviteId, periode) => 
     transformResponse: [(/** @type {any} */ brut) => brut],
   });
   return String(response.data ?? '');
+};
+
+/**
+ * COLL-AFFICHE (03/10/2026) — « Une affiche pour l'installation » (planche 30 B) : l'adresse
+ * du PDF du planning d'UNE installation pour UNE semaine, et l'en-tête du compte connecté. La
+ * route est gardée (gestionnaire de CETTE Ville, ou super-admin) : le fichier est rapatrié avec
+ * le jeton par `downloadRemoteFile`, qui le pose sur le téléphone (ou le télécharge, sur le site).
+ * @param {string} collectiviteId - documentId de la collectivite.
+ * @param {{ installation: string, semaine: string }} choix - L'installation (documentId), le lundi.
+ * @returns {{ headers: Record<string, string>, url: string }} L'adresse complète et l'en-tête.
+ */
+export const requeteAfficheInstallation = (collectiviteId, { installation, semaine }) => {
+  const jeton = getAuthTokens()?.token;
+  return {
+    headers: jeton ? { Authorization: `Bearer ${jeton}` } : {},
+    url: client.getUri({
+      params: { installation, semaine },
+      url: `/collectivites/${idSur(collectiviteId)}/chiffres/affiche`,
+    }),
+  };
 };

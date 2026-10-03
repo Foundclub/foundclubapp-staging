@@ -50,11 +50,19 @@ export const extensionDeLUrl = (url, secours = 'pdf') => {
 /**
  * Confie l adresse au navigateur, qui applique sa propre regle de
  * telechargement.
+ *
+ * COLL-AFFICHE (03/10) — AVEC des en-tetes (le jeton d une route GARDEE : l affiche
+ * de l installation), le navigateur ne peut pas recevoir l adresse : il la
+ * demanderait sans jeton. Le fichier est alors lu avec ces en-tetes, puis
+ * telecharge sous son nom (Blob -> URL objet -> <a download>, le geste de
+ * `saveTextFile.web.js` et du telechargement d une affiche, `visualRender.web.js`).
  * @param {object} params
  * @param {string} params.url adresse du fichier sur le serveur
+ * @param {string} [params.fileName] nom du fichier telecharge (avec en-tetes)
+ * @param {Record<string, string>} [params.headers] en-tetes de la requete
  * @returns {Promise<{ opened: boolean, outcome: string }>} l issue, nommee
  */
-export const downloadRemoteFile = async ({ url }) => {
+export const downloadRemoteFile = async ({ fileName, headers, url }) => {
   const adresse = String(url || '').trim();
   if (!adresse) {
     const erreur = new Error(i18next.t(
@@ -65,8 +73,36 @@ export const downloadRemoteFile = async ({ url }) => {
     throw erreur;
   }
 
-  await LinksPlatform.openUrl(adresse);
-  return { opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
+  if (!headers) {
+    await LinksPlatform.openUrl(adresse);
+    return { opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
+  }
+
+  const reponse = await fetch(adresse, { headers });
+  if (!reponse.ok) {
+    const erreur = new Error(i18next.t(
+      'downloadRemoteFile.errors.http',
+      'Le serveur a refuse le fichier ({{code}}).',
+      { code: reponse.status },
+    ));
+    erreur.reason = DOWNLOAD_FAILURES.HTTP_ERROR;
+    erreur.status = reponse.status;
+    throw erreur;
+  }
+  const objet = URL.createObjectURL(await reponse.blob());
+  try {
+    const lien = document.createElement('a');
+    lien.download = String(fileName || `foundclub-document.${extensionDeLUrl(adresse)}`);
+    lien.href = objet;
+    lien.rel = 'noopener';
+    document.body.appendChild(lien);
+    lien.click();
+    document.body.removeChild(lien);
+  } finally {
+    // Laisse le navigateur amorcer le telechargement avant de revoquer l adresse.
+    setTimeout(() => URL.revokeObjectURL(objet), 10000);
+  }
+  return { opened: true, outcome: FILE_SHARE_OUTCOMES.DOWNLOADS };
 };
 
 export default {

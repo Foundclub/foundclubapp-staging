@@ -223,6 +223,18 @@ export const tauxTenues = (club) => {
 };
 
 /**
+ * « Ville de Montrivage » => « ville-de-montrivage » : sans accent ni espace (comme le serveur).
+ * @param {unknown} nom - Le nom.
+ * @param {string} secours - Ce qu'on écrit quand le nom est vide.
+ * @returns {string} Le nom nettoyé.
+ */
+const enNomDeFichier = (nom, secours) => String(nom || secours)
+  .normalize('NFD').replace(/\p{M}/gu, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '') || secours;
+
+/**
  * Le nom du fichier exporté, comme le serveur le nomme : « chiffres-ville-de-montrivage-semaine-
  * 2026-09-28.csv » (sans accent ni espace).
  * @param {unknown} nomVille - Le nom de la Ville.
@@ -231,13 +243,8 @@ export const tauxTenues = (club) => {
  * @returns {string} Le nom du fichier.
  */
 export const nomDuFichierExporte = (nomVille, periode, from) => {
-  const ville = String(nomVille || 'ville')
-    .normalize('NFD').replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'ville';
   const debut = /^\d{4}-\d{2}-\d{2}$/.test(String(from || '')) ? `-${from}` : '';
-  return `chiffres-${ville}-${periode}${debut}.csv`;
+  return `chiffres-${enNomDeFichier(nomVille, 'ville')}-${periode}${debut}.csv`;
 };
 
 /**
@@ -250,3 +257,73 @@ export const avecMarqueUtf8 = (texte) => {
   const csv = String(texte ?? '');
   return csv.startsWith('\uFEFF') ? csv : `\uFEFF${csv}`;
 };
+
+// ---------------------------------------------------------------------------
+// COLL-AFFICHE (03/10/2026) — « Une affiche pour l'installation » (planche 30 B, décision d'Adel
+// « affiche A ») : le PDF du planning d'UNE installation pour UNE semaine. Contrat :
+// admin/docs/CONTRAT_CHIFFRES_VILLE.md §7 bis.
+// ---------------------------------------------------------------------------
+
+/**
+ * Le lundi (AAAA-MM-JJ) de la semaine d'un jour, décalé de n semaines. Calcul en UTC : un jour
+ * civil reste ce jour-là, quel que soit le fuseau de l'appareil.
+ * @param {unknown} jour - Un jour AAAA-MM-JJ.
+ * @param {number} [semaines] - Le décalage (−1 : la semaine d'avant).
+ * @returns {string | null} Le lundi, ou null si le jour est illisible.
+ */
+export const lundiDecale = (jour, semaines = 0) => {
+  const texte = String(jour || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texte)) return null;
+  const date = new Date(`${texte}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== texte) return null;
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7) + 7 * semaines);
+  return date.toISOString().slice(0, 10);
+};
+
+/**
+ * Le dimanche (AAAA-MM-JJ) de la semaine qui commence ce lundi.
+ * @param {string} lundi - Le lundi AAAA-MM-JJ.
+ * @returns {string} Le dimanche.
+ */
+export const dimancheDe = (lundi) => {
+  const date = new Date(`${lundi}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 6);
+  return date.toISOString().slice(0, 10);
+};
+
+/**
+ * Le lundi de la semaine où l'on est, sur l'appareil.
+ * @param {Date} [maintenant] - Maintenant.
+ * @returns {string} Le lundi AAAA-MM-JJ.
+ */
+export const lundiDeMaintenant = (maintenant = new Date()) => {
+  const deux = (/** @type {number} */ n) => String(n).padStart(2, '0');
+  const mois = deux(maintenant.getMonth() + 1);
+  const jour = `${maintenant.getFullYear()}-${mois}-${deux(maintenant.getDate())}`;
+  return /** @type {string} */ (lundiDecale(jour));
+};
+
+/**
+ * L'installation proposée d'abord : la plus utilisée de la période (ses heures), à égalité la
+ * première du serveur (ordre du nom). La planche montre celle où sont toutes les séances.
+ * @param {unknown} installations - `installations` des chiffres.
+ * @returns {any} L'installation, ou null s'il n'y en a aucune.
+ */
+export const installationParDefaut = (installations) => {
+  const liste = Array.isArray(installations) ? installations.filter((i) => i?.documentId) : [];
+  const minutes = (/** @type {any} */ i) => Number(i?.minutes) || 0;
+  return liste.reduce(
+    (meilleure, i) => (meilleure === null || minutes(i) > minutes(meilleure) ? i : meilleure),
+    null,
+  );
+};
+
+/**
+ * Le nom du PDF, comme le serveur le nomme : « affiche-gymnase-des-tilleuls-2026-09-28.pdf ».
+ * @param {unknown} nomInstallation - Le nom de l'installation.
+ * @param {string} lundi - Le lundi de la semaine (AAAA-MM-JJ).
+ * @returns {string} Le nom du fichier.
+ */
+export const nomDuFichierAffiche = (nomInstallation, lundi) => (
+  `affiche-${enNomDeFichier(nomInstallation, 'installation')}-${lundi}.pdf`
+);
