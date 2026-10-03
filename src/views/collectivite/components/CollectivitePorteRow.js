@@ -67,10 +67,15 @@ function CollectivitePorteRow() {
 
   return (
     <TouchableOpacity
+      // COLL-FIX2 (T10) : « 1 demandes à trancher » — le singulier a sa phrase.
       accessibilityLabel={nombre > 0
         ? t(
-          'collectiviteAccueil.porte.a11yDemandes',
-          'Ma collectivité, {{nom}} : {{nombre}} demandes à trancher',
+          nombre === 1
+            ? 'collectiviteAccueil.porte.a11yDemande'
+            : 'collectiviteAccueil.porte.a11yDemandes',
+          nombre === 1
+            ? 'Ma collectivité, {{nom}} : 1 demande à trancher'
+            : 'Ma collectivité, {{nom}} : {{nombre}} demandes à trancher',
           { nom: ville.name || '', nombre, ...SANS_ECHAPPEMENT },
         )
         : t('collectiviteAccueil.porte.a11y', 'Ma collectivité, {{nom}}', {

@@ -199,20 +199,36 @@ export const fullRanges = (intervalles, capacite) => {
 
 /**
  * Les moments complets d un jour de la semaine type, en minutes.
- * ponytail: on compare les heures, pas les periodes — deux creneaux de periodes
- * disjointes (sept.-dec. / janv.-juin) se lisent ici « complet » ; c est l apercu du
- * serveur (§4.2, pic dans le temps) qui juge. Sortie : lire `validFrom`/`validUntil`.
+ * 🐞 COLL-FIX2 (03/10), planche 23 (tournée T10) : deux créneaux ne prennent une place ENSEMBLE
+ * que si leurs heures ET leurs périodes se chevauchent (`validFrom` / `validUntil`, jours
+ * « AAAA-MM-JJ »). Avant, le même club sur deux périodes qui se suivent se lisait « complet ».
+ * Des périodes qui se croisent ont un jour commun : le plus tardif de leurs débuts. On juge
+ * donc les heures à chaque début de période, et on réunit les plages pleines.
  * @param {any[]} creneaux - Les creneaux d UN jour.
  * @param {number} capacite - maxSlots.
  * @returns {Array<{ start: number, end: number }>} Les plages pleines.
  */
-export const fullRangesOfSlots = (creneaux, capacite) => fullRanges(
-  creneaux.map((creneau) => ({
-    end: toMinutes(creneau?.endTime) ?? 0,
-    start: toMinutes(creneau?.startTime) ?? 0,
-  })),
-  capacite,
-);
+export const fullRangesOfSlots = (creneaux, capacite) => {
+  const du = (/** @type {any} */ c) => String(c?.validFrom || '0000-01-01').slice(0, 10);
+  const au = (/** @type {any} */ c) => String(c?.validUntil || '9999-12-31').slice(0, 10);
+  const pleines = [...new Set(creneaux.map(du))].flatMap((jour) => fullRanges(
+    creneaux
+      .filter((creneau) => du(creneau) <= jour && jour <= au(creneau))
+      .map((creneau) => ({
+        end: toMinutes(creneau?.endTime) ?? 0,
+        start: toMinutes(creneau?.startTime) ?? 0,
+      })),
+    capacite,
+  ));
+  return pleines
+    .sort((a, b) => a.start - b.start)
+    .reduce((/** @type {Array<{ start: number, end: number }>} */ fusion, plage) => {
+      const derniere = fusion[fusion.length - 1];
+      if (derniere && plage.start <= derniere.end) derniere.end = Math.max(derniere.end, plage.end);
+      else fusion.push({ ...plage });
+      return fusion;
+    }, []);
+};
 
 /**
  * Les moments complets d un planning (blocs dates), du plus tot au plus tard.

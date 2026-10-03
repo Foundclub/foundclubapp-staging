@@ -158,9 +158,12 @@ function CollectiviteActualiteForm() {
       let choisi = null;
       if (cle === 'document') {
         // T9 (C18) : la COPIE du document part, comme dans la messagerie (platform/media).
+        // COLL-FIX2 (T10) : et le sélecteur s'ouvre comme celui de la messagerie, qui envoie des
+        // documents : en mode « import » (ACTION_GET_CONTENT), pas « open ».
         choisi = await MediaPlatform.pickDocument({
           ...getDocumentPickerOptions(),
           localCopy: true,
+          mode: 'import',
         });
       } else if (cle === 'camera') {
         if (Platform.OS === 'android') {

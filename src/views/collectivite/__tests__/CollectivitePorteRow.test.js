@@ -109,6 +109,17 @@ describe('COLL-ACCUEIL — planche 3 : le compte mixte et sa rangée-porte', () 
     ]));
   });
 
+  // 🎨 COLL-FIX2 (03/10), planche 31 (tournée T10) : « 1 demandes à trancher ».
+  it('une seule demande : « 1 demande à trancher », au singulier', async () => {
+    mockRequetes = { data: [{ documentId: 'rq-1' }] };
+    const arbre = await monter();
+    const porte = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith('Ma collectivité')))[0];
+    expect(porte.props.accessibilityLabel)
+      .toBe('Ma collectivité, Ville de Montrivage : 1 demande à trancher');
+  });
+
   it('elle ouvre l espace de la Ville, avec « ‹ AS Montrivage » pour revenir', async () => {
     const arbre = await monter();
     const [porte] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID

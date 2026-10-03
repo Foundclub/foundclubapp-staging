@@ -241,6 +241,17 @@ describe('COLL-CONSOLE — « À traiter » en tête de la console des collectiv
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminCollectiviteInvitations, { onglet: 'foundclub' });
   });
 
+  // 🎨 COLL-FIX2 (03/10), planche 13 (tournée T10) : rien à traiter, et les 3 lignes n'avaient
+  // AUCUN compteur — elles ne disaient pas « rien ». Elles disent « 0 », discret.
+  it('A0 — rien à traiter : chaque ligne dit « 0 »', async () => {
+    serveur.demandes = [];
+    const arbre = await monter(AdminCollectiviteList, (a) => textes(a.root).includes('Demandes de rattachement'));
+    await attendre(() => textes(parTestID(arbre.root, 'gestionnaire-entree-file')).includes('0'));
+    expect(textes(parTestID(arbre.root, 'a-traiter-rattachements'))).toEqual(['Demandes de rattachement', '0']);
+    expect(textes(parTestID(arbre.root, 'a-traiter-foundclub'))).toEqual(['Clubs à inviter, par FoundClub', '0']);
+    expect(textes(parTestID(arbre.root, 'gestionnaire-entree-file'))).toEqual(['Demandes de gestionnaire', '0']);
+  });
+
   it('A2 — « Mairies à activer » filtre la liste sur les inactives ; « Toutes » y ramène', async () => {
     const arbre = await monter(AdminCollectiviteList, (a) => textes(a.root).includes('Ville de Montrivage'));
     await appuyer(parTestID(arbre.root, 'a-traiter-mairies'));

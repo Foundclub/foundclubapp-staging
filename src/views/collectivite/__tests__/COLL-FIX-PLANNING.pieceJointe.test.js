@@ -159,9 +159,11 @@ describe('COLL-FIX-PLANNING — la piece jointe d une actualite (T9_C18)', () =>
     });
     const arbre = await monter();
     await ajouter(arbre, 'document');
+    // COLL-FIX2 (T10) : la copie ne suffisait pas ; le sélecteur s'ouvre maintenant comme celui
+    // de la messagerie (mode « import »).
     expect(mockPickDocument).toHaveBeenCalledWith(expect.objectContaining({
       localCopy: true,
-      mode: 'open',
+      mode: 'import',
     }));
     expect(uploadActualiteFile).toHaveBeenCalledWith([DOCUMENT_CHOISI]);
     expect(textes(arbre)).toContain('reglement-interieur.pdf');

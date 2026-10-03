@@ -386,6 +386,18 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
       .toHaveBeenCalledWith('CollectiviteInstallations', { collectiviteId: 'ville-montrivage' });
   });
 
+  // 🎨 COLL-FIX2 (03/10), planche 2 (tournée T10, T10_C02_1) : « Vos clubs » s'affichait « Vos »
+  // sous Android 16 (gras de plusieurs mots dans une boîte à sa largeur mesurée). La parade
+  // éprouvée : la boîte du titre est ÉTIRÉE (flexGrow), jamais à sa largeur mesurée.
+  it('les titres de section sont étirés : « Vos clubs » ne perd plus « clubs »', async () => {
+    const arbre = await monter();
+    const titre = arbre.root.findAllByType(Text)
+      .find((/** @type {any} */ n) => n.props.accessibilityRole === 'header'
+        && aplatirTexte(n.props.children).trim() === 'Vos clubs');
+    expect(titre).toBeDefined();
+    expect(StyleSheet.flatten(titre.props.style)).toEqual(expect.objectContaining({ flexGrow: 1 }));
+  });
+
   it('« Vos clubs » : des NOMBRES, et aucune coordonnée de club ni de personne', async () => {
     const arbre = await monter();
     const lus = textes(arbre);

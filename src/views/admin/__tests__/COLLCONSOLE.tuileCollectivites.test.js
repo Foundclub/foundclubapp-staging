@@ -212,7 +212,7 @@ test('T4 — la tuile attend SEULE : « … » ; le reste du dashboard est déj�
   const arbre = monter();
   expect(tuileDe(arbre).props.value).toBe('…');
   expect(tuileDe(arbre).props.busy).toBe(true);
-  expect(texteSous(arbre.toJSON())).toContain('Pilotage general');
+  expect(texteSous(arbre.toJSON())).toContain('Pilotage général');
 });
 
 test('T5 — la lecture échoue : « — », jamais 0 ; la ligne grise du dashboard le dit', () => {
