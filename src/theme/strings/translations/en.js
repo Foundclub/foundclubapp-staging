@@ -5371,6 +5371,13 @@ export default {
       semaine_other: 'This week: {{count}} sessions',
       surtitre: 'My local authority',
     },
+    // COLL-C2B-BIS (03/10) — board 23: a slot's period, and the date of a withdrawal.
+    periode: {
+      au: 'To',
+      depuis: 'Since {{date}}: the slot has started, its start date no longer changes.',
+      du: 'From',
+      ordre: 'The end of the period must come after its start.',
+    },
     planning: {
       aujourdhui: 'Today, {{jour}}',
       autresClubs: 'Other clubs',

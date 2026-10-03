@@ -5735,6 +5735,13 @@ export default {
       semaine_other: 'Cette semaine : {{count}} séances',
       surtitre: 'Ma collectivité',
     },
+    // COLL-C2B-BIS (03/10) — planche 23 : la période d'un créneau, et la date d'un retrait.
+    periode: {
+      au: 'Au',
+      depuis: 'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
+      du: 'Du',
+      ordre: 'La fin de la période doit suivre son début.',
+    },
     planning: {
       aujourdhui: 'Aujourd’hui, {{jour}}',
       autresClubs: 'Autres clubs',
