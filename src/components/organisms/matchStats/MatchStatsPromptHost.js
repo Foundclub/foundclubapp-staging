@@ -152,7 +152,7 @@ const openPendingMatchStatsList = () => navigate(RouteNames.EventStack, {
 function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const { t } = useTranslation();
   const [{ auth }] = useAppContext();
-  const { isBootstrapResolved } = useAuth();
+  const { isBootstrapResolved, userData } = useAuth();
   const queryClient = useQueryClient();
   // FINITIONS8 (point 7) : la fenetre fermee est retenue sous `<compte>:<fenetre>`, ici aussi.
   const accountDocumentId = auth?.user?.documentId;
@@ -880,7 +880,16 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     }
 
     // État 1 — le score, dans la fenêtre : − / + d'une main, au bord du terrain.
-    const ourName = String(shownPrompt?.team?.name || '').trim()
+    // ST-VUES3-ORDI (écran 1, point 2 ; planche P2-rappel) — le camp de gauche porte le CLUB
+    // (« AS Montrivage »), plus l'équipe (« U15 ») : face à « Adversaire », c'est le club qui
+    // joue. Le rappel ne porte que l'équipe ; son club vient des équipes que l'entraîneur
+    // entraîne (`trainedTeams`). Sans lui, l'équipe, comme avant.
+    const ourClubName = String((userData?.trainedTeams || []).find(
+      (/** @type {any} */ team) => team?.documentId
+        && team.documentId === shownPrompt?.team?.documentId,
+    )?.club?.name || '').trim();
+    const ourName = ourClubName
+      || String(shownPrompt?.team?.name || '').trim()
       || t('stMatch.rappel.us', 'Mon équipe');
     const ourTeam = { team: ourName, ...SANS_ECHAPPEMENT };
     const changeScore = (/** @type {'for' | 'against'} */ side, /** @type {number} */ step) => {

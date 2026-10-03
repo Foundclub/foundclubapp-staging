@@ -9,7 +9,10 @@ import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
+import {
+  resolveEventDisplayName,
+  resolveEventOpponentName,
+} from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
@@ -85,9 +88,19 @@ import {
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
+import { formatEventPlaceShort, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
+import { findParentTeamId } from './matchEncartLines';
+import {
+  buildMatchHeaderScoreSummary,
+  resolveMatchStartTimeLabel,
+  resolveMatchVerdictTag,
+  resolveTeamCoachFirstname,
+  resolveViewerFromInvitedTeam,
+} from './matchPageModel';
 /* eslint-enable perfectionist/sort-imports */
 
 const flattenPages = (pages) => {
@@ -321,8 +334,23 @@ function EventDetails({ navigation, route }) {
     const playerTeam = teams.find((team) => Array.isArray(team?.players) && team.players.some((player) => player?.documentId === userDocumentId));
     if (playerTeam?.documentId) return playerTeam.documentId;
 
+    // 👪 ST-VUES3-ORDI — comme le telephone (DECISIONS-SOIR, « parents encart B ») : le
+    // parent lit l equipe de SON enfant, que le serveur nomme.
+    const parentTeamId = findParentTeamId({
+      invitedTeams: event?.invitedTeams,
+      team: event?.team,
+      viewerParentTeamDocumentIds: event?.viewerParentTeamDocumentIds,
+    });
+    if (parentTeamId) return parentTeamId;
+
     return teams[0]?.documentId || null;
-  }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
+  }, [
+    event?.invitedTeams,
+    event?.team,
+    event?.viewerParentTeamDocumentIds,
+    userData?.documentId,
+    userData?.trainedTeams,
+  ]);
   const compositionEditorTeam = useMemo(() => {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     return teams.find((team) => team?.documentId === compositionTeamId) || event?.team || null;
@@ -551,6 +579,9 @@ function EventDetails({ navigation, route }) {
   // telle quelle — y mettre « match termine » serait un contresens.
   // ==========================================================================
   const isMatchEvent = normalizeTypeName(event?.type?.name).includes('match');
+  // 👪 ST-VUES3-ORDI — le parent d un joueur de CETTE equipe demande aussi la feuille : le
+  // serveur ne lui rend que l encart (score, auteur, buteurs). Meme porte que le telephone.
+  const isTeamParent = Boolean(compositionTeamId) && compositionTeamId === findParentTeamId(event);
   // ⛔ LE DEBUT VIENT DU SERVEUR, IL NE SE DEDUIT PAS DE `event.date` : quand la
   // date est a minuit et que l heure vit dans `startTime`, la deduction placerait
   // la fin du match a 02:00 et ouvrirait l apres-match AVANT le coup d envoi
@@ -601,7 +632,9 @@ function EventDetails({ navigation, route }) {
     data: matchStatsPayload,
     isFetching: isMatchStatsFetching,
   } = useGetEventMatchStats(eventId || '', compositionTeamId || undefined, {
-    enabled: Boolean(eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember)),
+    enabled: Boolean(
+      eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember || isTeamParent),
+    ),
   });
   const matchStatsReport = matchStatsPayload?.report || null;
   const playerCollectiveRating = matchStatsPayload?.playerCollectiveRating || null;
@@ -609,6 +642,8 @@ function EventDetails({ navigation, route }) {
   const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
   const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
+  // ST-MATCH (écrans 1 et 7) — « Karim n'a pas encore saisi le score », « Le bilan de Karim ».
+  const teamCoachFirstname = resolveTeamCoachFirstname(compositionEditorTeam || event?.team);
   const matchStatsScoreLabel = useMemo(() => {
     const score = matchStatsPayload?.score;
     if (!score?.available) return t('eventDetails.scoreToComplete', 'Score à compléter');
@@ -712,6 +747,105 @@ function EventDetails({ navigation, route }) {
   const isPostMatchDoorClosed = Boolean(postMatchAction.disabled || isMatchStatsFetching);
   // Comme pour l ecran 1, `showOverviewTab` tombe : le site n a pas d onglets.
   const showPostMatchCard = Boolean(isMatchEvent && compositionTeamId && canViewMatchStats);
+
+  // 🆚 ST-VUES3-ORDI (écran 1 sur ordinateur) — L'ENCART DU SCORE DU TÉLÉPHONE, avec ses
+  // 7 états, les buteurs et l'auteur : MÊME calcul (`buildMatchHeaderScoreSummary`), MÊMES
+  // portes (l'équipe, l'organisateur, et le parent que le serveur reconnaît — « parents
+  // encart B » ; un visiteur ne lit que le score). « Nommer l'adversaire » ouvre ici la
+  // modification de l'événement, où vit le champ ; « Saisir le score », la feuille de match.
+  const matchOpponentName = isMatchEvent ? resolveEventOpponentName(event) : '';
+  const isViewerFromInvitedTeam = useMemo(
+    () => resolveViewerFromInvitedTeam({ compositionTeamId, event }),
+    [compositionTeamId, event],
+  );
+  const matchStartTimeLabel = useMemo(() => resolveMatchStartTimeLabel(event), [event]);
+  const scrollToMatchStats = useCallback(() => {
+    document.querySelector('[data-event-section="match-stats"]')
+      ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, []);
+  const openOpponentEdit = useCallback(() => {
+    navigation.navigate(RouteNames.EventEdit, { eventId });
+  }, [eventId, navigation]);
+  const matchEncartSummary = useMemo(() => {
+    if (!isMatchEvent) return null;
+    const summary = buildMatchHeaderScoreSummary({
+      canEdit,
+      canManage: canManageMatchStats,
+      canSeeDetails: Boolean(
+        isTeamMember || canEdit || matchStatsPayload?.permissions?.actorRole === 'parent',
+      ),
+      coachFirstname: teamCoachFirstname,
+      event,
+      isFinal: isMatchStatsFinal,
+      isFinished: isMatchFinished,
+      isViewerFromInvitedTeam,
+      onNameOpponent: openOpponentEdit,
+      opponentName: matchOpponentName,
+      playerLines: matchStatsReport?.playerLines,
+      scoreState: matchStatsPayload?.score || null,
+      sport: matchStatsPayload?.sport,
+      startTimeLabel: matchStartTimeLabel,
+      t,
+      viewerDocumentId: userData?.documentId || null,
+    });
+    return {
+      ...summary,
+      onEnterScore: postMatchAction.isScoreEntry && !postMatchAction.disabled
+        ? openMatchStatsEditor
+        : null,
+      onSeeStats: summary.isScoreShown && canViewMatchStats && compositionTeamId
+        ? scrollToMatchStats
+        : null,
+    };
+  }, [
+    canEdit,
+    canManageMatchStats,
+    canViewMatchStats,
+    compositionTeamId,
+    event,
+    isMatchEvent,
+    isMatchFinished,
+    isMatchStatsFinal,
+    isTeamMember,
+    isViewerFromInvitedTeam,
+    matchOpponentName,
+    matchStartTimeLabel,
+    matchStatsPayload?.permissions?.actorRole,
+    matchStatsPayload?.score,
+    matchStatsPayload?.sport,
+    matchStatsReport?.playerLines,
+    openMatchStatsEditor,
+    openOpponentEdit,
+    postMatchAction.disabled,
+    postMatchAction.isScoreEntry,
+    scrollToMatchStats,
+    t,
+    teamCoachFirstname,
+    userData?.documentId,
+  ]);
+  // 🏷️ ST-MATCH (écran 1) — la pastille porte l'étape et le verdict : « MATCH · TERMINÉ ·
+  // VICTOIRE » (mêmes mots que le téléphone).
+  const matchTypeTag = isMatchEvent
+    ? [
+      event?.type?.name || 'Match',
+      isMatchFinished ? t('eventDetails.typeTag.matchFinished', 'TERMINÉ') : '',
+      resolveMatchVerdictTag({
+        isFinished: isMatchFinished,
+        t,
+        verdict: matchEncartSummary?.verdict,
+      }),
+    ].filter(Boolean).join(' · ')
+    : '';
+  // 📅 ST-VUES3-ORDI (écran 1, point 2, planche P3-match-ordi) — la ligne d'infos du match,
+  // sous le titre : « U15 · sam. 5 sept. · 19:00 – 20:00 · Lyon (69001) ».
+  const matchWhenLine = isMatchEvent ? formatEventWhenLine(event) : '';
+  const matchInfoLine = isMatchEvent
+    ? [
+      String(event?.team?.name || '').trim(),
+      matchWhenLine ? `${matchWhenLine.charAt(0).toLowerCase()}${matchWhenLine.slice(1)}` : '',
+      formatEventPlaceShort(event),
+    ].filter(Boolean).join(' · ')
+    : '';
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -1713,17 +1847,23 @@ function EventDetails({ navigation, route }) {
                       color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
                     }}
                     >
-                      <span>{formatDateTimeLabel(event?.date)}</span>
-                      {event?.startTime ? (
-                        <span>
-                          {formatTimeLabel(event?.startTime)}
-                          {' '}
-                          -
-                          {' '}
-                          {formatTimeLabel(event?.endTime)}
-                        </span>
-                      ) : null}
-                      {event?.team?.name ? <span>{event.team.name}</span> : null}
+                      {matchInfoLine ? (
+                        <span data-testid="event-match-info-line">{matchInfoLine}</span>
+                      ) : (
+                        <>
+                          <span>{formatDateTimeLabel(event?.date)}</span>
+                          {event?.startTime ? (
+                            <span>
+                              {formatTimeLabel(event?.startTime)}
+                              {' '}
+                              -
+                              {' '}
+                              {formatTimeLabel(event?.endTime)}
+                            </span>
+                          ) : null}
+                          {event?.team?.name ? <span>{event.team.name}</span> : null}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1953,6 +2093,46 @@ function EventDetails({ navigation, route }) {
               {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
                   le telephone : c est la seule chose a FAIRE maintenant, tout
                   le reste de la page est de la consultation. */}
+              {/* 🆚 ST-VUES3-ORDI (écran 1 sur ordinateur, planche P3-match-ordi) — L'ENCART
+                  DU SCORE du téléphone (`MatchScoreEncart`, le même composant) : la pastille
+                  « MATCH · TERMINÉ · VICTOIRE », le face-à-face, qui a saisi, les buteurs, ce
+                  qu'on attend. Les lignes arrivent déjà filtrées pour CE lecteur. */}
+              {matchEncartSummary ? (
+                <div data-event-section="match-encart" style={{ display: 'grid', gap: 14 }}>
+                  {matchTypeTag ? (
+                    <span
+                      style={{
+                        border: `1px solid ${accentColor}`,
+                        borderRadius: 8,
+                        color: accentColor,
+                        fontSize: 13,
+                        justifySelf: 'center',
+                        letterSpacing: '0.04em',
+                        padding: '6px 12px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {matchTypeTag}
+                    </span>
+                  ) : null}
+                  <div
+                    style={{
+                      background: 'rgba(23, 56, 68, 0.55)',
+                      border: '1px solid rgba(1, 179, 244, 0.24)',
+                      borderRadius: 24,
+                      padding: '20px 16px',
+                    }}
+                  >
+                    <MatchScoreEncart
+                      clubName={event?.team?.club?.name || event?.club?.name || ''}
+                      eventClub={event?.team?.club || event?.club || null}
+                      logoUrl={(event?.team?.club || event?.club)?.logo?.url}
+                      matchScoreSummary={matchEncartSummary}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
               {showNextActionCard ? (
                 <EventNextActionCard
                   expectedCount={nextActionExpectedCount}

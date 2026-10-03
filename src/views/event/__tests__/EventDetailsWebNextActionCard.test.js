@@ -693,3 +693,103 @@ describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose p
     );
   });
 });
+
+// ==========================================================================
+// ST-VUES3-ORDI (03/10) — LA PAGE DU MATCH SUR ORDINATEUR (planche P3-match-ordi) : écrans
+// 1, 7 et 8 du design des statistiques, sur le site.
+//   · point 2 — la ligne d'infos sous le titre : « U15 · jeu. 1 janv. · 18:00 » ;
+//   · point 3 — l'encart du score du téléphone, ses états, l'auteur, les buteurs ;
+//   · point 4 — la carte « Après le match » du téléphone, À DROITE, avec « Relancer les N » ;
+//   · point 5 — « Gérer l'événement » : Modifier, Convocation, « Stats du match » et sa note.
+// Avant ce lot, le site n'avait rien de tout cela (titre, date longue, ancienne carte à
+// gauche, un seul bouton « Modifier »).
+// ==========================================================================
+
+describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
+  // Le texte RENDU (les composants natifs servis par react-native-web compris), pas celui du JSX.
+  const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
+    .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
+    .join(' ').replace(/\s+/g, ' ').trim();
+  const parSection = (/** @type {any} */ root, /** @type {string} */ nom) => root
+    .findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === nom);
+
+  const FEUILLE_PUBLIEE = buildMatchStats({
+    playerResponses: [
+      { label: 'Hugo L.', status: 'submitted' },
+      { label: 'Léa M.', status: 'pending' },
+      { label: 'Max P.', status: 'pending' },
+    ],
+    report: {
+      collectiveComment: 'Bon bloc en première mi-temps.',
+      collectiveRating: 8,
+      finalizedAt: '2099-01-01T21:39:00.000Z',
+      needsReview: false,
+      playerLines: [{ goals: 2, label: 'Hugo L.', player: { firstname: 'Hugo', lastname: 'Lemaire' } }],
+      responseCompletionCount: 1,
+      responseEligibleCount: 3,
+      scoreAgainst: 1,
+      scoreFor: 3,
+      status: 'final',
+    },
+    score: {
+      available: true,
+      recordedAt: '2099-01-01T21:35:00.000Z',
+      recordedBy: { documentId: 'karim', firstname: 'Karim' },
+      scoreAgainst: 1,
+      scoreFor: 3,
+      source: 'manual',
+      waitingOfficial: false,
+    },
+  });
+
+  test('🔴 point 3 — l encart du score : la pastille, le face-à-face, le score et qui l a saisi', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent({ opponentName: 'Test-COMPO', team: { ...buildEvent().team, club: { documentId: CLUB_ID, name: 'AS Montrivage' } } }),
+      matchStats: FEUILLE_PUBLIEE,
+    });
+
+    const [encart] = parSection(root, 'match-encart');
+    expect(encart).toBeDefined();
+    const texte = texteRendu(encart);
+    expect(texte).toContain('Match · TERMINÉ · VICTOIRE');
+    expect(texte).toContain('AS Montrivage');
+    expect(texte).toContain('Test-COMPO');
+    expect(texte).toContain('3 - 1');
+    expect(texte).toContain('Score saisi');
+    expect(texte).toContain('Saisi par Karim le');
+    expect(parTestID(encart, 'event-header-match-encart')[0]).toBeDefined();
+  });
+
+  test('🔴 point 3 — un visiteur lit le score, jamais qui l a saisi (mineurs en U15)', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      auth: { canManageEvent: () => false, userData: null },
+      event: buildMatchEvent({
+        matchResult: {
+          savedAt: '2099-01-01T21:35:00.000Z',
+          savedBy: { firstname: 'Karim' },
+          scoreAgainst: 1,
+          scoreFor: 3,
+          source: 'manual',
+        },
+        opponentName: 'Test-COMPO',
+      }),
+      matchStats: null,
+    });
+
+    const texte = texteRendu(parSection(root, 'match-encart')[0]);
+    expect(texte).toContain('3 - 1');
+    expect(texte).not.toContain('Saisi par');
+  });
+
+  test('🔴 point 2 — la ligne d infos du match, comme la planche : l équipe, le jour et l heure', () => {
+    const root = mountScreen({ event: buildMatchEvent() });
+
+    const jour = new Date('2099-01-01T17:00:00.000Z')
+      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', weekday: 'short' });
+    const [ligne] = root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-match-info-line');
+    expect(textOf(ligne)).toBe(`U15 · ${jour} · 18:00`);
+  });
+
+});
