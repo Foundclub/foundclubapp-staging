@@ -7,6 +7,7 @@ import {
   COLLECTIVITE_HOME_ACTIONS,
   firstFullMoment,
   formatWeekMoment,
+  homeActionTarget,
   isOwnClubRequest,
   isVilleOnlyAccount,
   latestManagerRequest,
@@ -32,12 +33,30 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
     const affichees = availableHomeActions();
     // COLL-C4A (02/10) : « Publier une actualité » a son écran.
     // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » aussi.
+    // COLL-ACCUEIL-BIS (03/10) : « Attribuer un créneau » (C2b) et « Inviter un club » (C-CLUBS).
     expect(affichees.map((action) => action.key)).toEqual([
-      'publishNews', 'closeInstallation', 'blockSlot', 'addInstallation',
+      'assignSlot', 'publishNews', 'closeInstallation',
+      'blockSlot', 'inviteClub', 'addInstallation',
     ]);
     affichees.forEach((action) => {
       expect(RouteNames[/** @type {keyof typeof RouteNames} */ (action.route)]).toBe(action.route);
     });
+  });
+
+  it('« Attribuer un créneau » : une installation ⇒ ses créneaux ; sinon la liste', () => {
+    const attribuer = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'assignSlot');
+    const publier = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'publishNews');
+    expect(homeActionTarget(/** @type {any} */ (attribuer), [{ documentId: 'tilleuls' }])).toEqual({
+      params: { facilityId: 'tilleuls' }, route: 'CollectiviteInstallation',
+    });
+    const deux = [{ documentId: 'a' }, { documentId: 'b' }];
+    expect(homeActionTarget(/** @type {any} */ (attribuer), deux))
+      .toEqual({ params: {}, route: 'CollectiviteInstallations' });
+    expect(homeActionTarget(/** @type {any} */ (attribuer), undefined))
+      .toEqual({ params: {}, route: 'CollectiviteInstallations' });
+    // Les autres actions ne regardent pas les installations.
+    expect(homeActionTarget(/** @type {any} */ (publier), [{ documentId: 'tilleuls' }]))
+      .toEqual({ params: {}, route: 'CollectiviteActualiteForm' });
   });
 });
 

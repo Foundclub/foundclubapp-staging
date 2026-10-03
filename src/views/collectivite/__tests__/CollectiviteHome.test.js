@@ -40,6 +40,16 @@ let mockFermetures;
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 
+// COLL-ACCUEIL-BIS (03/10) — la largeur de l'écran : 390 (téléphone) par défaut, 1280 pour la
+// planche « ordinateur » (l'accueil passe en colonnes à partir de 1024).
+let mockLargeur = 390;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({
+    fontScale: 1, height: 900, scale: 1, width: mockLargeur,
+  }),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
   useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
@@ -240,6 +250,7 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) =
 };
 
 beforeEach(() => {
+  mockLargeur = 390;
   mockRetenu.clear();
   mockNavigate.mockClear();
   mockGoBack.mockClear();
@@ -343,7 +354,7 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(refetch).toHaveBeenCalled();
   });
 
-  it('« Vos actions » : SEULEMENT celles dont l écran existe', async () => {
+  it('« Vos actions » : chacune ouvre son écran', async () => {
     const arbre = await monter();
     const lus = textes(arbre);
     expect(lus).toContain('Vos actions');
@@ -353,10 +364,6 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » ont leur écran.
     expect(lus).toContain('Fermer une installation');
     expect(lus).toContain('Bloquer un créneau');
-    // Leurs écrans n'existent pas encore (lots C2a/C2b, C-CLUBS) : aucun bouton mort.
-    ['Attribuer un créneau', 'Inviter un club'].forEach((action) => {
-      expect(lus).not.toContain(action);
-    });
     await appuyer(arbre, 'collectivite-home-action-publishNews');
     expect(mockNavigate).toHaveBeenCalledWith(
       'CollectiviteActualiteForm',
@@ -465,6 +472,106 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     ]));
     expect(lus.some((texte) => texte.startsWith('Vous ne gérez pas cette collectivité.')))
       .toBe(true);
+  });
+});
+
+// 🏛️ COLL-ACCUEIL-BIS (03/10/2026) — PLANCHES 2 et 3, l'accueil COMPLET (P3v2-accueil-tel et
+// -ordi), élément par élément contre l'écran :
+//   - la carte de la demande dit la FONCTION de qui demande (« Karim Benali, dirigeant ») : le
+//     serveur la rend depuis C3B (`requesterFunction`), l'écran « Demandes » la disait déjà ;
+//   - les SIX actions de la planche, dans son ordre, chacune vers son VRAI écran : « Attribuer un
+//     créneau » (C2b : les créneaux de l'installation, ou la liste s'il y en a plusieurs) et
+//     « Inviter un club » (C-CLUBS) manquaient ;
+//   - sur ordinateur : les six actions en UNE rangée, l'icône à gauche du titre ; la colonne
+//     « Ce qui vous attend » montre la 2e demande en carte compacte, sans boutons.
+// ROUGES avant le lot.
+describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet', () => {
+  const ORDRE_DE_LA_PLANCHE = [
+    'assignSlot', 'publishNews', 'closeInstallation', 'blockSlot', 'inviteClub', 'addInstallation',
+  ];
+  // Une carte par testID : la plus extérieure (le TouchableOpacity et son style ; ses enfants
+  // internes reprennent le même testID).
+  const cartesDAction = (/** @type {any} */ arbre) => {
+    const vus = new Set();
+    return arbre.root.findAll((/** @type {any} */ n) => String(n.props?.testID || '')
+      .startsWith('collectivite-home-action-') && typeof n.props?.onPress === 'function')
+      .filter((/** @type {any} */ n) => !vus.has(n.props.testID) && vus.add(n.props.testID));
+  };
+  const actionsAffichees = (/** @type {any} */ arbre) => cartesDAction(arbre)
+    .map((/** @type {any} */ n) => n.props.testID.replace('collectivite-home-action-', ''));
+
+  it('la carte dit la FONCTION de qui demande : « Karim Benali, dirigeant »', async () => {
+    mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: 'manager' }, DEMANDE_RECENTE]);
+    const lus = textes(await monter());
+    expect(lus).toContain('Demandé par Karim Benali, dirigeant');
+  });
+
+  it('un entraîneur : « …, entraîneur » ; une fonction inconnue : le nom seul', async () => {
+    mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: 'trainer' }]);
+    expect(textes(await monter())).toContain('Demandé par Karim Benali, entraîneur');
+    mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: null }]);
+    expect(textes(await monter())).toContain('Demandé par Karim Benali');
+  });
+
+  it('les SIX actions de la planche, dans son ordre', async () => {
+    const arbre = await monter();
+    expect(actionsAffichees(arbre)).toEqual(ORDRE_DE_LA_PLANCHE);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Attribuer un créneau', 'Inviter un club',
+    ]));
+  });
+
+  it('« Attribuer un créneau » : la liste, ou les créneaux de l installation unique', async () => {
+    const plusieurs = await monter();
+    await appuyer(plusieurs, 'collectivite-home-action-assignSlot');
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      'CollectiviteInstallations',
+      { collectiviteId: 'ville-montrivage' },
+    );
+    mockInstallations = lu([TILLEULS]);
+    const une = await monter();
+    await appuyer(une, 'collectivite-home-action-assignSlot');
+    expect(mockNavigate).toHaveBeenLastCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'tilleuls',
+    });
+  });
+
+  it('« Inviter un club » ouvre l invitation de CETTE Ville (le lien, lot C-CLUBS)', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'collectivite-home-action-inviteClub');
+    expect(mockNavigate)
+      .toHaveBeenLastCalledWith('CollectiviteInviteClub', { collectiviteId: 'ville-montrivage' });
+  });
+
+  it('ordinateur : les six actions sur UNE rangée, l icône à gauche du titre', async () => {
+    mockLargeur = 1280;
+    const arbre = await monter();
+    const cartes = cartesDAction(arbre);
+    expect(cartes).toHaveLength(6);
+    cartes.forEach((/** @type {any} */ carte) => {
+      const style = StyleSheet.flatten(carte.props.style);
+      // Six parts égales : aucune ne passe à la ligne, aucune largeur plafonnée.
+      expect(style).toEqual(expect.objectContaining({
+        flexBasis: 0, flexDirection: 'row', flexGrow: 1,
+      }));
+      expect(style.maxWidth).toBeUndefined();
+    });
+  });
+
+  it('ordinateur : la 2e demande en carte COMPACTE, sans boutons (téléphone : une)', async () => {
+    const telephone = await monter();
+    expect(textes(telephone)).not.toContain('Montrivage FC · U15');
+    mockLargeur = 1280;
+    const ordinateur = await monter();
+    const lus = textes(ordinateur);
+    expect(lus).toContain('AS Montrivage · U13');
+    expect(lus).toContain('Montrivage FC · U15');
+    expect(lus).toContain('1 place libre');
+    const compacte = ordinateur.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-home-attente-carte-compacte');
+    expect(compacte.length).toBeGreaterThan(0);
+    // Un seul « Accepter » : la carte compacte se tranche dans « Demandes ».
+    expect(lus.filter((texte) => texte === 'Accepter')).toHaveLength(1);
   });
 });
 

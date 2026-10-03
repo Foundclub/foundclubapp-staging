@@ -20,6 +20,7 @@ import {
   clubTotals,
   firstFullMoment,
   formatWeekMoment,
+  homeActionTarget,
   isOwnClubRequest,
   oldestPendingRequest,
   premiersPas,
@@ -221,6 +222,10 @@ function CollectiviteHome() {
 
   const demandes = Array.isArray(pending.data) ? pending.data : [];
   const enTete = oldestPendingRequest(demandes);
+  // Sur ordinateur, la colonne « Ce qui vous attend » montre aussi la suivante (compacte).
+  const deuxieme = enColonnes
+    ? oldestPendingRequest(demandes.filter((demande) => demande !== enTete))
+    : null;
   const actions = availableHomeActions();
   const totaux = clubTotals(clubs.data);
   const listeClubs = Array.isArray(clubs.data) ? clubs.data : [];
@@ -279,11 +284,22 @@ function CollectiviteHome() {
   );
 
   // ── 1. CE QUI VOUS ATTEND ──────────────────────────────────────────────────────────────
-  const renderCarteDemande = (/** @type {any} */ demande) => {
+  // COLL-ACCUEIL-BIS (03/10) — `compacte` : la 2e demande de la colonne « ordinateur »
+  // (P3v2-accueil-ordi) ; elle se lit, elle se tranche dans « Demandes ».
+  const renderCarteDemande = (/** @type {any} */ demande, compacte = false) => {
     const club = demande?.club?.name || t('collectivite.requests.unknownClub', 'Club');
     const equipe = demande?.team?.name;
-    const auteur = [demande?.requestedBy?.firstname, demande?.requestedBy?.lastname]
+    const personne = [demande?.requestedBy?.firstname, demande?.requestedBy?.lastname]
       .filter(Boolean).join(' ');
+    // COLL-ACCUEIL-BIS — « Karim Benali, dirigeant » : la fonction que le serveur rend depuis
+    // C3B (`requesterFunction`), avec les mots de l'écran « Demandes ».
+    let fonction = '';
+    if (demande?.requesterFunction === 'manager') {
+      fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
+    } else if (demande?.requesterFunction === 'trainer') {
+      fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
+    }
+    const auteur = personne ? [personne, fonction].filter(Boolean).join(', ') : '';
     const conflit = summarizeConflict(demande?.conflict);
     let pastille = null;
     if (conflit?.full) {
@@ -303,8 +319,12 @@ function CollectiviteHome() {
     }
     return (
       <View
-        style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}
-        testID="collectivite-home-attente-carte"
+        style={[
+          ApplicationStyle.card, Spaces.padding[16], carteStyle, compacte ? { gap: 4 } : null,
+        ]}
+        testID={compacte
+          ? 'collectivite-home-attente-carte-compacte'
+          : 'collectivite-home-attente-carte'}
       >
         <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
@@ -357,7 +377,7 @@ function CollectiviteHome() {
           {`${demande?.facility?.name || ''} · ${
             formatSlot(demande?.requestedStart, demande?.requestedEnd)}`}
         </Text>
-        {conflit ? (
+        {conflit && !compacte ? (
           <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
             <View
               accessibilityLabel={t(
@@ -397,22 +417,24 @@ function CollectiviteHome() {
             ) : null}
           </View>
         ) : null}
-        <View style={[Alignments.row, { gap: 12 }]}>
-          <View style={{ flex: 1 }}>
-            <Button
-              onPress={() => setDecision({ kind: 'refuse', request: demande })}
-              title={t('collectivite.requests.actions.refuse', 'Refuser')}
-              variant="Secondary"
-            />
+        {compacte ? null : (
+          <View style={[Alignments.row, { gap: 12 }]}>
+            <View style={{ flex: 1 }}>
+              <Button
+                onPress={() => setDecision({ kind: 'refuse', request: demande })}
+                title={t('collectivite.requests.actions.refuse', 'Refuser')}
+                variant="Secondary"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                onPress={() => setDecision({ kind: 'approve', request: demande })}
+                title={t('collectivite.requests.actions.approve', 'Accepter')}
+                variant="Primary"
+              />
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Button
-              onPress={() => setDecision({ kind: 'approve', request: demande })}
-              title={t('collectivite.requests.actions.approve', 'Accepter')}
-              variant="Primary"
-            />
-          </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -565,6 +587,7 @@ function CollectiviteHome() {
           </View>
         </View>
         {renderCarteDemande(enTete)}
+        {deuxieme ? renderCarteDemande(deuxieme, true) : null}
         <View style={{ alignSelf: 'flex-start' }}>
           {lienFleche(
             demandes.length === 1
@@ -638,11 +661,12 @@ function CollectiviteHome() {
       <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
         {actions.map((action, index) => {
           const texte = texteAction(action.key);
+          const cible = homeActionTarget(action, installations.data);
           return (
             <TouchableOpacity
               accessibilityRole="button"
               key={action.key}
-              onPress={() => ouvrir(String(action.route), action.params)}
+              onPress={() => ouvrir(cible.route, cible.params)}
               style={[
                 ApplicationStyle.card,
                 Spaces.padding[16],
@@ -650,11 +674,20 @@ function CollectiviteHome() {
                 {
                   // La première action est la plus forte (la planche la borde de bleu).
                   borderColor: index === 0 ? Colors.primary500 : carteStyle.borderColor,
-                  flexBasis: enColonnes ? 180 : 150,
+                  flexBasis: 150,
                   flexGrow: 1,
-                  maxWidth: enColonnes ? 260 : undefined,
-                  minHeight: enColonnes ? 56 : 112,
+                  minHeight: 112,
                 },
+                // COLL-ACCUEIL-BIS (03/10), P3v2-accueil-ordi : les six actions en UNE rangée de
+                // parts égales, l'icône à gauche du titre.
+                enColonnes ? {
+                  alignItems: 'center',
+                  flexBasis: 0,
+                  flexDirection: 'row',
+                  gap: 12,
+                  minHeight: 56,
+                  paddingVertical: 8,
+                } : null,
               ]}
               testID={`collectivite-home-action-${action.key}`}
             >
@@ -671,7 +704,9 @@ function CollectiviteHome() {
                   style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.primary200]}
                 />
               </View>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{texte.titre}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00, enColonnes ? { flexShrink: 1 } : null]}>
+                {texte.titre}
+              </Text>
               {enColonnes ? null : (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{texte.dit}</Text>
               )}

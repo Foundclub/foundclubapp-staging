@@ -23,9 +23,11 @@ import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
  * @type {ReadonlyArray<{ icon: string, key: string, lot: string, route: string | null }>}
  */
 export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
-  // Le cœur du produit : le créneau de saison (lots C2a serveur, C2b écran).
+  // Le cœur du produit : le créneau de saison (lots C2a serveur, C2b écran). COLL-ACCUEIL-BIS
+  // (03/10) : la liste des installations, chacune ouvre ses créneaux ; avec une seule
+  // installation, ses créneaux directement (`homeActionTarget`).
   {
-    icon: 'calendar', key: 'assignSlot', lot: 'C2a + C2b', route: null,
+    icon: 'calendar', key: 'assignSlot', lot: 'C2a + C2b', route: 'CollectiviteInstallations',
   },
   // Les actualités de la Ville (lot C4a, 02/10 : le formulaire « Nouvelle actualité »).
   {
@@ -46,9 +48,9 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
     params: { mode: 'bloquer' },
     route: 'CollectiviteFermeture',
   },
-  // Inviter un club absent de FoundClub (lot C-CLUBS).
+  // Inviter un club absent de FoundClub (lot C-CLUBS : le lien de la Ville, « Par FoundClub »).
   {
-    icon: 'users', key: 'inviteClub', lot: 'C-CLUBS', route: null,
+    icon: 'users', key: 'inviteClub', lot: 'C-CLUBS', route: 'CollectiviteInviteClub',
   },
   // Existe depuis COLL1C : le formulaire d'installation de la collectivité.
   {
@@ -64,6 +66,26 @@ export const COLLECTIVITE_HOME_ACTIONS = Object.freeze([
 export const availableHomeActions = (actions = COLLECTIVITE_HOME_ACTIONS) => (
   actions.filter((action) => Boolean(action.route))
 );
+
+/**
+ * COLL-ACCUEIL-BIS (03/10) — où mène une action. « Attribuer un créneau » se fait dans
+ * l'onglet « Créneaux » d'UNE installation (C2b) : avec une seule installation, on y va tout
+ * droit ; sinon, la liste des installations, où chacune ouvre ses créneaux.
+ * @param {{ params?: Record<string, any>, route: string | null }} action - Une action affichable.
+ * @param {unknown} installations - Les installations de la Ville (documentId).
+ * @returns {{ params: Record<string, any>, route: string }} L'écran et ses paramètres.
+ */
+export const homeActionTarget = (action, installations) => {
+  const liste = (Array.isArray(installations) ? installations : [])
+    .filter((installation) => installation?.documentId);
+  if (/** @type {any} */ (action)?.key === 'assignSlot' && liste.length === 1) {
+    return {
+      params: { facilityId: liste[0].documentId },
+      route: RouteNames.CollectiviteInstallation,
+    };
+  }
+  return { params: action?.params || {}, route: String(action?.route) };
+};
 
 const horodatage = (/** @type {unknown} */ valeur) => {
   const date = typeof valeur === 'string' || valeur instanceof Date ? new Date(valeur) : null;
