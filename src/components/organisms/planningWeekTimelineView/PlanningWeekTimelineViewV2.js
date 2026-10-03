@@ -30,6 +30,8 @@ import { images as Images } from '@/theme/images';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import Hachures from '@/components/atoms/hachures/Hachures';
+
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
@@ -705,8 +707,10 @@ function PlanningWeekTimelineView({
 
   const renderTimedEventCard = (event, left, width) => {
     // COLL-C4B (02/10, design P4v3-fermer ecran 4) — une plage FERMEE ou BLOQUEE par la Ville :
-    // orange (attention), en pointilles, avec ce qu elle dit ; la mairie la touche (lecture seule
-    // ailleurs). Elle n est jamais une seance : ni club, ni equipe.
+    // orange (attention), avec ce qu elle dit ; la mairie la touche (lecture seule ailleurs). Elle
+    // n est jamais une seance : ni club, ni equipe.
+    // COLL-C4B-BIS (03/10) : de VRAIES hachures (`.ferme-bande` : rayures a 135 degres) et un bord
+    // PLEIN, comme la planche — plus des pointilles sur un fond uni.
     if (event?.raw?.closureBand) {
       return (
         <EventBlock
@@ -715,9 +719,9 @@ function PlanningWeekTimelineView({
           key={event.id || `fermeture-${event.dayIndex}-${event.top}`}
           onReadOnlyEventPress={onReadOnlyEventPress}
           style={[styles.eventCard, {
-            backgroundColor: hexToRgba(pendingAccentColor, 0.12),
-            borderColor: hexToRgba(pendingAccentColor, 0.6),
-            borderStyle: 'dashed',
+            backgroundColor: 'transparent',
+            borderColor: hexToRgba(pendingAccentColor, 0.55),
+            borderStyle: 'solid',
             borderWidth: 1,
             height: event.height - 2,
             left: `${left}%`,
@@ -727,11 +731,15 @@ function PlanningWeekTimelineView({
             width: `${width}%`,
           }]}
         >
+          <Hachures color={pendingAccentColor} />
           <Text
             numberOfLines={4}
             style={[
               Fonts.p3Bold,
-              { color: pendingAccentColor, fontSize: mode === 'week' ? 9 : 11 },
+              {
+                color: Colors.warning400 || pendingAccentColor,
+                fontSize: mode === 'week' ? 9 : 11,
+              },
             ]}
           >
             {event.title}
@@ -830,8 +838,14 @@ function PlanningWeekTimelineView({
           borderColor: hexToRgba(cardAccentColor, isTiny ? 0.42 : 0.34),
           borderLeftColor: cardAccentColor,
           borderLeftWidth: mode === 'week' ? 2 : 3,
+          // COLL-C4B-BIS (03/10) : Android ne trace des pointilles que si les QUATRE bords ont la
+          // meme epaisseur et la meme couleur ; sinon, un trait plein (photo T10_C25_5).
           ...(isPendingRequest || aDeplacer ? {
-            borderColor: pendingAccentColor, borderStyle: 'dashed', borderWidth: aDeplacer ? 2 : 1,
+            borderColor: pendingAccentColor,
+            borderLeftColor: pendingAccentColor,
+            borderLeftWidth: aDeplacer ? 2 : 1,
+            borderStyle: 'dashed',
+            borderWidth: aDeplacer ? 2 : 1,
           } : {}),
           height: event.height - 2,
           justifyContent: isTiny ? 'center' : 'flex-start',
@@ -886,6 +900,19 @@ function PlanningWeekTimelineView({
             {secondaryLabel}
           </Text>
         ) : null}
+        {/* COLL-C4B-BIS : « a deplacer » sous le club et l equipe, comme la planche (ecran 4). */}
+        {aDeplacer && !isTiny ? (
+          <Text
+            numberOfLines={1}
+            style={[
+              Fonts.p3Bold,
+              { color: pendingAccentColor, fontSize: mode === 'week' ? 8 : 10 },
+            ]}
+            testID="a-deplacer"
+          >
+            {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
+          </Text>
+        ) : null}
         {canShowTertiary ? (
           <Text
             numberOfLines={1}
@@ -910,18 +937,6 @@ function PlanningWeekTimelineView({
         ) : null}
         {event.leagueMatch || event.league_match ? (
           <View style={[styles.leagueDot, { backgroundColor: Colors.gold500 || '#D4AF37' }]} />
-        ) : null}
-        {aDeplacer && !isTiny ? (
-          <Text
-            numberOfLines={1}
-            style={[
-              Fonts.p3Bold,
-              { color: pendingAccentColor, fontSize: mode === 'week' ? 8 : 10 },
-            ]}
-            testID="a-deplacer"
-          >
-            {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
-          </Text>
         ) : null}
       </EventBlock>
     );

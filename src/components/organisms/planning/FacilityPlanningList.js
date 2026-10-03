@@ -142,10 +142,12 @@ function FacilityPlanningList({
                   borderColor: enAttente || aDeplacer
                     ? Colors.warning500
                     : withAlpha(Colors.neutral00, 0.12),
-                  borderLeftColor: enAttente
+                  // COLL-C4B-BIS (03/10) : Android ne trace des pointilles que si les QUATRE bords
+                  // sont egaux (epaisseur, couleur) ; sinon, un trait plein (photo T10_C25_5).
+                  borderLeftColor: enAttente || aDeplacer
                     ? Colors.warning500
                     : bloc.displayColor || Colors.primary500,
-                  borderLeftWidth: 3,
+                  borderLeftWidth: enAttente || aDeplacer ? 1 : 3,
                   borderRadius: 12,
                   borderStyle: enAttente || aDeplacer ? 'dashed' : 'solid',
                   borderWidth: 1,

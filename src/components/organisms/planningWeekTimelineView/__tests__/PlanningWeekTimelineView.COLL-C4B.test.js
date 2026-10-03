@@ -142,12 +142,14 @@ const PLAGE = {
 };
 
 describe('COLL-C4B — la plage fermee et la seance « a deplacer » dans la grille', () => {
-  it('la plage : orange, en pointilles, son libelle ; seule la mairie la touche, jamais comme une seance', async () => {
+  it('la plage : orange, hachuree, son libelle ; seule la mairie la touche, jamais comme une seance', async () => {
     const onEventPress = jest.fn();
     const onReadOnlyEventPress = jest.fn();
     const arbre = await monter([PLAGE, TOUCHEE, AUTRE], { onEventPress, onReadOnlyEventPress });
     const plage = styleDuBloc(arbre, 'Fermé · travaux');
-    expect(plage.borderStyle).toBe('dashed');
+    // COLL-C4B-BIS (03/10) : la planche dit des HACHURES et un bord PLEIN ; les pointilles etaient le
+    // pis-aller nomme par C4B (« pas de hachures : fond orange leger et pointilles »).
+    expect(plage.borderStyle).toBe('solid');
     expect(String(plage.borderColor).startsWith('rgba(')).toBe(true);
     const noeud = arbre.root.findAll((/** @type {any} */ n) => (
       typeof n.props.onPress === 'function' && String(n.props.accessibilityLabel || '').startsWith('Fermé · travaux')
