@@ -516,6 +516,70 @@ describe('COLL-C3B-BIS — planche 31 : squelettes, « Nous contacter », icône
   });
 });
 
+// COLL-C3B-BIS (03/10) — planche 32 (P6-ordi, P6v2-ordi ; liste du plan, ligne 32) : sur
+// ordinateur. ROUGE avant : « Traitées » empilait des cartes pleine largeur, la file ne disait
+// la place qu'en couleur de texte, et la demande ouverte était la carte du téléphone.
+describe('COLL-C3B-BIS — planche 32 : la file, la demande ouverte, « Traitées » en grille', () => {
+  const trouver = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === testID && typeof n.type === 'string');
+  const styleDe = (/** @type {any} */ noeud) => Object.assign(
+    {},
+    ...[noeud.props.style].flat(Infinity).filter(Boolean),
+  );
+
+  // eslint-disable-next-line max-len
+  it('la file : une pastille qui dit la place (« Complet · déjà 1 équipe », « Il reste 2 places »)', async () => {
+    mockDimensions = ORDINATEUR;
+    mockEnAttente = [EN_ATTENTE, SERIE];
+    const arbre = await monter((l) => l.includes(PHRASE_1));
+    const pastilles = trouver(arbre, 'demande-file-pastille');
+    expect(pastilles).toHaveLength(2);
+    // Une pastille : un fond et un bord, pas un texte de couleur.
+    expect(styleDe(pastilles[0]).borderWidth).toBe(1);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Complet · déjà 1 équipe',
+      'Il reste 2 places',
+    ]));
+  });
+
+  // eslint-disable-next-line max-len
+  it('la demande ouverte : la phrase en grand, « Motif » et « Demandé par » côte à côte, les gestes à droite', async () => {
+    mockDimensions = ORDINATEUR;
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Motif',
+      '« Match de coupe avancé »',
+      'Demandé par',
+      'Paul Veuillet, dirigeant · Test Fc',
+    ]));
+    const [colonnes] = trouver(arbre, 'demande-ouverte-motif-demandeur');
+    expect(styleDe(colonnes).flexDirection).toBe('row');
+    const [gestes] = trouver(arbre, 'demande-ouverte-gestes');
+    expect(styleDe(gestes).justifyContent).toBe('flex-end');
+    const [phrase] = trouver(arbre, 'demande-ouverte-phrase');
+    expect(styleDe(phrase).fontSize).toBeGreaterThanOrEqual(22);
+  });
+
+  // eslint-disable-next-line max-len
+  it('« Traitées » sur ordinateur : une grille de deux colonnes ; au téléphone, la pile', async () => {
+    mockDimensions = ORDINATEUR;
+    const arbre = await monter();
+    await appuyer(arbre, 'onglet-decided');
+    await attendre(() => textes(arbre).includes('Acceptée'));
+    const [grille] = trouver(arbre, 'demandes-traitees-grille');
+    expect(styleDe(grille)).toEqual(expect.objectContaining({
+      flexDirection: 'row', flexWrap: 'wrap',
+    }));
+
+    mockDimensions = PORTRAIT;
+    const telephone = await monter();
+    await appuyer(telephone, 'onglet-decided');
+    await attendre(() => textes(telephone).includes('Acceptée'));
+    expect(trouver(telephone, 'demandes-traitees-grille')).toHaveLength(0);
+  });
+});
+
 // TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55 : « A ») — « Demandes de la Ville »
 // s'écrivait deux fois : l'en-tête de l'écran, puis le titre de la page. La page porte le NOM.
 describe('TEXTES-COLLECTIVITES — « Demandes de la Ville » ne s écrit plus deux fois', () => {

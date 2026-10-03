@@ -5500,6 +5500,11 @@ export default {
       refuserSerieEtAnnuler: 'Refuse and cancel the trainings',
       serontPrevenus: 'Will be notified',
     },
+    // COLL-C3B-BIS (03/10) — the queue badge, on desktop (board 32).
+    file: {
+      complet: 'Full · already {{equipes}}',
+      reste: '{{places}} left',
+    },
     fonction: {
       manager: 'manager',
       trainer: 'coach',
@@ -5530,6 +5535,12 @@ export default {
       places: '{{nombre}} spots',
       uneEquipe: '1 team',
       unePlace: '1 spot',
+    },
+    // COLL-C3B-BIS (03/10) — the open request, on desktop (board 32).
+    ouverte: {
+      demandePar: 'Requested by',
+      demandeur: '{{qui}} · {{club}}',
+      motif: 'Reason',
     },
     pastille: {
       chaqueSemaine: 'Every week',

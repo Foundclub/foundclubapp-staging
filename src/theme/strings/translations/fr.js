@@ -5870,6 +5870,11 @@ export default {
       refuserSerieEtAnnuler: 'Refuser et annuler les entraînements',
       serontPrevenus: 'Seront prévenus',
     },
+    // COLL-C3B-BIS (03/10) — la pastille de la file, sur ordinateur (planche 32).
+    file: {
+      complet: 'Complet · déjà {{equipes}}',
+      reste: 'Il reste {{places}}',
+    },
     fonction: {
       manager: 'dirigeant',
       trainer: 'entraîneur',
@@ -5900,6 +5905,12 @@ export default {
       places: '{{nombre}} places',
       uneEquipe: '1 équipe',
       unePlace: '1 place',
+    },
+    // COLL-C3B-BIS (03/10) — la demande ouverte, sur ordinateur (planche 32).
+    ouverte: {
+      demandePar: 'Demandé par',
+      demandeur: '{{qui}} · {{club}}',
+      motif: 'Motif',
     },
     pastille: {
       chaqueSemaine: 'Chaque semaine',
