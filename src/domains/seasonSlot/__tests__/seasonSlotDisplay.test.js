@@ -67,6 +67,38 @@ describe('seasonSlotDisplay — complet, libre', () => {
     ], 2)).toEqual([{ end: 1170, start: 1080 }]);
   });
 
+  // 🐞 COLL-FIX2 (03/10), planche 23, tournée T10 (T10_C23_1) : « Mercredi · complet » alors que
+  // les 2 lignes sont le MÊME club sur deux périodes qui se SUIVENT (1 sept. – 6 oct. puis
+  // 7 oct. – 30 juin). Deux créneaux ne prennent une place ensemble que si leurs PÉRIODES se
+  // chevauchent aussi.
+  it('le complet d un jour type : seulement si les PÉRIODES se chevauchent aussi', () => {
+    const creneau = (/** @type {string} */ du, /** @type {string} */ au) => ({
+      endTime: '19:30', startTime: '18:00', validFrom: du, validUntil: au,
+    });
+    // Le gymnase de la tournée : 2 places. Deux périodes qui se suivent : jamais en même temps.
+    expect(fullRangesOfSlots([
+      creneau('2026-09-01', '2026-10-06'),
+      creneau('2026-10-07', '2027-06-30'),
+    ], 2)).toEqual([]);
+    // Elles se chevauchent une semaine : complet.
+    expect(fullRangesOfSlots([
+      creneau('2026-09-01', '2026-10-13'),
+      creneau('2026-10-07', '2027-06-30'),
+    ], 2)).toEqual([{ end: 1170, start: 1080 }]);
+    // 3 places, 3 créneaux dont jamais plus de 2 ensemble : pas complet.
+    expect(fullRangesOfSlots([
+      creneau('2026-09-01', '2027-06-30'),
+      creneau('2026-09-01', '2026-12-31'),
+      creneau('2027-01-01', '2027-06-30'),
+    ], 3)).toEqual([]);
+    // Un 3e ensemble à partir de janvier : complet.
+    expect(fullRangesOfSlots([
+      creneau('2026-09-01', '2027-06-30'),
+      creneau('2026-09-01', '2027-06-30'),
+      creneau('2027-01-01', '2027-06-30'),
+    ], 3)).toEqual([{ end: 1170, start: 1080 }]);
+  });
+
   it('le libre : l ouverture moins ce qui est occupe', () => {
     expect(freeRanges([{ end: 1170, start: 1080 }], 480, 1320))
       .toEqual([{ end: 1080, start: 480 }, { end: 1320, start: 1170 }]);

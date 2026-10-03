@@ -291,6 +291,21 @@ describe('COLL-C3B — planche P6v2 : chaque demande est une phrase', () => {
     expect(lus).toContain('En attente (1)');
   });
 
+  // 🐞 COLL-FIX2 (03/10), planche 31 (tournée T10) : « AS Montrivage · U15, de 18:30 à . » — un
+  // occupant dont le serveur ne connaît pas la fin. La phrase ne finit plus jamais par « à . ».
+  it('un occupant sans heure de fin : « dès 18:00 », jamais « à . »', async () => {
+    mockEnAttente = [{
+      ...EN_ATTENTE,
+      conflict: {
+        ...EN_ATTENTE.conflict,
+        occupants: [{ ...EN_ATTENTE.conflict.occupants[0], end: null }],
+      },
+    }];
+    const lus = textes(await monter());
+    expect(lus).toContain(`AIKI · Seniors, dès ${heure('2030-10-07T16:00:00.000Z')}.`);
+    expect(lus.some((texte) => / à \.$/.test(texte))).toBe(false);
+  });
+
   // eslint-disable-next-line max-len
   it('une série « chaque semaine » : « … jusqu’au 30 juin », place libre, « Accepter la série » ⇒ series: true', async () => {
     mockEnAttente = [SERIE];

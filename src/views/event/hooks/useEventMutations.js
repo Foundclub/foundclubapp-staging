@@ -221,9 +221,25 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
 
   const cancelEventMutation = useMutation({
     mutationFn: cancelEvent,
-    onSuccess: () => {
+    onSuccess: (/** @type {any} */ reponse) => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       invalidatePersonalPlanning();
+      // 🏛️ COLL-FIX2 (03/10) — D33, planche 46 : sur une installation de la Ville, la mairie est
+      // prévenue ; le SERVEUR le dit (`meta.collectivitePrevenue`), le club le lit. Rien sinon.
+      const prevenue = reponse?.meta?.collectivitePrevenue;
+      if (prevenue) {
+        Alert.alert(
+          t('useEventMutations.villePrevenue.titre', 'C’est annulé'),
+          t(
+            'useEventMutations.villePrevenue.corps',
+            'La {{ville}} est prévenue : la place se libère.',
+            {
+              ville: prevenue.collectiviteName || t('collectiviteDemandes.club.laVille', 'Ville'),
+              ...SANS_ECHAPPEMENT,
+            },
+          ),
+        );
+      }
       navigation.goBack();
     },
   });

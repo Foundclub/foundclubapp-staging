@@ -10,11 +10,11 @@ import {
   PARENTAL_DECLARATION_SIGNATORIES,
 } from '@/constants/parentalDeclaration';
 
-// La phrase du PARENT (declaration v1, empreinte MINOR_PARENTAL_DECLARATION_TEXT_HASH) : elle
-// n'est affichee qu'au parent qui signe depuis le lien (ParentLinkInvite). ⚠️ Elle n'est pas
-// identique au texte que le serveur empreinte (lui l'ecrit sans accents) : divergence ANTERIEURE
-// a CONSENTEMENT-PHRASE, non corrigee ici car ce serait une nouvelle version du texte du parent.
-const PARENT_DECLARATION_TEXT = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.';
+// La phrase du PARENT (declaration v3, empreinte MINOR_PARENTAL_DECLARATION_TEXT_HASH) : elle
+// n'est affichee qu'au parent qui signe depuis le lien (ParentLinkInvite). MINEURS-SUITE (03/10,
+// « 3- B ») : corrigee, elle est enfin MOT POUR MOT celle que le serveur empreinte (temoins S4 ici,
+// SECUEVENT/V3 ter dans admin). Changer une virgule = une nouvelle version, des deux cotes.
+const PARENT_DECLARATION_TEXT = 'Je déclare être le parent ou le représentant légal de cet enfant et utiliser l\'application en son nom.';
 
 /**
  * Le texte a afficher a cote de la case : celui dont la preuve portera l'empreinte.

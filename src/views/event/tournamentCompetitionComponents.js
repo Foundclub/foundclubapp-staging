@@ -370,7 +370,7 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
                     'Qualifié A',
                   ) : t(
                     'tournamentCompetitionComponents.toBeDecided',
-                    'A définir',
+                    'À définir',
                   )}
                 </Text>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
@@ -379,7 +379,7 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
                     'Qualifié B',
                   ) : t(
                     'tournamentCompetitionComponents.toBeDecided',
-                    'A définir',
+                    'À définir',
                   )}
                 </Text>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{formatTournamentScore(match)}</Text>

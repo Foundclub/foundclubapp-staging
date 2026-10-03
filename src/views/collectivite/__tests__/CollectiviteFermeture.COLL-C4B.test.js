@@ -297,7 +297,8 @@ test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer �
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(closeFacility).not.toHaveBeenCalled();
   const lu = textes(arbre);
-  expect(lu).toContain('Fermer Gymnase des Tilleuls le vendredi 2 octobre ?');
+  // COLL-FIX2 (T10) : avec son article, comme la maquette (P4v3-fermer-tel, état 2).
+  expect(lu).toContain('Fermer le Gymnase des Tilleuls le vendredi 2 octobre ?');
   expect(lu).toContain(
     'Montrivage FC et Montrivage Basket seront prévenus. Leurs séances restent à leur charge.',
   );
@@ -323,7 +324,7 @@ test('C4B-A1/4 decochee, la case n envoie pas d actualite ; plusieurs jours : «
   expect(textes(arbre)).toContain('Fermer l’installation ces jours-là');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre)).toContain(
-    'Fermer Gymnase des Tilleuls du samedi 17 octobre au dimanche 25 octobre ?',
+    'Fermer le Gymnase des Tilleuls du samedi 17 octobre au dimanche 25 octobre ?',
   );
   await appuyer(parTestID(arbre, 'fermeture-confirmer'));
   expect(closeFacility).toHaveBeenCalledWith(
@@ -384,8 +385,10 @@ test('C4B-A1/5 BLOQUER : un jour, deux heures, pour quoi ; ouvert depuis le plan
   await saisir('Pour quoi', 'Forum des associations');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre)).toContain(
-    'Bloquer Gymnase des Tilleuls le samedi 3 octobre, de 09:00 à 13:00 ?',
+    'Bloquer le Gymnase des Tilleuls le samedi 3 octobre, de 09:00 à 13:00 ?',
   );
+  // COLL-FIX2 (T10) : UN club prévenu se dit au singulier (« AS Montrivage seront prévenus »).
+  expect(textes(arbre)).toContain('Montrivage FC sera prévenu. Ses séances restent à sa charge.');
   await appuyer(parTestID(arbre, 'fermeture-confirmer'));
   expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', {
     endDate: '2026-10-03',

@@ -13,7 +13,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useAdminCollectiviteInvitations } from '@/services/collectivite/collectiviteQueries';
 
 /**
- * Une ligne de « À traiter » : un libelle, son nombre (rien quand il vaut 0, « — » quand la
+ * Une ligne de « À traiter » : un libelle, son nombre (« 0 », discret, quand rien n attend —
+ * COLL-FIX2, tournee T10 : sans lui, trois lignes sans chiffre ne disaient rien ; « — » quand la
  * lecture a echoue), et l ecran qu elle ouvre. Meme dessin que la porte de la file des
  * demandes de gestionnaire (ManagerRequestsLink, lot COLL-ACCUEIL), posee a cote d elle.
  * @param {{ count: number | null, label: string, onPress: () => void, testID: string }} props
@@ -26,7 +27,7 @@ function LigneATraiter({
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  let compteur = null;
+  let compteur = <Text style={[Fonts.p3Bold, Fonts.neutral300]}>0</Text>;
   if (count === null) {
     compteur = <Text style={[Fonts.p3Bold, Fonts.neutral300]}>—</Text>;
   } else if (count > 0) {
@@ -46,7 +47,7 @@ function LigneATraiter({
   }
   return (
     <TouchableOpacity
-      accessibilityLabel={count ? `${label} : ${count}` : label}
+      accessibilityLabel={count === null ? label : `${label} : ${count}`}
       accessibilityRole="button"
       onPress={onPress}
       style={[
