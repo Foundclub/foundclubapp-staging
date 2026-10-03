@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -1488,12 +1489,49 @@ function MatchStatsEditor({ navigation, route }) {
     t('stMatch.feuille.confirmEditable', 'Tu pourras la modifier et la republier.'),
   ].filter(Boolean).join(' ');
 
+  /**
+   * Un lien du fil d'Ariane.
+   * @param {string} libelle - Le mot du lien.
+   * @param {() => void} onPress - Où il mène.
+   * @returns {import('react').ReactElement} Le lien.
+   */
+  const renderCrumb = (libelle, onPress) => (
+    <Pressable accessibilityRole="link" hitSlop={8} onPress={onPress}>
+      <Text style={[Fonts.p3, Fonts.primary200]}>{libelle}</Text>
+    </Pressable>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
       boundedHeight
       contentContainerStyle={[SpacesAny.paddingTop[0], SpacesAny.paddingBottom[0], Alignments.fill]}
     >
+      {/* 📐 ST-MATCH10-BIS (point 6) — le fil d'Ariane du site (planche P3-editeur-ordi) :
+          « Planning › Match › Feuille de match ». Au téléphone, le retour de l'en-tête suffit. */}
+      {ordinateur && sourceType === 'event' && eventId ? (
+        <View
+          style={[
+            Alignments.row, Alignments.alignCenter, Alignments.wrap, SpacesAny.gap[8],
+            SpacesAny.paddingHorizontal[16], SpacesAny.paddingTop[8],
+          ]}
+          testID="feuille-fil"
+        >
+          {renderCrumb(
+            t('stMatch.feuille.crumbPlanning', 'Planning'),
+            () => navigation.navigate(RouteNames.MyEventList),
+          )}
+          <Text style={[Fonts.p3, Fonts.neutral300]}>›</Text>
+          {renderCrumb(
+            t('stMatch.feuille.crumbMatch', 'Match'),
+            () => navigation.navigate(RouteNames.EventDetails, { eventId }),
+          )}
+          <Text style={[Fonts.p3, Fonts.neutral300]}>›</Text>
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            {t('stMatch.feuille.title', 'Feuille de match')}
+          </Text>
+        </View>
+      ) : null}
       <View
         style={[
           Alignments.row, Alignments.alignCenter, SpacesAny.gap[8],

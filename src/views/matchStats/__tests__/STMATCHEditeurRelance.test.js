@@ -929,3 +929,31 @@ describe('ST-MATCH10-BIS · 4 — « brouillon A » : « Brouillon » éteint pe
     expect(textes(racine)).not.toContain('« Brouillon » et « Publier » attendent la correction.');
   });
 });
+
+describe('ST-MATCH10-BIS · 6 — le fil d Ariane du site (planche P3-editeur-ordi)', () => {
+  const fil = (/** @type {any} */ racine) => racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-fil')[0];
+
+  test('Ordinateur : « Planning › Match › Feuille de match », au-dessus du titre', async () => {
+    const racine = await monter(feuilleU15(), { desktop: true });
+
+    expect(fil(racine)).toBeTruthy();
+    expect(textes(fil(racine))).toEqual(['Planning', '›', 'Match', '›', 'Feuille de match']);
+  });
+
+  test('« Planning » mène au planning, « Match » à la page du match', async () => {
+    const racine = await monter(feuilleU15(), { desktop: true });
+
+    await appuyerSur(fil(racine), 'Planning');
+    expect(navigation.navigate).toHaveBeenLastCalledWith(RouteNames.MyEventList);
+    await appuyerSur(fil(racine), 'Match');
+    expect(navigation.navigate).toHaveBeenLastCalledWith(RouteNames.EventDetails, { eventId: 'event-1' });
+    // Des liens, pour un lecteur d'écran ; la page en cours n'en est pas un.
+    const liens = hotes(fil(racine), (n) => n.props.accessibilityRole === 'link');
+    expect(liens).toHaveLength(2);
+  });
+
+  test('Téléphone : pas de fil (le retour de l en-tête suffit)', async () => {
+    const racine = await monter(feuilleU15());
+    expect(fil(racine)).toBeUndefined();
+  });
+});

@@ -16550,6 +16550,8 @@ export default {
         assists: 'Assists',
         minutes: 'Minutes',
       },
+      crumbMatch: 'Match',
+      crumbPlanning: 'Schedule',
       draftError: 'The draft could not be saved. Try again.',
       draftSaved: 'Draft saved',
       draftSavedBody: 'Players see nothing until you publish.',

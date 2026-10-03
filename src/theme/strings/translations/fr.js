@@ -17339,6 +17339,8 @@ export default {
         assists: 'Passes',
         minutes: 'Minutes',
       },
+      crumbMatch: 'Match',
+      crumbPlanning: 'Planning',
       draftError: 'Le brouillon n’a pas pu être enregistré. Réessaie.',
       draftSaved: 'Brouillon enregistré',
       draftSavedBody: 'Les joueurs ne voient rien tant que tu ne publies pas.',
