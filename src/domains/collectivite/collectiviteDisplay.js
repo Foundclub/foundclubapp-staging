@@ -1,3 +1,5 @@
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
 
 /**
@@ -139,6 +141,40 @@ const SIREN_PATTERN = /^\d{9}$/;
 export const isOfficialCollectiviteName = (name, type) => {
   const motif = /** @type {Record<string, RegExp>} */ (OFFICIAL_NAME_PATTERNS)[String(type)];
   return Boolean(motif) && motif.test(String(name || '').trim());
+};
+
+/**
+ * COLL-CONSOLE-BIS (03/10/2026) — le NOM OFFICIEL d une commune trouvee dans le referentiel de
+ * l Etat (D59), avec son article : « Valfleuri » → « Ville de Valfleuri », « Aix » → « Ville
+ * d’Aix », « Le Havre » → « Ville du Havre », « Les Mureaux » → « Ville des Mureaux ». « La »
+ * et « L’ » ne se contractent pas (« Ville de La Rochelle »). Un nom FRANCAIS, quelle que soit
+ * la langue de l ecran, comme le prefixe que pose le formulaire (le dictionnaire anglais porte
+ * les memes valeurs).
+ * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {unknown} nom - Le nom de la commune, tel que le referentiel l ecrit.
+ * @returns {string} Le nom officiel, ou '' sans nom.
+ */
+export const nomOfficielDeCommune = (t, nom) => {
+  const propre = String(nom || '').trim();
+  if (!propre) return '';
+  if (/^le /iu.test(propre)) {
+    return t('collectiviteConsoleBis.commune.nomDu', 'Ville du {{nom}}', {
+      nom: propre.slice(3), ...SANS_ECHAPPEMENT,
+    });
+  }
+  if (/^les /iu.test(propre)) {
+    return t('collectiviteConsoleBis.commune.nomDes', 'Ville des {{nom}}', {
+      nom: propre.slice(4), ...SANS_ECHAPPEMENT,
+    });
+  }
+  if (/^[aeiouyhàâäéèêëîïôöùûüœæ]/iu.test(propre)) {
+    return t('collectiviteConsoleBis.commune.nomElide', 'Ville d’{{nom}}', {
+      nom: propre, ...SANS_ECHAPPEMENT,
+    });
+  }
+  return t('collectiviteConsoleBis.commune.nomDe', 'Ville de {{nom}}', {
+    nom: propre, ...SANS_ECHAPPEMENT,
+  });
 };
 
 /**

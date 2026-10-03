@@ -15,6 +15,7 @@ import {
 import {
   COLLECTIVITE_TYPES,
   collectiviteTypeLabel,
+  nomOfficielDeCommune,
   readCollectiviteCreateForm,
 } from '@/domains/collectivite/collectiviteDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
@@ -29,7 +30,10 @@ import ConsoleSheet from '@/views/admin/components/ConsoleSheet';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useCreateAdminCollectivite } from '@/services/collectivite/collectiviteQueries';
+import {
+  useCommuneSearch,
+  useCreateAdminCollectivite,
+} from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -105,8 +109,11 @@ const CHAMP_DE_LA_FAUTE = {
  *   - « Annuler » ou le retour, saisie commencée : une FEUILLE de l'app demande avant de perdre
  *     (textes du lot TEXTES-COLLECTIVITÉS) ;
  *   - créée : la fiche remplace le formulaire et dit les gestes qui restent (`justCreated`).
- * ⛔ PAS FAIT : chercher la commune dans le fichier des communes (il existe hors de l'app,
- * non branché) ; les codes se saisissent à la main, contrôlés comme avant.
+ * COLL-CONSOLE-BIS (03/10/2026) — « CHERCHER LA COMMUNE » (planche 14) : pour une commune, on la
+ * cherche par son nom dans le référentiel de l'État (lu par le serveur) ; un appui remplit le
+ * nom officiel, le code INSEE et le SIREN. Une commune déjà sur FoundClub le dit et ouvre sa
+ * fiche. Référentiel muet ou en panne : les codes se saisissent à la main, contrôlés comme avant
+ * (le serveur refuse toujours un INSEE ou un SIREN déjà pris).
  * @returns {import('react').ReactElement} L'écran.
  */
 function AdminCollectiviteForm() {
@@ -134,6 +141,9 @@ function AdminCollectiviteForm() {
   const [quitter, setQuitter] = useState(/** @type {{ sortir: () => void } | null} */ (null));
   const creer = useCreateAdminCollectivite();
   const enCours = Boolean(creer.isPending);
+  // COLL-CONSOLE-BIS (03/10) — le texte de « Chercher la commune » (planche 14).
+  const [commune, setCommune] = useState('');
+  const communes = useCommuneSearch(commune, { enabled: form.type === 'commune' });
 
   // TEXTES-COLLECTIVITES (01/10) — une saisie VIDE (seul le debut officiel du nom, pose par
   // l ecran) part sans question ; sinon, on demande. Apres une creation reussie, le detail
@@ -182,6 +192,24 @@ function AdminCollectiviteForm() {
       const nomVide = !avant.name.trim() || prefixes.includes(avant.name.trim());
       return { ...avant, name: nomVide ? prefixeOfficiel(t, type) : avant.name, type };
     });
+  };
+
+  // Un appui sur une commune du référentiel remplit le formulaire ; une commune déjà sur
+  // FoundClub ouvre sa fiche (elle ne se crée pas deux fois).
+  const choisirCommune = (/** @type {any} */ trouvee) => {
+    if (trouvee?.collectivite?.documentId) {
+      navigation.navigate(RouteNames.AdminCollectiviteDetail, {
+        collectiviteId: trouvee.collectivite.documentId,
+      });
+      return;
+    }
+    setForm((avant) => ({
+      ...avant,
+      codeInsee: String(trouvee?.codeInsee || ''),
+      name: nomOfficielDeCommune(t, trouvee?.name) || avant.name,
+      siren: String(trouvee?.siren || avant.siren),
+    }));
+    setCommune('');
   };
 
   const libelleFaute = (/** @type {string} */ faute) => {
@@ -321,6 +349,98 @@ function AdminCollectiviteForm() {
     </View>
   ) : null;
 
+  const communesTrouvees = Array.isArray(communes.data) ? communes.data : [];
+  let resultatsCommune = null;
+  if (commune.trim().length >= 3) {
+    if (communes.isLoading) {
+      resultatsCommune = (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('adminCollectivites.detail.searching', 'Recherche…')}
+        </Text>
+      );
+    } else if (communesTrouvees.length === 0) {
+      resultatsCommune = (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteConsoleBis.commune.aucune',
+            'Aucune commune trouvée : saisis son nom officiel et ses codes ci-dessous.',
+          )}
+        </Text>
+      );
+    } else {
+      resultatsCommune = communesTrouvees.map((trouvee) => (
+        <TouchableOpacity
+          accessibilityRole="button"
+          disabled={enCours}
+          key={trouvee.codeInsee}
+          onPress={() => choisirCommune(trouvee)}
+          style={[
+            ApplicationStyle.borderRadius16,
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.padding[12],
+            {
+              backgroundColor: withAlpha(Colors.primary700, 0.45),
+              borderColor: withAlpha(Colors.primary500, 0.5),
+              borderWidth: 1,
+              gap: 8,
+              minHeight: 56,
+            },
+          ]}
+          testID={`admin-collectivite-form-commune-${trouvee.codeInsee}`}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{trouvee.name}</Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {[
+                Array.isArray(trouvee.codesPostaux) ? trouvee.codesPostaux[0] : null,
+                t('collectiviteConsole.fiche.insee', 'INSEE {{code}}', { code: trouvee.codeInsee }),
+                trouvee.siren
+                  ? t('collectiviteConsole.fiche.siren', 'SIREN {{code}}', { code: trouvee.siren })
+                  : null,
+              ].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
+          {trouvee.collectivite?.documentId ? (
+            <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+              {t('collectiviteAccueil.inscription.collectivite.dejaSur', 'Déjà sur FoundClub')}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
+      ));
+    }
+  }
+  const rechercheCommune = form.type === 'commune' ? (
+    <View style={{ gap: 6 }}>
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+        {t('collectiviteConsoleBis.commune.chercher', 'Chercher la commune')}
+      </Text>
+      <TextInput
+        accessibilityLabel={t('collectiviteConsoleBis.commune.chercher', 'Chercher la commune')}
+        autoCorrect={false}
+        editable={!enCours}
+        onChangeText={setCommune}
+        placeholderTextColor={Colors.neutral400}
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Fonts.p2,
+          Spaces.padding[12],
+          { borderColor: withAlpha(Colors.primary500, 0.5), color: Colors.neutral00 },
+        ]}
+        testID="admin-collectivite-form-commune"
+        value={commune}
+      />
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {t(
+          'collectiviteConsoleBis.commune.aide',
+          'Nom officiel, code INSEE et SIREN se remplissent à partir d’elle.',
+        )}
+      </Text>
+      {resultatsCommune}
+    </View>
+  ) : null;
+
   const rangeeDuPied = deuxColonnes ? [Alignments.row, Alignments.justifyEnd] : null;
   const formulaire = (
     <View style={{ gap: 16 }}>
@@ -364,6 +484,7 @@ function AdminCollectiviteForm() {
           })}
         </View>
       </View>
+      {rechercheCommune}
       {champ({ cle: 'name', label: t('adminCollectivites.form.name', 'Nom officiel') })}
       {fautesDe('name').length === 0 ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>

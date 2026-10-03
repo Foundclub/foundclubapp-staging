@@ -39,6 +39,7 @@ import {
   saveCollectiviteInstallation,
   searchAdminCollectiviteTargets,
   searchCollectivitesForSignup,
+  searchCommunes,
   setAdminCollectiviteActive,
 } from './collectiviteService';
 
@@ -591,6 +592,25 @@ export const useCollectiviteSignupSearch = (query) => {
     queryFn: async () => unwrapRows(await searchCollectivitesForSignup(texte)),
     queryKey: ['collectivite-manager-requests', 'search', texte.toLowerCase()],
     staleTime: 60_000,
+  });
+};
+
+/**
+ * COLL-CONSOLE-BIS (03/10/2026) — « Chercher la commune » : les communes du referentiel de l Etat
+ * (lu par le serveur) dont le nom commence comme le texte (3 lettres au moins). Partagee par
+ * l inscription « Je represente une collectivite » et la creation dans la console.
+ * @param {string} query - Le texte tape.
+ * @param {{ enabled?: boolean }} [options] - `enabled: false` : rien n est demande (un autre type
+ *   que « commune »).
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useCommuneSearch = (query, { enabled = true } = {}) => {
+  const texte = String(query || '').trim();
+  return useQuery({
+    enabled: enabled && texte.length >= 3,
+    queryFn: async () => unwrapRows(await searchCommunes(texte)),
+    queryKey: ['collectivite-manager-requests', 'communes', texte.toLowerCase()],
+    staleTime: 5 * 60_000,
   });
 };
 

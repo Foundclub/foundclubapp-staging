@@ -5534,6 +5534,21 @@ export default {
       indisponible: 'Nombre indisponible',
     },
   },
+  // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
+  // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
+  collectiviteConsoleBis: {
+    commune: {
+      aide: 'Nom officiel, code INSEE et SIREN se remplissent à partir d’elle.',
+      aucune: 'Aucune commune trouvée : saisis son nom officiel et ses codes ci-dessous.',
+      chercher: 'Chercher la commune',
+      codeInsee: 'Code INSEE {{code}}',
+      // Le nom OFFICIEL (D59) : français dans toutes les langues, comme les préfixes du formulaire.
+      nomDe: 'Ville de {{nom}}',
+      nomDes: 'Ville des {{nom}}',
+      nomDu: 'Ville du {{nom}}',
+      nomElide: 'Ville d’{{nom}}',
+    },
+  },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — « Tes installations » cote club, en 3 groupes (design P8v2, D32).
   clubInstallations: {

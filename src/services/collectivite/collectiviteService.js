@@ -363,6 +363,22 @@ export const searchCollectivitesForSignup = async (query) => {
 };
 
 /**
+ * COLL-CONSOLE-BIS (03/10/2026) — « CHERCHER LA COMMUNE » (planches 7, 8 et 14) : les communes du
+ * referentiel de l Etat (geo.api.gouv.fr, lu PAR LE SERVEUR), avec leurs codes postaux, leur
+ * code INSEE et leur SIREN ; une commune deja sur FoundClub porte sa collectivite. Meme route
+ * que la recherche ci-dessus, avec `communes=1`. Referentiel en panne : une liste vide.
+ * @param {string} query - Le texte tape (3 lettres au moins).
+ * @returns {Promise<any>} `{ data: [{ codeInsee, codesPostaux, collectivite, departement, name,
+ *   siren }] }`.
+ */
+export const searchCommunes = async (query) => {
+  const response = await client.get('/collectivite-manager-requests/collectivites', {
+    params: { communes: 1, q: String(query || '').trim() },
+  });
+  return response.data;
+};
+
+/**
  * Envoie MA demande de gestionnaire.
  * @param {{ codeInsee?: string, collectiviteDocumentId?: string, collectiviteName?: string,
  *   collectiviteType?: string, jobTitle: string, professionalEmail: string }} data - La demande.
