@@ -68,6 +68,9 @@ import {
 const unwrapRows = (response) => (Array.isArray(response?.data) ? response.data : []);
 
 export const MY_COLLECTIVITES_QUERY_KEY = ['collectivites', 'mine'];
+// COLL-CONSOLE-BIS — « Chercher la commune » (useCommuneSearch) ; FINITIONS12-COLL : la création
+// d'une collectivité l'invalide.
+export const COMMUNES_SEARCH_QUERY_KEY = ['collectivite-manager-requests', 'communes'];
 
 /**
  * La clef des demandes d une collectivite (prefixe partage avec le lot 3a).
@@ -519,15 +522,18 @@ export const useAdminCollectiviteSearch = (kind, query) => {
  * l etat que le serveur rend, jamais celui qu il a demande.
  * @param {(variables: any) => Promise<any>} mutationFn - Le geste du service.
  * @param {QueryOptions} [options] - Options react-query (`onSuccess` compris).
+ * @param {Array<Array<string>>} [autresClefs] - D'autres lectures à relire (FINITIONS12-COLL).
  * @returns {any} La mutation.
  */
-const useGesteSuperAdmin = (mutationFn, options = {}) => {
+const useGesteSuperAdmin = (mutationFn, options = {}, autresClefs = []) => {
   const queryClient = useQueryClient();
   const { onSuccess, ...rest } = options;
   return useMutation({
     mutationFn,
     onSuccess: async (data, variables, context) => {
-      await queryClient.invalidateQueries({ queryKey: ADMIN_COLLECTIVITES_QUERY_KEY });
+      await Promise.all([ADMIN_COLLECTIVITES_QUERY_KEY, ...autresClefs].map((queryKey) => (
+        queryClient.invalidateQueries({ queryKey })
+      )));
       onSuccess?.(data, variables, context);
     },
     ...rest,
@@ -603,6 +609,9 @@ export const useRemoveAdminCollectiviteGestionnaire = (options) => useGesteSuper
 export const useCreateAdminCollectivite = (options) => useGesteSuperAdmin(
   createAdminCollectivite,
   options,
+  // FINITIONS12-COLL (03/10) — la recherche de commune se relit : sinon, retaper le même texte
+  // rend la réponse d'avant, sans « Déjà sur FoundClub » (tournée T11, C14).
+  [COMMUNES_SEARCH_QUERY_KEY],
 );
 
 // ─── COLL-ACCUEIL (01/10/2026) : LA DEMANDE DE GESTIONNAIRE ────────────────────────────
@@ -650,7 +659,7 @@ export const useCommuneSearch = (query, { enabled = true } = {}) => {
   return useQuery({
     enabled: enabled && texte.length >= 3,
     queryFn: async () => unwrapRows(await searchCommunes(texte)),
-    queryKey: ['collectivite-manager-requests', 'communes', texte.toLowerCase()],
+    queryKey: [...COMMUNES_SEARCH_QUERY_KEY, texte.toLowerCase()],
     staleTime: 5 * 60_000,
   });
 };
