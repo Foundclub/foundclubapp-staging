@@ -16,6 +16,8 @@ import useTheme from '@/theme/themeContext';
  * @param {string} [props.accessibilityLabel]
  * @param {string} [props.accessibilityHint]
  * @param {import('react-native').AccessibilityRole} [props.accessibilityRole]
+ * @param {'arrowLeft' | 'close'} [props.iconName] - COLL-C4A3 : la croix d'un écran qu'on ANNULE
+ *   (une saisie), la flèche (par défaut) d'un écran qu'on quitte.
  * @returns {import('react').ReactElement}
  */
 function HeaderBackButton({
@@ -24,6 +26,7 @@ function HeaderBackButton({
   accessibilityRole = 'button',
   borderColor = 'primary500',
   color = 'primary500',
+  iconName = 'arrowLeft',
   iconStyle = [],
   onPress = undefined,
   style = [],
@@ -60,7 +63,7 @@ function HeaderBackButton({
       ]}
     >
       <Image
-        source={Images.arrowLeft}
+        source={Images[iconName] || Images.arrowLeft}
         style={[ApplicationStyle.icon16, resolvedTintColor, iconStyle]}
       />
     </TouchableOpacity>

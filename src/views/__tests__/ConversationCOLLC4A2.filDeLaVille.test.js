@@ -21,6 +21,8 @@ let mockChatData;
 let mockMessagesError;
 let mockMembres;
 const mockSendMessage = jest.fn(() => 'temp-1');
+// COLL-C4A3 point 4 — « Réessayer » un message en échec.
+const mockRetry = jest.fn();
 let mockMessagesPage;
 let mockBlockedRows;
 const mockBlockMutate = jest.fn();
@@ -177,6 +179,7 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
     joinChat: jest.fn(),
     leaveChat: jest.fn(),
     markMessagesAsRead: jest.fn(),
+    retryFailedMessage: mockRetry,
     retryMessage: jest.fn(),
     sendMessage: mockSendMessage,
     sendReadReceipt: jest.fn(),
@@ -354,6 +357,7 @@ describe('COLL-C4A2 — les fils de la Ville dans la conversation', () => {
     };
     mockBlockedRows = [];
     mockSendMessage.mockClear();
+    mockRetry.mockClear();
   });
 
   afterEach(() => {
@@ -426,5 +430,70 @@ describe('COLL-C4A2 — les fils de la Ville dans la conversation', () => {
     expect(props.messages[0].user.name).toBe('Karim Benali');
     act(() => { props.onSend([{ text: 'Coucou' }]); });
     expect(mockSendMessage.mock.calls[0][2]).not.toHaveProperty('senderSignature');
+  });
+
+  // COLL-C4A3 (03/10, planche 47) — l'en-tête porte l'icône ou l'écusson du fil (T9 : absent).
+  it('COLL-C4A3 — en-tete : la tuile du canal ; conversation privee, l ecusson d en face', () => {
+    /* eslint-disable global-require */
+    const ClubLogoMark = require('@/components/molecules/clubLogoMark/ClubLogoMark').default;
+    const { EcussonVille } = require('@/views/collectivite/components/BlocDeLaVille');
+    const { IconeDuCanal } = require('@/views/collectivite/components/FilDeLaVille');
+    /* eslint-enable global-require */
+    const enTete = (/** @type {any} */ arbre) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'fil-de-la-ville-ecusson'
+        && typeof n.type !== 'string',
+    )[0];
+
+    const canal = monter({ chatType: 'collectivite_dirigeants', espace: 'ville' });
+    expect(enTete(canal.arbre).findAllByType(IconeDuCanal)).toHaveLength(1);
+
+    mockChatData = {
+      ...CANAL,
+      collectiviteClub: { documentId: 'club-a', name: 'AS Ville A' },
+      type: 'collectivite_club',
+    };
+    const cote = monter({ chatType: 'collectivite_club', espace: 'ville' });
+    expect(enTete(cote.arbre).findByType(ClubLogoMark).props.club.name).toBe('AS Ville A');
+    const club = monter({ chatType: 'collectivite_club' });
+    expect(enTete(club.arbre).findByType(EcussonVille).props.nom).toBe('Ville de Demo');
+
+    mockChatData = { documentId: 'chat-1', participants: [], type: 'whisper' };
+    const ordinaire = monter({});
+    expect(enTete(ordinaire.arbre).findAllByType(IconeDuCanal)).toHaveLength(0);
+    expect(enTete(ordinaire.arbre).findAllByType(ClubLogoMark)).toHaveLength(0);
+  });
+
+  // COLL-C4A3 point 4 (« voix ok », Adel 02/10) — un message en ÉCHEC qu'on réessaie repart avec
+  // la MÊME voix demandée : la Ville depuis l'espace de la Ville, aucune depuis le club. Avant le
+  // lot, « Réessayer » renvoyait sans voix : un compte mixte écrivait alors au nom de son club.
+  it('COLL-C4A3 — « Reessayer » redemande la meme voix : la Ville ; du club, aucune', () => {
+    // eslint-disable-next-line global-require
+    const { TouchableOpacity } = require('react-native');
+    const echec = {
+      _id: 'm-echec', createdAt: new Date(), failed: true, text: 'Bonjour', user: { _id: 'moi' },
+    };
+    const reessayer = (/** @type {Record<string, unknown>} */ params) => {
+      const { props } = monter(params);
+      /** @type {any} */
+      let bulle;
+      act(() => {
+        bulle = renderer.create(props.renderBubble({ currentMessage: echec, position: 'right' }));
+      });
+      // Le bouton le plus INTERIEUR qui porte « Réessayer » (la bulle elle-même est touchable).
+      const touchables = bulle.root.findAllByType(TouchableOpacity).reverse();
+      const bouton = touchables.find((/** @type {any} */ n) => (
+        typeof n.props.onPress === 'function'
+        && n.findAll((/** @type {any} */ c) => c.props?.children === 'Réessayer').length > 0
+      ));
+      act(() => { bouton.props.onPress(); });
+      act(() => { bulle.unmount(); });
+    };
+
+    reessayer({ espace: 'ville' });
+    expect(mockRetry)
+      .toHaveBeenLastCalledWith('chat-1', echec, { senderSignature: { voix: 'ville' } });
+    reessayer({});
+    expect(mockRetry).toHaveBeenCalledTimes(2);
+    expect(mockRetry.mock.calls[1][2] || {}).not.toHaveProperty('senderSignature');
   });
 });

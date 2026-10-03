@@ -104,6 +104,7 @@ import VoiceComposerZone, {
 } from '@/components/organisms/voiceComposer/VoiceComposerZone';
 import {
   BoutonMembresDuFil,
+  EcussonDuFil,
   FilDeLaVilleQuitte,
   useFilDeLaVille,
   VideDuFilDeLaVille,
@@ -552,7 +553,7 @@ function Conversation({ navigation, route }) {
     isSocketConnected,
     reactToMessage,
     removeGroupMember,
-    retryFailedMessage,
+    retryFailedMessage: retryFailedMessageSansVoix,
     sendMessage: sendMessageSansVoix,
     sendReadReceipt,
     sendTypingStart,
@@ -819,6 +820,15 @@ function Conversation({ navigation, route }) {
   ) => sendMessageSansVoix(id, texte, { ...filDeLaVille.voix, ...extra }), [
     filDeLaVille.voix,
     sendMessageSansVoix,
+  ]);
+  // COLL-C4A3 (point 4) — « Réessayer » redemande la MÊME voix que l'envoi : sans elle, un compte
+  // mixte renverrait au nom de son club ce qu'il avait écrit au nom de la Ville.
+  const retryFailedMessage = useCallback((
+    /** @type {string} */ id,
+    /** @type {any} */ message,
+  ) => retryFailedMessageSansVoix(id, message, filDeLaVille.voix), [
+    filDeLaVille.voix,
+    retryFailedMessageSansVoix,
   ]);
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match;
@@ -6166,6 +6176,15 @@ function Conversation({ navigation, route }) {
             onPress={() => navigation.goBack()}
             style={{ marginLeft: 0 }}
             withDefaultMargin={false}
+          />
+        </View>
+
+        {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
+        <View testID="fil-de-la-ville-ecusson">
+          <EcussonDuFil
+            chat={chatData}
+            espaceVille={route?.params?.espace === 'ville'}
+            routeChatType={route?.params?.chatType || null}
           />
         </View>
 

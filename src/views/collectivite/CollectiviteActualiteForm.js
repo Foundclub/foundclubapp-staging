@@ -1,5 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import {
+  useCallback, useEffect, useLayoutEffect, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -29,6 +31,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
@@ -55,6 +58,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
 
 import MediaPlatform from '@/platform/media';
+import { ecouterLeDepot } from '@/platform/media/depotDeFichiers';
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
 import { useIsDesktop } from '@/responsive';
 
@@ -117,6 +121,21 @@ function CollectiviteActualiteForm() {
   const [envoiPiece, setEnvoiPiece] = useState(/** @type {string | null} */ (null));
   const [tentee, setTentee] = useState(false);
   const [erreurServeur, setErreurServeur] = useState('');
+  // COLL-C4A3 — le glisser-déposer n'existe que sur le site, sur ordinateur.
+  const depotPossible = Platform.OS === 'web' && isDesktop;
+  const [zoneDepot, setZoneDepot] = useState(/** @type {any} */ (null));
+  const [survolDepot, setSurvolDepot] = useState(false);
+
+  // COLL-C4A3 (planche 18) — une CROIX ferme l'écran, pas une flèche : on annule une saisie.
+  const renderHeaderLeft = useCallback(() => (
+    <HeaderBackButton
+      accessibilityLabel={t('collectiviteActualites.form.annuler', 'Annuler')}
+      iconName="close"
+    />
+  ), [t]);
+  useLayoutEffect(() => {
+    navigation.setOptions?.({ headerLeft: renderHeaderLeft });
+  }, [navigation, renderHeaderLeft]);
 
   // « Modifier » : le formulaire se remplit UNE fois, à la lecture de l'actualité.
   useEffect(() => {
@@ -149,6 +168,31 @@ function CollectiviteActualiteForm() {
   const fautes = actualiteFormErrors(formulaire);
   const enCours = publier.isPending || modifier.isPending;
 
+  /**
+   * Un échec d'envoi dit la même phrase, que le fichier ait été choisi ou lâché ; sa cause part au
+   * journal. Une annulation du sélecteur n'est pas un échec.
+   * @param {unknown} erreur - Ce qui a été jeté.
+   */
+  const direLEchec = (erreur) => {
+    if (estAnnulation(erreur)) return;
+    journal.warn('Piece jointe non envoyee', erreur);
+    setErreurServeur(t(
+      'collectiviteActualites.form.pieceEchec',
+      'La pièce jointe n’a pas pu être envoyée. Réessayez.',
+    ));
+  };
+
+  /**
+   * Téléverse les fichiers, UN PAR UN, et ajoute chacun aux pièces jointes dès qu'il est parti.
+   * @param {any[]} choisis - Ce que rend le sélecteur, ou les fichiers lâchés.
+   * @returns {Promise<void>} Fini quand le dernier est parti ; jette au premier échec.
+   */
+  const televerser = (choisis) => choisis.reduce(async (precedent, brut) => {
+    await precedent;
+    const fichier = await uploadActualiteFile(brut);
+    if (fichier?.id) setPieces((avant) => [...avant, fichier]);
+  }, Promise.resolve());
+
   const ajouterPiece = async (/** @type {'photos' | 'camera' | 'document'} */ cle) => {
     setFeuille(false);
     // T9 (C18) : un nouvel essai efface le message d'un échec précédent.
@@ -176,20 +220,40 @@ function CollectiviteActualiteForm() {
       }
       if (!choisi || choisi?.didCancel) return;
       setEnvoiPiece(cle);
-      const fichier = await uploadActualiteFile(choisi);
-      if (fichier?.id) setPieces((avant) => [...avant, fichier]);
+      await televerser([choisi]);
     } catch (erreur) {
-      if (!estAnnulation(erreur)) {
-        journal.warn('Piece jointe non envoyee', erreur);
-        setErreurServeur(t(
-          'collectiviteActualites.form.pieceEchec',
-          'La pièce jointe n’a pas pu être envoyée. Réessayez.',
-        ));
-      }
+      direLEchec(erreur);
     } finally {
       setEnvoiPiece(null);
     }
   };
+
+  // COLL-C4A3 — des fichiers lâchés sur le site suivent le chemin d'un fichier choisi, dans la
+  // limite des pièces jointes ; rien ne part pendant un autre envoi.
+  const deposer = async (/** @type {any[]} */ fichiers) => {
+    const place = ACTUALITE_ATTACHMENTS_MAX - pieces.length;
+    if (envoiPiece || place <= 0 || fichiers.length === 0) return;
+    setErreurServeur('');
+    setEnvoiPiece('depot');
+    try {
+      await televerser(fichiers.slice(0, place));
+    } catch (erreur) {
+      direLEchec(erreur);
+    } finally {
+      setEnvoiPiece(null);
+    }
+  };
+  // L'écoute du navigateur appelle toujours la DERNIÈRE version (pièces et envoi à jour), sans
+  // être rebranchée à chaque frappe.
+  const deposerRef = useRef(deposer);
+  deposerRef.current = deposer;
+  useEffect(() => {
+    if (!depotPossible) return undefined;
+    return ecouterLeDepot(zoneDepot, {
+      onFichiers: (fichiers) => deposerRef.current(fichiers),
+      onSurvol: setSurvolDepot,
+    });
+  }, [depotPossible, zoneDepot]);
 
   const enregistrer = async () => {
     setTentee(true);
@@ -261,7 +325,7 @@ function CollectiviteActualiteForm() {
   ];
 
   const boutonsAjouter = isDesktop ? (
-    <View style={[Alignments.row, { gap: 8 }]}>
+    <View style={[Alignments.row, Alignments.alignCenter, Alignments.wrap, { gap: 8 }]}>
       {actionsDeLaFeuille.map((action) => (
         <Button
           disabled={Boolean(envoiPiece)}
@@ -275,6 +339,11 @@ function CollectiviteActualiteForm() {
           variant="SecondaryLight"
         />
       ))}
+      {depotPossible ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]} testID="actualite-form-glisser">
+          {t('collectiviteActualites.form.glisser', 'ou glissez un fichier ici')}
+        </Text>
+      ) : null}
     </View>
   ) : (
     <TouchableOpacity
@@ -455,8 +524,28 @@ function CollectiviteActualiteForm() {
   if (!prete) {
     corps = <Loader />;
   } else if (isDesktop) {
+    // COLL-C4A3 — tout l'écran reçoit un fichier lâché (le formulaire ET l'aperçu) : lâché à
+    // côté d'une zone trop petite, il serait ouvert par le navigateur, et la saisie perdue.
     corps = (
-      <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
+      <View
+        ref={depotPossible ? setZoneDepot : undefined}
+        style={[
+          Alignments.row,
+          {
+            alignItems: 'flex-start',
+            borderColor: 'transparent',
+            borderRadius: 16,
+            borderWidth: 1,
+            gap: 24,
+          },
+          survolDepot ? {
+            backgroundColor: withAlpha(Colors.primary500, 0.08),
+            borderColor: Colors.primary500,
+            borderStyle: 'dashed',
+          } : null,
+        ]}
+        testID="actualite-form-depot"
+      >
         <View style={{ flex: 1, minWidth: 0 }}>{formulaireRendu}</View>
         <View style={{ width: 400 }}>{apercu}</View>
       </View>

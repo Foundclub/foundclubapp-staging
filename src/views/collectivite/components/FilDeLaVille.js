@@ -20,6 +20,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -62,6 +64,27 @@ export function IconeDuCanal({ taille = 40 }) {
       />
     </View>
   );
+}
+
+/**
+ * COLL-C4A3 (planche 47) — l'écusson d'un fil de la Ville, dans l'en-tête de la conversation
+ * (P3c-canal-tel, écrans 1 et 8) : la tuile du canal des dirigeants ; pour la conversation
+ * privée, l'écusson d'EN FACE, comme dans la liste de la messagerie (le club côté Ville, la Ville
+ * côté club). Rien hors de ces fils.
+ * @param {{ chat: any, espaceVille?: boolean, routeChatType?: string | null,
+ *   taille?: number }} props - Le fil ; `routeChatType` montre la tuile du canal avant que le fil
+ *   soit lu.
+ * @returns {import('react').ReactElement | null} L'écusson, ou rien.
+ */
+export function EcussonDuFil({
+  chat, espaceVille = false, routeChatType = null, taille = 40,
+}) {
+  const type = chat?.type || routeChatType;
+  if (type === CANAL_DIRIGEANTS) return <IconeDuCanal taille={taille} />;
+  if (type !== CONVERSATION_CLUB || !chat) return null;
+  return espaceVille
+    ? <ClubLogoMark club={chat.collectiviteClub} isNeutral size={taille} />
+    : <EcussonVille nom={String(chat.collectivite?.name || '')} taille={taille} />;
 }
 
 /**

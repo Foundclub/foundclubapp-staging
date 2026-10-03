@@ -295,7 +295,8 @@ describe('COLL-C4A — planche 1 : publier une actualité', () => {
       'Ajouter une photo ou un document',
     ]));
     expect(phraseDestinataires(arbre)).toBe([
-      'Reçue par les membres des 3 clubs.',
+      // COLL-C4A3 (planche 18) : « rattachés », comme la maquette validée.
+      'Reçue par les membres des 3 clubs rattachés.',
       'Une notification part aux dirigeants, aux entraîneurs et aux membres qui l’ont activée.',
       'Personne n’y répond.',
     ].join(' '));
@@ -307,7 +308,7 @@ describe('COLL-C4A — planche 1 : publier une actualité', () => {
     expect(textes(arbre))
       .toEqual(expect.arrayContaining(['Dojo municipal', 'Gymnase des Tilleuls']));
     await appuyer(parTestID(arbre, 'actualite-form-installation-dojo'));
-    expect(phraseDestinataires(arbre)).toMatch(/^Reçue par les membres d’1 club\./);
+    expect(phraseDestinataires(arbre)).toMatch(/^Reçue par les membres d’1 club rattaché\./);
   });
 
   it('un titre vide n’envoie rien ; un formulaire juste envoie la liste blanche', async () => {

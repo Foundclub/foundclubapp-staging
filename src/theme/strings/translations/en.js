@@ -4695,6 +4695,12 @@ export default {
   // COLL-C4A2 (02/10/2026) — les canaux de la Ville dans la messagerie : canal des dirigeants
   // (D72) et conversation privee Ville <-> club (D73). Design HY521H1 page 3.
   collectiviteCanaux: {
+    colonne: {
+      canaux: 'City channels',
+      lectureSeule: 'Read-only for clubs',
+      titre: 'Channels and conversations',
+      vous: 'You',
+    },
     conversationsVides: 'No conversation yet. A club manager who writes to you will appear here.',
     dernierMessage: '{{qui}}: {{texte}}',
     dirigeantLigne: '{{ville}} and {{nombre}} clubs',
@@ -4750,6 +4756,7 @@ export default {
       priveeMairie: 'You and the club’s managers',
     },
     titre: 'Club managers',
+    tonClub: 'Your club',
     vide: {
       dirigeantTexte: 'Here you talk with {{ville}} and the managers of the other attached clubs: a slot to give up, a tournament to set. Players and parents are not in it.',
       dirigeantTitre: 'The club managers’ channel',
@@ -4773,8 +4780,8 @@ export default {
       calcul: 'Counting the clubs that will receive it…',
       dirigeants: 'Received by the managers of the {{nombre}} attached clubs, with a notification. Nobody replies to it.',
       dirigeantsUn: 'Received by the managers of 1 attached club, with a notification. Nobody replies to it.',
-      membres: 'Received by the members of {{nombre}} clubs.',
-      membresUn: 'Received by the members of 1 club.',
+      membres: 'Received by the members of the {{nombre}} attached clubs.',
+      membresUn: 'Received by the members of 1 attached club.',
       notification: 'A notification goes to managers, coaches and members who turned it on. Nobody replies to it.',
     },
     audiences: {
@@ -4841,6 +4848,7 @@ export default {
     erreur: 'The news could not be loaded.',
     form: {
       ajouter: 'Add a photo or a document',
+      annuler: 'Cancel',
       apercu: 'What members will read',
       camera: 'Camera',
       choisirInstallation: 'Choose the facility: its clubs will receive it.',
@@ -4856,6 +4864,7 @@ export default {
         },
       },
       feuilleTitre: 'Add',
+      glisser: 'or drop a file here',
       header: 'New post',
       headerModifier: 'Edit the post',
       photoJointe: 'Attached photo',

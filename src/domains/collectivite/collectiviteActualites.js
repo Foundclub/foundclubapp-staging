@@ -144,10 +144,10 @@ export const audiencePreview = (t, { audience, clubsCount }) => {
       );
   }
   const qui = nombre === 1
-    ? t('collectiviteActualites.apercu.membresUn', 'Reçue par les membres d’1 club.')
+    ? t('collectiviteActualites.apercu.membresUn', 'Reçue par les membres d’1 club rattaché.')
     : t(
       'collectiviteActualites.apercu.membres',
-      'Reçue par les membres des {{nombre}} clubs.',
+      'Reçue par les membres des {{nombre}} clubs rattachés.',
       { nombre },
     );
   return `${qui} ${t(

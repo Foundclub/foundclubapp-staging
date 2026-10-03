@@ -5028,6 +5028,13 @@ export default {
   // COLL-C4A2 (02/10/2026) — les canaux de la Ville dans la messagerie : canal des dirigeants
   // (D72) et conversation privee Ville <-> club (D73). Design HY521H1 page 3.
   collectiviteCanaux: {
+    // COLL-C4A3 (planche 47) : la colonne de gauche de « Messages » de la Ville, sur le site.
+    colonne: {
+      canaux: 'Canaux de la Ville',
+      lectureSeule: 'Lecture seule pour les clubs',
+      titre: 'Canaux et conversations',
+      vous: 'Vous',
+    },
     conversationsVides: 'Aucune conversation. Un dirigeant qui vous écrit apparaîtra ici.',
     dernierMessage: '{{qui}} : {{texte}}',
     dirigeantLigne: '{{ville}} et {{nombre}} clubs',
@@ -5087,6 +5094,8 @@ export default {
       priveeMairie: 'Vous et les dirigeants du club',
     },
     titre: 'Dirigeants des clubs',
+    // COLL-C4A3 (planche 47) : le titre des conversations du club, sous les canaux de la Ville.
+    tonClub: 'Ton club',
     vide: {
       // eslint-disable-next-line max-len
       dirigeantTexte: 'Ici, tu échanges avec {{ville}} et les dirigeants des autres clubs rattachés : un créneau à céder, un tournoi à caler. Les joueurs et les parents n’y sont pas.',
@@ -5112,8 +5121,8 @@ export default {
       calcul: 'Nous comptons les clubs qui la recevront…',
       dirigeants: 'Reçue par les dirigeants des {{nombre}} clubs rattachés, avec une notification. Personne n’y répond.',
       dirigeantsUn: 'Reçue par les dirigeants d’1 club rattaché, avec une notification. Personne n’y répond.',
-      membres: 'Reçue par les membres des {{nombre}} clubs.',
-      membresUn: 'Reçue par les membres d’1 club.',
+      membres: 'Reçue par les membres des {{nombre}} clubs rattachés.',
+      membresUn: 'Reçue par les membres d’1 club rattaché.',
       notification: 'Une notification part aux dirigeants, aux entraîneurs et aux membres qui l’ont activée. Personne n’y répond.',
     },
     audiences: {
@@ -5180,6 +5189,7 @@ export default {
     erreur: 'Les actualités n’ont pas pu être lues.',
     form: {
       ajouter: 'Ajouter une photo ou un document',
+      annuler: 'Annuler',
       apercu: 'Ce que liront les membres',
       camera: 'Caméra',
       choisirInstallation: 'Choisissez l’installation : ses clubs la recevront.',
@@ -5195,6 +5205,7 @@ export default {
         },
       },
       feuilleTitre: 'Ajouter',
+      glisser: 'ou glissez un fichier ici',
       header: 'Nouvelle actualité',
       headerModifier: 'Modifier l’actualité',
       photoJointe: 'Photo jointe',

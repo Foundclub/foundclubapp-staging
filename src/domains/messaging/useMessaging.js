@@ -1252,7 +1252,15 @@ const useMessaging = (currentChatId) => {
     }
   }, [socket]);
 
-  const retryFailedMessage = useCallback((/** @type {string} */ chatId, /** @type {ChatMessage | Record<string, any>} */ failedMessage) => {
+  // COLL-C4A3 (03/10, point 4) — `extra` : ce que l'ÉCRAN ajoute à chaque envoi, et qu'un message
+  // en échec ne garde pas : la voix DEMANDÉE dans un fil de la Ville (« ville » depuis l'espace de
+  // la Ville). Sans elle, « Réessayer » renvoyait au nom du club ce qu'un compte mixte avait écrit
+  // au nom de la Ville.
+  const retryFailedMessage = useCallback((
+    /** @type {string} */ chatId,
+    /** @type {ChatMessage | Record<string, any>} */ failedMessage,
+    /** @type {{ senderSignature?: { voix: string } }} */ extra = {},
+  ) => {
     const safeChatId = normalizeChatId(chatId);
     if (!safeChatId || !failedMessage) return;
 
@@ -1292,6 +1300,7 @@ const useMessaging = (currentChatId) => {
         ? { documentId: failedMessage.replyTo.documentId }
         : null,
       sender: userData,
+      ...extra,
     });
   }, [clearPendingTimeout, queryClient, sendMessage, userData]);
 

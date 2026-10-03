@@ -7,14 +7,21 @@ import {
 } from 'react-native';
 
 import { publicationDateLabel } from '@/domains/collectivite/collectiviteActualites';
-import { CANAL_DIRIGEANTS, signatureDuMessage } from '@/domains/collectivite/collectiviteCanaux';
+import {
+  CANAL_DIRIGEANTS,
+  CONVERSATION_CLUB,
+  filsDeLaMessagerie,
+  signatureDuMessage,
+} from '@/domains/collectivite/collectiviteCanaux';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import { formatChatTimestamp } from '@/domains/messaging/messagingUseCases';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
 
@@ -32,12 +39,15 @@ import {
  * de précision, une flèche. Toute la ligne est un lien.
  * COLL-C4A2 : `ecusson` remplace l'écusson de la Ville (le canal des dirigeants porte sa tuile),
  * `compteur` dit les messages non lus.
- * @param {{ compteur?: number, ecusson?: import('react').ReactNode, nomVille: string,
- *   onPress: () => void, precision: string, testID: string, titre: string }} props
+ * COLL-C4A3 (planche 47) : `heure`, l'heure du dernier message, à droite du titre (P3c-canal-tel,
+ * écran 3) ; accentuée tant qu'il reste des non-lus.
+ * @param {{ compteur?: number, ecusson?: import('react').ReactNode, heure?: string,
+ *   nomVille: string, onPress: () => void, precision: string, testID: string,
+ *   titre: string }} props
  * @returns {import('react').ReactElement} La ligne.
  */
 function LigneDeCanal({
-  compteur = 0, ecusson = null, nomVille, onPress, precision, testID, titre,
+  compteur = 0, ecusson = null, heure = '', nomVille, onPress, precision, testID, titre,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images,
@@ -63,7 +73,19 @@ function LigneDeCanal({
     >
       {ecusson || <EcussonVille nom={nomVille} taille={40} />}
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-        <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{titre}</Text>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+            {titre}
+          </Text>
+          {heure ? (
+            <Text
+              style={[Fonts.p3, compteur > 0 ? Fonts.primary200 : Fonts.neutral300]}
+              testID={`${testID}-heure`}
+            >
+              {heure}
+            </Text>
+          ) : null}
+        </View>
         <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{precision}</Text>
       </View>
       {compteur > 0 ? (
@@ -202,6 +224,7 @@ function LigneCanalDuDirigeant({
     <LigneDeCanal
       compteur={Number(fil?.unreadCount) || 0}
       ecusson={<IconeDuCanal taille={40} />}
+      heure={dernier?.createdAt ? formatChatTimestamp(dernier.createdAt) : ''}
       nomVille={String(collectivite?.name || '')}
       onPress={() => navigation.navigate(RouteNames.Conversation, {
         chatId: ligne.canal.documentId,
@@ -221,6 +244,8 @@ function LigneCanalDuDirigeant({
  * Un entraîneur, un joueur, un parent le voient aussi (la Ville leur écrit à tous).
  * COLL-C4A2 : le DIRIGEANT y trouve aussi, au-dessus, le canal des dirigeants de la Ville, avec le
  * dernier message (« qui · pour quel club ») et ses non-lus (écran 3). Pas un entraîneur.
+ * COLL-C4A3 (planche 47) : sous les canaux de la Ville, « Ton club » titre les conversations du
+ * club et des équipes (écrans 3 et 7), pour tous les rôles.
  * @param {{ chats?: any[], navigation: any }} props
  * @returns {import('react').ReactElement | null} La section, ou rien sans Ville.
  */
@@ -278,6 +303,163 @@ function CanauxDuMembre({ chats = [], navigation }) {
               titre={t('collectiviteActualites.canaux.membreTitre', 'Actualités de la Ville')}
             />
           </View>
+        );
+      })}
+      <Text
+        accessibilityRole="header"
+        style={[Fonts.p3Bold, Fonts.neutral300, { marginTop: 8 }]}
+        testID="canaux-ton-club"
+      >
+        {t('collectiviteCanaux.tonClub', 'Ton club')}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * Une ligne de la colonne de gauche du site (P3c-canal-ordi : « .ligne-conv ») : un écusson, un
+ * titre, l'aperçu ; le fil ouvert est marqué (`actif`). Toute la ligne est un lien.
+ * @param {{ actif?: boolean, ecusson: import('react').ReactNode, onPress: () => void,
+ *   precision: string, testID: string, titre: string }} props
+ * @returns {import('react').ReactElement} La ligne.
+ */
+function LigneDeColonne({
+  actif = false, ecusson, onPress, precision, testID, titre,
+}) {
+  const { Alignments, Colors, Fonts } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityRole="link"
+      accessibilityState={{ selected: actif }}
+      onPress={onPress}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        {
+          backgroundColor: actif ? withAlpha(Colors.primary500, 0.12) : 'transparent',
+          borderRadius: 12,
+          gap: 10,
+          minHeight: 60,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+        },
+      ]}
+      testID={testID}
+    >
+      {ecusson}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral00]}>{titre}</Text>
+        {precision ? (
+          <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral200]}>{precision}</Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * 🖥️ COLL-C4A3 (planche 47, P3c-canal-ordi) — LA COLONNE DE GAUCHE de « Messages » de la Ville,
+ * SUR LE SITE, quand un fil de la Ville est ouvert : les canaux de la Ville (les actualités, le
+ * canal des dirigeants), puis SES conversations privées avec ses clubs. Le fil ouvert est marqué ;
+ * chaque ligne y mène depuis l'espace de la Ville (la voix de la Ville). La liste des fils vient
+ * de l'écran (la même requête que la messagerie) : la colonne suit ses mises à jour en temps réel.
+ * @param {{ chatId: string, chats?: any[], collectiviteId: string, navigation: any }} props
+ * @returns {import('react').ReactElement | null} La colonne, ou rien pour une Ville inconnue.
+ */
+export function ColonneDesFilsDeLaVille({
+  chatId, chats = [], collectiviteId, navigation,
+}) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
+  const mine = useMyCollectivites();
+  const canaux = useMesCanauxDeLaVille();
+  const collectivite = findManagedCollectivite(mine.data, collectiviteId);
+  if (!collectivite) return null;
+  const liste = Array.isArray(chats) ? chats : [];
+  const canal = (Array.isArray(canaux.data) ? canaux.data : [])
+    .find((/** @type {any} */ ligne) => ligne?.collectivite?.documentId === collectiviteId)?.canal;
+  const filDuCanal = liste.find((/** @type {any} */ fil) => fil?.documentId === canal?.documentId);
+  const conversations = filsDeLaMessagerie(liste, { collectiviteId, espaceVille: true });
+  // « Vous : … » quand la Ville a écrit, sinon « Prénom Nom : … » (P3c-canal-ordi).
+  const apercu = (/** @type {any} */ fil, /** @type {string} */ repli) => {
+    const dernier = Array.isArray(fil?.messages) ? fil.messages[0] : null;
+    if (!dernier?.message) return repli;
+    const qui = dernier?.senderSignature?.voix === 'ville'
+      ? t('collectiviteCanaux.colonne.vous', 'Vous')
+      : String(signatureDuMessage(t, dernier) || '').split(' · ')[0];
+    return qui
+      ? t('collectiviteCanaux.dernierMessage', '{{qui}} : {{texte}}', {
+        qui,
+        texte: dernier.message,
+        ...SANS_ECHAPPEMENT,
+      })
+      : String(dernier.message);
+  };
+  const ouvrir = (
+    /** @type {string} */ id,
+    /** @type {string} */ type,
+    /** @type {string} */ titre,
+  ) => (
+    navigation.navigate(RouteNames.Conversation, {
+      chatId: id, chatType: type, espace: 'ville', title: titre,
+    })
+  );
+  const groupe = (/** @type {string} */ libelle) => (
+    <Text
+      accessibilityRole="header"
+      style={[Fonts.p4Bold, Fonts.neutral300, {
+        letterSpacing: 0.8, marginHorizontal: 10, marginTop: 10, textTransform: 'uppercase',
+      }]}
+    >
+      {libelle}
+    </Text>
+  );
+  const titreDuCanal = t('collectiviteCanaux.titre', 'Dirigeants des clubs');
+  return (
+    <View
+      accessibilityLabel={t('collectiviteCanaux.colonne.titre', 'Canaux et conversations')}
+      role="navigation"
+      style={{ gap: 2 }}
+      testID="colonne-fils-de-la-ville"
+    >
+      {groupe(t('collectiviteCanaux.colonne.canaux', 'Canaux de la Ville'))}
+      <LigneDeColonne
+        ecusson={<EcussonVille nom={String(collectivite.name || '')} taille={32} />}
+        onPress={() => navigation.navigate(RouteNames.CollectiviteActualites, { collectiviteId })}
+        precision={t('collectiviteCanaux.colonne.lectureSeule', 'Lecture seule pour les clubs')}
+        testID="colonne-actualites"
+        titre={t('collectiviteActualites.canaux.membreTitre', 'Actualités de la Ville')}
+      />
+      {canal?.documentId ? (
+        <LigneDeColonne
+          actif={canal.documentId === chatId}
+          ecusson={<IconeDuCanal taille={32} />}
+          onPress={() => ouvrir(canal.documentId, CANAL_DIRIGEANTS, titreDuCanal)}
+          precision={apercu(filDuCanal, '')}
+          testID="colonne-canal-dirigeants"
+          titre={titreDuCanal}
+        />
+      ) : null}
+      {groupe(t('collectiviteActualites.canaux.conversations', 'Conversations'))}
+      {conversations.length === 0 ? (
+        <Text style={[Fonts.p4, Fonts.neutral200, { marginHorizontal: 10, marginTop: 4 }]}>
+          {t(
+            'collectiviteCanaux.conversationsVides',
+            'Aucune conversation. Un dirigeant qui vous écrit apparaîtra ici.',
+          )}
+        </Text>
+      ) : conversations.map((/** @type {any} */ fil) => {
+        const nomDuClub = String(fil?.collectiviteClub?.name || '');
+        return (
+          <LigneDeColonne
+            actif={fil.documentId === chatId}
+            ecusson={<ClubLogoMark club={fil.collectiviteClub} isNeutral size={32} />}
+            key={fil.documentId}
+            onPress={() => ouvrir(fil.documentId, CONVERSATION_CLUB, nomDuClub)}
+            precision={apercu(fil, '')}
+            testID={`colonne-${fil.documentId}`}
+            titre={nomDuClub}
+          />
         );
       })}
     </View>

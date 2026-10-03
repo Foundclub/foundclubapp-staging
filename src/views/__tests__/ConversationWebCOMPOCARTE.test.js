@@ -129,6 +129,8 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
+  // COLL-C4A3 : la liste des fils, que le site ne lit que pour la colonne de la Ville.
+  useGetChats: () => ({ data: undefined }),
 }));
 
 // Le client HTTP lit ses adresses au CHARGEMENT du module : dans une copie de

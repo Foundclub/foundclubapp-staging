@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useWindowDimensions } from 'react-native'
+import { useWindowDimensions, View } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
@@ -31,7 +31,10 @@ import CompositionMessageBubble from '@/components/molecules/compositionMessageB
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
+// COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
+import { ColonneDesFilsDeLaVille } from '@/views/collectivite/components/CanauxDeLaVille';
 import {
+  EcussonDuFil,
   FilDeLaVilleQuitte,
   useFilDeLaVille,
   VideDuFilDeLaVille,
@@ -43,6 +46,7 @@ import {
   useGetChatById,
   useGetChatMessageReactions,
   useGetChatMessages,
+  useGetChats,
 } from '@/services/chat/chatQueriesCompat';
 const { openUrl } = links || {}
 const { pickDocument, pickImage, recordVoiceNote } = media || {}
@@ -315,7 +319,7 @@ function Conversation({ navigation, route }) {
     leaveChat,
     reactToMessage,
     respondToProposal,
-    retryFailedMessage,
+    retryFailedMessage: retryFailedMessageSansVoix,
     sendMessage: sendMessageSansVoix,
     sendReadReceipt,
     sendTypingStart,
@@ -409,6 +413,36 @@ function Conversation({ navigation, route }) {
     filDeLaVille.voix,
     sendMessageSansVoix,
   ]);
+  // COLL-C4A3 (point 4) — « Renvoyer » redemande la MÊME voix que l'envoi (voir Conversation.js).
+  const retryFailedMessage = useCallback((
+    /** @type {string} */ id,
+    /** @type {any} */ message,
+  ) => retryFailedMessageSansVoix(id, message, filDeLaVille.voix), [
+    filDeLaVille.voix,
+    retryFailedMessageSansVoix,
+  ]);
+  // 🖥️ COLL-C4A3 (planche 47, P3c-canal-ordi) — sur ordinateur, depuis l'espace de la Ville, un
+  // fil de la Ville s'ouvre en TROIS colonnes : ses canaux et conversations à gauche. La liste des
+  // fils est la requête de la messagerie : la socket la réécrit, la colonne suit sans recharger.
+  // Le type `Chat` ne connaît pas encore la Ville d'un fil (COLL-C4A2) : lue telle quelle.
+  const villeDuFil = String(/** @type {any} */ (chatData)?.collectivite?.documentId || '');
+  const avecColonneDeLaVille = Boolean(
+    isDesktop && route?.params?.espace === 'ville' && filDeLaVille.estFil && villeDuFil,
+  );
+  const { data: listeDesFils } = useGetChats({
+    currentUserClubId: userData?.club?.documentId,
+    currentUserId: userData?.documentId,
+  }, { enabled: avecColonneDeLaVille });
+  const filsDeLaColonne = useMemo(() => {
+    const pages = listeDesFils?.pages;
+    return Array.isArray(pages)
+      ? pages.flatMap((/** @type {any} */ page) => page?.data || [])
+      : [];
+  }, [listeDesFils]);
+  let colonnesDeLaGrille = isDesktop ? 'minmax(0, 1.5fr) minmax(320px, 420px)' : 'minmax(0, 1fr)';
+  if (avecColonneDeLaVille) {
+    colonnesDeLaGrille = 'minmax(240px, 300px) minmax(0, 1.5fr) minmax(280px, 380px)';
+  }
   const { data: sharedEventsPages } = useGetEvents({
     compact: true,
     excludeType: 'Reservation',
@@ -2192,10 +2226,28 @@ function Conversation({ navigation, route }) {
           color: baseTextColor,
           display: 'grid',
           gap: 24,
-          gridTemplateColumns: isDesktop ? 'minmax(0, 1.5fr) minmax(320px, 420px)' : 'minmax(0, 1fr)',
+          gridTemplateColumns: colonnesDeLaGrille,
           minHeight: isDesktop ? 'calc(100vh - 120px)' : 'auto',
         }}
       >
+        {avecColonneDeLaVille ? (
+          <aside
+            style={{
+              alignSelf: 'start',
+              background: panelBackground,
+              border: `1px solid ${borderColor}`,
+              borderRadius: 24,
+              padding: 12,
+            }}
+          >
+            <ColonneDesFilsDeLaVille
+              chatId={chatId}
+              chats={filsDeLaColonne}
+              collectiviteId={villeDuFil}
+              navigation={navigation}
+            />
+          </aside>
+        ) : null}
         <section
           style={{
             background: panelBackground,
@@ -2209,13 +2261,27 @@ function Conversation({ navigation, route }) {
         >
           <header style={{ borderBottom: `1px solid ${borderColor}`, display: 'grid', gap: 10, padding: 24 }}>
             <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'space-between' }}>
-              <div style={{ display: 'grid', gap: 6 }}>
-                <span style={{ color: mutedTextColor, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  Messagerie
-                </span>
-                <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0 }}>
-                  {conversationName}
-                </h1>
+              <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
+                {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
+                <View testID="fil-de-la-ville-ecusson">
+                  <EcussonDuFil
+                    chat={chatData}
+                    espaceVille={route?.params?.espace === 'ville'}
+                    routeChatType={route?.params?.chatType || null}
+                  />
+                </View>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <span
+                    style={{
+                      color: mutedTextColor, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase',
+                    }}
+                  >
+                    Messagerie
+                  </span>
+                  <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0 }}>
+                    {conversationName}
+                  </h1>
+                </div>
               </div>
               <span style={{
                 background: isSocketConnected ? 'rgba(39, 214, 163, 0.15)' : 'rgba(255, 161, 21, 0.12)',
