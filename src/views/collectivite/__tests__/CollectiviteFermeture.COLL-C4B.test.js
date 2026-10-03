@@ -315,6 +315,7 @@ test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer �
   expect(closeFacility).toHaveBeenCalledWith('gym-tilleuls', {
     endDate: '2026-10-02',
     kind: 'closure',
+    label: null, // FINITIONS12-COLL : sans nom, le champ part vide (il efface un ancien nom)
     message: 'Réfection du sol',
     publishActualite: true,
     reason: 'travaux',
@@ -442,6 +443,7 @@ test('C4B-A1/6 MODIFIER : la fermeture relue au serveur, le meme ecran rempli ; 
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(modifyFacilityClosure).toHaveBeenCalledWith('fermeture-1', {
     endDate: '2026-10-03',
+    label: null, // FINITIONS12-COLL : la fermeture relue n a pas de nom
     message: 'Réfection du sol',
     reason: 'travaux',
     startDate: '2026-10-02',
@@ -490,4 +492,31 @@ test('FIN11-COLL/1 « Fermer le gymnase ce jour-là », « Fermer la piscine ce 
   arbre = await rendre();
   await choisirDate('Du', '02/10/2026');
   expect(textes(arbre)).toContain('Fermer l’installation ce jour-là');
+});
+
+// 🧪 FINITIONS12-COLL (03/10), point 12 — decision d Adel « ferie B » : une fermeture peut porter un
+// NOM (« Ascension »), facultatif, 40 caracteres ; il part au serveur dans `label`, a cote du motif.
+// Pas pour un blocage : son « Pour quoi » est deja son nom. ROUGE avant le lot.
+test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermeture ; 40 caracteres ; pas pour un blocage', async () => {
+  const arbre = await rendre();
+  expect(champ('Nom (facultatif)')).toBeDefined();
+  expect(champ('Nom (facultatif)').maxLength).toBe(40);
+  expect(champ('Nom (facultatif)').placeholder).toBe('Ascension');
+  await choisirDate('Du', '02/10/2026');
+  await appuyer(parTestID(arbre, 'fermeture-motif-vacances'));
+  await saisir('Nom (facultatif)', '  Ascension ');
+  await appuyer(parTestID(arbre, 'fermeture-envoyer'));
+  await appuyer(parTestID(arbre, 'fermeture-confirmer'));
+  expect(closeFacility).toHaveBeenCalledWith(
+    'gym-tilleuls',
+    expect.objectContaining({ label: 'Ascension', reason: 'vacances' }),
+  );
+
+  mockInputProps.length = 0;
+  mockParams = {
+    collectiviteId: 'ville-montrivage', date: '2026-10-03', facilityId: 'gym-tilleuls', mode: 'bloquer',
+  };
+  await rendre();
+  expect(champ('Pour quoi')).toBeDefined();
+  expect(champ('Nom (facultatif)')).toBeUndefined();
 });

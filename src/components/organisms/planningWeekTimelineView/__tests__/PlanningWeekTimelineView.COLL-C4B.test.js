@@ -1,5 +1,5 @@
 /* eslint-disable max-len -- des libelles entiers de la grille, compares tels quels */
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { normalizePlanningItems } from '@/utils/planning/planningSlots';
@@ -175,5 +175,22 @@ describe('COLL-C4B — la plage fermee et la seance « a deplacer » dans la gri
     expect(touchee.borderWidth).toBe(2);
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'a-deplacer' && typeof n.type === 'string')).toHaveLength(1);
     expect(styleDuBloc(arbre, 'Montrivage FC').borderStyle).not.toBe('dashed');
+  });
+});
+
+// 🎨 FINITIONS12-COLL (03/10) — point 10 : « à déplacer » n'était PAS écrit sur la séance touchée
+// (tournée T11, C25_3, vue Jour à plateaux) : en troisième ligne, sous le club et l'équipe, le bloc
+// le coupait (`overflow: hidden`). Il passe sur la DEUXIÈME ligne, avec l'équipe. ROUGE avant.
+describe('FINITIONS12-COLL point 10 — « à déplacer » tient dans le bloc', () => {
+  it('« U13 · à déplacer » sur la même ligne, la deuxième', async () => {
+    const arbre = await monter([TOUCHEE]);
+    const aplatir = (/** @type {any} */ e) => {
+      if (Array.isArray(e)) return e.map(aplatir).join('');
+      if (e === null || e === undefined || typeof e === 'boolean') return '';
+      if (typeof e === 'object') return aplatir(e?.props?.children);
+      return String(e);
+    };
+    const lignes = arbre.root.findAllByType(Text).map((n) => aplatir(n.props.children).trim());
+    expect(lignes.some((ligne) => /U13.*à déplacer/.test(ligne))).toBe(true);
   });
 });

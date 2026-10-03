@@ -11,6 +11,7 @@ import {
   seasonSlotErrorMessage,
   slotWho,
   timeRange,
+  unSeulPointFinal,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -112,7 +113,7 @@ function SeasonSlotManage({
           })}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t(
+          {unSeulPointFinal(t(
             'collectiviteCreneaux.gerer.retirerPerd',
             '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
             {
@@ -123,7 +124,7 @@ function SeasonSlotManage({
               qui,
               ...SANS_ECHAPPEMENT,
             },
-          )}
+          ))}
         </Text>
         <DatePickerInput
           label={t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')}

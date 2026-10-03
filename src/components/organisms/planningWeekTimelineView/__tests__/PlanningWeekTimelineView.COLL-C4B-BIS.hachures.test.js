@@ -160,13 +160,20 @@ describe('COLL-C4B-BIS point 3 — de vraies hachures, et des pointilles qui se 
     expect(style.borderColor).toBe(COULEURS.warning500);
   });
 
-  it('3. « a deplacer » se lit juste sous le club et l equipe (la planche), avant l heure', async () => {
+  it('3. « a deplacer » se lit juste apres le club et l equipe (la planche), avant l heure', async () => {
     const arbre = await monter([toucheeDuMercredi], { mode: 'day' });
-    const lignes = noeudDuBloc(arbre, 'Montrivage FC').findAllByType(Text)
-      .map((/** @type {any} */ n) => String(n.props.children));
-    const aDeplacer = lignes.indexOf('à déplacer');
-    expect(aDeplacer).toBeGreaterThan(-1);
-    expect(lignes.slice(0, aDeplacer)).toEqual(['Montrivage FC', 'Senior B']);
+    const aplatir = (/** @type {any} */ e) => {
+      if (Array.isArray(e)) return e.map(aplatir).join('');
+      if (e === null || e === undefined || typeof e === 'boolean') return '';
+      if (typeof e === 'object') return aplatir(e?.props?.children);
+      return String(e);
+    };
+    const [premiere, deuxieme] = noeudDuBloc(arbre, 'Montrivage FC').findAllByType(Text)
+      .map((/** @type {any} */ n) => aplatir(n.props.children));
+    // FINITIONS12-COLL (03/10) : sur la DEUXIEME ligne, avec l equipe — en troisieme, le bloc le
+    // coupait (tournee T11, C25_3). L ordre de la planche reste : club, equipe, « a deplacer ».
+    expect(premiere).toBe('Montrivage FC');
+    expect(deuxieme).toBe('Senior B · à déplacer');
   });
 });
 

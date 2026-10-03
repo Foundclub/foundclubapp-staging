@@ -11,6 +11,7 @@ import {
 import { lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import {
+  CLOSURE_MAX_NAME_LENGTH,
   CLOSURE_REASONS,
   closureDaysLabel,
   closureErrorMessage,
@@ -276,6 +277,8 @@ function FormulaireDeFermeture({
   const [motif, setMotif] = useState(existante?.reason || (bloquer ? null : 'travaux'));
   const [mot, setMot] = useState(existante?.message || '');
   const [pourQuoi, setPourQuoi] = useState(existante?.label || '');
+  // FINITIONS12-COLL (03/10, decision d Adel « ferie B ») — le NOM d une fermeture (« Ascension »).
+  const [nomDeFermeture, setNomDeFermeture] = useState(bloquer ? '' : existante?.label || '');
   const [heureDebut, setHeureDebut] = useState(
     String(existante?.startTime || params.startTime || '').slice(0, 5),
   );
@@ -310,6 +313,7 @@ function FormulaireDeFermeture({
   // COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») : la saisie, dite au planning (panneau), qui la
   // hachure et cerne les seances touchees « pendant la saisie ». Rien quand elle ne se lit pas.
   const motDuBlocage = pourQuoi.trim() || null;
+  const nomRetenu = nomDeFermeture.trim() || null;
   const motifRetenu = bloquer ? null : motif;
   const idDeLaFermeture = existante?.documentId || null;
   useEffect(() => {
@@ -320,13 +324,13 @@ function FormulaireDeFermeture({
         endDate: apercuParams.endDate,
         endTime: apercuParams.endTime || null,
         kind: apercuParams.kind,
-        label: motDuBlocage,
+        label: bloquer ? motDuBlocage : nomRetenu,
         reason: motifRetenu,
         startDate: apercuParams.startDate,
         startTime: apercuParams.startTime || null,
       }
       : null);
-  }, [apercuParams, idDeLaFermeture, motDuBlocage, motifRetenu, onDraftChange]);
+  }, [apercuParams, bloquer, idDeLaFermeture, motDuBlocage, motifRetenu, nomRetenu, onDraftChange]);
   // En partant (envoye, annule, autre panneau), le planning efface le brouillon.
   useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
 
@@ -364,6 +368,7 @@ function FormulaireDeFermeture({
       data.label = pourQuoi.trim();
     } else {
       data.reason = motif;
+      data.label = nomRetenu;
     }
     try {
       if (modification) {
@@ -613,6 +618,16 @@ function FormulaireDeFermeture({
           ))}
         </View>
       </View>
+      {/* FINITIONS12-COLL : le nom s imprime (planning, bandeau, affiches), donc court. */}
+      <Input
+        density="compact"
+        label={t('collectiviteFermetures.form.nom', 'Nom (facultatif)')}
+        maxLength={CLOSURE_MAX_NAME_LENGTH}
+        onChangeText={setNomDeFermeture}
+        placeholder={t('collectiviteFermetures.form.nomExemple', 'Ascension')}
+        testID="fermeture-nom"
+        value={nomDeFermeture}
+      />
     </View>
   );
 

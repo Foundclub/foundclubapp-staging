@@ -552,3 +552,81 @@ describe('COLL-FIX2 — l’aperçu dit qui décidera (D32, SPEC-PLACE)', () => 
     expect(textes(arbre)).not.toContain(LA_VILLE_REPOND);
   });
 });
+
+// 🧮 FINITIONS12-COLL (03/10) — point 2 : L'APERÇU D'UNE SÉRIE ADDITIONNAIT LES DATES. Tournée T11
+// (C43_6) : « Il y a déjà 39 équipes : c'est complet » et « AS Montrivage · U13 » deux fois, pour
+// une série de 38 jeudis dont UN seul est plein (la Ville : « Complet 1 fois sur 38 »). Le serveur
+// rend une ligne d'occupant par séance datée de la saison, et la place au PIC ; il dit désormais
+// combien de dates sont pleines (`occurrences`). ROUGE avant le lot.
+describe('FINITIONS12-COLL point 2 — l’aperçu d’une série se lit date par date', () => {
+  // 37 séances datées des U13 (une par jeudi) et 1 des U15 : 38 lignes, UN jeudi plein.
+  const ligne = (/** @type {string} */ equipe, /** @type {string} */ jour) => ({
+    club: { documentId: 'club-A', name: 'AS Montrivage' },
+    endTime: '19:30',
+    startTime: '18:00',
+    team: { name: equipe },
+    validFrom: jour,
+    validUntil: jour,
+  });
+  const SERIE_UN_PLEIN = {
+    capacity: 2,
+    occupants: [
+      ...Array.from({ length: 37 }, () => ligne('U13', JOUR)),
+      ligne('U15', JOUR),
+    ],
+    occurrences: { count: 38, fullCount: 1, fullDates: [JOUR] },
+    peak: 2,
+    remaining: 0,
+  };
+
+  it('1 jeudi plein sur 38 : « Complet 1 fois sur 38 dates », jamais « 38 équipes »', async () => {
+    mockApercu = SERIE_UN_PLEIN;
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => textes(arbre).some((t) => t.startsWith('Complet 1 fois')));
+    const lus = textes(arbre);
+    expect(lus).toContain('Complet 1 fois sur 38 dates : jeu. 3 oct.');
+    expect(lus.join(' | ')).not.toMatch(/38 équipes|39 équipes/);
+    // Les noms ne se répètent plus : une ligne par club · équipe · heures.
+    expect(lus).toContain(
+      // eslint-disable-next-line max-len
+      'Déjà là : AS Montrivage · U13 (ton club), de 18:00 à 19:30 et AS Montrivage · U15 (ton club), de 18:00 à 19:30.',
+    );
+  });
+
+  it('tous les jeudis pleins : « Complet chaque semaine : il y a déjà 2 équipes. »', async () => {
+    mockApercu = {
+      ...SERIE_UN_PLEIN, occurrences: { count: 38, fullCount: 38, fullDates: [JOUR] },
+    };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => textes(arbre).some((t) => t.startsWith('Complet chaque semaine')));
+    expect(textes(arbre)).toContain('Complet chaque semaine : il y a déjà 2 équipes.');
+  });
+});
+
+// 🏛️ FINITIONS12-COLL (03/10) — point 6, `creation` (tranché par le chef) : la demande DIT ce qui
+// arrive si la mairie refuse, comme le déplacement (FINITIONS11-COLL point 7, même clé). À une
+// condition, REMPLIE : un témoin serveur prouve qu'une séance CRÉÉE hors créneau puis REFUSÉE est
+// annulée — banc vrai moteur du lot (P6 : POST /api/events hors créneau ⇒ pending_validation ;
+// refus de la Ville ⇒ cancelled, inactive, 404 pour l'entraîneur) et admin
+// tests/authz/COLL3A-demandes-le-proprietaire-tranche.test.js (T5). ROUGE avant le lot.
+describe('FINITIONS12-COLL point 6 — « Si la mairie refuse, la séance sera annulée. »', () => {
+  const PHRASE = 'Si la mairie refuse, la séance sera annulée.';
+
+  it('la mairie décidera : la phrase est là, avant l’envoi', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const arbre = await monter((l) => l.includes(PHRASE));
+    expect(textes(arbre)).toContain(PHRASE);
+  });
+
+  it.each([
+    ['posée tout de suite', { inClubSlot: true, outcome: 'direct' }],
+    ['le dirigeant décidera', { inClubSlot: true, outcome: 'dirigeant' }],
+  ])('%s : pas de phrase sur la mairie', async (_cas, decision) => {
+    mockApercu = { ...APERCU_LIBRE, decision };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await attendre(() => textes(arbre).some((texte) => /posé|dirigeant/.test(texte)));
+    expect(textes(arbre)).not.toContain(PHRASE);
+  });
+});

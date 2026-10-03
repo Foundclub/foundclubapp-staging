@@ -418,14 +418,41 @@ function ClubSlotRequest({
   } else if (place) {
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
     const equipesLa = Math.max(0, Number(place.capacity) - Number(place.remaining));
+    // 🧮 FINITIONS12-COLL (03/10) — UNE SÉRIE SE LIT DATE PAR DATE (tournée T11 : « Il y a déjà
+    // 39 équipes : c'est complet » pour 38 jeudis dont UN plein). Le serveur rend une ligne
+    // d'occupant par séance datée de la période et la place au PIC ; `occurrences` dit combien
+    // de dates sont pleines. Une série compte donc les équipes au pic, jamais les lignes.
+    /** @type {{ count?: number, fullCount?: number, fullDates?: string[] } | null} */
+    const dates = hebdo && Number(place.occurrences?.count) > 1 ? place.occurrences : null;
+    const pleines = Number(dates?.fullCount || 0);
     let phrase;
     if (equipesLa === 0 && !occupants.length) {
       phrase = t('collectiviteDemandes.place.personne', 'Personne n’y est : il reste {{places}}.', {
         places: nombreDePlaces(Number(place.remaining)), ...SANS_ECHAPPEMENT,
       });
+    } else if (dates && pleines > 0 && pleines < Number(dates.count)) {
+      const jours = (Array.isArray(dates.fullDates) ? dates.fullDates : [])
+        .map((date) => format(parse(date, 'yyyy-MM-dd', new Date()), 'EEE d MMM', { locale: fr }))
+        .join(', ');
+      phrase = t(
+        'collectiviteDemandes.place.serieCompleteCertaines',
+        'Complet {{nombre}} fois sur {{total}} dates : {{dates}}',
+        {
+          dates: pleines > 4 ? `${jours} …` : jours,
+          nombre: pleines,
+          total: Number(dates.count),
+          ...SANS_ECHAPPEMENT,
+        },
+      );
+    } else if (dates && pleines > 0) {
+      // eslint-disable-next-line max-len
+      phrase = t('collectiviteDemandes.serie.completesToutes', 'Complet chaque semaine : il y a déjà {{equipes}}.', {
+        equipes: nombreDEquipes(equipesLa), ...SANS_ECHAPPEMENT,
+      });
     } else if (complet) {
       phrase = t('collectiviteDemandes.place.complet', 'Il y a déjà {{equipes}} : c’est complet.', {
-        equipes: nombreDEquipes(Math.max(equipesLa, occupants.length)), ...SANS_ECHAPPEMENT,
+        equipes: nombreDEquipes(dates ? equipesLa : Math.max(equipesLa, occupants.length)),
+        ...SANS_ECHAPPEMENT,
       });
     } else {
       // eslint-disable-next-line max-len
@@ -434,7 +461,16 @@ function ClubSlotRequest({
         equipes: nombreDEquipes(equipesLa), places: nombreDePlaces(Number(place.remaining)), ...SANS_ECHAPPEMENT,
       });
     }
-    const noms = occupants.slice(0, 4).map((/** @type {any} */ occupant) => {
+    // Une ligne par club · équipe · heures : une série les répète une fois par date.
+    const uniques = occupants.filter((/** @type {any} */ occupant, /** @type {number} */ rang) => (
+      occupants.findIndex((/** @type {any} */ autre) => (
+        autre?.club?.documentId === occupant?.club?.documentId
+        && autre?.team?.name === occupant?.team?.name
+        && autre?.startTime === occupant?.startTime
+        && autre?.endTime === occupant?.endTime
+      )) === rang
+    ));
+    const noms = uniques.slice(0, 4).map((/** @type {any} */ occupant) => {
       const nom = [occupant?.club?.name, occupant?.team?.name].filter(Boolean).join(' · ');
       const tonClub = occupant?.club?.documentId && occupant.club.documentId === clubId
         ? t('collectiviteDemandes.club.tonClub', ' (ton club)')
@@ -666,6 +702,17 @@ function ClubSlotRequest({
             'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
             // eslint-disable-next-line max-len
             { ville: nomDeLaVille || t('collectiviteDemandes.club.laVille', 'Ville'), ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+      {/* FINITIONS12-COLL (03/10) — `creation` : ce qui arrive si la mairie refuse, comme au */}
+      {/* déplacement (FINITIONS11-COLL point 7, même clé). Prouvé côté serveur : une séance */}
+      {/* créée hors créneau puis refusée est annulée (banc vrai moteur ; admin COLL3A T5). */}
+      {pourLaMairie && !refusee ? (
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]} testID="demande-si-refus">
+          {t(
+            'collectiviteDemandes.decision.siRefusAnnulee',
+            'Si la mairie refuse, la séance sera annulée.',
           )}
         </Text>
       ) : null}

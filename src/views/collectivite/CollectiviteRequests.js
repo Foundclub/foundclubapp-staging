@@ -700,7 +700,7 @@ function CollectiviteRequests() {
           {t(
             'collectiviteDemandes.vide.attente',
             // eslint-disable-next-line max-len
-            'Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
+            'Quand un club demande une place hors de ses créneaux, complète ou non, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
           )}
         </Text>
       </View>
@@ -779,7 +779,11 @@ function CollectiviteRequests() {
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
     >
-      <DecisionCreneauModal decision={decision} onClose={() => setDecision(null)} />
+      <DecisionCreneauModal
+        collectiviteId={collectiviteId}
+        decision={decision}
+        onClose={() => setDecision(null)}
+      />
 
       <ScrollView
         contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}

@@ -53,11 +53,15 @@ const PLACE_PRISE_ENTRE_TEMPS = 'FACILITY_OVERRIDE_CAPACITY_CHANGED';
  * ou l'appuyer, la ferme) ; « Demandé par Karim Benali, dirigeant » ; et une série s'accepte DATE
  * PAR DATE : chaque date en attente se coche, avec sa place ; une partie cochée envoie `dates`, et
  * le serveur refuse les autres (« Date non retenue »).
- * @param {{ decision: Decision | null, onClose: () => void }} props - La décision en cours
- *   (null : fenêtre fermée) et sa fermeture.
+ * FINITIONS12-COLL (03/10) — `collectiviteId` : si la réponse se perd (délai dépassé, réseau),
+ * la mutation relit la file de cette Ville avant de dire « Erreur » (tournée T11 : une décision
+ * écrite affichée en erreur, fenêtre ouverte).
+ * @param {{ collectiviteId?: string | null, decision: Decision | null,
+ *   onClose: () => void }} props - La Ville, la décision en cours (null : fenêtre fermée) et sa
+ *   fermeture.
  * @returns {import('react').ReactElement} La fenêtre.
  */
-function DecisionCreneauModal({ decision, onClose }) {
+function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -130,6 +134,7 @@ function DecisionCreneauModal({ decision, onClose }) {
     const mutation = estRefus ? refuse : approve;
     try {
       await mutation.mutateAsync({
+        collectiviteId,
         decisionReason,
         requestId: demande?.documentId,
         series: serie,

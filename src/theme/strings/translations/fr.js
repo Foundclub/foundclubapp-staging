@@ -6042,6 +6042,8 @@ export default {
       personne: 'Personne n’y est : il reste {{places}}.',
       premiereDate: 'Pour la première date, le {{jour}} :',
       reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
+      // FINITIONS12-COLL (03/10) — l'aperçu d'une série côté club (tournée T11, C43_6).
+      serieCompleteCertaines: 'Complet {{nombre}} fois sur {{total}} dates : {{dates}}',
     },
     // COLL-C3B-BIS (03/10) — une série se lit en entier (planche 34).
     serie: {
@@ -6062,8 +6064,9 @@ export default {
       votreMessage: 'Votre message',
     },
     vide: {
+      // FINITIONS12-COLL (03/10) — depuis SPEC-PLACE, aussi sur une place libre (T11, C31).
       // eslint-disable-next-line max-len
-      attente: 'Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
+      attente: 'Quand un club demande une place hors de ses créneaux, complète ou non, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
     },
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
@@ -6140,6 +6143,9 @@ export default {
       mot: 'Un mot pour les clubs (facultatif)',
       motExemple: 'Réfection du sol',
       motif: 'Motif',
+      // FINITIONS12-COLL (03/10) — décision d’Adel « férié B » : le nom d’une journée fermée.
+      nom: 'Nom (facultatif)',
+      nomExemple: 'Ascension',
       ordreDates: 'La fin suit le début.',
       ordreHeures: 'L’heure de fin suit l’heure de début.',
       pourQuoi: 'Pour quoi',
@@ -14504,6 +14510,10 @@ export default {
     // COLL-FIX-PLANNING (T9) : la carte des séances regroupées d une colonne trop étroite.
     grappe_one: 'séance',
     grappe_other: 'séances',
+    // FINITIONS12-COLL (03/10) — des créneaux groupés ne sont pas des séances (T11, C27_1).
+    grappeCreneaux_one: 'créneau',
+    grappeCreneaux_other: 'créneaux',
+    grappeMixte: '{{seances}} et {{creneaux}}',
     more: 'plus',
     noEventInThisPeriod: 'Aucun événement sur cette période',
     noEventWithATime: 'Aucun événement avec horaire',

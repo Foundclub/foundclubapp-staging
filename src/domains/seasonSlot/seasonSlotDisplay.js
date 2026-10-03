@@ -58,6 +58,27 @@ export const weekdayName = (isoDay, { short = false } = {}) => {
 export const isoWeekdayOf = (date) => ((date.getDay() + 6) % 7) + 1;
 
 /**
+ * 🎨 FINITIONS12-COLL (03/10) — UN SEUL POINT en fin de phrase quand elle finit sur une date
+ * abrégée (« … à partir du sam. 3 oct.. », tournée T11, C23 : `formatDay` garde le point de
+ * « oct. », la phrase en ajoutait un).
+ * @param {string} phrase - La phrase.
+ * @returns {string} La phrase, sans point doublé à la fin.
+ */
+export const unSeulPointFinal = (phrase) => String(phrase || '').replace(/..$/, '.');
+
+/**
+ * 🗓️ FINITIONS12-COLL (03/10) — LA FIN D'UN CRÉNEAU, celle qu'on écrit : le dernier jour où il a
+ * lieu (`effectiveUntil`, serveur : un créneau retiré « à partir du 1er juin » finit le 31 mai),
+ * sinon sa période (`validUntil`). Tournée T11 (C23) : « du 1 sept. au 30 juin » sur un créneau
+ * qui s'arrête au 31 mai.
+ * @param {{ effectiveUntil?: string | null, validUntil?: string | null } | null | undefined} slot
+ * @returns {string | null} AAAA-MM-JJ, ou null.
+ */
+export const finDuCreneau = (slot) => (
+  String(slot?.effectiveUntil || slot?.validUntil || '').slice(0, 10) || null
+);
+
+/**
  * Une heure « HH:MM » valide ?
  * @param {unknown} valeur - Ce qui a ete tape.
  * @returns {boolean} Vrai pour « 08:00 », faux pour « 8h ».

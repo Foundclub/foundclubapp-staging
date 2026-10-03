@@ -230,3 +230,38 @@ describe('COLL-CONSOLE-BIS — planche 14 : « Chercher la commune » dans la co
     expect(champ(arbre, 'commune')).toBeUndefined();
   });
 });
+
+// 🧯 FINITIONS12-COLL (03/10) — point 5 : APRÈS UNE CRÉATION, LA RECHERCHE RENDAIT L'ANCIENNE
+// RÉPONSE. Tournée T11 (C14) : juste après « Créer » la Ville de Montpellier, retaper « Montpel »
+// rendait la réponse en cache (5 min), SANS « Déjà sur FoundClub » ; il fallait changer le texte.
+// La création invalide la recherche (même clé de requête). ROUGE avant le lot.
+describe('FINITIONS12-COLL point 5 — la recherche se relit après une création', () => {
+  it('retaper le même texte juste après « Créer » dit « Déjà sur FoundClub »', async () => {
+    let creee = false;
+    mockGet.mockImplementation(async () => ({
+      data: {
+        data: [creee
+          ? {
+            ...VALFLEURI,
+            collectivite: { documentId: 'ville-valfleuri', name: 'Ville de Valfleuri' },
+          }
+          : VALFLEURI],
+      },
+    }));
+    mockPost.mockImplementation(async () => {
+      creee = true;
+      return { data: { data: { documentId: 'ville-valfleuri' } } };
+    });
+    const arbre = await monter();
+    await taper(arbre, 'commune', 'Valf');
+    await attendre(() => pressables(arbre, 'admin-collectivite-form-commune-13999').length > 0);
+    await appuyer(arbre, 'admin-collectivite-form-commune-13999');
+    await appuyer(arbre, 'bouton-Créer — elle naîtra inactive');
+    await attendre(() => mockPost.mock.calls.length > 0);
+
+    await taper(arbre, 'commune', '');
+    await taper(arbre, 'commune', 'Valf');
+    await attendre(() => textes(arbre).includes('Déjà sur FoundClub'));
+    expect(textes(arbre)).toContain('Déjà sur FoundClub');
+  });
+});

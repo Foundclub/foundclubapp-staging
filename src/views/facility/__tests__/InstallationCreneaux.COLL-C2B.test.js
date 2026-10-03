@@ -589,3 +589,31 @@ describe('COLL-C2B planche 3 — 7. aucun nom de personne a la mairie', () => {
     SECRETS.forEach((secret) => expect(lu).not.toContain(secret));
   });
 });
+
+// 🗓️ FINITIONS12-COLL (03/10) — point 8 : un créneau RETIRÉ « à partir du 1er juin » disparaissait
+// déjà de la liste active (tournée T11, C23). Le serveur le garde désormais dans les actifs jusqu'à
+// la veille, avec `effectiveUntil` ; la ligne écrit SA fin. ROUGE avant le lot.
+describe('FINITIONS12-COLL point 8 — retiré plus tard : listé jusque-là, avec sa fin', () => {
+  it('retiré à partir du 1er juin : « 17:30 – 19:00 · du 1 sept. au 31 mai »', async () => {
+    /** @type {any} */ (listFacilitySeasonSlots).mockImplementation(
+      (/** @type {string} */ _id, /** @type {any} */ { status }) => Promise.resolve(
+        status === 'withdrawn'
+          ? { data: [RETIRE], meta: META() }
+          : {
+            data: [creneau({
+              documentId: 'mar-u15',
+              effectiveUntil: '2027-05-31',
+              endTime: '19:00',
+              startTime: '17:30',
+              status: 'withdrawn',
+              weekday: 2,
+              withdrawnFrom: '2027-06-01',
+            })],
+            meta: META(),
+          },
+      ),
+    );
+    const lus = textes(await rendre());
+    expect(lus).toContain('17:30 – 19:00 · du 1 sept. au 31 mai');
+  });
+});

@@ -30,6 +30,9 @@ const mockBanners = /** @type {any[]} */ ([]);
 const mockSendMessage = jest.fn();
 const mockSendTypingStart = jest.fn();
 const mockSendTypingStop = jest.fn();
+// FINITIONS12-COLL : le fil doublé se règle (un fil de la Ville pour le témoin du canal vide).
+const FIL_ORDINAIRE = { documentId: 'chat-1', participants: [], type: 'group' };
+let mockChat = /** @type {any} */ (FIL_ORDINAIRE);
 
 // VOCAL — la barre de saisie porte la zone vocale (Reanimated + Gesture Handler) :
 // doublures partagées, qui gardent `Swipeable` et enregistrent les gestes.
@@ -190,7 +193,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
   // cet ecran ne parlent pas de reactions, et une rangee vide ne se dessine pas.
   useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatById: () => ({
-    data: { documentId: 'chat-1', participants: [], type: 'group' },
+    data: mockChat,
     isLoading: false,
   }),
   useGetChatMessages: () => ({
@@ -307,6 +310,7 @@ const appuyerSurEnvoyer = (texte) => {
 };
 
 beforeEach(() => {
+  mockChat = FIL_ORDINAIRE;
   mockGiftedRenders.length = 0;
   mockBanners.length = 0;
   mockSendMessage.mockReset();
@@ -427,5 +431,83 @@ describe('MSG1 / N5 — brider la frappe', () => {
     taper('');
     expect(mockSendTypingStop).toHaveBeenCalled();
     act(() => { arbre.unmount(); });
+  });
+});
+
+// 🧯 FINITIONS12-COLL (03/10) — point 3 : LE CANAL VIDE DE LA VILLE (tournée T11, C47_3).
+//   a) « Envoyer » sans connexion temps réel EFFAÇAIT le texte. Les témoins MSG1 ci-dessus
+//      appellent `onSend` DIRECTEMENT : ils contournent le vrai bouton, qui appelait
+//      `props.onSend(message, true)` — et GiftedChat 2.8.1 (lib/GiftedChat/index.js, `_onSend`)
+//      remet la barre à zéro AVANT de transmettre (`onInputTextChanged('')`) quand ce second
+//      argument vaut `true`. La garde de l'écran gardait un texte déjà effacé.
+//   b) La phrase d'accueil d'un fil vide s'affichait À L'ENVERS sur Android : la liste inversée
+//      y retourne son contenu sur les DEUX axes (`scale: -1`, @react-native/virtualized-lists,
+//      `verticallyInverted`), l'écran ne le redressait que sur un (`scaleY: -1`) ⇒ miroir.
+// ROUGE avant le lot.
+describe('FINITIONS12-COLL point 3 — le canal vide de la Ville', () => {
+  // Le vrai bouton Envoyer, avec la remise à zéro telle que GiftedChat 2.8.1 la fait.
+  const envoyerParLeBouton = (/** @type {string} */ texte) => {
+    const props = dernieresProps();
+    const onSendDeGiftedChat = (
+      /** @type {any} */ messages,
+      /** @type {boolean} */ remettreAZero,
+    ) => {
+      if (remettreAZero === true) props.onInputTextChanged('');
+      props.onSend(Array.isArray(messages) ? messages : [messages]);
+    };
+    /** @type {any} */
+    let bouton;
+    act(() => {
+      bouton = renderer.create(props.renderSend({ onSend: onSendDeGiftedChat, text: texte }));
+    });
+    const touche = bouton.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'button' && typeof n.props?.onPress === 'function'
+    ))[0];
+    act(() => { touche.props.onPress(); });
+    act(() => { bouton.unmount(); });
+  };
+
+  it('a) sans connexion, le VRAI bouton Envoyer laisse le texte dans le champ', () => {
+    mockSendMessage.mockReturnValue(null);
+    const { arbre } = monterConversation();
+    taper('Recette T11 canal, message de la Ville');
+    envoyerParLeBouton('Recette T11 canal, message de la Ville');
+    expect(dernieresProps().text).toBe('Recette T11 canal, message de la Ville');
+    expect(mockBanners).toHaveLength(1);
+    act(() => { arbre.unmount(); });
+  });
+
+  it('a) envoi accepté : le VRAI bouton vide le champ, comme avant', () => {
+    mockSendMessage.mockReturnValue('optimiste-1');
+    const { arbre } = monterConversation();
+    taper('Bonjour');
+    envoyerParLeBouton('Bonjour');
+    expect(dernieresProps().text).toBe('');
+    act(() => { arbre.unmount(); });
+  });
+
+  it.each([
+    ['android', [{ scale: -1 }]],
+    ['ios', [{ scaleY: -1 }]],
+  // eslint-disable-next-line max-len
+  ])('b) %s : la phrase d’un fil vide est redressée comme la liste la retourne', (systeme, attendu) => {
+    // eslint-disable-next-line global-require
+    const { Platform, StyleSheet } = require('react-native');
+    const avant = Platform.OS;
+    Platform.OS = /** @type {any} */ (systeme);
+    try {
+      mockChat = {
+        collectivite: { name: 'Ville de Montrivage' },
+        documentId: 'chat-1',
+        participants: [],
+        type: 'collectivite_dirigeants',
+      };
+      const { arbre } = monterConversation();
+      const vide = dernieresProps().renderChatEmpty();
+      expect(StyleSheet.flatten(vide.props.style).transform).toEqual(attendu);
+      act(() => { arbre.unmount(); });
+    } finally {
+      Platform.OS = avant;
+    }
   });
 });

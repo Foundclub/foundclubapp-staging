@@ -1642,6 +1642,23 @@ function FacilityList() {
             </Text>
           </TouchableOpacity>
         ) : null}
+        {/* FINITIONS12-COLL (03/10) — la porte PERMANENTE de « Tes demandes à la Ville » */}
+        {/* (avant : l'accusé d'envoi seul, tournée T11), là où le club demande à la Ville. */}
+        {enGroupes ? (
+          <TouchableOpacity
+            accessibilityRole="link"
+            onPress={() => /** @type {any} */ (navigation).navigate(
+              RouteNames.ClubSlotRequests,
+              { clubId: contextClubId },
+            )}
+            style={{ justifyContent: 'center', minHeight: 44 }}
+            testID="facility-list-tes-demandes"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {t('collectiviteDemandes.club.tesDemandes', 'Tes demandes à la Ville')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {content}

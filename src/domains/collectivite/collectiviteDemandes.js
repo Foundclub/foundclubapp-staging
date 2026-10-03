@@ -4,6 +4,8 @@ import { enGB, fr } from 'date-fns/locale';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { isRequestTimeoutAbandon } from '@/utils/errors/apiError';
+
 import { summarizeConflict } from './collectiviteAccueil';
 
 // 🏛️ COLL-C3B (02/10) — LES DEMANDES DE CRÉNEAU EN PHRASES (planches P6v2, P6-fenetre, P8v2).
@@ -282,3 +284,36 @@ export const horsOuverture = ({
   if (ouverture !== null && debut < ouverture) return { cas: 'ouvre', heure: ouverture };
   return null;
 };
+
+// ─── FINITIONS12-COLL (03/10) — UNE RÉPONSE PERDUE N'EST PAS UNE ERREUR ──────────────────────
+
+// Les relectures de la file après un délai dépassé : tout de suite, puis 2 s et 4 s après (le
+// serveur peut finir d'écrire juste après l'abandon du client, à 15 s).
+export const RELECTURES_APRES_DELAI_MS = [0, 2000, 4000];
+
+/**
+ * Faut-il RELIRE la file avant de dire « Erreur » sur une décision de la mairie ? Tournée T11 : la
+ * Ville accepte 37 dates, le serveur répond 200 en 23,5 s, le client abandonne à 15 s, et la
+ * fenêtre disait « Erreur » sur une décision écrite. Une réponse perdue (délai dépassé, réseau
+ * coupé : aucun statut HTTP) ou « plus en attente » (un appui précédent l'a déjà tranchée) peut
+ * cacher une décision passée ; toute autre erreur est une vraie erreur.
+ * @param {any} error - Ce que le client HTTP a rejeté.
+ * @returns {'delai' | 'reseau' | 'dejaTranchee' | null} Pourquoi relire, ou null.
+ */
+export const raisonDeRelireLaDecision = (error) => {
+  if (isRequestTimeoutAbandon(error)) return 'delai';
+  if (/no longer pending/i.test(String(error?.message || ''))) return 'dejaTranchee';
+  // Sans réponse du serveur, l'intercepteur rejette le message nu d'axios (« Network Error »).
+  if (typeof error === 'string' || Number(error?.status ?? -1) === 0) return 'reseau';
+  return null;
+};
+
+/**
+ * La demande est-elle encore dans la file relue ? (Une série = une carte, portée par sa plus
+ * proche date : tant que la décision n'est pas passée, la carte garde la même.)
+ * @param {any[]} file - La file en attente, relue.
+ * @param {string} documentId - La demande tranchée.
+ * @returns {boolean} Vrai si elle attend toujours.
+ */
+export const estEncoreEnAttente = (file, documentId) => (Array.isArray(file) ? file : [])
+  .some((/** @type {any} */ demande) => demande?.documentId === documentId);

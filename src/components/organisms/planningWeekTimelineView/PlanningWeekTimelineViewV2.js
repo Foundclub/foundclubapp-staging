@@ -661,11 +661,29 @@ function PlanningWeekTimelineView({
   ) => {
     const seances = event.events.filter((/** @type {any} */ e) => !e.raw?.closureBand);
     const nombre = seances.length || event.events.length;
-    const mot = t('planningWeekTimelineViewV2.grappe', {
-      count: nombre,
+    // 🧮 FINITIONS12-COLL (03/10) — MÊME MOT (tournée T11, C27_1) : trois CRÉNEAUX groupés se
+    // disaient « 3 séances ». Un créneau est une attribution, pas une séance (admin
+    // docs/CONTRAT_CHIFFRES_VILLE.md §1) : la grappe dit ce qu elle groupe.
+    const creneaux = seances
+      .filter((/** @type {any} */ e) => (e.kind || e.raw?.kind) === 'slot').length;
+    const vraies = nombre - creneaux;
+    const motSeances = t('planningWeekTimelineViewV2.grappe', {
+      count: vraies || nombre,
       defaultValue_one: 'séance',
       defaultValue_other: 'séances',
     });
+    const motCreneaux = t('planningWeekTimelineViewV2.grappeCreneaux', {
+      count: creneaux || nombre,
+      defaultValue_one: 'créneau',
+      defaultValue_other: 'créneaux',
+    });
+    let mot = motSeances;
+    if (creneaux && !vraies) mot = motCreneaux;
+    else if (creneaux) {
+      mot = t('planningWeekTimelineViewV2.grappeMixte', '{{seances}} et {{creneaux}}', {
+        creneaux: motCreneaux, seances: motSeances,
+      });
+    }
     const aDeplacer = event.events.some((/** @type {any} */ e) => e.raw?.closure);
     return (
       <TouchableOpacity
@@ -898,10 +916,18 @@ function PlanningWeekTimelineView({
             }]}
           >
             {secondaryLabel}
+            {/* FINITIONS12-COLL (03/10) — « a deplacer » sur la DEUXIEME ligne, avec */}
+            {/* l equipe : en troisieme, le bloc le coupait (`overflow: hidden` ; T11, C25_3). */}
+            {aDeplacer ? (
+              <Text style={{ color: pendingAccentColor }} testID="a-deplacer">
+                {` · ${t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}`}
+              </Text>
+            ) : null}
           </Text>
         ) : null}
         {/* COLL-C4B-BIS : « a deplacer » sous le club et l equipe, comme la planche (ecran 4). */}
-        {aDeplacer && !isTiny ? (
+        {/* FINITIONS12-COLL : seul, quand il n y a pas de deuxieme ligne. */}
+        {aDeplacer && !isTiny && !canShowSecondary ? (
           <Text
             numberOfLines={1}
             style={[

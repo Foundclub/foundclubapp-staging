@@ -389,6 +389,17 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
   });
 
   it('« Cette semaine » : chaque installation, ses séances, et le moment complet', async () => {
+    // FINITIONS12-COLL point 9 : le nombre de séances vient de « Chiffres » (sans taux ici).
+    mockChiffresSemaine = {
+      data: {
+        installations: [
+          { documentId: TILLEULS.documentId, seances: 3, taux: null },
+          { documentId: DOJO.documentId, seances: 0, taux: null },
+        ],
+      },
+      error: null,
+      isLoading: false,
+    };
     const arbre = await monter();
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
@@ -598,7 +609,13 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
 describe('COLL-C5 — planches 2 et 3 : la jauge d occupation de la semaine', () => {
   it('une jauge par installation, remplie du taux ; « occupation : 23 % »', async () => {
     mockChiffresSemaine = {
-      data: { installations: [{ documentId: TILLEULS.documentId, taux: 23 }] },
+      // FINITIONS12-COLL point 9 : + `seances`, le nombre que « Chiffres » compte.
+      data: {
+        installations: [
+          { documentId: TILLEULS.documentId, seances: 3, taux: 23 },
+          { documentId: DOJO.documentId, seances: 0 },
+        ],
+      },
       error: null,
       isLoading: false,
     };
@@ -852,5 +869,30 @@ describe('FINITIONS11-COLL (2) — la fermeture a venir dit qui est a prevenir',
     expect(lus.filter((texte) => texte === 'Fermeture à venir')).toHaveLength(2);
     expect(lus).not.toContain(personne);
     expect(lus.join(' ')).not.toMatch(/touchée/);
+  });
+});
+
+// 🧮 FINITIONS12-COLL (03/10) — point 9 : MÊME MOT, MÊME NOMBRE. Tournée T11 (C02_4, C30_1) :
+// l'accueil disait « Gymnase des Tilleuls · 14 séances » quand « Chiffres » en disait 10 la même
+// semaine : l'accueil comptait les BLOCS du planning, créneaux compris ; un créneau est une
+// attribution, pas une séance (admin docs/CONTRAT_CHIFFRES_VILLE.md §1, « Créneau de saison »).
+// Décision sur pièces : l'accueil prend le nombre de « Chiffres » (`seances` de la ligne, tenues +
+// à venir), la même lecture que son taux (§5). ROUGE avant le lot.
+describe('FINITIONS12-COLL point 9 — l’accueil compte les séances comme « Chiffres »', () => {
+  // eslint-disable-next-line max-len
+  it('3 blocs au planning, 1 séance selon « Chiffres » : « 1 séance · occupation : 7 % »', async () => {
+    mockChiffresSemaine = {
+      data: {
+        installations: [
+          { documentId: TILLEULS.documentId, seances: 1, taux: 7 },
+          { documentId: DOJO.documentId, seances: 0, taux: 0 },
+        ],
+      },
+      error: null,
+      isLoading: false,
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('1 séance · occupation : 7 %');
+    expect(lus.some((texte) => texte.startsWith('3 séances'))).toBe(false);
   });
 });

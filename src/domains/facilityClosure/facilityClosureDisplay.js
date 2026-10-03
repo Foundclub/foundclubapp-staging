@@ -18,6 +18,9 @@ import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
  */
 
 export const CLOSURE_REASONS = ['travaux', 'vacances', 'manifestation', 'autre'];
+// FINITIONS12-COLL (03/10) — le nom d une fermeture tient en 40 caracteres, comme au serveur
+// (`CLOSURE_MAX_NAME_LENGTH`, admin `facility-closure/utils`).
+export const CLOSURE_MAX_NAME_LENGTH = 40;
 
 /**
  * La locale date-fns de la langue de l app.
@@ -92,6 +95,17 @@ export const closureHoursLabel = (t, fermeture) => {
 };
 
 /**
+ * 🏷️ FINITIONS12-COLL (03/10, décision d Adel « férié B ») — le NOM d une fermeture (« Ascension »,
+ * facultatif, 40 caractères) : il passe avant le motif partout où le motif s affiche. Rien pour un
+ * blocage (son `label` est son « pour quoi », lu à part).
+ * @param {{ kind?: string, label?: string|null }} fermeture - La fermeture.
+ * @returns {string} Le nom, ou vide.
+ */
+export const closureName = (fermeture) => (
+  fermeture?.kind === 'block' ? '' : String(fermeture?.label || '').trim()
+);
+
+/**
  * La pastille d une fermeture (onglet « Fermetures ») : « Fermeture · travaux », « Blocage ·
  * Ville ».
  * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
@@ -101,6 +115,12 @@ export const closureHoursLabel = (t, fermeture) => {
 export const closureTagLabel = (t, fermeture) => {
   if (fermeture?.kind === 'block') {
     return t('collectiviteFermetures.liste.pastilleBlocage', 'Blocage · Ville');
+  }
+  if (closureName(fermeture)) {
+    return t('collectiviteFermetures.liste.pastilleFermeture', 'Fermeture · {{motif}}', {
+      ...SANS_ECHAPPEMENT,
+      motif: closureName(fermeture),
+    });
   }
   const motif = reasonLabel(t, fermeture?.reason);
   return motif
@@ -125,6 +145,12 @@ export const closureBandLabel = (t, fermeture) => {
         motif: fermeture.label,
       })
       : t('collectiviteFermetures.planning.bloqueSeul', 'Bloqué par la Ville');
+  }
+  if (closureName(fermeture)) {
+    return t('collectiviteFermetures.planning.ferme', 'Fermé · {{motif}}', {
+      ...SANS_ECHAPPEMENT,
+      motif: closureName(fermeture),
+    });
   }
   const motif = reasonLabel(t, fermeture?.reason);
   return motif
@@ -309,7 +335,7 @@ export const phraseForFacilityType = (lieu, { feminine, generic, masculine }) =>
 export const closureBannerText = (t, fermeture, { facilityType = null, withDays = false } = {}) => {
   const motif = fermeture?.kind === 'block'
     ? fermeture.label || ''
-    : reasonLabel(t, fermeture?.reason);
+    : closureName(fermeture) || reasonLabel(t, fermeture?.reason);
   const mot = fermeture?.message
     ? t('collectiviteFermetures.bandeau.mot', 'Mot de la Ville : « {{mot}} ».', {
       ...SANS_ECHAPPEMENT,

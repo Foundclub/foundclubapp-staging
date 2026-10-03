@@ -5665,6 +5665,8 @@ export default {
       personne: 'Nobody is there: {{places}} left.',
       premiereDate: 'For the first date, {{jour}}:',
       reste: 'There are already {{equipes}}: {{places}} left.',
+      // FINITIONS12-COLL (03/10) — the club's preview of a series (round T11, C43_6).
+      serieCompleteCertaines: 'Full {{nombre}} times out of {{total}} dates: {{dates}}',
     },
     // COLL-C3B-BIS (03/10) — a series reads as a whole (board 34).
     serie: {
@@ -5685,7 +5687,7 @@ export default {
       votreMessage: 'Your message',
     },
     vide: {
-      attente: 'When a club wants a spot on a facility that is already full, its request arrives here. You accept or refuse it, with a note; the club is notified.',
+      attente: 'When a club asks for a spot outside its slots, full or not, its request arrives here. You accept or refuse it, with a note; the club is notified.',
     },
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
@@ -5761,6 +5763,9 @@ export default {
       mot: 'A note for the clubs (optional)',
       motExemple: 'Floor renovation',
       motif: 'Reason',
+      // FINITIONS12-COLL (03/10) — the name of a closed day.
+      nom: 'Name (optional)',
+      nomExemple: 'Ascension Day',
       ordreDates: 'The end follows the start.',
       ordreHeures: 'The end time follows the start time.',
       pourQuoi: 'What for',
@@ -13828,6 +13833,10 @@ export default {
     changeThePeriodToSee: 'The arrows lead to other dates.',
     grappe_one: 'session',
     grappe_other: 'sessions',
+    // FINITIONS12-COLL (03/10) — grouped slots are not sessions (round T11, C27_1).
+    grappeCreneaux_one: 'slot',
+    grappeCreneaux_other: 'slots',
+    grappeMixte: '{{seances}} and {{creneaux}}',
     more: 'more',
     noEventInThisPeriod: 'No event in this period',
     noEventWithATime: 'No event with a time',

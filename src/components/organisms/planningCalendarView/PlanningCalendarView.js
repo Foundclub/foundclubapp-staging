@@ -19,6 +19,7 @@ import {
   closureHoursLabel,
   closureOfDay,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
+import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
@@ -174,6 +175,12 @@ function PlanningCalendarDay({
     dayColor = colors.primary500;
   }
   let borderColor = isCurrentDay ? colors.primary500 : 'transparent';
+  let fondDuJour = 'transparent';
+  // FINITIONS12-COLL (03/10) — un jour FERME choisi garde un fond leger : le bleu plein
+  // recouvrait ses hachures (tournee T11, C25_4 : « le 7 est cerne, pas hachure »).
+  if (isSelected) {
+    fondDuJour = journeeFermee ? withAlpha(colors.primary500, 0.3) : colors.primary500;
+  }
   if (fermetureDuJour) borderColor = colors.warning500;
 
   return (
@@ -186,7 +193,7 @@ function PlanningCalendarDay({
         style={[
           styles.dayCell,
           {
-            backgroundColor: isSelected ? colors.primary500 : 'transparent',
+            backgroundColor: fondDuJour,
             borderColor,
             borderStyle: jourBloque ? 'dashed' : 'solid',
             opacity: isDisabled ? 0.4 : 1,
@@ -195,7 +202,7 @@ function PlanningCalendarDay({
         ]}
         testID={testIDDuJour}
       >
-        {journeeFermee ? <Hachures color={colors.warning500} /> : null}
+        {journeeFermee ? <Hachures color={colors.warning500} intensite={2} /> : null}
         <Text
           style={[
             fonts.p3Bold,

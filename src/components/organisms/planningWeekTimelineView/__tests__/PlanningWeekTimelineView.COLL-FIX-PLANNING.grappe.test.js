@@ -231,3 +231,30 @@ describe('COLL-FIX-PLANNING 3 — la semaine tenue droite ne pose plus des blocs
     expect(parseFloat(plage.width)).toBeCloseTo(UN_JOUR);
   });
 });
+
+// 🧮 FINITIONS12-COLL (03/10) — point 9 : MÊME MOT. Tournée T11 (C27_1) : la semaine en paysage
+// groupait trois CRÉNEAUX du vendredi en « 3 séances ». Un créneau est une attribution, pas une
+// séance (admin docs/CONTRAT_CHIFFRES_VILLE.md §1) : la grappe dit ce qu'elle groupe. ROUGE avant.
+describe('FINITIONS12-COLL point 9 — la grappe dit ce qu’elle groupe', () => {
+  const CRENEAU_A = bloc({ endAt: '2026-10-08T17:30:00.000Z', kind: 'slot', startAt: '2026-10-08T16:00:00.000Z' });
+  const CRENEAU_B = bloc({
+    club: { documentId: 'club-B', name: 'US Ville B' }, endAt: '2026-10-08T18:00:00.000Z', kind: 'slot', startAt: '2026-10-08T16:30:00.000Z', title: 'US Ville B · Seniors B',
+  });
+
+  it('deux créneaux : « 2 créneaux », jamais « séances »', async () => {
+    const arbre = await monter([CRENEAU_A, CRENEAU_B]);
+    await mesurer(arbre, 350);
+    const [grappe] = grappes(arbre);
+    expect(grappe).toBeDefined();
+    expect(aplatir(grappe.props.children)).toContain('créneaux');
+    expect(aplatir(grappe.props.children)).not.toContain('séances');
+    expect(grappe.props.accessibilityLabel.startsWith('2 créneaux')).toBe(true);
+  });
+
+  it('une séance et un créneau : « séances et créneaux »', async () => {
+    const arbre = await monter([SEANCE_A, CRENEAU_B]);
+    await mesurer(arbre, 350);
+    const [grappe] = grappes(arbre);
+    expect(aplatir(grappe.props.children)).toContain('séance et créneau');
+  });
+});

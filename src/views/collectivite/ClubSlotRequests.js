@@ -59,8 +59,19 @@ function ClubSlotRequests() {
   const demandes = useSentFacilityOverrideRequests(clubId);
   const { refetch } = demandes;
   useFocusEffect(useCallback(() => { refetch?.(); }, [refetch]));
+  // 🚪 FINITIONS12-COLL (03/10) — ouvert par la réponse de la Ville (`requestId`, notification) :
+  // CETTE demande en tête, signalée, avec la réponse et le mot de la mairie (maquette P8v3-notifs,
+  // état 2). Tournée T11 : un refus ouvrait l'entraînement annulé.
+  const ouverte = params.requestId || null;
   /** @type {any[]} */
-  const lignes = Array.isArray(demandes.data) ? demandes.data : [];
+  const recues = Array.isArray(demandes.data) ? demandes.data : [];
+  const rangOuvert = ouverte ? recues.findIndex((d) => d?.documentId === ouverte) : -1;
+  const lignes = rangOuvert > 0
+    ? [recues[rangOuvert], ...recues.slice(0, rangOuvert), ...recues.slice(rangOuvert + 1)]
+    : recues;
+  const testIdDe = (/** @type {any} */ demande) => (demande?.documentId === ouverte
+    ? 'demande-envoyee-ouverte'
+    : `demande-envoyee-${demande?.documentId}`);
 
   const etat = (/** @type {any} */ demande) => {
     if (demande?.status === 'approved') {
@@ -121,8 +132,10 @@ function ClubSlotRequests() {
     return (
       <View
         key={demande?.documentId}
-        style={carte}
-        testID={`demande-envoyee-${demande?.documentId}`}
+        style={demande?.documentId === ouverte
+          ? { ...carte, borderColor: Colors.primary500, borderWidth: 2 }
+          : carte}
+        testID={testIdDe(demande)}
       >
         <View
           style={[Alignments.row, Alignments.alignCenter, ENTRE_DEUX]}
@@ -177,9 +190,14 @@ function ClubSlotRequests() {
           <View
             key={demande?.documentId}
             style={[Alignments.row, Spaces.padding[12], {
-              borderTopColor: withAlpha(Colors.neutral00, 0.09), borderTopWidth: 1, gap: 12,
+              backgroundColor: demande?.documentId === ouverte
+                ? withAlpha(Colors.primary500, 0.12)
+                : 'transparent',
+              borderTopColor: withAlpha(Colors.neutral00, 0.09),
+              borderTopWidth: 1,
+              gap: 12,
             }]}
-            testID={`demande-envoyee-${demande?.documentId}`}
+            testID={testIdDe(demande)}
           >
             {cellule(demande?.team?.name || '—', 1)}
             {cellule(demande?.facility?.name || '—', 2)}

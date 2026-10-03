@@ -1,6 +1,7 @@
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  finDuCreneau,
   formatPeriod,
   isoWeekdayOf,
   timeRange,
@@ -61,10 +62,11 @@ export const clubSlotParts = (slot) => ({
   // 1 sept. au 6 oct., puis « U15 » du 7 oct. au 30 juin) se lisait en deux lignes identiques,
   // sans période. La période s'écrit quand le créneau ne couvre pas toute la saison
   // (du 1er septembre au 30 juin, contrat §2).
+  // FINITIONS12-COLL : la fin écrite est le dernier jour où il a lieu (retiré : la veille).
   period: /-09-01$/.test(String(slot?.validFrom || '-09-01'))
-    && /-06-30$/.test(String(slot?.validUntil || '-06-30'))
+    && /-06-30$/.test(finDuCreneau(slot) || '-06-30')
     ? ''
-    : formatPeriod(slot?.validFrom, slot?.validUntil, { withYear: false }),
+    : formatPeriod(slot?.validFrom, finDuCreneau(slot), { withYear: false }),
   team: slot?.team?.name || null,
 });
 
