@@ -88,6 +88,10 @@ function ManagerRequestsLink({ collectiviteId = null }) {
           <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{String(demandes.length)}</Text>
         </View>
       ) : null}
+      {/* COLL-FIX2 (T10) : « 0 », discret, quand la file est lue et vide (« À traiter »). */}
+      {!collectiviteId && enAttente.isSuccess && demandes.length === 0 ? (
+        <Text style={[Fonts.p3Bold, Fonts.neutral300]}>0</Text>
+      ) : null}
       {collectiviteId ? (
         <Text style={[Fonts.p2Bold, Fonts.primary500]}>
           {t('collectiviteAccueil.console.ouvrirFile', 'Ouvrir dans la file')}

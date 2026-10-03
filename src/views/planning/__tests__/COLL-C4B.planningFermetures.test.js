@@ -371,6 +371,16 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
     expect(grille().events.filter((/** @type {any} */ e) => !e.raw?.closureBand)).toHaveLength(3);
   });
 
+  // 🎨 COLL-FIX2 (03/10), planche 25 (tournée T10, T10_C25_5) : un jour FERMÉ disait encore
+  // « 1 place libre au plus chargé ».
+  it('1b. un jour fermé : la ligne de la place dit la fermeture, pas une place libre', async () => {
+    gereLaVille();
+    avecFermeture();
+    const arbre = await rendre();
+    const ligne = textes(arbre).find((/** @type {string} */ texte) => / à la fois · /.test(texte));
+    expect(ligne).toBe('2 équipes à la fois · fermeture ce jour-là');
+  });
+
   it('2. la mairie touche la plage : Modifier ou Rouvrir', async () => {
     gereLaVille();
     avecFermeture();

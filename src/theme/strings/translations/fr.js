@@ -4792,6 +4792,7 @@ export default {
       accepterMet: 'Accepter met {{equipes}} équipes pour {{places}} places.',
       complet: 'Complet',
       compteurA11y: '{{nombre}} demandes en attente',
+      compteurA11yUne: '1 demande en attente',
       erreurTexte: 'Vérifiez la connexion, puis réessayez. Rien n’a été perdu.',
       erreurTitre: 'Les demandes n’ont pas pu être lues.',
       placesLibres: '{{nombre}} places libres',
@@ -4821,6 +4822,7 @@ export default {
     compte: {
       gestionnaire: 'Gestionnaire · {{ville}}',
       rangeeA11y: '{{nom}}, ma collectivité',
+      rangeeA11yDemande: '{{nom}}, ma collectivité, 1 demande en attente',
       rangeeA11yDemandes: '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
       retourMonCompte: 'Mon compte',
     },
@@ -4971,6 +4973,8 @@ export default {
     nousContacter: 'Nous contacter',
     porte: {
       a11y: 'Ma collectivité, {{nom}}',
+      // COLL-FIX2 (03/10) — le singulier des trois compteurs (planche 31).
+      a11yDemande: 'Ma collectivité, {{nom}} : 1 demande à trancher',
       a11yDemandes: 'Ma collectivité, {{nom}} : {{nombre}} demandes à trancher',
       demandes: 'Ma collectivité · {{nombre}} demandes',
       retourAccueil: 'Accueil',
@@ -5555,6 +5559,8 @@ export default {
     },
     creneau: {
       ligne: '{{team}} · chaque {{day}} {{hours}}',
+      // COLL-FIX2 (03/10) — un créneau sur une partie de la saison (planche 42).
+      lignePeriode: '{{team}} · chaque {{day}} {{hours}} · {{periode}}',
       toutLeClub: 'Tout le club',
     },
     fiche: {
@@ -5738,6 +5744,8 @@ export default {
       enAttenteJour_other: '{{count}} demandes en attente sur ce jour.',
       enAttenteSemaine_one: '{{count}} demande en attente cette semaine.',
       enAttenteSemaine_other: '{{count}} demandes en attente cette semaine.',
+      // COLL-FIX2 (03/10) — un jour fermé (planche 25).
+      fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
       libreSemaine: 'libre toute la semaine',
       origineAttente: 'Demande en attente de décision',
@@ -5832,6 +5840,19 @@ export default {
       depasse: 'Accepter met {{equipes}} pour {{places}}.',
       libre: 'Accepter ne gêne personne.',
     },
+    // COLL-FIX2 (03/10) — ce que le serveur fera de la séance, dit pendant la saisie (planche 43).
+    decision: {
+      // eslint-disable-next-line max-len
+      complet: 'C’est complet : l’installation n’accepte pas d’équipe en plus. Choisis une autre heure.',
+      // eslint-disable-next-line max-len
+      creneauDuClub: 'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+      dirigeant: 'Ton club est déjà au complet dans son créneau : ton dirigeant décidera.',
+      // eslint-disable-next-line max-len
+      mairieLibre: 'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+      posee: 'Ton entraînement sera posé tout de suite.',
+      poser: 'Poser l’entraînement',
+      quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
+    },
     erreur: {
       titre: 'Les demandes n’ont pas pu être lues.',
     },
@@ -5861,6 +5882,10 @@ export default {
       et: ' et ',
     },
     lieu: {
+      // COLL-FIX2 (03/10) — le lieu avec son article (planche 25).
+      articleFeminin: 'la {{nom}}',
+      articleMasculin: 'le {{nom}}',
+      articleVoyelle: 'l’{{nom}}',
       feminin: 'à la {{nom}}',
       masculin: 'au {{nom}}',
       voyelle: 'à l’{{nom}}',
@@ -5899,6 +5924,8 @@ export default {
     place: {
       complet: 'Il y a déjà {{equipes}} : c’est complet.',
       dejaLa: '{{noms}}, de {{debut}} à {{fin}}.',
+      // COLL-FIX2 (03/10) — un occupant dont la fin est inconnue (planche 31).
+      dejaLaDes: '{{noms}}, dès {{debut}}.',
       personne: 'Personne n’y est : il reste {{places}}.',
       premiereDate: 'Pour la première date, le {{jour}} :',
       reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
@@ -5946,6 +5973,8 @@ export default {
       fermer: 'Fermer',
       le: 'le {{jour}}',
       personne: 'Aucune séance n’est touchée : aucun club n’est prévenu.',
+      // COLL-FIX2 (03/10) — un seul club prévenu (planche 25).
+      prevenu: '{{clubs}} sera prévenu. Ses séances restent à sa charge.',
       prevenus: '{{clubs}} seront prévenus. Leurs séances restent à leur charge.',
       titreBloquer: 'Bloquer {{installation}} {{jours}}, de {{debut}} à {{fin}} ?',
       titreFermer: 'Fermer {{installation}} {{jours}} ?',
@@ -21749,6 +21778,11 @@ export default {
     unableToSaveYourArrival: "Impossible d'enregistrer ton arrivée.",
     unableToSaveYourDelay: "Impossible d'enregistrer ton retard.",
     unableToSaveYourParticipation: "Impossible d'enregistrer ta participation pour le moment.",
+    // COLL-FIX2 (03/10) — D33 : la Ville prévenue d'une annulation, dit au club (planche 46).
+    villePrevenue: {
+      corps: 'La {{ville}} est prévenue : la place se libère.',
+      titre: 'C’est annulé',
+    },
   },
   useEventShowcase: {
     variants: {

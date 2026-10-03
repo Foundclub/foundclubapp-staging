@@ -197,6 +197,24 @@ describe('COLL-C2C — Tes installations en 3 groupes', () => {
     expect(textes(rendre())).toContain('Tout le club · chaque samedi 10:00 – 12:00');
   });
 
+  // 🎨 COLL-FIX2 (03/10), planche 42 (tournée T10, T10_C42_1) : un créneau RÉPARTI se lisait en
+  // deux lignes identiques (« Tout le club · chaque mercredi » et « U15 · chaque mercredi »).
+  // La période s'écrit quand le créneau ne couvre pas toute la saison ; pas sinon.
+  it('un créneau sur une partie de la saison dit sa période ; toute la saison, rien de plus', () => {
+    avecInstallations([deLaVille({
+      ...GYMNASE,
+      clubSeasonSlots: [
+        { ...creneau('s4', 3, '18:00', '19:30', null), validFrom: '2026-09-01', validUntil: '2026-10-06' },
+        { ...creneau('s5', 3, '18:00', '19:30'), validFrom: '2026-10-07', validUntil: '2027-06-30' },
+        { ...creneau('s6', 2, '17:30', '19:00'), validFrom: '2026-09-01', validUntil: '2027-06-30' },
+      ],
+    })]);
+    const lus = textes(rendre());
+    expect(lus).toContain('Tout le club · chaque mercredi 18:00 – 19:30 · 1 sept. – 6 oct.');
+    expect(lus).toContain('U15 · chaque mercredi 18:00 – 19:30 · 7 oct. – 30 juin');
+    expect(lus).toContain('U15 · chaque mardi 17:30 – 19:00');
+  });
+
   it('la carte dit ce qu est l installation : adresse pour le groupe 2, horaires pour le groupe 3', () => {
     const lus = textes(rendre());
     expect(lus).toContain('Gymnase · 2 équipes à la fois · 12 rue des Tilleuls');

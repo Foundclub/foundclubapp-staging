@@ -769,10 +769,15 @@ function Profile({ navigation, route }) {
       const badge = index === 0 ? nombreDemandesVille : 0;
       const nom = collectivite?.name || '';
       return {
+        // COLL-FIX2 (T10) : le singulier a sa phrase (« 1 demandes » vu sur la porte jumelle).
         a11y: badge > 0
           ? t(
-            'collectiviteAccueil.compte.rangeeA11yDemandes',
-            '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
+            badge === 1
+              ? 'collectiviteAccueil.compte.rangeeA11yDemande'
+              : 'collectiviteAccueil.compte.rangeeA11yDemandes',
+            badge === 1
+              ? '{{nom}}, ma collectivité, 1 demande en attente'
+              : '{{nom}}, ma collectivité, {{nombre}} demandes en attente',
             { nom, nombre: badge, ...SANS_ECHAPPEMENT },
           )
           : t('collectiviteAccueil.compte.rangeeA11y', '{{nom}}, ma collectivité', {

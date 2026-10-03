@@ -257,8 +257,16 @@ function CollectiviteHome() {
     </TouchableOpacity>
   );
 
+  // 🎨 COLL-FIX2 (03/10), planche 2 (tournée T10) : « Vos clubs » s'affichait « Vos ». Un texte
+  // GRAS de plusieurs mots, dans une boîte à sa largeur mesurée, perd son dernier mot sous
+  // Android 16 (mémoire piege-android16-gras-dernier-mot-perdu) : la boîte est ÉTIRÉE.
   const titreSection = (/** @type {string} */ libelle) => (
-    <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>{libelle}</Text>
+    <Text
+      accessibilityRole="header"
+      style={[Fonts.h4Bold, Fonts.neutral00, { flexGrow: 1, flexShrink: 1 }]}
+    >
+      {libelle}
+    </Text>
   );
 
   const squelette = (/** @type {number} */ hauteur) => (
@@ -533,11 +541,13 @@ function CollectiviteHome() {
         <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
           {titreSection(t('collectiviteAccueil.attente.titre', 'Ce qui vous attend'))}
           <View
-            accessibilityLabel={t(
-              'collectiviteAccueil.attente.compteurA11y',
-              '{{nombre}} demandes en attente',
-              { nombre: demandes.length },
-            )}
+            accessibilityLabel={demandes.length === 1
+              ? t('collectiviteAccueil.attente.compteurA11yUne', '1 demande en attente')
+              : t(
+                'collectiviteAccueil.attente.compteurA11y',
+                '{{nombre}} demandes en attente',
+                { nombre: demandes.length },
+              )}
             style={[
               Alignments.alignCenter,
               Alignments.justifyCenter,
@@ -876,7 +886,10 @@ function CollectiviteHome() {
           source={Images.arrowLeft}
           style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.primary500]}
         />
-        <Text style={[Fonts.p2Bold, Fonts.primary500]}>{retour}</Text>
+        {/* COLL-FIX2 (T10) : « ← AS Montrivage » s'affichait « ← AS » : même parade. */}
+        <Text style={[Fonts.p2Bold, Fonts.primary500, { flexGrow: 1, flexShrink: 1 }]}>
+          {retour}
+        </Text>
       </TouchableOpacity>
     );
   } else if (enTeteEspace) {

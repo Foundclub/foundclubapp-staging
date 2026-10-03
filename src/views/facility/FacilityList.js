@@ -1089,12 +1089,18 @@ function FacilityList() {
           <View style={{ gap: 2 }}>
             {item.clubSeasonSlots.map((/** @type {any} */ creneau) => {
               const morceaux = clubSlotParts(creneau);
+              // COLL-FIX2 (T10) : la période, quand le créneau ne couvre pas toute la saison.
               const ligne = t(
-                'clubInstallations.creneau.ligne',
-                '{{team}} · chaque {{day}} {{hours}}',
+                morceaux.period
+                  ? 'clubInstallations.creneau.lignePeriode'
+                  : 'clubInstallations.creneau.ligne',
+                morceaux.period
+                  ? '{{team}} · chaque {{day}} {{hours}} · {{periode}}'
+                  : '{{team}} · chaque {{day}} {{hours}}',
                 {
                   day: morceaux.day,
                   hours: morceaux.hours,
+                  periode: morceaux.period,
                   team: morceaux.team
                     || t('clubInstallations.creneau.toutLeClub', 'Tout le club'),
                   ...SANS_ECHAPPEMENT,
