@@ -5681,6 +5681,11 @@ export default {
       travaux: 'Works',
       vacances: 'Holidays',
     },
+    // COLL-C4B-BIS (03/10) — the right-hand panel of the planning, on desktop (board 25).
+    panneau: {
+      fermer: 'Close the panel',
+      titreFermer: 'Close the facility',
+    },
     planning: {
       aDeplacer: 'to move',
       bloque: 'Blocked by the town · {{motif}}',

@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -42,6 +42,7 @@ import {
   closureDaysLabel,
   closureHoursLabel,
   closureTagLabel,
+  closureTouchesBlock,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
   capitalize,
@@ -69,6 +70,7 @@ import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { PanneauDeFermeture } from '@/views/collectivite/CollectiviteFermeture';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -341,13 +343,31 @@ function PlanningWeekFullscreen() {
   // COLL-C2B (02/10) — design P5-jour : une place EN ATTENTE (contrat C2A §7, `pending`) se lit
   // « en attente » a sa place ; un MEMBRE voit son club en couleur et les autres en gris.
   const normalizedEvents = useMemo(() => normalizePlanningItems(data?.data || []), [data]);
+  // 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») — la fermeture EN SAISIE dans le panneau de
+  // droite (ordinateur) : « le jour ferme se hachure pendant la saisie, et les seances touchees se
+  // cernent d orange ». Rien n est ecrit tant que la mairie n a pas confirme.
+  const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
   const events = useMemo(() => {
     if (!isFacilitySource) return normalizedEvents;
     return assignClubPlanningColors(normalizedEvents).map((/** @type {any} */ evenement) => {
       const brut = evenement.raw || {};
       const duClubDuLecteur = Boolean(evenement.documentId) || brut.isOwnClub === true;
+      // Le brouillon cerne ce qu il toucherait ; en MODIFIANT une fermeture, il libere aussi ce
+      // qu elle ne touche plus (la regle du serveur, §13.3 : closureTouchesBlock).
+      const touche = closureTouchesBlock(evenement, brouillon);
+      const liberee = Boolean(brouillon?.documentId)
+        && brut.closure?.documentId === brouillon.documentId;
+      const cerne = touche || liberee
+        ? {
+          raw: {
+            ...brut,
+            closure: touche ? { documentId: brouillon.documentId, kind: brouillon.kind } : null,
+          },
+        }
+        : {};
       return {
         ...evenement,
+        ...cerne,
         displayColor: readsAsOrganizer || duClubDuLecteur
           ? evenement.displayColor
           : Colors.neutral500,
@@ -358,7 +378,7 @@ function PlanningWeekFullscreen() {
           : evenement.participationStatus,
       };
     });
-  }, [Colors.neutral500, isFacilitySource, normalizedEvents, readsAsOrganizer]);
+  }, [Colors.neutral500, brouillon, isFacilitySource, normalizedEvents, readsAsOrganizer]);
   const hasEvents = events.length > 0;
   // SPEC Collectivites §2 C : la mairie touche le bloc d'un AUTRE club -> une fiche en
   // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
@@ -715,9 +735,18 @@ function PlanningWeekFullscreen() {
   const ouvertureDuJour = toMinutes(facilityMeta?.openingTime) ?? 8 * 60;
   const fermetureDuJour = toMinutes(facilityMeta?.closingTime) ?? 22 * 60;
   // COLL-C4B (02/10) — les plages fermees ou bloquees de la fenetre (`meta.closures`, contrat §13).
+  // COLL-C4B-BIS : plus le brouillon du panneau (a la place de la fermeture qu il modifie).
+  const fermeturesDuServeur = Array.isArray(data?.meta?.closures) ? data.meta.closures : [];
+  const fermeturesDessinees = brouillon
+    ? [
+      ...fermeturesDuServeur.filter((/** @type {any} */ fermeture) => !brouillon.documentId
+        || fermeture?.documentId !== brouillon.documentId),
+      { ...brouillon, enSaisie: true },
+    ]
+    : fermeturesDuServeur;
   const bandesDeFermeture = isFacilitySource
     ? normalizePlanningItems(closureBandsForRange(
-      data?.meta?.closures,
+      fermeturesDessinees,
       planningRange,
       { closing: fermetureDuJour, opening: ouvertureDuJour },
       (/** @type {any} */ fermeture) => closureBandLabel(t, fermeture),
@@ -862,6 +891,36 @@ function PlanningWeekFullscreen() {
   // Design P5-semaine-ordi : sur le site, la mairie choisit l installation en haut (une
   // pastille a la couleur de chacune) ; un bloc ouvert = un panneau a droite.
   const isDesktop = useIsDesktop();
+  // 🖥️ COLL-C4B-BIS — ouvert par « Fermer une installation » sur ordinateur (CollectiviteFermeture
+  // cede la place au planning) : le panneau de la fermeture, d emblee.
+  const fermetureDemandee = route?.params?.fermeture || null;
+  useEffect(() => {
+    if (!isDesktop || !fermetureDemandee) return;
+    const lu = route?.params || {};
+    setPanneau({
+      closureId: lu.closureId || null,
+      date: lu.date || null,
+      endTime: lu.endTime || null,
+      mode: fermetureDemandee === 'bloquer' ? 'bloquer' : 'fermer',
+      startTime: lu.startTime || null,
+      type: 'fermeture',
+    });
+  // La demande de l adresse ne vaut qu a l ouverture.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fermetureDemandee, isDesktop]);
+  // Le jour saisi doit SE VOIR : la page le rejoint quand il est hors de la page affichee.
+  const debutDuBrouillon = brouillon?.startDate || null;
+  const dernierDebutSuivi = useRef(/** @type {string | null} */ (null));
+  useEffect(() => {
+    if (!debutDuBrouillon || debutDuBrouillon === dernierDebutSuivi.current) return;
+    dernierDebutSuivi.current = debutDuBrouillon;
+    const jour = parseISO(debutDuBrouillon);
+    if (Number.isNaN(jour.getTime())) return;
+    const visible = vue === VUES.jour
+      ? isSameDay(jour, currentDate)
+      : debutDuBrouillon >= planningRange.from && debutDuBrouillon <= planningRange.to;
+    if (!visible) setCurrentDate(jour);
+  }, [currentDate, debutDuBrouillon, planningRange.from, planningRange.to, vue]);
   const installationsDeLaVille = useCollectiviteInstallations(
     isFacilitySource && isDesktop ? managingCollectiviteId : null,
   );
@@ -888,6 +947,8 @@ function PlanningWeekFullscreen() {
     if (!managingCollectiviteId) return undefined;
     return (/** @type {any} */ event) => {
       if (event?.raw?.closureBand) {
+        // COLL-C4B-BIS : la plage du brouillon n est pas encore une fermeture.
+        if (event.raw.closureBand.enSaisie) return;
         setReadOnlyBlock(null);
         setFermetureOuverte(event.raw.closureBand);
         return;
@@ -1117,7 +1178,23 @@ function PlanningWeekFullscreen() {
   })();
 
   // ─── COLL-C4B (02/10) — design P4v3-fermer : la plage touchee, et « Bloquer pour la Ville » ───
+  // 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») : sur ordinateur, le formulaire s ouvre dans le
+  // panneau de droite, la semaine reste visible ; le telephone garde l ecran plein
+  // (P4v3-fermer-tel).
   const ouvrirLaFermeture = (/** @type {Record<string, any>} */ extra) => {
+    if (isDesktop) {
+      setFermetureOuverte(null);
+      setReadOnlyBlock(null);
+      setPanneau({
+        closureId: extra.closureId || null,
+        date: extra.date || null,
+        endTime: extra.endTime || null,
+        mode: extra.mode || null,
+        startTime: extra.startTime || null,
+        type: 'fermeture',
+      });
+      return;
+    }
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteFermeture, {
       collectiviteId: managingCollectiviteId,
       facilityId,
@@ -1218,6 +1295,26 @@ function PlanningWeekFullscreen() {
           onClose={fermerPanneau}
           onModify={(/** @type {any} */ creneau) => setPanneau({ creneau, type: 'modifier' })}
           slot={panneau.creneau}
+        />
+      </View>
+    );
+  } else if (panneau?.type === 'fermeture' && isDesktop && peutAttribuer) {
+    // 🖥️ COLL-C4B-BIS : fermer, bloquer, modifier — le panneau de droite (P4v3-fermer-ordi).
+    panneauRendu = (
+      <View style={Spaces.padding[16]}>
+        <PanneauDeFermeture
+          closureId={panneau.closureId}
+          collectiviteId={managingCollectiviteId}
+          date={panneau.date}
+          endTime={panneau.endTime}
+          facilityId={facilityId}
+          facilityName={contextDetailLabel}
+          key={`fermeture-${panneau.closureId || panneau.mode || 'fermer'}-${panneau.date || ''}`}
+          mode={panneau.mode}
+          onCancel={fermerPanneau}
+          onDone={fermerPanneau}
+          onDraftChange={setBrouillon}
+          startTime={panneau.startTime}
         />
       </View>
     );
