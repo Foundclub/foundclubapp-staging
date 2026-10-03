@@ -60,6 +60,7 @@ describe('collectiviteDisplay — console super-admin (D61)', () => {
       clubsCount: 2,
       documentId: 'v',
       isActive: false,
+      membersCount: null,
       name: 'Ville de V',
       type: 'commune',
     });

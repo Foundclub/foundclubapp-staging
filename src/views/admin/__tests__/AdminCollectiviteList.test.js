@@ -337,9 +337,10 @@ describe('D61 — écran 1 : la liste des collectivités (planche P2-liste)', ()
     const arbre = await monter();
     // eslint-disable-next-line max-len
     expect(textes(arbre.root)).toEqual(expect.arrayContaining(['Collectivité', 'État', 'Clubs rattachés']));
-    // COLL-CONSOLE-BIS (03/10) — + « Activée le » : « — » pour une Ville inactive.
+    // COLL-CONSOLE-BIS (03/10) — + « Adhérents couverts » (« — » : ce serveur doublé ne les
+    // compte pas) et « Activée le » (« — » pour une Ville inactive).
     expect(textes(carte(arbre, 'ville-montrivage'))).toEqual([
-      'M', 'Ville de Montrivage', 'Commune', 'Inactive', '3', '—',
+      'M', 'Ville de Montrivage', 'Commune', 'Inactive', '3', '—', '—',
     ]);
   });
 

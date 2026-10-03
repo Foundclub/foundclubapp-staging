@@ -214,16 +214,18 @@ export const readCollectiviteCreateForm = (form) => {
  * s il vaut VRAI : une ligne d avant le lot 1d lit NULL, donc inactive (meme regle que
  * le serveur, collectivite service `isActive`).
  * COLL-CONSOLE-BIS (03/10) — + `activatedAt` (la date de l activation en cours, ou null : une
- * Ville activee avant le lot, ou inactive).
+ * Ville activee avant le lot, ou inactive) ; + `membersCount`, les adherents couverts, comptes
+ * par le serveur (null : compteur en panne ou serveur ancien — jamais un faux 0).
  * @param {any} entry - Une ligne de `/superadmin/content/.../list`.
  * @returns {{ activatedAt: string | null, clubsCount: number, documentId: string,
- *   isActive: boolean, name: string, type: string }} La ligne.
+ *   isActive: boolean, membersCount: number | null, name: string, type: string }} La ligne.
  */
 export const toAdminCollectiviteRow = (entry) => ({
   activatedAt: typeof entry?.activatedAt === 'string' ? entry.activatedAt : null,
   clubsCount: Array.isArray(entry?.clubs) ? entry.clubs.length : 0,
   documentId: String(entry?.documentId || ''),
   isActive: entry?.isActive === true,
+  membersCount: Number.isInteger(entry?.membersCount) ? entry.membersCount : null,
   name: String(entry?.name || ''),
   type: String(entry?.type || ''),
 });

@@ -5553,6 +5553,7 @@ export default {
     },
     liste: {
       colonneActivee: 'Activée le',
+      colonneAdherents: 'Adhérents couverts',
     },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.

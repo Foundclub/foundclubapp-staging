@@ -65,8 +65,8 @@ const LARGEUR_TABLEAU = 768;
  *   - chargement, vide (qui porte la création), erreur, liste tronquée, filtre sans résultat.
  * COLL-CONSOLE-BIS (03/10/2026) — la colonne « Activée le » du tableau (planche 13) : la date
  * posée par le serveur à l'activation, ou « — » (une Ville activée avant le lot, ou inactive).
- * ⛔ PAS FAIT (planche P2-liste-ordi) : la colonne « Adhérents couverts » (le serveur ne rend pas
- * la somme des membres).
+ * COLL-CONSOLE-BIS (03/10/2026) — la colonne « Adhérents couverts » (planche 13) : la somme des
+ * membres des clubs rattachés, comptée par le serveur dans la même lecture ; « — » sans nombre.
  * Seul un SuperAdmin arrive ici : la pile AdminStack n'est montée que pour lui
  * (PrivateNavigator) et le serveur refuse la lecture à tout autre compte (403, affiché).
  * @returns {import('react').ReactElement} L'écran.
@@ -215,6 +215,9 @@ function AdminCollectiviteList() {
         </View>
         <View style={{ flex: 1 }}><EtatCollectivite isActive={ligne.isActive} /></View>
         <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>{String(ligne.clubsCount)}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
+          {ligne.membersCount === null ? '—' : String(ligne.membersCount)}
+        </Text>
         <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
           {ligne.isActive ? formatDateWithDayPrefix(ligne.activatedAt, { fallback: '—' }) : '—'}
         </Text>
@@ -392,6 +395,10 @@ function AdminCollectiviteList() {
               {enTeteColonne(t('collectiviteConsole.liste.colonneCollectivite', 'Collectivité'), 3)}
               {enTeteColonne(t('collectiviteConsole.liste.colonneEtat', 'État'), 1)}
               {enTeteColonne(t('collectiviteConsole.liste.colonneClubs', 'Clubs rattachés'), 1)}
+              {enTeteColonne(
+                t('collectiviteConsoleBis.liste.colonneAdherents', 'Adhérents couverts'),
+                1,
+              )}
               {enTeteColonne(t('collectiviteConsoleBis.liste.colonneActivee', 'Activée le'), 1)}
               <View style={{ width: 18 }} />
             </View>
