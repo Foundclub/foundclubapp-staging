@@ -134,7 +134,7 @@ function Button({
           >
             {/* ST-MONMATCH (écran 9, état 4) — la roue À CÔTÉ du libellé, sur demande. */}
             {isLoading ? (
-              <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
+              <Loader color={/** @type {string} */ (ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100)} />
             ) : null}
             {title ? (
               // ROLES2 — une seule ligne (hauteur fixe) : la police rétrécit

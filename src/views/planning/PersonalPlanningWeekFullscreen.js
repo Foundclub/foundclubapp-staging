@@ -613,7 +613,7 @@ function PlanningWeekFullscreen() {
     // COLL-FIX2 (03/10), planche 25 (T10_C25_5) : un jour FERMÉ (toute la journée) disait encore
     // « 1 place libre au plus chargé ». La fermeture le dit, pas une place.
     const jourFerme = vue === VUES.jour
-      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((fermeture) => (
+      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((/** @type {any} */ fermeture) => (
         fermeture?.kind !== 'block'
         && closureCoversDay(fermeture, format(currentDate, 'yyyy-MM-dd'))
       ));

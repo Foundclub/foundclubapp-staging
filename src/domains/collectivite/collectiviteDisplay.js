@@ -151,7 +151,7 @@ export const isOfficialCollectiviteName = (name, type) => {
  * et « L’ » ne se contractent pas (« Ville de La Rochelle »). Un nom FRANCAIS, quelle que soit
  * la langue de l ecran, comme le prefixe que pose le formulaire (le dictionnaire anglais porte
  * les memes valeurs).
- * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (TFunction d i18next).
  * @param {unknown} nom - Le nom de la commune, tel que le referentiel l ecrit.
  * @returns {string} Le nom officiel, ou '' sans nom.
  */

@@ -697,7 +697,7 @@ function AdminCollectiviteDetail() {
               <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
                 <View
                   style={{
-                    backgroundColor: resolveFacilityPlanningColor(installation),
+                    backgroundColor: resolveFacilityPlanningColor(installation) ?? undefined,
                     borderRadius: 6,
                     height: 12,
                     width: 12,

@@ -163,7 +163,7 @@ export const lectureDeLaSerie = (demande) => {
   const pleines = dates.filter((/** @type {any} */ date) => (
     Number(date?.taken || 0) >= Number(date?.maxSlots || 1)
   ));
-  const uniforme = pris.every((valeur) => valeur === pris[0]);
+  const uniforme = pris.every((/** @type {number} */ valeur) => valeur === pris[0]);
   return {
     au: format(dates[dates.length - 1].debut, 'd MMMM', { locale }),
     capacite,

@@ -14,7 +14,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { lieuAvecPreposition } from './collectiviteDemandes';
 
-/** @typedef {(cle: string, repli?: any, options?: Record<string, unknown>) => string} Traduire */
+/** @typedef {any} Traduire - La traduction (TFunction d i18next, qui ne se reduit pas a une signature simple). */
 
 /** Les trois périodes de la page, dans l'ordre du sélecteur. */
 export const PERIODES_CHIFFRES = /** @type {const} */ (['semaine', 'mois', 'saison']);
@@ -175,8 +175,11 @@ export const phraseDelai = (t, jours) => {
  */
 export const phraseSeancesDesClubs = (t, chiffres) => {
   const installations = (Array.isArray(chiffres?.installations) ? chiffres.installations : [])
-    .filter((ligne) => (nombre(ligne?.seances) ?? 0) > 0);
-  const total = installations.reduce((somme, ligne) => somme + Number(ligne.seances), 0);
+    .filter((/** @type {any} */ ligne) => (nombre(ligne?.seances) ?? 0) > 0);
+  const total = installations.reduce(
+    (/** @type {number} */ somme, /** @type {any} */ ligne) => somme + Number(ligne.seances),
+    0,
+  );
   if (total === 0) return t('collectiviteChiffres.clubs.aucune', 'Aucune séance sur la période.');
   if (installations.length === 1) {
     return t('collectiviteChiffres.clubs.toutesAu', {
