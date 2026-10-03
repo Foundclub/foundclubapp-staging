@@ -5856,11 +5856,19 @@ function Conversation({ navigation, route }) {
    * Render the empty conversation placeholder.
    * La liste est inversee (`inverted`), donc gifted-chat rend ce contenu tel quel
    * dans une FlatList retournee : on retourne le bloc a notre tour.
+   * 🧯 FINITIONS12-COLL (03/10) — COMME la liste le retourne : sur Android sur les DEUX axes
+   * (`scale: -1`, @react-native/virtualized-lists, `verticallyInverted`), ailleurs sur un seul
+   * (`scaleY: -1`). Tournée T11 : redressé sur un seul axe, le texte s'affichait en miroir
+   * sur Android (« à l'envers »). La liste ne le fait pas elle-même : gifted-chat passe une
+   * fonction qui ignore le `style` que la liste lui donne.
    * @returns {React.ReactElement} Rendered empty state
    */
+  const redresse = Platform.OS === 'android'
+    ? { transform: [{ scale: -1 }] }
+    : { transform: [{ scaleY: -1 }] };
   const renderChatEmpty = () => (filDeLaVille.estFil ? (
     // COLL-C4A2 — la première phrase d'un fil de la Ville : à quoi il sert, qui le lit.
-    <View style={[Alignments.fill, Alignments.justifyCenter, { transform: [{ scaleY: -1 }] }]}>
+    <View style={[Alignments.fill, Alignments.justifyCenter, redresse]}>
       <VideDuFilDeLaVille
         chat={chatData}
         clubsCount={filDeLaVille.clubsCount}
@@ -5873,7 +5881,7 @@ function Conversation({ navigation, route }) {
       Alignments.justifyCenter,
       Alignments.alignCenter,
       Spaces.padding[24],
-      { transform: [{ scaleY: -1 }] },
+      redresse,
     ]}
     >
       <Text style={[Fonts.h4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
@@ -5999,7 +6007,12 @@ function Conversation({ navigation, route }) {
               return;
             }
             if (props.onSend) {
-              props.onSend({ text: props.text }, true);
+              // 🧯 FINITIONS12-COLL (03/10) — `false` : gifted-chat ne vide PAS la barre lui-même.
+              // Avec `true`, il effaçait le texte AVANT `onSend` (lib/GiftedChat/index.js,
+              // `_onSend`) : sans connexion temps réel, la garde MSG1 gardait un champ déjà vide
+              // (tournée T11, C47_3 : texte perdu, sans « Réessayer »). `onSend` vide le champ
+              // lui-même, et seulement si le message est parti.
+              props.onSend({ text: props.text }, false);
             }
           }}
           style={{
