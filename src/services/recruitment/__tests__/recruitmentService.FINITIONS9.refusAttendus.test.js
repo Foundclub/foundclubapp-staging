@@ -67,6 +67,13 @@ describe('FINITIONS9 · point 4 — un refus attendu n est pas une panne, avec o
     expect(consoleError).not.toHaveBeenCalled();
   });
 
+  it('FINITIONS10 — « Tu as déjà postulé à cette annonce. » (ex-anglais) est un refus attendu', async () => {
+    mockPost.mockRejectedValue(refus400('Tu as déjà postulé à cette annonce.'));
+
+    await expect(applyToRecruitmentAd('ad-1', {})).rejects.toBeDefined();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
   it('JUMEAU : une vraie panne (500) est toujours journalisée', async () => {
     mockPost.mockRejectedValue({ message: 'Internal Server Error', status: 500 });
 

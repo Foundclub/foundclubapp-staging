@@ -284,6 +284,35 @@ describe('FINITIONS9 · point 4 — « déjà candidaté » : Hugo lit « Demand
   });
 });
 
+// FINITIONS10 (03/10) — les 2 phrases qui étaient encore en ANGLAIS sur la même route.
+// Ancien serveur : « You have already applied to this ad » — l'écran ne la reconnaissait pas
+// (il affichait la phrase, sans changer d'état) ; c'est inchangé. Nouveau serveur : « Tu as déjà
+// postulé à cette annonce. » — reconnue par « deja postule » : « Demande en attente », ce qui est
+// juste (une candidature existe). Ordre de déploiement indifférent : aucune combinaison ne recule.
+describe('FINITIONS10 · point 1 — « Tu as déjà postulé » : Hugo lit « Demande en attente »', () => {
+  it('🚨 NOUVELLE forme (serveur traduit) : « Demande en attente »', async () => {
+    const tree = await postulerEtEtreRefuse('Tu as déjà postulé à cette annonce.');
+
+    expect(findButton(tree, 'Demande en attente')?.props.disabled).toBe(true);
+    expect(Alert.alert).toHaveBeenCalledWith('Candidature', 'Tu as déjà postulé à cette annonce.');
+  });
+
+  it('ANCIENNE forme (serveur de prod actuel) : la phrase s affiche, « Postuler » reste, comme avant', async () => {
+    const tree = await postulerEtEtreRefuse('You have already applied to this ad');
+
+    expect(findButton(tree, 'Postuler')).toBeDefined();
+    expect(Alert.alert).toHaveBeenCalledWith('Candidature', 'You have already applied to this ad');
+  });
+
+  it('« Cette annonce n est plus active. » s affiche telle quelle et ne pose aucun état', async () => {
+    const tree = await postulerEtEtreRefuse("Cette annonce n'est plus active.");
+
+    expect(findButton(tree, 'Postuler')).toBeDefined();
+    expect(findButton(tree, 'Demande en attente')).toBeUndefined();
+    expect(Alert.alert).toHaveBeenCalledWith('Candidature', "Cette annonce n'est plus active.");
+  });
+});
+
 describe('FINITIONS9 · point 4 — jumeau (ce qui ne bouge pas)', () => {
   it('un refus qui ne dit rien de l état (« poste complet ») laisse « Postuler »', async () => {
     const tree = await postulerEtEtreRefuse('Ce poste est déjà complet.');
