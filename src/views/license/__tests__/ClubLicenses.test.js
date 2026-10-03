@@ -537,7 +537,7 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
       const texte = texteDeLEcran(monterDetail());
 
       expect(texte).toContain('Cotisations');
-      expect(texte).toContain('Detail complet de la campagne Cotisation licences 2026/2027.');
+      expect(texte).toContain('Détail complet de la campagne Cotisation licences 2026/2027.');
     });
 
     it('garde ses 4 cartes de statistiques, qui y servent de filtre', () => {
