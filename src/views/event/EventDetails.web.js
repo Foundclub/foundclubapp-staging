@@ -136,7 +136,7 @@ const getParticipationLabel = (effectiveStatus) => {
   if (effectiveStatus === 'missing') {
     return i18next.t(
       'eventDetails.youReMarkedAbsent',
-      'Tu es signale absent',
+      'Tu es signalé absent',
     );
   }
   return i18next.t('eventDetails.noAnswer', 'Aucune réponse');

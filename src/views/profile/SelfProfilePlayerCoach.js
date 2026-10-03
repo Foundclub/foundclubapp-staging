@@ -29,6 +29,7 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 // eslint-disable-next-line max-len
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
 import {
   buildChoiceOptions,
   buildProfileFormValues,
@@ -676,7 +677,7 @@ function SelfProfilePlayerCoach({ navigation }) {
         {/* ── Voir mon profil comme les autres ───────────────────────── */}
         <TouchableOpacity
           accessibilityRole="button"
-          onPress={() => navigation.navigate(RouteNames.UserDetails, {
+          onPress={() => ouvrirUneVueDuProfil(navigation, {
             preview: true,
             userId,
           })}
@@ -705,7 +706,7 @@ function SelfProfilePlayerCoach({ navigation }) {
             suit le sport, et ce qu elle compte. L entraineur n a pas de rangee (PE-1). */}
         {isPlayer ? (
           <MySeasonCard
-            onPressSeeAll={() => navigation.navigate(RouteNames.UserDetails, { userId, view: 'myStats' })}
+            onPressSeeAll={() => ouvrirUneVueDuProfil(navigation, { userId, view: 'myStats' })}
             sportHint={playerTeams[0]?.activities?.[0]?.name || ''}
             stats={personalStats}
           />
@@ -1033,7 +1034,7 @@ function SelfProfilePlayerCoach({ navigation }) {
                 icon={Images.users}
                 Images={Images}
                 label={t('userDetails.sections.coachFeedback', 'Retours du coach')}
-                onPress={() => navigation.navigate(RouteNames.UserDetails, {
+                onPress={() => ouvrirUneVueDuProfil(navigation, {
                   userId,
                   view: 'coachFeedback',
                 })}
@@ -1051,7 +1052,7 @@ function SelfProfilePlayerCoach({ navigation }) {
                 icon={Images.trophy}
                 Images={Images}
                 label={t('myStats.rowLabel', 'Mes stats')}
-                onPress={() => navigation.navigate(RouteNames.UserDetails, { userId, view: 'myStats' })}
+                onPress={() => ouvrirUneVueDuProfil(navigation, { userId, view: 'myStats' })}
                 surfaces={surfaces}
                 value={t('myStats.rowValue', '{{count}} match', {
                   count: Number(personalStats?.overall?.matches || 0),

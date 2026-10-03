@@ -5823,9 +5823,14 @@ export default {
     // COLL-AFFICHE (03/10/2026) — "A poster for the facility" (board 30 B, Adel's decision "affiche A").
     affiche: {
       detail: 'PDF · one week · {{installation}}',
+      // COLL-AFFICHE-2 (03/10/2026, Adel's decision "saison A") — the whole season's poster.
+      detailSaison: 'PDF · the season · {{installation}}',
       erreur: 'The poster could not be downloaded.',
       installation: 'Facility',
+      laSaison: 'The season',
+      laSemaine: 'The week',
       ok: 'Poster saved: {{fichier}}',
+      periode: 'Period',
       sansInstallation: 'PDF · one week · no facility yet',
       semaine: 'Week',
       semainePrecedente: 'Previous week',

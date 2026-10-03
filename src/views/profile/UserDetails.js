@@ -47,6 +47,7 @@ import {
   seenFeedbackKeys,
   wantsChildFeedbackAlert,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
+import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
 import ChildIdentityCard, { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
@@ -1386,7 +1387,7 @@ function UserDetails({ navigation, route }) {
                       count: coachFeedback.length,
                     })}
                     accessibilityRole="link"
-                    onPress={() => navigation.navigate(RouteNames.UserDetails, {
+                    onPress={() => ouvrirUneVueDuProfil(navigation, {
                       userId: targetUserId,
                       view: 'coachFeedback',
                     })}

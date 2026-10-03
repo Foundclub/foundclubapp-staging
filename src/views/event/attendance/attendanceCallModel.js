@@ -447,10 +447,16 @@ export const countPresence = (items) => (items || []).reduce((totals, item) => {
 
 /**
  * Les personnes que le coach n a jamais vues — celles que la cloture nomme.
+ *
+ * FINITIONS12-STATS (8, tournee T11) — « jamais vu » = AUCUN etat (`resolveRowState`), la regle
+ * du compteur du haut (`countCalled`). Avant, c etait « pas arrive » : un joueur pointe ABSENT
+ * a la main etait nomme « jamais vu », et la cloture disait « 0 pointé · 2 jamais vus » sous un
+ * compteur « 1 / 2 ».
  * @param {any[]} items
  * @returns {any[]}
  */
-export const listNeverSeen = (items) => (items || []).filter((item) => !isMarked(item));
+export const listNeverSeen = (items) => (items || [])
+  .filter((item) => resolveRowState(item) === null);
 
 /**
  * Les identifiants a envoyer a `bulk` : ceux qui n ont AUCUN etat.

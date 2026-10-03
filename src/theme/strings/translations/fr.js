@@ -6204,9 +6204,14 @@ export default {
     // COLL-AFFICHE (03/10/2026) — « Une affiche pour l’installation » (planche 30 B).
     affiche: {
       detail: 'PDF · une semaine · {{installation}}',
+      // COLL-AFFICHE-2 (03/10/2026, décision d’Adel « saison A ») — l’affiche de toute la saison.
+      detailSaison: 'PDF · la saison · {{installation}}',
       erreur: 'L’affiche n’a pas pu être téléchargée.',
       installation: 'Installation',
+      laSaison: 'La saison',
+      laSemaine: 'La semaine',
       ok: 'Affiche enregistrée : {{fichier}}',
+      periode: 'Période',
       sansInstallation: 'PDF · une semaine · aucune installation pour l’instant',
       semaine: 'Semaine',
       semainePrecedente: 'Semaine précédente',
@@ -7864,7 +7869,7 @@ export default {
       selfOnTime: "Arrivée enregistrée a l'heure.",
     },
     // eslint-disable-next-line max-len
-    lateArrivalReportedMinConfirm: 'Retard signale : +{{declaredLateMinutes}} min. Confirme ton arrivée une fois sur place.',
+    lateArrivalReportedMinConfirm: 'Retard signalé : +{{declaredLateMinutes}} min. Confirme ton arrivée une fois sur place.',
     later: 'Plus tard',
     lineUpPublished: 'Composition publiée',
     linkCopiedToTheClipboard: 'Lien copie dans le presse-papiers.',
@@ -8401,7 +8406,7 @@ export default {
     waitingForTheSyncedOfficial: 'En attente du score officiel synchronise.',
     wellDoneYourEventIs: 'Bravo, ton événement est en ligne',
     weReFetchingTheCurrent: "On récupère l'état actuel de la composition.",
-    youAreMarkedPresentOn: "Tu es signale present a l'heure.",
+    youAreMarkedPresentOn: 'Tu es signalé présent à l’heure.',
     // eslint-disable-next-line max-len
     youCanAlreadyCreateThe: 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.',
     youHaveMinLeftTo: 'Il te reste {{minutesLeft}} min pour signaler ton arrivée ou ton retard.',
@@ -8410,7 +8415,7 @@ export default {
     yourAnswerIsAboutYour: 'Ta réponse concerne ton équipe tournoi, pas le RSVP classique de l’événement.',
     youReCalledUpStarter: 'Tu es convoqué · Titulaire',
     youReCalledUpSubstitute: 'Tu es convoqué · Remplaçant',
-    youReMarkedAbsent: 'Tu es signale absent',
+    youReMarkedAbsent: 'Tu es signalé absent',
     youReNotInThe: 'Tu n’es pas dans la composition publiée.',
     youReTakingPart: 'Tu participes',
     yourFeelingIsSavedWithout: 'Ton ressenti est enregistré, sans stats quantitatives.',
