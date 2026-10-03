@@ -209,7 +209,7 @@ describe('N4/D3 — le resultat se traduit SANS ADAPTATION', () => {
     const message = buildRemindMessage(reuni);
 
     expect(message.outcome).toBe('blocked');
-    expect(message.title).toBe('Personne n a ete relance');
+    expect(message.title).toBe("Personne n'a été relancé");
     expect(`${message.title} ${message.description}`).not.toContain('envoye');
   });
 });

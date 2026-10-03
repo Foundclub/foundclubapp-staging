@@ -935,6 +935,31 @@ export const claimClub = async (clubId) => {
 };
 
 /**
+ * STATS-FIX2 · point 2 (ecran 18) — la carte « Résultats du week-end » d'un club SIMPLE
+ * (le club multisport a la sienne : `getCMWeekendResults`). Reservee au dirigeant du club
+ * (policy is-club-manager).
+ * @param {string} clubId - Le club (documentId).
+ * @returns {Promise<any>} Le week-end, une ligne par match d'equipe, le prochain match.
+ */
+export const getClubWeekendResults = async (clubId) => {
+  const result = await client.get(`/clubs/${clubId}/weekend-results`);
+  return result.data?.data ?? null;
+};
+
+/**
+ * STATS-FIX2 · point 2 — « Relancer » : le dirigeant d'un club simple demande le score aux
+ * entraineurs de l'equipe (une relance par entraineur, par match et par jour, cote serveur).
+ * @param {string} clubId - Le club (documentId).
+ * @param {{ eventId: string, teamId: string }} payload - Le match, et l'equipe sans score.
+ * @returns {Promise<{ alreadyRemindedCount?: number, remindedCount?: number,
+ *   trainerCount?: number } | null>} Combien d'entraineurs, combien relances.
+ */
+export const remindClubWeekendScore = async (clubId, { eventId, teamId }) => {
+  const result = await client.post(`/clubs/${clubId}/weekend-results/remind`, { eventId, teamId });
+  return result.data?.data ?? null;
+};
+
+/**
  * Création self-service d'un club (coach/dirigeant qui ne trouve pas son club).
  * Le serveur crée le club immédiatement (non vérifié) et notifie les superadmins.
  * @param {{
