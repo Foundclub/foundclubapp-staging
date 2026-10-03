@@ -9707,10 +9707,11 @@ function EventDetails({ navigation, route }) {
                 ))}
               </View>
 
-              {/* 🗣️ Une porte fermee DIT pourquoi — en orange (plus en or). ⚠️ Le cadenas du design
-                  manque : l'app n'a AUCUNE icône cadenas (ni SvgIcon, ni Images). */}
+              {/* 🗣️ Une porte fermee DIT pourquoi — en orange (plus en or), derrière le CADENAS
+                  (ST-MONMATCH, `cadenas B` : le `lock` de GlyphIcon, dans le même orange). */}
               {isMatchScoreLocked ? (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                  <GlyphIcon color={Colors.warning500} name="lock" size={16} />
                   <Text style={[Fonts.p3, Fonts.warning500, { flexShrink: 1 }]}>
                     {t(
                       'stMatch.score.locked',
@@ -9747,11 +9748,12 @@ function EventDetails({ navigation, route }) {
                     />
                   </>
                 ) : (
-                  // ponytail: « Enregistrement… » s'écrit, la roue ne tourne pas — l'atome
-                  // `Button` n'affiche que la roue OU le texte. Voie de sortie : une roue à
-                  // côté du libellé dans l'atome.
+                  // ST-MONMATCH (écran 9, état 4) — « Enregistrement… » ET la roue : l'atome
+                  // la fait tourner à côté du libellé (`keepTitleWhileLoading`).
                   <Button
                     disabled={isMatchScoreSaving}
+                    isLoading={isMatchScoreSaving}
+                    keepTitleWhileLoading
                     onPress={handleSaveMatchScore}
                     title={(() => {
                       if (isMatchScoreSaving) return t('stMatch.score.saving', 'Enregistrement…');

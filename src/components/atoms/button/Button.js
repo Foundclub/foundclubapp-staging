@@ -10,6 +10,8 @@ import Loader from '@/components/atoms/loader/Loader';
  * Button component.
  * @param {object} props
  * @param {boolean} [props.isLoading]
+ * @param {boolean} [props.keepTitleWhileLoading] - ST-MONMATCH : la roue tourne À CÔTÉ du
+ *   libellé (« Enregistrement… ») au lieu de le remplacer. Sur demande seulement.
  * @param {boolean} [props.disabled]
  * @param {import('react-native').Insets} [props.hitSlop]
  * @param {string} [props.title]
@@ -39,6 +41,7 @@ function Button({
   iconPosition,
   isLoading,
   isOption = false,
+  keepTitleWhileLoading = false,
   onPress,
   size = 'md',
   style,
@@ -113,7 +116,8 @@ function Button({
         style,
       ]}
     >
-      {isLoading ? <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
+      {isLoading && !(keepTitleWhileLoading && title)
+        ? <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
         : (
           // FINITIONS (recette Android 16 du 2026-09-28) — la rangée couvre TOUT le
           // bouton et centre son contenu : c'est ce qui permet au libellé seul de
@@ -128,6 +132,10 @@ function Button({
               iconPosition === 'before' && Alignments.rowReverse,
             ]}
           >
+            {/* ST-MONMATCH (écran 9, état 4) — la roue À CÔTÉ du libellé, sur demande. */}
+            {isLoading ? (
+              <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
+            ) : null}
             {title ? (
               // ROLES2 — une seule ligne (hauteur fixe) : la police rétrécit
               // jusqu'à 70 % avant que le libellé ne soit coupé d'une ellipse
