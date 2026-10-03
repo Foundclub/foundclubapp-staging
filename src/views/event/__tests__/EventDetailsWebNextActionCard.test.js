@@ -715,6 +715,9 @@ describe('SECU-STATS — sur le site, la carte « APRES LE MATCH » ne propose p
 // ==========================================================================
 
 describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
+  // Les boutons DOM (pas les boutons natifs) dont le texte contient ce libellé.
+  const boutonsDOM = (/** @type {any} */ root, /** @type {string} */ libelle) => root
+    .findAll((/** @type {any} */ n) => n.type === 'button' && textOf(n).includes(libelle));
   // Le texte RENDU (les composants natifs servis par react-native-web compris), pas celui du JSX.
   const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
     .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
@@ -822,4 +825,46 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
     expect(texteRendu(parTestID(bloc, 'post-match-relancer')[0])).toContain('Déjà relancés aujourd’hui');
   });
 
+  test('🔴 point 5 — « Gérer l événement » : Modifier, Convocation, « Stats du match » et sa note', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(PENDANT_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    const [gerer] = boutonsDOM(root, "Gérer l'événement");
+    expect(gerer).toBeDefined();
+    act(() => gerer.props.onClick());
+    const menu = root.findAll((/** @type {any} */ n) => n.props?.role === 'menu')[0];
+    const items = menu.findAll((/** @type {any} */ n) => n.props?.role === 'menuitem');
+    expect(items.map((/** @type {any} */ item) => textOf(item).split(' S’ouvre')[0]))
+      .toEqual(['Modifier', 'Convocation', 'Stats du match']);
+    // Avant la fin du match : la puce est éteinte et dit QUAND elle s'ouvrira.
+    expect(textOf(items[2])).toContain('S’ouvre à la fin du match');
+    expect(items[2].props.disabled).toBe(true);
+  });
+
+  test('🔴 point 5 — après la fin, « Stats du match » ouvre la feuille de match', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    act(() => boutonsDOM(root, "Gérer l'événement")[0].props.onClick());
+    const stats = root.findAll((/** @type {any} */ n) => n.props?.role === 'menuitem')
+      .find((/** @type {any} */ item) => textOf(item).includes('Stats du match'));
+    expect(textOf(stats)).toContain('Étape 2 sur 3 : la feuille');
+    act(() => stats.props.onClick());
+    expect(dernierEnvoiVers('MatchStatsEditor')).toEqual(
+      expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
+    );
+  });
+
+  test('protégé — un entraînement garde son seul bouton « Modifier », sans menu', () => {
+    const root = mountScreen({});
+
+    expect(boutonsDOM(root, "Gérer l'événement")).toHaveLength(0);
+    expect(boutonsDOM(root, 'Modifier')).not.toHaveLength(0);
+  });
 });

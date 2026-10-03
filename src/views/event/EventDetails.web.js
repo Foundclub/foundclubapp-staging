@@ -6,7 +6,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWindowDimensions } from 'react-native';
+import { Image, useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import {
@@ -200,6 +200,7 @@ function EventDetails({ navigation, route }) {
   const queryClient = useQueryClient();
   const {
     Colors,
+    Images,
   } = useTheme();
   const {
     canManageEvent,
@@ -1239,6 +1240,73 @@ function EventDetails({ navigation, route }) {
   const softTextColor = Colors?.neutral100 || '#e6eef2';
   const softSurfaceColor = 'rgba(255,255,255,0.04)';
   const pillSurfaceColor = 'rgba(255,255,255,0.06)';
+  // 🧰 ST-VUES3-ORDI (écran 8 sur ordinateur, planche P3-match-ordi, état 4) — « GÉRER
+  // L'ÉVÉNEMENT » : le menu se déplie sous son bouton, avec les puces du téléphone et leurs
+  // conditions (`buildManageChips`, EventDetails.js) : « Modifier », « Convocation »
+  // (« Répartition » pour une détection), et « Stats du match » avec sa note — la porte du
+  // téléphone, éteinte avant la fin du match (« S'ouvre à la fin du match, … ») ou pour le
+  // dirigeant qui n'entraîne pas (« Saisies par l'entraîneur de l'équipe, Karim »). Le menu
+  // est celui de la page du MATCH (la planche) ; les autres types gardent leur bouton
+  // « Modifier », comme avant.
+  const [isManageMenuOpen, setIsManageMenuOpen] = useState(false);
+  // 🪤 L'en-tête de la page coupe ce qui dépasse (`overflow: hidden`, pour ses coins
+  // arrondis) : le menu se pose donc en position FIXE, sous son bouton, et se referme quand la
+  // page défile, change de taille, ou qu'on clique à côté (constaté au banc de capture).
+  const manageButtonRef = useRef(null);
+  const manageMenuRef = useRef(null);
+  const [manageMenuPosition, setManageMenuPosition] = useState(null);
+  const toggleManageMenu = useCallback(() => {
+    const cadre = manageButtonRef.current?.getBoundingClientRect?.();
+    setManageMenuPosition(cadre && typeof window !== 'undefined'
+      ? { right: Math.max(16, window.innerWidth - cadre.right), top: cadre.bottom + 8 }
+      : null);
+    setIsManageMenuOpen((ouvert) => !ouvert);
+  }, []);
+  useEffect(() => {
+    if (!isManageMenuOpen || typeof window?.addEventListener !== 'function') return undefined;
+    const fermer = () => setIsManageMenuOpen(false);
+    const dehors = (/** @type {any} */ evenement) => {
+      if (manageMenuRef.current?.contains?.(evenement.target)) return;
+      if (manageButtonRef.current?.contains?.(evenement.target)) return;
+      fermer();
+    };
+    window.addEventListener('scroll', fermer, true);
+    window.addEventListener('resize', fermer);
+    window.addEventListener('mousedown', dehors);
+    return () => {
+      window.removeEventListener('scroll', fermer, true);
+      window.removeEventListener('resize', fermer);
+      window.removeEventListener('mousedown', dehors);
+    };
+  }, [isManageMenuOpen]);
+  const manageMenuItems = [
+    ...(canEdit ? [{
+      icon: 'edit',
+      key: 'edit',
+      label: t('eventDetails.managePanel.edit', 'Modifier'),
+      onPress: () => navigation.navigate(RouteNames.EventEdit, { eventId }),
+    }] : []),
+    ...(canEdit && supportsEventComposition ? [{
+      disabled: isStaffCompositionFetching,
+      icon: 'users',
+      key: 'lineup',
+      label: isDetectionEvent
+        ? t('eventDetails.managePanel.lineupDetection', 'Répartition')
+        : t('eventDetails.managePanel.lineup', 'Convocation'),
+      onPress: handleManageComposition,
+    }] : []),
+    ...(canEdit && supportsEventComposition && isMatchEvent ? [{
+      disabled: isPostMatchDoorClosed,
+      icon: 'running',
+      key: 'matchStats',
+      label: isMatchStatsFetching
+        ? t('common.loading', 'Chargement...')
+        : t('eventDetails.matchStats', 'Stats du match'),
+      note: postMatchAction.subtitle,
+      onPress: openMatchStatsEditor,
+    }] : []),
+  ];
+  const showManageMenu = Boolean(canEdit && isMatchEvent && manageMenuItems.length > 1);
   const clubCertificationPalette = getClubCertificationPalette(event?.team?.club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(event?.team?.club);
   const sectionTitleStyle = {
@@ -1824,7 +1892,92 @@ function EventDetails({ navigation, route }) {
                         ? t('eventDetails.sharing', 'Partage...')
                         : t('eventDetails.share', 'Partager')}
                     </button>
-                    {canEdit ? (
+                    {showManageMenu ? (
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          aria-expanded={isManageMenuOpen}
+                          aria-haspopup="menu"
+                          onClick={toggleManageMenu}
+                          ref={manageButtonRef}
+                          style={primaryButtonStyle}
+                          type="button"
+                        >
+                          {t('eventDetails.managePanel.title', 'Gérer l’événement')}
+                        </button>
+                        {isManageMenuOpen ? (
+                          <div
+                            aria-label={t('eventDetails.managePanel.title', 'Gérer l’événement')}
+                            ref={manageMenuRef}
+                            role="menu"
+                            style={{
+                              background: '#0b2530',
+                              border: `1px solid ${borderColor}`,
+                              borderRadius: 16,
+                              boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
+                              display: 'grid',
+                              gap: 4,
+                              maxWidth: 'calc(100vw - 32px)',
+                              padding: 8,
+                              position: manageMenuPosition ? 'fixed' : 'absolute',
+                              right: manageMenuPosition ? manageMenuPosition.right : 0,
+                              top: manageMenuPosition ? manageMenuPosition.top : 'calc(100% + 8px)',
+                              width: 380,
+                              zIndex: 20,
+                            }}
+                          >
+                            {manageMenuItems.map((item) => (
+                              <button
+                                aria-disabled={Boolean(item.disabled)}
+                                disabled={Boolean(item.disabled)}
+                                key={item.key}
+                                onClick={() => {
+                                  setIsManageMenuOpen(false);
+                                  item.onPress();
+                                }}
+                                role="menuitem"
+                                style={{
+                                  alignItems: 'center',
+                                  background: 'transparent',
+                                  border: 0,
+                                  borderRadius: 12,
+                                  color: textColor,
+                                  cursor: item.disabled ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  fontFamily: 'Montserrat-Bold, sans-serif',
+                                  fontSize: 15,
+                                  gap: 12,
+                                  minHeight: item.note ? 64 : 48,
+                                  opacity: item.disabled ? 0.6 : 1,
+                                  padding: '8px 12px',
+                                  textAlign: 'left',
+                                }}
+                                type="button"
+                              >
+                                <Image
+                                  source={Images[item.icon]}
+                                  style={{ height: 20, tintColor: accentColor, width: 20 }}
+                                />
+                                <span style={{ display: 'grid', gap: 2 }}>
+                                  <span>{item.label}</span>
+                                  {item.note ? (
+                                    <span
+                                      style={{
+                                        color: mutedTextColor,
+                                        fontFamily: 'Montserrat-Regular, Montserrat, sans-serif',
+                                        fontSize: 13,
+                                      }}
+                                    >
+                                      {item.note}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {canEdit && !showManageMenu ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
                         style={primaryButtonStyle}
