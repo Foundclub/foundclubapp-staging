@@ -604,3 +604,29 @@ describe('FINITIONS12-COLL point 2 — l’aperçu d’une série se lit date pa
     expect(textes(arbre)).toContain('Complet chaque semaine : il y a déjà 2 équipes.');
   });
 });
+
+// 🏛️ FINITIONS12-COLL (03/10) — point 6, `creation` (tranché par le chef) : la demande DIT ce qui
+// arrive si la mairie refuse, comme le déplacement (FINITIONS11-COLL point 7, même clé). À une
+// condition, REMPLIE : un témoin serveur prouve qu'une séance CRÉÉE hors créneau puis REFUSÉE est
+// annulée — banc vrai moteur du lot (P6 : POST /api/events hors créneau ⇒ pending_validation ;
+// refus de la Ville ⇒ cancelled, inactive, 404 pour l'entraîneur) et admin
+// tests/authz/COLL3A-demandes-le-proprietaire-tranche.test.js (T5). ROUGE avant le lot.
+describe('FINITIONS12-COLL point 6 — « Si la mairie refuse, la séance sera annulée. »', () => {
+  const PHRASE = 'Si la mairie refuse, la séance sera annulée.';
+
+  it('la mairie décidera : la phrase est là, avant l’envoi', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const arbre = await monter((l) => l.includes(PHRASE));
+    expect(textes(arbre)).toContain(PHRASE);
+  });
+
+  it.each([
+    ['posée tout de suite', { inClubSlot: true, outcome: 'direct' }],
+    ['le dirigeant décidera', { inClubSlot: true, outcome: 'dirigeant' }],
+  ])('%s : pas de phrase sur la mairie', async (_cas, decision) => {
+    mockApercu = { ...APERCU_LIBRE, decision };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await attendre(() => textes(arbre).some((texte) => /posé|dirigeant/.test(texte)));
+    expect(textes(arbre)).not.toContain(PHRASE);
+  });
+});

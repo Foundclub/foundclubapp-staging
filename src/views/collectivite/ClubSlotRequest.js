@@ -705,6 +705,17 @@ function ClubSlotRequest({
           )}
         </Text>
       ) : null}
+      {/* FINITIONS12-COLL (03/10) — `creation` : ce qui arrive si la mairie refuse, comme au */}
+      {/* déplacement (FINITIONS11-COLL point 7, même clé). Prouvé côté serveur : une séance */}
+      {/* créée hors créneau puis refusée est annulée (banc vrai moteur ; admin COLL3A T5). */}
+      {pourLaMairie && !refusee ? (
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]} testID="demande-si-refus">
+          {t(
+            'collectiviteDemandes.decision.siRefusAnnulee',
+            'Si la mairie refuse, la séance sera annulée.',
+          )}
+        </Text>
+      ) : null}
       {issue === 'dirigeant' ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
