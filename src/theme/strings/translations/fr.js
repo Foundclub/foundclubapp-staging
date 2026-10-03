@@ -6116,6 +6116,18 @@ export default {
     },
     surtitre: 'Planning',
     titre: 'Chiffres',
+    // COLL-C5 point 4 — « Utilisation » sur la fiche d'un club, côté mairie (planche 37).
+    utilisation: {
+      annulees: 'annulées',
+      erreur: 'Les chiffres de la saison n’ont pas pu être lus.',
+      // eslint-disable-next-line max-len
+      fermeture_one: '{{count}} séance touchée par une fermeture de la Ville : elle n’est pas comptée comme annulée.',
+      // eslint-disable-next-line max-len
+      fermeture_other: '{{count}} séances touchées par une fermeture de la Ville : elles ne sont pas comptées comme annulées.',
+      heures: 'réservées cette saison',
+      pourquoi: 'De quoi répondre au conseil municipal : qui utilise vraiment quoi.',
+      tenues: 'séances tenues',
+    },
   },
   comingSoonLeagueScreen: {
     back: 'Retour',

@@ -5740,6 +5740,15 @@ export default {
     },
     surtitre: 'Schedule',
     titre: 'Figures',
+    utilisation: {
+      annulees: 'cancelled',
+      erreur: 'This season’s figures could not be loaded.',
+      fermeture_one: '{{count}} session hit by a City closure: it is not counted as cancelled.',
+      fermeture_other: '{{count}} sessions hit by a City closure: they are not counted as cancelled.',
+      heures: 'booked this season',
+      pourquoi: 'What you need to tell the city council: who really uses what.',
+      tenues: 'sessions held',
+    },
   },
   comingSoonLeagueScreen: {
     back: 'Back',
