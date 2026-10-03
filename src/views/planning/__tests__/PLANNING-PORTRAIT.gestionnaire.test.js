@@ -156,6 +156,15 @@ jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   withdrawSeasonSlot: jest.fn(),
 }));
 
+// COLL-C4B-BIS (03/10) : le planning lit aussi les fermetures (panneau sur ordinateur, bandeau).
+jest.mock('@/services/facilityClosure/facilityClosureService', () => ({
+  closeFacility: jest.fn(),
+  listCollectiviteClosures: jest.fn(),
+  listFacilityClosures: jest.fn(async () => ({ data: [], meta: {} })),
+  modifyFacilityClosure: jest.fn(),
+  previewFacilityClosure: jest.fn(),
+  reopenFacilityClosure: jest.fn(),
+}));
 jest.mock('@/services/facility/facilityService', () => ({
   getFacilityPlanning: jest.fn(),
 }));

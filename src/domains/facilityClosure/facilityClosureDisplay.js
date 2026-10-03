@@ -5,6 +5,7 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
 
 /**
  * COLL-C4B (02/10) — ce que l ecran DIT d une fermeture ou d un blocage : jours, heures, motif,
@@ -142,9 +143,11 @@ export const closureBandLabel = (t, fermeture) => {
  */
 export const touchedSessionLine = (seance, { withDay = false } = {}) => {
   const qui = [seance?.club?.name, seance?.team?.name].filter(Boolean).join(' · ');
-  const heures = seance?.startTime && seance?.endTime
-    ? `${String(seance.startTime).slice(0, 5)} – ${String(seance.endTime).slice(0, 5)}`
-    : '';
+  // COLL-C4B-BIS (03/10, tournee T10) : une seance SANS heure de fin (`endTime: null`) garde son
+  // heure de debut — la carte perdait les deux (« AS Montrivage · U15 »).
+  const debut = seance?.startTime ? String(seance.startTime).slice(0, 5) : '';
+  const fin = seance?.endTime ? String(seance.endTime).slice(0, 5) : '';
+  const heures = debut && fin ? `${debut} – ${fin}` : debut;
   const quand = [withDay ? closureDay(seance?.date) : '', heures].filter(Boolean).join(' ');
   return [qui, quand].filter(Boolean).join(', ');
 };
@@ -190,6 +193,19 @@ export const closureCoversDay = (fermeture, jour) => Boolean(
 );
 
 /**
+ * 🖥️ COLL-C4B-BIS (03/10) — la fermeture d UN jour (vue Mois, Liste) : celle de toute la journee
+ * d abord (elle ferme tout), sinon le premier blocage du jour.
+ * @param {any[]} fermetures - `meta.closures` (et le brouillon du panneau).
+ * @param {string} jour - AAAA-MM-JJ.
+ * @returns {any | null} La fermeture, ou null si le jour est ouvert.
+ */
+export const closureOfDay = (fermetures, jour) => {
+  const couvrantes = (Array.isArray(fermetures) ? fermetures : [])
+    .filter((fermeture) => closureCoversDay(fermeture, jour));
+  return couvrantes.find((fermeture) => fermeture?.kind !== 'block') || couvrantes[0] || null;
+};
+
+/**
  * « 09:30 » en minutes depuis minuit, ou null si l heure manque.
  * @param {string | null | undefined} heure - HH:MM.
  * @returns {number | null} Les minutes.
@@ -197,6 +213,31 @@ export const closureCoversDay = (fermeture, jour) => Boolean(
 const minutesDe = (heure) => {
   const lu = /^(\d{1,2}):(\d{2})/.exec(String(heure || ''));
   return lu ? Number(lu[1]) * 60 + Number(lu[2]) : null;
+};
+
+/**
+ * 🖥️ COLL-C4B-BIS (03/10) — LA REGLE DU SERVEUR (contrat C2A §13.3), recopiee pour le BROUILLON
+ * d une saisie : le planning cerne les seances que la fermeture toucherait, PENDANT qu on tape
+ * (« P4v3-fermer-ordi »). Fermeture : le jour de debut de la seance est dans la periode. Blocage :
+ * le meme jour, et les heures se chevauchent (sans heure de fin : 1 h 30). Le serveur reste le
+ * juge : la carte des seances touchees vient de lui, ceci ne fait que dessiner.
+ * @param {any} bloc - Un bloc normalise du planning (`normalizePlanningItem`).
+ * @param {{ kind?: string, startDate?: string|null, endDate?: string|null,
+ *   startTime?: string|null, endTime?: string|null } | null} fermeture - La saisie.
+ * @returns {boolean} Vrai si la fermeture touche le bloc.
+ */
+export const closureTouchesBlock = (bloc, fermeture) => {
+  if (!fermeture || bloc?.raw?.closureBand) return false;
+  const fenetre = getPlanningItemWindow(bloc);
+  if (!fenetre) return false;
+  if (!closureCoversDay(fermeture, format(fenetre.startAt, 'yyyy-MM-dd'))) return false;
+  if (fermeture.kind !== 'block') return true;
+  const de = minutesDe(fermeture.startTime);
+  const a = minutesDe(fermeture.endTime);
+  if (de === null || a === null) return false;
+  const debut = fenetre.startAt.getHours() * 60 + fenetre.startAt.getMinutes();
+  const fin = debut + Math.round((fenetre.endAt.getTime() - fenetre.startAt.getTime()) / 60000);
+  return debut < a && de < fin;
 };
 
 /**
