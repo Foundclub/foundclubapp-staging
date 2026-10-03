@@ -149,3 +149,16 @@ describe('COLL-C4B-BIS point 4 — la vue Mois marque les jours fermes', () => {
     expect(textes(arbreSamedi)).toContain('09:00 – 13:00');
   });
 });
+
+// 🎨 FINITIONS12-COLL (03/10) — point 10 : « la vue Mois ne hachure pas un jour fermé (le 7 est
+// cerné) » (tournée T11, C25_4). Les hachures y étaient, mais le jour CHOISI se peignait d'un bleu
+// plein qui les recouvrait (et, pâles dans une case étroite, elles ne se voyaient pas). Un jour fermé
+// choisi garde un fond transparent : les hachures se lisent. ROUGE avant le lot.
+describe('FINITIONS12-COLL point 10 — un jour fermé CHOISI reste hachuré', () => {
+  it('le vendredi fermé, choisi : ses hachures, sans fond plein par-dessus', async () => {
+    const arbre = await monter(new Date(2026, 9, 9, 12, 0));
+    const vendredi = parTestID(arbre, 'jour-ferme-2026-10-09')[0];
+    expect(vendredi.findAll((/** @type {any} */ n) => n.props.testID === 'hachures' && typeof n.type === 'string')).toHaveLength(1);
+    expect(StyleSheet.flatten(vendredi.props.style).backgroundColor).not.toBe(COULEURS.primary500);
+  });
+});

@@ -916,10 +916,18 @@ function PlanningWeekTimelineView({
             }]}
           >
             {secondaryLabel}
+            {/* FINITIONS12-COLL (03/10) — « a deplacer » sur la DEUXIEME ligne, avec */}
+            {/* l equipe : en troisieme, le bloc le coupait (`overflow: hidden` ; T11, C25_3). */}
+            {aDeplacer ? (
+              <Text style={{ color: pendingAccentColor }} testID="a-deplacer">
+                {` · ${t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}`}
+              </Text>
+            ) : null}
           </Text>
         ) : null}
         {/* COLL-C4B-BIS : « a deplacer » sous le club et l equipe, comme la planche (ecran 4). */}
-        {aDeplacer && !isTiny ? (
+        {/* FINITIONS12-COLL : seul, quand il n y a pas de deuxieme ligne. */}
+        {aDeplacer && !isTiny && !canShowSecondary ? (
           <Text
             numberOfLines={1}
             style={[

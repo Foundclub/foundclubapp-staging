@@ -6064,8 +6064,9 @@ export default {
       votreMessage: 'Votre message',
     },
     vide: {
+      // FINITIONS12-COLL (03/10) — depuis SPEC-PLACE, aussi sur une place libre (T11, C31).
       // eslint-disable-next-line max-len
-      attente: 'Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
+      attente: 'Quand un club demande une place hors de ses créneaux, complète ou non, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.',
     },
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).

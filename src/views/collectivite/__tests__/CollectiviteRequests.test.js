@@ -423,8 +423,10 @@ describe('COLL-C3B — planche P6-demandes : traitées, vide, erreur, refus d’
   it('en attente, vide : l’écran explique d’où viennent les demandes', async () => {
     mockEnAttente = [];
     const lus = textes(await monter((l) => l.includes('Aucune demande en attente.')));
+    // FINITIONS12-COLL (03/10), point 10 : depuis SPEC-PLACE, une demande nait aussi sur une place
+    // LIBRE hors des creneaux du club (tournee T11, C31) ; « deja complete » etait faux.
     // eslint-disable-next-line max-len
-    expect(lus).toContain('Quand un club veut une place sur une installation déjà complète, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.');
+    expect(lus).toContain('Quand un club demande une place hors de ses créneaux, complète ou non, sa demande arrive ici. Vous l’acceptez ou la refusez, avec un mot ; le club est prévenu.');
   });
 
   it('refus d’accès (403) : « Accès retiré »', async () => {

@@ -170,3 +170,13 @@ describe('COLL-C2B-BIS — planche 23 : retirer à partir d une date choisie', (
     expect(onWithdrawn).toHaveBeenCalled();
   });
 });
+
+// 🎨 FINITIONS12-COLL (03/10) — point 10 : « … à partir du sam. 3 oct.. » (tournée T11, C23) : la
+// date abrégée porte déjà son point, la phrase en ajoutait un. ROUGE avant le lot.
+describe('FINITIONS12-COLL point 10 — un seul point après une date abrégée', () => {
+  it('« à partir du lun. 5 oct. » : jamais « .. »', async () => {
+    const arbre = await monter();
+    expect(phrase(arbre)).toMatch(/[^.]\.$|[^.]$/);
+    expect(phrase(arbre)).not.toMatch(/\.\.$/);
+  });
+});

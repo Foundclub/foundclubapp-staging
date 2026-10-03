@@ -5687,7 +5687,7 @@ export default {
       votreMessage: 'Your message',
     },
     vide: {
-      attente: 'When a club wants a spot on a facility that is already full, its request arrives here. You accept or refuse it, with a note; the club is notified.',
+      attente: 'When a club asks for a spot outside its slots, full or not, its request arrives here. You accept or refuse it, with a note; the club is notified.',
     },
   },
   // COLL-C4B (02/10/2026) — fermer une installation, bloquer un creneau (HY521H1 p. 4, D16).
