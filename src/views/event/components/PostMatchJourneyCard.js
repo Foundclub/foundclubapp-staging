@@ -99,6 +99,7 @@ const lireLeMoment = (iso) => {
  * @param {(cle: string) => void} props.onPressEtape - Ouvrir l'étape courante.
  * @param {(() => void) | null} [props.onRelancer] - Relancer ceux qui manquent.
  * @param {boolean} [props.relanceEnCours] - Une relance part.
+ * @param {boolean} [props.relanceFaite] - STATS-FIX2 · 8-7 : la relance est faite aujourd hui.
  * @param {number} [props.reponsesAttendues] - Combien de joueur·se·s sont attendus.
  * @param {number} [props.reponsesRecues] - Combien ont répondu.
  * @param {ScoreAuteur} [props.scoreAuteur] - L'auteur de la saisie.
@@ -127,6 +128,7 @@ function PostMatchJourneyCard({
   onPressEtape,
   onRelancer = null,
   relanceEnCours = false,
+  relanceFaite = false,
   reponsesAttendues = 0,
   reponsesRecues = 0,
   scoreAuteur = null,
@@ -314,17 +316,20 @@ function PostMatchJourneyCard({
       </View>
       {avecRelance ? (
         <View style={{ flex: 1 }} testID="post-match-relancer">
+          {/* STATS-FIX2 · 8-7 (T10) — relance faite : le bouton le dit, et ne repart pas. */}
           <Button
-            disabled={relanceEnCours}
+            disabled={relanceEnCours || relanceFaite}
             isLoading={relanceEnCours}
             onPress={() => onRelancer?.()}
             size="sm"
-            title={t('stMatch.carte.remind', {
-              count: manquants.length,
-              defaultValue_one: 'Relancer {{count}} joueur',
-              defaultValue_other: 'Relancer les {{count}}',
-            })}
-            variant="Primary"
+            title={relanceFaite
+              ? t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui')
+              : t('stMatch.carte.remind', {
+                count: manquants.length,
+                defaultValue_one: 'Relancer {{count}} joueur',
+                defaultValue_other: 'Relancer les {{count}}',
+              })}
+            variant={relanceFaite ? 'Secondary' : 'Primary'}
           />
         </View>
       ) : null}

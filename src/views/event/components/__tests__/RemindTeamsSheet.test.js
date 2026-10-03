@@ -343,7 +343,7 @@ describe('N4/1H — apres l envoi, la feuille rend compte', () => {
     relancer(root);
 
     const lus = textes(root).join(' ');
-    expect(lus).toContain('Personne n a ete relance');
+    expect(lus).toContain("Personne n'a été relancé");
     expect(lus).not.toContain('envoye');
   });
 

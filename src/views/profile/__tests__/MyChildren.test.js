@@ -475,4 +475,18 @@ describe('ST-RETOURS — Mes enfants : le neuf, et le moins de 13 ans', () => {
 
     expect(texteVisible(arbre)).not.toContain('Stats et retours de match');
   });
+
+  // STATS-FIX2 · 8-22 (tournee T10, ecran 22) — Lea (7 ans, une fiche) passait AVANT Hugo (son
+  // compte relie, celui qui a des retours). La planche 22, etat 1 : « Les comptes de mes
+  // enfants » d abord, puis les enfants declares.
+  test('🔴 STATS-FIX2 — les comptes relies passent AVANT les fiches declarees', async () => {
+    mockEnfants = [unEnfant({ age: 7 })];
+    const texte = texteVisible(await rendre());
+
+    expect(texte.indexOf('Hugo Lemaire')).toBeGreaterThan(-1);
+    expect(texte.indexOf('Léa Martin')).toBeGreaterThan(-1);
+    expect(texte.indexOf('Hugo Lemaire')).toBeLessThan(texte.indexOf('Léa Martin'));
+    expect(texte.indexOf('Les comptes de mes enfants'))
+      .toBeLessThan(texte.indexOf('Léa Martin'));
+  });
 });

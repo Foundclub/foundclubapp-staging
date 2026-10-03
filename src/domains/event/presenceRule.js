@@ -31,12 +31,23 @@ export const isRsvpEnabled = (event) => event?.rsvpEnabled !== false;
 export const isArrivalTrackingEnabled = (event) => event?.arrivalTrackingEnabled !== false;
 
 /**
+ * STATS-FIX2 · point 5 (tournee T10, ecran 1) — combien de temps la porte « Je passe en
+ * present » reste ouverte apres le DEBUT de l evenement : le temps de l apres-match, 72 h, la
+ * fenetre « chaude » des rappels d apres-match du serveur (`match-stats-report.ts`,
+ * HOT_WINDOW_HOURS). Sans borne, elle restait epinglee sur un match d un mois.
+ * ponytail: comptee depuis le DEBUT (la seule date sure de tous les evenements) ; un evenement
+ * de plusieurs heures perd donc ses dernieres heures de porte. Voie de sortie : lire la fin.
+ */
+export const LATE_PRESENCE_WINDOW_MS = 72 * 60 * 60 * 1000;
+
+/**
  * « Je passe en present » : la porte etroite du « pas renseigne », apres le
  * debut de l evenement. Memes refus que le serveur (`event-rsvp.ts`,
  * `assertLatePresenceAllowed`) : un membre convie, sans reponse, jamais
  * par-dessus une absence constatee a l appel, jamais sur un evenement ou l on
  * ne repond pas. Une journee de stage passe par le stage, un match de
  * championnat garde sa reponse ouverte : ni l un ni l autre ne sont concernes.
+ * Et le temps de l apres-match seulement (`LATE_PRESENCE_WINDOW_MS`).
  * @param {{
  *   event: any,
  *   hasPendingRequest?: boolean,
@@ -64,5 +75,5 @@ export const canDeclareLatePresence = ({
   // Depuis POINTAGE, le serveur ne rend `no_show` que pour une absence SIGNEE.
   if (String(myAttendanceStatus || '').trim().toLowerCase() === 'no_show') return false;
   const startMs = new Date(event?.date).getTime();
-  return Number.isFinite(startMs) && startMs <= now;
+  return Number.isFinite(startMs) && startMs <= now && now - startMs <= LATE_PRESENCE_WINDOW_MS;
 };

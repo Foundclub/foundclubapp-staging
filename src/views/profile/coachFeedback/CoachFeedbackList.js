@@ -14,9 +14,20 @@ import { feedbackMetaLine } from '@/views/profile/coachFeedback/coachFeedbackMod
  *
  * Une carte par retour : le match (et « Nouveau » tant qu il n a pas ete lu), l equipe, le
  * jour DU MATCH, le resultat et qui a ecrit ; la note sur 10 s il y en a une (jamais « 0/10 ») ;
- * le mot, en entier ; « Ouvrir le match » pour le joueur. Sous la liste, qui peut la lire.
+ * le mot, en entier ; « Ouvrir le match ». Sous la liste, qui peut la lire.
  * La meme carte sert la fiche de l enfant, vue par son parent (planche 22, « Dernier retour »).
  */
+
+/**
+ * STATS-FIX2 · point 1 (T10, P4) — la porte du match, pour le PARENT. Adel a decide
+ * « parents encart B » (registre des mineurs, ligne 15) : le parent lit l encart du score du
+ * match de son enfant, dans la fiche du match. Seul un match d evenement y mene : pour un match
+ * de League, rien n a ete decide pour lui, il n a donc pas de porte.
+ * @param {any} item - Le retour, tel que le serveur le rend.
+ * @returns {boolean} - Le parent peut ouvrir ce match.
+ */
+export const parentCanOpenMatch = (item) => Boolean(item?.sourceDocumentId)
+  && item?.sourceType !== 'league_match';
 
 /**
  * La ligne « qui peut lire » : un cadenas, et la phrase.
@@ -111,13 +122,16 @@ export function CoachWords({ numberOfLines, text }) {
  * @param {object} props - Les proprietes.
  * @param {any} props.item - Le retour, tel que le serveur le rend.
  * @param {boolean} [props.isNew] - Pas encore lu.
- * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match » (le joueur seulement).
+ * @param {(item: any, layout: any) => void} [props.onLayout] - STATS-FIX2 · point 7 : la place
+ *   de la carte (pour savoir si elle est passee a l ecran).
+ * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match ».
  * @param {boolean} [props.showFullComment] - Ne rien couper.
  * @returns {import('react').ReactElement} - La carte.
  */
 export function CoachFeedbackCard({
   isNew = false,
   item,
+  onLayout,
   onOpenMatch,
   showFullComment = false,
 }) {
@@ -137,6 +151,7 @@ export function CoachFeedbackCard({
         status: isNew ? t('stRetours.feedback.new') : '',
         ...SANS_ECHAPPEMENT,
       }).trim()}
+      onLayout={onLayout ? (event) => onLayout(item, event?.nativeEvent?.layout) : undefined}
       style={feedbackCardStyle(Colors, isNew)}
       testID="coach-feedback-card"
     >
@@ -172,14 +187,18 @@ export function CoachFeedbackCard({
  * @param {object} props - Les proprietes.
  * @param {any[]} props.items - Les retours, le plus recent en haut.
  * @param {Set<string>} [props.newKeys] - Les clefs pas encore lues.
+ * @param {(item: any, layout: any) => void} [props.onCardLayout] - La place de chaque carte.
  * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match ».
+ * @param {boolean} [props.parentView] - Le parent lit : la porte, vers un match d evenement.
  * @param {boolean} [props.showFullComments] - Vue dediee : rien n est coupe.
  * @returns {import('react').ReactElement} - La liste.
  */
 function CoachFeedbackList({
   items,
   newKeys,
+  onCardLayout,
   onOpenMatch,
+  parentView = false,
   showFullComments = false,
 }) {
   return (
@@ -189,7 +208,8 @@ function CoachFeedbackList({
           isNew={Boolean(newKeys?.has(String(item?.feedbackKey || '')))}
           item={item}
           key={String(item?.feedbackKey || `${item?.sourceDocumentId || 'retour'}-${index}`)}
-          onOpenMatch={onOpenMatch}
+          onLayout={onCardLayout}
+          onOpenMatch={parentView && !parentCanOpenMatch(item) ? undefined : onOpenMatch}
           showFullComment={showFullComments}
         />
       ))}
@@ -206,7 +226,8 @@ function CoachFeedbackList({
  * @param {boolean} props.hasError - La lecture a echoue.
  * @param {() => void} props.onRetry - « Reessayer ».
  * @param {Set<string>} [props.newKeys] - Les clefs pas encore lues.
- * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match » (le joueur).
+ * @param {(item: any, layout: any) => void} [props.onCardLayout] - La place de chaque carte.
+ * @param {(item: any) => void} [props.onOpenMatch] - « Ouvrir le match » (parent : evenement).
  * @param {'parent' | 'self'} props.viewer - Qui lit.
  * @param {string} [props.childFirstname] - L enfant (vue du parent).
  * @param {boolean} [props.hasParentLink] - Le joueur a un parent relie.
@@ -219,6 +240,7 @@ export function CoachFeedbackViewBody({
   isLoading,
   items,
   newKeys,
+  onCardLayout,
   onOpenMatch,
   onRetry,
   viewer,
@@ -304,7 +326,9 @@ export function CoachFeedbackViewBody({
       <CoachFeedbackList
         items={list}
         newKeys={newKeys}
-        onOpenMatch={isParent ? undefined : onOpenMatch}
+        onCardLayout={onCardLayout}
+        onOpenMatch={onOpenMatch}
+        parentView={isParent}
         showFullComments
       />
       <WhoCanReadLine testID="coach-feedback-who-can-read" text={whoCanRead} />

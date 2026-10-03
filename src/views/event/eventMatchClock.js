@@ -13,6 +13,8 @@
  * c'est le temps du lecteur qu'ils racontent, pas celui du serveur.
  */
 
+import { getZonedDateParts, toUtcFromZonedLocal } from '@/utils/parisTime';
+
 /**
  * Duree retenue quand l'evenement n'a pas d'heure de fin.
  *
@@ -30,6 +32,9 @@
  */
 export const DEFAULT_MATCH_DURATION_MINUTES = 90;
 
+const HEURE_RE = /^(\d{1,2}):(\d{2})/;
+const JOUR_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Lit une date sans jamais rendre une date invalide.
  * @param {unknown} value
@@ -42,18 +47,36 @@ const parseDateSafe = (value) => {
 };
 
 /**
- * L'heure de fin de l'evenement : celle qu'il declare, sinon son debut plus la
- * duree par defaut du serveur.
+ * L'heure de fin de l'evenement : celle qu'il declare (`endDate`), sinon son heure de fin
+ * saisie (`endTime`) le jour du debut A PARIS, sinon son debut plus la duree par defaut.
+ *
+ * STATS-FIX2 · point 8 (tournee T10, ecran 4) — « fin à 19:30 » pour une seance de 18 h a 19 h :
+ * l app enregistre l heure de fin dans `endTime` (jamais `endDate`, reservee aux stages), et
+ * personne ne la lisait. ⚠️ MEME REGLE que le serveur (`getEventEndedAt` ->
+ * `resolveEventEndAt`, event-governance-helpers.js), avec le meme calcul d heure de Paris
+ * (`utils/parisTime.js`) : sinon l app dit « fini » quand le serveur refuse encore.
  * @param {unknown} eventEndDate
  * @param {unknown} eventStartAt
+ * @param {unknown} [eventEndTime] - « HH:mm » ou « HH:mm:ss.SSS ».
  * @returns {Date | null}
  */
-export const resolveEventEndedAt = (eventEndDate, eventStartAt) => {
+export const resolveEventEndedAt = (eventEndDate, eventStartAt, eventEndTime = null) => {
   const explicitEnd = parseDateSafe(eventEndDate);
   if (explicitEnd) return explicitEnd;
 
   const start = parseDateSafe(eventStartAt);
   if (!start) return null;
+
+  const heure = String(eventEndTime || '').match(HEURE_RE);
+  const hour = heure ? Number(heure[1]) : NaN;
+  const minute = heure ? Number(heure[2]) : NaN;
+  if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+    const jour = getZonedDateParts(start);
+    const fin = toUtcFromZonedLocal({
+      day: jour.day, hour, minute, month: jour.month, second: 0, year: jour.year,
+    });
+    return fin.getTime() <= start.getTime() ? new Date(fin.getTime() + JOUR_MS) : fin;
+  }
 
   return new Date(start.getTime() + (DEFAULT_MATCH_DURATION_MINUTES * 60 * 1000));
 };
