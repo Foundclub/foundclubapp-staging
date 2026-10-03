@@ -55,11 +55,13 @@ describe('collectiviteDisplay — console super-admin (D61)', () => {
       clubs: [{ documentId: 'a' }, { documentId: 'b' }], documentId: 'v', isActive, name: 'Ville de V', type: 'commune',
     });
     // COLL-CONSOLE-BIS (03/10) — + la date d activation (null : le serveur n en a pas).
+    // COLL-C6-DEMO (03/10) — + `isDemo` (faux sans le drapeau du serveur).
     expect(ligne(null)).toEqual({
       activatedAt: null,
       clubsCount: 2,
       documentId: 'v',
       isActive: false,
+      isDemo: false,
       membersCount: null,
       name: 'Ville de V',
       type: 'commune',

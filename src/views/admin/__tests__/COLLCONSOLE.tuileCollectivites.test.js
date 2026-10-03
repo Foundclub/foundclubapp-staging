@@ -90,6 +90,10 @@ jest.mock('@/services/inAppPopupCampaign/inAppPopupCampaignQueries', () => ({
   useGetInAppPopupCampaigns: () => mockRequeteVide,
 }));
 jest.mock('@/utils/errors/displayError', () => ({ getErrorMessage: () => 'erreur' }));
+// C6-DEMO/D6 lit la VRAIE liste demandee au serveur (collectiviteService) : son client HTTP, lui,
+// exige un `.env` absent des copies de travail.
+jest.mock('@/services/client', () => ({ __esModule: true, default: {} }));
+jest.mock('@/domains/auth/authUseCases', () => ({ getAuthTokens: jest.fn() }));
 // Le VRAI theme, jamais un Proxy : un Proxy rend les echecs Jest illisibles.
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
@@ -289,4 +293,34 @@ test('D5 — l état de l offre club par club, lu dans l APERÇU du serveur ; sa
   });
   expect(readClubOfferStates({ data: { clubs: [{ clubDocumentId: 'a', offer: 'granted' }] } }).size).toBe(0);
   expect(readClubOfferStates(null).size).toBe(0);
+});
+
+// 🎭 COLL-C6-DEMO (03/10) — LA VILLE DE DÉMONSTRATION NE COMPTE PAS COMME UN CLIENT (D17, `démo A`).
+// Elle reste dans la LISTE de la console (le super-admin la gère, y rattache l'agent commercial),
+// mais ni la tuile, ni « à activer » ne la comptent. ROUGE avant le lot : « 2 », « 2 actives ·
+// 7 clubs couverts » ; et la liste ne demandait pas `isDemo` au serveur.
+const ligneDemo = (clubs, isActive = true) => ({ ...ligne('Ville de Démo', isActive, clubs), isDemo: true });
+
+test('C6-DEMO/T6 — la Ville de démo active (4 clubs) ne compte pas : « 1 », « 1 active · 3 clubs couverts »', () => {
+  mockCollectivites = reponse([ligneDemo(4), ligne('Ville de Montrivage', true, 3)]);
+  const arbre = monter();
+  expect(tuileDe(arbre).props.value).toBe('1');
+  expect(texteTuile(arbre)).toContain('1 active · 3 clubs couverts');
+});
+
+test('C6-DEMO/T7 — seule la démo existe : « 0 », « Aucune mairie pour l’instant » ; inactive, elle n’est pas « à activer »', () => {
+  mockCollectivites = reponse([ligneDemo(4)]);
+  const arbre = monter();
+  expect(tuileDe(arbre).props.value).toBe('0');
+  expect(texteTuile(arbre)).toContain('Aucune mairie pour l’instant');
+  expect(summarizeAdminCollectivites([{ clubsCount: 4, isActive: false, isDemo: true }]).toActivate).toBe(0);
+});
+
+test('C6-DEMO/D6 — la ligne porte `isDemo` (vrai seulement s’il vaut VRAI), et la liste le demande au serveur', () => {
+  const { toAdminCollectiviteRow } = jest.requireActual('@/domains/collectivite/collectiviteDisplay');
+  const { ADMIN_COLLECTIVITES_LIST_PAYLOAD } = jest.requireActual('@/services/collectivite/collectiviteService');
+  expect(toAdminCollectiviteRow({ documentId: 'v', isDemo: true }).isDemo).toBe(true);
+  expect(toAdminCollectiviteRow({ documentId: 'v', isDemo: null }).isDemo).toBe(false);
+  expect(toAdminCollectiviteRow({ documentId: 'v', isDemo: 'true' }).isDemo).toBe(false);
+  expect(ADMIN_COLLECTIVITES_LIST_PAYLOAD.fields).toContain('isDemo');
 });
