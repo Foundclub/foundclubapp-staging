@@ -50,7 +50,8 @@ describe('COLL-C4A — à qui elle est partie, en NOMBRES', () => {
       audiencePreview(t, { audience, clubsCount })
     );
     expect(phrase('membres', 3)).toBe([
-      'Reçue par les membres des 3 clubs.',
+      // COLL-C4A3 (planche 18) : « rattachés », comme la maquette validée.
+      'Reçue par les membres des 3 clubs rattachés.',
       'Une notification part aux dirigeants, aux entraîneurs et aux membres qui l’ont activée.',
       'Personne n’y répond.',
     ].join(' '));

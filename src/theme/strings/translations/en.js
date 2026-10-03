@@ -4773,8 +4773,8 @@ export default {
       calcul: 'Counting the clubs that will receive it…',
       dirigeants: 'Received by the managers of the {{nombre}} attached clubs, with a notification. Nobody replies to it.',
       dirigeantsUn: 'Received by the managers of 1 attached club, with a notification. Nobody replies to it.',
-      membres: 'Received by the members of {{nombre}} clubs.',
-      membresUn: 'Received by the members of 1 club.',
+      membres: 'Received by the members of the {{nombre}} attached clubs.',
+      membresUn: 'Received by the members of 1 attached club.',
       notification: 'A notification goes to managers, coaches and members who turned it on. Nobody replies to it.',
     },
     audiences: {
@@ -4841,6 +4841,7 @@ export default {
     erreur: 'The news could not be loaded.',
     form: {
       ajouter: 'Add a photo or a document',
+      annuler: 'Cancel',
       apercu: 'What members will read',
       camera: 'Camera',
       choisirInstallation: 'Choose the facility: its clubs will receive it.',
@@ -4856,6 +4857,7 @@ export default {
         },
       },
       feuilleTitre: 'Add',
+      glisser: 'or drop a file here',
       header: 'New post',
       headerModifier: 'Edit the post',
       photoJointe: 'Attached photo',
