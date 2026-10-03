@@ -358,7 +358,7 @@ describe('P2 · temoin 2 — appuyer « Absents » ne laisse que les absents', (
 
     const textes = textesDeLaListe(arbre);
 
-    expect(textes).toContain('Absent·e·s');
+    expect(textes).toContain('Absent·e·s · 1');
     expect(textes).toContain('Bilal Test');
     expect(textes).not.toContain('Présent·e·s');
     expect(textes).not.toContain('Sans réponse');
@@ -376,7 +376,7 @@ describe('P2 · temoin 3 — « Tous » retablit', () => {
     const textes = textesDeLaListe(arbre);
 
     expect(textes).toContain('Présent·e·s');
-    expect(textes).toContain('Absent·e·s');
+    expect(textes).toContain('Absent·e·s · 1');
     expect(textes).toContain('Sans réponse');
     expect(textes).toContain('Alex Test');
     expect(textes).toContain('Bilal Test');
@@ -395,7 +395,7 @@ describe('P2 · temoin 4 — l ORDRE des groupes ne bouge pas', () => {
       const textes = textesDeLaListe(arbre);
       return [
         textes.indexOf('Présent·e·s'),
-        textes.indexOf('Absent·e·s'),
+        textes.indexOf('Absent·e·s · 1'),
         textes.indexOf('Sans réponse'),
       ];
     };
@@ -579,8 +579,8 @@ describe('P2 · temoin 8 — la colonne d argent ne casse aucun temoin d ordre',
     const textes = textesDeLaListe(arbre);
 
     expect(textes.indexOf('Présent·e·s')).toBeGreaterThanOrEqual(0);
-    expect(textes.indexOf('Présent·e·s')).toBeLessThan(textes.indexOf('Absent·e·s'));
-    expect(textes.indexOf('Absent·e·s')).toBeLessThan(textes.indexOf('Sans réponse'));
+    expect(textes.indexOf('Présent·e·s')).toBeLessThan(textes.indexOf('Absent·e·s · 1'));
+    expect(textes.indexOf('Absent·e·s · 1')).toBeLessThan(textes.indexOf('Sans réponse'));
   });
 });
 
@@ -598,7 +598,7 @@ describe('P2 · temoin 9 — le CHEMIN AVEC EQUIPES, celui de la vraie vie', () 
     const textes = textesDeLaListe(arbre);
 
     expect(textes).toContain('U15 Feminines');
-    expect(textes).toContain('Absent·e·s');
+    expect(textes).toContain('Absent·e·s · 1');
     expect(textes).toContain('Bilal Test');
     expect(textes).not.toContain('Présent·e·s');
     expect(textes).not.toContain('Sans réponse');

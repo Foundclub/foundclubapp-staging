@@ -859,9 +859,11 @@ describe('ST-MATCH10-BIS · 3 — « feuille convoqués A » : tout l effectif c
     await appuyerSur(racine, 'Retours');
     const vus = textes(racine);
 
+    // FINITIONS11 (« compte A », Adel 03/10) : le COMPTE et « Manquent » ne portent que les 7
+    // convoqués (Hugo et Léo ont répondu) ; la feuille garde ses 11 lignes (« Joueurs · 11 »).
     expect(vus).toEqual(expect.arrayContaining([
-      '2 sur 11 ont répondu',
-      'Manquent · 9',
+      '2 sur 7 ont répondu',
+      'Manquent · 5',
       'Relancer les 5',
       'Nino Garcia, Théo Nguyen et 2 autres ne sont pas convoqués : la relance ne part qu’aux convoqués.',
     ]));
@@ -1022,5 +1024,38 @@ describe('ST-MATCH10-BIS · O1 — « Ton retour à Hugo » sous le tableau, sur
     const telephone = await monter(avecRetour());
     await appuyerSur(telephone, 'Joueurs · 1');
     expect(textes(telephone)).not.toContain('Ton retour à Hugo');
+  });
+});
+// FINITIONS11-STATS · point 6 — « compte A » (Adel, 03/10 ~11h) : la feuille dit LE MÊME compte
+// que la carte « Après le match » (défaut 19) : les CONVOQUÉS qui ont un compte. Elle garde
+// toutes ses lignes (« feuille convoqués A ») ; un joueur ajouté à la main, sans compte, n'entre
+// ni dans le compte, ni dans « Manquent », ni dans la phrase des non-convoqués.
+describe('FINITIONS11 · point 6 — « compte A » : la feuille compte les convoqués, comme la carte', () => {
+  const avecConvocationEtJoueurAjoute = () => {
+    const donnees = feuilleEffectifComplet();
+    const horsConvocation = new Set(['Nino Garcia', 'Sami Martin', 'Théo Nguyen', 'Yanis Bernard']);
+    donnees.playerResponses = [
+      ...donnees.playerResponses.map((/** @type {any} */ item) => ({
+        ...item, convoked: !horsConvocation.has(item.label),
+      })),
+      {
+        convoked: false, documentId: null, label: 'Joueur Ajouté', status: null, userDocumentId: null,
+      },
+    ];
+    return donnees;
+  };
+
+  test('🔴 Retours : « 2 sur 7 ont répondu », « Manquent · 5 », « Relancer les 5 » ; le joueur sans compte n est nommé nulle part', async () => {
+    const racine = await monter(avecConvocationEtJoueurAjoute());
+    await appuyerSur(racine, 'Retours');
+    const vus = textes(racine);
+
+    expect(vus).toEqual(expect.arrayContaining([
+      '2 sur 7 ont répondu',
+      'Manquent · 5',
+      'Relancer les 5',
+      'Nino Garcia, Théo Nguyen et 2 autres ne sont pas convoqués : la relance ne part qu’aux convoqués.',
+    ]));
+    expect(vus.join(' ')).not.toContain('Joueur Ajouté');
   });
 });

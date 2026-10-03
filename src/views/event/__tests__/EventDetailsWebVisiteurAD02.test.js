@@ -134,6 +134,10 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
   useGetTrainingReviews: () => ({ data: undefined }),
 }));
 
+// FINITIONS11 · point 1 — le drapeau « Signaler » du site tire le service de signalement :
+// doublure, comme les autres services (le client HTTP refuse de se charger sans `.env`).
+jest.mock('@/services/eventReport/eventReportService', () => ({ createEventReport: jest.fn() }));
+
 jest.mock('@/services/event/eventService', () => ({
   approveEventTaskAssignment: jest.fn(),
   assignEventTask: jest.fn(),

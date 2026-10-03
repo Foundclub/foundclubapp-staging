@@ -127,6 +127,10 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
   useGetTrainingReviews: () => ({ data: undefined }),
 }));
 
+// FINITIONS11 · point 1 — le drapeau « Signaler » du site tire le service de signalement :
+// doublure, comme les autres services (le client HTTP refuse de se charger sans `.env`).
+jest.mock('@/services/eventReport/eventReportService', () => ({ createEventReport: jest.fn() }));
+
 jest.mock('@/services/event/eventService', () => ({ updateEvent: jest.fn() }));
 
 jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
@@ -800,7 +804,7 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
 
     const jour = new Date('2099-01-01T17:00:00.000Z')
       .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', weekday: 'short' });
-    const [ligne] = root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-match-info-line');
+    const [ligne] = root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-info-line');
     expect(textOf(ligne)).toBe(`U15 · ${jour} · 18:00`);
   });
 
@@ -866,5 +870,92 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
 
     expect(boutonsDOM(root, "Gérer l'événement")).toHaveLength(0);
     expect(boutonsDOM(root, 'Modifier')).not.toHaveLength(0);
+  });
+});
+// FINITIONS11-STATS · point 4 (écran 7) — le site lit le MÊME juge (`matchPageModel.js`) :
+// « Relancer les N » compte les convoqués à relancer, comme le serveur.
+describe('FINITIONS11 · point 4 — sur le site, « Relancer les N » = les convoqués à relancer', () => {
+  const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
+    .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
+    .join(' ').replace(/\s+/g, ' ').trim();
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    convoked: true, label, status: 'pending', userDocumentId: `compte-${label}`, ...champs,
+  });
+
+  test('🔴 7 convoqués sans réponse, 1 hors convocation, 1 sans compte : « Relancer les 7 »', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({
+        playerResponses: [
+          reponse('Ali B.', { status: 'submitted' }),
+          reponse('Hugo L.'),
+          reponse('Léa M.'),
+          reponse('Max P.'),
+          reponse('Nina R.', { status: 'draft' }),
+          reponse('Omar S.'),
+          reponse('Paul T.'),
+          reponse('Zoé V.'),
+          reponse('Yanis K.', { convoked: false }),
+          reponse('Joueur ajouté', { convoked: false, userDocumentId: null }),
+        ],
+        report: {
+          finalizedAt: '2099-01-01T21:39:00.000Z',
+          needsReview: false,
+          responseCompletionCount: 1,
+          responseEligibleCount: 8,
+          status: 'final',
+        },
+        score: {
+          available: true, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+
+    const [bloc] = root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'match-stats');
+    expect(texteRendu(parTestID(bloc, 'post-match-relancer')[0])).toContain('Relancer les 7');
+    expect(texteRendu(parTestID(bloc, 'post-match-journey')[0])).not.toContain('Yanis');
+  });
+});
+// FINITIONS11-STATS · point 6 bis — le site lit le MÊME juge : les deux listes de la carte.
+describe('FINITIONS11 · point 6 bis — sur le site, « Convoqués : … » et « Aussi présents, sans convocation : … »', () => {
+  const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
+    .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
+    .join(' ').replace(/\s+/g, ' ').trim();
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    label, participation: null, status: null, userDocumentId: `compte-${label.split(' ')[0]}`, ...champs,
+  });
+
+  test('🔴 les convoqués comptés, et les deux joueurs venus sans convocation nommés à part', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({
+        playerResponses: [
+          reponse('Léa M.', { convoked: true, participation: 'played', status: 'submitted' }),
+          reponse('Sami D.', { convoked: true }),
+          reponse('Lucas P.', { convoked: false, participation: 'played', status: 'submitted' }),
+          reponse('Nathan R.', { convoked: false }),
+          reponse('Yanis K.', { convoked: false }),
+        ],
+        report: {
+          finalizedAt: '2099-01-01T21:39:00.000Z',
+          needsReview: false,
+          playerLines: [{ minutesPlayed: 30, userDocumentId: 'compte-Nathan' }],
+          responseCompletionCount: 1,
+          responseEligibleCount: 2,
+          status: 'final',
+        },
+        score: {
+          available: true, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+
+    const [bloc] = root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'match-stats');
+    const carte = texteRendu(parTestID(bloc, 'post-match-journey')[0]);
+    expect(carte).toContain('Convoqués : 1 sur 2 a répondu · manquent Sami');
+    expect(carte).toContain('Aussi présents, sans convocation : Lucas, Nathan');
+    expect(carte).not.toContain('Yanis');
   });
 });

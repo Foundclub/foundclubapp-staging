@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -16,10 +17,14 @@ import useTheme from '@/theme/themeContext';
  * ST-MATCH (02/10) — `decrementLabel` / `incrementLabel` : un nom pour CHAQUE bouton
  * quand « Précédent / Suivant » ne dit pas ce qu'il fait (« Un but de plus pour
  * AS Montrivage », la saisie du score). Absents, rien ne change pour les 4 écrans.
+ * FINITIONS11 (03/10, écran 9 des stats, état 3) — `locked` : le compteur VERROUILLÉ de la
+ * planche (score officiel) — bordure pointillée orange, fond orange léger, les deux boutons
+ * éteints. Sur demande seulement, comme `keepTitleWhileLoading` sur Button.
  * @param {object} root0 Proprietes.
  * @param {string} [root0.decrementLabel] Nom du bouton « - » pour les lecteurs d'écran.
  * @param {string} [root0.incrementLabel] Nom du bouton « + » pour les lecteurs d'écran.
  * @param {string} [root0.label] Intitule affiche au-dessus du compteur.
+ * @param {boolean} [root0.locked] Verrouille : bordure pointillee orange, boutons eteints.
  * @param {number} [root0.max] Valeur maximale atteignable.
  * @param {number} [root0.min] Valeur minimale atteignable.
  * @param {() => void} root0.onDecrement Appele au « - ».
@@ -29,8 +34,8 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement} Le compteur rendu.
  */
 function InputStepper({
-  decrementLabel, incrementLabel, label, max = 100, min = 0, onDecrement, onIncrement,
-  tone = 'surface', value,
+  decrementLabel, incrementLabel, label, locked = false, max = 100, min = 0, onDecrement,
+  onIncrement, tone = 'surface', value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -47,6 +52,17 @@ function InputStepper({
       padding: 8,
     }
     : { backgroundColor: Colors.neutral100, borderRadius: 8, padding: 4 };
+  // 🔒 FINITIONS11 — la planche : `border-style: dashed`, warning500 à 55 %, fond à 6 %.
+  const lockedStyle = locked
+    ? {
+      backgroundColor: withAlpha(Colors.warning500, 0.06),
+      borderColor: withAlpha(Colors.warning500, 0.55),
+      borderStyle: /** @type {'dashed'} */ ('dashed'),
+      borderWidth: 1,
+    }
+    : null;
+  const decrementDisabled = locked || value <= min;
+  const incrementDisabled = locked || value >= max;
   const buttonStyle = isTunnelTone
     ? {
       backgroundColor: 'rgba(1, 179, 244, 0.12)',
@@ -67,19 +83,20 @@ function InputStepper({
         Alignments.alignCenter,
         Alignments.justifySpaceBetween,
         containerStyle,
+        lockedStyle,
       ]}
       >
         <TouchableOpacity
           accessibilityLabel={decrementLabel || `${t('common.previous')} ${label || ''}`.trim()}
           accessibilityRole="button"
-          accessibilityState={{ disabled: value <= min }}
-          disabled={value <= min}
+          accessibilityState={{ disabled: decrementDisabled }}
+          disabled={decrementDisabled}
           hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={onDecrement}
           style={[
             Spaces.padding[12],
             buttonStyle,
-            value <= min && { opacity: 0.5 },
+            decrementDisabled && { opacity: 0.5 },
           ]}
         >
           <Text style={[Fonts.h3, signStyle]}>-</Text>
@@ -90,14 +107,14 @@ function InputStepper({
         <TouchableOpacity
           accessibilityLabel={incrementLabel || `${t('common.next')} ${label || ''}`.trim()}
           accessibilityRole="button"
-          accessibilityState={{ disabled: value >= max }}
-          disabled={value >= max}
+          accessibilityState={{ disabled: incrementDisabled }}
+          disabled={incrementDisabled}
           hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={onIncrement}
           style={[
             Spaces.padding[12],
             buttonStyle,
-            value >= max && { opacity: 0.5 },
+            incrementDisabled && { opacity: 0.5 },
           ]}
         >
           <Text style={[Fonts.h3, signStyle]}>+</Text>

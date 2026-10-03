@@ -1631,3 +1631,84 @@ describe('ST-MATCH écran 7 — déjà relancés aujourd hui', () => {
     alerte.mockRestore();
   });
 });
+// FINITIONS11-STATS · point 4 (écran 7) — « Relancer les N » compte ceux que le SERVEUR
+// relancera : convoqués (« c oui »), avec un compte, sans réponse envoyée. Avant : la liste
+// des prénoms coupée à 5 + « +N » (7 manquants = « Relancer les 6 »), non-convoqués compris.
+describe('FINITIONS11 · point 4 — sur le téléphone, « Relancer les N » = les convoqués à relancer', () => {
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    convoked: true, label, status: 'pending', userDocumentId: `compte-${label}`, ...champs,
+  });
+
+  test('🔴 7 convoqués sans réponse, 1 hors convocation, 1 sans compte : « Relancer les 7 »', () => {
+    const root = monter({
+      matchStats: statsAvec({
+        playerResponses: [
+          reponse('Ali Benali', { status: 'submitted' }),
+          reponse('Hugo Lefèvre'),
+          reponse('Léo Durand'),
+          reponse('Max Petit'),
+          reponse('Nina Roux', { status: 'draft' }),
+          reponse('Omar Sow'),
+          reponse('Paul Tran'),
+          reponse('Zoé Vidal'),
+          reponse('Yanis Kader', { convoked: false }),
+          reponse('Joueur ajouté', { convoked: false, userDocumentId: null }),
+        ],
+        report: {
+          finalizedAt: '2020-01-01T12:39:00.000Z',
+          needsReview: false,
+          responseCompletionCount: 1,
+          responseEligibleCount: 8,
+          status: 'final',
+        },
+        score: {
+          available: true, locked: false, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+    const textes = textesVisibles(root);
+
+    expect(textes).toEqual(expect.arrayContaining(['Relancer les 7']));
+    expect(textes).not.toContain('Relancer les 6');
+    expect(textes.join(' ')).not.toContain('Yanis');
+  });
+});
+// FINITIONS11-STATS · point 6 bis — « listes ok » (Adel, 03/10 ~13h20) : la carte « Après le
+// match » dit les deux listes, sur le téléphone, avec le juge partagé (`matchPageModel.js`).
+describe('FINITIONS11 · point 6 bis — sur le téléphone, « Convoqués : … » et « Aussi présents, sans convocation : … »', () => {
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    label, participation: null, status: null, userDocumentId: `compte-${label.split(' ')[0]}`, ...champs,
+  });
+
+  test('🔴 les convoqués comptés, et les deux joueurs venus sans convocation nommés à part', () => {
+    const root = monter({
+      matchStats: statsAvec({
+        playerResponses: [
+          reponse('Léa Martin', { convoked: true, participation: 'played', status: 'submitted' }),
+          reponse('Sami Diallo', { convoked: true }),
+          reponse('Lucas Petit', { convoked: false, participation: 'played', status: 'submitted' }),
+          reponse('Nathan Roux', { convoked: false }),
+          reponse('Yanis Kader', { convoked: false }),
+        ],
+        report: {
+          finalizedAt: '2020-01-01T12:39:00.000Z',
+          needsReview: false,
+          playerLines: [{ minutesPlayed: 30, userDocumentId: 'compte-Nathan' }],
+          responseCompletionCount: 1,
+          responseEligibleCount: 2,
+          status: 'final',
+        },
+        score: {
+          available: true, locked: false, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+    const textes = textesVisibles(root);
+
+    expect(textes).toEqual(expect.arrayContaining([
+      'Convoqués : 1 sur 2 a répondu · manquent Sami',
+      'Aussi présents, sans convocation : Lucas, Nathan',
+    ]));
+    expect(textes.join(' ')).not.toContain('Yanis');
+  });
+});

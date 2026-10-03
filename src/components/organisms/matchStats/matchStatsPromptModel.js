@@ -3,6 +3,8 @@ import i18next from 'i18next';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { isAwaitedResponder } from '@/views/event/matchPageModel';
+
 // ==========================================================================
 // 🔔 ST-MATCH (écrans 3 et 4, design des statistiques validé le 02/10) — CE
 // QUE DIT LA FENÊTRE « APRÈS LE MATCH », RAPPEL PAR RAPPEL.
@@ -154,14 +156,40 @@ export const resolveCoachStep = (prompt) => {
 };
 
 /**
+ * FINITIONS11 · point 2 (écran 1, planche « Rappel d'après-match de l'entraîneur ») — le titre
+ * de la fenêtre de l'entraîneur : « AS Montrivage — Test-COMPO », et « AS Montrivage —
+ * adversaire à confirmer » tant qu'il est inconnu. Le serveur nomme l'adversaire
+ * (`opponentName`, `null` s'il est inconnu). Un serveur d'avant ne rend pas le champ : le titre
+ * d'avant (`label`) reste. Même règle que la feuille de match (`MatchStatsEditor`).
+ * @param {any} prompt - Le rappel d'entraîneur.
+ * @param {string} ourSide - Le camp de gauche : le club, sinon l'équipe.
+ * @returns {string} Le titre.
+ */
+export const describeCoachPromptTitle = (prompt, ourSide) => {
+  const label = prompt?.label || 'Match';
+  const serverNamesOpponent = prompt?.sourceType === 'event'
+    && Object.prototype.hasOwnProperty.call(prompt || {}, 'opponentName');
+  const side = String(ourSide || '').trim();
+  if (!serverNamesOpponent || !side) return label;
+  const opponent = String(prompt?.opponentName || '').trim();
+  return [
+    side,
+    opponent || i18next.t('stMatch.feuille.opponentUnknown', 'adversaire à confirmer'),
+  ].join(' — ');
+};
+
+/**
  * « 0 sur 1 joueur a répondu ». Le rappel ne porte pas ce compte (le serveur le
  * calcule pour la feuille) : la fenêtre le lit dans la feuille de l'entraîneur
  * (`match-stats`, liste `playerResponses`), lue seulement quand elle s'ouvre.
+ * FINITIONS11 · point 6 (« compte A ») : les CONVOQUÉS qui ont un compte, comme la carte.
  * @param {any} matchStats - La feuille, si elle est lue.
  * @returns {string} La phrase, ou une chaîne vide quand on ne sait pas.
  */
 export const describeResponsesCount = (matchStats) => {
-  const responses = Array.isArray(matchStats?.playerResponses) ? matchStats.playerResponses : null;
+  const responses = Array.isArray(matchStats?.playerResponses)
+    ? matchStats.playerResponses.filter(isAwaitedResponder)
+    : null;
   if (!responses || !responses.length) return '';
   const total = responses.length;
   const done = responses

@@ -7163,6 +7163,11 @@ export default {
     automatic: 'Automatic',
     available: 'Available',
     book: 'Book',
+    // FINITIONS11 (03/10) — the breadcrumb at the top of an event page, on the website.
+    breadcrumb: {
+      label: 'Breadcrumb',
+      planning: 'Schedule',
+    },
     campaignAlreadyLinked: 'Campaign already linked',
     cancel: 'Cancel',
     cancelling: 'Cancelling...',
@@ -16699,6 +16704,7 @@ export default {
       actionScore: 'Enter the score',
       actionSeeSheet: 'See the sheet',
       actionSheet: 'Fill in the sheet',
+      convokedResponses: 'Called up: {{responses}}',
       endLabel: '{{day}} at {{time}}',
       header: 'After the match',
       headerComplete: 'After the match · complete',
@@ -16711,6 +16717,8 @@ export default {
       opensAt: 'Everything opens at the end of the match, {{when}}.',
       playersRating_one: 'Players · {{count}} rating',
       playersRating_other: 'Players · {{count}} ratings',
+      // FINITIONS11 6 bis: the two lists of the card.
+      presentWithoutConvocation: 'Also present, not called up: {{names}}',
       remind_one: 'Remind {{count}} player',
       remind_other: 'Remind the {{count}}',
       reminded_one: '{{count}} player reminded.',

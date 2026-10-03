@@ -28,6 +28,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import {
   buildDraftFigures,
+  describeCoachPromptTitle,
   describeDraftRemaining,
   describePromptResult,
   describePromptWhen,
@@ -417,6 +418,22 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   ];
   const result = describePromptResult(shownPrompt?.score);
   const matchLine = describePromptWhen(shownPrompt, { withTeam: !isPlayerPrompt });
+  // ST-VUES3-ORDI (écran 1, point 2 ; planche P2-rappel) — le camp de gauche porte le CLUB
+  // (« AS Montrivage »), plus l'équipe (« U15 ») : face à l'adversaire, c'est le club qui
+  // joue. Le rappel ne porte que l'équipe ; son club vient des équipes que l'entraîneur
+  // entraîne (`trainedTeams`). Sans lui, l'équipe, comme avant.
+  const ourClubName = String((userData?.trainedTeams || []).find(
+    (/** @type {any} */ team) => team?.documentId
+      && team.documentId === shownPrompt?.team?.documentId,
+  )?.club?.name || '').trim();
+  const ourName = ourClubName
+    || String(shownPrompt?.team?.name || '').trim()
+    || t('stMatch.rappel.us', 'Mon équipe');
+  // FINITIONS11 · point 2 — l'adversaire que le serveur nomme (`opponentName`), sinon rien.
+  const opponentName = String(shownPrompt?.opponentName || '').trim();
+  const promptTitle = isPlayerPrompt
+    ? shownPrompt?.label || 'Match'
+    : describeCoachPromptTitle(shownPrompt, ourClubName || shownPrompt?.team?.name);
 
   const renderPill = (/** @type {string} */ label) => (
     <View
@@ -448,7 +465,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
         <Text style={[Fonts.p4Bold, Fonts.primary500, Fonts.uppercase]}>{eyebrow}</Text>
         {pill ? renderPill(pill) : null}
       </View>
-      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{shownPrompt?.label || 'Match'}</Text>
+      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{promptTitle}</Text>
       {matchLine || result ? (
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {matchLine}
@@ -879,18 +896,8 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
       );
     }
 
-    // État 1 — le score, dans la fenêtre : − / + d'une main, au bord du terrain.
-    // ST-VUES3-ORDI (écran 1, point 2 ; planche P2-rappel) — le camp de gauche porte le CLUB
-    // (« AS Montrivage »), plus l'équipe (« U15 ») : face à « Adversaire », c'est le club qui
-    // joue. Le rappel ne porte que l'équipe ; son club vient des équipes que l'entraîneur
-    // entraîne (`trainedTeams`). Sans lui, l'équipe, comme avant.
-    const ourClubName = String((userData?.trainedTeams || []).find(
-      (/** @type {any} */ team) => team?.documentId
-        && team.documentId === shownPrompt?.team?.documentId,
-    )?.club?.name || '').trim();
-    const ourName = ourClubName
-      || String(shownPrompt?.team?.name || '').trim()
-      || t('stMatch.rappel.us', 'Mon équipe');
+    // État 1 — le score, dans la fenêtre : − / + d'une main, au bord du terrain (le camp de
+    // gauche, `ourName`, est calculé plus haut : le titre s'en sert aussi).
     const ourTeam = { team: ourName, ...SANS_ECHAPPEMENT };
     const changeScore = (/** @type {'for' | 'against'} */ side, /** @type {number} */ step) => {
       setScoreDraft((draft) => ({
@@ -898,7 +905,9 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
         [side]: Math.min(99, Math.max(0, draft[side] + step)),
       }));
     };
-    const theirName = t('stMatch.rappel.opponent', 'Adversaire');
+    // FINITIONS11 · point 2 — le compteur de droite nomme l'adversaire quand le serveur le connaît.
+    const theirName = opponentName || t('stMatch.rappel.opponent', 'Adversaire');
+    const theirTeam = { team: opponentName, ...SANS_ECHAPPEMENT };
     return (
       <View style={[Spaces.gap[sectionGap]]}>
         {renderHead(t('stMatch.rappel.coachStep1', 'Après le match · étape 1 sur 3'))}
@@ -926,11 +935,12 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
           <Text style={[Fonts.h3Black, Fonts.neutral300, Spaces.paddingBottom[16]]}>-</Text>
           <View style={[Alignments.fill]}>
             <InputStepper
-              decrementLabel={t(
-                'stMatch.rappel.minusAgainst',
-                'Un but de moins pour l\'adversaire',
-              )}
-              incrementLabel={t('stMatch.rappel.plusAgainst', 'Un but de plus pour l\'adversaire')}
+              decrementLabel={opponentName
+                ? t('stMatch.rappel.minusFor', 'Un but de moins pour {{team}}', theirTeam)
+                : t('stMatch.rappel.minusAgainst', 'Un but de moins pour l\'adversaire')}
+              incrementLabel={opponentName
+                ? t('stMatch.rappel.plusFor', 'Un but de plus pour {{team}}', theirTeam)
+                : t('stMatch.rappel.plusAgainst', 'Un but de plus pour l\'adversaire')}
               label={theirName}
               max={99}
               min={0}

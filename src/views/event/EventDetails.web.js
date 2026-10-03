@@ -27,6 +27,7 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
   peutRelireSaNote,
@@ -59,6 +60,7 @@ import {
   createEventParticipation,
   deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
+import { createEventReport } from '@/services/eventReport/eventReportService';
 import {
   useGetEventMatchStats,
   useRemindEventMatchResponses,
@@ -100,8 +102,11 @@ import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { findParentTeamId } from './matchEncartLines';
 import {
   buildMatchHeaderScoreSummary,
+  countPlayersToRemind,
   formatMatchEndLabel,
+  hasPublishedConvocation,
   listMissingResponders,
+  listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchVerdictTag,
@@ -142,27 +147,6 @@ const getTournamentTeamStatusLabel = (status) => {
   if (status === 'declined') return i18next.t('eventDetails.declined', 'Refusée');
   if (status === 'archived') return i18next.t('eventDetails.archived', 'Archivee');
   return i18next.t('eventDetails.pending', 'En attente');
-};
-
-const formatDate = (value, options = {}) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(localeDesFormats(), options);
-};
-
-const formatDateTimeLabel = (value) => formatDate(value, {
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  month: 'long',
-  year: 'numeric',
-});
-
-const formatTimeLabel = (value) => {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  return raw.slice(0, 5);
 };
 
 const getUserDisplayName = (user) => `${String(user?.firstname || '').trim()} ${String(user?.lastname || '').trim()}`.trim() || i18next.t('eventDetails.member', 'Membre');
@@ -726,6 +710,22 @@ function EventDetails({ navigation, route }) {
     () => listMissingResponders(matchStatsPayload?.playerResponses),
     [matchStatsPayload?.playerResponses],
   );
+  // 🔔 FINITIONS11 · point 4 — « Relancer les N » : ceux que le serveur relancera (convoqués,
+  // avec un compte), pas la liste des prénoms coupée à 5.
+  const matchPlayersToRemind = useMemo(
+    () => countPlayersToRemind(matchStatsPayload?.playerResponses),
+    [matchStatsPayload?.playerResponses],
+  );
+  // 📋 FINITIONS11 · point 6 bis (« listes ok ») — « Convoqués : … » et « Aussi présents, sans
+  // convocation : … », lus dans la charge de la feuille (aucune lecture neuve).
+  const matchHasConvocation = hasPublishedConvocation(matchStatsPayload?.playerResponses);
+  const matchPresentWithoutConvocation = useMemo(
+    () => listPresentWithoutConvocation(
+      matchStatsPayload?.playerResponses,
+      matchStatsPayload?.report?.playerLines,
+    ),
+    [matchStatsPayload?.playerResponses, matchStatsPayload?.report?.playerLines],
+  );
   // 🎯 ST-MATCH (écran 7) — « Relancer les N », comme au téléphone : la route remind-responses
   // (le serveur ne relance que les convoqués, « c oui »). STATS-FIX2 · 8-7 : la relance faite
   // (ou déjà faite ce jour) est retenue pour CE match et CETTE équipe, la carte le dit.
@@ -853,16 +853,22 @@ function EventDetails({ navigation, route }) {
       }),
     ].filter(Boolean).join(' · ')
     : '';
-  // 📅 ST-VUES3-ORDI (écran 1, point 2, planche P3-match-ordi) — la ligne d'infos du match,
-  // sous le titre : « U15 · sam. 5 sept. · 19:00 – 20:00 · Lyon (69001) ».
-  const matchWhenLine = isMatchEvent ? formatEventWhenLine(event) : '';
-  const matchInfoLine = isMatchEvent
-    ? [
-      String(event?.team?.name || '').trim(),
-      matchWhenLine ? `${matchWhenLine.charAt(0).toLowerCase()}${matchWhenLine.slice(1)}` : '',
-      formatEventPlaceShort(event),
-    ].filter(Boolean).join(' · ')
-    : '';
+  // 📅 ST-VUES3-ORDI (écran 1, point 2, planche P3-match-ordi) — la ligne d'infos, sous le
+  // titre : « U15 · sam. 5 sept. · 19:00 – 20:00 · Lyon (69001) ». FINITIONS11 · point 1 :
+  // la même pour TOUS les types d'événement (l'en-tête de la planche vaut pour chaque page).
+  const eventWhenLine = formatEventWhenLine(event);
+  const eventInfoLine = [
+    String(event?.team?.name || '').trim(),
+    eventWhenLine ? `${eventWhenLine.charAt(0).toLowerCase()}${eventWhenLine.slice(1)}` : '',
+    formatEventPlaceShort(event),
+  ].filter(Boolean).join(' · ');
+  // 🏷️ FINITIONS11 · point 1 — le titre d'un match nomme les deux camps, comme l'encart :
+  // « AS Montrivage — Test-COMPO ». Sans adversaire connu, le nom d'avant reste (jamais
+  // un « — » orphelin).
+  const headerClubName = String(event?.team?.club?.name || event?.club?.name || '').trim();
+  const headerTitle = isMatchEvent && headerClubName && matchOpponentName
+    ? `${headerClubName} — ${matchOpponentName}`
+    : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Evenement');
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -1469,6 +1475,31 @@ function EventDetails({ navigation, route }) {
     }
   }, [event?.name, event?.type?.name, eventLink, t]);
 
+  // 🚩 FINITIONS11 · point 1 (planche P3-match-ordi) — « Signaler », comme le drapeau du
+  // téléphone : même service (`createEventReport`), même charge `{ event, reason }`. Le site
+  // demande la raison par la boîte du navigateur, comme ses autres saisies d'une ligne.
+  const reportEventMutation = useMutation({
+    mutationFn: createEventReport,
+    onError: () => {
+      window.alert(t('common.errorOccurred', 'Une erreur est survenue.'));
+    },
+    onSuccess: () => {
+      window.alert(t(
+        'eventDetails.modals.reportSuccess.description',
+        'Merci de ton retour, nous allons traiter ta demande dans les plus brefs délais.',
+      ));
+    },
+  });
+  const handleReportEvent = useCallback(() => {
+    if (!eventId || reportEventMutation.isPending) return;
+    const reason = String(window.prompt(t(
+      'eventDetails.modals.reportEvent.description',
+      'Merci de nous indiquer la raison pour laquelle tu signales cet événement.',
+    )) || '').trim();
+    if (!reason) return;
+    reportEventMutation.mutate({ event: eventId, reason });
+  }, [eventId, reportEventMutation, t]);
+
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
     if (!teamDocumentId) return;
     navigation.navigate(RouteNames.TournamentTeamDetails, { eventId, teamId: teamDocumentId });
@@ -1894,13 +1925,49 @@ function EventDetails({ navigation, route }) {
                 alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between',
               }}
               >
-                <button
-                  onClick={() => navigation.goBack()}
-                  style={{ ...outlineButtonStyle, padding: '10px 14px' }}
-                  type="button"
-                >
-                  {t('common.back', 'Retour')}
-                </button>
+                {/* 🧭 FINITIONS11 · point 1 (planche P3-match-ordi) — le fil d'Ariane
+                    « Planning › Match » remplace « Retour » pour un membre connecté ; un
+                    visiteur, qui n'a pas de planning, garde « Retour ». */}
+                {isSignedIn && hasEvent ? (
+                  <nav
+                    aria-label={t('eventDetails.breadcrumb.label', 'Fil d’Ariane')}
+                    data-testid="event-breadcrumb"
+                    style={{
+                      alignItems: 'center',
+                      color: softTextColor,
+                      display: 'flex',
+                      fontFamily: 'Montserrat-Regular, Montserrat, sans-serif',
+                      fontSize: 13,
+                      gap: 8,
+                    }}
+                  >
+                    <button
+                      onClick={() => navigation.navigate(RouteNames.MyEventList)}
+                      style={{
+                        background: 'transparent',
+                        border: 0,
+                        color: accentColor,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: 'inherit',
+                        padding: 0,
+                      }}
+                      type="button"
+                    >
+                      {t('eventDetails.breadcrumb.planning', 'Planning')}
+                    </button>
+                    <span aria-hidden="true">›</span>
+                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}</span>
+                  </nav>
+                ) : (
+                  <button
+                    onClick={() => navigation.goBack()}
+                    style={{ ...outlineButtonStyle, padding: '10px 14px' }}
+                    type="button"
+                  >
+                    {t('common.back', 'Retour')}
+                  </button>
+                )}
                 {hasEvent ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     <button
@@ -1912,6 +1979,31 @@ function EventDetails({ navigation, route }) {
                         ? t('eventDetails.sharing', 'Partage...')
                         : t('eventDetails.share', 'Partager')}
                     </button>
+                    {/* 🚩 FINITIONS11 · point 1 — le drapeau « Signaler » de la planche (carré de
+                        44, bord et icône bleus), à côté de « Gérer l'événement ». */}
+                    {isSignedIn ? (
+                      <button
+                        aria-label={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
+                        disabled={reportEventMutation.isPending}
+                        onClick={handleReportEvent}
+                        style={{
+                          alignItems: 'center',
+                          background: 'transparent',
+                          border: `1px solid ${accentColor}`,
+                          borderRadius: 12,
+                          cursor: reportEventMutation.isPending ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          height: 44,
+                          justifyContent: 'center',
+                          padding: 0,
+                          width: 44,
+                        }}
+                        title={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
+                        type="button"
+                      >
+                        <SvgIcon color={accentColor} height={20} name="flag" width={20} />
+                      </button>
+                    ) : null}
                     {showManageMenu ? (
                       <div style={{ position: 'relative' }}>
                         <button
@@ -2013,12 +2105,16 @@ function EventDetails({ navigation, route }) {
               {hasEvent ? (
                 <>
                   <div style={{ display: 'grid', gap: 10 }}>
-                    <span style={{
-                      color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
-                    }}
-                    >
-                      {event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}
-                    </span>
+                    {/* Le type en capitales reste pour un visiteur : le fil d'Ariane le porte
+                        pour un membre connecté. */}
+                    {!isSignedIn ? (
+                      <span style={{
+                        color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      }}
+                      >
+                        {event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}
+                      </span>
+                    ) : null}
                     <h1 style={{
                       color: textColor,
                       fontFamily: 'Montserrat-Black, sans-serif',
@@ -2027,33 +2123,16 @@ function EventDetails({ navigation, route }) {
                       margin: 0,
                     }}
                     >
-                      {event?.name || event?.type?.name || t(
-                        'eventDetails.eventFallback',
-                        'Evenement',
-                      )}
+                      {headerTitle}
                     </h1>
-                    <div style={{
-                      color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
-                    }}
-                    >
-                      {matchInfoLine ? (
-                        <span data-testid="event-match-info-line">{matchInfoLine}</span>
-                      ) : (
-                        <>
-                          <span>{formatDateTimeLabel(event?.date)}</span>
-                          {event?.startTime ? (
-                            <span>
-                              {formatTimeLabel(event?.startTime)}
-                              {' '}
-                              -
-                              {' '}
-                              {formatTimeLabel(event?.endTime)}
-                            </span>
-                          ) : null}
-                          {event?.team?.name ? <span>{event.team.name}</span> : null}
-                        </>
-                      )}
-                    </div>
+                    {eventInfoLine ? (
+                      <div style={{
+                        color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
+                      }}
+                      >
+                        <span data-testid="event-info-line">{eventInfoLine}</span>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
@@ -2766,6 +2845,7 @@ function EventDetails({ navigation, route }) {
                   {canManageMatchStats ? (
                     <PostMatchJourneyCard
                       avantLaFin={!isMatchFinished}
+                      avecConvocation={matchHasConvocation}
                       boutonDesactive={isPostMatchDoorClosed}
                       feuilleBrouillonDepuis={matchStatsReport?.status === 'draft'
                         ? matchStatsReport?.updatedAt || matchStatsReport?.createdAt || ''
@@ -2777,6 +2857,7 @@ function EventDetails({ navigation, route }) {
                       motDuCoach={matchStatsReport?.collectiveComment || ''}
                       motif={postMatchAction.subtitle}
                       moyenneJoueurs={playerCollectiveRating}
+                      nombreARelancer={matchPlayersToRemind}
                       noteEquipe={matchStatsReport?.collectiveRating ?? null}
                       onPressEtape={() => {
                         // 🔒 DEUX COUCHES : la carte bloque l'appui porte close, et
@@ -2786,6 +2867,7 @@ function EventDetails({ navigation, route }) {
                         openMatchStatsEditor();
                       }}
                       onRelancer={remindMissingResponders}
+                      presentsSansConvocation={matchPresentWithoutConvocation}
                       relanceEnCours={Boolean(remindResponsesMutation.isPending)}
                       relanceFaite={relanceDuJourCle === relanceCle}
                       reponsesAttendues={Number(

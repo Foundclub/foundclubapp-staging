@@ -185,8 +185,11 @@ import { useEventMutations } from './hooks/useEventMutations';
 import { findParentTeamId } from './matchEncartLines';
 import {
   buildMatchHeaderScoreSummary,
+  countPlayersToRemind,
   formatMatchEndLabel,
+  hasPublishedConvocation,
   listMissingResponders,
+  listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
   resolveMatchVerdictTag,
@@ -4938,6 +4941,22 @@ function EventDetails({ navigation, route }) {
     () => listMissingResponders(matchStatsPayload?.playerResponses),
     [matchStatsPayload?.playerResponses],
   );
+  // 🔔 FINITIONS11 · point 4 — « Relancer les N » : ceux que le serveur relancera (convoqués,
+  // avec un compte), pas la liste des prénoms coupée à 5.
+  const matchPlayersToRemind = useMemo(
+    () => countPlayersToRemind(matchStatsPayload?.playerResponses),
+    [matchStatsPayload?.playerResponses],
+  );
+  // 📋 FINITIONS11 · point 6 bis (« listes ok ») — « Convoqués : … » et « Aussi présents, sans
+  // convocation : … », lus dans la charge de la feuille (aucune lecture neuve).
+  const matchHasConvocation = hasPublishedConvocation(matchStatsPayload?.playerResponses);
+  const matchPresentWithoutConvocation = useMemo(
+    () => listPresentWithoutConvocation(
+      matchStatsPayload?.playerResponses,
+      matchStatsPayload?.report?.playerLines,
+    ),
+    [matchStatsPayload?.playerResponses, matchStatsPayload?.report?.playerLines],
+  );
 
   // 🎯 ST-MATCH (écran 7) — « Relancer », depuis la carte : la route existe (remind-responses,
   // celle de l'éditeur) ; le serveur ne relance que les convoqués (« c oui », 02/10).
@@ -8496,6 +8515,7 @@ function EventDetails({ navigation, route }) {
                   {canManageMatchStats ? (
                     <PostMatchJourneyCard
                       avantLaFin={!isMatchFinished}
+                      avecConvocation={matchHasConvocation}
                       boutonDesactive={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
                       feuilleBrouillonDepuis={matchStatsReport?.status === 'draft'
                         ? matchStatsReport?.updatedAt || matchStatsReport?.createdAt || ''
@@ -8507,11 +8527,13 @@ function EventDetails({ navigation, route }) {
                       motDuCoach={matchStatsReport?.collectiveComment || ''}
                       motif={matchStatsPrimaryAction.subtitle}
                       moyenneJoueurs={playerCollectiveRating}
+                      nombreARelancer={matchPlayersToRemind}
                       noteEquipe={matchStatsReport?.collectiveRating ?? null}
                       onPressEtape={(/** @type {string} */ etape) => (etape === 'score'
                         ? openMatchScoreSheet()
                         : openMatchStatsEditor())}
                       onRelancer={remindMissingResponders}
+                      presentsSansConvocation={matchPresentWithoutConvocation}
                       relanceEnCours={isRemindingResponders}
                       relanceFaite={relanceDuJourCle === relanceCle}
                       reponsesAttendues={Number(
@@ -9552,6 +9574,8 @@ function EventDetails({ navigation, route }) {
                           incrementLabel={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
                             team: row.spoken, ...SANS_ECHAPPEMENT,
                           })}
+                          // FINITIONS11 · point 5 — la bordure pointillée orange de la planche.
+                          locked={isMatchScoreLocked}
                           max={isMatchScoreLocked ? matchScoreDraft[row.side] : 99}
                           min={isMatchScoreLocked ? matchScoreDraft[row.side] : 0}
                           onDecrement={() => changeMatchScore(row.side, -1)}

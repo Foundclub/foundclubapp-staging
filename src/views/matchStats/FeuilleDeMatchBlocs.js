@@ -12,6 +12,7 @@ import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
+import { hasResponderAccount, isAwaitedResponder } from '@/views/event/matchPageModel';
 
 import {
   colonnesDeLaLigne,
@@ -725,14 +726,15 @@ export function BlocRetours({
   const { t } = useTranslation();
   const surfaces = useSurfacesFeuille();
   const repondu = reponses.filter((reponse) => reponse?.status === 'submitted');
-  const manquants = reponses.filter((reponse) => reponse?.status !== 'submitted');
-  // 📐 ST-MATCH10-BIS (point 3) — « feuille convoqués A » : TOUT l'effectif compte (« 2 sur
-  // 11 ont répondu »), mais le serveur ne relance que les convoqués (« c oui »). Le bouton
-  // compte donc ceux qu'il relancera, et la feuille dit qui ne l'est pas. Un serveur
-  // d'avant ne marque personne (`convoked` absent) : tous restent relançables.
-  const aRelancer = manquants.filter((reponse) => reponse?.convoked !== false);
-  const horsConvocation = manquants
-    .filter((reponse) => reponse?.convoked === false)
+  // 🧮 FINITIONS11 · point 6 — « compte A » (Adel, 03/10) : « Manquent » ne compte que les
+  // ATTENDUS (convoqués, avec un compte), comme « N sur M » et la relance. La phrase nomme les
+  // non-convoqués sans réponse ; un joueur ajouté à la main, sans compte, ne peut pas répondre :
+  // il n'est nommé nulle part ici. Un serveur d'avant ne marque personne : tous restent.
+  const sansReponse = reponses.filter((reponse) => reponse?.status !== 'submitted');
+  const manquants = sansReponse.filter(isAwaitedResponder);
+  const aRelancer = manquants;
+  const horsConvocation = sansReponse
+    .filter((reponse) => reponse?.convoked === false && hasResponderAccount(reponse))
     .map((reponse) => reponse?.label)
     .filter(Boolean);
   const part = attendues > 0 ? Math.round((recues / attendues) * 100) : 0;
@@ -772,14 +774,18 @@ export function BlocRetours({
         </View>
       </View>
 
-      {manquants.length ? (
+      {manquants.length || horsConvocation.length ? (
         <View style={[surfaces.encart, Spaces.padding[12], Spaces.gap[8]]}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
-            {t('stMatch.feuille.missingTitle', 'Manquent · {{n}}', { n: manquants.length })}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {manquants.map((reponse) => reponse?.label).filter(Boolean).join(', ')}
-          </Text>
+          {manquants.length ? (
+            <>
+              <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                {t('stMatch.feuille.missingTitle', 'Manquent · {{n}}', { n: manquants.length })}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {manquants.map((reponse) => reponse?.label).filter(Boolean).join(', ')}
+              </Text>
+            </>
+          ) : null}
           {horsConvocation.length ? (
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {t('stMatch.feuille.notConvokedNoReminder', {

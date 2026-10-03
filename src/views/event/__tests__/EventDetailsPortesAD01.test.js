@@ -1186,6 +1186,31 @@ describe('ST-MATCH écran 9 — la feuille du score', () => {
     expect(mockSaveEventMatchResult).not.toHaveBeenCalled();
   });
 
+  // FINITIONS11 · point 5 (écran 9, état 3) — les compteurs verrouillés portent la bordure
+  // POINTILLÉE orange de la planche : la feuille demande l'option `locked` au compteur partagé,
+  // et seulement quand le score vient de la fédération.
+  const compteursDeLaFeuille = (/** @type {any} */ root) => laFeuille(root).findAll(
+    (/** @type {any} */ node) => typeof node.props?.decrementLabel === 'string'
+      && typeof node.props?.onDecrement === 'function',
+    { deep: false },
+  );
+
+  test('🔴 FINITIONS11 · verrouillé : les deux compteurs demandent leur bordure pointillée (`locked`)', () => {
+    const root = ouvrir(statsSansScore({
+      locked: true, scoreAgainst: 1, scoreFor: 2, source: 'external_sync',
+    }));
+
+    const compteurs = compteursDeLaFeuille(root);
+    expect(compteurs).toHaveLength(2);
+    compteurs.forEach((/** @type {any} */ c) => expect(c.props.locked).toBe(true));
+  });
+
+  test('🔒 FINITIONS11 · au repos : les compteurs gardent leur bord plein (`locked` éteint)', () => {
+    const compteurs = compteursDeLaFeuille(ouvrir());
+
+    expect(compteurs).toHaveLength(2);
+    compteurs.forEach((/** @type {any} */ c) => expect(c.props.locked).toBe(false));
+  });
   test('🔒 au repos, pas de cadenas (le score n est pas verrouillé)', () => {
     const root = ouvrir();
 
