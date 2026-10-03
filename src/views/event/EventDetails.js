@@ -182,7 +182,17 @@ import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
-import { buildMatchEncartLines, findParentTeamId } from './matchEncartLines';
+import { findParentTeamId } from './matchEncartLines';
+import {
+  buildMatchHeaderScoreSummary,
+  formatMatchEndLabel,
+  listMissingResponders,
+  resolveMatchStartTimeLabel,
+  resolveMatchStatsDoor,
+  resolveMatchVerdictTag,
+  resolveTeamCoachFirstname,
+  resolveViewerFromInvitedTeam,
+} from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
@@ -3609,25 +3619,11 @@ function EventDetails({ navigation, route }) {
   // pour ses joueurs : le 3-1 gagne par le club devenait une DEFAITE a
   // l'ecran. La regle est la meme qu'au nommage (`eventDisplayName.js`) —
   // les DEUX clubs doivent etre connus et egaux, sinon rien ne change.
-  const isViewerFromInvitedTeam = useMemo(() => {
-    const organizerTeamId = event?.team?.documentId || null;
-    const currentTeamId = compositionTeamId || organizerTeamId || null;
-    if (!organizerTeamId || !currentTeamId || organizerTeamId === currentTeamId) return false;
-
-    const organizerClubId = event?.team?.club?.documentId || event?.club?.documentId || null;
-    const viewerTeam = (event?.invitedTeams || [])
-      .find((team) => team?.documentId === currentTeamId);
-    const viewerClubId = viewerTeam?.club?.documentId || null;
-    if (organizerClubId && viewerClubId && organizerClubId === viewerClubId) return false;
-
-    return true;
-  }, [
-    compositionTeamId,
-    event?.club?.documentId,
-    event?.invitedTeams,
-    event?.team?.club?.documentId,
-    event?.team?.documentId,
-  ]);
+  // ST-VUES3-ORDI — la regle vit dans `matchPageModel.js`, partagee avec le site.
+  const isViewerFromInvitedTeam = useMemo(
+    () => resolveViewerFromInvitedTeam({ compositionTeamId, event }),
+    [compositionTeamId, event],
+  );
 
   const compositionEditorTeam = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
@@ -3913,95 +3909,25 @@ function EventDetails({ navigation, route }) {
 
   // ST-MATCH (écrans 1 et 7) — le prénom de l'entraîneur de l'équipe : « Karim n'a pas
   // encore saisi le score », « Le bilan de Karim ».
-  const teamCoachFirstname = useMemo(() => String(
-    (compositionEditorTeam || event?.team)?.trainers?.[0]?.firstname || '',
-  ).trim() || null, [compositionEditorTeam, event?.team]);
+  const teamCoachFirstname = useMemo(
+    () => resolveTeamCoachFirstname(compositionEditorTeam || event?.team),
+    [compositionEditorTeam, event?.team],
+  );
   // ST-MONMATCH (écran 12) — « Le retour de Karim » : qui a publié la feuille
   // (`report.submittedBy`, rendu au joueur), sinon l'entraîneur de l'équipe.
   const monMatchEntraineur = String(matchStatsReport?.submittedBy?.firstname || '').trim()
     || teamCoachFirstname || '';
 
   // ST-MATCH (écran 1, état 1) — « VS » et l'heure du coup d'envoi, au centre.
-  const matchStartTimeLabel = useMemo(() => {
-    if (event?.startTime) return String(event.startTime).substring(0, 5);
-    if (!event?.date) return null;
-    const startAt = new Date(event.date);
-    return Number.isNaN(startAt.getTime())
-      ? null
-      : startAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' });
-  }, [event?.date, event?.startTime]);
+  const matchStartTimeLabel = useMemo(() => resolveMatchStartTimeLabel(event), [event]);
 
+  // ST-VUES3-ORDI — le calcul de l'encart vit dans `matchPageModel.js` : le site
+  // (`EventDetails.web.js`) appelle le MEME, avec ses propres faits.
   const matchHeaderScoreSummary = useMemo(() => {
     if (!isMatchEvent) return null;
 
-    const scoreState = matchStatsPayload?.score || null;
-    const storedMatchResult = event?.matchResult || null;
-    // La regle d'orientation vit desormais dans `isViewerFromInvitedTeam` (D3) :
-    // le score et la pastille ne peuvent plus diverger.
-    const shouldInvertStoredScore = Boolean(storedMatchResult && isViewerFromInvitedTeam);
-
-    let fallbackScoreFor = null;
-    let fallbackScoreAgainst = null;
-    if (storedMatchResult) {
-      fallbackScoreFor = shouldInvertStoredScore
-        ? storedMatchResult?.scoreAgainst
-        : storedMatchResult?.scoreFor;
-      fallbackScoreAgainst = shouldInvertStoredScore
-        ? storedMatchResult?.scoreFor
-        : storedMatchResult?.scoreAgainst;
-    }
-    const fallbackAvailable = fallbackScoreFor !== null
-      && fallbackScoreFor !== undefined
-      && fallbackScoreAgainst !== null
-      && fallbackScoreAgainst !== undefined;
-    const fallbackSource = storedMatchResult?.source || null;
-
-    const available = Boolean(scoreState?.available || fallbackAvailable);
-    const resolvedScoreFor = scoreState?.available ? scoreState?.scoreFor : fallbackScoreFor;
-    const resolvedScoreAgainst = scoreState?.available ? scoreState?.scoreAgainst : fallbackScoreAgainst;
-    const resolvedSource = scoreState?.available ? scoreState?.source : fallbackSource;
-    const waitingOfficial = Boolean(
-      scoreState?.waitingOfficial || (!scoreState?.available && event?.externalAutoSource),
-    );
-
-    // 🆕 N3 (D5) — L'ENCART EXISTE AVANT LE MATCH.
-    // Jusqu'ici cette ligne rendait `null` : un match a venir n'affichait donc
-    // AUCUN encart, et l'adversaire n'apparaissait nulle part sur la carte.
-    // C'est le cadre A de la planche 03 — « Test FC — FC Bonneveine » et
-    // « Score en attente » se montrent des qu'un adversaire est connu, et le
-    // cadre I (adversaire inconnu) se montre aussi, pour le dire.
-    const awaitingOpponent = !matchOpponentName;
-
-    // 🏁 N3 (D6) — LE VERDICT SE DEDUIT, IL NE SE STOCKE PAS.
-    // `resolvedScoreFor/Against` sont DEJA orientes vers le lecteur (D3) :
-    // le verdict herite donc de l'orientation sans rien recalculer, et le
-    // 3-1 de l'organisateur devient bien une defaite pour l'equipe invitee.
-    let verdict = null;
-    if (available) {
-      const scoredFor = Number(resolvedScoreFor);
-      const scoredAgainst = Number(resolvedScoreAgainst);
-      if (Number.isFinite(scoredFor) && Number.isFinite(scoredAgainst)) {
-        if (scoredFor > scoredAgainst) verdict = 'win';
-        else if (scoredFor < scoredAgainst) verdict = 'loss';
-        else verdict = 'draw';
-      }
-    }
-
-    // D9/D10 — LA PRESENCE DU RAPPEL PORTE LE DROIT, pas un drapeau que
-    // l'entete pourrait oublier de lire. Il n'existe que pour qui peut editer
-    // ET quand l'adversaire manque : renommer un adversaire deja connu reste
-    // dans EventEdit, ou vit le champ complet.
-    const onNameOpponent = canEdit && awaitingOpponent ? handleOpenOpponentSheet : null;
-
-    // 🆚 ST-MATCH (écran 1) — le centre du face-à-face (« VS 19:00 », « – – Score en
-    // attente », « 2 - 1 Score saisi ») et les lignes de l'encart, calculés par
-    // `buildMatchEncartLines` pour CE lecteur. ⛔ Les badges « Score du match »,
-    // « Score manuel » et le texte d'aide sont RETIRÉS : le face-à-face et la pastille
-    // de type les disent (« manuel » devient « Score saisi » et le nom de qui l'a saisi).
-    // L'auteur vient de la feuille (`score.recordedBy`) ou, pour qui ne la lit pas (le
-    // dirigeant), du score enregistré sur l'événement (`matchResult.savedBy`).
-    const lignes = buildMatchEncartLines({
-      available,
+    return buildMatchHeaderScoreSummary({
+      canEdit,
       canManage: canManageMatchStats,
       // 🔒 L'équipe et son encadrement ; jamais un visiteur (mineurs en U15). 👪 Et le parent d'un
       // joueur que le SERVEUR a reconnu (DECISIONS-SOIR, « parents encart B ») : l'app ne le
@@ -4010,41 +3936,25 @@ function EventDetails({ navigation, route }) {
         isTeamMember || canEdit || matchStatsPayload?.permissions?.actorRole === 'parent',
       ),
       coachFirstname: teamCoachFirstname,
+      event,
+      isFinal: isMatchStatsFinal,
       isFinished: isMatchFinished,
-      locale: localeDesFormats(),
-      publishedLines: isMatchStatsFinal && matchStatsPayload?.sport !== 'basketball'
-        ? matchStatsReport?.playerLines || null
-        : null,
-      recordedAt: scoreState?.available
-        ? scoreState?.recordedAt || null
-        : storedMatchResult?.savedAt || null,
-      recordedBy: scoreState?.available
-        ? scoreState?.recordedBy || null
-        : storedMatchResult?.savedBy || null,
-      scoreAgainst: resolvedScoreAgainst,
-      scoreFor: resolvedScoreFor,
-      source: resolvedSource,
+      isViewerFromInvitedTeam,
+      onNameOpponent: handleOpenOpponentSheet,
+      opponentName: matchOpponentName,
+      playerLines: matchStatsReport?.playerLines,
+      scoreState: matchStatsPayload?.score || null,
+      sport: matchStatsPayload?.sport,
       startTimeLabel: matchStartTimeLabel,
       t,
       viewerDocumentId: userData?.documentId || null,
-      waitingOfficial,
     });
-
-    return {
-      ...lignes,
-      awaitingOpponent,
-      onNameOpponent,
-      opponentName: matchOpponentName,
-      verdict,
-    };
   }, [
-    // `isMatchFinished` a QUITTE cette liste avec D5, puis y est REVENU avec FINITIONS7 ;
-    // depuis ST-MATCH (écran 1), il choisit le centre du face-à-face : « VS 19:00 » avant
-    // le coup d'envoi, « – – Score en attente » après (la règle de FINITIONS7 tient).
+    // `isMatchFinished` choisit le centre du face-à-face : « VS 19:00 » avant le coup
+    // d'envoi, « – – Score en attente » après (la règle de FINITIONS7 tient).
     canEdit,
     canManageMatchStats,
-    event?.externalAutoSource,
-    event?.matchResult,
+    event,
     handleOpenOpponentSheet,
     isMatchEvent,
     isMatchFinished,
@@ -4065,15 +3975,11 @@ function EventDetails({ navigation, route }) {
   // 🏷️ ST-MATCH (écran 1) — la pastille de type porte le VERDICT une fois le score
   // connu : « MATCH · TERMINÉ · VICTOIRE ». Le badge de l'encart qui le disait est
   // retiré : une seule place pour le résultat.
-  const matchVerdictTagSegment = useMemo(() => {
-    const verdict = matchHeaderScoreSummary?.verdict;
-    if (!isMatchFinished || !verdict) return '';
-    return {
-      draw: t('stMatch.encart.verdictTag.draw', 'NUL'),
-      loss: t('stMatch.encart.verdictTag.loss', 'DÉFAITE'),
-      win: t('stMatch.encart.verdictTag.win', 'VICTOIRE'),
-    }[verdict] || '';
-  }, [isMatchFinished, matchHeaderScoreSummary?.verdict, t]);
+  const matchVerdictTagSegment = useMemo(() => resolveMatchVerdictTag({
+    isFinished: isMatchFinished,
+    t,
+    verdict: matchHeaderScoreSummary?.verdict,
+  }), [isMatchFinished, matchHeaderScoreSummary?.verdict, t]);
   const typeTagSegmentsAvecVerdict = useMemo(
     () => [...typeTagSegmentsComplets, matchVerdictTagSegment],
     [matchVerdictTagSegment, typeTagSegmentsComplets],
@@ -4441,16 +4347,7 @@ function EventDetails({ navigation, route }) {
   // devenu la chip « Convocation » ; le bloc n'avait plus aucun lecteur.
 
   // 🎯 ST-MATCH (écrans 7 et 8) — « Tout s'ouvre à la fin du match, sam. 5 sept. à 20:00 ».
-  const matchEndLabel = useMemo(() => {
-    if (!eventEndedAt || Number.isNaN(eventEndedAt.getTime())) return '';
-    return t('stMatch.carte.endLabel', '{{day}} à {{time}}', {
-      day: eventEndedAt.toLocaleDateString(localeDesFormats(), {
-        day: 'numeric', month: 'short', weekday: 'short',
-      }),
-      time: eventEndedAt.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
-      ...SANS_ECHAPPEMENT,
-    });
-  }, [eventEndedAt, t]);
+  const matchEndLabel = useMemo(() => formatMatchEndLabel({ eventEndedAt, t }), [eventEndedAt, t]);
 
   // 🗣️ N4 (D6) — LES SEPT TITRES ONT DISPARU, L'ETAT EST RESTE.
   //
@@ -4471,80 +4368,20 @@ function EventDetails({ navigation, route }) {
   // fin du match, sam. 5 sept. à 20:00 », et au dirigeant qui n'entraîne pas (« score A »)
   // QUI saisit. Retirés : « Commence par enregistrer le score du match. », « Rapport
   // finalise », « Les membres de ton équipe peuvent encore finaliser ce rapport. ».
-  const matchStatsPrimaryAction = useMemo(() => {
-    if (!isMatchFinished) {
-      return {
-        disabled: true,
-        subtitle: matchEndLabel
-          ? t('stMatch.gerer.opensAt', 'S’ouvre à la fin du match, {{when}}', {
-            when: matchEndLabel, ...SANS_ECHAPPEMENT,
-          })
-          : t('stMatch.gerer.opensAtEnd', 'S’ouvre à la fin du match'),
-      };
-    }
-    if (matchStatsPayload?.score?.waitingOfficial) {
-      return {
-        disabled: true,
-        subtitle: t(
-          'eventDetails.waitingForTheSyncedOfficial',
-          'En attente du score officiel synchronise.',
-        ),
-      };
-    }
-    const publiee = matchStatsReport?.finalizedAt ? new Date(matchStatsReport.finalizedAt) : null;
-    const reportFinalisedSubtitle = publiee && !Number.isNaN(publiee.getTime())
-      ? t('stMatch.gerer.publishedOn', 'Feuille publiée le {{date}} à {{time}}', {
-        date: publiee.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
-        time: publiee.toLocaleTimeString(localeDesFormats(), {
-          hour: '2-digit', minute: '2-digit',
-        }),
-        ...SANS_ECHAPPEMENT,
-      })
-      : t('stMatch.gerer.published', 'Feuille publiée');
-    // 🔒 SECU-STATS — L EDITEUR EST L OUTIL DE L ENCADREMENT. Il affiche l avis
-    // du coach et l auto-evaluation de CHAQUE joueur : rapport publie ou a
-    // re-verifier, il s ouvrait pourtant a tout membre de l equipe, et c est par
-    // la qu un joueur lisait ces champs. Ce test passe donc AVANT les deux
-    // suivants. Le joueur garde SA reponse (« Mon retour post-match »).
-    // 🏛️ « score A » (Adel, 02/10) : le dirigeant qui n'entraîne pas ne saisit pas ; la
-    // note lui dit QUI saisit (le prénom vient de l'équipe, pas de la feuille).
-    if (!canManageMatchStats) {
-      return {
-        disabled: true,
-        subtitle: teamCoachFirstname
-          ? t('stMatch.gerer.managerWho', 'Saisies par l’entraîneur de l’équipe, {{name}}', {
-            name: teamCoachFirstname, ...SANS_ECHAPPEMENT,
-          })
-          : t('stMatch.gerer.managerWhoUnnamed', 'Saisies par l’entraîneur de l’équipe'),
-      };
-    }
-    if (isMatchStatsReviewRequired) {
-      return {
-        disabled: false,
-        subtitle: t('stMatch.gerer.review', 'Score officiel changé : vérifie la feuille'),
-      };
-    }
-    if (isMatchStatsFinal) {
-      return {
-        disabled: false,
-        subtitle: reportFinalisedSubtitle,
-      };
-    }
-    if (matchStatsPayload?.score?.available) {
-      return {
-        disabled: false,
-        subtitle: t('stMatch.gerer.stepSheet', 'Étape 2 sur 3 : la feuille'),
-      };
-    }
-    // AD01 (✍️) — LE SEUL CAS QUE LA FEUILLE COURTE DETOURNE. Ce drapeau vit
-    // ici, et nulle part ailleurs : recopier la condition a cote serait un
-    // second juge, qui divergerait au premier changement de regle.
-    return {
-      disabled: false,
-      isScoreEntry: true,
-      subtitle: t('stMatch.gerer.stepScore', 'Étape 1 sur 3 : le score'),
-    };
-  }, [
+  // ST-VUES3-ORDI — la porte vit dans `matchPageModel.js` : la puce du menu Gérer du
+  // SITE (planche P3-match-ordi, état 4) lit la même.
+  const matchStatsPrimaryAction = useMemo(() => resolveMatchStatsDoor({
+    canManage: canManageMatchStats,
+    coachFirstname: teamCoachFirstname,
+    endLabel: matchEndLabel,
+    finalizedAt: matchStatsReport?.finalizedAt || null,
+    isFinal: isMatchStatsFinal,
+    isFinished: isMatchFinished,
+    isReviewRequired: isMatchStatsReviewRequired,
+    scoreAvailable: Boolean(matchStatsPayload?.score?.available),
+    t,
+    waitingOfficial: Boolean(matchStatsPayload?.score?.waitingOfficial),
+  }), [
     isMatchFinished,
     canManageMatchStats,
     isMatchStatsReviewRequired,
@@ -5097,14 +4934,10 @@ function EventDetails({ navigation, route }) {
 
   // 🎯 ST-MATCH (écran 7, amélioration 3) — l'étape 3 NOMME qui manque. La feuille de
   // l'encadrement porte la liste (le joueur n'en reçoit que le compte : SECU-STATS).
-  const matchMissingResponders = useMemo(() => {
-    const items = Array.isArray(matchStatsPayload?.playerResponses) ? matchStatsPayload.playerResponses : [];
-    const prenoms = items
-      .filter((/** @type {any} */ item) => item?.status !== 'submitted')
-      .map((/** @type {any} */ item) => String(item?.label || '').trim().split(/\s+/)[0])
-      .filter(Boolean);
-    return prenoms.length > 5 ? [...prenoms.slice(0, 5), `+${prenoms.length - 5}`] : prenoms;
-  }, [matchStatsPayload?.playerResponses]);
+  const matchMissingResponders = useMemo(
+    () => listMissingResponders(matchStatsPayload?.playerResponses),
+    [matchStatsPayload?.playerResponses],
+  );
 
   // 🎯 ST-MATCH (écran 7) — « Relancer », depuis la carte : la route existe (remind-responses,
   // celle de l'éditeur) ; le serveur ne relance que les convoqués (« c oui », 02/10).

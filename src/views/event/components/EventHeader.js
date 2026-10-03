@@ -7,8 +7,6 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
-import Button from '@/components/atoms/button/Button';
-import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
@@ -32,7 +30,17 @@ import BG_MATCH from '@/assets/background-card-event/card-match.png';
 import BG_RESERVATION from '@/assets/background-card-event/card-reservation.png';
 import BG_STAGE from '@/assets/background-card-event/card-stage.png';
 import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
+// Même motif que `EventDetails.web.js` : `import/order` et `perfectionist` se contredisent
+// sur l'ordre des imports relatifs et des alias non classés.
+/* eslint-disable perfectionist/sort-imports */
 import { openExternalMap } from '@/platform/maps/externalMap';
+import {
+  formatEventPlaceShort,
+  formatEventTeamLine,
+  formatEventWhenLine,
+} from '../eventInfoLines';
+import MatchScoreEncart from './MatchScoreEncart';
+/* eslint-enable perfectionist/sort-imports */
 
 // AE01 — les 7 fonds, recopies des CARTES de liste (`EventCardNew.js:53-62`) :
 // le tournoi empruntait le fond du match et le stage tombait dans « autre »,
@@ -260,16 +268,127 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
     });
   };
 
-  // 🏁 N3 (D5) / ST-MATCH (écran 1) — L'ecran fournit la DONNEE (`opponentName`,
-  // la pastille d'etape qui porte le verdict) ; la carte fournit la MISE EN FORME.
-  // ST-MATCH : le verdict ne colore plus le badge ni la bordure — il est DIT dans la
-  // pastille (« Match · terminé · victoire »), le face-à-face est celui du pack 05C.
-  const opponentDisplayName = toDisplayText(matchScoreSummary?.opponentName);
-  // ST-MATCH (écran 1, état 6) — l'attente du score officiel se dit en ORANGE, plus
-  // en or (l'or est réservé à la League) ; les autres attentes, en gris.
-  const statusLineColor = matchScoreSummary?.statusLine?.tone === 'warning'
-    ? Colors.warning400
-    : Colors.neutral300;
+  // 📅 ST-VUES3-ORDI (écran 1, point 2) — LE BLOC D'INFOS DU MATCH, dans l'ordre de la
+  // planche « L'encart du score » : calendrier (« Sam. 5 sept. · 19:00 – 20:00 »), épingle
+  // (« Lyon (69001) », qui ouvre toujours le GPS), personnes (« U15 · AS Montrivage »). Ni
+  // nom de section, ni « Ouvrir dans le GPS » écrit, ni catégorie en capitales. Un lieu
+  // sans ville connue garde son libellé d'avant (ne rien inventer) ; un match importé,
+  // son lieu de compétition. Les autres types gardent leur bloc (leur propre pack).
+  const matchWhenLine = matchScoreSummary ? formatEventWhenLine(event) : '';
+  const matchPlaceLine = matchScoreSummary
+    ? ((isImportedExternalMatch && externalMatchLocation) || formatEventPlaceShort(event)
+      || getLocationText())
+    : '';
+  const matchTeamLine = matchScoreSummary ? formatEventTeamLine(event) : '';
+  const renderMatchInfo = (
+    /** @type {any} */ icon,
+    /** @type {string} */ text,
+    /** @type {string} */ testID,
+  ) => (
+    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]} testID={testID}>
+      <Image
+        source={icon}
+        style={[{ height: 16, width: 16 }, { tintColor: Colors.primary200 }]}
+      />
+      <Text style={[Fonts.p2, Fonts.neutral200, { flexShrink: 1 }]}>{text}</Text>
+    </View>
+  );
+
+  // Le bloc d'infos des autres types d'événement, inchangé (leur propre pack).
+  const defaultInfoBlock = (
+    <>
+      {/* Section Name */}
+      <View style={[Alignments.fullWidth, Spaces.gap[8], Spaces.marginBottom[12]]}>
+        <Text style={[Fonts.p2Bold, Fonts.textRight, Alignments.fullWidth, { color: accentColor }]}>
+          {sectionName}
+        </Text>
+        <View style={[Alignments.fullWidth, ApplicationStyle.separator, { backgroundColor: accentColor }]} />
+      </View>
+
+      {/* Info: Location, Date, Time, Team Category */}
+      <View style={[Spaces.gap[24], Alignments.fill]}>
+        {getLocationText() ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleOpenLocationInGps}
+            style={[Alignments.justifyCenter, Spaces.gap[8]]}
+          >
+            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
+              <Image
+                source={Images.pin}
+                style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+              />
+              <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '90%' }]}>
+                {getLocationText()}
+              </Text>
+            </View>
+            <Text style={[Fonts.p4, Fonts.textCenter, { color: accentColor }]}>
+              {t('common.openInGps', 'Ouvrir dans le GPS')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {event?.date && (
+          <View style={[Alignments.row, Alignments.fill, Spaces.gap[16]]}>
+            <View style={[Spaces.gap[8]]}>
+              <View style={[Alignments.row, Spaces.gap[8]]}>
+                <Image
+                  source={Images.calendar}
+                  style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+                />
+                {/* FINITIONS7 (tournee 8) — la date s affichait « jeu » seul : un texte de
+                    plusieurs mots a sa largeur mesuree perd son dernier mot sous Android 16
+                    (piege paye par FINITIONS le 29/09). Insecable, il tient comme un mot. */}
+                <Text style={[Fonts.p2, Fonts.neutral00]}>
+                  {texteInsecable(formatDateWithDayPrefix(event.date))}
+                </Text>
+              </View>
+
+              <View style={[Alignments.row, Spaces.gap[4]]}>
+                <Image
+                  source={Images.clock}
+                  style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
+                />
+                <Text style={[Fonts.p2, Fonts.primary100]}>
+                  {event?.startTime && event?.endTime
+                    ? `${event.startTime.substring(0, 5)} - ${event.endTime.substring(0, 5)}`
+                    : format(new Date(event.date), 'HH:mm')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[{ height: 45, width: 1 }, ApplicationStyle.backgroundColor.neutral00]} />
+
+            {(categoryName || levelName || activityName) && (
+              // FINITIONS7 — c est cette colonne qui retrecit (ses textes ont deja leur « … ») :
+              // une longue categorie (« SÉNIOR (+18 ANS) ») ne pousse plus la date hors de l ecran.
+              <View style={[Spaces.gap[8], { flexShrink: 1 }]}>
+                {categoryName ? (
+                  <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                    {categoryName}
+                  </Text>
+                ) : null}
+                <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
+                  {levelName || activityName}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {invitedTeamNames.length > 0 && (
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3Bold, { color: accentColor }]}>
+              {t('eventDetails.header.invitedTeams', 'Équipes invitées')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.primary100]}>
+              {invitedTeamNames.join(' \u2022 ')}
+            </Text>
+          </View>
+        )}
+      </View>
+    </>
+  );
 
   return (
     <ImageBackground
@@ -369,194 +488,14 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
           Retirés : le badge « Score du match · Victoire », la couleur du verdict sur la
           bordure (la pastille dit le verdict), et le mot « manuel ». */}
       {matchScoreSummary ? (
-        <View style={[Alignments.fullWidth, Spaces.gap[16]]} testID="event-header-match-encart">
-          <View
-            style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
-            testID="event-header-face-a-face"
-          >
-            <View
-              style={[Alignments.fill, Alignments.alignCenter, Spaces.gap[8]]}
-              testID="event-header-camp-club"
-            >
-              <ClubLogoMark club={eventClub} logoUrl={logoUrl} name={clubName} size={44} />
-              <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-                {clubName}
-              </Text>
-            </View>
-
-            <View style={[Alignments.alignCenter, { minWidth: 88 }]} testID="event-header-score">
-              <Text
-                style={[
-                  matchScoreSummary.isScoreShown ? Fonts.h1Black : Fonts.h3Black,
-                  matchScoreSummary.isScoreShown ? Fonts.neutral00 : Fonts.neutral300,
-                ]}
-              >
-                {matchScoreSummary.value}
-              </Text>
-              {matchScoreSummary.centerLabel ? (
-                <Text style={[Fonts.p4Bold, Fonts.neutral300, Fonts.uppercase]}>
-                  {matchScoreSummary.centerLabel}
-                </Text>
-              ) : null}
-            </View>
-
-            {/* D9/D10 — la PRESENCE du rappel porte le droit. Un lecteur qui n'organise
-                pas ne recoit pas `onNameOpponent` : aucun bouton n'est monte. Le camp
-                « Nommer l'adversaire » prend la MEME emprise que l'autre camp (05C). */}
-            {matchScoreSummary.onNameOpponent ? (
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.8}
-                onPress={matchScoreSummary.onNameOpponent}
-                style={[
-                  ApplicationStyle.borderRadius16,
-                  Alignments.fill,
-                  Alignments.alignCenter,
-                  Alignments.justifyCenter,
-                  Spaces.gap[4],
-                  Spaces.paddingVertical[8],
-                  {
-                    borderColor: Colors.primary500,
-                    borderStyle: 'dashed',
-                    borderWidth: 1,
-                    minHeight: 92,
-                  },
-                ]}
-                testID="event-header-nommer-adversaire"
-              >
-                <Image
-                  source={Images.plus}
-                  style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.primary500]}
-                />
-                <Text style={[Fonts.p3Bold, Fonts.primary500, Fonts.textCenter]}>
-                  {t('eventDetails.matchCard.nameOpponent', 'Nommer l\'adversaire')}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View
-                style={[
-                  Alignments.fill,
-                  Alignments.alignCenter,
-                  Spaces.gap[8],
-                  // D10 — le POINTILLE dit « il manque quelque chose », sans un mot de plus.
-                  matchScoreSummary.awaitingOpponent
-                    ? [ApplicationStyle.borderRadius16, Spaces.paddingVertical[8], {
-                      borderColor: withAlpha(Colors.neutral00, 0.24),
-                      borderStyle: 'dashed',
-                      borderWidth: 1,
-                    }]
-                    : null,
-                ]}
-                testID="event-header-camp-adversaire"
-              >
-                {opponentDisplayName ? (
-                  <ClubLogoMark name={opponentDisplayName} size={44} />
-                ) : null}
-                <Text
-                  numberOfLines={2}
-                  style={[
-                    Fonts.p2Bold,
-                    opponentDisplayName ? Fonts.neutral00 : Fonts.neutral300,
-                    Fonts.textCenter,
-                  ]}
-                >
-                  {opponentDisplayName
-                    || t('eventDetails.matchCard.opponentToConfirm', 'Adversaire à confirmer')}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {matchScoreSummary.onEnterScore ? (
-            <Button
-              onPress={matchScoreSummary.onEnterScore}
-              title={t('stMatch.encart.enterScore', 'Saisir le score')}
-              variant="Primary"
-            />
-          ) : null}
-
-          {matchScoreSummary.statusLine ? (
-            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
-              <SvgIcon
-                color={statusLineColor}
-                height={14}
-                name="clock-two-thirty"
-                style={/** @type {any} */ (Spaces.marginTop[4])}
-                width={14}
-              />
-              <Text
-                style={[Fonts.p3, Fonts.textCenter, { color: statusLineColor, flexShrink: 1 }]}
-                testID="event-header-match-attente"
-              >
-                {matchScoreSummary.statusLine.text}
-              </Text>
-            </View>
-          ) : null}
-
-          {matchScoreSummary.authorLine ? (
-            <Text
-              style={[Fonts.p3, Fonts.neutral300, Fonts.textCenter]}
-              testID="event-header-match-auteur"
-            >
-              {matchScoreSummary.authorLine}
-            </Text>
-          ) : null}
-
-          {matchScoreSummary.scorersLine ? (
-            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[4]]}>
-              <SvgIcon
-                color={Colors.neutral300}
-                height={14}
-                name="soccer-ball"
-                style={/** @type {any} */ (Spaces.marginTop[4])}
-                width={14}
-              />
-              <Text
-                style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter, { flexShrink: 1 }]}
-                testID="event-header-match-buteurs"
-              >
-                {matchScoreSummary.scorersLine}
-              </Text>
-            </View>
-          ) : null}
-
-          {matchScoreSummary.onSeeStats ? (
-            <TouchableOpacity
-              accessibilityRole="link"
-              activeOpacity={0.8}
-              onPress={matchScoreSummary.onSeeStats}
-              style={[
-                Alignments.row,
-                Alignments.alignCenter,
-                Alignments.selfCenter,
-                Spaces.gap[8],
-                { minHeight: 44 },
-              ]}
-              testID="event-header-voir-les-stats"
-            >
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('stMatch.encart.seeMatchStats', 'Voir les stats du match')}
-              </Text>
-              <SvgIcon color={Colors.primary500} height={12} name="arrow-right" width={12} />
-            </TouchableOpacity>
-          ) : null}
-
-          {facilityName ? (
-            <View
-              style={[
-                ApplicationStyle.borderRadius100,
-                Alignments.selfCenter,
-                Spaces.paddingHorizontal[8],
-                Spaces.paddingVertical[4],
-                { backgroundColor: withAlpha(accentColor, 0.14) },
-              ]}
-            >
-              <Text style={[Fonts.p4, Fonts.neutral00]}>
-                {facilityName}
-              </Text>
-            </View>
-          ) : null}
-        </View>
+        <MatchScoreEncart
+          accentColor={accentColor}
+          clubName={clubName}
+          eventClub={eventClub}
+          facilityName={facilityName}
+          logoUrl={logoUrl}
+          matchScoreSummary={matchScoreSummary}
+        />
       ) : null}
 
       {/* 🔭 P7 — LES DEUX TUILES DE RECRUTEMENT (planche 03, carte E).
@@ -627,96 +566,50 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
         </View>
       ) : null}
 
-      {/* Section Name */}
-      <View style={[Alignments.fullWidth, Spaces.gap[8], Spaces.marginBottom[12]]}>
-        <Text style={[Fonts.p2Bold, Fonts.textRight, Alignments.fullWidth, { color: accentColor }]}>
-          {sectionName}
-        </Text>
-        <View style={[Alignments.fullWidth, ApplicationStyle.separator, { backgroundColor: accentColor }]} />
-      </View>
-
-      {/* Info: Location, Date, Time, Team Category */}
-      <View style={[Spaces.gap[24], Alignments.fill]}>
-        {getLocationText() ? (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleOpenLocationInGps}
-            style={[Alignments.justifyCenter, Spaces.gap[8]]}
-          >
-            <View style={[Alignments.row, Alignments.justifyCenter, Spaces.gap[8]]}>
-              <Image
-                source={Images.pin}
-                style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-              />
-              <Text style={[Fonts.p2, Fonts.primary100, { maxWidth: '90%' }]}>
-                {getLocationText()}
-              </Text>
-            </View>
-            <Text style={[Fonts.p4, Fonts.textCenter, { color: accentColor }]}>
-              {t('common.openInGps', 'Ouvrir dans le GPS')}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {event?.date && (
-          <View style={[Alignments.row, Alignments.fill, Spaces.gap[16]]}>
-            <View style={[Spaces.gap[8]]}>
-              <View style={[Alignments.row, Spaces.gap[8]]}>
-                <Image
-                  source={Images.calendar}
-                  style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-                />
-                {/* FINITIONS7 (tournee 8) — la date s affichait « jeu » seul : un texte de
-                    plusieurs mots a sa largeur mesuree perd son dernier mot sous Android 16
-                    (piege paye par FINITIONS le 29/09). Insecable, il tient comme un mot. */}
-                <Text style={[Fonts.p2, Fonts.neutral00]}>
-                  {texteInsecable(formatDateWithDayPrefix(event.date))}
-                </Text>
-              </View>
-
-              <View style={[Alignments.row, Spaces.gap[4]]}>
-                <Image
-                  source={Images.clock}
-                  style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral00]}
-                />
-                <Text style={[Fonts.p2, Fonts.primary100]}>
-                  {event?.startTime && event?.endTime
-                    ? `${event.startTime.substring(0, 5)} - ${event.endTime.substring(0, 5)}`
-                    : format(new Date(event.date), 'HH:mm')}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[{ height: 45, width: 1 }, ApplicationStyle.backgroundColor.neutral00]} />
-
-            {(categoryName || levelName || activityName) && (
-              // FINITIONS7 — c est cette colonne qui retrecit (ses textes ont deja leur « … ») :
-              // une longue categorie (« SÉNIOR (+18 ANS) ») ne pousse plus la date hors de l ecran.
-              <View style={[Spaces.gap[8], { flexShrink: 1 }]}>
-                {categoryName ? (
-                  <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
-                    {categoryName}
-                  </Text>
-                ) : null}
-                <Text numberOfLines={1} style={[Fonts.p2, Fonts.primary100, Fonts.uppercase]}>
-                  {levelName || activityName}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {invitedTeamNames.length > 0 && (
-          <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.p3Bold, { color: accentColor }]}>
+      {/* 📅 ST-VUES3-ORDI (écran 1, point 2) — le bloc d'infos de la planche pour un match ;
+          les autres types gardent le leur. */}
+      {matchScoreSummary ? (
+        <View
+          style={[
+            Alignments.fullWidth,
+            Spaces.gap[8],
+            {
+              borderTopColor: withAlpha(Colors.neutral00, 0.08),
+              borderTopWidth: 1,
+              paddingTop: 12,
+            },
+          ]}
+          testID="event-header-infos-match"
+        >
+          {matchWhenLine
+            ? renderMatchInfo(
+              Images.calendar,
+              texteInsecable(matchWhenLine),
+              'event-header-info-date',
+            )
+            : null}
+          {matchPlaceLine ? (
+            <TouchableOpacity
+              accessibilityHint={t('common.openInGps', 'Ouvrir dans le GPS')}
+              accessibilityRole="button"
+              activeOpacity={0.8}
+              onPress={handleOpenLocationInGps}
+            >
+              {renderMatchInfo(Images.pin, matchPlaceLine, 'event-header-info-lieu')}
+            </TouchableOpacity>
+          ) : null}
+          {matchTeamLine
+            ? renderMatchInfo(Images.users, matchTeamLine, 'event-header-info-equipe')
+            : null}
+          {invitedTeamNames.length > 0 ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
               {t('eventDetails.header.invitedTeams', 'Équipes invitées')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.primary100]}>
+              {' : '}
               {invitedTeamNames.join(' \u2022 ')}
             </Text>
-          </View>
-        )}
-      </View>
+          ) : null}
+        </View>
+      ) : defaultInfoBlock}
     </ImageBackground>
   );
 }

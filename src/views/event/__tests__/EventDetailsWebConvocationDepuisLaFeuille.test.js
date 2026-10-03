@@ -113,6 +113,8 @@ jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
 // l apres-match : une charge vide suffit.
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => emptyQuery(),
+  // ST-VUES3-ORDI — « Relancer les N » de la carte « Après le match », sur le site.
+  useRemindEventMatchResponses: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 // Récolte du 03/10 : ST-RETOURS2 fait lire les avis d'entraînement par la fiche
