@@ -74,6 +74,19 @@ export const tauxLisible = (taux) => {
 };
 
 /**
+ * « occupation : 6 % » (ou « occupation : — ») : la fin de la ligne « 9 séances · … » de
+ * l'accueil (planches 2 et 3).
+ * @param {Traduire} t - La traduction.
+ * @param {unknown} taux - Le taux de la semaine, ou null.
+ * @returns {string} Le libellé.
+ */
+export const phraseOccupation = (t, taux) => t(
+  'collectiviteChiffres.jauge.occupation',
+  'occupation : {{taux}}',
+  { taux: tauxLisible(taux), ...SANS_ECHAPPEMENT },
+);
+
+/**
  * « 6 tenues · 1 annulée par le club · 2 touchées par une fermeture » (+ « · 2 à venir » quand la
  * période n'est pas finie : sinon les trois nombres ne font pas le total). Les replis restent DANS
  * `t()` : c'est là que le compteur du français en dur les sait traduisibles.

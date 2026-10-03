@@ -28,6 +28,8 @@ let mockClubs;
 /** @type {any} */
 let mockSemaine;
 /** @type {any} */
+let mockChiffresSemaine;
+/** @type {any} */
 let mockMine;
 /** @type {any} */
 let mockParams;
@@ -108,6 +110,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  // COLL-C5 (03/10) : la jauge lit le taux de la semaine (les chiffres de la Ville).
+  useCollectiviteChiffres: () => mockChiffresSemaine,
   useCollectiviteClubs: () => mockClubs,
   useCollectiviteInstallations: () => mockInstallations,
   useCollectiviteRequests: () => mockRequetes,
@@ -265,6 +269,7 @@ beforeEach(() => {
   mockClubs = lu(CLUBS);
   mockActualites = lu([]);
   mockFermetures = lu({ data: [] });
+  mockChiffresSemaine = { data: null, error: null, isLoading: false };
   mockSemaine = [
     {
       installation: TILLEULS,
@@ -382,7 +387,8 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(lus).toEqual(expect.arrayContaining([
       'Cette semaine',
       'Gymnase des Tilleuls',
-      '3 séances',
+      // COLL-C5 (03/10) — la ligne de la planche : « 9 séances · occupation : — » sans taux.
+      '3 séances · occupation : —',
       'Dojo municipal',
       'Aucune séance',
       'libre',
@@ -580,6 +586,27 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
 // les étapes se cochent d'elles-mêmes, une seule porte un bouton, masquables une fois faites.
 // « Attribuer les créneaux » (lot C2a) est MASQUÉE ; « Présentez-vous aux clubs » paraît depuis
 // le lot C4a (02/10) et se coche à la première actualité.
+// 📊 COLL-C5 (03/10/2026), point 3 — PLANCHES 2 et 3 : la jauge d'occupation de « Cette semaine »
+// (design HY521H1 page 1), le TAUX de la semaine lu dans les chiffres de la Ville (contrat §5).
+describe('COLL-C5 — planches 2 et 3 : la jauge d occupation de la semaine', () => {
+  it('une jauge par installation, remplie du taux ; « occupation : 23 % »', async () => {
+    mockChiffresSemaine = {
+      data: { installations: [{ documentId: TILLEULS.documentId, taux: 23 }] },
+      error: null,
+      isLoading: false,
+    };
+    const arbre = await monter();
+    expect(textes(arbre))
+      .toEqual(expect.arrayContaining(['3 séances · occupation : 23 %', 'Aucune séance']));
+    const jauge = (/** @type {string} */ id) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === `collectivite-home-jauge-${id}`
+        && typeof n.props?.accessibilityLabel === 'string',
+    )[0];
+    expect(jauge(TILLEULS.documentId).props.accessibilityLabel).toBe('Occupation : 23 %');
+    expect(jauge(DOJO.documentId).props.accessibilityLabel).toBe('Occupation : —');
+  });
+});
+
 describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve', () => {
   it('Ville toute neuve : 0 sur 4, et SEULE la première étape porte un bouton', async () => {
     mockInstallations = lu([]);
