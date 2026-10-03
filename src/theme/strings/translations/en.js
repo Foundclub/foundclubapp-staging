@@ -4695,6 +4695,12 @@ export default {
   // COLL-C4A2 (02/10/2026) — les canaux de la Ville dans la messagerie : canal des dirigeants
   // (D72) et conversation privee Ville <-> club (D73). Design HY521H1 page 3.
   collectiviteCanaux: {
+    colonne: {
+      canaux: 'City channels',
+      lectureSeule: 'Read-only for clubs',
+      titre: 'Channels and conversations',
+      vous: 'You',
+    },
     conversationsVides: 'No conversation yet. A club manager who writes to you will appear here.',
     dernierMessage: '{{qui}}: {{texte}}',
     dirigeantLigne: '{{ville}} and {{nombre}} clubs',
