@@ -86,6 +86,7 @@ import {
 } from '@/services/event/eventService';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
+import { useFacilityClosures } from '@/services/facilityClosure/facilityClosureQueries';
 import {
   getClubSharedPlanning,
   getCMPlanning,
@@ -737,6 +738,14 @@ function PlanningWeekFullscreen() {
   // COLL-C4B (02/10) — les plages fermees ou bloquees de la fenetre (`meta.closures`, contrat §13).
   // COLL-C4B-BIS : plus le brouillon du panneau (a la place de la fermeture qu il modifie).
   const fermeturesDuServeur = Array.isArray(data?.meta?.closures) ? data.meta.closures : [];
+  // COLL-C4B-BIS (03/10), point 6 — LE BANDEAU suit la periode concernee (P3b-actu-tel ecran 6 :
+  // « tant que la fermeture dure ou approche ») : la fermeture de la page d abord, sinon celle que
+  // le serveur annonce (`meta.bandeau` : en cours, ou dans les 14 jours). Pour TOUS les lecteurs —
+  // le membre d un club rattache lit la ; avant, seule la fermeture de la page s y disait.
+  const fermeturesDeLInstallation = useFacilityClosures(isFacilitySource ? facilityId : null);
+  const fermetureDuBandeau = fermeturesDuServeur[0]
+    || fermeturesDeLInstallation.data?.meta?.bandeau
+    || null;
   const fermeturesDessinees = brouillon
     ? [
       ...fermeturesDuServeur.filter((/** @type {any} */ fermeture) => !brouillon.documentId
@@ -1680,7 +1689,7 @@ function PlanningWeekFullscreen() {
           <View style={[Spaces.marginBottom[8], { gap: 6 }]}>
             {/* COLL-C4B (02/10) — la fermeture de la page, pour TOUS les lecteurs (P3b). */}
             <FacilityClosureBanner
-              closure={Array.isArray(data?.meta?.closures) ? data.meta.closures[0] : null}
+              closure={fermetureDuBandeau}
               testID="planning-bandeau-fermeture"
               withDays
             />

@@ -525,3 +525,40 @@ describe('COLL-C4B-BIS point 5 — un jour ferme n a aucune place', () => {
     expect(libre).toHaveLength(0);
   });
 });
+
+// 🖥️ COLL-C4B-BIS (03/10/2026), point 6 — LE BANDEAU CHEZ UN MEMBRE suit la periode concernee
+// (P3b-actu-tel ecran 6 : « tant que la fermeture dure ou approche »), pas seulement la page :
+// limite nommee par C4B (commit 461815de, « pas celle qui approche la semaine suivante »).
+describe('COLL-C4B-BIS point 6 — le bandeau suit la fermeture qui dure ou approche', () => {
+  it('11. un joueur, semaine sans fermeture : le bandeau dit celle de mardi prochain (meta.bandeau)', async () => {
+    mockOrdinateur = false;
+    /** @type {any} */ (listFacilityClosures).mockResolvedValue({
+      data: [],
+      meta: {
+        bandeau: {
+          documentId: 'f2', endDate: '2026-03-10', kind: 'closure', reason: 'vacances', startDate: '2026-03-10',
+        },
+        canManage: false,
+      },
+    });
+    const lus = textes(await rendre());
+    expect(listFacilityClosures).toHaveBeenCalledWith('gym-ville', { status: 'active' });
+    expect(lus).toContain('L’installation est fermée le mardi 10 mars');
+    expect(lus).toContain('Vacances.');
+  });
+
+  it('12. la fermeture de la page passe avant celle qui approche', async () => {
+    mockOrdinateur = false;
+    avecFermeture();
+    /** @type {any} */ (listFacilityClosures).mockResolvedValue({
+      data: [],
+      meta: {
+        bandeau: {
+          documentId: 'f2', endDate: '2026-03-10', kind: 'closure', reason: 'vacances', startDate: '2026-03-10',
+        },
+      },
+    });
+    const lus = textes(await rendre());
+    expect(lus).toContain('L’installation est fermée le mercredi 4 mars');
+  });
+});
