@@ -459,3 +459,36 @@ describe('COLL-C4B-BIS point 1 — sur ordinateur, le panneau a droite du planni
     expect(mockNavigation.navigate).toHaveBeenLastCalledWith('CollectiviteFermeture', expect.objectContaining({ mode: 'bloquer' }));
   });
 });
+
+// 🖥️ COLL-C4B-BIS (03/10/2026), point 2 — « P4v3-fermer-ordi » : la semaine HACHUREE. Le planning
+// donne la plage a la grille dans TOUTES les vues (la vue Jour a plateaux l oubliait : photo T10
+// T10_C25_5, aucune plage), et une semaine fermee sans seance se dessine au lieu de « Aucun
+// creneau cette semaine ».
+describe('COLL-C4B-BIS point 2 — la plage dans toutes les vues', () => {
+  it('7. vue Jour a plateaux : la plage est donnee a la grille', async () => {
+    avecFermeture();
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue({
+      ...reponse([BLOC_DE_MON_CLUB]),
+      meta: {
+        ...reponse([]).meta,
+        closures: [FERMETURE_DU_JOUR],
+        facility: { ...reponse([]).meta.facility, plateaux: ['Côté tribune', 'Côté parking'] },
+      },
+    });
+    mockOrdinateur = false;
+    await rendre();
+    expect(grille().lanes).toBeDefined();
+    expect(bandes()).toHaveLength(1);
+  });
+
+  it('8. une semaine fermee sans seance : la grille et sa plage, pas « Aucun creneau »', async () => {
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue({
+      ...reponse([]),
+      meta: { ...reponse([]).meta, closures: [FERMETURE_DU_JOUR] },
+    });
+    mockOrdinateur = false;
+    const arbre = await rendre();
+    expect(textes(arbre)).not.toContain('Aucun créneau cette semaine');
+    expect(bandes()).toHaveLength(1);
+  });
+});

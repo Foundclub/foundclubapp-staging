@@ -266,10 +266,20 @@ function PlanningWeekTimelineView({
     ? lanes
     : null;
 
+  // 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») : une JOURNEE fermee (plage `closureBand` d une
+  // fermeture, pas d un blocage) n ouvre pas les heures creuses — « Libre jusqu a 17:30 » reste
+  // replie, la plage les couvre toutes. Seule dans la page, elle les ouvre : la journee se lit.
+  const heuresOuvrantes = useMemo(() => {
+    const sansJourneeFermee = timedEvents.filter((/** @type {any} */ event) => (
+      !event?.raw?.closureBand || event.raw.closureBand.kind === 'block'
+    ));
+    return sansJourneeFermee.length ? sansJourneeFermee : timedEvents;
+  }, [timedEvents]);
+
   const activeHours = useMemo(() => {
     const values = new Set();
 
-    timedEvents.forEach((event) => {
+    heuresOuvrantes.forEach((event) => {
       const eventTime = extractTime(event);
       if (!eventTime) return;
       const { endHour, endMinute, startHour } = eventTime;
@@ -285,7 +295,7 @@ function PlanningWeekTimelineView({
     });
 
     return values;
-  }, [timedEvents]);
+  }, [heuresOuvrantes]);
 
   const timelineBlocks = useMemo(() => {
     const blocks = [];
@@ -388,12 +398,16 @@ function PlanningWeekTimelineView({
         );
       }
 
+      // COLL-C4B-BIS : une JOURNEE fermee couvre toute la colonne (`.ferme-bande` : top 0,
+      // bottom 0).
+      const journeeFermee = Boolean(event?.raw?.closureBand)
+        && event.raw.closureBand.kind !== 'block';
       const positionedEvent = {
         ...event,
-        bottom: Math.max(top + minEventHeight, bottom),
+        bottom: journeeFermee ? totalHeight : Math.max(top + minEventHeight, bottom),
         color: getEventColor(event, Colors.primary500),
         dayIndex,
-        top,
+        top: journeeFermee ? 0 : top,
       };
 
       byDay[dayIndex].push(positionedEvent);
@@ -406,6 +420,17 @@ function PlanningWeekTimelineView({
     if (colonnesDePlateaux) {
       const largeur = 100 / colonnesDePlateaux.length;
       return byDay.flatMap((dayEvents) => dayEvents.map((/** @type {any} */ event) => {
+        // COLL-C4B-BIS : la plage fermee passe sous TOUTES les colonnes de plateaux.
+        if (event.raw?.closureBand) {
+          return {
+            ...event,
+            colIndex: 0,
+            displayType: 'event',
+            height: event.bottom - event.top,
+            leftPercent: 0,
+            widthPercent: 100,
+          };
+        }
         const colonne = Math.max(0, Math.min(
           colonnesDePlateaux.length - 1,
           Number(laneOf ? laneOf(event) : 0) || 0,
@@ -422,12 +447,11 @@ function PlanningWeekTimelineView({
     }
 
     return byDay.flatMap((dayEvents, dayIndex) => {
-      // T9 (C29_2) : quand deux blocs ne tiennent pas cote a cote, une plage fermee (COLL-C4B) ne
-      // prend pas de place : elle se pose en FOND, sur toute la largeur du jour, sous les seances.
+      // T9 (C29_2), puis COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») : une plage fermee (COLL-C4B)
+      // ne prend JAMAIS la place d une seance : elle se pose en FOND, sur toute la largeur du jour,
+      // sous les seances — sur un telephone comme sur la semaine large de l ordinateur.
       /** @type {any[]} */
-      const enFond = tropEtroit(2)
-        ? dayEvents.filter((/** @type {any} */ event) => event.raw?.closureBand)
-        : [];
+      const enFond = dayEvents.filter((/** @type {any} */ event) => event.raw?.closureBand);
       const fond = enFond.map((/** @type {any} */ event) => ({
         ...event,
         colIndex: 0,
@@ -534,6 +558,8 @@ function PlanningWeekTimelineView({
     weekDays.forEach((day) => counts.set(getDayKey(day), 0));
 
     weekEvents.forEach((event) => {
+      // COLL-C4B-BIS : la plage fermee n est pas une seance.
+      if (event?.raw?.closureBand) return;
       const eventDate = getPlanningItemDate(event);
       if (!eventDate) return;
       const key = getDayKey(eventDate);

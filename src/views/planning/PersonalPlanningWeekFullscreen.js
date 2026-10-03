@@ -1062,7 +1062,8 @@ function PlanningWeekFullscreen() {
       );
     }
 
-    if (!hasEvents) {
+    // COLL-C4B-BIS : une semaine FERMEE sans seance se dessine (la plage), comme la planche.
+    if (!hasEvents && !bandesDeFermeture.length) {
       return (
         <View
           style={{
@@ -1132,8 +1133,9 @@ function PlanningWeekFullscreen() {
         compactFullscreen
         currentDate={vue === VUES.troisJours ? addDays(currentDate, -1) : currentDate}
         // COLL-C4B (02/10) — design P4v3-fermer ecran 4 : les plages fermees ou bloquees, posees
-        // a cote des seances (jamais comptees comme une seance). Pas en colonnes de plateaux.
-        events={colonnesDePlateaux ? events : [...bandesDeFermeture, ...events]}
+        // sous les seances (jamais comptees comme une seance). COLL-C4B-BIS : aussi en colonnes de
+        // plateaux (la grille les pose sous toutes les colonnes).
+        events={[...bandesDeFermeture, ...events]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
         laneOf={colonnesDePlateaux ? colonneDuBloc : undefined}
         lanes={colonnesDePlateaux}
