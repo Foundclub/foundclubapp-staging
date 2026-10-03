@@ -577,9 +577,11 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
     await appuyerSur(racine, 'Publier');
     const [fenetre] = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-confirmation');
     expect(fenetre).toBeTruthy();
+    // 📐 ADAPTÉ (ST-MATCH10-BIS, point 2) : la fenêtre dit aussi que les parents d'un mineur
+    // reçoivent son retour (le serveur les prévient : `sendCoachFeedbackToParents`).
     expect(textes(fenetre)).toEqual([
       'Publier la feuille ?',
-      'Hugo recevra ton retour individuel. Les joueurs de l’équipe U15 verront le score, ta note de l’équipe et ton mot. Tu pourras la modifier et la republier.',
+      'Hugo et, s’il est mineur, ses parents recevront ton retour individuel. Les joueurs de l’équipe U15 verront le score, ta note de l’équipe et ton mot. Tu pourras la modifier et la republier.',
       'Annuler',
       'Publier',
     ]);
@@ -644,7 +646,7 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
     expect(textes(racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0])).toEqual(['Republier']);
   });
 
-  test('État 10 · Aucun joueur : l onglet dit pourquoi et mène au match, sans texte technique', async () => {
+  test('État 10 · Aucun joueur : l onglet dit pourquoi et ouvre la convocation, sans texte technique', async () => {
     const donnees = feuilleU15({ playerLines: [], responseCompletionCount: 0, responseEligibleCount: 0 }, {
       availablePlayers: [], playerResponses: [],
     });
@@ -657,8 +659,12 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
       'Les joueurs viennent de la convocation du match. Publie-la, ou ajoute l’équipe au match.',
     ]));
     expect(vus.some((texte) => /roster|Publie d abord/.test(texte))).toBe(false);
-    await appuyerSur(racine, 'Ouvrir la page du match');
-    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.EventDetails, { eventId: 'event-1' });
+    // 📐 ADAPTÉ (ST-MATCH10-BIS, point 5) : le bouton de la planche, « Ouvrir la convocation ».
+    // La feuille ne sait pas bâtir une convocation : elle rend la main à la page du match,
+    // qui ouvre SA porte de convocation (témoins EventDetails*ConvocationDepuisLaFeuille).
+    expect(vus).not.toContain('Ouvrir la page du match');
+    await appuyerSur(racine, 'Ouvrir la convocation');
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.EventDetails, { eventId: 'event-1', focusSection: 'convocation' });
   });
 
   test('État 11 · Erreur : l en-tête reste, la phrase est humaine, « Réessayer » relit', async () => {
@@ -765,5 +771,256 @@ describe('ST-MATCH10 — la feuille de match sur ordinateur (3 colonnes)', () =>
 
     expect(textes(racine).some((texte) => /^Publiée le .+ à \d{2}:\d{2}$/.test(texte))).toBe(true);
     expect(textes(racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0])).toEqual(['Modifier']);
+  });
+});
+
+// ==========================================================================
+// 📐 ST-MATCH10-BIS (03/10) — LES 7 MANQUES DE L'ÉCRAN 10, un par un.
+// ==========================================================================
+describe('ST-MATCH10-BIS · 1 — l adversaire nommé (le serveur le rend avec la feuille)', () => {
+  // Le vrai nom d'un match en base : « Match vs Test-COMPO » (event-display-name.js).
+  const nommee = (/** @type {any} */ adversaire = 'Test-COMPO', /** @type {any} */ rapport = {}) => feuilleU15(rapport, {
+    event: {
+      date: '2026-09-05T15:00:00.000Z', documentId: 'event-1', name: 'Match vs Test-COMPO', opponentName: adversaire,
+    },
+    team: { clubName: 'AS Montrivage', documentId: 'team-1', name: 'U15' },
+  });
+
+  test('Téléphone : « AS Montrivage — Test-COMPO », et chaque compteur porte le nom de son camp', async () => {
+    const racine = await monter(nommee());
+    const vus = textes(racine);
+
+    expect(vus).toEqual(expect.arrayContaining(['AS Montrivage — Test-COMPO', 'AS Montrivage', 'Test-COMPO', 'U15 · 1 sur 1 a répondu']));
+    expect(vus).not.toContain('Adversaire');
+    expect(parDescription(racine, 'Un but de plus pour Test-COMPO')).not.toHaveLength(0);
+    expect(parDescription(racine, 'Un but de plus pour AS Montrivage')).not.toHaveLength(0);
+  });
+
+  test('Ordinateur : le sous-titre dit le match, l équipe et le jour', async () => {
+    const racine = await monter(nommee(), { desktop: true });
+    expect(textes(racine).some((texte) => /^AS Montrivage — Test-COMPO · U15 · .*5.*$/.test(texte))).toBe(true);
+  });
+
+  test('Adversaire inconnu : « adversaire à confirmer » (planche, état 10), jamais un nom vide', async () => {
+    const racine = await monter(nommee(null));
+    const vus = textes(racine);
+
+    expect(vus).toContain('AS Montrivage — adversaire à confirmer');
+    expect(vus).toContain('Adversaire');
+  });
+
+  test('Publiée : le bilan nomme les deux camps', async () => {
+    const racine = await monter(nommee('Test-COMPO', { finalizedAt: '2026-10-01T20:39:00.000Z', status: 'final' }));
+    expect(textes(racine)).toEqual(expect.arrayContaining(['AS Montrivage', '2 - 1', 'Test-COMPO']));
+  });
+
+  test('Serveur d avant (pas de champ) : le nom de l événement reste', async () => {
+    const racine = await monter(feuilleU15());
+    expect(textes(racine)).toContain('AS Montrivage — Test-COMPO');
+  });
+});
+
+describe('ST-MATCH10-BIS · 2 — « s il est mineur, ses parents » : qui est prévenu de quoi', () => {
+  test('Plusieurs retours : la fenêtre les nomme, et dit que les parents d un mineur les reçoivent aussi', async () => {
+    const donnees = feuilleEffectifComplet();
+    donnees.report.coachPlayerReviews = [
+      { comment: 'Bon pressing.', rating: 7, userDocumentId: 'j0' },
+      { comment: 'Belle passe.', rating: 8, userDocumentId: 'j1' },
+    ];
+    const racine = await monter(donnees);
+
+    await appuyerSur(racine, 'Publier');
+    const [fenetre] = racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-confirmation');
+    expect(textes(fenetre)[1]).toBe('Léo et Hugo recevront leur retour individuel ; pour un mineur, ses parents aussi. Les joueurs de l’équipe U15 verront le score, ta note de l’équipe et ton mot. Tu pourras la modifier et la republier.');
+  });
+
+  test('La fiche du joueur garde la même règle (décision du chef, phrase A)', async () => {
+    const racine = await monter(feuilleU15());
+    await appuyerSur(racine, 'Joueurs · 1');
+    await appuyerSurDescription(racine, 'Hugo Lemaire : 90 minutes, 1 but, 0 passe. A répondu.');
+    expect(textes(racine)).toContain('Lu par Hugo et, s’il est mineur, ses parents. Jamais par ses coéquipiers.');
+  });
+});
+
+describe('ST-MATCH10-BIS · 3 — « feuille convoqués A » : tout l effectif compte, seuls les convoqués sont relancés', () => {
+  // L'effectif de 11, une convocation publiée de 7 (dont Hugo et Léo, qui ont répondu) ;
+  // Nino et Théo ont été ajoutés hors convocation.
+  const avecConvocation = () => {
+    const donnees = feuilleEffectifComplet();
+    const horsConvocation = new Set(['Nino Garcia', 'Sami Martin', 'Théo Nguyen', 'Yanis Bernard']);
+    donnees.playerResponses = donnees.playerResponses.map((/** @type {any} */ item) => ({
+      ...item, convoked: !horsConvocation.has(item.label),
+    }));
+    return donnees;
+  };
+
+  test('Retours : « 2 sur 11 ont répondu », mais « Relancer » ne compte que les convoqués, et le dit', async () => {
+    const racine = await monter(avecConvocation());
+    await appuyerSur(racine, 'Retours');
+    const vus = textes(racine);
+
+    expect(vus).toEqual(expect.arrayContaining([
+      '2 sur 11 ont répondu',
+      'Manquent · 9',
+      'Relancer les 5',
+      'Nino Garcia, Théo Nguyen et 2 autres ne sont pas convoqués : la relance ne part qu’aux convoqués.',
+    ]));
+    expect(bouton(racine, 'Relancer les 9')).toBeUndefined();
+  });
+
+  test('Retours : aucun convoqué ne manque ⇒ pas de bouton, la phrase dit pourquoi', async () => {
+    const donnees = feuilleU15({ responseCompletionCount: 1, responseEligibleCount: 2 }, {
+      playerResponses: [
+        { ...REPONSE_HUGO, convoked: true },
+        {
+          convoked: false, label: 'Nino Garcia', status: null, userDocumentId: 'u9',
+        },
+      ],
+    });
+    const racine = await monter(donnees);
+    await appuyerSur(racine, 'Retours');
+
+    expect(textes(racine)).toContain('Nino Garcia n’est pas convoqué : la relance ne part qu’aux convoqués.');
+    expect(textes(racine).some((texte) => texte.startsWith('Relancer'))).toBe(false);
+  });
+
+  test('Joueurs : un joueur ajouté hors convocation est dit tel, et garde ses minutes', async () => {
+    const donnees = avecConvocation();
+    donnees.report.playerLines = [{
+      minutesPlayed: 30, sportPayload: { assists: 0, goals: 0, goalsConceded: 0 }, userDocumentId: 'j3',
+    }];
+    const racine = await monter(donnees);
+    await appuyerSur(racine, 'Joueurs · 11');
+
+    expect(parDescription(racine, 'Nino Garcia : 30 minutes, 0 but, 0 passe. Hors convocation.')).not.toHaveLength(0);
+    expect(textes(racine).filter((texte) => texte === 'Hors convocation')).toHaveLength(4);
+    await appuyerSur(racine, 'Brouillon');
+    expect(mockSaveDraft.mock.calls[0][1].playerLines.find((/** @type {any} */ ligne) => ligne.userDocumentId === 'j3'))
+      .toMatchObject({ minutesPlayed: 30 });
+  });
+
+  test('Serveur d avant (pas de champ) : tous les manquants restent relançables', async () => {
+    const racine = await monter(feuilleEffectifComplet());
+    await appuyerSur(racine, 'Retours');
+    expect(bouton(racine, 'Relancer les 9')).toBeTruthy();
+  });
+});
+
+describe('ST-MATCH10-BIS · 4 — « brouillon A » : « Brouillon » éteint pendant une incohérence, et l alerte le dit', () => {
+  test('L alerte unique dit que les deux boutons attendent la correction ; aucun appui ne part', async () => {
+    const donnees = feuilleU15({
+      playerLines: [{ ...LIGNE_VIDE_HUGO, minutesPlayed: 90, sportPayload: { ...LIGNE_VIDE_HUGO.sportPayload, goals: 3 } }],
+    }, { availablePlayers: [HUGO] });
+    const racine = await monter(donnees);
+    const [alerte] = hotes(racine, (n) => n.props.accessibilityRole === 'alert');
+
+    expect(textes(alerte)).toEqual([
+      '1 correction',
+      '3 buts saisis pour un score de 2. Vérifie Hugo Lemaire.',
+      '« Brouillon » et « Publier » attendent la correction.',
+    ]);
+    expect(bouton(racine, 'Brouillon').props.disabled).toBe(true);
+    expect(bouton(racine, 'Publier').props.disabled).toBe(true);
+    expect(mockSaveDraft).not.toHaveBeenCalled();
+  });
+
+  test('Une feuille cohérente : la phrase n apparaît pas', async () => {
+    const racine = await monter(feuilleU15());
+    expect(textes(racine)).not.toContain('« Brouillon » et « Publier » attendent la correction.');
+  });
+});
+
+describe('ST-MATCH10-BIS · 6 — le fil d Ariane du site (planche P3-editeur-ordi)', () => {
+  const fil = (/** @type {any} */ racine) => racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-fil')[0];
+
+  test('Ordinateur : « Planning › Match › Feuille de match », au-dessus du titre', async () => {
+    const racine = await monter(feuilleU15(), { desktop: true });
+
+    expect(fil(racine)).toBeTruthy();
+    expect(textes(fil(racine))).toEqual(['Planning', '›', 'Match', '›', 'Feuille de match']);
+  });
+
+  test('« Planning » mène au planning, « Match » à la page du match', async () => {
+    const racine = await monter(feuilleU15(), { desktop: true });
+
+    await appuyerSur(fil(racine), 'Planning');
+    expect(navigation.navigate).toHaveBeenLastCalledWith(RouteNames.MyEventList);
+    await appuyerSur(fil(racine), 'Match');
+    expect(navigation.navigate).toHaveBeenLastCalledWith(RouteNames.EventDetails, { eventId: 'event-1' });
+    // Des liens, pour un lecteur d'écran ; la page en cours n'en est pas un.
+    const liens = hotes(fil(racine), (n) => n.props.accessibilityRole === 'link');
+    expect(liens).toHaveLength(2);
+  });
+
+  test('Téléphone : pas de fil (le retour de l en-tête suffit)', async () => {
+    const racine = await monter(feuilleU15());
+    expect(fil(racine)).toBeUndefined();
+  });
+});
+
+describe('ST-MATCH10-BIS · 7 — la colonne « Réponse » sur ordinateur (planche O2)', () => {
+  const colonneJoueurs = (/** @type {any} */ racine) => racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-colonne-joueurs')[0];
+
+  test('Un joueur ouvert : « Joueur · Réponse · Min · Buts · Pas. », la réponse dans SA colonne', async () => {
+    const donnees = feuilleEffectifComplet();
+    const racine = await monter(donnees, { desktop: true });
+    await appuyerSurDescription(racine, 'Hugo Roux : 0 minute, 0 but, 0 passe. A répondu.');
+    const vus = textes(colonneJoueurs(racine));
+
+    expect(vus.slice(1, 6)).toEqual(['Joueur', 'Réponse', 'Min', 'Buts', 'Pas.']);
+    expect(vus).not.toContain('Ta note');
+    // Deux ont répondu, neuf non (« — », comme la planche) ; plus de 2e ligne sous le nom.
+    expect(vus.filter((texte) => texte === 'A répondu')).toHaveLength(2);
+    expect(vus.filter((texte) => texte === '—')).toHaveLength(9);
+    expect(vus).not.toContain('Pas encore répondu');
+  });
+
+  test('Aucun joueur ouvert (planche O1) : « Ta note » reste, la réponse sous le nom', async () => {
+    const racine = await monter(feuilleU15(), { desktop: true });
+    const vus = textes(colonneJoueurs(racine));
+
+    expect(vus).toEqual(expect.arrayContaining(['Ta note', 'A répondu · repris de sa réponse']));
+    expect(vus).not.toContain('Réponse');
+  });
+
+  test('Téléphone : pas de colonne « Réponse » (la ligne la dit sous le nom)', async () => {
+    const racine = await monter(feuilleU15());
+    await appuyerSur(racine, 'Joueurs · 1');
+    expect(textes(racine)).not.toContain('Réponse');
+  });
+});
+
+describe('ST-MATCH10-BIS · O1 — « Ton retour à Hugo » sous le tableau, sur ordinateur (planche O1)', () => {
+  const colonneJoueurs = (/** @type {any} */ racine) => racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-colonne-joueurs')[0];
+  const avecRetour = () => feuilleU15({ coachPlayerReviews: [{ comment: 'Bon pressing.', rating: 7, userDocumentId: 'u1' }] });
+
+  test('Aucun joueur ouvert : ton retour écrit se lit sous le tableau, avec qui le lit', async () => {
+    const racine = await monter(avecRetour(), { desktop: true });
+    const vus = textes(colonneJoueurs(racine));
+
+    const debut = vus.indexOf('Ton retour à Hugo');
+    expect(debut).toBeGreaterThan(-1);
+    expect(vus.slice(debut, debut + 3)).toEqual([
+      'Ton retour à Hugo',
+      'Bon pressing.',
+      'Lu par Hugo et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
+    ]);
+    // L'ordre de la planche : le tableau, ton retour, puis l'aide.
+    expect(vus.indexOf('Clique une ligne pour ses chiffres et ton retour.')).toBeGreaterThan(debut);
+  });
+
+  test('Cliquer ton retour ouvre le joueur (panneau de droite)', async () => {
+    const racine = await monter(avecRetour(), { desktop: true });
+    await appuyerSur(colonneJoueurs(racine), 'Ton retour à Hugo');
+    expect(racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-panneau-joueur')).not.toHaveLength(0);
+  });
+
+  test('Pas de commentaire écrit : rien sous le tableau ; au téléphone non plus', async () => {
+    const sansMot = await monter(feuilleU15({ coachPlayerReviews: [{ comment: '', rating: 7, userDocumentId: 'u1' }] }), { desktop: true });
+    expect(textes(sansMot)).not.toContain('Ton retour à Hugo');
+    act(() => arbre.unmount());
+    const telephone = await monter(avecRetour());
+    await appuyerSur(telephone, 'Joueurs · 1');
+    expect(textes(telephone)).not.toContain('Ton retour à Hugo');
   });
 });

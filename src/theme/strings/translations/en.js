@@ -5172,6 +5172,45 @@ export default {
       indisponible: 'Number unavailable',
     },
   },
+  // COLL-CONSOLE-BIS (03/10/2026) — what was left of the local-authority console and sign-up
+  // (design HY521H1, pages 1 and 2: boards 7, 8, 12 to 17).
+  collectiviteConsoleBis: {
+    accueil: {
+      demandesGestionnaire: 'Manager requests',
+      mairiesAActiver: 'Town halls to activate',
+    },
+    commune: {
+      aide: 'The official name, INSEE code and SIREN are filled in from it.',
+      aucune: 'No municipality found: type its official name and codes below.',
+      chercher: 'Search for the municipality',
+      codeInsee: 'INSEE code {{code}}',
+      // The OFFICIAL name (D59) stays French in every language, like the form's prefixes.
+      nomDe: 'Ville de {{nom}}',
+      nomDes: 'Ville des {{nom}}',
+      nomDu: 'Ville du {{nom}}',
+      nomElide: 'Ville d’{{nom}}',
+    },
+    fenetres: {
+      chaqueClub: 'Each attached club, and what changes for it.',
+      colonneChange: 'What changes',
+      colonneClub: 'Attached club',
+      paieDeja: 'Already pays: nothing changes',
+      recoit: 'Gets the Club plan for free',
+    },
+    fiche: {
+      depuis: 'Since {{date}}',
+    },
+    liste: {
+      colonneActivee: 'Activated on',
+      colonneAdherents: 'Members covered',
+    },
+    traitees: {
+      colonneCollectivite: 'Local authority',
+      colonneIssue: 'Outcome',
+      colonneLe: 'On',
+      colonnePersonne: 'Person',
+    },
+  },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — the club's facilities in 3 groups (design P8v2, D32).
   clubInstallations: {
@@ -16589,6 +16628,7 @@ export default {
       answeredTitle: 'Answered · {{n}}',
       clickHint: 'Click a row for their figures and your feedback.',
       col: {
+        answer: 'Answer',
         assists: 'Ast.',
         goals: 'Goals',
         minutes: 'Min',
@@ -16599,9 +16639,9 @@ export default {
         team: 'Team',
       },
       confirmEditable: 'You can edit it and republish it.',
-      confirmReceiverOne: '{{name}} will receive your individual feedback.',
-      confirmReceiversMany_one: '{{count}} player will receive your individual feedback.',
-      confirmReceiversMany_other: '{{names}} will receive their individual feedback.',
+      confirmReceiverOne: '{{name}} and, if a minor, their parents will receive your individual feedback.',
+      confirmReceiversMany_one: '{{count}} player will receive your individual feedback; if a minor, their parents too.',
+      confirmReceiversMany_other: '{{names}} will receive their individual feedback; for a minor, their parents too.',
       confirmRepublishTitle: 'Republish the sheet?',
       confirmTeam: 'The players of the {{team}} team will see the score, your team rating and your word.',
       confirmTeamUnnamed: "The team's players will see the score, your team rating and your word.",
@@ -16612,6 +16652,8 @@ export default {
         assists: 'Assists',
         minutes: 'Minutes',
       },
+      crumbMatch: 'Match',
+      crumbPlanning: 'Schedule',
       draftError: 'The draft could not be saved. Try again.',
       draftSaved: 'Draft saved',
       draftSavedBody: 'Players see nothing until you publish.',
@@ -16653,7 +16695,11 @@ export default {
       noPlayersToAnswer: 'No player is expecting a questionnaire for this match.',
       noShowText: "They don't count on the sheet until the roll call is corrected.",
       noShowTitle: 'Not checked in at roll call',
+      notConvokedNoReminder_one: '{{names}} is not called up: reminders only go to called-up players.',
+      notConvokedNoReminder_other: '{{names}} are not called up: reminders only go to called-up players.',
       officialLock: 'Official federation score',
+      openConvocation: 'Open the call-up',
+      opponentUnknown: 'opponent to be confirmed',
       playersRatingHidden: 'Players: from 3 answers',
       privacyPlayer: 'Read by {{name}} and, if a minor, their parents. Never by their teammates.',
       privateComment: 'Private comment for this player',
@@ -16678,6 +16724,7 @@ export default {
         answered: 'Answered',
         answeredTaken: 'Answered · taken from their answer',
         notAnswered: 'Not answered yet',
+        notConvoked: 'Not called up',
         toCheck: 'To check',
       },
       saveDraft: 'Draft',
@@ -16705,6 +16752,8 @@ export default {
       },
       title: 'Match sheet',
       validate: 'Done',
+      waitsForFixBoth: '“{{draft}}” and “{{publish}}” wait for the fix.',
+      waitsForFixOne: '“{{publish}}” waits for the fix.',
     },
     gerer: {
       managerWho: "Entered by the team's coach, {{name}}",

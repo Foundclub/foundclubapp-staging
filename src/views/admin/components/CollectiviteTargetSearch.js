@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
+import {
+  clubCityAndSport,
+  sortClubsByProximity,
+} from '@/domains/collectivite/collectiviteConsole';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -9,20 +13,23 @@ import Button from '@/components/atoms/button/Button';
 import { useAdminCollectiviteSearch } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
-import { getShortAddress } from '@/utils/location';
 
 /**
  * 🏛️ CHERCHER UN CLUB OU UN COMPTE DANS LA CONSOLE — sortie telle quelle de la fiche d une
  * collectivite (AdminCollectiviteDetail, D61) par COLL-CONSOLE (02/10), pour que l ecran des
  * demandes RELIE une demande « Par FoundClub » a son club avec la MEME recherche.
  * Deux lettres au moins ; ce qui est deja pris se lit `dejaTexte` et ne se choisit pas.
- * @param {{ deja: Set<string>, dejaTexte: string, enCours: boolean, kind: 'club' | 'user',
- *   libelleAction: string, onChoisir: (cible: any) => void, placeholder: string,
- *   testID: string }} props - La recherche.
+ * COLL-CONSOLE-BIS (03/10) — un club dit sa VILLE et son SPORT ; avec `codeInseeProche` (la
+ * collectivite de la fiche), les clubs de la commune viennent d abord, puis ceux du
+ * departement (planche 15).
+ * @param {{ codeInseeProche?: string | null, deja: Set<string>, dejaTexte: string,
+ *   enCours: boolean, kind: 'club' | 'user', libelleAction: string,
+ *   onChoisir: (cible: any) => void, placeholder: string, testID: string }} props - La recherche.
  * @returns {import('react').ReactElement} Le champ et ses resultats.
  */
 function CollectiviteTargetSearch({
-  deja, dejaTexte, enCours, kind, libelleAction, onChoisir, placeholder, testID,
+  codeInseeProche = null, deja, dejaTexte, enCours, kind, libelleAction, onChoisir, placeholder,
+  testID,
 }) {
   const { t } = useTranslation();
   const {
@@ -30,7 +37,8 @@ function CollectiviteTargetSearch({
   } = useTheme();
   const [texte, setTexte] = useState('');
   const resultats = useAdminCollectiviteSearch(kind, texte);
-  const lignes = Array.isArray(resultats.data) ? resultats.data : [];
+  const recus = Array.isArray(resultats.data) ? resultats.data : [];
+  const lignes = kind === 'club' ? sortClubsByProximity(recus, codeInseeProche) : recus;
   const champStyle = { borderColor: `${Colors.primary500}80`, color: Colors.neutral00 };
 
   let contenu = null;
@@ -63,9 +71,9 @@ function CollectiviteTargetSearch({
     } else {
       contenu = lignes.map((/** @type {any} */ cible) => {
         const pris = deja.has(String(cible?.documentId));
-        // Un club dit sa ville (son adresse publique) ; un compte, son e-mail.
+        // Un club dit sa ville et son sport ; un compte, son e-mail.
         const sousTitre = kind === 'club'
-          ? getShortAddress(cible?.raw?.addressDetails) || null
+          ? clubCityAndSport(cible?.raw) || null
           : cible?.subtitle;
         return (
           <View

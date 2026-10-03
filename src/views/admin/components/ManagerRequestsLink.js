@@ -92,6 +92,10 @@ function ManagerRequestsLink({ collectiviteId = null }) {
       {!collectiviteId && enAttente.isSuccess && demandes.length === 0 ? (
         <Text style={[Fonts.p3Bold, Fonts.neutral300]}>0</Text>
       ) : null}
+      {/* COLL-CONSOLE-BIS (03/10) : « — » quand la lecture a échoué, comme les autres lignes. */}
+      {!collectiviteId && enAttente.error ? (
+        <Text style={[Fonts.p3Bold, Fonts.neutral300]}>—</Text>
+      ) : null}
       {collectiviteId ? (
         <Text style={[Fonts.p2Bold, Fonts.primary500]}>
           {t('collectiviteAccueil.console.ouvrirFile', 'Ouvrir dans la file')}
