@@ -319,7 +319,7 @@ function Conversation({ navigation, route }) {
     leaveChat,
     reactToMessage,
     respondToProposal,
-    retryFailedMessage,
+    retryFailedMessage: retryFailedMessageSansVoix,
     sendMessage: sendMessageSansVoix,
     sendReadReceipt,
     sendTypingStart,
@@ -412,6 +412,14 @@ function Conversation({ navigation, route }) {
   ) => sendMessageSansVoix(id, texte, { ...filDeLaVille.voix, ...extra }), [
     filDeLaVille.voix,
     sendMessageSansVoix,
+  ]);
+  // COLL-C4A3 (point 4) — « Renvoyer » redemande la MÊME voix que l'envoi (voir Conversation.js).
+  const retryFailedMessage = useCallback((
+    /** @type {string} */ id,
+    /** @type {any} */ message,
+  ) => retryFailedMessageSansVoix(id, message, filDeLaVille.voix), [
+    filDeLaVille.voix,
+    retryFailedMessageSansVoix,
   ]);
   // 🖥️ COLL-C4A3 (planche 47, P3c-canal-ordi) — sur ordinateur, depuis l'espace de la Ville, un
   // fil de la Ville s'ouvre en TROIS colonnes : ses canaux et conversations à gauche. La liste des

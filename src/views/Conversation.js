@@ -553,7 +553,7 @@ function Conversation({ navigation, route }) {
     isSocketConnected,
     reactToMessage,
     removeGroupMember,
-    retryFailedMessage,
+    retryFailedMessage: retryFailedMessageSansVoix,
     sendMessage: sendMessageSansVoix,
     sendReadReceipt,
     sendTypingStart,
@@ -820,6 +820,15 @@ function Conversation({ navigation, route }) {
   ) => sendMessageSansVoix(id, texte, { ...filDeLaVille.voix, ...extra }), [
     filDeLaVille.voix,
     sendMessageSansVoix,
+  ]);
+  // COLL-C4A3 (point 4) — « Réessayer » redemande la MÊME voix que l'envoi : sans elle, un compte
+  // mixte renverrait au nom de son club ce qu'il avait écrit au nom de la Ville.
+  const retryFailedMessage = useCallback((
+    /** @type {string} */ id,
+    /** @type {any} */ message,
+  ) => retryFailedMessageSansVoix(id, message, filDeLaVille.voix), [
+    filDeLaVille.voix,
+    retryFailedMessageSansVoix,
   ]);
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match;

@@ -21,6 +21,8 @@ let mockChatData;
 let mockMessagesError;
 let mockMembres;
 const mockSendMessage = jest.fn(() => 'temp-1');
+// COLL-C4A3 point 4 — « Réessayer » un message en échec.
+const mockRetry = jest.fn();
 let mockMessagesPage;
 let mockBlockedRows;
 const mockBlockMutate = jest.fn();
@@ -177,6 +179,7 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
     joinChat: jest.fn(),
     leaveChat: jest.fn(),
     markMessagesAsRead: jest.fn(),
+    retryFailedMessage: mockRetry,
     retryMessage: jest.fn(),
     sendMessage: mockSendMessage,
     sendReadReceipt: jest.fn(),
@@ -354,6 +357,7 @@ describe('COLL-C4A2 — les fils de la Ville dans la conversation', () => {
     };
     mockBlockedRows = [];
     mockSendMessage.mockClear();
+    mockRetry.mockClear();
   });
 
   afterEach(() => {
@@ -457,5 +461,39 @@ describe('COLL-C4A2 — les fils de la Ville dans la conversation', () => {
     const ordinaire = monter({});
     expect(enTete(ordinaire.arbre).findAllByType(IconeDuCanal)).toHaveLength(0);
     expect(enTete(ordinaire.arbre).findAllByType(ClubLogoMark)).toHaveLength(0);
+  });
+
+  // COLL-C4A3 point 4 (« voix ok », Adel 02/10) — un message en ÉCHEC qu'on réessaie repart avec
+  // la MÊME voix demandée : la Ville depuis l'espace de la Ville, aucune depuis le club. Avant le
+  // lot, « Réessayer » renvoyait sans voix : un compte mixte écrivait alors au nom de son club.
+  it('COLL-C4A3 — « Reessayer » redemande la meme voix : la Ville ; du club, aucune', () => {
+    // eslint-disable-next-line global-require
+    const { TouchableOpacity } = require('react-native');
+    const echec = {
+      _id: 'm-echec', createdAt: new Date(), failed: true, text: 'Bonjour', user: { _id: 'moi' },
+    };
+    const reessayer = (/** @type {Record<string, unknown>} */ params) => {
+      const { props } = monter(params);
+      /** @type {any} */
+      let bulle;
+      act(() => {
+        bulle = renderer.create(props.renderBubble({ currentMessage: echec, position: 'right' }));
+      });
+      // Le bouton le plus INTERIEUR qui porte « Réessayer » (la bulle elle-même est touchable).
+      const touchables = bulle.root.findAllByType(TouchableOpacity).reverse();
+      const bouton = touchables.find((/** @type {any} */ n) => (
+        typeof n.props.onPress === 'function'
+        && n.findAll((/** @type {any} */ c) => c.props?.children === 'Réessayer').length > 0
+      ));
+      act(() => { bouton.props.onPress(); });
+      act(() => { bulle.unmount(); });
+    };
+
+    reessayer({ espace: 'ville' });
+    expect(mockRetry)
+      .toHaveBeenLastCalledWith('chat-1', echec, { senderSignature: { voix: 'ville' } });
+    reessayer({});
+    expect(mockRetry).toHaveBeenCalledTimes(2);
+    expect(mockRetry.mock.calls[1][2] || {}).not.toHaveProperty('senderSignature');
   });
 });

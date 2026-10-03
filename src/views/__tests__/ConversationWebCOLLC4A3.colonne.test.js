@@ -23,6 +23,11 @@ const VILLE = { documentId: 'ville-de-recette', name: 'Ville de Montrivage' };
 const AUTRE_VILLE = { documentId: 'ville-voisine', name: 'Ville de Beaulieu' };
 
 let mockLargeur = 1280;
+// COLL-C4A3 point 4 — l'envoi et « Réessayer », et les messages du fil.
+const mockSendMessage = jest.fn(() => 'temp-1');
+const mockRetry = jest.fn();
+/** @type {any[]} */
+let mockMessagesDuFil = [];
 /** @type {any} */
 let mockFils = [];
 
@@ -79,8 +84,8 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
     leaveChat: jest.fn(),
     reactToMessage: jest.fn(),
     respondToProposal: jest.fn(),
-    retryFailedMessage: jest.fn(),
-    sendMessage: jest.fn(),
+    retryFailedMessage: mockRetry,
+    sendMessage: mockSendMessage,
     sendReadReceipt: jest.fn(),
     sendTypingStart: jest.fn(),
     sendTypingStop: jest.fn(),
@@ -102,7 +107,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
   }),
   useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatMessages: () => ({
-    data: { pages: [{ data: [] }] },
+    data: { pages: [{ data: mockMessagesDuFil }] },
     error: null,
     fetchNextPage: jest.fn(),
     hasNextPage: false,
@@ -283,6 +288,9 @@ beforeEach(() => {
   queryClient = creerQueryClientDeTest();
   mockLargeur = 1280;
   mockFils = FILS;
+  mockMessagesDuFil = [];
+  mockSendMessage.mockClear();
+  mockRetry.mockClear();
 });
 
 afterEach(() => {
@@ -355,5 +363,72 @@ describe('COLL-C4A3 — planche 47 sur le site : la colonne de gauche de la Vill
     expect(parTestID((await monter()).arbre, 'colonne-fils-de-la-ville')).toHaveLength(0);
     mockLargeur = 1280;
     expect(parTestID((await monter({})).arbre, 'colonne-fils-de-la-ville')).toHaveLength(0);
+  });
+});
+
+// 🗣️ COLL-C4A3 point 4 — LA VOIX D'UN COMPTE MIXTE, SUR LE SITE (« voix ok », Adel 02/10). La règle
+// est au serveur (`voixDeLExpediteur`, admin tests/authz/COLL-C4A2-canal-dirigeants, test 8 : les
+// deux sens) ; le téléphone a son témoin (ConversationCOLLC4A2.filDeLaVille). Le site n'en avait
+// aucun : depuis l'espace de la Ville il DEMANDE la voix de la Ville, depuis le club il ne demande
+// rien (le serveur signe alors au nom du club). Et « Réessayer » redemande la même voix.
+describe('COLL-C4A3 — point 4 : la voix demandée par le site, dans les deux sens', () => {
+  /**
+   * Écrit un message dans la zone de saisie du site, et l'envoie par Entrée.
+   * @param {any} arbre - L'écran.
+   * @param {string} texte - Le message.
+   */
+  const ecrire = async (arbre, texte) => {
+    await act(async () => {
+      arbre.root.findByType('textarea').props.onChange({ target: { value: texte } });
+    });
+    await act(async () => {
+      arbre.root.findByType('textarea').props.onKeyDown({
+        key: 'Enter', preventDefault: () => {}, shiftKey: false,
+      });
+    });
+  };
+
+  test('depuis l’espace de la Ville : la voix de la Ville est DEMANDÉE', async () => {
+    const { arbre } = await monter({ espace: 'ville' });
+    await ecrire(arbre, 'Faites chacun votre demande.');
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      CHAT_ID,
+      'Faites chacun votre demande.',
+      expect.objectContaining({ senderSignature: { voix: 'ville' } }),
+    );
+  });
+
+  test('depuis le club (hors espace de la Ville) : aucune voix demandée', async () => {
+    const { arbre } = await monter({});
+    await ecrire(arbre, 'Nos U15 peuvent passer à 19:00.');
+    expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage.mock.calls[0][2]).not.toHaveProperty('senderSignature');
+  });
+
+  test('« Renvoyer » un message en échec : la même voix (Ville ; club : aucune)', async () => {
+    const echec = {
+      createdAt: '2026-10-03T08:00:00.000Z',
+      documentId: 'temp-echec',
+      failed: true,
+      message: 'Faites chacun votre demande.',
+      sender: { documentId: 'agent-ville', firstname: 'Sophie', lastname: 'Leroy' },
+    };
+    mockMessagesDuFil = [echec];
+    const boutonRenvoyer = (/** @type {any} */ arbre) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.type === 'button' && texteDe(n).includes('Renvoyer'),
+    )[0];
+
+    const ville = await monter({ espace: 'ville' });
+    await act(async () => { boutonRenvoyer(ville.arbre).props.onClick(); });
+    expect(mockRetry).toHaveBeenLastCalledWith(
+      CHAT_ID,
+      expect.objectContaining({ documentId: 'temp-echec' }),
+      { senderSignature: { voix: 'ville' } },
+    );
+
+    const club = await monter({});
+    await act(async () => { boutonRenvoyer(club.arbre).props.onClick(); });
+    expect(mockRetry).toHaveBeenCalledTimes(2);
+    expect(mockRetry.mock.calls[1][2] || {}).not.toHaveProperty('senderSignature');
   });
 });
