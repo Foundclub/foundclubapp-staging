@@ -127,6 +127,10 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
   useGetTrainingReviews: () => ({ data: undefined }),
 }));
 
+// FINITIONS11 · point 1 — le drapeau « Signaler » du site tire le service de signalement :
+// doublure, comme les autres services (le client HTTP refuse de se charger sans `.env`).
+jest.mock('@/services/eventReport/eventReportService', () => ({ createEventReport: jest.fn() }));
+
 jest.mock('@/services/event/eventService', () => ({ updateEvent: jest.fn() }));
 
 jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
@@ -800,7 +804,7 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
 
     const jour = new Date('2099-01-01T17:00:00.000Z')
       .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', weekday: 'short' });
-    const [ligne] = root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-match-info-line');
+    const [ligne] = root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-info-line');
     expect(textOf(ligne)).toBe(`U15 · ${jour} · 18:00`);
   });
 

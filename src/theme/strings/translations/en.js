@@ -7163,6 +7163,11 @@ export default {
     automatic: 'Automatic',
     available: 'Available',
     book: 'Book',
+    // FINITIONS11 (03/10) — the breadcrumb at the top of an event page, on the website.
+    breadcrumb: {
+      label: 'Breadcrumb',
+      planning: 'Schedule',
+    },
     campaignAlreadyLinked: 'Campaign already linked',
     cancel: 'Cancel',
     cancelling: 'Cancelling...',

@@ -7597,6 +7597,11 @@ export default {
     automatic: 'Automatique',
     available: 'Disponible',
     book: 'Reserver',
+    // FINITIONS11 (03/10) — le fil d'Ariane en haut de la page d'un événement, sur le site.
+    breadcrumb: {
+      label: 'Fil d’Ariane',
+      planning: 'Planning',
+    },
     campaignAlreadyLinked: 'Campagne déjà liée',
     cancel: 'Annuler',
     cancelling: 'Annulation...',
