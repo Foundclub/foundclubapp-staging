@@ -82,6 +82,11 @@ jest.mock('@/domains/auth/useAuth', () => ({
   }),
 }));
 
+// FINITIONS11-COLL (03/10) : le juge du déplacement (aperçu au nom du club) lit le serveur ; ici,
+// il ne dit jamais « mairie » (la phrase a son témoin : EventEditFIN11COLL).
+jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
+  useMairieDecideDuDeplacement: () => false,
+}));
 // LES SEULES PORTES SUR LE RESEAU. Tout ce qui est compte dans ce fichier passe
 // par elles, et par elles seules.
 jest.mock('@/services/event/eventService', () => ({

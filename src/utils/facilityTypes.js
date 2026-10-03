@@ -17,6 +17,7 @@ import i18next from 'i18next';
  * pour des cles non numeriques : c'est l'ordre des pastilles.
  */
 /* eslint-disable perfectionist/sort-objects -- l'ordre EST l'ordre des pastilles */
+/** @type {Record<string, () => string>} */
 const LIBELLE_PAR_VALEUR = {
   Terrain: () => i18next.t('facilityForm.types.pitch', 'Terrain'),
   Gymnase: () => i18next.t('facilityForm.types.gym', 'Gymnase'),
@@ -32,10 +33,30 @@ const LIBELLE_PAR_VALEUR = {
   'Terrain multisport': () => i18next.t('facilityForm.types.multisportPitch', 'Terrain multisport'),
   Skatepark: () => i18next.t('facilityForm.types.skatepark', 'Skatepark'),
 };
+
+// FINITIONS11-COLL (03/10, planche 25) — le GENRE du nom de chaque type, pour accorder une phrase :
+// « le gymnase est fermé », « la piscine est fermée ». Même ordre, mêmes clés que ci-dessus.
+/** @type {Record<string, 'feminin' | 'masculin'>} */
+const GENRE_PAR_VALEUR = {
+  Terrain: 'masculin',
+  Gymnase: 'masculin',
+  'Salle vidéo': 'feminin',
+  Vestiaire: 'masculin',
+  'Club House': 'masculin',
+  Dojo: 'masculin',
+  "Piste d'athlétisme": 'feminin',
+  'Terrain de rugby': 'masculin',
+  Piscine: 'feminin',
+  'Court de tennis': 'masculin',
+  'Salle de sport': 'feminin',
+  'Terrain multisport': 'masculin',
+  Skatepark: 'masculin',
+};
 /* eslint-enable perfectionist/sort-objects */
 
-/** @type {{ label: string, value: string }[]} */
+/** @type {{ genre: 'feminin' | 'masculin', label: string, value: string }[]} */
 export const FACILITY_TYPES = Object.keys(LIBELLE_PAR_VALEUR).map((value) => ({
+  genre: GENRE_PAR_VALEUR[value],
   get label() {
     return LIBELLE_PAR_VALEUR[value]();
   },
@@ -51,4 +72,16 @@ export const FACILITY_TYPES = Object.keys(LIBELLE_PAR_VALEUR).map((value) => ({
 export const getFacilityTypeLabel = (value) => {
   const type = FACILITY_TYPES.find((entry) => entry.value === value);
   return type ? type.label : String(value || '').trim();
+};
+
+/**
+ * FINITIONS11-COLL (03/10) — le nom commun d'un type, dans la langue de l'écran, et son genre :
+ * « gymnase » (masculin), « piscine » (féminin). null pour une valeur inconnue ou absente : la
+ * phrase garde alors son libellé générique (« l'installation »).
+ * @param {string | null | undefined} value - La valeur du serveur (`facility.type`).
+ * @returns {{ genre: 'feminin' | 'masculin', nom: string } | null} Le nom, ou null.
+ */
+export const getFacilityTypeNoun = (value) => {
+  const type = FACILITY_TYPES.find((entry) => entry.value === value);
+  return type ? { genre: type.genre, nom: type.label.toLocaleLowerCase() } : null;
 };

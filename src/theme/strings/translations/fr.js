@@ -871,7 +871,8 @@ export default {
     },
     entitlement: {
       correct: 'Corriger',
-      sourceSlot: 'Slot source:',
+      // FINITIONS11-COLL (03/10) — « place », pas « slot » (FINITIONS10, question 2).
+      sourceSlot: 'Place source :',
       team: 'Équipe',
       unknownScope: 'Scope inconnu',
     },
@@ -1044,8 +1045,8 @@ export default {
       confirm: 'Resynchroniser',
       confirmMessage: 'Cela va recalculer les entitlements TEAM de la subscription {{plan}}.',
       confirmTitle: 'Resynchroniser les droits Team ?',
-      doneMessage_one: '{{count}} slot resynchronise.',
-      doneMessage_other: '{{count}} slots resynchronises.',
+      doneMessage_one: '{{count}} place resynchronisée.',
+      doneMessage_other: '{{count}} places resynchronisées.',
       doneTitle: 'Resync terminée',
       failedMessage: 'Impossible de resynchroniser cette subscription.',
       failedTitle: 'Resync impossible',
@@ -5945,6 +5946,8 @@ export default {
       posee: 'Ton entraînement sera posé tout de suite.',
       poser: 'Poser l’entraînement',
       quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
+      // FINITIONS11-COLL (03/10) — « deplacer A » : une séance déplacée hors créneau.
+      siRefusAnnulee: 'Si la mairie refuse, la séance sera annulée.',
     },
     erreur: {
       titre: 'Les demandes n’ont pas pu être lues.',
@@ -6067,13 +6070,22 @@ export default {
   collectiviteFermetures: {
     accueil: {
       aVenir: 'Fermeture à venir',
+      // FINITIONS11-COLL (03/10) — planches 2-3.
+      personneAPrevenir: 'Aucun club n’y a de séance : personne à prévenir.',
     },
     bandeau: {
       bloque: 'Bloquée par la Ville, {{heures}}',
       bloqueLe: 'Bloquée par la Ville le {{jour}}, {{heures}}',
       fermeJour: 'L’installation est fermée ce jour-là',
+      // FINITIONS11-COLL (03/10) — planche 25 : accordé au type de l’installation.
+      fermeJourFeminin: 'La {{lieu}} est fermée ce jour-là',
+      fermeJourMasculin: 'Le {{lieu}} est fermé ce jour-là',
       fermeLe: 'L’installation est fermée le {{jour}}',
+      fermeLeFeminin: 'La {{lieu}} est fermée le {{jour}}',
+      fermeLeMasculin: 'Le {{lieu}} est fermé le {{jour}}',
       fermePeriode: 'L’installation est fermée {{jours}}',
+      fermePeriodeFeminin: 'La {{lieu}} est fermée {{jours}}',
+      fermePeriodeMasculin: 'Le {{lieu}} est fermé {{jours}}',
       mot: 'Mot de la Ville : « {{mot}} ».',
     },
     carte: {
@@ -6112,7 +6124,12 @@ export default {
       au: 'Au',
       boutonBloquer: 'Bloquer pour la Ville',
       boutonFermerJour: 'Fermer l’installation ce jour-là',
+      // FINITIONS11-COLL (03/10) — planche 25 : accordé au type de l’installation.
+      boutonFermerJourFeminin: 'Fermer la {{lieu}} ce jour-là',
+      boutonFermerJourMasculin: 'Fermer le {{lieu}} ce jour-là',
       boutonFermerJours: 'Fermer l’installation ces jours-là',
+      boutonFermerJoursFeminin: 'Fermer la {{lieu}} ces jours-là',
+      boutonFermerJoursMasculin: 'Fermer le {{lieu}} ces jours-là',
       changer: 'Changer',
       choisirInstallation: 'Choisissez l’installation',
       de: 'De',

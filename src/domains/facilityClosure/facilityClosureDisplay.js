@@ -5,6 +5,7 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { getServerErrorCode } from '@/utils/errors/displayError';
+import { getFacilityTypeNoun } from '@/utils/facilityTypes';
 import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
 
 /**
@@ -282,15 +283,30 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
 };
 
 /**
+ * FINITIONS11-COLL (03/10, planche 25) — la phrase accordee au TYPE de l installation : « Le
+ * gymnase est ferme », « La piscine est fermee » ; sans type connu, la generique (« L installation
+ * est fermee »).
+ * @param {{ genre: string, nom: string } | null} lieu - `getFacilityTypeNoun(facility.type)`.
+ * @param {{ feminine: string, generic: string, masculine: string }} phrases - Les trois phrases.
+ * @returns {string} Celle qui convient.
+ */
+export const phraseForFacilityType = (lieu, { feminine, generic, masculine }) => {
+  if (!lieu) return generic;
+  return lieu.genre === 'feminin' ? feminine : masculine;
+};
+
+/**
  * Le bandeau d une seance ou d une installation : « Le gymnase est fermé ce jour-là ».
- * Le premier mot du nom (« Gymnase », « Dojo ») porte la phrase ; le genre n est pas devine ici.
+ * FINITIONS11-COLL : le type de l installation (`facilityType`, la valeur du serveur) donne le nom
+ * et son genre ; un type inconnu, ou absent, garde « L installation ».
  * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {any} fermeture - La fermeture (`facility`, `kind`, `startDate`, `endDate`).
- * @param {{ withDays?: boolean }} [options] - Le jour dans le titre (fiche de l installation,
- *   planning) ; sans : « ce jour-la » (la fiche d une seance porte deja son jour).
+ * @param {{ facilityType?: string | null, withDays?: boolean }} [options] - Le type de
+ *   l installation (`facility.type`) ; le jour dans le titre (fiche de l installation, planning) ;
+ *   sans : « ce jour-la » (la fiche d une seance porte deja son jour).
  * @returns {{ titre: string, texte: string }} Le titre et la ligne du bandeau.
  */
-export const closureBannerText = (t, fermeture, { withDays = false } = {}) => {
+export const closureBannerText = (t, fermeture, { facilityType = null, withDays = false } = {}) => {
   const motif = fermeture?.kind === 'block'
     ? fermeture.label || ''
     : reasonLabel(t, fermeture?.reason);
@@ -301,6 +317,13 @@ export const closureBannerText = (t, fermeture, { withDays = false } = {}) => {
     })
     : '';
   const jour = closureDay(fermeture?.startDate, { long: true });
+  const lieu = getFacilityTypeNoun(facilityType);
+  const valeurs = {
+    ...SANS_ECHAPPEMENT,
+    jour,
+    jours: closureDaysLabel(t, fermeture, { long: true }),
+    lieu: lieu?.nom,
+  };
   let titre;
   if (fermeture?.kind === 'block') {
     titre = withDays && jour
@@ -319,20 +342,57 @@ export const closureBannerText = (t, fermeture, { withDays = false } = {}) => {
       });
   } else if (fermeture?.startDate && fermeture.startDate === fermeture.endDate) {
     titre = withDays && jour
-      ? t('collectiviteFermetures.bandeau.fermeLe', 'L’installation est fermée le {{jour}}', {
-        ...SANS_ECHAPPEMENT,
-        jour,
+      ? phraseForFacilityType(lieu, {
+        feminine: t(
+          'collectiviteFermetures.bandeau.fermeLeFeminin',
+          'La {{lieu}} est fermée le {{jour}}',
+          valeurs,
+        ),
+        generic: t(
+          'collectiviteFermetures.bandeau.fermeLe',
+          'L’installation est fermée le {{jour}}',
+          valeurs,
+        ),
+        masculine: t(
+          'collectiviteFermetures.bandeau.fermeLeMasculin',
+          'Le {{lieu}} est fermé le {{jour}}',
+          valeurs,
+        ),
       })
-      : t('collectiviteFermetures.bandeau.fermeJour', 'L’installation est fermée ce jour-là');
+      : phraseForFacilityType(lieu, {
+        feminine: t(
+          'collectiviteFermetures.bandeau.fermeJourFeminin',
+          'La {{lieu}} est fermée ce jour-là',
+          valeurs,
+        ),
+        generic: t(
+          'collectiviteFermetures.bandeau.fermeJour',
+          'L’installation est fermée ce jour-là',
+        ),
+        masculine: t(
+          'collectiviteFermetures.bandeau.fermeJourMasculin',
+          'Le {{lieu}} est fermé ce jour-là',
+          valeurs,
+        ),
+      });
   } else {
-    titre = t(
-      'collectiviteFermetures.bandeau.fermePeriode',
-      'L’installation est fermée {{jours}}',
-      {
-        ...SANS_ECHAPPEMENT,
-        jours: closureDaysLabel(t, fermeture, { long: true }),
-      },
-    );
+    titre = phraseForFacilityType(lieu, {
+      feminine: t(
+        'collectiviteFermetures.bandeau.fermePeriodeFeminin',
+        'La {{lieu}} est fermée {{jours}}',
+        valeurs,
+      ),
+      generic: t(
+        'collectiviteFermetures.bandeau.fermePeriode',
+        'L’installation est fermée {{jours}}',
+        valeurs,
+      ),
+      masculine: t(
+        'collectiviteFermetures.bandeau.fermePeriodeMasculin',
+        'Le {{lieu}} est fermé {{jours}}',
+        valeurs,
+      ),
+    });
   }
   return { texte: [motif ? `${motif}.` : '', mot].filter(Boolean).join(' '), titre };
 };

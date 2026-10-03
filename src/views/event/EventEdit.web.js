@@ -25,6 +25,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetEventForEdit, useGetEventTypes } from '@/services/event/eventQueries';
 import { createEvent, updateEvent } from '@/services/event/eventService';
 import { useGetFacilities } from '@/services/facility/facilityQueries';
+import { useMairieDecideDuDeplacement } from '@/services/seasonSlot/seasonSlotQueries';
 import { getTeams } from '@/services/team/teamService';
 
 import { getEntityDocumentId } from '@/utils/entityId';
@@ -141,6 +142,17 @@ function EventEdit({ navigation, route }) {
     enabled: Boolean(facilityClubId),
   });
   const facilities = normalizeFacilities(facilitiesResponse);
+  // FINITIONS11-COLL (03/10, décision d'Adel « deplacer A ») — comme au téléphone : une séance
+  // DÉPLACÉE hors du créneau du club, la mairie décide, et si elle refuse, la séance est annulée.
+  // Le club le lit AVANT d'enregistrer, juste au-dessus des boutons.
+  const laMairieDecide = useMairieDecideDuDeplacement(eventId ? event : null, {
+    club: facilityClubId || null,
+    debut: formState.startTime || '',
+    facilityId: formState.facility || null,
+    fin: formState.endTime || '',
+    jour: formState.date || '',
+    team: formState.team || null,
+  });
 
   useEffect(() => {
     if (!event) return;
@@ -944,6 +956,38 @@ function EventEdit({ navigation, route }) {
               {submitError ? (
                 <div style={{ color: '#ff6b81', fontSize: 14 }}>
                   {submitError}
+                </div>
+              ) : null}
+
+              {laMairieDecide ? (
+                <div
+                  data-testid="event-edit-mairie-decide"
+                  role="status"
+                  style={{
+                    background: 'rgba(255, 161, 21, 0.12)',
+                    border: `1px solid ${Colors?.warning500 || '#ffa115'}`,
+                    borderRadius: 12,
+                    color: textColor,
+                    display: 'grid',
+                    fontSize: 14,
+                    gap: 4,
+                    lineHeight: 1.5,
+                    padding: '12px 16px',
+                  }}
+                >
+                  <span>
+                    {t(
+                      'collectiviteDemandes.decision.mairieLibre',
+                      // eslint-disable-next-line max-len -- une phrase ne se coupe pas
+                      'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+                    )}
+                  </span>
+                  <strong>
+                    {t(
+                      'collectiviteDemandes.decision.siRefusAnnulee',
+                      'Si la mairie refuse, la séance sera annulée.',
+                    )}
+                  </strong>
                 </div>
               ) : null}
 

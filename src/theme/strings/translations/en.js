@@ -5572,6 +5572,8 @@ export default {
       posee: 'Your training will be set right away.',
       poser: 'Set the training',
       quiDecideDirigeant: 'Your club manager accepts or refuses; you get the answer as a notification.',
+      // FINITIONS11-COLL (03/10) — Adel's decision "deplacer A": a session moved outside the slot.
+      siRefusAnnulee: 'If the town hall refuses, the session will be cancelled.',
     },
     erreur: {
       titre: 'The requests could not be loaded.',
@@ -5690,13 +5692,22 @@ export default {
   collectiviteFermetures: {
     accueil: {
       aVenir: 'Upcoming closure',
+      // FINITIONS11-COLL (03/10) — boards 2-3.
+      personneAPrevenir: 'No club has a session there: nobody to notify.',
     },
     bandeau: {
       bloque: 'Blocked by the town, {{heures}}',
       bloqueLe: 'Blocked by the town on {{jour}}, {{heures}}',
       fermeJour: 'The facility is closed that day',
+      // FINITIONS11-COLL (03/10) — board 25: worded after the facility type.
+      fermeJourFeminin: 'The {{lieu}} is closed that day',
+      fermeJourMasculin: 'The {{lieu}} is closed that day',
       fermeLe: 'The facility is closed on {{jour}}',
+      fermeLeFeminin: 'The {{lieu}} is closed on {{jour}}',
+      fermeLeMasculin: 'The {{lieu}} is closed on {{jour}}',
       fermePeriode: 'The facility is closed {{jours}}',
+      fermePeriodeFeminin: 'The {{lieu}} is closed {{jours}}',
+      fermePeriodeMasculin: 'The {{lieu}} is closed {{jours}}',
       mot: 'Note from the town: “{{mot}}”.',
     },
     carte: {
@@ -5734,7 +5745,12 @@ export default {
       au: 'To',
       boutonBloquer: 'Block for the town',
       boutonFermerJour: 'Close the facility that day',
+      // FINITIONS11-COLL (03/10) — board 25: worded after the facility type.
+      boutonFermerJourFeminin: 'Close the {{lieu}} that day',
+      boutonFermerJourMasculin: 'Close the {{lieu}} that day',
       boutonFermerJours: 'Close the facility on those days',
+      boutonFermerJoursFeminin: 'Close the {{lieu}} on those days',
+      boutonFermerJoursMasculin: 'Close the {{lieu}} on those days',
       changer: 'Change',
       choisirInstallation: 'Choose the facility',
       de: 'From',

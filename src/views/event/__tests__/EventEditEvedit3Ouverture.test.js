@@ -87,6 +87,11 @@ jest.mock('@/domains/auth/useAuth', () => ({
   }),
 }));
 
+// FINITIONS11-COLL (03/10) : le juge du déplacement (aperçu au nom du club) lit le serveur ; ici,
+// il ne dit jamais « mairie » (la phrase a son témoin : EventEditFIN11COLL).
+jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
+  useMairieDecideDuDeplacement: () => false,
+}));
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL`,
 // absent de toute copie de travail, et la suite entiere meurt au chargement.
 jest.mock('@/services/event/eventService', () => ({

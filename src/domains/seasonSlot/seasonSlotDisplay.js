@@ -65,6 +65,43 @@ export const isoWeekdayOf = (date) => ((date.getDay() + 6) % 7) + 1;
 export const isTime = (valeur) => typeof valeur === 'string' && HEURE.test(valeur.trim());
 
 /**
+ * 🧭 FINITIONS11-COLL (03/10, décision d'Adel « deplacer A ») — LA QUESTION POSÉE AU SERVEUR
+ * POUR UNE SÉANCE QU'ON DÉPLACE : les paramètres de l'aperçu
+ * (`GET /facilities/:id/season-slots/preview`, au nom du club : COLL-FIX2 y rend
+ * `decision.outcome`, les mêmes juges qu'event.update). Hors du créneau du club, la mairie
+ * décide, et si elle refuse la séance est annulée : le club doit le lire AVANT d'enregistrer.
+ * Seulement si la séance a BOUGÉ (jour, heures, installation) : sinon le serveur ne rejuge rien
+ * (COLL-C2B-BIS, `isSessionMoved`).
+ * @param {any} seance - La séance enregistrée (date, startTime, endTime, facility, club, team).
+ * @param {{ club?: string | null, debut: string, facilityId?: string | null, fin: string,
+ *   jour: string, team?: string | null }} saisie - La saisie de l'écran (jour AAAA-MM-JJ).
+ * @returns {Record<string, string | number> | null} Les paramètres, ou null (rien à demander).
+ */
+export const parametresApercuDuDeplacement = (seance, saisie) => {
+  const club = saisie?.club || seance?.club?.documentId || null;
+  if (!seance?.documentId || !club || !saisie?.facilityId) return null;
+  if (!isTime(saisie.debut) || !isTime(saisie.fin)) return null;
+  const jour = parseISO(String(saisie.jour || ''));
+  if (Number.isNaN(jour.getTime())) return null;
+  const jourEnregistre = seance.date ? format(new Date(seance.date), 'yyyy-MM-dd') : '';
+  const bouge = saisie.facilityId !== (seance.facility?.documentId || null)
+    || saisie.jour !== jourEnregistre
+    || saisie.debut !== String(seance.startTime || '').slice(0, 5)
+    || saisie.fin !== String(seance.endTime || '').slice(0, 5);
+  if (!bouge) return null;
+  const team = saisie.team || seance.team?.documentId || null;
+  return {
+    club,
+    endTime: saisie.fin,
+    startTime: saisie.debut,
+    ...(team ? { team } : {}),
+    validFrom: saisie.jour,
+    validUntil: saisie.jour,
+    weekday: isoWeekdayOf(jour),
+  };
+};
+
+/**
  * « HH:MM » (ou « HH:MM:SS.000 ») en minutes depuis minuit.
  * @param {unknown} valeur - L heure.
  * @returns {number | null} Les minutes, ou null si illisible.

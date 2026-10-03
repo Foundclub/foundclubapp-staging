@@ -16,8 +16,11 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * Sur un entrainement touche (D16), il porte les deux gestes du club : « Changer l heure ou le
  * lieu », « Annuler l entrainement ». Rien n est annule a la place du club ; ses joueurs ne sont
  * prevenus que s il deplace ou annule (le geste de la fiche, comme aujourd hui).
+ * FINITIONS11-COLL (03/10, planche 25) : `facilityType` (la valeur du serveur, `facility.type`)
+ * nomme le lieu, « Le gymnase est fermé ce jour-là » ; sans lui, « L'installation ».
  * @param {{
  *   closure: any,
+ *   facilityType?: string | null,
  *   onMove?: () => void,
  *   onCancel?: () => void,
  *   testID?: string,
@@ -26,12 +29,12 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * @returns {import('react').ReactElement | null} Le bandeau.
  */
 function FacilityClosureBanner({
-  closure, onCancel, onMove, testID = 'bandeau-fermeture', withDays = false,
+  closure, facilityType = null, onCancel, onMove, testID = 'bandeau-fermeture', withDays = false,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   if (!closure) return null;
-  const { texte, titre } = closureBannerText(t, closure, { withDays });
+  const { texte, titre } = closureBannerText(t, closure, { facilityType, withDays });
   const gestes = Boolean(onMove || onCancel);
   return (
     <View style={{ gap: 8 }} testID={testID}>

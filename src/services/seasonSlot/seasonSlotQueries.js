@@ -2,8 +2,12 @@ import {
   keepPreviousData, useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
-import { summarizeInstallationWeek } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  parametresApercuDuDeplacement,
+  summarizeInstallationWeek,
+} from '@/domains/seasonSlot/seasonSlotDisplay';
 
+import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 
 import { getPlanningDefaultDate, getPlanningRange } from '@/utils/planning/planningSlots';
@@ -71,6 +75,33 @@ export const useSeasonSlotPreview = (facilityId, params) => useQuery({
   queryKey: [...seasonSlotsQueryKey(facilityId), 'preview', params],
   staleTime: 0,
 });
+
+/**
+ * 🧭 FINITIONS11-COLL (03/10, décision d'Adel « deplacer A ») — la séance qu'on DÉPLACE sera-t-elle
+ * jugée par la MAIRIE ? (hors du créneau du club : si elle refuse, la séance est annulée). L'aperçu
+ * au nom du club (COLL-FIX2) le dit ; rien n'est demandé si la séance n'a pas bougé, ni hors des
+ * installations de la Ville du club (sur le terrain d'un club, l'aperçu dit aussi « mairie » pour
+ * « le propriétaire décide » : ce n'est pas la mairie). Un serveur ancien, une panne, ou une
+ * réponse d'avant le déplacement : non — jamais une promesse fausse.
+ * @param {any} seance - La séance enregistrée.
+ * @param {{ club?: string | null, debut: string, facilityId?: string | null, fin: string,
+ *   jour: string, team?: string | null }} saisie - La saisie de l'écran (jour AAAA-MM-JJ).
+ * @returns {boolean} Vrai si la mairie décidera.
+ */
+export const useMairieDecideDuDeplacement = (seance, saisie) => {
+  const params = parametresApercuDuDeplacement(seance, saisie);
+  const installationsDeLaVille = useClubCollectiviteFacilities(params ? String(params.club) : null);
+  const deLaVille = Boolean(params) && Array.isArray(installationsDeLaVille.data)
+    && installationsDeLaVille.data.some(
+      (/** @type {any} */ installation) => installation?.documentId === saisie?.facilityId,
+    );
+  const apercu = useSeasonSlotPreview(
+    deLaVille ? saisie.facilityId : null,
+    deLaVille ? params : null,
+  );
+  return deLaVille && !apercu.isPlaceholderData
+    && apercu.data?.data?.decision?.outcome === 'mairie';
+};
 
 /**
  * Un creneau, avec ses entrainements poses (§4.4).

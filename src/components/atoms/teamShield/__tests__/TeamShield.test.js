@@ -60,6 +60,33 @@ jest.mock('@/utils/imageUrl', () => ({
 
 const CREST = 'https://exemple.test/crest-squad.png';
 
+// 🧭 FINITIONS11-COLL (03/10), point 6 — L EMPREINTE NE DEPEND PLUS DE LA COPIE DE TRAVAIL.
+// Le transformeur d images de jest ecrit `testUri` en chemin RELATIF, depuis react-native dans le
+// node_modules PARTAGE (D:/App/fc/app) : la copie principale lit « ../../../src/… », une copie
+// `.worktrees/<lot>` lit « ../../../../.worktrees/<lot>/src/… », et les 13 empreintes du temoin 3
+// rougissaient sans que rien n ait change. Le chemin est ramene a sa forme de la copie principale
+// A PARTIR de `src/` : l image comparee reste la meme (`src/assets/icons/shield.png`), seul le
+// chemin vers la copie est neutralise. Dans la copie principale, rien ne change (deja a sa forme).
+const FORME_PRINCIPALE = '../../../';
+const cheminDeLaCopiePrincipale = (/** @type {string} */ testUri) => {
+  const chemin = testUri.replace(/\\/g, '/');
+  const debut = chemin.lastIndexOf('/src/');
+  return debut === -1 ? chemin : `${FORME_PRINCIPALE}${chemin.slice(debut + 1)}`;
+};
+expect.addSnapshotSerializer({
+  serialize: (valeur, config, indentation, profondeur, refs, printer) => printer(
+    { ...valeur, testUri: cheminDeLaCopiePrincipale(valeur.testUri) },
+    config,
+    indentation,
+    profondeur,
+    refs,
+  ),
+  test: (valeur) => Boolean(valeur)
+    && typeof valeur === 'object'
+    && typeof valeur.testUri === 'string'
+    && cheminDeLaCopiePrincipale(valeur.testUri) !== valeur.testUri,
+});
+
 const rendre = (/** @type {any} */ props) => {
   /** @type {any} */
   let arbre;
@@ -222,5 +249,18 @@ describe('D70 · temoin 3 — les appelants qui ne passent PAS d\'image ne chang
     ['trois lettres', { initials: 'USA' }],
   ])('%s rend exactement ce qu\'il rendait', (_libelle, props) => {
     expect(rendre(props).toJSON()).toMatchSnapshot();
+  });
+
+  it('FIN11-COLL/6 le chemin de l ecusson se lit pareil dans toute copie, image comparee', () => {
+    const image = 'src/assets/icons/shield.png';
+    expect(cheminDeLaCopiePrincipale(`../../../${image}`)).toBe(`../../../${image}`);
+    expect(cheminDeLaCopiePrincipale(`../../../../.worktrees/PERMS-app/${image}`))
+      .toBe(`../../../${image}`);
+    expect(cheminDeLaCopiePrincipale(
+      `..\\..\\..\\..\\.claude\\worktrees\\x\\.worktrees\\FIN11-COLL-app\\${image.replace(/\//g, '\\')}`,
+    )).toBe(`../../../${image}`);
+    // Une AUTRE image ne se confond jamais avec l ecusson : seul le chemin vers la copie tombe.
+    expect(cheminDeLaCopiePrincipale('../../../../.worktrees/X-app/src/assets/icons/ball.png'))
+      .toBe('../../../src/assets/icons/ball.png');
   });
 });

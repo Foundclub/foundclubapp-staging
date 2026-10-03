@@ -1752,6 +1752,7 @@ function PlanningWeekFullscreen() {
             {/* COLL-C4B (02/10) — la fermeture de la page, pour TOUS les lecteurs (P3b). */}
             <FacilityClosureBanner
               closure={fermetureDuBandeau}
+              facilityType={facilityMeta?.type}
               testID="planning-bandeau-fermeture"
               withDays
             />
