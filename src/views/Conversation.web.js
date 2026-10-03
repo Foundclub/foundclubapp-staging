@@ -424,7 +424,8 @@ function Conversation({ navigation, route }) {
   // 🖥️ COLL-C4A3 (planche 47, P3c-canal-ordi) — sur ordinateur, depuis l'espace de la Ville, un
   // fil de la Ville s'ouvre en TROIS colonnes : ses canaux et conversations à gauche. La liste des
   // fils est la requête de la messagerie : la socket la réécrit, la colonne suit sans recharger.
-  const villeDuFil = String(chatData?.collectivite?.documentId || '');
+  // Le type `Chat` ne connaît pas encore la Ville d'un fil (COLL-C4A2) : lue telle quelle.
+  const villeDuFil = String(/** @type {any} */ (chatData)?.collectivite?.documentId || '');
   const avecColonneDeLaVille = Boolean(
     isDesktop && route?.params?.espace === 'ville' && filDeLaVille.estFil && villeDuFil,
   );
@@ -432,9 +433,12 @@ function Conversation({ navigation, route }) {
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
   }, { enabled: avecColonneDeLaVille });
-  const filsDeLaColonne = useMemo(() => (Array.isArray(listeDesFils?.pages)
-    ? listeDesFils.pages.flatMap((/** @type {any} */ page) => page?.data || [])
-    : []), [listeDesFils]);
+  const filsDeLaColonne = useMemo(() => {
+    const pages = listeDesFils?.pages;
+    return Array.isArray(pages)
+      ? pages.flatMap((/** @type {any} */ page) => page?.data || [])
+      : [];
+  }, [listeDesFils]);
   let colonnesDeLaGrille = isDesktop ? 'minmax(0, 1.5fr) minmax(320px, 420px)' : 'minmax(0, 1fr)';
   if (avecColonneDeLaVille) {
     colonnesDeLaGrille = 'minmax(240px, 300px) minmax(0, 1.5fr) minmax(280px, 380px)';
