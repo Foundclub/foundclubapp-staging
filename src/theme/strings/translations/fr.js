@@ -14501,6 +14501,10 @@ export default {
     // COLL-FIX-PLANNING (T9) : la carte des séances regroupées d une colonne trop étroite.
     grappe_one: 'séance',
     grappe_other: 'séances',
+    // FINITIONS12-COLL (03/10) — des créneaux groupés ne sont pas des séances (T11, C27_1).
+    grappeCreneaux_one: 'créneau',
+    grappeCreneaux_other: 'créneaux',
+    grappeMixte: '{{seances}} et {{creneaux}}',
     more: 'plus',
     noEventInThisPeriod: 'Aucun événement sur cette période',
     noEventWithATime: 'Aucun événement avec horaire',

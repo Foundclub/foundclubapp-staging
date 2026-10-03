@@ -741,12 +741,19 @@ function CollectiviteHome() {
   );
 
   // ── 3. CETTE SEMAINE ───────────────────────────────────────────────────────────────────
-  const libelleSeances = (/** @type {any} */ query) => {
-    if (query?.isLoading) return '…';
-    if (query?.error) return '—';
-    const lignes = Array.isArray(query?.data?.data) ? query.data.data.length : NaN;
-    const total = Number(query?.data?.meta?.total ?? lignes);
-    if (!Number.isFinite(total)) return '—';
+  // 🧮 FINITIONS12-COLL (03/10) — MÊME MOT, MÊME NOMBRE (tournée T11, C02_4 / C30_1) : le nombre
+  // de séances de la semaine est celui de « Chiffres » (`seances` de la ligne : tenues + à venir,
+  // admin docs/CONTRAT_CHIFFRES_VILLE.md §5), la même lecture que le taux. Avant : les BLOCS du
+  // planning, créneaux compris (« 14 séances » contre 10) ; un créneau n'est pas une séance (§1).
+  const seancesSelonChiffres = (/** @type {string | undefined} */ facilityId) => {
+    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
+    const ligne = Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) : null;
+    return typeof ligne?.seances === 'number' ? ligne.seances : null;
+  };
+  const libelleSeances = (/** @type {string | undefined} */ facilityId) => {
+    if (chiffresSemaine.isLoading) return '…';
+    const total = seancesSelonChiffres(facilityId);
+    if (total === null) return '—';
     if (total === 0) return t('collectiviteAccueil.semaine.aucuneSeance', 'Aucune séance');
     if (total === 1) return t('collectiviteAccueil.semaine.uneSeance', '1 séance');
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });
@@ -760,10 +767,9 @@ function CollectiviteHome() {
   };
 
   // La planche dit « occupation » seulement quand il y a des séances (sinon « Aucune séance »).
-  const seancesDansLaSemaine = (/** @type {any} */ query) => {
-    const lignes = Array.isArray(query?.data?.data) ? query.data.data.length : 0;
-    return Number(query?.data?.meta?.total ?? lignes) || 0;
-  };
+  const seancesDansLaSemaine = (/** @type {string | undefined} */ facilityId) => (
+    seancesSelonChiffres(facilityId) || 0
+  );
 
   const renderSemaine = () => {
     let corps;
@@ -827,12 +833,12 @@ function CollectiviteHome() {
                   testID={`collectivite-home-jauge-${installation?.documentId}`}
                 />
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {seancesDansLaSemaine(query) > 0
-                    ? `${libelleSeances(query)} · ${phraseOccupation(
+                  {seancesDansLaSemaine(installation?.documentId) > 0
+                    ? `${libelleSeances(installation?.documentId)} · ${phraseOccupation(
                       t,
                       tauxDeLaSemaine(installation?.documentId),
                     )}`
-                    : libelleSeances(query)}
+                    : libelleSeances(installation?.documentId)}
                 </Text>
               </View>
             );

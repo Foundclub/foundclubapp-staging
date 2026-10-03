@@ -13825,6 +13825,10 @@ export default {
     changeThePeriodToSee: 'The arrows lead to other dates.',
     grappe_one: 'session',
     grappe_other: 'sessions',
+    // FINITIONS12-COLL (03/10) — grouped slots are not sessions (round T11, C27_1).
+    grappeCreneaux_one: 'slot',
+    grappeCreneaux_other: 'slots',
+    grappeMixte: '{{seances}} and {{creneaux}}',
     more: 'more',
     noEventInThisPeriod: 'No event in this period',
     noEventWithATime: 'No event with a time',
