@@ -25,6 +25,8 @@ const mockRemindMutate = jest.fn();
 const mockRemindMatchMutateAsync = jest.fn();
 const mockNavigate = jest.fn();
 const mockStartWhisperChat = jest.fn();
+// ST-MONMATCH (écran 2, état 3) — « Présent » sur la ligne d'un absent à l'appel.
+const mockUpdateLateMutate = jest.fn();
 const mockEventQuery = { data: null };
 const mockMatchStatsQuery = { data: null };
 const mockMyMatchResponseQuery = { data: null };
@@ -211,7 +213,7 @@ jest.mock('../hooks/useEventMutations', () => {
       sosAlertMutation: idleMutation(),
       updateEventMutation: idleMutation(),
       updateEventNoNavMutation: idleMutation(),
-      updateLateMinutesMutation: idleMutation(),
+      updateLateMinutesMutation: { isPending: false, mutate: mockUpdateLateMutate },
     }),
   };
 });
@@ -410,15 +412,18 @@ const monter = (/** @type {any} */ options = {}) => {
   const {
     auth = authPour(COACH, true),
     event = MATCH_FINI,
+    horloge = HORLOGE,
     matchStats = statsAvec(),
     myMatchResponse = null,
+    // ST-MONMATCH — `focusSection` : la notification « Retour de Karim » ouvre la fiche ici.
+    params = {},
   } = options;
 
   mockUseAuth.mockReturnValue(auth);
   mockEventQuery.data = event;
   mockMatchStatsQuery.data = matchStats;
   mockMyMatchResponseQuery.data = myMatchResponse;
-  mockAttendanceQuery.data = HORLOGE;
+  mockAttendanceQuery.data = horloge;
 
   /** @type {any} */
   let arbre = null;
@@ -432,7 +437,7 @@ const monter = (/** @type {any} */ options = {}) => {
           navigate: mockNavigate,
           setOptions: mockSetOptions,
         }}
-        route={{ params: { eventId: 'event-1' } }}
+        route={{ params: { eventId: 'event-1', ...params } }}
       />,
     );
   });
@@ -827,10 +832,12 @@ describe('SECU-STATS — la carte « APRÈS LE MATCH » ne propose plus l editeu
     expect(rangDe(textes, 'Rapport finalise')).toBe(-1);
   });
 
-  test('le joueur garde SA reponse : « Mon retour post-match » ouvre son propre questionnaire', () => {
+  // ST-MONMATCH (écran 12) — ADAPTÉ : « Voir » devient « Modifier ma réponse », qui dit ce
+  // qu'il fait ; le geste et sa destination ne changent pas.
+  test('le joueur garde SA reponse : « Modifier ma réponse » ouvre son propre questionnaire', () => {
     const root = monter(vuDuJoueur());
 
-    act(() => { boutonNomme(root, 'Voir').props.onPress(); });
+    act(() => { boutonNomme(root, 'Modifier ma réponse').props.onPress(); });
 
     expect(mockNavigate).toHaveBeenCalledWith(
       'PlayerMatchResponse',
@@ -943,6 +950,237 @@ describe('ST-MATCH écran 2 — marqué absent à l appel', () => {
     const texte = textesDe(bloc).join(' | ');
     expect(texte).toContain('Un encadrant t\'a marqué absent à l\'appel.');
     expect(boutonNomme(bloc, 'Écrire à')).toBeFalsy();
+  });
+});
+
+// ==========================================================================
+// 🎯 ST-MONMATCH (écran 12, et l'état 2 de l'écran 2) — « MON MATCH » SUR LA FICHE.
+// Les états de la carte se testent seuls (`MonMatchCard.STMONMATCH.test.js`). Ici, ce
+// que SEULE la fiche peut prouver : la carte remplace les deux anciens blocs, elle reçoit
+// le bon nom et le bon avis, la notification la met en tête, et le joueur ne voit QUE lui.
+// ==========================================================================
+describe('ST-MONMATCH écran 12 — « Mon match » sur la fiche du match', () => {
+  const SCORE = {
+    available: true, locked: false, scoreAgainst: 1, scoreFor: 2, source: 'manual', waitingOfficial: false,
+  };
+  const COEQUIPIER = 'joueur-2';
+  const MON_AVIS = 'AVIS-DU-COACH-POUR-LE-LECTEUR-INVENTE';
+  const AVIS_SUR_UN_COEQUIPIER = 'AVIS-PRIVE-DU-COACH-SUR-UN-COEQUIPIER-INVENTE';
+  const AUTO_EVAL_D_UN_COEQUIPIER = 'AUTO-EVALUATION-PRIVEE-D-UN-COEQUIPIER-INVENTEE';
+  const AUTO_EVAL_BRUTE = 'AUTO-EVALUATION-BRUTE-D-UN-COEQUIPIER-INVENTEE';
+  // Un bloc par testID : `deep: false` ne compte pas deux fois la vue et son hôte natif.
+  const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
+    .findAll((/** @type {any} */ n) => n.props?.testID === id, { deep: false });
+  const ENVOYEE = {
+    minutesPlayed: 90,
+    participation: 'played',
+    quantitativeState: 'completed',
+    selfComment: 'Mon propre ressenti',
+    selfRating: 8,
+    sportPayload: { assists: 0, goals: 1 },
+    status: 'submitted',
+    submittedAt: '2026-10-01T20:28:00.000Z',
+    teamRating: 7,
+  };
+
+  /**
+   * La fiche telle qu un JOUEUR de l equipe la lit, feuille publiee par Karim.
+   * @param {object} [options] - Les surcharges.
+   * @param {any} [options.reponse] - SA reponse.
+   * @param {any} [options.retour] - L avis du coach pour LUI (`myCoachReview`).
+   * @param {any} [options.feuille] - Les surcharges de la feuille (`matchStats`).
+   * @param {any} [options.params] - Les parametres de la route.
+   * @returns {any} - Les options de `monter`.
+   */
+  const vuDuJoueur = ({
+    feuille = {}, params = {}, reponse = ENVOYEE, retour = { comment: MON_AVIS, rating: 7 },
+  } = {}) => ({
+    auth: authPour(JOUEUR),
+    matchStats: statsAvec({
+      myCoachReview: retour,
+      permissions: { canManage: false, canRespond: true, canView: true },
+      report: {
+        coachPlayerReviews: [],
+        needsReview: false,
+        responseCompletionCount: 1,
+        responseEligibleCount: 1,
+        status: 'final',
+        submittedBy: { documentId: COACH, firstname: 'Karim' },
+      },
+      score: SCORE,
+      ...feuille,
+    }),
+    myMatchResponse: { permissions: { canRespond: true }, response: reponse },
+    params,
+  });
+
+  test('🔴 une seule carte « Mon match » : plus de « Mes stats » ni de « Mon retour coach »', () => {
+    const textes = textesVisibles(monter(vuDuJoueur()));
+
+    expect(textes.filter((texte) => texte === 'Mon match')).toHaveLength(1);
+    expect(rangDe(textes, 'Mes stats')).toBe(-1);
+    expect(rangDe(textes, 'Mon retour coach')).toBe(-1);
+    expect(rangDe(textes, 'Pas encore partagé')).toBe(-1);
+    expect(textes).toEqual(expect.arrayContaining(['Ma réponse', 'Envoyée', 'Modifier ma réponse']));
+  });
+
+  test('🔴 le retour est NOMMÉ (l auteur de la feuille publiée) et dit privé', () => {
+    const textes = textesVisibles(monter(vuDuJoueur()));
+
+    expect(textes).toEqual(expect.arrayContaining(['Le retour de Karim', 'Toi et tes parents', '7/10', MON_AVIS]));
+  });
+
+  test('sans auteur de feuille, le prénom vient de l entraîneur de l équipe ; sans lui, la phrase reste vraie', () => {
+    const avecEntraineur = textesVisibles(monter({
+      ...vuDuJoueur({ feuille: { report: { status: 'final', submittedBy: null } }, retour: null }),
+      event: {
+        ...MATCH_FINI,
+        team: { ...MATCH_FINI.team, trainers: [{ documentId: COACH, firstname: 'Karim' }] },
+      },
+    }));
+    expect(avecEntraineur).toContain('Karim n\'a pas encore écrit de retour pour toi. Tu seras prévenu·e.');
+
+    const sansNom = textesVisibles(monter(vuDuJoueur({
+      feuille: { report: { status: 'final', submittedBy: null } }, retour: null,
+    })));
+    expect(sansNom).toContain('Ton entraîneur n\'a pas encore écrit de retour pour toi. Tu seras prévenu·e.');
+  });
+
+  test('🔴 arrivé par la notification : « Nouveau », et le retour AVANT la réponse', () => {
+    const textes = textesVisibles(monter(vuDuJoueur({ params: { focusSection: 'coachFeedback' } })));
+
+    expect(textes).toEqual(expect.arrayContaining(['Nouveau', 'Visible par toi et tes parents.']));
+    expect(rangDe(textes, 'Le retour de Karim')).toBeLessThan(rangDe(textes, 'Ma réponse'));
+  });
+
+  test('🔴 « Donner mon retour » (rien d envoyé) ouvre SON questionnaire, jamais l éditeur', () => {
+    const root = monter(vuDuJoueur({ reponse: null, retour: null }));
+    const bouton = root.findAll((/** @type {any} */ n) => n.props?.title === 'Donner mon retour')[0];
+
+    expect(bouton).toBeTruthy();
+    act(() => { bouton.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'PlayerMatchResponse',
+      expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith('MatchStatsEditor', expect.anything());
+  });
+
+  test('écran 2, état 2 — la présence corrigée : l encadré disparaît, « Mon match » redevient un retour à donner', () => {
+    const root = monter({
+      ...vuDuJoueur({ reponse: null, retour: null }),
+      myMatchResponse: {
+        attendanceRestriction: null,
+        attendanceRestrictionAt: null,
+        attendanceRestrictionBy: null,
+        permissions: { canRespond: true },
+        response: null,
+      },
+    });
+    const textes = textesVisibles(root);
+
+    expect(parTestID(root, 'st-match-absent-a-l-appel')).toHaveLength(0);
+    expect(rangDe(textes, 'Marqué absent')).toBe(-1);
+    // La pastille porte des espaces insécables (`texteInsecable`) : on lit des espaces simples.
+    expect(textes.map((texte) => texte.replace(/\s/g, ' '))).toEqual(expect.arrayContaining(['Mon match', 'À répondre']));
+    expect(root.findAll((/** @type {any} */ n) => n.props?.title === 'Donner mon retour')).not.toHaveLength(0);
+  });
+
+  test('écran 2, état 1 — pointé absent : l encadré, et PAS de carte de réponse à côté', () => {
+    const root = monter({
+      ...vuDuJoueur({ reponse: null, retour: null }),
+      myMatchResponse: {
+        attendanceRestriction: 'no_show',
+        attendanceRestrictionBy: { documentId: COACH, firstname: 'Karim' },
+        permissions: { canRespond: false, canView: true },
+        response: null,
+      },
+    });
+
+    expect(parTestID(root, 'st-match-absent-a-l-appel')).toHaveLength(1);
+    expect(parTestID(root, 'st-monmatch')).toHaveLength(0);
+    expect(root.findAll((/** @type {any} */ n) => n.props?.title === 'Donner mon retour')).toHaveLength(0);
+  });
+
+  test('écran 2, état 3 — l entraîneur corrige l appel d un geste : « Présent » passe le joueur à l heure', () => {
+    allerSurLOnglet(monter({ matchStats: statsAvec({ score: SCORE }) }), 'participants');
+    const liste = propsDesParticipants[propsDesParticipants.length - 1];
+
+    expect(liste.rouvreLeQuestionnaire).toBe(true);
+    act(() => { liste.onCoachMarkPresent({ documentId: JOUEUR }); });
+    expect(mockUpdateLateMutate).toHaveBeenCalledWith({
+      eventId: 'event-1',
+      payload: { lateMinutes: 0, note: null },
+      userId: JOUEUR,
+    });
+  });
+
+  test('écran 2, état 3 — avant la fin du match, la liste ne parle pas de questionnaire', () => {
+    allerSurLOnglet(monter({
+      event: { ...MATCH_FINI, date: '2099-01-01T10:00:00.000Z', endDate: '2099-01-01T12:00:00.000Z' },
+      matchStats: statsAvec({ score: SCORE }),
+    }), 'participants');
+
+    expect(propsDesParticipants[propsDesParticipants.length - 1].rouvreLeQuestionnaire).toBe(false);
+  });
+
+  test('🔒 FUITE — le joueur ne voit QUE lui, même si une feuille d ancien serveur lui en envoyait plus', () => {
+    // Une feuille comme la rendait la prod AVANT SECU-STATS : l avis du coach sur chaque
+    // joueur et l auto-évaluation de chacun, deux fois. Le serveur ne les envoie plus ; la
+    // fiche ne doit de toute façon RIEN en afficher.
+    const root = monter(vuDuJoueur({
+      feuille: {
+        availablePlayers: [
+          { documentId: JOUEUR, playerResponse: ENVOYEE },
+          { documentId: COEQUIPIER, playerResponse: { selfComment: AUTO_EVAL_BRUTE, selfRating: 2, status: 'submitted' } },
+        ],
+        playerResponses: [
+          { ...ENVOYEE, label: 'Moi', userDocumentId: JOUEUR },
+          {
+            label: 'Coéquipier', selfComment: AUTO_EVAL_D_UN_COEQUIPIER, selfRating: 2, status: 'submitted', teamRating: 3, userDocumentId: COEQUIPIER,
+          },
+        ],
+        report: {
+          coachPlayerReviews: [
+            { comment: MON_AVIS, rating: 7, userDocumentId: JOUEUR },
+            { comment: AVIS_SUR_UN_COEQUIPIER, rating: 3, userDocumentId: COEQUIPIER },
+          ],
+          needsReview: false,
+          status: 'final',
+          submittedBy: { documentId: COACH, firstname: 'Karim' },
+        },
+      },
+    }));
+    const textes = textesVisibles(root);
+
+    // SA part reste : son avis, ses chiffres.
+    expect(textes).toContain(MON_AVIS);
+    expect(textes.filter((texte) => texte === MON_AVIS)).toHaveLength(1);
+    // 🔒 Le filet : tout ce que la fiche écrit, d'un bloc. AUCUN texte privé d'un autre.
+    const brut = JSON.stringify(textes);
+    expect(brut).not.toContain(AVIS_SUR_UN_COEQUIPIER);
+    expect(brut).not.toContain(AUTO_EVAL_D_UN_COEQUIPIER);
+    expect(brut).not.toContain(AUTO_EVAL_BRUTE);
+  });
+
+  test('🔴 défaut 23 — une réponse envoyée : plus de « Tu étais là ? Passe en présent »', () => {
+    // Un match fini il y a une heure : la porte « passer présent après coup » est ouverte
+    // (72 h) pour un joueur « pas renseigné ».
+    const maintenant = Date.now();
+    const recent = {
+      ...MATCH_FINI,
+      date: new Date(maintenant - 3 * 3600 * 1000).toISOString(),
+      endDate: new Date(maintenant - 3600 * 1000).toISOString(),
+    };
+    const horloge = { data: { serverNow: new Date(maintenant).toISOString() } };
+    const porteDuPresent = (/** @type {any} */ root) => root
+      .findAll((/** @type {any} */ n) => n.props && 'onDeclareLatePresence' in n.props)
+      .some((/** @type {any} */ n) => typeof n.props.onDeclareLatePresence === 'function');
+
+    // Contre-épreuve : rien d'envoyé, la porte reste.
+    expect(porteDuPresent(monter({ ...vuDuJoueur({ reponse: null }), event: recent, horloge }))).toBe(true);
+    // Réponse envoyée : elle disparaît.
+    expect(porteDuPresent(monter({ ...vuDuJoueur(), event: recent, horloge }))).toBe(false);
   });
 });
 

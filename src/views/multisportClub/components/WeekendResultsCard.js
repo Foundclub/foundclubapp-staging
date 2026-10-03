@@ -18,6 +18,10 @@ import StatsIcon from '@/components/atoms/SvgIcon/SvgIcon';
  * qui l'entraîne a « Saisir ». Un week-end sans match annonce le prochain ; un club sans
  * équipe dit par où commencer. C'est le SERVEUR qui dit qui peut quoi
  * (`viewerIsTrainer`, `canRemind` : GET /cm/:cmId/weekend-results) ; la carte le dit.
+ *
+ * ST-VUES3-ORDI (03/10) — sur ORDINATEUR (planche P5-club-ordi, `variant="table"`), les
+ * mêmes lignes en TABLEAU : Équipe, Match, Score, puis « Voir » sur un score saisi,
+ * « Saisir » chez l'entraîneur, « Relancer Karim » chez le dirigeant. Le téléphone ne change pas.
  */
 
 /**
@@ -134,6 +138,7 @@ export const formatWeekendLabel = (weekend, rows) => {
  * @param {Set<string>} [props.remindedKeys] - Les lignes déjà relancées.
  * @param {{ label: string, onPress: () => void } | null} [props.emptyAction] - Le geste
  *   d'un club sans équipe.
+ * @param {'stacked' | 'table'} [props.variant] - `table` : la colonne du site, en tableau.
  * @returns {import('react').ReactElement | null} La carte.
  */
 function WeekendResultsCard({
@@ -147,6 +152,7 @@ function WeekendResultsCard({
   onRetry,
   remindedKeys = new Set(),
   remindingKey = null,
+  variant = 'stacked',
 }) {
   const { t } = useTranslation();
   const {
@@ -221,6 +227,7 @@ function WeekendResultsCard({
 
   const rows = Array.isArray(data.rows) ? data.rows : [];
   const spansTwoDays = daysOf(rows).size > 1;
+  const isTable = variant === 'table';
   // Les lettres et les couleurs de la forme d'équipe (onglet Performance, ST-VUES).
   /** @typedef {{ background: string, color: string, label: string, letter: string }} FormLetter */
   /** @type {Record<string, FormLetter>} */
@@ -280,15 +287,46 @@ function WeekendResultsCard({
     return <Text style={[Fonts.p3, { color: Colors.warning400 }]}>{text}</Text>;
   };
 
+  // « U15 contre Test-COMPO : victoire 2 - 1. Ouvrir le match. »
+  const openMatchLabel = (/** @type {WeekendRow} */ row) => t(
+    'weekendResults.openMatchA11y',
+    '{{team}} contre {{opponent}} : {{result}} {{score}}. Ouvrir le match.',
+    {
+      opponent: opponentOf(row),
+      result: row.result ? formLetter[row.result].label : '',
+      score: `${row.scoreFor} - ${row.scoreAgainst}`,
+      team: row.teamName || '',
+      ...SANS_ECHAPPEMENT,
+    },
+  );
+
   const renderAction = (/** @type {WeekendRow} */ row) => {
     const key = weekendRowKey(row);
     if (row.status === 'scored') {
+      if (!isTable) {
+        return (
+          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+            {`${row.scoreFor} - ${row.scoreAgainst}`}
+          </Text>
+        );
+      }
+      // Le tableau a sa colonne Score : la ligne se termine par « Voir » (planche ordinateur).
+      if (!row.result) return null;
       return (
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-          {`${row.scoreFor} - ${row.scoreAgainst}`}
-        </Text>
+        <TouchableOpacity
+          accessibilityLabel={openMatchLabel(row)}
+          accessibilityRole="link"
+          onPress={() => onOpenMatch(row)}
+          style={{ justifyContent: 'center', minHeight: 40 }}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {t('weekendResults.see', 'Voir')}
+          </Text>
+        </TouchableOpacity>
       );
     }
+    // Sur le tableau, « À venir » et « Score officiel attendu » sont dans la colonne Score.
+    if (isTable && row.status !== 'missing') return null;
     if (row.status === 'upcoming') return muted(t('weekendResults.upcoming', 'À venir'));
     if (row.status === 'official_pending') {
       return muted(t('weekendResults.officialPending', 'Score officiel attendu'));
@@ -309,10 +347,13 @@ function WeekendResultsCard({
     }
     if (remindedKeys.has(key)) return muted(t('weekendResults.reminded', 'Relancé'));
     if (!row.canRemind) return null;
+    // Sur le tableau, la colonne Score ne nomme pas l'entraîneur : le bouton le fait
+    // (« Relancer Karim », planche ordinateur).
+    const names = trainerNames(row);
     return (
       <Button
         accessibilityLabel={t('weekendResults.remindA11y', 'Relancer {{names}} pour le score', {
-          names: trainerNames(row),
+          names,
           ...SANS_ECHAPPEMENT,
         })}
         icon="bell"
@@ -320,28 +361,136 @@ function WeekendResultsCard({
         isLoading={remindingKey === key}
         onPress={() => onRemind(row)}
         size="sm"
-        title={t('weekendResults.remind', 'Relancer')}
+        title={isTable && names
+          ? t('weekendResults.remindNamed', 'Relancer {{names}}', { names, ...SANS_ECHAPPEMENT })
+          : t('weekendResults.remind', 'Relancer')}
         variant="SecondaryLight"
       />
     );
   };
 
-  const renderRow = (/** @type {WeekendRow} */ row, /** @type {number} */ index) => {
+  // La colonne Score du tableau : le score, ou ce qui l'attend.
+  const renderScoreCell = (/** @type {WeekendRow} */ row) => {
+    const cell = { flexShrink: 0, textAlign: /** @type {const} */ ('right'), width: 132 };
+    if (row.status === 'scored') {
+      return (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, cell]}>
+          {`${row.scoreFor} - ${row.scoreAgainst}`}
+        </Text>
+      );
+    }
+    if (row.status === 'missing') {
+      return (
+        <Text style={[Fonts.p2, { color: Colors.warning400 }, cell]}>
+          {t('weekendResults.scoreToEnterShort', 'à saisir')}
+        </Text>
+      );
+    }
+    return (
+      <Text style={[Fonts.p3, Fonts.neutral300, cell]}>
+        {row.status === 'upcoming'
+          ? t('weekendResults.upcoming', 'À venir')
+          : t('weekendResults.officialPending', 'Score officiel attendu')}
+      </Text>
+    );
+  };
+
+  // Le Match du tableau : « contre Test-COMPO · 19:00 », ou « adversaire à confirmer · 21:00 ».
+  const matchOf = (/** @type {WeekendRow} */ row) => [
+    row.opponentName
+      ? t('weekendResults.versus', 'contre {{opponent}}', {
+        opponent: row.opponentName,
+        ...SANS_ECHAPPEMENT,
+      })
+      : opponentOf(row),
+    whenOf(row),
+  ].filter(Boolean).join(' · ');
+
+  const renderFormChip = (/** @type {WeekendRow} */ row) => {
     const form = row.status === 'scored' && row.result ? formLetter[row.result] : unknownForm;
+    return (
+      <View
+        style={{
+          alignItems: 'center',
+          backgroundColor: form.background,
+          borderRadius: 6,
+          height: 24,
+          justifyContent: 'center',
+          width: 24,
+        }}
+      >
+        <Text style={[Fonts.p4Bold, { color: form.color }]}>{form.letter}</Text>
+      </View>
+    );
+  };
+
+  const tableLine = [
+    Alignments.row,
+    Alignments.alignCenter,
+    Spaces.gap[12],
+    { paddingHorizontal: 4 },
+  ];
+  const columnTeam = { flex: 1, minWidth: 0 };
+  const columnMatch = { flex: 2, minWidth: 0 };
+  const columnAction = { alignItems: /** @type {const} */ ('flex-end'), flexShrink: 0, width: 156 };
+
+  const renderTableHead = () => {
+    const head = [
+      Fonts.p4Bold,
+      Fonts.neutral300,
+      { letterSpacing: 1, textTransform: /** @type {const} */ ('uppercase') },
+    ];
+    return (
+      <View
+        style={[
+          tableLine,
+          {
+            borderBottomColor: withAlpha(Colors.neutral00, 0.12),
+            borderBottomWidth: 1,
+            paddingVertical: 8,
+          },
+        ]}
+      >
+        <View style={{ width: 24 }} />
+        <Text style={[head, columnTeam]}>{t('weekendResults.columnTeam', 'Équipe')}</Text>
+        <Text style={[head, columnMatch]}>{t('weekendResults.columnMatch', 'Match')}</Text>
+        <Text style={[head, { flexShrink: 0, textAlign: 'right', width: 132 }]}>
+          {t('weekendResults.columnScore', 'Score')}
+        </Text>
+        <View style={columnAction} />
+      </View>
+    );
+  };
+
+  const renderTableRow = (/** @type {WeekendRow} */ row, /** @type {number} */ index) => (
+    <View
+      key={weekendRowKey(row)}
+      style={[
+        tableLine,
+        {
+          borderTopColor: withAlpha(Colors.neutral00, 0.07),
+          borderTopWidth: index === 0 ? 0 : 1,
+          minHeight: 52,
+          paddingVertical: 6,
+        },
+      ]}
+    >
+      {renderFormChip(row)}
+      <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, columnTeam]}>
+        {row.teamName || ''}
+      </Text>
+      <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral100, columnMatch]}>
+        {matchOf(row)}
+      </Text>
+      {renderScoreCell(row)}
+      <View style={columnAction}>{renderAction(row)}</View>
+    </View>
+  );
+
+  const renderRow = (/** @type {WeekendRow} */ row, /** @type {number} */ index) => {
     const content = (
       <>
-        <View
-          style={{
-            alignItems: 'center',
-            backgroundColor: form.background,
-            borderRadius: 6,
-            height: 24,
-            justifyContent: 'center',
-            width: 24,
-          }}
-        >
-          <Text style={[Fonts.p4Bold, { color: form.color }]}>{form.letter}</Text>
-        </View>
+        {renderFormChip(row)}
         <View style={{ flex: 1 }}>
           <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
             {`${row.teamName || ''} — ${opponentOf(row)}`}
@@ -367,17 +516,7 @@ function WeekendResultsCard({
     if (row.status === 'scored' && row.result) {
       return (
         <TouchableOpacity
-          accessibilityLabel={t(
-            'weekendResults.openMatchA11y',
-            '{{team}} contre {{opponent}} : {{result}} {{score}}. Ouvrir le match.',
-            {
-              opponent: opponentOf(row),
-              result: formLetter[row.result].label,
-              score: `${row.scoreFor} - ${row.scoreAgainst}`,
-              team: row.teamName || '',
-              ...SANS_ECHAPPEMENT,
-            },
-          )}
+          accessibilityLabel={openMatchLabel(row)}
           accessibilityRole="button"
           key={weekendRowKey(row)}
           onPress={() => onOpenMatch(row)}
@@ -414,9 +553,16 @@ function WeekendResultsCard({
         {muted(formatWeekendLabel(data.weekend, rows))}
       </View>
 
-      {rows.length ? (
+      {rows.length && isTable ? (
+        <View>
+          {renderTableHead()}
+          {rows.map(renderTableRow)}
+        </View>
+      ) : null}
+      {rows.length && !isTable ? (
         <View>{rows.map(renderRow)}</View>
-      ) : (
+      ) : null}
+      {rows.length ? null : (
         // État 3 — un week-end sans match le dit et annonce le prochain, au lieu de disparaître.
         <View style={Spaces.gap[4]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>

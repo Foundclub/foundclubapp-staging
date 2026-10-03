@@ -564,3 +564,74 @@ describe('STATS-FIX2 · point 1 — le parent ouvre le match depuis le retour du
     expect(portesDuMatch(await rendre(PAPA, FICHE_DE_HUGO))).toHaveLength(0);
   });
 });
+
+// ST-RETOURS2 · POINT 3 (planche 22, etat 2) — L EN-TETE DE LA FICHE DE SON ENFANT, CENTRE.
+//
+// La planche : sous le titre « Hugo », une carte CENTREE — l avatar, « Hugo Lemaire », la ligne
+// « 14 ans · U15 · AS Montrivage », et « Mon enfant ». L ecran gardait la carte de tout profil
+// (avatar a gauche, blason et nom du club a droite), avec « Mon enfant » colle a gauche dessous.
+// Tout autre lecteur garde la carte d origine.
+describe('ST-RETOURS2 · point 3 — l en-tete centre de la fiche de son enfant', () => {
+  const HUGO_ET_SON_CLUB = {
+    ...HUGO_VU_PAR_PAPA,
+    club: { documentId: 'asm', name: 'AS Montrivage' },
+  };
+
+  /**
+   * Le style a plat d un noeud (les tableaux de styles du theme fusionnes).
+   * @param {any} style
+   * @returns {any}
+   */
+  const styleAPlat = (style) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
+  /**
+   * La carte d identite de l enfant, ou rien.
+   * @param {any} arbre
+   * @returns {any}
+   */
+  const carteDIdentite = (arbre) => arbre.root
+    .findAll((n) => typeof n.type === 'string' && n.props.testID === 'parent-child-identity')[0];
+
+  /**
+   * Le haut de la fiche : tout ce qui precede l historique (la section « Equipes », plus bas,
+   * porte aussi un blason par equipe).
+   * @param {string} t
+   * @returns {string}
+   */
+  const enTete = (t) => t.slice(0, t.indexOf('SECTION HISTORIQUE'));
+
+  beforeEach(() => {
+    mockFetchedUser = HUGO_ET_SON_CLUB;
+    mockFollow = { hugo: { seen: ['event:m1:u15:v1', 'event:m0:u15:v1'] } };
+  });
+
+  it('🔴 une carte CENTREE : avatar, nom, « 14 ans · U15 · AS Montrivage », tag', async () => {
+    const carte = carteDIdentite(await rendre(PAPA, FICHE_DE_HUGO));
+
+    expect(carte).toBeDefined();
+    expect(styleAPlat(carte.props.style).alignItems).toBe('center');
+    const lignes = carte.findAllByType(Text).map((n) => aplatir(n.props.children));
+    expect(lignes).toEqual([
+      'AVATAR:Hugo Lemaire',
+      'Hugo Lemaire',
+      '14 ans · U15 · AS Montrivage',
+      'Mon enfant',
+    ]);
+  });
+
+  it('🔴 « Mon enfant » ne vit plus qu une fois, DANS la carte centree', async () => {
+    const t = texte(await rendre(PAPA, FICHE_DE_HUGO));
+
+    expect(t.split('Mon enfant').length - 1).toBe(1);
+    expect(enTete(t)).not.toContain('BLASON');
+  });
+
+  it('🔒 un AUTRE adulte garde la carte d origine (blason, pas de « Mon enfant »)', async () => {
+    mockFetchedUser = { ...HUGO_ET_SON_CLUB, parentAccount: { documentId: 'un-autre' } };
+    const arbre = await rendre(PAPA, FICHE_DE_HUGO);
+
+    expect(carteDIdentite(arbre)).toBeUndefined();
+    expect(enTete(texte(arbre))).toContain('BLASON');
+    expect(texte(arbre)).not.toContain('Mon enfant');
+  });
+});

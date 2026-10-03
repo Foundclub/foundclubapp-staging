@@ -765,6 +765,7 @@ function PlanningWeekFullscreen() {
     /** @type {Date} */ jour,
     /** @type {number} */ debut,
     /** @type {number} */ fin,
+    /** @type {number | null} */ plateau = null,
   ) => {
     const debutTexte = fromMinutes(debut);
     const finTexte = fromMinutes(Math.min(debut + 90, fin > debut ? fin : debut + 90));
@@ -773,7 +774,13 @@ function PlanningWeekFullscreen() {
       compact: true,
       // COLL-C4B : le jour exact, pour « Bloquer pour la Ville » (un blocage tient en UN jour).
       date: format(jour, 'yyyy-MM-dd'),
-      initial: { endTime: finTexte, startTime: debutTexte, weekday: isoWeekdayOf(jour) },
+      // COLL-C2B-BIS (planches 24 et 29) : touchee dans la colonne d un plateau, l heure le garde.
+      initial: {
+        endTime: finTexte,
+        startTime: debutTexte,
+        weekday: isoWeekdayOf(jour),
+        ...(plateau ? { plateau } : {}),
+      },
       titre: `${weekdayName(isoWeekdayOf(jour))} ${timeRange(debutTexte, finTexte)}`,
       type: 'attribuer',
     });
@@ -806,10 +813,20 @@ function PlanningWeekFullscreen() {
   };
   let toucherUneHeureLibre;
   if (peutAttribuer) {
-    toucherUneHeureLibre = (/** @type {Date} */ jour, /** @type {number} */ heure) => attribuerA(
+    // COLL-C2B-BIS : la colonne touchee (vue Jour, D66) est le plateau n° colonne + 1 ; la colonne
+    // « Indifferent » (la derniere, apres les plateaux nommes) n en porte aucun.
+    const nombreDePlateaux = Array.isArray(facilityMeta?.plateaux)
+      ? facilityMeta.plateaux.length
+      : 0;
+    toucherUneHeureLibre = (
+      /** @type {Date} */ jour,
+      /** @type {number} */ heure,
+      /** @type {number | undefined} */ colonne,
+    ) => attribuerA(
       jour,
       heure * 60,
       heure * 60 + 90,
+      Number.isInteger(colonne) && Number(colonne) < nombreDePlateaux ? Number(colonne) + 1 : null,
     );
   } else if (peutDemander) {
     toucherUneHeureLibre = (/** @type {Date} */ jour, /** @type {number} */ heure) => (

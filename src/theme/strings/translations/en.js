@@ -5351,6 +5351,13 @@ export default {
       retirerPerd: '{{qui}} loses {{jour}} {{heures}}, {{installation}}, from {{date}}.',
       retirerTitre: 'Withdraw the {{jour}} slot?',
     },
+    // COLL-C2B-BIS (03/10) — board 23, desktop: the typical week on an hour scale.
+    grille: {
+      caseVide: 'Assign {{jour}} at {{heure}}',
+      creux: 'No slot from {{debut}} to {{fin}}',
+      creuxApres: 'No slot after {{debut}}',
+      teinte: '{{jour}} shaded: full from {{debut}} to {{fin}}.',
+    },
     infos: {
       adresse: 'Address',
       capacite: 'Teams at a time',
@@ -5363,6 +5370,8 @@ export default {
       capacite_one: '{{count}} team at a time',
       capacite_other: '{{count}} teams at a time',
       complet: 'full {{moment}}',
+      // COLL-C2B-BIS (03/10) — board 21: the small "…" menu on desktop.
+      fermerMenu: 'Close the menu',
       modifier: 'Edit the facility',
       ouvrir: '{{nom}}: its slots and its schedule',
       plusActions: 'More actions for {{nom}}',
@@ -5370,6 +5379,13 @@ export default {
       semaine_one: 'This week: {{count}} session',
       semaine_other: 'This week: {{count}} sessions',
       surtitre: 'My local authority',
+    },
+    // COLL-C2B-BIS (03/10) — board 23: a slot's period, and the date of a withdrawal.
+    periode: {
+      au: 'To',
+      depuis: 'Since {{date}}: the slot has started, its start date no longer changes.',
+      du: 'From',
+      ordre: 'The end of the period must come after its start.',
     },
     planning: {
       aujourdhui: 'Today, {{jour}}',
@@ -5399,6 +5415,8 @@ export default {
     vues: {
       enAttente: 'Pending: {{qui}}',
       heureLibre: 'Free hour, {{jour}} {{heure}}: assign',
+      // COLL-C2B-BIS (03/10) — boards 24 and 29: a court's free hour, in Day view.
+      heureLibrePlateau: 'Free hour, {{plateau}}, {{jour}} {{heure}}: assign',
       jour: 'Day',
       joursPrecedents: 'Previous days',
       joursSuivants: 'Next days',
@@ -12598,6 +12616,11 @@ export default {
       message: "{{firstname}}'s profile will be erased: their first name, last name and date of birth. A line-up already played will keep their first name — we don't rewrite the sheet of a past match.",
       title: "Delete {{firstname}}'s profile?",
     },
+    declared: {
+      notFound: 'This profile no longer exists.',
+      open: 'See their page',
+      title: 'My children under 13',
+    },
     errors: {
       delete: "This profile can't be deleted right now.",
     },
@@ -16472,15 +16495,22 @@ export default {
       closedExplain: 'Roll call is closed. It stayed open until 2 h after the end.',
       marked_one: '{{count}} checked',
       marked_other: '{{count}} checked',
+      markPresent: 'Present',
+      markPresentA11y: 'Mark {{name}} present',
       neverSeen_one: '{{count}} never seen',
       neverSeen_other: '{{count}} never seen',
+      reopens: 'Marking a player present reopens their match questionnaire.',
+      reopensNamed: 'Marking {{name}} present reopens their match questionnaire.',
       serverWill: 'The server will mark them « Not checked » after the end, around',
     },
     attente: {
       colEnd: 'End of match',
       colLeft: "What's left",
       colMatch: 'Match',
+      colResponses: 'Answers',
       colTeam: 'Team',
+      complete: '{{match}} is complete: sheet published, {{responses}}.',
+      completeOn: '{{match}} is complete: sheet published on {{date}} at {{time}}, {{responses}}.',
       draft: 'Draft',
       endedAt: 'ended at {{time}}',
       enterScore: 'Enter the score',
@@ -16488,6 +16518,7 @@ export default {
       errorTitle: "Pending matches couldn't be loaded.",
       loading: 'Loading pending matches',
       open: 'Open',
+      responsesShort: '{{count}} of {{total}}',
       review: 'Check required',
       reviewDetail: 'The official score has changed',
       score: 'Score to enter',
@@ -16722,6 +16753,27 @@ export default {
       review: 'Official score changed: check the sheet',
       stepScore: 'Step 1 of 3: the score',
       stepSheet: 'Step 2 of 3: the sheet',
+    },
+    monMatch: {
+      answer: 'Give my feedback',
+      edit: 'Edit my answer',
+      eyebrow: 'My answer',
+      feedbackTitle: "{{name}}'s feedback",
+      feedbackTitleUnnamed: "Your coach's feedback",
+      new: 'New',
+      noFeedback: "{{name}} hasn't written any feedback for you yet. You'll be notified.",
+      noFeedbackUnnamed: "Your coach hasn't written any feedback for you yet. You'll be notified.",
+      notInvolved: 'Not involved in this match',
+      presentNoPlay: 'There without playing',
+      privateLong: 'Visible to you and your parents.',
+      privateShort: 'You and your parents',
+      sent: 'Sent',
+      sentOn: 'On {{date}} at {{time}}',
+      title: 'My match',
+      toAnswerBody: 'Say whether you played, your figures and your two ratings. {{name}} will read them.',
+      toAnswerBodyUnnamed: 'Say whether you played, your figures and your two ratings. Your coach will read them.',
+      unknownFigures: '{{name}} will enter your figures on the sheet.',
+      unknownFiguresUnnamed: 'Your coach will enter your figures on the sheet.',
     },
     rappel: {
       close: 'Close',
@@ -19220,6 +19272,20 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Each team\'s stats',
   },
+  // ST-VUES3-ORDI (03/10) — "Teams", right column of screen 18 on desktop.
+  clubTeamsCard: {
+    draws_one: '{{count}} draw',
+    draws_other: '{{count}} draws',
+    losses_one: '{{count}} loss',
+    losses_other: '{{count}} losses',
+    openStatsA11y: '{{team}}: open its stats',
+    presence: 'Attendance: {{percent}}',
+    presenceNone: 'Attendance: no roll call yet',
+    stats: 'Stats',
+    title: 'Teams',
+    wins_one: '{{count}} win',
+    wins_other: '{{count}} wins',
+  },
   // ST-VUES2 (02/10) — the cyan "1 new" pill (screen 16, "Coach feedback").
   newItemsPill: {
     count_one: '{{count}} new',
@@ -19227,6 +19293,10 @@ export default {
   },
   // ST-VUES2 (02/10) — the "Weekend results" card of "Club management" (screen 18).
   weekendResults: {
+    // ST-VUES3-ORDI (03/10) — the screen 18 table on desktop.
+    columnMatch: 'Match',
+    columnScore: 'Score',
+    columnTeam: 'Team',
     createSection: 'Create a section',
     createTeam: 'Create a team',
     enterScore: 'Enter',
@@ -19244,10 +19314,14 @@ export default {
     remind: 'Remind',
     remindA11y: 'Remind {{names}} about the score',
     reminded: 'Reminded',
+    remindNamed: 'Remind {{names}}',
     scoreToEnter: 'Score to enter',
     scoreToEnterBy: 'Score to enter · {{names}}',
+    scoreToEnterShort: 'to enter',
+    see: 'View',
     title: 'Weekend results',
     upcoming: 'Upcoming',
+    versus: 'vs {{opponent}}',
   },
   myStats: {
     assists_one: 'Assist',

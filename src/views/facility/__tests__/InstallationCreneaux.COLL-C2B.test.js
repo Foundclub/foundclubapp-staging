@@ -474,7 +474,11 @@ describe('COLL-C2B planche 3 — 4. gerer, modifier, retirer (D67), retablir (§
     expect(lus).toContain('Le club est prévenu.');
 
     await appuyer(parTexte(arbre, 'Retirer le créneau'));
-    expect(withdrawSeasonSlot).toHaveBeenCalledWith('mar-u15', {});
+    // COLL-C2B-BIS (03/10) — le retrait part avec SA date (« À partir du », aujourd hui par défaut ;
+    // témoin dédié : SeasonSlotManage.COLL-C2B-BIS.retrait.test.js). Avant : `{}`, le même jour.
+    expect(withdrawSeasonSlot).toHaveBeenCalledWith('mar-u15', {
+      effectiveFrom: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
   });
 
   it('modifier : « a partir du », le meme formulaire, PUT sur le creneau', async () => {

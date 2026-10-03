@@ -14,11 +14,11 @@ import {
   fullRangesOfSlots,
   groupSlotsByWeekday,
   overCapacityPreviewOf,
-  SEASON_SLOT_WEEKDAYS,
   seasonSlotErrorMessage,
   seasonYears,
   slotWho,
   timeRange,
+  toMinutes,
   weekdayName,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -35,6 +35,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
+import SeasonSlotWeekGrid from '@/components/organisms/seasonSlot/SeasonSlotWeekGrid';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -168,6 +169,9 @@ function CreneauRetire({ slot }) {
  * attribue (place libre pendant la saisie), gere, modifie « a partir du », retire (D67) et
  * retablit. Les onglets : Creneaux · Planning (le planning plein ecran de l installation) · Infos.
  * Sur ordinateur, la semaine se lit en 7 colonnes et le panneau s ouvre a droite.
+ * COLL-C2B-BIS (03/10) — planche 23 : sur ordinateur, ces 7 colonnes sont A L ECHELLE DES HEURES
+ * (la colonne des heures de la planche, `SeasonSlotWeekGrid`) ; une case vide ouvre « Attribuer »,
+ * deja rempli du jour ET de l heure.
  *
  * Le serveur est le seul juge des droits (`meta.canManage`) : sans lui, AUCUN geste d ecriture
  * (ni « Attribuer », ni « Modifier », ni « Retirer », ni « Retablir »).
@@ -322,6 +326,11 @@ function InstallationCreneaux() {
     initial: jour ? { weekday: jour } : {},
     type: 'attribuer',
   });
+  // COLL-C2B-BIS — une case vide de la grille : le jour ET l heure (« 17:30 – 19:00 »).
+  const attribuerALHeure = (/** @type {Record<string, any>} */ initial) => setPanneau({
+    initial,
+    type: 'attribuer',
+  });
 
   // ─── L onglet « Creneaux » ──────────────────────────────────────────────────────────
   const ongletCreneaux = (() => {
@@ -359,51 +368,17 @@ function InstallationCreneaux() {
     }
     const parJour = groupSlotsByWeekday(creneaux);
     if (isDesktop) {
-      // Ordinateur (P4v2-ordi) : la semaine type en 7 colonnes ; chaque colonne s ouvre sur
-      // « Attribuer », deja rempli de son jour.
+      // Ordinateur (P4v2-ordi, etat A) : la semaine type A L ECHELLE DES HEURES. Un bloc se gere ;
+      // une case vide ouvre « Attribuer », deja rempli du jour et de l heure (COLL-C2B-BIS).
       return (
-        <View style={[Alignments.row, { alignItems: 'flex-start', gap: 8 }]}>
-          {SEASON_SLOT_WEEKDAYS.map((jour) => {
-            const duJour = parJour.find((groupe) => groupe.weekday === jour)?.slots || [];
-            return (
-              <View key={`colonne-${jour}`} style={{ flex: 1, gap: 6, minWidth: 0 }}>
-                <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.neutral300]}>
-                  {duJour.length ? titreDuJour(jour, duJour) : weekdayName(jour, { short: true })}
-                </Text>
-                {duJour.map(carteDeCreneau)}
-                {canManage ? (
-                  <TouchableOpacity
-                    accessibilityLabel={t(
-                      'collectiviteCreneaux.creneaux.attribuerLe',
-                      'Attribuer le {{jour}}',
-                      {
-                        jour: weekdayName(jour).toLocaleLowerCase(),
-                        ...SANS_ECHAPPEMENT,
-                      },
-                    )}
-                    accessibilityRole="button"
-                    onPress={() => attribuer(jour)}
-                    style={[
-                      Alignments.alignCenter,
-                      Alignments.justifyCenter,
-                      {
-                        borderColor: withAlpha(Colors.primary500, 0.4),
-                        borderRadius: 12,
-                        borderStyle: 'dashed',
-                        borderWidth: 1,
-                        minHeight: 40,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-                      {`+ ${t('collectiviteCreneaux.creneaux.attribuerCourt', 'Attribuer')}`}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            );
-          })}
-        </View>
+        <SeasonSlotWeekGrid
+          capacite={capacite}
+          creneaux={creneaux}
+          fermeture={toMinutes(installation.closingTime)}
+          onAttribuer={canManage ? attribuerALHeure : undefined}
+          onCreneau={(creneau) => setPanneau({ creneau, type: 'gerer' })}
+          ouverture={toMinutes(installation.openingTime)}
+        />
       );
     }
     return (
@@ -479,7 +454,7 @@ function InstallationCreneaux() {
         clubs={clubsRattaches}
         facilityId={facilityId}
         initial={panneau.initial}
-        key={`attribuer-${panneau.initial?.weekday || 0}`}
+        key={`attribuer-${panneau.initial?.weekday || 0}-${panneau.initial?.startTime || ''}`}
         onCancel={fermer}
         onDone={fermer}
       />
@@ -573,7 +548,8 @@ function InstallationCreneaux() {
               </Text>
             </View>
           ) : null}
-          {canManage && creneaux.length > 0 && !isDesktop ? (
+          {/* COLL-C2B-BIS : sur ordinateur aussi (la grille ne montre pas les heures repliees). */}
+          {canManage && creneaux.length > 0 ? (
             <Button
               onPress={() => attribuer()}
               title={t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau')}
