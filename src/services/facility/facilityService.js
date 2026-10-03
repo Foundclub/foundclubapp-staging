@@ -438,15 +438,24 @@ const getPendingFacilityOverrideRequests = async (clubId) => {
 // COLL-C3B (02/10) — `series` : « Accepter la série » / « Refuser la série » (toutes les dates en
 // attente d une demande « chaque semaine » ; acceptée, la série devient un créneau de saison).
 // Sans lui, le corps est celui d avant, au mot près.
-const decisionBody = (decisionReason, series) => ({
-  data: series ? { decisionReason, series: true } : { decisionReason },
-});
+// COLL-C3B-BIS (03/10) — `dates` : accepter une série DATE PAR DATE (les demandes choisies ; le
+// serveur refuse les autres). Absent : la série entière, comme avant.
+const decisionBody = (decisionReason, series, dates = null) => {
+  if (!series) return { data: { decisionReason } };
+  if (!Array.isArray(dates)) return { data: { decisionReason, series: true } };
+  return { data: { dates, decisionReason, series: true } };
+};
 
-const approveFacilityOverrideRequest = async (requestId, decisionReason = '', series = false) => {
+const approveFacilityOverrideRequest = async (
+  requestId,
+  decisionReason = '',
+  series = false,
+  dates = null,
+) => {
   try {
     const response = await client.post(
       `/facility-override-requests/${requestId}/approve`,
-      decisionBody(decisionReason, series),
+      decisionBody(decisionReason, series, dates),
     );
     return response.data;
   } catch (error) {

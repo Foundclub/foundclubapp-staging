@@ -2,6 +2,7 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,6 +17,7 @@ import {
   dateDeDecision,
   estDemandeHebdo,
   etatDeLaPlace,
+  lectureDeLaSerie,
   lieuAvecPreposition,
   momentDeLaDemande,
   occupantsParHoraire,
@@ -25,7 +27,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import Loader from '@/components/atoms/loader/Loader';
+import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
@@ -36,6 +39,8 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
 /** @typedef {{ kind: 'approve' | 'refuse', request: any }} Decision */
 
@@ -93,6 +98,10 @@ function CollectiviteRequests() {
   const ouvrir = (/** @type {'approve' | 'refuse'} */ kind, /** @type {any} */ request) => {
     setDecision({ kind, request });
   };
+  // COLL-C3B-BIS (planche 31, état 6) : le compte qui n'est plus gestionnaire sait à qui écrire.
+  const contacter = () => {
+    Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {});
+  };
 
   // ─── Les mots ────────────────────────────────────────────────────────────────────────────
   const nombreDEquipes = (/** @type {number} */ nombre) => (nombre === 1
@@ -145,8 +154,36 @@ function CollectiviteRequests() {
     return t('collectiviteDemandes.phrase.unique', '{{club}} demande le {{jour}}, de {{debut}} à {{fin}}, {{lieu}}, pour ses {{equipe}}.', valeurs);
   };
 
+  // COLL-C3B-BIS (planche 34) — la pastille d'une SÉRIE dit toutes ses semaines : « Complet »
+  // (toutes pleines), « Complet 3 fois sur 12 », ou « Place libre ».
+  const pastilleDeSerie = (/** @type {any} */ demande) => {
+    const lecture = lectureDeLaSerie(demande);
+    if (!lecture) return null;
+    if (lecture.completes.length === lecture.nombre) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('collectiviteDemandes.pastille.complet', 'Complet'),
+      };
+    }
+    if (lecture.completes.length) {
+      return {
+        couleur: Colors.warning500,
+        // eslint-disable-next-line max-len
+        texte: t('collectiviteDemandes.serie.pastilleCertaines', 'Complet {{nombre}} fois sur {{total}}', {
+          nombre: lecture.completes.length, total: lecture.nombre,
+        }),
+      };
+    }
+    return {
+      couleur: Colors.success500,
+      texte: t('collectiviteDemandes.serie.pastilleLibre', 'Place libre'),
+    };
+  };
+
   // La pastille d'état : « Complet » (orange) ou « 1 place libre » (vert).
   const pastilleDePlace = (/** @type {any} */ demande) => {
+    const serie = pastilleDeSerie(demande);
+    if (serie) return serie;
     const place = etatDeLaPlace(demande?.conflict);
     if (!place) return null;
     if (place.complet) {
@@ -183,6 +220,37 @@ function CollectiviteRequests() {
     </View>
   );
 
+  // COLL-C3B-BIS (planche 32, P6v2-ordi) : dans la file, la pastille dit la place en mots
+  // (« Complet · déjà 2 équipes », « Il reste 1 place »), sur un fond, comme la planche.
+  const pastilleDeFile = (/** @type {any} */ demande) => {
+    const lecture = lectureDeLaSerie(demande);
+    if (lecture && lecture.completes.length === lecture.nombre) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('collectiviteDemandes.file.complet', 'Complet · déjà {{equipes}}', {
+          equipes: nombreDEquipes(lecture.prisMax), ...SANS_ECHAPPEMENT,
+        }),
+      };
+    }
+    if (lecture) return pastilleDeSerie(demande);
+    const place = etatDeLaPlace(demande?.conflict);
+    if (!place) return null;
+    if (place.complet) {
+      return {
+        couleur: Colors.warning500,
+        texte: t('collectiviteDemandes.file.complet', 'Complet · déjà {{equipes}}', {
+          equipes: nombreDEquipes(place.equipes), ...SANS_ECHAPPEMENT,
+        }),
+      };
+    }
+    return {
+      couleur: Colors.success500,
+      texte: t('collectiviteDemandes.file.reste', 'Il reste {{places}}', {
+        places: nombreDePlaces(place.restantes), ...SANS_ECHAPPEMENT,
+      }),
+    };
+  };
+
   // Les pastilles d'une carte : la place, une fois / chaque semaine, et « Demande de votre club ».
   const pastillesDe = (/** @type {any} */ demande) => {
     const place = demande?.status === 'pending' ? pastilleDePlace(demande) : null;
@@ -204,8 +272,87 @@ function CollectiviteRequests() {
     );
   };
 
+  // COLL-C3B-BIS (planche 34) — UNE SÉRIE SE LIT EN ENTIER : « 3 mercredis du 9 octobre au
+  // 23 octobre : », puis ce qu'il y a sur place CHAQUE semaine (« Complet 1 fois sur 3 : mer.
+  // 16 oct. »), et la conséquence. Avant : la première date seule.
+  const surPlaceDeLaSerie = (/** @type {any} */ lecture) => {
+    const toutes = lecture.completes.length === lecture.nombre;
+    const certaines = lecture.completes.length > 0 && !toutes;
+    let phrasePlace;
+    if (toutes) {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.serie.completesToutes', 'Complet chaque semaine : il y a déjà {{equipes}}.', {
+        equipes: nombreDEquipes(lecture.prisMax), ...SANS_ECHAPPEMENT,
+      });
+    } else if (certaines) {
+      const premieres = lecture.completes.slice(0, 4).join(', ');
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.serie.completesCertaines', 'Complet {{nombre}} fois sur {{total}} : {{dates}}', {
+        dates: lecture.completes.length > 4 ? `${premieres} …` : premieres,
+        nombre: lecture.completes.length,
+        total: lecture.nombre,
+        ...SANS_ECHAPPEMENT,
+      });
+    } else if (lecture.prisUniforme === 0) {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.place.personne', 'Personne n’y est : il reste {{places}}.', {
+        places: nombreDePlaces(lecture.restantes), ...SANS_ECHAPPEMENT,
+      });
+    } else if (lecture.prisUniforme !== null) {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.place.reste', 'Il y a déjà {{equipes}} : il reste {{places}}.', {
+        // eslint-disable-next-line max-len
+        equipes: nombreDEquipes(lecture.prisUniforme), places: nombreDePlaces(lecture.restantes), ...SANS_ECHAPPEMENT,
+      });
+    } else {
+      // eslint-disable-next-line max-len
+      phrasePlace = t('collectiviteDemandes.serie.libreVariable', 'Il reste de la place chaque semaine.');
+    }
+    // eslint-disable-next-line max-len
+    let consequence = t('collectiviteDemandes.serie.consequenceLibre', 'Accepter ne gêne personne, aucune semaine.');
+    if (toutes || certaines) {
+      const valeurs = {
+        equipes: nombreDEquipes(lecture.prisMax + 1),
+        places: nombreDePlaces(lecture.capacite),
+        ...SANS_ECHAPPEMENT,
+      };
+      consequence = toutes
+        // eslint-disable-next-line max-len
+        ? t('collectiviteDemandes.serie.consequenceToutes', 'Accepter met {{equipes}} pour {{places}}, chaque semaine.', valeurs)
+        // eslint-disable-next-line max-len
+        : t('collectiviteDemandes.serie.consequenceCertaines', 'Accepter met {{equipes}} pour {{places}} ces jours-là.', valeurs);
+    }
+    const couleur = toutes || certaines ? Colors.warning500 : Colors.success500;
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius12,
+          Spaces.padding[12],
+          {
+            backgroundColor: `${couleur}1F`, borderColor: `${couleur}66`, borderWidth: 1, gap: 4,
+          },
+        ]}
+        testID="collectivite-request-conflict"
+      >
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('collectiviteDemandes.serie.entete', '{{nombre}} {{jours}} du {{du}} au {{au}} :', {
+            au: lecture.au,
+            du: lecture.du,
+            jours: `${lecture.jourSemaine}s`,
+            nombre: lecture.nombre,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{phrasePlace}</Text>
+        <Text style={[Fonts.p3Bold, { color: couleur }]}>{consequence}</Text>
+      </View>
+    );
+  };
+
   // Ce qu'il y a sur place, en une phrase ; qui est déjà là ; la conséquence.
   const surPlace = (/** @type {any} */ demande) => {
+    const lecture = lectureDeLaSerie(demande);
+    if (lecture) return surPlaceDeLaSerie(lecture);
     const place = etatDeLaPlace(demande?.conflict);
     if (!place) return null;
     let phrasePlace;
@@ -281,8 +428,8 @@ function CollectiviteRequests() {
     );
   };
 
-  // Le motif et l'encadrant qui demande, en petit : « « Séance … » · Karim Benali, dirigeant ».
-  const motifEtDemandeur = (/** @type {any} */ demande) => {
+  // L'encadrant qui demande, avec sa fonction (décision « nom B ») : « Karim Benali, dirigeant ».
+  const demandeurDe = (/** @type {any} */ demande) => {
     // eslint-disable-next-line max-len
     const personne = [demande?.requestedBy?.firstname, demande?.requestedBy?.lastname].filter(Boolean).join(' ');
     let fonction = '';
@@ -290,7 +437,12 @@ function CollectiviteRequests() {
     if (demande?.requesterFunction === 'manager') fonction = t('collectiviteDemandes.fonction.manager', 'dirigeant');
     // eslint-disable-next-line max-len
     if (demande?.requesterFunction === 'trainer') fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
-    const qui = [personne, fonction].filter(Boolean).join(', ');
+    return [personne, fonction].filter(Boolean).join(', ');
+  };
+
+  // Le motif et l'encadrant qui demande, en petit : « « Séance … » · Karim Benali, dirigeant ».
+  const motifEtDemandeur = (/** @type {any} */ demande) => {
+    const qui = demandeurDe(demande);
     const morceaux = [
       demande?.reason ? `« ${demande.reason} »` : '',
       qui,
@@ -348,6 +500,71 @@ function CollectiviteRequests() {
     </View>
   );
 
+  // COLL-C3B-BIS (planche 32, P6v2-ordi) — sur ordinateur, la demande OUVERTE à droite de la
+  // file : les pastilles, la phrase en grand, ce qu'il y a sur place, puis « Motif » et
+  // « Demandé par » côte à côte, un filet, et les deux gestes à droite.
+  const renderDemandeOuverte = (/** @type {any} */ demande) => {
+    const qui = demandeurDe(demande);
+    const legende = [Fonts.p3Bold, Fonts.neutral300];
+    return (
+      <View
+        key={demande?.documentId}
+        style={[ApplicationStyle.card, Spaces.padding[24], carteStyle, { gap: 16 }]}
+        testID={`collectivite-request-${demande?.documentId}`}
+      >
+        {pastillesDe(demande)}
+        <Text style={[Fonts.h2Bold, Fonts.neutral00]} testID="demande-ouverte-phrase">
+          {phraseDe(demande)}
+        </Text>
+        {surPlace(demande)}
+        <View style={[Alignments.row, { gap: 24 }]} testID="demande-ouverte-motif-demandeur">
+          {demande?.reason ? (
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={legende}>{t('collectiviteDemandes.ouverte.motif', 'Motif')}</Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>{`« ${demande.reason} »`}</Text>
+            </View>
+          ) : null}
+          {qui ? (
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={legende}>
+                {t('collectiviteDemandes.ouverte.demandePar', 'Demandé par')}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>
+                {demande?.club?.name
+                  ? t('collectiviteDemandes.ouverte.demandeur', '{{qui}} · {{club}}', {
+                    club: demande.club.name, qui, ...SANS_ECHAPPEMENT,
+                  })
+                  : qui}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={{ backgroundColor: `${Colors.neutral00}1A`, height: 1 }} />
+        <View
+          style={[Alignments.row, { gap: 12, justifyContent: 'flex-end' }]}
+          testID="demande-ouverte-gestes"
+        >
+          <View style={{ minWidth: 180 }}>
+            <Button
+              onPress={() => ouvrir('refuse', demande)}
+              title={t('collectivite.requests.actions.refuse', 'Refuser')}
+              variant="Secondary"
+            />
+          </View>
+          <View style={{ minWidth: 180 }}>
+            <Button
+              onPress={() => ouvrir('approve', demande)}
+              title={estDemandeHebdo(demande) && demande?.series
+                ? t('collectiviteDemandes.actions.accepterSerie', 'Accepter la série')
+                : t('collectivite.requests.actions.approve', 'Accepter')}
+              variant="Primary"
+            />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   // Une demande TRAITÉE : l'issue en grosse pastille, la phrase, votre message, « prévenu ».
   const renderTraitee = (/** @type {any} */ demande) => {
     const acceptee = demande?.status === 'approved';
@@ -391,14 +608,19 @@ function CollectiviteRequests() {
             <Text style={[Fonts.p2, Fonts.neutral100]}>{`« ${demande.decisionReason} »`}</Text>
           </View>
         ) : null}
-        <Text style={[Fonts.p3, Fonts.neutral300]}>{prevenu}</Text>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          <View testID="demande-prevenu-coche">
+            <SvgIcon color={Colors.success500} height={12} name="check" width={12} />
+          </View>
+          <Text style={[Fonts.p3, Fonts.neutral300, { flex: 1 }]}>{prevenu}</Text>
+        </View>
       </View>
     );
   };
 
   // Sur ordinateur, une ligne de la file : la pastille et la phrase courte.
   const renderLigneDeFile = (/** @type {any} */ demande, /** @type {boolean} */ active) => {
-    const place = pastilleDePlace(demande);
+    const place = pastilleDeFile(demande);
     return (
       <Pressable
         accessibilityRole="button"
@@ -417,7 +639,11 @@ function CollectiviteRequests() {
         ]}
         testID={`demande-file-${demande?.documentId}`}
       >
-        {place ? <Text style={[Fonts.p3Bold, { color: place.couleur }]}>{place.texte}</Text> : null}
+        {place ? (
+          <View style={{ alignSelf: 'flex-start' }}>
+            {pastille(place.texte, place.couleur, 'demande-file-pastille')}
+          </View>
+        ) : null}
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{phraseDe(demande, true)}</Text>
       </Pressable>
     );
@@ -425,20 +651,26 @@ function CollectiviteRequests() {
 
   const refusDAcces = Number(/** @type {any} */ (liste.error)?.status) === 403;
 
+  // COLL-C3B-BIS (planche 31, état 5) : pendant la lecture, une carte en squelette, à la forme
+  // des cartes (titre, ligne, encadré de la place), au lieu d'un rond qui tourne.
+  const blocSquelette = [ApplicationStyle.borderRadius12, { backgroundColor: Colors.primary700 }];
+  const squelette = (
+    <View
+      accessibilityState={{ busy: true }}
+      style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}
+      testID="demandes-squelette"
+    >
+      <SkeletonLoader isActive wrapperStyle={[{ gap: 10 }]}>
+        <View style={[...blocSquelette, { height: 22, width: '60%' }]} />
+        <View style={[...blocSquelette, { height: 14, width: '80%' }]} />
+        <View style={[...blocSquelette, { height: 90 }]} />
+      </SkeletonLoader>
+    </View>
+  );
+
   let contenu;
   if (liste.isLoading) {
-    contenu = <Loader />;
-  } else if (refusDAcces) {
-    contenu = (
-      <View style={{ gap: 8 }} testID="demandes-acces-retire">
-        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {t('collectiviteDemandes.acces.titre', 'Accès retiré')}
-        </Text>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t('collectiviteDemandes.acces.texte', 'Vous ne gérez pas cette collectivité.')}
-        </Text>
-      </View>
-    );
+    contenu = squelette;
   } else if (liste.error) {
     contenu = (
       <View style={{ gap: 12 }} testID="demandes-erreur">
@@ -458,6 +690,9 @@ function CollectiviteRequests() {
   } else if (demandes.length === 0) {
     contenu = onglet === 'pending' ? (
       <View style={{ gap: 8 }} testID="demandes-vide">
+        <View testID="demandes-vide-icone">
+          <SvgIcon color={Colors.primary200} height={40} name="envelope" width={40} />
+        </View>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
           {t('collectivite.requests.emptyPending', 'Aucune demande en attente.')}
         </Text>
@@ -474,6 +709,23 @@ function CollectiviteRequests() {
         {t('collectivite.requests.emptyDecided', 'Aucune demande traitée pour l’instant.')}
       </Text>
     );
+  } else if (onglet === 'decided' && deuxVolets) {
+    // COLL-C3B-BIS (planche 32, P6-ordi état 2) : « Traitées » en GRILLE de deux colonnes.
+    contenu = (
+      <View
+        style={[Alignments.row, { flexWrap: 'wrap', gap: 16 }]}
+        testID="demandes-traitees-grille"
+      >
+        {demandes.map((demande) => (
+          <View
+            key={demande?.documentId}
+            style={{ flexBasis: '48%', flexGrow: 1, maxWidth: '50%' }}
+          >
+            {renderTraitee(demande)}
+          </View>
+        ))}
+      </View>
+    );
   } else if (onglet === 'decided') {
     contenu = demandes.map(renderTraitee);
   } else if (deuxVolets) {
@@ -483,11 +735,42 @@ function CollectiviteRequests() {
         <View style={{ gap: 12, width: 380 }}>
           {demandes.map((d) => renderLigneDeFile(d, d?.documentId === active?.documentId))}
         </View>
-        <View style={{ flex: 1 }}>{renderEnAttente(active)}</View>
+        <View style={{ flex: 1 }}>{renderDemandeOuverte(active)}</View>
       </View>
     );
   } else {
     contenu = demandes.map(renderEnAttente);
+  }
+
+  // COLL-C3B-BIS (planche 31, état 6) — refus d'accès : ni onglets ni liste, il n'y a rien à
+  // lire ici ; le drapeau, la raison, et « Nous contacter ».
+  if (refusDAcces) {
+    return (
+      <ScreenContainer
+        bgImage="bg2"
+        contentContainerStyle={[Alignments.fill, Alignments.justifyCenter, Spaces.padding[24]]}
+      >
+        <View
+          style={[ApplicationStyle.card, Spaces.padding[24], Alignments.alignCenter, carteStyle]}
+          testID="demandes-acces-retire"
+        >
+          <View testID="demandes-acces-icone">
+            <SvgIcon color={Colors.primary200} height={40} name="flag" width={40} />
+          </View>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {t('collectiviteDemandes.acces.titre', 'Accès retiré')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
+            {t('collectiviteDemandes.acces.texte', 'Vous ne gérez pas cette collectivité.')}
+          </Text>
+          <Button
+            onPress={contacter}
+            title={t('collectiviteAccueil.nousContacter', 'Nous contacter')}
+            variant="Secondary"
+          />
+        </View>
+      </ScreenContainer>
+    );
   }
 
   return (
@@ -526,8 +809,9 @@ function CollectiviteRequests() {
           options={[
             {
               // `nombre`, pas `count` : `count` ferait chercher a i18next une forme plurielle.
+              // COLL-C3B-BIS (planche 31, état 5) : « En attente (…) » tant que la file se lit.
               label: t('collectivite.requests.tabs.pending', 'En attente ({{nombre}})', {
-                nombre: nbEnAttente,
+                nombre: pending.isLoading ? '…' : nbEnAttente,
               }),
               value: 'pending',
             },

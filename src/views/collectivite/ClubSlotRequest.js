@@ -2,9 +2,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Pressable,
   ScrollView,
   Text,
   useWindowDimensions,
@@ -84,20 +85,31 @@ const versChamp = (valeur) => {
  * libre ou non (SPEC-PLACE, DECISIONS-SOIR 02/10), « Un mot pour la mairie » en est le motif. Puis
  * l'accusé de réception, qui dit qui décide, et « Tes demandes à la Ville ».
  * Au « tu » : c'est un club qui lit.
- * @returns {import('react').ReactElement} L'écran.
+ * COLL-C3B-BIS (03/10) — planche 43 : « Changer » d'installation ; et sur ORDINATEUR, la même
+ * saisie s'ouvre en PANNEAU à droite du planning de l'installation (`enPanneau`), qui dessine
+ * pendant la saisie la place demandée en pointillé (`onBrouillon` : le jour, les heures, l'équipe).
+ * @param {{ enPanneau?: boolean, initial?: Record<string, any> | null,
+ *   onBrouillon?: ((brouillon: Record<string, any> | null) => void) | null,
+ *   onFermer?: (() => void) | null }} [props] - En panneau : les valeurs du planning, le brouillon
+ *   rendu au planning, et la fermeture du panneau. Sans props : l'écran, rempli par la route.
+ * @returns {import('react').ReactElement} L'écran, ou le panneau.
  */
-function ClubSlotRequest() {
+function ClubSlotRequest({
+  enPanneau = false, initial = null, onBrouillon = null, onFermer = null,
+} = {}) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  const params = /** @type {Record<string, any>} */ (route?.params || {});
+  const params = /** @type {Record<string, any>} */ (
+    enPanneau ? initial || {} : route?.params || {}
+  );
   const { userData } = /** @type {any} */ (useAuth()) || {};
   const clubId = params.clubId || userData?.club?.documentId || null;
   const { width } = useWindowDimensions();
-  const deuxColonnes = width >= LARGEUR_DEUX_COLONNES;
+  const deuxColonnes = !enPanneau && width >= LARGEUR_DEUX_COLONNES;
   const queryClient = useQueryClient();
 
   const [installationId, setInstallationId] = useState(params.facilityId || null);
@@ -243,6 +255,22 @@ function ClubSlotRequest() {
     }
   };
 
+  // COLL-C3B-BIS (planche 43) — en panneau, le planning dessine la place demandée en pointillé
+  // pendant la saisie : il reçoit le brouillon (jour, heures, équipe), et rien une fois envoyé.
+  const brouillonPret = Boolean(installationId && jourIso && heuresLisibles && !resultat);
+  useEffect(() => {
+    if (!onBrouillon) return;
+    onBrouillon(brouillonPret
+      ? {
+        date: jourIso,
+        endTime: fin,
+        equipe: nomDeLEquipe,
+        facilityId: installationId,
+        startTime: debut,
+      }
+      : null);
+  }, [brouillonPret, debut, fin, installationId, jourIso, nomDeLEquipe, onBrouillon]);
+
   const titreDuChamp = (/** @type {string} */ texte) => (
     <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{texte}</Text>
   );
@@ -312,54 +340,61 @@ function ClubSlotRequest() {
         'Ton club est déjà au complet dans son créneau à ce moment : ton dirigeant l’accepte ou la refuse. Tu reçois sa réponse en notification.',
       );
     }
+    const contenuAccuse = (
+      <>
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]} testID="demande-accuse-titre">
+          {titreAccuse}
+        </Text>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{leMoment()}</Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>{suiteAccuse}</Text>
+        {resultat.enAttente || resultat.enAttenteDuDirigeant ? (
+          <View
+            style={[carte, { borderColor: Colors.warning500, borderStyle: 'dashed' }]}
+            testID="demande-accuse-attente"
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+              {resultat.enAttente
+                ? t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie')
+                : t(
+                  'collectiviteDemandes.club.enAttenteDuDirigeant',
+                  'En attente de ton dirigeant',
+                )}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {`${nomDeLEquipe} · ${debut} – ${fin}`}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('collectiviteDemandes.club.commeDansTonPlanning', 'Comme dans ton planning.')}
+            </Text>
+          </View>
+        ) : null}
+        {resultat.ratees ? (
+          <Text style={[Fonts.p3Bold, Fonts.error500]}>
+            {t(
+              'collectiviteDemandes.club.ratees',
+              '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
+              { nombre: resultat.ratees },
+            )}
+          </Text>
+        ) : null}
+        <Button
+          onPress={() => navigation.navigate(RouteNames.ClubSlotRequests, { clubId })}
+          title={t('collectiviteDemandes.club.voirMesDemandes', 'Voir mes demandes')}
+          variant="Primary"
+        />
+        <Button
+          onPress={() => (onFermer ? onFermer() : navigation.goBack?.())}
+          title={t('collectiviteDemandes.fenetre.fermer', 'Fermer')}
+          variant="Ghost"
+        />
+      </>
+    );
+    // COLL-C3B-BIS (planche 43, état B) : en panneau, l'accusé prend la place de la saisie.
+    if (enPanneau) return <View style={{ gap: 16, padding: 16 }}>{contenuAccuse}</View>;
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
         <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 16 }}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]} testID="demande-accuse-titre">
-            {titreAccuse}
-          </Text>
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{leMoment()}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>{suiteAccuse}</Text>
-          {resultat.enAttente || resultat.enAttenteDuDirigeant ? (
-            <View
-              style={[carte, { borderColor: Colors.warning500, borderStyle: 'dashed' }]}
-              testID="demande-accuse-attente"
-            >
-              <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-                {resultat.enAttente
-                  ? t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie')
-                  : t(
-                    'collectiviteDemandes.club.enAttenteDuDirigeant',
-                    'En attente de ton dirigeant',
-                  )}
-              </Text>
-              <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {`${nomDeLEquipe} · ${debut} – ${fin}`}
-              </Text>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {t('collectiviteDemandes.club.commeDansTonPlanning', 'Comme dans ton planning.')}
-              </Text>
-            </View>
-          ) : null}
-          {resultat.ratees ? (
-            <Text style={[Fonts.p3Bold, Fonts.error500]}>
-              {t(
-                'collectiviteDemandes.club.ratees',
-                '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
-                { nombre: resultat.ratees },
-              )}
-            </Text>
-          ) : null}
-          <Button
-            onPress={() => navigation.navigate(RouteNames.ClubSlotRequests, { clubId })}
-            title={t('collectiviteDemandes.club.voirMesDemandes', 'Voir mes demandes')}
-            variant="Primary"
-          />
-          <Button
-            onPress={() => navigation.goBack?.()}
-            title={t('collectiviteDemandes.fenetre.fermer', 'Fermer')}
-            variant="Ghost"
-          />
+          {contenuAccuse}
         </ScrollView>
       </ScreenContainer>
     );
@@ -475,7 +510,20 @@ function ClubSlotRequest() {
     <View style={{ gap: 16 }}>
       {installation ? (
         <View style={carte} testID="demande-installation">
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{installation.name}</Text>
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>{installation.name}</Text>
+            {/* COLL-C3B-BIS (planche 43) : « Changer » rend le choix de l'installation. */}
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setInstallationId(null)}
+              testID="demande-installation-changer"
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {t('collectiviteDemandes.club.changer', 'Changer')}
+              </Text>
+            </Pressable>
+          </View>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t('collectiviteDemandes.club.installation', '{{ville}} · {{equipes}} à la fois', {
               equipes: nombreDEquipes(Math.max(1, Number(installation.maxSlots || 1))),
@@ -640,6 +688,20 @@ function ClubSlotRequest() {
       />
     </View>
   );
+
+  // COLL-C3B-BIS (planche 43, état A) — sur ordinateur, à droite du planning : le titre de la
+  // planche, la saisie puis la place, en une colonne (le panneau défile déjà).
+  if (enPanneau) {
+    return (
+      <View style={{ gap: 16, padding: 16 }} testID="demande-panneau">
+        <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {t('collectiviteDemandes.club.titrePanneau', 'Demander ce créneau')}
+        </Text>
+        {saisie}
+        {placeEtEnvoi}
+      </View>
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="screen">

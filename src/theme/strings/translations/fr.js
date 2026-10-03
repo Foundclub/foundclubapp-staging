@@ -5847,6 +5847,8 @@ export default {
       aucuneDemande: 'Aucune demande envoyée à une Ville pour l’instant.',
       aucuneInstallation: 'Ton club n’est rattaché à aucune Ville pour l’instant.',
       autreHeure: 'Demander une autre heure',
+      // COLL-C3B-BIS (03/10) — planche 43 : changer d’installation ; le titre du panneau.
+      changer: 'Changer',
       choisirInstallation: 'Installation de la Ville',
       colEquipe: 'Équipe',
       colInstallation: 'Installation',
@@ -5890,12 +5892,24 @@ export default {
       ratees: '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
       tesDemandes: 'Tes demandes à la Ville',
       titre: 'Demander un créneau',
+      titrePanneau: 'Demander ce créneau',
       tonClub: ' (ton club)',
       voirMesDemandes: 'Voir mes demandes',
     },
     consequence: {
       depasse: 'Accepter met {{equipes}} pour {{places}}.',
       libre: 'Accepter ne gêne personne.',
+    },
+    // COLL-C3B-BIS (03/10) — accepter une série date par date (planche 33).
+    dates: {
+      accepterCertaines: 'Accepter {{nombre}} dates sur {{total}}',
+      accepterUne: 'Accepter 1 date sur {{total}}',
+      aucune: 'Cochez au moins une date.',
+      complet: 'Complet · {{pris}} sur {{places}}',
+      // eslint-disable-next-line max-len
+      refusPlusieurs: 'Les {{nombre}} autres dates seront refusées : le club lira « Date non retenue ».',
+      refusUne: 'L’autre date sera refusée : le club lira « Date non retenue ».',
+      titre: 'Les dates de la série',
     },
     // COLL-FIX2 (03/10) — ce que le serveur fera de la séance, dit pendant la saisie (planche 43).
     decision: {
@@ -5919,6 +5933,8 @@ export default {
       depasse: '{{equipes}} pour {{places}} à ce moment.',
       fermer: 'Fermer',
       motifsFrequents: 'Motifs fréquents',
+      // COLL-C3B-BIS (03/10) — la poignée de la feuille (planche 33).
+      poignee: 'Fermer la fenêtre',
       prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
       prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
       refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
@@ -5926,6 +5942,11 @@ export default {
       refuserSerie: 'Refuser la série',
       refuserSerieEtAnnuler: 'Refuser et annuler les entraînements',
       serontPrevenus: 'Seront prévenus',
+    },
+    // COLL-C3B-BIS (03/10) — la pastille de la file, sur ordinateur (planche 32).
+    file: {
+      complet: 'Complet · déjà {{equipes}}',
+      reste: 'Il reste {{places}}',
     },
     fonction: {
       manager: 'dirigeant',
@@ -5958,6 +5979,16 @@ export default {
       uneEquipe: '1 équipe',
       unePlace: '1 place',
     },
+    // COLL-C3B-BIS (03/10) — la liste « Notifications » d'une demande refusée (planche 35).
+    notification: {
+      refusee: 'Refusée',
+    },
+    // COLL-C3B-BIS (03/10) — la demande ouverte, sur ordinateur (planche 32).
+    ouverte: {
+      demandePar: 'Demandé par',
+      demandeur: '{{qui}} · {{club}}',
+      motif: 'Motif',
+    },
     pastille: {
       chaqueSemaine: 'Chaque semaine',
       complet: 'Complet',
@@ -5986,6 +6017,18 @@ export default {
       personne: 'Personne n’y est : il reste {{places}}.',
       premiereDate: 'Pour la première date, le {{jour}} :',
       reste: 'Il y a déjà {{equipes}} : il reste {{places}}.',
+    },
+    // COLL-C3B-BIS (03/10) — une série se lit en entier (planche 34).
+    serie: {
+      completesCertaines: 'Complet {{nombre}} fois sur {{total}} : {{dates}}',
+      completesToutes: 'Complet chaque semaine : il y a déjà {{equipes}}.',
+      consequenceCertaines: 'Accepter met {{equipes}} pour {{places}} ces jours-là.',
+      consequenceLibre: 'Accepter ne gêne personne, aucune semaine.',
+      consequenceToutes: 'Accepter met {{equipes}} pour {{places}}, chaque semaine.',
+      entete: '{{nombre}} {{jours}} du {{du}} au {{au}} :',
+      libreVariable: 'Il reste de la place chaque semaine.',
+      pastilleCertaines: 'Complet {{nombre}} fois sur {{total}}',
+      pastilleLibre: 'Place libre',
     },
     traitee: {
       prevenu: 'Le club a été prévenu.',

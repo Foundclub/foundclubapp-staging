@@ -107,6 +107,14 @@ jest.mock(
   () => function ScreenContainerMock({ children }) { return children; },
 );
 jest.mock('@/components/atoms/loader/Loader', () => function LoaderMock() { return null; });
+// La lueur du squelette (Reanimated, MaskedView) n'est pas l'objet du témoin : ses blocs, si.
+jest.mock('@/components/atoms/skeletonLoader/SkeletonLoader', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return function SkeletonLoaderMock(/** @type {any} */ props) {
+    return reactActuel.createElement(VueRN, { testID: 'squelette-lueur' }, props.children);
+  };
+});
 jest.mock('@/components/atoms/button/Button', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
@@ -346,7 +354,8 @@ describe('COLL-C3B — planche P6-fenetre : accepter ou refuser', () => {
     expect(textes(arbre)).toEqual(expect.arrayContaining([
       'Accepter la demande',
       'Test Fc · U15',
-      'Demandé par Paul Veuillet',
+      // COLL-C3B-BIS (planche 33) : l'encadrant AVEC sa fonction, comme la planche.
+      'Demandé par Paul Veuillet, dirigeant',
       '2 équipes pour 1 place à ce moment.',
       'Seront prévenus',
       'Paul Veuillet (Test Fc), qui demande ; et les clubs déjà là : AIKI · Seniors.',
@@ -454,6 +463,281 @@ describe('COLL-C3B — planche P6-demandes : traitées, vide, erreur, refus d’
       params: { collectiviteId: 'ville-de-recette' },
       route: 'CollectiviteRequests',
     });
+  });
+});
+
+// COLL-C3B-BIS (03/10) — planche 31 (P6-demandes, états 3, 5 et 6 ; liste du plan, ligne 31) :
+// ce que la tournée T10 a laissé. ROUGE avant : un rond de chargement au lieu des cartes, un
+// « Accès retiré » sans personne à qui écrire, un écran vide et un « prévenu » sans icône.
+// (Le pluriel « 1 demande à trancher » de la porte est déjà corrigé par COLL-FIX2.)
+describe('COLL-C3B-BIS — planche 31 : squelettes, « Nous contacter », icônes', () => {
+  const trouver = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === testID);
+
+  // eslint-disable-next-line max-len
+  it('pendant la lecture : des squelettes à la forme des cartes, et l’onglet « En attente (…) »', async () => {
+    mockGet.mockImplementation(async (/** @type {string} */ url) => {
+      if (url === '/collectivites/mine') return { data: { data: [VILLE] } };
+      return new Promise(() => {});
+    });
+    const arbre = await monter((l) => l.includes('Ville de Recette'));
+    expect(trouver(arbre, 'demandes-squelette').length).toBeGreaterThanOrEqual(1);
+    expect(textes(arbre)).toContain('En attente (…)');
+  });
+
+  // eslint-disable-next-line max-len
+  it('refus d’accès : le drapeau, « Accès retiré », et « Nous contacter » écrit à l’équipe', async () => {
+    const { Linking } = jest.requireActual('react-native');
+    const ouvrirLien = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    mockGet.mockImplementation(async (/** @type {string} */ url) => {
+      if (url === '/collectivites/mine') return { data: { data: [] } };
+      throw Object.assign(new Error('Forbidden'), { status: 403 });
+    });
+    const arbre = await monter((l) => l.includes('Accès retiré'));
+    expect(trouver(arbre, 'demandes-acces-icone').length).toBeGreaterThanOrEqual(1);
+    // La planche n'a plus d'onglets : il n'y a rien à lire ici.
+    expect(textes(arbre)).not.toContain('Traitées');
+    await appuyer(arbre, 'bouton-Nous contacter');
+    const { SUPPORT_CONTACT_MAILTO } = jest.requireActual('@/config/legalUrls');
+    expect(ouvrirLien).toHaveBeenCalledWith(SUPPORT_CONTACT_MAILTO);
+    ouvrirLien.mockRestore();
+  });
+
+  it('en attente, vide : l’enveloppe au-dessus du texte', async () => {
+    mockEnAttente = [];
+    const arbre = await monter((l) => l.includes('Aucune demande en attente.'));
+    expect(trouver(arbre, 'demandes-vide-icone').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('« Traitées » : la coche devant « Le club a été prévenu »', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'onglet-decided');
+    await attendre(() => textes(arbre).includes('Acceptée'));
+    expect(trouver(arbre, 'demande-prevenu-coche').length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// COLL-C3B-BIS (03/10) — planche 32 (P6-ordi, P6v2-ordi ; liste du plan, ligne 32) : sur
+// ordinateur. ROUGE avant : « Traitées » empilait des cartes pleine largeur, la file ne disait
+// la place qu'en couleur de texte, et la demande ouverte était la carte du téléphone.
+describe('COLL-C3B-BIS — planche 32 : la file, la demande ouverte, « Traitées » en grille', () => {
+  const trouver = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === testID && typeof n.type === 'string');
+  const styleDe = (/** @type {any} */ noeud) => Object.assign(
+    {},
+    ...[noeud.props.style].flat(Infinity).filter(Boolean),
+  );
+
+  // eslint-disable-next-line max-len
+  it('la file : une pastille qui dit la place (« Complet · déjà 1 équipe », « Il reste 2 places »)', async () => {
+    mockDimensions = ORDINATEUR;
+    mockEnAttente = [EN_ATTENTE, SERIE];
+    const arbre = await monter((l) => l.includes(PHRASE_1));
+    const pastilles = trouver(arbre, 'demande-file-pastille');
+    expect(pastilles).toHaveLength(2);
+    // Une pastille : un fond et un bord, pas un texte de couleur.
+    expect(styleDe(pastilles[0]).borderWidth).toBe(1);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Complet · déjà 1 équipe',
+      'Il reste 2 places',
+    ]));
+  });
+
+  // eslint-disable-next-line max-len
+  it('la demande ouverte : la phrase en grand, « Motif » et « Demandé par » côte à côte, les gestes à droite', async () => {
+    mockDimensions = ORDINATEUR;
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Motif',
+      '« Match de coupe avancé »',
+      'Demandé par',
+      'Paul Veuillet, dirigeant · Test Fc',
+    ]));
+    const [colonnes] = trouver(arbre, 'demande-ouverte-motif-demandeur');
+    expect(styleDe(colonnes).flexDirection).toBe('row');
+    const [gestes] = trouver(arbre, 'demande-ouverte-gestes');
+    expect(styleDe(gestes).justifyContent).toBe('flex-end');
+    const [phrase] = trouver(arbre, 'demande-ouverte-phrase');
+    expect(styleDe(phrase).fontSize).toBeGreaterThanOrEqual(22);
+  });
+
+  // eslint-disable-next-line max-len
+  it('« Traitées » sur ordinateur : une grille de deux colonnes ; au téléphone, la pile', async () => {
+    mockDimensions = ORDINATEUR;
+    const arbre = await monter();
+    await appuyer(arbre, 'onglet-decided');
+    await attendre(() => textes(arbre).includes('Acceptée'));
+    const [grille] = trouver(arbre, 'demandes-traitees-grille');
+    expect(styleDe(grille)).toEqual(expect.objectContaining({
+      flexDirection: 'row', flexWrap: 'wrap',
+    }));
+
+    mockDimensions = PORTRAIT;
+    const telephone = await monter();
+    await appuyer(telephone, 'onglet-decided');
+    await attendre(() => textes(telephone).includes('Acceptée'));
+    expect(trouver(telephone, 'demandes-traitees-grille')).toHaveLength(0);
+  });
+});
+
+// COLL-C3B-BIS (03/10) — planche 33 (P6-fenetre ; liste du plan, ligne 33). ROUGE avant : la
+// feuille posée en bas sans poignée, et « Accepter la série » en tout ou rien (le serveur ne
+// recevait jamais de dates).
+describe('COLL-C3B-BIS — planche 33 : la poignée, et accepter une série date par date', () => {
+  const trouver = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === testID
+      && typeof n.props?.onPress === 'function');
+  const jourCourt = (/** @type {string} */ iso) => format(new Date(iso), 'EEE d MMM', {
+    locale: fr,
+  });
+  // Une date de la série, comme le serveur la rend (`seriesDates`) : le mercredi, 17:30 - 19:00.
+  const date = (/** @type {string} */ documentId, /** @type {string} */ jour, taken = 0) => ({
+    documentId,
+    maxSlots: 2,
+    remaining: 2 - taken,
+    requestedEnd: `${jour}T17:00:00.000Z`,
+    requestedStart: `${jour}T15:30:00.000Z`,
+    taken,
+  });
+  const SERIE_DATES = {
+    ...SERIE,
+    seriesDates: [
+      date('rq-serie', '2030-10-09'),
+      date('rq-serie-2', '2030-10-16', 2),
+      date('rq-serie-3', '2030-10-23', 1),
+    ],
+  };
+
+  // eslint-disable-next-line max-len
+  it('au téléphone, la feuille a sa poignée ; l’appuyer la ferme ; sur ordinateur, pas de poignée', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'bouton-Accepter');
+    expect(textes(arbre)).toContain('Accepter la demande');
+    expect(trouver(arbre, 'fenetre-poignee')).toHaveLength(1);
+    await appuyer(arbre, 'fenetre-poignee');
+    expect(textes(arbre)).not.toContain('Accepter la demande');
+
+    mockDimensions = ORDINATEUR;
+    const ordinateur = await monter();
+    await appuyer(ordinateur, 'bouton-Accepter');
+    expect(trouver(ordinateur, 'fenetre-poignee')).toHaveLength(0);
+  });
+
+  // eslint-disable-next-line max-len
+  it('une série : chaque date se coche, avec sa place ; toutes cochées, « Accepter la série »', async () => {
+    mockEnAttente = [SERIE_DATES];
+    const arbre = await monter((lus) => lus.includes('Accepter la série'));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Les dates de la série',
+      jourCourt('2030-10-09T15:30:00.000Z'),
+      '2 places libres',
+      jourCourt('2030-10-16T15:30:00.000Z'),
+      'Complet · 2 sur 2',
+      '1 place libre',
+    ]));
+    const cases = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'checkbox' && typeof n.props?.onPress === 'function'
+    ));
+    expect(cases).toHaveLength(3);
+    expect(cases.every((/** @type {any} */ c) => c.props.accessibilityState?.checked)).toBe(true);
+  });
+
+  // eslint-disable-next-line max-len
+  it('décocher une date : « Accepter 2 dates sur 3 », la feuille dit le sort de l’autre, le serveur reçoit les dates', async () => {
+    mockEnAttente = [SERIE_DATES];
+    const arbre = await monter((lus) => lus.includes('Accepter la série'));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    await appuyer(arbre, 'date-serie-rq-serie-2');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Accepter 2 dates sur 3',
+      'L’autre date sera refusée : le club lira « Date non retenue ».',
+    ]));
+    await appuyer(arbre, 'bouton-Accepter 2 dates sur 3');
+    expect(mockPost).toHaveBeenCalledWith(
+      '/facility-override-requests/rq-serie/approve',
+      { data: { dates: ['rq-serie', 'rq-serie-3'], decisionReason: '', series: true } },
+    );
+  });
+
+  it('aucune date cochée : le bouton se tait et la feuille le dit', async () => {
+    mockEnAttente = [SERIE_DATES];
+    const arbre = await monter((lus) => lus.includes('Accepter la série'));
+    await appuyer(arbre, 'bouton-Accepter la série');
+    await appuyer(arbre, 'date-serie-rq-serie');
+    await appuyer(arbre, 'date-serie-rq-serie-2');
+    await appuyer(arbre, 'date-serie-rq-serie-3');
+    expect(textes(arbre)).toContain('Cochez au moins une date.');
+    // La carte et la feuille portent chacune « Accepter la série » : celle de la feuille (la seule
+    // qui reçoit `disabled`) se tait, et l'appuyer quand même n'envoie rien.
+    const enFenetre = trouver(arbre, 'bouton-Accepter la série')
+      .filter((/** @type {any} */ b) => b.props.disabled !== undefined);
+    expect(enFenetre.length).toBeGreaterThan(0);
+    expect(enFenetre.every((/** @type {any} */ b) => b.props.disabled === true)).toBe(true);
+    await act(async () => { await enFenetre[0].props.onPress(); });
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+});
+
+// COLL-C3B-BIS (03/10) — planche 34 (P6v2-phrase ; liste du plan, ligne 34). ROUGE avant : une
+// série se lisait sur sa PREMIÈRE date (« Pour la première date, le mercredi 9 oct. : … »).
+// Elle se lit EN ENTIER : combien de semaines, du … au …, et combien sont pleines.
+describe('COLL-C3B-BIS — planche 34 : une série se lit en entier', () => {
+  const semaine = (/** @type {string} */ documentId, /** @type {string} */ jour, taken = 0) => ({
+    documentId,
+    maxSlots: 2,
+    remaining: 2 - taken,
+    requestedEnd: `${jour}T17:00:00.000Z`,
+    requestedStart: `${jour}T15:30:00.000Z`,
+    taken,
+  });
+  const serieDe = (/** @type {number[]} */ pris) => ({
+    ...SERIE,
+    seriesDates: ['2030-10-09', '2030-10-16', '2030-10-23']
+      .map((jour, rang) => semaine(rang ? `rq-serie-${rang + 1}` : 'rq-serie', jour, pris[rang])),
+  });
+  const PHRASE_SERIE = (/** @type {any} */ demande) => [
+    `Montrivage Basket demande chaque mercredi, de ${heure(demande.requestedStart)}`,
+    `à ${heure(demande.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket,`,
+    'jusqu’au 30 juin.',
+  ].join(' ');
+  const SEIZE_OCT = format(new Date('2030-10-16T15:30:00.000Z'), 'EEE d MMM', { locale: fr });
+
+  it('une semaine pleine sur trois : laquelle, et ce que coûte accepter ces jours-là', async () => {
+    const demande = serieDe([0, 2, 1]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      '3 mercredis du 9 octobre au 23 octobre :',
+      `Complet 1 fois sur 3 : ${SEIZE_OCT}`,
+      'Accepter met 3 équipes pour 2 places ces jours-là.',
+      'Complet 1 fois sur 3',
+    ]));
+    expect(lus.some((texte) => texte.startsWith('Pour la première date'))).toBe(false);
+  });
+
+  it('aucune semaine pleine : « … aucune semaine », la pastille « Place libre »', async () => {
+    const demande = serieDe([0, 0, 0]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      '3 mercredis du 9 octobre au 23 octobre :',
+      'Personne n’y est : il reste 2 places.',
+      'Accepter ne gêne personne, aucune semaine.',
+      'Place libre',
+    ]));
+  });
+
+  it('toutes pleines : « Complet chaque semaine », la conséquence chaque semaine', async () => {
+    const demande = serieDe([2, 2, 2]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      'Complet chaque semaine : il y a déjà 2 équipes.',
+      'Accepter met 3 équipes pour 2 places, chaque semaine.',
+      'Complet',
+    ]));
   });
 });
 

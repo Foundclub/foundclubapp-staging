@@ -5483,6 +5483,8 @@ export default {
       aucuneDemande: 'No request sent to a town yet.',
       aucuneInstallation: 'Your club is not attached to any town yet.',
       autreHeure: 'Ask for another time',
+      // COLL-C3B-BIS (03/10) — board 43: change facility; the panel title.
+      changer: 'Change',
       choisirInstallation: 'Town facility',
       colEquipe: 'Team',
       colInstallation: 'Facility',
@@ -5523,12 +5525,23 @@ export default {
       ratees: '{{nombre}} date(s) could not be sent: try again from your planning.',
       tesDemandes: 'Your requests to the town',
       titre: 'Request a slot',
+      titrePanneau: 'Request this slot',
       tonClub: ' (your club)',
       voirMesDemandes: 'See my requests',
     },
     consequence: {
       depasse: 'Accepting puts {{equipes}} for {{places}}.',
       libre: 'Accepting bothers nobody.',
+    },
+    // COLL-C3B-BIS (03/10) — accepting a series date by date (board 33).
+    dates: {
+      accepterCertaines: 'Accept {{nombre}} dates out of {{total}}',
+      accepterUne: 'Accept 1 date out of {{total}}',
+      aucune: 'Tick at least one date.',
+      complet: 'Full · {{pris}} of {{places}}',
+      refusPlusieurs: 'The {{nombre}} other dates will be refused: the club will read “Date not kept”.',
+      refusUne: 'The other date will be refused: the club will read “Date not kept”.',
+      titre: 'The dates of the series',
     },
     // COLL-FIX2 (03/10) — what the server will do with the session, said while typing (board 43).
     decision: {
@@ -5549,6 +5562,8 @@ export default {
       depasse: '{{equipes}} for {{places}} at that time.',
       fermer: 'Close',
       motifsFrequents: 'Common reasons',
+      // COLL-C3B-BIS (03/10) — the sheet handle (board 33).
+      poignee: 'Close the window',
       prevenuDemandeur: '{{personne}} ({{club}}), who asks',
       prevenusDejaLa: 'and the clubs already there: {{clubs}}',
       refusAideSerie: 'The club receives your reason; the trainings of the series are cancelled.',
@@ -5556,6 +5571,11 @@ export default {
       refuserSerie: 'Refuse the series',
       refuserSerieEtAnnuler: 'Refuse and cancel the trainings',
       serontPrevenus: 'Will be notified',
+    },
+    // COLL-C3B-BIS (03/10) — the queue badge, on desktop (board 32).
+    file: {
+      complet: 'Full · already {{equipes}}',
+      reste: '{{places}} left',
     },
     fonction: {
       manager: 'manager',
@@ -5588,6 +5608,16 @@ export default {
       uneEquipe: '1 team',
       unePlace: '1 spot',
     },
+    // COLL-C3B-BIS (03/10) — the « Notifications » list of a refused request (board 35).
+    notification: {
+      refusee: 'Refused',
+    },
+    // COLL-C3B-BIS (03/10) — the open request, on desktop (board 32).
+    ouverte: {
+      demandePar: 'Requested by',
+      demandeur: '{{qui}} · {{club}}',
+      motif: 'Reason',
+    },
     pastille: {
       chaqueSemaine: 'Every week',
       complet: 'Full',
@@ -5613,6 +5643,18 @@ export default {
       personne: 'Nobody is there: {{places}} left.',
       premiereDate: 'For the first date, {{jour}}:',
       reste: 'There are already {{equipes}}: {{places}} left.',
+    },
+    // COLL-C3B-BIS (03/10) — a series reads as a whole (board 34).
+    serie: {
+      completesCertaines: 'Full {{nombre}} times out of {{total}}: {{dates}}',
+      completesToutes: 'Full every week: there are already {{equipes}}.',
+      consequenceCertaines: 'Accepting puts {{equipes}} for {{places}} on those days.',
+      consequenceLibre: 'Accepting bothers nobody, any week.',
+      consequenceToutes: 'Accepting puts {{equipes}} for {{places}}, every week.',
+      entete: '{{nombre}} {{jours}} from {{du}} to {{au}}:',
+      libreVariable: 'There is room every week.',
+      pastilleCertaines: 'Full {{nombre}} times out of {{total}}',
+      pastilleLibre: 'Spot free',
     },
     traitee: {
       prevenu: 'The club has been notified.',

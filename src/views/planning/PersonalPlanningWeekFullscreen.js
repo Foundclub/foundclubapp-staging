@@ -69,6 +69,7 @@ import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ClubSlotRequest from '@/views/collectivite/ClubSlotRequest';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -98,6 +99,7 @@ import {
   getFacilityConflictMode,
 } from '@/utils/facilityConflictMode';
 import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
+import { toParisIsoFromLocalSelection } from '@/utils/parisTime';
 import {
   lireVueRetenue,
   pageDAujourdhui,
@@ -368,6 +370,8 @@ function PlanningWeekFullscreen() {
   const [fermetureOuverte, setFermetureOuverte] = useState(/** @type {any} */ (null));
   // COLL-C2B (02/10) — ce que la mairie a ouvert : « attribuer », « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
+  // COLL-C3B-BIS (planche 43) — la place que le club est en train de DEMANDER dans le panneau.
+  const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
   // COLL-FIX-PLANNING (G4) — ces trois fenetres du bas s affichent par un PORTAIL pose AU-DESSUS
   // de la navigation : en quittant l ecran (Ecrire aux dirigeants, Modifier, une seance), elles
   // resteraient par-dessus l ecran suivant. Elles se ferment quand l ecran perd la main (« blur »).
@@ -392,6 +396,40 @@ function PlanningWeekFullscreen() {
     : null;
   const facilityMeta = route?.params?.facilityMeta || serverFacility;
   const contextDetailLabel = route?.params?.contextDetailLabel || serverFacility?.name || null;
+  // COLL-C3B-BIS (planche 43, état A) — pendant la saisie dans le panneau, la place DEMANDÉE se
+  // dessine dans la grille comme une demande en attente : pointillé orange, « U13 ? ».
+  const evenementsAffiches = useMemo(() => {
+    if (!brouillon || brouillon.facilityId !== facilityId) return events;
+    const [annee, mois, jourDuMois] = String(brouillon.date).split('-').map(Number);
+    const instant = (/** @type {string} */ heure) => {
+      const [h, m] = String(heure).split(':').map(Number);
+      return toParisIsoFromLocalSelection(new Date(annee, mois - 1, jourDuMois, h, m, 0, 0));
+    };
+    const titre = `${brouillon.equipe || '…'} ?`;
+    const [place] = normalizePlanningItems([{
+      brouillon: true,
+      club: { documentId: userData?.club?.documentId || null, name: userData?.club?.name || '' },
+      documentId: null,
+      endAt: instant(brouillon.endTime),
+      endTime: `${brouillon.endTime}:00.000`,
+      facility: { documentId: facilityId, name: contextDetailLabel },
+      hasExplicitTime: true,
+      kind: 'event',
+      origin: 'request',
+      pending: true,
+      startAt: instant(brouillon.startTime),
+      startTime: `${brouillon.startTime}:00.000`,
+      team: { name: titre },
+      title: titre,
+    }]);
+    if (!place) return events;
+    return [
+      ...events,
+      { ...place, displayColor: Colors.warning500, participationStatus: 'pending' },
+    ];
+  }, [
+    brouillon, Colors.warning500, contextDetailLabel, events, facilityId, userData?.club,
+  ]);
   const facilityPlanningSummary = useMemo(() => {
     if (!facilityId || !facilityMeta) return null;
 
@@ -757,6 +795,8 @@ function PlanningWeekFullscreen() {
   const peutDemander = !peutAttribuer && Boolean(clubDuLecteur)
     && (Array.isArray(villesDuClub.data) ? villesDuClub.data : [])
       .some((/** @type {any} */ installation) => installation?.documentId === facilityId);
+  // COLL-C3B-BIS (planche 43) : sur ordinateur, la demande s'ouvre en PANNEAU, à droite.
+  const demandeEnPanneau = useIsDesktop();
   const demanderA = (/** @type {Date | null} */ jour, /** @type {number | null} */ heure) => {
     /** @type {Record<string, any>} */
     const params = { clubId: clubDuLecteur, facilityId };
@@ -764,6 +804,10 @@ function PlanningWeekFullscreen() {
     if (heure !== null) {
       params.startTime = fromMinutes(heure * 60);
       params.endTime = fromMinutes(Math.min(heure * 60 + 90, fermetureDuJour));
+    }
+    if (demandeEnPanneau) {
+      setPanneau({ initial: params, type: 'demander' });
+      return;
     }
     /** @type {any} */ (navigation).navigate(RouteNames.ClubSlotRequest, params);
   };
@@ -810,7 +854,10 @@ function PlanningWeekFullscreen() {
   const creneauOuvert = peutAttribuer && readOnlyBlock?.raw?.slot?.documentId
     ? creneauDuBloc(readOnlyBlock)
     : null;
-  const fermerPanneau = useCallback(() => setPanneau(null), []);
+  const fermerPanneau = useCallback(() => {
+    setPanneau(null);
+    setBrouillon(null);
+  }, []);
   const ouvrirUnBloc = (/** @type {any} */ bloc) => {
     if (bloc?.documentId) {
       /** @type {any} */ (navigation).navigate(RouteNames.EventStack, {
@@ -972,7 +1019,7 @@ function PlanningWeekFullscreen() {
         <ScrollView contentContainerStyle={{ gap: 8, paddingBottom: 24 }}>
           <PlanningCalendarView
             currentDate={currentDate}
-            events={events}
+            events={evenementsAffiches}
             onDateSelect={setCurrentDate}
             onEventPress={ouvrirUnBloc}
           />
@@ -1072,7 +1119,9 @@ function PlanningWeekFullscreen() {
         currentDate={vue === VUES.troisJours ? addDays(currentDate, -1) : currentDate}
         // COLL-C4B (02/10) — design P4v3-fermer ecran 4 : les plages fermees ou bloquees, posees
         // a cote des seances (jamais comptees comme une seance). Pas en colonnes de plateaux.
-        events={colonnesDePlateaux ? events : [...bandesDeFermeture, ...events]}
+        events={colonnesDePlateaux
+          ? evenementsAffiches
+          : [...bandesDeFermeture, ...evenementsAffiches]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
         laneOf={colonnesDePlateaux ? colonneDuBloc : undefined}
         lanes={colonnesDePlateaux}
@@ -1206,6 +1255,18 @@ function PlanningWeekFullscreen() {
           />
         ) : null}
       </View>
+    );
+  } else if (panneau?.type === 'demander') {
+    // COLL-C3B-BIS (planche 43) — le club demande sans quitter le planning ; le brouillon de la
+    // saisie remonte ici et se dessine dans la grille.
+    panneauRendu = (
+      <ClubSlotRequest
+        enPanneau
+        initial={panneau.initial}
+        key={`demander-${panneau.initial?.date || ''}-${panneau.initial?.startTime || ''}`}
+        onBrouillon={setBrouillon}
+        onFermer={fermerPanneau}
+      />
     );
   } else if (panneau?.type === 'gerer') {
     panneauRendu = (

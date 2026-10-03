@@ -140,6 +140,46 @@ export const etatDeLaPlace = (conflit) => {
 };
 
 /**
+ * COLL-C3B-BIS (03/10), planche 34 — UNE SÉRIE SE LIT EN ENTIER, pas sur sa première date :
+ * combien de semaines (« 12 mardis »), du … au …, et lesquelles sont pleines. Lit les dates en
+ * attente que le serveur rend avec leur place (`seriesDates` : taken, maxSlots, remaining).
+ * @param {any} demande - Une demande « chaque semaine » de `/collectivites/:id/requests`.
+ * @returns {{ au: string, capacite: number, completes: string[], du: string, jourSemaine: string,
+ *   nombre: number, prisMax: number, prisUniforme: number | null, restantes: number }
+ *   | null} La lecture, ou null s'il n'y a pas au moins deux dates lisibles.
+ */
+export const lectureDeLaSerie = (demande) => {
+  const dates = (Array.isArray(demande?.seriesDates) ? demande.seriesDates : [])
+    .map((/** @type {any} */ date) => ({ ...date, debut: lireDate(date?.requestedStart) }))
+    .filter((/** @type {any} */ date) => date.debut)
+    .sort((/** @type {any} */ a, /** @type {any} */ b) => a.debut.getTime() - b.debut.getTime());
+  if (dates.length < 2) return null;
+  const locale = localeDesDates();
+  const capacite = Math.max(
+    1,
+    ...dates.map((/** @type {any} */ date) => Number(date?.maxSlots || 1)),
+  );
+  const pris = dates.map((/** @type {any} */ date) => Number(date?.taken || 0));
+  const pleines = dates.filter((/** @type {any} */ date) => (
+    Number(date?.taken || 0) >= Number(date?.maxSlots || 1)
+  ));
+  const uniforme = pris.every((valeur) => valeur === pris[0]);
+  return {
+    au: format(dates[dates.length - 1].debut, 'd MMMM', { locale }),
+    capacite,
+    completes: pleines.map((/** @type {any} */ date) => (
+      format(date.debut, 'EEE d MMM', { locale })
+    )),
+    du: format(dates[0].debut, 'd MMMM', { locale }),
+    jourSemaine: format(dates[0].debut, 'EEEE', { locale }),
+    nombre: dates.length,
+    prisMax: Math.max(...pris),
+    prisUniforme: uniforme ? pris[0] : null,
+    restantes: Math.max(0, capacite - Math.max(...pris)),
+  };
+};
+
+/**
  * Qui est déjà là, regroupé par horaire : « AS Montrivage · U15 et Montrivage FC · Senior B,
  * de 18:00 à 19:30 ». Le club et l'équipe, jamais une personne.
  * @param {any} conflit - `conflict` d'une demande en attente.
