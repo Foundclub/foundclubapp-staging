@@ -5087,6 +5087,8 @@ export default {
       priveeMairie: 'Vous et les dirigeants du club',
     },
     titre: 'Dirigeants des clubs',
+    // COLL-C4A3 (planche 47) : le titre des conversations du club, sous les canaux de la Ville.
+    tonClub: 'Ton club',
     vide: {
       // eslint-disable-next-line max-len
       dirigeantTexte: 'Ici, tu échanges avec {{ville}} et les dirigeants des autres clubs rattachés : un créneau à céder, un tournoi à caler. Les joueurs et les parents n’y sont pas.',

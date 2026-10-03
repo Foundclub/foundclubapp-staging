@@ -4750,6 +4750,7 @@ export default {
       priveeMairie: 'You and the club’s managers',
     },
     titre: 'Club managers',
+    tonClub: 'Your club',
     vide: {
       dirigeantTexte: 'Here you talk with {{ville}} and the managers of the other attached clubs: a slot to give up, a tournament to set. Players and parents are not in it.',
       dirigeantTitre: 'The club managers’ channel',

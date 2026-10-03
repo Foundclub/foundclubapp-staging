@@ -427,4 +427,35 @@ describe('COLL-C4A2 — les fils de la Ville dans la conversation', () => {
     act(() => { props.onSend([{ text: 'Coucou' }]); });
     expect(mockSendMessage.mock.calls[0][2]).not.toHaveProperty('senderSignature');
   });
+
+  // COLL-C4A3 (03/10, planche 47) — l'en-tête porte l'icône ou l'écusson du fil (T9 : absent).
+  it('COLL-C4A3 — en-tete : la tuile du canal ; conversation privee, l ecusson d en face', () => {
+    /* eslint-disable global-require */
+    const ClubLogoMark = require('@/components/molecules/clubLogoMark/ClubLogoMark').default;
+    const { EcussonVille } = require('@/views/collectivite/components/BlocDeLaVille');
+    const { IconeDuCanal } = require('@/views/collectivite/components/FilDeLaVille');
+    /* eslint-enable global-require */
+    const enTete = (/** @type {any} */ arbre) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'fil-de-la-ville-ecusson'
+        && typeof n.type !== 'string',
+    )[0];
+
+    const canal = monter({ chatType: 'collectivite_dirigeants', espace: 'ville' });
+    expect(enTete(canal.arbre).findAllByType(IconeDuCanal)).toHaveLength(1);
+
+    mockChatData = {
+      ...CANAL,
+      collectiviteClub: { documentId: 'club-a', name: 'AS Ville A' },
+      type: 'collectivite_club',
+    };
+    const cote = monter({ chatType: 'collectivite_club', espace: 'ville' });
+    expect(enTete(cote.arbre).findByType(ClubLogoMark).props.club.name).toBe('AS Ville A');
+    const club = monter({ chatType: 'collectivite_club' });
+    expect(enTete(club.arbre).findByType(EcussonVille).props.nom).toBe('Ville de Demo');
+
+    mockChatData = { documentId: 'chat-1', participants: [], type: 'whisper' };
+    const ordinaire = monter({});
+    expect(enTete(ordinaire.arbre).findAllByType(IconeDuCanal)).toHaveLength(0);
+    expect(enTete(ordinaire.arbre).findAllByType(ClubLogoMark)).toHaveLength(0);
+  });
 });

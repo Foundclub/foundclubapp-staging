@@ -104,6 +104,7 @@ import VoiceComposerZone, {
 } from '@/components/organisms/voiceComposer/VoiceComposerZone';
 import {
   BoutonMembresDuFil,
+  EcussonDuFil,
   FilDeLaVilleQuitte,
   useFilDeLaVille,
   VideDuFilDeLaVille,
@@ -6166,6 +6167,15 @@ function Conversation({ navigation, route }) {
             onPress={() => navigation.goBack()}
             style={{ marginLeft: 0 }}
             withDefaultMargin={false}
+          />
+        </View>
+
+        {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
+        <View testID="fil-de-la-ville-ecusson">
+          <EcussonDuFil
+            chat={chatData}
+            espaceVille={route?.params?.espace === 'ville'}
+            routeChatType={route?.params?.chatType || null}
           />
         </View>
 
