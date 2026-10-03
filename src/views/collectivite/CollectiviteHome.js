@@ -24,6 +24,7 @@ import {
   isOwnClubRequest,
   oldestPendingRequest,
   premiersPas,
+  seasonSlotsSeen,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
@@ -972,9 +973,12 @@ function CollectiviteHome() {
   );
 
   // ── PREMIERS PAS (planche P1v3) et MOT D'ACCUEIL (planche P2-gestion, état 6) ─────────────
+  // COLL-ACCUEIL-BIS — l'étape 3 se coche au premier créneau de saison vu dans la semaine.
+  const nombreCreneaux = seasonSlotsSeen(semaine);
   const guide = premiersPas({
     actualitesCount: Array.isArray(actualitesEnLigne.data) ? actualitesEnLigne.data.length : 0,
     clubsVus,
+    creneauxCount: nombreCreneaux,
     installationsCount: Array.isArray(installations.data) ? installations.data.length : 0,
   });
   const nombreActualites = Array.isArray(actualitesEnLigne.data)
@@ -982,7 +986,39 @@ function CollectiviteHome() {
     : 0;
   const nombreClubs = Array.isArray(clubs.data) ? clubs.data.length : 0;
   const nombreInstallations = Array.isArray(installations.data) ? installations.data.length : 0;
-  const texteEtape = (/** @type {string} */ cle, /** @type {boolean} */ fait) => {
+  const texteEtape = (
+    /** @type {string} */ cle,
+    /** @type {boolean} */ fait,
+    /** @type {boolean} */ attend = false,
+  ) => {
+    // COLL-ACCUEIL-BIS (03/10) — « Attribuez les créneaux de la saison » (planche P1v3, étape 3).
+    if (cle === 'creneaux') {
+      if (fait) {
+        return {
+          titre: nombreCreneaux === 1
+            ? t('collectiviteAccueil.premiersPas.creneaux.faitUn', '1 créneau attribué')
+            : t('collectiviteAccueil.premiersPas.creneaux.faits', '{{nombre}} créneaux attribués', {
+              nombre: nombreCreneaux,
+            }),
+        };
+      }
+      return {
+        bouton: t('collectiviteAccueil.actions.assignSlot.titre', 'Attribuer un créneau'),
+        dit: attend
+          ? t(
+            'collectiviteAccueil.premiersPas.creneaux.attend',
+            'Après l’étape 1 : qui joue où, chaque semaine.',
+          )
+          : t(
+            'collectiviteAccueil.premiersPas.creneaux.dit',
+            'Qui joue où, chaque semaine, toute la saison.',
+          ),
+        titre: t(
+          'collectiviteAccueil.premiersPas.creneaux.titre',
+          'Attribuez les créneaux de la saison',
+        ),
+      };
+    }
     // COLL-C4A (02/10) — « Présentez-vous aux clubs » (planche P1v3, étape 4).
     if (cle === 'actualite') {
       if (fait) {
@@ -1038,17 +1074,22 @@ function CollectiviteHome() {
           }),
       };
     }
+    const rattaches = nombreClubs === 1
+      ? t('collectiviteAccueil.premiersPas.clubs.ditUn', 'L’équipe FoundClub a rattaché 1 club.')
+      : t(
+        'collectiviteAccueil.premiersPas.clubs.dit',
+        'L’équipe FoundClub a rattaché {{nombre}} clubs.',
+        {
+          nombre: nombreClubs,
+        },
+      );
     return {
       bouton: t('collectiviteAccueil.clubs.voir', 'Voir les clubs'),
-      dit: nombreClubs === 1
-        ? t('collectiviteAccueil.premiersPas.clubs.ditUn', 'L’équipe FoundClub a rattaché 1 club.')
-        : t(
-          'collectiviteAccueil.premiersPas.clubs.dit',
-          'L’équipe FoundClub a rattaché {{nombre}} clubs.',
-          {
-            nombre: nombreClubs,
-          },
-        ),
+      // COLL-ACCUEIL-BIS : « Un club manque ? Invitez-le. » (l'action « Inviter un club »).
+      dit: `${rattaches} ${t(
+        'collectiviteAccueil.premiersPas.clubs.manque',
+        'Un club manque ? Invitez-le.',
+      )}`,
       titre: t('collectiviteAccueil.premiersPas.clubs.titre', 'Vérifiez vos clubs'),
     };
   };
@@ -1114,28 +1155,25 @@ function CollectiviteHome() {
           variant="Ghost"
         />
       </View>
-    ) : (
-      <View
-        accessibilityLabel={t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
-        style={[ApplicationStyle.card, Spaces.padding[16], carteStyle, { gap: 12 }]}
-        testID="collectivite-home-premiers-pas"
-      >
-        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
-            {t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
-          </Text>
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-            {t('collectiviteAccueil.premiersPas.compte', '{{faits}} sur {{total}}', {
-              faits: guide.faits,
-              total: guide.total,
-            })}
-          </Text>
-        </View>
+    ) : (() => {
+      const compte = (
+        <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+          {t('collectiviteAccueil.premiersPas.compte', '{{faits}} sur {{total}}', {
+            faits: guide.faits,
+            total: guide.total,
+          })}
+        </Text>
+      );
+      const jauge = (
         <View
           accessibilityLabel={t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
           accessibilityRole="progressbar"
           accessibilityValue={{ max: guide.total, min: 0, now: guide.faits }}
-          style={{ backgroundColor: withAlpha(Colors.neutral00, 0.12), borderRadius: 3, height: 6 }}
+          style={[
+            { backgroundColor: withAlpha(Colors.neutral00, 0.12), borderRadius: 3, height: 6 },
+            // Planche 10 (ordinateur) : la jauge, 240 px, à droite du titre.
+            enColonnes ? { width: 240 } : null,
+          ]}
         >
           <View
             style={{
@@ -1146,66 +1184,137 @@ function CollectiviteHome() {
             }}
           />
         </View>
-        {guide.etapes.map((etape, index) => {
-          const texte = texteEtape(etape.key, etape.fait);
-          return (
+      );
+      const etapes = guide.etapes.map((etape, index) => {
+        const texte = texteEtape(etape.key, etape.fait, etape.attend);
+        // L'étape des créneaux mène où mène l'action « Attribuer un créneau ».
+        const cible = etape.key === 'creneaux'
+          ? homeActionTarget({ key: 'assignSlot', route: etape.route }, installations.data)
+          : { params: {}, route: etape.route };
+        let fondDuNumero = withAlpha(Colors.neutral00, 0.08);
+        if (etape.fait) fondDuNumero = withAlpha(Colors.success500, 0.2);
+        else if (etape.suivante) fondDuNumero = Colors.primary500;
+        return (
+          <View
+            key={etape.key}
+            style={[
+              Alignments.row,
+              { alignItems: 'flex-start', gap: 12 },
+              // La planche grise l'étape qui attend la précédente (« Après l'étape 1 »).
+              etape.attend ? { opacity: 0.55 } : null,
+              // Planche 10 : une colonne par étape, la suivante bordée de bleu.
+              enColonnes ? [
+                ApplicationStyle.card,
+                Spaces.padding[16],
+                verreStyle,
+                {
+                  flexBasis: 0, flexDirection: 'column', flexGrow: 1, gap: 8,
+                },
+                etape.suivante ? {
+                  backgroundColor: withAlpha(Colors.primary500, 0.1),
+                  borderColor: Colors.primary500,
+                } : null,
+              ] : null,
+            ]}
+            testID={`collectivite-home-pas-${etape.key}`}
+          >
             <View
-              key={etape.key}
-              style={[Alignments.row, { alignItems: 'flex-start', gap: 12 }]}
-              testID={`collectivite-home-pas-${etape.key}`}
+              accessibilityLabel={etape.fait
+                ? t('collectiviteAccueil.premiersPas.fait', 'Fait')
+                : undefined}
+              style={[
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                {
+                  backgroundColor: fondDuNumero,
+                  borderRadius: 12,
+                  height: 24,
+                  width: 24,
+                },
+              ]}
             >
-              <View
-                accessibilityLabel={etape.fait
-                  ? t('collectiviteAccueil.premiersPas.fait', 'Fait')
-                  : undefined}
-                style={[
-                  Alignments.alignCenter,
-                  Alignments.justifyCenter,
-                  {
-                    backgroundColor: etape.fait
-                      ? withAlpha(Colors.success500, 0.2)
-                      : withAlpha(Colors.neutral00, 0.08),
-                    borderRadius: 12,
-                    height: 24,
-                    width: 24,
-                  },
-                ]}
-              >
-                {etape.fait ? (
-                  <Image
-                    source={Images.check}
-                    style={{ height: 12, tintColor: Colors.success500, width: 12 }}
-                  />
-                ) : (
-                  <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{String(index + 1)}</Text>
-                )}
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
+              {etape.fait ? (
+                <Image
+                  source={Images.check}
+                  style={{ height: 12, tintColor: Colors.success500, width: 12 }}
+                />
+              ) : (
                 <Text
-                  style={etape.fait
-                    ? [Fonts.p2, Fonts.neutral200]
-                    : [Fonts.p2Bold, Fonts.neutral00]}
+                  style={[
+                    Fonts.p3Bold,
+                    etape.suivante ? { color: Colors.primary900 } : Fonts.neutral100,
+                  ]}
                 >
-                  {texte.titre}
+                  {String(index + 1)}
                 </Text>
-                {texte.dit ? <Text style={[Fonts.p3, Fonts.neutral200]}>{texte.dit}</Text> : null}
-                {etape.suivante && texte.bouton ? (
-                  <View style={{ alignSelf: 'flex-start' }}>
-                    <Button
-                      onPress={() => ouvrir(etape.route)}
-                      size="sm"
-                      testID={`collectivite-home-pas-${etape.key}-bouton`}
-                      title={texte.bouton}
-                      variant="Primary"
-                    />
-                  </View>
-                ) : null}
+              )}
+            </View>
+            <View style={{ flex: enColonnes ? undefined : 1, gap: 4 }}>
+              <Text
+                style={etape.fait
+                  ? [Fonts.p2, Fonts.neutral200]
+                  : [Fonts.p2Bold, Fonts.neutral00]}
+              >
+                {texte.titre}
+              </Text>
+              {texte.dit ? <Text style={[Fonts.p3, Fonts.neutral200]}>{texte.dit}</Text> : null}
+              {etape.suivante && texte.bouton ? (
+                <View style={{ alignSelf: 'flex-start' }}>
+                  <Button
+                    onPress={() => ouvrir(cible.route, cible.params)}
+                    size="sm"
+                    testID={`collectivite-home-pas-${etape.key}-bouton`}
+                    title={texte.bouton}
+                    variant="Primary"
+                  />
+                </View>
+              ) : null}
+            </View>
+          </View>
+        );
+      });
+      // COLL-ACCUEIL-BIS (03/10) — planche 10 (P1v3-premiers-pas-ordi) : le titre, la jauge et le
+      // compte sur une ligne, puis les quatre étapes en colonnes.
+      if (enColonnes) {
+        return (
+          <View
+            accessibilityLabel={t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
+            style={{ gap: 12 }}
+            testID="collectivite-home-premiers-pas"
+          >
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+              {titreSection(t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas'))}
+              <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+                {jauge}
+                {compte}
               </View>
             </View>
-          );
-        })}
-      </View>
-    );
+            <View
+              style={[Alignments.row, { alignItems: 'stretch', gap: 12 }]}
+              testID="collectivite-home-premiers-pas-colonnes"
+            >
+              {etapes}
+            </View>
+          </View>
+        );
+      }
+      return (
+        <View
+          accessibilityLabel={t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
+          style={[ApplicationStyle.card, Spaces.padding[16], carteStyle, { gap: 12 }]}
+          testID="collectivite-home-premiers-pas"
+        >
+          <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {t('collectiviteAccueil.premiersPas.titre', 'Vos premiers pas')}
+            </Text>
+            {compte}
+          </View>
+          {jauge}
+          {etapes}
+        </View>
+      );
+    })();
   }
 
   const actualites = <ActualitesDeLaVille collectiviteId={String(collectiviteId)} />;

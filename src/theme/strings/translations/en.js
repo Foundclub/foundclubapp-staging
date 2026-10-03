@@ -4654,9 +4654,19 @@ export default {
         ditUn: 'The FoundClub team linked 1 club.',
         faits: '{{nombre}} clubs checked',
         faitUn: '1 club checked',
+        // COLL-ACCUEIL-BIS (03/10) — planche P1v3 : l'invitation d'un club absent (lot C-CLUBS).
+        manque: 'A club is missing? Invite it.',
         titre: 'Check your clubs',
       },
       compte: '{{faits}} of {{total}}',
+      // COLL-ACCUEIL-BIS (03/10) — l'étape 3 de la planche P1v3 (les créneaux de saison, C2b).
+      creneaux: {
+        attend: 'After step 1: who plays where, every week.',
+        dit: 'Who plays where, every week, all season.',
+        faits: '{{nombre}} slots assigned',
+        faitUn: '1 slot assigned',
+        titre: 'Assign the season slots',
+      },
       fait: 'Done',
       faits: 'Your first steps are done: {{faits}} of {{total}}.',
       installations: {

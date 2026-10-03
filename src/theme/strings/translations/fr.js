@@ -4986,9 +4986,19 @@ export default {
         ditUn: 'L’équipe FoundClub a rattaché 1 club.',
         faits: '{{nombre}} clubs vérifiés',
         faitUn: '1 club vérifié',
+        // COLL-ACCUEIL-BIS (03/10) — planche P1v3 : l'invitation d'un club absent (lot C-CLUBS).
+        manque: 'Un club manque ? Invitez-le.',
         titre: 'Vérifiez vos clubs',
       },
       compte: '{{faits}} sur {{total}}',
+      // COLL-ACCUEIL-BIS (03/10) — l'étape 3 de la planche P1v3 (les créneaux de saison, C2b).
+      creneaux: {
+        attend: 'Après l’étape 1 : qui joue où, chaque semaine.',
+        dit: 'Qui joue où, chaque semaine, toute la saison.',
+        faits: '{{nombre}} créneaux attribués',
+        faitUn: '1 créneau attribué',
+        titre: 'Attribuez les créneaux de la saison',
+      },
       fait: 'Fait',
       faits: 'Vos premiers pas sont faits : {{faits}} sur {{total}}.',
       installations: {

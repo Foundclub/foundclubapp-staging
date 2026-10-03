@@ -344,43 +344,67 @@ export const latestManagerRequest = (demandes) => {
 
 /**
  * Les étapes des premiers pas, dans l'ordre où elles se débloquent. Une étape sans écran
- * (`route: null`) est MASQUÉE : « attribuer les créneaux » attend le lot C2a (le créneau de
- * saison n'existe pas encore). « Présentez-vous aux clubs » mène, depuis le lot C4a (02/10), au
- * formulaire « Nouvelle actualité ». Le lot qui construit l'écran pose sa route ici, et l'étape
- * apparaît à sa place.
+ * (`route: null`) est MASQUÉE. « Présentez-vous aux clubs » mène, depuis le lot C4a (02/10), au
+ * formulaire « Nouvelle actualité » ; « Attribuez les créneaux de la saison », depuis
+ * COLL-ACCUEIL-BIS (03/10), aux installations (C2b : chacune ouvre ses créneaux).
  * @type {ReadonlyArray<{ key: string, lot: string, route: string | null }>}
  */
 export const PREMIERS_PAS = Object.freeze([
   { key: 'installations', lot: 'COLL1C', route: 'CollectiviteInstallationForm' },
   { key: 'clubs', lot: 'COLL1C', route: 'CollectiviteClubs' },
-  { key: 'creneaux', lot: 'C2a + C2b', route: null },
+  { key: 'creneaux', lot: 'C2a + C2b', route: 'CollectiviteInstallations' },
   { key: 'actualite', lot: 'C4a', route: 'CollectiviteActualiteForm' },
 ]);
 
 /**
+ * COLL-ACCUEIL-BIS (03/10) — les créneaux de saison que l'accueil VOIT dans le planning de la
+ * semaine qu'il lit déjà (contrat C2A §7 : chaque bloc venu d'un créneau porte `slot`). Un
+ * créneau revient chaque semaine : il est compté UNE fois. Aucune lecture en plus.
+ * ponytail: un créneau qui ne tombe pas dans la semaine (saison pas commencée) n'est pas vu ;
+ * voie de sortie : un compteur des créneaux actifs dans `/collectivites/:id`.
+ * @param {unknown} semaine - `useCollectiviteWeek` : [{ installation, query }].
+ * @returns {number} Le nombre de créneaux distincts vus.
+ */
+export const seasonSlotsSeen = (semaine) => {
+  const vus = new Set();
+  (Array.isArray(semaine) ? semaine : []).forEach((ligne) => {
+    const blocs = Array.isArray(ligne?.query?.data?.data) ? ligne.query.data.data : [];
+    blocs.forEach((/** @type {any} */ bloc) => {
+      if (bloc?.slot?.documentId) vus.add(bloc.slot.documentId);
+    });
+  });
+  return vus.size;
+};
+
+/**
  * Où en sont les premiers pas. Les étapes se cochent d'elles-mêmes : des installations
- * existent ; la liste des clubs rattachés a été ouverte ; une actualité est en ligne (C4a). UNE
- * seule étape porte un bouton à la fois (la première qui n'est pas faite) : on ne se demande
- * jamais par où commencer.
- * @param {{ actualitesCount?: number, clubsVus: boolean, installationsCount: number }} etat - Ce
- *   qui est lu et retenu.
+ * existent ; la liste des clubs rattachés a été ouverte ; un créneau de saison est attribué
+ * (COLL-ACCUEIL-BIS) ; une actualité est en ligne (C4a). UNE seule étape porte un bouton à la
+ * fois (la première qui n'est pas faite) : on ne se demande jamais par où commencer. Les
+ * créneaux ATTENDENT les installations (planche : « Après l'étape 1 », grisée).
+ * @param {{ actualitesCount?: number, clubsVus: boolean, creneauxCount?: number,
+ *   installationsCount: number }} etat - Ce qui est lu et retenu.
  * @param {ReadonlyArray<{ key: string, route: string | null }>} [etapes] - Le registre.
- * @returns {{ etapes: Array<{ fait: boolean, key: string, route: string, suivante: boolean }>,
- *   faits: number, total: number, tousFaits: boolean }} L'état du guide.
+ * @returns {{ etapes: Array<{ attend: boolean, fait: boolean, key: string, route: string,
+ *   suivante: boolean }>, faits: number, total: number, tousFaits: boolean }} L'état du guide.
  */
 export const premiersPas = (
-  { actualitesCount = 0, clubsVus, installationsCount },
+  {
+    actualitesCount = 0, clubsVus, creneauxCount = 0, installationsCount,
+  },
   etapes = PREMIERS_PAS,
 ) => {
   const faitPour = {
     actualite: Number(actualitesCount) > 0,
     clubs: clubsVus === true,
+    creneaux: Number(creneauxCount) > 0,
     installations: Number(installationsCount) > 0,
   };
   const visibles = etapes.filter((etape) => Boolean(etape.route));
   const estFaite = (/** @type {string} */ cle) => Boolean(faitPour[/** @type {'clubs'} */ (cle)]);
   const indexSuivante = visibles.findIndex((etape) => !estFaite(etape.key));
   const liste = visibles.map((etape, index) => ({
+    attend: etape.key === 'creneaux' && !faitPour.installations,
     fait: Boolean(faitPour[/** @type {'clubs'} */ (etape.key)]),
     key: etape.key,
     route: String(etape.route),
