@@ -269,7 +269,7 @@ describe('MASQUE — identites masquees : un NOMBRE, jamais un nom', () => {
     const textes = textesVisibles(arbre);
 
     expect(textes).toContain('3 participants');
-    expect(textes).not.toContain('Aucun participant confirme pour le moment.');
+    expect(textes).not.toContain('Aucun participant confirmé pour le moment.');
     expect(textes).toContain('Les identités des participants sont masquees par l organisateur.');
   });
 
