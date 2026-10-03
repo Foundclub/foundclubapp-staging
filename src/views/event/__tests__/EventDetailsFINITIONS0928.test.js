@@ -28,6 +28,8 @@ const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockRefetchMyMatchResponse = jest.fn();
+/** @type {any[][]} STATS-FIX2 · point 4 : chaque appel du hook de la réponse perso. */
+const mockMyMatchResponseCalls = [];
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
 const mockAttendanceQuery = { data: null };
@@ -146,7 +148,10 @@ jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () =>
 
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => emptyQuery(),
-  useGetEventMyMatchResponse: () => ({ ...emptyQuery(), refetch: mockRefetchMyMatchResponse }),
+  useGetEventMyMatchResponse: (/** @type {any[]} */ ...args) => {
+    mockMyMatchResponseCalls.push(args);
+    return { ...emptyQuery(), refetch: mockRefetchMyMatchResponse };
+  },
 }));
 
 jest.mock('@/services/event/eventService', () => ({
@@ -444,6 +449,18 @@ const authCoach = () => ({
   userData: { documentId: COACH, role: { name: 'Dirigeant' } },
 });
 
+// STATS-FIX2 · point 4 — un JOUEUR de l equipe : c est lui, et lui seul, qui a « Mon match »
+// sur la fiche du match (ST-MONMATCH : la carte unique qui remplace « Mes stats » et
+// « Mon retour coach »).
+const authJoueur = () => ({
+  canEditClub: () => false,
+  canEditEvent: () => false,
+  canManageEvent: () => false,
+  freeUsageSummary: null,
+  subscriptionAccessLevel: 'FREE',
+  userData: { documentId: JOUEUR, role: { name: 'Joueur' } },
+});
+
 /** @type {any} */
 let mounted = null;
 
@@ -457,13 +474,14 @@ const demonter = () => {
 
 const monter = (/** @type {any} */ {
   attendance = null,
+  auth = authCoach(),
   convocationData = convocation(),
   event = MATCH_A_VENIR,
 } = {}) => {
   mockEventQuery.data = event;
   mockConvocationQuery.data = convocationData;
   mockAttendanceQuery.data = attendance;
-  mockUseAuth.mockReturnValue(authCoach());
+  mockUseAuth.mockReturnValue(auth);
 
   demonter();
   act(() => {
@@ -579,16 +597,19 @@ describe('FINITIONS 1b — les libellés de la fiche ne perdent plus leur dernie
       .toEqual({ flexGrow: 1, textAlign: 'center' });
   });
 
-  test('pastilles « Mes stats » et « Mon retour coach » : aucun point de coupure', () => {
-    const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
+  // STATS-FIX2 · point 4 : ce bloc est celui du JOUEUR — c est lui qui le lit.
+  // ST-MONMATCH : « Mes stats » et « Mon retour coach » ne font plus qu'une carte, « Mon
+  // match » ; sa pastille « À répondre » garde la parade (plus de « Pas encore partagé »).
+  test('pastille « À répondre » de « Mon match » : aucun point de coupure', () => {
+    const root = monter({
+      attendance: HORLOGE_APRES_LE_MATCH, auth: authJoueur(), event: MATCH_FINI,
+    });
 
-    const aFaire = texteNommé(root, 'À faire');
-    const pasEncore = texteNommé(root, 'Pas encore partagé');
+    const aRepondre = texteNommé(root, 'À répondre');
 
-    expect(aFaire).toBeDefined();
-    expect(pasEncore).toBeDefined();
-    expect(texteBrut(aFaire)).not.toContain(' ');
-    expect(texteBrut(pasEncore)).not.toContain(' ');
+    expect(aRepondre).toBeDefined();
+    expect(texteBrut(aRepondre)).not.toContain(' ');
+    expect(texteNommé(root, 'Pas encore partagé')).toBeUndefined();
   });
 });
 
@@ -708,10 +729,84 @@ describe('FINITIONS 4 — la réponse perso n est plus demandée avant la fin du
     expect(mockRefetchMyMatchResponse).not.toHaveBeenCalled();
   });
 
+  // STATS-FIX2 · point 4 : la réponse perso est celle d un JOUEUR (le serveur la refuse a un
+  // entraineur pur : 403) — la contre-epreuve se fait donc avec le joueur.
   test('🔒 contre-épreuve : match fini, rafraîchir la fiche relit bien la réponse perso', () => {
-    const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
+    const root = monter({
+      attendance: HORLOGE_APRES_LE_MATCH, auth: authJoueur(), event: MATCH_FINI,
+    });
     tirerPourRafraichir(root);
 
     expect(mockRefetchMyMatchResponse).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ===========================================================================
+// STATS-FIX2 · POINT 4 (tournee T10, ecran 7, deja vu a la T9) — LES BLOCS DU JOUEUR
+// CHEZ L ENTRAINEUR
+// ===========================================================================
+// 🐞 Karim, entraineur de l U15, voyait sur SON match « Mes stats · Retour individuel ·
+// Renseigner » et « Mon retour coach ». La cause : `isTeamMember` compte les joueurs ET les
+// entraineurs ; la fiche demandait donc la réponse perso d un entraineur, le serveur la
+// refusait (403, `canRespond: isPlayer`), et sans réponse l ecran retombait sur
+// `isTeamMember` — vrai pour l entraineur.
+// ST-MONMATCH (écran 12, état 7) — la carte unique « Mon match » garde la même porte : pas
+// de « Mon match » chez l'entraîneur, il n'est pas joueur.
+describe('STATS-FIX2 · point 4 — « Mon match » : au joueur seul', () => {
+  /** @type {any} */
+  let interactions = null;
+
+  beforeEach(() => {
+    mockRefetchMyMatchResponse.mockClear();
+    mockMyMatchResponseCalls.length = 0;
+    interactions = jest.spyOn(InteractionManager, 'runAfterInteractions')
+      .mockImplementation((/** @type {any} */ rappel) => {
+        if (typeof rappel === 'function') rappel();
+        return /** @type {any} */ ({ cancel: () => {}, done: Promise.resolve(), then: () => {} });
+      });
+  });
+
+  afterEach(() => {
+    if (interactions) interactions.mockRestore();
+    interactions = null;
+  });
+
+  const derniereDemande = () => (
+    mockMyMatchResponseCalls[mockMyMatchResponseCalls.length - 1] || []
+  );
+
+  test('🔴 l entraineur pur : ni « Mon match », ni « Mes stats », ni « Mon retour coach »', () => {
+    const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
+
+    expect(texteNommé(root, 'Mon match')).toBeUndefined();
+    expect(texteNommé(root, 'Mes stats')).toBeUndefined();
+    expect(texteNommé(root, 'Mon retour coach')).toBeUndefined();
+  });
+
+  test('🔴 l entraineur pur : la réponse perso n est pas demandée (le serveur la refuse)', () => {
+    monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
+
+    expect(derniereDemande()[2]?.enabled).toBe(false);
+  });
+
+  test('🔒 le joueur : sa carte « Mon match », et sa réponse perso est demandée', () => {
+    const root = monter({
+      attendance: HORLOGE_APRES_LE_MATCH, auth: authJoueur(), event: MATCH_FINI,
+    });
+
+    expect(texteNommé(root, 'Mon match')).toBeDefined();
+    expect(texteNommé(root, 'Mes stats')).toBeUndefined();
+    expect(derniereDemande()[2]?.enabled).toBe(true);
+  });
+
+  test('🔒 l entraineur qui JOUE aussi dans l equipe garde ses blocs de joueur', () => {
+    const joueEtEntraine = {
+      ...MATCH_FINI,
+      team: { ...MATCH_FINI.team, players: [...MATCH_FINI.team.players, { documentId: COACH }] },
+    };
+    const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: joueEtEntraine });
+
+    expect(texteNommé(root, 'Mon match')).toBeDefined();
+    expect(derniereDemande()[2]?.enabled).toBe(true);
   });
 });

@@ -125,6 +125,13 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
 }));
 
 // `EventTasksSection` est monte pour de vrai : il appelle ces quatre services.
+// ST-RETOURS2 · point 1 — la fiche du site lit les avis d entrainement : doublure, comme
+// les autres services (le client HTTP refuse de se charger sans `.env`).
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetMyTrainingReview: () => ({ data: undefined }),
+  useGetTrainingReviews: () => ({ data: undefined }),
+}));
+
 jest.mock('@/services/event/eventService', () => ({
   approveEventTaskAssignment: jest.fn(),
   assignEventTask: jest.fn(),
@@ -471,7 +478,10 @@ describe('POINTAGE — le joueur convie sur le site', () => {
   });
 
   test('🚨 le lendemain : « Je passe en present » remplace « Participer »', async () => {
-    const root = monterEnJoueur({ date: '2026-09-28T18:00:00.000Z' });
+    // STATS-FIX2 · point 5 : la porte ne tient que 72 h apres le debut — « le lendemain »
+    // se compte donc depuis MAINTENANT (une date ecrite en dur vieillit avec l horloge).
+    const hier = new Date(Date.now() - (20 * 60 * 60 * 1000)).toISOString();
+    const root = monterEnJoueur({ date: hier });
 
     expect(buttonWithText(root, 'Participer')).toBeUndefined();
     await click(root, 'Je passe en présent');

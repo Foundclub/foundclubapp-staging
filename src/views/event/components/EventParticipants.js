@@ -11,6 +11,7 @@ import {
 import { isArrivalTrackingEnabled, isRsvpEnabled } from '@/domains/event/presenceRule';
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -143,6 +144,10 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {Date | null | undefined} [eventStartAt]
  * @property {number | undefined} [nowMs]
  * @property {(user?: User) => void} [onCoachEditLate]
+ * @property {((user?: User) => void) | null} [onCoachMarkPresent] - ST-MONMATCH : corrige
+ *   d'un geste une absence pointée à l'appel (passe le joueur présent).
+ * @property {boolean} [rouvreLeQuestionnaire] - ST-MONMATCH : un match fini, où passer
+ *   présent rouvre le questionnaire du joueur (la liste le dit).
  */
 
 /**
@@ -272,6 +277,16 @@ const comparable = (valeur) => (valeur === null || valeur === undefined ? '' : S
  * @param {string | null | undefined} arrivedAt
  * @returns {string}
  */
+/**
+ * ST-MONMATCH — une absence CONSTATÉE à l'appel (depuis POINTAGE, le serveur ne rend
+ * `no_show` que pour elle).
+ * @param {AttendanceState | null | undefined} attendance - La ligne d'appel.
+ * @returns {boolean} Vrai pour un absent pointé.
+ */
+const estPointeAbsent = (attendance) => String(
+  attendance?.attendanceStatus || attendance?.finalState || '',
+).trim().toLowerCase() === 'no_show';
+
 const formatArrivalTime = (arrivedAt) => {
   if (!arrivedAt) return '';
   const date = new Date(arrivedAt);
@@ -482,9 +497,11 @@ function EventParticipants({
   nowMs,
   onCandidatePress = null,
   onCoachEditLate,
+  onCoachMarkPresent = null,
   participantsSummary,
   participationsByStatus,
   pendingParticipations,
+  rouvreLeQuestionnaire = false,
   teamParticipationSections = [],
 }) {
   const {
@@ -548,7 +565,8 @@ function EventParticipants({
   // (`not_reported`) et de la phrase du joueur, UN seul libelle a l ecran — et
   // « Relancer » n a plus d objet. Reponses decochees : aucun compteur de
   // reponses non plus (tuiles, pastilles, « N réponses sur M »).
-  const finEvenement = resolveEventEndedAt(event?.endDate, eventStartAt);
+  // STATS-FIX2 · point 8 : l heure de fin SAISIE (endTime) decide, comme au serveur.
+  const finEvenement = resolveEventEndedAt(event?.endDate, eventStartAt, event?.endTime);
   const evenementTermine = Boolean(finEvenement)
     && /** @type {Date} */ (finEvenement).getTime() <= instantCourant;
   const reponseAttendue = reponsesOuvertes && !evenementTermine;
@@ -707,6 +725,9 @@ function EventParticipants({
         key={`${options.keyPrefix || 'participant'}-${player.documentId || userId}`}
         nowMs={nowMs}
         onEditLate={onCoachEditLate}
+        // ST-MONMATCH (écran 2, état 3) : la correction de l'appel suit le droit de GÉRER
+        // l'événement, pas le groupe — un absent pointé l'est aussi dans « Absent·e·s ».
+        onMarkPresent={canEdit ? onCoachMarkPresent : null}
         onPress={options.onPress || handleUserPress}
         paymentStatus={statutPaiement}
         player={player}
@@ -1515,6 +1536,32 @@ function EventParticipants({
     }));
   };
 
+  // 🎯 ST-MONMATCH (écran 2, état 3) — la phrase sous la liste : passer présent un absent à
+  // l'appel rouvre son questionnaire. Son prénom s'il est le seul, sinon une phrase générale.
+  const idsAbsentsALAppel = Object.entries(attendanceByUserId || {})
+    .filter(([, ligne]) => estPointeAbsent(ligne))
+    .map(([userId]) => userId);
+  let phraseDuQuestionnaire = '';
+  if (canEdit && onCoachMarkPresent && rouvreLeQuestionnaire && idsAbsentsALAppel.length) {
+    const joueursListes = [
+      ...Object.values(participationsByStatus || {}),
+      ...(teamParticipationSections || []).flatMap((section) => [
+        section?.participating, section?.missing, section?.notAnswered,
+      ]),
+    ].flatMap((liste) => (Array.isArray(liste) ? liste : []));
+    const seul = idsAbsentsALAppel.length === 1
+      ? joueursListes.find((joueur) => joueur?.documentId === idsAbsentsALAppel[0])
+      : null;
+    const prenom = String(seul?.firstname || '').trim();
+    phraseDuQuestionnaire = prenom
+      ? t(
+        'stMatch.appel.reopensNamed',
+        'Passer {{name}} présent rouvre son questionnaire de match.',
+        { name: prenom, ...SANS_ECHAPPEMENT },
+      )
+      : t('stMatch.appel.reopens', 'Passer un joueur présent rouvre son questionnaire de match.');
+  }
+
   return (
     <View style={[Spaces.gap[16], Alignments.fill]}>
       {/* 🗂️ P7 — en mode « par poste », les demandes vivent DANS leur poste :
@@ -1629,6 +1676,14 @@ function EventParticipants({
             : t('eventDetails.participantsFilter.empty', 'Personne dans ce groupe')}
         </Text>
       ) : renderParticipationsContent()}
+
+      {/* 🎯 ST-MONMATCH (écran 2, état 3) — sur un match fini, passer présent un absent à
+          l'appel rouvre son questionnaire de match (règle du serveur) : la liste le dit. */}
+      {phraseDuQuestionnaire ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]} testID="st-monmatch-appel-questionnaire">
+          {phraseDuQuestionnaire}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -1643,11 +1698,12 @@ function EventParticipants({
  * nowMs?: number,
  * onPress: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
+ * onMarkPresent?: ((user?: User) => void) | null,
  * paymentStatus?: string,
  * reponseAttendue?: boolean,
  * statusKind?: 'participating' | 'missing' | 'not_answered' | 'staff_present',
  * styles: any,
- * t: (clef: string, valeurParDefaut?: string) => string
+ * t: (clef: string, valeurParDefaut?: string, options?: Record<string, unknown>) => string
  * }} props
  */
 function ParticipantItem({
@@ -1657,6 +1713,7 @@ function ParticipantItem({
   eventStartAt,
   nowMs,
   onEditLate,
+  onMarkPresent = null,
   onPress,
   paymentStatus = '',
   player,
@@ -1689,8 +1746,12 @@ function ParticipantItem({
     )
     : '';
   const tonDePaiement = tonStatutPaiement(Colors, String(paymentStatus || ''));
-  const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
   const dejaPointe = Boolean(attendance?.arrivedAt);
+  // 🎯 ST-MONMATCH (écran 2, état 3) — l'absent à l'appel : l'heure du pointage se lit à
+  // côté de « Absent à l'appel » (aucune heure d'arrivée, par définition).
+  const estAbsentALAppel = estPointeAbsent(attendance);
+  const arrivalTime = formatArrivalTime(attendance?.arrivedAt)
+    || (estAbsentALAppel ? formatArrivalTime(attendance?.finalizedAt) : '');
 
   return (
     <View
@@ -1832,6 +1893,21 @@ function ParticipantItem({
             onPress={() => onEditLate && onEditLate(player)}
             size="sm"
             title={t('eventDetails.attendanceActions.edit', 'Modifier')}
+            variant="SecondaryLight"
+          />
+        ) : null}
+        {/* 🚪 ST-MONMATCH (écran 2, état 3) — « Présent » : l'absent à l'appel n'avait
+            AUCUN bouton (« Modifier » exige une heure d'arrivée). Un geste le corrige, par
+            la correction sans fenêtre du serveur. Même gabarit que « Modifier ». */}
+        {onMarkPresent && estAbsentALAppel ? (
+          <Button
+            accessibilityLabel={t('stMatch.appel.markPresentA11y', 'Passer {{name}} présent', {
+              name: getUserDisplayName(player), ...SANS_ECHAPPEMENT,
+            })}
+            hitSlop={ApplicationStyle.hitSlop.min44From39}
+            onPress={() => onMarkPresent(player)}
+            size="sm"
+            title={t('stMatch.appel.markPresent', 'Présent')}
             variant="SecondaryLight"
           />
         ) : null}

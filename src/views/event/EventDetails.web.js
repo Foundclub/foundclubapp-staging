@@ -24,6 +24,11 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
+import TrainingReviewsCard, {
+  peutRelireSaNote,
+  peutVoirLesAvisDEntrainement,
+} from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   getTournamentPendingMembershipForUser,
@@ -57,6 +62,7 @@ import {
   registerClubTeamToTournament,
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
+import { useGetTrainingReviews } from '@/services/trainingReview/trainingReviewQueries';
 
 import {
   getClubCertificationLabel,
@@ -553,13 +559,35 @@ function EventDetails({ navigation, route }) {
   // inconnue, `resolveIsMatchFinished` repond NON, et la porte reste fermee :
   // l erreur va donc toujours dans le sens sur.
   const eventEndedAt = useMemo(
-    () => resolveEventEndedAt(event?.endDate, attendancePayload?.data?.eventStartAt),
-    [attendancePayload?.data?.eventStartAt, event?.endDate],
+    // STATS-FIX2 · point 8 : l heure de fin SAISIE (endTime) decide, comme au serveur.
+    () => resolveEventEndedAt(
+      event?.endDate,
+      attendancePayload?.data?.eventStartAt,
+      event?.endTime,
+    ),
+    [attendancePayload?.data?.eventStartAt, event?.endDate, event?.endTime],
   );
   const isMatchFinished = useMemo(
     () => resolveIsMatchFinished({ eventEndedAt, serverNowMs: serverClockMs }),
     [eventEndedAt, serverClockMs],
   );
+  // ST-RETOURS2 · point 1 (planche 21, ordinateur) — « AVIS DES JOUEURS » sur le site, avec
+  // les MEMES portes que le telephone (EventDetails.js, `peutVoirLesAvisDEntrainementIci`) :
+  // un entrainement termine a l horloge du SERVEUR, vu par son encadrant. La lecture ne part
+  // que porte ouverte — un joueur ne l appelle jamais, la policy la lui refuserait. Le joueur,
+  // lui, relit SA note (`peutRelireSaNote`), jamais celles des autres.
+  const peutVoirLesAvisIci = peutVoirLesAvisDEntrainement({
+    canEdit,
+    isFinished: isMatchFinished,
+    isTraining: trainingOpenConfig.isTraining,
+  });
+  const { data: avisDEntrainement } = useGetTrainingReviews(peutVoirLesAvisIci ? eventId : null);
+  const peutRelireSaNoteIci = peutRelireSaNote({
+    canEdit,
+    isFinished: isMatchFinished,
+    isTeamMember,
+    isTraining: trainingOpenConfig.isTraining,
+  });
   // 🏁 FINITIONS4 (D6, recette du 29/09) — LA REGLE DU TELEPHONE
   // (`EventParticipants.js`) : quand une reponse n est plus attendue (« Les
   // participants repondent » decochee, ou evenement termine), « Sans réponse »
@@ -842,6 +870,29 @@ function EventDetails({ navigation, route }) {
     isStaffCompositionFetching,
     navigation,
     staffCompositionPayload, t,
+  ]);
+
+  // 📐 ST-MATCH10-BIS (écran 10 des stats, état 10) — « Ouvrir la convocation » depuis la
+  // feuille de match VIDE, jumeau de `EventDetails.js` (mêmes conditions). Le site ne sait
+  // pas effacer un paramètre d'adresse sans l'écrire « undefined » : l'entrée d'historique
+  // est REMPLACÉE par l'adresse propre, puis la convocation s'ouvre par-dessus. Le retour du
+  // navigateur ramène donc à la page du match, sans rouvrir la convocation. Le verrou tient
+  // UNE ouverture par arrivée (même raison qu'au téléphone).
+  const convocationOuverteRef = useRef(false);
+  useEffect(() => {
+    if (highlightedSection !== 'convocation') {
+      convocationOuverteRef.current = false;
+      return;
+    }
+    if (convocationOuverteRef.current) return;
+    if (!canEdit || !supportsEventComposition) return;
+    if (isStaffCompositionFetching || !staffCompositionPayload) return;
+    convocationOuverteRef.current = true;
+    navigation.replace(RouteNames.EventDetails, { eventId });
+    handleManageComposition();
+  }, [
+    canEdit, eventId, handleManageComposition, highlightedSection, isStaffCompositionFetching,
+    navigation, staffCompositionPayload, supportsEventComposition,
   ]);
 
   // 🚪 COMPO-WEB — LA PORTE « CONVOCATION PUBLIEE » DE L'ENTRAINEUR, SUR LE SITE.
@@ -2265,6 +2316,18 @@ function EventDetails({ navigation, route }) {
             </section>
 
             <section style={{ alignContent: 'start', display: 'grid', gap: 24 }}>
+              {/* ST-RETOURS2 · point 1 — la planche ordinateur : la seance a gauche, les
+                  avis a DROITE. Le composant du telephone, servi tel quel ; `avisDEntrainement`
+                  gate le rendu (sans lui, la carte dirait « aucun avis » en chargeant). */}
+              {peutVoirLesAvisIci && avisDEntrainement ? (
+                <TrainingReviewsCard donnees={avisDEntrainement} titleInside />
+              ) : null}
+              {peutRelireSaNoteIci ? (
+                <MyTrainingReviewBlock
+                  eventId={eventId}
+                  trainerFirstname={(event?.team?.trainers || [])[0]?.firstname || null}
+                />
+              ) : null}
               <div style={{
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}

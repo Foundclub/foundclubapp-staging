@@ -18,6 +18,7 @@ import {
   direLeCompte,
   direSaReponse,
   direUnChiffre,
+  joindreLesNoms,
   NOTES_SUR_DIX,
   repriseDeSaReponse,
 } from './feuilleDeMatchModel';
@@ -242,6 +243,8 @@ export function AlerteFeuille({ lignes, titre }) {
  * LA LIGNE PAR JOUEUR (états 2, 3 et 6) : minutes, buts, passes ; le détail au toucher.
  * @param {object} props - Les propriétés.
  * @param {Set<string>} props.aVerifier - Les lignes nommées par l'alerte.
+ * @param {boolean} [props.colonneReponse] - Ordinateur, un joueur ouvert (planche O2) : la
+ *   réponse dans SA colonne, au lieu de la 2e ligne sous le nom et de « Ta note ».
  * @param {any[]} props.lignes - Les lignes en cours de saisie.
  * @param {Map<string, number | null>} props.notesDuCoach - Ta note, par ligne (ordinateur).
  * @param {(cle: string) => void} props.onOuvrir - Ouvre la feuille du joueur.
@@ -252,7 +255,8 @@ export function AlerteFeuille({ lignes, titre }) {
  * @returns {import('react').ReactElement} Le tableau.
  */
 export function TableauDesJoueurs({
-  aVerifier, lignes, notesDuCoach, onOuvrir, ordinateur, reponses, selection, sport,
+  aVerifier, colonneReponse = false, lignes, notesDuCoach, onOuvrir, ordinateur, reponses,
+  selection, sport,
 }) {
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -270,6 +274,8 @@ export function TableauDesJoueurs({
     points: t('stMatch.feuille.col.points', 'Pts'),
   };
   const cellule = { textAlign: /** @type {'center'} */ ('center'), width: 40 };
+  // 📐 ST-MATCH10-BIS (point 7) — la colonne « Réponse » de la planche O2.
+  const celluleReponse = { width: 112 };
   return (
     <View>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { paddingBottom: 8 }]}>
@@ -277,10 +283,15 @@ export function TableauDesJoueurs({
         <Text style={[Fonts.p4Bold, Fonts.neutral300, Alignments.fill]}>
           {t('stMatch.feuille.col.player', 'Joueur')}
         </Text>
+        {colonneReponse ? (
+          <Text style={[Fonts.p4Bold, Fonts.neutral300, celluleReponse]}>
+            {t('stMatch.feuille.col.answer', 'Réponse')}
+          </Text>
+        ) : null}
         {colonnes.map((cle) => (
           <Text key={cle} style={[Fonts.p4Bold, Fonts.neutral300, cellule]}>{entetes[cle]}</Text>
         ))}
-        {ordinateur ? (
+        {ordinateur && !colonneReponse ? (
           <Text style={[Fonts.p4Bold, Fonts.neutral300, { textAlign: 'center', width: 56 }]}>
             {t('stMatch.feuille.col.myRating', 'Ta note')}
           </Text>
@@ -290,7 +301,11 @@ export function TableauDesJoueurs({
         const reponse = reponses.get(ligne.userDocumentId) || null;
         const aRepondu = reponse?.status === 'submitted';
         const douteuse = aVerifier.has(ligne.key);
-        let etat = t('stMatch.feuille.row.notAnswered', 'Pas encore répondu');
+        // 📐 ST-MATCH10-BIS (point 3, « feuille convoqués A ») : un joueur ajouté hors
+        // convocation reste sur la feuille avec ses minutes ; personne ne l'attend.
+        let etat = reponse?.convoked === false
+          ? t('stMatch.feuille.row.notConvoked', 'Hors convocation')
+          : t('stMatch.feuille.row.notAnswered', 'Pas encore répondu');
         if (douteuse) {
           etat = t('stMatch.feuille.row.toCheck', 'À vérifier');
         } else if (aRepondu) {
@@ -299,6 +314,8 @@ export function TableauDesJoueurs({
         const sousTitre = !douteuse && aRepondu && repriseDeSaReponse(ligne, cles)
           ? t('stMatch.feuille.row.answeredTaken', 'A répondu · repris de sa réponse')
           : etat;
+        // La colonne dit « — » pour qui n'a pas encore répondu, comme la planche.
+        const reponseCourte = douteuse || aRepondu || reponse?.convoked === false ? etat : '—';
         const note = notesDuCoach.get(ligne.key);
         return (
           <Pressable
@@ -339,13 +356,23 @@ export function TableauDesJoueurs({
             />
             <View style={Alignments.fill}>
               <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.label}</Text>
+              {colonneReponse ? null : (
+                <Text
+                  numberOfLines={1}
+                  style={[Fonts.p4, douteuse ? Fonts.warning400 : Fonts.neutral300]}
+                >
+                  {sousTitre}
+                </Text>
+              )}
+            </View>
+            {colonneReponse ? (
               <Text
                 numberOfLines={1}
-                style={[Fonts.p4, douteuse ? Fonts.warning400 : Fonts.neutral300]}
+                style={[Fonts.p3, douteuse ? Fonts.warning400 : Fonts.neutral100, celluleReponse]}
               >
-                {sousTitre}
+                {reponseCourte}
               </Text>
-            </View>
+            ) : null}
             {colonnes.map((cle) => {
               const valeur = chiffre(ligne?.[cle]);
               const marque = cle !== 'minutesPlayed' && valeur > 0;
@@ -358,7 +385,7 @@ export function TableauDesJoueurs({
                 </Text>
               );
             })}
-            {ordinateur ? (
+            {ordinateur && !colonneReponse ? (
               <Text style={[Fonts.p2, Fonts.neutral100, { textAlign: 'center', width: 56 }]}>
                 {note ? String(note) : '—'}
               </Text>
@@ -631,6 +658,55 @@ export function FicheDuJoueur({
 }
 
 /**
+ * 📐 ST-MATCH10-BIS (O1) — TES RETOURS ÉCRITS, SOUS LE TABLEAU (planche P3-editeur-ordi,
+ * état 1) : sur ordinateur, sans joueur ouvert, chaque retour écrit se relit d'un coup
+ * d'œil, avec qui le lit. Un clic ouvre le joueur ; sa note et ses chiffres restent
+ * dans son panneau.
+ * @param {object} props - Les propriétés.
+ * @param {(cle: string) => void} props.onOuvrir - Ouvre le joueur.
+ * @param {Array<{ cle: string, commentaire: string, prenom: string }>} props.retours - Les
+ *   retours écrits, dans l'ordre de la feuille.
+ * @returns {import('react').ReactElement | null} Les retours, ou rien.
+ */
+export function ApercuDesRetours({ onOuvrir, retours }) {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
+  const { t } = useTranslation();
+  const surfaces = useSurfacesFeuille();
+  if (!retours.length) return null;
+  return (
+    <View style={Spaces.gap[8]}>
+      {retours.map((retour) => (
+        <Pressable
+          accessibilityRole="button"
+          key={retour.cle}
+          onPress={() => onOuvrir(retour.cle)}
+          style={[surfaces.encart, Spaces.padding[12], Spaces.gap[8]]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('stMatch.feuille.feedbackTo', 'Ton retour à {{name}}', {
+              name: retour.prenom, ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>{retour.commentaire}</Text>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <GlyphIcon color={Colors.neutral300} name="lock" size={16} />
+            <Text style={[Fonts.p3, Fonts.neutral300, Alignments.fill]}>
+              {t(
+                'stMatch.feuille.privacyPlayer',
+                'Lu par {{name}} et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
+                { name: retour.prenom, ...SANS_ECHAPPEMENT },
+              )}
+            </Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/**
  * L'ONGLET RETOURS (état 5) : le compte, qui manque et « Relancer », qui a répondu.
  * @param {object} props - Les propriétés.
  * @param {number} props.attendues - Les joueurs de la feuille.
@@ -650,6 +726,15 @@ export function BlocRetours({
   const surfaces = useSurfacesFeuille();
   const repondu = reponses.filter((reponse) => reponse?.status === 'submitted');
   const manquants = reponses.filter((reponse) => reponse?.status !== 'submitted');
+  // 📐 ST-MATCH10-BIS (point 3) — « feuille convoqués A » : TOUT l'effectif compte (« 2 sur
+  // 11 ont répondu »), mais le serveur ne relance que les convoqués (« c oui »). Le bouton
+  // compte donc ceux qu'il relancera, et la feuille dit qui ne l'est pas. Un serveur
+  // d'avant ne marque personne (`convoked` absent) : tous restent relançables.
+  const aRelancer = manquants.filter((reponse) => reponse?.convoked !== false);
+  const horsConvocation = manquants
+    .filter((reponse) => reponse?.convoked === false)
+    .map((reponse) => reponse?.label)
+    .filter(Boolean);
   const part = attendues > 0 ? Math.round((recues / attendues) * 100) : 0;
 
   if (!attendues) {
@@ -695,14 +780,27 @@ export function BlocRetours({
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {manquants.map((reponse) => reponse?.label).filter(Boolean).join(', ')}
           </Text>
-          {onRelancer ? (
+          {horsConvocation.length ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('stMatch.feuille.notConvokedNoReminder', {
+                count: horsConvocation.length,
+                // eslint-disable-next-line max-len
+                defaultValue_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
+                // eslint-disable-next-line max-len
+                defaultValue_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
+                names: joindreLesNoms(horsConvocation, t),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
+          {onRelancer && aRelancer.length ? (
             <Button
               disabled={relanceEnCours}
               icon="bell"
               isLoading={relanceEnCours}
               onPress={onRelancer}
               title={t('stMatch.carte.remind', {
-                count: manquants.length,
+                count: aRelancer.length,
                 defaultValue_one: 'Relancer {{count}} joueur',
                 defaultValue_other: 'Relancer les {{count}}',
               })}

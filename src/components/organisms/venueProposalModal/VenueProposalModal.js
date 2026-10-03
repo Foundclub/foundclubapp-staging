@@ -347,7 +347,7 @@ function VenueProposalModal({
 
   const venueSummary = useMemo(() => venueInput?.trim() || t(
     'venueProposalModal.toBeDecided',
-    'A définir',
+    'À définir',
   ), [venueInput, t]);
   const dateSummary = useMemo(
     () => date.toLocaleDateString(localeDesFormats(), {

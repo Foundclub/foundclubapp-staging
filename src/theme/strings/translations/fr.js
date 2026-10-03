@@ -204,11 +204,11 @@ export default {
     processing: 'Traitement...',
     processRequest: 'Traiter la demande',
     requester: 'Demandeur',
-    screenTitle: 'Detail demande',
+    screenTitle: 'Détail demande',
     states: {
       errorDescription: 'Impossible de charger cette demande.',
       errorTitle: 'Chargement impossible',
-      loadingDescription: 'Nous chargeons le detail de la demande.',
+      loadingDescription: 'Nous chargeons le détail de la demande.',
       loadingTitle: 'Chargement de la demande',
       missingId: "L'identifiant de la demande est absent de l'URL.",
       notFound: 'Demande introuvable',
@@ -316,7 +316,7 @@ export default {
       updatedAt: 'Dernière mise à jour',
       verified: 'Club certifié',
     },
-    itemsCount: 'element(s)',
+    itemsCount: 'élément(s)',
     location: {
       address: 'Adresse',
       city: 'Ville',
@@ -342,7 +342,7 @@ export default {
       members: 'Membres',
       parentMultisport: 'Club multisport parent',
       requests: 'Demandes',
-      teams: 'Equipes',
+      teams: 'Équipes',
     },
     relationSearchPlaceholder: 'Rechercher une entrée',
     remove: 'Retirer',
@@ -357,7 +357,7 @@ export default {
       missingId: "L'identifiant club est absent de l'URL.",
       notFoundDescription: "Le club demande n'existe pas ou n'est plus accessible.",
       notFoundTitle: 'Club introuvable',
-      retry: 'Reessayer',
+      retry: 'Réessayer',
     },
     stats: {
       events: 'Événements',
@@ -365,7 +365,7 @@ export default {
       members: 'Membres',
       requests: 'Demandes',
       sponsors: 'Sponsors',
-      teams: 'Equipes',
+      teams: 'Équipes',
     },
     syncing: 'Synchronisation...',
     unnamedClub: 'Club sans nom',
@@ -531,7 +531,7 @@ export default {
       retry: 'Réessayer',
     },
     userFallback: 'Utilisateur',
-    viewDetails: 'Voir detail',
+    viewDetails: 'Voir détail',
   },
   adminClubWizardActivities: {
     loadError: 'Impossible de charger les activités.',
@@ -539,7 +539,7 @@ export default {
     next: 'Suivant',
     // eslint-disable-next-line max-len
     noneSelected: 'Aucune activité sélectionnée pour le moment. Tu peux continuer et compléter plus tard.',
-    retry: 'Reessayer',
+    retry: 'Réessayer',
     searchLabel: 'Rechercher une activité',
     searchPlaceholder: 'Football, basket, handball...',
     selectedCount: '{{count}} activité(s) sélectionnée(s)',
@@ -813,7 +813,7 @@ export default {
   },
   adminDashboard: {
     billing: {
-      receivedOn: 'Recu le',
+      receivedOn: 'Reçu le',
     },
     call: {
       action: 'Appeler',
@@ -862,9 +862,9 @@ export default {
     create: 'Creer',
     detectionQueue: {
       // eslint-disable-next-line max-len
-      description_one: '{{count}} detection dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
+      description_one: '{{count}} détection dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
       // eslint-disable-next-line max-len
-      description_other: '{{count}} detections dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
+      description_other: '{{count}} détections dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
       empty: 'Aucune détection en attente',
       emptyDescription: 'La file est vide pour le moment.',
       title: 'File de vérification détection',
@@ -872,12 +872,12 @@ export default {
     entitlement: {
       correct: 'Corriger',
       sourceSlot: 'Slot source:',
-      team: 'Equipe',
+      team: 'Équipe',
       unknownScope: 'Scope inconnu',
     },
     firstEvent: {
       badge: '1er event',
-      createdOn: 'Cree le',
+      createdOn: 'Créé le',
       defaultName: 'Événement',
       organizer: 'Organisateur:',
     },
@@ -922,8 +922,8 @@ export default {
     },
     legacy: {
       defaultName: 'Club legacy',
-      maxTeams_one: 'Legacy {{count}} equipe',
-      maxTeams_other: 'Legacy {{count}} equipes',
+      maxTeams_one: 'Legacy {{count}} équipe',
+      maxTeams_other: 'Legacy {{count}} équipes',
       noDocumentId: 'Sans documentId',
       partner: 'Partenaire',
       targetedDryRun: 'Dry-run cible',
@@ -968,7 +968,7 @@ export default {
       failedTitle: 'Création impossible',
       payerLabel: 'Payeur user documentId',
       productLabel: 'Provider productId / transactionId / raison',
-      providerLabel: 'Provider / statut / periode',
+      providerLabel: 'Provider / statut / période',
       title: 'Subscription manuelle',
       transactionPlaceholder: 'providerTransactionId (optionnel)',
     },
@@ -1008,14 +1008,14 @@ export default {
     saving: 'Enregistrement...',
     sections: {
       kpis: 'KPIs détection et acquisition',
-      overview: 'Pilotage general',
+      overview: 'Pilotage général',
     },
     states: {
       errorDescription: 'Impossible de charger les indicateurs admin.',
       errorTitle: 'Chargement impossible',
       loadingDescription: "Nous synchronisons les indicateurs d'administration.",
       loadingTitle: 'Chargement du dashboard admin',
-      retry: 'Reessayer',
+      retry: 'Réessayer',
     },
     subscription: {
       noTransaction: 'Sans transaction',
@@ -1127,7 +1127,7 @@ export default {
       orphaned: 'Orphelins',
       pending: 'En attente',
       sending: 'Envoi',
-      sent: 'Envoyees',
+      sent: 'Envoyées',
       subscriptions: 'Abonnements',
     },
     no: 'Non',
@@ -1143,7 +1143,7 @@ export default {
       errorTitle: 'Diagnostic indisponible',
       loadingDescription: "Nous lisons l'état runtime push, la queue et les installations.",
       loadingTitle: 'Diagnostic notifications',
-      retry: 'Reessayer',
+      retry: 'Réessayer',
     },
     tokens: {
       allSubscribed: 'Tous les comptes locaux detectes sur cet appareil sont abonnés.',
@@ -1291,7 +1291,7 @@ export default {
   adminReports: {
     by: 'Par',
     empty: {
-      hint: 'Aucun element ne correspond aux filtres actuels.',
+      hint: 'Aucun élément ne correspond aux filtres actuels.',
       title: 'Aucun signalement à traiter',
     },
     filters: {
@@ -1300,7 +1300,7 @@ export default {
       rejected: 'Refusés',
       resolved: 'Resolus',
     },
-    noDetail: 'Signalement sans detail.',
+    noDetail: 'Signalement sans détail.',
     openConversation: 'Ouvrir la conversation',
     openEvent: "Ouvrir l'événement",
     shownCount: 'signalement(s) affiche(s)',
@@ -1338,7 +1338,7 @@ export default {
     },
     legacyClub: 'Club legacy',
     legacyEmpty: 'Aucun club legacy dans l aperçu.',
-    legacyMaxTeams: 'Legacy max equipes:',
+    legacyMaxTeams: 'Legacy max équipes:',
     legacySubscription: 'Legacy abonnement:',
     legacyToMigrate: 'Legacy à migrer',
     migrationRequired: 'Migration requise',
@@ -1502,7 +1502,7 @@ export default {
     openProfile: 'Ouvrir la fiche de {{name}}',
     roles: {
       clubManager: 'Dirigeant',
-      coach: 'Entraineur',
+      coach: 'Entraîneur',
       none: 'Sans rôle',
       player: 'Joueur',
     },
@@ -1559,16 +1559,16 @@ export default {
     engagement: {
       expenses: 'Indemnisé',
       salaried: 'Salarié',
-      toBeDefined: 'A définir',
+      toBeDefined: 'À définir',
       volunteer: 'Bénévole',
     },
     engagementLabel: "Type d'engagement *",
     engagementPlaceholder: 'Sélectionner un cadre',
     experience: {
-      confirmed: 'Confirme',
-      expert: 'Experimente',
+      confirmed: 'Confirmé',
+      expert: 'Expérimenté',
       junior: 'Junior',
-      qualified: 'Diplome',
+      qualified: 'Diplômé',
     },
     experienceLabel: 'Expérience attendue *',
     experiencePlaceholder: "Sélectionner un niveau d'expérience",
@@ -1579,7 +1579,7 @@ export default {
     roleOtherPlaceholder: 'Ex. Responsable gardiens, coordinateur sportif...',
     rolePlaceholder: 'Sélectionner un rôle',
     subtitle: 'Définis le rôle encadrement recherche et le cadre de la mission.',
-    title: 'Profil entraîneur recherche',
+    title: "Profil d'entraîneur recherché",
   },
   adWizardDescription: {
     context: {
@@ -2359,7 +2359,7 @@ export default {
     },
     eventPublished: {
       body: '{{event}} est maintenant visible pour les joueurs concernés.',
-      title: 'Événement publie',
+      title: 'Événement publié',
     },
     eventResponsesComplete: {
       body: 'Tous les joueurs de {{team}} ont répondu pour {{event}}.',
@@ -2462,7 +2462,7 @@ export default {
     },
     licensePaymentConfirmed: {
       body: 'Le paiement de {{license}} a bien été confirmé.',
-      title: 'Paiement confirme',
+      title: 'Paiement confirmé',
     },
     officialLicenseUploaded: {
       body: 'La copie officielle est disponible pour le membre concerne.',
@@ -2999,7 +2999,7 @@ export default {
       acceptedParticipants: 'Participants acceptés de l événement',
       addRule: '+ Ajouter une règle',
       advancedFilters: {
-        categories: 'Categories',
+        categories: 'Catégories',
         // eslint-disable-next-line max-len
         description: 'Cette campagne utilise des filtres qui ne sont plus proposés aux nouvelles campagnes. Ils restent modifiables ici.',
         levels: 'Niveaux',
@@ -3186,11 +3186,11 @@ export default {
       waiver: 'Exoneration automatique',
     },
     pricingRuleType: {
-      category: 'Categorie',
+      category: 'Catégorie',
       level: 'Niveau',
       role: 'Role',
       section: 'Section',
-      team: 'Equipe',
+      team: 'Équipe',
     },
     reminderPreview: {
       // eslint-disable-next-line max-len
@@ -3639,7 +3639,7 @@ export default {
       generateReceipt: 'Générer un reçu',
       method: 'Methode',
       paymentFallback: 'Paiement',
-      receiptNumber: 'Recu {{receiptNumber}}',
+      receiptNumber: 'Reçu {{receiptNumber}}',
       refund: 'Rembourser',
       refundLine: 'Remboursement {{amount}} - {{status}}',
       title: 'Historique',
@@ -3701,8 +3701,8 @@ export default {
       emptyDescription: 'Les reçus apparaîtront ici après validation des paiements.',
       emptyTitle: 'Aucun reçu',
       issued: 'Emission',
-      number: 'Numero',
-      title: 'Recus',
+      number: 'Numéro',
+      title: 'Reçus',
     },
     schedule: {
       title: 'Echeancier',
@@ -3775,7 +3775,7 @@ export default {
       remind: 'Relancer',
       reopen: 'Reouvrir',
       resume: 'Reprendre',
-      settings: 'Parametres',
+      settings: 'Paramètres',
     },
     alerts: {
       bulkReminder: {
@@ -3975,8 +3975,8 @@ export default {
     header: {
       campaignFallbackTitle: 'Campagne cotisation',
       chooseClub: 'Choisir un club',
-      detailSubtitle: 'Detail complet de la campagne {{name}}.',
-      selectedFallback: 'selectionnee',
+      detailSubtitle: 'Détail complet de la campagne {{name}}.',
+      selectedFallback: 'sélectionnée',
       title: 'Cotisations',
     },
     helloAsso: {
@@ -4092,11 +4092,11 @@ export default {
       fallbackName: 'Membre',
     },
     memberFilters: {
-      category: 'Categorie',
+      category: 'Catégorie',
       level: 'Niveau',
       role: 'Role',
       section: 'Section',
-      team: 'Equipe',
+      team: 'Équipe',
     },
     memberList: {
       inViewSummary: '{{members}} membre(s) dans cette vue.',
@@ -4621,7 +4621,7 @@ export default {
     },
     reviewCard: {
       approve: 'Valider',
-      details: 'Detail',
+      details: 'Détail',
       noTeam: 'Sans équipe',
       reject: 'Rejeter',
       toApprove: 'à valider',
@@ -5534,6 +5534,45 @@ export default {
       indisponible: 'Nombre indisponible',
     },
   },
+  // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
+  // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
+  collectiviteConsoleBis: {
+    accueil: {
+      demandesGestionnaire: 'Demandes de gestionnaire',
+      mairiesAActiver: 'Mairies à activer',
+    },
+    commune: {
+      aide: 'Nom officiel, code INSEE et SIREN se remplissent à partir d’elle.',
+      aucune: 'Aucune commune trouvée : saisis son nom officiel et ses codes ci-dessous.',
+      chercher: 'Chercher la commune',
+      codeInsee: 'Code INSEE {{code}}',
+      // Le nom OFFICIEL (D59) : français dans toutes les langues, comme les préfixes du formulaire.
+      nomDe: 'Ville de {{nom}}',
+      nomDes: 'Ville des {{nom}}',
+      nomDu: 'Ville du {{nom}}',
+      nomElide: 'Ville d’{{nom}}',
+    },
+    fenetres: {
+      chaqueClub: 'Chaque club rattaché, et ce qui change pour lui.',
+      colonneChange: 'Ce qui change',
+      colonneClub: 'Club rattaché',
+      paieDeja: 'Paie déjà : rien ne change',
+      recoit: 'Reçoit l’offre Club offerte',
+    },
+    fiche: {
+      depuis: 'Depuis le {{date}}',
+    },
+    liste: {
+      colonneActivee: 'Activée le',
+      colonneAdherents: 'Adhérents couverts',
+    },
+    traitees: {
+      colonneCollectivite: 'Collectivité',
+      colonneIssue: 'Issue',
+      colonneLe: 'Le',
+      colonnePersonne: 'Personne',
+    },
+  },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — « Tes installations » cote club, en 3 groupes (design P8v2, D32).
   clubInstallations: {
@@ -5715,6 +5754,13 @@ export default {
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
     },
+    // COLL-C2B-BIS (03/10) — planche 23, ordinateur : la semaine type à l'échelle des heures.
+    grille: {
+      caseVide: 'Attribuer le {{jour}} à {{heure}}',
+      creux: 'Aucun créneau de {{debut}} à {{fin}}',
+      creuxApres: 'Aucun créneau après {{debut}}',
+      teinte: '{{jour}} teinté : complet de {{debut}} à {{fin}}.',
+    },
     infos: {
       adresse: 'Adresse',
       capacite: 'Équipes à la fois',
@@ -5727,6 +5773,8 @@ export default {
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
       complet: 'complet {{moment}}',
+      // COLL-C2B-BIS (03/10) — planche 21 : le petit menu « … » sur ordinateur.
+      fermerMenu: 'Fermer le menu',
       modifier: 'Modifier l’installation',
       ouvrir: '{{nom}} : ses créneaux et son planning',
       plusActions: 'Plus d’actions pour {{nom}}',
@@ -5734,6 +5782,13 @@ export default {
       semaine_one: 'Cette semaine : {{count}} séance',
       semaine_other: 'Cette semaine : {{count}} séances',
       surtitre: 'Ma collectivité',
+    },
+    // COLL-C2B-BIS (03/10) — planche 23 : la période d'un créneau, et la date d'un retrait.
+    periode: {
+      au: 'Au',
+      depuis: 'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
+      du: 'Du',
+      ordre: 'La fin de la période doit suivre son début.',
     },
     planning: {
       aujourdhui: 'Aujourd’hui, {{jour}}',
@@ -5763,6 +5818,8 @@ export default {
     vues: {
       enAttente: 'En attente : {{qui}}',
       heureLibre: 'Heure libre, {{jour}} {{heure}} : attribuer',
+      // COLL-C2B-BIS (03/10) — planches 24 et 29 : l'heure libre d'un plateau, en vue Jour.
+      heureLibrePlateau: 'Heure libre, {{plateau}}, {{jour}} {{heure}} : attribuer',
       jour: 'Jour',
       joursPrecedents: 'Jours précédents',
       joursSuivants: 'Jours suivants',
@@ -6246,7 +6303,7 @@ export default {
     otherTeams_other: '+ {{count}} autres équipes dans cette composition',
     published: 'Composition publiée',
     tapToSeeTheLine: 'Appuyer pour voir la composition',
-    team: 'Equipe',
+    team: 'Équipe',
     teamLineUpPublished: "Composition d'équipes publiée",
     // COMPOMSG — « v2 » ne disait rien à un joueur. Affiché seulement à partir de 2.
     version: 'Version {{version}}',
@@ -6403,11 +6460,11 @@ export default {
     },
     calendar: {
       action: 'Agenda',
-      body: 'Match confirme. Tu peux l ajouter à ton agenda.',
-      eventDetails: 'Match confirme depuis la messagerie League',
+      body: "Match confirmé. Tu peux l'ajouter à ton agenda.",
+      eventDetails: 'Match confirmé depuis la messagerie League',
       eventTitle: 'Match FoundClub League',
       openError: "Impossible d'ouvrir ton agenda.",
-      title: 'Match confirme',
+      title: 'Match confirmé',
     },
     calendarFormat: {
       lastDay: '[Hier]',
@@ -6567,7 +6624,7 @@ export default {
         voteCount: 'Nombre de votes',
         voteHint: 'Sélectionne une option pour voter ou modifier ton vote. '
           + 'Appuie à nouveau dessus pour retirer ton vote. '
-          + "Le detail des votants s'affiche quand le sondage n'est pas anonyme.",
+          + "Le détail des votants s'affiche quand le sondage n'est pas anonyme.",
         votesByOption: 'Votes par option',
       },
       errors: {
@@ -7097,9 +7154,9 @@ export default {
   },
   downloadRemoteFile: {
     errors: {
-      empty: 'Le fichier telecharge est vide.',
+      empty: 'Le fichier téléchargé est vide.',
       http: 'Le serveur a refuse le fichier ({{code}}).',
-      noUrl: 'Aucune adresse de fichier a telecharger.',
+      noUrl: 'Aucune adresse de fichier à télécharger.',
     },
   },
   endMatchScreen: {
@@ -7754,7 +7811,7 @@ export default {
     },
     matchScore2: 'Score du match',
     matchStats: 'Stats du match',
-    maxTeams: 'Max equipes:',
+    maxTeams: 'Max équipes:',
     member: 'Membre',
     menu: {
       campaign: 'Créer la cotisation de cet événement',
@@ -7859,7 +7916,7 @@ export default {
     nextStep: 'Suite logique',
     noAnswer: 'Aucune réponse',
     noClubTeamAvailableTo: 'Aucune équipe club disponible à inscrire.',
-    noConfirmedParticipantYet: 'Aucun participant confirme pour le moment.',
+    noConfirmedParticipantYet: 'Aucun participant confirmé pour le moment.',
     noInvitedTeam: 'Aucune équipe invitée.',
     noLineUpPublishedYet: 'Aucune composition publiée pour le moment.',
     noOpenTournamentTeamCan: 'Aucune équipe tournoi ouverte ne peut être rejointe pour le moment.',
@@ -8050,7 +8107,7 @@ export default {
     signInToAnswerThis: 'Connecte-toi pour répondre à cet événement.',
     signInToTakePart: 'Se connecter pour participer',
     sourceTeam: 'Équipe source',
-    sourceTeam2: 'Equipe source:',
+    sourceTeam2: 'Équipe source:',
     squadSize: 'Effectif:',
     staffNote: 'Note staff',
     stage: {
@@ -8101,22 +8158,22 @@ export default {
       teams: 'Équipes',
     },
     takePart: 'Participer',
-    teamApproval: 'Validation des equipes:',
-    teamFallback: 'Equipe',
+    teamApproval: 'Validation des équipes:',
+    teamFallback: 'Équipe',
     teamLineUp: 'Composition d’équipes',
     teamLineUpPublished: "Composition d'équipes publiée",
     teamName: 'Nom de l équipe',
     teamReport: 'Bilan équipe',
-    teamS: 'equipe(s)',
+    teamS: 'équipe(s)',
     teams: 'Équipes',
     // FINITIONS (recette du 28/09) — plus de « (s) » : l'écran passe `count`.
     teamSPublished: '{{count}} équipes publiées',
     teamSPublished_one: '{{count}} équipe publiée',
     teamSPublished_other: '{{count}} équipes publiées',
-    teamSPublished2: 'equipe(s) publiee(s)',
+    teamSPublished2: 'équipe(s) publiée(s)',
     teamToCreate: 'Équipe à créer : {{teamName}}.',
     temporaryTeam: 'Équipe éphémère',
-    temporaryTeams: 'Equipes ephemeres:',
+    temporaryTeams: 'Équipes éphémères:',
     theCoachHasnTLeft: "Le coach n'a pas encore laissé d'avis individuel pour ce match.",
     theCoachPublishedIndividualFeedback: 'Le coach a publié un retour individuel pour ton match.',
     // eslint-disable-next-line max-len
@@ -8135,7 +8192,7 @@ export default {
     theScoreIsSavedFrom: 'Le score s’enregistre depuis l’application mobile.',
     theStartHasPassedReport: 'Le début est passé. Signale ton retard ou confirme ton arrivée.',
     theTeamLineUpIs: "La composition d'équipes est encore en cours de chargement.",
-    theTeamSMatch10: 'Le match de l equipe : {{teamRating}}/10',
+    theTeamSMatch10: "Le match de l'équipe : {{teamRating}}/10",
     thisDayBelongsToThe: 'Cette journée depend du stage principal.',
     // eslint-disable-next-line max-len
     thisEventAlreadyHasA: 'Cet événement a déjà une campagne de cotisation. Crée-en une autre seulement si tu veux un paiement distinct.',
@@ -8498,7 +8555,7 @@ export default {
     setupUnavailable: 'Configuration indisponible',
     start: 'Début',
     team: 'Équipe',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     // eslint-disable-next-line max-len
     theFeaturingRequestIsMade: 'La demande de mise à la une se fait depuis la fiche de l événement après création.',
     // eslint-disable-next-line max-len
@@ -8669,7 +8726,7 @@ export default {
     absent: 'Absent',
     exportTheListExcelCsv: 'Exporter la liste (Excel/CSV)',
     noAnswer: 'Sans réponse',
-    noConfirmedParticipantYet: 'Aucun participant confirme pour le moment.',
+    noConfirmedParticipantYet: 'Aucun participant confirmé pour le moment.',
     user: 'Utilisateur',
   },
   eventPresenceOptions: {
@@ -8742,7 +8799,7 @@ export default {
     memberSReadyToBe: '{{selectedCount}} membre(s) prêt(s) à être assignes',
     // eslint-disable-next-line max-len
     noAdditionalMemberIsAvailable: 'Aucun membre supplémentaire n est disponible pour cette tâche pour le moment.',
-    nobodyIsConfirmedOnThis: 'Personne n est encore confirme sur cette tâche.',
+    nobodyIsConfirmedOnThis: "Personne n'est encore confirmé sur cette tâche.",
     pending: 'En attente',
     pendingVolunteers: 'Volontaires en attente',
     removeAMemberOrChoose: 'Retire un membre ou choisis une autre tâche avant de continuer.',
@@ -8785,15 +8842,15 @@ export default {
     searchForATeam: 'Rechercher une équipe',
     searching: 'Recherche en cours...',
     selectedMembers: 'Membres sélectionnés',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     teamInvitations: "Invitations d'équipe",
     teamName: 'Nom de lequipe',
   },
   eventTeamAudiencesSection: {
     accept: 'Accepter',
-    accepted: 'Acceptee',
+    accepted: 'Acceptée',
     allMembers: 'Tous les membres',
-    cancelled: 'Annulee',
+    cancelled: 'Annulée',
     cancelTheInvitation: "Annuler l'invitation",
     decline: 'Refuser',
     declined: 'Refusée',
@@ -8801,7 +8858,7 @@ export default {
     internalTeam: 'Équipe interne',
     organiser: 'Organisateur',
     pending: 'En attente',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     teamInvitations: "Invitations d'équipe",
     unableToUpdateThisInvitation: 'Impossible de mettre à jour cette invitation.',
   },
@@ -8854,7 +8911,7 @@ export default {
       advanced: {
         featuredCount: '{{count}} espace(s)',
         invites: 'Invitations',
-        invitesCount: '{{count}} equipe(s)',
+        invitesCount: '{{count}} équipe(s)',
         no: 'Non',
         none: 'Aucune',
         opponent: 'Adversaire',
@@ -8881,7 +8938,7 @@ export default {
         recurrentNote: 'Pour une récurrence, la demande sera envoyée pour chaque occurrence créée.',
         title: 'Mise à la une',
         // eslint-disable-next-line max-len
-        warningMessage: "L'événement est créé, mais la demande de mise à la une n'a pas pu être envoyée. Tu pourras la refaire depuis le detail.",
+        warningMessage: "L'événement est créé, mais la demande de mise à la une n'a pas pu être envoyée. Tu pourras la refaire depuis le détail.",
         warningTitle: 'Événement crée',
       },
       freeQuota: {
@@ -8949,7 +9006,7 @@ export default {
       },
       inheritedHours: 'Horaires hérités du stage',
       mainLocation: 'Lieu principal',
-      periodTitle: 'Periode',
+      periodTitle: 'Période',
       startDate: 'Date de début',
       // eslint-disable-next-line max-len
       subtitle: 'Définis la période du stage, les horaires par défaut et les exceptions sur certains jours.',
@@ -9127,18 +9184,18 @@ export default {
         internalInvitesAllAction: 'Inviter tous les membres',
         // eslint-disable-next-line max-len
         internalInvitesAllHint: 'Tous les membres de cette équipe recevront cette invitation et verront ensuite l événement dans leur planning.',
-        internalInvitesAllMembers: 'Tous les membres invites',
+        internalInvitesAllMembers: 'Tous les membres invités',
         internalInvitesEmptyRoster: 'Aucun membre disponible pour cette équipe.',
         // eslint-disable-next-line max-len
         internalInvitesModalHint: 'Choisis si tu invites tout le groupe ou seulement certains membres à cet événement.',
         internalInvitesPickedCount: '{{count}} membre(s) sélectionne(s)',
         internalInvitesPickPrompt: 'Sélectionne les membres à inviter',
         internalInvitesRemove: 'Retirer cette invitation',
-        internalInvitesSelectedCount: '{{count}} membre(s) invites',
+        internalInvitesSelectedCount: '{{count}} membre(s) invité(s)',
         internalInvitesSomeAction: 'Choisir certains membres',
         // eslint-disable-next-line max-len
         internalInvitesSubtitle: 'Choisis une équipe, puis invite tout le groupe ou seulement les membres concernés.',
-        internalInvitesTeamHint: 'Appuie pour choisir les membres ou inviter toute l equipe.',
+        internalInvitesTeamHint: "Appuie pour choisir les membres ou inviter toute l'équipe.",
         internalInvitesTitle: 'Inviter des membres d une équipe de mon club',
         invitesOnlySubtitle: 'Invite une équipe de ton club à cet entraînement.',
         matchCallUpCount: '{{count}} sur {{total}}',
@@ -9251,7 +9308,7 @@ export default {
       logisticsToggleHelper: 'Active cette option pour définir une période, les jours actifs et les horaires par jour.',
       logisticsToggleTitle: 'Tournoi sur plusieurs jours',
       mainLocation: 'Lieu principal',
-      periodTitle: 'Periode',
+      periodTitle: 'Période',
       startDate: 'Date de début',
       // eslint-disable-next-line max-len
       subtitle: 'Définis la période du tournoi, les horaires par défaut et les exceptions sur certains jours.',
@@ -9263,7 +9320,7 @@ export default {
   eventWizardRecap: {
     allowed: 'Autorise',
     allowedPlural: 'Autorisees',
-    bracketLine: 'Bracket: {{value}}',
+    bracketLine: 'Tableau final: {{value}}',
     directQualification: 'Directs',
     disabledPlural: 'Desactivees',
     featuredCm: 'A la une multisport',
@@ -9374,7 +9431,7 @@ export default {
     addsASmallFinalWhen: 'Ajoute une petite finale quand le tableau atteint les demi-finales.',
     automaticShuffleOfTheAccepted: 'Melange automatique des équipes acceptées.',
     best3rds: 'Meilleurs 3es',
-    bracketSize: 'Taille du bracket',
+    bracketSize: 'Taille du tableau',
     // eslint-disable-next-line max-len
     chooseTheTournamentSMain: 'Choisis le fonctionnement sportif principal du tournoi. Le cockpit organisateur pilotera ensuite le tirage, les matchs et les scores.',
     competitionFormat: 'Format de compétition',
@@ -9394,7 +9451,7 @@ export default {
     groupsOnlyDescription: 'Des poules uniquement, sans tableau final.',
     knockoutBracket: 'Tableau final',
     league: 'Championnat',
-    leagueDescription: 'Un seul classement general, sans bracket.',
+    leagueDescription: 'Un seul classement général, sans tableau final.',
     loss: 'Défaite',
     numberOfGroups: 'Nombre de poules',
     qualifiedPerGroup: 'Qualifiés par poule',
@@ -9415,7 +9472,7 @@ export default {
     theOrganiserKeepsTheSeed: 'L organisateur garde l ordre de seed pour le tirage.',
     thirdPlaceMatch: 'Match pour la 3e place',
     tournamentStructure: 'Structure du tournoi',
-    useAStandardBracketSize: 'Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.',
+    useAStandardBracketSize: 'Utilise une taille de tableau standard: 2, 4, 8, 16 ou 32.',
     win: 'Victoire',
   },
   eventWizardType: {
@@ -11149,7 +11206,7 @@ export default {
       cancelMatch: 'Annuler le match',
       confirmMatch: 'Confirmer le match',
       markVenueBooked: 'Marquer terrain réservé',
-      scoreAvailableAtStart: 'Score disponible au debut du match + 1 min.',
+      scoreAvailableAtStart: 'Score disponible au début du match + 1 min.',
     },
     captainFeedback: {
       available: 'Disponible',
@@ -11170,7 +11227,7 @@ export default {
       default: {
         helperNoVenue: "Le match reste à confirmer par les équipes avant le coup d'envoi.",
         // eslint-disable-next-line max-len
-        helperVenue: "Le terrain doit être confirme avant le coup d'envoi pour garder le workflow League propre.",
+        helperVenue: "Le terrain doit être confirmé avant le coup d'envoi pour garder le workflow League propre.",
         labelNoVenue: 'Match à confirmer',
         labelVenue: 'Terrain à confirmer',
       },
@@ -11265,7 +11322,7 @@ export default {
       status: {
         draft: 'Brouillon',
         notInvolved: 'Non concerne',
-        sent: 'Envoye',
+        sent: 'Envoyé',
         todo: 'A faire',
         unknown: 'Je ne sais pas',
       },
@@ -11480,7 +11537,7 @@ export default {
     },
     tabs: {
       history: 'Historique',
-      team: 'Equipe',
+      team: 'Équipe',
     },
     teamAFallback: 'Équipe A',
     teamBFallback: 'Équipe B',
@@ -11494,7 +11551,7 @@ export default {
     venueToBeDecided: 'Lieu à définir',
     view: 'Voir',
     workflow: {
-      confirmed: 'Confirme',
+      confirmed: 'Confirmé',
       finished: 'Terminé',
       presence: 'Présences',
       proposal: 'Proposition',
@@ -11572,12 +11629,12 @@ export default {
       viewNegotiation: 'Voir la négociation',
     },
     helpers: {
-      cancelled: 'Ce match est terminé. Consulte l historique League pour le detail.',
+      cancelled: "Ce match est terminé. Consulte l'historique League pour le détail.",
       // eslint-disable-next-line max-len
       confirmedUpcoming: 'Le match est confirmé. Gérer maintenant la présence et le suivi d équipe.',
       default: 'Consulte la fiche match pour suivre l état League.',
       disputed: 'Un litige est en cours. Ouvre la fiche pour consulter les éléments du match.',
-      finished: 'Le match est terminé. Consulte l historique League pour le detail.',
+      finished: "Le match est terminé. Consulte l'historique League pour le détail.",
       pendingProposal: 'Une proposition League attend ton attention dans la fiche match.',
       // eslint-disable-next-line max-len
       pendingValidation: 'Le score adverse a été soumis. Ouvre la fiche pour confirmer ou contester.',
@@ -11586,7 +11643,7 @@ export default {
       // eslint-disable-next-line max-len
       waitingProposal: 'Une proposition League est en cours. Ouvre la fiche pour negocier ce match.',
       waitingScore: 'Le match est joue. Ouvre la fiche pour saisir ou valider le score.',
-      waitingVenue: 'Le terrain doit maintenant être confirme dans la fiche match.',
+      waitingVenue: 'Le terrain doit maintenant être confirmé dans la fiche match.',
     },
   },
   legacySearchMapNative: {
@@ -11693,7 +11750,7 @@ export default {
     },
     statusLabels: {
       active: 'Active',
-      cancelled: 'Annulee',
+      cancelled: 'Annulée',
       checkoutFailed: 'Test checkout en erreur',
       closed: 'Cloturee',
       confirmed: 'Valide',
@@ -12479,12 +12536,12 @@ export default {
       title: 'Historique indisponible',
     },
     opponentFallback: 'Adversaire',
-    retry: 'Reessayer',
+    retry: 'Réessayer',
     subtitle: 'SAISON EN COURS',
     title: 'HISTORIQUE',
   },
   matchRecapBanner: {
-    openDetailsHint: 'Touche pour voir le detail complet.',
+    openDetailsHint: 'Touche pour voir le détail complet.',
     resultFallback: 'Match terminé',
     title: 'Recap match',
   },
@@ -12618,7 +12675,7 @@ export default {
     threePointersExceedPoints: 'Les tirs a 3 points saisis dépassent le total des points marques.',
     tryAgain: 'Réessayer',
     // eslint-disable-next-line max-len
-    unmarkedPlayersHint: "Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n'a pas ete corrigee.",
+    unmarkedPlayersHint: "Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n'a pas été corrigée.",
     update: 'Mettre à jour',
     updateAfterOfficialScore: 'Mettre à jour après score officiel',
     updateAfterOfficialScoreQuestion: 'Mettre à jour après score officiel ?',
@@ -12678,7 +12735,7 @@ export default {
     scoreToComplete: 'Score à compléter',
     seeAllPendingMatches: 'Voir tous les matchs en attente',
     team: 'Équipe',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     teamReport: 'Bilan équipe',
     // eslint-disable-next-line max-len
     theMatchIsOverStart: 'Le match est terminé. Commence par enregistrer le score, puis complète les statistiques de ton équipe.',
@@ -13230,7 +13287,7 @@ export default {
     cancel: 'Annuler',
     clear: 'Effacer',
     closeAuto: 'Fermer auto',
-    coachNotPublished: 'Le coach n a pas encore publie de composition pour cet événement.',
+    coachNotPublished: "Le coach n'a pas encore publié de composition pour cet événement.",
     convokedCount: '{{convokedCount}} joueur(s) convoqué(s) sur {{total}}',
     // eslint-disable-next-line max-len
     convokeHint: "Coche les joueurs que tu convoques. Tu les placeras sur le terrain à l'étape suivante.",
@@ -13287,12 +13344,12 @@ export default {
     step2Of2: 'Étape 2 sur 2',
     substitutes: 'Remplaçants / en attente',
     tapPlayerHint: 'Touche un joueur pour le sélectionner, puis touche un poste sur une équipe.',
-    teamCountPill: '{{teamCount}} equipe(s)',
+    teamCountPill: '{{teamCount}} équipe(s)',
     teamLineup: "Composition d'équipes",
     teamLineupPublished: "Composition d'équipes publiée",
     teamNumber: 'Équipe {{number}}',
     teamRequired: 'Équipe requise',
-    teamSource: 'Equipe',
+    teamSource: 'Équipe',
     teamsUnit: 'équipes',
     whereTheyPlay: 'Où ils jouent',
     whoPlays: 'Qui joue ?',
@@ -13301,7 +13358,7 @@ export default {
   multiTeamCompositionUtils: {
     team: 'Équipe {{number}}',
     team1: 'Équipe 1',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
   },
   myActivitiesFeed: {
     applicant: 'Candidat',
@@ -13672,7 +13729,7 @@ export default {
       venueBookedBody: 'Le terrain est confirmé !',
       venueBookedTitle: 'Terrain Réservé',
     },
-    attendanceTitle: 'Presences joueurs confirmees (',
+    attendanceTitle: 'Présences joueurs confirmées (',
     badges: {
       disputed: 'LITIGE',
       scorePending: 'SCORE EN ATTENTE',
@@ -13781,7 +13838,7 @@ export default {
   },
   notifications: {
     details: {
-      bodyFallback: 'Aucun detail disponible.',
+      bodyFallback: 'Aucun détail disponible.',
       loadError: 'Impossible de charger cette notification.',
       notFound: 'Notification introuvable.',
       participationDeclined: {
@@ -14234,7 +14291,7 @@ export default {
     saveTheScoreBeforeFilling: 'Enregistrer le score avant de remplir les stats.',
     scoreToComplete: 'Score à compléter',
     teamAction: "Action d'équipe",
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     teamReport: 'Bilan équipe',
     toAnswer: 'A répondre',
     toFinalise: 'A finaliser',
@@ -14740,7 +14797,7 @@ export default {
     noVoteForThisOption: 'Aucun vote pour cette option.',
     oneChoicePerParticipant: 'Un seul choix par participant',
     poll: 'Sondage',
-    pollDetails: 'Detail du sondage',
+    pollDetails: 'Détail du sondage',
     pollNotFound: 'Sondage introuvable',
     // eslint-disable-next-line max-len
     seeTheResultsVoteOr: 'Consulte les résultats, vote ou modifie ton choix directement depuis le web.',
@@ -14980,6 +15037,8 @@ export default {
       add: 'Ajouter une expérience',
       bestLevel: 'Meilleur niveau',
       count: '{{count}} expérience(s)',
+      count_one: '{{count}} expérience',
+      count_other: '{{count}} expériences',
       deleteConfirmation: 'Veux-tu vraiment supprimer cette expérience ?',
       empty: 'Ajoute ton parcours sportif pour enrichir ton profil',
       emptyOther: 'Aucun historique renseigné',
@@ -15221,7 +15280,7 @@ export default {
       decline: 'Refuser',
     },
     badge: {
-      accepted: 'Acceptee',
+      accepted: 'Acceptée',
       declined: 'Refusée',
       pendingMine: 'En attente de réponse',
       pendingTheirs: 'En attente de ta réponse',
@@ -15264,7 +15323,7 @@ export default {
       deadline: 'Date limite:',
       deadlineNotSet: 'Non définie',
       seasonFallback: 'Cotisation en cours',
-      team: 'Equipe:',
+      team: 'Équipe:',
       title: 'Campagne',
     },
     declareModal: {
@@ -15332,7 +15391,7 @@ export default {
         description: 'Le reçu apparaîtra après confirmation du paiement par le club ou le prestataire.',
         title: 'Pas encore de reçu',
       },
-      number: 'Numero',
+      number: 'Numéro',
       status: 'Statut',
       title: 'Reçus déjà emis',
     },
@@ -15448,7 +15507,7 @@ export default {
     coachProfile: {
       availability: 'Disponibilites',
       certifications: 'Certifications souhaitées',
-      title: 'Profil entraîneur recherche',
+      title: "Profil d'entraîneur recherché",
     },
     declineConfirm: {
       body: 'Veux-tu vraiment refuser cette candidature ?',
@@ -15529,7 +15588,7 @@ export default {
       pending: 'En attente',
     },
     tags: {
-      detection: 'Detection',
+      detection: 'Détection',
       detectionWithDate: 'Détection · {{date}}',
     },
   },
@@ -15545,10 +15604,10 @@ export default {
       updateSuccess: "L'annonce a été mise à jour avec succès.",
     },
     coachExperience: {
-      confirmed: 'Confirme',
-      expert: 'Experimente',
+      confirmed: 'Confirmé',
+      expert: 'Expérimenté',
       junior: 'Junior',
-      qualified: 'Diplome',
+      qualified: 'Diplômé',
     },
     coachRoles: {
       assistant: 'Entraîneur adjoint',
@@ -15562,13 +15621,13 @@ export default {
     engagement: {
       expenses: 'Indemnisé',
       salaried: 'Salarié',
-      toBeDefined: 'A définir',
+      toBeDefined: 'À définir',
       volunteer: 'Bénévole',
     },
     form: {
       availability: 'Disponibilites',
       availabilityPlaceholder: 'Ex: soirs de semaine, mercredi, week-end...',
-      category: 'Categorie',
+      category: 'Catégorie',
       categoryPlaceholder: 'Sélectionner une catégorie',
       certifications: 'Certifications souhaitées',
       certificationsPlaceholder: 'Ex: BMF, BPJEPS, formation jeunes',
@@ -15603,7 +15662,7 @@ export default {
       loadingBody: 'Préparation du formulaire d’édition.',
       loadingTitle: 'Chargement de l’annonce...',
       // eslint-disable-next-line max-len
-      notFoundBody: 'Cette annonce n’est plus disponible ou ne peut pas etre modifiee depuis ce lien.',
+      notFoundBody: 'Cette annonce n’est plus disponible ou ne peut pas être modifiée depuis ce lien.',
       notFoundTitle: 'Annonce introuvable',
       reload: 'Recharger',
     },
@@ -15616,7 +15675,7 @@ export default {
     },
     fields: {
       category: {
-        label: 'Categorie',
+        label: 'Catégorie',
         placeholder: 'Sélectionner une catégorie',
       },
       city: {
@@ -15718,7 +15777,7 @@ export default {
     },
     audience: {
       all: 'Toutes',
-      coach: 'Entraineurs',
+      coach: 'Entraîneurs',
       player: 'Joueurs',
     },
     completeProfile: {
@@ -15792,15 +15851,15 @@ export default {
     title: 'Crée ton compte',
   },
   remindReport: {
-    alreadyRemindedOn: 'Deja relance le {{date}}.',
-    alreadyRemindedRecently: 'Deja relance il y a moins de 48 h.',
+    alreadyRemindedOn: 'Déjà relancé le {{date}}.',
+    alreadyRemindedRecently: 'Déjà relancé il y a moins de 48 h.',
     canRemindFrom: ' Tu pourras relancer a partir du {{date}}.',
-    everyoneAnswered: 'Tout le monde a deja repondu : il n y avait personne a relancer.',
-    nobodyReminded: 'Personne n a ete relance',
+    everyoneAnswered: "Tout le monde a déjà répondu : il n'y avait personne à relancer.",
+    nobodyReminded: "Personne n'a été relancé",
     // eslint-disable-next-line max-len
-    oneOtherAlreadyReminded: 'Une autre personne a deja ete relancee il y a moins de 48 h : elle ne recevra rien de plus.',
+    oneOtherAlreadyReminded: 'Une autre personne a déjà été relancée il y a moins de 48 h : elle ne recevra rien de plus.',
     // eslint-disable-next-line max-len
-    othersAlreadyReminded: '{{blockedCount}} autres personnes ont deja ete relancees il y a moins de 48 h : elles ne recevront rien de plus.',
+    othersAlreadyReminded: '{{blockedCount}} autres personnes ont déjà été relancées il y a moins de 48 h : elles ne recevront rien de plus.',
     remindedPeople_one: '{{count}} personne relancee',
     remindedPeople_other: '{{count}} personnes relancees',
     waitBetweenReminders: ' Il faut attendre 48 h entre deux relances.',
@@ -15828,7 +15887,7 @@ export default {
     eventFallback: 'Événement',
     facility: {
       // eslint-disable-next-line max-len
-      subtitle: '{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).',
+      subtitle: '{{team}} demande une place supplémentaire sur {{facility}} ({{overlap}}/{{max}} créneaux déjà pris).',
       title: 'Exception installation',
     },
     facilityFallback: 'Installation',
@@ -15843,8 +15902,8 @@ export default {
       title: 'Mise à la une {{scope}} - {{event}}',
     },
     friendly: {
-      myTeamFallback: 'ton equipe',
-      opponentFallback: 'Une equipe',
+      myTeamFallback: 'ton équipe',
+      opponentFallback: 'Une équipe',
       received: '{{opponent}} propose un match à {{team}}.',
       receivedTitle: 'Proposition de match amical',
       sent: 'Envoyée à {{opponent}}. En attente de sa réponse.',
@@ -16871,7 +16930,7 @@ export default {
       pending: 'En attente',
       pendingTitle: 'Réponses joueur en attente de validation équipe',
       playersRating: 'Joueurs {{rating}}/10',
-      published: 'Publie',
+      published: 'Publié',
       responses: '{{responded}}/{{eligible}} joueurs ont répondu',
     },
     requestPending: 'Demande en attente',
@@ -16913,7 +16972,7 @@ export default {
       status: 'Statut',
     },
     slots: {
-      confirmed: 'Confirmes',
+      confirmed: 'Confirmés',
       introCaptain: 'Ajoute et anime tes créneaux pour rendre la squad visible et active.',
       introMember: 'Consulte les prochains créneaux et confirme ta présence en un geste.',
       missing: 'Manquants',
@@ -17147,7 +17206,7 @@ export default {
   },
   squadSearchScreen: {
     activeFilters: 'Filtres actifs:',
-    categoryFallback: 'Categorie',
+    categoryFallback: 'Catégorie',
     detectedStatuses: 'Statuts detectes:',
     editFilters: 'Modifier les filtres',
     empty: {
@@ -17223,7 +17282,7 @@ export default {
       mixed: 'Mixte',
     },
     subtitle: 'Choisis ton équipe classique pour recuperer le nom et les membres dans League.',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     title: 'Quelle équipe importer ?',
   },
   squadSportStep: {
@@ -17292,15 +17351,22 @@ export default {
       closedExplain: "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin.",
       marked_one: '{{count}} pointé',
       marked_other: '{{count}} pointés',
+      markPresent: 'Présent',
+      markPresentA11y: 'Passer {{name}} présent',
       neverSeen_one: '{{count}} jamais vu',
       neverSeen_other: '{{count}} jamais vus',
+      reopens: 'Passer un joueur présent rouvre son questionnaire de match.',
+      reopensNamed: 'Passer {{name}} présent rouvre son questionnaire de match.',
       serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
     },
     attente: {
       colEnd: 'Fin du match',
       colLeft: 'Ce qui reste',
       colMatch: 'Match',
+      colResponses: 'Réponses',
       colTeam: 'Équipe',
+      complete: '{{match}} est complet : feuille publiée, {{responses}}.',
+      completeOn: '{{match}} est complet : feuille publiée le {{date}} à {{time}}, {{responses}}.',
       draft: 'Brouillon',
       endedAt: 'fin à {{time}}',
       enterScore: 'Saisir le score',
@@ -17308,6 +17374,7 @@ export default {
       errorTitle: "Les matchs en attente n'ont pas pu être lus.",
       loading: 'Chargement des matchs en attente',
       open: 'Ouvrir',
+      responsesShort: '{{count}} sur {{total}}',
       review: 'Vérification requise',
       reviewDetail: 'Le score officiel a changé',
       score: 'Score à saisir',
@@ -17368,6 +17435,7 @@ export default {
       responsesBefore: 'Ils reçoivent le questionnaire à la fin du match',
       responsesCount_one: '{{count}} sur {{total}} a répondu',
       responsesCount_other: '{{count}} sur {{total}} ont répondu',
+      responsesCount_zero: 'Aucune réponse sur {{total}}',
       scoreBefore: 'Toi, à la fin du match',
       scoreBy: 'saisi par {{name}} le {{date}} à {{time}}',
       scoreByMe: 'saisi par toi le {{date}} à {{time}}',
@@ -17415,6 +17483,7 @@ export default {
       answeredTitle: 'Ont répondu · {{n}}',
       clickHint: 'Clique une ligne pour ses chiffres et ton retour.',
       col: {
+        answer: 'Réponse',
         assists: 'Pas.',
         goals: 'Buts',
         minutes: 'Min',
@@ -17425,9 +17494,12 @@ export default {
         team: 'Éq.',
       },
       confirmEditable: 'Tu pourras la modifier et la republier.',
-      confirmReceiverOne: '{{name}} recevra ton retour individuel.',
-      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel.',
-      confirmReceiversMany_other: '{{names}} recevront leur retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiverOne: '{{name}} et, s’il est mineur, ses parents recevront ton retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel ; s’il est mineur, ses parents aussi.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_other: '{{names}} recevront leur retour individuel ; pour un mineur, ses parents aussi.',
       confirmRepublishTitle: 'Republier la feuille ?',
       // eslint-disable-next-line max-len
       confirmTeam: 'Les joueurs de l’équipe {{team}} verront le score, ta note de l’équipe et ton mot.',
@@ -17440,6 +17512,8 @@ export default {
         assists: 'Passes',
         minutes: 'Minutes',
       },
+      crumbMatch: 'Match',
+      crumbPlanning: 'Planning',
       draftError: 'Le brouillon n’a pas pu être enregistré. Réessaie.',
       draftSaved: 'Brouillon enregistré',
       draftSavedBody: 'Les joueurs ne voient rien tant que tu ne publies pas.',
@@ -17483,7 +17557,13 @@ export default {
       noPlayersToAnswer: 'Aucun joueur n’attend de questionnaire pour ce match.',
       noShowText: 'Ils ne comptent pas dans la feuille tant que l’appel n’est pas corrigé.',
       noShowTitle: 'Non pointés à l’appel',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
       officialLock: 'Score officiel de la fédération',
+      openConvocation: 'Ouvrir la convocation',
+      opponentUnknown: 'adversaire à confirmer',
       playersRatingHidden: 'Les joueurs : dès 3 réponses',
       // eslint-disable-next-line max-len
       privacyPlayer: 'Lu par {{name}} et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
@@ -17502,6 +17582,7 @@ export default {
       republish: 'Republier',
       responsesSentence_one: '{{count}} sur {{total}} a répondu.',
       responsesSentence_other: '{{count}} sur {{total}} ont répondu.',
+      responsesSentence_zero: 'Aucune réponse sur {{total}}.',
       // eslint-disable-next-line max-len
       reviewChanged: '{{official}} au lieu de {{sheet}}. Vérifie les buts de chaque joueur, puis republie.',
       row: {
@@ -17509,6 +17590,7 @@ export default {
         answered: 'A répondu',
         answeredTaken: 'A répondu · repris de sa réponse',
         notAnswered: 'Pas encore répondu',
+        notConvoked: 'Hors convocation',
         toCheck: 'À vérifier',
       },
       saveDraft: 'Brouillon',
@@ -17536,6 +17618,8 @@ export default {
       },
       title: 'Feuille de match',
       validate: 'Valider',
+      waitsForFixBoth: '« {{draft}} » et « {{publish}} » attendent la correction.',
+      waitsForFixOne: '« {{publish}} » attend la correction.',
     },
     gerer: {
       managerWho: 'Saisies par l’entraîneur de l’équipe, {{name}}',
@@ -17547,6 +17631,29 @@ export default {
       review: 'Score officiel changé : vérifie la feuille',
       stepScore: 'Étape 1 sur 3 : le score',
       stepSheet: 'Étape 2 sur 3 : la feuille',
+    },
+    monMatch: {
+      answer: 'Donner mon retour',
+      edit: 'Modifier ma réponse',
+      eyebrow: 'Ma réponse',
+      feedbackTitle: 'Le retour de {{name}}',
+      feedbackTitleUnnamed: 'Le retour de ton entraîneur',
+      new: 'Nouveau',
+      noFeedback: "{{name}} n'a pas encore écrit de retour pour toi. Tu seras prévenu·e.",
+      // eslint-disable-next-line max-len
+      noFeedbackUnnamed: "Ton entraîneur n'a pas encore écrit de retour pour toi. Tu seras prévenu·e.",
+      notInvolved: 'Pas concerné·e par ce match',
+      presentNoPlay: 'Là sans jouer',
+      privateLong: 'Visible par toi et tes parents.',
+      privateShort: 'Toi et tes parents',
+      sent: 'Envoyée',
+      sentOn: 'Le {{date}} à {{time}}',
+      title: 'Mon match',
+      toAnswerBody: 'Dis si tu as joué, tes chiffres et tes deux notes. {{name}} les lira.',
+      // eslint-disable-next-line max-len
+      toAnswerBodyUnnamed: 'Dis si tu as joué, tes chiffres et tes deux notes. Ton entraîneur les lira.',
+      unknownFigures: '{{name}} saisira tes chiffres sur la feuille.',
+      unknownFiguresUnnamed: 'Ton entraîneur saisira tes chiffres sur la feuille.',
     },
     rappel: {
       close: 'Fermer',
@@ -17635,6 +17742,7 @@ export default {
       plus: 'Un but de plus pour {{team}}',
       responses_one: '{{count}} sur {{total}} a déjà répondu',
       responses_other: '{{count}} sur {{total}} ont déjà répondu',
+      responses_zero: 'Aucune réponse sur {{total}}',
       retry: 'Réessayer',
       save: 'Enregistrer {{score}}',
       saved: 'Score enregistré : {{score}}',
@@ -17812,7 +17920,7 @@ export default {
       callWholeTeamTwoTaps: 'Convoque toute ton équipe en 2 taps',
       clubRightsCentralised: 'Droits club et gestion centralisée',
       collectEachTeamFee: 'Encaisse la cotisation de chaque équipe',
-      existingMembersKeepAll: 'Les membres deja inscrits gardent tout',
+      existingMembersKeepAll: 'Les membres déjà inscrits gardent tout',
       fullTeamManagement: 'Gestion complète de chaque équipe',
       lineupCallups: 'Composition et convocations',
       lineupCallupsTwoTaps: 'Composition et convocations en 2 taps',
@@ -17930,7 +18038,7 @@ export default {
       events: 'Événements',
       matches: 'Matchs',
       recruitment: 'Recrutement',
-      teams: 'Equipes',
+      teams: 'Équipes',
     },
     quotaSheet: {
       composition: {
@@ -18742,7 +18850,7 @@ export default {
       updated: 'MAJ récente',
     },
     summary: {
-      empty: '0 element',
+      empty: '0 élément',
       fields: '{{count}} champs',
       items: '{{count}} éléments',
       itemsWithExample: '{{count}} éléments (ex: {{firstLabel}})',
@@ -18755,8 +18863,8 @@ export default {
       errorDescription: 'Impossible de charger cette entrée.',
       errorTitle: 'Chargement impossible',
       incompleteUrl: "Les informations de l'entrée superadmin sont incomplètes dans l'URL.",
-      loadingDescription: "Nous chargeons le detail de l'entrée.",
-      loadingTitle: 'Chargement du detail',
+      loadingDescription: "Nous chargeons le détail de l'entrée.",
+      loadingTitle: 'Chargement du détail',
       notFound: 'Entrée introuvable',
       retry: 'Réessayer',
       unavailable: "Cette entrée superadmin n'existe pas ou n'est plus accessible.",
@@ -19014,7 +19122,7 @@ export default {
     unknownSport: 'Sport inconnu',
   },
   superAdminLicensesDashboard: {
-    campaignDetail: 'Detail campagne',
+    campaignDetail: 'Détail campagne',
     campaignUpdatedAt: 'Dernière mise à jour campagne',
     currentSlug: 'Slug actuel',
     // eslint-disable-next-line max-len
@@ -19045,7 +19153,7 @@ export default {
     lastWebhook: 'Dernier webhook',
     metrics: {
       campaigns: 'Campagnes',
-      confirmedPayments: 'Paiements confirmes',
+      confirmedPayments: 'Paiements confirmés',
       helloassoCampaigns: 'Campagnes HelloAsso',
       ignoredEvents: 'Webhooks ignores',
       pendingPayments: 'Paiements en attente',
@@ -19070,7 +19178,7 @@ export default {
     paymentsCockpit: 'Cockpit paiements',
     paymentsListTitle: 'Paiements cotisations',
     paymentStats: {
-      confirmed: 'Confirmes',
+      confirmed: 'Confirmés',
       failed: 'En anomalie',
       pending: 'En attente',
     },
@@ -19110,7 +19218,7 @@ export default {
       errorTitle: 'Chargement impossible',
       loadingDescription: 'Nous consolidons les campagnes, providers et paiements cotisations.',
       loadingTitle: 'Chargement du cockpit cotisations',
-      retry: 'Reessayer',
+      retry: 'Réessayer',
     },
     title: 'Cockpit cotisations',
     undefinedSeason: 'Saison non définie',
@@ -19138,7 +19246,7 @@ export default {
     defaultLineupSavedAlert: 'Composition type enregistrée.',
     delete: 'Supprimer',
     deleteDefaultError: 'Impossible de supprimer la composition type.',
-    detection: 'Detection',
+    detection: 'Détection',
     detectionLineup: "Composition d'équipe détection",
     draft: 'Brouillon',
     // eslint-disable-next-line max-len
@@ -19486,7 +19594,7 @@ export default {
       deleteTrainerError: 'Impossible de retirer cet entraîneur',
       invitePlayers: {
         alreadyHaveTheApp: "J'ai déjà l'application",
-        downloadApp: "Telecharge l'application ici",
+        downloadApp: "Télécharge l'application ici",
         downloadOnAndroid: 'Télécharger sur Android',
         downloadOnIOS: 'Télécharger sur iOS',
         message: 'Bonjour !'
@@ -19795,7 +19903,7 @@ export default {
       playersRating: 'Joueurs',
       playersScore: 'Joueurs {{rating}}/10',
       playersTitle: 'Joueurs',
-      published: 'Publie',
+      published: 'Publié',
       ratingCount_one: '{{count}} note',
       ratingCount_other: '{{count}} notes',
       recentTitle: 'Derniers matchs renseignés',
@@ -20260,6 +20368,20 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Les stats de chaque équipe',
   },
+  // ST-VUES3-ORDI (03/10) — « Les équipes », colonne de droite de l'écran 18 sur ordinateur.
+  clubTeamsCard: {
+    draws_one: '{{count}} nul',
+    draws_other: '{{count}} nuls',
+    losses_one: '{{count}} défaite',
+    losses_other: '{{count}} défaites',
+    openStatsA11y: '{{team}} : ouvrir ses stats',
+    presence: 'Présence : {{percent}}',
+    presenceNone: 'Présence : pas encore d’appel',
+    stats: 'Stats',
+    title: 'Les équipes',
+    wins_one: '{{count}} victoire',
+    wins_other: '{{count}} victoires',
+  },
   // ST-VUES2 (02/10) — la pastille cyan « 1 nouveau » (écran 16, « Retours du coach »).
   newItemsPill: {
     count_one: '{{count}} nouveau',
@@ -20267,6 +20389,10 @@ export default {
   },
   // ST-VUES2 (02/10) — la carte « Résultats du week-end » de « Gestion du club » (écran 18).
   weekendResults: {
+    // ST-VUES3-ORDI (03/10) — le tableau de l'écran 18 sur ordinateur.
+    columnMatch: 'Match',
+    columnScore: 'Score',
+    columnTeam: 'Équipe',
     createSection: 'Créer une section',
     createTeam: 'Créer une équipe',
     enterScore: 'Saisir',
@@ -20284,10 +20410,14 @@ export default {
     remind: 'Relancer',
     remindA11y: 'Relancer {{names}} pour le score',
     reminded: 'Relancé',
+    remindNamed: 'Relancer {{names}}',
     scoreToEnter: 'Score à saisir',
     scoreToEnterBy: 'Score à saisir · {{names}}',
+    scoreToEnterShort: 'à saisir',
+    see: 'Voir',
     title: 'Résultats du week-end',
     upcoming: 'À venir',
+    versus: 'contre {{opponent}}',
   },
   myStats: {
     assists_one: 'Passe déc.',
@@ -20666,9 +20796,9 @@ export default {
     standings: 'Classement',
     teamA: 'Équipe A',
     teamB: 'Équipe B',
-    teamFallback: 'Equipe',
+    teamFallback: 'Équipe',
     timeToBeSet: 'Horaire à définir',
-    toBeDecided: 'A définir',
+    toBeDecided: 'À définir',
     tournamentMatch: 'Match tournoi',
     winShort: 'V',
   },
@@ -20679,7 +20809,7 @@ export default {
     approve: 'Valider',
     archiveTheTeam: 'Archiver l équipe',
     automatic: 'Automatique',
-    bracketGenerated: 'Bracket génère',
+    bracketGenerated: 'Tableau final généré',
     cancel: 'Annuler',
     close: 'Cloturer',
     closeTheTournament: 'Clôturer le tournoi',
@@ -20722,7 +20852,7 @@ export default {
     tabMatches: 'Matchs',
     tabOverview: 'Vue d ensemble',
     tabStandings: 'Classements',
-    tabTeams: 'Equipes',
+    tabTeams: 'Équipes',
     teamApprovalMode: 'Validation des équipes: {{mode}}',
     temporaryTeamCreatedByA: 'Équipe éphémère créée par un joueur',
     // eslint-disable-next-line max-len
@@ -20742,7 +20872,7 @@ export default {
     unableToSyncTheTournament: 'Impossible de synchroniser la structure du tournoi.',
     unableToUpdateThisTeam: 'Impossible de mettre à jour cette équipe.',
     // eslint-disable-next-line max-len
-    youCanFollowGroupsMatches: 'Tu peux suivre les poules, les matchs, les classements et le bracket depuis ce cockpit en lecture seule.',
+    youCanFollowGroupsMatches: 'Tu peux suivre les poules, les matchs, les classements et le tableau final depuis ce cockpit en lecture seule.',
   },
   tournamentMatchDetails: {
     addressUnavailable: 'Adresse indisponible',
@@ -20788,7 +20918,7 @@ export default {
     allowTemporaryTeams: 'Autoriser les équipes éphémères',
     automatic: 'Automatique',
     best3rds: 'Meilleurs 3es',
-    bracketSize: 'Taille du bracket',
+    bracketSize: 'Taille du tableau',
     cancel: 'Annuler',
     // eslint-disable-next-line max-len
     compatibleTeamsAreAcceptedDirectly: 'Les équipes compatibles sont acceptées directement a l inscription.',
@@ -20841,7 +20971,7 @@ export default {
     tournamentRules: 'Règles du tournoi',
     tournamentSettings: 'Paramètres du tournoi',
     unableToUpdateTheTournament: 'Impossible de mettre à jour les paramètres du tournoi.',
-    useAStandardBracketSize: 'Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.',
+    useAStandardBracketSize: 'Utilise une taille de tableau standard: 2, 4, 8, 16 ou 32.',
     win: 'Victoire',
   },
   tournamentTeamDetails: {
@@ -21670,6 +21800,12 @@ export default {
         + ' prénom — on ne réécrit pas la feuille d’un match passé.',
       title: 'Supprimer la fiche de {{firstname}} ?',
     },
+    // ST-RETOURS2 (03/10, planche 22) — la section des FICHES : les enfants sans compte.
+    declared: {
+      notFound: 'Cette fiche n’existe plus.',
+      open: 'Voir sa fiche',
+      title: 'Mes enfants de moins de 13 ans',
+    },
     errors: {
       delete: 'Impossible de supprimer cette fiche pour le moment.',
     },
@@ -21838,9 +21974,9 @@ export default {
     },
   },
   useEventMutations: {
-    nobodyWasNotifiedTryAgain: '{{raison}} Personne n a ete prevenu : reessaie dans un instant.',
+    nobodyWasNotifiedTryAgain: "{{raison}} Personne n'a été prévenu : réessaie dans un instant.",
     theReminderCouldnTBe: 'La relance n a pas pu partir',
-    theServerDidnTRespond: 'Le serveur n a pas repondu.',
+    theServerDidnTRespond: "Le serveur n'a pas répondu.",
     unableToApproveThisParticipation: 'Impossible de valider cette participation pour le moment.',
     unableToChangeTheDelay: 'Impossible de modifier le retard.',
     unableToDeclineThisParticipation: 'Impossible de refuser cette participation pour le moment.',
@@ -22107,7 +22243,7 @@ export default {
       minutes: 'Minutes',
       points: 'Points',
       privateToOwner: 'Ces statistiques ne sont visibles que par la personne elle-même.',
-      teamFallback: 'Equipe',
+      teamFallback: 'Équipe',
       wins: 'Victoires',
     },
     teamGroups: {
@@ -22189,7 +22325,7 @@ export default {
       + 'doit être d’accord. Si c’est le cas, coche la case.',
     loadError: {
       message: 'Impossible de charger le profil.',
-      retry: 'Reessayer',
+      retry: 'Réessayer',
       title: 'Chargement impossible',
     },
     loading: {
@@ -22402,14 +22538,14 @@ export default {
     slotInThePast: 'Créneau passe',
     slotToFix: 'Créneau à corriger',
     start: 'Commencer',
-    startField: 'Debut',
-    stepOfTotal: 'Etape {{current}}/{{total}}',
+    startField: 'Début',
+    stepOfTotal: 'Étape {{current}}/{{total}}',
     theEndIsStillCalculated: 'La fin reste calculee automatiquement ({{durationMinutes}} min).',
     // eslint-disable-next-line max-len
     thisProposalFallsInThe: 'Cette proposition tombe dans le passé. Reviens en arrière pour choisir une date ou une heure future.',
     thisSlotIsAlreadyIn: 'Ce créneau est déjà passé. Choisis une date ou une heure future.',
     time: 'Heure',
-    toBeDecided: 'A définir',
+    toBeDecided: 'À définir',
     today: 'Aujourd hui',
     tomorrow: 'Demain',
     unableToConvertTheSelected: 'Impossible de convertir le créneau sélectionne.',

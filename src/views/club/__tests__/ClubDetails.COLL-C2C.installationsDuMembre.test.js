@@ -37,6 +37,13 @@ let mockRoute;
 
 const mockHasClubAccess = jest.fn(() => false);
 
+// ST-VUES3-ORDI — la planche ordinateur du hub (`ClubResultsBoard`) lit le bilan de chaque
+// équipe : ces deux services importent le client HTTP, qui refuse de se charger sans `API_URL`.
+jest.mock('@/services/matchStats/matchStatsService', () => ({
+  getTeamPerformanceStats: jest.fn(),
+}));
+jest.mock('@/services/stats/statsService', () => ({ getTeamStats: jest.fn() }));
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
 }));

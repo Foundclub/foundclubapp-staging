@@ -1097,6 +1097,12 @@ describe('ST-MATCH écran 9 — la feuille du score', () => {
 
     expect(boutonPortant(root, 'Enregistrement…').props.disabled).toBe(true);
     expect(mockSaveEventMatchResult).toHaveBeenCalledTimes(1);
+    // ST-MONMATCH (écran 9, état 4) — « Le bouton TOURNE » : la fiche demande à l'atome la roue
+    // À CÔTÉ du libellé (l'atome lui-même : Button.roueEtLibelle.STMONMATCH).
+    const [demande] = laFeuille(root).findAll(
+      (/** @type {any} */ node) => node.props?.title === 'Enregistrement…' && 'keepTitleWhileLoading' in node.props,
+    );
+    expect(demande?.props).toEqual(expect.objectContaining({ isLoading: true, keepTitleWhileLoading: true }));
   });
 
   test('5 · enregistré : la suite DANS la feuille, aucune alerte système', async () => {
@@ -1168,11 +1174,67 @@ describe('ST-MATCH écran 9 — la feuille du score', () => {
 
     // L'orange du thème (warning500), lu dans le thème et non recopié.
     expect(couleurs).toContain(jest.requireActual('@/theme/colors').default().warning500);
+    // ST-MONMATCH (écran 9, `cadenas B`) — le CADENAS devant le motif, dans le même orange.
+    const cadenas = laFeuille(root).findAll((/** @type {any} */ node) => node.props?.name === 'lock', { deep: false });
+    expect(cadenas).toHaveLength(1);
+    expect(cadenas[0].props.color).toBe(jest.requireActual('@/theme/colors').default().warning500);
     expect(compteur(root, NOUS_PLUS).props.disabled).toBe(true);
     expect(boutonPortant(root, 'Enregistrer')).toBeUndefined();
     expect(boutonPortant(root, 'Fermer')).toBeTruthy();
     appuyerDansLaFeuille(root, 'Saisir la feuille');
     expect(routesEmpruntees()).toContain('MatchStatsEditor');
     expect(mockSaveEventMatchResult).not.toHaveBeenCalled();
+  });
+
+  test('🔒 au repos, pas de cadenas (le score n est pas verrouillé)', () => {
+    const root = ouvrir();
+
+    expect(laFeuille(root).findAll((/** @type {any} */ node) => node.props?.name === 'lock', { deep: false }))
+      .toHaveLength(0);
+  });
+
+  // ST-MONMATCH (écran 9) — « aucune inversion possible quand on est l'équipe INVITÉE » : la
+  // planche le promet, aucun témoin ne le tenait. L'entraîneur de l'équipe invitée lit SON
+  // équipe d'abord, et le score part pour SON équipe, dans SON sens.
+  test('🔴 équipe INVITÉE : son nom d abord, l hôte en face, et 2 - 1 part pour SON équipe', async () => {
+    const EQUIPE_INVITEE = 'equipe-invitee';
+    const root = monter({
+      attendance: HORLOGE,
+      auth: authPour(COACH, true),
+      event: {
+        ...MATCH_FINI,
+        club: { documentId: 'club-hote', name: 'FC Hôte' },
+        invitedTeams: [{
+          club: { documentId: CLUB_ID, name: 'AS Montrivage' },
+          documentId: EQUIPE_INVITEE,
+          name: 'U15 Montrivage',
+          players: [{ documentId: JOUEUR }],
+          trainers: [{ documentId: COACH }],
+        }],
+        team: {
+          club: { documentId: 'club-hote', name: 'FC Hôte' },
+          documentId: 'equipe-hote',
+          name: 'U15 Hôte',
+          players: [],
+          trainers: [{ documentId: 'coach-hote' }],
+        },
+      },
+      matchStats: {
+        ...statsSansScore({ teamDocumentId: EQUIPE_INVITEE }),
+        team: { documentId: EQUIPE_INVITEE, name: 'U15 Montrivage' },
+      },
+    });
+    ouvrirLaFeuilleDeGestion();
+    presserLaRangee(root, 'matchStats');
+
+    expect(textesDeLaFeuille(root)).toEqual(expect.arrayContaining(['U15 Montrivage — FC Hôte']));
+    toucher(root, 'Un but de plus pour U15 Montrivage', 2);
+    toucher(root, 'Un but de plus pour FC Hôte');
+    appuyer(root, 'Enregistrer 2 - 1');
+    await viderLaFile();
+
+    expect(mockSaveEventMatchResult).toHaveBeenCalledWith({
+      eventId: 'event-1', scoreAgainst: 1, scoreFor: 2, teamId: EQUIPE_INVITEE,
+    });
   });
 });

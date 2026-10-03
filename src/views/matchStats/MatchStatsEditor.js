@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -62,6 +63,7 @@ import {
 import { useIsDesktop } from '@/responsive';
 import {
   AlerteFeuille,
+  ApercuDesRetours,
   BilanPublie,
   BlocRetours,
   Compteur,
@@ -507,9 +509,22 @@ function MatchStatsEditor({ navigation, route }) {
     [scoreAgainst, scoreFor],
   );
 
-  const matchLabel = sourceType === 'league'
-    ? route?.params?.matchLabel || ''
-    : statsPayload?.event?.name || '';
+  // 📐 ST-MATCH10-BIS (point 1) — « AS Montrivage — Test-COMPO » : le serveur nomme
+  // l'adversaire (`event.opponentName`, `null` s'il est inconnu) et le club de l'équipe. Un
+  // serveur d'avant ne rend pas le champ : le nom de l'événement reste.
+  const opponentName = statsPayload?.event?.opponentName || '';
+  const serverNamesOpponent = sourceType === 'event'
+    && Object.prototype.hasOwnProperty.call(statsPayload?.event || {}, 'opponentName');
+  const ourSide = statsPayload?.team?.clubName || teamName;
+  let matchLabel = statsPayload?.event?.name || '';
+  if (sourceType === 'league') {
+    matchLabel = route?.params?.matchLabel || '';
+  } else if (serverNamesOpponent && ourSide) {
+    matchLabel = [
+      ourSide,
+      opponentName || t('stMatch.feuille.opponentUnknown', 'adversaire à confirmer'),
+    ].join(' — ');
+  }
 
   // H9 — UNE SEULE LISTE DE CLES, PARTAGEE AVEC L ECRAN JOUEUR.
   // Cet ecran tenait sa propre liste, `PlayerMatchResponseScreen` la sienne, et
@@ -883,6 +898,29 @@ function MatchStatsEditor({ navigation, route }) {
     && !playersAverage?.hidden
     && Number(playersAverage?.count) >= MOYENNE_MIN_REPONSES;
 
+  // ── Les libellés de la barre d'action (repris par l'alerte unique) ──
+  const republish = isReviewRequired || isEditingPublished;
+  const showsDraftButton = !isReviewRequired && !isEditingPublished;
+  let publishLabel = ordinateur
+    ? t('stMatch.feuille.publishLong', 'Publier la feuille')
+    : t('stMatch.feuille.publish', 'Publier');
+  if (republish) publishLabel = t('stMatch.feuille.republish', 'Republier');
+  const draftLabel = ordinateur
+    ? t('stMatch.feuille.saveDraftLong', 'Enregistrer le brouillon')
+    : t('stMatch.feuille.saveDraft', 'Brouillon');
+  // 📐 ST-MATCH10-BIS (point 4, « brouillon A », tranché par le chef) : le serveur refuse un
+  // brouillon incohérent (`assertMatchStatsConsistency`) ; « Brouillon » s'éteint donc avec
+  // « Publier », et l'alerte unique le DIT (un bouton éteint sans raison est un bouton cassé).
+  const waitsForFixLine = showsDraftButton
+    ? t(
+      'stMatch.feuille.waitsForFixBoth',
+      '« {{draft}} » et « {{publish}} » attendent la correction.',
+      { draft: draftLabel, publish: publishLabel, ...SANS_ECHAPPEMENT },
+    )
+    : t('stMatch.feuille.waitsForFixOne', '« {{publish}} » attend la correction.', {
+      publish: publishLabel, ...SANS_ECHAPPEMENT,
+    });
+
   // ── Les alertes, en haut, une de chaque au plus ──
   const savedReportScore = statsPayload?.report
     && Number.isFinite(Number(statsPayload.report.scoreFor))
@@ -912,7 +950,7 @@ function MatchStatsEditor({ navigation, route }) {
       ) : null}
       {hasConsistencyIssues && !isReadOnly ? (
         <AlerteFeuille
-          lignes={corrections.map((correction) => correction.texte)}
+          lignes={[...corrections.map((correction) => correction.texte), waitsForFixLine]}
           titre={t('stMatch.feuille.corrections', {
             count: corrections.length,
             defaultValue_one: '{{count}} correction',
@@ -946,8 +984,8 @@ function MatchStatsEditor({ navigation, route }) {
       waitingOfficial: isWaitingOfficial,
     }).authorLine
     : null;
-  const ourTeam = teamName || t('stMatch.score.us', 'Mon équipe');
-  const theOpponent = t('stMatch.score.opponent', 'Adversaire');
+  const ourTeam = ourSide || t('stMatch.score.us', 'Mon équipe');
+  const theOpponent = opponentName || t('stMatch.score.opponent', 'Adversaire');
   const scoreDisabled = isScoreLocked || isReadOnly;
 
   const renderScoreAndReview = () => {
@@ -1019,10 +1057,12 @@ function MatchStatsEditor({ navigation, route }) {
           <Compteur
             desactive={scoreDisabled}
             descriptionMoins={t('stMatch.score.minus', 'Un but de moins pour {{team}}', {
-              team: t('stMatch.score.theOpponent', 'l’adversaire'), ...SANS_ECHAPPEMENT,
+              team: opponentName || t('stMatch.score.theOpponent', 'l’adversaire'),
+              ...SANS_ECHAPPEMENT,
             })}
             descriptionPlus={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
-              team: t('stMatch.score.theOpponent', 'l’adversaire'), ...SANS_ECHAPPEMENT,
+              team: opponentName || t('stMatch.score.theOpponent', 'l’adversaire'),
+              ...SANS_ECHAPPEMENT,
             })}
             grand
             libelle={theOpponent}
@@ -1108,6 +1148,14 @@ function MatchStatsEditor({ navigation, route }) {
     () => new Map(coachReviews.map((review) => [review.lineKey, review.rating ?? null])),
     [coachReviews],
   );
+  // 📐 ST-MATCH10-BIS (O1) — tes retours écrits, relus sous le tableau sur ordinateur.
+  const writtenFeedbacks = coachReviews
+    .filter((review) => Boolean(String(review?.comment || '').trim()) && review?.lineKey)
+    .map((review) => ({
+      cle: review.lineKey,
+      commentaire: String(review.comment).trim(),
+      prenom: firstNameOf(playerLines.find((line) => line.key === review.lineKey) || review),
+    }));
   const scoredGoals = playerLines
     .reduce((total, line) => total + getNumericStatValue(line?.goals), 0);
   const knownScoreFor = getNullableNumericStatValue(scoreFor);
@@ -1132,10 +1180,16 @@ function MatchStatsEditor({ navigation, route }) {
                 'Les joueurs viennent de l’effectif de l’équipe.',
               )}
           </Text>
+          {/* 📐 ST-MATCH10-BIS (point 5) — « Ouvrir la convocation » (planche, état 10). La
+              feuille ne sait pas bâtir une convocation (joueurs éligibles, brouillon, sport) :
+              la page du match, elle, sait, et ouvre SA porte quand on lui demande. */}
           {sourceType === 'event' && eventId ? (
             <Button
-              onPress={() => navigation.navigate(RouteNames.EventDetails, { eventId })}
-              title={t('stMatch.feuille.emptyAction', 'Ouvrir la page du match')}
+              onPress={() => navigation.navigate(RouteNames.EventDetails, {
+                eventId,
+                focusSection: 'convocation',
+              })}
+              title={t('stMatch.feuille.openConvocation', 'Ouvrir la convocation')}
               variant="Secondary"
             />
           ) : null}
@@ -1165,6 +1219,7 @@ function MatchStatsEditor({ navigation, route }) {
         ) : null}
         <TableauDesJoueurs
           aVerifier={linesToCheck}
+          colonneReponse={ordinateur && Boolean(openLineKey)}
           lignes={playerLines}
           notesDuCoach={coachRatingByLine}
           onOuvrir={setOpenLineKey}
@@ -1173,6 +1228,9 @@ function MatchStatsEditor({ navigation, route }) {
           selection={ordinateur ? openLineKey : null}
           sport={sport}
         />
+        {ordinateur && !openLineKey ? (
+          <ApercuDesRetours onOuvrir={setOpenLineKey} retours={writtenFeedbacks} />
+        ) : null}
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {ordinateur
             ? t('stMatch.feuille.clickHint', 'Clique une ligne pour ses chiffres et ton retour.')
@@ -1353,7 +1411,6 @@ function MatchStatsEditor({ navigation, route }) {
 
   // ── La barre d'action collante (amélioration 4) ──
   const isBusy = saveDraftMutation.isPending || submitMutation.isPending;
-  const republish = isReviewRequired || isEditingPublished;
   let actions = null;
   if (isReady) {
     if (isReadOnly) {
@@ -1372,12 +1429,7 @@ function MatchStatsEditor({ navigation, route }) {
             disabled={hasConsistencyIssues || isBusy}
             isLoading={submitMutation.isPending}
             onPress={handleSubmit}
-            title={(() => {
-              if (republish) return t('stMatch.feuille.republish', 'Republier');
-              return ordinateur
-                ? t('stMatch.feuille.publishLong', 'Publier la feuille')
-                : t('stMatch.feuille.publish', 'Publier');
-            })()}
+            title={publishLabel}
             variant="Primary"
           />
         </View>
@@ -1393,16 +1445,14 @@ function MatchStatsEditor({ navigation, route }) {
             />
           </View>
         );
-      } else if (!isReviewRequired) {
+      } else if (showsDraftButton) {
         secondButton = (
           <View style={Alignments.fill}>
             <Button
               disabled={hasConsistencyIssues || isBusy}
               isLoading={saveDraftMutation.isPending}
               onPress={handleSaveDraft}
-              title={ordinateur
-                ? t('stMatch.feuille.saveDraftLong', 'Enregistrer le brouillon')
-                : t('stMatch.feuille.saveDraft', 'Brouillon')}
+              title={draftLabel}
               variant="Secondary"
             />
           </View>
@@ -1418,18 +1468,23 @@ function MatchStatsEditor({ navigation, route }) {
   }
 
   // ── La confirmation à deux boutons (état 7) ──
+  // 📐 ST-MATCH10-BIS (point 2) — qui est prévenu de quoi : le parent d'un mineur reçoit SON
+  // retour (`sendCoachFeedbackToParents`, ST-RETOURS). L'éditeur ne connaît pas l'âge : la
+  // phrase dit « s'il est mineur », comme la fiche du joueur (phrase A, tranchée par le chef).
   let receiversSentence = '';
   if (receivers.length === 1) {
     receiversSentence = t(
       'stMatch.feuille.confirmReceiverOne',
-      '{{name}} recevra ton retour individuel.',
+      '{{name}} et, s’il est mineur, ses parents recevront ton retour individuel.',
       { name: receivers[0], ...SANS_ECHAPPEMENT },
     );
   } else if (receivers.length > 1) {
     receiversSentence = t('stMatch.feuille.confirmReceiversMany', {
       count: receivers.length,
-      defaultValue_one: '{{count}} joueur recevra ton retour individuel.',
-      defaultValue_other: '{{names}} recevront leur retour individuel.',
+      // eslint-disable-next-line max-len
+      defaultValue_one: '{{count}} joueur recevra ton retour individuel ; s’il est mineur, ses parents aussi.',
+      // eslint-disable-next-line max-len
+      defaultValue_other: '{{names}} recevront leur retour individuel ; pour un mineur, ses parents aussi.',
       names: joindreLesNoms(receivers, t),
       ...SANS_ECHAPPEMENT,
     });
@@ -1449,12 +1504,49 @@ function MatchStatsEditor({ navigation, route }) {
     t('stMatch.feuille.confirmEditable', 'Tu pourras la modifier et la republier.'),
   ].filter(Boolean).join(' ');
 
+  /**
+   * Un lien du fil d'Ariane.
+   * @param {string} libelle - Le mot du lien.
+   * @param {() => void} onPress - Où il mène.
+   * @returns {import('react').ReactElement} Le lien.
+   */
+  const renderCrumb = (libelle, onPress) => (
+    <Pressable accessibilityRole="link" hitSlop={8} onPress={onPress}>
+      <Text style={[Fonts.p3, Fonts.primary200]}>{libelle}</Text>
+    </Pressable>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
       boundedHeight
       contentContainerStyle={[SpacesAny.paddingTop[0], SpacesAny.paddingBottom[0], Alignments.fill]}
     >
+      {/* 📐 ST-MATCH10-BIS (point 6) — le fil d'Ariane du site (planche P3-editeur-ordi) :
+          « Planning › Match › Feuille de match ». Au téléphone, le retour de l'en-tête suffit. */}
+      {ordinateur && sourceType === 'event' && eventId ? (
+        <View
+          style={[
+            Alignments.row, Alignments.alignCenter, Alignments.wrap, SpacesAny.gap[8],
+            SpacesAny.paddingHorizontal[16], SpacesAny.paddingTop[8],
+          ]}
+          testID="feuille-fil"
+        >
+          {renderCrumb(
+            t('stMatch.feuille.crumbPlanning', 'Planning'),
+            () => navigation.navigate(RouteNames.MyEventList),
+          )}
+          <Text style={[Fonts.p3, Fonts.neutral300]}>›</Text>
+          {renderCrumb(
+            t('stMatch.feuille.crumbMatch', 'Match'),
+            () => navigation.navigate(RouteNames.EventDetails, { eventId }),
+          )}
+          <Text style={[Fonts.p3, Fonts.neutral300]}>›</Text>
+          <Text style={[Fonts.p3, Fonts.neutral100]}>
+            {t('stMatch.feuille.title', 'Feuille de match')}
+          </Text>
+        </View>
+      ) : null}
       <View
         style={[
           Alignments.row, Alignments.alignCenter, SpacesAny.gap[8],

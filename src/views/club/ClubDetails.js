@@ -52,6 +52,10 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
+import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
+import WeekendResultsCard, {
+  weekendRowKey,
+} from '@/views/multisportClub/components/WeekendResultsCard';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -66,7 +70,12 @@ import {
 } from '@/services/auth/authService';
 import { getCategorySortKey } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
-import { claimClub, updateClub } from '@/services/club/clubService';
+import {
+  claimClub,
+  getClubWeekendResults,
+  remindClubWeekendScore,
+  updateClub,
+} from '@/services/club/clubService';
 import { useGetMyClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestQueries';
 import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
@@ -84,11 +93,16 @@ import {
   getClubCertificationPalette,
   isPartnerClub,
 } from '@/utils/clubCertification';
+import { displayErrorAlert } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 import safeJsonParse from '@/utils/safeJsonParse';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
+// Même motif que `EventDetails.web.js` : `import/order` veut `@/responsive` AVANT les voisins,
+// `perfectionist` APRÈS ; les deux règles se contredisent sur ce seul bloc.
+/* eslint-disable perfectionist/sort-imports */
+import { useIsDesktop } from '@/responsive';
 import {
   canCreateTeamInClub,
   childIdsWithPendingRequest,
@@ -102,6 +116,7 @@ import {
 } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
+/* eslint-enable perfectionist/sort-imports */
 // D34 ecran 07 : la rangee partenaire du pack fait 56 pt de haut — assez pour
 // un logo rond de 38 et une corbeille de 40 sans les serrer.
 const SPONSOR_ROW_HEIGHT = 56;
@@ -267,6 +282,9 @@ function ClubDetails({ navigation, route }) {
   // publique /annuaire/clubs/<id>/<slug>/. Absent, le téléphone ne change pas.
   const annuaire = route?.params?.annuaire === true;
   const { width: largeurEcran } = useWindowDimensions();
+  // ST-VUES3-ORDI — l'écran 18 a une planche ORDINATEUR (P5-club-ordi) : le hub du
+  // dirigeant la montre quand la fenêtre est large ; le téléphone ne change pas.
+  const isDesktop = useIsDesktop();
   const actionsEnColonne = annuaire && Platform.OS === 'web'
     && largeurEcran >= LARGEUR_COLONNE_D_ACTIONS;
   const [aProposDeplie, setAProposDeplie] = useState(false);
@@ -1828,6 +1846,70 @@ function ClubDetails({ navigation, route }) {
   const isClubSubPage = canEdit && Boolean(hubSection);
   const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
 
+  // STATS-FIX2 · point 2 (T10, ecran 18) — « Résultats du week-end » n'existait que dans
+  // `CMDashboard` (club omnisport) : le dirigeant d'un club SIMPLE n'y avait aucune porte.
+  // La meme carte vit maintenant sur SON hub, lue par la route du club (policy
+  // is-club-manager, droit du seul Dirigeant : la meme regle que `canEdit`).
+  const {
+    data: weekendResults,
+    error: weekendError,
+    isLoading: weekendLoading,
+    refetch: refetchWeekend,
+  } = useQuery({
+    enabled: isClubHub && Boolean(clubId),
+    queryFn: () => getClubWeekendResults(clubId),
+    queryKey: ['club-weekend-results', clubId],
+  });
+  // « score A » : le dirigeant qui n'entraine pas l'equipe relance son entraineur. La ligne
+  // relancee le dit pour la session ; le serveur, lui, n'envoie qu'une relance par jour.
+  const [remindedWeekendKeys, setRemindedWeekendKeys] = useState(() => new Set());
+  const remindWeekendMutation = useMutation({
+    mutationFn: (row) => remindClubWeekendScore(clubId, {
+      eventId: row.eventId,
+      teamId: row.teamId,
+    }),
+    onError: (err) => {
+      displayErrorAlert(err);
+    },
+    onSuccess: (_result, row) => {
+      setRemindedWeekendKeys((previous) => new Set(previous).add(weekendRowKey(row)));
+    },
+  });
+  const handleOpenWeekendMatch = useCallback((row) => {
+    if (!row?.eventId) return;
+    navigation.navigate(RouteNames.EventStack, {
+      params: { eventId: row.eventId },
+      screen: RouteNames.EventDetails,
+    });
+  }, [navigation]);
+  // La carte reçoit la même chose au téléphone et dans la planche ordinateur.
+  const weekendCardProps = {
+    data: weekendResults,
+    emptyAction: {
+      label: t('weekendResults.createTeam', 'Créer une équipe'),
+      onPress: handleCreateTeam,
+    },
+    error: weekendError,
+    isLoading: weekendLoading,
+    onEnterScore: handleOpenWeekendMatch,
+    onOpenMatch: handleOpenWeekendMatch,
+    onRemind: (row) => remindWeekendMutation.mutate(row),
+    onRetry: refetchWeekend,
+    remindedKeys: remindedWeekendKeys,
+    remindingKey: remindWeekendMutation.isPending && remindWeekendMutation.variables
+      ? weekendRowKey(remindWeekendMutation.variables)
+      : null,
+  };
+  // ST-VUES3-ORDI — « Stats » d'une équipe de la planche ouvre son onglet Stats, ouvert au
+  // dirigeant (STATS-ENQUÊTE, défaut 3).
+  const handleOpenTeamStats = useCallback((team) => {
+    if (!team?.documentId) return;
+    navigation.navigate(RouteNames.TeamStack, {
+      params: { initialTab: 'stats', teamId: team.documentId },
+      screen: RouteNames.TeamDetails,
+    });
+  }, [navigation]);
+
   // Les compteurs se lisent sur les MEMES sources que les sections qu'ils
   // annoncent : un compteur ecrit en dur ment des la premiere modification.
   const clubSportsCount = club?.activites?.length || 0;
@@ -1863,6 +1945,35 @@ function ClubDetails({ navigation, route }) {
     }
     navigation.navigate(RouteNames.Club, params);
   }, [clubId, navigation]);
+
+  // ST-VUES3-ORDI — la colonne de droite de la planche ordinateur : les trois chiffres qui se
+  // touchent (comme « Gestion du club » d'un club omnisport), puis « Les équipes ».
+  const clubHubStatsItems = [
+    {
+      key: 'sports',
+      label: t('clubDetails.titles.activities'),
+      onPress: () => openClubHubSection('sports'),
+      value: clubSportsCount,
+    },
+    {
+      key: 'teams',
+      label: t('clubDetails.titles.teams'),
+      onPress: () => openClubHubSection('teams'),
+      value: sortedClubTeams.length,
+    },
+    {
+      key: 'members',
+      label: t('multisport.stats.members', 'Membres'),
+      onPress: () => navigation.navigate(RouteNames.ClubMemberRoles, { clubId }),
+      value: clubMembersCount,
+    },
+  ];
+  const clubBoardTeams = sortedClubTeams.map((team) => ({
+    club,
+    documentId: team?.documentId,
+    name: team?.name,
+    sport: team?.activities?.[0]?.name || team?.activity?.name || null,
+  }));
 
   const clubArrivalInterestIsBusy = hasPendingClubArrivalInterest
     || createClubArrivalInterestMutation.isPending;
@@ -2943,6 +3054,19 @@ function ClubDetails({ navigation, route }) {
 
           {isClubHub ? (
             <View style={[Spaces.gap[16]]}>
+              {isDesktop ? (
+                <ClubResultsBoard
+                  onOpenTeamStats={handleOpenTeamStats}
+                  statsItems={clubHubStatsItems}
+                  teams={clubBoardTeams}
+                  weekendCard={weekendCardProps}
+                />
+              ) : (
+                <WeekendResultsCard
+                  // eslint-disable-next-line react/jsx-props-no-spreading
+                  {...weekendCardProps}
+                />
+              )}
               <ClubHubGroup label={t('clubDetails.hub.groups.manage', 'Gérer')}>
                 <ClubHubRow
                   icon={Images.stadium}

@@ -2,6 +2,8 @@ import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
+import WeekendResultsCard from '@/views/multisportClub/components/WeekendResultsCard';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 
@@ -34,6 +36,28 @@ let mockNavigation;
 let mockRoute;
 
 const mockHasClubAccess = jest.fn(() => true);
+// ST-VUES3-ORDI — l'ecran 18 a une planche ORDINATEUR : le hub la montre quand la
+// fenetre est large. Faux par defaut : les autres temoins restent sur le telephone.
+let mockIsDesktop = false;
+// ST-VUES3-ORDI — la planche ordinateur du hub (`ClubResultsBoard`) lit le bilan de chaque
+// équipe : ces deux services importent le client HTTP, qui refuse de se charger sans `API_URL`.
+jest.mock('@/services/matchStats/matchStatsService', () => ({
+  getTeamPerformanceStats: jest.fn(),
+}));
+jest.mock('@/services/stats/statsService', () => ({ getTeamStats: jest.fn() }));
+
+jest.mock('@/responsive', () => ({
+  ...jest.requireActual('@/responsive'),
+  useIsDesktop: () => mockIsDesktop,
+}));
+/** @type {jest.Mock<any, any[]>} */
+const mockWeekendQuery = jest.fn(() => ({
+  data: undefined, error: null, isLoading: false, refetch: jest.fn(),
+}));
+const mockGetClubWeekendResults = jest.fn();
+const mockRemindClubWeekendScore = jest.fn(() => Promise.resolve({
+  alreadyRemindedCount: 0, remindedCount: 1, trainerCount: 1,
+}));
 const mockStartClubChat = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -52,7 +76,17 @@ jest.mock('@tanstack/react-query', () => ({
         .catch((erreur) => options?.onError?.(erreur, variables));
     },
   }),
-  useQuery: () => ({ data: [], isLoading: false, refetch: jest.fn() }),
+  // ST-VUES3-ORDI : « Les équipes » (planche ordinateur) lit le bilan de chaque equipe.
+  useQueries: (/** @type {any} */ options) => (options?.queries || []).map(() => ({
+    data: undefined, error: null, isLoading: false,
+  })),
+  // STATS-FIX2 · point 2 : la carte « Résultats du week-end » a sa propre lecture,
+  // observee par `mockWeekendQuery` ; toutes les autres gardent la reponse vide.
+  useQuery: (/** @type {any} */ options) => (
+    options?.queryKey?.[0] === 'club-weekend-results'
+      ? mockWeekendQuery(options)
+      : { data: [], isLoading: false, refetch: jest.fn() }
+  ),
   // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
   // rafraichir « Demandes », « Accueil » et « Mes equipes » apres une demande
   // d'adhesion (`joinClub`). Sans cette doublure, le rendu jette.
@@ -200,6 +234,8 @@ jest.mock('@/services/club/clubQueries', () => ({
 
 jest.mock('@/services/club/clubService', () => ({
   claimClub: jest.fn(),
+  getClubWeekendResults: (/** @type {any[]} */ ...args) => mockGetClubWeekendResults(...args),
+  remindClubWeekendScore: (/** @type {any[]} */ ...args) => mockRemindClubWeekendScore(...args),
   updateClub: jest.fn(),
 }));
 
@@ -1002,5 +1038,192 @@ describe('ClubDetails — ROLES2 — « Staff » compte ceux qui entraînent vra
     };
 
     expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 2 entraîneurs')).toBeDefined();
+  });
+});
+
+// STATS-FIX2 · POINT 2 (tournee T10, ecran 18) — « RESULTATS DU WEEK-END » POUR UN CLUB SIMPLE.
+// La carte n existait que dans `CMDashboard` (club omnisport) : le dirigeant d un club simple
+// comme AS Montrivage (celui de la planche 18) n y avait aucune porte. Elle entre dans son hub
+// « Gérer mon club », lue par la route du club simple (admin STATS-FIX2 :
+// GET /clubs/:id/weekend-results, policy is-club-manager, droit du seul Dirigeant).
+describe('STATS-FIX2 · point 2 — « Résultats du week-end » dans le hub d un club simple', () => {
+  const WEEKEND = {
+    nextMatch: null,
+    rows: [
+      {
+        canRemind: false,
+        date: '2026-09-05T17:00:00.000Z',
+        eventId: 'e1',
+        opponentName: 'Test-COMPO',
+        result: 'win',
+        scoreAgainst: 1,
+        scoreFor: 2,
+        sport: 'Football',
+        status: 'scored',
+        teamId: 't-1',
+        teamName: 'U15 Filles',
+        trainers: [{ documentId: 'u-1', firstname: 'Philippe' }],
+        viewerIsTrainer: true,
+      },
+      {
+        canRemind: true,
+        date: '2026-09-05T19:00:00.000Z',
+        eventId: 'e2',
+        opponentName: null,
+        result: null,
+        scoreAgainst: null,
+        scoreFor: null,
+        sport: 'Football',
+        status: 'missing',
+        teamId: 't-2',
+        teamName: 'Seniors A',
+        trainers: [{ documentId: 'u-3', firstname: 'Karim' }],
+        viewerIsTrainer: false,
+      },
+    ],
+    teamCount: 2,
+    teamsWithoutMatchScores: [],
+    weekend: {
+      endAt: '2026-09-06T22:00:00.000Z',
+      saturday: '2026-09-05',
+      startAt: '2026-09-04T22:00:00.000Z',
+      sunday: '2026-09-06',
+    },
+  };
+
+  beforeEach(() => {
+    mockWeekendQuery.mockImplementation(() => ({
+      data: WEEKEND, error: null, isLoading: false, refetch: jest.fn(),
+    }));
+  });
+
+  it('🔴 le hub du dirigeant porte la carte, lue par la route DU club', () => {
+    const arbre = monter();
+
+    expect(texteDe(arbre.root)).toContain('Résultats du week-end');
+    expect(texteDe(arbre.root)).toContain('2 - 1');
+    const [options] = mockWeekendQuery.mock.calls[mockWeekendQuery.mock.calls.length - 1];
+    expect(options.queryKey).toEqual(['club-weekend-results', 'club-1']);
+    expect(options.enabled).toBe(true);
+    options.queryFn();
+    expect(mockGetClubWeekendResults).toHaveBeenCalledWith('club-1');
+  });
+
+  it('🔴 « Relancer » demande le score par la route du club, et la ligne le dit', async () => {
+    const arbre = monter();
+
+    await act(async () => {
+      pressableAvecTexte(arbre, 'Relancer').props.onPress();
+    });
+    expect(mockRemindClubWeekendScore)
+      .toHaveBeenCalledWith('club-1', { eventId: 'e2', teamId: 't-2' });
+    expect(texteDe(arbre.root)).toContain('Relancé');
+  });
+
+  it('🔴 un match de la carte s ouvre', () => {
+    const arbre = monter();
+    const ligne = pressableAvecTexte(arbre, 'U15 Filles — Test-COMPO');
+
+    act(() => {
+      ligne.props.onPress();
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('EventStack', {
+      params: { eventId: 'e1' },
+      screen: 'EventDetails',
+    });
+  });
+
+  it('🔒 un joueur de passage : ni carte, ni lecture', () => {
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+    const arbre = monter();
+
+    expect(texteDe(arbre.root)).not.toContain('Résultats du week-end');
+    expect(mockWeekendQuery.mock.calls.every(([options]) => options.enabled === false)).toBe(true);
+  });
+
+  it('🔒 une sous-page du hub : pas de carte (elle vit sur le hub seul)', () => {
+    expect(texteDe(monter('teams').root)).not.toContain('Résultats du week-end');
+  });
+});
+
+// ST-VUES3-ORDI (03/10) — ÉCRAN 18 SUR ORDINATEUR : la planche « Le club du dirigeant —
+// ordinateur » (P5-club-ordi) met « Résultats du week-end » en TABLEAU à gauche, et à
+// droite les trois chiffres qui se touchent, puis « Les équipes » et le lien vers leurs
+// stats. Avant ce lot, le site ne montrait que la carte du téléphone, seule.
+describe('ST-VUES3-ORDI · écran 18 — la planche ordinateur du hub d un club simple', () => {
+  const WEEKEND = {
+    nextMatch: null,
+    rows: [],
+    teamCount: 2,
+    teamsWithoutMatchScores: [],
+    weekend: { saturday: '2026-09-05', sunday: '2026-09-06' },
+  };
+  const planche = (/** @type {any} */ arbre) => arbre.root.findAllByType(ClubResultsBoard);
+
+  beforeEach(() => {
+    mockWeekendQuery.mockImplementation(() => ({
+      data: WEEKEND, error: null, isLoading: false, refetch: jest.fn(),
+    }));
+  });
+  afterEach(() => {
+    mockIsDesktop = false;
+  });
+
+  it('🔴 sur ordinateur, le hub porte la planche : le tableau, les chiffres, les équipes', () => {
+    mockIsDesktop = true;
+    mockClubQuery.data = {
+      ...CLUB,
+      membersCount: 9,
+      teams: CLUB.teams.map((team, index) => ({
+        ...team,
+        activities: [{ name: index === 0 ? 'Football' : 'Arts martiaux' }],
+      })),
+    };
+    const arbre = monter();
+
+    const [board] = planche(arbre);
+    expect(board).toBeDefined();
+    expect(board.props.weekendCard.data).toBe(WEEKEND);
+    expect(arbre.root.findAllByType(WeekendResultsCard)).toHaveLength(1);
+    expect(arbre.root.findByType(WeekendResultsCard).props.variant).toBe('table');
+    expect(board.props.statsItems.map((/** @type {any} */ item) => [item.label, item.value]))
+      .toEqual([['Sports', 1], ['Équipes', 2], ['Membres', 9]]);
+    // Dans l'ordre des équipes du club (la catégorie d'âge, de la plus âgée à la plus jeune).
+    expect(board.props.teams.map((/** @type {any} */ team) => [team.name, team.sport]))
+      .toEqual([['Seniors A', 'Arts martiaux'], ['U15 Filles', 'Football']]);
+  });
+
+  it('🔴 les chiffres et les équipes mènent quelque part', () => {
+    mockIsDesktop = true;
+    const [board] = planche(monter());
+
+    act(() => board.props.statsItems[1].onPress());
+    expect(mockNavigation.push)
+      .toHaveBeenCalledWith('Club', { clubId: 'club-1', section: 'teams' });
+    act(() => board.props.statsItems[2].onPress());
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ClubMemberRoles', { clubId: 'club-1' });
+    act(() => board.props.onOpenTeamStats(board.props.teams[0]));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('TeamStack', {
+      params: { initialTab: 'stats', teamId: 't-2' },
+      screen: 'TeamDetails',
+    });
+  });
+
+  it('📱 sur téléphone, rien ne change : la carte empilée, pas de planche', () => {
+    const arbre = monter();
+
+    expect(planche(arbre)).toHaveLength(0);
+    expect(arbre.root.findByType(WeekendResultsCard).props.variant).toBeUndefined();
+  });
+
+  it('🔒 sur ordinateur aussi, un joueur de passage n a ni planche ni carte', () => {
+    mockIsDesktop = true;
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+    const arbre = monter();
+
+    expect(planche(arbre)).toHaveLength(0);
+    expect(arbre.root.findAllByType(WeekendResultsCard)).toHaveLength(0);
   });
 });

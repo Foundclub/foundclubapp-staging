@@ -323,7 +323,13 @@ describe('COLL-CONSOLE — l écran des demandes de rattachement et « Par Found
     const champ = arbre.root.findAllByType(TextInput).find((n) => n.props.testID === 'relier-demande-f1');
     await act(async () => { champ.props.onChangeText('judo'); });
     await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'relier-demande-f1-resultat-judo-club').length > 0);
-    expect(mockPost).toHaveBeenCalledWith(RECHERCHE_CLUB, { fields: ['documentId', 'name', 'addressDetails'], pageSize: 10, q: 'judo' });
+    // COLL-CONSOLE-BIS (03/10) — + la ville officielle, l INSEE (proximite) et le sport.
+    expect(mockPost).toHaveBeenCalledWith(RECHERCHE_CLUB, {
+      fields: ['documentId', 'name', 'addressDetails', 'cityName', 'inseeCom'],
+      pageSize: 20,
+      populate: { activites: { fields: ['name'] } },
+      q: 'judo',
+    });
     await appuyer(bouton(parTestID(arbre.root, 'relier-demande-f1-resultat-judo-club'), 'Relier'));
     await attendre(() => mockPut.mock.calls.length > 0);
     expect(mockPut).toHaveBeenCalledWith(

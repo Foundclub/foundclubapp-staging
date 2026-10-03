@@ -243,6 +243,75 @@ describe('ST-MATCH écran 6 — Matchs en attente (ordinateur)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 🎯 ST-MONMATCH (écran 6, design validé le 02/10) — LA COLONNE « RÉPONSES » ET LA LIGNE
+// « … EST COMPLET ». Le compte vient du serveur (`responses`, lecture des rappels) : N = les
+// CONVOQUÉS (« c oui ») ; la feuille, elle, garde tout l'effectif (« feuille convoqués A ») —
+// les deux règles sont écrites et vérifiées côté serveur (ST-MONMATCH-matchs-en-attente-reponses).
+// ---------------------------------------------------------------------------
+describe('ST-MONMATCH écran 6 — « 7 sur 11 » et « … est complet »', () => {
+  const PUBLIEE = '2026-10-01T20:39:00.000Z';
+  const COMPLET = {
+    eventId: 'match-19h',
+    finalizedAt: PUBLIEE,
+    label: 'AS Montrivage — Test-COMPO',
+    responses: { count: 1, total: 1 },
+  };
+  const le = (/** @type {string} */ iso) => ({
+    date: new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+    heure: new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+  });
+
+  test('🔴 téléphone — la carte de l entraîneur dit combien ont répondu', () => {
+    const racine = monter({ data: { items: [entraineur({ responses: { count: 7, total: 11 } })] } });
+
+    expect(textes(racine)).toContain('Puis la feuille de match · 7 sur 11 ont répondu');
+  });
+
+  test('🔴 ordinateur — le tableau a sa colonne « Réponses »', () => {
+    const racine = monter({ data: { items: [entraineur({ responses: { count: 0, total: 1 } })] } }, 1280);
+
+    expect(textes(racine)).toEqual(expect.arrayContaining(['Réponses', '0 sur 1']));
+  });
+
+  test('🔴 téléphone — « … est complet : feuille publiée, 1 sur 1 a répondu. »', () => {
+    const racine = monter({ data: { items: [entraineur()], lastCompleted: COMPLET } });
+
+    expect(textes(racine)).toContain('AS Montrivage — Test-COMPO est complet : feuille publiée, 1 sur 1 a répondu.');
+    expect(parId(racine, 'st-match-attente-complet')).toBeTruthy();
+  });
+
+  test('🔴 ordinateur — la ligne « complet » dit QUAND la feuille a été publiée', () => {
+    const racine = monter({ data: { items: [entraineur()], lastCompleted: COMPLET } }, 1280);
+    const { date, heure } = le(PUBLIEE);
+
+    expect(textes(racine)).toContain(`AS Montrivage — Test-COMPO est complet : feuille publiée le ${date} à ${heure}, 1 sur 1 a répondu.`);
+  });
+
+  test('le dernier match devenu complet vidait la liste : l état vide reste, et la ligne le dit dessous', () => {
+    const racine = monter({ data: { emptyReason: 'nothing_pending', items: [], lastCompleted: COMPLET } });
+
+    expect(textes(racine)).toEqual(expect.arrayContaining([
+      'Aucune action en attente',
+      'AS Montrivage — Test-COMPO est complet : feuille publiée, 1 sur 1 a répondu.',
+    ]));
+  });
+
+  test('🔒 serveur ancien (sans compte) : rien d inventé — ni « 0 sur 0 », ni ligne « complet »', () => {
+    const tel = textes(monter({ data: { items: [entraineur(), joueur()] } }));
+    expect(tel.join(' | ')).not.toMatch(/ sur \d+|est complet/);
+
+    const ordi = textes(monter({ data: { items: [entraineur()] } }, 1280));
+    expect(ordi).toContain('—');
+  });
+
+  test('🔒 un rappel de JOUEUR ne porte jamais de compte', () => {
+    const racine = monter({ data: { items: [joueur({ responses: { count: 3, total: 9 } })] } });
+
+    expect(textes(racine).join(' | ')).not.toMatch(/3 sur 9/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 🐞 T9 (02/10, captures T9_S06_1 / T9_S06_2) — OUVERT DEPUIS LE RAPPEL, L'ÉCRAN
 // S'AFFICHAIT VIDE ; « tirer pour rafraîchir » faisait apparaître 7 actions.
 // ---------------------------------------------------------------------------

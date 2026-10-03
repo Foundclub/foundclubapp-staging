@@ -63,3 +63,25 @@ test('POINTAGE-app/4 — AVANT le debut, ce n est pas « apres coup »', () => {
 
   expect(canDeclareLatePresence(pasRenseigne({ event: demain }))).toBe(false);
 });
+
+// STATS-FIX2 · POINT 5 (tournee T10, ecran 1) — « Tu n as pas repondu… Je passe en present »
+// etait epingle sur un match du 05/09, un mois plus tard. La porte du « pas renseigne » reste
+// ouverte APRES l evenement (decision d Adel « reponse B », 29/09), mais le temps de l apres-match
+// seulement : 72 h, la fenetre « chaude » des rappels d apres-match du serveur
+// (match-stats-report.ts, HOT_WINDOW_HOURS), comptee depuis le debut.
+test('STATS-FIX2/5 — 🔴 un mois apres, « Je passe en present » n est plus propose', () => {
+  const ilYAUnMois = matchDHier({ date: new Date(MAINTENANT - 27 * 24 * HEURE).toISOString() });
+
+  expect(canDeclareLatePresence(pasRenseigne({ event: ilYAUnMois }))).toBe(false);
+});
+
+test('STATS-FIX2/5 — la porte tient 72 h apres le debut, pas une de plus', () => {
+  const debutIlYA = (heures) => matchDHier({
+    date: new Date(MAINTENANT - heures * HEURE).toISOString(),
+  });
+
+  expect(canDeclareLatePresence(pasRenseigne({ event: debutIlYA(1) }))).toBe(true);
+  expect(canDeclareLatePresence(pasRenseigne({ event: debutIlYA(71) }))).toBe(true);
+  expect(canDeclareLatePresence(pasRenseigne({ event: debutIlYA(72) }))).toBe(true);
+  expect(canDeclareLatePresence(pasRenseigne({ event: debutIlYA(73) }))).toBe(false);
+});

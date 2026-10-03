@@ -65,6 +65,13 @@ const mockOptionsDesMutations = [];
 // `getApiErrorTranslation` ne trouverait AUCUN code et ce filet validerait des
 // phrases qui n'existent pas dans l'app. Ici, ce sont les textes de `fr.js`
 // eux-memes qui sont mis a l'epreuve.
+// ST-VUES3-ORDI — la planche ordinateur du hub (`ClubResultsBoard`) lit le bilan de chaque
+// équipe : ces deux services importent le client HTTP, qui refuse de se charger sans `API_URL`.
+jest.mock('@/services/matchStats/matchStatsService', () => ({
+  getTeamPerformanceStats: jest.fn(),
+}));
+jest.mock('@/services/stats/statsService', () => ({ getTeamStats: jest.fn() }));
+
 jest.mock('i18next', () => {
   const dictionnaire = jest.requireActual('@/theme/strings/translations/fr').default;
   const lire = (/** @type {string} */ chemin) => String(chemin).split('.').reduce(
