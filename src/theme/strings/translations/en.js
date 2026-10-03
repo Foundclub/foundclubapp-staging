@@ -12530,6 +12530,9 @@ export default {
       message: "{{firstname}}'s profile will be erased: their first name, last name and date of birth. A line-up already played will keep their first name — we don't rewrite the sheet of a past match.",
       title: "Delete {{firstname}}'s profile?",
     },
+    declared: {
+      title: 'My children under 13',
+    },
     errors: {
       delete: "This profile can't be deleted right now.",
     },

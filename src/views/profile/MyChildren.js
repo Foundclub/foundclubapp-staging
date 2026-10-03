@@ -311,6 +311,11 @@ function MyChildren() {
             </View>
           </WithDataWrapper>
         </View>
+        {/* ST-RETOURS2 · point 2 (planche 22, etat 1) — la seconde section a son titre, comme
+            la premiere : les fiches que le parent declare pour ses enfants sans compte. */}
+        <Text style={[Spaces.marginTop[12], Fonts.h4Bold, Fonts.neutral00]}>
+          {t('myChildren.declared.title')}
+        </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t(
             'myChildren.screen.hint',

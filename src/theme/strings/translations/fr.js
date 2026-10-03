@@ -21568,6 +21568,10 @@ export default {
         + ' prénom — on ne réécrit pas la feuille d’un match passé.',
       title: 'Supprimer la fiche de {{firstname}} ?',
     },
+    // ST-RETOURS2 (03/10, planche 22) — la section des FICHES : les enfants sans compte.
+    declared: {
+      title: 'Mes enfants de moins de 13 ans',
+    },
     errors: {
       delete: 'Impossible de supprimer cette fiche pour le moment.',
     },

@@ -490,3 +490,43 @@ describe('ST-RETOURS — Mes enfants : le neuf, et le moins de 13 ans', () => {
       .toBeLessThan(texte.indexOf('Léa Martin'));
   });
 });
+
+// ===========================================================================
+// ST-RETOURS2 (03/10) — PLANCHE 22 DU DESIGN VALIDE, ETAT 1 : « MES ENFANTS ».
+//
+// Point 2 : deux sections, chacune avec son titre — « Les comptes de mes enfants », puis
+// « Mes enfants de moins de 13 ans ». Le titre de la seconde manquait : les fiches suivaient
+// la phrase d aide sans rien qui dise de quoi il s agissait.
+// ===========================================================================
+
+describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
+  const HUGO = {
+    age: 14, documentId: 'hugo', firstname: 'Hugo', lastname: 'Lemaire',
+  };
+
+  beforeEach(() => {
+    mockLiens = { children: [HUGO], requests: [] };
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  test('🔴 point 2 — « Mes enfants de moins de 13 ans », après les comptes', async () => {
+    mockEnfants = [unEnfant({ age: 7, firstname: 'Lea', lastname: 'Test' })];
+    const texte = texteVisible(await rendre());
+
+    const titre = texte.indexOf('Mes enfants de moins de 13 ans');
+    expect(titre).toBeGreaterThan(texte.indexOf('Hugo Lemaire'));
+    expect(titre).toBeLessThan(texte.indexOf('Lea Test'));
+  });
+
+  test('🔴 point 2 — sans fiche, la section garde son titre et dit qu il n y en a pas', async () => {
+    mockEnfants = [];
+    const texte = texteVisible(await rendre());
+
+    const titre = texte.indexOf('Mes enfants de moins de 13 ans');
+    expect(titre).toBeGreaterThan(-1);
+    expect(titre).toBeLessThan(texte.indexOf('Tu n’as pas encore déclaré d’enfant.'));
+  });
+});
