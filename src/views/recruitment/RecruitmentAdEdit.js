@@ -112,19 +112,19 @@ const COACH_EXPERIENCE_OPTIONS = [
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.coachExperience.confirmed', 'Confirme');
+      return i18next.t('recruitmentAdEdit.coachExperience.confirmed', 'Confirmé');
     },
     value: 'confirme',
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.coachExperience.expert', 'Experimente');
+      return i18next.t('recruitmentAdEdit.coachExperience.expert', 'Expérimenté');
     },
     value: 'experimente',
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.coachExperience.qualified', 'Diplome');
+      return i18next.t('recruitmentAdEdit.coachExperience.qualified', 'Diplômé');
     },
     value: 'diplome',
   },
@@ -151,7 +151,7 @@ const ENGAGEMENT_OPTIONS = [
   },
   {
     get label() {
-      return i18next.t('recruitmentAdEdit.engagement.toBeDefined', 'A définir');
+      return i18next.t('recruitmentAdEdit.engagement.toBeDefined', 'À définir');
     },
     value: 'a_definir',
   },
