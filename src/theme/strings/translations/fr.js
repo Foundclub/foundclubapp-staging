@@ -17382,6 +17382,10 @@ export default {
       noPlayersToAnswer: 'Aucun joueur n’attend de questionnaire pour ce match.',
       noShowText: 'Ils ne comptent pas dans la feuille tant que l’appel n’est pas corrigé.',
       noShowTitle: 'Non pointés à l’appel',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
       officialLock: 'Score officiel de la fédération',
       opponentUnknown: 'adversaire à confirmer',
       playersRatingHidden: 'Les joueurs : dès 3 réponses',
@@ -17410,6 +17414,7 @@ export default {
         answered: 'A répondu',
         answeredTaken: 'A répondu · repris de sa réponse',
         notAnswered: 'Pas encore répondu',
+        notConvoked: 'Hors convocation',
         toCheck: 'À vérifier',
       },
       saveDraft: 'Brouillon',

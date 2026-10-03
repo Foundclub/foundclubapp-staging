@@ -18,6 +18,7 @@ import {
   direLeCompte,
   direSaReponse,
   direUnChiffre,
+  joindreLesNoms,
   NOTES_SUR_DIX,
   repriseDeSaReponse,
 } from './feuilleDeMatchModel';
@@ -290,7 +291,11 @@ export function TableauDesJoueurs({
         const reponse = reponses.get(ligne.userDocumentId) || null;
         const aRepondu = reponse?.status === 'submitted';
         const douteuse = aVerifier.has(ligne.key);
-        let etat = t('stMatch.feuille.row.notAnswered', 'Pas encore répondu');
+        // 📐 ST-MATCH10-BIS (point 3, « feuille convoqués A ») : un joueur ajouté hors
+        // convocation reste sur la feuille avec ses minutes ; personne ne l'attend.
+        let etat = reponse?.convoked === false
+          ? t('stMatch.feuille.row.notConvoked', 'Hors convocation')
+          : t('stMatch.feuille.row.notAnswered', 'Pas encore répondu');
         if (douteuse) {
           etat = t('stMatch.feuille.row.toCheck', 'À vérifier');
         } else if (aRepondu) {
@@ -650,6 +655,15 @@ export function BlocRetours({
   const surfaces = useSurfacesFeuille();
   const repondu = reponses.filter((reponse) => reponse?.status === 'submitted');
   const manquants = reponses.filter((reponse) => reponse?.status !== 'submitted');
+  // 📐 ST-MATCH10-BIS (point 3) — « feuille convoqués A » : TOUT l'effectif compte (« 2 sur
+  // 11 ont répondu »), mais le serveur ne relance que les convoqués (« c oui »). Le bouton
+  // compte donc ceux qu'il relancera, et la feuille dit qui ne l'est pas. Un serveur
+  // d'avant ne marque personne (`convoked` absent) : tous restent relançables.
+  const aRelancer = manquants.filter((reponse) => reponse?.convoked !== false);
+  const horsConvocation = manquants
+    .filter((reponse) => reponse?.convoked === false)
+    .map((reponse) => reponse?.label)
+    .filter(Boolean);
   const part = attendues > 0 ? Math.round((recues / attendues) * 100) : 0;
 
   if (!attendues) {
@@ -695,14 +709,26 @@ export function BlocRetours({
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {manquants.map((reponse) => reponse?.label).filter(Boolean).join(', ')}
           </Text>
-          {onRelancer ? (
+          {horsConvocation.length ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('stMatch.feuille.notConvokedNoReminder', {
+                count: horsConvocation.length,
+                defaultValue_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
+                // eslint-disable-next-line max-len
+                defaultValue_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
+                names: joindreLesNoms(horsConvocation, t),
+                ...SANS_ECHAPPEMENT,
+              })}
+            </Text>
+          ) : null}
+          {onRelancer && aRelancer.length ? (
             <Button
               disabled={relanceEnCours}
               icon="bell"
               isLoading={relanceEnCours}
               onPress={onRelancer}
               title={t('stMatch.carte.remind', {
-                count: manquants.length,
+                count: aRelancer.length,
                 defaultValue_one: 'Relancer {{count}} joueur',
                 defaultValue_other: 'Relancer les {{count}}',
               })}

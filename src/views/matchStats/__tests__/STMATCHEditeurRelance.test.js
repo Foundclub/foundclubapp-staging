@@ -837,3 +837,67 @@ describe('ST-MATCH10-BIS · 2 — « s il est mineur, ses parents » : qui est p
     expect(textes(racine)).toContain('Lu par Hugo et, s’il est mineur, ses parents. Jamais par ses coéquipiers.');
   });
 });
+
+describe('ST-MATCH10-BIS · 3 — « feuille convoqués A » : tout l effectif compte, seuls les convoqués sont relancés', () => {
+  // L'effectif de 11, une convocation publiée de 7 (dont Hugo et Léo, qui ont répondu) ;
+  // Nino et Théo ont été ajoutés hors convocation.
+  const avecConvocation = () => {
+    const donnees = feuilleEffectifComplet();
+    const horsConvocation = new Set(['Nino Garcia', 'Théo Nguyen', 'Sami Martin', 'Yanis Bernard']);
+    donnees.playerResponses = donnees.playerResponses.map((/** @type {any} */ item) => ({
+      ...item, convoked: !horsConvocation.has(item.label),
+    }));
+    return donnees;
+  };
+
+  test('Retours : « 2 sur 11 ont répondu », mais « Relancer » ne compte que les convoqués, et le dit', async () => {
+    const racine = await monter(avecConvocation());
+    await appuyerSur(racine, 'Retours');
+    const vus = textes(racine);
+
+    expect(vus).toEqual(expect.arrayContaining([
+      '2 sur 11 ont répondu',
+      'Manquent · 9',
+      'Relancer les 5',
+      'Nino Garcia, Théo Nguyen et 2 autres ne sont pas convoqués : la relance ne part qu’aux convoqués.',
+    ]));
+    expect(bouton(racine, 'Relancer les 9')).toBeUndefined();
+  });
+
+  test('Retours : aucun convoqué ne manque ⇒ pas de bouton, la phrase dit pourquoi', async () => {
+    const donnees = feuilleU15({ responseCompletionCount: 1, responseEligibleCount: 2 }, {
+      playerResponses: [
+        { ...REPONSE_HUGO, convoked: true },
+        {
+          convoked: false, label: 'Nino Garcia', status: null, userDocumentId: 'u9',
+        },
+      ],
+    });
+    const racine = await monter(donnees);
+    await appuyerSur(racine, 'Retours');
+
+    expect(textes(racine)).toContain('Nino Garcia n’est pas convoqué : la relance ne part qu’aux convoqués.');
+    expect(textes(racine).some((texte) => texte.startsWith('Relancer'))).toBe(false);
+  });
+
+  test('Joueurs : un joueur ajouté hors convocation est dit tel, et garde ses minutes', async () => {
+    const donnees = avecConvocation();
+    donnees.report.playerLines = [{
+      minutesPlayed: 30, sportPayload: { assists: 0, goals: 0, goalsConceded: 0 }, userDocumentId: 'j3',
+    }];
+    const racine = await monter(donnees);
+    await appuyerSur(racine, 'Joueurs · 11');
+
+    expect(parDescription(racine, 'Nino Garcia : 30 minutes, 0 but, 0 passe. Hors convocation.')).not.toHaveLength(0);
+    expect(textes(racine).filter((texte) => texte === 'Hors convocation')).toHaveLength(4);
+    await appuyerSur(racine, 'Brouillon');
+    expect(mockSaveDraft.mock.calls[0][1].playerLines.find((/** @type {any} */ ligne) => ligne.userDocumentId === 'j3'))
+      .toMatchObject({ minutesPlayed: 30 });
+  });
+
+  test('Serveur d avant (pas de champ) : tous les manquants restent relançables', async () => {
+    const racine = await monter(feuilleEffectifComplet());
+    await appuyerSur(racine, 'Retours');
+    expect(bouton(racine, 'Relancer les 9')).toBeTruthy();
+  });
+});
