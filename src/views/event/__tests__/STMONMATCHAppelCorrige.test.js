@@ -166,8 +166,9 @@ const boutonsPresent = (/** @type {any} */ arbre) => arbre.root.findAllByType(Bu
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => noeud.props.children)
   .filter((/** @type {any} */ enfant) => typeof enfant === 'string');
-const heureLocale = (/** @type {string} */ iso) => new Date(iso)
-  .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+// FINITIONS11 · point 3 (planche) : l'heure du pointage s'écrit « lun. 20:55 », le jour puis l'heure.
+const heureLocale = (/** @type {string} */ iso) => `${new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short' })} ${new Date(iso)
+  .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
 
 test('ST-MONMATCH appel/1 — 🚪 l absent à l appel a « Présent » sur sa ligne, nommé pour le lecteur d écran', async () => {
   const arbre = await monter(proprietes());

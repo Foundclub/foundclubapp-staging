@@ -11,6 +11,7 @@ import {
 import { isArrivalTrackingEnabled, isRsvpEnabled } from '@/domains/event/presenceRule';
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -287,6 +288,45 @@ const estPointeAbsent = (attendance) => String(
   attendance?.attendanceStatus || attendance?.finalState || '',
 ).trim().toLowerCase() === 'no_show';
 
+/**
+ * FINITIONS11 · point 3 (écran 2, état 3) — UN JOUEUR POINTÉ ABSENT À L'APPEL EST UN ABSENT :
+ * il passe de « Présent·e·s » (ou de « Sans réponse ») à « Absent·e·s ». L'appel, une fois fait,
+ * tranche ; la réponse d'avant ne range plus. Les tuiles, les filtres et la liste lisent ces
+ * mêmes listes : ils le comptent comme absent. Sans absent pointé, les listes d'origine.
+ * @param {any} listes - Un objet portant participating / missing / notAnswered.
+ * @param {Record<string, AttendanceState> | undefined} presences - Les lignes d'appel.
+ * @returns {any} Les mêmes listes, les absents pointés rangés avec les absents.
+ */
+const rangerLesAbsentsALAppel = (listes, presences) => {
+  if (!listes) return listes;
+  const pointe = (/** @type {any} */ joueur) => estPointeAbsent(presences?.[joueur?.documentId]);
+  const participating = listes.participating || [];
+  const notAnswered = listes.notAnswered || [];
+  const deplaces = [...participating.filter(pointe), ...notAnswered.filter(pointe)];
+  if (!deplaces.length) return listes;
+  return {
+    ...listes,
+    missing: [...(listes.missing || []), ...deplaces],
+    notAnswered: notAnswered.filter((joueur) => !pointe(joueur)),
+    participating: participating.filter((joueur) => !pointe(joueur)),
+  };
+};
+
+/**
+ * FINITIONS11 · point 3 — l'heure du pointage d'un absent : « sam. 18:55 » (planche).
+ * @param {string | null | undefined} valeur - Une date ISO.
+ * @returns {string} Le jour court et l'heure, ou une chaîne vide.
+ */
+const formatJourEtHeure = (valeur) => {
+  if (!valeur) return '';
+  const date = new Date(valeur);
+  if (Number.isNaN(date.getTime())) return '';
+  const locale = localeDesFormats();
+  const jour = date.toLocaleDateString(locale, { weekday: 'short' });
+  const heure = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  return `${jour} ${heure}`;
+};
+
 const formatArrivalTime = (arrivedAt) => {
   if (!arrivedAt) return '';
   const date = new Date(arrivedAt);
@@ -346,11 +386,13 @@ const resolveAttendanceBadge = ({
   // 🚫 POINTAGE — depuis le 29/09, le serveur ne rend `no_show` que pour une
   // absence CONSTATEE A L APPEL par un encadrant. « Non pointe » disait l ancien
   // robot, qui n existe plus : ne pas pointer ne rend jamais absent.
+  // FINITIONS11 · point 3 (planche « Absent à l'appel ») — ORANGE et non plus rouge :
+  // l'appel peut se tromper, et l'entraîneur le corrige d'un geste (« Présent »).
   if (normalizedAttendanceStatus === 'no_show') {
     return {
-      backgroundColor: `${colors.error500}18`,
-      borderColor: `${colors.error500}36`,
-      textColor: colors.error500,
+      backgroundColor: withAlpha(colors.warning500, 0.09),
+      borderColor: withAlpha(colors.warning500, 0.21),
+      textColor: colors.warning400,
       title: t('eventDetails.attendanceBadge.absentAtCall', 'Absent à l’appel'),
       value: null,
     };
@@ -499,15 +541,26 @@ function EventParticipants({
   onCoachEditLate,
   onCoachMarkPresent = null,
   participantsSummary,
-  participationsByStatus,
+  participationsByStatus: listesParStatut,
   pendingParticipations,
   rouvreLeQuestionnaire = false,
-  teamParticipationSections = [],
+  teamParticipationSections: sectionsDEquipe = [],
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  // 🗂️ FINITIONS11 · point 3 — les absents pointés à l'appel rejoignent « Absent·e·s », dans
+  // les DEUX chemins (cartes d'équipe et liste sans équipes). Tout le reste de l'écran lit
+  // ces listes-là.
+  const participationsByStatus = useMemo(
+    () => rangerLesAbsentsALAppel(listesParStatut, attendanceByUserId),
+    [attendanceByUserId, listesParStatut],
+  );
+  const teamParticipationSections = useMemo(
+    () => (sectionsDEquipe || []).map((section) => rangerLesAbsentsALAppel(section, attendanceByUserId)),
+    [attendanceByUserId, sectionsDEquipe],
+  );
   // AC07 : le bouton se grise TANT QUE la relance est en vol. On lit l etat de
   // la mutation par sa clef plutot que par une prop : `EventDetails` n a rien a
   // faire descendre, et les deux boutons « Relancer » de cet ecran se grisent
@@ -821,7 +874,7 @@ function EventParticipants({
     return (
       <>
         <Text style={[Fonts.h4Bold, Fonts.primary500]}>
-          {title}
+          {options.countInTitle ? `${title} · ${players.length}` : title}
         </Text>
         {players.map((player) => renderParticipant(player, options))}
       </>
@@ -942,6 +995,8 @@ function EventParticipants({
           section.missing,
           {
             allowLiveLate: false,
+            // FINITIONS11 · point 3 (planche) : « Absent·e·s · 1 ».
+            countInTitle: true,
             emptyMessage: messageSiReponses('eventDetails.emptyStates.noAbsence'),
             keyPrefix: `${section.key}-missing`,
             statusKind: 'missing',
@@ -1494,6 +1549,7 @@ function EventParticipants({
             listesAffichees.missing || [],
             {
               allowLiveLate: false,
+              countInTitle: true,
               emptyMessage: messageSiReponses('eventDetails.emptyStates.noAbsence'),
               keyPrefix: 'legacy-missing',
               statusKind: 'missing',
@@ -1750,8 +1806,9 @@ function ParticipantItem({
   // 🎯 ST-MONMATCH (écran 2, état 3) — l'absent à l'appel : l'heure du pointage se lit à
   // côté de « Absent à l'appel » (aucune heure d'arrivée, par définition).
   const estAbsentALAppel = estPointeAbsent(attendance);
+  // FINITIONS11 · point 3 — « sam. 18:55 » : le jour, puis l'heure (planche).
   const arrivalTime = formatArrivalTime(attendance?.arrivedAt)
-    || (estAbsentALAppel ? formatArrivalTime(attendance?.finalizedAt) : '');
+    || (estAbsentALAppel ? formatJourEtHeure(attendance?.finalizedAt) : '');
 
   return (
     <View

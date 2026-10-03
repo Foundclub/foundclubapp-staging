@@ -371,8 +371,6 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
     });
 
     expect(pastilles(arbre)).toEqual([
-      // 1. `no_show` gagne sur tout le reste.
-      { couleur: COULEURS.error500, texte: PASTILLE.nonPointe },
       // 4. arrive EN RETARD : S3 le passe au ROUGE, et le retard se DIT.
       //    Adel a demande ces mots-la : « N min de retard », pas « +N min ».
       { couleur: COULEURS.error500, texte: PASTILLE.arrive },
@@ -394,6 +392,9 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
       { couleur: COULEURS.warning500, texte: '+12 min' },
       // 2. absent declare.
       { couleur: COULEUR_ABSENT, texte: PASTILLE.absent },
+      // 1. `no_show` gagne sur tout le reste. FINITIONS11 · point 3 : la pastille est ORANGE
+      //    (l appel peut se tromper), et le pointe absent est RANGE avec les absents.
+      { couleur: COULEURS.warning400, texte: PASTILLE.nonPointe },
       // 3. sans reponse.
       { couleur: COULEURS.neutral200, texte: PASTILLE.sansReponse },
     ]);
@@ -431,8 +432,8 @@ describe('AD06 · temoin 2 — les 5 groupes et leur ordre', () => {
 
     expect(rang('Demandes de participation')).toBeGreaterThanOrEqual(0);
     expect(rang('Demandes de participation')).toBeLessThan(rang('Présent·e·s'));
-    expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s'));
-    expect(rang('Absent·e·s')).toBeLessThan(rang('Sans réponse'));
+    expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s · 1'));
+    expect(rang('Absent·e·s · 1')).toBeLessThan(rang('Sans réponse'));
     expect(rang('Sans réponse')).toBeLessThan(rang('Historique équipe retirée'));
     expect(textes).toContain('U15 Feminines');
   });
@@ -461,8 +462,8 @@ describe('AD06 · temoin 3 — le second chemin, celui sans equipes', () => {
     const rang = (/** @type {string} */ libelle) => textes.indexOf(libelle);
 
     expect(rang('Présent·e·s')).toBeGreaterThanOrEqual(0);
-    expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s'));
-    expect(rang('Absent·e·s')).toBeLessThan(rang('Sans réponse'));
+    expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s · 1'));
+    expect(rang('Absent·e·s · 1')).toBeLessThan(rang('Sans réponse'));
     // Ce chemin ne connait PAS l historique, ni les noms d equipe.
     expect(textes).not.toContain('Historique équipe retirée');
     expect(textes).not.toContain('U15 Feminines');

@@ -376,7 +376,7 @@ describe('AE02 · temoin 1 — chercher un nom filtre les groupes', () => {
     // 3. Le groupe « Absent·e·s » n a plus AUCUN resultat : il disparait, titre
     //    compris. Il ne dit surtout pas « Aucune absence signalée. » — ce serait
     //    un mensonge : il y a bien une absence, elle ne matche juste pas.
-    expect(textes).not.toContain('Absent·e·s');
+    expect(textes.filter((texte) => texte.startsWith('Absent·e·s'))).toEqual([]);
     expect(textes).not.toContain('Aucune absence signalée.');
   });
 
@@ -475,7 +475,7 @@ describe('AE02 · temoin 2 — aucun nom ne correspond', () => {
     expect(textes).not.toContain('Éloïse Dupont');
     expect(textes).not.toContain('U15 Feminines');
     expect(textes).not.toContain('Présent·e·s');
-    expect(textes).not.toContain('Absent·e·s');
+    expect(textes.filter((texte) => texte.startsWith('Absent·e·s'))).toEqual([]);
   });
 
   test('la phrase disparait des qu un nom correspond a nouveau', () => {
@@ -650,8 +650,8 @@ describe('AE02 · temoin 5 — l ecran par defaut n a pas bouge', () => {
     const rang = (/** @type {string} */ libelle) => textes.indexOf(libelle);
 
     expect(rang('Présent·e·s')).toBeGreaterThanOrEqual(0);
-    expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s'));
-    expect(rang('Absent·e·s')).toBeLessThan(rang('Sans réponse'));
+    expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s · 1'));
+    expect(rang('Absent·e·s · 1')).toBeLessThan(rang('Sans réponse'));
     expect(textes).toContain('U15 Feminines');
     expect(textes).toContain('Éloïse Dupont');
     expect(textes).toContain('Chloé Durand');
