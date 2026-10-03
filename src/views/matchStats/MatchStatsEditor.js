@@ -33,6 +33,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { buildMatchEncartLines } from '@/views/event/matchEncartLines';
+import { isAwaitedResponder } from '@/views/event/matchPageModel';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -448,10 +449,16 @@ function MatchStatsEditor({ navigation, route }) {
     () => new Map(responseItems.map((/** @type {any} */ item) => [item?.userDocumentId, item])),
     [responseItems],
   );
-  const responseEligibleCount = responseItems.length;
-  const responseCompletionCount = useMemo(
-    () => responseItems.filter((/** @type {any} */ item) => item?.status === 'submitted').length,
+  // 🧮 FINITIONS11 · point 6 — « compte A » : « N sur M ont répondu » compte les CONVOQUÉS qui
+  // ont un compte, comme la carte « Après le match » ; la feuille garde toutes ses lignes.
+  const awaitedResponseItems = useMemo(
+    () => responseItems.filter(isAwaitedResponder),
     [responseItems],
+  );
+  const responseEligibleCount = awaitedResponseItems.length;
+  const responseCompletionCount = useMemo(
+    () => awaitedResponseItems.filter((/** @type {any} */ item) => item?.status === 'submitted').length,
+    [awaitedResponseItems],
   );
 
   const remindResponsesMutation = useMutation({

@@ -3,6 +3,8 @@ import i18next from 'i18next';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { isAwaitedResponder } from '@/views/event/matchPageModel';
+
 // ==========================================================================
 // 🔔 ST-MATCH (écrans 3 et 4, design des statistiques validé le 02/10) — CE
 // QUE DIT LA FENÊTRE « APRÈS LE MATCH », RAPPEL PAR RAPPEL.
@@ -180,11 +182,14 @@ export const describeCoachPromptTitle = (prompt, ourSide) => {
  * « 0 sur 1 joueur a répondu ». Le rappel ne porte pas ce compte (le serveur le
  * calcule pour la feuille) : la fenêtre le lit dans la feuille de l'entraîneur
  * (`match-stats`, liste `playerResponses`), lue seulement quand elle s'ouvre.
+ * FINITIONS11 · point 6 (« compte A ») : les CONVOQUÉS qui ont un compte, comme la carte.
  * @param {any} matchStats - La feuille, si elle est lue.
  * @returns {string} La phrase, ou une chaîne vide quand on ne sait pas.
  */
 export const describeResponsesCount = (matchStats) => {
-  const responses = Array.isArray(matchStats?.playerResponses) ? matchStats.playerResponses : null;
+  const responses = Array.isArray(matchStats?.playerResponses)
+    ? matchStats.playerResponses.filter(isAwaitedResponder)
+    : null;
   if (!responses || !responses.length) return '';
   const total = responses.length;
   const done = responses

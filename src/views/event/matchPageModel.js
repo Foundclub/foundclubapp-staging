@@ -174,17 +174,34 @@ export const resolveMatchStatsDoor = ({
 };
 
 /**
+ * 🧮 FINITIONS11 · points 4 et 6 — QUI EST ATTENDU après un match : un joueur CONVOQUÉ
+ * (« c oui » : `convoked === false` = hors convocation) qui a un COMPTE (un joueur ajouté à la
+ * main a `userDocumentId: null` : il ne peut ni répondre, ni être relancé). C'est LE compte
+ * de « N sur M ont répondu », partout (« compte A », Adel 03/10), et la règle de la relance.
+ * Un serveur d'avant ne marque ni l'un ni l'autre : tout le monde reste attendu.
+ * @param {any} item - Une ligne de `playerResponses`.
+ * @returns {boolean} Vrai si le joueur a un compte (ou si le serveur ne le dit pas).
+ */
+export const hasResponderAccount = (item) => !(
+  item && 'userDocumentId' in item && !item.userDocumentId
+);
+
+/**
+ * La règle d'attente (voir plus haut) : convoqué, et un compte.
+ * @param {any} item - Une ligne de `playerResponses`.
+ * @returns {boolean} Vrai si sa réponse est attendue.
+ */
+export const isAwaitedResponder = (item) => item?.convoked !== false && hasResponderAccount(item);
+
+/**
  * 🔔 FINITIONS11 · point 4 (écran 7) — CEUX QUE LE SERVEUR RELANCERA, et eux seuls
- * (`remindEventMissingResponses`) : pas de réponse envoyée, CONVOQUÉ (« c oui » :
- * `convoked === false` = hors convocation) et avec un COMPTE (un joueur ajouté à la main a
- * `userDocumentId: null`). Un serveur d'avant ne marque ni l'un ni l'autre : tous restent.
+ * (`remindEventMissingResponses`) : attendus, et sans réponse envoyée.
  * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
  * @returns {any[]} Les réponses attendues et pas encore envoyées.
  */
-const listResponsesToRemind = (playerResponses) => (Array.isArray(playerResponses) ? playerResponses : [])
-  .filter((/** @type {any} */ item) => item?.status !== 'submitted'
-    && item?.convoked !== false
-    && !(item && 'userDocumentId' in item && !item.userDocumentId));
+const listResponsesToRemind = (playerResponses) => (
+  Array.isArray(playerResponses) ? playerResponses : []
+).filter((/** @type {any} */ item) => item?.status !== 'submitted' && isAwaitedResponder(item));
 
 /**
  * 🔔 FINITIONS11 · point 4 — « Relancer les N » : N = ceux que le serveur relancera (la liste
@@ -192,7 +209,9 @@ const listResponsesToRemind = (playerResponses) => (Array.isArray(playerResponse
  * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
  * @returns {number} Le nombre de joueurs à relancer.
  */
-export const countPlayersToRemind = (playerResponses) => listResponsesToRemind(playerResponses).length;
+export const countPlayersToRemind = (playerResponses) => (
+  listResponsesToRemind(playerResponses).length
+);
 
 /**
  * 🎯 ST-MATCH (écran 7, amélioration 3) — l'étape 3 NOMME qui manque : 5 prénoms au plus,
