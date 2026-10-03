@@ -5548,6 +5548,13 @@ export default {
       nomDu: 'Ville du {{nom}}',
       nomElide: 'Ville d’{{nom}}',
     },
+    fenetres: {
+      chaqueClub: 'Chaque club rattaché, et ce qui change pour lui.',
+      colonneChange: 'Ce qui change',
+      colonneClub: 'Club rattaché',
+      paieDeja: 'Paie déjà : rien ne change',
+      recoit: 'Reçoit l’offre Club offerte',
+    },
     fiche: {
       depuis: 'Depuis le {{date}}',
     },

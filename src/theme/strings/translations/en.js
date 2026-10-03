@@ -5186,6 +5186,13 @@ export default {
       nomDu: 'Ville du {{nom}}',
       nomElide: 'Ville d’{{nom}}',
     },
+    fenetres: {
+      chaqueClub: 'Each attached club, and what changes for it.',
+      colonneChange: 'What changes',
+      colonneClub: 'Attached club',
+      paieDeja: 'Already pays: nothing changes',
+      recoit: 'Gets the Club plan for free',
+    },
     fiche: {
       depuis: 'Since {{date}}',
     },
