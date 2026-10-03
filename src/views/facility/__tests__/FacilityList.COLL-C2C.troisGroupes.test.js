@@ -279,3 +279,28 @@ describe('COLL-C2C — Tes installations en 3 groupes', () => {
     expect(lus.some((texte) => /^(Au club|Tes créneaux de la Ville|À demander à la Ville)/.test(texte))).toBe(false);
   });
 });
+
+// 🚪 FINITIONS12-COLL (03/10) — point 4 : « TES DEMANDES À LA VILLE » N'AVAIT QU'UNE PORTE, l'accusé
+// d'envoi (tournée T11). Une porte PERMANENTE, là où le club demande à la Ville : « Tes
+// installations », que le dirigeant ouvre par Gérer mon club › Installations et l'entraîneur par
+// la page de son équipe › Installations. ROUGE avant le lot.
+describe('FINITIONS12-COLL point 4 — la porte permanente vers « Tes demandes à la Ville »', () => {
+  const lien = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.testID === 'facility-list-tes-demandes' && typeof n.props?.onPress === 'function'
+  ));
+
+  it('un club rattaché à une Ville : « Tes demandes à la Ville » ouvre ses demandes', () => {
+    const arbre = rendre();
+    expect(textes(arbre)).toContain('Tes demandes à la Ville');
+    act(() => { lien(arbre)[0].props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('ClubSlotRequests', { clubId: 'as-montrivage' });
+  });
+
+  it('sans installation de la Ville, ou en mode Ville : pas de porte', () => {
+    avecInstallations([SALLE]);
+    expect(lien(rendre())).toHaveLength(0);
+    avecInstallations([SALLE, GYMNASE, DOJO, STADE]);
+    mockRoute = { params: { collectiviteId: 'ville-montrivage' } };
+    expect(lien(rendre())).toHaveLength(0);
+  });
+});

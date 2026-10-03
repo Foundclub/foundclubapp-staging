@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubSlotRequests from '../ClubSlotRequests';
@@ -35,7 +35,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
   useNavigation: () => ({ navigate: mockNavigate }),
-  useRoute: () => ({ params: {} }),
+  useRoute: () => ({ params: mockRouteParams }),
 }));
 jest.mock('react-i18next', () => {
   const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
@@ -130,6 +130,8 @@ const JOUR = format(new Date(EN_ATTENTE.requestedStart), 'EEE d MMM', { locale: 
 const MOMENT = `${JOUR.charAt(0).toUpperCase()}${JOUR.slice(1)}, ${heure(EN_ATTENTE.requestedStart)} – ${heure(EN_ATTENTE.requestedEnd)}`;
 
 let mockLignes = [EN_ATTENTE, ACCEPTEE, REFUSEE, SERIE];
+/** @type {Record<string, any>} */
+let mockRouteParams = {};
 
 const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
@@ -167,6 +169,7 @@ beforeEach(() => {
     fontScale: 1, height: 812, scale: 2, width: 375,
   };
   mockLignes = [EN_ATTENTE, ACCEPTEE, REFUSEE, SERIE];
+  mockRouteParams = {};
   mockGet.mockReset();
   mockNavigate.mockReset();
   mockGet.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ config) => {
@@ -223,5 +226,39 @@ describe('COLL-C3B — « Tes demandes à la Ville »', () => {
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'demandes-tableau').length).toBeGreaterThan(0);
     // eslint-disable-next-line max-len
     expect(textes(arbre)).toEqual(expect.arrayContaining(['Équipe', 'Installation', 'Moment', 'Réponse', 'Mot de la mairie']));
+  });
+});
+
+// 🚪 FINITIONS12-COLL (03/10) — point 4 : LA RÉPONSE DE LA VILLE OUVRE LA DEMANDE. Tournée T11 : la
+// notification de refus ouvrait l'entraînement annulé (écran rose). Le serveur envoie désormais
+// `ctaRoute: 'ClubSlotRequests'`, `ctaParams: { clubId, requestId }` (maquette P8v3-notifs,
+// état 2) ;
+// l'écran met CETTE demande en tête, signalée, avec le refus et son motif. ROUGE avant le lot.
+describe('FINITIONS12-COLL point 4 — la réponse de la Ville ouvre la demande', () => {
+  it('la notification de refus mène ici, pas à l’entraînement annulé', () => {
+    // eslint-disable-next-line global-require, max-len
+    const { resolveNotificationDestination } = require('@/utils/notifications/notificationNavigation');
+    const destination = resolveNotificationDestination({
+      ctaParams: { clubId: 'club-A', requestId: 'rq-3' },
+      ctaRoute: 'ClubSlotRequests',
+      decision: 'refused',
+      eventId: 'ev-annule',
+      type: 'overbookingRequest',
+    });
+    expect(destination).toEqual({
+      params: { clubId: 'club-A', requestId: 'rq-3' },
+      route: 'ClubSlotRequests',
+    });
+  });
+
+  // eslint-disable-next-line max-len
+  it('ouverte sur une demande : celle-ci en tête, signalée, avec le refus et son motif', async () => {
+    mockRouteParams = { clubId: 'club-A', requestId: 'rq-3' };
+    const arbre = await monter((l) => l.includes('Refusée'));
+    const cartes = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.testID === 'string'
+      && n.props.testID.startsWith('demande-envoyee-') && n.type === View);
+    expect(cartes[0].props.testID).toBe('demande-envoyee-ouverte');
+    const dans = textes({ root: cartes[0] });
+    expect(dans).toEqual(expect.arrayContaining(['Refusée', '« Gymnase complet le 8 octobre »']));
   });
 });
