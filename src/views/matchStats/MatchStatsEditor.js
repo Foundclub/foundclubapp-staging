@@ -507,9 +507,22 @@ function MatchStatsEditor({ navigation, route }) {
     [scoreAgainst, scoreFor],
   );
 
-  const matchLabel = sourceType === 'league'
-    ? route?.params?.matchLabel || ''
-    : statsPayload?.event?.name || '';
+  // 📐 ST-MATCH10-BIS (point 1) — « AS Montrivage — Test-COMPO » : le serveur nomme
+  // l'adversaire (`event.opponentName`, `null` s'il est inconnu) et le club de l'équipe. Un
+  // serveur d'avant ne rend pas le champ : le nom de l'événement reste.
+  const opponentName = statsPayload?.event?.opponentName || '';
+  const serverNamesOpponent = sourceType === 'event'
+    && Object.prototype.hasOwnProperty.call(statsPayload?.event || {}, 'opponentName');
+  const ourSide = statsPayload?.team?.clubName || teamName;
+  let matchLabel = statsPayload?.event?.name || '';
+  if (sourceType === 'league') {
+    matchLabel = route?.params?.matchLabel || '';
+  } else if (serverNamesOpponent && ourSide) {
+    matchLabel = [
+      ourSide,
+      opponentName || t('stMatch.feuille.opponentUnknown', 'adversaire à confirmer'),
+    ].join(' — ');
+  }
 
   // H9 — UNE SEULE LISTE DE CLES, PARTAGEE AVEC L ECRAN JOUEUR.
   // Cet ecran tenait sa propre liste, `PlayerMatchResponseScreen` la sienne, et
@@ -946,8 +959,8 @@ function MatchStatsEditor({ navigation, route }) {
       waitingOfficial: isWaitingOfficial,
     }).authorLine
     : null;
-  const ourTeam = teamName || t('stMatch.score.us', 'Mon équipe');
-  const theOpponent = t('stMatch.score.opponent', 'Adversaire');
+  const ourTeam = ourSide || t('stMatch.score.us', 'Mon équipe');
+  const theOpponent = opponentName || t('stMatch.score.opponent', 'Adversaire');
   const scoreDisabled = isScoreLocked || isReadOnly;
 
   const renderScoreAndReview = () => {
@@ -1019,10 +1032,12 @@ function MatchStatsEditor({ navigation, route }) {
           <Compteur
             desactive={scoreDisabled}
             descriptionMoins={t('stMatch.score.minus', 'Un but de moins pour {{team}}', {
-              team: t('stMatch.score.theOpponent', 'l’adversaire'), ...SANS_ECHAPPEMENT,
+              team: opponentName || t('stMatch.score.theOpponent', 'l’adversaire'),
+              ...SANS_ECHAPPEMENT,
             })}
             descriptionPlus={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
-              team: t('stMatch.score.theOpponent', 'l’adversaire'), ...SANS_ECHAPPEMENT,
+              team: opponentName || t('stMatch.score.theOpponent', 'l’adversaire'),
+              ...SANS_ECHAPPEMENT,
             })}
             grand
             libelle={theOpponent}

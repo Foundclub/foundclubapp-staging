@@ -17380,6 +17380,7 @@ export default {
       noShowText: 'Ils ne comptent pas dans la feuille tant que l’appel n’est pas corrigé.',
       noShowTitle: 'Non pointés à l’appel',
       officialLock: 'Score officiel de la fédération',
+      opponentUnknown: 'adversaire à confirmer',
       playersRatingHidden: 'Les joueurs : dès 3 réponses',
       // eslint-disable-next-line max-len
       privacyPlayer: 'Lu par {{name}} et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',

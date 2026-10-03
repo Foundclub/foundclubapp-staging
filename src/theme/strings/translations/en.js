@@ -16592,6 +16592,7 @@ export default {
       noShowText: "They don't count on the sheet until the roll call is corrected.",
       noShowTitle: 'Not checked in at roll call',
       officialLock: 'Official federation score',
+      opponentUnknown: 'opponent to be confirmed',
       playersRatingHidden: 'Players: from 3 answers',
       privacyPlayer: 'Read by {{name}} and, if a minor, their parents. Never by their teammates.',
       privateComment: 'Private comment for this player',

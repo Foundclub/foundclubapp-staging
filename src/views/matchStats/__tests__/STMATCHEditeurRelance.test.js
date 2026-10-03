@@ -767,3 +767,49 @@ describe('ST-MATCH10 — la feuille de match sur ordinateur (3 colonnes)', () =>
     expect(textes(racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0])).toEqual(['Modifier']);
   });
 });
+
+// ==========================================================================
+// 📐 ST-MATCH10-BIS (03/10) — LES 7 MANQUES DE L'ÉCRAN 10, un par un.
+// ==========================================================================
+describe('ST-MATCH10-BIS · 1 — l adversaire nommé (le serveur le rend avec la feuille)', () => {
+  // Le vrai nom d'un match en base : « Match vs Test-COMPO » (event-display-name.js).
+  const nommee = (/** @type {any} */ adversaire = 'Test-COMPO', /** @type {any} */ rapport = {}) => feuilleU15(rapport, {
+    event: {
+      date: '2026-09-05T15:00:00.000Z', documentId: 'event-1', name: 'Match vs Test-COMPO', opponentName: adversaire,
+    },
+    team: { clubName: 'AS Montrivage', documentId: 'team-1', name: 'U15' },
+  });
+
+  test('Téléphone : « AS Montrivage — Test-COMPO », et chaque compteur porte le nom de son camp', async () => {
+    const racine = await monter(nommee());
+    const vus = textes(racine);
+
+    expect(vus).toEqual(expect.arrayContaining(['AS Montrivage — Test-COMPO', 'AS Montrivage', 'Test-COMPO', 'U15 · 1 sur 1 a répondu']));
+    expect(vus).not.toContain('Adversaire');
+    expect(parDescription(racine, 'Un but de plus pour Test-COMPO')).not.toHaveLength(0);
+    expect(parDescription(racine, 'Un but de plus pour AS Montrivage')).not.toHaveLength(0);
+  });
+
+  test('Ordinateur : le sous-titre dit le match, l équipe et le jour', async () => {
+    const racine = await monter(nommee(), { desktop: true });
+    expect(textes(racine).some((texte) => /^AS Montrivage — Test-COMPO · U15 · .*5.*$/.test(texte))).toBe(true);
+  });
+
+  test('Adversaire inconnu : « adversaire à confirmer » (planche, état 10), jamais un nom vide', async () => {
+    const racine = await monter(nommee(null));
+    const vus = textes(racine);
+
+    expect(vus).toContain('AS Montrivage — adversaire à confirmer');
+    expect(vus).toContain('Adversaire');
+  });
+
+  test('Publiée : le bilan nomme les deux camps', async () => {
+    const racine = await monter(nommee('Test-COMPO', { finalizedAt: '2026-10-01T20:39:00.000Z', status: 'final' }));
+    expect(textes(racine)).toEqual(expect.arrayContaining(['AS Montrivage', '2 - 1', 'Test-COMPO']));
+  });
+
+  test('Serveur d avant (pas de champ) : le nom de l événement reste', async () => {
+    const racine = await monter(feuilleU15());
+    expect(textes(racine)).toContain('AS Montrivage — Test-COMPO');
+  });
+});
