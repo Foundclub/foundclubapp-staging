@@ -1574,6 +1574,26 @@ function EventDetails({ navigation, route }) {
     ...teamParticipationSections,
     ...(externalParticipationSection ? [externalParticipationSection] : []),
   ];
+  // 🔢 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur) — les trois tuiles de la colonne de
+  // gauche (« 14 Présent·e·s · 2 Absent·e·s · 0 Sans réponse ») comptent les MÊMES listes que
+  // celles affichées plus bas : aucune lecture neuve, aucune règle de plus.
+  const participantTotals = participantSections.reduce((totaux, section) => ({
+    missing: totaux.missing + (section.missing?.length || 0),
+    notAnswered: totaux.notAnswered + (section.notAnswered?.length || 0),
+    participating: totaux.participating + (section.participating?.length || 0),
+  }), { missing: 0, notAnswered: 0, participating: 0 });
+  const showTrainingParticipants = Boolean(
+    trainingOpenConfig.isTraining && canViewParticipantNames && participantSections.length > 0,
+  );
+  // Le petit titre des cartes de la colonne de gauche (« Participants », « Description »).
+  const miniTitreStyle = {
+    color: mutedTextColor,
+    fontFamily: 'Montserrat-Bold, sans-serif',
+    fontSize: 13,
+  };
+  const trainingDescription = trainingOpenConfig.isTraining
+    ? String(event?.description || '').trim()
+    : '';
   // 🔢 « Joueurs attendus » DIT LE NOMBRE DE L APPEL. Il affichait
   // `event.totalPlayers`, un champ de saisie qui vaut 0 par defaut au schema :
   // « 0 » a cote de « 15 attendus ». Quand l evenement a des equipes, on prend
@@ -2067,7 +2087,9 @@ function EventDetails({ navigation, route }) {
                     ) : null}
                   </div>
 
-                  {String(event?.description || '').trim() ? (
+                  {/* ST-VUES3-ORDI · point 6 — la description d'un entraînement a sa carte, à
+                      gauche (écran 21) : elle ne s'écrit plus aussi dans l'en-tête. */}
+                  {String(event?.description || '').trim() && !trainingOpenConfig.isTraining ? (
                     <p style={{
                       color: softTextColor, fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 840,
                     }}
@@ -2309,6 +2331,100 @@ function EventDetails({ navigation, route }) {
                   onPress={openAttendanceCall}
                   opensAtLabel={nextActionOpensAtLabel}
                 />
+              ) : null}
+
+              {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
+                  ordinateur ») — LA SÉANCE À GAUCHE : la carte « Participants » et ses trois
+                  tuiles, puis la « Description ». Les avis sont à droite (ST-RETOURS2). Mêmes
+                  portes que la liste : des noms visibles et des équipes. */}
+              {showTrainingParticipants ? (
+                <div
+                  data-event-section="training-participants"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 12,
+                    padding: 16,
+                  }}
+                >
+                  <span style={miniTitreStyle}>
+                    {t('eventDetails.participants', 'Participants')}
+                  </span>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 8,
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    }}
+                  >
+                    {[
+                      {
+                        cle: 'participating',
+                        couleur: Colors?.success200 || '#8ae9cd',
+                        libelle: t('eventDetails.participationStatus.participating', 'Présent·e·s'),
+                        valeur: participantTotals.participating,
+                      },
+                      {
+                        cle: 'missing',
+                        couleur: textColor,
+                        libelle: t('eventDetails.participationStatus.missing', 'Absent·e·s'),
+                        valeur: participantTotals.missing,
+                      },
+                      {
+                        cle: 'notAnswered',
+                        couleur: textColor,
+                        libelle: libelleSansReponse,
+                        valeur: participantTotals.notAnswered,
+                      },
+                    ].map((tuile) => (
+                      <div
+                        key={tuile.cle}
+                        style={{
+                          background: 'rgba(23, 56, 68, 0.5)',
+                          border: `1px solid ${borderColor}`,
+                          borderRadius: 16,
+                          display: 'grid',
+                          gap: 2,
+                          minWidth: 0,
+                          padding: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: tuile.couleur,
+                            fontFamily: 'Montserrat-Black, sans-serif',
+                            fontSize: 24,
+                          }}
+                        >
+                          {tuile.valeur}
+                        </span>
+                        <span style={{ color: mutedTextColor, fontSize: 12 }}>{tuile.libelle}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {trainingDescription ? (
+                <div
+                  data-event-section="training-description"
+                  style={{
+                    background: softSurfaceColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 16,
+                    display: 'grid',
+                    gap: 8,
+                    padding: 16,
+                  }}
+                >
+                  <span style={miniTitreStyle}>
+                    {t('eventDetails.fields.description', 'Description')}
+                  </span>
+                  <p style={{ color: softTextColor, fontSize: 15, lineHeight: 1.6, margin: 0 }}>
+                    {trainingDescription}
+                  </p>
+                </div>
               ) : null}
 
               {hasVisibleEventTasks ? (

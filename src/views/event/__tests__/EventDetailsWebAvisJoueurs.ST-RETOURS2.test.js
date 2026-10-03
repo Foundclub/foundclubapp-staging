@@ -395,3 +395,50 @@ describe('ST-RETOURS2 · point 1 — « Avis des joueurs » sur la fiche d’un 
     expect(mockAppelsMaNote.mock.calls.some(([id]) => Boolean(id))).toBe(false);
   });
 });
+
+// ==========================================================================
+// ST-VUES3-ORDI · POINT 6 (décidé par le chef, 03/10) — ÉCRAN 21 SUR ORDINATEUR, LA COLONNE
+// DE GAUCHE de la planche (parcours 6, « Avis des joueurs — ordinateur ») : la carte
+// « Participants » et ses trois tuiles (« 14 Présent·e·s · 2 Absent·e·s · 0 Sans réponse »),
+// puis la carte « Description ». ST-RETOURS2 avait posé les avis à DROITE, pas la gauche.
+// Les nombres sont CEUX de la liste des participants du site (`buildTeamParticipationSections`,
+// la règle du téléphone) : aucune lecture neuve.
+// ==========================================================================
+describe('ST-VUES3-ORDI · point 6 — la colonne de gauche d un entraînement, sur le site', () => {
+  const LEA = { documentId: 'joueur-2', firstname: 'Léa', lastname: 'Martin' };
+  const MAX = { documentId: 'joueur-3', firstname: 'Max', lastname: 'Petit' };
+  const SEANCE = buildTraining({
+    description: 'Atelier de passes, puis jeu réduit.',
+    missings: [MAX],
+    participations: [JOUEUR, LEA],
+    team: { ...buildTraining().team, players: [JOUEUR, LEA, MAX] },
+  });
+  const occurrences = (/** @type {string} */ texte, /** @type {string} */ motif) => texte
+    .split(motif).length - 1;
+
+  test('🔴 la carte « Participants » : les trois tuiles, avec les nombres de la liste', () => {
+    const arbre = monter({ event: SEANCE });
+    const cartes = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.['data-event-section'] === 'training-participants'
+    ));
+
+    expect(cartes).toHaveLength(1);
+    // Séance terminée : « Sans réponse » devient « Pas renseigné » (FINITIONS4, D6), comme la liste.
+    expect(texteRendu(arbre)).toContain('Participants 2 Présent·e·s 1 Absent·e·s 0 Pas renseigné');
+  });
+
+  test('🔴 la carte « Description » est à gauche, et la description ne s écrit qu une fois', () => {
+    const texte = texteRendu(monter({ event: SEANCE }));
+
+    expect(texte).toContain('Description Atelier de passes, puis jeu réduit.');
+    expect(occurrences(texte, 'Atelier de passes, puis jeu réduit.')).toBe(1);
+  });
+
+  test('protégé : un match n a pas ces cartes (sa colonne de gauche est l encart du score)', () => {
+    const texte = texteRendu(monter({
+      event: { ...SEANCE, type: { name: 'Match' } },
+    }));
+
+    expect(texte).not.toContain('Participants 2 Présent·e·s');
+  });
+});
