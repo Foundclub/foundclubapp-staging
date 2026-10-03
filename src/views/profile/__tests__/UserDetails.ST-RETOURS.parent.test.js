@@ -1,3 +1,4 @@
+import { CommonActions, StackActions, StackRouter } from '@react-navigation/routers';
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -29,6 +30,7 @@ let mockStatsQuery;
 let mockFollow;
 const mockMarquerLu = jest.fn();
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 const mockRelire = jest.fn();
 
 jest.mock('@/services/userBlock/userBlockQueries', () => ({
@@ -200,9 +202,14 @@ const montes = [];
  * Monte l ecran de la route pour ce compte, avec ces parametres.
  * @param {any} moi
  * @param {any} parametres
+ * @param {any} [navigation] La navigation donnee a l ecran (par defaut : des doublures).
  * @returns {Promise<any>}
  */
-const rendre = async (moi, parametres) => {
+const rendre = async (
+  moi,
+  parametres,
+  navigation = { goBack: jest.fn(), navigate: mockNavigate, push: mockPush },
+) => {
   mockAuthValue = {
     refetchUserData: jest.fn(),
     USER_ROLES: {
@@ -219,7 +226,7 @@ const rendre = async (moi, parametres) => {
   await act(async () => {
     arbre = renderer.create(
       <UserDetails
-        navigation={/** @type {any} */ ({ goBack: jest.fn(), navigate: mockNavigate })}
+        navigation={/** @type {any} */ (navigation)}
         route={/** @type {any} */ ({ params: parametres })}
       />,
     );
@@ -325,7 +332,8 @@ describe('ST-RETOURS · planche 22 — la fiche de l enfant, vue par son parent'
     await act(async () => {
       appuyable(arbre, 'Tous ses retours · 2').props.onPress();
     });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.UserDetails, {
+    // FINITIONS12-STATS (2) : la vue est EMPILEE (`push`) ; `navigate` remplacait la fiche.
+    expect(mockPush).toHaveBeenCalledWith(RouteNames.UserDetails, {
       userId: 'hugo',
       view: 'coachFeedback',
     });
@@ -633,5 +641,66 @@ describe('ST-RETOURS2 · point 3 — l en-tete centre de la fiche de son enfant'
     expect(carteDIdentite(arbre)).toBeUndefined();
     expect(enTete(texte(arbre))).toContain('BLASON');
     expect(texte(arbre)).not.toContain('Mon enfant');
+  });
+});
+
+// FINITIONS12-STATS · POINT 2 (tournee T11) — chez Papa Test : Mes enfants › Hugo › Tous ses
+// retours, puis Retour ⇒ on arrivait a « Mes enfants » au lieu de la fiche de Hugo. La cause,
+// lue dans le VRAI routeur (`@react-navigation/routers` 7.5, StackRouter, cas 'NAVIGATE') :
+// `navigate` vers l ecran deja affiche (« If the route matches the current one, then navigate
+// to it ») REMPLACE ses parametres au lieu d empiler une page. La fiche devenait la vue des
+// retours ; Retour depilait donc la seule page qui restait.
+/**
+ * Une pile de navigation sur le VRAI routeur de React Navigation : chaque geste de l ecran
+ * passe par lui, comme dans l app ; le temoin lit la pile qui en sort.
+ * @param {Array<{ name: string, params?: any }>} routes La pile de depart.
+ * @returns {any} La navigation de l ecran, et `etat` : la pile courante.
+ */
+const pileReelle = (routes) => {
+  const routeur = StackRouter({});
+  const options = {
+    routeGetIdList: {},
+    routeNames: [RouteNames.MyChildren, RouteNames.UserDetails],
+    routeParamList: {},
+  };
+  /** @type {any} */
+  let etat = routeur.getRehydratedState(/** @type {any} */ ({ routes }), options);
+  const jouer = (/** @type {any} */ action) => {
+    etat = routeur.getStateForAction(etat, action, options) || etat;
+  };
+  return {
+    get etat() { return etat; },
+    goBack: () => jouer(CommonActions.goBack()),
+    navigate: (/** @type {string} */ nom, /** @type {any} */ p) => (
+      jouer(CommonActions.navigate(nom, p))
+    ),
+    push: (/** @type {string} */ nom, /** @type {any} */ p) => jouer(StackActions.push(nom, p)),
+  };
+};
+
+describe('FINITIONS12-STATS · point 2 — Retour depuis les retours du coach', () => {
+  beforeEach(() => {
+    mockFetchedUser = HUGO_VU_PAR_PAPA;
+  });
+
+  it('🔴 la vue s EMPILE : Retour ramene a la fiche de Hugo, pas a « Mes enfants »', async () => {
+    const pile = pileReelle([
+      { name: RouteNames.MyChildren },
+      { name: RouteNames.UserDetails, params: FICHE_DE_HUGO },
+    ]);
+    const arbre = await rendre(PAPA, FICHE_DE_HUGO, pile);
+
+    await act(async () => {
+      appuyable(arbre, 'Tous ses retours · 2').props.onPress();
+    });
+    expect(pile.etat.routes.map((/** @type {any} */ r) => [r.name, r.params])).toEqual([
+      [RouteNames.MyChildren, undefined],
+      [RouteNames.UserDetails, FICHE_DE_HUGO],
+      [RouteNames.UserDetails, { userId: 'hugo', view: 'coachFeedback' }],
+    ]);
+
+    pile.goBack();
+    const page = pile.etat.routes[pile.etat.index];
+    expect([page.name, page.params]).toEqual([RouteNames.UserDetails, FICHE_DE_HUGO]);
   });
 });

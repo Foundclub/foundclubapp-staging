@@ -33,6 +33,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 // eslint-disable-next-line max-len
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -687,7 +688,7 @@ function SelfProfileUnified({ navigation }) {
             `isOwnerView` a faux. En inventer un second rouvrirait la fuite. */}
         <TouchableOpacity
           accessibilityRole="button"
-          onPress={() => navigation.navigate(RouteNames.UserDetails, {
+          onPress={() => ouvrirUneVueDuProfil(navigation, {
             preview: true,
             userId: userData?.documentId || userData?.id,
           })}

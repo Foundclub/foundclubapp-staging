@@ -35,6 +35,7 @@ import UserDetails from '../UserDetails';
 /** @type {any} */
 let mockAuthValue;
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 
 // BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
 // bloquees. Ce module-la importe le client HTTP, qui refuse de se charger sans
@@ -390,7 +391,7 @@ const rendre = async (utilisateurCourant, parametresRoute = {}) => {
   await act(async () => {
     arbre = renderer.create(
       <UserDetails
-        navigation={/** @type {any} */ ({ navigate: mockNavigate })}
+        navigation={/** @type {any} */ ({ navigate: mockNavigate, push: mockPush })}
         route={/** @type {any} */ ({ params: parametresRoute })}
       />,
     );
@@ -418,7 +419,8 @@ describe('D65 · temoin 4 — un DIRIGEANT peut se relire comme les autres le vo
       bouton.props.onPress();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('UserDetails', {
+    // FINITIONS12-STATS (2) : l apercu s EMPILE sur « Mon profil » (Retour y ramene).
+    expect(mockPush).toHaveBeenCalledWith('UserDetails', {
       preview: true,
       userId: 'user-1',
     });
@@ -433,7 +435,7 @@ describe('D65 · temoin 4 — un DIRIGEANT peut se relire comme les autres le vo
       pressablePortant(arbre, LIBELLE_APERCU).props.onPress();
     });
 
-    const [, parametres] = mockNavigate.mock.calls[0];
+    const [, parametres] = mockPush.mock.calls[0];
     expect(parametres.preview).toBe(true);
     expect(Object.keys(parametres).sort()).toEqual(['preview', 'userId']);
   });
