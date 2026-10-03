@@ -5572,6 +5572,8 @@ export default {
       posee: 'Your training will be set right away.',
       poser: 'Set the training',
       quiDecideDirigeant: 'Your club manager accepts or refuses; you get the answer as a notification.',
+      // FINITIONS11-COLL (03/10) — Adel's decision "deplacer A": a session moved outside the slot.
+      siRefusAnnulee: 'If the town hall refuses, the session will be cancelled.',
     },
     erreur: {
       titre: 'The requests could not be loaded.',

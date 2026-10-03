@@ -41,6 +41,7 @@ import {
   useGetEventTypes,
 } from '@/services/event/eventQueries';
 import { createEvent, updateEvent } from '@/services/event/eventService';
+import { useMairieDecideDuDeplacement } from '@/services/seasonSlot/seasonSlotQueries';
 import { getTeams } from '@/services/team/teamService';
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
@@ -682,6 +683,23 @@ function EventEdit({ navigation, route }) {
     || null;
   const clubId = initialSelectedTeam?.club?.documentId || userData?.club?.documentId;
   const cmId = initialSelectedTeam?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.documentId;
+
+  // FINITIONS11-COLL (03/10, décision d'Adel « deplacer A ») — une séance DÉPLACÉE hors du créneau
+  // du club : la mairie décide, et si elle refuse, la séance est annulée. Le club le lit AVANT
+  // d'enregistrer, juste au-dessus du bouton. Le serveur juge (aperçu COLL-FIX2) ; rien ne bouge,
+  // rien n'est demandé.
+  const jourDuDeplacement = useMemo(() => {
+    const jour = parse(String(selectedDate || ''), 'dd/MM/yyyy', new Date());
+    return isValid(jour) ? format(jour, 'yyyy-MM-dd') : '';
+  }, [selectedDate]);
+  const laMairieDecide = useMairieDecideDuDeplacement(eventId ? event : null, {
+    club: clubId || null,
+    debut: selectedStartTime || '',
+    facilityId: selectedFacilityId || null,
+    fin: selectedEndTime || '',
+    jour: jourDuDeplacement,
+    team: selectedTeamId || null,
+  });
 
   // Fetch club teams for invited teams selection
   // R5 (b) — CET APPEL VIVAIT HORS DU CACHE, DONC IL REPARTAIT A CHAQUE
@@ -1806,6 +1824,31 @@ function EventEdit({ navigation, route }) {
                 {t(
                   'eventEdit.loading.description',
                   "Chargement de l'événement… Le bouton s'active dès que tout est affiché.",
+                )}
+              </Text>
+            </View>
+          ) : null}
+          {laMairieDecide ? (
+            <View
+              style={[
+                Spaces.padding[16],
+                Spaces.gap[4],
+                ApplicationStyle.backgroundColor.warning100,
+                { borderColor: Colors.warning500, borderRadius: 8, borderWidth: 1 },
+              ]}
+              testID="event-edit-mairie-decide"
+            >
+              <Text style={[Fonts.p2, Fonts.warning900]}>
+                {t(
+                  'collectiviteDemandes.decision.mairieLibre',
+                  // eslint-disable-next-line max-len -- une phrase ne se coupe pas
+                  'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+                )}
+              </Text>
+              <Text style={[Fonts.p2Bold, Fonts.warning900]}>
+                {t(
+                  'collectiviteDemandes.decision.siRefusAnnulee',
+                  'Si la mairie refuse, la séance sera annulée.',
                 )}
               </Text>
             </View>

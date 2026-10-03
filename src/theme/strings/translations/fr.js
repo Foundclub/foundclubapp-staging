@@ -5946,6 +5946,8 @@ export default {
       posee: 'Ton entraînement sera posé tout de suite.',
       poser: 'Poser l’entraînement',
       quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
+      // FINITIONS11-COLL (03/10) — « deplacer A » : une séance déplacée hors créneau.
+      siRefusAnnulee: 'Si la mairie refuse, la séance sera annulée.',
     },
     erreur: {
       titre: 'Les demandes n’ont pas pu être lues.',

@@ -210,6 +210,11 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMyMatchResponse: () => requeteVide(),
 }));
 
+// FINITIONS11-COLL (03/10) : le juge du déplacement (aperçu au nom du club) lit le serveur ; ici,
+// il ne dit jamais « mairie » (la phrase a son témoin : EventEditFIN11COLL).
+jest.mock('@/services/seasonSlot/seasonSlotQueries', () => ({
+  useMairieDecideDuDeplacement: () => false,
+}));
 jest.mock('@/services/event/eventService', () => ({
   approveFeatured: jest.fn(),
   createEvent: jest.fn(() => Promise.resolve({})),
