@@ -896,6 +896,27 @@ function MatchStatsEditor({ navigation, route }) {
     && !playersAverage?.hidden
     && Number(playersAverage?.count) >= MOYENNE_MIN_REPONSES;
 
+  // ── Les libellés de la barre d'action (repris par l'alerte unique) ──
+  const republish = isReviewRequired || isEditingPublished;
+  const showsDraftButton = !isReviewRequired && !isEditingPublished;
+  let publishLabel = ordinateur
+    ? t('stMatch.feuille.publishLong', 'Publier la feuille')
+    : t('stMatch.feuille.publish', 'Publier');
+  if (republish) publishLabel = t('stMatch.feuille.republish', 'Republier');
+  const draftLabel = ordinateur
+    ? t('stMatch.feuille.saveDraftLong', 'Enregistrer le brouillon')
+    : t('stMatch.feuille.saveDraft', 'Brouillon');
+  // 📐 ST-MATCH10-BIS (point 4, « brouillon A », tranché par le chef) : le serveur refuse un
+  // brouillon incohérent (`assertMatchStatsConsistency`) ; « Brouillon » s'éteint donc avec
+  // « Publier », et l'alerte unique le DIT (un bouton éteint sans raison est un bouton cassé).
+  const waitsForFixLine = showsDraftButton
+    ? t('stMatch.feuille.waitsForFixBoth', '« {{draft}} » et « {{publish}} » attendent la correction.', {
+      draft: draftLabel, publish: publishLabel, ...SANS_ECHAPPEMENT,
+    })
+    : t('stMatch.feuille.waitsForFixOne', '« {{publish}} » attend la correction.', {
+      publish: publishLabel, ...SANS_ECHAPPEMENT,
+    });
+
   // ── Les alertes, en haut, une de chaque au plus ──
   const savedReportScore = statsPayload?.report
     && Number.isFinite(Number(statsPayload.report.scoreFor))
@@ -925,7 +946,7 @@ function MatchStatsEditor({ navigation, route }) {
       ) : null}
       {hasConsistencyIssues && !isReadOnly ? (
         <AlerteFeuille
-          lignes={corrections.map((correction) => correction.texte)}
+          lignes={[...corrections.map((correction) => correction.texte), waitsForFixLine]}
           titre={t('stMatch.feuille.corrections', {
             count: corrections.length,
             defaultValue_one: '{{count}} correction',
@@ -1368,7 +1389,6 @@ function MatchStatsEditor({ navigation, route }) {
 
   // ── La barre d'action collante (amélioration 4) ──
   const isBusy = saveDraftMutation.isPending || submitMutation.isPending;
-  const republish = isReviewRequired || isEditingPublished;
   let actions = null;
   if (isReady) {
     if (isReadOnly) {
@@ -1387,12 +1407,7 @@ function MatchStatsEditor({ navigation, route }) {
             disabled={hasConsistencyIssues || isBusy}
             isLoading={submitMutation.isPending}
             onPress={handleSubmit}
-            title={(() => {
-              if (republish) return t('stMatch.feuille.republish', 'Republier');
-              return ordinateur
-                ? t('stMatch.feuille.publishLong', 'Publier la feuille')
-                : t('stMatch.feuille.publish', 'Publier');
-            })()}
+            title={publishLabel}
             variant="Primary"
           />
         </View>
@@ -1408,16 +1423,14 @@ function MatchStatsEditor({ navigation, route }) {
             />
           </View>
         );
-      } else if (!isReviewRequired) {
+      } else if (showsDraftButton) {
         secondButton = (
           <View style={Alignments.fill}>
             <Button
               disabled={hasConsistencyIssues || isBusy}
               isLoading={saveDraftMutation.isPending}
               onPress={handleSaveDraft}
-              title={ordinateur
-                ? t('stMatch.feuille.saveDraftLong', 'Enregistrer le brouillon')
-                : t('stMatch.feuille.saveDraft', 'Brouillon')}
+              title={draftLabel}
               variant="Secondary"
             />
           </View>

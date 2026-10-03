@@ -16647,6 +16647,8 @@ export default {
       },
       title: 'Match sheet',
       validate: 'Done',
+      waitsForFixBoth: '“{{draft}}” and “{{publish}}” wait for the fix.',
+      waitsForFixOne: '“{{publish}}” waits for the fix.',
     },
     gerer: {
       managerWho: "Entered by the team's coach, {{name}}",

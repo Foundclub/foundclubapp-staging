@@ -17442,6 +17442,8 @@ export default {
       },
       title: 'Feuille de match',
       validate: 'Valider',
+      waitsForFixBoth: '« {{draft}} » et « {{publish}} » attendent la correction.',
+      waitsForFixOne: '« {{publish}} » attend la correction.',
     },
     gerer: {
       managerWho: 'Saisies par l’entraîneur de l’équipe, {{name}}',

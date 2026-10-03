@@ -901,3 +901,27 @@ describe('ST-MATCH10-BIS · 3 — « feuille convoqués A » : tout l effectif c
     expect(bouton(racine, 'Relancer les 9')).toBeTruthy();
   });
 });
+
+describe('ST-MATCH10-BIS · 4 — « brouillon A » : « Brouillon » éteint pendant une incohérence, et l alerte le dit', () => {
+  test('L alerte unique dit que les deux boutons attendent la correction ; aucun appui ne part', async () => {
+    const donnees = feuilleU15({
+      playerLines: [{ ...LIGNE_VIDE_HUGO, minutesPlayed: 90, sportPayload: { ...LIGNE_VIDE_HUGO.sportPayload, goals: 3 } }],
+    }, { availablePlayers: [HUGO] });
+    const racine = await monter(donnees);
+    const [alerte] = hotes(racine, (n) => n.props.accessibilityRole === 'alert');
+
+    expect(textes(alerte)).toEqual([
+      '1 correction',
+      '3 buts saisis pour un score de 2. Vérifie Hugo Lemaire.',
+      '« Brouillon » et « Publier » attendent la correction.',
+    ]);
+    expect(bouton(racine, 'Brouillon').props.disabled).toBe(true);
+    expect(bouton(racine, 'Publier').props.disabled).toBe(true);
+    expect(mockSaveDraft).not.toHaveBeenCalled();
+  });
+
+  test('Une feuille cohérente : la phrase n apparaît pas', async () => {
+    const racine = await monter(feuilleU15());
+    expect(textes(racine)).not.toContain('« Brouillon » et « Publier » attendent la correction.');
+  });
+});
