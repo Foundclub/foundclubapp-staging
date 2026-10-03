@@ -392,7 +392,7 @@ function PlanningWeekFullscreen() {
   // COLL-C2B (02/10) — ce que la mairie a ouvert : « attribuer », « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
   // COLL-C3B-BIS (planche 43) — la place que le club est en train de DEMANDER dans le panneau.
-  const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
+  const [brouillonDemande, setBrouillonDemande] = useState(/** @type {any} */ (null));
   // COLL-FIX-PLANNING (G4) — ces trois fenetres du bas s affichent par un PORTAIL pose AU-DESSUS
   // de la navigation : en quittant l ecran (Ecrire aux dirigeants, Modifier, une seance), elles
   // resteraient par-dessus l ecran suivant. Elles se ferment quand l ecran perd la main (« blur »).
@@ -420,26 +420,26 @@ function PlanningWeekFullscreen() {
   // COLL-C3B-BIS (planche 43, état A) — pendant la saisie dans le panneau, la place DEMANDÉE se
   // dessine dans la grille comme une demande en attente : pointillé orange, « U13 ? ».
   const evenementsAffiches = useMemo(() => {
-    if (!brouillon || brouillon.facilityId !== facilityId) return events;
-    const [annee, mois, jourDuMois] = String(brouillon.date).split('-').map(Number);
+    if (!brouillonDemande || brouillonDemande.facilityId !== facilityId) return events;
+    const [annee, mois, jourDuMois] = String(brouillonDemande.date).split('-').map(Number);
     const instant = (/** @type {string} */ heure) => {
       const [h, m] = String(heure).split(':').map(Number);
       return toParisIsoFromLocalSelection(new Date(annee, mois - 1, jourDuMois, h, m, 0, 0));
     };
-    const titre = `${brouillon.equipe || '…'} ?`;
+    const titre = `${brouillonDemande.equipe || '…'} ?`;
     const [place] = normalizePlanningItems([{
       brouillon: true,
       club: { documentId: userData?.club?.documentId || null, name: userData?.club?.name || '' },
       documentId: null,
-      endAt: instant(brouillon.endTime),
-      endTime: `${brouillon.endTime}:00.000`,
+      endAt: instant(brouillonDemande.endTime),
+      endTime: `${brouillonDemande.endTime}:00.000`,
       facility: { documentId: facilityId, name: contextDetailLabel },
       hasExplicitTime: true,
       kind: 'event',
       origin: 'request',
       pending: true,
-      startAt: instant(brouillon.startTime),
-      startTime: `${brouillon.startTime}:00.000`,
+      startAt: instant(brouillonDemande.startTime),
+      startTime: `${brouillonDemande.startTime}:00.000`,
       team: { name: titre },
       title: titre,
     }]);
@@ -449,7 +449,7 @@ function PlanningWeekFullscreen() {
       { ...place, displayColor: Colors.warning500, participationStatus: 'pending' },
     ];
   }, [
-    brouillon, Colors.warning500, contextDetailLabel, events, facilityId, userData?.club,
+    brouillonDemande, Colors.warning500, contextDetailLabel, events, facilityId, userData?.club,
   ]);
   const facilityPlanningSummary = useMemo(() => {
     if (!facilityId || !facilityMeta) return null;
@@ -894,6 +894,8 @@ function PlanningWeekFullscreen() {
     : null;
   const fermerPanneau = useCallback(() => {
     setPanneau(null);
+    setBrouillonDemande(null);
+    // Recolte 03/10 (COLL-C3B-BIS + COLL-C4B-BIS) : le brouillon de la fermeture s efface aussi.
     setBrouillon(null);
   }, []);
   const ouvrirUnBloc = (/** @type {any} */ bloc) => {
@@ -1355,7 +1357,7 @@ function PlanningWeekFullscreen() {
         enPanneau
         initial={panneau.initial}
         key={`demander-${panneau.initial?.date || ''}-${panneau.initial?.startTime || ''}`}
-        onBrouillon={setBrouillon}
+        onBrouillon={setBrouillonDemande}
         onFermer={fermerPanneau}
       />
     );
