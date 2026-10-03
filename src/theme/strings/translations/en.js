@@ -5351,6 +5351,13 @@ export default {
       retirerPerd: '{{qui}} loses {{jour}} {{heures}}, {{installation}}, from {{date}}.',
       retirerTitre: 'Withdraw the {{jour}} slot?',
     },
+    // COLL-C2B-BIS (03/10) — board 23, desktop: the typical week on an hour scale.
+    grille: {
+      caseVide: 'Assign {{jour}} at {{heure}}',
+      creux: 'No slot from {{debut}} to {{fin}}',
+      creuxApres: 'No slot after {{debut}}',
+      teinte: '{{jour}} shaded: full from {{debut}} to {{fin}}.',
+    },
     infos: {
       adresse: 'Address',
       capacite: 'Teams at a time',
@@ -5363,6 +5370,8 @@ export default {
       capacite_one: '{{count}} team at a time',
       capacite_other: '{{count}} teams at a time',
       complet: 'full {{moment}}',
+      // COLL-C2B-BIS (03/10) — board 21: the small "…" menu on desktop.
+      fermerMenu: 'Close the menu',
       modifier: 'Edit the facility',
       ouvrir: '{{nom}}: its slots and its schedule',
       plusActions: 'More actions for {{nom}}',
@@ -5370,6 +5379,13 @@ export default {
       semaine_one: 'This week: {{count}} session',
       semaine_other: 'This week: {{count}} sessions',
       surtitre: 'My local authority',
+    },
+    // COLL-C2B-BIS (03/10) — board 23: a slot's period, and the date of a withdrawal.
+    periode: {
+      au: 'To',
+      depuis: 'Since {{date}}: the slot has started, its start date no longer changes.',
+      du: 'From',
+      ordre: 'The end of the period must come after its start.',
     },
     planning: {
       aujourdhui: 'Today, {{jour}}',
@@ -5399,6 +5415,8 @@ export default {
     vues: {
       enAttente: 'Pending: {{qui}}',
       heureLibre: 'Free hour, {{jour}} {{heure}}: assign',
+      // COLL-C2B-BIS (03/10) — boards 24 and 29: a court's free hour, in Day view.
+      heureLibrePlateau: 'Free hour, {{plateau}}, {{jour}} {{heure}}: assign',
       jour: 'Day',
       joursPrecedents: 'Previous days',
       joursSuivants: 'Next days',

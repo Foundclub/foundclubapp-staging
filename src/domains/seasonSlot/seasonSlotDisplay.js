@@ -349,3 +349,108 @@ export const momentLabel = ({ end, start }) => (
   `${format(start, 'EEE', { locale: dateLocale() })} ${format(start, 'HH:mm')} – `
   + `${format(end, 'HH:mm')}`
 );
+
+// Deux plages separees d au plus 30 minutes restent dans la meme bande de la grille.
+const ECART_DANS_LA_BANDE = 30;
+
+/**
+ * Les plages horaires de creneaux, en minutes, lisibles et dans l ordre.
+ * @param {any[]} creneaux - Des creneaux (`startTime`, `endTime`).
+ * @returns {Array<{ creneau: any, debut: number, fin: number }>} Les plages.
+ */
+const plagesDe = (creneaux) => (Array.isArray(creneaux) ? creneaux : [])
+  .map((creneau) => ({
+    creneau,
+    debut: toMinutes(creneau?.startTime),
+    fin: toMinutes(creneau?.endTime),
+  }))
+  .filter((plage) => plage.debut !== null && plage.fin !== null && plage.fin > plage.debut)
+  .map((plage) => ({ creneau: plage.creneau, debut: Number(plage.debut), fin: Number(plage.fin) }))
+  .sort((a, b) => (a.debut - b.debut) || (a.fin - b.fin));
+
+/**
+ * 📐 COLL-C2B-BIS (03/10) — planche 23, ordinateur : LA SEMAINE TYPE A L ECHELLE DES HEURES (design
+ * P4v2-creneaux-ordi, etat A). Les heures ou un creneau existe, tous jours confondus, forment des
+ * BANDES a l echelle, avec leurs reperes (le debut, puis chaque heure pleine) ; entre elles, et
+ * avant ou apres si les horaires sont connus, une ligne REPLIEE (« Aucun creneau de 12:00 a
+ * 17:30 »).
+ * @param {any[]} creneaux - Les creneaux actifs de l installation.
+ * @param {{ fermeture?: number | null, ouverture?: number | null }} [bornes] - En minutes.
+ * @returns {Array<{ type: 'bande', debut: number, fin: number, reperes: number[] }
+ *   | { type: 'creux', debut: number, fin: number | null }>} Les lignes, de haut en bas.
+ */
+export const weekGridRows = (creneaux, { fermeture = null, ouverture = null } = {}) => {
+  const bandes = plagesDe(creneaux).reduce((
+    /** @type {Array<{ debut: number, fin: number }>} */ fusion,
+    plage,
+  ) => {
+    const derniere = fusion[fusion.length - 1];
+    if (derniere && plage.debut <= derniere.fin + ECART_DANS_LA_BANDE) {
+      derniere.fin = Math.max(derniere.fin, plage.fin);
+    } else {
+      fusion.push({ debut: plage.debut, fin: plage.fin });
+    }
+    return fusion;
+  }, []);
+  /** @type {any[]} */
+  const lignes = [];
+  bandes.forEach((bande, index) => {
+    const avant = index === 0 ? ouverture : bandes[index - 1].fin;
+    if (avant !== null && avant < bande.debut) {
+      lignes.push({ debut: avant, fin: bande.debut, type: 'creux' });
+    }
+    const reperes = [bande.debut];
+    for (let heure = (Math.floor(bande.debut / 60) + 1) * 60; heure < bande.fin; heure += 60) {
+      reperes.push(heure);
+    }
+    lignes.push({
+      debut: bande.debut, fin: bande.fin, reperes, type: 'bande',
+    });
+  });
+  const derniere = bandes[bandes.length - 1];
+  if (derniere && (fermeture === null || derniere.fin < fermeture)) {
+    lignes.push({ debut: derniere.fin, fin: fermeture, type: 'creux' });
+  }
+  return lignes;
+};
+
+/**
+ * Les creneaux d UN jour, cote a cote quand ils se chevauchent (le jeudi complet de la planche) :
+ * chaque grappe de creneaux qui se touchent partage sa largeur en `voies` ; un creneau prend la
+ * premiere voie libre a son debut.
+ * @param {any[]} creneaux - Les creneaux d un jour.
+ * @returns {Array<{ creneau: any, debut: number, fin: number, voie: number, voies: number }>}
+ *   Les creneaux places.
+ */
+export const weekGridLanes = (creneaux) => {
+  /** @type {Array<{ creneau: any, debut: number, fin: number, voie: number, voies: number }>} */
+  const places = [];
+  /** @type {Array<{ creneau: any, debut: number, fin: number }>} */
+  let grappe = [];
+  let finDeGrappe = -1;
+  const poserLaGrappe = () => {
+    /** @type {number[]} */
+    const voies = [];
+    const posees = grappe.map((plage) => {
+      let voie = voies.findIndex((fin) => fin <= plage.debut);
+      if (voie < 0) {
+        voie = voies.length;
+        voies.push(0);
+      }
+      voies[voie] = plage.fin;
+      return { ...plage, voie };
+    });
+    posees.forEach((plage) => places.push({ ...plage, voies: voies.length }));
+  };
+  plagesDe(creneaux).forEach((plage) => {
+    if (grappe.length && plage.debut >= finDeGrappe) {
+      poserLaGrappe();
+      grappe = [];
+      finDeGrappe = -1;
+    }
+    grappe.push(plage);
+    finDeGrappe = Math.max(finDeGrappe, plage.fin);
+  });
+  if (grappe.length) poserLaGrappe();
+  return places;
+};

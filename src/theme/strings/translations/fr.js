@@ -5715,6 +5715,13 @@ export default {
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
     },
+    // COLL-C2B-BIS (03/10) — planche 23, ordinateur : la semaine type à l'échelle des heures.
+    grille: {
+      caseVide: 'Attribuer le {{jour}} à {{heure}}',
+      creux: 'Aucun créneau de {{debut}} à {{fin}}',
+      creuxApres: 'Aucun créneau après {{debut}}',
+      teinte: '{{jour}} teinté : complet de {{debut}} à {{fin}}.',
+    },
     infos: {
       adresse: 'Adresse',
       capacite: 'Équipes à la fois',
@@ -5727,6 +5734,8 @@ export default {
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
       complet: 'complet {{moment}}',
+      // COLL-C2B-BIS (03/10) — planche 21 : le petit menu « … » sur ordinateur.
+      fermerMenu: 'Fermer le menu',
       modifier: 'Modifier l’installation',
       ouvrir: '{{nom}} : ses créneaux et son planning',
       plusActions: 'Plus d’actions pour {{nom}}',
@@ -5734,6 +5743,13 @@ export default {
       semaine_one: 'Cette semaine : {{count}} séance',
       semaine_other: 'Cette semaine : {{count}} séances',
       surtitre: 'Ma collectivité',
+    },
+    // COLL-C2B-BIS (03/10) — planche 23 : la période d'un créneau, et la date d'un retrait.
+    periode: {
+      au: 'Au',
+      depuis: 'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
+      du: 'Du',
+      ordre: 'La fin de la période doit suivre son début.',
     },
     planning: {
       aujourdhui: 'Aujourd’hui, {{jour}}',
@@ -5763,6 +5779,8 @@ export default {
     vues: {
       enAttente: 'En attente : {{qui}}',
       heureLibre: 'Heure libre, {{jour}} {{heure}} : attribuer',
+      // COLL-C2B-BIS (03/10) — planches 24 et 29 : l'heure libre d'un plateau, en vue Jour.
+      heureLibrePlateau: 'Heure libre, {{plateau}}, {{jour}} {{heure}} : attribuer',
       jour: 'Jour',
       joursPrecedents: 'Jours précédents',
       joursSuivants: 'Jours suivants',
