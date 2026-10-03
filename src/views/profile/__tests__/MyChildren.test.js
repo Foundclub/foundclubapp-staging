@@ -500,6 +500,35 @@ describe('ST-RETOURS — Mes enfants : le neuf, et le moins de 13 ans', () => {
 // la phrase d aide sans rien qui dise de quoi il s agissait.
 // ===========================================================================
 
+/** Les couleurs du theme, les memes que celles de la doublure de `useTheme`. */
+const COULEURS = jest.requireActual('@/theme/colors').default();
+
+/**
+ * Le style a plat d un noeud (les tableaux de styles fusionnes).
+ * @param {any} style - Le style.
+ * @returns {any} - Le style a plat.
+ */
+const styleAPlat = (style) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));
+
+/**
+ * Le noeud HOTE qui porte ce `testID` (celui qui recoit le style).
+ * @param {any} arbre - L arbre rendu.
+ * @param {string} testID - L etiquette.
+ * @returns {any} - Le noeud, ou undefined.
+ */
+const hote = (arbre, testID) => arbre.root
+  .findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === testID)[0];
+
+/**
+ * L element APPUYABLE qui porte ce `testID`.
+ * @param {any} arbre - L arbre rendu.
+ * @param {string} testID - L etiquette.
+ * @returns {any} - L element, ou undefined.
+ */
+const porteDe = (arbre, testID) => arbre.root.findAll((/** @type {any} */ n) => (
+  typeof n.props?.onPress === 'function' && n.props.testID === testID
+))[0];
+
 describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
   const HUGO = {
     age: 14, documentId: 'hugo', firstname: 'Hugo', lastname: 'Lemaire',
@@ -538,6 +567,42 @@ describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
     const texte = texteVisible(await rendre());
 
     expect(texte).toContain('Hugo Lemaire | 14 ans |');
+  });
+
+  // Point 2 ter — la planche : la carte de Hugo porte une fleche (plus le texte « Voir son
+  // profil », qui reste dit au lecteur d ecran) et son bord est VIF quand il y a du neuf.
+  test('🔴 point 2 ter — la carte de Hugo : une fleche, le bord VIF s il y a du neuf', async () => {
+    mockSuivi = {};
+    mockStatsParEnfant = {
+      hugo: {
+        recentCoachFeedback: [{ comment: 'Bien.', feedbackKey: 'event:m1:u15:v1', rating: 7 }],
+      },
+    };
+    const arbre = await rendre();
+    const carte = hote(arbre, 'linked-child-hugo');
+
+    expect(texteVisible(arbre)).not.toContain('Voir son profil');
+    expect(carte.findAll((/** @type {any} */ n) => n.props?.name === 'arrow-right').length)
+      .toBeGreaterThan(0);
+    expect(styleAPlat(carte.props.style).borderColor).toBe(COULEURS.primary500);
+    expect(porteDe(arbre, 'linked-child-hugo').props.accessibilityLabel)
+      .toBe('Hugo Lemaire, Voir son profil');
+    mockSuivi = undefined;
+    mockStatsParEnfant = {};
+  });
+
+  test('point 2 ter — tout est lu : le bord de la carte de Hugo redevient discret', async () => {
+    mockSuivi = { hugo: { seen: ['event:m1:u15:v1'] } };
+    mockStatsParEnfant = {
+      hugo: {
+        recentCoachFeedback: [{ comment: 'Bien.', feedbackKey: 'event:m1:u15:v1', rating: 7 }],
+      },
+    };
+    const carte = hote(await rendre(), 'linked-child-hugo');
+
+    expect(styleAPlat(carte.props.style).borderColor).not.toBe(COULEURS.primary500);
+    mockSuivi = undefined;
+    mockStatsParEnfant = {};
   });
 
   test('🔴 point 2 — sans fiche, la section garde son titre et dit qu il n y en a pas', async () => {
@@ -595,8 +660,11 @@ describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, et
   test('🔴 point 4 — la carte de Lea, dans « Mes enfants », ouvre SA page', async () => {
     const arbre = await rendre();
 
-    const porte = pressable(arbre, 'Voir sa fiche');
+    const porte = porteDe(arbre, 'declared-child-lea');
     expect(porte).toBeTruthy();
+    expect(porte.props.accessibilityLabel).toBe('Lea Test, Voir sa fiche');
+    expect(porte.findAll((/** @type {any} */ n) => n.props?.name === 'arrow-right').length)
+      .toBeGreaterThan(0);
     await act(async () => { porte.props.onPress(); });
     expect(mockPush).toHaveBeenCalledWith('MyChildren', { childDocumentId: 'lea' });
   });
@@ -644,7 +712,7 @@ describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, et
     mockEnfants = [unEnfant({ age: 15 })];
     const arbre = await rendre();
 
-    expect(pressable(arbre, 'Voir sa fiche')).toBeUndefined();
+    expect(porteDe(arbre, 'declared-child-enfant-1')).toBeUndefined();
   });
 });
 

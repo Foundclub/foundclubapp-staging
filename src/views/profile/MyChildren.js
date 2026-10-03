@@ -10,10 +10,11 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import Icone from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { NewPill } from '@/views/profile/coachFeedback/CoachFeedbackList';
+import { feedbackCardStyle, NewPill } from '@/views/profile/coachFeedback/CoachFeedbackList';
 import {
   newFeedbackKeys,
   seenFeedbackKeys,
@@ -40,60 +41,69 @@ import {
 import { parentalPowerForAge } from '@/constants/parentalDeclaration';
 
 /**
- * ST-RETOURS (02/10, planche 22 etat 1) — sur la carte d un enfant RELIE, les retours de son
- * entraineur que le parent n a pas encore lus. Le parent sait s il y a du neuf sans ouvrir.
- * Rien tant que « ce que j ai deja lu » n est pas arrive : on n annonce pas tout comme neuf.
- * @param {object} props - Les proprietes.
- * @param {string} props.childDocumentId - L enfant relie.
- * @param {any} props.follow - Ce que le parent a deja lu
- *   (`/firebase-auth/me/coach-feedback-follow`).
- * @returns {import('react').ReactElement | null} - La ligne, ou rien.
- */
-function NouveauxRetoursDeLEnfant({ childDocumentId, follow }) {
-  const { t } = useTranslation();
-  const { Alignments, Fonts } = useTheme();
-  const { data } = useGetPersonalStats(childDocumentId, { enabled: Boolean(childDocumentId) });
-  if (!follow) return null;
-  const retours = Array.isArray(data?.recentCoachFeedback) ? data.recentCoachFeedback : [];
-  const count = newFeedbackKeys(retours, seenFeedbackKeys(follow, childDocumentId)).size;
-  if (!count) return null;
-  return (
-    <View
-      style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
-      testID={`linked-child-new-feedback-${childDocumentId}`}
-    >
-      <NewPill label={t('stRetours.parent.newCount', { count })} />
-      <Text style={[Fonts.p3, Fonts.neutral200]}>
-        {t('stRetours.parent.newCountHint', { count })}
-      </Text>
-    </View>
-  );
-}
-
-/**
- * ST-RETOURS2 · point 2 bis (planche 22, etat 1) — sous le nom d un enfant RELIE :
- * « 14 ans · U15 · AS Montrivage ». L age vient du lien ; l equipe et le club, de son profil
- * public — la lecture que fait deja SA fiche (`UserDetails`, meme cle de cache : la fiche
- * s ouvre donc deja remplie). Profil pas encore lu : l age seul, sans trou.
+ * LA CARTE D UN ENFANT RELIE dans « Mes enfants » (planche 22, etat 1) : elle ouvre SON profil,
+ * ou vivent « Retours du coach » et sa fiche.
+ * - ST-RETOURS (02/10) : les retours de son entraineur que le parent n a pas encore lus — il
+ *   sait s il y a du neuf sans ouvrir. Rien tant que « ce que j ai deja lu » n est pas arrive :
+ *   on n annonce pas tout comme neuf.
+ * - ST-RETOURS2 · point 2 bis : « 14 ans · U15 · AS Montrivage ». L age vient du lien ;
+ *   l equipe et le club, de son profil public — la lecture que fait deja SA fiche
+ *   (`UserDetails`, meme cle de cache : la fiche s ouvre donc deja remplie). Profil pas
+ *   encore lu : l age seul, sans trou.
+ * - ST-RETOURS2 · point 2 ter : la « carte-bloc » de la planche, VIVE quand il y a du neuf,
+ *   et une fleche ; « Voir son profil » reste dit au lecteur d ecran.
  * @param {object} props - Les proprietes.
  * @param {any} props.compte - L enfant relie (`/parent-links/as-parent`).
- * @returns {import('react').ReactElement} - La ligne.
+ * @param {any} props.follow - Ce que le parent a deja lu
+ *   (`/firebase-auth/me/coach-feedback-follow`).
+ * @param {(compte: any) => void} props.onOpen - Ouvre son profil.
+ * @returns {import('react').ReactElement} - La carte.
  */
-function LigneDuCompteRelie({ compte }) {
+function CarteDuCompteRelie({ compte, follow, onOpen }) {
   const { t } = useTranslation();
-  const { Fonts } = useTheme();
-  const { data: profil } = useGetUserById(compte?.documentId, {
-    enabled: Boolean(compte?.documentId),
-  });
+  const { Alignments, Colors, Fonts } = useTheme();
+  const id = compte?.documentId;
+  const { data: stats } = useGetPersonalStats(id, { enabled: Boolean(id) });
+  const { data: profil } = useGetUserById(id, { enabled: Boolean(id) });
+  const nom = `${compte?.firstname || ''} ${compte?.lastname || ''}`.trim();
+  const retours = Array.isArray(stats?.recentCoachFeedback) ? stats.recentCoachFeedback : [];
+  const nouveaux = follow ? newFeedbackKeys(retours, seenFeedbackKeys(follow, id)).size : 0;
   const equipes = Array.isArray(profil?.myTeams) ? profil.myTeams : [];
+
   return (
-    <Text style={[Fonts.p3, Fonts.neutral200]}>
-      {ligneDIdentite(t, {
-        age: compte?.age,
-        clubName: profil?.club?.name,
-        teamName: equipes[0]?.name,
-      })}
-    </Text>
+    <TouchableOpacity
+      accessibilityLabel={`${nom}, ${t('myChildren.accounts.open', 'Voir son profil')}`}
+      accessibilityRole="button"
+      onPress={() => onOpen(compte)}
+      style={feedbackCardStyle(Colors, nouveaux > 0)}
+      testID={`linked-child-${id}`}
+    >
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+        <ProfileAvatar enablePreview={false} imageUrl={compte?.avatar?.url} name={nom} size={40} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{nom}</Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {ligneDIdentite(t, {
+              age: compte?.age,
+              clubName: profil?.club?.name,
+              teamName: equipes[0]?.name,
+            })}
+          </Text>
+        </View>
+        <Icone color={Colors.primary500} height={12} name="arrow-right" width={12} />
+      </View>
+      {nouveaux > 0 ? (
+        <View
+          style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
+          testID={`linked-child-new-feedback-${id}`}
+        >
+          <NewPill label={t('stRetours.parent.newCount', { count: nouveaux })} />
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('stRetours.parent.newCountHint', { count: nouveaux })}
+          </Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
   );
 }
 
@@ -127,7 +137,7 @@ function MyChildren({ route } = {}) {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    Alignments, Colors, Fonts, Spaces,
   } = useTheme();
 
   const {
@@ -219,15 +229,8 @@ function MyChildren({ route } = {}) {
     );
   }, [supprimerEnfant, t]);
 
-  const carteStyle = [
-    ApplicationStyle.card,
-    Spaces.padding[16],
-    {
-      backgroundColor: `${Colors.primary700}73`,
-      borderColor: `${Colors.primary500}80`,
-      gap: 12,
-    },
-  ];
+  // ST-RETOURS2 · point 2 ter — la « carte-bloc » de la planche 22 (etat 1), celle des retours.
+  const carteStyle = feedbackCardStyle(Colors, false);
 
   // ST-RETOURS2 · point 4 (planche 22, etat 6) — LA PAGE D UN ENFANT DE MOINS DE 13 ANS. Une
   // vue de cette route, comme « Retours du coach » sur celle du profil : aucune route neuve,
@@ -300,39 +303,14 @@ function MyChildren({ route } = {}) {
                 </Text>
               ) : null}
 
-              {comptesRelies.map((compte) => {
-                const nomDuCompte = `${compte?.firstname || ''} ${compte?.lastname || ''}`.trim();
-                return (
-                  <TouchableOpacity
-                    key={compte?.documentId}
-                    onPress={() => ouvrirLeProfil(compte)}
-                    style={carteStyle}
-                    testID={`linked-child-${compte?.documentId}`}
-                  >
-                    <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
-                      <ProfileAvatar
-                        enablePreview={false}
-                        imageUrl={compte?.avatar?.url}
-                        name={nomDuCompte}
-                        size={44}
-                      />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                          {nomDuCompte}
-                        </Text>
-                        <LigneDuCompteRelie compte={compte} />
-                      </View>
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
-                        {t('myChildren.accounts.open', 'Voir son profil')}
-                      </Text>
-                    </View>
-                    <NouveauxRetoursDeLEnfant
-                      childDocumentId={compte?.documentId}
-                      follow={suiviDesRetours}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
+              {comptesRelies.map((compte) => (
+                <CarteDuCompteRelie
+                  compte={compte}
+                  follow={suiviDesRetours}
+                  key={compte?.documentId}
+                  onOpen={ouvrirLeProfil}
+                />
+              ))}
 
               {/* 🤐 Une demande s'affiche « envoyée » jusqu'à sa réponse ou son échéance :
                   le numéro ne dit jamais s'il existe un compte derrière. */}
@@ -433,6 +411,7 @@ function MyChildren({ route } = {}) {
                 const Rangee = aSaPage ? TouchableOpacity : View;
                 const porte = aSaPage
                   ? {
+                    accessibilityLabel: `${nomComplet}, ${t('myChildren.declared.open')}`,
                     accessibilityRole: 'button',
                     onPress: () => ouvrirLaFiche(enfant),
                     testID: `declared-child-${enfant?.documentId}`,
@@ -450,13 +429,13 @@ function MyChildren({ route } = {}) {
                         enablePreview={false}
                         imageUrl={enfant?.photo?.url}
                         name={nomComplet}
-                        size={44}
+                        size={40}
                       />
                       <View style={{ flex: 1, gap: 2 }}>
-                        <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                           {nomComplet}
                         </Text>
-                        <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {aUnAge
                             ? t('myChildren.screen.years', '{{count}} ans', { count: enfant.age })
                             : ''}
@@ -466,9 +445,12 @@ function MyChildren({ route } = {}) {
                         </Text>
                       </View>
                       {aSaPage ? (
-                        <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
-                          {t('myChildren.declared.open')}
-                        </Text>
+                        <Icone
+                          color={Colors.primary500}
+                          height={12}
+                          name="arrow-right"
+                          width={12}
+                        />
                       ) : null}
                     </Rangee>
 
