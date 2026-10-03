@@ -114,9 +114,15 @@ function ClubTeamsCard({ onOpenTeamStats, teams = [] }) {
     }
     // Sans appel, une phrase, jamais « 0 % » (même règle que « Vie d'équipe »).
     const rows = (Array.isArray(stats?.data) ? stats.data : []).map(readAttendanceRow);
-    const pointed = rows.reduce((total, row) => total + row.pointed, 0);
+    const pointed = rows.reduce(
+      (/** @type {number} */ total, /** @type {any} */ row) => total + row.pointed,
+      0,
+    );
     if (!pointed) return t('clubTeamsCard.presenceNone', 'Présence : pas encore d’appel');
-    const attended = rows.reduce((total, row) => total + row.attended, 0);
+    const attended = rows.reduce(
+      (/** @type {number} */ total, /** @type {any} */ row) => total + row.attended,
+      0,
+    );
     const rate = Number(stats?.teamAverage?.presenceRate ?? attended / pointed);
     return t('clubTeamsCard.presence', 'Présence : {{percent}}', {
       percent: `${Math.round(rate * 100)} %`,
