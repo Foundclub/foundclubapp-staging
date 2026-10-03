@@ -1,6 +1,7 @@
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getShortAddress } from '@/utils/location';
 
 /**
  * COLLECTIVITES 1c (2026-09-29) — ce que les ecrans « Ma collectivite » affichent, en
@@ -244,6 +245,8 @@ export const toAdminCollectiviteDetail = (entry) => {
   return {
     ...toAdminCollectiviteRow(entry),
     clubs: liste(entry.clubs).map((club) => ({
+      // COLL-CONSOLE-BIS (03/10) — la ville du club (planche 15).
+      city: String(club?.cityName || '').trim() || getShortAddress(club?.addressDetails) || null,
       documentId: String(club?.documentId || ''),
       logoUrl: club?.logo?.url || null,
       name: String(club?.name || ''),
@@ -258,6 +261,8 @@ export const toAdminCollectiviteDetail = (entry) => {
       documentId: String(installation?.documentId || ''),
       maxSlots: Number.isInteger(installation?.maxSlots) ? installation.maxSlots : null,
       name: String(installation?.name || ''),
+      // COLL-CONSOLE-BIS (03/10) — la couleur du planning (la pastille, planche 15).
+      planningColor: installation?.planningColor || null,
       type: installation?.type || null,
     })).sort(parNom),
     siren: entry.siren || null,

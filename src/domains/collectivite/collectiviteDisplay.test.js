@@ -87,15 +87,25 @@ describe('collectiviteDisplay — console super-admin (D61)', () => {
       name: 'Ville de Montrivage',
       type: 'commune',
     });
+    // COLL-CONSOLE-BIS (03/10) — + la ville du club (null : ni SIRENE ni adresse).
     expect(detail.clubs).toEqual([
-      { documentId: 'a', logoUrl: null, name: 'AS Montrivage' },
-      { documentId: 'z', logoUrl: '/z.png', name: 'Zèbre FC' },
+      {
+        city: null, documentId: 'a', logoUrl: null, name: 'AS Montrivage',
+      },
+      {
+        city: null, documentId: 'z', logoUrl: '/z.png', name: 'Zèbre FC',
+      },
     ]);
     // eslint-disable-next-line max-len
     expect(detail.gestionnaires).toEqual([{ documentId: 'k', email: 'k@example.invalid', name: 'Karim Benali' }]);
     expect(detail.installations).toEqual([
       {
-        documentId: 'g', maxSlots: 2, name: 'Gymnase des Tilleuls', type: 'Gymnase',
+        // COLL-CONSOLE-BIS (03/10) — + la couleur du planning (null : la palette la choisit).
+        documentId: 'g',
+        maxSlots: 2,
+        name: 'Gymnase des Tilleuls',
+        planningColor: null,
+        type: 'Gymnase',
       },
     ]);
     expect(toAdminCollectiviteDetail(null)).toBeNull();

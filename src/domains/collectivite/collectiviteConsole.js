@@ -8,6 +8,8 @@
  * dit n est pas affiche.
  */
 
+import { getShortAddress } from '@/utils/location';
+
 /**
  * @typedef {{ clubsCount: number, documentId: string, isActive: boolean, name: string,
  *   type: string }} AdminCollectiviteRow
@@ -119,6 +121,84 @@ export const splitAdminInvitations = (rows) => {
     done: lignes.filter((ligne) => ligne?.status === 'attached'),
     foundclub: enAttente('foundclub'),
   };
+};
+
+// ─── COLL-CONSOLE-BIS (03/10/2026) : LA FICHE D UNE COLLECTIVITE (planche 15) ─────────────
+
+/**
+ * Le departement d un code INSEE : ses 2 premiers caracteres (2A, 2B compris), 3 outre-mer.
+ * @param {unknown} codeInsee - Le code.
+ * @returns {string} Le departement, ou ''.
+ */
+const departementDe = (codeInsee) => {
+  const code = String(codeInsee || '').trim().toUpperCase();
+  if (!code) return '';
+  return /^9[78]/.test(code) ? code.slice(0, 3) : code.slice(0, 2);
+};
+
+/**
+ * La PROXIMITE dans la recherche de clubs a rattacher : d abord les clubs de la commune de la
+ * collectivite (meme code INSEE), puis ceux de son departement, puis les autres ; l ordre du
+ * serveur (alphabetique) est garde dans chaque groupe. Sans code INSEE, rien ne bouge.
+ * ponytail: la proximite par les codes, pas par la distance ; voie de sortie : le geohash du
+ * club, si une Ville voisine compte un jour.
+ * @param {any[]} resultats - Les clubs trouves (`raw.inseeCom`).
+ * @param {unknown} codeInsee - Le code INSEE de la collectivite.
+ * @returns {any[]} Les memes clubs, ranges.
+ */
+export const sortClubsByProximity = (resultats, codeInsee) => {
+  const lignes = Array.isArray(resultats) ? resultats : [];
+  const ville = String(codeInsee || '').trim().toUpperCase();
+  if (!ville) return lignes;
+  const rang = (/** @type {any} */ resultat) => {
+    const code = String(resultat?.raw?.inseeCom || '').trim().toUpperCase();
+    if (code && code === ville) return 0;
+    if (code && departementDe(code) === departementDe(ville)) return 1;
+    return 2;
+  };
+  return lignes
+    .map((resultat, index) => ({ index, rang: rang(resultat), resultat }))
+    .sort((a, b) => a.rang - b.rang || a.index - b.index)
+    .map(({ resultat }) => resultat);
+};
+
+/**
+ * La ville d un club (son libelle officiel SIRENE, sinon son adresse publique), et son sport (ses
+ * activites, deux au plus) : « Montrivage · Basket ».
+ * @param {any} club - Le club (`cityName`, `addressDetails`, `activites`).
+ * @returns {string} La ligne, ou ''.
+ */
+export const clubCityAndSport = (club) => {
+  const ville = String(club?.cityName || '').trim() || getShortAddress(club?.addressDetails);
+  const sports = (Array.isArray(club?.activites) ? club.activites : [])
+    .map((/** @type {any} */ activite) => String(activite?.name || '').trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(', ');
+  return [ville, sports].filter(Boolean).join(' · ');
+};
+
+/**
+ * L e-mail d un gestionnaire, pour l equipe FoundClub (planche 15 : « [e-mail du compte] »), sauf
+ * l e-mail de REMPLISSAGE que le serveur pose a la creation d un compte par telephone
+ * (`<numero>@example.com`) : ce n est pas une adresse, et il porterait le numero. La console ne
+ * lit des gestionnaires que le nom et l e-mail (minimisation, temoin collectiviteDisplay).
+ * @param {{ email?: string | null }} compte - Le compte.
+ * @returns {string | null} L e-mail, ou null.
+ */
+export const managerEmail = (compte) => {
+  const email = String(compte?.email || '').trim();
+  return email.includes('@') && !/@example\.com$/i.test(email) ? email : null;
+};
+
+/**
+ * Le prenom et le nom d un nom affiche (« Karim Benali »), pour le rond a ses initiales.
+ * @param {unknown} nom - Le nom affiche.
+ * @returns {{ firstname: string, lastname: string }} Le premier mot, et le dernier.
+ */
+export const splitDisplayName = (nom) => {
+  const mots = String(nom || '').trim().split(/\s+/).filter(Boolean);
+  return { firstname: mots[0] || '', lastname: mots.length > 1 ? mots[mots.length - 1] : '' };
 };
 
 /** @typedef {'atActivation' | 'offered' | 'paysItself'} ClubOfferState */

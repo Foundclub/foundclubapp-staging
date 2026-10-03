@@ -148,7 +148,11 @@ describe('collectiviteService — la console super-admin (D61)', () => {
     await searchAdminCollectiviteTargets('club', ' mont ');
     await searchAdminCollectiviteTargets('user', 'karim');
     expect(mockPost).toHaveBeenNthCalledWith(1, '/superadmin/relations/api%3A%3Aclub.club/search', {
-      fields: ['documentId', 'name', 'addressDetails'], pageSize: 10, q: 'mont',
+      // COLL-CONSOLE-BIS (03/10) — + la ville officielle, l INSEE (proximite) et le sport.
+      fields: ['documentId', 'name', 'addressDetails', 'cityName', 'inseeCom'],
+      pageSize: 20,
+      populate: { activites: { fields: ['name'] } },
+      q: 'mont',
     });
     expect(mockPost).toHaveBeenNthCalledWith(
       2,

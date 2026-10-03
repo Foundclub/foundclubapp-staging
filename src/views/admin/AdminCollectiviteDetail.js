@@ -9,7 +9,11 @@ import {
   View,
 } from 'react-native';
 
-import { splitAdminInvitations } from '@/domains/collectivite/collectiviteConsole';
+import {
+  managerEmail,
+  splitAdminInvitations,
+  splitDisplayName,
+} from '@/domains/collectivite/collectiviteConsole';
 import {
   collectiviteTypeLabel,
   toAdminCollectiviteDetail,
@@ -22,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteActivation from '@/views/admin/components/CollectiviteActivation';
@@ -43,6 +48,7 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 /** @typedef {{ ok: boolean, texte: string } | null} Retour */
 /**
@@ -138,8 +144,10 @@ function MenuDActions({ actions, testID }) {
  *      recherche (« Déjà gestionnaire ») et la porte de la file des demandes de gestionnaire ;
  *   5. les INSTALLATIONS, en lecture (« Gymnase · 2 équipes à la fois »).
  * Chaque geste relit la collectivité depuis le serveur : l'écran affiche ce qu'il rend.
- * ⛔ PAS FAIT : « Depuis le … » (aucune date d'activation en base) ; le sport du club dans la
- * recherche, et le tri par proximité.
+ * COLL-CONSOLE-BIS (03/10/2026), planche 15 : la ville de chaque club rattaché ; la ville, le
+ * sport et la proximité (commune, puis département) dans la recherche de clubs ; le rond aux
+ * initiales et l'e-mail de chaque gestionnaire (rien si l'e-mail n'est qu'un remplissage) ; la
+ * pastille de couleur de chaque installation, celle du planning.
  * @returns {import('react').ReactElement} L'écran.
  */
 function AdminCollectiviteDetail() {
@@ -534,6 +542,9 @@ function AdminCollectiviteDetail() {
                   <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {club.name}
                   </Text>
+                  {club.city ? (
+                    <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{club.city}</Text>
+                  ) : null}
                   {pastilleOffre(club.documentId)}
                 </View>
                 <PlusDActions
@@ -569,6 +580,7 @@ function AdminCollectiviteDetail() {
             </View>
           ))}
           <CollectiviteTargetSearch
+            codeInseeProche={detail.codeInsee}
             deja={new Set(detail.clubs.map((/** @type {any} */ club) => club.documentId))}
             dejaTexte={t('adminCollectivites.detail.alreadyAttached', 'Déjà rattaché')}
             enCours={rattacher.isPending}
@@ -606,19 +618,23 @@ function AdminCollectiviteDetail() {
             </Text>
           ) : detail.gestionnaires.map((/** @type {any} */ compte) => {
             const nom = compte.name || compte.email || compte.documentId;
+            const email = managerEmail(compte);
+            const initiales = splitDisplayName(compte.name);
             return (
               <View key={compte.documentId} style={{ gap: 4 }}>
                 <View
                   style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
                   testID={`admin-collectivite-gestionnaire-${compte.documentId}`}
                 >
-                  <ClubLogoMark name={nom} size={36} />
+                  <MemberAvatar
+                    firstname={initiales.firstname}
+                    lastname={initiales.lastname}
+                    size={40}
+                  />
                   <View style={{ flex: 1 }}>
                     <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>
-                    {compte.email ? (
-                      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>
-                        {compte.email}
-                      </Text>
+                    {email ? (
+                      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{email}</Text>
                     ) : null}
                   </View>
                   <PlusDActions
@@ -678,7 +694,18 @@ function AdminCollectiviteDetail() {
             </Text>
           ) : detail.installations.map((/** @type {any} */ installation) => (
             <View key={installation.documentId} style={{ gap: 2 }}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{installation.name}</Text>
+              <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+                <View
+                  style={{
+                    backgroundColor: resolveFacilityPlanningColor(installation),
+                    borderRadius: 6,
+                    height: 12,
+                    width: 12,
+                  }}
+                  testID={`admin-collectivite-installation-${installation.documentId}-couleur`}
+                />
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{installation.name}</Text>
+              </View>
               <Text style={[Fonts.p3, Fonts.neutral300]}>
                 {[
                   installation.type,

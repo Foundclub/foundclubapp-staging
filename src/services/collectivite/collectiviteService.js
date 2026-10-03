@@ -204,10 +204,16 @@ export const ADMIN_COLLECTIVITES_LIST_PAYLOAD = {
 
 // Le detail : la meme lecture, filtree sur UNE collectivite (un corps JSON, pas de
 // `populate` imbrique dans une URL). Des gestionnaires, le nom et l e-mail seulement.
+// COLL-CONSOLE-BIS (03/10) — + la ville des clubs et la couleur des installations (planche
+// 15). Des gestionnaires, toujours le nom et l e-mail seulement. Lu par le SEUL SuperAdmin
+// (route global::is-superadmin).
 export const ADMIN_COLLECTIVITE_DETAIL_POPULATE = {
-  clubs: { fields: ['documentId', 'name'], populate: { logo: { fields: ['url'] } } },
+  clubs: {
+    fields: ['documentId', 'name', 'cityName', 'addressDetails'],
+    populate: { logo: { fields: ['url'] } },
+  },
   gestionnaires: { fields: ['documentId', 'firstname', 'lastname', 'email'] },
-  installations: { fields: ['documentId', 'name', 'type', 'maxSlots'] },
+  installations: { fields: ['documentId', 'name', 'type', 'maxSlots', 'planningColor'] },
 };
 
 const idSur = (/** @type {unknown} */ valeur) => encodeURIComponent(String(valeur || '').trim());
@@ -327,10 +333,13 @@ export const createAdminCollectivite = async (data) => {
 // Ce que chaque recherche lit : un club par son nom, un compte par son nom et son e-mail.
 // COLL-CONSOLE (02/10) — et l adresse du club (publique, celle de sa fiche) : la recherche dit
 // sa ville, pour rattacher le bon club (planche P2-fiche, « chaque résultat dit sa ville »).
+// COLL-CONSOLE-BIS (03/10) — et sa ville officielle, son code INSEE (la proximite) et son SPORT
+// (`activites`, une relation : l explorateur la relaie desormais), planche 15.
 const SEARCH_FIELDS = {
-  club: ['documentId', 'name', 'addressDetails'],
+  club: ['documentId', 'name', 'addressDetails', 'cityName', 'inseeCom'],
   user: ['documentId', 'firstname', 'lastname', 'email'],
 };
+const SEARCH_POPULATE = { club: { activites: { fields: ['name'] } } };
 const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.user' };
 
 /**
@@ -342,7 +351,10 @@ const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.u
 export const searchAdminCollectiviteTargets = async (kind, query) => (
   searchSuperadminRelations(SEARCH_UIDS[kind], {
     fields: SEARCH_FIELDS[kind],
-    pageSize: 10,
+    // COLL-CONSOLE-BIS (03/10) — 20 clubs : la proximite les range ensuite (commune d abord).
+    pageSize: kind === 'club' ? 20 : 10,
+    ...(SEARCH_POPULATE[/** @type {'club'} */ (kind)]
+      ? { populate: SEARCH_POPULATE[/** @type {'club'} */ (kind)] } : {}),
     q: String(query || '').trim(),
   })
 );
