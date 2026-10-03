@@ -17311,6 +17311,7 @@ export default {
       answeredTitle: 'Ont répondu · {{n}}',
       clickHint: 'Clique une ligne pour ses chiffres et ton retour.',
       col: {
+        answer: 'Réponse',
         assists: 'Pas.',
         goals: 'Buts',
         minutes: 'Min',

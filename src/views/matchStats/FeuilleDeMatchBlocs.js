@@ -243,6 +243,8 @@ export function AlerteFeuille({ lignes, titre }) {
  * LA LIGNE PAR JOUEUR (états 2, 3 et 6) : minutes, buts, passes ; le détail au toucher.
  * @param {object} props - Les propriétés.
  * @param {Set<string>} props.aVerifier - Les lignes nommées par l'alerte.
+ * @param {boolean} [props.colonneReponse] - Ordinateur, un joueur ouvert (planche O2) : la
+ *   réponse dans SA colonne, au lieu de la 2e ligne sous le nom et de « Ta note ».
  * @param {any[]} props.lignes - Les lignes en cours de saisie.
  * @param {Map<string, number | null>} props.notesDuCoach - Ta note, par ligne (ordinateur).
  * @param {(cle: string) => void} props.onOuvrir - Ouvre la feuille du joueur.
@@ -253,7 +255,8 @@ export function AlerteFeuille({ lignes, titre }) {
  * @returns {import('react').ReactElement} Le tableau.
  */
 export function TableauDesJoueurs({
-  aVerifier, lignes, notesDuCoach, onOuvrir, ordinateur, reponses, selection, sport,
+  aVerifier, colonneReponse = false, lignes, notesDuCoach, onOuvrir, ordinateur, reponses, selection,
+  sport,
 }) {
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -271,6 +274,8 @@ export function TableauDesJoueurs({
     points: t('stMatch.feuille.col.points', 'Pts'),
   };
   const cellule = { textAlign: /** @type {'center'} */ ('center'), width: 40 };
+  // 📐 ST-MATCH10-BIS (point 7) — la colonne « Réponse » de la planche O2.
+  const celluleReponse = { width: 112 };
   return (
     <View>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { paddingBottom: 8 }]}>
@@ -278,10 +283,15 @@ export function TableauDesJoueurs({
         <Text style={[Fonts.p4Bold, Fonts.neutral300, Alignments.fill]}>
           {t('stMatch.feuille.col.player', 'Joueur')}
         </Text>
+        {colonneReponse ? (
+          <Text style={[Fonts.p4Bold, Fonts.neutral300, celluleReponse]}>
+            {t('stMatch.feuille.col.answer', 'Réponse')}
+          </Text>
+        ) : null}
         {colonnes.map((cle) => (
           <Text key={cle} style={[Fonts.p4Bold, Fonts.neutral300, cellule]}>{entetes[cle]}</Text>
         ))}
-        {ordinateur ? (
+        {ordinateur && !colonneReponse ? (
           <Text style={[Fonts.p4Bold, Fonts.neutral300, { textAlign: 'center', width: 56 }]}>
             {t('stMatch.feuille.col.myRating', 'Ta note')}
           </Text>
@@ -304,6 +314,8 @@ export function TableauDesJoueurs({
         const sousTitre = !douteuse && aRepondu && repriseDeSaReponse(ligne, cles)
           ? t('stMatch.feuille.row.answeredTaken', 'A répondu · repris de sa réponse')
           : etat;
+        // La colonne dit « — » pour qui n'a pas encore répondu, comme la planche.
+        const reponseCourte = douteuse || aRepondu || reponse?.convoked === false ? etat : '—';
         const note = notesDuCoach.get(ligne.key);
         return (
           <Pressable
@@ -344,13 +356,23 @@ export function TableauDesJoueurs({
             />
             <View style={Alignments.fill}>
               <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.label}</Text>
+              {colonneReponse ? null : (
+                <Text
+                  numberOfLines={1}
+                  style={[Fonts.p4, douteuse ? Fonts.warning400 : Fonts.neutral300]}
+                >
+                  {sousTitre}
+                </Text>
+              )}
+            </View>
+            {colonneReponse ? (
               <Text
                 numberOfLines={1}
-                style={[Fonts.p4, douteuse ? Fonts.warning400 : Fonts.neutral300]}
+                style={[Fonts.p3, douteuse ? Fonts.warning400 : Fonts.neutral100, celluleReponse]}
               >
-                {sousTitre}
+                {reponseCourte}
               </Text>
-            </View>
+            ) : null}
             {colonnes.map((cle) => {
               const valeur = chiffre(ligne?.[cle]);
               const marque = cle !== 'minutesPlayed' && valeur > 0;
@@ -363,7 +385,7 @@ export function TableauDesJoueurs({
                 </Text>
               );
             })}
-            {ordinateur ? (
+            {ordinateur && !colonneReponse ? (
               <Text style={[Fonts.p2, Fonts.neutral100, { textAlign: 'center', width: 56 }]}>
                 {note ? String(note) : '—'}
               </Text>

@@ -16527,6 +16527,7 @@ export default {
       answeredTitle: 'Answered · {{n}}',
       clickHint: 'Click a row for their figures and your feedback.',
       col: {
+        answer: 'Answer',
         assists: 'Ast.',
         goals: 'Goals',
         minutes: 'Min',

@@ -1208,6 +1208,7 @@ function MatchStatsEditor({ navigation, route }) {
         ) : null}
         <TableauDesJoueurs
           aVerifier={linesToCheck}
+          colonneReponse={ordinateur && Boolean(openLineKey)}
           lignes={playerLines}
           notesDuCoach={coachRatingByLine}
           onOuvrir={setOpenLineKey}

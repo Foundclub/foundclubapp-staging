@@ -957,3 +957,35 @@ describe('ST-MATCH10-BIS · 6 — le fil d Ariane du site (planche P3-editeur-or
     expect(fil(racine)).toBeUndefined();
   });
 });
+
+describe('ST-MATCH10-BIS · 7 — la colonne « Réponse » sur ordinateur (planche O2)', () => {
+  const colonneJoueurs = (/** @type {any} */ racine) => racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-colonne-joueurs')[0];
+
+  test('Un joueur ouvert : « Joueur · Réponse · Min · Buts · Pas. », la réponse dans SA colonne', async () => {
+    const donnees = feuilleEffectifComplet();
+    const racine = await monter(donnees, { desktop: true });
+    await appuyerSurDescription(racine, 'Hugo Roux : 0 minute, 0 but, 0 passe. A répondu.');
+    const vus = textes(colonneJoueurs(racine));
+
+    expect(vus.slice(1, 6)).toEqual(['Joueur', 'Réponse', 'Min', 'Buts', 'Pas.']);
+    expect(vus).not.toContain('Ta note');
+    // Deux ont répondu, neuf non (« — », comme la planche) ; plus de 2e ligne sous le nom.
+    expect(vus.filter((texte) => texte === 'A répondu')).toHaveLength(2);
+    expect(vus.filter((texte) => texte === '—')).toHaveLength(9);
+    expect(vus).not.toContain('Pas encore répondu');
+  });
+
+  test('Aucun joueur ouvert (planche O1) : « Ta note » reste, la réponse sous le nom', async () => {
+    const racine = await monter(feuilleU15(), { desktop: true });
+    const vus = textes(colonneJoueurs(racine));
+
+    expect(vus).toEqual(expect.arrayContaining(['Ta note', 'A répondu · repris de sa réponse']));
+    expect(vus).not.toContain('Réponse');
+  });
+
+  test('Téléphone : pas de colonne « Réponse » (la ligne la dit sous le nom)', async () => {
+    const racine = await monter(feuilleU15());
+    await appuyerSur(racine, 'Joueurs · 1');
+    expect(textes(racine)).not.toContain('Réponse');
+  });
+});
