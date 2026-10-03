@@ -125,6 +125,13 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
 }));
 
 // `EventTasksSection` est monte pour de vrai : il appelle ces quatre services.
+// ST-RETOURS2 · point 1 — la fiche du site lit les avis d entrainement : doublure, comme
+// les autres services (le client HTTP refuse de se charger sans `.env`).
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetMyTrainingReview: () => ({ data: undefined }),
+  useGetTrainingReviews: () => ({ data: undefined }),
+}));
+
 jest.mock('@/services/event/eventService', () => ({
   approveEventTaskAssignment: jest.fn(),
   assignEventTask: jest.fn(),
