@@ -5351,6 +5351,13 @@ export default {
       retirerPerd: '{{qui}} loses {{jour}} {{heures}}, {{installation}}, from {{date}}.',
       retirerTitre: 'Withdraw the {{jour}} slot?',
     },
+    // COLL-C2B-BIS (03/10) — board 23, desktop: the typical week on an hour scale.
+    grille: {
+      caseVide: 'Assign {{jour}} at {{heure}}',
+      creux: 'No slot from {{debut}} to {{fin}}',
+      creuxApres: 'No slot after {{debut}}',
+      teinte: '{{jour}} shaded: full from {{debut}} to {{fin}}.',
+    },
     infos: {
       adresse: 'Address',
       capacite: 'Teams at a time',

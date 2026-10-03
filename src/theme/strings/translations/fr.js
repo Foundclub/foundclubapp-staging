@@ -5715,6 +5715,13 @@ export default {
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
     },
+    // COLL-C2B-BIS (03/10) — planche 23, ordinateur : la semaine type à l'échelle des heures.
+    grille: {
+      caseVide: 'Attribuer le {{jour}} à {{heure}}',
+      creux: 'Aucun créneau de {{debut}} à {{fin}}',
+      creuxApres: 'Aucun créneau après {{debut}}',
+      teinte: '{{jour}} teinté : complet de {{debut}} à {{fin}}.',
+    },
     infos: {
       adresse: 'Adresse',
       capacite: 'Équipes à la fois',
