@@ -90,6 +90,7 @@ const lireLeMoment = (iso) => {
  * @param {string} [props.feuillePublieeLe] - La feuille a été publiée (ISO).
  * @param {string} [props.finDuMatch] - « sam. 5 sept. à 20:00 », pour dire quand tout s'ouvre.
  * @param {string[]} [props.manquants] - Les prénoms de ceux qui n'ont pas répondu.
+ * @param {number | null} [props.nombreARelancer] - FINITIONS11 : combien le serveur relancera.
  * @param {string} [props.monDocumentId] - Qui regarde, pour écrire « toi ».
  * @param {{ average: number | null, count: number } | null} [props.moyenneJoueurs]
  *   - La moyenne des notes des joueurs.
@@ -124,6 +125,7 @@ function PostMatchJourneyCard({
   motDuCoach = '',
   motif = '',
   moyenneJoueurs = null,
+  nombreARelancer = null,
   noteEquipe = null,
   onPressEtape,
   onRelancer = null,
@@ -296,7 +298,11 @@ function PostMatchJourneyCard({
     });
   }
 
-  const avecRelance = courante === 'responses' && Boolean(onRelancer) && manquants.length > 0;
+  // FINITIONS11 · point 4 — « Relancer les N » compte ceux que le serveur relancera
+  // (`nombreARelancer`, du juge partagé) ; la liste des prénoms, coupée à 5 + « +N », ne se
+  // compte pas. Sans le nombre (appelant d'avant), la liste comme avant.
+  const aRelancer = Number.isFinite(nombreARelancer) ? Number(nombreARelancer) : manquants.length;
+  const avecRelance = courante === 'responses' && Boolean(onRelancer) && aRelancer > 0;
 
   // 🪤 LE `testID` VIT SUR CE `View`, PAS SUR LE `Button` : l'atome `Button` ne
   // déclare NI ne transmet `testID`.
@@ -325,7 +331,7 @@ function PostMatchJourneyCard({
             title={relanceFaite
               ? t('stMatch.relance.alreadyToday', 'Déjà relancés aujourd’hui')
               : t('stMatch.carte.remind', {
-                count: manquants.length,
+                count: aRelancer,
                 defaultValue_one: 'Relancer {{count}} joueur',
                 defaultValue_other: 'Relancer les {{count}}',
               })}

@@ -872,3 +872,48 @@ describe('ST-VUES3-ORDI — la page du match sur ordinateur', () => {
     expect(boutonsDOM(root, 'Modifier')).not.toHaveLength(0);
   });
 });
+// FINITIONS11-STATS · point 4 (écran 7) — le site lit le MÊME juge (`matchPageModel.js`) :
+// « Relancer les N » compte les convoqués à relancer, comme le serveur.
+describe('FINITIONS11 · point 4 — sur le site, « Relancer les N » = les convoqués à relancer', () => {
+  const texteRendu = (/** @type {any} */ noeud) => (noeud?.children || [])
+    .map((/** @type {any} */ enfant) => (typeof enfant === 'string' ? enfant : texteRendu(enfant)))
+    .join(' ').replace(/\s+/g, ' ').trim();
+  const reponse = (/** @type {string} */ label, /** @type {any} */ champs = {}) => ({
+    convoked: true, label, status: 'pending', userDocumentId: `compte-${label}`, ...champs,
+  });
+
+  test('🔴 7 convoqués sans réponse, 1 hors convocation, 1 sans compte : « Relancer les 7 »', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({
+        playerResponses: [
+          reponse('Ali B.', { status: 'submitted' }),
+          reponse('Hugo L.'),
+          reponse('Léa M.'),
+          reponse('Max P.'),
+          reponse('Nina R.', { status: 'draft' }),
+          reponse('Omar S.'),
+          reponse('Paul T.'),
+          reponse('Zoé V.'),
+          reponse('Yanis K.', { convoked: false }),
+          reponse('Joueur ajouté', { convoked: false, userDocumentId: null }),
+        ],
+        report: {
+          finalizedAt: '2099-01-01T21:39:00.000Z',
+          needsReview: false,
+          responseCompletionCount: 1,
+          responseEligibleCount: 8,
+          status: 'final',
+        },
+        score: {
+          available: true, scoreAgainst: 1, scoreFor: 3, source: 'manual', waitingOfficial: false,
+        },
+      }),
+    });
+
+    const [bloc] = root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'match-stats');
+    expect(texteRendu(parTestID(bloc, 'post-match-relancer')[0])).toContain('Relancer les 7');
+    expect(texteRendu(parTestID(bloc, 'post-match-journey')[0])).not.toContain('Yanis');
+  });
+});

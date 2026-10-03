@@ -185,6 +185,7 @@ import { useEventMutations } from './hooks/useEventMutations';
 import { findParentTeamId } from './matchEncartLines';
 import {
   buildMatchHeaderScoreSummary,
+  countPlayersToRemind,
   formatMatchEndLabel,
   listMissingResponders,
   resolveMatchStartTimeLabel,
@@ -4938,6 +4939,12 @@ function EventDetails({ navigation, route }) {
     () => listMissingResponders(matchStatsPayload?.playerResponses),
     [matchStatsPayload?.playerResponses],
   );
+  // 🔔 FINITIONS11 · point 4 — « Relancer les N » : ceux que le serveur relancera (convoqués,
+  // avec un compte), pas la liste des prénoms coupée à 5.
+  const matchPlayersToRemind = useMemo(
+    () => countPlayersToRemind(matchStatsPayload?.playerResponses),
+    [matchStatsPayload?.playerResponses],
+  );
 
   // 🎯 ST-MATCH (écran 7) — « Relancer », depuis la carte : la route existe (remind-responses,
   // celle de l'éditeur) ; le serveur ne relance que les convoqués (« c oui », 02/10).
@@ -8507,6 +8514,7 @@ function EventDetails({ navigation, route }) {
                       motDuCoach={matchStatsReport?.collectiveComment || ''}
                       motif={matchStatsPrimaryAction.subtitle}
                       moyenneJoueurs={playerCollectiveRating}
+                      nombreARelancer={matchPlayersToRemind}
                       noteEquipe={matchStatsReport?.collectiveRating ?? null}
                       onPressEtape={(/** @type {string} */ etape) => (etape === 'score'
                         ? openMatchScoreSheet()

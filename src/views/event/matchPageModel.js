@@ -174,16 +174,36 @@ export const resolveMatchStatsDoor = ({
 };
 
 /**
+ * 🔔 FINITIONS11 · point 4 (écran 7) — CEUX QUE LE SERVEUR RELANCERA, et eux seuls
+ * (`remindEventMissingResponses`) : pas de réponse envoyée, CONVOQUÉ (« c oui » :
+ * `convoked === false` = hors convocation) et avec un COMPTE (un joueur ajouté à la main a
+ * `userDocumentId: null`). Un serveur d'avant ne marque ni l'un ni l'autre : tous restent.
+ * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
+ * @returns {any[]} Les réponses attendues et pas encore envoyées.
+ */
+const listResponsesToRemind = (playerResponses) => (Array.isArray(playerResponses) ? playerResponses : [])
+  .filter((/** @type {any} */ item) => item?.status !== 'submitted'
+    && item?.convoked !== false
+    && !(item && 'userDocumentId' in item && !item.userDocumentId));
+
+/**
+ * 🔔 FINITIONS11 · point 4 — « Relancer les N » : N = ceux que le serveur relancera (la liste
+ * des prénoms est coupée à 5 + « +N », elle ne se compte pas).
+ * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
+ * @returns {number} Le nombre de joueurs à relancer.
+ */
+export const countPlayersToRemind = (playerResponses) => listResponsesToRemind(playerResponses).length;
+
+/**
  * 🎯 ST-MATCH (écran 7, amélioration 3) — l'étape 3 NOMME qui manque : 5 prénoms au plus,
  * puis « +N ». La feuille de l'encadrement porte la liste (le joueur n'en reçoit que le
- * compte : SECU-STATS).
+ * compte : SECU-STATS). FINITIONS11 · point 4 : les mêmes que la relance (convoqués, avec
+ * un compte).
  * @param {unknown} playerResponses - `matchStatsPayload.playerResponses`.
  * @returns {string[]} Les prénoms, et « +N » s'il y en a plus de 5.
  */
 export const listMissingResponders = (playerResponses) => {
-  const items = Array.isArray(playerResponses) ? playerResponses : [];
-  const prenoms = items
-    .filter((/** @type {any} */ item) => item?.status !== 'submitted')
+  const prenoms = listResponsesToRemind(playerResponses)
     .map((/** @type {any} */ item) => String(item?.label || '').trim().split(/\s+/)[0])
     .filter(Boolean);
   return prenoms.length > 5 ? [...prenoms.slice(0, 5), `+${prenoms.length - 5}`] : prenoms;

@@ -102,6 +102,7 @@ import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { findParentTeamId } from './matchEncartLines';
 import {
   buildMatchHeaderScoreSummary,
+  countPlayersToRemind,
   formatMatchEndLabel,
   listMissingResponders,
   resolveMatchStartTimeLabel,
@@ -705,6 +706,12 @@ function EventDetails({ navigation, route }) {
   );
   const matchMissingResponders = useMemo(
     () => listMissingResponders(matchStatsPayload?.playerResponses),
+    [matchStatsPayload?.playerResponses],
+  );
+  // 🔔 FINITIONS11 · point 4 — « Relancer les N » : ceux que le serveur relancera (convoqués,
+  // avec un compte), pas la liste des prénoms coupée à 5.
+  const matchPlayersToRemind = useMemo(
+    () => countPlayersToRemind(matchStatsPayload?.playerResponses),
     [matchStatsPayload?.playerResponses],
   );
   // 🎯 ST-MATCH (écran 7) — « Relancer les N », comme au téléphone : la route remind-responses
@@ -2837,6 +2844,7 @@ function EventDetails({ navigation, route }) {
                       motDuCoach={matchStatsReport?.collectiveComment || ''}
                       motif={postMatchAction.subtitle}
                       moyenneJoueurs={playerCollectiveRating}
+                      nombreARelancer={matchPlayersToRemind}
                       noteEquipe={matchStatsReport?.collectiveRating ?? null}
                       onPressEtape={() => {
                         // 🔒 DEUX COUCHES : la carte bloque l'appui porte close, et
