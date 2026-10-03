@@ -20187,6 +20187,20 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Les stats de chaque équipe',
   },
+  // ST-VUES3-ORDI (03/10) — « Les équipes », colonne de droite de l'écran 18 sur ordinateur.
+  clubTeamsCard: {
+    draws_one: '{{count}} nul',
+    draws_other: '{{count}} nuls',
+    losses_one: '{{count}} défaite',
+    losses_other: '{{count}} défaites',
+    openStatsA11y: '{{team}} : ouvrir ses stats',
+    presence: 'Présence : {{percent}}',
+    presenceNone: 'Présence : pas encore d’appel',
+    stats: 'Stats',
+    title: 'Les équipes',
+    wins_one: '{{count}} victoire',
+    wins_other: '{{count}} victoires',
+  },
   // ST-VUES2 (02/10) — la pastille cyan « 1 nouveau » (écran 16, « Retours du coach »).
   newItemsPill: {
     count_one: '{{count}} nouveau',
@@ -20194,6 +20208,10 @@ export default {
   },
   // ST-VUES2 (02/10) — la carte « Résultats du week-end » de « Gestion du club » (écran 18).
   weekendResults: {
+    // ST-VUES3-ORDI (03/10) — le tableau de l'écran 18 sur ordinateur.
+    columnMatch: 'Match',
+    columnScore: 'Score',
+    columnTeam: 'Équipe',
     createSection: 'Créer une section',
     createTeam: 'Créer une équipe',
     enterScore: 'Saisir',
@@ -20211,10 +20229,14 @@ export default {
     remind: 'Relancer',
     remindA11y: 'Relancer {{names}} pour le score',
     reminded: 'Relancé',
+    remindNamed: 'Relancer {{names}}',
     scoreToEnter: 'Score à saisir',
     scoreToEnterBy: 'Score à saisir · {{names}}',
+    scoreToEnterShort: 'à saisir',
+    see: 'Voir',
     title: 'Résultats du week-end',
     upcoming: 'À venir',
+    versus: 'contre {{opponent}}',
   },
   myStats: {
     assists_one: 'Passe déc.',

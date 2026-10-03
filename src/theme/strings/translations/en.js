@@ -19178,6 +19178,20 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Each team\'s stats',
   },
+  // ST-VUES3-ORDI (03/10) — "Teams", right column of screen 18 on desktop.
+  clubTeamsCard: {
+    draws_one: '{{count}} draw',
+    draws_other: '{{count}} draws',
+    losses_one: '{{count}} loss',
+    losses_other: '{{count}} losses',
+    openStatsA11y: '{{team}}: open its stats',
+    presence: 'Attendance: {{percent}}',
+    presenceNone: 'Attendance: no roll call yet',
+    stats: 'Stats',
+    title: 'Teams',
+    wins_one: '{{count}} win',
+    wins_other: '{{count}} wins',
+  },
   // ST-VUES2 (02/10) — the cyan "1 new" pill (screen 16, "Coach feedback").
   newItemsPill: {
     count_one: '{{count}} new',
@@ -19185,6 +19199,10 @@ export default {
   },
   // ST-VUES2 (02/10) — the "Weekend results" card of "Club management" (screen 18).
   weekendResults: {
+    // ST-VUES3-ORDI (03/10) — the screen 18 table on desktop.
+    columnMatch: 'Match',
+    columnScore: 'Score',
+    columnTeam: 'Team',
     createSection: 'Create a section',
     createTeam: 'Create a team',
     enterScore: 'Enter',
@@ -19202,10 +19220,14 @@ export default {
     remind: 'Remind',
     remindA11y: 'Remind {{names}} about the score',
     reminded: 'Reminded',
+    remindNamed: 'Remind {{names}}',
     scoreToEnter: 'Score to enter',
     scoreToEnterBy: 'Score to enter · {{names}}',
+    scoreToEnterShort: 'to enter',
+    see: 'View',
     title: 'Weekend results',
     upcoming: 'Upcoming',
+    versus: 'vs {{opponent}}',
   },
   myStats: {
     assists_one: 'Assist',
