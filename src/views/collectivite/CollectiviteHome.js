@@ -1407,7 +1407,11 @@ function CollectiviteHome() {
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
     >
-      <DecisionCreneauModal decision={decision} onClose={() => setDecision(null)} />
+      <DecisionCreneauModal
+        collectiviteId={collectiviteId}
+        decision={decision}
+        onClose={() => setDecision(null)}
+      />
       {enTeteEcran}
       <ScrollView
         contentContainerStyle={{ gap: 28, paddingBottom: 24, paddingTop: 12 }}

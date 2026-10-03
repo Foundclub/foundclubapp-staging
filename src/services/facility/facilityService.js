@@ -525,6 +525,11 @@ const getBookableFacilities = async () => {
   }
 };
 
+// FINITIONS12-COLL (03/10) — la file d'une Ville, que les mutations de décision relisent quand une
+// réponse se perd (facilityQueries) : la MÊME lecture que l'écran « Demandes de la Ville », passée
+// par ce module pour que les témoins qui le doublent ne chargent pas le vrai client HTTP.
+export { getCollectiviteRequests } from '@/services/collectivite/collectiviteService';
+
 export {
   approveFacilityOverrideRequest,
   createBooking,

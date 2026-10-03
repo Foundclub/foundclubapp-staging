@@ -779,7 +779,11 @@ function CollectiviteRequests() {
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
     >
-      <DecisionCreneauModal decision={decision} onClose={() => setDecision(null)} />
+      <DecisionCreneauModal
+        collectiviteId={collectiviteId}
+        decision={decision}
+        onClose={() => setDecision(null)}
+      />
 
       <ScrollView
         contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}
