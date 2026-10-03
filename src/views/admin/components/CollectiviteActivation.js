@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
@@ -17,7 +17,11 @@ import {
   useSetAdminCollectiviteActive,
 } from '@/services/collectivite/collectiviteQueries';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+// COLL-CONSOLE-BIS (03/10) — au-dela de cette largeur (le site), « Activer » se lit en tableau.
+const LARGEUR_TABLEAU = 768;
 
 /**
  * Les clubs d un verdict, par leur nom (l identifiant si le nom manque : un club ne disparait
@@ -164,8 +168,14 @@ const phraseDuBandeau = (t, collectivite, etats) => {
  * au-dessus des boutons, et « Réessayer » relance. Apres le geste, la fenetre se ferme et le
  * bandeau garde le compte rendu, avec les noms. La liste et la fiche sont RELUES depuis le
  * serveur (useSetAdminCollectiviteActive) : l etat affiche est celui qu il rend.
- * @param {{ collectivite: { clubs?: Array<{ documentId: string, name: string }>,
- *   clubsCount: number, documentId: string, isActive: boolean, name: string },
+ * COLL-CONSOLE-BIS (03/10) — sur le SITE, la fenêtre « Activer » présente les clubs en TABLEAU à
+ * deux colonnes, « Club rattaché » et « Ce qui change » (planche 16, P2-fenetres-ordi état A) ;
+ * le téléphone garde la liste groupée.
+ * COLL-CONSOLE-BIS (03/10) — une Ville active dit DEPUIS QUAND (planche 15) : « Depuis le … »,
+ * la date posée par le serveur à l'activation, ou « — » (activée avant le lot).
+ * @param {{ collectivite: { activatedAt?: string | null,
+ *   clubs?: Array<{ documentId: string, name: string }>, clubsCount: number,
+ *   documentId: string, isActive: boolean, name: string },
  *   etats?: Record<string, string> | null }} props - La collectivite telle que le serveur l a
  *   lue, et l etat de l offre de chacun de ses clubs (s il est connu).
  * @returns {import('react').ReactElement} Le bandeau, son bouton, sa fenetre et son compte rendu.
@@ -185,8 +195,10 @@ function CollectiviteActivation({ collectivite, etats = null }) {
     },
   });
   const apercu = usePreviewAdminCollectiviteActive();
+  const { width } = useWindowDimensions();
 
   const activer = !collectivite.isActive;
+  const enTableau = activer && width >= LARGEUR_TABLEAU;
   const count = Number(collectivite.clubsCount) || 0;
   const valeurs = {
     count,
@@ -292,6 +304,48 @@ function CollectiviteActivation({ collectivite, etats = null }) {
   let corps = <Text style={[Fonts.p2, Fonts.neutral100]}>{messageSansClub()}</Text>;
   if (fenetre?.verdicts === null) {
     corps = <Text style={[Fonts.p2, Fonts.neutral100]}>{messageSansApercu()}</Text>;
+  } else if (groupes.length > 0 && enTableau) {
+    const colonne = [Fonts.p3Bold, Fonts.neutral300, { flex: 1 }];
+    corps = (
+      <View testID="collectivite-fenetre-tableau">
+        <View style={[Alignments.row, Spaces.paddingVertical[8], { gap: 12 }]}>
+          <Text style={colonne}>
+            {t('collectiviteConsoleBis.fenetres.colonneClub', 'Club rattaché')}
+          </Text>
+          <Text style={colonne}>
+            {t('collectiviteConsoleBis.fenetres.colonneChange', 'Ce qui change')}
+          </Text>
+        </View>
+        {groupes.flatMap((groupe) => groupe.clubs.map((/** @type {any} */ club) => {
+          const nom = String(club?.name || club?.clubDocumentId || '');
+          const recoit = groupe.offre === 'granted';
+          return (
+            <View
+              key={club?.clubDocumentId || nom}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Spaces.paddingVertical[8],
+                { borderTopColor: withAlpha(Colors.primary500, 0.25), borderTopWidth: 1, gap: 12 },
+              ]}
+              testID={`collectivite-fenetre-ligne-${club?.clubDocumentId}`}
+            >
+              <View style={[Alignments.row, Alignments.alignCenter, { flex: 1, gap: 12 }]}>
+                <ClubLogoMark name={nom} size={32} />
+                <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+                  {nom}
+                </Text>
+              </View>
+              <Text style={[Fonts.p2, recoit ? Fonts.success500 : Fonts.neutral300, { flex: 1 }]}>
+                {recoit
+                  ? t('collectiviteConsoleBis.fenetres.recoit', 'Reçoit l’offre Club offerte')
+                  : t('collectiviteConsoleBis.fenetres.paieDeja', 'Paie déjà : rien ne change')}
+              </Text>
+            </View>
+          );
+        }))}
+      </View>
+    );
   } else if (groupes.length > 0) {
     corps = groupes.map((groupe) => (
       <View key={groupe.offre} style={{ gap: 8 }} testID={`collectivite-fenetre-${groupe.offre}`}>
@@ -385,7 +439,15 @@ function CollectiviteActivation({ collectivite, etats = null }) {
           ? t('adminCollectivites.status.inactive', 'Inactive')
           : t('adminCollectivites.status.active', 'Active')}
       />
-      <Text style={[Fonts.p2, Fonts.neutral100]}>{phraseDuBandeau(t, collectivite, etats)}</Text>
+      <Text style={[Fonts.p2, Fonts.neutral100]}>
+        {[
+          activer ? null : t('collectiviteConsoleBis.fiche.depuis', 'Depuis le {{date}}', {
+            date: formatDateWithDayPrefix(collectivite.activatedAt, { fallback: '—' }),
+            ...SANS_ECHAPPEMENT,
+          }),
+          phraseDuBandeau(t, collectivite, etats),
+        ].filter(Boolean).join(' · ')}
+      </Text>
       {compteRendu}
       <Button
         disabled={enCours}
@@ -409,6 +471,12 @@ function CollectiviteActivation({ collectivite, etats = null }) {
           variant: activer ? 'Primary' : 'Danger',
         }}
         secondary={{ label: t('adminCollectivites.activation.cancel', 'Annuler') }}
+        subtitle={enTableau && groupes.length > 0
+          ? t(
+            'collectiviteConsoleBis.fenetres.chaqueClub',
+            'Chaque club rattaché, et ce qui change pour lui.',
+          )
+          : null}
         testID="collectivite-fenetre-etat"
         title={activer
           ? t('adminCollectivites.activation.activateTitle', 'Activer {{name}} ?', valeurs)

@@ -83,6 +83,8 @@ jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn(async () => 
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteSignupSearch: () => mockTrouvees,
+  // COLL-CONSOLE-BIS (03/10) — le référentiel des communes, muet ici : la saisie libre reste.
+  useCommuneSearch: () => ({ data: [], isLoading: false }),
   useCreateManagerRequest: () => ({ isPending: false, mutateAsync: mockEnvoi }),
   useMyCollectivites: () => mockVilles,
   useMyManagerRequests: () => mockDemandes,

@@ -289,7 +289,8 @@ export const signupContactErrors = (champs) => {
 /**
  * Le corps de la demande : une collectivité EXISTANTE (son identifiant) ou « à créer » (son
  * nom tel que saisi et son type ; l'équipe pose le nom officiel, D59, en acceptant).
- * @param {{ documentId?: string | null, name: string, type: string }} collectivite - Le choix.
+ * @param {{ codeInsee?: string | null, documentId?: string | null, name: string,
+ *   type: string }} collectivite - Le choix.
  * @param {{ jobTitle?: string, professionalEmail?: string }} contact - « Vous ».
  * @returns {Record<string, string>} Le corps.
  */
@@ -297,6 +298,9 @@ export const managerRequestPayload = (collectivite, contact) => ({
   ...(collectivite?.documentId
     ? { collectiviteDocumentId: collectivite.documentId }
     : {
+      // COLL-CONSOLE-BIS (03/10) — une commune trouvee dans le referentiel porte son code INSEE :
+      // la console n aura pas a le chercher pour ouvrir son espace.
+      ...(collectivite?.codeInsee ? { codeInsee: String(collectivite.codeInsee) } : {}),
       collectiviteName: String(collectivite?.name || '').trim(),
       collectiviteType: String(collectivite?.type || ''),
     }),

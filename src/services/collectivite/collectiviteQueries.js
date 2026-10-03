@@ -2,7 +2,11 @@ import {
   useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
-import { readClubOfferStates } from '@/domains/collectivite/collectiviteConsole';
+import {
+  readClubOfferStates,
+  summarizeAdminCollectivites,
+} from '@/domains/collectivite/collectiviteConsole';
+import { toAdminCollectiviteRow } from '@/domains/collectivite/collectiviteDisplay';
 
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 
@@ -39,6 +43,7 @@ import {
   saveCollectiviteInstallation,
   searchAdminCollectiviteTargets,
   searchCollectivitesForSignup,
+  searchCommunes,
   setAdminCollectiviteActive,
 } from './collectiviteService';
 
@@ -595,6 +600,25 @@ export const useCollectiviteSignupSearch = (query) => {
 };
 
 /**
+ * COLL-CONSOLE-BIS (03/10/2026) — « Chercher la commune » : les communes du referentiel de l Etat
+ * (lu par le serveur) dont le nom commence comme le texte (3 lettres au moins). Partagee par
+ * l inscription « Je represente une collectivite » et la creation dans la console.
+ * @param {string} query - Le texte tape.
+ * @param {{ enabled?: boolean }} [options] - `enabled: false` : rien n est demande (un autre type
+ *   que « commune »).
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useCommuneSearch = (query, { enabled = true } = {}) => {
+  const texte = String(query || '').trim();
+  return useQuery({
+    enabled: enabled && texte.length >= 3,
+    queryFn: async () => unwrapRows(await searchCommunes(texte)),
+    queryKey: ['collectivite-manager-requests', 'communes', texte.toLowerCase()],
+    staleTime: 5 * 60_000,
+  });
+};
+
+/**
  * Envoie MA demande, puis relit mes demandes.
  * @param {QueryOptions} [options] - Options react-query (`onSuccess` compris).
  * @returns {any} La mutation.
@@ -634,6 +658,27 @@ export const useAdminManagerRequests = (status, options = {}) => useQuery({
   staleTime: 0,
   ...options,
 });
+
+/**
+ * COLL-CONSOLE-BIS (03/10/2026), planche 12 — les nombres des deux lignes « Collectivités » de
+ * « À traiter », sur l accueil du SuperAdmin : « Mairies à activer » (les inactives qui ont deja
+ * des clubs, comme la tuile) et « Demandes de gestionnaire » (la file en attente). Les DEUX
+ * lectures existantes de la console, sous leurs clefs : aucune lecture neuve. `enabled: false`
+ * (un autre compte) : aucune requete, des zeros.
+ * @param {boolean} enabled - Vrai pour le SuperAdmin seul.
+ * @returns {{ demandesGestionnaire: number, mairiesAActiver: number }} Les deux nombres.
+ */
+export const useAdminCollectivitesATraiter = (enabled) => {
+  const liste = useAdminCollectivites({ enabled: enabled === true });
+  const file = useAdminManagerRequests('pending', { enabled: enabled === true });
+  const lignes = Array.isArray(liste.data?.data) ? liste.data.data : [];
+  return {
+    demandesGestionnaire: enabled === true && Array.isArray(file.data) ? file.data.length : 0,
+    mairiesAActiver: enabled === true
+      ? summarizeAdminCollectivites(lignes.map(toAdminCollectiviteRow)).toActivate
+      : 0,
+  };
+};
 
 /**
  * Accepter ou refuser une demande ; variables `{ decision, requestId, data }`. Relit la file,

@@ -17,6 +17,7 @@ import {
 import {
   COLLECTIVITE_TYPES,
   collectiviteTypeLabel,
+  nomOfficielDeCommune,
 } from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -31,12 +32,16 @@ import { RouteNames } from '@/navigation/routeNames';
 import { updateMe } from '@/services/auth/authService';
 import {
   useCollectiviteSignupSearch,
+  useCommuneSearch,
   useCreateManagerRequest,
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
-/** @typedef {{ documentId: string | null, name: string, type: string }} ChoixCollectivite */
+/**
+ * @typedef {{ codeInsee?: string | null, documentId: string | null, name: string,
+ *   type: string }} ChoixCollectivite
+ */
 /** @typedef {'firstname' | 'lastname' | 'jobTitle' | 'professionalEmail'} ChampVous */
 
 /**
@@ -104,14 +109,28 @@ function CollectiviteSignup() {
   const [erreurServeur, setErreurServeur] = useState('');
 
   const trouvees = useCollectiviteSignupSearch(recherche);
+  // COLL-CONSOLE-BIS (03/10) — « Chercher la commune » (planches 7 et 8) : le référentiel de
+  // l'État, lu par le serveur, pour une COMMUNE seulement.
+  const communes = useCommuneSearch(recherche, { enabled: type === 'commune' });
   const envoi = /** @type {any} */ (useCreateManagerRequest());
   const fautes = signupContactErrors(champs);
 
   const resultats = (Array.isArray(trouvees.data) ? trouvees.data : [])
     .filter((collectivite) => collectivite?.type === type);
   const texte = recherche.trim();
-  // Une collectivité absente de FoundClub reste possible : la demande servira à l'ouvrir.
-  const absente = texte.length >= 3 && !trouvees.isLoading
+  // Les communes du référentiel : celle qui est DÉJÀ sur FoundClub se choisit comme une
+  // existante (une fois), une absente garde son code INSEE pour la demande.
+  const dejaListees = new Set(resultats.map((collectivite) => collectivite?.documentId));
+  const communesTrouvees = type === 'commune' && Array.isArray(communes.data) ? communes.data : [];
+  const communesSurFoundClub = communesTrouvees.filter((commune) => (
+    commune?.collectivite?.documentId && !dejaListees.has(commune.collectivite.documentId)
+  ));
+  const communesAbsentes = communesTrouvees.filter((commune) => !commune?.collectivite?.documentId);
+  // Une collectivité absente de FoundClub reste possible : la demande servira à l'ouvrir. Quand
+  // le référentiel a trouvé des communes, on choisit parmi elles (avec leur code) ; sinon (autre
+  // type, référentiel muet ou en panne), la saisie libre d'avant reste.
+  const absente = texte.length >= 3 && !trouvees.isLoading && !communes.isLoading
+    && communesTrouvees.length === 0
     && !resultats.some((collectivite) => (
       String(collectivite?.name).toLowerCase() === texte.toLowerCase()
     ));
@@ -194,8 +213,10 @@ function CollectiviteSignup() {
     /** @type {string} */ precision,
     /** @type {string} */ testID,
   ) => {
+    // Deux communes homonymes (« Saint-Martin ») ne se confondent pas : le code INSEE compte.
     const choisie = choix?.name === collectivite.name
-      && choix?.documentId === collectivite.documentId;
+      && choix?.documentId === collectivite.documentId
+      && (choix?.codeInsee || null) === (collectivite.codeInsee || null);
     return (
       <TouchableOpacity
         accessibilityRole="radio"
@@ -316,6 +337,30 @@ function CollectiviteSignup() {
           { documentId: collectivite.documentId, name: collectivite.name, type: collectivite.type },
           t('collectiviteAccueil.inscription.collectivite.dejaSur', 'Déjà sur FoundClub'),
           `collectivite-inscription-trouvee-${collectivite.documentId}`,
+        ))}
+        {communesSurFoundClub.map((commune) => ligneChoix(
+          {
+            documentId: commune.collectivite.documentId,
+            name: commune.collectivite.name,
+            type: 'commune',
+          },
+          t('collectiviteAccueil.inscription.collectivite.dejaSur', 'Déjà sur FoundClub'),
+          `collectivite-inscription-trouvee-${commune.collectivite.documentId}`,
+        ))}
+        {communesAbsentes.map((commune) => ligneChoix(
+          {
+            codeInsee: commune.codeInsee,
+            documentId: null,
+            name: nomOfficielDeCommune(t, commune.name),
+            type: 'commune',
+          },
+          [
+            Array.isArray(commune.codesPostaux) ? commune.codesPostaux[0] : null,
+            t('collectiviteConsoleBis.commune.codeInsee', 'Code INSEE {{code}}', {
+              code: commune.codeInsee,
+            }),
+          ].filter(Boolean).join(' · '),
+          `collectivite-inscription-commune-${commune.codeInsee}`,
         ))}
         {absente ? ligneChoix(
           { documentId: null, name: texte, type },

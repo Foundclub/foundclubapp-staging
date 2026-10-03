@@ -275,11 +275,17 @@ const MAX_BANNER_LINES = 4;
  *
  * Une ligne dont le compteur vaut 0 DISPARAIT. Si toutes disparaissent, le
  * tableau est vide et le bandeau ne se rend pas du tout.
+ * COLL-CONSOLE-BIS (03/10/2026), planche 12 — le SuperAdmin voit aussi deux lignes
+ * « Collectivités », dans l'ordre de la maquette, après « À la une » : « Mairies à activer » et
+ * « Demandes de gestionnaire ». Leurs nombres viennent des lectures de la console
+ * (useAdminCollectivitesATraiter) ; le plafond de 4 lignes du pack reste.
  * @param {HomeCounters} counters
  * @param {string} roleKey - `president`, `coach`, `superAdmin`, ou autre (joueur).
+ * @param {{ demandesGestionnaire?: number, mairiesAActiver?: number }} [collectivites] - Les
+ *   nombres de la console des collectivités (SuperAdmin seul).
  * @returns {{ hasAlert: boolean, key: string, value: number }[]}
  */
-export const selectBannerLines = (counters, roleKey) => {
+export const selectBannerLines = (counters, roleKey, collectivites = {}) => {
   /** @type {{ hasAlert: boolean, key: string, value: number }[]} */
   let lines = [];
 
@@ -289,6 +295,16 @@ export const selectBannerLines = (counters, roleKey) => {
       { hasAlert: true, key: 'signalements', value: moderation.signalements },
       { hasAlert: true, key: 'revendications', value: moderation.revendications },
       { hasAlert: false, key: 'aLaUne', value: moderation.aLaUne },
+      {
+        hasAlert: true,
+        key: 'mairiesAActiver',
+        value: Number(collectivites?.mairiesAActiver) || 0,
+      },
+      {
+        hasAlert: true,
+        key: 'demandesGestionnaire',
+        value: Number(collectivites?.demandesGestionnaire) || 0,
+      },
       { hasAlert: false, key: 'clubsAOnboarder', value: moderation.clubsAOnboarder },
     ];
   } else if (roleKey === 'president') {

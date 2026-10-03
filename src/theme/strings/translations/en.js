@@ -5172,6 +5172,45 @@ export default {
       indisponible: 'Number unavailable',
     },
   },
+  // COLL-CONSOLE-BIS (03/10/2026) — what was left of the local-authority console and sign-up
+  // (design HY521H1, pages 1 and 2: boards 7, 8, 12 to 17).
+  collectiviteConsoleBis: {
+    accueil: {
+      demandesGestionnaire: 'Manager requests',
+      mairiesAActiver: 'Town halls to activate',
+    },
+    commune: {
+      aide: 'The official name, INSEE code and SIREN are filled in from it.',
+      aucune: 'No municipality found: type its official name and codes below.',
+      chercher: 'Search for the municipality',
+      codeInsee: 'INSEE code {{code}}',
+      // The OFFICIAL name (D59) stays French in every language, like the form's prefixes.
+      nomDe: 'Ville de {{nom}}',
+      nomDes: 'Ville des {{nom}}',
+      nomDu: 'Ville du {{nom}}',
+      nomElide: 'Ville d’{{nom}}',
+    },
+    fenetres: {
+      chaqueClub: 'Each attached club, and what changes for it.',
+      colonneChange: 'What changes',
+      colonneClub: 'Attached club',
+      paieDeja: 'Already pays: nothing changes',
+      recoit: 'Gets the Club plan for free',
+    },
+    fiche: {
+      depuis: 'Since {{date}}',
+    },
+    liste: {
+      colonneActivee: 'Activated on',
+      colonneAdherents: 'Members covered',
+    },
+    traitees: {
+      colonneCollectivite: 'Local authority',
+      colonneIssue: 'Outcome',
+      colonneLe: 'On',
+      colonnePersonne: 'Person',
+    },
+  },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — the club's facilities in 3 groups (design P8v2, D32).
   clubInstallations: {
