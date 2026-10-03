@@ -12,7 +12,7 @@
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
-import { lieuAvecPreposition } from './collectiviteDemandes';
+import { finDeSaison, lieuAvecPreposition } from './collectiviteDemandes';
 
 /** @typedef {any} Traduire - La traduction (TFunction d i18next, qui ne se reduit pas a une signature simple). */
 
@@ -292,16 +292,23 @@ export const dimancheDe = (lundi) => {
 };
 
 /**
+ * Le jour où l'on est (AAAA-MM-JJ), sur l'appareil.
+ * @param {Date} [maintenant] - Maintenant.
+ * @returns {string} Le jour.
+ */
+export const aujourdhui = (maintenant = new Date()) => {
+  const deux = (/** @type {number} */ n) => String(n).padStart(2, '0');
+  return `${maintenant.getFullYear()}-${deux(maintenant.getMonth() + 1)}-${deux(maintenant.getDate())}`;
+};
+
+/**
  * Le lundi de la semaine où l'on est, sur l'appareil.
  * @param {Date} [maintenant] - Maintenant.
  * @returns {string} Le lundi AAAA-MM-JJ.
  */
-export const lundiDeMaintenant = (maintenant = new Date()) => {
-  const deux = (/** @type {number} */ n) => String(n).padStart(2, '0');
-  const mois = deux(maintenant.getMonth() + 1);
-  const jour = `${maintenant.getFullYear()}-${mois}-${deux(maintenant.getDate())}`;
-  return /** @type {string} */ (lundiDecale(jour));
-};
+export const lundiDeMaintenant = (maintenant = new Date()) => (
+  /** @type {string} */ (lundiDecale(aujourdhui(maintenant)))
+);
 
 /**
  * L'installation proposée d'abord : la plus utilisée de la période (ses heures), à égalité la
@@ -327,3 +334,16 @@ export const installationParDefaut = (installations) => {
 export const nomDuFichierAffiche = (nomInstallation, lundi) => (
   `affiche-${enNomDeFichier(nomInstallation, 'installation')}-${lundi}.pdf`
 );
+
+/**
+ * COLL-AFFICHE-2 (03/10, décision d'Adel « saison A ») — le nom du PDF de l'affiche de la SAISON,
+ * comme le serveur le nomme : « affiche-gymnase-des-tilleuls-saison-2026-2027.pdf ». La saison est
+ * celle qui contient le jour (du 1er septembre au 30 juin, `finDeSaison`).
+ * @param {unknown} nomInstallation - Le nom de l'installation.
+ * @param {string} jour - Un jour de la saison (AAAA-MM-JJ), d'ordinaire aujourd'hui.
+ * @returns {string} Le nom du fichier.
+ */
+export const nomDuFichierAfficheSaison = (nomInstallation, jour) => {
+  const fin = Number(finDeSaison(jour).slice(0, 4));
+  return `affiche-${enNomDeFichier(nomInstallation, 'installation')}-saison-${fin - 1}-${fin}.pdf`;
+};

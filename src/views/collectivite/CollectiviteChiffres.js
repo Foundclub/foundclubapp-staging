@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import {
+  aujourdhui,
   avecMarqueUtf8,
   dimancheDe,
   dureeLisible,
@@ -18,6 +19,7 @@ import {
   lundiDecale,
   lundiDeMaintenant,
   nomDuFichierAffiche,
+  nomDuFichierAfficheSaison,
   nomDuFichierExporte,
   PERIODES_CHIFFRES,
   phraseDelai,
@@ -179,6 +181,41 @@ function ChoixDeSortie({
 }
 
 /**
+ * Une puce de choix du panneau de l'affiche : une installation (COLL-AFFICHE), une période
+ * (COLL-AFFICHE-2, « La semaine » / « La saison »).
+ * @param {{ choisie: boolean, libelle: string, onPress: () => void, testID: string }} props
+ * @returns {import('react').ReactElement} La puce.
+ */
+function PuceDeChoix({
+  choisie, libelle, onPress, testID,
+}) {
+  const { Colors, Fonts } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={{ selected: choisie }}
+      onPress={onPress}
+      style={{
+        backgroundColor: choisie
+          ? withAlpha(Colors.primary500, 0.22)
+          : withAlpha(Colors.neutral00, 0.05),
+        borderColor: choisie
+          ? Colors.primary500
+          : withAlpha(Colors.neutral00, 0.12),
+        borderRadius: 999,
+        borderWidth: 1,
+        justifyContent: 'center',
+        minHeight: 36,
+        paddingHorizontal: 14,
+      }}
+      testID={testID}
+    >
+      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{libelle}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/**
  * La flèche « Semaine précédente » / « Semaine suivante » de l'affiche (COLL-AFFICHE).
  * @param {{ etiquette: string, icone: string, onPress: () => void }} props
  * @returns {import('react').ReactElement} Le bouton.
@@ -224,7 +261,8 @@ function BoutonDeSemaine({ etiquette, icone, onPress }) {
  * affiche pour l'installation » : le PDF du planning d'UNE installation pour UNE semaine, que le
  * serveur fabrique (`GET /collectivites/:id/chiffres/affiche`, contrat §7 bis). Elle vient en
  * premier, cochée, comme sur la planche ; on choisit l'installation et la semaine, puis
- * « Télécharger ».
+ * « Télécharger ». COLL-AFFICHE-2 (03/10, « saison A ») : ou TOUTE LA SAISON (« La saison » : la
+ * semaine type et ce qui change dans l'année, sans flèches de semaine).
  * @returns {import('react').ReactElement} L'écran.
  */
 function CollectiviteChiffres() {
@@ -255,6 +293,8 @@ function CollectiviteChiffres() {
     /** @type {string | null} */ (null),
   );
   const [lundi, setLundi] = useState(/** @type {string | null} */ (null));
+  // COLL-AFFICHE-2 (03/10) — l'affiche d'une semaine, ou de toute la saison.
+  const [etendue, setEtendue] = useState(/** @type {'semaine' | 'saison'} */ ('semaine'));
   const installations = Array.isArray(data?.installations) ? data.installations : [];
   const installation = installations.find(
     (/** @type {any} */ i) => i?.documentId === installationChoisie,
@@ -268,6 +308,7 @@ function CollectiviteChiffres() {
     setSortie(parDefaut ? 'affiche' : 'tableau');
     setInstallationChoisie(parDefaut?.documentId || null);
     setLundi((periode === 'semaine' && lundiDecale(data?.from)) || lundiDeMaintenant());
+    setEtendue('semaine');
     setExportOuvert(true);
   };
   const telechargerTableau = async () => {
@@ -294,14 +335,21 @@ function CollectiviteChiffres() {
   };
   // Le PDF vient d'une route GARDÉE : `downloadRemoteFile` le rapatrie avec le jeton du compte.
   const telechargerAffiche = async () => {
-    if (!installation || !lundi) return;
-    const fichier = nomDuFichierAffiche(installation.name, lundi);
+    if (!installation) return;
+    // La saison : celle d'aujourd'hui, comme le serveur (aucune date envoyée).
+    const saison = etendue === 'saison';
+    if (!saison && !lundi) return;
+    const fichier = saison
+      ? nomDuFichierAfficheSaison(installation.name, aujourdhui())
+      : nomDuFichierAffiche(installation.name, String(lundi));
     setExportEtat({ enCours: true, erreur: null, ok: null });
     try {
-      const { headers, url } = requeteAfficheInstallation(String(collectiviteId), {
-        installation: installation.documentId,
-        semaine: lundi,
-      });
+      const { headers, url } = requeteAfficheInstallation(
+        String(collectiviteId),
+        saison
+          ? { installation: installation.documentId, periode: 'saison' }
+          : { installation: installation.documentId, semaine: String(lundi) },
+      );
       await downloadRemoteFile({
         fileName: fichier, headers, mimeType: 'application/pdf', url,
       });
@@ -549,10 +597,15 @@ function CollectiviteChiffres() {
           <ChoixDeSortie
             coche={sortie === 'affiche'}
             detail={installation
-              ? t('collectiviteChiffres.affiche.detail', 'PDF · une semaine · {{installation}}', {
-                installation: installation.name,
-                ...SANS_ECHAPPEMENT,
-              })
+              ? t(
+                etendue === 'saison'
+                  ? 'collectiviteChiffres.affiche.detailSaison'
+                  : 'collectiviteChiffres.affiche.detail',
+                etendue === 'saison'
+                  ? 'PDF · la saison · {{installation}}'
+                  : 'PDF · une semaine · {{installation}}',
+                { installation: installation.name, ...SANS_ECHAPPEMENT },
+              )
               : t(
                 'collectiviteChiffres.affiche.sansInstallation',
                 'PDF · une semaine · aucune installation pour l’instant',
@@ -579,72 +632,78 @@ function CollectiviteChiffres() {
                 {t('collectiviteChiffres.affiche.installation', 'Installation')}
               </Text>
               <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-                {installations.map((/** @type {any} */ i) => {
-                  const choisie = i?.documentId === installationChoisie;
-                  return (
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: choisie }}
-                      key={i?.documentId}
-                      onPress={() => setInstallationChoisie(i?.documentId)}
-                      style={{
-                        backgroundColor: choisie
-                          ? withAlpha(Colors.primary500, 0.22)
-                          : withAlpha(Colors.neutral00, 0.05),
-                        borderColor: choisie
-                          ? Colors.primary500
-                          : withAlpha(Colors.neutral00, 0.12),
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        justifyContent: 'center',
-                        minHeight: 36,
-                        paddingHorizontal: 14,
-                      }}
-                      testID={`affiche-installation-${i?.documentId}`}
-                    >
-                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{i?.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {installations.map((/** @type {any} */ i) => (
+                  <PuceDeChoix
+                    choisie={i?.documentId === installationChoisie}
+                    key={i?.documentId}
+                    libelle={i?.name}
+                    onPress={() => setInstallationChoisie(i?.documentId)}
+                    testID={`affiche-installation-${i?.documentId}`}
+                  />
+                ))}
               </View>
               <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
-                {t('collectiviteChiffres.affiche.semaine', 'Semaine')}
+                {t('collectiviteChiffres.affiche.periode', 'Période')}
               </Text>
-              <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
-                <BoutonDeSemaine
-                  etiquette={t(
-                    'collectiviteChiffres.affiche.semainePrecedente',
-                    'Semaine précédente',
-                  )}
-                  icone="arrow-left"
-                  onPress={() => setLundi((l) => lundiDecale(l, -1))}
+              <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
+                <PuceDeChoix
+                  choisie={etendue === 'semaine'}
+                  libelle={t('collectiviteChiffres.affiche.laSemaine', 'La semaine')}
+                  onPress={() => setEtendue('semaine')}
+                  testID="affiche-periode-semaine"
                 />
-                <View
-                  style={[
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    {
-                      borderColor: withAlpha(Colors.neutral00, 0.12),
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      flex: 1,
-                      gap: 8,
-                      minHeight: 44,
-                      paddingHorizontal: 12,
-                    },
-                  ]}
-                >
-                  <SvgIcon color={Colors.primary200} height={14} name="calendar" width={14} />
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {lundi ? formatPeriod(lundi, dimancheDe(lundi), { withYear: false }) : ''}
-                  </Text>
-                </View>
-                <BoutonDeSemaine
-                  etiquette={t('collectiviteChiffres.affiche.semaineSuivante', 'Semaine suivante')}
-                  icone="arrow-right"
-                  onPress={() => setLundi((l) => lundiDecale(l, 1))}
+                <PuceDeChoix
+                  choisie={etendue === 'saison'}
+                  libelle={t('collectiviteChiffres.affiche.laSaison', 'La saison')}
+                  onPress={() => setEtendue('saison')}
+                  testID="affiche-periode-saison"
                 />
               </View>
+              {etendue === 'semaine' ? (
+                <>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
+                    {t('collectiviteChiffres.affiche.semaine', 'Semaine')}
+                  </Text>
+                  <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+                    <BoutonDeSemaine
+                      etiquette={t(
+                        'collectiviteChiffres.affiche.semainePrecedente',
+                        'Semaine précédente',
+                      )}
+                      icone="arrow-left"
+                      onPress={() => setLundi((l) => lundiDecale(l, -1))}
+                    />
+                    <View
+                      style={[
+                        Alignments.row,
+                        Alignments.alignCenter,
+                        {
+                          borderColor: withAlpha(Colors.neutral00, 0.12),
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          flex: 1,
+                          gap: 8,
+                          minHeight: 44,
+                          paddingHorizontal: 12,
+                        },
+                      ]}
+                    >
+                      <SvgIcon color={Colors.primary200} height={14} name="calendar" width={14} />
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {lundi ? formatPeriod(lundi, dimancheDe(lundi), { withYear: false }) : ''}
+                      </Text>
+                    </View>
+                    <BoutonDeSemaine
+                      etiquette={t(
+                        'collectiviteChiffres.affiche.semaineSuivante',
+                        'Semaine suivante',
+                      )}
+                      icone="arrow-right"
+                      onPress={() => setLundi((l) => lundiDecale(l, 1))}
+                    />
+                  </View>
+                </>
+              ) : null}
             </View>
           ) : null}
           <Text style={[Fonts.p3, Fonts.neutral300]}>
