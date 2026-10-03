@@ -96,6 +96,8 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => ({
     data: null, isFetching: false, isLoading: false, refetch: jest.fn(),
   }),
+  // ST-VUES3-ORDI — « Relancer les N » de la carte « Après le match », sur le site.
+  useRemindEventMatchResponses: () => ({ isPending: false, mutateAsync: jest.fn() }),
 }));
 
 // 🔎 Les deux lectures des avis : on garde CHAQUE identifiant demandé, pour prouver qu'un

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import {
   getEventMatchResult,
@@ -10,6 +10,7 @@ import {
   getPendingMatchStatsPrompts,
   getPersonalStats,
   getTeamPerformanceStats,
+  remindEventMatchResponses,
 } from './matchStatsService';
 
 const MATCH_STATS_STALE_MS = 30_000;
@@ -83,6 +84,14 @@ export const useGetLeagueTeamPerformanceStats = (teamId, options = {}) => useQue
   queryKey: ['leagueTeamPerformanceStats', teamId],
   staleTime: 1000 * 60 * 5,
   ...options,
+});
+
+// ST-VUES3-ORDI — « Relancer les N » de la carte « Après le match », sur le SITE : la même
+// route que le téléphone (`useEventMutations`), sans tirer tout le hook de l'écran.
+export const useRemindEventMatchResponses = () => useMutation({
+  mutationFn: (/** @type {{ eventId: string, teamId: string }} */ variables) => (
+    remindEventMatchResponses(variables?.eventId, variables?.teamId)
+  ),
 });
 
 // FINITIONS6 — lue aussi par MatchStatsPromptHost au retour au premier plan.
