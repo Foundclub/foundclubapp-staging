@@ -658,6 +658,55 @@ export function FicheDuJoueur({
 }
 
 /**
+ * 📐 ST-MATCH10-BIS (O1) — TES RETOURS ÉCRITS, SOUS LE TABLEAU (planche P3-editeur-ordi,
+ * état 1) : sur ordinateur, sans joueur ouvert, chaque retour écrit se relit d'un coup
+ * d'œil, avec qui le lit. Un clic ouvre le joueur ; sa note et ses chiffres restent
+ * dans son panneau.
+ * @param {object} props - Les propriétés.
+ * @param {(cle: string) => void} props.onOuvrir - Ouvre le joueur.
+ * @param {Array<{ cle: string, commentaire: string, prenom: string }>} props.retours - Les
+ *   retours écrits, dans l'ordre de la feuille.
+ * @returns {import('react').ReactElement | null} Les retours, ou rien.
+ */
+export function ApercuDesRetours({ onOuvrir, retours }) {
+  const {
+    Alignments, Colors, Fonts, Spaces,
+  } = useTheme();
+  const { t } = useTranslation();
+  const surfaces = useSurfacesFeuille();
+  if (!retours.length) return null;
+  return (
+    <View style={Spaces.gap[8]}>
+      {retours.map((retour) => (
+        <Pressable
+          accessibilityRole="button"
+          key={retour.cle}
+          onPress={() => onOuvrir(retour.cle)}
+          style={[surfaces.encart, Spaces.padding[12], Spaces.gap[8]]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('stMatch.feuille.feedbackTo', 'Ton retour à {{name}}', {
+              name: retour.prenom, ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>{retour.commentaire}</Text>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <GlyphIcon color={Colors.neutral300} name="lock" size={16} />
+            <Text style={[Fonts.p3, Fonts.neutral300, Alignments.fill]}>
+              {t(
+                'stMatch.feuille.privacyPlayer',
+                'Lu par {{name}} et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
+                { name: retour.prenom, ...SANS_ECHAPPEMENT },
+              )}
+            </Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/**
  * L'ONGLET RETOURS (état 5) : le compte, qui manque et « Relancer », qui a répondu.
  * @param {object} props - Les propriétés.
  * @param {number} props.attendues - Les joueurs de la feuille.

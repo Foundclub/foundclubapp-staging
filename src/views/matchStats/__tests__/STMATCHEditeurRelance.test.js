@@ -989,3 +989,38 @@ describe('ST-MATCH10-BIS · 7 — la colonne « Réponse » sur ordinateur (plan
     expect(textes(racine)).not.toContain('Réponse');
   });
 });
+
+describe('ST-MATCH10-BIS · O1 — « Ton retour à Hugo » sous le tableau, sur ordinateur (planche O1)', () => {
+  const colonneJoueurs = (/** @type {any} */ racine) => racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-colonne-joueurs')[0];
+  const avecRetour = () => feuilleU15({ coachPlayerReviews: [{ comment: 'Bon pressing.', rating: 7, userDocumentId: 'u1' }] });
+
+  test('Aucun joueur ouvert : ton retour écrit se lit sous le tableau, avec qui le lit', async () => {
+    const racine = await monter(avecRetour(), { desktop: true });
+    const vus = textes(colonneJoueurs(racine));
+
+    const debut = vus.indexOf('Ton retour à Hugo');
+    expect(debut).toBeGreaterThan(-1);
+    expect(vus.slice(debut, debut + 3)).toEqual([
+      'Ton retour à Hugo',
+      'Bon pressing.',
+      'Lu par Hugo et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
+    ]);
+    // L'ordre de la planche : le tableau, ton retour, puis l'aide.
+    expect(vus.indexOf('Clique une ligne pour ses chiffres et ton retour.')).toBeGreaterThan(debut);
+  });
+
+  test('Cliquer ton retour ouvre le joueur (panneau de droite)', async () => {
+    const racine = await monter(avecRetour(), { desktop: true });
+    await appuyerSur(colonneJoueurs(racine), 'Ton retour à Hugo');
+    expect(racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-panneau-joueur')).not.toHaveLength(0);
+  });
+
+  test('Pas de commentaire écrit : rien sous le tableau ; au téléphone non plus', async () => {
+    const sansMot = await monter(feuilleU15({ coachPlayerReviews: [{ comment: '', rating: 7, userDocumentId: 'u1' }] }), { desktop: true });
+    expect(textes(sansMot)).not.toContain('Ton retour à Hugo');
+    act(() => arbre.unmount());
+    const telephone = await monter(avecRetour());
+    await appuyerSur(telephone, 'Joueurs · 1');
+    expect(textes(telephone)).not.toContain('Ton retour à Hugo');
+  });
+});

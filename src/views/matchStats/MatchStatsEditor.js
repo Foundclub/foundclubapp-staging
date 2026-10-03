@@ -63,6 +63,7 @@ import {
 import { useIsDesktop } from '@/responsive';
 import {
   AlerteFeuille,
+  ApercuDesRetours,
   BilanPublie,
   BlocRetours,
   Compteur,
@@ -1147,6 +1148,14 @@ function MatchStatsEditor({ navigation, route }) {
     () => new Map(coachReviews.map((review) => [review.lineKey, review.rating ?? null])),
     [coachReviews],
   );
+  // 📐 ST-MATCH10-BIS (O1) — tes retours écrits, relus sous le tableau sur ordinateur.
+  const writtenFeedbacks = coachReviews
+    .filter((review) => Boolean(String(review?.comment || '').trim()) && review?.lineKey)
+    .map((review) => ({
+      cle: review.lineKey,
+      commentaire: String(review.comment).trim(),
+      prenom: firstNameOf(playerLines.find((line) => line.key === review.lineKey) || review),
+    }));
   const scoredGoals = playerLines
     .reduce((total, line) => total + getNumericStatValue(line?.goals), 0);
   const knownScoreFor = getNullableNumericStatValue(scoreFor);
@@ -1219,6 +1228,9 @@ function MatchStatsEditor({ navigation, route }) {
           selection={ordinateur ? openLineKey : null}
           sport={sport}
         />
+        {ordinateur && !openLineKey ? (
+          <ApercuDesRetours onOuvrir={setOpenLineKey} retours={writtenFeedbacks} />
+        ) : null}
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {ordinateur
             ? t('stMatch.feuille.clickHint', 'Clique une ligne pour ses chiffres et ton retour.')
