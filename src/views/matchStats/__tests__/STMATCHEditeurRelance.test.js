@@ -646,7 +646,7 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
     expect(textes(racine.findAll((/** @type {any} */ n) => n.props?.testID === 'feuille-barre')[0])).toEqual(['Republier']);
   });
 
-  test('État 10 · Aucun joueur : l onglet dit pourquoi et mène au match, sans texte technique', async () => {
+  test('État 10 · Aucun joueur : l onglet dit pourquoi et ouvre la convocation, sans texte technique', async () => {
     const donnees = feuilleU15({ playerLines: [], responseCompletionCount: 0, responseEligibleCount: 0 }, {
       availablePlayers: [], playerResponses: [],
     });
@@ -659,8 +659,12 @@ describe('ST-MATCH10 — la feuille de match en trois onglets (téléphone)', ()
       'Les joueurs viennent de la convocation du match. Publie-la, ou ajoute l’équipe au match.',
     ]));
     expect(vus.some((texte) => /roster|Publie d abord/.test(texte))).toBe(false);
-    await appuyerSur(racine, 'Ouvrir la page du match');
-    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.EventDetails, { eventId: 'event-1' });
+    // 📐 ADAPTÉ (ST-MATCH10-BIS, point 5) : le bouton de la planche, « Ouvrir la convocation ».
+    // La feuille ne sait pas bâtir une convocation : elle rend la main à la page du match,
+    // qui ouvre SA porte de convocation (témoins EventDetails*ConvocationDepuisLaFeuille).
+    expect(vus).not.toContain('Ouvrir la page du match');
+    await appuyerSur(racine, 'Ouvrir la convocation');
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.EventDetails, { eventId: 'event-1', focusSection: 'convocation' });
   });
 
   test('État 11 · Erreur : l en-tête reste, la phrase est humaine, « Réessayer » relit', async () => {

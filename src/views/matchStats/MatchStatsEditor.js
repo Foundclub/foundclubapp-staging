@@ -1168,10 +1168,16 @@ function MatchStatsEditor({ navigation, route }) {
                 'Les joueurs viennent de l’effectif de l’équipe.',
               )}
           </Text>
+          {/* 📐 ST-MATCH10-BIS (point 5) — « Ouvrir la convocation » (planche, état 10). La
+              feuille ne sait pas bâtir une convocation (joueurs éligibles, brouillon, sport) :
+              la page du match, elle, sait, et ouvre SA porte quand on lui demande. */}
           {sourceType === 'event' && eventId ? (
             <Button
-              onPress={() => navigation.navigate(RouteNames.EventDetails, { eventId })}
-              title={t('stMatch.feuille.emptyAction', 'Ouvrir la page du match')}
+              onPress={() => navigation.navigate(RouteNames.EventDetails, {
+                eventId,
+                focusSection: 'convocation',
+              })}
+              title={t('stMatch.feuille.openConvocation', 'Ouvrir la convocation')}
               variant="Secondary"
             />
           ) : null}

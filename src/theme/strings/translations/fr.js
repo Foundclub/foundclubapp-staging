@@ -17387,6 +17387,7 @@ export default {
       // eslint-disable-next-line max-len
       notConvokedNoReminder_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
       officialLock: 'Score officiel de la fédération',
+      openConvocation: 'Ouvrir la convocation',
       opponentUnknown: 'adversaire à confirmer',
       playersRatingHidden: 'Les joueurs : dès 3 réponses',
       // eslint-disable-next-line max-len

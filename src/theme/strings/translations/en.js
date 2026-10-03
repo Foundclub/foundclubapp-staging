@@ -16594,6 +16594,7 @@ export default {
       notConvokedNoReminder_one: '{{names}} is not called up: reminders only go to called-up players.',
       notConvokedNoReminder_other: '{{names}} are not called up: reminders only go to called-up players.',
       officialLock: 'Official federation score',
+      openConvocation: 'Open the call-up',
       opponentUnknown: 'opponent to be confirmed',
       playersRatingHidden: 'Players: from 3 answers',
       privacyPlayer: 'Read by {{name}} and, if a minor, their parents. Never by their teammates.',
