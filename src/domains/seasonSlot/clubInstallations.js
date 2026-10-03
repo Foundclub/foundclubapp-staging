@@ -1,6 +1,7 @@
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  formatPeriod,
   isoWeekdayOf,
   timeRange,
   toMinutes,
@@ -56,6 +57,14 @@ export const groupClubInstallations = (facilities) => {
 export const clubSlotParts = (slot) => ({
   day: weekdayName(slot?.weekday).toLocaleLowerCase(),
   hours: timeRange(slot?.startTime, slot?.endTime),
+  // 🎨 COLL-FIX2 (03/10), planche 42 (tournée T10) : un créneau RÉPARTI (« Tout le club » du
+  // 1 sept. au 6 oct., puis « U15 » du 7 oct. au 30 juin) se lisait en deux lignes identiques,
+  // sans période. La période s'écrit quand le créneau ne couvre pas toute la saison
+  // (du 1er septembre au 30 juin, contrat §2).
+  period: /-09-01$/.test(String(slot?.validFrom || '-09-01'))
+    && /-06-30$/.test(String(slot?.validUntil || '-06-30'))
+    ? ''
+    : formatPeriod(slot?.validFrom, slot?.validUntil, { withYear: false }),
   team: slot?.team?.name || null,
 });
 

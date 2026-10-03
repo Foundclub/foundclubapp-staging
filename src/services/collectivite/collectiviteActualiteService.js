@@ -156,6 +156,92 @@ export const normalizeActualiteFile = (brut) => {
 };
 
 /**
+ * 🐞 COLL-FIX2 (03/10) — ENVOYER LE FORMULAIRE, ET SAVOIR POURQUOI IL N'EST PAS PARTI.
+ * Tournées T9 et T10 : « Network request failed » et AUCUN POST /upload. Sur Android, React Native
+ * rend exactement cette erreur quand il ne peut pas CONSTRUIRE le corps (NetworkingModule :
+ * « Could not retrieve file for uri … », « Binary FormData part needs a content-type header. ») :
+ * la requête ne part jamais. `fetch` lit la réponse en `blob` et jette cette raison ; un
+ * XMLHttpRequest en TEXTE la garde dans `responseText`. L'erreur la porte (`natif`), le journal
+ * de l'écran la montre : la prochaine tournée lira la vraie cause au lieu de la deviner.
+ * @param {string} url - L'adresse de `/upload`.
+ * @param {FormData} formData - Le formulaire.
+ * @param {string | null | undefined} token - Le jeton du compte.
+ * @returns {Promise<{ ok: boolean, status: number, texte: string }>} La réponse.
+ */
+const envoyerLeFormulaire = (url, formData, token) => new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', url);
+  if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+  xhr.timeout = 45000;
+  xhr.onload = () => resolve({
+    ok: xhr.status >= 200 && xhr.status < 300,
+    status: xhr.status,
+    texte: xhr.responseText || '',
+  });
+  const echec = (/** @type {string} */ quoi) => () => {
+    const natif = String(xhr.responseText || '').trim() || null;
+    reject(Object.assign(new Error(natif ? `${quoi} : ${natif}` : quoi), { natif }));
+  };
+  xhr.onerror = echec('Network request failed');
+  xhr.ontimeout = echec('Network request timed out');
+  xhr.send(formData);
+});
+
+/**
+ * Le corps rendu par `/upload` : le 1er fichier créé, ou une erreur qui dit le statut.
+ * @param {{ ok: boolean, status: number, texte: string }} reponse - La réponse.
+ * @returns {any} Le fichier créé, ou null.
+ */
+const lireLeFichierCree = (reponse) => {
+  let corps = null;
+  try {
+    corps = reponse.texte ? JSON.parse(reponse.texte) : null;
+  } catch {
+    corps = null;
+  }
+  if (!reponse.ok) {
+    throw new Error(corps?.error?.message || `HTTP ${reponse.status}`);
+  }
+  const [premier] = Array.isArray(corps) ? corps : [];
+  return premier || null;
+};
+
+/**
+ * Téléverse UNE pièce déjà normalisée : le VRAI envoi, sans import à l'appel (testable).
+ * 🐞 COLL-FIX2 (03/10) — comme la messagerie, qui envoie des documents (Conversation.js,
+ * `uploadAttachmentAsset`) : un 1er envoi direct, et si la requête n'a pas pu partir, un 2e par
+ * le client HTTP de l'app. Si les deux échouent, c'est l'erreur du 1er qui remonte : elle porte la
+ * raison native.
+ * @param {{ fichier: any, secours?: (formData: FormData) => Promise<any>, token?: string | null,
+ *   url: string }} envoi - La pièce, l'adresse, le jeton, l'envoi de secours (rend `data`).
+ * @returns {Promise<any>} Le fichier créé, ou null.
+ */
+export const televerserLaPiece = async ({
+  fichier, secours, token, url,
+}) => {
+  const formData = new FormData();
+  if (typeof File !== 'undefined' && fichier instanceof File) {
+    formData.append('files', fichier, fichier.name || `piece-jointe-${Date.now()}`);
+  } else {
+    formData.append('files', /** @type {any} */ (fichier));
+  }
+  let reponse;
+  try {
+    reponse = await envoyerLeFormulaire(url, formData, token);
+  } catch (erreur) {
+    if (!secours) throw erreur;
+    try {
+      const data = await secours(formData);
+      const [premier] = Array.isArray(data) ? data : [];
+      return premier || null;
+    } catch {
+      throw erreur;
+    }
+  }
+  return lireLeFichierCree(reponse);
+};
+
+/**
  * Téléverse UNE pièce jointe (`POST /upload`, comme la messagerie) et rend le fichier créé.
  * Le serveur de l'actualité vérifie ensuite qu'il existe.
  * @param {any} brut - Ce que rend le sélecteur.
@@ -165,29 +251,13 @@ export const normalizeActualiteFile = (brut) => {
 export const uploadActualiteFile = async (brut) => {
   const fichier = normalizeActualiteFile(brut);
   if (!fichier) return null;
-  const formData = new FormData();
-  if (typeof File !== 'undefined' && fichier instanceof File) {
-    formData.append('files', fichier, fichier.name || `piece-jointe-${Date.now()}`);
-  } else {
-    formData.append('files', /** @type {any} */ (fichier));
-  }
   const token = (await session())?.token;
-  // `fetch` plutôt qu'axios : Android perd le FormData d'axios (Conversation.js, même choix).
-  const response = await fetch(`${getApiBaseUrl()}/upload`, {
-    body: formData,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    method: 'POST',
+  return televerserLaPiece({
+    fichier,
+    secours: async (formData) => (await (await client()).post('/upload', formData, {
+      timeout: 45000,
+    })).data,
+    token,
+    url: `${getApiBaseUrl()}/upload`,
   });
-  const texte = await response.text();
-  let corps = null;
-  try {
-    corps = texte ? JSON.parse(texte) : null;
-  } catch {
-    corps = null;
-  }
-  if (!response.ok) {
-    throw new Error(corps?.error?.message || `HTTP ${response.status}`);
-  }
-  const [premier] = Array.isArray(corps) ? corps : [];
-  return premier || null;
 };

@@ -51,62 +51,72 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  */
 
 /**
- * Le bouton « Plus d'actions » d'une ligne (icône dots-horizontal, validée par Adel le 01/10) et
- * son menu, déplié SOUS la ligne : un geste qui retire (« Détacher », « Retirer ») ne se fait
- * plus d'un appui distrait sur la ligne (planche P2-fiche, « retiré, et pourquoi »).
- * @param {{ actions: Array<{ danger?: boolean, label: string, onPress: () => void }>,
- *   libelle: string, ouvert: boolean, onBasculer: () => void, testID: string }} props - Le menu.
+ * Le bouton « Plus d'actions » d'une ligne (icône dots-horizontal, validée par Adel le 01/10) : un
+ * geste qui retire (« Détacher », « Retirer ») ne se fait plus d'un appui distrait sur la ligne
+ * (planche P2-fiche, « retiré, et pourquoi »). Son menu est `MenuDActions`, posé SOUS la ligne.
+ * @param {{ libelle: string, ouvert: boolean, onBasculer: () => void, testID: string }} props -
+ *   Le bouton.
  * @returns {import('react').ReactElement} Le bouton.
  */
 function PlusDActions({
-  actions, libelle, onBasculer, ouvert, testID,
+  libelle, onBasculer, ouvert, testID,
 }) {
+  const { Alignments, Colors } = useTheme();
+  return (
+    <TouchableOpacity
+      accessibilityLabel={libelle}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: ouvert }}
+      hitSlop={{
+        bottom: 8, left: 8, right: 8, top: 8,
+      }}
+      onPress={onBasculer}
+      style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
+      testID={testID}
+    >
+      <SvgIcon color={Colors.neutral200} height={22} name="dots-horizontal" width={22} />
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * Le menu d'une ligne, déplié SOUS elle, sur toute sa largeur.
+ * 🐞 COLL-FIX2 (03/10), tournée T10 (T10_C16_2) : il se dépliait DANS la ligne, sous le bouton,
+ * et la colonne du menu écrasait celle du nom (« AS Montriv / age »).
+ * @param {{ actions: Array<{ danger?: boolean, label: string, onPress: () => void }>,
+ *   testID: string }} props - Les actions, et le testID du bouton qui l'ouvre.
+ * @returns {import('react').ReactElement} Le menu.
+ */
+function MenuDActions({ actions, testID }) {
   const {
-    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+    ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   return (
-    <View style={{ gap: 8 }}>
-      <TouchableOpacity
-        accessibilityLabel={libelle}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: ouvert }}
-        hitSlop={{
-          bottom: 8, left: 8, right: 8, top: 8,
-        }}
-        onPress={onBasculer}
-        style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
-        testID={testID}
-      >
-        <SvgIcon color={Colors.neutral200} height={22} name="dots-horizontal" width={22} />
-      </TouchableOpacity>
-      {ouvert ? (
-        <View
-          style={[
-            ApplicationStyle.borderRadius16,
-            Spaces.padding[8],
-            {
-              backgroundColor: Colors.primary700,
-              borderColor: withAlpha(Colors.primary500, 0.5),
-              borderWidth: 1,
-              gap: 4,
-            },
-          ]}
-          testID={`${testID}-menu`}
+    <View
+      style={[
+        ApplicationStyle.borderRadius16,
+        Spaces.padding[8],
+        {
+          backgroundColor: Colors.primary700,
+          borderColor: withAlpha(Colors.primary500, 0.5),
+          borderWidth: 1,
+          gap: 4,
+        },
+      ]}
+      testID={`${testID}-menu`}
+    >
+      {actions.map((action) => (
+        <TouchableOpacity
+          accessibilityRole="button"
+          key={action.label}
+          onPress={action.onPress}
+          style={[Spaces.paddingHorizontal[12], { justifyContent: 'center', minHeight: 44 }]}
         >
-          {actions.map((action) => (
-            <TouchableOpacity
-              accessibilityRole="button"
-              key={action.label}
-              onPress={action.onPress}
-              style={[Spaces.paddingHorizontal[12], { justifyContent: 'center', minHeight: 44 }]}
-            >
-              <Text style={[Fonts.p2Bold, action.danger ? Fonts.error300 : Fonts.neutral00]}>
-                {action.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : null}
+          <Text style={[Fonts.p2Bold, action.danger ? Fonts.error300 : Fonts.neutral00]}>
+            {action.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 }
@@ -527,6 +537,16 @@ function AdminCollectiviteDetail() {
                   {pastilleOffre(club.documentId)}
                 </View>
                 <PlusDActions
+                  libelle={t('collectiviteConsole.fiche.plusDActions', 'Plus d’actions : {{nom}}', {
+                    nom: club.name, ...SANS_ECHAPPEMENT,
+                  })}
+                  onBasculer={() => basculerMenu(`club-${club.documentId}`)}
+                  ouvert={menuOuvert === `club-${club.documentId}`}
+                  testID={`admin-collectivite-club-${club.documentId}-actions`}
+                />
+              </View>
+              {menuOuvert === `club-${club.documentId}` ? (
+                <MenuDActions
                   actions={[
                     {
                       label: t('collectiviteConsole.fiche.voirClub', 'Voir la fiche du club'),
@@ -543,14 +563,9 @@ function AdminCollectiviteDetail() {
                       onPress: () => onDetacher(club),
                     },
                   ]}
-                  libelle={t('collectiviteConsole.fiche.plusDActions', 'Plus d’actions : {{nom}}', {
-                    nom: club.name, ...SANS_ECHAPPEMENT,
-                  })}
-                  onBasculer={() => basculerMenu(`club-${club.documentId}`)}
-                  ouvert={menuOuvert === `club-${club.documentId}`}
                   testID={`admin-collectivite-club-${club.documentId}-actions`}
                 />
-              </View>
+              ) : null}
             </View>
           ))}
           <CollectiviteTargetSearch
@@ -592,33 +607,41 @@ function AdminCollectiviteDetail() {
           ) : detail.gestionnaires.map((/** @type {any} */ compte) => {
             const nom = compte.name || compte.email || compte.documentId;
             return (
-              <View
-                key={compte.documentId}
-                style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
-                testID={`admin-collectivite-gestionnaire-${compte.documentId}`}
-              >
-                <ClubLogoMark name={nom} size={36} />
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>
-                  {compte.email ? (
-                    <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>
-                      {compte.email}
-                    </Text>
-                  ) : null}
+              <View key={compte.documentId} style={{ gap: 4 }}>
+                <View
+                  style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+                  testID={`admin-collectivite-gestionnaire-${compte.documentId}`}
+                >
+                  <ClubLogoMark name={nom} size={36} />
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>
+                    {compte.email ? (
+                      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>
+                        {compte.email}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <PlusDActions
+                    libelle={t(
+                      'collectiviteConsole.fiche.plusDActions',
+                      'Plus d’actions : {{nom}}',
+                      { nom, ...SANS_ECHAPPEMENT },
+                    )}
+                    onBasculer={() => basculerMenu(`gestionnaire-${compte.documentId}`)}
+                    ouvert={menuOuvert === `gestionnaire-${compte.documentId}`}
+                    testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
+                  />
                 </View>
-                <PlusDActions
-                  actions={[{
-                    danger: true,
-                    label: t('adminCollectivites.detail.removeManager', 'Retirer'),
-                    onPress: () => onRetirer({ documentId: compte.documentId, name: nom }),
-                  }]}
-                  libelle={t('collectiviteConsole.fiche.plusDActions', 'Plus d’actions : {{nom}}', {
-                    nom, ...SANS_ECHAPPEMENT,
-                  })}
-                  onBasculer={() => basculerMenu(`gestionnaire-${compte.documentId}`)}
-                  ouvert={menuOuvert === `gestionnaire-${compte.documentId}`}
-                  testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
-                />
+                {menuOuvert === `gestionnaire-${compte.documentId}` ? (
+                  <MenuDActions
+                    actions={[{
+                      danger: true,
+                      label: t('adminCollectivites.detail.removeManager', 'Retirer'),
+                      onPress: () => onRetirer({ documentId: compte.documentId, name: nom }),
+                    }]}
+                    testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
+                  />
+                ) : null}
               </View>
             );
           })}

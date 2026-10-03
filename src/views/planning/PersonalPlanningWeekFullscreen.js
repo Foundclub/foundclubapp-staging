@@ -38,6 +38,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   closureBandLabel,
   closureBandsForRange,
+  closureCoversDay,
   closureDaysLabel,
   closureHoursLabel,
   closureTagLabel,
@@ -571,8 +572,17 @@ function PlanningWeekFullscreen() {
     const capacite = facilityPlanningSummary.maxSlots;
     const plein = fullMomentsOfPlanning(confirmes, capacite)[0] || null;
     const pic = Math.min(capacite, getPlanningPeakOccupancy(confirmes).maxConcurrent);
+    // COLL-FIX2 (03/10), planche 25 (T10_C25_5) : un jour FERMÉ (toute la journée) disait encore
+    // « 1 place libre au plus chargé ». La fermeture le dit, pas une place.
+    const jourFerme = vue === VUES.jour
+      && (Array.isArray(data?.meta?.closures) ? data.meta.closures : []).some((fermeture) => (
+        fermeture?.kind !== 'block'
+        && closureCoversDay(fermeture, format(currentDate, 'yyyy-MM-dd'))
+      ));
     let suite;
-    if (plein) {
+    if (jourFerme) {
+      suite = t('collectiviteCreneaux.planning.fermeJour', 'fermeture ce jour-là');
+    } else if (plein) {
       suite = t('collectiviteCreneaux.liste.complet', 'complet {{moment}}', {
         moment: vue === VUES.jour
           ? `${format(plein.start, 'HH:mm')} – ${format(plein.end, 'HH:mm')}`
@@ -597,11 +607,12 @@ function PlanningWeekFullscreen() {
     });
     return {
       capacite,
-      pic: plein ? capacite : pic,
-      plein: Boolean(plein),
+      pic: plein || jourFerme ? capacite : pic,
+      plein: Boolean(plein) || jourFerme,
       texte: `${equipes} · ${suite}`,
     };
-  }, [blocsDeLaPage, facilityPlanningSummary, isFacilitySource, readsAsOrganizer, t, vue]);
+  // eslint-disable-next-line max-len
+  }, [blocsDeLaPage, currentDate, data?.meta?.closures, facilityPlanningSummary, isFacilitySource, readsAsOrganizer, t, vue]);
   const legende = useMemo(() => {
     if (!isFacilitySource) return [];
     const parClub = new Map();

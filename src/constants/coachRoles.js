@@ -95,7 +95,7 @@ export const ENGAGEMENT_OPTIONS = [
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.engagement.toBeDefined', 'A définir');
+      return i18next.t('adWizardCoachProfile.engagement.toBeDefined', 'À définir');
     },
     value: 'a_definir',
   },

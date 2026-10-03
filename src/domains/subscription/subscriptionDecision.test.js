@@ -548,7 +548,7 @@ describe('S12-B — le refus de quota au licencie', () => {
 
   test('ses benefices ne REVENDENT rien : ce club paie deja', () => {
     expect(getSubscriptionPaywallBenefits(QUOTA_DECISION)).toEqual([
-      'Les membres deja inscrits gardent tout',
+      'Les membres déjà inscrits gardent tout',
       'Seules les NOUVELLES adhesions sont en pause',
       'Passe a la tranche superieure pour rouvrir',
     ]);

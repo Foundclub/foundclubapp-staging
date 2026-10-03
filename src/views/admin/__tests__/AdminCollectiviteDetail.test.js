@@ -601,6 +601,34 @@ describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () 
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.AdminClubDetail, { clubId: 'as-montrivage' });
   });
 
+  // 🐞 COLL-FIX2 (03/10), tournée T10 (T10_C16_2) : le menu « … » s'ouvrait DANS la ligne, dans la
+  // colonne du bouton, et écrasait le nom (« AS Montriv / age »). Il se déplie SOUS la ligne,
+  // sur toute sa largeur, comme le disait déjà la planche P2-fiche.
+  // eslint-disable-next-line max-len
+  it('F5b — le menu « … » se déplie SOUS la ligne, jamais dedans : le nom garde toute sa colonne', async () => {
+    const arbre = await monter();
+    const ligne = (testID) => arbre.root
+      .findAll((n) => n.props?.testID === testID && n.props?.style)[0];
+    const sesMenus = (noeud) => noeud
+      .findAll((n) => String(n.props?.testID || '').endsWith('-actions-menu'));
+    const ouvrir = async (testID) => {
+      const bouton3Points = arbre.root
+        .findAll((n) => n.props?.testID === testID && typeof n.props?.onPress === 'function')[0];
+      await act(async () => { bouton3Points.props.onPress(); });
+    };
+
+    const verifier = async (cle) => {
+      await ouvrir(`admin-collectivite-${cle}-actions`);
+      const laLigne = ligne(`admin-collectivite-${cle}`);
+      // Rien dans la ligne : le nom garde sa colonne…
+      expect(sesMenus(laLigne)).toHaveLength(0);
+      // … et le menu suit la ligne, dans le même bloc.
+      expect(sesMenus(laLigne.parent)).not.toHaveLength(0);
+    };
+    await verifier('club-as-montrivage');
+    await verifier('gestionnaire-karim');
+  });
+
   // eslint-disable-next-line max-len
   it('F6 — la recherche dit la VILLE de chaque club ; « Aucun résultat » dit la suite', async () => {
     serveur.clubsTrouves = [{

@@ -72,6 +72,28 @@ export const lieuAvecPreposition = (nom, t) => {
 };
 
 /**
+ * COLL-FIX2 (03/10), planche 25 : le lieu précédé de son ARTICLE, « le Gymnase des Tilleuls »,
+ * « la Salle Jean Moulin », « l’Espace Mistral » (la maquette : « Fermer le Gymnase des
+ * Tilleuls le vendredi 2 octobre ? »). Même devinette que la préposition.
+ * @param {unknown} nom - Le nom de l'installation.
+ * @param {any} t - La traduction.
+ * @returns {string} Le lieu, ou '' sans nom.
+ */
+export const lieuAvecArticle = (nom, t) => {
+  const libelle = String(nom || '').trim();
+  if (!libelle) return '';
+  const valeurs = { nom: libelle, ...SANS_ECHAPPEMENT };
+  const genre = genreDuLieu(libelle);
+  if (genre === 'voyelle') {
+    return t('collectiviteDemandes.lieu.articleVoyelle', 'l’{{nom}}', valeurs);
+  }
+  if (genre === 'feminin') {
+    return t('collectiviteDemandes.lieu.articleFeminin', 'la {{nom}}', valeurs);
+  }
+  return t('collectiviteDemandes.lieu.articleMasculin', 'le {{nom}}', valeurs);
+};
+
+/**
  * Le moment d'une demande, en mots : jour long (« jeudi 1 oct. »), jour court (« jeu. 1 oct. »),
  * jour de la semaine (« jeudi »), heures (« 18:00 »), et la fin d'une série (« 30 juin »).
  * @param {any} demande - Une demande (requestedStart, requestedEnd, series).
