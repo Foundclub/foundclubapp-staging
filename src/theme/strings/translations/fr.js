@@ -5562,6 +5562,12 @@ export default {
       colonneActivee: 'Activée le',
       colonneAdherents: 'Adhérents couverts',
     },
+    traitees: {
+      colonneCollectivite: 'Collectivité',
+      colonneIssue: 'Issue',
+      colonneLe: 'Le',
+      colonnePersonne: 'Personne',
+    },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — « Tes installations » cote club, en 3 groupes (design P8v2, D32).

@@ -5200,6 +5200,12 @@ export default {
       colonneActivee: 'Activated on',
       colonneAdherents: 'Members covered',
     },
+    traitees: {
+      colonneCollectivite: 'Local authority',
+      colonneIssue: 'Outcome',
+      colonneLe: 'On',
+      colonnePersonne: 'Person',
+    },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — the club's facilities in 3 groups (design P8v2, D32).
