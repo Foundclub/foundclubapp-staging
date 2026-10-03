@@ -9560,6 +9560,8 @@ function EventDetails({ navigation, route }) {
                           incrementLabel={t('stMatch.score.plus', 'Un but de plus pour {{team}}', {
                             team: row.spoken, ...SANS_ECHAPPEMENT,
                           })}
+                          // FINITIONS11 · point 5 — la bordure pointillée orange de la planche.
+                          locked={isMatchScoreLocked}
                           max={isMatchScoreLocked ? matchScoreDraft[row.side] : 99}
                           min={isMatchScoreLocked ? matchScoreDraft[row.side] : 0}
                           onDecrement={() => changeMatchScore(row.side, -1)}
