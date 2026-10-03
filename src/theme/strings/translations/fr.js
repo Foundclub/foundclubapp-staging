@@ -5365,7 +5365,8 @@ export default {
       invalidBody: 'La Ville l’a peut-être changé : demande-lui le nouveau lien.',
       invalidTitle: 'Ce lien d’invitation ne marche plus.',
       // eslint-disable-next-line max-len
-      noClub: 'Tu ne diriges aucun club sur FoundClub. Inscris d’abord ton club, puis rouvre le lien de la Ville.',
+      // COLL-ACCUEIL-BIS (03/10, planche 38) : la demande part toute seule à la création du club.
+      noClub: 'Tu ne diriges aucun club sur FoundClub. Inscris ton club : sa demande de rattachement partira toute seule.',
       onlyYours: 'Seuls les clubs dont tu es dirigeant sont proposés.',
       outsideBody: 'L’équipe FoundClub vérifiera avec la Ville avant de le rattacher.',
       outsideTitle: 'Ce club n’est pas à {{commune}}',

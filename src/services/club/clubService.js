@@ -988,6 +988,8 @@ export const createSelfOnboardClub = async (payload) => {
     return {
       club: response.data?.data || response.data,
       clubRequestDocumentId: response.data?.clubRequestDocumentId || null,
+      // COLL-ACCUEIL-BIS (planche 38) : la demande de rattachement partie toute seule, ou null.
+      collectiviteInvitation: response.data?.collectiviteInvitation || null,
       duplicate: false,
     };
   } catch (error) {

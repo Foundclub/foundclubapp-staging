@@ -230,8 +230,10 @@ describe('COLL-CLUBS — planche 3, côté club : demander le rattachement', () 
   it('un compte qui ne dirige aucun club : le dire, et proposer d’inscrire son club', async () => {
     mockMesClubs = { data: [], error: null, isLoading: false };
     const lus = textes(await monter(CollectiviteJoinRequest));
+    // COLL-ACCUEIL-BIS (03/10, planche 38) : la demande part toute seule à la création du club ;
+    // « puis rouvre le lien de la Ville » n'est plus vrai (COLLACCUEILBIS.retourAutomatique.test.js).
     expect(lus).toContain(
-      'Tu ne diriges aucun club sur FoundClub. Inscris d’abord ton club, puis rouvre le lien de la Ville.',
+      'Tu ne diriges aucun club sur FoundClub. Inscris ton club : sa demande de rattachement partira toute seule.',
     );
   });
 });

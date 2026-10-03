@@ -5015,7 +5015,8 @@ export default {
       header: 'Join the town',
       invalidBody: 'The town may have changed it: ask it for the new link.',
       invalidTitle: 'This invitation link no longer works.',
-      noClub: 'You do not lead any club on FoundClub. Register your club first, then open the town’s link again.',
+      // COLL-ACCUEIL-BIS (03/10, planche 38) : la demande part toute seule à la création du club.
+      noClub: 'You do not lead any club on FoundClub. Register your club: its request to join the town will be sent automatically.',
       onlyYours: 'Only the clubs you lead are offered.',
       outsideBody: 'The FoundClub team will check with the town before attaching it.',
       outsideTitle: 'This club is not in {{commune}}',
