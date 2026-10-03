@@ -911,9 +911,11 @@ function MatchStatsEditor({ navigation, route }) {
   // brouillon incohérent (`assertMatchStatsConsistency`) ; « Brouillon » s'éteint donc avec
   // « Publier », et l'alerte unique le DIT (un bouton éteint sans raison est un bouton cassé).
   const waitsForFixLine = showsDraftButton
-    ? t('stMatch.feuille.waitsForFixBoth', '« {{draft}} » et « {{publish}} » attendent la correction.', {
-      draft: draftLabel, publish: publishLabel, ...SANS_ECHAPPEMENT,
-    })
+    ? t(
+      'stMatch.feuille.waitsForFixBoth',
+      '« {{draft}} » et « {{publish}} » attendent la correction.',
+      { draft: draftLabel, publish: publishLabel, ...SANS_ECHAPPEMENT },
+    )
     : t('stMatch.feuille.waitsForFixOne', '« {{publish}} » attend la correction.', {
       publish: publishLabel, ...SANS_ECHAPPEMENT,
     });

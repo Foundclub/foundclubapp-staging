@@ -847,7 +847,7 @@ describe('ST-MATCH10-BIS · 3 — « feuille convoqués A » : tout l effectif c
   // Nino et Théo ont été ajoutés hors convocation.
   const avecConvocation = () => {
     const donnees = feuilleEffectifComplet();
-    const horsConvocation = new Set(['Nino Garcia', 'Théo Nguyen', 'Sami Martin', 'Yanis Bernard']);
+    const horsConvocation = new Set(['Nino Garcia', 'Sami Martin', 'Théo Nguyen', 'Yanis Bernard']);
     donnees.playerResponses = donnees.playerResponses.map((/** @type {any} */ item) => ({
       ...item, convoked: !horsConvocation.has(item.label),
     }));

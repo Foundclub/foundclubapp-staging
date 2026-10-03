@@ -218,65 +218,10 @@ const mountScreen = (/** @type {any} */ { auth, convocation = null, event } = {}
   return mounted.root;
 };
 
-const textOf = (/** @type {any} */ node) => {
-  const parts = [];
-  const walk = (/** @type {any} */ child) => {
-    if (child === null || child === undefined || child === false) return;
-    if (typeof child === 'string' || typeof child === 'number') {
-      parts.push(String(child));
-      return;
-    }
-    const children = child?.props?.children;
-    if (Array.isArray(children)) children.forEach(walk);
-    else walk(children);
-  };
-  walk(node);
-  return parts.join(' ').replace(/\s+/g, ' ').trim();
-};
-
 /**
- * Le bouton du site qui PORTE ce libelle. Le rendu web emet de vrais `<button>`,
- * donc on les cherche par type hote, pas par composant.
- * @param {any} root - Racine du rendu.
- * @param {string} label - Le libelle porte par le bouton.
- * @returns {any} - Le bouton, ou undefined.
+ * Le nom de la route empruntee au dernier appui.
+ * @returns {string | null} - La route, ou null.
  */
-const buttonWithText = (/** @type {any} */ root, /** @type {string} */ label) => root
-  .findAllByType('button')
-  .find((/** @type {any} */ node) => textOf(node).includes(label));
-
-const click = (/** @type {any} */ root, /** @type {string} */ label) => {
-  const node = buttonWithText(root, label);
-  if (!node) throw new Error(`Aucun bouton ne porte le libelle « ${label} »`);
-  act(() => {
-    node.props.onClick();
-  });
-};
-
-const lastBoardParams = () => {
-  const call = [...mockNavigate.mock.calls].reverse()
-    .find((/** @type {any} */ entry) => entry[0] === 'TacticalBoardV2');
-  return call ? call[1] : null;
-};
-
-/** Les parametres du dernier envoi vers le NOUVEAU parcours (ecran 1 du pack). */
-const lastCallUpParams = () => {
-  const call = [...mockNavigate.mock.calls].reverse()
-    .find((/** @type {any} */ entry) => entry[0] === 'MatchCallUpSelection');
-  return call ? call[1] : null;
-};
-
-/**
- * C-E — les parametres du dernier envoi vers l ecran 13 (detection).
- * @returns {any} - Les parametres de route, ou null.
- */
-const lastSquadSetupParams = () => {
-  const call = [...mockNavigate.mock.calls].reverse()
-    .find((/** @type {any} */ entry) => entry[0] === 'DetectionSquadSetup');
-  return call ? call[1] : null;
-};
-
-/** Le nom de la route empruntee au dernier appui. */
 const lastRoute = () => {
   const call = [...mockNavigate.mock.calls].pop();
   return call ? call[0] : null;
@@ -311,7 +256,7 @@ describe('ST-MATCH10-BIS · 5 — la feuille de match vide « ouvre la convocati
     mockTeamCompositionQuery.data = null;
   });
 
-  test('🥇 arrivé par ?focusSection=convocation : l adresse est nettoyée, puis la convocation s ouvre', () => {
+  test('🥇 par ?focusSection=convocation : adresse nettoyée, puis la convocation s ouvre', () => {
     mockRouteParams = { eventId: 'event-1', focusSection: 'convocation' };
     mockTeamCompositionQuery.data = COMPO_A_FAIRE;
     mountScreen({ event: buildEvent({ type: { name: 'Match' } }) });
@@ -319,7 +264,8 @@ describe('ST-MATCH10-BIS · 5 — la feuille de match vide « ouvre la convocati
     expect(mockReplace).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' });
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(lastRoute()).toBe('MatchCallUpSelection');
-    expect(mockReplace.mock.invocationCallOrder[0]).toBeLessThan(mockNavigate.mock.invocationCallOrder[0]);
+    expect(mockReplace.mock.invocationCallOrder[0])
+      .toBeLessThan(mockNavigate.mock.invocationCallOrder[0]);
   });
 
   test('🔒 sans le paramètre, rien ne part', () => {

@@ -255,8 +255,8 @@ export function AlerteFeuille({ lignes, titre }) {
  * @returns {import('react').ReactElement} Le tableau.
  */
 export function TableauDesJoueurs({
-  aVerifier, colonneReponse = false, lignes, notesDuCoach, onOuvrir, ordinateur, reponses, selection,
-  sport,
+  aVerifier, colonneReponse = false, lignes, notesDuCoach, onOuvrir, ordinateur, reponses,
+  selection, sport,
 }) {
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -735,6 +735,7 @@ export function BlocRetours({
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {t('stMatch.feuille.notConvokedNoReminder', {
                 count: horsConvocation.length,
+                // eslint-disable-next-line max-len
                 defaultValue_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
                 // eslint-disable-next-line max-len
                 defaultValue_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',

@@ -1,4 +1,3 @@
-import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
@@ -320,24 +319,6 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   };
 });
 
-/**
- * Bascule sur l'onglet demande. Sans effet sur un evenement qui n'a pas
- * d'onglets (tout type autre que le match) : la colonne y est entiere.
- * @param {any} root - Racine du rendu.
- * @param {string} valeur - 'overview' | 'participants' | 'callUp'.
- * @returns {void}
- */
-const allerSurLOnglet = (root, valeur) => {
-  const [onglet] = root.findAll(
-    (/** @type {any} */ node) => node.props?.testID === `onglet-${valeur}`,
-    { deep: false },
-  );
-  if (!onglet) return;
-  act(() => {
-    onglet.props.onPress();
-  });
-};
-
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -348,8 +329,6 @@ const CLUB_ID = 'club-1';
 const TEAM_ID = 'team-1';
 const JOUEUR = 'joueur-1';
 const REMPLACANT = 'joueur-2';
-const SPECTATEUR = 'joueur-9';
-
 // Le pack publie par le coach : un titulaire sur le terrain, un sur le banc.
 const PACK = {
   publishedAt: '2026-08-20T09:00:00.000Z',
@@ -442,40 +421,6 @@ const monter = (/** @type {any} */ { auth, convocation = CONVOCATION, event } = 
   return mounted.root;
 };
 
-const textOf = (/** @type {any} */ node) => {
-  const parts = [];
-  const walk = (/** @type {any} */ child) => {
-    if (child === null || child === undefined || child === false) return;
-    if (typeof child === 'string' || typeof child === 'number') {
-      parts.push(String(child));
-      return;
-    }
-    const children = child?.props?.children;
-    if (Array.isArray(children)) children.forEach(walk);
-    else walk(children);
-  };
-  walk(node);
-  return parts.join(' ').replace(/\s+/g, ' ').trim();
-};
-
-const textesVisibles = (/** @type {any} */ root) => root
-  .findAllByType(Text)
-  .map((/** @type {any} */ node) => textOf(node))
-  .filter(Boolean);
-
-const appuyer = (/** @type {any} */ root, /** @type {string} */ libelle) => {
-  const bouton = root
-    .findAllByProps({ accessibilityRole: 'button' })
-    .find((/** @type {any} */ node) => textOf(node).includes(libelle));
-  if (!bouton) {
-    const vu = textesVisibles(root).join(' | ');
-    throw new Error(`Aucun bouton ne porte le libelle « ${libelle} ». Vu : ${vu}`);
-  }
-  act(() => {
-    bouton.props.onPress();
-  });
-};
-
 const derniereRoute = () => {
   const call = [...mockNavigate.mock.calls].pop();
   return call ? call[0] : null;
@@ -513,19 +458,20 @@ const COMPO_A_FAIRE = {
   team: { documentId: TEAM_ID, name: 'U15' },
 };
 
-describe('ST-MATCH10-BIS · 5 — la feuille de match vide « ouvre la convocation » (téléphone)', () => {
+describe('ST-MATCH10-BIS · 5 — la feuille vide « ouvre la convocation » (téléphone)', () => {
   beforeEach(() => {
     mockRouteParams = { eventId: 'event-1' };
   });
 
-  test('🥇 arrivé avec focusSection « convocation », le coach est mené à la convocation, une fois', () => {
+  test('🥇 avec focusSection « convocation », le coach va à la convocation, une fois', () => {
     mockRouteParams = { eventId: 'event-1', focusSection: 'convocation' };
     mockTeamCompositionQuery.data = COMPO_A_FAIRE;
     monter({ auth: authPour('coach-1', true), convocation: null });
 
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(derniereRoute()).toBe('MatchCallUpSelection');
-    expect(mockNavigate.mock.calls[0][1]).toEqual(expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }));
+    expect(mockNavigate.mock.calls[0][1])
+      .toEqual(expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }));
     // Le paramètre est effacé : revenir de la convocation ne la rouvre pas.
     expect(mockSetParams).toHaveBeenCalledWith({ focusSection: undefined });
   });
