@@ -115,6 +115,13 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => emptyQuery(),
 }));
 
+// Récolte du 03/10 : ST-RETOURS2 fait lire les avis d'entraînement par la fiche
+// du site. Sans ce double, le vrai client réseau se charge et lit la config locale.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetMyTrainingReview: () => ({ data: undefined }),
+  useGetTrainingReviews: () => ({ data: undefined }),
+}));
+
 jest.mock('@/services/event/eventService', () => ({ updateEvent: jest.fn() }));
 
 jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
