@@ -74,26 +74,9 @@ export const tauxLisible = (taux) => {
 };
 
 /**
- * Un nombre accordé : « 1 tenue », « 6 tenues » (les deux formes viennent du catalogue).
- * @param {Traduire} t - La traduction.
- * @param {string} cle - La clé, sans `_one` / `_other`.
- * @param {number} compte - Le nombre.
- * @param {string} un - Le repli au singulier.
- * @param {string} plusieurs - Le repli au pluriel.
- * @param {Record<string, unknown>} [valeurs] - D'autres valeurs à poser dans la phrase.
- * @returns {string} Le libellé.
- */
-const accorde = (t, cle, compte, un, plusieurs, valeurs = {}) => t(cle, {
-  count: compte,
-  defaultValue_one: un,
-  defaultValue_other: plusieurs,
-  ...valeurs,
-  ...SANS_ECHAPPEMENT,
-});
-
-/**
  * « 6 tenues · 1 annulée par le club · 2 touchées par une fermeture » (+ « · 2 à venir » quand la
- * période n'est pas finie : sinon les trois nombres ne font pas le total).
+ * période n'est pas finie : sinon les trois nombres ne font pas le total). Les replis restent DANS
+ * `t()` : c'est là que le compteur du français en dur les sait traduisibles.
  * @param {Traduire} t - La traduction.
  * @param {any} seances - `data.seances` du serveur.
  * @returns {string} La phrase.
@@ -101,36 +84,28 @@ const accorde = (t, cle, compte, un, plusieurs, valeurs = {}) => t(cle, {
 export const phraseSeancesTenues = (t, seances) => {
   const n = (/** @type {string} */ cle) => nombre(seances?.[cle]) ?? 0;
   const morceaux = [
-    accorde(
-      t,
-      'collectiviteChiffres.seances.tenues',
-      n('tenues'),
-      '{{count}} tenue',
-      '{{count}} tenues',
-    ),
-    accorde(
-      t,
-      'collectiviteChiffres.seances.annulees',
-      n('annulees'),
-      '{{count}} annulée par le club',
-      '{{count}} annulées par le club',
-    ),
-    accorde(
-      t,
-      'collectiviteChiffres.seances.fermeture',
-      n('fermeture'),
-      '{{count}} touchée par une fermeture',
-      '{{count}} touchées par une fermeture',
-    ),
+    t('collectiviteChiffres.seances.tenues', {
+      count: n('tenues'),
+      defaultValue_one: '{{count}} tenue',
+      defaultValue_other: '{{count}} tenues',
+    }),
+    t('collectiviteChiffres.seances.annulees', {
+      count: n('annulees'),
+      defaultValue_one: '{{count}} annulée par le club',
+      defaultValue_other: '{{count}} annulées par le club',
+    }),
+    t('collectiviteChiffres.seances.fermeture', {
+      count: n('fermeture'),
+      defaultValue_one: '{{count}} touchée par une fermeture',
+      defaultValue_other: '{{count}} touchées par une fermeture',
+    }),
   ];
   if (n('aVenir') > 0) {
-    morceaux.push(accorde(
-      t,
-      'collectiviteChiffres.seances.aVenir',
-      n('aVenir'),
-      '{{count}} à venir',
-      '{{count}} à venir',
-    ));
+    morceaux.push(t('collectiviteChiffres.seances.aVenir', {
+      count: n('aVenir'),
+      defaultValue_one: '{{count}} à venir',
+      defaultValue_other: '{{count}} à venir',
+    }));
   }
   return morceaux.join(' · ');
 };
@@ -144,36 +119,28 @@ export const phraseSeancesTenues = (t, seances) => {
 export const phraseDemandes = (t, demandes) => {
   const n = (/** @type {string} */ cle) => nombre(demandes?.[cle]) ?? 0;
   const morceaux = [
-    accorde(
-      t,
-      'collectiviteChiffres.demandes.recues',
-      n('recues'),
-      '{{count}} reçue',
-      '{{count}} reçues',
-    ),
-    accorde(
-      t,
-      'collectiviteChiffres.demandes.acceptees',
-      n('acceptees'),
-      '{{count}} acceptée',
-      '{{count}} acceptées',
-    ),
-    accorde(
-      t,
-      'collectiviteChiffres.demandes.refusees',
-      n('refusees'),
-      '{{count}} refusée',
-      '{{count}} refusées',
-    ),
+    t('collectiviteChiffres.demandes.recues', {
+      count: n('recues'),
+      defaultValue_one: '{{count}} reçue',
+      defaultValue_other: '{{count}} reçues',
+    }),
+    t('collectiviteChiffres.demandes.acceptees', {
+      count: n('acceptees'),
+      defaultValue_one: '{{count}} acceptée',
+      defaultValue_other: '{{count}} acceptées',
+    }),
+    t('collectiviteChiffres.demandes.refusees', {
+      count: n('refusees'),
+      defaultValue_one: '{{count}} refusée',
+      defaultValue_other: '{{count}} refusées',
+    }),
   ];
   if (n('enAttente') > 0) {
-    morceaux.push(accorde(
-      t,
-      'collectiviteChiffres.demandes.enAttente',
-      n('enAttente'),
-      '{{count}} en attente',
-      '{{count}} en attente',
-    ));
+    morceaux.push(t('collectiviteChiffres.demandes.enAttente', {
+      count: n('enAttente'),
+      defaultValue_one: '{{count}} en attente',
+      defaultValue_other: '{{count}} en attente',
+    }));
   }
   return morceaux.join(' · ');
 };
@@ -190,14 +157,13 @@ export const phraseDelai = (t, jours) => {
     return t('collectiviteChiffres.demandes.delaiInconnu', 'Délai moyen de réponse : —');
   }
   // En français, moins de 2 s'accorde au singulier : « 1,3 jour », « 2 jours ».
-  return accorde(
-    t,
-    'collectiviteChiffres.demandes.delai',
-    valeur < 2 ? 1 : 2,
-    'Délai moyen de réponse : {{jours}} jour.',
-    'Délai moyen de réponse : {{jours}} jours.',
-    { jours: String(valeur).replace('.', ',') },
-  );
+  return t('collectiviteChiffres.demandes.delai', {
+    count: valeur < 2 ? 1 : 2,
+    defaultValue_one: 'Délai moyen de réponse : {{jours}} jour.',
+    defaultValue_other: 'Délai moyen de réponse : {{jours}} jours.',
+    jours: String(valeur).replace('.', ','),
+    ...SANS_ECHAPPEMENT,
+  });
 };
 
 /**
@@ -213,14 +179,13 @@ export const phraseSeancesDesClubs = (t, chiffres) => {
   const total = installations.reduce((somme, ligne) => somme + Number(ligne.seances), 0);
   if (total === 0) return t('collectiviteChiffres.clubs.aucune', 'Aucune séance sur la période.');
   if (installations.length === 1) {
-    return accorde(
-      t,
-      'collectiviteChiffres.clubs.toutesAu',
-      total,
-      '{{count}} séance, {{lieu}}.',
-      '{{count}} séances, toutes {{lieu}}.',
-      { lieu: lieuAvecPreposition(installations[0]?.name, t) },
-    );
+    return t('collectiviteChiffres.clubs.toutesAu', {
+      count: total,
+      defaultValue_one: '{{count}} séance, {{lieu}}.',
+      defaultValue_other: '{{count}} séances, toutes {{lieu}}.',
+      lieu: lieuAvecPreposition(installations[0]?.name, t),
+      ...SANS_ECHAPPEMENT,
+    });
   }
   return t(
     'collectiviteChiffres.clubs.surPlusieurs',
