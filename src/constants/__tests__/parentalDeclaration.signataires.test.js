@@ -92,18 +92,27 @@ test('S3 — par defaut, la preuve envoyee est celle de l ado : nouvelle version
   }));
 });
 
-test('S4 — le parent garde SA declaration : texte, version et empreinte d avant', () => {
+// MINEURS-SUITE (2026-10-03, decision d'Adel « 3- B », registre des mineurs ligne 16) : la
+// phrase du parent passe en version CORRIGEE (accents, apostrophe). Adel l'appelle « version 2
+// du parent » ; l'identifiant v2 etant celui de l'ado, elle s'appelle v3. Le serveur accepte
+// encore la v1 des applis installees ; cette app-ci envoie la v3, et l'empreinte est celle du
+// texte AFFICHE (avant, la carte affichait une phrase que le serveur n'empreintait pas).
+test('S4 — le parent signe sa phrase CORRIGEE : texte affiche = texte empreinte, version v3', () => {
   const preuve = buildMinorParentalDeclarationPayload({
     signatory: SIGNATAIRE_PARENT,
     sourceScreen: 'parent_link_request',
   });
 
-  expect(preuve.legalVersion).toBe('minor-parental-declaration-v1-2026-05-14');
+  expect(preuve.legalVersion).toBe('minor-parental-declaration-v3-parent-2026-10-03');
   expect(preuve.legalVersion).toBe(MINOR_PARENTAL_DECLARATION_VERSION);
   expect(preuve.legalTextHash)
-    .toBe('42f52a118fe373ac50160c7676da639696723111fbf9e1c4c412d3f3f6c7adf2');
+    .toBe('490d56e62970f7ded2339dfe7227720b4aa15b0cbc35d6b707455d84afef7ebf');
   expect(preuve.consentFlags).toEqual({ parentalAuthorityConfirmation: true });
-  expect(parentalDeclarationTextFor(SIGNATAIRE_PARENT)).toMatch(/^Je déclare être le parent/);
+  expect(parentalDeclarationTextFor(SIGNATAIRE_PARENT)).toBe(
+    'Je déclare être le parent ou le représentant légal de cet enfant et utiliser l\'application en son nom.',
+  );
+  expect(sha256(parentalDeclarationTextFor(SIGNATAIRE_PARENT)))
+    .toBe(MINOR_PARENTAL_DECLARATION_TEXT_HASH);
 });
 
 test('S5 — CARTE DES APPELANTS : seul le lien parent fait signer le parent', () => {

@@ -35,19 +35,19 @@ const EXPERIENCE_OPTIONS = [
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.experience.confirmed', 'Confirme');
+      return i18next.t('adWizardCoachProfile.experience.confirmed', 'Confirmé');
     },
     value: 'confirme',
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.experience.expert', 'Experimente');
+      return i18next.t('adWizardCoachProfile.experience.expert', 'Expérimenté');
     },
     value: 'experimente',
   },
   {
     get label() {
-      return i18next.t('adWizardCoachProfile.experience.qualified', 'Diplome');
+      return i18next.t('adWizardCoachProfile.experience.qualified', 'Diplômé');
     },
     value: 'diplome',
   },
@@ -99,7 +99,7 @@ function AdWizardCoachProfile({ navigation }) {
         'adWizardCoachProfile.subtitle',
         'Définis le rôle encadrement recherche et le cadre de la mission.',
       )}
-      title={t('adWizardCoachProfile.title', 'Profil entraîneur recherche')}
+      title={t('adWizardCoachProfile.title', "Profil d'entraîneur recherché")}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], {

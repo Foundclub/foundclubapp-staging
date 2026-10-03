@@ -106,3 +106,30 @@ describe('AC10 — la duree par defaut recopie celle du serveur', () => {
     expect(resolveEventEndedAt(null, null)).toBeNull();
   });
 });
+
+// STATS-FIX2 · POINT 8 (tournee T10, ecran 4) — « fin à 19:30 » pour une seance de 18 h a 19 h.
+// L app enregistre l heure de fin dans `endTime` (jamais `endDate`, reservee aux stages) : sans
+// la lire, la fin tombait a debut + 90 min. Meme regle que le serveur (`getEventEndedAt` ->
+// `resolveEventEndAt`) : `endDate`, sinon `endTime` le jour du debut A PARIS, sinon 90 min.
+describe('STATS-FIX2 · point 8 — l heure de fin SAISIE decide', () => {
+  // Sam. 5 sept. 2026, 18:00 a Paris (UTC+2).
+  const DEBUT = new Date('2026-09-05T16:00:00.000Z');
+
+  test('🔴 18:00 – 19:00 : la fin est 19:00 a Paris, pas 19:30', () => {
+    expect(resolveEventEndedAt(null, DEBUT, '19:00:00.000')?.toISOString())
+      .toBe('2026-09-05T17:00:00.000Z');
+  });
+
+  test('une fin apres minuit tombe le lendemain', () => {
+    const debutTardif = new Date('2026-09-05T20:30:00.000Z'); // 22:30 a Paris
+    expect(resolveEventEndedAt(null, debutTardif, '00:30')?.toISOString())
+      .toBe('2026-09-05T22:30:00.000Z');
+  });
+
+  test('une `endDate` explicite l emporte encore ; une heure illisible retombe sur 90 min', () => {
+    expect(resolveEventEndedAt('2026-09-05T17:15:00.000Z', DEBUT, '19:00')?.toISOString())
+      .toBe('2026-09-05T17:15:00.000Z');
+    expect(resolveEventEndedAt(null, DEBUT, 'bientot')?.toISOString())
+      .toBe('2026-09-05T17:30:00.000Z');
+  });
+});
