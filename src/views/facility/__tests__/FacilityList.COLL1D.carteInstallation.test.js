@@ -113,6 +113,10 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 // importe le client HTTP, qui refuse de se charger sans `API_URL` (piege paye
 // au lot L35, 2026-08-05). `getFacilitySections` est donc reimplemente ici a
 // l'identique de la source, et non `requireActual`.
+// COLL-C4B-BIS (03/10) : la carte d une installation de la Ville lit sa fermeture (bandeau).
+jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
+  useFacilityClosures: () => ({ data: null }),
+}));
 jest.mock('@/services/facility/facilityService', () => ({
   deleteFacility: jest.fn(),
   getFacilitySections: (/** @type {any[]} */ installations, /** @type {any} */ libelles = {}) => {

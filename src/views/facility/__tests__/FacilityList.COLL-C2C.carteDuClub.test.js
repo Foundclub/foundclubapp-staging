@@ -79,6 +79,10 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
     data: [], error: null, isLoading: false, isRefetching: false, refetch: jest.fn(),
   }),
 }));
+// COLL-C4B-BIS (03/10) : la carte d une installation de la Ville lit sa fermeture (bandeau).
+jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
+  useFacilityClosures: () => ({ data: null }),
+}));
 jest.mock('@/services/facility/facilityService', () => ({
   deleteFacility: jest.fn(),
   getFacilitySections: (/** @type {any[]} */ installations) => (
