@@ -1,4 +1,7 @@
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getShortAddress } from '@/utils/location';
 
 /**
  * COLLECTIVITES 1c (2026-09-29) — ce que les ecrans « Ma collectivite » affichent, en
@@ -142,6 +145,40 @@ export const isOfficialCollectiviteName = (name, type) => {
 };
 
 /**
+ * COLL-CONSOLE-BIS (03/10/2026) — le NOM OFFICIEL d une commune trouvee dans le referentiel de
+ * l Etat (D59), avec son article : « Valfleuri » → « Ville de Valfleuri », « Aix » → « Ville
+ * d’Aix », « Le Havre » → « Ville du Havre », « Les Mureaux » → « Ville des Mureaux ». « La »
+ * et « L’ » ne se contractent pas (« Ville de La Rochelle »). Un nom FRANCAIS, quelle que soit
+ * la langue de l ecran, comme le prefixe que pose le formulaire (le dictionnaire anglais porte
+ * les memes valeurs).
+ * @param {(cle: string, repli: string, options?: object) => string} t - La traduction.
+ * @param {unknown} nom - Le nom de la commune, tel que le referentiel l ecrit.
+ * @returns {string} Le nom officiel, ou '' sans nom.
+ */
+export const nomOfficielDeCommune = (t, nom) => {
+  const propre = String(nom || '').trim();
+  if (!propre) return '';
+  if (/^le /iu.test(propre)) {
+    return t('collectiviteConsoleBis.commune.nomDu', 'Ville du {{nom}}', {
+      nom: propre.slice(3), ...SANS_ECHAPPEMENT,
+    });
+  }
+  if (/^les /iu.test(propre)) {
+    return t('collectiviteConsoleBis.commune.nomDes', 'Ville des {{nom}}', {
+      nom: propre.slice(4), ...SANS_ECHAPPEMENT,
+    });
+  }
+  if (/^[aeiouyhàâäéèêëîïôöùûüœæ]/iu.test(propre)) {
+    return t('collectiviteConsoleBis.commune.nomElide', 'Ville d’{{nom}}', {
+      nom: propre, ...SANS_ECHAPPEMENT,
+    });
+  }
+  return t('collectiviteConsoleBis.commune.nomDe', 'Ville de {{nom}}', {
+    nom: propre, ...SANS_ECHAPPEMENT,
+  });
+};
+
+/**
  * Lit le formulaire de creation : les champs nettoyes, et la liste des fautes (cles de
  * traduction sous `adminCollectivites.form.errors`). Vide = pret a partir. Le serveur
  * reste juge (400, 409) : ce controle evite l aller-retour et porte D59, que lui ignore.
@@ -177,14 +214,19 @@ export const readCollectiviteCreateForm = (form) => {
  * Une collectivite telle que la liste de la console la lit. `isActive` n est vrai que
  * s il vaut VRAI : une ligne d avant le lot 1d lit NULL, donc inactive (meme regle que
  * le serveur, collectivite service `isActive`).
+ * COLL-CONSOLE-BIS (03/10) — + `activatedAt` (la date de l activation en cours, ou null : une
+ * Ville activee avant le lot, ou inactive) ; + `membersCount`, les adherents couverts, comptes
+ * par le serveur (null : compteur en panne ou serveur ancien — jamais un faux 0).
  * @param {any} entry - Une ligne de `/superadmin/content/.../list`.
- * @returns {{ clubsCount: number, documentId: string, isActive: boolean, name: string,
- *   type: string }} La ligne.
+ * @returns {{ activatedAt: string | null, clubsCount: number, documentId: string,
+ *   isActive: boolean, membersCount: number | null, name: string, type: string }} La ligne.
  */
 export const toAdminCollectiviteRow = (entry) => ({
+  activatedAt: typeof entry?.activatedAt === 'string' ? entry.activatedAt : null,
   clubsCount: Array.isArray(entry?.clubs) ? entry.clubs.length : 0,
   documentId: String(entry?.documentId || ''),
   isActive: entry?.isActive === true,
+  membersCount: Number.isInteger(entry?.membersCount) ? entry.membersCount : null,
   name: String(entry?.name || ''),
   type: String(entry?.type || ''),
 });
@@ -203,6 +245,8 @@ export const toAdminCollectiviteDetail = (entry) => {
   return {
     ...toAdminCollectiviteRow(entry),
     clubs: liste(entry.clubs).map((club) => ({
+      // COLL-CONSOLE-BIS (03/10) — la ville du club (planche 15).
+      city: String(club?.cityName || '').trim() || getShortAddress(club?.addressDetails) || null,
       documentId: String(club?.documentId || ''),
       logoUrl: club?.logo?.url || null,
       name: String(club?.name || ''),
@@ -217,6 +261,8 @@ export const toAdminCollectiviteDetail = (entry) => {
       documentId: String(installation?.documentId || ''),
       maxSlots: Number.isInteger(installation?.maxSlots) ? installation.maxSlots : null,
       name: String(installation?.name || ''),
+      // COLL-CONSOLE-BIS (03/10) — la couleur du planning (la pastille, planche 15).
+      planningColor: installation?.planningColor || null,
       type: installation?.type || null,
     })).sort(parNom),
     siren: entry.siren || null,

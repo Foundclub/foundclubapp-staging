@@ -5545,6 +5545,45 @@ export default {
       indisponible: 'Nombre indisponible',
     },
   },
+  // COLL-CONSOLE-BIS (03/10/2026) — les restes de la console et de l inscription des
+  // collectivités (design HY521H1, pages 1 et 2 : planches 7, 8, 12 à 17).
+  collectiviteConsoleBis: {
+    accueil: {
+      demandesGestionnaire: 'Demandes de gestionnaire',
+      mairiesAActiver: 'Mairies à activer',
+    },
+    commune: {
+      aide: 'Nom officiel, code INSEE et SIREN se remplissent à partir d’elle.',
+      aucune: 'Aucune commune trouvée : saisis son nom officiel et ses codes ci-dessous.',
+      chercher: 'Chercher la commune',
+      codeInsee: 'Code INSEE {{code}}',
+      // Le nom OFFICIEL (D59) : français dans toutes les langues, comme les préfixes du formulaire.
+      nomDe: 'Ville de {{nom}}',
+      nomDes: 'Ville des {{nom}}',
+      nomDu: 'Ville du {{nom}}',
+      nomElide: 'Ville d’{{nom}}',
+    },
+    fenetres: {
+      chaqueClub: 'Chaque club rattaché, et ce qui change pour lui.',
+      colonneChange: 'Ce qui change',
+      colonneClub: 'Club rattaché',
+      paieDeja: 'Paie déjà : rien ne change',
+      recoit: 'Reçoit l’offre Club offerte',
+    },
+    fiche: {
+      depuis: 'Depuis le {{date}}',
+    },
+    liste: {
+      colonneActivee: 'Activée le',
+      colonneAdherents: 'Adhérents couverts',
+    },
+    traitees: {
+      colonneCollectivite: 'Collectivité',
+      colonneIssue: 'Issue',
+      colonneLe: 'Le',
+      colonnePersonne: 'Personne',
+    },
+  },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.
   // COLL-C2C (02/10) — « Tes installations » cote club, en 3 groupes (design P8v2, D32).
   clubInstallations: {
@@ -5726,6 +5765,13 @@ export default {
       retirerPerd: '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
       retirerTitre: 'Retirer le créneau du {{jour}} ?',
     },
+    // COLL-C2B-BIS (03/10) — planche 23, ordinateur : la semaine type à l'échelle des heures.
+    grille: {
+      caseVide: 'Attribuer le {{jour}} à {{heure}}',
+      creux: 'Aucun créneau de {{debut}} à {{fin}}',
+      creuxApres: 'Aucun créneau après {{debut}}',
+      teinte: '{{jour}} teinté : complet de {{debut}} à {{fin}}.',
+    },
     infos: {
       adresse: 'Adresse',
       capacite: 'Équipes à la fois',
@@ -5738,6 +5784,8 @@ export default {
       capacite_one: '{{count}} équipe à la fois',
       capacite_other: '{{count}} équipes à la fois',
       complet: 'complet {{moment}}',
+      // COLL-C2B-BIS (03/10) — planche 21 : le petit menu « … » sur ordinateur.
+      fermerMenu: 'Fermer le menu',
       modifier: 'Modifier l’installation',
       ouvrir: '{{nom}} : ses créneaux et son planning',
       plusActions: 'Plus d’actions pour {{nom}}',
@@ -5745,6 +5793,13 @@ export default {
       semaine_one: 'Cette semaine : {{count}} séance',
       semaine_other: 'Cette semaine : {{count}} séances',
       surtitre: 'Ma collectivité',
+    },
+    // COLL-C2B-BIS (03/10) — planche 23 : la période d'un créneau, et la date d'un retrait.
+    periode: {
+      au: 'Au',
+      depuis: 'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
+      du: 'Du',
+      ordre: 'La fin de la période doit suivre son début.',
     },
     planning: {
       aujourdhui: 'Aujourd’hui, {{jour}}',
@@ -5774,6 +5829,8 @@ export default {
     vues: {
       enAttente: 'En attente : {{qui}}',
       heureLibre: 'Heure libre, {{jour}} {{heure}} : attribuer',
+      // COLL-C2B-BIS (03/10) — planches 24 et 29 : l'heure libre d'un plateau, en vue Jour.
+      heureLibrePlateau: 'Heure libre, {{plateau}}, {{jour}} {{heure}} : attribuer',
       jour: 'Jour',
       joursPrecedents: 'Jours précédents',
       joursSuivants: 'Jours suivants',
@@ -17227,15 +17284,22 @@ export default {
       closedExplain: "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin.",
       marked_one: '{{count}} pointé',
       marked_other: '{{count}} pointés',
+      markPresent: 'Présent',
+      markPresentA11y: 'Passer {{name}} présent',
       neverSeen_one: '{{count}} jamais vu',
       neverSeen_other: '{{count}} jamais vus',
+      reopens: 'Passer un joueur présent rouvre son questionnaire de match.',
+      reopensNamed: 'Passer {{name}} présent rouvre son questionnaire de match.',
       serverWill: 'Le serveur les passera en « Non pointé » après la fin, vers',
     },
     attente: {
       colEnd: 'Fin du match',
       colLeft: 'Ce qui reste',
       colMatch: 'Match',
+      colResponses: 'Réponses',
       colTeam: 'Équipe',
+      complete: '{{match}} est complet : feuille publiée, {{responses}}.',
+      completeOn: '{{match}} est complet : feuille publiée le {{date}} à {{time}}, {{responses}}.',
       draft: 'Brouillon',
       endedAt: 'fin à {{time}}',
       enterScore: 'Saisir le score',
@@ -17243,6 +17307,7 @@ export default {
       errorTitle: "Les matchs en attente n'ont pas pu être lus.",
       loading: 'Chargement des matchs en attente',
       open: 'Ouvrir',
+      responsesShort: '{{count}} sur {{total}}',
       review: 'Vérification requise',
       reviewDetail: 'Le score officiel a changé',
       score: 'Score à saisir',
@@ -17351,6 +17416,7 @@ export default {
       answeredTitle: 'Ont répondu · {{n}}',
       clickHint: 'Clique une ligne pour ses chiffres et ton retour.',
       col: {
+        answer: 'Réponse',
         assists: 'Pas.',
         goals: 'Buts',
         minutes: 'Min',
@@ -17361,9 +17427,12 @@ export default {
         team: 'Éq.',
       },
       confirmEditable: 'Tu pourras la modifier et la republier.',
-      confirmReceiverOne: '{{name}} recevra ton retour individuel.',
-      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel.',
-      confirmReceiversMany_other: '{{names}} recevront leur retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiverOne: '{{name}} et, s’il est mineur, ses parents recevront ton retour individuel.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_one: '{{count}} joueur recevra ton retour individuel ; s’il est mineur, ses parents aussi.',
+      // eslint-disable-next-line max-len
+      confirmReceiversMany_other: '{{names}} recevront leur retour individuel ; pour un mineur, ses parents aussi.',
       confirmRepublishTitle: 'Republier la feuille ?',
       // eslint-disable-next-line max-len
       confirmTeam: 'Les joueurs de l’équipe {{team}} verront le score, ta note de l’équipe et ton mot.',
@@ -17376,6 +17445,8 @@ export default {
         assists: 'Passes',
         minutes: 'Minutes',
       },
+      crumbMatch: 'Match',
+      crumbPlanning: 'Planning',
       draftError: 'Le brouillon n’a pas pu être enregistré. Réessaie.',
       draftSaved: 'Brouillon enregistré',
       draftSavedBody: 'Les joueurs ne voient rien tant que tu ne publies pas.',
@@ -17419,7 +17490,13 @@ export default {
       noPlayersToAnswer: 'Aucun joueur n’attend de questionnaire pour ce match.',
       noShowText: 'Ils ne comptent pas dans la feuille tant que l’appel n’est pas corrigé.',
       noShowTitle: 'Non pointés à l’appel',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_one: '{{names}} n’est pas convoqué : la relance ne part qu’aux convoqués.',
+      // eslint-disable-next-line max-len
+      notConvokedNoReminder_other: '{{names}} ne sont pas convoqués : la relance ne part qu’aux convoqués.',
       officialLock: 'Score officiel de la fédération',
+      openConvocation: 'Ouvrir la convocation',
+      opponentUnknown: 'adversaire à confirmer',
       playersRatingHidden: 'Les joueurs : dès 3 réponses',
       // eslint-disable-next-line max-len
       privacyPlayer: 'Lu par {{name}} et, s’il est mineur, ses parents. Jamais par ses coéquipiers.',
@@ -17446,6 +17523,7 @@ export default {
         answered: 'A répondu',
         answeredTaken: 'A répondu · repris de sa réponse',
         notAnswered: 'Pas encore répondu',
+        notConvoked: 'Hors convocation',
         toCheck: 'À vérifier',
       },
       saveDraft: 'Brouillon',
@@ -17473,6 +17551,8 @@ export default {
       },
       title: 'Feuille de match',
       validate: 'Valider',
+      waitsForFixBoth: '« {{draft}} » et « {{publish}} » attendent la correction.',
+      waitsForFixOne: '« {{publish}} » attend la correction.',
     },
     gerer: {
       managerWho: 'Saisies par l’entraîneur de l’équipe, {{name}}',
@@ -17484,6 +17564,29 @@ export default {
       review: 'Score officiel changé : vérifie la feuille',
       stepScore: 'Étape 1 sur 3 : le score',
       stepSheet: 'Étape 2 sur 3 : la feuille',
+    },
+    monMatch: {
+      answer: 'Donner mon retour',
+      edit: 'Modifier ma réponse',
+      eyebrow: 'Ma réponse',
+      feedbackTitle: 'Le retour de {{name}}',
+      feedbackTitleUnnamed: 'Le retour de ton entraîneur',
+      new: 'Nouveau',
+      noFeedback: "{{name}} n'a pas encore écrit de retour pour toi. Tu seras prévenu·e.",
+      // eslint-disable-next-line max-len
+      noFeedbackUnnamed: "Ton entraîneur n'a pas encore écrit de retour pour toi. Tu seras prévenu·e.",
+      notInvolved: 'Pas concerné·e par ce match',
+      presentNoPlay: 'Là sans jouer',
+      privateLong: 'Visible par toi et tes parents.',
+      privateShort: 'Toi et tes parents',
+      sent: 'Envoyée',
+      sentOn: 'Le {{date}} à {{time}}',
+      title: 'Mon match',
+      toAnswerBody: 'Dis si tu as joué, tes chiffres et tes deux notes. {{name}} les lira.',
+      // eslint-disable-next-line max-len
+      toAnswerBodyUnnamed: 'Dis si tu as joué, tes chiffres et tes deux notes. Ton entraîneur les lira.',
+      unknownFigures: '{{name}} saisira tes chiffres sur la feuille.',
+      unknownFiguresUnnamed: 'Ton entraîneur saisira tes chiffres sur la feuille.',
     },
     rappel: {
       close: 'Fermer',
@@ -20198,6 +20301,20 @@ export default {
   clubStatsView: {
     eachTeamStats: 'Les stats de chaque équipe',
   },
+  // ST-VUES3-ORDI (03/10) — « Les équipes », colonne de droite de l'écran 18 sur ordinateur.
+  clubTeamsCard: {
+    draws_one: '{{count}} nul',
+    draws_other: '{{count}} nuls',
+    losses_one: '{{count}} défaite',
+    losses_other: '{{count}} défaites',
+    openStatsA11y: '{{team}} : ouvrir ses stats',
+    presence: 'Présence : {{percent}}',
+    presenceNone: 'Présence : pas encore d’appel',
+    stats: 'Stats',
+    title: 'Les équipes',
+    wins_one: '{{count}} victoire',
+    wins_other: '{{count}} victoires',
+  },
   // ST-VUES2 (02/10) — la pastille cyan « 1 nouveau » (écran 16, « Retours du coach »).
   newItemsPill: {
     count_one: '{{count}} nouveau',
@@ -20205,6 +20322,10 @@ export default {
   },
   // ST-VUES2 (02/10) — la carte « Résultats du week-end » de « Gestion du club » (écran 18).
   weekendResults: {
+    // ST-VUES3-ORDI (03/10) — le tableau de l'écran 18 sur ordinateur.
+    columnMatch: 'Match',
+    columnScore: 'Score',
+    columnTeam: 'Équipe',
     createSection: 'Créer une section',
     createTeam: 'Créer une équipe',
     enterScore: 'Saisir',
@@ -20222,10 +20343,14 @@ export default {
     remind: 'Relancer',
     remindA11y: 'Relancer {{names}} pour le score',
     reminded: 'Relancé',
+    remindNamed: 'Relancer {{names}}',
     scoreToEnter: 'Score à saisir',
     scoreToEnterBy: 'Score à saisir · {{names}}',
+    scoreToEnterShort: 'à saisir',
+    see: 'Voir',
     title: 'Résultats du week-end',
     upcoming: 'À venir',
+    versus: 'contre {{opponent}}',
   },
   myStats: {
     assists_one: 'Passe déc.',
@@ -21607,6 +21732,12 @@ export default {
         + ' et sa date de naissance. Une composition déjà jouée gardera son'
         + ' prénom — on ne réécrit pas la feuille d’un match passé.',
       title: 'Supprimer la fiche de {{firstname}} ?',
+    },
+    // ST-RETOURS2 (03/10, planche 22) — la section des FICHES : les enfants sans compte.
+    declared: {
+      notFound: 'Cette fiche n’existe plus.',
+      open: 'Voir sa fiche',
+      title: 'Mes enfants de moins de 13 ans',
     },
     errors: {
       delete: 'Impossible de supprimer cette fiche pour le moment.',

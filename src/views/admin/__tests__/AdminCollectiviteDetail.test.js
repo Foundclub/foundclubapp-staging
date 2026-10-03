@@ -302,8 +302,13 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     };
     const arbre = await monter();
     await chercher(arbre, 'admin-collectivite-recherche-club', 'mont');
-    // eslint-disable-next-line max-len
-    expect(mockPost).toHaveBeenCalledWith(RECHERCHE_CLUB, { fields: ['documentId', 'name', 'addressDetails'], pageSize: 10, q: 'mont' });
+    // COLL-CONSOLE-BIS (03/10) — + la ville officielle, l INSEE (proximite) et le sport.
+    expect(mockPost).toHaveBeenCalledWith(RECHERCHE_CLUB, {
+      fields: ['documentId', 'name', 'addressDetails', 'cityName', 'inseeCom'],
+      pageSize: 20,
+      populate: { activites: { fields: ['name'] } },
+      q: 'mont',
+    });
 
     // Un club déjà rattaché ici ne se rattache pas deux fois.
     // eslint-disable-next-line max-len
@@ -538,8 +543,11 @@ describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () 
     await attendre(() => arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-offre-as-montrivage').length > 0);
     expect(mockPut).toHaveBeenCalledWith(`${ROUTE}/active`, { data: { previewIsActive: false } });
     expect(textes(arbre.root)).toContain('Commune · INSEE 99001');
+    // COLL-CONSOLE-BIS (03/10) — une Ville active dit depuis quand (« — » : sans date au serveur).
     expect(bandeau(arbre)).toEqual([
-      'Active', '1 club reçoit l’offre Club offerte. Montrivage FC paie lui-même.', 'Couper',
+      'Active',
+      'Depuis le — · 1 club reçoit l’offre Club offerte. Montrivage FC paie lui-même.',
+      'Couper',
     ]);
     expect(offre(arbre, 'as-montrivage')).toEqual(['Offerte par la Ville']);
     expect(offre(arbre, 'montrivage-fc')).toEqual(['Paie lui-même']);
@@ -569,7 +577,7 @@ describe('COLL-CONSOLE — la fiche d une collectivité (planche P2-fiche)', () 
     // eslint-disable-next-line max-len
     expect(arbre.root.findAll((n) => String(n.props?.testID || '').startsWith('admin-collectivite-offre-'))).toHaveLength(0);
     // eslint-disable-next-line max-len
-    expect(bandeau(arbre)[1]).toBe('Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.');
+    expect(bandeau(arbre)[1]).toBe('Depuis le — · Ses clubs rattachés reçoivent l’offre Club offerte, sauf ceux qui paient déjà.');
   });
 
   // eslint-disable-next-line max-len

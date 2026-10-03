@@ -83,7 +83,8 @@ describe('collectiviteService — la console super-admin (D61)', () => {
   it('la liste : l explorateur, une ligne par collectivité, ses clubs réduits à leur identifiant', async () => {
     await getAdminCollectivites();
     expect(mockPost).toHaveBeenCalledWith(EXPLORATEUR, {
-      fields: ['documentId', 'name', 'type', 'isActive'],
+      // COLL-CONSOLE-BIS (03/10) — + la date d activation (« Activée le »).
+      fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt'],
       pagination: { page: 1, pageSize: 100 },
       populate: { clubs: { fields: ['documentId'] } },
       sort: ['name:asc'],
@@ -97,7 +98,7 @@ describe('collectiviteService — la console super-admin (D61)', () => {
     // eslint-disable-next-line max-len
     await expect(getAdminCollectivite('ville')).resolves.toEqual({ documentId: 'ville', name: 'Ville de X' });
     expect(mockPost).toHaveBeenCalledWith(EXPLORATEUR, {
-      fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren'],
+      fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt'],
       filters: { documentId: { $eq: 'ville' } },
       pagination: { page: 1, pageSize: 1 },
       populate: ADMIN_COLLECTIVITE_DETAIL_POPULATE,
@@ -147,7 +148,11 @@ describe('collectiviteService — la console super-admin (D61)', () => {
     await searchAdminCollectiviteTargets('club', ' mont ');
     await searchAdminCollectiviteTargets('user', 'karim');
     expect(mockPost).toHaveBeenNthCalledWith(1, '/superadmin/relations/api%3A%3Aclub.club/search', {
-      fields: ['documentId', 'name', 'addressDetails'], pageSize: 10, q: 'mont',
+      // COLL-CONSOLE-BIS (03/10) — + la ville officielle, l INSEE (proximite) et le sport.
+      fields: ['documentId', 'name', 'addressDetails', 'cityName', 'inseeCom'],
+      pageSize: 20,
+      populate: { activites: { fields: ['name'] } },
+      q: 'mont',
     });
     expect(mockPost).toHaveBeenNthCalledWith(
       2,

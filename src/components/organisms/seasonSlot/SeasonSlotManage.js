@@ -1,3 +1,6 @@
+import {
+  format, isValid, parse, parseISO,
+} from 'date-fns';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
@@ -16,6 +19,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 
 import { useSeasonSlot, useWithdrawSeasonSlot } from '@/services/seasonSlot/seasonSlotQueries';
 
@@ -29,6 +33,8 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * Retirer demande une confirmation et le dit (D67, decision d Adel du 01/10) : les entrainements
  * deja poses RESTENT, le club les garde ou les annule lui-meme, et la mairie peut retablir le
  * creneau depuis la liste. Le serveur ne touche aucune seance (§4.6).
+ * COLL-C2B-BIS (03/10) — planche 23 : le retrait vaut « a partir du » une date CHOISIE (aujourd hui
+ * par defaut, jusqu a la fin du creneau) ; les seances posees apres cette date restent aussi (D67).
  *
  * Un lecteur qui ne gere pas l installation (`meta.canManage` faux) ne voit AUCUN geste.
  * ⛔ Aucun nom de personne : un club, une equipe, des heures.
@@ -59,6 +65,13 @@ function SeasonSlotManage({
   // Depuis le planning, « Retirer le creneau » ouvre directement la confirmation.
   const [etape, setEtape] = useState(/** @type {'detail' | 'retirer'} */ (etapeInitiale));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
+  // COLL-C2B-BIS — la date d effet du retrait, saisie « JJ/MM/AAAA ».
+  const [aPartirDu, setAPartirDu] = useState(format(new Date(), 'dd/MM/yyyy'));
+  const dateDuRetrait = parse(aPartirDu, 'dd/MM/yyyy', new Date());
+  const retraitLisible = isValid(dateDuRetrait);
+  const finDuCreneau = slot?.validUntil
+    ? parseISO(String(slot.validUntil).slice(0, 10))
+    : undefined;
   // Le serveur a le dernier mot : s il dit que ce compte ne gere pas, aucun geste.
   const gere = canManage && detail.data?.meta?.canManage !== false;
 
@@ -80,7 +93,10 @@ function SeasonSlotManage({
     const confirmer = async () => {
       setErreur(null);
       try {
-        await retirer.mutateAsync({ data: {}, slotId: slot.documentId });
+        await retirer.mutateAsync({
+          data: { effectiveFrom: format(dateDuRetrait, 'yyyy-MM-dd') },
+          slotId: slot.documentId,
+        });
         onWithdrawn?.();
         onClose();
       } catch (refus) {
@@ -100,7 +116,7 @@ function SeasonSlotManage({
             'collectiviteCreneaux.gerer.retirerPerd',
             '{{qui}} perd le {{jour}} {{heures}}, {{installation}}, à partir du {{date}}.',
             {
-              date: formatDay(new Date(), { withYear: false }),
+              date: formatDay(retraitLisible ? dateDuRetrait : new Date(), { withYear: false }),
               heures,
               installation: installationName || slot?.facility?.name || '',
               jour: jour.toLocaleLowerCase(),
@@ -109,6 +125,16 @@ function SeasonSlotManage({
             },
           )}
         </Text>
+        <DatePickerInput
+          label={t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')}
+          maximumDate={finDuCreneau}
+          minimumDate={new Date()}
+          onChange={(/** @type {string} */ valeur) => {
+            setAPartirDu(valeur);
+            setErreur(null);
+          }}
+          value={aPartirDu}
+        />
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {t('collectiviteCreneaux.gerer.clubPrevenu', 'Le club est prévenu.')}
         </Text>
@@ -142,6 +168,7 @@ function SeasonSlotManage({
           <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreur}</Text>
         ) : null}
         <Button
+          disabled={!retraitLisible}
           isLoading={retirer.isPending}
           onPress={confirmer}
           title={t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}

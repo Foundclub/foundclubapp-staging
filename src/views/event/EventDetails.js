@@ -159,7 +159,6 @@ import {
 import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
-import texteInsecable from '@/utils/texteInsecable';
 
 import {
   formatTimeInZone,
@@ -175,6 +174,7 @@ import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
 import MatchBilanCard from './components/MatchBilanCard';
+import MonMatchCard from './components/MonMatchCard';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentPeopleList from './components/TournamentPeopleList';
@@ -3836,7 +3836,17 @@ function EventDetails({ navigation, route }) {
   const myCoachReview = matchStatsPayload?.myCoachReview || null;
   const myMatchResponse = myMatchResponsePayload?.response || null;
   const isCoachFeedbackHighlighted = highlightedSection === 'coachFeedback';
-  const hasMyCoachReview = myCoachReview?.rating != null || Boolean(myCoachReview?.comment);
+  // 🎯 ST-MONMATCH (écran 12, état 5, défaut 25) — la notification « Retour de Karim » ouvre
+  // la fiche SUR le retour : dès que la carte « Mon match » est posée avec son retour, on y
+  // descend, une seule fois. ⛔ Jest ne mesure rien : le défilement se voit à la recette.
+  const monMatchAnchorRef = useRef(null);
+  const hasScrolledToCoachFeedbackRef = useRef(false);
+  const onMonMatchLayout = useCallback(() => {
+    if (!isCoachFeedbackHighlighted || hasScrolledToCoachFeedbackRef.current) return;
+    if (myCoachReview?.rating == null && !myCoachReview?.comment) return;
+    hasScrolledToCoachFeedbackRef.current = true;
+    requestAnimationFrame(() => scrollToAnchor(monMatchAnchorRef));
+  }, [isCoachFeedbackHighlighted, myCoachReview, scrollToAnchor]);
   const hasExplicitMyMatchResponsePermission = typeof myMatchResponsePayload?.permissions?.canRespond === 'boolean';
   const canRespondMyMatchStats = hasExplicitMyMatchResponsePermission
     ? Boolean(myMatchResponsePayload?.permissions?.canRespond)
@@ -3906,6 +3916,10 @@ function EventDetails({ navigation, route }) {
   const teamCoachFirstname = useMemo(() => String(
     (compositionEditorTeam || event?.team)?.trainers?.[0]?.firstname || '',
   ).trim() || null, [compositionEditorTeam, event?.team]);
+  // ST-MONMATCH (écran 12) — « Le retour de Karim » : qui a publié la feuille
+  // (`report.submittedBy`, rendu au joueur), sinon l'entraîneur de l'équipe.
+  const monMatchEntraineur = String(matchStatsReport?.submittedBy?.firstname || '').trim()
+    || teamCoachFirstname || '';
 
   // ST-MATCH (écran 1, état 1) — « VS » et l'heure du coup d'envoi, au centre.
   const matchStartTimeLabel = useMemo(() => {
@@ -4542,79 +4556,6 @@ function EventDetails({ navigation, route }) {
     t,
     teamCoachFirstname,
   ]);
-  const myMatchResponseStatusMeta = useMemo(() => {
-    if (myMatchResponse?.status === 'draft') {
-      return {
-        backgroundColor: `${Colors.primary500}20`,
-        borderColor: `${Colors.primary500}45`,
-        label: t('eventDetails.draft', 'Brouillon'),
-        textColor: Colors.primary500,
-      };
-    }
-    if (myMatchResponse?.status === 'submitted') {
-      if (myMatchResponse?.participation === 'not_involved') {
-        return {
-          backgroundColor: `${Colors.neutral00}14`,
-          borderColor: `${Colors.neutral00}24`,
-          label: t('eventDetails.notInvolved', 'Non concerné'),
-          textColor: Colors.neutral00,
-        };
-      }
-      if (myMatchResponse?.quantitativeState === 'unknown') {
-        return {
-          backgroundColor: `${Colors.gold500}20`,
-          borderColor: `${Colors.gold500}45`,
-          label: t('eventDetails.iDonTKnow', 'Je ne sais pas'),
-          textColor: Colors.gold500,
-        };
-      }
-      return {
-        backgroundColor: `${Colors.success500}20`,
-        borderColor: `${Colors.success500}45`,
-        label: t('eventDetails.sent', 'Envoyé'),
-        textColor: Colors.success500,
-      };
-    }
-    return {
-      backgroundColor: `${Colors.primary500}20`,
-      borderColor: `${Colors.primary500}45`,
-      label: t('eventDetails.toDo', 'À faire'),
-      textColor: Colors.primary500,
-    };
-  }, [Colors.gold500, Colors.neutral00, Colors.primary500, Colors.success500, myMatchResponse, t]);
-  const myMatchResponseSummary = useMemo(() => {
-    if (myMatchResponse?.status === 'submitted') {
-      if (myMatchResponse?.participation === 'not_involved') {
-        return t(
-          'eventDetails.youSaidYouWerenT',
-          'Tu as indique ne pas être concerne par ce match.',
-        );
-      }
-      if (myMatchResponse?.participation === 'present_no_play') {
-        return t('eventDetails.youSaidYouWereThere', 'Tu as indique que tu etais la sans jouer.');
-      }
-      if (myMatchResponse?.quantitativeState === 'unknown') {
-        return t(
-          'eventDetails.yourFeelingIsSavedWithout',
-          'Ton ressenti est enregistré, sans stats quantitatives.',
-        );
-      }
-      return t(
-        'eventDetails.yourPersonalStatsAndRating',
-        'Tes stats personnelles et ta note sont enregistrées.',
-      );
-    }
-    if (myMatchResponse?.status === 'draft') {
-      return t(
-        'eventDetails.yourPersonalPostMatchDraft',
-        'Ton brouillon perso post-match attend encore une validation.',
-      );
-    }
-    return t(
-      'eventDetails.enterYourIndividualFeedbackThen',
-      'Renseigne ton retour individuel, puis ajoute une note sur 10.',
-    );
-  }, [myMatchResponse, t]);
   // 🚩 ST-MATCH (écran 2, design validé le 02/10) — « MARQUÉ ABSENT À L'APPEL ».
   // QUI a pointé et QUAND viennent du serveur (`attendanceRestrictionBy/At`, admin
   // ST-MATCH) ; sans eux (serveur plus ancien), la phrase reste vraie sans les nommer.
@@ -4681,11 +4622,6 @@ function EventDetails({ navigation, route }) {
     }
   }, [absenceMarker?.documentId, navigation, startWhisperChat, t]);
 
-  const myMatchResponseButtonTitle = useMemo(() => {
-    if (myMatchResponse?.status === 'draft') return t('eventDetails.resume', 'Reprendre');
-    if (myMatchResponse?.status === 'submitted') return t('eventDetails.view', 'Voir');
-    return t('eventDetails.fillIn', 'Renseigner');
-  }, [myMatchResponse, t]);
   // 🎯 ST-MATCH (écran 5, ABANDONNÉ par le design validé le 02/10) — la fenêtre « Stats de
   // fin de match » qui s'ouvrait toute seule par-dessus la page est RETIRÉE, avec son
   // message, sa clef de session et son effet. Elle recouvrait la carte « Après le match »,
@@ -4993,6 +4929,31 @@ function EventDetails({ navigation, route }) {
     isStaffCompositionFetching,
     openCompositionBoard,
     staffCompositionPayload, t,
+  ]);
+
+  // 📐 ST-MATCH10-BIS (écran 10 des stats, état 10) — « Ouvrir la convocation » depuis la
+  // feuille de match VIDE. La feuille ne sait pas bâtir une convocation : elle revient ici
+  // avec `focusSection: 'convocation'`, et la page ouvre SA porte — celle de la puce
+  // « Convocation » du menu Gérer, mêmes conditions — dès que la compo du staff est lue
+  // (jamais avant : on ouvrirait une compo vide par-dessus un brouillon). Le paramètre est
+  // effacé aussitôt : revenir de la convocation ne la rouvre pas. Le verrou tient UNE
+  // ouverture par arrivée : l'effacement du paramètre n'est pas immédiat, et un rendu
+  // intermédiaire rouvrirait la convocation par-dessus elle-même.
+  const convocationOuverteRef = useRef(false);
+  useEffect(() => {
+    if (highlightedSection !== 'convocation') {
+      convocationOuverteRef.current = false;
+      return;
+    }
+    if (convocationOuverteRef.current) return;
+    if (!canEdit || !supportsEventComposition) return;
+    if (isStaffCompositionFetching || !staffCompositionPayload) return;
+    convocationOuverteRef.current = true;
+    navigation.setParams?.({ focusSection: undefined });
+    handleManageComposition();
+  }, [
+    canEdit, handleManageComposition, highlightedSection, isStaffCompositionFetching, navigation,
+    staffCompositionPayload, supportsEventComposition,
   ]);
 
   // H8 — la liste des bilans en attente, atteignable depuis la page du match.
@@ -5413,6 +5374,19 @@ function EventDetails({ navigation, route }) {
   const handleCoachEditLate = useCallback((/** @type {User | null | undefined} */ targetUser) => {
     openCoachLateModal(targetUser, 'coach_edit');
   }, [openCoachLateModal]);
+
+  // 🚪 ST-MONMATCH (écran 2, état 3) — « Présent » sur la ligne d'un absent à l'appel : la
+  // correction SANS fenêtre du serveur (`patchLate`, retard 0 ⇒ arrivé à l'heure, au coup
+  // d'envoi). L'absence signée n'existe plus : sur un match fini, le serveur rouvre son
+  // questionnaire tout seul (`findSignedAbsenceForUser`).
+  const handleCoachMarkPresent = useCallback((/** @type {User | undefined} */ targetUser) => {
+    if (!eventId || !targetUser?.documentId) return;
+    /** @type {any} */ (mutations.updateLateMinutesMutation).mutate({
+      eventId,
+      payload: { lateMinutes: 0, note: null },
+      userId: targetUser.documentId,
+    });
+  }, [eventId, mutations.updateLateMinutesMutation]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleSetLatePreset = useCallback((value) => {
@@ -7934,12 +7908,15 @@ function EventDetails({ navigation, route }) {
     const eventLicenseCampaignActionsNode = canManageEventLicenseCampaigns
       ? renderEventLicenseCampaignActions()
       : null;
+    // ST-MONMATCH (écran 12, défaut 23) — plus de « Tu étais là ? Passe en présent » sous une
+    // réponse de match déjà envoyée : le joueur a déjà dit s il était là.
+    const offrePresentApresCoup = peutPasserPresentApresCoup && myMatchResponse?.status !== 'submitted';
     const eventAnswerButtonsNode = (
       <EventAnswerButtons
         event={event}
         hasAcceptedRequest={hasAcceptedRequest}
         hasPendingRequest={hasPendingRequest}
-        onDeclareLatePresence={peutPasserPresentApresCoup ? handleDeclareLatePresence : undefined}
+        onDeclareLatePresence={offrePresentApresCoup ? handleDeclareLatePresence : undefined}
         onDecline={() => handleDeclineEvent(event)}
         onDeleteParticipation={handleDeleteParticipation}
         onJoin={handleJoinEvent}
@@ -8572,9 +8549,11 @@ function EventDetails({ navigation, route }) {
                   nowMs={serverNowMs}
                   onCandidatePress={handleOpenDetectionCandidate}
                   onCoachEditLate={handleCoachEditLate}
+                  onCoachMarkPresent={handleCoachMarkPresent}
                   participantsSummary={participantsSummary}
                   participationsByStatus={participationsByStatus}
                   pendingParticipations={pendingParticipations}
+                  rouvreLeQuestionnaire={Boolean(isMatchEvent && isMatchFinished)}
                   teamParticipationSections={teamParticipationSections}
                 />
               ) : null}
@@ -8648,178 +8627,19 @@ function EventDetails({ navigation, route }) {
                 ) : null}
 
               {showOverviewTab && isMatchEvent && compositionTeamId && isTeamPlayer && isMatchFinished && canRespondMyMatchStats ? (
-                <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                    {t('eventDetails.myStats', 'Mes stats')}
-                  </Text>
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary900,
-                      ApplicationStyle.borderRadius24,
-                      ApplicationStyle.borderColor.primary500,
-                      ApplicationStyle.borderWidth1,
-                      Spaces.padding[16],
-                      Spaces.gap[12],
-                    ]}
-                  >
-                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                          {t('eventDetails.individualFeedback', 'Retour individuel')}
-                        </Text>
-                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                          {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : t('eventDetails.toComplete', 'A compléter')}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          Spaces.paddingHorizontal[12],
-                          Spaces.paddingVertical[8],
-                          {
-                            backgroundColor: myMatchResponseStatusMeta.backgroundColor,
-                            borderColor: myMatchResponseStatusMeta.borderColor,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                          },
-                        ]}
-                      >
-                        {/* FINITIONS (recette Android 16 du 28/09) — une pastille épouse
-                            son texte : un libellé gras de plusieurs mots y perdait son
-                            dernier mot. Espaces insécables (`texteInsecable`). */}
-                        <Text
-                          style={[Fonts.p4Bold, { color: myMatchResponseStatusMeta.textColor }]}
-                        >
-                          {texteInsecable(myMatchResponseStatusMeta.label)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={[Fonts.p2, Fonts.neutral100]}>
-                      {myMatchResponseSummary}
-                    </Text>
-
-                    {myMatchResponse?.teamRating ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                          {t(
-                            'eventDetails.theTeamSMatch10',
-                            'Le match de l equipe : {{teamRating}}/10',
-                            { teamRating: myMatchResponse.teamRating, ...SANS_ECHAPPEMENT },
-                          )}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {myMatchResponse?.selfComment ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                        ]}
-                      >
-                        <Text numberOfLines={3} style={[Fonts.p4, Fonts.neutral100]}>
-                          {myMatchResponse.selfComment}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    <Button
-                      disabled={isMyMatchResponseFetching}
-                      onPress={openMyMatchResponse}
-                      size="sm"
-                      title={myMatchResponseButtonTitle}
-                      variant="Secondary"
-                    />
-                  </View>
-                </View>
-              ) : null}
-
-              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamPlayer && isMatchFinished && canRespondMyMatchStats ? (
-                <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                    {t('eventDetails.myCoachFeedback', 'Mon retour coach')}
-                  </Text>
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary900,
-                      ApplicationStyle.borderRadius24,
-                      ApplicationStyle.borderColor.primary500,
-                      ApplicationStyle.borderWidth1,
-                      Spaces.padding[16],
-                      Spaces.gap[12],
-                      isCoachFeedbackHighlighted
-                        ? {
-                          borderColor: Colors.primary200,
-                          borderWidth: 2,
-                        }
-                        : null,
-                    ]}
-                  >
-                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>{t('eventDetails.coachSIndividualFeedback', 'Retour individuel du coach')}</Text>
-                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                          {myCoachReview?.rating != null ? `${myCoachReview.rating}/10` : t('eventDetails.pending', 'En attente')}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          Spaces.paddingHorizontal[12],
-                          Spaces.paddingVertical[8],
-                          {
-                            backgroundColor: hasMyCoachReview ? `${Colors.success500}18` : `${Colors.primary500}18`,
-                            borderColor: hasMyCoachReview ? `${Colors.success500}55` : `${Colors.primary500}40`,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                          },
-                        ]}
-                      >
-                        {/* FINITIONS — même pastille, même parade. */}
-                        <Text style={[Fonts.p4Bold, hasMyCoachReview ? Fonts.success500 : Fonts.primary100]}>
-                          {texteInsecable(hasMyCoachReview ? t(
-                            'eventDetails.available',
-                            'Disponible',
-                          ) : t(
-                            'eventDetails.notSharedYet',
-                            'Pas encore partagé',
-                          ))}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={[Fonts.p2, Fonts.neutral100]}>
-                      {hasMyCoachReview
-                        ? t(
-                          'eventDetails.theCoachPublishedIndividualFeedback',
-                          'Le coach a publié un retour individuel pour ton match.',
-                        )
-                        : t(
-                          'eventDetails.theCoachHasnTLeft',
-                          "Le coach n'a pas encore laisse d'avis individuel pour ce match.",
-                        )}
-                    </Text>
-
-                    {myCoachReview?.comment ? (
-                      <View
-                        style={[
-                          ApplicationStyle.backgroundColor.primary700,
-                          ApplicationStyle.borderRadius16,
-                          Spaces.padding[12],
-                        ]}
-                      >
-                        <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {myCoachReview.comment}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
+                /* 🎯 ST-MONMATCH (écran 12, design validé le 02/10) — « MON MATCH » : UNE carte au
+                   lieu de « Mes stats » et « Mon retour coach ». Même porte qu'avant : au JOUEUR
+                   seul (STATS-FIX2 · 4). La carte ne lit que SA réponse et SON avis (SECU-STATS). */
+                <View collapsable={false} onLayout={onMonMatchLayout} ref={monMatchAnchorRef}>
+                  <MonMatchCard
+                    arriveParLeRetour={isCoachFeedbackHighlighted}
+                    entraineur={monMatchEntraineur}
+                    estOccupee={isMyMatchResponseFetching}
+                    onRepondre={openMyMatchResponse}
+                    reponse={myMatchResponse}
+                    retourDuCoach={myCoachReview}
+                    sport={matchStatsPayload?.sport || myMatchResponsePayload?.sport || 'football'}
+                  />
                 </View>
               ) : null}
 
@@ -9912,10 +9732,11 @@ function EventDetails({ navigation, route }) {
                 ))}
               </View>
 
-              {/* 🗣️ Une porte fermee DIT pourquoi — en orange (plus en or). ⚠️ Le cadenas du design
-                  manque : l'app n'a AUCUNE icône cadenas (ni SvgIcon, ni Images). */}
+              {/* 🗣️ Une porte fermee DIT pourquoi — en orange (plus en or), derrière le CADENAS
+                  (ST-MONMATCH, `cadenas B` : le `lock` de GlyphIcon, dans le même orange). */}
               {isMatchScoreLocked ? (
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+                  <GlyphIcon color={Colors.warning500} name="lock" size={16} />
                   <Text style={[Fonts.p3, Fonts.warning500, { flexShrink: 1 }]}>
                     {t(
                       'stMatch.score.locked',
@@ -9952,11 +9773,12 @@ function EventDetails({ navigation, route }) {
                     />
                   </>
                 ) : (
-                  // ponytail: « Enregistrement… » s'écrit, la roue ne tourne pas — l'atome
-                  // `Button` n'affiche que la roue OU le texte. Voie de sortie : une roue à
-                  // côté du libellé dans l'atome.
+                  // ST-MONMATCH (écran 9, état 4) — « Enregistrement… » ET la roue : l'atome
+                  // la fait tourner à côté du libellé (`keepTitleWhileLoading`).
                   <Button
                     disabled={isMatchScoreSaving}
+                    isLoading={isMatchScoreSaving}
+                    keepTitleWhileLoading
                     onPress={handleSaveMatchScore}
                     title={(() => {
                       if (isMatchScoreSaving) return t('stMatch.score.saving', 'Enregistrement…');

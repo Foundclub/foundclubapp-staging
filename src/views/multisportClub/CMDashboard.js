@@ -35,6 +35,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   deleteCMSection,
   getCMClubs,
+  getCMTeams,
   getCMWeekendResults,
   getMultisportClubById,
   remindCMWeekendScore,
@@ -42,6 +43,11 @@ import {
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
 
+// Même motif que `EventDetails.web.js` : `import/order` veut `@/responsive` AVANT les voisins,
+// `perfectionist` APRÈS ; les deux règles se contredisent sur ce seul bloc.
+/* eslint-disable perfectionist/sort-imports */
+import { useIsDesktop } from '@/responsive';
+import ClubResultsBoard from './components/ClubResultsBoard';
 import MultisportActionGrid from './components/MultisportActionGrid';
 import MultisportAdminsSection from './components/MultisportAdminsSection';
 import MultisportHeroCard from './components/MultisportHeroCard';
@@ -49,6 +55,7 @@ import MultisportSectionsList from './components/MultisportSectionsList';
 import MultisportSponsorsSection from './components/MultisportSponsorsSection';
 import MultisportStatsRow from './components/MultisportStatsRow';
 import WeekendResultsCard, { weekendRowKey } from './components/WeekendResultsCard';
+/* eslint-enable perfectionist/sort-imports */
 
 /** @param {any} error */
 const normalizeErrorMessage = (error) => String(
@@ -244,6 +251,20 @@ function CMDashboard({ navigation, route }) {
     },
   });
 
+  // ST-VUES3-ORDI (planche 18, ordinateur) — la colonne de droite liste « Les équipes » du
+  // club : la même lecture (et le même cache) que la liste « Équipes ». Le téléphone ne la
+  // demande pas.
+  const isDesktop = useIsDesktop();
+  const { data: cmTeamsData } = useQuery({
+    enabled: Boolean(resolvedCmId) && isCmAdmin && isDesktop,
+    queryFn: () => getCMTeams(resolvedCmId),
+    queryKey: ['cm-teams', resolvedCmId],
+  });
+  const cmTeams = useMemo(
+    () => (Array.isArray(cmTeamsData?.data) ? cmTeamsData.data : []),
+    [cmTeamsData?.data],
+  );
+
   const refetch = useCallback(() => {
     refetchCM();
     refetchSections();
@@ -352,6 +373,15 @@ function CMDashboard({ navigation, route }) {
     });
   }, [navigation]);
 
+  // ST-VUES3-ORDI — « Stats » d'une équipe de la planche ordinateur ouvre son onglet Stats.
+  const handleOpenTeamStats = useCallback((/** @type {{ documentId?: string }} */ team) => {
+    if (!team?.documentId) return;
+    navigation.navigate(RouteNames.TeamStack, {
+      params: { initialTab: 'stats', teamId: team.documentId },
+      screen: RouteNames.TeamDetails,
+    });
+  }, [navigation]);
+
   // Etat 4 — un club sans equipe : une equipe dans sa premiere section, ou d'abord une section.
   const weekendEmptyAction = useMemo(() => {
     if (!isCmAdmin) return null;
@@ -452,6 +482,23 @@ function CMDashboard({ navigation, route }) {
       value: globalStats.members,
     },
   ]), [globalStats.members, globalStats.sections, globalStats.teams, navigation, resolvedCmId, t]);
+
+  // La carte reçoit la même chose au téléphone et dans la planche ordinateur.
+  const weekendCardProps = {
+    data: weekendResults,
+    emptyAction: weekendEmptyAction,
+    error: weekendError,
+    isLoading: weekendLoading,
+    onEnterScore: handleOpenWeekendMatch,
+    onOpenMatch: handleOpenWeekendMatch,
+    onRemind: (/** @type {{ eventId: string, teamId: string }} */ row) => remindMutation
+      .mutate(row),
+    onRetry: refetchWeekend,
+    remindedKeys,
+    remindingKey: remindMutation.isPending && remindMutation.variables
+      ? weekendRowKey(remindMutation.variables)
+      : null,
+  };
 
   const isMissingCmId = !resolvedCmId;
   const isCmNotFound = Boolean(resolvedCmId) && !isLoading && !error && !cm;
@@ -565,37 +612,41 @@ function CMDashboard({ navigation, route }) {
                 onEditPress={handleOpenManageClub}
               />
 
-              <MultisportStatsRow items={statsItems} />
-
-              {isCmAdmin ? (
-                <WeekendResultsCard
-                  data={weekendResults}
-                  emptyAction={weekendEmptyAction}
-                  error={weekendError}
-                  isLoading={weekendLoading}
-                  onEnterScore={handleOpenWeekendMatch}
-                  onOpenMatch={handleOpenWeekendMatch}
-                  onRemind={(row) => remindMutation.mutate(row)}
-                  onRetry={refetchWeekend}
-                  remindedKeys={remindedKeys}
-                  remindingKey={remindMutation.isPending && remindMutation.variables
-                    ? weekendRowKey(remindMutation.variables)
-                    : null}
+              {/* ST-VUES3-ORDI (planche 18, ordinateur) — le tableau du week-end a gauche, les
+                  trois chiffres et « Les équipes » a droite. Le telephone ne change pas. */}
+              {isDesktop && isCmAdmin ? (
+                <ClubResultsBoard
+                  onOpenTeamStats={handleOpenTeamStats}
+                  statsItems={statsItems}
+                  teams={cmTeams}
+                  weekendCard={weekendCardProps}
                 />
-              ) : null}
+              ) : (
+                <>
+                  <MultisportStatsRow items={statsItems} />
 
-              {/* ST-VUES (planche 18, etat 2) — chaque fiche d equipe a son onglet Stats pour
-                  le dirigeant (STATS-ENQUETE, defaut 3) : un lien y mene, par la liste. */}
-              <TouchableOpacity
-                accessibilityRole="link"
-                onPress={() => navigation.navigate(RouteNames.CMTeams, { cmId: resolvedCmId })}
-                style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
-                testID="cm-team-stats-link"
-              >
-                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {t('clubStatsView.eachTeamStats', 'Les stats de chaque équipe')}
-                </Text>
-              </TouchableOpacity>
+                  {isCmAdmin ? (
+                    <WeekendResultsCard
+                      // eslint-disable-next-line react/jsx-props-no-spreading
+                      {...weekendCardProps}
+                    />
+                  ) : null}
+
+                  {/* ST-VUES (planche 18, etat 2) — chaque fiche d equipe a son onglet
+                      Stats pour le dirigeant (STATS-ENQUETE, defaut 3) : un lien y mene,
+                      par la liste. */}
+                  <TouchableOpacity
+                    accessibilityRole="link"
+                    onPress={() => navigation.navigate(RouteNames.CMTeams, { cmId: resolvedCmId })}
+                    style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44 }}
+                    testID="cm-team-stats-link"
+                  >
+                    <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                      {t('clubStatsView.eachTeamStats', 'Les stats de chaque équipe')}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
               <MultisportSponsorsSection
                 canEdit={isCmAdmin}

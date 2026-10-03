@@ -1,9 +1,12 @@
-import { format, parse } from 'date-fns';
+import {
+  format, isValid, parse, parseISO,
+} from 'date-fns';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import {
+  formatDay,
   formatPeriod,
   isoWeekdayOf,
   isTime,
@@ -83,6 +86,23 @@ const prochainJour = (jour) => {
 };
 
 /**
+ * Une date saisie « JJ/MM/AAAA » en jour civil « AAAA-MM-JJ » (null si illisible).
+ * @param {string} saisie - La date saisie.
+ * @returns {string | null} Le jour civil.
+ */
+const versJourCivil = (saisie) => {
+  const date = parse(String(saisie || ''), 'dd/MM/yyyy', new Date());
+  return isValid(date) ? format(date, 'yyyy-MM-dd') : null;
+};
+
+/**
+ * Un jour civil « AAAA-MM-JJ » en saisie « JJ/MM/AAAA » (vide si absent).
+ * @param {string | null | undefined} jour - Le jour civil.
+ * @returns {string} La saisie.
+ */
+const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy') : '');
+
+/**
  * 📐 COLL-C2B (02/10) — ATTRIBUER ou MODIFIER un creneau de saison (design HY521H1, planches
  * P4v2-creneaux, ecrans 2, 3 et 8 ; P4v3-plateaux, ecran 2 ; P5v2-vues, ecran 5).
  *
@@ -94,6 +114,10 @@ const prochainJour = (jour) => {
  *
  * ⛔ Aucun nom de personne : la carte dit des clubs et des equipes (SPEC §2 H).
  * Le champ « Plateau » n existe que si l installation a des plateaux nommes (D66).
+ *
+ * COLL-C2B-BIS (03/10) — planche 23 : « Modifier » change aussi la PERIODE (« Du », « Au »), sans
+ * retirer ni recreer (contrat §4.5). Un creneau commence garde son debut (dit, pas choisi) ; la
+ * carte de place se lit sur la nouvelle periode, a partir d aujourd hui (le serveur fait de meme).
  *
  * COLL-C2C (02/10) — D32 : `repartition` = le DIRIGEANT repartit un creneau de son club entre ses
  * equipes. Seule l equipe change (et la date d effet) : ni jour, ni heures, ni plateau, ni carte
@@ -159,6 +183,18 @@ function SeasonSlotForm({
   const [aPartirDu, setAPartirDu] = useState(
     modification ? format(prochainJour(Number(slot?.weekday) || 1), 'dd/MM/yyyy') : '',
   );
+  // COLL-C2B-BIS — la periode d un creneau qu on modifie (la mairie seule ; pas en repartition).
+  const avecPeriode = modification && !repartition;
+  const aujourdhui = format(new Date(), 'yyyy-MM-dd');
+  const debutActuel = slot?.validFrom ? String(slot.validFrom).slice(0, 10) : null;
+  const finActuelle = slot?.validUntil ? String(slot.validUntil).slice(0, 10) : null;
+  const dejaCommence = Boolean(debutActuel) && String(debutActuel) < aujourdhui;
+  const [periodeDu, setPeriodeDu] = useState(versSaisie(debutActuel));
+  const [periodeAu, setPeriodeAu] = useState(versSaisie(finActuelle));
+  const nouveauDebut = dejaCommence ? debutActuel : versJourCivil(periodeDu);
+  const nouvelleFin = versJourCivil(periodeAu);
+  const periodeJuste = !avecPeriode
+    || Boolean(nouveauDebut && nouvelleFin && nouvelleFin >= nouveauDebut);
   const [conflit, setConflit] = useState(/** @type {any} */ (null));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
 
@@ -172,14 +208,22 @@ function SeasonSlotForm({
   const ordreJuste = debutLisible && finLisible
     && Number(toMinutes(fin)) > Number(toMinutes(debut));
   // COLL-C2C : en repartition, la place ne change pas (meme jour, memes heures) : rien a lire.
+  // COLL-C2B-BIS : en modification, la place se lit sur la periode choisie, a partir d aujourd hui.
+  let apercuDu = null;
+  if (avecPeriode && periodeJuste && nouveauDebut && nouvelleFin) {
+    apercuDu = nouveauDebut < aujourdhui ? aujourdhui : nouveauDebut;
+  }
+  const apercuAu = apercuDu ? nouvelleFin : null;
   const parametresApercu = useMemo(() => (facilityId && jour && ordreJuste && !repartition ? {
     endTime: fin,
     excludeSlot: slot?.documentId || undefined,
     plateau: plateau || undefined,
     startTime: debut,
     weekday: jour,
+    ...(apercuDu ? { validFrom: apercuDu, validUntil: apercuAu } : {}),
   } : null), [
-    debut, facilityId, fin, jour, ordreJuste, plateau, repartition, slot?.documentId,
+    apercuAu, apercuDu, debut, facilityId, fin, jour, ordreJuste, plateau, repartition,
+    slot?.documentId,
   ]);
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
   const place = conflit || apercu.data?.data || null;
@@ -188,7 +232,8 @@ function SeasonSlotForm({
     || clubs.find((ligne) => ligne.documentId === club)?.name
     || '';
   const pret = Boolean(facilityId && club && jour && ordreJuste)
-    && (!modification || Boolean(aPartirDu));
+    && (!modification || Boolean(aPartirDu))
+    && periodeJuste;
 
   let erreurHeures = null;
   if ((debut && !debutLisible) || (fin && !finLisible)) {
@@ -224,6 +269,9 @@ function SeasonSlotForm({
               startTime: debut,
               weekday: jour,
               ...champPlateau,
+              // COLL-C2B-BIS : seule une periode CHANGEE part (sinon la coupure d avant, intacte).
+              ...(nouveauDebut && nouveauDebut !== debutActuel ? { validFrom: nouveauDebut } : {}),
+              ...(nouvelleFin && nouvelleFin !== finActuelle ? { validUntil: nouvelleFin } : {}),
               ...confirmation,
             },
           slotId: slot.documentId,
@@ -494,6 +542,48 @@ function SeasonSlotForm({
         </View>
       )}
       {erreurHeures ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurHeures}</Text> : null}
+
+      {avecPeriode ? (
+        <View style={{ gap: 8 }}>
+          {titreDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
+          {dejaCommence ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t(
+                'collectiviteCreneaux.periode.depuis',
+                'Depuis le {{date}} : le créneau a commencé, son début ne change plus.',
+                { date: formatDay(debutActuel), ...SANS_ECHAPPEMENT },
+              )}
+            </Text>
+          ) : (
+            <DatePickerInput
+              label={t('collectiviteCreneaux.periode.du', 'Du')}
+              minimumDate={new Date()}
+              onChange={(/** @type {string} */ valeur) => {
+                setPeriodeDu(valeur);
+                toucherLaSaisie();
+              }}
+              value={periodeDu}
+            />
+          )}
+          <DatePickerInput
+            label={t('collectiviteCreneaux.periode.au', 'Au')}
+            minimumDate={new Date()}
+            onChange={(/** @type {string} */ valeur) => {
+              setPeriodeAu(valeur);
+              toucherLaSaisie();
+            }}
+            value={periodeAu}
+          />
+          {periodeJuste ? null : (
+            <Text style={[Fonts.p3, Fonts.error500]}>
+              {t(
+                'collectiviteCreneaux.periode.ordre',
+                'La fin de la période doit suivre son début.',
+              )}
+            </Text>
+          )}
+        </View>
+      ) : null}
 
       {modification ? (
         <DatePickerInput

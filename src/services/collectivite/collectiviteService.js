@@ -194,8 +194,9 @@ export const COLLECTIVITE_UID = 'api::collectivite.collectivite';
 // La liste : une ligne par collectivite, ses clubs reduits a leur identifiant (on les compte).
 // ponytail: 100 collectivites par page, sans page suivante — au-dela, l ecran le dit
 // (`meta.pagination.total`) ; voie de sortie : paginer comme AdminClubList.
+// COLL-CONSOLE-BIS (03/10) — + `activatedAt` : « Activée le » (planche 13).
 export const ADMIN_COLLECTIVITES_LIST_PAYLOAD = {
-  fields: ['documentId', 'name', 'type', 'isActive'],
+  fields: ['documentId', 'name', 'type', 'isActive', 'activatedAt'],
   pagination: { page: 1, pageSize: 100 },
   populate: { clubs: { fields: ['documentId'] } },
   sort: ['name:asc'],
@@ -203,10 +204,16 @@ export const ADMIN_COLLECTIVITES_LIST_PAYLOAD = {
 
 // Le detail : la meme lecture, filtree sur UNE collectivite (un corps JSON, pas de
 // `populate` imbrique dans une URL). Des gestionnaires, le nom et l e-mail seulement.
+// COLL-CONSOLE-BIS (03/10) — + la ville des clubs et la couleur des installations (planche
+// 15). Des gestionnaires, toujours le nom et l e-mail seulement. Lu par le SEUL SuperAdmin
+// (route global::is-superadmin).
 export const ADMIN_COLLECTIVITE_DETAIL_POPULATE = {
-  clubs: { fields: ['documentId', 'name'], populate: { logo: { fields: ['url'] } } },
+  clubs: {
+    fields: ['documentId', 'name', 'cityName', 'addressDetails'],
+    populate: { logo: { fields: ['url'] } },
+  },
   gestionnaires: { fields: ['documentId', 'firstname', 'lastname', 'email'] },
-  installations: { fields: ['documentId', 'name', 'type', 'maxSlots'] },
+  installations: { fields: ['documentId', 'name', 'type', 'maxSlots', 'planningColor'] },
 };
 
 const idSur = (/** @type {unknown} */ valeur) => encodeURIComponent(String(valeur || '').trim());
@@ -229,7 +236,8 @@ export const getAdminCollectivites = async () => (
  */
 export const getAdminCollectivite = async (collectiviteId) => {
   const response = await listSuperadminEntries(COLLECTIVITE_UID, {
-    fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren'],
+    // COLL-CONSOLE-BIS (03/10) — + `activatedAt` : « Depuis le … » (planche 15).
+    fields: ['documentId', 'name', 'type', 'isActive', 'codeInsee', 'siren', 'activatedAt'],
     filters: { documentId: { $eq: String(collectiviteId || '').trim() } },
     pagination: { page: 1, pageSize: 1 },
     populate: ADMIN_COLLECTIVITE_DETAIL_POPULATE,
@@ -325,10 +333,13 @@ export const createAdminCollectivite = async (data) => {
 // Ce que chaque recherche lit : un club par son nom, un compte par son nom et son e-mail.
 // COLL-CONSOLE (02/10) — et l adresse du club (publique, celle de sa fiche) : la recherche dit
 // sa ville, pour rattacher le bon club (planche P2-fiche, « chaque résultat dit sa ville »).
+// COLL-CONSOLE-BIS (03/10) — et sa ville officielle, son code INSEE (la proximite) et son SPORT
+// (`activites`, une relation : l explorateur la relaie desormais), planche 15.
 const SEARCH_FIELDS = {
-  club: ['documentId', 'name', 'addressDetails'],
+  club: ['documentId', 'name', 'addressDetails', 'cityName', 'inseeCom'],
   user: ['documentId', 'firstname', 'lastname', 'email'],
 };
+const SEARCH_POPULATE = { club: { activites: { fields: ['name'] } } };
 const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.user' };
 
 /**
@@ -340,7 +351,10 @@ const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.u
 export const searchAdminCollectiviteTargets = async (kind, query) => (
   searchSuperadminRelations(SEARCH_UIDS[kind], {
     fields: SEARCH_FIELDS[kind],
-    pageSize: 10,
+    // COLL-CONSOLE-BIS (03/10) — 20 clubs : la proximite les range ensuite (commune d abord).
+    pageSize: kind === 'club' ? 20 : 10,
+    ...(SEARCH_POPULATE[/** @type {'club'} */ (kind)]
+      ? { populate: SEARCH_POPULATE[/** @type {'club'} */ (kind)] } : {}),
     q: String(query || '').trim(),
   })
 );
@@ -358,6 +372,22 @@ export const searchAdminCollectiviteTargets = async (kind, query) => (
 export const searchCollectivitesForSignup = async (query) => {
   const response = await client.get('/collectivite-manager-requests/collectivites', {
     params: { q: String(query || '').trim() },
+  });
+  return response.data;
+};
+
+/**
+ * COLL-CONSOLE-BIS (03/10/2026) — « CHERCHER LA COMMUNE » (planches 7, 8 et 14) : les communes du
+ * referentiel de l Etat (geo.api.gouv.fr, lu PAR LE SERVEUR), avec leurs codes postaux, leur
+ * code INSEE et leur SIREN ; une commune deja sur FoundClub porte sa collectivite. Meme route
+ * que la recherche ci-dessus, avec `communes=1`. Referentiel en panne : une liste vide.
+ * @param {string} query - Le texte tape (3 lettres au moins).
+ * @returns {Promise<any>} `{ data: [{ codeInsee, codesPostaux, collectivite, departement, name,
+ *   siren }] }`.
+ */
+export const searchCommunes = async (query) => {
+  const response = await client.get('/collectivite-manager-requests/collectivites', {
+    params: { communes: 1, q: String(query || '').trim() },
   });
   return response.data;
 };

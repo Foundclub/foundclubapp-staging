@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
 import {
-  useCallback, useLayoutEffect, useMemo, useState,
+  useCallback, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -9,9 +9,12 @@ import {
   FlatList,
   Image,
   Linking,
+  Modal,
   Platform,
+  Pressable,
   RefreshControl,
   SectionList,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -106,6 +109,53 @@ const CASE_AJOUT = { documentId: '__ajout__', isAddCard: true };
 const GROUPE_VIDE = { documentId: '__groupe_vide__', isEmptyGroup: true };
 const COLONNES_ORDINATEUR = 3;
 const SQUELETTES = ['a', 'b'];
+// COLL-C2B-BIS (03/10) — planche 21 : la largeur du petit menu « Plus d actions » sur ordinateur.
+const LARGEUR_DU_MENU = 260;
+
+/**
+ * Le bouton « Plus d actions » d une carte. Sur ordinateur (`mesurer`), il dit OU il est : le
+ * petit menu s ancre sous lui (COLL-C2B-BIS, planche 21). Mesure en panne : le menu s ouvre
+ * quand meme, a sa place par defaut.
+ * @param {{
+ *   libelle: string,
+ *   mesurer: boolean,
+ *   onAncrer: (ancre: { hauteur: number, largeur: number, x: number, y: number }) => void,
+ *   onOuvrir: () => void,
+ * }} props
+ * @returns {import('react').ReactElement} Le bouton.
+ */
+function BoutonPlusDActions({
+  libelle, mesurer, onAncrer, onOuvrir,
+}) {
+  const { Alignments, Colors } = useTheme();
+  const bouton = useRef(/** @type {any} */ (null));
+  const ouvrir = () => {
+    onOuvrir();
+    if (!mesurer || typeof bouton.current?.measureInWindow !== 'function') return;
+    bouton.current.measureInWindow((
+      /** @type {number} */ x,
+      /** @type {number} */ y,
+      /** @type {number} */ largeur,
+      /** @type {number} */ hauteur,
+    ) => onAncrer({
+      hauteur, largeur, x, y,
+    }));
+  };
+  // La vue qui l enveloppe se mesure (une vue native : sur le site comme sur le telephone).
+  return (
+    <View collapsable={false} ref={bouton}>
+      <TouchableOpacity
+        accessibilityLabel={libelle}
+        accessibilityRole="button"
+        hitSlop={4}
+        onPress={ouvrir}
+        style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
+      >
+        <SvgIcon color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 /**
  * Facility list screen.
@@ -177,6 +227,8 @@ function FacilityList() {
   const semaines = useInstallationsWeekSummary(isCollectiviteMode ? facilities : []);
   // Le menu « Plus d actions » d une carte de la Ville : l installation ouverte, ou null.
   const [menuInstallation, setMenuInstallation] = useState(/** @type {any} */ (null));
+  // COLL-C2B-BIS — sur ordinateur, la place du bouton qui l a ouvert (le menu s y ancre).
+  const [ancreDuMenu, setAncreDuMenu] = useState(/** @type {any} */ (null));
 
   useFocusEffect(
     useCallback(() => {
@@ -605,19 +657,19 @@ function FacilityList() {
           {/* COLL-C2C (02/10) — planche P8-installations-tel : le « Supprimer » rouge ne se voit
               plus sur la carte ; il est range dans « Plus d actions » (le menu de C2B). */}
           {isEditable && !isCollectiviteMode ? (
-            <TouchableOpacity
-              accessibilityLabel={t(
+            <BoutonPlusDActions
+              libelle={t(
                 'collectiviteCreneaux.liste.plusActions',
                 'Plus d’actions pour {{nom}}',
                 { nom: item?.name || '', ...SANS_ECHAPPEMENT },
               )}
-              accessibilityRole="button"
-              hitSlop={4}
-              onPress={() => setMenuInstallation(item)}
-              style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
-            >
-              <SvgIcon color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
-            </TouchableOpacity>
+              mesurer={isDesktop}
+              onAncrer={setAncreDuMenu}
+              onOuvrir={() => {
+                setAncreDuMenu(null);
+                setMenuInstallation(item);
+              }}
+            />
           ) : null}
         </View>
 
@@ -677,14 +729,12 @@ function FacilityList() {
     );
   }, [
     Alignments.alignCenter,
-    Alignments.justifyCenter,
     Alignments.row,
     Alignments.wrap,
     ApplicationStyle.borderRadius24,
     ApplicationStyle.icon16,
     ApplicationStyle.tintColor.primary200,
     Colors.neutral00,
-    Colors.primary200,
     Colors.primary500,
     Colors.primary800,
     Fonts.neutral00,
@@ -701,6 +751,7 @@ function FacilityList() {
     handleOpenFacilityMap,
     handleOpenPlanning,
     isCollectiviteMode,
+    isDesktop,
     renderMetaChip,
     t,
   ]);
@@ -817,19 +868,19 @@ function FacilityList() {
                 </View>
               ) : null}
             </TouchableOpacity>
-            <TouchableOpacity
-              accessibilityLabel={t(
+            <BoutonPlusDActions
+              libelle={t(
                 'collectiviteCreneaux.liste.plusActions',
                 'Plus d’actions pour {{nom}}',
                 { nom, ...SANS_ECHAPPEMENT },
               )}
-              accessibilityRole="button"
-              hitSlop={4}
-              onPress={() => setMenuInstallation(item)}
-              style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
-            >
-              <SvgIcon color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
-            </TouchableOpacity>
+              mesurer={isDesktop}
+              onAncrer={setAncreDuMenu}
+              onOuvrir={() => {
+                setAncreDuMenu(null);
+                setMenuInstallation(item);
+              }}
+            />
           </View>
         </View>
       </View>
@@ -838,7 +889,6 @@ function FacilityList() {
     Alignments,
     ApplicationStyle.borderRadius24,
     Colors.neutral00,
-    Colors.primary200,
     Colors.primary500,
     Colors.primary800,
     Fonts,
@@ -881,7 +931,10 @@ function FacilityList() {
       });
     }
   }
-  const fermerMenu = () => setMenuInstallation(null);
+  const fermerMenu = () => {
+    setMenuInstallation(null);
+    setAncreDuMenu(null);
+  };
   // COLL-C2C (02/10) — cote club, le menu range le geste qu on ne doit pas faire par megarde.
   if (menuInstallation && !isCollectiviteMode) {
     menuGestes.push({
@@ -895,7 +948,75 @@ function FacilityList() {
       ),
     });
   }
-  const menuDesInstallations = (
+  // 📐 COLL-C2B-BIS (03/10) — planche 21 (P4-ordi, etat A) : SUR ORDINATEUR, un PETIT MENU ancre
+  // sous le bouton « … » (son bord droit sur celui du bouton), pas une feuille du bas ; toucher a
+  // cote le ferme. Le telephone garde sa feuille, inchangee.
+  const menuOrdinateur = isDesktop ? (
+    <Modal
+      animationType="none"
+      onRequestClose={fermerMenu}
+      transparent
+      visible={Boolean(menuInstallation)}
+    >
+      <Pressable
+        accessibilityLabel={t('collectiviteCreneaux.liste.fermerMenu', 'Fermer le menu')}
+        onPress={fermerMenu}
+        style={StyleSheet.absoluteFill}
+      />
+      {menuInstallation ? (
+        <View
+          accessibilityRole="menu"
+          style={[
+            Spaces.padding[8],
+            {
+              backgroundColor: Colors.primary700,
+              borderColor: withAlpha(Colors.primary500, 0.5),
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 4,
+              position: 'absolute',
+              width: LARGEUR_DU_MENU,
+            },
+            ancreDuMenu
+              ? {
+                left: Math.max(8, ancreDuMenu.x + ancreDuMenu.largeur - LARGEUR_DU_MENU),
+                top: ancreDuMenu.y + ancreDuMenu.hauteur + 4,
+              }
+              : { right: 24, top: 96 },
+          ]}
+          testID="menu-plus-dactions"
+        >
+          {menuGestes.map((geste) => (
+            <TouchableOpacity
+              accessibilityRole="menuitem"
+              key={geste.cle}
+              onPress={() => {
+                fermerMenu();
+                geste.onPress();
+              }}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Spaces.paddingHorizontal[12],
+                { borderRadius: 10, gap: 12, minHeight: 44 },
+              ]}
+            >
+              <SvgIcon
+                color={geste.danger ? Colors.error500 : Colors.primary200}
+                name={geste.icone}
+              />
+              <Text
+                style={[Fonts.p2Bold, geste.danger ? { color: Colors.error500 } : Fonts.neutral00]}
+              >
+                {geste.libelle}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+    </Modal>
+  ) : null;
+  const menuDesInstallations = menuOrdinateur || (
     <BottomModal close={fermerMenu} isVisible={Boolean(menuInstallation)} webPresentation="dialog">
       {menuInstallation ? (
         <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>

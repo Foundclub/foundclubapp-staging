@@ -53,6 +53,10 @@ const SIREN_PATTERN = /^\d{9}$/;
  * Seul un SuperAdmin arrive ici (pile AdminStack) ; le serveur refuse tout autre compte (403).
  * Paramètre de route facultatif : `collectiviteId` (« Ouvrir dans la file » depuis la fiche
  * d'une collectivité) : la file s'ouvre sur la demande de cette collectivité.
+ * COLL-CONSOLE-BIS (03/10/2026), planche 17 (P2-gestion-ordi, état D) : sur le site, « Traitées »
+ * est une GRILLE sur toute la largeur — Personne | Collectivité | Issue | Le (et qui a tranché),
+ * le motif d'un refus sous sa ligne. Le téléphone garde ses cartes. L'e-mail est tranché
+ * (`mail A`, 02/10) : la personne est prévenue dans l'app seulement, en v1.
  * @returns {import('react').ReactElement} L'écran.
  */
 function AdminManagerRequests() {
@@ -267,6 +271,41 @@ function AdminManagerRequests() {
               ...SANS_ECHAPPEMENT,
             })}
         </Text>
+        {!validee && demande?.refusalReason ? (
+          <Text style={[Fonts.p2, Fonts.neutral100, { fontStyle: 'italic' }]}>
+            {`« ${demande.refusalReason} »`}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
+
+  // COLL-CONSOLE-BIS (03/10) — une ligne de la grille des demandes traitées (site, planche 17).
+  const renderLigneTraitee = (/** @type {any} */ demande) => {
+    const validee = demande?.status === 'accepted';
+    return (
+      <View
+        key={demande?.documentId}
+        style={[
+          Spaces.paddingVertical[12],
+          { borderTopColor: withAlpha(Colors.primary500, 0.25), borderTopWidth: 1, gap: 4 },
+        ]}
+        testID={`gestionnaire-traitee-${demande?.documentId}`}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 2 }]}>{nomDe(demande)}</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100, { flex: 2 }]}>
+            {demande?.collectivite?.name || ''}
+          </Text>
+          <View style={[Alignments.row, { flex: 1 }]}>
+            {validee
+              ? pastille(t('collectiviteAccueil.console.validee', 'Validée'), Colors.success500)
+              : pastille(t('collectiviteAccueil.console.refusee', 'Refusée'), Colors.error300)}
+          </View>
+          <Text style={[Fonts.p3, Fonts.neutral200, { flex: 2 }]}>
+            {[dateDe(demande?.decidedAt), demande?.decidedBy].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
         {!validee && demande?.refusalReason ? (
           <Text style={[Fonts.p2, Fonts.neutral100, { fontStyle: 'italic' }]}>
             {`« ${demande.refusalReason} »`}
@@ -696,6 +735,29 @@ function AdminManagerRequests() {
         ) : null}
       </View>
     );
+  } else if (onglet === 'decided' && enColonnes) {
+    const colonne = (/** @type {string} */ texte, /** @type {number} */ flex) => (
+      <Text style={[Fonts.p3Bold, Fonts.neutral300, { flex }]}>{texte}</Text>
+    );
+    file = (
+      <View
+        style={[
+          ApplicationStyle.card,
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[8],
+          carteStyle,
+        ]}
+        testID="gestionnaire-traitees-grille"
+      >
+        <View style={[Alignments.row, Spaces.paddingVertical[8], { gap: 12 }]}>
+          {colonne(t('collectiviteConsoleBis.traitees.colonnePersonne', 'Personne'), 2)}
+          {colonne(t('collectiviteConsoleBis.traitees.colonneCollectivite', 'Collectivité'), 2)}
+          {colonne(t('collectiviteConsoleBis.traitees.colonneIssue', 'Issue'), 1)}
+          {colonne(t('collectiviteConsoleBis.traitees.colonneLe', 'Le'), 2)}
+        </View>
+        {demandes.map(renderLigneTraitee)}
+      </View>
+    );
   } else {
     file = (
       <View style={{ gap: 12 }}>
@@ -742,7 +804,15 @@ function AdminManagerRequests() {
 
   // Téléphone : la file, ou la demande ouverte. Ordinateur : la file à gauche, la demande à droite.
   let corps;
-  if (enColonnes) {
+  if (enColonnes && onglet === 'decided') {
+    // COLL-CONSOLE-BIS (03/10) — la grille des traitées prend toute la largeur (planche 17).
+    corps = (
+      <View style={{ gap: 12 }}>
+        <View style={{ width: 400 }}>{segments}</View>
+        {file}
+      </View>
+    );
+  } else if (enColonnes) {
     corps = (
       <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
         <View style={{ gap: 12, width: 400 }}>

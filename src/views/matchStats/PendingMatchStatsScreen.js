@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -52,12 +53,31 @@ import {
 const WIDE_LAYOUT_MIN_WIDTH = 1024;
 
 /**
- * La ligne d'état d'une carte : sa pastille et ce qui reste, en mots.
+ * ST-MONMATCH (écran 6) — « 7 sur 11 ont répondu ». Le compte vient du serveur
+ * (`responses`) : N = les convoqués (« c oui ») ; sans compte (serveur plus ancien), rien.
+ * @param {any} responses - `{ count, total }`, ou rien.
+ * @param {Function} t - La traduction.
+ * @returns {string} La phrase, ou une chaîne vide.
+ */
+export const describeResponsesCount = (responses, t) => {
+  const total = Number(responses?.total);
+  if (!Number.isFinite(total) || total <= 0) return '';
+  return t('stMatch.carte.responsesCount', {
+    count: Number(responses?.count) || 0,
+    defaultValue_one: '{{count}} sur {{total}} a répondu',
+    defaultValue_other: '{{count}} sur {{total}} ont répondu',
+    total,
+    ...SANS_ECHAPPEMENT,
+  });
+};
+
+/**
+ * La ligne d'état d'une carte, sans le compte des réponses.
  * @param {any} prompt - Le rappel.
  * @param {Function} t - La traduction.
  * @returns {{ detail: string, label: string, tone: 'cyan' | 'neutral' | 'warning' }} L'état.
  */
-export const describePendingState = (prompt, t) => {
+const describeBaseState = (prompt, t) => {
   if (prompt?.actionType === 'player_self_report') {
     if (prompt?.state === 'draft') {
       return {
@@ -102,6 +122,20 @@ export const describePendingState = (prompt, t) => {
     label: t('stMatch.attente.sheet', 'Feuille à saisir'),
     tone: 'neutral',
   };
+};
+
+/**
+ * La ligne d'état d'une carte : sa pastille et ce qui reste, en mots — et, pour
+ * l'entraîneur, combien ont répondu (ST-MONMATCH : « Puis la feuille · 0 sur 1 a répondu »).
+ * @param {any} prompt - Le rappel.
+ * @param {Function} t - La traduction.
+ * @returns {{ detail: string, label: string, tone: 'cyan' | 'neutral' | 'warning' }} L'état.
+ */
+export const describePendingState = (prompt, t) => {
+  const etat = describeBaseState(prompt, t);
+  if (prompt?.actionType === 'player_self_report') return etat;
+  const reponses = describeResponsesCount(prompt?.responses, t);
+  return reponses ? { ...etat, detail: `${etat.detail} · ${reponses}` } : etat;
 };
 
 /**
@@ -313,6 +347,7 @@ function PendingMatchStatsScreen({ navigation }) {
           ['team', t('stMatch.attente.colTeam', 'Équipe'), 1],
           ['end', t('stMatch.attente.colEnd', 'Fin du match'), 2],
           ['left', t('stMatch.attente.colLeft', 'Ce qui reste'), 2],
+          ['responses', t('stMatch.attente.colResponses', 'Réponses'), 1],
           ['action', '', 2],
         ].map(([key, label, flex]) => (
           <Text
@@ -352,6 +387,16 @@ function PendingMatchStatsScreen({ navigation }) {
             <View style={[{ flex: 2 }, Alignments.alignStart]}>
               {renderPill(etat.label, etat.tone)}
             </View>
+            {/* ST-MONMATCH (écran 6) — « 7 sur 11 » ; « — » quand le serveur ne le dit pas. */}
+            <Text style={[Fonts.p2, Fonts.neutral200, { flex: 1 }]}>
+              {Number(item?.responses?.total) > 0
+                ? t('stMatch.attente.responsesShort', '{{count}} sur {{total}}', {
+                  count: Number(item.responses.count) || 0,
+                  total: Number(item.responses.total),
+                  ...SANS_ECHAPPEMENT,
+                })
+                : '—'}
+            </Text>
             <View style={[{ flex: 2 }, Alignments.alignEnd]}>
               <Button
                 onPress={() => handleOpenPrompt(item)}
@@ -379,6 +424,53 @@ function PendingMatchStatsScreen({ navigation }) {
       {asTable ? renderTable(items) : items.map(renderCard)}
     </View>
   );
+
+  // 🎯 ST-MONMATCH (écran 6) — un match devenu COMPLET le dit, au lieu de sortir de la liste
+  // sans un mot (serveur : `lastCompleted`, même règle que la carte « Après le match »).
+  // Sur le site, la ligne dit aussi QUAND la feuille a été publiée.
+  const renderComplete = () => {
+    const lastCompleted = pendingPayload?.lastCompleted || null;
+    const reponses = describeResponsesCount(lastCompleted?.responses, t);
+    if (!reponses) return null;
+    const match = lastCompleted?.label || 'Match';
+    const publiee = lastCompleted?.finalizedAt ? new Date(lastCompleted.finalizedAt) : null;
+    const texte = isWide && publiee && !Number.isNaN(publiee.getTime())
+      ? t(
+        'stMatch.attente.completeOn',
+        '{{match}} est complet : feuille publiée le {{date}} à {{time}}, {{responses}}.',
+        {
+          date: publiee.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+          match,
+          responses: reponses,
+          time: formatPromptTime(lastCompleted.finalizedAt),
+          ...SANS_ECHAPPEMENT,
+        },
+      )
+      : t('stMatch.attente.complete', '{{match}} est complet : feuille publiée, {{responses}}.', {
+        match, responses: reponses, ...SANS_ECHAPPEMENT,
+      });
+    return (
+      <View
+        style={[
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.gap[12],
+          Spaces.padding[12],
+          ApplicationStyle.borderRadius16,
+          {
+            alignSelf: isWide ? 'flex-start' : 'stretch',
+            backgroundColor: withAlpha(Colors.neutral00, 0.04),
+            borderColor: withAlpha(Colors.neutral00, 0.09),
+            borderWidth: 1,
+          },
+        ]}
+        testID="st-match-attente-complet"
+      >
+        <SvgIcon color={Colors.success500} height={20} name="check" width={20} />
+        <Text style={[Fonts.p2, Fonts.neutral200, { flexShrink: 1 }]}>{texte}</Text>
+      </View>
+    );
+  };
 
   // Le résumé du démarrage annonce des matchs sans les lister : tant que la liste n'est pas
   // là, c'est un chargement — jamais « aucune action » (capture T9_S06_1).
@@ -470,6 +562,7 @@ function PendingMatchStatsScreen({ navigation }) {
           {emptyExplanation.title}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>{emptyExplanation.body}</Text>
+        {isDone ? renderComplete() : null}
       </View>
     );
   } else {
@@ -477,21 +570,24 @@ function PendingMatchStatsScreen({ navigation }) {
     const forTeam = t('pendingMatchStatsScreen.forMyTeam', 'Pour mon équipe');
     const bothFamilies = personalPromptItems.length > 0 && teamPromptItems.length > 0;
     body = (
-      <View
-        style={[isWide && bothFamilies ? Alignments.row : null, Spaces.gap[24]]}
-        testID="st-match-attente-sections"
-      >
-        {personalPromptItems.length
-          ? renderSection(forMe, personalPromptItems, 'st-match-attente-pour-moi')
-          : null}
-        {teamPromptItems.length
-          ? renderSection(
-            forTeam,
-            teamPromptItems,
-            'st-match-attente-pour-mon-equipe',
-            isWide && !bothFamilies,
-          )
-          : null}
+      <View style={Spaces.gap[24]}>
+        <View
+          style={[isWide && bothFamilies ? Alignments.row : null, Spaces.gap[24]]}
+          testID="st-match-attente-sections"
+        >
+          {personalPromptItems.length
+            ? renderSection(forMe, personalPromptItems, 'st-match-attente-pour-moi')
+            : null}
+          {teamPromptItems.length
+            ? renderSection(
+              forTeam,
+              teamPromptItems,
+              'st-match-attente-pour-mon-equipe',
+              isWide && !bothFamilies,
+            )
+            : null}
+        </View>
+        {renderComplete()}
       </View>
     );
   }
