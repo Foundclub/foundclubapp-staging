@@ -27,6 +27,7 @@ import {
   seasonSlotsSeen,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
+import { phraseOccupation } from '@/domains/collectivite/collectiviteChiffres';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
 import {
   closureDaysLabel,
@@ -47,11 +48,13 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import ActualitesDeLaVille from '@/views/collectivite/components/ActualitesDeLaVille';
 import { BandeauActualiteMairie } from '@/views/collectivite/components/BandeauActualiteVille';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
+import JaugeOccupation from '@/views/collectivite/components/JaugeOccupation';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useCollectiviteActualites } from '@/services/collectivite/collectiviteActualiteQueries';
 import {
+  useCollectiviteChiffres,
   useCollectiviteClubs,
   useCollectiviteInstallations,
   useCollectiviteRequests,
@@ -138,6 +141,9 @@ function CollectiviteHome() {
   const installations = useCollectiviteInstallations(collectiviteId);
   const clubs = useCollectiviteClubs(collectiviteId);
   const semaine = useCollectiviteWeek(installations.data, { enabled: Boolean(collectivite) });
+  // COLL-C5 (03/10) — planches 2 et 3 : la jauge lit le TAUX de la semaine (contrat §5), la meme
+  // lecture que la page « Chiffres ». Seulement pour le gestionnaire de CETTE Ville.
+  const chiffresSemaine = useCollectiviteChiffres(collectivite ? collectiviteId : null, 'semaine');
   // COLL-C4A : le 4e premier pas (« Présentez-vous aux clubs ») se coche à la 1re actualité.
   const actualitesEnLigne = useCollectiviteActualites(collectiviteId);
   // COLL-C4B (02/10) — « Fermeture à venir » (P3v2-accueil, point d accroche de COLL-ACCUEIL) :
@@ -730,6 +736,19 @@ function CollectiviteHome() {
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });
   };
 
+  // COLL-C5 (03/10) : le taux d une installation, ou null (jamais un 0 invente).
+  const tauxDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
+    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
+    const ligne = Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) : null;
+    return typeof ligne?.taux === 'number' ? ligne.taux : null;
+  };
+
+  // La planche dit « occupation » seulement quand il y a des séances (sinon « Aucune séance »).
+  const seancesDansLaSemaine = (/** @type {any} */ query) => {
+    const lignes = Array.isArray(query?.data?.data) ? query.data.data.length : 0;
+    return Number(query?.data?.meta?.total ?? lignes) || 0;
+  };
+
   const renderSemaine = () => {
     let corps;
     if (installations.isLoading) corps = squelette(96);
@@ -783,9 +802,22 @@ function CollectiviteHome() {
                   </Text>
                   {etat}
                 </View>
-                {/* La jauge d'occupation de la planche attend le taux (lot 5) : */}
-                {/* rien plutôt qu'une jauge vide. */}
-                <Text style={[Fonts.p3, Fonts.neutral300]}>{libelleSeances(query)}</Text>
+                {/* COLL-C5 (03/10) — planches 2 et 3 : la jauge d'occupation de la semaine */}
+                {/* (contrat §5) ; sans taux (pas d horaires, lecture en cours ou en panne), */}
+                {/* elle reste vide et dit « — ». */}
+                <JaugeOccupation
+                  couleur={complet ? Colors.warning500 : installation?.planningColor}
+                  taux={tauxDeLaSemaine(installation?.documentId)}
+                  testID={`collectivite-home-jauge-${installation?.documentId}`}
+                />
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {seancesDansLaSemaine(query) > 0
+                    ? `${libelleSeances(query)} · ${phraseOccupation(
+                      t,
+                      tauxDeLaSemaine(installation?.documentId),
+                    )}`
+                    : libelleSeances(query)}
+                </Text>
               </View>
             );
           })}

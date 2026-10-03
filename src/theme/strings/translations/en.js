@@ -5843,6 +5843,10 @@ export default {
       tauxSansHoraires: 'Occupancy rate: — (opening hours not set).',
       titre: 'Session hours, by facility',
     },
+    jauge: {
+      a11y: 'Occupancy: {{taux}}',
+      occupation: 'occupancy: {{taux}}',
+    },
     lien: 'Figures and export',
     periodes: {
       intervalle: 'from {{from}} to {{to}}',

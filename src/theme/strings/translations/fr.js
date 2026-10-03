@@ -6222,6 +6222,11 @@ export default {
       tauxSansHoraires: 'Taux d’occupation : — (horaires d’ouverture non renseignés).',
       titre: 'Heures de séances, par installation',
     },
+    // COLL-C5 point 3 — la jauge d'occupation de l'accueil (planches 2 et 3).
+    jauge: {
+      a11y: 'Occupation : {{taux}}',
+      occupation: 'occupation : {{taux}}',
+    },
     lien: 'Chiffres et export',
     periodes: {
       intervalle: 'du {{from}} au {{to}}',
