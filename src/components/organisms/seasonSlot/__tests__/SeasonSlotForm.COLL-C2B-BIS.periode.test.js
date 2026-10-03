@@ -38,6 +38,12 @@ const frTemoin = require('@/theme/strings/translations/fr');
 /** @type {any[]} */
 const mockDateProps = [];
 
+// Les phrases passent par le vrai i18next (interpolation comprise).
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (/** @type {any[]} */ ...args) => jest.requireActual('i18next').t(...args),
+  }),
+}));
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   attributeSeasonSlot: jest.fn(),
   getClubTeamsForSlot: jest.fn(),
