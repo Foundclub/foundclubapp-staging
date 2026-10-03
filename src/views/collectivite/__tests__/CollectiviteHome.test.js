@@ -40,6 +40,16 @@ let mockFermetures;
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 
+// COLL-ACCUEIL-BIS (03/10) — la largeur de l'écran : 390 (téléphone) par défaut, 1280 pour la
+// planche « ordinateur » (l'accueil passe en colonnes à partir de 1024).
+let mockLargeur = 390;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({
+    fontScale: 1, height: 900, scale: 1, width: mockLargeur,
+  }),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
   useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
@@ -240,6 +250,7 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) =
 };
 
 beforeEach(() => {
+  mockLargeur = 390;
   mockRetenu.clear();
   mockNavigate.mockClear();
   mockGoBack.mockClear();
@@ -343,7 +354,7 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(refetch).toHaveBeenCalled();
   });
 
-  it('« Vos actions » : SEULEMENT celles dont l écran existe', async () => {
+  it('« Vos actions » : chacune ouvre son écran', async () => {
     const arbre = await monter();
     const lus = textes(arbre);
     expect(lus).toContain('Vos actions');
@@ -353,10 +364,6 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » ont leur écran.
     expect(lus).toContain('Fermer une installation');
     expect(lus).toContain('Bloquer un créneau');
-    // Leurs écrans n'existent pas encore (lots C2a/C2b, C-CLUBS) : aucun bouton mort.
-    ['Attribuer un créneau', 'Inviter un club'].forEach((action) => {
-      expect(lus).not.toContain(action);
-    });
     await appuyer(arbre, 'collectivite-home-action-publishNews');
     expect(mockNavigate).toHaveBeenCalledWith(
       'CollectiviteActualiteForm',
@@ -468,20 +475,120 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
   });
 });
 
+// 🏛️ COLL-ACCUEIL-BIS (03/10/2026) — PLANCHES 2 et 3, l'accueil COMPLET (P3v2-accueil-tel et
+// -ordi), élément par élément contre l'écran :
+//   - la carte de la demande dit la FONCTION de qui demande (« Karim Benali, dirigeant ») : le
+//     serveur la rend depuis C3B (`requesterFunction`), l'écran « Demandes » la disait déjà ;
+//   - les SIX actions de la planche, dans son ordre, chacune vers son VRAI écran : « Attribuer un
+//     créneau » (C2b : les créneaux de l'installation, ou la liste s'il y en a plusieurs) et
+//     « Inviter un club » (C-CLUBS) manquaient ;
+//   - sur ordinateur : les six actions en UNE rangée, l'icône à gauche du titre ; la colonne
+//     « Ce qui vous attend » montre la 2e demande en carte compacte, sans boutons.
+// ROUGES avant le lot.
+describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet', () => {
+  const ORDRE_DE_LA_PLANCHE = [
+    'assignSlot', 'publishNews', 'closeInstallation', 'blockSlot', 'inviteClub', 'addInstallation',
+  ];
+  // Une carte par testID : la plus extérieure (le TouchableOpacity et son style ; ses enfants
+  // internes reprennent le même testID).
+  const cartesDAction = (/** @type {any} */ arbre) => {
+    const vus = new Set();
+    return arbre.root.findAll((/** @type {any} */ n) => String(n.props?.testID || '')
+      .startsWith('collectivite-home-action-') && typeof n.props?.onPress === 'function')
+      .filter((/** @type {any} */ n) => !vus.has(n.props.testID) && vus.add(n.props.testID));
+  };
+  const actionsAffichees = (/** @type {any} */ arbre) => cartesDAction(arbre)
+    .map((/** @type {any} */ n) => n.props.testID.replace('collectivite-home-action-', ''));
+
+  it('la carte dit la FONCTION de qui demande : « Karim Benali, dirigeant »', async () => {
+    mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: 'manager' }, DEMANDE_RECENTE]);
+    const lus = textes(await monter());
+    expect(lus).toContain('Demandé par Karim Benali, dirigeant');
+  });
+
+  it('un entraîneur : « …, entraîneur » ; une fonction inconnue : le nom seul', async () => {
+    mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: 'trainer' }]);
+    expect(textes(await monter())).toContain('Demandé par Karim Benali, entraîneur');
+    mockRequetes = lu([{ ...DEMANDE_ANCIENNE, requesterFunction: null }]);
+    expect(textes(await monter())).toContain('Demandé par Karim Benali');
+  });
+
+  it('les SIX actions de la planche, dans son ordre', async () => {
+    const arbre = await monter();
+    expect(actionsAffichees(arbre)).toEqual(ORDRE_DE_LA_PLANCHE);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Attribuer un créneau', 'Inviter un club',
+    ]));
+  });
+
+  it('« Attribuer un créneau » : la liste, ou les créneaux de l installation unique', async () => {
+    const plusieurs = await monter();
+    await appuyer(plusieurs, 'collectivite-home-action-assignSlot');
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      'CollectiviteInstallations',
+      { collectiviteId: 'ville-montrivage' },
+    );
+    mockInstallations = lu([TILLEULS]);
+    const une = await monter();
+    await appuyer(une, 'collectivite-home-action-assignSlot');
+    expect(mockNavigate).toHaveBeenLastCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'tilleuls',
+    });
+  });
+
+  it('« Inviter un club » ouvre l invitation de CETTE Ville (le lien, lot C-CLUBS)', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'collectivite-home-action-inviteClub');
+    expect(mockNavigate)
+      .toHaveBeenLastCalledWith('CollectiviteInviteClub', { collectiviteId: 'ville-montrivage' });
+  });
+
+  it('ordinateur : les six actions sur UNE rangée, l icône à gauche du titre', async () => {
+    mockLargeur = 1280;
+    const arbre = await monter();
+    const cartes = cartesDAction(arbre);
+    expect(cartes).toHaveLength(6);
+    cartes.forEach((/** @type {any} */ carte) => {
+      const style = StyleSheet.flatten(carte.props.style);
+      // Six parts égales : aucune ne passe à la ligne, aucune largeur plafonnée.
+      expect(style).toEqual(expect.objectContaining({
+        flexBasis: 0, flexDirection: 'row', flexGrow: 1,
+      }));
+      expect(style.maxWidth).toBeUndefined();
+    });
+  });
+
+  it('ordinateur : la 2e demande en carte COMPACTE, sans boutons (téléphone : une)', async () => {
+    const telephone = await monter();
+    expect(textes(telephone)).not.toContain('Montrivage FC · U15');
+    mockLargeur = 1280;
+    const ordinateur = await monter();
+    const lus = textes(ordinateur);
+    expect(lus).toContain('AS Montrivage · U13');
+    expect(lus).toContain('Montrivage FC · U15');
+    expect(lus).toContain('1 place libre');
+    const compacte = ordinateur.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-home-attente-carte-compacte');
+    expect(compacte.length).toBeGreaterThan(0);
+    // Un seul « Accepter » : la carte compacte se tranche dans « Demandes ».
+    expect(lus.filter((texte) => texte === 'Accepter')).toHaveLength(1);
+  });
+});
+
 // 🏛️ COLL-ACCUEIL — PLANCHE 7 : les PREMIERS PAS d'une Ville toute neuve (P1v3-premiers-pas),
 // et le mot d'accueil de la première visite (P2-gestion, état 6). Juste sous le nom de la Ville :
 // les étapes se cochent d'elles-mêmes, une seule porte un bouton, masquables une fois faites.
 // « Attribuer les créneaux » (lot C2a) est MASQUÉE ; « Présentez-vous aux clubs » paraît depuis
 // le lot C4a (02/10) et se coche à la première actualité.
 describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve', () => {
-  it('Ville toute neuve : 0 sur 3, et SEULE la première étape porte un bouton', async () => {
+  it('Ville toute neuve : 0 sur 4, et SEULE la première étape porte un bouton', async () => {
     mockInstallations = lu([]);
     mockClubs = lu([]);
     mockSemaine = [];
     const arbre = await monter();
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
-      'Vos premiers pas', '0 sur 3', 'Ajoutez vos installations', 'Vérifiez vos clubs',
+      'Vos premiers pas', '0 sur 4', 'Ajoutez vos installations', 'Vérifiez vos clubs',
       'Présentez-vous aux clubs', 'Une première actualité, lue par leurs membres.',
     ]));
     const boutons = arbre.root.findAll((/** @type {any} */ n) => String(n.props?.testID || '')
@@ -489,13 +596,22 @@ describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve'
       .map((/** @type {any} */ n) => n.props.testID);
     expect(boutons).toContain('bouton-Ajouter une installation');
     expect(boutons).not.toContain('bouton-Voir les clubs');
-    // L étape du lot à venir (C2b) n est pas montrée.
-    expect(lus).not.toContain('Attribuez les créneaux de la saison');
+    // COLL-ACCUEIL-BIS (03/10) : l étape 3 (C2b) est montrée, EN ATTENTE de l étape 1 (grisée,
+    // sans bouton), comme la planche.
+    expect(boutons).not.toContain('bouton-Attribuer un créneau');
+    expect(lus).toEqual(expect.arrayContaining([
+      'Attribuez les créneaux de la saison', 'Après l’étape 1 : qui joue où, chaque semaine.',
+    ]));
+    const [enAttente] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-home-pas-creneaux');
+    expect(StyleSheet.flatten(enAttente.props.style)).toEqual(expect.objectContaining({
+      opacity: 0.55,
+    }));
   });
 
   it('une étape faite se résume en une ligne ; la suivante prend le bouton', async () => {
     const arbre = await monter();
-    expect(textes(arbre)).toEqual(expect.arrayContaining(['1 sur 3', '2 installations ajoutées']));
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['1 sur 4', '2 installations ajoutées']));
     await appuyer(arbre, 'bouton-Voir les clubs');
     expect(mockNavigate)
       .toHaveBeenCalledWith('CollectiviteClubs', { collectiviteId: 'ville-montrivage' });
@@ -511,15 +627,87 @@ describe('COLL-ACCUEIL — planche 7 : les premiers pas d une Ville toute neuve'
       recipients: { clubsCount: 3 },
       title: 'Forum des associations',
     }]);
+    // COLL-ACCUEIL-BIS : l étape 3 se coche d elle-même, dès qu un créneau de saison paraît
+    // dans le planning de la semaine (contrat C2A §7 : `slot` sur le bloc).
+    mockSemaine = [{
+      installation: TILLEULS,
+      query: lu({
+        data: [{
+          date: '2030-10-03',
+          endTime: '19:30',
+          origin: 'slot',
+          slot: { documentId: 'cr1' },
+          startTime: '18:00',
+        }],
+        meta: { total: 1 },
+      }),
+    }];
     const premier = await monter();
     await appuyer(premier, 'collectivite-home-voir-clubs');
     const second = await monter();
-    expect(textes(second)).toContain('Vos premiers pas sont faits : 3 sur 3.');
+    expect(textes(second)).toContain('Vos premiers pas sont faits : 4 sur 4.');
     await appuyer(second, 'bouton-Masquer');
-    expect(textes(second)).not.toContain('Vos premiers pas sont faits : 3 sur 3.');
+    expect(textes(second)).not.toContain('Vos premiers pas sont faits : 4 sur 4.');
     const troisieme = await monter();
     expect(textes(troisieme)).not.toContain('Vos premiers pas');
-    expect(textes(troisieme)).not.toContain('Vos premiers pas sont faits : 3 sur 3.');
+    expect(textes(troisieme)).not.toContain('Vos premiers pas sont faits : 4 sur 4.');
+  });
+
+  // 🏛️ COLL-ACCUEIL-BIS (03/10/2026) — l étape 3, « Attribuez les créneaux de la saison » (C2b),
+  // et la planche 10 (P1v3-premiers-pas-ordi) : les quatre étapes en COLONNES. ROUGES avant.
+  it('étape 3 : son bouton « Attribuer un créneau » ouvre les écrans du créneau', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'collectivite-home-voir-clubs');
+    const ensuite = await monter();
+    expect(textes(ensuite)).toEqual(expect.arrayContaining([
+      '2 sur 4',
+      'Attribuez les créneaux de la saison',
+      'Qui joue où, chaque semaine, toute la saison.',
+    ]));
+    await appuyer(ensuite, 'bouton-Attribuer un créneau');
+    expect(mockNavigate).toHaveBeenLastCalledWith(
+      'CollectiviteInstallations',
+      { collectiviteId: 'ville-montrivage' },
+    );
+  });
+
+  it('étape 3 faite : « 2 créneaux attribués », un créneau compté une fois', async () => {
+    const bloc = (/** @type {string} */ id, /** @type {string} */ jour) => ({
+      date: jour, endTime: '19:30', origin: 'slot', slot: { documentId: id }, startTime: '18:00',
+    });
+    mockSemaine = [{
+      installation: TILLEULS,
+      query: lu({
+        data: [bloc('cr1', '2030-10-01'), bloc('cr1', '2030-10-03'), bloc('cr2', '2030-10-02')],
+      }),
+    }];
+    expect(textes(await monter())).toContain('2 créneaux attribués');
+  });
+
+  it('étape 2 : « Un club manque ? Invitez-le. »', async () => {
+    const lus = textes(await monter());
+    expect(lus).toContain('L’équipe FoundClub a rattaché 3 clubs. Un club manque ? Invitez-le.');
+  });
+
+  it('ordinateur (planche 10) : les quatre étapes en COLONNES, la suivante bordée', async () => {
+    mockLargeur = 1280;
+    const arbre = await monter();
+    const [colonnes] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-home-premiers-pas-colonnes');
+    expect(colonnes).toBeDefined();
+    expect(StyleSheet.flatten(colonnes.props.style)).toEqual(expect.objectContaining({
+      flexDirection: 'row',
+    }));
+    const etapes = ['installations', 'clubs', 'creneaux', 'actualite'].map((cle) => arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === `collectivite-home-pas-${cle}`)[0]);
+    etapes.forEach((/** @type {any} */ etape) => {
+      expect(StyleSheet.flatten(etape.props.style)).toEqual(expect.objectContaining({
+        flexBasis: 0, flexGrow: 1,
+      }));
+    });
+    // La suivante (étape 2, « Vérifiez vos clubs ») porte la bordure primary500.
+    const couleurs = jest.requireActual('@/theme/colors').default();
+    expect(StyleSheet.flatten(etapes[1].props.style).borderColor).toBe(couleurs.primary500);
   });
 
   it('le mot d accueil se lit à la PREMIÈRE visite, puis plus jamais', async () => {

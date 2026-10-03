@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { retenirLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -60,6 +61,9 @@ function CollectiviteJoin() {
   const installations = Array.isArray(page?.installations) ? page.installations : [];
 
   const inscrireMonClub = () => {
+    // COLL-ACCUEIL-BIS (03/10, planche 38) : le lien est RETENU (il survit au détour par la
+    // connexion) ; la création du club l'envoie, et la demande de rattachement part toute seule.
+    retenirLienDeLaVille(token);
     if (!connecte) {
       openPublicAuthFlow(navigation);
       return;

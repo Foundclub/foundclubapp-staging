@@ -5,6 +5,7 @@ import { Alert, Text, View } from 'react-native';
 
 import { attachCreatedClubToProfile, markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { lienDeLaVilleRetenu, oublierLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import useTheme from '@/theme/themeContext';
 
@@ -69,7 +70,11 @@ function ClubWizardRecap({ navigation, route }) {
       .map((activity) => activity.name);
   }, [activities, state.activityDocumentIds]);
 
-  const resumeAfterSuccess = async (createdClub) => {
+  const resumeAfterSuccess = async (
+    createdClub,
+    collectiviteInvitation = null,
+    lienDeLaVille = null,
+  ) => {
     dispatch({ type: 'RESET' });
 
     // Les invalidations, elles, ne s'attendent PAS : `invalidateQueries` marque
@@ -154,6 +159,22 @@ function ClubWizardRecap({ navigation, route }) {
       return;
     }
 
+    // COLL-ACCUEIL-BIS (03/10, planche 38, ecran 5) — LE CLUB VENAIT DU LIEN D UNE VILLE : sa
+    // demande de rattachement est partie toute seule (le serveur l a posee). Il le lit
+    // (« Demande envoyee »), et la fiche du club reste dessous : « Retour » y mene.
+    if (clubDocumentId && collectiviteInvitation?.status && lienDeLaVille) {
+      const parentNavigation = navigation.getParent?.() || navigation;
+      parentNavigation.navigate(RouteNames.CollectiviteJoinRequest, {
+        resultat: { ...collectiviteInvitation, clubId: clubDocumentId },
+        token: lienDeLaVille,
+      });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: RouteNames.Club, params: { clubId: clubDocumentId } }],
+      });
+      return;
+    }
+
     // D81 — LES 5 ETAPES QUITTENT LA PILE. `navigate` posait la fiche du club
     // PAR-DESSUS elles : un seul « Retour » ramenait sur le recapitulatif d'un
     // club deja cree, bouton « Creer mon club » sous le doigt. Le retour depuis
@@ -184,6 +205,8 @@ function ClubWizardRecap({ navigation, route }) {
     }
 
     setIsSubmitting(true);
+    // COLL-ACCUEIL-BIS (planche 38) : le lien de la Ville retenu (moins de 48 h) part avec le club.
+    const lienDeLaVille = lienDeLaVilleRetenu();
     try {
       const result = await createSelfOnboardClub({
         activityDocumentIds: state.activityDocumentIds,
@@ -196,12 +219,15 @@ function ClubWizardRecap({ navigation, route }) {
         name: String(state.name).trim(),
         phoneNumber: state.phoneNumber,
         screen: 'club_wizard',
+        ...(lienDeLaVille ? { collectiviteInvitationToken: lienDeLaVille } : {}),
       });
 
       if (result?.duplicate) {
         setDuplicates(Array.isArray(result.suggestions) ? result.suggestions : []);
         return;
       }
+      // Le club est cree : le lien a servi, un second club ne repart pas vers la meme Ville.
+      if (lienDeLaVille) oublierLienDeLaVille();
 
       Alert.alert(
         t('clubWizard.recap.successTitle', 'Club créé !'),
@@ -209,7 +235,14 @@ function ClubWizardRecap({ navigation, route }) {
           'clubWizard.recap.successDescription',
           'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
         ),
-        [{ onPress: () => resumeAfterSuccess(result?.club), text: t('common.actions.ok', 'OK') }],
+        [{
+          onPress: () => resumeAfterSuccess(
+            result?.club,
+            result?.collectiviteInvitation,
+            lienDeLaVille,
+          ),
+          text: t('common.actions.ok', 'OK'),
+        }],
         { cancelable: false },
       );
     } catch (error) {

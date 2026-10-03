@@ -7,6 +7,7 @@ import {
   COLLECTIVITE_HOME_ACTIONS,
   firstFullMoment,
   formatWeekMoment,
+  homeActionTarget,
   isOwnClubRequest,
   isVilleOnlyAccount,
   latestManagerRequest,
@@ -14,6 +15,7 @@ import {
   oldestPendingRequest,
   PREMIERS_PAS,
   premiersPas,
+  seasonSlotsSeen,
   signupContactErrors,
   summarizeConflict,
 } from './collectiviteAccueil';
@@ -32,12 +34,30 @@ describe('COLL-ACCUEIL — les actions de l accueil', () => {
     const affichees = availableHomeActions();
     // COLL-C4A (02/10) : « Publier une actualité » a son écran.
     // COLL-C4B (02/10) : « Fermer une installation » et « Bloquer un créneau » aussi.
+    // COLL-ACCUEIL-BIS (03/10) : « Attribuer un créneau » (C2b) et « Inviter un club » (C-CLUBS).
     expect(affichees.map((action) => action.key)).toEqual([
-      'publishNews', 'closeInstallation', 'blockSlot', 'addInstallation',
+      'assignSlot', 'publishNews', 'closeInstallation',
+      'blockSlot', 'inviteClub', 'addInstallation',
     ]);
     affichees.forEach((action) => {
       expect(RouteNames[/** @type {keyof typeof RouteNames} */ (action.route)]).toBe(action.route);
     });
+  });
+
+  it('« Attribuer un créneau » : une installation ⇒ ses créneaux ; sinon la liste', () => {
+    const attribuer = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'assignSlot');
+    const publier = COLLECTIVITE_HOME_ACTIONS.find((action) => action.key === 'publishNews');
+    expect(homeActionTarget(/** @type {any} */ (attribuer), [{ documentId: 'tilleuls' }])).toEqual({
+      params: { facilityId: 'tilleuls' }, route: 'CollectiviteInstallation',
+    });
+    const deux = [{ documentId: 'a' }, { documentId: 'b' }];
+    expect(homeActionTarget(/** @type {any} */ (attribuer), deux))
+      .toEqual({ params: {}, route: 'CollectiviteInstallations' });
+    expect(homeActionTarget(/** @type {any} */ (attribuer), undefined))
+      .toEqual({ params: {}, route: 'CollectiviteInstallations' });
+    // Les autres actions ne regardent pas les installations.
+    expect(homeActionTarget(/** @type {any} */ (publier), [{ documentId: 'tilleuls' }]))
+      .toEqual({ params: {}, route: 'CollectiviteActualiteForm' });
   });
 });
 
@@ -182,8 +202,34 @@ describe('COLL-ACCUEIL — les premiers pas (planche P1v3)', () => {
   it('quatre étapes au registre ; celles des lots à venir sont masquées', () => {
     expect(PREMIERS_PAS.map((etape) => etape.key))
       .toEqual(['installations', 'clubs', 'creneaux', 'actualite']);
-    // COLL-C4A (02/10) : « Présentez-vous aux clubs » a son écran ; « les créneaux » attend C2b.
-    expect(premiersPas({ clubsVus: false, installationsCount: 0 }).total).toBe(3);
+    // COLL-C4A (02/10) : « Présentez-vous aux clubs » a son écran.
+    // COLL-ACCUEIL-BIS (03/10) : « les créneaux » aussi (C2b) : quatre étapes, comme la planche.
+    expect(premiersPas({ clubsVus: false, installationsCount: 0 }).total).toBe(4);
+  });
+
+  it('l étape « créneaux » ATTEND les installations, et se coche au premier créneau vu', () => {
+    const neuve = premiersPas({ clubsVus: false, installationsCount: 0 });
+    expect(neuve.etapes.find((etape) => etape.key === 'creneaux'))
+      .toEqual(expect.objectContaining({ attend: true, fait: false, suivante: false }));
+    const prete = premiersPas({ clubsVus: true, installationsCount: 2 });
+    expect(prete.etapes.find((etape) => etape.key === 'creneaux'))
+      .toEqual(expect.objectContaining({ attend: false, fait: false, suivante: true }));
+    expect(premiersPas({ clubsVus: true, creneauxCount: 1, installationsCount: 2 }).etapes
+      .find((etape) => etape.key === 'creneaux')?.fait).toBe(true);
+  });
+
+  it('les créneaux de la semaine : un créneau compté une fois, les séances seules ignorées', () => {
+    const lu = (/** @type {any[]} */ data) => ({ query: { data: { data } } });
+    expect(seasonSlotsSeen([
+      lu([
+        { slot: { documentId: 'a' } },
+        { slot: { documentId: 'a' } },
+        { origin: 'club', slot: null },
+      ]),
+      lu([{ slot: { documentId: 'b' } }]),
+      { query: { error: new Error('panne') } },
+    ])).toBe(2);
+    expect(seasonSlotsSeen(undefined)).toBe(0);
   });
 
   it('elles se cochent d elles-mêmes ; UNE seule porte le bouton', () => {
@@ -191,15 +237,19 @@ describe('COLL-ACCUEIL — les premiers pas (planche P1v3)', () => {
     expect(neuve.etapes.map((etape) => [etape.key, etape.fait, etape.suivante])).toEqual([
       ['installations', false, true],
       ['clubs', false, false],
+      ['creneaux', false, false],
       ['actualite', false, false],
     ]);
     const amiChemin = premiersPas({ clubsVus: false, installationsCount: 3 });
     expect(amiChemin.faits).toBe(1);
     expect(amiChemin.etapes.find((etape) => etape.suivante)?.key).toBe('clubs');
-    const avantLaPremiere = premiersPas({ clubsVus: true, installationsCount: 1 });
+    const avantLaPremiere = premiersPas({
+      clubsVus: true, creneauxCount: 1, installationsCount: 1,
+    });
     expect(avantLaPremiere.etapes.find((etape) => etape.suivante)?.key).toBe('actualite');
-    expect(premiersPas({ actualitesCount: 1, clubsVus: true, installationsCount: 1 }).tousFaits)
-      .toBe(true);
+    expect(premiersPas({
+      actualitesCount: 1, clubsVus: true, creneauxCount: 1, installationsCount: 1,
+    }).tousFaits).toBe(true);
   });
 
   it('une étape dont le lot pose sa route apparaît à sa place', () => {

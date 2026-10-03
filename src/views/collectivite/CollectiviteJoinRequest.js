@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { retenirLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -43,14 +44,16 @@ function CollectiviteJoinRequest() {
   } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const routeParams = /** @type {{ token?: string } | undefined} */ (route?.params);
+  const routeParams = /** @type {{ resultat?: any, token?: string } | undefined} */ (route?.params);
   const token = routeParams?.token || null;
 
   const apercu = useCollectiviteInvitationPreview(token);
   const clubs = useMyClubsForCollectiviteInvitation(token);
   const demander = useRequestCollectiviteAttach();
   const [choix, setChoix] = useState(/** @type {string | null} */ (null));
-  const [resultat, setResultat] = useState(/** @type {any} */ (null));
+  // COLL-ACCUEIL-BIS (03/10, planche 38) : revenu de la création d'un club venu du lien, la
+  // demande est DÉJÀ partie (le serveur l'a posée) : « Demande envoyée » s'affiche tout de suite.
+  const [resultat, setResultat] = useState(/** @type {any} */ (routeParams?.resultat || null));
 
   const nomDeLaVille = /** @type {any} */ (apercu.data)?.collectivite?.name || '';
   const ville = nomDeLaVille
@@ -132,14 +135,18 @@ function CollectiviteJoinRequest() {
           {t(
             'collectiviteClubs.join.noClub',
             // eslint-disable-next-line max-len
-            'Tu ne diriges aucun club sur FoundClub. Inscris d’abord ton club, puis rouvre le lien de la Ville.',
+            'Tu ne diriges aucun club sur FoundClub. Inscris ton club : sa demande de rattachement partira toute seule.',
           )}
         </Text>
         <Button
-          onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
-            params: { entry: 'collectivite-invitation' },
-            screen: RouteNames.ClubWizardName,
-          })}
+          onPress={() => {
+            // COLL-ACCUEIL-BIS (planche 38) : la création du club emportera le lien de la Ville.
+            retenirLienDeLaVille(token);
+            /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
+              params: { entry: 'collectivite-invitation' },
+              screen: RouteNames.ClubWizardName,
+            });
+          }}
           title={t('collectiviteClubs.join.register', 'Inscrire mon club')}
         />
       </View>
