@@ -1880,7 +1880,7 @@ function EventDetails({ navigation, route }) {
           accentColor: Colors.success500 || 'rgb(34, 197, 94)',
           badgeBackgroundColor: `${Colors.success500 || 'rgb(34, 197, 94)'}22`,
           badgeBorderColor: `${Colors.success500 || 'rgb(34, 197, 94)'}38`,
-          badgeLabel: 'Arrive',
+          badgeLabel: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
           badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
           badgeValue: null,
           description: t(
@@ -1905,7 +1905,7 @@ function EventDetails({ navigation, route }) {
           accentColor: Colors.warning500 || 'rgb(245, 158, 11)',
           badgeBackgroundColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}22`,
           badgeBorderColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}38`,
-          badgeLabel: 'Arrive',
+          badgeLabel: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
           badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
           badgeValue: `+${lateMinutes} min`,
           description: t(
@@ -1922,10 +1922,10 @@ function EventDetails({ navigation, route }) {
         accentColor: Colors.success500 || 'rgb(34, 197, 94)',
         badgeBackgroundColor: `${Colors.success500 || 'rgb(34, 197, 94)'}22`,
         badgeBorderColor: `${Colors.success500 || 'rgb(34, 197, 94)'}38`,
-        badgeLabel: 'Arrive',
+        badgeLabel: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
         badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
         badgeValue: null,
-        description: t('eventDetails.youAreMarkedPresentOn', "Tu es signale present a l'heure."),
+        description: t('eventDetails.youAreMarkedPresentOn', 'Tu es signalé présent à l’heure.'),
         hasArrived: true,
         primaryAction: null,
         secondaryAction: null,
@@ -1938,12 +1938,12 @@ function EventDetails({ navigation, route }) {
         accentColor: Colors.warning500 || 'rgb(245, 158, 11)',
         badgeBackgroundColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}22`,
         badgeBorderColor: `${Colors.warning500 || 'rgb(245, 158, 11)'}38`,
-        badgeLabel: 'Retard annonce',
+        badgeLabel: t('eventDetails.attendanceBadge.declaredLate', 'Retard annoncé'),
         badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
         badgeValue: `+${declaredLateMinutes} min`,
         description: t(
           'eventDetails.lateArrivalReportedMinConfirm',
-          'Retard signale : +{{declaredLateMinutes}} min. Confirme ton arrivée une fois sur '
+          'Retard signalé : +{{declaredLateMinutes}} min. Confirme ton arrivée une fois sur '
             + 'place.',
           { declaredLateMinutes, ...SANS_ECHAPPEMENT },
         ),

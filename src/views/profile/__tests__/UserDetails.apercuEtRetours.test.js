@@ -41,6 +41,7 @@ let mockFetchedUser;
 /** @type {any[]} */
 let mockMyHistories = [];
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 const mockGoBack = jest.fn();
 const mockDeleteHistory = jest.fn();
 
@@ -378,7 +379,11 @@ const rendre = async (utilisateurCourant, parametresRoute = {}) => {
   await act(async () => {
     arbre = renderer.create(
       <UserDetails
-        navigation={/** @type {any} */ ({ goBack: mockGoBack, navigate: mockNavigate })}
+        navigation={/** @type {any} */ ({
+          goBack: mockGoBack,
+          navigate: mockNavigate,
+          push: mockPush,
+        })}
         route={/** @type {any} */ ({ params: parametresRoute })}
       />,
     );
@@ -591,8 +596,9 @@ describe('PROFIL-JOUEUR · A19 — « Retours du coach » s\'ouvre sur les retou
       ligne.props.onPress();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.UserDetails, VUE_RETOURS);
-    expect(mockNavigate).not.toHaveBeenCalledWith(
+    // FINITIONS12-STATS (2) : la vue s EMPILE sur « Mon profil » (Retour y ramene).
+    expect(mockPush).toHaveBeenCalledWith(RouteNames.UserDetails, VUE_RETOURS);
+    expect(mockPush).not.toHaveBeenCalledWith(
       RouteNames.UserDetails,
       expect.objectContaining({ preview: true }),
     );
@@ -744,7 +750,7 @@ describe('PARENT-RETOURS — le parent d\'un mineur lit les retours du coach de 
       entree.props.onPress();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.UserDetails, VUE_RETOURS_ENFANT);
+    expect(mockPush).toHaveBeenCalledWith(RouteNames.UserDetails, VUE_RETOURS_ENFANT);
   });
 
   it('la vue liste les retours de l\'enfant, et dit de qui il s\'agit', async () => {

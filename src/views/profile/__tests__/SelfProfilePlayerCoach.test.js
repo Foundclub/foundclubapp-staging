@@ -23,6 +23,7 @@ let mockAuthValue;
 /** @type {any} */
 let mockPersonalStats;
 const mockNavigate = jest.fn();
+const mockPush = jest.fn();
 const mockUpdateMe = jest.fn();
 
 // BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
@@ -400,7 +401,11 @@ const rendre = async (utilisateurCourant, parametresRoute = {}) => {
   await act(async () => {
     arbre = renderer.create(
       <UserDetails
-        navigation={/** @type {any} */ ({ goBack: jest.fn(), navigate: mockNavigate })}
+        navigation={/** @type {any} */ ({
+          goBack: jest.fn(),
+          navigate: mockNavigate,
+          push: mockPush,
+        })}
         route={/** @type {any} */ ({ params: parametresRoute })}
       />,
     );
@@ -558,7 +563,8 @@ describe('D39 · « Voir mon profil comme les autres »', () => {
       bouton.props.onPress();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith(
+    // FINITIONS12-STATS (2) : l apercu s EMPILE sur « Mon profil » (Retour y ramene).
+    expect(mockPush).toHaveBeenCalledWith(
       'UserDetails',
       { preview: true, userId: 'user-joueur' },
     );

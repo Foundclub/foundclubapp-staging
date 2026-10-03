@@ -9,6 +9,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 import {
   buildArrivedAtIso,
+  countCalled,
   countPresence,
   formatTimeInZone,
   listNeverSeen,
@@ -99,7 +100,9 @@ export function AttendanceCloseSheet({
   const presence = countPresence(items);
   const neverSeen = listNeverSeen(items);
   const identitiesHidden = Boolean(payloadData?.participantIdentitiesHidden);
-  const markedCount = items.length - presence.waiting;
+  // FINITIONS12-STATS (8) : « pointé » = la regle du compteur du haut ; une absence posee a la
+  // main EST un pointage.
+  const markedCount = countCalled(items);
 
   // 🗣️ Toutes les chaines de la feuille, au meme endroit.
   const mots = {
