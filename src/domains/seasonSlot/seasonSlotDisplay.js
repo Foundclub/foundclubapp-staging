@@ -64,7 +64,9 @@ export const isoWeekdayOf = (date) => ((date.getDay() + 6) % 7) + 1;
  * @param {string} phrase - La phrase.
  * @returns {string} La phrase, sans point doublé à la fin.
  */
-export const unSeulPointFinal = (phrase) => String(phrase || '').replace(/..$/, '.');
+// FINITIONS13-COLL (04/10) : le motif était /..$/ (deux caractères QUELCONQUES) :
+// « 1 juin. » devenait « 1 jui. ». Seul un point doublé tombe.
+export const unSeulPointFinal = (phrase) => String(phrase || '').replace(/\.\.$/, '.');
 
 /**
  * 🗓️ FINITIONS12-COLL (03/10) — LA FIN D'UN CRÉNEAU, celle qu'on écrit : le dernier jour où il a

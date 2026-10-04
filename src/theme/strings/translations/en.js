@@ -5672,9 +5672,13 @@ export default {
     serie: {
       completesCertaines: 'Full {{nombre}} times out of {{total}}: {{dates}}',
       completesToutes: 'Full every week: there are already {{equipes}}.',
+      // FINITIONS13-COLL (04/10) — every week full, not all alike (round T13, C2_1c).
+      completesToutesEcarts: 'Full every week: there are already {{equipes}}, {{ecarts}}.',
       consequenceCertaines: 'Accepting puts {{equipes}} for {{places}} on those days.',
       consequenceLibre: 'Accepting bothers nobody, any week.',
       consequenceToutes: 'Accepting puts {{equipes}} for {{places}}, every week.',
+      consequenceToutesEcarts: 'Accepting puts {{equipes}} for {{places}}, every week ({{ecarts}}).',
+      ecart: '{{nombre}} on {{date}}',
       entete: '{{nombre}} {{jours}} from {{du}} to {{au}}:',
       libreVariable: 'There is room every week.',
       pastilleCertaines: 'Full {{nombre}} times out of {{total}}',

@@ -741,6 +741,22 @@ describe('COLL-C3B-BIS — planche 34 : une série se lit en entier', () => {
       'Complet',
     ]));
   });
+
+  // 🧮 FINITIONS13-COLL (04/10) point 5 — tournée T13 (C2_1c) : toutes les semaines pleines, mais
+  // pas avec le même nombre d'équipes (« 2 sur 2 » chaque jeudi, « 3 sur 2 » le 8 oct.). L'en-tête
+  // disait « il y a déjà 3 équipes » (le MAXIMUM) ; il suit le compte date par date. ROUGE avant.
+  it('toutes pleines, pas pareilles : le nombre de chaque semaine, puis l’écart', async () => {
+    const demande = serieDe([2, 3, 2]);
+    mockEnAttente = [demande];
+    const lus = textes(await monter((l) => l.includes(PHRASE_SERIE(demande))));
+    expect(lus).toEqual(expect.arrayContaining([
+      // « 16 oct. » finit déjà la phrase : un seul point.
+      `Complet chaque semaine : il y a déjà 2 équipes, 3 le ${SEIZE_OCT}`,
+      `Accepter met 3 équipes pour 2 places, chaque semaine (4 le ${SEIZE_OCT}).`,
+      'Complet',
+    ]));
+    expect(lus.join(' | ')).not.toMatch(/il y a déjà 3 équipes\./);
+  });
 });
 
 // TEXTES-COLLECTIVITES (tranche du chef, 01/10 ~16h55 : « A ») — « Demandes de la Ville »

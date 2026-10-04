@@ -23,6 +23,7 @@ import {
   occupantsParHoraire,
 } from '@/domains/collectivite/collectiviteDemandes';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import { unSeulPointFinal } from '@/domains/seasonSlot/seasonSlotDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -228,7 +229,8 @@ function CollectiviteRequests() {
       return {
         couleur: Colors.warning500,
         texte: t('collectiviteDemandes.file.complet', 'Complet · déjà {{equipes}}', {
-          equipes: nombreDEquipes(lecture.prisMax), ...SANS_ECHAPPEMENT,
+          // FINITIONS13-COLL (04/10) : le nombre de la plupart des semaines, pas le maximum.
+          equipes: nombreDEquipes(lecture.prisCourant), ...SANS_ECHAPPEMENT,
         }),
       };
     }
@@ -278,11 +280,27 @@ function CollectiviteRequests() {
   const surPlaceDeLaSerie = (/** @type {any} */ lecture) => {
     const toutes = lecture.completes.length === lecture.nombre;
     const certaines = lecture.completes.length > 0 && !toutes;
+    // 🧮 FINITIONS13-COLL (04/10) — TOUTES PLEINES, PAS TOUTES PAREILLES (tournée T13, C2_1c) :
+    // l'en-tête dit le nombre de la plupart des semaines, puis les semaines qui s'en écartent,
+    // datées, comme la liste date par date (« 2 sur 2 », « 3 sur 2 »). Avant : le MAXIMUM.
+    const ecartsDe = (/** @type {number} */ enPlus) => {
+      const morceaux = lecture.ecarts.slice(0, 3).map((/** @type {any} */ ecart) => (
+        t('collectiviteDemandes.serie.ecart', '{{nombre}} le {{date}}', {
+          date: ecart.date, nombre: ecart.pris + enPlus, ...SANS_ECHAPPEMENT,
+        })
+      ));
+      return (lecture.ecarts.length > 3 ? [...morceaux, '…'] : morceaux).join(', ');
+    };
     let phrasePlace;
-    if (toutes) {
+    if (toutes && lecture.ecarts.length) {
+      // eslint-disable-next-line max-len
+      phrasePlace = unSeulPointFinal(t('collectiviteDemandes.serie.completesToutesEcarts', 'Complet chaque semaine : il y a déjà {{equipes}}, {{ecarts}}.', {
+        ecarts: ecartsDe(0), equipes: nombreDEquipes(lecture.prisCourant), ...SANS_ECHAPPEMENT,
+      }));
+    } else if (toutes) {
       // eslint-disable-next-line max-len
       phrasePlace = t('collectiviteDemandes.serie.completesToutes', 'Complet chaque semaine : il y a déjà {{equipes}}.', {
-        equipes: nombreDEquipes(lecture.prisMax), ...SANS_ECHAPPEMENT,
+        equipes: nombreDEquipes(lecture.prisCourant), ...SANS_ECHAPPEMENT,
       });
     } else if (certaines) {
       const premieres = lecture.completes.slice(0, 4).join(', ');
@@ -316,11 +334,18 @@ function CollectiviteRequests() {
         places: nombreDePlaces(lecture.capacite),
         ...SANS_ECHAPPEMENT,
       };
-      consequence = toutes
-        // eslint-disable-next-line max-len
-        ? t('collectiviteDemandes.serie.consequenceToutes', 'Accepter met {{equipes}} pour {{places}}, chaque semaine.', valeurs)
-        // eslint-disable-next-line max-len
-        : t('collectiviteDemandes.serie.consequenceCertaines', 'Accepter met {{equipes}} pour {{places}} ces jours-là.', valeurs);
+      // eslint-disable-next-line max-len
+      consequence = t('collectiviteDemandes.serie.consequenceCertaines', 'Accepter met {{equipes}} pour {{places}} ces jours-là.', valeurs);
+      if (toutes) {
+        const chaqueSemaine = {
+          ...valeurs, ecarts: ecartsDe(1), equipes: nombreDEquipes(lecture.prisCourant + 1),
+        };
+        consequence = lecture.ecarts.length
+          // eslint-disable-next-line max-len
+          ? t('collectiviteDemandes.serie.consequenceToutesEcarts', 'Accepter met {{equipes}} pour {{places}}, chaque semaine ({{ecarts}}).', chaqueSemaine)
+          // eslint-disable-next-line max-len
+          : t('collectiviteDemandes.serie.consequenceToutes', 'Accepter met {{equipes}} pour {{places}}, chaque semaine.', chaqueSemaine);
+      }
     }
     const couleur = toutes || certaines ? Colors.warning500 : Colors.success500;
     return (

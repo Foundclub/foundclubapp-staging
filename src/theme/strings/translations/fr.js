@@ -6049,9 +6049,14 @@ export default {
     serie: {
       completesCertaines: 'Complet {{nombre}} fois sur {{total}} : {{dates}}',
       completesToutes: 'Complet chaque semaine : il y a déjà {{equipes}}.',
+      // FINITIONS13-COLL (04/10) — toutes pleines, pas toutes pareilles (tournée T13, C2_1c).
+      completesToutesEcarts: 'Complet chaque semaine : il y a déjà {{equipes}}, {{ecarts}}.',
       consequenceCertaines: 'Accepter met {{equipes}} pour {{places}} ces jours-là.',
       consequenceLibre: 'Accepter ne gêne personne, aucune semaine.',
       consequenceToutes: 'Accepter met {{equipes}} pour {{places}}, chaque semaine.',
+      // eslint-disable-next-line max-len
+      consequenceToutesEcarts: 'Accepter met {{equipes}} pour {{places}}, chaque semaine ({{ecarts}}).',
+      ecart: '{{nombre}} le {{date}}',
       entete: '{{nombre}} {{jours}} du {{du}} au {{au}} :',
       libreVariable: 'Il reste de la place chaque semaine.',
       pastilleCertaines: 'Complet {{nombre}} fois sur {{total}}',
