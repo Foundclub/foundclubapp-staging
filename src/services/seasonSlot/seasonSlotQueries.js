@@ -2,11 +2,13 @@ import {
   keepPreviousData, useMutation, useQueries, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 
+import { seancesDeLInstallation } from '@/domains/collectivite/collectiviteChiffres';
 import {
   parametresApercuDuDeplacement,
   summarizeInstallationWeek,
 } from '@/domains/seasonSlot/seasonSlotDisplay';
 
+import { useCollectiviteChiffres } from '@/services/collectivite/collectiviteQueries';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 
@@ -189,11 +191,15 @@ export const useRestoreSeasonSlot = () => useGesteCreneau(
  * La semaine de chaque installation de la Ville, pour sa carte (design P4, « Cette semaine :
  * 9 seances · complet jeu. 18:00 – 19:30 ») : UNE lecture du planning par installation, sous
  * la meme clef que le planning plein ecran (le cache est partage). Le taux reste au lot C5.
+ * 🧮 FINITIONS13-COLL (04/10) — LE NOMBRE est celui de « Chiffres » et de l accueil
+ * (`seancesDeLInstallation`, meme lecture, meme clef de cache) ; le planning ne donne plus que le
+ * MOMENT complet. Avant : les blocs du planning, creneaux compris (T13 : 14 contre 10).
  * @param {any[]} installations - Les installations (documentId, maxSlots).
+ * @param {string | null} [collectiviteId] - La Ville (sa lecture « Chiffres » de la semaine).
  * @returns {Record<string, { count: number, full: { start: Date, end: Date } | null }>} Par
  *   documentId ; une installation encore en lecture n y figure pas.
  */
-export const useInstallationsWeekSummary = (installations) => {
+export const useInstallationsWeekSummary = (installations, collectiviteId = null) => {
   const lignes = (Array.isArray(installations) ? installations : [])
     .filter((installation) => installation?.documentId);
   const semaine = getPlanningRange(getPlanningDefaultDate(), 'week');
@@ -206,12 +212,17 @@ export const useInstallationsWeekSummary = (installations) => {
       staleTime: 60_000,
     })),
   });
+  const chiffres = useCollectiviteChiffres(lignes.length ? collectiviteId : null, 'semaine');
   /** @type {Record<string, { count: number, full: { start: Date, end: Date } | null }>} */
   const resumes = {};
   lignes.forEach((installation, index) => {
     const reponse = lectures[index]?.data;
-    if (reponse) {
-      resumes[installation.documentId] = summarizeInstallationWeek(reponse, installation.maxSlots);
+    const seances = seancesDeLInstallation(chiffres.data, installation.documentId);
+    if (reponse && seances !== null) {
+      resumes[installation.documentId] = {
+        ...summarizeInstallationWeek(reponse, installation.maxSlots),
+        count: seances,
+      };
     }
   });
   return resumes;

@@ -249,7 +249,7 @@ function FacilityList() {
   }, [isCollectiviteMode, navigation]);
   // « Cette semaine : 9 seances · complet jeu. 18:00 – 19:30 » : la semaine de chaque
   // installation de la Ville, lue dans son planning. Cote club, rien n est lu.
-  const semaines = useInstallationsWeekSummary(isCollectiviteMode ? facilities : []);
+  const semaines = useInstallationsWeekSummary(isCollectiviteMode ? facilities : [], collectiviteId);
   // Le menu « Plus d actions » d une carte de la Ville : l installation ouverte, ou null.
   const [menuInstallation, setMenuInstallation] = useState(/** @type {any} */ (null));
   // COLL-C2B-BIS — sur ordinateur, la place du bouton qui l a ouvert (le menu s y ancre).
