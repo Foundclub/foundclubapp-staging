@@ -143,7 +143,7 @@ describe('FINITIONS13-STATS 6 (b) — sous un match TERMINE, plus de reponse', (
     mockUserData.mockReturnValue(HUGO);
   });
 
-  test('🔒 avant la fin : « Je participe ! » et « Annuler ma participation » (rien ne change)', () => {
+  test('🔒 avant la fin : « Je participe ! » et « Annuler ma participation »', () => {
     const tree = render({ ...gestes, event: match(), isFinished: false });
 
     expect(tagsOf(tree)).toEqual(['eventList.info.alreadyJoined']);
@@ -158,7 +158,10 @@ describe('FINITIONS13-STATS 6 (b) — sous un match TERMINE, plus de reponse', (
   });
 
   test('🔴 match fini, joueur dehors : plus de « Participer »', () => {
-    mockUserData.mockReturnValue({ documentId: 'compte-dehors', role: { name: USER_ROLES.player } });
+    mockUserData.mockReturnValue({
+      documentId: 'compte-dehors',
+      role: { name: USER_ROLES.player },
+    });
     const tree = render({ ...gestes, event: match({ participations: [] }), isFinished: true });
 
     expect(titlesOf(tree)).toEqual([]);
