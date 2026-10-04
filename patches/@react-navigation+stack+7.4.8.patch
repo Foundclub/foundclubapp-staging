@@ -1,0 +1,87 @@
+diff --git a/node_modules/@react-navigation/stack/lib/module/views/Stack/CardContainer.js b/node_modules/@react-navigation/stack/lib/module/views/Stack/CardContainer.js
+index dfaf18a..2a50c64 100644
+--- a/node_modules/@react-navigation/stack/lib/module/views/Stack/CardContainer.js
++++ b/node_modules/@react-navigation/stack/lib/module/views/Stack/CardContainer.js
+@@ -161,6 +161,7 @@ function CardContainerInner({
+     gestureVelocityImpact,
+     headerMode,
+     headerShown,
++    headerTransparent,
+     transitionSpec
+   } = scene.descriptor.options;
+   const {
+@@ -242,7 +243,14 @@ function CardContainerInner({
+             getPreviousScene,
+             getFocusedRoute,
+             onContentHeightChange: onHeaderHeightChange,
+-            style: styles.header
++            // FoundClub (patch-package), backport of react-navigation#13075:
++            // with headerTransparent the header is absolutely positioned, so this
++            // wrapper had a ZERO height and Android skipped everything inside it
++            // (TalkBack, uiautomator). The wrapper itself goes absolute (the content
++            // still runs under the header) and takes the header height.
++            style: headerTransparent ? [styles.header, styles.headerTransparent, {
++              minHeight: headerHeight
++            }] : styles.header
+           }) : null, /*#__PURE__*/_jsx(View, {
+             style: styles.scene,
+             children: /*#__PURE__*/_jsx(HeaderBackContext.Provider, {
+@@ -269,6 +277,12 @@ const styles = StyleSheet.create({
+   header: {
+     zIndex: 1
+   },
++  headerTransparent: {
++    position: 'absolute',
++    top: 0,
++    start: 0,
++    end: 0
++  },
+   scene: {
+     flex: 1
+   }
+diff --git a/node_modules/@react-navigation/stack/src/views/Stack/CardContainer.tsx b/node_modules/@react-navigation/stack/src/views/Stack/CardContainer.tsx
+index da56613..ef608e3 100644
+--- a/node_modules/@react-navigation/stack/src/views/Stack/CardContainer.tsx
++++ b/node_modules/@react-navigation/stack/src/views/Stack/CardContainer.tsx
+@@ -205,6 +205,7 @@ function CardContainerInner({
+     gestureVelocityImpact,
+     headerMode,
+     headerShown,
++    headerTransparent,
+     transitionSpec,
+   } = scene.descriptor.options;
+ 
+@@ -297,7 +298,19 @@ function CardContainerInner({
+                   getPreviousScene,
+                   getFocusedRoute,
+                   onContentHeightChange: onHeaderHeightChange,
+-                  style: styles.header,
++                  // FoundClub (patch-package), backport of react-navigation#13075:
++                  // with headerTransparent the header is absolutely positioned, so
++                  // this wrapper had a ZERO height and Android skipped everything
++                  // inside it (TalkBack, uiautomator). The wrapper itself goes
++                  // absolute (the content still runs under the header) and takes
++                  // the header height.
++                  style: headerTransparent
++                    ? [
++                        styles.header,
++                        styles.headerTransparent,
++                        { minHeight: headerHeight },
++                      ]
++                    : styles.header,
+                 })
+               : null}
+             <View style={styles.scene}>
+@@ -333,6 +346,12 @@ const styles = StyleSheet.create({
+   header: {
+     zIndex: 1,
+   },
++  headerTransparent: {
++    position: 'absolute',
++    top: 0,
++    start: 0,
++    end: 0,
++  },
+   scene: {
+     flex: 1,
+   },
