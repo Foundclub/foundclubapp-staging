@@ -9,12 +9,13 @@ import { getFacilityPlanning } from '@/services/facility/facilityService';
 import { useInstallationsWeekSummary } from '../seasonSlotQueries';
 
 // 🧮 FINITIONS13-COLL (04/10/2026), point 4 — « MÊME MOT, MÊME NOMBRE », la fin du travail.
-// Tournée T13 (C2_9b) : la liste « Installations de la Ville » disait « Cette semaine : 14 séances »
-// (Gymnase) et « 1 séance » (Dojo) quand l'accueil et « Chiffres » disaient 10 et 0. La liste
-// comptait les BLOCS du planning, créneaux compris ; FINITIONS12-COLL point 9 avait déjà branché
-// l'accueil sur « Chiffres » (`seances` de la ligne de l'installation, admin
-// docs/CONTRAT_CHIFFRES_VILLE.md §1 et §5). La liste lit la même règle, partagée. Le « complet
-// jeu. 18:00 – 19:30 » garde le planning (c'est un moment, pas un compte). ROUGE avant le lot.
+// Tournée T13 (C2_9b) : la liste « Installations de la Ville » disait « Cette semaine :
+// 14 séances » (Gymnase) et « 1 séance » (Dojo) quand l'accueil et « Chiffres » disaient
+// 10 et 0. La liste comptait les BLOCS du planning, créneaux compris ; FINITIONS12-COLL
+// point 9 avait déjà branché l'accueil sur « Chiffres » (`seances` de la ligne de
+// l'installation, admin docs/CONTRAT_CHIFFRES_VILLE.md §1 et §5). La liste lit la même
+// règle, partagée. Le « complet jeu. 18:00 – 19:30 » garde le planning (c'est un moment,
+// pas un compte). ROUGE avant le lot.
 
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   attributeSeasonSlot: jest.fn(),
@@ -48,7 +49,10 @@ const PLANNINGS = {
   dojo: [bloc('10:00', '11:00', 'slot')],
   gym: [
     bloc('18:00', '19:30'), bloc('18:00', '19:30'),
-    ...Array.from({ length: 8 }, (_, i) => bloc(`${String(8 + i).padStart(2, '0')}:00`, `${String(8 + i).padStart(2, '0')}:45`)),
+    ...Array.from({ length: 8 }, (_, i) => {
+      const h = String(8 + i).padStart(2, '0');
+      return bloc(`${h}:00`, `${h}:45`);
+    }),
     ...Array.from({ length: 4 }, () => bloc('14:00', '17:00', 'slot')),
   ],
 };
@@ -107,7 +111,7 @@ afterEach(() => {
   });
 });
 
-describe('FINITIONS13-COLL point 4 — la liste compte les séances comme « Chiffres » et l’accueil', () => {
+describe('FINITIONS13-COLL point 4 — la liste compte comme « Chiffres » et l’accueil', () => {
   it('Gymnase : 10 séances (pas 14 blocs) ; Dojo : 0 (pas 1 créneau)', async () => {
     const resume = await lire();
     expect(resume.gym.count).toBe(10);
@@ -117,7 +121,10 @@ describe('FINITIONS13-COLL point 4 — la liste compte les séances comme « Chi
 
   it('le moment complet reste lu dans le planning', async () => {
     const resume = await lire();
-    expect(resume.gym.full).toEqual({ end: new Date('2026-10-01T15:00:00.000Z'), start: new Date('2026-10-01T12:00:00.000Z') });
+    expect(resume.gym.full).toEqual({
+      end: new Date('2026-10-01T15:00:00.000Z'),
+      start: new Date('2026-10-01T12:00:00.000Z'),
+    });
     expect(resume.dojo.full).toBeNull();
   });
 

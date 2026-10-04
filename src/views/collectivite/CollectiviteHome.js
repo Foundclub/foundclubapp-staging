@@ -27,7 +27,10 @@ import {
   seasonSlotsSeen,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
-import { phraseOccupation, seancesDeLInstallation } from '@/domains/collectivite/collectiviteChiffres';
+import {
+  phraseOccupation,
+  seancesDeLInstallation,
+} from '@/domains/collectivite/collectiviteChiffres';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
 import {
   closureDaysLabel,
