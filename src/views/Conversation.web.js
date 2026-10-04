@@ -1575,7 +1575,13 @@ function Conversation({ navigation, route }) {
     // l'adresse, qui ne porte ni joueurs ni placements. Repli, comme pour tout
     // type que le site ne sait pas dessiner — en francais, jamais son nom.
     if (composition.type === 'lineup_share' && String(composition?.eventId || '').trim()) {
-      return <CompositionMessageBubble composition={composition} isMe={isMine} />;
+      return (
+        <CompositionMessageBubble
+          composition={composition}
+          currentPeople={chatData?.participants}
+          isMe={isMine}
+        />
+      );
     }
 
     return (
@@ -1608,6 +1614,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
+    chatData?.participants,
     handleProposalResponse,
     handleVoteOnPoll,
     mutedTextColor,

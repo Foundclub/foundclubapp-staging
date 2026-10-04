@@ -147,6 +147,43 @@ export const getPersonName = (person) => [person?.firstname, person?.lastname]
   .join(' ');
 
 /**
+ * FINITIONS13-STATS (2) — LE NOM DU COMPTE, PAS CELUI DE LA PUBLICATION.
+ *
+ * Une compo publiee fige le nom et la photo de chaque joueur. Un compte renomme
+ * ensuite restait sous son ancien nom (recette : Hugo, compte 130, « Paul
+ * Veuillet » jusqu'au 29/09). Meme regle que la feuille de match et que la vue
+ * Convocation (serveur) : l'identite vient du compte quand on l'a DEJA lu.
+ * ⛔ Un joueur hors app, un compte qu'on n'a pas lu, ou lu sans nom, garde la
+ * photo : c'est la seule trace qu'on en a. Rien d'autre que l'identite ne bouge.
+ * @param {any[]} players - Les personnes figees par la publication.
+ * @param {any[]} [currentPeople] - Les comptes lus aujourd'hui.
+ * @returns {any[]} Les memes personnes, chaque compte lu sous son identite du jour.
+ */
+export const applyCurrentIdentities = (players, currentPeople = []) => {
+  const list = Array.isArray(players) ? players : [];
+  /** @type {Map<string, any>} */
+  const byId = new Map();
+  (Array.isArray(currentPeople) ? currentPeople : []).forEach((person) => {
+    const id = toId(person?.documentId);
+    if (id && getPersonName(person)) byId.set(id, person);
+  });
+  if (!byId.size) return list;
+
+  return list.map((player) => {
+    const current = player && !player.isManual
+      ? byId.get(toId(player.documentId || player.id))
+      : null;
+    if (!current) return player;
+    return {
+      ...player,
+      ...('avatar' in current ? { avatar: current.avatar || null } : {}),
+      firstname: current.firstname || '',
+      lastname: current.lastname || '',
+    };
+  });
+};
+
+/**
  * AC08 — LE BANC, enfin montre a quelqu'un.
  *
  * 🎁 Aucune donnee neuve : `reservePlayerIds` porte l'ordre voulu par le coach et
