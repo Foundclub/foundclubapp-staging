@@ -627,6 +627,19 @@ describe('ST-RETOURS2 · point 3 — l en-tete centre de la fiche de son enfant'
     ]);
   });
 
+  // FINITIONS13-STATS · point 3 (T13, tranche par le chef « A ») — la fiche de Hugo disait
+  // « 14 ans · U13 » (sa PREMIERE equipe) alors qu il joue aussi en U15 : elle les dit toutes.
+  it('🔴 FIN13-STATS 3 — deux equipes : « 14 ans · U13 · U15 · AS Montrivage »', async () => {
+    mockFetchedUser = {
+      ...HUGO_ET_SON_CLUB,
+      myTeams: [{ documentId: 'u13', name: 'U13' }, { documentId: 'u15', name: 'U15' }],
+    };
+    const carte = carteDIdentite(await rendre(PAPA, FICHE_DE_HUGO));
+
+    const lignes = carte.findAllByType(Text).map((n) => aplatir(n.props.children));
+    expect(lignes).toContain('14 ans · U13 · U15 · AS Montrivage');
+  });
+
   it('🔴 « Mon enfant » ne vit plus qu une fois, DANS la carte centree', async () => {
     const t = texte(await rendre(PAPA, FICHE_DE_HUGO));
 

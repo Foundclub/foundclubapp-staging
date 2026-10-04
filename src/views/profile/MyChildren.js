@@ -86,7 +86,7 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
             {ligneDIdentite(t, {
               age: compte?.age,
               clubName: profil?.club?.name,
-              teamName: equipes[0]?.name,
+              teamNames: equipes.map((equipe) => equipe?.name),
             })}
           </Text>
         </View>
