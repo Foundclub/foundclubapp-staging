@@ -22,6 +22,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useEvent from '@/domains/event/useEvent';
+import { seanceDeplacee } from '@/domains/seasonSlot/seasonSlotDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -775,13 +776,26 @@ function EventEdit({ navigation, route }) {
     return finalOptions;
   }, [teamOptions, selectedTeamId, clubTeams, trainedTeams, t]);
 
+  // 🧭 FINITIONS13-COLL (04/10), point 6 — l'avertissement de place SUIT LE SERVEUR. Une séance
+  // modifiée sans bouger garde sa décision (FINITIONS11-COLL) : rien à annoncer (tournée T12,
+  // F11C_5 : « restera en demande en attente » sur une séance que le serveur gardait confirmée).
+  // Et quand la MAIRIE décidera, ses deux phrases parlent seules (« un dirigeant » serait faux).
+  const seanceBouge = !eventId || (Boolean(event) && seanceDeplacee(event, {
+    debut: selectedStartTime || '',
+    facilityId: selectedFacilityId || null,
+    fin: selectedEndTime || '',
+    jour: jourDuDeplacement,
+  }));
   const requiresFacilityApproval = Boolean(
     selectedFacilityId
+    && seanceBouge
+    && !laMairieDecide
     && selectedOccupancy?.saturated
     && selectedOccupancy?.requiresApproval,
   );
   const allowsImmediateFacilityConflict = Boolean(
     selectedFacilityId
+    && seanceBouge
     && selectedOccupancy?.saturated
     && selectedOccupancy?.allowsImmediateConfirmation,
   );

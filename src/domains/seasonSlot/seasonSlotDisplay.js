@@ -88,6 +88,25 @@ export const finDuCreneau = (slot) => (
 export const isTime = (valeur) => typeof valeur === 'string' && HEURE.test(valeur.trim());
 
 /**
+ * 🧭 FINITIONS13-COLL (04/10) — LA SÉANCE A-T-ELLE BOUGÉ ? (installation, jour, heures). Une séance
+ * modifiée sans bouger garde la décision du serveur (event.update, `isSessionMoved`) : rien n'est
+ * rejugé, rien ne s'annonce. Lue par l'aperçu du déplacement et par l'avertissement de place de
+ * « Modifier » (tournée T12, F11C_5 : « restera en demande en attente » sur une séance que le
+ * serveur gardait confirmée).
+ * @param {any} seance - La séance enregistrée (date, startTime, endTime, facility).
+ * @param {{ debut: string, facilityId?: string | null, fin: string, jour: string }} saisie - La
+ *   saisie de l'écran (jour AAAA-MM-JJ, heures HH:MM).
+ * @returns {boolean} Vrai si elle a bougé.
+ */
+export const seanceDeplacee = (seance, saisie) => {
+  const jourEnregistre = seance?.date ? format(new Date(seance.date), 'yyyy-MM-dd') : '';
+  return (saisie?.facilityId || null) !== (seance?.facility?.documentId || null)
+    || saisie?.jour !== jourEnregistre
+    || saisie?.debut !== String(seance?.startTime || '').slice(0, 5)
+    || saisie?.fin !== String(seance?.endTime || '').slice(0, 5);
+};
+
+/**
  * 🧭 FINITIONS11-COLL (03/10, décision d'Adel « deplacer A ») — LA QUESTION POSÉE AU SERVEUR
  * POUR UNE SÉANCE QU'ON DÉPLACE : les paramètres de l'aperçu
  * (`GET /facilities/:id/season-slots/preview`, au nom du club : COLL-FIX2 y rend
@@ -106,12 +125,7 @@ export const parametresApercuDuDeplacement = (seance, saisie) => {
   if (!isTime(saisie.debut) || !isTime(saisie.fin)) return null;
   const jour = parseISO(String(saisie.jour || ''));
   if (Number.isNaN(jour.getTime())) return null;
-  const jourEnregistre = seance.date ? format(new Date(seance.date), 'yyyy-MM-dd') : '';
-  const bouge = saisie.facilityId !== (seance.facility?.documentId || null)
-    || saisie.jour !== jourEnregistre
-    || saisie.debut !== String(seance.startTime || '').slice(0, 5)
-    || saisie.fin !== String(seance.endTime || '').slice(0, 5);
-  if (!bouge) return null;
+  if (!seanceDeplacee(seance, saisie)) return null;
   const team = saisie.team || seance.team?.documentId || null;
   return {
     club,
