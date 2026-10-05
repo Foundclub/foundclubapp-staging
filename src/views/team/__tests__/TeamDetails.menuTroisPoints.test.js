@@ -769,7 +769,7 @@ describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
     expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
   });
 
-  test('🚨 offre Équipe active : « Convocations » (onglet) et « Cotisation » ferment la feuille', () => {
+  test('🚨 offre Équipe active : « Convocations » et « Cotisation » ferment la feuille', () => {
     mockAuthCourant = {
       ...AUTH_DIRIGEANT,
       entitlementsSummary: [{ scopeTeamDocumentId: EQUIPE.documentId, status: 'active' }],
@@ -786,7 +786,7 @@ describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('ClubLicenses');
   });
 
-  test('🔒 une rangée verrouillée « offre Équipe » ouvre l’offre PAR-DESSUS la feuille (inchangé)', () => {
+  test('🔒 une rangée verrouillée « offre Équipe » ouvre l’offre PAR-DESSUS la feuille', () => {
     const racine = monterLaFiche();
     ouvrirLeMenu(racine);
 

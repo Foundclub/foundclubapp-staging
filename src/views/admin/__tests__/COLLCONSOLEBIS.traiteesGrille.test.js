@@ -238,7 +238,7 @@ beforeEach(() => {
 });
 
 describe('COLL-CONSOLE-BIS — planche 17 : « Traitées » en grille sur le site', () => {
-  it('FIN14 · 🔒 sur le site, « Refuser » reste à GAUCHE du geste principal (planche ordi, état A)', async () => {
+  it('FIN14 · 🔒 site : « Refuser » à GAUCHE du geste principal (planche ordi A)', async () => {
     mockLargeur = 1280;
     mockEnAttente = lu([MONTRIVAGE]);
     const arbre = await monter(<AdminManagerRequests />);

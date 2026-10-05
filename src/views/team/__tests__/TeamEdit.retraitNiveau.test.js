@@ -431,7 +431,8 @@ describe('FINITIONS14 · « Enregistrer » relit la fiche de l equipe AVANT d y 
     });
 
     const relectureFiche = mockInvalidateQueries.mock.calls.findIndex(
-      ([parametres]) => JSON.stringify(parametres?.queryKey) === JSON.stringify(['team', 'equipe-1']),
+      ([parametres]) => JSON.stringify(parametres?.queryKey)
+        === JSON.stringify(['team', 'equipe-1']),
     );
     expect(relectureFiche).toBeGreaterThanOrEqual(0);
     expect(navigation.goBack).toHaveBeenCalledTimes(1);

@@ -565,15 +565,17 @@ describe('FINITIONS6 · F6-3 — un convoque parti de l equipe est annonce, pas 
     teamComposition: COMPO_SERVEUR_PUBLIEE,
   };
 
-  test('🚨 FIN14 · par « Gérer › Convocation » (sans selectedPlayers), la sélection le dit', async () => {
+  test('🚨 FIN14 · par « Gérer › Convocation » (sans selectedPlayers), c est dit', async () => {
     const arbre = await rendre(porteGererConvocation);
 
-    expect(arbre.root.findAll((/** @type {any} */ noeud) => noeud.props?.testID === 'matchcallup-left-team').length)
-      .toBeGreaterThan(0);
+    const pieds = arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud.props?.testID === 'matchcallup-left-team',
+    );
+    expect(pieds.length).toBeGreaterThan(0);
     expect(texteVisible(arbre)).toContain(PHRASE_KARIM);
   });
 
-  test('🚨 FIN14 · par « Gérer › Convocation », « Suivant » emmène ce que publiera le serveur', async () => {
+  test('🚨 FIN14 · par « Gérer › Convocation », « Suivant » suit le serveur', async () => {
     const arbre = await rendre(porteGererConvocation);
 
     await appuyerSur(arbre, 'Suivant');
@@ -584,7 +586,7 @@ describe('FINITIONS6 · F6-3 — un convoque parti de l equipe est annonce, pas 
       .toEqual(['p2']);
   });
 
-  test('FIN14 · jumeau : l entrée qui marchait (selectedPlayers remis) le dit toujours, une seule fois', async () => {
+  test('FIN14 · jumeau : l entrée selectedPlayers le dit toujours, une seule fois', async () => {
     const arbre = await rendre({ ...porteGererConvocation, selectedPlayers: [KARIM, EFFECTIF[1]] });
 
     expect(texteVisible(arbre)).toContain(PHRASE_KARIM);

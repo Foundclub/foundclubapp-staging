@@ -339,8 +339,10 @@ describe('COLL-ACCUEIL — planche 5 (états 5, 6), P2-gestion (état 7) : la de
     mockParams = { justSent: true };
     mockDemandes = { data: [EN_ATTENTE], isLoading: false, refetch: jest.fn() };
     const arbre = await monter(CollectiviteSignupStatus);
-    const [bouton] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'bouton-Compris'
-      && typeof n.props?.onPress === 'function');
+    const [bouton] = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'bouton-Compris'
+        && typeof n.props?.onPress === 'function',
+    );
     let parent = bouton?.parent;
     let dansLeDefilement = false;
     while (parent) {
@@ -353,10 +355,14 @@ describe('COLL-ACCUEIL — planche 5 (états 5, 6), P2-gestion (état 7) : la de
 
   it('FIN14 · 🚨 les dates comme la planche : « jeu. 1 oct. », « ven. 2 oct. »', async () => {
     mockDemandes = { data: [EN_ATTENTE], isLoading: false, refetch: jest.fn() };
-    expect(textes(await monter(CollectiviteSignupStatus))).toContain('Demande envoyée le jeu. 1 oct.');
+    expect(textes(await monter(CollectiviteSignupStatus)))
+      .toContain('Demande envoyée le jeu. 1 oct.');
     mockDemandes = {
       data: [{
-        ...EN_ATTENTE, decidedAt: '2026-10-02T09:00:00.000Z', refusalReason: 'Non.', status: 'refused',
+        ...EN_ATTENTE,
+        decidedAt: '2026-10-02T09:00:00.000Z',
+        refusalReason: 'Non.',
+        status: 'refused',
       }],
       isLoading: false,
       refetch: jest.fn(),
