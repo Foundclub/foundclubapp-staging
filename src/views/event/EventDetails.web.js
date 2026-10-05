@@ -109,7 +109,7 @@ import {
   listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
-  resolveMatchVerdictTag,
+  resolveMatchTagSegments,
   resolveTeamCoachFirstname,
   resolveViewerFromInvitedTeam,
 } from './matchPageModel';
@@ -842,11 +842,12 @@ function EventDetails({ navigation, route }) {
   ]);
   // 🏷️ ST-MATCH (écran 1) — la pastille porte l'étape et le verdict : « MATCH · TERMINÉ ·
   // VICTOIRE » (mêmes mots que le téléphone).
+  // FINITIONS15 point 9e : la même règle que le téléphone (un score connu dit la fin).
   const matchTypeTag = isMatchEvent
     ? [
       event?.type?.name || 'Match',
-      isMatchFinished ? t('eventDetails.typeTag.matchFinished', 'TERMINÉ') : '',
-      resolveMatchVerdictTag({
+      ...resolveMatchTagSegments({
+        horlogeConnue: serverClockMs !== null,
         isFinished: isMatchFinished,
         t,
         verdict: matchEncartSummary?.verdict,
