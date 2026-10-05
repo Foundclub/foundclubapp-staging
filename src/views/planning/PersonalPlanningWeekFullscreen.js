@@ -106,6 +106,7 @@ import {
 import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
 import { toParisIsoFromLocalSelection } from '@/utils/parisTime';
 import {
+  ligneDesDemandesEnAttente,
   lireVueRetenue,
   pageDAujourdhui,
   pageSuivante,
@@ -717,17 +718,8 @@ function PlanningWeekFullscreen() {
     readsAsOrganizer, t]);
   // « Trancher » : seulement pour la mairie, et vers SES demandes (lot 3a).
   const nombreEnAttente = managingCollectiviteId ? blocsEnAttente.length : 0;
-  const ligneEnAttente = vue !== VUES.jour
-    ? t('collectiviteCreneaux.planning.enAttenteSemaine', {
-      count: nombreEnAttente,
-      defaultValue_one: '{{count}} demande en attente cette semaine.',
-      defaultValue_other: '{{count}} demandes en attente cette semaine.',
-    })
-    : t('collectiviteCreneaux.planning.enAttenteJour', {
-      count: nombreEnAttente,
-      defaultValue_one: '{{count}} demande en attente sur ce jour.',
-      defaultValue_other: '{{count}} demandes en attente sur ce jour.',
-    });
+  // FINITIONS13-COLL (04/10) : la période de la VUE (T13 : « cette semaine » en vue Mois).
+  const ligneEnAttente = ligneDesDemandesEnAttente(t, vue, nombreEnAttente);
   // Contrat C2A §7 : d ou vient la place (creneau attribue, demande, seance du club).
   const origineDe = (/** @type {any} */ bloc) => {
     const brut = bloc?.raw || {};

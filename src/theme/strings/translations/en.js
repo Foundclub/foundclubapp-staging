@@ -5453,8 +5453,12 @@ export default {
       demandeEnAttente: 'Pending request',
       enAttenteJour_one: '{{count}} pending request on this day.',
       enAttenteJour_other: '{{count}} pending requests on this day.',
+      enAttenteMois_one: '{{count}} pending request this month.',
+      enAttenteMois_other: '{{count}} pending requests this month.',
       enAttenteSemaine_one: '{{count}} pending request this week.',
       enAttenteSemaine_other: '{{count}} pending requests this week.',
+      enAttenteTroisJours_one: '{{count}} pending request over these three days.',
+      enAttenteTroisJours_other: '{{count}} pending requests over these three days.',
       // COLL-FIX2 (03/10) — a closed day (board 25).
       fermeJour: 'closed that day',
       libreJour: 'free all day',

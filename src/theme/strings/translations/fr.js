@@ -5820,8 +5820,13 @@ export default {
       demandeEnAttente: 'Demande en attente',
       enAttenteJour_one: '{{count}} demande en attente sur ce jour.',
       enAttenteJour_other: '{{count}} demandes en attente sur ce jour.',
+      // FINITIONS13-COLL (04/10) — la période de la vue (tournée T13 : « cette semaine » en Mois).
+      enAttenteMois_one: '{{count}} demande en attente ce mois-ci.',
+      enAttenteMois_other: '{{count}} demandes en attente ce mois-ci.',
       enAttenteSemaine_one: '{{count}} demande en attente cette semaine.',
       enAttenteSemaine_other: '{{count}} demandes en attente cette semaine.',
+      enAttenteTroisJours_one: '{{count}} demande en attente sur ces trois jours.',
+      enAttenteTroisJours_other: '{{count}} demandes en attente sur ces trois jours.',
       // COLL-FIX2 (03/10) — un jour fermé (planche 25).
       fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
