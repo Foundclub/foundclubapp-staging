@@ -1,4 +1,5 @@
 /* eslint-disable max-len -- les phrases du serveur sont citées en entier */
+import { applicationStatusFromApplyRejection } from '../applyRejection';
 import { applyToRecruitmentAd } from '../recruitmentService';
 
 // FINITIONS9 · POINT 4 — LES REFUS DE CANDIDATURE, AVEC OU SANS ACCENTS.
@@ -72,6 +73,15 @@ describe('FINITIONS9 · point 4 — un refus attendu n est pas une panne, avec o
 
     await expect(applyToRecruitmentAd('ad-1', {})).rejects.toBeDefined();
     expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it('ANNONCE-RAPPEL 6 — « Cette annonce a expiré » est un refus attendu, qui ne dit rien de MA candidature', async () => {
+    const phrase = "Cette annonce a expiré : elle n'accepte plus de candidatures.";
+    mockPost.mockRejectedValue(refus400(phrase));
+
+    await expect(applyToRecruitmentAd('ad-1', {})).rejects.toBeDefined();
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(applicationStatusFromApplyRejection(phrase)).toBeNull();
   });
 
   it('JUMEAU : une vraie panne (500) est toujours journalisée', async () => {

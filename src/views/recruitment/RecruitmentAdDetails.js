@@ -233,6 +233,11 @@ function RecruitmentAdDetails() {
   // Point 6 (choix du chef « badge A ») : une fois l'echeance passee, le badge dit « EXPIRÉE »
   // a TOUT lecteur — aucun serveur ne passe `isActive` a false a l'echeance.
   const isOnline = Boolean(ad?.isActive) && !getRecruitmentAdExpiry(ad)?.isExpired;
+  // ANNONCE-RAPPEL, point 6 (choix du chef « A », 05/10) — le serveur refuse desormais une
+  // candidature apres l'echeance (admin recruitment-ad-custom.ts, `apply`) : « Postuler » se grise
+  // avec la meme borne. Une annonce liee a un EVENEMENT garde sa regle : c'est l'evenement qui la
+  // ferme. Test : __tests__/RecruitmentAdDetails.renouveler.test.js (ANNONCE-RAPPEL 6).
+  const isClosedByExpiry = !eventDocumentId && Boolean(getRecruitmentAdExpiry(ad)?.isExpired);
   let statusBadgeLabel = t('recruitmentAdDetails.header.statusInactive', 'INACTIF');
   if (isOnline) {
     statusBadgeLabel = t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE');
@@ -923,13 +928,15 @@ function RecruitmentAdDetails() {
     applyButtonTitle = t('recruitmentAdDetails.footer.pending', 'Demande en attente');
   } else if (!ad.isActive) {
     applyButtonTitle = t('recruitmentAdDetails.footer.inactive', 'Annonce inactive');
+  } else if (isClosedByExpiry) {
+    applyButtonTitle = t('recruitmentAdDetails.footer.expired', 'Annonce expirée');
   } else if (isDeclined) {
     applyButtonTitle = t('recruitmentAdDetails.footer.applyAgain', 'Postuler à nouveau');
   }
 
   let footerActionNode = (
     <Button
-      disabled={!ad.isActive || hasApplied}
+      disabled={!ad.isActive || isClosedByExpiry || hasApplied}
       isLoading={applyMutation.isPending}
       onPress={handleApply}
       title={applyButtonTitle}
@@ -941,7 +948,7 @@ function RecruitmentAdDetails() {
     footerActionNode = (
       <View style={{ gap: 12 }}>
         <Button
-          disabled={!ad.isActive || hasApplied}
+          disabled={!ad.isActive || isClosedByExpiry || hasApplied}
           isLoading={applyMutation.isPending}
           onPress={handleApply}
           title={applyButtonTitle}

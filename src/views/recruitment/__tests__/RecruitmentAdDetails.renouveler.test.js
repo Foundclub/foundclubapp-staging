@@ -482,3 +482,57 @@ describe('ANNONCE-RENOUVELER 6 — le badge de la fiche dit « EXPIRÉE » apres
     expect(textes(tree)).not.toContain('EXPIRÉE');
   });
 });
+
+// ANNONCE-RAPPEL, point 6 (choix du chef « A », 05/10) — sous le badge « EXPIRÉE », « Postuler »
+// restait actif, et le serveur acceptait la candidature. Il la refuse desormais (admin
+// recruitment-ad-custom.ts, `apply`) ; le bouton se grise avec la MEME borne que le badge
+// (utils/recruitmentAdRenewal.js). Une annonce liee a un EVENEMENT garde sa regle : c'est
+// l'evenement qui la ferme, pas les 30 jours que ses postes recoivent par defaut.
+// A lancer sous TZ=UTC ET TZ=Europe/Paris (la borne est un instant : meme verdict).
+describe('ANNONCE-RAPPEL 6 — « Postuler » se grise apres l echeance', () => {
+  const POSTULER = 'Postuler';
+  const EXPIREE = 'Annonce expirée';
+
+  it('un TIERS sur une annonce expiree : « Annonce expirée », grise', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: inDays(-2) });
+
+    expect(findButton(tree, POSTULER)).toBeUndefined();
+    expect(findButton(tree, EXPIREE)?.props.disabled).toBe(true);
+  });
+
+  it('echeance a venir (J+3) : « Postuler », actif', async () => {
+    const { tree } = await renderFor(TIERS);
+
+    expect(findButton(tree, POSTULER)?.props.disabled).toBe(false);
+    expect(findButton(tree, EXPIREE)).toBeUndefined();
+  });
+
+  it('sans echeance (ancienne annonce) : « Postuler », actif, comme avant', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: null });
+
+    expect(findButton(tree, POSTULER)?.props.disabled).toBe(false);
+  });
+
+  it('renouvelee (echeance repoussee de 30 jours) : « Postuler » revient, actif', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: inDays(30) });
+
+    expect(findButton(tree, POSTULER)?.props.disabled).toBe(false);
+  });
+
+  it('liee a un EVENEMENT : « Postuler » reste actif, c est l evenement qui la ferme', async () => {
+    const { tree } = await renderFor(TIERS, {
+      ...AD,
+      event: { date: inDays(10), documentId: 'ev-entrainement', type: { name: 'Entraînement' } },
+      expirationDate: inDays(-2),
+    });
+
+    expect(findButton(tree, POSTULER)?.props.disabled).toBe(false);
+  });
+
+  it('une annonce desactivee garde « Annonce inactive », meme expiree', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: inDays(-2), isActive: false });
+
+    expect(findButton(tree, 'Annonce inactive')?.props.disabled).toBe(true);
+    expect(findButton(tree, EXPIREE)).toBeUndefined();
+  });
+});
