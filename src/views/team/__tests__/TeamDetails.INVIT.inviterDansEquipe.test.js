@@ -671,9 +671,12 @@ describe('INVIT — la fiche d equipe sait ENVOYER une invitation', () => {
 
     expect(textesPortant(racine, 'Invitation envoyée')).toHaveLength(1);
     expect(textesPortant(racine, 'Inviter')).toHaveLength(0);
+    // FINITIONS14 · point 5 (T13-bis) — « Elle rejoindra l'équipe » pour Recette Onboarding :
+    // aucun compte ne porte de genre (le schéma n'a pas de champ) ; le « Elle » était écrit en dur.
+    // La forme neutre du projet (« il·elle », comme `teamDetails.invite.emptyExplanation`).
     expect(mockAlerte).toHaveBeenCalledWith(
       'Invitation envoyée',
-      'Chloé D va recevoir une notification. Elle rejoindra l\'équipe si elle accepte.',
+      'Chloé D va recevoir une notification. Il·elle rejoindra l\'équipe en acceptant.',
     );
   });
 

@@ -1,6 +1,8 @@
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { describeCoachPromptTitle } from '@/components/organisms/matchStats/matchStatsPromptModel';
+
 /**
  * ST-RETOURS (02/10) — CE QUE DIT UN RETOUR DU COACH, sans React : les lignes que la carte
  * affiche (planche 19) et ce qui est « nouveau ». Teste a part : `__tests__/coachFeedbackModel`.
@@ -39,6 +41,21 @@ export const feedbackResultLabel = (t, item) => {
 };
 
 /**
+ * FINITIONS14 · point 4 (planche 19) — LE TITRE d un retour : « AS Montrivage — Test-COMPO », et
+ * « AS Montrivage — adversaire à confirmer » tant qu il est inconnu. La regle du rappel
+ * (`describeCoachPromptTitle`) : le serveur nomme l adversaire d un match de club
+ * (`opponentName`) et son club (`clubName` — le parent n a pas les equipes de son enfant) ;
+ * sinon l equipe. Serveur d avant, ou retour de championnat : `matchLabel`, comme avant.
+ * @param {(key: string, options?: any) => string} t - La traduction.
+ * @param {any} item - Le retour.
+ * @returns {string} - Le titre.
+ */
+export const feedbackTitle = (t, item) => describeCoachPromptTitle(
+  { ...item, label: item?.matchLabel || t('stRetours.feedback.matchFallback') },
+  item?.clubName || item?.teamName,
+);
+
+/**
  * La ligne sous le titre d un retour.
  *   · dans la liste : « U15 · sam. 5 sept. · victoire 2 - 1 · de Karim » ;
  *   · sur la fiche de l enfant :
@@ -50,7 +67,7 @@ export const feedbackResultLabel = (t, item) => {
  */
 export const feedbackMetaLine = (t, item, variant = 'list') => {
   const author = String(item?.authorFirstname || '').trim();
-  const head = variant === 'latest' ? item?.matchLabel : item?.teamName;
+  const head = variant === 'latest' ? feedbackTitle(t, item) : item?.teamName;
   return [
     String(head || '').trim(),
     formatFeedbackDay(item?.matchDate || item?.publishedAt || item?.submittedAt),

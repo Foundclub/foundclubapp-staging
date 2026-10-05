@@ -1,3 +1,4 @@
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
@@ -32,6 +33,25 @@ const formatHour = (value) => {
   if (!date || Number.isNaN(date.getTime())) return '';
   const deux = (/** @type {number} */ valeur) => String(valeur).padStart(2, '0');
   return `${deux(date.getHours())}:${deux(date.getMinutes())}`;
+};
+
+/**
+ * FINITIONS14 (T13-bis, planches 7 et 17) — le jour comme l ecrivent les planches des
+ * collectivites : « jeu. 1 oct. » ; '' si illisible.
+ * ⛔ Pas dans `formatDateWithDayPrefix` (« jeu 01/10/2026 ») : cet utilitaire sert 21 fichiers,
+ * dont 11 hors des collectivites (cartes d evenement, reservations, annonces…). Changer son
+ * format les changerait tous sans planche qui le demande.
+ * @param {string | Date | null | undefined} value - La date.
+ * @returns {string} Le jour.
+ */
+export const formatCollectiviteDay = (value) => {
+  const date = value ? new Date(/** @type {any} */ (value)) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(localeDesFormats(), {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'short',
+  }).format(date);
 };
 
 /**

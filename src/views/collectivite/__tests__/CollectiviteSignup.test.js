@@ -1,4 +1,6 @@
-import { Text, TextInput, TouchableOpacity } from 'react-native';
+import {
+  ScrollView, Text, TextInput, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { updateMe } from '@/services/auth/authService';
@@ -328,6 +330,44 @@ describe('COLL-ACCUEIL — planche 5 (états 5, 6), P2-gestion (état 7) : la de
       .toEqual(expect.arrayContaining(['Demande refusée', '« Lien non vérifié. »']));
     await appuyer(arbre, 'bouton-Refaire une demande');
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
+  });
+
+  // FINITIONS14 · point 5 (T13-bis, planche 7, état 5) — « Compris » était collé sous le texte ;
+  // la planche le pose EN PIED (`pied-fixe`), hors de la zone qui défile. Et les dates
+  // s'écrivent comme la planche : « Demande envoyée le jeu. 1 oct. ».
+  it('FIN14 · 🚨 juste envoyée : « Compris » est EN PIED, hors de la zone qui défile', async () => {
+    mockParams = { justSent: true };
+    mockDemandes = { data: [EN_ATTENTE], isLoading: false, refetch: jest.fn() };
+    const arbre = await monter(CollectiviteSignupStatus);
+    const [bouton] = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'bouton-Compris'
+        && typeof n.props?.onPress === 'function',
+    );
+    let parent = bouton?.parent;
+    let dansLeDefilement = false;
+    while (parent) {
+      if (parent.type === ScrollView) dansLeDefilement = true;
+      parent = parent.parent;
+    }
+    expect(bouton).toBeDefined();
+    expect(dansLeDefilement).toBe(false);
+  });
+
+  it('FIN14 · 🚨 les dates comme la planche : « jeu. 1 oct. », « ven. 2 oct. »', async () => {
+    mockDemandes = { data: [EN_ATTENTE], isLoading: false, refetch: jest.fn() };
+    expect(textes(await monter(CollectiviteSignupStatus)))
+      .toContain('Demande envoyée le jeu. 1 oct.');
+    mockDemandes = {
+      data: [{
+        ...EN_ATTENTE,
+        decidedAt: '2026-10-02T09:00:00.000Z',
+        refusalReason: 'Non.',
+        status: 'refused',
+      }],
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    expect(textes(await monter(CollectiviteSignupStatus))).toContain('Réponse du ven. 2 oct.');
   });
 
   it('acceptée : l espace de la Ville s ouvre', async () => {

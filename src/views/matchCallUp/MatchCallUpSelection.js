@@ -368,14 +368,35 @@ function MatchCallUpSelection() {
   // ⚠️ Elles arrivent EN DERNIER et on ne garde que la premiere occurrence de
   // chaque identifiant : l'ordre des listes connues — donc le terrain et le banc
   // qui en decoulent — ne bouge pas d'un pouce.
+  //
+  // FINITIONS14 (T13-bis, F6-3 REPRODUIT) — ET LA 5e : LES INSTANTANES DU PACK PUBLIE.
+  // « Gerer l'evenement › Convocation » (`handleManageComposition`) ouvre le BROUILLON
+  // (la publication le garde, sans instantane), l'effectif ACTUEL et la charge du
+  // serveur, mais pas `selectedPlayers`. L'amorce cochait l'identifiant du titulaire
+  // parti (lu dans le pack), et aucune liste ne le portait : il sortait d'ici sans un
+  // mot, jamais annonce. Son nom n'existe plus que dans l'instantane de la compo
+  // publiee (`teamComposition.published`, ou le pack lui-meme quand c'est lui qu'on
+  // rouvre). Seuls les COCHES ressortent : un parti non convoque reste dehors.
+  // 🔒 Cette source ne sert QUE quand l'ecran peut juger (`peutJugerLesPartis`) :
+  // elle ne fait que NOMMER un parti, que `partisDeLEquipe` annonce et n'emmene pas.
+  // Sans la liste du serveur, rien ne change (FINITIONS2 4 : le parti n'est ni compte
+  // ni emmene).
+  const peutJugerLesPartis = Array.isArray(teamComposition?.eligiblePlayers) && !isClubTeamsLoading;
   const convoquesCoches = useMemo(() => {
     /** @type {Map<string, any>} */
     const parIdentifiant = new Map();
+    const instantanesPublies = peutJugerLesPartis
+      ? [existingComposition, teamComposition?.published].flatMap((/** @type {any} */ pack) => [
+        ...(Array.isArray(pack?.snapshotPlayers) ? pack.snapshotPlayers : EMPTY_LIST),
+        ...(Array.isArray(pack?.reserveSnapshotPlayers) ? pack.reserveSnapshotPlayers : EMPTY_LIST),
+      ])
+      : EMPTY_LIST;
     [
       ...squadPlayers,
       ...reinforcementPlayers,
       ...manualPlayers,
       ...(Array.isArray(convoquesRecus) ? convoquesRecus : EMPTY_LIST),
+      ...instantanesPublies,
     ].forEach((/** @type {any} */ player) => {
       const playerId = getCompositionPlayerId(player);
       if (!playerId || parIdentifiant.has(playerId)) return;
@@ -384,7 +405,16 @@ function MatchCallUpSelection() {
 
     return [...parIdentifiant.values()]
       .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
-  }, [convoquesRecus, manualPlayers, reinforcementPlayers, selectedIds, squadPlayers]);
+  }, [
+    convoquesRecus,
+    existingComposition,
+    manualPlayers,
+    peutJugerLesPartis,
+    reinforcementPlayers,
+    selectedIds,
+    squadPlayers,
+    teamComposition?.published,
+  ]);
 
   // FINITIONS6 · F6-3 (tournee 8) — LE CONVOQUE QUI N'EST PLUS DANS L'EQUIPE.
   //

@@ -13,7 +13,10 @@ import {
   View,
 } from 'react-native';
 
-import { isOfficialCollectiviteName } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  formatCollectiviteDay,
+  isOfficialCollectiviteName,
+} from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -28,7 +31,6 @@ import {
   useDecideManagerRequest,
 } from '@/services/collectivite/collectiviteQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /** @typedef {{ kind: 'accept' | 'refuse', request: any }} Decision */
@@ -102,9 +104,9 @@ function AdminManagerRequests() {
     .filter(Boolean)
     .join(' ')
     || t('collectiviteAccueil.console.sansNom', 'Compte sans nom');
-  const dateDe = (/** @type {unknown} */ valeur) => formatDateWithDayPrefix(
+  // FINITIONS14 (planche 17) — « jeu. 1 oct. », comme la planche.
+  const dateDe = (/** @type {unknown} */ valeur) => formatCollectiviteDay(
     /** @type {any} */ (valeur),
-    { fallback: '' },
   );
 
   const ecrireA = (/** @type {string} */ adresse) => Promise
@@ -348,6 +350,26 @@ function AdminManagerRequests() {
           : '',
         ...SANS_ECHAPPEMENT,
       });
+    const boutonRefuser = (
+      <Button
+        key="refuser"
+        onPress={() => ouvrirDecision('refuse', demande)}
+        title={t('collectiviteAccueil.console.refuser', 'Refuser')}
+        variant="Secondary"
+      />
+    );
+    const boutonValider = (
+      <Button
+        key="valider"
+        onPress={() => ouvrirDecision('accept', demande)}
+        title={
+          ville.exists
+            ? t('collectiviteAccueil.console.valider', 'Valider : nommer gestionnaire')
+            : t('collectiviteAccueil.console.validerCreer', 'Valider et créer la Ville')
+        }
+        variant="Primary"
+      />
+    );
     return (
       <View
         style={[
@@ -437,21 +459,11 @@ function AdminManagerRequests() {
             )}
           </Text>
         </View>
+        {/* FINITIONS14 (T13-bis, planche 17) — téléphone : « Valider » AU-DESSUS de « Refuser »
+            (état 2) ; site : « Refuser » à gauche du geste principal (planche ordi, état A). */}
         <View style={[enColonnes ? Alignments.row : null, { gap: 12, justifyContent: 'flex-end' }]}>
-          <Button
-            onPress={() => ouvrirDecision('refuse', demande)}
-            title={t('collectiviteAccueil.console.refuser', 'Refuser')}
-            variant="Secondary"
-          />
-          <Button
-            onPress={() => ouvrirDecision('accept', demande)}
-            title={
-              ville.exists
-                ? t('collectiviteAccueil.console.valider', 'Valider : nommer gestionnaire')
-                : t('collectiviteAccueil.console.validerCreer', 'Valider et créer la Ville')
-            }
-            variant="Primary"
-          />
+          {enColonnes ? boutonRefuser : boutonValider}
+          {enColonnes ? boutonValider : boutonRefuser}
         </View>
       </View>
     );

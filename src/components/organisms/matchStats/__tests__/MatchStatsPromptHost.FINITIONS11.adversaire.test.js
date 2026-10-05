@@ -218,3 +218,54 @@ describe('FINITIONS11 · point 2 — la fenêtre de l entraîneur nomme l advers
     expect(textes(racine)).toContain('Les Lions VS Les Aigles');
   });
 });
+
+// ==========================================================================
+// FINITIONS14 · point 4 (FINITIONS13-STATS 6c/6d) — LA FENÊTRE DU JOUEUR AUSSI.
+// Planche « Rappel d'après-match du joueur » : « AS Montrivage — Test-COMPO ». La T13-bis a vu
+// « Match vs Test-COMPO » : la fenêtre du joueur gardait `label`. Le serveur envoie désormais
+// `opponentName` dans le rappel du joueur ; son club vient des équipes où il JOUE (`myTeams`).
+// ==========================================================================
+describe('FINITIONS14 · point 4 — la fenêtre du joueur nomme l adversaire', () => {
+  const HUGO = {
+    documentId: 'hugo',
+    myTeams: [{ club: { name: 'AS Montrivage' }, documentId: 'u15', name: 'U15' }],
+    trainedTeams: [],
+  };
+  const rappelJoueur = (/** @type {any} */ champs = {}) => ({
+    actionType: 'player_self_report',
+    endedAt: '2026-09-05T18:00:00.000Z',
+    eventId: 'match-19h',
+    key: 'event:match-19h:u15:self',
+    label: 'Match vs Test-COMPO',
+    personalResponse: null,
+    score: { available: true, scoreAgainst: 1, scoreFor: 2 },
+    sourceType: 'event',
+    sport: 'football',
+    state: 'todo',
+    team: { documentId: 'u15', name: 'U15' },
+    ...champs,
+  });
+
+  test('1 · 🔴 « AS Montrivage — Test-COMPO », plus « Match vs Test-COMPO »', async () => {
+    mockUtilisateur = HUGO;
+    const racine = await monter(charge([rappelJoueur({ opponentName: 'Test-COMPO' })]));
+    const vus = textes(racine);
+
+    expect(vus).toContain('AS Montrivage — Test-COMPO');
+    expect(vus).not.toContain('Match vs Test-COMPO');
+  });
+
+  test('2 · 🔴 adversaire inconnu : « AS Montrivage — adversaire à confirmer »', async () => {
+    mockUtilisateur = HUGO;
+    const racine = await monter(charge([rappelJoueur({ label: 'Match de championnat U15', opponentName: null })]));
+
+    expect(textes(racine)).toContain('AS Montrivage — adversaire à confirmer');
+  });
+
+  test('3 · 🔒 serveur d AVANT (pas de champ) : le titre d avant', async () => {
+    mockUtilisateur = HUGO;
+    const racine = await monter(charge([rappelJoueur()]));
+
+    expect(textes(racine)).toContain('Match vs Test-COMPO');
+  });
+});

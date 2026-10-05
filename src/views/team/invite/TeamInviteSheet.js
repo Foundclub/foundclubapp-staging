@@ -181,7 +181,8 @@ function TeamInviteSheetBody({
         t('teamDetails.invite.sentTitle', 'Invitation envoyée'),
         t(
           'teamDetails.invite.sentMessage',
-          '{{name}} va recevoir une notification. Elle rejoindra l\'équipe si elle accepte.',
+          // FINITIONS14 (T13-bis) — aucun compte ne porte de genre : la forme neutre du projet.
+          '{{name}} va recevoir une notification. Il·elle rejoindra l\'équipe en acceptant.',
           {
             name: variables?.userName || t('teamDetails.invite.someone', 'Cette personne'),
             ...SANS_ECHAPPEMENT,

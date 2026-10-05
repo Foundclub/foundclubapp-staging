@@ -695,6 +695,13 @@ function TeamListContent({
 
       const memberCount = getTeamMemberCount(item);
       const trainerCount = getTeamTrainerCount(item);
+      // FINITIONS14 (T13-bis, photo F10) — l'equipe d'une invitation recue arrive SANS son
+      // effectif (ni listes, ni compteurs) : la grille disait « 0 Membres, 0 Entraineur·e·s » pour
+      // une U15 qui en a 2 et 1. Un effectif inconnu ne s'affiche pas en zero.
+      const effectifConnu = ['players', 'trainers', 'members']
+        .some((cle) => Array.isArray(item?.[cle]))
+        || (item?.playersCount ?? null) !== null
+        || (item?.trainersCount ?? null) !== null;
       // Une etiquette par information REELLEMENT presente : les absentes sont
       // retirees de la liste, jamais rendues vides.
       const metaChips = [
@@ -864,7 +871,7 @@ function TeamListContent({
             qui contredisent l'explication juste au-dessus. Les equipes, elles,
             gardent leurs vrais compteurs, en attente comme ailleurs.
           */}
-          {isClubRequestCard ? null : (
+          {isClubRequestCard || !effectifConnu ? null : (
             <View
               style={[styles.statsBand, { backgroundColor: withAlpha(Colors.neutral00, 0.05) }]}
               testID="team-card-stats"
