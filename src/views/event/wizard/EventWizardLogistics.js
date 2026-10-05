@@ -153,6 +153,20 @@ const areSameDay = (firstDate, secondDate) => (
   && firstDate.getDate() === secondDate.getDate()
 );
 
+/**
+ * 🎨 FINITIONS13-COLL (04/10) — LE DÉBUT DE LA RÉPÉTITION SUIT LE JOUR DE LA SÉANCE tant qu'on ne
+ * l'a pas choisi ailleurs : resté au jour d'avant, ou plus tôt que la séance, il prend son nouveau
+ * jour ; choisi plus tard, il reste. Tournée T13 (C2_2a) : « samedi 3 octobre », le jour de la
+ * saisie, pour une séance le jeudi 8 ; déplacée au 22, la série aurait gardé les 8 et 15.
+ * @param {Date | null} debut - Le début de la répétition retenu.
+ * @param {Date} ancienne - Le jour de la séance avant le changement.
+ * @param {Date} nouvelle - Le nouveau jour de la séance.
+ * @returns {Date} Le début à retenir.
+ */
+export const debutDeRepetitionSuivant = (debut, ancienne, nouvelle) => (
+  !debut || areSameDay(debut, ancienne) || debut < nouvelle ? new Date(nouvelle) : debut
+);
+
 const buildDefaultRecurrenceEndDate = (startDate, frequency, interval) => {
   const fallbackEnd = new Date(startDate);
   if (frequency === 'month') {
@@ -404,6 +418,13 @@ function EventWizardLogistics({ navigation, route }) {
     patchRecurrenceDraft({ intervalText: toNumberInputText(draftInterval + 1) });
   };
 
+  // FINITIONS13-COLL (04/10) : changer le jour de la séance emmène le début de la répétition
+  // (`debutDeRepetitionSuivant`).
+  const changerLaDate = (/** @type {Date} */ nouvelle) => {
+    setRecurrenceStartDate((debut) => debutDeRepetitionSuivant(debut, date, nouvelle));
+    setDate(nouvelle);
+  };
+
   /**
    * Ouvre la feuille sur une COPIE des valeurs enregistrees.
    *
@@ -454,7 +475,7 @@ function EventWizardLogistics({ navigation, route }) {
     const suggestedEnd = buildAutomaticEndTime(suggestedStart);
 
     if (!areSameDay(date, suggestedStart)) {
-      setDate(suggestedStart);
+      changerLaDate(suggestedStart);
     }
 
     setStartTime(suggestedStart);
@@ -809,7 +830,7 @@ function EventWizardLogistics({ navigation, route }) {
             <DatePickerInput
               label={t('eventEdit.fields.date.label')}
               minimumDate={new Date()}
-              onChange={(text) => setDate(mergeDateInput(text, date))}
+              onChange={(text) => changerLaDate(mergeDateInput(text, date))}
               value={toDateInputText(date)}
             />
 
