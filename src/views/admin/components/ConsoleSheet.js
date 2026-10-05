@@ -76,7 +76,10 @@ function ConsoleSheet({
       isLoading={enCours}
       onPress={primary.onPress}
       title={primary.label}
-      variant={primary.variant || 'Primary'}
+      // FINITIONS14 (T13-bis, planche 16, états B, C, D) — le geste principal qui RETIRE est
+      // rouge PLEIN (« Retirer l'offre à 2 clubs », « Détacher », « Retirer Karim Benali ») ;
+      // il était en contour. Le second bouton garde son contour.
+      variant={primary.variant === 'Danger' ? 'DangerFilled' : primary.variant || 'Primary'}
     />
   );
 

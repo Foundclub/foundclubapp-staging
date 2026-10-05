@@ -29,6 +29,14 @@ const getStyle = (colors) => ({
     borderColor: colors.error500,
     borderWidth: 1,
   },
+  // FINITIONS14 (T13-bis, planche 16, `btn-dp`) — le rouge PLEIN du geste qui retire dans une
+  // fenetre de confirmation. Ajout purement additif : `buttonDanger` (contour) ne change pas.
+  buttonDangerFilled: {
+    ...buttonCommonStyle,
+    backgroundColor: colors.error500,
+    borderColor: colors.error500,
+    borderWidth: 1,
+  },
   buttonDisabled: {
     opacity: 0.5,
   },
@@ -125,6 +133,9 @@ const getStyle = (colors) => ({
   // existant ne change d apparence.
   buttonTextDanger: {
     color: colors.error500,
+  },
+  buttonTextDangerFilled: {
+    color: colors.neutral00,
   },
 
 });

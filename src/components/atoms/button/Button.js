@@ -15,7 +15,8 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {boolean} [props.disabled]
  * @param {import('react-native').Insets} [props.hitSlop]
  * @param {string} [props.title]
- * @param {'Primary'|'PrimaryLight'|'Secondary'|'SecondaryLight'|'Ghost'|'Danger'} [props.variant]
+ * @param {'Primary'|'PrimaryLight'|'Secondary'|'SecondaryLight'|'Ghost'|'Danger'
+ *   |'DangerFilled'} [props.variant]
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.style]
  * @param {import('react-native').TextStyle | import('react-native').TextStyle[]} [props.textStyle]
  * @param {keyof import('../../../theme/types').AllImages} [props.icon]
