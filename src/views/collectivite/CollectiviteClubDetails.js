@@ -19,8 +19,12 @@ import {
   ligneSeancesDeLaSemaine,
   nombreOuTiret,
 } from '@/domains/collectivite/collectiviteClubsDisplay';
-import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
-import { timeRange, weekdayName } from '@/domains/seasonSlot/seasonSlotDisplay';
+import {
+  findManagedCollectivite,
+  formatCollectiviteDay,
+  formatSlot,
+} from '@/domains/collectivite/collectiviteDisplay';
+import { timeRange, unSeulPointFinal, weekdayName } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -44,7 +48,6 @@ import {
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 import { SUPPORT_CONTACT_EMAIL } from '@/config/legalUrls';
@@ -674,18 +677,19 @@ function CollectiviteClubDetails() {
     } else if (offre.kind === 'own') {
       ligne = t('collectiviteClubs.detail.offerOwn', 'Son propre abonnement.');
     }
+    // FINITIONS15 point 8 : planche P2-fiche, « Depuis le jeu. 1 oct. ».
     const depuis = offre.kind === 'collectivite' && offre.since
-      ? formatDateWithDayPrefix(offre.since).split(' ').pop()
+      ? formatCollectiviteDay(offre.since)
       : '';
     return (
       <BlocDeFiche testID="fiche-club-offre" titre={t('collectiviteClubs.detail.offer', 'L’offre')}>
         <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne}</Text>
         {depuis ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {t('collectiviteClubs.detail.offerSince', 'Depuis le {{date}}.', {
+            {unSeulPointFinal(t('collectiviteClubs.detail.offerSince', 'Depuis le {{date}}.', {
               date: depuis,
               ...SANS_ECHAPPEMENT,
-            })}
+            }))}
           </Text>
         ) : null}
         <TouchableOpacity

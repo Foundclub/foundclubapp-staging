@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, useWindowDimensions, View } from 'react-native';
 
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -17,7 +18,6 @@ import {
   useSetAdminCollectiviteActive,
 } from '@/services/collectivite/collectiviteQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 // COLL-CONSOLE-BIS (03/10) — au-dela de cette largeur (le site), « Activer » se lit en tableau.
@@ -442,7 +442,8 @@ function CollectiviteActivation({ collectivite, etats = null }) {
       <Text style={[Fonts.p2, Fonts.neutral100]}>
         {[
           activer ? null : t('collectiviteConsoleBis.fiche.depuis', 'Depuis le {{date}}', {
-            date: formatDateWithDayPrefix(collectivite.activatedAt, { fallback: '—' }),
+            // FINITIONS15 point 8 : planche P2-fiche-ordi, « Depuis le jeu. 1 oct. ».
+            date: formatCollectiviteDay(collectivite.activatedAt) || '—',
             ...SANS_ECHAPPEMENT,
           }),
           phraseDuBandeau(t, collectivite, etats),

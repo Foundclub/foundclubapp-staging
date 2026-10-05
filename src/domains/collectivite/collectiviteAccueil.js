@@ -1,6 +1,7 @@
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
+
 import { RouteNames } from '@/navigation/routeNames';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
 
 /**
@@ -186,13 +187,14 @@ export const firstFullMoment = (blocs, maxSlots) => {
 };
 
 /**
- * Le moment complet, en mots courts : « jeu 18:00 » (même jour abrégé que formatSlot).
+ * Le moment complet, en mots courts : « jeu. 18:00 » (même jour abrégé que formatSlot ;
+ * FINITIONS15 point 8 : planche P3v2-accueil, « complet jeu. 18:00 »).
  * @param {Date | null} date - Le moment.
  * @returns {string} Le libellé, ou '' si la date est illisible.
  */
 export const formatWeekMoment = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
-  const [jour] = formatDateWithDayPrefix(date, { fallback: '' }).split(' ');
+  const [jour] = formatCollectiviteDay(date).split(' ');
   const deux = (/** @type {number} */ valeur) => String(valeur).padStart(2, '0');
   return `${jour} ${deux(date.getHours())}:${deux(date.getMinutes())}`;
 };

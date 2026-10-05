@@ -175,7 +175,9 @@ describe('COLL-CONSOLE-BIS — la date d activation, de la lecture à l écran',
     const arbre = await monter(<AdminCollectiviteList />);
     await attendre(() => Boolean(ligne(arbre, 'ville-a')));
     expect(textes(arbre.root)).toContain('Activée le');
-    expect(textes(ligne(arbre, 'ville-a'))).toContain('jeu 01/10/2026');
+    // INVERSE PAR FINITIONS15 point 8 — motif : la planche écrit « jeu. 1 oct. » (FINITIONS14 ⚖️ 4, A).
+    // Planche P2-liste-ordi : colonne « Activée le » = « jeu. 1 oct. ».
+    expect(textes(ligne(arbre, 'ville-a'))).toContain('jeu. 1 oct.');
     expect(textes(ligne(arbre, 'ville-b'))).toContain('—');
     expect(textes(ligne(arbre, 'ville-c'))).toContain('—');
   });
@@ -187,7 +189,9 @@ describe('COLL-CONSOLE-BIS — la date d activation, de la lecture à l écran',
     const avecDate = await monter(
       <CollectiviteActivation collectivite={{ ...base, activatedAt: ACTIVEE_LE_1ER }} />,
     );
-    expect(textes(avecDate.root).some((texte) => texte.startsWith('Depuis le jeu 01/10/2026 · ')))
+    // INVERSE PAR FINITIONS15 point 8 — motif : la planche écrit « jeu. 1 oct. » (FINITIONS14 ⚖️ 4, A).
+    // Planche P2-fiche-ordi : « Depuis le jeu. 1 oct. ».
+    expect(textes(avecDate.root).some((texte) => texte.startsWith('Depuis le jeu. 1 oct. · ')))
       .toBe(true);
     const sansDate = await monter(
       <CollectiviteActivation collectivite={{ ...base, activatedAt: null }} />,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { splitAdminInvitations } from '@/domains/collectivite/collectiviteConsole';
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -26,7 +27,6 @@ import {
   useLinkAdminCollectiviteInvitationClub,
 } from '@/services/collectivite/collectiviteQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /** @typedef {'rattachements' | 'foundclub' | 'faits'} Onglet */
@@ -120,9 +120,9 @@ function AdminCollectiviteInvitations() {
   const villeDe = (/** @type {any} */ demande) => formatCollectiviteOfferedBy(
     demande?.collectivite?.name || '',
   );
-  const dateDe = (/** @type {unknown} */ valeur) => formatDateWithDayPrefix(
+  // FINITIONS15 point 8 : planche P2-fiche, « Envoyée le jeu. 1 oct. ».
+  const dateDe = (/** @type {unknown} */ valeur) => formatCollectiviteDay(
     /** @type {any} */ (valeur),
-    { fallback: '' },
   );
 
   const onRattacher = (/** @type {any} */ demande) => {

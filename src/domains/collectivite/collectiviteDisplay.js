@@ -1,7 +1,6 @@
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getShortAddress } from '@/utils/location';
 
 /**
@@ -55,13 +54,14 @@ export const formatCollectiviteDay = (value) => {
 };
 
 /**
- * Le moment d une demande ou d un occupant : « jeu 01/10/2026 · 18:00 – 19:30 ».
+ * Le moment d une demande ou d un occupant : « jeu. 1 oct. · 18:00 – 19:30 » (FINITIONS15 point 8 :
+ * planches P3v2-accueil et P7v2-fiche).
  * @param {string | null | undefined} start - Debut (ISO).
  * @param {string | null | undefined} end - Fin (ISO).
  * @returns {string} Le libelle, ou '' si le debut est illisible.
  */
 export const formatSlot = (start, end) => {
-  const day = formatDateWithDayPrefix(start, { fallback: '' });
+  const day = formatCollectiviteDay(start);
   if (!day) return '';
   const from = formatHour(start);
   const to = formatHour(end);

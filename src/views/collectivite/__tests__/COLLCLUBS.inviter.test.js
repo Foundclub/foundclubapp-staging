@@ -242,10 +242,11 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
       'Invitations',
-      'Judo Club', 'Envoyée', 'Le 01/10/2026 · Transmise à l’équipe FoundClub · pas encore inscrit.',
+      // INVERSE PAR FINITIONS15 point 8 — la date comme les planches : « jeu. 1 oct. ».
+      'Judo Club', 'Envoyée', 'Le jeu. 1 oct. · Transmise à l’équipe FoundClub · pas encore inscrit.',
       'Recette Stripe FC', 'Inscrit',
-      'Le 01/10/2026 · Hors de la commune : l’équipe FoundClub vérifie avec vous avant de le rattacher.',
-      'Tennis Club', 'Rattaché', 'Le 20/09/2026 · Il apparaît dans vos clubs.',
+      'Le jeu. 1 oct. · Hors de la commune : l’équipe FoundClub vérifie avec vous avant de le rattacher.',
+      'Tennis Club', 'Rattaché', 'Le dim. 20 sept. · Il apparaît dans vos clubs.',
     ]));
     const relancer = arbre.root.findAll(
       (/** @type {any} */ n) => n.props?.title === 'Relancer' && typeof n.props?.onPress === 'function',
