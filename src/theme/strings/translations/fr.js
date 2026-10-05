@@ -15694,6 +15694,7 @@ export default {
       applyAgain: 'Postuler à nouveau',
       applyAsCoach: 'Candidater comme entraîneur',
       declinedNote: 'Ta candidature a été refusée par le club.',
+      expired: 'Annonce expirée',
       inactive: 'Annonce inactive',
       participating: 'Je participe',
       pending: 'Demande en attente',

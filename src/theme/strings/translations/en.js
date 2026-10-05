@@ -14913,6 +14913,7 @@ export default {
       applyAgain: 'Apply again',
       applyAsCoach: 'Apply as a coach',
       declinedNote: 'The club declined your application.',
+      expired: 'Ad expired',
       inactive: 'Inactive ad',
       participating: "I'm taking part",
       pending: 'Request pending',

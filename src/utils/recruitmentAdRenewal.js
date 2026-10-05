@@ -25,6 +25,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  *   l'annonce n'a pas d'echeance lisible : ni ligne, ni bouton.
  */
 export const getRecruitmentAdExpiry = (ad, now = new Date()) => {
+  // ANNONCE-RAPPEL, point 8 (choix du chef « A », 05/10) — une annonce liee a un EVENEMENT n'a
+  // pas d'echeance propre : ses postes naissent avec « +30 jours » par defaut (admin event.ts,
+  // createDetectionRecruitmentAdsForEvent), et c'est l'evenement qui la ferme. Ni badge
+  // « EXPIRÉE », ni ligne, ni « Renouveler » — meme exclusion que le serveur (apply, rappel J-3).
+  if (String(ad?.event?.documentId || '').trim()) return null;
   const expiresAt = Date.parse(String(ad?.expirationDate || ''));
   if (!Number.isFinite(expiresAt)) return null;
 

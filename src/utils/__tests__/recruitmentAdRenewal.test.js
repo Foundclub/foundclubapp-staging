@@ -87,6 +87,21 @@ describe('ANNONCE-RENOUVELER 2 — getRecruitmentAdExpiry : la fenetre des 7 jou
     const expiry = getRecruitmentAdExpiry({ expirationDate: '2026-11-12T23:30:00.000Z' }, NOW);
     expect(expiry?.expiresAt.toISOString()).toBe('2026-11-12T23:30:00.000Z');
   });
+
+  // ANNONCE-RAPPEL, point 8 (choix du chef « A », 05/10) — les postes d'une detection naissent
+  // avec « +30 jours » par defaut (admin event.ts, createDetectionRecruitmentAdsForEvent), sans
+  // lien avec la date de l'evenement : c'est l'EVENEMENT qui les ferme. Meme exclusion que le
+  // serveur (apply, rappel).
+  it('liee a un EVENEMENT : pas d echeance propre (ni badge, ni ligne, ni bouton)', () => {
+    const event = { date: '2026-10-15T08:00:00.000Z', documentId: 'ev-detection' };
+    const passee = '2026-10-01T10:00:00.000Z';
+    expect(getRecruitmentAdExpiry({ event, expirationDate: passee }, NOW)).toBeNull();
+    expect(getRecruitmentAdExpiry({ event, expirationDate: '2026-10-08T10:00:00.000Z' }, NOW))
+      .toBeNull();
+    // JUMEAU : sans evenement (`event: null`, comme le serveur la rend), l'echeance compte.
+    expect(getRecruitmentAdExpiry({ event: null, expirationDate: passee }, NOW)?.isExpired)
+      .toBe(true);
+  });
 });
 
 describe(`ANNONCE-RENOUVELER 2 — la date affichee est celle de l appareil (${FUSEAU})`, () => {
