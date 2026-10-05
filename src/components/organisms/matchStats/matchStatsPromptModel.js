@@ -161,6 +161,8 @@ export const resolveCoachStep = (prompt) => {
  * adversaire à confirmer » tant qu'il est inconnu. Le serveur nomme l'adversaire
  * (`opponentName`, `null` s'il est inconnu). Un serveur d'avant ne rend pas le champ : le titre
  * d'avant (`label`) reste. Même règle que la feuille de match (`MatchStatsEditor`).
+ * FINITIONS14 · point 4 — la MÊME règle titre désormais le rappel du JOUEUR (fenêtre et liste
+ * des matchs en attente) et les « Retours du coach » : le serveur y nomme aussi l'adversaire.
  * @param {any} prompt - Le rappel d'entraîneur.
  * @param {string} ourSide - Le camp de gauche : le club, sinon l'équipe.
  * @returns {string} Le titre.
@@ -176,6 +178,22 @@ export const describeCoachPromptTitle = (prompt, ourSide) => {
     side,
     opponent || i18next.t('stMatch.feuille.opponentUnknown', 'adversaire à confirmer'),
   ].join(' — ');
+};
+
+/**
+ * FINITIONS14 · point 4 — LE CLUB d'un rappel, camp de gauche du titre « AS Montrivage — … » :
+ * lu dans les équipes du compte, celles qu'il ENTRAÎNE puis celles où il JOUE (le serveur y
+ * peuple `club`). Le rappel ne porte que l'équipe ; lire le club côté serveur coûterait une
+ * requête de plus (FROIDMASSE). Inconnu : chaîne vide (l'appelant met l'équipe).
+ * @param {any} prompt - Le rappel (il porte `team.documentId`).
+ * @param {any} userData - Le compte.
+ * @returns {string} Le nom du club, ou une chaîne vide.
+ */
+export const findPromptClubName = (prompt, userData) => {
+  const teamId = prompt?.team?.documentId;
+  if (!teamId) return '';
+  return String([...(userData?.trainedTeams || []), ...(userData?.myTeams || [])]
+    .find((/** @type {any} */ team) => team?.documentId === teamId)?.club?.name || '').trim();
 };
 
 /**

@@ -7,7 +7,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Icone from '@/components/atoms/SvgIcon/SvgIcon';
-import { feedbackMetaLine } from '@/views/profile/coachFeedback/coachFeedbackModel';
+import { feedbackMetaLine, feedbackTitle } from '@/views/profile/coachFeedback/coachFeedbackModel';
 
 /**
  * ST-RETOURS (02/10) — « RETOURS DU COACH », planche 19 du design valide des statistiques.
@@ -142,7 +142,8 @@ export function CoachFeedbackCard({
   const meta = feedbackMetaLine(t, item, 'list');
   const comment = String(item?.comment || '').trim();
   const hasRating = typeof item?.rating === 'number';
-  const matchLabel = item?.matchLabel || t('stRetours.feedback.matchFallback');
+  // FINITIONS14 · point 4 — « AS Montrivage — Test-COMPO » (planche 19).
+  const matchLabel = feedbackTitle(t, item);
 
   return (
     <View

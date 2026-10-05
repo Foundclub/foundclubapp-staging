@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -18,7 +19,9 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import {
+  describeCoachPromptTitle,
   describeDraftRemaining,
+  findPromptClubName,
   formatPromptDay,
   formatPromptTime,
   resolveCoachStep,
@@ -171,6 +174,14 @@ function PendingMatchStatsScreen({ navigation }) {
   } = useTheme();
   const { width } = useWindowDimensions();
   const isWide = width >= WIDE_LAYOUT_MIN_WIDTH;
+  const { userData } = useAuth();
+  // FINITIONS14 · point 4 (FINITIONS13-STATS 6c/6d) — « AS Montrivage — Test-COMPO » sur chaque
+  // carte, « Pour moi » comme « Pour mon équipe » : la règle de la fenêtre de rappel. Le club vient
+  // des équipes du compte, sinon l'équipe ; serveur d'avant (sans `opponentName`) : `label`.
+  const titreDuRappel = (/** @type {any} */ prompt) => describeCoachPromptTitle(
+    prompt,
+    findPromptClubName(prompt, userData) || prompt?.team?.name,
+  );
 
   const {
     data: pendingPayload,
@@ -286,7 +297,7 @@ function PendingMatchStatsScreen({ navigation }) {
     const etat = describePendingState(item, t);
     return (
       <TouchableOpacity
-        accessibilityLabel={`${item?.label || 'Match'}, ${etat.label}`}
+        accessibilityLabel={`${titreDuRappel(item)}, ${etat.label}`}
         accessibilityRole="button"
         activeOpacity={0.85}
         key={item?.key}
@@ -307,7 +318,7 @@ function PendingMatchStatsScreen({ navigation }) {
           style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}
         >
           <Text style={[Fonts.p1Bold, Fonts.neutral00, { flexShrink: 1 }]}>
-            {item?.label || 'Match'}
+            {titreDuRappel(item)}
           </Text>
           <SvgIcon color={Colors.primary500} height={12} name="arrow-right" width={12} />
         </View>
@@ -376,7 +387,7 @@ function PendingMatchStatsScreen({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 3 }]}>
-              {item?.label || 'Match'}
+              {titreDuRappel(item)}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200, { flex: 1 }]}>{item?.team?.name || ''}</Text>
             <Text style={[Fonts.p2, Fonts.neutral200, { flex: 2 }]}>
