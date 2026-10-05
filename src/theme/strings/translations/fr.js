@@ -13542,6 +13542,7 @@ export default {
       responsesTitle: 'Aucune réponse pour le moment.',
     },
     item: {
+      expired: 'Expirée',
       new: 'Nouveau',
       offline: 'Hors ligne',
       online: 'En ligne',
@@ -15682,6 +15683,7 @@ export default {
       withdraw: 'Retirer ma candidature',
     },
     header: {
+      statusExpired: 'EXPIRÉE',
       statusInactive: 'INACTIF',
       statusOnline: 'EN LIGNE',
     },

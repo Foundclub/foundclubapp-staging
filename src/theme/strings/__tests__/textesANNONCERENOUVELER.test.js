@@ -46,6 +46,21 @@ afterAll(async () => {
   await i18n.changeLanguage('fr');
 });
 
+// Point 6 (choix du chef « badge A ») : le badge de la fiche et la pastille de « Mes annonces ».
+const ETATS = {
+  'myActivitiesScreen.item.expired': ['Expirée', 'Expired'],
+  'recruitmentAdDetails.header.statusExpired': ['EXPIRÉE', 'EXPIRED'],
+};
+
+describe('ANNONCE-RENOUVELER (6) — « EXPIRÉE » / « Expirée »', () => {
+  it.each(Object.entries(ETATS))('%s en fr et en en', async (clef, [francais, anglais]) => {
+    await i18n.changeLanguage('fr');
+    expect(i18n.t(clef)).toBe(francais);
+    await i18n.changeLanguage('en');
+    expect(i18n.t(clef)).toBe(anglais);
+  });
+});
+
 describe('ANNONCE-RENOUVELER (4) — les textes du renouvellement', () => {
   it.each(Object.entries(TEXTES))('%s en francais', async (clef, [francais]) => {
     await i18n.changeLanguage('fr');

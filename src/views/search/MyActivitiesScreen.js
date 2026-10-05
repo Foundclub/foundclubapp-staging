@@ -226,6 +226,17 @@ function MyActivitiesScreen({ navigation }) {
     </Text>
   );
 
+  /**
+   * L'etat d'une publication : en ligne, expiree (ANNONCE-RENOUVELER 6), ou hors ligne.
+   * @param {any} item La publication.
+   * @returns {string} Le libelle.
+   */
+  const publicationStateLabel = (item) => {
+    if (item.isOnline) return t('myActivitiesScreen.item.online', 'En ligne');
+    if (item.isExpired) return t('myActivitiesScreen.item.expired', 'Expirée');
+    return t('myActivitiesScreen.item.offline', 'Hors ligne');
+  };
+
   const renderCard = (/** @type {any} */ item) => (
     <TouchableOpacity
       accessibilityLabel={item.title}
@@ -294,10 +305,7 @@ function MyActivitiesScreen({ navigation }) {
             }}
             />
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {item.isOnline ? t('myActivitiesScreen.item.online', 'En ligne') : t(
-                'myActivitiesScreen.item.offline',
-                'Hors ligne',
-              )}
+              {publicationStateLabel(item)}
             </Text>
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
               {`· ${item.countLabel}`}

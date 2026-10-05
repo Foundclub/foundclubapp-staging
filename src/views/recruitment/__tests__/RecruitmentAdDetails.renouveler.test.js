@@ -434,3 +434,51 @@ describe('ANNONCE-RENOUVELER 3 — l appui sur « Renouveler 30 jours »', () =>
     expect(mockRenewRecruitmentAd).toHaveBeenCalledTimes(2);
   });
 });
+
+// ANNONCE-RENOUVELER, point 6 (choix du chef « badge A », 05/10) — le badge de la fiche lisait
+// `isActive` seul ; aucun serveur ne le passe a false a l'echeance : une annonce expiree disait
+// « EN LIGNE » a TOUT lecteur, a cote de « Expirée depuis le … » chez son auteur.
+// Meme borne que la ligne (utils/recruitmentAdRenewal.js).
+describe('ANNONCE-RENOUVELER 6 — le badge de la fiche dit « EXPIRÉE » apres l echeance', () => {
+  /**
+   * Les textes rendus, un par un (le badge est un texte a lui seul).
+   * @param {any} tree L'arbre rendu.
+   * @returns {string[]} Les textes.
+   */
+  const textes = (tree) => collectText(tree.toJSON());
+
+  it('un TIERS sur une annonce expiree : « EXPIRÉE », plus « EN LIGNE »', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: inDays(-2) });
+
+    expect(textes(tree)).toContain('EXPIRÉE');
+    expect(textes(tree)).not.toContain('EN LIGNE');
+  });
+
+  it('l AUTEUR aussi, avec sa ligne « Expirée depuis le … »', async () => {
+    const expiree = { ...AD, expirationDate: inDays(-2) };
+    const { tree } = await renderFor(AUTEUR, expiree);
+
+    expect(textes(tree)).toContain('EXPIRÉE');
+    expect(allText(tree)).toContain(`Expirée depuis le ${dateOf(expiree.expirationDate)}`);
+  });
+
+  it('echeance pas encore passee (J+3) : « EN LIGNE »', async () => {
+    const { tree } = await renderFor(TIERS);
+
+    expect(textes(tree)).toContain('EN LIGNE');
+    expect(textes(tree)).not.toContain('EXPIRÉE');
+  });
+
+  it('sans echeance (ancienne annonce) : « EN LIGNE », comme avant', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: null });
+
+    expect(textes(tree)).toContain('EN LIGNE');
+  });
+
+  it('une annonce desactivee reste « INACTIF », meme expiree', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, expirationDate: inDays(-2), isActive: false });
+
+    expect(textes(tree)).toContain('INACTIF');
+    expect(textes(tree)).not.toContain('EXPIRÉE');
+  });
+});

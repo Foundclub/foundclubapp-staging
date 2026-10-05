@@ -12762,6 +12762,7 @@ export default {
       responsesTitle: 'No replies yet.',
     },
     item: {
+      expired: 'Expired',
       new: 'New',
       offline: 'Offline',
       online: 'Live',
@@ -14904,6 +14905,7 @@ export default {
       withdraw: 'Withdraw my application',
     },
     header: {
+      statusExpired: 'EXPIRED',
       statusInactive: 'INACTIVE',
       statusOnline: 'LIVE',
     },

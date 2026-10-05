@@ -21,6 +21,7 @@ import i18next from 'i18next';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { getRecruitmentAdExpiry } from '@/utils/recruitmentAdRenewal';
 import { getRecruitmentAdPlayerTitle } from '@/utils/recruitmentAdTitle';
 
 import { getCoachRoleLabel } from '@/constants/coachRoles';
@@ -79,6 +80,10 @@ export const buildRecruitmentAdTitle = (ad) => {
  */
 const toRecruitmentPublication = (ad) => {
   const count = Number(ad?.applicationsCount || 0);
+  // ANNONCE-RENOUVELER (6) : une annonce active dont l'echeance est passee est EXPIREE, pas
+  // « En ligne » — aucun serveur ne passe `isActive` a false a l'echeance (meme borne que la
+  // fiche, utils/recruitmentAdRenewal.js). Test : MyActivitiesScreen.annonceExpiree.test.js.
+  const isExpired = Boolean(ad?.isActive) && Boolean(getRecruitmentAdExpiry(ad)?.isExpired);
   return {
     ad,
     countLabel: i18next.t('myActivitiesFeed.applicationCount', {
@@ -86,7 +91,8 @@ const toRecruitmentPublication = (ad) => {
       defaultValue_one: '{{count}} candidature',
       defaultValue_other: '{{count}} candidatures',
     }),
-    isOnline: Boolean(ad?.isActive),
+    isExpired,
+    isOnline: Boolean(ad?.isActive) && !isExpired,
     key: `offre-${documentKey(ad)}`,
     market: 'recruitment',
     meta: joinMeta([

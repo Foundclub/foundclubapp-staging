@@ -230,6 +230,15 @@ function RecruitmentAdDetails() {
   // co-entraineur (admin recruitment-ad-custom.ts, `renew`). Bouton a 7 jours de l'echeance ou
   // apres. Test : __tests__/RecruitmentAdDetails.renouveler.test.js.
   const isAuthor = useMemo(() => isAdAuthor(ad, userData), [userData, ad]);
+  // Point 6 (choix du chef « badge A ») : une fois l'echeance passee, le badge dit « EXPIRÉE »
+  // a TOUT lecteur — aucun serveur ne passe `isActive` a false a l'echeance.
+  const isOnline = Boolean(ad?.isActive) && !getRecruitmentAdExpiry(ad)?.isExpired;
+  let statusBadgeLabel = t('recruitmentAdDetails.header.statusInactive', 'INACTIF');
+  if (isOnline) {
+    statusBadgeLabel = t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE');
+  } else if (ad?.isActive) {
+    statusBadgeLabel = t('recruitmentAdDetails.header.statusExpired', 'EXPIRÉE');
+  }
   const expiry = isAuthor ? getRecruitmentAdExpiry(ad) : null;
   const canRenew = Boolean(expiry?.isRenewable);
 
@@ -1556,15 +1565,12 @@ function RecruitmentAdDetails() {
             )}
 
             <View style={[styles.statusBadge, {
-              backgroundColor: ad.isActive ? 'rgba(0, 179, 244, 0.2)' : 'rgba(100,100,100,0.2)',
-              borderColor: ad.isActive ? Colors.primary500 : Colors.neutral500,
+              backgroundColor: isOnline ? 'rgba(0, 179, 244, 0.2)' : 'rgba(100,100,100,0.2)',
+              borderColor: isOnline ? Colors.primary500 : Colors.neutral500,
             }]}
             >
-              <Text style={[Fonts.captionBold, { color: ad.isActive ? Colors.primary500 : Colors.neutral400 }]}>
-                {ad.isActive ? t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE') : t(
-                  'recruitmentAdDetails.header.statusInactive',
-                  'INACTIF',
-                )}
+              <Text style={[Fonts.captionBold, { color: isOnline ? Colors.primary500 : Colors.neutral400 }]}>
+                {statusBadgeLabel}
               </Text>
             </View>
           </View>
