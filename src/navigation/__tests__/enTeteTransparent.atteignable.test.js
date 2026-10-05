@@ -31,15 +31,15 @@ import { commonOptions } from '@/navigation/commonOptions';
  *     declare « invisible pour l'utilisateur » (`View.isVisibleToUser`, aire nulle)
  *     et les outils d'accessibilite sautent TOUT ce qu'elle contient : le releve de
  *     la T12 montre ce trou (indice 0 absent sous la carte).
- *   C'est le defaut amont react-navigation#13043 (« Headers on Android lose
- *   accessibility ability when headerTransparent: true »), corrige par #13075 dans
+ *   C'est le defaut amont react-navigation, ticket 13043 (« Headers on Android lose
+ *   accessibility ability when headerTransparent: true »), corrige par la demande 13075 dans
  *   une version plus recente que la notre.
  *
  * ✅ CE QUE CE FILET EXIGE, sur la VRAIE pile, en mode Android :
  *   1. chaque boite entre un bouton de l'en-tete et la racine a une hauteur ;
  *   2. l'en-tete ne prend toujours AUCUNE place dans la colonne : le contenu passe
  *      dessous, comme avant (l'apparence ne bouge pas — c'est le piege qu'a connu
- *      le premier correctif amont, react-navigation#13096).
+ *      le premier correctif amont, react-navigation, ticket 13096).
  *
  * ⚠️ Ce filet lit `node_modules` : il est ROUGE tant que le correctif
  * `patches/@react-navigation+stack+7.4.8.patch` n'est pas applique
