@@ -1145,6 +1145,9 @@ function Conversation({ navigation, route }) {
   });
 
   const [typingUsers, setTypingUsers] = useState(new Set());
+  // 🎨 FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion le DIT au pied du fil, tant
+  // que la connexion manque (tournée T13, C2_3b : la bannière passe et s'en va ; rien ne restait).
+  const [envoiRefuse, setEnvoiRefuse] = useState(false);
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
   // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
@@ -4518,6 +4521,7 @@ function Conversation({ navigation, route }) {
     if (messagesRefuses > 0) {
       // On ne vide RIEN : ni le champ, ni la citation. Le texte reste sous les
       // yeux de celui qui l'a ecrit, et il peut le renvoyer d'un appui.
+      setEnvoiRefuse(true);
       showErrorBanner(i18n.t(
         'conversation.connectionUnavailable',
         'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
@@ -4525,6 +4529,7 @@ function Conversation({ navigation, route }) {
       return;
     }
 
+    setEnvoiRefuse(false);
     setReplyingTo(null);
     setComposerText('');
   };
@@ -5832,6 +5837,20 @@ function Conversation({ navigation, route }) {
   };
 
   const renderFooter = () => {
+    // FINITIONS13-COLL (04/10) — l'envoi refusé, dit tant que la connexion manque.
+    const ligneEnvoiRefuse = envoiRefuse && !isSocketConnected ? (
+      <Text
+        style={[Fonts.p3Bold, Spaces.paddingHorizontal[16], { color: Colors.warning500 }]}
+        testID="conversation-envoi-refuse"
+      >
+        {i18n.t(
+          'conversation.envoiRefuse',
+          // eslint-disable-next-line max-len
+          'Ton message n’est pas parti : la connexion à la messagerie est coupée. Il reste dans le champ ; renvoie-le dans un instant.',
+        )}
+      </Text>
+    ) : null;
+    if (ligneEnvoiRefuse && typingUsers.size === 0) return ligneEnvoiRefuse;
     if (typingUsers.size > 0) {
       const typingNames = Array.from(typingUsers)
         .map((typingUserId) => resolveVoterName(String(typingUserId)))
@@ -5847,7 +5866,12 @@ function Conversation({ navigation, route }) {
         : i18n.t('conversation.typing.someone', "Quelqu'un écrit...");
       // MSGLIVE — la phrase ne change pas, la FORME change : les trois points
       // animés viennent se poser À CÔTÉ d'elle, jamais à sa place.
-      return <TypingIndicator label={typingLabel} />;
+      return ligneEnvoiRefuse ? (
+        <View style={{ gap: 4 }}>
+          {ligneEnvoiRefuse}
+          <TypingIndicator label={typingLabel} />
+        </View>
+      ) : <TypingIndicator label={typingLabel} />;
     }
     return null;
   };
@@ -6202,15 +6226,18 @@ function Conversation({ navigation, route }) {
         </View>
 
         <View style={{ alignItems: 'flex-start', flex: 1, paddingHorizontal: 16 }}>
+          {/* FINITIONS13-COLL (04/10) — le canal de la Ville tient sur deux lignes (T13, C2_3a :
+              « Dirigeants des clu… »). */}
           <Text
-            numberOfLines={1}
+            numberOfLines={filDeLaVille.estFil ? 2 : 1}
             style={[Fonts.h3, { color: Colors.neutral00 }]}
+            testID="conversation-titre"
           >
             {title}
           </Text>
           {subtitle ? (
             <Text
-              numberOfLines={1}
+              numberOfLines={filDeLaVille.estFil ? 2 : 1}
               style={[Fonts.p3, { color: Colors.neutral300 }]}
             >
               {subtitle}
@@ -6306,7 +6333,14 @@ function Conversation({ navigation, route }) {
             focusOnInputWhenOpeningKeyboard={!isPollModalVisible}
             infiniteScroll
             inverted
-            listViewProps={{ onScrollToIndexFailed: handleScrollToIndexFailed }}
+            // FINITIONS13-COLL (04/10) — un fil VIDE occupe toute la hauteur : sa phrase se centre
+            // (tournée T13, C2_3a : collée en bas). Avec des messages, rien ne change.
+            listViewProps={messagesAvecReactions.length
+              ? { onScrollToIndexFailed: handleScrollToIndexFailed }
+              : {
+                contentContainerStyle: { flexGrow: 1 },
+                onScrollToIndexFailed: handleScrollToIndexFailed,
+              }}
             loadEarlier={hasNextPage}
             locale={localeDesFormats().slice(0, 2)}
             messageContainerRef={messageContainerRef}

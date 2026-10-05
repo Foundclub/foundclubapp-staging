@@ -6220,6 +6220,8 @@ export default {
       body: 'Send the first message to start the conversation.',
       title: 'No messages yet',
     },
+    // FINITIONS13-COLL (04/10) — a message refused for lack of connection (round T13, C2_3b).
+    envoiRefuse: 'Your message was not sent: the messaging connection is down. It stays in the field; send it again in a moment.',
     eventFallback: 'Event',
     friendly: {
       matchConfirmedTitle: 'Match confirmed',

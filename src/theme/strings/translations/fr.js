@@ -6622,6 +6622,9 @@ export default {
       body: 'Envoie le premier message pour lancer la conversation.',
       title: 'Aucun message pour le moment',
     },
+    // FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion, au pied du fil (T13, C2_3b).
+    // eslint-disable-next-line max-len
+    envoiRefuse: 'Ton message n’est pas parti : la connexion à la messagerie est coupée. Il reste dans le champ ; renvoie-le dans un instant.',
     eventFallback: 'Événement',
     friendly: {
       matchConfirmedTitle: 'Match confirmé',
