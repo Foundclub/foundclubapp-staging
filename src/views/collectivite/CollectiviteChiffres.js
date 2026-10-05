@@ -295,6 +295,15 @@ function CollectiviteChiffres() {
   const [lundi, setLundi] = useState(/** @type {string | null} */ (null));
   // COLL-AFFICHE-2 (03/10) — l'affiche d'une semaine, ou de toute la saison.
   const [etendue, setEtendue] = useState(/** @type {'semaine' | 'saison'} */ ('semaine'));
+  // 🎨 FINITIONS13-COLL (04/10) — le message d'un téléchargement parle de CE choix : changer de
+  // sortie, d'installation, de période ou de semaine l'efface (tournée T12, CAF_4b : « Affiche
+  // enregistrée » restait sous « Un tableau pour le service »).
+  const choisir = (/** @type {() => void} */ geste) => {
+    geste();
+    setExportEtat((avant) => (avant.ok || avant.erreur
+      ? { enCours: avant.enCours, erreur: null, ok: null }
+      : avant));
+  };
   const installations = Array.isArray(data?.installations) ? data.installations : [];
   const installation = installations.find(
     (/** @type {any} */ i) => i?.documentId === installationChoisie,
@@ -611,7 +620,7 @@ function CollectiviteChiffres() {
                 'PDF · une semaine · aucune installation pour l’instant',
               )}
             inactif={installations.length === 0}
-            onPress={() => setSortie('affiche')}
+            onPress={() => choisir(() => setSortie('affiche'))}
             testID="export-affiche"
             titre={t('collectiviteChiffres.affiche.titre', 'Une affiche pour l’installation')}
           />
@@ -622,7 +631,7 @@ function CollectiviteChiffres() {
               'Tableur · toutes les séances · {{periode}}',
               { periode: intervalle, ...SANS_ECHAPPEMENT },
             )}
-            onPress={() => setSortie('tableau')}
+            onPress={() => choisir(() => setSortie('tableau'))}
             testID="export-tableau"
             titre={t('collectiviteChiffres.export.tableau', 'Un tableau pour le service')}
           />
@@ -637,7 +646,7 @@ function CollectiviteChiffres() {
                     choisie={i?.documentId === installationChoisie}
                     key={i?.documentId}
                     libelle={i?.name}
-                    onPress={() => setInstallationChoisie(i?.documentId)}
+                    onPress={() => choisir(() => setInstallationChoisie(i?.documentId))}
                     testID={`affiche-installation-${i?.documentId}`}
                   />
                 ))}
@@ -649,13 +658,13 @@ function CollectiviteChiffres() {
                 <PuceDeChoix
                   choisie={etendue === 'semaine'}
                   libelle={t('collectiviteChiffres.affiche.laSemaine', 'La semaine')}
-                  onPress={() => setEtendue('semaine')}
+                  onPress={() => choisir(() => setEtendue('semaine'))}
                   testID="affiche-periode-semaine"
                 />
                 <PuceDeChoix
                   choisie={etendue === 'saison'}
                   libelle={t('collectiviteChiffres.affiche.laSaison', 'La saison')}
-                  onPress={() => setEtendue('saison')}
+                  onPress={() => choisir(() => setEtendue('saison'))}
                   testID="affiche-periode-saison"
                 />
               </View>
@@ -671,7 +680,7 @@ function CollectiviteChiffres() {
                         'Semaine précédente',
                       )}
                       icone="arrow-left"
-                      onPress={() => setLundi((l) => lundiDecale(l, -1))}
+                      onPress={() => choisir(() => setLundi((l) => lundiDecale(l, -1)))}
                     />
                     <View
                       style={[
@@ -699,7 +708,7 @@ function CollectiviteChiffres() {
                         'Semaine suivante',
                       )}
                       icone="arrow-right"
-                      onPress={() => setLundi((l) => lundiDecale(l, 1))}
+                      onPress={() => choisir(() => setLundi((l) => lundiDecale(l, 1)))}
                     />
                   </View>
                 </>
