@@ -14921,6 +14921,17 @@ export default {
     owner: {
       posterCta: 'Create the poster to share',
     },
+    renewal: {
+      action: 'Renew for 30 days',
+      errorForbidden: 'Only the author of the ad can renew it.',
+      errorGeneric: 'Unable to extend the ad right now. Check your connection and try again.',
+      errorTitle: 'Renewal failed',
+      expiredSince: 'Expired on {{date}}',
+      expiresOn: 'Expires on {{date}}',
+      successBody: 'Ad extended until {{date}}.',
+      successBodyWithoutDate: 'Your ad is live again for 30 days.',
+      successTitle: 'Ad renewed',
+    },
     state: {
       loadError: 'Unable to load',
       loading: 'Loading...',
