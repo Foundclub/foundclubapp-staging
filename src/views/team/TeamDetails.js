@@ -1334,8 +1334,11 @@ function TeamDetails({ navigation, route }) {
     () => !!(teamId && canManageCurrentTeamExternalSync && externalCompetitionEligible),
     [canManageCurrentTeamExternalSync, externalCompetitionEligible, teamId],
   );
+  // FINITIONS14 · point 6 (décision d'Adel « externe staff », 05/10) — la carte « Source externe »
+  // (fournisseur, dernier envoi, qui l'a configurée) est réservée au STAFF de l'équipe : son
+  // entraîneur, le dirigeant du club. Le classement et le calendrier ne changent pas.
   const showExternalSyncCard = useMemo(
-    () => !!(
+    () => canManageCurrentTeamExternalSync && !!(
       canConfigureFFBB
       || team?.externalStandingUrl
       || externalSyncReport
@@ -1345,6 +1348,7 @@ function TeamDetails({ navigation, route }) {
     ),
     [
       canConfigureFFBB,
+      canManageCurrentTeamExternalSync,
       externalCompetitionEligible,
       externalSyncReport,
       team?.externalCompetitionName,

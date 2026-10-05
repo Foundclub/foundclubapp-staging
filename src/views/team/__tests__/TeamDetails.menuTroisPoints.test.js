@@ -798,6 +798,82 @@ describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
   });
 });
 
+// FINITIONS14 · point 6 (decision d'Adel « externe staff », tranchee « carte A » par le chef,
+// 05/10 ~17h45) — la carte « Source externe » (FFF/FFBB : fournisseur, dernier envoi, qui l'a
+// configuree) ne s'affiche plus qu'au STAFF de l'equipe : son entraineur, le dirigeant du club.
+// Un joueur la voyait. Le classement et le calendrier, eux, ne changent pas.
+describe('FINITIONS14 · point 6 — la carte « Source externe » est reservee au staff', () => {
+  const EQUIPE_RELIEE = {
+    ...EQUIPE,
+    externalCompetitionName: 'Regionale 2',
+    externalStandingUrl: 'https://exemple.test/classement',
+    externalTeamName: 'SENIORS A',
+  };
+  /** @type {any} */
+  let donneesDAvant;
+  beforeEach(() => {
+    donneesDAvant = mockReponseEquipe.data;
+    mockReponseEquipe.data = EQUIPE_RELIEE;
+  });
+  afterEach(() => {
+    mockReponseEquipe.data = donneesDAvant;
+  });
+
+  /**
+   * Ouvre l'onglet « Calendrier » (la carte y est posee, sous la liste des matchs).
+   * @param {any} racine La racine de l'arbre.
+   * @returns {void}
+   */
+  const ouvrirLeCalendrier = (racine) => {
+    const onglet = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+        && textesPortant(noeud, 'Calendrier').length > 0,
+    ).pop();
+    if (!onglet) throw new Error('Aucun onglet « Calendrier »');
+    act(() => {
+      onglet.props.onPress();
+    });
+  };
+
+  const JOUEUR_DE_L_EQUIPE = Object.freeze({
+    ...AUTH_VISITEUR,
+    userData: {
+      club: CLUB,
+      documentId: 'joueuse-1',
+      myTeams: [{ documentId: 'equipe-1' }],
+      role: { name: 'Joueur' },
+      teamMembershipRequests: [],
+      trainedTeams: [],
+    },
+  });
+
+  test('🚨 un JOUEUR de l equipe ne voit pas la carte', () => {
+    mockAuthCourant = JOUEUR_DE_L_EQUIPE;
+    const racine = monterLaFiche();
+    ouvrirLeCalendrier(racine);
+
+    expect(textesPortant(racine, 'Source externe')).toHaveLength(0);
+  });
+
+  test('🔒 l ENTRAINEUR de l equipe la voit toujours', () => {
+    mockAuthCourant = {
+      ...JOUEUR_DE_L_EQUIPE,
+      userData: { ...JOUEUR_DE_L_EQUIPE.userData, trainedTeams: [{ documentId: 'equipe-1' }] },
+    };
+    const racine = monterLaFiche();
+    ouvrirLeCalendrier(racine);
+
+    expect(textesPortant(racine, 'Source externe').length).toBeGreaterThan(0);
+  });
+
+  test('🔒 le DIRIGEANT du club la voit toujours', () => {
+    const racine = monterLaFiche();
+    ouvrirLeCalendrier(racine);
+
+    expect(textesPortant(racine, 'Source externe').length).toBeGreaterThan(0);
+  });
+});
+
 // FINITIONS14 · point 3 (T13-bis, defaut 3) — « Retirer ce joueur » : le serveur l'a retire
 // (PUT 13:48:22), la fiche le liste encore jusqu'a sa relecture (13:48:30, journal du
 // relais). La reussite ne faisait que relancer la lecture : la liste attendait un
