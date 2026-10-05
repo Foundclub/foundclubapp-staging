@@ -1160,6 +1160,10 @@ function EventEdit({ navigation, route }) {
                 <FacilitySelector
                   clubId={clubId || ''}
                   cmId={cmId || ''}
+                  // FINITIONS13-COLL (04/10) : la même liste que l'assistant (installations de la
+                  // Ville où le club a un créneau), et toujours celle de la séance (T12, T13 : le
+                  // Gymnase manquait).
+                  currentFacility={eventId ? event?.facility || null : null}
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   facilityId={watch('facility')}
                   location={value}
@@ -1177,6 +1181,8 @@ function EventEdit({ navigation, route }) {
                     setValue('facility', newFacilityId || '', { shouldDirty: true });
                   }}
                   onOccupancyResolved={setSelectedOccupancy}
+                  teamId={selectedTeamId || null}
+                  withVilleSlots
                 />
               )}
             />

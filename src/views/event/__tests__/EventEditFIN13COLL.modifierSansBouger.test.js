@@ -150,6 +150,7 @@ jest.mock(
     const react = jest.requireActual('react');
     const rn = jest.requireActual('react-native');
     return function FacilitySelectorDouble(/** @type {any} */ props) {
+      mockSelecteur.props = props;
       const { onOccupancyResolved } = props;
       react.useEffect(() => {
         onOccupancyResolved?.({ requiresApproval: true, saturated: true });
@@ -177,6 +178,10 @@ jest.mock(
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventTeamAudiencesEditor'),
 );
 /* eslint-enable global-require */
+
+// Ce que l'écran donne au sélecteur d'installation (point 8, « Modifier » sans le Gymnase).
+/** @type {{ props: any }} */
+const mockSelecteur = { props: null };
 
 // Le juge du déplacement (FINITIONS11-COLL) est doublé : son crochet a son propre témoin.
 const mockDecide = jest.fn(() => false);
@@ -267,6 +272,14 @@ afterEach(() => {
     act(() => { arbre.unmount(); });
     arbre = null;
   }
+});
+
+describe('FINITIONS13-COLL (8) — « Modifier » propose le lieu de la séance', () => {
+  test('les installations de la Ville (comme l’assistant) et celle de la séance', async () => {
+    await monter();
+    expect(mockSelecteur.props?.withVilleSlots).toBe(true);
+    expect(mockSelecteur.props?.currentFacility).toEqual(expect.objectContaining({ documentId: 'facility-1' }));
+  });
 });
 
 describe('FINITIONS13-COLL (6) — « Modifier » suit la décision du serveur', () => {
