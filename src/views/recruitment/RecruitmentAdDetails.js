@@ -236,8 +236,9 @@ function RecruitmentAdDetails() {
   // ANNONCE-RAPPEL, point 6 (choix du chef « A », 05/10) — le serveur refuse desormais une
   // candidature apres l'echeance (admin recruitment-ad-custom.ts, `apply`) : « Postuler » se grise
   // avec la meme borne. Une annonce liee a un EVENEMENT garde sa regle : c'est l'evenement qui la
-  // ferme. Test : __tests__/RecruitmentAdDetails.renouveler.test.js (ANNONCE-RAPPEL 6).
-  const isClosedByExpiry = !eventDocumentId && Boolean(getRecruitmentAdExpiry(ad)?.isExpired);
+  // ferme (exclusion portee par getRecruitmentAdExpiry, point 8).
+  // Test : __tests__/RecruitmentAdDetails.renouveler.test.js (ANNONCE-RAPPEL 6).
+  const isClosedByExpiry = Boolean(getRecruitmentAdExpiry(ad)?.isExpired);
   let statusBadgeLabel = t('recruitmentAdDetails.header.statusInactive', 'INACTIF');
   if (isOnline) {
     statusBadgeLabel = t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE');

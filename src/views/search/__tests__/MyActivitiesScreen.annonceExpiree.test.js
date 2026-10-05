@@ -185,4 +185,17 @@ describe('ANNONCE-RENOUVELER 6 — « Mes annonces » dit « Expirée » apres l
     expect(textes).toContain('Hors ligne');
     expect(textes).not.toContain('Expirée');
   });
+
+  // ANNONCE-RAPPEL, point 8 (choix du chef « A », 05/10) — un poste de detection a « +30 jours »
+  // par defaut, sans lien avec la date de la detection : c'est l'evenement qui le ferme.
+  it('liee a un EVENEMENT a venir, echeance depassee : « En ligne », pas « Expirée »', async () => {
+    const textes = await textesDeMesAnnonces([{
+      ...ANNONCE,
+      event: { date: inDays(10), documentId: 'ev-detection', type: { name: 'Détection' } },
+      expirationDate: inDays(-2),
+    }]);
+
+    expect(textes).toContain('En ligne');
+    expect(textes).not.toContain('Expirée');
+  });
 });

@@ -529,6 +529,30 @@ describe('ANNONCE-RAPPEL 6 — « Postuler » se grise apres l echeance', () => 
     expect(findButton(tree, POSTULER)?.props.disabled).toBe(false);
   });
 
+  // ANNONCE-RAPPEL, point 8 (choix du chef « A », 05/10) — meme regle pour le badge et la ligne.
+  it('liee a un EVENEMENT, echeance depassee : badge « EN LIGNE », pas « EXPIRÉE »', async () => {
+    const { tree } = await renderFor(TIERS, {
+      ...AD,
+      event: { date: inDays(10), documentId: 'ev-entrainement', type: { name: 'Entraînement' } },
+      expirationDate: inDays(-2),
+    });
+    const textes = collectText(tree.toJSON());
+
+    expect(textes).toContain('EN LIGNE');
+    expect(textes).not.toContain('EXPIRÉE');
+  });
+
+  it('liee a un EVENEMENT : l AUTEUR n a ni ligne d echeance ni « Renouveler »', async () => {
+    const { tree } = await renderFor(AUTEUR, {
+      ...AD,
+      event: { date: inDays(10), documentId: 'ev-entrainement', type: { name: 'Entraînement' } },
+      expirationDate: inDays(-2),
+    });
+
+    expect(allText(tree)).not.toMatch(/Expir/);
+    expect(findButton(tree, RENOUVELER)).toBeUndefined();
+  });
+
   it('une annonce desactivee garde « Annonce inactive », meme expiree', async () => {
     const { tree } = await renderFor(TIERS, { ...AD, expirationDate: inDays(-2), isActive: false });
 
