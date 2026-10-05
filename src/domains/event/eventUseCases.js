@@ -271,22 +271,20 @@ export const formatDateInput = (date) => {
 };
 
 /**
- * Convert a date string in the format 'dd/mm/yyyy' to a Date object.
- * @param {string} dateString
- * @returns {Date | undefined}
- */
-/**
- * Convert a date string in the format 'dd/mm/yyyy' to a Date object.
+ * Convert a date string in the format 'dd/mm/yyyy' to a Date object, at MIDNIGHT ON THE DEVICE.
+ *
+ * 🐞 FINITIONS15 point 2 (T14) : `new Date('yyyy-mm-dd')` se lit en UTC (1 h ou 2 h du matin à
+ * Paris). Une série qui traversait le passage à l'heure d'hiver perdait sa date de fin (fin le
+ * 29 oct. ⇒ dernière séance le 22). Les trois appelants (séries, fenêtre d'occupation et jour
+ * présélectionné d'`EventEdit`) lisent ensuite l'heure ou le jour EN LOCAL : minuit local est
+ * juste pour eux dans tout fuseau.
  * @param {string} dateString
  * @returns {Date | undefined}
  */
 export const getDateFromDateInput = (dateString) => {
   if (!dateString || typeof dateString !== 'string') return undefined;
-  const splittedDate = dateString.split('/');
-  const day = splittedDate[0];
-  const month = splittedDate[1];
-  const year = splittedDate[2];
-  const date = new Date(`${year}-${month}-${day}`);
+  const [day, month, year] = dateString.split('/').map((part) => Number(part));
+  const date = new Date(year, month - 1, day);
   if (Number.isNaN(date.getTime())) return undefined;
   return date;
 };
