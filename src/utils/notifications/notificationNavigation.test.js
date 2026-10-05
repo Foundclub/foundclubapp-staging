@@ -488,3 +488,27 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
     });
   });
 });
+
+// ANNONCE-RAPPEL (05/10) — le rappel « Ton annonce expire dans 3 jours » ouvre EXACTEMENT la
+// destination d'une nouvelle candidature sur la meme annonce : la fiche, ou se trouve
+// « Renouveler 30 jours ». Le site en tire le meme chemin (/recruitment/:adId, webRoutes.js).
+describe('ANNONCE-RAPPEL — le rappel J-3 d une annonce', () => {
+  test('ouvre la fiche de SON annonce, comme une candidature', () => {
+    const rappel = resolveNotificationDestination({
+      adId: 'ad-gardien',
+      ctaParams: '{"adId":"ad-gardien"}',
+      ctaRoute: 'RecruitmentAdDetails',
+      type: 'recruitment_ad_expiring',
+    });
+    const candidature = resolveNotificationDestination({
+      adId: 'ad-gardien',
+      type: NOTIFICATION_TYPES.RECRUITMENT_APPLICATION,
+    });
+
+    expect(rappel).toEqual({
+      params: { adId: 'ad-gardien' },
+      route: RouteNames.RecruitmentAdDetails,
+    });
+    expect(rappel).toEqual(candidature);
+  });
+});

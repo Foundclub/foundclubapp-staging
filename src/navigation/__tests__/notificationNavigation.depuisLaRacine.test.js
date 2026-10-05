@@ -427,6 +427,35 @@ const CAS = [
     nom: 'TournamentManagement : alerte effectif tournoi (notificationNavigation.js:1006-1012)',
     parametres: { eventId: 'evt-1' },
   },
+  {
+    // ANNONCE-RAPPEL (05/10) — charge REELLE, telle que la cloche la stocke :
+    // admin config/cron/recruitment-ad-expiry-reminder.ts (`data` de sendNotificationWithTemplate).
+    // Le type est inconnu de l'app : c'est `ctaRoute` qui ouvre la fiche
+    // (notificationNavigation.js:509), sur l'app deja installee comme sur la neuve.
+    charge: {
+      adId: 'ad-1',
+      ctaParams: { adId: 'ad-1' },
+      ctaRoute: 'RecruitmentAdDetails',
+      dedupeKey: 'recruitment_ad_expiring:ad-1:2026-10-25T10:00:00.000Z',
+      type: 'recruitment_ad_expiring',
+    },
+    ecran: RouteNames.RecruitmentAdDetails,
+    nom: 'RecruitmentAdDetails : rappel J-3 d une annonce, ctaRoute SERVEUR (cloche)',
+    parametres: { adId: 'ad-1' },
+  },
+  {
+    // La meme, telle que le PUSH l'apporte : FCM ne porte que du texte, les objets partent en
+    // JSON (admin send-notifications.ts, serializeDataForFcm).
+    charge: {
+      adId: 'ad-1',
+      ctaParams: '{"adId":"ad-1"}',
+      ctaRoute: 'RecruitmentAdDetails',
+      type: 'recruitment_ad_expiring',
+    },
+    ecran: RouteNames.RecruitmentAdDetails,
+    nom: 'RecruitmentAdDetails : rappel J-3 d une annonce, ctaRoute SERVEUR (push)',
+    parametres: { adId: 'ad-1' },
+  },
 ];
 
 // ---------------------------------------------------------------------------
