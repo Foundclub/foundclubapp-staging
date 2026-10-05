@@ -1615,7 +1615,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
-    chatData?.participants,
+    chatId,
     handleProposalResponse,
     handleVoteOnPoll,
     mutedTextColor,

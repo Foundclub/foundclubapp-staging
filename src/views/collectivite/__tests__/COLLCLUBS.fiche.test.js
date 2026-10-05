@@ -242,7 +242,7 @@ describe('COLL-CLUBS — planche 2 : la fiche d’un club, côté mairie', () =>
     const arbre = await monter();
     expect(textes(arbre)).toEqual(expect.arrayContaining([
       'Abonnement offert par la Ville de Montrivage.',
-      // INVERSE PAR FINITIONS15 point 8 — planche P2-fiche : « Depuis le jeu. 1 oct. » ; un seul point.
+      // INVERSE PAR FINITIONS15 point 8 — planche P2-fiche, « Depuis le jeu. 1 oct. ».
       'Depuis le mar. 15 sept.',
       'Pour la changer, écrivez à l’équipe FoundClub.',
     ]));

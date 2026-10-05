@@ -440,13 +440,19 @@ describe('FINITIONS13-COLL point 8 — le début de la répétition suit la séa
 // Quand l'utilisateur a choisi lui-même plusieurs jours, son choix reste, et le jour de la
 // nouvelle date s'y ajoute (la séance elle-même fait partie de la série) — comme avant.
 // ROUGE avant le lot.
-describe('FINITIONS15 point 1 — changer la date de la séance déplace le jour de la répétition', () => {
-  /** Le dernier rendu du champ « Date » de la séance (pas ceux de la feuille). */
+describe('FINITIONS15 point 1 — la date de la séance déplace le jour de la répétition', () => {
+  /**
+   * Le dernier rendu du champ « Date » de la séance (pas ceux de la feuille).
+   * @returns {any} Ses propriétés.
+   */
   const champDeLaDate = () => [...mockDates]
     .reverse()
     .find((props) => props.label === 'eventEdit.fields.date.label');
 
-  /** Les jours cochés au dernier rendu de la feuille. */
+  /**
+   * Les jours cochés au dernier rendu de la feuille.
+   * @returns {number[]} Les jours (0 = dimanche).
+   */
   const joursCoches = () => mockJours[mockJours.length - 1].selectedDays.map(Number);
 
   /**
@@ -466,7 +472,10 @@ describe('FINITIONS15 point 1 — changer la date de la séance déplace le jour
     return nouvelle;
   };
 
-  /** Le jour de la semaine de la séance, d'après son champ « Date ». */
+  /**
+   * Le jour de la semaine de la séance, d'après son champ « Date ».
+   * @returns {number} Le jour (0 = dimanche).
+   */
   const jourDeLaSeance = () => {
     const [jour, mois, annee] = champDeLaDate().value.split('/').map(Number);
     return new Date(annee, mois - 1, jour).getDay();
@@ -497,7 +506,7 @@ describe('FINITIONS15 point 1 — changer la date de la séance déplace le jour
     expect(joursCoches()).toEqual([nouvelle.getDay()]);
   });
 
-  test('plusieurs jours choisis par l utilisateur : son choix reste, le nouveau jour s ajoute', () => {
+  test('plusieurs jours choisis : son choix reste, le nouveau jour s ajoute', () => {
     afficherLEcran();
     ouvrirLaFeuille();
     const base = jourDeLaSeance();

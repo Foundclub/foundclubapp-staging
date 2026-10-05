@@ -81,8 +81,8 @@ jest.mock('@/services/client', () => ({
 // atteindre. Ils vivent dans le service que `useEventAnswerMutations` appelle,
 // le meme hook que les deux autres ecrans qui repondent depuis une carte.
 jest.mock('@/services/event/eventService', () => ({
-  missingEvent: (/** @type {any[]} */ ...args) => mockMissingEvent(...args),
-  respondToEventRsvp: (/** @type {any[]} */ ...args) => mockRespondToEventRsvp(...args),
+  missingEvent: jest.fn(),
+  respondToEventRsvp: jest.fn(),
 }));
 
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -251,7 +251,7 @@ const COMPOSITION = {
   type: 'lineup_share',
 };
 
-describe('FINITIONS15 point 6 — la carte de composition prend le nom du jour, même dessinée tôt', () => {
+describe('FINITIONS15 point 6 — la carte de composition prend le nom du jour', () => {
   beforeEach(() => {
     mockGiftedRenders.length = 0;
     mockBullesCompo.length = 0;
@@ -263,7 +263,7 @@ describe('FINITIONS15 point 6 — la carte de composition prend le nom du jour, 
     }
   });
 
-  test('la fiche du fil arrive APRÈS le dessin : la carte reçoit quand même ses participants', async () => {
+  test('la fiche du fil arrive APRÈS le dessin : la carte reçoit ses participants', async () => {
     // eslint-disable-next-line global-require
     const { QueryClient, QueryClientProvider } = require('@tanstack/react-query');
     // eslint-disable-next-line global-require

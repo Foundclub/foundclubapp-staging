@@ -444,10 +444,11 @@ const SEANCE_DANS_LE_CRENEAU = bloc({
   title: 'US Ville B · U15',
 });
 
-describe('FINITIONS15 point 3 — une séance posée dans un créneau dit qu elle est une séance', () => {
+describe('FINITIONS15 point 3 — une séance posée dans un créneau le dit', () => {
   beforeEach(() => { gereLaVille(); });
 
-  it('sa ligne d origine nomme la séance ET son créneau ; le créneau seul garde la sienne', async () => {
+  it('la séance nomme son créneau ; le créneau seul garde sa ligne', async () => {
+    const SEANCE = 'Séance du club dans son créneau : chaque mercredi, du 7 oct. au 30 juin';
     /** @type {any} */ (getFacilityPlanning).mockResolvedValue(
       reponse([SEANCE_DANS_LE_CRENEAU, BLOC_D_UN_AUTRE_CLUB]),
     );
@@ -460,7 +461,7 @@ describe('FINITIONS15 point 3 — une séance posée dans un créneau dit qu ell
     });
     await attendre();
     let lus = textes(arbre);
-    expect(lus).toContain('Séance du club dans son créneau : chaque mercredi, du 7 oct. au 30 juin');
+    expect(lus).toContain(SEANCE);
     expect(lus).not.toContain('Créneau attribué : chaque mercredi, du 7 oct. au 30 juin');
 
     await act(async () => {

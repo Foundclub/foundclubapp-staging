@@ -120,7 +120,7 @@ describe('COLL-ACCUEIL — la vision', () => {
   });
 
   it('le moment s écrit « jeu 18:00 »', () => {
-    // INVERSE PAR FINITIONS15 point 8 — motif : la planche écrit « jeu. 1 oct. » (FINITIONS14 ⚖️ 4, A).
+    // INVERSE PAR FINITIONS15 point 8 — motif : la planche écrit « jeu. 1 oct. ».
     // Planche P3v2-accueil : « complet jeu. 18:00 ».
     expect(formatWeekMoment(new Date(2030, 9, 3, 18, 0))).toBe('jeu. 18:00');
     expect(formatWeekMoment(null)).toBe('');
