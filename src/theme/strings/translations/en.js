@@ -5468,6 +5468,7 @@ export default {
       origineCreneau: 'Assigned slot: every {{jour}}, from {{debut}} to {{fin}}',
       origineDemande: 'Accepted request',
       origineDemandeSerie: 'Accepted request (every week)',
+      origineSeanceDansCreneau: 'Club session in its slot: every {{jour}}, from {{debut}} to {{fin}}',
       origineTitre: 'Origin of the place',
       placesLibres_one: '{{count}} place free at the busiest time',
       placesLibres_other: '{{count}} places free at the busiest time',

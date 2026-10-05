@@ -5836,6 +5836,8 @@ export default {
       origineCreneau: 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
       origineDemande: 'Demande acceptée',
       origineDemandeSerie: 'Demande acceptée (chaque semaine)',
+      // FINITIONS15 point 3 : une séance posée dans le créneau, à SES heures.
+      origineSeanceDansCreneau: 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}',
       origineTitre: 'Origine de la place',
       placesLibres_one: '{{count}} place libre au plus chargé',
       placesLibres_other: '{{count}} places libres au plus chargé',
