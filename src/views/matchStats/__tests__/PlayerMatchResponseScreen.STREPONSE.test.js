@@ -213,9 +213,10 @@ afterEach(async () => {
 /**
  * Monte l'écran sur l'enveloppe donnée.
  * @param {{ data?: any, error?: any, isLoading?: boolean }} enveloppe - Ce que rend la requête.
+ * @param {Record<string, any>} [parametres] - Des paramètres de route en plus (FINITIONS15 9g).
  * @returns {Promise<{ arbre: any, navigation: any }>} - L'écran monté et sa navigation.
  */
-const monter = async (enveloppe) => {
+const monter = async (enveloppe, parametres = {}) => {
   mockEnveloppe = {
     data: enveloppe.data ?? null,
     error: enveloppe.error ?? null,
@@ -225,7 +226,11 @@ const monter = async (enveloppe) => {
   const navigation = {
     canGoBack: jest.fn(() => true), goBack: jest.fn(), navigate: jest.fn(), replace: jest.fn(),
   };
-  const route = { params: { eventId: 'evt-u15', sourceType: 'event', teamId: 'team-u15' } };
+  const route = {
+    params: {
+      eventId: 'evt-u15', sourceType: 'event', teamId: 'team-u15', ...parametres,
+    },
+  };
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
@@ -328,6 +333,38 @@ describe('ST-REPONSE — « Mon retour de match », les 9 états de la planche',
     expect(tout).not.toContain('Ma performance');
     expect(appui(arbre, 'Brouillon').props.disabled).toBe(true);
     expect(appui(arbre, 'Envoyer').props.disabled).toBe(true);
+  });
+
+  // 🎨 FINITIONS15 point 9g (restes de FINITIONS14 ⚖️ 5) — planche P4 : « AS Montrivage —
+  // Test-COMPO ». Les cartes ouvraient l'écran avec l'ancien libellé (« Match vs Test-COMPO ») ; le
+  // serveur rend maintenant l'adversaire et le club, comme à la feuille de l'entraîneur : l'écran
+  // se titre SEUL, par la règle des cartes (`describeCoachPromptTitle`). ROUGE avant le lot.
+  test('🔴 FIN15 9g — le titre vient du serveur : « AS Montrivage — Test-COMPO »', async () => {
+    const { arbre } = await monter({
+      data: {
+        ...MATCH,
+        event: { ...MATCH.event, name: 'Match vs Test-COMPO', opponentName: 'Test-COMPO' },
+        response: null,
+        team: { ...MATCH.team, clubName: 'AS Montrivage' },
+      },
+    }, { matchLabel: 'Match vs Test-COMPO' });
+    const tout = textes(arbre);
+
+    expect(tout).toContain('AS Montrivage — Test-COMPO');
+    expect(tout).not.toContain('Match vs Test-COMPO');
+  });
+
+  test('🔴 FIN15 9g — adversaire inconnu : « AS Montrivage — adversaire à confirmer »', async () => {
+    const { arbre } = await monter({
+      data: {
+        ...MATCH,
+        event: { ...MATCH.event, name: 'Match', opponentName: null },
+        response: null,
+        team: { ...MATCH.team, clubName: 'AS Montrivage' },
+      },
+    }, { matchLabel: 'Match' });
+
+    expect(textes(arbre)).toContain('AS Montrivage — adversaire à confirmer');
   });
 
   test('2 · j\'ai joué : un sélecteur, un seul temps de jeu rempli par les pastilles', async () => {
