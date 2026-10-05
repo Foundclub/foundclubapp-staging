@@ -154,6 +154,26 @@ describe('ecran 4 — les 3 points de depart, et ce qui les grise', () => {
     expect(avecSource.find((option) => option.key === START_FROM_LAST_MATCH).available).toBe(true);
   });
 
+  // FINITIONS13-STATS · point 7 (T12) — le brouillon VIDE de l assistant arretait la cascade du
+  // serveur : « Dernier match » grise alors qu une compo publiee existait. Le serveur JOINT
+  // desormais la derniere publiee (`bootstrap.lastMatch`) : la rangee la lit.
+  test('🔴 FIN13 7 — brouillon vide + `lastMatch` joint : « Dernier match » est disponible', () => {
+    const options = buildStartFromOptions({
+      bootstrap: {
+        composition: { selectedPlayerIds: ['p1'], teams: [{ placements: [] }] },
+        lastMatch: { ...dernierMatch, event: { date: '2026-10-10T13:00:00.000Z' } },
+        source: 'draft',
+      },
+      players: ONZE,
+    });
+    const rangee = options.find((option) => option.key === START_FROM_LAST_MATCH);
+
+    expect(rangee.available).toBe(true);
+    expect(rangee.unavailableReason).toBeNull();
+    expect(rangee.placements.map((placement) => placement.playerId)).toEqual(['p1']);
+    expect(rangee.detail).toBe('2026-10-10T13:00:00.000Z');
+  });
+
   test('la compo type est cochee par defaut quand elle existe, sinon le terrain vide', () => {
     expect(getDefaultStartFromKey(buildStartFromOptions({
       defaultComposition: compoType, players: ONZE,
