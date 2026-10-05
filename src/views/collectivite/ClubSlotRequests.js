@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useCallback } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -56,6 +56,13 @@ function ClubSlotRequests() {
   const { width } = useWindowDimensions();
   const tableau = width >= LARGEUR_TABLEAU;
 
+  // 🎨 FINITIONS13-COLL (04/10) — UN SEUL TITRE (tournée T13, C2_4a : « Tes demandes à la Ville »
+  // écrit deux fois) : la page le porte, l'en-tête de navigation se tait, comme « Installations de
+  // la Ville » (COLL-C2B). Le bouton retour reste.
+  useLayoutEffect(() => {
+    navigation.setOptions?.({ headerTitle: '' });
+  }, [navigation]);
+
   const demandes = useSentFacilityOverrideRequests(clubId);
   const { refetch } = demandes;
   useFocusEffect(useCallback(() => { refetch?.(); }, [refetch]));
@@ -89,7 +96,17 @@ function ClubSlotRequests() {
   const momentDe = (/** @type {any} */ demande) => {
     const moment = momentDeLaDemande(demande);
     if (!moment) return '';
-    if (estDemandeHebdo(demande) && demande?.series) {
+    // 🎨 FINITIONS13-COLL (04/10) — une carte REFUSÉE d'une série ne dit pas la période de la série
+    // (celle des dates maintenues, tournée T13 C2_1e) : sa date, ou « chaque jeudi … · 3 dates ».
+    const refusee = demande?.status === 'refused';
+    const nombre = Number(demande?.seriesCount || 1);
+    if (estDemandeHebdo(demande) && demande?.series && refusee && nombre > 1) {
+      // eslint-disable-next-line max-len
+      return t('collectiviteDemandes.club.ligneSerieDates', 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates', {
+        debut: moment.debut, fin: moment.fin, jour: moment.jourSemaine, nombre, ...SANS_ECHAPPEMENT,
+      });
+    }
+    if (estDemandeHebdo(demande) && demande?.series && !refusee) {
       // eslint-disable-next-line max-len
       return t('collectiviteDemandes.club.ligneSerie', 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}', {
         // eslint-disable-next-line max-len

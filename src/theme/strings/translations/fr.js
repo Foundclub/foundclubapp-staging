@@ -5904,6 +5904,8 @@ export default {
       laVille: 'Ville',
       libreCeJour: 'Libre ce {{jour}} :',
       ligneSerie: 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
+      // FINITIONS13-COLL (04/10) — les dates refusées d'une série (tournée T13, C2_1e).
+      ligneSerieDates: 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
       // eslint-disable-next-line max-len
       momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',

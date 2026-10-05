@@ -5535,6 +5535,8 @@ export default {
       laVille: 'Town',
       libreCeJour: 'Free this {{jour}}:',
       ligneSerie: 'Every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}}',
+      // FINITIONS13-COLL (04/10) — the refused dates of a series (round T13, C2_1e).
+      ligneSerieDates: 'Every {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
       momentSerie: '{{equipe}} · every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'A note for the town hall (optional)',
