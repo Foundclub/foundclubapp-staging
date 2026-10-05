@@ -160,6 +160,20 @@ const isSameEntity = (left, right) => {
 };
 
 /**
+ * « Est-ce MOI qui ai publie cette annonce ? » — plus etroit que `canManageTeamAd`.
+ * ANNONCE-RENOUVELER (05/10) : le serveur ne laisse RENOUVELER que l'auteur, meme a un
+ * co-entraineur que sa police laisse passer
+ * (admin : recruitment-ad/controllers/recruitment-ad-custom.ts, `renew`).
+ * Test : __tests__/teamMembership.auteurAnnonce.test.js.
+ * @param {any} ad L'annonce (avec `author`).
+ * @param {any} user Le compte connecte (`userData`).
+ * @returns {boolean} true si ce compte en est l'auteur.
+ */
+export const isAdAuthor = (ad, user) => Boolean(
+  ad?.author && user && isSameEntity(ad.author, user),
+);
+
+/**
  * « Est-ce que je gere cette ANNONCE ? » — annonce de recrutement comme annonce
  * de match amical : le serveur tient la meme regle pour les deux,
  * `canManageTeam(equipe de l'annonce)` OU auteur de l'annonce
@@ -171,6 +185,6 @@ const isSameEntity = (left, right) => {
  */
 export const canManageTeamAd = (ad, user) => {
   if (!ad || !user) return false;
-  if (ad?.author && isSameEntity(ad.author, user)) return true;
+  if (isAdAuthor(ad, user)) return true;
   return isTeamManager(ad?.team, user);
 };
