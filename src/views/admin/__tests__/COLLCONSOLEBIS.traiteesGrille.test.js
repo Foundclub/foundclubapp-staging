@@ -238,6 +238,16 @@ beforeEach(() => {
 });
 
 describe('COLL-CONSOLE-BIS — planche 17 : « Traitées » en grille sur le site', () => {
+  it('FIN14 · 🔒 sur le site, « Refuser » reste à GAUCHE du geste principal (planche ordi, état A)', async () => {
+    mockLargeur = 1280;
+    mockEnAttente = lu([MONTRIVAGE]);
+    const arbre = await monter(<AdminManagerRequests />);
+    const ordre = textes(arbre)
+      .filter((texte) => texte === 'Refuser' || /^Valider/.test(texte));
+    expect(ordre[0]).toBe('Refuser');
+    expect(ordre[1]).toMatch(/^Valider/);
+  });
+
   it('sur le site : Personne | Collectivité | Issue | Le, une ligne par demande', async () => {
     mockLargeur = 1280;
     const arbre = await monter(<AdminManagerRequests />);
@@ -247,7 +257,8 @@ describe('COLL-CONSOLE-BIS — planche 17 : « Traitées » en grille sur le sit
       .toEqual(expect.arrayContaining(['Personne', 'Collectivité', 'Issue', 'Le']));
     const montrivage = textesSous(ligneTraitee(arbre, 'dm-1'));
     expect(montrivage.slice(0, 3)).toEqual(['Agnès Mairie', 'Ville de Montrivage', 'Validée']);
-    expect(montrivage[3]).toMatch(/02\/10\/2026 · Adel F$/);
+    // FINITIONS14 (planche 17) : la date comme la planche, « ven. 2 oct. ».
+    expect(montrivage[3]).toMatch(/^ven\. 2 oct\. · Adel F$/);
     const valfleuri = textesSous(ligneTraitee(arbre, 'dm-2'));
     expect(valfleuri.slice(0, 3)).toEqual(['Paul Valfleuri', 'Valfleuri', 'Refusée']);
     expect(valfleuri).toContain('« Lien non vérifié. »');
