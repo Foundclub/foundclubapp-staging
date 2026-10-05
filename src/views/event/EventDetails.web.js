@@ -21,7 +21,10 @@ import {
   isArrivalTrackingEnabled,
   isRsvpEnabled,
 } from '@/domains/event/presenceRule';
-import { resolveClientSourceTeamForUser } from '@/domains/participation/participationFlow';
+import {
+  resolveClientResponderDecision,
+  resolveClientSourceTeamForUser,
+} from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -474,6 +477,8 @@ function EventDetails({ navigation, route }) {
     isConvenedMember,
     isMissing: participationState?.isMissing,
     isParticipating: participationState?.isParticipating,
+    // FINITIONS15 point 9f : l'encadrant qui n'est pas joueur n'a pas cette porte (comme le téléphone).
+    isStaffOnly: resolveClientResponderDecision(event, userData).isStaffOnly,
     myAttendanceStatus: monPointage?.attendanceStatus,
   });
   const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);

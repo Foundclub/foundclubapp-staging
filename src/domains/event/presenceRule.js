@@ -54,6 +54,7 @@ export const LATE_PRESENCE_WINDOW_MS = 72 * 60 * 60 * 1000;
  *   isConvenedMember?: boolean,
  *   isMissing?: boolean,
  *   isParticipating?: boolean,
+ *   isStaffOnly?: boolean,
  *   myAttendanceStatus?: string | null,
  *   now?: number,
  * }} input
@@ -65,10 +66,15 @@ export const canDeclareLatePresence = ({
   isConvenedMember = false,
   isMissing = false,
   isParticipating = false,
+  isStaffOnly = false,
   myAttendanceStatus = null,
   now = Date.now(),
 }) => {
   if (!event || !isConvenedMember || !isRsvpEnabled(event)) return false;
+  // 🎨 FINITIONS15 point 9f (T14) — l'encadrant qui n'est pas joueur (`isStaffOnly`) n'est pas
+  // invité à « passer présent » : planche Statistiques P4, état 7, « il a sa carte d'entraîneur,
+  // et c'est tout ». L'app ferme ici une porte que le serveur laisse ouverte : rien ne s'écrit.
+  if (isStaffOnly) return false;
   if (event?.league_match) return false;
   if (String(event?.eventFormat || '').trim().toLowerCase() === 'stage_day') return false;
   if (isParticipating || isMissing || hasPendingRequest) return false;

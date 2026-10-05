@@ -46,6 +46,7 @@ import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/even
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getParticipationErrorMessage,
+  resolveClientResponderDecision,
   resolveClientSourceTeamForUser,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
@@ -2212,6 +2213,8 @@ function EventDetails({ navigation, route }) {
     isConvenedMember: isConvenedTeamMember,
     isMissing: currentUserParticipationState.isMissing,
     isParticipating: currentUserParticipationState.isParticipating,
+    // FINITIONS15 point 9f : l'encadrant qui n'est pas joueur n'a pas cette porte.
+    isStaffOnly: resolveClientResponderDecision(event, userData).isStaffOnly,
     myAttendanceStatus: myAttendance?.attendanceStatus,
   });
   const tournamentAwareParticipationFlow = useMemo(() => {
