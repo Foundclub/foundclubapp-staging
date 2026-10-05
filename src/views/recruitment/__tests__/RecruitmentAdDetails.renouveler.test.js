@@ -322,3 +322,115 @@ describe('ANNONCE-RENOUVELER 2 — QUAND l auteur voit « Renouveler 30 jours »
     expect(findButton(tree, RENOUVELER)).toBeUndefined();
   });
 });
+
+/**
+ * Une promesse qu'on tient a la main, pour regarder l'ecran PENDANT l'appel.
+ * @returns {{ promise: Promise<any>, resolve: (value: any) => void }} La promesse et sa cle.
+ */
+const deferred = () => {
+  /**
+   * Tient la promesse.
+   * @type {(value: any) => void}
+   */
+  let resolve = () => {};
+  const promise = new Promise((res) => { resolve = res; });
+  return { promise, resolve };
+};
+
+/**
+ * Appuie sur « Renouveler 30 jours » et laisse les promesses se poser. react-query livre ses
+ * changements d'etat par `setTimeout(cb, 0)` (jest.setup.js) : un tour de minuterie apres
+ * l'appui, et l'ecran a recu « en cours ».
+ * @param {any} tree L'arbre rendu.
+ * @returns {Promise<void>}
+ */
+const pressRenew = async (tree) => {
+  await act(async () => {
+    findButton(tree, RENOUVELER).props.onPress();
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+  });
+};
+
+describe('ANNONCE-RENOUVELER 3 — l appui sur « Renouveler 30 jours »', () => {
+  it('appelle la route de CETTE annonce ; le bouton se fige pendant l appel', async () => {
+    const appel = deferred();
+    mockRenewRecruitmentAd.mockReturnValue(appel.promise);
+    const { tree } = await renderFor(AUTEUR);
+
+    await pressRenew(tree);
+
+    expect(mockRenewRecruitmentAd).toHaveBeenCalledTimes(1);
+    expect(mockRenewRecruitmentAd).toHaveBeenCalledWith('ad-u15');
+    expect(findButton(tree, RENOUVELER).props.isLoading).toBe(true);
+
+    await pressRenew(tree);
+    expect(mockRenewRecruitmentAd).toHaveBeenCalledTimes(1);
+
+    await act(async () => { appel.resolve({ expirationDate: inDays(30), success: true }); });
+  });
+
+  it('succes : « Annonce prolongée jusqu au … », fiche relue, listes invalidées', async () => {
+    const nouvelle = inDays(30);
+    mockRenewRecruitmentAd.mockImplementation(async () => {
+      // Ce que le serveur rendra a la relecture : l'echeance neuve.
+      mockGetRecruitmentAd.mockResolvedValue({ ...AD, expirationDate: nouvelle });
+      return {
+        expirationDate: nouvelle,
+        message: 'Annonce renouvelee pour 30 jours',
+        success: true,
+      };
+    });
+    const { queryClient, tree } = await renderFor(AUTEUR);
+    const invalidate = jest.spyOn(queryClient, 'invalidateQueries');
+    const lecturesAvant = mockGetRecruitmentAd.mock.calls.length;
+
+    await pressRenew(tree);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Annonce renouvelée',
+      `Annonce prolongée jusqu’au ${dateOf(nouvelle)}.`,
+    );
+    // La fiche est relue, et « Mes annonces » / la recherche le seront a leur tour.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['recruitmentAd', 'ad-u15'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['recruitmentAds'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['myRecruitmentAds'] });
+    expect(mockGetRecruitmentAd.mock.calls.length).toBeGreaterThan(lecturesAvant);
+    // L'echeance neuve est a l'ecran, et le bouton s'en va (30 jours > 7).
+    expect(allText(tree)).toContain(`Expire le ${dateOf(nouvelle)}`);
+    expect(findButton(tree, RENOUVELER)).toBeUndefined();
+  });
+
+  it('echec 403 : un message clair, la fiche intacte, le bouton de nouveau actif', async () => {
+    const refus = Object.assign(new Error('Request failed with status code 403'), {
+      response: { data: { error: { message: 'You can only renew your own ads' } }, status: 403 },
+    });
+    mockRenewRecruitmentAd.mockRejectedValue(refus);
+    const { tree } = await renderFor(AUTEUR);
+
+    await pressRenew(tree);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Renouvellement impossible',
+      'Seul l’auteur de l’annonce peut la renouveler.',
+    );
+    expect(allText(tree)).toContain(`Expire le ${dateOf(AD.expirationDate)}`);
+    expect(findButton(tree, RENOUVELER).props.isLoading).toBe(false);
+  });
+
+  it('echec reseau : un message clair, et on peut reessayer', async () => {
+    mockRenewRecruitmentAd.mockRejectedValueOnce(new Error('Network Error'));
+    const { tree } = await renderFor(AUTEUR);
+
+    await pressRenew(tree);
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Renouvellement impossible',
+      'Impossible de prolonger l’annonce pour le moment. Vérifie ta connexion et réessaie.',
+    );
+    expect(findButton(tree, RENOUVELER).props.isLoading).toBe(false);
+
+    mockRenewRecruitmentAd.mockResolvedValueOnce({ expirationDate: inDays(30), success: true });
+    await pressRenew(tree);
+    expect(mockRenewRecruitmentAd).toHaveBeenCalledTimes(2);
+  });
+});

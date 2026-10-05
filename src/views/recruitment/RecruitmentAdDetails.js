@@ -506,8 +506,51 @@ function RecruitmentAdDetails() {
     },
   }));
 
+  // ANNONCE-RENOUVELER (point 3) — le serveur relance l'annonce pour 30 jours a partir de
+  // l'appui et rend `{ expirationDate, message, success }`. L'echeance neuve est posee tout de
+  // suite sur la fiche (le bouton s'en va), puis la fiche et les listes sont relues.
   const renewMutation = /** @type {any} */ (useMutation({
     mutationFn: () => renewRecruitmentAd(ad.documentId || ad.id),
+    onError: (/** @type {any} */ error) => {
+      // Le message du serveur est en anglais (« You can only renew your own ads ») : on ne le
+      // montre pas, on dit ce qui se passe.
+      const message = error?.response?.status === 403
+        ? t(
+          'recruitmentAdDetails.renewal.errorForbidden',
+          'Seul l’auteur de l’annonce peut la renouveler.',
+        )
+        : t(
+          'recruitmentAdDetails.renewal.errorGeneric',
+          'Impossible de prolonger l’annonce pour le moment. Vérifie ta connexion et réessaie.',
+        );
+      Alert.alert(
+        t('recruitmentAdDetails.renewal.errorTitle', 'Renouvellement impossible'),
+        message,
+      );
+    },
+    onSuccess: (/** @type {any} */ result) => {
+      const renewed = getRecruitmentAdExpiry({ expirationDate: result?.expirationDate });
+      if (renewed) {
+        queryClient.setQueryData(['recruitmentAd', adId], (/** @type {any} */ previous) => (
+          previous
+            ? { ...previous, expirationDate: result.expirationDate, isActive: true }
+            : previous
+        ));
+      }
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
+      queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] });
+      const message = renewed
+        ? t('recruitmentAdDetails.renewal.successBody', 'Annonce prolongée jusqu’au {{date}}.', {
+          date: formatRecruitmentAdExpiryDate(renewed.expiresAt),
+          ...SANS_ECHAPPEMENT,
+        })
+        : t(
+          'recruitmentAdDetails.renewal.successBodyWithoutDate',
+          'Ton annonce repart pour 30 jours.',
+        );
+      Alert.alert(t('recruitmentAdDetails.renewal.successTitle', 'Annonce renouvelée'), message);
+    },
   }));
 
   const confirmDelete = () => {
@@ -515,6 +558,7 @@ function RecruitmentAdDetails() {
   };
 
   const handleRenew = () => {
+    if (renewMutation.isPending) return;
     renewMutation.mutate();
   };
 
@@ -1676,6 +1720,8 @@ function RecruitmentAdDetails() {
             {canRenew ? (
               <View style={{ marginBottom: 12 }}>
                 <Button
+                  isLoading={renewMutation.isPending}
+                  keepTitleWhileLoading
                   onPress={handleRenew}
                   title={t('recruitmentAdDetails.renewal.action', 'Renouveler 30 jours')}
                   variant="Primary"
