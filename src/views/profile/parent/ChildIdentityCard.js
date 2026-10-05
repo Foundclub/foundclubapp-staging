@@ -17,18 +17,45 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
  * @param {string | null} [enfant.teamName] - Son equipe.
  * @param {Array<string | null | undefined>} [enfant.teamNames] - FINITIONS13-STATS (3) : TOUTES
  *   ses equipes, dans l ordre de son profil (« U13 · U15 ») ; a defaut, `teamName`.
+ * @param {Array<any>} [enfant.teams] - FINITIONS15 (9d) : ses equipes AVEC leur club
+ *   (`myTeams`, `club` peuple) ; chacune se range sous SON club. Prime sur `teamNames`.
  * @returns {string} - La ligne, vide si on ne sait rien.
  */
 export const ligneDIdentite = (t, {
-  age, clubName, teamName, teamNames,
+  age, clubName, teamName, teamNames, teams,
 }) => {
+  const lAge = typeof age === 'number'
+    ? t('myChildren.screen.years', '{{count}} ans', { count: age })
+    : '';
+  // 🎨 FINITIONS15 point 9d (T14, S03d) — « 14 ans · U13 · Seniors A · U15 · AS Montrivage » :
+  // Seniors A est une equipe d un AUTRE club, la ligne la rangeait sous celui du profil. Chaque
+  // equipe va sous SON club (« equipe · club », la grammaire de la planche 22) ; le club de
+  // l enfant d abord ; une equipe sans club lu reste sous le sien.
+  if (Array.isArray(teams) && teams.length > 0) {
+    const principal = String(clubName || '').trim();
+    /** @type {Map<string, string[]>} */
+    const parClub = new Map(principal ? [[principal, []]] : []);
+    teams.forEach((equipe) => {
+      const nom = String(equipe?.name || '').trim();
+      if (!nom) return;
+      const club = String(equipe?.club?.name || '').trim() || principal;
+      const liste = parClub.get(club) || [];
+      if (!liste.includes(nom)) liste.push(nom);
+      parClub.set(club, liste);
+    });
+    const groupes = [...parClub].filter(([, noms]) => noms.length > 0);
+    if (groupes.length > 0) {
+      return [lAge, ...groupes.flatMap(([club, noms]) => [...noms, club])]
+        .filter(Boolean).join(' · ');
+    }
+  }
   // FINITIONS13-STATS (3, T13, tranche par le chef « A ») — Hugo joue en U13 ET en U15 : la
   // ligne prenait sa PREMIERE equipe et disait « 14 ans · U13 ». Elle les dit toutes, une fois.
   const equipes = [...new Set((Array.isArray(teamNames) ? teamNames : [])
     .map((nom) => String(nom || '').trim())
     .filter(Boolean))];
   return [
-    typeof age === 'number' ? t('myChildren.screen.years', '{{count}} ans', { count: age }) : '',
+    lAge,
     ...(equipes.length > 0 ? equipes : [teamName]),
     clubName,
   ].filter(Boolean).join(' · ');

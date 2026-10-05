@@ -227,7 +227,11 @@ function PendingMatchStatsScreen({ navigation }) {
         : { eventId: prompt?.eventId }),
       actionType: prompt?.actionType || 'coach_team_review',
       actorRole: prompt?.actorRole || 'player',
-      matchLabel: prompt?.label || 'Match',
+      // FINITIONS15 point 9g : l'écran s'ouvre avec le titre de la carte (« AS Montrivage — … »).
+      matchLabel: describeCoachPromptTitle(
+        prompt,
+        findPromptClubName(prompt, userData) || prompt?.team?.name,
+      ),
       sourceType: prompt?.sourceType === 'league' ? 'league' : 'event',
       sport: prompt?.sport || 'football',
       teamId: prompt?.team?.documentId || undefined,
@@ -240,7 +244,7 @@ function PendingMatchStatsScreen({ navigation }) {
         'Bilan équipe',
       ),
     });
-  }, [navigation, t]);
+  }, [navigation, t, userData]);
 
   // L'en-tête et le retour, dans TOUS les états (amélioration 4).
   const header = (
@@ -443,7 +447,9 @@ function PendingMatchStatsScreen({ navigation }) {
     const lastCompleted = pendingPayload?.lastCompleted || null;
     const reponses = describeResponsesCount(lastCompleted?.responses, t);
     if (!reponses) return null;
-    const match = lastCompleted?.label || 'Match';
+    // FINITIONS15 point 9g — planche P2-attente, état 3 : le titre des cartes, « AS Montrivage —
+    // Test-COMPO est complet ». Serveur d'avant (sans `opponentName`) : `label`, comme avant.
+    const match = lastCompleted ? titreDuRappel(lastCompleted) : 'Match';
     const publiee = lastCompleted?.finalizedAt ? new Date(lastCompleted.finalizedAt) : null;
     const texte = isWide && publiee && !Number.isNaN(publiee.getTime())
       ? t(

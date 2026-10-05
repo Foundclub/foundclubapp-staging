@@ -175,6 +175,50 @@ describe('COLL-C2B-BIS — planche 23 : retirer à partir d une date choisie', (
   });
 });
 
+// 🐞 FINITIONS15 point 4 (tournée T14, C15b) — LA FICHE D'UN CRÉNEAU RETIRÉ dit la même fin que la
+// liste. Créneau Basket retiré à partir du 1er juin (T11) : la liste dit « du 1 sept. au 31 mai »
+// (`finDuCreneau` : `effectiveUntil`), la fiche disait « Période 1 sept. 2026 – 30 juin 2027 »
+// (`validUntil` brut, la fin de la saison). La date du retrait est bornée au même jour. ROUGE avant
+// le lot.
+describe('FINITIONS15 point 4 — la fiche d un créneau retiré finit le même jour que la liste', () => {
+  const RETIRE = {
+    ...CRENEAU,
+    effectiveUntil: '2027-05-31',
+    validFrom: '2026-09-01',
+    validUntil: '2027-06-30',
+  };
+
+  it('« Période 1 sept. 2026 – 31 mai 2027 », et le retrait borné au 31 mai', async () => {
+    /** @type {any} */ (getSeasonSlot).mockResolvedValue({ data: RETIRE, meta: { canManage: true } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={client}>
+          <SeasonSlotManage
+            canManage
+            installationName="Gymnase des Tilleuls"
+            onClose={jest.fn()}
+            onModify={jest.fn()}
+            onWithdrawn={jest.fn()}
+            slot={RETIRE}
+          />
+        </QueryClientProvider>,
+      );
+    });
+    await tours();
+    arbresMontes.push(arbre);
+
+    expect(textes(arbre)).toContain('1 sept. 2026 – 31 mai 2027');
+    expect(textes(arbre)).not.toContain('1 sept. 2026 – 30 juin 2027');
+
+    await act(async () => { await presser(arbre, 'Retirer le créneau'); });
+    await tours();
+    expect(format(champ().maximumDate, 'yyyy-MM-dd')).toBe('2027-05-31');
+  });
+});
+
 // 🎨 FINITIONS12-COLL (03/10) — point 10 : « … à partir du sam. 3 oct.. » (tournée T11, C23) : la
 // date abrégée porte déjà son point, la phrase en ajoutait un. ROUGE avant le lot.
 describe('FINITIONS12-COLL point 10 — un seul point après une date abrégée', () => {

@@ -177,15 +177,21 @@ describe('FINITIONS13-STATS 2 — la carte du fil nomme chaque joueur par son CO
     expect(texte).toContain('Lina Durand');
   });
 
-  test('les deux messageries donnent les participants du fil a la carte', () => {
+  // INVERSE PAR FINITIONS15 point 6 — motif : passés par les props, les participants
+  // arrivaient souvent APRÈS le dessin de la carte, et GiftedChat ne la redessinait jamais
+  // (tournée T14, S03c : « Paul Veuillet » toujours là). Chaque messagerie monte maintenant
+  // l'enveloppe qui s'abonne elle-même à la fiche du fil ; la preuve en vrai écran est
+  // src/views/__tests__/ConversationFIN15.bulleCompoNomDuJour.test.js.
+  test('les deux messageries montent la carte abonnée à la fiche du fil', () => {
     // Lu dans les sources : la carte est montee a UN endroit par messagerie.
     const vues = path.join(__dirname, '..', '..', '..', '..', 'views');
     ['Conversation.js', 'Conversation.web.js'].forEach((fichier) => {
       const source = fs.readFileSync(path.join(vues, fichier), 'utf8');
-      const montages = source.match(/<CompositionMessageBubble[\s\S]*?\/>/g) || [];
+      expect(source).not.toMatch(/<CompositionMessageBubble\s/);
+      const montages = source.match(/<CompositionMessageBubbleDuFil[\s\S]*?\/>/g) || [];
       expect(montages.length).toBeGreaterThan(0);
       montages.forEach((montage) => {
-        expect(montage).toMatch(/currentPeople=\{chatData\?\.participants\}/);
+        expect(montage).toMatch(/chatId=\{chatId\}/);
       });
     });
   });

@@ -730,9 +730,18 @@ function PlanningWeekFullscreen() {
           'Demande acceptée (chaque semaine)',
         );
       }
+      // FINITIONS15 point 3 (T14) : une SÉANCE du club posée dans le créneau en prend la place avec
+      // SES heures (le serveur la rend `origin: 'slot'`, `kind` de séance) ; le créneau seul est
+      // `kind: 'slot'`, à ses heures. « Créneau attribué » sous 18:00 – 19:00, pour un créneau de
+      // 17:30 – 19:00, faisait croire à deux heures pour le même créneau.
+      const seanceDansLeCreneau = Boolean(brut.kind) && brut.kind !== 'slot';
       return t(
-        'collectiviteCreneaux.planning.origineCreneau',
-        'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
+        seanceDansLeCreneau
+          ? 'collectiviteCreneaux.planning.origineSeanceDansCreneau'
+          : 'collectiviteCreneaux.planning.origineCreneau',
+        seanceDansLeCreneau
+          ? 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}'
+          : 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
         {
           debut: brut.slot?.validFrom
             ? format(parseISO(brut.slot.validFrom), 'd MMM', { locale: localeDesDates() })

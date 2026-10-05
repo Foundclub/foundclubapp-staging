@@ -99,5 +99,7 @@ describe('COLL-C4A — le formulaire', () => {
     const maintenant = new Date('2026-10-02T10:00:00');
     expect(publicationDateLabel(t, '2026-10-02T08:00:00', maintenant)).toBe('aujourd’hui');
     expect(publicationDateLabel(t, 'illisible', maintenant)).toBe('');
+    // FINITIONS15 point 8 — planche P3b-actu : « Fermeture · mar. 29 sept. ». ROUGE avant le lot.
+    expect(publicationDateLabel(t, '2026-09-29T08:00:00', maintenant)).toBe('mar. 29 sept.');
   });
 });

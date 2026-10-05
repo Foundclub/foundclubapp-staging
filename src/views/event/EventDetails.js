@@ -46,6 +46,7 @@ import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/even
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getParticipationErrorMessage,
+  resolveClientResponderDecision,
   resolveClientSourceTeamForUser,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
@@ -192,7 +193,7 @@ import {
   listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
-  resolveMatchVerdictTag,
+  resolveMatchTagSegments,
   resolveTeamCoachFirstname,
   resolveViewerFromInvitedTeam,
 } from './matchPageModel';
@@ -2212,6 +2213,8 @@ function EventDetails({ navigation, route }) {
     isConvenedMember: isConvenedTeamMember,
     isMissing: currentUserParticipationState.isMissing,
     isParticipating: currentUserParticipationState.isParticipating,
+    // FINITIONS15 point 9f : l'encadrant qui n'est pas joueur n'a pas cette porte.
+    isStaffOnly: resolveClientResponderDecision(event, userData).isStaffOnly,
     myAttendanceStatus: myAttendance?.attendanceStatus,
   });
   const tournamentAwareParticipationFlow = useMemo(() => {
@@ -3700,12 +3703,8 @@ function EventDetails({ navigation, route }) {
   // N1 avait prevu que N3 « allonge le tableau » des precisions de la pastille.
   // Il ne peut pas l'allonger DANS `typeTagSegments` : le lieu du match depend
   // de `compositionTeamId`, declare 800 lignes plus bas — un hook ne se lit pas
-  // avant d'exister. Les deux listes se rejoignent donc ici, et
-  // `buildTypeTagLabel` retire tout seul les segments vides.
-  const typeTagSegmentsComplets = useMemo(
-    () => [...typeTagSegments, matchVenueTagSegment],
-    [matchVenueTagSegment, typeTagSegments],
-  );
+  // avant d'exister. Les listes se rejoignent plus bas (`typeTagSegmentsAvecVerdict`),
+  // et `buildTypeTagLabel` retire tout seul les segments vides.
 
   const compositionEditorPlayers = useMemo(
     () => getCompositionPlayersForEvent(event, compositionEditorTeam, isDetectionEvent),
@@ -3997,16 +3996,28 @@ function EventDetails({ navigation, route }) {
 
   // 🏷️ ST-MATCH (écran 1) — la pastille de type porte le VERDICT une fois le score
   // connu : « MATCH · TERMINÉ · VICTOIRE ». Le badge de l'encart qui le disait est
-  // retiré : une seule place pour le résultat.
-  const matchVerdictTagSegment = useMemo(() => resolveMatchVerdictTag({
-    isFinished: isMatchFinished,
+  // retiré : une seule place pour le résultat. FINITIONS15 point 9e : un score connu dit
+  // aussi la fin, pour le lecteur sans horloge du serveur (le parent).
+  const typeTagSegmentsAvecVerdict = useMemo(() => [
+    ...typeTagSegments,
+    ...(isMatchEvent
+      ? resolveMatchTagSegments({
+        horlogeConnue: serverClockMs !== null,
+        isFinished: isMatchFinished,
+        segmentDuLieu: matchVenueTagSegment,
+        t,
+        verdict: matchHeaderScoreSummary?.verdict,
+      })
+      : []),
+  ], [
+    isMatchEvent,
+    isMatchFinished,
+    matchHeaderScoreSummary?.verdict,
+    matchVenueTagSegment,
+    serverClockMs,
     t,
-    verdict: matchHeaderScoreSummary?.verdict,
-  }), [isMatchFinished, matchHeaderScoreSummary?.verdict, t]);
-  const typeTagSegmentsAvecVerdict = useMemo(
-    () => [...typeTagSegmentsComplets, matchVerdictTagSegment],
-    [matchVerdictTagSegment, typeTagSegmentsComplets],
-  );
+    typeTagSegments,
+  ]);
   // N4 (D6) : `matchStatsSummaryText`, `matchStatsStatusMeta` et
   // `matchStatsCardButtonTitle` ont QUITTE ce fichier. Ils decrivaient l'entete
   // du bloc « Stats du match » — une phrase de resume, une pastille d'etat et le

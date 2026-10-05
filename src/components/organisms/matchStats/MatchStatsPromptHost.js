@@ -289,8 +289,14 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   const openShownPrompt = useCallback((/** @type {any} */ prompt = shownPrompt) => {
     if (!prompt) return;
     dismissPromptForSession();
-    navigateToPendingMatchStats(prompt);
-  }, [dismissPromptForSession, shownPrompt]);
+    // FINITIONS15 point 9g : l'écran s'ouvre avec le titre de la fenêtre (« AS Montrivage — … »).
+    navigateToPendingMatchStats(prompt, {
+      matchLabel: describeCoachPromptTitle(
+        prompt,
+        findPromptClubName(prompt, userData) || prompt?.team?.name,
+      ),
+    });
+  }, [dismissPromptForSession, shownPrompt, userData]);
 
   // 🔔 ST-MATCH (écran 3, amélioration 2) — « J'étais là sans jouer » et « Je n'étais
   // pas concerné·e » s'envoient SANS ouvrir le formulaire : même route que lui

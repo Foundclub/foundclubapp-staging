@@ -58,6 +58,15 @@ test('POINTAGE-app/3 — la porte reste fermee a tous les autres', () => {
   expect(surUn({ league_match: { id: 1 } })).toBe(false);
 });
 
+// 🎨 FINITIONS15 point 9f (tournée T14) — Karim, entraîneur et NON joueur, était invité à
+// « Passe en présent » sur son propre match. Planche Statistiques P4, état 7 (« Ce que voit
+// l'entraîneur ») : « il n'est pas joueur. Il a sa carte d'entraîneur, et c'est tout. » L'encadrant
+// seul n'a pas cette porte ; l'entraîneur-joueur (dans `players`) la garde. ROUGE avant le lot.
+test('FINITIONS15 9f — l encadrant qui n est pas joueur n est pas invité à passer présent', () => {
+  expect(canDeclareLatePresence(pasRenseigne({ isStaffOnly: true }))).toBe(false);
+  expect(canDeclareLatePresence(pasRenseigne({ isStaffOnly: false }))).toBe(true);
+});
+
 test('POINTAGE-app/4 — AVANT le debut, ce n est pas « apres coup »', () => {
   const demain = matchDHier({ date: new Date(MAINTENANT + 20 * HEURE).toISOString() });
 

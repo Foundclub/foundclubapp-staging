@@ -5836,6 +5836,9 @@ export default {
       origineCreneau: 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
       origineDemande: 'Demande acceptée',
       origineDemandeSerie: 'Demande acceptée (chaque semaine)',
+      // FINITIONS15 point 3 : une séance posée dans le créneau, à SES heures.
+      // eslint-disable-next-line max-len
+      origineSeanceDansCreneau: 'Séance du club dans son créneau : chaque {{jour}}, du {{debut}} au {{fin}}',
       origineTitre: 'Origine de la place',
       placesLibres_one: '{{count}} place libre au plus chargé',
       placesLibres_other: '{{count}} places libres au plus chargé',
@@ -8169,7 +8172,7 @@ export default {
     present: 'Présent',
     present2: 'presents',
     pricePerson: 'Prix / personne',
-    privateTraining: 'Entraînement prive',
+    privateTraining: 'Entraînement privé',
     publication: 'Publication',
     published: 'Publié',
     publishedOn: 'Publiée le',
@@ -9120,6 +9123,8 @@ export default {
       timeLabel: 'Horaire',
       totalPlayers: 'Joueurs attendus: {{value}}',
       totalPlayersTitle: 'Joueurs attendus',
+      // FINITIONS15 point 9a : la clef manquait, le récap montrait le texte de secours sans accent.
+      trainingCapacityPrivate: 'Capacité illimitée (entraînement privé)',
       validationMode: 'Validation: {{value}}',
       whenWhereTitle: 'Quand et lieu',
     },
@@ -9360,7 +9365,7 @@ export default {
         trainingOpenCapacity: 'Illimité en interne + quota externe',
         // eslint-disable-next-line max-len
         trainingOpenSubtitle: 'Définis uniquement combien de joueurs externes a l équipe tu veux accepter.',
-        trainingPrivateCapacity: 'Illimité (entraînement prive)',
+        trainingPrivateCapacity: 'Illimité (entraînement privé)',
         trainingSubtitle: 'Définis tes joueurs attendus pour cet entraînement.',
         trainingTotalPlayers: 'Joueurs attendus (interne)',
         unlimited: 'Illimité',

@@ -336,7 +336,7 @@ function EventWizardParticipants({ navigation, route }) {
       )
       : t(
         'eventWizard.steps.participants.trainingPrivateCapacity',
-        'Illimité (entraînement prive)',
+        'Illimité (entraînement privé)',
       );
   }
 

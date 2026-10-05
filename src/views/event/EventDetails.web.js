@@ -21,7 +21,10 @@ import {
   isArrivalTrackingEnabled,
   isRsvpEnabled,
 } from '@/domains/event/presenceRule';
-import { resolveClientSourceTeamForUser } from '@/domains/participation/participationFlow';
+import {
+  resolveClientResponderDecision,
+  resolveClientSourceTeamForUser,
+} from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -109,7 +112,7 @@ import {
   listPresentWithoutConvocation,
   resolveMatchStartTimeLabel,
   resolveMatchStatsDoor,
-  resolveMatchVerdictTag,
+  resolveMatchTagSegments,
   resolveTeamCoachFirstname,
   resolveViewerFromInvitedTeam,
 } from './matchPageModel';
@@ -474,6 +477,8 @@ function EventDetails({ navigation, route }) {
     isConvenedMember,
     isMissing: participationState?.isMissing,
     isParticipating: participationState?.isParticipating,
+    // FINITIONS15 point 9f : l'encadrant non joueur n'a pas cette porte (comme le téléphone).
+    isStaffOnly: resolveClientResponderDecision(event, userData).isStaffOnly,
     myAttendanceStatus: monPointage?.attendanceStatus,
   });
   const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
@@ -842,11 +847,12 @@ function EventDetails({ navigation, route }) {
   ]);
   // 🏷️ ST-MATCH (écran 1) — la pastille porte l'étape et le verdict : « MATCH · TERMINÉ ·
   // VICTOIRE » (mêmes mots que le téléphone).
+  // FINITIONS15 point 9e : la même règle que le téléphone (un score connu dit la fin).
   const matchTypeTag = isMatchEvent
     ? [
       event?.type?.name || 'Match',
-      isMatchFinished ? t('eventDetails.typeTag.matchFinished', 'TERMINÉ') : '',
-      resolveMatchVerdictTag({
+      ...resolveMatchTagSegments({
+        horlogeConnue: serverClockMs !== null,
         isFinished: isMatchFinished,
         t,
         verdict: matchEncartSummary?.verdict,
@@ -2568,7 +2574,7 @@ function EventDetails({ navigation, route }) {
                 >
                   <div style={{ display: 'grid', gap: 4 }}>
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                      {trainingOpenConfig.isOpenTraining ? t('eventDetails.openTraining2', 'Entraînement ouvert') : t('eventDetails.privateTraining', 'Entraînement prive')}
+                      {trainingOpenConfig.isOpenTraining ? t('eventDetails.openTraining2', 'Entraînement ouvert') : t('eventDetails.privateTraining', 'Entraînement privé')}
                     </strong>
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {trainingOpenConfig.isOpenTraining

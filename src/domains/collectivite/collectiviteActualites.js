@@ -1,4 +1,4 @@
-import { formatDateWithDayPrefix } from '@/utils/date';
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 
 /**
  * 📰 COLL-C4A (02/10/2026) — LES ACTUALITÉS DE LA VILLE, en fonctions PURES : aucun appel réseau,
@@ -170,7 +170,8 @@ export const publicationDateLabel = (t, valeur, maintenant = new Date()) => {
   if (date.toDateString() === maintenant.toDateString()) {
     return t('collectiviteActualites.aujourdhui', 'aujourd’hui');
   }
-  return formatDateWithDayPrefix(date, { fallback: '' });
+  // FINITIONS15 point 8 : planche P3b-actu, « mar. 29 sept. ».
+  return formatCollectiviteDay(date);
 };
 
 // Le bandeau de l'accueil : une actualité de moins de 7 jours (planche P3b-bandeau-tel, écran 6).

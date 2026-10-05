@@ -825,14 +825,19 @@ describe('R2 - une equipe de mon propre club n est pas un adversaire', () => {
       opponentName: null,
     });
 
-    monter({ auth: ORGANISATEUR(), event: vraiMatch });
+    // AJUSTÉ PAR FINITIONS15 point 9e — motif : sans horloge du serveur, un score connu dit
+    // désormais la fin (le parent, T14). L'organisateur et l'entraîneur invité, eux, lisent l'appel :
+    // ils ONT l'horloge, et elle dit que ce match de 2099 n'est pas fini. Le témoin garde ainsi ce
+    // qu'il prouve (le lieu, retourné ou non).
+    const AVANT_LA_FIN = HORLOGE_SERVEUR('2026-01-01T10:00:00.000Z');
+    monter({ attendance: AVANT_LA_FIN, auth: ORGANISATEUR(), event: vraiMatch });
     expect(pastille()).toBe('MATCH · À DOMICILE');
     expect(resume().opponentName).toBe(ADVERSAIRE);
     expect(resume().verdict).toBe('win');
 
     // L adversaire, lui, voit toujours le match retourne : c est le comportement
     // de N3, et R2 ne doit pas y toucher.
-    monter({ auth: COACH_DE_L_INVITEE(), event: vraiMatch });
+    monter({ attendance: AVANT_LA_FIN, auth: COACH_DE_L_INVITEE(), event: vraiMatch });
     expect(pastille()).toBe('MATCH · À L\'EXTÉRIEUR');
     expect(resume().value).toBe('1 - 3');
     expect(resume().verdict).toBe('loss');
@@ -1040,6 +1045,22 @@ describe('DECISIONS-SOIR — le parent lit l encart du score comme un membre', (
     expect(resume().scorersLine).toBe('Hugo L.');
     // Rien d'autre : les stats du match restent aux membres de l'équipe.
     expect(resume().onSeeStats).toBeNull();
+  });
+
+  // 🎨 FINITIONS15 point 9e (tournée T14, S03f) — le parent lisait « MATCH » seul sur le match
+  // terminé (Karim : « MATCH · TERMINÉ · VICTOIRE », planche Statistiques P1 états 4, 5 et 7 :
+  // tout lecteur). La fin du match se décide à l'horloge du SERVEUR, que donne l'appel ; le parent
+  // n'a pas accès à l'appel (`canAccessAttendance`) : jamais d'horloge, jamais « terminé ». Un
+  // score connu prouve la fin (le serveur refuse de l'enregistrer avant, `ensureEventIsFinished`).
+  // Ici, comme en vrai : AUCUNE horloge du serveur. ROUGE avant le lot.
+  test('🔴 FIN15 9e — sans horloge du serveur, le score connu dit « MATCH · TERMINÉ · VICTOIRE »', async () => {
+    monter({
+      attendance: null, auth: PARENT(), event: match({ viewerParentTeamDocumentIds: [TEAM_ID] }), matchStats: ENCART_DU_PARENT,
+    });
+    await apresLesInteractions();
+
+    expect(resume().value).toBe('1 - 0');
+    expect(pastille()).toBe('MATCH · TERMINÉ · VICTOIRE');
   });
 
   test('son enfant joue dans l equipe INVITEE : l encart est demande pour CETTE equipe', async () => {

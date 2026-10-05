@@ -64,6 +64,11 @@ function EventWizardTeamCard({
     {
       label: t('teamList.fields.members', 'Membres'),
       value: (() => {
+        // FINITIONS15 point 7 (T14, A00) : une équipe venue SANS ses listes (le tunnel d'annonce)
+        // n'a pas de nombre de membres connu ; « 0 » y était faux. Rien ne s'écrit alors (même
+        // règle que FINITIONS14 5f). Une liste lue et vide dit, elle, vraiment 0.
+        const listesLues = [team?.players, team?.trainers, team?.members].filter(Array.isArray);
+        if (listesLues.length === 0) return '';
         const ids = new Set();
         const collect = (list = []) => {
           list.forEach((member) => {

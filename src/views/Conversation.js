@@ -79,7 +79,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ChatReactionsRow from '@/components/molecules/chatReactions/ChatReactionsRow';
-import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
+import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
 import DocumentMessageBubble from '@/components/molecules/documentMessageBubble/DocumentMessageBubble';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
@@ -5387,9 +5387,11 @@ function Conversation({ navigation, route }) {
             marginTop,
           }}
           >
-            <CompositionMessageBubble
+            {/* FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil (GiftedChat
+                ne la redessine pas quand les participants arrivent après elle). */}
+            <CompositionMessageBubbleDuFil
+              chatId={chatId}
               composition={currentMessage.composition}
-              currentPeople={chatData?.participants}
               isMe={!isLeft}
             />
           </View>

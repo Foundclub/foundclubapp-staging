@@ -32,6 +32,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import { describeCoachPromptTitle } from '@/components/organisms/matchStats/matchStatsPromptModel';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -182,10 +183,25 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     || t('playerMatchResponseScreen.coachFallback', 'ton entraîneur');
   const coachAtStart = capitalize(coachName);
 
-  const matchName = routeMatchLabel
+  const titreDeSecours = routeMatchLabel
     || responsePayload?.event?.name
     || responsePayload?.team?.name
     || t('playerMatchResponseScreen.match', 'Match');
+  // 🎨 FINITIONS15 point 9g — « AS Montrivage — Test-COMPO » (planche P4) : l'écran se titre SEUL,
+  // par la règle des cartes, quand le serveur nomme l'adversaire (`event.opponentName`, `null`
+  // inconnu) et le club (`team.clubName`). Serveur d'avant : le titre d'avant.
+  const serveurNommeLAdversaire = sourceType === 'event'
+    && Object.prototype.hasOwnProperty.call(responsePayload?.event || {}, 'opponentName');
+  const matchName = serveurNommeLAdversaire
+    ? describeCoachPromptTitle(
+      {
+        label: titreDeSecours,
+        opponentName: responsePayload?.event?.opponentName,
+        sourceType: 'event',
+      },
+      responsePayload?.team?.clubName || responsePayload?.team?.name,
+    )
+    : titreDeSecours;
 
   const matchMeta = useMemo(() => {
     const locale = localeDesFormats();

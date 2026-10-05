@@ -389,3 +389,25 @@ export const resolveMatchVerdictTag = ({ isFinished, t, verdict = null }) => {
     win: t('stMatch.encart.verdictTag.win', 'VICTOIRE'),
   })[verdict] || '';
 };
+
+/**
+ * 🎨 FINITIONS15 point 9e (T14, S03f) — LES PRÉCISIONS DE LA PASTILLE D'UN MATCH : le lieu avant
+ * la fin, « TERMINÉ » et le verdict après. Le parent lisait « MATCH » seul : la fin se décide à
+ * l'horloge du SERVEUR, que seul l'appel donne, et le parent n'y a pas accès. Quand cette
+ * horloge MANQUE, un SCORE connu prouve la fin (le serveur refuse de l'enregistrer avant,
+ * `ensureEventIsFinished`). Quand elle est là, elle seule décide (règle AC10).
+ * Une seule règle pour le téléphone et le site. À n'appeler que pour un match.
+ * @param {{ horlogeConnue?: boolean, isFinished: boolean, segmentDuLieu?: string, t: Traduire,
+ *   verdict?: string | null }} params - L'horloge du serveur est-elle lue, la fin à cette horloge,
+ *   le segment « À DOMICILE » / « À L'EXTÉRIEUR », le verdict.
+ * @returns {string[]} Les segments, vides compris (`buildTypeTagLabel` les retire).
+ */
+export const resolveMatchTagSegments = ({
+  horlogeConnue = false, isFinished, segmentDuLieu = '', t, verdict = null,
+}) => {
+  const fini = Boolean(isFinished || (!horlogeConnue && verdict));
+  return [
+    fini ? t('eventDetails.typeTag.matchFinished', 'TERMINÉ') : segmentDuLieu,
+    resolveMatchVerdictTag({ isFinished: fini, t, verdict }),
+  ];
+};

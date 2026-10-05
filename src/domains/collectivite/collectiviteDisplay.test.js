@@ -40,7 +40,9 @@ describe('collectiviteDisplay', () => {
   it('le moment d une demande porte le jour et les deux heures', () => {
     const debut = new Date(2030, 9, 7, 18, 0).toISOString();
     const fin = new Date(2030, 9, 7, 19, 30).toISOString();
-    expect(formatSlot(debut, fin)).toBe('lun 07/10/2030 · 18:00 – 19:30');
+    // INVERSE PAR FINITIONS15 point 8 — motif : la planche écrit « jeu. 1 oct. ».
+    // Planches P3v2-accueil et P7v2-fiche : « jeu. 1 oct. · 18:00 – 19:30 ».
+    expect(formatSlot(debut, fin)).toBe('lun. 7 oct. · 18:00 – 19:30');
     expect(formatSlot('pas une date', fin)).toBe('');
   });
 });

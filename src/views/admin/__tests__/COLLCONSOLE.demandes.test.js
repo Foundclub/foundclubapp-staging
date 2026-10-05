@@ -275,7 +275,8 @@ describe('COLL-CONSOLE — l écran des demandes de rattachement et « Par Found
     ]));
     const carte = textes(parTestID(arbre.root, 'demande-demande-r1'));
     expect(carte[0]).toBe('Recette Stripe FC');
-    expect(carte[1]).toMatch(/^Pour la Ville de Montrivage · le .*01\/10/);
+    // INVERSE PAR FINITIONS15 point 8 — motif : la planche P2-fiche écrit « Envoyée le jeu. 1 oct. ».
+    expect(carte[1]).toBe('Pour la Ville de Montrivage · le jeu. 1 oct.');
     expect(carte).toContain('Hors de la commune : vérifie que le club joue bien à Ville de Montrivage avant de le rattacher.');
 
     await appuyer(parTestID(arbre.root, 'onglet-faits'));

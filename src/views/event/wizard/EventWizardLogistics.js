@@ -167,6 +167,23 @@ export const debutDeRepetitionSuivant = (debut, ancienne, nouvelle) => (
   !debut || areSameDay(debut, ancienne) || debut < nouvelle ? new Date(nouvelle) : debut
 );
 
+/**
+ * 🐞 FINITIONS15 point 1 (T14, C08 et C08b) — LE JOUR DE LA RÉPÉTITION SUIT LE JOUR DE LA SÉANCE
+ * quand c'est le seul retenu : la répétition ne portait que le jour présélectionné (celui de
+ * l'ancienne date), le jour de la nouvelle date le remplace. Avant, il s'ajoutait à côté (lundi +
+ * jeudi) et la série prenait des séances en trop. Plusieurs jours choisis par l'utilisateur :
+ * son choix reste (l'effet qui suit y ajoute le jour de la séance, comme avant).
+ * @param {any[]} jours - Les jours retenus (0 = dimanche).
+ * @param {Date} ancienne - Le jour de la séance avant le changement.
+ * @param {Date} nouvelle - Le nouveau jour de la séance.
+ * @returns {any[]} Les jours à retenir.
+ */
+export const joursDeRepetitionSuivants = (jours, ancienne, nouvelle) => (
+  Array.isArray(jours) && jours.length === 1 && Number(jours[0]) === ancienne.getDay()
+    ? [nouvelle.getDay()]
+    : jours
+);
+
 const buildDefaultRecurrenceEndDate = (startDate, frequency, interval) => {
   const fallbackEnd = new Date(startDate);
   if (frequency === 'month') {
@@ -419,9 +436,13 @@ function EventWizardLogistics({ navigation, route }) {
   };
 
   // FINITIONS13-COLL (04/10) : changer le jour de la séance emmène le début de la répétition
-  // (`debutDeRepetitionSuivant`).
+  // (`debutDeRepetitionSuivant`) ; FINITIONS15 : et son jour, s'il était le seul retenu
+  // (`joursDeRepetitionSuivants`), même quand la répétition est éteinte.
   const changerLaDate = (/** @type {Date} */ nouvelle) => {
     setRecurrenceStartDate((debut) => debutDeRepetitionSuivant(debut, date, nouvelle));
+    setRecurrenceDays((/** @type {any[]} */ jours) => (
+      joursDeRepetitionSuivants(jours, date, nouvelle)
+    ));
     setDate(nouvelle);
   };
 

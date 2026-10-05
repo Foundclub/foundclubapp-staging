@@ -27,7 +27,7 @@ import {
 import useMessaging from '@/domains/messaging/useMessaging'
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
-import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
+import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
@@ -1576,9 +1576,10 @@ function Conversation({ navigation, route }) {
     // type que le site ne sait pas dessiner — en francais, jamais son nom.
     if (composition.type === 'lineup_share' && String(composition?.eventId || '').trim()) {
       return (
-        <CompositionMessageBubble
+        // FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil.
+        <CompositionMessageBubbleDuFil
+          chatId={chatId}
           composition={composition}
-          currentPeople={chatData?.participants}
           isMe={isMine}
         />
       );
@@ -1614,7 +1615,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
-    chatData?.participants,
+    chatId,
     handleProposalResponse,
     handleVoteOnPoll,
     mutedTextColor,

@@ -1124,7 +1124,8 @@ function UserDetails({ navigation, route }) {
   const ligneDeLEnfant = ligneDIdentite(t, {
     age,
     clubName: user?.club?.name,
-    teamNames: playerTeams.map((team) => team?.name),
+    // FINITIONS15 point 9d : chaque equipe sous SON club.
+    teams: playerTeams,
   });
   const badgeRechercheDeClub = user?.isLookingForClub ? (
     <View

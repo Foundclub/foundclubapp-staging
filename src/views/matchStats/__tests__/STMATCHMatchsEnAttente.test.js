@@ -392,6 +392,42 @@ describe('FINITIONS14 · point 4 — les cartes titrent « club — adversaire �
     expect(textes(racine)).not.toContain('Match de championnat U15');
   });
 
+  // 🎨 FINITIONS15 point 9g — planche P2-attente, état 3 : « AS Montrivage — Test-COMPO est
+  // complet : … ». La ligne lisait `lastCompleted.label` (« Match vs Test-COMPO ») ; le serveur y
+  // nomme désormais l'adversaire : même titre que les cartes. Et une carte ouvre l'écran de réponse
+  // avec CE titre (serveur d'avant compris). ROUGES avant le lot.
+  test('🔴 FIN15 9g — « … est complet » porte le titre des cartes', () => {
+    mockUtilisateur = COMPTE;
+    const racine = monter({
+      data: {
+        emptyReason: 'nothing_pending',
+        items: [],
+        lastCompleted: {
+          eventId: 'match-19h',
+          finalizedAt: '2026-10-01T20:39:00.000Z',
+          label: 'Match vs Test-COMPO',
+          opponentName: 'Test-COMPO',
+          responses: { count: 1, total: 1 },
+          sourceType: 'event',
+          team: { documentId: 'u15', name: 'U15' },
+        },
+      },
+    });
+
+    expect(textes(racine))
+      .toContain('AS Montrivage — Test-COMPO est complet : feuille publiée, 1 sur 1 a répondu.');
+  });
+
+  test('🔴 FIN15 9g — la carte ouvre l écran de réponse avec SON titre', () => {
+    mockUtilisateur = COMPTE;
+    const racine = monter({ data: { items: [joueur({ label: 'Match vs Test-COMPO', opponentName: 'Test-COMPO' })] } });
+    act(() => { parId(racine, 'st-match-attente-carte-event:match-19h:u15:self').props.onPress(); });
+
+    expect(mockNaviguer).toHaveBeenCalledWith('PlayerMatchResponse', expect.objectContaining({
+      matchLabel: 'AS Montrivage — Test-COMPO',
+    }));
+  });
+
   test('🔴 le tableau du site porte le même titre', () => {
     mockUtilisateur = COMPTE;
     // Le site met en tableau la famille « Pour mon équipe » quand elle est seule.

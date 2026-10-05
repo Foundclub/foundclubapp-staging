@@ -414,6 +414,66 @@ describe('COLL-C2B planche 4 — un MEMBRE : son club en couleur, les autres en 
   });
 });
 
+// 🐞 FINITIONS15 point 3 (tournée T14, C15a) — LE CRÉNEAU U15 DU MERCREDI : 17:30 – 19:00 dans
+// l'onglet Créneaux et sur l'affiche, 18:00 – 19:00 dans la vue Liste du planning.
+// CE QUI EST VRAI : le CRÉNEAU est 17:30 – 19:00. Sa ligne `season-slot` est la source unique des
+// heures d'un créneau : l'onglet Créneaux (toSeasonSlotView), l'affiche (chiffres.ts) et le bloc
+// d'un créneau SEUL au planning (toWindow ⇒ toDbTime, planning-slot.ts:993) la lisent. Un bloc de
+// 18:00 ne peut donc pas être le créneau : c'est une SÉANCE du club posée dans le créneau, qui en
+// prend la place (contrat C2A, planning-slot.ts:940-962) avec SES heures. Le défaut : sa ligne
+// d'origine disait « Créneau attribué », sous des heures qui ne sont pas celles du créneau.
+// La séance dit maintenant qu'elle en est une. ROUGE avant le lot.
+const SEANCE_DANS_LE_CRENEAU = bloc({
+  club: { documentId: 'club-B', name: 'US Ville B' },
+  documentId: null,
+  endAt: '2026-03-04T18:00:00.000Z',
+  endTime: '19:00:00.000',
+  isOwnClub: false,
+  kind: 'event',
+  origin: 'slot',
+  slot: {
+    documentId: 'slot-U15',
+    source: 'attribution',
+    validFrom: '2025-10-07',
+    validUntil: '2026-06-30',
+    weekday: 3,
+  },
+  startAt: '2026-03-04T17:00:00.000Z',
+  startTime: '18:00:00.000',
+  team: { name: 'U15' },
+  title: 'US Ville B · U15',
+});
+
+describe('FINITIONS15 point 3 — une séance posée dans un créneau le dit', () => {
+  beforeEach(() => { gereLaVille(); });
+
+  it('la séance nomme son créneau ; le créneau seul garde sa ligne', async () => {
+    const SEANCE = 'Séance du club dans son créneau : chaque mercredi, du 7 oct. au 30 juin';
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue(
+      reponse([SEANCE_DANS_LE_CRENEAU, BLOC_D_UN_AUTRE_CLUB]),
+    );
+    const arbre = await rendre();
+    const { events, onReadOnlyEventPress } = grille();
+
+    await act(async () => {
+      onReadOnlyEventPress(events
+        .find((/** @type {any} */ evenement) => evenement.team?.name === 'U15'));
+    });
+    await attendre();
+    let lus = textes(arbre);
+    expect(lus).toContain(SEANCE);
+    expect(lus).not.toContain('Créneau attribué : chaque mercredi, du 7 oct. au 30 juin');
+
+    await act(async () => {
+      onReadOnlyEventPress(events
+        .find((/** @type {any} */ evenement) => evenement.team?.name === 'Seniors B'));
+    });
+    await attendre();
+    lus = textes(arbre);
+    expect(lus).toContain('Créneau attribué : chaque mercredi, du 1 sept. au 30 juin');
+  });
+});
+
 describe('COLL-C2B planche 4 — la semaine, telephone tourne', () => {
   it('la barre dit la semaine ; la grille reste, voilee, pendant la lecture suivante', async () => {
     gereLaVille();

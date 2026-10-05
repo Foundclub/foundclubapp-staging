@@ -15,7 +15,10 @@ import {
   ligneSeancesDeLaSemaine,
   nombreOuTiret,
 } from '@/domains/collectivite/collectiviteClubsDisplay';
-import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  findManagedCollectivite,
+  formatCollectiviteDay,
+} from '@/domains/collectivite/collectiviteDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -34,7 +37,6 @@ import {
   useRemindCollectiviteInvitation,
 } from '@/services/collectivite/collectiviteQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 import { useIsDesktop } from '@/responsive';
@@ -388,7 +390,8 @@ function CollectiviteClubs() {
   };
   const renderInvitation = (/** @type {any} */ invitation) => {
     const etat = etatDInvitation(t, invitation);
-    const date = formatDateWithDayPrefix(invitation?.createdAt).split(' ').pop();
+    // FINITIONS15 point 8 : la date comme les planches, « jeu. 1 oct. ».
+    const date = formatCollectiviteDay(invitation?.createdAt);
     const relancee = Number(invitation?.remindCount) || 0;
     return (
       <View

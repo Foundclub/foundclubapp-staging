@@ -18,6 +18,7 @@ import {
 } from '@/domains/collectivite/collectiviteConsole';
 import {
   collectiviteTypeLabel,
+  formatCollectiviteDay,
   toAdminCollectiviteRow,
 } from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -39,7 +40,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useAdminCollectivites } from '@/services/collectivite/collectiviteQueries';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
@@ -219,7 +219,8 @@ function AdminCollectiviteList() {
           {ligne.membersCount === null ? '—' : String(ligne.membersCount)}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100, { flex: 1 }]}>
-          {ligne.isActive ? formatDateWithDayPrefix(ligne.activatedAt, { fallback: '—' }) : '—'}
+          {/* FINITIONS15 point 8 : planche P2-liste-ordi, « jeu. 1 oct. ». */}
+          {ligne.isActive ? formatCollectiviteDay(ligne.activatedAt) || '—' : '—'}
         </Text>
       </>
     );

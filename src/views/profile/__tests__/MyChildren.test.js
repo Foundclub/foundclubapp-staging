@@ -576,6 +576,27 @@ describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
     expect(texte).toContain('Hugo Lemaire | 14 ans · U13 · U15 · AS Montrivage');
   });
 
+  // 🎨 FINITIONS15 point 9d (tournée T14, S03d) — « 14 ans · U13 · Seniors A · U15 ·
+  // AS Montrivage » : « Seniors A » est une équipe de Recette Stripe FC, la ligne la rangeait
+  // sous AS Montrivage (le club du profil, posé en bout de ligne). Chaque équipe va sous SON
+  // club (`myTeams.club`) ; le club de l'enfant d'abord. Planche 22 : « équipe · club ».
+  test('🔴 FIN15 9d — une équipe d un autre club se range sous SON club', async () => {
+    mockProfils = {
+      hugo: {
+        club: { name: 'AS Montrivage' },
+        myTeams: [
+          { club: { name: 'AS Montrivage' }, documentId: 'u13', name: 'U13' },
+          { club: { name: 'Recette Stripe FC' }, documentId: 'seniors-a', name: 'Seniors A' },
+          { club: { name: 'AS Montrivage' }, documentId: 'u15', name: 'U15' },
+        ],
+      },
+    };
+    const texte = texteVisible(await rendre());
+
+    const autreClub = 'Seniors A · Recette Stripe FC';
+    expect(texte).toContain(`Hugo Lemaire | 14 ans · U13 · U15 · AS Montrivage · ${autreClub}`);
+  });
+
   test('point 2 bis — profil pas encore lu : la carte dit l age seul, sans trou', async () => {
     mockProfils = {};
     const texte = texteVisible(await rendre());

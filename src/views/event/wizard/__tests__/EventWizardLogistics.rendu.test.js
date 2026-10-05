@@ -19,6 +19,10 @@ import EventWizardLogistics, { debutDeRepetitionSuivant } from '../EventWizardLo
 const mockGabarits = [];
 /** Proprietes recues par la feuille du bas, dans l'ordre du rendu. */
 const mockFeuilles = [];
+/** Proprietes recues par les champs de date, dans l'ordre du rendu (FINITIONS15). */
+const mockDates = [];
+/** Proprietes recues par le choix des jours, dans l'ordre du rendu (FINITIONS15). */
+const mockJours = [];
 
 // Le traducteur double INTERPOLE `{{count}}` : sans cela « Toutes les {{count}}
 // semaines » ne deviendrait jamais « Toutes les 2 semaines », et le test de la
@@ -78,6 +82,7 @@ jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => functi
 ) {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN } = jest.requireActual('react-native');
+  mockDates.push(props);
   return reactActuel.createElement(TexteRN, null, props.label);
 });
 
@@ -89,9 +94,12 @@ jest.mock('@/components/molecules/timePickerInput/TimePickerInput', () => functi
   return reactActuel.createElement(TexteRN, null, props.label);
 });
 
-jest.mock('@/components/molecules/dayPicker/DayPicker', () => function JoursMock() {
+jest.mock('@/components/molecules/dayPicker/DayPicker', () => function JoursMock(
+  /** @type {any} */ props,
+) {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN } = jest.requireActual('react-native');
+  mockJours.push(props);
   return reactActuel.createElement(TexteRN, null, 'CHOIX-DES-JOURS');
 });
 
@@ -419,5 +427,96 @@ describe('FINITIONS13-COLL point 8 — le début de la répétition suit la séa
   test('choisi plus tard que la séance : il reste', () => {
     const NOVEMBRE = new Date(2026, 10, 5);
     expect(debutDeRepetitionSuivant(NOVEMBRE, SAMEDI_3, JEUDI_8)).toBe(NOVEMBRE);
+  });
+});
+
+// 🐞 FINITIONS15 point 1 (tournée T14, C08 et C08b, planche 43) — L'ANCIEN JOUR NE RESTE PAS
+// COCHÉ. Karim pose une séance le lundi 5 oct., ouvre « Répéter » (lundi présélectionné), puis
+// déplace la séance au jeudi 8 : le jeudi s'ajoutait À CÔTÉ du lundi, et la série aurait aussi
+// pris tous les lundis — des séances en trop qu'on ne voit qu'en relisant la feuille.
+//
+// LA RÈGLE RETENUE : quand la répétition ne porte QUE le jour de l'ancienne date (le jour
+// présélectionné, que l'utilisateur n'a pas complété), le jour de la nouvelle date le REMPLACE.
+// Quand l'utilisateur a choisi lui-même plusieurs jours, son choix reste, et le jour de la
+// nouvelle date s'y ajoute (la séance elle-même fait partie de la série) — comme avant.
+// ROUGE avant le lot.
+describe('FINITIONS15 point 1 — la date de la séance déplace le jour de la répétition', () => {
+  /**
+   * Le dernier rendu du champ « Date » de la séance (pas ceux de la feuille).
+   * @returns {any} Ses propriétés.
+   */
+  const champDeLaDate = () => [...mockDates]
+    .reverse()
+    .find((props) => props.label === 'eventEdit.fields.date.label');
+
+  /**
+   * Les jours cochés au dernier rendu de la feuille.
+   * @returns {number[]} Les jours (0 = dimanche).
+   */
+  const joursCoches = () => mockJours[mockJours.length - 1].selectedDays.map(Number);
+
+  /**
+   * Déplace la séance de `decalage` jours, par le champ « Date » comme le fait le doigt.
+   * @param {number} decalage Le nombre de jours.
+   * @returns {Date} La nouvelle date.
+   */
+  const deplacerLaSeance = (decalage) => {
+    const [jour, mois, annee] = champDeLaDate().value.split('/').map(Number);
+    const nouvelle = new Date(annee, mois - 1, jour + decalage);
+    const texte = [
+      String(nouvelle.getDate()).padStart(2, '0'),
+      String(nouvelle.getMonth() + 1).padStart(2, '0'),
+      nouvelle.getFullYear(),
+    ].join('/');
+    act(() => champDeLaDate().onChange(texte));
+    return nouvelle;
+  };
+
+  /**
+   * Le jour de la semaine de la séance, d'après son champ « Date ».
+   * @returns {number} Le jour (0 = dimanche).
+   */
+  const jourDeLaSeance = () => {
+    const [jour, mois, annee] = champDeLaDate().value.split('/').map(Number);
+    return new Date(annee, mois - 1, jour).getDay();
+  };
+
+  test('répétition allumée sur le seul jour présélectionné : le nouveau jour le remplace', () => {
+    afficherLEcran();
+    ouvrirLaFeuille();
+    expect(joursCoches()).toEqual([jourDeLaSeance()]);
+    act(() => presserLeTexte('Appliquer'));
+
+    const nouvelle = deplacerLaSeance(3);
+
+    ouvrirLaFeuille();
+    expect(joursCoches()).toEqual([nouvelle.getDay()]);
+  });
+
+  test('répétition éteinte puis rallumée : le jour suit aussi la date', () => {
+    afficherLEcran();
+    ouvrirLaFeuille();
+    act(() => presserLeTexte('Appliquer'));
+    ouvrirLaFeuille();
+    act(() => presserLeTexte('Ne pas répéter'));
+
+    const nouvelle = deplacerLaSeance(3);
+
+    ouvrirLaFeuille();
+    expect(joursCoches()).toEqual([nouvelle.getDay()]);
+  });
+
+  test('plusieurs jours choisis : son choix reste, le nouveau jour s ajoute', () => {
+    afficherLEcran();
+    ouvrirLaFeuille();
+    const base = jourDeLaSeance();
+    const autre = (base + 2) % 7;
+    act(() => mockJours[mockJours.length - 1].onChange([base, autre]));
+    act(() => presserLeTexte('Appliquer'));
+
+    const nouvelle = deplacerLaSeance(1);
+
+    ouvrirLaFeuille();
+    expect([...joursCoches()].sort()).toEqual([base, autre, nouvelle.getDay()].sort());
   });
 });

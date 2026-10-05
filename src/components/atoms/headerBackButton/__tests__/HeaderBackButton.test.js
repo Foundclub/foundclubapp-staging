@@ -63,6 +63,21 @@ afterEach(() => {
   mockGoBack.mockClear();
 });
 
+// 🎨 FINITIONS15 point 9c — dessinée DANS le bouton de react-navigation (`headerBackImage`), la
+// flèche est décorative : un seul « Retour » au relevé d'accessibilité. L'appui marche toujours.
+// ROUGE avant le lot.
+describe('FINITIONS15 point 9c — la flèche décorative', () => {
+  it('ni libellé, ni rôle, hors de l arbre d accessibilité ; l appui revient en arrière', () => {
+    const { bouton } = monter({ decorative: true });
+    expect(bouton.props.accessible).toBe(false);
+    expect(bouton.props.accessibilityLabel).toBeUndefined();
+    expect(bouton.props.accessibilityRole).toBeUndefined();
+    expect(bouton.props.importantForAccessibility).toBe('no-hide-descendants');
+    act(() => { bouton.props.onPress(); });
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('HeaderBackButton — ce qu il fait aujourd hui (caracterisation)', () => {
   it('une fleche, le libelle « Retour », et un appui revient en arriere', () => {
     const { bouton, image } = monter();
