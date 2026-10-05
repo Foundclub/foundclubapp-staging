@@ -699,3 +699,94 @@ describe('ABOPARCLUB — les verrous violets suivent le club de l equipe', () =>
     expect(estDansLaFeuille(racine, LIBELLE_VOIR_L_OFFRE_CLUB)).toBe(true);
   });
 });
+
+// FINITIONS14 · point 2 (T13-bis, défaut 2) — « Actions d'équipe › Modifier » laissait la
+// feuille ouverte PAR-DESSUS « Modifier l'équipe » (photos D1b, D1c) : `handleEditTeam`
+// navigue sans la fermer, et la feuille (`BottomSheetModal`, rendue à la racine) reste au
+// premier plan de l'écran suivant. Même défaut pour TOUTES les rangées qui quittent la
+// feuille (navigation, onglet, fenêtre système) : seules l'invitation, le partage et la
+// remise à zéro la fermaient à la main.
+describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
+  /**
+   * Appuie sur la rangée (ou l'action d'en-tête) qui porte ce libellé.
+   * @param {any} racine La racine de l'arbre.
+   * @param {string} libelle Le libellé de la rangée.
+   * @returns {void}
+   */
+  const appuyerSurLaRangee = (racine, libelle) => {
+    const cible = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+        && textesPortant(noeud, libelle).length > 0,
+    ).pop();
+    if (!cible) throw new Error(`Aucune rangée « ${libelle} »`);
+    act(() => {
+      cible.props.onPress();
+    });
+  };
+
+  /** @type {any} */
+  let espionAlerte;
+  beforeEach(() => {
+    navigation.navigate.mockClear();
+    const { Alert } = jest.requireActual('react-native');
+    espionAlerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    espionAlerte.mockRestore();
+  });
+
+  test('🚨 « Modifier l’équipe » ouvre le formulaire ET ferme la feuille', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    appuyerSurLaRangee(racine, "Modifier l'équipe");
+
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      'TeamStack',
+      expect.objectContaining({ screen: 'TeamEdit' }),
+    );
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+  });
+
+  test.each([
+    ['Installations'],
+    ['Sponsors & partenaires'],
+    ["Voir l'offre"],
+    ["Quitter l'équipe"],
+  ])('🚨 « %s » (navigation ou fenêtre) ferme la feuille', (libelle) => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    appuyerSurLaRangee(racine, libelle);
+
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+  });
+
+  test('🚨 offre Équipe active : « Convocations » (onglet) et « Cotisation » ferment la feuille', () => {
+    mockAuthCourant = {
+      ...AUTH_DIRIGEANT,
+      entitlementsSummary: [{ scopeTeamDocumentId: EQUIPE.documentId, status: 'active' }],
+    };
+    const racine = monterLaFiche();
+
+    ouvrirLeMenu(racine);
+    appuyerSurLaRangee(racine, 'Convocations');
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+
+    ouvrirLeMenu(racine);
+    appuyerSurLaRangee(racine, "Cotisation de l'équipe");
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+    expect(navigation.navigate).toHaveBeenCalledWith('ClubLicenses');
+  });
+
+  test('🔒 une rangée verrouillée « offre Équipe » ouvre l’offre PAR-DESSUS la feuille (inchangé)', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    appuyerSurLaRangee(racine, 'Composition type');
+
+    // La feuille d'offre s'empile sur celle des actions (pile des `BottomSheetModal`) :
+    // fermer l'une pendant que l'autre se presente fait disparaitre la seconde (D19).
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(true);
+  });
+});

@@ -1916,7 +1916,12 @@ function TeamDetails({ navigation, route }) {
     reason: 'SUBSCRIPTION_REQUIRED',
     requiredPlan: ['TEAM'],
   }));
-  const openClubOfferRecap = () => navigation.navigate(RouteNames.GuideOffersRecap);
+  // FINITIONS14 — appele seulement depuis la feuille des actions (rangees verrouillees
+  // « offre Club » et « Voir l'offre » de l'en-tete) : il en sort, il la ferme.
+  const openClubOfferRecap = () => {
+    setIsTeamActionsPanelOpen(false);
+    navigation.navigate(RouteNames.GuideOffersRecap);
+  };
   const joinActionTitle = (() => {
     if (pendingRequest) {
       return t('teamDetails.actions.requestPending', 'Demande en attente');
@@ -2767,11 +2772,26 @@ function TeamDetails({ navigation, route }) {
       labelColor = Fonts.neutral300;
     }
     const lockColor = lock === 'club' ? Colors.violet500 : Colors.primary500;
+    // FINITIONS14 (T13-bis, defaut 2) — UNE RANGEE QUI QUITTE LA FEUILLE LA FERME.
+    // « Modifier l'equipe » naviguait sans la fermer : la feuille (rendue a la racine)
+    // restait PAR-DESSUS le formulaire, et il fallait toucher le fond grise pour
+    // l'atteindre. Meme defaut pour toutes les rangees qui naviguent, changent d'onglet
+    // ou ouvrent une fenetre systeme : on ferme ICI, une fois, plutot que dans chaque
+    // geste. ⛔ Sauf le verrou « offre Equipe » : il ouvre la feuille d'offre, qui
+    // s'empile sur celle-ci (pile des `BottomSheetModal`) ; fermer l'une pendant que
+    // l'autre se presente fait disparaitre la seconde (piege D19).
+    const quitteLaFeuille = lock !== 'team';
+    const handlePress = quitteLaFeuille
+      ? () => {
+        setIsTeamActionsPanelOpen(false);
+        onPress?.();
+      }
+      : onPress;
     return (
       <TouchableOpacity
         accessibilityRole="button"
         key={label}
-        onPress={onPress}
+        onPress={handlePress}
         style={[
           Alignments.row,
           Alignments.alignCenter,
@@ -4830,10 +4850,7 @@ function TeamDetails({ navigation, route }) {
                   icon: 'trash',
                   label: t('teamStatsPanel.resetAction', 'Remettre la présence à zéro'),
                   last: true,
-                  onPress: () => {
-                    setIsTeamActionsPanelOpen(false);
-                    handleResetStats();
-                  },
+                  onPress: handleResetStats,
                 })}
               </View>
             ) : null}
