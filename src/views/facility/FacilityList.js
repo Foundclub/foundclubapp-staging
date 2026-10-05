@@ -22,6 +22,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
+import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
   clubSlotParts,
   groupClubInstallations,
@@ -170,11 +171,12 @@ function BoutonPlusDActions({
  */
 function BandeauDeFermetureDeLaVille({ facilityId, facilityType = null }) {
   const fermetures = useFacilityClosures(facilityId || null);
-  const bandeau = fermetures.data?.meta?.bandeau || null;
-  if (!bandeau) return null;
+  // FINITIONS13-COLL (04/10) : toutes les fermetures annoncées, la plus proche d'abord.
+  const bandeaux = closuresOfBanner(fermetures.data?.meta);
+  if (!bandeaux.length) return null;
   return (
     <FacilityClosureBanner
-      closure={bandeau}
+      closures={bandeaux}
       facilityType={facilityType}
       testID={`carte-ville-bandeau-${facilityId}`}
       withDays
@@ -249,7 +251,10 @@ function FacilityList() {
   }, [isCollectiviteMode, navigation]);
   // « Cette semaine : 9 seances · complet jeu. 18:00 – 19:30 » : la semaine de chaque
   // installation de la Ville, lue dans son planning. Cote club, rien n est lu.
-  const semaines = useInstallationsWeekSummary(isCollectiviteMode ? facilities : []);
+  const semaines = useInstallationsWeekSummary(
+    isCollectiviteMode ? facilities : [],
+    collectiviteId,
+  );
   // Le menu « Plus d actions » d une carte de la Ville : l installation ouverte, ou null.
   const [menuInstallation, setMenuInstallation] = useState(/** @type {any} */ (null));
   // COLL-C2B-BIS — sur ordinateur, la place du bouton qui l a ouvert (le menu s y ancre).

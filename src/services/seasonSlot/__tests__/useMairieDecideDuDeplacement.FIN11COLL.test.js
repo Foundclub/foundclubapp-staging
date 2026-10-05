@@ -23,6 +23,10 @@ jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   restoreSeasonSlot: jest.fn(),
   withdrawSeasonSlot: jest.fn(),
 }));
+// FINITIONS13-COLL (04/10) : seasonSlotQueries lit « Chiffres » de la Ville (même client HTTP).
+jest.mock('@/services/collectivite/collectiviteService', () => ({
+  getCollectiviteChiffres: jest.fn(),
+}));
 // Les installations des Villes du club (COLL-C3B) : le gymnase et le dojo ; « terrain-club » n'en est pas.
 jest.mock('@/services/facility/facilityService', () => ({
   getClubCollectiviteFacilities: jest.fn(() => Promise.resolve({

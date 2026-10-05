@@ -1,4 +1,9 @@
+import i18next from 'i18next';
+
+import fr from '@/theme/strings/translations/fr';
+
 import {
+  ligneDesDemandesEnAttente,
   pageDAujourdhui,
   pageSuivante,
   plageDeLaVue,
@@ -37,5 +42,26 @@ describe('installationPlanningViews — les fleches et « Aujourd hui »', () =>
     expect(pageDAujourdhui(VUES.troisJours, MERCREDI, jeudi)).toBe(true);
     expect(pageDAujourdhui(VUES.semaine, MERCREDI, jeudi)).toBe(true);
     expect(pageDAujourdhui(VUES.mois, MERCREDI, new Date(2026, 3, 1))).toBe(false);
+  });
+});
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8 : la ligne des demandes en attente dit la période de la
+// VUE (tournée T13 : « 4 demandes en attente cette semaine » en vue Mois, pour les 9, 13, 16 et
+// 27 oct.).
+// ROUGE avant le lot (la fonction n'existait pas : la phrase vivait dans l'écran).
+describe('FINITIONS13-COLL point 8 — « en attente » dit la période de la vue', () => {
+  beforeAll(async () => {
+    await i18next.init({ lng: 'fr', resources: { fr: { translation: fr } } });
+  });
+  const t = i18next.t.bind(i18next);
+
+  it('Jour, 3 jours, Semaine et Liste, Mois : chacune sa période', () => {
+    expect(ligneDesDemandesEnAttente(t, VUES.jour, 1)).toBe('1 demande en attente sur ce jour.');
+    expect(ligneDesDemandesEnAttente(t, VUES.troisJours, 2))
+      .toBe('2 demandes en attente sur ces trois jours.');
+    expect(ligneDesDemandesEnAttente(t, VUES.semaine, 2))
+      .toBe('2 demandes en attente cette semaine.');
+    expect(ligneDesDemandesEnAttente(t, VUES.liste, 1)).toBe('1 demande en attente cette semaine.');
+    expect(ligneDesDemandesEnAttente(t, VUES.mois, 4)).toBe('4 demandes en attente ce mois-ci.');
   });
 });

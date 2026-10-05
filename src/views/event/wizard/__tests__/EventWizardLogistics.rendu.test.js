@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
-import EventWizardLogistics from '../EventWizardLogistics';
+import EventWizardLogistics, { debutDeRepetitionSuivant } from '../EventWizardLogistics';
 
 // Filet D09 (E6) — comment la RECURRENCE se saisit AUJOURD'HUI, avant d'etre
 // repliee dans une feuille du bas. Etat du 2026-08-06.
@@ -399,5 +399,25 @@ describe('D09 — l ecran « Logistique », etat du 2026-08-06', () => {
     expect(textes).toContain('eventWizard.steps.logistics.reservationTitle');
     expect(textes).toContain('eventEdit.fields.pricePerPerson.label');
     expect(textes).toContain('eventWizard.steps.logistics.reservationMode');
+  });
+});
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8 : le début de la répétition SUIT le jour de la séance tant
+// qu'on ne l'a pas choisi (tournée T13, C2_2a : « samedi 3 octobre », le jour de la saisie, pour
+// une séance le jeudi 8 ; déplacée au 22, la série aurait gardé les 8 et 15). ROUGE avant le lot.
+describe('FINITIONS13-COLL point 8 — le début de la répétition suit la séance', () => {
+  const SAMEDI_3 = new Date(2026, 9, 3, 10, 0);
+  const JEUDI_8 = new Date(2026, 9, 8, 0, 0);
+  const JEUDI_22 = new Date(2026, 9, 22, 0, 0);
+
+  test('resté au jour d avant, ou plus tôt que la séance : il suit', () => {
+    expect(debutDeRepetitionSuivant(SAMEDI_3, SAMEDI_3, JEUDI_8)).toEqual(JEUDI_8);
+    expect(debutDeRepetitionSuivant(JEUDI_8, SAMEDI_3, JEUDI_22)).toEqual(JEUDI_22);
+    expect(debutDeRepetitionSuivant(null, SAMEDI_3, JEUDI_8)).toEqual(JEUDI_8);
+  });
+
+  test('choisi plus tard que la séance : il reste', () => {
+    const NOVEMBRE = new Date(2026, 10, 5);
+    expect(debutDeRepetitionSuivant(NOVEMBRE, SAMEDI_3, JEUDI_8)).toBe(NOVEMBRE);
   });
 });

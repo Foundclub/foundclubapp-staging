@@ -5820,8 +5820,13 @@ export default {
       demandeEnAttente: 'Demande en attente',
       enAttenteJour_one: '{{count}} demande en attente sur ce jour.',
       enAttenteJour_other: '{{count}} demandes en attente sur ce jour.',
+      // FINITIONS13-COLL (04/10) — la période de la vue (tournée T13 : « cette semaine » en Mois).
+      enAttenteMois_one: '{{count}} demande en attente ce mois-ci.',
+      enAttenteMois_other: '{{count}} demandes en attente ce mois-ci.',
       enAttenteSemaine_one: '{{count}} demande en attente cette semaine.',
       enAttenteSemaine_other: '{{count}} demandes en attente cette semaine.',
+      enAttenteTroisJours_one: '{{count}} demande en attente sur ces trois jours.',
+      enAttenteTroisJours_other: '{{count}} demandes en attente sur ces trois jours.',
       // COLL-FIX2 (03/10) — un jour fermé (planche 25).
       fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
@@ -5888,6 +5893,8 @@ export default {
       enAttente: 'En attente',
       enAttenteDeLaMairie: 'En attente de la mairie',
       enAttenteDuDirigeant: 'En attente de ton dirigeant',
+      // FINITIONS13-COLL (04/10) — la fiche d'une séance en attente (installation d'un club).
+      enAttenteDuProprietaire: 'En attente du gestionnaire de l’installation',
       // eslint-disable-next-line max-len
       ensuite: 'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
       // eslint-disable-next-line max-len
@@ -5904,6 +5911,8 @@ export default {
       laVille: 'Ville',
       libreCeJour: 'Libre ce {{jour}} :',
       ligneSerie: 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
+      // FINITIONS13-COLL (04/10) — les dates refusées d'une série (tournée T13, C2_1e).
+      ligneSerieDates: 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
       // eslint-disable-next-line max-len
       momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
@@ -6049,9 +6058,14 @@ export default {
     serie: {
       completesCertaines: 'Complet {{nombre}} fois sur {{total}} : {{dates}}',
       completesToutes: 'Complet chaque semaine : il y a déjà {{equipes}}.',
+      // FINITIONS13-COLL (04/10) — toutes pleines, pas toutes pareilles (tournée T13, C2_1c).
+      completesToutesEcarts: 'Complet chaque semaine : il y a déjà {{equipes}}, {{ecarts}}.',
       consequenceCertaines: 'Accepter met {{equipes}} pour {{places}} ces jours-là.',
       consequenceLibre: 'Accepter ne gêne personne, aucune semaine.',
       consequenceToutes: 'Accepter met {{equipes}} pour {{places}}, chaque semaine.',
+      // eslint-disable-next-line max-len
+      consequenceToutesEcarts: 'Accepter met {{equipes}} pour {{places}}, chaque semaine ({{ecarts}}).',
+      ecart: '{{nombre}} le {{date}}',
       entete: '{{nombre}} {{jours}} du {{du}} au {{au}} :',
       libreVariable: 'Il reste de la place chaque semaine.',
       pastilleCertaines: 'Complet {{nombre}} fois sur {{total}}',
@@ -6608,6 +6622,9 @@ export default {
       body: 'Envoie le premier message pour lancer la conversation.',
       title: 'Aucun message pour le moment',
     },
+    // FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion, au pied du fil (T13, C2_3b).
+    // eslint-disable-next-line max-len
+    envoiRefuse: 'Ton message n’est pas parti : la connexion à la messagerie est coupée. Il reste dans le champ ; renvoie-le dans un instant.',
     eventFallback: 'Événement',
     friendly: {
       matchConfirmedTitle: 'Match confirmé',

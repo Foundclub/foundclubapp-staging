@@ -511,3 +511,59 @@ describe('FINITIONS12-COLL point 3 — le canal vide de la Ville', () => {
     }
   });
 });
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8, le canal des dirigeants (tournée T13, C2_3a / C2_3b) : la
+// phrase d'un fil vide collée en bas (planche : centrée), le titre tronqué « Dirigeants des clu… »,
+// et rien à l'écran ne disait pourquoi le message n'était pas parti (la bannière passe et s'en va).
+// ROUGES avant le lot.
+describe('FINITIONS13-COLL point 8 — le canal des dirigeants', () => {
+  const FIL_VILLE = {
+    collectivite: { name: 'Ville de Montrivage' },
+    documentId: 'chat-1',
+    participants: [],
+    type: 'collectivite_dirigeants',
+  };
+  const aplatirTexte = (/** @type {any} */ noeud) => {
+    if (noeud === null || noeud === undefined || typeof noeud === 'boolean') return '';
+    if (typeof noeud === 'string' || typeof noeud === 'number') return String(noeud);
+    if (Array.isArray(noeud)) return noeud.map(aplatirTexte).join('');
+    return aplatirTexte(noeud?.props?.children);
+  };
+
+  it('un envoi refusé le DIT au pied du fil, tant que la connexion manque', () => {
+    mockSendMessage.mockReturnValue(null);
+    const { arbre } = monterConversation();
+    taper('Recette T13 canal hors ligne');
+    appuyerSurEnvoyer('Recette T13 canal hors ligne');
+    const pied = aplatirTexte(dernieresProps().renderFooter());
+    expect(pied).toContain('Ton message n’est pas parti');
+    act(() => { arbre.unmount(); });
+  });
+
+  it('un envoi accepté : aucune ligne au pied du fil', () => {
+    mockSendMessage.mockReturnValue('optimiste-1');
+    const { arbre } = monterConversation();
+    taper('Bonjour');
+    appuyerSurEnvoyer('Bonjour');
+    expect(aplatirTexte(dernieresProps().renderFooter())).not.toContain('pas parti');
+    act(() => { arbre.unmount(); });
+  });
+
+  it('un fil vide occupe toute la hauteur : sa phrase est centrée, pas collée en bas', () => {
+    mockChat = FIL_VILLE;
+    const { arbre } = monterConversation();
+    expect(dernieresProps().listViewProps?.contentContainerStyle)
+      .toEqual(expect.objectContaining({ flexGrow: 1 }));
+    act(() => { arbre.unmount(); });
+  });
+
+  it('le titre du canal tient sur deux lignes au lieu d’être coupé', () => {
+    mockChat = FIL_VILLE;
+    const { arbre } = monterConversation();
+    const titre = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'conversation-titre',
+    )[0];
+    expect(titre?.props.numberOfLines).toBe(2);
+    act(() => { arbre.unmount(); });
+  });
+});

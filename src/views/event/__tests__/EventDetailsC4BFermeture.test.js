@@ -532,3 +532,31 @@ describe('COLL-C4B · le bandeau de la seance touchee par une fermeture', () => 
     expect(contient(racine, 'L’installation est fermée')).toBe(false);
   });
 });
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8 : une séance EN ATTENTE dit qui décide (tournée T13, C2_1a :
+// la séance d'une série demandée à la Ville ne disait rien). Le serveur le dit (`pendingDecider`).
+// ROUGE avant le lot.
+describe('FINITIONS13-COLL point 8 — la séance en attente dit qui décide', () => {
+  const enAttente = (pendingDecider) => buildEvent({
+    facility: { documentId: 'gym-1', name: 'Gymnase des Tilleuls' },
+    pendingDecider,
+    pendingReason: pendingDecider === 'dirigeant' ? 'club_slot_overflow' : 'facility_overbooking',
+    status: 'pending_validation',
+  });
+
+  test('la mairie décidera : « En attente de la mairie »', () => {
+    const racine = monter({ auth: ORGANISATEUR(), event: enAttente('mairie') });
+    expect(parTestID(racine, 'event-attente-decision')).toHaveLength(1);
+    expect(contient(racine, 'En attente de la mairie')).toBe(true);
+  });
+
+  test('le créneau du club est complet : « En attente de ton dirigeant »', () => {
+    const racine = monter({ auth: ORGANISATEUR(), event: enAttente('dirigeant') });
+    expect(contient(racine, 'En attente de ton dirigeant')).toBe(true);
+  });
+
+  test('une séance qui n’attend pas : rien', () => {
+    const racine = monter({ auth: ORGANISATEUR(), event: buildEvent() });
+    expect(parTestID(racine, 'event-attente-decision')).toHaveLength(0);
+  });
+});

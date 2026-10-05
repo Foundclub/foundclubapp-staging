@@ -27,7 +27,10 @@ import {
   seasonSlotsSeen,
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
-import { phraseOccupation } from '@/domains/collectivite/collectiviteChiffres';
+import {
+  phraseOccupation,
+  seancesDeLInstallation,
+} from '@/domains/collectivite/collectiviteChiffres';
 import { findManagedCollectivite, formatSlot } from '@/domains/collectivite/collectiviteDisplay';
 import {
   closureDaysLabel,
@@ -745,11 +748,10 @@ function CollectiviteHome() {
   // de séances de la semaine est celui de « Chiffres » (`seances` de la ligne : tenues + à venir,
   // admin docs/CONTRAT_CHIFFRES_VILLE.md §5), la même lecture que le taux. Avant : les BLOCS du
   // planning, créneaux compris (« 14 séances » contre 10) ; un créneau n'est pas une séance (§1).
-  const seancesSelonChiffres = (/** @type {string | undefined} */ facilityId) => {
-    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
-    const ligne = Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) : null;
-    return typeof ligne?.seances === 'number' ? ligne.seances : null;
-  };
+  // FINITIONS13-COLL (04/10) : la règle est partagée avec la liste des installations.
+  const seancesSelonChiffres = (/** @type {string | undefined} */ facilityId) => (
+    seancesDeLInstallation(chiffresSemaine.data, facilityId)
+  );
   const libelleSeances = (/** @type {string | undefined} */ facilityId) => {
     if (chiffresSemaine.isLoading) return '…';
     const total = seancesSelonChiffres(facilityId);

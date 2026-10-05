@@ -308,3 +308,18 @@ describe('COLL-AFFICHE — planche 30 B : « Une affiche pour l’installation �
     }));
   });
 });
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8 : le message d'un téléchargement parle de CE choix
+// (tournée T12, CAF_4b : « Affiche enregistrée : … » restait sous « Un tableau pour le service »).
+// ROUGE avant le lot.
+describe('FINITIONS13-COLL point 8 — le message suit le choix', () => {
+  it('« Affiche enregistrée » disparaît quand on choisit le tableau', async () => {
+    mockTelecharger.mockResolvedValue({ opened: true, outcome: 'downloads' });
+    const arbre = await ouvrir();
+    await act(async () => { parTitre(arbre, 'Télécharger').props.onPress(); });
+    const message = 'Affiche enregistrée : affiche-gymnase-des-tilleuls-2026-09-28.pdf';
+    expect(textes(arbre)).toContain(message);
+    await act(async () => { parTestID(arbre, 'export-tableau').props.onPress(); });
+    expect(textes(arbre)).not.toContain(message);
+  });
+});

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
+import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
   finDuCreneau,
   formatDay,
@@ -211,7 +212,8 @@ function InstallationCreneaux() {
   const clubs = useCollectiviteClubs(canManage ? collectiviteId : null);
   // COLL-C4B (02/10) — le bandeau de la fiche, tant que la fermeture dure ou approche (P3b).
   const fermeturesDeLInstallation = useFacilityClosures(facilityId);
-  const bandeau = fermeturesDeLInstallation.data?.meta?.bandeau || null;
+  // FINITIONS13-COLL (04/10) : toutes les fermetures annoncées, la plus proche d'abord.
+  const bandeaux = closuresOfBanner(fermeturesDeLInstallation.data?.meta);
 
   const ligne = (Array.isArray(installations.data) ? installations.data : [])
     .find((installation) => installation?.documentId === facilityId) || null;
@@ -507,7 +509,7 @@ function InstallationCreneaux() {
       </View>
 
       <FacilityClosureBanner
-        closure={bandeau}
+        closures={bandeaux}
         facilityType={installation.type}
         testID="installation-bandeau-fermeture"
         withDays

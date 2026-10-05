@@ -162,6 +162,19 @@ export const closureBandLabel = (t, fermeture) => {
 };
 
 /**
+ * 🎨 FINITIONS13-COLL (04/10) — LES FERMETURES DU BANDEAU, telles que le serveur les annonce :
+ * toutes celles qui durent ou approchent (`meta.bandeaux`, la plus proche d abord) ; un serveur
+ * d avant ne rend que la premiere (`meta.bandeau`). Tournee T13 : une fermeture le 15 restait
+ * invisible tant qu une autre existait le 10.
+ * @param {any} meta - `meta` de GET /facilities/:id/closures.
+ * @returns {any[]} Les fermetures, dans l ordre.
+ */
+export const closuresOfBanner = (meta) => {
+  if (Array.isArray(meta?.bandeaux)) return meta.bandeaux.filter(Boolean);
+  return meta?.bandeau ? [meta.bandeau] : [];
+};
+
+/**
  * Une seance touchee, telle que la carte la dit : « AS Montrivage · U15, 18:00 – 19:30 ».
  * @param {{ club?: { name?: string|null }|null, team?: { name?: string|null }|null,
  *   startTime?: string|null, endTime?: string|null, date?: string|null }} seance - La seance.

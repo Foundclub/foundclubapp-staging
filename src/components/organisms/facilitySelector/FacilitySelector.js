@@ -44,10 +44,14 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
  * @param {boolean} [props.withVilleSlots] - COLL-C2C : propose aussi les installations de la Ville
  *   ou le club a un creneau (l etape « Lieu » d un evenement ; les autres appelants : rien).
  * @param {string | null} [props.teamId] - COLL-C2C : l equipe de l evenement (son creneau).
+ * @param {{ documentId?: string, name?: string } | null} [props.currentFacility] - FIN13-COLL :
+ *   l installation ACTUELLE de la seance modifiee, toujours proposee (T12/T13 : « Modifier » ne
+ *   listait pas le Gymnase de la Ville ou la seance avait lieu).
  */
 function FacilitySelector({
   clubId,
   cmId,
+  currentFacility = null,
   error,
   facilityId,
   location,
@@ -153,8 +157,14 @@ function FacilitySelector({
       }
     });
 
+    // FINITIONS13-COLL (04/10) — l installation ACTUELLE de la seance, meme hors des listes lues.
+    if (currentFacility?.documentId
+      && !allFacilities.some((facility) => facility.documentId === currentFacility.documentId)) {
+      allFacilities.push({ ...currentFacility });
+    }
+
     return allFacilities;
-  }, [clubFacilitiesData, cmFacilitiesData, villeFacilitiesData]);
+  }, [clubFacilitiesData, cmFacilitiesData, currentFacility, villeFacilitiesData]);
   // COLL-C2C — D32 : la seance tombe-t-elle dans un creneau du club ? Alors le creneau porte la
   // place : la carte d occupation de l installation ne s applique pas (le serveur en juge pareil).
   const facilitePourCreneau = facilities.find(
