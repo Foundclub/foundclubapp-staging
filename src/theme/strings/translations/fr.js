@@ -8225,6 +8225,8 @@ export default {
     share: 'Partager',
     sharing: 'Partage...',
     signInToAnswerThis: 'Connecte-toi pour répondre à cet événement.',
+    signInToSee: 'Connecte-toi pour voir cet événement',
+    signInToSeeHint: 'Il est peut-être réservé aux membres de son équipe.',
     signInToTakePart: 'Se connecter pour participer',
     sourceTeam: 'Équipe source',
     sourceTeam2: 'Équipe source:',

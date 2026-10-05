@@ -5384,6 +5384,7 @@ function Conversation({ navigation, route }) {
           >
             <CompositionMessageBubble
               composition={currentMessage.composition}
+              currentPeople={chatData?.participants}
               isMe={!isLeft}
             />
           </View>

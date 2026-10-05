@@ -562,6 +562,20 @@ describe('ST-RETOURS2 — Mes enfants (planche 22, etat 1)', () => {
     expect(texte).toContain('Hugo Lemaire | 14 ans · U15 · AS Montrivage');
   });
 
+  // FINITIONS13-STATS · point 3 (T13, tranche par le chef « A ») — Hugo joue en U13 ET en U15 :
+  // la carte ne prend plus sa PREMIERE equipe, elle les dit toutes, dans l ordre de son profil.
+  test('🔴 FIN13-STATS 3 — deux equipes : « 14 ans · U13 · U15 · AS Montrivage »', async () => {
+    mockProfils = {
+      hugo: {
+        club: { name: 'AS Montrivage' },
+        myTeams: [{ documentId: 'u13', name: 'U13' }, { documentId: 'u15', name: 'U15' }],
+      },
+    };
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Hugo Lemaire | 14 ans · U13 · U15 · AS Montrivage');
+  });
+
   test('point 2 bis — profil pas encore lu : la carte dit l age seul, sans trou', async () => {
     mockProfils = {};
     const texte = texteVisible(await rendre());

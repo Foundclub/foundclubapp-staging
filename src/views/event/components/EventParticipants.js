@@ -1848,60 +1848,110 @@ function ParticipantItem({
             size={40}
             style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
           />
-          {/* MARQUEE — le nom du participant se lit en entier. */}
-          <MarqueeText
-            containerStyle={{ flex: 1 }}
-            style={[Fonts.p1Bold, Fonts.neutral00]}
-            text={getUserDisplayName(player)}
-          />
+          {/* 🪪 FINITIONS13-STATS (6, T12 photo F11S_3) — L ABSENT A L APPEL N A PLUS DE
+              PASTILLE. Le nom, la pastille et « Présent » se partageaient une ligne : « Hugo L… »,
+              « Absent … », l heure invisible. La planche (« Absent à l'appel », état 3) : le nom
+              en entier, et dessous « Absent à l'appel · sam. 18:55 ».
+              Mêmes textes, même orange. */}
+          {estAbsentALAppel ? (
+            <View
+              style={{ flex: 1, gap: 2 }}
+              testID={`FIN13-identite-${player?.documentId || ''}`}
+            >
+              <MarqueeText
+                containerStyle={{ alignSelf: 'stretch' }}
+                style={[Fonts.p1Bold, Fonts.neutral00]}
+                text={getUserDisplayName(player)}
+              />
+              <View
+                style={[Alignments.row, Alignments.alignCenter, { flexWrap: 'wrap' }]}
+                testID={`FIN13-ligne-absent-${player?.documentId || ''}`}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={[Fonts.p3, { color: badge.textColor, flexShrink: 0, textAlign: 'center' }]}
+                >
+                  {badge.title}
+                </Text>
+                {arrivalTime ? (
+                  <Text numberOfLines={1} style={[Fonts.p3, { color: badge.textColor }]}>
+                    {' · '}
+                  </Text>
+                ) : null}
+                {arrivalTime ? (
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      Fonts.p3,
+                      { color: badge.textColor, flexShrink: 0, textAlign: 'center' },
+                    ]}
+                  >
+                    {arrivalTime}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            // MARQUEE — le nom du participant se lit en entier.
+            <MarqueeText
+              containerStyle={{ flex: 1 }}
+              style={[Fonts.p1Bold, Fonts.neutral00]}
+              text={getUserDisplayName(player)}
+            />
+          )}
         </View>
-        <View
-          style={[
-            ApplicationStyle.borderRadius16,
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.gap[8],
-            Spaces.paddingHorizontal[8],
-            Spaces.paddingVertical[4],
-            {
-              backgroundColor: badge.backgroundColor,
-              borderColor: badge.borderColor,
-              borderWidth: 1,
-              flexShrink: 1,
-            },
-          ]}
-          testID={`COMPACT-pastille-${player?.documentId || ''}`}
-        >
-          {/* 🛡️ L ETAT NE MAIGRIT JAMAIS (`flexShrink: 0`). « Arrivé »,
-              « Absent », « À pointer » : c est la seule information dont on ne
-              peut rien retirer. Les deux suivantes, si — et dans cet ordre. */}
-          <Text
-            numberOfLines={1}
-            style={[Fonts.p3, { color: badge.textColor, flexShrink: 0, textAlign: 'center' }]}
+        {estAbsentALAppel ? null : (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[8],
+              Spaces.paddingHorizontal[8],
+              Spaces.paddingVertical[4],
+              {
+                backgroundColor: badge.backgroundColor,
+                borderColor: badge.borderColor,
+                borderWidth: 1,
+                flexShrink: 1,
+              },
+            ]}
+            testID={`COMPACT-pastille-${player?.documentId || ''}`}
           >
-            {badge.title}
-          </Text>
-          {badge.value ? (
+            {/* 🛡️ L ETAT NE MAIGRIT JAMAIS (`flexShrink: 0`). « Arrivé »,
+                « Absent », « À pointer » : c est la seule information dont on ne
+                peut rien retirer. Les deux suivantes, si — et dans cet ordre. */}
             <Text
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
               numberOfLines={1}
-              style={[Fonts.p3Bold, { color: badge.textColor, flexShrink: 1, textAlign: 'center' }]}
+              style={[Fonts.p3, { color: badge.textColor, flexShrink: 0, textAlign: 'center' }]}
             >
-              {badge.value}
+              {badge.title}
             </Text>
-          ) : null}
-          {arrivalTime ? (
-            <Text
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
-              numberOfLines={1}
-              style={[Fonts.p4, { color: badge.textColor, flexShrink: 4, textAlign: 'center' }]}
-            >
-              {arrivalTime}
-            </Text>
-          ) : null}
-        </View>
+            {badge.value ? (
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+                numberOfLines={1}
+                style={[
+                  Fonts.p3Bold,
+                  { color: badge.textColor, flexShrink: 1, textAlign: 'center' },
+                ]}
+              >
+                {badge.value}
+              </Text>
+            ) : null}
+            {arrivalTime ? (
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+                numberOfLines={1}
+                style={[Fonts.p4, { color: badge.textColor, flexShrink: 4, textAlign: 'center' }]}
+              >
+                {arrivalTime}
+              </Text>
+            ) : null}
+          </View>
+        )}
 
         {/* 💶 P2 (D7) — « A PAYE », LA COLONNE D A COTE DE « VIENT ».
             ⚠️ Son `Text` ne porte PAS `textAlign: 'center'` : la pastille

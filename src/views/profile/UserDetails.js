@@ -1119,11 +1119,12 @@ function UserDetails({ navigation, route }) {
   );
 
   // ST-RETOURS2 · point 3 (planche 22, etat 2) — sous le nom de SON enfant, la ligne
-  // « 14 ans · U15 · AS Montrivage » : son age, sa premiere equipe, son club.
+  // « 14 ans · U15 · AS Montrivage » : son age, ses equipes (FINITIONS13-STATS 3 : toutes,
+  // « U13 · U15 »), son club.
   const ligneDeLEnfant = ligneDIdentite(t, {
     age,
     clubName: user?.club?.name,
-    teamName: playerTeams[0]?.name,
+    teamNames: playerTeams.map((team) => team?.name),
   });
   const badgeRechercheDeClub = user?.isLookingForClub ? (
     <View
