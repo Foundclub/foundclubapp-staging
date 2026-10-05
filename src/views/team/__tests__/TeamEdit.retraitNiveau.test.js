@@ -60,8 +60,14 @@ const EQUIPE = {
   trainers: [],
 };
 
+// FINITIONS14 — la doublure GARDE les options de chaque mutation (`onSuccess` compris),
+// pour que le temoin du point 3 rejoue ce que fait l'ecran apres « Enregistrer ».
+const mockOptionsMutations = [];
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: () => ({ isPending: false, mutate: mockMutate }),
+  useMutation: (/** @type {any} */ options) => {
+    mockOptionsMutations.push(options);
+    return { isPending: false, mutate: mockMutate };
+  },
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
 }));
 
@@ -400,5 +406,37 @@ describe('R03 · TeamEdit — retirer le niveau de l equipe', () => {
     }).not.toThrow();
 
     expect(valeurAfficheeDu('section')).toBe('');
+  });
+});
+
+// FINITIONS14 · point 3 (T13-bis, defaut 3) — LA FICHE D'EQUIPE N'ETAIT PAS RELUE APRES
+// « Enregistrer ». Categorie passee de « Sénior (+18 ans) » a « U15 » : le serveur
+// repond U15 (PUT 13:10:55), la fiche affiche encore « Sénior » au retour, et ne se
+// relit qu'a 13:11:09 (journal du relais). L'ecran rafraichissait `teams`, `get-me`
+// et `app-bootstrap`… mais pas `['team', id]`, la fiche ou l'on revient : elle
+// dependait de sa propre relecture au retour, partie 14 s plus tard.
+describe('FINITIONS14 · « Enregistrer » relit la fiche de l equipe AVANT d y revenir', () => {
+  it('🚨 la fiche `[team, id]` est rafraichie, et avant le retour', async () => {
+    const { updateTeam } = jest.requireMock('@/services/team/teamService');
+    mockOptionsMutations.length = 0;
+    mockInvalidateQueries.mockClear();
+    navigation.goBack.mockClear();
+    const arbre = monter();
+
+    const options = [...mockOptionsMutations].reverse()
+      .find((/** @type {any} */ entree) => entree?.mutationFn === updateTeam);
+    expect(options).toBeDefined();
+    await act(async () => {
+      await options.onSuccess();
+    });
+
+    const relectureFiche = mockInvalidateQueries.mock.calls.findIndex(
+      ([parametres]) => JSON.stringify(parametres?.queryKey) === JSON.stringify(['team', 'equipe-1']),
+    );
+    expect(relectureFiche).toBeGreaterThanOrEqual(0);
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    expect(mockInvalidateQueries.mock.invocationCallOrder[relectureFiche])
+      .toBeLessThan(navigation.goBack.mock.invocationCallOrder[0]);
+    act(() => arbre.unmount());
   });
 });

@@ -153,9 +153,16 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));
 
+// FINITIONS14 — la doublure GARDE les options de chaque mutation et expose
+// `setQueryData` : le temoin du point 3 rejoue la reussite d'un retrait de joueur.
+const mockOptionsMutations = [];
+const mockSetQueryData = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: () => ({ isPending: false, mutate: jest.fn() }),
-  useQueryClient: () => ({ invalidateQueries: jest.fn(), setQueryData: jest.fn() }),
+  useMutation: (/** @type {any} */ options) => {
+    mockOptionsMutations.push(options);
+    return { isPending: false, mutate: jest.fn() };
+  },
+  useQueryClient: () => ({ invalidateQueries: jest.fn(), setQueryData: mockSetQueryData }),
 }));
 
 // La doublure de `t` rend le repli quand il existe : sans lui, les libelles
@@ -788,5 +795,39 @@ describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
     // La feuille d'offre s'empile sur celle des actions (pile des `BottomSheetModal`) :
     // fermer l'une pendant que l'autre se presente fait disparaitre la seconde (D19).
     expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(true);
+  });
+});
+
+// FINITIONS14 · point 3 (T13-bis, defaut 3) — « Retirer ce joueur » : le serveur l'a retire
+// (PUT 13:48:22), la fiche le liste encore jusqu'a sa relecture (13:48:30, journal du
+// relais). La reussite ne faisait que relancer la lecture : la liste attendait un
+// aller-retour complet. Elle retire maintenant le joueur de la fiche EN CACHE des la
+// reponse du serveur, puis relit comme avant.
+describe('FINITIONS14 · un joueur retire quitte la fiche des la reponse du serveur', () => {
+  test('🚨 la fiche en cache perd le joueur, et la relecture part quand meme', () => {
+    mockOptionsMutations.length = 0;
+    mockSetQueryData.mockClear();
+    mockReponseEquipe.refetch.mockClear();
+    monterLaFiche();
+
+    // La mutation du retrait : celle dont la fonction appelle `removePlayerFromTeam`.
+    const options = [...mockOptionsMutations].reverse().find(
+      (/** @type {any} */ entree) => String(entree?.mutationFn).includes('removePlayerFromTeam'),
+    );
+    expect(options).toBeDefined();
+
+    act(() => {
+      options.onSuccess({}, { playerId: 'joueuse-1', teamId: 'equipe-1' });
+    });
+
+    const ecriture = mockSetQueryData.mock.calls.find(
+      ([cle]) => JSON.stringify(cle) === JSON.stringify(['team', 'equipe-1']),
+    );
+    expect(ecriture).toBeDefined();
+    const ficheApres = ecriture[1](EQUIPE);
+    expect(ficheApres.players.map((/** @type {any} */ joueur) => joueur.documentId)).toEqual([]);
+    expect(ficheApres.trainers).toBe(EQUIPE.trainers);
+    expect(ecriture[1](undefined)).toBeUndefined();
+    expect(mockReponseEquipe.refetch).toHaveBeenCalled();
   });
 });

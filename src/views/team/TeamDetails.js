@@ -787,7 +787,19 @@ function TeamDetails({ navigation, route }) {
         t('teamDetails.alerts.removePlayerError', 'Impossible de retirer ce joueur de l équipe'),
       );
     },
-    onSuccess: () => {
+    onSuccess: (
+      /** @type {any} */ _reponse,
+      /** @type {{ teamId: string; playerId: string }} */ { playerId, teamId: equipeId },
+    ) => {
+      // FINITIONS14 (T13-bis, defaut 3) — le serveur l'a retire : la fiche le retire AUSSI
+      // TOT. Elle ne faisait que relancer sa lecture, et le joueur restait liste pendant
+      // l'aller-retour (8 s en recette). La relecture part ensuite, comme avant.
+      queryClient.setQueryData(['team', equipeId], (/** @type {any} */ fiche) => (fiche ? {
+        ...fiche,
+        players: (fiche.players || []).filter(
+          (/** @type {any} */ joueur) => joueur?.documentId !== playerId,
+        ),
+      } : fiche));
       refetch();
     },
   }));
