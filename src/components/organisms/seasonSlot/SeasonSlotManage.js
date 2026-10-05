@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import {
+  finDuCreneau as dernierJourDuCreneau,
   formatDay,
   formatPeriod,
   seasonSlotErrorMessage,
@@ -70,9 +71,10 @@ function SeasonSlotManage({
   const [aPartirDu, setAPartirDu] = useState(format(new Date(), 'dd/MM/yyyy'));
   const dateDuRetrait = parse(aPartirDu, 'dd/MM/yyyy', new Date());
   const retraitLisible = isValid(dateDuRetrait);
-  const finDuCreneau = slot?.validUntil
-    ? parseISO(String(slot.validUntil).slice(0, 10))
-    : undefined;
+  // FINITIONS15 point 4 (T14, C15b) : la fin d'un créneau RETIRÉ est la veille du retrait
+  // (`effectiveUntil`), comme dans la liste ; la période et la date du retrait la lisent aussi.
+  const dernierJour = dernierJourDuCreneau(slot);
+  const finDuCreneau = dernierJour ? parseISO(dernierJour) : undefined;
   // Le serveur a le dernier mot : s il dit que ce compte ne gere pas, aucun geste.
   const gere = canManage && detail.data?.meta?.canManage !== false;
 
@@ -211,7 +213,7 @@ function SeasonSlotManage({
       <View style={{ gap: 8 }}>
         {rangee(
           t('collectiviteCreneaux.gerer.periode', 'Période'),
-          formatPeriod(slot?.validFrom, slot?.validUntil),
+          formatPeriod(slot?.validFrom, dernierJour),
         )}
         {slot?.attributedAt ? rangee(
           t('collectiviteCreneaux.gerer.attribueLe', 'Attribué le'),
