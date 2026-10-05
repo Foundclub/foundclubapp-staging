@@ -88,6 +88,44 @@ export const plageDeLaVue = (vue, date) => {
 };
 
 /**
+ * 🎨 FINITIONS13-COLL (04/10) — LA LIGNE DES DEMANDES EN ATTENTE dit la periode de LA VUE, celle
+ * que la page lit (`plageDeLaVue`) : ce jour, ces trois jours, cette semaine (Semaine, Liste), ce
+ * mois-ci. Tournee T13 : « 4 demandes en attente cette semaine » en vue Mois.
+ * @param {(cle: string, options?: any) => string} t - i18next.
+ * @param {string} vue - La vue.
+ * @param {number} nombre - Les demandes en attente de la page.
+ * @returns {string} La ligne.
+ */
+export const ligneDesDemandesEnAttente = (t, vue, nombre) => {
+  if (vue === VUES.jour) {
+    return t('collectiviteCreneaux.planning.enAttenteJour', {
+      count: nombre,
+      defaultValue_one: '{{count}} demande en attente sur ce jour.',
+      defaultValue_other: '{{count}} demandes en attente sur ce jour.',
+    });
+  }
+  if (vue === VUES.troisJours) {
+    return t('collectiviteCreneaux.planning.enAttenteTroisJours', {
+      count: nombre,
+      defaultValue_one: '{{count}} demande en attente sur ces trois jours.',
+      defaultValue_other: '{{count}} demandes en attente sur ces trois jours.',
+    });
+  }
+  if (vue === VUES.mois) {
+    return t('collectiviteCreneaux.planning.enAttenteMois', {
+      count: nombre,
+      defaultValue_one: '{{count}} demande en attente ce mois-ci.',
+      defaultValue_other: '{{count}} demandes en attente ce mois-ci.',
+    });
+  }
+  return t('collectiviteCreneaux.planning.enAttenteSemaine', {
+    count: nombre,
+    defaultValue_one: '{{count}} demande en attente cette semaine.',
+    defaultValue_other: '{{count}} demandes en attente cette semaine.',
+  });
+};
+
+/**
  * Le jour suivant (ou precedent) selon la vue : un jour, trois jours, une semaine, un mois.
  * @param {string} vue - La vue.
  * @param {Date} date - Le jour affiche.

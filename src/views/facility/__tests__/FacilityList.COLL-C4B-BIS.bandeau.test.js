@@ -79,7 +79,13 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 const mockBandeaux = {};
 jest.mock('@/services/facilityClosure/facilityClosureQueries', () => ({
   useFacilityClosures: (/** @type {string} */ id) => ({
-    data: mockBandeaux[id] ? { data: [], meta: { bandeau: mockBandeaux[id] } } : null,
+    // FINITIONS13-COLL (04/10) : une liste = `meta.bandeaux` (serveur d apres), sinon `meta.bandeau`.
+    data: mockBandeaux[id] ? {
+      data: [],
+      meta: Array.isArray(mockBandeaux[id])
+        ? { bandeau: mockBandeaux[id][0], bandeaux: mockBandeaux[id] }
+        : { bandeau: mockBandeaux[id] },
+    } : null,
   }),
 }));
 jest.mock('@/services/facility/facilityService', () => ({
@@ -180,6 +186,27 @@ describe('COLL-C4B-BIS point 6 — la carte d une installation de la Ville porte
     const bandeaux = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'carte-ville-bandeau-dojo');
     expect(bandeaux).toHaveLength(1);
     expect(arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'carte-ville-bandeau-gym-tilleuls')).toHaveLength(0);
+    delete mockBandeaux.dojo;
+  });
+});
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8 : TOUTES les fermetures à venir (tournée T13 : la fermeture
+// du 15 restait invisible tant qu'une autre existait le 10). ROUGE avant le lot.
+describe('FINITIONS13-COLL point 8 — le bandeau dit toutes les fermetures à venir', () => {
+  it('deux fermetures annoncées : deux bandeaux, la plus proche d’abord', () => {
+    mockBandeaux.dojo = [
+      {
+        documentId: 'f-1', endDate: '2026-10-08', kind: 'closure', label: 'Ascension', reason: 'autre', startDate: '2026-10-08',
+      },
+      {
+        documentId: 'f-2', endDate: '2026-10-15', kind: 'closure', reason: 'travaux', startDate: '2026-10-15',
+      },
+    ];
+    const lus = textes(rendre());
+    const premier = lus.indexOf('Le dojo est fermé le jeudi 8 octobre');
+    const second = lus.indexOf('Le dojo est fermé le jeudi 15 octobre');
+    expect(premier).toBeGreaterThanOrEqual(0);
+    expect(second).toBeGreaterThan(premier);
     delete mockBandeaux.dojo;
   });
 });

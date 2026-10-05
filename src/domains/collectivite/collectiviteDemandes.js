@@ -146,8 +146,12 @@ export const etatDeLaPlace = (conflit) => {
  * combien de semaines (« 12 mardis »), du … au …, et lesquelles sont pleines. Lit les dates en
  * attente que le serveur rend avec leur place (`seriesDates` : taken, maxSlots, remaining).
  * @param {any} demande - Une demande « chaque semaine » de `/collectivites/:id/requests`.
- * @returns {{ au: string, capacite: number, completes: string[], du: string, jourSemaine: string,
- *   nombre: number, prisMax: number, prisUniforme: number | null, restantes: number }
+ * 🧮 FINITIONS13-COLL (04/10) — et le nombre d'équipes de la PLUPART des semaines (`prisCourant`),
+ * avec les semaines qui s'en écartent (`ecarts`) : tournée T13, « il y a déjà 3 équipes » (le
+ * maximum) pour 37 jeudis à 2 et un seul à 3.
+ * @returns {{ au: string, capacite: number, completes: string[], du: string,
+ *   ecarts: Array<{ date: string, pris: number }>, jourSemaine: string, nombre: number,
+ *   prisCourant: number, prisMax: number, prisUniforme: number | null, restantes: number }
  *   | null} La lecture, ou null s'il n'y a pas au moins deux dates lisibles.
  */
 export const lectureDeLaSerie = (demande) => {
@@ -166,6 +170,13 @@ export const lectureDeLaSerie = (demande) => {
     Number(date?.taken || 0) >= Number(date?.maxSlots || 1)
   ));
   const uniforme = pris.every((/** @type {number} */ valeur) => valeur === pris[0]);
+  /** @type {Map<number, number>} */
+  const frequences = new Map();
+  pris.forEach((/** @type {number} */ valeur) => {
+    frequences.set(valeur, (frequences.get(valeur) || 0) + 1);
+  });
+  // Le nombre le plus fréquent ; à égalité, le plus petit.
+  const [[prisCourant]] = [...frequences.entries()].sort((a, b) => (b[1] - a[1]) || (a[0] - b[0]));
   return {
     au: format(dates[dates.length - 1].debut, 'd MMMM', { locale }),
     capacite,
@@ -173,8 +184,15 @@ export const lectureDeLaSerie = (demande) => {
       format(date.debut, 'EEE d MMM', { locale })
     )),
     du: format(dates[0].debut, 'd MMMM', { locale }),
+    ecarts: dates
+      .filter((/** @type {any} */ date) => Number(date?.taken || 0) !== prisCourant)
+      .map((/** @type {any} */ date) => ({
+        date: format(date.debut, 'EEE d MMM', { locale }),
+        pris: Number(date?.taken || 0),
+      })),
     jourSemaine: format(dates[0].debut, 'EEEE', { locale }),
     nombre: dates.length,
+    prisCourant,
     prisMax: Math.max(...pris),
     prisUniforme: uniforme ? pris[0] : null,
     restantes: Math.max(0, capacite - Math.max(...pris)),

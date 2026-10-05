@@ -11,6 +11,7 @@ import {
   slotWho,
   summarizeInstallationWeek,
   toMinutes,
+  unSeulPointFinal,
   weekdayName,
 } from '../seasonSlotDisplay';
 
@@ -138,5 +139,18 @@ describe('seasonSlotDisplay — les refus du serveur', () => {
     expect(seasonSlotErrorMessage(t, { details: { code: 'FACILITY_PLATEAUX_INVALID' } }))
       .toMatch(/plateau/);
     expect(seasonSlotErrorMessage(t, { details: { code: 'AUTRE' } })).toBeNull();
+  });
+});
+
+// 🎨 FINITIONS13-COLL (04/10) — `unSeulPointFinal` retirait les DEUX derniers caractères de toute
+// phrase (motif /..$/) : « … à partir du lun. 1 juin. » devenait « … 1 jui. ». Seul un point doublé
+// tombe. ROUGE avant le lot.
+describe('FINITIONS13-COLL — un seul point final, et seulement quand il est doublé', () => {
+  it('« oct.. » ⇒ « oct. » ; « juin. », « mai. » et « … » restent intacts', () => {
+    expect(unSeulPointFinal('à partir du sam. 3 oct..')).toBe('à partir du sam. 3 oct.');
+    expect(unSeulPointFinal('à partir du lun. 1 juin.')).toBe('à partir du lun. 1 juin.');
+    expect(unSeulPointFinal('à partir du ven. 1 mai.')).toBe('à partir du ven. 1 mai.');
+    const ellipse = 'il y a déjà 2 équipes, 3 le jeu. 8 oct. …';
+    expect(unSeulPointFinal(ellipse)).toBe(ellipse);
   });
 });

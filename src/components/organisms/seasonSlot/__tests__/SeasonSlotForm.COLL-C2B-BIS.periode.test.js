@@ -51,6 +51,10 @@ jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   modifySeasonSlot: jest.fn(),
   previewFacilitySeasonSlot: jest.fn(),
 }));
+// FINITIONS13-COLL (04/10) : seasonSlotQueries lit « Chiffres » de la Ville (même client HTTP).
+jest.mock('@/services/collectivite/collectiviteService', () => ({
+  getCollectiviteChiffres: jest.fn(),
+}));
 jest.mock('@/services/facility/facilityService', () => ({ getFacilityPlanning: jest.fn() }));
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;

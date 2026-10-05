@@ -5453,8 +5453,12 @@ export default {
       demandeEnAttente: 'Pending request',
       enAttenteJour_one: '{{count}} pending request on this day.',
       enAttenteJour_other: '{{count}} pending requests on this day.',
+      enAttenteMois_one: '{{count}} pending request this month.',
+      enAttenteMois_other: '{{count}} pending requests this month.',
       enAttenteSemaine_one: '{{count}} pending request this week.',
       enAttenteSemaine_other: '{{count}} pending requests this week.',
+      enAttenteTroisJours_one: '{{count}} pending request over these three days.',
+      enAttenteTroisJours_other: '{{count}} pending requests over these three days.',
       // COLL-FIX2 (03/10) — a closed day (board 25).
       fermeJour: 'closed that day',
       libreJour: 'free all day',
@@ -5521,6 +5525,8 @@ export default {
       enAttente: 'Pending',
       enAttenteDeLaMairie: 'Waiting for the town hall',
       enAttenteDuDirigeant: 'Waiting for your club manager',
+      // FINITIONS13-COLL (04/10) — a pending session's page (a club's facility).
+      enAttenteDuProprietaire: 'Waiting for the facility manager',
       ensuite: 'The town hall accepts or refuses it. You get its answer as a notification, with its note.',
       ensuiteDirigeant: 'Your club is already full in its slot at that time: your club manager accepts or refuses it. You get the answer as a notification.',
       entrainementAnnule: 'the training is cancelled',
@@ -5535,6 +5541,8 @@ export default {
       laVille: 'Town',
       libreCeJour: 'Free this {{jour}}:',
       ligneSerie: 'Every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}}',
+      // FINITIONS13-COLL (04/10) — the refused dates of a series (round T13, C2_1e).
+      ligneSerieDates: 'Every {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates',
       momentSerie: '{{equipe}} · every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'A note for the town hall (optional)',
@@ -5672,9 +5680,13 @@ export default {
     serie: {
       completesCertaines: 'Full {{nombre}} times out of {{total}}: {{dates}}',
       completesToutes: 'Full every week: there are already {{equipes}}.',
+      // FINITIONS13-COLL (04/10) — every week full, not all alike (round T13, C2_1c).
+      completesToutesEcarts: 'Full every week: there are already {{equipes}}, {{ecarts}}.',
       consequenceCertaines: 'Accepting puts {{equipes}} for {{places}} on those days.',
       consequenceLibre: 'Accepting bothers nobody, any week.',
       consequenceToutes: 'Accepting puts {{equipes}} for {{places}}, every week.',
+      consequenceToutesEcarts: 'Accepting puts {{equipes}} for {{places}}, every week ({{ecarts}}).',
+      ecart: '{{nombre}} on {{date}}',
       entete: '{{nombre}} {{jours}} from {{du}} to {{au}}:',
       libreVariable: 'There is room every week.',
       pastilleCertaines: 'Full {{nombre}} times out of {{total}}',
@@ -6208,6 +6220,8 @@ export default {
       body: 'Send the first message to start the conversation.',
       title: 'No messages yet',
     },
+    // FINITIONS13-COLL (04/10) — a message refused for lack of connection (round T13, C2_3b).
+    envoiRefuse: 'Your message was not sent: the messaging connection is down. It stays in the field; send it again in a moment.',
     eventFallback: 'Event',
     friendly: {
       matchConfirmedTitle: 'Match confirmed',

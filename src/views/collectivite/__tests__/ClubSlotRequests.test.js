@@ -16,6 +16,7 @@ import ClubSlotRequests from '../ClubSlotRequests';
 
 const mockGet = jest.fn();
 const mockNavigate = jest.fn();
+const mockSetOptions = jest.fn();
 let mockDimensions = {
   fontScale: 1, height: 812, scale: 2, width: 375,
 };
@@ -34,7 +35,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
-  useNavigation: () => ({ navigate: mockNavigate }),
+  useNavigation: () => ({ navigate: mockNavigate, setOptions: mockSetOptions }),
   useRoute: () => ({ params: mockRouteParams }),
 }));
 jest.mock('react-i18next', () => {
@@ -172,6 +173,7 @@ beforeEach(() => {
   mockRouteParams = {};
   mockGet.mockReset();
   mockNavigate.mockReset();
+  mockSetOptions.mockReset();
   mockGet.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ config) => {
     if (url === '/facility-override-requests/sent' && config?.params?.clubId === 'club-A') {
       return { data: { data: mockLignes } };
@@ -260,5 +262,38 @@ describe('FINITIONS12-COLL point 4 — la réponse de la Ville ouvre la demande'
     expect(cartes[0].props.testID).toBe('demande-envoyee-ouverte');
     const dans = textes({ root: cartes[0] });
     expect(dans).toEqual(expect.arrayContaining(['Refusée', '« Gymnase complet le 8 octobre »']));
+  });
+});
+
+// 🎨 FINITIONS13-COLL (04/10) — point 8, deux retouches vues par la T13 (C2_4a…4e). ROUGES avant.
+describe('FINITIONS13-COLL point 8 — « Tes demandes à la Ville »', () => {
+  it('le titre s’écrit UNE fois : la page le porte, l’en-tête de navigation se tait', async () => {
+    const lus = textes(await monter((l) => l.includes('Acceptée')));
+    expect(lus.filter((texte) => texte === 'Tes demandes à la Ville')).toHaveLength(1);
+    expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: '' });
+  });
+
+  it('la date REFUSÉE d’une série dit SA date ; une série refusée, ses dates', async () => {
+    const DATE_REFUSEE = ligne({
+      decisionReason: 'Date non retenue : la Ville a accepté les autres dates de la série.',
+      documentId: 'rq-5',
+      isRecurring: true,
+      series: { until: '2031-06-30' },
+      seriesCount: 1,
+      status: 'refused',
+    });
+    const SERIE_REFUSEE = ligne({
+      documentId: 'rq-6',
+      isRecurring: true,
+      series: { until: '2030-10-03' },
+      seriesCount: 3,
+      status: 'refused',
+    });
+    mockLignes = [DATE_REFUSEE, SERIE_REFUSEE];
+    const lus = textes(await monter((l) => l.includes('Refusée')));
+    expect(lus).toContain(`${MOMENT} · l’entraînement est annulé`);
+    // eslint-disable-next-line max-len
+    expect(lus).toContain(`Chaque jeudi, ${heure(SERIE_REFUSEE.requestedStart)} – ${heure(SERIE_REFUSEE.requestedEnd)} · 3 dates · l’entraînement est annulé`);
+    expect(lus.join(' | ')).not.toMatch(/jusqu’au/);
   });
 });

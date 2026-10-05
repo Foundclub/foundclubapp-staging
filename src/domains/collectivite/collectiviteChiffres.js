@@ -124,6 +124,23 @@ export const phraseSeancesTenues = (t, seances) => {
 };
 
 /**
+ * 🧮 FINITIONS12-COLL (03/10) et FINITIONS13-COLL (04/10) — MÊME MOT, MÊME NOMBRE : les séances
+ * de la semaine d'une installation sont celles de « Chiffres » (`seances` de sa ligne : tenues + à
+ * venir, admin docs/CONTRAT_CHIFFRES_VILLE.md §4.1 et §5), jamais les BLOCS du planning, qui
+ * comptent aussi les créneaux (§1 : un créneau est une attribution, pas une séance). L'accueil de
+ * la Ville et la liste « Installations de la Ville » lisent cette règle (tournée T13 : la liste
+ * disait 14 et 1 quand l'accueil disait 10 et 0).
+ * @param {any} chiffres - La réponse de « Chiffres » (`{ installations }`).
+ * @param {string | null | undefined} facilityId - documentId de l'installation.
+ * @returns {number | null} Le nombre, ou null tant qu'il n'est pas connu (jamais un 0 inventé).
+ */
+export const seancesDeLInstallation = (chiffres, facilityId) => {
+  const lignes = chiffres?.installations;
+  const ligne = Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) : null;
+  return typeof ligne?.seances === 'number' ? ligne.seances : null;
+};
+
+/**
  * « 4 reçues · 1 acceptée · 1 refusée » (+ « · 1 en attente »).
  * @param {Traduire} t - La traduction.
  * @param {any} demandes - `data.demandes` du serveur.

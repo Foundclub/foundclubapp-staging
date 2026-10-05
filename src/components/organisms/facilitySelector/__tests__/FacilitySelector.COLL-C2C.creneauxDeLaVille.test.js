@@ -126,6 +126,7 @@ const monter = (/** @type {any} */ props = {}) => {
     arbre = renderer.create(
       <FacilitySelector
         clubId="as-montrivage"
+        currentFacility={props.currentFacility}
         facilityId={props.facilityId || null}
         location={null}
         occupancyWindow={props.occupancyWindow}
@@ -159,6 +160,18 @@ describe('COLL-C2C — l étape « Lieu » : les installations de la Ville où l
     expect(lus).toContain('Tes créneaux de la Ville : U15 · chaque mardi 17:30 – 19:00');
     expect(lus).toContain('Choisis une installation de ton club, ou de la Ville où ton club a un créneau.');
     expect(mockRequetes['facilities-ville-creneaux'].enabled).toBe(true);
+  });
+
+  // 🎨 FINITIONS13-COLL (04/10) — point 8 : « Modifier » ne listait pas le Gymnase où la séance
+  // a lieu (tournée T12, F11C_5 ; T13, C2_7b). L'installation ACTUELLE de la séance est toujours
+  // proposée, même hors des listes lues. ROUGE avant le lot.
+  it('FIN13-COLL : l installation actuelle de la séance est toujours dans la liste', () => {
+    const lus = textes(monter({
+      currentFacility: { documentId: 'gym-ville', name: 'Gymnase des Tilleuls' },
+      facilityId: 'gym-ville',
+    }));
+    expect(lus).toContain('Salle annexe');
+    expect(lus).toContain('Gymnase des Tilleuls');
   });
 
   it('les 4 autres appelants ne demandent rien : aucune lecture de plus, la liste d avant', () => {

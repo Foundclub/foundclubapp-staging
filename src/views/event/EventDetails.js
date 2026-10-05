@@ -2324,6 +2324,26 @@ function EventDetails({ navigation, route }) {
   // 🔒 Rien n'a change pour un lecteur : cette ligne est, mot pour mot, celle
   // qu'il voyait deja. La clef `openTraining.pendingSuffix` n'est pas
   // supprimee : c'est la carte qui la demande maintenant.
+  // 🎨 FINITIONS13-COLL (04/10) — UNE SÉANCE EN ATTENTE DIT QUI DÉCIDE (tournée T13, C2_1a : la
+  // séance d'une série demandée à la Ville ne disait rien). Le serveur le sait (`pendingDecider` :
+  // la mairie, le dirigeant, ou le gestionnaire de l'installation) ; rien pour une séance qui
+  // n'attend pas.
+  const decideurs = {
+    dirigeant: () => t(
+      'collectiviteDemandes.club.enAttenteDuDirigeant',
+      'En attente de ton dirigeant',
+    ),
+    mairie: () => t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie'),
+    proprietaire: () => t(
+      'collectiviteDemandes.club.enAttenteDuProprietaire',
+      'En attente du gestionnaire de l’installation',
+    ),
+  };
+  const decideur = String(/** @type {any} */ (event)?.pendingDecider || '');
+  const ligneDAttente = Object.prototype.hasOwnProperty.call(decideurs, decideur)
+    ? decideurs[/** @type {'dirigeant' | 'mairie' | 'proprietaire'} */ (decideur)]()
+    : null;
+
   const openTrainingPublicLine = useMemo(() => {
     const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
     if (!trainingOpenConfig.isOpenTraining || quota <= 0) return '';
@@ -8163,6 +8183,14 @@ function EventDetails({ navigation, route }) {
                 onCancel={handleCancelEvent}
                 onMove={handleEditEvent}
               />
+            ) : null}
+            {ligneDAttente ? (
+              <Text
+                style={[Fonts.p2Bold, { color: Colors.warning500 }]}
+                testID="event-attente-decision"
+              >
+                {ligneDAttente}
+              </Text>
             ) : null}
             {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
                 ne concerne que l'entrainement ouvert : les onglets du match ne
