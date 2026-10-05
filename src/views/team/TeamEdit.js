@@ -197,6 +197,11 @@ function TeamEdit({ navigation, route }) {
       Alert.alert(t('common.error', 'Erreur'), errorMessage);
     },
     onSuccess: async () => {
+      // FINITIONS14 (T13-bis, defaut 3) — LA FICHE OU L'ON REVIENT, D'ABORD. Elle n'etait
+      // pas dans cette liste : au retour, elle montrait l'ancienne categorie jusqu'a sa
+      // propre relecture (partie 14 s apres l'enregistrement en recette). Montee sous ce
+      // formulaire, elle se relit ici, pendant que le bouton tourne encore.
+      if (teamId) await queryClient.invalidateQueries({ queryKey: ['team', teamId] });
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
       await queryClient.invalidateQueries({ queryKey: ['get-me'] });
       await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });

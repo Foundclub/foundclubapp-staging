@@ -269,4 +269,33 @@ describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais
     expect(lus).not.toContain('Entraineur');
     expect(lus).not.toContain('SuperAdmin');
   });
+
+  // FINITIONS14 · point 5 (T13-bis) — « Recette Mairie, Dirigeant » alors que son profil dit
+  // « Membre » : le compte n'a AUCUN rôle sportif (rôle Strapi « Authenticated »), et une règle
+  // de janvier le traduisait « Dirigeant ». Le dirigeant a son propre rôle (« Dirigeant »).
+  it('🚨 un compte sans rôle sportif (« Authenticated ») est « Membre », comme sur sa carte', () => {
+    AUTH_PAR_ROLE.player.authSessions = [
+      session('moi-player', 'Hugo', 'Joueur'),
+      session('mairie', 'Recette', 'Authenticated'),
+    ];
+    const { arbre } = monter('player');
+
+    appuyerSur(arbre, 'Changer de compte');
+    const lus = textes(arbre);
+
+    expect(lus).toContain('Recette Test');
+    expect(lus).toContain('Membre');
+    expect(lus).not.toContain('Dirigeant');
+  });
+
+  it('🔒 jumeau : un vrai « Dirigeant » reste « Dirigeant »', () => {
+    AUTH_PAR_ROLE.player.authSessions = [
+      session('moi-player', 'Hugo', 'Joueur'),
+      session('karim-d', 'Karim', 'Dirigeant'),
+    ];
+    const { arbre } = monter('player');
+
+    appuyerSur(arbre, 'Changer de compte');
+    expect(textes(arbre)).toContain('Dirigeant');
+  });
 });

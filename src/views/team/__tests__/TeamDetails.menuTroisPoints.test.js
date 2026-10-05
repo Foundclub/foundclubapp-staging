@@ -153,9 +153,16 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));
 
+// FINITIONS14 — la doublure GARDE les options de chaque mutation et expose
+// `setQueryData` : le temoin du point 3 rejoue la reussite d'un retrait de joueur.
+const mockOptionsMutations = [];
+const mockSetQueryData = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: () => ({ isPending: false, mutate: jest.fn() }),
-  useQueryClient: () => ({ invalidateQueries: jest.fn(), setQueryData: jest.fn() }),
+  useMutation: (/** @type {any} */ options) => {
+    mockOptionsMutations.push(options);
+    return { isPending: false, mutate: jest.fn() };
+  },
+  useQueryClient: () => ({ invalidateQueries: jest.fn(), setQueryData: mockSetQueryData }),
 }));
 
 // La doublure de `t` rend le repli quand il existe : sans lui, les libelles
@@ -697,5 +704,206 @@ describe('ABOPARCLUB — les verrous violets suivent le club de l equipe', () =>
     ouvrirLeMenu(racine);
 
     expect(estDansLaFeuille(racine, LIBELLE_VOIR_L_OFFRE_CLUB)).toBe(true);
+  });
+});
+
+// FINITIONS14 · point 2 (T13-bis, défaut 2) — « Actions d'équipe › Modifier » laissait la
+// feuille ouverte PAR-DESSUS « Modifier l'équipe » (photos D1b, D1c) : `handleEditTeam`
+// navigue sans la fermer, et la feuille (`BottomSheetModal`, rendue à la racine) reste au
+// premier plan de l'écran suivant. Même défaut pour TOUTES les rangées qui quittent la
+// feuille (navigation, onglet, fenêtre système) : seules l'invitation, le partage et la
+// remise à zéro la fermaient à la main.
+describe('FINITIONS14 · une rangée qui quitte la feuille la ferme', () => {
+  /**
+   * Appuie sur la rangée (ou l'action d'en-tête) qui porte ce libellé.
+   * @param {any} racine La racine de l'arbre.
+   * @param {string} libelle Le libellé de la rangée.
+   * @returns {void}
+   */
+  const appuyerSurLaRangee = (racine, libelle) => {
+    const cible = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+        && textesPortant(noeud, libelle).length > 0,
+    ).pop();
+    if (!cible) throw new Error(`Aucune rangée « ${libelle} »`);
+    act(() => {
+      cible.props.onPress();
+    });
+  };
+
+  /** @type {any} */
+  let espionAlerte;
+  beforeEach(() => {
+    navigation.navigate.mockClear();
+    const { Alert } = jest.requireActual('react-native');
+    espionAlerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    espionAlerte.mockRestore();
+  });
+
+  test('🚨 « Modifier l’équipe » ouvre le formulaire ET ferme la feuille', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    appuyerSurLaRangee(racine, "Modifier l'équipe");
+
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      'TeamStack',
+      expect.objectContaining({ screen: 'TeamEdit' }),
+    );
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+  });
+
+  test.each([
+    ['Installations'],
+    ['Sponsors & partenaires'],
+    ["Voir l'offre"],
+    ["Quitter l'équipe"],
+  ])('🚨 « %s » (navigation ou fenêtre) ferme la feuille', (libelle) => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    appuyerSurLaRangee(racine, libelle);
+
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+  });
+
+  test('🚨 offre Équipe active : « Convocations » et « Cotisation » ferment la feuille', () => {
+    mockAuthCourant = {
+      ...AUTH_DIRIGEANT,
+      entitlementsSummary: [{ scopeTeamDocumentId: EQUIPE.documentId, status: 'active' }],
+    };
+    const racine = monterLaFiche();
+
+    ouvrirLeMenu(racine);
+    appuyerSurLaRangee(racine, 'Convocations');
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+
+    ouvrirLeMenu(racine);
+    appuyerSurLaRangee(racine, "Cotisation de l'équipe");
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(false);
+    expect(navigation.navigate).toHaveBeenCalledWith('ClubLicenses');
+  });
+
+  test('🔒 une rangée verrouillée « offre Équipe » ouvre l’offre PAR-DESSUS la feuille', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    appuyerSurLaRangee(racine, 'Composition type');
+
+    // La feuille d'offre s'empile sur celle des actions (pile des `BottomSheetModal`) :
+    // fermer l'une pendant que l'autre se presente fait disparaitre la seconde (D19).
+    expect(noeudParId(racine, ID_FEUILLE) !== null).toBe(true);
+  });
+});
+
+// FINITIONS14 · point 6 (decision d'Adel « externe staff », tranchee « carte A » par le chef,
+// 05/10 ~17h45) — la carte « Source externe » (FFF/FFBB : fournisseur, dernier envoi, qui l'a
+// configuree) ne s'affiche plus qu'au STAFF de l'equipe : son entraineur, le dirigeant du club.
+// Un joueur la voyait. Le classement et le calendrier, eux, ne changent pas.
+describe('FINITIONS14 · point 6 — la carte « Source externe » est reservee au staff', () => {
+  const EQUIPE_RELIEE = {
+    ...EQUIPE,
+    externalCompetitionName: 'Regionale 2',
+    externalStandingUrl: 'https://exemple.test/classement',
+    externalTeamName: 'SENIORS A',
+  };
+  /** @type {any} */
+  let donneesDAvant;
+  beforeEach(() => {
+    donneesDAvant = mockReponseEquipe.data;
+    mockReponseEquipe.data = EQUIPE_RELIEE;
+  });
+  afterEach(() => {
+    mockReponseEquipe.data = donneesDAvant;
+  });
+
+  /**
+   * Ouvre l'onglet « Calendrier » (la carte y est posee, sous la liste des matchs).
+   * @param {any} racine La racine de l'arbre.
+   * @returns {void}
+   */
+  const ouvrirLeCalendrier = (racine) => {
+    const onglet = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+        && textesPortant(noeud, 'Calendrier').length > 0,
+    ).pop();
+    if (!onglet) throw new Error('Aucun onglet « Calendrier »');
+    act(() => {
+      onglet.props.onPress();
+    });
+  };
+
+  const JOUEUR_DE_L_EQUIPE = Object.freeze({
+    ...AUTH_VISITEUR,
+    userData: {
+      club: CLUB,
+      documentId: 'joueuse-1',
+      myTeams: [{ documentId: 'equipe-1' }],
+      role: { name: 'Joueur' },
+      teamMembershipRequests: [],
+      trainedTeams: [],
+    },
+  });
+
+  test('🚨 un JOUEUR de l equipe ne voit pas la carte', () => {
+    mockAuthCourant = JOUEUR_DE_L_EQUIPE;
+    const racine = monterLaFiche();
+    ouvrirLeCalendrier(racine);
+
+    expect(textesPortant(racine, 'Source externe')).toHaveLength(0);
+  });
+
+  test('🔒 l ENTRAINEUR de l equipe la voit toujours', () => {
+    mockAuthCourant = {
+      ...JOUEUR_DE_L_EQUIPE,
+      userData: { ...JOUEUR_DE_L_EQUIPE.userData, trainedTeams: [{ documentId: 'equipe-1' }] },
+    };
+    const racine = monterLaFiche();
+    ouvrirLeCalendrier(racine);
+
+    expect(textesPortant(racine, 'Source externe').length).toBeGreaterThan(0);
+  });
+
+  test('🔒 le DIRIGEANT du club la voit toujours', () => {
+    const racine = monterLaFiche();
+    ouvrirLeCalendrier(racine);
+
+    expect(textesPortant(racine, 'Source externe').length).toBeGreaterThan(0);
+  });
+});
+
+// FINITIONS14 · point 3 (T13-bis, defaut 3) — « Retirer ce joueur » : le serveur l'a retire
+// (PUT 13:48:22), la fiche le liste encore jusqu'a sa relecture (13:48:30, journal du
+// relais). La reussite ne faisait que relancer la lecture : la liste attendait un
+// aller-retour complet. Elle retire maintenant le joueur de la fiche EN CACHE des la
+// reponse du serveur, puis relit comme avant.
+describe('FINITIONS14 · un joueur retire quitte la fiche des la reponse du serveur', () => {
+  test('🚨 la fiche en cache perd le joueur, et la relecture part quand meme', () => {
+    mockOptionsMutations.length = 0;
+    mockSetQueryData.mockClear();
+    mockReponseEquipe.refetch.mockClear();
+    monterLaFiche();
+
+    // La mutation du retrait : celle dont la fonction appelle `removePlayerFromTeam`.
+    const options = [...mockOptionsMutations].reverse().find(
+      (/** @type {any} */ entree) => String(entree?.mutationFn).includes('removePlayerFromTeam'),
+    );
+    expect(options).toBeDefined();
+
+    act(() => {
+      options.onSuccess({}, { playerId: 'joueuse-1', teamId: 'equipe-1' });
+    });
+
+    const ecriture = mockSetQueryData.mock.calls.find(
+      ([cle]) => JSON.stringify(cle) === JSON.stringify(['team', 'equipe-1']),
+    );
+    expect(ecriture).toBeDefined();
+    const ficheApres = ecriture[1](EQUIPE);
+    expect(ficheApres.players.map((/** @type {any} */ joueur) => joueur.documentId)).toEqual([]);
+    expect(ficheApres.trainers).toBe(EQUIPE.trainers);
+    expect(ecriture[1](undefined)).toBeUndefined();
+    expect(mockReponseEquipe.refetch).toHaveBeenCalled();
   });
 });

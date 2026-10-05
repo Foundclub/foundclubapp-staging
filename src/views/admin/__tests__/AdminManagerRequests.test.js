@@ -364,6 +364,32 @@ describe('COLL-ACCUEIL — planche 6 : la file des demandes de gestionnaire', ()
   });
 });
 
+// FINITIONS14 · point 5 (T13-bis, planche 17 « Demandes de gestionnaire », téléphone) — la
+// planche empile « Valider : nommer gestionnaire » AU-DESSUS de « Refuser » (état 2) ; l'écran
+// faisait l'inverse. Sur le site (planche ordi, état A), « Refuser » reste à gauche du geste
+// principal. Et les dates s'écrivent comme la planche : « jeu. 1 oct. », plus « jeu 01/10/2026 ».
+describe('FINITIONS14 · planche 17 — l ordre des gestes et la date', () => {
+  /**
+   * L'ordre d'apparition des deux gestes dans l'arbre (= de haut en bas sur téléphone).
+   * @param {any} arbre - L'arbre monté.
+   * @returns {string[]} Les libellés des deux gestes, dans l'ordre.
+   */
+  const ordreDesGestes = (arbre) => textes(arbre)
+    .filter((texte) => texte === 'Refuser' || texte === 'Valider : nommer gestionnaire');
+
+  it('🚨 téléphone : « Valider » au-dessus de « Refuser »', async () => {
+    const arbre = await monter(<AdminManagerRequests />);
+    await appuyer(arbre, 'gestionnaire-demande-dm-1');
+    expect(ordreDesGestes(arbre)).toEqual(['Valider : nommer gestionnaire', 'Refuser']);
+  });
+
+  it('🚨 la date de la demande : « jeu. 1 oct. », plus « jeu 01/10/2026 »', async () => {
+    const lus = textes(await monter(<AdminManagerRequests />));
+    expect(lus).toContain('jeu. 1 oct.');
+    expect(lus.some((texte) => texte.includes('01/10/2026'))).toBe(false);
+  });
+});
+
 describe('COLL-ACCUEIL — planche 6 : les portes de la file dans la console', () => {
   it('la liste des collectivités : l entrée de la file, avec le nombre en attente', async () => {
     const arbre = await monter(<ManagerRequestsLink />);

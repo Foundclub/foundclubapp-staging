@@ -30,6 +30,14 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
     return mockRequete;
   },
 }));
+// FINITIONS14 (point 4) — l'écran lit le compte (le club de ses équipes, camp de gauche du titre).
+// `useAuth` charge le client HTTP, absent d'une copie de travail : doublé. Compte vide = titres d'avant.
+/** @type {any} */
+let mockUtilisateur = null;
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: mockUtilisateur }),
+}));
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: jest.fn(() => ({
@@ -347,5 +355,55 @@ describe('T9 · Matchs en attente ouvert depuis le rappel', () => {
 
     expect(parId(racine, 'st-match-attente-vide')).toBeTruthy();
     expect(parId(racine, 'st-match-attente-chargement')).toBeUndefined();
+  });
+});
+
+// ==========================================================================
+// FINITIONS14 · point 4 (FINITIONS13-STATS 6c/6d) — LES TITRES « AS Montrivage — <adversaire> ».
+// T13-bis : les cartes disaient « Match », « Match de championnat U15 », « Match vs Test-COMPO »
+// (le `label` du serveur). La planche : « AS Montrivage — adversaire à confirmer » et
+// « AS Montrivage — Test-COMPO », dans « Pour moi » ET « Pour mon équipe ». Le serveur nomme
+// l'adversaire (`opponentName`, `null` inconnu) ; le club vient des équipes du compte.
+// ==========================================================================
+describe('FINITIONS14 · point 4 — les cartes titrent « club — adversaire »', () => {
+  const COMPTE = {
+    documentId: 'hugo',
+    myTeams: [{ club: { name: 'AS Montrivage' }, documentId: 'u15', name: 'U15' }],
+    trainedTeams: [{ club: { name: 'AS Montrivage' }, documentId: 'u15', name: 'U15' }],
+  };
+  afterEach(() => { mockUtilisateur = null; });
+
+  test('🔴 « Pour moi » : « AS Montrivage — Test-COMPO », plus « Match vs Test-COMPO »', () => {
+    mockUtilisateur = COMPTE;
+    const racine = monter({ data: { items: [joueur({ label: 'Match vs Test-COMPO', opponentName: 'Test-COMPO' })] } });
+    const vus = textes(racine);
+
+    expect(vus).toContain('AS Montrivage — Test-COMPO');
+    expect(vus).not.toContain('Match vs Test-COMPO');
+    const carte = parId(racine, 'st-match-attente-carte-event:match-19h:u15:self');
+    expect(carte.props.accessibilityLabel).toBe('AS Montrivage — Test-COMPO, À répondre');
+  });
+
+  test('🔴 « Pour mon équipe », adversaire inconnu : « AS Montrivage — adversaire à confirmer »', () => {
+    mockUtilisateur = COMPTE;
+    const racine = monter({ data: { items: [entraineur({ label: 'Match de championnat U15', opponentName: null })] } });
+
+    expect(textes(racine)).toContain('AS Montrivage — adversaire à confirmer');
+    expect(textes(racine)).not.toContain('Match de championnat U15');
+  });
+
+  test('🔴 le tableau du site porte le même titre', () => {
+    mockUtilisateur = COMPTE;
+    // Le site met en tableau la famille « Pour mon équipe » quand elle est seule.
+    const racine = monter({ data: { items: [entraineur({ label: 'Match', opponentName: 'Test-COMPO' })] } }, 1280);
+
+    expect(textes(parId(racine, 'st-match-attente-tableau'))).toContain('AS Montrivage — Test-COMPO');
+  });
+
+  test('🔒 serveur d AVANT (pas de champ `opponentName`) : le titre d avant', () => {
+    mockUtilisateur = COMPTE;
+    const racine = monter({ data: { items: [joueur({ label: 'Match vs Test-COMPO' })] } });
+
+    expect(textes(racine)).toContain('Match vs Test-COMPO');
   });
 });

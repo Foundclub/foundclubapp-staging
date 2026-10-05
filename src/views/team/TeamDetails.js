@@ -787,7 +787,19 @@ function TeamDetails({ navigation, route }) {
         t('teamDetails.alerts.removePlayerError', 'Impossible de retirer ce joueur de l équipe'),
       );
     },
-    onSuccess: () => {
+    onSuccess: (
+      /** @type {any} */ _reponse,
+      /** @type {{ teamId: string; playerId: string }} */ { playerId, teamId: equipeId },
+    ) => {
+      // FINITIONS14 (T13-bis, defaut 3) — le serveur l'a retire : la fiche le retire AUSSI
+      // TOT. Elle ne faisait que relancer sa lecture, et le joueur restait liste pendant
+      // l'aller-retour (8 s en recette). La relecture part ensuite, comme avant.
+      queryClient.setQueryData(['team', equipeId], (/** @type {any} */ fiche) => (fiche ? {
+        ...fiche,
+        players: (fiche.players || []).filter(
+          (/** @type {any} */ joueur) => joueur?.documentId !== playerId,
+        ),
+      } : fiche));
       refetch();
     },
   }));
@@ -1322,8 +1334,11 @@ function TeamDetails({ navigation, route }) {
     () => !!(teamId && canManageCurrentTeamExternalSync && externalCompetitionEligible),
     [canManageCurrentTeamExternalSync, externalCompetitionEligible, teamId],
   );
+  // FINITIONS14 · point 6 (décision d'Adel « externe staff », 05/10) — la carte « Source externe »
+  // (fournisseur, dernier envoi, qui l'a configurée) est réservée au STAFF de l'équipe : son
+  // entraîneur, le dirigeant du club. Le classement et le calendrier ne changent pas.
   const showExternalSyncCard = useMemo(
-    () => !!(
+    () => canManageCurrentTeamExternalSync && !!(
       canConfigureFFBB
       || team?.externalStandingUrl
       || externalSyncReport
@@ -1333,6 +1348,7 @@ function TeamDetails({ navigation, route }) {
     ),
     [
       canConfigureFFBB,
+      canManageCurrentTeamExternalSync,
       externalCompetitionEligible,
       externalSyncReport,
       team?.externalCompetitionName,
@@ -1916,7 +1932,12 @@ function TeamDetails({ navigation, route }) {
     reason: 'SUBSCRIPTION_REQUIRED',
     requiredPlan: ['TEAM'],
   }));
-  const openClubOfferRecap = () => navigation.navigate(RouteNames.GuideOffersRecap);
+  // FINITIONS14 — appele seulement depuis la feuille des actions (rangees verrouillees
+  // « offre Club » et « Voir l'offre » de l'en-tete) : il en sort, il la ferme.
+  const openClubOfferRecap = () => {
+    setIsTeamActionsPanelOpen(false);
+    navigation.navigate(RouteNames.GuideOffersRecap);
+  };
   const joinActionTitle = (() => {
     if (pendingRequest) {
       return t('teamDetails.actions.requestPending', 'Demande en attente');
@@ -2767,11 +2788,26 @@ function TeamDetails({ navigation, route }) {
       labelColor = Fonts.neutral300;
     }
     const lockColor = lock === 'club' ? Colors.violet500 : Colors.primary500;
+    // FINITIONS14 (T13-bis, defaut 2) — UNE RANGEE QUI QUITTE LA FEUILLE LA FERME.
+    // « Modifier l'equipe » naviguait sans la fermer : la feuille (rendue a la racine)
+    // restait PAR-DESSUS le formulaire, et il fallait toucher le fond grise pour
+    // l'atteindre. Meme defaut pour toutes les rangees qui naviguent, changent d'onglet
+    // ou ouvrent une fenetre systeme : on ferme ICI, une fois, plutot que dans chaque
+    // geste. ⛔ Sauf le verrou « offre Equipe » : il ouvre la feuille d'offre, qui
+    // s'empile sur celle-ci (pile des `BottomSheetModal`) ; fermer l'une pendant que
+    // l'autre se presente fait disparaitre la seconde (piege D19).
+    const quitteLaFeuille = lock !== 'team';
+    const handlePress = quitteLaFeuille
+      ? () => {
+        setIsTeamActionsPanelOpen(false);
+        onPress?.();
+      }
+      : onPress;
     return (
       <TouchableOpacity
         accessibilityRole="button"
         key={label}
-        onPress={onPress}
+        onPress={handlePress}
         style={[
           Alignments.row,
           Alignments.alignCenter,
@@ -4830,10 +4866,7 @@ function TeamDetails({ navigation, route }) {
                   icon: 'trash',
                   label: t('teamStatsPanel.resetAction', 'Remettre la présence à zéro'),
                   last: true,
-                  onPress: () => {
-                    setIsTeamActionsPanelOpen(false);
-                    handleResetStats();
-                  },
+                  onPress: handleResetStats,
                 })}
               </View>
             ) : null}

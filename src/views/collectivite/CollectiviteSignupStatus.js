@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { clubInitials, latestManagerRequest } from '@/domains/collectivite/collectiviteAccueil';
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -29,8 +30,6 @@ import {
   useMyCollectivites,
   useMyManagerRequests,
 } from '@/services/collectivite/collectiviteQueries';
-
-import { formatDateWithDayPrefix } from '@/utils/date';
 
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
@@ -146,6 +145,9 @@ function CollectiviteSignupStatus() {
   );
 
   let contenu;
+  // FINITIONS14 (T13-bis, planche 7, état 5) — le geste de l'écran « Demande envoyée » vit EN
+  // PIED (`pied-fixe`), hors de la zone qui défile : il était collé sous le texte.
+  let piedDePage = null;
   if (demandes.isLoading || villes.isLoading) {
     contenu = <Loader />;
   } else if (!envoyeeVue) {
@@ -183,13 +185,20 @@ function CollectiviteSignupStatus() {
             { nom: derniere?.collectivite?.name || '', ...SANS_ECHAPPEMENT },
           )}
         </Text>
-        <View style={{ alignSelf: 'stretch' }}>
-          <Button
-            onPress={() => setEnvoyeeVue(true)}
-            title={t('collectiviteAccueil.demande.envoyee.compris', 'Compris')}
-            variant="Primary"
-          />
-        </View>
+      </View>
+    );
+    piedDePage = (
+      <View
+        style={{
+          alignSelf: 'center', maxWidth: 640, paddingTop: 12, width: '100%',
+        }}
+        testID="collectivite-demande-envoyee-pied"
+      >
+        <Button
+          onPress={() => setEnvoyeeVue(true)}
+          title={t('collectiviteAccueil.demande.envoyee.compris', 'Compris')}
+          variant="Primary"
+        />
       </View>
     );
   } else if (villeGeree?.documentId) {
@@ -225,7 +234,7 @@ function CollectiviteSignupStatus() {
           </Text>
         </View>
         {carteDemande(derniere, t('collectiviteAccueil.demande.refusee.le', 'Réponse du {{date}}', {
-          date: formatDateWithDayPrefix(derniere?.decidedAt, { fallback: '' }),
+          date: formatCollectiviteDay(derniere?.decidedAt),
           ...SANS_ECHAPPEMENT,
         }))}
         <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
@@ -284,7 +293,7 @@ function CollectiviteSignupStatus() {
           'collectiviteAccueil.demande.attente.le',
           'Demande envoyée le {{date}}',
           {
-            date: formatDateWithDayPrefix(derniere?.createdAt, { fallback: '' }),
+            date: formatCollectiviteDay(derniere?.createdAt),
             ...SANS_ECHAPPEMENT,
           },
         ))}
@@ -357,6 +366,7 @@ function CollectiviteSignupStatus() {
       >
         {contenu}
       </ScrollView>
+      {piedDePage}
     </ScreenContainer>
   );
 }

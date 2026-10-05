@@ -527,4 +527,99 @@ describe('FINITIONS6 · F6-3 — un convoque parti de l equipe est annonce, pas 
     await appuyerSur(arbre, 'Suivant');
     expect(convoquesEnvoyes().sort()).toEqual(['k1', 'p2']);
   });
+
+  // ------------------------------------------------------------------------
+  // FINITIONS14 · point 1 — LE CORRECTIF NE S'AFFICHAIT PAS PAR « Gérer › Convocation ».
+  //
+  // 🔍 T13-bis (05/10, REPRODUIT) : Recette Onboarding, titulaire publié, quitte l'U15 ;
+  // le coach rouvre par « Gérer l'événement › Convocation » : « 1 convoqué », AUCUN pied.
+  // 🧭 Cette porte (`handleManageComposition`, fiche du match) passe le BROUILLON — que
+  // la publication garde, sans instantané — l'effectif ACTUEL et la charge du serveur
+  // (`teamComposition`), mais PAS `selectedPlayers`. Le parti n'était nommé nulle part
+  // sauf dans l'instantané de la compo PUBLIÉE (`teamComposition.published.snapshotPlayers`).
+  // ------------------------------------------------------------------------
+  const BROUILLON_AVEC_KARIM = {
+    manualPlayers: [],
+    reservePlayerIds: [],
+    schemaVersion: 3,
+    selectedPlayerIds: ['k1', 'p2'],
+    sportContext: 'football',
+    teams: PACK_AVEC_KARIM.teams,
+  };
+  const COMPO_SERVEUR_PUBLIEE = {
+    ...COMPO_SERVEUR,
+    draft: BROUILLON_AVEC_KARIM,
+    published: {
+      ...PACK_AVEC_KARIM,
+      reserveSnapshotPlayers: [],
+      snapshotPlayers: [
+        { ...KARIM, assignmentKind: 'team_entry' },
+        ...EFFECTIF.map((personne) => ({ ...personne, assignmentKind: 'unassigned' })),
+      ],
+    },
+  };
+  // La porte telle que `handleManageComposition` la passe (brouillon, effectif actuel).
+  const porteGererConvocation = {
+    existingComposition: BROUILLON_AVEC_KARIM,
+    players: EFFECTIF,
+    teamComposition: COMPO_SERVEUR_PUBLIEE,
+  };
+
+  test('🚨 FIN14 · par « Gérer › Convocation » (sans selectedPlayers), c est dit', async () => {
+    const arbre = await rendre(porteGererConvocation);
+
+    const pieds = arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud.props?.testID === 'matchcallup-left-team',
+    );
+    expect(pieds.length).toBeGreaterThan(0);
+    expect(texteVisible(arbre)).toContain(PHRASE_KARIM);
+  });
+
+  test('🚨 FIN14 · par « Gérer › Convocation », « Suivant » suit le serveur', async () => {
+    const arbre = await rendre(porteGererConvocation);
+
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(convoquesEnvoyes()).toEqual(['p2']);
+    const appel = [...mockNavigate.mock.calls].pop();
+    expect((appel?.[1]?.startPlacements || []).map((/** @type {any} */ p) => p.playerId))
+      .toEqual(['p2']);
+  });
+
+  test('FIN14 · jumeau : l entrée selectedPlayers le dit toujours, une seule fois', async () => {
+    const arbre = await rendre({ ...porteGererConvocation, selectedPlayers: [KARIM, EFFECTIF[1]] });
+
+    expect(texteVisible(arbre)).toContain(PHRASE_KARIM);
+    expect(texteVisible(arbre).split('Karim Benali').length - 1).toBe(1);
+  });
+
+  test('🔒 FIN14 · un parti NON convoqué de l instantané publié n est pas annoncé', async () => {
+    const PARTI_NON_CONVOQUE = joueur('z9', 'Zoe', 'Partie');
+    const arbre = await rendre({
+      ...porteGererConvocation,
+      teamComposition: {
+        ...COMPO_SERVEUR_PUBLIEE,
+        published: {
+          ...COMPO_SERVEUR_PUBLIEE.published,
+          snapshotPlayers: [
+            ...COMPO_SERVEUR_PUBLIEE.published.snapshotPlayers,
+            { ...PARTI_NON_CONVOQUE, assignmentKind: 'unassigned' },
+          ],
+        },
+      },
+    });
+
+    expect(texteVisible(arbre)).toContain(PHRASE_KARIM);
+    expect(texteVisible(arbre)).not.toContain('Zoe Partie');
+  });
+
+  test('🔒 FIN14 · sans la liste du serveur, la porte ne juge personne', async () => {
+    const arbre = await rendre({
+      existingComposition: BROUILLON_AVEC_KARIM,
+      players: EFFECTIF,
+      teamComposition: { published: COMPO_SERVEUR_PUBLIEE.published },
+    });
+
+    expect(texteVisible(arbre)).not.toContain('n’est plus dans l’équipe');
+  });
 });

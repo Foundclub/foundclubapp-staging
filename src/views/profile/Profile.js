@@ -1031,10 +1031,10 @@ function Profile({ navigation, route }) {
         // FINITIONS8 (point 9) : le NOM du role en base (« Entraineur », « SuperAdmin »)
         // s'affichait tel quel ; il se lit par profile.identity.roles, comme la carte
         // d'identite de cet ecran.
+        // FINITIONS14 (T13-bis) — « Authenticated » (aucun rôle sportif) était traduit
+        // « Dirigeant » (règle de janvier) ; il suit la règle de la carte d'identité : « Membre ».
         let roleName = t('profile.accountSwitcher.fallbackRole', 'Utilisateur');
-        if (user?.role?.name === 'Authenticated') {
-          roleName = t('profile.identity.roles.president', 'Dirigeant');
-        } else if (user?.role?.name) {
+        if (user?.role?.name) {
           const sessionRoleKey = getUserRoleKey(user.role.type || user.role.name);
           roleName = t(
             `profile.identity.roles.${sessionRoleKey}`,

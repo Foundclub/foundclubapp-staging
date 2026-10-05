@@ -358,6 +358,49 @@ describe('P10 — une invitation recue ne se confond pas avec une demande envoye
   });
 });
 
+// FINITIONS14 · point 5 (T13-bis, photo F10) — la carte d'invitation reçue disait « 0 Membres,
+// 0 Entraîneur·e·s » pour une U15 qui en a 2 et 1 : l'équipe d'une invitation arrive SANS son
+// effectif (relevé du relais de la tournée : ni `players`, ni `trainers`, ni compteur). Un
+// effectif inconnu ne s'affiche pas en zéro : la grille se tait ; connu, elle reste.
+describe('FINITIONS14 — une carte d invitation n invente pas « 0 Membres »', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('🚨 effectif inconnu (comme le vrai bootstrap) : pas de grille « 0 Membres »', async () => {
+    const sansEffectif = { ...EQUIPE_QUI_INVITE };
+    delete sansEffectif.players;
+    delete sansEffectif.trainers;
+    const textes = await textesAffiches([
+      {
+        direction: 'invite', documentId: 'tmr-9', state: 'pending', team: sansEffectif,
+      },
+    ]);
+
+    expect(textes).toContain('LES INVITANTS');
+    expect(textes).not.toContain('Membres');
+    expect(textes).not.toContain('Entraîneur·e·s');
+  });
+
+  test('🔒 effectif connu : la grille reste, avec les vrais nombres', async () => {
+    const textes = await textesAffiches([
+      {
+        direction: 'invite',
+        documentId: 'tmr-10',
+        state: 'pending',
+        team: {
+          ...EQUIPE_QUI_INVITE,
+          players: [{ documentId: 'j1' }, { documentId: 'j2' }],
+          trainers: [{ documentId: 'e1' }],
+        },
+      },
+    ]);
+
+    expect(textes).toContain('Membres');
+    expect(textes).toContain('Entraîneur·e·s');
+  });
+});
+
 // CLEF14 — vu sur l'émulateur le 14/09 (recette, compte de test « Test Fc ») :
 // une demande pour REJOINDRE un club et une demande pour le GÉRER portent le même
 // club, donc la même clef React `pending-<club>`. React le signale (« two children

@@ -33,6 +33,7 @@ import {
   describePromptResult,
   describePromptWhen,
   describeResponsesCount,
+  findPromptClubName,
   resolveCoachStep,
 } from '@/components/organisms/matchStats/matchStatsPromptModel';
 
@@ -422,18 +423,16 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
   // (« AS Montrivage »), plus l'équipe (« U15 ») : face à l'adversaire, c'est le club qui
   // joue. Le rappel ne porte que l'équipe ; son club vient des équipes que l'entraîneur
   // entraîne (`trainedTeams`). Sans lui, l'équipe, comme avant.
-  const ourClubName = String((userData?.trainedTeams || []).find(
-    (/** @type {any} */ team) => team?.documentId
-      && team.documentId === shownPrompt?.team?.documentId,
-  )?.club?.name || '').trim();
+  // FINITIONS14 · point 4 — et, pour le joueur, des équipes où il joue (`myTeams`).
+  const ourClubName = findPromptClubName(shownPrompt, userData);
   const ourName = ourClubName
     || String(shownPrompt?.team?.name || '').trim()
     || t('stMatch.rappel.us', 'Mon équipe');
   // FINITIONS11 · point 2 — l'adversaire que le serveur nomme (`opponentName`), sinon rien.
   const opponentName = String(shownPrompt?.opponentName || '').trim();
-  const promptTitle = isPlayerPrompt
-    ? shownPrompt?.label || 'Match'
-    : describeCoachPromptTitle(shownPrompt, ourClubName || shownPrompt?.team?.name);
+  // FINITIONS14 · point 4 — le joueur aussi : le serveur nomme son adversaire (planche « Rappel
+  // d'après-match du joueur »). Serveur d'avant : `label`, comme avant.
+  const promptTitle = describeCoachPromptTitle(shownPrompt, ourClubName || shownPrompt?.team?.name);
 
   const renderPill = (/** @type {string} */ label) => (
     <View

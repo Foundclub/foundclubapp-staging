@@ -20015,7 +20015,7 @@ export default {
       searchPlaceholder: 'Rechercher un membre du club',
       sentBadge: 'Invitation envoyée',
       sentMessage: '{{name}} va recevoir une notification.'
-        + " Elle rejoindra l'équipe si elle accepte.",
+        + " Il·elle rejoindra l'équipe en acceptant.",
       sentTitle: 'Invitation envoyée',
       sheetIntro: 'Choisis une personne de ton club :'
         + " elle reçoit une invitation, et c'est elle qui accepte.",
