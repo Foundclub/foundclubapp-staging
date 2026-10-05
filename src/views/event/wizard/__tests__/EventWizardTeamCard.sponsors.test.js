@@ -123,3 +123,38 @@ describe('D58 — les sponsors de la carte d equipe', () => {
     expect(textes).toContain('U15 A');
   });
 });
+
+// 🐞 FINITIONS15 point 7 (tournée T14, A00) — « MEMBRES, 0 » PARTOUT DANS LE TUNNEL D'ANNONCE.
+// L'annonce reçoit les équipes de l'utilisateur SANS leurs listes (ni `players`, ni `trainers`,
+// ni `members`) ; la carte comptait alors « 0 » — un nombre faux (le tunnel d'événement, qui lit
+// les effectifs, disait 2, 16, 1). Même règle que FINITIONS14 5f : un nombre qu'on n'a pas ne
+// s'écrit pas. Une liste lue et VIDE, elle, dit vraiment 0. ROUGE avant le lot.
+describe('FINITIONS15 point 7 — la carte ne compte pas des membres qu elle n a pas lus', () => {
+  test('aucune liste lue : ni « Membres », ni « 0 »', () => {
+    const textes = monterEtLire({});
+
+    expect(textes).not.toContain('Membres');
+    expect(textes).not.toContain('0');
+    expect(textes).toContain('U15 A');
+  });
+
+  test('des listes lues : le nombre de personnes, sans doublon', () => {
+    const textes = monterEtLire({
+      team: {
+        ...EQUIPE_SPONSORISEE,
+        players: [{ documentId: 'j-1' }, { documentId: 'j-2' }],
+        trainers: [{ documentId: 'j-2' }],
+      },
+    });
+
+    expect(textes).toContain('Membres');
+    expect(textes).toContain('2');
+  });
+
+  test('une liste lue et vide : « 0 » est vrai, il s écrit', () => {
+    const textes = monterEtLire({ team: { ...EQUIPE_SPONSORISEE, players: [] } });
+
+    expect(textes).toContain('Membres');
+    expect(textes).toContain('0');
+  });
+});
