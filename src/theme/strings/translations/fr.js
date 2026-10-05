@@ -5893,6 +5893,8 @@ export default {
       enAttente: 'En attente',
       enAttenteDeLaMairie: 'En attente de la mairie',
       enAttenteDuDirigeant: 'En attente de ton dirigeant',
+      // FINITIONS13-COLL (04/10) — la fiche d'une séance en attente (installation d'un club).
+      enAttenteDuProprietaire: 'En attente du gestionnaire de l’installation',
       // eslint-disable-next-line max-len
       ensuite: 'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
       // eslint-disable-next-line max-len

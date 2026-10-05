@@ -5525,6 +5525,8 @@ export default {
       enAttente: 'Pending',
       enAttenteDeLaMairie: 'Waiting for the town hall',
       enAttenteDuDirigeant: 'Waiting for your club manager',
+      // FINITIONS13-COLL (04/10) — a pending session's page (a club's facility).
+      enAttenteDuProprietaire: 'Waiting for the facility manager',
       ensuite: 'The town hall accepts or refuses it. You get its answer as a notification, with its note.',
       ensuiteDirigeant: 'Your club is already full in its slot at that time: your club manager accepts or refuses it. You get the answer as a notification.',
       entrainementAnnule: 'the training is cancelled',
