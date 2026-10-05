@@ -250,6 +250,36 @@ describe('FINITIONS11 · point 3 — l absent pointé à l appel, chez l entraî
     expect(lus).toContain(jourEtHeure(POINTE_A));
   });
 
+  // FINITIONS13-STATS · point 6 (T12, photo F11S_3) — « Hugo L… », « Absent … », et l heure
+  // invisible : le nom, la pastille et le bouton « Présent » se partageaient UNE ligne. La planche
+  // (« Absent à l'appel », état 3) n a pas de pastille : le nom en entier, et dessous, en une
+  // seconde ligne, « Absent à l'appel · sam. 18:55 ».
+  test('6 · 🔴 FIN13 — plus de pastille : « Absent à l’appel » et l heure se lisent SOUS le nom', async () => {
+    const arbre = await monter(proprietes());
+    const parId = (/** @type {string} */ id) => arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === id);
+
+    expect(parId(`COMPACT-pastille-${HUGO.documentId}`)).toHaveLength(0);
+    const identite = parId(`FIN13-identite-${HUGO.documentId}`)[0];
+    expect(identite).toBeDefined();
+    const lus = identite.findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
+    expect(lus).toEqual(expect.arrayContaining(['Absent à l’appel', jourEtHeure(POINTE_A)]));
+    // La seconde ligne vit DANS la colonne du nom, et vient APRES lui : l heure ferme la colonne.
+    // ⚠️ Comparer des valeurs simples : un echec qui afficherait deux noeuds du rendu sature la
+    // memoire de jest.
+    const seconde = parId(`FIN13-ligne-absent-${HUGO.documentId}`)[0];
+    expect(identite.findAll((/** @type {any} */ n) => n === seconde).length).toBe(1);
+    expect(lus[lus.length - 1]).toBe(jourEtHeure(POINTE_A));
+  });
+
+  test('7 · 🔒 FIN13 — les autres rangées gardent leur pastille', async () => {
+    const arbre = await monter(proprietes());
+
+    expect(arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.testID === 'string' && n.props.testID.startsWith('COMPACT-pastille-')
+    )).length).toBeGreaterThan(0);
+  });
+
   test('5 · 🔒 personne pointé absent : les groupes gardent leur titre d avant (pas de « · N » sur un groupe vide)', async () => {
     const arbre = await monter(proprietes({
       attendanceByUserId: { [KYLIAN.documentId]: PRESENCES[KYLIAN.documentId] },

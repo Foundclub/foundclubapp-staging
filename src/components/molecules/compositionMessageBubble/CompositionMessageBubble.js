@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import PlayerHeadToken from '@/components/tactical/PlayerHeadToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import {
+  applyCurrentIdentities,
   buildConvocationFieldTokens,
   buildPublishedBoardTarget,
   formatConvocationDay,
@@ -97,10 +98,12 @@ const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '
  * perimee sans le dire.
  * @param {object} props
  * @param {CompositionPayload | null | undefined} props.composition - The composition data
+ * @param {any[]} [props.currentPeople] - FINITIONS13-STATS (2) : les participants
+ *   du fil, relus avec lui. Un compte renomme depuis la publication y prend son nom du jour.
  * @param {boolean} [props.isMe] - Whether sent by current user
  * @returns {import('react').ReactElement | null}
  */
-function CompositionMessageBubble({ composition, isMe = false }) {
+function CompositionMessageBubble({ composition, currentPeople = [], isMe = false }) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const navigation = useNavigation();
@@ -117,17 +120,25 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     manualPlayers = [],
     placements = [],
     publishedVersion,
-    reservePlayers = [],
+    reservePlayers: reservePlayersPublies = [],
     schemaVersion = 2,
-    snapshotPlayers = [],
+    snapshotPlayers: snapshotPlayersPublies = [],
     sport = 'football',
     sportContext,
     teamId,
     teamName,
-    teamPlayers = [],
+    teamPlayers: teamPlayersPublies = [],
     teams = [],
     type,
   } = composition;
+  // 🪪 FINITIONS13-STATS (2) — la carte est une PHOTO de la publication : elle figeait
+  // le nom de chaque joueur (Hugo, renomme le 29/09, restait « Paul Veuillet »). Les
+  // participants du fil, DEJA relus avec lui, donnent le nom du jour — aucune requete
+  // de plus (la regle « bulle A » du 29/09 tient). Meme regle que la feuille de match
+  // et que la vue Convocation : seule l identite bouge, jamais qui est convoque.
+  const reservePlayers = applyCurrentIdentities(reservePlayersPublies, currentPeople);
+  const snapshotPlayers = applyCurrentIdentities(snapshotPlayersPublies, currentPeople);
+  const teamPlayers = applyCurrentIdentities(teamPlayersPublies, currentPeople);
   // 🐛 COMPOMSG (point 3) — `teams` vaut `[]` par defaut : `Array.isArray(teams)`
   // etait donc TOUJOURS vrai, et les cartes « a plat » d'avant la v3 (7 en
   // production, du 13/05 au 15/06) ne lisaient jamais leurs `placements` — ni

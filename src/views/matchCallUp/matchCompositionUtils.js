@@ -326,16 +326,22 @@ export const buildStartFromOptions = ({
   );
 
   const bootstrapSource = String(bootstrap?.source || '').trim();
-  const lastMatchPlacements = bootstrapSource === START_FROM_LAST_MATCH
-    ? keepPlacementsOfCalledUpPlayers(readPlacementsFromPack(bootstrap?.composition), players)
+  // 🧭 FINITIONS13-STATS (7, T12) — le brouillon VIDE de l assistant arretait la cascade du
+  // serveur, et « Dernier match » restait grise. Le serveur joint alors la derniere compo
+  // publiee (`bootstrap.lastMatch`, `event-composition.ts`) : la rangee la lit.
+  const lastMatchSource = bootstrapSource === START_FROM_LAST_MATCH
+    ? bootstrap
+    : (bootstrap?.lastMatch || null);
+  const lastMatchPlacements = lastMatchSource
+    ? keepPlacementsOfCalledUpPlayers(readPlacementsFromPack(lastMatchSource?.composition), players)
     : [];
   // FINITIONS6 · F6-4 — D1, « D1 A » (Adel, 01/10) : LE BANC SEUL. Des convoques
   // qui etaient tous AU BANC du dernier match n'y ont aucun placement : la rangee
   // etait grisee, « Aucune compo deja publiee a reprendre » — faux, elle les nomme.
   // Le banc se reprend tout seul (un convoque non place part du banc du plateau) :
   // la rangee est disponible des que le dernier match NOMME un convoque.
-  const lastMatchCalledUpIds = new Set(bootstrapSource === START_FROM_LAST_MATCH
-    ? readCalledUpIdsFromPack(bootstrap?.composition)
+  const lastMatchCalledUpIds = new Set(lastMatchSource
+    ? readCalledUpIdsFromPack(lastMatchSource?.composition)
     : []);
   const lastMatchAvailable = lastMatchPlacements.length > 0
     || calledUpPlayers.some((player) => lastMatchCalledUpIds.has(getCompositionPlayerId(player)));
@@ -348,8 +354,8 @@ export const buildStartFromOptions = ({
   const presetLabel = normalizeLabel(
     defaultPack?.teams?.[0]?.presetLabel || defaultPack?.presetLabel,
   );
-  const lastMatchDate = bootstrapSource === START_FROM_LAST_MATCH
-    ? normalizeLabel(bootstrap?.event?.date)
+  const lastMatchDate = lastMatchSource
+    ? normalizeLabel(lastMatchSource?.event?.date)
     : '';
 
   // Terrain vide : le seul point de depart qui n'a besoin d'aucune donnee, donc

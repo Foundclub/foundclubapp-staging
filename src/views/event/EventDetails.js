@@ -7788,6 +7788,7 @@ function EventDetails({ navigation, route }) {
         event={event}
         hasAcceptedRequest={hasAcceptedRequest}
         hasPendingRequest={hasPendingRequest}
+        isFinished={isMatchFinished}
         onDeclareLatePresence={offrePresentApresCoup ? handleDeclareLatePresence : undefined}
         onDecline={() => handleDeclineEvent(event)}
         onDeleteParticipation={handleDeleteParticipation}

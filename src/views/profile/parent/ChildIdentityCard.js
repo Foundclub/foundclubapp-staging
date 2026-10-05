@@ -15,13 +15,24 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
  * @param {number | null} [enfant.age] - Son age (calcule par le serveur).
  * @param {string | null} [enfant.clubName] - Son club.
  * @param {string | null} [enfant.teamName] - Son equipe.
+ * @param {Array<string | null | undefined>} [enfant.teamNames] - FINITIONS13-STATS (3) : TOUTES
+ *   ses equipes, dans l ordre de son profil (« U13 · U15 ») ; a defaut, `teamName`.
  * @returns {string} - La ligne, vide si on ne sait rien.
  */
-export const ligneDIdentite = (t, { age, clubName, teamName }) => [
-  typeof age === 'number' ? t('myChildren.screen.years', '{{count}} ans', { count: age }) : '',
-  teamName,
-  clubName,
-].filter(Boolean).join(' · ');
+export const ligneDIdentite = (t, {
+  age, clubName, teamName, teamNames,
+}) => {
+  // FINITIONS13-STATS (3, T13, tranche par le chef « A ») — Hugo joue en U13 ET en U15 : la
+  // ligne prenait sa PREMIERE equipe et disait « 14 ans · U13 ». Elle les dit toutes, une fois.
+  const equipes = [...new Set((Array.isArray(teamNames) ? teamNames : [])
+    .map((nom) => String(nom || '').trim())
+    .filter(Boolean))];
+  return [
+    typeof age === 'number' ? t('myChildren.screen.years', '{{count}} ans', { count: age }) : '',
+    ...(equipes.length > 0 ? equipes : [teamName]),
+    clubName,
+  ].filter(Boolean).join(' · ');
+};
 
 /**
  * ST-RETOURS2 (03/10, planche 22 du design valide, etats 2 et 6) — LA CARTE D IDENTITE D UN

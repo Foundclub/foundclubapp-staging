@@ -27,6 +27,9 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} [props.onDeleteParticipation] - Callback to delete their participation
  * @param {() => void} [props.onEdit] - Callback when user wants to edit the event
  * @param {() => void} [props.onCancel] - Callback when user wants to cancel the event
+ * @param {boolean} [props.isFinished] - FINITIONS13-STATS (6) : le match est FINI, selon
+ *   l horloge du serveur (la fiche le sait, `isMatchFinished`). Plus aucune reponse ne
+ *   s offre, sauf « je passe en present » quand la fiche l ouvre.
  * @param {() => void} [props.onDeclareLatePresence] - POINTAGE : la porte « je passe
  *   en present » du « pas renseigne », apres coup. La fiche ne la donne que
  *   quand `canDeclareLatePresence` l ouvre (`domains/event/presenceRule.js`).
@@ -42,6 +45,7 @@ function EventAnswerButtons({
   event,
   hasAcceptedRequest,
   hasPendingRequest,
+  isFinished = false,
   onAbout,
   onCancel,
   onDeclareLatePresence,
@@ -139,6 +143,12 @@ function EventAnswerButtons({
   const isConvenedMember = Boolean(sourceTeam);
   const showsOrganizerActions = Boolean(onEdit && onCancel);
   const canAnswerAsMember = isConvenedMember && !showsOrganizerActions;
+
+  // 🏁 FINITIONS13-STATS (6, T13) — SOUS UN MATCH FINI, PLUS DE REPONSE. Hugo lisait
+  // « Je participe ! » et « Annuler ma participation » sous le match du 3 oct. termine ; le
+  // serveur refuse toute reponse apres coup (`validateDateIsInFuture`). Seule la porte
+  // « je passe en present » (POINTAGE, reponse B) reste, quand la fiche l ouvre.
+  if (isFinished && !onDeclareLatePresence) return null;
 
   // If user is a player — or a member of a convened team — show the answer buttons
   if (userData?.role?.name === USER_ROLES.player || canAnswerAsMember) {
@@ -443,6 +453,11 @@ function EventAnswerButtons({
     }
     return <View />;
   }
+
+  // 👪 FINITIONS13-STATS (6, T13) — UN COMPTE CONNECTE N EST PAS UN VISITEUR. Papa Test
+  // (role Parent), sur la page du match de son fils, lisait « Participer » : cette branche, celle
+  // du visiteur NON connecte, ouvrait… la connexion. Connecte, ni joueur ni encadrant : rien.
+  if (userData) return null;
 
   // For non-logged in users, show login button
   return (

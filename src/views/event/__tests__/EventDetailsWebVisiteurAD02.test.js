@@ -94,7 +94,8 @@ jest.mock('@/services/event/eventQueries', () => ({
   useGetEvent: () => ({
     data: mockEventQuery.data,
     dataUpdatedAt: 1,
-    error: null,
+    // FINITIONS13-STATS · 6 (h) — la reponse du serveur peut etre un 404.
+    error: mockEventQuery.error || null,
     isFetching: false,
     isLoading: false,
     refetch: jest.fn(),
@@ -464,6 +465,38 @@ describe('AD02 · la page publique d un evenement face a un visiteur sans compte
 // « Participer ». Apres coup, le « pas renseigne » voit « Je passe en present »,
 // qui part par la route des reponses. Ecrits ROUGES contre app `8d017cd6`.
 // ==========================================================================
+// FINITIONS13-STATS · POINT 6 (h, T13) — un lien `/events/<id>` ouvert SANS compte disait
+// « Événement introuvable — Cet événement n'est plus disponible ou a été supprimé » : le serveur
+// rend 404 a un visiteur pour un evenement reserve aux membres. Le visiteur ne savait pas qu il
+// lui suffisait de se connecter.
+describe('FINITIONS13-STATS 6 (h) — un lien d evenement ouvert sans compte', () => {
+  afterEach(() => {
+    mockEventQuery.error = null;
+  });
+
+  test('🔴 404 pour un visiteur : il est invite a se connecter, pas « introuvable »', async () => {
+    mockEventQuery.error = { status: 404 };
+    const root = mountScreen({
+      auth: { canManageEvent: () => false, userData: null },
+      event: null,
+    });
+
+    expect(screenText()).toContain('Connecte-toi pour voir cet événement');
+    expect(screenText()).not.toContain('Événement introuvable');
+    await click(root, 'Se connecter');
+    expect(openPublicAuthFlow).toHaveBeenCalledTimes(1);
+  });
+
+  test('🔒 404 pour un compte connecte : « Événement introuvable », comme avant', () => {
+    mockEventQuery.error = { status: 404 };
+    const root = mountScreen({ event: null });
+
+    expect(screenText()).toContain('Événement introuvable');
+    expect(screenText()).not.toContain('Connecte-toi pour voir cet événement');
+    expect(buttonWithText(root, 'Se connecter')).toBeUndefined();
+  });
+});
+
 describe('POINTAGE — le joueur convie sur le site', () => {
   const JOUEUR = {
     documentId: 'joueur-convie', firstname: 'Enzo', lastname: 'Martin', role: { name: 'Joueur' },
