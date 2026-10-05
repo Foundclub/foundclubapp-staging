@@ -18,8 +18,12 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * prevenus que s il deplace ou annule (le geste de la fiche, comme aujourd hui).
  * FINITIONS11-COLL (03/10, planche 25) : `facilityType` (la valeur du serveur, `facility.type`)
  * nomme le lieu, « Le gymnase est fermé ce jour-là » ; sans lui, « L'installation ».
+ * 🎨 FINITIONS13-COLL (04/10) : `closures` (une liste) pose un bandeau par fermeture, la plus
+ * proche d'abord (tournée T13 : la fermeture du 15 restait invisible tant qu'une autre existait
+ * le 10).
  * @param {{
- *   closure: any,
+ *   closure?: any,
+ *   closures?: any[],
  *   facilityType?: string | null,
  *   onMove?: () => void,
  *   onCancel?: () => void,
@@ -29,10 +33,42 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * @returns {import('react').ReactElement | null} Le bandeau.
  */
 function FacilityClosureBanner({
-  closure, facilityType = null, onCancel, onMove, testID = 'bandeau-fermeture', withDays = false,
+  closure = null,
+  closures,
+  facilityType = null,
+  onCancel,
+  onMove,
+  testID = 'bandeau-fermeture',
+  withDays = false,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
+  if (Array.isArray(closures)) {
+    const liste = closures.filter(Boolean);
+    if (liste.length < 2) {
+      return liste.length ? (
+        <FacilityClosureBanner
+          closure={liste[0]}
+          facilityType={facilityType}
+          testID={testID}
+          withDays={withDays}
+        />
+      ) : null;
+    }
+    return (
+      <View style={{ gap: 8 }}>
+        {liste.map((une, rang) => (
+          <FacilityClosureBanner
+            closure={une}
+            facilityType={facilityType}
+            key={une?.documentId || `${une?.startDate}-${rang}`}
+            testID={rang ? `${testID}-${rang + 1}` : testID}
+            withDays={withDays}
+          />
+        ))}
+      </View>
+    );
+  }
   if (!closure) return null;
   const { texte, titre } = closureBannerText(t, closure, { facilityType, withDays });
   const gestes = Boolean(onMove || onCancel);

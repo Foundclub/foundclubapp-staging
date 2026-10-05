@@ -41,6 +41,7 @@ import {
   closureCoversDay,
   closureDaysLabel,
   closureHoursLabel,
+  closuresOfBanner,
   closureTagLabel,
   closureTouchesBlock,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -785,9 +786,17 @@ function PlanningWeekFullscreen() {
   // le serveur annonce (`meta.bandeau` : en cours, ou dans les 14 jours). Pour TOUS les lecteurs —
   // le membre d un club rattache lit la ; avant, seule la fermeture de la page s y disait.
   const fermeturesDeLInstallation = useFacilityClosures(isFacilitySource ? facilityId : null);
-  const fermetureDuBandeau = fermeturesDuServeur[0]
-    || fermeturesDeLInstallation.data?.meta?.bandeau
-    || null;
+  // FINITIONS13-COLL (04/10) — TOUTES : celles de la page, puis celles que le serveur annonce
+  // (`meta.bandeaux`), chacune une fois (tournée T13 : celle du 15 restait cachée par celle du 10).
+  /** @type {any[]} */
+  const fermeturesAnnoncees = [
+    ...fermeturesDuServeur,
+    ...closuresOfBanner(fermeturesDeLInstallation.data?.meta),
+  ];
+  const fermeturesDuBandeau = fermeturesAnnoncees.filter((fermeture, rang) => (
+    !fermeture?.documentId
+    || fermeturesAnnoncees.findIndex((autre) => autre?.documentId === fermeture.documentId) === rang
+  ));
   const fermeturesDessinees = brouillon
     ? [
       ...fermeturesDuServeur.filter((/** @type {any} */ fermeture) => !brouillon.documentId
@@ -1755,7 +1764,7 @@ function PlanningWeekFullscreen() {
           <View style={[Spaces.marginBottom[8], { gap: 6 }]}>
             {/* COLL-C4B (02/10) — la fermeture de la page, pour TOUS les lecteurs (P3b). */}
             <FacilityClosureBanner
-              closure={fermetureDuBandeau}
+              closures={fermeturesDuBandeau}
               facilityType={facilityMeta?.type}
               testID="planning-bandeau-fermeture"
               withDays

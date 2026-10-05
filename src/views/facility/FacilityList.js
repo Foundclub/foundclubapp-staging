@@ -22,6 +22,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
+import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
 import {
   clubSlotParts,
   groupClubInstallations,
@@ -170,11 +171,12 @@ function BoutonPlusDActions({
  */
 function BandeauDeFermetureDeLaVille({ facilityId, facilityType = null }) {
   const fermetures = useFacilityClosures(facilityId || null);
-  const bandeau = fermetures.data?.meta?.bandeau || null;
-  if (!bandeau) return null;
+  // FINITIONS13-COLL (04/10) : toutes les fermetures annoncées, la plus proche d'abord.
+  const bandeaux = closuresOfBanner(fermetures.data?.meta);
+  if (!bandeaux.length) return null;
   return (
     <FacilityClosureBanner
-      closure={bandeau}
+      closures={bandeaux}
       facilityType={facilityType}
       testID={`carte-ville-bandeau-${facilityId}`}
       withDays
