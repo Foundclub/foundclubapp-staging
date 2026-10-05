@@ -7763,6 +7763,8 @@ export default {
     share: 'Share',
     sharing: 'Sharing...',
     signInToAnswerThis: 'Sign in to answer this event.',
+    signInToSee: 'Sign in to see this event',
+    signInToSeeHint: 'It may be open to its team members only.',
     signInToTakePart: 'Sign in to take part',
     sourceTeam: 'Source team',
     sourceTeam2: 'Source team:',

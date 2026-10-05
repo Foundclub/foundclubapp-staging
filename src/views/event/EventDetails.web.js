@@ -2331,7 +2331,46 @@ function EventDetails({ navigation, route }) {
           </section>
         ) : null}
 
-        {!isLoading && (isEventGone || (!error && !hasEvent)) ? (
+        {/* 🔑 FINITIONS13-STATS (6 h, T13) — UN LIEN OUVERT SANS COMPTE. Le serveur rend 404
+            a un visiteur pour un evenement reserve aux membres : il lisait « Événement
+            introuvable… supprimé », sans savoir qu il lui suffisait de se connecter. */}
+        {!isLoading && !isSignedIn && (isEventGone || (!error && !hasEvent)) ? (
+          <section style={{
+            background: sectionBackground,
+            border: `1px solid ${borderColor}`,
+            borderRadius: 24,
+            color: mutedTextColor,
+            display: 'grid',
+            gap: 10,
+            padding: 22,
+          }}
+          >
+            <div style={{
+              color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22,
+            }}
+            >
+              {t('eventDetails.signInToSee', 'Connecte-toi pour voir cet événement')}
+            </div>
+            <div>
+              {t(
+                'eventDetails.signInToSeeHint',
+                'Il est peut-être réservé aux membres de son équipe.',
+              )}
+            </div>
+            <button
+              onClick={() => openPublicAuthFlow(navigation, {
+                origin: RouteNames.EventDetails,
+                source: 'event-details-login',
+              })}
+              style={{ ...primaryButtonStyle, justifySelf: 'start', padding: '10px 16px' }}
+              type="button"
+            >
+              {t('eventDetails.actions.login', 'Se connecter')}
+            </button>
+          </section>
+        ) : null}
+
+        {!isLoading && isSignedIn && (isEventGone || (!error && !hasEvent)) ? (
           <section style={{
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 10, padding: 22,
           }}
