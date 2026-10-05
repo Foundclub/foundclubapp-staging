@@ -2568,7 +2568,7 @@ function EventDetails({ navigation, route }) {
                 >
                   <div style={{ display: 'grid', gap: 4 }}>
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                      {trainingOpenConfig.isOpenTraining ? t('eventDetails.openTraining2', 'Entraînement ouvert') : t('eventDetails.privateTraining', 'Entraînement prive')}
+                      {trainingOpenConfig.isOpenTraining ? t('eventDetails.openTraining2', 'Entraînement ouvert') : t('eventDetails.privateTraining', 'Entraînement privé')}
                     </strong>
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {trainingOpenConfig.isOpenTraining

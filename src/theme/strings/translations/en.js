@@ -8592,6 +8592,7 @@ export default {
       timeLabel: 'Time',
       totalPlayers: 'Players expected: {{value}}',
       totalPlayersTitle: 'Players expected',
+      trainingCapacityPrivate: 'Unlimited capacity (private training)',
       validationMode: 'Validation: {{value}}',
       whenWhereTitle: 'When and where',
     },

@@ -1516,7 +1516,7 @@ function EventWizardRecap({ navigation }) {
                         : 'eventWizard.recap.trainingCapacityPrivate',
                       trainingOpenConfig.isOpenTraining
                         ? 'Illimité en interne + quota externe'
-                        : 'Capacité illimitée (entraînement prive)',
+                        : 'Capacité illimitée (entraînement privé)',
                     )
                     : capacityValueLabel}
                 </Text>
