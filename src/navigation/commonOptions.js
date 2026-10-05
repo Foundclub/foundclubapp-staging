@@ -1,4 +1,5 @@
 import { CardStyleInterpolators } from '@react-navigation/stack';
+import i18next from 'i18next';
 import {
   Platform,
   Text,
@@ -14,7 +15,13 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 
 export const commonOptions = {
   cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-  headerBackImage: () => <HeaderBackButton />,
+  // 🎨 FINITIONS15 point 9c (T14) — « Retour » n'est lu QU'UNE fois. La flèche est dessinée DANS le
+  // bouton de react-navigation : elle est décorative, et c'est lui qui porte « Retour » (il disait
+  // « Go back » au relevé d'accessibilité). Lu à l'appel : la langue peut changer après le chargement.
+  get headerBackAccessibilityLabel() {
+    return i18next.isInitialized ? i18next.t('common.back', 'Retour') : 'Retour';
+  },
+  headerBackImage: () => <HeaderBackButton decorative />,
   headerBackTitle: '',
   headerShadowVisible: false,
   headerShown: true,
