@@ -13559,6 +13559,7 @@ export default {
       responsesTitle: 'Aucune réponse pour le moment.',
     },
     item: {
+      expired: 'Expirée',
       new: 'Nouveau',
       offline: 'Hors ligne',
       online: 'En ligne',
@@ -15699,6 +15700,7 @@ export default {
       withdraw: 'Retirer ma candidature',
     },
     header: {
+      statusExpired: 'EXPIRÉE',
       statusInactive: 'INACTIF',
       statusOnline: 'EN LIGNE',
     },
@@ -15717,6 +15719,18 @@ export default {
     },
     owner: {
       posterCta: 'Créer l’affiche à partager',
+    },
+    renewal: {
+      action: 'Renouveler 30 jours',
+      errorForbidden: 'Seul l’auteur de l’annonce peut la renouveler.',
+      // eslint-disable-next-line max-len
+      errorGeneric: 'Impossible de prolonger l’annonce pour le moment. Vérifie ta connexion et réessaie.',
+      errorTitle: 'Renouvellement impossible',
+      expiredSince: 'Expirée depuis le {{date}}',
+      expiresOn: 'Expire le {{date}}',
+      successBody: 'Annonce prolongée jusqu’au {{date}}.',
+      successBodyWithoutDate: 'Ton annonce repart pour 30 jours.',
+      successTitle: 'Annonce renouvelée',
     },
     state: {
       loadError: 'Chargement impossible',

@@ -22,7 +22,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
-import { canManageTeamAd } from '@/domains/team/teamMembership';
+import { canManageTeamAd, isAdAuthor } from '@/domains/team/teamMembership';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -53,6 +53,7 @@ import {
   getMyApplications,
   getRecruitmentAd,
   getRecruitmentApplications,
+  renewRecruitmentAd,
   resolveRecruitmentAdApplicationState,
   updateRecruitmentApplicationStatus,
   withdrawRecruitmentApplication,
@@ -70,6 +71,10 @@ import {
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
+import {
+  formatRecruitmentAdExpiryDate,
+  getRecruitmentAdExpiry,
+} from '@/utils/recruitmentAdRenewal';
 import { getRecruitmentAdPlayerTitle } from '@/utils/recruitmentAdTitle';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
@@ -220,6 +225,22 @@ function RecruitmentAdDetails() {
   // Avant, `myTeams` (les equipes ou l'on JOUE) donnait les outils du club a un
   // joueur ; Test : __tests__/RecruitmentAdDetails.gererAnnonce.test.js.
   const isOwner = useMemo(() => canManageTeamAd(ad, userData), [userData, ad]);
+  // ANNONCE-RENOUVELER (« renouveler A », 05/10) — l'echeance et « Renouveler 30 jours », pour
+  // l'AUTEUR seulement : le serveur refuse le renouvellement a tout autre compte, meme a un
+  // co-entraineur (admin recruitment-ad-custom.ts, `renew`). Bouton a 7 jours de l'echeance ou
+  // apres. Test : __tests__/RecruitmentAdDetails.renouveler.test.js.
+  const isAuthor = useMemo(() => isAdAuthor(ad, userData), [userData, ad]);
+  // Point 6 (choix du chef « badge A ») : une fois l'echeance passee, le badge dit « EXPIRÉE »
+  // a TOUT lecteur — aucun serveur ne passe `isActive` a false a l'echeance.
+  const isOnline = Boolean(ad?.isActive) && !getRecruitmentAdExpiry(ad)?.isExpired;
+  let statusBadgeLabel = t('recruitmentAdDetails.header.statusInactive', 'INACTIF');
+  if (isOnline) {
+    statusBadgeLabel = t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE');
+  } else if (ad?.isActive) {
+    statusBadgeLabel = t('recruitmentAdDetails.header.statusExpired', 'EXPIRÉE');
+  }
+  const expiry = isAuthor ? getRecruitmentAdExpiry(ad) : null;
+  const canRenew = Boolean(expiry?.isRenewable);
 
   // FINITIONS8 (tournee 9, point 1) — le statut de MA candidature vient de « mes
   // candidatures » : l'annonce ne l'apporte plus (D10), et `candidates` disait « en attente »
@@ -494,8 +515,60 @@ function RecruitmentAdDetails() {
     },
   }));
 
+  // ANNONCE-RENOUVELER (point 3) — le serveur relance l'annonce pour 30 jours a partir de
+  // l'appui et rend `{ expirationDate, message, success }`. L'echeance neuve est posee tout de
+  // suite sur la fiche (le bouton s'en va), puis la fiche et les listes sont relues.
+  const renewMutation = /** @type {any} */ (useMutation({
+    mutationFn: () => renewRecruitmentAd(ad.documentId || ad.id),
+    onError: (/** @type {any} */ error) => {
+      // Le message du serveur est en anglais (« You can only renew your own ads ») : on ne le
+      // montre pas, on dit ce qui se passe.
+      const message = error?.response?.status === 403
+        ? t(
+          'recruitmentAdDetails.renewal.errorForbidden',
+          'Seul l’auteur de l’annonce peut la renouveler.',
+        )
+        : t(
+          'recruitmentAdDetails.renewal.errorGeneric',
+          'Impossible de prolonger l’annonce pour le moment. Vérifie ta connexion et réessaie.',
+        );
+      Alert.alert(
+        t('recruitmentAdDetails.renewal.errorTitle', 'Renouvellement impossible'),
+        message,
+      );
+    },
+    onSuccess: (/** @type {any} */ result) => {
+      const renewed = getRecruitmentAdExpiry({ expirationDate: result?.expirationDate });
+      if (renewed) {
+        queryClient.setQueryData(['recruitmentAd', adId], (/** @type {any} */ previous) => (
+          previous
+            ? { ...previous, expirationDate: result.expirationDate, isActive: true }
+            : previous
+        ));
+      }
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAd', adId] });
+      queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
+      queryClient.invalidateQueries({ queryKey: ['myRecruitmentAds'] });
+      const message = renewed
+        ? t('recruitmentAdDetails.renewal.successBody', 'Annonce prolongée jusqu’au {{date}}.', {
+          date: formatRecruitmentAdExpiryDate(renewed.expiresAt),
+          ...SANS_ECHAPPEMENT,
+        })
+        : t(
+          'recruitmentAdDetails.renewal.successBodyWithoutDate',
+          'Ton annonce repart pour 30 jours.',
+        );
+      Alert.alert(t('recruitmentAdDetails.renewal.successTitle', 'Annonce renouvelée'), message);
+    },
+  }));
+
   const confirmDelete = () => {
     deleteMutation.mutate(ad.documentId || ad.id);
+  };
+
+  const handleRenew = () => {
+    if (renewMutation.isPending) return;
+    renewMutation.mutate();
   };
 
   useLayoutEffect(() => {
@@ -552,6 +625,19 @@ function RecruitmentAdDetails() {
     && ['accepted', 'pending'].includes(String(currentUserApplication?.status || '').trim().toLowerCase()),
   );
   const date = ad?.createdAt ? formatDateWithDayPrefix(new Date(ad.createdAt)) : '';
+  let expiryLabel = '';
+  if (expiry) {
+    const expiryDate = formatRecruitmentAdExpiryDate(expiry.expiresAt);
+    expiryLabel = expiry.isExpired
+      ? t('recruitmentAdDetails.renewal.expiredSince', 'Expirée depuis le {{date}}', {
+        date: expiryDate,
+        ...SANS_ECHAPPEMENT,
+      })
+      : t('recruitmentAdDetails.renewal.expiresOn', 'Expire le {{date}}', {
+        date: expiryDate,
+        ...SANS_ECHAPPEMENT,
+      });
+  }
   const detectionDate = ad?.event?.date ? formatDateWithDayPrefix(new Date(ad.event.date)) : '';
   const detectionDateTimeLabel = useMemo(() => {
     if (!ad?.event?.date) return '';
@@ -1446,6 +1532,17 @@ function RecruitmentAdDetails() {
             <Text style={[Fonts.h1, styles.title]}>
               {positionLabel}
             </Text>
+            {expiryLabel ? (
+              <Text
+                style={[Fonts.caption, {
+                  color: expiry?.isExpired ? Colors.warning500 : Colors.neutral300,
+                  marginTop: 4,
+                  textAlign: 'center',
+                }]}
+              >
+                {expiryLabel}
+              </Text>
+            ) : null}
             <Text style={[Fonts.h3, styles.clubTitle, { color: Colors.primary500 }]}>
               {clubName}
             </Text>
@@ -1468,15 +1565,12 @@ function RecruitmentAdDetails() {
             )}
 
             <View style={[styles.statusBadge, {
-              backgroundColor: ad.isActive ? 'rgba(0, 179, 244, 0.2)' : 'rgba(100,100,100,0.2)',
-              borderColor: ad.isActive ? Colors.primary500 : Colors.neutral500,
+              backgroundColor: isOnline ? 'rgba(0, 179, 244, 0.2)' : 'rgba(100,100,100,0.2)',
+              borderColor: isOnline ? Colors.primary500 : Colors.neutral500,
             }]}
             >
-              <Text style={[Fonts.captionBold, { color: ad.isActive ? Colors.primary500 : Colors.neutral400 }]}>
-                {ad.isActive ? t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE') : t(
-                  'recruitmentAdDetails.header.statusInactive',
-                  'INACTIF',
-                )}
+              <Text style={[Fonts.captionBold, { color: isOnline ? Colors.primary500 : Colors.neutral400 }]}>
+                {statusBadgeLabel}
               </Text>
             </View>
           </View>
@@ -1629,6 +1723,17 @@ function RecruitmentAdDetails() {
       >
         {isOwner ? (
           <View>
+            {canRenew ? (
+              <View style={{ marginBottom: 12 }}>
+                <Button
+                  isLoading={renewMutation.isPending}
+                  keepTitleWhileLoading
+                  onPress={handleRenew}
+                  title={t('recruitmentAdDetails.renewal.action', 'Renouveler 30 jours')}
+                  variant="Primary"
+                />
+              </View>
+            ) : null}
             <View style={{ marginBottom: 12 }}>
               <Button
                 onPress={handleEdit}
