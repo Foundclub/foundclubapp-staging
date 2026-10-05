@@ -477,7 +477,7 @@ function EventDetails({ navigation, route }) {
     isConvenedMember,
     isMissing: participationState?.isMissing,
     isParticipating: participationState?.isParticipating,
-    // FINITIONS15 point 9f : l'encadrant qui n'est pas joueur n'a pas cette porte (comme le téléphone).
+    // FINITIONS15 point 9f : l'encadrant non joueur n'a pas cette porte (comme le téléphone).
     isStaffOnly: resolveClientResponderDecision(event, userData).isStaffOnly,
     myAttendanceStatus: monPointage?.attendanceStatus,
   });

@@ -51,14 +51,12 @@ function HeaderBackButton({
 
   return (
     <TouchableOpacity
-      {...(decorative
-        ? { accessible: false, importantForAccessibility: 'no-hide-descendants' }
-        : {
-          accessibilityHint,
-          accessibilityLabel: accessibilityLabel || t('common.back'),
-          accessibilityRole,
-        })}
+      accessibilityHint={decorative ? undefined : accessibilityHint}
+      accessibilityLabel={decorative ? undefined : accessibilityLabel || t('common.back')}
+      accessibilityRole={decorative ? undefined : accessibilityRole}
+      accessible={!decorative}
       hitSlop={ApplicationStyle.hitSlop.min44From32}
+      importantForAccessibility={decorative ? 'no-hide-descendants' : 'auto'}
       onPress={onPress || navigation.goBack}
       style={[
         ApplicationStyle.borderRadius100,

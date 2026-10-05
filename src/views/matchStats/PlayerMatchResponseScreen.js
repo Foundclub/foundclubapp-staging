@@ -194,7 +194,11 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     && Object.prototype.hasOwnProperty.call(responsePayload?.event || {}, 'opponentName');
   const matchName = serveurNommeLAdversaire
     ? describeCoachPromptTitle(
-      { label: titreDeSecours, opponentName: responsePayload?.event?.opponentName, sourceType: 'event' },
+      {
+        label: titreDeSecours,
+        opponentName: responsePayload?.event?.opponentName,
+        sourceType: 'event',
+      },
       responsePayload?.team?.clubName || responsePayload?.team?.name,
     )
     : titreDeSecours;

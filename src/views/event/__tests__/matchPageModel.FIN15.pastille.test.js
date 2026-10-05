@@ -9,8 +9,9 @@ const t = (/** @type {string} */ _cle, /** @type {string} */ repli) => repli;
 
 describe('FINITIONS15 point 9e — la pastille d un match', () => {
   test('sans horloge du serveur, un score connu : « TERMINÉ · VICTOIRE »', () => {
-    expect(resolveMatchTagSegments({ isFinished: false, segmentDuLieu: 'À DOMICILE', t, verdict: 'win' }))
-      .toEqual(['TERMINÉ', 'VICTOIRE']);
+    expect(resolveMatchTagSegments({
+      isFinished: false, segmentDuLieu: 'À DOMICILE', t, verdict: 'win',
+    })).toEqual(['TERMINÉ', 'VICTOIRE']);
   });
 
   test('l horloge du serveur dit « pas fini » : elle décide, le lieu reste', () => {
