@@ -98,7 +98,7 @@ const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '
  * perimee sans le dire.
  * @param {object} props
  * @param {CompositionPayload | null | undefined} props.composition - The composition data
- * @param {CompositionPlayer[]} [props.currentPeople] - FINITIONS13-STATS (2) : les participants
+ * @param {any[]} [props.currentPeople] - FINITIONS13-STATS (2) : les participants
  *   du fil, relus avec lui. Un compte renomme depuis la publication y prend son nom du jour.
  * @param {boolean} [props.isMe] - Whether sent by current user
  * @returns {import('react').ReactElement | null}
