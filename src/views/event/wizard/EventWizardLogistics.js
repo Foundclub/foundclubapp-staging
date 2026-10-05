@@ -440,7 +440,9 @@ function EventWizardLogistics({ navigation, route }) {
   // (`joursDeRepetitionSuivants`), même quand la répétition est éteinte.
   const changerLaDate = (/** @type {Date} */ nouvelle) => {
     setRecurrenceStartDate((debut) => debutDeRepetitionSuivant(debut, date, nouvelle));
-    setRecurrenceDays((/** @type {any[]} */ jours) => joursDeRepetitionSuivants(jours, date, nouvelle));
+    setRecurrenceDays((/** @type {any[]} */ jours) => (
+      joursDeRepetitionSuivants(jours, date, nouvelle)
+    ));
     setDate(nouvelle);
   };
 
