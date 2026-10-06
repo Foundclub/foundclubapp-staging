@@ -542,7 +542,9 @@ function RecrutementListContent({
 
   // Handle ad card press
   const handleAdCardPress = useCallback((/** @type {RecruitmentAdItem} */ ad, isOwnerContext = false) => {
-    nav.navigate(RouteNames.RecruitmentAdDetails, { ad, isOwner: isOwnerContext });
+    // FINITIONS18 · POINT 5 (T16, SITE_A7) — sans `adId`, l'adresse du site gardait `:adId` en clair
+    // (« Chargement impossible · Not Found ») : l'annonce entiere ne voyage pas dans une adresse.
+    nav.navigate(RouteNames.RecruitmentAdDetails, { ad, adId: ad?.documentId, isOwner: isOwnerContext });
   }, [nav]);
 
   const openRecruitmentAuthFlow = useCallback((/** @type {string} */ source, /** @type {RecruitmentAdItem} */ ad) => {

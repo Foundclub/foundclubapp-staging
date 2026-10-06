@@ -201,7 +201,10 @@ function MyActivitiesScreen({ navigation }) {
       });
       return;
     }
-    nav.navigate(RouteNames.RecruitmentAdDetails, { ad: item.ad, isOwner: isStaff });
+    // FINITIONS18 · POINT 5 (T16) — `adId` : sur le site, l'adresse de la fiche le porte (`:adId`).
+    nav.navigate(RouteNames.RecruitmentAdDetails, {
+      ad: item.ad, adId: documentKey(item.ad), isOwner: isStaff,
+    });
   }, [isStaff, navigation]);
 
   const cardSurface = withAlpha(Colors.primary900, 0.6);

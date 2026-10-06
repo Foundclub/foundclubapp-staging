@@ -270,8 +270,9 @@ describe('A12 — le JOUEUR ouvre « Mes candidatures », une seule liste', () =
     )[0];
     await act(async () => { carte.props.onPress(); });
 
+    // FINITIONS18 · POINT 5 (T16) : `adId` aussi, que l'adresse du site porte (`/recruitment/:adId`).
     expect(navigation.navigate).toHaveBeenCalledWith('RecruitmentAdDetails', {
-      ad: candidatureEnAttente, isOwner: false,
+      ad: candidatureEnAttente, adId: 'ad-attente', isOwner: false,
     });
   });
 });

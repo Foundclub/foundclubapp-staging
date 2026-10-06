@@ -201,7 +201,8 @@ function RecruitmentAdCard({
       return;
     }
 
-    navigation.navigate(RouteNames.RecruitmentAdDetails, { ad });
+    // FINITIONS18 · POINT 5 (T16) — `adId` : sur le site, l'adresse de la fiche le porte (`:adId`).
+    navigation.navigate(RouteNames.RecruitmentAdDetails, { ad, adId: ad?.documentId });
   };
 
   const handleApplyPress = () => {
