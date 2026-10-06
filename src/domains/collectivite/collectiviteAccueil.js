@@ -229,6 +229,19 @@ export const isVilleOnlyAccount = ({ hasManagerRequest, managedCount, roleKey })
 );
 
 /**
+ * FINITIONS16 · POINT 11 (T15) — un compte sans rôle sportif (clef `new`) qui ne gère ni ne
+ * demande à gérer de Ville CHOISIT SON STATUT : c'est la première étape de son tunnel. Le
+ * téléphone l'y mène (PrivateNavigator) ; l'accueil du site, qui ne renvoyait qu'aux étapes
+ * d'âge, le laissait sur l'accueil « Joueur » après « Changer de compte ». Un compte « Ville
+ * seule » ne l'est jamais ; un compte qui a déjà un rôle non plus.
+ * @param {{ roleKey: string, managedCount: number, hasManagerRequest: boolean }} compte
+ * @returns {boolean} Vrai quand le compte doit d'abord choisir son statut.
+ */
+export const doitChoisirSonStatut = ({ hasManagerRequest, managedCount, roleKey }) => (
+  roleKey === 'new' && !isVilleOnlyAccount({ hasManagerRequest, managedCount, roleKey })
+);
+
+/**
  * Les quatre onglets de l'espace de la Ville, dans l'ordre de la planche (« Accueil ·
  * Demandes · Planning · Messages », décision d'Adel du 01/10 : la messagerie reste, les
  * clubs et les installations passent par l'accueil). Chaque onglet monte un écran qui
