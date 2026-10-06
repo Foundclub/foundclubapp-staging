@@ -266,9 +266,12 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MatchHistoryScreen]: '/league/matches/history',
   [RouteNames.EndMatchScreen]: '/league/matches/:matchId/end',
   [RouteNames.PastMatchDetails]: '/league/matches/:matchId/past',
-  [RouteNames.MatchStatsEditor]: '/league/matches/:matchId/stats',
-  [RouteNames.PendingMatchStats]: '/league/matches/:matchId/pending-stats',
-  [RouteNames.PlayerMatchResponse]: '/league/matches/:matchId/response',
+  // FINITIONS16 · POINT 15 (T15) — hors de « /league » et SANS parametre de chemin : le site
+  // choisit sa barre a l'adresse, et un match de club passe un `eventId` (le `:matchId` restait
+  // en clair). L'evenement ou le match de League voyagent en parametres.
+  [RouteNames.MatchStatsEditor]: '/match-stats/sheet',
+  [RouteNames.PendingMatchStats]: '/match-stats/pending',
+  [RouteNames.PlayerMatchResponse]: '/match-stats/response',
   [RouteNames.PlanningWeekFullscreen]: '/planning/week',
   [RouteNames.PersonalPlanningWeekFullscreen]: '/planning/personal/week',
   // COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (la collectivite et le
