@@ -1844,6 +1844,14 @@ function ClubDetails({ navigation, route }) {
   const hubSection = route?.params?.section || null;
   const isClubHub = canEdit && !hubSection && selectedTab !== 'planning';
   const isClubSubPage = canEdit && Boolean(hubSection);
+  // ECRAN18-ENTETE (06/10, décision d'Adel `entete compact`) — sur ordinateur, l'en-tête du hub
+  // devient la ligne de la planche P5-club-ordi : écusson, « Gestion du club », nom, sports. Même
+  // bascule que les 2 colonnes de cette planche (`ClubResultsBoard`) ; le téléphone garde sa carte.
+  const enTeteCompact = isClubHub && isDesktop;
+  const sportsDuClub = (club?.activites || [])
+    .map((activite) => activite?.name)
+    .filter(Boolean)
+    .join(' · ');
   const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
 
   // STATS-FIX2 · point 2 (T10, ecran 18) — « Résultats du week-end » n'existait que dans
@@ -2763,7 +2771,141 @@ function ClubDetails({ navigation, route }) {
           {/* D50 : la carte d'identite du club appartient au HUB (et a la page
               publique). Une sous-page n'est pas le club : elle est UNE de ses
               rubriques, et l'en-tete de pile porte deja le retour. */}
-          {!isClubSubPage ? (
+          {/* ECRAN18-ENTETE — l'en-tête compact de la planche ordinateur. Rien n'est perdu par
+              rapport à la grande carte : « Modifier » et l'affiche à droite dans la ligne,
+              l'encart de la Ville juste dessous, en petit. L'adresse, la certification et les
+              coordonnées du club (absentes de la planche) restent dans « Modifier ». */}
+          {enTeteCompact ? (
+            <View style={[Spaces.gap[12]]} testID="club-entete-compact">
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  {
+                    columnGap: 24,
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    rowGap: 12,
+                  },
+                ]}
+              >
+                <View style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.gap[12],
+                  { flexShrink: 1 },
+                ]}
+                >
+                  <ClubLogoMark
+                    club={club}
+                    logoStyle={[
+                      ApplicationStyle.borderWidth1,
+                      ApplicationStyle.borderColor.neutral00,
+                      ApplicationStyle.backgroundColor.neutral00,
+                      { borderRadius: 16 },
+                    ]}
+                    size={60}
+                  />
+                  <View style={{ flexShrink: 1, gap: 4 }}>
+                    <Text style={[
+                      Fonts.p3Bold,
+                      Fonts.primary200,
+                      { letterSpacing: 0.4, textTransform: 'uppercase' },
+                    ]}
+                    >
+                      {t('clubDetails.compactHeader.kicker', 'Gestion du club')}
+                    </Text>
+                    <Text
+                      // eslint-disable-next-line react/jsx-props-no-spreading
+                      {...proprietesDeTitre(1)}
+                      style={[Fonts.h1Black, Fonts.neutral00]}
+                    >
+                      {club?.name}
+                    </Text>
+                    {sportsDuClub ? (
+                      <Text style={[Fonts.p2, Fonts.neutral200]}>{sportsDuClub}</Text>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={[
+                  Alignments.row,
+                  Alignments.alignCenter,
+                  Spaces.gap[16],
+                  { flexWrap: 'wrap' },
+                ]}
+                >
+                  <Button
+                    onPress={handleOpenClubPoster}
+                    size="sm"
+                    title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
+                    variant="Secondary"
+                  />
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={handleEditClub}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[8],
+                      { minHeight: 44 },
+                    ]}
+                  >
+                    <Image
+                      source={Images.edit}
+                      style={[
+                        ApplicationStyle.icon20,
+                        ApplicationStyle.tintColor.primary500,
+                      ]}
+                    />
+                    <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                      {t('clubDetails.actions.editInfo') || 'Modifier'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {collectiviteOffer ? (
+                <TouchableOpacity
+                  accessibilityLabel={t(
+                    'clubDetails.collectiviteOffer.ouvrir',
+                    '{{offert}} : voir ses installations',
+                    { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
+                  )}
+                  accessibilityRole="link"
+                  onPress={handleOpenFacilityList}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[8],
+                    {
+                      alignSelf: 'flex-start',
+                      backgroundColor: withAlpha(Colors.success500, 0.08),
+                      borderColor: withAlpha(Colors.success500, 0.4),
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      minHeight: 32,
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>
+                    {offertParLaVille}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'clubDetails.collectiviteOffer.voir',
+                      'Voir les installations de la Ville',
+                    )}
+                  </Text>
+                  <Image
+                    source={Images.arrowRight}
+                    style={{ height: 12, tintColor: Colors.success200, width: 12 }}
+                  />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+          {!isClubSubPage && !enTeteCompact ? (
             <View style={[
               ApplicationStyle.borderRadius24,
               ApplicationStyle.backgroundColor.primary700,
@@ -3032,7 +3174,8 @@ function ClubDetails({ navigation, route }) {
             </View>
           ) : null}
 
-          {canEdit && clubId && !isClubSubPage ? (
+          {/* ECRAN18-ENTETE — sur ordinateur, l'affiche est déjà dans l'en-tête compact. */}
+          {canEdit && clubId && !isClubSubPage && !enTeteCompact ? (
             <Button
               onPress={handleOpenClubPoster}
               title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}

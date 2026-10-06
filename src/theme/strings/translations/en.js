@@ -2549,6 +2549,9 @@ export default {
       ouvrir: '{{offert}}: see its facilities',
       voir: 'See the town facilities',
     },
+    compactHeader: {
+      kicker: 'Club management',
+    },
     facilities: {
       nameFallback: 'Facility',
     },
