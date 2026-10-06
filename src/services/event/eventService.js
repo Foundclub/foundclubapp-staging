@@ -84,11 +84,17 @@ export const eventSchema = Joi.object({
 /**
  * Create a new event
  * @param {FCEventForm} eventData
- * @param {{ suppressCelebration?: boolean }} [options]
+ * @param {{ announceSeriesLater?: boolean, suppressCelebration?: boolean }} [options]
+ *   `announceSeriesLater` (SERIE-ANNONCE, 06/10) : une date d'une série que l'app annoncera
+ *   d'un coup (`announceEventSeries`, après le lot) — le serveur ne l'annonce pas seule.
  * @returns {Promise<any>} 201
  */
 export const createEvent = async (eventData, options = {}) => {
+  // SERIE-ANNONCE (06/10) — « j'annoncerai la série » voyage A LA RACINE du corps, jamais
+  // dans `data` : un serveur d'avant ce lot refuse en 400 une clé inconnue de `data`, il
+  // ignore la racine (et annonce alors la série par l'ancien chemin).
   const response = await client.post('/events', {
+    ...(options?.announceSeriesLater === true ? { announceSeriesLater: true } : {}),
     data: eventData,
   });
   if (options?.suppressCelebration !== true) {
@@ -134,6 +140,25 @@ export const updateEvent = async ({ documentId, eventData, recurrenceMode }) => 
 };
 
 /**
+ * SERIE-ANNONCE (06/10, décision du chef « serie A ») — « annoncer la série ».
+ *
+ * Après le lot de créations d'une série posée « j'annoncerai » (`createEvent` +
+ * `announceSeriesLater`), UN appel : le serveur annonce alors la série entière, une fois, en
+ * la disant (« 2 séances, chaque mercredi du 14 au 21 oct., 17:30 - 19:00 »). Idempotent côté
+ * serveur. Un échec ne perd rien : le serveur annonce seul quelques minutes plus tard (son
+ * filet), et un serveur d'avant ce lot a annoncé par l'ancien chemin.
+ * @param {string} documentId - Une date de la série (la première créée).
+ * @returns {Promise<any>} La réponse du serveur (`{ data: { announced, count, reason } }`),
+ *   `null` sans date.
+ */
+export const announceEventSeries = async (documentId) => {
+  const id = String(documentId || '').trim();
+  if (!id) return null;
+  const response = await client.post(`/events/${id}/announce-series`);
+  return response.data;
+};
+
+/**
  * Cancel an event
  * @param {object} params
  * @param {string} params.documentId - The event ID
@@ -151,7 +176,7 @@ export const cancelEvent = async ({ documentId, recurrenceMode }) => {
  * Create multiple events sequentially.
  * Useful for récurrent creation to collect partial failures.
  * @param {FCEventForm[]} payloads
- * @param {{ suppressCelebration?: boolean }} [options]
+ * @param {{ announceSeriesLater?: boolean, suppressCelebration?: boolean }} [options]
  * @returns {Promise<{created: Array<{payload: FCEventForm, response: any, documentId: string | null}>, failed: Array<{payload: FCEventForm, error: any}>}>}
  */
 export const createEventsSequentially = async (payloads = [], options = {}) => (
@@ -159,6 +184,7 @@ export const createEventsSequentially = async (payloads = [], options = {}) => (
     const acc = await accPromise;
     try {
       const response = await createEvent(payload, {
+        announceSeriesLater: options?.announceSeriesLater === true,
         suppressCelebration: options?.suppressCelebration === true,
       });
       const documentId = response?.data?.documentId || response?.documentId || null;
@@ -173,7 +199,7 @@ export const createEventsSequentially = async (payloads = [], options = {}) => (
 /**
  * Create multiple events with bounded concurrency while preserving partial failure reporting.
  * @param {FCEventForm[]} payloads
- * @param {{ concurrency?: number, onProgress?: (progress: {
+ * @param {{ announceSeriesLater?: boolean, concurrency?: number, onProgress?: (progress: {
  *   completed: number,
  *   created: number,
  *   failed: number,
@@ -210,6 +236,7 @@ export const createEventsWithConcurrency = async (payloads = [], options = {}) =
         // Each worker intentionally processes its own queue sequentially to cap network concurrency.
         // eslint-disable-next-line no-await-in-loop
         const response = await createEvent(payload, {
+          announceSeriesLater: options?.announceSeriesLater === true,
           suppressCelebration: options?.suppressCelebration === true,
         });
         const documentId = response?.data?.documentId || response?.documentId || null;

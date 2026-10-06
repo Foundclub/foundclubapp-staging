@@ -39,6 +39,10 @@ const mockHasClubAccess = jest.fn(() => true);
 // ST-VUES3-ORDI — l'ecran 18 a une planche ORDINATEUR : le hub la montre quand la
 // fenetre est large. Faux par defaut : les autres temoins restent sur le telephone.
 let mockIsDesktop = false;
+// ECRAN18-ENTETE — les droits du compte : l'encart « Offert par la Ville » ne s'affiche que si
+// une Ville offre CE club. Vide par defaut : les autres temoins n'ont pas d'encart.
+/** @type {any[]} */
+let mockEntitlementsSummary = [];
 // ST-VUES3-ORDI — la planche ordinateur du hub (`ClubResultsBoard`) lit le bilan de chaque
 // équipe : ces deux services importent le client HTTP, qui refuse de se charger sans `API_URL`.
 jest.mock('@/services/matchStats/matchStatsService', () => ({
@@ -110,7 +114,7 @@ const TRADUCTIONS_SANS_REPLI = {
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
+    t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
       const gabarit = (() => {
         if (typeof repli === 'string') return repli;
         if (repli && typeof repli.defaultValue === 'string') return repli.defaultValue;
@@ -119,11 +123,14 @@ jest.mock('react-i18next', () => ({
 
       // i18next remplace `{{x}}` par `options.x` : la doublure doit le faire
       // aussi, sinon les etiquettes d'accessibilite restent des gabarits.
-      if (!repli || typeof repli !== 'object') return gabarit;
+      // ECRAN18-ENTETE : les options arrivent aussi en 3e argument, apres un repli
+      // texte (`t(cle, 'Offert par {{who}}', { who })`), comme le permet i18next.
+      const valeurs = repli && typeof repli === 'object' ? repli : options;
+      if (!valeurs || typeof valeurs !== 'object') return gabarit;
       return gabarit.replace(
         /\{\{(\w+)\}\}/g,
         (/** @type {string} */ entier, /** @type {string} */ nom) => (
-          repli[nom] === undefined ? entier : String(repli[nom])
+          valeurs[nom] === undefined ? entier : String(valeurs[nom])
         ),
       );
     },
@@ -150,6 +157,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     canEditClub: (/** @type {string} */ id) => mockHasClubAccess(id),
     canJoinClub: () => false,
     clubs: [{ documentId: 'club-1' }],
+    entitlementsSummary: mockEntitlementsSummary,
     getNextOnboardingRoute: () => null,
     getPostOnboardingHomeRoute: () => null,
     hasClubAccess: mockHasClubAccess,
@@ -1225,5 +1233,118 @@ describe('ST-VUES3-ORDI · écran 18 — la planche ordinateur du hub d un club 
 
     expect(planche(arbre)).toHaveLength(0);
     expect(arbre.root.findAllByType(WeekendResultsCard)).toHaveLength(0);
+  });
+});
+
+// ECRAN18-ENTETE (06/10) — décision d'Adel `entete compact`. Sur le site, à 1 280 px, le corps
+// du hub suivait déjà la planche P5-club-ordi (2 colonnes), mais l'en-tête restait la grande
+// carte du téléphone (écusson centré, nom en capitales, certification, adresse, encart de la
+// Ville) suivie du grand bouton de l'affiche : près de la moitié de l'écran avant les résultats.
+// La planche veut UNE ligne : l'écusson, « Gestion du club », le nom, les sports. Même bascule
+// que les 2 colonnes (le hub du dirigeant + `useIsDesktop`) ; le téléphone garde sa carte.
+// Rien n'est perdu : « Modifier », l'encart de la Ville et l'affiche restent dans l'en-tête.
+describe('ECRAN18-ENTETE · l en-tête compact de « Gérer mon club » sur ordinateur', () => {
+  // Le droit Club qu'une Ville offre au club (même forme que le témoin COLL-C2C du bandeau).
+  const DROIT_OFFERT = {
+    capability: '*',
+    offeredBy: { documentId: 'ville-montrivage', name: 'Ville de Montrivage' },
+    paidBy: null,
+    scopeClubDocumentId: 'club-1',
+    scopeClubName: 'Stade Marseillais Université Club',
+    scopeType: 'CLUB',
+    status: 'active',
+    subscriptionCurrentPeriodEnd: null,
+    subscriptionPlanCode: 'fc_collectivite_club',
+  };
+  const enTete = (/** @type {any} */ arbre) => arbre.root
+    .findAll((/** @type {any} */ noeud) => noeud.props?.testID === 'club-entete-compact');
+  const tailles = (/** @type {any} */ noeud) => noeud.findAllByType(ClubLogoMark)
+    .map((/** @type {any} */ ecusson) => ecusson.props.size);
+
+  beforeEach(() => {
+    mockEntitlementsSummary = [DROIT_OFFERT];
+    mockClubQuery.data = {
+      ...CLUB,
+      activites: [
+        { documentId: 'act-1', name: 'Football' },
+        { documentId: 'act-2', name: 'Arts martiaux' },
+      ],
+    };
+  });
+  afterEach(() => {
+    mockIsDesktop = false;
+    mockEntitlementsSummary = [];
+  });
+
+  it('🔴 sur ordinateur, le hub porte la ligne de la planche : écusson, surtitre, nom', () => {
+    mockIsDesktop = true;
+    const arbre = monter();
+
+    const [tete] = enTete(arbre);
+    expect(tete).toBeDefined();
+    const lus = texteDe(tete);
+    expect(lus).toContain('Gestion du club');
+    expect(lus).toContain('Stade Marseillais Université Club');
+    expect(lus).toContain('Football · Arts martiaux');
+    expect(tailles(tete)).toEqual([60]);
+    // La grande carte du téléphone n'est plus là : plus d'écusson de 80, une seule ligne.
+    expect(tailles(arbre.root).filter((taille) => taille === 80)).toHaveLength(0);
+  });
+
+  it('🔴 rien n est perdu : « Modifier », l encart de la Ville et l affiche y sont', () => {
+    mockIsDesktop = true;
+    const arbre = monter();
+    const [tete] = enTete(arbre);
+    expect(tete).toBeDefined();
+    const dansLEnTete = { root: tete };
+
+    act(() => pressableAvecTexte(dansLEnTete, 'Modifier').props.onPress());
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ClubEditPage', { clubId: 'club-1' });
+
+    act(() => pressableAvecTexte(dansLEnTete, 'Affiche — Rejoindre le club').props.onPress());
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('VisualShowcase', expect.objectContaining({
+      subjectId: 'club-1', subjectType: 'club', template: 'affiche-club',
+    }));
+
+    const encart = pressableAvecTexte(dansLEnTete, 'Offert par la Ville de Montrivage');
+    expect(encart.props.accessibilityLabel)
+      .toBe('Offert par la Ville de Montrivage : voir ses installations');
+    act(() => encart.props.onPress());
+    expect(mockNavigation.navigate)
+      .toHaveBeenCalledWith('FacilityList', expect.objectContaining({ clubId: 'club-1' }));
+
+    // L'affiche ne se répète pas en grand bouton sous l'en-tête.
+    expect(texteDe(arbre.root).split('Affiche — Rejoindre le club')).toHaveLength(2);
+  });
+
+  it('📱 au téléphone, rien ne change : la grande carte, la Ville, l affiche en grand', () => {
+    const arbre = monter();
+
+    expect(enTete(arbre)).toHaveLength(0);
+    expect(tailles(arbre.root)).toEqual([80]);
+    const lus = texteDe(arbre.root);
+    expect(lus).not.toContain('Gestion du club');
+    expect(lus).toContain('Voir les installations de la Ville');
+    expect(lus).toContain('Affiche — Rejoindre le club');
+    expect(pressableAvecTexte(arbre, 'Modifier')).toBeDefined();
+  });
+
+  it('🔒 sur ordinateur, la fiche d un club qu on ne dirige pas garde sa grande carte', () => {
+    mockIsDesktop = true;
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+    const arbre = monter();
+
+    expect(enTete(arbre)).toHaveLength(0);
+    // La grande carte reste (les autres écussons sont ceux des équipes de la fiche).
+    expect(tailles(arbre.root)).toContain(80);
+  });
+
+  it('🔒 sur ordinateur, une sous-page du hub n a ni la carte ni la ligne', () => {
+    mockIsDesktop = true;
+    const arbre = monter('teams');
+
+    expect(enTete(arbre)).toHaveLength(0);
+    expect(texteDe(arbre.root)).not.toContain('Gestion du club');
   });
 });

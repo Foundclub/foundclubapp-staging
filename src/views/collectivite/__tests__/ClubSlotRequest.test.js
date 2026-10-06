@@ -396,6 +396,9 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     // eslint-disable-next-line max-len
     expect(new Date(corps.data.endDate).getTime() - new Date(corps.data.date).getTime()).toBe(90 * 60 * 1000);
     expect('recurrenceGroupId' in corps.data).toBe(false);
+    // SERIE-ANNONCE (06/10) : une seule séance n'est pas une série — ni « j'annoncerai »,
+    // ni « annoncer la série ».
+    expect('announceSeriesLater' in corps).toBe(false);
     expect(textes(arbre)).toEqual(expect.arrayContaining([
       'U13 · jeu. 3 oct., 18:00 – 19:30 · Gymnase des Tilleuls',
       'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
@@ -413,17 +416,40 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     await appuyer(arbre, 'bouton-Envoyer la demande');
     await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
     // Du jeudi 3 octobre 2030 au jeudi 26 juin 2031 : 39 jeudis.
-    expect(mockPost).toHaveBeenCalledTimes(39);
-    const groupes = new Set(mockPost.mock.calls.map(([, corps]) => corps.data.recurrenceGroupId));
+    // SERIE-ANNONCE (06/10) : les POST /events seulement (« annoncer la série » est à part).
+    const poses = mockPost.mock.calls.filter(([url]) => url === '/events');
+    expect(poses).toHaveLength(39);
+    const groupes = new Set(poses.map(([, corps]) => corps.data.recurrenceGroupId));
     expect(groupes.size).toBe(1);
     // COLL-FIX-DEMANDES : chaque séance de la série est fermée au dehors.
-    // eslint-disable-next-line max-len
-    expect(mockPost.mock.calls.every(([, corps]) => corps.data.sessionStatus === 'closed')).toBe(true);
+    expect(poses.every(([, corps]) => corps.data.sessionStatus === 'closed')).toBe(true);
     expect([...groupes][0]).toBeTruthy();
     // COLL-FIX2 (T10) : la fin dite est la DERNIÈRE séance (le jeudi 26 juin), comme côté Ville et
     // dans « Tes demandes à la Ville » — plus la fin de saison (30 juin), qui n'est pas un jeudi.
     // eslint-disable-next-line max-len
     expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 26 juin · Gymnase des Tilleuls');
+  });
+
+  // SERIE-ANNONCE (06/10, décision du chef « serie A ») — une série posée d'office dans le
+  // créneau du club s'annonce UNE fois à l'équipe, et dit la série : chaque séance part
+  // « j'annoncerai » (à la RACINE du corps, jamais dans `data`), puis UN appel « annoncer la
+  // série » avec la première séance posée.
+  // eslint-disable-next-line max-len
+  it('chaque semaine : chaque séance part « j’annoncerai », puis UN appel « annoncer la série »', async () => {
+    mockStatut = 'confirmed';
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    await appuyer(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => textes(arbre).includes('C’est posé : c’est dans ton créneau'));
+    const poses = mockPost.mock.calls.filter(([url]) => url === '/events');
+    expect(poses).toHaveLength(39);
+    expect(poses.every(([, corps]) => corps.announceSeriesLater === true)).toBe(true);
+    expect(poses.some(([, corps]) => 'announceSeriesLater' in corps.data)).toBe(false);
+    const annonces = mockPost.mock.calls
+      .filter(([url]) => String(url).endsWith('/announce-series'));
+    expect(annonces).toEqual([['/events/ev-1/announce-series']]);
   });
 
   // DECISIONS-SOIR (02/10) — SPEC-PLACE, règle d'Adel : « Si c'est une place libre attribuée au
