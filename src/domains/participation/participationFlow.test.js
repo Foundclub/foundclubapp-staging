@@ -3,7 +3,45 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import {
   ParticipationFlowKind,
   resolveParticipationFlow,
+  resolveParticipationOffer,
 } from './participationFlow';
+
+// FINITIONS16 · POINT 1 (T15) — QUI SE VOIT OFFRIR UNE REPONSE, une seule regle pour le
+// telephone (`EventAnswerButtons`) et le site (`EventDetails.web.js`). ROUGE avant : la
+// fonction n existait pas, chaque ecran avait la sienne, et celle du site oubliait le role.
+describe('FINITIONS16 1 — resolveParticipationOffer', () => {
+  test('🔴 un parent connecte : rien a repondre', () => {
+    expect(resolveParticipationOffer({
+      isConvenedMember: false,
+      user: { documentId: 'compte-papa', role: { name: USER_ROLES.parent } },
+    })).toBe('none');
+  });
+
+  test('🔴 un compte sans role sportif (Authenticated) : rien a repondre', () => {
+    expect(resolveParticipationOffer({
+      isConvenedMember: false,
+      user: { documentId: 'compte-neuf', role: { name: USER_ROLES.new } },
+    })).toBe('none');
+  });
+
+  test('🔒 un visiteur sans compte : la porte de connexion', () => {
+    expect(resolveParticipationOffer({ isConvenedMember: false, user: null })).toBe('login');
+  });
+
+  test('🔒 un joueur, convie ou non : il repond (ou demande sa place)', () => {
+    const joueur = { documentId: 'j-1', role: { name: USER_ROLES.player } };
+
+    expect(resolveParticipationOffer({ isConvenedMember: false, user: joueur })).toBe('answer');
+    expect(resolveParticipationOffer({ isConvenedMember: true, user: joueur })).toBe('answer');
+  });
+
+  test('🔒 un encadrant MEMBRE d une equipe conviee repond (COACH1) ; dehors, rien', () => {
+    const coach = { documentId: 'c-1', role: { name: USER_ROLES.coach } };
+
+    expect(resolveParticipationOffer({ isConvenedMember: true, user: coach })).toBe('answer');
+    expect(resolveParticipationOffer({ isConvenedMember: false, user: coach })).toBe('none');
+  });
+});
 
 describe('participationFlow', () => {
   const playerUser = {

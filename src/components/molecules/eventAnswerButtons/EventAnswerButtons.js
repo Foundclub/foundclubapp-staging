@@ -7,7 +7,11 @@ import { isMatchEventType } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState, resolveRsvpAnswer } from '@/domains/event/participationState';
 import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import useEvent from '@/domains/event/useEvent';
-import { resolveClientResponderDecision, resolveParticipationFlow } from '@/domains/participation/participationFlow';
+import {
+  resolveClientResponderDecision,
+  resolveParticipationFlow,
+  resolveParticipationOffer,
+} from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -143,6 +147,11 @@ function EventAnswerButtons({
   const isConvenedMember = Boolean(sourceTeam);
   const showsOrganizerActions = Boolean(onEdit && onCancel);
   const canAnswerAsMember = isConvenedMember && !showsOrganizerActions;
+  // FINITIONS16 · POINT 1 (T15) — la MEME regle que le site (`EventDetails.web.js`).
+  const participationOffer = resolveParticipationOffer({
+    isConvenedMember: canAnswerAsMember,
+    user: userData,
+  });
 
   // 🏁 FINITIONS13-STATS (6, T13) — SOUS UN MATCH FINI, PLUS DE REPONSE. Hugo lisait
   // « Je participe ! » et « Annuler ma participation » sous le match du 3 oct. termine ; le
@@ -151,7 +160,7 @@ function EventAnswerButtons({
   if (isFinished && !onDeclareLatePresence) return null;
 
   // If user is a player — or a member of a convened team — show the answer buttons
-  if (userData?.role?.name === USER_ROLES.player || canAnswerAsMember) {
+  if (participationOffer === 'answer') {
     // 🚫 POINTAGE (decision d Adel du 29/09) — « LES PARTICIPANTS REPONDENT »
     // DECOCHEE : la rangee disparait, sans motif de refus. Rien a expliquer :
     // l organisateur a choisi qu on ne reponde pas. Une personne du dehors
@@ -457,7 +466,7 @@ function EventAnswerButtons({
   // 👪 FINITIONS13-STATS (6, T13) — UN COMPTE CONNECTE N EST PAS UN VISITEUR. Papa Test
   // (role Parent), sur la page du match de son fils, lisait « Participer » : cette branche, celle
   // du visiteur NON connecte, ouvrait… la connexion. Connecte, ni joueur ni encadrant : rien.
-  if (userData) return null;
+  if (participationOffer === 'none') return null;
 
   // For non-logged in users, show login button
   return (

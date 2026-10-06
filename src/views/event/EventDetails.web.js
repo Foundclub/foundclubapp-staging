@@ -24,6 +24,7 @@ import {
 import {
   resolveClientResponderDecision,
   resolveClientSourceTeamForUser,
+  resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -482,7 +483,14 @@ function EventDetails({ navigation, route }) {
     myAttendanceStatus: monPointage?.attendanceStatus,
   });
   const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
+  // FINITIONS16 · POINT 1 (T15) — la regle du telephone : un compte connecte qui n est ni
+  // joueur ni membre d une equipe conviee (Papa Test, role Parent) n a rien a repondre.
+  const rienARepondre = resolveParticipationOffer({
+    isConvenedMember,
+    user: isSignedIn ? userData : null,
+  }) === 'none';
   const afficherParticiper = !canEdit
+    && !rienARepondre
     && !peutPasserPresentApresCoup
     && !reponsesFermeesAuMembre
     && !participationState?.isParticipating

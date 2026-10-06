@@ -188,6 +188,27 @@ export const resolveClientResponderDecision = (event, user) => {
   return { isStaffOnly: false, sourceTeam };
 };
 
+/**
+ * FINITIONS16 · POINT 1 (T15) — QUI SE VOIT OFFRIR UNE REPONSE sur la page d un evenement
+ * (« Participer », Present / Absent). UNE regle pour le telephone (`EventAnswerButtons`) et le
+ * site (`EventDetails.web.js`) : le site oubliait le role, et Papa Test (role Parent) y lisait
+ * « Participer » sous l entrainement de son fils, alors que le telephone ne lui montre rien
+ * depuis FINITIONS13-STATS.
+ *
+ * - sans compte : la porte de connexion ;
+ * - un joueur, ou un MEMBRE d une equipe conviee (COACH1 : l encadrant membre repond) : il
+ *   repond, ou demande sa place ;
+ * - tout autre compte connecte (parent, compte sans role sportif, encadrant ou dirigeant
+ *   d ailleurs) : rien a repondre.
+ * @param {{ isConvenedMember?: boolean, user?: any }} params
+ * @returns {'login' | 'answer' | 'none'} Ce que la page lui offre.
+ */
+export const resolveParticipationOffer = ({ isConvenedMember = false, user = null }) => {
+  if (!user) return 'login';
+  if (user?.role?.name === USER_ROLES.player || isConvenedMember) return 'answer';
+  return 'none';
+};
+
 const buildReservationFlow = (entity, context) => {
   const user = context?.user;
   const participationState = context?.participationState
