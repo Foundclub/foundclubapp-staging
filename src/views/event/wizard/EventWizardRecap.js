@@ -39,6 +39,7 @@ import {
   celebrate,
 } from '@/services/celebrations/celebrationRuntime';
 import {
+  announceEventSeries,
   createEventsWithConcurrency,
   getEventById,
   requestFeatured,
@@ -437,6 +438,12 @@ function EventWizardRecap({ navigation }) {
   );
 
   const recurrencePreviewCount = plannedPayloads.length;
+  // SERIE-ANNONCE (06/10, décision du chef « serie A ») — une SÉRIE (plusieurs dates d'un même
+  // `recurrenceGroupId`) s'annonce UNE fois aux équipes, après le lot : chaque date part
+  // « j'annoncerai », puis `announceEventSeries` (`finalizeSuccess`). Une date seule
+  // s'annonce à sa création, comme avant.
+  const isSeriesBatch = plannedPayloads.length > 1
+    && Boolean(plannedPayloads[0]?.recurrenceGroupId);
   const recapNotSet = t('eventWizard.recap.notSet');
 
   const getLocationDisplayText = () => {
@@ -706,6 +713,7 @@ function EventWizardRecap({ navigation }) {
 
   const runCreateBatch = async (payloads) => {
     const result = await createEventsWithConcurrency(payloads, {
+      announceSeriesLater: isSeriesBatch,
       concurrency: CREATE_EVENT_BATCH_CONCURRENCY,
       onProgress: setSubmitProgress,
       suppressCelebration: true,
@@ -821,6 +829,12 @@ function EventWizardRecap({ navigation }) {
     // Lance les six d'un coup et n'attend rien : voir le pourquoi chiffre sur
     // `refreshCachesAfterEventCreation`.
     refreshCachesAfterEventCreation(queryClient);
+    // SERIE-ANNONCE — la série posée s'annonce UNE fois, sans faire attendre l'écran. Un
+    // échec ne perd rien : le serveur annonce seul quelques minutes plus tard (son filet), et
+    // un serveur d'avant ce lot a ignoré « j'annoncerai » et annoncé par l'ancien chemin.
+    if (isSeriesBatch && firstCreatedId) {
+      announceEventSeries(firstCreatedId).catch(() => {});
+    }
 
     const firstCreatedItem = created.find((item) => item.documentId === firstCreatedId) || null;
     const celebrationPayload = {
