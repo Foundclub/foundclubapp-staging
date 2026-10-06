@@ -117,8 +117,12 @@ function CollectiviteFermeture() {
   ) => {
     let fermeture = params.mode === 'bloquer' ? 'bloquer' : 'fermer';
     if (params.closureId) fermeture = 'modifier';
+    // FINITIONS18 · POINT 2 (T16, site) — cet ecran ne sert que la Ville : le planning qui prend sa
+    // place garde le menu de la Ville (`espace=ville` dans l'adresse, AppShell ; FINITIONS16 18).
     /** @type {Record<string, string>} */
-    const parametres = { facilityId, fermeture, sourceType: 'facility' };
+    const parametres = {
+      espace: 'ville', facilityId, fermeture, sourceType: 'facility',
+    };
     if (facilityName) parametres.contextDetailLabel = facilityName;
     ['closureId', 'date', 'startTime', 'endTime'].forEach((cle) => {
       if (params[cle]) parametres[cle] = String(params[cle]);
