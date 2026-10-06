@@ -25,6 +25,7 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
+import { getRecruitmentAdExpiry } from '@/utils/recruitmentAdRenewal';
 import { getRecruitmentAdPlayerTitle, getRecruitmentAdSportName } from '@/utils/recruitmentAdTitle';
 
 import CARD_BACKGROUND from '@/assets/background-card-event/card-autre.png';
@@ -124,6 +125,10 @@ function RecruitmentAdCard({
     ownApplicationStatusByAd,
   );
   const isDeclined = applicationState.status === 'declined';
+  // FINITIONS16 · POINT 5 (T15) — la carte gardait « Candidater » actif sur une annonce EXPIRÉE,
+  // que la fiche grise (« Annonce expirée ») et que le serveur refuse. Meme borne que la fiche :
+  // `getRecruitmentAdExpiry` (une annonce liee a un evenement n'a pas d'echeance propre).
+  const isExpired = Boolean(getRecruitmentAdExpiry(ad)?.isExpired);
 
   let playerCtaBackgroundColor = Colors.primary500;
   let playerCtaBorderColor = 'transparent';
@@ -155,6 +160,14 @@ function RecruitmentAdCard({
     playerCtaBorderColor = `${Colors.primary500}35`;
     playerCtaTextColor = Colors.primary100;
     playerCtaBorderWidth = 1;
+  } else if (isExpired) {
+    // FINITIONS16 5 — le libelle de la fiche, mot pour mot, et a la meme place qu elle
+    // (apres « acceptee » et « en attente ») : les deux ne peuvent plus diverger.
+    playerCtaLabel = t('recruitmentAdDetails.footer.expired', 'Annonce expirée');
+    playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
+    playerCtaBorderColor = 'rgba(255,255,255,0.12)';
+    playerCtaTextColor = Colors.neutral300;
+    playerCtaBorderWidth = 1;
   } else if (isDeclined) {
     // FINITIONS8 (point 1) : la carte dit le refus ; on repostule depuis la fiche.
     playerCtaLabel = t('recruitmentAdCard.cta.declined', 'Candidature refusée');
@@ -167,9 +180,16 @@ function RecruitmentAdCard({
   }
 
   const candidatesCount = ad.applicationsCount || ad.candidatesCount || ad.candidates?.length || 0;
-  const statusInfo = ad.isActive
-    ? { color: Colors.primary500, text: t('recruitmentAdCard.status.online', 'En ligne') }
-    : { color: Colors.neutral500, text: t('recruitmentAdCard.status.inactive', 'Inactive') };
+  let statusInfo = {
+    color: Colors.neutral500,
+    text: t('recruitmentAdCard.status.inactive', 'Inactive'),
+  };
+  if (ad.isActive) {
+    // FINITIONS16 5 — en ligne mais echue : « Expirée », le mot de « Mes activites ».
+    statusInfo = isExpired
+      ? { color: Colors.warning500, text: t('myActivitiesScreen.item.expired', 'Expirée') }
+      : { color: Colors.primary500, text: t('recruitmentAdCard.status.online', 'En ligne') };
+  }
   const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
   const audienceTypeLabel = isCoachAd ? t(
     'recruitmentAdCard.coachAudience',
@@ -190,8 +210,8 @@ function RecruitmentAdCard({
     onApply(ad);
   };
 
-  const isPlayerCtaDisabled = !ad.isActive || applicationState.hasApplied || isApplying
-    || isDeclined;
+  const isPlayerCtaDisabled = !ad.isActive || isExpired || applicationState.hasApplied
+    || isApplying || isDeclined;
   const shouldRenderInteractiveCta = Boolean(onApply) && !isPlayerCtaDisabled;
   const playerCtaStyles = [
     styles.ctaBadge,
