@@ -44,6 +44,17 @@ const normalizeParticipationStatus = (value) => {
   return null;
 };
 
+/**
+ * FINITIONS18 · POINT 9 (T16) — UNE DEMANDE EN ATTENTE, une seule regle pour le telephone et le
+ * site : ACTIVE et au statut « pending ». Le site listait sous « Demandes en attente » toutes les
+ * demandes de l'evenement, une reponse « Je participe » (`accepted`) comprise, statut brut en
+ * anglais (« Hugo Lemaire · Statut: accepted »).
+ * @param {any} participation - Une demande de participation.
+ * @returns {boolean} Vrai si c'est une demande en attente.
+ */
+export const isPendingParticipationRequest = (participation) => isActiveParticipation(participation)
+  && normalizeParticipationStatus(participation?.participationStatus) === 'pending';
+
 export const getLatestActiveParticipationForUser = ({
   participationRequests = [],
   user,

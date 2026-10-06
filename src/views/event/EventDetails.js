@@ -41,7 +41,10 @@ import {
   uniqueUsers,
 } from '@/domains/event/eventParticipantSections';
 import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
-import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import {
+  getCurrentUserEventParticipationState,
+  isPendingParticipationRequest,
+} from '@/domains/event/participationState';
 import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/event/presenceRule';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
@@ -2264,7 +2267,8 @@ function EventDetails({ navigation, route }) {
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
-      activeEventParticipations.filter((participation) => participation.participationStatus === 'pending')
+      // FINITIONS18 · POINT 9 — LA regle des demandes en attente, la meme que le site.
+      activeEventParticipations.filter(isPendingParticipationRequest)
     ),
     [activeEventParticipations],
   );

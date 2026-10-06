@@ -15,7 +15,10 @@ import {
 } from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
-import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import {
+  getCurrentUserEventParticipationState,
+  isPendingParticipationRequest,
+} from '@/domains/event/participationState';
 import {
   canDeclareLatePresence,
   isArrivalTrackingEnabled,
@@ -1594,6 +1597,9 @@ function EventDetails({ navigation, route }) {
   // anonymise et bloque cote serveur, pas efface : sans ce tri il reste ici.
   const participants = withoutDeletedAccounts(event?.participations);
   const participationRequests = withoutDeletedAccountEntries(event?.participationRequests);
+  // FINITIONS18 · POINT 9 (T16) — « Demandes en attente » : les demandes ACTIVES au statut
+  // « pending », LA regle du telephone. Le bloc listait toutes les demandes (« Statut: accepted »).
+  const demandesEnAttente = participationRequests.filter(isPendingParticipationRequest);
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
   const hasVisibleEventTasks = canViewParticipantNames
     && Array.isArray(event?.eventTasks)
@@ -1621,9 +1627,7 @@ function EventDetails({ navigation, route }) {
     canEdit,
     event,
     inactiveParticipations: participationRequests.filter((request) => request?.isActive === false),
-    pendingParticipations: participationRequests.filter(
-      (request) => request?.isActive !== false && request?.participationStatus === 'pending',
-    ),
+    pendingParticipations: demandesEnAttente,
     t,
     trainerKeys: getEventTrainerKeys(event),
   });
@@ -2848,13 +2852,13 @@ function EventDetails({ navigation, route }) {
                   <h3 style={{ ...sectionTitleStyle, fontSize: 18 }}>
                     {t('eventDetails.pendingRequests', 'Demandes en attente')}
                   </h3>
-                  {participationRequests.length === 0 ? (
+                  {demandesEnAttente.length === 0 ? (
                     <div style={{ color: mutedTextColor }}>
                       {t('eventDetails.noPendingRequest', 'Aucune demande en attente.')}
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gap: 12 }}>
-                      {participationRequests.map((request) => (
+                      {demandesEnAttente.map((request) => (
                         <div
                           key={getEntityDocumentId(request) || getEntityDocumentId(request?.user)}
                           style={{
@@ -2868,11 +2872,6 @@ function EventDetails({ navigation, route }) {
                         >
                           <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
                             {getUserDisplayName(request?.user)}
-                          </span>
-                          <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                            {t('eventDetails.status', 'Statut:')}
-                            {' '}
-                            {request?.participationStatus || 'pending'}
                           </span>
                           {request?.sourceTeam?.name ? (
                             <span style={{ color: mutedTextColor, fontSize: 13 }}>
