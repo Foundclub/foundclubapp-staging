@@ -14,6 +14,10 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import {
+  continuerSurOrdinateur,
+  STYLE_CONTINUER_ORDINATEUR,
+} from '@/views/onboarding/components/continuerOrdinateur';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
@@ -29,12 +33,6 @@ import {
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
 import { useIsDesktop } from '@/responsive';
-
-/** FINITIONS16 21 (planche 8) — « Continuer », sur ordinateur : à droite, 200 px au moins. */
-const STYLE_CONTINUER_ORDINATEUR = /** @type {import('react-native').ViewStyle} */ ({
-  alignSelf: 'flex-end',
-  minWidth: 200,
-});
 
 /**
  * User type selection screen component. Let users to select their role
@@ -78,7 +76,7 @@ function UserRole({ navigation }) {
   // parcours d'inscription vient de getOnboardingViews.
   const sansRoleSportif = Platform.OS === 'web' && userData?.role?.type === 'authenticated';
   // FINITIONS16 21 (planche 8, P1-inscription-ordi) : sur ordinateur, « Continuer » à droite.
-  const surOrdinateur = Platform.OS === 'web' && isDesktop;
+  const surOrdinateur = continuerSurOrdinateur(isDesktop);
   const villes = useMyCollectivites({ enabled: sansRoleSportif });
   const demandesDeGestion = useMyManagerRequests({ enabled: sansRoleSportif });
   const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
