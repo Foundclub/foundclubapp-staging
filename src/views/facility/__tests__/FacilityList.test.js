@@ -690,6 +690,8 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallations)', () =
     expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
       contextDetailLabel: 'Gymnase de la Recette',
       facilityId: 'gymnase-recette',
+      // FINITIONS16 18 : le site garde le menu de la Ville sur ce planning.
+      espace: 'ville',
       sourceType: 'facility',
     });
   });

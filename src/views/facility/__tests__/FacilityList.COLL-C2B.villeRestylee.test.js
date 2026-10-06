@@ -270,6 +270,8 @@ describe('COLL-C2B planche 1 — la carte d une installation de la Ville', () =>
     expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
       contextDetailLabel: 'Gymnase des Tilleuls',
       facilityId: 'gym-tilleuls',
+      // FINITIONS16 18 : le site garde le menu de la Ville sur ce planning.
+      espace: 'ville',
       sourceType: 'facility',
     });
 

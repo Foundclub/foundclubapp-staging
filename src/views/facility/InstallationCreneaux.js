@@ -231,6 +231,9 @@ function InstallationCreneaux() {
   const ouvrirLePlanning = () => {
     navigation.navigate(RouteNames.PlanningWeekFullscreen, {
       contextDetailLabel: nom || null,
+      // FINITIONS16 · POINT 18 (T15) — l'installation de la Ville : sur le site, le menu de la
+      // Ville reste sur son planning (`espace=ville` dans l'adresse, AppShell).
+      ...(collectiviteId ? { espace: 'ville' } : {}),
       facilityId,
       sourceType: 'facility',
     });
