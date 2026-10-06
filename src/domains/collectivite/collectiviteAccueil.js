@@ -358,6 +358,19 @@ export const latestManagerRequest = (demandes) => {
 // ─── LES PREMIERS PAS D'UNE VILLE TOUTE NEUVE (planche P1v3-premiers-pas) ─────────────────
 
 /**
+ * FINITIONS18 · POINT 10 (T16) — LA cle de ce que l'accueil de la Ville retient sur l'appareil,
+ * pour CE compte et CETTE Ville (mot d'accueil lu, liste des clubs ouverte, guide masque). Une
+ * seule fabrique : l'accueil la lit, l'ecran des clubs l'ecrit (« Verifiez vos clubs »).
+ * @param {string} nom - Ce qui est retenu (« clubs-vus », « bienvenue-vue », « guide-masque »).
+ * @param {string | null | undefined} userDocumentId - Le compte.
+ * @param {string | null | undefined} collectiviteId - La Ville.
+ * @returns {string} La cle de stockage.
+ */
+export const clePremierPas = (nom, userDocumentId, collectiviteId) => (
+  `coll-accueil:${nom}:${userDocumentId || 'anonyme'}:${collectiviteId || ''}`
+);
+
+/**
  * Les étapes des premiers pas, dans l'ordre où elles se débloquent. Une étape sans écran
  * (`route: null`) est MASQUÉE. « Présentez-vous aux clubs » mène, depuis le lot C4a (02/10), au
  * formulaire « Nouvelle actualité » ; « Attribuez les créneaux de la saison », depuis

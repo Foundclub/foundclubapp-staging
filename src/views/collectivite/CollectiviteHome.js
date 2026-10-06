@@ -16,6 +16,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import {
   availableHomeActions,
+  clePremierPas,
   clubInitials,
   clubTotals,
   firstFullMoment,
@@ -113,7 +114,7 @@ function CollectiviteHome() {
   // ponytail: retenu sur l'appareil, pas au serveur — un autre téléphone revoit le guide une
   // fois ; voie de sortie : un champ du compte si les agents changent souvent d'appareil.
   const cleRetenue = (/** @type {string} */ nom) => (
-    `coll-accueil:${nom}:${userData?.documentId || 'anonyme'}:${collectiviteId || ''}`
+    clePremierPas(nom, userData?.documentId, collectiviteId)
   );
   const lireRetenu = (/** @type {string} */ nom) => {
     try {
@@ -157,9 +158,13 @@ function CollectiviteHome() {
 
   const refetchPending = pending.refetch;
   // Au retour d'une demande tranchée, le compteur doit déjà être juste.
+  // FINITIONS18 · POINT 10 (T16) — et « Verifiez vos clubs » se relit : la liste des clubs a pu
+  // etre ouverte par une autre entree (le menu de la Ville du site) ; elle coche la meme cle.
   useFocusEffect(useCallback(() => {
     refetchPending?.();
-  }, [refetchPending]));
+    if (lireRetenu('clubs-vus')) setClubsVus(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetchPending, userData?.documentId, collectiviteId]));
 
   const ouvrir = (/** @type {string} */ ecran, /** @type {Record<string, any>} */ extra = {}) => {
     // Ouvrir la liste des clubs rattachés coche le 2e premier pas (« Vérifiez vos clubs »).

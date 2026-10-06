@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Linking,
@@ -9,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { clePremierPas } from '@/domains/collectivite/collectiviteAccueil';
 import {
   etatDInvitation,
   ligneDirigeants,
@@ -19,6 +21,7 @@ import {
   findManagedCollectivite,
   formatCollectiviteDay,
 } from '@/domains/collectivite/collectiviteDisplay';
+import { useAppContext } from '@/store/appContext';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -39,6 +42,7 @@ import {
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
+import { setItem } from '@/platform/storage';
 import { useIsDesktop } from '@/responsive';
 
 /**
@@ -70,6 +74,20 @@ function CollectiviteClubs() {
   const isDesktop = useIsDesktop();
   const routeParams = /** @type {{ collectiviteId?: string } | undefined} */ (route?.params);
   const collectiviteId = routeParams?.collectiviteId || null;
+
+  // FINITIONS18 · POINT 10 (T16) — ouvrir cette liste, par N'IMPORTE quelle entree (bouton de
+  // l'accueil, menu de la Ville du site), coche « Verifiez vos clubs » : 3 sur 4 sur le site, 4 sur
+  // 4 au telephone, parce que seul le bouton de l'accueil cochait. Meme cle que l'accueil.
+  // ponytail: retenu sur l'appareil, comme avant ; voie de sortie : un champ du compte.
+  const userDocumentId = /** @type {any} */ (useAppContext()[0])?.auth?.user?.documentId;
+  useEffect(() => {
+    if (!userDocumentId || !collectiviteId) return;
+    try {
+      setItem(clePremierPas('clubs-vus', userDocumentId, collectiviteId), '1');
+    } catch {
+      // Sans stockage, l'etape se cochera par le bouton de l'accueil, comme avant.
+    }
+  }, [collectiviteId, userDocumentId]);
 
   const mine = useMyCollectivites();
   const collectivite = findManagedCollectivite(mine.data, collectiviteId);
