@@ -272,7 +272,8 @@ function PlanningWeekFullscreen() {
   const contextLabel = route?.params?.contextLabel || null;
   const facilityId = route?.params?.facilityId || null;
   const sectionId = route?.params?.sectionId || null;
-  const withChildren = route?.params?.withChildren === true;
+  const withChildren = /** @type {{ withChildren?: boolean } | undefined} */ (route?.params)
+    ?.withChildren === true;
 
   const [currentDate, setCurrentDate] = useState(getInitialDate(route?.params?.date));
   // PLANNING-PORTRAIT (01/10, decision d'Adel « D6 A ») : l'ecran SUIT le telephone.
