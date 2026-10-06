@@ -1127,6 +1127,57 @@ export const markOnboardingComplete = (documentId) => {
   }
 };
 
+// Les champs que le tunnel lit pour sauter une etape (`getOnboardingViews`), nommes quand ils
+// sont VIDES dans l'identite qui decide.
+const CHAMPS_LUS_PAR_LE_TUNNEL = [
+  'firstname', 'lastname', 'birthdate', 'section', 'address', 'avatar', 'preferredSport',
+  'position', 'bestLevel', 'category', 'sportsHistory',
+];
+
+/**
+ * FINITIONS18 · POINT 4 (tournee T16) — LA LIGNE DE JOURNAL DE LA DECISION « TUNNEL OU ACCUEIL ».
+ *
+ * Hugo (joueur) sort de l'app par « retour », la rouvre : l'arbre React REMONTE dans le MEME
+ * moteur JS (« Running foundclub … rootTag 11 », aucune requete d'identite) et la pile s'ouvre
+ * sur « Etape 10 sur 13 · Ton parcours sportif ». Demarrage a froid, bouton accueil, Karim : pas
+ * de tunnel. Le journal du relais montre que les deux chemins ne decident pas sur la MEME
+ * identite (a froid : la session gardee sur le telephone, en attendant le serveur ; au
+ * remontage : le resume du serveur reste en cache), mais pas QUEL champ, ni le drapeau
+ * `hasCompletedOnboarding_<id>` (par appareil). Cette ligne le dit a la prochaine reproduction,
+ * sans aucune donnee personnelle : des noms de champs, d'etapes, et oui / non.
+ * ponytail: un diagnostic, pas un correctif. Voie de sortie : la retirer avec le correctif de la
+ * cause (`useAuth.js`, effet « ONBOARDING_DECISION »).
+ * @param {object} params - Ce qui a decide.
+ * @param {boolean | null} params.flag - Le drapeau lu sur l'appareil (null : illisible).
+ * @param {{ isEntryCheckpoint?: boolean, views?: { canShow: boolean, route: string }[] }
+ *   | undefined} params.onboardingViews - La decision (`getOnboardingViews`).
+ * @param {string} params.source - L'identite lue : 'get-me', 'bootstrap' ou 'session'.
+ * @param {any} params.userData - L'identite qui a decide.
+ * @returns {string} La ligne, pour `logcat`.
+ */
+export const describeOnboardingDecision = ({
+  flag, onboardingViews, source, userData,
+}) => {
+  const etapes = (Array.isArray(onboardingViews?.views) ? onboardingViews.views : [])
+    .filter((view) => view?.canShow)
+    .map((view) => view.route);
+  const vides = CHAMPS_LUS_PAR_LE_TUNNEL.filter((champ) => !userData?.[champ]);
+  if (!userData?.height && !userData?.weight) vides.push('height+weight');
+  const nombre = (/** @type {any} */ liste) => (Array.isArray(liste) ? liste.length : 0);
+  return [
+    '[AUTH] ONBOARDING_DECISION',
+    `source=${source}`,
+    `documentId=${userData?.documentId ? 'oui' : 'non'}`,
+    `drapeau=${flag === null ? 'illisible' : String(flag)}`,
+    `role=${getUserRoleKey(userData?.role?.name || USER_ROLES.new)}`,
+    `controle=${onboardingViews?.isEntryCheckpoint === true}`,
+    `etapes=${etapes.join(',') || 'aucune'}`,
+    `vides=${vides.join(',') || 'aucun'}`,
+    `equipes=${nombre(userData?.myTeams)}/${nombre(userData?.trainedTeams)}`,
+    `clubs=${nombre(userData?.clubs)}`,
+  ].join(' ');
+};
+
 /**
  * Get the fields to display in the profile based on user role
  * @param {Role} role - The user role
