@@ -76,6 +76,11 @@ function TimePickerInput({
     setShowPicker(false);
   };
 
+  // FINITIONS16 · POINT 6 — le champ du navigateur parle deja HH:mm : la valeur passe telle quelle.
+  const handleWebChange = (/** @type {{ currentTarget?: { value?: string } }} */ event) => {
+    onChange(event?.currentTarget?.value || '');
+  };
+
   const displayValue = value || placeholder;
 
   return (
@@ -85,23 +90,54 @@ function TimePickerInput({
           {label}
         </Text>
       )}
-      <TouchableOpacity
-        onPress={() => setShowPicker(true)}
-        style={[
+      {/* FINITIONS16 · POINT 6 (`heure oui`) — SUR LE SITE, LE CHAMP D'HEURE DU NAVIGATEUR. La
+          roue ne se montait que sur iOS et Android : sur le site, l'appui n'ouvrait rien (meme
+          defaut que DatePickerInput, point 3). Meme boite, meme valeur HH:mm ; la police vient
+          du site (`input { font: inherit }`, web/src/index.css). */}
+      {Platform.OS === 'web' ? (
+        <View style={[
           ApplicationStyle.borderRadius12,
           ApplicationStyle.backgroundColor.primary700,
           Spaces.padding[16],
           error && { borderColor: Colors.error500, borderWidth: 1 },
         ]}
-      >
-        <Text style={[
-          Fonts.p1,
-          value ? Fonts.neutral00 : { color: Colors.neutral300 },
-        ]}
         >
-          {displayValue}
-        </Text>
-      </TouchableOpacity>
+          <input
+            aria-label={label || placeholder}
+            onChange={handleWebChange}
+            style={{
+              background: 'transparent',
+              border: 0,
+              color: Colors.neutral00,
+              colorScheme: 'dark',
+              fontSize: 16,
+              outline: 'none',
+              padding: 0,
+              width: '100%',
+            }}
+            type="time"
+            value={value || ''}
+          />
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={() => setShowPicker(true)}
+          style={[
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.backgroundColor.primary700,
+            Spaces.padding[16],
+            error && { borderColor: Colors.error500, borderWidth: 1 },
+          ]}
+        >
+          <Text style={[
+            Fonts.p1,
+            value ? Fonts.neutral00 : { color: Colors.neutral300 },
+          ]}
+          >
+            {displayValue}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {error && (
         <Text style={[Fonts.p3, { color: Colors.error500 }]}>
