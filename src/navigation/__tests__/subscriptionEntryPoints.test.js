@@ -70,10 +70,16 @@ const POINTS_D_ENTREE = [
     fichier: 'views/event/EventDetails.js',
     pourquoi: 'relance de quota apres publication',
   },
+  // FINITIONS16 23 — LA TUILE D'ACCUEIL VISE DESORMAIS DEUX ECRANS : decision L33 COMPLETEE
+  // PAR ADEL le 06/10/2026 vers 13h20 (`tuile B`, relayee par le chef d'orchestre ; constat de
+  // la tournee T15, planche 39). Un club dont l'offre Club est COUVERTE PAR LA VILLE n'a rien a
+  // acheter : la tuile ouvre « Mon abonnement » (le hub, « Offert par la Ville… »). Les autres
+  // clubs : inchange, la tuile affiche un compteur et vend (le carrousel).
+  // ⚠️ L'ordre compte : le hub est la PREMIERE route citee du fichier.
   {
-    attendu: 'SubscriptionOffers',
+    attendu: ['SubscriptionOverview', 'SubscriptionOffers'],
     fichier: 'views/home/HomeHub.js',
-    pourquoi: 'la carte d accueil affiche un compteur',
+    pourquoi: 'club couvert par la Ville => hub ; sinon la carte affiche un compteur => carrousel',
   },
   {
     attendu: 'SubscriptionOverview',
