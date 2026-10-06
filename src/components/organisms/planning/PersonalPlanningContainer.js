@@ -54,21 +54,24 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
     () => getPlanningRange(currentDate, viewMode),
     [currentDate, viewMode],
   );
-  const { data: eventsData, isLoading } = useQuery({
+  const { data: eventsData, isError, isLoading } = useQuery({
     placeholderData: keepPreviousPageData,
     queryFn: () => getMyPlanning(planningRange),
     queryKey: ['planning', 'personal', planningRange.from, planningRange.to],
     staleTime: PERSONAL_PLANNING_STALE_MS,
   });
 
+  // PARENT-PLANNING (06/10) — un ECHEC libere aussi la liste du planning. Sur le site, elle
+  // attend ce signal ; le role Parent n a pas le droit de lire ce calendrier (403) : sans
+  // cette sortie, sa liste — les evenements de son enfant compris — ne partait jamais.
   useEffect(() => {
-    if (!eventsData || hasEmittedReadyRef.current) {
+    if ((!eventsData && !isError) || hasEmittedReadyRef.current) {
       return;
     }
 
     hasEmittedReadyRef.current = true;
     onDataResolved?.();
-  }, [eventsData, onDataResolved, hasEmittedReadyRef]);
+  }, [eventsData, isError, onDataResolved, hasEmittedReadyRef]);
 
   const viewOptions = useMemo(() => ([
     { label: 'Semaine', value: 'week' },
