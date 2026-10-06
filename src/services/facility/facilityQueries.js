@@ -81,6 +81,7 @@ export const useGetFacilities = (clubId, options = {}) => useQuery({
  * que `FacilitySelector` (telephone) : le site et le telephone partagent la lecture.
  * @param {string} cmId - L omnisport.
  * @param {object} [options] - Options de react-query.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La lecture.
  */
 export const useGetCMFacilities = (cmId, options = {}) => useQuery({
   enabled: !!cmId,
@@ -94,6 +95,7 @@ export const useGetCMFacilities = (cmId, options = {}) => useQuery({
  * la MEME clef de cache que `FacilitySelector` (telephone).
  * @param {string} clubId - Le club.
  * @param {object} [options] - Options de react-query.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La lecture.
  */
 export const useGetClubVilleFacilitiesWithSlots = (clubId, options = {}) => useQuery({
   enabled: Boolean(clubId),

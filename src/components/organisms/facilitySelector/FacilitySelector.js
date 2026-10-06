@@ -11,7 +11,11 @@ import {
   View,
 } from 'react-native';
 
-import { clubSlotParts, creneauDeLaSeance, eventFacilityOptions } from '@/domains/seasonSlot/clubInstallations';
+import {
+  clubSlotParts,
+  creneauDeLaSeance,
+  eventFacilityOptions,
+} from '@/domains/seasonSlot/clubInstallations';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 

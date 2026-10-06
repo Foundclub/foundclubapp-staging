@@ -334,11 +334,12 @@ describe('FINITIONS16 2 — sur le site (Joi qui ne valide rien), la date reste 
     await saisir(arbre, 'Nom', 'Age');
     await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
 
-    expect(textes(arbre).join(' | ')).toContain('Renseigne une date de naissance valide pour continuer.');
+    expect(textes(arbre).join(' | '))
+      .toContain('Renseigne une date de naissance valide pour continuer.');
     expect(bouton(arbre, LIBELLE_CTA).props.disabled).toBe(true);
   });
 
-  it('🔴 une date impossible (31 fevrier) ou incomplete (annee a 2 chiffres) n envoie RIEN', async () => {
+  it('🔴 une date impossible (31 fevrier) ou incomplete (annee sur 2) n envoie RIEN', async () => {
     const arbre = rendre('Joueur');
 
     await saisir(arbre, 'Prénom', 'Recette');

@@ -63,8 +63,8 @@ jest.mock('@/services/event/eventService', () => ({
 }));
 jest.mock('@/services/facility/facilityQueries', () => ({
   // FINITIONS16 · 4 : le formulaire lit aussi l omnisport et la Ville (listes vides ici).
-  useGetCMFacilities: () => ({ data: undefined }),
   useGetClubVilleFacilitiesWithSlots: () => ({ data: undefined }),
+  useGetCMFacilities: () => ({ data: undefined }),
   useGetFacilities: () => ({
     data: [{ documentId: 'facility-1', name: 'Gymnase des Tilleuls' }], error: null, isLoading: false,
   }),

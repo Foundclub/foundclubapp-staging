@@ -52,8 +52,8 @@ function DatePickerInput({
 
   // FINITIONS16 · POINT 3 (T15) — le champ du navigateur parle AAAA-MM-JJ, en date LOCALE
   // (`format`, jamais `toISOString` : minuit a Paris est la veille en UTC).
-  const formatInputDate = (date) => format(date, 'yyyy-MM-dd');
-  const handleWebChange = (event) => {
+  const formatInputDate = (/** @type {Date} */ date) => format(date, 'yyyy-MM-dd');
+  const handleWebChange = (/** @type {{ currentTarget?: { value?: string } }} */ event) => {
     const saisie = event?.currentTarget?.value || '';
     if (!saisie) {
       onChange('');

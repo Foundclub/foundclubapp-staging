@@ -26,7 +26,9 @@ jest.mock('@react-native-community/datetimepicker', () => function SelecteurMock
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
   }),
 }));
 
@@ -147,7 +149,9 @@ describe('FINITIONS16 3 — sur le site, un vrai champ de date du navigateur', (
     monter({ value: '07/10/2026' });
     expect(champDeDate()[0].props.value).toBe('2026-10-07');
 
-    act(() => { arbre.update(createElement(DatePickerInput, { label: 'Du', onChange: jest.fn(), value: '' })); });
+    act(() => {
+      arbre.update(createElement(DatePickerInput, { label: 'Du', onChange: jest.fn(), value: '' }));
+    });
     expect(champDeDate()[0].props.value).toBe('');
   });
 
@@ -162,7 +166,7 @@ describe('FINITIONS16 3 — sur le site, un vrai champ de date du navigateur', (
     expect(onChange).toHaveBeenLastCalledWith('');
   });
 
-  test('🔴 les bornes passent au navigateur en dates LOCALES (pas de jour perdu a minuit UTC)', () => {
+  test('🔴 les bornes passent au navigateur en dates LOCALES (pas de jour perdu a 0 h UTC)', () => {
     monter({
       maximumDate: new Date(2027, 5, 30, 0, 30),
       minimumDate: new Date(2026, 9, 7, 0, 30),
@@ -172,7 +176,7 @@ describe('FINITIONS16 3 — sur le site, un vrai champ de date du navigateur', (
     expect(champDeDate()[0].props.max).toBe('2027-06-30');
   });
 
-  test('🔴 le champ porte le libelle (lecteur d ecran) ; le libelle et l erreur restent visibles', () => {
+  test('🔴 le champ porte le libelle (lecteur d ecran) ; libelle et erreur restent visibles', () => {
     monter({ error: 'Choisis une date' });
 
     expect(champDeDate()[0].props['aria-label']).toBe('Du');

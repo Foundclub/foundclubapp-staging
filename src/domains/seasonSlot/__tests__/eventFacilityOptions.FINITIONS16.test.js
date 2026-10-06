@@ -38,7 +38,10 @@ describe('FINITIONS16 4 — eventFacilityOptions', () => {
 
   test('🔴 des listes absentes (pas encore lues) ne cassent rien', () => {
     expect(eventFacilityOptions({
-      clubFacilities: undefined, cmFacilities: null, currentFacility: null, villeFacilities: undefined,
+      clubFacilities: undefined,
+      cmFacilities: null,
+      currentFacility: null,
+      villeFacilities: undefined,
     })).toEqual([]);
   });
 });

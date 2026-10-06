@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- des phrases entieres, comparees telles quelles */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
@@ -66,10 +67,10 @@ jest.mock('@/services/event/eventService', () => ({
 }));
 // Les installations DU CLUB : le Club-house seulement. Le Gymnase n'y est pas : il est a la Ville.
 jest.mock('@/services/facility/facilityQueries', () => ({
-  useGetCMFacilities: () => ({ data: { data: [] }, error: null, isLoading: false }),
   useGetClubVilleFacilitiesWithSlots: () => ({
     data: mockInstallationsDeLaVille.data, error: null, isLoading: false,
   }),
+  useGetCMFacilities: () => ({ data: { data: [] }, error: null, isLoading: false }),
   useGetFacilities: () => ({
     data: [{ documentId: 'club-house', name: 'Club-house' }], error: null, isLoading: false,
   }),
@@ -119,7 +120,10 @@ const SEANCE_AU_GYMNASE = {
 /** @type {any} */
 let arbre = null;
 
-/** La liste « Installation » : le seul `<select>` dont une option dit « Aucune installation ». */
+/**
+ * La liste « Installation » : le seul `<select>` dont une option dit « Aucune installation ».
+ * @returns {any} Le noeud `<select>`, ou undefined.
+ */
 const listeInstallation = () => arbre.root.findAll(
   (/** @type {any} */ n) => n.type === 'select'
     && n.findAll((/** @type {any} */ o) => o.type === 'option' && o.props.value === '').length > 0
