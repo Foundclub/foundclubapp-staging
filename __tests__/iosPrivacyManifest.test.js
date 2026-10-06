@@ -82,6 +82,10 @@ const TYPES_VALIDES_APPLE = Object.freeze([
  * identifiant de niveau appareil. ⚠️ La case « Identifiant de l appareil » reste
  * a cocher chez Apple — tant qu elle ne l est pas, l ecart existe dans l autre
  * sens, et lui seul.
+ *
+ * Le 17e, `ProductInteraction` (IOS-PRIVACY, 06/10), arrive avec la publication
+ * groupee : ce que l utilisateur a LU est garde sur son compte. ⚠️ La case
+ * « Interaction avec le produit » est a cocher chez Apple avec elle (geste d Adel).
  */
 const TYPES_ATTENDUS = Object.freeze({
   // Note vocale : enregistrement (`voiceNoteService.js:406`) puis televersement
@@ -142,6 +146,15 @@ const TYPES_ATTENDUS = Object.freeze({
   // (`ProfileEdit.js:233,256`) et position GPS haute precision demandee par la
   // carte de recherche (`searchMapGeolocation.js:20`).
   NSPrivacyCollectedDataTypePreciseLocation: {
+    finalites: [FONCTIONNEMENT],
+    lie: true,
+    pistage: false,
+  },
+  // Ce que l utilisateur a LU, garde sur son compte pour la pastille « non lu » :
+  // actualites de la Ville vues (`collectiviteActualiteService.js:131`, PUT
+  // /collectivite-actualites/mine/seen) et retours du coach suivis
+  // (`coachFeedbackService.js:14,25`, /firebase-auth/me/coach-feedback-follow).
+  NSPrivacyCollectedDataTypeProductInteraction: {
     finalites: [FONCTIONNEMENT],
     lie: true,
     pistage: false,
