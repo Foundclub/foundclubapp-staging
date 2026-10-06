@@ -14333,6 +14333,8 @@ export default {
     },
     alerts: {
       deleteAlert: {
+        // FINITIONS18 15 (decision d'Adel « abo-suppr oui », 06/10).
+        abonnement: 'Deleting your account does not stop a subscription bought on the App Store or Google Play: cancel it in your phone settings.',
         actions: {
           cancel: 'Cancel',
           confirm: 'Delete',

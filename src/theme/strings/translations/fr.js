@@ -15070,6 +15070,9 @@ export default {
     },
     alerts: {
       deleteAlert: {
+        // FINITIONS18 15 (decision d'Adel « abo-suppr oui », 06/10).
+        // eslint-disable-next-line max-len
+        abonnement: 'La suppression de ton compte n’arrête pas un abonnement pris sur l’App Store ou Google Play : résilie-le dans les réglages de ton téléphone.',
         actions: {
           cancel: 'Annuler',
           confirm: 'Supprimer',

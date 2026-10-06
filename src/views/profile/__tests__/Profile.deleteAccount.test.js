@@ -294,3 +294,21 @@ test('TEMOIN — la confirmation declenche toujours la suppression, l annulation
   await act(async () => { confirmer.onPress(); });
   expect(suppression.mutate).toHaveBeenCalledTimes(1);
 });
+
+// 💰 FINITIONS18 · POINT 15 (decision d'Adel `abo-suppr oui`, 06/10) — supprimer son compte
+// n'arrete PAS un abonnement pris sur l'App Store ou Google Play (3 abonnements actifs en prod,
+// mesure du chef), et l'ecran de suppression ne le disait pas. UNE phrase, apres les
+// consequences, avant les boutons ; rien ne change a la facturation ni au parcours. ROUGE avant.
+test('FIN18-15 avant de confirmer, l ecran dit que la suppression n arrete pas un abonnement des magasins', async () => {
+  const arbre = await monterEcran();
+
+  await appuyerSur(arbre, 'Supprimer mon compte');
+
+  const { boutons, message } = derniereAlerte();
+  expect(message).toContain('n’arrête pas un abonnement');
+  expect(message).toContain('App Store');
+  expect(message).toContain('Google Play');
+  expect(message).toContain('réglages de ton téléphone');
+  expect(message.indexOf('historique passé')).toBeLessThan(message.indexOf('abonnement'));
+  expect(boutons.map((/** @type {any} */ bouton) => bouton.text)).toEqual(['Annuler', 'Supprimer']);
+});
