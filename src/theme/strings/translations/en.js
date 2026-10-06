@@ -5732,6 +5732,7 @@ export default {
       aucune: 'No session affected: no club to notify.',
       clubs_one: '{{count}} club notified',
       clubs_other: '{{count}} clubs notified',
+      clubs_zero: 'No club notified',
       etAutres_one: 'and {{count}} more',
       etAutres_other: 'and {{count}} more',
       pasAnnulee: 'Its session is not cancelled: the club moves or cancels it itself.',
@@ -5924,6 +5925,8 @@ export default {
     titre: 'Figures',
     utilisation: {
       annulees: 'cancelled',
+      annulees_one: 'cancelled',
+      annulees_other: 'cancelled',
       erreur: 'This season’s figures could not be loaded.',
       fermeture_one: '{{count}} session hit by a City closure: it is not counted as cancelled.',
       fermeture_other: '{{count}} sessions hit by a City closure: they are not counted as cancelled.',
@@ -14330,6 +14333,8 @@ export default {
     },
     alerts: {
       deleteAlert: {
+        // FINITIONS18 15 (decision d'Adel « abo-suppr oui », 06/10).
+        abonnement: 'Deleting your account does not stop a subscription bought on the App Store or Google Play: cancel it in your phone settings.',
         actions: {
           cancel: 'Cancel',
           confirm: 'Delete',

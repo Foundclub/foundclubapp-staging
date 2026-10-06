@@ -16,6 +16,10 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import {
+  continuerSurOrdinateur,
+  STYLE_CONTINUER_ORDINATEUR,
+} from '@/views/onboarding/components/continuerOrdinateur';
 import OnboardingAccountExits from '@/views/onboarding/components/OnboardingAccountExits';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
@@ -30,6 +34,7 @@ import {
   isMinorParentAccountRequiredError,
   isMinorParentalDeclarationError,
 } from '@/constants/parentalDeclaration';
+import { useIsDesktop } from '@/responsive';
 
 // D15 - ECRAN FUSIONNE « Qui es-tu ? ».
 // Prenom, nom et date de naissance tenaient sur DEUX etapes (UserName puis
@@ -174,6 +179,7 @@ const dateDeNaissanceSaisie = ({ day = '', month = '', year = '' }) => {
  * @returns {import('react').ReactElement} User identity screen component
  */
 function UserName({ navigation }) {
+  const isDesktop = useIsDesktop();
   const {
     Alignments, Fonts, Spaces,
   } = useTheme();
@@ -606,6 +612,8 @@ function UserName({ navigation }) {
           disabled={hasBlockingError}
           isLoading={updateUserMutation.isPending}
           onPress={handleSubmit(handleFormSubmit)}
+          // FINITIONS18 11 (planche 8) : sur ordinateur, « Continuer » a droite, 200 px au moins.
+          style={continuerSurOrdinateur(isDesktop) ? STYLE_CONTINUER_ORDINATEUR : undefined}
           title={t('profile.actions.save')}
           variant="Primary"
         />

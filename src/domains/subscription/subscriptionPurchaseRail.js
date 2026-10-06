@@ -498,7 +498,7 @@ export const performSubscriptionPlanChange = async ({
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB) {
     throw new Error(i18next.t(
       'subscriptionPurchaseRail.errors.planChangeMobileOnly',
-      'Le changement d offre se fait depuis l app mobile pour le moment.',
+      'Le changement d’offre se fait depuis l’app mobile pour le moment.',
     ));
   }
 

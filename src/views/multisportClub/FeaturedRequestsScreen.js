@@ -332,7 +332,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
                         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                           {event.name || event.type?.name || request?.name || t(
                             'featuredRequestsScreen.request.eventFallback',
-                            'Evenement',
+                            'Événement',
                           )}
                         </Text>
                         <Text style={[Fonts.p2, Fonts.primary100]}>

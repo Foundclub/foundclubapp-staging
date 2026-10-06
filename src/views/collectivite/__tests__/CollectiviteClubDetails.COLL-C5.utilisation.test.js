@@ -177,7 +177,7 @@ describe('COLL-C5 — planche 37 : « Utilisation » sur la fiche d’un club', 
       '80 %',
       'séances tenues',
       '0',
-      'annulées',
+      'annulée',
       '1 séance touchée par une fermeture de la Ville : elle n’est pas comptée comme annulée.',
       'De quoi répondre au conseil municipal : qui utilise vraiment quoi.',
     ]);
@@ -187,7 +187,7 @@ describe('COLL-C5 — planche 37 : « Utilisation » sur la fiche d’un club', 
     mockChiffres = { data: { clubs: [], periode: 'saison' }, error: null, isLoading: false };
     const lus = await textesDuBloc();
     expect(lus.slice(1, 7)).toEqual([
-      '0 h', 'réservées cette saison', '—', 'séances tenues', '0', 'annulées',
+      '0 h', 'réservées cette saison', '—', 'séances tenues', '0', 'annulée',
     ]);
     expect(lus.join(' | ')).not.toMatch(/fermeture/);
   });

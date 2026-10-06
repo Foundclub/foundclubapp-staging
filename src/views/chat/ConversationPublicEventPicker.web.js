@@ -118,7 +118,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
           : null,
         location: event?.location || null,
         locationDetails: event?.locationDetails || '',
-        name: event?.name || 'Evenement',
+        name: event?.name || 'Événement',
         team: event?.team ? { name: event?.team?.name || '' } : null,
       },
     });
@@ -227,10 +227,10 @@ function ConversationPublicEventPicker({ navigation, route }) {
                   <article key={eventId} style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 22, display: 'grid', gap: 12, padding: 18 }}>
                     <div style={{ display: 'grid', gap: 6 }}>
                       <span style={{ color: accentColor, fontSize: 13 }}>
-                        {event?.type?.name || 'Evenement'}
+                        {event?.type?.name || 'Événement'}
                       </span>
                       <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22, margin: 0 }}>
-                        {event?.name || 'Evenement'}
+                        {event?.name || 'Événement'}
                       </h2>
                       <span style={{ color: mutedTextColor, fontSize: 14 }}>
                         {event?.team?.name || event?.team?.club?.name || t(

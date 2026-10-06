@@ -466,7 +466,7 @@ function RecruitmentAdEdit({ navigation, route }) {
           <InputStepper
             label={isCoachAd ? t(
               'recruitmentAdEdit.form.quantityCoach',
-              'Nombre de profils recherches',
+              'Nombre de profils recherchés',
             ) : t(
               'recruitmentAdEdit.form.quantityPlayers',
               'Nombre de joueurs recherches',

@@ -124,7 +124,7 @@ function RecruitmentProfilesList({
   }
   let headerDescription = t(
     'recruitmentProfilesList.header.default',
-    'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.',
+    'Retrouve ici les joueurs et joueuses ouverts à un club pour construire ton recrutement.',
   );
   if (hasSearchTerm) {
     headerDescription = t(
@@ -292,7 +292,7 @@ function RecruitmentProfilesList({
           )
           : t(
             'recruitmentProfilesList.empty.later',
-            "Les profils ouverts a un club apparaîtront ici des qu'ils seront disponibles.",
+            'Les profils ouverts à un club apparaîtront ici dès qu’ils seront disponibles.',
           )}
       </Text>
       {hasSearchTerm || hasActiveFilters ? (

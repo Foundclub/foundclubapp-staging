@@ -177,7 +177,7 @@ export const formatNotificationRelativeTime = (dateInput) => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return i18next.t('notificationPresentation.relative.now', "A l'instant");
+  if (diffMins < 1) return i18next.t('notificationPresentation.relative.now', 'À l’instant');
   if (diffMins < 60) {
     return i18next.t(
       'notificationPresentation.relative.minutes',

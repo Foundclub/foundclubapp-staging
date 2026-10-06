@@ -199,7 +199,13 @@ export const createWebNavigationAdapter = ({
       if (typeof setSearchParams !== 'function') {
         return;
       }
-      setSearchParams(mergedParams);
+      // FINITIONS18 · POINT 12 (T16) — `initialTab=undefined` dans l'adresse de l'équipe :
+      // un paramètre EFFACÉ (`undefined`) s'écrivait « undefined » (react-router écrit chaque
+      // clé reçue). La règle de `buildQueryString` : ni vide, ni objet ; un `false` reste écrit.
+      setSearchParams(Object.fromEntries(Object.entries(mergedParams)
+        .filter(([, valeur]) => valeur !== undefined && valeur !== null && valeur !== ''
+          && typeof valeur !== 'object')
+        .map(([cle, valeur]) => [cle, String(valeur)])));
     },
   };
 

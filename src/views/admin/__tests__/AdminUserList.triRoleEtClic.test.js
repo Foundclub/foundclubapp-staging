@@ -252,7 +252,7 @@ test('USERS/4 — on peut demander les PLUS ANCIENS', () => {
 test('USERS/5 — on peut filtrer par role', () => {
   const arbre = monter();
 
-  expect(appuyerSur(arbre, 'Filtrer sur le role Dirigeant')).toBe(true);
+  expect(appuyerSur(arbre, 'Filtrer sur le rôle Dirigeant')).toBe(true);
 
   const dernier = mockParamsRecus[mockParamsRecus.length - 1];
   expect(dernier.role).toBe('dirigeant');
@@ -261,8 +261,8 @@ test('USERS/5 — on peut filtrer par role', () => {
 test('USERS/6 — appuyer deux fois sur le meme role retire le filtre', () => {
   const arbre = monter();
 
-  appuyerSur(arbre, 'Filtrer sur le role Dirigeant');
-  appuyerSur(arbre, 'Filtrer sur le role Dirigeant');
+  appuyerSur(arbre, 'Filtrer sur le rôle Dirigeant');
+  appuyerSur(arbre, 'Filtrer sur le rôle Dirigeant');
 
   const dernier = mockParamsRecus[mockParamsRecus.length - 1];
   expect(dernier.role).toBe('');

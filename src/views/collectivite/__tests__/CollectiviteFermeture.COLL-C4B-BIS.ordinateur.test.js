@@ -181,6 +181,7 @@ test('C4B-BIS-1/1 ordinateur, installation connue : l ecran cede la place au pla
   };
   const arbre = await rendre(<CollectiviteFermeture />);
   expect(mockNavigation.replace).toHaveBeenCalledWith('PlanningWeekFullscreen', {
+    espace: 'ville',
     contextDetailLabel: 'Gymnase des Tilleuls',
     facilityId: 'gym-tilleuls',
     fermeture: 'fermer',
@@ -196,6 +197,7 @@ test('C4B-BIS-1/2 ordinateur : « Bloquer pour la Ville » garde son jour et ses
   };
   await rendre(<CollectiviteFermeture />);
   expect(mockNavigation.replace).toHaveBeenLastCalledWith('PlanningWeekFullscreen', {
+    espace: 'ville',
     date: '2026-10-03',
     endTime: '13:00',
     facilityId: 'gym-tilleuls',
@@ -206,6 +208,7 @@ test('C4B-BIS-1/2 ordinateur : « Bloquer pour la Ville » garde son jour et ses
   mockParams = { closureId: 'fermeture-1', collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' };
   await rendre(<CollectiviteFermeture />);
   expect(mockNavigation.replace).toHaveBeenLastCalledWith('PlanningWeekFullscreen', {
+    espace: 'ville',
     closureId: 'fermeture-1',
     facilityId: 'gym-tilleuls',
     fermeture: 'modifier',
@@ -220,6 +223,7 @@ test('C4B-BIS-1/3 ordinateur, depuis l accueil (sans installation) : on la chois
   expect(textes(arbre)).toContain('Choisissez l’installation');
   await act(async () => { parTestID(arbre, 'fermeture-installation-dojo').props.onPress(); });
   expect(mockNavigation.replace).toHaveBeenCalledWith('PlanningWeekFullscreen', {
+    espace: 'ville',
     contextDetailLabel: 'Dojo municipal',
     facilityId: 'dojo',
     fermeture: 'fermer',
@@ -281,4 +285,20 @@ test('C4B-BIS-5/1 telephone, « Fermer » : la boite de l installation dit aussi
   mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'bloquer' };
   const arbreBloquer = await rendre(<CollectiviteFermeture />);
   expect(textes(arbreBloquer)).toContain('2 équipes à la fois');
+});
+
+// 🏛️ FINITIONS18 · POINT 2 (tournee T16, SITE) — « Fermer » depuis l espace de la Ville cede la
+// place a la grille du planning (`/planning/week`) : le menu de la Ville y DISPARAISSAIT (la barre
+// du club a sa place). FINITIONS16 18 a pose la marque `espace=ville` sur les liens de la fiche
+// d installation et de la liste ; cet ecran-ci, qui ne sert QUE la Ville, ne la posait pas. ROUGE avant.
+test('FIN18-2 ordinateur : le planning ouvert par « Fermer » garde le menu de la Ville (espace=ville)', async () => {
+  for (const params of [
+    { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'fermer' },
+    { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'bloquer' },
+    { closureId: 'fermeture-1', collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls' },
+  ]) {
+    mockParams = params;
+    await rendre(<CollectiviteFermeture />);
+    expect(mockNavigation.replace).toHaveBeenLastCalledWith('PlanningWeekFullscreen', expect.objectContaining({ espace: 'ville' }));
+  }
 });

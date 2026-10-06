@@ -80,6 +80,12 @@ function AdminManagerRequests() {
   const [codeInsee, setCodeInsee] = useState('');
   const [siren, setSiren] = useState('');
   const [erreur, setErreur] = useState('');
+  // FINITIONS18 · POINT 7 (T15, T16, reproduit sur l'emulateur le 06/10) — « Traitees » ne
+  // reagissait pas au telephone : une zone MORTE de ~100 × 70 px au centre du bouton, a l'abscisse
+  // exacte du rond natif de « tirer pour actualiser » (CircleImageView, x 425-529 dans son parent).
+  // `refreshing` suivait CHAQUE relecture de fond (au montage de l'ecran) : le rond descendait,
+  // puis restait, invisible, a prendre les appuis. Il ne suit plus que le geste de l'utilisateur.
+  const [actualisationDemandee, setActualisationDemandee] = useState(false);
 
   const enAttente = useAdminManagerRequests('pending');
   const traitees = useAdminManagerRequests('decided', { enabled: onglet === 'decided' });
@@ -860,10 +866,11 @@ function AdminManagerRequests() {
           <RefreshControl
             colors={[Colors.primary500]}
             onRefresh={() => {
-              enAttente.refetch?.();
-              traitees.refetch?.();
+              setActualisationDemandee(true);
+              Promise.allSettled([enAttente.refetch?.(), traitees.refetch?.()])
+                .finally(() => setActualisationDemandee(false));
             }}
-            refreshing={Boolean(enAttente.isRefetching || traitees.isRefetching)}
+            refreshing={actualisationDemandee}
             tintColor={Colors.primary500}
           />
         )}

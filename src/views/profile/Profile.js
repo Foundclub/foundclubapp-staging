@@ -298,7 +298,14 @@ function Profile({ navigation, route }) {
       // a venir, staff prevenu, historique conserve). L ancienne cle `subtitle`
       // renvoyait vers un formulaire de contact alors que ce bouton supprime le
       // compte immediatement — elle reste en place, plus personne ne l affiche.
-      t('profile.alerts.deleteAlert.consequences'),
+      // FINITIONS18 · POINT 15 (decision d'Adel « abo-suppr oui », 06/10) — la suppression
+      // n'arrete PAS un abonnement pris sur l'App Store ou Google Play : l'ecran le dit, apres les
+      // consequences, avant les boutons. Rien ne change a la facturation ni au parcours.
+      `${t('profile.alerts.deleteAlert.consequences')}\n\n${t(
+        'profile.alerts.deleteAlert.abonnement',
+        // eslint-disable-next-line max-len
+        'La suppression de ton compte n’arrête pas un abonnement pris sur l’App Store ou Google Play : résilie-le dans les réglages de ton téléphone.',
+      )}`,
       [
         {
           style: 'cancel',

@@ -668,7 +668,7 @@ describe('subscriptionPurchaseRail', () => {
       Platform.OS = 'web';
 
       await expect(performSubscriptionPlanChange({ catalogEntry: buildCatalogEntry() }))
-        .rejects.toThrow('Le changement d offre se fait depuis l app mobile pour le moment.');
+        .rejects.toThrow('Le changement d’offre se fait depuis l’app mobile pour le moment.');
       expect(changeSubscriptionPlan).not.toHaveBeenCalled();
       expect(purchaseSubscriptionViaRevenueCat).not.toHaveBeenCalled();
     });

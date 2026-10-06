@@ -448,10 +448,21 @@ const useAuth = () => {
     }
 
     if (bootstrapData?.pendingMatchStatsSummary) {
-      queryClient.setQueryData(
-        ['pendingMatchStatsPrompts'],
-        bootstrapData.pendingMatchStatsSummary,
-      );
+      // FINITIONS18 · POINT 6 (T16) — le RESUME du demarrage (`items: []`) ne remplace jamais une
+      // LISTE deja lue : cet effet repasse a chaque nouvelle identite de `auth`, et « Matchs en
+      // attente », reste monte sous « Mon retour de match », tombait sur son squelette sans fin
+      // (« des matchs, pas de liste »), sans relire. Une liste qui ne compte plus comme le serveur
+      // est seulement marquee a relire.
+      const resume = bootstrapData.pendingMatchStatsSummary;
+      const liste = /** @type {any} */ (queryClient.getQueryData(['pendingMatchStatsPrompts']));
+      if (!Array.isArray(liste?.items) || liste.items.length === 0) {
+        queryClient.setQueryData(['pendingMatchStatsPrompts'], resume);
+      } else if (Number(liste?.totalPending) !== Number(resume?.totalPending)) {
+        queryClient.invalidateQueries(
+          { queryKey: ['pendingMatchStatsPrompts'] },
+          { cancelRefetch: false },
+        );
+      }
     }
   }, [auth, bootstrapData, queryClient]);
 

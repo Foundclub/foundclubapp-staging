@@ -1133,7 +1133,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       'multiTeamCompositionBoard.whereTheyPlay',
       'Où ils jouent',
     ));
-  const contextLabel = teamName || eventName || t('multiTeamCompositionBoard.event', 'Evenement');
+  const contextLabel = teamName || eventName || t('multiTeamCompositionBoard.event', 'Événement');
   const viewerBranchCount = resolvedReadOnlyBranches.length;
   const convokedCount = allPlayers.length;
 

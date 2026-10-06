@@ -595,6 +595,16 @@ export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSAN
 /** @type {string[]} */
 const ENTRY_CHECKPOINT_ROUTES = [RouteNames.UserName, RouteNames.UserParentalDeclaration];
 
+// FINITIONS18 · POINT 4 — les etapes FACULTATIVES du tunnel (« Optional steps » des parcours
+// joueur et entraineur, plus les deux guides d'affiliation) : un compte deja dans une equipe ou un
+// club n'est jamais renvoye au tunnel pour elles.
+/** @type {string[]} */
+const OPTIONAL_ONBOARDING_ROUTES = [
+  RouteNames.UserSport, RouteNames.UserPosition, RouteNames.UserPhysique, RouteNames.UserLevel,
+  RouteNames.UserCategory, RouteNames.UserSportHistory, RouteNames.UserClubSearch,
+  RouteNames.UserAffiliationGuide, RouteNames.UserTeamAffiliation, RouteNames.UserTrainedTeams,
+];
+
 /**
  * AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire de
  * l'onboarding », `docs/DECISIONS_MINEURS.md` ligne 10) - LE POINT DE CONTROLE
@@ -927,6 +937,33 @@ export const getOnboardingViews = ({
     return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
   }
 
+  // FINITIONS18 · POINT 4 (tournee T16, reproduit sur l'emulateur le 06/10) - Hugo (joueur, 3
+  // equipes), apres une sortie par « retour », rouvrait l'app sur « Etape 10 sur 13 · Ton parcours
+  // sportif ». Le drapeau est PAR APPAREIL : sans lui, le tunnel reprenait a la premiere etape
+  // non remplie, meme FACULTATIVE (parcours sportif vide, « trouve ton club » jamais remplie). A
+  // froid, l'accueil ne s'affichait que par accident (la pile naissait sur « Adresse », que la
+  // session du telephone croit vide, puis cette etape disparaissait et la pile retombait sur
+  // l'accueil). Un compte DEJA dans une equipe, dont l'inscription n'a PAS commence sur cet
+  // appareil (un compte neuf passe toujours par « Quel est ton statut ? », qui le marque), et a qui
+  // il ne manque que des etapes facultatives (et l'age), a fini son inscription ailleurs : le point
+  // de controle de l'age, rien d'autre. Une inscription EN COURS ici garde tout son tunnel.
+  const onboardingStartedHere = (() => {
+    try {
+      return documentId ? storage.getBoolean(onboardingStartedKey(documentId)) === true : false;
+    } catch (e) { return false; }
+  })();
+  if (
+    firstname
+    && lastname
+    && hasTeamAffiliation
+    && !onboardingStartedHere
+    && pendingRoutes.length > 0
+    && pendingRoutes.every((route) => ENTRY_CHECKPOINT_ROUTES.includes(route)
+      || OPTIONAL_ONBOARDING_ROUTES.includes(route))
+  ) {
+    return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
+  }
+
   const views = pendingRoutes.length > 0 ? filteredViews : [];
   return {
     totalViews,
@@ -1114,6 +1151,26 @@ export const resolveOnboardingExitRoute = ({
   }
 
   return RouteNames.Welcome;
+};
+
+/**
+ * FINITIONS18 · POINT 4 — la cle qui dit qu'une inscription a COMMENCE sur cet appareil.
+ * @param {string} documentId - Le compte.
+ * @returns {string} La cle de stockage.
+ */
+const onboardingStartedKey = (documentId) => `onboardingStarted_${documentId}`;
+
+/**
+ * FINITIONS18 · POINT 4 — « Quel est ton statut ? » ouvre l'inscription d'un compte NEUF : elle est
+ * marquee commencee sur cet appareil. Sans ce marqueur, un compte deja dans une equipe n'est pas
+ * renvoye au tunnel pour des etapes facultatives (`getOnboardingViews`).
+ * @param {string | null | undefined} documentId - Le compte.
+ * @returns {void}
+ */
+export const markOnboardingStarted = (documentId) => {
+  if (documentId) {
+    storage.set(onboardingStartedKey(documentId), true);
+  }
 };
 
 /**

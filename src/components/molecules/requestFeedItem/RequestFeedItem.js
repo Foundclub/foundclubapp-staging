@@ -308,7 +308,7 @@ function RequestFeedItem({
 
         {item?.meta?.eventName ? (
           <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
-            {t('requestsHub.installation.eventLabel', 'Evenement')}
+            {t('requestsHub.installation.eventLabel', 'Événement')}
             :
             {' '}
             {item.meta.eventName}

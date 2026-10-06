@@ -41,7 +41,10 @@ import {
   uniqueUsers,
 } from '@/domains/event/eventParticipantSections';
 import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
-import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import {
+  getCurrentUserEventParticipationState,
+  isPendingParticipationRequest,
+} from '@/domains/event/participationState';
 import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/event/presenceRule';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
@@ -329,7 +332,7 @@ function TrainingOpenBottomSheet({
       <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {t('eventDetails.openTheTrainingSession', 'Ouvrir l entraînement')}
+            {t('eventDetails.openTheTrainingSession', 'Ouvrir l’entraînement')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t(
@@ -2264,7 +2267,8 @@ function EventDetails({ navigation, route }) {
 
   const pendingParticipations = useMemo(
     () => /** @type {EventParticipation[]} */ (
-      activeEventParticipations.filter((participation) => participation.participationStatus === 'pending')
+      // FINITIONS18 · POINT 9 — LA regle des demandes en attente, la meme que le site.
+      activeEventParticipations.filter(isPendingParticipationRequest)
     ),
     [activeEventParticipations],
   );
@@ -3734,7 +3738,7 @@ function EventDetails({ navigation, route }) {
       return preferredLabel.trim();
     }
 
-    return event?.type?.name || t('eventDetails.eventFallback', 'Evenement');
+    return event?.type?.name || t('eventDetails.eventFallback', 'Événement');
   }, [event, eventDescriptionText, t]);
 
   const {

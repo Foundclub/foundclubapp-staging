@@ -235,7 +235,7 @@ function NotificationDetails() {
 
             <View>
               <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-                {t('notifications.details.participationDeclined.labels.event', 'Evenement')}
+                {t('notifications.details.participationDeclined.labels.event', 'Événement')}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, marginTop: 4 }]}>
                 {eventLabel}

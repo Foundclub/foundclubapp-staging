@@ -859,7 +859,7 @@ function EventWizardRecap({ navigation }) {
 
     if (featuredFailures.length > 0) {
       Alert.alert(
-        t('eventWizard.recap.featured.warningTitle', 'Événement crée'),
+        t('eventWizard.recap.featured.warningTitle', 'Événement créé'),
         t(
           'eventWizard.recap.featured.warningMessage',
           "L'événement est créé, mais la demande de mise à la une n'a pas pu être envoyée. Tu pourras la refaire depuis le detail.",

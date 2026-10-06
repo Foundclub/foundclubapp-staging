@@ -405,7 +405,7 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
   );
   const eventName = normalizeString(event?.name || event?.type?.name) || i18next.t(
     'requestMappers.eventFallback',
-    'Evenement',
+    'Événement',
   );
   const startDate = toIsoString(event?.date);
 
@@ -440,7 +440,7 @@ export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) 
   );
   const eventName = normalizeString(event?.name || event?.type?.name) || i18next.t(
     'requestMappers.eventFallback',
-    'Evenement',
+    'Événement',
   );
   const requester = request?.requester || request?.user || {};
   const requesterName = resolveRequesterName(requester);
@@ -478,7 +478,7 @@ export const mapFeaturedRequestToHubItem = (/** @type {Record<string, any>} */ e
   const eventId = String(eventEntity?.documentId || eventEntity?.id || '');
   const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || i18next.t(
     'requestMappers.eventFallback',
-    'Evenement',
+    'Événement',
   );
   const clubName = normalizeString(eventEntity?.team?.club?.name) || i18next.t(
     'requestMappers.clubFallback',
@@ -549,7 +549,7 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
   const eventId = normalizeString(eventEntity?.documentId || eventEntity?.id);
   const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || i18next.t(
     'requestMappers.eventFallback',
-    'Evenement',
+    'Événement',
   );
   const facilityName = normalizeString(request?.facility?.name) || i18next.t(
     'requestMappers.facilityFallback',

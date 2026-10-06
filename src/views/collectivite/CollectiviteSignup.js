@@ -26,6 +26,10 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import {
+  continuerSurOrdinateur,
+  STYLE_CONTINUER_ORDINATEUR,
+} from '@/views/onboarding/components/continuerOrdinateur';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -37,6 +41,8 @@ import {
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import { useIsDesktop } from '@/responsive';
 
 /**
  * @typedef {{ codeInsee?: string | null, documentId: string | null, name: string,
@@ -88,6 +94,7 @@ const refusLisible = (t, code) => {
  */
 function CollectiviteSignup() {
   const { t } = useTranslation();
+  const isDesktop = useIsDesktop();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -145,6 +152,9 @@ function CollectiviteSignup() {
     }
     return t('collectiviteAccueil.inscription.erreurs.obligatoire', 'Ce champ est obligatoire.');
   };
+
+  // FINITIONS18 11 (planche 8) — le site, a la largeur d'un ordinateur.
+  const surOrdinateur = continuerSurOrdinateur(isDesktop);
 
   const retour = () => {
     if (etape === 2) {
@@ -460,11 +470,27 @@ function CollectiviteSignup() {
         {enTete}
         {etape === 1 ? etapeCollectivite : etapeVous}
       </ScrollView>
-      <View style={{ alignSelf: 'center', maxWidth: 560, width: '100%' }}>
+      <View
+        style={[
+          { alignSelf: 'center', maxWidth: 560, width: '100%' },
+          // FINITIONS18 11 (planche 8, etat A) : sur ordinateur, « Annuler » puis « Continuer »,
+          // a droite.
+          surOrdinateur ? { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' } : null,
+        ]}
+      >
+        {surOrdinateur && etape === 1 ? (
+          <Button
+            onPress={retour}
+            style={{ minWidth: 120 }}
+            title={t('common.actions.cancel', 'Annuler')}
+            variant="Ghost"
+          />
+        ) : null}
         {etape === 1 ? (
           <Button
             disabled={!choix}
             onPress={() => setEtape(2)}
+            style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
             title={t('collectiviteAccueil.inscription.continuer', 'Continuer')}
             variant="Primary"
           />
@@ -473,6 +499,7 @@ function CollectiviteSignup() {
             disabled={Boolean(envoi.isPending)}
             isLoading={Boolean(envoi.isPending)}
             onPress={envoyer}
+            style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
             title={t('collectiviteAccueil.inscription.envoyer', 'Envoyer ma demande')}
             variant="Primary"
           />

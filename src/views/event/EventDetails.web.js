@@ -15,7 +15,10 @@ import {
 } from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
-import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import {
+  getCurrentUserEventParticipationState,
+  isPendingParticipationRequest,
+} from '@/domains/event/participationState';
 import {
   canDeclareLatePresence,
   isArrivalTrackingEnabled,
@@ -568,7 +571,7 @@ function EventDetails({ navigation, route }) {
   // ⚠️ Les deux ecrans doivent dire la MEME chose : c'est ce nom que porte la
   // carte de compo envoyee dans le tchat, lisible depuis les deux.
   const compositionEventLabel = useMemo(
-    () => resolveEventDisplayName(event, 'Evenement'),
+    () => resolveEventDisplayName(event, 'Événement'),
     [event],
   );
 
@@ -887,7 +890,7 @@ function EventDetails({ navigation, route }) {
   const headerClubName = String(event?.team?.club?.name || event?.club?.name || '').trim();
   const headerTitle = isMatchEvent && headerClubName && matchOpponentName
     ? `${headerClubName} — ${matchOpponentName}`
-    : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Evenement');
+    : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Événement');
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -1477,7 +1480,7 @@ function EventDetails({ navigation, route }) {
     setIsSharing(true);
     try {
       const shareMessage = buildShareMessageWithUrl({
-        intro: event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Evenement'),
+        intro: event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Événement'),
         linkLabel: t('eventDetails.seeTheFoundclubPage', 'Voir la fiche FoundClub'),
         url: eventLink,
       });
@@ -1594,6 +1597,9 @@ function EventDetails({ navigation, route }) {
   // anonymise et bloque cote serveur, pas efface : sans ce tri il reste ici.
   const participants = withoutDeletedAccounts(event?.participations);
   const participationRequests = withoutDeletedAccountEntries(event?.participationRequests);
+  // FINITIONS18 · POINT 9 (T16) — « Demandes en attente » : les demandes ACTIVES au statut
+  // « pending », LA regle du telephone. Le bloc listait toutes les demandes (« Statut: accepted »).
+  const demandesEnAttente = participationRequests.filter(isPendingParticipationRequest);
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
   const hasVisibleEventTasks = canViewParticipantNames
     && Array.isArray(event?.eventTasks)
@@ -1621,9 +1627,7 @@ function EventDetails({ navigation, route }) {
     canEdit,
     event,
     inactiveParticipations: participationRequests.filter((request) => request?.isActive === false),
-    pendingParticipations: participationRequests.filter(
-      (request) => request?.isActive !== false && request?.participationStatus === 'pending',
-    ),
+    pendingParticipations: demandesEnAttente,
     t,
     trainerKeys: getEventTrainerKeys(event),
   });
@@ -1917,7 +1921,7 @@ function EventDetails({ navigation, route }) {
             <span>
               {t(
                 'eventDetails.eventCreatedCheckTheLast',
-                'Événement crée. Vérifie les derniers détails avant de le partager.',
+                'Événement créé. Vérifie les derniers détails avant de le partager.',
               )}
             </span>
             <button
@@ -1983,7 +1987,7 @@ function EventDetails({ navigation, route }) {
                       {t('eventDetails.breadcrumb.planning', 'Planning')}
                     </button>
                     <span aria-hidden="true">›</span>
-                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}</span>
+                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Événement')}</span>
                   </nav>
                 ) : (
                   <button
@@ -2138,7 +2142,7 @@ function EventDetails({ navigation, route }) {
                         color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
                       }}
                       >
-                        {event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}
+                        {event?.type?.name || t('eventDetails.eventFallback', 'Événement')}
                       </span>
                     ) : null}
                     <h1 style={{
@@ -2644,7 +2648,7 @@ function EventDetails({ navigation, route }) {
                     >
                       {updateTrainingMutation.isPending
                         ? t('eventDetails.saving', 'Enregistrement...')
-                        : (trainingOpenConfig.isOpenTraining ? t('eventDetails.closeTheTrainingSession', 'Fermer l entraînement') : t('eventDetails.openTheTrainingSession', 'Ouvrir l entraînement'))}
+                        : (trainingOpenConfig.isOpenTraining ? t('eventDetails.closeTheTrainingSession', 'Fermer l’entraînement') : t('eventDetails.openTheTrainingSession', 'Ouvrir l’entraînement'))}
                     </button>
                   </div>
 
@@ -2848,13 +2852,13 @@ function EventDetails({ navigation, route }) {
                   <h3 style={{ ...sectionTitleStyle, fontSize: 18 }}>
                     {t('eventDetails.pendingRequests', 'Demandes en attente')}
                   </h3>
-                  {participationRequests.length === 0 ? (
+                  {demandesEnAttente.length === 0 ? (
                     <div style={{ color: mutedTextColor }}>
                       {t('eventDetails.noPendingRequest', 'Aucune demande en attente.')}
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gap: 12 }}>
-                      {participationRequests.map((request) => (
+                      {demandesEnAttente.map((request) => (
                         <div
                           key={getEntityDocumentId(request) || getEntityDocumentId(request?.user)}
                           style={{
@@ -2868,11 +2872,6 @@ function EventDetails({ navigation, route }) {
                         >
                           <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
                             {getUserDisplayName(request?.user)}
-                          </span>
-                          <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                            {t('eventDetails.status', 'Statut:')}
-                            {' '}
-                            {request?.participationStatus || 'pending'}
                           </span>
                           {request?.sourceTeam?.name ? (
                             <span style={{ color: mutedTextColor, fontSize: 13 }}>
