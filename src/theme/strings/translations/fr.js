@@ -2778,6 +2778,10 @@ export default {
       ouvrir: '{{offert}} : voir ses installations',
       voir: 'Voir les installations de la Ville',
     },
+    // ECRAN18-ENTETE (06/10) — le surtitre de l'en-tête compact du hub, sur ordinateur.
+    compactHeader: {
+      kicker: 'Gestion du club',
+    },
     facilities: {
       nameFallback: 'Installation',
     },
