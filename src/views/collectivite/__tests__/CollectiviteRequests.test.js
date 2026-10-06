@@ -769,3 +769,25 @@ describe('TEXTES-COLLECTIVITES — « Demandes de la Ville » ne s écrit plus d
     expect(lus).not.toContain('VILLE DE RECETTE');
   });
 });
+
+// FINITIONS16 · POINT 21 (tournee T15, photo SITE_C32b ; planche 32, P6-ordi) — SUR LE SITE, la
+// page s'intitulait « Ville de Montrivage ». Le site n'a pas l'en-tete du telephone (qui dit
+// deja « Demandes de la Ville ») : la planche y met le nom de la Ville en surtitre, puis
+// « Demandes de la Ville ». Le telephone ne change pas (temoin ci-dessus). ROUGE avant.
+describe('FINITIONS16 21 — planche 32 sur le site : « Demandes de la Ville »', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const osAvant = Platform.OS;
+  afterEach(() => {
+    Platform.OS = osAvant;
+  });
+
+  it('🔴 le surtitre dit la Ville, le titre dit « Demandes de la Ville »', async () => {
+    Platform.OS = 'web';
+    const arbre = await monter();
+    const lus = textes(arbre);
+    const titre = lus.indexOf('Demandes de la Ville');
+    expect(titre).toBeGreaterThan(0);
+    expect(lus[titre - 1]).toBe('Ville de Recette');
+    expect(lus.filter((texte) => texte === 'Demandes de la Ville')).toHaveLength(1);
+  });
+});
