@@ -352,3 +352,40 @@ describe('COLL-ACCUEIL · sur le site, un compte Ville seule saute le statut', (
     });
   });
 });
+
+// FINITIONS16 · POINT 21 (tournee T15, photo SITE_C08_AGE0 ; planche 8, P1-inscription-ordi
+// etat B) — SUR LE SITE, sur ordinateur, « Continuer » prenait toute la largeur de la colonne.
+// La planche le pose a droite, 200 px au moins. Le telephone ne change pas. ROUGE avant.
+let mockOrdinateur = false;
+jest.mock('@/responsive', () => ({ useIsDesktop: () => mockOrdinateur }));
+
+describe('FINITIONS16 21 — planche 8 : « Continuer » à droite sur ordinateur', () => {
+  const { Platform, StyleSheet } = jest.requireActual('react-native');
+  const osAvant = Platform.OS;
+  afterEach(() => {
+    Platform.OS = osAvant;
+    mockOrdinateur = false;
+  });
+  const styleDuBouton = async () => {
+    const arbre = await monter();
+    // Le style que l ecran DONNE au bouton (la doublure de `Button` ne le transmet pas).
+    const [continuer] = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'function' && n.props.title === CONTINUER,
+    );
+    return StyleSheet.flatten(continuer.props.style) || {};
+  };
+
+  test('🔴 sur le site, sur ordinateur : à droite, 200 px au moins', async () => {
+    Platform.OS = 'web';
+    mockOrdinateur = true;
+    const style = await styleDuBouton();
+    expect(style.alignSelf).toBe('flex-end');
+    expect(style.minWidth).toBe(200);
+  });
+
+  test('🔒 au téléphone : toute la largeur, comme avant', async () => {
+    mockOrdinateur = true;
+    const style = await styleDuBouton();
+    expect(style.alignSelf).toBeUndefined();
+  });
+});

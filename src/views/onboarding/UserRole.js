@@ -28,6 +28,11 @@ import {
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
+import { useIsDesktop } from '@/responsive';
+
+/** FINITIONS16 21 (planche 8) — « Continuer », sur ordinateur : à droite, 200 px au moins. */
+const STYLE_CONTINUER_ORDINATEUR = { alignSelf: 'flex-end', minWidth: 200 };
+
 /**
  * User type selection screen component. Let users to select their role
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -55,6 +60,7 @@ function UserRole({ navigation }) {
     Alignments, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const isDesktop = useIsDesktop();
   const {
     data: roles,
     error: rolesError,
@@ -68,6 +74,8 @@ function UserRole({ navigation }) {
   // (PrivateNavigator) l'y emmène déjà au démarrage ; ici, c'est le filet du site, dont le
   // parcours d'inscription vient de getOnboardingViews.
   const sansRoleSportif = Platform.OS === 'web' && userData?.role?.type === 'authenticated';
+  // FINITIONS16 21 (planche 8, P1-inscription-ordi) : sur ordinateur, « Continuer » à droite.
+  const surOrdinateur = Platform.OS === 'web' && isDesktop;
   const villes = useMyCollectivites({ enabled: sansRoleSportif });
   const demandesDeGestion = useMyManagerRequests({ enabled: sansRoleSportif });
   const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
@@ -300,7 +308,7 @@ function UserRole({ navigation }) {
         disabled={!hasChosenRole && !representeCollectivite}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
-        style={[Spaces.marginTop[24]]}
+        style={[Spaces.marginTop[24], surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : null]}
         title={t('profile.actions.save')}
         variant="Primary"
       />
