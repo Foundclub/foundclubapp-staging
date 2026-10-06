@@ -595,6 +595,16 @@ export const onboardingCollectsBirthdate = (role) => !ROLES_SANS_DATE_DE_NAISSAN
 /** @type {string[]} */
 const ENTRY_CHECKPOINT_ROUTES = [RouteNames.UserName, RouteNames.UserParentalDeclaration];
 
+// FINITIONS18 · POINT 4 — les etapes FACULTATIVES du tunnel (« Optional steps » des parcours
+// joueur et entraineur, plus les deux guides d'affiliation) : un compte deja dans une equipe ou un
+// club n'est jamais renvoye au tunnel pour elles.
+/** @type {string[]} */
+const OPTIONAL_ONBOARDING_ROUTES = [
+  RouteNames.UserSport, RouteNames.UserPosition, RouteNames.UserPhysique, RouteNames.UserLevel,
+  RouteNames.UserCategory, RouteNames.UserSportHistory, RouteNames.UserClubSearch,
+  RouteNames.UserAffiliationGuide, RouteNames.UserTeamAffiliation, RouteNames.UserTrainedTeams,
+];
+
 /**
  * AGE-OBLIGATOIRE ② (02/10/2026, decision d'Adel « 3- C en etape obligatoire de
  * l'onboarding », `docs/DECISIONS_MINEURS.md` ligne 10) - LE POINT DE CONTROLE
@@ -927,6 +937,33 @@ export const getOnboardingViews = ({
     return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
   }
 
+  // FINITIONS18 · POINT 4 (tournee T16, reproduit sur l'emulateur le 06/10) - Hugo (joueur, 3
+  // equipes), apres une sortie par « retour », rouvrait l'app sur « Etape 10 sur 13 · Ton parcours
+  // sportif ». Le drapeau est PAR APPAREIL : sans lui, le tunnel reprenait a la premiere etape
+  // non remplie, meme FACULTATIVE (parcours sportif vide, « trouve ton club » jamais remplie). A
+  // froid, l'accueil ne s'affichait que par accident (la pile naissait sur « Adresse », que la
+  // session du telephone croit vide, puis cette etape disparaissait et la pile retombait sur
+  // l'accueil). Un compte DEJA dans une equipe, dont l'inscription n'a PAS commence sur cet
+  // appareil (un compte neuf passe toujours par « Quel est ton statut ? », qui le marque), et a qui
+  // il ne manque que des etapes facultatives (et l'age), a fini son inscription ailleurs : le point
+  // de controle de l'age, rien d'autre. Une inscription EN COURS ici garde tout son tunnel.
+  const onboardingStartedHere = (() => {
+    try {
+      return documentId ? storage.getBoolean(onboardingStartedKey(documentId)) === true : false;
+    } catch (e) { return false; }
+  })();
+  if (
+    firstname
+    && lastname
+    && hasTeamAffiliation
+    && !onboardingStartedHere
+    && pendingRoutes.length > 0
+    && pendingRoutes.every((route) => ENTRY_CHECKPOINT_ROUTES.includes(route)
+      || OPTIONAL_ONBOARDING_ROUTES.includes(route))
+  ) {
+    return getEntryCheckpointViews({ birthdate, parentalDeclarationAccepted, role });
+  }
+
   const views = pendingRoutes.length > 0 ? filteredViews : [];
   return {
     totalViews,
@@ -1117,6 +1154,26 @@ export const resolveOnboardingExitRoute = ({
 };
 
 /**
+ * FINITIONS18 · POINT 4 — la cle qui dit qu'une inscription a COMMENCE sur cet appareil.
+ * @param {string} documentId - Le compte.
+ * @returns {string} La cle de stockage.
+ */
+const onboardingStartedKey = (documentId) => `onboardingStarted_${documentId}`;
+
+/**
+ * FINITIONS18 · POINT 4 — « Quel est ton statut ? » ouvre l'inscription d'un compte NEUF : elle est
+ * marquee commencee sur cet appareil. Sans ce marqueur, un compte deja dans une equipe n'est pas
+ * renvoye au tunnel pour des etapes facultatives (`getOnboardingViews`).
+ * @param {string | null | undefined} documentId - Le compte.
+ * @returns {void}
+ */
+export const markOnboardingStarted = (documentId) => {
+  if (documentId) {
+    storage.set(onboardingStartedKey(documentId), true);
+  }
+};
+
+/**
  * Mark onboarding as completed for a user
  * This should be called when the user finishes or skips the last onboarding step
  * @param {string} documentId - The user's document ID
@@ -1125,57 +1182,6 @@ export const markOnboardingComplete = (documentId) => {
   if (documentId) {
     storage.set(`hasCompletedOnboarding_${documentId}`, true);
   }
-};
-
-// Les champs que le tunnel lit pour sauter une etape (`getOnboardingViews`), nommes quand ils
-// sont VIDES dans l'identite qui decide.
-const CHAMPS_LUS_PAR_LE_TUNNEL = [
-  'firstname', 'lastname', 'birthdate', 'section', 'address', 'avatar', 'preferredSport',
-  'position', 'bestLevel', 'category', 'sportsHistory',
-];
-
-/**
- * FINITIONS18 · POINT 4 (tournee T16) — LA LIGNE DE JOURNAL DE LA DECISION « TUNNEL OU ACCUEIL ».
- *
- * Hugo (joueur) sort de l'app par « retour », la rouvre : l'arbre React REMONTE dans le MEME
- * moteur JS (« Running foundclub … rootTag 11 », aucune requete d'identite) et la pile s'ouvre
- * sur « Etape 10 sur 13 · Ton parcours sportif ». Demarrage a froid, bouton accueil, Karim : pas
- * de tunnel. Le journal du relais montre que les deux chemins ne decident pas sur la MEME
- * identite (a froid : la session gardee sur le telephone, en attendant le serveur ; au
- * remontage : le resume du serveur reste en cache), mais pas QUEL champ, ni le drapeau
- * `hasCompletedOnboarding_<id>` (par appareil). Cette ligne le dit a la prochaine reproduction,
- * sans aucune donnee personnelle : des noms de champs, d'etapes, et oui / non.
- * ponytail: un diagnostic, pas un correctif. Voie de sortie : la retirer avec le correctif de la
- * cause (`useAuth.js`, effet « ONBOARDING_DECISION »).
- * @param {object} params - Ce qui a decide.
- * @param {boolean | null} params.flag - Le drapeau lu sur l'appareil (null : illisible).
- * @param {{ isEntryCheckpoint?: boolean, views?: { canShow: boolean, route: string }[] }
- *   | undefined} params.onboardingViews - La decision (`getOnboardingViews`).
- * @param {string} params.source - L'identite lue : 'get-me', 'bootstrap' ou 'session'.
- * @param {any} params.userData - L'identite qui a decide.
- * @returns {string} La ligne, pour `logcat`.
- */
-export const describeOnboardingDecision = ({
-  flag, onboardingViews, source, userData,
-}) => {
-  const etapes = (onboardingViews?.views || [])
-    .filter((view) => view?.canShow)
-    .map((view) => view.route);
-  const vides = CHAMPS_LUS_PAR_LE_TUNNEL.filter((champ) => !userData?.[champ]);
-  if (!userData?.height && !userData?.weight) vides.push('height+weight');
-  const nombre = (/** @type {any} */ liste) => (Array.isArray(liste) ? liste.length : 0);
-  return [
-    '[AUTH] ONBOARDING_DECISION',
-    `source=${source}`,
-    `documentId=${userData?.documentId ? 'oui' : 'non'}`,
-    `drapeau=${flag === null ? 'illisible' : String(flag)}`,
-    `role=${getUserRoleKey(userData?.role?.name || USER_ROLES.new)}`,
-    `controle=${onboardingViews?.isEntryCheckpoint === true}`,
-    `etapes=${etapes.join(',') || 'aucune'}`,
-    `vides=${vides.join(',') || 'aucun'}`,
-    `equipes=${nombre(userData?.myTeams)}/${nombre(userData?.trainedTeams)}`,
-    `clubs=${nombre(userData?.clubs)}`,
-  ].join(' ');
 };
 
 /**

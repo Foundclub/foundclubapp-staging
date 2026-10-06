@@ -55,7 +55,6 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import {
   canUserEditClub,
-  describeOnboardingDecision,
   formatBirthdateToDisplay,
   formatBirthdateToSend,
   getActiveClubId,
@@ -87,8 +86,6 @@ let lastBootstrapRequestLogKey = null;
 let lastBootstrapSyncedKey = null;
 /** @type {string | null} */
 let lastFullUserSyncedKey = null;
-/** @type {string | null} */
-let lastOnboardingDecisionLine = null;
 
 const getBootstrapErrorStatus = (/** @type {any} */ error) => {
   const parsedStatus = Number(error?.status || error?.response?.status || error?.error?.status);
@@ -252,7 +249,6 @@ const useAuth = () => {
     data: bootstrapData,
     error: bootstrapError,
     isLoading: isBootstrapLoading,
-    isPlaceholderData: isBootstrapPlaceholder,
   } = useQuery({
     enabled: Boolean(auth?.token) && !isAddingAccount && !disableAppBootstrap,
     placeholderData: auth?.user ? { userSummary: auth.user } : undefined,
@@ -502,30 +498,6 @@ const useAuth = () => {
   const onboardingViews = useMemo(() => (
     userData ? getOnboardingViews(userData) : undefined
   ), [userData]);
-
-  // FINITIONS18 · POINT 4 (T16) — la decision « tunnel ou accueil » dans logcat, une fois par
-  // decision differente (`describeOnboardingDecision`) : QUELLE identite a decide (profil
-  // complet, resume du serveur, ou session gardee sur le telephone) et ce qu'elle avait de vide.
-  // ponytail: diagnostic du tunnel de Hugo au remontage ; a retirer avec le correctif de la cause.
-  let onboardingSource = 'session';
-  if (fullUserData) onboardingSource = 'get-me';
-  else if (bootstrapData?.userSummary && !isBootstrapPlaceholder) onboardingSource = 'bootstrap';
-  useEffect(() => {
-    if (!userData) return;
-    /** @type {boolean | null} */
-    let flag = null;
-    try {
-      flag = storage.getBoolean(`hasCompletedOnboarding_${userData?.documentId || ''}`) === true;
-    } catch {
-      flag = null;
-    }
-    const ligne = describeOnboardingDecision({
-      flag, onboardingViews, source: onboardingSource, userData,
-    });
-    if (lastOnboardingDecisionLine === ligne) return;
-    lastOnboardingDecisionLine = ligne;
-    console.info(ligne);
-  }, [onboardingSource, onboardingViews, userData]);
 
   const profileFields = useMemo(() => (
     userData ? profileFieldToDisplay(userData.role) : []

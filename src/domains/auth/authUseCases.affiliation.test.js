@@ -184,6 +184,10 @@ describe('D33 — club trouve, equipe absente : aucune impasse', () => {
   // au parcours mais `canShow` est faux — elle n'est pas montee. Sortir depuis
   // l'etape club doit mener au sas, sans jamais viser un ecran absent.
   it('joueur deja affilie a une equipe : l\'etape equipe n\'est pas montee, la sortie reste le sas', () => {
+    // FINITIONS18 · POINT 4 : une inscription EN COURS sur cet appareil (« Quel est ton statut ? »
+    // l'a marquee) garde son tunnel ; sans ce marqueur, un compte deja affilie n'en a plus.
+    /** @type {any} */ (storage.getBoolean)
+      .mockImplementation((cle) => cle === 'onboardingStarted_user-d33');
     const { views } = getOnboardingViews({
       ...joueurPresqueFini(),
       myTeams: [{ documentId: 'team-1' }],

@@ -7,7 +7,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getRoleDocumentIdByKey } from '@/domains/auth/authUseCases';
+import { getRoleDocumentIdByKey, markOnboardingStarted } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -95,6 +95,12 @@ function UserRole({ navigation }) {
       navigation.reset({ index: 0, routes: [{ name: RouteNames.CollectiviteSignupStatus }] });
     }
   }, [aDemande, navigation, sansRoleSportif, villeGeree?.documentId]);
+
+  // FINITIONS18 · POINT 4 — une inscription NEUVE commence ici : elle est marquee sur cet appareil
+  // (un compte deja affilie qui n'a jamais vu cet ecran ici n'est pas renvoye au tunnel).
+  useEffect(() => {
+    markOnboardingStarted(userData?.documentId);
+  }, [userData?.documentId]);
 
   useEffect(() => {
     if (userData?.role?.documentId) {
