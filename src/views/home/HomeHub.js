@@ -35,6 +35,7 @@ import {
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab, getRecruitmentRoleMode } from '@/domains/search/recruitmentFlow';
 import {
+  getCollectiviteOffer,
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
   getSubscriptionStatusMeta,
@@ -402,6 +403,8 @@ function HomeHubContent({ auth, navigation, route }) {
   const {
     canPublishGovernedClubContent,
     canUsePlayerMode,
+    clubVerificationSummary,
+    entitlementsSummary,
     freeUsageSummary,
     governedPublishingBlockReason,
     isPlayerMode,
@@ -1422,11 +1425,21 @@ function HomeHubContent({ auth, navigation, route }) {
   // (« N événements offerts restants »), c'est un argument de vente. Le hub ne
   // porte plus de catalogue ; y renvoyer couterait un tap de plus a qui veut
   // payer. La gestion reste atteignable depuis « Mon compte ».
+  // FINITIONS16 23 — decision L33 completee par Adel le 06/10 (`tuile B`) : un club dont l'offre
+  // Club est COUVERTE PAR LA VILLE n'a rien a acheter ; la tuile ouvre « Mon abonnement » (le hub,
+  // « Offert par la Ville… »). Les autres clubs : le carrousel, inchange. Meme juge et meme club
+  // actif que « Mon compte » (Profile.js) et l'ecran qu'elle ouvre.
+  const clubCouvertParLaVille = Boolean(getCollectiviteOffer({
+    clubDocumentId: clubVerificationSummary?.clubDocumentId || userData?.club?.documentId,
+    entitlementsSummary,
+  }));
   const handleOpenSubscriptionOverview = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, {
-      screen: RouteNames.SubscriptionOffers,
+      screen: clubCouvertParLaVille
+        ? RouteNames.SubscriptionOverview
+        : RouteNames.SubscriptionOffers,
     });
-  }, [navigation]);
+  }, [clubCouvertParLaVille, navigation]);
 
   // S06 — OUVRIR L'EVENEMENT QUE LE BANDEAU VIENT DE NOMMER.
   //

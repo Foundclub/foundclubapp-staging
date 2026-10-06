@@ -7494,7 +7494,7 @@ export default {
     positionsWanted: 'Postes recherchés : {{positions}}',
     teamsUnit: ' équipes',
     tournament: 'TOURNOI',
-    training: 'ENTRAINEMENT',
+    training: 'ENTRAÎNEMENT',
     trainingCamp: 'STAGE',
   },
   eventDetails: {
@@ -7672,7 +7672,7 @@ export default {
     cancel: 'Annuler',
     cancelling: 'Annulation...',
     cancelMyRequest: 'Annuler ma demande',
-    capacity: 'Capacite',
+    capacity: 'Capacité',
     checkInTheArrival: "Pointer l'arrivée",
     checkInTheArrivalAnd: "Pointe l'arrivée et ajuste le retard si nécessaire.",
     checkInToCorrect: 'Absent à l’appel',
@@ -8088,7 +8088,7 @@ export default {
     openTheTeam: 'Ouvrir l équipe',
     openTheTrainingSession: 'Ouvrir l entraînement',
     // eslint-disable-next-line max-len
-    openTheTrainingSessionTo: 'Ouvre l entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.',
+    openTheTrainingSessionTo: 'Ouvre l’entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.',
     openTraining: {
       cardClosedMeaning: 'Réservé à ton équipe : personne de l’extérieur ne peut s’inscrire.',
       cardClosedTitle: 'Entraînement privé',
@@ -8182,6 +8182,7 @@ export default {
     publication: 'Publication',
     published: 'Publié',
     publishedOn: 'Publiée le',
+    publishedOnAt: 'Publiée le {{date}} à {{time}}',
     quickInfo: 'Infos rapides',
     registerAClubTeam: 'Inscrire une équipe du club',
     registerMyTeam: 'Inscrire mon équipe',
@@ -8439,7 +8440,7 @@ export default {
     weReFetchingTheCurrent: "On récupère l'état actuel de la composition.",
     youAreMarkedPresentOn: 'Tu es signalé présent à l’heure.',
     // eslint-disable-next-line max-len
-    youCanAlreadyCreateThe: 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.',
+    youCanAlreadyCreateThe: 'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.',
     youHaveMinLeftTo: 'Il te reste {{minutesLeft}} min pour signaler ton arrivée ou ton retard.',
     yourActualArrivalHasBeen: 'Ton arrivée réelle a bien été enregistrée.',
     // eslint-disable-next-line max-len
@@ -13485,7 +13486,7 @@ export default {
     presetRequired: 'Preset requis',
     publication: 'Publication',
     publish: 'Publier',
-    publishedOn: 'Publiée le {{date}}',
+    publishedOn: 'Publiée le {{date}} à {{time}}',
     publishError: 'Impossible de publier cette composition.',
     removeShort: 'Suppr.',
     save: 'Sauvegarder',
@@ -15588,7 +15589,7 @@ export default {
   recruitmentAdCard: {
     applyHint: 'Postuler à cette annonce',
     categoryUnknown: 'Catégorie ?',
-    coachAudience: 'ENTRAINEUR',
+    coachAudience: 'ENTRAÎNEUR',
     coachRole: 'Rôle entraîneur',
     cta: {
       accepted: 'Je participe',
@@ -15694,7 +15695,7 @@ export default {
       cancel: 'Annuler',
       checking: 'Vérification de la détection en cours.',
       confirm: 'Participer',
-      dateAtHour: '{{date}} a {{hour}}',
+      dateAtHour: '{{date}} à {{hour}}',
       summaryClub: 'Club concerne : {{club}}',
       summaryDate: 'Date de la détection : {{date}}',
       summaryPosition: 'Poste vise : {{position}}',

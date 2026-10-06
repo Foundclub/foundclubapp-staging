@@ -432,3 +432,86 @@ describe('COLL-C4A3 — point 4 : la voix demandée par le site, dans les deux s
     expect(mockRetry.mock.calls[1][2] || {}).not.toHaveProperty('senderSignature');
   });
 });
+
+// ==========================================================================
+// FINITIONS16 · POINT 20 (tournee T15, photos SITE_C47a / SITE_C47b ; planche 47,
+// P3c-canal-ordi) — le canal des dirigeants SUR LE SITE :
+//   1. une bulle d'UNE ligne faisait 648 px : la grille du fil etirait sa seule rangee ;
+//   2. mon message ne disait pas au nom de qui il part (planche : « Ville de Montrivage ») ;
+//   3. « 06/10/2026 a 04:23 », « Repondre » ;
+//   4. le bouton « Réagir » etait un emoji (« 🙂 ») : aucun emoji (decision de design du 01/10) ;
+//   5. le titre du fil et ceux de la colonne de droite, sombres sur sombre (le CSS global du site
+//      colore h1/h2/h3 en primary900) ;
+//   6. des textes de developpeur : « Socket actif » / « Mode HTTP », « Parite web … sockets ».
+// ROUGE avant.
+// ==========================================================================
+describe('FINITIONS16 20 — le canal des dirigeants, sur le site', () => {
+  const MON_MESSAGE = {
+    createdAt: '2026-10-06T02:23:00.000Z',
+    documentId: 'msg-t15',
+    message: 'Recette T15 canal temps reel, a ignorer',
+    sender: { documentId: 'agent-ville', firstname: 'Sophie', lastname: 'Leroy' },
+    senderSignature: { nom: 'Ville de Montrivage', voix: 'ville' },
+  };
+
+  const hotes = (/** @type {any} */ arbre, /** @type {string} */ type) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.type === type,
+  );
+
+  test('🔴 la grille du fil ne s etire plus : une bulle d une ligne reste d une ligne', async () => {
+    mockMessagesDuFil = [MON_MESSAGE];
+    const { arbre } = await monter();
+    const fil = hotes(arbre, 'div').find(
+      (/** @type {any} */ n) => n.props.style?.overflowY === 'auto' && n.props.style?.gap === 16,
+    );
+    expect(fil).toBeDefined();
+    expect(fil.props.style.alignContent).toBe('start');
+  });
+
+  test('🔴 mon message dit au nom de qui il part : « Ville de Montrivage »', async () => {
+    mockMessagesDuFil = [MON_MESSAGE];
+    const { arbre } = await monter();
+    const [bulle] = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'REACTWEB-bulle-msg-t15',
+    );
+    expect(texteDe(bulle)).toContain('Ville de Montrivage');
+  });
+
+  test('🔴 « à » et « Répondre », avec leurs accents', async () => {
+    mockMessagesDuFil = [MON_MESSAGE];
+    const { arbre } = await monter();
+    const texte = texteDe(arbre.root);
+    expect(texte).toContain('Répondre');
+    expect(texte).not.toContain('Repondre');
+    expect(texte).toMatch(/\d{2}\/\d{2}\/\d{4} à \d{2}:\d{2}/);
+  });
+
+  test('🔴 le bouton « Réagir » n est pas un emoji', async () => {
+    mockMessagesDuFil = [MON_MESSAGE];
+    const { arbre } = await monter();
+    const [bouton] = arbre.root.findAll(
+      (/** @type {any} */ n) => n.type === 'button'
+        && n.props?.['data-testid'] === 'REACTWEB-reagir-msg-t15',
+    );
+    expect(bouton.props['aria-label']).toBe('Réagir à ce message');
+    expect(texteDe(bouton)).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(bouton.findAll((/** @type {any} */ n) => n.type === 'svg')).toHaveLength(1);
+  });
+
+  // Le CSS global du site peint h1/h2/h3 en primary900 : sombre sur sombre.
+  test('🔴 chaque titre porte sa couleur claire', async () => {
+    mockMessagesDuFil = [MON_MESSAGE];
+    const { arbre } = await monter();
+    const titres = ['h1', 'h2', 'h3'].flatMap((type) => hotes(arbre, type));
+    expect(titres.length).toBeGreaterThan(0);
+    expect(titres.filter((/** @type {any} */ n) => !n.props.style?.color)
+      .map((/** @type {any} */ n) => texteDe(n))).toEqual([]);
+  });
+
+  test('🔴 aucun texte de développeur', async () => {
+    mockMessagesDuFil = [MON_MESSAGE];
+    const { arbre } = await monter();
+    const texte = texteDe(arbre.root);
+    expect(texte).not.toMatch(/Socket actif|Mode HTTP|Parite web|sockets partages|hooks, services/);
+  });
+});

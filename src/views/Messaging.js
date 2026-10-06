@@ -557,8 +557,8 @@ function Messaging({ navigation, route }) {
       showMessagingAlert(
         actionError,
         isPinned
-          ? t('messaging.unpinError', 'Impossible de desepingler cette conversation.')
-          : t('messaging.pinError', "Impossible d'epingler cette conversation."),
+          ? t('messaging.unpinError', 'Impossible de désépingler cette conversation.')
+          : t('messaging.pinError', "Impossible d'épingler cette conversation."),
       );
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
@@ -588,9 +588,9 @@ function Messaging({ navigation, route }) {
     const isPendingAction = pendingChatAction.chatId === chatId;
     const isPinPending = isPendingAction && pendingChatAction.type === 'pin';
     const isArchivePending = isPendingAction && pendingChatAction.type === 'archive';
-    let pinActionLabel = t('messaging.pin', 'Epingler');
+    let pinActionLabel = t('messaging.pin', 'Épingler');
     if (isPinned) {
-      pinActionLabel = t('messaging.unpin', 'Desepingler');
+      pinActionLabel = t('messaging.unpin', 'Désépingler');
     }
     if (isPinPending) {
       pinActionLabel = t('common.loading', 'Chargement...');

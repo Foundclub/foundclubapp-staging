@@ -35,7 +35,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
-import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -52,6 +51,7 @@ import {
   publishEventConvocation,
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
+import { lireLeMomentCourt } from '@/utils/date';
 import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 
 import {
@@ -1285,7 +1285,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         </Text>
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {branch?.published?.publishedAt
-                            ? t('multiTeamCompositionBoard.publishedOn', 'Publiée le {{date}}', { date: new Date(branch.published.publishedAt).toLocaleString(localeDesFormats()), ...SANS_ECHAPPEMENT })
+                            ? t('multiTeamCompositionBoard.publishedOn', 'Publiée le {{date}} à {{time}}', { ...lireLeMomentCourt(branch.published.publishedAt), ...SANS_ECHAPPEMENT })
                             : t(
                               'multiTeamCompositionBoard.teamLineupPublished',
                               "Composition d'équipes publiée",

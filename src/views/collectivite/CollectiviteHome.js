@@ -705,13 +705,16 @@ function CollectiviteHome() {
                   minHeight: 112,
                 },
                 // COLL-ACCUEIL-BIS (03/10), P3v2-accueil-ordi : les six actions en UNE rangée de
-                // parts égales, l'icône à gauche du titre.
+                // parts égales, l'icône à gauche du titre. FINITIONS16 21 (T15, 1 280 px) : la
+                // carte fait 150 px ; un cadre serré laisse 94 px au titre, il tient sur deux
+                // lignes (« Attribuer un » = 90,6 px en Montserrat gras 14).
                 enColonnes ? {
                   alignItems: 'center',
                   flexBasis: 0,
                   flexDirection: 'row',
-                  gap: 12,
+                  gap: 8,
                   minHeight: 56,
+                  paddingHorizontal: 10,
                   paddingVertical: 8,
                 } : null,
               ]}
@@ -722,7 +725,11 @@ function CollectiviteHome() {
                   Alignments.alignCenter,
                   Alignments.justifyCenter,
                   ApplicationStyle.borderRadius12,
-                  { backgroundColor: withAlpha(Colors.primary500, 0.18), height: 36, width: 36 },
+                  {
+                    backgroundColor: withAlpha(Colors.primary500, 0.18),
+                    height: enColonnes ? 28 : 36,
+                    width: enColonnes ? 28 : 36,
+                  },
                 ]}
               >
                 <Image

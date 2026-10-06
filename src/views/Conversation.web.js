@@ -206,12 +206,6 @@ const getErrorMessage = (error, fallback) => String(error?.message || fallback |
 ))
   .trim()
 
-// REACT-WEB — la frimousse du bouton qui ouvre la barre. Ecrite par POINT DE
-// CODE : un outil d edition qui abime un emoji le fait en silence, et personne
-// ne s en apercoit avant la production. Elle n appartient PAS au jeu ferme des
-// six reactions — c est une icone, pas un choix.
-const REACTION_TRIGGER_GLYPH = String.fromCodePoint(0x1F642);
-
 /** Les mesures de la barre ouverte, en pixels : 6 emojis, le « + », leurs marges, son cadre. */
 const REACTION_BAR_WIDTH = 272;
 const REACTION_BAR_HEIGHT = 44;
@@ -314,7 +308,6 @@ function Conversation({ navigation, route }) {
     userData,
   } = useAuth()
   const {
-    isSocketConnected,
     joinChat,
     leaveChat,
     reactToMessage,
@@ -1214,7 +1207,11 @@ function Conversation({ navigation, route }) {
         <span style={{ color: mutedTextColor, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           Messagerie
         </span>
-        <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0 }}>
+        <h1
+          style={{
+            color: baseTextColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0,
+          }}
+        >
           {title}
         </h1>
       </div>
@@ -1712,6 +1709,10 @@ function Conversation({ navigation, route }) {
     // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
     const senderName = filDeLaVille.nomDeLExpediteur(message) || getDisplayName(message?.sender);
     const isMine = areSameEntityId(message?.sender?.documentId, userData?.documentId)
+    // FINITIONS16 20 (planche 47) : MON message dans un fil de la Ville dit au nom de qui il part.
+    const maVoix = isMine && filDeLaVille.estFil
+      ? String(message?.senderSignature?.nom || '').trim()
+      : '';
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo
@@ -1787,7 +1788,23 @@ function Conversation({ navigation, route }) {
             }}
             type="button"
           >
-            {REACTION_TRIGGER_GLYPH}
+            {/* REACT-WEB — l icone du bouton qui ouvre la barre (FINITIONS16 20 : un dessin au
+                trait, plus un emoji). Elle n appartient PAS au jeu ferme des six reactions. */}
+            <svg
+              aria-hidden="true"
+              fill="none"
+              height="16"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              width="16"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8" />
+              <path d="M9 9.5h.01M15 9.5h.01" />
+            </svg>
           </button>
           {reactionBarMessageId === getMessageId(message) && reactionBarAnchor && !clavierOuvert ? (
             <div
@@ -1962,9 +1979,9 @@ function Conversation({ navigation, route }) {
               </div>
             </div>
           ) : null}
-          {!isMine ? (
+          {!isMine || maVoix ? (
             <div style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
-              {senderName}
+              {isMine ? maVoix : senderName}
             </div>
           ) : null}
           {replyPreview ? (
@@ -1981,7 +1998,7 @@ function Conversation({ navigation, route }) {
                 {getDisplayName(replyPreview?.sender)}
               </span>
               <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                {String(replyPreview?.message || '').trim() || 'Message partage'}
+                {String(replyPreview?.message || '').trim() || 'Message partagé'}
               </span>
             </div>
           ) : null}
@@ -2045,7 +2062,7 @@ function Conversation({ navigation, route }) {
             <span>
               {formatDay(message?.createdAt)}
               {' '}
-              a
+              à
               {' '}
               {formatTime(message?.createdAt)}
               {message?.pending ? i18next.t('conversation.web.message.sending', ' • envoi...') : ''}
@@ -2106,7 +2123,7 @@ function Conversation({ navigation, route }) {
                 }}
                 type="button"
               >
-                Repondre
+                Répondre
               </button>
             </div>
           </div>
@@ -2287,23 +2304,15 @@ function Conversation({ navigation, route }) {
                   >
                     Messagerie
                   </span>
-                  <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0 }}>
+                  <h1
+                    style={{
+                      color: baseTextColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0,
+                    }}
+                  >
                     {conversationName}
                   </h1>
                 </div>
               </div>
-              <span style={{
-                background: isSocketConnected ? 'rgba(39, 214, 163, 0.15)' : 'rgba(255, 161, 21, 0.12)',
-                border: `1px solid ${isSocketConnected ? 'rgba(39, 214, 163, 0.3)' : 'rgba(255, 161, 21, 0.26)'}`,
-                borderRadius: 999,
-                color: isSocketConnected ? '#27d6a3' : '#ffa115',
-                fontFamily: 'Montserrat-Bold, sans-serif',
-                fontSize: 12,
-                padding: '8px 12px',
-              }}
-              >
-                {isSocketConnected ? 'Socket actif' : 'Mode HTTP'}
-              </span>
             </div>
             <div style={{ color: mutedTextColor, fontSize: 14 }}>
               {isChatLoading
@@ -2320,6 +2329,8 @@ function Conversation({ navigation, route }) {
           <div
             ref={messagePaneRef}
             style={{
+              // FINITIONS16 20 : la rangee d un seul message ne s etire plus sur toute la hauteur.
+              alignContent: 'start',
               display: 'grid',
               gap: 16,
               overflowY: 'auto',
@@ -2431,7 +2442,7 @@ function Conversation({ navigation, route }) {
                   </span>
                   <span style={{ color: baseTextColor, fontSize: 13 }}>
                     // @ts-ignore: FIXME: Baseline TS regression
-                    {String(replyTarget?.message || '').trim() || 'Message partage'}
+                    {String(replyTarget?.message || '').trim() || 'Message partagé'}
                   </span>
                 </div>
                 <button
@@ -2549,7 +2560,11 @@ function Conversation({ navigation, route }) {
                 padding: 22,
               }}
             >
-              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>
+              <h2
+                style={{
+                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+                }}
+              >
                 {filDeLaVille.estCanal
                   ? t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal')
                   : t('collectiviteCanaux.membres.titrePrivee', 'Dans cette conversation')}
@@ -2561,7 +2576,13 @@ function Conversation({ navigation, route }) {
             </section>
           ) : null}
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22 }}>
-            <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Partager</h2>
+            <h2
+              style={{
+                color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+              }}
+            >
+              Partager
+            </h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button onClick={handleShareLocation} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Position</button>
               <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Photo</button>
@@ -2569,7 +2590,13 @@ function Conversation({ navigation, route }) {
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
-              <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>Contacts</h3>
+              <h3
+                style={{
+                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
+                }}
+              >
+                Contacts
+              </h3>
               {shareableContacts.length === 0 ? (
                 <div style={{ color: mutedTextColor, fontSize: 13 }}>
                   {i18next.t(
@@ -2619,7 +2646,11 @@ function Conversation({ navigation, route }) {
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
-              <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>
+              <h3
+                style={{
+                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
+                }}
+              >
                 {i18next.t('conversation.web.share.events', 'Événements')}
               </h3>
               {shareableEvents.length === 0 ? (
@@ -2660,7 +2691,13 @@ function Conversation({ navigation, route }) {
           </section>
 
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-            <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Sondage</h2>
+            <h2
+              style={{
+                color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+              }}
+            >
+              Sondage
+            </h2>
             <input onChange={(event) => setPollQuestion(event.target.value)} placeholder={i18next.t('conversation.web.poll.questionPlaceholder', 'Question du sondage')} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={pollQuestion} />
             {pollOptions.map((option, index) => (
               <input
@@ -2703,7 +2740,11 @@ function Conversation({ navigation, route }) {
 
           {isLeagueConversation ? (
             <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>
+              <h2
+                style={{
+                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+                }}
+              >
                 {i18next.t('conversation.web.proposal.title', 'Proposition de match')}
               </h2>
               <input onChange={(event) => setProposalDate(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="date" value={proposalDate} />
@@ -2735,16 +2776,6 @@ function Conversation({ navigation, route }) {
               </button>
             </section>
           ) : null}
-
-          <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 8, padding: 22 }}>
-            <h2 style={{ color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Parite web</h2>
-            <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-              {i18next.t(
-                'conversation.web.footerNote',
-                'Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.', // eslint-disable-line max-len
-              )}
-            </div>
-          </section>
         </aside>
       </div>
     </ScreenContainer>

@@ -35,11 +35,12 @@ describe('FINITIONS2 5 — « Publiée le », jamais « Publie le »', () => {
     await i18n.changeLanguage('fr');
   });
 
-  test('la compo multi-equipes : « Publiée le 29/09/2026 10:58 »', () => {
+  test('la compo multi-equipes : « Publiée le 29 sept. à 10:58 »', () => {
     // Meme appel que l ecran (MultiTeamCompositionBoard.js) : la date sans echappement.
-    const options = { date: '29/09/2026 10:58', ...SANS_ECHAPPEMENT };
+    // FINITIONS16 19 : le jour et l heure separes, comme la feuille de match (planche S10).
+    const options = { date: '29 sept.', time: '10:58', ...SANS_ECHAPPEMENT };
     expect(i18n.t('multiTeamCompositionBoard.publishedOn', options))
-      .toBe('Publiée le 29/09/2026 10:58');
+      .toBe('Publiée le 29 sept. à 10:58');
   });
 
   test('l annonce de recrutement : « Publiée le »', () => {

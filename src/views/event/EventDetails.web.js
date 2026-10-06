@@ -27,7 +27,6 @@ import {
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
-import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -80,6 +79,7 @@ import {
   getClubCertificationLabel,
   getClubCertificationPalette,
 } from '@/utils/clubCertification';
+import { lireLeMomentCourt } from '@/utils/date';
 import { getEntityDocumentId } from '@/utils/entityId';
 import { getErrorStatus } from '@/utils/errors/displayError';
 import getImageUrl from '@/utils/imageUrl';
@@ -2187,7 +2187,7 @@ function EventDetails({ navigation, route }) {
                       >
                         Session
                         {' '}
-                        {event.sessionStatus === 'closed' ? 'fermee' : 'ouverte'}
+                        {event.sessionStatus === 'closed' ? 'fermée' : 'ouverte'}
                       </span>
                     ) : null}
                   </div>
@@ -2603,7 +2603,7 @@ function EventDetails({ navigation, route }) {
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {trainingOpenConfig.isOpenTraining
                         ? t('eventDetails.externalPlayersCanJoinAccording', 'Les joueurs externes peuvent rejoindre selon le quota et le mode de validation choisis.')
-                        : t('eventDetails.openTheTrainingSessionTo', 'Ouvre l entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.')}
+                        : t('eventDetails.openTheTrainingSessionTo', 'Ouvre l’entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.')}
                     </span>
                   </div>
 
@@ -2728,7 +2728,7 @@ function EventDetails({ navigation, route }) {
                       {staffCompositionPayload?.draft
                         ? t('eventDetails.aDraftAlreadyExistsResume', 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.')
                         : compositionEligiblePlayerCount === 0
-                          ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.')
+                          ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.')
                           : t('eventDetails.createSeveralTeamsByHand', 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.')}
                     </span>
                   </div>
@@ -2738,9 +2738,10 @@ function EventDetails({ navigation, route }) {
                       <span>{publishedCompositionSummary.join(' · ')}</span>
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <span>
-                          {t('eventDetails.publishedOn', 'Publiée le')}
-                          {' '}
-                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
+                          {t('eventDetails.publishedOnAt', 'Publiée le {{date}} à {{time}}', {
+                            ...lireLeMomentCourt(convocationBranches[0].published.publishedAt),
+                            ...SANS_ECHAPPEMENT,
+                          })}
                         </span>
                       ) : null}
                     </div>
@@ -3026,7 +3027,7 @@ function EventDetails({ navigation, route }) {
                         || t('eventDetails.notSetFeminine', 'Non définie'),
                     },
                     {
-                      label: t('eventDetails.capacity', 'Capacite'),
+                      label: t('eventDetails.capacity', 'Capacité'),
                       value: event?.capacity ?? t('eventDetails.open2', 'Libre'),
                     },
                     ...(!trainingOpenConfig.isOpenTraining

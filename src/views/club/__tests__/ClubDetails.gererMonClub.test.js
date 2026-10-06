@@ -1195,8 +1195,11 @@ describe('ST-VUES3-ORDI · écran 18 — la planche ordinateur du hub d un club 
     expect(board.props.weekendCard.data).toBe(WEEKEND);
     expect(arbre.root.findAllByType(WeekendResultsCard)).toHaveLength(1);
     expect(arbre.root.findByType(WeekendResultsCard).props.variant).toBe('table');
+    // FINITIONS16 22 (T15, écran 18) : « Sections · Équipes · Membres », comme la planche P5. La
+    // doublure de traduction de ce témoin rendait « Équipes » pour `clubDetails.titles.teams`,
+    // dont la vraie valeur est « Nos équipes » : le défaut passait inaperçu ici.
     expect(board.props.statsItems.map((/** @type {any} */ item) => [item.label, item.value]))
-      .toEqual([['Sports', 1], ['Équipes', 2], ['Membres', 9]]);
+      .toEqual([['Sections', 1], ['Équipes', 2], ['Membres', 9]]);
     // Dans l'ordre des équipes du club (la catégorie d'âge, de la plus âgée à la plus jeune).
     expect(board.props.teams.map((/** @type {any} */ team) => [team.name, team.sport]))
       .toEqual([['Seniors A', 'Arts martiaux'], ['U15 Filles', 'Football']]);

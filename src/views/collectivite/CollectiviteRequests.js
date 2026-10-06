@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Linking,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -825,12 +826,26 @@ function CollectiviteRequests() {
       >
         {/* TEXTES-COLLECTIVITES (01/10) : « Demandes de la Ville » est l en-tete de l ecran, */}
         {/* et s ecrivait deux fois. La page porte le NOM de la collectivite, comme les */}
-        {/* installations. */}
-        <View style={{ gap: 4 }}>
-          <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {collectivite?.name || t('collectivite.requests.title', 'Demandes de la Ville')}
-          </Text>
-        </View>
+        {/* installations. FINITIONS16 21 (planche 32) : le SITE n a pas cet en-tete ; la */}
+        {/* Ville passe en surtitre et la page dit « Demandes de la Ville ». */}
+        {Platform.OS === 'web' ? (
+          <View style={{ gap: 2 }}>
+            {collectivite?.name ? (
+              <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+                {collectivite.name}
+              </Text>
+            ) : null}
+            <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
+              {t('collectivite.requests.title', 'Demandes de la Ville')}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 4 }}>
+            <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+              {collectivite?.name || t('collectivite.requests.title', 'Demandes de la Ville')}
+            </Text>
+          </View>
+        )}
         <SegmentedControl
           onChange={(/** @type {string} */ valeur) => setOnglet(
             valeur === 'decided' ? 'decided' : 'pending',

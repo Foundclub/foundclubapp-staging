@@ -676,7 +676,8 @@ describe('FINITIONS 2 — l onglet Convocation parle comme un dirigeant', () => 
     allerSurLOnglet(root, 'callUp');
     const texte = toutLeTexte(root);
 
-    expect(texte).toMatch(/Publiée le \d{2}\/\d{2}\/\d{4}/);
+    // FINITIONS16 19 : comme la planche S10, « Publiée le 1 oct. à 22:39 » (sans secondes).
+    expect(texte).toMatch(/Publiée le \d{1,2} \S+ à \d{2}:\d{2}(?!:)/);
     expect(texte).not.toContain('Publie le');
     expect(texte).not.toContain('&#x2F;');
   });

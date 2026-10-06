@@ -501,7 +501,7 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
                   </Text>
                   <Button
                     onPress={() => setSearchNonce((current) => current + 1)}
-                    title={t('common.retry', 'Reessayer')}
+                    title={t('common.retry', 'Réessayer')}
                     variant="Primary"
                   />
                 </View>
@@ -586,7 +586,7 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
                   </Text>
                   <Button
                     onPress={() => loadClubTeams(selectedClub)}
-                    title={t('common.retry', 'Reessayer')}
+                    title={t('common.retry', 'Réessayer')}
                     variant="Primary"
                   />
                 </View>
@@ -715,7 +715,7 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
                   </Text>
                   <Button
                     onPress={() => refetchActivities()}
-                    title={t('common.retry', 'Reessayer')}
+                    title={t('common.retry', 'Réessayer')}
                     variant="Secondary"
                   />
                 </View>

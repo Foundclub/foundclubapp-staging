@@ -26,6 +26,7 @@ import {
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
+import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { images as Images } from '@/theme/images';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -804,6 +805,18 @@ function PlanningWeekTimelineView({
 
     const metaLabel = quaternaryMetaLabel;
     const showPrimaryAsType = !isTeamFocusedCard && Boolean(typeLabel);
+    // FINITIONS16 22 (T15, planning du parent) : un bloc court cache la ligne du titre, où le
+    // prénom de l'enfant est écrit (« Hugo · … », PARENT-PLANNING) ; il passe devant la première.
+    const prenomsEnfants = isCompact
+      ? formatViewerChildrenNames(event?.raw?.viewerChildren || event?.viewerChildren, t)
+      : '';
+    const premiereLigne = prenomsEnfants && !String(primaryLabel || '').includes(prenomsEnfants)
+      ? t('planningSlots.childEventTitle', '{{names}} · {{title}}', {
+        names: prenomsEnfants,
+        title: primaryLabel,
+        ...SANS_ECHAPPEMENT,
+      })
+      : primaryLabel;
     // PLANNING-PORTRAIT : sur un bloc d'installation, l'equipe reste lisible des qu'il y
     // a deux lignes de place (« AS Montrivage » / « U15 »).
     let canShowSecondary = !isCompact && Boolean(secondaryLabel);
@@ -903,7 +916,7 @@ function PlanningWeekTimelineView({
             marginBottom: canShowSecondary ? 2 : 0,
           }]}
         >
-          {primaryLabel}
+          {premiereLigne}
         </Text>
         {canShowSecondary ? (
           <Text
