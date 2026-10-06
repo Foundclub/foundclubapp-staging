@@ -615,7 +615,15 @@ function CollectiviteClubDetails() {
       },
       {
         cle: 'annulees',
-        libelle: t('collectiviteChiffres.utilisation.annulees', 'annulées'),
+        // FINITIONS18 12 (T16) — « 1 annulées » : le libellé s'accorde au nombre ; « … » et « — »
+        // (lecture, panne) gardent le pluriel.
+        libelle: /^\d+$/.test(valeurs.annulees)
+          ? t('collectiviteChiffres.utilisation.annulees', {
+            count: Number(valeurs.annulees),
+            defaultValue_one: 'annulée',
+            defaultValue_other: 'annulées',
+          })
+          : t('collectiviteChiffres.utilisation.annulees', 'annulées'),
         valeur: valeurs.annulees,
       },
     ];

@@ -1921,7 +1921,7 @@ function EventDetails({ navigation, route }) {
             <span>
               {t(
                 'eventDetails.eventCreatedCheckTheLast',
-                'Événement crée. Vérifie les derniers détails avant de le partager.',
+                'Événement créé. Vérifie les derniers détails avant de le partager.',
               )}
             </span>
             <button

@@ -1010,16 +1010,11 @@ function EventEdit({ navigation, route }) {
                 </div>
               ) : null}
 
+              {/* FINITIONS18 12 (T16) — plus de texte de développeur à gauche des boutons. */}
               <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between',
+                display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'flex-end',
               }}
               >
-                <div style={{
-                  color: mutedTextColor, fontSize: 13, lineHeight: 1.5, maxWidth: 680,
-                }}
-                >
-                  {t('eventEdit.theWebVersionNowAlso', 'La version web couvre maintenant aussi les invitations d équipes et les tâches annexes, au plus proche du flow mobile.')}
-                </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
                     onClick={() => navigation.goBack()}

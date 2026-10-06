@@ -43,6 +43,8 @@ function CarteDeFermeture({ canManage, fermeture, onModify }) {
     count: Number(fermeture.notifiedClubsCount) || 0,
     defaultValue_one: '{{count}} club prévenu',
     defaultValue_other: '{{count}} clubs prévenus',
+    // FINITIONS18 12 (T16) — « 0 club prévenu » se dit « Aucun club prévenu ».
+    defaultValue_zero: 'Aucun club prévenu',
   });
   const ligne = [
     closureHoursLabel(t, fermeture),

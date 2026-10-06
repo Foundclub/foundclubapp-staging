@@ -430,6 +430,7 @@ function FormulaireDeFermeture({
             count: Number(carte.clubsCount) || 0,
             defaultValue_one: '{{count}} club prévenu',
             defaultValue_other: '{{count}} clubs prévenus',
+            defaultValue_zero: 'Aucun club prévenu',
           })}`
           : t(
             'collectiviteFermetures.carte.aucune',

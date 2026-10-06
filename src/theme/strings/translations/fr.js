@@ -2344,7 +2344,7 @@ export default {
     },
     eventCreated: {
       body: '{{event}} est bien enregistre.',
-      title: 'Événement crée',
+      title: 'Événement créé',
     },
     eventExternalTeamAccepted: {
       body: '{{team}} rejoint {{event}}.',
@@ -6116,6 +6116,8 @@ export default {
       aucune: 'Aucune séance touchée : aucun club à prévenir.',
       clubs_one: '{{count}} club prévenu',
       clubs_other: '{{count}} clubs prévenus',
+      // FINITIONS18 12 (T16) — « 0 club prévenu » se dit « Aucun club prévenu ».
+      clubs_zero: 'Aucun club prévenu',
       etAutres_one: 'et {{count}} autre',
       etAutres_other: 'et {{count}} autres',
       pasAnnulee: 'Sa séance n’est pas annulée : le club la déplace ou l’annule lui-même.',
@@ -6312,6 +6314,9 @@ export default {
     // COLL-C5 point 4 — « Utilisation » sur la fiche d'un club, côté mairie (planche 37).
     utilisation: {
       annulees: 'annulées',
+      // FINITIONS18 12 (T16) — « 1 annulées » : le libellé s'accorde au nombre.
+      annulees_one: 'annulée',
+      annulees_other: 'annulées',
       erreur: 'Les chiffres de la saison n’ont pas pu être lus.',
       // eslint-disable-next-line max-len
       fermeture_one: '{{count}} séance touchée par une fermeture de la Ville : elle n’est pas comptée comme annulée.',
@@ -7799,7 +7804,7 @@ export default {
     enterYourIndividualFeedbackThen: 'Renseigne ton retour individuel, puis ajoute une note sur 10.',
     eventAttendance: 'Présence événement',
     eventCampaign: 'Campagne événement',
-    eventCreatedCheckTheLast: 'Événement crée. Vérifie les derniers détails avant de le partager.',
+    eventCreatedCheckTheLast: 'Événement créé. Vérifie les derniers détails avant de le partager.',
     eventFallback: 'Événement',
     eventGone: 'Cet événement n’est plus disponible ou a été supprimé.',
     eventNotFound: 'Événement introuvable',
@@ -9088,7 +9093,7 @@ export default {
         title: 'Mise à la une',
         // eslint-disable-next-line max-len
         warningMessage: "L'événement est créé, mais la demande de mise à la une n'a pas pu être envoyée. Tu pourras la refaire depuis le détail.",
-        warningTitle: 'Événement crée',
+        warningTitle: 'Événement créé',
       },
       freeQuota: {
         description: '{{remaining}}/{{total}} publication gratuite restante avant paywall.',

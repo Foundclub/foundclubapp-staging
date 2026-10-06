@@ -27,7 +27,7 @@ describe('celebrationRuntime', () => {
     expect(payload).toEqual(expect.objectContaining({
       actionKey: 'event_created',
       body: 'Match amical est bien enregistre.',
-      title: 'Événement crée',
+      title: 'Événement créé',
       variant: 'banner',
     }));
     expect(received).toEqual([payload]);

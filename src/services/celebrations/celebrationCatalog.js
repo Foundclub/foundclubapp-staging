@@ -303,7 +303,7 @@ export const celebrationCatalog = {
         },
       ),
       eyebrow: i18next.t('celebrationCatalog.eyebrows.event', 'EVENEMENT'),
-      title: i18next.t('celebrationCatalog.eventCreated.title', 'Événement crée'),
+      title: i18next.t('celebrationCatalog.eventCreated.title', 'Événement créé'),
     }),
     category: 'event',
     channels: 'local_banner',
