@@ -216,7 +216,7 @@ function NotificationDetails() {
           <View style={[Spaces.marginTop[20]]}>
             <Button
               onPress={() => refetch()}
-              title={t('common.retry', 'Reessayer')}
+              title={t('common.retry', 'Réessayer')}
               variant="Secondary"
             />
           </View>

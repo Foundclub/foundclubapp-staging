@@ -38,6 +38,19 @@ describe('FINITIONS16 19 — les textes relevés par la T15, avec leurs accents'
     expect(source).toContain("t('messaging.unpin', 'Désépingler')");
   });
 
+  // `common.retry` / `common.team` manquent au dictionnaire EXPRES (mines connues de
+  // frClefsAtteignables : « Actualiser », « Recharger »…) : c'est leur REPLI qui s'affiche.
+  it('🔴 les replis affichés de « common.retry » / « common.team » ont leurs accents', () => {
+    const fautifs = [
+      ['components', 'organisms', 'externalCompetitionPromptGate', 'ExternalCompetitionPromptGate.js'],
+      ['views', 'NewConversation.js'],
+      ['views', 'event', 'wizard', 'components', 'EventWizardOpponentInvite.js'],
+      ['views', 'notification', 'NotificationDetails.js'],
+    ].filter((chemin) => /t\('common\.(retry|team)', '(Reessayer|Equipe)'\)/.test(readFileSync(join(VUES, '..', ...chemin), 'utf8')))
+      .map((chemin) => chemin.join('/'));
+    expect(fautifs).toEqual([]);
+  });
+
   it('🔴 « Session fermée » sur la page d’un événement du site (écrit en dur)', () => {
     const source = readFileSync(join(VUES, 'event', 'EventDetails.web.js'), 'utf8');
     expect(source).not.toMatch(/'fermee'/);

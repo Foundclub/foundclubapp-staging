@@ -223,7 +223,7 @@ function ExternalCompetitionPromptGate({
       >
         <View style={{ gap: 6 }}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00, { lineHeight: 22 }]}>
-            {team?.name || t('common.team', 'Equipe')}
+            {team?.name || t('common.team', 'Équipe')}
           </Text>
           {activityLabel ? (
             <Text style={[Fonts.p3, Fonts.primary500, { lineHeight: 18 }]}>
