@@ -31,7 +31,10 @@ import { getApiErrorTranslation } from '@/utils/errors/displayError';
 import { useIsDesktop } from '@/responsive';
 
 /** FINITIONS16 21 (planche 8) — « Continuer », sur ordinateur : à droite, 200 px au moins. */
-const STYLE_CONTINUER_ORDINATEUR = { alignSelf: 'flex-end', minWidth: 200 };
+const STYLE_CONTINUER_ORDINATEUR = /** @type {import('react-native').ViewStyle} */ ({
+  alignSelf: 'flex-end',
+  minWidth: 200,
+});
 
 /**
  * User type selection screen component. Let users to select their role
@@ -308,7 +311,9 @@ function UserRole({ navigation }) {
         disabled={!hasChosenRole && !representeCollectivite}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
-        style={[Spaces.marginTop[24], surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : null]}
+        style={surOrdinateur
+          ? [Spaces.marginTop[24], STYLE_CONTINUER_ORDINATEUR]
+          : [Spaces.marginTop[24]]}
         title={t('profile.actions.save')}
         variant="Primary"
       />
