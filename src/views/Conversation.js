@@ -5392,6 +5392,7 @@ function Conversation({ navigation, route }) {
             <CompositionMessageBubbleDuFil
               chatId={chatId}
               composition={currentMessage.composition}
+              currentEvent={currentMessage.event}
               isMe={!isLeft}
             />
           </View>

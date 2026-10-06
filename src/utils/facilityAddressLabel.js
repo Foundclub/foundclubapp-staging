@@ -132,3 +132,20 @@ export const resolveLocationDisplayLabel = (location, fallbackLabel = '') => {
 
   return [facilityName, shortAddress].filter(Boolean).join(' · ') || usableText(fallbackLabel);
 };
+
+/**
+ * FINITIONS16 · POINT 14 (T15) — LE LIEU D'UNE ANNONCE, une seule lecture pour la carte de liste
+ * (`RecruitmentAdCard`) et la fiche (`RecruitmentAdDetails`). La fiche lisait `city` tel quel :
+ * « Gymnase - [object Object] », écrit cassé en base depuis la T8, s'y affichait (annonce
+ * AILIER FORT) quand la carte, elle, recomposait le lieu.
+ * @param {any} ad - L'annonce.
+ * @param {any} [club] - Son club, pour la ville de repli.
+ * @param {string} [fallbackLabel] - Le repli de l'écran appelant.
+ * @returns {string} Le lieu affichable, jamais « [object Object] ».
+ */
+export const resolveRecruitmentAdLocation = (ad, club = null, fallbackLabel = '') => (
+  resolveLocationDisplayLabel(
+    ad?.address,
+    getShortAddress(ad?.city || club?.city || '') || fallbackLabel,
+  )
+);

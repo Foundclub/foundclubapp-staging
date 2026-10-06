@@ -74,9 +74,9 @@ import {
   useSurfacesFeuille,
 } from './FeuilleDeMatchBlocs';
 import {
+  chiffresQuiComptent,
   corrigerLaFeuille,
   direLeCompte,
-  estUneLigneVide,
   joindreLesNoms,
   MOYENNE_MIN_REPONSES,
 } from './feuilleDeMatchModel';
@@ -187,9 +187,12 @@ const buildInitialLines = (players, report, sport, responses) => {
     const existing = existingMap.get(playerKey) || null;
     const hasSentFigures = Boolean(player?.suggestedStats && player?.documentId)
       && submitted.has(player.documentId);
-    const takesSentFigures = Boolean(player?.suggestedStats)
-      && (!existing || (hasSentFigures && estUneLigneVide(existing)));
-    const source = takesSentFigures ? player.suggestedStats : existing;
+    // FINITIONS16 16 : la regle vit dans `chiffresQuiComptent`, que l'encart du score lit aussi.
+    const source = chiffresQuiComptent({
+      aEnvoye: hasSentFigures,
+      chiffresEnvoyes: player?.suggestedStats || null,
+      ligne: existing,
+    });
     const payload = source?.sportPayload || {};
     const baseLine = /** @type {MatchStatsLine} */ ({
       firstname: player?.firstname || null,

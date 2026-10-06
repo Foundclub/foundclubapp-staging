@@ -799,6 +799,8 @@ function EventDetails({ navigation, route }) {
   const matchEncartSummary = useMemo(() => {
     if (!isMatchEvent) return null;
     const summary = buildMatchHeaderScoreSummary({
+      // FINITIONS16 16 : les chiffres envoyes par les joueurs, comme la feuille.
+      availablePlayers: matchStatsPayload?.availablePlayers,
       canEdit,
       canManage: canManageMatchStats,
       canSeeDetails: Boolean(
@@ -812,6 +814,7 @@ function EventDetails({ navigation, route }) {
       onNameOpponent: openOpponentEdit,
       opponentName: matchOpponentName,
       playerLines: matchStatsReport?.playerLines,
+      playerResponses: matchStatsPayload?.playerResponses,
       scoreState: matchStatsPayload?.score || null,
       sport: matchStatsPayload?.sport,
       startTimeLabel: matchStartTimeLabel,
@@ -840,7 +843,9 @@ function EventDetails({ navigation, route }) {
     isViewerFromInvitedTeam,
     matchOpponentName,
     matchStartTimeLabel,
+    matchStatsPayload?.availablePlayers,
     matchStatsPayload?.permissions?.actorRole,
+    matchStatsPayload?.playerResponses,
     matchStatsPayload?.score,
     matchStatsPayload?.sport,
     matchStatsReport?.playerLines,

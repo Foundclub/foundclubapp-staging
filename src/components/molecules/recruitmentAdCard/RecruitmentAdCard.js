@@ -22,9 +22,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import { resolveRecruitmentAdApplicationState } from '@/services/recruitment/recruitmentService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
-import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
+import { resolveRecruitmentAdLocation } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
-import { getShortAddress } from '@/utils/location';
 import { getRecruitmentAdExpiry } from '@/utils/recruitmentAdRenewal';
 import { getRecruitmentAdPlayerTitle, getRecruitmentAdSportName } from '@/utils/recruitmentAdTitle';
 
@@ -106,11 +105,11 @@ function RecruitmentAdCard({
   // l'activite de l'equipe quand la reponse la porte ; sinon l'etiquette disparait.
   // (La meme lecture fait le titre d'une annonce sans poste : recruitmentAdTitle.js.)
   const sportName = getRecruitmentAdSportName(ad);
-  const address = getShortAddress(ad.city || club?.city || '');
   // T8 : 6 annonces portent « Gymnase - [object Object] » ECRIT EN BASE (releve du
   // 26/08). Tant que ces lignes ne sont pas reparees, l'affichage recompose le
-  // libelle depuis les champs restes sains de la MEME charge.
-  const locationLabel = resolveLocationDisplayLabel(ad.address, address || t(
+  // libelle depuis les champs restes sains de la MEME charge. FINITIONS16 14 : la
+  // fiche lit le lieu par la MEME fonction.
+  const locationLabel = resolveRecruitmentAdLocation(ad, club, t(
     'recruitmentAdCard.locationUnspecified',
     'Lieu non précisé',
   ));

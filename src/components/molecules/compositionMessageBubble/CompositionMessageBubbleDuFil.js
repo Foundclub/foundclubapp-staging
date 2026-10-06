@@ -17,14 +17,18 @@ import CompositionMessageBubble from './CompositionMessageBubble';
  * @param {object} props
  * @param {string} props.chatId - Le fil, celui que l'écran lit déjà.
  * @param {any} props.composition - La charge de la carte.
+ * @param {any} [props.currentEvent] - FINITIONS16 (8) : le match joint au message, du jour.
  * @param {boolean} [props.isMe] - Message de l'utilisateur courant.
  * @returns {import('react').ReactElement | null} La carte.
  */
-function CompositionMessageBubbleDuFil({ chatId, composition, isMe = false }) {
+function CompositionMessageBubbleDuFil({
+  chatId, composition, currentEvent = null, isMe = false,
+}) {
   const { data: fil } = useGetChatById(chatId, { enabled: false });
   return (
     <CompositionMessageBubble
       composition={composition}
+      currentEvent={currentEvent}
       currentPeople={/** @type {any} */ (fil)?.participants}
       isMe={isMe}
     />

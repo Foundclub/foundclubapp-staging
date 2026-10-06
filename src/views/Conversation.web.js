@@ -1580,6 +1580,7 @@ function Conversation({ navigation, route }) {
         <CompositionMessageBubbleDuFil
           chatId={chatId}
           composition={composition}
+          currentEvent={message?.event}
           isMe={isMine}
         />
       );

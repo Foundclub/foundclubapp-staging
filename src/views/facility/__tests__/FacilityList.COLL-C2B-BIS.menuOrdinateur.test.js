@@ -245,6 +245,8 @@ describe('COLL-C2B-BIS — planche 21 : le « … » ouvre un petit menu ancré,
     expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
       contextDetailLabel: 'Gymnase des Tilleuls',
       facilityId: 'gym-tilleuls',
+      // FINITIONS16 18 : le site garde le menu de la Ville sur ce planning.
+      espace: 'ville',
       sourceType: 'facility',
     });
     expect(menu(arbre)).toBeUndefined();

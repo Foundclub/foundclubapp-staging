@@ -43,6 +43,63 @@ export const estUneLigneVide = (ligne) => chiffre(ligne?.minutesPlayed) === 0
   && Object.values(ligne?.sportPayload || {}).every((valeur) => !valeur);
 
 /**
+ * FINITIONS16 · POINT 16 — LES CHIFFRES QUI COMPTENT pour un joueur de la feuille, une seule
+ * règle pour l'éditeur de la feuille et l'encart du score (ST-MATCH10, défaut 19) : sans ligne, ou
+ * avec une ligne VIDE et une réponse ENVOYÉE, les chiffres que le joueur a envoyés ; sinon la
+ * ligne (l'entraîneur a pu corriger la réponse). La T15 lisait « 2 buts sans buteur » à l'encart
+ * et « 1 but sur 2 a un buteur » sur la feuille du même match.
+ * @param {{ aEnvoye?: boolean, chiffresEnvoyes?: any, ligne?: any }} entree - La ligne de la
+ *   feuille, les chiffres envoyés par le joueur (`suggestedStats`), et s'il a envoyé sa réponse.
+ * @returns {any} La source des chiffres : les chiffres envoyés, ou la ligne (null si aucune).
+ */
+export const chiffresQuiComptent = ({ aEnvoye = false, chiffresEnvoyes = null, ligne = null }) => (
+  chiffresEnvoyes && (!ligne || (aEnvoye && estUneLigneVide(ligne))) ? chiffresEnvoyes : ligne
+);
+
+/**
+ * FINITIONS16 · POINT 16 — les lignes d'une feuille PUBLIÉE telles que la feuille les montre :
+ * chaque joueur de la feuille prend `chiffresQuiComptent`. Sans les chiffres envoyés (un lecteur
+ * à qui le serveur ne les donne pas), les lignes publiées telles quelles.
+ * @param {{ joueurs?: any[] | null, lignes?: any[] | null, reponses?: any[] | null }} feuille -
+ *   `availablePlayers`, `report.playerLines` et `playerResponses` de la charge du match.
+ * @returns {any[]} Les lignes, au format de la feuille publiée (`user`, `sportPayload`…).
+ */
+export const lignesDeLaFeuilleQuiComptent = ({ joueurs = [], lignes = [], reponses = [] }) => {
+  const publiees = Array.isArray(lignes) ? lignes : [];
+  const avecJoueur = (Array.isArray(joueurs) ? joueurs : []).filter((joueur) => joueur?.documentId);
+  if (!avecJoueur.some((joueur) => joueur?.suggestedStats)) return publiees;
+
+  const cleDeLigne = (/** @type {any} */ ligne) => ligne?.userDocumentId || ligne?.user?.documentId;
+  const parJoueur = new Map(publiees.map((ligne) => [cleDeLigne(ligne), ligne]));
+  const envoyees = new Set((Array.isArray(reponses) ? reponses : [])
+    .filter((reponse) => reponse?.status === 'submitted')
+    .map((reponse) => reponse?.userDocumentId)
+    .filter(Boolean));
+
+  const desJoueurs = avecJoueur.map((joueur) => {
+    const ligne = parJoueur.get(joueur.documentId) || null;
+    const source = chiffresQuiComptent({
+      aEnvoye: envoyees.has(joueur.documentId),
+      chiffresEnvoyes: joueur?.suggestedStats || null,
+      ligne,
+    });
+    if (!source || source === ligne) return ligne;
+    return {
+      ...(ligne || {}),
+      minutesPlayed: source?.minutesPlayed,
+      sportPayload: source?.sportPayload || {},
+      user: ligne?.user || {
+        documentId: joueur.documentId, firstname: joueur.firstname, lastname: joueur.lastname,
+      },
+      userDocumentId: joueur.documentId,
+    };
+  }).filter(Boolean);
+  const dejaLa = new Set(avecJoueur.map((joueur) => joueur.documentId));
+
+  return [...desJoueurs, ...publiees.filter((ligne) => !dejaLa.has(cleDeLigne(ligne)))];
+};
+
+/**
  * Les chiffres de la ligne sont-ils ceux de la réponse du joueur ?
  * @param {any} ligne - Une ligne en cours de saisie (valeurs en texte).
  * @param {string[]} cles - Les chiffres du sport.

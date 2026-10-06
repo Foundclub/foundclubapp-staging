@@ -394,6 +394,9 @@ function FacilityList() {
     if (facility?.ownerType === 'collectivite' || isCollectiviteMode) {
       navigation.navigate(RouteNames.PlanningWeekFullscreen, {
         contextDetailLabel: facility?.name || null,
+        // FINITIONS16 · POINT 18 (T15) — depuis l'espace de la Ville, le planning le dit : sur le
+        // site, l'adresse porte `espace=ville` et le menu de la Ville reste (AppShell).
+        ...(isCollectiviteMode ? { espace: 'ville' } : {}),
         facilityId,
         sourceType: 'facility',
       });

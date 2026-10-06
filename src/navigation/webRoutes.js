@@ -266,9 +266,12 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MatchHistoryScreen]: '/league/matches/history',
   [RouteNames.EndMatchScreen]: '/league/matches/:matchId/end',
   [RouteNames.PastMatchDetails]: '/league/matches/:matchId/past',
-  [RouteNames.MatchStatsEditor]: '/league/matches/:matchId/stats',
-  [RouteNames.PendingMatchStats]: '/league/matches/:matchId/pending-stats',
-  [RouteNames.PlayerMatchResponse]: '/league/matches/:matchId/response',
+  // FINITIONS16 · POINT 15 (T15) — hors de « /league » et SANS parametre de chemin : le site
+  // choisit sa barre a l'adresse, et un match de club passe un `eventId` (le `:matchId` restait
+  // en clair). L'evenement ou le match de League voyagent en parametres.
+  [RouteNames.MatchStatsEditor]: '/match-stats/sheet',
+  [RouteNames.PendingMatchStats]: '/match-stats/pending',
+  [RouteNames.PlayerMatchResponse]: '/match-stats/response',
   [RouteNames.PlanningWeekFullscreen]: '/planning/week',
   [RouteNames.PersonalPlanningWeekFullscreen]: '/planning/personal/week',
   // COLL-CLUBS (01/10/2026) — la fiche d un club rattache, cote mairie (la collectivite et le
@@ -369,12 +372,37 @@ export const readWebQueryParams = (searchParams) => Object.fromEntries(
 
 export const getWebRoutePattern = (routeName) => WEB_ROUTE_PATTERNS[routeName] || '/';
 
+/**
+ * FINITIONS16 · POINT 13 (T15) — UNE PILE APPELEE SANS ECRAN. Sur le telephone,
+ * `navigate(AdWizardStack)` ouvre la pile sur son premier ecran (`initialRouteName`) ;
+ * sur le site, la pile n'a pas d'adresse (un conteneur, webRouteExemptions.js) et
+ * `buildWebPath` rendait « / » : « Recruter » ramenait a l'accueil, ou l'on etait deja,
+ * et les 5 `navigate(ProfileStack)` aussi. Le premier ecran de chaque pile, LE MEME que
+ * celui du telephone (un temoin relit les piles) ; seulement ceux dont l'adresse n'a pas
+ * de parametre a remplir (EventStack, qui demande un match, n'y est pas).
+ */
+/** @type {Readonly<Record<string, string>>} */
+const WEB_STACK_INITIAL_ROUTES = Object.freeze({
+  [RouteNames.AdWizardStack]: RouteNames.AdWizardAudienceType,
+  [RouteNames.AdminStack]: RouteNames.SuperAdminHome,
+  [RouteNames.ClubStack]: RouteNames.ClubList,
+  [RouteNames.FriendlyMatchWizardStack]: RouteNames.FriendlyMatchWizardTeam,
+  [RouteNames.ProfileStack]: RouteNames.Profile,
+  [RouteNames.TeamStack]: RouteNames.TeamList,
+});
+
 export const buildWebPath = (routeName, params = {}, options = {}) => {
   const nestedScreen = params?.screen;
   const nestedParams = params?.params;
 
   if (typeof nestedScreen === 'string') {
     return buildWebPath(nestedScreen, nestedParams || {}, options);
+  }
+
+  const premierEcranDeLaPile = WEB_STACK_INITIAL_ROUTES[String(routeName)];
+  const adresses = /** @type {Record<string, string>} */ (WEB_ROUTE_PATTERNS);
+  if (premierEcranDeLaPile && !adresses[String(routeName)]) {
+    return buildWebPath(premierEcranDeLaPile, params, options);
   }
 
   const pattern = getWebRoutePattern(routeName);
@@ -396,6 +424,7 @@ export const getInitialWebPath = () => normalizePathValue(WEB_ROUTE_PATTERNS[Rou
 
 export {
   WEB_ROUTE_PATTERNS,
+  WEB_STACK_INITIAL_ROUTES,
 };
 
 export default WEB_ROUTE_PATTERNS;

@@ -100,10 +100,14 @@ const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '
  * @param {CompositionPayload | null | undefined} props.composition - The composition data
  * @param {any[]} [props.currentPeople] - FINITIONS13-STATS (2) : les participants
  *   du fil, relus avec lui. Un compte renomme depuis la publication y prend son nom du jour.
+ * @param {any} [props.currentEvent] - FINITIONS16 (8) : le match tel que le serveur le joint au
+ *   message AUJOURD'HUI. Un match modifie depuis la publication y prend son titre et son heure.
  * @param {boolean} [props.isMe] - Whether sent by current user
  * @returns {import('react').ReactElement | null}
  */
-function CompositionMessageBubble({ composition, currentPeople = [], isMe = false }) {
+function CompositionMessageBubble({
+  composition, currentEvent = null, currentPeople = [], isMe = false,
+}) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const navigation = useNavigation();
@@ -218,7 +222,19 @@ function CompositionMessageBubble({ composition, currentPeople = [], isMe = fals
   // partait a la poubelle : la carte n'en gardait que le jour.
   // ♻️ COMPOMSG — le jour et l'heure s'ecrivent avec les MEMES fonctions que
   // « Tu es convoque » : un joueur qui passe de l'un a l'autre lit la meme date.
-  const whenLine = [formatConvocationDay(eventDate), formatConvocationTime(eventDate)]
+  // 🗓️ FINITIONS16 · POINT 8 (T15) — LE MATCH D'AUJOURD'HUI, PAS LA PHOTO. Le match du 3 oct. avait
+  // ete modifie apres la publication (adversaire renomme, coup d'envoi avance) : la carte disait
+  // « RECETTE 28-09 · 17:00 », « Ouvrir » montrait « Équipe visiteuse · 15:00 ». Le message porte
+  // le match du jour (`message.event`) : la carte le lit, sans requete de plus. Seulement le MEME
+  // match ; sans date lisible, la photo.
+  const matchDuJour = currentEvent?.documentId
+    && String(currentEvent.documentId) === String(eventId || '')
+    ? currentEvent
+    : null;
+  const dateDuMatch = Number.isFinite(Date.parse(String(matchDuJour?.date || '')))
+    ? matchDuJour?.date
+    : eventDate;
+  const whenLine = [formatConvocationDay(dateDuMatch), formatConvocationTime(dateDuMatch)]
     .filter(Boolean).join(' · ');
   const addressLine = readableAddress(eventAddress) || t(
     'compositionMessageBubble.locationNotSpecified',
@@ -233,7 +249,9 @@ function CompositionMessageBubble({ composition, currentPeople = [], isMe = fals
   // RDV. Le serveur envoie desormais `eventDisplayName` (« Match vs US Pelican »,
   // la meme regle que « Tu es convoque ») et `eventNote` (le texte libre).
   // ⛔ Une carte DEJA postee n'a ni l'un ni l'autre : elle garde son titre d'hier.
-  const title = String(eventDisplayName || '').trim() || eventName;
+  const title = String(matchDuJour?.name || '').trim()
+    || String(eventDisplayName || '').trim()
+    || eventName;
   const noteText = String(eventNote || '').trim();
   const note = noteText && noteText.toLowerCase() !== String(title || '').trim().toLowerCase()
     ? noteText
@@ -389,7 +407,7 @@ function CompositionMessageBubble({ composition, currentPeople = [], isMe = fals
   // lit au serveur, dans `CompositionAnswerBar`, jamais sur la carte.
   const { auth: lecteur } = getAuthRuntimeSnapshot();
   const viewerId = String(lecteur?.user?.documentId || lecteur?.user?.id || '').trim();
-  const matchAVenir = Date.parse(String(eventDate || '')) > Date.now();
+  const matchAVenir = Date.parse(String(dateDuMatch || '')) > Date.now();
   const proposeLaReponse = type === 'lineup_share'
     && Boolean(eventId)
     && matchAVenir
