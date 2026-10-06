@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars -- harnais recopie de AdminManagerRequests.test.js */
+/* eslint-disable no-unused-vars, max-len -- harnais recopie de AdminManagerRequests.test.js */
 import { Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -227,7 +227,6 @@ beforeEach(() => {
   mockTraitees = lu([]);
   mockTrancher.mockResolvedValue({ data: {} });
 });
-
 
 // FINITIONS18 · POINT 7 (T15, T16 ; REPRODUIT sur l'emulateur le 06/10) — au telephone, l'onglet
 // « Traitees » ne reagissait pas : une zone MORTE de ~100 × 70 px au centre du bouton, a l'abscisse
