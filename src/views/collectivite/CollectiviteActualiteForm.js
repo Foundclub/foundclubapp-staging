@@ -571,6 +571,27 @@ function CollectiviteActualiteForm() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {/* FINITIONS16 21 (planche 18) : le site n a pas l en-tete du telephone ; la page */}
+        {/* porte son titre, et la meme croix « Annuler » qui ferme. */}
+        {Platform.OS === 'web' ? (
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+            <HeaderBackButton
+              accessibilityLabel={t('collectiviteActualites.form.annuler', 'Annuler')}
+              iconName="close"
+              withDefaultMargin={false}
+            />
+            <View style={{ gap: 2 }}>
+              <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+                {t('collectiviteActualites.header', 'Actualités de la Ville')}
+              </Text>
+              <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
+                {actualiteId
+                  ? t('collectiviteActualites.form.headerModifier', 'Modifier l’actualité')
+                  : t('collectiviteActualites.form.header', 'Nouvelle actualité')}
+              </Text>
+            </View>
+          </View>
+        ) : null}
         {corps}
       </ScrollView>
       <BottomModal

@@ -388,3 +388,45 @@ describe('COLL-C4A — planche 1 : le bloc « Actualités de la Ville » de l’
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteActualiteForm', VILLE);
   });
 });
+
+// FINITIONS16 · POINT 21 (tournee T15, photo SITE_C18 ; planche 18, P3b-actu-ordi) — SUR LE SITE,
+// le formulaire d'une actualite n'avait ni titre ni moyen d'en sortir : le telephone les met dans
+// son en-tete natif (titre « Nouvelle actualité », croix « Annuler »), que le site n'a pas. La
+// planche : « Actualités de la Ville » en surtitre, « Nouvelle actualité » en titre. ROUGE avant.
+describe('FINITIONS16 21 — planche 18 sur le site : le titre et la croix', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const osAvant = Platform.OS;
+  afterEach(() => {
+    Platform.OS = osAvant;
+  });
+  const croixDe = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.accessibilityLabel === 'Annuler'
+      && typeof n.props?.onPress === 'function',
+  )[0];
+
+  it('🔴 « Actualités de la Ville », « Nouvelle actualité », et la croix qui ferme', async () => {
+    Platform.OS = 'web';
+    mockOrdinateur = true;
+    const arbre = await monter(<CollectiviteActualiteForm />);
+    const lus = textes(arbre);
+    const titre = lus.indexOf('Nouvelle actualité');
+    expect(titre).toBeGreaterThan(0);
+    expect(lus[titre - 1]).toBe('Actualités de la Ville');
+    expect(croixDe(arbre)).toBeTruthy();
+    await appuyer(croixDe(arbre));
+    expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  it('🔴 « Modifier l’actualité » quand on modifie', async () => {
+    Platform.OS = 'web';
+    mockParams = { ...VILLE, actualiteId: SUBVENTIONS.documentId };
+    const arbre = await monter(<CollectiviteActualiteForm />);
+    expect(textes(arbre)).toContain('Modifier l’actualité');
+  });
+
+  it('🔒 au téléphone, c’est l’en-tête natif qui le dit, pas le corps', async () => {
+    const arbre = await monter(<CollectiviteActualiteForm />);
+    expect(textes(arbre)).not.toContain('Nouvelle actualité');
+    expect(croixDe(arbre)).toBeUndefined();
+  });
+});
