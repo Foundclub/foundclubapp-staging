@@ -1158,7 +1158,7 @@ const CHAMPS_LUS_PAR_LE_TUNNEL = [
 export const describeOnboardingDecision = ({
   flag, onboardingViews, source, userData,
 }) => {
-  const etapes = (Array.isArray(onboardingViews?.views) ? onboardingViews.views : [])
+  const etapes = (onboardingViews?.views || [])
     .filter((view) => view?.canShow)
     .map((view) => view.route);
   const vides = CHAMPS_LUS_PAR_LE_TUNNEL.filter((champ) => !userData?.[champ]);
