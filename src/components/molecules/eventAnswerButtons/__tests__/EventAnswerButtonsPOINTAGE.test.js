@@ -7,6 +7,24 @@ import Button from '@/components/atoms/button/Button';
 
 import EventAnswerButtons from '../EventAnswerButtons';
 
+// TEMOINS-DATES (06/10/2026) — BOMBE A RETARDEMENT DESAMORCEE : l evenement de ce fichier est date
+// en dur au 12/05/2027 18:00 UTC comme un moment « a venir », et le composant le compare a l heure
+// REELLE (evenement passe = plus de Present / Absent). ROUGE a partir de ce moment-la, sans qu une
+// ligne change (mesure : horloge avancee, fichier seul, vert a +218 j, rouge a +219 j). Seul `Date`
+// est fige, au 06/10/2026, jour ou ce fichier est vert ; les minuteries restent vraies (act et les
+// promesses en dependent), comme `FIGER_LA_DATE` de CollectiviteChiffres.COLL-AFFICHE2.
+const FIGER_LA_DATE = {
+  doNotFake: [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval',
+    'clearInterval', 'setTimeout', 'clearTimeout',
+  ],
+  now: new Date('2026-10-06T00:00:00.000Z'),
+};
+beforeEach(() => { jest.useFakeTimers(FIGER_LA_DATE); });
+afterEach(() => { jest.useRealTimers(); });
+
 // LOT POINTAGE (decisions d Adel du 29/09) — LES BOUTONS PRESENT / ABSENT
 // SUIVENT L OPTION « LES PARTICIPANTS REPONDENT », ET LE « PAS RENSEIGNE »
 // PEUT PASSER PRESENT APRES COUP.
