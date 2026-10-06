@@ -41,7 +41,7 @@ jest.mock('@/utils/logger/logger', () => ({
   })),
 }));
 
-const { getEvents } = require('./eventService');
+const { getEvents, getMyPlanning } = require('./eventService');
 
 const HUGO = { documentId: 'hugo', firstname: 'Hugo' };
 const PAGE = {
@@ -82,6 +82,20 @@ describe('PARENT-PLANNING — getEvents et les evenements des enfants', () => {
     await getEvents({ compact: true, myTeams: true, viewerDocumentId: 'paul' });
     const [, config] = mockGet.mock.calls[0];
     expect(Object.prototype.hasOwnProperty.call(config.params, 'withChildren')).toBe(false);
+  });
+
+  test('3-17 ROUGE-AVANT — le calendrier d un parent demande ses enfants', async () => {
+    mockGet.mockResolvedValueOnce({ data: { data: [] } });
+    await getMyPlanning({ from: '2026-12-01', to: '2026-12-07', withChildren: true });
+    expect(mockGet).toHaveBeenCalledWith(
+      '/users/me/planning?from=2026-12-01&to=2026-12-07&withChildren=true',
+    );
+  });
+
+  test('3-18 PROTEGE — sans le drapeau, l adresse du calendrier ne change pas', async () => {
+    mockGet.mockResolvedValueOnce({ data: { data: [] } });
+    await getMyPlanning({ from: '2026-12-01', to: '2026-12-07' });
+    expect(mockGet).toHaveBeenCalledWith('/users/me/planning?from=2026-12-01&to=2026-12-07');
   });
 
   test('3-14 — la marque du serveur arrive a l ecran (la validation la garde)', async () => {

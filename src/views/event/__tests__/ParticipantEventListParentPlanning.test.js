@@ -21,6 +21,7 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockUseGetEvents = jest.fn();
 const mockCartes = [];
+const mockCalendriers = [];
 const mockNavigate = jest.fn();
 
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -149,9 +150,13 @@ jest.mock(
     };
   },
 );
+// Le calendrier du haut est double : on garde ce que l ecran lui DONNE (« calendrier B »).
 jest.mock(
   '@/components/organisms/planning/PersonalPlanningContainer',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_PersonalPlanning'),
+  () => function PersonalPlanningDouble(/** @type {any} */ props) {
+    mockCalendriers.push(props);
+    return null;
+  },
 );
 // Le vide est double : il rend son titre et sa description, ce que lit le parent.
 jest.mock(
@@ -265,6 +270,7 @@ beforeEach(() => {
   mockUseGetEvents.mockReset();
   mockNavigate.mockReset();
   mockCartes.length = 0;
+  mockCalendriers.length = 0;
 });
 
 afterEach(() => {
@@ -342,6 +348,16 @@ describe('PARENT-PLANNING / 3 — le planning d un parent', () => {
       'Les prochains événements de Hugo et Léa s’afficheront ici dès que leurs équipes '
       + 'en publieront.',
     );
+  });
+
+  test('3-15 ROUGE-AVANT — un parent : le calendrier demande AUSSI les enfants', async () => {
+    await monter(requete([], { viewerChildren: [HUGO] }));
+    expect(mockCalendriers[mockCalendriers.length - 1].withChildren).toBe(true);
+  });
+
+  test('3-16 PROTEGE — un compte sans enfant : le calendrier ne demande rien de plus', async () => {
+    await monter(requete([]));
+    expect(mockCalendriers[mockCalendriers.length - 1].withChildren).toBeFalsy();
   });
 
   test('3-8 PROTEGE — sans enfant, le message du vide ne change pas', async () => {
