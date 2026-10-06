@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 import { formatRecruitmentAdExpiryDate } from '@/utils/recruitmentAdRenewal';
 
 import RecruitmentAdDetails from '../RecruitmentAdDetails';
@@ -558,5 +559,41 @@ describe('ANNONCE-RAPPEL 6 — « Postuler » se grise apres l echeance', () => 
 
     expect(findButton(tree, 'Annonce inactive')?.props.disabled).toBe(true);
     expect(findButton(tree, EXPIREE)).toBeUndefined();
+  });
+});
+
+// FINITIONS16 · POINT 14 (tournee T15, photo A6b) — la FICHE de l'annonce AILIER FORT (SMUC)
+// affichait « Gymnase - [object Object] » : elle lisait `city` tel quel, ecrit casse en base
+// depuis la T8. La CARTE de liste, elle, recompose le lieu (`resolveLocationDisplayLabel`).
+// Une seule lecture pour les deux. La charge est celle que le relais de la T15 a capturee.
+describe('FINITIONS16 14 — le lieu de la fiche, recompose comme sur la carte', () => {
+  const AILIER_FORT = {
+    ...AD,
+    address: {
+      address: {
+        description: '21 Rue fortia 13001 Marseille',
+        geometry: { coordinates: [5.374284, 43.291757], type: 'Point' },
+      },
+      facilityDocumentId: 'r2dtoskvhuyqvglxuemz83qg',
+      facilityName: 'Gymnase',
+      label: 'Gymnase - [object Object]',
+      source: 'club_facility',
+      value: '',
+    },
+    city: 'Gymnase - [object Object]',
+    documentId: 'ad-ailier',
+  };
+
+  it('🔴 jamais « [object Object] » : le lieu recompose, comme la carte', async () => {
+    const { tree } = await renderFor(TIERS, AILIER_FORT);
+
+    expect(allText(tree)).not.toContain('[object Object]');
+    expect(allText(tree)).toContain(resolveLocationDisplayLabel(AILIER_FORT.address, ''));
+  });
+
+  it('🔒 une annonce saine garde sa ville', async () => {
+    const { tree } = await renderFor(TIERS, { ...AD, city: 'Marseille' });
+
+    expect(allText(tree)).toContain('Marseille');
   });
 });

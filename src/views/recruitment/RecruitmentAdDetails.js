@@ -69,8 +69,8 @@ import {
   isVerifiedClub,
 } from '@/utils/clubCertification';
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { resolveRecruitmentAdLocation } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
-import { getShortAddress } from '@/utils/location';
 import {
   formatRecruitmentAdExpiryDate,
   getRecruitmentAdExpiry,
@@ -611,7 +611,9 @@ function RecruitmentAdDetails() {
     'recruitmentAdDetails.fallback.category',
     'Catégorie ?',
   );
-  const address = getShortAddress(ad?.city || club?.city || '');
+  // FINITIONS16 · POINT 14 (T15) — le lieu par la MEME lecture que la carte de liste : la fiche
+  // affichait « Gymnase - [object Object] » (annonce AILIER FORT, `city` ecrit casse en base).
+  const address = resolveRecruitmentAdLocation(ad, club);
   const sectionName = ad?.section?.name || ad?.section;
   const coachExperienceLabel = humanizeEnumLabel(ad?.coachExperienceLevel, '');
   const engagementLabel = getEngagementLabel(ad?.engagementType);
