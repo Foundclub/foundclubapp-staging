@@ -91,7 +91,7 @@ const seanceDeHugo = (id, debut, fin) => ({
   documentId: id,
   endAt: null,
   endTime: `${fin}:00`,
-  facility: { documentId: 'tilleuls', name: 'Gymnase des Tilleuls', planningColor: '#FFA115' },
+  facility: { documentId: 'tilleuls', name: 'Gymnase des Tilleuls' },
   hasExplicitTime: true,
   kind: 'event',
   startAt: `2026-10-07T${debut}:00.000+02:00`,
