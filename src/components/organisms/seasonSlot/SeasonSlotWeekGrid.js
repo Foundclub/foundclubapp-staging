@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Pressable, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { getClubInitials } from '@/domains/club/clubUseCase';
 import {
   fromMinutes,
   fullRangesOfSlots,
@@ -24,6 +26,14 @@ const LARGEUR_DES_HEURES = 56;
 const PAS_DES_CASES = 30;
 const DUREE_PROPOSEE = 90;
 const FIN_DU_JOUR = (23 * 60) + 59;
+// FINITIONS16 21 (planche 23, T15) : sous 72 px, une voie ne loge plus le nom d un club
+// (« Montrivage Basket » : ~115 px en gras 12) et le coupait en « Mo… » : elle montre les
+// initiales des ecussons. Sous 30 px, pas meme deux lettres : aucun texte ; le bloc garde sa
+// couleur, son nom pour le lecteur d ecran, et s ouvre au clic.
+const VOIE_NOM_ENTIER = 72;
+const VOIE_INITIALES = 30;
+// Le cadre de la grille : 12 px de marge de chaque cote.
+const MARGES_DU_CADRE = 24;
 
 /**
  * 📐 COLL-C2B-BIS (03/10) — planche 23, ORDINATEUR : la semaine type de l installation A L ECHELLE
@@ -58,6 +68,11 @@ function SeasonSlotWeekGrid({
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const trait = withAlpha(Colors.neutral00, 0.08);
+  // La largeur d une colonne de jour, une fois le cadre mesure (0 : pas encore).
+  const [largeurCadre, setLargeurCadre] = useState(0);
+  const largeurJour = largeurCadre > 0
+    ? (largeurCadre - MARGES_DU_CADRE - LARGEUR_DES_HEURES) / SEASON_SLOT_WEEKDAYS.length
+    : 0;
   const lignes = weekGridRows(creneaux, { fermeture, ouverture });
   const jours = SEASON_SLOT_WEEKDAYS.map((jour) => {
     const duJour = creneaux.filter((creneau) => Number(creneau?.weekday) === jour);
@@ -196,6 +211,10 @@ function SeasonSlotWeekGrid({
   ) => {
     const { creneau } = place;
     const heures = timeRange(fromMinutes(place.debut), fromMinutes(place.fin));
+    const largeurVoie = largeurJour > 0 ? largeurJour / place.voies : Infinity;
+    let contenu = 'rien';
+    if (largeurVoie >= VOIE_NOM_ENTIER) contenu = 'entier';
+    else if (largeurVoie >= VOIE_INITIALES) contenu = 'initiales';
     return (
       <TouchableOpacity
         accessibilityLabel={t(
@@ -223,7 +242,7 @@ function SeasonSlotWeekGrid({
       >
         <View
           style={[
-            Spaces.paddingHorizontal[8],
+            contenu === 'entier' ? Spaces.paddingHorizontal[8] : Spaces.paddingHorizontal[4],
             Spaces.paddingVertical[4],
             {
               backgroundColor: withAlpha(Colors.primary800, 0.92),
@@ -237,13 +256,17 @@ function SeasonSlotWeekGrid({
             },
           ]}
         >
-          <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral00]}>
-            {creneau.club?.name || ''}
-          </Text>
-          {creneau.team?.name ? (
+          {contenu === 'rien' ? null : (
+            <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral00]}>
+              {contenu === 'entier'
+                ? creneau.club?.name || ''
+                : getClubInitials(creneau.club?.name || '').slice(0, 3)}
+            </Text>
+          )}
+          {contenu !== 'rien' && creneau.team?.name ? (
             <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{creneau.team.name}</Text>
           ) : null}
-          {place.fin - place.debut >= 75 ? (
+          {contenu === 'entier' && place.fin - place.debut >= 75 ? (
             <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{heures}</Text>
           ) : null}
         </View>
@@ -316,6 +339,7 @@ function SeasonSlotWeekGrid({
   return (
     <View style={{ gap: 8 }} testID="semaine-type-grille">
       <View
+        onLayout={(evenement) => setLargeurCadre(evenement.nativeEvent.layout.width)}
         style={[
           Spaces.paddingHorizontal[12],
           Spaces.paddingBottom[12],
@@ -327,6 +351,7 @@ function SeasonSlotWeekGrid({
             gap: 4,
           },
         ]}
+        testID="semaine-type-cadre"
       >
         {enTete}
         {lignes.map((ligne) => (
