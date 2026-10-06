@@ -22,6 +22,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { canManageTeamAd, isAdAuthor } from '@/domains/team/teamMembership';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -68,7 +69,6 @@ import {
   getClubCertificationPalette,
   isVerifiedClub,
 } from '@/utils/clubCertification';
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { resolveRecruitmentAdLocation } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import {
@@ -632,7 +632,12 @@ function RecruitmentAdDetails() {
     && currentUserApplication?.documentId
     && ['accepted', 'pending'].includes(String(currentUserApplication?.status || '').trim().toLowerCase()),
   );
-  const date = ad?.createdAt ? formatDateWithDayPrefix(new Date(ad.createdAt)) : '';
+  // FINITIONS16 19 (T15, photo A6b) : « Publiée le 5 août », le format de « Expire le » juste
+  // dessous, plus « mer 05/08/2026 ».
+  const datePublication = ad?.createdAt ? new Date(ad.createdAt) : null;
+  const date = datePublication && !Number.isNaN(datePublication.getTime())
+    ? formatRecruitmentAdExpiryDate(datePublication)
+    : '';
   let expiryLabel = '';
   if (expiry) {
     const expiryDate = formatRecruitmentAdExpiryDate(expiry.expiresAt);
@@ -646,21 +651,22 @@ function RecruitmentAdDetails() {
         ...SANS_ECHAPPEMENT,
       });
   }
-  const detectionDate = ad?.event?.date ? formatDateWithDayPrefix(new Date(ad.event.date)) : '';
+  // FINITIONS16 19 : le jour d un evenement comme sur sa page, « mer. 30 sept. ».
+  const detectionDate = ad?.event?.date ? formatCollectiviteDay(ad.event.date) : '';
   const detectionDateTimeLabel = useMemo(() => {
     if (!ad?.event?.date) return '';
 
     const detectionDateValue = new Date(ad.event.date);
     if (Number.isNaN(detectionDateValue.getTime())) return '';
 
-    const dateLabel = formatDateWithDayPrefix(detectionDateValue);
+    const dateLabel = formatCollectiviteDay(detectionDateValue);
     const hourLabel = detectionDateValue.toLocaleTimeString(localeDesFormats(), {
       hour: '2-digit',
       minute: '2-digit',
     });
 
     return hourLabel
-      ? i18next.t('recruitmentAdDetails.detectionModal.dateAtHour', '{{date}} a {{hour}}', {
+      ? i18next.t('recruitmentAdDetails.detectionModal.dateAtHour', '{{date}} à {{hour}}', {
         date: dateLabel,
         hour: hourLabel,
         ...SANS_ECHAPPEMENT,

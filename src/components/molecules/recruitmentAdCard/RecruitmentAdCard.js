@@ -12,6 +12,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
+import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -21,7 +22,6 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { resolveRecruitmentAdApplicationState } from '@/services/recruitment/recruitmentService';
 
-import { formatDateWithDayPrefix } from '@/utils/date';
 import { resolveRecruitmentAdLocation } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getRecruitmentAdExpiry } from '@/utils/recruitmentAdRenewal';
@@ -115,7 +115,7 @@ function RecruitmentAdCard({
   ));
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDateLabel = ad?.event?.date
-    ? formatDateWithDayPrefix(new Date(ad.event.date))
+    ? formatCollectiviteDay(ad.event.date)
     : '';
   const applicationState = resolveRecruitmentAdApplicationState(
     ad,

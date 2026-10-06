@@ -1,3 +1,5 @@
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 /**
  * French weekday prefixes
  */
@@ -51,4 +53,20 @@ export const formatDateTimeWithDayPrefix = (value, options) => {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${day} a ${hours}h${minutes}`;
+};
+
+/**
+ * FINITIONS16 19 — le moment comme l ecrivent les planches : « 1 oct. » et « 22:39 », pour
+ * « Publiée le 1 oct. à 22:39 » (feuille de match, planche S10). Sans secondes.
+ * @param {string | Date | null | undefined} value - La date.
+ * @returns {{ date: string, time: string } | null} Le jour et l heure, ou rien si illisible.
+ */
+export const lireLeMomentCourt = (value) => {
+  if (!value) return null;
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return null;
+  return {
+    date: instant.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+    time: instant.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
+  };
 };

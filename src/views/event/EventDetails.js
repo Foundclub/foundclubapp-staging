@@ -157,6 +157,7 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import { lireLeMomentCourt } from '@/utils/date';
 import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
@@ -8709,9 +8710,10 @@ function EventDetails({ navigation, route }) {
                       ) : null}
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
-                          {t('eventDetails.publishedOn', 'Publiée le')}
-                          {' '}
-                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
+                          {t('eventDetails.publishedOnAt', 'Publiée le {{date}} à {{time}}', {
+                            ...lireLeMomentCourt(convocationBranches[0].published.publishedAt),
+                            ...SANS_ECHAPPEMENT,
+                          })}
                         </Text>
                       ) : null}
                       {/* 🧾 R6 — LES NOMS, AVANT le bouton. La question que se

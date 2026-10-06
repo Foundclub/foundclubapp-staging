@@ -597,3 +597,14 @@ describe('FINITIONS16 14 — le lieu de la fiche, recompose comme sur la carte',
     expect(allText(tree)).toContain('Marseille');
   });
 });
+
+// FINITIONS16 · POINT 19 (tournee T15, photo A6b) — « Publiée le mer 05/08/2026 » : la date de
+// publication suit le format de la fiche (« Expire le 4 septembre »), plus « jour JJ/MM/AAAA ».
+describe('FINITIONS16 19 — la date de publication de la fiche', () => {
+  it('🔴 « Publiée le » dit « 1 septembre », jamais « mar 01/09/2026 »', async () => {
+    const { tree } = await renderFor(TIERS, AD);
+
+    expect(allText(tree)).toContain(dateOf(AD.createdAt));
+    expect(allText(tree)).not.toMatch(/\b(lun|mar|mer|jeu|ven|sam|dim) \d{2}\/\d{2}\/\d{4}/);
+  });
+});

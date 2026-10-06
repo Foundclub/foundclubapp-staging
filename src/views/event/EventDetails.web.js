@@ -27,7 +27,6 @@ import {
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
-import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -80,6 +79,7 @@ import {
   getClubCertificationLabel,
   getClubCertificationPalette,
 } from '@/utils/clubCertification';
+import { lireLeMomentCourt } from '@/utils/date';
 import { getEntityDocumentId } from '@/utils/entityId';
 import { getErrorStatus } from '@/utils/errors/displayError';
 import getImageUrl from '@/utils/imageUrl';
@@ -2738,9 +2738,10 @@ function EventDetails({ navigation, route }) {
                       <span>{publishedCompositionSummary.join(' · ')}</span>
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <span>
-                          {t('eventDetails.publishedOn', 'Publiée le')}
-                          {' '}
-                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
+                          {t('eventDetails.publishedOnAt', 'Publiée le {{date}} à {{time}}', {
+                            ...lireLeMomentCourt(convocationBranches[0].published.publishedAt),
+                            ...SANS_ECHAPPEMENT,
+                          })}
                         </span>
                       ) : null}
                     </div>
