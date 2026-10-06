@@ -1957,16 +1957,18 @@ function ClubDetails({ navigation, route }) {
 
   // ST-VUES3-ORDI — la colonne de droite de la planche ordinateur : les trois chiffres qui se
   // touchent (comme « Gestion du club » d'un club omnisport), puis « Les équipes ».
+  // FINITIONS16 22 (T15, écran 18, planche P5) : « Sections · Équipes · Membres », les mots du
+  // club omnisport (`multisport.stats`) ; « Sports » et « Nos équipes » étaient ceux de la fiche.
   const clubHubStatsItems = [
     {
       key: 'sports',
-      label: t('clubDetails.titles.activities'),
+      label: t('multisport.stats.sections', 'Sections'),
       onPress: () => openClubHubSection('sports'),
       value: clubSportsCount,
     },
     {
       key: 'teams',
-      label: t('clubDetails.titles.teams'),
+      label: t('multisport.stats.teams', 'Équipes'),
       onPress: () => openClubHubSection('teams'),
       value: sortedClubTeams.length,
     },
