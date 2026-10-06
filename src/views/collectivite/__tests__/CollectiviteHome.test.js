@@ -582,6 +582,29 @@ describe('COLL-ACCUEIL-BIS — planches 2 et 3 : l accueil de la Ville complet',
     });
   });
 
+  // FINITIONS16 21 (tournee T15, photo SITE_C03a, a 1 280 px) — les libelles des six actions
+  // passaient sur TROIS lignes (« Attribuer / un / créneau ») : chaque carte fait 150 px (mesure
+  // sur la photo), et le cadre (16 + pastille 36 + 12 + 16) ne laissait que 70 px au texte. Le
+  // plus large des premiers morceaux, « Attribuer un », fait 90,6 px en Montserrat gras 14
+  // (mesure dans le fichier de la police) : il faut au moins 91 px. La rangee et l icone a
+  // gauche restent (planche 3). ROUGE avant.
+  it('🔴 ordinateur : chaque libellé tient sur deux lignes dans une carte de 150 px', async () => {
+    mockLargeur = 1280;
+    const arbre = await monter();
+    const cartes = cartesDAction(arbre);
+    expect(cartes).toHaveLength(6);
+    cartes.forEach((/** @type {any} */ carte) => {
+      const style = StyleSheet.flatten(carte.props.style);
+      const [pastille] = carte.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+        && StyleSheet.flatten(n.props.style)?.height === StyleSheet.flatten(n.props.style)?.width
+        && Number(StyleSheet.flatten(n.props.style)?.width) >= 24);
+      const largeurPastille = StyleSheet.flatten(pastille.props.style).width;
+      const marge = style.paddingHorizontal ?? style.padding;
+      const pourLeTexte = 150 - 2 * marge - largeurPastille - style.gap;
+      expect(pourLeTexte).toBeGreaterThanOrEqual(91);
+    });
+  });
+
   it('ordinateur : la 2e demande en carte COMPACTE, sans boutons (téléphone : une)', async () => {
     const telephone = await monter();
     expect(textes(telephone)).not.toContain('Montrivage FC · U15');
