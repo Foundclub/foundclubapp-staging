@@ -567,4 +567,27 @@ describe('FINITIONS16 1 — le parent, sur la page de l evenement de son enfant'
 
     expect(buttonWithText(root, 'Participer')).toBeDefined();
   });
+
+  // FINITIONS16 · POINT 7 (T15) — Papa Test lisait encore l encart « Mon statut — Aucune
+  // réponse » : il n a rien a repondre, aucune planche ne lui montre un statut. Le telephone ne
+  // l affiche pas (photo P06 de la T15). ROUGE avant.
+  test('🔴 Papa Test ne lit pas « Mon statut — Aucune réponse »', () => {
+    monterEn(PAPA);
+
+    expect(screenText()).not.toContain('Mon statut');
+    expect(screenText()).not.toContain('Aucune réponse');
+  });
+
+  test('🔒 le joueur hors de l equipe garde « Mon statut — Aucune réponse »', () => {
+    monterEn(JOUEUR_DEHORS);
+
+    expect(screenText()).toContain('Mon statut');
+    expect(screenText()).toContain('Aucune réponse');
+  });
+
+  test('🔒 le visiteur sans compte garde « Rejoindre cet événement »', () => {
+    mountAsVisitor();
+
+    expect(screenText()).toContain('Rejoindre cet événement');
+  });
 });
