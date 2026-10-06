@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
@@ -164,6 +166,11 @@ function ParticipantEventList({ navigation }) {
   // cache froid. Une seule fois.
   const userDocumentId = userData?.documentId;
 
+  // 👪 PARENT-PLANNING (06/10, decision d Adel « parent planning oui », registre des mineurs
+  // ligne 21) — le planning d un parent montre AUSSI les evenements a venir de ses enfants
+  // mineurs, comme chaque enfant les voit. Le serveur les trouve (lien et age lus en base) et
+  // les marque `viewerChildren` / `viewerChildrenOnly` ; pour un compte qui n est le parent de
+  // personne, la reponse ne change pas.
   const myEventsQueryConfig = useMemo(() => ({
     compact: true,
     // @ts-ignore
@@ -171,6 +178,7 @@ function ParticipantEventList({ navigation }) {
     sort: 'date:asc',
     startDateAfter: listStartDateAfter,
     ...(userDocumentId ? { viewerDocumentId: userDocumentId } : {}),
+    withChildren: true,
   }), [listStartDateAfter, userDocumentId]);
 
   // @ts-ignore
@@ -188,6 +196,14 @@ function ParticipantEventList({ navigation }) {
   });
 
   const events = useMemo(() => eventsData?.pages.flatMap((page) => page.data) || [], [eventsData]);
+  // Les enfants que le serveur a trouves (meme sans evenement a venir) : le vide les nomme.
+  const viewerChildrenNames = formatViewerChildrenNames(
+    /** @type {any} */ (eventsData?.pages?.[0]?.meta)?.viewerChildren,
+    t,
+  );
+  const viewerChildrenCount = (
+    /** @type {any} */ (eventsData?.pages?.[0]?.meta)?.viewerChildren || []
+  ).filter((/** @type {any} */ child) => child?.firstname).length;
 
   // Get user's club and CM IDs for featured events membership filtering
   const userClubId = userData?.club?.documentId;
@@ -692,6 +708,10 @@ function ParticipantEventList({ navigation }) {
       <View style={[Spaces.marginBottom[16]]}>
         <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
           <EventCardNew
+            // 👪 PARENT-PLANNING — pour quel enfant, et en lecture seule si ce n est pas AUSSI
+            // l evenement du parent. L appui ouvre la fiche, ou un compte Parent n a rien a
+            // repondre (FINITIONS13-STATS 6).
+            childLabel={formatViewerChildrenNames(item.viewerChildren, t)}
             displayProfile="teamFocused"
             item={item}
             onDecline={() => handleDeclineEvent(item)}
@@ -700,6 +720,7 @@ function ParticipantEventList({ navigation }) {
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item)}
             onPress={() => handleEventPress(item)}
+            readOnly={item.viewerChildrenOnly === true}
             // 🕐 T2/D5 — SEULE la carte qui attend s éteint. `isPending` est vrai
             // pour la mutation entière : s en servir tel quel ferait clignoter
             // la liste complète pour un seul appui.
@@ -877,6 +898,22 @@ function ParticipantEventList({ navigation }) {
       );
     }
 
+    // 👪 PARENT-PLANNING — un parent sans evenement a venir lit le prenom de son enfant.
+    const parentDescription = viewerChildrenNames
+      ? t('participantEventList.childrenNextEventsWillShow', {
+        count: viewerChildrenCount,
+        defaultValue_one: 'Les prochains événements de {{names}} s’afficheront ici dès que '
+          + 'son équipe en publiera.',
+        defaultValue_other: 'Les prochains événements de {{names}} s’afficheront ici dès que '
+          + 'leurs équipes en publieront.',
+        names: viewerChildrenNames,
+        ...SANS_ECHAPPEMENT,
+      })
+      : t(
+        'participantEventList.yourNextEventsWillShow',
+        'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
+      );
+
     return (
       <View style={[Spaces.marginHorizontal[16]]}>
         <EmptyState
@@ -890,10 +927,7 @@ function ParticipantEventList({ navigation }) {
                 'participantEventList.createYourFirstEventTo',
                 'Crée ton premier événement pour le voir apparaître ici.',
               )
-              : t(
-                'participantEventList.yourNextEventsWillShow',
-                'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
-              )
+              : parentDescription
           }
           icon={Images.calendar}
           onAction={canManageEvents ? handleCreateEventPress : undefined}
@@ -912,6 +946,8 @@ function ParticipantEventList({ navigation }) {
     isEventsLoading,
     refetchEvents,
     shouldLoadEventFeed, t,
+    viewerChildrenCount,
+    viewerChildrenNames,
   ]);
 
   return (

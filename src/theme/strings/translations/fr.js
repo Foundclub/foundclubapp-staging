@@ -7473,6 +7473,8 @@ export default {
   eventCardNew: {
     book: 'Réserver',
     booking: 'RÉSERVATION',
+    // PARENT-PLANNING (06/10) — la pastille du prénom de l enfant, dans le planning du parent.
+    childEventA11y: 'Événement de {{names}}',
     detectionTrial: 'DÉTECTION / ESSAI',
     event: 'ÉVÉNEMENT',
     full: 'Complet',
@@ -14276,6 +14278,12 @@ export default {
   participantEventList: {
     addAnEvent: 'Ajouter un événement',
     anErrorOccurred: 'Une erreur est survenue.',
+    // PARENT-PLANNING (06/10) — le planning d un parent nomme ses enfants (« Hugo et Léa »).
+    childrenNames: '{{others}} et {{last}}',
+    // eslint-disable-next-line max-len
+    childrenNextEventsWillShow_one: 'Les prochains événements de {{names}} s’afficheront ici dès que son équipe en publiera.',
+    // eslint-disable-next-line max-len
+    childrenNextEventsWillShow_other: 'Les prochains événements de {{names}} s’afficheront ici dès que leurs équipes en publieront.',
     createAnEvent: 'Créer un événement',
     createYourFirstEventTo: 'Crée ton premier événement pour le voir apparaître ici.',
     eventsFrom: 'Événements à partir de',

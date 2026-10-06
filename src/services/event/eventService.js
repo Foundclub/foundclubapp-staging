@@ -813,6 +813,7 @@ const buildRequestHubEventPopulate = () => ({
  *   compact?: boolean;
  *   requestHub?: boolean;
  *   viewerDocumentId?: string;
+ *   withChildren?: boolean;
  *  }} params - The parameters for filtering events
  * @param {{ signal?: AbortSignal }} [options]
  * @returns {Promise<{data: FCEvent[], meta: {
@@ -1174,6 +1175,9 @@ export const getEvents = async (params = {}, options = {}) => {
     ...(normalizedSearchQuery ? { _q: normalizedSearchQuery } : {}),
     ...(fields ? { fields } : {}),
     myTeams: params.myTeams, // Pass myTeams filter to backend
+    // PARENT-PLANNING (06/10) — avec `myTeams` : AUSSI les evenements a venir des enfants mineurs
+    // du lecteur, marques `viewerChildren` / `viewerChildrenOnly` par le serveur.
+    ...(params.withChildren ? { withChildren: true } : {}),
     pagination: {
       page: page || 1,
       pageSize: pageSize || 10,

@@ -383,10 +383,15 @@ const resolveCapacityGauge = (eventItem, { isReservation, isTournamentEvent }) =
  * @param {'present' | 'absent' | ''} [props.submittingAnswer] - T2 : la réponse
  *   que cette carte est en train d envoyer. Simple passe-plat vers
  *   `EventAnswerButtons`, qui en fait l état de chargement de ses deux boutons.
+ * @param {string} [props.childLabel] - PARENT-PLANNING (06/10) : le prénom de l enfant que
+ *   l événement concerne, dans le planning de son parent (« Hugo », « Hugo et Léa »).
+ * @param {boolean} [props.readOnly] - PARENT-PLANNING (06/10) : la carte ne propose aucune
+ *   réponse (l événement de l enfant, pas celui du parent).
  * @returns {import('react').ReactElement}
  */
 function EventCardNew({
   actionLabel,
+  childLabel = '',
   displayProfile = 'default',
   item,
   mode = 'default',
@@ -398,6 +403,7 @@ function EventCardNew({
   onPress,
   onRefuse,
   onValidate,
+  readOnly = false,
   showClubHeader = false,
   submittingAnswer = '',
   useFacilityAccentColor = false,
@@ -783,14 +789,35 @@ function EventCardNew({
         <View pointerEvents="none" style={styles.staticContent}>
           {/* Rangée 1 — chip type + date courte */}
           <View style={styles.topRow}>
-            <View style={[styles.typeChip, glassChipStyle]}>
-              <View style={[styles.typeDot, { backgroundColor: typeAccentColor }]} />
-              <Text
-                numberOfLines={1}
-                style={[styles.typeChipText, { color: typeAccentColor }]}
-              >
-                {headerTitle}
-              </Text>
+            <View style={styles.topRowChips}>
+              <View style={[styles.typeChip, glassChipStyle]}>
+                <View style={[styles.typeDot, { backgroundColor: typeAccentColor }]} />
+                <Text
+                  numberOfLines={1}
+                  style={[styles.typeChipText, { color: typeAccentColor }]}
+                >
+                  {headerTitle}
+                </Text>
+              </View>
+              {/* PARENT-PLANNING (06/10) — pour QUEL enfant : un parent de deux enfants doit
+                  savoir lequel. Meme forme que la pastille du type. */}
+              {childLabel ? (
+                <View
+                  accessibilityLabel={t('eventCardNew.childEventA11y', 'Événement de {{names}}', {
+                    names: childLabel,
+                    ...SANS_ECHAPPEMENT,
+                  })}
+                  style={[styles.typeChip, glassChipStyle]}
+                  testID="event-card-child-label"
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.typeChipText, { color: Colors.neutral00 }]}
+                  >
+                    {childLabel}
+                  </Text>
+                </View>
+              ) : null}
             </View>
             {shortDateLabel ? (
               <Text
@@ -953,7 +980,8 @@ function EventCardNew({
         </View>
 
         {/* CTA - Interactive (Captures touches) */}
-        {!isShareMode ? (
+        {/* PARENT-PLANNING (06/10) — l evenement de l enfant se LIT, il ne se repond pas. */}
+        {!isShareMode && !readOnly ? (
           <View pointerEvents="auto" style={styles.ctaContainer}>
             {renderCtaContent()}
           </View>
@@ -1118,6 +1146,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'space-between',
+  },
+  topRowChips: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: 8,
   },
   typeChip: {
     alignItems: 'center',
