@@ -41,7 +41,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEventTypes } from '@/services/event/eventQueries';
-import { createEventsSequentially } from '@/services/event/eventService';
+import { announceEventSeries, createEventsSequentially } from '@/services/event/eventService';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import { useClubTeamsForSlot, useSeasonSlotPreview } from '@/services/seasonSlot/seasonSlotQueries';
@@ -224,11 +224,21 @@ function ClubSlotRequest({
         type: typeEntrainement.documentId,
         typeName: typeEntrainement.name,
       });
-      // eslint-disable-next-line max-len
-      const { created, failed } = await createEventsSequentially(corps, { suppressCelebration: true });
+      // SERIE-ANNONCE (06/10) — « chaque semaine » : une série, que l'app annonce UNE fois aux
+      // joueurs une fois posée (les séances posées d'office dans le créneau du club ; celles en
+      // attente de la mairie ne s'annoncent pas). Chaque séance part donc « j'annoncerai ».
+      const serie = Boolean(corps[0]?.recurrenceGroupId);
+      const { created, failed } = await createEventsSequentially(corps, {
+        announceSeriesLater: serie,
+        suppressCelebration: true,
+      });
       if (!created.length) {
         setErreur(getErrorMessage(/** @type {any} */ (failed[0]?.error)));
         return;
+      }
+      // Sans attendre : un échec ne perd rien (le serveur annonce seul, plus tard).
+      if (serie && created[0]?.documentId) {
+        announceEventSeries(created[0].documentId).catch(() => {});
       }
       const statut = (/** @type {any} */ c) => c?.response?.data?.status || c?.response?.status;
       // 🏛️ DECISIONS-SOIR (02/10) — QUI DÉCIDE, le serveur le dit (`pendingReason`) : la mairie
