@@ -13,6 +13,7 @@ import {
   isTrainingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
+import { eventFacilityOptions } from '@/domains/seasonSlot/clubInstallations';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -24,7 +25,11 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEventForEdit, useGetEventTypes } from '@/services/event/eventQueries';
 import { createEvent, updateEvent } from '@/services/event/eventService';
-import { useGetFacilities } from '@/services/facility/facilityQueries';
+import {
+  useGetClubVilleFacilitiesWithSlots,
+  useGetCMFacilities,
+  useGetFacilities,
+} from '@/services/facility/facilityQueries';
 import { useMairieDecideDuDeplacement } from '@/services/seasonSlot/seasonSlotQueries';
 import { getTeams } from '@/services/team/teamService';
 
@@ -141,7 +146,21 @@ function EventEdit({ navigation, route }) {
   } = useGetFacilities(facilityClubId, {
     enabled: Boolean(facilityClubId),
   });
-  const facilities = normalizeFacilities(facilitiesResponse);
+  // FINITIONS16 · POINT 4 (T15) — « Modifier » une seance au Gymnase affichait « Aucune
+  // installation » : ce formulaire ne lisait que les installations du club. La liste du
+  // telephone (`eventFacilityOptions`) : club, omnisport, Ville ou le club a un creneau, et
+  // toujours l installation actuelle de la seance.
+  const facilityCmId = selectedTeam?.club?.parentMultisport?.documentId
+    || userData?.club?.parentMultisport?.documentId
+    || '';
+  const { data: cmFacilitiesResponse } = useGetCMFacilities(facilityCmId);
+  const { data: villeFacilitiesResponse } = useGetClubVilleFacilitiesWithSlots(facilityClubId);
+  const facilities = eventFacilityOptions({
+    clubFacilities: normalizeFacilities(facilitiesResponse),
+    cmFacilities: normalizeFacilities(cmFacilitiesResponse),
+    currentFacility: eventId ? event?.facility || null : null,
+    villeFacilities: villeFacilitiesResponse,
+  });
   // FINITIONS11-COLL (03/10, décision d'Adel « deplacer A ») — comme au téléphone : une séance
   // DÉPLACÉE hors du créneau du club, la mairie décide, et si elle refuse, la séance est annulée.
   // Le club le lit AVANT d'enregistrer, juste au-dessus des boutons.

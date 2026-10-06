@@ -99,6 +99,39 @@ export const creneauDeLaSeance = (slots, { start = null, teamId = null } = {}) =
   }) || null;
 };
 
+/**
+ * FINITIONS16 · POINT 4 (T15) — LES INSTALLATIONS PROPOSÉES À UNE SÉANCE, une seule liste pour
+ * le téléphone (`FacilitySelector`) et le site (`EventEdit.web.js`). Sur le site, « Modifier »
+ * une séance au Gymnase de la Ville affichait « Aucune installation » : le formulaire ne lisait
+ * que les installations du club.
+ *
+ * Dans cet ordre, sans doublon : celles du club ; celles de l omnisport (`isShared`) ; celles de
+ * la Ville où le club a un créneau (`isVilleSlot`, COLL-C2C) ; et toujours l installation
+ * ACTUELLE de la séance, même hors des listes lues (FINITIONS13-COLL).
+ * @param {{ clubFacilities?: any[] | null, cmFacilities?: any[] | null,
+ *   currentFacility?: any | null, villeFacilities?: any[] | null }} listes - Ce qui a été lu.
+ * @returns {any[]} Les installations à proposer.
+ */
+export const eventFacilityOptions = ({
+  clubFacilities = [], cmFacilities = [], currentFacility = null, villeFacilities = [],
+}) => {
+  const installations = [...(Array.isArray(clubFacilities) ? clubFacilities : [])];
+  const dejaListee = (/** @type {any} */ facility) => installations
+    .some((installation) => installation.documentId === facility?.documentId);
+
+  (Array.isArray(cmFacilities) ? cmFacilities : []).forEach((cmFacility) => {
+    if (!dejaListee(cmFacility)) installations.push({ ...cmFacility, isShared: true });
+  });
+  (Array.isArray(villeFacilities) ? villeFacilities : []).forEach((villeFacility) => {
+    if (!dejaListee(villeFacility)) installations.push({ ...villeFacility, isVilleSlot: true });
+  });
+  if (currentFacility?.documentId && !dejaListee(currentFacility)) {
+    installations.push({ ...currentFacility });
+  }
+
+  return installations;
+};
+
 // « DEMANDER » À LA VILLE : l écran du lot C3B (`ClubSlotRequest`, récolté le 02/10), avec
 // l installation déjà choisie (ses paramètres : clubId, facilityId, teamId, date, heures).
 export const ROUTE_DEMANDE_A_LA_VILLE = RouteNames.ClubSlotRequest;

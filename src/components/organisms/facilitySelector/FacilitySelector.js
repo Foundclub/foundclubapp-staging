@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { clubSlotParts, creneauDeLaSeance } from '@/domains/seasonSlot/clubInstallations';
+import { clubSlotParts, creneauDeLaSeance, eventFacilityOptions } from '@/domains/seasonSlot/clubInstallations';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -139,32 +139,14 @@ function FacilitySelector({
     || (Boolean(cmId) && (isLoadingCmFacilities || isFetchingCmFacilities))
   );
 
-  const facilities = useMemo(() => {
-    const clubFacilities = clubFacilitiesData?.data || [];
-    const cmFacilities = cmFacilitiesData?.data || [];
-
-    const allFacilities = [...clubFacilities];
-    cmFacilities.forEach((cmFacility) => {
-      if (!allFacilities.some((facility) => facility.documentId === cmFacility.documentId)) {
-        allFacilities.push({ ...cmFacility, isShared: true });
-      }
-    });
-
-    // COLL-C2C — les installations de la Ville ou le club a un creneau, apres les siennes.
-    (Array.isArray(villeFacilitiesData) ? villeFacilitiesData : []).forEach((villeFacility) => {
-      if (!allFacilities.some((facility) => facility.documentId === villeFacility.documentId)) {
-        allFacilities.push({ ...villeFacility, isVilleSlot: true });
-      }
-    });
-
-    // FINITIONS13-COLL (04/10) — l installation ACTUELLE de la seance, meme hors des listes lues.
-    if (currentFacility?.documentId
-      && !allFacilities.some((facility) => facility.documentId === currentFacility.documentId)) {
-      allFacilities.push({ ...currentFacility });
-    }
-
-    return allFacilities;
-  }, [clubFacilitiesData, cmFacilitiesData, currentFacility, villeFacilitiesData]);
+  // COLL-C2C (Ville) et FINITIONS13-COLL (installation actuelle) — FINITIONS16 4 : la regle vit
+  // dans `eventFacilityOptions`, que le formulaire du site lit aussi.
+  const facilities = useMemo(() => eventFacilityOptions({
+    clubFacilities: clubFacilitiesData?.data || [],
+    cmFacilities: cmFacilitiesData?.data || [],
+    currentFacility,
+    villeFacilities: villeFacilitiesData,
+  }), [clubFacilitiesData, cmFacilitiesData, currentFacility, villeFacilitiesData]);
   // COLL-C2C — D32 : la seance tombe-t-elle dans un creneau du club ? Alors le creneau porte la
   // place : la carte d occupation de l installation ne s applique pas (le serveur en juge pareil).
   const facilitePourCreneau = facilities.find(
