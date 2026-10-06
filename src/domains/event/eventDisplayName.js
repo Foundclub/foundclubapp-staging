@@ -149,7 +149,7 @@ export const resolveEventOpponentName = (eventLike) => {
  * @param {string} [replis] Le mot de repli quand rien ne nomme l'evenement.
  * @returns {string} Le nom affichable, jamais vide, jamais un « vs » orphelin.
  */
-export const resolveEventDisplayName = (eventLike, replis = 'Evenement') => {
+export const resolveEventDisplayName = (eventLike, replis = 'Événement') => {
   const typeName = texte(eventLike?.type?.name || eventLike?.typeName);
   const adversaire = resolveEventOpponentName(eventLike);
 

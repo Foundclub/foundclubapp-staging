@@ -154,7 +154,7 @@ describe('Y02/6 — les autres types d evenement n ont pas change de nom', () =>
   });
 
   test('un evenement sans rien du tout garde son mot de repli', () => {
-    expect(resolveEventDisplayName({})).toBe('Evenement');
+    expect(resolveEventDisplayName({})).toBe('Événement');
     expect(resolveEventDisplayName({}, 'Événement')).toBe('Événement');
   });
 });

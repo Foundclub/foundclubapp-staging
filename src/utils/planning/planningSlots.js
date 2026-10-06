@@ -363,7 +363,7 @@ export const resolvePlanningCardContent = (item, { profile = 'default' } = {}) =
 
   const defaultPrimaryLabel = typeLabel || title || i18next.t(
     'planningSlots.eventFallback',
-    'Evenement',
+    'Événement',
   );
   const defaultContextLabel = (() => {
     const secondaryLabel = getPlanningItemSecondaryLabel(item);

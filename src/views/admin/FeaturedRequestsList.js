@@ -125,7 +125,7 @@ function FeaturedRequestsList() {
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
           {item?.event?.name || item?.event?.type?.name || t(
             'featuredRequestsList.eventFallback',
-            'Evenement',
+            'Événement',
           )}
         </Text>
         <Text style={[Fonts.p2, Fonts.primary100]}>

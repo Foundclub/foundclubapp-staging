@@ -1105,7 +1105,7 @@ function AdminDashboard() {
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {item?.name || t('adminDashboard.firstEvent.defaultName', 'Evenement')}
+              {item?.name || t('adminDashboard.firstEvent.defaultName', 'Événement')}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
               {item?.team?.name || t('adminDashboard.unknownTeam', 'Équipe inconnue')}

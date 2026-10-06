@@ -926,7 +926,7 @@ function EventEdit({ navigation, route }) {
 
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                  {t('eventEdit.advancedTeamInvitations', 'Invitations d équipes avancées')}
+                  {t('eventEdit.advancedTeamInvitations', 'Invitations d’équipes avancées')}
                 </div>
                 <EventTeamAudiencesEditor
                   availableTeams={clubTeams}

@@ -97,7 +97,7 @@ function AdWizardCoachProfile({ navigation }) {
       stepIndex={getAdWizardNeedsStepIndex(state)}
       subtitle={t(
         'adWizardCoachProfile.subtitle',
-        'Définis le rôle encadrement recherche et le cadre de la mission.',
+        'Définis le rôle d’encadrement recherché et le cadre de la mission.',
       )}
       title={t('adWizardCoachProfile.title', "Profil d'entraîneur recherché")}
     >
@@ -185,7 +185,7 @@ function AdWizardCoachProfile({ navigation }) {
         }]}
         >
           <InputStepper
-            label={t('adWizardCoachProfile.quantityLabel', 'Nombre de profils recherches')}
+            label={t('adWizardCoachProfile.quantityLabel', 'Nombre de profils recherchés')}
             max={10}
             min={1}
             onDecrement={() => dispatch({ payload: Math.max(1, state.coachQuantity - 1), type: 'SET_COACH_QUANTITY' })}

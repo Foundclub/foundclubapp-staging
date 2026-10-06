@@ -1574,12 +1574,12 @@ export default {
     experienceLabel: 'Expérience attendue *',
     experiencePlaceholder: "Sélectionner un niveau d'expérience",
     next: 'Suivant',
-    quantityLabel: 'Nombre de profils recherches',
+    quantityLabel: 'Nombre de profils recherchés',
     roleLabel: 'Rôle principal *',
     roleOtherLabel: 'Précise le rôle',
     roleOtherPlaceholder: 'Ex. Responsable gardiens, coordinateur sportif...',
     rolePlaceholder: 'Sélectionner un rôle',
-    subtitle: 'Définis le rôle encadrement recherche et le cadre de la mission.',
+    subtitle: 'Définis le rôle d’encadrement recherché et le cadre de la mission.',
     title: "Profil d'entraîneur recherché",
   },
   adWizardDescription: {
@@ -7690,7 +7690,7 @@ export default {
     chooseWhetherYouCreateYour: 'Choisis si tu créés ton équipe éphémère ou si tu rejoins une équipe déjà inscrite.',
     chosenPosition: 'Poste choisi : {{position}}.',
     chosenTeam: 'Équipe choisie : {{teamName}}.',
-    closeTheTrainingSession: 'Fermer l entraînement',
+    closeTheTrainingSession: 'Fermer l’entraînement',
     coachRating: 'Note coach',
     coachSIndividualFeedback: 'Retour individuel du coach',
     competitionInDraft: 'Compétition en brouillon',
@@ -8091,7 +8091,7 @@ export default {
     openTeams: 'Équipes ouvertes',
     openTheCalendar: 'Ouvrir le calendrier',
     openTheTeam: 'Ouvrir l équipe',
-    openTheTrainingSession: 'Ouvrir l entraînement',
+    openTheTrainingSession: 'Ouvrir l’entraînement',
     // eslint-disable-next-line max-len
     openTheTrainingSessionTo: 'Ouvre l’entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.',
     openTraining: {
@@ -8485,7 +8485,7 @@ export default {
       save: 'Enregistrer',
     },
     addressOrVenue: 'Adresse ou lieu',
-    advancedTeamInvitations: 'Invitations d équipes avancées',
+    advancedTeamInvitations: 'Invitations d’équipes avancées',
     automatic: 'Automatique',
     cancel: 'Annuler',
     capacity: 'Capacité',
@@ -13990,7 +13990,7 @@ export default {
       days: 'Il y a {{value}} j',
       hours: 'Il y a {{value}} h',
       minutes: 'Il y a {{value}} min',
-      now: "A l'instant",
+      now: 'À l’instant',
     },
   },
   notifications: {
@@ -15831,7 +15831,7 @@ export default {
       missionsPlaceholder: "Cadre, responsabilités, projet d'équipe...",
       position: 'Poste',
       positionPlaceholder: 'Ex: Attaquant, Gardien...',
-      quantityCoach: 'Nombre de profils recherches',
+      quantityCoach: 'Nombre de profils recherchés',
       quantityPlayers: 'Nombre de joueurs recherches',
       section: 'Section',
       sectionPlaceholder: 'Sélectionner une section',
@@ -15914,13 +15914,13 @@ export default {
       one: '1 profil',
     },
     empty: {
-      later: "Les profils ouverts a un club apparaîtront ici des qu'ils seront disponibles.",
+      later: 'Les profils ouverts à un club apparaîtront ici dès qu’ils seront disponibles.',
       title: 'Aucun profil visible pour cette recherche.',
       widen: "Essaie d'elargir les filtres ou de simplifier la recherche.",
     },
     header: {
       // eslint-disable-next-line max-len
-      default: 'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.',
+      default: 'Retrouve ici les joueurs et joueuses ouverts à un club pour construire ton recrutement.',
       filtered: 'Les filtres ci-dessous ciblent uniquement les profils ouverts à ton recrutement.',
       // eslint-disable-next-line max-len
       searching: 'Recherche en cours pour "{{search}}". Les profils les plus pertinents remontent en premier.',

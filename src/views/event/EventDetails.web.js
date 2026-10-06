@@ -571,7 +571,7 @@ function EventDetails({ navigation, route }) {
   // ⚠️ Les deux ecrans doivent dire la MEME chose : c'est ce nom que porte la
   // carte de compo envoyee dans le tchat, lisible depuis les deux.
   const compositionEventLabel = useMemo(
-    () => resolveEventDisplayName(event, 'Evenement'),
+    () => resolveEventDisplayName(event, 'Événement'),
     [event],
   );
 
@@ -890,7 +890,7 @@ function EventDetails({ navigation, route }) {
   const headerClubName = String(event?.team?.club?.name || event?.club?.name || '').trim();
   const headerTitle = isMatchEvent && headerClubName && matchOpponentName
     ? `${headerClubName} — ${matchOpponentName}`
-    : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Evenement');
+    : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Événement');
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -1480,7 +1480,7 @@ function EventDetails({ navigation, route }) {
     setIsSharing(true);
     try {
       const shareMessage = buildShareMessageWithUrl({
-        intro: event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Evenement'),
+        intro: event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Événement'),
         linkLabel: t('eventDetails.seeTheFoundclubPage', 'Voir la fiche FoundClub'),
         url: eventLink,
       });
@@ -1987,7 +1987,7 @@ function EventDetails({ navigation, route }) {
                       {t('eventDetails.breadcrumb.planning', 'Planning')}
                     </button>
                     <span aria-hidden="true">›</span>
-                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}</span>
+                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Événement')}</span>
                   </nav>
                 ) : (
                   <button
@@ -2142,7 +2142,7 @@ function EventDetails({ navigation, route }) {
                         color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
                       }}
                       >
-                        {event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}
+                        {event?.type?.name || t('eventDetails.eventFallback', 'Événement')}
                       </span>
                     ) : null}
                     <h1 style={{
@@ -2648,7 +2648,7 @@ function EventDetails({ navigation, route }) {
                     >
                       {updateTrainingMutation.isPending
                         ? t('eventDetails.saving', 'Enregistrement...')
-                        : (trainingOpenConfig.isOpenTraining ? t('eventDetails.closeTheTrainingSession', 'Fermer l entraînement') : t('eventDetails.openTheTrainingSession', 'Ouvrir l entraînement'))}
+                        : (trainingOpenConfig.isOpenTraining ? t('eventDetails.closeTheTrainingSession', 'Fermer l’entraînement') : t('eventDetails.openTheTrainingSession', 'Ouvrir l’entraînement'))}
                     </button>
                   </div>
 

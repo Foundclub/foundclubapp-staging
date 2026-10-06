@@ -191,7 +191,7 @@ const buildEventShareComposition = (event) => {
   return {
     eventDate: event?.date || null,
     eventDocumentId,
-    eventName: event?.name || 'Evenement',
+    eventName: event?.name || 'Événement',
     eventPreview: event,
     locationLabel: event?.location?.label || event?.facility?.address || event?.facility?.name || '',
     teamName: event?.team?.name || '',
@@ -1456,7 +1456,7 @@ function Conversation({ navigation, route }) {
       return (
         <div style={{ display: 'grid', gap: 10 }}>
           <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
-            {composition?.eventName || 'Evenement'}
+            {composition?.eventName || 'Événement'}
           </div>
           <div style={{ color: mutedTextColor, display: 'grid', fontSize: 13, gap: 4 }}>
             <span>{formatDay(composition?.eventDate)}</span>
@@ -2677,7 +2677,7 @@ function Conversation({ navigation, route }) {
                   }}
                   type="button"
                 >
-                  <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{event?.name || 'Evenement'}</span>
+                  <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{event?.name || 'Événement'}</span>
                   <span style={{ color: mutedTextColor, fontSize: 12 }}>
                     {formatDay(event?.date)}
                     {' '}

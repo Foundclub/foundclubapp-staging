@@ -2777,7 +2777,7 @@ function Conversation({ navigation, route }) {
       facility: mergeNamedEventEntity(previewEvent?.facility, payloadEvent?.facility),
       location: preferEventValue(payloadEvent?.location, previewEvent?.location),
       locationDetails: preferEventValue(payloadEvent?.locationDetails, previewEvent?.locationDetails),
-      name: preferEventValue(payloadEvent?.name, previewEvent?.name || 'Evenement'),
+      name: preferEventValue(payloadEvent?.name, previewEvent?.name || 'Événement'),
       team: (!hasMeaningfulEventValue(previewTeam) && !hasMeaningfulEventValue(payloadTeam))
         ? null
         : {
@@ -2791,7 +2791,7 @@ function Conversation({ navigation, route }) {
           section: preferEventValue(payloadTeam?.section, previewTeam?.section),
         },
       type: mergeNamedEventEntity(previewEvent?.type, payloadEvent?.type)
-        || { name: previewEvent?.type?.name || payloadEvent?.type?.name || 'Evenement' },
+        || { name: previewEvent?.type?.name || payloadEvent?.type?.name || 'Événement' },
     };
   }, [
     hasMeaningfulEventValue,
@@ -2825,9 +2825,9 @@ function Conversation({ navigation, route }) {
         date: composition?.eventDate || null,
         documentId: eventDocumentId,
         locationDetails: composition?.locationLabel || '',
-        name: composition?.eventName || 'Evenement',
+        name: composition?.eventName || 'Événement',
         team: composition?.teamName ? { name: composition?.teamName } : null,
-        type: { name: 'Evenement' },
+        type: { name: 'Événement' },
       }
       : null;
 

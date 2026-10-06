@@ -97,7 +97,7 @@ const getStatusLabel = (value) => {
 
 const getSourceLabel = (value) => (value === 'message' ? 'Message' : i18next.t(
   'adminReports.source.event',
-  'Evenement',
+  'Événement',
 ));
 
 /**

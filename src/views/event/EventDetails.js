@@ -332,7 +332,7 @@ function TrainingOpenBottomSheet({
       <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {t('eventDetails.openTheTrainingSession', 'Ouvrir l entraînement')}
+            {t('eventDetails.openTheTrainingSession', 'Ouvrir l’entraînement')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t(
@@ -3738,7 +3738,7 @@ function EventDetails({ navigation, route }) {
       return preferredLabel.trim();
     }
 
-    return event?.type?.name || t('eventDetails.eventFallback', 'Evenement');
+    return event?.type?.name || t('eventDetails.eventFallback', 'Événement');
   }, [event, eventDescriptionText, t]);
 
   const {
