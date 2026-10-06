@@ -21,6 +21,7 @@
     "android:repair:metro": "node ./scripts/android/repair-emulator-metro.js com.foundclub.staging",
     "ios:staging": "cross-env APP_ENV=staging react-native run-ios --scheme 'FoundClub Staging'",
     "test": "jest",
+    "temoins:horloge": "node ./scripts/temoins-horloge/rejouer.js",
     "type-check": "npx -p typescript tsc --allowJs --noEmit -p jsconfig.json",
     "type-check:report": "node ./scripts/typecheck-report.js",
     "type-check:no-regression": "node ./scripts/typecheck-no-regression.js",
