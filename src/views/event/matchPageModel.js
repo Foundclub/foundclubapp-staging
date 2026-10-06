@@ -1,6 +1,8 @@
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { lignesDeLaFeuilleQuiComptent } from '@/views/matchStats/feuilleDeMatchModel';
+
 import { buildMatchEncartLines } from './matchEncartLines';
 
 /**
@@ -277,12 +279,14 @@ export const listMissingResponders = (playerResponses) => {
  *   coachFirstname?: string | null, event: any, isFinal: boolean, isFinished: boolean,
  *   isViewerFromInvitedTeam: boolean, locale?: string,
  *   onNameOpponent?: (() => void) | null, opponentName?: string, playerLines?: any,
+ *   availablePlayers?: any, playerResponses?: any,
  *   scoreState?: any, sport?: string | null, startTimeLabel?: string | null, t: Traduire,
  *   viewerDocumentId?: string | null,
  * }} params - Ce que l'écran sait du match et du lecteur.
  * @returns {any} Les lignes de l'encart, l'adversaire, le verdict et le geste « Nommer ».
  */
 export const buildMatchHeaderScoreSummary = ({
+  availablePlayers = null,
   canEdit,
   canManage,
   canSeeDetails,
@@ -295,6 +299,7 @@ export const buildMatchHeaderScoreSummary = ({
   onNameOpponent = null,
   opponentName = '',
   playerLines = null,
+  playerResponses = null,
   scoreState = null,
   sport = null,
   startTimeLabel = null,
@@ -350,7 +355,15 @@ export const buildMatchHeaderScoreSummary = ({
     coachFirstname,
     isFinished,
     locale,
-    publishedLines: isFinal && sport !== 'basketball' ? playerLines || null : null,
+    // FINITIONS16 · POINT 16 (T15) — les lignes telles que la FEUILLE les montre : une ligne
+    // vide cede la place aux chiffres que le joueur a envoyes (`chiffresQuiComptent`).
+    publishedLines: isFinal && sport !== 'basketball' && Array.isArray(playerLines)
+      ? lignesDeLaFeuilleQuiComptent({
+        joueurs: availablePlayers,
+        lignes: playerLines,
+        reponses: playerResponses,
+      })
+      : null,
     recordedAt: scoreState?.available
       ? scoreState?.recordedAt || null
       : storedMatchResult?.savedAt || null,

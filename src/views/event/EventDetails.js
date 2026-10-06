@@ -3949,6 +3949,8 @@ function EventDetails({ navigation, route }) {
     if (!isMatchEvent) return null;
 
     return buildMatchHeaderScoreSummary({
+      // FINITIONS16 16 : les chiffres envoyes par les joueurs, comme la feuille.
+      availablePlayers: matchStatsPayload?.availablePlayers,
       canEdit,
       canManage: canManageMatchStats,
       // 🔒 L'équipe et son encadrement ; jamais un visiteur (mineurs en U15). 👪 Et le parent d'un
@@ -3965,6 +3967,7 @@ function EventDetails({ navigation, route }) {
       onNameOpponent: handleOpenOpponentSheet,
       opponentName: matchOpponentName,
       playerLines: matchStatsReport?.playerLines,
+      playerResponses: matchStatsPayload?.playerResponses,
       scoreState: matchStatsPayload?.score || null,
       sport: matchStatsPayload?.sport,
       startTimeLabel: matchStartTimeLabel,
@@ -3985,7 +3988,9 @@ function EventDetails({ navigation, route }) {
     isViewerFromInvitedTeam,
     matchOpponentName,
     matchStartTimeLabel,
+    matchStatsPayload?.availablePlayers,
     matchStatsPayload?.permissions?.actorRole,
+    matchStatsPayload?.playerResponses,
     matchStatsPayload?.score,
     matchStatsPayload?.sport,
     matchStatsReport?.playerLines,
