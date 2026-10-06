@@ -50,6 +50,25 @@ function DatePickerInput({
   // Format the date from Date to DD/MM/YYYY string
   const formatDate = (date) => format(date, 'dd/MM/yyyy');
 
+  // FINITIONS16 · POINT 3 (T15) — le champ du navigateur parle AAAA-MM-JJ, en date LOCALE
+  // (`format`, jamais `toISOString` : minuit a Paris est la veille en UTC).
+  const formatInputDate = (/** @type {Date} */ date) => format(date, 'yyyy-MM-dd');
+  const handleWebChange = (/** @type {{ currentTarget?: { value?: string } }} */ event) => {
+    const saisie = event?.currentTarget?.value || '';
+    if (!saisie) {
+      onChange('');
+      return;
+    }
+    const parsed = parse(saisie, 'yyyy-MM-dd', new Date());
+    if (isValid(parsed)) {
+      onChange(formatDate(parsed));
+    }
+  };
+  const getWebInputValue = () => {
+    const parsed = value ? parse(value, 'dd/MM/yyyy', new Date()) : null;
+    return parsed && isValid(parsed) ? formatInputDate(parsed) : '';
+  };
+
   // Format for display (more readable)
   const formatDisplayDate = (date) => format(date, 'EEEE d MMMM yyyy', { locale: fr });
 
@@ -85,23 +104,57 @@ function DatePickerInput({
           {label}
         </Text>
       )}
-      <TouchableOpacity
-        onPress={() => setShowPicker(true)}
-        style={[
+      {/* FINITIONS16 · POINT 3 (T15) — SUR LE SITE, LE CHAMP DE DATE DU NAVIGATEUR. Le
+          calendrier ne se montait que sur iOS et Android : l'appui n'ouvrait rien, et « Fermer
+          une installation » comme « Demander un creneau » etaient impossibles depuis un
+          ordinateur. Meme boite, meme valeur JJ/MM/AAAA rendue aux ecrans ; la police vient du
+          site (`input { font: inherit }`, web/src/index.css). */}
+      {Platform.OS === 'web' ? (
+        <View style={[
           ApplicationStyle.borderRadius12,
           ApplicationStyle.backgroundColor.primary700,
           Spaces.padding[16],
           error && { borderColor: Colors.error500, borderWidth: 1 },
         ]}
-      >
-        <Text style={[
-          Fonts.p1,
-          value ? Fonts.neutral00 : { color: Colors.neutral300 },
-        ]}
         >
-          {getDisplayValue()}
-        </Text>
-      </TouchableOpacity>
+          <input
+            aria-label={label || placeholder}
+            max={maximumDate ? formatInputDate(maximumDate) : undefined}
+            min={minimumDate ? formatInputDate(minimumDate) : undefined}
+            onChange={handleWebChange}
+            style={{
+              background: 'transparent',
+              border: 0,
+              color: Colors.neutral00,
+              colorScheme: 'dark',
+              fontSize: 16,
+              outline: 'none',
+              padding: 0,
+              width: '100%',
+            }}
+            type="date"
+            value={getWebInputValue()}
+          />
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={() => setShowPicker(true)}
+          style={[
+            ApplicationStyle.borderRadius12,
+            ApplicationStyle.backgroundColor.primary700,
+            Spaces.padding[16],
+            error && { borderColor: Colors.error500, borderWidth: 1 },
+          ]}
+        >
+          <Text style={[
+            Fonts.p1,
+            value ? Fonts.neutral00 : { color: Colors.neutral300 },
+          ]}
+          >
+            {getDisplayValue()}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {error && (
         <Text style={[Fonts.p3, { color: Colors.error500 }]}>

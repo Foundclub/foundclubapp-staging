@@ -138,6 +138,36 @@ const identitySchema = Joi.object({ ...nameFields, ...birthdateFields }).custom(
 const nameOnlySchema = Joi.object(nameFields);
 
 /**
+ * FINITIONS16 · POINT 2 (T15) — LA DATE DE NAISSANCE, SANS COMPTER SUR JOI.
+ *
+ * Le site ne charge pas la vraie bibliotheque Joi : `web/vite.config.ts` la remplace par
+ * `web/src/shims/joi.ts`, dont chaque schema dit « valide ». Sur le site, le resolveur
+ * ci-dessus laissait donc partir « Continuer » sans date (compte « Recette Age » de la T15).
+ * Cette fonction redit les memes regles que `birthdateFields` + `isRealDate` (deux chiffres,
+ * deux chiffres, quatre chiffres de 1920 a cette annee, une date qui existe) et l'envoi la lit
+ * avant de partir, sur le telephone comme sur le site.
+ * @param {{ day?: string, month?: string, year?: string }} saisie - Les trois champs.
+ * @returns {string | null} « AAAA-MM-JJ », ou null si la date manque ou n'existe pas.
+ */
+const dateDeNaissanceSaisie = ({ day = '', month = '', year = '' }) => {
+  if (!/^\d{2}$/.test(day) || !/^\d{2}$/.test(month) || !/^\d{4}$/.test(year)) return null;
+  const jour = Number(day);
+  const mois = Number(month);
+  const annee = Number(year);
+  if (annee < 1920 || annee > new Date().getFullYear()) return null;
+  const date = new Date(Date.UTC(annee, mois - 1, jour));
+  if (
+    date.getUTCFullYear() !== annee
+    || date.getUTCMonth() !== mois - 1
+    || date.getUTCDate() !== jour
+  ) {
+    return null;
+  }
+
+  return `${year}-${month}-${day}`;
+};
+
+/**
  * Ecran d'identite de l'inscription : prenom, nom, et date de naissance quand le
  * parcours du role la demande.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
@@ -248,6 +278,7 @@ function UserName({ navigation }) {
     formState: { errors: formErrors },
     handleSubmit,
     reset,
+    setError,
     setFocus,
   } = useForm({
     defaultValues: {
@@ -317,12 +348,27 @@ function UserName({ navigation }) {
   const handleFormSubmit = (data) => {
     if (!userData) return;
 
+    // FINITIONS16 · POINT 2 — sur le site, Joi ne bloque rien (`dateDeNaissanceSaisie`) :
+    // l'envoi redit les champs obligatoires lui-meme. Une erreur posee grise le bouton ET
+    // affiche le message (invariant D66), et s'efface des que le champ est ressaisi.
+    const birthdate = collectsBirthdate
+      ? dateDeNaissanceSaisie({ day: data.day, month: data.month, year: data.year })
+      : null;
+    /** @type {('firstname' | 'lastname' | 'day' | 'month' | 'year')[]} */
+    const champsManquants = [
+      ...(data.firstname ? [] : /** @type {const} */ (['firstname'])),
+      ...(data.lastname ? [] : /** @type {const} */ (['lastname'])),
+      ...(collectsBirthdate && !birthdate ? /** @type {const} */ (['day', 'month', 'year']) : []),
+    ];
+    if (champsManquants.length > 0) {
+      champsManquants.forEach((champ) => setError(champ, { type: 'required' }));
+      return;
+    }
+
     updateUserMutation.mutate({
       firstname: data.firstname,
       lastname: data.lastname,
-      ...(collectsBirthdate && data.year && data.month && data.day
-        ? { birthdate: `${data.year}-${data.month}-${data.day}` }
-        : {}),
+      ...(birthdate ? { birthdate } : {}),
     });
   };
 

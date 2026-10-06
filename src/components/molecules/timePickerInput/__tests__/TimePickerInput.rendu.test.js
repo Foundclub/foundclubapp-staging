@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TimePickerInput from '../TimePickerInput';
@@ -256,5 +257,54 @@ describe('D19 — le selecteur d heure, etat du 2026-08-07', () => {
     ).pop();
     expect(styleAplati(titre.props.style).textAlign).toBe('center');
     expect(styleAplati(titre.props.style).flex).toBe(1);
+  });
+});
+
+// FINITIONS16 · POINT 6 (tranche `heure oui`, 06/10) — LE SELECTEUR D'HEURE ETAIT INERTE SUR LE
+// SITE, comme celui des dates (point 3) : la roue ne se montait que sur iOS et Android. 11 champs
+// du site (assistant de creation d'evenement, creneaux et conditions de match amical, tournoi).
+// Sur le site : un vrai champ d'heure du navigateur. ROUGE avant.
+describe('FINITIONS16 6 — sur le site, un vrai champ d heure du navigateur', () => {
+  const osDOrigine = Platform.OS;
+  const champDHeure = () => arbre.root.findAll(
+    (/** @type {any} */ noeud) => noeud.type === 'input' && noeud.props.type === 'time',
+  );
+
+  beforeEach(() => {
+    Platform.OS = 'web';
+  });
+
+  afterEach(() => {
+    Platform.OS = osDOrigine;
+  });
+
+  test('🔴 le champ d heure est la, sans appui prealable, sur l heure saisie', () => {
+    afficherLeChamp();
+
+    expect(champDHeure()).toHaveLength(1);
+    expect(champDHeure()[0].props.value).toBe('09:30');
+    expect(mockRoues).toHaveLength(0);
+  });
+
+  test('🔴 sans valeur, le champ est vide (le navigateur montre --:--)', () => {
+    afficherLeChamp({ value: '' });
+
+    expect(champDHeure()[0].props.value).toBe('');
+  });
+
+  test('🔴 un choix rend HH:mm, comme la roue ; vider rend une chaine vide', () => {
+    afficherLeChamp();
+
+    act(() => { champDHeure()[0].props.onChange({ currentTarget: { value: '19:05' } }); });
+    act(() => { champDHeure()[0].props.onChange({ currentTarget: { value: '' } }); });
+
+    expect(heuresRendues).toEqual(['19:05', '']);
+  });
+
+  test('🔴 le champ porte le libelle (lecteur d ecran) ; le libelle reste visible', () => {
+    const { textes } = afficherLeChamp();
+
+    expect(champDHeure()[0].props['aria-label']).toBe('Heure de début');
+    expect(textes).toContain('Heure de début');
   });
 });

@@ -13,6 +13,8 @@ import {
   getBookableFacilities,
   getClubCollectiviteFacilities,
   getClubFacilityContext,
+  getClubVilleFacilitiesWithSlots,
+  getCMFacilities,
   getCollectiviteRequests,
   getFacilities,
   getFacility,
@@ -71,6 +73,34 @@ export const useGetFacilities = (clubId, options = {}) => useQuery({
   queryFn: () => getFacilities(clubId),
   queryKey: ['facilities', clubId],
   staleTime: 1000 * 60 * 5,
+  ...options,
+});
+
+/**
+ * FINITIONS16 · POINT 4 — les installations de l omnisport du club, avec la MEME clef de cache
+ * que `FacilitySelector` (telephone) : le site et le telephone partagent la lecture.
+ * @param {string} cmId - L omnisport.
+ * @param {object} [options] - Options de react-query.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La lecture.
+ */
+export const useGetCMFacilities = (cmId, options = {}) => useQuery({
+  enabled: !!cmId,
+  queryFn: () => getCMFacilities(cmId),
+  queryKey: ['cm-facilities', cmId],
+  ...options,
+});
+
+/**
+ * FINITIONS16 · POINT 4 — les installations de la Ville ou le club a un creneau (COLL-C2C), avec
+ * la MEME clef de cache que `FacilitySelector` (telephone).
+ * @param {string} clubId - Le club.
+ * @param {object} [options] - Options de react-query.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La lecture.
+ */
+export const useGetClubVilleFacilitiesWithSlots = (clubId, options = {}) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: () => getClubVilleFacilitiesWithSlots(clubId),
+  queryKey: ['facilities-ville-creneaux', clubId],
   ...options,
 });
 

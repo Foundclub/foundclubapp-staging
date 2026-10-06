@@ -24,6 +24,7 @@ import {
 import {
   resolveClientResponderDecision,
   resolveClientSourceTeamForUser,
+  resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -482,7 +483,14 @@ function EventDetails({ navigation, route }) {
     myAttendanceStatus: monPointage?.attendanceStatus,
   });
   const reponsesFermeesAuMembre = isConvenedMember && !isRsvpEnabled(event);
+  // FINITIONS16 · POINT 1 (T15) — la regle du telephone : un compte connecte qui n est ni
+  // joueur ni membre d une equipe conviee (Papa Test, role Parent) n a rien a repondre.
+  const rienARepondre = resolveParticipationOffer({
+    isConvenedMember,
+    user: isSignedIn ? userData : null,
+  }) === 'none';
   const afficherParticiper = !canEdit
+    && !rienARepondre
     && !peutPasserPresentApresCoup
     && !reponsesFermeesAuMembre
     && !participationState?.isParticipating
@@ -1367,6 +1375,13 @@ function EventDetails({ navigation, route }) {
   const statusDetailLabel = (isSignedIn
     ? participationLabel
     : t('eventDetails.signInToAnswerThis', 'Connecte-toi pour répondre à cet événement.'));
+  // FINITIONS16 · POINT 7 (T15) — Papa Test lisait « Mon statut — Aucune réponse » : il n'a
+  // rien a repondre (`rienARepondre`, point 1) et aucune reponse a lui. Aucune planche ne lui
+  // montre de statut, le telephone n'en affiche pas : l'encart se tait. Une reponse qu'il aurait
+  // quand meme (demande, participation, absence) reste dite.
+  const masquerMonStatut = rienARepondre && !['accepted', 'missing', 'pending'].includes(
+    String(participationState?.effectiveStatus || '').trim().toLowerCase(),
+  );
 
   const handleJoin = useCallback(async () => {
     setActionError('');
@@ -2196,10 +2211,14 @@ function EventDetails({ navigation, route }) {
                   padding: isTablet ? 32 : 22,
                 }}
               >
-                <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>{statusHeadingLabel}</div>
-                <div style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.5 }}>
-                  {statusDetailLabel}
-                </div>
+                {masquerMonStatut ? null : (
+                  <>
+                    <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>{statusHeadingLabel}</div>
+                    <div style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.5 }}>
+                      {statusDetailLabel}
+                    </div>
+                  </>
+                )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {peutPasserPresentApresCoup ? (
                     <div style={{ display: 'grid', gap: 8 }}>

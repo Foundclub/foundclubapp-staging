@@ -535,3 +535,59 @@ describe('POINTAGE — le joueur convie sur le site', () => {
     expect(buttonWithText(root, 'Je passe en présent')).toBeUndefined();
   });
 });
+
+// ==========================================================================
+// FINITIONS16 · POINT 1 (tournee T15, photo SITE_P2) — PAPA TEST, SUR LE SITE, VOYAIT
+// « Participer » sur la page de l entrainement de son fils. Le telephone ne le montre plus
+// depuis FINITIONS13-STATS (`EventAnswerButtonsFIN13`) : un compte connecte qui n est ni
+// joueur ni membre d une equipe conviee n a RIEN a repondre. Meme regle, une seule source :
+// `resolveParticipationOffer` (domains/participation/participationFlow.js). ROUGE avant.
+// ==========================================================================
+describe('FINITIONS16 1 — le parent, sur la page de l evenement de son enfant', () => {
+  const PAPA = {
+    documentId: 'compte-papa', firstname: 'Papa', lastname: 'Test', role: { name: 'Parent' },
+  };
+  const JOUEUR_DEHORS = {
+    documentId: 'joueur-dehors', firstname: 'Ines', lastname: 'Rocher', role: { name: 'Joueur' },
+  };
+  const monterEn = (/** @type {any} */ userData) => mountScreen({
+    auth: { canManageEvent: () => false, userData },
+    event: buildEvent({ missings: [], participations: [] }),
+  });
+
+  test('🔴 Papa Test (role Parent) : aucun « Participer »', () => {
+    const root = monterEn(PAPA);
+
+    expect(buttonWithText(root, 'Participer')).toBeUndefined();
+    expect(buttonWithText(root, 'Se connecter')).toBeUndefined();
+  });
+
+  test('🔒 un joueur hors de l equipe garde « Participer » (il demande sa place)', () => {
+    const root = monterEn(JOUEUR_DEHORS);
+
+    expect(buttonWithText(root, 'Participer')).toBeDefined();
+  });
+
+  // FINITIONS16 · POINT 7 (T15) — Papa Test lisait encore l encart « Mon statut — Aucune
+  // réponse » : il n a rien a repondre, aucune planche ne lui montre un statut. Le telephone ne
+  // l affiche pas (photo P06 de la T15). ROUGE avant.
+  test('🔴 Papa Test ne lit pas « Mon statut — Aucune réponse »', () => {
+    monterEn(PAPA);
+
+    expect(screenText()).not.toContain('Mon statut');
+    expect(screenText()).not.toContain('Aucune réponse');
+  });
+
+  test('🔒 le joueur hors de l equipe garde « Mon statut — Aucune réponse »', () => {
+    monterEn(JOUEUR_DEHORS);
+
+    expect(screenText()).toContain('Mon statut');
+    expect(screenText()).toContain('Aucune réponse');
+  });
+
+  test('🔒 le visiteur sans compte garde « Rejoindre cet événement »', () => {
+    mountAsVisitor();
+
+    expect(screenText()).toContain('Rejoindre cet événement');
+  });
+});
