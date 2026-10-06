@@ -798,6 +798,11 @@ function AdminManagerRequests() {
   const segments = (
     <SegmentedControl
       onChange={(/** @type {string} */ valeur) => {
+        // FINITIONS18 · POINT 7 (T15, T16) — au téléphone, « Traitées » « ne réagit pas » (2 appuis),
+        // alors que la logique est juste (témoins) et que le même contrôle marche sur « Demandes
+        // de la Ville ». Cette ligne dit dans logcat si l'appui ARRIVE au code.
+        // ponytail: diagnostic ; à retirer avec le correctif.
+        console.info(`[CONSOLE] ONGLET_GESTIONNAIRES valeur=${valeur} avant=${onglet}`);
         setOnglet(valeur === 'decided' ? 'decided' : 'pending');
         setOuverteId(null);
       }}
