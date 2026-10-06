@@ -194,8 +194,8 @@ export default {
       comment: 'Commentaire:',
       initialSearch: 'Recherche initiale:',
       name: 'Nom:',
-      phone: 'Telephone:',
-      screen: 'Ecran:',
+      phone: 'Téléphone:',
+      screen: 'Écran:',
       target: 'Cible:',
     },
     forClub: 'Pour le club :',
@@ -309,8 +309,8 @@ export default {
       name: 'Nom',
       parentMultisport: 'Multisport parent',
       partnership: 'Partenariat',
-      phone: 'Telephone',
-      reservation: 'Reservation',
+      phone: 'Téléphone',
+      reservation: 'Réservation',
       // eslint-disable-next-line max-len
       subscriptionsNote: 'Les abonnements, entitlements et capacités Team sont pilotes depuis les opérations abonnements, plus depuis la fiche club.',
       updatedAt: 'Dernière mise à jour',
@@ -519,7 +519,7 @@ export default {
       title: 'Aucune demande en attente',
     },
     managerToContact: 'Dirigeant à contacter',
-    phone: 'Telephone:',
+    phone: 'Téléphone:',
     process: 'Traiter',
     requester: 'Demandeur',
     screenTitle: 'Clubs à onboarder',
@@ -589,7 +589,7 @@ export default {
     // eslint-disable-next-line max-len
     hint: 'Tu pourras toujours revenir dans la fiche club pour compléter ou corriger ces informations.',
     next: 'Suivant',
-    phoneLabel: 'Telephone',
+    phoneLabel: 'Téléphone',
     // eslint-disable-next-line max-len
     subtitle: 'Ajoute un email et un numéro de téléphone pour que la fiche club soit exploitable des la création. Ces champs restent optionnels.',
     title: 'Contact principal',
@@ -859,7 +859,7 @@ export default {
     },
     close: 'Fermer',
     clubMissing: 'Club non renseigne',
-    create: 'Creer',
+    create: 'Créer',
     detectionQueue: {
       // eslint-disable-next-line max-len
       description_one: '{{count}} détection dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
@@ -1003,8 +1003,8 @@ export default {
       rejectedBadge: 'Rejetee',
       save: 'Enregistrer',
       title: 'Traiter la vérification',
-      verified: 'Verifiee',
-      verifiedBadge: 'Verifiee',
+      verified: 'Vérifiée',
+      verifiedBadge: 'Vérifiée',
     },
     saving: 'Enregistrement...',
     sections: {
@@ -1116,7 +1116,7 @@ export default {
       title: 'Actions de test',
     },
     // eslint-disable-next-line max-len
-    description: "Verifie la configuration push, la queue d'envoi et les abonnements multi-comptes sans exposer les secrets.",
+    description: "Vérifie la configuration push, la queue d'envoi et les abonnements multi-comptes sans exposer les secrets.",
     failures: {
       empty: 'Aucun échec récent.',
       noDetail: 'Sans erreur détaillée',
@@ -1499,7 +1499,7 @@ export default {
       title: 'Aucun utilisateur trouvé',
       trySearch: 'Essaie une autre recherche',
     },
-    filterByRole: 'Filtrer sur le role {{label}}',
+    filterByRole: 'Filtrer sur le rôle {{label}}',
     openProfile: 'Ouvrir la fiche de {{name}}',
     roles: {
       clubManager: 'Dirigeant',
@@ -1744,7 +1744,7 @@ export default {
       players_other: '{{count}} joueurs',
       positions_one: '{{count}} poste',
       positions_other: '{{count}} postes',
-      roles_one: '{{count}} role',
+      roles_one: '{{count}} rôle',
       roles_other: '{{count}} roles',
     },
     incomplete: {
@@ -1785,7 +1785,7 @@ export default {
       profile: 'Profil',
       progress: '{{done}} / 4 informations clés prêtes à publier',
       ready: 'Prêt à publier',
-      role: 'Role',
+      role: 'Rôle',
       team: 'Équipe',
       title: "Vue d'ensemble",
     },
@@ -2202,7 +2202,7 @@ export default {
   authWeb: {
     errors: {
       browserRequired: 'Le navigateur est requis pour initialiser le reCAPTCHA.',
-      firebaseNotConfigured: 'Firebase Web n est pas configure pour cette application.',
+      firebaseNotConfigured: 'Firebase Web n’est pas configuré pour cette application.',
     },
   },
   bookingCalendar: {
@@ -2241,7 +2241,7 @@ export default {
         shared: 'Partagé',
         sharedDescription: 'Tu ouvres la réservation à d’autres joueurs.',
       },
-      noFacility: 'Aucune installation reservable n est disponible pour le moment.',
+      noFacility: 'Aucune installation réservable n’est disponible pour le moment.',
       noSlot: 'Aucun créneau disponible pour cette date.',
       pickFacilityFirst: 'Choisis une installation pour voir ses créneaux disponibles.',
       refresh: 'Rafraîchir les disponibilités',
@@ -2302,13 +2302,13 @@ export default {
   },
   celebrationCatalog: {
     attendanceOnTimeStreak: {
-      body_one: 'Tu enchaines {{count}} entrainement. Continue comme ca.',
-      body_other: 'Tu enchaines {{count}} entrainements. Continue comme ca.',
+      body_one: 'Tu enchaînes {{count}} entraînement. Continue comme ça.',
+      body_other: 'Tu enchaînes {{count}} entraînements. Continue comme ça.',
       title: 'Série sans retard',
     },
     attendancePresenceStreak: {
-      body_one: 'Tu enchaines {{count}} presence. Continue comme ca.',
-      body_other: 'Tu enchaines {{count}} presences. Continue comme ca.',
+      body_one: 'Tu enchaînes {{count}} présence. Continue comme ça.',
+      body_other: 'Tu enchaînes {{count}} présences. Continue comme ça.',
       title: 'Série de présences',
     },
     clubLicenseeQuotaApproaching: {
@@ -2394,15 +2394,15 @@ export default {
     eyebrows: {
       attendance: 'ASSIDUITE',
       callUp: 'CONVOCATION',
-      event: 'EVENEMENT',
-      events: 'EVENEMENTS',
+      event: 'ÉVÉNEMENT',
+      events: 'ÉVÉNEMENTS',
       license: 'LICENCE',
       lineup: 'COMPOSITION',
       organisation: 'ORGANISATION',
       participation: 'PARTICIPATION',
       presence: 'PRESENCE',
       subscription: 'ABONNEMENT',
-      team: 'EQUIPE',
+      team: 'ÉQUIPE',
     },
     fallbacks: {
       externalTeamCap: 'Une équipe externe',
@@ -2449,8 +2449,8 @@ export default {
       title: 'Quorum atteint',
     },
     leagueVictoryStreak: {
-      body_one: 'Tu enchaines {{count}} victoire. Continue comme ca.',
-      body_other: 'Tu enchaines {{count}} victoires. Continue comme ca.',
+      body_one: 'Tu enchaînes {{count}} victoire. Continue comme ça.',
+      body_other: 'Tu enchaînes {{count}} victoires. Continue comme ça.',
       title: 'Série de victoires',
     },
     leagueWeekendWin: {
@@ -3147,7 +3147,7 @@ export default {
     },
     loadError: {
       // eslint-disable-next-line max-len
-      description: 'Impossible de charger la campagne. Le formulaire n est pas ouvert pour éviter d ecraser ses paramètres.',
+      description: 'Impossible de charger la campagne. Le formulaire n’est pas ouvert pour éviter d’écraser ses paramètres.',
       retry: 'Réessayer',
       title: 'Paramètres indisponibles',
     },
@@ -3193,7 +3193,7 @@ export default {
     pricingRuleType: {
       category: 'Catégorie',
       level: 'Niveau',
-      role: 'Role',
+      role: 'Rôle',
       section: 'Section',
       team: 'Équipe',
     },
@@ -3250,7 +3250,7 @@ export default {
       noMethod: 'Aucun moyen actif',
       none: 'Aucune',
       // eslint-disable-next-line max-len
-      noParentMultisport: 'Aucun multisport parent n est rattaché à ce club. Le paiement central ne pourra pas être validé.',
+      noParentMultisport: 'Aucun multisport parent n’est rattaché à ce club. Le paiement central ne pourra pas être validé.',
       overdueAfter: 'Marquer en retard après le (optionnel)',
       period: 'Période',
       requestedDocuments: 'Pièces demandées',
@@ -3369,7 +3369,7 @@ export default {
         title: 'Paiement',
       },
       reminders: {
-        subtitle: 'On relance tant que ce n est pas payé.',
+        subtitle: 'On relance tant que ce n’est pas payé.',
         title: 'Relances',
       },
       review: {
@@ -3565,7 +3565,7 @@ export default {
       document: {
         downloadFailedFallback: 'Le document n a pas pu être enregistré sur ton téléphone.',
         downloadFailedTitle: 'Téléchargement impossible',
-        unavailableMessage: 'Aucun fichier exploitable n est rattaché à ce dépôt.',
+        unavailableMessage: 'Aucun fichier exploitable n’est rattaché à ce dépôt.',
         unavailableTitle: 'Document indisponible',
       },
       officialLicense: {
@@ -3597,7 +3597,7 @@ export default {
         messageExemption: 'L exemption est annulée, les relances redeviennent possibles, ',
         messageNotice: 'et la personne en est prévenue.',
         successMessageEnd: 'et tu peux de nouveau relancer.',
-        successMessageStart: '{{memberName}} n est plus exempté·e : le reste à payer est rétabli ',
+        successMessageStart: '{{memberName}} n’est plus exempté·e : le reste à payer est rétabli ',
         successTitle: 'Cotisation à payer',
         title: 'Remettre cette cotisation à payer ?',
       },
@@ -3618,7 +3618,7 @@ export default {
       descriptionManager: 'Valide ou redemande les pièces fournies par le membre.',
       download: 'Télécharger',
       dueBefore: 'A remettre avant {{dueDate}}',
-      emptyDescription: 'Aucune pièce n est demandée pour cette campagne.',
+      emptyDescription: 'Aucune pièce n’est demandée pour cette campagne.',
       emptyTitle: 'Pas de documents',
       fallbackName: 'Document',
       noDeadline: 'Pas de date limite définie',
@@ -3639,7 +3639,7 @@ export default {
     },
     history: {
       date: 'Date',
-      emptyDescription: 'Aucun paiement n est encore rattache à cette cotisation.',
+      emptyDescription: 'Aucun paiement n’est encore rattaché à cette cotisation.',
       emptyTitle: 'Aucun historique',
       generateReceipt: 'Générer un reçu',
       method: 'Methode',
@@ -3668,7 +3668,7 @@ export default {
       reviewDocument: 'Revoir le document',
     },
     notFound: {
-      description: 'Cette cotisation est introuvable ou n est plus accessible.',
+      description: 'Cette cotisation est introuvable ou n’est plus accessible.',
       title: 'Cotisation introuvable',
     },
     officialLicense: {
@@ -3676,7 +3676,7 @@ export default {
       descriptionCoach: 'Consulte la licence officielle de cet adherent si elle est disponible.',
       descriptionManager: 'Ajoute ou remplace la licence officielle de cet adherent.',
       download: 'Télécharger la licence',
-      none: 'Aucune licence officielle n est encore disponible.',
+      none: 'Aucune licence officielle n’est encore disponible.',
       open: 'Ouvrir la licence',
       replace: 'Remplacer la licence',
       title: 'Licence officielle',
@@ -3741,7 +3741,7 @@ export default {
       title: 'Paiements indisponibles',
     },
     header: {
-      subtitle: 'Controle les déclarations externes avant de les passer en encaisse.',
+      subtitle: 'Contrôle les déclarations externes avant de les passer en encaissé.',
       title: 'Paiements à valider',
     },
     list: {
@@ -3959,7 +3959,7 @@ export default {
       errorDescription: 'Impossible de charger la campagne ou les cotisations pour le moment.',
       errorTitle: 'Cotisations indisponibles',
       // eslint-disable-next-line max-len
-      noCampaignDescription: 'Un dirigeant doit d abord créer et activer une campagne de cotisation.',
+      noCampaignDescription: 'Un dirigeant doit d’abord créer et activer une campagne de cotisation.',
       noCampaignTitle: 'Aucune campagne active',
       retry: 'Réessayer',
     },
@@ -4099,7 +4099,7 @@ export default {
     memberFilters: {
       category: 'Catégorie',
       level: 'Niveau',
-      role: 'Role',
+      role: 'Rôle',
       section: 'Section',
       team: 'Équipe',
     },
@@ -4211,7 +4211,7 @@ export default {
         description: 'Tu peux lancer une relance groupée ou suivre l intensité des rappels déjà envoyés.',
         title: 'Activité de relance',
       },
-      lastReminder: 'Derniere relance:',
+      lastReminder: 'Dernière relance:',
       membersReminded: 'Membres relances',
       noAutomation: 'Aucune relance automatique configuree.',
       none: 'Aucune',
@@ -4578,7 +4578,7 @@ export default {
         title: 'Montant requis',
       },
       bulkCreate: {
-        confirm: 'Creer',
+        confirm: 'Créer',
         message: '{{sectionCount}} section(s) recevront une campagne {{seasonLabel}}.',
         title: 'Créer les campagnes manquantes',
       },
@@ -4643,7 +4643,7 @@ export default {
       helloAssoToCheck: 'à vérifier',
       members: 'Licencies',
       noCampaign: 'Aucune campagne',
-      settings: 'Reglages',
+      settings: 'Réglages',
       setUp: 'Configurer',
       toApprove: 'A valider ({{pendingCount}})',
     },
@@ -6558,7 +6558,7 @@ export default {
       unstableConnection: 'Connexion instable. Vérifie ton réseau puis réessaie.',
       unsupportedType: 'Type de fichier non pris en charge.',
       voiceFileEmpty: 'Le fichier audio local est vide.',
-      voiceModuleUnavailable: 'Le module vocal n est pas disponible sur cette build.',
+      voiceModuleUnavailable: 'Le module vocal n’est pas disponible sur cette build.',
       // eslint-disable-next-line max-len
       voiceNotRecognised: 'La note vocale a bien été enregistrée, mais le serveur n a pas reconnu le fichier audio. Réessaie.',
       voiceSocketUnavailable: 'Socket chat indisponible avant la création du message.',
@@ -6937,7 +6937,7 @@ export default {
       location: {
         accessError: 'Impossible d acceder à ta position.',
         shareError: 'Impossible de partager ta position.',
-        unavailable: 'La geolocalisation n est pas disponible sur ce navigateur.',
+        unavailable: 'La géolocalisation n’est pas disponible sur ce navigateur.',
       },
       message: {
         sendError: 'Impossible d envoyer le message.',
@@ -6990,11 +6990,11 @@ export default {
       voice: {
         finalizeError: 'Impossible de finaliser cette note vocale.',
         noneUploaded: 'Aucune note vocale n a pu être televersee.',
-        playbackUnavailable: 'Le fichier audio n est pas disponible pour la lecture web.',
+        playbackUnavailable: 'Le fichier audio n’est pas disponible pour la lecture web.',
         recording: 'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.',
         sendError: 'Impossible d envoyer cette note vocale.',
         stop: 'Arrêter la note vocale',
-        unavailable: 'L enregistrement vocal n est pas disponible sur ce navigateur.',
+        unavailable: 'L’enregistrement vocal n’est pas disponible sur ce navigateur.',
         unsupported: 'Les notes vocales ne sont pas prises en charge par ce navigateur.',
         usesMic: 'Les notes vocales utilisent le microphone du navigateur.',
       },
@@ -7893,8 +7893,8 @@ export default {
     joinThisEvent: 'Rejoindre cet événement',
     lastMatch: 'Dernier match',
     // eslint-disable-next-line max-len
-    lastSavedExternalSpotsSetting: 'Dernier reglage mémorise: {{limit}} place(s) externes - validation {{mode}}',
-    lastSavedSetting: 'Dernier reglage mémorise: {{quotaLine}}',
+    lastSavedExternalSpotsSetting: 'Dernier réglage mémorisé : {{limit}} place(s) externes - validation {{mode}}',
+    lastSavedSetting: 'Dernier réglage mémorisé : {{quotaLine}}',
     late: {
       helper: "0 = a l'heure. Ajuste la valeur si nécessaire avant validation.",
       minutesInvalid: 'Le retard doit être un nombre positif.',
@@ -8073,9 +8073,9 @@ export default {
     noOpenTournamentTeamCan: 'Aucune équipe tournoi ouverte ne peut être rejointe pour le moment.',
     noPendingRequest: 'Aucune demande en attente.',
     notAllowed: 'Non autorise',
-    noTeamIsRegisteredFor: 'Aucune équipe n est encore inscrite sur ce tournoi.',
-    noTeamIsRegisteredYet: 'Aucune équipe n est encore inscrite.',
-    noTeamOpenToRequests: 'Aucune équipe ouverte aux demandes n est disponible pour le moment.',
+    noTeamIsRegisteredFor: 'Aucune équipe n’est encore inscrite sur ce tournoi.',
+    noTeamIsRegisteredYet: 'Aucune équipe n’est encore inscrite.',
+    noTeamOpenToRequests: 'Aucune équipe ouverte aux demandes n’est disponible pour le moment.',
     nothingReported: 'Aucun signalement',
     notInvolved: 'Non concerné',
     // eslint-disable-next-line max-len
@@ -8333,7 +8333,7 @@ export default {
     // eslint-disable-next-line max-len
     theEventIsOverAnd: "Un encadrant t'a marqué absent à l'appel. S'il s'est trompé, il peut corriger ton pointage.",
     // eslint-disable-next-line max-len
-    theMatchIsOverSave: 'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton équipe.',
+    theMatchIsOverSave: 'Le match est terminé. Enregistre d’abord le score puis complète les statistiques de ton équipe.',
     // eslint-disable-next-line max-len
     theOfficialScoreChangedAfter: 'Le score officiel a changé après la première publication. Une mise à jour est requise.',
     // eslint-disable-next-line max-len
@@ -8350,7 +8350,7 @@ export default {
     thisDayBelongsToThe: 'Cette journée depend du stage principal.',
     // eslint-disable-next-line max-len
     thisEventAlreadyHasA: 'Cet événement a déjà une campagne de cotisation. Crée-en une autre seulement si tu veux un paiement distinct.',
-    thisEventIsNoLonger: 'Cet événement n est plus disponible ou n a pas pu être charge.',
+    thisEventIsNoLonger: 'Cet événement n’est plus disponible ou n’a pas pu être chargé.',
     thisReportIsADraft: 'Ce bilan est un brouillon — voir tous mes matchs en attente',
     // eslint-disable-next-line max-len
     thisTeamWillOnlyExist: 'Cette équipe n existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.',
@@ -8696,9 +8696,9 @@ export default {
         title: 'Modification limitée',
       },
     },
-    noEventTypeIsAvailable: 'Aucun type d événement n est disponible pour le moment.',
+    noEventTypeIsAvailable: 'Aucun type d’événement n’est disponible pour le moment.',
     noFacility: 'Aucune installation',
-    noOtherClubTeamIs: 'Aucune autre équipe du club n est disponible pour le moment.',
+    noOtherClubTeamIs: 'Aucune autre équipe du club n’est disponible pour le moment.',
     noTeamAvailableToCreate: 'Aucune équipe disponible pour créer ou modifier cet événement.',
     planning: 'Planning',
     preparingTheForm: 'Préparation du formulaire...',
@@ -8952,7 +8952,7 @@ export default {
     membersCanVolunteerAndStaff: 'Les membres peuvent se proposer, et les encadrants peuvent assigner directement les bonnes personnes.',
     memberSReadyToBe: '{{selectedCount}} membre(s) prêt(s) à être assignes',
     // eslint-disable-next-line max-len
-    noAdditionalMemberIsAvailable: 'Aucun membre supplémentaire n est disponible pour cette tâche pour le moment.',
+    noAdditionalMemberIsAvailable: 'Aucun membre supplémentaire n’est disponible pour cette tâche pour le moment.',
     nobodyIsConfirmedOnThis: "Personne n'est encore confirmé sur cette tâche.",
     pending: 'En attente',
     pendingVolunteers: 'Volontaires en attente',
@@ -9218,7 +9218,7 @@ export default {
       },
       detectionSlots: {
         capacityWarning: 'Le total des places par poste dépasse la capacité de l événement.',
-        emptyPositions: 'Aucun poste n est actuellement défini pour ce sport.',
+        emptyPositions: 'Aucun poste n’est actuellement défini pour ce sport.',
         positionSummary: '{{count}} place(s) sur ce poste',
         recapSummary: '{{count}} place(s) cible au total',
         // eslint-disable-next-line max-len
@@ -9512,7 +9512,7 @@ export default {
     standaloneTournament: 'Tournoi autonome',
     teamApproval: 'Validation des équipes: {{value}}',
     temporaryTeams: 'Équipes éphémères: {{value}}',
-    thirdPlaceMatchEnabled: 'Petite finale activee',
+    thirdPlaceMatchEnabled: 'Petite finale activée',
     tournamentSettings: 'Paramètres tournoi',
     tournamentStructure: 'Structure du tournoi',
     yourEvent: 'Ton événement',
@@ -11197,7 +11197,7 @@ export default {
       // eslint-disable-next-line max-len
       body: "La conversation avec l'adversaire n'est pas encore prête. Réessaie dans quelques secondes ou ouvre la fiche match pour suivre l'organisation.",
       close: 'Fermer',
-      reply: 'Repondre',
+      reply: 'Répondre',
       status: 'État League',
       title: 'Conversation en préparation',
     },
@@ -11423,7 +11423,7 @@ export default {
     },
     conversationPending: {
       // eslint-disable-next-line max-len
-      alertBody: "La conversation avec l'adversaire n est pas encore disponible. Réessaie dans quelques secondes.",
+      alertBody: "La conversation avec l'adversaire n’est pas encore disponible. Réessaie dans quelques secondes.",
       // eslint-disable-next-line max-len
       cardBody: 'La conversation avec l adversaire arrive bientôt. Réessaie dans quelques secondes ou poursuis depuis cette fiche match.',
       title: 'Conversation en préparation',
@@ -11521,7 +11521,7 @@ export default {
         origin: "Envoyée par l'adversaire",
         title: 'Proposition reçue',
       },
-      reply: 'Repondre',
+      reply: 'Répondre',
       sendNewProposal: 'Envoyer une nouvelle proposition',
       sendProposal: 'Envoyer une proposition',
       sent: {
@@ -11856,7 +11856,7 @@ export default {
     messages: {
       checking: 'On vérifie le retour du paiement et la confirmation transmise au club.',
       // eslint-disable-next-line max-len
-      confirmed: 'Le paiement est confirmé. Ton reçu apparaîtra des qu il sera généré par le club ou automatiquement.',
+      confirmed: 'Le paiement est confirmé. Ton reçu apparaîtra dès qu’il sera généré par le club ou automatiquement.',
       // eslint-disable-next-line max-len
       failed: 'Le paiement n a pas abouti. Tu peux revenir à ta cotisation pour relancer un règlement.',
       // eslint-disable-next-line max-len
@@ -11876,7 +11876,7 @@ export default {
       credentialsMissing: 'Renseigne le slug, le client id et le client secret avant publication.',
       disabled: 'HelloAsso est désactivé pour ce scope.',
       needsReview: 'La configuration HelloAsso demande une vérification supplémentaire.',
-      notConfigured: 'La connexion HelloAsso n est pas encore configurée pour ce club.',
+      notConfigured: 'La connexion HelloAsso n’est pas encore configurée pour ce club.',
       oauthFailed: 'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.',
       pending: 'La configuration HelloAsso existe, mais elle n a pas encore été vérifiée.',
       ready: 'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.',
@@ -11886,7 +11886,7 @@ export default {
     },
     installments: {
       empty: {
-        description: 'Aucune échéance détaillée n est encore disponible.',
+        description: 'Aucune échéance détaillée n’est encore disponible.',
         title: 'Échéancier indisponible',
       },
       item: 'Échéance',
@@ -12189,7 +12189,7 @@ export default {
       keySlot: 'Créneau phare',
       label: 'MATCH TROUVE',
       // eslint-disable-next-line max-len
-      maskedHint: 'Le profil reste masque tant que le premier contact n est pas engage dans le chat.',
+      maskedHint: 'Le profil reste masqué tant que le premier contact n’est pas engagé dans le chat.',
       nextStep: 'Prochaine étape',
       opposingTeam: 'Équipe adverse',
     },
@@ -12707,7 +12707,7 @@ export default {
     pointsAfter: 'Points après',
     pointsBefore: 'Points avant',
     resultFallback: 'Résultat validé',
-    resultLabel: 'Resultat',
+    resultLabel: 'Résultat',
     searchAgain: 'Relancer une recherche',
     streakBonus: ' | Bonus série ',
     title: 'Recap de fin de match',
@@ -12722,7 +12722,7 @@ export default {
     cancel: 'Annuler',
     checkRequired: 'Vérification requise',
     cleanSheet: 'Clean sheet',
-    cleanSheetNeedsZero: 'Le clean sheet n est possible que si le score adverse est a 0.',
+    cleanSheetNeedsZero: 'Le clean sheet n’est possible que si le score adverse est à 0.',
     correctionsRequired: 'Corrections requises',
     draftInProgress: 'Brouillon en cours',
     draftSaved: 'Brouillon enregistre',
@@ -12762,7 +12762,7 @@ export default {
     noPlayerFeedbackYet: 'Pas encore de retour joueur',
     noPlayerForReport: 'Aucun joueur disponible pour ce rapport.',
     // eslint-disable-next-line max-len
-    noPlayerForReportHint: 'Publie d abord la composition d équipe ou vérifie le roster de l équipe pour alimenter cette liste.',
+    noPlayerForReportHint: 'Publie d’abord la composition d’équipe ou vérifie le roster de l’équipe pour alimenter cette liste.',
     noReminderNeeded: 'Aucune relance nécessaire pour ce match.',
     officialScoreAwaited: 'Le score officiel est encore attendu depuis la synchronisation externe.',
     // eslint-disable-next-line max-len
@@ -12928,9 +12928,9 @@ export default {
       browserRequired: 'Le navigateur est requis pour enregistrer une note vocale.',
       noFilePicker: 'Le navigateur ne supporte pas le sélecteur de fichiers.',
       voiceNoteFailed: 'L enregistrement vocal a échoué.',
-      voiceNoteNotAdapted: 'L enregistrement vocal n est pas encore adapte via platform/media.',
+      voiceNoteNotAdapted: 'L’enregistrement vocal n’est pas encore adapté via platform/media.',
       // eslint-disable-next-line max-len
-      voiceNoteUnsupported: 'L enregistrement vocal web n est pas pris en charge par ce navigateur.',
+      voiceNoteUnsupported: 'L’enregistrement vocal web n’est pas pris en charge par ce navigateur.',
     },
   },
   memberLicenseModel: {
@@ -13158,7 +13158,7 @@ export default {
         remaining_other: '{{count}} places restantes',
         statusOpen: 'Ouverte',
         statusRecruiting: 'En recherche',
-        titleFallback: 'Reservation',
+        titleFallback: 'Réservation',
         urgent: 'SOS urgent',
       },
       header: {
@@ -13182,7 +13182,7 @@ export default {
         emptyBody: 'Reviens plus tard ou passe par la recherche pour voir toutes les réservations disponibles.',
         emptyTitle: 'Aucune réservation ouverte pour l’instant',
         loadError: 'Impossible de charger les réservations.',
-        loading: 'Chargement des reservations…',
+        loading: 'Chargement des réservations…',
       },
       stats: {
         open: 'Réservations ouvertes',
@@ -13285,7 +13285,7 @@ export default {
       errorTitle: 'Club indisponible',
       loading: 'Nous préparons les informations de ta structure multisport.',
       loadingTitle: 'Chargement du club',
-      notFound: 'Cette structure multisport est introuvable ou n est plus accessible.',
+      notFound: 'Cette structure multisport est introuvable ou n’est plus accessible.',
       notFoundTitle: 'Club introuvable',
     },
     edit: {
@@ -13301,7 +13301,7 @@ export default {
       loadingTitle: 'Chargement de la fiche',
       loadingUser: 'Nous préparons les informations de ton club multisport.',
       loadingUserTitle: 'Chargement du club',
-      notFound: 'Cette structure multisport est introuvable ou n est plus accessible.',
+      notFound: 'Cette structure multisport est introuvable ou n’est plus accessible.',
       notFoundTitle: 'Club introuvable',
       userError: 'Impossible de retrouver ta structure multisport pour le moment.',
       userErrorTitle: 'Édition indisponible',
@@ -13634,7 +13634,7 @@ export default {
         title: 'Pièce envoyée',
       },
       documentUnavailable: {
-        message: 'Aucun fichier exploitable n est rattaché à ce dépôt.',
+        message: 'Aucun fichier exploitable n’est rattaché à ce dépôt.',
         title: 'Document indisponible',
       },
       downloadFailed: {
@@ -13764,7 +13764,7 @@ export default {
     },
     notFound: {
       action: 'Voir mes cotisations',
-      description: 'Cette cotisation n est pas disponible pour ton compte.',
+      description: 'Cette cotisation n’est pas disponible pour ton compte.',
       title: 'Cotisation introuvable',
     },
     onlineMethods: {
@@ -13834,7 +13834,7 @@ export default {
         title: 'Téléchargement impossible',
       },
       receiptUnavailable: {
-        message: 'Aucun fichier n est rattaché à ce reçu.',
+        message: 'Aucun fichier n’est rattaché à ce reçu.',
         title: 'Reçu indisponible',
       },
     },
@@ -14330,7 +14330,7 @@ export default {
     thisClosedEventIsReserved: 'Cet événement fermé est réservé aux équipes concernées.',
     thisEventIsAlreadyOver: 'Cet événement est déjà passé.',
     thisEventIsFull: 'Cet événement est complet.',
-    thisListingIsNoLonger: 'Cette annonce n est plus active.',
+    thisListingIsNoLonger: 'Cette annonce n’est plus active.',
     thisTrainingSessionDoesnT: 'Cet entraînement n accepte pas de joueurs externes pour le moment.',
     youAlreadyHaveAPending: 'Tu as déjà une candidature en attente sur cette détection.',
     youCanTApplyTo: 'Tu ne peux pas candidater à ta propre annonce.',
@@ -14982,7 +14982,7 @@ export default {
   },
   positionSelectionList: {
     currentSelection: 'Sélection actuelle',
-    select: 'Selectionner',
+    select: 'Sélectionner',
   },
   premiumBadge: {
     clubOffer: 'Offre Club',
@@ -15505,7 +15505,7 @@ export default {
     documents: {
       dueBefore: ' - Dépôt avant {{dueDate}}',
       empty: {
-        description: 'Aucune pièce supplémentaire n est associée à ce lien.',
+        description: 'Aucune pièce supplémentaire n’est associée à ce lien.',
         title: 'Aucun document',
       },
       nameFallback: 'Document',
@@ -15542,7 +15542,7 @@ export default {
       total: 'Total',
     },
     notFound: {
-      description: 'Ce lien est introuvable ou n est plus disponible.',
+      description: 'Ce lien est introuvable ou n’est plus disponible.',
     },
     paused: {
       // eslint-disable-next-line max-len
@@ -15671,7 +15671,7 @@ export default {
       messageLabel: 'Message',
       // eslint-disable-next-line max-len
       messagePlaceholder: "Explique ton expérience, tes disponibilités ou ce que tu peux apporter a l'équipe.",
-      phoneLabel: 'Telephone',
+      phoneLabel: 'Téléphone',
       phonePlaceholder: 'Ton numéro de téléphone',
       submit: 'Envoyer ma candidature',
       title: 'Candidater comme entraîneur',
@@ -15766,7 +15766,7 @@ export default {
       loading: 'Chargement...',
       notFound: 'Annonce introuvable',
       reload: 'Recharger',
-      unavailableBody: 'Cette annonce n est plus disponible ou n a pas pu être chargée.',
+      unavailableBody: 'Cette annonce n’est plus disponible ou n’a pas pu être chargée.',
     },
     status: {
       accepted: 'Accepte',
@@ -15955,7 +15955,7 @@ export default {
       alreadyAccepted: 'Ta candidature est déjà validée pour cette annonce.',
       alreadyInDetection: 'Tu participes déjà à cette détection.',
       error: 'Impossible d envoyer la candidature pour le moment.',
-      inactive: 'Cette annonce n est plus active.',
+      inactive: 'Cette annonce n’est plus active.',
       pendingDetection: 'Tu as déjà une candidature en attente sur cette détection.',
       sent: 'Ta candidature a bien été envoyée.',
       sentTitle: 'Candidature envoyée',
@@ -16049,7 +16049,7 @@ export default {
     remindedPeople_one: '{{count}} personne relancee',
     remindedPeople_other: '{{count}} personnes relancees',
     waitBetweenReminders: ' Il faut attendre 48 h entre deux relances.',
-    willBeNotified: 'Elles vont recevoir une notification pour leur rappeler de repondre.',
+    willBeNotified: 'Elles vont recevoir une notification pour leur rappeler de répondre.',
   },
   requestFeedItem: {
     occupancy: '{{occupied}}/{{max}} places occupées',
@@ -16159,7 +16159,7 @@ export default {
       approveOverflow: 'Autoriser',
       open: 'Voir la proposition',
       openChat: 'Ouvrir chat',
-      respond: 'Repondre',
+      respond: 'Répondre',
       viewEvent: "Voir l'événement",
       viewProfile: 'Voir le profil',
       viewProfileHint: 'Ouvre le profil du demandeur',
@@ -16234,7 +16234,7 @@ export default {
     partialError: 'Source indisponible',
     // eslint-disable-next-line max-len
     partialErrorDescription: 'Certaines demandes n ont pas pu être chargées. Le reste reste disponible.',
-    partialErrorForbidden: 'Cette section n est pas disponible pour ce compte.',
+    partialErrorForbidden: 'Cette section n’est pas disponible pour ce compte.',
     partialErrorLabel: 'indisponible',
     // Y04 — la bannière d'erreur n'avait AUCUN bouton : elle nommait la panne et
     // s'arrêtait là. Un 403 n'y arrive jamais (le service le laisse tomber en
@@ -16429,7 +16429,7 @@ export default {
       title: 'Ne rate plus aucun événement',
     },
     profilesUnavailable: {
-      editBody: 'Cette alerte profils n est plus modifiable sur un compte joueur.',
+      editBody: 'Cette alerte profils n’est plus modifiable sur un compte joueur.',
       // eslint-disable-next-line max-len
       launchBody: 'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraîneur.',
       title: 'Alerte profils indisponible',
@@ -16629,7 +16629,7 @@ export default {
     heading: {
       clubs: 'Clubs',
       events: 'Événements',
-      reservations: 'Reservations',
+      reservations: 'Réservations',
     },
     hints: {
       clubsZoom: 'Zoome pour afficher tous les clubs de cette zone.',
@@ -16712,7 +16712,7 @@ export default {
   },
   share: {
     errors: {
-      webUnavailable: 'Le partage web n est pas disponible dans ce navigateur.',
+      webUnavailable: 'Le partage web n’est pas disponible dans ce navigateur.',
     },
   },
   shareCompositionModal: {
@@ -17959,7 +17959,7 @@ export default {
     errors: {
       // eslint-disable-next-line max-len
       clubAlreadyCovered: 'Ce club est déjà couvert par une offre Club active (souscrite par un autre membre). Inutile de payer deux fois : les droits sont partages.',
-      clubRequired: 'Rattache d abord le bon club avant de prendre une offre Club.',
+      clubRequired: 'Rattache d’abord le bon club avant de prendre une offre Club.',
       generic: 'Impossible de mettre à jour ton abonnement pour le moment.',
       // eslint-disable-next-line max-len
       missingTransactionId: 'Le store ne nous a pas transmis le numéro de ta transaction. Ton paiement est bien enregistré chez lui : tes droits s ouvriront automatiquement, et « Restaurer mes achats » les débloque tout de suite.',
@@ -17978,7 +17978,7 @@ export default {
       // eslint-disable-next-line max-len
       teamSlotDuplicate: 'Une même équipe ne peut pas être attribuée deux fois à la même offre Équipe.',
       // eslint-disable-next-line max-len
-      webPlanChangeClosed: 'Le changement d offre web public n est pas encore ouvert sur cet environnement.',
+      webPlanChangeClosed: 'Le changement d’offre web public n’est pas encore ouvert sur cet environnement.',
     },
     monthlyEquivalent: 'soit {{amount}} {{currency}}/mois',
     period: {
@@ -18304,9 +18304,9 @@ export default {
         title: 'Checkout indisponible',
       },
       clubRequired: {
-        clubPlanMessage: 'Rattache d abord ton compte a un club avant de prendre une offre Club.',
+        clubPlanMessage: 'Rattache d’abord ton compte à un club avant de prendre une offre Club.',
         // eslint-disable-next-line max-len
-        licenseeMessage: 'Rattache d abord ton compte a un club : c est sur lui que se compte le nombre de licenciés.',
+        licenseeMessage: 'Rattache d’abord ton compte à un club : c’est sur lui que se compte le nombre de licenciés.',
         title: 'Club requis',
       },
       licenseeCountRequired: {
@@ -18323,7 +18323,7 @@ export default {
       },
       teamRequired: {
         noSelection: 'Sélectionne au moins une équipe à couvrir avec cette offre Équipe.',
-        noTeam: 'Ajoute ou rattache d abord une équipe avant de prendre une offre Équipe.',
+        noTeam: 'Ajoute ou rattache d’abord une équipe avant de prendre une offre Équipe.',
         title: 'Équipe requise',
       },
     },
@@ -18636,7 +18636,7 @@ export default {
   subscriptionPurchaseRail: {
     errors: {
       invalidLicenseeCount: 'Nombre de licenciés invalide (entier, minimum 1).',
-      planChangeMobileOnly: 'Le changement d offre se fait depuis l app mobile pour le moment.',
+      planChangeMobileOnly: 'Le changement d’offre se fait depuis l’app mobile pour le moment.',
       webPaymentUnavailable: 'Paiement web indisponible pour le moment.',
     },
   },
@@ -19398,7 +19398,7 @@ export default {
     secretConfigured: 'Configure (masque)',
     secretMissing: 'Non configure',
     // eslint-disable-next-line max-len
-    secretNote: 'Le secret n est jamais affiche. Si tu laisses le champ vide, on conserve le secret existant.',
+    secretNote: 'Le secret n’est jamais affiché. Si tu laisses le champ vide, on conserve le secret existant.',
     secretPlaceholderKeep: 'Client secret (laisser vide pour conserver)',
     slugPlaceholder: 'Slug organisation HelloAsso',
     slugRequired: 'Le slug organisation est obligatoire.',
@@ -19413,7 +19413,7 @@ export default {
     undefinedSeason: 'Saison non définie',
     unnamedCampaign: 'Campagne sans nom',
     updated: 'Maj',
-    verifying: 'Verification...',
+    verifying: 'Vérification...',
     visibleCampaigns: 'Campagnes visibles (',
   },
   tacticalBoard: {
@@ -20140,7 +20140,7 @@ export default {
       trainersHidden: 'Le club masque les entraîneurs de cette équipe pour les visiteurs externes.',
     },
     slots: {
-      comingSoonBody: 'La gestion des créneaux sera activee prochainement.',
+      comingSoonBody: 'La gestion des créneaux sera activée prochainement.',
       comingSoonTitle: 'Bientôt disponible',
     },
     standingsTable: {
@@ -22392,7 +22392,7 @@ export default {
     license: {
       available: 'Une licence officielle est disponible pour ce joueur.',
       title: 'Licence',
-      unavailable: 'La licence officielle n est pas encore disponible pour ce joueur.',
+      unavailable: 'La licence officielle n’est pas encore disponible pour ce joueur.',
       view: 'Voir la licence',
     },
     notSet: 'Non renseigné',
@@ -22742,7 +22742,7 @@ export default {
     venueOptional: 'Lieu (optionnel)',
     venueRequired: 'Lieu requis',
     // eslint-disable-next-line max-len
-    youCanAlreadyProposeA: 'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.',
+    youCanAlreadyProposeA: 'Tu peux déjà proposer un lieu, mais ce n’est pas obligatoire pour ce format.',
     yourOpponentCanAcceptDecline: 'Ton adversaire pourra accepter, refuser ou contre-proposer.',
   },
   visualRender: {
