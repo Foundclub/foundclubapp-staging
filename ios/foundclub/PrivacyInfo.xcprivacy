@@ -293,6 +293,23 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
+		<!-- ce que l utilisateur a LU (IOS-PRIVACY, 06/10) —
+		     collectiviteActualiteService.js:131 (PUT /collectivite-actualites/mine/seen :
+		     les actualites de la Ville vues) et coachFeedbackService.js:14,25
+		     (/firebase-auth/me/coach-feedback-follow : les retours du coach lus).
+		     Garde sur le compte, pour la pastille « non lu ». Aucun pistage. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 		<!-- alertes de recherche — searchAlertService.js:26
 		     (POST /search-alerts { label, filters, type }) : les criteres d une
 		     recherche et le nom que l utilisateur lui donne sont ENREGISTRES cote
