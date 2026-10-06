@@ -7038,6 +7038,7 @@ export default {
   eventCardNew: {
     book: 'Book',
     booking: 'BOOKING',
+    childEventA11y: 'Event for {{names}}',
     detectionTrial: 'TRIAL',
     event: 'EVENT',
     full: 'Full',
@@ -13602,6 +13603,9 @@ export default {
   participantEventList: {
     addAnEvent: 'Add an event',
     anErrorOccurred: 'An error occurred.',
+    childrenNames: '{{others}} and {{last}}',
+    childrenNextEventsWillShow_one: 'Upcoming events for {{names}} will show up here as soon as their team publishes them.',
+    childrenNextEventsWillShow_other: 'Upcoming events for {{names}} will show up here as soon as their teams publish them.',
     createAnEvent: 'Create an event',
     createYourFirstEventTo: 'Create your first event to see it here.',
     eventsFrom: 'Events from',
@@ -13845,6 +13849,7 @@ export default {
     openThePlanningInFull: 'Open the planning in full screen',
   },
   planningSlots: {
+    childEventTitle: '{{names}} · {{title}}',
     event: 'Event',
     eventFallback: 'Event',
   },

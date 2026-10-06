@@ -35,6 +35,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import {
   closureBandLabel,
   closureBandsForRange,
@@ -185,6 +186,7 @@ const getPlanningQuery = ({
   planningRange,
   sectionId,
   sourceType,
+  withChildren = false,
 }) => {
   switch (sourceType) {
     case FULLSCREEN_SOURCE_TYPES.club:
@@ -231,10 +233,17 @@ const getPlanningQuery = ({
       };
     case FULLSCREEN_SOURCE_TYPES.personal:
     default:
+      // PARENT-PLANNING (06/10, « calendrier B ») : un parent (parametre `withChildren`, pose par
+      // « Mon planning ») voit AUSSI les creneaux a venir de ses enfants.
       return {
         enabled: true,
-        queryFn: () => getMyPlanning(planningRange),
-        queryKey: ['planning', 'fullscreen', 'personal', planningRange.from, planningRange.to],
+        queryFn: () => getMyPlanning(
+          withChildren ? { ...planningRange, withChildren: true } : planningRange,
+        ),
+        queryKey: [
+          'planning', 'fullscreen', 'personal', planningRange.from, planningRange.to,
+          ...(withChildren ? ['withChildren'] : []),
+        ],
       };
   }
 };
@@ -263,6 +272,8 @@ function PlanningWeekFullscreen() {
   const contextLabel = route?.params?.contextLabel || null;
   const facilityId = route?.params?.facilityId || null;
   const sectionId = route?.params?.sectionId || null;
+  const withChildren = /** @type {{ withChildren?: boolean } | undefined} */ (route?.params)
+    ?.withChildren === true;
 
   const [currentDate, setCurrentDate] = useState(getInitialDate(route?.params?.date));
   // PLANNING-PORTRAIT (01/10, decision d'Adel « D6 A ») : l'ecran SUIT le telephone.
@@ -314,7 +325,8 @@ function PlanningWeekFullscreen() {
     planningRange,
     sectionId,
     sourceType,
-  }), [clubId, cmId, facilityId, planningRange, sectionId, sourceType]);
+    withChildren,
+  }), [clubId, cmId, facilityId, planningRange, sectionId, sourceType, withChildren]);
   const {
     data,
     error,
@@ -348,7 +360,11 @@ function PlanningWeekFullscreen() {
   // tous les blocs y partagent la meme installation, donc la meme couleur sans cela.
   // COLL-C2B (02/10) — design P5-jour : une place EN ATTENTE (contrat C2A §7, `pending`) se lit
   // « en attente » a sa place ; un MEMBRE voit son club en couleur et les autres en gris.
-  const normalizedEvents = useMemo(() => normalizePlanningItems(data?.data || []), [data]);
+  // PARENT-PLANNING : le prenom de l enfant sur ses creneaux (les autres sources n en portent pas).
+  const normalizedEvents = useMemo(
+    () => withViewerChildrenTitles(normalizePlanningItems(data?.data || []), t),
+    [data, t],
+  );
   // 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») — la fermeture EN SAISIE dans le panneau de
   // droite (ordinateur) : « le jour ferme se hachure pendant la saisie, et les seances touchees se
   // cernent d orange ». Rien n est ecrit tant que la mairie n a pas confirme.

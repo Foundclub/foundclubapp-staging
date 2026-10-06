@@ -813,6 +813,7 @@ const buildRequestHubEventPopulate = () => ({
  *   compact?: boolean;
  *   requestHub?: boolean;
  *   viewerDocumentId?: string;
+ *   withChildren?: boolean;
  *  }} params - The parameters for filtering events
  * @param {{ signal?: AbortSignal }} [options]
  * @returns {Promise<{data: FCEvent[], meta: {
@@ -1174,6 +1175,9 @@ export const getEvents = async (params = {}, options = {}) => {
     ...(normalizedSearchQuery ? { _q: normalizedSearchQuery } : {}),
     ...(fields ? { fields } : {}),
     myTeams: params.myTeams, // Pass myTeams filter to backend
+    // PARENT-PLANNING (06/10) — avec `myTeams` : AUSSI les evenements a venir des enfants mineurs
+    // du lecteur, marques `viewerChildren` / `viewerChildrenOnly` par le serveur.
+    ...(params.withChildren ? { withChildren: true } : {}),
     pagination: {
       page: page || 1,
       pageSize: pageSize || 10,
@@ -1340,13 +1344,17 @@ export const getClubEvents = async (clubId) => getEvents({
 
 /**
  * Get lightweight planning slots for the connected user.
- * @param {{ from?: string, to?: string }} [filters]
+ * PARENT-PLANNING (06/10) : `withChildren` verse AUSSI les creneaux a venir de ses enfants
+ * mineurs (marques `viewerChildren` par le serveur). L ecran ne le demande qu a un compte qui a
+ * des enfants.
+ * @param {{ from?: string, to?: string, withChildren?: boolean }} [filters]
  * @returns {Promise<any>}
  */
 export const getMyPlanning = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.from) params.append('from', filters.from);
   if (filters.to) params.append('to', filters.to);
+  if (filters.withChildren) params.append('withChildren', 'true');
 
   const suffix = params.toString() ? `?${params.toString()}` : '';
   const response = await client.get(`/users/me/planning${suffix}`);

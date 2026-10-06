@@ -84,6 +84,11 @@
  * @property {string} [stageDefaultStartTime]
  * @property {string} [stageDefaultEndTime]
  * @property {any[]} [stageSchedule]
+ * @property {Array<{ documentId?: string, firstname?: string | null }>} [viewerChildren]
+ *   PARENT-PLANNING : les enfants mineurs du lecteur que l evenement concerne (liste du
+ *   planning, `withChildren`).
+ * @property {boolean} [viewerChildrenOnly] - PARENT-PLANNING : vrai si l evenement n est PAS
+ *   aussi celui du lecteur (la carte est en lecture seule).
  * @property {Array<{
  *   documentId?: string,
  *   sourceType?: 'club_team' | 'custom_team',
