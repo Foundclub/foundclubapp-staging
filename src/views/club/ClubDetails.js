@@ -52,6 +52,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
+import ClubCompactHeader from '@/views/multisportClub/components/ClubCompactHeader';
 import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
 import WeekendResultsCard, {
   weekendRowKey,
@@ -2776,93 +2777,20 @@ function ClubDetails({ navigation, route }) {
               l'encart de la Ville juste dessous, en petit. L'adresse, la certification et les
               coordonnées du club (absentes de la planche) restent dans « Modifier ». */}
           {enTeteCompact ? (
-            <View style={[Spaces.gap[12]]} testID="club-entete-compact">
-              <View
-                style={[
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  {
-                    columnGap: 24,
-                    flexWrap: 'wrap',
-                    justifyContent: 'space-between',
-                    rowGap: 12,
-                  },
-                ]}
-              >
-                <View style={[
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Spaces.gap[12],
-                  { flexShrink: 1 },
-                ]}
-                >
-                  <ClubLogoMark
-                    club={club}
-                    logoStyle={[
-                      ApplicationStyle.borderWidth1,
-                      ApplicationStyle.borderColor.neutral00,
-                      ApplicationStyle.backgroundColor.neutral00,
-                      { borderRadius: 16 },
-                    ]}
-                    size={60}
-                  />
-                  <View style={{ flexShrink: 1, gap: 4 }}>
-                    <Text style={[
-                      Fonts.p3Bold,
-                      Fonts.primary200,
-                      { letterSpacing: 0.4, textTransform: 'uppercase' },
-                    ]}
-                    >
-                      {t('clubDetails.compactHeader.kicker', 'Gestion du club')}
-                    </Text>
-                    <Text
-                      // eslint-disable-next-line react/jsx-props-no-spreading
-                      {...proprietesDeTitre(1)}
-                      style={[Fonts.h1Black, Fonts.neutral00]}
-                    >
-                      {club?.name}
-                    </Text>
-                    {sportsDuClub ? (
-                      <Text style={[Fonts.p2, Fonts.neutral200]}>{sportsDuClub}</Text>
-                    ) : null}
-                  </View>
-                </View>
-                <View style={[
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Spaces.gap[16],
-                  { flexWrap: 'wrap' },
-                ]}
-                >
-                  <Button
-                    onPress={handleOpenClubPoster}
-                    size="sm"
-                    title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
-                    variant="Secondary"
-                  />
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    onPress={handleEditClub}
-                    style={[
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      Spaces.gap[8],
-                      { minHeight: 44 },
-                    ]}
-                  >
-                    <Image
-                      source={Images.edit}
-                      style={[
-                        ApplicationStyle.icon20,
-                        ApplicationStyle.tintColor.primary500,
-                      ]}
-                    />
-                    <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                      {t('clubDetails.actions.editInfo') || 'Modifier'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+            <ClubCompactHeader
+              actions={(
+                <Button
+                  onPress={handleOpenClubPoster}
+                  size="sm"
+                  title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
+                  variant="Secondary"
+                />
+              )}
+              club={club}
+              onEdit={handleEditClub}
+              subtitle={sportsDuClub}
+              title={club?.name}
+            >
               {collectiviteOffer ? (
                 <TouchableOpacity
                   accessibilityLabel={t(
@@ -2903,7 +2831,7 @@ function ClubDetails({ navigation, route }) {
                   />
                 </TouchableOpacity>
               ) : null}
-            </View>
+            </ClubCompactHeader>
           ) : null}
           {!isClubSubPage && !enTeteCompact ? (
             <View style={[

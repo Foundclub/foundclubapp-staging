@@ -47,6 +47,7 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 // `perfectionist` APRÈS ; les deux règles se contredisent sur ce seul bloc.
 /* eslint-disable perfectionist/sort-imports */
 import { useIsDesktop } from '@/responsive';
+import ClubCompactHeader from './components/ClubCompactHeader';
 import ClubResultsBoard from './components/ClubResultsBoard';
 import MultisportActionGrid from './components/MultisportActionGrid';
 import MultisportAdminsSection from './components/MultisportAdminsSection';
@@ -87,7 +88,7 @@ const isForbiddenError = (error) => (
  * @typedef {{ documentId?: string; firstname?: string; lastname?: string; avatar?: ImageAsset }} CMAdmin
  * @typedef {{ title?: string; link?: string; logo?: ImageAsset }} CMSponsor
  * @typedef {{ teams?: number; members?: number }} CMSectionStats
- * @typedef {{ documentId?: string; name?: string; sport?: string; logoUrl?: string; stats?: CMSectionStats }} CMSectionRow
+ * @typedef {{ documentId?: string; name?: string; sport?: string; activites?: Array<{ name?: string }>; logoUrl?: string; stats?: CMSectionStats }} CMSectionRow
  * @typedef {{ documentId?: string; name?: string; admins?: CMAdmin[]; sections?: Array<{ documentId?: string; name?: string }> }} CMMultisportSummary
  * @typedef {{
  *  documentId?: string;
@@ -264,6 +265,16 @@ function CMDashboard({ navigation, route }) {
     () => (Array.isArray(cmTeamsData?.data) ? cmTeamsData.data : []),
     [cmTeamsData?.data],
   );
+  // ECRAN18-OMNI (06/10, décision d'Adel `omni A`) — sur ordinateur, la grande carte du
+  // téléphone laisse la place à la ligne de la planche P5-club-ordi, comme pour un club simple
+  // (ECRAN18-ENTETE). Même bascule que la planche à 2 colonnes ; le téléphone et un visiteur
+  // gardent la carte.
+  const enTeteCompact = isDesktop && isCmAdmin;
+  // Les sports du club, une fois chacun : ceux de ses sections (même lecture que « Mes
+  // sections » : `sport`, sinon la première activité).
+  const sportsDesSections = useMemo(() => [...new Set(sections
+    .map((section) => section?.sport || section?.activites?.[0]?.name || '')
+    .filter(Boolean))].join(' · '), [sections]);
 
   const refetch = useCallback(() => {
     refetchCM();
@@ -605,12 +616,29 @@ function CMDashboard({ navigation, route }) {
               isLoading={isLoading}
               wrapperStyle={[Spaces.gap[24]]}
             >
-              <MultisportHeroCard
-                canEdit={isCmAdmin}
-                cm={cm}
-                getClubInitials={getClubInitials}
-                onEditPress={handleOpenManageClub}
-              />
+              {/* ECRAN18-OMNI — la ligne compacte sur ordinateur. Rien n'est perdu : « Modifier »
+                  et le badge OMNISPORT y sont ; l'adresse, le téléphone et l'e-mail (absents de la
+                  planche) restent dans « Modifier ». */}
+              {enTeteCompact ? (
+                <ClubCompactHeader
+                  badge={t('multisport.badge', 'OMNISPORT')}
+                  club={cm || undefined}
+                  editAccessibilityLabel={t(
+                    'multisport.accessibility.editClub',
+                    'Modifier les informations du club',
+                  )}
+                  onEdit={handleOpenManageClub}
+                  subtitle={sportsDesSections}
+                  title={cm?.name || '-'}
+                />
+              ) : (
+                <MultisportHeroCard
+                  canEdit={isCmAdmin}
+                  cm={cm}
+                  getClubInitials={getClubInitials}
+                  onEditPress={handleOpenManageClub}
+                />
+              )}
 
               {/* ST-VUES3-ORDI (planche 18, ordinateur) — le tableau du week-end a gauche, les
                   trois chiffres et « Les équipes » a droite. Le telephone ne change pas. */}
