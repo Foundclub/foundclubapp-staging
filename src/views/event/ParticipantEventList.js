@@ -204,6 +204,10 @@ function ParticipantEventList({ navigation }) {
   const viewerChildrenCount = (
     /** @type {any} */ (eventsData?.pages?.[0]?.meta)?.viewerChildren || []
   ).filter((/** @type {any} */ child) => child?.firstname).length;
+  // « calendrier B » : le calendrier du haut ne demande les enfants qu a un compte qui en a.
+  const hasViewerChildren = (
+    /** @type {any} */ (eventsData?.pages?.[0]?.meta)?.viewerChildren || []
+  ).length > 0;
 
   // Get user's club and CM IDs for featured events membership filtering
   const userClubId = userData?.club?.documentId;
@@ -775,6 +779,7 @@ function ParticipantEventList({ navigation }) {
       <PersonalPlanningContainer
         onDataResolved={handlePlanningDataResolved}
         onSummaryPress={handleSummaryPress}
+        withChildren={hasViewerChildren}
       />
     );
 
@@ -868,6 +873,7 @@ function ParticipantEventList({ navigation }) {
     handleDateConfirm,
     handlePlanningDataResolved,
     handleSummaryPress,
+    hasViewerChildren,
     isEventsLoading,
     isFeaturedLoading,
     listStartDate,

@@ -23,4 +23,26 @@ const formatViewerChildrenNames = (children, t) => {
   });
 };
 
+/**
+ * PARENT-PLANNING (06/10, « calendrier B ») — le calendrier du parent ecrit le prenom de l enfant
+ * sur chaque creneau qui le concerne : « Hugo · Entrainement U15 ». Les autres ne changent pas.
+ * @param {any[]} items - Les creneaux, tels que `normalizePlanningItems` les rend (`raw` = le
+ *   serveur).
+ * @param {any} t - La traduction (i18next).
+ * @returns {any[]} Les creneaux, titres des enfants prefixes.
+ */
+export const withViewerChildrenTitles = (items, t) => (Array.isArray(items) ? items : [])
+  .map((item) => {
+    const names = formatViewerChildrenNames(item?.raw?.viewerChildren || item?.viewerChildren, t);
+    if (!names) return item;
+    return {
+      ...item,
+      title: t('planningSlots.childEventTitle', '{{names}} · {{title}}', {
+        names,
+        title: item?.title || '',
+        ...SANS_ECHAPPEMENT,
+      }),
+    };
+  });
+
 export default formatViewerChildrenNames;

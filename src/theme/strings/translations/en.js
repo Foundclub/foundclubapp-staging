@@ -13849,6 +13849,7 @@ export default {
     openThePlanningInFull: 'Open the planning in full screen',
   },
   planningSlots: {
+    childEventTitle: '{{names}} · {{title}}',
     event: 'Event',
     eventFallback: 'Event',
   },

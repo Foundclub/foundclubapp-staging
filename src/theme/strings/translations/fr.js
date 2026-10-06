@@ -14535,6 +14535,8 @@ export default {
     openThePlanningInFull: 'Ouvrir le planning en plein écran',
   },
   planningSlots: {
+    // PARENT-PLANNING (06/10) — le créneau d un enfant, dans le calendrier de son parent.
+    childEventTitle: '{{names}} · {{title}}',
     event: 'Événement',
     eventFallback: 'Événement',
   },

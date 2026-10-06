@@ -1344,13 +1344,17 @@ export const getClubEvents = async (clubId) => getEvents({
 
 /**
  * Get lightweight planning slots for the connected user.
- * @param {{ from?: string, to?: string }} [filters]
+ * PARENT-PLANNING (06/10) : `withChildren` verse AUSSI les creneaux a venir de ses enfants
+ * mineurs (marques `viewerChildren` par le serveur). L ecran ne le demande qu a un compte qui a
+ * des enfants.
+ * @param {{ from?: string, to?: string, withChildren?: boolean }} [filters]
  * @returns {Promise<any>}
  */
 export const getMyPlanning = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.from) params.append('from', filters.from);
   if (filters.to) params.append('to', filters.to);
+  if (filters.withChildren) params.append('withChildren', 'true');
 
   const suffix = params.toString() ? `?${params.toString()}` : '';
   const response = await client.get(`/users/me/planning${suffix}`);

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { withViewerChildrenTitles } from '@/domains/event/viewerChildren';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
@@ -33,10 +34,14 @@ const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
 
 /**
  * Personal planning content.
- * @param {{ onDataResolved?: () => void, onSummaryPress?: () => void }} props
+ * @param {{
+ *   onDataResolved?: () => void, onSummaryPress?: () => void, withChildren?: boolean,
+ * }} props - PARENT-PLANNING (06/10, « calendrier B ») : `withChildren` (un compte qui A des
+ *   enfants, dit par la liste du planning) demande AUSSI leurs creneaux a venir ; sans elle,
+ *   rien ne change.
  * @returns {import('react').ReactElement}
  */
-function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
+function PersonalPlanningContainer({ onDataResolved, onSummaryPress, withChildren = false }) {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const {
@@ -56,8 +61,13 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
   );
   const { data: eventsData, isError, isLoading } = useQuery({
     placeholderData: keepPreviousPageData,
-    queryFn: () => getMyPlanning(planningRange),
-    queryKey: ['planning', 'personal', planningRange.from, planningRange.to],
+    queryFn: () => getMyPlanning(
+      withChildren ? { ...planningRange, withChildren: true } : planningRange,
+    ),
+    // La cle d avant reste celle de tous les comptes sans enfant ; un parent a la sienne.
+    queryKey: withChildren
+      ? ['planning', 'personal', planningRange.from, planningRange.to, 'withChildren']
+      : ['planning', 'personal', planningRange.from, planningRange.to],
     staleTime: PERSONAL_PLANNING_STALE_MS,
   });
 
@@ -95,7 +105,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
     return <Loader />;
   }
 
-  const events = normalizePlanningItems(eventsData?.data || []);
+  const events = withViewerChildrenTitles(normalizePlanningItems(eventsData?.data || []), t);
 
   const handleEventPress = (event) => {
     if (!event?.documentId) return;
@@ -111,6 +121,7 @@ function PersonalPlanningContainer({ onDataResolved, onSummaryPress }) {
       contextLabel: t('planning.fullscreen.personal', 'Mon planning'),
       date: currentDate.toISOString(),
       sourceType: 'personal',
+      ...(withChildren ? { withChildren: true } : {}),
     });
   };
 
