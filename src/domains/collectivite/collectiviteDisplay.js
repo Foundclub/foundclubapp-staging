@@ -58,13 +58,16 @@ export const formatCollectiviteDay = (value) => {
  * planches P3v2-accueil et P7v2-fiche).
  * @param {string | null | undefined} start - Debut (ISO).
  * @param {string | null | undefined} end - Fin (ISO).
+ * VILLE-T18B (a) (07/10) — une fin au début ou AVANT (demande écrite avant le correctif serveur du
+ * 03/10 : tournée T18, « 18:00 – 17:00 ») ne s'écrit pas : le début seul.
  * @returns {string} Le libelle, ou '' si le debut est illisible.
  */
 export const formatSlot = (start, end) => {
   const day = formatCollectiviteDay(start);
   if (!day) return '';
   const from = formatHour(start);
-  const to = formatHour(end);
+  const finApresDebut = new Date(String(end)).getTime() > new Date(String(start)).getTime();
+  const to = finApresDebut ? formatHour(end) : '';
   return to ? `${day} · ${from} – ${to}` : `${day} · ${from}`;
 };
 

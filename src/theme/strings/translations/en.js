@@ -4700,6 +4700,7 @@ export default {
       complet: 'full {{moment}}',
       libre: 'free',
       planning: 'Schedule',
+      reservees: '{{duree}} booked this week',
       seances: '{{nombre}} sessions',
       titre: 'This week',
       uneSeance: '1 session',
@@ -5719,6 +5720,7 @@ export default {
       aVenir: 'Upcoming closure',
       // FINITIONS11-COLL (03/10) — boards 2-3.
       personneAPrevenir: 'No club has a session there: nobody to notify.',
+      voirToutes: 'See the {{count}} upcoming closures',
     },
     bandeau: {
       bloque: 'Blocked by the town, {{heures}}',
@@ -5900,9 +5902,11 @@ export default {
     },
     installations: {
       a11y: '{{nom}}: {{heures}}, occupancy {{taux}}',
+      a11ySansTaux: '{{nom}}: {{heures}} booked',
       aucune: 'No facility yet.',
+      reservees_one: '{{count}} session · {{duree}} booked over the period.',
+      reservees_other: '{{count}} sessions · {{duree}} booked over the period.',
       taux: 'Occupancy rate: {{taux}}.',
-      tauxSansHoraires: 'Occupancy rate: — (opening hours not set).',
       titre: 'Session hours, by facility',
     },
     jauge: {
