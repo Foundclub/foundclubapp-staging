@@ -127,6 +127,8 @@ import VoiceComposerZone, {
   VoiceSendAppear,
 } from '@/components/organisms/voiceComposer/VoiceComposerZone';
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
+import InfosDuGroupe from '@/views/chat/InfosDuGroupe';
+import MenuDuFil from '@/views/chat/MenuDuFil';
 import {
   BoutonMembresDuFil,
   EcussonDuFil,
@@ -806,6 +808,7 @@ function Conversation({ navigation, route }) {
     sendTypingStart,
     sendTypingStop,
     socket,
+    startWhisperChat,
     updateGroupMeta,
     votePoll,
   } = useMessaging(chatId);
@@ -1025,7 +1028,6 @@ function Conversation({ navigation, route }) {
   );
   const [isEditMessageModalVisible, setIsEditMessageModalVisible] = useState(false);
   const [isGroupManagementVisible, setIsGroupManagementVisible] = useState(false);
-  const [groupNameDraft, setGroupNameDraft] = useState('');
   const [isGroupMutationLoading, setIsGroupMutationLoading] = useState(false);
   const [isEditMessageSubmitting, setIsEditMessageSubmitting] = useState(false);
   const [isEditMessageUploadingAttachment, setIsEditMessageUploadingAttachment] = useState(false);
@@ -1160,11 +1162,6 @@ function Conversation({ navigation, route }) {
   );
   const { isPending: isBlockingUser, mutate: blockOtherParticipant } = useBlockUser();
   const { isPending: isUnblockingUser, mutate: unblockOtherParticipant } = useUnblockUser();
-
-  useEffect(() => {
-    if (!isGroupChat) return;
-    setGroupNameDraft(String(chatData?.groupName || ''));
-  }, [chatData?.groupName, isGroupChat]);
 
   const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
   const {
@@ -3161,15 +3158,16 @@ function Conversation({ navigation, route }) {
     navigation.setParams({ sharedEventFromPicker: undefined });
   }, [handleShareEvent, navigation, route?.params?.sharedEventFromPicker]);
 
+  // 👥 MSG1A (§3.16) — les « Infos du groupe » s'ouvrent pour TOUT membre du groupe (le pack :
+  // toucher le titre, ou ⋮ > « Infos du groupe ») ; les gestes d'admin restent aux admins.
   const handleOpenGroupManagement = () => {
-    if (!isGroupAdmin) return;
-    setGroupNameDraft(String(chatData?.groupName || ''));
+    if (!isGroupChat) return;
     setIsMenuVisible(false);
     setIsGroupManagementVisible(true);
   };
 
-  const handleSaveGroupName = async () => {
-    const nextGroupName = String(groupNameDraft || '').trim();
+  const handleSaveGroupName = async (/** @type {string} */ nom) => {
+    const nextGroupName = String(nom || '').trim();
     if (!chatId || !nextGroupName) {
       showErrorBanner(i18n.t(
         'conversation.group.invalidName',
@@ -3208,49 +3206,84 @@ function Conversation({ navigation, route }) {
     });
   };
 
-  const handleRemoveGroupMember = (/** @type {any} */ member) => {
+  // MSG1A (§3.16) — la confirmation vit DANS la page « Infos du groupe » : on arrive ici
+  // apres le « Retirer » de la boite de confirmation.
+  const handleRemoveGroupMember = async (/** @type {any} */ member) => {
     const memberId = String(member?.documentId || member?.id || '').trim();
     if (!chatId || !memberId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await removeGroupMember({
+        chatId,
+        userId: memberId,
+      });
+    } catch (error) {
+      conversationLogger.warn('Failed to remove group member', error);
+      showErrorBanner(i18n.t(
+        'conversation.group.removeError',
+        'Impossible de retirer ce membre.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
 
-    const memberLabel = `${member?.firstname || ''} ${member?.lastname || ''}`.trim() || i18n.t(
-      'conversation.group.thisMember',
-      'ce membre',
-    );
-    openConversationPrompt({
-      body: i18n.t(
-        'conversation.group.removeConfirm',
-        'Retirer {{member}} du groupe ?',
-        { member: memberLabel, ...SANS_ECHAPPEMENT },
-      ),
-      primaryAction: {
-        label: 'Retirer',
-        onPress: async () => {
-          closeConversationPrompt();
-          try {
-            setIsGroupMutationLoading(true);
-            await removeGroupMember({
-              chatId,
-              userId: memberId,
-            });
-          } catch (error) {
-            conversationLogger.warn('Failed to remove group member', error);
-            showErrorBanner(i18n.t(
-              'conversation.group.removeError',
-              'Impossible de retirer ce membre.',
-            ));
-          } finally {
-            setIsGroupMutationLoading(false);
-          }
-        },
-      },
-      secondaryAction: {
-        label: 'Annuler',
-        onPress: closeConversationPrompt,
-        variant: 'Secondary',
-      },
-      title: i18n.t('conversation.group.removeTitle', 'Retirer un membre'),
-      tone: 'critical',
-    });
+  // MSG1A (§3.16) — « Nommer admin du groupe » / « Retirer le role d'admin » : le serveur
+  // le sait deja (`updateGroupMeta`, `addAdminIds` / `removeAdminIds`, admins seulement).
+  const handleToggleGroupAdmin = async (/** @type {any} */ member, /** @type {boolean} */ devientAdmin) => {
+    const memberId = String(member?.documentId || member?.id || '').trim();
+    if (!chatId || !memberId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({
+        chatId,
+        data: devientAdmin ? { addAdminIds: [memberId] } : { removeAdminIds: [memberId] },
+      });
+    } catch (error) {
+      conversationLogger.warn('Failed to update group admins', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupInfo.adminError',
+        'Impossible de changer les admins du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // MSG1A (§3.16) — « Envoyer un message » depuis la fiche d'un membre : la discussion
+  // privee existante. `push`, pas `navigate` : vers l'ecran DEJA affiche, `navigate`
+  // remplacerait ses parametres et « Retour » sauterait ce fil.
+  const handleMessageGroupMember = async (/** @type {any} */ member) => {
+    const memberId = String(member?.documentId || member?.id || '').trim();
+    if (!memberId) return;
+    setIsGroupManagementVisible(false);
+    try {
+      const fil = await startWhisperChat([memberId]);
+      if (fil?.documentId) {
+        // @ts-ignore
+        navigation.push(RouteNames.Conversation, { chatId: fil.documentId });
+      }
+    } catch (error) {
+      conversationLogger.warn('Failed to open private chat', error);
+      showErrorBanner(i18n.t(
+        'messaging.createConversationError',
+        'Impossible de démarrer cette conversation.',
+      ));
+    }
+  };
+
+  const handleReportFromMenu = () => {
+    setIsMenuVisible(false);
+    setIsGroupManagementVisible(false);
+    setSafeTimeout(() => {
+      showInfoBanner(
+        i18n.t(
+          'conversation.report.contactSupport',
+          'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.', // eslint-disable-line max-len
+        ),
+        i18n.t('conversation.report.title', 'Signaler'),
+      );
+    }, 300);
   };
 
   const openSharedContact = (/** @type {string} */ userDocumentId) => {
@@ -6648,7 +6681,7 @@ function Conversation({ navigation, route }) {
       sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${t('conversation.header.you', 'Vous')}`;
     }
   }
-  const peutOuvrirLaGestionDuGroupe = isGroupAdmin;
+  const peutOuvrirLaGestionDuGroupe = isGroupChat;
 
   return (
     <ImageBackground
@@ -6936,73 +6969,53 @@ function Conversation({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Menu Modal */}
-        <BottomModal
-          close={() => setIsMenuVisible(false)}
-          isVisible={isMenuVisible}
-        >
-          <View style={[Spaces.gap[16], Spaces.marginTop[32]]}>
-            {showCancelButton && (
-            <Button
-              onPress={() => {
+        {/* ⋮ MSG1A (§3.16) — le petit menu du pack. Memes entrees qu'avant (« Annuler le
+            match », le groupe, « Signaler », « Bloquer » en tete-a-tete), sans « Fermer ». */}
+        <MenuDuFil
+          entrees={[
+            ...(isGroupChat ? [{
+              cle: 'infos-du-groupe',
+              icone: 'users',
+              libelle: t('conversation.groupInfo.title', 'Infos du groupe'),
+              onPress: handleOpenGroupManagement,
+            }] : []),
+            ...(showCancelButton ? [{
+              cle: 'annuler-le-match',
+              danger: true,
+              icone: 'xmark',
+              libelle: t('common.cancelMatch', 'Annuler le match'),
+              onPress: () => {
                 setIsMenuVisible(false);
                 setSafeTimeout(() => {
                   handleCancelMatch();
                 }, 300);
-              }}
-              title={t('common.cancelMatch', 'Annuler le match')}
-              variant="Secondary"
-            />
-            )}
-
-            {isGroupAdmin && (
-            <Button
-              onPress={handleOpenGroupManagement}
-              title={t('conversation.actions.manageGroup', 'Gérer le groupe')}
-              variant="SecondaryLight"
-            />
-            )}
-
-            <Button
-              onPress={() => {
-                setIsMenuVisible(false);
-                setSafeTimeout(() => {
-                  showInfoBanner(
-                    i18n.t(
-                      'conversation.report.contactSupport',
-                      'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.', // eslint-disable-line max-len
-                    ),
-                    i18n.t('conversation.report.title', 'Signaler'),
-                  );
-                }, 300);
-              }}
-              title={t('conversation.actions.report', 'Signaler')}
-              variant="SecondaryLight"
-            />
-
-            {/* 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde.
-                Il n apparait QUE pour un tete-a-tete : un fil de club, d equipe
-                ou de groupe n a personne a bloquer, et la discussion a trois du
-                mineur avec son parent n en a pas non plus (K5). */}
-            {otherParticipantId ? (
-              <Button
-                disabled={isBlockingUser || isUnblockingUser}
-                isLoading={isBlockingUser || isUnblockingUser}
-                onPress={handleToggleBlockFromMenu}
-                title={isOtherParticipantBlocked
-                  ? t('userBlock.actions.unblock', 'Débloquer cette personne')
-                  : t('userBlock.actions.block', 'Bloquer cette personne')}
-                variant="SecondaryLight"
-              />
-            ) : null}
-
-            <Button
-              onPress={() => setIsMenuVisible(false)}
-              title={t('common.cancel', 'Fermer')}
-              variant="PrimaryLight"
-            />
-          </View>
-        </BottomModal>
+              },
+            }] : []),
+            // 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde. Il n apparait QUE
+            // pour un tete-a-tete : un fil de club, d equipe ou de groupe n a personne a bloquer,
+            // et la discussion a trois du mineur avec son parent n en a pas non plus (K5).
+            ...(otherParticipantId ? [{
+              cle: 'bloquer',
+              danger: !isOtherParticipantBlocked,
+              desactive: isBlockingUser || isUnblockingUser,
+              icone: 'ban',
+              libelle: isOtherParticipantBlocked
+                ? t('userBlock.actions.unblock', 'Débloquer cette personne')
+                : t('userBlock.actions.block', 'Bloquer cette personne'),
+              onPress: handleToggleBlockFromMenu,
+            }] : []),
+            {
+              cle: 'signaler',
+              danger: true,
+              icone: 'flag',
+              libelle: t('conversation.actions.report', 'Signaler'),
+              onPress: handleReportFromMenu,
+            },
+          ]}
+          haut={top + 56}
+          onClose={() => setIsMenuVisible(false)}
+          visible={isMenuVisible}
+        />
 
         <GlobalPromptModal
           body={conversationPrompt?.body}
@@ -7015,98 +7028,22 @@ function Conversation({ navigation, route }) {
           visible={Boolean(conversationPrompt)}
         />
 
-        <BottomModal
-          close={() => setIsGroupManagementVisible(false)}
-          isVisible={isGroupManagementVisible}
-        >
-          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[12]]}>
-            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
-              {t('conversation.group.title', 'Gestion du groupe')}
-            </Text>
-
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t('conversation.group.nameLabel', 'Nom du groupe')}
-            </Text>
-            <TextInput
-              onChangeText={setGroupNameDraft}
-              placeholder={t('conversation.group.namePlaceholder', 'Nom du groupe')}
-              placeholderTextColor={Colors.neutral300}
-              style={[
-                Fonts.p2,
-                ApplicationStyle.borderRadius16,
-                Spaces.paddingHorizontal[16],
-                Spaces.paddingVertical[12],
-                {
-                  borderColor: Colors.primary500,
-                  borderWidth: 1,
-                  color: Colors.neutral00,
-                },
-              ]}
-              value={groupNameDraft}
-            />
-
-            <Button
-              disabled={isGroupMutationLoading}
-              isLoading={isGroupMutationLoading}
-              onPress={handleSaveGroupName}
-              title={t('conversation.group.saveName', 'Enregistrer le nom')}
-              variant="SecondaryLight"
-            />
-
-            <Button
-              disabled={isGroupMutationLoading}
-              onPress={handleAddGroupMembers}
-              title={t('conversation.group.addMembers', 'Ajouter des membres')}
-              variant="SecondaryLight"
-            />
-
-            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
-              {t('conversation.group.members', 'Membres')}
-            </Text>
-            {(Array.isArray(chatData?.participants) ? chatData.participants : []).map((participant) => {
-              const participantId = String(participant?.documentId || participant?.id || '').trim();
-              if (!participantId) return null;
-              const isSelf = participantId === String(userData?.documentId || '');
-              const isMemberAdmin = groupAdminIds.includes(participantId);
-              const participantName = `${participant?.firstname || ''} ${participant?.lastname || ''}`.trim() || participant?.username || participant?.phoneNumber || participantId;
-
-              return (
-                <View
-                  key={`group-member:${participantId}`}
-                  style={[
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Alignments.justifyBetween,
-                    Spaces.paddingVertical[8],
-                  ]}
-                >
-                  <View style={Alignments.fill}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>{participantName}</Text>
-                    <Text style={[Fonts.p4, Fonts.neutral300]}>
-                      {isMemberAdmin ? t('conversation.group.admin', 'Admin') : t('conversation.group.member', 'Membre')}
-                    </Text>
-                  </View>
-                  {!isSelf && (
-                    <TouchableOpacity
-                      disabled={isGroupMutationLoading}
-                      onPress={() => handleRemoveGroupMember(participant)}
-                    >
-                      <Text style={[Fonts.p3Bold, { color: Colors.warning500 || Colors.primary500 }]}>
-                        {t('conversation.group.remove', 'Retirer')}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
-
-            <Button
-              onPress={() => setIsGroupManagementVisible(false)}
-              title={t('common.close', 'Fermer')}
-              variant="PrimaryLight"
-            />
-          </View>
-        </BottomModal>
+        <InfosDuGroupe
+          adminIds={groupAdminIds}
+          chat={chatData}
+          estAdmin={isGroupAdmin}
+          meId={String(userData?.documentId || '')}
+          occupe={isGroupMutationLoading}
+          onAjouter={handleAddGroupMembers}
+          onBasculerAdmin={handleToggleGroupAdmin}
+          onClose={() => setIsGroupManagementVisible(false)}
+          onEnvoyerUnMessage={handleMessageGroupMember}
+          onRenommer={handleSaveGroupName}
+          onRetirer={handleRemoveGroupMember}
+          onSignaler={handleReportFromMenu}
+          resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+          visible={isGroupManagementVisible && isGroupChat}
+        />
 
         <BottomModal
           close={() => setIsAttachmentMenuVisible(false)}

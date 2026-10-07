@@ -691,3 +691,38 @@ describe('MSG1A — §3.11 canal d annonce en lecture seule', () => {
     expect(contientLeTexte(gifted.renderInputToolbar({ text: '' }), LECTURE_SEULE)).toBe(true);
   });
 });
+
+describe('MSG1A — §3.16 infos du groupe et menu ⋮', () => {
+  /* eslint-disable global-require */
+  const InfosDuGroupe = require('@/views/chat/InfosDuGroupe').default;
+  const MenuDuFil = require('@/views/chat/MenuDuFil').default;
+  /* eslint-enable global-require */
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('GI1 — toucher le titre d un groupe ouvre ses infos, meme pour un simple membre', () => {
+    const { ecran } = monterLaConversation();
+    expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(false);
+
+    const titre = ecran.root.findAll((n) => n.props?.accessibilityHint === 'Ouvre les infos du groupe'
+      && typeof n.props?.onPress === 'function')[0];
+    act(() => { titre.props.onPress(); });
+    expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(true);
+  });
+
+  test('GI2 — le ⋮ d un groupe : « Infos du groupe » et « Signaler », sans « Fermer »', () => {
+    const { ecran } = monterLaConversation();
+    const cles = ecran.root.findByType(MenuDuFil).props.entrees.map((entree) => entree.cle);
+    expect(cles).toEqual(['infos-du-groupe', 'signaler']);
+  });
+});
