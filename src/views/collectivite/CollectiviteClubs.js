@@ -137,7 +137,8 @@ function CollectiviteClubs() {
     borderWidth: 1,
   };
 
-  const renderContact = (/** @type {any} */ club) => {
+  // VILLE-T18C (07/10) : `court` — dans la colonne du tableau (ordinateur), le libellé court.
+  const renderContact = (/** @type {any} */ club, court = false) => {
     const liens = [
       club?.email ? { adresse: `mailto:${club.email}`, cle: 'email', texte: club.email } : null,
       club?.phoneNumber
@@ -157,6 +158,7 @@ function CollectiviteClubs() {
             club={club}
             collectiviteId={collectiviteId}
             compact
+            court={court}
             demanderFiche
             testID={`collectivite-club-${club?.documentId}-demander-fiche`}
           />
@@ -266,7 +268,7 @@ function CollectiviteClubs() {
         </Text>
         <View style={{ flex: colonnes[3].flex }}>{renderSeances(club)}</View>
         <View style={{ flex: colonnes[4].flex, gap: 6 }}>
-          {renderContact(club)}
+          {renderContact(club, true)}
           <EcrireAuxDirigeants
             club={club}
             collectiviteId={collectiviteId}

@@ -600,6 +600,7 @@ function FacilitySelector({
           address={location}
           error={error}
           label={t('eventEdit.fields.address.label', 'Adresse')}
+          permettreLieuSurCarte
           placeholder={t('eventEdit.fields.location.placeholder')}
           setAddress={handleAddressChange}
           wrapperStyle={fieldSurfaceStyle}

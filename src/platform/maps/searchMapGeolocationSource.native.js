@@ -54,6 +54,18 @@ export const ensureSearchMapGeolocationPermission = async () => {
   return granted === PermissionsAndroid.RESULTS.GRANTED;
 };
 
+// ADRESSE-CARTE (07/10) — « la position, si elle est DÉJÀ accordée ; ne jamais demander une
+// permission neuve pour ça ». Android sait le dire sans rien demander (`check`). iOS, non : le
+// module n'expose pas l'état de l'autorisation, et son premier `getCurrentPosition` ouvrirait la
+// demande. On répond donc NON sur iOS — la carte part de ce qui a été tapé, ou de la France.
+export const isSearchMapGeolocationAlreadyGranted = async () => {
+  if (Platform.OS !== 'android') {
+    return false;
+  }
+
+  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+};
+
 /**
  * @param {(position: any) => void} onSuccess
  * @param {() => void} onFailure
@@ -66,5 +78,6 @@ export const getCurrentSearchMapPosition = (onSuccess, onFailure, options) => {
 export default {
   ensureSearchMapGeolocationPermission,
   getCurrentSearchMapPosition,
+  isSearchMapGeolocationAlreadyGranted,
   isSearchMapGeolocationSupported,
 };

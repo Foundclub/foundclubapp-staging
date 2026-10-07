@@ -1196,3 +1196,41 @@ describe('TEXTES-COLLECTIVITES — le formulaire en mairie, et les couleurs nomm
     expect(noms).not.toContain('Couleur de planning');
   });
 });
+
+// ADRESSE-CARTE (07/10) — le besoin d'Adel, en créant une installation : « si l'adresse qu'on veut
+// n'est pas trouvée, on l'ajoute ». Le champ d'adresse propose « Placez-la sur la carte », et le
+// lieu posé revient À LA FORME d'une adresse de la liste (témoin du champ :
+// autocompleteAddressInput.lieuSurCarte.test.js ③). Ici : l'installation part avec CE point.
+describe('FacilityForm — ADRESSE-CARTE : un lieu posé sur la carte', () => {
+  const LIEU_POSE = {
+    city: 'Marseille',
+    label: 'Stade de Luminy (13009 Marseille)',
+    lat: 43.2289,
+    lng: 5.4371,
+    postcode: '13009',
+    provider: 'ban',
+    providerId: 'lieu:abc',
+    type: 'manual',
+    value: '5.4371|43.2289',
+  };
+
+  it('le champ d adresse propose de placer le lieu sur la carte', async () => {
+    await monterEcran();
+    expect(dernieresProps(mockAddressProps).permettreLieuSurCarte).toBe(true);
+  });
+
+  it('nom + lieu posé : la création part avec le point de l épingle', async () => {
+    const arbre = await monterEcran();
+    await saisirNom('Stade de Luminy');
+    await choisirAdresse(LIEU_POSE);
+
+    await appuyerSur(arbre, 'Créer');
+
+    expect(createFacility).toHaveBeenCalledTimes(1);
+    expect(/** @type {any} */ (createFacility).mock.calls[0][0].address).toEqual({
+      description: 'Stade de Luminy (13009 Marseille)',
+      geometry: { coordinates: [5.4371, 43.2289], type: 'Point' },
+    });
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+});

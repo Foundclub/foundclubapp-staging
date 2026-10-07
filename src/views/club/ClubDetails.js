@@ -122,6 +122,7 @@ import {
   pendingChildRequestKeys,
   resolveClubDetailsActionMatrix,
   resolveEmptyClubClaimGesture,
+  showsCityNewsBlock,
 } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
@@ -893,6 +894,23 @@ function ClubDetails({ navigation, route }) {
     if (duContexte.length || isAuthenticated) return duContexte;
     return Array.isArray(club?.publicFacilities) ? club.publicFacilities : [];
   }, [club?.publicFacilities, facilityContext?.allFacilities, isAuthenticated]);
+  // 🏟️ VILLE-T18C (07/10, tournée T18 D01a ; planche 40, état 1) — « Installations, 5 » pour 1 au
+  // club et 4 de la Ville : les deux nombres se disent séparément, comme la liste des
+  // installations (TEXTES-COLLECTIVITES). Sans installation de la Ville : un seul nombre.
+  const deLaVille = facilities
+    .filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite').length;
+  const compteDesInstallations = deLaVille
+    ? {
+      affiche: t('clubDetails.hub.installationsAvecVille', '{{club}} + {{ville}} de la Ville', {
+        club: facilities.length - deLaVille, ville: deLaVille,
+      }),
+      dit: t(
+        'clubDetails.hub.installationsAvecVilleDit',
+        '{{club}} au club et {{ville}} de la Ville',
+        { club: facilities.length - deLaVille, ville: deLaVille },
+      ),
+    }
+    : { affiche: String(facilities.length), dit: undefined };
   // COLL-C2C (02/10) — planche P8-installations-tel, etat 3 (le membre) : « Au club », puis la
   // Ville nommee UNE fois, dans le titre de son groupe. « Pretees » est retire (vague 2) : le club
   // n a que des creneaux, la Ville gere.
@@ -1748,6 +1766,14 @@ function ClubDetails({ navigation, route }) {
   // cette garde, chaque visiteur anonyme se prendrait un 401 a l ouverture.
   const { data: mesEnfantsBruts } = useGetMyDeclaredChildren({
     enabled: Boolean(isAuthenticated),
+  });
+  // VILLE-T18D 6 (« parent prevenu B ») — le bloc « De la Ville » : un membre, ou le parent d'un
+  // joueur mineur du club ; le serveur juge (can-read-club-news).
+  const afficheLeBlocDeLaVille = showsCityNewsBlock({
+    clubId,
+    enfants: mesEnfantsBruts,
+    isMember,
+    isParentRole: isAuthenticated && userData?.role?.name === USER_ROLES.parent,
   });
   // ⛔ On ne remonte QUE des tranches : ni la matrice ni cette fiche n ont de
   // raison de manipuler le prenom ou la date de naissance d un mineur.
@@ -3170,7 +3196,8 @@ function ClubDetails({ navigation, route }) {
                   icon={Images.stadium}
                   label={t('facilityList.title', 'Installations')}
                   onPress={handleOpenFacilityList}
-                  value={facilitiesLoading ? '…' : String(facilities.length)}
+                  value={facilitiesLoading ? '…' : compteDesInstallations.affiche}
+                  valueLabel={facilitiesLoading ? undefined : compteDesInstallations.dit}
                 />
                 <ClubHubRow
                   divider
@@ -3259,13 +3286,14 @@ function ClubDetails({ navigation, route }) {
             <>
               {/* COLL-C4A (02/10) — « De la Ville de … » : la dernière actualité de la Ville
                   d'un club rattaché, pour SES membres, et l'interrupteur D68. Rien pour un club
-                  rattaché à personne (le bloc ne s'affiche pas). */}
+                  rattaché à personne (le bloc ne s'affiche pas). VILLE-T18D 6 (« parent prévenu
+                  B ») : aussi pour le parent d'un joueur mineur du club ; le serveur juge. */}
               {/* VOIE 3 (« collectivité A », 07/10) — la sous-page « Ma collectivité » du
                   dirigeant ; un visiteur ne la voit jamais (pas `showsClubSection`). */}
               {isClubSubPage && hubSection === 'collectivite' && clubId ? (
                 <MaCollectivite clubId={String(clubId)} />
               ) : null}
-              {isMember && clubId ? (
+              {afficheLeBlocDeLaVille ? (
                 <BlocDeLaVille
                   clubId={String(clubId)}
                   encadrant={isClubStaffRole}

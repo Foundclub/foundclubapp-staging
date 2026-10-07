@@ -466,6 +466,14 @@ function CollectiviteClubDetails() {
             ...SANS_ECHAPPEMENT,
           })}
         </Text>
+        {/* VILLE-T18C (07/10, tournée T18 SITE_G63) — « 38 refusées » pour UNE série refusée :
+            elle compte une fois par date. Même règle et même phrase que « Chiffres ». */}
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteChiffres.demandes.unite',
+            'Une demande « chaque semaine » compte une fois par date.',
+          )}
+        </Text>
         <TouchableOpacity
           accessibilityRole="link"
           onPress={voirLesDemandes}

@@ -24,10 +24,12 @@ import {
   audiencePreview,
   categoryLabel,
   isImageAttachment,
+  pieceEnEnvoi,
   toActualitePayload,
 } from '@/domains/collectivite/collectiviteActualites';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -71,6 +73,11 @@ const estAnnulation = (erreur) => /cancel/i.test(String(erreur?.code || erreur?.
 
 // T9 (C18) : l'échec d'une pièce jointe ne disait que « Réessayez » — sa cause part au journal.
 const journal = createLogger('collectivite-actualite');
+
+/**
+ * VILLE-T18D — une pièce EN COURS d'envoi : photo ou document, son aperçu, la part envoyée.
+ * @typedef {{ apercu: string | null, photo: boolean, progression: number | null }} EnvoiEnCours
+ */
 
 /**
  * 📰 PUBLIER (OU MODIFIER) UNE ACTUALITÉ DE LA VILLE — COLL-C4A (02/10/2026).
@@ -119,6 +126,7 @@ function CollectiviteActualiteForm() {
   const [prete, setPrete] = useState(!actualiteId);
   const [feuille, setFeuille] = useState(false);
   const [envoiPiece, setEnvoiPiece] = useState(/** @type {string | null} */ (null));
+  const [envoi, setEnvoi] = useState(/** @type {EnvoiEnCours | null} */ (null));
   const [tentee, setTentee] = useState(false);
   const [erreurServeur, setErreurServeur] = useState('');
   // COLL-C4A3 — le glisser-déposer n'existe que sur le site, sur ordinateur.
@@ -189,7 +197,11 @@ function CollectiviteActualiteForm() {
    */
   const televerser = (choisis) => choisis.reduce(async (precedent, brut) => {
     await precedent;
-    const fichier = await uploadActualiteFile(brut);
+    // VILLE-T18D (T18 : 10,8 s sans rien dire) : l'écran montre la pièce et ce qui en est parti.
+    setEnvoi({ ...pieceEnEnvoi(brut), progression: null });
+    const fichier = await uploadActualiteFile(brut, {
+      onProgress: (progression) => setEnvoi((avant) => (avant ? { ...avant, progression } : avant)),
+    });
     if (fichier?.id) setPieces((avant) => [...avant, fichier]);
   }, Promise.resolve());
 
@@ -225,6 +237,7 @@ function CollectiviteActualiteForm() {
       direLEchec(erreur);
     } finally {
       setEnvoiPiece(null);
+      setEnvoi(null);
     }
   };
 
@@ -241,6 +254,7 @@ function CollectiviteActualiteForm() {
       direLEchec(erreur);
     } finally {
       setEnvoiPiece(null);
+      setEnvoi(null);
     }
   };
   // L'écoute du navigateur appelle toujours la DERNIÈRE version (pièces et envoi à jour), sans
@@ -365,6 +379,89 @@ function CollectiviteActualiteForm() {
     </TouchableOpacity>
   );
 
+  // VILLE-T18D — la ligne d'ENVOI : ce qui est parti (n %), puis l'attente du serveur, et
+  // pourquoi « Publier » attend. Une photo du téléphone se montre avant d'être envoyée.
+  const progression = Number.isFinite(envoi?.progression) ? Number(envoi?.progression) : null;
+  const pourcent = progression === null ? null : Math.min(100, Math.floor(progression * 100));
+  let ligneEnvoi = '';
+  if (envoi && progression !== null && progression >= 1) {
+    ligneEnvoi = envoi.photo
+      ? t('collectiviteActualites.form.envoi.photoRecue', 'Photo reçue, le serveur la prépare…')
+      : t(
+        'collectiviteActualites.form.envoi.documentRecu',
+        'Document reçu, le serveur l’enregistre…',
+      );
+  } else if (envoi && pourcent !== null) {
+    ligneEnvoi = envoi.photo
+      ? t(
+        'collectiviteActualites.form.envoi.photoPourcent',
+        'Envoi de la photo… {{pourcent}} %',
+        { pourcent, ...SANS_ECHAPPEMENT },
+      )
+      : t(
+        'collectiviteActualites.form.envoi.documentPourcent',
+        'Envoi du document… {{pourcent}} %',
+        { pourcent, ...SANS_ECHAPPEMENT },
+      );
+  } else if (envoi) {
+    ligneEnvoi = envoi.photo
+      ? t('collectiviteActualites.form.envoi.photo', 'Envoi de la photo…')
+      : t('collectiviteActualites.form.envoi.document', 'Envoi du document…');
+  }
+  const ligneDEnvoi = envoi ? (
+    <View
+      accessibilityLabel={ligneEnvoi}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="progressbar"
+      accessibilityValue={pourcent === null ? undefined : { max: 100, min: 0, now: pourcent }}
+      style={[
+        ApplicationStyle.borderRadius12,
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.padding[8],
+        { backgroundColor: withAlpha(Colors.neutral00, 0.06), gap: 10 },
+      ]}
+      testID="actualite-form-envoi"
+    >
+      {envoi.apercu ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          resizeMode="cover"
+          source={{ uri: envoi.apercu }}
+          style={{ borderRadius: 8, height: 36, width: 36 }}
+          testID="actualite-form-envoi-apercu"
+        />
+      ) : (
+        <View style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 36, width: 36 }]}>
+          <Loader size="small" />
+        </View>
+      )}
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{ligneEnvoi}</Text>
+        {pourcent === null ? null : (
+          <View
+            style={{
+              backgroundColor: withAlpha(Colors.neutral00, 0.12),
+              borderRadius: 2,
+              height: 4,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{ backgroundColor: Colors.primary500, height: 4, width: `${pourcent}%` }}
+            />
+          </View>
+        )}
+        <Text style={[Fonts.p4, Fonts.neutral300]}>
+          {t(
+            'collectiviteActualites.form.envoi.attente',
+            'Vous pourrez publier dès la fin de l’envoi.',
+          )}
+        </Text>
+      </View>
+    </View>
+  ) : null;
+
   const blocPieces = (
     <View style={{ gap: 8 }}>
       {pieces.map((fichier) => (
@@ -377,6 +474,7 @@ function CollectiviteActualiteForm() {
             : t('collectiviteActualites.form.documentJoint', 'Document joint')}
         />
       ))}
+      {ligneDEnvoi}
       {pieces.length < ACTUALITE_ATTACHMENTS_MAX ? boutonsAjouter : null}
     </View>
   );

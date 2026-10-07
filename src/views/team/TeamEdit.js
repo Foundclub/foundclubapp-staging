@@ -723,6 +723,7 @@ function TeamEdit({ navigation, route }) {
                 <AutocompleteAddressInput
                   address={value}
                   label={t('teamEdit.fields.address.label', 'Adresse de l\'équipe')}
+                  permettreLieuSurCarte
                   placeholder={t('teamEdit.fields.address.placeholder', 'Rechercher une adresse')}
                   setAddress={(newAddress) => {
                     onChange(newAddress);

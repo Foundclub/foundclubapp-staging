@@ -58,6 +58,11 @@ const ECRANS_MAIRIE = [
   // COLL-ACCUEIL (01/10) : l inscription de la mairie et l ecran « ou en est ma demande ».
   'views/collectivite/CollectiviteSignup.js',
   'views/collectivite/CollectiviteSignupStatus.js',
+  // VILLE-T18C (07/10, tournee T18 G62) : la fiche d un club cote mairie et le bouton « Ecrire
+  // aux dirigeants » (la Ville qui ecrit au club : fiche, liste des clubs, planning de la Ville).
+  // Hors de ce filet, « quand tu envoies ce message » a tutoye la mairie jusqu en recette.
+  'views/collectivite/CollectiviteClubDetails.js',
+  'views/collectivite/components/EcrireAuxDirigeants.js',
   // VILLE-INVITER-CLUB (07/10) : la recherche « Deja sur FoundClub », et « Demandes de
   // rattachement ».
   'views/collectivite/components/AjouterUnClub.js',
