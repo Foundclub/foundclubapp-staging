@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { buildLineupUpdateNotice } from './convocationWizardUtils';
@@ -25,15 +26,21 @@ function ConvocationUpdateNotice({ composition, messages = [] }) {
 
   let text = t('conversationConvocation.notice.updated', { version: notice.version });
   if (notice.kind === 'replaced') {
+    // Des NOMS de joueurs (« Rayan N'Diaye ») : sans echappement, comme tout nom (FINITIONS3).
     text = t('conversationConvocation.notice.replaced', {
-      entering: notice.entering, leaving: notice.leaving, version: notice.version,
+      entering: notice.entering,
+      leaving: notice.leaving,
+      version: notice.version,
+      ...SANS_ECHAPPEMENT,
     });
   } else if (notice.kind === 'changed') {
     const changes = [
       notice.added ? t('conversationConvocation.notice.added', { count: notice.added }) : '',
       notice.removed ? t('conversationConvocation.notice.removed', { count: notice.removed }) : '',
     ].filter(Boolean).join(', ');
-    text = t('conversationConvocation.notice.changed', { changes, version: notice.version });
+    text = t('conversationConvocation.notice.changed', {
+      changes, version: notice.version, ...SANS_ECHAPPEMENT,
+    });
   }
 
   return (

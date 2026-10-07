@@ -22,6 +22,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
@@ -340,7 +341,9 @@ function ConvocationWizard({
   const title = isUpdate
     ? t('conversationConvocation.titleEdit')
     : t('conversationConvocation.titleNew');
-  const subtitle = t('conversationConvocation.stepOf', { name: stepName, step });
+  const subtitle = t('conversationConvocation.stepOf', {
+    name: stepName, step, ...SANS_ECHAPPEMENT,
+  });
 
   let primaryLabel = t('conversationConvocation.next');
   if (step === CONVOCATION_STEPS.length) {

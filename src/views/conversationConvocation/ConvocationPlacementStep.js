@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -147,8 +148,10 @@ function ConvocationPlacementStep({
     t('conversationConvocation.placement.a11yHint'),
   ].join(' ');
   if (selectedRow) {
+    // Un nom (« N'Diaye ») ne doit pas sortir en « N&#39;Diaye » : FINITIONS3, sansEchappement.js.
     hint = t('conversationConvocation.placement.selectedHint', {
       name: getCompositionPlayerLabel(selectedRow.player),
+      ...SANS_ECHAPPEMENT,
     });
   }
 
@@ -196,7 +199,9 @@ function ConvocationPlacementStep({
                       name: action,
                     }))}
                     accessibilityHint={t('conversationConvocation.placement.tokenHint')}
-                    accessibilityLabel={t('conversationConvocation.placement.tokenLabel', { name })}
+                    accessibilityLabel={t('conversationConvocation.placement.tokenLabel', {
+                      name, ...SANS_ECHAPPEMENT,
+                    })}
                     accessible
                     key={playerId}
                     onAccessibilityAction={(event) => onMove((list) => nudgePlacement(
