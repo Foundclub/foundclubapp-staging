@@ -20,7 +20,6 @@ import {
   datesDeLaDemande,
   finDeLaSerie,
   finDeSaison,
-  horsOuverture,
 } from '@/domains/collectivite/collectiviteDemandes';
 import { payloadsDeLaDemande } from '@/domains/collectivite/collectiviteDemandesEnvoi';
 import { isTrainingEventType } from '@/domains/event/eventUseCases';
@@ -86,11 +85,12 @@ const versChamp = (valeur) => {
  * depuis « Tes demandes à la Ville ». La PLACE se lit pendant la saisie (contrat C2A §4.2, qui
  * compte aussi les séances datées : D75), avec qui est déjà là : club et équipe, jamais un nom
  * de personne (D71, D2). Complet ⇒ on ne bloque pas (« Tu peux demander quand même : la mairie
- * décidera »), et les heures libres du même jour se choisissent d'un appui. Seul blocage : hors
- * des heures d'ouverture. L'envoi pose l'entraînement (une date, ou chaque semaine jusqu'à la fin
- * de la saison) ; hors des créneaux du club, le serveur en fait une demande à la mairie, place
- * libre ou non (SPEC-PLACE, DECISIONS-SOIR 02/10), « Un mot pour la mairie » en est le motif. Puis
- * l'accusé de réception, qui dit qui décide, et « Tes demandes à la Ville ».
+ * décidera »), et les heures libres du même jour se choisissent d'un appui. Plus aucun blocage
+ * par les heures d'ouverture (VILLE-INSTALLATION, 07/10). L'envoi pose l'entraînement (une
+ * date, ou chaque semaine jusqu'à la fin de la saison) ; hors des créneaux du club, le serveur
+ * en fait une demande à la mairie, place libre ou non (SPEC-PLACE, DECISIONS-SOIR 02/10),
+ * « Un mot pour la mairie » en est le motif. Puis l'accusé de réception, qui dit qui décide, et
+ * « Tes demandes à la Ville ».
  * Au « tu » : c'est un club qui lit.
  * COLL-C3B-BIS (03/10) — planche 43 : « Changer » d'installation ; et sur ORDINATEUR, la même
  * saisie s'ouvre en PANNEAU à droite du planning de l'installation (`enPanneau`), qui dessine
@@ -166,13 +166,13 @@ function ClubSlotRequest({
     : null;
   // eslint-disable-next-line max-len
   const heuresLisibles = isTime(debut) && isTime(fin) && (toMinutes(debut) ?? 0) < (toMinutes(fin) ?? 0);
+  // 📍 VILLE-INSTALLATION (07/10) — LES HEURES D'OUVERTURE NE BLOQUENT PLUS. Décision d'Adel
+  // (« on ne met pas d'ouverture ni de fermeture » : la Ville ne les saisit plus), puis du chef
+  // d'orchestre dans sa ligne : celles restées en base ne doivent plus rien bloquer. Elles ne
+  // bornent plus que les heures libres PROPOSÉES ci-dessous (une suggestion, pas un refus).
+  // Témoin : __tests__/ClubSlotRequest.test.js, « plus aucun blocage, ni avertissement ».
   const ouverture = toMinutes(installation?.openingTime);
   const fermeture = toMinutes(installation?.closingTime);
-  const horsHeures = heuresLisibles
-    ? horsOuverture({
-      debut: toMinutes(debut), fermeture, fin: toMinutes(fin), ouverture,
-    })
-    : null;
 
   // 🧭 COLL-FIX2 (03/10) — l'aperçu est demandé AU NOM du club et de l'équipe : le serveur dit
   // alors ce qu'il fera de la séance (`decision`, mêmes juges qu'event.create : D32, la place,
@@ -239,7 +239,7 @@ function ClubSlotRequest({
   const envoyer = async () => {
     if (enCours.current) return;
     // eslint-disable-next-line max-len
-    if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || horsHeures || refusee) return;
+    if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || refusee) return;
     enCours.current = true;
     setEnvoi(true);
     setErreur('');
@@ -511,20 +511,7 @@ function ClubSlotRequest({
 
   // ─── La place pendant la saisie (P8v2, états 1 et 2) ─────────────────────────────────────
   let carteDeLaPlace = null;
-  if (horsHeures) {
-    const heure = fromMinutes(horsHeures.heure);
-    carteDeLaPlace = (
-      <View style={[carte, { borderColor: Colors.error500 }]} testID="demande-hors-ouverture">
-        <Text style={[Fonts.p2Bold, Fonts.error500]}>
-          {horsHeures.cas === 'ferme'
-            // eslint-disable-next-line max-len
-            ? t('collectiviteDemandes.club.ferme', 'L’installation ferme à {{heure}}. Termine à {{heure}}, ou commence plus tôt.', { heure, ...SANS_ECHAPPEMENT })
-            // eslint-disable-next-line max-len
-            : t('collectiviteDemandes.club.ouvre', 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.', { heure, ...SANS_ECHAPPEMENT })}
-        </Text>
-      </View>
-    );
-  } else if (place) {
+  if (place) {
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
     // 🧮 VILLE-T18C (07/10, tournée T18 D09a) — « il y a déjà 2 équipes » puis 3 noms : la capacité
     // moins la place restante (jamais sous zéro) plafonne à la capacité. Le serveur rend le PIC
@@ -900,7 +887,7 @@ function ClubSlotRequest({
       ) : null}
       <Button
         // eslint-disable-next-line max-len
-        disabled={envoi || Boolean(horsHeures) || refusee || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
+        disabled={envoi || refusee || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
         isLoading={envoi}
         onPress={envoyer}
         title={titreDuBouton}

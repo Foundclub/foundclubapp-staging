@@ -199,7 +199,7 @@ describe('COLL-C4B-BIS point 2 — la semaine hachuree (ordinateur)', () => {
   it('3. une semaine sans seance mais fermee : la plage se lit, de l ouverture a la fermeture', async () => {
     const arbre = await monter([PLAGE_VENDREDI]);
     const heures = regleDesHeures(arbre).map((cellule) => cellule.texte);
-    expect(heures[0]).toBe('8:00');
+    expect(heures[0]).toBe('08:00');
     expect(heures).toContain('21:00');
     expect(styleDuBloc(arbre, 'Fermé · travaux')).toBeDefined();
   });

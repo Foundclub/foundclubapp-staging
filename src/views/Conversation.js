@@ -5240,6 +5240,7 @@ function Conversation({ navigation, route }) {
               <PollMessageBubble
                 currentUserId={userData?.documentId || ''}
                 isMe={!isLeft}
+                messageId={currentMessage?.documentId || currentMessage?._id || currentMessage?.id}
                 onOpenDetails={() => handleOpenPollDetails(currentMessage)}
                 onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
                 poll={currentMessage.composition}

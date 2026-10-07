@@ -234,10 +234,15 @@ afterEach(() => {
 });
 
 describe('COLL-C2B planche 2 — six groupes, et le type dans une feuille', () => {
-  it('les six groupes, dans l ordre du dessin', async () => {
+  // VILLE-INSTALLATION (07/10) — décision d Adel « on ne met pas d ouverture ni de fermeture » :
+  // le groupe « Quand » (Ouverture / Fermeture) est parti ; il en reste cinq, dans le même ordre.
+  it('les cinq groupes, dans l ordre du dessin, sans « Quand »', async () => {
     const lus = textes(await monterVille());
+    expect(lus).not.toContain('Quand');
+    expect(champ('Ouverture')).toBeUndefined();
+    expect(champ('Fermeture')).toBeUndefined();
     const groupes = [
-      'L’essentiel', 'Où', 'Quand', 'Combien d’équipes à la fois', 'Quand c’est plein',
+      'L’essentiel', 'Où', 'Combien d’équipes à la fois', 'Quand c’est plein',
       'Couleur dans le planning',
     ];
     const positions = groupes.map((groupe) => lus.indexOf(groupe));
@@ -351,15 +356,17 @@ describe('COLL-C2B planche 2 — les erreurs, sans fenetre systeme', () => {
     await appuyer(parLibelle(arbre, 'Type'));
     await appuyer(parTexte(arbre, 'Dojo'));
     await choisirAdresse({ label: 'rue des Tilleuls' });
-    await saisir('Ouverture', '20:00');
-    await saisir('Fermeture', '08:00');
+    // VILLE-INSTALLATION (07/10) : plus d horaires ; la seconde erreur est un plateau sans nom.
+    await appuyer(parTexte(arbre, '+'));
+    await basculer(arbre, true);
+    await saisir('Plateau 1', '   ');
     await appuyer(parTexte(arbre, 'Créer'));
 
     expect(mockSaveCollectivite).not.toHaveBeenCalled();
     expect(Alert.alert).not.toHaveBeenCalled();
     expect(mockAddressProps[mockAddressProps.length - 1].error)
       .toBe('Sélectionnez une adresse géolocalisée dans la liste.');
-    expect(champ('Fermeture').error).toBe('La fermeture doit suivre l’ouverture.');
+    expect(textes(arbre)).toContain('Nommez chaque plateau.');
     expect(textes(arbre)).toContain('2 champs à corriger');
   });
 

@@ -198,7 +198,12 @@ function AutocompleteAddressInput({
       searchValue={addressSearch}
       setSearchValue={setAddressSearch}
       setValue={handleSetValue}
-      value={selectedAddress?.label || ''}
+      // VILLE-INSTALLATION 5 (07/10, tournée T18) : une adresse ENREGISTRÉE revient du serveur
+      // en { description, geometry } (pas de `label`) : le champ montrait l'indice sous un
+      // « GPS activé ». On lit la même chose que les cartes (description à défaut du libellé).
+      value={selectedAddress?.label
+        || /** @type {any} */ (selectedAddress)?.description
+        || ''}
       wrapperStyle={wrapperStyle}
     />
   );

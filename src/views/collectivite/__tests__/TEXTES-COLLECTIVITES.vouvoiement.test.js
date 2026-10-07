@@ -63,6 +63,10 @@ const ECRANS_MAIRIE = [
   // Hors de ce filet, « quand tu envoies ce message » a tutoye la mairie jusqu en recette.
   'views/collectivite/CollectiviteClubDetails.js',
   'views/collectivite/components/EcrireAuxDirigeants.js',
+  // VILLE-INVITER-CLUB (07/10) : la recherche « Deja sur FoundClub », et « Demandes de
+  // rattachement ».
+  'views/collectivite/components/AjouterUnClub.js',
+  'views/collectivite/components/DemandesDeRattachement.js',
 ];
 
 // Les clefs que la mairie lit dans les écrans PARTAGÉS avec les clubs.
@@ -84,6 +88,13 @@ const REFUS_LUS_PAR_LA_MAIRIE = [
   'APIerrors.COLLECTIVITE_INVALID_PAYLOAD',
   'APIerrors.FACILITY_OVERRIDE_CAPACITY_CHANGED',
   'APIerrors.FACILITY_OVERRIDE_OWNER_REQUIRED',
+  // VILLE-INVITER-CLUB (07/10) : envoyer, relancer, juger une demande de rattachement.
+  'APIerrors.COLLECTIVITE_ATTACH_REQUEST_PENDING',
+  'APIerrors.COLLECTIVITE_CLUB_WITHOUT_LEADER',
+  'APIerrors.COLLECTIVITE_DEMO_FORBIDDEN',
+  'APIerrors.COLLECTIVITE_INVITATION_ANSWERED_BY_FOUNDCLUB',
+  'APIerrors.COLLECTIVITE_INVITATION_DECIDED',
+  'APIerrors.COLLECTIVITE_PROPOSAL_REMIND_TOO_SOON',
 ];
 
 describe('TEXTES-COLLECTIVITES — la mairie est vouvoyée', () => {

@@ -52,6 +52,70 @@ export const getPollTotalVotes = (options) => (
     : 0
 );
 
+// SECU-SONDAGE-ANONYME (07/10) — MON CHOIX DANS UN SONDAGE ANONYME. Décision d'Adel « anonyme A » :
+// le serveur ne met plus les votants d'un sondage anonyme dans sa composition (elle part à tout le
+// fil), il n'y laisse que les COMPTEURS. Mon choix m'arrive à moi seul (`myOptionIds`, réponse de
+// mon vote et GET /poll-voters). L'app le POSE dans la composition qu'elle garde en cache, sous la
+// forme que les écrans lisent déjà : `voters: [moi]` sur mes options. Rien d'autre ne change.
+
+/**
+ * Les options que je coche, d'après la composition.
+ * @param {any} poll La composition du sondage.
+ * @param {string} currentUserId Mon identifiant.
+ * @returns {string[]} Mes options, dans l'ordre du sondage.
+ */
+export const getMyPollOptionIds = (poll, currentUserId) => {
+  const me = String(currentUserId || '').trim();
+  if (!me || !Array.isArray(poll?.options)) return [];
+  return poll.options
+    .filter((/** @type {any} */ option) => getPollVoters(option).includes(me))
+    .map((/** @type {any} */ option) => String(option?.id || ''))
+    .filter(Boolean);
+};
+
+/**
+ * Un sondage anonyme dont la composition ne nomme personne : celle du serveur neuf. (Un serveur
+ * ancien y laissait les votants : dans ce cas, c'est lui qui fait foi et l'app n'y touche pas.)
+ * @param {any} poll La composition du sondage.
+ * @returns {boolean} Vrai s'il faut demander mon choix à part.
+ */
+export const isAnonymousPollNamingNoOne = (poll) => (
+  poll?.type === 'poll'
+  && Boolean(poll?.isAnonymous)
+  && Array.isArray(poll?.options)
+  && poll.options.every((/** @type {any} */ option) => getPollVoters(option).length === 0)
+);
+
+/**
+ * Pose MON choix dans un sondage anonyme : `voters: [moi]` sur mes options, `[]` ailleurs ; les
+ * compteurs du serveur ne bougent pas. Rien à poser (choix inconnu, sondage visible, pas un
+ * sondage) ⇒ la composition revient telle quelle ; déjà posé ⇒ la MÊME composition revient (aucun
+ * redessin pour rien).
+ * @param {any} poll La composition du sondage.
+ * @param {string[] | null | undefined} myOptionIds Mon choix, tel que le serveur me l'a rendu.
+ * @param {string} currentUserId Mon identifiant.
+ * @returns {any} La composition, avec mon choix.
+ */
+export const withMyAnonymousPollVotes = (poll, myOptionIds, currentUserId) => {
+  const me = String(currentUserId || '').trim();
+  if (poll?.type !== 'poll' || !poll?.isAnonymous || !me) return poll;
+  if (!Array.isArray(myOptionIds)) return poll;
+  const options = Array.isArray(poll.options) ? poll.options : [];
+  const mine = new Set(myOptionIds.map((value) => String(value || '').trim()).filter(Boolean));
+  const voters = (/** @type {any} */ option) => (mine.has(String(option?.id || '')) ? [me] : []);
+  const unchanged = options.every((/** @type {any} */ option) => {
+    const current = getPollVoters(option);
+    const wanted = voters(option);
+    return current.length === wanted.length
+      && current.every((value, index) => value === wanted[index]);
+  });
+  if (unchanged) return poll;
+  return {
+    ...poll,
+    options: options.map((/** @type {any} */ option) => ({ ...option, voters: voters(option) })),
+  };
+};
+
 /**
  * Creates a poll composition payload suitable for chat messages.
  * @param {object} params
@@ -144,9 +208,13 @@ export const applyOptimisticPollVote = ({
       changed = true;
     }
 
+    // SECU-SONDAGE-ANONYME (07/10) — le compteur BOUGE de ma voix, il ne se recompte pas sur les
+    // votants : un sondage anonyme du serveur ne nomme plus personne (`voters` ne porte que moi,
+    // posé par l'app), son `voteCount` compte tout le monde. Pour un sondage visible, c'est le même
+    // nombre que `nextVoters.length`.
     return {
       ...option,
-      voteCount: nextVoters.length,
+      voteCount: Math.max(0, getPollVoteCount(option) + nextVoters.length - optionVoters.length),
       voters: nextVoters,
     };
   });

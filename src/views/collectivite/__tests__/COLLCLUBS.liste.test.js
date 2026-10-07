@@ -70,6 +70,17 @@ jest.mock('@/responsive', () => ({
   useIsDesktop: () => mockBureau,
 }));
 
+// VILLE-INVITER-CLUB (07/10) : les demandes de rattachement vivent dans un module a part ;
+// `data` absent = un serveur d'avant le lot : l'ecran garde « Invitations » comme avant.
+jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
+  useAnswerCollectiviteAttachRequest: () => ({ isPending: false, mutate: jest.fn() }),
+  useCancelCollectiviteProposal: () => ({ isPending: false, mutate: jest.fn() }),
+  useCollectiviteClubRequests: () => ({ data: undefined, error: null, isLoading: false }),
+  useCollectiviteClubSearch: () => ({ data: [], error: null, isLoading: false }),
+  useProposeCollectiviteClub: () => ({ isPending: false, mutate: jest.fn() }),
+  useRemindCollectiviteProposal: () => ({ isPending: false, mutate: jest.fn() }),
+}));
+
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
   useCollectiviteInvitations: () => mockInvitations,
@@ -234,7 +245,8 @@ describe('COLL-CLUBS — planche 1 : la liste des clubs rattachés', () => {
     };
     expect(textes(await monter())).toEqual(expect.arrayContaining([
       'Aucun club rattaché pour l’instant.',
-      'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Invitez-le.',
+      // VILLE-INVITER-CLUB (07/10) : la Ville ajoute elle-meme un club deja inscrit (« club A »).
+      'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
     ]));
   });
 });

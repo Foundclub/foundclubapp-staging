@@ -17,6 +17,7 @@ import {
   closureErrorMessage,
   phraseForFacilityType,
   reasonLabel,
+  touchedCountLabel,
   touchedSessionLine,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -360,6 +361,24 @@ function FormulaireDeFermeture({
       );
   }
 
+  // VILLE-T18A « fermer A » (décision du chef d'orchestre, 07/10, T18 point 3, G54a) : après
+  // « Fermer », la fermeture se lit dans l'onglet « Fermetures » de l'installation (« N clubs
+  // prévenus ») — avant, retour à l'accueil sans rien. Venue de cette fiche (son bouton « Fermer
+  // l'installation ») : on y revient. Sinon (l'accueil) : la fiche REMPLACE le formulaire, que
+  // Retour ne rouvre pas une fois envoyé.
+  const versLesFermetures = () => {
+    const etat = navigation.getState?.();
+    const precedente = etat?.routes?.[(etat?.index ?? 0) - 1];
+    if (precedente?.name === RouteNames.CollectiviteInstallation
+      && precedente?.params?.facilityId === facilityId) {
+      navigation.goBack?.();
+      return;
+    }
+    const parametres = { collectiviteId, facilityId, onglet: 'fermetures' };
+    if (navigation.replace) navigation.replace(RouteNames.CollectiviteInstallation, parametres);
+    else navigation.navigate?.(RouteNames.CollectiviteInstallation, parametres);
+  };
+
   const envoyer = async () => {
     setErreur(null);
     /** @type {Record<string, any>} */
@@ -391,6 +410,7 @@ function FormulaireDeFermeture({
       }
       setConfirmer(false);
       if (onDone) onDone();
+      else if (!modification && !bloquer) versLesFermetures();
       else navigation.goBack?.();
     } catch (refus) {
       setConfirmer(false);
@@ -424,11 +444,7 @@ function FormulaireDeFermeture({
     >
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
         {Number(carte.sessionsCount) > 0
-          ? `${t('collectiviteFermetures.carte.seances', {
-            count: Number(carte.sessionsCount),
-            defaultValue_one: '{{count}} séance touchée',
-            defaultValue_other: '{{count}} séances touchées',
-          })}, ${t('collectiviteFermetures.carte.clubs', {
+          ? `${touchedCountLabel(t, carte)}, ${t('collectiviteFermetures.carte.clubs', {
             count: Number(carte.clubsCount) || 0,
             defaultValue_one: '{{count}} club prévenu',
             defaultValue_other: '{{count}} clubs prévenus',
@@ -447,6 +463,10 @@ function FormulaireDeFermeture({
             testID="fermeture-carte-seance"
           >
             {touchedSessionLine(seance, { withDay: plusieursJours })}
+            {/* VILLE-T18A (T18, G54a) — un créneau sans séance posée se dit comme tel. */}
+            {seance?.kind === 'slot'
+              ? ` (${t('collectiviteFermetures.carte.creneau', 'créneau')})`
+              : null}
           </Text>
         ),
       )}

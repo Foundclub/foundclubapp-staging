@@ -136,7 +136,7 @@ describe('T06 — la vue mois annonce l horloge de l evenement', () => {
     }]);
     arbresMontes.push(arbre);
 
-    expect(textes(arbre)).toContain('18:00 - 19:00');
+    expect(textes(arbre)).toContain('18:00 – 19:00');
   });
 
   it('l horloge donne l HEURE, l instant garde le JOUR', async () => {

@@ -49,6 +49,31 @@ const DEFAULT_HOUR_HEIGHT = 60;
 const DEFAULT_COLLAPSED_HEIGHT = 18;
 const DEFAULT_MIN_EVENT_HEIGHT = 28;
 const DEFAULT_TIME_COLUMN_WIDTH = 56;
+// VILLE-T18A (tournée T18, G56c) — l étiquette d une heure remonte de la moitié de sa
+// ligne pour se centrer sur son trait ; la grille garde AU MOINS cette marge en haut,
+// sinon la première heure (« 08:00 ») est coupée. Et l heure s écrit HH:MM, comme toute
+// l app (« 08:00 », pas « 8:00 »).
+const REMONTEE_DE_L_ETIQUETTE = 8;
+/**
+ * L étiquette d une heure entière de la règle.
+ * @param {number} heure - 0 à 23.
+ * @returns {string} « 08:00 ».
+ */
+const etiquetteDHeure = (heure) => `${String(heure).padStart(2, '0')}:00`;
+/**
+ * VILLE-T18A (tournée T18, site, SITE_G45b) — LA CLÉ D UN BLOC. Un créneau de saison n a pas de
+ * `documentId` : sa clé était « jour-hauteur », la MÊME pour deux créneaux à la même heure. Clés
+ * en double : quand la grille se tasse (un panneau s ouvre) et que les deux blocs deviennent une
+ * grappe, React gardait un bloc FANTÔME par-dessus. Le créneau, puis le club, la départagent.
+ * @param {any} event - Le bloc place (jour, hauteur, colonne).
+ * @returns {string} Une clé unique dans la grille.
+ */
+const cleDuBloc = (event) => event?.documentId || [
+  event?.raw?.slot?.documentId || event?.club?.documentId || event?.title || 'bloc',
+  event?.dayIndex,
+  event?.top,
+  event?.colIndex ?? 0,
+].join('-');
 // COLL-FIX-PLANNING (tournee T9, capture T9_C29_2) — sous cette largeur (en points), un bloc ne
 // montre plus que deux ou trois lettres par ligne (« AS / … / 1… ») : les seances qui se
 // chevauchent se REGROUPENT alors en une seule carte (« 2 séances », voir layoutEvents).
@@ -706,7 +731,7 @@ function PlanningWeekTimelineView({
         <View style={styles.grappeDots}>
           {seances.map((/** @type {any} */ e) => (
             <View
-              key={`${e.documentId || e.title}-${e.top}`}
+              key={cleDuBloc(e)}
               style={[styles.grappeDot, { backgroundColor: e.color || Colors.primary500 }]}
             />
           ))}
@@ -861,7 +886,7 @@ function PlanningWeekTimelineView({
       <EventBlock
         accessibilityLabel={blockAccessibilityLabel}
         event={event}
-        key={event.documentId || `${event.dayIndex}-${event.top}`}
+        key={cleDuBloc(event)}
         onEventPress={onEventPress}
         onReadOnlyEventPress={onReadOnlyEventPress}
         style={[styles.eventCard, {
@@ -1145,7 +1170,7 @@ function PlanningWeekTimelineView({
   const cellulesLibres = onFreeSlotPress ? timelineBlocks.flatMap((block) => {
     const heure = block.type === 'hour' ? block.value : block.start;
     const hauteur = block.type === 'hour' ? hourHeight : collapsedHeight;
-    const heureLue = `${String(heure).padStart(2, '0')}:00`;
+    const heureLue = etiquetteDHeure(heure);
     const finDeLaCase = (block.type === 'hour' ? block.value + 1 : block.end + 1) * 60;
     const joursOuverts = weekDays
       .map((day, dayIndex) => ({ day, dayIndex }))
@@ -1359,7 +1384,7 @@ function PlanningWeekTimelineView({
                     {timelineBlocks.map((block) => (
                       <View key={block.type === 'hour' ? `hour-${block.value}` : block.id} style={[styles.timeCell, { height: block.type === 'hour' ? hourHeight : collapsedHeight }]}>
                         {block.type === 'hour' ? (
-                          <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{`${block.value}:00`}</Text>
+                          <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{etiquetteDHeure(block.value)}</Text>
                         ) : (
                           <Text style={styles.collapsedText}>…</Text>
                         )}
@@ -1435,7 +1460,7 @@ function PlanningWeekTimelineView({
                   {timelineBlocks.map((block) => (
                     <View key={block.type === 'hour' ? `hour-${block.value}` : block.id} style={[styles.timeCell, { height: block.type === 'hour' ? hourHeight : collapsedHeight }]}>
                       {block.type === 'hour' ? (
-                        <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{`${block.value}:00`}</Text>
+                        <Text style={[Fonts.p3, styles.hourText, { color: Colors.neutral300 }]}>{etiquetteDHeure(block.value)}</Text>
                       ) : (
                         <Text style={styles.collapsedText}>…</Text>
                       )}
@@ -1523,7 +1548,7 @@ const styles = StyleSheet.create({
   compactHeaderDate: { fontSize: 12 },
   compactHeaderSpacing: { paddingBottom: 2, paddingTop: 1 },
   compactPanel: { borderRadius: 14, paddingHorizontal: 2 },
-  compactScrollContent: { paddingBottom: 8, paddingTop: 0 },
+  compactScrollContent: { paddingBottom: 8, paddingTop: REMONTEE_DE_L_ETIQUETTE },
   compactUntimedCard: { marginBottom: 4, paddingHorizontal: 6, paddingVertical: 4 },
   compactUntimedSection: { marginTop: 6, paddingBottom: 4, paddingTop: 4 },
   container: { backgroundColor: 'transparent', flex: 1 },
@@ -1566,7 +1591,7 @@ const styles = StyleSheet.create({
   hitSlop: {
     bottom: 10, left: 10, right: 10, top: 10,
   },
-  hourText: { fontSize: 11, fontWeight: '700', marginTop: -8 },
+  hourText: { fontSize: 11, fontWeight: '700', marginTop: -REMONTEE_DE_L_ETIQUETTE },
   leagueDot: {
     borderColor: 'rgba(0,18,24,0.8)', borderRadius: 999, borderWidth: 1, height: 10, position: 'absolute', right: 3, top: 3, width: 10,
   },
@@ -1632,7 +1657,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 11,
   },
-  scrollContent: { paddingBottom: 50, paddingTop: 6 },
+  scrollContent: { paddingBottom: 50, paddingTop: REMONTEE_DE_L_ETIQUETTE },
   summaryArrow: {
     height: 12, marginLeft: 8, tintColor: '#FFFFFF', width: 12,
   },
