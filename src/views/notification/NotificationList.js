@@ -91,6 +91,7 @@ function NotificationList() {
   const {
     deleteNotification,
     hasNextPage,
+    isError,
     isFetchingNextPage,
     isLoading,
     loadMore,
@@ -506,6 +507,60 @@ function NotificationList() {
     nav.navigate(RouteNames.HomeTab);
   }, [nav]);
 
+  // VILLE-NOTIFS (07/10) — une lecture en echec n'est pas une liste vide : « Aucune notification »
+  // ne s'affiche que si le serveur a REPONDU qu'il n'y en a pas (capture G53b de la T18).
+  let listEmpty = null;
+  if (!isLoading && isError) {
+    listEmpty = (
+      <View style={{ alignItems: 'center', marginTop: 60 }}>
+        <Text style={[Fonts.h4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+          {t('notificationList.errors.load', 'Impossible de charger les notifications.')}
+        </Text>
+        <TouchableOpacity
+          accessibilityLabel={t('common.actions.retry', 'Réessayer')}
+          accessibilityRole="button"
+          hitSlop={{
+            bottom: 12, left: 12, right: 12, top: 12,
+          }}
+          onPress={refreshNotifications}
+          style={{ marginTop: 16 }}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+            {t('common.actions.retry', 'Réessayer')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  } else if (!isLoading) {
+    listEmpty = (
+      <View style={{ alignItems: 'center', marginTop: 60 }}>
+        <SvgIcon
+          color={Colors.primary200}
+          height={48}
+          name="bell"
+          style={{ marginBottom: 16 }}
+          width={48}
+        />
+        <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+          {t('notificationList.empty.title', 'Aucune notification')}
+        </Text>
+        <Text
+          style={[
+            Fonts.p2,
+            {
+              color: Colors.neutral00,
+              marginTop: 8,
+              opacity: 0.7,
+              textAlign: 'center',
+            },
+          ]}
+        >
+          {t('notificationList.empty.body', 'Les nouvelles notifications apparaîtront ici.')}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -546,35 +601,7 @@ function NotificationList() {
         contentContainerStyle={{ paddingBottom: 40 }}
         data={sections}
         keyExtractor={(item) => item.key}
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <SvgIcon
-                color={Colors.primary200}
-                height={48}
-                name="bell"
-                style={{ marginBottom: 16 }}
-                width={48}
-              />
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                {t('notificationList.empty.title', 'Aucune notification')}
-              </Text>
-              <Text
-                style={[
-                  Fonts.p2,
-                  {
-                    color: Colors.neutral00,
-                    marginTop: 8,
-                    opacity: 0.7,
-                    textAlign: 'center',
-                  },
-                ]}
-              >
-                {t('notificationList.empty.body', 'Les nouvelles notifications apparaîtront ici.')}
-              </Text>
-            </View>
-          ) : null
-        }
+        ListEmptyComponent={listEmpty}
         ListFooterComponent={
           isFetchingNextPage ? (
             <View style={{ alignItems: 'center', padding: 16 }}>

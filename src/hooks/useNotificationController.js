@@ -117,6 +117,7 @@ export const useNotificationController = (options = {}) => {
     data: notificationsData,
     fetchNextPage,
     hasNextPage,
+    isError,
     isFetchingNextPage,
     isLoading,
     refetch,
@@ -325,6 +326,8 @@ export const useNotificationController = (options = {}) => {
   return {
     deleteNotification: deleteMutationAsync,
     hasNextPage,
+    // VILLE-NOTIFS (07/10) — une lecture en echec n'est pas une liste vide : les ecrans le disent.
+    isError,
     isFetchingNextPage,
     isLoading,
     loadMore,

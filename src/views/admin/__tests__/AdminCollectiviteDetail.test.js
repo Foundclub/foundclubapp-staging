@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Alert, Text, TextInput } from 'react-native';
+import {
+  Alert, StyleSheet, Text, TextInput, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -22,6 +24,15 @@ import AdminCollectiviteDetail from '../AdminCollectiviteDetail';
 // Le client HTTP est doublé ; le VRAI i18next (fr.js) écrit les phrases.
 
 const mockGet = jest.fn();
+// VT18E (07/10) — la largeur de la fenêtre : un téléphone par défaut (celle du moteur de test,
+// 750), un ordinateur pour la planche P2-fiche-ordi.
+let mockLargeur = 750;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({
+    fontScale: 1, height: 900, scale: 1, width: mockLargeur,
+  }),
+}));
 const mockPost = jest.fn();
 const mockPut = jest.fn();
 const mockDelete = jest.fn();
@@ -153,13 +164,16 @@ const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
 
 /**
  * Laisse tourner react-query jusqu a ce que la condition tienne (borne).
+ * VT18E (07/10) — bornée en TEMPS, plus en tours : la recherche part 300 ms après la dernière
+ * lettre (anti-rebond), ce que 80 tours ne couvrent pas sous charge.
  * @param {() => boolean} condition - Ce qu on attend.
  * @returns {Promise<void>}
  */
 const attendre = async (condition) => {
-  for (let i = 0; i < 80 && !condition(); i += 1) {
+  const fin = Date.now() + 5000;
+  while (!condition() && Date.now() < fin) {
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((suite) => { setTimeout(suite, 10); }); });
   }
 };
 
@@ -233,6 +247,7 @@ const chercher = async (arbre, testID, texte) => {
 };
 
 beforeEach(() => {
+  mockLargeur = 750;
   mockParams = { collectiviteId: 'ville-montrivage' };
   serveur = {
     clubs: [
@@ -308,7 +323,7 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
       pageSize: 20,
       populate: { activites: { fields: ['name'] } },
       q: 'mont',
-    });
+    }, { signal: expect.any(AbortSignal) });
 
     // Un club déjà rattaché ici ne se rattache pas deux fois.
     // eslint-disable-next-line max-len
@@ -422,7 +437,7 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     await chercher(arbre, 'admin-collectivite-recherche-compte', 'lemaire');
     expect(mockPost).toHaveBeenCalledWith(RECHERCHE_COMPTE, {
       fields: ['documentId', 'firstname', 'lastname', 'email'], pageSize: 10, q: 'lemaire',
-    });
+    }, { signal: expect.any(AbortSignal) });
     const dejaLa = parTestID(arbre.root, 'admin-collectivite-recherche-compte-resultat-karim');
     expect(bouton(dejaLa, 'Déjà gestionnaire').props.disabled).toBe(true);
 
@@ -764,5 +779,74 @@ describe('COLL-CONSOLE — les fenêtres de la fiche (planche P2-fenetres)', () 
     await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
     // eslint-disable-next-line max-len
     expect(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-seul-gestionnaire')).toHaveLength(0);
+  });
+});
+
+// ♿ VT18E (07/10/2026), point 4 — tournée T18 (capture S10a) : « Détacher de la Ville » absent de
+// l arbre d accessibilité au relevé, trouvé seulement au toucher. Chaque action d un menu « … »
+// porte désormais son rôle ET son libellé (le texte enfant ne suffit pas à nommer le bouton pour
+// un lecteur d écran ni pour l arbre d accessibilité Android). ROUGE avant le lot.
+describe('VT18E — le menu « … » d une ligne, vu par l accessibilité', () => {
+  /**
+   * Ouvre un menu « … » et rend [rôle, libellé] de chacune de ses actions.
+   * @param {any} arbre - L écran.
+   * @param {string} testID - Le bouton du menu.
+   * @returns {Promise<Array<[string, string]>>} Les actions.
+   */
+  const actionsDuMenu = async (arbre, testID) => {
+    const bouton3Points = arbre.root
+      .findAll((n) => n.props?.testID === testID && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { bouton3Points.props.onPress(); });
+    const menu = arbre.root.findAll((n) => n.props?.testID === `${testID}-menu`)[0];
+    return menu.findAllByType(TouchableOpacity)
+      .map((n) => [n.props.accessibilityRole, n.props.accessibilityLabel]);
+  };
+
+  it('chaque action du menu d un club et d un gestionnaire a son rôle et son libellé', async () => {
+    const arbre = await monter();
+    expect(await actionsDuMenu(arbre, 'admin-collectivite-club-as-montrivage-actions')).toEqual([
+      ['button', 'Voir la fiche du club'],
+      ['button', 'Détacher de la Ville'],
+    ]);
+    expect(await actionsDuMenu(arbre, 'admin-collectivite-gestionnaire-karim-actions')).toEqual([
+      ['button', 'Retirer'],
+    ]);
+  });
+});
+
+// 🖥️ VT18E (07/10/2026), ajout T18 (d) — tournée T18 (SITE_S13) : sur le site, la fiche d'une
+// collectivité tenait en UNE colonne pleine largeur, « Activer » en bouton géant. La planche
+// P2-fiche-ordi : 1 200 px au plus, deux colonnes — à gauche l'en-tête, le bandeau d'état
+// (« Activer » à côté de sa phrase), les clubs, les installations ; à droite les gestionnaires.
+// Le téléphone ne change pas. ROUGE avant le lot.
+describe('VT18E — la fiche sur ordinateur (planche P2-fiche-ordi)', () => {
+  const style = (/** @type {any} */ noeud) => StyleSheet.flatten(noeud.props.style) || {};
+  const hote = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((n) => n.props?.testID === testID && typeof n.type === 'string')[0];
+
+  it('ordinateur : deux colonnes, gestionnaires à droite, « Activer » à côté', async () => {
+    mockLargeur = 1280;
+    const arbre = await monter();
+    const colonnes = hote(arbre, 'admin-collectivite-colonnes');
+    expect(colonnes).toBeDefined();
+    expect(style(colonnes))
+      .toEqual(expect.objectContaining({ flexDirection: 'row', maxWidth: 1200 }));
+    const principale = parTestID(arbre.root, 'admin-collectivite-colonne-principale');
+    const laterale = parTestID(arbre.root, 'admin-collectivite-colonne-laterale');
+    const dans = (/** @type {any} */ colonne, /** @type {string} */ testID) => colonne
+      .findAll((n) => n.props?.testID === testID).length > 0;
+    const aGauche = [
+      'collectivite-bandeau-etat', 'admin-collectivite-clubs', 'admin-collectivite-installations',
+    ];
+    expect(aGauche.map((testID) => dans(principale, testID))).toEqual([true, true, true]);
+    expect(dans(laterale, 'admin-collectivite-gestionnaires')).toBe(true);
+    expect(dans(principale, 'admin-collectivite-gestionnaires')).toBe(false);
+    expect(style(hote(arbre, 'collectivite-bandeau-etat')).flexDirection).toBe('row');
+  });
+
+  it('téléphone : une colonne, comme avant ; le bandeau empile son bouton', async () => {
+    const arbre = await monter();
+    expect(hote(arbre, 'admin-collectivite-colonnes')).toBeUndefined();
+    expect(style(hote(arbre, 'collectivite-bandeau-etat')).flexDirection).not.toBe('row');
   });
 });

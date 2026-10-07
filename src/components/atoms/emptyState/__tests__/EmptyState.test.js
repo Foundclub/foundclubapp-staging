@@ -105,6 +105,15 @@ describe('EmptyState — le comportement fige avant correction du JSDoc', () => 
     expect(boutons[0].props.onPress).toBe(action);
   });
 
+  // VILLE-T18A (T18 G28a) : « Attribuer le premier » s'affichait « Attribuer le » — le bouton
+  // épouse son texte GRAS, et Android 16 perd le dernier mot (piège connu). Libellé insécable.
+  it('le libelle du bouton ne se coupe jamais : ses espaces sont insecables', () => {
+    const [bouton] = rendre({ actionLabel: 'Attribuer le premier', onAction: () => {}, title: 'T' })
+      .root.findAllByType(Button);
+
+    expect(bouton.props.title).toBe('Attribuer\u00a0le\u00a0premier');
+  });
+
   it('n affiche l illustration que si on la fournit', () => {
     const sansIcone = rendre({ title: 'T' });
     const avecIcone = rendre({ icon: { uri: 'https://exemple.test/i.png' }, title: 'T' });

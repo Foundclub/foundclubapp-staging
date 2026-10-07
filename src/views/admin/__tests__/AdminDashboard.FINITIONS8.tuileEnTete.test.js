@@ -100,6 +100,14 @@ jest.mock(
   () => function ScreenContainerMock({ children }) { return children; },
 );
 jest.mock('@/views/admin/components/AdminStateView', () => function AdminStateViewMock() { return null; });
+// OFFRIR-ABONNEMENT (07/10) : la liste des abonnements offerts a son propre temoin
+// (OffresFoundclubListe.test.js) ; ici elle est doublee comme les autres sous-composants.
+jest.mock(
+  '@/views/admin/components/OffresFoundclubListe',
+  () => function OffresFoundclubListeMock() {
+    return null;
+  },
+);
 
 /** @type {any[]} */
 const arbresMontes = [];

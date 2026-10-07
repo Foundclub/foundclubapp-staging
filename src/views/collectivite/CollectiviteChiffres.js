@@ -397,6 +397,26 @@ function CollectiviteChiffres() {
     const lignes = Array.isArray(data?.installations) ? data.installations : [];
     const maximum = Math.max(0, ...lignes.map((/** @type {any} */ l) => Number(l?.minutes) || 0));
     const tauxVille = data?.ville?.taux;
+    // VILLE-T18B (e) (07/10) — sans horaires (retirés, décision d'Adel), pas de taux : la page dit
+    // ce qui se mesure sans eux, comme l'accueil de la Ville. Plus de renvoi vers un champ retiré.
+    const seancesDeLaPeriode = lignes.reduce(
+      (/** @type {number} */ somme, /** @type {any} */ l) => somme + (Number(l?.seances) || 0),
+      0,
+    );
+    const sansTaux = (/** @type {unknown} */ taux) => taux === null || taux === undefined;
+    let phraseSansHoraires = t(
+      'collectiviteChiffres.clubs.aucune',
+      'Aucune séance sur la période.',
+    );
+    if (seancesDeLaPeriode > 0) {
+      phraseSansHoraires = t('collectiviteChiffres.installations.reservees', {
+        count: seancesDeLaPeriode,
+        defaultValue_one: '{{count}} séance · {{duree}} réservées sur la période.',
+        defaultValue_other: '{{count}} séances · {{duree}} réservées sur la période.',
+        duree: dureeLisible(data?.ville?.minutes),
+        ...SANS_ECHAPPEMENT,
+      });
+    }
     return (
       <BlocDeChiffres
         testID="chiffres-installations"
@@ -408,16 +428,22 @@ function CollectiviteChiffres() {
           </Text>
         ) : lignes.map((/** @type {any} */ ligne) => (
           <LigneABarre
-            accessibilityLabel={t(
-              'collectiviteChiffres.installations.a11y',
-              '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
-              {
-                heures: dureeLisible(ligne?.minutes),
-                nom: ligne?.name,
-                taux: tauxLisible(ligne?.taux),
-                ...SANS_ECHAPPEMENT,
-              },
-            )}
+            accessibilityLabel={sansTaux(ligne?.taux)
+              ? t(
+                'collectiviteChiffres.installations.a11ySansTaux',
+                '{{nom}} : {{heures}} réservées',
+                { heures: dureeLisible(ligne?.minutes), nom: ligne?.name, ...SANS_ECHAPPEMENT },
+              )
+              : t(
+                'collectiviteChiffres.installations.a11y',
+                '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
+                {
+                  heures: dureeLisible(ligne?.minutes),
+                  nom: ligne?.name,
+                  taux: tauxLisible(ligne?.taux),
+                  ...SANS_ECHAPPEMENT,
+                },
+              )}
             couleur={ligne?.planningColor || Colors.primary500}
             key={ligne?.documentId}
             largeur={largeurBarre(ligne?.minutes, maximum)}
@@ -426,11 +452,8 @@ function CollectiviteChiffres() {
           />
         ))}
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {tauxVille === null || tauxVille === undefined
-            ? t(
-              'collectiviteChiffres.installations.tauxSansHoraires',
-              'Taux d’occupation : — (horaires d’ouverture non renseignés).',
-            )
+          {sansTaux(tauxVille)
+            ? phraseSansHoraires
             : t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
               taux: tauxLisible(tauxVille),
               ...SANS_ECHAPPEMENT,
