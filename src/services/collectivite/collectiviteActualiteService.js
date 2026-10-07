@@ -1,3 +1,5 @@
+import { colors } from '@/theme/colors';
+
 import { createLogger } from '@/utils/logger/logger';
 
 import { getApiBaseUrl } from '@/config/runtimeUrls';
@@ -313,7 +315,7 @@ export const reduirePhotoDuNavigateur = async (
     toile.width = largeur;
     toile.height = hauteur;
     const dessin = toile.getContext('2d');
-    dessin.fillStyle = '#ffffff';
+    dessin.fillStyle = colors.neutral00;
     dessin.fillRect(0, 0, largeur, hauteur);
     dessin.drawImage(image, 0, 0, largeur, hauteur);
     image.close?.();
