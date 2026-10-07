@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Alert, Text, TextInput } from 'react-native';
+import {
+  Alert, Text, TextInput, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -767,5 +769,37 @@ describe('COLL-CONSOLE — les fenêtres de la fiche (planche P2-fenetres)', () 
     await choisirAction(arbre, 'admin-collectivite-gestionnaire-karim-actions', 'Retirer');
     // eslint-disable-next-line max-len
     expect(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-seul-gestionnaire')).toHaveLength(0);
+  });
+});
+
+// ♿ VT18E (07/10/2026), point 4 — tournée T18 (capture S10a) : « Détacher de la Ville » absent de
+// l arbre d accessibilité au relevé, trouvé seulement au toucher. Chaque action d un menu « … »
+// porte désormais son rôle ET son libellé (le texte enfant ne suffit pas à nommer le bouton pour
+// un lecteur d écran ni pour l arbre d accessibilité Android). ROUGE avant le lot.
+describe('VT18E — le menu « … » d une ligne, vu par l accessibilité', () => {
+  /**
+   * Ouvre un menu « … » et rend [rôle, libellé] de chacune de ses actions.
+   * @param {any} arbre - L écran.
+   * @param {string} testID - Le bouton du menu.
+   * @returns {Promise<Array<[string, string]>>} Les actions.
+   */
+  const actionsDuMenu = async (arbre, testID) => {
+    const bouton3Points = arbre.root
+      .findAll((n) => n.props?.testID === testID && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { bouton3Points.props.onPress(); });
+    const menu = arbre.root.findAll((n) => n.props?.testID === `${testID}-menu`)[0];
+    return menu.findAllByType(TouchableOpacity)
+      .map((n) => [n.props.accessibilityRole, n.props.accessibilityLabel]);
+  };
+
+  it('chaque action du menu d un club et d un gestionnaire a son rôle et son libellé', async () => {
+    const arbre = await monter();
+    expect(await actionsDuMenu(arbre, 'admin-collectivite-club-as-montrivage-actions')).toEqual([
+      ['button', 'Voir la fiche du club'],
+      ['button', 'Détacher de la Ville'],
+    ]);
+    expect(await actionsDuMenu(arbre, 'admin-collectivite-gestionnaire-karim-actions')).toEqual([
+      ['button', 'Retirer'],
+    ]);
   });
 });

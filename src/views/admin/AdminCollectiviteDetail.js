@@ -112,7 +112,10 @@ function MenuDActions({ actions, testID }) {
       testID={`${testID}-menu`}
     >
       {actions.map((action) => (
+        // ♿ VT18E (07/10, capture S10a) — « Détacher de la Ville » manquait à l arbre
+        // d accessibilité : chaque action porte son libellé, pas seulement son texte enfant.
         <TouchableOpacity
+          accessibilityLabel={action.label}
           accessibilityRole="button"
           key={action.label}
           onPress={action.onPress}
