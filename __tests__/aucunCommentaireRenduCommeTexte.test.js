@@ -20,12 +20,7 @@ const CHAMPS_IGNORES = ['extra', 'innerComments', 'leadingComments', 'loc', 'tra
 const SRC = path.join(RACINE, 'src');
 
 // Exceptions DATÉES, à retirer dès qu'elles ne servent plus (le dernier cas le vérifie).
-const EXCEPTIONS = {
-  // Les 3 de la messagerie du site sont la part du lot MESSAGERIE-1W (branche
-  // feat/MSG1W-app, 9dd9224a), qui les retire. Posée le 07/10/2026 : à SUPPRIMER
-  // à la récolte de la seconde des deux branches (TEXTE-PARASITE, MESSAGERIE-1W).
-  'src/views/Conversation.web.js': 3,
-};
+const EXCEPTIONS = {};
 
 /**
  * Les textes JSX d'une source qui ressemblent à un commentaire.
