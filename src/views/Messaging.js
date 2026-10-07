@@ -8,42 +8,40 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, Platform, Text, TextInput, TouchableOpacity, View,
+  Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
+import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   formatChatTimestamp,
   getChatLastMessage,
   getChatMessagePreview,
   isLeagueChat,
-  resolveFriendlyMatchOpponent,
 } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { hideBlockedChats, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
-import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
-import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — les canaux de la Ville, épinglés en tête de la messagerie.
-import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
+import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
-import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -271,104 +269,6 @@ function Messaging({ navigation, route }) {
       title,
       ...(espaceVille ? { espace: 'ville' } : {}),
     });
-  };
-
-  /**
-   * Render the avatar for a conversation
-   * @param {Chat} chat
-   * @returns {import('react').ReactElement} The rendered avatar
-   */
-  const renderConversationAvatar = (chat) => {
-    switch (chat.type) {
-      case 'club':
-        return (
-          <ClubLogoMark
-            club={chat?.club}
-            isNeutral
-            size={48}
-          />
-        );
-      // COLL-C4A2 — la conversation privée porte l'écusson d'en face (le club côté Ville, la Ville
-      // côté club) ; le canal des dirigeants, sa tuile.
-      case 'collectivite_club':
-        return espaceVille
-          ? <ClubLogoMark club={chat?.collectiviteClub} isNeutral size={48} />
-          : <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={48} />;
-      case 'collectivite_dirigeants':
-        return <IconeDuCanal taille={48} />;
-      case 'friendly_match': {
-        // AC05 constat 3 — « ça doit afficher le logo adverse ou l'écusson
-        // adverse ». Le fil d'amical n'a AUCUNE équipe attachée côté serveur
-        // (friendly-match-workflow.ts:591) : le camp d'en face se lit dans le
-        // titre « Match amical : A vs B », et se dessine alors en initiales.
-        // Quand on ne sait pas lequel des deux camps est l'adversaire, on garde
-        // le repli neutre — jamais un écusson qui ferait croire à un vrai club.
-        const opponent = resolveFriendlyMatchOpponent({ chat, myTeams: allMyTeams });
-        if (!opponent) return <ProfileAvatar enablePreview={false} size={48} />;
-        return (
-          <ClubLogoMark
-            logoUrl={opponent.logoUrl}
-            name={opponent.name}
-            size={48}
-          />
-        );
-      }
-      case 'group':
-      case 'whisper': {
-        const participant = chat.participants?.find(
-          (p) => p.documentId !== userData?.documentId,
-        ) || chat.participants?.[0];
-        return (
-          <ProfileAvatar
-            imageStyle={{ borderRadius: 40 }}
-            imageUrl={participant?.avatar?.url}
-            name={[participant?.firstname, participant?.lastname].filter(Boolean).join(' ')}
-            size={40}
-            style={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.neutral00,
-              { borderRadius: 40 },
-            ]}
-          />
-        );
-      }
-      case 'league_match':
-        return (
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral900,
-            borderColor: Colors.gold500,
-            borderRadius: 24,
-            borderWidth: 2,
-            height: 48,
-            justifyContent: 'center',
-            width: 48,
-          }}
-          >
-            <SvgIcon color={Colors.gold500} height={22} name="trophy" width={22} />
-          </View>
-        );
-      case 'multisport':
-        return (
-          <ClubLogoMark
-            club={chat?.multisportClub}
-            isNeutral
-            size={48}
-          />
-        );
-      case 'team':
-        return (
-          <ClubLogoMark
-            club={chat?.team}
-            name={chat?.team?.club?.name || chat?.team?.name}
-            size={48}
-          />
-        );
-      default:
-        // Type de conversation inconnu : aucun nom fiable a montrer, donc le
-        // repli neutre de ProfileAvatar (et non plus un dessin de personne).
-        return <ProfileAvatar enablePreview={false} size={48} />;
-    }
   };
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -703,12 +603,25 @@ function Messaging({ navigation, route }) {
       ));
 
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-    let chatBackgroundStyle = ApplicationStyle.backgroundColor.transparent;
-    if (hasUnread) {
-      chatBackgroundStyle = ApplicationStyle.backgroundColor.primary700;
-    } else if (chatIsLeague) {
-      chatBackgroundStyle = { backgroundColor: 'rgba(212, 175, 55, 0.1)' };
-    }
+    // 🗂️ MSG1A (§3.13) — la ligne du pack : avatar 52, titre 16, heure (cyan si non lu),
+    // apercu 14 avec « Prenom : » dans les fils a plusieurs, coches si c'est moi, icone du
+    // contenu riche, epingle et pastille de non-lus cyan. Un SEUL bouton par ligne (l'avatar
+    // n'en est plus un second, imbrique).
+    const extrait = lastMessage ? extraitDuMessageCite(lastMessage, t) : { icone: '', texte: '' };
+    const auteurDuDernier = lastMessage && !isMyMessage && !estUnTeteATete(chat?.type)
+      ? String(lastMessage?.sender?.firstname || '').trim()
+      : '';
+    const sourdine = withAlpha(Colors.neutral00, 0.58);
+    const titreDeLaLigne = titreDuFil(t, { chat, espaceVille }) || getConversationName({
+      chatClub: chat.club,
+      chatGroupName: chat.groupName,
+      chatLeagueMatch: chat.league_match,
+      chatMultisportClub: chat.multisportClub,
+      chatParticipants: chat.participants,
+      chatTeam: chat.team,
+      chatType: chat.type,
+      meId: userData?.documentId,
+    });
 
     return (
       <Swipeable
@@ -717,112 +630,86 @@ function Messaging({ navigation, route }) {
       >
         <TouchableOpacity
           onPress={() => handleChatPress(chat)}
-          style={[
-            ApplicationStyle.borderRadius2,
-            Spaces.padding[16],
-            Spaces.marginBottom[8],
-            chatBackgroundStyle,
-            isPinned && { borderLeftColor: Colors.primary500, borderLeftWidth: 4 },
-            chatIsLeague && { borderLeftColor: Colors.gold500, borderLeftWidth: 4 },
-          ]}
+          style={stylesDeLaListe.ligne}
+          testID={`liste-fil-${chat.documentId}`}
         >
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-            <TouchableOpacity
-              onPress={() => handleChatPress(chat)}
-              style={[
-                ApplicationStyle.borderRadius24,
-                { height: 48, width: 48 },
-              ]}
-            >
-              {renderConversationAvatar(chat)}
-            </TouchableOpacity>
-            <View style={[Alignments.fill, Alignments.column]}>
-              <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-                {/*
-                  MARQUEE — le nom de la conversation (club, équipe, groupe) se
-                  lit en entier : c'est lui qui dit à qui on parle.
-                */}
-                <MarqueeText
-                  containerStyle={{ flex: 1 }}
-                  style={[
-                    Fonts.p2Bold,
-                    Fonts.neutral00,
-                    hasUnread && Fonts.neutral00,
-                  ]}
-                  text={titreDuFil(t, { chat, espaceVille }) || getConversationName({
-                    chatClub: chat.club,
-                    chatGroupName: chat.groupName,
-                    chatLeagueMatch: chat.league_match,
-                    chatMultisportClub: chat.multisportClub,
-                    chatParticipants: chat.participants,
-                    chatTeam: chat.team,
-                    chatType: chat.type,
-                    meId: userData?.documentId,
-                  })}
-                />
-                {chatIsLeague && (
-                <View style={{
-                  backgroundColor: Colors.gold500,
-                  borderRadius: 4,
-                  marginLeft: 8,
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                }}
-                >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
-                </View>
-                )}
-                {isPinned && (
-                <View style={{
-                  backgroundColor: Colors.primary500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
-                }}
-                >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>
-                    {t('messaging.pinnedBadge', 'ÉPINGLÉ')}
-                  </Text>
-                </View>
-                )}
+          <AvatarDuFil
+            chat={chat}
+            espaceVille={espaceVille}
+            meId={userData?.documentId}
+            myTeams={allMyTeams}
+            size={52}
+          />
+          <View style={[stylesDeLaListe.corps, { borderBottomColor: withAlpha(Colors.neutral00, 0.07) }]}>
+            <View style={stylesDeLaListe.rangee}>
+              {/*
+                MARQUEE — le nom de la conversation (club, équipe, groupe) se
+                lit en entier : c'est lui qui dit à qui on parle.
+              */}
+              <MarqueeText
+                containerStyle={{ flex: 1 }}
+                style={[stylesDeLaListe.titre, { color: Colors.neutral00 }]}
+                text={titreDeLaLigne}
+              />
+              {chatIsLeague && (
+              <View style={[stylesDeLaListe.puceLigue, { backgroundColor: Colors.gold500 }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
               </View>
-
-              {lastMessage && (
-                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      Fonts.p3Bold,
-                      hasUnread ? Fonts.neutral00 : Fonts.neutral300,
-                      Alignments.fill,
-                    ]}
-                  >
-                    {getChatMessagePreview(lastMessage, t)}
-                  </Text>
-                  {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon.
-                      En surbrillance tant que la conversation n'est pas lue. */}
-                  <Text style={[
-                    Fonts.p3Bold,
-                    hasUnread ? { color: Colors.error500 } : Fonts.neutral500,
+              )}
+              {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon. En cyan tant que la
+                  conversation n'est pas lue. */}
+              {lastMessage ? (
+                <Text
+                  style={[
+                    stylesDeLaListe.heure,
+                    hasUnread
+                      ? { color: Colors.primary500, fontFamily: 'Montserrat-Bold' }
+                      : { color: withAlpha(Colors.neutral00, 0.5) },
                   ]}
-                  >
-                    {formatChatTimestamp(lastMessage.createdAt)}
+                >
+                  {formatChatTimestamp(lastMessage.createdAt)}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={stylesDeLaListe.rangee}>
+              <View style={stylesDeLaListe.apercu}>
+                {lastMessage && isMyMessage ? (
+                  <GlyphIcon color={sourdine} name="checkDouble" size={16} />
+                ) : null}
+                {auteurDuDernier ? (
+                  <Text style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}>
+                    {`${auteurDuDernier}\u00A0:`}
                   </Text>
+                ) : null}
+                {extrait.icone ? <GlyphIcon color={sourdine} name={extrait.icone} size={15} /> : null}
+                <Text
+                  numberOfLines={1}
+                  style={[stylesDeLaListe.apercuTexte, stylesDeLaListe.apercuFin, { color: sourdine }]}
+                >
+                  {lastMessage ? getChatMessagePreview(lastMessage, t) : ''}
+                </Text>
+              </View>
+              {isPinned ? (
+                <View accessibilityLabel={t('messaging.pinnedBadge', 'ÉPINGLÉ')} accessible>
+                  <GlyphIcon color={withAlpha(Colors.neutral00, 0.45)} name="thumbtack" size={15} />
+                </View>
+              ) : null}
+              {hasUnread ? (
+                <View
+                  accessibilityLabel={unreadBadge
+                    ? `${unreadBadge} ${t('messaging.unread.badge', 'Non lu')}`
+                    : t('messaging.unread.badge', 'Non lu')}
+                  accessible
+                  style={[stylesDeLaListe.pastille, { backgroundColor: Colors.primary500 }]}
+                >
                   {unreadBadge ? (
-                    <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                    <Text style={[stylesDeLaListe.pastilleTexte, { color: Colors.primary900 }]}>
                       {unreadBadge}
                     </Text>
                   ) : null}
-                  {hasUnread ? (
-                    <View
-                      accessibilityLabel={t('messaging.unread.badge', 'Non lu')}
-                      style={{
-                        backgroundColor: Colors.error500,
-                        borderRadius: 999,
-                        height: 8,
-                        width: 8,
-                      }}
-                    />
-                  ) : null}
                 </View>
-              )}
+              ) : null}
             </View>
           </View>
           {renderWebChatActions(chat)}
@@ -883,7 +770,8 @@ function Messaging({ navigation, route }) {
             <ProfileButton />
           </View>
         </View>
-        <Text style={[Fonts.p1Black, Fonts.neutral00, Spaces.marginTop[16]]}>
+        {/* MSG1A (§3.13, decision d'Adel « titre Messages ») — « Messages », 28 en gras. */}
+        <Text style={[stylesDeLaListe.titreDeLaPage, Fonts.neutral00, Spaces.marginTop[16]]}>
           {t('messaging.title')}
         </Text>
         <OnboardingWrapper
@@ -1035,4 +923,74 @@ function Messaging({ navigation, route }) {
     </TutorialFlowBoundary>
   );
 }
+const stylesDeLaListe = StyleSheet.create({
+  apercu: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+    minWidth: 0,
+  },
+  apercuFin: {
+    flexShrink: 1,
+  },
+  apercuTexte: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  corps: {
+    alignSelf: 'stretch',
+    borderBottomWidth: 1,
+    flex: 1,
+    gap: 3,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  heure: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  ligne: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    height: 72,
+  },
+  pastille: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 20,
+    justifyContent: 'center',
+    minWidth: 20,
+    paddingHorizontal: 6,
+  },
+  pastilleTexte: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 11.5,
+    lineHeight: 14,
+  },
+  puceLigue: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  rangee: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  titre: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  titreDeLaPage: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 28,
+    lineHeight: 34,
+  },
+});
+
 export default Messaging;

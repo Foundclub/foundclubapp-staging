@@ -427,6 +427,20 @@ export const removeGroupMember = async (chatId, userId) => {
 };
 
 /**
+ * MSG1A (§3.16, decision d'Adel `quitter maintenant`, 07/10) — QUITTER UN GROUPE, pour tout
+ * membre. ⚠️ La route est posee par le lot serveur MESSAGERIE-1B : au 07/10 19h20, ni son
+ * contrat (`admin/docs/CONTRAT_MESSAGERIE_1B.md`, branche `feat/MSG1B-serveur`) ni son code ne
+ * la portent encore. Le CHEMIN ci-dessous est donc une SUPPOSITION, posee ici et nulle part
+ * ailleurs : quand 1B publiera la sienne, c'est la seule ligne a aligner.
+ * @param {string} chatId
+ * @returns {Promise<any>}
+ */
+export const leaveGroupChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/leave`);
+  return response.data?.data ?? response.data;
+};
+
+/**
  * Update group metadata
  * @param {string} chatId
  * @param {{ groupName?: string; addAdminIds?: string[]; removeAdminIds?: string[] }} data

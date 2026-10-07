@@ -13,7 +13,12 @@ import {
   View,
 } from 'react-native';
 
-import { clubInitials, latestManagerRequest } from '@/domains/collectivite/collectiviteAccueil';
+import {
+  clubInitials,
+  latestManagerRequest,
+  pendingManagerRequests,
+  recentRefusedManagerRequest,
+} from '@/domains/collectivite/collectiviteAccueil';
 import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -40,6 +45,8 @@ import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
  *   - en attente : « Demande en cours de vérification », et ce que l'espace permettra ;
  *   - refusée : le motif de l'équipe, « Nous contacter » et « Refaire une demande » ;
  *   - acceptée : l'espace de la Ville s'ouvre.
+ * VINSC2 (07/10, tournée T18) : une demande EN ATTENTE (et un refus de moins de 30 jours) se lit
+ * quel que soit l'état principal — un gestionnaire de Montrivage qui demande Rouvres voit les deux.
  * Le serveur est le seul juge : l'écran lit `/collectivite-manager-requests/mine` et
  * `/collectivites/mine`, à chaque retour sur l'écran.
  * @returns {import('react').ReactElement} L'écran.
@@ -57,6 +64,8 @@ function CollectiviteSignupStatus() {
   const demandes = useMyManagerRequests();
   const villes = useMyCollectivites();
   const derniere = latestManagerRequest(demandes.data);
+  const enAttente = pendingManagerRequests(demandes.data);
+  const refusRecent = recentRefusedManagerRequest(demandes.data);
   const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
 
   const relireDemandes = demandes.refetch;
@@ -108,7 +117,10 @@ function CollectiviteSignupStatus() {
   );
 
   const carteDemande = (/** @type {any} */ demande, /** @type {string} */ sousTitre) => (
-    <View style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}>
+    <View
+      key={demande?.documentId}
+      style={[ApplicationStyle.card, Spaces.padding[16], carteStyle]}
+    >
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
         <View
           style={[
@@ -141,6 +153,33 @@ function CollectiviteSignupStatus() {
           )}
         </Text>
       )}
+    </View>
+  );
+
+  // La ligne sous le nom : la date de l'envoi (en attente) ou de la réponse (refusée).
+  const sousTitreDe = (/** @type {any} */ demande) => (demande?.status === 'refused'
+    ? t('collectiviteAccueil.demande.refusee.le', 'Réponse du {{date}}', {
+      date: formatCollectiviteDay(demande?.decidedAt),
+      ...SANS_ECHAPPEMENT,
+    })
+    : t('collectiviteAccueil.demande.attente.le', 'Demande envoyée le {{date}}', {
+      date: formatCollectiviteDay(demande?.createdAt),
+      ...SANS_ECHAPPEMENT,
+    }));
+
+  // VINSC2 — une demande à suivre à côté de l'état principal : son titre, puis sa carte.
+  const suiviDeDemande = (/** @type {any} */ demande) => (
+    <View
+      key={demande?.documentId}
+      style={{ gap: 8 }}
+      testID={`collectivite-demande-suivi-${demande?.documentId}`}
+    >
+      <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+        {demande?.status === 'refused'
+          ? t('collectiviteAccueil.demande.refusee.titre', 'Demande refusée')
+          : t('collectiviteAccueil.demande.attente.titre', 'Demande en cours de vérification')}
+      </Text>
+      {carteDemande(demande, sousTitreDe(demande))}
     </View>
   );
 
@@ -220,6 +259,8 @@ function CollectiviteSignupStatus() {
           title={t('collectiviteAccueil.demande.acceptee.ouvrir', 'Ouvrir mon espace')}
           variant="Primary"
         />
+        {/* VINSC2 (T18) — une demande pour une AUTRE collectivité ne disparaît pas. */}
+        {[...enAttente, ...(refusRecent ? [refusRecent] : [])].map(suiviDeDemande)}
       </View>
     );
   } else if (derniere?.status === 'refused') {
@@ -233,10 +274,7 @@ function CollectiviteSignupStatus() {
             {t('collectiviteAccueil.demande.refusee.titre', 'Demande refusée')}
           </Text>
         </View>
-        {carteDemande(derniere, t('collectiviteAccueil.demande.refusee.le', 'Réponse du {{date}}', {
-          date: formatCollectiviteDay(derniere?.decidedAt),
-          ...SANS_ECHAPPEMENT,
-        }))}
+        {carteDemande(derniere, sousTitreDe(derniere))}
         <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
           <Button
             onPress={contacter}
@@ -249,6 +287,8 @@ function CollectiviteSignupStatus() {
             variant="Secondary"
           />
         </View>
+        {/* VINSC2 — une demande plus ancienne, encore en attente, se lit aussi. */}
+        {enAttente.map(suiviDeDemande)}
       </View>
     );
   } else if (derniere) {
@@ -289,14 +329,9 @@ function CollectiviteSignupStatus() {
             {t('collectiviteAccueil.demande.attente.titre', 'Demande en cours de vérification')}
           </Text>
         </View>
-        {carteDemande(derniere, t(
-          'collectiviteAccueil.demande.attente.le',
-          'Demande envoyée le {{date}}',
-          {
-            date: formatCollectiviteDay(derniere?.createdAt),
-            ...SANS_ECHAPPEMENT,
-          },
-        ))}
+        {/* VINSC2 — chaque demande en attente, la plus récente d'abord. */}
+        {(enAttente.length > 0 ? enAttente : [derniere])
+          .map((demande) => carteDemande(demande, sousTitreDe(demande)))}
         <View style={{ gap: 12 }}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
             {t('collectiviteAccueil.demande.attente.permettra', 'Ce que votre espace permettra')}

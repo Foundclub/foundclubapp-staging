@@ -107,6 +107,8 @@ const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '
  * @param {boolean} [props.dansLaBulle] - MSG1A (§3.7) : posee dans le cadre commun du fil.
  * @param {boolean} [props.isMe] - Whether sent by current user
  * @param {import('react').ReactNode} [props.meta] - MSG1A : l'heure et les coches, avant le pied.
+ * @param {(cible: { label: string }) => void} [props.onOpenAddress] - MSG1A (§3.18) : le lieu
+ *   devient un lien (feuille Plans / Google Maps / Waze / Copier).
  * @param {(target?: 'placement') => void} [props.onEdit] - Contrat MSG1A / MSG1C (07/10) : pour
  *   qui peut convoquer. Present : « Modifier » (contour) appelle `onEdit()` (etape Joueurs) et le
  *   terrain appelle `onEdit('placement')` ; absent : un seul « Ouvrir la composition », et le
@@ -123,6 +125,7 @@ function CompositionMessageBubble({
   isMe = false,
   meta = null,
   onEdit = undefined,
+  onOpenAddress = undefined,
   renderReponses = undefined,
 }) {
   const { t } = useTranslation();
@@ -466,6 +469,20 @@ function CompositionMessageBubble({
   const peutModifierIci = typeof onEdit === 'function';
   const toucherLeTerrain = peutModifierIci ? () => onEdit('placement') : openFullScreen;
   const reponses = typeof renderReponses === 'function' ? renderReponses() : null;
+  // 📍 MSG1A (§3.18) — le lieu en lien. ⛔ Jamais un bouton DANS le bouton de la carte : le
+  // lien et l'encadre « Infos » sortent alors du corps, a la suite, dans le meme ordre.
+  const adresseCliquable = hasEventContext && Boolean(readableAddress(eventAddress))
+    && typeof onOpenAddress === 'function';
+  const encadreInfos = note ? (
+    <View style={[styles.note, { backgroundColor: withAlpha(Colors.neutral900, 0.22) }]}>
+      <Text style={[styles.noteTexte, styles.noteLabel, { color: Colors.primary500 }]}>
+        {t('compositionMessageBubble.note', 'Infos')}
+      </Text>
+      <Text numberOfLines={3} style={[styles.noteTexte, styles.noteCorps, { color: Colors.neutral00 }]}>
+        {note}
+      </Text>
+    </View>
+  ) : null;
 
   // ♿ COMPO-CARTE-SITE — TROIS BOUTONS COTE A COTE, AUCUN DANS UN AUTRE (carte, terrain,
   // pied). Un lecteur d'ecran entend la carte (sa phrase dit tout), puis le terrain, puis
@@ -510,7 +527,7 @@ function CompositionMessageBubble({
                 {[whenLine, teamName].filter(Boolean).join(' · ')}
               </Text>
             ) : null}
-            {hasEventContext ? (
+            {hasEventContext && !adresseCliquable ? (
               <Text numberOfLines={2} style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}>
                 {addressLine}
               </Text>
@@ -519,17 +536,26 @@ function CompositionMessageBubble({
         ) : null}
 
         {/* COMPOMSG — le texte de l'entraineur (souvent le RDV), sous le mot « Infos ». */}
-        {note ? (
-          <View style={[styles.note, { backgroundColor: withAlpha(Colors.neutral900, 0.22) }]}>
-            <Text style={[styles.noteTexte, styles.noteLabel, { color: Colors.primary500 }]}>
-              {t('compositionMessageBubble.note', 'Infos')}
-            </Text>
-            <Text numberOfLines={3} style={[styles.noteTexte, styles.noteCorps, { color: Colors.neutral00 }]}>
-              {note}
-            </Text>
-          </View>
-        ) : null}
+        {adresseCliquable ? null : encadreInfos}
       </TouchableOpacity>
+
+      {adresseCliquable ? (
+        <View style={[styles.suiteDuCorps, retrait]}>
+          <TouchableOpacity
+            accessibilityHint={t('conversation.address.hint', 'Ouvre le choix de l’application de cartes')}
+            accessibilityRole="link"
+            onPress={() => onOpenAddress({ label: addressLine })}
+            style={styles.lienAdresse}
+            testID="composition-adresse"
+          >
+            <GlyphIcon color={Colors.primary500} name="locationPin" size={14} />
+            <Text numberOfLines={2} style={[styles.contexte, styles.lienAdresseTexte, { color: Colors.primary500 }]}>
+              {addressLine}
+            </Text>
+          </TouchableOpacity>
+          {encadreInfos}
+        </View>
+      ) : null}
 
       {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au plein ecran.
           ⚖️ MSG1A — le pack le dessine COUCHE (276 x 132) ; il reste DEBOUT, dans les
@@ -815,6 +841,11 @@ const styles = StyleSheet.create({
   },
   sansRetrait: {
     paddingHorizontal: 0,
+  },
+  suiteDuCorps: {
+    gap: 6,
+    marginTop: 6,
+    paddingHorizontal: 14,
   },
   titre: {
     fontFamily: GRAS_FAMILLE,

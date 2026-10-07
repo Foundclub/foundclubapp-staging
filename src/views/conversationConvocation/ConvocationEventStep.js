@@ -9,6 +9,10 @@ import useTheme from '@/theme/themeContext';
 import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 
+// La carte du planning exige ses rappels de reponse ; en mode « share » elle n'en affiche aucun
+// (meme usage que la feuille « Evenement » du fil, `Conversation.js`).
+const CarteEvenement = /** @type {any} */ (EventCardNew);
+
 /**
  * MESSAGERIE-1C — ETAPE 1 « EVENEMENT » (pack messagerie §3.12, §5).
  *
@@ -61,7 +65,7 @@ function ConvocationEventStep({
             ]}
             testID={`convocation-event-${eventId}`}
           >
-            <EventCardNew item={event} mode="share" onPress={() => onSelect(event)} />
+            <CarteEvenement item={event} mode="share" onPress={() => onSelect(event)} />
             {isSelected ? (
               <View
                 pointerEvents="none"

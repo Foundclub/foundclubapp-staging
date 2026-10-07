@@ -594,7 +594,7 @@ export const splitSelection = (rows, selection) => ({
  * @param {any} [input.basePack] Le pack deja publie (il garde l'identite de son equipe).
  * @param {string} [input.category] La categorie de l'equipe (format du football).
  * @param {any[]} [input.placements] Les placements du terrain.
- * @param {boolean} [input.requireResponse] « Demander Present / Absent ».
+ * @param {boolean} [input.requireResponse] L'interrupteur Demander Present / Absent.
  * @param {Array<{ id: string, isManual: boolean, player: any }>} [input.rows]
  * @param {Record<string, string>} [input.selection]
  * @param {string} [input.sport]

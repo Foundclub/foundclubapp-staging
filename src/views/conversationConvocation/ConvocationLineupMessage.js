@@ -45,13 +45,12 @@ function ConvocationLineupMessage({
   chatId, children, composition, onEdit,
 }) {
   const { data: messagesPages } = useGetChatMessages({ chatId }, { enabled: false });
-  const messages = useMemo(() => (Array.isArray(messagesPages?.pages) ? messagesPages.pages : [])
-    .flatMap((/** @type {any} */ page) => (Array.isArray(page?.data) ? page.data : [])), [
-    messagesPages,
-  ]);
+  const pages = /** @type {any} */ (messagesPages)?.pages;
+  const messages = useMemo(() => (Array.isArray(pages) ? pages : [])
+    .flatMap((/** @type {any} */ page) => (Array.isArray(page?.data) ? page.data : [])), [pages]);
 
   const isLineup = composition?.type === LINEUP_SHARE_TYPE;
-  const { auth } = getAuthRuntimeSnapshot();
+  const { auth } = /** @type {any} */ (getAuthRuntimeSnapshot());
   const canEdit = isLineup
     && typeof onEdit === 'function'
     && Boolean(composition?.eventId)

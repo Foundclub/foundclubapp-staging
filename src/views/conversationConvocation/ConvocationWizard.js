@@ -53,6 +53,7 @@ import {
   splitSelection,
 } from './convocationWizardUtils';
 
+/** @type {any[]} */
 const EMPTY_LIST = [];
 
 /**
@@ -111,7 +112,6 @@ function ConvocationWizard({
   const [step, setStep] = useState(isEditMode ? Math.max(2, Math.min(3, startStep)) : 1);
   const [eventId, setEventId] = useState(initialEventId);
   const [initializedFor, setInitializedFor] = useState('');
-  /** @type {[Record<string, string>, Function]} */
   const [selection, setSelection] = useState(/** @type {Record<string, string>} */ ({}));
   const [placements, setPlacements] = useState(/** @type {any[]} */ (EMPTY_LIST));
   const [addedManualPlayers, setAddedManualPlayers] = useState(/** @type {any[]} */ (EMPTY_LIST));
@@ -252,7 +252,7 @@ function ConvocationWizard({
    * @param {string} text
    * @returns {Promise<boolean>}
    */
-  const sendDetailsMessage = useCallback(async (text) => {
+  const sendDetailsMessage = useCallback(async (/** @type {string} */ text) => {
     const optimisticId = sendMessage(chatId, text, { sender: userData });
     if (optimisticId) return true;
     try {
@@ -378,12 +378,14 @@ function ConvocationWizard({
         isLoading={!isPayloadReady}
         isUpdate={isUpdate}
         onAddManualPlayer={(player) => {
-          setAddedManualPlayers((current) => [...current, player]);
-          setSelection((current) => ({ ...current, [player.documentId]: 'pitch' }));
+          setAddedManualPlayers((/** @type {any[]} */ current) => [...current, player]);
+          setSelection((/** @type {Record<string, string>} */ current) => ({
+            ...current, [player.documentId]: 'pitch',
+          }));
         }}
         onRemoveManualPlayer={(playerId) => {
-          setRemovedIds((current) => [...current, playerId]);
-          setSelection((current) => {
+          setRemovedIds((/** @type {string[]} */ current) => [...current, playerId]);
+          setSelection((/** @type {Record<string, string>} */ current) => {
             const next = { ...current };
             delete next[playerId];
             return next;

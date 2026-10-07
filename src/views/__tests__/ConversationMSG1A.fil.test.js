@@ -14,6 +14,11 @@ import renderer, { act } from 'react-test-renderer';
 // accepte les messages (`chat-message.ts` ne restreint pas les groupes).
 // 🔴 ROUGE avant MSG1A : G1-1. 🟢 G1-2 tient la porte d'un vrai canal fermee.
 
+const mockLeaveGroupChat = jest.fn();
+jest.mock('@/services/chat/chatService', () => ({
+  ...jest.requireActual('@/services/chat/chatService'),
+  leaveGroupChat: (/** @type {any[]} */ ...args) => mockLeaveGroupChat(...args),
+}));
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 let mockChatData;
 let mockMessagesPage;
@@ -628,3 +633,174 @@ describe('MSG1A — §3.5 feuille « Ajouter »', () => {
       .toEqual(['photos', 'camera', 'document', 'poll', 'event', 'location', 'contact']);
   });
 });
+
+describe('MSG1A — §3.18 adresses cliquables', () => {
+  // eslint-disable-next-line global-require
+  const FeuilleDAdresse = require('@/components/organisms/feuilleDAdresse/FeuilleDAdresse').default;
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('AD1 — une adresse ecrite dans un texte est un lien qui ouvre la feuille d adresse', () => {
+    const { ecran, gifted } = monterLaConversation();
+    const arbre = rendreLaBulle(gifted, {
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00', { text: 'RDV 12 rue Pasteur a 18h' }),
+      position: 'left',
+    });
+    const texte = arbre.root.findAll((n) => n.props?.currentMessage && n.props?.textStyle)[0];
+    const [motif] = texte.props.parsePatterns({});
+
+    expect('RDV 12 rue Pasteur a 18h'.match(motif.pattern)).toEqual(['12 rue Pasteur']);
+    expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toBeNull();
+
+    act(() => { motif.onPress('12 rue Pasteur'); });
+    expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toEqual({ label: '12 rue Pasteur' });
+  });
+});
+
+describe('MSG1A — §3.11 canal d annonce en lecture seule', () => {
+  // eslint-disable-next-line global-require
+  const GlyphIcon = require('@/components/atoms/glyphIcon/GlyphIcon').default;
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = FIL_DE_CLUB;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('LS1 — la saisie est remplacee par une barre opaque avec un cadenas et le libelle existant', () => {
+    const { gifted } = monterLaConversation();
+    /** @type {any} */
+    let barre;
+    act(() => { barre = renderer.create(gifted.renderInputToolbar({ text: '' })); });
+    aDemonter.push(() => { act(() => { barre.unmount(); }); });
+
+    const conteneur = barre.root.findAll((n) => n.props?.testID === 'conversation-lecture-seule')[0];
+    expect(conteneur).toBeDefined();
+    expect(conteneur.findByType(GlyphIcon).props.name).toBe('lock');
+    expect(contientLeTexte(gifted.renderInputToolbar({ text: '' }), LECTURE_SEULE)).toBe(true);
+  });
+});
+
+describe('MSG1A — §3.16 infos du groupe et menu ⋮', () => {
+  /* eslint-disable global-require */
+  const InfosDuGroupe = require('@/views/chat/InfosDuGroupe').default;
+  const MenuDuFil = require('@/views/chat/MenuDuFil').default;
+  /* eslint-enable global-require */
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('GI1 — toucher le titre d un groupe ouvre ses infos, meme pour un simple membre', () => {
+    const { ecran } = monterLaConversation();
+    expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(false);
+
+    const titre = ecran.root.findAll((n) => n.props?.accessibilityHint === 'Ouvre les infos du groupe'
+      && typeof n.props?.onPress === 'function')[0];
+    act(() => { titre.props.onPress(); });
+    expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(true);
+  });
+
+  test('GI2 — le ⋮ d un groupe : « Infos du groupe » et « Signaler », sans « Fermer »', () => {
+    const { ecran } = monterLaConversation();
+    const cles = ecran.root.findByType(MenuDuFil).props.entrees.map((entree) => entree.cle);
+    expect(cles).toEqual(['infos-du-groupe', 'signaler']);
+  });
+});
+
+describe('MSG1A — `genre A`, notices de groupe, `quitter maintenant`', () => {
+  /* eslint-disable global-require */
+  const BulleDuFil = require('@/components/molecules/bulleDuFil/BulleDuFil').default;
+  const InfosDuGroupe = require('@/views/chat/InfosDuGroupe').default;
+  /* eslint-enable global-require */
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+    mockLeaveGroupChat.mockReset();
+    mockLeaveGroupChat.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('SR1 — la clef du serveur devient « Entraîneur » a cote du nom ; sans clef, rien', () => {
+    mockMessagesPage = {
+      data: [
+        {
+          createdAt: '2026-10-07T10:00:00.000Z',
+          documentId: 'm1',
+          message: 'Rappel : 19h30',
+          sender: { documentId: 'karim', firstname: 'Karim', staffRole: 'entraineur' },
+        },
+        {
+          createdAt: '2026-10-07T10:05:00.000Z',
+          documentId: 'm2',
+          message: 'Ok',
+          sender: { documentId: 'lea', firstname: 'Léa' },
+        },
+      ],
+      meta: { pagination: { page: 1, pageCount: 1, total: 2 } },
+    };
+    const { gifted } = monterLaConversation();
+    const [lea, karim] = [...gifted.messages].sort((a, b) => b.createdAt - a.createdAt);
+
+    const bulleKarim = rendreLaBulle(gifted, { currentMessage: karim, position: 'left' });
+    expect(bulleKarim.root.findByType(BulleDuFil).props.role).toBe('Entraîneur');
+    const bulleLea = rendreLaBulle(gifted, { currentMessage: lea, position: 'left' });
+    expect(bulleLea.root.findByType(BulleDuFil).props.role).toBe('');
+  });
+
+  test('NS1 — une notice de groupe (`systemNotice`) devient une ligne systeme, pas une bulle', () => {
+    mockMessagesPage = {
+      data: [{
+        createdAt: '2026-10-07T10:00:00.000Z',
+        documentId: 'n1',
+        message: 'Adel a renommé le groupe en « Les U13 bis ».',
+        sender: null,
+        systemNotice: { kind: 'group_renamed', version: 1 },
+      }],
+      meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+    };
+    const { gifted } = monterLaConversation();
+    const notice = gifted.messages.find((m) => m._id === 'n1');
+    expect(notice.system).toBe(true);
+    expect(notice.text).toBe('Adel a renommé le groupe en « Les U13 bis ».');
+  });
+
+  test('QG1 — « Quitter le groupe » appelle la fonction de service isolee, puis revient a la liste', async () => {
+    const { ecran } = monterLaConversation();
+    const infos = ecran.root.findByType(InfosDuGroupe);
+    await act(async () => { await infos.props.onQuitter(); });
+    expect(mockLeaveGroupChat).toHaveBeenCalledWith('chat-1');
+  });
+});
+

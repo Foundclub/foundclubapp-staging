@@ -32,7 +32,7 @@ import { buildAnswerGroups, canManageTeamConvocation } from './convocationWizard
 function ConvocationResponsesBlock({ composition, isLatest = true }) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
-  const { auth } = getAuthRuntimeSnapshot();
+  const { auth } = /** @type {any} */ (getAuthRuntimeSnapshot());
 
   const eventId = String(composition?.eventId || '');
   const teamId = String(composition?.teamId || '');

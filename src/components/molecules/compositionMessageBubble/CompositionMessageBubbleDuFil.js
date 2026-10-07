@@ -23,6 +23,7 @@ import CompositionMessageBubble from './CompositionMessageBubble';
  * @param {import('react').ReactNode} [props.meta] - MSG1A : l'heure et les coches.
  * @param {(target?: any) => void} [props.onEdit] - MESSAGERIE-1C : « Modifier » pour qui peut
  *   convoquer ; transmis tel quel a la carte.
+ * @param {(cible: { label: string }) => void} [props.onOpenAddress] - MSG1A (§3.18) : le lieu en lien.
  * @param {() => any} [props.renderReponses] - MESSAGERIE-1C : le bloc « Reponses » sous la carte.
  * @returns {import('react').ReactElement | null} La carte.
  */
@@ -34,6 +35,7 @@ function CompositionMessageBubbleDuFil({
   isMe = false,
   meta = null,
   onEdit = undefined,
+  onOpenAddress = undefined,
   renderReponses = undefined,
 }) {
   const { data: fil } = useGetChatById(chatId, { enabled: false });
@@ -46,6 +48,7 @@ function CompositionMessageBubbleDuFil({
       isMe={isMe}
       meta={meta}
       onEdit={onEdit}
+      onOpenAddress={onOpenAddress}
       renderReponses={renderReponses}
     />
   );
