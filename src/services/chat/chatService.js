@@ -428,10 +428,10 @@ export const removeGroupMember = async (chatId, userId) => {
 
 /**
  * MSG1A (§3.16, decision d'Adel `quitter maintenant`, 07/10) — QUITTER UN GROUPE, pour tout
- * membre. ⚠️ La route est posee par le lot serveur MESSAGERIE-1B : au 07/10 19h20, ni son
- * contrat (`admin/docs/CONTRAT_MESSAGERIE_1B.md`, branche `feat/MSG1B-serveur`) ni son code ne
- * la portent encore. Le CHEMIN ci-dessous est donc une SUPPOSITION, posee ici et nulle part
- * ailleurs : quand 1B publiera la sienne, c'est la seule ligne a aligner.
+ * membre. Route du lot serveur MESSAGERIE-1B (`feat/MSG1B-serveur` 01dd1b59, contrat
+ * `admin/docs/CONTRAT_MESSAGERIE_1B.md` §5.6) : 200 `{ data: { chatDocumentId, left: true,
+ * newAdmin: { documentId } | null } }` ; 403 non-membre ; 400 si le fil n'est pas un groupe.
+ * Le serveur pose lui-meme les notices `member_left` / `admin_inherited`.
  * @param {string} chatId
  * @returns {Promise<any>}
  */

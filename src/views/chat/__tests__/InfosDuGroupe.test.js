@@ -161,7 +161,7 @@ describe('InfosDuGroupe (§3.16)', () => {
     const onQuitter = jest.fn();
     const { arbre } = rendre({ adminIds: ['karim'], estAdmin: false, onQuitter });
     act(() => { parId(arbre, 'infos-du-groupe-quitter').props.onPress(); });
-    expect(textes(arbre)).toContain('Quitter « Covoit U15 » ?');
+    expect(textes(arbre)).toContain('Quitter le groupe « Covoit U15 » ? Tu ne recevras plus ses messages.');
     expect(onQuitter).not.toHaveBeenCalled();
 
     act(() => { parId(arbre, 'infos-du-groupe-confirmer-depart').props.onPress(); });

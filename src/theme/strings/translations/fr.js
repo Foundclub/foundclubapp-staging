@@ -6701,7 +6701,7 @@ export default {
     groupInfo: {
       adminError: 'Impossible de changer les admins du groupe.',
       leave: 'Quitter le groupe',
-      leaveConfirm: 'Quitter « {{name}} » ?',
+      leaveConfirm: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
       leaveConfirmAction: 'Quitter',
       leaveError: 'Impossible de quitter le groupe pour le moment.',
       makeAdmin: 'Nommer admin du groupe',

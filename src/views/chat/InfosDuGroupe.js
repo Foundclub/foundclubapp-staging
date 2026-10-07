@@ -378,7 +378,7 @@ function InfosDuGroupe({
             >
               <Text style={[styles.boiteTitre, { color: Colors.neutral00 }]}>
                 {t('conversation.groupInfo.leaveConfirm', {
-                  defaultValue: 'Quitter « {{name}} » ?',
+                  defaultValue: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
                   name: nomDuGroupe || t('conversation.groupInfo.untitled', 'Groupe'),
                   ...SANS_ECHAPPEMENT,
                 })}

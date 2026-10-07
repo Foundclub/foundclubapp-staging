@@ -74,6 +74,7 @@ import {
 } from '@/domains/participation/participationFlow';
 import {
   hideBlockedMessages,
+  peutBloquer,
   resolveOtherParticipantId,
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
@@ -1158,7 +1159,9 @@ function Conversation({ navigation, route }) {
     () => resolveOtherParticipantId(chatData, userData?.documentId),
     [chatData, userData?.documentId],
   );
-  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) });
+  // VILLE-NOTIFS — pas d'appel (403) ni de « Bloquer » pour un compte sans role de club.
+  const compteQuiPeutBloquer = peutBloquer(userData);
+  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: compteQuiPeutBloquer });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
   const isOtherParticipantBlocked = Boolean(
     otherParticipantId && blockedUserIds.has(otherParticipantId),
@@ -7047,7 +7050,7 @@ function Conversation({ navigation, route }) {
             // 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde. Il n apparait QUE
             // pour un tete-a-tete : un fil de club, d equipe ou de groupe n a personne a bloquer,
             // et la discussion a trois du mineur avec son parent n en a pas non plus (K5).
-            ...(otherParticipantId ? [{
+            ...(otherParticipantId && compteQuiPeutBloquer ? [{
               cle: 'bloquer',
               danger: !isOtherParticipantBlocked,
               desactive: isBlockingUser || isUnblockingUser,

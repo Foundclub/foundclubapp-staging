@@ -24,7 +24,7 @@ import {
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { hideBlockedChats, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import { hideBlockedChats, peutBloquer, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -161,7 +161,8 @@ function Messaging({ navigation, route }) {
   // tete-a-tete de la liste. Une seule requete, partagee avec la fiche d une
   // personne et le menu d une conversation (meme clef react-query).
   const { data: myBlockedRows } = useGetMyBlockedUsers({
-    enabled: Boolean(userData?.documentId),
+    // VILLE-NOTIFS — pas d'appel (403) pour un compte sans role de club.
+    enabled: peutBloquer(userData),
   });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
 

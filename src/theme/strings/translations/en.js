@@ -6292,7 +6292,7 @@ export default {
     groupInfo: {
       adminError: 'Could not change the group admins.',
       leave: 'Leave the group',
-      leaveConfirm: 'Leave “{{name}}”?',
+      leaveConfirm: 'Leave the group “{{name}}”? You will no longer receive its messages.',
       leaveConfirmAction: 'Leave',
       leaveError: 'Could not leave the group right now.',
       makeAdmin: 'Make group admin',
