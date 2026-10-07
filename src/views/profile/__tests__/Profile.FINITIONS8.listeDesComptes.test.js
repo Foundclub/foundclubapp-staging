@@ -127,10 +127,14 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => mockPa
 jest.mock('@/components/templates/ScreenContainer', () => mockPassePlat());
 
 jest.mock('@/services/auth/authService', () => ({ deleteAccount: jest.fn() }));
+// VILLE-T18B (07/10) : les Villes que gère le compte MONTÉ (`/collectivites/mine`) ; aucune par
+// défaut. Un objet stable par témoin (un objet neuf à chaque appel ferait boucler les mémos).
+/** @type {any} */
+let mockVillesGerees = { data: [] };
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
-  return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => aucune };
+  return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => mockVillesGerees };
 });
 jest.mock('@/config/legalUrls', () => ({ SUPPORT_CONTACT_MAILTO: 'mailto:contact@exemple.test' }));
 
@@ -297,5 +301,113 @@ describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais
 
     appuyerSur(arbre, 'Changer de compte');
     expect(textes(arbre)).toContain('Dirigeant');
+  });
+});
+
+// VILLE-T18B · point 4 (T18, G12b) — Hugo actif, la feuille écrit « Recette Mairie · Membre »,
+// alors que « Mon compte » de Recette Mairie dit « Gestionnaire · Ville de Montrivage »
+// (COLL-ACCUEIL, 01/10). Depuis FINITIONS14, la feuille suit la carte d'identité ; la carte d'un
+// compte « Ville seule » a changé, la feuille non. Et la feuille ne sait d'un compte NON actif
+// que ce que sa session a gardé (son rôle « Authenticated ») : la Ville qu'il gère ne se lit
+// qu'en étant ce compte. ROUGE avant le lot.
+describe('VILLE-T18B · point 4 — un compte « Ville seule » est « Gestionnaire » dans la feuille', () => {
+  const { clearScoped } = jest.requireActual('@/platform/storage');
+  const MONTRIVAGE = { data: [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage' }] };
+  const AUTH_MAIRIE = {
+    ...authDe('player'),
+    userData: {
+      documentId: 'recette-mairie',
+      firstname: 'Recette',
+      id: 9,
+      lastname: 'Mairie',
+      multisportClubs: [],
+      role: { name: 'Authenticated', type: 'authenticated' },
+    },
+  };
+  const SESSIONS = [
+    session('moi-player', 'Hugo', 'Joueur'),
+    {
+      user: {
+        documentId: 'recette-mairie',
+        firstname: 'Recette',
+        lastname: 'Mairie',
+        role: { name: 'Authenticated', type: 'authenticated' },
+      },
+    },
+  ];
+
+  /**
+   * Monte « Mon compte » du compte de la mairie (il lit la Ville qu'il gère).
+   * @param {any} villes - Ce que `/collectivites/mine` rend pour lui.
+   * @returns {renderer.ReactTestRenderer}
+   */
+  const ouvrirMonCompteDeLaMairie = (villes) => {
+    mockVillesGerees = villes;
+    mockAuth = { ...AUTH_MAIRIE, authSessions: SESSIONS };
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    arbres.push(arbre);
+    return arbre;
+  };
+
+  /**
+   * La mairie ouvre « Mon compte », puis le quitte (vers un autre compte). Deux `act` : démonter
+   * dans le même `act` que le montage couperait ses effets avant qu'ils ne tournent.
+   * @param {any} villes - Ce que `/collectivites/mine` rend pour elle.
+   * @returns {void}
+   */
+  const passerParMonCompteDeLaMairie = (villes) => {
+    const arbre = ouvrirMonCompteDeLaMairie(villes);
+    act(() => { arbre.unmount(); });
+    arbres.pop();
+  };
+
+  beforeEach(() => {
+    clearScoped('coll-compte:');
+    mockVillesGerees = { data: [] };
+  });
+
+  it('mairie ACTIVE : la feuille dit ce que dit son en-tête, jamais « Membre »', () => {
+    const arbre = ouvrirMonCompteDeLaMairie(MONTRIVAGE);
+
+    appuyerSur(arbre, 'Changer de compte');
+    const lus = textes(arbre);
+
+    // L'en-tête de « Mon compte » ET la ligne du compte actif dans la feuille.
+    expect(lus.filter((texte) => texte === 'Gestionnaire · Ville de Montrivage')).toHaveLength(2);
+    expect(lus).not.toContain('Membre');
+  });
+
+  it('G12b : Hugo actif, Recette Mairie dans la liste est « Gestionnaire · Ville de Montrivage »', () => {
+    passerParMonCompteDeLaMairie(MONTRIVAGE);
+    mockVillesGerees = { data: [] };
+    AUTH_PAR_ROLE.player.authSessions = SESSIONS;
+    const { arbre } = monter('player');
+
+    appuyerSur(arbre, 'Changer de compte');
+    const lus = textes(arbre);
+
+    expect(lus).toContain('Recette Mairie');
+    expect(lus).toContain('Gestionnaire · Ville de Montrivage');
+    expect(lus).not.toContain('Membre');
+  });
+
+  it('🔒 jumeau : un compte qui ne gère plus de Ville redevient « Membre »', () => {
+    passerParMonCompteDeLaMairie(MONTRIVAGE);
+    passerParMonCompteDeLaMairie({ data: [] });
+    mockVillesGerees = { data: [] };
+    AUTH_PAR_ROLE.player.authSessions = SESSIONS;
+    const { arbre } = monter('player');
+
+    appuyerSur(arbre, 'Changer de compte');
+    const lus = textes(arbre);
+
+    expect(lus).toContain('Membre');
+    expect(lus).not.toContain('Gestionnaire · Ville de Montrivage');
   });
 });
