@@ -526,7 +526,13 @@ function ClubSlotRequest({
     );
   } else if (place) {
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
-    const equipesLa = Math.max(0, Number(place.capacity) - Number(place.remaining));
+    // 🧮 VILLE-T18C (07/10, tournée T18 D09a) — « il y a déjà 2 équipes » puis 3 noms : la capacité
+    // moins la place restante (jamais sous zéro) plafonne à la capacité. Le serveur rend le PIC
+    // (`peak`) ; un serveur qui ne le rend pas garde le calcul d'avant.
+    const pic = Number(place.peak);
+    const equipesLa = Number.isFinite(pic) && place.peak !== null && place.peak !== undefined
+      ? Math.max(0, pic)
+      : Math.max(0, Number(place.capacity) - Number(place.remaining));
     // 🧮 FINITIONS12-COLL (03/10) — UNE SÉRIE SE LIT DATE PAR DATE (tournée T11 : « Il y a déjà
     // 39 équipes : c'est complet » pour 38 jeudis dont UN plein). Le serveur rend une ligne
     // d'occupant par séance datée de la période et la place au PIC ; `occurrences` dit combien

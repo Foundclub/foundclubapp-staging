@@ -878,3 +878,48 @@ describe('VILLE-T18C point 2 — la phrase dit pourquoi, « Jour » a un indice,
     alerte.mockRestore();
   });
 });
+
+// 🧮 VILLE-T18C (07/10) — point 3, tournée T18 (D09a) : « Complet chaque semaine : il y a déjà 2
+// équipes. » puis « Déjà là » nomme 3 équipes, sur un gymnase à 2 places. Le serveur rend le PIC
+// (`peak` : 3 équipes en même temps) ; l'écran lisait la capacité moins la place restante, qui ne
+// descend jamais sous zéro (2 − 0 = 2). Le nombre suit désormais le pic, donc la liste. (Les
+// séances refusées, elles, ne comptent déjà pas : le serveur les annule, `status: cancelled`,
+// `isActive: false`, et l'aperçu les écarte — admin planning-slot.ts, buildBasePlanningFilters.)
+describe('VILLE-T18C point 3 — le nombre d’équipes suit la liste (le pic, pas la capacité)', () => {
+  const ligne = (/** @type {string} */ club, /** @type {string} */ equipe) => ({
+    club: { documentId: club === 'AS Montrivage' ? 'club-A' : 'club-B', name: club },
+    endTime: '19:30',
+    startTime: '18:00',
+    team: { name: equipe },
+    validFrom: JOUR,
+    validUntil: JOUR,
+  });
+  const TROIS_SUR_DEUX = {
+    capacity: 2,
+    occupants: [
+      ligne('AS Montrivage', 'U13'),
+      ligne('Montrivage FC', 'Loisir mixtes'),
+      ligne('Montrivage FC', 'Senior B'),
+    ],
+    occurrences: { count: 36, fullCount: 36, fullDates: [JOUR] },
+    peak: 3,
+    remaining: 0,
+  };
+
+  // eslint-disable-next-line max-len
+  it('chaque semaine, 3 équipes sur 2 places : « il y a déjà 3 équipes », comme la liste', async () => {
+    mockApercu = TROIS_SUR_DEUX;
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => textes(arbre).some((t) => t.startsWith('Complet chaque semaine')));
+    const lus = textes(arbre);
+    expect(lus).toContain('Complet chaque semaine : il y a déjà 3 équipes.');
+    expect(lus.join(' | ')).not.toMatch(/déjà 2 équipes/);
+  });
+
+  it('une fois, 3 équipes sur 2 places : « Il y a déjà 3 équipes : c’est complet. »', async () => {
+    mockApercu = { ...TROIS_SUR_DEUX, occurrences: undefined };
+    const arbre = await monter((l) => l.includes('Il y a déjà 3 équipes : c’est complet.'));
+    expect(textes(arbre)).toContain('Il y a déjà 3 équipes : c’est complet.');
+  });
+});
