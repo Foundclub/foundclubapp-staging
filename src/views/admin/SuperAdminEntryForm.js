@@ -964,7 +964,6 @@ function SuperAdminEntryForm({ navigation, route }) {
         </Text>
 
         <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
-          // @ts-ignore: FIXME: Baseline TS regression
           {selected.map((relationId) => (
             <View
               key={relationId}
@@ -1094,7 +1093,6 @@ function SuperAdminEntryForm({ navigation, route }) {
 
         {results.length > 0 ? (
           <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {results.map((item) => (
               <TouchableOpacity
                 key={item?.documentId}
@@ -1108,7 +1106,6 @@ function SuperAdminEntryForm({ navigation, route }) {
                 ]}
               >
                 <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>{item?.label || item?.documentId}</Text>
-                // @ts-ignore: FIXME: Baseline TS regression
                 <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[2]]}>
                   {item?.subtitle || item?.documentId}
                 </Text>
@@ -1216,7 +1213,6 @@ function SuperAdminEntryForm({ navigation, route }) {
           </Text>
         ) : (
           <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {selectedItems.map((item, index) => {
               const itemKey = `${getMediaKey(item) || 'media'}-${index}`;
               const itemLabel = item?.name || item?.url || item?.documentId || item?.id || t(
@@ -1332,7 +1328,6 @@ function SuperAdminEntryForm({ navigation, route }) {
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{getFieldLabel(attribute)}</Text>
           <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8], Spaces.marginTop[8]]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {options.map((option) => (
               <TouchableOpacity
                 key={option}
@@ -1410,9 +1405,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         {description ? (
           <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>{description}</Text>
         ) : null}
-        // @ts-ignore: FIXME: Baseline TS regression
         <View style={Spaces.marginTop[10]}>
-          // @ts-ignore: FIXME: Baseline TS regression
           {attributes.map((attribute) => renderScalarField(attribute))}
         </View>
       </View>
@@ -1432,7 +1425,6 @@ function SuperAdminEntryForm({ navigation, route }) {
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[32]]}>
-        // @ts-ignore: FIXME: Baseline TS regression
         <View style={[Spaces.marginTop[superAdminLayout.pageTop], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
             {isEditMode
@@ -1461,7 +1453,6 @@ function SuperAdminEntryForm({ navigation, route }) {
             {`${t('superAdminContentManager.form.editableFields', 'Champs editables')} (${editableAttributes.length})`}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {editableAttributes.map((attribute) => attribute?.name).join(', ')
               || t('superAdminContentManager.form.noEditableFields', 'Aucun champ détecté')}
           </Text>
@@ -1522,7 +1513,6 @@ function SuperAdminEntryForm({ navigation, route }) {
               <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
                 {t('superAdminContentManager.form.rawFallbackHint', 'Champs non totalement supportes en mode guide:')}
                 {' '}
-                // @ts-ignore: FIXME: Baseline TS regression
                 {unsupportedAttributes.map((attribute) => attribute?.name).join(', ')}
               </Text>
             ) : null}
