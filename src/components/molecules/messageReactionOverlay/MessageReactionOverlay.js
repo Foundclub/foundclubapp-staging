@@ -170,8 +170,14 @@ function MessageReactionOverlay({
     animation.start();
     return () => animation.stop();
   }, [pop, reduireLesAnimations, visible]);
-  const stylePop = {
+  // 👆 La PILULE apparait en fondu SEUL : ses boutons sont des cibles tactiles, ils doivent
+  // mesurer 44 des la premiere image (rouge de la recolte 3a : 40,4 px mesures pendant
+  // l'agrandissement, whatsapp2-menu.spec.ts:124). Le MENU garde l'effet du pack.
+  const styleFondu = {
     opacity: pop.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+  };
+  const stylePop = {
+    ...styleFondu,
     transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [POP_DEPART, 1] }) }],
   };
 
@@ -322,7 +328,7 @@ function MessageReactionOverlay({
                   top: place.pill.top,
                   transformOrigin: isMine ? 'right bottom' : 'left bottom',
                 },
-                stylePop,
+                styleFondu,
               ]}
               testID="WHATSAPP-pilule"
             >
