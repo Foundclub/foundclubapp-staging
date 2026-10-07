@@ -281,6 +281,30 @@ describe('le site rend le detail d un sondage', () => {
     expect(root.findAllByType('img')).toHaveLength(0);
   });
 
+  // SECU-SONDAGE-ANONYME (07/10) — le serveur ne met plus, dans un sondage anonyme, que les
+  // COMPTEURS (aucun votant) ; mon choix est posé par la couche données (`voters: [moi]`).
+  test('un sondage anonyme du serveur neuf affiche ses COMPTEURS, et mon choix surligné', () => {
+    const root = mountScreen({
+      poll: buildPoll({
+        isAnonymous: true,
+        options: [
+          {
+            id: 'opt-1', label: 'Samedi 14h', voteCount: 3, voters: [],
+          },
+          {
+            id: 'opt-2', label: 'Dimanche 10h', voteCount: 1, voters: ['user-1'],
+          },
+        ],
+      }),
+    });
+
+    const rendu = textOf(root);
+    expect(rendu).toContain('3 votes');
+    expect(rendu).toContain('1 vote');
+    expect(rendu).not.toContain('0 vote');
+    expect(buttonWithText(root, 'Vote enregistre')).toBeTruthy();
+  });
+
   test('voter transmet au service le message et l option choisis', async () => {
     const root = mountScreen();
 
