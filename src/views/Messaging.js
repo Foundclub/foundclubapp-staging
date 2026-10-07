@@ -31,6 +31,7 @@ import useTheme from '@/theme/themeContext';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
+import { etatDEnvoi } from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -675,7 +676,12 @@ function Messaging({ navigation, route }) {
             <View style={stylesDeLaListe.rangee}>
               <View style={stylesDeLaListe.apercu}>
                 {lastMessage && isMyMessage ? (
-                  <GlyphIcon color={sourdine} name="checkDouble" size={16} />
+                  // Coches cyan si le serveur dit « lu » (meme regle que la bulle : `etatDEnvoi`).
+                  <GlyphIcon
+                    color={etatDEnvoi(lastMessage) === 'lu' ? Colors.primary500 : sourdine}
+                    name="checkDouble"
+                    size={16}
+                  />
                 ) : null}
                 {auteurDuDernier ? (
                   <Text style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}>

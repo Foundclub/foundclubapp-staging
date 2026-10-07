@@ -278,4 +278,24 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
     }]);
     expect(toutLeTexte(arbre)).not.toContain('Karim :');
   });
+
+  test('LI4 — mon dernier message LU par quelqu un : coches cyan ; pas encore lu : grises', async () => {
+    // eslint-disable-next-line global-require
+    const genererCouleurs = require('@/theme/colors').default;
+    const couleurs = genererCouleurs();
+    const fil = (readBy) => ({
+      ...CHATS[0],
+      messages: [{
+        createdAt: '2026-10-07T10:00:00.000Z',
+        message: 'A demain',
+        readBy,
+        sender: { documentId: 'moi', firstname: 'Adel' },
+      }],
+    });
+    const coches = (arbre) => arbre.root.findAllByType(GlyphIcon)
+      .find((/** @type {any} */ n) => n.props.name === 'checkDouble').props.color;
+
+    expect(coches(await monterAvec([fil([{ documentId: 'karim' }])]))).toBe(couleurs.primary500);
+    expect(coches(await monterAvec([fil([])]))).not.toBe(couleurs.primary500);
+  });
 });
