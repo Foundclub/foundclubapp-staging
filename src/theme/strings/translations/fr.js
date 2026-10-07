@@ -13958,6 +13958,8 @@ export default {
     errors: {
       delete: 'Impossible de supprimer la notification.',
       eventNotFound: "Impossible de retrouver l'événement associe à cette notification.",
+      // VILLE-NOTIFS (07/10) — la lecture de la liste a échoué (n'est pas « Aucune notification »).
+      load: 'Impossible de charger les notifications.',
       markAll: 'Impossible de marquer toutes les notifications comme lues.',
       markRead: 'Impossible de marquer la notification comme lue.',
       markReadShort: 'Impossible de marquer comme lu.',
@@ -13985,6 +13987,7 @@ export default {
       title: 'Aucune notification',
     },
     errors: {
+      load: 'Impossible de charger les notifications.',
       markAll: 'Impossible de marquer toutes les notifications.',
       markRead: 'Impossible de marquer comme lu.',
     },

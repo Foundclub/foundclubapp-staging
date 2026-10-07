@@ -33,12 +33,14 @@ import {
  * @returns {import('react').ReactElement | null}
  */
 function NotificationPopup({
+  isError = false,
   isLoading,
   isVisible,
   notifications,
   onClose,
   onMarkAllAsRead,
   onMarkAsRead,
+  onRetry = undefined,
 }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -51,7 +53,10 @@ function NotificationPopup({
   const recentNotifications = safeNotifications.slice(0, 8);
   const unreadCount = safeNotifications.filter((n) => !n.read).length;
   const shouldShowLoading = Boolean(isLoading) && recentNotifications.length === 0;
-  const shouldShowEmpty = !shouldShowLoading && recentNotifications.length === 0;
+  // VILLE-NOTIFS (07/10) — une lecture en echec se dit : elle ne se deguise plus en « Aucune
+  // notification » (la cloche disait 4, le panneau rien). Deja des notifications : on les garde.
+  const shouldShowError = !shouldShowLoading && Boolean(isError) && recentNotifications.length === 0;
+  const shouldShowEmpty = !shouldShowLoading && !shouldShowError && recentNotifications.length === 0;
 
   const popupBackground = Colors?.neutral900 || '#121212';
   const popupBorder = Colors?.primary500 || '#01B3F4';
@@ -153,6 +158,27 @@ function NotificationPopup({
         <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
           {t('notificationPopup.loading', 'Chargement des notifications...')}
         </Text>
+      </View>
+    );
+  } else if (shouldShowError) {
+    popupContent = (
+      <View style={{ alignItems: 'center', padding: 24 }}>
+        <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textSecondary, textAlign: 'center' }]}>
+          {t('notificationPopup.errors.load', 'Impossible de charger les notifications.')}
+        </Text>
+        {onRetry ? (
+          <TouchableOpacity
+            accessibilityLabel={t('common.actions.retry', 'Réessayer')}
+            accessibilityRole="button"
+            hitSlop={ApplicationStyle.hitSlop.min44From24}
+            onPress={onRetry}
+            style={{ marginTop: 12 }}
+          >
+            <Text style={[Fonts.p3Bold || { fontWeight: '600' }, { color: popupBorder }]}>
+              {t('common.actions.retry', 'Réessayer')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   } else if (shouldShowEmpty) {
