@@ -5414,17 +5414,35 @@ function Conversation({ navigation, route }) {
     // Composition message
     if (currentMessage.composition) {
       if (currentMessage.composition.type === 'poll') {
+        // 📊 MSG1A (§3.4) — le sondage dans le cadre commun : nom, queue, heure avant le pied.
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View style={{ marginBottom, marginTop }}>
-              <PollMessageBubble
-                currentUserId={userData?.documentId || ''}
-                isMe={!isLeft}
-                onOpenDetails={() => handleOpenPollDetails(currentMessage)}
-                onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
-                poll={currentMessage.composition}
-                resolveVoterName={resolveVoterName}
-              />
+            <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+              <BulleDuFil
+                couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                estAMoi={estAMoi}
+                estDernier={estDernierDuGroupe}
+                nom={nomEnTete}
+                testID="bulle-sondage"
+              >
+                <PollMessageBubble
+                  currentUserId={userData?.documentId || ''}
+                  dansLaBulle
+                  isMe={!isLeft}
+                  meta={(
+                    <MetaDuMessage
+                      estAMoi={estAMoi}
+                      etat={etatDEnvoi(currentMessage)}
+                      heure={heureDuMessage(currentMessage.createdAt)}
+                    />
+                  )}
+                  onOpenDetails={() => handleOpenPollDetails(currentMessage)}
+                  onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
+                  poll={currentMessage.composition}
+                  resolveVoterAvatar={resolveVoterAvatar}
+                  resolveVoterName={resolveVoterName}
+                />
+              </BulleDuFil>
             </View>
           ),
         );
@@ -5790,6 +5808,17 @@ function Conversation({ navigation, route }) {
       <GlyphIcon color={Colors.neutral00} name="chevronDown" size={22} />
     </View>
   );
+
+  // 📊 MSG1A (§3.4) — l'avatar d'un votant (sondage), lu sur les participants du fil. Les
+  // NOMS restent l'affaire de `resolveVoterName`, que ce lot ne touche pas.
+  const resolveVoterAvatar = (/** @type {string} */ voterId) => {
+    const membre = Array.isArray(chatData?.participants)
+      ? chatData.participants.find((participant) => (
+        String(participant?.documentId || participant?.id || '') === String(voterId || '')
+      ))
+      : null;
+    return resolveMediaUri(membre?.avatar?.url) || '';
+  };
 
   // 🧑 MSG1A (§3.1) — l'avatar de 28, en bas du groupe, dans les fils a plusieurs
   // (GiftedChat ne l'appelle que pour la DERNIERE bulle d'un groupe).
