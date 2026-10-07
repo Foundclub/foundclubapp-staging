@@ -23,6 +23,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
+import OffreFoundclubClub from '@/views/admin/components/OffreFoundclubClub';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -645,6 +646,9 @@ function AdminClubDetail() {
             />
           </View>
         </View>
+
+        {/* OFFRIR-ABONNEMENT (07/10) — offrir l abonnement Club en deux appuis. */}
+        <OffreFoundclubClub clubId={clubId} clubName={club.name} />
 
         <ScrollView
           contentContainerStyle={styles.tabsContent}

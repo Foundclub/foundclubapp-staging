@@ -525,11 +525,16 @@ function Profile({ navigation, route }) {
     TEAM: 'team',
   }[paidSubscriptionAccessLevel] || 'free';
   let subscriptionStatusText = t(`profile.subscription.status.${subscriptionStatusKey}`);
-  if (offerPayer?.kind === 'collectivite' && !uncoveredActiveClub) {
+  // OFFRIR-ABONNEMENT (07/10) — offerte par FoundClub (console SuperAdmin) : la meme phrase
+  // que l'offre de la Ville, jamais « Payé par ton club ».
+  const offertePar = offerPayer?.kind === 'foundclub'
+    ? 'FoundClub'
+    : offerPayer?.kind === 'collectivite' && formatCollectiviteOfferedBy(offerPayer.name);
+  if (offertePar && !uncoveredActiveClub) {
     subscriptionStatusText = t(
       'profile.subscription.offeredBy',
       'Offert par {{who}} : toutes les équipes de ton club sont couvertes.',
-      { who: formatCollectiviteOfferedBy(offerPayer.name), ...SANS_ECHAPPEMENT },
+      { who: offertePar, ...SANS_ECHAPPEMENT },
     );
   } else if (offerPayer?.kind === 'trial' && !uncoveredActiveClub) {
     subscriptionStatusText = offerPayer.endsAt
