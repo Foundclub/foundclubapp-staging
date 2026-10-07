@@ -95,7 +95,10 @@ import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
 import CitationDansLaBulle from '@/components/molecules/bulleDuFil/CitationDansLaBulle';
 import DegradeDePhoto from '@/components/molecules/bulleDuFil/DegradeDePhoto';
-import MetaDuMessage, { etatDEnvoi, heureDuMessage } from '@/components/molecules/bulleDuFil/MetaDuMessage';
+import MetaDuMessage, {
+  etatDEnvoi,
+  heureDuMessage,
+} from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import {
   NOTICE,
   PUCE_DE_DATE,
@@ -466,7 +469,9 @@ const isDocumentPickerCancellation = (documentPicker, error) => (
  */
 const margesDeLaBulle = (estAMoi, typeDuFil) => {
   if (estAMoi) return { alignItems: 'flex-end', marginLeft: 56, marginRight: 2 };
-  if (estUnTeteATete(typeDuFil)) return { alignItems: 'flex-start', marginLeft: 2, marginRight: 64 };
+  if (estUnTeteATete(typeDuFil)) {
+    return { alignItems: 'flex-start', marginLeft: 2, marginRight: 64 };
+  }
   return { alignItems: 'flex-start', marginRight: 40 };
 };
 
@@ -1549,10 +1554,18 @@ function Conversation({ navigation, route }) {
   // Personne ne l'atteignait : la carte du fil cachait ses boutons (`mode="share"`) ;
   // la bulle du pack montre « Present | Absent ».
   // ponytail: troisieme copie de la meme fonction ; l'unifier touche deux ecrans hors du lot.
-  const handleParticipateToEvent = async (/** @type {{ documentId?: string; eventFormat?: string; parentEvent?: { documentId?: string } }} */ event) => {
+  const handleParticipateToEvent = async (
+    /**
+     * @type {{ documentId?: string; eventFormat?: string;
+     *   parentEvent?: { documentId?: string } }}
+     */ event,
+  ) => {
     if (String(event?.eventFormat || '').toLowerCase() === 'stage_day' && event?.documentId) {
       try {
-        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
       } catch {
         // Le retour d'erreur est porte par la mutation.
       }
@@ -1595,7 +1608,10 @@ function Conversation({ navigation, route }) {
     // AA01 — un membre convie REPOND (`POST /events/:id/rsvp`), il ne demande pas.
     if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
       try {
-        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
       } catch {
         // Le retour d'erreur est porte par la mutation.
       }
@@ -3261,7 +3277,10 @@ function Conversation({ navigation, route }) {
 
   // MSG1A (§3.16) — « Nommer admin du groupe » / « Retirer le role d'admin » : le serveur
   // le sait deja (`updateGroupMeta`, `addAdminIds` / `removeAdminIds`, admins seulement).
-  const handleToggleGroupAdmin = async (/** @type {any} */ member, /** @type {boolean} */ devientAdmin) => {
+  const handleToggleGroupAdmin = async (
+    /** @type {any} */ member,
+    /** @type {boolean} */ devientAdmin,
+  ) => {
     const memberId = String(member?.documentId || member?.id || '').trim();
     if (!chatId || !memberId) return;
     try {
@@ -4027,7 +4046,18 @@ function Conversation({ navigation, route }) {
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, chatData?.staffRoles, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [
+    blockedUserIds,
+    chatData?.staffRoles,
+    filDeLaVille,
+    messagesPages,
+    getAnonymizedName,
+    getPrimaryImageUriFromMessage,
+    isImageAttachmentMessage,
+    logAttachmentDebug,
+    normalizeMessageAttachments,
+    resolveMediaUri,
+  ]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
@@ -5276,11 +5306,17 @@ function Conversation({ navigation, route }) {
     const clipboard = getClipboardModule();
     if (clipboard && typeof clipboard.setString === 'function' && texte) {
       clipboard.setString(texte);
-      showSuccessBanner(t('conversation.address.copied', 'Adresse copiée'), t('conversation.actions.copySuccess.title', 'Copié'));
+      showSuccessBanner(
+        t('conversation.address.copied', 'Adresse copiée'),
+        t('conversation.actions.copySuccess.title', 'Copié'),
+      );
       return;
     }
     showErrorBanner(
-      t('conversation.actions.copyUnavailable', 'Le presse-papiers est indisponible sur cette build.'),
+      t(
+        'conversation.actions.copyUnavailable',
+        'Le presse-papiers est indisponible sur cette build.',
+      ),
       t('common.error', 'Erreur'),
     );
   }, [showErrorBanner, showSuccessBanner, t]);
@@ -5473,7 +5509,10 @@ function Conversation({ navigation, route }) {
   // au CYAN au seuil (deux disques superposes : seule l'opacite s'anime, ce que le pilote
   // natif de Swipeable sait faire). L'icone reste celle choisie pour cette place par le lot
   // ICONES (« icone go » d'Adel, 01/10 ; temoin `iconesALeurPlace` 2).
-  const renderReplySwipeAction = useCallback((/** @type {any} */ _progress, /** @type {any} */ dragX) => {
+  const renderReplySwipeAction = useCallback((
+    /** @type {any} */ _progress,
+    /** @type {any} */ dragX,
+  ) => {
     const avancee = dragX.interpolate({
       extrapolate: 'clamp',
       inputRange: [-MESSAGE_REPLY_SWIPE_THRESHOLD, 0, MESSAGE_REPLY_SWIPE_THRESHOLD],
@@ -5492,14 +5531,22 @@ function Conversation({ navigation, route }) {
     const echelle = avancee.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
     return (
       <View style={stylesDuFil.actionDeGlisser}>
-        <Animated.View style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}>
+        <Animated.View
+          style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}
+        >
           <View
-            style={[stylesDuFil.disqueRepondre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
+            style={[
+              stylesDuFil.disqueRepondre,
+              { backgroundColor: withAlpha(Colors.neutral00, 0.14) },
+            ]}
           >
             <SvgIcon color={Colors.neutral00} height={18} name="reply" width={18} />
           </View>
           <Animated.View
-            style={[stylesDuFil.disqueRepondre, { backgroundColor: Colors.primary500, opacity: auSeuil }]}
+            style={[
+              stylesDuFil.disqueRepondre,
+              { backgroundColor: Colors.primary500, opacity: auSeuil },
+            ]}
           >
             <SvgIcon color={Colors.primary900} height={18} name="reply" width={18} />
           </Animated.View>
@@ -5634,7 +5681,8 @@ function Conversation({ navigation, route }) {
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
-      // 📅 MSG1A (§3.8) — l'evenement partage dans le cadre commun : nom, queue, heure avant le pied.
+      // 📅 MSG1A (§3.8) — l'evenement partage dans le cadre commun : nom, queue, heure avant le
+      // pied.
       return wrapWithMessageInteractions(
         currentMessage, (
           <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
@@ -5688,7 +5736,9 @@ function Conversation({ navigation, route }) {
                   dansLaBulle
                   isMe={!isLeft}
                   // SONDAGE-NOMS — donne, la bulle lit elle-meme les noms des votants au serveur.
-                  messageId={currentMessage?.documentId || currentMessage?._id || currentMessage?.id}
+                  messageId={
+                    currentMessage?.documentId || currentMessage?._id || currentMessage?.id
+                  }
                   meta={(
                     <MetaDuMessage
                       estAMoi={estAMoi}
@@ -5839,7 +5889,16 @@ function Conversation({ navigation, route }) {
                 />
               </BulleDuFil>
               {currentMessage.failed ? (
-                <Text style={[Fonts.p4Bold, { color: Colors.chatDanger, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                <Text
+                  style={[
+                    Fonts.p4Bold,
+                    {
+                      color: Colors.chatDanger,
+                      marginTop: 4,
+                      textAlign: isLeft ? 'left' : 'right',
+                    },
+                  ]}
+                >
                   {t('common.retry', 'Réessayer')}
                 </Text>
               ) : null}
@@ -5933,7 +5992,9 @@ function Conversation({ navigation, route }) {
       return wrapWithMessageInteractions(
         currentMessage,
         (
-          <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
+          <View
+            style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}
+          >
             {/* MSG1A (§3.1) — le document devient une CARTE DANS LA BULLE (SPECS.md §1,
                 `DocBody`) : meme cadre que le texte (nom, queue, heure dessous). La carte
                 garde ses boutons Ouvrir / Telecharger / Partager, inchanges. */}
@@ -6003,7 +6064,11 @@ function Conversation({ navigation, route }) {
             testID="bulle-texte"
           >
             {citationNode ? (
-              <View style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}>{citationNode}</View>
+              <View
+                style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}
+              >
+                {citationNode}
+              </View>
             ) : null}
             {imageDuMessage}
             {aDuTexte ? (
@@ -6520,7 +6585,12 @@ function Conversation({ navigation, route }) {
           testID="conversation-lecture-seule"
         >
           <GlyphIcon color={withAlpha(Colors.neutral00, 0.72)} name="lock" size={16} />
-          <Text style={[stylesDuFil.barreLectureSeuleTexte, { color: withAlpha(Colors.neutral00, 0.72) }]}>
+          <Text
+            style={[
+              stylesDuFil.barreLectureSeuleTexte,
+              { color: withAlpha(Colors.neutral00, 0.72) },
+            ]}
+          >
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
         </View>
@@ -6792,14 +6862,19 @@ function Conversation({ navigation, route }) {
         names: prenomsQuiEcrivent.slice(0, 2).join(', '),
         ...SANS_ECHAPPEMENT,
       });
-  } else if (!sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil) {
+  } else if (
+    !sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil
+  ) {
     const prenomsDesMembres = (Array.isArray(chatData?.participants) ? chatData.participants : [])
-      .filter((/** @type {any} */ membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
+      .filter((/** @type {any} */ membre) => (
+        String(membre?.documentId || '') !== String(userData?.documentId || '')
+      ))
       .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
       .filter(Boolean)
       .slice(0, 30);
     if (prenomsDesMembres.length > 0) {
-      sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${t('conversation.header.you', 'Vous')}`;
+      const vous = t('conversation.header.you', 'Vous');
+      sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${vous}`;
     }
   }
   const peutOuvrirLaGestionDuGroupe = isGroupChat;
@@ -6984,7 +7059,8 @@ function Conversation({ navigation, route }) {
                   contentContainerStyle: { flexGrow: 1 },
                   onScrollToIndexFailed: handleScrollToIndexFailed,
                 }),
-              // 🔔 MSG1A (§3.10) — la notice du dirigeant, en haut du fil (pied de la liste inversee).
+              // 🔔 MSG1A (§3.10) — la notice du dirigeant, en haut du fil (pied de la liste
+              // inversee).
               ...(noticeDeTete ? { ListFooterComponent: noticeDeTete } : {}),
             }}
             loadEarlier={hasNextPage}
@@ -7184,7 +7260,12 @@ function Conversation({ navigation, route }) {
               <Text style={[stylesDuFil.titreDeFeuille, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.title', 'Ajouter')}
               </Text>
-              <Text style={[stylesDuFil.sousTitreDeFeuille, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+              <Text
+                style={[
+                  stylesDuFil.sousTitreDeFeuille,
+                  { color: withAlpha(Colors.neutral00, 0.6) },
+                ]}
+              >
                 {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
               </Text>
             </View>

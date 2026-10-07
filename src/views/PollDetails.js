@@ -408,7 +408,9 @@ function PollDetails({ navigation, route }) {
     poll?.allowMultipleVotes
       ? t('conversation.poll.details.multipleAllowed', 'Votes multiples autorisés')
       : t('conversation.poll.details.singleChoice', 'Un seul choix par participant'),
-  ].concat(poll?.isAnonymous ? [t('conversation.poll.details.anonymousVotes', 'Votes anonymes')] : []);
+  ].concat(
+    poll?.isAnonymous ? [t('conversation.poll.details.anonymousVotes', 'Votes anonymes')] : [],
+  );
   const capitales = [styles.capitales, { color: withAlpha(Colors.neutral00, 0.6) }];
 
   return (
@@ -439,7 +441,10 @@ function PollDetails({ navigation, route }) {
           style={styles.boutonRetour}
           withDefaultMargin={false}
         />
-        <Text accessibilityRole="header" style={[styles.titreDeLEnTete, { color: Colors.neutral00 }]}>
+        <Text
+          accessibilityRole="header"
+          style={[styles.titreDeLEnTete, { color: Colors.neutral00 }]}
+        >
           {t('conversation.poll.details.title', 'Detail du sondage')}
         </Text>
       </View>
@@ -474,7 +479,10 @@ function PollDetails({ navigation, route }) {
                   key={etiquette}
                   style={[
                     styles.etiquette,
-                    { backgroundColor: withAlpha(Colors.primary500, 0.14), color: Colors.primary500 },
+                    {
+                      backgroundColor: withAlpha(Colors.primary500, 0.14),
+                      color: Colors.primary500,
+                    },
                   ]}
                 >
                   {etiquette}
@@ -527,7 +535,9 @@ function PollDetails({ navigation, route }) {
                       })}
                     </Text>
                   </View>
-                  <View style={[styles.barre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}>
+                  <View
+                    style={[styles.barre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
+                  >
                     <View
                       style={{
                         backgroundColor: Colors.primary500,
@@ -540,11 +550,20 @@ function PollDetails({ navigation, route }) {
                   {/* Un sondage anonyme ne montre personne. */}
                   {poll?.isAnonymous ? <View style={{ height: 6 }} /> : null}
                   {!poll?.isAnonymous && section.voters.length === 0 ? (
-                    <Text style={[Fonts.p3, styles.aucunVote, { color: withAlpha(Colors.neutral00, 0.55) }]}>
+                    <Text
+                      style={[
+                        Fonts.p3,
+                        styles.aucunVote,
+                        { color: withAlpha(Colors.neutral00, 0.55) },
+                      ]}
+                    >
                       {t('conversation.poll.details.noVotes', 'Aucun vote pour cette option.')}
                     </Text>
                   ) : null}
-                  {!poll?.isAnonymous ? section.voters.map((/** @type {any} */ voter, /** @type {number} */ index) => {
+                  {!poll?.isAnonymous ? section.voters.map((
+                    /** @type {any} */ voter,
+                    /** @type {number} */ index,
+                  ) => {
                     const fullName = `${voter.firstname} ${voter.lastname}`.trim();
                     const displayLabel = fullName
                       || voter.displayName
@@ -556,7 +575,10 @@ function PollDetails({ navigation, route }) {
                         style={[
                           styles.voterRow,
                           index > 0
-                            ? { borderTopColor: withAlpha(Colors.neutral00, 0.06), borderTopWidth: 1 }
+                            ? {
+                              borderTopColor: withAlpha(Colors.neutral00, 0.06),
+                              borderTopWidth: 1,
+                            }
                             : null,
                         ]}
                       >

@@ -357,7 +357,10 @@ function MessageReactionOverlay({
                 accessibilityRole="button"
                 activeOpacity={0.6}
                 onPress={() => setClavierOuvert(true)}
-                style={[styles.boutonDeLaPilule, { backgroundColor: withAlpha(Colors.neutral00, 0.12) }]}
+                style={[
+                  styles.boutonDeLaPilule,
+                  { backgroundColor: withAlpha(Colors.neutral00, 0.12) },
+                ]}
                 testID="WHATSAPP-plus"
               >
                 <GlyphIcon color={Colors.neutral00} name="plus2" size={22} />
@@ -388,7 +391,10 @@ function MessageReactionOverlay({
                   <View key={action.key}>
                     {index === indexDuFilet ? (
                       <View
-                        style={[styles.filet, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}
+                        style={[
+                          styles.filet,
+                          { backgroundColor: withAlpha(Colors.neutral00, 0.08) },
+                        ]}
                       />
                     ) : null}
                     <TouchableOpacity

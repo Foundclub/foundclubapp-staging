@@ -24,7 +24,11 @@ import {
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { hideBlockedChats, peutBloquer, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import {
+  hideBlockedChats,
+  peutBloquer,
+  toBlockedUserIdSet,
+} from '@/domains/userBlock/userBlockFilters';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -642,7 +646,12 @@ function Messaging({ navigation, route }) {
             myTeams={allMyTeams}
             size={52}
           />
-          <View style={[stylesDeLaListe.corps, { borderBottomColor: withAlpha(Colors.neutral00, 0.07) }]}>
+          <View
+            style={[
+              stylesDeLaListe.corps,
+              { borderBottomColor: withAlpha(Colors.neutral00, 0.07) },
+            ]}
+          >
             <View style={stylesDeLaListe.rangee}>
               {/*
                 MARQUEE — le nom de la conversation (club, équipe, groupe) se
@@ -689,7 +698,10 @@ function Messaging({ navigation, route }) {
                   ) : null}
                   {auteurDuDernier ? (
                     <Text
-                      style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}
+                      style={[
+                        stylesDeLaListe.apercuTexte,
+                        { color: withAlpha(Colors.neutral00, 0.8) },
+                      ]}
                     >
                       {`${auteurDuDernier}\u00A0:`}
                     </Text>

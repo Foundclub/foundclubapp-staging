@@ -7,7 +7,8 @@ import useTheme from '@/theme/themeContext';
 import { NOM_DE_L_AUTEUR, ROLE_DE_L_AUTEUR } from './typographieDuFil';
 
 /** La queue du pack (svg 24 x 18), dessinee pour une bulle RECUE ; miroir pour les miennes. */
-const TRACE_DE_LA_QUEUE = 'M6 0V9C6 13.5 3.8 16.6 0 18C4.6 18.6 8.8 17.6 11.6 15.6C13.6 17.2 16.4 18 20 18H24V0Z';
+const TRACE_DE_LA_QUEUE = 'M6 0V9C6 13.5 3.8 16.6 0 18C4.6 18.6 8.8 17.6 11.6 15.6'
+  + 'C13.6 17.2 16.4 18 20 18H24V0Z';
 
 /**
  * MSG1A — LE CADRE D'UNE BULLE DU FIL, « MODELE WHATSAPP » (SPECS.md §1).

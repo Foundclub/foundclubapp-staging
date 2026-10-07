@@ -394,7 +394,7 @@ describe('messagerie — la carte d\'evenement d\'un fil', () => {
     expect(mockRespondToEventRsvp).toHaveBeenCalledWith('ev-4', 'present');
   });
 
-  test('MSG1A — un membre convie qui repond « Present » REPOND, il ne demande pas sa place', async () => {
+  test('MSG1A — un convie qui repond « Present » REPOND, il ne demande pas sa place', async () => {
     const props = bulleDeLEvenement({
       date: '2099-01-01T18:00:00Z',
       documentId: 'ev-5',

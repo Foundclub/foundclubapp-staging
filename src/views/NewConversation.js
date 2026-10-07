@@ -3,7 +3,8 @@ import i18next from 'i18next';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, FlatList, Image, Platform, SectionList, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Alert, FlatList, Image, Platform, SectionList, StyleSheet, Text, TextInput, TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -409,7 +410,10 @@ function NewConversation({ navigation, route }) {
           <Text numberOfLines={1} style={[stylesDuChoix.ligneNom, { color: Colors.neutral00 }]}>
             {nomComplet(item)}
           </Text>
-          <Text numberOfLines={1} style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}>
+          <Text
+            numberOfLines={1}
+            style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
+          >
             {dejaDansLeGroupe
               ? t('newConversation.alreadyInGroup', 'Déjà dans le groupe')
               : item.role?.name || t('common.member')}
@@ -458,7 +462,10 @@ function NewConversation({ navigation, route }) {
     } else {
       appelALAction = {
         bouton: t('newConversation.cta.next', 'Suivant'),
-        sous: t('newConversation.membersPlusYou', { count: nombreChoisi, defaultValue: '{{count}} membres + vous' }),
+        sous: t('newConversation.membersPlusYou', {
+          count: nombreChoisi,
+          defaultValue: '{{count}} membres + vous',
+        }),
         suivant: true,
         titre: t('newConversation.newGroup', 'Nouveau groupe'),
       };
@@ -528,14 +535,22 @@ function NewConversation({ navigation, route }) {
     >
       {/* Header — MSG1A (§3.15) : titre et sous-titre qui disent la regle, puis le compte. */}
       <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter]}>
-        <HeaderBackButton onPress={() => (etape === 'nom' ? setEtape('choix') : navigation.goBack())} />
+        <HeaderBackButton
+          onPress={() => (etape === 'nom' ? setEtape('choix') : navigation.goBack())}
+        />
         <View style={[Spaces.marginLeft[16], Alignments.fill]}>
           <Text numberOfLines={1} style={[Fonts.h3, Fonts.neutral00]}>
             {etape === 'nom' ? t('newConversation.newGroup', 'Nouveau groupe') : headerTitle}
           </Text>
-          <Text numberOfLines={1} style={[stylesDuChoix.sousTitre, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+          <Text
+            numberOfLines={1}
+            style={[stylesDuChoix.sousTitre, { color: withAlpha(Colors.neutral00, 0.6) }]}
+          >
             {etape === 'nom'
-              ? t('newConversation.membersPlusYou', { count: nombreChoisi, defaultValue: '{{count}} membres + vous' })
+              ? t('newConversation.membersPlusYou', {
+                count: nombreChoisi,
+                defaultValue: '{{count}} membres + vous',
+              })
               : sousTitreDeLEnTete}
           </Text>
         </View>
@@ -554,14 +569,18 @@ function NewConversation({ navigation, route }) {
               onChangeText={setNomDuGroupe}
               placeholder={t('newConversation.groupNamePlaceholder', 'Nom du groupe (facultatif)')}
               placeholderTextColor={withAlpha(Colors.neutral00, 0.5)}
-              style={[stylesDuChoix.champNom, { borderBottomColor: Colors.primary500, color: Colors.neutral00 }]}
+              style={[
+                stylesDuChoix.champNom,
+                { borderBottomColor: Colors.primary500, color: Colors.neutral00 },
+              ]}
               testID="nouveau-groupe-nom"
               value={nomDuGroupe}
             />
           </View>
           <Text style={[stylesDuChoix.aide, { color: withAlpha(Colors.neutral00, 0.6) }]}>
             {t('newConversation.groupNameHint', {
-              defaultValue: 'Sans nom, il s’appellera « {{name}} ». Tu pourras le changer plus tard.',
+              defaultValue:
+                'Sans nom, il s’appellera « {{name}} ». Tu pourras le changer plus tard.',
               ...SANS_ECHAPPEMENT,
               name: nomParDefaut,
             })}
@@ -574,7 +593,11 @@ function NewConversation({ navigation, route }) {
           </Text>
           <View style={stylesDuChoix.grille}>
             <View style={stylesDuChoix.tuile}>
-              <ProfileAvatar imageUrl={userData?.avatar?.url} name={nomComplet(userData)} size={56} />
+              <ProfileAvatar
+                imageUrl={userData?.avatar?.url}
+                name={nomComplet(userData)}
+                size={56}
+              />
               <Text style={[stylesDuChoix.tuileNom, { color: Colors.neutral00 }]}>
                 {t('conversation.header.you', 'Vous')}
               </Text>
@@ -597,12 +620,24 @@ function NewConversation({ navigation, route }) {
                   testID={`groupe-retirer-${id}`}
                 >
                   <View>
-                    <ProfileAvatar imageUrl={personne?.avatar?.url} name={nomComplet(personne)} size={56} />
-                    <View style={[stylesDuChoix.retirer, { backgroundColor: Colors.neutral500, borderColor: Colors.chatBackground }]}>
+                    <ProfileAvatar
+                      imageUrl={personne?.avatar?.url}
+                      name={nomComplet(personne)}
+                      size={56}
+                    />
+                    <View
+                      style={[
+                        stylesDuChoix.retirer,
+                        { backgroundColor: Colors.neutral500, borderColor: Colors.chatBackground },
+                      ]}
+                    >
                       <GlyphIcon color={Colors.neutral00} name="xmark" size={12} />
                     </View>
                   </View>
-                  <Text numberOfLines={1} style={[stylesDuChoix.tuileNom, { color: Colors.neutral00 }]}>
+                  <Text
+                    numberOfLines={1}
+                    style={[stylesDuChoix.tuileNom, { color: Colors.neutral00 }]}
+                  >
                     {personne?.firstname || nomComplet(personne)}
                   </Text>
                 </TouchableOpacity>
@@ -706,18 +741,33 @@ function NewConversation({ navigation, route }) {
               testID={`selection-retirer-${getUserIdentifier(personne)}`}
             >
               <View>
-                <ProfileAvatar imageUrl={personne?.avatar?.url} name={nomComplet(personne)} size={48} />
-                <View style={[stylesDuChoix.retirer, { backgroundColor: Colors.neutral500, borderColor: Colors.chatBackground }]}>
+                <ProfileAvatar
+                  imageUrl={personne?.avatar?.url}
+                  name={nomComplet(personne)}
+                  size={48}
+                />
+                <View
+                  style={[
+                    stylesDuChoix.retirer,
+                    { backgroundColor: Colors.neutral500, borderColor: Colors.chatBackground },
+                  ]}
+                >
                   <GlyphIcon color={Colors.neutral00} name="xmark" size={12} />
                 </View>
               </View>
-              <Text numberOfLines={1} style={[stylesDuChoix.choisiNom, { color: withAlpha(Colors.neutral00, 0.85) }]}>
+              <Text
+                numberOfLines={1}
+                style={[stylesDuChoix.choisiNom, { color: withAlpha(Colors.neutral00, 0.85) }]}
+              >
                 {personne?.firstname || nomComplet(personne)}
               </Text>
             </TouchableOpacity>
           )}
           showsHorizontalScrollIndicator={false}
-          style={[stylesDuChoix.bandeauConteneur, { borderBottomColor: withAlpha(Colors.neutral00, 0.06) }]}
+          style={[
+            stylesDuChoix.bandeauConteneur,
+            { borderBottomColor: withAlpha(Colors.neutral00, 0.06) },
+          ]}
         />
       ) : null}
 
@@ -730,12 +780,20 @@ function NewConversation({ navigation, route }) {
 
       {/* 🧾 MSG1A (§3.15) — la barre du bas : ce qui va se passer, puis le bouton. */}
       {etape === 'choix' && appelALAction ? (
-        <View style={[stylesDuChoix.barre, { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) }]}>
+        <View
+          style={[
+            stylesDuChoix.barre,
+            { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) },
+          ]}
+        >
           <View style={stylesDuChoix.barreTextes}>
             <Text numberOfLines={1} style={[stylesDuChoix.barreTitre, { color: Colors.neutral00 }]}>
               {appelALAction.titre}
             </Text>
-            <Text numberOfLines={1} style={[stylesDuChoix.barreSous, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+            <Text
+              numberOfLines={1}
+              style={[stylesDuChoix.barreSous, { color: withAlpha(Colors.neutral00, 0.6) }]}
+            >
               {appelALAction.sous}
             </Text>
           </View>
@@ -743,16 +801,31 @@ function NewConversation({ navigation, route }) {
             accessibilityRole="button"
             disabled={isCreating}
             onPress={vaVersLeNom ? () => setEtape('nom') : handleCreate}
-            style={[stylesDuChoix.pilule, { backgroundColor: Colors.primary500 }, isCreating ? stylesDuChoix.piluleEteinte : null]}
+            style={[
+              stylesDuChoix.pilule,
+              { backgroundColor: Colors.primary500 },
+              isCreating ? stylesDuChoix.piluleEteinte : null,
+            ]}
             testID="nouvelle-discussion-valider"
           >
-            <Text style={[stylesDuChoix.piluleTexte, { color: Colors.primary900 }]}>{appelALAction.bouton}</Text>
-            {appelALAction.suivant ? <GlyphIcon color={Colors.primary900} name="chevronRight" size={18} /> : null}
+            <Text
+              style={[stylesDuChoix.piluleTexte, { color: Colors.primary900 }]}
+            >
+              {appelALAction.bouton}
+            </Text>
+            {appelALAction.suivant ? (
+              <GlyphIcon color={Colors.primary900} name="chevronRight" size={18} />
+            ) : null}
           </TouchableOpacity>
         </View>
       ) : null}
       {etape === 'nom' ? (
-        <View style={[stylesDuChoix.barre, { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) }]}>
+        <View
+          style={[
+            stylesDuChoix.barre,
+            { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) },
+          ]}
+        >
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityState={{ disabled: nombreChoisi < 2 || isCreating }}
@@ -766,7 +839,13 @@ function NewConversation({ navigation, route }) {
             ]}
             testID="nouveau-groupe-creer"
           >
-            <Text style={[stylesDuChoix.piluleTexte, stylesDuChoix.piluleTexteLarge, { color: Colors.primary900 }]}>
+            <Text
+              style={[
+                stylesDuChoix.piluleTexte,
+                stylesDuChoix.piluleTexteLarge,
+                { color: Colors.primary900 },
+              ]}
+            >
               {t('newConversation.createGroup', 'Créer le groupe')}
             </Text>
           </TouchableOpacity>
