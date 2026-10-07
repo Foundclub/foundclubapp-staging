@@ -392,7 +392,10 @@ function CollectiviteHome() {
           {`${demande?.facility?.name || ''} · ${
             formatSlot(demande?.requestedStart, demande?.requestedEnd)}`}
         </Text>
-        {conflit && !compacte ? (
+        {/* VILLE-T18B point 2 (T18, G02) — la jauge ne vient qu'avec sa légende, « Accepter met… » :
+            sur une demande qui a de la place, elle n'était que des pastilles grises sans mot, et la
+            pastille d'en-tête dit déjà « 2 places libres » (planche P3v2-accueil : Complet seul). */}
+        {conflit?.full && !compacte ? (
           <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
             <View
               accessibilityLabel={t(
@@ -417,19 +420,17 @@ function CollectiviteHome() {
                 />
               ))}
             </View>
-            {conflit.full ? (
-              <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
-                {t(
-                  'collectiviteAccueil.attente.accepterMet',
-                  'Accepter met {{equipes}} équipes pour {{places}} places.',
-                  {
-                    equipes: conflit.teamsIfAccepted,
-                    places: conflit.maxSlots,
-                    ...SANS_ECHAPPEMENT,
-                  },
-                )}
-              </Text>
-            ) : null}
+            <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
+              {t(
+                'collectiviteAccueil.attente.accepterMet',
+                'Accepter met {{equipes}} équipes pour {{places}} places.',
+                {
+                  equipes: conflit.teamsIfAccepted,
+                  places: conflit.maxSlots,
+                  ...SANS_ECHAPPEMENT,
+                },
+              )}
+            </Text>
           </View>
         ) : null}
         {compacte ? null : (

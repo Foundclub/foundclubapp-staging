@@ -919,3 +919,40 @@ describe('FINITIONS12-COLL point 9 — l’accueil compte les séances comme « 
     expect(lus.some((texte) => texte.startsWith('3 séances'))).toBe(false);
   });
 });
+
+// 🧮 VILLE-T18B point 2 (07/10) — tournée T18, capture G02 : sous l'horaire d'une demande qui a de
+// la place, DEUX PASTILLES GRISES sans légende (lecteur d'écran : « 0 places prises sur 2 ») ; la
+// pastille d'en-tête dit déjà « 2 places libres ». La planche P3v2-accueil ne dessine la jauge des
+// places que pour une demande COMPLÈTE, à côté de sa légende : « Accepter met 3 équipes pour
+// 2 places. ». ROUGE avant le lot.
+describe('VILLE-T18B point 2 — la jauge des places ne vient qu’avec sa phrase', () => {
+  const jauges = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.type === 'string'
+    && / prises? sur /.test(String(n.props?.accessibilityLabel || ''))
+  ));
+  const avecPlaces = (/** @type {number} */ libres) => ({
+    ...DEMANDE_ANCIENNE,
+    conflict: { maxSlots: 2, occupants: [], remaining: libres },
+  });
+
+  it('2 places libres sur 2 (G02) : la pastille d’en-tête, aucune jauge muette', async () => {
+    mockRequetes = lu([avecPlaces(2)]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('2 places libres');
+    expect(jauges(arbre)).toHaveLength(0);
+  });
+
+  it('1 place libre sur 2 : « 1 place libre », toujours sans jauge', async () => {
+    mockRequetes = lu([avecPlaces(1)]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('1 place libre');
+    expect(jauges(arbre)).toHaveLength(0);
+  });
+
+  it('complet : la jauge ET sa légende, comme la planche', async () => {
+    const arbre = await monter();
+    expect(jauges(arbre).map((/** @type {any} */ n) => n.props.accessibilityLabel))
+      .toEqual(['2 places prises sur 2']);
+    expect(textes(arbre)).toContain('Accepter met 3 équipes pour 2 places.');
+  });
+});
