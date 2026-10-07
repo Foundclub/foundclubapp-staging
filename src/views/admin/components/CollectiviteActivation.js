@@ -419,20 +419,11 @@ function CollectiviteActivation({ collectivite, etats = null }) {
 
   const enCours = Boolean(mutation.isPending || apercu.isPending);
   const teinte = activer ? Colors.warning500 : Colors.success500;
-  return (
-    <View
-      style={[
-        ApplicationStyle.borderRadius16,
-        Spaces.padding[16],
-        {
-          backgroundColor: withAlpha(teinte, 0.1),
-          borderColor: withAlpha(teinte, 0.45),
-          borderWidth: 1,
-          gap: 12,
-        },
-      ]}
-      testID="collectivite-bandeau-etat"
-    >
+  // 🖥️ VT18E (07/10, tournée T18 SITE_S13) — sur le site, « Activer » se tenait en bouton géant
+  // sur toute la largeur : il se pose À CÔTÉ de sa phrase (planche P2-fiche-ordi, état 1).
+  const enLigne = width >= LARGEUR_TABLEAU;
+  const etatEtPhrase = (
+    <>
       <PastilleAPoint
         color={teinte}
         label={activer
@@ -450,6 +441,24 @@ function CollectiviteActivation({ collectivite, etats = null }) {
         ].filter(Boolean).join(' · ')}
       </Text>
       {compteRendu}
+    </>
+  );
+  return (
+    <View
+      style={[
+        ApplicationStyle.borderRadius16,
+        Spaces.padding[16],
+        {
+          backgroundColor: withAlpha(teinte, 0.1),
+          borderColor: withAlpha(teinte, 0.45),
+          borderWidth: 1,
+          gap: 12,
+        },
+        enLigne ? { alignItems: 'center', flexDirection: 'row', gap: 16 } : null,
+      ]}
+      testID="collectivite-bandeau-etat"
+    >
+      {enLigne ? <View style={{ flex: 1, gap: 8 }}>{etatEtPhrase}</View> : etatEtPhrase}
       <Button
         disabled={enCours}
         isLoading={Boolean(apercu.isPending)}

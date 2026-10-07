@@ -8,9 +8,11 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   applyOptimisticPollVote,
   getPollTotalVotes,
+  getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import { BREAKPOINTS } from '@/responsive';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -85,6 +87,7 @@ function PollDetails({ navigation, route }) {
     if (initialPoll?.type === 'poll') return initialPoll;
     return null;
   }, [initialPoll, pollMessage?.composition]);
+  const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
 
   const voterDirectory = useMemo(() => {
     const map = new Map();
@@ -103,8 +106,11 @@ function PollDetails({ navigation, route }) {
       chatData.participants.forEach(registerUser);
     }
     flattenMessages(messagesPages?.pages).forEach((message) => registerUser(message?.sender));
+    // SONDAGE-NOMS — les votants lus au serveur EN DERNIER : un fil de club n'a pas de
+    // participants, et le serveur est le seul à savoir qu'un compte a été supprimé.
+    pollVoterProfiles.forEach(registerUser);
     return map;
-  }, [chatData?.participants, messagesPages?.pages, userData]);
+  }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData]);
 
   const resolveVoterProfile = useCallback((voterId) => {
     return voterDirectory.get(String(voterId || '').trim()) || {
@@ -121,7 +127,8 @@ function PollDetails({ navigation, route }) {
   const optionSections = useMemo(() => {
     if (!Array.isArray(poll?.options)) return [];
     return poll.options.map((option, index) => ({
-      count: getPollVoters(option).length,
+      // SECU-SONDAGE-ANONYME — le compteur du serveur (un sondage anonyme ne nomme personne).
+      count: getPollVoteCount(option),
       id: String(option?.id || `option-${index}`),
       isSelected: getPollVoters(option).includes(String(userData?.documentId || '').trim()),
       label: String(

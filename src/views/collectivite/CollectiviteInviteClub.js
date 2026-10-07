@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import { cheminDuLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -18,6 +19,7 @@ import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AjouterUnClub from '@/views/collectivite/components/AjouterUnClub';
 
 import {
   useCollectiviteInvitationLink,
@@ -30,13 +32,6 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import { share } from '@/platform/share';
-
-/**
- * Le chemin de la page publique du lien, sur le site (route CollectiviteJoin).
- * @param {string} token - Le code du lien.
- * @returns {string} Le chemin.
- */
-export const cheminDuLienDeLaVille = (token) => `/invitation-ville/${token}`;
 
 /**
  * Copie un texte : le presse-papiers du navigateur sur le site, le module natif sur le
@@ -75,6 +70,10 @@ const copier = async (texte) => {
  *     enregistree pour l equipe FoundClub ; ⛔ l application n envoie aucun e-mail (ecrire a un
  *     tiers est un geste a part, a decider par Adel).
  * Ce qui se passe ensuite (inscrit, rattache) se lit dans « Clubs rattaches », sous la liste.
+ * VILLE-INVITER-CLUB (07/10/2026) : un 3e onglet, en tete, « Deja sur FoundClub » — la Ville
+ * cherche un club deja inscrit et lui envoie sa demande (components/AjouterUnClub). Il s'ouvre
+ * par « Ajouter un club » (param `onglet: 'recherche'`) ; sans ce param, l'ecran garde le lien.
+ * « lien A » d'Adel : le club qui arrive par le lien DEMANDE ; la Ville accepte ou refuse.
  * « vous » : la mairie.
  * @returns {import('react').ReactElement} L ecran.
  */
@@ -84,7 +83,9 @@ function CollectiviteInviteClub() {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const route = useRoute();
-  const routeParams = /** @type {{ collectiviteId?: string } | undefined} */ (route?.params);
+  const routeParams = /** @type {{ collectiviteId?: string, onglet?: string } | undefined} */ (
+    route?.params
+  );
   const collectiviteId = routeParams?.collectiviteId || null;
 
   const mine = useMyCollectivites();
@@ -93,7 +94,9 @@ function CollectiviteInviteClub() {
   const changer = useRotateCollectiviteInvitationLink();
   const inviter = useInviteClubByFoundClub();
 
-  const [onglet, setOnglet] = useState(/** @type {'lien' | 'foundclub'} */ ('lien'));
+  const [onglet, setOnglet] = useState(/** @type {'recherche' | 'lien' | 'foundclub'} */ (
+    ['foundclub', 'recherche'].includes(String(routeParams?.onglet)) ? routeParams?.onglet : 'lien'
+  ));
   const [confirmerLeChangement, setConfirmerLeChangement] = useState(false);
   const [retour, setRetour] = useState('');
   const [nomDuClub, setNomDuClub] = useState('');
@@ -103,6 +106,10 @@ function CollectiviteInviteClub() {
   const ville = collectivite?.name
     ? formatCollectiviteOfferedBy(collectivite.name)
     : t('collectiviteClubs.detail.theCity', 'la Ville');
+  // T18 (07/10) : le texte PARTAGÉ commence par la Ville — « La Ville de … vous invite »,
+  // jamais « la Ville ». Au milieu d'une phrase (« le lien de la Ville de … »), `ville` garde
+  // sa minuscule.
+  const villeEnTete = ville ? ville.charAt(0).toUpperCase() + ville.slice(1) : ville;
   const token = /** @type {any} */ (lien.data)?.token || null;
   const adresse = token ? buildPublicWebUrl({ path: cheminDuLienDeLaVille(token) }) : null;
 
@@ -123,7 +130,7 @@ function CollectiviteInviteClub() {
         message: t(
           'collectiviteClubs.invite.shareMessage',
           '{{ville}} vous invite à inscrire votre club sur FoundClub : {{adresse}}',
-          { adresse, ville, ...SANS_ECHAPPEMENT },
+          { adresse, ville: villeEnTete, ...SANS_ECHAPPEMENT },
         ),
         title: t('collectiviteClubs.invite.shareTitle', 'Invitation de la Ville sur FoundClub'),
         url: adresse,
@@ -174,7 +181,7 @@ function CollectiviteInviteClub() {
         {t(
           'collectiviteClubs.invite.linkIntro',
           // eslint-disable-next-line max-len
-          'Un club n’est pas encore sur FoundClub ? Envoyez-lui le lien de {{ville}} : il inscrit son club, puis l’équipe FoundClub le rattache à la Ville.',
+          'Un club n’est pas encore sur FoundClub ? Envoyez-lui le lien de {{ville}} : il inscrit son club et demande à vous rejoindre ; vous acceptez sa demande dans vos clubs.',
           { ville, ...SANS_ECHAPPEMENT },
         )}
       </Text>
@@ -340,14 +347,20 @@ function CollectiviteInviteClub() {
             {(collectivite?.name || t('collectivite.home.kicker', 'Ma collectivité')).toUpperCase()}
           </Text>
           <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('collectiviteClubs.invite.title', 'Inviter un club absent de FoundClub')}
+            {onglet === 'recherche'
+              ? t('collectiviteRattachement.ajouter.title', 'Ajouter un club déjà sur FoundClub')
+              : t('collectiviteClubs.invite.title', 'Inviter un club absent de FoundClub')}
           </Text>
         </View>
         <SegmentedControl
           onChange={(/** @type {string} */ valeur) => setOnglet(
-            valeur === 'foundclub' ? 'foundclub' : 'lien',
+            ['foundclub', 'recherche'].includes(valeur) ? /** @type {any} */ (valeur) : 'lien',
           )}
           options={[
+            {
+              label: t('collectiviteRattachement.ajouter.tab', 'Déjà sur FoundClub'),
+              value: 'recherche',
+            },
             { label: t('collectiviteClubs.invite.byLink', 'Par un lien'), value: 'lien' },
             {
               label: t('collectiviteClubs.invite.byFoundClub', 'Par FoundClub'),
@@ -356,7 +369,14 @@ function CollectiviteInviteClub() {
           ]}
           value={onglet}
         />
-        {onglet === 'lien' ? renderLien() : renderFoundClub()}
+        {onglet === 'recherche' ? (
+          <AjouterUnClub
+            collectiviteId={collectiviteId}
+            onInviterParLien={() => setOnglet('lien')}
+          />
+        ) : null}
+        {onglet === 'lien' ? renderLien() : null}
+        {onglet === 'foundclub' ? renderFoundClub() : null}
       </ScrollView>
     </ScreenContainer>
   );

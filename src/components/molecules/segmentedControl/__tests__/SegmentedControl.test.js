@@ -1,4 +1,6 @@
-import { Text, TouchableOpacity } from 'react-native';
+import {
+  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import SegmentedControl from '../SegmentedControl';
@@ -109,6 +111,7 @@ const monter = (props = {}) => {
         onChange={props.onChange || jest.fn()}
         options={props.options || MODES_DE_CONFLIT}
         value={props.value || MODES_DE_CONFLIT[0].value}
+        wrapLabels={Boolean(props.wrapLabels)}
       />,
     );
   });
@@ -269,5 +272,65 @@ describe('SegmentedControl — S5 : le mode UNE LIGNE qui retrecit au lieu de co
     });
 
     expect(onChange).toHaveBeenCalledWith('allow_and_notify');
+  });
+});
+
+// 📐 VT18E (07/10/2026), point 3 — UN QUATRIEME MODE : LES ONGLETS PASSENT A LA LIGNE.
+//
+// Tournee T18 (capture S18a) : « Rattachements et invitations » porte trois onglets comptes,
+// « Rattachements (0) · Par FoundClub (1) · Rattaches (0) », ~461 dp pour ~363 dp de large sur un
+// Pixel 9 : le troisieme etait COUPE au bord. `fitLabels` n y suffit pas (meme a 72 %, les trois
+// textes demandent ~367 dp) et `fullLabels` casserait « Rattachements » au milieu du mot.
+// ⇒ `wrapLabels` : chaque onglet garde sa taille et son texte entier, et celui qui ne tient plus
+// passe a la ligne suivante. Les autres ecrans ne changent pas (contre-epreuve ci-dessous).
+const ONGLETS_DES_DEMANDES = [
+  { label: 'Rattachements (0)', value: 'rattachements' },
+  { label: 'Par FoundClub (1)', value: 'foundclub' },
+  { label: 'Rattachés (0)', value: 'faits' },
+];
+
+const styleAplati = (/** @type {any} */ noeud) => StyleSheet.flatten(noeud.props.style) || {};
+
+describe('SegmentedControl — VT18E : le mode qui passe a la ligne au lieu de couper', () => {
+  it('avec wrapLabels, les onglets sont poses dans une rangee qui passe a la ligne', () => {
+    const arbre = monter({ options: ONGLETS_DES_DEMANDES, wrapLabels: true });
+
+    const rangee = arbre.root.findAllByType(View)
+      .find((/** @type {any} */ noeud) => styleAplati(noeud).flexWrap === 'wrap');
+    expect(rangee).toBeDefined();
+    expect(rangee.findAllByType(TouchableOpacity)).toHaveLength(3);
+    // Ni defilement, ni bande que l on fait glisser : rien ne sort du cadre.
+    expect(arbre.root.findAllByType(ScrollView)).toHaveLength(0);
+    expect(arbre.root.findAllByType(View)
+      .some((/** @type {any} */ noeud) => Array.isArray(styleAplati(noeud).transform))).toBe(false);
+  });
+
+  it('avec wrapLabels, chaque libelle est entier, a sa taille, sur une ligne', () => {
+    const noeuds = libellesRendus(monter({ options: ONGLETS_DES_DEMANDES, wrapLabels: true }));
+
+    expect(noeuds.map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children)))
+      .toEqual(['Rattachements (0)', 'Par FoundClub (1)', 'Rattachés (0)']);
+    noeuds.forEach((/** @type {any} */ noeud) => {
+      expect(noeud.props.numberOfLines).toBe(1);
+      expect(noeud.props.adjustsFontSizeToFit).toBe(false);
+    });
+  });
+
+  it('🔒 sans wrapLabels, rien ne passe a la ligne : les autres ecrans ne bougent pas', () => {
+    const arbre = monter({ options: ONGLETS_DES_DEMANDES });
+
+    expect(arbre.root.findAllByType(View)
+      .some((/** @type {any} */ noeud) => styleAplati(noeud).flexWrap === 'wrap')).toBe(false);
+  });
+
+  it('wrapLabels ne change rien aux valeurs remontees', () => {
+    const onChange = jest.fn();
+    const arbre = monter({ onChange, options: ONGLETS_DES_DEMANDES, wrapLabels: true });
+
+    act(() => {
+      arbre.root.findAllByType(TouchableOpacity)[2].props.onPress();
+    });
+
+    expect(onChange).toHaveBeenCalledWith('faits');
   });
 });

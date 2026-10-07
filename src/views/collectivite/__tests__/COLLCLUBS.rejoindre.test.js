@@ -202,7 +202,8 @@ describe('COLL-CLUBS — planche 3, côté club : demander le rattachement', () 
       'Quel club veux-tu rattacher à la Ville de Montrivage ?',
       'Recette Stripe FC',
       'Ce club n’est pas à Montrivage',
-      'L’équipe FoundClub vérifiera avec la Ville avant de le rattacher.',
+      // VILLE-INVITER-CLUB (07/10, « lien A » d'Adel) : la Ville juge elle-meme sa demande.
+      'La Ville le verra avant de répondre à ta demande.',
       'Seuls les clubs dont tu es dirigeant sont proposés.',
     ]));
   });
@@ -219,7 +220,7 @@ describe('COLL-CLUBS — planche 3, côté club : demander le rattachement', () 
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
       'Demande envoyée',
-      'L’équipe FoundClub vérifie que ton club est bien à Montrivage, puis le rattache à la Ville. Tu seras prévenu.',
+      'La Ville accepte ou refuse ta demande. Tu seras prévenu, et tu suis sa réponse sur la page de ton club.',
       'D’ici là, ton club fonctionne déjà normalement.',
     ]));
     expect(lus.some((texte) => /\d+\s*(jour|heure|semaine)/.test(texte))).toBe(false);

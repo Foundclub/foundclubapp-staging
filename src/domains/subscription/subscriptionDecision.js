@@ -1274,6 +1274,13 @@ export const formatSubscriptionPlanLabel = (planCode) => {
     );
   }
 
+  // OFFRIR-ABONNEMENT (07/10) — l'offre Club offerte par FoundClub depuis la console
+  // SuperAdmin (plan jamais vendu, admin subscription-catalog.ts). Meme raison : sans
+  // cette ligne, le repli l'ecrivait « Fc Foundclub Club ».
+  if (normalizedPlanCode === 'fc_foundclub_club') {
+    return i18next.t('subscriptionDecision.planLabel.foundclub', 'Club · offert par FoundClub');
+  }
+
   // T09 — c'est le SEUL nom que connaisse l'ecran « Mon abonnement » : il ne
   // recoit qu'un planCode (SubscriptionOverview.js:239), jamais le displayName du
   // catalogue. Il doit donc reconstruire mot pour mot le nom sous lequel l'offre
@@ -1740,8 +1747,10 @@ const getOfferDate = (planCode, payerSubscriptions) => {
  * @param {string} [params.clubDocumentId] - Le club actif.
  * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte (bootstrap).
  * @param {any} [params.subscriptionSummary] - Le resume des abonnements (bootstrap).
+ * OFFRIR-ABONNEMENT (07/10) — une offre de FoundClub (console SuperAdmin) se dit
+ * `foundclub` : le club ne paie rien. Un paiement sur le meme club passe devant elle.
  * @returns {{ kind: 'collectivite', name: string } | { endsAt: string | null, kind: 'trial' }
- *   | { kind: 'paid' } | null} Qui paie, ou null.
+ *   | { kind: 'paid' } | { kind: 'foundclub' } | null} Qui paie, ou null.
  */
 export const getActiveClubOfferPayer = ({
   clubDocumentId, entitlementsSummary, subscriptionSummary,
@@ -1760,7 +1769,9 @@ export const getActiveClubOfferPayer = ({
   if (droits.length === 0) return null;
   if (droits.some((droit) => planDe(droit) === 'fc_collectivite_club')) return null;
 
-  if (droits.some((droit) => !planDe(droit).startsWith('fc_trial_'))) return { kind: 'paid' };
+  const horsEssai = droits.filter((droit) => !planDe(droit).startsWith('fc_trial_'));
+  if (horsEssai.some((droit) => planDe(droit) !== 'fc_foundclub_club')) return { kind: 'paid' };
+  if (horsEssai.length > 0) return { kind: 'foundclub' };
 
   const planEssai = planDe(droits[0]);
   const essai = normalizeDecisionArray(subscriptionSummary?.payerSubscriptionsSummary).find(

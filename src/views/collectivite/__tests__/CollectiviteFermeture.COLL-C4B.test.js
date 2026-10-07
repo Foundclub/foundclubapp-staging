@@ -324,7 +324,12 @@ test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer �
     reason: 'travaux',
     startDate: '2026-10-02',
   });
-  expect(mockNavigation.goBack).toHaveBeenCalled();
+  // VILLE-T18A « fermer A » (décision du chef, 07/10) : la fermeture se lit ensuite dans l onglet
+  // « Fermetures » de l installation (avant : retour à l accueil, sans rien).
+  expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+    collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'fermetures',
+  });
+  expect(mockNavigation.goBack).not.toHaveBeenCalled();
 });
 
 test('C4B-A1/4 cochee par la Ville, la case envoie l actualite ; plusieurs jours : « ces jours-la »', async () => {
@@ -522,4 +527,69 @@ test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermet
   await rendre();
   expect(champ('Pour quoi')).toBeDefined();
   expect(champ('Nom (facultatif)')).toBeUndefined();
+});
+
+// 🟨 VILLE-T18A (07/10, tournée T18 point 3, G54a) — « 2 séances touchées, 2 clubs prévenus » quand
+// Montrivage FC n a qu un CRÉNEAU ce jour-là (aucune séance posée) : le serveur rend chaque ligne avec
+// son `kind` ; un créneau se compte et se dit à part. ROUGE avant le lot.
+test('VILLE-T18A (2) une séance et un créneau touchés se comptent à part, le créneau se dit', async () => {
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [
+        { documentId: 'club-as', name: 'AS Montrivage' },
+        { documentId: 'club-fc', name: 'Montrivage FC' },
+      ],
+      clubsCount: 2,
+      sessions: [
+        {
+          club: { documentId: 'club-as', name: 'AS Montrivage' }, date: '2026-10-13', endTime: '19:30', kind: 'event', startTime: '18:00', team: { name: 'U15' },
+        },
+        {
+          club: { documentId: 'club-fc', name: 'Montrivage FC' }, date: '2026-10-13', endTime: '19:30', kind: 'slot', startTime: '18:00', team: null,
+        },
+      ],
+      sessionsCount: 2,
+    },
+  });
+  const arbre = await rendre();
+  await choisirDate('Du', '13/10/2026');
+  const lu = textes(arbre);
+  expect(lu).toContain('1 séance touchée, 1 créneau touché, 2 clubs prévenus');
+  expect(lu).not.toContain('2 séances touchées, 2 clubs prévenus');
+  expect(lu).toContain('AS Montrivage · U15, 18:00 – 19:30');
+  expect(lu).toContain('Montrivage FC, 18:00 – 19:30 (créneau)');
+});
+
+// VILLE-T18A « fermer A » (décision du chef d orchestre, 07/10, T18 point 3, G54a) — après « Fermer »,
+// la fermeture se lit dans l onglet « Fermetures » de l installation (« N clubs prévenus ») :
+// depuis la fiche (bouton « Fermer l installation » de cet onglet), on Y REVIENT ; depuis l accueil,
+// la fiche REMPLACE le formulaire (Retour ne rouvre pas un formulaire déjà envoyé). ROUGE avant.
+test('VILLE-T18A fermer A : venue de l accueil, la fiche de l installation remplace le formulaire', async () => {
+  mockNavigation.replace = jest.fn();
+  const arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  await appuyer(parTestID(arbre, 'fermeture-envoyer'));
+  await appuyer(parTestID(arbre, 'fermeture-confirmer'));
+  expect(mockNavigation.replace).toHaveBeenCalledWith('CollectiviteInstallation', {
+    collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'fermetures',
+  });
+  expect(mockNavigation.goBack).not.toHaveBeenCalled();
+});
+
+test('VILLE-T18A fermer A : venue de la fiche de cette installation, on y revient (onglet Fermetures)', async () => {
+  mockNavigation.replace = jest.fn();
+  mockNavigation.getState = () => ({
+    index: 1,
+    routes: [
+      { name: 'CollectiviteInstallation', params: { facilityId: 'gym-tilleuls', onglet: 'fermetures' } },
+      { name: 'CollectiviteFermeture', params: mockParams },
+    ],
+  });
+  const arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  await appuyer(parTestID(arbre, 'fermeture-envoyer'));
+  await appuyer(parTestID(arbre, 'fermeture-confirmer'));
+  expect(mockNavigation.goBack).toHaveBeenCalled();
+  expect(mockNavigation.replace).not.toHaveBeenCalled();
+  expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CollectiviteInstallation', expect.anything());
 });

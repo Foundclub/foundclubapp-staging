@@ -50,8 +50,10 @@ const buildTimeLabel = (item) => {
   const start = resolvePlanningStartTime(item);
   const end = resolvePlanningEndTime(item);
 
+  // VILLE-T18A (tournée T18, G39) — le tiret demi-cadratin de toute l'app (« 18:00 – 19:30 »,
+  // `timeRange`) ; la fiche d'un bloc et les cartes du planning écrivaient « 18:00 - 19:30 ».
   if (start && end && start !== end) {
-    return `${start} - ${end}`;
+    return `${start} – ${end}`;
   }
 
   return start || end || '';

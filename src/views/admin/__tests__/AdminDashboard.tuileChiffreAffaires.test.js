@@ -146,6 +146,14 @@ jest.mock(
     return null;
   },
 );
+// OFFRIR-ABONNEMENT (07/10) : la liste des abonnements offerts a son propre temoin
+// (OffresFoundclubListe.test.js) ; ici elle est doublee comme les autres sous-composants.
+jest.mock(
+  '@/views/admin/components/OffresFoundclubListe',
+  () => function OffresFoundclubListeMock() {
+    return null;
+  },
+);
 
 /**
  * 🧨 UN ARBRE JAMAIS DEMONTE FAIT ROUGIR LA CI SANS QU AUCUN TEMOIN NE SOIT ROUGE.

@@ -125,6 +125,8 @@ const AutocompleteSelect = forwardRef(
     // refs
     const searchInputRef = useRef(null);
     const wasValuesVisibleRef = useRef(false);
+    // VILLE-INSTALLATION (07/10) : la personne a-t-elle touche une option depuis l ouverture ?
+    const selectionToucheeRef = useRef(false);
 
     /**
      * @param {unknown} value
@@ -184,6 +186,7 @@ const AutocompleteSelect = forwardRef(
     useEffect(() => {
       const justOpened = areValuesVisible && !wasValuesVisibleRef.current;
       if (justOpened) {
+        selectionToucheeRef.current = false;
         setSelectedOptions(hydrateSelectedOptionsFromProps());
       }
       wasValuesVisibleRef.current = areValuesVisible;
@@ -237,6 +240,7 @@ const AutocompleteSelect = forwardRef(
      * @returns {void}
      */
     const handleSelectOption = (option) => {
+      selectionToucheeRef.current = true;
       if (props.isMulti) {
         setSelectedOptions((current) => {
           const currentArray = Array.isArray(current) ? current : [];
@@ -253,7 +257,22 @@ const AutocompleteSelect = forwardRef(
     const handleCloseModal = (persistSelection = true) => {
       // ⛔ Plus rien a annuler ici : l'ouverture n'est plus differee, donc il
       // n'existe plus d'ouverture « en attente » a rattraper a la fermeture.
-      if (persistSelection) {
+      //
+      // 📍 VILLE-INSTALLATION (07/10) — FERMER SANS RIEN TOUCHER NE REECRIT PAS LA VALEUR.
+      // A l ouverture, la coche se reconstruit depuis `props.value` ; si la liste du moment ne
+      // contient pas la valeur (recherche videe a la fermeture precedente), on fabrique un
+      // remplacant `{ label, value: label }`. Le renvoyer a l appelant ECRASAIT son objet :
+      // une adresse choisie dans la liste perdait ses coordonnees des qu on rouvrait le champ,
+      // et « Creer » de la Ville refusait « Selectionnez une adresse geolocalisee » (essai
+      // d Adel, 2.6.70). Champ vide : on rend `undefined` comme avant (temoin 3 de R03).
+      // Temoin : views/facility/__tests__/FacilityForm.VILLE-INSTALLATION.adresse.test.js.
+      const valeurDeDepart = Array.isArray(props.value) && !props.isMulti
+        ? props.value[0]
+        : props.value;
+      const champDejaRempli = props.isMulti
+        ? Array.isArray(props.value) && props.value.length > 0
+        : toComparableTokens(valeurDeDepart).length > 0;
+      if (persistSelection && (selectionToucheeRef.current || !champDejaRempli)) {
         props.setValue(selectedOptions);
       }
 
@@ -521,9 +540,10 @@ const AutocompleteSelect = forwardRef(
               )}
             </TouchableOpacity>
             <View pointerEvents="none">
+              {/* L Input garde l ETAT d erreur (' ' : libelle et trait rouges), pas le message. */}
               <Input
                 editable={false}
-                error={props.error}
+                error={props.error ? ' ' : undefined}
                 label={props.label}
                 lightMode={props.lightMode}
                 readOnly
@@ -533,6 +553,23 @@ const AutocompleteSelect = forwardRef(
             </View>
           </View>
         )}
+        {/* 📍 VILLE-INSTALLATION (07/10) — LE MESSAGE D ERREUR SORT DE LA ZONE COUVERTE. */}
+        {/* La surcouche couvre la boite de l Input et pose la valeur en BAS : quand l Input */}
+        {/* dessinait aussi le message, ce « bas » devenait le message et la valeur s ecrivait */}
+        {/* dessus (essai d Adel, 2.6.70). Meme place, meme police que dans l Input. */}
+        {/* Temoin : __tests__/AutocompleteSelect.erreurSousLaValeur.test.js. */}
+        {!isCardLikeVariant && props.error && props.error !== ' ' ? (
+          <Text
+            style={[
+              Fonts.p2,
+              Fonts.error300,
+              hasLabel ? Spaces.marginTop[8] : null,
+              { opacity: props.disabled ? 0.5 : 1 },
+            ]}
+          >
+            {props.error}
+          </Text>
+        ) : null}
         {isCardVariant && props.error && props.error !== ' ' ? (
           <Text style={[Fonts.p2, Fonts.error700, Spaces.marginTop[8]]}>
             {props.error}
