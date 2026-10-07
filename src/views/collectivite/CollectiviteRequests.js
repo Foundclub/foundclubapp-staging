@@ -16,6 +16,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { isOwnClubRequest } from '@/domains/collectivite/collectiviteAccueil';
 import {
   dateDeDecision,
+  datesRefuseesDUneSerie,
   estDemandeHebdo,
   etatDeLaPlace,
   lectureDeLaSerie,
@@ -132,7 +133,10 @@ function CollectiviteRequests() {
       lieu: lieuAvecPreposition(demande?.facility?.name, t),
       ...SANS_ECHAPPEMENT,
     };
-    const hebdo = estDemandeHebdo(demande);
+    // 🗓️ VILLE-T18C (07/10, tournée T18 G51) — une carte REFUSÉE d'une seule date d'une série
+    // se lit comme cette date ; plusieurs : la série, jusqu'à SA dernière date (le serveur décrit
+    // une carte tranchée par ses propres dates), et la pastille dit combien.
+    const hebdo = estDemandeHebdo(demande) && datesRefuseesDUneSerie(demande) !== 1;
     if (courte) {
       return hebdo
         // eslint-disable-next-line max-len
@@ -257,16 +261,24 @@ function CollectiviteRequests() {
   // Les pastilles d'une carte : la place, une fois / chaque semaine, et « Demande de votre club ».
   const pastillesDe = (/** @type {any} */ demande) => {
     const place = demande?.status === 'pending' ? pastilleDePlace(demande) : null;
+    // VILLE-T18C (07/10) — une carte refusée d'une série : ses dates, pas « Chaque semaine ».
+    const refusees = datesRefuseesDUneSerie(demande);
+    let frequence = estDemandeHebdo(demande)
+      ? t('collectiviteDemandes.pastille.chaqueSemaine', 'Chaque semaine')
+      : t('collectiviteDemandes.pastille.uneFois', 'Une fois');
+    if (refusees === 1) {
+      frequence = t('collectiviteDemandes.pastille.uneDateDeLaSerie', 'Une date de la série');
+    } else if (refusees > 1) {
+      frequence = t(
+        'collectiviteDemandes.pastille.datesDeLaSerie',
+        '{{nombre}} dates de la série',
+        { nombre: refusees },
+      );
+    }
     return (
       <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
         {place ? pastille(place.texte, place.couleur, 'demande-pastille-place') : null}
-        {pastille(
-          estDemandeHebdo(demande)
-            ? t('collectiviteDemandes.pastille.chaqueSemaine', 'Chaque semaine')
-            : t('collectiviteDemandes.pastille.uneFois', 'Une fois'),
-          Colors.neutral300,
-          'demande-pastille-frequence',
-        )}
+        {pastille(frequence, Colors.neutral300, 'demande-pastille-frequence')}
         {isOwnClubRequest(demande, userData)
           // eslint-disable-next-line max-len
           ? pastille(t('collectiviteDemandes.pastille.votreClub', 'Demande de votre club'), Colors.primary200, 'demande-votre-club')

@@ -2813,6 +2813,9 @@ export default {
         coachAllowed: 'Délégation',
         ownerOnly: 'Dirigeant',
       },
+      // VILLE-T18C (07/10) — la rangée « Installations » (planche 40, tournée T18 D01a).
+      installationsAvecVille: '{{club}} + {{ville}} de la Ville',
+      installationsAvecVilleDit: '{{club}} au club et {{ville}} de la Ville',
       owner: 'dirigeant',
       owners: 'dirigeants',
       rows: {
@@ -5104,10 +5107,14 @@ export default {
       // eslint-disable-next-line max-len
       brouillonFiche: 'Bonjour, pourriez-vous compléter les coordonnées de votre club sur sa fiche FoundClub ? Merci.',
       demanderFiche: 'Demander au club de compléter sa fiche',
+      // VILLE-T18C (07/10) — la colonne du tableau des clubs (planche 36, tournée T18 SITE_G60).
+      demanderFicheCourt: 'Demander de compléter',
       ecrire: 'Écrire aux dirigeants',
       envoyer: 'Envoyer',
-      premierMessageAide: 'La conversation s’ouvre quand tu envoies ce message.',
+      // VILLE-T18C (07/10) — la mairie est vouvoyée ; « d’AS » devant une voyelle (T18, G62).
+      premierMessageAide: 'La conversation s’ouvre quand vous envoyez ce message.',
       premierMessageTitre: 'Premier message aux dirigeants de {{club}}',
+      premierMessageTitreElide: 'Premier message aux dirigeants d’{{club}}',
     },
     quitte: {
       retour: 'Retour à la messagerie',
@@ -6040,6 +6047,8 @@ export default {
       // COLL-C3B-BIS (03/10) — planche 43 : changer d’installation ; le titre du panneau.
       changer: 'Changer',
       choisirInstallation: 'Installation de la Ville',
+      // VILLE-T18C (07/10) — « Jour » vide (tournée T18, D07).
+      choisirJour: 'Choisis un jour',
       colEquipe: 'Équipe',
       colInstallation: 'Installation',
       colMoment: 'Moment',
@@ -6062,14 +6071,22 @@ export default {
       // eslint-disable-next-line max-len
       ensuiteDirigeant: 'Ton club est déjà au complet dans son créneau à ce moment : ton dirigeant l’accepte ou la refuse. Tu reçois sa réponse en notification.',
       entrainementAnnule: 'l’entraînement est annulé',
+      // VILLE-T18C (07/10) — une série en cours d’envoi (tournée T18, D09b).
+      envoiEnCours: 'Envoi en cours : {{fait}} sur {{total}} dates envoyées. Reste sur cet écran.',
+      // eslint-disable-next-line max-len
+      envoiEnCoursAttends: 'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+      envoiEnCoursTitre: 'Envoi en cours',
       envoyee: 'Demande envoyée à la {{ville}}',
       envoyeeDirigeant: 'Demande envoyée à ton dirigeant',
       envoyer: 'Envoyer la demande',
       envoyerQuandMeme: 'Envoyer quand même',
       equipe: 'Équipe',
       ferme: 'L’installation ferme à {{heure}}. Termine à {{heure}}, ou commence plus tôt.',
+      // VILLE-T18C (07/10) — la fin choisie d’une série.
+      finDeLaSaison: 'Fin de la saison',
       installation: '{{ville}} · {{equipes}} à la fois',
       jour: 'Jour',
+      jusquAu: 'Jusqu’au',
       laVille: 'Ville',
       libreCeJour: 'Libre ce {{jour}} :',
       ligneSerie: 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}',
@@ -6083,7 +6100,14 @@ export default {
       posee: 'C’est posé : c’est dans ton créneau',
       quandMeme: 'Tu peux demander quand même : la mairie décidera.',
       quiDecide: 'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
+      // VILLE-T18C (07/10) — Retour sur une saisie modifiée (tournée T18, D07).
+      quitter: 'Quitter',
+      quitterPerdu: 'Ce que tu as saisi sera perdu.',
+      quitterTitre: 'Quitter sans envoyer ?',
       ratees: '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
+      rester: 'Rester',
+      serieCompte: '{{nombre}} dates, jusqu’au {{jour}}.',
+      serieUneDate: 'Une seule date : le {{jour}}.',
       tesDemandes: 'Tes demandes à la Ville',
       titre: 'Demander un créneau',
       titrePanneau: 'Demander ce créneau',
@@ -6119,12 +6143,20 @@ export default {
       quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
       // FINITIONS11-COLL (03/10) — « deplacer A » : une séance déplacée hors créneau.
       siRefusAnnulee: 'Si la mairie refuse, la séance sera annulée.',
+      // VILLE-T18C (07/10, tournée T18 D07c) — posée d’office : pourquoi (la gestion de la Ville).
+      // eslint-disable-next-line max-len
+      tuGeres: 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.',
+      // eslint-disable-next-line max-len
+      tuGeresComplet: 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, même au complet.',
     },
     erreur: {
       titre: 'Les demandes n’ont pas pu être lues.',
     },
     fenetre: {
       accepterSerie: 'Accepter la série',
+      // VILLE-T18C (07/10) — trancher une série : ce qui s’écrit, pendant l’attente (T18, G49c).
+      // eslint-disable-next-line max-len
+      accordEnCours: 'Accord des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
       demandePar: 'Demandé par {{personne}}',
       depasse: '{{equipes}} pour {{places}} à ce moment.',
       fermer: 'Fermer',
@@ -6134,6 +6166,8 @@ export default {
       prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
       prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
       refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
+      // eslint-disable-next-line max-len
+      refusEnCours: 'Refus des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
       refuserEtAnnuler: 'Refuser et annuler l’entraînement',
       refuserSerie: 'Refuser la série',
       refuserSerieEtAnnuler: 'Refuser et annuler les entraînements',
@@ -6188,7 +6222,10 @@ export default {
     pastille: {
       chaqueSemaine: 'Chaque semaine',
       complet: 'Complet',
+      // VILLE-T18C (07/10) — une carte refusée d’une série (tournée T18, G51).
+      datesDeLaSerie: '{{nombre}} dates de la série',
       placesLibres: '{{nombre}} places libres',
+      uneDateDeLaSerie: 'Une date de la série',
       uneFois: 'Une fois',
       unePlaceLibre: '1 place libre',
       votreClub: 'Demande de votre club',

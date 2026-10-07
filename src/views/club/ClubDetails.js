@@ -894,6 +894,23 @@ function ClubDetails({ navigation, route }) {
     if (duContexte.length || isAuthenticated) return duContexte;
     return Array.isArray(club?.publicFacilities) ? club.publicFacilities : [];
   }, [club?.publicFacilities, facilityContext?.allFacilities, isAuthenticated]);
+  // 🏟️ VILLE-T18C (07/10, tournée T18 D01a ; planche 40, état 1) — « Installations, 5 » pour 1 au
+  // club et 4 de la Ville : les deux nombres se disent séparément, comme la liste des
+  // installations (TEXTES-COLLECTIVITES). Sans installation de la Ville : un seul nombre.
+  const deLaVille = facilities
+    .filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite').length;
+  const compteDesInstallations = deLaVille
+    ? {
+      affiche: t('clubDetails.hub.installationsAvecVille', '{{club}} + {{ville}} de la Ville', {
+        club: facilities.length - deLaVille, ville: deLaVille,
+      }),
+      dit: t(
+        'clubDetails.hub.installationsAvecVilleDit',
+        '{{club}} au club et {{ville}} de la Ville',
+        { club: facilities.length - deLaVille, ville: deLaVille },
+      ),
+    }
+    : { affiche: String(facilities.length), dit: undefined };
   // COLL-C2C (02/10) — planche P8-installations-tel, etat 3 (le membre) : « Au club », puis la
   // Ville nommee UNE fois, dans le titre de son groupe. « Pretees » est retire (vague 2) : le club
   // n a que des creneaux, la Ville gere.
@@ -3179,7 +3196,8 @@ function ClubDetails({ navigation, route }) {
                   icon={Images.stadium}
                   label={t('facilityList.title', 'Installations')}
                   onPress={handleOpenFacilityList}
-                  value={facilitiesLoading ? '…' : String(facilities.length)}
+                  value={facilitiesLoading ? '…' : compteDesInstallations.affiche}
+                  valueLabel={facilitiesLoading ? undefined : compteDesInstallations.dit}
                 />
                 <ClubHubRow
                   divider

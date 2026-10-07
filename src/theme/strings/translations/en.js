@@ -2575,6 +2575,9 @@ export default {
         coachAllowed: 'Delegated',
         ownerOnly: 'Club manager',
       },
+      // VILLE-T18C (07/10) — the « Facilities » row (board 40, round T18 D01a).
+      installationsAvecVille: '{{club}} + {{ville}} from the town',
+      installationsAvecVilleDit: '{{club}} at the club and {{ville}} from the town',
       owner: 'club manager',
       owners: 'club managers',
       rows: {
@@ -4759,10 +4762,14 @@ export default {
       annuler: 'Cancel',
       brouillonFiche: 'Hello, could you complete your club’s contact details on its FoundClub page? Thank you.',
       demanderFiche: 'Ask the club to complete its page',
+      // VILLE-T18C (07/10) — the clubs table column (board 36, round T18 SITE_G60).
+      demanderFicheCourt: 'Ask to complete',
       ecrire: 'Write to the club managers',
       envoyer: 'Send',
       premierMessageAide: 'The conversation opens when you send this message.',
       premierMessageTitre: 'First message to the managers of {{club}}',
+      // VILLE-T18C (07/10) — French elides « de » before a vowel; English does not.
+      premierMessageTitreElide: 'First message to the managers of {{club}}',
     },
     quitte: {
       retour: 'Back to messages',
@@ -5551,6 +5558,8 @@ export default {
       // COLL-C3B-BIS (03/10) — board 43: change facility; the panel title.
       changer: 'Change',
       choisirInstallation: 'Town facility',
+      // VILLE-T18C (07/10) — empty « Day » (round T18, D07).
+      choisirJour: 'Pick a day',
       colEquipe: 'Team',
       colInstallation: 'Facility',
       colMoment: 'When',
@@ -5571,14 +5580,21 @@ export default {
       ensuite: 'The town hall accepts or refuses it. You get its answer as a notification, with its note.',
       ensuiteDirigeant: 'Your club is already full in its slot at that time: your club manager accepts or refuses it. You get the answer as a notification.',
       entrainementAnnule: 'the training is cancelled',
+      // VILLE-T18C (07/10) — a series being sent (round T18, D09b).
+      envoiEnCours: 'Sending: {{fait}} of {{total}} dates sent. Stay on this screen.',
+      envoiEnCoursAttends: 'Wait for the sending to finish: otherwise some dates would not be sent.',
+      envoiEnCoursTitre: 'Sending',
       envoyee: 'Request sent to {{ville}}',
       envoyeeDirigeant: 'Request sent to your club manager',
       envoyer: 'Send the request',
       envoyerQuandMeme: 'Send anyway',
       equipe: 'Team',
       ferme: 'The facility closes at {{heure}}. End at {{heure}}, or start earlier.',
+      // VILLE-T18C (07/10) — the chosen end of a series.
+      finDeLaSaison: 'End of the season',
       installation: '{{ville}} · {{equipes}} at a time',
       jour: 'Day',
+      jusquAu: 'Until',
       laVille: 'Town',
       libreCeJour: 'Free this {{jour}}:',
       ligneSerie: 'Every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}}',
@@ -5591,7 +5607,14 @@ export default {
       posee: 'Done: it is in your slot',
       quandMeme: 'You can still ask: the town hall will decide.',
       quiDecide: '{{ville}} accepts or refuses; you get its answer as a notification.',
+      // VILLE-T18C (07/10) — Back on a changed form (round T18, D07).
+      quitter: 'Leave',
+      quitterPerdu: 'What you entered will be lost.',
+      quitterTitre: 'Leave without sending?',
       ratees: '{{nombre}} date(s) could not be sent: try again from your planning.',
+      rester: 'Stay',
+      serieCompte: '{{nombre}} dates, until {{jour}}.',
+      serieUneDate: 'A single date: {{jour}}.',
       tesDemandes: 'Your requests to the town',
       titre: 'Request a slot',
       titrePanneau: 'Request this slot',
@@ -5623,12 +5646,17 @@ export default {
       quiDecideDirigeant: 'Your club manager accepts or refuses; you get the answer as a notification.',
       // FINITIONS11-COLL (03/10) — Adel's decision "deplacer A": a session moved outside the slot.
       siRefusAnnulee: 'If the town hall refuses, the session will be cancelled.',
+      // VILLE-T18C (07/10, round T18 D07c) — set at once: why (the town management).
+      tuGeres: 'You manage this facility for the town: your training will be set right away, no request.',
+      tuGeresComplet: 'You manage this facility for the town: your training will be set right away, even when full.',
     },
     erreur: {
       titre: 'The requests could not be loaded.',
     },
     fenetre: {
       accepterSerie: 'Accept the series',
+      // VILLE-T18C (07/10) — deciding a series: what is being written, while waiting (T18, G49c).
+      accordEnCours: 'Accepting {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       demandePar: 'Requested by {{personne}}',
       depasse: '{{equipes}} for {{places}} at that time.',
       fermer: 'Close',
@@ -5638,6 +5666,7 @@ export default {
       prevenuDemandeur: '{{personne}} ({{club}}), who asks',
       prevenusDejaLa: 'and the clubs already there: {{clubs}}',
       refusAideSerie: 'The club receives your reason; the trainings of the series are cancelled.',
+      refusEnCours: 'Refusing {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       refuserEtAnnuler: 'Refuse and cancel the training',
       refuserSerie: 'Refuse the series',
       refuserSerieEtAnnuler: 'Refuse and cancel the trainings',
@@ -5692,7 +5721,10 @@ export default {
     pastille: {
       chaqueSemaine: 'Every week',
       complet: 'Full',
+      // VILLE-T18C (07/10) — a refused card of a series (round T18, G51).
+      datesDeLaSerie: '{{nombre}} dates of the series',
       placesLibres: '{{nombre}} spots free',
+      uneDateDeLaSerie: 'One date of the series',
       uneFois: 'Once',
       unePlaceLibre: '1 spot free',
       votreClub: 'Request from your club',
