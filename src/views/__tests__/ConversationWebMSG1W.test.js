@@ -160,6 +160,14 @@ jest.mock('@/components/molecules/eventMessageBubble/EventMessageBubble', () => 
   };
 });
 const mockParticipation = jest.fn(() => Promise.resolve({ data: {} }));
+// §3.16 — les personnes que J AI bloquees (K3, K4).
+/** @type {any[]} */
+let mockBloques = [];
+jest.mock('@/services/userBlock/userBlockQueries', () => ({
+  useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
+  useGetMyBlockedUsers: () => ({ data: mockBloques }),
+  useUnblockUser: () => ({ isPending: false, mutate: jest.fn() }),
+}));
 jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
   createEventParticipation: (/** @type {any} */ donnees) => mockParticipation(donnees),
 }));
@@ -259,6 +267,7 @@ beforeEach(() => {
   queryClient = creerQueryClientDeTest();
   mockLargeur = 1280;
   mockSocket = fausseSocket();
+  mockBloques = [];
   mockMoi = {
     documentId: 'moi', firstname: 'Adel', lastname: 'Ferchichi', role: { type: 'coach' },
   };
@@ -414,5 +423,31 @@ describe('MSG1W §3.8 — Présent / Absent depuis la bulle d un événement', (
 
     await act(async () => { bulle.props.onDecline({ documentId: 'evt-1' }); });
     expect(mockAbsent).toHaveBeenCalledWith('evt-1');
+  });
+});
+
+// 📐 §3.16 (K4, ce que le pack oublie) — LES MESSAGES D UNE PERSONNE BLOQUEE. Le telephone les cache
+// (`hideBlockedMessages`) ; le site les montrait. Ils restent en base (signalement possible).
+describe('MSG1W §3.16 — une personne bloquée ne s affiche plus dans le fil du site', () => {
+  test('les messages de Bruno disparaissent une fois bloque ; les autres restent', async () => {
+    mockMessagesDuFil = [
+      {
+        createdAt: '2026-10-07T08:00:00.000Z',
+        documentId: 'm-bruno',
+        message: 'Message de Bruno',
+        sender: BRUNO,
+      },
+      {
+        createdAt: '2026-10-07T08:01:00.000Z',
+        documentId: 'm-moi',
+        message: 'Mon message',
+        sender: MOI,
+      },
+    ];
+    mockBloques = [{ user: { documentId: BRUNO.documentId } }];
+    const { arbre } = await monter();
+    const texte = texteDe(arbre.root);
+    expect(texte).not.toContain('Message de Bruno');
+    expect(texte).toContain('Mon message');
   });
 });

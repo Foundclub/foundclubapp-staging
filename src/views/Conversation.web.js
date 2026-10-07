@@ -32,6 +32,12 @@ import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
+// MSG1W §3.16 — bloquer une personne et cacher ses messages : la regle du telephone (K3, K4).
+import {
+  hideBlockedMessages,
+  resolveOtherParticipantId,
+  toBlockedUserIdSet,
+} from '@/domains/userBlock/userBlockFilters';
 // MSG1W (07/10) — « Bruno écrit… » : la regle de la minuterie du telephone.
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
@@ -83,6 +89,11 @@ import {
   respondToLeagueProposal,
 } from '@/services/league/leagueMatchService'
 import { createMessageReport } from '@/services/messageReport/messageReportService'
+import {
+  useBlockUser,
+  useGetMyBlockedUsers,
+  useUnblockUser,
+} from '@/services/userBlock/userBlockQueries';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext'
 import {
@@ -775,6 +786,87 @@ function FenetreDuSite({
   );
 }
 
+/**
+ * MSG1W — UNE CONFIRMATION DU SITE (SPECS §4 : boite de 300, titre centre, « Annuler » au contour,
+ * l action en rouge). Pour supprimer un message, retirer un membre, bloquer une personne.
+ * @param {{ id: string, libelleAction: string, onAnnuler: () => void, onConfirmer: () => void,
+ *   texte: string, titre: string }} props - Les mots et les deux gestes.
+ * @returns {import('react').ReactElement} La confirmation.
+ */
+function ConfirmationDuSite({
+  id, libelleAction, onAnnuler, onConfirmer, texte, titre,
+}) {
+  return (
+    <div
+      style={{
+        alignItems: 'center',
+        background: PALETTE_DU_FIL.voile,
+        display: 'flex',
+        inset: 0,
+        justifyContent: 'center',
+        position: 'fixed',
+        zIndex: 1150,
+      }}
+    >
+      <div
+        aria-describedby={`${id}-texte`}
+        aria-labelledby={`${id}-titre`}
+        aria-modal="true"
+        role="alertdialog"
+        style={{
+          background: PALETTE_DU_FIL.feuille,
+          borderRadius: 20,
+          boxSizing: 'border-box',
+          display: 'grid',
+          gap: 12,
+          padding: 20,
+          textAlign: 'center',
+          width: 'min(300px, calc(100vw - 32px))',
+        }}
+      >
+        <h2
+          id={`${id}-titre`}
+          style={{
+            color: PALETTE_DU_FIL.texte,
+            fontFamily: 'Montserrat-Bold, sans-serif',
+            fontSize: 17,
+            margin: 0,
+          }}
+        >
+          {titre}
+        </h2>
+        <p
+          id={`${id}-texte`}
+          style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}
+        >
+          {texte}
+        </p>
+        <div
+          style={{
+            display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr', marginTop: 6,
+          }}
+        >
+          <button onClick={onAnnuler} style={STYLE_BOUTON_CONTOUR} type="button">
+            {i18next.t('common.actions.cancel', 'Annuler')}
+          </button>
+          <button
+            onClick={onConfirmer}
+            style={{
+              ...STYLE_BOUTON_CONTOUR,
+              background: 'rgba(255, 90, 116, 0.16)',
+              border: `1.5px solid ${PALETTE_DU_FIL.danger}`,
+              color: PALETTE_DU_FIL.danger,
+            }}
+            type="button"
+          >
+            {libelleAction}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Un champ d une fenetre du site (proposition de match). */
 const STYLE_CHAMP_DE_FENETRE = {
   background: PALETTE_DU_FIL.champ,
@@ -858,6 +950,7 @@ function Conversation({ navigation, route }) {
     joinChat,
     leaveChat,
     reactToMessage,
+    removeGroupMember,
     respondToProposal,
     retryFailedMessage: retryFailedMessageSansVoix,
     sendMessage: sendMessageSansVoix,
@@ -865,6 +958,7 @@ function Conversation({ navigation, route }) {
     sendTypingStart,
     sendTypingStop,
     socket,
+    updateGroupMeta,
     votePoll,
   } = useMessaging(chatId)
 
@@ -939,6 +1033,13 @@ function Conversation({ navigation, route }) {
   const [fenetre, setFenetre] = useState('');
   const [sondageOuvert, setSondageOuvert] = useState(false);
   const [contactChoisi, setContactChoisi] = useState('');
+  // MSG1W §3.16 — le menu ⋮, la fenetre « Infos du groupe » et ses confirmations.
+  const [menuOptionsOuvert, setMenuOptionsOuvert] = useState(false);
+  const menuOptionsRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const [infosOuvertes, setInfosOuvertes] = useState(false);
+  const [nomEnEdition, setNomEnEdition] = useState(/** @type {string | null} */ (null));
+  const [membreARetirer, setMembreARetirer] = useState(/** @type {any} */ (null));
+  const [blocageAConfirmer, setBlocageAConfirmer] = useState(false);
 
   const {
     data: chatData,
@@ -1320,7 +1421,6 @@ function Conversation({ navigation, route }) {
 
   // MSG1W §3.1 — le fil range en groupes et en jours (filDuSite.js), et les mots des puces,
   // ceux du telephone (format de moment « [Aujourd'hui] », sans ses crochets).
-  const entreesDuFil = useMemo(() => rangerLeFil(messages), [messages]);
   const libelleAujourdhui = sansCrochets(t('conversation.calendarFormat.sameDay', "[Aujourd'hui]"));
   const libelleHier = sansCrochets(t('conversation.calendarFormat.lastDay', '[Hier]'));
 
@@ -2604,6 +2704,127 @@ function Conversation({ navigation, route }) {
     setSondageOuvert(false);
   }, [sendChatPayload, userData?.documentId]);
 
+  // MSG1W §3.16 — LE GROUPE ET LE TETE-A-TETE. Memes regles que le telephone (Conversation.js) :
+  // les admins d un groupe le renomment et retirent ses membres ; un tete-a-tete STRICTEMENT a deux
+  // (K5) permet de bloquer la personne ; les messages d une personne bloquee sont caches (K4).
+  const estUnGroupe = chatData?.type === 'group';
+  const adminsDuGroupe = useMemo(() => (
+    // @ts-ignore: FIXME: Baseline TS regression
+    (Array.isArray(chatData?.groupAdmins) ? chatData.groupAdmins : [])
+      .map((/** @type {any} */ admin) => String(admin?.documentId || admin?.id || ''))
+      .filter(Boolean)
+  ), [chatData]);
+  const jeSuisAdmin = estUnGroupe && adminsDuGroupe.includes(String(userData?.documentId || ''));
+  const autrePersonne = resolveOtherParticipantId(chatData, userData?.documentId);
+  const { data: mesBlocages } = useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) });
+  const personnesBloquees = useMemo(() => toBlockedUserIdSet(mesBlocages), [mesBlocages]);
+  const autrePersonneBloquee = Boolean(autrePersonne && personnesBloquees.has(autrePersonne));
+  // Le fil range en groupes et en jours, SANS les messages d une personne bloquee (K4).
+  const entreesDuFil = useMemo(
+    () => rangerLeFil(hideBlockedMessages(messages, personnesBloquees)),
+    [messages, personnesBloquees],
+  );
+  const { isPending: blocageEnCours, mutate: bloquer } = useBlockUser();
+  const { isPending: deblocageEnCours, mutate: debloquer } = useUnblockUser();
+
+  // Comme le telephone : le signalement d un fil passe par le support.
+  const texteDuSignalement = t(
+    'conversation.report.contactSupport',
+    'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.',
+  );
+  const entreesDuMenuOptions = [
+    ...(estUnGroupe ? [{
+      action: () => setInfosOuvertes(true),
+      cle: 'infos',
+      libelle: t('conversation.web.fil.infosDuGroupe', 'Infos du groupe'),
+    }] : []),
+    {
+      action: () => setAnnonce(texteDuSignalement),
+      cle: 'signaler',
+      libelle: t('conversation.actions.report', 'Signaler'),
+    },
+    ...(autrePersonne ? [{
+      action: () => {
+        if (autrePersonneBloquee) {
+          debloquer(autrePersonne);
+          return;
+        }
+        setBlocageAConfirmer(true);
+      },
+      cle: 'bloquer',
+      libelle: autrePersonneBloquee
+        ? t('userBlock.actions.unblock', 'Débloquer cette personne')
+        : t('userBlock.actions.block', 'Bloquer cette personne'),
+    }] : []),
+  ];
+
+  // Le menu ⋮ se ferme par Echap ou un clic a cote.
+  useEffect(() => {
+    if (!menuOptionsOuvert) return undefined;
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key === 'Escape') setMenuOptionsOuvert(false);
+    };
+    const surClic = (/** @type {MouseEvent} */ event) => {
+      if (menuOptionsRef.current?.contains(/** @type {Node} */ (event.target))) return;
+      setMenuOptionsOuvert(false);
+    };
+    document.addEventListener('keydown', surTouche);
+    document.addEventListener('mousedown', surClic);
+    return () => {
+      document.removeEventListener('keydown', surTouche);
+      document.removeEventListener('mousedown', surClic);
+    };
+  }, [menuOptionsOuvert]);
+
+  // Echap ferme les infos du groupe et ses confirmations.
+  useEffect(() => {
+    if (!infosOuvertes && !membreARetirer && !blocageAConfirmer) return undefined;
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key !== 'Escape') return;
+      if (membreARetirer) {
+        setMembreARetirer(null);
+        return;
+      }
+      setBlocageAConfirmer(false);
+      setInfosOuvertes(false);
+      setNomEnEdition(null);
+    };
+    document.addEventListener('keydown', surTouche);
+    return () => document.removeEventListener('keydown', surTouche);
+  }, [blocageAConfirmer, infosOuvertes, membreARetirer]);
+
+  const enregistrerLeNom = useCallback(async () => {
+    const nom = String(nomEnEdition || '').trim();
+    if (!chatId || !nom || typeof updateGroupMeta !== 'function') {
+      setAnnonce(t('conversation.group.invalidName', 'Entre un nom de groupe valide.'));
+      return;
+    }
+    try {
+      await updateGroupMeta({ chatId, data: { groupName: nom } });
+      setNomEnEdition(null);
+      setAnnonce(t('conversation.group.renamed', 'Nom du groupe mis à jour.'));
+      await queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+    } catch {
+      setAnnonce(t(
+        'conversation.group.renameError',
+        'Impossible de mettre à jour le nom du groupe.',
+      ));
+    }
+  }, [chatId, nomEnEdition, queryClient, t, updateGroupMeta]);
+
+  const retirerLeMembre = useCallback(async () => {
+    const membre = membreARetirer;
+    setMembreARetirer(null);
+    const id = String(membre?.documentId || membre?.id || '').trim();
+    if (!chatId || !id || typeof removeGroupMember !== 'function') return;
+    try {
+      await removeGroupMember({ chatId, userId: id });
+      await queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+    } catch {
+      setAnnonce(t('conversation.group.removeError', 'Impossible de retirer ce membre.'));
+    }
+  }, [chatId, membreARetirer, queryClient, removeGroupMember, t]);
+
   // Echap ferme la fenetre ouverte depuis le « + ».
   useEffect(() => {
     if (!fenetre) return undefined;
@@ -3327,6 +3548,57 @@ function Conversation({ navigation, route }) {
   const sousTitreDuFil = filDeLaVille.sousTitre || `${
     Array.isArray(chatData?.participants) ? chatData.participants.length : 0
   } participants`;
+  // MSG1W §3.1 — le titre du fil et sa ligne (« … écrit » en cyan). §3.16 : dans un groupe, il
+  // ouvre les infos du groupe.
+  // @ts-ignore: FIXME: Baseline TS regression
+  const membresDuFil = Array.isArray(chatData?.participants) ? chatData.participants : [];
+  const libelleRetirer = t('conversation.group.remove', 'Retirer');
+  const blocDuTitre = (
+    <>
+      <h1
+        style={{
+          color: PALETTE_DU_FIL.texte,
+          fontFamily: 'Montserrat-Bold, sans-serif',
+          fontSize: 16,
+          lineHeight: '20px',
+          margin: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {conversationName}
+      </h1>
+      <span
+        style={{
+          color: PALETTE_DU_FIL.texteDoux,
+          fontSize: 12.5,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {libelleQuiEcrit ? (
+          <span
+            data-testid="MSG1W-qui-ecrit"
+            style={{
+              color: PALETTE_DU_FIL.accent,
+              fontFamily: 'Montserrat-Bold, sans-serif',
+            }}
+          >
+            {libelleQuiEcrit}
+          </span>
+        ) : null}
+        {!libelleQuiEcrit && isChatLoading
+          ? i18next.t(
+            'conversation.web.loading.conversation',
+            'Chargement de la conversation...',
+          )
+          : null}
+        {!libelleQuiEcrit && !isChatLoading ? sousTitreDuFil : null}
+      </span>
+    </>
+  );
   const styleDuBoutonRond = {
     alignItems: 'center',
     background: PALETTE_DU_FIL.accent,
@@ -3385,8 +3657,8 @@ function Conversation({ navigation, route }) {
   ];
 
   // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
-  // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un telephone, la
-  // liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
+  // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un
+  // telephone, la liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
   const panneauDeDroite = filDeLaVille.estFil && filDeLaVille.membres ? (
     <aside
       style={{
@@ -3544,49 +3816,103 @@ function Conversation({ navigation, route }) {
                 {getInitials(conversationName)}
               </span>
             ) : null}
-            <div style={{ display: 'grid', flex: 1, gap: 2, minWidth: 0 }}>
-              <h1
+            {/* MSG1W §3.16 — toucher le titre d un groupe ouvre ses infos (README §3.16). */}
+            {estUnGroupe ? (
+              <button
+                onClick={() => setInfosOuvertes(true)}
                 style={{
+                  background: 'transparent',
+                  border: 0,
+                  cursor: 'pointer',
+                  display: 'grid',
+                  flex: 1,
+                  gap: 2,
+                  minWidth: 0,
+                  padding: 0,
+                  textAlign: 'left',
+                }}
+                type="button"
+              >
+                {blocDuTitre}
+              </button>
+            ) : (
+              <div style={{ display: 'grid', flex: 1, gap: 2, minWidth: 0 }}>
+                {blocDuTitre}
+              </div>
+            )}
+            <div ref={menuOptionsRef} style={{ position: 'relative' }}>
+              <button
+                aria-expanded={menuOptionsOuvert}
+                aria-haspopup="menu"
+                aria-label={t('conversation.web.fil.options', 'Plus d’options')}
+                onClick={() => setMenuOptionsOuvert((ouvert) => !ouvert)}
+                style={{
+                  alignItems: 'center',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: 0,
+                  borderRadius: 999,
                   color: PALETTE_DU_FIL.texte,
-                  fontFamily: 'Montserrat-Bold, sans-serif',
-                  fontSize: 16,
-                  lineHeight: '20px',
-                  margin: 0,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexShrink: 0,
+                  height: 40,
+                  justifyContent: 'center',
+                  padding: 0,
+                  width: 40,
                 }}
+                type="button"
               >
-                {conversationName}
-              </h1>
-              <span
-                style={{
-                  color: PALETTE_DU_FIL.texteDoux,
-                  fontSize: 12.5,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {libelleQuiEcrit ? (
-                  <span
-                    data-testid="MSG1W-qui-ecrit"
-                    style={{
-                      color: PALETTE_DU_FIL.accent,
-                      fontFamily: 'Montserrat-Bold, sans-serif',
-                    }}
-                  >
-                    {libelleQuiEcrit}
-                  </span>
-                ) : null}
-                {!libelleQuiEcrit && isChatLoading
-                  ? i18next.t(
-                    'conversation.web.loading.conversation',
-                    'Chargement de la conversation...',
-                  )
-                  : null}
-                {!libelleQuiEcrit && !isChatLoading ? sousTitreDuFil : null}
-              </span>
+                <GlyphIcon color={PALETTE_DU_FIL.texte} name="dotsVertical" size={20} />
+              </button>
+              {menuOptionsOuvert ? (
+                <div
+                  aria-label={t('conversation.web.fil.options', 'Plus d’options')}
+                  role="menu"
+                  style={{
+                    background: PALETTE_DU_FIL.menu,
+                    border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                    borderRadius: 16,
+                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+                    display: 'grid',
+                    minWidth: 230,
+                    padding: 6,
+                    position: 'absolute',
+                    right: 0,
+                    top: 46,
+                    zIndex: 30,
+                  }}
+                >
+                  {entreesDuMenuOptions.map((entree) => (
+                    <button
+                      className="MSG1W-ligne-menu"
+                      disabled={entree.cle === 'bloquer' && (blocageEnCours || deblocageEnCours)}
+                      key={entree.cle}
+                      onClick={() => {
+                        setMenuOptionsOuvert(false);
+                        entree.action();
+                      }}
+                      role="menuitem"
+                      style={{
+                        background: 'transparent',
+                        border: 0,
+                        borderRadius: 10,
+                        color: entree.cle === 'bloquer'
+                          ? PALETTE_DU_FIL.danger
+                          : PALETTE_DU_FIL.texte,
+                        cursor: 'pointer',
+                        fontFamily: 'Montserrat-Regular, sans-serif',
+                        fontSize: 15,
+                        minHeight: 44,
+                        padding: '0 14px',
+                        textAlign: 'left',
+                      }}
+                      type="button"
+                    >
+                      {entree.libelle}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </header>
 
@@ -4424,80 +4750,259 @@ function Conversation({ navigation, route }) {
         </div>
       ) : null}
       {messageASupprimer ? (
-        <div
-          style={{
-            alignItems: 'center',
-            background: PALETTE_DU_FIL.voile,
-            display: 'flex',
-            inset: 0,
-            justifyContent: 'center',
-            position: 'fixed',
-            zIndex: 1100,
+        <ConfirmationDuSite
+          id="msg1w-suppression"
+          libelleAction={t('common.actions.delete', 'Supprimer')}
+          onAnnuler={() => setMessageASupprimer(null)}
+          onConfirmer={confirmerLaSuppression}
+          texte={t(
+            'conversation.actions.deleteConfirm.description',
+            'Ce message sera supprimé pour tous les participants.',
+          )}
+          titre={t('conversation.actions.deleteConfirm.title', 'Supprimer le message')}
+        />
+      ) : null}
+      {infosOuvertes ? (
+        <FenetreDuSite
+          compacte={!isDesktop}
+          idTitre="msg1w-titre-infos"
+          onFermer={() => {
+            setInfosOuvertes(false);
+            setNomEnEdition(null);
           }}
+          titre={t('conversation.web.fil.infosDuGroupe', 'Infos du groupe')}
         >
           <div
-            aria-describedby="msg1w-texte-suppression"
-            aria-labelledby="msg1w-titre-suppression"
-            aria-modal="true"
-            role="alertdialog"
             style={{
-              background: PALETTE_DU_FIL.feuille,
-              borderRadius: 20,
-              boxSizing: 'border-box',
-              display: 'grid',
-              gap: 12,
-              padding: 20,
-              textAlign: 'center',
-              width: 'min(300px, calc(100vw - 32px))',
+              display: 'grid', gap: 8, justifyItems: 'center', textAlign: 'center',
             }}
           >
-            <h2
-              id="msg1w-titre-suppression"
+            <span
+              aria-hidden="true"
               style={{
+                alignItems: 'center',
+                background: PALETTE_DU_FIL.bulleRecue,
+                borderRadius: '50%',
                 color: PALETTE_DU_FIL.texte,
+                display: 'inline-flex',
                 fontFamily: 'Montserrat-Bold, sans-serif',
-                fontSize: 17,
-                margin: 0,
+                fontSize: 30,
+                height: 92,
+                justifyContent: 'center',
+                width: 92,
               }}
             >
-              {t('conversation.actions.deleteConfirm.title', 'Supprimer le message')}
-            </h2>
-            <p
-              id="msg1w-texte-suppression"
-              style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}
-            >
-              {t(
-                'conversation.actions.deleteConfirm.description',
-                'Ce message sera supprimé pour tous les participants.',
-              )}
-            </p>
-            <div
-              style={{
-                display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr', marginTop: 6,
-              }}
-            >
+              {getInitials(conversationName)}
+            </span>
+            {nomEnEdition === null ? (
+              <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+                <span
+                  style={{
+                    color: PALETTE_DU_FIL.texte,
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    fontSize: 22,
+                  }}
+                >
+                  {conversationName}
+                </span>
+                {jeSuisAdmin ? (
+                  <button
+                    aria-label={t('conversation.web.fil.renommer', 'Renommer le groupe')}
+                    onClick={() => setNomEnEdition(
+                      String(chatData?.groupName || conversationName || ''),
+                    )}
+                    style={{
+                      background: 'transparent',
+                      border: 0,
+                      color: PALETTE_DU_FIL.accent,
+                      cursor: 'pointer',
+                      padding: 4,
+                    }}
+                    type="button"
+                  >
+                    {DESSIN_MODIFIER}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 8, width: '100%' }}>
+                <input
+                  aria-label={t('conversation.group.nameLabel', 'Nom du groupe')}
+                  onChange={(event) => setNomEnEdition(event.target.value)}
+                  placeholder={t('conversation.group.namePlaceholder', 'Nom du groupe')}
+                  style={STYLE_CHAMP_DE_FENETRE}
+                  value={nomEnEdition}
+                />
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <button
+                    onClick={() => setNomEnEdition(null)}
+                    style={STYLE_BOUTON_CONTOUR}
+                    type="button"
+                  >
+                    {t('common.actions.cancel', 'Annuler')}
+                  </button>
+                  <button onClick={enregistrerLeNom} style={STYLE_BOUTON_PLEIN} type="button">
+                    {t('conversation.group.saveName', 'Enregistrer le nom')}
+                  </button>
+                </div>
+              </div>
+            )}
+            <span style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14 }}>
+              {t('conversation.web.fil.groupeMembres', {
+                count: Array.isArray(chatData?.participants) ? chatData.participants.length : 0,
+                defaultValue_one: 'Groupe · {{count}} membre',
+                defaultValue_other: 'Groupe · {{count}} membres',
+              })}
+            </span>
+          </div>
+          {/* MSG1B (serveur) : photo du groupe, « Autorisations du groupe » et admins multiples
+              viendront ICI, entre l en-tete et la liste. Rien n est invente avant leur contrat. */}
+          <div style={{ display: 'grid', gap: 2 }}>
+            {jeSuisAdmin ? (
               <button
-                onClick={() => setMessageASupprimer(null)}
-                style={STYLE_BOUTON_CONTOUR}
-                type="button"
-              >
-                {t('common.actions.cancel', 'Annuler')}
-              </button>
-              <button
-                onClick={confirmerLaSuppression}
+                onClick={() => {
+                  setInfosOuvertes(false);
+                  navigation.navigate(RouteNames.NewConversation, {
+                    chatId,
+                    mode: 'add_group_members',
+                  });
+                }}
                 style={{
-                  ...STYLE_BOUTON_CONTOUR,
-                  background: 'rgba(255, 90, 116, 0.16)',
-                  border: `1.5px solid ${PALETTE_DU_FIL.danger}`,
-                  color: PALETTE_DU_FIL.danger,
+                  alignItems: 'center',
+                  background: 'transparent',
+                  border: 0,
+                  color: PALETTE_DU_FIL.accent,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  fontSize: 15,
+                  gap: 12,
+                  minHeight: 62,
+                  padding: '0 4px',
+                  textAlign: 'left',
                 }}
                 type="button"
               >
-                {t('common.actions.delete', 'Supprimer')}
+                <span
+                  style={{
+                    alignItems: 'center',
+                    background: PALETTE_DU_FIL.accent,
+                    borderRadius: '50%',
+                    display: 'inline-flex',
+                    height: 42,
+                    justifyContent: 'center',
+                    width: 42,
+                  }}
+                >
+                  <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={22} />
+                </span>
+                {t('conversation.group.addMembers', 'Ajouter des membres')}
               </button>
-            </div>
+            ) : null}
+            {membresDuFil.map((/** @type {any} */ membre) => {
+              const id = String(membre?.documentId || membre?.id || '');
+              const estAdmin = adminsDuGroupe.includes(id);
+              const estMoi = id === String(userData?.documentId || '');
+              return (
+                <div
+                  data-testid={`MSG1W-membre-${id}`}
+                  key={`membre-${id}`}
+                  style={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    gap: 12,
+                    minHeight: 62,
+                    padding: '0 4px',
+                  }}
+                >
+                  <AvatarDuGroupe idMessage={`membre-${id}`} personne={membre} />
+                  <span style={{ color: PALETTE_DU_FIL.texte, flex: 1, fontSize: 15 }}>
+                    {getDisplayName(membre)}
+                  </span>
+                  {estAdmin ? (
+                    <span
+                      style={{
+                        border: '1px solid rgba(1, 179, 244, 0.5)',
+                        borderRadius: 999,
+                        color: PALETTE_DU_FIL.accent,
+                        fontFamily: 'Montserrat-Bold, sans-serif',
+                        fontSize: 11.5,
+                        padding: '2px 8px',
+                      }}
+                    >
+                      {t('conversation.group.admin', 'Admin')}
+                    </span>
+                  ) : null}
+                  {jeSuisAdmin && !estMoi ? (
+                    <button
+                      aria-label={`${libelleRetirer} ${getDisplayName(membre)}`}
+                      onClick={() => setMembreARetirer(membre)}
+                      style={{
+                        background: 'transparent',
+                        border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                        borderRadius: 999,
+                        color: PALETTE_DU_FIL.texteDoux,
+                        cursor: 'pointer',
+                        fontSize: 12.5,
+                        padding: '4px 10px',
+                      }}
+                      type="button"
+                    >
+                      {t('conversation.group.remove', 'Retirer')}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-        </div>
+          <button
+            onClick={() => setAnnonce(texteDuSignalement)}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+              borderRadius: 14,
+              color: PALETTE_DU_FIL.danger,
+              cursor: 'pointer',
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              fontSize: 15,
+              minHeight: 48,
+            }}
+            type="button"
+          >
+            {t('conversation.web.fil.signalerLeGroupe', 'Signaler le groupe')}
+          </button>
+        </FenetreDuSite>
+      ) : null}
+      {membreARetirer ? (
+        <ConfirmationDuSite
+          id="msg1w-retrait"
+          libelleAction={t('conversation.group.remove', 'Retirer')}
+          onAnnuler={() => setMembreARetirer(null)}
+          onConfirmer={retirerLeMembre}
+          texte={t('conversation.group.removeConfirm', {
+            defaultValue: 'Retirer {{member}} du groupe ?',
+            member: getDisplayName(membreARetirer),
+            ...SANS_ECHAPPEMENT,
+          })}
+          titre={t('conversation.group.removeTitle', 'Retirer un membre')}
+        />
+      ) : null}
+      {blocageAConfirmer ? (
+        <ConfirmationDuSite
+          id="msg1w-blocage"
+          libelleAction={t('userBlock.confirm.block', 'Bloquer')}
+          onAnnuler={() => setBlocageAConfirmer(false)}
+          onConfirmer={() => {
+            setBlocageAConfirmer(false);
+            if (autrePersonne) bloquer(autrePersonne);
+          }}
+          texte={t(
+            'userBlock.confirm.messageNoName',
+            // eslint-disable-next-line max-len -- une phrase ne se coupe pas
+            'Cette personne ne pourra plus t’écrire ni ouvrir de discussion avec toi, et tu ne verras plus ses messages.',
+          )}
+          titre={t('userBlock.confirm.title', 'Bloquer cette personne ?')}
+        />
       ) : null}
       {annonce ? (
         <div
