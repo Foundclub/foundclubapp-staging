@@ -5557,32 +5557,41 @@ function Conversation({ navigation, route }) {
       if (currentMessage.composition.type === 'voice_note') {
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View
-              style={{
-                alignItems: isLeft ? 'flex-start' : 'flex-end',
-                marginBottom,
-                marginTop,
-                width: '100%',
-              }}
-            >
-              {/* VOCAL — la bulle porte son nom (au-dessus, quand l'auteur
-                  change), son heure et « Envoi… » (dessous) : la maquette. */}
-              <VoiceNoteBubble
-                attachments={currentMessage.attachments || []}
-                composition={currentMessage.composition}
-                createdAt={currentMessage.createdAt}
-                isMe={!isLeft}
-                isPending={Boolean(currentMessage.pending)}
-                message={currentMessage.message}
-                messageId={getMessageDocumentId(currentMessage)}
-                nextVoiceMessageId={nextVoiceToChain(
-                  nextMessage,
-                  isMessageOwnedByCurrentUser(nextMessage),
+            <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+              {/* 🎙️ MSG1A (§3.6) — le vocal dans le cadre commun : nom en tete de groupe,
+                  queue, et l'heure + les coches DANS la bulle (seul changement du pack). */}
+              <BulleDuFil
+                couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                estAMoi={estAMoi}
+                estDernier={estDernierDuGroupe}
+                nom={nomEnTete}
+                testID="bulle-vocal"
+              >
+                <VoiceNoteBubble
+                  attachments={currentMessage.attachments || []}
+                  composition={currentMessage.composition}
+                  createdAt={currentMessage.createdAt}
+                  dansLaBulle
+                  isMe={!isLeft}
+                  isPending={Boolean(currentMessage.pending)}
+                  message={currentMessage.message}
+                  messageId={getMessageDocumentId(currentMessage)}
+                  meta={(
+                    <MetaDuMessage
+                      estAMoi={estAMoi}
+                      etat={etatDEnvoi(currentMessage)}
+                      heure={heureDuMessage(currentMessage.createdAt)}
+                    />
                 )}
-                senderName={isLeft && !isSameUserAsPrevious ? currentMessage.user?.name || '' : ''}
-              />
+                  nextVoiceMessageId={nextVoiceToChain(
+                    nextMessage,
+                    isMessageOwnedByCurrentUser(nextMessage),
+                  )}
+                  senderName={isLeft ? currentMessage.user?.name || '' : ''}
+                />
+              </BulleDuFil>
               {currentMessage.failed ? (
-                <Text style={[Fonts.p4Bold, { color: Colors.error500, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.chatDanger, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
                   {t('common.retry', 'Réessayer')}
                 </Text>
               ) : null}

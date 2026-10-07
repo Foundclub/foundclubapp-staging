@@ -196,11 +196,15 @@ const entreeBulle = () => {
  * @param {any} props.composition - La composition du message (durée, onde).
  * @param {Array<{ id?: number, url?: string; uri?: string; mime?: string; name?: string, previewUrl?: string }>} [props.attachments]
  * @param {unknown} [props.createdAt] - La date du message.
+ * @param {boolean} [props.dansLaBulle] - MSG1A (§3.6) : pose dans le cadre commun du fil
+ *   (`BulleDuFil`) — ni fond, ni nom, ni heure dessous ; l'heure et les coches (`meta`) se
+ *   posent DANS la bulle, a droite sous l'onde.
  * @param {boolean} [props.isMe] - Le message est-il à moi.
  * @param {boolean} [props.isPending] - Le serveur ne l'a pas encore confirmé.
  * @param {string} [props.message] - Le texte joint (vocaux envoyés par d'anciennes versions).
  * @param {string} [props.messageId] - L'identifiant du message (point « non écouté »).
  * @param {string} [props.nextVoiceMessageId] - Le vocal à lancer quand celui-ci finit ('' : aucun).
+ * @param {import('react').ReactNode} [props.meta] - MSG1A : l'heure et les coches du fil.
  * @param {string} [props.senderName] - Le nom de l'auteur, à afficher au-dessus.
  * @returns {import('react').ReactElement | null}
  */
@@ -208,16 +212,20 @@ function VoiceNoteBubble({
   attachments = [],
   composition,
   createdAt,
+  dansLaBulle = false,
   isMe = false,
   isPending = false,
   message = '',
   messageId = '',
+  meta = null,
   nextVoiceMessageId = '',
   senderName = '',
 }) {
   const { Colors, Fonts } = useTheme();
   const { i18n, t } = useTranslation();
-  const couleurs = palette(Colors, isMe);
+  // MSG1A (§3.6) — dans le cadre du fil, ma bulle est PETROLE (choix C du pack) : les
+  // commandes prennent les couleurs « recues » (lecture cyan, encre sombre).
+  const couleurs = palette(Colors, isMe && !dansLaBulle);
 
   const audioAttachment = useMemo(() => getPrimaryAudioAttachment(attachments), [attachments]);
   const initialAudioUrl = useMemo(() => resolveAudioAttachmentUrl(attachments), [attachments]);
@@ -468,14 +476,16 @@ function VoiceNoteBubble({
 
   return (
     <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-      {!isMe && senderName ? (
+      {!isMe && senderName && !dansLaBulle ? (
         <Text numberOfLines={1} style={[Fonts.p3Bold, styles.nom, { color: Colors.neutral300 }]}>
           {senderName}
         </Text>
       ) : null}
       <Animated.View
         entering={nouvelle ? entreeBulle : undefined}
-        style={[styles.bulle, isMe ? styles.coinMoi : styles.coinAutre, { backgroundColor: couleurs.fond }]}
+        style={dansLaBulle
+          ? styles.contenuDansLaBulle
+          : [styles.bulle, isMe ? styles.coinMoi : styles.coinAutre, { backgroundColor: couleurs.fond }]}
         testID="voice-note-bubble"
       >
         <View style={styles.rangee}>
@@ -553,6 +563,7 @@ function VoiceNoteBubble({
                   testID="voice-note-unlistened"
                 />
               ) : null}
+              {dansLaBulle && meta ? <View style={styles.metaDansLaBulle}>{meta}</View> : null}
             </View>
           </View>
 
@@ -602,12 +613,14 @@ function VoiceNoteBubble({
           </Text>
         ) : null}
       </Animated.View>
-      <View style={[styles.pied, isMe ? styles.piedMoi : styles.piedAutre]}>
-        <Text style={[Fonts.small, { color: Colors.neutral400 }]} testID="voice-note-hour">
-          {isPending ? t('voiceNoteBubble.sending', 'Envoi…') : heure}
-        </Text>
-        {isMe && !isPending ? <GlyphIcon color={Colors.neutral400} name="checkDouble" size={14} /> : null}
-      </View>
+      {dansLaBulle ? null : (
+        <View style={[styles.pied, isMe ? styles.piedMoi : styles.piedAutre]}>
+          <Text style={[Fonts.small, { color: Colors.neutral400 }]} testID="voice-note-hour">
+            {isPending ? t('voiceNoteBubble.sending', 'Envoi…') : heure}
+          </Text>
+          {isMe && !isPending ? <GlyphIcon color={Colors.neutral400} name="checkDouble" size={14} /> : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -630,12 +643,19 @@ const styles = StyleSheet.create({
   coinAutre: {
     borderBottomLeftRadius: 6,
   },
+  // MSG1A (§3.6) — dans le cadre du fil (marges 10) : 260 de contenu, 280 de bulle, comme
+  // le pack (`VoiceContent`, mesures du handoff vocaux).
   coinMoi: {
     borderBottomRightRadius: 6,
   },
   colonne: {
     flex: 1,
     gap: 2,
+  },
+  contenuDansLaBulle: {
+    paddingBottom: 1,
+    paddingTop: 3,
+    width: 260,
   },
   lecture: {
     borderRadius: 22,
@@ -647,6 +667,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     height: 16,
+  },
+  metaDansLaBulle: {
+    marginLeft: 'auto',
   },
   nom: {
     marginBottom: 4,
