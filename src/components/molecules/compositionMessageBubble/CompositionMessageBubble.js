@@ -478,7 +478,10 @@ function CompositionMessageBubble({
       <Text style={[styles.noteTexte, styles.noteLabel, { color: Colors.primary500 }]}>
         {t('compositionMessageBubble.note', 'Infos')}
       </Text>
-      <Text numberOfLines={3} style={[styles.noteTexte, styles.noteCorps, { color: Colors.neutral00 }]}>
+      <Text
+        numberOfLines={3}
+        style={[styles.noteTexte, styles.noteCorps, { color: Colors.neutral00 }]}
+      >
         {note}
       </Text>
     </View>
@@ -508,7 +511,10 @@ function CompositionMessageBubble({
             {kicker}
           </Text>
           {versionLine ? (
-            <Text numberOfLines={1} style={[styles.version, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.version, { color: withAlpha(Colors.neutral00, 0.7) }]}
+            >
               {versionLine}
             </Text>
           ) : null}
@@ -523,12 +529,18 @@ function CompositionMessageBubble({
         {hasEventContext || teamName ? (
           <View style={styles.contextLines}>
             {whenLine || teamName ? (
-              <Text numberOfLines={1} style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}
+              >
                 {[whenLine, teamName].filter(Boolean).join(' · ')}
               </Text>
             ) : null}
             {hasEventContext && !adresseCliquable ? (
-              <Text numberOfLines={2} style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+              <Text
+                numberOfLines={2}
+                style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}
+              >
                 {addressLine}
               </Text>
             ) : null}
@@ -542,14 +554,20 @@ function CompositionMessageBubble({
       {adresseCliquable ? (
         <View style={[styles.suiteDuCorps, retrait]}>
           <TouchableOpacity
-            accessibilityHint={t('conversation.address.hint', 'Ouvre le choix de l’application de cartes')}
+            accessibilityHint={t(
+              'conversation.address.hint',
+              'Ouvre le choix de l’application de cartes',
+            )}
             accessibilityRole="link"
             onPress={() => onOpenAddress({ label: addressLine })}
             style={styles.lienAdresse}
             testID="composition-adresse"
           >
             <GlyphIcon color={Colors.primary500} name="locationPin" size={14} />
-            <Text numberOfLines={2} style={[styles.contexte, styles.lienAdresseTexte, { color: Colors.primary500 }]}>
+            <Text
+              numberOfLines={2}
+              style={[styles.contexte, styles.lienAdresseTexte, { color: Colors.primary500 }]}
+            >
               {addressLine}
             </Text>
           </TouchableOpacity>
@@ -595,7 +613,9 @@ function CompositionMessageBubble({
         <View
           style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.6) }]}
         >
-          {peutModifierIci ? <GlyphIcon color={Colors.neutral00} name="penSquare" size={13} /> : null}
+          {peutModifierIci ? (
+            <GlyphIcon color={Colors.neutral00} name="penSquare" size={13} />
+          ) : null}
           <Text style={[styles.pilule, { color: Colors.neutral00 }]}>
             {peutModifierIci
               ? t('compositionMessageBubble.editPlacement', 'Modifier le placement')
@@ -620,7 +640,10 @@ function CompositionMessageBubble({
               <Text style={[styles.rosterTitle, { color: Colors.neutral00 }]}>
                 {`${pitchTitle} · ${starterNames.length}`}
               </Text>
-              <Text numberOfLines={2} style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+              <Text
+                numberOfLines={2}
+                style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}
+              >
                 {starterNames.join(' · ')}
               </Text>
             </View>
@@ -630,20 +653,32 @@ function CompositionMessageBubble({
               <Text style={[styles.rosterTitle, { color: Colors.neutral00 }]}>
                 {`${benchTitle} · ${benchNames.length}`}
               </Text>
-              <Text numberOfLines={2} style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+              <Text
+                numberOfLines={2}
+                style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}
+              >
                 {benchNames.join(' · ')}
               </Text>
             </View>
           ) : null}
           {otherTeamsLine ? (
-            <Text style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>{otherTeamsLine}</Text>
+            <Text
+              style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}
+            >
+              {otherTeamsLine}
+            </Text>
           ) : null}
           {/* 🌐 HORS DE LA BULLE (le site, tant que MESSAGERIE-1W n'a pas adopte le pack) :
               l'ancien bas de carte « N convoques · Ouvrir », meme toucher que la carte et
               masque aux lecteurs d'ecran (temoins COMPO-CARTE-SITE du site et de l'app). */}
           {!dansLaBulle ? (
-            <View style={[styles.footerHorsBulle, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
-              <Text numberOfLines={1} style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+            <View
+              style={[styles.footerHorsBulle, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}
+              >
                 {calledUpLine}
               </Text>
               <Text style={[styles.boutonPiedTexte, { color: Colors.primary500 }]}>
@@ -673,9 +708,18 @@ function CompositionMessageBubble({
           gere la composition (« Modifier » en contour, « Ouvrir » plein), un seul « Ouvrir la
           composition » pour les autres. Le nombre de convoques reste dit, au-dessus. */}
       {dansLaBulle ? (
-        <View style={[styles.footer, styles.footerDansLaBulle, { borderTopColor: withAlpha(Colors.neutral00, 0.14) }]}>
+        <View
+          style={[
+            styles.footer,
+            styles.footerDansLaBulle,
+            { borderTopColor: withAlpha(Colors.neutral00, 0.14) },
+          ]}
+        >
           {calledUpLine ? (
-            <Text numberOfLines={1} style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}
+            >
               {calledUpLine}
             </Text>
           ) : null}

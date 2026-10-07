@@ -7,7 +7,11 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { lieuAOuvrir, presenceDansLeFil, resumeDesParticipants } from '@/domains/messaging/evenementDansLeFil';
+import {
+  lieuAOuvrir,
+  presenceDansLeFil,
+  resumeDesParticipants,
+} from '@/domains/messaging/evenementDansLeFil';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -26,7 +30,10 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEvent } from '@/services/event/eventQueries';
 
-import { resolveExternalMatchDisplay, resolveExternalMatchLocation } from '@/utils/externalMatchDisplay';
+import {
+  resolveExternalMatchDisplay,
+  resolveExternalMatchLocation,
+} from '@/utils/externalMatchDisplay';
 import { getShortAddress } from '@/utils/location';
 
 /** Au-dela, l'appui allume se rend : le serveur n'a pas repondu (erreur deja dite). */
@@ -65,7 +72,7 @@ const heureDeLEvenement = (evenement) => {
  * @param {() => any} [props.onDecline] - « Absent ».
  * @param {() => any} [props.onJoin] - Garde pour le contrat du fil : la bulle du pack n'offre
  *   rien a qui n'est pas convie, il passe par « Ouvrir l'evenement ».
- * @param {(cible: { label: string, latitude?: any, longitude?: any }) => void} [props.onOpenAddress]
+ * @param {(cible: { label: string, latitude?: *, longitude?: * }) => void} [props.onOpenAddress]
  *   - MSG1A (§3.18) : le lieu devient un lien.
  * @param {() => any} [props.onParticipate] - « Present ».
  * @param {(personne: any) => string} [props.resolveAvatar] - L'adresse de la photo d'une personne.
@@ -87,8 +94,11 @@ function EventMessageBubble({
   const { data: complet, dataUpdatedAt } = useGetEvent(event?.documentId || '');
 
   // 🕐 T2/D5 — l'option appuyee s'allume TOUT DE SUITE, puis la reponse du serveur reprend
-  // la main des que l'evenement est relu. Pas d'etat optimiste (meme regle qu'`EventAnswerButtons`).
-  const [appui, setAppui] = useState(/** @type {{ choix: string, depuis: number } | null} */ (null));
+  // la main des que l'evenement est relu. Pas d'etat optimiste (meme regle
+  // qu'`EventAnswerButtons`).
+  const [appui, setAppui] = useState(
+    /** @type {{ choix: string, depuis: number } | null} */ (null),
+  );
   useEffect(() => {
     if (appui && dataUpdatedAt !== appui.depuis) setAppui(null);
   }, [appui, dataUpdatedAt]);
@@ -139,7 +149,11 @@ function EventMessageBubble({
     else onDecline();
   };
 
-  const ligne = (/** @type {any} */ icone, /** @type {string} */ texte, /** @type {string} */ testID) => (
+  const ligne = (
+    /** @type {any} */ icone,
+    /** @type {string} */ texte,
+    /** @type {string} */ testID,
+  ) => (
     <View style={styles.ligne} testID={testID}>
       <GlyphIcon color={sousTexte} name={icone} size={15} />
       <Text numberOfLines={2} style={[styles.ligneTexte, { color: sousTexte }]}>{texte}</Text>
@@ -171,7 +185,9 @@ function EventMessageBubble({
         testID={`evenement-presence-${cle}`}
       >
         {choisie ? <GlyphIcon color={Colors.primary900} name="check" size={15} /> : null}
-        <Text style={[styles.optionTexte, { color: choisie ? Colors.primary900 : Colors.neutral00 }]}>
+        <Text
+          style={[styles.optionTexte, { color: choisie ? Colors.primary900 : Colors.neutral00 }]}
+        >
           {libelle}
         </Text>
       </TouchableOpacity>
@@ -200,18 +216,28 @@ function EventMessageBubble({
       <Text numberOfLines={2} style={[styles.titre, { color: Colors.neutral00 }]}>{titre}</Text>
       {quand ? ligne('calendar', quand, 'evenement-date') : null}
       {equipe
-        ? ligne('users', t('conversation.eventBubble.team', { name: equipe, ...SANS_ECHAPPEMENT }), 'evenement-equipe')
+        ? ligne(
+          'users',
+          t('conversation.eventBubble.team', { name: equipe, ...SANS_ECHAPPEMENT }),
+          'evenement-equipe',
+        )
         : null}
       {lieu && onOpenAddress ? (
         <TouchableOpacity
-          accessibilityHint={t('conversation.address.hint', 'Ouvre le choix de l’application de cartes')}
+          accessibilityHint={t(
+            'conversation.address.hint',
+            'Ouvre le choix de l’application de cartes',
+          )}
           accessibilityRole="link"
           onPress={() => onOpenAddress(lieuAOuvrir(evenement, lieu))}
           style={styles.ligne}
           testID="evenement-lieu"
         >
           <GlyphIcon color={Colors.primary500} name="locationPin" size={15} />
-          <Text numberOfLines={2} style={[styles.ligneTexte, styles.lien, { color: Colors.primary500 }]}>
+          <Text
+            numberOfLines={2}
+            style={[styles.ligneTexte, styles.lien, { color: Colors.primary500 }]}
+          >
             {lieu}
           </Text>
         </TouchableOpacity>
@@ -220,7 +246,9 @@ function EventMessageBubble({
 
       {resume ? (
         <TouchableOpacity
-          accessibilityLabel={`${t('conversation.eventBubble.participants', 'Participants')}, ${resumeTexte}`}
+          accessibilityLabel={
+            `${t('conversation.eventBubble.participants', 'Participants')}, ${resumeTexte}`
+          }
           accessibilityRole="button"
           activeOpacity={0.85}
           onPress={ouvrirLEvenement}
@@ -252,7 +280,10 @@ function EventMessageBubble({
             <Text style={[styles.participantsTitre, { color: Colors.primary500 }]}>
               {t('conversation.eventBubble.participants', 'Participants')}
             </Text>
-            <Text numberOfLines={2} style={[styles.participantsResume, { color: withAlpha(Colors.neutral00, 0.82) }]}>
+            <Text
+              numberOfLines={2}
+              style={[styles.participantsResume, { color: withAlpha(Colors.neutral00, 0.82) }]}
+            >
               {resumeTexte}
             </Text>
           </View>

@@ -221,7 +221,8 @@ describe('MSG1A — PollMessageBubble (caracterisation)', () => {
     const avatars = arbre.root.findAll((n) => n.props?.testID === 'avatar-Leo Martin');
     expect(avatars.length).toBeGreaterThan(0);
     const option = arbre.root.findAll(
-      (n) => n.props?.testID === 'sondage-option-o1' && typeof n.props?.accessibilityLabel === 'string',
+      (n) => n.props?.testID === 'sondage-option-o1'
+        && typeof n.props?.accessibilityLabel === 'string',
     )[0];
     expect(option.props.accessibilityLabel).toContain('Leo Martin');
     expect(option.props.accessibilityLabel).not.toContain('Membre');
@@ -230,14 +231,29 @@ describe('MSG1A — PollMessageBubble (caracterisation)', () => {
   // MSG1A x SECU-SONDAGE-ANONYME — un sondage anonyme du serveur neuf ne porte que des
   // COMPTEURS ; l'app y pose MON choix (`voters: [moi]` sur mes options). La bulle : mon option
   // cochee, les compteurs du serveur, et AUCUN votant (ni pastille, ni nom, meme pas moi).
-  test('P11 — anonyme du serveur neuf : mon choix coche, compteurs du serveur, aucun votant', () => {
+  test('P11 — anonyme du serveur neuf : mon choix coche, ses compteurs, aucun votant', () => {
     const anonyme = {
       ...SONDAGE,
       isAnonymous: true,
       options: [
-        { id: 'o1', label: 'Mardi 19h', voteCount: 4, voters: [] },
-        { id: 'o2', label: 'Jeudi 20h', voteCount: 3, voters: ['moi'] },
-        { id: 'o3', label: 'Samedi 10h', voteCount: 0, voters: [] },
+        {
+          id: 'o1',
+          label: 'Mardi 19h',
+          voteCount: 4,
+          voters: [],
+        },
+        {
+          id: 'o2',
+          label: 'Jeudi 20h',
+          voteCount: 3,
+          voters: ['moi'],
+        },
+        {
+          id: 'o3',
+          label: 'Samedi 10h',
+          voteCount: 0,
+          voters: [],
+        },
       ],
     };
     const arbre = rendre({ onVote: jest.fn(), poll: anonyme });
