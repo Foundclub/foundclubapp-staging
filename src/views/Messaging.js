@@ -24,13 +24,14 @@ import {
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { hideBlockedChats, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import { hideBlockedChats, peutBloquer, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
+import { etatDEnvoi } from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -160,7 +161,8 @@ function Messaging({ navigation, route }) {
   // tete-a-tete de la liste. Une seule requete, partagee avec la fiche d une
   // personne et le menu d une conversation (meme clef react-query).
   const { data: myBlockedRows } = useGetMyBlockedUsers({
-    enabled: Boolean(userData?.documentId),
+    // VILLE-NOTIFS — pas d'appel (403) pour un compte sans role de club.
+    enabled: peutBloquer(userData),
   });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
 
@@ -672,45 +674,66 @@ function Messaging({ navigation, route }) {
               ) : null}
             </View>
 
-            <View style={stylesDeLaListe.rangee}>
-              <View style={stylesDeLaListe.apercu}>
-                {lastMessage && isMyMessage ? (
-                  <GlyphIcon color={sourdine} name="checkDouble" size={16} />
-                ) : null}
-                {auteurDuDernier ? (
-                  <Text style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}>
-                    {`${auteurDuDernier}\u00A0:`}
-                  </Text>
-                ) : null}
-                {extrait.icone ? <GlyphIcon color={sourdine} name={extrait.icone} size={15} /> : null}
-                <Text
-                  numberOfLines={1}
-                  style={[stylesDeLaListe.apercuTexte, stylesDeLaListe.apercuFin, { color: sourdine }]}
-                >
-                  {lastMessage ? getChatMessagePreview(lastMessage, t) : ''}
-                </Text>
-              </View>
-              {isPinned ? (
-                <View accessibilityLabel={t('messaging.pinnedBadge', 'ÉPINGLÉ')} accessible>
-                  <GlyphIcon color={withAlpha(Colors.neutral00, 0.45)} name="thumbtack" size={15} />
-                </View>
-              ) : null}
-              {hasUnread ? (
-                <View
-                  accessibilityLabel={unreadBadge
-                    ? `${unreadBadge} ${t('messaging.unread.badge', 'Non lu')}`
-                    : t('messaging.unread.badge', 'Non lu')}
-                  accessible
-                  style={[stylesDeLaListe.pastille, { backgroundColor: Colors.primary500 }]}
-                >
-                  {unreadBadge ? (
-                    <Text style={[stylesDeLaListe.pastilleTexte, { color: Colors.primary900 }]}>
-                      {unreadBadge}
+            {/* Sans dernier message, ni punaise, ni non-lu : pas de seconde ligne vide, le titre
+                se centre dans la ligne de 72 (constate sur l'emulateur, 07/10). */}
+            {lastMessage || isPinned || hasUnread ? (
+              <View style={stylesDeLaListe.rangee}>
+                <View style={stylesDeLaListe.apercu}>
+                  {lastMessage && isMyMessage ? (
+                  // Coches cyan si le serveur dit « lu » (meme regle que la bulle : `etatDEnvoi`).
+                    <GlyphIcon
+                      color={etatDEnvoi(lastMessage) === 'lu' ? Colors.primary500 : sourdine}
+                      name="checkDouble"
+                      size={16}
+                    />
+                  ) : null}
+                  {auteurDuDernier ? (
+                    <Text
+                      style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}
+                    >
+                      {`${auteurDuDernier}\u00A0:`}
                     </Text>
                   ) : null}
+                  {extrait.icone ? (
+                    <GlyphIcon color={sourdine} name={extrait.icone} size={15} />
+                  ) : null}
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      stylesDeLaListe.apercuTexte,
+                      stylesDeLaListe.apercuFin,
+                      { color: sourdine },
+                    ]}
+                  >
+                    {lastMessage ? getChatMessagePreview(lastMessage, t) : ''}
+                  </Text>
                 </View>
-              ) : null}
-            </View>
+                {isPinned ? (
+                  <View accessibilityLabel={t('messaging.pinnedBadge', 'ÉPINGLÉ')} accessible>
+                    <GlyphIcon
+                      color={withAlpha(Colors.neutral00, 0.45)}
+                      name="thumbtack"
+                      size={15}
+                    />
+                  </View>
+                ) : null}
+                {hasUnread ? (
+                  <View
+                    accessibilityLabel={unreadBadge
+                      ? `${unreadBadge} ${t('messaging.unread.badge', 'Non lu')}`
+                      : t('messaging.unread.badge', 'Non lu')}
+                    accessible
+                    style={[stylesDeLaListe.pastille, { backgroundColor: Colors.primary500 }]}
+                  >
+                    {unreadBadge ? (
+                      <Text style={[stylesDeLaListe.pastilleTexte, { color: Colors.primary900 }]}>
+                        {unreadBadge}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
           {renderWebChatActions(chat)}
         </TouchableOpacity>

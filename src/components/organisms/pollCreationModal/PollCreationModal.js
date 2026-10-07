@@ -140,7 +140,8 @@ function InterrupteurDuPack({ allume, Colors }) {
 }
 
 /**
- * Question input isolated from the modal state to avoid rerendering the whole sheet on each keystroke.
+ * Question input isolated from the modal state to avoid rerendering the whole sheet on each
+ * keystroke.
  * @param {object} props
  * @param {(value: string) => void} props.onValueChange
  * @param {string} props.placeholder
@@ -174,7 +175,12 @@ const QuestionInputField = memo(({
         <Text style={[stylesDuPack.etiquette, { color: withAlpha(Colors.neutral00, 0.6) }]}>
           Question
         </Text>
-        <Text style={[stylesDuPack.etiquette, { color: withAlpha(Colors.neutral00, 0.6), letterSpacing: 0 }]}>
+        <Text
+          style={[
+            stylesDuPack.etiquette,
+            { color: withAlpha(Colors.neutral00, 0.6), letterSpacing: 0 },
+          ]}
+        >
           {questionLength}
           /140
         </Text>
@@ -358,7 +364,10 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     if (error) setError('');
   }, [error]);
 
-  const handleChangeOption = useCallback((/** @type {string} */ optionId, /** @type {string} */ value) => {
+  const handleChangeOption = useCallback((
+    /** @type {string} */ optionId,
+    /** @type {string} */ value,
+  ) => {
     optionValuesRef.current[optionId] = value;
     if (duplicateOptionIdSet.size > 0) {
       setDuplicateOptionIdSet(new Set());
@@ -414,7 +423,10 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     });
 
     if (!trimmedQuestion) {
-      setError(t('conversation.poll.errors.questionRequired', 'Ajoute une question pour ton sondage.'));
+      setError(t(
+        'conversation.poll.errors.questionRequired',
+        'Ajoute une question pour ton sondage.',
+      ));
       return;
     }
 
@@ -425,7 +437,10 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
 
     if (duplicateIds.size > 0) {
       setDuplicateOptionIdSet(duplicateIds);
-      setError(t('conversation.poll.errors.duplicateOptions', 'Chaque option doit être differente.'));
+      setError(t(
+        'conversation.poll.errors.duplicateOptions',
+        'Chaque option doit être differente.',
+      ));
       return;
     }
 
@@ -492,8 +507,12 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
       keyboardBehavior="interactive"
       scrollViewProps={MODAL_SCROLL_VIEW_PROPS}
       snapPoints={POLL_SNAP_POINTS}
+      // MSG1A — demande de MESSAGERIE-1W : sur le site, une fenetre centree plutot qu'une
+      // feuille pleine largeur. Le telephone ignore ce reglage (BottomModal.js).
+      webPresentation="dialog"
     >
-      {/* MSG1A (§3.4) — en-tete du pack : fermer (rond de 36) a gauche, titre 18, sous-titre. */}
+      {/* MSG1A (§3.4) — en-tete du pack : fermer (rond de 36) a gauche, titre 18,
+          sous-titre. */}
       <View style={[stylesDuPack.enTete, Spaces.marginBottom[8]]}>
         <TouchableOpacity
           accessibilityLabel={t('common.close', 'Fermer')}
@@ -539,7 +558,12 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
           <Text style={[stylesDuPack.etiquette, { color: withAlpha(Colors.neutral00, 0.6) }]}>
             {t('conversation.poll.form.optionsLabel', 'Options')}
           </Text>
-          <Text style={[stylesDuPack.etiquette, { color: withAlpha(Colors.neutral00, 0.6), letterSpacing: 0 }]}>
+          <Text
+            style={[
+              stylesDuPack.etiquette,
+              { color: withAlpha(Colors.neutral00, 0.6), letterSpacing: 0 },
+            ]}
+          >
             {options.length}
             /
             {MAX_OPTIONS}

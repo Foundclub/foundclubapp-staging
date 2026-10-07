@@ -22,7 +22,9 @@ jest.mock('react-native-reanimated', () => {
     __esModule: true,
     default: { View },
     Easing: { linear: jest.fn() },
-    useAnimatedStyle: (/** @type {any} */ fabrique) => (typeof fabrique === 'function' ? fabrique() : {}),
+    useAnimatedStyle: (/** @type {any} */ fabrique) => (
+      typeof fabrique === 'function' ? fabrique() : {}
+    ),
     useSharedValue: (/** @type {any} */ valeur) => ({ value: valeur }),
     withTiming: (/** @type {any} */ valeur) => valeur,
   };
@@ -31,7 +33,14 @@ jest.mock('react-native-linear-gradient', () => 'LinearGradient');
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, Circle: VueRN, default: VueRN, Line: VueRN, Path: VueRN, Polyline: VueRN, Rect: VueRN, Svg: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
 
@@ -74,10 +83,13 @@ jest.mock('@/services/event/eventQueries', () => ({
 }));
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => {
   const { View: VueRN } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ props) => <VueRN testID={`avatar-${props.name}`} /> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => <VueRN testID={`avatar-${props.name}`} />,
+  };
 });
 
-const DEMAIN = new Date(Date.now() + (24 * 60 * 60 * 1000)).toISOString();
+const DEMAIN = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
 /**
  * L'evenement complet, tel que la fiche le relit.
@@ -101,6 +113,7 @@ const evenement = (surcharge = {}) => ({
 });
 
 /**
+ * Aide du temoin : `rendre`.
  * @param {any} [props]
  * @returns {any}
  */
@@ -120,14 +133,17 @@ const rendre = (props = {}) => {
 };
 
 /**
+ * Aide du temoin : `textes`.
  * @param {any} arbre
  * @returns {string}
  */
-const textes = (arbre) => arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.children === 'string')
+const textes = (arbre) => arbre.root
+  .findAll((/** @type {any} */ n) => typeof n.props?.children === 'string')
   .map((/** @type {any} */ n) => n.props.children)
   .join(' | ');
 
 /**
+ * Aide du temoin : `parId`.
  * @param {any} arbre
  * @param {string} id
  * @returns {any[]}
@@ -151,53 +167,78 @@ describe('EventMessageBubble — l evenement partage du fil (pack MSG1A)', () =>
     expect(vu).toContain('Ouvrir l’événement');
   });
 
-  test('B2 — un membre convie voit « Ta presence » et les deux options ; Absent appelle le refus', () => {
-    mockEvenementComplet.mockReturnValue(evenement());
-    const onDecline = jest.fn();
-    const arbre = rendre({ onDecline });
-    expect(textes(arbre)).toContain('Ta présence');
+  test(
+    'B2 — un membre convie voit « Ta presence » et les deux options ; Absent appelle le refus',
+    () => {
+      mockEvenementComplet.mockReturnValue(evenement());
+      const onDecline = jest.fn();
+      const arbre = rendre({ onDecline });
+      expect(textes(arbre)).toContain('Ta présence');
 
-    act(() => { parId(arbre, 'evenement-presence-absent')[0].props.onPress(); });
+      act(() => {
+        parId(arbre, 'evenement-presence-absent')[0].props.onPress();
+      });
 
-    expect(onDecline).toHaveBeenCalledTimes(1);
-    // L'option appuyee s'allume tout de suite, et le libelle passe a « Ta reponse ».
-    expect(parId(arbre, 'evenement-presence-absent')[0].props.accessibilityState).toEqual({ selected: true });
-    expect(textes(arbre)).toContain('Ta réponse');
-  });
+      expect(onDecline).toHaveBeenCalledTimes(1);
+      // L'option appuyee s'allume tout de suite, et le libelle passe a « Ta reponse ».
+      expect(parId(arbre, 'evenement-presence-absent')[0].props.accessibilityState).toEqual({
+        selected: true,
+      });
+      expect(textes(arbre)).toContain('Ta réponse');
+    },
+  );
 
-  test('B3 — la reponse vient de L EVENEMENT : present surligne, un tap sur Absent la change', () => {
-    mockEvenementComplet.mockReturnValue(evenement({ participations: [{ documentId: 'moi' }] }));
-    const onDecline = jest.fn();
-    const arbre = rendre({ onDecline });
-    expect(parId(arbre, 'evenement-presence-present')[0].props.disabled).toBe(true);
-    expect(parId(arbre, 'evenement-presence-present')[0].props.accessibilityState).toEqual({ selected: true });
+  test(
+    'B3 — la reponse vient de L EVENEMENT : present surligne, un tap sur Absent la change',
+    () => {
+      mockEvenementComplet.mockReturnValue(evenement({ participations: [{ documentId: 'moi' }] }));
+      const onDecline = jest.fn();
+      const arbre = rendre({ onDecline });
+      expect(parId(arbre, 'evenement-presence-present')[0].props.disabled).toBe(true);
+      expect(parId(arbre, 'evenement-presence-present')[0].props.accessibilityState).toEqual({
+        selected: true,
+      });
 
-    act(() => { parId(arbre, 'evenement-presence-absent')[0].props.onPress(); });
-    expect(onDecline).toHaveBeenCalledTimes(1);
-  });
+      act(() => {
+        parId(arbre, 'evenement-presence-absent')[0].props.onPress();
+      });
+      expect(onDecline).toHaveBeenCalledTimes(1);
+    },
+  );
 
   test('B4 — pas convie, ou reponses fermees : pas de selecteur, bulle normale', () => {
-    mockEvenementComplet.mockReturnValue(evenement({ team: { documentId: 'eq-2', name: 'U15', players: [] } }));
+    mockEvenementComplet.mockReturnValue(
+      evenement({ team: { documentId: 'eq-2', name: 'U15', players: [] } }),
+    );
     expect(parId(rendre(), 'evenement-presence-present')).toHaveLength(0);
 
     mockEvenementComplet.mockReturnValue(evenement({ rsvpEnabled: false }));
     expect(parId(rendre(), 'evenement-presence-present')).toHaveLength(0);
   });
 
-  test('B5 — la ligne Participants compte presents / absents / sans reponse et ouvre l evenement', () => {
-    mockEvenementComplet.mockReturnValue(evenement({ participations: [{ documentId: 'lui', firstname: 'Hugo' }] }));
-    const arbre = rendre();
-    expect(textes(arbre)).toContain('1 present · 1 noAnswer');
-    expect(arbre.root.findAll((/** @type {any} */ n) => (
-      typeof n.type === 'string' && n.props?.testID === 'avatar-Hugo'
-    ))).toHaveLength(1);
+  test(
+    'B5 — la ligne Participants compte presents / absents / sans reponse et ouvre l evenement',
+    () => {
+      mockEvenementComplet.mockReturnValue(
+        evenement({ participations: [{ documentId: 'lui', firstname: 'Hugo' }] }),
+      );
+      const arbre = rendre();
+      expect(textes(arbre)).toContain('1 present · 1 noAnswer');
+      expect(
+        arbre.root.findAll(
+          (/** @type {any} */ n) => typeof n.type === 'string' && n.props?.testID === 'avatar-Hugo',
+        ),
+      ).toHaveLength(1);
 
-    act(() => { parId(arbre, 'evenement-participants')[0].props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
-      params: { eventId: 'ev-1' },
-      screen: 'EventDetails',
-    });
-  });
+      act(() => {
+        parId(arbre, 'evenement-participants')[0].props.onPress();
+      });
+      expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+        params: { eventId: 'ev-1' },
+        screen: 'EventDetails',
+      });
+    },
+  );
 
   test('B6 — sans evenement relu (hors ligne), l apercu du message suffit', () => {
     mockEvenementComplet.mockReturnValue(undefined);

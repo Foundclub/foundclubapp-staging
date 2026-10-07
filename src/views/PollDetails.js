@@ -22,6 +22,7 @@ import {
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
@@ -230,6 +231,7 @@ function PollDetails({ navigation, route }) {
     if (initialPoll?.type === 'poll') return initialPoll;
     return null;
   }, [initialPoll, pollMessage?.composition]);
+  const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
 
   const voterDirectory = useMemo(() => {
     /** @type {Map<string, { avatarUrl: string; displayName: string; firstname: string; lastname: string }>} */
@@ -267,8 +269,13 @@ function PollDetails({ navigation, route }) {
       });
     }
 
+    // SONDAGE-NOMS — les votants lus au serveur EN DERNIER : un fil de club n'a pas de
+    // participants, et le serveur est le seul à savoir qu'un compte a été supprimé (le nom
+    // figé dans un vieux message ne le sait pas).
+    pollVoterProfiles.forEach((profile) => registerUser(profile));
+
     return directory;
-  }, [chatData?.participants, messagesPages?.pages, userData, t]);
+  }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData, t]);
 
   const resolveVoterName = (/** @type {string} */ voterId) => {
     if (!voterId) return t('conversation.poll.common.member', 'Membre');
@@ -395,7 +402,7 @@ function PollDetails({ navigation, route }) {
   // etiquettes, une carte par option (compte en cyan pour la plus votee, barre, votants), puis
   // les informations. Le vote depuis la carte du haut reste possible, comme avant.
   const comptesParOption = (Array.isArray(poll?.options) ? poll.options : [])
-    .map((option) => getPollVoteCount(option));
+    .map((/** @type {any} */ option) => getPollVoteCount(option));
   const maximumDeVotes = Math.max(1, ...comptesParOption);
   const etiquettes = [
     poll?.allowMultipleVotes
@@ -494,7 +501,7 @@ function PollDetails({ navigation, route }) {
               )}
             </Text>
 
-            {optionVoterSections.map((section, rang) => {
+            {optionVoterSections.map((/** @type {any} */ section, /** @type {number} */ rang) => {
               const compte = comptesParOption[rang] ?? section.voters.length;
               const enTete = compte === maximumDeVotes && compte > 0;
               return (
@@ -537,7 +544,7 @@ function PollDetails({ navigation, route }) {
                       {t('conversation.poll.details.noVotes', 'Aucun vote pour cette option.')}
                     </Text>
                   ) : null}
-                  {!poll?.isAnonymous ? section.voters.map((voter, index) => {
+                  {!poll?.isAnonymous ? section.voters.map((/** @type {any} */ voter, /** @type {number} */ index) => {
                     const fullName = `${voter.firstname} ${voter.lastname}`.trim();
                     const displayLabel = fullName
                       || voter.displayName

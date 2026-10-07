@@ -59,6 +59,7 @@ import {
   applyOptimisticPollVote,
   createPollComposition,
 } from '@/domains/messaging/pollUseCases';
+import { ancreSurLEcran } from '@/domains/messaging/reactionPillPlacement';
 import {
   getMyReactionEmoji,
   getReactionsForMessage,
@@ -74,6 +75,7 @@ import {
 } from '@/domains/participation/participationFlow';
 import {
   hideBlockedMessages,
+  peutBloquer,
   resolveOtherParticipantId,
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
@@ -663,11 +665,12 @@ const stylesDuFil = StyleSheet.create({
 });
 
 /**
- *
- * @param root0
- * @param root0.height
- * @param root0.mine
- * @param root0.width
+ * La forme d'une bulle pendant le chargement du fil.
+ * @param {object} props
+ * @param {number} props.height
+ * @param {boolean} [props.mine]
+ * @param {number | string} props.width
+ * @returns {import('react').ReactElement}
  */
 function SkeletonBubble({ height, mine = false, width }) {
   const { Colors } = useTheme();
@@ -1181,7 +1184,9 @@ function Conversation({ navigation, route }) {
     () => resolveOtherParticipantId(chatData, userData?.documentId),
     [chatData, userData?.documentId],
   );
-  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) });
+  // VILLE-NOTIFS — pas d'appel (403) ni de « Bloquer » pour un compte sans role de club.
+  const compteQuiPeutBloquer = peutBloquer(userData);
+  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: compteQuiPeutBloquer });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
   const isOtherParticipantBlocked = Boolean(
     otherParticipantId && blockedUserIds.has(otherParticipantId),
@@ -4527,7 +4532,10 @@ function Conversation({ navigation, route }) {
   // MSG1A (§3.1) — la photo du pack : 252 x 184, rayon 15, un degrade sombre en bas
   // pour que l'heure blanche se lise sur n'importe quelle image. L'appui long ouvre le
   // menu du message (la bulle de GiftedChat le faisait ; ce cadre n'existe plus).
-  const renderMessageImage = useCallback((messageImageProps, options = {}) => {
+  const renderMessageImage = useCallback((
+    /** @type {any} */ messageImageProps,
+    /** @type {{ onLongPress?: () => void }} */ options = {},
+  ) => {
     const rawMessage = messageImageProps?.currentMessage || {};
     const safeMessage = {
       ...rawMessage,
@@ -5138,9 +5146,14 @@ function Conversation({ navigation, route }) {
         /** @type {number} */ y,
         /** @type {number} */ width,
         /** @type {number} */ height,
-      ) => ouvrir({
+      ) => ouvrir(ancreSurLEcran({
         height, width, x, y,
-      }));
+      }, {
+        // MSG1A (§3.2) — sur Android, la mesure part du bas de la barre d'etat ; le calque,
+        // du haut de l'ecran (constate : 142 px de decalage sur l'emulateur, 07/10).
+        hauteurBarreDEtat: StatusBar.currentHeight,
+        os: Platform.OS,
+      })));
       return;
     }
 
@@ -5495,7 +5508,11 @@ function Conversation({ navigation, route }) {
     );
   }, [Colors.neutral00, Colors.primary500, Colors.primary900]);
 
-  const wrapWithMessageInteractions = useCallback((currentMessage, children, options = {}) => {
+  const wrapWithMessageInteractions = useCallback((
+    /** @type {any} */ currentMessage,
+    /** @type {any} */ children,
+    /** @type {{ onPress?: () => void }} */ options = {},
+  ) => {
     if (!currentMessage) return children;
 
     const messageKey = getMessageDocumentId(currentMessage);
@@ -5670,6 +5687,8 @@ function Conversation({ navigation, route }) {
                   currentUserId={userData?.documentId || ''}
                   dansLaBulle
                   isMe={!isLeft}
+                  // SONDAGE-NOMS — donne, la bulle lit elle-meme les noms des votants au serveur.
+                  messageId={currentMessage?.documentId || currentMessage?._id || currentMessage?.id}
                   meta={(
                     <MetaDuMessage
                       estAMoi={estAMoi}
@@ -6001,11 +6020,11 @@ function Conversation({ navigation, route }) {
                     right: { color: Colors.neutral00 },
                   }}
                   // 📍 MSG1A (§3.18) — une adresse ecrite (numero + type de voie) devient un lien.
-                  parsePatterns={(styleDeLien) => [{
+                  parsePatterns={(/** @type {any} */ styleDeLien) => /** @type {any} */ ([{
                     onPress: (/** @type {string} */ texte) => setAdresseOuverte({ label: texte }),
                     pattern: motifDAdresse(),
                     style: [styleDeLien, stylesDuFil.lienSouligne],
-                  }]}
+                  }])}
                   position={position}
                   textStyle={{
                     left: [TEXTE_DU_MESSAGE, stylesDuFil.texte, { color: Colors.neutral00 }],
@@ -6098,7 +6117,7 @@ function Conversation({ navigation, route }) {
   // NOMS restent l'affaire de `resolveVoterName`, que ce lot ne touche pas.
   const resolveVoterAvatar = (/** @type {string} */ voterId) => {
     const membre = Array.isArray(chatData?.participants)
-      ? chatData.participants.find((participant) => (
+      ? chatData.participants.find((/** @type {any} */ participant) => (
         String(participant?.documentId || participant?.id || '') === String(voterId || '')
       ))
       : null;
@@ -6395,7 +6414,7 @@ function Conversation({ navigation, route }) {
     if (typingUsers.size > 0) {
       // MSG1A (§3.1) — dans un fil a plusieurs, l'avatar de 28 de celui qui ecrit.
       const premierQuiEcrit = Array.isArray(chatData?.participants)
-        ? chatData.participants.find((membre) => (
+        ? chatData.participants.find((/** @type {any} */ membre) => (
           String(membre?.documentId || '') === String(Array.from(typingUsers)[0] || '')
         ))
         : null;
@@ -6775,8 +6794,8 @@ function Conversation({ navigation, route }) {
       });
   } else if (!sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil) {
     const prenomsDesMembres = (Array.isArray(chatData?.participants) ? chatData.participants : [])
-      .filter((membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
-      .map((membre) => String(membre?.firstname || '').trim())
+      .filter((/** @type {any} */ membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
+      .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
       .filter(Boolean)
       .slice(0, 30);
     if (prenomsDesMembres.length > 0) {
@@ -6896,13 +6915,14 @@ function Conversation({ navigation, route }) {
       <View style={[Alignments.fill]}>
         {/* MSG1A (§3.1) — le motif sportif en filigrane (cyan a 8 %, tuile de 240), derriere
             le fil seulement : ni l'en-tete ni la saisie ne le portent. */}
-        <Image
-          pointerEvents="none"
-          resizeMode="repeat"
-          source={Images.motifDuFil}
-          style={StyleSheet.absoluteFill}
-          testID="conversation-motif"
-        />
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <Image
+            resizeMode="repeat"
+            source={Images.motifDuFil}
+            style={StyleSheet.absoluteFill}
+            testID="conversation-motif"
+          />
+        </View>
         {renderLeagueNegotiationBanner()}
         {/* COLL-C4A2 — club détaché : « Tu ne fais plus partie de ce canal » (écran 6). */}
         {filDeLaVille.estQuitte ? (
@@ -6977,7 +6997,7 @@ function Conversation({ navigation, route }) {
             onSend={onSend}
             // MSG1A (§3.1) — avatar de 28 en bas des groupes (aucun en tete-a-tete), puces
             // de date, notices discretes, et « revenir en bas » au-dela de 160.
-            imageStyle={{ left: stylesDuFil.avatarVide }}
+            imageStyle={/** @type {any} */ ({ left: stylesDuFil.avatarVide })}
             isScrollToBottomEnabled
             renderAvatar={estUnTeteATete(chatData?.type) ? null : renderAvatarDuFil}
             renderBubble={renderBubble}
@@ -7096,7 +7116,7 @@ function Conversation({ navigation, route }) {
             // 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde. Il n apparait QUE
             // pour un tete-a-tete : un fil de club, d equipe ou de groupe n a personne a bloquer,
             // et la discussion a trois du mineur avec son parent n en a pas non plus (K5).
-            ...(otherParticipantId ? [{
+            ...(otherParticipantId && compteQuiPeutBloquer ? [{
               cle: 'bloquer',
               danger: !isOtherParticipantBlocked,
               desactive: isBlockingUser || isUnblockingUser,

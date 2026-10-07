@@ -213,69 +213,122 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
   const AvatarDuFil = require('@/views/chat/AvatarDuFil').default;
 
   /**
+   * Aide du temoin : `monterAvec`.
    * @param {any[]} fils
    * @returns {Promise<any>}
    */
   const monterAvec = async (fils) => {
     mockChatsQuery = etatListe({
-      data: { pages: [{ data: fils, meta: { pagination: { page: 1, pageCount: 1, total: fils.length } } }] },
+      data: {
+        pages: [{
+          data: fils,
+          meta: { pagination: { page: 1, pageCount: 1, total: fils.length } },
+        }],
+      },
       hasNextPage: false,
     });
     return monter();
   };
 
   /**
+   * Aide du temoin : `toutLeTexte`.
    * @param {any} arbre
    * @returns {string}
    */
   const toutLeTexte = (arbre) => JSON.stringify(arbre.toJSON());
 
-  test('LI1 — groupe : « Prénom : », icône du contenu riche, pastille de non-lus cyan avec le nombre', async () => {
-    const arbre = await monterAvec([{
-      ...CHATS[0],
-      messages: [{
-        composition: { question: 'Quel créneau ?', type: 'poll' },
-        createdAt: '2026-10-07T10:00:00.000Z',
-        sender: { documentId: 'karim', firstname: 'Karim' },
-      }],
-      unreadCount: 3,
-    }]);
+  test(
+    'LI1 — groupe : « Prénom : », icône du contenu riche, pastille de non-lus cyan avec le nombre',
+    async () => {
+      const arbre = await monterAvec([
+        {
+          ...CHATS[0],
+          messages: [
+            {
+              composition: { question: 'Quel créneau ?', type: 'poll' },
+              createdAt: '2026-10-07T10:00:00.000Z',
+              sender: { documentId: 'karim', firstname: 'Karim' },
+            },
+          ],
+          unreadCount: 3,
+        },
+      ]);
 
-    expect(toutLeTexte(arbre)).toContain('Karim :');
-    expect(toutLeTexte(arbre)).toContain('Sondage : Quel créneau ?');
-    const icones = arbre.root.findAllByType(GlyphIcon).map((/** @type {any} */ n) => n.props.name);
-    expect(icones).toContain('chartSimpleHorizontal');
-    expect(toutLeTexte(arbre)).toContain('"3"');
-    // Un seul bouton par ligne : l'avatar n'en est plus un second.
-    expect(arbre.root.findAllByType(AvatarDuFil)[0].props.size).toBe(52);
-  });
+      expect(toutLeTexte(arbre)).toContain('Karim :');
+      expect(toutLeTexte(arbre)).toContain('Sondage : Quel créneau ?');
+      const icones = arbre.root.findAllByType(GlyphIcon)
+        .map((/** @type {any} */ n) => n.props.name);
+      expect(icones).toContain('chartSimpleHorizontal');
+      expect(toutLeTexte(arbre)).toContain('"3"');
+      // Un seul bouton par ligne : l'avatar n'en est plus un second.
+      expect(arbre.root.findAllByType(AvatarDuFil)[0].props.size).toBe(52);
+    },
+  );
 
-  test('LI2 — mon dernier message : les coches, pas de « Prénom : » ; épinglé : la punaise', async () => {
-    const arbre = await monterAvec([{
-      ...CHATS[0],
-      messages: [{
-        createdAt: '2026-10-07T10:00:00.000Z',
-        message: 'A demain',
-        sender: { documentId: 'moi', firstname: 'Adel' },
-      }],
-      pinnedBy: [{ documentId: 'moi' }],
-    }]);
+  test(
+    'LI2 — mon dernier message : les coches, pas de « Prénom : » ; épinglé : la punaise',
+    async () => {
+      const arbre = await monterAvec([
+        {
+          ...CHATS[0],
+          messages: [
+            {
+              createdAt: '2026-10-07T10:00:00.000Z',
+              message: 'A demain',
+              sender: { documentId: 'moi', firstname: 'Adel' },
+            },
+          ],
+          pinnedBy: [{ documentId: 'moi' }],
+        },
+      ]);
 
-    const icones = arbre.root.findAllByType(GlyphIcon).map((/** @type {any} */ n) => n.props.name);
-    expect(icones).toEqual(expect.arrayContaining(['checkDouble', 'thumbtack']));
-    expect(toutLeTexte(arbre)).not.toContain('Adel :');
-  });
+      const icones = arbre.root.findAllByType(GlyphIcon)
+        .map((/** @type {any} */ n) => n.props.name);
+      expect(icones).toEqual(expect.arrayContaining(['checkDouble', 'thumbtack']));
+      expect(toutLeTexte(arbre)).not.toContain('Adel :');
+    },
+  );
 
   test('LI3 — tête-à-tête : jamais de « Prénom : »', async () => {
-    const arbre = await monterAvec([{
-      ...CHATS[0],
-      messages: [{
-        createdAt: '2026-10-07T10:00:00.000Z',
-        message: 'Salut',
-        sender: { documentId: 'karim', firstname: 'Karim' },
-      }],
-      type: 'whisper',
-    }]);
+    const arbre = await monterAvec([
+      {
+        ...CHATS[0],
+        messages: [
+          {
+            createdAt: '2026-10-07T10:00:00.000Z',
+            message: 'Salut',
+            sender: { documentId: 'karim', firstname: 'Karim' },
+          },
+        ],
+        type: 'whisper',
+      },
+    ]);
     expect(toutLeTexte(arbre)).not.toContain('Karim :');
   });
+
+  test(
+    'LI4 — mon dernier message LU par quelqu un : coches cyan ; pas encore lu : grises',
+    async () => {
+    // eslint-disable-next-line global-require
+      const genererCouleurs = require('@/theme/colors').default;
+      const couleurs = genererCouleurs();
+      const fil = (readBy) => ({
+        ...CHATS[0],
+        messages: [
+          {
+            createdAt: '2026-10-07T10:00:00.000Z',
+            message: 'A demain',
+            readBy,
+            sender: { documentId: 'moi', firstname: 'Adel' },
+          },
+        ],
+      });
+      const coches = (arbre) => arbre.root
+        .findAllByType(GlyphIcon)
+        .find((/** @type {any} */ n) => n.props.name === 'checkDouble').props.color;
+
+      expect(coches(await monterAvec([fil([{ documentId: 'karim' }])]))).toBe(couleurs.primary500);
+      expect(coches(await monterAvec([fil([])]))).not.toBe(couleurs.primary500);
+    },
+  );
 });

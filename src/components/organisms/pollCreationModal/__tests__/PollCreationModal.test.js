@@ -14,8 +14,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
       const texte = typeof repli === 'string' ? repli : repli?.defaultValue || cle;
-      return texte.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (
-        repli?.[nom] !== undefined ? String(repli[nom]) : m));
+      return texte.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (repli?.[nom] !== undefined ? String(repli[nom]) : m));
     },
   }),
 }));
@@ -23,7 +22,14 @@ jest.mock('react-i18next', () => ({
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, Circle: VueRN, default: VueRN, Line: VueRN, Path: VueRN, Polyline: VueRN, Rect: VueRN, Svg: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
 
@@ -36,14 +42,23 @@ jest.mock('@/theme/themeContext', () => {
   return {
     __esModule: true,
     default: () => ({
-      Alignments, Colors, Fonts: generateFonts(Colors), Images: new Proxy({}, { get: () => 1 }), Spaces,
+      Alignments,
+      Colors,
+      Fonts: generateFonts(Colors),
+      Images: new Proxy({}, { get: () => 1 }),
+      Spaces,
     }),
   };
 });
 
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
-  (/** @type {any} */ { children }) => children
-));
+const mockFeuilles = /** @type {any[]} */ ([]);
+jest.mock(
+  '@/components/molecules/bottomModal/BottomModal',
+  () => (/** @type {any} */ props) => {
+    mockFeuilles.push(props);
+    return props.children;
+  },
+);
 
 jest.mock('@/components/atoms/button/Button', () => {
   const { Text: Texte, TouchableOpacity: Touchable } = jest.requireActual('react-native');
@@ -58,6 +73,7 @@ jest.mock('@/components/atoms/button/Button', () => {
 });
 
 /**
+ * Aide du temoin : `monter`.
  * @param {any} [props]
  * @returns {{arbre: any, onClose: jest.Mock, onSubmit: jest.Mock}} Le banc.
  */
@@ -68,21 +84,37 @@ const monter = (props = {}) => {
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <PollCreationModal isVisible onClose={props.onClose || onClose} onSubmit={props.onSubmit || onSubmit} />,
+      <PollCreationModal
+        isVisible
+        onClose={props.onClose || onClose}
+        onSubmit={props.onSubmit || onSubmit}
+      />,
     );
   });
   return { arbre, onClose, onSubmit };
 };
 
 const champs = (arbre) => arbre.root.findAllByType(TextInput);
-const textes = (arbre) => arbre.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
+const textes = (arbre) => arbre.root.findAllByType(Text)
+  .map((n) => [].concat(n.props.children).join(''));
 const toucherLeTexte = (arbre, texte) => {
-  const bouton = arbre.root.findAllByType(TouchableOpacity).reverse()
-    .find((n) => n.findAll((c) => c.type === Text && [].concat(c.props.children).join('') === texte).length > 0);
+  const bouton = arbre.root
+    .findAllByType(TouchableOpacity)
+    .reverse()
+    .find(
+      (n) => n.findAll(
+        (c) => c.type === Text && [].concat(c.props.children).join('') === texte,
+      ).length
+        > 0,
+    );
   if (!bouton) throw new Error(`bouton introuvable : ${texte}`);
-  return act(async () => { await bouton.props.onPress(); });
+  return act(async () => {
+    await bouton.props.onPress();
+  });
 };
-const ecrire = (champ, valeur) => act(() => { champ.props.onChangeText(valeur); });
+const ecrire = (champ, valeur) => act(() => {
+  champ.props.onChangeText(valeur);
+});
 
 describe('MSG1A — PollCreationModal (caracterisation)', () => {
   test('S1 — question vide : refus, et rien n est envoye', async () => {
@@ -119,14 +151,25 @@ describe('MSG1A — PollCreationModal (caracterisation)', () => {
     ecrire(champs(arbre)[0], '  Quel creneau ? ');
     ecrire(champs(arbre)[1], 'Mardi');
     ecrire(champs(arbre)[2], 'Jeudi');
-    const interrupteurs = arbre.root.findAll((n) => n.props?.accessibilityRole === 'switch'
-      && typeof n.props.onPress === 'function' && typeof n.type !== 'string', { deep: false });
-    act(() => { interrupteurs[0].props.onPress(); });
-    act(() => { interrupteurs[1].props.onPress(); });
+    const interrupteurs = arbre.root.findAll(
+      (n) => n.props?.accessibilityRole === 'switch'
+        && typeof n.props.onPress === 'function'
+        && typeof n.type !== 'string',
+      { deep: false },
+    );
+    act(() => {
+      interrupteurs[0].props.onPress();
+    });
+    act(() => {
+      interrupteurs[1].props.onPress();
+    });
     await toucherLeTexte(arbre, 'Envoyer le sondage');
 
     expect(onSubmit).toHaveBeenCalledWith({
-      allowMultipleVotes: true, isAnonymous: true, options: ['Mardi', 'Jeudi'], question: 'Quel creneau ?',
+      allowMultipleVotes: true,
+      isAnonymous: true,
+      options: ['Mardi', 'Jeudi'],
+      question: 'Quel creneau ?',
     });
   });
 
@@ -134,8 +177,9 @@ describe('MSG1A — PollCreationModal (caracterisation)', () => {
     const { arbre } = monter();
     // Le pack (MSG1A) retire le lien « + Ajouter une option » a 6 ; avant, il etait grise.
     // Dans les deux cas : on appuie tant qu'on peut, et on ne depasse jamais 6.
-    const lienPresent = () => arbre.root.findAll((n) => n.type === Text
-      && [].concat(n.props.children).join('') === '+ Ajouter une option').length > 0;
+    const lienPresent = () => arbre.root.findAll(
+      (n) => n.type === Text && [].concat(n.props.children).join('') === '+ Ajouter une option',
+    ).length > 0;
     for (let i = 0; i < 8 && lienPresent(); i += 1) {
       // eslint-disable-next-line no-await-in-loop
       await toucherLeTexte(arbre, '+ Ajouter une option');
@@ -147,11 +191,23 @@ describe('MSG1A — PollCreationModal (caracterisation)', () => {
 
   test('S6 — on peut fermer la feuille', async () => {
     const { arbre, onClose } = monter();
-    const fermer = arbre.root.findAll((n) => typeof n.props?.onPress === 'function'
-      && /Fermer|Annuler/.test(String(n.props?.accessibilityLabel || n.props?.title || '')))[0]
-      || arbre.root.findAll((n) => n.props?.testID === 'bouton-Annuler')[0];
-    await act(async () => { await fermer.props.onPress(); });
+    const fermer = arbre.root.findAll(
+      (n) => typeof n.props?.onPress === 'function'
+          && /Fermer|Annuler/.test(String(n.props?.accessibilityLabel || n.props?.title || '')),
+    )[0] || arbre.root.findAll((n) => n.props?.testID === 'bouton-Annuler')[0];
+    await act(async () => {
+      await fermer.props.onPress();
+    });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // MSG1A — demande de MESSAGERIE-1W (tranchee oui par le chef, 07/10) : sur ordinateur, la
+  // feuille s'ouvrait en PLEINE LARGEUR (BottomModal.web, mode « sheet ») ; elle demande la
+  // fenetre centree. Le telephone ignore ce reglage (BottomModal.js).
+  test('S7 — sur le site, la creation de sondage s ouvre en fenetre centree', () => {
+    mockFeuilles.length = 0;
+    monter();
+    expect(mockFeuilles[mockFeuilles.length - 1].webPresentation).toBe('dialog');
   });
 });

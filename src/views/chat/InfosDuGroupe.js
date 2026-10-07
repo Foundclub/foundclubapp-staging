@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +17,11 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
-import { GRAS_FAMILLE, LIGNE_DE_MENU, REGULIER_FAMILLE } from '@/components/molecules/bulleDuFil/typographieDuFil';
+import {
+  GRAS_FAMILLE,
+  LIGNE_DE_MENU,
+  REGULIER_FAMILLE,
+} from '@/components/molecules/bulleDuFil/typographieDuFil';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
@@ -27,7 +38,9 @@ const idDe = (membre) => String(membre?.documentId || membre?.id || '').trim();
  * @returns {string}
  */
 const nomDe = (membre) => `${membre?.firstname || ''} ${membre?.lastname || ''}`.trim()
-  || membre?.username || membre?.phoneNumber || idDe(membre);
+  || membre?.username
+  || membre?.phoneNumber
+  || idDe(membre);
 
 /**
  * MSG1A (§3.16) — « INFOS DU GROUPE », la page du pack qui remplace la feuille « Gestion
@@ -99,8 +112,10 @@ function InfosDuGroupe({
   }, [nomDuGroupe, visible]);
 
   const participants = Array.isArray(chat?.participants) ? chat.participants : [];
-  const moi = participants.find((membre) => idDe(membre) === meId);
-  const autres = participants.filter((membre) => idDe(membre) && idDe(membre) !== meId);
+  const moi = participants.find((/** @type {any} */ membre) => idDe(membre) === meId);
+  const autres = participants.filter(
+    (/** @type {any} */ membre) => idDe(membre) && idDe(membre) !== meId,
+  );
   const ordonnes = moi ? [moi, ...autres] : autres;
   const filet = withAlpha(Colors.neutral00, 0.07);
   const sourdine = withAlpha(Colors.neutral00, 0.58);
@@ -133,13 +148,18 @@ function InfosDuGroupe({
       testID={testID}
     >
       <GlyphIcon color={danger ? Colors.chatDanger : Colors.neutral00} name={icone} size={20} />
-      <Text style={[LIGNE_DE_MENU, { color: danger ? Colors.chatDanger : Colors.neutral00 }]}>{libelle}</Text>
+      <Text style={[LIGNE_DE_MENU, { color: danger ? Colors.chatDanger : Colors.neutral00 }]}>
+        {libelle}
+      </Text>
     </TouchableOpacity>
   );
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} statusBarTranslucent visible={visible}>
-      <View style={[styles.page, { backgroundColor: Colors.chatBackground }]} testID="infos-du-groupe">
+      <View
+        style={[styles.page, { backgroundColor: Colors.chatBackground }]}
+        testID="infos-du-groupe"
+      >
         <View style={[styles.enTete, { backgroundColor: Colors.chatBar, paddingTop: top }]}>
           <TouchableOpacity
             accessibilityLabel={t('common.back', 'Retour')}
@@ -150,7 +170,10 @@ function InfosDuGroupe({
           >
             <GlyphIcon color={Colors.neutral00} name="chevronLeft" size={20} />
           </TouchableOpacity>
-          <Text accessibilityRole="header" style={[styles.titreEnTete, { color: Colors.neutral00 }]}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.titreEnTete, { color: Colors.neutral00 }]}
+          >
             {t('conversation.groupInfo.title', 'Infos du groupe')}
           </Text>
         </View>
@@ -168,7 +191,11 @@ function InfosDuGroupe({
                   onSubmitEditing={enregistrer}
                   style={[
                     styles.champ,
-                    { backgroundColor: Colors.primary800, borderColor: Colors.primary500, color: Colors.neutral00 },
+                    {
+                      backgroundColor: Colors.primary800,
+                      borderColor: Colors.primary500,
+                      color: Colors.neutral00,
+                    },
                   ]}
                   testID="infos-du-groupe-champ-nom"
                   value={brouillon}
@@ -176,8 +203,14 @@ function InfosDuGroupe({
                 <View style={styles.boutons}>
                   <TouchableOpacity
                     accessibilityRole="button"
-                    onPress={() => { setBrouillon(nomDuGroupe); setEnEdition(false); }}
-                    style={[styles.bouton, { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 }]}
+                    onPress={() => {
+                      setBrouillon(nomDuGroupe);
+                      setEnEdition(false);
+                    }}
+                    style={[
+                      styles.bouton,
+                      { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 },
+                    ]}
                   >
                     <Text style={[styles.boutonTexte, { color: Colors.neutral00 }]}>
                       {t('common.cancel', 'Annuler')}
@@ -198,7 +231,11 @@ function InfosDuGroupe({
               </View>
             ) : (
               <TouchableOpacity
-                accessibilityHint={estAdmin ? t('conversation.groupInfo.renameHint', 'Renommer le groupe') : undefined}
+                accessibilityHint={
+                  estAdmin
+                    ? t('conversation.groupInfo.renameHint', 'Renommer le groupe')
+                    : undefined
+                }
                 accessibilityRole={estAdmin ? 'button' : 'text'}
                 disabled={!estAdmin}
                 onPress={() => setEnEdition(true)}
@@ -241,7 +278,7 @@ function InfosDuGroupe({
                 </Text>
               </TouchableOpacity>
             ) : null}
-            {ordonnes.map((membre, index) => {
+            {ordonnes.map((/** @type {any} */ membre, /** @type {number} */ index) => {
               const id = idDe(membre);
               const cEstMoi = id === meId;
               return (
@@ -271,7 +308,12 @@ function InfosDuGroupe({
                     </Text>
                   </View>
                   {membreEstAdmin(membre) ? (
-                    <View style={[styles.pastilleAdmin, { borderColor: withAlpha(Colors.primary500, 0.5) }]}>
+                    <View
+                      style={[
+                        styles.pastilleAdmin,
+                        { borderColor: withAlpha(Colors.primary500, 0.5) },
+                      ]}
+                    >
                       <Text style={[styles.pastilleAdminTexte, { color: Colors.primary500 }]}>
                         {t('conversation.group.admin', 'Admin')}
                       </Text>
@@ -282,7 +324,9 @@ function InfosDuGroupe({
             })}
           </View>
 
-          <View style={[styles.carte, styles.carteSignaler, { backgroundColor: Colors.primary800 }]}>
+          <View
+            style={[styles.carte, styles.carteSignaler, { backgroundColor: Colors.primary800 }]}
+          >
             <TouchableOpacity
               accessibilityRole="button"
               onPress={onSignaler}
@@ -320,10 +364,15 @@ function InfosDuGroupe({
           >
             <Pressable
               onPress={() => {}}
-              style={[styles.feuille, { backgroundColor: Colors.chatSheet, paddingBottom: 34 + bottom }]}
+              style={[
+                styles.feuille,
+                { backgroundColor: Colors.chatSheet, paddingBottom: 34 + bottom },
+              ]}
               testID="infos-du-groupe-fiche"
             >
-              <View style={[styles.poignee, { backgroundColor: withAlpha(Colors.neutral00, 0.25) }]} />
+              <View
+                style={[styles.poignee, { backgroundColor: withAlpha(Colors.neutral00, 0.25) }]}
+              />
               <View style={styles.ficheEnTete}>
                 <ProfileAvatar
                   enablePreview={false}
@@ -342,43 +391,64 @@ function InfosDuGroupe({
                   </Text>
                 </View>
               </View>
-              {ligneDeFiche('envelope', t('conversation.groupInfo.sendMessage', 'Envoyer un message'), () => {
-                const membre = membreOuvert;
-                setMembreOuvert(null);
-                onEnvoyerUnMessage(membre);
-              }, 'infos-du-groupe-message')}
-              {estAdmin ? ligneDeFiche(
-                'shieldCheck',
-                membreEstAdmin(membreOuvert)
-                  ? t('conversation.groupInfo.removeAdmin', 'Retirer le rôle d’admin')
-                  : t('conversation.groupInfo.makeAdmin', 'Nommer admin du groupe'),
+              {ligneDeFiche(
+                'envelope',
+                t('conversation.groupInfo.sendMessage', 'Envoyer un message'),
                 () => {
                   const membre = membreOuvert;
                   setMembreOuvert(null);
-                  onBasculerAdmin(membre, !membreEstAdmin(membre));
+                  onEnvoyerUnMessage(membre);
                 },
-                'infos-du-groupe-admin',
-              ) : null}
-              {estAdmin ? ligneDeFiche(
-                'userMinus',
-                t('conversation.groupInfo.removeFromGroup', 'Retirer du groupe'),
-                () => { setARetirer(membreOuvert); setMembreOuvert(null); },
-                'infos-du-groupe-retirer',
-                true,
-              ) : null}
+                'infos-du-groupe-message',
+              )}
+              {estAdmin
+                ? ligneDeFiche(
+                  'shieldCheck',
+                  membreEstAdmin(membreOuvert)
+                    ? t('conversation.groupInfo.removeAdmin', 'Retirer le rôle d’admin')
+                    : t('conversation.groupInfo.makeAdmin', 'Nommer admin du groupe'),
+                  () => {
+                    const membre = membreOuvert;
+                    setMembreOuvert(null);
+                    onBasculerAdmin(membre, !membreEstAdmin(membre));
+                  },
+                  'infos-du-groupe-admin',
+                )
+                : null}
+              {estAdmin
+                ? ligneDeFiche(
+                  'userMinus',
+                  t('conversation.groupInfo.removeFromGroup', 'Retirer du groupe'),
+                  () => {
+                    setARetirer(membreOuvert);
+                    setMembreOuvert(null);
+                  },
+                  'infos-du-groupe-retirer',
+                  true,
+                )
+                : null}
             </Pressable>
           </Pressable>
         ) : null}
 
         {departAConfirmer ? (
-          <View style={[styles.voileCentre, { backgroundColor: withAlpha(Colors.neutral900, 0.55) }]}>
+          <View
+            style={[styles.voileCentre, { backgroundColor: withAlpha(Colors.neutral900, 0.55) }]}
+          >
             <View
-              style={[styles.boite, { backgroundColor: Colors.chatSheet, borderColor: withAlpha(Colors.neutral00, 0.08) }]}
+              style={[
+                styles.boite,
+                {
+                  backgroundColor: Colors.chatSheet,
+                  borderColor: withAlpha(Colors.neutral00, 0.08),
+                },
+              ]}
               testID="infos-du-groupe-confirmation-depart"
             >
               <Text style={[styles.boiteTitre, { color: Colors.neutral00 }]}>
                 {t('conversation.groupInfo.leaveConfirm', {
-                  defaultValue: 'Quitter « {{name}} » ?',
+                  defaultValue:
+                    'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
                   name: nomDuGroupe || t('conversation.groupInfo.untitled', 'Groupe'),
                   ...SANS_ECHAPPEMENT,
                 })}
@@ -387,7 +457,11 @@ function InfosDuGroupe({
                 <TouchableOpacity
                   accessibilityRole="button"
                   onPress={() => setDepartAConfirmer(false)}
-                  style={[styles.bouton, styles.boutonBoite, { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 }]}
+                  style={[
+                    styles.bouton,
+                    styles.boutonBoite,
+                    { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 },
+                  ]}
                 >
                   <Text style={[styles.boutonTexte, { color: Colors.neutral00 }]}>
                     {t('common.cancel', 'Annuler')}
@@ -395,7 +469,10 @@ function InfosDuGroupe({
                 </TouchableOpacity>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  onPress={() => { setDepartAConfirmer(false); onQuitter?.(); }}
+                  onPress={() => {
+                    setDepartAConfirmer(false);
+                    onQuitter?.();
+                  }}
                   style={[
                     styles.bouton,
                     styles.boutonBoite,
@@ -419,9 +496,17 @@ function InfosDuGroupe({
         {/* La confirmation, DANS la page : une seconde fenetre par-dessus une page deja
             ouverte ne s'affiche pas toujours sur iPhone. */}
         {aRetirer ? (
-          <View style={[styles.voileCentre, { backgroundColor: withAlpha(Colors.neutral900, 0.55) }]}>
+          <View
+            style={[styles.voileCentre, { backgroundColor: withAlpha(Colors.neutral900, 0.55) }]}
+          >
             <View
-              style={[styles.boite, { backgroundColor: Colors.chatSheet, borderColor: withAlpha(Colors.neutral00, 0.08) }]}
+              style={[
+                styles.boite,
+                {
+                  backgroundColor: Colors.chatSheet,
+                  borderColor: withAlpha(Colors.neutral00, 0.08),
+                },
+              ]}
               testID="infos-du-groupe-confirmation"
             >
               <Text style={[styles.boiteTitre, { color: Colors.neutral00 }]}>
@@ -435,7 +520,11 @@ function InfosDuGroupe({
                 <TouchableOpacity
                   accessibilityRole="button"
                   onPress={() => setARetirer(null)}
-                  style={[styles.bouton, styles.boutonBoite, { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 }]}
+                  style={[
+                    styles.bouton,
+                    styles.boutonBoite,
+                    { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 },
+                  ]}
                 >
                   <Text style={[styles.boutonTexte, { color: Colors.neutral00 }]}>
                     {t('common.cancel', 'Annuler')}
@@ -443,7 +532,11 @@ function InfosDuGroupe({
                 </TouchableOpacity>
                 <TouchableOpacity
                   accessibilityRole="button"
-                  onPress={() => { const membre = aRetirer; setARetirer(null); onRetirer(membre); }}
+                  onPress={() => {
+                    const membre = aRetirer;
+                    setARetirer(null);
+                    onRetirer(membre);
+                  }}
                   style={[
                     styles.bouton,
                     styles.boutonBoite,

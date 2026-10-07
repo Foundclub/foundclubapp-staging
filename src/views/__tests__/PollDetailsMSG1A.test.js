@@ -14,16 +14,37 @@ let mockMessages = [];
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
-    bottom: 34, left: 0, right: 0, top: 47,
+    bottom: 34,
+    left: 0,
+    right: 0,
+    top: 47,
   }),
 }));
 
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, Circle: VueRN, default: VueRN, Line: VueRN, Path: VueRN, Polyline: VueRN, Rect: VueRN, Svg: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
+
+// SONDAGE-NOMS — le crochet qui lit les noms au serveur est double : ce temoin ne parle qu'a
+// la bulle ; les profils rendus par le serveur se reglent par `mockProfils`.
+const mockProfils = new Map();
+jest.mock('@/domains/messaging/usePollVoterProfiles', () => ({
+  __esModule: true,
+  default: () => mockProfils,
+  nameOfPollVoter: (/** @type {any} */ profil) => (
+    `${String(profil?.firstname || '').trim()} ${String(profil?.lastname || '').trim()}`.trim()
+  ),
+}));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -32,8 +53,12 @@ jest.mock('react-i18next', () => ({
       if (repli && typeof repli === 'object') {
         const forme = repli.count === 1 ? repli.defaultValue_one : repli.defaultValue_other;
         const texte = forme || repli.defaultValue || cle;
-        return texte.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (
-          repli[nom] !== undefined ? String(repli[nom]) : m));
+        return texte.replace(
+          /\{\{(\w+)\}\}/g,
+          (/** @type {string} */ m, /** @type {string} */ nom) => (
+            repli[nom] !== undefined ? String(repli[nom]) : m
+          ),
+        );
       }
       return cle;
     },
@@ -75,7 +100,11 @@ jest.mock('@/theme/themeContext', () => {
   return {
     __esModule: true,
     default: () => ({
-      Alignments, Colors, Fonts: generateFonts(Colors), Images: new Proxy({}, { get: () => 1 }), Spaces,
+      Alignments,
+      Colors,
+      Fonts: generateFonts(Colors),
+      Images: new Proxy({}, { get: () => 1 }),
+      Spaces,
     }),
   };
 });
@@ -96,6 +125,7 @@ const sondage = (extra = {}) => ({
 });
 
 /**
+ * Aide du temoin : `monter`.
  * @returns {any} L'arbre rendu.
  */
 const monter = () => {
@@ -114,7 +144,8 @@ const monter = () => {
   return arbre;
 };
 
-const textes = (arbre) => arbre.root.findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
+const textes = (arbre) => arbre.root.findAllByType(Text)
+  .map((n) => [].concat(n.props.children).join(''));
 
 describe('MSG1A — PollDetails (telephone)', () => {
   test('D1 — la question, les options et les NOMS des votants', () => {

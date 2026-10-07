@@ -22,7 +22,8 @@ import { buildExternalMapLinks, listExternalMapApps } from '@/platform/maps/exte
  * fiche de l'evenement. Le pack les montre toutes les trois parce qu'un navigateur ne
  * sait pas ce qui est installe.
  * @param {object} props
- * @param {{ label: string, latitude?: any, longitude?: any } | null} props.adresse - `null` : fermee.
+ * @param {{ label: string, latitude?: any, longitude?: any } | null} props.adresse - L'adresse
+ *   touchee ; `null` : feuille fermee.
  * @param {() => void} props.onClose
  * @param {(texte: string) => void} props.onCopy - Copie (et dit « Adresse copiee »).
  * @returns {import('react').ReactElement}
@@ -39,9 +40,15 @@ function FeuilleDAdresse({ adresse, onClose, onCopy }) {
     const cible = adresse ? buildExternalMapLinks(adresse) : null;
     if (!cible) return undefined;
     listExternalMapApps(cible)
-      .then((trouvees) => { if (vivante) setApplis(trouvees); })
-      .catch(() => { if (vivante) setApplis([{ key: 'google', url: cible.google }]); });
-    return () => { vivante = false; };
+      .then((trouvees) => {
+        if (vivante) setApplis(trouvees);
+      })
+      .catch(() => {
+        if (vivante) setApplis([{ key: 'google', url: cible.google }]);
+      });
+    return () => {
+      vivante = false;
+    };
   }, [adresse]);
 
   const ouvrir = (/** @type {string} */ url) => {
@@ -120,7 +127,10 @@ function FeuilleDAdresse({ adresse, onClose, onCopy }) {
           {ligne(
             'fileCopy',
             t('conversation.address.copy', 'Copier l’adresse'),
-            () => { onCopy(adresse?.label || ''); onClose(); },
+            () => {
+              onCopy(adresse?.label || '');
+              onClose();
+            },
             'feuille-adresse-copier',
           )}
         </Pressable>

@@ -42,7 +42,10 @@ jest.mock('react-native-gifted-chat', () => {
     // MSG1A — la bulle de texte rend le `MessageText` de GiftedChat dans son propre cadre,
     // et la puce de date son `Day`.
     Day: VueRN,
-    GiftedChat: (/** @type {any} */ props) => { mockGiftedRenders.push(props); return null; },
+    GiftedChat: (/** @type {any} */ props) => {
+      mockGiftedRenders.push(props);
+      return null;
+    },
     InputToolbar: VueRN,
     MessageText: VueRN,
     Time: VueRN,
@@ -50,11 +53,15 @@ jest.mock('react-native-gifted-chat', () => {
 });
 
 jest.mock('react-native-image-picker', () => ({
-  launchCamera: jest.fn(), launchImageLibrary: jest.fn(),
+  launchCamera: jest.fn(),
+  launchImageLibrary: jest.fn(),
 }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
-    bottom: 34, left: 0, right: 0, top: 47,
+    bottom: 34,
+    left: 0,
+    right: 0,
+    top: 47,
   }),
 }));
 jest.mock('react-native-svg', () => {
@@ -73,7 +80,9 @@ jest.mock('react-native-svg', () => {
 
 jest.mock(
   '@/components/atoms/skeletonLoader/SkeletonLoader',
-  () => function SkeletonLoaderMock() { return null; },
+  () => function SkeletonLoaderMock() {
+    return null;
+  },
 );
 
 // `.env` est gitignore, donc absent de toute copie de travail : sans ces
@@ -81,7 +90,10 @@ jest.mock(
 jest.mock('@/services/client', () => ({
   __esModule: true,
   default: {
-    delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn(),
+    delete: jest.fn(),
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
   },
 }));
 
@@ -109,8 +121,12 @@ jest.mock('@/theme/strings', () => ({
   default: {
     t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => (
       typeof repli === 'string'
-        ? repli.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (
-          valeurs && valeurs[nom] !== undefined ? String(valeurs[nom]) : m))
+        ? repli.replace(
+          /\{\{(\w+)\}\}/g,
+          (/** @type {string} */ m, /** @type {string} */ nom) => (
+            valeurs && valeurs[nom] !== undefined ? String(valeurs[nom]) : m
+          ),
+        )
         : cle
     ),
   },
@@ -140,7 +156,9 @@ jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
   createEventParticipation: jest.fn(),
 }));
 jest.mock('@/services/league/leagueMatchService', () => ({
-  cancelMatch: jest.fn(), createLeagueProposal: jest.fn(), respondToLeagueProposal: jest.fn(),
+  cancelMatch: jest.fn(),
+  createLeagueProposal: jest.fn(),
+  respondToLeagueProposal: jest.fn(),
 }));
 jest.mock('@/services/messageReport/messageReportService', () => ({
   createMessageReport: jest.fn(),
@@ -212,9 +230,10 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('@/components/atoms/button/Button', () => () => null);
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
-  (/** @type {any} */ { children }) => children
-));
+jest.mock(
+  '@/components/molecules/bottomModal/BottomModal',
+  () => (/** @type {any} */ { children }) => children,
+);
 jest.mock('@/components/molecules/eventMessageBubble/EventMessageBubble', () => () => null);
 jest.mock('@/components/atoms/errorWrapper/ErrorWrapper', () => () => null);
 jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => () => null);
@@ -245,7 +264,7 @@ const aDemonter = [];
 
 const PAGE_VIDE = { data: [], meta: { pagination: { page: 1, pageCount: 1, total: 0 } } };
 
-const LECTURE_SEULE = 'Canal d\'annonce (lecture seule)';
+const LECTURE_SEULE = "Canal d'annonce (lecture seule)";
 
 const FIL_DE_GROUPE = {
   documentId: 'chat-1',
@@ -284,23 +303,27 @@ const monterLaConversation = () => {
   /** @type {any} */
   let ecran = null;
   act(() => {
-    ecran = renderer.create(createElement(
-      QueryClientProvider,
-      { client: clientRequetes },
-      createElement(Conversation, {
-        navigation: {
-          addListener: () => () => {},
-          goBack: jest.fn(),
-          navigate: jest.fn(),
-          setOptions: jest.fn(),
-        },
-        route: { params: { chatId: 'chat-1' } },
-      }),
-    ));
+    ecran = renderer.create(
+      createElement(
+        QueryClientProvider,
+        { client: clientRequetes },
+        createElement(Conversation, {
+          navigation: {
+            addListener: () => () => {},
+            goBack: jest.fn(),
+            navigate: jest.fn(),
+            setOptions: jest.fn(),
+          },
+          route: { params: { chatId: 'chat-1' } },
+        }),
+      ),
+    );
   });
 
   aDemonter.push(() => {
-    act(() => { ecran.unmount(); });
+    act(() => {
+      ecran.unmount();
+    });
     clientRequetes.clear();
   });
 
@@ -370,7 +393,10 @@ const GROUPE_NOMME = {
 
 const TETE_A_TETE = {
   documentId: 'chat-1',
-  participants: [{ documentId: 'moi', firstname: 'Adel' }, { documentId: 'karim', firstname: 'Karim' }],
+  participants: [
+    { documentId: 'moi', firstname: 'Adel' },
+    { documentId: 'karim', firstname: 'Karim' },
+  ],
   type: 'whisper',
 };
 
@@ -400,8 +426,14 @@ const msg = (id, auteur, quand, extra = {}) => ({
 const rendreLaBulle = (gifted, props) => {
   /** @type {any} */
   let arbre;
-  act(() => { arbre = renderer.create(gifted.renderBubble(props)); });
-  aDemonter.push(() => { act(() => { arbre.unmount(); }); });
+  act(() => {
+    arbre = renderer.create(gifted.renderBubble(props));
+  });
+  aDemonter.push(() => {
+    act(() => {
+      arbre.unmount();
+    });
+  });
   return arbre;
 };
 
@@ -428,8 +460,14 @@ describe('MSG1A — §3.1 habillage du fil', () => {
     const a1 = msg('a1', 'karim', '2026-10-07T10:00:00');
     const a2 = msg('a2', 'karim', '2026-10-07T10:01:00');
 
-    const premiere = rendreLaBulle(gifted, { currentMessage: a1, nextMessage: a2, position: 'left' });
-    const derniere = rendreLaBulle(gifted, { currentMessage: a2, position: 'left', previousMessage: a1 });
+    const premiere = rendreLaBulle(gifted, {
+      currentMessage: a1, nextMessage: a2, position: 'left',
+    });
+    const derniere = rendreLaBulle(gifted, {
+      currentMessage: a2,
+      position: 'left',
+      previousMessage: a1,
+    });
 
     const cadre1 = premiere.root.findByType(BulleDuFil).props;
     const cadre2 = derniere.root.findByType(BulleDuFil).props;
@@ -442,7 +480,8 @@ describe('MSG1A — §3.1 habillage du fil', () => {
   test('H2 — le texte garde le moteur de liens de GiftedChat, avec la place de l heure', () => {
     const { gifted } = monterLaConversation();
     const arbre = rendreLaBulle(gifted, {
-      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'), position: 'left',
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'),
+      position: 'left',
     });
 
     const texte = arbre.root.findAll((n) => n.props?.currentMessage && n.props?.textStyle)[0];
@@ -452,7 +491,8 @@ describe('MSG1A — §3.1 habillage du fil', () => {
   test('H3 — heure et coches DANS la bulle ; mon message en cours d envoi le dit', () => {
     const { gifted } = monterLaConversation();
     const arbre = rendreLaBulle(gifted, {
-      currentMessage: msg('m1', 'moi', '2026-10-07T10:02:00', { pending: true }), position: 'right',
+      currentMessage: msg('m1', 'moi', '2026-10-07T10:02:00', { pending: true }),
+      position: 'right',
     });
 
     const meta = arbre.root.findByType(MetaDuMessage).props;
@@ -465,26 +505,32 @@ describe('MSG1A — §3.1 habillage du fil', () => {
     mockChatData = TETE_A_TETE;
     const { gifted } = monterLaConversation();
     const arbre = rendreLaBulle(gifted, {
-      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'), position: 'left',
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'),
+      position: 'left',
     });
 
     expect(arbre.root.findByType(BulleDuFil).props.nom).toBe('');
     expect(gifted.renderAvatar).toBeNull();
   });
 
-  test('H5 — groupe : avatar de 28, puces de date, notices, « revenir en bas » au-dela de 160', () => {
-    const { gifted } = monterLaConversation();
+  test(
+    'H5 — groupe : avatar de 28, puces de date, notices, « revenir en bas » au-dela de 160',
+    () => {
+      const { gifted } = monterLaConversation();
 
-    expect(typeof gifted.renderAvatar).toBe('function');
-    expect(typeof gifted.renderDay).toBe('function');
-    expect(gifted.isScrollToBottomEnabled).toBe(true);
-    expect(gifted.scrollToBottomOffset).toBe(160);
-    expect(gifted.imageStyle.left).toEqual(expect.objectContaining({ height: 28, width: 28 }));
-  });
+      expect(typeof gifted.renderAvatar).toBe('function');
+      expect(typeof gifted.renderDay).toBe('function');
+      expect(gifted.isScrollToBottomEnabled).toBe(true);
+      expect(gifted.scrollToBottomOffset).toBe(160);
+      expect(gifted.imageStyle.left).toEqual(expect.objectContaining({ height: 28, width: 28 }));
+    },
+  );
 
   test('H6 — une ligne sans auteur devient une notice discrete', () => {
     const { gifted } = monterLaConversation();
-    const notice = gifted.renderSystemMessage({ currentMessage: { text: 'Karim a rejoint le canal' } });
+    const notice = gifted.renderSystemMessage({
+      currentMessage: { text: 'Karim a rejoint le canal' },
+    });
 
     expect(contientLeTexte(notice, 'Karim a rejoint le canal')).toBe(true);
     expect(gifted.renderSystemMessage({ currentMessage: { text: '  ' } })).toBeNull();
@@ -518,12 +564,15 @@ describe('MSG1A — §3.2 appui long', () => {
     }
   });
 
-  test('L1 — dans un canal d annonce (on ne peut pas ecrire), le menu ne propose pas « Repondre »', () => {
-    mockChatData = FIL_DE_CLUB;
-    const { ecran } = monterLaConversation();
+  test(
+    'L1 — dans un canal d annonce (on ne peut pas ecrire), le menu ne propose pas « Repondre »',
+    () => {
+      mockChatData = FIL_DE_CLUB;
+      const { ecran } = monterLaConversation();
 
-    expect(ecran.root.findByType(MessageReactionOverlay).props.canReply).toBe(false);
-  });
+      expect(ecran.root.findByType(MessageReactionOverlay).props.canReply).toBe(false);
+    },
+  );
 
   test('L2 — dans un groupe, « Repondre » reste propose', () => {
     mockChatData = GROUPE_NOMME;
@@ -537,7 +586,9 @@ describe('MSG1A — §3.3 glisser pour repondre', () => {
   /* eslint-disable global-require */
   const BarreDeReponse = require('@/components/molecules/bulleDuFil/BarreDeReponse').default;
   const BulleDuFil = require('@/components/molecules/bulleDuFil/BulleDuFil').default;
-  const CitationDansLaBulle = require('@/components/molecules/bulleDuFil/CitationDansLaBulle').default;
+  const CitationDansLaBulle = require(
+    '@/components/molecules/bulleDuFil/CitationDansLaBulle',
+  ).default;
   const { View: VueRN } = require('react-native');
   /* eslint-enable global-require */
 
@@ -556,7 +607,11 @@ describe('MSG1A — §3.3 glisser pour repondre', () => {
   test('R1 — la citation est DANS la bulle : nom de l auteur cite et extrait', () => {
     const { gifted } = monterLaConversation();
     const reponse = msg('r1', 'karim', '2026-10-07T10:05:00', {
-      replyTo: { documentId: 'm0', message: 'Quelqu un peut me deposer ?', sender: { documentId: 'moi', firstname: 'Adel' } },
+      replyTo: {
+        documentId: 'm0',
+        message: 'Quelqu un peut me deposer ?',
+        sender: { documentId: 'moi', firstname: 'Adel' },
+      },
     });
 
     const arbre = rendreLaBulle(gifted, { currentMessage: reponse, position: 'left' });
@@ -573,15 +628,23 @@ describe('MSG1A — §3.3 glisser pour repondre', () => {
 
     // La doublure de Swipeable est une View : on declenche son ouverture a la main.
     const glisser = arbre.root.findAll((n) => typeof n.props?.onSwipeableOpen === 'function')[0];
-    act(() => { glisser.props.onSwipeableOpen(); });
+    act(() => {
+      glisser.props.onSwipeableOpen();
+    });
 
     const giftedApres = mockGiftedRenders[mockGiftedRenders.length - 1];
     /** @type {any} */
     let barre;
-    act(() => { barre = renderer.create(giftedApres.renderInputToolbar({ text: '' })); });
-    aDemonter.push(() => { act(() => { barre.unmount(); }); });
+    act(() => {
+      barre = renderer.create(giftedApres.renderInputToolbar({ text: '' }));
+    });
+    aDemonter.push(() => {
+      act(() => {
+        barre.unmount();
+      });
+    });
 
-    const props = barre.root.findByType(BarreDeReponse).props;
+    const { props } = barre.root.findByType(BarreDeReponse);
     expect(props.nom).toBe('Karim Benali');
     expect(props.texte).toBe('Texte a1');
     expect(VueRN).toBeDefined();
@@ -591,18 +654,22 @@ describe('MSG1A — §3.3 glisser pour repondre', () => {
     mockChatData = FIL_DE_CLUB;
     const club = monterLaConversation();
     const bulleClub = rendreLaBulle(club.gifted, {
-      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'), position: 'left',
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'),
+      position: 'left',
     });
-    const enabledClub = bulleClub.root.findAll((n) => typeof n.props?.onSwipeableOpen === 'function')[0]
-      .props.enabled;
+    const enabledClub = bulleClub.root.findAll(
+      (n) => typeof n.props?.onSwipeableOpen === 'function',
+    )[0].props.enabled;
 
     mockChatData = GROUPE_NOMME;
     const groupe = monterLaConversation();
     const bulleGroupe = rendreLaBulle(groupe.gifted, {
-      currentMessage: msg('a2', 'karim', '2026-10-07T10:00:00'), position: 'left',
+      currentMessage: msg('a2', 'karim', '2026-10-07T10:00:00'),
+      position: 'left',
     });
-    const enabledGroupe = bulleGroupe.root.findAll((n) => typeof n.props?.onSwipeableOpen === 'function')[0]
-      .props.enabled;
+    const enabledGroupe = bulleGroupe.root.findAll(
+      (n) => typeof n.props?.onSwipeableOpen === 'function',
+    )[0].props.enabled;
 
     expect(enabledClub).toBe(false);
     expect(enabledGroupe).toBe(true);
@@ -611,7 +678,9 @@ describe('MSG1A — §3.3 glisser pour repondre', () => {
 
 describe('MSG1A — §3.5 feuille « Ajouter »', () => {
   // eslint-disable-next-line global-require
-  const ChatAttachmentSheet = require('@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet');
+  const ChatAttachmentSheet = require(
+    '@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet',
+  );
 
   beforeEach(() => {
     mockGiftedRenders.length = 0;
@@ -629,8 +698,15 @@ describe('MSG1A — §3.5 feuille « Ajouter »', () => {
     const { ecran } = monterLaConversation();
     const feuille = ecran.root.findByType(ChatAttachmentSheet.default || ChatAttachmentSheet);
 
-    expect(feuille.props.actions.map((action) => action.key))
-      .toEqual(['photos', 'camera', 'document', 'poll', 'event', 'location', 'contact']);
+    expect(feuille.props.actions.map((action) => action.key)).toEqual([
+      'photos',
+      'camera',
+      'document',
+      'poll',
+      'event',
+      'location',
+      'contact',
+    ]);
   });
 });
 
@@ -653,7 +729,9 @@ describe('MSG1A — §3.18 adresses cliquables', () => {
   test('AD1 — une adresse ecrite dans un texte est un lien qui ouvre la feuille d adresse', () => {
     const { ecran, gifted } = monterLaConversation();
     const arbre = rendreLaBulle(gifted, {
-      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00', { text: 'RDV 12 rue Pasteur a 18h' }),
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00', {
+        text: 'RDV 12 rue Pasteur a 18h',
+      }),
       position: 'left',
     });
     const texte = arbre.root.findAll((n) => n.props?.currentMessage && n.props?.textStyle)[0];
@@ -662,8 +740,11 @@ describe('MSG1A — §3.18 adresses cliquables', () => {
     expect('RDV 12 rue Pasteur a 18h'.match(motif.pattern)).toEqual(['12 rue Pasteur']);
     expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toBeNull();
 
-    act(() => { motif.onPress('12 rue Pasteur'); });
-    expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toEqual({ label: '12 rue Pasteur' });
+    act(() => {
+      motif.onPress('12 rue Pasteur');
+    });
+    expect(ecran.root.findByType(FeuilleDAdresse).props.adresse)
+      .toEqual({ label: '12 rue Pasteur' });
   });
 });
 
@@ -683,18 +764,29 @@ describe('MSG1A — §3.11 canal d annonce en lecture seule', () => {
     }
   });
 
-  test('LS1 — la saisie est remplacee par une barre opaque avec un cadenas et le libelle existant', () => {
-    const { gifted } = monterLaConversation();
-    /** @type {any} */
-    let barre;
-    act(() => { barre = renderer.create(gifted.renderInputToolbar({ text: '' })); });
-    aDemonter.push(() => { act(() => { barre.unmount(); }); });
+  test(
+    'LS1 — la saisie est remplacee par une barre opaque avec un cadenas et le libelle existant',
+    () => {
+      const { gifted } = monterLaConversation();
+      /** @type {any} */
+      let barre;
+      act(() => {
+        barre = renderer.create(gifted.renderInputToolbar({ text: '' }));
+      });
+      aDemonter.push(() => {
+        act(() => {
+          barre.unmount();
+        });
+      });
 
-    const conteneur = barre.root.findAll((n) => n.props?.testID === 'conversation-lecture-seule')[0];
-    expect(conteneur).toBeDefined();
-    expect(conteneur.findByType(GlyphIcon).props.name).toBe('lock');
-    expect(contientLeTexte(gifted.renderInputToolbar({ text: '' }), LECTURE_SEULE)).toBe(true);
-  });
+      const conteneur = barre.root.findAll(
+        (n) => n.props?.testID === 'conversation-lecture-seule',
+      )[0];
+      expect(conteneur).toBeDefined();
+      expect(conteneur.findByType(GlyphIcon).props.name).toBe('lock');
+      expect(contientLeTexte(gifted.renderInputToolbar({ text: '' }), LECTURE_SEULE)).toBe(true);
+    },
+  );
 });
 
 describe('MSG1A — §3.16 infos du groupe et menu ⋮', () => {
@@ -719,9 +811,13 @@ describe('MSG1A — §3.16 infos du groupe et menu ⋮', () => {
     const { ecran } = monterLaConversation();
     expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(false);
 
-    const titre = ecran.root.findAll((n) => n.props?.accessibilityHint === 'Ouvre les infos du groupe'
-      && typeof n.props?.onPress === 'function')[0];
-    act(() => { titre.props.onPress(); });
+    const titre = ecran.root.findAll(
+      (n) => n.props?.accessibilityHint === 'Ouvre les infos du groupe'
+        && typeof n.props?.onPress === 'function',
+    )[0];
+    act(() => {
+      titre.props.onPress();
+    });
     expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(true);
   });
 
@@ -779,28 +875,37 @@ describe('MSG1A — `genre A`, notices de groupe, `quitter maintenant`', () => {
     expect(bulleLea.root.findByType(BulleDuFil).props.role).toBe('');
   });
 
-  test('NS1 — une notice de groupe (`systemNotice`) devient une ligne systeme, pas une bulle', () => {
-    mockMessagesPage = {
-      data: [{
-        createdAt: '2026-10-07T10:00:00.000Z',
-        documentId: 'n1',
-        message: 'Adel a renommé le groupe en « Les U13 bis ».',
-        sender: null,
-        systemNotice: { kind: 'group_renamed', version: 1 },
-      }],
-      meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
-    };
-    const { gifted } = monterLaConversation();
-    const notice = gifted.messages.find((m) => m._id === 'n1');
-    expect(notice.system).toBe(true);
-    expect(notice.text).toBe('Adel a renommé le groupe en « Les U13 bis ».');
-  });
+  test(
+    'NS1 — une notice de groupe (`systemNotice`) devient une ligne systeme, pas une bulle',
+    () => {
+      mockMessagesPage = {
+        data: [
+          {
+            createdAt: '2026-10-07T10:00:00.000Z',
+            documentId: 'n1',
+            message: 'Adel a renommé le groupe en « Les U13 bis ».',
+            sender: null,
+            systemNotice: { kind: 'group_renamed', version: 1 },
+          },
+        ],
+        meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+      };
+      const { gifted } = monterLaConversation();
+      const notice = gifted.messages.find((m) => m.documentId === 'n1');
+      expect(notice.system).toBe(true);
+      expect(notice.text).toBe('Adel a renommé le groupe en « Les U13 bis ».');
+    },
+  );
 
-  test('QG1 — « Quitter le groupe » appelle la fonction de service isolee, puis revient a la liste', async () => {
-    const { ecran } = monterLaConversation();
-    const infos = ecran.root.findByType(InfosDuGroupe);
-    await act(async () => { await infos.props.onQuitter(); });
-    expect(mockLeaveGroupChat).toHaveBeenCalledWith('chat-1');
-  });
+  test(
+    'QG1 — « Quitter le groupe » appelle la fonction de service isolee, puis revient a la liste',
+    async () => {
+      const { ecran } = monterLaConversation();
+      const infos = ecran.root.findByType(InfosDuGroupe);
+      await act(async () => {
+        await infos.props.onQuitter();
+      });
+      expect(mockLeaveGroupChat).toHaveBeenCalledWith('chat-1');
+    },
+  );
 });
-
