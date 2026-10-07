@@ -87,6 +87,36 @@ export const getTeamIdOfChat = (chat) => {
 };
 
 /**
+ * 🔒 « convoquer entraineurs » (Adel, 07/10) — QUI PEUT CREER OU MODIFIER LA CONVOCATION D'UNE
+ * EQUIPE : son entraineur (`trainedTeams`) ou le super-admin. C'est la regle du serveur
+ * (`is-event-trainer` + `ensureCanManageTeam`), recopiee sans rien y ajouter.
+ * @param {object} input
+ * @param {string} input.teamId
+ * @param {any} input.user L'utilisateur connecte.
+ * @returns {boolean}
+ */
+export const canManageTeamConvocation = ({ teamId, user }) => {
+  const id = toId(teamId);
+  if (!id || !user) return false;
+  if (getUserRoleKey(user?.role?.type || user?.role?.name) === 'superAdmin') return true;
+  return asArray(user?.trainedTeams).some((team) => toId(team?.documentId || team?.id) === id);
+};
+
+/**
+ * L'etape ou s'ouvre la modification : « Modifier » (et l'appui long) mene aux Joueurs ; toucher
+ * le terrain mene au Placement. La carte peut le dire par `'placement'`, `{ step: 'placement' }`
+ * ou `{ startStep: 3 }`.
+ * @param {any} [target]
+ * @returns {2 | 3}
+ */
+export const getEditStartStep = (target) => {
+  if (target === 'placement' || target?.step === 'placement' || Number(target?.startStep) === 3) {
+    return 3;
+  }
+  return 2;
+};
+
+/**
  * 🔒 « convoquer entraineurs » (Adel, 07/10) — QUI VOIT L'ENTREE « CONVOCATION ».
  *
  * La regle est celle du serveur, recopiee sans rien y ajouter : `is-event-trainer` laisse passer
@@ -98,12 +128,9 @@ export const getTeamIdOfChat = (chat) => {
  * @param {any} input.user L'utilisateur connecte (`userData`).
  * @returns {boolean}
  */
-export const canConvokeFromChat = ({ chat, user }) => {
-  const teamId = getTeamIdOfChat(chat);
-  if (!teamId || !user) return false;
-  if (getUserRoleKey(user?.role?.type || user?.role?.name) === 'superAdmin') return true;
-  return asArray(user?.trainedTeams).some((team) => toId(team?.documentId || team?.id) === teamId);
-};
+export const canConvokeFromChat = ({ chat, user }) => canManageTeamConvocation({
+  teamId: getTeamIdOfChat(chat), user,
+});
 
 /**
  * L'evenement concerne-t-il cette equipe (organisatrice OU invitee) ?

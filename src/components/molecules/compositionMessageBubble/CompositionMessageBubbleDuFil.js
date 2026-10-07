@@ -19,10 +19,13 @@ import CompositionMessageBubble from './CompositionMessageBubble';
  * @param {any} props.composition - La charge de la carte.
  * @param {any} [props.currentEvent] - FINITIONS16 (8) : le match joint au message, du jour.
  * @param {boolean} [props.isMe] - Message de l'utilisateur courant.
+ * @param {(target?: any) => void} [props.onEdit] - MESSAGERIE-1C : « Modifier » pour qui peut
+ *   convoquer ; transmis tel quel a la carte.
+ * @param {() => any} [props.renderReponses] - MESSAGERIE-1C : le bloc « Reponses » sous la carte.
  * @returns {import('react').ReactElement | null} La carte.
  */
 function CompositionMessageBubbleDuFil({
-  chatId, composition, currentEvent = null, isMe = false,
+  chatId, composition, currentEvent = null, isMe = false, onEdit, renderReponses,
 }) {
   const { data: fil } = useGetChatById(chatId, { enabled: false });
   return (
@@ -31,6 +34,9 @@ function CompositionMessageBubbleDuFil({
       currentEvent={currentEvent}
       currentPeople={/** @type {any} */ (fil)?.participants}
       isMe={isMe}
+      // @ts-ignore — props posees par MESSAGERIE-1A sur la carte ; la recolte les assemble.
+      onEdit={onEdit}
+      renderReponses={renderReponses}
     />
   );
 }

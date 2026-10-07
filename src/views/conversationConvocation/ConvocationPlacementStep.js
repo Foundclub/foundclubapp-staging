@@ -49,8 +49,8 @@ const firstNameOf = (player) => sanitizeCompositionText(player?.firstname)
  * MESSAGERIE-1C — ETAPE 3 « PLACEMENT » (pack messagerie §3.12, §5).
  *
  * Le terrain debout du sport (`RenderedTacticalField`, le meme que partout), une pastille par
- * titulaire (sa photo, ses initiales a defaut), GLISSEE librement (bornee de 5 a 95 %), et les remplacants en puces
- * ambrees dessous.
+ * titulaire (sa photo, ses initiales a defaut), GLISSEE librement (bornee de 5 a 95 %), et les
+ * remplacants en puces ambrees dessous.
  *
  * ♿ Deplacer SANS glisser (prompt 1C) : toucher une pastille la choisit, toucher ensuite le
  * terrain l'y pose ; au lecteur d'ecran, chaque pastille porte les actions « Avancer »,

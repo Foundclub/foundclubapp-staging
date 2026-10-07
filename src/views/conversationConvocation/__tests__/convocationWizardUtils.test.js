@@ -8,10 +8,12 @@ import {
   buildPitchPlacements,
   buildSelectionFromPack,
   canConvokeFromChat,
+  canManageTeamConvocation,
   clampPitchPercent,
   filterTeamEvents,
   findLastPublishedManualPlayers,
   findPlacementAt,
+  getEditStartStep,
   isConvocableEvent,
   isLatestLineupComposition,
   nudgePlacement,
@@ -406,5 +408,21 @@ describe('MESSAGERIE-1C · le reste', () => {
     expect(buildEventSummary({
       eventAddress: '12 rue du Stade', eventDisplayName: 'Entraînement', typeName: 'Entraînement',
     })).toMatchObject({ place: '12 rue du Stade', title: 'Entraînement', typeKey: 'training' });
+  });
+});
+
+describe('MESSAGERIE-1C · modifier depuis la carte', () => {
+  test('l etape d ouverture : Joueurs par defaut, Placement quand on touche le terrain', () => {
+    expect(getEditStartStep()).toBe(2);
+    expect(getEditStartStep('placement')).toBe(3);
+    expect(getEditStartStep({ step: 'placement' })).toBe(3);
+    expect(getEditStartStep({ startStep: 3 })).toBe(3);
+  });
+
+  test('qui peut modifier : l entraineur de l equipe de la carte, ou le super-admin', () => {
+    const coach = { role: { name: 'Entraineur' }, trainedTeams: [{ documentId: TEAM }] };
+    expect(canManageTeamConvocation({ teamId: TEAM, user: coach })).toBe(true);
+    expect(canManageTeamConvocation({ teamId: 'autre', user: coach })).toBe(false);
+    expect(canManageTeamConvocation({ teamId: TEAM, user: null })).toBe(false);
   });
 });
