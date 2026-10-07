@@ -16,7 +16,8 @@ import NotificationBadge from '../NotificationBadge';
 // Chaine VRAIE de bout en bout : la cloche, le vrai hook (react-query), le vrai panneau. Seul le
 // service reseau est double — il echoue comme le serveur de la recette, puis repond.
 
-// Le premier test paie le chargement du vrai panneau et du vrai hook : 5 s ne suffisent pas a froid.
+// Le premier test paie le chargement du vrai panneau et du vrai hook :
+// 5 s ne suffisent pas a froid.
 jest.setTimeout(30000);
 
 const mockReseau = {
@@ -34,7 +35,9 @@ jest.mock('@/services/notification/notificationService', () => ({
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
   }),
 }));
 
@@ -52,7 +55,10 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/navigation/navigationService', () => ({ navigate: jest.fn() }));
 
 jest.mock('@/domains/auth/useAuth', () => {
-  const sessionFigee = Object.freeze({ isBootstrapResolved: true, userData: { documentId: 'mairie' } });
+  const sessionFigee = Object.freeze({
+    isBootstrapResolved: true,
+    userData: { documentId: 'mairie' },
+  });
   return { __esModule: true, default: () => sessionFigee };
 });
 
@@ -75,7 +81,10 @@ jest.mock('@/utils/webRuntime', () => ({
 }));
 
 const ERREUR_400 = Object.assign(new Error('Request failed with status code 400'), {
-  response: { data: { error: { message: 'Invalid key user', name: 'ValidationError' } }, status: 400 },
+  response: {
+    data: { error: { message: 'Invalid key user', name: 'ValidationError' } },
+    status: 400,
+  },
 });
 
 const page = (/** @type {number} */ nombre) => ({
@@ -88,18 +97,26 @@ const page = (/** @type {number} */ nombre) => ({
     title: `Nouvelle demande ${i + 1}`,
     type: 'overbookingRequest',
   })),
-  meta: { pagination: { page: 1, pageCount: 1, pageSize: 20, total: nombre } },
+  meta: {
+    pagination: {
+      page: 1, pageCount: 1, pageSize: 20, total: nombre,
+    },
+  },
 });
 
 /** @type {renderer.ReactTestRenderer[]} */
 const arbresMontes = [];
 
 const monter = () => {
-  const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity, retry: false } },
+  });
   /** @type {renderer.ReactTestRenderer | undefined} */
   let arbre;
   act(() => {
-    arbre = renderer.create(createElement(QueryClientProvider, { client }, createElement(NotificationBadge)));
+    arbre = renderer.create(
+      createElement(QueryClientProvider, { client }, createElement(NotificationBadge)),
+    );
   });
   const monte = /** @type {renderer.ReactTestRenderer} */ (arbre);
   arbresMontes.push(monte);
@@ -112,11 +129,19 @@ const textes = (/** @type {renderer.ReactTestRenderer} */ arbre) => arbre.root
   .filter((valeur) => valeur !== null && valeur !== undefined && valeur !== false)
   .map(String);
 
-const toucher = async (/** @type {renderer.ReactTestRenderer} */ arbre, /** @type {string} */ libelle) => {
+/**
+ * Appuie sur ce qui porte ce libelle d'accessibilite.
+ * @param {renderer.ReactTestRenderer} arbre
+ * @param {string} libelle
+ * @returns {Promise<void>}
+ */
+const toucher = async (arbre, libelle) => {
   const cible = arbre.root.findAll((noeud) => (
     noeud.props?.accessibilityLabel === libelle && typeof noeud.props?.onPress === 'function'
   ))[0];
-  if (!cible) throw new Error(`rien a toucher pour « ${libelle} » ; textes : ${textes(arbre).join(' | ')}`);
+  if (!cible) {
+    throw new Error(`rien a toucher pour « ${libelle} » ; textes : ${textes(arbre).join(' | ')}`);
+  }
   await act(async () => {
     await cible.props.onPress();
   });
@@ -141,6 +166,7 @@ afterEach(() => {
   arbresMontes.splice(0).forEach((arbre) => act(() => { arbre.unmount(); }));
 });
 
+// eslint-disable-next-line max-len
 test('VILLE-NOTIFS/A1 — la lecture echoue : le panneau dit l erreur et propose « Reessayer », jamais « Aucune notification »', async () => {
   mockReseau.liste.mockRejectedValue(ERREUR_400);
   const arbre = monter();
@@ -155,6 +181,7 @@ test('VILLE-NOTIFS/A1 — la lecture echoue : le panneau dit l erreur et propose
   expect(affiches).not.toContain('Aucune notification');
 });
 
+// eslint-disable-next-line max-len
 test('VILLE-NOTIFS/A2 — « Reessayer » relit la liste, et la liste s affiche quand le serveur repond', async () => {
   mockReseau.liste.mockRejectedValueOnce(ERREUR_400).mockResolvedValue(page(4));
   const arbre = monter();
@@ -172,6 +199,7 @@ test('VILLE-NOTIFS/A2 — « Reessayer » relit la liste, et la liste s affiche 
   expect(affiches).not.toContain('Impossible de charger les notifications.');
 });
 
+// eslint-disable-next-line max-len
 test('VILLE-NOTIFS/A3 — caracterise : une liste vraiment vide dit toujours « Aucune notification »', async () => {
   mockReseau.liste.mockResolvedValue(page(0));
   const arbre = monter();

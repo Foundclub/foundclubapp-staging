@@ -106,6 +106,7 @@ beforeEach(() => {
   mockEtat.refreshNotifications.mockClear();
 });
 
+// eslint-disable-next-line max-len
 test('VILLE-NOTIFS/L1 — lecture en erreur et rien a montrer : l erreur et « Reessayer », jamais « Aucune notification »', () => {
   mockEtat.isError = true;
   const arbre = monter();
@@ -126,6 +127,7 @@ test('VILLE-NOTIFS/L2 — « Reessayer » relance la lecture (liste et cloche)',
   expect(mockEtat.refreshNotifications).toHaveBeenCalledTimes(1);
 });
 
+// eslint-disable-next-line max-len
 test('VILLE-NOTIFS/L3 — caracterise : une liste vraiment vide dit toujours « Aucune notification »', () => {
   const arbre = monter();
   const affiches = textes(arbre);

@@ -55,8 +55,9 @@ function NotificationPopup({
   const shouldShowLoading = Boolean(isLoading) && recentNotifications.length === 0;
   // VILLE-NOTIFS (07/10) — une lecture en echec se dit : elle ne se deguise plus en « Aucune
   // notification » (la cloche disait 4, le panneau rien). Deja des notifications : on les garde.
-  const shouldShowError = !shouldShowLoading && Boolean(isError) && recentNotifications.length === 0;
-  const shouldShowEmpty = !shouldShowLoading && !shouldShowError && recentNotifications.length === 0;
+  const nothingToShow = !shouldShowLoading && recentNotifications.length === 0;
+  const shouldShowError = nothingToShow && Boolean(isError);
+  const shouldShowEmpty = nothingToShow && !shouldShowError;
 
   const popupBackground = Colors?.neutral900 || '#121212';
   const popupBorder = Colors?.primary500 || '#01B3F4';
