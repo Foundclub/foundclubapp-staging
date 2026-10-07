@@ -11,11 +11,19 @@ import renderer, { act } from 'react-test-renderer';
 const mockLeaveGroupChat = jest.fn();
 const mockSetGroupPhoto = jest.fn();
 const mockRemoveGroupPhoto = jest.fn();
+const mockChoisirLaPhoto = jest.fn();
 jest.mock('@/services/chat/chatService', () => ({
   ...jest.requireActual('@/services/chat/chatService'),
   leaveGroupChat: (/** @type {any[]} */ ...args) => mockLeaveGroupChat(...args),
+}));
+jest.mock('@/services/chat/groupPhotoService', () => ({
   removeGroupPhoto: (/** @type {any[]} */ ...args) => mockRemoveGroupPhoto(...args),
   setGroupPhoto: (/** @type {any[]} */ ...args) => mockSetGroupPhoto(...args),
+}));
+jest.mock('@/domains/messaging/photoDuGroupe', () => ({
+  __esModule: true,
+  choisirLaPhotoDuGroupe: (/** @type {any[]} */ ...args) => mockChoisirLaPhoto(...args),
+  default: (/** @type {any[]} */ ...args) => mockChoisirLaPhoto(...args),
 }));
 const mockGetUserRolesByIds = jest.fn();
 jest.mock('@/services/user/userService', () => ({
@@ -359,7 +367,10 @@ beforeEach(() => {
   mockUpdateGroupMeta.mockReset();
   mockUpdateGroupMeta.mockResolvedValue({});
   mockSetGroupPhoto.mockReset();
+  mockSetGroupPhoto.mockResolvedValue({});
   mockRemoveGroupPhoto.mockReset();
+  mockRemoveGroupPhoto.mockResolvedValue({});
+  mockChoisirLaPhoto.mockReset();
 });
 
 describe('MSG1BA — §3.1 le role des membres dans « Infos du groupe »', () => {
@@ -407,5 +418,131 @@ describe('MSG1BA — §3.1 le role des membres dans « Infos du groupe »', () =
     const infos = ecran.root.findByType(InfosDuGroupe);
     expect(infos.props.visible).toBe(true);
     expect(infos.props.roles).toEqual({});
+  });
+});
+
+/**
+ * Cherche un texte dans un ELEMENT React, sans le rendre.
+ * @param {any} noeud L'element (ou une chaine, un tableau).
+ * @param {string} texte Le texte cherche.
+ * @returns {boolean} Vrai s'il y figure.
+ */
+const contientLeTexte = (noeud, texte) => {
+  if (noeud == null || typeof noeud === 'boolean') return false;
+  if (typeof noeud === 'string' || typeof noeud === 'number') return String(noeud) === texte;
+  if (Array.isArray(noeud)) return noeud.some((enfant) => contientLeTexte(enfant, texte));
+  return contientLeTexte(noeud?.props?.children, texte);
+};
+
+const SEULS_LES_ADMINS = 'Seuls les admins peuvent envoyer des messages.';
+const AUTORISATIONS = {
+  membersCanAddMembers: false,
+  membersCanEditName: false,
+  membersCanEditPhoto: false,
+  membersCanSendMessages: true,
+};
+
+describe('MSG1BA — §3.16 « Seuls les admins peuvent envoyer des messages »', () => {
+  test('SA1 — envoi coupe pour les membres : la barre remplace la saisie', () => {
+    mockChatData = {
+      ...GROUPE_NOMME,
+      groupPermissions: { ...AUTORISATIONS, membersCanSendMessages: false },
+    };
+    const { gifted } = monterLaConversation();
+    const barre = gifted.renderInputToolbar({ text: '' });
+    expect(contientLeTexte(barre, SEULS_LES_ADMINS)).toBe(true);
+  });
+
+  test('SA2 — envoi coupe, mais je suis admin : la saisie reste', () => {
+    mockChatData = {
+      ...GROUPE_NOMME,
+      groupAdmins: [{ documentId: 'moi' }],
+      groupPermissions: { ...AUTORISATIONS, membersCanSendMessages: false },
+    };
+    const { gifted } = monterLaConversation();
+    const barre = gifted.renderInputToolbar({ text: '' });
+    expect(contientLeTexte(barre, SEULS_LES_ADMINS)).toBe(false);
+    expect(contientLeTexte(barre, "Canal d'annonce (lecture seule)")).toBe(false);
+  });
+
+  test('SA3 — serveur d avant 1B (pas d autorisations) : tout membre ecrit, comme avant', () => {
+    const { gifted } = monterLaConversation();
+    const barre = gifted.renderInputToolbar({ text: '' });
+    expect(contientLeTexte(barre, SEULS_LES_ADMINS)).toBe(false);
+    expect(contientLeTexte(barre, "Canal d'annonce (lecture seule)")).toBe(false);
+  });
+});
+
+describe('MSG1BA — §3.16 les gestes d « Infos du groupe » partent au serveur', () => {
+  /* eslint-disable global-require */
+  const InfosDuGroupe = require('@/views/chat/InfosDuGroupe').default;
+  /* eslint-enable global-require */
+
+  const MOI_ADMIN = {
+    ...GROUPE_NOMME,
+    groupAdmins: [{ documentId: 'moi' }, { documentId: 'karim' }],
+    groupPermissions: AUTORISATIONS,
+  };
+
+  test('IG1 — les autorisations du serveur arrivent a la page ; sans elles, null', () => {
+    mockChatData = MOI_ADMIN;
+    let { ecran } = monterLaConversation();
+    expect(ecran.root.findByType(InfosDuGroupe).props.autorisations).toEqual(AUTORISATIONS);
+    while (aDemonter.length) /** @type {any} */ (aDemonter.pop())();
+    mockChatData = GROUPE_NOMME;
+    ({ ecran } = monterLaConversation());
+    expect(ecran.root.findByType(InfosDuGroupe).props.autorisations).toBeNull();
+  });
+
+  test('IG2 — un interrupteur : PATCH group-meta { permissions }, la seule clef', async () => {
+    mockChatData = MOI_ADMIN;
+    const { ecran } = monterLaConversation();
+    await act(async () => {
+      await ecran.root.findByType(InfosDuGroupe).props
+        .onChangerAutorisation('membersCanEditName', true);
+    });
+    expect(mockUpdateGroupMeta).toHaveBeenCalledWith({
+      chatId: 'chat-1',
+      data: { permissions: { membersCanEditName: true } },
+    });
+  });
+
+  test('IG3 — « Valider » les admins : UNE requete, ajouts et retraits', async () => {
+    mockChatData = MOI_ADMIN;
+    const { ecran } = monterLaConversation();
+    await act(async () => {
+      await ecran.root.findByType(InfosDuGroupe).props.onValiderAdmins(['moi', 'lea']);
+    });
+    expect(mockUpdateGroupMeta).toHaveBeenCalledTimes(1);
+    expect(mockUpdateGroupMeta).toHaveBeenCalledWith({
+      chatId: 'chat-1',
+      data: { addAdminIds: ['lea'], removeAdminIds: ['karim'] },
+    });
+  });
+
+  test('IG4 — la photo : choisie, puis envoyee au groupe ; « Supprimer » la retire', async () => {
+    const fichier = { name: 'g.jpg', type: 'image/jpeg', uri: 'file:///g.jpg' };
+    mockChoisirLaPhoto.mockResolvedValue({ apercu: fichier.uri, fichier });
+    mockChatData = MOI_ADMIN;
+    const { ecran } = monterLaConversation();
+    await act(async () => {
+      await ecran.root.findByType(InfosDuGroupe).props.onChoisirPhoto('camera');
+    });
+    expect(mockChoisirLaPhoto).toHaveBeenCalledWith('camera', expect.any(Function));
+    expect(mockSetGroupPhoto).toHaveBeenCalledWith('chat-1', fichier);
+    await act(async () => {
+      await ecran.root.findByType(InfosDuGroupe).props.onSupprimerPhoto();
+    });
+    expect(mockRemoveGroupPhoto).toHaveBeenCalledWith('chat-1');
+  });
+
+  test('IG5 — photo annulee : rien ne part', async () => {
+    mockChoisirLaPhoto.mockResolvedValue(null);
+    mockChatData = MOI_ADMIN;
+    const { ecran } = monterLaConversation();
+    await act(async () => {
+      await ecran.root.findByType(InfosDuGroupe).props.onChoisirPhoto('galerie');
+    });
+    expect(mockSetGroupPhoto).not.toHaveBeenCalled();
   });
 });

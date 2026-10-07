@@ -138,3 +138,90 @@ describe('InfosDuGroupe — §3.1 le role de chaque membre', () => {
     expect(textes(arbre)).toContain('Lea Morel | Admin · Joueur');
   });
 });
+
+const OUVERTES = {
+  membersCanAddMembers: false,
+  membersCanEditName: false,
+  membersCanEditPhoto: false,
+  membersCanSendMessages: true,
+};
+
+describe('InfosDuGroupe — §3.16 photo, autorisations, admins', () => {
+  test('IA1 — admin : la ligne « Autorisations du groupe » et son resume ; la page s ouvre', () => {
+    const onChangerAutorisation = jest.fn();
+    const { arbre } = rendre({ autorisations: OUVERTES, onChangerAutorisation });
+    expect(textes(arbre)).toContain('Autorisations du groupe | Les membres peuvent écrire');
+    act(() => {
+      parId(arbre, 'infos-du-groupe-autorisations').props.onPress();
+    });
+    act(() => {
+      parId(arbre, 'autorisation-membersCanEditName').props.onValueChange(true);
+    });
+    expect(onChangerAutorisation).toHaveBeenCalledWith('membersCanEditName', true);
+  });
+
+  test('IA2 — simple membre : pas de ligne « Autorisations » ; ce qui est ouvert, permis', () => {
+    const { arbre } = rendre({
+      adminIds: ['karim'],
+      autorisations: { ...OUVERTES, membersCanAddMembers: true, membersCanEditName: true },
+      estAdmin: false,
+    });
+    expect(parId(arbre, 'infos-du-groupe-autorisations')).toBeUndefined();
+    expect(parId(arbre, 'infos-du-groupe-nom').props.disabled).toBe(false);
+    expect(parId(arbre, 'infos-du-groupe-ajouter')).toBeDefined();
+    // La photo reste fermee pour lui : pas de pastille appareil photo.
+    expect(parId(arbre, 'infos-du-groupe-photo')).toBeUndefined();
+  });
+
+  test('IA3 — la photo : feuille, « Choisir dans la galerie », « Supprimer » s il y en a', () => {
+    const onChoisirPhoto = jest.fn();
+    const onSupprimerPhoto = jest.fn();
+    const { arbre } = rendre({
+      autorisations: OUVERTES,
+      chat: { ...GROUPE, groupPhoto: { url: '/uploads/g.jpg' } },
+      onChoisirPhoto,
+      onSupprimerPhoto,
+    });
+    act(() => {
+      parId(arbre, 'infos-du-groupe-photo').props.onPress();
+    });
+    act(() => {
+      parId(arbre, 'photo-du-groupe-galerie').props.onPress();
+    });
+    expect(onChoisirPhoto).toHaveBeenCalledWith('galerie');
+    act(() => {
+      parId(arbre, 'infos-du-groupe-photo').props.onPress();
+    });
+    act(() => {
+      parId(arbre, 'photo-du-groupe-supprimer').props.onPress();
+    });
+    expect(onSupprimerPhoto).toHaveBeenCalled();
+  });
+
+  test('IA4 — serveur d avant 1B : ni photo, ni autorisations, comme avant', () => {
+    const { arbre } = rendre({ autorisations: null });
+    expect(parId(arbre, 'infos-du-groupe-photo')).toBeUndefined();
+    expect(parId(arbre, 'infos-du-groupe-autorisations')).toBeUndefined();
+    expect(parId(arbre, 'infos-du-groupe-nom').props.disabled).toBe(false);
+    expect(parId(arbre, 'infos-du-groupe-ajouter')).toBeDefined();
+  });
+
+  test('IA5 — « Modifier les admins » : on coche Lea, « Valider » rend la liste complete', () => {
+    const onValiderAdmins = jest.fn();
+    const { arbre } = rendre({ autorisations: OUVERTES, onValiderAdmins });
+    act(() => {
+      parId(arbre, 'infos-du-groupe-autorisations').props.onPress();
+    });
+    expect(textes(arbre)).toContain('Admins · 1');
+    act(() => {
+      parId(arbre, 'autorisations-modifier-les-admins').props.onPress();
+    });
+    act(() => {
+      parId(arbre, 'admins-du-groupe-lea').props.onPress();
+    });
+    act(() => {
+      parId(arbre, 'admins-du-groupe-valider').props.onPress();
+    });
+    expect(onValiderAdmins).toHaveBeenCalledWith(['moi', 'lea']);
+  });
+});

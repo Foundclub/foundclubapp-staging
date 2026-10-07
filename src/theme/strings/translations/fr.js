@@ -6714,6 +6714,7 @@ export default {
       openIn: 'Ouvrir dans {{app}}',
       title: 'Adresse',
     },
+    adminsOnlySend: 'Seuls les admins peuvent envoyer des messages.',
     attachmentErrors: {
       addFailed: "Impossible d'ajouter cette pièce jointe.",
       invalidFormat: 'Format de pièce jointe invalide.',
@@ -6846,12 +6847,14 @@ export default {
       title: 'Gestion du groupe',
     },
     groupAdmins: {
+      cannotRemoveSelf: 'Tu ne peux pas te retirer toi-même le rôle d’admin.',
       count_one: '{{count}} admin',
       count_other: '{{count}} admins',
       validate: 'Valider',
     },
     groupInfo: {
       adminError: 'Impossible de changer les admins du groupe.',
+      editPhoto: 'Modifier la photo du groupe',
       leave: 'Quitter le groupe',
       leaveConfirm: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
       leaveConfirmAction: 'Quitter',
@@ -6889,12 +6892,15 @@ export default {
       summaryRename: 'renommer',
       summaryWrite: 'écrire',
       title: 'Autorisations du groupe',
+      updateError: 'Impossible de changer les autorisations du groupe.',
     },
     groupPhoto: {
       camera: 'Prendre une photo',
       library: 'Choisir dans la galerie',
       remove: 'Supprimer la photo',
+      removeError: 'Impossible de supprimer la photo du groupe.',
       title: 'Photo du groupe',
+      updateError: 'Impossible de changer la photo du groupe.',
     },
     header: {
       openGroupHint: 'Ouvre les infos du groupe',

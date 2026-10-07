@@ -12,6 +12,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  peutDansLeGroupe,
+  resumeDesAutorisations,
+} from '@/domains/messaging/autorisationsDuGroupe';
 import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -25,6 +29,9 @@ import {
 } from '@/components/molecules/bulleDuFil/typographieDuFil';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
+import AutorisationsDuGroupe from '@/views/chat/AutorisationsDuGroupe';
+import FeuillePhotoDuGroupe from '@/views/chat/FeuillePhotoDuGroupe';
 
 /**
  * L'identifiant d'un membre.
@@ -55,22 +62,33 @@ const nomDe = (membre) => `${membre?.firstname || ''} ${membre?.lastname || ''}`
  * - « Signaler le groupe ».
  * - « Quitter le groupe » (decision d'Adel `quitter maintenant`), pour TOUT membre, avec
  *   confirmation — l'appel vit dans une fonction de service isolee (`leaveGroupChat`).
- * La photo du groupe et les « Autorisations du groupe » demandent le serveur : lot
- * MESSAGERIE-1B.
+ * MSG1BA (§3.16) — ce que le serveur MESSAGERIE-1B ajoute (contrat §4, §5) :
+ * - la PHOTO (92, pastille appareil photo de 34 quand elle est modifiable) : « Prendre une
+ *   photo », « Choisir dans la galerie », « Supprimer la photo » ;
+ * - « AUTORISATIONS DU GROUPE » (admins) : « Les membres peuvent… », « Modifier les admins »
+ *   + « Valider » ;
+ * - ce qu'un MEMBRE peut faire selon ces autorisations : renommer, ajouter, changer la photo.
+ * `autorisations` nul = serveur d'avant 1B : ni photo modifiable, ni autorisations, et seuls
+ * les admins renomment et ajoutent (comme avant).
  * @param {object} props
  * @param {string[]} props.adminIds
+ * @param {Record<string, boolean> | null} [props.autorisations] - `groupPermissions` resolues.
  * @param {any} props.chat
  * @param {boolean} props.estAdmin - Le lecteur est admin du groupe.
  * @param {string} props.meId
  * @param {boolean} [props.occupe] - Une ecriture est en cours.
  * @param {() => void} props.onAjouter
  * @param {(membre: any, devientAdmin: boolean) => void} props.onBasculerAdmin
+ * @param {(cle: string, valeur: boolean) => void} [props.onChangerAutorisation]
+ * @param {(source: 'camera' | 'galerie') => void} [props.onChoisirPhoto]
  * @param {() => void} props.onClose
  * @param {(membre: any) => void} props.onEnvoyerUnMessage
  * @param {() => void} [props.onQuitter] - Appele APRES la confirmation ; absent = pas de ligne.
  * @param {(nom: string) => Promise<any>} props.onRenommer
  * @param {(membre: any) => void} props.onRetirer - Appele APRES la confirmation.
  * @param {() => void} props.onSignaler
+ * @param {() => void} [props.onSupprimerPhoto]
+ * @param {(admins: string[]) => void} [props.onValiderAdmins] - La liste complete choisie.
  * @param {(personne: any) => string} [props.resolveAvatar]
  * @param {Record<string, string>} [props.roles] - MSG1BA (§3.1) : documentId -> nom du role
  *   (`role.name`) ; absent = « Membre ».
@@ -79,18 +97,23 @@ const nomDe = (membre) => `${membre?.firstname || ''} ${membre?.lastname || ''}`
  */
 function InfosDuGroupe({
   adminIds,
+  autorisations = null,
   chat,
   estAdmin,
   meId,
   occupe = false,
   onAjouter,
   onBasculerAdmin,
+  onChangerAutorisation = () => {},
+  onChoisirPhoto = () => {},
   onClose,
   onEnvoyerUnMessage,
   onQuitter = undefined,
   onRenommer,
   onRetirer,
   onSignaler,
+  onSupprimerPhoto = () => {},
+  onValiderAdmins = () => {},
   resolveAvatar = () => '',
   roles = {},
   visible,
@@ -104,6 +127,11 @@ function InfosDuGroupe({
   const [membreOuvert, setMembreOuvert] = useState(/** @type {any} */ (null));
   const [aRetirer, setARetirer] = useState(/** @type {any} */ (null));
   const [departAConfirmer, setDepartAConfirmer] = useState(false);
+  // MSG1BA (§3.16) — la feuille photo, puis les pages « Autorisations » et « Modifier les admins »,
+  // posees PAR-DESSUS la page (dans sa fenetre).
+  const [feuillePhoto, setFeuillePhoto] = useState(false);
+  const [pageAutorisations, setPageAutorisations] = useState(false);
+  const [pageAdmins, setPageAdmins] = useState(false);
 
   useEffect(() => {
     if (!visible) {
@@ -111,6 +139,9 @@ function InfosDuGroupe({
       setMembreOuvert(null);
       setARetirer(null);
       setDepartAConfirmer(false);
+      setFeuillePhoto(false);
+      setPageAutorisations(false);
+      setPageAdmins(false);
     }
     setBrouillon(nomDuGroupe);
   }, [nomDuGroupe, visible]);
@@ -136,6 +167,20 @@ function InfosDuGroupe({
   };
 
   const membreEstAdmin = (/** @type {any} */ membre) => adminIds.includes(idDe(membre));
+  // 🛡️ MSG1BA (§3.16) — admin : tout ; membre : ce que les autorisations ouvrent. La photo
+  // demande le serveur 1B (`autorisations` presentes) : sans lui, la route n'existe pas.
+  const lecteur = { autorisations, estAdmin };
+  const peutRenommer = peutDansLeGroupe(lecteur, 'membersCanEditName');
+  const peutAjouter = peutDansLeGroupe(lecteur, 'membersCanAddMembers');
+  const peutChangerLaPhoto = Boolean(autorisations)
+    && peutDansLeGroupe(lecteur, 'membersCanEditPhoto');
+  const photoDuGroupe = String(chat?.groupPhoto?.url || '').trim();
+  const membresAffiches = ordonnes.map((/** @type {any} */ membre) => ({
+    avatar: resolveAvatar(membre) || undefined,
+    id: idDe(membre),
+    nom: idDe(membre) === meId ? t('conversation.header.you', 'Vous') : nomDe(membre),
+    role: libelleDuRole(roles[idDe(membre)] || membre?.role?.name, t),
+  }));
   // 🏷️ MSG1BA (§3.1) — « Entraîneur », « Joueur »... sous le nom ; sans role connu, « Membre ».
   const roleDe = (/** @type {any} */ membre) => libelleDuRole(
     roles[idDe(membre)] || membre?.role?.name,
@@ -189,7 +234,39 @@ function InfosDuGroupe({
 
         <ScrollView contentContainerStyle={[styles.contenu, { paddingBottom: 40 + bottom }]}>
           <View style={styles.identite}>
-            <ClubLogoMark name={nomDuGroupe || 'Groupe'} size={92} />
+            {/* 🖼️ MSG1BA (§3.16) — la photo du groupe, sinon l'ecusson ; la pastille appareil
+                photo quand le lecteur peut la changer. */}
+            <TouchableOpacity
+              accessibilityLabel={peutChangerLaPhoto
+                ? t('conversation.groupInfo.editPhoto', 'Modifier la photo du groupe')
+                : undefined}
+              accessibilityRole={peutChangerLaPhoto ? 'button' : 'image'}
+              disabled={!peutChangerLaPhoto || occupe}
+              onPress={() => setFeuillePhoto(true)}
+              testID={peutChangerLaPhoto ? 'infos-du-groupe-photo' : 'infos-du-groupe-avatar'}
+            >
+              {photoDuGroupe ? (
+                <ProfileAvatar
+                  enablePreview={false}
+                  imageStyle={{ borderRadius: 46 }}
+                  imageUrl={photoDuGroupe}
+                  name={nomDuGroupe}
+                  size={92}
+                />
+              ) : (
+                <ClubLogoMark name={nomDuGroupe || 'Groupe'} size={92} />
+              )}
+              {peutChangerLaPhoto ? (
+                <View
+                  style={[
+                    styles.pastillePhoto,
+                    { backgroundColor: Colors.primary500, borderColor: Colors.chatBackground },
+                  ]}
+                >
+                  <GlyphIcon color={Colors.primary900} name="camera" size={17} />
+                </View>
+              ) : null}
+            </TouchableOpacity>
             {enEdition ? (
               <View style={styles.edition}>
                 <TextInput
@@ -241,12 +318,12 @@ function InfosDuGroupe({
             ) : (
               <TouchableOpacity
                 accessibilityHint={
-                  estAdmin
+                  peutRenommer
                     ? t('conversation.groupInfo.renameHint', 'Renommer le groupe')
                     : undefined
                 }
-                accessibilityRole={estAdmin ? 'button' : 'text'}
-                disabled={!estAdmin}
+                accessibilityRole={peutRenommer ? 'button' : 'text'}
+                disabled={!peutRenommer}
                 onPress={() => setEnEdition(true)}
                 style={styles.nomLigne}
                 testID="infos-du-groupe-nom"
@@ -254,7 +331,9 @@ function InfosDuGroupe({
                 <Text numberOfLines={1} style={[styles.nom, { color: Colors.neutral00 }]}>
                   {nomDuGroupe || t('conversation.groupInfo.untitled', 'Groupe')}
                 </Text>
-                {estAdmin ? <GlyphIcon color={Colors.primary500} name="pencil" size={18} /> : null}
+                {peutRenommer ? (
+                  <GlyphIcon color={Colors.primary500} name="pencil" size={18} />
+                ) : null}
               </TouchableOpacity>
             )}
             <Text style={[styles.resume, { color: withAlpha(Colors.neutral00, 0.6) }]}>
@@ -265,6 +344,31 @@ function InfosDuGroupe({
             </Text>
           </View>
 
+          {/* 🛡️ MSG1BA (§3.16) — « Autorisations du groupe », pour les admins (serveur 1B). */}
+          {estAdmin && autorisations ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setPageAutorisations(true)}
+              style={[
+                styles.carte,
+                styles.ligneAutorisations,
+                { backgroundColor: Colors.primary800 },
+              ]}
+              testID="infos-du-groupe-autorisations"
+            >
+              <GlyphIcon color={Colors.primary500} name="shieldCheck" size={22} />
+              <View style={styles.membreTextes}>
+                <Text style={[styles.nomMembre, { color: Colors.neutral00 }]}>
+                  {t('conversation.groupPermissions.title', 'Autorisations du groupe')}
+                </Text>
+                <Text numberOfLines={1} style={[styles.roleMembre, { color: sourdine }]}>
+                  {resumeDesAutorisations(autorisations, t)}
+                </Text>
+              </View>
+              <GlyphIcon color={withAlpha(Colors.neutral00, 0.5)} name="chevronRight" size={20} />
+            </TouchableOpacity>
+          ) : null}
+
           <Text style={[styles.majuscules, { color: withAlpha(Colors.neutral00, 0.6) }]}>
             {t('conversation.groupInfo.membersCaps', {
               count: participants.length,
@@ -272,7 +376,7 @@ function InfosDuGroupe({
             })}
           </Text>
           <View style={[styles.carte, { backgroundColor: Colors.primary800 }]}>
-            {estAdmin ? (
+            {peutAjouter ? (
               <TouchableOpacity
                 accessibilityRole="button"
                 onPress={onAjouter}
@@ -298,7 +402,7 @@ function InfosDuGroupe({
                   onPress={() => setMembreOuvert(membre)}
                   style={[
                     styles.ligneMembre,
-                    estAdmin || index ? { borderTopColor: filet, borderTopWidth: 1 } : null,
+                    peutAjouter || index ? { borderTopColor: filet, borderTopWidth: 1 } : null,
                   ]}
                   testID={`infos-du-groupe-membre-${id}`}
                 >
@@ -502,6 +606,44 @@ function InfosDuGroupe({
           </View>
         ) : null}
 
+        {/* 🖼️🛡️ MSG1BA (§3.16) — par-dessus la page, dans sa fenetre (meme raison que les
+            confirmations ci-dessous). */}
+        <FeuillePhotoDuGroupe
+          aPhoto={Boolean(photoDuGroupe)}
+          onChoisir={onChoisirPhoto}
+          onClose={() => setFeuillePhoto(false)}
+          onSupprimer={onSupprimerPhoto}
+          visible={feuillePhoto}
+        />
+        <AutorisationsDuGroupe
+          admins={membresAffiches.filter((membre) => adminIds.includes(membre.id))}
+          occupe={occupe}
+          onChanger={onChangerAutorisation}
+          onClose={() => setPageAutorisations(false)}
+          onModifierLesAdmins={() => setPageAdmins(true)}
+          valeurs={autorisations || {}}
+          visible={pageAutorisations && !pageAdmins}
+        />
+        <AdminsDuGroupe
+          adminsInitiaux={[
+            ...adminIds.filter((id) => id === meId),
+            ...adminIds.filter((id) => id !== meId),
+          ]}
+          meId={meId}
+          membres={membresAffiches}
+          note={t(
+            'conversation.groupAdmins.cannotRemoveSelf',
+            'Tu ne peux pas te retirer toi-même le rôle d’admin.',
+          )}
+          occupe={occupe}
+          onClose={() => setPageAdmins(false)}
+          onValider={(admins) => {
+            setPageAdmins(false);
+            onValiderAdmins(admins);
+          }}
+          visible={pageAdmins}
+        />
+
         {/* La confirmation, DANS la page : une seconde fenetre par-dessus une page deja
             ouverte ne s'affiche pas toujours sur iPhone. */}
         {aRetirer ? (
@@ -657,6 +799,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  ligneAutorisations: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 14,
+    height: 62,
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
   ligneDeFiche: {
     alignItems: 'center',
     borderTopWidth: 1,
@@ -721,6 +871,17 @@ const styles = StyleSheet.create({
     fontFamily: GRAS_FAMILLE,
     fontSize: 11.5,
     lineHeight: 15,
+  },
+  pastillePhoto: {
+    alignItems: 'center',
+    borderRadius: 17,
+    borderWidth: 3,
+    bottom: 0,
+    height: 34,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    width: 34,
   },
   poignee: {
     alignSelf: 'center',

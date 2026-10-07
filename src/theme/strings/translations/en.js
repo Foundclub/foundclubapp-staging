@@ -6289,6 +6289,7 @@ export default {
       openIn: 'Open in {{app}}',
       title: 'Address',
     },
+    adminsOnlySend: 'Only admins can send messages.',
     attachmentErrors: {
       addFailed: 'Unable to add this attachment.',
       invalidFormat: 'Invalid attachment format.',
@@ -6415,12 +6416,14 @@ export default {
       title: 'Group management',
     },
     groupAdmins: {
+      cannotRemoveSelf: 'You cannot remove your own admin role.',
       count_one: '{{count}} admin',
       count_other: '{{count}} admins',
       validate: 'Confirm',
     },
     groupInfo: {
       adminError: 'Could not change the group admins.',
+      editPhoto: 'Edit the group photo',
       leave: 'Leave the group',
       leaveConfirm: 'Leave the group “{{name}}”? You will no longer receive its messages.',
       leaveConfirmAction: 'Leave',
@@ -6457,12 +6460,15 @@ export default {
       summaryRename: 'rename',
       summaryWrite: 'write',
       title: 'Group permissions',
+      updateError: 'Unable to change the group permissions.',
     },
     groupPhoto: {
       camera: 'Take a photo',
       library: 'Choose from the library',
       remove: 'Remove the photo',
+      removeError: 'Unable to remove the group photo.',
       title: 'Group photo',
+      updateError: 'Unable to change the group photo.',
     },
     header: {
       openGroupHint: 'Opens the group info',
