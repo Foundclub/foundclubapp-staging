@@ -530,6 +530,11 @@ const stylesDuFil = StyleSheet.create({
   sousTitreQuiEcrit: {
     fontFamily: 'Montserrat-Bold',
   },
+  titreDeFeuille: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 18,
+    lineHeight: 24,
+  },
   titres: {
     flex: 1,
     minWidth: 0,
@@ -593,6 +598,12 @@ const stylesDuFil = StyleSheet.create({
   rondRepondre: {
     height: 32,
     width: 32,
+  },
+  sousTitreDeFeuille: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
   },
   texte: {
     marginBottom: 0,
@@ -3223,6 +3234,8 @@ function Conversation({ navigation, route }) {
       ? t('conversation.attachments.unavailable', 'Bientôt disponible')
       : '';
 
+    // MSG1A (§3.5) — l'ordre du pack : Photos, Camera, Document, Sondage, Evenement,
+    // Localisation, Contact (l'entree « Convocation » viendra avec le lot 1C).
     return [
       {
         icon: 'PH',
@@ -3235,20 +3248,6 @@ function Conversation({ navigation, route }) {
         key: 'camera',
         label: t('conversation.attachments.camera', 'Camera'),
         loading: isUploading,
-      },
-      {
-        disabled: !isLocationShareEnabled,
-        icon: 'LO',
-        key: 'location',
-        label: t('conversation.attachments.location', 'Localisation'),
-        unavailableReason: locationReason,
-      },
-      {
-        disabled: !isContactShareEnabled || shareableContacts.length === 0,
-        icon: 'CO',
-        key: 'contact',
-        label: t('conversation.attachments.contact', 'Contact'),
-        unavailableReason: contactReason,
       },
       {
         disabled: isDocumentPickerDisabled,
@@ -3268,6 +3267,20 @@ function Conversation({ navigation, route }) {
         key: 'event',
         label: t('conversation.attachments.event', 'Événement'),
         unavailableReason: eventReason,
+      },
+      {
+        disabled: !isLocationShareEnabled,
+        icon: 'LO',
+        key: 'location',
+        label: t('conversation.attachments.location', 'Localisation'),
+        unavailableReason: locationReason,
+      },
+      {
+        disabled: !isContactShareEnabled || shareableContacts.length === 0,
+        icon: 'CO',
+        key: 'contact',
+        label: t('conversation.attachments.contact', 'Contact'),
+        unavailableReason: contactReason,
       },
     ];
   }, [
@@ -6953,18 +6966,12 @@ function Conversation({ navigation, route }) {
               tuile tronquee). Pose en en-tete, il ne defile plus jamais —
               quelle que soit la hauteur du contenu.
             */
+            // MSG1A (§3.5) — l'en-tete du pack : « Ajouter » 18, sous-titre 13 a 60 %, a gauche.
             <View>
-              <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              <Text style={[stylesDuFil.titreDeFeuille, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.title', 'Ajouter')}
               </Text>
-              <Text
-                style={[
-                  Fonts.p3,
-                  Fonts.neutral300,
-                  Fonts.textCenter,
-                  Spaces.marginTop[4],
-                ]}
-              >
+              <Text style={[stylesDuFil.sousTitreDeFeuille, { color: withAlpha(Colors.neutral00, 0.6) }]}>
                 {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
               </Text>
             </View>

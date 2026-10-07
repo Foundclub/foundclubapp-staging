@@ -603,3 +603,28 @@ describe('MSG1A — §3.3 glisser pour repondre', () => {
     expect(enabledGroupe).toBe(true);
   });
 });
+
+describe('MSG1A — §3.5 feuille « Ajouter »', () => {
+  // eslint-disable-next-line global-require
+  const ChatAttachmentSheet = require('@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet');
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('F1 — les entrees dans l ordre du pack', () => {
+    const { ecran } = monterLaConversation();
+    const feuille = ecran.root.findByType(ChatAttachmentSheet.default || ChatAttachmentSheet);
+
+    expect(feuille.props.actions.map((action) => action.key))
+      .toEqual(['photos', 'camera', 'document', 'poll', 'event', 'location', 'contact']);
+  });
+});
