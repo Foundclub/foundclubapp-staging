@@ -1268,6 +1268,8 @@ function Conversation({ navigation, route }) {
     Colors,
     Images,
   } = useTheme()
+  // Sur le site, une image du theme est une adresse (`images.web.js` : { uri }).
+  const adresseDuMotif = /** @type {{ uri?: string } | undefined} */ (Images?.motifDuFil)?.uri;
   const {
     hasClubAccess,
     userData,
@@ -3047,16 +3049,28 @@ function Conversation({ navigation, route }) {
   ), [chatData]);
   const jeSuisAdmin = estUnGroupe && adminsDuGroupe.includes(String(userData?.documentId || ''));
   const autrePersonne = resolveOtherParticipantId(chatData, userData?.documentId);
-  const { data: mesBlocages } = useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) });
-  const personnesBloquees = useMemo(() => toBlockedUserIdSet(mesBlocages), [mesBlocages]);
+  // Les crochets de blocage se declarent `object` : on dit ce qu on en lit.
+  const { data: mesBlocages } = /** @type {{ data?: any[] }} */ (
+    useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) })
+  );
+  const personnesBloquees = useMemo(() => toBlockedUserIdSet(mesBlocages || []), [mesBlocages]);
   const autrePersonneBloquee = Boolean(autrePersonne && personnesBloquees.has(autrePersonne));
   // Le fil range en groupes et en jours, SANS les messages d une personne bloquee (K4).
   const entreesDuFil = useMemo(
     () => rangerLeFil(hideBlockedMessages(messages, personnesBloquees)),
     [messages, personnesBloquees],
   );
-  const { isPending: blocageEnCours, mutate: bloquer } = useBlockUser();
-  const { isPending: deblocageEnCours, mutate: debloquer } = useUnblockUser();
+  /** @typedef {{ isPending: boolean, mutate: (id: string) => void }} GesteDeBlocage */
+  const { isPending: blocageEnCours, mutate: bloquer } = /** @type {GesteDeBlocage} */ (
+    useBlockUser()
+  );
+  const { isPending: deblocageEnCours, mutate: debloquer } = /** @type {GesteDeBlocage} */ (
+    useUnblockUser()
+  );
+  // Contrat 1B §2.3 : le repli du role du staff, absent du type `Chat` partage (lot 1B-app).
+  const rolesDuStaff = /** @type {Record<string, string> | undefined} */ (
+    /** @type {any} */ (chatData)?.staffRoles
+  );
 
   // Comme le telephone : le signalement d un fil passe par le support.
   const texteDuSignalement = t(
@@ -3196,7 +3210,9 @@ function Conversation({ navigation, route }) {
    * @param {import('@/views/conversationWeb/filDuSite').EntreeMessage} entree - Le message rangé.
    * @returns {import('react').ReactElement} La rangee du message.
    */
-  const renderMessageCard = useCallback((entree) => {
+  const renderMessageCard = useCallback((
+    /** @type {import('@/views/conversationWeb/filDuSite').EntreeMessage} */ entree,
+  ) => {
     const { dernier, message, premier } = entree;
     const idMessage = getMessageId(message);
     // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : une notice centrée, sans bulle.
@@ -3242,7 +3258,7 @@ function Conversation({ navigation, route }) {
     // `entraineur` dans les fils d equipe, de club et omnisport, en repli `chat.staffRoles`
     // (la regle du telephone, « genre A »). Absent : rien ne s affiche.
     const cleDuRole = message?.sender?.staffRole
-      || chatData?.staffRoles?.[getEntityDocumentId(message?.sender)];
+      || rolesDuStaff?.[getEntityDocumentId(message?.sender)];
     const roleDuStaff = {
       dirigeant: i18next.t('conversation.web.fil.roleDirigeant', 'Dirigeant'),
       entraineur: i18next.t('conversation.web.fil.roleEntraineur', 'Entraîneur'),
@@ -3773,7 +3789,6 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
-    chatData?.staffRoles,
     chatData?.type,
     clavierOuvert,
     familleEmoji,
@@ -3794,6 +3809,7 @@ function Conversation({ navigation, route }) {
     renderAttachments,
     renderComposition,
     repondreA,
+    rolesDuStaff,
     userData?.documentId,
   ])
 
@@ -4316,9 +4332,7 @@ function Conversation({ navigation, route }) {
             style={{
               // MSG1W (SPECS §1) — le motif sportif en filigrane (MSG1A, tuile de 240), derriere
               // le fil seulement, comme sur le telephone : il reste en place quand le fil defile.
-              backgroundImage: Images?.motifDuFil?.uri
-                ? `url("${Images.motifDuFil.uri}")`
-                : undefined,
+              backgroundImage: adresseDuMotif ? `url("${adresseDuMotif}")` : undefined,
               backgroundRepeat: 'repeat',
               backgroundSize: '240px 240px',
               minHeight: 0,
