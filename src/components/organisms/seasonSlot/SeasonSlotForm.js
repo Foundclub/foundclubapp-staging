@@ -27,7 +27,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
-import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 
 import {
@@ -616,14 +616,16 @@ function SeasonSlotForm({
         </View>
       )}
 
+      {/* VILLE-T18A (T18 G29a, G32a) — les heures se CHOISISSENT : le sélecteur d heure de la
+          création d événement (décision d Adel du 07/10, « réutiliser ce qu on a déjà ») ; elles
+          se tapaient au clavier. Même valeur « HH:MM ». */}
       {compact || repartition ? null : (
         <View style={[Alignments.row, { gap: 12 }]}>
           <View style={{ flex: 1 }}>
-            <Input
-              density="compact"
+            <TimePickerInput
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
-              onChangeText={(/** @type {string} */ valeur) => {
-                setDebut(valeur.trim());
+              onChange={(/** @type {string} */ valeur) => {
+                setDebut(String(valeur || '').trim());
                 toucherLaSaisie();
               }}
               placeholder="17:30"
@@ -631,11 +633,10 @@ function SeasonSlotForm({
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Input
-              density="compact"
+            <TimePickerInput
               label={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
-              onChangeText={(/** @type {string} */ valeur) => {
-                setFin(valeur.trim());
+              onChange={(/** @type {string} */ valeur) => {
+                setFin(String(valeur || '').trim());
                 toucherLaSaisie();
               }}
               placeholder="19:00"

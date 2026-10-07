@@ -160,6 +160,15 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock(/** @ty
   mockInputProps.push(props);
   return null;
 });
+// VILLE-T18A : Début et Fin sont des sélecteurs d heure (TimePickerInput) ; même relevé,
+// leur `onChange` se lit comme le `onChangeText` d un champ.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, onChangeText: props.onChange });
+    return null;
+  },
+);
 jest.mock(
   '@/components/molecules/datePickerInput/DatePickerInput',
   () => function DatePickerInputMock(/** @type {any} */ props) {
