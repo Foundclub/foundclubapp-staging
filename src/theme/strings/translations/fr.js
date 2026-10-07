@@ -5085,6 +5085,8 @@ export default {
       // eslint-disable-next-line max-len
       brouillonFiche: 'Bonjour, pourriez-vous compléter les coordonnées de votre club sur sa fiche FoundClub ? Merci.',
       demanderFiche: 'Demander au club de compléter sa fiche',
+      // VILLE-T18C (07/10) — la colonne du tableau des clubs (planche 36, tournée T18 SITE_G60).
+      demanderFicheCourt: 'Demander de compléter',
       ecrire: 'Écrire aux dirigeants',
       envoyer: 'Envoyer',
       // VILLE-T18C (07/10) — la mairie est vouvoyée ; « d’AS » devant une voyelle (T18, G62).

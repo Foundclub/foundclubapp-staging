@@ -4747,6 +4747,8 @@ export default {
       annuler: 'Cancel',
       brouillonFiche: 'Hello, could you complete your club’s contact details on its FoundClub page? Thank you.',
       demanderFiche: 'Ask the club to complete its page',
+      // VILLE-T18C (07/10) — the clubs table column (board 36, round T18 SITE_G60).
+      demanderFicheCourt: 'Ask to complete',
       ecrire: 'Write to the club managers',
       envoyer: 'Send',
       premierMessageAide: 'The conversation opens when you send this message.',
