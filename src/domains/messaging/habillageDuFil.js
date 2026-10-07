@@ -37,9 +37,11 @@ const LARGEUR_ESPACE_INSECABLE = 3.9;
  * @param {boolean} estAMoi - Ma bulle (heure + coches) ou une bulle recue.
  * @returns {string} La reserve.
  */
-export const reserveDeLHeure = (estAMoi) => '\u00A0'.repeat(Math.ceil(
-  (estAMoi ? ESPACE_RESERVE_META.moi : ESPACE_RESERVE_META.recu) / LARGEUR_ESPACE_INSECABLE,
-));
+export const reserveDeLHeure = (estAMoi) => '\u00A0'.repeat(
+  Math.ceil(
+    (estAMoi ? ESPACE_RESERVE_META.moi : ESPACE_RESERVE_META.recu) / LARGEUR_ESPACE_INSECABLE,
+  ),
+);
 
 /**
  * L'index (0 a 12) de la couleur d'une personne : le meme identifiant donne
@@ -68,6 +70,7 @@ export const couleurDuNom = (Colors, identifiant) => (
 );
 
 /**
+ * Aide du temoin : `cette aide`.
  * @param {any} message - Un message au format GiftedChat.
  * @returns {string} L'identifiant de son auteur.
  */
@@ -75,6 +78,7 @@ export const couleurDuNom = (Colors, identifiant) => (
 const auteurDe = (message) => String(message?.user?._id ?? '');
 
 /**
+ * Aide du temoin : `memeJour`.
  * @param {any} a - Un message.
  * @param {any} b - Un autre message.
  * @returns {boolean} Vrai s'ils sont du meme jour calendaire.
@@ -83,12 +87,15 @@ const memeJour = (a, b) => {
   const da = new Date(a?.createdAt);
   const db = new Date(b?.createdAt);
   if (Number.isNaN(da.getTime()) || Number.isNaN(db.getTime())) return false;
-  return da.getFullYear() === db.getFullYear()
+  return (
+    da.getFullYear() === db.getFullYear()
     && da.getMonth() === db.getMonth()
-    && da.getDate() === db.getDate();
+    && da.getDate() === db.getDate()
+  );
 };
 
 /**
+ * Aide du temoin : `memeGroupe`.
  * @param {any} a - Un message.
  * @param {any} b - Le message voisin (ou rien).
  * @returns {boolean} Vrai si les deux appartiennent au meme groupe de bulles.
@@ -193,7 +200,8 @@ export const auteurDuMessageCite = (message, moi, t) => {
   if (identifiant && identifiant === String(moi || '').trim()) {
     return { identifiant, nom: t('conversation.header.you', 'Vous') };
   }
-  const nom = [message?.sender?.firstname, message?.sender?.lastname].filter(Boolean).join(' ').trim()
+  const nom = [message?.sender?.firstname, message?.sender?.lastname]
+    .filter(Boolean).join(' ').trim()
     || String(message?.sender?.name || message?.user?.name || '').trim()
     || t('conversation.replyPreview.defaultAuthor', 'Membre');
   return { identifiant, nom };

@@ -35,7 +35,13 @@ function MenuDuFil({
   const { Colors } = useTheme();
 
   return (
-    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent transparent visible={visible}>
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      transparent
+      visible={visible}
+    >
       <Pressable onPress={onClose} style={styles.fond} testID="menu-du-fil-fond">
         <Pressable
           onPress={() => {}}
@@ -59,7 +65,9 @@ function MenuDuFil({
                 onPress={entree.onPress}
                 style={[
                   styles.ligne,
-                  index ? { borderTopColor: withAlpha(Colors.neutral00, 0.07), borderTopWidth: 1 } : null,
+                  index
+                    ? { borderTopColor: withAlpha(Colors.neutral00, 0.07), borderTopWidth: 1 }
+                    : null,
                   entree.desactive ? styles.eteinte : null,
                 ]}
                 testID={`menu-du-fil-${entree.cle}`}

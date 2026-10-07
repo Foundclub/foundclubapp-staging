@@ -276,7 +276,9 @@ function PollMessageBubble({
                     {canVote && loadingOptionId === optionId ? (
                       <ActivityIndicator color={Colors.primary500} size="small" />
                     ) : (
-                      <Text style={[styles.compte, { color: Colors.neutral00 }]}>{String(voteCount)}</Text>
+                      <Text style={[styles.compte, { color: Colors.neutral00 }]}>
+                        {String(voteCount)}
+                      </Text>
                     )}
                   </View>
                 </View>

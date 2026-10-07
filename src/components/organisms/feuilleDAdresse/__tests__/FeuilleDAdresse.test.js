@@ -18,7 +18,14 @@ jest.mock('react-i18next', () => ({
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, Circle: VueRN, default: VueRN, Line: VueRN, Path: VueRN, Polyline: VueRN, Rect: VueRN, Svg: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
 jest.mock('@/theme/themeContext', () => {
@@ -35,6 +42,7 @@ jest.mock('@/platform/maps/externalMap', () => ({
 }));
 
 /**
+ * Aide du temoin : `parId`.
  * @param {any} arbre
  * @param {string} id
  * @returns {any}
@@ -44,26 +52,35 @@ const parId = (arbre, id) => arbre.root.findAll(
 )[0];
 
 describe('FeuilleDAdresse', () => {
-  test('F1 — les applis du telephone, puis Copier ; une appli ouvre son lien et ferme', async () => {
-    const ouvrirUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
-    const onClose = jest.fn();
-    /** @type {any} */
-    let arbre;
-    await act(async () => {
-      arbre = renderer.create(
-        <FeuilleDAdresse adresse={{ label: '12 rue Pasteur' }} onClose={onClose} onCopy={jest.fn()} />,
-      );
-    });
+  test(
+    'F1 — les applis du telephone, puis Copier ; une appli ouvre son lien et ferme',
+    async () => {
+      const ouvrirUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+      const onClose = jest.fn();
+      /** @type {any} */
+      let arbre;
+      await act(async () => {
+        arbre = renderer.create(
+          <FeuilleDAdresse
+            adresse={{ label: '12 rue Pasteur' }}
+            onClose={onClose}
+            onCopy={jest.fn()}
+          />,
+        );
+      });
 
-    expect(parId(arbre, 'feuille-adresse-apple')).toBeTruthy();
-    expect(parId(arbre, 'feuille-adresse-waze')).toBeTruthy();
-    expect(parId(arbre, 'feuille-adresse-copier')).toBeTruthy();
+      expect(parId(arbre, 'feuille-adresse-apple')).toBeTruthy();
+      expect(parId(arbre, 'feuille-adresse-waze')).toBeTruthy();
+      expect(parId(arbre, 'feuille-adresse-copier')).toBeTruthy();
 
-    await act(async () => { parId(arbre, 'feuille-adresse-waze').props.onPress(); });
-    expect(ouvrirUrl).toHaveBeenCalledWith('waze://ici');
-    expect(onClose).toHaveBeenCalled();
-    ouvrirUrl.mockRestore();
-  });
+      await act(async () => {
+        parId(arbre, 'feuille-adresse-waze').props.onPress();
+      });
+      expect(ouvrirUrl).toHaveBeenCalledWith('waze://ici');
+      expect(onClose).toHaveBeenCalled();
+      ouvrirUrl.mockRestore();
+    },
+  );
 
   test('F2 — « Copier l adresse » copie le texte affiche et ferme', async () => {
     const onClose = jest.fn();
@@ -76,7 +93,9 @@ describe('FeuilleDAdresse', () => {
       );
     });
 
-    act(() => { parId(arbre, 'feuille-adresse-copier').props.onPress(); });
+    act(() => {
+      parId(arbre, 'feuille-adresse-copier').props.onPress();
+    });
     expect(onCopy).toHaveBeenCalledWith('12 rue Pasteur');
     expect(onClose).toHaveBeenCalled();
   });
@@ -85,7 +104,9 @@ describe('FeuilleDAdresse', () => {
     /** @type {any} */
     let arbre;
     await act(async () => {
-      arbre = renderer.create(<FeuilleDAdresse adresse={null} onClose={jest.fn()} onCopy={jest.fn()} />);
+      arbre = renderer.create(
+        <FeuilleDAdresse adresse={null} onClose={jest.fn()} onCopy={jest.fn()} />,
+      );
     });
     const modale = arbre.root.findAll((/** @type {any} */ n) => n.props?.visible !== undefined)[0];
     expect(modale.props.visible).toBe(false);
