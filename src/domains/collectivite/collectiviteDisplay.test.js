@@ -45,6 +45,17 @@ describe('collectiviteDisplay', () => {
     expect(formatSlot(debut, fin)).toBe('lun. 7 oct. · 18:00 – 19:30');
     expect(formatSlot('pas une date', fin)).toBe('');
   });
+
+  // VILLE-T18B (a) (07/10) — tournée T18 : « ven. 9 oct. · 18:00 – 17:00 ». Une demande écrite
+  // avant le correctif du 03/10 garde une fin AVANT son début ; l'accueil ne l'écrit plus comme une
+  // plage : il donne le début seul (la ligne en base, c'est le chef qui la répare). ROUGE avant.
+  it('une fin au début ou avant ne s écrit pas : le début seul', () => {
+    const debut = new Date(2030, 9, 11, 18, 0).toISOString();
+    expect(formatSlot(debut, new Date(2030, 9, 11, 17, 0).toISOString())).toBe('ven. 11 oct. · 18:00');
+    expect(formatSlot(debut, debut)).toBe('ven. 11 oct. · 18:00');
+    expect(formatSlot(debut, new Date(2030, 9, 11, 19, 30).toISOString()))
+      .toBe('ven. 11 oct. · 18:00 – 19:30');
+  });
 });
 
 // 🏛️ D61 (29/09) — la console super-admin : ce que la liste et le detail lisent, et le
