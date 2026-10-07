@@ -21,6 +21,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { isEndTimeNotAfterStart } from '@/domains/event/eventUseCases';
 import useEvent from '@/domains/event/useEvent';
 import { seanceDeplacee } from '@/domains/seasonSlot/seasonSlotDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -937,6 +938,16 @@ function EventEdit({ navigation, route }) {
           );
           return;
         }
+      }
+
+      // VILLE-T18B (a) — une fin restée derrière un début déplacé ne part plus : la demande à la
+      // Ville disait « 18:00 – 17:00 » (tournée T18). La création le refusait déjà.
+      if (isEndTimeNotAfterStart(data.startTime, data.endTime)) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          t('eventWizard.errors.invalidTimeRange', "L'heure de fin doit être après l'heure de début."),
+        );
+        return;
       }
 
       console.log('Form submitted with data:', data);

@@ -10,6 +10,7 @@ import {
   createEventUpdatePayload,
   getEventEditSupport,
   hasExternalAudience,
+  isEndTimeNotAfterStart,
   isTrainingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
@@ -393,6 +394,15 @@ function EventEdit({ navigation, route }) {
       setSubmitError(t(
         'eventEdit.typeTeamDateAndStart',
         'Type, équipe, date et heure de début sont obligatoires.',
+      ));
+      return;
+    }
+
+    // VILLE-T18B (a) — une fin restée derrière un début déplacé ne part plus (T18 : « 18:00 – 17:00 »).
+    if (isEndTimeNotAfterStart(formState.startTime, formState.endTime)) {
+      setSubmitError(t(
+        'eventWizard.errors.invalidTimeRange',
+        "L'heure de fin doit être après l'heure de début.",
       ));
       return;
     }
