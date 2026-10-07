@@ -31,7 +31,9 @@ const mockNaviguer = jest.fn(() => mockPret);
 jest.mock('@/navigation/navigationService', () => ({
   __esModule: true,
   navigate: (/** @type {any[]} */ ...args) => mockNaviguer(...args),
-  navigationRef: { getCurrentRoute: () => (mockRouteCourante ? { name: mockRouteCourante } : null) },
+  navigationRef: {
+    getCurrentRoute: () => (mockRouteCourante ? { name: mockRouteCourante } : null),
+  },
 }));
 
 const LIEN = 'CodeDeLaVille0123456789ab';
@@ -42,7 +44,8 @@ const LIEN = 'CodeDeLaVille0123456789ab';
  * @returns {void}
  */
 const poserLeRetour = (age = 0) => {
-  mockRangement.set('coll-invitation-ville-retour', JSON.stringify({ at: Date.now() - age, token: LIEN }));
+  const repere = JSON.stringify({ at: Date.now() - age, token: LIEN });
+  mockRangement.set('coll-invitation-ville-retour', repere);
 };
 
 /**
@@ -53,10 +56,14 @@ const poserLeRetour = (age = 0) => {
 const monterPuisAttendre = async (pret) => {
   // eslint-disable-next-line global-require
   const useRetourAuLienDeLaVille = require('../useRetourAuLienDeLaVille').default;
-  const Sonde = () => {
+  /**
+   * Un composant qui ne fait qu appeler le crochet.
+   * @returns {null} rien a l ecran
+   */
+  function Sonde() {
     useRetourAuLienDeLaVille(pret);
     return null;
-  };
+  }
   await act(async () => { renderer.create(createElement(Sonde)); });
   await act(async () => { jest.advanceTimersByTime(2000); });
 };
@@ -86,7 +93,7 @@ describe('LIENS-APP -- apres la connexion, l app revient a la page du lien de la
     expect(mockNaviguer).not.toHaveBeenCalled();
   });
 
-  it('deja sur la page du lien (lien de lancement rejoue) : on ne l empile pas une 2e fois', async () => {
+  it('deja sur la page du lien (lien de lancement rejoue) : pas une 2e fois', async () => {
     poserLeRetour();
     mockRouteCourante = 'CollectiviteJoin';
     await monterPuisAttendre(true);
@@ -111,7 +118,8 @@ describe('LIENS-APP -- apres la connexion, l app revient a la page du lien de la
 
 describe('LIENS-APP -- PrivateNavigator branche le crochet APRES l accueil', () => {
   it('l appel attend le compte charge et AUCUNE etape d accueil en attente', () => {
-    const source = fs.readFileSync(path.join(__dirname, '..', 'private', 'PrivateNavigator.js'), 'utf8');
+    const fichier = path.join(__dirname, '..', 'private', 'PrivateNavigator.js');
+    const source = fs.readFileSync(fichier, 'utf8');
     const appel = source.match(/useRetourAuLienDeLaVille\(([\s\S]*?)\);/)?.[1] || '';
 
     expect({

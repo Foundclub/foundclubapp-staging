@@ -218,8 +218,8 @@ function PrivateNavigator() {
     userDataLoading,
   ]);
 
-  // LIENS-APP (07/10) — le lien de la Ville ouvert sans compte : une fois connecté, et l'accueil
-  // fait (et la pile montée : pas pendant la lecture « Ville seule »), l'app revient à la page du lien.
+  // LIENS-APP (07/10) — le lien de la Ville ouvert sans compte : une fois connecté, l'accueil
+  // fait et la pile montée (pas pendant la lecture « Ville seule »), retour à la page du lien.
   useRetourAuLienDeLaVille(
     Boolean(userData?.documentId) && !userDataLoading && !userDataError && !villeEnLecture
       && !firstPendingOnboardingRoute,

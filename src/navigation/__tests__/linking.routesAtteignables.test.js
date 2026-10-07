@@ -487,14 +487,13 @@ describe('LIENS-EVENEMENT -- https://<site>/events/<id> mene a la fiche de l eve
 // (CollectiviteInviteClub.js, buildPublicWebUrl + cheminDuLienDeLaVille). Mesure avant le lot :
 // ni le fichier iOS du site (/i/*, /install.html, /suppression.html, /events/*), ni le manifeste
 // Android (/i/, /install.html, /events/), ni cette table ne le connaissaient.
-// eslint-disable-next-line import/no-dynamic-require, global-require
+// eslint-disable-next-line import/no-dynamic-require
 const { extractPathFromURL: extraireLeChemin } = require(path.join(
   path.dirname(require.resolve('@react-navigation/native/package.json')),
   'lib/module/extractPathFromURL.js',
 ));
-// eslint-disable-next-line global-require
 const { cheminDuLienDeLaVille } = require('@/domains/collectivite/lienDeLaVille');
-// eslint-disable-next-line global-require
+
 const { buildPublicWebUrl } = require('@/utils/shareLinks');
 
 /**
@@ -557,7 +556,8 @@ describe('LIENS-APP -- le lien de la Ville ouvre la page du lien DANS l app', ()
 // scripts/__tests__/LIENS-APP-trois-listes.test.mjs). Un chemin oublie dans l une des trois
 // listes rougit l un des deux.
 describe('LIENS-APP -- chaque chemin confie a l app par Android mene a un ecran', () => {
-  const MANIFESTE = path.join(SOURCES, '..', 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  const ANDROID = path.join(SOURCES, '..', 'android', 'app', 'src', 'main');
+  const MANIFESTE = path.join(ANDROID, 'AndroidManifest.xml');
 
   /**
    * Les prefixes du filtre verifie de foundclub.app.
@@ -578,7 +578,10 @@ describe('LIENS-APP -- chaque chemin confie a l app par Android mene a un ecran'
     '/i/': ['/i/team/t-1?c=AbCdEfGhIjKlMnOpQrStUv12', '/i/event/e-1'],
     // La page d installation porte des invitations (inviteLink.js, forme 2).
     '/install.html': ['/install.html?type=team&id=t-1&invite=true'],
-    '/invitation-ville/': [cheminDuLienDeLaVille('jeton-42'), `${cheminDuLienDeLaVille('jeton-42')}/rattacher`],
+    '/invitation-ville/': [
+      cheminDuLienDeLaVille('jeton-42'),
+      `${cheminDuLienDeLaVille('jeton-42')}/rattacher`,
+    ],
   };
   // Les pages du site qui ne doivent JAMAIS partir a l app : vitrine et annuaire (SEO), paiement,
   // QR des affiches (une redirection du site), et l ecran de la Ville qui fabrique le lien.
@@ -608,7 +611,7 @@ describe('LIENS-APP -- chaque chemin confie a l app par Android mene a un ecran'
     ['connecte', CONNECTE, RACINE_CONNECTEE],
     ['deconnecte', DECONNECTE, RACINE_DECONNECTEE],
     ['ajout de compte', AJOUT_DE_COMPTE, RACINE_DECONNECTEE],
-  ])('%s : chaque exemple va a la fenetre d invitation ou a un ecran monte', (_mode, etatApp, racine) => {
+  ])('%s : chaque exemple va a la fenetre d invitation ou a un ecran', (_mode, etatApp, racine) => {
     const morts = Object.values(EXEMPLES).flat().flatMap((chemin) => {
       const lien = `https://foundclub.app${chemin}`;
       const { etat, prise } = recevoir(etatApp, lien);
