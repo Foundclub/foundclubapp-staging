@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
-  Alert, Text, TextInput, TouchableOpacity,
+  Alert, StyleSheet, Text, TextInput, TouchableOpacity,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -24,6 +24,15 @@ import AdminCollectiviteDetail from '../AdminCollectiviteDetail';
 // Le client HTTP est doublé ; le VRAI i18next (fr.js) écrit les phrases.
 
 const mockGet = jest.fn();
+// VT18E (07/10) — la largeur de la fenêtre : un téléphone par défaut (celle du moteur de test,
+// 750), un ordinateur pour la planche P2-fiche-ordi.
+let mockLargeur = 750;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({
+    fontScale: 1, height: 900, scale: 1, width: mockLargeur,
+  }),
+}));
 const mockPost = jest.fn();
 const mockPut = jest.fn();
 const mockDelete = jest.fn();
@@ -238,6 +247,7 @@ const chercher = async (arbre, testID, texte) => {
 };
 
 beforeEach(() => {
+  mockLargeur = 750;
   mockParams = { collectiviteId: 'ville-montrivage' };
   serveur = {
     clubs: [
@@ -801,5 +811,42 @@ describe('VT18E — le menu « … » d une ligne, vu par l accessibilité', () 
     expect(await actionsDuMenu(arbre, 'admin-collectivite-gestionnaire-karim-actions')).toEqual([
       ['button', 'Retirer'],
     ]);
+  });
+});
+
+// 🖥️ VT18E (07/10/2026), ajout T18 (d) — tournée T18 (SITE_S13) : sur le site, la fiche d'une
+// collectivité tenait en UNE colonne pleine largeur, « Activer » en bouton géant. La planche
+// P2-fiche-ordi : 1 200 px au plus, deux colonnes — à gauche l'en-tête, le bandeau d'état
+// (« Activer » à côté de sa phrase), les clubs, les installations ; à droite les gestionnaires.
+// Le téléphone ne change pas. ROUGE avant le lot.
+describe('VT18E — la fiche sur ordinateur (planche P2-fiche-ordi)', () => {
+  const style = (/** @type {any} */ noeud) => StyleSheet.flatten(noeud.props.style) || {};
+  const hote = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((n) => n.props?.testID === testID && typeof n.type === 'string')[0];
+
+  it('ordinateur : deux colonnes, gestionnaires à droite, « Activer » à côté', async () => {
+    mockLargeur = 1280;
+    const arbre = await monter();
+    const colonnes = hote(arbre, 'admin-collectivite-colonnes');
+    expect(colonnes).toBeDefined();
+    expect(style(colonnes))
+      .toEqual(expect.objectContaining({ flexDirection: 'row', maxWidth: 1200 }));
+    const principale = parTestID(arbre.root, 'admin-collectivite-colonne-principale');
+    const laterale = parTestID(arbre.root, 'admin-collectivite-colonne-laterale');
+    const dans = (/** @type {any} */ colonne, /** @type {string} */ testID) => colonne
+      .findAll((n) => n.props?.testID === testID).length > 0;
+    const aGauche = [
+      'collectivite-bandeau-etat', 'admin-collectivite-clubs', 'admin-collectivite-installations',
+    ];
+    expect(aGauche.map((testID) => dans(principale, testID))).toEqual([true, true, true]);
+    expect(dans(laterale, 'admin-collectivite-gestionnaires')).toBe(true);
+    expect(dans(principale, 'admin-collectivite-gestionnaires')).toBe(false);
+    expect(style(hote(arbre, 'collectivite-bandeau-etat')).flexDirection).toBe('row');
+  });
+
+  it('téléphone : une colonne, comme avant ; le bandeau empile son bouton', async () => {
+    const arbre = await monter();
+    expect(hote(arbre, 'admin-collectivite-colonnes')).toBeUndefined();
+    expect(style(hote(arbre, 'collectivite-bandeau-etat')).flexDirection).not.toBe('row');
   });
 });
