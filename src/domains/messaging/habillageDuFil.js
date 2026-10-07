@@ -134,7 +134,7 @@ export const estUnTeteATete = (typeDuFil) => typeDuFil === 'whisper';
 export const extraitDuMessageCite = (message, t) => {
   const composition = message?.composition;
   const texte = String(message?.text ?? message?.message ?? '').trim();
-  const titre = (valeur) => String(valeur || '').trim();
+  const titre = (/** @type {any} */ valeur) => String(valeur || '').trim();
 
   switch (composition?.type) {
     case 'contact_share':
@@ -171,10 +171,10 @@ export const extraitDuMessageCite = (message, t) => {
     };
   }
   const pieces = Array.isArray(message?.attachments) ? message.attachments : [];
-  if (message?.image || pieces.some((piece) => isImageAttachment(piece))) {
+  if (message?.image || pieces.some((/** @type {any} */ piece) => isImageAttachment(piece))) {
     return { icone: 'image', texte: texte || t('conversation.quote.photo', 'Photo') };
   }
-  const document = pieces.find((piece) => isDocumentAttachment(piece));
+  const document = pieces.find((/** @type {any} */ piece) => isDocumentAttachment(piece));
   if (document) return { icone: 'file', texte: texte || getDocumentDisplayName(document) };
   return { icone: '', texte: texte || t('conversation.replyPreview.defaultText', 'Message') };
 };

@@ -99,8 +99,8 @@ function InfosDuGroupe({
   }, [nomDuGroupe, visible]);
 
   const participants = Array.isArray(chat?.participants) ? chat.participants : [];
-  const moi = participants.find((membre) => idDe(membre) === meId);
-  const autres = participants.filter((membre) => idDe(membre) && idDe(membre) !== meId);
+  const moi = participants.find((/** @type {any} */ membre) => idDe(membre) === meId);
+  const autres = participants.filter((/** @type {any} */ membre) => idDe(membre) && idDe(membre) !== meId);
   const ordonnes = moi ? [moi, ...autres] : autres;
   const filet = withAlpha(Colors.neutral00, 0.07);
   const sourdine = withAlpha(Colors.neutral00, 0.58);
@@ -241,7 +241,7 @@ function InfosDuGroupe({
                 </Text>
               </TouchableOpacity>
             ) : null}
-            {ordonnes.map((membre, index) => {
+            {ordonnes.map((/** @type {any} */ membre, /** @type {number} */ index) => {
               const id = idDe(membre);
               const cEstMoi = id === meId;
               return (

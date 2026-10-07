@@ -56,7 +56,9 @@ export const presenceDansLeFil = ({ evenement, maintenantMs = Date.now(), utilis
     user: utilisateur,
   }));
   return {
-    reponse: reponse === RsvpAnswer.present || reponse === RsvpAnswer.absent ? reponse : null,
+    reponse: reponse === RsvpAnswer.present || reponse === RsvpAnswer.absent
+      ? /** @type {'present' | 'absent'} */ (reponse)
+      : null,
   };
 };
 
@@ -115,7 +117,7 @@ export const lieuAOuvrir = (evenement, libelleCourt) => {
     || getLocationCoordinates(evenement?.location);
   return {
     label: lieu?.label || libelleCourt,
-    latitude: coordonnees?.lat,
-    longitude: coordonnees?.lng,
+    latitude: coordonnees?.lat ?? undefined,
+    longitude: coordonnees?.lng ?? undefined,
   };
 };

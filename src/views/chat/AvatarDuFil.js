@@ -94,7 +94,7 @@ function AvatarDuFil({
       );
       break;
     case 'whisper': {
-      const participant = chat?.participants?.find((p) => p?.documentId !== meId)
+      const participant = chat?.participants?.find((/** @type {any} */ p) => p?.documentId !== meId)
         || chat?.participants?.[0];
       contenu = (
         <ProfileAvatar

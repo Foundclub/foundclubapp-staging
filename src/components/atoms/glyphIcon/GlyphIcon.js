@@ -70,7 +70,7 @@ function GlyphIcon({
   if (Object.prototype.hasOwnProperty.call(TRACES_MESSAGERIE, name)) {
     return (
       <Svg height={size} viewBox="0 0 24 24" width={size}>
-        <Path d={TRACES_MESSAGERIE[name]} fill={strokeColor} />
+        <Path d={/** @type {Record<string, string>} */ (TRACES_MESSAGERIE)[name]} fill={strokeColor} />
       </Svg>
     );
   }

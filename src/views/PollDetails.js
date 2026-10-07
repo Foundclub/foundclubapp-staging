@@ -395,7 +395,7 @@ function PollDetails({ navigation, route }) {
   // etiquettes, une carte par option (compte en cyan pour la plus votee, barre, votants), puis
   // les informations. Le vote depuis la carte du haut reste possible, comme avant.
   const comptesParOption = (Array.isArray(poll?.options) ? poll.options : [])
-    .map((option) => getPollVoteCount(option));
+    .map((/** @type {any} */ option) => getPollVoteCount(option));
   const maximumDeVotes = Math.max(1, ...comptesParOption);
   const etiquettes = [
     poll?.allowMultipleVotes
@@ -494,7 +494,7 @@ function PollDetails({ navigation, route }) {
               )}
             </Text>
 
-            {optionVoterSections.map((section, rang) => {
+            {optionVoterSections.map((/** @type {any} */ section, /** @type {number} */ rang) => {
               const compte = comptesParOption[rang] ?? section.voters.length;
               const enTete = compte === maximumDeVotes && compte > 0;
               return (
@@ -537,7 +537,7 @@ function PollDetails({ navigation, route }) {
                       {t('conversation.poll.details.noVotes', 'Aucun vote pour cette option.')}
                     </Text>
                   ) : null}
-                  {!poll?.isAnonymous ? section.voters.map((voter, index) => {
+                  {!poll?.isAnonymous ? section.voters.map((/** @type {any} */ voter, /** @type {number} */ index) => {
                     const fullName = `${voter.firstname} ${voter.lastname}`.trim();
                     const displayLabel = fullName
                       || voter.displayName
