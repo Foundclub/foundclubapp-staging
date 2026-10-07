@@ -4,6 +4,7 @@ import {
   etatDesCoches,
   evenementDuMessage,
   libelleDuJour,
+  morceauxDuTexte,
   rangerLeFil,
 } from '../filDuSite';
 
@@ -125,5 +126,31 @@ describe('evenementDuMessage', () => {
     })).toMatchObject({ documentId: 'e2', name: 'Tournoi', team: { name: 'Seniors' } });
     expect(evenementDuMessage({ composition: { type: 'event_share' } })).toBeNull();
     expect(evenementDuMessage({ message: 'Salut' })).toBeNull();
+  });
+});
+
+// Decision du chef `1-A` : la regle des adresses de MSG1A (adresseDansLeTexte) decoupe le texte.
+describe('morceauxDuTexte', () => {
+  it('isole une adresse ecrite (numero + type de voie), le reste reste du texte', () => {
+    expect(morceauxDuTexte('Rendez-vous au 12 rue du Stade à Aix. Merci')).toEqual([
+      { type: 'texte', valeur: 'Rendez-vous au ' },
+      { type: 'adresse', valeur: '12 rue du Stade à Aix' },
+      { type: 'texte', valeur: '. Merci' },
+    ]);
+  });
+
+  it('sans adresse, un seul morceau ; un texte vide, aucun', () => {
+    expect(morceauxDuTexte('On se retrouve a 18h'))
+      .toEqual([{ type: 'texte', valeur: 'On se retrouve a 18h' }]);
+    expect(morceauxDuTexte('')).toEqual([]);
+  });
+
+  it('deux adresses dans le meme message', () => {
+    const adresses = morceauxDuTexte('3 place Carnot ou 8 avenue de la Gare')
+      .filter((m) => m.type === 'adresse');
+    expect(adresses).toEqual([
+      { type: 'adresse', valeur: '3 place Carnot' },
+      { type: 'adresse', valeur: '8 avenue de la Gare' },
+    ]);
   });
 });

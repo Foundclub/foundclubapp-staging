@@ -69,6 +69,7 @@ import {
   etatDesCoches,
   evenementDuMessage,
   libelleDuJour,
+  morceauxDuTexte,
   rangerLeFil,
 } from '@/views/conversationWeb/filDuSite';
 // MSG1W §3.13 — la liste « Messages » de la colonne de gauche, avec les regles de la messagerie.
@@ -86,6 +87,8 @@ import {
 } from '@/views/collectivite/components/FilDeLaVille';
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
+// MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
+import { buildExternalMapLinks } from '@/platform/maps/externalMap';
 import media from '@/platform/media'
 import {
   useGetChatById,
@@ -1361,6 +1364,8 @@ function Conversation({ navigation, route }) {
   const [annonce, setAnnonce] = useState('');
   // MSG1W §3.5 — la fenetre ouverte depuis le « + » : '', 'evenement', 'contact', 'proposition'.
   const [fenetre, setFenetre] = useState('');
+  // MSG1W (1-A, §3.18) — l adresse touchee dans un message ; '' : fenetre fermee.
+  const [adresseOuverte, setAdresseOuverte] = useState('');
   const [sondageOuvert, setSondageOuvert] = useState(false);
   const [contactChoisi, setContactChoisi] = useState('');
   // MSG1W §3.16 — le menu ⋮, la fenetre « Infos du groupe » et ses confirmations.
@@ -3191,15 +3196,32 @@ function Conversation({ navigation, route }) {
     }
   }, [chatId, navigation, queryClient, t]);
 
-  // Echap ferme la fenetre ouverte depuis le « + ».
+  // Echap ferme la fenetre ouverte depuis le « + », ou celle d une adresse.
   useEffect(() => {
-    if (!fenetre) return undefined;
+    if (!fenetre && !adresseOuverte) return undefined;
+    if (typeof document === 'undefined') return undefined;
     const surTouche = (/** @type {KeyboardEvent} */ event) => {
-      if (event.key === 'Escape') setFenetre('');
+      if (event.key !== 'Escape') return;
+      setFenetre('');
+      setAdresseOuverte('');
     };
     document.addEventListener('keydown', surTouche);
     return () => document.removeEventListener('keydown', surTouche);
-  }, [fenetre]);
+  }, [adresseOuverte, fenetre]);
+
+  const copierLAdresse = useCallback(async () => {
+    const adresse = adresseOuverte;
+    setAdresseOuverte('');
+    try {
+      await navigator.clipboard.writeText(adresse);
+      setAnnonce(t('conversation.address.copied', 'Adresse copiée'));
+    } catch {
+      setAnnonce(t(
+        'conversation.actions.copyUnavailable',
+        'Le presse-papiers est indisponible sur cette build.',
+      ));
+    }
+  }, [adresseOuverte, t]);
 
   /**
    * MSG1W §3.1 — UNE BULLE DU FIL, au dessin du pack « modele WhatsApp » (SPECS §1) :
@@ -3446,7 +3468,29 @@ function Conversation({ navigation, route }) {
                   whiteSpace: 'pre-wrap',
                 }}
               >
-                {texte}
+                {/* MSG1W (1-A, §3.18) — une adresse ecrite devient un lien (regle de MSG1A). */}
+                {morceauxDuTexte(texte).map((morceau, rang) => (morceau.type === 'adresse' ? (
+                  <button
+                    aria-haspopup="dialog"
+                    // eslint-disable-next-line react/no-array-index-key -- sans identifiant
+                    key={`adresse-${rang}`}
+                    onClick={() => setAdresseOuverte(morceau.valeur)}
+                    style={{
+                      background: 'transparent',
+                      border: 0,
+                      color: isMine ? PALETTE_DU_FIL.texte : PALETTE_DU_FIL.accent,
+                      cursor: 'pointer',
+                      font: 'inherit',
+                      padding: 0,
+                      textAlign: 'inherit',
+                      textDecoration: 'underline',
+                    }}
+                    type="button"
+                  >
+                    {morceau.valeur}
+                  </button>
+                  // eslint-disable-next-line react/no-array-index-key -- morceaux sans identifiant
+                ) : <Fragment key={`texte-${rang}`}>{morceau.valeur}</Fragment>))}
                 {/* La place de l heure au bout de la derniere ligne (SPECS §1 : 54 / 36). */}
                 <span
                   aria-hidden="true"
@@ -5206,6 +5250,52 @@ function Conversation({ navigation, route }) {
           )}
           titre={t('conversation.actions.deleteConfirm.title', 'Supprimer le message')}
         />
+      ) : null}
+      {adresseOuverte ? (
+        <FenetreDuSite
+          compacte
+          idTitre="msg1w-titre-adresse"
+          onFermer={() => setAdresseOuverte('')}
+          titre={t('conversation.address.title', 'Adresse')}
+        >
+          <p style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}>
+            {adresseOuverte}
+          </p>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {/* Sur ordinateur, les pages web des applis de cartes (Waze : son lien web). */}
+            {[
+              { cle: 'google', url: buildExternalMapLinks({ label: adresseOuverte })?.google },
+              { cle: 'apple', url: buildExternalMapLinks({ label: adresseOuverte })?.apple },
+              {
+                cle: 'waze',
+                url: `https://www.waze.com/ul?q=${encodeURIComponent(adresseOuverte)}&navigate=yes`,
+              },
+            ].map(({ cle, url }) => (
+              <a
+                href={url}
+                key={cle}
+                onClick={() => setAdresseOuverte('')}
+                rel="noopener noreferrer"
+                style={{
+                  ...STYLE_BOUTON_CONTOUR,
+                  alignItems: 'center',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  textDecoration: 'none',
+                }}
+                target="_blank"
+              >
+                {t('conversation.address.openIn', {
+                  app: t(`externalMap.apps.${cle}`),
+                  defaultValue: 'Ouvrir dans {{app}}',
+                })}
+              </a>
+            ))}
+            <button onClick={copierLAdresse} style={STYLE_BOUTON_CONTOUR} type="button">
+              {t('conversation.address.copy', 'Copier l’adresse')}
+            </button>
+          </div>
+        </FenetreDuSite>
       ) : null}
       {infosOuvertes ? (
         <FenetreDuSite

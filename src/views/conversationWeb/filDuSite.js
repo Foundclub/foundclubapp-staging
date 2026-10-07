@@ -11,6 +11,8 @@
  * exempte du contrat de theme) en attendant les jetons de MESSAGERIE-1A.
  */
 
+import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
+
 /**
  * Le jour LOCAL d une date, « AAAA-MM-JJ » ; '' si la date est illisible.
  * @param {string | number | Date | null | undefined} valeur - La date.
@@ -195,4 +197,25 @@ export const evenementDuMessage = (message) => {
     return { ...fusion, documentId: id };
   }
   return base ? { ...base, documentId: id } : null;
+};
+
+/**
+ * MSG1W (decision du chef `1-A`) — le texte d un message en morceaux : les ADRESSES ecrites
+ * (regle de MSG1A, adresseDansLeTexte : « numero + type de voie ») et le texte autour.
+ * @param {string} texte - Le texte du message.
+ * @returns {{ type: 'texte' | 'adresse', valeur: string }[]} Les morceaux, dans l ordre.
+ */
+export const morceauxDuTexte = (texte) => {
+  const source = String(texte || '');
+  /** @type {{ type: 'texte' | 'adresse', valeur: string }[]} */
+  const morceaux = [];
+  let fin = 0;
+  Array.from(source.matchAll(motifDAdresse())).forEach((trouve) => {
+    const debut = trouve.index ?? 0;
+    if (debut > fin) morceaux.push({ type: 'texte', valeur: source.slice(fin, debut) });
+    morceaux.push({ type: 'adresse', valeur: trouve[0] });
+    fin = debut + trouve[0].length;
+  });
+  if (fin < source.length) morceaux.push({ type: 'texte', valeur: source.slice(fin) });
+  return morceaux;
 };
