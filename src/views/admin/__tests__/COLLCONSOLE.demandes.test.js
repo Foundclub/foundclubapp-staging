@@ -92,10 +92,14 @@ jest.mock('@/components/atoms/button/Button', () => {
     );
   };
 });
+/** @type {any} */
+let mockProprietesOnglets = null;
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN, View: Vue } = jest.requireActual('react-native');
-  return function SegmentedControlMock(/** @type {any} */ { onChange, options }) {
+  return function SegmentedControlMock(/** @type {any} */ props) {
+    const { onChange, options } = props;
+    mockProprietesOnglets = props;
     return reactActuel.createElement(Vue, null, options.map((option) => reactActuel.createElement(
       PressableRN,
       { key: option.value, onPress: () => onChange(option.value), testID: `onglet-${option.value}` },
@@ -276,6 +280,8 @@ describe('COLL-CONSOLE — l écran des demandes de rattachement et « Par Found
     expect(textes(arbre.root)).toEqual(expect.arrayContaining([
       'Rattachements et invitations', 'Rattachements (1)', 'Par FoundClub (2)', 'Rattachés (1)',
     ]));
+    // VT18E (07/10, capture S18a) — le 3e onglet était coupé au bord : les onglets passent à la ligne.
+    expect(mockProprietesOnglets.wrapLabels).toBe(true);
     const carte = textes(parTestID(arbre.root, 'demande-demande-r1'));
     expect(carte[0]).toBe('Recette Stripe FC');
     // INVERSE PAR FINITIONS15 point 8 — motif : la planche P2-fiche écrit « Envoyée le jeu. 1 oct. ».

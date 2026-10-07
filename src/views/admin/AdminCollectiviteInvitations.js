@@ -406,6 +406,9 @@ function AdminCollectiviteInvitations() {
             },
           ]}
           value={onglet}
+          // VT18E (07/10, capture S18a) — « Rattachés (0) » était coupé au bord : les onglets
+          // passent à la ligne plutôt que de déborder.
+          wrapLabels
         />
         {params?.collectiviteId ? (
           <Button
