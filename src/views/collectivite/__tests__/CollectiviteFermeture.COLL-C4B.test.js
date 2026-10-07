@@ -286,16 +286,19 @@ test('C4B-A1/1 FERMER : la carte nomme les seances touchees et les clubs prevenu
   expect(JSON.stringify(lu)).not.toMatch(new RegExp(SECRETS.join('|')));
 });
 
-test('C4B-A1/2 le motif « Travaux » et la case « Publier aussi une actualite Fermeture » sont choisis par defaut', async () => {
+// FINITIONS19 3 (T17 §7.4, decision d'Adel « actualité A » du 07/10) : la case « Publier aussi une
+// actualite Fermeture » est DECOCHEE par defaut — cochee, un appui distrait sur « Fermer » publiait une
+// actualite a TOUS les membres des clubs rattaches. Elle n'est plus choisie a la place de la Ville.
+test('C4B-A1/2 le motif « Travaux » est choisi par defaut ; la case « Publier aussi une actualite Fermeture » est DECOCHEE', async () => {
   const arbre = await rendre();
   const travaux = parTestID(arbre, 'fermeture-motif-travaux');
   expect(travaux.props.accessibilityState).toEqual({ checked: true });
   const publier = parTestID(arbre, 'fermeture-publier');
   expect(publier.props.accessibilityRole).toBe('checkbox');
-  expect(publier.props.accessibilityState).toEqual({ checked: true });
+  expect(publier.props.accessibilityState).toEqual({ checked: false });
   expect(textes(arbre)).toContain('Pour tous les membres des clubs rattachés.');
   await appuyer(publier);
-  expect(parTestID(arbre, 'fermeture-publier').props.accessibilityState).toEqual({ checked: false });
+  expect(parTestID(arbre, 'fermeture-publier').props.accessibilityState).toEqual({ checked: true });
 });
 
 test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer » envoie le bon corps, puis revient', async () => {
@@ -317,14 +320,14 @@ test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer �
     kind: 'closure',
     label: null, // FINITIONS12-COLL : sans nom, le champ part vide (il efface un ancien nom)
     message: 'Réfection du sol',
-    publishActualite: true,
+    publishActualite: false, // FINITIONS19 3 : sans geste, aucune actualite
     reason: 'travaux',
     startDate: '2026-10-02',
   });
   expect(mockNavigation.goBack).toHaveBeenCalled();
 });
 
-test('C4B-A1/4 decochee, la case n envoie pas d actualite ; plusieurs jours : « ces jours-la »', async () => {
+test('C4B-A1/4 cochee par la Ville, la case envoie l actualite ; plusieurs jours : « ces jours-la »', async () => {
   const arbre = await rendre();
   await choisirDate('Du', '17/10/2026');
   await choisirDate('Au', '25/10/2026');
@@ -341,7 +344,7 @@ test('C4B-A1/4 decochee, la case n envoie pas d actualite ; plusieurs jours : «
     'gym-tilleuls',
     expect.objectContaining({
       endDate: '2026-10-25',
-      publishActualite: false,
+      publishActualite: true,
       reason: 'vacances',
       startDate: '2026-10-17',
     }),
