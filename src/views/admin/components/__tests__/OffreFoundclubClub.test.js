@@ -73,6 +73,22 @@ jest.mock('@/components/atoms/button/Button', () => {
   };
 });
 
+// Le selecteur de date de l app (JJ/MM/AAAA) : double en champ texte, ses bornes visibles.
+jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
+  const reactActuel = jest.requireActual('react');
+  const { TextInput: ChampRN } = jest.requireActual('react-native');
+  return function DatePickerInputMock(/** @type {any} */ props) {
+    return reactActuel.createElement(ChampRN, {
+      maximumDate: props.maximumDate,
+      minimumDate: props.minimumDate,
+      onChangeText: props.onChange,
+      placeholder: props.placeholder,
+      testID: 'offre-foundclub-date',
+      value: props.value,
+    });
+  };
+});
+
 const ROUTE = '/admin-dashboard/subscription-ops/clubs/club-A/foundclub-offer';
 const FIN = '2027-10-07T12:00:00.000Z';
 const DEBUT = '2026-10-07T12:00:00.000Z';
@@ -316,4 +332,80 @@ test('O9 — une offre posée AVANT la console (plan de la Ville) : on prévient
     // eslint-disable-next-line max-len
     'Posée avant la console : le club lit encore « offert par la collectivité ». « Modifier la durée » puis « Enregistrer » corrige ce libellé.',
   );
+});
+
+// Decision d Adel du 07/10 ~23h15 : « il faut pouvoir offrir le temps qu on veut ».
+const champDate = (/** @type {any} */ noeud) => noeud.findAllByType(TextInput)
+  .find((/** @type {any} */ n) => n.props.testID === 'offre-foundclub-date');
+
+// eslint-disable-next-line max-len
+test('O10 — « Jusqu’au… » : le sélecteur de date apparaît (demain au plus tôt, 5 ans au plus) ; « Offrir » attend une date ; la FIN du jour choisi part au serveur', async () => {
+  const arbre = await monter();
+  await act(async () => { bouton(arbre.root, 'Offrir l’abonnement').props.onPress(); });
+  let ouverte = feuille(arbre, 'offre-foundclub-feuille');
+  expect(textes(ouverte)).toContain('Jusqu’au…');
+  expect(champDate(ouverte)).toBeUndefined();
+  await act(async () => { parTestID(ouverte, 'offre-foundclub-duree-until').props.onPress(); });
+  ouverte = feuille(arbre, 'offre-foundclub-feuille');
+  const champ = champDate(ouverte);
+  expect(champ).toBeTruthy();
+  const maintenant = new Date();
+  expect(champ.props.minimumDate.getTime()).toBeGreaterThan(maintenant.getTime());
+  expect(champ.props.maximumDate.getFullYear()).toBe(maintenant.getFullYear() + 5);
+  expect(bouton(ouverte, 'Offrir').props.disabled).toBe(true);
+
+  await act(async () => { champ.props.onChangeText('31/12/2026'); });
+  ouverte = feuille(arbre, 'offre-foundclub-feuille');
+  expect(bouton(ouverte, 'Offrir').props.disabled).toBeFalsy();
+  await act(async () => { bouton(ouverte, 'Offrir').props.onPress(); });
+  await attendre(() => mockPost.mock.calls.length > 0);
+  expect(mockPost).toHaveBeenCalledWith(ROUTE, {
+    data: {
+      duration: 'until',
+      endsAt: new Date(2026, 11, 31, 23, 59, 59, 999).toISOString(),
+      reason: 'Offert par FoundClub',
+    },
+  });
+});
+
+// eslint-disable-next-line max-len
+test('O11 — « Modifier la durée » d une offre datée : « Jusqu’au… » est choisi, avec SA date', async () => {
+  serveur.etat = {
+    collectivite: false,
+    kind: 'foundclub',
+    planCode: 'fc_foundclub_club',
+    reason: 'Club pilote',
+    since: DEBUT,
+    subscriptionDocumentId: 'sub-1',
+    until: FIN,
+  };
+  const arbre = await monter();
+  await act(async () => { bouton(arbre.root, 'Modifier la durée').props.onPress(); });
+  const ouverte = feuille(arbre, 'offre-foundclub-feuille');
+  const choisies = ['1m', '3m', '1y', 'none', 'until']
+    // eslint-disable-next-line max-len
+    .filter((duree) => parTestID(ouverte, `offre-foundclub-duree-${duree}`).props.accessibilityState?.selected);
+  expect(choisies).toEqual(['until']);
+  expect(champDate(ouverte).props.value).toBe('07/10/2027');
+});
+
+// eslint-disable-next-line max-len
+test('O12 — une date refusée par le serveur (plus de 5 ans) : la phrase s écrit dans la feuille', async () => {
+  serveur.reponseOffre = Object.assign(new Error('FOUNDCLUB_OFFER_END_DATE_TOO_FAR'), {
+    response: {
+      // eslint-disable-next-line max-len
+      data: { error: { details: { code: 'FOUNDCLUB_OFFER_END_DATE_TOO_FAR' }, message: 'FOUNDCLUB_OFFER_END_DATE_TOO_FAR' } },
+      status: 400,
+    },
+  });
+  const arbre = await monter();
+  await act(async () => { bouton(arbre.root, 'Offrir l’abonnement').props.onPress(); });
+  // eslint-disable-next-line max-len
+  await act(async () => { parTestID(feuille(arbre, 'offre-foundclub-feuille'), 'offre-foundclub-duree-until').props.onPress(); });
+  // eslint-disable-next-line max-len
+  await act(async () => { champDate(feuille(arbre, 'offre-foundclub-feuille')).props.onChangeText('01/01/2040'); });
+  // eslint-disable-next-line max-len
+  await act(async () => { bouton(feuille(arbre, 'offre-foundclub-feuille'), 'Offrir').props.onPress(); });
+  await attendre(() => textes(arbre.root).includes('Pas plus de 5 ans.'));
+  expect(textes(arbre.root)).toContain('Pas plus de 5 ans.');
 });

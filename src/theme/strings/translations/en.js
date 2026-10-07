@@ -13312,10 +13312,13 @@ export default {
   offreFoundclub: {
     ancienPlan: 'Set before the console: the club still reads “offered by the local authority”. “Change the duration” then “Save” fixes this label.',
     annuler: 'Cancel',
+    choisirUneDate: 'Pick a date',
+    dateDeFin: 'End date',
     dejaPaye: 'This club already pays for its plan: nothing was added.',
     depuis: 'Since {{date}}',
     duree: 'Duration',
     durees: {
+      jusquAu: 'Until…',
       sansFin: 'No end date',
       troisMois: '3 months',
       unAn: '1 year',
@@ -13324,6 +13327,8 @@ export default {
     enregistrer: 'Save',
     erreurs: {
       clubIntrouvable: 'This club no longer exists.',
+      dateInvalide: 'Pick a future date.',
+      dateTropLoin: 'No more than {{max}} years.',
       duree: 'Choose a duration.',
       motifTropLong: 'The reason is longer than {{max}} characters.',
     },

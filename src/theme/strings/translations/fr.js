@@ -14037,10 +14037,13 @@ export default {
     // eslint-disable-next-line max-len
     ancienPlan: 'Posée avant la console : le club lit encore « offert par la collectivité ». « Modifier la durée » puis « Enregistrer » corrige ce libellé.',
     annuler: 'Annuler',
+    choisirUneDate: 'Choisir une date',
+    dateDeFin: 'Date de fin',
     dejaPaye: 'Ce club paie déjà son abonnement : rien n’a été posé.',
     depuis: 'Depuis le {{date}}',
     duree: 'Durée',
     durees: {
+      jusquAu: 'Jusqu’au…',
       sansFin: 'Sans fin',
       troisMois: '3 mois',
       unAn: '1 an',
@@ -14049,6 +14052,8 @@ export default {
     enregistrer: 'Enregistrer',
     erreurs: {
       clubIntrouvable: 'Ce club n’existe plus.',
+      dateInvalide: 'Choisis une date à venir.',
+      dateTropLoin: 'Pas plus de {{max}} ans.',
       duree: 'Choisis une durée.',
       motifTropLong: 'Le motif dépasse {{max}} caractères.',
     },

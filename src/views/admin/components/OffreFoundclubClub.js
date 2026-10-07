@@ -1,3 +1,4 @@
+import { format, isValid, parse } from 'date-fns';
 import i18next from 'i18next';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import { PastilleAPoint } from '@/views/admin/components/CollectiviteBadges';
 import ConsoleSheet from '@/views/admin/components/ConsoleSheet';
 
@@ -19,7 +21,10 @@ import {
   useGrantFoundclubClubOffer,
   useRevokeFoundclubClubOffer,
 } from '@/services/admin/foundclubOfferQueries';
-import { FOUNDCLUB_OFFER_DURATIONS } from '@/services/admin/foundclubOfferService';
+import {
+  FOUNDCLUB_OFFER_CUSTOM_DURATION,
+  FOUNDCLUB_OFFER_DURATIONS,
+} from '@/services/admin/foundclubOfferService';
 
 import { getErrorMessage, getServerErrorCode } from '@/utils/errors/displayError';
 
@@ -31,6 +36,38 @@ const DUREE_PAR_DEFAUT = '1y';
 // Le plan de l offre FoundClub (admin subscription-catalog.ts). Une offre posee AVANT la console
 // (07/10, « Aix-Perd en Buvette ») porte celui de la Ville : l app y lit « collectivité ».
 const PLAN_FOUNDCLUB = 'fc_foundclub_club';
+// Les puces de la feuille : 1 mois, 3 mois, 1 an, sans fin, puis « Jusqu’au… » une date choisie.
+const DUREES = [...FOUNDCLUB_OFFER_DURATIONS, FOUNDCLUB_OFFER_CUSTOM_DURATION];
+// Le selecteur de date de l app parle JJ/MM/AAAA (DatePickerInput).
+const FORMAT_SELECTEUR = 'dd/MM/yyyy';
+// Une date choisie : 5 ans au plus (le serveur refuse au-dela, FOUNDCLUB_OFFER_END_DATE_TOO_FAR).
+const ANNEES_MAX = 5;
+
+/**
+ * La FIN du jour choisi, en heure locale, en ISO : l offre couvre tout ce jour-la. Rien si la
+ * date est illisible.
+ * @param {string} valeur - La date du selecteur (JJ/MM/AAAA).
+ * @returns {string | null} La fin en ISO, ou null.
+ */
+const finDuJourChoisi = (valeur) => {
+  const jour = valeur ? parse(valeur, FORMAT_SELECTEUR, new Date()) : null;
+  if (!jour || !isValid(jour)) return null;
+  jour.setHours(23, 59, 59, 999);
+  return jour.toISOString();
+};
+
+/**
+ * Les bornes du selecteur : demain au plus tot (une date a venir), dans 5 ans au plus.
+ * @returns {{ max: Date, min: Date }} Les bornes.
+ */
+const bornesDuSelecteur = () => {
+  const min = new Date();
+  min.setDate(min.getDate() + 1);
+  min.setHours(0, 0, 0, 0);
+  const max = new Date();
+  max.setFullYear(max.getFullYear() + ANNEES_MAX);
+  return { max, min };
+};
 
 /**
  * Un jour lisible : « 7 octobre 2027 ».
@@ -66,8 +103,12 @@ const messageDuRefus = (erreur) => {
   switch (getServerErrorCode(erreur)) {
     case 'FOUNDCLUB_OFFER_CLUB_NOT_FOUND':
       return i18next.t('offreFoundclub.erreurs.clubIntrouvable');
+    case 'FOUNDCLUB_OFFER_END_DATE_TOO_FAR':
+      return i18next.t('offreFoundclub.erreurs.dateTropLoin', { max: ANNEES_MAX });
     case 'FOUNDCLUB_OFFER_INVALID_DURATION':
       return i18next.t('offreFoundclub.erreurs.duree');
+    case 'FOUNDCLUB_OFFER_INVALID_END_DATE':
+      return i18next.t('offreFoundclub.erreurs.dateInvalide');
     case 'FOUNDCLUB_OFFER_REASON_TOO_LONG':
       return i18next.t('offreFoundclub.erreurs.motifTropLong', { max: MOTIF_MAX });
     default:
@@ -141,6 +182,8 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
   const [modification, setModification] = useState(false);
   const [retraitOuvert, setRetraitOuvert] = useState(false);
   const [duree, setDuree] = useState(DUREE_PAR_DEFAUT);
+  // La date du selecteur (JJ/MM/AAAA), avec « Jusqu’au… » seulement.
+  const [dateFin, setDateFin] = useState('');
   const [motif, setMotif] = useState('');
   const [compteRendu, setCompteRendu] = useState(/** @type {string | null} */ (null));
   const offre = useGrantFoundclubClubOffer({
@@ -164,6 +207,7 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
     setCompteRendu(null);
     setModification(false);
     setDuree(DUREE_PAR_DEFAUT);
+    setDateFin('');
     setMotif(t('offreFoundclub.motifParDefaut'));
     setFeuilleOuverte(true);
   };
@@ -173,7 +217,11 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
     offre.reset?.();
     setCompteRendu(null);
     setModification(true);
-    setDuree(enCours?.until ? DUREE_PAR_DEFAUT : 'none');
+    // Une offre datee se rouvre sur SA date (« Jusqu’au… ») ; sans fin, sur « Sans fin ».
+    const fin = enCours?.until ? new Date(enCours.until) : null;
+    const finLisible = Boolean(fin && isValid(fin));
+    setDuree(finLisible ? FOUNDCLUB_OFFER_CUSTOM_DURATION : 'none');
+    setDateFin(finLisible ? format(/** @type {Date} */ (fin), FORMAT_SELECTEUR) : '');
     setMotif(String(enCours?.reason || '').trim() || t('offreFoundclub.motifParDefaut'));
     setFeuilleOuverte(true);
   };
@@ -188,7 +236,11 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
     '1y': t('offreFoundclub.durees.unAn'),
     '3m': t('offreFoundclub.durees.troisMois'),
     none: t('offreFoundclub.durees.sansFin'),
+    until: t('offreFoundclub.durees.jusquAu'),
   };
+  const dateChoisie = duree === FOUNDCLUB_OFFER_CUSTOM_DURATION;
+  const finChoisie = dateChoisie ? finDuJourChoisi(dateFin) : null;
+  const bornes = bornesDuSelecteur();
 
   /** @type {import('react').ReactNode} */
   let corps;
@@ -289,8 +341,12 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
         onClose={fermer}
         primary={{
           isLoading: Boolean(offre.isPending),
+          // « Jusqu’au… » sans date : rien a envoyer.
+          disabled: dateChoisie && !finChoisie,
           label: modification ? t('offreFoundclub.enregistrer') : t('offreFoundclub.offrir'),
-          onPress: () => offre.mutate({ clubId, duration: duree, reason: motif.trim() }),
+          onPress: () => offre.mutate({
+            clubId, duration: duree, endsAt: finChoisie, reason: motif.trim(),
+          }),
         }}
         secondary={{ label: t('offreFoundclub.annuler'), onPress: fermer }}
         subtitle={nom || null}
@@ -310,7 +366,7 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
             accessibilityRole="radiogroup"
             style={[Alignments.row, Alignments.wrap, { gap: 8 }]}
           >
-            {FOUNDCLUB_OFFER_DURATIONS.map((valeur) => {
+            {DUREES.map((valeur) => {
               const choisie = valeur === duree;
               return (
                 <TouchableOpacity
@@ -338,13 +394,23 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
                       { color: choisie ? Colors.neutral00 : Colors.primary200 },
                     ]}
                   >
-                    {libellesDurees[/** @type {'1m' | '3m' | '1y' | 'none'} */ (valeur)]}
+                    {libellesDurees[/** @type {'1m' | '3m' | '1y' | 'none' | 'until'} */ (valeur)]}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
         </View>
+        {dateChoisie ? (
+          <DatePickerInput
+            label={t('offreFoundclub.dateDeFin')}
+            maximumDate={bornes.max}
+            minimumDate={bornes.min}
+            onChange={setDateFin}
+            placeholder={t('offreFoundclub.choisirUneDate')}
+            value={dateFin}
+          />
+        ) : null}
         <View style={{ gap: 6 }}>
           <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
             {t('offreFoundclub.motifFacultatif')}

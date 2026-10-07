@@ -25,15 +25,21 @@ export const getFoundclubClubOffer = async (clubId) => {
   return response.data;
 };
 
+/** « Jusqu au… » une date choisie (decision d Adel du 07/10) : la fin part avec la demande. */
+export const FOUNDCLUB_OFFER_CUSTOM_DURATION = 'until';
+
 /**
  * Offrir (ou reoffrir) l abonnement Club.
- * @param {{ clubId: string, duration: string, reason: string }} params - Le club, la duree,
- *   le motif.
+ * @param {{ clubId: string, duration: string, endsAt?: string | null, reason: string }} params -
+ *   Le club, la duree, la fin choisie (ISO, avec `until` seulement), le motif.
  * @returns {Promise<any>} `{ data: { offer: 'granted' | 'already-paid', currentPeriodEnd,
  *   subscriptionDocumentId } }`.
  */
-export const grantFoundclubClubOffer = async ({ clubId, duration, reason }) => {
-  const response = await client.post(routeDuClub(clubId), { data: { duration, reason } });
+export const grantFoundclubClubOffer = async ({
+  clubId, duration, endsAt = null, reason,
+}) => {
+  const data = endsAt ? { duration, endsAt, reason } : { duration, reason };
+  const response = await client.post(routeDuClub(clubId), { data });
   return response.data;
 };
 
