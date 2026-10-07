@@ -51,3 +51,33 @@ describe('COLL-ACCUEIL-BIS — le lien de la Ville retenu sur l appareil', () =>
     expect(lienDeLaVilleRetenu(MAINTENANT)).toBeNull();
   });
 });
+
+// LIENS-APP (07/10/2026) — REVENIR AU LIEN APRÈS LA CONNEXION. Le lien de la Ville ouvert sans
+// compte mène à la connexion ; une fois connecté, l'app doit revenir à la page du lien. Un repère
+// À PART du lien retenu 48 h : celui-là attend la création d'un club, celui-ci ne sert qu'une
+// fois, juste après la connexion. Borné à 1 h. ROUGE avant le lot (les fonctions n'existaient pas).
+describe('LIENS-APP — le retour au lien après la connexion', () => {
+  // eslint-disable-next-line global-require
+  const lien = () => require('./lienDeLaVille');
+
+  it('retenu, il se relit pendant 1 h, puis ne vaut plus', () => {
+    const { DUREE_DU_RETOUR_MS, retenirLeRetourAuLien, retourAuLienEnAttente } = lien();
+    expect(DUREE_DU_RETOUR_MS).toBe(60 * 60 * 1000);
+    retenirLeRetourAuLien('CodeDeLaVille0123456789ab', MAINTENANT);
+    expect(retourAuLienEnAttente(MAINTENANT + 1000)).toBe('CodeDeLaVille0123456789ab');
+    expect(retourAuLienEnAttente(MAINTENANT + DUREE_DU_RETOUR_MS + 1)).toBeNull();
+  });
+
+  it('oublié, il ne se relit plus ; il ne touche pas au lien retenu 48 h', () => {
+    const { oublierLeRetourAuLien, retenirLeRetourAuLien, retourAuLienEnAttente } = lien();
+    retenirLienDeLaVille('LienRetenu', MAINTENANT);
+    retenirLeRetourAuLien('LienDuRetour', MAINTENANT);
+    oublierLeRetourAuLien();
+    expect(retourAuLienEnAttente(MAINTENANT)).toBeNull();
+    expect(lienDeLaVilleRetenu(MAINTENANT)).toBe('LienRetenu');
+  });
+
+  it('le chemin partagé par la Ville est celui de la page du lien', () => {
+    expect(lien().cheminDuLienDeLaVille('abc')).toBe('/invitation-ville/abc');
+  });
+});
