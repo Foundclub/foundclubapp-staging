@@ -5211,6 +5211,15 @@ export default {
       document: 'Document',
       documentJoint: 'Document joint',
       enregistrer: 'Enregistrer',
+      envoi: {
+        attente: 'Vous pourrez publier dès la fin de l’envoi.',
+        document: 'Envoi du document…',
+        documentPourcent: 'Envoi du document… {{pourcent}} %',
+        documentRecu: 'Document reçu, le serveur l’enregistre…',
+        photo: 'Envoi de la photo…',
+        photoPourcent: 'Envoi de la photo… {{pourcent}} %',
+        photoRecue: 'Photo reçue, le serveur la prépare…',
+      },
       fautes: {
         installation: 'Choisissez l’installation.',
         texteTropLong: 'Le texte est trop long.',

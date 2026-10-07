@@ -231,6 +231,23 @@ export const photosEtDocuments = (pieces) => {
 };
 
 /**
+ * ⏱️ VILLE-T18D — ce que l'écran dit d'une pièce PENDANT son envoi : une photo ou un document,
+ * et, pour une photo du téléphone, son fichier local (montré tout de suite, avant l'envoi).
+ * @param {any} brut - Ce que rend le sélecteur (image-picker, documents, `File` du site).
+ * @returns {{ apercu: string | null, photo: boolean }} La pièce en cours d'envoi.
+ */
+export const pieceEnEnvoi = (brut) => {
+  const premier = Array.isArray(brut) ? brut[0] : brut;
+  const piece = premier?.assets?.[0] || premier;
+  const photo = isImageAttachment({
+    mime: piece?.type || piece?.mimeType,
+    name: piece?.name || piece?.fileName,
+  });
+  const uri = String(piece?.uri || '');
+  return { apercu: photo && /^(file|content|ph):/i.test(uri) ? uri : null, photo };
+};
+
+/**
  * L'adresse d'une photo à afficher sur `largeurMin` pixels : la plus petite version fabriquée
  * par le serveur (vignette, small, medium, large) qui soit assez large, sinon l'original.
  * Une carte n'a pas à charger 2048 px ; une capture en portrait n'a pas de version assez large.
