@@ -132,7 +132,10 @@ function TypingIndicator({ avatar = null, label }) {
           width={24}
         >
           <Path
-            d="M6 0V9C6 13.5 3.8 16.6 0 18C4.6 18.6 8.8 17.6 11.6 15.6C13.6 17.2 16.4 18 20 18H24V0Z"
+            d={
+              'M6 0V9C6 13.5 3.8 16.6 0 18C4.6 18.6 8.8 17.6 11.6 15.6'
+              + 'C13.6 17.2 16.4 18 20 18H24V0Z'
+            }
             fill={Colors.primary700}
           />
         </Svg>
