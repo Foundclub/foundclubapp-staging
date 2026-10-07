@@ -5885,6 +5885,8 @@ export default {
       // COLL-C3B-BIS (03/10) — planche 43 : changer d’installation ; le titre du panneau.
       changer: 'Changer',
       choisirInstallation: 'Installation de la Ville',
+      // VILLE-T18C (07/10) — « Jour » vide (tournée T18, D07).
+      choisirJour: 'Choisis un jour',
       colEquipe: 'Équipe',
       colInstallation: 'Installation',
       colMoment: 'Moment',
@@ -5934,8 +5936,13 @@ export default {
       ouvre: 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.',
       posee: 'C’est posé : c’est dans ton créneau',
       quandMeme: 'Tu peux demander quand même : la mairie décidera.',
+      // VILLE-T18C (07/10) — Retour sur une saisie modifiée (tournée T18, D07).
+      quitter: 'Quitter',
+      quitterPerdu: 'Ce que tu as saisi sera perdu.',
+      quitterTitre: 'Quitter sans envoyer ?',
       quiDecide: 'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
       ratees: '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
+      rester: 'Rester',
       serieCompte: '{{nombre}} dates, jusqu’au {{jour}}.',
       serieUneDate: 'Une seule date : le {{jour}}.',
       tesDemandes: 'Tes demandes à la Ville',
@@ -5973,6 +5980,11 @@ export default {
       quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
       // FINITIONS11-COLL (03/10) — « deplacer A » : une séance déplacée hors créneau.
       siRefusAnnulee: 'Si la mairie refuse, la séance sera annulée.',
+      // VILLE-T18C (07/10, tournée T18 D07c) — posée d’office : pourquoi (la gestion de la Ville).
+      // eslint-disable-next-line max-len
+      tuGeres: 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.',
+      // eslint-disable-next-line max-len
+      tuGeresComplet: 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, même au complet.',
     },
     erreur: {
       titre: 'Les demandes n’ont pas pu être lues.',

@@ -590,10 +590,14 @@ describe('COLL-FIX2 — l’aperçu dit qui décidera (D32, SPEC-PLACE)', () => 
     expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(true);
   });
 
+  // VILLE-T18C (07/10, tournée T18 D07c) : la phrase dit désormais POURQUOI (la gestion de la
+  // Ville).
   it('qui tranche lui-même, place libre : posé tout de suite', async () => {
     mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'direct' } };
-    const arbre = await monter((l) => l.includes('Ton entraînement sera posé tout de suite.'));
-    expect(textes(arbre)).toContain('Ton entraînement sera posé tout de suite.');
+    // eslint-disable-next-line max-len
+    const phrase = 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.';
+    const arbre = await monter((l) => l.includes(phrase));
+    expect(textes(arbre)).toContain(phrase);
     expect(textes(arbre)).toContain('Poser l’entraînement');
     expect(textes(arbre)).not.toContain(LA_VILLE_REPOND);
   });
@@ -808,5 +812,69 @@ describe('VILLE-T18C point 1 — une série part vite, dit où elle en est, et n
       .toEqual(['2030-10-03', '2030-10-10', '2030-10-17', '2030-10-24']);
     // eslint-disable-next-line max-len
     expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 24 octobre · Gymnase des Tilleuls');
+  });
+});
+
+// 🗣️ VILLE-T18C (07/10) — point 2, tournée T18 (D07c) : U13 dans le créneau des U15, au T18 :
+// « Il y a déjà 2 équipes : c’est complet. … Ton entraînement sera posé tout de suite. » —
+// CONTRADICTOIRE, sans dire pourquoi. Le compte (Karim) est dirigeant du club ET gestionnaire de la
+// Ville : il tranche lui-même. Le serveur ne pose « tout de suite » hors d'un créneau du club que
+// pour qui tranche lui-même (admin season-slot.ts `judgeSession` : sur une installation de la
+// Ville, `needsCityApproval` est faux seulement pour elle ou lui) ; et cet écran ne propose que les
+// installations de la Ville. ROUGE avant le lot : la phrase dit pourquoi ; « Jour » vide a un
+// indice ; Retour sur une saisie modifiée demande avant de la perdre.
+// eslint-disable-next-line max-len
+describe('VILLE-T18C point 2 — la phrase dit pourquoi, « Jour » a un indice, Retour demande', () => {
+  // eslint-disable-next-line max-len
+  const TU_GERES_COMPLET = 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, même au complet.';
+
+  it('complet, mais posé tout de suite hors créneau du club : la phrase dit pourquoi', async () => {
+    mockApercu = { ...APERCU_COMPLET, decision: { inClubSlot: false, outcome: 'direct' } };
+    const arbre = await monter((l) => l.includes(TU_GERES_COMPLET));
+    const lus = textes(arbre);
+    expect(lus).toContain('Il y a déjà 2 équipes : c’est complet.');
+    expect(lus).toContain(TU_GERES_COMPLET);
+    expect(lus).not.toContain('Ton entraînement sera posé tout de suite.');
+    expect(lus).toContain('Poser l’entraînement');
+  });
+
+  it('« Jour » vide : un indice', async () => {
+    mockParams = { clubId: 'club-A', facilityId: 'gym-ville' };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    const jour = arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'demande-jour')[0];
+    expect(aplatir(jour.props.children)).toBe('Choisis un jour');
+  });
+
+  // eslint-disable-next-line max-len
+  it('Retour : libre tant que rien n’est saisi ; une saisie modifiée demande avant de la perdre', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    const retenirAvant = jest.fn();
+    await act(async () => {
+      mockEcouteurs.beforeRemove?.({
+        data: { action: { type: 'GO_BACK' } }, preventDefault: retenirAvant,
+      });
+    });
+    expect(retenirAvant).not.toHaveBeenCalled();
+
+    await appuyer(arbre, 'demande-equipe-u13');
+    const retenir = jest.fn();
+    await act(async () => {
+      mockEcouteurs.beforeRemove?.({
+        data: { action: { type: 'GO_BACK' } }, preventDefault: retenir,
+      });
+    });
+    expect(retenir).toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith(
+      'Quitter sans envoyer ?',
+      'Ce que tu as saisi sera perdu.',
+      expect.any(Array),
+    );
+    const boutons = /** @type {any[]} */ (alerte.mock.calls.at(-1)?.[2]);
+    expect(boutons.map((b) => b.text)).toEqual(['Rester', 'Quitter']);
+    await act(async () => { boutons[1].onPress(); });
+    expect(mockDispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+    alerte.mockRestore();
   });
 });

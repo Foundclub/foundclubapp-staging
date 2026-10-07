@@ -135,6 +135,8 @@ function ClubSlotRequest({
   );
   // VILLE-T18C — un 2ᵉ appui arrive avant que `envoi` soit relu : le verrou est une référence.
   const enCours = useRef(false);
+  // VILLE-T18C — « Quitter » confirmé : la sortie rejouée ne redemande pas.
+  const sortieLibre = useRef(false);
   const [erreur, setErreur] = useState('');
   const [resultat, setResultat] = useState(/** @type {any} */ (null));
 
@@ -312,6 +314,18 @@ function ClubSlotRequest({
     }
   };
 
+  // VILLE-T18C (07/10, tournée T18 D07) — une saisie MODIFIÉE (par rapport à ce que l'écran a reçu)
+  // ne se perd plus sur un Retour sans question. Rien de modifié, ou déjà envoyée : on sort.
+  const saisieModifiee = !resultat && (
+    equipe !== (params.teamId || null)
+    || hebdo
+    || jour !== versChamp(params.date)
+    || debut !== (params.startTime || '')
+    || fin !== (params.endTime || '')
+    || Boolean(mot.trim())
+    || installationId !== (params.facilityId || null)
+  );
+
   // VILLE-T18C (07/10) — RETOUR PENDANT L'ENVOI : une série coupée en route laisserait une partie
   // de ses dates au serveur et l'autre nulle part. On retient, et on dit pourquoi.
   // ponytail: sur le site, le « retour » du NAVIGATEUR ne passe pas par `beforeRemove` (même limite
@@ -319,17 +333,36 @@ function ClubSlotRequest({
   useEffect(() => {
     if (enPanneau) return undefined;
     return navigation.addListener?.('beforeRemove', (/** @type {any} */ evenement) => {
-      if (!enCours.current) return;
+      if (enCours.current) {
+        evenement.preventDefault();
+        Alert.alert(
+          t('collectiviteDemandes.club.envoiEnCoursTitre', 'Envoi en cours'),
+          t(
+            'collectiviteDemandes.club.envoiEnCoursAttends',
+            'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+          ),
+        );
+        return;
+      }
+      if (!saisieModifiee || sortieLibre.current) return;
       evenement.preventDefault();
       Alert.alert(
-        t('collectiviteDemandes.club.envoiEnCoursTitre', 'Envoi en cours'),
-        t(
-          'collectiviteDemandes.club.envoiEnCoursAttends',
-          'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
-        ),
+        t('collectiviteDemandes.club.quitterTitre', 'Quitter sans envoyer ?'),
+        t('collectiviteDemandes.club.quitterPerdu', 'Ce que tu as saisi sera perdu.'),
+        [
+          { style: 'cancel', text: t('collectiviteDemandes.club.rester', 'Rester') },
+          {
+            onPress: () => {
+              sortieLibre.current = true;
+              navigation.dispatch?.(evenement.data.action);
+            },
+            style: 'destructive',
+            text: t('collectiviteDemandes.club.quitter', 'Quitter'),
+          },
+        ],
       );
     });
-  }, [enPanneau, navigation, t]);
+  }, [enPanneau, navigation, saisieModifiee, t]);
 
   // COLL-C3B-BIS (planche 43) — en panneau, le planning dessine la place demandée en pointillé
   // pendant la saisie : il reçoit le brouillon (jour, heures, équipe), et rien une fois envoyé.
@@ -563,14 +596,29 @@ function ClubSlotRequest({
       )
       : null;
     let couleurDeLaSuite = Colors.warning500;
-    if (posee) {
+    if (posee && decision?.inClubSlot) {
       couleurDeLaSuite = Colors.success500;
-      suite = decision?.inClubSlot
+      suite = t(
+        'collectiviteDemandes.decision.creneauDuClub',
+        'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+      );
+    } else if (posee) {
+      // 🗣️ VILLE-T18C (07/10, tournée T18 D07c) — « c’est complet » puis « posé tout de suite »,
+      // sans dire pourquoi. Hors d'un créneau du club, sur une installation de la Ville (les
+      // seules de cet écran), le serveur ne pose d'office que pour qui tranche lui-même : la
+      // gestion de la Ville (admin season-slot.ts `judgeSession` ⇒ `needsCityApproval`).
+      couleurDeLaSuite = Colors.success500;
+      suite = complet
         ? t(
-          'collectiviteDemandes.decision.creneauDuClub',
-          'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+          'collectiviteDemandes.decision.tuGeresComplet',
+          // eslint-disable-next-line max-len
+          'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, même au complet.',
         )
-        : t('collectiviteDemandes.decision.posee', 'Ton entraînement sera posé tout de suite.');
+        : t(
+          'collectiviteDemandes.decision.tuGeres',
+          // eslint-disable-next-line max-len
+          'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.',
+        );
     } else if (issue === 'dirigeant') {
       suite = t(
         'collectiviteDemandes.decision.dirigeant',
@@ -713,6 +761,8 @@ function ClubSlotRequest({
           // Une fin choisie AVANT le nouveau jour ne vaut plus : la saison reprend.
           if (jusquAIso && jusquAIso < versIso(valeur)) setJusquA('');
         }}
+        // VILLE-T18C (07/10, tournée T18 D07) : vide, le champ ne disait rien.
+        placeholder={t('collectiviteDemandes.club.choisirJour', 'Choisis un jour')}
         value={jour}
       />
       {/* VILLE-T18C (07/10, tournée T18 D09) — une série choisit sa fin ; sans date, la saison. */}

@@ -5514,6 +5514,8 @@ export default {
       // COLL-C3B-BIS (03/10) — board 43: change facility; the panel title.
       changer: 'Change',
       choisirInstallation: 'Town facility',
+      // VILLE-T18C (07/10) — empty « Day » (round T18, D07).
+      choisirJour: 'Pick a day',
       colEquipe: 'Team',
       colInstallation: 'Facility',
       colMoment: 'When',
@@ -5560,8 +5562,13 @@ export default {
       ouvre: 'The facility opens at {{heure}}. Start at {{heure}}, or later.',
       posee: 'Done: it is in your slot',
       quandMeme: 'You can still ask: the town hall will decide.',
+      // VILLE-T18C (07/10) — Back on a changed form (round T18, D07).
+      quitter: 'Leave',
+      quitterPerdu: 'What you entered will be lost.',
+      quitterTitre: 'Leave without sending?',
       quiDecide: '{{ville}} accepts or refuses; you get its answer as a notification.',
       ratees: '{{nombre}} date(s) could not be sent: try again from your planning.',
+      rester: 'Stay',
       serieCompte: '{{nombre}} dates, until {{jour}}.',
       serieUneDate: 'A single date: {{jour}}.',
       tesDemandes: 'Your requests to the town',
@@ -5595,6 +5602,10 @@ export default {
       quiDecideDirigeant: 'Your club manager accepts or refuses; you get the answer as a notification.',
       // FINITIONS11-COLL (03/10) — Adel's decision "deplacer A": a session moved outside the slot.
       siRefusAnnulee: 'If the town hall refuses, the session will be cancelled.',
+      // VILLE-T18C (07/10, round T18 D07c) — set at once: why (the town management).
+      tuGeres: 'You manage this facility for the town: your training will be set right away, no request.',
+      // eslint-disable-next-line max-len
+      tuGeresComplet: 'You manage this facility for the town: your training will be set right away, even when full.',
     },
     erreur: {
       titre: 'The requests could not be loaded.',
