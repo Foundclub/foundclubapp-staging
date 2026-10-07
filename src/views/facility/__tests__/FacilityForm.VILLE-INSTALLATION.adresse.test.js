@@ -33,19 +33,27 @@ let mockNavigation;
 let mockRoute;
 const mockSaveCollectivite = jest.fn();
 
-// Ce que rend la Geoplateforme pour « Avenue de Luminy » (forme de `searchPlaces`).
-const mockLuminy = {
-  geometry: { coordinates: [5.4356, 43.2318], type: 'Point' },
-  properties: {
-    city: 'Marseille',
-    context: '13, Bouches-du-Rhône, Provence-Alpes-Côte d’Azur',
-    id: '13209_5530',
-    label: 'Avenue de Luminy 13009 Marseille',
-    postcode: '13009',
-    type: 'street',
+// Ce que rend NOTRE serveur (`GET /geo/search`, admin `api/geo/services/providers/ban.ts`) : une
+// RUE (le cas d Adel) et une COMMUNE (l installation « T » creee en prod le 07/10 a 11:49 avec
+// « Marseille (13001) », [5.405, 43.282] — indice du chef d orchestre).
+const mockReponsesDuServeur = {
+  luminy: {
+    address_line: 'Avenue de Luminy', city: 'Marseille', confidence: 0.92, country: 'FR',
+    label: 'Avenue de Luminy 13009 Marseille', lat: 43.2318, lng: 5.4356, postcode: '13009',
+    provider: 'ban', provider_id: '13209_5530', source: 'autocomplete',
   },
-  type: 'Feature',
+  marseille: {
+    address_line: 'Marseille', city: 'Marseille', confidence: 0.97, country: 'FR',
+    label: 'Marseille', lat: 43.282, lng: 5.405, postcode: '13001',
+    provider: 'ban', provider_id: '13201', source: 'autocomplete',
+  },
 };
+const mockClientGet = jest.fn(async (/** @type {string} */ chemin, /** @type {any} */ options) => {
+  const q = String(options?.params?.q || '').toLowerCase();
+  const trouvees = Object.entries(mockReponsesDuServeur)
+    .filter(([clef]) => q.includes(clef)).map(([, lieu]) => lieu);
+  return { data: chemin === '/geo/search' ? { data: trouvees, meta: {} } : { features: [] } };
+});
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -83,14 +91,32 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-// La recherche : la liste ne propose QUE quand la recherche tape au moins 3 lettres
-// (`enabled`), exactement comme `useGetPlaces`.
-jest.mock('@/services/places/placesQueries', () => ({
-  useGetPlaces: (/** @type {any} */ { options, searchParam }) => ({
-    data: options?.enabled && /luminy/i.test(searchParam) ? [mockLuminy] : undefined,
-    isLoading: false,
-  }),
+// La recherche : le VRAI `searchPlaces` (validation Joi de la reponse, remise en point GeoJSON) ;
+// seul l appel reseau est double. `useGetPlaces` garde son contrat : rien sous 3 lettres
+// (`enabled`), une recherche videe ne rend plus rien.
+jest.mock('@/services/client', () => ({
+  __esModule: true,
+  default: { get: (/** @type {any[]} */ ...args) => mockClientGet(...args) },
 }));
+jest.mock('@/services/places/placesQueries', () => {
+  const reactActuel = jest.requireActual('react');
+  const { searchPlaces } = jest.requireActual('@/services/places/placesService');
+  return {
+    useGetPlaces: (/** @type {any} */ { options, searchParam, type }) => {
+      const [data, setData] = reactActuel.useState(undefined);
+      reactActuel.useEffect(() => {
+        if (!options?.enabled) {
+          setData(undefined);
+          return undefined;
+        }
+        let vivant = true;
+        searchPlaces(searchParam, type).then((lieux) => { if (vivant) setData(lieux); });
+        return () => { vivant = false; };
+      }, [options?.enabled, searchParam, type]);
+      return { data, isLoading: false };
+    },
+  };
+});
 
 jest.mock('@/services/facility/facilityQueries', () => ({
   useGetFacility: () => ({
@@ -244,26 +270,44 @@ const monterVille = async () => {
   return arbre;
 };
 
+// Chercher dans la feuille ouverte, puis choisir une ligne de la liste et « Sélectionner ».
+const chercherEtChoisir = async (
+  /** @type {any} */ arbre,
+  /** @type {string} */ recherche,
+  /** @type {string} */ libelle,
+) => {
+  await saisir(arbre, 'saisie:Rechercher...', recherche);
+  await attendre(400);
+  await attendre(0);
+  await appuyer(parId(arbre, `option:${libelle}`));
+  await appuyer(parTexte(arbre, 'Sélectionner'));
+  // Une seconde passe : la recherche s est videe (350 ms d attente de frappe).
+  await attendre(1000);
+};
+
 // Le geste d Adel : un nom, un type, puis l adresse cherchee et choisie DANS LA LISTE.
-const remplirCommeAdel = async (/** @type {any} */ arbre) => {
+const remplirCommeAdel = async (
+  /** @type {any} */ arbre,
+  recherche = 'Avenue de Luminy',
+  libelle = LIBELLE_LUMINY,
+) => {
   await saisir(arbre, 'saisie:Nom de l\'installation', 'Stade de Luminy');
   await appuyer(pressables(arbre).find((/** @type {any} */ noeud) => String(
     noeud.props?.accessibilityLabel || '',
   ).startsWith('Type')));
   await appuyer(parId(arbre, 'type-Terrain'));
   await appuyer(parTexte(arbre, INVITE_ADRESSE));
-  await saisir(arbre, 'saisie:Rechercher...', 'Avenue de Luminy');
-  await attendre(400);
-  await appuyer(parId(arbre, `option:${LIBELLE_LUMINY}`));
-  await appuyer(parTexte(arbre, 'Sélectionner'));
-  // Une seconde passe : la recherche s est videe (350 ms d attente de frappe).
-  await attendre(1000);
+  await chercherEtChoisir(arbre, recherche, libelle);
 };
 
 // L adresse que le serveur doit recevoir : le point exact de la liste.
 const ADRESSE_ENVOYEE = {
   description: LIBELLE_LUMINY,
   geometry: { coordinates: [5.4356, 43.2318], type: 'Point' },
+};
+const COMMUNE_ENVOYEE = {
+  description: 'Marseille (13001)',
+  geometry: { coordinates: [5.405, 43.282], type: 'Point' },
 };
 
 // Le premier temoin charge l ecran entier (une dizaine de secondes sur ce PC).
@@ -284,11 +328,35 @@ afterEach(() => {
 });
 
 describe('VILLE-INSTALLATION 1 — « Créer » cree l installation avec l adresse choisie', () => {
-  it('choisir dans la liste puis « Créer » : l envoi part, avec le point de la liste', async () => {
+  // Indice du chef (prod, 07/10) : une COMMUNE a marche, une RUE non. Les deux formes, telles
+  // que le serveur les rend, passent par le meme chemin : la forme n est pas la cause.
+  it.each([
+    ['une RUE', 'Avenue de Luminy', LIBELLE_LUMINY, ADRESSE_ENVOYEE],
+    ['une COMMUNE', 'Marseille', 'Marseille (13001)', COMMUNE_ENVOYEE],
+  ])('choisir %s dans la liste puis « Créer » : l envoi part, avec son point', async (
+    _cas,
+    recherche,
+    libelle,
+    attendue,
+  ) => {
     const arbre = await monterVille();
-    await remplirCommeAdel(arbre);
-    expect(textes(arbre)).toContain(LIBELLE_LUMINY);
+    await remplirCommeAdel(arbre, recherche, libelle);
+    expect(textes(arbre)).toContain(libelle);
+    expect(textes(arbre)).toContain('GPS activé');
 
+    await appuyer(parTexte(arbre, 'Créer'));
+
+    expect(textes(arbre)).not.toContain(REFUS_ADRESSE);
+    expect(mockSaveCollectivite).toHaveBeenCalledTimes(1);
+    expect(mockSaveCollectivite.mock.calls[0][0].data.address).toEqual(attendue);
+  });
+
+  it('commune d abord, puis RUE choisie a la place : c est la rue qui part', async () => {
+    const arbre = await monterVille();
+    await remplirCommeAdel(arbre, 'Marseille', 'Marseille (13001)');
+
+    await appuyer(parTexte(arbre, 'Marseille (13001)'));
+    await chercherEtChoisir(arbre, 'Avenue de Luminy', LIBELLE_LUMINY);
     await appuyer(parTexte(arbre, 'Créer'));
 
     expect(textes(arbre)).not.toContain(REFUS_ADRESSE);
@@ -308,6 +376,26 @@ describe('VILLE-INSTALLATION 1 — « Créer » cree l installation avec l adres
     expect(textes(arbre)).not.toContain(REFUS_ADRESSE);
     expect(mockSaveCollectivite).toHaveBeenCalledTimes(1);
     expect(mockSaveCollectivite.mock.calls[0][0].data.address).toEqual(ADRESSE_ENVOYEE);
+  });
+
+  // Ce qu Adel decrit : « le libellé reste rouge » APRES avoir choisi la rue. Rechoisir une ligne
+  // de la liste doit effacer le refus et laisser partir l envoi. (Avant le correctif, le premier
+  // « Créer » est refuse ; apres, il part deja : on juge donc le DERNIER envoi.)
+  it('apres un refus, rechoisir la rue dans la liste efface l erreur et « Créer » part', async () => {
+    const arbre = await monterVille();
+    await remplirCommeAdel(arbre);
+    await appuyer(parTexte(arbre, LIBELLE_LUMINY));
+    await appuyer(parTexte(arbre, 'Sélectionner'));
+    await attendre(50);
+    await appuyer(parTexte(arbre, 'Créer'));
+
+    await appuyer(parTexte(arbre, LIBELLE_LUMINY));
+    await chercherEtChoisir(arbre, 'Avenue de Luminy', LIBELLE_LUMINY);
+    expect(textes(arbre)).not.toContain(REFUS_ADRESSE);
+    await appuyer(parTexte(arbre, 'Créer'));
+
+    expect(mockSaveCollectivite).toHaveBeenCalled();
+    expect(mockSaveCollectivite.mock.lastCall[0].data.address).toEqual(ADRESSE_ENVOYEE);
   });
 
   it('rouvrir le champ puis toucher a cote de la feuille : l adresse reste', async () => {
