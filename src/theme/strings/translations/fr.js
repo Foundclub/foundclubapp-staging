@@ -6920,6 +6920,27 @@ export default {
         unavailable: 'Ce contenu ne peut pas s’afficher sur le site.',
       },
       empty: 'Aucun message pour le moment.',
+      // MSG1W (07/10) — la messagerie du site au dessin du telephone (pack « modele WhatsApp »).
+      fil: {
+        annulerReponse: 'Annuler la réponse',
+        echec: 'Non envoyé',
+        enCours: 'Envoi en cours',
+        envoye: 'Envoyé',
+        groupeMembres_one: 'Groupe · {{count}} membre',
+        groupeMembres_other: 'Groupe · {{count}} membres',
+        infosDuGroupe: 'Infos du groupe',
+        lu: 'Lu',
+        messagePartage: 'Message partagé',
+        nouvelleDiscussion: 'Nouvelle discussion',
+        options: 'Plus d’options',
+        plusDActions: 'Plus d’actions',
+        renommer: 'Renommer le groupe',
+        revenirEnBas: 'Revenir en bas',
+        roleDirigeant: 'Dirigeant',
+        roleEntraineur: 'Entraîneur',
+        signalerLeGroupe: 'Signaler le groupe',
+        titreListe: 'Messages',
+      },
       // eslint-disable-next-line max-len
       footerNote: 'Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.',
       league: {
