@@ -338,6 +338,7 @@ describe('MSG1A — contrat de la carte avec MSG1C', () => {
           composition={COMPO}
           dansLaBulle={props.dansLaBulle}
           onEdit={props.onEdit}
+          onOpenAddress={props.onOpenAddress}
           renderReponses={props.renderReponses}
         />,
       );
@@ -380,5 +381,24 @@ describe('MSG1A — contrat de la carte avec MSG1C', () => {
     const style = [cadre.props.style].flat(Infinity).reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
     expect(style.backgroundColor).toBeUndefined();
     expect(style.borderWidth).toBeUndefined();
+  });
+
+  test('K5 — avec onOpenAddress, le lieu est un LIEN a part, hors du bouton de la carte', () => {
+    const onOpenAddress = jest.fn();
+    const arbre = rendreAvec({ onOpenAddress });
+    const lien = arbre.root.findAll((n) => n.props?.testID === 'composition-adresse'
+      && typeof n.props?.onPress === 'function')[0];
+
+    expect(lien.props.accessibilityRole).toBe('link');
+    // ⛔ Aucun bouton dans un bouton : aucun ancetre du lien n'est le bouton de la carte.
+    let parent = lien.parent;
+    while (parent) {
+      expect(parent.props?.accessibilityRole === 'button' && parent.props?.accessibilityLabel)
+        .toBeFalsy();
+      parent = parent.parent;
+    }
+
+    act(() => { lien.props.onPress(); });
+    expect(onOpenAddress).toHaveBeenCalledWith({ label: 'Pélissanne (13330)' });
   });
 });

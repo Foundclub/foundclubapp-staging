@@ -628,3 +628,36 @@ describe('MSG1A — §3.5 feuille « Ajouter »', () => {
       .toEqual(['photos', 'camera', 'document', 'poll', 'event', 'location', 'contact']);
   });
 });
+
+describe('MSG1A — §3.18 adresses cliquables', () => {
+  // eslint-disable-next-line global-require
+  const FeuilleDAdresse = require('@/components/organisms/feuilleDAdresse/FeuilleDAdresse').default;
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('AD1 — une adresse ecrite dans un texte est un lien qui ouvre la feuille d adresse', () => {
+    const { ecran, gifted } = monterLaConversation();
+    const arbre = rendreLaBulle(gifted, {
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00', { text: 'RDV 12 rue Pasteur a 18h' }),
+      position: 'left',
+    });
+    const texte = arbre.root.findAll((n) => n.props?.currentMessage && n.props?.textStyle)[0];
+    const [motif] = texte.props.parsePatterns({});
+
+    expect('RDV 12 rue Pasteur a 18h'.match(motif.pattern)).toEqual(['12 rue Pasteur']);
+    expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toBeNull();
+
+    act(() => { motif.onPress('12 rue Pasteur'); });
+    expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toEqual({ label: '12 rue Pasteur' });
+  });
+});

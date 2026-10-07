@@ -45,6 +45,7 @@ import {
   getUserRoleKey,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import {
   auteurDuMessageCite,
   couleurDuNom,
@@ -116,6 +117,7 @@ import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBub
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ChatAttachmentSheet from '@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet';
+import FeuilleDAdresse from '@/components/organisms/feuilleDAdresse/FeuilleDAdresse';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -526,6 +528,9 @@ const stylesDuFil = StyleSheet.create({
     paddingBottom: 4,
     paddingHorizontal: 7,
     paddingTop: 5,
+  },
+  lienSouligne: {
+    textDecorationLine: 'underline',
   },
   sousTitreQuiEcrit: {
     fontFamily: 'Montserrat-Bold',
@@ -1357,6 +1362,10 @@ function Conversation({ navigation, route }) {
   const [envoiRefuse, setEnvoiRefuse] = useState(false);
   // MSG1A (§3.3) — `canWrite` se calcule plus bas ; le glisser le lit a l'appel, par ce ref.
   const peutEcrireRef = useRef(true);
+  // 📍 MSG1A (§3.18) — l'adresse touchee dans le fil ; `null` : feuille fermee.
+  const [adresseOuverte, setAdresseOuverte] = useState(
+    /** @type {{ label: string, latitude?: any, longitude?: any } | null} */ (null),
+  );
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
   // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
@@ -1468,7 +1477,26 @@ function Conversation({ navigation, route }) {
     },
   });
 
-  const handleParticipateToEvent = async (/** @type {{ documentId?: string; parentEvent?: { documentId?: string } }} */ event) => {
+  // 🔇 TRIO/D3 — le hook partage des reponses (voir « ABSENT » plus bas).
+  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
+
+  // MSG1A (§3.8) — « PRESENT » DEPUIS LA BULLE, ALIGNE SUR SES DEUX FRERES
+  // (`EventListContent`, `ParticipantEventList`). Ce gestionnaire-ci n'avait pas leurs
+  // trois branches : seance de stage, choix du poste d'une detection, et surtout le
+  // membre convie qui REPOND (`rsvpPresent`) — il creait une DEMANDE a la place.
+  // Personne ne l'atteignait : la carte du fil cachait ses boutons (`mode="share"`) ;
+  // la bulle du pack montre « Present | Absent ».
+  // ponytail: troisieme copie de la meme fonction ; l'unifier touche deux ecrans hors du lot.
+  const handleParticipateToEvent = async (/** @type {{ documentId?: string; eventFormat?: string; parentEvent?: { documentId?: string } }} */ event) => {
+    if (String(event?.eventFormat || '').toLowerCase() === 'stage_day' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+      } catch {
+        // Le retour d'erreur est porte par la mutation.
+      }
+      return;
+    }
+
     const participationFlow = resolveParticipationFlow(event, { user: userData });
 
     if (!participationFlow?.canAct) {
@@ -1488,6 +1516,27 @@ function Conversation({ navigation, route }) {
         params: { eventId: event.parentEvent.documentId },
         screen: RouteNames.EventDetails,
       });
+      return;
+    }
+
+    // Les postes d'une detection se choisissent sur la fiche de l'evenement.
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      if (event?.documentId) {
+        navigation.navigate(RouteNames.EventStack, {
+          params: { eventId: event.documentId },
+          screen: RouteNames.EventDetails,
+        });
+      }
+      return;
+    }
+
+    // AA01 — un membre convie REPOND (`POST /events/:id/rsvp`), il ne demande pas.
+    if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+      } catch {
+        // Le retour d'erreur est porte par la mutation.
+      }
       return;
     }
 
@@ -1520,8 +1569,6 @@ function Conversation({ navigation, route }) {
   // seance de stage se repond par la porte des reponses, tout le reste par
   // `POST /events/:id/missing` — ET l'invalidation complete des six racines de
   // requetes, celle qui avait deja diverge trois fois.
-  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
-
   const handleDeclineEvent = (
     /** @type {{ documentId?: string; eventFormat?: string }} */ event,
   ) => {
@@ -5081,6 +5128,20 @@ function Conversation({ navigation, route }) {
     setIsMessageActionsVisible(false);
   }, [canCopySelectedMessage, selectedMessageTextValue, showErrorBanner, showSuccessBanner, t]);
 
+  // 📍 MSG1A (§3.18) — « Copier l'adresse » : meme presse-papiers que « Copier » un message.
+  const handleCopierAdresse = useCallback((/** @type {string} */ texte) => {
+    const clipboard = getClipboardModule();
+    if (clipboard && typeof clipboard.setString === 'function' && texte) {
+      clipboard.setString(texte);
+      showSuccessBanner(t('conversation.address.copied', 'Adresse copiée'), t('conversation.actions.copySuccess.title', 'Copié'));
+      return;
+    }
+    showErrorBanner(
+      t('conversation.actions.copyUnavailable', 'Le presse-papiers est indisponible sur cette build.'),
+      t('common.error', 'Erreur'),
+    );
+  }, [showErrorBanner, showSuccessBanner, t]);
+
   const handleOpenReportForSelectedMessage = useCallback(() => {
     if (!selectedMessageDocumentId || isSelectedMessageOwn) return;
     setIsMessageActionsVisible(false);
@@ -5404,21 +5465,34 @@ function Conversation({ navigation, route }) {
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
+      // 📅 MSG1A (§3.8) — l'evenement partage dans le cadre commun : nom, queue, heure avant le pied.
       return wrapWithMessageInteractions(
         currentMessage, (
-          <View style={{
-            marginBottom,
-            marginTop,
-            // Removed margins as requested
-          }}
-          >
-            <EventMessageBubble
-              event={resolvedMessageEvent}
-              isMe={!isLeft}
-              onDecline={() => handleDeclineEvent(resolvedMessageEvent)}
-              onJoin={() => handleJoinEvent(resolvedMessageEvent)}
-              onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
-            />
+          <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+            <BulleDuFil
+              couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+              estAMoi={estAMoi}
+              estDernier={estDernierDuGroupe}
+              nom={nomEnTete}
+              testID="bulle-evenement-partage"
+            >
+              <EventMessageBubble
+                event={resolvedMessageEvent}
+                isMe={!isLeft}
+                meta={(
+                  <MetaDuMessage
+                    estAMoi={estAMoi}
+                    etat={etatDEnvoi(currentMessage)}
+                    heure={heureDuMessage(currentMessage.createdAt)}
+                  />
+                )}
+                onDecline={() => handleDeclineEvent(resolvedMessageEvent)}
+                onJoin={() => handleJoinEvent(resolvedMessageEvent)}
+                onOpenAddress={setAdresseOuverte}
+                onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
+                resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+              />
+            </BulleDuFil>
           </View>
         ),
       );
@@ -5626,6 +5700,7 @@ function Conversation({ navigation, route }) {
                     heure={heureDuMessage(currentMessage.createdAt)}
                   />
                 )}
+                onOpenAddress={setAdresseOuverte}
               />
             </BulleDuFil>
           </View>
@@ -5756,6 +5831,12 @@ function Conversation({ navigation, route }) {
                     left: { color: Colors.primary500 },
                     right: { color: Colors.neutral00 },
                   }}
+                  // 📍 MSG1A (§3.18) — une adresse ecrite (numero + type de voie) devient un lien.
+                  parsePatterns={(styleDeLien) => [{
+                    onPress: (/** @type {string} */ texte) => setAdresseOuverte({ label: texte }),
+                    pattern: motifDAdresse(),
+                    style: [styleDeLien, stylesDuFil.lienSouligne],
+                  }]}
                   position={position}
                   textStyle={{
                     left: [TEXTE_DU_MESSAGE, stylesDuFil.texte, { color: Colors.neutral00 }],
@@ -7247,6 +7328,11 @@ function Conversation({ navigation, route }) {
           memes libelles — seul leur cadre a change, pour qu elles partagent un
           unique calque avec la pilule plutot que de se superposer a elle.
         */}
+        <FeuilleDAdresse
+          adresse={adresseOuverte}
+          onClose={() => setAdresseOuverte(null)}
+          onCopy={handleCopierAdresse}
+        />
         <MessageReactionOverlay
           anchor={reactionAnchor}
           canCopy={canCopySelectedMessage}

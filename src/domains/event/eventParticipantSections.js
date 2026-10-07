@@ -96,7 +96,7 @@ export const uniqueUsers = (users = []) => {
  * @param {User[]} [users] - Une liste recue du serveur.
  * @returns {number} - Ses personnes vivantes sans cle.
  */
-const countAnonymousUsers = (users = []) => withoutDeletedAccounts(users)
+export const countAnonymousUsers = (users = []) => withoutDeletedAccounts(users)
   .filter((user) => !getUserKey(user)).length;
 
 /**

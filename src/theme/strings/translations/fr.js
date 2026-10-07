@@ -6360,6 +6360,7 @@ export default {
       askLater: 'Plus tard',
       back: 'Retour',
       cancel: 'Annuler',
+      close: 'Fermer',
       confirm: 'Confirmer',
       continueLater: 'Continuer plus tard',
       create: 'Créer',
@@ -6559,6 +6560,13 @@ export default {
       reply: 'Répondre',
       report: 'Signaler',
     },
+    address: {
+      copied: 'Adresse copiée',
+      copy: 'Copier l’adresse',
+      hint: 'Ouvre le choix de l’application de cartes',
+      openIn: 'Ouvrir dans {{app}}',
+      title: 'Adresse',
+    },
     attachmentErrors: {
       addFailed: "Impossible d'ajouter cette pièce jointe.",
       invalidFormat: 'Format de pièce jointe invalide.',
@@ -6650,6 +6658,23 @@ export default {
     // FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion, au pied du fil (T13, C2_3b).
     // eslint-disable-next-line max-len
     envoiRefuse: 'Ton message n’est pas parti : la connexion à la messagerie est coupée. Il reste dans le champ ; renvoie-le dans un instant.',
+    eventBubble: {
+      absent_one: '{{count}} absent',
+      absent_other: '{{count}} absents',
+      answerAbsent: 'Absent',
+      answerPresent: 'Présent',
+      noAnswer_one: '{{count}} sans réponse',
+      noAnswer_other: '{{count}} sans réponse',
+      open: 'Ouvrir l’événement',
+      participants: 'Participants',
+      present_one: '{{count}} présent',
+      present_other: '{{count}} présents',
+      shared: 'Événement partagé',
+      team: 'Équipe : {{name}}',
+      untitled: 'Événement',
+      yourAnswer: 'Ta réponse',
+      yourPresence: 'Ta présence',
+    },
     eventFallback: 'Événement',
     friendly: {
       matchConfirmedTitle: 'Match confirmé',

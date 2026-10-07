@@ -96,6 +96,8 @@ jest.mock('@/domains/auth/authUseCases', () => ({
   getAuthTokens: () => Promise.resolve({ jwt: 'jwt' }),
   getManagedMultisportIds: () => [],
   getUserRoleKey: () => 'player',
+  // MSG1A — `onParticipate` lit le role (`resolveParticipationFlow`).
+  USER_ROLES: { player: 'Joueur' },
 }));
 jest.mock('@/theme/strings', () => ({
   __esModule: true,
@@ -372,5 +374,37 @@ describe('messagerie — la carte d\'evenement d\'un fil', () => {
     expect(typeof props.onJoin).toBe('function');
     expect(typeof props.onParticipate).toBe('function');
     expect(typeof props.onDecline).toBe('function');
+  });
+
+  // MSG1A (§3.8) — LE SELECTEUR « PRESENT | ABSENT » DE LA BULLE APPELLE `onParticipate`.
+  // Le gestionnaire du fil n'avait pas les trois branches que ses deux freres
+  // (`EventListContent`, `ParticipantEventList`) portent : il creait une DEMANDE de
+  // participation la ou un membre convie REPOND. Tant que la carte du fil cachait ses
+  // boutons (`mode="share"`), personne ne l'atteignait ; la bulle du pack les montre.
+  test('MSG1A — « Present » d une seance de stage passe par la porte des reponses', async () => {
+    const props = bulleDeLEvenement({
+      documentId: 'ev-4',
+      eventFormat: 'stage_day',
+      name: 'Jour 1',
+      type: { name: 'Stage' },
+    });
+
+    await act(async () => { await props.onParticipate(); });
+
+    expect(mockRespondToEventRsvp).toHaveBeenCalledWith('ev-4', 'present');
+  });
+
+  test('MSG1A — un membre convie qui repond « Present » REPOND, il ne demande pas sa place', async () => {
+    const props = bulleDeLEvenement({
+      date: '2099-01-01T18:00:00Z',
+      documentId: 'ev-5',
+      name: 'Entrainement',
+      team: { documentId: 'eq-1', players: [{ documentId: 'moi' }] },
+      type: { name: 'Entrainement' },
+    });
+
+    await act(async () => { await props.onParticipate(); });
+
+    expect(mockRespondToEventRsvp).toHaveBeenCalledWith('ev-5', 'present');
   });
 });
