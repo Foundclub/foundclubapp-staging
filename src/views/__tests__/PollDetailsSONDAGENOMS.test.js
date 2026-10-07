@@ -179,6 +179,39 @@ describe('SONDAGE-NOMS — le détail mobile nomme un votant qui n a rien écrit
     expect(mockGet).toHaveBeenCalledWith(`/chat-messages/${MESSAGE_ID}/poll-voters`);
   });
 
+  // Décision d'Adel (07/10) : un votant dont le compte est supprimé s'affiche « Compte
+  // supprimé » — le serveur le signale (`deleted: true`, aucun nom). Un votant que le serveur ne
+  // cite pas (parti du fil) reste « Membre ».
+  test('compte supprimé : « Compte supprimé » ; votant non cité : « Membre »', async () => {
+    mockGet.mockImplementation((/** @type {string} */ url) => (
+      url === `/chat-messages/${MESSAGE_ID}/poll-voters`
+        ? Promise.resolve({
+          data: {
+            chatDocumentId: 'chat-club',
+            data: [
+              LEO,
+              {
+                avatar: null, deleted: true, documentId: 'ancien', firstname: '', lastname: '',
+              },
+            ],
+            messageDocumentId: MESSAGE_ID,
+          },
+        })
+        : Promise.resolve({ data: {} })
+    ));
+    const root = await monter(buildPoll({
+      options: [
+        { id: 'opt-1', label: 'Samedi 14h', voters: [LEO.documentId, 'ancien'] },
+        { id: 'opt-2', label: 'Dimanche 10h', voters: ['parti'] },
+      ],
+    }));
+
+    const rendu = textes(root);
+    expect(rendu).toContain('Leo Martin');
+    expect(rendu).toContain('Compte supprimé');
+    expect(rendu).toContain('Membre');
+  });
+
   test('un sondage anonyme ne demande AUCUN nom au serveur', async () => {
     await monter(buildPoll({ isAnonymous: true }));
 

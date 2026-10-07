@@ -164,4 +164,60 @@ describe('SONDAGE-NOMS — le détail du site nomme un votant qui n a rien écri
     expect(photo).toBeTruthy();
     expect(mockGet).toHaveBeenCalledWith(`/chat-messages/${MESSAGE_ID}/poll-voters`);
   });
+
+  // Décision d'Adel (07/10) : « Compte supprimé » pour un compte effacé, signalé par le serveur.
+  // Il a écrit un message chargé (son ancien nom y est figé) : le serveur, plus frais, l'emporte.
+  test('un compte supprimé s affiche « Compte supprimé », même s il avait écrit', async () => {
+    mockGet.mockImplementation((/** @type {string} */ url) => (
+      url === `/chat-messages/${MESSAGE_ID}/poll-voters`
+        ? Promise.resolve({
+          data: {
+            chatDocumentId: 'chat-club',
+            data: [{
+              avatar: null, deleted: true, documentId: 'ancien', firstname: '', lastname: '',
+            }],
+            messageDocumentId: MESSAGE_ID,
+          },
+        })
+        : Promise.resolve({ data: {} })
+    ));
+    mockPages.data = {
+      pages: [{
+        data: [
+          {
+            composition: {
+              ...POLL,
+              options: [{ id: 'opt-1', label: 'Samedi 14h', voters: ['ancien'] }],
+            },
+            documentId: MESSAGE_ID,
+            sender: KARIM,
+          },
+          {
+            composition: null,
+            documentId: 'message-ancien',
+            message: 'Bonjour',
+            sender: { documentId: 'ancien', firstname: 'Paul', lastname: 'Ancien' },
+          },
+        ],
+      }],
+    };
+
+    act(() => {
+      mounted = renderer.create(createElement(
+        QueryClientProvider,
+        { client },
+        createElement(PollDetailsWeb, {
+          navigation: { goBack: jest.fn() },
+          route: { params: { chatId: 'chat-club', messageId: MESSAGE_ID } },
+        }),
+      ));
+    });
+    await act(async () => {
+      await new Promise((fini) => { setTimeout(fini, 20); });
+    });
+
+    const rendu = textOf(mounted.root);
+    expect(rendu).toContain('Compte supprimé');
+    expect(rendu).not.toContain('Paul Ancien');
+  });
 });

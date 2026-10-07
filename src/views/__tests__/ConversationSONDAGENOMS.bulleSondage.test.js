@@ -258,7 +258,9 @@ jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => ()
 jest.mock('@/components/organisms/popup/GlobalPromptModal', () => () => null);
 jest.mock('@/components/organisms/venueProposalModal/VenueProposalModal', () => () => null);
 
-jest.setTimeout(30000);
+// Le premier montage transpile tout l écran de conversation (plus de 7 000 lignes) : ~25 s
+// seul, davantage quand une autre suite tourne. 60 s laissent la marge sans rien masquer.
+jest.setTimeout(60000);
 
 /** @type {Array<() => void>} */
 const aDemonter = [];

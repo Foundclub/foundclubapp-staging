@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getPollVoters } from '@/domains/messaging/pollUseCases';
 
@@ -18,6 +19,11 @@ import { getPollVoterProfiles } from '@/services/chat/chatService';
  *
  * 🔑 La clef porte la LISTE des votants : un vote de plus relit les noms. Les noms déjà lus
  * restent affichés pendant la relecture (`keepPreviousData`) : pas de retour à « Membre ».
+ *
+ * 🪦 Un votant dont le compte est SUPPRIMÉ arrive signalé (`deleted: true`, aucun nom) : il
+ * est rendu ici sous le nom « Compte supprimé » (décision d'Adel, 07/10), pour que les trois
+ * endroits le disent sans rien changer à leur dessin. Un votant que le serveur ne cite pas
+ * (parti du fil) n'est pas dans la table : chaque écran garde son repli « Membre ».
  */
 
 const POLL_VOTERS_STALE_MS = 60 * 1000;
@@ -56,6 +62,7 @@ export const nameOfPollVoter = (profile) => (
  *   firstname: string; lastname: string }>} Les votants nommés, par identifiant.
  */
 export default function usePollVoterProfiles(messageId, poll) {
+  const { t } = useTranslation();
   const safeMessageId = String(messageId || '').trim();
   const voterIds = listPollVoterIdsToName(poll);
 
@@ -73,8 +80,15 @@ export default function usePollVoterProfiles(messageId, poll) {
     const voters = data?.data;
     (Array.isArray(voters) ? voters : []).forEach((profile) => {
       const voterId = String(profile?.documentId || '').trim();
-      if (voterId) profiles.set(voterId, profile);
+      if (!voterId) return;
+      profiles.set(voterId, profile?.deleted
+        ? {
+          ...profile,
+          firstname: t('conversation.poll.common.deletedAccount', 'Compte supprimé'),
+          lastname: '',
+        }
+        : profile);
     });
     return profiles;
-  }, [data]);
+  }, [data, t]);
 }

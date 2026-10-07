@@ -100,14 +100,14 @@ function PollDetails({ navigation, route }) {
       });
     };
 
-    // SONDAGE-NOMS — les votants nommés par le serveur D'ABORD : un fil de club n'a pas de
-    // participants. Les sources locales ci-dessous passent par-dessus, comme avant.
-    pollVoterProfiles.forEach(registerUser);
     registerUser(userData);
     if (Array.isArray(chatData?.participants)) {
       chatData.participants.forEach(registerUser);
     }
     flattenMessages(messagesPages?.pages).forEach((message) => registerUser(message?.sender));
+    // SONDAGE-NOMS — les votants lus au serveur EN DERNIER : un fil de club n'a pas de
+    // participants, et le serveur est le seul à savoir qu'un compte a été supprimé.
+    pollVoterProfiles.forEach(registerUser);
     return map;
   }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData]);
 
