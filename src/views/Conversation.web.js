@@ -50,6 +50,7 @@ import {
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
+import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
@@ -85,6 +86,14 @@ import {
   useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+// MSG1W « convocation site B » — l assistant de MESSAGERIE-1C, importe DIRECTEMENT : sa porte
+// differee (`require`) ne passe pas le serveur de dev du site (greffon des images seulement).
+import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
+import ConvocationWizard from '@/views/conversationConvocation/ConvocationWizard';
+import {
+  canConvokeFromChat,
+  getTeamIdOfChat,
+} from '@/views/conversationConvocation/convocationWizardUtils';
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
 // MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
@@ -1142,6 +1151,7 @@ const STYLE_CHAMP_DE_FENETRE = {
 /** MSG1W §3.5 — l icone de chaque entree du « + » (pastille ronde, feuille du telephone). */
 const ICONES_DU_PLUS = {
   contact: 'idCard',
+  convocation: <ConvocationGlyph color={PALETTE_DU_FIL.accent} name="clipboardUser" size={18} />,
   document: 'fileArrowUp',
   event: 'calendar',
   // Le jeu de glyphes de l app n a ni photo ni repere : deux dessins au trait.
@@ -1201,6 +1211,7 @@ const ICONES_DU_MENU = {
   copy: DESSIN_COPIER,
   delete: <GlyphIcon color={PALETTE_DU_FIL.danger} name="trashAlt" size={20} />,
   edit: DESSIN_MODIFIER,
+  editComposition: DESSIN_MODIFIER,
   reply: DESSIN_REPONDRE,
   report: DESSIN_SIGNALER,
 };
@@ -2442,6 +2453,25 @@ function Conversation({ navigation, route }) {
     [annuaireDesVotants],
   );
 
+  // MSG1W « convocation site B » (decision d Adel, 07/10) — la convocation depuis le groupe
+  // d equipe, comme le telephone (MESSAGERIE-1C) : qui peut convoquer (entraineur de l equipe du
+  // fil, super-admin : la regle partagee de 1C), et l assistant, monte seulement a l ouverture.
+  const peutConvoquer = useMemo(
+    () => canConvokeFromChat({ chat: chatData, user: userData }),
+    [chatData, userData],
+  );
+  const [demandeConvocation, setDemandeConvocation] = useState(/** @type {any} */ (null));
+  const ouvrirModificationConvocation = useCallback((/** @type {any} */ demande) => {
+    const composition = demande?.composition;
+    if (!composition?.eventId) return;
+    setDemandeConvocation({
+      eventId: String(composition.eventId),
+      eventSummary: composition,
+      mode: 'edit',
+      startStep: demande?.startStep === 3 ? 3 : 2,
+    });
+  }, []);
+
   // §3.4 — toucher la carte d un sondage ouvre « Détail du sondage » (PollDetails.web.js).
   const ouvrirLesVotes = useCallback((/** @type {any} */ message) => {
     const id = getMessageId(message);
@@ -2645,12 +2675,24 @@ function Conversation({ navigation, route }) {
     if (composition.type === 'lineup_share' && String(composition?.eventId || '').trim()) {
       return (
         // FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil.
-        <CompositionMessageBubbleDuFil
+        // MSG1W « convocation site B » — « Modifier » et « Reponses » (contrat onEdit /
+        // renderReponses de 1A, rempli par ConvocationLineupMessage de 1C).
+        <ConvocationLineupMessage
           chatId={chatId}
           composition={composition}
-          currentEvent={message?.event}
-          isMe={isMine}
-        />
+          onEdit={peutConvoquer ? ouvrirModificationConvocation : undefined}
+        >
+          {(/** @type {any} */ convocation) => (
+            <CompositionMessageBubbleDuFil
+              chatId={chatId}
+              composition={composition}
+              currentEvent={message?.event}
+              isMe={isMine}
+              onEdit={convocation.onEdit}
+              renderReponses={convocation.renderReponses}
+            />
+          )}
+        </ConvocationLineupMessage>
       );
     }
 
@@ -2690,6 +2732,8 @@ function Conversation({ navigation, route }) {
     mutedTextColor,
     navigation,
     ouvrirLesVotes,
+    ouvrirModificationConvocation,
+    peutConvoquer,
     primaryColor,
     resolveVoterName,
     userData?.documentId,
@@ -2792,9 +2836,13 @@ function Conversation({ navigation, route }) {
     return getMessageActions({
       canCopy: Boolean(String(message?.message || '').trim()),
       canEdit: mien && estModifiable(message),
+      // MSG1W « convocation site B » — « Modifier la composition » sur une carte publiee (1C).
+      canEditComposition: peutConvoquer
+        && message?.composition?.type === 'lineup_share'
+        && Boolean(message?.composition?.eventId),
       isMine: mien,
     }).filter((action) => peutEcrire || action.key !== 'reply');
-  }, [peutEcrire, userData?.documentId]);
+  }, [peutConvoquer, peutEcrire, userData?.documentId]);
 
   const fermerLeMenu = useCallback((/** @type {boolean} */ rendreLeFocus) => {
     setMenuDuMessage(null);
@@ -2910,8 +2958,12 @@ function Conversation({ navigation, route }) {
       setMessageASupprimer(message);
       return;
     }
+    if (cle === 'editComposition') {
+      ouvrirModificationConvocation({ composition: message?.composition, startStep: 2 });
+      return;
+    }
     if (cle === 'report') handleReportMessage(message);
-  }, [fermerLeMenu, handleReportMessage, repondreA, t]);
+  }, [fermerLeMenu, handleReportMessage, ouvrirModificationConvocation, repondreA, t]);
 
   // MSG1W §3.2 — la fenetre « Modifier » prend le focus ; Echap ferme les deux fenetres.
   const champEditionRef = useRef(/** @type {HTMLTextAreaElement | null} */ (null));
@@ -4069,6 +4121,12 @@ function Conversation({ navigation, route }) {
       cle: 'contact',
       libelle: t('conversation.attachments.contact', 'Contact'),
     },
+    // MSG1W « convocation site B » — fil d equipe, entraineur de l equipe ou super-admin (1C).
+    ...(peutConvoquer ? [{
+      action: () => setDemandeConvocation({ mode: 'create' }),
+      cle: 'convocation',
+      libelle: t('conversationConvocation.entry', 'Convocation'),
+    }] : []),
     // Un fil League : la proposition de creneau (le panneau permanent d avant).
     ...(isLeagueConversation ? [{
       action: () => setFenetre('proposition'),
@@ -5249,6 +5307,25 @@ function Conversation({ navigation, route }) {
             'Ce message sera supprimé pour tous les participants.',
           )}
           titre={t('conversation.actions.deleteConfirm.title', 'Supprimer le message')}
+        />
+      ) : null}
+      {demandeConvocation ? (
+        <ConvocationWizard
+          chatId={chatId}
+          eventSummary={demandeConvocation.eventSummary}
+          initialEventId={demandeConvocation.eventId}
+          mode={demandeConvocation.mode}
+          onClose={(/** @type {{ published?: boolean } | undefined} */ resultat) => {
+            setDemandeConvocation(null);
+            // La carte arrive par le temps reel ; le site relit aussi le fil, au cas ou.
+            if (resultat?.published) {
+              queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+            }
+          }}
+          startStep={demandeConvocation.startStep}
+          teamId={getTeamIdOfChat(chatData)}
+          teamName={chatData?.team?.name || ''}
+          visible
         />
       ) : null}
       {adresseOuverte ? (

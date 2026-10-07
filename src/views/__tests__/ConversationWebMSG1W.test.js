@@ -176,6 +176,9 @@ jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
   createEventParticipation: (/** @type {any} */ donnees) => mockParticipation(donnees),
 }));
 jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => () => null);
+// L assistant de convocation (MESSAGERIE-1C) charge le mur payant et son stockage natif :
+// une doublure ici ; les temoins Playwright du site ouvrent le vrai.
+jest.mock('@/views/conversationConvocation/ConvocationWizard', () => () => null);
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const react = jest.requireActual('react');

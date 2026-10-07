@@ -153,6 +153,9 @@ jest.mock('@/platform/media', () => ({ __esModule: true, default: {} }));
 // modules natifs ne se chargent pas dans ce banc, et ce temoin ne les regarde pas.
 jest.mock('@/components/molecules/eventCard/EventCardNew', () => () => null);
 jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => () => null);
+// L assistant de convocation (MESSAGERIE-1C) charge le mur payant et son stockage natif :
+// une doublure ici ; les temoins Playwright du site ouvrent le vrai.
+jest.mock('@/views/conversationConvocation/ConvocationWizard', () => () => null);
 // MSG1W §3.8 — la bulle d evenement du telephone, doublee : elle ecrit le nom qu elle recoit.
 jest.mock('@/components/molecules/eventMessageBubble/EventMessageBubble', () => {
   const react = jest.requireActual('react');
