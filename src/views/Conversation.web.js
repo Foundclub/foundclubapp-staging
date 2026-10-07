@@ -25,10 +25,21 @@ import {
   REACTION_EMOJIS,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging'
+// MSG1W (07/10) — « Bruno écrit… » : la regle de la minuterie du telephone.
+import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
+// MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
 import ScreenContainer from '@/components/templates/ScreenContainer'
+// MSG1W (07/10) — la forme du fil (groupes, puces de date, coches), sans rendu.
+import {
+  etatDesCoches,
+  indiceDeCouleur,
+  libelleDuJour,
+  rangerLeFil,
+} from '@/views/conversationWeb/filDuSite';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
@@ -48,8 +59,6 @@ import {
   useGetChatMessages,
   useGetChats,
 } from '@/services/chat/chatQueriesCompat';
-const { openUrl } = links || {}
-const { pickDocument, pickImage, recordVoiceNote } = media || {}
 import { createChatMessage } from '@/services/chat/chatService'
 import client from '@/services/client'
 import { useGetEvents } from '@/services/event/eventQueries'
@@ -58,6 +67,7 @@ import {
   respondToLeagueProposal,
 } from '@/services/league/leagueMatchService'
 import { createMessageReport } from '@/services/messageReport/messageReportService'
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext'
 import {
   getDocumentDisplayName,
@@ -75,6 +85,8 @@ import {
   LEAGUE_LEGAL_SCOPES,
 } from '@/constants/leagueLegalAcceptance'
 
+const { openUrl } = links || {}
+const { pickDocument, pickImage, recordVoiceNote } = media || {}
 const EMPTY_POLL_OPTIONS = ['', '', '']
 
 // @ts-ignore: FIXME: Baseline TS regression
@@ -281,7 +293,315 @@ const REACTION_HOVER_STYLE = `
   @media (hover: none) {
     .REACTWEB-hote .REACTWEB-declencheur { opacity: 1; pointer-events: auto; }
   }
+  @keyframes MSG1W-point {
+    0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-3px); }
+  }
+  .MSG1W-point { animation: MSG1W-point 1.2s infinite ease-in-out; }
+  @media (prefers-reduced-motion: reduce) { .MSG1W-point { animation: none; } }
 `;
+
+/**
+ * MSG1W (07/10) — LES VALEURS DU PACK « MODELE WHATSAPP » (SPECS §0), EN UN SEUL ENDROIT.
+ *
+ * ponytail: valeurs ecrites ici, dans le fichier du site exempte du contrat de theme, le temps
+ * que MESSAGERIE-1A pose les jetons de la messagerie dans `app/src/theme/` ; sortie : remplacer
+ * chaque valeur par son jeton au message du chef « staging avance (jetons de la messagerie) ».
+ * Aucune autre couleur du fil ne doit s ecrire en dur ailleurs que dans cet objet.
+ */
+const PALETTE_DU_FIL = {
+  accent: '#01b3f4',
+  barre: '#021219',
+  bulleMienne: '#0b5875',
+  bulleRecue: '#173844',
+  carteMienne: 'rgba(0, 0, 0, 0.22)',
+  carteRecue: 'rgba(0, 10, 14, 0.30)',
+  champ: '#0b2530',
+  champBord: '#173844',
+  cochesEnvoye: 'rgba(255, 255, 255, 0.5)',
+  cochesLu: '#ffffff',
+  danger: '#ff5a74',
+  encre: '#001218',
+  fil: '#03141b',
+  filet: 'rgba(255, 255, 255, 0.06)',
+  menu: '#142e39',
+  menuBord: 'rgba(255, 255, 255, 0.08)',
+  metaMienne: 'rgba(255, 255, 255, 0.72)',
+  metaRecue: 'rgba(255, 255, 255, 0.62)',
+  noticeFond: 'rgba(2, 20, 27, 0.55)',
+  noticeTexte: 'rgba(255, 255, 255, 0.62)',
+  placeholder: '#8a9599',
+  puce: 'rgba(2, 20, 27, 0.84)',
+  revenirEnBas: 'rgba(23, 56, 68, 0.98)',
+  role: 'rgba(255, 255, 255, 0.55)',
+  texte: '#ffffff',
+  texteDoux: 'rgba(255, 255, 255, 0.6)',
+};
+
+/** Les couleurs des noms (SPECS §0) : une par personne, la meme dans tous les fils. */
+const COULEURS_DES_NOMS = [
+  '#5fe3b5', '#f598d8', '#ffad5c', '#a99bff', '#ff7a93', '#a5e36b', '#ff9670',
+  '#6fd3ff', '#ffd84d', '#5ee0e0', '#e59cff', '#c9b28a', '#ffcf70',
+];
+
+/** Le style d un texte LU par le lecteur d ecran mais invisible a l ecran. */
+const TEXTE_MASQUE = {
+  border: 0,
+  clip: 'rect(0 0 0 0)',
+  height: 1,
+  margin: -1,
+  overflow: 'hidden',
+  padding: 0,
+  position: 'absolute',
+  whiteSpace: 'nowrap',
+  width: 1,
+};
+
+/**
+ * La couleur du nom d une personne dans le fil.
+ * @param {any} personne - L expediteur.
+ * @returns {string} Sa couleur.
+ */
+const couleurDeLaPersonne = (personne) => COULEURS_DES_NOMS[
+  indiceDeCouleur(String(personne?.documentId || personne?.id || ''), COULEURS_DES_NOMS.length)
+];
+
+/**
+ * MSG1W — l heure et les coches, DANS la bulle (README §3.1, SPECS §1). Les coches ne se
+ * posent que sur MES messages : pales = envoye, blanches = lu (regle du telephone).
+ * @param {{ heure: string, idMessage: string, mien: boolean, message: any }} props
+ * @returns {import('react').ReactElement} La ligne d heure.
+ */
+function MetaDuMessage({
+  heure, idMessage, message, mien,
+}) {
+  const etat = mien ? etatDesCoches(message) : undefined;
+  let coches = null;
+  if (etat === 'echec') {
+    coches = (
+      <span style={{ color: PALETTE_DU_FIL.danger, fontFamily: 'Montserrat-Bold, sans-serif' }}>
+        !
+      </span>
+    );
+  } else if (etat === 'en-cours') {
+    coches = <GlyphIcon color={PALETTE_DU_FIL.cochesEnvoye} name="clock" size={13} />;
+  } else if (etat) {
+    coches = (
+      <GlyphIcon
+        color={etat === 'lu' ? PALETTE_DU_FIL.cochesLu : PALETTE_DU_FIL.cochesEnvoye}
+        name="checkDouble"
+        size={15}
+      />
+    );
+  }
+  const libellesDesCoches = {
+    echec: i18next.t('conversation.web.fil.echec', 'Non envoyé'),
+    'en-cours': i18next.t('conversation.web.fil.enCours', 'Envoi en cours'),
+    envoye: i18next.t('conversation.web.fil.envoye', 'Envoyé'),
+    lu: i18next.t('conversation.web.fil.lu', 'Lu'),
+  };
+  return (
+    <span
+      data-coches={etat}
+      data-testid={`MSG1W-meta-${idMessage}`}
+      style={{
+        alignItems: 'center',
+        color: mien ? PALETTE_DU_FIL.metaMienne : PALETTE_DU_FIL.metaRecue,
+        display: 'inline-flex',
+        fontFamily: 'Montserrat-Regular, sans-serif',
+        fontSize: 11,
+        gap: 3,
+        lineHeight: '15px',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {heure}
+      {coches ? (
+        <span style={{ display: 'inline-flex' }}>
+          {coches}
+          <span style={TEXTE_MASQUE}>{libellesDesCoches[etat]}</span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * MSG1W — la queue de la DERNIERE bulle d un groupe (SPECS §1 : 24 × 18, vers l exterieur).
+ * @param {{ couleur: string, mienne: boolean }} props
+ * @returns {import('react').ReactElement} La queue.
+ */
+function QueueDeBulle({ couleur, mienne }) {
+  return (
+    <svg
+      aria-hidden="true"
+      height="14"
+      style={{
+        bottom: 0,
+        left: mienne ? undefined : -7,
+        position: 'absolute',
+        right: mienne ? -7 : undefined,
+      }}
+      viewBox="0 0 12 14"
+      width="12"
+    >
+      <path d={mienne ? 'M0 0 Q2 10 12 14 L0 14 Z' : 'M12 0 Q10 10 0 14 L12 14 Z'} fill={couleur} />
+    </svg>
+  );
+}
+
+/**
+ * MSG1W — l avatar de 28 au bas d un groupe (groupes seulement) : la photo, sinon les initiales
+ * sur la couleur de la personne.
+ * @param {{ idMessage: string, personne: any }} props
+ * @returns {import('react').ReactElement} L avatar.
+ */
+function AvatarDuGroupe({ idMessage, personne }) {
+  const photo = getImageUrl(
+    personne?.avatar?.url || personne?.avatar?.formats?.thumbnail?.url || '',
+  );
+  const initiales = getInitials(getDisplayName(personne));
+  return (
+    <span
+      aria-hidden="true"
+      data-testid={`MSG1W-avatar-${idMessage}`}
+      style={{
+        alignItems: 'center',
+        background: couleurDeLaPersonne(personne),
+        backgroundImage: photo ? `url("${photo}")` : undefined,
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+        borderRadius: '50%',
+        color: PALETTE_DU_FIL.encre,
+        display: 'inline-flex',
+        fontFamily: 'Montserrat-Bold, sans-serif',
+        fontSize: 11,
+        height: 28,
+        justifyContent: 'center',
+        width: 28,
+      }}
+    >
+      {photo ? null : initiales}
+    </span>
+  );
+}
+
+/**
+ * MSG1W — un petit bouton rond de la barre qui apparait au survol d une bulle. Son libelle est
+ * un TEXTE masque (lu par le lecteur d ecran, trouve par `getByRole`), pas un `aria-label`.
+ * @param {{ children: any, libelle: string, onClick: (event: any) => void, testId?: string }} props
+ * @returns {import('react').ReactElement} Le bouton.
+ */
+function BoutonDuSurvol({
+  children, libelle, onClick, testId,
+}) {
+  return (
+    <button
+      className="REACTWEB-declencheur"
+      data-testid={testId}
+      onClick={onClick}
+      style={{
+        alignItems: 'center',
+        background: PALETTE_DU_FIL.menu,
+        border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+        borderRadius: 999,
+        color: PALETTE_DU_FIL.texte,
+        cursor: 'pointer',
+        display: 'flex',
+        height: 28,
+        justifyContent: 'center',
+        padding: 0,
+        position: 'relative',
+        transition: 'opacity 120ms ease',
+        width: 28,
+      }}
+      title={libelle}
+      type="button"
+    >
+      {children}
+      <span style={TEXTE_MASQUE}>{libelle}</span>
+    </button>
+  );
+}
+
+/** La fleche « repondre », au trait (aucun emoji dans l habillage). */
+const DESSIN_REPONDRE = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="15"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="15"
+  >
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </svg>
+);
+
+/** Le drapeau « signaler », au trait. */
+const DESSIN_SIGNALER = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="14"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="14"
+  >
+    <path d="M4 22V4" />
+    <path d="M4 4h12l-2 4 2 4H4" />
+  </svg>
+);
+
+/** La fleche vers le bas du bouton « revenir en bas ». */
+const DESSIN_VERS_LE_BAS = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="20"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="20"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+/** La fleche de retour de l en-tete. */
+const DESSIN_RETOUR = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="20"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="20"
+  >
+    <path d="M19 12H5" />
+    <path d="m12 19-7-7 7-7" />
+  </svg>
+);
+
+/**
+ * Le mot d une puce de date « [Aujourd'hui] » (format de moment, celui du telephone) sans ses
+ * crochets.
+ * @param {string} valeur - La traduction.
+ * @returns {string} Le mot.
+ */
+const sansCrochets = (valeur) => String(valeur || '').replace(/[[\]]/g, '');
 
 // @ts-ignore: FIXME: Baseline TS regression
 const formatDurationLabel = (durationMs) => {
@@ -317,6 +637,7 @@ function Conversation({ navigation, route }) {
     sendReadReceipt,
     sendTypingStart,
     sendTypingStop,
+    socket,
     votePoll,
   } = useMessaging(chatId)
 
@@ -371,6 +692,13 @@ function Conversation({ navigation, route }) {
   const typingTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
   const handledSharedEventFromPickerRef = useRef('')
   const voiceRecorderRef = useRef(null)
+  // MSG1W §3.1 — le cadre a la hauteur de l ecran, « revenir en bas », le menu « + », la saisie.
+  const cadreRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const [hauteurDuCadre, setHauteurDuCadre] = useState(0);
+  const [loinDuBas, setLoinDuBas] = useState(false);
+  const [menuAjouterOuvert, setMenuAjouterOuvert] = useState(false);
+  const menuAjouterRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const saisieRef = useRef(/** @type {HTMLTextAreaElement | null} */ (null));
 
   const {
     data: chatData,
@@ -432,9 +760,10 @@ function Conversation({ navigation, route }) {
       ? pages.flatMap((/** @type {any} */ page) => page?.data || [])
       : [];
   }, [listeDesFils]);
-  let colonnesDeLaGrille = isDesktop ? 'minmax(0, 1.5fr) minmax(320px, 420px)' : 'minmax(0, 1fr)';
+  let colonnesDeLaGrille = isDesktop ? 'minmax(0, 1fr) minmax(300px, 360px)' : 'minmax(0, 1fr)';
   if (avecColonneDeLaVille) {
-    colonnesDeLaGrille = 'minmax(240px, 300px) minmax(0, 1.5fr) minmax(280px, 380px)';
+    // MSG1W — le fil du milieu garde 360 px au moins : a 1 280 il etait ecrase a ~190 px.
+    colonnesDeLaGrille = 'minmax(220px, 280px) minmax(360px, 1fr) minmax(260px, 320px)';
   }
   const { data: sharedEventsPages } = useGetEvents({
     compact: true,
@@ -630,6 +959,78 @@ function Conversation({ navigation, route }) {
     proposalStartTime,
     proposalVenue,
   ])
+
+  // MSG1W §3.1 — LE CADRE A LA HAUTEUR DE L ECRAN. Mesure : du haut du cadre au bas de la
+  // fenetre ; sur telephone, la barre d onglets du site occupe le bas (5,75 rem, index.css).
+  // MSG1W §3.1 — « Bruno écrit… » : sous le titre (en cyan) et en bulle au bas du fil.
+  const quiEcrit = useQuiEcrit({ chatId, moi: userData?.documentId, socket });
+  const libelleQuiEcrit = useMemo(() => {
+    if (!quiEcrit.length) return '';
+    const prenoms = quiEcrit.map((id) => {
+      // @ts-ignore: FIXME: Baseline TS regression
+      const participant = (Array.isArray(chatData?.participants) ? chatData.participants : [])
+        .find((/** @type {any} */ personne) => areSameEntityId(personne?.documentId, id));
+      return String(participant?.firstname || '').trim();
+    }).filter(Boolean);
+    if (!prenoms.length) return t('conversation.typing.someone', "Quelqu'un écrit...");
+    return t('conversation.typing.named', {
+      count: prenoms.length,
+      defaultValue_one: '{{names}} écrit...',
+      defaultValue_other: '{{names}} écrivent...',
+      names: prenoms.slice(0, 2).join(', '),
+      ...SANS_ECHAPPEMENT,
+    });
+  }, [chatData?.participants, quiEcrit, t]);
+
+  const filCharge = Boolean(chatData);
+  useEffect(() => {
+    // Le banc jest (react-native) n a pas de fenetre a mesurer : rien a faire.
+    if (typeof window === 'undefined') return undefined;
+    if (typeof window.addEventListener !== 'function') return undefined;
+    const mesurer = () => {
+      const cadre = cadreRef.current;
+      if (!cadre?.getBoundingClientRect) return;
+      const haut = cadre.getBoundingClientRect().top + (window.scrollY || 0);
+      const reserveDuBas = isDesktop ? 20 : 96;
+      setHauteurDuCadre(Math.max(420, Math.round(window.innerHeight - haut - reserveDuBas)));
+    };
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    return () => window.removeEventListener('resize', mesurer);
+  }, [filCharge, isDesktop]);
+
+  // MSG1W §3.1 — la saisie grandit avec le texte, jusqu a 140 px, puis defile.
+  useEffect(() => {
+    const champ = saisieRef.current;
+    if (!champ?.style) return;
+    champ.style.height = 'auto';
+    champ.style.height = `${Math.min(140, Math.max(44, champ.scrollHeight || 0))}px`;
+  }, [composerText]);
+
+  // MSG1W §3.1 — le menu « + » se ferme par Echap ou par un clic a cote, comme la barre des
+  // reactions.
+  useEffect(() => {
+    if (!menuAjouterOuvert) return undefined;
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key === 'Escape') setMenuAjouterOuvert(false);
+    };
+    const surClic = (/** @type {MouseEvent} */ event) => {
+      if (menuAjouterRef.current?.contains(/** @type {Node} */ (event.target))) return;
+      setMenuAjouterOuvert(false);
+    };
+    document.addEventListener('keydown', surTouche);
+    document.addEventListener('mousedown', surClic);
+    return () => {
+      document.removeEventListener('keydown', surTouche);
+      document.removeEventListener('mousedown', surClic);
+    };
+  }, [menuAjouterOuvert]);
+
+  // MSG1W §3.1 — le fil range en groupes et en jours (filDuSite.js), et les mots des puces,
+  // ceux du telephone (format de moment « [Aujourd'hui] », sans ses crochets).
+  const entreesDuFil = useMemo(() => rangerLeFil(messages), [messages]);
+  const libelleAujourdhui = sansCrochets(t('conversation.calendarFormat.sameDay', "[Aujourd'hui]"));
+  const libelleHier = sansCrochets(t('conversation.calendarFormat.lastDay', '[Hier]'));
 
   const sendChatPayload = useCallback(async (/** @type {any} */ {
     attachments = [],
@@ -1690,18 +2091,39 @@ function Conversation({ navigation, route }) {
     };
   }, [reactionBarMessageId]);
 
-  // @ts-ignore: FIXME: Baseline TS regression
-  const renderMessageCard = useCallback((message) => {
-    // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : une ligne centrée, sans bulle.
+  /**
+   * MSG1W §3.1 — UNE BULLE DU FIL, au dessin du pack « modele WhatsApp » (SPECS §1) :
+   * groupee par expediteur (nom sur la premiere, avatar et queue sur la derniere), heure et
+   * coches DANS la bulle, reactions a cheval sur son bas. Les gestes (reagir, repondre,
+   * signaler, renvoyer) restent ceux d avant : seule leur place change.
+   * @param {import('@/views/conversationWeb/filDuSite').EntreeMessage} entree - Le message rangé.
+   * @returns {import('react').ReactElement} La rangee du message.
+   */
+  const renderMessageCard = useCallback((entree) => {
+    const { dernier, message, premier } = entree;
+    const idMessage = getMessageId(message);
+    // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : une notice centrée, sans bulle.
     if (filDeLaVille.estLigneSysteme(message)) {
       return (
         <div
-          key={getMessageId(message)}
-          style={{
-            color: mutedTextColor, fontSize: 13, justifySelf: 'center', textAlign: 'center',
-          }}
+          data-msg1w-id={idMessage}
+          key={idMessage}
+          style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}
         >
-          {String(message?.message || '')}
+          <span
+            style={{
+              background: PALETTE_DU_FIL.noticeFond,
+              borderRadius: 8,
+              color: PALETTE_DU_FIL.noticeTexte,
+              fontSize: 11.5,
+              lineHeight: '15px',
+              maxWidth: 280,
+              padding: '3px 10px',
+              textAlign: 'center',
+            }}
+          >
+            {String(message?.message || '')}
+          </span>
         </div>
       );
     }
@@ -1712,99 +2134,337 @@ function Conversation({ navigation, route }) {
     const maVoix = isMine && filDeLaVille.estFil
       ? String(message?.senderSignature?.nom || '').trim()
       : '';
+    // Le nom et l avatar ne servent qu a plusieurs : un tete-a-tete n en porte pas (SPECS §1).
+    const estAPlusieurs = chatData?.type !== 'whisper';
+    const montrerNom = (!isMine && estAPlusieurs && premier) || Boolean(maVoix && premier);
+    const montrerAvatar = !isMine && estAPlusieurs && dernier;
+    // MSG1B-1 (serveur, contrat du 07/10) : `sender.staffRole` vaut `dirigeant` ou `entraineur`
+    // dans les fils d equipe, de club et omnisport. Absent : rien ne s affiche.
+    const roleDuStaff = {
+      dirigeant: i18next.t('conversation.web.fil.roleDirigeant', 'Dirigeant'),
+      entraineur: i18next.t('conversation.web.fil.roleEntraineur', 'Entraîneur'),
+    }[String(message?.sender?.staffRole || '')] || '';
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo
-    const bubbleBackground = isMine ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 255, 255, 0.04)'
-    const messageReactions = getReactionsForMessage(
-      reactionsByMessage,
-      getMessageId(message),
-    );
+    const texte = String(message?.message || '').trim();
+    // La carte de composition du telephone porte deja son cadre : elle se pose SANS bulle.
+    const estCarteNue = message?.composition?.type === 'lineup_share'
+      && Boolean(String(message?.composition?.eventId || '').trim());
+    const fondDeBulle = isMine ? PALETTE_DU_FIL.bulleMienne : PALETTE_DU_FIL.bulleRecue;
+    const messageReactions = getReactionsForMessage(reactionsByMessage, idMessage);
     const myReactionEmoji = getMyReactionEmoji(messageReactions, userData?.documentId);
+    const totalDesReactions = messageReactions.reduce(
+      (somme, reaction) => somme + (Number(reaction?.count) || 0),
+      0,
+    );
+    const auteurCite = replyPreview?.sender;
+    const meta = (
+      <MetaDuMessage
+        heure={formatTime(message?.createdAt)}
+        idMessage={idMessage}
+        message={message}
+        mien={isMine}
+      />
+    );
 
     return (
       <div
-        key={getMessageId(message)}
+        data-msg1w-id={idMessage}
+        key={idMessage}
         style={{
+          alignItems: 'flex-end',
           display: 'flex',
+          gap: 8,
           justifyContent: isMine ? 'flex-end' : 'flex-start',
+          marginBottom: messageReactions.length > 0 ? 16 : 0,
+          marginTop: premier ? 10 : 2,
+          paddingLeft: isMine ? (isDesktop ? '18%' : 64) : 8,
+          paddingRight: isMine ? 10 : (isDesktop ? '18%' : 40),
         }}
       >
+        {!isMine && estAPlusieurs ? (
+          <span style={{ flexShrink: 0, width: 28 }}>
+            {montrerAvatar ? (
+              <AvatarDuGroupe idMessage={idMessage} personne={message?.sender} />
+            ) : null}
+          </span>
+        ) : null}
         <div
           className="REACTWEB-hote"
-          data-testid={`REACTWEB-bulle-${getMessageId(message)}`}
           style={{
-            background: bubbleBackground,
-            border: `1px solid ${isMine ? 'rgba(1, 179, 244, 0.28)' : borderColor}`,
-            borderRadius: 22,
-            color: baseTextColor,
-            display: 'grid',
-            gap: 12,
-            maxWidth: 'min(720px, 100%)',
-            padding: 18,
-            // REACT-WEB — LE BOUTON EST POSE EN ABSOLU DANS CE CADRE, et c est ce qui
-            // garantit qu une conversation garde exactement son allure : il n occupe
-            // aucune place dans la grille, donc aucune bulle ne se decale, ni quand il
-            // apparait, ni quand il disparait.
+            display: 'flex',
+            flexDirection: 'column',
+            maxWidth: '100%',
+            minWidth: 0,
+            // REACT-WEB — la barre du survol est posee EN ABSOLU a cote de la bulle : elle
+            // n occupe aucune place, donc aucune bulle ne se decale quand elle apparait.
             position: 'relative',
-            width: isDesktop ? 'auto' : '100%',
           }}
         >
-          <button
-            aria-expanded={reactionBarMessageId === getMessageId(message)}
-            aria-haspopup="true"
-            aria-label={i18next.t('conversation.reactions.add', 'Réagir à ce message')}
-            className="REACTWEB-declencheur"
-            data-testid={`REACTWEB-reagir-${getMessageId(message)}`}
-            onClick={(event) => {
-              reactionTriggerRef.current = event.currentTarget;
-              if (reactionBarMessageId === getMessageId(message)) {
-                setReactionBarMessageId('');
-                return;
-              }
-              setReactionBarAnchor(getReactionBarAnchor(event.currentTarget));
-              setReactionBarMessageId(getMessageId(message));
+          <div
+            data-testid={`REACTWEB-bulle-${idMessage}`}
+            style={{
+              alignSelf: isMine ? 'flex-end' : 'flex-start',
+              background: estCarteNue ? 'transparent' : fondDeBulle,
+              borderBottomLeftRadius: !isMine && dernier && !estCarteNue ? 4 : 18,
+              borderBottomRightRadius: isMine && dernier && !estCarteNue ? 4 : 18,
+              borderRadius: 18,
+              boxSizing: 'border-box',
+              color: PALETTE_DU_FIL.texte,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              maxWidth: '100%',
+              minWidth: 0,
+              padding: estCarteNue ? 0 : '6px 10px 7px',
+              position: 'relative',
             }}
+          >
+            {dernier && !estCarteNue ? (
+              <QueueDeBulle couleur={fondDeBulle} mienne={isMine} />
+            ) : null}
+            {montrerNom ? (
+              <div
+                data-testid={`MSG1W-nom-${idMessage}`}
+                style={{
+                  alignItems: 'baseline',
+                  display: 'flex',
+                  gap: 10,
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span
+                  style={{
+                    color: isMine ? PALETTE_DU_FIL.texteDoux : couleurDeLaPersonne(message?.sender),
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    fontSize: 13,
+                  }}
+                >
+                  {isMine ? maVoix : senderName}
+                </span>
+                {roleDuStaff && !isMine ? (
+                  <span style={{ color: PALETTE_DU_FIL.role, fontSize: 11.5 }}>{roleDuStaff}</span>
+                ) : null}
+              </div>
+            ) : null}
+            {replyPreview ? (
+              <button
+                onClick={() => {
+                  const cible = document.querySelector(
+                    `[data-msg1w-id="${getMessageId(replyPreview)}"]`,
+                  );
+                  cible?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+                }}
+                style={{
+                  background: isMine ? PALETTE_DU_FIL.carteMienne : PALETTE_DU_FIL.carteRecue,
+                  border: 0,
+                  borderLeft: `4px solid ${couleurDeLaPersonne(auteurCite)}`,
+                  borderRadius: 10,
+                  color: PALETTE_DU_FIL.texte,
+                  cursor: 'pointer',
+                  display: 'grid',
+                  gap: 2,
+                  minWidth: 190,
+                  padding: '6px 10px',
+                  textAlign: 'left',
+                }}
+                type="button"
+              >
+                <span
+                  style={{
+                    color: couleurDeLaPersonne(auteurCite),
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    fontSize: 12.5,
+                  }}
+                >
+                  {getDisplayName(auteurCite)}
+                </span>
+                <span
+                  style={{
+                    color: PALETTE_DU_FIL.texteDoux,
+                    fontSize: 13,
+                    lineHeight: '18px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {String(replyPreview?.message || '').trim() || 'Message partagé'}
+                </span>
+              </button>
+            ) : null}
+            {shouldRenderAttachments ? renderAttachments(attachments) : null}
+            {message?.composition ? renderComposition(message, isMine) : null}
+            {texte ? (
+              <div
+                style={{
+                  fontFamily: 'Montserrat-Regular, sans-serif',
+                  fontSize: 15,
+                  lineHeight: '20px',
+                  overflowWrap: 'anywhere',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {texte}
+                {/* La place de l heure au bout de la derniere ligne (SPECS §1 : 54 / 36). */}
+                <span
+                  aria-hidden="true"
+                  style={{ display: 'inline-block', width: isMine ? 58 : 40 }}
+                />
+              </div>
+            ) : null}
+            {texte ? (
+              <span style={{ bottom: 6, position: 'absolute', right: 10 }}>{meta}</span>
+            ) : (
+              <span style={{ alignSelf: 'flex-end', paddingRight: estCarteNue ? 8 : 0 }}>
+                {meta}
+              </span>
+            )}
+            {messageReactions.length > 0 ? (
+              <span
+                data-testid={`MSGREACT-rangee-${idMessage}`}
+                style={{
+                  alignItems: 'center',
+                  background: PALETTE_DU_FIL.bulleRecue,
+                  border: `1px solid ${myReactionEmoji ? PALETTE_DU_FIL.accent : 'transparent'}`,
+                  borderRadius: 12,
+                  bottom: -17,
+                  boxShadow: `0 0 0 2px ${PALETTE_DU_FIL.fil}`,
+                  boxSizing: 'border-box',
+                  display: 'inline-flex',
+                  fontSize: 13,
+                  gap: 2,
+                  height: 24,
+                  left: isMine ? undefined : 10,
+                  padding: '0 7px',
+                  position: 'absolute',
+                  right: isMine ? 10 : undefined,
+                }}
+                title={messageReactions
+                  .flatMap((reaction) => (Array.isArray(reaction?.users) ? reaction.users : []))
+                  .map((user) => [user?.firstname, user?.lastname].filter(Boolean).join(' '))
+                  .filter(Boolean)
+                  .join(', ')}
+              >
+                {messageReactions.slice(0, 3).map((reaction) => (
+                  <span key={`${idMessage}-${reaction?.emoji}`}>{reaction?.emoji}</span>
+                ))}
+                <span
+                  style={{
+                    color: PALETTE_DU_FIL.texteDoux,
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    fontSize: 12,
+                    marginLeft: 3,
+                  }}
+                >
+                  {String(totalDesReactions)}
+                </span>
+              </span>
+            ) : null}
+          </div>
+          {message?.failed ? (
+            <button
+              onClick={() => handleRetryFailedMessage(message)}
+              style={{
+                alignSelf: 'flex-end',
+                background: 'transparent',
+                border: 0,
+                color: PALETTE_DU_FIL.danger,
+                cursor: 'pointer',
+                fontFamily: 'Montserrat-Bold, sans-serif',
+                fontSize: 12,
+                marginTop: 4,
+                padding: 0,
+              }}
+              type="button"
+            >
+              Renvoyer
+            </button>
+          ) : null}
+          {/* La barre du survol, A COTE de la bulle : reagir, repondre, signaler. */}
+          <div
             style={{
               alignItems: 'center',
-              background: panelBackground,
-              border: `1px solid ${borderColor}`,
-              borderRadius: 999,
-              color: baseTextColor,
-              cursor: 'pointer',
               display: 'flex',
-              fontSize: 14,
-              height: 28,
-              justifyContent: 'center',
-              lineHeight: 1,
-              padding: 0,
+              gap: 4,
+              left: isMine ? undefined : '100%',
+              padding: '0 6px',
               position: 'absolute',
-              right: 10,
-              top: 10,
-              transition: 'opacity 120ms ease',
-              width: 28,
+              right: isMine ? '100%' : undefined,
+              top: 4,
               zIndex: 2,
             }}
-            type="button"
           >
-            {/* REACT-WEB — l icone du bouton qui ouvre la barre (FINITIONS16 20 : un dessin au
-                trait, plus un emoji). Elle n appartient PAS au jeu ferme des six reactions. */}
-            <svg
-              aria-hidden="true"
-              fill="none"
-              height="16"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              width="16"
+            <button
+              aria-expanded={reactionBarMessageId === idMessage}
+              aria-haspopup="true"
+              aria-label={i18next.t('conversation.reactions.add', 'Réagir à ce message')}
+              className="REACTWEB-declencheur"
+              data-testid={`REACTWEB-reagir-${idMessage}`}
+              onClick={(event) => {
+                reactionTriggerRef.current = event.currentTarget;
+                if (reactionBarMessageId === idMessage) {
+                  setReactionBarMessageId('');
+                  return;
+                }
+                setReactionBarAnchor(getReactionBarAnchor(event.currentTarget));
+                setReactionBarMessageId(idMessage);
+              }}
+              style={{
+                alignItems: 'center',
+                background: PALETTE_DU_FIL.menu,
+                border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                borderRadius: 999,
+                color: PALETTE_DU_FIL.texte,
+                cursor: 'pointer',
+                display: 'flex',
+                height: 28,
+                justifyContent: 'center',
+                lineHeight: 1,
+                padding: 0,
+                transition: 'opacity 120ms ease',
+                width: 28,
+              }}
+              type="button"
             >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8" />
-              <path d="M9 9.5h.01M15 9.5h.01" />
-            </svg>
-          </button>
+              {/* REACT-WEB — l icone du bouton qui ouvre la barre (FINITIONS16 20 : un dessin au
+                  trait, plus un emoji). Elle n appartient PAS au jeu ferme des six reactions. */}
+              <svg
+                aria-hidden="true"
+                fill="none"
+                height="16"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="16"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8.5 14.5c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8" />
+                <path d="M9 9.5h.01M15 9.5h.01" />
+              </svg>
+            </button>
+            <BoutonDuSurvol
+              libelle={i18next.t('conversation.actions.reply', 'Répondre')}
+              onClick={() => setReplyTarget(message)}
+              testId={`MSG1W-repondre-${idMessage}`}
+            >
+              {DESSIN_REPONDRE}
+            </BoutonDuSurvol>
+            {!isMine ? (
+              <BoutonDuSurvol
+                libelle={reportMessageMutation.isPending && reportedMessageId === idMessage
+                  ? 'Signalement...'
+                  : i18next.t('conversation.actions.report', 'Signaler')}
+                onClick={() => handleReportMessage(message)}
+                testId={`MSG1W-signaler-${idMessage}`}
+              >
+                {DESSIN_SIGNALER}
+              </BoutonDuSurvol>
+            ) : null}
+          </div>
           {reactionBarMessageId === getMessageId(message) && reactionBarAnchor && !clavierOuvert ? (
             <div
               aria-label={i18next.t('conversation.reactions.pick', 'Choisir une réaction')}
@@ -1978,176 +2638,27 @@ function Conversation({ navigation, route }) {
               </div>
             </div>
           ) : null}
-          {!isMine || maVoix ? (
-            <div style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
-              {isMine ? maVoix : senderName}
-            </div>
-          ) : null}
-          {replyPreview ? (
-            <div style={{
-              background: 'rgba(255,255,255,0.05)',
-              borderLeft: `3px solid ${primaryColor}`,
-              borderRadius: 12,
-              display: 'grid',
-              gap: 4,
-              padding: '10px 12px',
-            }}
-            >
-              <span style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
-                {getDisplayName(replyPreview?.sender)}
-              </span>
-              <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                {String(replyPreview?.message || '').trim() || 'Message partagé'}
-              </span>
-            </div>
-          ) : null}
-          {String(message?.message || '').trim() ? (
-            <div style={{ fontSize: 15, lineHeight: 1.5 }}>
-              {String(message?.message || '').trim()}
-            </div>
-          ) : null}
-          {shouldRenderAttachments ? renderAttachments(attachments) : null}
-          {message?.composition ? renderComposition(message, isMine) : null}
-          {messageReactions.length > 0 ? (
-            <div
-              data-testid={`MSGREACT-rangee-${getMessageId(message)}`}
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 6,
-                justifyContent: isMine ? 'flex-end' : 'flex-start',
-              }}
-            >
-              {messageReactions.map((reaction) => {
-                const isMyReaction = Boolean(myReactionEmoji)
-                  && reaction?.emoji === myReactionEmoji;
-                return (
-                  <span
-                    key={`${getMessageId(message)}-${reaction?.emoji}`}
-                    style={{
-                      alignItems: 'center',
-                      background: isMyReaction
-                        ? 'rgba(1, 179, 244, 0.22)'
-                        : 'rgba(255, 255, 255, 0.06)',
-                      border: `1px solid ${isMyReaction ? primaryColor : 'transparent'}`,
-                      borderRadius: 12,
-                      display: 'inline-flex',
-                      fontSize: 13,
-                      gap: 4,
-                      padding: '2px 8px',
-                    }}
-                    title={(Array.isArray(reaction?.users) ? reaction.users : [])
-                      .map((user) => [user?.firstname, user?.lastname].filter(Boolean).join(' '))
-                      .filter(Boolean)
-                      .join(', ')}
-                  >
-                    <span>{reaction?.emoji}</span>
-                    <span style={{ color: mutedTextColor }}>{String(reaction?.count ?? 0)}</span>
-                  </span>
-                );
-              })}
-            </div>
-          ) : null}
-          <div style={{
-            alignItems: 'center',
-            color: mutedTextColor,
-            display: 'flex',
-            flexWrap: 'wrap',
-            fontSize: 12,
-            gap: 10,
-            justifyContent: 'space-between',
-          }}
-          >
-            <span>
-              {formatDay(message?.createdAt)}
-              {' '}
-              à
-              {' '}
-              {formatTime(message?.createdAt)}
-              {message?.pending ? i18next.t('conversation.web.message.sending', ' • envoi...') : ''}
-              {message?.failed ? i18next.t(
-                'conversation.web.message.toResend',
-                ' • à renvoyer',
-              ) : ''}
-            </span>
-            <div style={{
-              alignItems: 'center',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 12,
-            }}
-            >
-              {message?.failed ? (
-                <button
-                  onClick={() => handleRetryFailedMessage(message)}
-                  style={{
-                    background: 'transparent',
-                    border: 0,
-                    color: primaryColor,
-                    cursor: 'pointer',
-                    fontFamily: 'Montserrat-Bold, sans-serif',
-                    padding: 0,
-                  }}
-                  type="button"
-                >
-                  Renvoyer
-                </button>
-              ) : null}
-              {!isMine ? (
-                <button
-                  disabled={reportMessageMutation.isPending && reportedMessageId === getMessageId(message)}
-                  onClick={() => handleReportMessage(message)}
-                  style={{
-                    background: 'transparent',
-                    border: 0,
-                    color: mutedTextColor,
-                    cursor: reportMessageMutation.isPending ? 'wait' : 'pointer',
-                    fontFamily: 'Montserrat-Bold, sans-serif',
-                    padding: 0,
-                  }}
-                  type="button"
-                >
-                  {reportMessageMutation.isPending && reportedMessageId === getMessageId(message) ? 'Signalement...' : 'Signaler'}
-                </button>
-              ) : null}
-              <button
-                onClick={() => setReplyTarget(message)}
-                style={{
-                  background: 'transparent',
-                  border: 0,
-                  color: primaryColor,
-                  cursor: 'pointer',
-                  fontFamily: 'Montserrat-Bold, sans-serif',
-                  padding: 0,
-                }}
-                type="button"
-              >
-                Répondre
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     )
   }, [
     baseTextColor,
     borderColor,
+    chatData?.type,
+    clavierOuvert,
+    familleEmoji,
     filDeLaVille,
     handleReportMessage,
     handleRetryFailedMessage,
     handleToggleReaction,
     isDesktop,
-    mutedTextColor,
     panelBackground,
-    primaryColor,
-    clavierOuvert,
-    familleEmoji,
     reactionBarAnchor,
     reactionBarMessageId,
     reactionsByMessage,
-    reportMessageMutation.isPending,
     renderAttachments,
     renderComposition,
+    reportMessageMutation.isPending,
     reportedMessageId,
     userData?.documentId,
   ])
@@ -2238,21 +2749,315 @@ function Conversation({ navigation, route }) {
     )
   }
 
+  const placeholderDeLaSaisie = filDeLaVille.placeholder
+    || t('conversation.messagePlaceholder', 'Message');
+  const aDuTexte = Boolean(composerText.trim());
+  const micIndisponible = isStoppingVoice
+    || (!isRecordingVoice && !isVoiceRecordingSupported)
+    || isUploading
+    || isSending
+    || isSubmittingPoll
+    || isSubmittingProposal;
+  const sousTitreDuFil = filDeLaVille.sousTitre || `${
+    Array.isArray(chatData?.participants) ? chatData.participants.length : 0
+  } participants`;
+  const styleDuBoutonRond = {
+    alignItems: 'center',
+    background: PALETTE_DU_FIL.accent,
+    border: 0,
+    borderRadius: 999,
+    color: PALETTE_DU_FIL.encre,
+    cursor: 'pointer',
+    display: 'flex',
+    flexShrink: 0,
+    height: 44,
+    justifyContent: 'center',
+    padding: 0,
+    position: 'relative',
+    width: 44,
+  };
+  const entreesDuMenuAjouter = [
+    {
+      action: handlePickImage,
+      cle: 'photos',
+      libelle: t('conversation.attachments.photos', 'Photos'),
+    },
+    {
+      action: handlePickDocument,
+      cle: 'document',
+      libelle: t('conversation.attachments.document', 'Document'),
+    },
+    {
+      action: handleShareLocation,
+      cle: 'location',
+      libelle: t('conversation.attachments.location', 'Localisation'),
+    },
+  ];
+
+  // MSG1W §3.1 — les panneaux d avant (Partager, Sondage, Proposition League). Sur ordinateur ils
+  // restent a droite du fil ; sur un telephone ils passent SOUS la messagerie, hors du cadre a
+  // hauteur d ecran. Ils seront remplaces par le menu « + » et ses fenetres (§3.5).
+  const panneauDeDroite = (
+    <aside
+      style={{
+        alignContent: 'start',
+        display: 'grid',
+        gap: 20,
+        marginTop: isDesktop ? 0 : 20,
+        minHeight: 0,
+        overflowY: isDesktop ? 'auto' : 'visible',
+      }}
+    >
+      {/* COLL-C4A2 — P3c-canal-ordi : « Dans ce canal », liste calculée, sans « Ajouter ». */}
+      {filDeLaVille.estFil && filDeLaVille.membres ? (
+        <section
+          style={{
+            background: panelBackground,
+            border: `1px solid ${borderColor}`,
+            borderRadius: 24,
+            display: 'grid',
+            gap: 14,
+            padding: 22,
+          }}
+        >
+          <h2
+            style={{
+              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+            }}
+          >
+            {filDeLaVille.estCanal
+              ? t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal')
+              : t('collectiviteCanaux.membres.titrePrivee', 'Dans cette conversation')}
+          </h2>
+          <ListeDesMembresDuFil
+            espaceVille={route?.params?.espace === 'ville'}
+            fil={filDeLaVille.membres}
+          />
+        </section>
+      ) : null}
+      <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22 }}>
+        <h2
+          style={{
+            color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+          }}
+        >
+          Partager
+        </h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <button onClick={handleShareLocation} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Position</button>
+          <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Photo</button>
+          <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Fichier</button>
+        </div>
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          <h3
+            style={{
+              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
+            }}
+          >
+            Contacts
+          </h3>
+          {shareableContacts.length === 0 ? (
+            <div style={{ color: mutedTextColor, fontSize: 13 }}>
+              {i18next.t(
+                'conversation.web.share.noContact',
+                'Aucun contact partageable dans cette conversation.',
+              )}
+            </div>
+          ) : shareableContacts.slice(0, 6).map((contact) => {
+            const fullName = getDisplayName(contact);
+            return (
+              <button
+                key={contact.documentId}
+                onClick={() => handleShareContact(contact)}
+                style={{
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 14,
+                  color: baseTextColor,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  gap: 12,
+                  padding: '10px 12px',
+                  textAlign: 'left',
+                }}
+                type="button"
+              >
+                <span style={{
+                  alignItems: 'center',
+                  background: 'rgba(1, 179, 244, 0.14)',
+                  borderRadius: '50%',
+                  display: 'inline-flex',
+                  height: 34,
+                  justifyContent: 'center',
+                  minWidth: 34,
+                }}
+                >
+                  {getInitials(fullName)}
+                </span>
+                <span style={{ display: 'grid', gap: 4 }}>
+                  <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{fullName}</span>
+                  <span style={{ color: mutedTextColor, fontSize: 12 }}>{contact?.role?.name || contact?.role?.type || contact?.role || ''}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          <h3
+            style={{
+              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
+            }}
+          >
+            {i18next.t('conversation.web.share.events', 'Événements')}
+          </h3>
+          {shareableEvents.length === 0 ? (
+            <div style={{ color: mutedTextColor, fontSize: 13 }}>
+              {i18next.t(
+                'conversation.web.share.noEvent',
+                'Aucun événement récent à partager.',
+              )}
+            </div>
+          ) : shareableEvents.slice(0, 6).map((event) => (
+            <button
+              key={getEntityDocumentId(event)}
+              onClick={() => handleShareEvent(event)}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${borderColor}`,
+                borderRadius: 14,
+                color: baseTextColor,
+                cursor: 'pointer',
+                display: 'grid',
+                gap: 4,
+                padding: '10px 12px',
+                textAlign: 'left',
+              }}
+              type="button"
+            >
+              <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{event?.name || 'Événement'}</span>
+              <span style={{ color: mutedTextColor, fontSize: 12 }}>
+                {formatDay(event?.date)}
+                {' '}
+                •
+                {' '}
+                {event?.team?.name || ''}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
+        <h2
+          style={{
+            color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+          }}
+        >
+          Sondage
+        </h2>
+        <input onChange={(event) => setPollQuestion(event.target.value)} placeholder={i18next.t('conversation.web.poll.questionPlaceholder', 'Question du sondage')} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={pollQuestion} />
+        {pollOptions.map((option, index) => (
+          <input
+            key={`poll-option-${index}`}
+            onChange={(event) => updatePollOption(index, event.target.value)}
+            placeholder={`Option ${index + 1}`}
+            style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }}
+            value={option}
+          />
+        ))}
+        <label style={{ alignItems: 'center', color: mutedTextColor, display: 'flex', gap: 8, fontSize: 13 }}>
+          <input checked={allowMultipleVotes} onChange={(event) => setAllowMultipleVotes(event.target.checked)} type="checkbox" />
+          Autoriser plusieurs votes
+        </label>
+        <label style={{ alignItems: 'center', color: mutedTextColor, display: 'flex', gap: 8, fontSize: 13 }}>
+          <input checked={isAnonymousPoll} onChange={(event) => setIsAnonymousPoll(event.target.checked)} type="checkbox" />
+          Sondage anonyme
+        </label>
+        <button
+          disabled={!canSubmitPoll}
+          onClick={handleSubmitPoll}
+          style={{
+            background: primaryColor,
+            border: 0,
+            borderRadius: 999,
+            color: '#001218',
+            cursor: !canSubmitPoll ? 'not-allowed' : 'pointer',
+            fontFamily: 'Montserrat-Bold, sans-serif',
+            opacity: !canSubmitPoll ? 0.6 : 1,
+            padding: '12px 16px',
+          }}
+          type="button"
+        >
+          {isSubmittingPoll ? 'Envoi...' : i18next.t(
+            'conversation.web.poll.send',
+            'Envoyer le sondage',
+          )}
+        </button>
+      </section>
+
+      {isLeagueConversation ? (
+        <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
+          <h2
+            style={{
+              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
+            }}
+          >
+            {i18next.t('conversation.web.proposal.title', 'Proposition de match')}
+          </h2>
+          <input onChange={(event) => setProposalDate(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="date" value={proposalDate} />
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+            <input onChange={(event) => setProposalStartTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalStartTime} />
+            <input onChange={(event) => setProposalEndTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalEndTime} />
+          </div>
+          <input onChange={(event) => setProposalVenue(event.target.value)} placeholder="Lieu" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalVenue} />
+          <input onChange={(event) => setProposalAddress(event.target.value)} placeholder="Adresse" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalAddress} />
+          <button
+            disabled={!canSubmitProposal}
+            onClick={handleSendProposal}
+            style={{
+              background: primaryColor,
+              border: 0,
+              borderRadius: 999,
+              color: '#001218',
+              cursor: !canSubmitProposal ? 'not-allowed' : 'pointer',
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              opacity: !canSubmitProposal ? 0.6 : 1,
+              padding: '12px 16px',
+            }}
+            type="button"
+          >
+            {isSubmittingProposal ? 'Envoi...' : i18next.t(
+              'conversation.web.proposal.send',
+              'Envoyer la proposition',
+            )}
+          </button>
+        </section>
+      ) : null}
+    </aside>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
       contentWidth="full"
       responsivePadding
       // @ts-ignore: FIXME: Baseline TS regression
-      style={{ paddingBottom: 32 }}
+      style={{ paddingBottom: isDesktop ? 0 : 24 }}
     >
       <div
+        ref={cadreRef}
         style={{
           color: baseTextColor,
           display: 'grid',
-          gap: 24,
+          gap: 16,
           gridTemplateColumns: colonnesDeLaGrille,
-          minHeight: isDesktop ? 'calc(100vh - 120px)' : 'auto',
+          // MSG1W §3.1 — LE CADRE A LA HAUTEUR DE L ECRAN : c est le fil qui defile ;
+          // l en-tete et la saisie restent en place (README §3.1, « bloc fixe »).
+          height: hauteurDuCadre || 'calc(100vh - 116px)',
+          minHeight: 0,
         }}
       >
         {avecColonneDeLaVille ? (
@@ -2262,6 +3067,8 @@ function Conversation({ navigation, route }) {
               background: panelBackground,
               border: `1px solid ${borderColor}`,
               borderRadius: 24,
+              maxHeight: '100%',
+              overflowY: 'auto',
               padding: 12,
             }}
           >
@@ -2275,153 +3082,331 @@ function Conversation({ navigation, route }) {
         ) : null}
         <section
           style={{
-            background: panelBackground,
-            border: `1px solid ${borderColor}`,
-            borderRadius: 28,
+            background: PALETTE_DU_FIL.fil,
+            border: `1px solid ${PALETTE_DU_FIL.filet}`,
+            borderRadius: isDesktop ? 20 : 16,
             display: 'grid',
             gridTemplateRows: 'auto minmax(0, 1fr) auto',
-            minHeight: isDesktop ? 'calc(100vh - 120px)' : 0,
+            minHeight: 0,
+            minWidth: 0,
             overflow: 'hidden',
           }}
         >
-          <header style={{ borderBottom: `1px solid ${borderColor}`, display: 'grid', gap: 10, padding: 24 }}>
-            <div style={{ alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'space-between' }}>
-              <div style={{ alignItems: 'center', display: 'flex', gap: 12 }}>
-                {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
-                <View testID="fil-de-la-ville-ecusson">
-                  <EcussonDuFil
-                    chat={chatData}
-                    espaceVille={route?.params?.espace === 'ville'}
-                    routeChatType={route?.params?.chatType || null}
-                  />
-                </View>
-                <div style={{ display: 'grid', gap: 6 }}>
+          <header
+            style={{
+              alignItems: 'center',
+              background: PALETTE_DU_FIL.barre,
+              borderBottom: `1px solid ${PALETTE_DU_FIL.filet}`,
+              boxSizing: 'border-box',
+              display: 'flex',
+              gap: 10,
+              minHeight: 62,
+              padding: '10px 14px',
+            }}
+          >
+            <button
+              aria-label={t('common.back', 'Retour')}
+              onClick={() => navigation.navigate(RouteNames.Chat)}
+              style={{
+                alignItems: 'center',
+                background: 'transparent',
+                border: `1.5px solid ${PALETTE_DU_FIL.accent}`,
+                borderRadius: 999,
+                color: PALETTE_DU_FIL.accent,
+                cursor: 'pointer',
+                display: 'flex',
+                flexShrink: 0,
+                height: 40,
+                justifyContent: 'center',
+                padding: 0,
+                width: 40,
+              }}
+              type="button"
+            >
+              {DESSIN_RETOUR}
+            </button>
+            {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
+            <View testID="fil-de-la-ville-ecusson">
+              <EcussonDuFil
+                chat={chatData}
+                espaceVille={route?.params?.espace === 'ville'}
+                routeChatType={route?.params?.chatType || null}
+                taille={38}
+              />
+            </View>
+            {!filDeLaVille.estFil ? (
+              <span
+                aria-hidden="true"
+                style={{
+                  alignItems: 'center',
+                  background: PALETTE_DU_FIL.bulleRecue,
+                  borderRadius: '50%',
+                  color: PALETTE_DU_FIL.texte,
+                  display: 'inline-flex',
+                  flexShrink: 0,
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  fontSize: 14,
+                  height: 38,
+                  justifyContent: 'center',
+                  width: 38,
+                }}
+              >
+                {getInitials(conversationName)}
+              </span>
+            ) : null}
+            <div style={{ display: 'grid', flex: 1, gap: 2, minWidth: 0 }}>
+              <h1
+                style={{
+                  color: PALETTE_DU_FIL.texte,
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  fontSize: 16,
+                  lineHeight: '20px',
+                  margin: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {conversationName}
+              </h1>
+              <span
+                style={{
+                  color: PALETTE_DU_FIL.texteDoux,
+                  fontSize: 12.5,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {libelleQuiEcrit ? (
                   <span
+                    data-testid="MSG1W-qui-ecrit"
                     style={{
-                      color: mutedTextColor, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase',
+                      color: PALETTE_DU_FIL.accent,
+                      fontFamily: 'Montserrat-Bold, sans-serif',
                     }}
                   >
-                    Messagerie
+                    {libelleQuiEcrit}
                   </span>
-                  <h1
-                    style={{
-                      color: baseTextColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: 28, margin: 0,
-                    }}
-                  >
-                    {conversationName}
-                  </h1>
-                </div>
-              </div>
-            </div>
-            <div style={{ color: mutedTextColor, fontSize: 14 }}>
-              {isChatLoading
-                ? i18next.t(
-                  'conversation.web.loading.conversation',
-                  'Chargement de la conversation...',
-                )
-                : (filDeLaVille.sousTitre || `${
-                  Array.isArray(chatData?.participants) ? chatData.participants.length : 0
-                } participants`)}
+                ) : null}
+                {!libelleQuiEcrit && isChatLoading
+                  ? i18next.t(
+                    'conversation.web.loading.conversation',
+                    'Chargement de la conversation...',
+                  )
+                  : null}
+                {!libelleQuiEcrit && !isChatLoading ? sousTitreDuFil : null}
+              </span>
             </div>
           </header>
 
-          <div
-            ref={messagePaneRef}
-            style={{
-              // FINITIONS16 20 : la rangee d un seul message ne s etire plus sur toute la hauteur.
-              alignContent: 'start',
-              display: 'grid',
-              gap: 16,
-              overflowY: 'auto',
-              padding: 24,
-            }}
-          >
-            {hasNextPage ? (
-              <button
-                onClick={() => fetchNextPage()}
-                style={{
-                  background: 'transparent',
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: 999,
-                  color: baseTextColor,
-                  cursor: 'pointer',
-                  justifySelf: 'center',
-                  padding: '10px 16px',
-                }}
-                type="button"
-              >
-                {isFetchingNextPage ? 'Chargement...' : i18next.t(
-                  'conversation.web.loadEarlier',
-                  'Afficher les messages precedents',
-                )}
-              </button>
-            ) : null}
-
-            {isMessagesLoading ? (
-              <div style={{ color: mutedTextColor }}>
-                {i18next.t('conversation.web.loading.messages', 'Chargement des messages...')}
-              </div>
-            ) : null}
-
-            {!isMessagesLoading && filDeLaVille.estQuitte ? (
-              <FilDeLaVilleQuitte
-                estCanal={filDeLaVille.estCanal}
-                onRetour={() => navigation.navigate(RouteNames.Chat)}
-              />
-            ) : null}
-            {!isMessagesLoading && messagesError && !filDeLaVille.estQuitte ? (
-              <div style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 18,
-                color: mutedTextColor,
-                display: 'grid',
-                gap: 12,
-                padding: 18,
+          <div style={{ minHeight: 0, position: 'relative' }}>
+            <div
+              data-testid="MSG1W-fil"
+              onScroll={(event) => {
+                const fil = event.currentTarget;
+                setLoinDuBas(fil.scrollHeight - fil.scrollTop - fil.clientHeight > 160);
               }}
-              >
-                <div>
-                  {getErrorMessage(messagesError, i18next.t(
-                    'conversation.web.loading.messagesError',
-                    'Impossible de charger les messages de cette conversation.',
-                  ))}
-                </div>
+              ref={messagePaneRef}
+              style={{
+                // FINITIONS16 20 : une rangee d un seul message ne s etire plus en hauteur.
+                alignContent: 'start',
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                overflowY: 'auto',
+                padding: '8px 6px 18px',
+              }}
+            >
+              {hasNextPage ? (
                 <button
-                  onClick={() => refetchMessages()}
+                  onClick={() => fetchNextPage()}
                   style={{
                     background: 'transparent',
                     border: `1px solid ${borderColor}`,
                     borderRadius: 999,
                     color: baseTextColor,
                     cursor: 'pointer',
-                    justifySelf: 'start',
-                    padding: '10px 14px',
+                    justifySelf: 'center',
+                    padding: '10px 16px',
                   }}
                   type="button"
                 >
-                  {i18next.t('conversation.web.retry', 'Réessayer')}
+                  {isFetchingNextPage ? 'Chargement...' : i18next.t(
+                    'conversation.web.loadEarlier',
+                    'Afficher les messages precedents',
+                  )}
                 </button>
-              </div>
-            ) : null}
+              ) : null}
 
-            {!isMessagesLoading && !messagesError && !messages.length && filDeLaVille.estFil ? (
-              <VideDuFilDeLaVille
-                chat={chatData}
-                clubsCount={filDeLaVille.clubsCount}
-                espaceVille={route?.params?.espace === 'ville'}
-              />
-            ) : null}
-            {!isMessagesLoading && !messagesError && !messages.length && !filDeLaVille.estFil ? (
-              <div style={{ color: mutedTextColor }}>
-                {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
-              </div>
-            ) : null}
+              {isMessagesLoading ? (
+                <div style={{ color: mutedTextColor }}>
+                  {i18next.t('conversation.web.loading.messages', 'Chargement des messages...')}
+                </div>
+              ) : null}
 
-            <style>{REACTION_HOVER_STYLE}</style>
-            {!messagesError ? messages.map((message) => renderMessageCard(message)) : null}
+              {!isMessagesLoading && filDeLaVille.estQuitte ? (
+                <FilDeLaVilleQuitte
+                  estCanal={filDeLaVille.estCanal}
+                  onRetour={() => navigation.navigate(RouteNames.Chat)}
+                />
+              ) : null}
+              {!isMessagesLoading && messagesError && !filDeLaVille.estQuitte ? (
+                <div style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 18,
+                  color: mutedTextColor,
+                  display: 'grid',
+                  gap: 12,
+                  padding: 18,
+                }}
+                >
+                  <div>
+                    {getErrorMessage(messagesError, i18next.t(
+                      'conversation.web.loading.messagesError',
+                      'Impossible de charger les messages de cette conversation.',
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => refetchMessages()}
+                    style={{
+                      background: 'transparent',
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: 999,
+                      color: baseTextColor,
+                      cursor: 'pointer',
+                      justifySelf: 'start',
+                      padding: '10px 14px',
+                    }}
+                    type="button"
+                  >
+                    {i18next.t('conversation.web.retry', 'Réessayer')}
+                  </button>
+                </div>
+              ) : null}
+
+              {!isMessagesLoading && !messagesError && !messages.length && filDeLaVille.estFil ? (
+                <VideDuFilDeLaVille
+                  chat={chatData}
+                  clubsCount={filDeLaVille.clubsCount}
+                  espaceVille={route?.params?.espace === 'ville'}
+                />
+              ) : null}
+              {!isMessagesLoading && !messagesError && !messages.length && !filDeLaVille.estFil ? (
+                <div style={{ color: mutedTextColor }}>
+                  {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+                </div>
+              ) : null}
+              <style>{REACTION_HOVER_STYLE}</style>
+              {!messagesError ? entreesDuFil.map((entree) => (entree.type === 'jour' ? (
+                <div
+                  key={entree.cle}
+                  style={{
+                    display: 'flex', justifyContent: 'center', marginBottom: 4, marginTop: 16,
+                  }}
+                >
+                  <span
+                    data-testid="MSG1W-puce-date"
+                    style={{
+                      backdropFilter: 'blur(12px)',
+                      background: PALETTE_DU_FIL.puce,
+                      border: `1px solid ${PALETTE_DU_FIL.filet}`,
+                      borderRadius: 999,
+                      color: PALETTE_DU_FIL.texte,
+                      fontFamily: 'Montserrat-Bold, sans-serif',
+                      fontSize: 12,
+                      padding: '5px 12px',
+                    }}
+                  >
+                    {libelleDuJour(entree.date, {
+                      aujourdhui: libelleAujourdhui,
+                      hier: libelleHier,
+                      locale: i18next.language === 'en' ? 'en-GB' : 'fr-FR',
+                    })}
+                  </span>
+                </div>
+              ) : renderMessageCard(entree))) : null}
+              {quiEcrit.length ? (
+                <div
+                  aria-label={libelleQuiEcrit}
+                  role="status"
+                  style={{ display: 'flex', marginTop: 10, paddingLeft: 8 }}
+                >
+                  <span
+                    style={{
+                      alignItems: 'center',
+                      background: PALETTE_DU_FIL.bulleRecue,
+                      borderRadius: 18,
+                      display: 'inline-flex',
+                      gap: 4,
+                      height: 34,
+                      padding: '0 14px',
+                    }}
+                  >
+                    {[0, 1, 2].map((point) => (
+                      <span
+                        className="MSG1W-point"
+                        key={point}
+                        style={{
+                          animationDelay: `${point * 0.2}s`,
+                          background: PALETTE_DU_FIL.texteDoux,
+                          borderRadius: '50%',
+                          display: 'inline-block',
+                          height: 7,
+                          width: 7,
+                        }}
+                      />
+                    ))}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+            {loinDuBas ? (
+              <button
+                onClick={() => {
+                  const fil = messagePaneRef.current;
+                  // @ts-ignore: FIXME: Baseline TS regression
+                  fil?.scrollTo?.({ behavior: 'smooth', top: fil.scrollHeight });
+                }}
+                style={{
+                  alignItems: 'center',
+                  background: PALETTE_DU_FIL.revenirEnBas,
+                  border: 0,
+                  borderRadius: 999,
+                  bottom: 12,
+                  boxShadow: '0 6px 18px rgba(0, 0, 0, 0.35)',
+                  color: PALETTE_DU_FIL.texte,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  height: 40,
+                  justifyContent: 'center',
+                  padding: 0,
+                  position: 'absolute',
+                  right: 12,
+                  width: 40,
+                  zIndex: 3,
+                }}
+                type="button"
+              >
+                {DESSIN_VERS_LE_BAS}
+                <span style={TEXTE_MASQUE}>
+                  {i18next.t('conversation.web.fil.revenirEnBas', 'Revenir en bas')}
+                </span>
+              </button>
+            ) : null}
           </div>
 
-          <div style={{ borderTop: `1px solid ${borderColor}`, display: 'grid', gap: 14, padding: 20 }}>
+          <footer
+            style={{
+              background: PALETTE_DU_FIL.barre,
+              borderTop: `1px solid ${PALETTE_DU_FIL.filet}`,
+              display: 'grid',
+              gap: 8,
+              padding: '8px 12px 12px',
+            }}
+          >
             {replyTarget ? (
               <div style={{
                 alignItems: 'center',
@@ -2451,330 +3436,155 @@ function Conversation({ navigation, route }) {
                 </button>
               </div>
             ) : null}
-
-            <textarea
-              onChange={(event) => setComposerText(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault()
-                  if (!isSending && composerText.trim()) {
-                    handleSendText()
-                  }
-                }
-              }}
-              placeholder={
-                filDeLaVille.placeholder || t('conversation.placeholder', 'Ecris ton message...')
-              }
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 20,
-                color: baseTextColor,
-                fontFamily: 'Montserrat-Regular, sans-serif',
-                fontSize: 15,
-                minHeight: 120,
-                outline: 'none',
-                padding: 16,
-                resize: 'vertical',
-                width: '100%',
-              }}
-              value={composerText}
-            />
-
-            <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                <button
-                  disabled={isStoppingVoice || (!isRecordingVoice && !isVoiceRecordingSupported) || isUploading || isSending || isSubmittingPoll || isSubmittingProposal}
-                  onClick={handleVoiceNote}
-                  style={{
-                    background: isRecordingVoice ? primaryColor : 'transparent',
-                    border: `1px solid ${isRecordingVoice ? primaryColor : borderColor}`,
-                    borderRadius: 999,
-                    color: isRecordingVoice ? '#001218' : baseTextColor,
-                    cursor: (isStoppingVoice || (!isRecordingVoice && !isVoiceRecordingSupported) || isUploading || isSending || isSubmittingPoll || isSubmittingProposal) ? 'not-allowed' : 'pointer',
-                    opacity: (isStoppingVoice || (!isRecordingVoice && !isVoiceRecordingSupported) || isUploading || isSending || isSubmittingPoll || isSubmittingProposal) ? 0.6 : 1,
-                    padding: '10px 14px',
-                  }}
-                  type="button"
-                >
-                  {isStoppingVoice
-                    ? 'Preparation...'
-                    : (isRecordingVoice ? i18next.t(
-                      'conversation.web.voice.stop',
-                      'Arrêter la note vocale',
-                    ) : 'Note vocale')}
-                </button>
-                <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Image</button>
-                <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Document</button>
-              </div>
-              <button
-                disabled={!canSendText}
-                onClick={handleSendText}
-                style={{
-                  background: primaryColor,
-                  border: 0,
-                  borderRadius: 999,
-                  color: '#001218',
-                  cursor: !canSendText ? 'not-allowed' : 'pointer',
-                  fontFamily: 'Montserrat-Bold, sans-serif',
-                  opacity: !canSendText ? 0.6 : 1,
-                  padding: '12px 18px',
-                }}
-                type="button"
-              >
-                {isSending ? 'Envoi...' : 'Envoyer'}
-              </button>
-            </div>
-            <div style={{ color: mutedTextColor, fontSize: 12 }}>
-              {isRecordingVoice
-                ? i18next.t(
+            {isRecordingVoice ? (
+              <div role="status" style={{ color: PALETTE_DU_FIL.danger, fontSize: 12.5 }}>
+                {i18next.t(
                   'conversation.web.voice.recording',
                   'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.',
-                )
-                : (isVoiceRecordingSupported
-                  ? i18next.t(
-                    'conversation.web.voice.usesMic',
-                    'Les notes vocales utilisent le microphone du navigateur.',
-                  )
-                  : i18next.t(
-                    'conversation.web.voice.unsupported',
-                    'Les notes vocales ne sont pas prises en charge par ce navigateur.',
-                  ))}
-            </div>
-          </div>
-        </section>
-
-        <aside style={{ display: 'grid', gap: 20 }}>
-          {/* COLL-C4A2 — P3c-canal-ordi : « Dans ce canal », liste calculée, sans « Ajouter ». */}
-          {filDeLaVille.estFil && filDeLaVille.membres ? (
-            <section
-              style={{
-                background: panelBackground,
-                border: `1px solid ${borderColor}`,
-                borderRadius: 24,
-                display: 'grid',
-                gap: 14,
-                padding: 22,
-              }}
-            >
-              <h2
-                style={{
-                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-                }}
-              >
-                {filDeLaVille.estCanal
-                  ? t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal')
-                  : t('collectiviteCanaux.membres.titrePrivee', 'Dans cette conversation')}
-              </h2>
-              <ListeDesMembresDuFil
-                espaceVille={route?.params?.espace === 'ville'}
-                fil={filDeLaVille.membres}
-              />
-            </section>
-          ) : null}
-          <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22 }}>
-            <h2
-              style={{
-                color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-              }}
-            >
-              Partager
-            </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <button onClick={handleShareLocation} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Position</button>
-              <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Photo</button>
-              <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Fichier</button>
-            </div>
-
-            <div style={{ display: 'grid', gap: 10 }}>
-              <h3
-                style={{
-                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
-                }}
-              >
-                Contacts
-              </h3>
-              {shareableContacts.length === 0 ? (
-                <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                  {i18next.t(
-                    'conversation.web.share.noContact',
-                    'Aucun contact partageable dans cette conversation.',
-                  )}
-                </div>
-              ) : shareableContacts.slice(0, 6).map((contact) => {
-                const fullName = getDisplayName(contact)
-                return (
-                  <button
-                    key={contact.documentId}
-                    onClick={() => handleShareContact(contact)}
-                    style={{
-                      alignItems: 'center',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: 14,
-                      color: baseTextColor,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      gap: 12,
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                    }}
-                    type="button"
-                  >
-                    <span style={{
-                      alignItems: 'center',
-                      background: 'rgba(1, 179, 244, 0.14)',
-                      borderRadius: '50%',
-                      display: 'inline-flex',
-                      height: 34,
-                      justifyContent: 'center',
-                      minWidth: 34,
-                    }}
-                    >
-                      {getInitials(fullName)}
-                    </span>
-                    <span style={{ display: 'grid', gap: 4 }}>
-                      <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{fullName}</span>
-                      <span style={{ color: mutedTextColor, fontSize: 12 }}>{contact?.role?.name || contact?.role?.type || contact?.role || ''}</span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div style={{ display: 'grid', gap: 10 }}>
-              <h3
-                style={{
-                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
-                }}
-              >
-                {i18next.t('conversation.web.share.events', 'Événements')}
-              </h3>
-              {shareableEvents.length === 0 ? (
-                <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                  {i18next.t(
-                    'conversation.web.share.noEvent',
-                    'Aucun événement récent à partager.',
-                  )}
-                </div>
-              ) : shareableEvents.slice(0, 6).map((event) => (
+                )}
+              </div>
+            ) : null}
+            <div style={{ alignItems: 'flex-end', display: 'flex', gap: 8 }}>
+              <div ref={menuAjouterRef} style={{ position: 'relative' }}>
                 <button
-                  key={getEntityDocumentId(event)}
-                  onClick={() => handleShareEvent(event)}
+                  aria-expanded={menuAjouterOuvert}
+                  aria-haspopup="menu"
+                  disabled={!canUseConversationActions}
+                  onClick={() => setMenuAjouterOuvert((ouvert) => !ouvert)}
+                  style={styleDuBoutonRond}
+                  type="button"
+                >
+                  <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={22} />
+                  <span style={TEXTE_MASQUE}>{t('conversation.attachments.title', 'Ajouter')}</span>
+                </button>
+                {menuAjouterOuvert ? (
+                  <div
+                    role="menu"
+                    style={{
+                      background: PALETTE_DU_FIL.menu,
+                      border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                      borderRadius: 16,
+                      bottom: 54,
+                      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+                      display: 'grid',
+                      left: 0,
+                      minWidth: 220,
+                      padding: 6,
+                      position: 'absolute',
+                      zIndex: 30,
+                    }}
+                  >
+                    {entreesDuMenuAjouter.map((entree) => (
+                      <button
+                        key={entree.cle}
+                        onClick={() => {
+                          setMenuAjouterOuvert(false);
+                          entree.action();
+                        }}
+                        role="menuitem"
+                        style={{
+                          background: 'transparent',
+                          border: 0,
+                          borderRadius: 10,
+                          color: PALETTE_DU_FIL.texte,
+                          cursor: 'pointer',
+                          fontFamily: 'Montserrat-Regular, sans-serif',
+                          fontSize: 15,
+                          minHeight: 44,
+                          padding: '0 14px',
+                          textAlign: 'left',
+                        }}
+                        type="button"
+                      >
+                        {entree.libelle}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <textarea
+                aria-label={placeholderDeLaSaisie}
+                onChange={(event) => setComposerText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (!isSending && composerText.trim()) {
+                      handleSendText();
+                    }
+                  }
+                }}
+                placeholder={placeholderDeLaSaisie}
+                ref={saisieRef}
+                rows={1}
+                style={{
+                  background: PALETTE_DU_FIL.champ,
+                  border: `1px solid ${PALETTE_DU_FIL.champBord}`,
+                  borderRadius: 22,
+                  boxSizing: 'border-box',
+                  color: PALETTE_DU_FIL.texte,
+                  flex: 1,
+                  fontFamily: 'Montserrat-Regular, sans-serif',
+                  fontSize: 16,
+                  lineHeight: '20px',
+                  maxHeight: 140,
+                  minHeight: 44,
+                  minWidth: 0,
+                  outline: 'none',
+                  padding: '11px 16px',
+                  resize: 'none',
+                }}
+                value={composerText}
+              />
+              {aDuTexte ? (
+                <button
+                  aria-busy={isSending}
+                  disabled={!canSendText}
+                  onClick={handleSendText}
                   style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 14,
-                    color: baseTextColor,
-                    cursor: 'pointer',
-                    display: 'grid',
-                    gap: 4,
-                    padding: '10px 12px',
-                    textAlign: 'left',
+                    ...styleDuBoutonRond,
+                    cursor: canSendText ? 'pointer' : 'not-allowed',
+                    opacity: canSendText ? 1 : 0.6,
                   }}
                   type="button"
                 >
-                  <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{event?.name || 'Événement'}</span>
-                  <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                    {formatDay(event?.date)}
-                    {' '}
-                    •
-                    {' '}
-                    {event?.team?.name || ''}
+                  <GlyphIcon color={PALETTE_DU_FIL.encre} name="send" size={20} />
+                  <span style={TEXTE_MASQUE}>Envoyer</span>
+                </button>
+              ) : (
+                <button
+                  disabled={micIndisponible}
+                  onClick={handleVoiceNote}
+                  style={{
+                    ...styleDuBoutonRond,
+                    background: isRecordingVoice ? PALETTE_DU_FIL.danger : PALETTE_DU_FIL.accent,
+                    cursor: micIndisponible ? 'not-allowed' : 'pointer',
+                    opacity: micIndisponible ? 0.6 : 1,
+                  }}
+                  title={isVoiceRecordingSupported ? undefined : i18next.t(
+                    'conversation.web.voice.unsupported',
+                    'Les notes vocales ne sont pas prises en charge par ce navigateur.',
+                  )}
+                  type="button"
+                >
+                  <GlyphIcon
+                    color={PALETTE_DU_FIL.encre}
+                    name={isRecordingVoice ? 'stop' : 'microphone'}
+                    size={20}
+                  />
+                  <span style={TEXTE_MASQUE}>
+                    {isRecordingVoice
+                      ? i18next.t('conversation.web.voice.stop', 'Arrêter la note vocale')
+                      : 'Note vocale'}
                   </span>
                 </button>
-              ))}
-            </div>
-          </section>
-
-          <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-            <h2
-              style={{
-                color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-              }}
-            >
-              Sondage
-            </h2>
-            <input onChange={(event) => setPollQuestion(event.target.value)} placeholder={i18next.t('conversation.web.poll.questionPlaceholder', 'Question du sondage')} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={pollQuestion} />
-            {pollOptions.map((option, index) => (
-              <input
-                key={`poll-option-${index}`}
-                onChange={(event) => updatePollOption(index, event.target.value)}
-                placeholder={`Option ${index + 1}`}
-                style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }}
-                value={option}
-              />
-            ))}
-            <label style={{ alignItems: 'center', color: mutedTextColor, display: 'flex', gap: 8, fontSize: 13 }}>
-              <input checked={allowMultipleVotes} onChange={(event) => setAllowMultipleVotes(event.target.checked)} type="checkbox" />
-              Autoriser plusieurs votes
-            </label>
-            <label style={{ alignItems: 'center', color: mutedTextColor, display: 'flex', gap: 8, fontSize: 13 }}>
-              <input checked={isAnonymousPoll} onChange={(event) => setIsAnonymousPoll(event.target.checked)} type="checkbox" />
-              Sondage anonyme
-            </label>
-            <button
-              disabled={!canSubmitPoll}
-              onClick={handleSubmitPoll}
-              style={{
-                background: primaryColor,
-                border: 0,
-                borderRadius: 999,
-                color: '#001218',
-                cursor: !canSubmitPoll ? 'not-allowed' : 'pointer',
-                fontFamily: 'Montserrat-Bold, sans-serif',
-                opacity: !canSubmitPoll ? 0.6 : 1,
-                padding: '12px 16px',
-              }}
-              type="button"
-            >
-              {isSubmittingPoll ? 'Envoi...' : i18next.t(
-                'conversation.web.poll.send',
-                'Envoyer le sondage',
               )}
-            </button>
-          </section>
+            </div>
+          </footer>
+        </section>
 
-          {isLeagueConversation ? (
-            <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-              <h2
-                style={{
-                  color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-                }}
-              >
-                {i18next.t('conversation.web.proposal.title', 'Proposition de match')}
-              </h2>
-              <input onChange={(event) => setProposalDate(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="date" value={proposalDate} />
-              <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-                <input onChange={(event) => setProposalStartTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalStartTime} />
-                <input onChange={(event) => setProposalEndTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalEndTime} />
-              </div>
-              <input onChange={(event) => setProposalVenue(event.target.value)} placeholder="Lieu" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalVenue} />
-              <input onChange={(event) => setProposalAddress(event.target.value)} placeholder="Adresse" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalAddress} />
-              <button
-                disabled={!canSubmitProposal}
-                onClick={handleSendProposal}
-                style={{
-                  background: primaryColor,
-                  border: 0,
-                  borderRadius: 999,
-                  color: '#001218',
-                  cursor: !canSubmitProposal ? 'not-allowed' : 'pointer',
-                  fontFamily: 'Montserrat-Bold, sans-serif',
-                  opacity: !canSubmitProposal ? 0.6 : 1,
-                  padding: '12px 16px',
-                }}
-                type="button"
-              >
-                {isSubmittingProposal ? 'Envoi...' : i18next.t(
-                  'conversation.web.proposal.send',
-                  'Envoyer la proposition',
-                )}
-              </button>
-            </section>
-          ) : null}
-        </aside>
+        {isDesktop ? panneauDeDroite : null}
       </div>
+      {isDesktop ? null : panneauDeDroite}
     </ScreenContainer>
   )
 }
