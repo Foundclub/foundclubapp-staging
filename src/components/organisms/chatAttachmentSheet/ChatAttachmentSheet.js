@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import ChatAttachmentActionIcon from './ChatAttachmentActionIcon';
@@ -43,6 +44,9 @@ function ChatAttachmentSheet({
 }) {
   const { Colors, Fonts } = useTheme();
 
+  // 🎨 MSG1A (§3.5) — LA GRILLE DU PACK (`AttachSheet`) : quatre colonnes de pastilles
+  // rondes de 58 (cyan a 14 %, glyphe cyan), libelle 12,5 dessous. Deux rangees pour sept
+  // entrees : la feuille est plus courte que la grille de cartes d'avant (trois rangees).
   return (
     <View style={styles.section}>
       <View style={styles.actionsGrid}>
@@ -50,28 +54,24 @@ function ChatAttachmentSheet({
           const isDisabled = !!action.disabled || !!action.loading;
           return (
             <TouchableOpacity
-              accessibilityLabel={action.label}
+              accessibilityLabel={action.unavailableReason
+                ? `${action.label}, ${action.unavailableReason}`
+                : action.label}
               accessibilityRole="button"
               accessibilityState={{ disabled: isDisabled }}
-              activeOpacity={0.9}
+              activeOpacity={0.8}
               disabled={isDisabled}
               key={action.key}
               onPress={() => onActionPress(action.key)}
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: isDisabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
-                  borderColor: isDisabled ? 'rgba(255,255,255,0.08)' : 'rgba(1,179,244,0.45)',
-                },
-              ]}
+              style={styles.actionButton}
             >
               <View
                 style={[
                   styles.actionIconCircle,
                   {
-                    backgroundColor: isDisabled ? 'rgba(255,255,255,0.08)' : 'rgba(1,179,244,0.2)',
-                    borderColor: isDisabled ? 'rgba(255,255,255,0.12)' : 'rgba(1,179,244,0.45)',
-                    borderWidth: 1,
+                    backgroundColor: isDisabled
+                      ? withAlpha(Colors.neutral00, 0.06)
+                      : withAlpha(Colors.primary500, 0.14),
                   },
                 ]}
               >
@@ -80,14 +80,14 @@ function ChatAttachmentSheet({
                 ) : (
                   <ChatAttachmentActionIcon
                     actionKey={action.key}
-                    color={isDisabled ? 'rgba(255,255,255,0.42)' : Colors.primary500}
+                    color={isDisabled ? withAlpha(Colors.neutral00, 0.42) : Colors.primary500}
+                    size={26}
                   />
                 )}
               </View>
               <Text
                 numberOfLines={2}
                 style={[
-                  Fonts.p2Bold,
                   styles.actionLabel,
                   { color: isDisabled ? Colors.neutral400 : Colors.neutral00 },
                 ]}

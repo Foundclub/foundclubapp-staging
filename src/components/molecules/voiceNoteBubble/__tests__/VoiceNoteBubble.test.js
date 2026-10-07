@@ -338,3 +338,49 @@ describe('VOCAL — état 5 · en cours de lecture (maquette, M4)', () => {
     expect(mockLecteur.seekTo).toHaveBeenLastCalledWith(12000);
   });
 });
+
+// MSG1A (§3.6) — DANS LE CADRE COMMUN DU FIL : seul changement du pack, l'heure et les coches
+// passent DANS la bulle (a droite, sous l'onde) ; le nom et la queue sont ceux du cadre, et ma
+// bulle prend le fond petrol du fil (les commandes reprennent les couleurs « recues »).
+// 🔴 ROUGE avant MSG1A : V1, V2, V3.
+describe('MSG1A — le vocal dans la bulle du fil', () => {
+  beforeEach(() => {
+    mockLecteur.isPlaying = false;
+    mockLecteur.speed = 1;
+    // eslint-disable-next-line global-require
+    require('@/domains/messaging/voiceListenedStore').resetVoiceListenedStoreForTests();
+  });
+
+  it('V1 — l heure (meta) est DANS la bulle, plus dessous', () => {
+    // eslint-disable-next-line global-require
+    const { Text: TexteRN } = require('react-native');
+    const meta = createElement(TexteRN, { testID: 'meta-test' }, '11:10');
+    const arbre = monter({
+      attachments: AUDIO, composition: { durationMs: 4000 }, dansLaBulle: true, isMe: true, meta,
+    });
+
+    const bulle = parId(arbre, 'voice-note-bubble')[0];
+    expect(bulle.findAll((n) => n.props?.testID === 'meta-test').length).toBeGreaterThan(0);
+    expect(parId(arbre, 'voice-note-hour')).toHaveLength(0);
+  });
+
+  it('V2 — pas de fond ni de nom propres : c est le cadre du fil qui les porte', () => {
+    const arbre = monter({
+      attachments: AUDIO, composition: { durationMs: 4000 }, dansLaBulle: true, senderName: 'Karim',
+    });
+
+    const style = StyleSheet.flatten(parId(arbre, 'voice-note-bubble')[0].props.style);
+    expect(style.backgroundColor).toBeUndefined();
+    expect(style.width).toBe(260);
+    expect(texte(arbre)).not.toContain('Karim');
+  });
+
+  it('V3 — ma bulle petrole : lecture cyan a l encre sombre, comme sur une bulle recue', () => {
+    const arbre = monter({
+      attachments: AUDIO, composition: { durationMs: 4000 }, dansLaBulle: true, isMe: true,
+    });
+
+    expect(StyleSheet.flatten(parId(arbre, 'voice-note-play')[0].props.style).backgroundColor)
+      .toBe(COULEURS.primary500);
+  });
+});

@@ -231,7 +231,7 @@ describe('T06 — le planning dessine chaque evenement a SON heure', () => {
 
     expect(poses).toHaveLength(1);
     // La carte porte bien 18:00 - 19:00 : c'est le libelle qui dit la verite.
-    expect(poses[0].textes).toContain('18:00 - 19:00');
+    expect(poses[0].textes).toContain('18:00 – 19:00');
     // Elle COMMENCE sur la ligne 18:00 (le +1 est la bordure de la carte)...
     expect(poses[0].top - 1).toBe(dixHuitHeures.y);
     // ... et elle FINIT au bout de cette meme heure, donc a 19:00.
@@ -281,8 +281,8 @@ describe('T06 — le planning dessine chaque evenement a SON heure', () => {
     const poses = blocs(arbre).sort((gauche, droite) => gauche.top - droite.top);
 
     expect(poses).toHaveLength(2);
-    expect(poses[0].textes).toContain('18:00 - 19:00');
-    expect(poses[1].textes).toContain('19:00 - 20:00');
+    expect(poses[0].textes).toContain('18:00 – 19:00');
+    expect(poses[1].textes).toContain('19:00 – 20:00');
     expect(poses[0].top - 1).toBe(dixHuit.y);
     expect(poses[1].top - 1).toBe(dixNeuf.y);
     // Le second commence ou le premier finit : ils ne se recouvrent pas.
@@ -304,7 +304,7 @@ describe('T06 — le planning dessine chaque evenement a SON heure', () => {
     const poses = blocs(arbre);
 
     expect(poses).toHaveLength(1);
-    expect(poses[0].textes).toContain('23:00 - 00:30');
+    expect(poses[0].textes).toContain('23:00 – 00:30');
     expect(poses[0].top - 1).toBe(vingtTroisHeures.y);
     // Une hauteur positive : le bloc ne remonte jamais au-dessus de son debut.
     expect(poses[0].hauteur).toBeGreaterThan(0);

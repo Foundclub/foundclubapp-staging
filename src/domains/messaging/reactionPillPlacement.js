@@ -16,6 +16,22 @@
  */
 
 /** L air entre la bulle et la pilule, en pixels. Assez pour les separer, assez peu pour les lier. */
+/**
+ * MSG1A (§3.2) — LA BULLE MESUREE, RAMENEE AUX COORDONNEES DE L'ECRAN.
+ *
+ * Constate sur l'emulateur (Pixel 9, API 36, 07/10) : la decoupe du voile tombait 142 px
+ * TROP HAUT, soit exactement la barre d'etat. Sur Android, `measureInWindow` compte depuis le
+ * bas de la barre d'etat ; le calque, lui (`Modal` `statusBarTranslucent`), compte depuis le
+ * haut de l'ecran. Sur iPhone, les deux origines sont le haut de l'ecran : rien ne bouge.
+ * @param {{ height: number, width: number, x: number, y: number }} mesure - `measureInWindow`.
+ * @param {{ os: string, hauteurBarreDEtat?: number | null }} contexte
+ * @returns {{ height: number, width: number, x: number, y: number }}
+ */
+export const ancreSurLEcran = (mesure, { hauteurBarreDEtat = 0, os }) => ({
+  ...mesure,
+  y: mesure.y + (os === 'android' ? Number(hauteurBarreDEtat) || 0 : 0),
+});
+
 export const REACTION_PILL_GAP = 8;
 
 /** La marge minimale entre un panneau et le bord de l ecran. */

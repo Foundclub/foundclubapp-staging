@@ -101,7 +101,13 @@ function CarteDeFermeture({ canManage, fermeture, onModify }) {
             {closureTagLabel(t, fermeture)}
           </Text>
         </View>
-        <Text style={[Fonts.p3, Fonts.neutral300]}>{closureDaysLabel(t, fermeture)}</Text>
+        {/* VILLE-T18A (T18, G57b) — « jeu. 8 oct. » s affichait « jeu. 8 » : la boîte épousait sa
+            largeur mesurée et Android 16 perdait le dernier mot. Étirée jusqu au bord droit. */}
+        <Text
+          style={[Fonts.p3, Fonts.neutral300, { flexGrow: 1, flexShrink: 1, textAlign: 'right' }]}
+        >
+          {closureDaysLabel(t, fermeture)}
+        </Text>
       </View>
       <Text style={[Fonts.p2, Fonts.neutral100]}>{ligne}</Text>
       {fermeture.message ? (
@@ -115,10 +121,16 @@ function CarteDeFermeture({ canManage, fermeture, onModify }) {
       {confirmer ? (
         <View style={{ gap: 8 }} testID={`fermeture-rouvrir-confirmation-${fermeture.documentId}`}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t(
-              'collectiviteFermetures.liste.rouvrirQuestion',
-              'Rouvrir ? Les mêmes clubs seront prévenus.',
-            )}
+            {/* VILLE-T18A (T18, G57b) — sans club prévenu, aucun « même club » à prévenir. */}
+            {Number(fermeture.notifiedClubsCount) > 0
+              ? t(
+                'collectiviteFermetures.liste.rouvrirQuestion',
+                'Rouvrir ? Les mêmes clubs seront prévenus.',
+              )
+              : t(
+                'collectiviteFermetures.liste.rouvrirQuestionSansClub',
+                'Rouvrir ? Aucun club n’est à prévenir.',
+              )}
           </Text>
           <View style={[Alignments.row, { gap: 8 }]}>
             <View style={{ flex: 1 }}>

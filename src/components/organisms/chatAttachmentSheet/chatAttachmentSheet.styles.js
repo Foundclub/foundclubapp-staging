@@ -1,48 +1,43 @@
 import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
-  // WHATSAPP2 — TROIS COLONNES, ET C'EST UNE MESURE QUI L'IMPOSE. En deux
-  // colonnes, les sept actions faisaient quatre rangees : la feuille reclamait
-  // 778 pt la ou un petit telephone n'en offre que 627. Elle defilait donc, et
-  // son titre partait sous le bord haut (capture d'Adel, 23/09). En trois
-  // colonnes il ne reste que trois rangees, et tout tient sans defiler.
+  // MSG1A (§3.5) — QUATRE COLONNES DE PASTILLES (le pack). WHATSAPP2 avait pose trois
+  // colonnes de cartes pour que sept actions tiennent sans defiler (778 pt reclames pour
+  // 627 offerts en deux colonnes) ; en quatre colonnes il ne reste que DEUX rangees : la
+  // feuille raccourcit encore, la regle tient.
   actionButton: {
     alignItems: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
-    minHeight: 120,
-    paddingHorizontal: 6,
-    paddingVertical: 12,
-    width: '31.5%',
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 2,
+    width: '25%',
   },
   actionIconCircle: {
     alignItems: 'center',
-    borderRadius: 28,
-    height: 56,
+    borderRadius: 29,
+    height: 58,
     justifyContent: 'center',
-    marginBottom: 10,
-    width: 56,
+    width: 58,
   },
   actionLabel: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 12.5,
+    lineHeight: 16,
     textAlign: 'center',
   },
   actionReason: {
-    marginTop: 6,
+    marginTop: -4,
     textAlign: 'center',
   },
   actionsGrid: {
-    columnGap: 6,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // 🧱 `flex-start` et PAS `space-between` : avec sept tuiles, la derniere
-    // rangee n'en porte qu'une. `space-between` la laisserait collee a gauche
-    // mais etirerait les autres rangees de facon irreguliere des qu'une action
-    // est masquee (elles le sont sous condition).
     justifyContent: 'flex-start',
-    rowGap: 12,
+    rowGap: 18,
   },
   section: {
     gap: 14,
+    marginTop: 6,
   },
   subtitle: {
     marginTop: 4,

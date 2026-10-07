@@ -29,6 +29,7 @@ import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import DemandesDeRattachement from '@/views/collectivite/components/DemandesDeRattachement';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -39,6 +40,9 @@ import {
   useMyCollectivites,
   useRemindCollectiviteInvitation,
 } from '@/services/collectivite/collectiviteQueries';
+import {
+  useCollectiviteClubRequests,
+} from '@/services/collectivite/collectiviteRattachementQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -62,6 +66,11 @@ import { useIsDesktop } from '@/responsive';
  * inscrit, rattache, avec « Relancer ».
  * COLL-C4A2 (02/10) : sur chaque club, « Ecrire aux dirigeants » (D73, la conversation privee de
  * la Ville avec CE club) ; sans contact, « Demander au club de completer sa fiche ».
+ * VILLE-INVITER-CLUB (07/10) : « Ajouter un club » (deja sur FoundClub : la recherche, puis la
+ * demande au club, « club A ») et, au-dessus des invitations, « Demandes de rattachement »
+ * dans les deux sens (« lien A » : la Ville accepte ou refuse celles venues de son lien).
+ * Les demandes du lien quittent alors « Invitations », qui ne garde que « Par FoundClub » ;
+ * tant que le serveur ne rend pas ces demandes (serveur d'avant le lot), elle les garde.
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteClubs() {
@@ -103,6 +112,19 @@ function CollectiviteClubs() {
   const inviter = () => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, { collectiviteId });
   };
+  const ajouter = () => {
+    /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
+      collectiviteId,
+      onglet: 'recherche',
+    });
+  };
+  const demandes = useCollectiviteClubRequests(collectiviteId);
+  const demandesLues = Array.isArray(demandes.data);
+  const invitationsAffichees = demandesLues
+    ? lesInvitations.filter(
+      (/** @type {any} */ invitation) => invitation?.kind !== 'attach_request',
+    )
+    : lesInvitations;
   const ouvrirLaFiche = (/** @type {any} */ club) => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteClubDetails, {
       clubId: club?.documentId,
@@ -115,7 +137,8 @@ function CollectiviteClubs() {
     borderWidth: 1,
   };
 
-  const renderContact = (/** @type {any} */ club) => {
+  // VILLE-T18C (07/10) : `court` — dans la colonne du tableau (ordinateur), le libellé court.
+  const renderContact = (/** @type {any} */ club, court = false) => {
     const liens = [
       club?.email ? { adresse: `mailto:${club.email}`, cle: 'email', texte: club.email } : null,
       club?.phoneNumber
@@ -135,6 +158,7 @@ function CollectiviteClubs() {
             club={club}
             collectiviteId={collectiviteId}
             compact
+            court={court}
             demanderFiche
             testID={`collectivite-club-${club?.documentId}-demander-fiche`}
           />
@@ -244,7 +268,7 @@ function CollectiviteClubs() {
         </Text>
         <View style={{ flex: colonnes[3].flex }}>{renderSeances(club)}</View>
         <View style={{ flex: colonnes[4].flex, gap: 6 }}>
-          {renderContact(club)}
+          {renderContact(club, true)}
           <EcrireAuxDirigeants
             club={club}
             collectiviteId={collectiviteId}
@@ -332,9 +356,14 @@ function CollectiviteClubs() {
         <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
           {t(
             'collectiviteClubs.list.emptyHint',
-            'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Invitez-le.',
+            'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
           )}
         </Text>
+        <Button
+          onPress={ajouter}
+          size="sm"
+          title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
+        />
         <Button
           isOption
           onPress={inviter}
@@ -371,6 +400,10 @@ function CollectiviteClubs() {
     contenu = (
       <View style={{ gap: 12 }}>
         {liste.map(renderCarte)}
+        <Button
+          onPress={ajouter}
+          title={t('collectiviteRattachement.add.tile', 'Ajouter un club déjà sur FoundClub')}
+        />
         <TouchableOpacity
           accessibilityRole="button"
           onPress={inviter}
@@ -494,6 +527,13 @@ function CollectiviteClubs() {
             <Text style={[Fonts.h2Black, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
             {isDesktop ? (
               <Button
+                onPress={ajouter}
+                size="sm"
+                title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
+              />
+            ) : null}
+            {isDesktop ? (
+              <Button
                 onPress={inviter}
                 size="sm"
                 title={t('collectiviteClubs.list.inviteDesktop', 'Inviter un club absent')}
@@ -509,12 +549,15 @@ function CollectiviteClubs() {
           </Text>
         </View>
         {contenu}
-        {lesInvitations.length ? (
+        {demandesLues ? (
+          <DemandesDeRattachement collectiviteId={collectiviteId} demandes={demandes.data} />
+        ) : null}
+        {invitationsAffichees.length ? (
           <View style={{ gap: 12 }} testID="collectivite-invitations">
             <Text accessibilityRole="header" style={[Fonts.h4Black, Fonts.neutral00]}>
               {t('collectiviteClubs.invitations.title', 'Invitations')}
             </Text>
-            {lesInvitations.map(renderInvitation)}
+            {invitationsAffichees.map(renderInvitation)}
           </View>
         ) : null}
       </ScrollView>

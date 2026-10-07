@@ -915,7 +915,10 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
     };
   });
 
-  it('créer : la route de la COLLECTIVITE, horaires compris ; pas POST /facilities', async () => {
+  // VILLE-INSTALLATION (07/10) — décision d Adel « on ne met pas d ouverture ni de fermeture » :
+  // le formulaire de la Ville ne les montre plus et ne les ENVOIE plus (ni valeur, ni null : un
+  // champ absent reste inchangé au serveur, rien n est effacé en base).
+  it('créer : la route de la COLLECTIVITE, SANS horaires ; pas POST /facilities', async () => {
     const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
     await saisir('Nom de l\'installation', 'Gymnase Jean Bouin');
     await choisirAdresse(ADRESSE_GEOCODEE);
@@ -923,8 +926,6 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
     // choisit dans une feuille.
     await appuyerSur(arbre, 'Choisir le type');
     await appuyerSur(arbre, 'Gymnase');
-    await saisir('Ouverture', '07:45');
-    await saisir('Fermeture', '22:30');
 
     await appuyerSur(arbre, 'Créer');
 
@@ -937,10 +938,8 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
           geometry: { coordinates: [5.395, 43.269], type: 'Point' },
         },
         capacityConflictMode: 'pending_validation',
-        closingTime: '22:30',
         maxSlots: 1,
         name: 'Gymnase Jean Bouin',
-        openingTime: '07:45',
         planningColor: FACILITY_PLANNING_PALETTE[0],
         type: 'Gymnase',
       },
@@ -967,34 +966,27 @@ describe('COLL1C — mode collectivité (route CollectiviteInstallationForm)', (
     const arbre = await monterEcran({
       params: { collectiviteId: 'ville-de-recette', facilityId: 'gymnase-recette' },
     });
-    expect(champ('Ouverture').value).toBe('08:00');
-    expect(champ('Fermeture').value).toBe('22:00');
+    // Ses horaires (08:00 – 22:00) ne se montrent plus… et ne partent pas : le serveur les GARDE.
+    expect(champ('Ouverture')).toBeUndefined();
+    expect(champ('Fermeture')).toBeUndefined();
 
     await appuyerSur(arbre, 'Enregistrer');
 
     expect(updateFacility).not.toHaveBeenCalled();
     expect(mockSaveCollectivite).toHaveBeenCalledWith(expect.objectContaining({
       collectiviteId: 'ville-de-recette',
-      data: expect.objectContaining({
-        closingTime: '22:00', maxSlots: 2, name: 'Gymnase de la Recette', openingTime: '08:00',
-      }),
+      data: expect.objectContaining({ maxSlots: 2, name: 'Gymnase de la Recette' }),
       facilityId: 'gymnase-recette',
     }));
+    const [{ data }] = mockSaveCollectivite.mock.calls[0];
+    expect(data).not.toHaveProperty('openingTime');
+    expect(data).not.toHaveProperty('closingTime');
   });
 
-  it('une fermeture avant l ouverture est refusée avant tout appel', async () => {
-    const arbre = await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
-    await saisir('Nom de l\'installation', 'Salle');
-    await choisirAdresse(ADRESSE_GEOCODEE);
-    await appuyerSur(arbre, 'Choisir le type');
-    await appuyerSur(arbre, 'Gymnase');
-    await saisir('Ouverture', '20:00');
-    await saisir('Fermeture', '08:00');
-
-    await appuyerSur(arbre, 'Créer');
-
-    expect(mockSaveCollectivite).not.toHaveBeenCalled();
-    expect(champ('Fermeture').error).toBe('La fermeture doit suivre l’ouverture.');
+  it('en mairie, aucun champ Ouverture ni Fermeture (création comme modification)', async () => {
+    await monterEcran({ params: { collectiviteId: 'ville-de-recette' } });
+    expect(champ('Ouverture')).toBeUndefined();
+    expect(champ('Fermeture')).toBeUndefined();
   });
 
   it('en mode club, les horaires ne s affichent pas et le corps envoyé ne change pas', async () => {
@@ -1036,12 +1028,13 @@ describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', 
     };
   });
 
-  it('collectivité : seule l heure change ⇒ l enregistrement part, sans adresse', async () => {
+  // VILLE-INSTALLATION (07/10) : les horaires ont quitté le formulaire ; c est le NOM qui change.
+  it('collectivité : seul le nom change ⇒ l enregistrement part, sans adresse', async () => {
     const arbre = await monterEcran({
       params: { collectiviteId: 'ville-de-recette', facilityId: 'gymnase-recette' },
     });
     await act(async () => {
-      champ('Ouverture').onChangeText('09:00');
+      champ('Nom de l\'installation').onChangeText('Gymnase du Port');
     });
 
     await appuyerSur(arbre, 'Enregistrer');
@@ -1050,8 +1043,10 @@ describe('FINITIONS3 — installation sans coordonnées, adresse non touchée', 
     expect(mockSaveCollectivite).toHaveBeenCalledTimes(1);
     const [{ data, facilityId }] = mockSaveCollectivite.mock.calls[0];
     expect(facilityId).toBe('gymnase-recette');
-    expect(data.openingTime).toBe('09:00');
-    expect(data.closingTime).toBe('22:00');
+    expect(data.name).toBe('Gymnase du Port');
+    // Ses horaires restent en base : ils ne partent pas.
+    expect('openingTime' in data).toBe(false);
+    expect('closingTime' in data).toBe(false);
     // Absente du corps = inchangee cote serveur (`readInstallationPayload`, partial).
     expect('address' in data).toBe(false);
     expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
@@ -1199,5 +1194,43 @@ describe('TEXTES-COLLECTIVITES — le formulaire en mairie, et les couleurs nomm
     expect(new Set(noms).size).toBe(FACILITY_PLANNING_PALETTE.length);
     expect(noms[0]).toBe('Bleu ciel');
     expect(noms).not.toContain('Couleur de planning');
+  });
+});
+
+// ADRESSE-CARTE (07/10) — le besoin d'Adel, en créant une installation : « si l'adresse qu'on veut
+// n'est pas trouvée, on l'ajoute ». Le champ d'adresse propose « Placez-la sur la carte », et le
+// lieu posé revient À LA FORME d'une adresse de la liste (témoin du champ :
+// autocompleteAddressInput.lieuSurCarte.test.js ③). Ici : l'installation part avec CE point.
+describe('FacilityForm — ADRESSE-CARTE : un lieu posé sur la carte', () => {
+  const LIEU_POSE = {
+    city: 'Marseille',
+    label: 'Stade de Luminy (13009 Marseille)',
+    lat: 43.2289,
+    lng: 5.4371,
+    postcode: '13009',
+    provider: 'ban',
+    providerId: 'lieu:abc',
+    type: 'manual',
+    value: '5.4371|43.2289',
+  };
+
+  it('le champ d adresse propose de placer le lieu sur la carte', async () => {
+    await monterEcran();
+    expect(dernieresProps(mockAddressProps).permettreLieuSurCarte).toBe(true);
+  });
+
+  it('nom + lieu posé : la création part avec le point de l épingle', async () => {
+    const arbre = await monterEcran();
+    await saisirNom('Stade de Luminy');
+    await choisirAdresse(LIEU_POSE);
+
+    await appuyerSur(arbre, 'Créer');
+
+    expect(createFacility).toHaveBeenCalledTimes(1);
+    expect(/** @type {any} */ (createFacility).mock.calls[0][0].address).toEqual({
+      description: 'Stade de Luminy (13009 Marseille)',
+      geometry: { coordinates: [5.4371, 43.2289], type: 'Point' },
+    });
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

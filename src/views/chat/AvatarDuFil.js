@@ -34,7 +34,10 @@ function AvatarDuFil({
   const ecusson = Math.round(size * 0.9);
   /** @type {import('react-native').ViewStyle} */
   const place = {
-    alignItems: 'center', height: size, justifyContent: 'center', width: size,
+    alignItems: 'center',
+    height: size,
+    justifyContent: 'center',
+    width: size,
   };
 
   let contenu;
@@ -45,9 +48,11 @@ function AvatarDuFil({
     // COLL-C4A2 — la conversation privée porte l'écusson d'en face (le club côté Ville, la
     // Ville côté club) ; le canal des dirigeants, sa tuile.
     case 'collectivite_club':
-      contenu = espaceVille
-        ? <ClubLogoMark club={chat?.collectiviteClub} isNeutral size={ecusson} />
-        : <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />;
+      contenu = espaceVille ? (
+        <ClubLogoMark club={chat?.collectiviteClub} isNeutral size={ecusson} />
+      ) : (
+        <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={ecusson} />
+      );
       break;
     case 'collectivite_dirigeants':
       contenu = <IconeDuCanal taille={ecusson} />;
@@ -55,13 +60,17 @@ function AvatarDuFil({
     case 'friendly_match': {
       // AC05 constat 3 — le camp d'en face, en initiales ; sans adversaire sûr, le repli neutre.
       const opponent = resolveFriendlyMatchOpponent({ chat, myTeams });
-      contenu = opponent
-        ? <ClubLogoMark logoUrl={opponent.logoUrl} name={opponent.name} size={ecusson} />
-        : <ProfileAvatar enablePreview={false} size={size} />;
+      contenu = opponent ? (
+        <ClubLogoMark logoUrl={opponent.logoUrl} name={opponent.name} size={ecusson} />
+      ) : (
+        <ProfileAvatar enablePreview={false} size={size} />
+      );
       break;
     }
     case 'group':
-      contenu = <ClubLogoMark name={String(chat?.groupName || '').trim() || 'Groupe'} size={ecusson} />;
+      contenu = (
+        <ClubLogoMark name={String(chat?.groupName || '').trim() || 'Groupe'} size={ecusson} />
+      );
       break;
     case 'league_match':
       contenu = (
@@ -94,7 +103,7 @@ function AvatarDuFil({
       );
       break;
     case 'whisper': {
-      const participant = chat?.participants?.find((p) => p?.documentId !== meId)
+      const participant = chat?.participants?.find((/** @type {any} */ p) => p?.documentId !== meId)
         || chat?.participants?.[0];
       contenu = (
         <ProfileAvatar
@@ -112,7 +121,11 @@ function AvatarDuFil({
       contenu = <ProfileAvatar enablePreview={false} size={size} />;
   }
 
-  return <View style={place} testID={`avatar-du-fil-${chat?.type || 'inconnu'}`}>{contenu}</View>;
+  return (
+    <View style={place} testID={`avatar-du-fil-${chat?.type || 'inconnu'}`}>
+      {contenu}
+    </View>
+  );
 }
 
 export default AvatarDuFil;

@@ -17,8 +17,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => {
       const texte = typeof repli === 'string' ? repli : repli?.defaultValue || cle;
-      return texte.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (
-        valeurs?.[nom] !== undefined ? String(valeurs[nom]) : (repli?.[nom] ?? m)));
+      return texte.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (valeurs?.[nom] !== undefined ? String(valeurs[nom]) : repli?.[nom] ?? m));
     },
   }),
 }));
@@ -32,19 +31,27 @@ jest.mock('@/theme/themeContext', () => {
   return {
     __esModule: true,
     default: () => ({
-      Alignments, Colors, Fonts: generateFonts(Colors), Spaces,
+      Alignments,
+      Colors,
+      Fonts: generateFonts(Colors),
+      Spaces,
     }),
   };
 });
 
 const REACTIONS = [
   { count: 1, emoji: '😂', users: [{ documentId: 'b' }] },
-  { count: 4, emoji: '👍', users: [{ documentId: 'moi' }, { documentId: 'a' }, { documentId: 'c' }, { documentId: 'd' }] },
+  {
+    count: 4,
+    emoji: '👍',
+    users: [{ documentId: 'moi' }, { documentId: 'a' }, { documentId: 'c' }, { documentId: 'd' }],
+  },
   { count: 2, emoji: '❤️', users: [{ documentId: 'e' }, { documentId: 'f' }] },
   { count: 1, emoji: '🙏', users: [{ documentId: 'g' }] },
 ];
 
 /**
+ * Aide du temoin : `rendre`.
  * @param {any} props
  * @returns {any} L'arbre rendu.
  */
@@ -73,7 +80,9 @@ describe('MSG1A — la pilule de reactions', () => {
 
     const boutons = arbre.root.findAllByType(TouchableOpacity);
     expect(boutons).toHaveLength(1);
-    act(() => { boutons[0].props.onPress(); });
+    act(() => {
+      boutons[0].props.onPress();
+    });
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -93,9 +102,10 @@ describe('MSG1A — la pilule de reactions', () => {
     const avecMoi = rendre({ myUserId: 'moi', reactions: REACTIONS });
     const sansMoi = rendre({ myUserId: 'personne', reactions: REACTIONS });
 
-    const liseré = (arbre) => arbre.root.findByProps({ testID: 'reactions-pilule-interieur' })
-      .props.style.flat?.() ?? arbre.root.findByProps({ testID: 'reactions-pilule-interieur' }).props.style;
-    const couleur = (arbre) => [].concat(liseré(arbre)).reduce((acc, s) => ({ ...acc, ...(s || {}) }), {}).borderColor;
+    const interieur = (arbre) => arbre.root.findByProps({ testID: 'reactions-pilule-interieur' });
+    const liseré = (arbre) => interieur(arbre).props.style.flat?.() ?? interieur(arbre).props.style;
+    const couleur = (arbre) => [].concat(liseré(arbre))
+      .reduce((acc, s) => ({ ...acc, ...(s || {}) }), {}).borderColor;
 
     expect(couleur(avecMoi)).toBe(colors.primary500);
     expect(couleur(sansMoi)).toBe('transparent');

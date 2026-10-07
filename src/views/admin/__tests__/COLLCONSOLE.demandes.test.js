@@ -92,10 +92,14 @@ jest.mock('@/components/atoms/button/Button', () => {
     );
   };
 });
+/** @type {any} */
+let mockProprietesOnglets = null;
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN, View: Vue } = jest.requireActual('react-native');
-  return function SegmentedControlMock(/** @type {any} */ { onChange, options }) {
+  return function SegmentedControlMock(/** @type {any} */ props) {
+    const { onChange, options } = props;
+    mockProprietesOnglets = props;
     return reactActuel.createElement(Vue, null, options.map((option) => reactActuel.createElement(
       PressableRN,
       { key: option.value, onPress: () => onChange(option.value), testID: `onglet-${option.value}` },
@@ -160,10 +164,13 @@ const aplatirTexte = (/** @type {any} */ enfants) => {
 };
 const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
   .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
+// VT18E (07/10) — bornée en TEMPS, plus en tours : la recherche « Relier » part 300 ms après la
+// dernière lettre (anti-rebond), ce que 80 tours ne couvrent pas sous charge.
 const attendre = async (/** @type {() => boolean} */ condition) => {
-  for (let i = 0; i < 80 && !condition(); i += 1) {
+  const fin = Date.now() + 5000;
+  while (!condition() && Date.now() < fin) {
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((suite) => { setTimeout(suite, 10); }); });
   }
 };
 const parTestID = (/** @type {any} */ noeud, /** @type {string} */ testID) => noeud.find(
@@ -273,6 +280,8 @@ describe('COLL-CONSOLE — l écran des demandes de rattachement et « Par Found
     expect(textes(arbre.root)).toEqual(expect.arrayContaining([
       'Rattachements et invitations', 'Rattachements (1)', 'Par FoundClub (2)', 'Rattachés (1)',
     ]));
+    // VT18E (07/10, capture S18a) — le 3e onglet était coupé au bord : les onglets passent à la ligne.
+    expect(mockProprietesOnglets.wrapLabels).toBe(true);
     const carte = textes(parTestID(arbre.root, 'demande-demande-r1'));
     expect(carte[0]).toBe('Recette Stripe FC');
     // INVERSE PAR FINITIONS15 point 8 — motif : la planche P2-fiche écrit « Envoyée le jeu. 1 oct. ».
@@ -330,7 +339,7 @@ describe('COLL-CONSOLE — l écran des demandes de rattachement et « Par Found
       pageSize: 20,
       populate: { activites: { fields: ['name'] } },
       q: 'judo',
-    });
+    }, { signal: expect.any(AbortSignal) });
     await appuyer(bouton(parTestID(arbre.root, 'relier-demande-f1-resultat-judo-club'), 'Relier'));
     await attendre(() => mockPut.mock.calls.length > 0);
     expect(mockPut).toHaveBeenCalledWith(

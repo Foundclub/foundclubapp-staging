@@ -405,12 +405,15 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(lus).toEqual(expect.arrayContaining([
       'Cette semaine',
       'Gymnase des Tilleuls',
-      // COLL-C5 (03/10) — la ligne de la planche : « 9 séances · occupation : — » sans taux.
-      '3 séances · occupation : —',
+      // INVERSÉ PAR VILLE-T18B (b) (07/10) — motif : décision du chef d'orchestre (T18, G03b).
+      // Avant (COLL-C5) : « 3 séances · occupation : — » sans taux. Sans taux, la ligne dit ce qui
+      // se mesure sans horaires ; ici « Chiffres » ne rend pas de minutes : le nombre seul.
+      '3 séances',
       'Dojo municipal',
       'Aucune séance',
       'libre',
     ]));
+    expect(lus).not.toContain('3 séances · occupation : —');
     expect(lus.some((texte) => /^complet .+ 18:00$/.test(texte))).toBe(true);
     await appuyer(arbre, 'collectivite-home-voir-planning');
     expect(mockNavigate)
@@ -650,7 +653,10 @@ describe('COLL-C5 — planches 2 et 3 : la jauge d occupation de la semaine', ()
         && typeof n.props?.accessibilityLabel === 'string',
     )[0];
     expect(jauge(TILLEULS.documentId).props.accessibilityLabel).toBe('Occupation : 23 %');
-    expect(jauge(DOJO.documentId).props.accessibilityLabel).toBe('Occupation : —');
+    // INVERSÉ PAR VILLE-T18B (b) (07/10) — motif : décision du chef d'orchestre (tournée T18,
+    // G03b) : une installation sans taux (sans horaires) n'a plus de jauge vide
+    // « Occupation : — » ; sa ligne dit ce qui se mesure sans horaires (« VILLE-T18B (b) »).
+    expect(jauge(DOJO.documentId)).toBeUndefined();
   });
 });
 
@@ -917,5 +923,156 @@ describe('FINITIONS12-COLL point 9 — l’accueil compte les séances comme « 
     const lus = textes(await monter());
     expect(lus).toContain('1 séance · occupation : 7 %');
     expect(lus.some((texte) => texte.startsWith('3 séances'))).toBe(false);
+  });
+});
+
+// 🧮 VILLE-T18B point 2 (07/10) — tournée T18, capture G02 : sous l'horaire d'une demande qui a de
+// la place, DEUX PASTILLES GRISES sans légende (lecteur d'écran : « 0 places prises sur 2 ») ; la
+// pastille d'en-tête dit déjà « 2 places libres ». La planche P3v2-accueil ne dessine la jauge des
+// places que pour une demande COMPLÈTE, à côté de sa légende : « Accepter met 3 équipes pour
+// 2 places. ». ROUGE avant le lot.
+describe('VILLE-T18B point 2 — la jauge des places ne vient qu’avec sa phrase', () => {
+  const jauges = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.type === 'string'
+    && / prises? sur /.test(String(n.props?.accessibilityLabel || ''))
+  ));
+  const avecPlaces = (/** @type {number} */ libres) => ({
+    ...DEMANDE_ANCIENNE,
+    conflict: { maxSlots: 2, occupants: [], remaining: libres },
+  });
+
+  it('2 places libres sur 2 (G02) : la pastille d’en-tête, aucune jauge muette', async () => {
+    mockRequetes = lu([avecPlaces(2)]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('2 places libres');
+    expect(jauges(arbre)).toHaveLength(0);
+  });
+
+  it('1 place libre sur 2 : « 1 place libre », toujours sans jauge', async () => {
+    mockRequetes = lu([avecPlaces(1)]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('1 place libre');
+    expect(jauges(arbre)).toHaveLength(0);
+  });
+
+  it('complet : la jauge ET sa légende, comme la planche', async () => {
+    const arbre = await monter();
+    expect(jauges(arbre).map((/** @type {any} */ n) => n.props.accessibilityLabel))
+      .toEqual(['2 places prises sur 2']);
+    expect(textes(arbre)).toContain('Accepter met 3 équipes pour 2 places.');
+  });
+});
+
+// 🧮 VILLE-T18B (b) (07/10) — ajout de la T18, décision du chef d'orchestre (G03b) : une
+// installation SANS HORAIRES (pas de taux : « Chiffres » rend `taux: null`) affichait une jauge
+// vide « Occupation : — » et « … · occupation : — ». Les horaires étant retirés (décision
+// d'Adel), toutes les installations neuves finiront ainsi. Sans horaires, la ligne dit ce qui se
+// mesure sans eux : « 6 séances · 9 h réservées cette semaine » ; avec horaires, le taux reste.
+// Et « tirer pour rafraîchir » relit aussi « Chiffres » : une installation créée pendant la visite
+// y manquait (ligne « — »). ROUGE avant le lot.
+describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesure', () => {
+  const jaugeDe = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === `collectivite-home-jauge-${id}`,
+  )[0];
+  const chiffres = (/** @type {any[]} */ installations) => ({
+    data: { installations }, error: null, isLoading: false, refetch: jest.fn(),
+  });
+  // Une ligne de « Chiffres » : sans taux, sa capacité aussi est inconnue (pas d'horaires).
+  const ligne = (
+    /** @type {string} */ documentId,
+    /** @type {number} */ minutes,
+    /** @type {number} */ seances,
+    /** @type {number | null} */ taux = null,
+  ) => ({
+    capaciteMinutes: taux === null ? null : 2400, documentId, minutes, seances, taux,
+  });
+
+  it('sans horaires : « 6 séances · 9 h réservées cette semaine », sans jauge vide', async () => {
+    mockChiffresSemaine = chiffres([
+      ligne(TILLEULS.documentId, 540, 6),
+      ligne(DOJO.documentId, 0, 0),
+    ]);
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      '6 séances · 9 h réservées cette semaine',
+      'Aucune séance',
+    ]));
+    expect(lus.some((texte) => texte.includes('occupation : —'))).toBe(false);
+    expect(jaugeDe(arbre, TILLEULS.documentId)).toBeUndefined();
+    expect(jaugeDe(arbre, DOJO.documentId)).toBeUndefined();
+  });
+
+  it('une séance d’une heure et demie : « 1 séance · 1 h 30 réservées… »', async () => {
+    mockChiffresSemaine = chiffres([ligne(TILLEULS.documentId, 90, 1)]);
+    expect(textes(await monter())).toContain('1 séance · 1 h 30 réservées cette semaine');
+  });
+
+  it('🔒 jumeau : avec horaires (Ville de Démo), le taux et sa jauge restent', async () => {
+    mockChiffresSemaine = chiffres([ligne(TILLEULS.documentId, 540, 6, 23)]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('6 séances · occupation : 23 %');
+    expect(jaugeDe(arbre, TILLEULS.documentId)).toBeDefined();
+  });
+
+  it('« tirer pour rafraîchir » relit aussi « Chiffres »', async () => {
+    mockChiffresSemaine = chiffres([]);
+    const arbre = await monter();
+    const [tirer] = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.props?.onRefresh === 'function',
+    );
+    await act(async () => { tirer.props.onRefresh(); });
+    expect(mockChiffresSemaine.refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// 🚧 VILLE-T18B (c) (07/10) — ajout de la T18, point 3 (G42b) : « Fermeture à venir » n'en
+// montrait que DEUX, sans rien pour voir les autres : la fermeture du Stade (« Ascension »,
+// 8 oct.) et celle de « T18 Salle essai » (13 oct.) avaient disparu de l'accueil. Le serveur les
+// rend toutes (triées) ; l'accueil coupait à deux. Toutes doivent rester accessibles. ROUGE avant.
+describe('VILLE-T18B (c) — toutes les fermetures à venir restent accessibles', () => {
+  const fermeture = (/** @type {number} */ n, /** @type {string} */ nom) => ({
+    documentId: `f${n}`,
+    endDate: `2030-10-0${n}`,
+    endTime: null,
+    facility: { documentId: `inst-${n}`, name: nom },
+    kind: 'closure',
+    reason: 'travaux',
+    startDate: `2030-10-0${n}`,
+    startTime: null,
+  });
+  const QUATRE = [
+    fermeture(1, 'Gymnase des Tilleuls'),
+    fermeture(2, 'T18 Salle essai'),
+    fermeture(3, 'Stade municipal de Montrivage'),
+    fermeture(4, 'Dojo municipal'),
+  ];
+  const cartes = (/** @type {any} */ arbre) => textes(arbre)
+    .filter((texte) => texte === 'Fermeture à venir').length;
+
+  it('4 à venir : les 2 premières, puis « Voir les 4 fermetures à venir » les montre', async () => {
+    mockFermetures = lu({ data: QUATRE });
+    const arbre = await monter();
+    expect(cartes(arbre)).toBe(2);
+    expect(textes(arbre)).toContain('Voir les 4 fermetures à venir');
+
+    await appuyer(arbre, 'collectivite-home-fermetures-toutes');
+    expect(cartes(arbre)).toBe(4);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Stade municipal de Montrivage', 'Dojo municipal',
+    ]));
+    await appuyer(arbre, 'collectivite-home-fermeture-f4');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'inst-4', onglet: 'fermetures',
+    });
+  });
+
+  it('🔒 jumeau : 2 à venir, les deux, et aucun lien de plus', async () => {
+    mockFermetures = lu({ data: QUATRE.slice(0, 2) });
+    const arbre = await monter();
+    expect(cartes(arbre)).toBe(2);
+    const liens = textes(arbre)
+      .filter((texte) => texte.startsWith('Voir les ') && texte.includes('fermeture'));
+    expect(liens).toEqual([]);
   });
 });

@@ -41,6 +41,7 @@ function ClubWizardAddress({ navigation, route }) {
       <AutocompleteAddressInput
         address={state.addressOption || undefined}
         label={t('clubWizard.address.label', 'Adresse du club')}
+        permettreLieuSurCarte
         placeholder={t('clubWizard.address.placeholder', 'Rue, ville…')}
         setAddress={(option) => dispatch({ payload: option || null, type: 'SET_ADDRESS' })}
       />

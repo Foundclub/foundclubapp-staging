@@ -9,6 +9,12 @@
  * et fait rougir toutes les suites d'une copie de travail sans `.env`.
  */
 
+import {
+  getDocumentDisplayName,
+  isDocumentAttachment,
+  isImageAttachment,
+} from '@/utils/documentAttachment';
+
 /** Les couleurs de nom du pack, dans l'ordre de SPECS.md §0 (jetons `chatName1..13`). */
 export const NOMBRE_DE_COULEURS_DE_NOM = 13;
 
@@ -31,9 +37,11 @@ const LARGEUR_ESPACE_INSECABLE = 3.9;
  * @param {boolean} estAMoi - Ma bulle (heure + coches) ou une bulle recue.
  * @returns {string} La reserve.
  */
-export const reserveDeLHeure = (estAMoi) => '\u00A0'.repeat(Math.ceil(
-  (estAMoi ? ESPACE_RESERVE_META.moi : ESPACE_RESERVE_META.recu) / LARGEUR_ESPACE_INSECABLE,
-));
+export const reserveDeLHeure = (estAMoi) => '\u00A0'.repeat(
+  Math.ceil(
+    (estAMoi ? ESPACE_RESERVE_META.moi : ESPACE_RESERVE_META.recu) / LARGEUR_ESPACE_INSECABLE,
+  ),
+);
 
 /**
  * L'index (0 a 12) de la couleur d'une personne : le meme identifiant donne
@@ -62,6 +70,7 @@ export const couleurDuNom = (Colors, identifiant) => (
 );
 
 /**
+ * Aide du temoin : `cette aide`.
  * @param {any} message - Un message au format GiftedChat.
  * @returns {string} L'identifiant de son auteur.
  */
@@ -69,6 +78,7 @@ export const couleurDuNom = (Colors, identifiant) => (
 const auteurDe = (message) => String(message?.user?._id ?? '');
 
 /**
+ * Aide du temoin : `memeJour`.
  * @param {any} a - Un message.
  * @param {any} b - Un autre message.
  * @returns {boolean} Vrai s'ils sont du meme jour calendaire.
@@ -77,12 +87,15 @@ const memeJour = (a, b) => {
   const da = new Date(a?.createdAt);
   const db = new Date(b?.createdAt);
   if (Number.isNaN(da.getTime()) || Number.isNaN(db.getTime())) return false;
-  return da.getFullYear() === db.getFullYear()
+  return (
+    da.getFullYear() === db.getFullYear()
     && da.getMonth() === db.getMonth()
-    && da.getDate() === db.getDate();
+    && da.getDate() === db.getDate()
+  );
 };
 
 /**
+ * Aide du temoin : `memeGroupe`.
  * @param {any} a - Un message.
  * @param {any} b - Le message voisin (ou rien).
  * @returns {boolean} Vrai si les deux appartiennent au meme groupe de bulles.
@@ -115,3 +128,81 @@ export const placeDansLeGroupe = ({ courant, precedent, suivant }) => ({
  * @returns {boolean} Vrai pour un tete-a-tete.
  */
 export const estUnTeteATete = (typeDuFil) => typeDuFil === 'whisper';
+
+/**
+ * MSG1A (§3.3) — CE QUE DIT UNE CITATION (dans la bulle, et dans la barre « reponse en
+ * cours »). Le message cite peut arriver sous deux formes : un message GiftedChat (`text`,
+ * `image`, `attachments`, `composition`) ou la citation que le serveur joint au message
+ * (`message`, `composition`). Un contenu riche se dit avec son ICONE (SPECS.md §1).
+ * @param {any} message - Le message cite.
+ * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @returns {{icone: string, texte: string}} L'extrait (une ligne) et son glyphe (ou rien).
+ */
+export const extraitDuMessageCite = (message, t) => {
+  const composition = message?.composition;
+  const texte = String(message?.text ?? message?.message ?? '').trim();
+  const titre = (/** @type {any} */ valeur) => String(valeur || '').trim();
+
+  switch (composition?.type) {
+    case 'contact_share':
+      return {
+        icone: 'users',
+        texte: titre(composition.contactName) || t('conversation.quote.contact', 'Contact'),
+      };
+    case 'event_share':
+      return {
+        icone: 'calendar',
+        texte: titre(composition.eventName) || t('conversation.quote.event', 'Événement'),
+      };
+    case 'lineup_share': {
+      const match = titre(composition.eventDisplayName) || titre(composition.eventName);
+      const mot = t('conversation.quote.lineup', 'Composition');
+      return { icone: 'users', texte: match ? `${mot} · ${match}` : mot };
+    }
+    case 'location_share':
+      return { icone: 'locationPin', texte: t('conversation.quote.location', 'Localisation') };
+    case 'poll':
+      return {
+        icone: 'chartSimpleHorizontal',
+        texte: titre(composition.question) || t('conversation.quote.poll', 'Sondage'),
+      };
+    case 'voice_note':
+      return { icone: 'microphone', texte: t('conversation.quote.voice', 'Message vocal') };
+    default:
+      break;
+  }
+  if (message?.event && typeof message.event === 'object') {
+    return {
+      icone: 'calendar',
+      texte: titre(message.event.name) || t('conversation.quote.event', 'Événement'),
+    };
+  }
+  const pieces = Array.isArray(message?.attachments) ? message.attachments : [];
+  if (message?.image || pieces.some((/** @type {any} */ piece) => isImageAttachment(piece))) {
+    return { icone: 'image', texte: texte || t('conversation.quote.photo', 'Photo') };
+  }
+  const document = pieces.find((/** @type {any} */ piece) => isDocumentAttachment(piece));
+  if (document) return { icone: 'file', texte: texte || getDocumentDisplayName(document) };
+  return { icone: '', texte: texte || t('conversation.replyPreview.defaultText', 'Message') };
+};
+
+/**
+ * MSG1A (§3.3) — QUI EST CITE : son nom (« Vous » si c'est moi) et l'identifiant qui donne
+ * sa couleur. Meme double forme que `extraitDuMessageCite`.
+ * @param {any} message - Le message cite.
+ * @param {string} moi - Mon identifiant.
+ * @param {(cle: string, repli: string) => string} t - La traduction.
+ * @returns {{identifiant: string, nom: string}} L'auteur cite.
+ */
+export const auteurDuMessageCite = (message, moi, t) => {
+  // eslint-disable-next-line no-underscore-dangle -- le format de GiftedChat
+  const identifiant = String(message?.sender?.documentId || message?.user?._id || '').trim();
+  if (identifiant && identifiant === String(moi || '').trim()) {
+    return { identifiant, nom: t('conversation.header.you', 'Vous') };
+  }
+  const nom = [message?.sender?.firstname, message?.sender?.lastname]
+    .filter(Boolean).join(' ').trim()
+    || String(message?.sender?.name || message?.user?.name || '').trim()
+    || t('conversation.replyPreview.defaultAuthor', 'Membre');
+  return { identifiant, nom };
+};

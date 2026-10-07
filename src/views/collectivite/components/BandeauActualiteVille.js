@@ -10,6 +10,7 @@ import {
 import {
   bandeauMairie,
   categoryLabel,
+  photosEtDocuments,
   publicationDateLabel,
 } from '@/domains/collectivite/collectiviteActualites';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
@@ -17,6 +18,7 @@ import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import { PetitePhoto } from '@/views/collectivite/components/ActualiteCarte';
 import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
 
 import {
@@ -30,16 +32,17 @@ import { getItem, setItem } from '@/platform/storage';
 /**
  * La forme du bandeau : une ligne d'étiquette, le titre, une ligne de précision, une flèche, et
  * la croix (44 px). Toute la carte est un lien, avec un libellé complet (planche, contrôle).
+ * VILLE-T18D : la première photo de l'actualité, en petit, avant la flèche.
  * @param {{
  *   ferme: () => void, fermeture: boolean, libelleCroix: string, libelleLien: string,
- *   nomVille: string, ouvre: () => void, precision: string, testID: string, titre: string,
- *   etiquette: string,
+ *   nomVille: string, ouvre: () => void, photo?: any, precision: string, testID: string,
+ *   titre: string, etiquette: string,
  * }} props
  * @returns {import('react').ReactElement} Le bandeau.
  */
 function FormeDuBandeau({
-  etiquette, ferme, fermeture, libelleCroix, libelleLien, nomVille, ouvre, precision, testID,
-  titre,
+  etiquette, ferme, fermeture, libelleCroix, libelleLien, nomVille, ouvre, photo, precision,
+  testID, titre,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images,
@@ -84,6 +87,7 @@ function FormeDuBandeau({
           <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{titre}</Text>
           <Text style={[Fonts.p4, Fonts.neutral200]}>{precision}</Text>
         </View>
+        {photo ? <PetitePhoto fichier={photo} taille={40} testID={`${testID}-photo`} /> : null}
         <Image
           source={Images.arrowRight}
           style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.neutral200]}
@@ -178,6 +182,7 @@ export function BandeauActualiteMembre({ onOuvrir }) {
         marquer();
         onOuvrir(collectiviteId);
       }}
+      photo={photosEtDocuments(actualite.attachments).photos[0]}
       precision={precision}
       testID="bandeau-actualite-ville"
       titre={String(actualite.title || '')}
@@ -236,6 +241,7 @@ export function BandeauActualiteMairie({
       )}
       nomVille={nomVille}
       ouvre={onOuvrir}
+      photo={photosEtDocuments(actualite.attachments).photos[0]}
       precision={nombre === 1
         ? t('collectiviteActualites.bandeau.mairiePrecisionUn', 'Depuis {{date}}, pour 1 club', {
           date,

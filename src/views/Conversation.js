@@ -12,6 +12,7 @@ import * as ReactI18next from 'react-i18next';
 import 'dayjs/locale/fr';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   ImageBackground,
   Keyboard,
@@ -44,9 +45,12 @@ import {
   getUserRoleKey,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import {
+  auteurDuMessageCite,
   couleurDuNom,
   estUnTeteATete,
+  extraitDuMessageCite,
   placeDansLeGroupe,
   reserveDeLHeure,
 } from '@/domains/messaging/habillageDuFil';
@@ -55,6 +59,7 @@ import {
   applyOptimisticPollVote,
   createPollComposition,
 } from '@/domains/messaging/pollUseCases';
+import { ancreSurLEcran } from '@/domains/messaging/reactionPillPlacement';
 import {
   getMyReactionEmoji,
   getReactionsForMessage,
@@ -70,6 +75,7 @@ import {
 } from '@/domains/participation/participationFlow';
 import {
   hideBlockedMessages,
+  peutBloquer,
   resolveOtherParticipantId,
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
@@ -85,7 +91,9 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
+import CitationDansLaBulle from '@/components/molecules/bulleDuFil/CitationDansLaBulle';
 import DegradeDePhoto from '@/components/molecules/bulleDuFil/DegradeDePhoto';
 import MetaDuMessage, { etatDEnvoi, heureDuMessage } from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import {
@@ -112,6 +120,7 @@ import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBub
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ChatAttachmentSheet from '@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet';
+import FeuilleDAdresse from '@/components/organisms/feuilleDAdresse/FeuilleDAdresse';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -121,6 +130,8 @@ import VoiceComposerZone, {
   VoiceSendAppear,
 } from '@/components/organisms/voiceComposer/VoiceComposerZone';
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
+import InfosDuGroupe from '@/views/chat/InfosDuGroupe';
+import MenuDuFil from '@/views/chat/MenuDuFil';
 import {
   BoutonMembresDuFil,
   EcussonDuFil,
@@ -128,6 +139,12 @@ import {
   useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
+import ConvocationWizardDiffere from '@/views/conversationConvocation/ConvocationWizardDiffere';
+import {
+  canConvokeFromChat,
+  getTeamIdOfChat,
+} from '@/views/conversationConvocation/convocationWizardUtils';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -148,6 +165,7 @@ import {
   useGetChatMessageReactions,
   useGetChatMessages,
 } from '@/services/chat/chatQueriesCompat';
+import { leaveGroupChat } from '@/services/chat/chatService';
 import {
   deleteVoiceNoteFile,
   isVoiceNoteRecordingSupported,
@@ -240,8 +258,11 @@ const TYPING_START_THROTTLE_MS = 1000;
 // la frappe, c'est quelqu'un qui a posé son téléphone (ou perdu le réseau).
 const TYPING_IDLE_TIMEOUT_MS = 6000;
 
-const MESSAGE_REPLY_SWIPE_THRESHOLD = 44;
-const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 68;
+// MSG1A (§3.3) — le geste du pack (SPECS.md §2) : seuil a 56, la bulle suit le doigt
+// jusqu'a 64, puis resiste (x 0,25).
+const MESSAGE_REPLY_SWIPE_THRESHOLD = 56;
+const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 64;
+const MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION = 4;
 
 const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'contact_share',
@@ -450,6 +471,11 @@ const margesDeLaBulle = (estAMoi, typeDuFil) => {
 };
 
 const stylesDuFil = StyleSheet.create({
+  actionDeGlisser: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
+  },
   // La place de l'avatar de 28 sur les bulles du groupe qui n'en portent pas.
   avatarVide: {
     borderRadius: 14,
@@ -457,6 +483,20 @@ const stylesDuFil = StyleSheet.create({
     width: 28,
   },
   // Retour : rond de 40, liseré cyan de 1,5, fleche de 20 (SPECS.md §1).
+  barreLectureSeule: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  barreLectureSeuleTexte: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13.5,
+    lineHeight: 18,
+  },
   boutonRetour: {
     alignItems: 'center',
     borderWidth: 1.5,
@@ -474,6 +514,16 @@ const stylesDuFil = StyleSheet.create({
     width: 40,
   },
   // En-tete : 62 sous la zone sure, 12 sur les cotes, filet du bas.
+  disqueRepondre: {
+    alignItems: 'center',
+    borderRadius: 16,
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   enTete: {
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -495,13 +545,26 @@ const stylesDuFil = StyleSheet.create({
     gap: 10,
     minWidth: 0,
   },
+  // Dans une bulle compacte (photo), la citation garde le retrait du texte.
+  citationSurPhoto: {
+    paddingHorizontal: 7,
+    paddingTop: 4,
+  },
   legendeDePhoto: {
     paddingBottom: 4,
     paddingHorizontal: 7,
     paddingTop: 5,
   },
+  lienSouligne: {
+    textDecorationLine: 'underline',
+  },
   sousTitreQuiEcrit: {
     fontFamily: 'Montserrat-Bold',
+  },
+  titreDeFeuille: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 18,
+    lineHeight: 24,
   },
   titres: {
     flex: 1,
@@ -536,6 +599,26 @@ const stylesDuFil = StyleSheet.create({
     marginTop: 6,
     maxWidth: 280,
   },
+  noticeDeTete: {
+    alignItems: 'flex-start',
+    alignSelf: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+    marginHorizontal: 24,
+    marginTop: 14,
+    maxWidth: 300,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  noticeDeTeteTexte: {
+    flexShrink: 1,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
   photo: {
     borderRadius: 15,
     height: 184,
@@ -563,6 +646,16 @@ const stylesDuFil = StyleSheet.create({
     right: 12,
     width: 40,
   },
+  rondRepondre: {
+    height: 32,
+    width: 32,
+  },
+  sousTitreDeFeuille: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
   texte: {
     marginBottom: 0,
     marginLeft: 0,
@@ -572,11 +665,12 @@ const stylesDuFil = StyleSheet.create({
 });
 
 /**
- *
- * @param root0
- * @param root0.height
- * @param root0.mine
- * @param root0.width
+ * La forme d'une bulle pendant le chargement du fil.
+ * @param {object} props
+ * @param {number} props.height
+ * @param {boolean} [props.mine]
+ * @param {number | string} props.width
+ * @returns {import('react').ReactElement}
  */
 function SkeletonBubble({ height, mine = false, width }) {
   const { Colors } = useTheme();
@@ -725,6 +819,7 @@ function Conversation({ navigation, route }) {
     sendTypingStart,
     sendTypingStop,
     socket,
+    startWhisperChat,
     updateGroupMeta,
     votePoll,
   } = useMessaging(chatId);
@@ -944,7 +1039,6 @@ function Conversation({ navigation, route }) {
   );
   const [isEditMessageModalVisible, setIsEditMessageModalVisible] = useState(false);
   const [isGroupManagementVisible, setIsGroupManagementVisible] = useState(false);
-  const [groupNameDraft, setGroupNameDraft] = useState('');
   const [isGroupMutationLoading, setIsGroupMutationLoading] = useState(false);
   const [isEditMessageSubmitting, setIsEditMessageSubmitting] = useState(false);
   const [isEditMessageUploadingAttachment, setIsEditMessageUploadingAttachment] = useState(false);
@@ -1030,6 +1124,24 @@ function Conversation({ navigation, route }) {
   ]);
   const isGroupChat = chatData?.type === 'group';
 
+  // MESSAGERIE-1C — LA CONVOCATION DEPUIS LE GROUPE D'EQUIPE : qui peut convoquer (entraineur de
+  // l'equipe du fil, super-admin), et l'assistant, monte seulement quand on l'ouvre.
+  const peutConvoquer = useMemo(
+    () => canConvokeFromChat({ chat: chatData, user: userData }),
+    [chatData, userData],
+  );
+  const [demandeConvocation, setDemandeConvocation] = useState(/** @type {any} */ (null));
+  const ouvrirModificationConvocation = useCallback((/** @type {any} */ demande) => {
+    const composition = demande?.composition;
+    if (!composition?.eventId) return;
+    setDemandeConvocation({
+      eventId: String(composition.eventId),
+      eventSummary: composition,
+      mode: 'edit',
+      startStep: demande?.startStep === 3 ? 3 : 2,
+    });
+  }, []);
+
   // 🔒 CONVAVERT (C4) — CE FIL EST-IL RATTACHE A UN CLUB ?
   //
   // Adel, le 2026-09-02 : « un message pour avertir que n'importe quelle
@@ -1072,18 +1184,15 @@ function Conversation({ navigation, route }) {
     () => resolveOtherParticipantId(chatData, userData?.documentId),
     [chatData, userData?.documentId],
   );
-  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) });
+  // VILLE-NOTIFS — pas d'appel (403) ni de « Bloquer » pour un compte sans role de club.
+  const compteQuiPeutBloquer = peutBloquer(userData);
+  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: compteQuiPeutBloquer });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
   const isOtherParticipantBlocked = Boolean(
     otherParticipantId && blockedUserIds.has(otherParticipantId),
   );
   const { isPending: isBlockingUser, mutate: blockOtherParticipant } = useBlockUser();
   const { isPending: isUnblockingUser, mutate: unblockOtherParticipant } = useUnblockUser();
-
-  useEffect(() => {
-    if (!isGroupChat) return;
-    setGroupNameDraft(String(chatData?.groupName || ''));
-  }, [chatData?.groupName, isGroupChat]);
 
   const [isEventShareModalVisible, setIsEventShareModalVisible] = useState(false);
   const {
@@ -1313,6 +1422,12 @@ function Conversation({ navigation, route }) {
   // 🎨 FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion le DIT au pied du fil, tant
   // que la connexion manque (tournée T13, C2_3b : la bannière passe et s'en va ; rien ne restait).
   const [envoiRefuse, setEnvoiRefuse] = useState(false);
+  // MSG1A (§3.3) — `canWrite` se calcule plus bas ; le glisser le lit a l'appel, par ce ref.
+  const peutEcrireRef = useRef(true);
+  // 📍 MSG1A (§3.18) — l'adresse touchee dans le fil ; `null` : feuille fermee.
+  const [adresseOuverte, setAdresseOuverte] = useState(
+    /** @type {{ label: string, latitude?: any, longitude?: any } | null} */ (null),
+  );
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
   // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
@@ -1424,7 +1539,26 @@ function Conversation({ navigation, route }) {
     },
   });
 
-  const handleParticipateToEvent = async (/** @type {{ documentId?: string; parentEvent?: { documentId?: string } }} */ event) => {
+  // 🔇 TRIO/D3 — le hook partage des reponses (voir « ABSENT » plus bas).
+  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
+
+  // MSG1A (§3.8) — « PRESENT » DEPUIS LA BULLE, ALIGNE SUR SES DEUX FRERES
+  // (`EventListContent`, `ParticipantEventList`). Ce gestionnaire-ci n'avait pas leurs
+  // trois branches : seance de stage, choix du poste d'une detection, et surtout le
+  // membre convie qui REPOND (`rsvpPresent`) — il creait une DEMANDE a la place.
+  // Personne ne l'atteignait : la carte du fil cachait ses boutons (`mode="share"`) ;
+  // la bulle du pack montre « Present | Absent ».
+  // ponytail: troisieme copie de la meme fonction ; l'unifier touche deux ecrans hors du lot.
+  const handleParticipateToEvent = async (/** @type {{ documentId?: string; eventFormat?: string; parentEvent?: { documentId?: string } }} */ event) => {
+    if (String(event?.eventFormat || '').toLowerCase() === 'stage_day' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+      } catch {
+        // Le retour d'erreur est porte par la mutation.
+      }
+      return;
+    }
+
     const participationFlow = resolveParticipationFlow(event, { user: userData });
 
     if (!participationFlow?.canAct) {
@@ -1444,6 +1578,27 @@ function Conversation({ navigation, route }) {
         params: { eventId: event.parentEvent.documentId },
         screen: RouteNames.EventDetails,
       });
+      return;
+    }
+
+    // Les postes d'une detection se choisissent sur la fiche de l'evenement.
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      if (event?.documentId) {
+        navigation.navigate(RouteNames.EventStack, {
+          params: { eventId: event.documentId },
+          screen: RouteNames.EventDetails,
+        });
+      }
+      return;
+    }
+
+    // AA01 — un membre convie REPOND (`POST /events/:id/rsvp`), il ne demande pas.
+    if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+      } catch {
+        // Le retour d'erreur est porte par la mutation.
+      }
       return;
     }
 
@@ -1476,8 +1631,6 @@ function Conversation({ navigation, route }) {
   // seance de stage se repond par la porte des reponses, tout le reste par
   // `POST /events/:id/missing` — ET l'invalidation complete des six racines de
   // requetes, celle qui avait deja diverge trois fois.
-  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
-
   const handleDeclineEvent = (
     /** @type {{ documentId?: string; eventFormat?: string }} */ event,
   ) => {
@@ -3036,15 +3189,16 @@ function Conversation({ navigation, route }) {
     navigation.setParams({ sharedEventFromPicker: undefined });
   }, [handleShareEvent, navigation, route?.params?.sharedEventFromPicker]);
 
+  // 👥 MSG1A (§3.16) — les « Infos du groupe » s'ouvrent pour TOUT membre du groupe (le pack :
+  // toucher le titre, ou ⋮ > « Infos du groupe ») ; les gestes d'admin restent aux admins.
   const handleOpenGroupManagement = () => {
-    if (!isGroupAdmin) return;
-    setGroupNameDraft(String(chatData?.groupName || ''));
+    if (!isGroupChat) return;
     setIsMenuVisible(false);
     setIsGroupManagementVisible(true);
   };
 
-  const handleSaveGroupName = async () => {
-    const nextGroupName = String(groupNameDraft || '').trim();
+  const handleSaveGroupName = async (/** @type {string} */ nom) => {
+    const nextGroupName = String(nom || '').trim();
     if (!chatId || !nextGroupName) {
       showErrorBanner(i18n.t(
         'conversation.group.invalidName',
@@ -3083,49 +3237,105 @@ function Conversation({ navigation, route }) {
     });
   };
 
-  const handleRemoveGroupMember = (/** @type {any} */ member) => {
+  // MSG1A (§3.16) — la confirmation vit DANS la page « Infos du groupe » : on arrive ici
+  // apres le « Retirer » de la boite de confirmation.
+  const handleRemoveGroupMember = async (/** @type {any} */ member) => {
     const memberId = String(member?.documentId || member?.id || '').trim();
     if (!chatId || !memberId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await removeGroupMember({
+        chatId,
+        userId: memberId,
+      });
+    } catch (error) {
+      conversationLogger.warn('Failed to remove group member', error);
+      showErrorBanner(i18n.t(
+        'conversation.group.removeError',
+        'Impossible de retirer ce membre.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
 
-    const memberLabel = `${member?.firstname || ''} ${member?.lastname || ''}`.trim() || i18n.t(
-      'conversation.group.thisMember',
-      'ce membre',
-    );
-    openConversationPrompt({
-      body: i18n.t(
-        'conversation.group.removeConfirm',
-        'Retirer {{member}} du groupe ?',
-        { member: memberLabel, ...SANS_ECHAPPEMENT },
-      ),
-      primaryAction: {
-        label: 'Retirer',
-        onPress: async () => {
-          closeConversationPrompt();
-          try {
-            setIsGroupMutationLoading(true);
-            await removeGroupMember({
-              chatId,
-              userId: memberId,
-            });
-          } catch (error) {
-            conversationLogger.warn('Failed to remove group member', error);
-            showErrorBanner(i18n.t(
-              'conversation.group.removeError',
-              'Impossible de retirer ce membre.',
-            ));
-          } finally {
-            setIsGroupMutationLoading(false);
-          }
-        },
-      },
-      secondaryAction: {
-        label: 'Annuler',
-        onPress: closeConversationPrompt,
-        variant: 'Secondary',
-      },
-      title: i18n.t('conversation.group.removeTitle', 'Retirer un membre'),
-      tone: 'critical',
-    });
+  // MSG1A (§3.16) — « Nommer admin du groupe » / « Retirer le role d'admin » : le serveur
+  // le sait deja (`updateGroupMeta`, `addAdminIds` / `removeAdminIds`, admins seulement).
+  const handleToggleGroupAdmin = async (/** @type {any} */ member, /** @type {boolean} */ devientAdmin) => {
+    const memberId = String(member?.documentId || member?.id || '').trim();
+    if (!chatId || !memberId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({
+        chatId,
+        data: devientAdmin ? { addAdminIds: [memberId] } : { removeAdminIds: [memberId] },
+      });
+    } catch (error) {
+      conversationLogger.warn('Failed to update group admins', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupInfo.adminError',
+        'Impossible de changer les admins du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // MSG1A (§3.16) — « Envoyer un message » depuis la fiche d'un membre : la discussion
+  // privee existante. `push`, pas `navigate` : vers l'ecran DEJA affiche, `navigate`
+  // remplacerait ses parametres et « Retour » sauterait ce fil.
+  const handleMessageGroupMember = async (/** @type {any} */ member) => {
+    const memberId = String(member?.documentId || member?.id || '').trim();
+    if (!memberId) return;
+    setIsGroupManagementVisible(false);
+    try {
+      const fil = await startWhisperChat([memberId]);
+      if (fil?.documentId) {
+        // @ts-ignore
+        navigation.push(RouteNames.Conversation, { chatId: fil.documentId });
+      }
+    } catch (error) {
+      conversationLogger.warn('Failed to open private chat', error);
+      showErrorBanner(i18n.t(
+        'messaging.createConversationError',
+        'Impossible de démarrer cette conversation.',
+      ));
+    }
+  };
+
+  // 🚪 MSG1A (§3.16, decision d'Adel `quitter maintenant`) — quitter le groupe, pour tout
+  // membre. L'appel est isole dans `leaveGroupChat` (route du lot serveur 1B).
+  const handleLeaveGroup = async () => {
+    if (!chatId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await leaveGroupChat(chatId);
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      setIsGroupManagementVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      conversationLogger.warn('Failed to leave group', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupInfo.leaveError',
+        'Impossible de quitter le groupe pour le moment.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  const handleReportFromMenu = () => {
+    setIsMenuVisible(false);
+    setIsGroupManagementVisible(false);
+    setSafeTimeout(() => {
+      showInfoBanner(
+        i18n.t(
+          'conversation.report.contactSupport',
+          'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.', // eslint-disable-line max-len
+        ),
+        i18n.t('conversation.report.title', 'Signaler'),
+      );
+    }, 300);
   };
 
   const openSharedContact = (/** @type {string} */ userDocumentId) => {
@@ -3190,6 +3400,8 @@ function Conversation({ navigation, route }) {
       ? t('conversation.attachments.unavailable', 'Bientôt disponible')
       : '';
 
+    // MSG1A (§3.5) — l'ordre du pack : Photos, Camera, Document, Sondage, Evenement,
+    // Localisation, Contact (l'entree « Convocation » viendra avec le lot 1C).
     return [
       {
         icon: 'PH',
@@ -3202,20 +3414,6 @@ function Conversation({ navigation, route }) {
         key: 'camera',
         label: t('conversation.attachments.camera', 'Camera'),
         loading: isUploading,
-      },
-      {
-        disabled: !isLocationShareEnabled,
-        icon: 'LO',
-        key: 'location',
-        label: t('conversation.attachments.location', 'Localisation'),
-        unavailableReason: locationReason,
-      },
-      {
-        disabled: !isContactShareEnabled || shareableContacts.length === 0,
-        icon: 'CO',
-        key: 'contact',
-        label: t('conversation.attachments.contact', 'Contact'),
-        unavailableReason: contactReason,
       },
       {
         disabled: isDocumentPickerDisabled,
@@ -3236,9 +3434,30 @@ function Conversation({ navigation, route }) {
         label: t('conversation.attachments.event', 'Événement'),
         unavailableReason: eventReason,
       },
+      {
+        disabled: !isLocationShareEnabled,
+        icon: 'LO',
+        key: 'location',
+        label: t('conversation.attachments.location', 'Localisation'),
+        unavailableReason: locationReason,
+      },
+      {
+        disabled: !isContactShareEnabled || shareableContacts.length === 0,
+        icon: 'CO',
+        key: 'contact',
+        label: t('conversation.attachments.contact', 'Contact'),
+        unavailableReason: contactReason,
+      },
+      // MESSAGERIE-1C (pack §3.5) — fil d'equipe, entraineur ou super-admin seulement.
+      ...(peutConvoquer ? [{
+        icon: 'CV',
+        key: 'convocation',
+        label: t('conversationConvocation.entry', 'Convocation'),
+      }] : []),
     ];
   }, [
     isUploading,
+    peutConvoquer,
     shareableContacts.length,
     t,
   ]);
@@ -3250,6 +3469,10 @@ function Conversation({ navigation, route }) {
         break;
       case 'contact':
         runAttachmentAction(() => setIsContactShareModalVisible(true));
+        break;
+      // MESSAGERIE-1C — l'assistant de convocation, apres la fermeture de la feuille.
+      case 'convocation':
+        runAttachmentAction(() => setDemandeConvocation({ mode: 'create' }));
         break;
       case 'document':
         runAttachmentAction(handlePickFile);
@@ -3788,18 +4011,23 @@ function Conversation({ navigation, route }) {
         replyTo: msg.replyTo,
         senderDocumentId: senderEntityId,
         // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : ligne centrée, sans bulle.
-        ...(filDeLaVille.estLigneSysteme(msg) ? { system: true } : {}),
+        // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
+        // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
+        ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
         text: msg.message,
         user: {
           _id: senderEntityId,
           avatar: avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
           name: filDeLaVille.nomDeLExpediteur(msg) || getAnonymizedName(msg.sender),
+          // 🏷️ MSG1A (§3.1, decision d'Adel `genre A`) — la CLEF du role du staff dans ce fil
+          // (contrat 1B §2.3 : `sender.staffRole`, repli `chat.staffRoles`). Absente = rien.
+          staffRole: msg.sender?.staffRole || chatData?.staffRoles?.[senderEntityId] || undefined,
         },
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, chatData?.staffRoles, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
@@ -4304,7 +4532,10 @@ function Conversation({ navigation, route }) {
   // MSG1A (§3.1) — la photo du pack : 252 x 184, rayon 15, un degrade sombre en bas
   // pour que l'heure blanche se lise sur n'importe quelle image. L'appui long ouvre le
   // menu du message (la bulle de GiftedChat le faisait ; ce cadre n'existe plus).
-  const renderMessageImage = useCallback((messageImageProps, options = {}) => {
+  const renderMessageImage = useCallback((
+    /** @type {any} */ messageImageProps,
+    /** @type {{ onLongPress?: () => void }} */ options = {},
+  ) => {
     const rawMessage = messageImageProps?.currentMessage || {};
     const safeMessage = {
       ...rawMessage,
@@ -4915,9 +5146,14 @@ function Conversation({ navigation, route }) {
         /** @type {number} */ y,
         /** @type {number} */ width,
         /** @type {number} */ height,
-      ) => ouvrir({
+      ) => ouvrir(ancreSurLEcran({
         height, width, x, y,
-      }));
+      }, {
+        // MSG1A (§3.2) — sur Android, la mesure part du bas de la barre d'etat ; le calque,
+        // du haut de l'ecran (constate : 142 px de decalage sur l'emulateur, 07/10).
+        hauteurBarreDEtat: StatusBar.currentHeight,
+        os: Platform.OS,
+      })));
       return;
     }
 
@@ -5035,6 +5271,20 @@ function Conversation({ navigation, route }) {
     setIsMessageActionsVisible(false);
   }, [canCopySelectedMessage, selectedMessageTextValue, showErrorBanner, showSuccessBanner, t]);
 
+  // 📍 MSG1A (§3.18) — « Copier l'adresse » : meme presse-papiers que « Copier » un message.
+  const handleCopierAdresse = useCallback((/** @type {string} */ texte) => {
+    const clipboard = getClipboardModule();
+    if (clipboard && typeof clipboard.setString === 'function' && texte) {
+      clipboard.setString(texte);
+      showSuccessBanner(t('conversation.address.copied', 'Adresse copiée'), t('conversation.actions.copySuccess.title', 'Copié'));
+      return;
+    }
+    showErrorBanner(
+      t('conversation.actions.copyUnavailable', 'Le presse-papiers est indisponible sur cette build.'),
+      t('common.error', 'Erreur'),
+    );
+  }, [showErrorBanner, showSuccessBanner, t]);
+
   const handleOpenReportForSelectedMessage = useCallback(() => {
     if (!selectedMessageDocumentId || isSelectedMessageOwn) return;
     setIsMessageActionsVisible(false);
@@ -5137,18 +5387,30 @@ function Conversation({ navigation, route }) {
   // ⚠️ IL EST DECLARE APRES LES CINQ, ET IL DOIT LE RESTER : son tableau de
   // dependances est evalue AU RENDU. Le placer plus haut citerait des `const`
   // pas encore initialisees — ReferenceError, et la conversation ne s ouvre plus.
+  // MESSAGERIE-1C — « Modifier la composition » sous la carte d'une convocation publiee.
+  const compositionChoisie = /** @type {any} */ (selectedMessage)?.composition;
+  const canEditSelectedComposition = peutConvoquer
+    && compositionChoisie?.type === 'lineup_share'
+    && Boolean(compositionChoisie?.eventId);
+
   const handleMessageAction = useCallback((clef) => {
     if (clef === 'reply') handleReplySelectedMessage();
     else if (clef === 'copy') handleCopySelectedMessage();
     else if (clef === 'edit') handleOpenEditForSelectedMessage();
     else if (clef === 'delete') handleDeleteSelectedMessage();
     else if (clef === 'report') handleOpenReportForSelectedMessage();
+    else if (clef === 'editComposition') {
+      setIsMessageActionsVisible(false);
+      ouvrirModificationConvocation({ composition: compositionChoisie, startStep: 2 });
+    }
   }, [
     handleCopySelectedMessage,
     handleDeleteSelectedMessage,
     handleOpenEditForSelectedMessage,
     handleOpenReportForSelectedMessage,
     handleReplySelectedMessage,
+    compositionChoisie,
+    ouvrirModificationConvocation,
   ]);
 
   // 🚫 BLOQUER (K3) — la confirmation passe par `openConversationPrompt`,
@@ -5207,34 +5469,50 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const renderReplySwipeAction = useCallback(() => (
-    <View
-      style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
-      }}
-    >
-      <View
-        style={{
-          alignItems: 'center',
-          backgroundColor: 'rgba(1, 179, 244, 0.18)',
-          borderColor: Colors.primary500,
-          borderRadius: 16,
-          borderWidth: 1,
-          justifyContent: 'center',
-          minHeight: 32,
-          minWidth: 32,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-        }}
-      >
-        <SvgIcon color={Colors.primary500} height={14} name="reply" width={14} />
+  // ↩️ MSG1A (§3.3) — le rond « repondre » du pack : 32, il grandit avec le geste et passe
+  // au CYAN au seuil (deux disques superposes : seule l'opacite s'anime, ce que le pilote
+  // natif de Swipeable sait faire). L'icone reste celle choisie pour cette place par le lot
+  // ICONES (« icone go » d'Adel, 01/10 ; temoin `iconesALeurPlace` 2).
+  const renderReplySwipeAction = useCallback((/** @type {any} */ _progress, /** @type {any} */ dragX) => {
+    const avancee = dragX.interpolate({
+      extrapolate: 'clamp',
+      inputRange: [-MESSAGE_REPLY_SWIPE_THRESHOLD, 0, MESSAGE_REPLY_SWIPE_THRESHOLD],
+      outputRange: [1, 0, 1],
+    });
+    const auSeuil = dragX.interpolate({
+      extrapolate: 'clamp',
+      inputRange: [
+        -MESSAGE_REPLY_SWIPE_THRESHOLD,
+        -(MESSAGE_REPLY_SWIPE_THRESHOLD - 1),
+        MESSAGE_REPLY_SWIPE_THRESHOLD - 1,
+        MESSAGE_REPLY_SWIPE_THRESHOLD,
+      ],
+      outputRange: [1, 0, 0, 1],
+    });
+    const echelle = avancee.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
+    return (
+      <View style={stylesDuFil.actionDeGlisser}>
+        <Animated.View style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}>
+          <View
+            style={[stylesDuFil.disqueRepondre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
+          >
+            <SvgIcon color={Colors.neutral00} height={18} name="reply" width={18} />
+          </View>
+          <Animated.View
+            style={[stylesDuFil.disqueRepondre, { backgroundColor: Colors.primary500, opacity: auSeuil }]}
+          >
+            <SvgIcon color={Colors.primary900} height={18} name="reply" width={18} />
+          </Animated.View>
+        </Animated.View>
       </View>
-    </View>
-  ), [Colors.primary500]);
+    );
+  }, [Colors.neutral00, Colors.primary500, Colors.primary900]);
 
-  const wrapWithMessageInteractions = useCallback((currentMessage, children, options = {}) => {
+  const wrapWithMessageInteractions = useCallback((
+    /** @type {any} */ currentMessage,
+    /** @type {any} */ children,
+    /** @type {{ onPress?: () => void }} */ options = {},
+  ) => {
     if (!currentMessage) return children;
 
     const messageKey = getMessageDocumentId(currentMessage);
@@ -5259,11 +5537,14 @@ function Conversation({ navigation, route }) {
 
     return (
       <Swipeable
-        friction={2}
+        // MSG1A (§3.3) — pas de reponse dans un canal ou l'on ne peut pas ecrire.
+        enabled={peutEcrireRef.current}
+        friction={1}
         leftThreshold={MESSAGE_REPLY_SWIPE_THRESHOLD}
         onSwipeableOpen={handleSwipeableOpen}
-        overshootLeft={false}
-        overshootRight={false}
+        overshootFriction={MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION}
+        overshootLeft
+        overshootRight
         ref={setSwipeableRef}
         renderLeftActions={renderReplySwipeAction}
         renderRightActions={renderReplySwipeAction}
@@ -5341,24 +5622,47 @@ function Conversation({ navigation, route }) {
     const nomEnTete = isLeft && estPremierDuGroupe && !estUnTeteATete(chatData?.type)
       ? String(currentMessage.user?.name || '').trim()
       : '';
+    // 🏷️ MSG1A (§3.1, `genre A`) — « Karim · Entraîneur » : la clef du serveur, un libelle
+    // unique pour tout le monde (le serveur ne connait pas le genre).
+    const libellesDesRoles = {
+      dirigeant: t('conversation.staffRole.dirigeant', 'Dirigeant'),
+      entraineur: t('conversation.staffRole.entraineur', 'Entraîneur'),
+    };
+    const roleEnTete = nomEnTete
+      ? libellesDesRoles[String(currentMessage.user?.staffRole || '')] || ''
+      : '';
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
+      // 📅 MSG1A (§3.8) — l'evenement partage dans le cadre commun : nom, queue, heure avant le pied.
       return wrapWithMessageInteractions(
         currentMessage, (
-          <View style={{
-            marginBottom,
-            marginTop,
-            // Removed margins as requested
-          }}
-          >
-            <EventMessageBubble
-              event={resolvedMessageEvent}
-              isMe={!isLeft}
-              onDecline={() => handleDeclineEvent(resolvedMessageEvent)}
-              onJoin={() => handleJoinEvent(resolvedMessageEvent)}
-              onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
-            />
+          <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+            <BulleDuFil
+              couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+              estAMoi={estAMoi}
+              estDernier={estDernierDuGroupe}
+              nom={nomEnTete}
+              role={roleEnTete}
+              testID="bulle-evenement-partage"
+            >
+              <EventMessageBubble
+                event={resolvedMessageEvent}
+                isMe={!isLeft}
+                meta={(
+                  <MetaDuMessage
+                    estAMoi={estAMoi}
+                    etat={etatDEnvoi(currentMessage)}
+                    heure={heureDuMessage(currentMessage.createdAt)}
+                  />
+                )}
+                onDecline={() => handleDeclineEvent(resolvedMessageEvent)}
+                onJoin={() => handleJoinEvent(resolvedMessageEvent)}
+                onOpenAddress={setAdresseOuverte}
+                onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
+                resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+              />
+            </BulleDuFil>
           </View>
         ),
       );
@@ -5367,17 +5671,38 @@ function Conversation({ navigation, route }) {
     // Composition message
     if (currentMessage.composition) {
       if (currentMessage.composition.type === 'poll') {
+        // 📊 MSG1A (§3.4) — le sondage dans le cadre commun : nom, queue, heure avant le pied.
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View style={{ marginBottom, marginTop }}>
-              <PollMessageBubble
-                currentUserId={userData?.documentId || ''}
-                isMe={!isLeft}
-                onOpenDetails={() => handleOpenPollDetails(currentMessage)}
-                onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
-                poll={currentMessage.composition}
-                resolveVoterName={resolveVoterName}
-              />
+            <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+              <BulleDuFil
+                couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                estAMoi={estAMoi}
+                estDernier={estDernierDuGroupe}
+                nom={nomEnTete}
+                role={roleEnTete}
+                testID="bulle-sondage"
+              >
+                <PollMessageBubble
+                  currentUserId={userData?.documentId || ''}
+                  dansLaBulle
+                  isMe={!isLeft}
+                  // SONDAGE-NOMS — donne, la bulle lit elle-meme les noms des votants au serveur.
+                  messageId={currentMessage?.documentId || currentMessage?._id || currentMessage?.id}
+                  meta={(
+                    <MetaDuMessage
+                      estAMoi={estAMoi}
+                      etat={etatDEnvoi(currentMessage)}
+                      heure={heureDuMessage(currentMessage.createdAt)}
+                    />
+                  )}
+                  onOpenDetails={() => handleOpenPollDetails(currentMessage)}
+                  onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
+                  poll={currentMessage.composition}
+                  resolveVoterAvatar={resolveVoterAvatar}
+                  resolveVoterName={resolveVoterName}
+                />
+              </BulleDuFil>
             </View>
           ),
         );
@@ -5479,32 +5804,42 @@ function Conversation({ navigation, route }) {
       if (currentMessage.composition.type === 'voice_note') {
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View
-              style={{
-                alignItems: isLeft ? 'flex-start' : 'flex-end',
-                marginBottom,
-                marginTop,
-                width: '100%',
-              }}
-            >
-              {/* VOCAL — la bulle porte son nom (au-dessus, quand l'auteur
-                  change), son heure et « Envoi… » (dessous) : la maquette. */}
-              <VoiceNoteBubble
-                attachments={currentMessage.attachments || []}
-                composition={currentMessage.composition}
-                createdAt={currentMessage.createdAt}
-                isMe={!isLeft}
-                isPending={Boolean(currentMessage.pending)}
-                message={currentMessage.message}
-                messageId={getMessageDocumentId(currentMessage)}
-                nextVoiceMessageId={nextVoiceToChain(
-                  nextMessage,
-                  isMessageOwnedByCurrentUser(nextMessage),
+            <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+              {/* 🎙️ MSG1A (§3.6) — le vocal dans le cadre commun : nom en tete de groupe,
+                  queue, et l'heure + les coches DANS la bulle (seul changement du pack). */}
+              <BulleDuFil
+                couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                estAMoi={estAMoi}
+                estDernier={estDernierDuGroupe}
+                nom={nomEnTete}
+                role={roleEnTete}
+                testID="bulle-vocal"
+              >
+                <VoiceNoteBubble
+                  attachments={currentMessage.attachments || []}
+                  composition={currentMessage.composition}
+                  createdAt={currentMessage.createdAt}
+                  dansLaBulle
+                  isMe={!isLeft}
+                  isPending={Boolean(currentMessage.pending)}
+                  message={currentMessage.message}
+                  messageId={getMessageDocumentId(currentMessage)}
+                  meta={(
+                    <MetaDuMessage
+                      estAMoi={estAMoi}
+                      etat={etatDEnvoi(currentMessage)}
+                      heure={heureDuMessage(currentMessage.createdAt)}
+                    />
                 )}
-                senderName={isLeft && !isSameUserAsPrevious ? currentMessage.user?.name || '' : ''}
-              />
+                  nextVoiceMessageId={nextVoiceToChain(
+                    nextMessage,
+                    isMessageOwnedByCurrentUser(nextMessage),
+                  )}
+                  senderName={isLeft ? currentMessage.user?.name || '' : ''}
+                />
+              </BulleDuFil>
               {currentMessage.failed ? (
-                <Text style={[Fonts.p4Bold, { color: Colors.error500, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.chatDanger, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
                   {t('common.retry', 'Réessayer')}
                 </Text>
               ) : null}
@@ -5515,19 +5850,45 @@ function Conversation({ navigation, route }) {
 
       return wrapWithMessageInteractions(
         currentMessage, (
-          <View style={{
-            marginBottom,
-            marginTop,
-          }}
-          >
-            {/* FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil (GiftedChat
-                ne la redessine pas quand les participants arrivent après elle). */}
-            <CompositionMessageBubbleDuFil
+          <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+            {/* 📋 MSG1A (§3.7) — la carte de composition dans le cadre commun (nom, queue), et
+                l'heure avant son pied. FINITIONS15 point 6 : la carte s'abonne elle-même à la
+                fiche du fil (GiftedChat ne la redessine pas quand les participants arrivent). */}
+            {/* MESSAGERIE-1C : notice, « Modifier » et bloc « Reponses » des convocations. */}
+            <ConvocationLineupMessage
               chatId={chatId}
               composition={currentMessage.composition}
-              currentEvent={currentMessage.event}
-              isMe={!isLeft}
-            />
+              onEdit={peutConvoquer ? ouvrirModificationConvocation : undefined}
+            >
+              {(/** @type {any} */ convocation) => (
+                <BulleDuFil
+                  couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                  estAMoi={estAMoi}
+                  estDernier={estDernierDuGroupe}
+                  nom={nomEnTete}
+                  role={roleEnTete}
+                  testID="bulle-composition"
+                >
+                  <CompositionMessageBubbleDuFil
+                    chatId={chatId}
+                    composition={currentMessage.composition}
+                    currentEvent={currentMessage.event}
+                    dansLaBulle
+                    isMe={!isLeft}
+                    meta={(
+                      <MetaDuMessage
+                        estAMoi={estAMoi}
+                        etat={etatDEnvoi(currentMessage)}
+                        heure={heureDuMessage(currentMessage.createdAt)}
+                      />
+                    )}
+                    onEdit={convocation.onEdit}
+                    onOpenAddress={setAdresseOuverte}
+                    renderReponses={convocation.renderReponses}
+                  />
+                </BulleDuFil>
+              )}
+            </ConvocationLineupMessage>
           </View>
         ),
       );
@@ -5535,41 +5896,24 @@ function Conversation({ navigation, route }) {
 
     const isPending = Boolean(currentMessage.pending);
     const isFailed = Boolean(currentMessage.failed);
-    const replyAuthorName = String(
-      currentMessage?.replyTo?.sender?.firstname
-      || currentMessage?.replyTo?.sender?.name
-      || currentMessage?.replyTo?.user?.name
-      || t('conversation.replyPreview.defaultAuthor', 'Membre'),
-    ).trim();
-    const replyPreviewText = String(
-      currentMessage?.replyTo?.message
-      || currentMessage?.replyTo?.text
-      || t('conversation.replyPreview.defaultText', 'Message'),
-    );
-    const replyPreviewNode = currentMessage.replyTo ? (
-      <TouchableOpacity
-        activeOpacity={0.85}
+    // 💬 MSG1A (§3.3) — LA CITATION PASSE DANS LA BULLE (SPECS.md §1) : filet et nom a la
+    // couleur de l'auteur cite (« Vous » si c'est moi), extrait d'une ligne avec l'icone du
+    // contenu. Un appui remonte au message cite, comme avant.
+    const auteurCite = currentMessage.replyTo
+      ? auteurDuMessageCite(currentMessage.replyTo, userData?.documentId || '', t)
+      : null;
+    const extraitCite = currentMessage.replyTo
+      ? extraitDuMessageCite(currentMessage.replyTo, t)
+      : null;
+    const citationNode = auteurCite && extraitCite ? (
+      <CitationDansLaBulle
+        couleur={couleurDuNom(Colors, auteurCite.identifiant)}
+        estAMoi={estAMoi}
+        icone={extraitCite.icone}
+        nom={auteurCite.nom}
         onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
-        style={{
-          backgroundColor: 'rgba(1,179,244,0.12)',
-          borderColor: Colors.primary700,
-          borderRadius: 8,
-          borderWidth: 1,
-          marginBottom: 4,
-          marginHorizontal: 12,
-          marginTop: marginTop + 4,
-          padding: 8,
-        }}
-      >
-        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-          {t('conversation.replyPreview.label', 'Réponse à')}
-          {' '}
-          {replyAuthorName}
-        </Text>
-        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-          {replyPreviewText}
-        </Text>
-      </TouchableOpacity>
+        texte={extraitCite.texte}
+      />
     ) : null;
     const normalizedCurrentAttachments = normalizeMessageAttachments(currentMessage?.attachments);
     const hasDocumentAttachment = normalizedCurrentAttachments.some((attachment) => (
@@ -5590,7 +5934,6 @@ function Conversation({ navigation, route }) {
         currentMessage,
         (
           <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
-            {replyPreviewNode}
             {/* MSG1A (§3.1) — le document devient une CARTE DANS LA BULLE (SPECS.md §1,
                 `DocBody`) : meme cadre que le texte (nom, queue, heure dessous). La carte
                 garde ses boutons Ouvrir / Telecharger / Partager, inchanges. */}
@@ -5599,8 +5942,10 @@ function Conversation({ navigation, route }) {
               estAMoi={estAMoi}
               estDernier={estDernierDuGroupe}
               nom={nomEnTete}
+              role={roleEnTete}
               testID="bulle-document"
             >
+              {citationNode}
               <DocumentMessageBubble
                 attachments={normalizedCurrentAttachments}
                 caption={documentCaption}
@@ -5648,37 +5993,18 @@ function Conversation({ navigation, route }) {
       currentMessage,
       (
         <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
-          {currentMessage.replyTo ? (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
-              style={{
-                backgroundColor: 'rgba(1,179,244,0.12)',
-                borderColor: Colors.primary700,
-                borderRadius: 8,
-                borderWidth: 1,
-                marginBottom: 4,
-                padding: 8,
-              }}
-            >
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {t('conversation.replyPreview.label', 'Réponse à')}
-                {' '}
-                {replyAuthorName}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-                {replyPreviewText}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
           <BulleDuFil
             compacte={Boolean(imageDuMessage)}
             couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
             estAMoi={estAMoi}
             estDernier={estDernierDuGroupe}
             nom={nomEnTete}
+            role={roleEnTete}
             testID="bulle-texte"
           >
+            {citationNode ? (
+              <View style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}>{citationNode}</View>
+            ) : null}
             {imageDuMessage}
             {aDuTexte ? (
               <View style={imageDuMessage ? stylesDuFil.legendeDePhoto : null}>
@@ -5693,6 +6019,12 @@ function Conversation({ navigation, route }) {
                     left: { color: Colors.primary500 },
                     right: { color: Colors.neutral00 },
                   }}
+                  // 📍 MSG1A (§3.18) — une adresse ecrite (numero + type de voie) devient un lien.
+                  parsePatterns={(/** @type {any} */ styleDeLien) => /** @type {any} */ ([{
+                    onPress: (/** @type {string} */ texte) => setAdresseOuverte({ label: texte }),
+                    pattern: motifDAdresse(),
+                    style: [styleDeLien, stylesDuFil.lienSouligne],
+                  }])}
                   position={position}
                   textStyle={{
                     left: [TEXTE_DU_MESSAGE, stylesDuFil.texte, { color: Colors.neutral00 }],
@@ -5780,6 +6112,17 @@ function Conversation({ navigation, route }) {
       <GlyphIcon color={Colors.neutral00} name="chevronDown" size={22} />
     </View>
   );
+
+  // 📊 MSG1A (§3.4) — l'avatar d'un votant (sondage), lu sur les participants du fil. Les
+  // NOMS restent l'affaire de `resolveVoterName`, que ce lot ne touche pas.
+  const resolveVoterAvatar = (/** @type {string} */ voterId) => {
+    const membre = Array.isArray(chatData?.participants)
+      ? chatData.participants.find((/** @type {any} */ participant) => (
+        String(participant?.documentId || participant?.id || '') === String(voterId || '')
+      ))
+      : null;
+    return resolveMediaUri(membre?.avatar?.url) || '';
+  };
 
   // 🧑 MSG1A (§3.1) — l'avatar de 28, en bas du groupe, dans les fils a plusieurs
   // (GiftedChat ne l'appelle que pour la DERNIERE bulle d'un groupe).
@@ -5910,6 +6253,8 @@ function Conversation({ navigation, route }) {
     return false;
   }, [chatData, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
 
+  peutEcrireRef.current = canWrite;
+
   /**
    * Render custom actions (attachment buttons)
    * @returns {React.ReactNode} Rendered actions component
@@ -5980,11 +6325,17 @@ function Conversation({ navigation, route }) {
       <View style={Spaces.gap[8]}>
         {hasMediaDraft ? (
           <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
             Spaces.padding[8],
             Alignments.row,
             Alignments.alignCenter,
-            { borderRadius: 14, gap: 10 },
+            {
+              // MSG1A (§3.3) — aux couleurs du champ de saisie (il etait clair sur fond nuit).
+              backgroundColor: Colors.primary800,
+              borderColor: Colors.primary700,
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 10,
+            },
           ]}
           >
             <Image
@@ -5997,12 +6348,12 @@ function Conversation({ navigation, route }) {
               }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary700 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.previewTitle', 'Photo prête à envoyer')}
               </Text>
               <Text
                 numberOfLines={2}
-                style={[Fonts.p4, { color: Colors.neutral700 }]}
+                style={[Fonts.p4, { color: withAlpha(Colors.neutral00, 0.7) }]}
               >
                 {composerText?.trim()
                   ? t('conversation.attachments.previewWithCaption', 'La légende sera envoyée avec la photo.')
@@ -6027,30 +6378,20 @@ function Conversation({ navigation, route }) {
           </View>
         ) : null}
 
-        {hasReplyPreview ? (
-          <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[8],
-            Alignments.row,
-            Alignments.justifySpaceBetween,
-            Alignments.alignCenter,
-          ]}
-          >
-            <View>
-              <Text style={[Fonts.p3Bold, Fonts.primary700]}>
-                {i18n.t('conversation.reply.replyingTo', 'Répondre a')}
-                {' '}
-                {replyingTo.user?.name}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral700]}>{replyingTo.text}</Text>
-            </View>
-            <Button
-              onPress={() => setReplyingTo(null)}
-              title="X"
-              variant="SecondaryLight"
+        {/* 💬 MSG1A (§3.3) — la barre « reponse en cours » du pack, au-dessus de la saisie. */}
+        {hasReplyPreview ? (() => {
+          const auteur = auteurDuMessageCite(replyingTo, userData?.documentId || '', t);
+          const extrait = extraitDuMessageCite(replyingTo, t);
+          return (
+            <BarreDeReponse
+              couleur={couleurDuNom(Colors, auteur.identifiant)}
+              icone={extrait.icone}
+              nom={auteur.nom}
+              onFermer={() => setReplyingTo(null)}
+              texte={extrait.texte}
             />
-          </View>
-        ) : null}
+          );
+        })() : null}
       </View>
     );
   };
@@ -6073,7 +6414,7 @@ function Conversation({ navigation, route }) {
     if (typingUsers.size > 0) {
       // MSG1A (§3.1) — dans un fil a plusieurs, l'avatar de 28 de celui qui ecrit.
       const premierQuiEcrit = Array.isArray(chatData?.participants)
-        ? chatData.participants.find((membre) => (
+        ? chatData.participants.find((/** @type {any} */ membre) => (
           String(membre?.documentId || '') === String(Array.from(typingUsers)[0] || '')
         ))
         : null;
@@ -6165,17 +6506,21 @@ function Conversation({ navigation, route }) {
    */
   const renderInputToolbar = (props) => {
     if (!canWrite) {
+      // 🔒 MSG1A (§3.11) — la barre opaque du pack, avec un cadenas, a la place de la saisie.
       return (
-        <View style={[
-          ApplicationStyle.borderRadius32,
-          ApplicationStyle.backgroundColor.neutral100,
-          Spaces.padding[16],
-          Alignments.alignCenter,
-          Alignments.justifyCenter,
-          { marginBottom: composerBottomInset },
-        ]}
+        <View
+          style={[
+            stylesDuFil.barreLectureSeule,
+            {
+              backgroundColor: Colors.chatBar,
+              borderTopColor: withAlpha(Colors.neutral00, 0.06),
+              paddingBottom: 16 + composerBottomInset,
+            },
+          ]}
+          testID="conversation-lecture-seule"
         >
-          <Text style={[Fonts.p2, Fonts.neutral500]}>
+          <GlyphIcon color={withAlpha(Colors.neutral00, 0.72)} name="lock" size={16} />
+          <Text style={[stylesDuFil.barreLectureSeuleTexte, { color: withAlpha(Colors.neutral00, 0.72) }]}>
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
         </View>
@@ -6314,22 +6659,30 @@ function Conversation({ navigation, route }) {
 
   /**
    * L'avertissement de lecture par le dirigeant, en tête du fil.
-   * @returns {React.ReactNode} La ligne, ou rien si le fil n'a pas de club.
+   *
+   * 🔔 MSG1A (§3.10, decision d'Adel `avertissement B`, 07/10) — ce n'est plus un bandeau
+   * FIXE sous l'en-tete : c'est une notice centree au tout debut de l'historique, qui
+   * defile avec les messages (comme la mention de chiffrement de WhatsApp). Elle est posee
+   * en pied de la liste INVERSEE (= en haut du fil), et seulement quand le plus ancien
+   * message est charge : plus haut, il n'y a plus rien.
+   * @returns {React.ReactElement | null} La notice, ou rien si le fil n'a pas de club.
    */
   const renderClubReadNotice = () => {
     if (!clubReadNoticeClubId) return null;
 
     return (
-      <View style={[
-        Alignments.row,
-        Alignments.alignCenter,
-        Spaces.paddingHorizontal[16],
-        Spaces.paddingVertical[8],
-        { backgroundColor: 'rgba(255,255,255,0.06)' },
-      ]}
+      <View
+        style={[
+          stylesDuFil.noticeDeTete,
+          {
+            backgroundColor: withAlpha(Colors.chatBackground, 0.9),
+            borderColor: withAlpha(Colors.primary500, 0.22),
+          },
+        ]}
       >
+        <GlyphIcon color={Colors.primary500} name="information" size={16} />
         <Text
-          style={[Fonts.p4, { color: Colors.neutral300, flex: 1 }]}
+          style={[stylesDuFil.noticeDeTeteTexte, { color: withAlpha(Colors.neutral00, 0.82) }]}
           testID="conversation-club-read-notice"
         >
           {t(
@@ -6340,6 +6693,7 @@ function Conversation({ navigation, route }) {
       </View>
     );
   };
+  const noticeDeTete = hasNextPage ? null : renderClubReadNotice();
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
@@ -6440,15 +6794,15 @@ function Conversation({ navigation, route }) {
       });
   } else if (!sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil) {
     const prenomsDesMembres = (Array.isArray(chatData?.participants) ? chatData.participants : [])
-      .filter((membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
-      .map((membre) => String(membre?.firstname || '').trim())
+      .filter((/** @type {any} */ membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
+      .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
       .filter(Boolean)
       .slice(0, 30);
     if (prenomsDesMembres.length > 0) {
       sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${t('conversation.header.you', 'Vous')}`;
     }
   }
-  const peutOuvrirLaGestionDuGroupe = isGroupAdmin;
+  const peutOuvrirLaGestionDuGroupe = isGroupChat;
 
   return (
     <ImageBackground
@@ -6561,14 +6915,14 @@ function Conversation({ navigation, route }) {
       <View style={[Alignments.fill]}>
         {/* MSG1A (§3.1) — le motif sportif en filigrane (cyan a 8 %, tuile de 240), derriere
             le fil seulement : ni l'en-tete ni la saisie ne le portent. */}
-        <Image
-          pointerEvents="none"
-          resizeMode="repeat"
-          source={Images.motifDuFil}
-          style={StyleSheet.absoluteFill}
-          testID="conversation-motif"
-        />
-        {renderClubReadNotice()}
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <Image
+            resizeMode="repeat"
+            source={Images.motifDuFil}
+            style={StyleSheet.absoluteFill}
+            testID="conversation-motif"
+          />
+        </View>
         {renderLeagueNegotiationBanner()}
         {/* COLL-C4A2 — club détaché : « Tu ne fais plus partie de ce canal » (écran 6). */}
         {filDeLaVille.estQuitte ? (
@@ -6623,12 +6977,16 @@ function Conversation({ navigation, route }) {
             inverted
             // FINITIONS13-COLL (04/10) — un fil VIDE occupe toute la hauteur : sa phrase se centre
             // (tournée T13, C2_3a : collée en bas). Avec des messages, rien ne change.
-            listViewProps={messagesAvecReactions.length
-              ? { onScrollToIndexFailed: handleScrollToIndexFailed }
-              : {
-                contentContainerStyle: { flexGrow: 1 },
-                onScrollToIndexFailed: handleScrollToIndexFailed,
-              }}
+            listViewProps={{
+              ...(messagesAvecReactions.length
+                ? { onScrollToIndexFailed: handleScrollToIndexFailed }
+                : {
+                  contentContainerStyle: { flexGrow: 1 },
+                  onScrollToIndexFailed: handleScrollToIndexFailed,
+                }),
+              // 🔔 MSG1A (§3.10) — la notice du dirigeant, en haut du fil (pied de la liste inversee).
+              ...(noticeDeTete ? { ListFooterComponent: noticeDeTete } : {}),
+            }}
             loadEarlier={hasNextPage}
             locale={localeDesFormats().slice(0, 2)}
             messageContainerRef={messageContainerRef}
@@ -6639,7 +6997,7 @@ function Conversation({ navigation, route }) {
             onSend={onSend}
             // MSG1A (§3.1) — avatar de 28 en bas des groupes (aucun en tete-a-tete), puces
             // de date, notices discretes, et « revenir en bas » au-dela de 160.
-            imageStyle={{ left: stylesDuFil.avatarVide }}
+            imageStyle={/** @type {any} */ ({ left: stylesDuFil.avatarVide })}
             isScrollToBottomEnabled
             renderAvatar={estUnTeteATete(chatData?.type) ? null : renderAvatarDuFil}
             renderBubble={renderBubble}
@@ -6733,73 +7091,53 @@ function Conversation({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Menu Modal */}
-        <BottomModal
-          close={() => setIsMenuVisible(false)}
-          isVisible={isMenuVisible}
-        >
-          <View style={[Spaces.gap[16], Spaces.marginTop[32]]}>
-            {showCancelButton && (
-            <Button
-              onPress={() => {
+        {/* ⋮ MSG1A (§3.16) — le petit menu du pack. Memes entrees qu'avant (« Annuler le
+            match », le groupe, « Signaler », « Bloquer » en tete-a-tete), sans « Fermer ». */}
+        <MenuDuFil
+          entrees={[
+            ...(isGroupChat ? [{
+              cle: 'infos-du-groupe',
+              icone: 'users',
+              libelle: t('conversation.groupInfo.title', 'Infos du groupe'),
+              onPress: handleOpenGroupManagement,
+            }] : []),
+            ...(showCancelButton ? [{
+              cle: 'annuler-le-match',
+              danger: true,
+              icone: 'xmark',
+              libelle: t('common.cancelMatch', 'Annuler le match'),
+              onPress: () => {
                 setIsMenuVisible(false);
                 setSafeTimeout(() => {
                   handleCancelMatch();
                 }, 300);
-              }}
-              title={t('common.cancelMatch', 'Annuler le match')}
-              variant="Secondary"
-            />
-            )}
-
-            {isGroupAdmin && (
-            <Button
-              onPress={handleOpenGroupManagement}
-              title={t('conversation.actions.manageGroup', 'Gérer le groupe')}
-              variant="SecondaryLight"
-            />
-            )}
-
-            <Button
-              onPress={() => {
-                setIsMenuVisible(false);
-                setSafeTimeout(() => {
-                  showInfoBanner(
-                    i18n.t(
-                      'conversation.report.contactSupport',
-                      'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.', // eslint-disable-line max-len
-                    ),
-                    i18n.t('conversation.report.title', 'Signaler'),
-                  );
-                }, 300);
-              }}
-              title={t('conversation.actions.report', 'Signaler')}
-              variant="SecondaryLight"
-            />
-
-            {/* 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde.
-                Il n apparait QUE pour un tete-a-tete : un fil de club, d equipe
-                ou de groupe n a personne a bloquer, et la discussion a trois du
-                mineur avec son parent n en a pas non plus (K5). */}
-            {otherParticipantId ? (
-              <Button
-                disabled={isBlockingUser || isUnblockingUser}
-                isLoading={isBlockingUser || isUnblockingUser}
-                onPress={handleToggleBlockFromMenu}
-                title={isOtherParticipantBlocked
-                  ? t('userBlock.actions.unblock', 'Débloquer cette personne')
-                  : t('userBlock.actions.block', 'Bloquer cette personne')}
-                variant="SecondaryLight"
-              />
-            ) : null}
-
-            <Button
-              onPress={() => setIsMenuVisible(false)}
-              title={t('common.cancel', 'Fermer')}
-              variant="PrimaryLight"
-            />
-          </View>
-        </BottomModal>
+              },
+            }] : []),
+            // 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde. Il n apparait QUE
+            // pour un tete-a-tete : un fil de club, d equipe ou de groupe n a personne a bloquer,
+            // et la discussion a trois du mineur avec son parent n en a pas non plus (K5).
+            ...(otherParticipantId && compteQuiPeutBloquer ? [{
+              cle: 'bloquer',
+              danger: !isOtherParticipantBlocked,
+              desactive: isBlockingUser || isUnblockingUser,
+              icone: 'ban',
+              libelle: isOtherParticipantBlocked
+                ? t('userBlock.actions.unblock', 'Débloquer cette personne')
+                : t('userBlock.actions.block', 'Bloquer cette personne'),
+              onPress: handleToggleBlockFromMenu,
+            }] : []),
+            {
+              cle: 'signaler',
+              danger: true,
+              icone: 'flag',
+              libelle: t('conversation.actions.report', 'Signaler'),
+              onPress: handleReportFromMenu,
+            },
+          ]}
+          haut={top + 56}
+          onClose={() => setIsMenuVisible(false)}
+          visible={isMenuVisible}
+        />
 
         <GlobalPromptModal
           body={conversationPrompt?.body}
@@ -6812,98 +7150,23 @@ function Conversation({ navigation, route }) {
           visible={Boolean(conversationPrompt)}
         />
 
-        <BottomModal
-          close={() => setIsGroupManagementVisible(false)}
-          isVisible={isGroupManagementVisible}
-        >
-          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[12]]}>
-            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
-              {t('conversation.group.title', 'Gestion du groupe')}
-            </Text>
-
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t('conversation.group.nameLabel', 'Nom du groupe')}
-            </Text>
-            <TextInput
-              onChangeText={setGroupNameDraft}
-              placeholder={t('conversation.group.namePlaceholder', 'Nom du groupe')}
-              placeholderTextColor={Colors.neutral300}
-              style={[
-                Fonts.p2,
-                ApplicationStyle.borderRadius16,
-                Spaces.paddingHorizontal[16],
-                Spaces.paddingVertical[12],
-                {
-                  borderColor: Colors.primary500,
-                  borderWidth: 1,
-                  color: Colors.neutral00,
-                },
-              ]}
-              value={groupNameDraft}
-            />
-
-            <Button
-              disabled={isGroupMutationLoading}
-              isLoading={isGroupMutationLoading}
-              onPress={handleSaveGroupName}
-              title={t('conversation.group.saveName', 'Enregistrer le nom')}
-              variant="SecondaryLight"
-            />
-
-            <Button
-              disabled={isGroupMutationLoading}
-              onPress={handleAddGroupMembers}
-              title={t('conversation.group.addMembers', 'Ajouter des membres')}
-              variant="SecondaryLight"
-            />
-
-            <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
-              {t('conversation.group.members', 'Membres')}
-            </Text>
-            {(Array.isArray(chatData?.participants) ? chatData.participants : []).map((participant) => {
-              const participantId = String(participant?.documentId || participant?.id || '').trim();
-              if (!participantId) return null;
-              const isSelf = participantId === String(userData?.documentId || '');
-              const isMemberAdmin = groupAdminIds.includes(participantId);
-              const participantName = `${participant?.firstname || ''} ${participant?.lastname || ''}`.trim() || participant?.username || participant?.phoneNumber || participantId;
-
-              return (
-                <View
-                  key={`group-member:${participantId}`}
-                  style={[
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Alignments.justifyBetween,
-                    Spaces.paddingVertical[8],
-                  ]}
-                >
-                  <View style={Alignments.fill}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>{participantName}</Text>
-                    <Text style={[Fonts.p4, Fonts.neutral300]}>
-                      {isMemberAdmin ? t('conversation.group.admin', 'Admin') : t('conversation.group.member', 'Membre')}
-                    </Text>
-                  </View>
-                  {!isSelf && (
-                    <TouchableOpacity
-                      disabled={isGroupMutationLoading}
-                      onPress={() => handleRemoveGroupMember(participant)}
-                    >
-                      <Text style={[Fonts.p3Bold, { color: Colors.warning500 || Colors.primary500 }]}>
-                        {t('conversation.group.remove', 'Retirer')}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
-
-            <Button
-              onPress={() => setIsGroupManagementVisible(false)}
-              title={t('common.close', 'Fermer')}
-              variant="PrimaryLight"
-            />
-          </View>
-        </BottomModal>
+        <InfosDuGroupe
+          adminIds={groupAdminIds}
+          chat={chatData}
+          estAdmin={isGroupAdmin}
+          meId={String(userData?.documentId || '')}
+          occupe={isGroupMutationLoading}
+          onAjouter={handleAddGroupMembers}
+          onBasculerAdmin={handleToggleGroupAdmin}
+          onClose={() => setIsGroupManagementVisible(false)}
+          onEnvoyerUnMessage={handleMessageGroupMember}
+          onQuitter={handleLeaveGroup}
+          onRenommer={handleSaveGroupName}
+          onRetirer={handleRemoveGroupMember}
+          onSignaler={handleReportFromMenu}
+          resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+          visible={isGroupManagementVisible && isGroupChat}
+        />
 
         <BottomModal
           close={() => setIsAttachmentMenuVisible(false)}
@@ -6916,18 +7179,12 @@ function Conversation({ navigation, route }) {
               tuile tronquee). Pose en en-tete, il ne defile plus jamais —
               quelle que soit la hauteur du contenu.
             */
+            // MSG1A (§3.5) — l'en-tete du pack : « Ajouter » 18, sous-titre 13 a 60 %, a gauche.
             <View>
-              <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              <Text style={[stylesDuFil.titreDeFeuille, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.title', 'Ajouter')}
               </Text>
-              <Text
-                style={[
-                  Fonts.p3,
-                  Fonts.neutral300,
-                  Fonts.textCenter,
-                  Spaces.marginTop[4],
-                ]}
-              >
+              <Text style={[stylesDuFil.sousTitreDeFeuille, { color: withAlpha(Colors.neutral00, 0.6) }]}>
                 {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
               </Text>
             </View>
@@ -7181,10 +7438,33 @@ function Conversation({ navigation, route }) {
           memes libelles — seul leur cadre a change, pour qu elles partagent un
           unique calque avec la pilule plutot que de se superposer a elle.
         */}
+        {demandeConvocation ? (
+          <ConvocationWizardDiffere
+            chatId={chatId}
+            eventSummary={demandeConvocation.eventSummary}
+            initialEventId={demandeConvocation.eventId}
+            mode={demandeConvocation.mode}
+            onClose={() => setDemandeConvocation(null)}
+            startStep={demandeConvocation.startStep}
+            teamId={getTeamIdOfChat(chatData)}
+            teamName={chatData?.team?.name || ''}
+            visible
+          />
+        ) : null}
+
+        <FeuilleDAdresse
+          adresse={adresseOuverte}
+          onClose={() => setAdresseOuverte(null)}
+          onCopy={handleCopierAdresse}
+        />
         <MessageReactionOverlay
           anchor={reactionAnchor}
           canCopy={canCopySelectedMessage}
           canEdit={canEditSelectedMessage}
+          canEditComposition={canEditSelectedComposition}
+          // MSG1A (§3.2) — canal en lecture seule : pas de « Repondre » (il ouvrait une
+          // reponse sans champ de saisie).
+          canReply={canWrite}
           isMine={isSelectedMessageOwn}
           myEmoji={myEmojiOnSelectedMessage}
           onAction={handleMessageAction}

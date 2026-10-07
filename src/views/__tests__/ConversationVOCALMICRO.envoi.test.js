@@ -342,6 +342,12 @@ const BROUILLON = {
   waveform: [4, 20, 12],
 };
 
+// ⏱️ MSG1A — le PREMIER cas charge tout l'ecran de conversation (plus de 7 000 lignes et la
+// messagerie) dans son budget de temps : de 5,5 s (machine calme) a 28 s (deux autres lots en
+// portes) mesures le 07/10, au-dela des 5 s par defaut. Meme regle que ConversationWebCOMPOCARTE
+// et ConversationWebCOLLC4A3, avec la marge de la mesure la plus lente.
+jest.setTimeout(60000);
+
 describe('VOCAL-MICRO — le vocal emporte le diagnostic de son micro jusqu\'en base', () => {
   beforeEach(() => {
     mockGiftedRenders.length = 0;

@@ -112,12 +112,16 @@ const casDuSwitch = (valeur) => (noeud) => noeud.type === 'SwitchCase'
 
 describe('ICÔNES — chaque endroit demande la bonne icône', () => {
   it('2 · la pastille qui apparaît en glissant un message montre « répondre »', () => {
+    // MSG1A (§3.3) — le rond du pack superpose DEUX disques (gris, puis cyan au seuil) :
+    // la meme icone « repondre » sur chacun.
     expect(iconesAutourDe('src/views/Conversation.js', constante('renderReplySwipeAction')))
-      .toEqual(['reply']);
+      .toEqual(['reply', 'reply']);
   });
 
   it('3 · l avatar d une conversation de ligue est un trophée', () => {
-    expect(iconesAutourDe('src/views/Messaging.js', casDuSwitch('league_match')))
+    // MSG1A (§3.13) — l'aiguillage des avatars de fil a quitte `Messaging.js` pour
+    // `AvatarDuFil.js` (partage par la liste et l'en-tete du fil) : le temoin le suit.
+    expect(iconesAutourDe('src/views/chat/AvatarDuFil.js', casDuSwitch('league_match')))
       .toEqual(['trophy']);
   });
 

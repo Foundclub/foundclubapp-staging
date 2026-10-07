@@ -121,6 +121,7 @@ const DOCUMENT_CHOISI = {
   type: 'application/pdf',
   uri: 'file:///data/user/0/app/cache/reglement-interieur.pdf',
 };
+const AVEC_PROGRESSION = expect.objectContaining({ onProgress: expect.any(Function) });
 const PHOTO_CHOISIE = { assets: [{ fileName: 'affiche.jpg', type: 'image/jpeg', uri: 'file:///affiche.jpg' }] };
 
 const aplatir = (/** @type {any} */ enfants) => {
@@ -165,7 +166,8 @@ describe('COLL-FIX-PLANNING — la piece jointe d une actualite (T9_C18)', () =>
       localCopy: true,
       mode: 'import',
     }));
-    expect(uploadActualiteFile).toHaveBeenCalledWith([DOCUMENT_CHOISI]);
+    // VILLE-T18D : l'envoi reçoit aussi de quoi dire sa progression à l'écran.
+    expect(uploadActualiteFile).toHaveBeenCalledWith([DOCUMENT_CHOISI], AVEC_PROGRESSION);
     expect(textes(arbre)).toContain('reglement-interieur.pdf');
     expect(textes(arbre)).not.toContain(ECHEC);
   });
@@ -182,7 +184,7 @@ describe('COLL-FIX-PLANNING — la piece jointe d une actualite (T9_C18)', () =>
     await ajouter(arbre, 'document');
     expect(textes(arbre)).toContain(ECHEC);
     await ajouter(arbre, 'photos');
-    expect(uploadActualiteFile).toHaveBeenLastCalledWith(PHOTO_CHOISIE);
+    expect(uploadActualiteFile).toHaveBeenLastCalledWith(PHOTO_CHOISIE, AVEC_PROGRESSION);
     expect(textes(arbre)).not.toContain(ECHEC);
   });
 

@@ -39,6 +39,7 @@ function SquadLocationStep({
         <View style={{ marginBottom: 30 }}>
           <AutocompleteAddressInput
             address={data.address}
+            permettreLieuSurCarte
             placeholder={t('squadLocationStep.placeholder', 'Rechercher une ville...')}
             setAddress={(addr) => {
               updateData('address', addr);

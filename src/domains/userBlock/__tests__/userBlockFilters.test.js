@@ -2,6 +2,7 @@ import {
   hideBlockedChats,
   hideBlockedMessages,
   isOneToOneChatWithBlockedUser,
+  peutBloquer,
   resolveOtherParticipantId,
 } from '../userBlockFilters';
 
@@ -156,5 +157,23 @@ describe('BLOQUER · témoin C — le filtre est BRANCHÉ sur la liste des discu
     const source = lireSource('views/Conversation.js');
 
     expect(source).toContain('hideBlockedMessages(');
+  });
+});
+
+describe('VILLE-NOTIFS — qui peut bloquer (et donc lire « mes blocages »)', () => {
+  test('V1 — un compte « Ville seule » (role Authenticated) : non — le serveur lui repond 403', () => {
+    expect(peutBloquer({ documentId: 'mairie', role: { name: 'Authenticated' } })).toBe(false);
+    expect(peutBloquer({ documentId: 'mairie', role: { type: 'authenticated' } })).toBe(false);
+  });
+
+  test('V2 — un role de club : oui', () => {
+    ['Joueur', 'Entraineur', 'Dirigeant', 'Parent'].forEach((nom) => {
+      expect(peutBloquer({ documentId: 'x', role: { name: nom } })).toBe(true);
+    });
+  });
+
+  test('V3 — role absent de la charge : comportement d avant (K3, exigence d Apple) ; sans compte : non', () => {
+    expect(peutBloquer({ documentId: 'x' })).toBe(true);
+    expect(peutBloquer(null)).toBe(false);
   });
 });

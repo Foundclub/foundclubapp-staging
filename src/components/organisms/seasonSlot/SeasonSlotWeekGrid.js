@@ -97,8 +97,10 @@ function SeasonSlotWeekGrid({
           <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
             {weekdayName(jour, { short: true })}
           </Text>
+          {/* VILLE-T18A (T18, site SITE_G37b) — panneau ouvert, colonne de ~66 px : sur UNE ligne,
+              « complet 18:00 – 19:30 » devenait « comple… ». Il passe à la ligne, centré. */}
           {complet[0] ? (
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.warning500]}>
+            <Text numberOfLines={3} style={[Fonts.p3, Fonts.warning500, { textAlign: 'center' }]}>
               {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
                 heures: timeRange(fromMinutes(complet[0].start), fromMinutes(complet[0].end)),
                 ...SANS_ECHAPPEMENT,

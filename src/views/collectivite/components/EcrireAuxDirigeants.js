@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { CONVERSATION_CLUB } from '@/domains/collectivite/collectiviteCanaux';
+import { nomQuiSElide } from '@/domains/collectivite/collectiviteDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -59,13 +60,14 @@ const useNavigationSiPresente = () => {
  * object ») : écran rouge en développement, plantage en production. L'écran qui le pose dans une
  * fenêtre lui passe donc SA navigation (`navigation`) ; sans navigation du tout, rien.
  * @param {{ club: { documentId?: string, name?: string } | null | undefined,
- *   collectiviteId: string | null | undefined, compact?: boolean, demanderFiche?: boolean,
- *   navigation?: { navigate: Function } | null, testID?: string }} props
+ *   collectiviteId: string | null | undefined, compact?: boolean, court?: boolean,
+ *   demanderFiche?: boolean, navigation?: { navigate: Function } | null, testID?: string }} props
+ *   `court` : le libellé court de « compléter sa fiche » (colonne du tableau, planche 36).
  * @returns {import('react').ReactElement | null} Le bouton, ou rien sans club, Ville ou navigation.
  */
 function EcrireAuxDirigeants({
-  club, collectiviteId, compact = false, demanderFiche = false, navigation: navigationRecue = null,
-  testID = 'ecrire-aux-dirigeants',
+  club, collectiviteId, compact = false, court = false, demanderFiche = false,
+  navigation: navigationRecue = null, testID = 'ecrire-aux-dirigeants',
 }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
@@ -135,17 +137,25 @@ function EcrireAuxDirigeants({
   if (premierMessage !== null) {
     return (
       <View style={{ alignSelf: 'stretch', gap: 8 }} testID={`${testID}-saisie`}>
+        {/* VILLE-T18C (07/10, tournée T18 G62) : « d’AS Montrivage », et la mairie VOUVOYÉE
+            (ce bouton est celui de la Ville : fiche d'un club, clubs rattachés, son planning). */}
         <Text style={[Fonts.p2, Fonts.neutral00]}>
-          {t(
-            'collectiviteCanaux.privee.premierMessageTitre',
-            'Premier message aux dirigeants de {{club}}',
-            { club: club.name || '', ...SANS_ECHAPPEMENT },
-          )}
+          {nomQuiSElide(club.name)
+            ? t(
+              'collectiviteCanaux.privee.premierMessageTitreElide',
+              'Premier message aux dirigeants d’{{club}}',
+              { club: club.name || '', ...SANS_ECHAPPEMENT },
+            )
+            : t(
+              'collectiviteCanaux.privee.premierMessageTitre',
+              'Premier message aux dirigeants de {{club}}',
+              { club: club.name || '', ...SANS_ECHAPPEMENT },
+            )}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t(
             'collectiviteCanaux.privee.premierMessageAide',
-            'La conversation s’ouvre quand tu envoies ce message.',
+            'La conversation s’ouvre quand vous envoyez ce message.',
           )}
         </Text>
         <Input
@@ -175,8 +185,18 @@ function EcrireAuxDirigeants({
     );
   }
 
+  let titre = t('collectiviteCanaux.privee.ecrire', 'Écrire aux dirigeants');
+  if (demanderFiche) {
+    // VILLE-T18C (07/10, tournée T18 SITE_G60) : dans la colonne du tableau, le libellé de la
+    // planche 36 ; le libellé entier y débordait de la carte.
+    titre = court
+      ? t('collectiviteCanaux.privee.demanderFicheCourt', 'Demander de compléter')
+      : t('collectiviteCanaux.privee.demanderFiche', 'Demander au club de compléter sa fiche');
+  }
+
   return (
-    <View style={{ alignSelf: compact ? 'flex-start' : 'stretch', gap: 4 }}>
+    // VILLE-T18C : jamais plus large que sa place (une colonne de tableau, une carte).
+    <View style={{ alignSelf: compact ? 'flex-start' : 'stretch', gap: 4, maxWidth: '100%' }}>
       <Button
         icon={demanderFiche ? undefined : 'send'}
         isLoading={enCours}
@@ -184,9 +204,7 @@ function EcrireAuxDirigeants({
         onPress={ecrire}
         size={compact ? 'sm' : undefined}
         testID={testID}
-        title={demanderFiche
-          ? t('collectiviteCanaux.privee.demanderFiche', 'Demander au club de compléter sa fiche')
-          : t('collectiviteCanaux.privee.ecrire', 'Écrire aux dirigeants')}
+        title={titre}
         variant={compact ? 'SecondaryLight' : 'Primary'}
       />
       {ligneErreur}

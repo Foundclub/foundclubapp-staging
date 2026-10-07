@@ -1,6 +1,7 @@
 import {
   ensureSearchMapGeolocationPermission,
   getCurrentSearchMapPosition,
+  isSearchMapGeolocationAlreadyGranted,
   isSearchMapGeolocationSupported,
 } from './searchMapGeolocationSource';
 
@@ -32,6 +33,48 @@ const SAFETY_NET_MS = DEFAULT_GEOLOCATION_OPTIONS.timeout + 2000;
 
 export const canUseSearchMapGeolocation = () => isSearchMapGeolocationSupported();
 
+// La lecture de la position elle-même, partagée par la DEMANDE (« Autour de moi ») et par la
+// lecture « si déjà accordée » (ADRESSE-CARTE). Elle ne lève jamais : `null` en cas d'échec.
+const readSearchMapPosition = () => new Promise((resolve) => {
+  let settled = false;
+  /** @type {any} */
+  let safetyNet;
+
+  const settle = (/** @type {{ lat: number, lng: number } | null} */ value) => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    clearTimeout(safetyNet);
+    resolve(value);
+  };
+
+  safetyNet = setTimeout(() => settle(null), SAFETY_NET_MS);
+
+  // Le `try` sert à ANNULER le minuteur quand la source lève : sans lui, la
+  // promesse serait bien rejetée puis rattrapée plus bas, mais le minuteur
+  // survivrait 12 secondes pour rien.
+  try {
+    getCurrentSearchMapPosition(
+      (/** @type {any} */ position) => {
+        const lat = position?.coords?.latitude;
+        const lng = position?.coords?.longitude;
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          settle(null);
+          return;
+        }
+
+        settle({ lat, lng });
+      },
+      () => settle(null),
+      DEFAULT_GEOLOCATION_OPTIONS,
+    );
+  } catch (error) {
+    settle(null);
+  }
+});
+
 /**
  * Request the current device position for the search map.
  * Keeps the renderer detached from direct geolocation access details.
@@ -48,45 +91,28 @@ export const requestCurrentSearchMapLocation = async () => {
       return null;
     }
 
-    return await new Promise((resolve) => {
-      let settled = false;
-      /** @type {any} */
-      let safetyNet;
+    return await readSearchMapPosition();
+  } catch (error) {
+    return null;
+  }
+};
 
-      const settle = (/** @type {{ lat: number, lng: number } | null} */ value) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(safetyNet);
-        resolve(value);
-      };
+/**
+ * ADRESSE-CARTE (07/10) — la position SEULEMENT si l'autorisation est DÉJÀ accordée. Ne demande
+ * jamais rien : sans autorisation (ou sur iOS, qui ne sait pas le dire sans demander), `null`.
+ * @returns {Promise<{ lat: number, lng: number } | null>}
+ */
+export const readCurrentSearchMapLocationIfGranted = async () => {
+  try {
+    if (!isSearchMapGeolocationSupported()) {
+      return null;
+    }
 
-      safetyNet = setTimeout(() => settle(null), SAFETY_NET_MS);
+    if (!await isSearchMapGeolocationAlreadyGranted()) {
+      return null;
+    }
 
-      // Le `try` sert à ANNULER le minuteur quand la source lève : sans lui, la
-      // promesse serait bien rejetée puis rattrapée plus bas, mais le minuteur
-      // survivrait 12 secondes pour rien.
-      try {
-        getCurrentSearchMapPosition(
-          (/** @type {any} */ position) => {
-            const lat = position?.coords?.latitude;
-            const lng = position?.coords?.longitude;
-
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-              settle(null);
-              return;
-            }
-
-            settle({ lat, lng });
-          },
-          () => settle(null),
-          DEFAULT_GEOLOCATION_OPTIONS,
-        );
-      } catch (error) {
-        settle(null);
-      }
-    });
+    return await readSearchMapPosition();
   } catch (error) {
     return null;
   }
@@ -94,5 +120,6 @@ export const requestCurrentSearchMapLocation = async () => {
 
 export default {
   canUseSearchMapGeolocation,
+  readCurrentSearchMapLocationIfGranted,
   requestCurrentSearchMapLocation,
 };

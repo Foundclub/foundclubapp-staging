@@ -93,17 +93,10 @@ export const countAdminCollectivitesByFilter = (rows) => {
   return { active: actives, all: lignes.length, inactive: lignes.length - actives };
 };
 
-/**
- * La lettre de l ecusson d une collectivite : celle de son nom propre, le DERNIER mot
- * (« Ville de Montrivage » → M, « Département du Var » → V, « Région Sud » → S).
- * @param {string} name - Le nom officiel.
- * @returns {string} Une lettre majuscule, ou « ? ».
- */
-export const collectiviteInitial = (name) => {
-  const mots = String(name || '').trim().split(/[\s'’-]+/).filter(Boolean);
-  const dernier = mots[mots.length - 1] || '';
-  return dernier ? dernier[0].toLocaleUpperCase('fr') : '?';
-};
+// VT18E (07/10) — la lettre de l ecusson d une collectivite : UNE regle, celle de
+// collectiviteDisplay (l initiale du nom propre ; le DERNIER mot donnait « E » pour « Ville de
+// Rouvres T18 essai »).
+export { collectiviteInitial } from '@/domains/collectivite/collectiviteDisplay';
 
 /**
  * Les demandes de la console, rangees comme ses onglets (lot COLL-CLUBS, serveur
@@ -117,11 +110,15 @@ export const collectiviteInitial = (name) => {
  */
 export const splitAdminInvitations = (rows) => {
   const lignes = Array.isArray(rows) ? rows : [];
+  // VILLE-INVITER-CLUB (07/10, « lien A ») : la Ville juge les demandes venues de son lien ; une
+  // demande qu'elle a REFUSÉE (`answer`) est traitée, plus « à rattacher ».
+  const traitee = (/** @type {any} */ ligne) => ligne?.status === 'attached'
+    || (ligne?.kind === 'attach_request' && ligne?.answer === 'refused');
   const enAttente = (/** @type {string} */ kind) => lignes
-    .filter((ligne) => ligne?.kind === kind && ligne?.status !== 'attached');
+    .filter((ligne) => ligne?.kind === kind && !traitee(ligne));
   return {
     attachRequests: enAttente('attach_request'),
-    done: lignes.filter((ligne) => ligne?.status === 'attached'),
+    done: lignes.filter(traitee),
     foundclub: enAttente('foundclub'),
   };
 };

@@ -61,6 +61,7 @@ function AdminClubWizardAddress({ navigation }) {
         <AutocompleteAddressInput
           address={state.addressOption || undefined}
           label={t('adminClubWizardAddress.addressLabel', 'Adresse principale')}
+          permettreLieuSurCarte
           placeholder={t('adminClubWizardAddress.addressPlaceholder', 'Rechercher une adresse')}
           setAddress={handleSelectAddress}
         />

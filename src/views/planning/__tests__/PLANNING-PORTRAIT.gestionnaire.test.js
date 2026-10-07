@@ -368,7 +368,7 @@ describe('PLANNING-PORTRAIT 3 — le bloc d un autre club, sur le planning de la
     expect(lu).toContain('US Ville B');
     expect(lu).toContain('Seniors B');
     expect(lu).toContain('lundi 5 octobre');
-    expect(lu).toContain('18:30 - 20:00');
+    expect(lu).toContain('18:30 – 20:00');
     expect(lu).toContain('contact@usvilleb.fr');
     expect(lu).toContain('0102030405');
     expect(getCollectiviteClubs).toHaveBeenCalledWith('ville-1');

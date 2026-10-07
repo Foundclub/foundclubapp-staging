@@ -11,13 +11,18 @@ import MetaDuMessage, { etatDEnvoi, heureDuMessage } from '../MetaDuMessage';
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, default: VueRN, Path: VueRN, Svg: VueRN,
+    __esModule: true,
+    default: VueRN,
+    Path: VueRN,
+    Svg: VueRN,
   };
 });
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
   }),
 }));
 
@@ -28,13 +33,16 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 /**
+ * Aide du temoin : `rendre`.
  * @param {any} element
  * @returns {any} L'arbre rendu.
  */
 const rendre = (element) => {
   /** @type {any} */
   let arbre;
-  act(() => { arbre = renderer.create(element); });
+  act(() => {
+    arbre = renderer.create(element);
+  });
   return arbre;
 };
 
@@ -48,13 +56,23 @@ const natifs = (arbre, testID) => arbre.root.findAll(
   (n) => n.props?.testID === testID && typeof n.type === 'string',
 );
 
-const fondDe = (arbre) => [].concat(natifs(arbre, 'cadre')[0].props.style)
-  .flat(Infinity).reduce((acc, s) => ({ ...acc, ...(s || {}) }), {}).backgroundColor;
+const fondDe = (arbre) => []
+  .concat(natifs(arbre, 'cadre')[0].props.style)
+  .flat(Infinity)
+  .reduce((acc, s) => ({ ...acc, ...(s || {}) }), {}).backgroundColor;
 
 describe('MSG1A — BulleDuFil', () => {
   test('C1 — la queue n est que sur la DERNIERE bulle du groupe', () => {
-    const derniere = rendre(<BulleDuFil estDernier testID="cadre"><Text>a</Text></BulleDuFil>);
-    const milieu = rendre(<BulleDuFil estDernier={false} testID="cadre"><Text>a</Text></BulleDuFil>);
+    const derniere = rendre(
+      <BulleDuFil estDernier testID="cadre">
+        <Text>a</Text>
+      </BulleDuFil>,
+    );
+    const milieu = rendre(
+      <BulleDuFil estDernier={false} testID="cadre">
+        <Text>a</Text>
+      </BulleDuFil>,
+    );
 
     expect(natifs(derniere, 'bulle-du-fil-queue')).toHaveLength(1);
     expect(natifs(milieu, 'bulle-du-fil-queue')).toHaveLength(0);
@@ -66,18 +84,27 @@ describe('MSG1A — BulleDuFil', () => {
   });
 
   test('C3 — le nom s affiche en tete, dans SA couleur, seulement s il est donne', () => {
-    const avecNom = rendre(<BulleDuFil couleurDuNom={colors.chatName1} nom="Karim Benali" testID="cadre" />);
+    const avecNom = rendre(
+      <BulleDuFil couleurDuNom={colors.chatName1} nom="Karim Benali" testID="cadre" />,
+    );
     const sansNom = rendre(<BulleDuFil testID="cadre" />);
 
     const nom = avecNom.root.findByProps({ testID: 'bulle-du-fil-nom' });
     expect(nom.props.children).toBe('Karim Benali');
-    expect([].concat(nom.props.style).flat(Infinity).find((s) => s?.color)?.color).toBe(colors.chatName1);
+    expect(
+      []
+        .concat(nom.props.style)
+        .flat(Infinity)
+        .find((s) => s?.color)?.color,
+    ).toBe(colors.chatName1);
     expect(sansNom.root.findAllByProps({ testID: 'bulle-du-fil-nom' })).toHaveLength(0);
   });
 
   test('C4 — le contenu passe APRES la queue (il est dessine par-dessus)', () => {
     const arbre = rendre(
-      <BulleDuFil estDernier testID="cadre"><Text testID="contenu">a</Text></BulleDuFil>,
+      <BulleDuFil estDernier testID="cadre">
+        <Text testID="contenu">a</Text>
+      </BulleDuFil>,
     );
     const enfants = natifs(arbre, 'cadre')[0].children;
     const ordre = enfants.map((n) => n.props?.testID).filter(Boolean);
@@ -100,8 +127,9 @@ describe('MSG1A — MetaDuMessage', () => {
 
   test('M3 — sur MES messages, le lecteur d ecran entend l heure et l etat', () => {
     const arbre = rendre(<MetaDuMessage estAMoi etat="lu" heure="14:32" />);
-    expect(arbre.root.findByProps({ testID: 'meta-du-message' }).props.accessibilityLabel)
-      .toBe('14:32, Lu');
+    expect(arbre.root.findByProps({ testID: 'meta-du-message' }).props.accessibilityLabel).toBe(
+      '14:32, Lu',
+    );
   });
 
   test('M4 — sur un message recu, l heure seule (pas de coches)', () => {

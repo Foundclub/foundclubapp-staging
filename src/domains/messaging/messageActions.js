@@ -22,13 +22,25 @@
  * trois seuls faits dont l ecran dispose au moment de l appui long — et c est
  * voulu : ces trois-la sont deja calcules par la vue, les recalculer ici
  * demanderait d y importer la moitie de la messagerie.
- * @type {{condition: (etat: {canCopy: boolean, canEdit: boolean, isMine: boolean}) => boolean,
- *   destructive?: boolean, fallback: string, key: string, labelKey: string}[]}
+ *
+ * 🎨 MSG1A (§3.2) — le menu du pack porte une ICONE par ligne (jeu FOUNDCLUB, `GlyphIcon`)
+ * et met en ROUGE Supprimer et Signaler (`alerte`). `destructive` garde son sens : seule
+ * « Supprimer » detruit. Et « Repondre » disparait quand on ne peut pas ecrire dans le fil
+ * (`canReply` faux, canal d'annonce) : il ouvrait une reponse sans champ de saisie.
+ *
+ * MESSAGERIE-1C — « Modifier la composition » (pack §3.2, §3.12) : sous la carte d'une
+ * convocation publiee, pour qui peut convoquer dans cette equipe (`canEditComposition`, calcule
+ * par la vue : entraineur de l'equipe ou super-admin).
+ * @type {{alerte?: boolean, condition: (etat: {canCopy: boolean, canEdit: boolean,
+ *   canEditComposition: boolean, canReply: boolean, isMine: boolean}) => boolean,
+ *   destructive?: boolean, fallback: string, icone: string, key: string,
+ *   labelKey: string}[]}
  */
 export const MESSAGE_ACTIONS = [
   {
-    condition: () => true,
+    condition: ({ canReply }) => canReply,
     fallback: 'Repondre',
+    icone: 'reply',
     key: 'reply',
     labelKey: 'conversation.actions.reply',
   },
@@ -36,6 +48,7 @@ export const MESSAGE_ACTIONS = [
     // Un message qui ne porte aucun texte — une piece jointe seule — n a rien a copier.
     condition: ({ canCopy }) => Boolean(canCopy),
     fallback: 'Copier',
+    icone: 'fileCopy',
     key: 'copy',
     labelKey: 'conversation.actions.copy',
   },
@@ -44,21 +57,33 @@ export const MESSAGE_ACTIONS = [
     // et sa composition est modifiable (un sondage ne l est pas).
     condition: ({ canEdit }) => Boolean(canEdit),
     fallback: 'Modifier',
+    icone: 'penSquare',
     key: 'edit',
     labelKey: 'conversation.actions.edit',
   },
   {
+    condition: ({ canEditComposition }) => Boolean(canEditComposition),
+    fallback: 'Modifier la composition',
+    icone: 'penSquare',
+    key: 'editComposition',
+    labelKey: 'conversationConvocation.longPressEdit',
+  },
+  {
+    alerte: true,
     condition: ({ isMine }) => Boolean(isMine),
     destructive: true,
     fallback: 'Supprimer',
+    icone: 'trashAlt',
     key: 'delete',
     labelKey: 'conversation.actions.delete',
   },
   {
     // 🔁 L EXACT MIROIR DE « Supprimer » : on ne signale pas son propre message.
     // Les deux ne peuvent donc jamais se montrer ensemble.
+    alerte: true,
     condition: ({ isMine }) => !isMine,
     fallback: 'Signaler',
+    icone: 'flag',
     key: 'report',
     labelKey: 'conversation.actions.report',
   },
@@ -66,8 +91,9 @@ export const MESSAGE_ACTIONS = [
 
 /**
  * Les actions a afficher pour un message donne.
- * @param {{canCopy?: boolean, canEdit?: boolean, isMine?: boolean}} [etat]
- *   Ce que la vue sait du message.
+ * @param {{canCopy?: boolean, canEdit?: boolean, canEditComposition?: boolean,
+ *   canReply?: boolean, isMine?: boolean}} [etat]
+ *   Ce que la vue sait du message. `canReply` absent vaut vrai (la regle d'avant MSG1A).
  * @returns {typeof MESSAGE_ACTIONS} Les actions retenues, dans l ordre
  *   d affichage.
  */
@@ -75,6 +101,8 @@ export const getMessageActions = (etat) => {
   const faits = {
     canCopy: Boolean(etat?.canCopy),
     canEdit: Boolean(etat?.canEdit),
+    canEditComposition: Boolean(etat?.canEditComposition),
+    canReply: etat?.canReply !== false,
     isMine: Boolean(etat?.isMine),
   };
 

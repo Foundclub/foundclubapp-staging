@@ -37,6 +37,7 @@ import { commonOptions } from '@/navigation/commonOptions';
 import { navigate as navigateRoot, navigationRef } from '@/navigation/navigationService';
 import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
+import useLiensEnAttente from '@/navigation/useLiensEnAttente';
 
 import {
   useMyCollectivites,
@@ -216,6 +217,14 @@ function PrivateNavigator() {
     userDataError,
     userDataLoading,
   ]);
+
+  // LIENS-APP (07/10) — le lien qui a lancé l'app (connecté), ou celui de la Ville ouvert sans
+  // compte : une fois l'accueil fait et la pile montée (pas pendant la lecture « Ville seule »),
+  // son écran s'empile. Jamais avant le contrôle d'âge d'un compte neuf.
+  useLiensEnAttente(
+    Boolean(userData?.documentId) && !userDataLoading && !userDataError && !villeEnLecture
+      && !firstPendingOnboardingRoute,
+  );
 
   const canShowView = useCallback((/** @type {string} */ routeName) => {
     const view = onboardingViews?.views?.find((item) => item.route === routeName);

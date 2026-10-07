@@ -279,3 +279,17 @@ describe('COLL-CLUBS — planche 2 : la fiche d’un club, côté mairie', () =>
     expect(refetch).toHaveBeenCalled();
   });
 });
+
+// VILLE-T18C (07/10) — ajout T18 du chef (19h25, SITE_G63) : « Cette saison : 2 acceptées, 38
+// refusées. » — une série refusée compte une fois par DATE (36 jeudis) ; l'écran « Chiffres » le
+// dit (« Une demande « chaque semaine » compte une fois par date. »), la fiche non. Même règle,
+// même phrase (même clef). ROUGE avant.
+describe('VILLE-T18C — la fiche d’un club dit comment se comptent ses demandes', () => {
+  it('sous « Cette saison », la même phrase que « Chiffres »', async () => {
+    const lus = textes(await monter());
+    const saison = lus.indexOf('Cette saison : 1 acceptée, 1 refusée.');
+    expect(saison).toBeGreaterThan(-1);
+    expect(lus[saison + 1])
+      .toBe('Une demande « chaque semaine » compte une fois par date.');
+  });
+});
