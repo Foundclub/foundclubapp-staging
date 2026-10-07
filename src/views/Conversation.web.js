@@ -93,7 +93,7 @@ import {
   useGetChatMessages,
   useGetChats,
 } from '@/services/chat/chatQueriesCompat';
-import { createChatMessage } from '@/services/chat/chatService'
+import { createChatMessage, leaveGroupChat } from '@/services/chat/chatService'
 import client from '@/services/client'
 import { useGetEvents } from '@/services/event/eventQueries'
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
@@ -3124,6 +3124,7 @@ function Conversation({ navigation, route }) {
   // Echap ferme les infos du groupe et ses confirmations.
   useEffect(() => {
     if (!infosOuvertes && !membreARetirer && !blocageAConfirmer) return undefined;
+    if (typeof document === 'undefined') return undefined;
     const surTouche = (/** @type {KeyboardEvent} */ event) => {
       if (event.key !== 'Escape') return;
       if (membreARetirer || departAConfirmer) {
@@ -3172,15 +3173,13 @@ function Conversation({ navigation, route }) {
   }, [chatId, membreARetirer, queryClient, removeGroupMember, t]);
 
   // MSG1W (§3.16, decision d Adel `quitter maintenant`) — QUITTER LE GROUPE, pour tout membre,
-  // par la route du serveur 1B (contrat MESSAGERIE-1B §5.6), puis retour a la liste.
-  // ponytail: l appel est ecrit ici ; le telephone l isole dans chatService.leaveGroupChat
-  // (MSG1A f2a86c52, pas encore dans staging). Sortie : a la recolte de 1A, appeler
-  // leaveGroupChat(chatId) a la place de cette ligne.
+  // par la fonction de service du telephone (chatService.leaveGroupChat, route 1B §5.6), puis
+  // retour a la liste.
   const quitterLeGroupe = useCallback(async () => {
     setDepartAConfirmer(false);
     if (!chatId) return;
     try {
-      await client.post(`/chats/${chatId}/leave`);
+      await leaveGroupChat(chatId);
       setInfosOuvertes(false);
       await queryClient.invalidateQueries({ queryKey: ['chats'] });
       navigation.navigate(RouteNames.Chat);

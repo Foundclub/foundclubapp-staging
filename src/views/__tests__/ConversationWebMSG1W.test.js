@@ -124,7 +124,11 @@ jest.mock('@/services/client', () => ({
   __esModule: true,
   default: { get: jest.fn(), post: jest.fn(), put: jest.fn() },
 }));
-jest.mock('@/services/chat/chatService', () => ({ createChatMessage: jest.fn() }));
+const mockQuitterLeGroupe = jest.fn(() => Promise.resolve({ left: true }));
+jest.mock('@/services/chat/chatService', () => ({
+  createChatMessage: jest.fn(),
+  leaveGroupChat: (/** @type {string} */ id) => mockQuitterLeGroupe(id),
+}));
 jest.mock('@/services/league/leagueMatchService', () => ({
   createLeagueProposal: jest.fn(),
   respondToLeagueProposal: jest.fn(),
@@ -485,6 +489,36 @@ describe('MSG1W §3.8 — Présent / Absent depuis la bulle d un événement', (
 
 // 📐 §3.16 (K4, ce que le pack oublie) — LES MESSAGES D UNE PERSONNE BLOQUEE. Le telephone les cache
 // (`hideBlockedMessages`) ; le site les montrait. Ils restent en base (signalement possible).
+// 📐 §3.16 — « Quitter le groupe » passe par la fonction de service PARTAGEE avec le telephone
+// (chatService.leaveGroupChat, MSG1A), plus par un appel ecrit dans l ecran (decision `1-A`).
+describe('MSG1W §3.16 — « Quitter le groupe » appelle la fonction partagée', () => {
+  test('un simple membre confirme : leaveGroupChat(id du fil), puis la liste', async () => {
+    mockQuitterLeGroupe.mockClear();
+    mockFil = {
+      documentId: CHAT_ID,
+      groupAdmins: [BRUNO],
+      groupName: 'Covoiturage du jeudi',
+      name: 'Covoiturage du jeudi',
+      participants: [MOI, BRUNO],
+      type: 'group',
+    };
+    const { arbre, navigation } = await monter();
+    const cliquer = async (/** @type {any} */ noeud) => {
+      await act(async () => { await noeud.props.onClick(); });
+    };
+    const boutonDeTexte = (/** @type {string} */ texte) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.type === 'button' && texteDe(n) === texte,
+    )[0];
+    await cliquer(parTestId(arbre, 'MSG1W-titre-du-fil')[0]);
+    await cliquer(boutonDeTexte('Quitter le groupe'));
+    await cliquer(boutonDeTexte('Quitter'));
+    expect(mockQuitterLeGroupe).toHaveBeenCalledWith(CHAT_ID);
+    const { default: client } = jest.requireMock('@/services/client');
+    expect(client.post).not.toHaveBeenCalledWith(`/chats/${CHAT_ID}/leave`);
+    expect(navigation.navigate).toHaveBeenCalledWith('Chat');
+  });
+});
+
 describe('MSG1W §3.16 — une personne bloquée ne s affiche plus dans le fil du site', () => {
   test('les messages de Bruno disparaissent une fois bloque ; les autres restent', async () => {
     mockMessagesDuFil = [
