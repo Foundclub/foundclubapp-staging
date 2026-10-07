@@ -1,11 +1,14 @@
 import { Image, Modal, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { photoUrl, photosEtDocuments } from '@/domains/collectivite/collectiviteActualites';
+import { photosEtDocuments, photoUrl } from '@/domains/collectivite/collectiviteActualites';
 
 import CollectiviteActualites from '../CollectiviteActualites';
 import ActualiteCarte, { PieceJointeActualite } from '../components/ActualiteCarte';
-import { BandeauActualiteMairie, BandeauActualiteMembre } from '../components/BandeauActualiteVille';
+import {
+  BandeauActualiteMairie,
+  BandeauActualiteMembre,
+} from '../components/BandeauActualiteVille';
 import BlocDeLaVille from '../components/BlocDeLaVille';
 
 // 📷 VILLE-T18D (07/10/2026) — T17 défaut 6, revu par la T18 au point 2 (captures G71b, G72, M03) :
@@ -131,7 +134,11 @@ const PAYSAGE = {
   width: 2048,
 };
 const PDF = {
-  ext: '.pdf', id: 12, mime: 'application/pdf', name: 'dossier-subvention.pdf', url: '/uploads/d.pdf',
+  ext: '.pdf',
+  id: 12,
+  mime: 'application/pdf',
+  name: 'dossier-subvention.pdf',
+  url: '/uploads/d.pdf',
 };
 const VILLE = { documentId: 'ville-de-recette', name: 'Ville de Montrivage' };
 const ACTU = {
@@ -177,7 +184,9 @@ const sources = (/** @type {any} */ arbre) => arbre.root.findAllByType(Image)
 beforeEach(() => {
   mockNavigate.mockReset();
   mockMine = { data: { actualites: [ACTU], bandeau: { actualite: ACTU, autres: 0 } } };
-  mockListe = { data: [ACTU], error: null, isLoading: false, refetch: jest.fn() };
+  mockListe = {
+    data: [ACTU], error: null, isLoading: false, refetch: jest.fn(),
+  };
   mockBloc = { data: { actualites: [ACTU], collectivite: VILLE, notify: false }, isLoading: false };
 });
 
@@ -197,7 +206,8 @@ describe('VILLE-T18D — les règles, en fonctions pures', () => {
     expect(photoUrl(PHOTO, 900)).toBe(`${R2}/113.png`);
     expect(photoUrl(PHOTO, 120)).toBe(`${R2}/small_113.png`);
     // Sans versions (envoi local, ou image plus petite que la vignette du serveur).
-    expect(photoUrl({ mime: 'image/png', url: '/uploads/petite.png' }, 900)).toBe('/uploads/petite.png');
+    expect(photoUrl({ mime: 'image/png', url: '/uploads/petite.png' }, 900))
+      .toBe('/uploads/petite.png');
   });
 });
 
@@ -220,7 +230,7 @@ describe('VILLE-T18D — la carte de l actualité', () => {
     const [vignette] = tousParTestID(arbre, 'actualite-photo');
     expect(vignette.props.accessibilityLabel).toBe('Agrandir la photo');
     // La carte charge la version « large », pas l'original de 2048 px.
-    expect(sources(arbre)).toEqual(['/uploads/large_affiche.jpg'].map((url) => expect.stringContaining(url)));
+    expect(sources(arbre)).toEqual([expect.stringContaining('/uploads/large_affiche.jpg')]);
     await act(async () => {
       vignette.props.onPress();
     });
@@ -267,7 +277,11 @@ describe('VILLE-T18D — le bandeau de l accueil', () => {
 
   it('mairie : la même vignette dans « Votre actualité · en ligne »', async () => {
     const arbre = await monter(
-      <BandeauActualiteMairie collectiviteId="ville-de-recette" nomVille="Ville de Montrivage" onOuvrir={jest.fn()} />,
+      <BandeauActualiteMairie
+        collectiviteId="ville-de-recette"
+        nomVille="Ville de Montrivage"
+        onOuvrir={jest.fn()}
+      />,
     );
     expect(tousParTestID(arbre, 'bandeau-actualite-mairie-photo')).toHaveLength(1);
   });

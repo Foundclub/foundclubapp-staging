@@ -15,8 +15,8 @@ import {
   categoryLabel,
   categoryTone,
   isImageAttachment,
-  photoUrl,
   photosEtDocuments,
+  photoUrl,
   publicationDateLabel,
   recipientsLine,
 } from '@/domains/collectivite/collectiviteActualites';
@@ -189,8 +189,9 @@ export function PastilleActualite({ categorie }) {
 }
 
 /**
- * Une pièce jointe : son étiquette (PDF, DOC…) ou, pour une photo, la photo elle-même ; son nom ;
- * l'appui l'ouvre. La carte n'en montre plus que les documents (VILLE-T18D) ; le formulaire, toutes.
+ * Une pièce jointe : son étiquette (PDF, DOC…) ou, pour une photo, la photo elle-même ; son
+ * nom ; l'appui l'ouvre. La carte n'en montre plus que les documents (VILLE-T18D) ; le
+ * formulaire, toutes.
  * @param {{ fichier: any, onRetirer?: () => void, sousTitre?: string }} props
  * @returns {import('react').ReactElement} La ligne.
  */
