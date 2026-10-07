@@ -16,6 +16,8 @@ export const images = {
   eventCardTournament: require('../assets/background-card-event/card-tournoi.png'),
   eventCardTraining: require('../assets/background-card-event/card-entrainement.png'),
   logo: require('../assets/pictures/logo.png'),
+  // MSG1A (§3.1) — le motif sportif en filigrane du fil (pack messagerie, tuile de 240).
+  motifDuFil: require('../assets/pictures/motif-du-fil.png'),
   roundAvatar: require('../assets/pictures/avatar-round.png'),
   // icon
   arrowLeft: require('../assets/icons/arrowLeft.png'),

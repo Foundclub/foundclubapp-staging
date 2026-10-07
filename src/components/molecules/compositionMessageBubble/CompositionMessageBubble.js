@@ -10,6 +10,8 @@ import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import { GRAS_FAMILLE, REGULIER_FAMILLE } from '@/components/molecules/bulleDuFil/typographieDuFil';
 import PlayerHeadToken from '@/components/tactical/PlayerHeadToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import {
@@ -102,14 +104,29 @@ const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '
  *   du fil, relus avec lui. Un compte renomme depuis la publication y prend son nom du jour.
  * @param {any} [props.currentEvent] - FINITIONS16 (8) : le match tel que le serveur le joint au
  *   message AUJOURD'HUI. Un match modifie depuis la publication y prend son titre et son heure.
+ * @param {boolean} [props.dansLaBulle] - MSG1A (§3.7) : posee dans le cadre commun du fil.
  * @param {boolean} [props.isMe] - Whether sent by current user
+ * @param {import('react').ReactNode} [props.meta] - MSG1A : l'heure et les coches, avant le pied.
+ * @param {(target?: 'placement') => void} [props.onEdit] - Contrat MSG1A / MSG1C (07/10) : pour
+ *   qui peut convoquer. Present : « Modifier » (contour) appelle `onEdit()` (etape Joueurs) et le
+ *   terrain appelle `onEdit('placement')` ; absent : un seul « Ouvrir la composition », et le
+ *   terrain ouvre le plein ecran comme avant.
+ * @param {() => import('react').ReactNode} [props.renderReponses] - Contrat MSG1A / MSG1C : le
+ *   bloc « Reponses » (dessine par 1C), rendu sous la carte.
  * @returns {import('react').ReactElement | null}
  */
 function CompositionMessageBubble({
-  composition, currentEvent = null, currentPeople = [], isMe = false,
+  composition,
+  currentEvent = null,
+  currentPeople = [],
+  dansLaBulle = false,
+  isMe = false,
+  meta = null,
+  onEdit = undefined,
+  renderReponses = undefined,
 }) {
   const { t } = useTranslation();
-  const { Colors, Fonts } = useTheme();
+  const { Colors } = useTheme();
   const navigation = useNavigation();
 
   if (!composition) return null;
@@ -413,14 +430,20 @@ function CompositionMessageBubble({
     && matchAVenir
     && Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId));
 
-  const cadre = [
-    styles.container,
-    {
-      alignSelf: isMe ? 'flex-end' : 'flex-start',
-      backgroundColor: withAlpha(Colors.primary800, 0.92),
-      borderColor: withAlpha(Colors.primary500, 0.35),
-    },
-  ];
+  // 🎨 MSG1A (§3.7) — dans le fil, la carte se pose DANS la bulle commune (`BulleDuFil`) :
+  // pas de fond ni de liseré propres, 276 de large (SPECS.md §3). Ailleurs (le site), elle
+  // garde son cadre.
+  const cadre = dansLaBulle
+    ? [styles.contenuDansLaBulle]
+    : [
+      styles.container,
+      {
+        alignSelf: isMe ? 'flex-end' : 'flex-start',
+        backgroundColor: withAlpha(Colors.primary800, 0.92),
+        borderColor: withAlpha(Colors.primary500, 0.35),
+      },
+    ];
+  const retrait = dansLaBulle ? styles.sansRetrait : null;
 
   const accessibilityLabel = [
     kicker,
@@ -438,23 +461,15 @@ function CompositionMessageBubble({
   const pitchTitle = t('compositionMessageBubble.onThePitch', 'Sur le terrain');
   const benchTitle = t('compositionMessageBubble.onTheBench', 'Sur le banc');
 
-  // ♿ COMPO-CARTE-SITE — TROIS BOUTONS COTE A COTE, AUCUN DANS UN AUTRE.
-  //
-  // 🔍 Le terrain « Agrandir » etait un bouton RANGE DANS le bouton-carte. Un
-  // element accessible (la carte) se lit comme UN SEUL element : VoiceOver et
-  // TalkBack ne voyaient pas le terrain, et le site rendait un `role="button"`
-  // dans un autre. Meme remede que les boutons Present / Absent de BULLE : le
-  // cadre passe a un conteneur, et les boutons s'y suivent.
-  //
-  // 👀 CE QUE VOIT UN VOYANT NE CHANGE PAS : memes textes, meme ordre, memes
-  // marges (`fieldTouch` reprend l'ecart que `gap` lui donnait), et chaque zone
-  // touchee ouvre ce qu'elle ouvrait. Seul l'assombrissement au toucher se
-  // limite desormais a la zone touchee.
-  //
-  // 🦻 CE QU'ENTEND UN LECTEUR D'ECRAN : la carte (sa phrase dit tout, compte
-  // des convoques compris), puis le terrain. Le bas de carte (noms, « Ouvrir »)
-  // fait la MEME chose que la carte : il est masque aux lecteurs d'ecran et hors
-  // de la tabulation, sinon chaque carte annoncerait deux fois le meme bouton.
+  // 🗂️ MSG1A (§3.7) — QUI PEUT MODIFIER, c'est l'appelant qui le dit (contrat avec MSG1C) :
+  // avec `onEdit`, deux boutons ; sans, un seul « Ouvrir la composition ».
+  const peutModifierIci = typeof onEdit === 'function';
+  const toucherLeTerrain = peutModifierIci ? () => onEdit('placement') : openFullScreen;
+  const reponses = typeof renderReponses === 'function' ? renderReponses() : null;
+
+  // ♿ COMPO-CARTE-SITE — TROIS BOUTONS COTE A COTE, AUCUN DANS UN AUTRE (carte, terrain,
+  // pied). Un lecteur d'ecran entend la carte (sa phrase dit tout), puis le terrain, puis
+  // les boutons du pied.
   return (
     <View style={cadre}>
       <TouchableOpacity
@@ -463,76 +478,62 @@ function CompositionMessageBubble({
         accessibilityRole="button"
         activeOpacity={0.85}
         onPress={handlePress}
-        style={styles.body}
+        style={[styles.body, retrait]}
       >
+        {/* MSG1A — l'en-tete du pack : glyphe « Users » + « Composition publiee » en cyan,
+            « Version N » a droite. */}
         <View style={styles.kickerRow}>
-          <View style={[styles.kickerDot, { backgroundColor: Colors.primary500 }]} />
+          <GlyphIcon color={Colors.primary500} name="users" size={15} />
           <Text
             numberOfLines={1}
-            style={[Fonts.p4Bold, styles.kicker, { color: Colors.primary500 }]}
+            style={[styles.kicker, { color: Colors.primary500 }]}
           >
             {kicker}
           </Text>
-          {/* Meme mot que la pastille de l'ecran « Compo modifiee » du pack. */}
           {versionLine ? (
-            <View
-              style={[
-                styles.versionChip,
-                { borderColor: withAlpha(Colors.primary500, 0.45) },
-              ]}
-            >
-              <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                {versionLine}
-              </Text>
-            </View>
+            <Text numberOfLines={1} style={[styles.version, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+              {versionLine}
+            </Text>
           ) : null}
         </View>
 
-        {/* U06 + COMPOLECT-2 — le nom du match a droit a DEUX lignes : sur la
-            capture d'Adel du 27/08, l'intitule unique se coupait. Puis, dans
-            l'ordre de la carte voisine `EventShareBubble` : quand, qui, ou. */}
+        {/* U06 + COMPOLECT-2 — le nom du match a droit a DEUX lignes. Puis quand · qui, et ou. */}
         {title ? (
-          <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+          <Text numberOfLines={2} style={[styles.titre, { color: Colors.neutral00 }]}>
             {title}
           </Text>
         ) : null}
         {hasEventContext || teamName ? (
           <View style={styles.contextLines}>
-            {whenLine ? (
-              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                {whenLine}
-              </Text>
-            ) : null}
-            {teamName ? (
-              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                {teamName}
+            {whenLine || teamName ? (
+              <Text numberOfLines={1} style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+                {[whenLine, teamName].filter(Boolean).join(' · ')}
               </Text>
             ) : null}
             {hasEventContext ? (
-              <Text numberOfLines={2} style={[Fonts.p4, { color: Colors.neutral200 }]}>
+              <Text numberOfLines={2} style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}>
                 {addressLine}
               </Text>
             ) : null}
           </View>
         ) : null}
 
-        {/* COMPOMSG — le texte de l'entraineur (souvent le RDV), sous le meme
-            mot que « Tu es convoque ». Sans texte, rien : pas de ligne vide. */}
+        {/* COMPOMSG — le texte de l'entraineur (souvent le RDV), sous le mot « Infos ». */}
         {note ? (
-          <View style={styles.note}>
-            <Text style={[Fonts.p4Bold, styles.noteLabel, { color: Colors.neutral300 }]}>
+          <View style={[styles.note, { backgroundColor: withAlpha(Colors.neutral900, 0.22) }]}>
+            <Text style={[styles.noteTexte, styles.noteLabel, { color: Colors.primary500 }]}>
               {t('compositionMessageBubble.note', 'Infos')}
             </Text>
-            <Text numberOfLines={3} style={[Fonts.p4, { color: Colors.neutral00 }]}>
+            <Text numberOfLines={3} style={[styles.noteTexte, styles.noteCorps, { color: Colors.neutral00 }]}>
               {note}
             </Text>
           </View>
         ) : null}
       </TouchableOpacity>
 
-      {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au
-          plein ecran, meme pour un convoque (que la carte, elle, envoie sur
-          « Tu es convoque »). La pastille « Agrandir » le dit. */}
+      {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au plein ecran.
+          ⚖️ MSG1A — le pack le dessine COUCHE (276 x 132) ; il reste DEBOUT, dans les
+          proportions de son sport (decision COMPOMSG du 23/09, capture d'Adel). */}
       <TouchableOpacity
         accessibilityLabel={t(
           'compositionMessageBubble.openFullScreen',
@@ -540,7 +541,7 @@ function CompositionMessageBubble({
         )}
         accessibilityRole="button"
         activeOpacity={0.85}
-        onPress={openFullScreen}
+        onPress={toucherLeTerrain}
         style={styles.fieldTouch}
       >
         <RenderedTacticalField
@@ -566,71 +567,58 @@ function CompositionMessageBubble({
           ))}
         </RenderedTacticalField>
         <View
-          style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.72) }]}
+          style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.6) }]}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-            {t('compositionMessageBubble.expand', 'Agrandir')}
+          {peutModifierIci ? <GlyphIcon color={Colors.neutral00} name="penSquare" size={13} /> : null}
+          <Text style={[styles.pilule, { color: Colors.neutral00 }]}>
+            {peutModifierIci
+              ? t('compositionMessageBubble.editPlacement', 'Modifier le placement')
+              : t('compositionMessageBubble.expand', 'Agrandir')}
           </Text>
         </View>
       </TouchableOpacity>
 
-      {/* Le bas de carte : meme toucher que la carte, masque aux lecteurs
-          d'ecran (la phrase de la carte le dit deja). */}
-      <TouchableOpacity
-        accessible={false}
-        activeOpacity={0.85}
-        aria-hidden
-        focusable={false}
-        onPress={handlePress}
-      >
-        {/* 🧾 R6 — QUI EST CONVOQUE. Memes mots que l'onglet « Convocation » de
-            la page d'evenement. Le bloc entier disparait quand il n'y a
-            personne : une section « Sur le banc » suivie de rien se lit comme
-            un bug. COMPOMSG : les noms se suivent sur une ligne qui passe a la
-            ligne, au lieu d'une colonne de douze lignes. */}
-        {starterNames.length > 0 || benchNames.length > 0 ? (
-          <View style={styles.roster}>
-            {starterNames.length > 0 ? (
-              <View style={styles.rosterGroup}>
-                <Text style={[Fonts.p4Bold, styles.rosterTitle, { color: Colors.neutral00 }]}>
-                  {`${pitchTitle} · ${starterNames.length}`}
-                </Text>
-                <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                  {starterNames.join(' · ')}
-                </Text>
-              </View>
-            ) : null}
-            {benchNames.length > 0 ? (
-              <View style={styles.rosterGroup}>
-                <Text style={[Fonts.p4Bold, styles.rosterTitle, { color: Colors.neutral00 }]}>
-                  {`${benchTitle} · ${benchNames.length}`}
-                </Text>
-                <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                  {benchNames.join(' · ')}
-                </Text>
-              </View>
-            ) : null}
-            {otherTeamsLine ? (
-              <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>{otherTeamsLine}</Text>
-            ) : null}
-          </View>
-        ) : null}
+      {/* 🧾 R6 — QUI EST CONVOQUE (memes mots que l'onglet « Convocation »), deux lignes au
+          plus par groupe (le pack). Masque aux lecteurs d'ecran : la carte le dit deja. */}
+      {starterNames.length > 0 || benchNames.length > 0 ? (
+        <TouchableOpacity
+          accessible={false}
+          activeOpacity={0.85}
+          aria-hidden
+          focusable={false}
+          onPress={handlePress}
+          style={[styles.roster, retrait]}
+        >
+          {starterNames.length > 0 ? (
+            <View style={styles.rosterGroup}>
+              <Text style={[styles.rosterTitle, { color: Colors.neutral00 }]}>
+                {`${pitchTitle} · ${starterNames.length}`}
+              </Text>
+              <Text numberOfLines={2} style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+                {starterNames.join(' · ')}
+              </Text>
+            </View>
+          ) : null}
+          {benchNames.length > 0 ? (
+            <View style={styles.rosterGroup}>
+              <Text style={[styles.rosterTitle, { color: Colors.neutral00 }]}>
+                {`${benchTitle} · ${benchNames.length}`}
+              </Text>
+              <Text numberOfLines={2} style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+                {benchNames.join(' · ')}
+              </Text>
+            </View>
+          ) : null}
+          {otherTeamsLine ? (
+            <Text style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>{otherTeamsLine}</Text>
+          ) : null}
+        </TouchableOpacity>
+      ) : null}
 
-        <View style={[styles.footer, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
-          <Text
-            numberOfLines={1}
-            style={[Fonts.p4, styles.footerText, { color: Colors.neutral300 }]}
-          >
-            {calledUpLine}
-          </Text>
-          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            {t('compositionMessageBubble.open', 'Ouvrir')}
-          </Text>
-        </View>
-      </TouchableOpacity>
+      {/* 🗳️ MSG1A (§3.7) — le bloc « Reponses » (dessine par MSG1C), sous la carte. */}
+      {reponses ? <View style={retrait}>{reponses}</View> : null}
 
-      {/* ♿ BULLE — les boutons de reponse, a la suite et non imbriques, pour
-          la meme raison que le terrain. */}
+      {/* ♿ BULLE — les boutons de reponse, a la suite et non imbriques. */}
       {proposeLaReponse ? (
         <CompositionAnswerBar
           eventId={eventId}
@@ -639,15 +627,72 @@ function CompositionMessageBubble({
           viewerId={viewerId}
         />
       ) : null}
+
+      {meta ? <View style={styles.meta}>{meta}</View> : null}
+
+      {/* MSG1A (§3.7) — le pied du pack : DEUX vrais boutons pour qui gere la composition
+          (« Modifier » en contour, « Ouvrir » plein), un seul « Ouvrir la composition » pour
+          les autres. Le nombre de convoques reste dit, au-dessus. */}
+      <View style={[styles.footer, dansLaBulle ? styles.footerDansLaBulle : null, { borderTopColor: withAlpha(Colors.neutral00, 0.14) }]}>
+        {calledUpLine ? (
+          <Text numberOfLines={1} style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+            {calledUpLine}
+          </Text>
+        ) : null}
+        <View style={styles.footerBoutons}>
+          {peutModifierIci ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.85}
+              onPress={() => onEdit()}
+              style={[styles.boutonPied, { borderColor: Colors.primary500, borderWidth: 1.5 }]}
+              testID="composition-modifier"
+            >
+              <GlyphIcon color={Colors.primary500} name="penSquare" size={16} />
+              <Text style={[styles.boutonPiedTexte, { color: Colors.primary500 }]}>
+                {t('compositionMessageBubble.edit', 'Modifier')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            accessibilityRole="button"
+            activeOpacity={0.85}
+            onPress={handlePress}
+            style={[styles.boutonPied, { backgroundColor: Colors.primary500 }]}
+            testID="composition-ouvrir"
+          >
+            <Text style={[styles.boutonPiedTexte, { color: Colors.primary900 }]}>
+              {peutModifierIci
+                ? t('compositionMessageBubble.open', 'Ouvrir')
+                : t('compositionMessageBubble.openComposition', 'Ouvrir la composition')}
+            </Text>
+            <GlyphIcon color={Colors.primary900} name="chevronRight" size={16} />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   body: {
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 14,
     paddingTop: 12,
+  },
+  boutonPied: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    height: 40,
+    justifyContent: 'center',
+  },
+  boutonPiedTexte: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 14,
+    lineHeight: 18,
   },
   container: {
     borderRadius: 14,
@@ -656,75 +701,126 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: CARD_WIDTH,
   },
+  contenuDansLaBulle: {
+    width: 276,
+  },
+  contexte: {
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   contextLines: {
     gap: 2,
   },
   expandPill: {
+    alignItems: 'center',
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    bottom: 8,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     position: 'absolute',
-    right: 6,
-    top: 6,
+    right: 8,
   },
-  // COMPO-CARTE-SITE — le terrain est sorti de `body` : il reprend a la main
-  // l'ecart que `gap` (8) lui donnait en plus de sa marge (4).
+  // COMPO-CARTE-SITE — le terrain est sorti de `body` : il reprend a la main l'ecart du pack.
   fieldTouch: {
     alignSelf: 'center',
     marginBottom: 4,
-    marginTop: 12,
+    marginTop: 10,
   },
   footer: {
-    alignItems: 'center',
     borderTopWidth: 1,
+    gap: 8,
+    marginTop: 8,
+    padding: 10,
+  },
+  footerBoutons: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
-    minHeight: 44,
-    paddingHorizontal: 14,
+  },
+  // Dans la bulle : le pied touche les bords (marges 10 de la bulle compensees).
+  footerDansLaBulle: {
+    marginBottom: -7,
+    marginHorizontal: -10,
   },
   footerText: {
-    flex: 1,
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   kicker: {
     flex: 1,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  kickerDot: {
-    borderRadius: 4,
-    height: 7,
-    width: 7,
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   kickerRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 7,
+    gap: 6,
+  },
+  meta: {
+    alignItems: 'flex-end',
+    marginTop: 8,
   },
   miniField: {
-    borderRadius: 10,
+    borderRadius: 12,
     height: MINI_FIELD_HEIGHT,
     overflow: 'hidden',
   },
   note: {
-    gap: 2,
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  noteCorps: {
+    flex: 1,
   },
   noteLabel: {
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    fontFamily: GRAS_FAMILLE,
   },
-  // Hors de `body` lui aussi : son ecart (8) et ses marges laterales (14).
+  noteTexte: {
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  pilule: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 11.5,
+    lineHeight: 15,
+  },
   roster: {
-    gap: 8,
-    marginTop: 8,
+    gap: 10,
+    marginTop: 10,
     paddingHorizontal: 14,
   },
   rosterGroup: {
-    gap: 2,
+    gap: 3,
+  },
+  rosterNoms: {
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 13,
+    lineHeight: 18,
   },
   rosterTitle: {
-    letterSpacing: 0.4,
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    lineHeight: 16,
     textTransform: 'uppercase',
+  },
+  sansRetrait: {
+    paddingHorizontal: 0,
+  },
+  titre: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 16,
+    lineHeight: 21,
+    marginTop: 2,
   },
   // Le jeton est CENTRE sur sa position, pas accroche par son coin.
   tokenSlot: {
@@ -732,11 +828,10 @@ const styles = StyleSheet.create({
     marginTop: -(MINI_TOKEN_SIZE / 2),
     position: 'absolute',
   },
-  versionChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  version: {
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
 

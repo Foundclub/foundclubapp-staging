@@ -18,9 +18,11 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   applyOptimisticPollVote,
   getPollTotalVotes,
+  getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
@@ -30,81 +32,151 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 
+// 🎨 MSG1A (§3.4) — les mesures du pack (SPECS.md §3, « Detail du sondage »).
 const styles = StyleSheet.create({
+  aide: {
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  aucunVote: {
+    paddingBottom: 10,
+    paddingTop: 2,
+  },
+  barre: {
+    borderRadius: 3,
+    height: 6,
+    marginBottom: 8,
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+  boutonRetour: {
+    alignItems: 'center',
+    borderWidth: 1.5,
+    height: 40,
+    justifyContent: 'center',
+    marginLeft: 0,
+    padding: 0,
+    width: 40,
+  },
+  capitales: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 12,
+    letterSpacing: 1.2,
+    lineHeight: 16,
+    textTransform: 'uppercase',
+  },
+  carte: {
+    borderRadius: 16,
+    marginTop: 12,
+    padding: 16,
+  },
+  carteDOption: {
+    borderRadius: 16,
+    marginTop: 12,
+    paddingBottom: 6,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+  },
+  carteInfos: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+  },
+  compteDOption: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 13.5,
+    lineHeight: 18,
+  },
   contentContainer: {
     paddingHorizontal: 16,
-    paddingTop: 6,
+    paddingTop: 18,
+  },
+  etiquette: {
+    borderRadius: 999,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 12.5,
+    lineHeight: 17,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  etiquettes: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 12,
+  },
+  flecheRetour: {
+    height: 20,
+    width: 20,
   },
   header: {
     alignItems: 'center',
+    borderBottomWidth: 1,
     flexDirection: 'row',
-    paddingBottom: 10,
-    paddingHorizontal: 16,
+    gap: 10,
+    minHeight: 62,
+    paddingBottom: 11,
+    paddingHorizontal: 12,
   },
-  headerContent: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  infoCard: {
-    backgroundColor: 'rgba(20, 39, 52, 0.78)',
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  infoDivider: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    height: 1,
-    marginVertical: 10,
+  infoLibelle: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 14.5,
+    lineHeight: 20,
   },
   infoRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    height: 48,
     justifyContent: 'space-between',
   },
-  optionSectionCard: {
-    backgroundColor: 'rgba(20, 39, 52, 0.78)',
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  infoValeur: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 14.5,
+    lineHeight: 20,
+  },
+  libelleDOption: {
+    flex: 1,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  nomDuVotant: {
+    flex: 1,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15,
+    lineHeight: 20,
   },
   optionSectionHeader: {
-    alignItems: 'center',
+    alignItems: 'baseline',
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
-    marginBottom: 8,
   },
   pollWrapper: {
     marginTop: 4,
   },
-  sectionHintCard: {
-    backgroundColor: 'rgba(1, 179, 244, 0.08)',
-    borderColor: 'rgba(1, 179, 244, 0.28)',
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  question: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 20,
+    lineHeight: 26,
   },
-  sectionTitle: {
+  titreDeLEnTete: {
+    flex: 1,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  titreDeSection: {
     marginBottom: 8,
+    marginHorizontal: 4,
+    marginTop: 24,
   },
   voterRow: {
     alignItems: 'center',
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    borderTopWidth: 1,
     flexDirection: 'row',
-    minHeight: 46,
-    paddingVertical: 8,
-  },
-  votersSectionTitle: {
-    marginBottom: 8,
-    marginTop: 14,
+    gap: 12,
+    height: 52,
   },
 });
 
@@ -319,11 +391,24 @@ function PollDetails({ navigation, route }) {
     [poll?.options],
   );
 
+  // 🎨 MSG1A (§3.4) — le detail du pack (SPECS.md §3) : la question en grand, ses reglages en
+  // etiquettes, une carte par option (compte en cyan pour la plus votee, barre, votants), puis
+  // les informations. Le vote depuis la carte du haut reste possible, comme avant.
+  const comptesParOption = (Array.isArray(poll?.options) ? poll.options : [])
+    .map((option) => getPollVoteCount(option));
+  const maximumDeVotes = Math.max(1, ...comptesParOption);
+  const etiquettes = [
+    poll?.allowMultipleVotes
+      ? t('conversation.poll.details.multipleAllowed', 'Votes multiples autorisés')
+      : t('conversation.poll.details.singleChoice', 'Un seul choix par participant'),
+  ].concat(poll?.isAnonymous ? [t('conversation.poll.details.anonymousVotes', 'Votes anonymes')] : []);
+  const capitales = [styles.capitales, { color: withAlpha(Colors.neutral00, 0.6) }];
+
   return (
     <ImageBackground
       resizeMode="cover"
       source={Images.bg2}
-      style={[Alignments.fill]}
+      style={[Alignments.fill, { backgroundColor: Colors.chatBackground }]}
     >
       {shouldAvoidDeprecatedSystemBarColors ? (
         <StatusBar barStyle="light-content" translucent />
@@ -331,64 +416,31 @@ function PollDetails({ navigation, route }) {
         <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
       )}
 
-      <View style={[styles.header, { paddingTop: top + 10 }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: Colors.chatBar,
+            borderBottomColor: withAlpha(Colors.neutral00, 0.06),
+            paddingTop: top + 10,
+          },
+        ]}
+      >
         <HeaderBackButton
+          iconStyle={styles.flecheRetour}
           onPress={() => navigation.goBack()}
-          style={{ marginLeft: 0 }}
+          style={styles.boutonRetour}
           withDefaultMargin={false}
         />
-        <View style={styles.headerContent}>
-          <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>
-            {t('conversation.poll.details.title', 'Detail du sondage')}
-          </Text>
-          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            {poll?.isAnonymous
-              ? t('conversation.poll.details.anonymousVotes', 'Votes anonymes')
-              : t('conversation.poll.details.visibleVotes', 'Votes visibles')}
-          </Text>
-        </View>
+        <Text accessibilityRole="header" style={[styles.titreDeLEnTete, { color: Colors.neutral00 }]}>
+          {t('conversation.poll.details.title', 'Detail du sondage')}
+        </Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: bottom + 28 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }, styles.sectionTitle]}>
-          {t('conversation.poll.details.infoTitle', 'Informations du sondage')}
-        </Text>
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {t('conversation.poll.details.createdBy', 'Crée par')}
-            </Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{createdByName}</Text>
-          </View>
-          <View style={styles.infoDivider} />
-          <View style={styles.infoRow}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {t('conversation.poll.details.date', 'Date')}
-            </Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{createdAtLabel}</Text>
-          </View>
-          <View style={styles.infoDivider} />
-          <View style={styles.infoRow}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {t('conversation.poll.details.voteCount', 'Nombre de votes')}
-            </Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{totalVotes}</Text>
-          </View>
-        </View>
-        <View style={styles.sectionHintCard}>
-          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            {t(
-              'conversation.poll.details.voteHint',
-              'Sélectionne une option pour voter ou modifier ton vote. '
-                + 'Appuie à nouveau dessus pour retirer ton vote. '
-                + 'Le detail des votants s\'affiche quand le sondage n\'est pas anonyme.',
-            )}
-          </Text>
-        </View>
-
         {isMessagesLoading && !poll ? (
           <View style={[Alignments.alignCenter, Spaces.marginTop[24]]}>
             <ActivityIndicator color={Colors.primary500} size="large" />
@@ -396,17 +448,7 @@ function PollDetails({ navigation, route }) {
         ) : null}
 
         {!poll ? (
-          <View
-            style={[
-              Spaces.padding[16],
-              {
-                backgroundColor: 'rgba(20, 39, 52, 0.7)',
-                borderColor: 'rgba(255,255,255,0.12)',
-                borderRadius: 12,
-                borderWidth: 1,
-              },
-            ]}
-          >
+          <View style={[styles.carte, { backgroundColor: Colors.primary700 }]}>
             <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>
               {t(
                 'conversation.poll.details.notFound',
@@ -416,6 +458,23 @@ function PollDetails({ navigation, route }) {
           </View>
         ) : (
           <>
+            <Text style={[styles.question, { color: Colors.neutral00 }]}>
+              {poll.question || t('conversation.poll.bubble.questionFallback', 'Question')}
+            </Text>
+            <View style={styles.etiquettes}>
+              {etiquettes.map((etiquette) => (
+                <Text
+                  key={etiquette}
+                  style={[
+                    styles.etiquette,
+                    { backgroundColor: withAlpha(Colors.primary500, 0.14), color: Colors.primary500 },
+                  ]}
+                >
+                  {etiquette}
+                </Text>
+              ))}
+            </View>
+
             <View style={styles.pollWrapper}>
               <PollMessageBubble
                 currentUserId={userData?.documentId || ''}
@@ -424,64 +483,118 @@ function PollDetails({ navigation, route }) {
                 onVote={isSubmittingVote ? undefined : handleVote}
                 poll={poll}
                 resolveVoterName={resolveVoterName}
-                showSelectedBadge
-                showVoterChips
               />
             </View>
-
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }, styles.votersSectionTitle]}>
-              {t('conversation.poll.details.votesByOption', 'Votes par option')}
+            <Text style={[Fonts.p4, styles.aide, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+              {t(
+                'conversation.poll.details.voteHint',
+                'Sélectionne une option pour voter ou modifier ton vote. '
+                  + 'Appuie à nouveau dessus pour retirer ton vote. '
+                  + 'Le detail des votants s\'affiche quand le sondage n\'est pas anonyme.',
+              )}
             </Text>
-            {poll?.isAnonymous ? (
-              <View style={styles.sectionHintCard}>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                  {t(
-                    'conversation.poll.details.anonymousHint',
-                    'Ce sondage est anonyme. Les votants ne sont pas affiches.',
-                  )}
-                </Text>
-              </View>
-            ) : optionVoterSections.map((section) => (
-              <View key={section.optionId} style={styles.optionSectionCard}>
-                <View style={styles.optionSectionHeader}>
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>
-                    {section.optionLabel}
-                  </Text>
-                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    {section.voters.length}
-                    {' '}
-                    {t('conversation.poll.common.vote', 'vote')}
-                    {section.voters.length > 1 ? 's' : ''}
-                  </Text>
+
+            {optionVoterSections.map((section, rang) => {
+              const compte = comptesParOption[rang] ?? section.voters.length;
+              const enTete = compte === maximumDeVotes && compte > 0;
+              return (
+                <View
+                  key={section.optionId}
+                  style={[styles.carteDOption, { backgroundColor: Colors.primary700 }]}
+                  testID={`detail-sondage-option-${section.optionId}`}
+                >
+                  <View style={styles.optionSectionHeader}>
+                    <Text style={[styles.libelleDOption, { color: Colors.neutral00 }]}>
+                      {section.optionLabel}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.compteDOption,
+                        { color: enTete ? Colors.primary500 : withAlpha(Colors.neutral00, 0.7) },
+                      ]}
+                    >
+                      {t('conversation.poll.bubble.votes', {
+                        count: compte,
+                        defaultValue_one: '{{count}} vote',
+                        defaultValue_other: '{{count}} votes',
+                      })}
+                    </Text>
+                  </View>
+                  <View style={[styles.barre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}>
+                    <View
+                      style={{
+                        backgroundColor: Colors.primary500,
+                        height: '100%',
+                        width: `${(compte / maximumDeVotes) * 100}%`,
+                      }}
+                    />
+                  </View>
+
+                  {/* Un sondage anonyme ne montre personne. */}
+                  {poll?.isAnonymous ? <View style={{ height: 6 }} /> : null}
+                  {!poll?.isAnonymous && section.voters.length === 0 ? (
+                    <Text style={[Fonts.p3, styles.aucunVote, { color: withAlpha(Colors.neutral00, 0.55) }]}>
+                      {t('conversation.poll.details.noVotes', 'Aucun vote pour cette option.')}
+                    </Text>
+                  ) : null}
+                  {!poll?.isAnonymous ? section.voters.map((voter, index) => {
+                    const fullName = `${voter.firstname} ${voter.lastname}`.trim();
+                    const displayLabel = fullName
+                      || voter.displayName
+                      || t('conversation.poll.common.member', 'Membre');
+
+                    return (
+                      <View
+                        key={`${section.optionId}-${voter.voterId}`}
+                        style={[
+                          styles.voterRow,
+                          index > 0
+                            ? { borderTopColor: withAlpha(Colors.neutral00, 0.06), borderTopWidth: 1 }
+                            : null,
+                        ]}
+                      >
+                        <ProfileAvatar
+                          enablePreview={false}
+                          imageUrl={voter.avatarUrl}
+                          name={displayLabel}
+                          size={36}
+                          style={{ borderRadius: 18 }}
+                        />
+                        <Text style={[styles.nomDuVotant, { color: Colors.neutral00 }]}>
+                          {displayLabel}
+                        </Text>
+                      </View>
+                    );
+                  }) : null}
                 </View>
+              );
+            })}
 
-                {section.voters.length === 0 ? (
-                  <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                    {t('conversation.poll.details.noVotes', 'Aucun vote pour cette option.')}
+            <Text style={[capitales, styles.titreDeSection]}>
+              {t('conversation.poll.details.infoTitle', 'Informations du sondage')}
+            </Text>
+            <View style={[styles.carteInfos, { backgroundColor: Colors.primary700 }]}>
+              {[
+                [t('conversation.poll.details.createdBy', 'Crée par'), createdByName],
+                [t('conversation.poll.details.date', 'Date'), createdAtLabel],
+                [t('conversation.poll.details.voteCount', 'Nombre de votes'), String(totalVotes)],
+              ].map(([libelle, valeur], index) => (
+                <View
+                  key={libelle}
+                  style={[
+                    styles.infoRow,
+                    index > 0
+                      ? { borderTopColor: withAlpha(Colors.neutral00, 0.06), borderTopWidth: 1 }
+                      : null,
+                  ]}
+                >
+                  <Text style={[styles.infoLibelle, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+                    {libelle}
                   </Text>
-                ) : section.voters.map((voter) => {
-                  const fullName = `${voter.firstname} ${voter.lastname}`.trim();
-                  const displayLabel = fullName
-                    || voter.displayName
-                    || t('conversation.poll.common.member', 'Membre');
-
-                  return (
-                    <View key={`${section.optionId}-${voter.voterId}`} style={styles.voterRow}>
-                      <ProfileAvatar
-                        enablePreview={false}
-                        imageUrl={voter.avatarUrl}
-                        name={displayLabel}
-                        size={34}
-                        style={{ borderRadius: 17 }}
-                      />
-                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00, marginLeft: 10 }]}>
-                        {displayLabel}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            ))}
+                  <Text style={[styles.infoValeur, { color: Colors.neutral00 }]}>{valeur}</Text>
+                </View>
+              ))}
+            </View>
           </>
         )}
       </ScrollView>

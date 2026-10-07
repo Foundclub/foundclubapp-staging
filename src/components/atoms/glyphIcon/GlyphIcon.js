@@ -7,6 +7,8 @@ import {
   Svg,
 } from 'react-native-svg';
 
+import TRACES_MESSAGERIE from './tracesMessagerie';
+
 // AD07 — POURQUOI CES SIX GLYPHES NE SONT PAS DES PNG.
 // Les six dessins (menu trois points, cadenas, exporter, avertissement, wifi
 // barre, histogramme) n'existaient dans AUCUN dossier d'assets, et personne
@@ -24,7 +26,10 @@ import {
  *   | 'hourglass' | 'idCard' | 'landmark' | 'lock' | 'receiptAlt'
  *   | 'triangleExclamation' | 'wifiSlash'
  *   | 'checkDouble' | 'chevronUp' | 'lockOpen' | 'lockShut' | 'microphone'
- *   | 'pause' | 'play' | 'plus2' | 'send' | 'stop' | 'trashAlt'} GlyphIconName
+ *   | 'pause' | 'play' | 'plus2' | 'send' | 'stop' | 'trashAlt'
+ *   | 'camera' | 'chartSimpleHorizontal' | 'check' | 'chevronDown' | 'file' | 'fileCopy'
+ *   | 'flag' | 'image' | 'information' | 'locationPin' | 'penSquare' | 'pencil' | 'reply'
+ *   | 'search' | 'shieldCheck' | 'thumbtack' | 'userMinus' | 'userPlus' | 'users' | 'xmark'} GlyphIconName
  */
 
 /* eslint-disable max-len -- tracés recopiés tels quels de la maquette VOCAL (décalages cuits) */
@@ -60,6 +65,15 @@ function GlyphIcon({
 }) {
   const strokeColor = color;
   const strokeWidth = 2;
+
+  // MSG1A — les glyphes pleins de la messagerie (voir `tracesMessagerie.js`).
+  if (Object.prototype.hasOwnProperty.call(TRACES_MESSAGERIE, name)) {
+    return (
+      <Svg height={size} viewBox="0 0 24 24" width={size}>
+        <Path d={TRACES_MESSAGERIE[name]} fill={strokeColor} />
+      </Svg>
+    );
+  }
 
   switch (name) {
     case 'arrowDownToBracket':

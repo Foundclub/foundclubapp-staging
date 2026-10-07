@@ -12,6 +12,7 @@ import * as ReactI18next from 'react-i18next';
 import 'dayjs/locale/fr';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   ImageBackground,
   Keyboard,
@@ -21,6 +22,7 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -28,11 +30,11 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import {
-  Bubble,
   Composer,
+  Day,
   GiftedChat,
   InputToolbar,
-  Time,
+  MessageText,
 } from 'react-native-gifted-chat';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +45,14 @@ import {
   getUserRoleKey,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  auteurDuMessageCite,
+  couleurDuNom,
+  estUnTeteATete,
+  extraitDuMessageCite,
+  placeDansLeGroupe,
+  reserveDeLHeure,
+} from '@/domains/messaging/habillageDuFil';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 import {
   applyOptimisticPollVote,
@@ -76,8 +86,19 @@ import Button from '@/components/atoms/button/Button';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
+import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
+import CitationDansLaBulle from '@/components/molecules/bulleDuFil/CitationDansLaBulle';
+import DegradeDePhoto from '@/components/molecules/bulleDuFil/DegradeDePhoto';
+import MetaDuMessage, { etatDEnvoi, heureDuMessage } from '@/components/molecules/bulleDuFil/MetaDuMessage';
+import {
+  NOTICE,
+  PUCE_DE_DATE,
+  SOUS_TITRE_DU_FIL,
+  TEXTE_DU_MESSAGE,
+  TITRE_DU_FIL,
+} from '@/components/molecules/bulleDuFil/typographieDuFil';
 import ChatReactionsRow from '@/components/molecules/chatReactions/ChatReactionsRow';
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
@@ -88,6 +109,7 @@ import EventShareBubble from '@/components/molecules/eventShareBubble/EventShare
 import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
 import MessageReactionOverlay from '@/components/molecules/messageReactionOverlay/MessageReactionOverlay';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
@@ -102,6 +124,7 @@ import VoiceComposerZone, {
   VoiceRestFade,
   VoiceSendAppear,
 } from '@/components/organisms/voiceComposer/VoiceComposerZone';
+import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import {
   BoutonMembresDuFil,
   EcussonDuFil,
@@ -227,8 +250,11 @@ const TYPING_START_THROTTLE_MS = 1000;
 // la frappe, c'est quelqu'un qui a posé son téléphone (ou perdu le réseau).
 const TYPING_IDLE_TIMEOUT_MS = 6000;
 
-const MESSAGE_REPLY_SWIPE_THRESHOLD = 44;
-const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 68;
+// MSG1A (§3.3) — le geste du pack (SPECS.md §2) : seuil a 56, la bulle suit le doigt
+// jusqu'a 64, puis resiste (x 0,25).
+const MESSAGE_REPLY_SWIPE_THRESHOLD = 56;
+const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 64;
+const MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION = 4;
 
 const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'contact_share',
@@ -419,13 +445,195 @@ const isDocumentPickerCancellation = (documentPicker, error) => (
  * @param {string} props.width
  * @returns {import('react').ReactElement}
  */
+/**
+ * MSG1A (§3.1) — les marges laterales d'une bulle (SPECS.md §1), une fois retiree la
+ * marge de 8 que GiftedChat pose deja de chaque cote de la rangee :
+ *   · la mienne : 64 a gauche, 10 a droite ;
+ *   · recue dans un fil a plusieurs : la colonne d'avatar (28 + 8, posee par GiftedChat)
+ *     puis 40 a droite ;
+ *   · recue dans un tete-a-tete (pas d'avatar) : 10 a gauche, 64 a droite.
+ * @param {boolean} estAMoi - Ma bulle.
+ * @param {unknown} typeDuFil - `chat.type`.
+ * @returns {import('react-native').ViewStyle} Les marges et l'alignement.
+ */
+const margesDeLaBulle = (estAMoi, typeDuFil) => {
+  if (estAMoi) return { alignItems: 'flex-end', marginLeft: 56, marginRight: 2 };
+  if (estUnTeteATete(typeDuFil)) return { alignItems: 'flex-start', marginLeft: 2, marginRight: 64 };
+  return { alignItems: 'flex-start', marginRight: 40 };
+};
+
+const stylesDuFil = StyleSheet.create({
+  actionDeGlisser: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
+  },
+  // La place de l'avatar de 28 sur les bulles du groupe qui n'en portent pas.
+  avatarVide: {
+    borderRadius: 14,
+    height: 28,
+    width: 28,
+  },
+  // Retour : rond de 40, liseré cyan de 1,5, fleche de 20 (SPECS.md §1).
+  boutonRetour: {
+    alignItems: 'center',
+    borderWidth: 1.5,
+    height: 40,
+    justifyContent: 'center',
+    marginLeft: 0,
+    padding: 0,
+    width: 40,
+  },
+  boutonRond: {
+    alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  // En-tete : 62 sous la zone sure, 12 sur les cotes, filet du bas.
+  disqueRepondre: {
+    alignItems: 'center',
+    borderRadius: 16,
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  enTete: {
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 62,
+    paddingBottom: 11,
+    paddingHorizontal: 12,
+    zIndex: 10,
+  },
+  flecheRetour: {
+    height: 20,
+    width: 20,
+  },
+  identiteDuFil: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minWidth: 0,
+  },
+  // Dans une bulle compacte (photo), la citation garde le retrait du texte.
+  citationSurPhoto: {
+    paddingHorizontal: 7,
+    paddingTop: 4,
+  },
+  legendeDePhoto: {
+    paddingBottom: 4,
+    paddingHorizontal: 7,
+    paddingTop: 5,
+  },
+  sousTitreQuiEcrit: {
+    fontFamily: 'Montserrat-Bold',
+  },
+  titreDeFeuille: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  titres: {
+    flex: 1,
+    minWidth: 0,
+  },
+  // L'heure et les coches : a 6 du bas et 10 du bord de la bulle.
+  meta: {
+    bottom: 6,
+    position: 'absolute',
+    right: 10,
+  },
+  // Sous une carte (document, sondage...) : l'heure a droite, 5 sous la carte.
+  metaSousCarte: {
+    alignSelf: 'flex-end',
+    marginTop: 5,
+  },
+  metaSurPhoto: {
+    bottom: 9,
+    position: 'absolute',
+    right: 12,
+  },
+  notice: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    textAlign: 'center',
+  },
+  noticeConteneur: {
+    alignSelf: 'center',
+    marginHorizontal: 32,
+    marginTop: 6,
+    maxWidth: 280,
+  },
+  photo: {
+    borderRadius: 15,
+    height: 184,
+    width: 252,
+  },
+  puceDeDate: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  puceDeDateConteneur: {
+    marginBottom: 4,
+    marginTop: 16,
+  },
+  // Day pose un `fontWeight: '600'` : la graisse vient de la police (Montserrat-Bold).
+  puceDeDateTexte: {
+    fontWeight: 'normal',
+  },
+  revenirEnBas: {
+    borderColor: 'transparent',
+    borderWidth: 1,
+    bottom: 12,
+    height: 40,
+    opacity: 1,
+    right: 12,
+    width: 40,
+  },
+  rondRepondre: {
+    height: 32,
+    width: 32,
+  },
+  sousTitreDeFeuille: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  texte: {
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    marginTop: 0,
+  },
+});
+
+/**
+ *
+ * @param root0
+ * @param root0.height
+ * @param root0.mine
+ * @param root0.width
+ */
 function SkeletonBubble({ height, mine = false, width }) {
   const { Colors } = useTheme();
   return (
     <View style={{
       alignSelf: mine ? 'flex-end' : 'flex-start',
-      backgroundColor: Colors.primary700,
-      borderRadius: 16,
+      // MSG1A (§3.1) — la forme d'un fil a ses vraies couleurs : petrole a moi, primary700 recu.
+      backgroundColor: mine ? Colors.chatBubbleMine : Colors.primary700,
+      borderRadius: 18,
       height,
       width,
     }}
@@ -1024,7 +1232,6 @@ function Conversation({ navigation, route }) {
   const giftedChatBottomOffset = Platform.OS === 'ios' ? 0 : safeBottomInset;
   const apiBaseUrl = useMemo(() => toApiBaseUrl(getApiBaseUrl()), []);
   const publicApiOrigin = useMemo(() => toPublicApiOrigin(getPublicApiOrigin()), []);
-  const HEADER_SIDE_WIDTH = 56;
   const resolveMediaUri = useCallback((/** @type {unknown} */ rawUri) => {
     const uri = String(rawUri || '').trim();
     if (!uri) return '';
@@ -1172,6 +1379,8 @@ function Conversation({ navigation, route }) {
   // 🎨 FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion le DIT au pied du fil, tant
   // que la connexion manque (tournée T13, C2_3b : la bannière passe et s'en va ; rien ne restait).
   const [envoiRefuse, setEnvoiRefuse] = useState(false);
+  // MSG1A (§3.3) — `canWrite` se calcule plus bas ; le glisser le lit a l'appel, par ce ref.
+  const peutEcrireRef = useRef(true);
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
   // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
@@ -3049,6 +3258,8 @@ function Conversation({ navigation, route }) {
       ? t('conversation.attachments.unavailable', 'Bientôt disponible')
       : '';
 
+    // MSG1A (§3.5) — l'ordre du pack : Photos, Camera, Document, Sondage, Evenement,
+    // Localisation, Contact (l'entree « Convocation » viendra avec le lot 1C).
     return [
       {
         icon: 'PH',
@@ -3061,20 +3272,6 @@ function Conversation({ navigation, route }) {
         key: 'camera',
         label: t('conversation.attachments.camera', 'Camera'),
         loading: isUploading,
-      },
-      {
-        disabled: !isLocationShareEnabled,
-        icon: 'LO',
-        key: 'location',
-        label: t('conversation.attachments.location', 'Localisation'),
-        unavailableReason: locationReason,
-      },
-      {
-        disabled: !isContactShareEnabled || shareableContacts.length === 0,
-        icon: 'CO',
-        key: 'contact',
-        label: t('conversation.attachments.contact', 'Contact'),
-        unavailableReason: contactReason,
       },
       {
         disabled: isDocumentPickerDisabled,
@@ -3094,6 +3291,20 @@ function Conversation({ navigation, route }) {
         key: 'event',
         label: t('conversation.attachments.event', 'Événement'),
         unavailableReason: eventReason,
+      },
+      {
+        disabled: !isLocationShareEnabled,
+        icon: 'LO',
+        key: 'location',
+        label: t('conversation.attachments.location', 'Localisation'),
+        unavailableReason: locationReason,
+      },
+      {
+        disabled: !isContactShareEnabled || shareableContacts.length === 0,
+        icon: 'CO',
+        key: 'contact',
+        label: t('conversation.attachments.contact', 'Contact'),
+        unavailableReason: contactReason,
       },
       // MESSAGERIE-1C (pack §3.5) — fil d'equipe, entraineur ou super-admin seulement.
       ...(peutConvoquer ? [{
@@ -4171,7 +4382,10 @@ function Conversation({ navigation, route }) {
     retryFailedMessage(chatId, selectedDocumentMessage);
   }, [chatId, closeDocumentActionMenu, retryFailedMessage, selectedDocumentActionMessage]);
 
-  const renderMessageImage = useCallback((messageImageProps) => {
+  // MSG1A (§3.1) — la photo du pack : 252 x 184, rayon 15, un degrade sombre en bas
+  // pour que l'heure blanche se lise sur n'importe quelle image. L'appui long ouvre le
+  // menu du message (la bulle de GiftedChat le faisait ; ce cadre n'existe plus).
+  const renderMessageImage = useCallback((messageImageProps, options = {}) => {
     const rawMessage = messageImageProps?.currentMessage || {};
     const safeMessage = {
       ...rawMessage,
@@ -4182,7 +4396,11 @@ function Conversation({ navigation, route }) {
 
     return (
       <TouchableOpacity
+        accessibilityLabel={t('conversation.attachments.photo', 'Photo')}
+        accessibilityRole="imagebutton"
         activeOpacity={0.9}
+        delayLongPress={250}
+        onLongPress={options?.onLongPress}
         onPress={() => {
           logAttachmentDebug('renderMessageImage open preview', { resolvedUrl });
           setDidTryImageHttpsFallback(false);
@@ -4199,16 +4417,12 @@ function Conversation({ navigation, route }) {
           }}
           resizeMode="cover"
           source={{ uri: resolvedUrl }}
-          style={{
-            borderRadius: 12,
-            height: 170,
-            marginTop: 4,
-            width: 220,
-          }}
+          style={stylesDuFil.photo}
         />
+        <DegradeDePhoto />
       </TouchableOpacity>
     );
-  }, [getPrimaryImageUriFromMessage, logAttachmentDebug, normalizeMessageAttachments]);
+  }, [getPrimaryImageUriFromMessage, logAttachmentDebug, normalizeMessageAttachments, t]);
 
   const selectedDocumentActionAttachment = useMemo(() => (
     getPrimaryDocumentAttachment(
@@ -5085,79 +5299,45 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  /**
-   * Render a custom time component
-   * @param {import('react-native-gifted-chat').TimeProps<any>} props - Component props
-   * @returns {React.ReactNode} Rendered time component
-   */
-  /**
-   * Render a custom time component
-   * @param {import('react-native-gifted-chat').TimeProps<any>} props - Component props
-   * @returns {React.ReactNode} Rendered time component
-   */
-  const renderTime = (props) => {
-    const { currentMessage, position } = props;
-    if (position === 'left' && currentMessage.user.name) {
-      return (
-        <View style={{
-          alignItems: 'center', flexDirection: 'row', marginBottom: 5, marginLeft: 10,
-        }}
-        >
-          <Text style={{ ...Fonts.p3, color: Colors.neutral500 }}>
-            ~
-            {' '}
-            {currentMessage.user.name}
-          </Text>
-          <Time
-            {...props}
-            containerStyle={{ left: { marginLeft: 0 } }}
-            timeTextStyle={{
-              left: { ...Fonts.p3, color: Colors.neutral500, marginLeft: 5 },
-              right: { ...Fonts.p3, color: Colors.primary900 },
-            }}
-          />
-        </View>
-      );
-    }
+  // ↩️ MSG1A (§3.3) — le rond « repondre » du pack : 32, il grandit avec le geste et passe
+  // au CYAN au seuil (deux disques superposes : seule l'opacite s'anime, ce que le pilote
+  // natif de Swipeable sait faire).
+  const renderReplySwipeAction = useCallback((/** @type {any} */ _progress, /** @type {any} */ dragX) => {
+    const avancee = dragX.interpolate({
+      extrapolate: 'clamp',
+      inputRange: [-MESSAGE_REPLY_SWIPE_THRESHOLD, 0, MESSAGE_REPLY_SWIPE_THRESHOLD],
+      outputRange: [1, 0, 1],
+    });
+    const auSeuil = dragX.interpolate({
+      extrapolate: 'clamp',
+      inputRange: [
+        -MESSAGE_REPLY_SWIPE_THRESHOLD,
+        -(MESSAGE_REPLY_SWIPE_THRESHOLD - 1),
+        MESSAGE_REPLY_SWIPE_THRESHOLD - 1,
+        MESSAGE_REPLY_SWIPE_THRESHOLD,
+      ],
+      outputRange: [1, 0, 0, 1],
+    });
+    const echelle = avancee.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
     return (
-      <Time
-        {...props}
-        timeTextStyle={{
-          left: [Fonts.p3, Fonts.neutral500],
-          right: [Fonts.p3, Fonts.primary900],
-        }}
-      />
-    );
-  };
-
-  const renderReplySwipeAction = useCallback(() => (
-    <View
-      style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
-      }}
-    >
-      <View
-        style={{
-          alignItems: 'center',
-          backgroundColor: 'rgba(1, 179, 244, 0.18)',
-          borderColor: Colors.primary500,
-          borderRadius: 16,
-          borderWidth: 1,
-          justifyContent: 'center',
-          minHeight: 32,
-          minWidth: 32,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-        }}
-      >
-        <SvgIcon color={Colors.primary500} height={14} name="reply" width={14} />
+      <View style={stylesDuFil.actionDeGlisser}>
+        <Animated.View style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}>
+          <View
+            style={[stylesDuFil.disqueRepondre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
+          >
+            <GlyphIcon color={Colors.neutral00} name="reply" size={18} />
+          </View>
+          <Animated.View
+            style={[stylesDuFil.disqueRepondre, { backgroundColor: Colors.primary500, opacity: auSeuil }]}
+          >
+            <GlyphIcon color={Colors.primary900} name="reply" size={18} />
+          </Animated.View>
+        </Animated.View>
       </View>
-    </View>
-  ), [Colors.primary500]);
+    );
+  }, [Colors.neutral00, Colors.primary500, Colors.primary900]);
 
-  const wrapWithMessageInteractions = useCallback((currentMessage, children) => {
+  const wrapWithMessageInteractions = useCallback((currentMessage, children, options = {}) => {
     if (!currentMessage) return children;
 
     const messageKey = getMessageDocumentId(currentMessage);
@@ -5182,11 +5362,14 @@ function Conversation({ navigation, route }) {
 
     return (
       <Swipeable
-        friction={2}
+        // MSG1A (§3.3) — pas de reponse dans un canal ou l'on ne peut pas ecrire.
+        enabled={peutEcrireRef.current}
+        friction={1}
         leftThreshold={MESSAGE_REPLY_SWIPE_THRESHOLD}
         onSwipeableOpen={handleSwipeableOpen}
-        overshootLeft={false}
-        overshootRight={false}
+        overshootFriction={MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION}
+        overshootLeft
+        overshootRight
         ref={setSwipeableRef}
         renderLeftActions={renderReplySwipeAction}
         renderRightActions={renderReplySwipeAction}
@@ -5196,7 +5379,10 @@ function Conversation({ navigation, route }) {
           <TouchableOpacity
             activeOpacity={1}
             delayLongPress={250}
+            // MSG1A — l'appui simple sur une piece jointe (hors photo) l'ouvrait par la
+            // bulle de GiftedChat ; la bulle de texte a son propre cadre, il passe ici.
             onLongPress={() => handleMessageLongPress(null, currentMessage)}
+            onPress={options?.onPress}
             ref={(/** @type {any} */ instance) => {
               if (!messageKey) return;
               if (instance) bubbleMeasureRefs.current.set(messageKey, instance);
@@ -5248,12 +5434,19 @@ function Conversation({ navigation, route }) {
     const marginTop = isSameUserAsPrevious ? 2 : 8;
     const marginBottom = isSameUserAsNext ? 2 : 8;
 
-    // Adjust border radius for grouped messages (rounded corners at edges, flat in middle)
+    // MSG1A (§3.1) — les coins aplatis au milieu d'un groupe ont disparu : chaque bulle
+    // garde son rayon de 18, et seule la DERNIERE porte la queue (`BulleDuFil`). Le nom de
+    // l'auteur ne s'ecrit qu'en tete de groupe, et jamais dans un tete-a-tete.
     const isLeft = position === 'left';
-    const topLeftRadius = isLeft && isSameUserAsPrevious ? 4 : 12;
-    const bottomLeftRadius = isLeft && isSameUserAsNext ? 4 : 12;
-    const topRightRadius = !isLeft && isSameUserAsPrevious ? 4 : 12;
-    const bottomRightRadius = !isLeft && isSameUserAsNext ? 4 : 12;
+    const estAMoi = !isLeft;
+    const { dernier: estDernierDuGroupe, premier: estPremierDuGroupe } = placeDansLeGroupe({
+      courant: currentMessage,
+      precedent: previousMessage,
+      suivant: nextMessage,
+    });
+    const nomEnTete = isLeft && estPremierDuGroupe && !estUnTeteATete(chatData?.type)
+      ? String(currentMessage.user?.name || '').trim()
+      : '';
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
@@ -5280,17 +5473,35 @@ function Conversation({ navigation, route }) {
     // Composition message
     if (currentMessage.composition) {
       if (currentMessage.composition.type === 'poll') {
+        // 📊 MSG1A (§3.4) — le sondage dans le cadre commun : nom, queue, heure avant le pied.
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View style={{ marginBottom, marginTop }}>
-              <PollMessageBubble
-                currentUserId={userData?.documentId || ''}
-                isMe={!isLeft}
-                onOpenDetails={() => handleOpenPollDetails(currentMessage)}
-                onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
-                poll={currentMessage.composition}
-                resolveVoterName={resolveVoterName}
-              />
+            <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+              <BulleDuFil
+                couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                estAMoi={estAMoi}
+                estDernier={estDernierDuGroupe}
+                nom={nomEnTete}
+                testID="bulle-sondage"
+              >
+                <PollMessageBubble
+                  currentUserId={userData?.documentId || ''}
+                  dansLaBulle
+                  isMe={!isLeft}
+                  meta={(
+                    <MetaDuMessage
+                      estAMoi={estAMoi}
+                      etat={etatDEnvoi(currentMessage)}
+                      heure={heureDuMessage(currentMessage.createdAt)}
+                    />
+                  )}
+                  onOpenDetails={() => handleOpenPollDetails(currentMessage)}
+                  onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
+                  poll={currentMessage.composition}
+                  resolveVoterAvatar={resolveVoterAvatar}
+                  resolveVoterName={resolveVoterName}
+                />
+              </BulleDuFil>
             </View>
           ),
         );
@@ -5392,32 +5603,41 @@ function Conversation({ navigation, route }) {
       if (currentMessage.composition.type === 'voice_note') {
         return wrapWithMessageInteractions(
           currentMessage, (
-            <View
-              style={{
-                alignItems: isLeft ? 'flex-start' : 'flex-end',
-                marginBottom,
-                marginTop,
-                width: '100%',
-              }}
-            >
-              {/* VOCAL — la bulle porte son nom (au-dessus, quand l'auteur
-                  change), son heure et « Envoi… » (dessous) : la maquette. */}
-              <VoiceNoteBubble
-                attachments={currentMessage.attachments || []}
-                composition={currentMessage.composition}
-                createdAt={currentMessage.createdAt}
-                isMe={!isLeft}
-                isPending={Boolean(currentMessage.pending)}
-                message={currentMessage.message}
-                messageId={getMessageDocumentId(currentMessage)}
-                nextVoiceMessageId={nextVoiceToChain(
-                  nextMessage,
-                  isMessageOwnedByCurrentUser(nextMessage),
+            <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+              {/* 🎙️ MSG1A (§3.6) — le vocal dans le cadre commun : nom en tete de groupe,
+                  queue, et l'heure + les coches DANS la bulle (seul changement du pack). */}
+              <BulleDuFil
+                couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                estAMoi={estAMoi}
+                estDernier={estDernierDuGroupe}
+                nom={nomEnTete}
+                testID="bulle-vocal"
+              >
+                <VoiceNoteBubble
+                  attachments={currentMessage.attachments || []}
+                  composition={currentMessage.composition}
+                  createdAt={currentMessage.createdAt}
+                  dansLaBulle
+                  isMe={!isLeft}
+                  isPending={Boolean(currentMessage.pending)}
+                  message={currentMessage.message}
+                  messageId={getMessageDocumentId(currentMessage)}
+                  meta={(
+                    <MetaDuMessage
+                      estAMoi={estAMoi}
+                      etat={etatDEnvoi(currentMessage)}
+                      heure={heureDuMessage(currentMessage.createdAt)}
+                    />
                 )}
-                senderName={isLeft && !isSameUserAsPrevious ? currentMessage.user?.name || '' : ''}
-              />
+                  nextVoiceMessageId={nextVoiceToChain(
+                    nextMessage,
+                    isMessageOwnedByCurrentUser(nextMessage),
+                  )}
+                  senderName={isLeft ? currentMessage.user?.name || '' : ''}
+                />
+              </BulleDuFil>
               {currentMessage.failed ? (
-                <Text style={[Fonts.p4Bold, { color: Colors.error500, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.chatDanger, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
                   {t('common.retry', 'Réessayer')}
                 </Text>
               ) : null}
@@ -5428,13 +5648,10 @@ function Conversation({ navigation, route }) {
 
       return wrapWithMessageInteractions(
         currentMessage, (
-          <View style={{
-            marginBottom,
-            marginTop,
-          }}
-          >
-            {/* FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil (GiftedChat
-                ne la redessine pas quand les participants arrivent après elle). */}
+          <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+            {/* 📋 MSG1A (§3.7) — la carte de composition dans le cadre commun (nom, queue), et
+                l'heure avant son pied. FINITIONS15 point 6 : la carte s'abonne elle-même à la
+                fiche du fil (GiftedChat ne la redessine pas quand les participants arrivent). */}
             {/* MESSAGERIE-1C : notice, « Modifier » et bloc « Reponses » des convocations. */}
             <ConvocationLineupMessage
               chatId={chatId}
@@ -5442,14 +5659,30 @@ function Conversation({ navigation, route }) {
               onEdit={peutConvoquer ? ouvrirModificationConvocation : undefined}
             >
               {(/** @type {any} */ convocation) => (
-                <CompositionMessageBubbleDuFil
-                  chatId={chatId}
-                  composition={currentMessage.composition}
-                  currentEvent={currentMessage.event}
-                  isMe={!isLeft}
-                  onEdit={convocation.onEdit}
-                  renderReponses={convocation.renderReponses}
-                />
+                <BulleDuFil
+                  couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                  estAMoi={estAMoi}
+                  estDernier={estDernierDuGroupe}
+                  nom={nomEnTete}
+                  testID="bulle-composition"
+                >
+                  <CompositionMessageBubbleDuFil
+                    chatId={chatId}
+                    composition={currentMessage.composition}
+                    currentEvent={currentMessage.event}
+                    dansLaBulle
+                    isMe={!isLeft}
+                    meta={(
+                      <MetaDuMessage
+                        estAMoi={estAMoi}
+                        etat={etatDEnvoi(currentMessage)}
+                        heure={heureDuMessage(currentMessage.createdAt)}
+                      />
+                    )}
+                    onEdit={convocation.onEdit}
+                    renderReponses={convocation.renderReponses}
+                  />
+                </BulleDuFil>
               )}
             </ConvocationLineupMessage>
           </View>
@@ -5459,41 +5692,24 @@ function Conversation({ navigation, route }) {
 
     const isPending = Boolean(currentMessage.pending);
     const isFailed = Boolean(currentMessage.failed);
-    const replyAuthorName = String(
-      currentMessage?.replyTo?.sender?.firstname
-      || currentMessage?.replyTo?.sender?.name
-      || currentMessage?.replyTo?.user?.name
-      || t('conversation.replyPreview.defaultAuthor', 'Membre'),
-    ).trim();
-    const replyPreviewText = String(
-      currentMessage?.replyTo?.message
-      || currentMessage?.replyTo?.text
-      || t('conversation.replyPreview.defaultText', 'Message'),
-    );
-    const replyPreviewNode = currentMessage.replyTo ? (
-      <TouchableOpacity
-        activeOpacity={0.85}
+    // 💬 MSG1A (§3.3) — LA CITATION PASSE DANS LA BULLE (SPECS.md §1) : filet et nom a la
+    // couleur de l'auteur cite (« Vous » si c'est moi), extrait d'une ligne avec l'icone du
+    // contenu. Un appui remonte au message cite, comme avant.
+    const auteurCite = currentMessage.replyTo
+      ? auteurDuMessageCite(currentMessage.replyTo, userData?.documentId || '', t)
+      : null;
+    const extraitCite = currentMessage.replyTo
+      ? extraitDuMessageCite(currentMessage.replyTo, t)
+      : null;
+    const citationNode = auteurCite && extraitCite ? (
+      <CitationDansLaBulle
+        couleur={couleurDuNom(Colors, auteurCite.identifiant)}
+        estAMoi={estAMoi}
+        icone={extraitCite.icone}
+        nom={auteurCite.nom}
         onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
-        style={{
-          backgroundColor: 'rgba(1,179,244,0.12)',
-          borderColor: Colors.primary700,
-          borderRadius: 8,
-          borderWidth: 1,
-          marginBottom: 4,
-          marginHorizontal: 12,
-          marginTop: marginTop + 4,
-          padding: 8,
-        }}
-      >
-        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-          {t('conversation.replyPreview.label', 'Réponse à')}
-          {' '}
-          {replyAuthorName}
-        </Text>
-        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-          {replyPreviewText}
-        </Text>
-      </TouchableOpacity>
+        texte={extraitCite.texte}
+      />
     ) : null;
     const normalizedCurrentAttachments = normalizeMessageAttachments(currentMessage?.attachments);
     const hasDocumentAttachment = normalizedCurrentAttachments.some((attachment) => (
@@ -5513,16 +5729,18 @@ function Conversation({ navigation, route }) {
       return wrapWithMessageInteractions(
         currentMessage,
         (
-          <View style={{ opacity: isPending ? 0.5 : 1, width: '100%' }}>
-            {replyPreviewNode}
-            <View
-              style={{
-                alignItems: isLeft ? 'flex-start' : 'flex-end',
-                marginBottom,
-                marginTop: currentMessage.replyTo ? 2 : marginTop,
-                width: '100%',
-              }}
+          <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
+            {/* MSG1A (§3.1) — le document devient une CARTE DANS LA BULLE (SPECS.md §1,
+                `DocBody`) : meme cadre que le texte (nom, queue, heure dessous). La carte
+                garde ses boutons Ouvrir / Telecharger / Partager, inchanges. */}
+            <BulleDuFil
+              couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+              estAMoi={estAMoi}
+              estDernier={estDernierDuGroupe}
+              nom={nomEnTete}
+              testID="bulle-document"
             >
+              {citationNode}
               <DocumentMessageBubble
                 attachments={normalizedCurrentAttachments}
                 caption={documentCaption}
@@ -5534,109 +5752,99 @@ function Conversation({ navigation, route }) {
                 onShare={() => shareDocumentAttachmentFromMessage(actionableMessage)}
                 pending={isPending}
               />
-            </View>
+              <View style={stylesDuFil.metaSousCarte}>
+                <MetaDuMessage
+                  estAMoi={estAMoi}
+                  etat={etatDEnvoi(currentMessage)}
+                  heure={heureDuMessage(currentMessage.createdAt)}
+                />
+              </View>
+            </BulleDuFil>
           </View>
         ),
       );
     }
 
+    // 🫧 MSG1A (§3.1) — LA BULLE DE TEXTE, « MODELE WHATSAPP » (SPECS.md §1). Elle quitte
+    // la bulle generique de GiftedChat pour le cadre commun `BulleDuFil` : queue sur la
+    // DERNIERE bulle du groupe, nom en couleur sur la PREMIERE (fils a plusieurs), heure et
+    // coches DANS la bulle. Ce qui marchait est garde tel quel : liens, telephones et
+    // courriels (le `MessageText` de GiftedChat), la photo et son plein ecran, l'envoi en
+    // cours (50 %), l'echec et « Reessayer », l'appui sur une piece jointe.
+    const texteDuMessage = String(currentMessage.text || '');
+    const aDuTexte = texteDuMessage.trim().length > 0;
+    const imageDuMessage = currentMessage.image ? renderMessageImage(
+      { currentMessage },
+      { onLongPress: () => handleMessageLongPress(null, currentMessage) },
+    ) : null;
+    const photoSeule = Boolean(imageDuMessage) && !aDuTexte;
+    const ouvrirLaPieceJointe = !imageDuMessage
+      && Array.isArray(currentMessage?.attachments)
+      && currentMessage.attachments.length > 0
+      ? () => openFirstAttachment(currentMessage)
+      : undefined;
+
     return wrapWithMessageInteractions(
       currentMessage,
       (
-        <View style={{ opacity: isPending ? 0.5 : 1 }}>
-          {currentMessage.replyTo ? (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
-              style={{
-                backgroundColor: 'rgba(1,179,244,0.12)',
-                borderColor: Colors.primary700,
-                borderRadius: 8,
-                borderWidth: 1,
-                marginBottom: 4,
-                marginHorizontal: 12,
-                marginTop: marginTop + 4,
-                padding: 8,
-              }}
-            >
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {t('conversation.replyPreview.label', 'Réponse à')}
-                {' '}
-                {replyAuthorName}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-                {replyPreviewText}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          <Bubble
-            {...props}
-            onPress={() => {
-              if (Array.isArray(currentMessage?.attachments) && currentMessage.attachments.length > 0) {
-                openFirstAttachment(currentMessage);
-              }
-            }}
-            renderMessageImage={renderMessageImage}
-            renderTicks={(/** @type {any} */ bubbleMessage) => {
-              if (bubbleMessage.failed) {
-                return <Text style={{ color: Colors.error500, fontSize: 10, marginRight: 4 }}>!</Text>;
-              }
-              if (bubbleMessage.pending) return <Text style={{ fontSize: 10, marginRight: 4 }}>...</Text>;
-              // Checkmark logic using icons or text
-              // GiftedChat appelle un renderTicks personnalise AVANT son propre
-              // garde gauche/droite : ce rendu s'applique donc AUSSI aux bulles
-              // recues (fond sombre #0F1821). L'encre suit le fond : primary900
-              // sur la bulle envoyee primary500 (7,96:1, cf. THEME.md),
-              // neutral00 sur la bulle recue sombre (17,90:1).
-              const tickColor = isLeft ? Colors.neutral00 : Colors.primary900;
-              if (bubbleMessage.readBy && bubbleMessage.readBy.length > 0) {
-                return <Text style={{ color: tickColor, fontSize: 10, fontWeight: 'bold' }}>vv</Text>;
-              }
-              return <Text style={{ color: tickColor, fontSize: 10 }}>v</Text>;
-            }}
-            renderTime={renderTime}
-            textStyle={{
-              left: [Fonts.p1, { color: Colors.neutral00 }], // White text for dark bubble
-              // Bulle envoyee = fond primary500 : encre primary900 (cf. THEME.md).
-              right: [Fonts.p1, Fonts.primary900],
-            }}
-            wrapperStyle={{
-              left: {
-                backgroundColor: '#0F1821', // Dark background for received messages to match screenshot
-                borderBottomLeftRadius: bottomLeftRadius,
-                borderBottomRightRadius: 18,
-                borderTopLeftRadius: topLeftRadius,
-                borderTopRightRadius: 18,
-                marginBottom,
-                marginTop: currentMessage.replyTo ? 2 : marginTop,
-                padding: 4,
-              },
-              right: {
-                backgroundColor: Colors.primary500,
-                borderBottomLeftRadius: 18,
-                borderBottomRightRadius: bottomRightRadius,
-                borderTopLeftRadius: 18,
-                borderTopRightRadius: topRightRadius,
-                marginBottom,
-                marginTop: currentMessage.replyTo ? 2 : marginTop,
-                padding: 4,
-              },
-            }}
-          />
+        <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
+          <BulleDuFil
+            compacte={Boolean(imageDuMessage)}
+            couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+            estAMoi={estAMoi}
+            estDernier={estDernierDuGroupe}
+            nom={nomEnTete}
+            testID="bulle-texte"
+          >
+            {citationNode ? (
+              <View style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}>{citationNode}</View>
+            ) : null}
+            {imageDuMessage}
+            {aDuTexte ? (
+              <View style={imageDuMessage ? stylesDuFil.legendeDePhoto : null}>
+                <MessageText
+                  currentMessage={{
+                    ...currentMessage,
+                    // La reserve d'espaces insecables garde la place de l'heure en fin de
+                    // derniere ligne (SPECS.md §1 : 54 sur mes bulles, 36 sur les autres).
+                    text: `${texteDuMessage}${reserveDeLHeure(estAMoi)}`,
+                  }}
+                  linkStyle={{
+                    left: { color: Colors.primary500 },
+                    right: { color: Colors.neutral00 },
+                  }}
+                  position={position}
+                  textStyle={{
+                    left: [TEXTE_DU_MESSAGE, stylesDuFil.texte, { color: Colors.neutral00 }],
+                    right: [TEXTE_DU_MESSAGE, stylesDuFil.texte, { color: Colors.neutral00 }],
+                  }}
+                />
+              </View>
+            ) : null}
+            <View style={photoSeule ? stylesDuFil.metaSurPhoto : stylesDuFil.meta}>
+              <MetaDuMessage
+                estAMoi={estAMoi}
+                etat={etatDEnvoi(currentMessage)}
+                heure={heureDuMessage(currentMessage.createdAt)}
+                surImage={photoSeule}
+              />
+            </View>
+          </BulleDuFil>
           {isChatRetryEnabled && isFailed && !isLeft ? (
-            <View style={{ alignItems: 'flex-end', marginRight: 10, marginTop: 4 }}>
+            <View style={{ alignItems: 'flex-end', marginTop: 4 }}>
               <TouchableOpacity
+                accessibilityRole="button"
                 onPress={() => retryFailedMessage(chatId, currentMessage)}
                 style={{
-                  backgroundColor: 'rgba(0,0,0,0.25)',
-                  borderColor: Colors.error500,
+                  backgroundColor: withAlpha(Colors.neutral900, 0.25),
+                  borderColor: Colors.chatDanger,
                   borderRadius: 12,
                   borderWidth: 1,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                 }}
               >
-                <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.chatDanger }]}>
                   {t('common.retry', 'Réessayer')}
                 </Text>
               </TouchableOpacity>
@@ -5644,6 +5852,84 @@ function Conversation({ navigation, route }) {
           ) : null}
         </View>
       ),
+      { onPress: ouvrirLaPieceJointe },
+    );
+  };
+
+  // 🗓️ MSG1A (§3.1) — la puce de date, centree (SPECS.md §1) : 12/700 sur la barre a 84 %.
+  // Les formats (« Aujourd'hui », « Hier »...) restent ceux passes a GiftedChat.
+  const renderPuceDeDate = (/** @type {any} */ props) => (
+    <Day
+      {...props}
+      containerStyle={stylesDuFil.puceDeDateConteneur}
+      textStyle={[PUCE_DE_DATE, stylesDuFil.puceDeDateTexte, { color: Colors.neutral00 }]}
+      wrapperStyle={[stylesDuFil.puceDeDate, { backgroundColor: withAlpha(Colors.chatBar, 0.84) }]}
+    />
+  );
+
+  // 🔕 MSG1A (§3.1, §3.17) — une ligne sans auteur (« … a rejoint le canal ») : notice
+  // DISCRETE, centree, comme demande (11,5, texte a 62 %, pastille de la barre a 55 %).
+  const renderNoticeSysteme = (/** @type {any} */ props) => {
+    const texte = String(props?.currentMessage?.text || '').trim();
+    if (!texte) return null;
+    return (
+      <View style={stylesDuFil.noticeConteneur} testID="notice-systeme">
+        <Text
+          style={[
+            NOTICE,
+            stylesDuFil.notice,
+            {
+              backgroundColor: withAlpha(Colors.chatBar, 0.55),
+              color: withAlpha(Colors.neutral00, 0.62),
+            },
+          ]}
+        >
+          {texte}
+        </Text>
+      </View>
+    );
+  };
+
+  // ⬇️ MSG1A (§3.1) — « revenir en bas » : rond de 40, visible au-dela de 160 du bas.
+  const renderBoutonRevenirEnBas = () => (
+    <View
+      accessibilityLabel={t('conversation.scrollToBottom', 'Revenir en bas')}
+      accessibilityRole="button"
+      testID="conversation-revenir-en-bas"
+    >
+      <GlyphIcon color={Colors.neutral00} name="chevronDown" size={22} />
+    </View>
+  );
+
+  // 📊 MSG1A (§3.4) — l'avatar d'un votant (sondage), lu sur les participants du fil. Les
+  // NOMS restent l'affaire de `resolveVoterName`, que ce lot ne touche pas.
+  const resolveVoterAvatar = (/** @type {string} */ voterId) => {
+    const membre = Array.isArray(chatData?.participants)
+      ? chatData.participants.find((participant) => (
+        String(participant?.documentId || participant?.id || '') === String(voterId || '')
+      ))
+      : null;
+    return resolveMediaUri(membre?.avatar?.url) || '';
+  };
+
+  // 🧑 MSG1A (§3.1) — l'avatar de 28, en bas du groupe, dans les fils a plusieurs
+  // (GiftedChat ne l'appelle que pour la DERNIERE bulle d'un groupe).
+  const renderAvatarDuFil = (/** @type {any} */ props) => {
+    const auteur = props?.currentMessage?.user;
+    if (!auteur) return null;
+    return (
+      <TouchableOpacity
+        accessibilityLabel={String(auteur.name || '').trim() || undefined}
+        accessibilityRole="imagebutton"
+        onPress={() => handleAvatarPress(auteur)}
+      >
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={auteur.avatar || undefined}
+          name={String(auteur.name || '')}
+          size={28}
+        />
+      </TouchableOpacity>
     );
   };
 
@@ -5722,8 +6008,11 @@ function Conversation({ navigation, route }) {
     // false` du bas et s affichait « Canal d annonce (lecture seule) ». Ce
     // n etait pas un choix — le serveur, lui, l autorise (chat-message.ts,
     // `ensureUserCanWriteInChat` ne restreint que `club` et `multisport`).
+    // 🐛 MSG1A (G1) — `group` manquait de la meme facon : tout groupe cree depuis
+    // « Nouvelle discussion » s'affichait en canal d'annonce.
     if (
       chatData.type === 'whisper'
+      || chatData.type === 'group'
       || chatData.type === 'team'
       || isLeagueConversation
       || isFriendlyMatchChat(chatData)
@@ -5751,6 +6040,8 @@ function Conversation({ navigation, route }) {
 
     return false;
   }, [chatData, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
+
+  peutEcrireRef.current = canWrite;
 
   /**
    * Render custom actions (attachment buttons)
@@ -5822,11 +6113,17 @@ function Conversation({ navigation, route }) {
       <View style={Spaces.gap[8]}>
         {hasMediaDraft ? (
           <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
             Spaces.padding[8],
             Alignments.row,
             Alignments.alignCenter,
-            { borderRadius: 14, gap: 10 },
+            {
+              // MSG1A (§3.3) — aux couleurs du champ de saisie (il etait clair sur fond nuit).
+              backgroundColor: Colors.primary800,
+              borderColor: Colors.primary700,
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 10,
+            },
           ]}
           >
             <Image
@@ -5839,12 +6136,12 @@ function Conversation({ navigation, route }) {
               }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary700 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.previewTitle', 'Photo prête à envoyer')}
               </Text>
               <Text
                 numberOfLines={2}
-                style={[Fonts.p4, { color: Colors.neutral700 }]}
+                style={[Fonts.p4, { color: withAlpha(Colors.neutral00, 0.7) }]}
               >
                 {composerText?.trim()
                   ? t('conversation.attachments.previewWithCaption', 'La légende sera envoyée avec la photo.')
@@ -5869,30 +6166,20 @@ function Conversation({ navigation, route }) {
           </View>
         ) : null}
 
-        {hasReplyPreview ? (
-          <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[8],
-            Alignments.row,
-            Alignments.justifySpaceBetween,
-            Alignments.alignCenter,
-          ]}
-          >
-            <View>
-              <Text style={[Fonts.p3Bold, Fonts.primary700]}>
-                {i18n.t('conversation.reply.replyingTo', 'Répondre a')}
-                {' '}
-                {replyingTo.user?.name}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral700]}>{replyingTo.text}</Text>
-            </View>
-            <Button
-              onPress={() => setReplyingTo(null)}
-              title="X"
-              variant="SecondaryLight"
+        {/* 💬 MSG1A (§3.3) — la barre « reponse en cours » du pack, au-dessus de la saisie. */}
+        {hasReplyPreview ? (() => {
+          const auteur = auteurDuMessageCite(replyingTo, userData?.documentId || '', t);
+          const extrait = extraitDuMessageCite(replyingTo, t);
+          return (
+            <BarreDeReponse
+              couleur={couleurDuNom(Colors, auteur.identifiant)}
+              icone={extrait.icone}
+              nom={auteur.nom}
+              onFermer={() => setReplyingTo(null)}
+              texte={extrait.texte}
             />
-          </View>
-        ) : null}
+          );
+        })() : null}
       </View>
     );
   };
@@ -5913,6 +6200,20 @@ function Conversation({ navigation, route }) {
     ) : null;
     if (ligneEnvoiRefuse && typingUsers.size === 0) return ligneEnvoiRefuse;
     if (typingUsers.size > 0) {
+      // MSG1A (§3.1) — dans un fil a plusieurs, l'avatar de 28 de celui qui ecrit.
+      const premierQuiEcrit = Array.isArray(chatData?.participants)
+        ? chatData.participants.find((membre) => (
+          String(membre?.documentId || '') === String(Array.from(typingUsers)[0] || '')
+        ))
+        : null;
+      const avatarQuiEcrit = premierQuiEcrit && !estUnTeteATete(chatData?.type) ? (
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={resolveMediaUri(premierQuiEcrit?.avatar?.url) || undefined}
+          name={[premierQuiEcrit?.firstname, premierQuiEcrit?.lastname].filter(Boolean).join(' ')}
+          size={28}
+        />
+      ) : null;
       const typingNames = Array.from(typingUsers)
         .map((typingUserId) => resolveVoterName(String(typingUserId)))
         .filter(Boolean);
@@ -5930,9 +6231,9 @@ function Conversation({ navigation, route }) {
       return ligneEnvoiRefuse ? (
         <View style={{ gap: 4 }}>
           {ligneEnvoiRefuse}
-          <TypingIndicator label={typingLabel} />
+          <TypingIndicator avatar={avatarQuiEcrit} label={typingLabel} />
         </View>
-      ) : <TypingIndicator label={typingLabel} />;
+      ) : <TypingIndicator avatar={avatarQuiEcrit} label={typingLabel} />;
     }
     return null;
   };
@@ -6022,9 +6323,9 @@ function Conversation({ navigation, route }) {
       <View style={[
         Spaces.paddingVertical[8],
         {
-          // VOCAL — la barre de la maquette (M1) : fond primary900 à 96 %,
-          // liseré haut de 1 px, 12 sur les côtés.
-          backgroundColor: withAlpha(Colors.primary900, 0.96),
+          // VOCAL — la barre de la maquette (M1) : liseré haut de 1 px, 12 sur les côtés.
+          // MSG1A (§3.1) — fond OPAQUE `chatBar` (« bloc fixe et pas transparent »).
+          backgroundColor: Colors.chatBar,
           borderTopColor: withAlpha(Colors.neutral00, 0.06),
           borderTopWidth: 1,
           paddingBottom: composerBottomInset,
@@ -6247,11 +6548,42 @@ function Conversation({ navigation, route }) {
     );
   };
 
+  // 🧭 MSG1A (§3.1) — CE QUE DIT L'EN-TETE SOUS LE TITRE.
+  //   · quelqu'un ecrit : « Prenom ecrit… » en cyan (« ecrit… » dans un tete-a-tete) ;
+  //   · sinon le sous-titre deja connu (fil de la Ville, parametre de route) ;
+  //   · sinon, dans un fil a plusieurs, les prenoms des membres puis « Vous ».
+  const prenomsQuiEcrivent = Array.from(typingUsers)
+    .map((idQuiEcrit) => String(resolveVoterName(String(idQuiEcrit)) || '').trim().split(/\s+/)[0])
+    .filter((prenom) => prenom && prenom !== 'Membre');
+  const quelquUnEcrit = typingUsers.size > 0;
+  let sousTitreDeLEnTete = subtitle;
+  if (quelquUnEcrit) {
+    sousTitreDeLEnTete = estUnTeteATete(chatData?.type) || prenomsQuiEcrivent.length === 0
+      ? i18n.t('conversation.typing.short', 'écrit…')
+      : i18n.t('conversation.typing.header', {
+        count: prenomsQuiEcrivent.length,
+        defaultValue_one: '{{names}} écrit…',
+        defaultValue_other: '{{names}} écrivent…',
+        names: prenomsQuiEcrivent.slice(0, 2).join(', '),
+        ...SANS_ECHAPPEMENT,
+      });
+  } else if (!sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil) {
+    const prenomsDesMembres = (Array.isArray(chatData?.participants) ? chatData.participants : [])
+      .filter((membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
+      .map((membre) => String(membre?.firstname || '').trim())
+      .filter(Boolean)
+      .slice(0, 30);
+    if (prenomsDesMembres.length > 0) {
+      sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${t('conversation.header.you', 'Vous')}`;
+    }
+  }
+  const peutOuvrirLaGestionDuGroupe = isGroupAdmin;
+
   return (
     <ImageBackground
       resizeMode="cover"
       source={Images.bg2}
-      style={[Alignments.fill]}
+      style={[Alignments.fill, { backgroundColor: Colors.chatBackground }]}
     >
       {shouldAvoidDeprecatedSystemBarColors ? (
         <StatusBar barStyle="light-content" translucent />
@@ -6259,88 +6591,112 @@ function Conversation({ navigation, route }) {
         <StatusBar backgroundColor="transparent" barStyle="light-content" translucent />
       )}
 
-      {/* Custom Header */}
-      <View style={{
-        alignItems: 'center',
-        flexDirection: 'row',
-        paddingBottom: 10,
-        paddingHorizontal: 16,
-        paddingTop: top + 10,
-        zIndex: 10,
-      }}
+      {/* 🧭 MSG1A (§3.1) — L'EN-TETE DU FIL, OPAQUE (« bloc fixe et pas transparent ») :
+          retour rond de 40 a liseré cyan, avatar (38 a plusieurs, 36 pour une personne),
+          titre 16/700, sous-titre « Prenom ecrit… » en cyan ou les membres, puis ⋮.
+          Toucher l'avatar ou le titre d'un groupe ouvre sa gestion. */}
+      <View
+        style={[
+          stylesDuFil.enTete,
+          {
+            backgroundColor: Colors.chatBar,
+            borderBottomColor: withAlpha(Colors.neutral00, 0.06),
+            paddingTop: top,
+          },
+        ]}
       >
-        <View style={{ alignItems: 'flex-start', width: HEADER_SIDE_WIDTH }}>
-          <HeaderBackButton
-            onPress={() => navigation.goBack()}
-            style={{ marginLeft: 0 }}
-            withDefaultMargin={false}
-          />
-        </View>
+        <HeaderBackButton
+          iconStyle={stylesDuFil.flecheRetour}
+          onPress={() => navigation.goBack()}
+          style={stylesDuFil.boutonRetour}
+          withDefaultMargin={false}
+        />
 
-        {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
-        <View testID="fil-de-la-ville-ecusson">
-          <EcussonDuFil
-            chat={chatData}
-            espaceVille={route?.params?.espace === 'ville'}
-            routeChatType={route?.params?.chatType || null}
-          />
-        </View>
+        <TouchableOpacity
+          accessibilityHint={peutOuvrirLaGestionDuGroupe
+            ? t('conversation.header.openGroupHint', 'Ouvre les infos du groupe')
+            : undefined}
+          accessibilityRole={peutOuvrirLaGestionDuGroupe ? 'button' : 'header'}
+          activeOpacity={peutOuvrirLaGestionDuGroupe ? 0.7 : 1}
+          disabled={!peutOuvrirLaGestionDuGroupe}
+          onPress={handleOpenGroupManagement}
+          style={stylesDuFil.identiteDuFil}
+        >
+          {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
+          <View testID="fil-de-la-ville-ecusson">
+            <EcussonDuFil
+              chat={chatData}
+              espaceVille={route?.params?.espace === 'ville'}
+              routeChatType={route?.params?.chatType || null}
+              taille={38}
+            />
+          </View>
+          {chatData && !filDeLaVille.estFil ? (
+            <AvatarDuFil
+              chat={chatData}
+              meId={userData?.documentId || ''}
+              size={estUnTeteATete(chatData?.type) ? 36 : 38}
+            />
+          ) : null}
 
-        <View style={{ alignItems: 'flex-start', flex: 1, paddingHorizontal: 16 }}>
-          {/* FINITIONS13-COLL (04/10) — le canal de la Ville tient sur deux lignes (T13, C2_3a :
-              « Dirigeants des clu… »). */}
-          <Text
-            numberOfLines={filDeLaVille.estFil ? 2 : 1}
-            style={[Fonts.h3, { color: Colors.neutral00 }]}
-            testID="conversation-titre"
-          >
-            {title}
-          </Text>
-          {subtitle ? (
+          <View style={stylesDuFil.titres}>
+            {/* FINITIONS13-COLL (04/10) — le canal de la Ville tient sur deux lignes (T13,
+                C2_3a : « Dirigeants des clu… »). */}
             <Text
               numberOfLines={filDeLaVille.estFil ? 2 : 1}
-              style={[Fonts.p3, { color: Colors.neutral300 }]}
+              style={[TITRE_DU_FIL, { color: Colors.neutral00 }]}
+              testID="conversation-titre"
             >
-              {subtitle}
+              {title}
             </Text>
-          ) : null}
-        </View>
-
-        <View style={{ alignItems: 'flex-end', width: HEADER_SIDE_WIDTH }}>
-          {/* COLL-C4A2 — un fil de la Ville : « Qui est dans ce canal » remplace le menu ⋮ (la
-              liste se calcule, elle ne se tient pas à la main). */}
-          {filDeLaVille.estFil ? (
-            <BoutonMembresDuFil
-              estCanal={filDeLaVille.estCanal}
-              onPress={filDeLaVille.ouvrirMembres}
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={() => setIsMenuVisible(true)}
-              style={{
-                alignItems: 'center',
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                borderRadius: 20,
-                height: 40,
-                justifyContent: 'center',
-                width: 40,
-              }}
-            >
+            {sousTitreDeLEnTete ? (
               <Text
-                style={{
-                  color: Colors.neutral00,
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                }}
+                numberOfLines={filDeLaVille.estFil ? 2 : 1}
+                style={[
+                  SOUS_TITRE_DU_FIL,
+                  quelquUnEcrit
+                    ? stylesDuFil.sousTitreQuiEcrit
+                    : null,
+                  { color: quelquUnEcrit ? Colors.primary500 : withAlpha(Colors.neutral00, 0.6) },
+                ]}
+                testID="conversation-sous-titre"
               >
-                {'\u22EE'}
+                {sousTitreDeLEnTete}
               </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            ) : null}
+          </View>
+        </TouchableOpacity>
+
+        {/* COLL-C4A2 — un fil de la Ville : « Qui est dans ce canal » remplace le menu ⋮ (la
+            liste se calcule, elle ne se tient pas à la main). */}
+        {filDeLaVille.estFil ? (
+          <BoutonMembresDuFil
+            estCanal={filDeLaVille.estCanal}
+            onPress={filDeLaVille.ouvrirMembres}
+          />
+        ) : (
+          <TouchableOpacity
+            accessibilityLabel={t('conversation.actions.menu', 'Options de la conversation')}
+            accessibilityRole="button"
+            onPress={() => setIsMenuVisible(true)}
+            style={[stylesDuFil.boutonRond, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}
+            testID="conversation-menu"
+          >
+            <GlyphIcon color={Colors.neutral00} name="dotsVertical" size={20} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={[Alignments.fill]}>
+        {/* MSG1A (§3.1) — le motif sportif en filigrane (cyan a 8 %, tuile de 240), derriere
+            le fil seulement : ni l'en-tete ni la saisie ne le portent. */}
+        <Image
+          pointerEvents="none"
+          resizeMode="repeat"
+          source={Images.motifDuFil}
+          style={StyleSheet.absoluteFill}
+          testID="conversation-motif"
+        />
         {renderClubReadNotice()}
         {renderLeagueNegotiationBanner()}
         {/* COLL-C4A2 — club détaché : « Tu ne fais plus partie de ce canal » (écran 6). */}
@@ -6410,11 +6766,24 @@ function Conversation({ navigation, route }) {
             onLoadEarlier={() => fetchNextPage()}
             onLongPress={handleMessageLongPress}
             onSend={onSend}
+            // MSG1A (§3.1) — avatar de 28 en bas des groupes (aucun en tete-a-tete), puces
+            // de date, notices discretes, et « revenir en bas » au-dela de 160.
+            imageStyle={{ left: stylesDuFil.avatarVide }}
+            isScrollToBottomEnabled
+            renderAvatar={estUnTeteATete(chatData?.type) ? null : renderAvatarDuFil}
             renderBubble={renderBubble}
             renderChatEmpty={renderChatEmpty}
+            renderDay={renderPuceDeDate}
             renderFooter={renderFooter}
             renderInputToolbar={isPollModalVisible ? () => null : renderInputToolbar}
             renderSend={renderSend}
+            renderSystemMessage={renderNoticeSysteme}
+            scrollToBottomComponent={renderBoutonRevenirEnBas}
+            scrollToBottomOffset={160}
+            scrollToBottomStyle={[
+              stylesDuFil.revenirEnBas,
+              { backgroundColor: withAlpha(Colors.primary700, 0.98) },
+            ]}
             text={composerText}
             user={{
               _id: userData?.documentId || '',
@@ -6676,18 +7045,12 @@ function Conversation({ navigation, route }) {
               tuile tronquee). Pose en en-tete, il ne defile plus jamais —
               quelle que soit la hauteur du contenu.
             */
+            // MSG1A (§3.5) — l'en-tete du pack : « Ajouter » 18, sous-titre 13 a 60 %, a gauche.
             <View>
-              <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              <Text style={[stylesDuFil.titreDeFeuille, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.title', 'Ajouter')}
               </Text>
-              <Text
-                style={[
-                  Fonts.p3,
-                  Fonts.neutral300,
-                  Fonts.textCenter,
-                  Spaces.marginTop[4],
-                ]}
-              >
+              <Text style={[stylesDuFil.sousTitreDeFeuille, { color: withAlpha(Colors.neutral00, 0.6) }]}>
                 {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
               </Text>
             </View>
@@ -6960,6 +7323,9 @@ function Conversation({ navigation, route }) {
           canCopy={canCopySelectedMessage}
           canEdit={canEditSelectedMessage}
           canEditComposition={canEditSelectedComposition}
+          // MSG1A (§3.2) — canal en lecture seule : pas de « Repondre » (il ouvrait une
+          // reponse sans champ de saisie).
+          canReply={canWrite}
           isMine={isSelectedMessageOwn}
           myEmoji={myEmojiOnSelectedMessage}
           onAction={handleMessageAction}

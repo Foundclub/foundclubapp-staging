@@ -4608,13 +4608,20 @@ export default {
     },
     inscription: {
       collectivite: {
+        aucune: 'No local authority matches “{{texte}}”.',
+        chargement: 'Loading the list…',
+        choisirDepartement: 'Your town: choose its département, or type its name.',
         dejaSur: 'Already on FoundClub',
+        departement: 'Département {{code}} · {{nom}}',
+        departementA11y: 'See the towns: {{nom}}',
         dit: 'Which one do you represent? FoundClub checks, then gives you its management.',
+        indisponible: 'The list is not available right now: type the name.',
         nom: 'Name of the local authority',
         nomCommune: 'Name of the town',
         ouverture: '{{nom}} has no FoundClub space yet. Continue: your request will be used to open it.',
         pasEncore: 'Not on FoundClub yet',
         titre: 'Your local authority',
+        tousLesDepartements: 'All départements',
         type: 'Type',
         typeA11y: 'Type of local authority',
       },
@@ -6037,6 +6044,8 @@ export default {
   compositionMessageBubble: {
     calledUp_one: '{{count}} called up',
     calledUp_other: '{{count}} called up',
+    edit: 'Edit',
+    editPlacement: 'Edit positions',
     expand: 'Enlarge',
     locationNotSpecified: 'Location not specified',
     matchLineUp: 'Match line-up',
@@ -6044,6 +6053,7 @@ export default {
     onTheBench: 'On the bench',
     onThePitch: 'On the pitch',
     open: 'Open',
+    openComposition: 'Open the line-up',
     openFullScreen: 'See the line-up full screen',
     openHint: 'Opens the line-up',
     otherTeams_one: '+ {{count}} other team in this line-up',
@@ -6141,6 +6151,7 @@ export default {
         title: 'Edit message',
       },
       manageGroup: 'Manage group',
+      menu: 'Conversation options',
       modalTitle: 'Message actions',
       reply: 'Reply',
       report: 'Report',
@@ -6173,6 +6184,7 @@ export default {
       noContact: 'No contact available to share',
       openErrorDescription: "The document couldn't be opened.",
       openErrorTitle: 'Unable to open',
+      photo: 'Photo',
       photos: 'Photos',
       pickFile: 'Send a file',
       pickMedia: 'Send media',
@@ -6252,6 +6264,10 @@ export default {
       thisMember: 'this member',
       title: 'Group management',
     },
+    header: {
+      openGroupHint: 'Opens the group info',
+      you: 'You',
+    },
     league: {
       cancelBody: 'This will cancel the match and delete the conversation.',
       cancelError: 'Unable to cancel the match.',
@@ -6263,6 +6279,12 @@ export default {
       teamA: 'Team A',
     },
     messagePlaceholder: 'Message',
+    meta: {
+      failed: 'Not sent',
+      read: 'Read',
+      sending: 'Sending',
+      sent: 'Sent',
+    },
     modals: {
       actions: {
         cancel: 'Cancel',
@@ -6336,8 +6358,13 @@ export default {
       bubble: {
         anonymousBadge: 'Anonymous poll',
         detailsHint: 'Tap an option to vote or change your vote. Tap again to remove it, or open the card for details.',
+        pickMany: 'Select one or more options',
+        pickOne: 'Select one option',
         questionFallback: 'Question',
+        seeVotes: 'See votes',
         selectedBadge: 'Your vote',
+        votes_one: '{{count}} vote',
+        votes_other: '{{count}} votes',
       },
       common: {
         member: 'Member',
@@ -6349,8 +6376,10 @@ export default {
         createdBy: 'Created by',
         date: 'Date',
         infoTitle: 'Poll information',
+        multipleAllowed: 'Multiple votes allowed',
         notFound: "This poll can't be found or has been deleted.",
         noVotes: 'No votes for this option.',
+        singleChoice: 'One choice per participant',
         syncInProgress: 'The poll is syncing.',
         syncTitle: 'Information',
         title: 'Poll details',
@@ -6410,6 +6439,16 @@ export default {
       sendError: 'Unable to send the proposal.',
       sent: 'Your proposal has been sent!',
     },
+    quote: {
+      contact: 'Contact',
+      event: 'Event',
+      hint: 'Scrolls back to the quoted message',
+      lineup: 'Line-up',
+      location: 'Location',
+      photo: 'Photo',
+      poll: 'Poll',
+      voice: 'Voice message',
+    },
     reactions: {
       add: 'React to this message',
       categories: {
@@ -6428,12 +6467,14 @@ export default {
       me: 'You',
       more: 'More emojis',
       pick: 'Choose a reaction',
+      summary: 'Reactions: {{detail}}',
       title_one: '{{count}} reaction',
       title_other: '{{count}} reactions',
     },
     readOnly: 'Announcement channel (read-only)',
     reload: 'Reload the conversation',
     reply: {
+      cancel: 'Cancel reply',
       replyingTo: 'Replying to',
     },
     replyPreview: {
@@ -6448,6 +6489,7 @@ export default {
     reservation: {
       joined: 'Booking joined.',
     },
+    scrollToBottom: 'Scroll to bottom',
     sending: 'Sending...',
     shareContact: {
       empty: 'No contact available to share in this chat.',
@@ -6469,8 +6511,11 @@ export default {
       title: 'Share a location',
     },
     typing: {
+      header_one: '{{names}} is typing…',
+      header_other: '{{names}} are typing…',
       named_one: '{{names}} is typing...',
       named_other: '{{names}} are typing...',
+      short: 'typing…',
       someone: 'Someone is typing...',
     },
     viewMatch: 'View match details',
@@ -12426,6 +12471,8 @@ export default {
     onboarding: {
       main: 'Search a conversation, open a chat and use the quick actions.',
     },
+    pin: 'Pin',
+    pinError: 'Unable to pin this conversation.',
     pinnedBadge: 'PINNED',
     preview: {
       attachment: 'Attachment',
@@ -12449,6 +12496,8 @@ export default {
     searchPlaceholder: 'Search a conversation...',
     searchUserPlaceholder: 'Search a member...',
     title: 'Private messages',
+    unpin: 'Unpin',
+    unpinError: 'Unable to unpin this conversation.',
     unread: {
       badge: 'Unread',
     },

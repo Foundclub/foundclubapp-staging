@@ -75,6 +75,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn(async () => ({})) }));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  // VILLE-INSCRIPTION (07/10) — les listes du référentiel, muettes ici : la saisie libre reste.
+  useCollectiviteReferentiel: () => ({ data: [], isLoading: false }),
   useCollectiviteSignupSearch: () => mockTrouvees,
   useCommuneSearch: (/** @type {string} */ texte, /** @type {any} */ options) => {
     mockAppelsCommunes.push({ options, texte });

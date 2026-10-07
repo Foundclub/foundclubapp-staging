@@ -4940,14 +4940,22 @@ export default {
     },
     inscription: {
       collectivite: {
+        // VILLE-INSCRIPTION (07/10) : la liste du référentiel de l'État, dès l'ouverture.
+        aucune: 'Aucune collectivité ne correspond à « {{texte}} ».',
+        chargement: 'Chargement de la liste…',
+        choisirDepartement: 'Votre commune : choisissez son département, ou tapez son nom.',
         dejaSur: 'Déjà sur FoundClub',
+        departement: 'Département {{code}} · {{nom}}',
+        departementA11y: 'Voir les communes : {{nom}}',
         dit: 'Laquelle représentez-vous ? FoundClub vérifie, puis vous en confie la gestion.',
+        indisponible: 'La liste n’est pas disponible pour le moment : tapez le nom.',
         nom: 'Nom de la collectivité',
         nomCommune: 'Nom de la commune',
         // eslint-disable-next-line max-len
         ouverture: '{{nom}} n’a pas encore d’espace FoundClub. Continuez : votre demande servira à l’ouvrir.',
         pasEncore: 'Pas encore sur FoundClub',
         titre: 'Votre collectivité',
+        tousLesDepartements: 'Tous les départements',
         type: 'Type',
         typeA11y: 'Type de collectivité',
       },
@@ -6430,6 +6438,8 @@ export default {
     // COMPOMSG — la carte compte les convoqués (terrain + banc), plus « 1 equipe(s) ».
     calledUp_one: '{{count}} convoqué',
     calledUp_other: '{{count}} convoqués',
+    edit: 'Modifier',
+    editPlacement: 'Modifier le placement',
     expand: 'Agrandir',
     locationNotSpecified: 'Lieu non précisé',
     matchLineUp: 'Composition du match',
@@ -6438,6 +6448,7 @@ export default {
     onTheBench: 'Sur le banc',
     onThePitch: 'Sur le terrain',
     open: 'Ouvrir',
+    openComposition: 'Ouvrir la composition',
     openFullScreen: 'Voir la composition en plein écran',
     openHint: 'Ouvre la composition',
     otherTeams_one: '+ {{count}} autre équipe dans cette composition',
@@ -6543,6 +6554,7 @@ export default {
         title: 'Modifier le message',
       },
       manageGroup: 'Gérer le groupe',
+      menu: 'Options de la conversation',
       modalTitle: 'Actions du message',
       reply: 'Répondre',
       report: 'Signaler',
@@ -6576,6 +6588,7 @@ export default {
       noContact: 'Aucun contact partageable',
       openErrorDescription: 'Le document n a pas pu être ouvert.',
       openErrorTitle: 'Ouverture impossible',
+      photo: 'Photo',
       photos: 'Photos',
       pickFile: 'Envoyer un fichier',
       pickMedia: 'Envoyer un média',
@@ -6660,6 +6673,10 @@ export default {
       thisMember: 'ce membre',
       title: 'Gestion du groupe',
     },
+    header: {
+      openGroupHint: 'Ouvre les infos du groupe',
+      you: 'Vous',
+    },
     league: {
       cancelBody: 'Cette action annulera le match et supprimera la conversation.',
       cancelError: "Impossible d'annuler le match.",
@@ -6671,6 +6688,12 @@ export default {
       teamA: 'Équipe A',
     },
     messagePlaceholder: 'Message',
+    meta: {
+      failed: 'Non envoyé',
+      read: 'Lu',
+      sending: 'Envoi en cours',
+      sent: 'Envoyé',
+    },
     modals: {
       actions: {
         cancel: 'Annuler',
@@ -6746,8 +6769,13 @@ export default {
         anonymousBadge: 'Sondage anonyme',
         detailsHint: 'Appuie sur une option pour voter ou modifier ton vote. '
           + 'Appuie à nouveau pour le retirer, ou ouvre la carte pour les détails.',
+        pickMany: 'Sélectionne une ou plusieurs options',
+        pickOne: 'Sélectionne une option',
         questionFallback: 'Question',
+        seeVotes: 'Voir les votes',
         selectedBadge: 'Ton vote',
+        votes_one: '{{count}} vote',
+        votes_other: '{{count}} votes',
       },
       common: {
         member: 'Membre',
@@ -6759,8 +6787,10 @@ export default {
         createdBy: 'Créé par',
         date: 'Date',
         infoTitle: 'Informations du sondage',
+        multipleAllowed: 'Votes multiples autorisés',
         notFound: 'Ce sondage est introuvable ou a été supprimé.',
         noVotes: 'Aucun vote pour cette option.',
+        singleChoice: 'Un seul choix par participant',
         syncInProgress: 'Le sondage est en cours de synchronisation.',
         syncTitle: 'Information',
         title: 'Détail du sondage',
@@ -6822,6 +6852,16 @@ export default {
       sendError: "Impossible d'envoyer la proposition.",
       sent: 'Ta proposition a été envoyée !',
     },
+    quote: {
+      contact: 'Contact',
+      event: 'Événement',
+      hint: 'Remonte au message cité',
+      lineup: 'Composition',
+      location: 'Localisation',
+      photo: 'Photo',
+      poll: 'Sondage',
+      voice: 'Message vocal',
+    },
     reactions: {
       add: 'Réagir à ce message',
       categories: {
@@ -6840,12 +6880,14 @@ export default {
       me: 'Toi',
       more: "Plus d'emojis",
       pick: 'Choisir une réaction',
+      summary: 'Réactions : {{detail}}',
       title_one: '{{count}} réaction',
       title_other: '{{count}} réactions',
     },
     readOnly: "Canal d'annonce (lecture seule)",
     reload: 'Recharger la conversation',
     reply: {
+      cancel: 'Annuler la réponse',
       replyingTo: 'Répondre a',
     },
     replyPreview: {
@@ -6861,6 +6903,7 @@ export default {
     reservation: {
       joined: 'Réservation rejointe.',
     },
+    scrollToBottom: 'Revenir en bas',
     sending: 'Envoi en cours...',
     shareContact: {
       empty: 'Aucun contact partageable dans ce chat.',
@@ -6882,8 +6925,11 @@ export default {
       title: 'Partager une localisation',
     },
     typing: {
+      header_one: '{{names}} écrit…',
+      header_other: '{{names}} écrivent…',
       named_one: '{{names}} écrit...',
       named_other: '{{names}} écrivent...',
+      short: 'écrit…',
       someone: "Quelqu'un écrit...",
     },
     viewMatch: 'Voir la fiche match',
@@ -13208,6 +13254,8 @@ export default {
     onboarding: {
       main: 'Recherche une conversation, ouvre un chat et utilise les actions rapides.',
     },
+    pin: 'Épingler',
+    pinError: "Impossible d'épingler cette conversation.",
     pinnedBadge: 'ÉPINGLÉ',
     preview: {
       attachment: 'Pièce jointe',
@@ -13231,6 +13279,8 @@ export default {
     searchPlaceholder: 'Rechercher une conversation...',
     searchUserPlaceholder: 'Rechercher un membre...',
     title: 'Messages privés',
+    unpin: 'Désépingler',
+    unpinError: 'Impossible de désépingler cette conversation.',
     unread: {
       badge: 'Non lu',
     },
