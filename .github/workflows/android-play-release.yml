@@ -42,7 +42,7 @@ jobs:
   build-and-upload-play:
     runs-on: ubuntu-latest
     # ~28 min mesurees ; le defaut de GitHub est 6 HEURES.
-    timeout-minutes: 50
+    timeout-minutes: 90
     permissions:
       contents: read
     env:
