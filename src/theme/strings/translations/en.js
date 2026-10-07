@@ -4883,6 +4883,15 @@ export default {
       document: 'Document',
       documentJoint: 'Attached document',
       enregistrer: 'Save',
+      envoi: {
+        attente: 'You can publish as soon as the upload is done.',
+        document: 'Uploading the document…',
+        documentPourcent: 'Uploading the document… {{pourcent}}%',
+        documentRecu: 'Document received, the server is saving it…',
+        photo: 'Uploading the photo…',
+        photoPourcent: 'Uploading the photo… {{pourcent}}%',
+        photoRecue: 'Photo received, the server is preparing it…',
+      },
       fautes: {
         installation: 'Choose the facility.',
         texteTropLong: 'The text is too long.',
@@ -4909,6 +4918,10 @@ export default {
     header: 'City news',
     modifiee: 'Edited',
     modifier: 'Edit',
+    photo: {
+      agrandir: 'Enlarge the photo',
+      fermer: 'Close the photo',
+    },
     pieceJointe: {
       ouvrir: 'Open {{nom}}',
       retirer: 'Remove the attachment',

@@ -214,7 +214,9 @@ describe('COLL-C4A — planche 2 : le bloc « De la Ville » de la fiche du club
     const source = readFileSync(join(__dirname, '..', '..', 'club', 'ClubDetails.js'), 'utf8');
     expect(source)
       .toContain("import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';");
-    expect(source).toMatch(/isMember && clubId \? \(\s*<BlocDeLaVille/);
+    // VILLE-T18D 6 (« parent prévenu B ») : la porte passe par un juge, membre OU parent d'un
+    // joueur mineur du club (src/views/club/__tests__/VILLE-T18D.blocDeLaVilleDuParent.test.js).
+    expect(source).toMatch(/\{afficheLeBlocDeLaVille \? \(\s*<BlocDeLaVille/);
     expect(source).toMatch(/navigation\.navigate\(\s*RouteNames\.CollectiviteActualitesCanal/);
   });
 });

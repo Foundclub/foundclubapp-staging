@@ -1,4 +1,9 @@
+import { colors } from '@/theme/colors';
+
+import { createLogger } from '@/utils/logger/logger';
+
 import { getApiBaseUrl } from '@/config/runtimeUrls';
+import { PHOTO_MAX_DIMENSION, PHOTO_QUALITY } from '@/platform/media/photoLimits';
 
 /**
  * 📰 COLL-C4A (02/10/2026) — LES ACTUALITÉS DE LA VILLE, côté serveur `api::collectivite-actualite`
@@ -14,6 +19,10 @@ import { getApiBaseUrl } from '@/config/runtimeUrls';
  * 10 témoins) et les accueils importent ce module sans doubler le client, qui exige l'adresse du
  * serveur dès son chargement (mémoire piege-env-absent-worktree-import-service).
  */
+
+// VILLE-T18D : la durée d'un envoi (transfert, puis réponse du serveur) part au journal de
+// l'écran ; la tournée suivante la lit au lieu de la deviner.
+const journal = createLogger('collectivite-actualite');
 
 /**
  * Le client HTTP de l'app, chargé à l'appel.
@@ -163,20 +172,38 @@ export const normalizeActualiteFile = (brut) => {
  * la requête ne part jamais. `fetch` lit la réponse en `blob` et jette cette raison ; un
  * XMLHttpRequest en TEXTE la garde dans `responseText`. L'erreur la porte (`natif`), le journal
  * de l'écran la montre : la prochaine tournée lira la vraie cause au lieu de la deviner.
+ * ⏱️ VILLE-T18D (07/10) — l'envoi dit aussi où il en est (`upload.onprogress`, fraction envoyée)
+ * et quand le dernier octet est parti : la réponse sépare le TRANSFERT de l'attente du serveur.
  * @param {string} url - L'adresse de `/upload`.
  * @param {FormData} formData - Le formulaire.
  * @param {string | null | undefined} token - Le jeton du compte.
- * @returns {Promise<{ ok: boolean, status: number, texte: string }>} La réponse.
+ * @param {((fraction: number) => void) | undefined} onProgress - La fraction envoyée, de 0 à 1.
+ * @returns {Promise<{ envoiMs: number | null, ok: boolean, status: number, texte: string,
+ *   totalMs: number }>} La réponse.
  */
-const envoyerLeFormulaire = (url, formData, token) => new Promise((resolve, reject) => {
+const envoyerLeFormulaire = (url, formData, token, onProgress) => new Promise((resolve, reject) => {
   const xhr = new XMLHttpRequest();
+  const debut = Date.now();
+  /** @type {number | null} */
+  let envoyeA = null;
   xhr.open('POST', url);
   if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
   xhr.timeout = 45000;
+  if (xhr.upload) {
+    xhr.upload.onprogress = (/** @type {any} */ evenement) => {
+      const total = Number(evenement?.total) || 0;
+      if (total <= 0) return;
+      const fraction = Math.min(1, Number(evenement?.loaded || 0) / total);
+      if (fraction >= 1 && envoyeA === null) envoyeA = Date.now();
+      onProgress?.(fraction);
+    };
+  }
   xhr.onload = () => resolve({
+    envoiMs: envoyeA === null ? null : envoyeA - debut,
     ok: xhr.status >= 200 && xhr.status < 300,
     status: xhr.status,
     texte: xhr.responseText || '',
+    totalMs: Date.now() - debut,
   });
   const echec = (/** @type {string} */ quoi) => () => {
     const natif = String(xhr.responseText || '').trim() || null;
@@ -212,12 +239,14 @@ const lireLeFichierCree = (reponse) => {
  * `uploadAttachmentAsset`) : un 1er envoi direct, et si la requête n'a pas pu partir, un 2e par
  * le client HTTP de l'app. Si les deux échouent, c'est l'erreur du 1er qui remonte : elle porte la
  * raison native.
- * @param {{ fichier: any, secours?: (formData: FormData) => Promise<any>, token?: string | null,
- *   url: string }} envoi - La pièce, l'adresse, le jeton, l'envoi de secours (rend `data`).
+ * @param {{ fichier: any, octets?: number | null, onProgress?: (fraction: number) => void,
+ *   secours?: (formData: FormData) => Promise<any>, token?: string | null, url: string }} envoi -
+ *   La pièce, son poids (pour le journal), la progression, l'adresse, le jeton, l'envoi de
+ *   secours (rend `data`).
  * @returns {Promise<any>} Le fichier créé, ou null.
  */
 export const televerserLaPiece = async ({
-  fichier, secours, token, url,
+  fichier, octets = null, onProgress, secours, token, url,
 }) => {
   const formData = new FormData();
   if (typeof File !== 'undefined' && fichier instanceof File) {
@@ -227,7 +256,15 @@ export const televerserLaPiece = async ({
   }
   let reponse;
   try {
-    reponse = await envoyerLeFormulaire(url, formData, token);
+    reponse = await envoyerLeFormulaire(url, formData, token, onProgress);
+    // VILLE-T18D : le transfert (dernier octet parti) et l'attente du serveur, séparés.
+    journal.info('Piece jointe envoyee', {
+      envoiMs: reponse.envoiMs,
+      octets: Number(octets) > 0 ? Number(octets) : null,
+      reponseMs: reponse.envoiMs === null ? null : reponse.totalMs - reponse.envoiMs,
+      statut: reponse.status,
+      totalMs: reponse.totalMs,
+    });
   } catch (erreur) {
     if (!secours) throw erreur;
     try {
@@ -241,19 +278,77 @@ export const televerserLaPiece = async ({
   return lireLeFichierCree(reponse);
 };
 
+// Une photo du site déjà légère (moins de 300 Ko) et petite (2048 px au plus) part telle quelle.
+const SEUIL_REENCODAGE_OCTETS = 300 * 1024;
+const PHOTO_DU_NAVIGATEUR = /^image\/(jpeg|png|webp)$/i;
+
+/**
+ * 📏 VILLE-T18D (07/10) — LE SITE RÉDUIT UNE PHOTO COMME LE TÉLÉPHONE, avant de l'envoyer.
+ * Au téléphone, react-native-image-picker la réduit déjà (PHOTO_PICKER_LIMITS, platform/media) ;
+ * le navigateur, lui, envoyait la photo telle que choisie (4 à 8 Mo pour une photo d'appareil).
+ * Mêmes règles ici (2048 px de côté, JPEG 0,8), par une toile du navigateur ; le fond est blanc
+ * (un JPEG n'a pas de transparence). Une photo déjà sous les limites, un format que le
+ * navigateur ne sait pas lire (HEIC), un résultat plus lourd ou un échec : l'original part.
+ * ponytail: seule la pièce d'une ACTUALITÉ passe ici ; la messagerie et l'avatar du site n'ont
+ * toujours aucune réduction (voie de sortie : appeler cette fonction depuis platform/media).
+ * @param {any} fichier - Ce que rend le sélecteur (un `File` sur le site).
+ * @param {any} [env] - Le navigateur (`createImageBitmap`, `document`) ; doublé par les témoins.
+ * @returns {Promise<any>} La photo réduite (un `File` JPEG), ou le fichier reçu.
+ */
+export const reduirePhotoDuNavigateur = async (
+  fichier,
+  env = typeof window === 'undefined' ? {} : window,
+) => {
+  if (typeof File === 'undefined' || !(fichier instanceof File)) return fichier;
+  if (!PHOTO_DU_NAVIGATEUR.test(fichier.type)) return fichier;
+  try {
+    const image = await env.createImageBitmap(fichier, { imageOrientation: 'from-image' });
+    const cote = Math.max(image.width, image.height);
+    if (cote <= PHOTO_MAX_DIMENSION && fichier.size <= SEUIL_REENCODAGE_OCTETS) {
+      image.close?.();
+      return fichier;
+    }
+    const echelle = Math.min(1, PHOTO_MAX_DIMENSION / cote);
+    const largeur = Math.round(image.width * echelle);
+    const hauteur = Math.round(image.height * echelle);
+    const toile = env.document.createElement('canvas');
+    toile.width = largeur;
+    toile.height = hauteur;
+    const dessin = toile.getContext('2d');
+    dessin.fillStyle = colors.neutral00;
+    dessin.fillRect(0, 0, largeur, hauteur);
+    dessin.drawImage(image, 0, 0, largeur, hauteur);
+    image.close?.();
+    const jpeg = await new Promise((resolve) => {
+      toile.toBlob(resolve, 'image/jpeg', PHOTO_QUALITY);
+    });
+    if (!jpeg || jpeg.size >= fichier.size) return fichier;
+    const nom = `${String(fichier.name || 'photo').replace(/\.[^.]+$/, '')}.jpg`;
+    return new File([jpeg], nom, { lastModified: Date.now(), type: 'image/jpeg' });
+  } catch {
+    return fichier;
+  }
+};
+
 /**
  * Téléverse UNE pièce jointe (`POST /upload`, comme la messagerie) et rend le fichier créé.
  * Le serveur de l'actualité vérifie ensuite qu'il existe.
  * @param {any} brut - Ce que rend le sélecteur.
+ * @param {{ onProgress?: (fraction: number) => void }} [options] - VILLE-T18D : la fraction
+ *   envoyée, pour l'écran.
  * @returns {Promise<{ id: number, mime?: string, name?: string, url?: string } | null>} Le
  *   fichier, ou null si rien n'a été choisi.
  */
-export const uploadActualiteFile = async (brut) => {
-  const fichier = normalizeActualiteFile(brut);
+export const uploadActualiteFile = async (brut, { onProgress } = {}) => {
+  const choisi = await reduirePhotoDuNavigateur(brut);
+  const fichier = normalizeActualiteFile(choisi);
   if (!fichier) return null;
   const token = (await session())?.token;
+  const premier = Array.isArray(choisi) ? choisi[0] : choisi;
   return televerserLaPiece({
     fichier,
+    octets: premier?.size ?? premier?.assets?.[0]?.fileSize ?? premier?.fileSize ?? null,
+    onProgress,
     secours: async (formData) => (await (await client()).post('/upload', formData, {
       timeout: 45000,
     })).data,

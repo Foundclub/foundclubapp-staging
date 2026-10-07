@@ -110,6 +110,33 @@ export const floatingActionsScrollPadding = (count, bottomInset) => {
 };
 
 /**
+ * 👪 VILLE-T18D 6 (08/10/2026, decision d'Adel « parent prevenu B ») — LA FICHE POSE-T-ELLE LE
+ * BLOC « DE LA VILLE » (et son interrupteur D68 « Me prevenir ») ?
+ *
+ * Pour un membre, comme avant. Pour le PARENT d'un joueur mineur de CE club aussi : la serrure du
+ * serveur (`can-read-club-news`) est le juge. Un compte au role Parent ouvre donc la porte et le
+ * serveur repond : refuse, le bloc (qui attend sa reponse) ne s'affiche pas. Un compte d'un autre
+ * role qui a declare un enfant MINEUR dans ce club l'ouvre aussi. Cette fonction decide d'une
+ * PORTE, pas d'un droit.
+ * @param {object} params - Ce que la fiche sait.
+ * @param {string | null | undefined} params.clubId - Le club affiche.
+ * @param {any[]} [params.enfants] - Les fiches enfants du compte (`/declared-children/mine`).
+ * @param {boolean} [params.isMember] - Le compte est membre de ce club.
+ * @param {boolean} [params.isParentRole] - Le compte, connecte, a le role Parent.
+ * @returns {boolean} La fiche pose-t-elle le bloc ?
+ */
+export const showsCityNewsBlock = ({
+  clubId, enfants, isMember = false, isParentRole = false,
+}) => {
+  if (!clubId) return false;
+  if (isMember || isParentRole) return true;
+  return (Array.isArray(enfants) ? enfants : []).some((enfant) => (
+    String(enfant?.club?.documentId || '') === String(clubId)
+    && parentalPowerForAge(enfant?.age) !== 'none'
+  ));
+};
+
+/**
  * PARENT P2 — COMBIEN D ENFANTS, ET DANS QUELLE TRANCHE D AGE.
  *
  * Le comptage vit ICI, a cote de la matrice qui le consomme, et pas dans
