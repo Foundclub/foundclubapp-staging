@@ -269,3 +269,51 @@ test('O7 — la Ville offre déjà l offre Club : on le dit, et on peut quand m�
   expect(textes(arbre.root)).toContain('Sa collectivité lui offre déjà l’offre Club. Celle de FoundClub s’ajoute, et reste si la Ville retire la sienne.');
   expect(bouton(arbre.root, 'Offrir l’abonnement')).toBeTruthy();
 });
+
+// eslint-disable-next-line max-len
+test('O8 — club offert : « Modifier la durée » rouvre la feuille avec SA durée et SON motif ; « Enregistrer » renvoie le geste', async () => {
+  serveur.etat = {
+    collectivite: false,
+    kind: 'foundclub',
+    planCode: 'fc_foundclub_club',
+    reason: 'Club pilote',
+    since: DEBUT,
+    subscriptionDocumentId: 'sub-1',
+    until: null,
+  };
+  const arbre = await monter();
+  await act(async () => { bouton(arbre.root, 'Modifier la durée').props.onPress(); });
+  const ouverte = feuille(arbre, 'offre-foundclub-feuille');
+  expect(textes(ouverte)).toContain('Modifier la durée');
+  const choisies = ['1m', '3m', '1y', 'none']
+    // eslint-disable-next-line max-len
+    .filter((duree) => parTestID(ouverte, `offre-foundclub-duree-${duree}`).props.accessibilityState?.selected);
+  expect(choisies).toEqual(['none']);
+  // eslint-disable-next-line max-len
+  const motif = ouverte.findAllByType(TextInput).find((n) => n.props.testID === 'offre-foundclub-motif');
+  expect(motif.props.value).toBe('Club pilote');
+  await act(async () => { parTestID(ouverte, 'offre-foundclub-duree-1y').props.onPress(); });
+  await act(async () => {
+    bouton(feuille(arbre, 'offre-foundclub-feuille'), 'Enregistrer').props.onPress();
+  });
+  await attendre(() => mockPost.mock.calls.length > 0);
+  expect(mockPost).toHaveBeenCalledWith(ROUTE, { data: { duration: '1y', reason: 'Club pilote' } });
+});
+
+// eslint-disable-next-line max-len
+test('O9 — une offre posée AVANT la console (plan de la Ville) : on prévient que l app lit « collectivité », et comment corriger', async () => {
+  serveur.etat = {
+    collectivite: false,
+    kind: 'foundclub',
+    planCode: 'fc_collectivite_club',
+    reason: null,
+    since: DEBUT,
+    subscriptionDocumentId: 'sub-1',
+    until: null,
+  };
+  const arbre = await monter();
+  expect(textes(arbre.root)).toContain(
+    // eslint-disable-next-line max-len
+    'Posée avant la console : le club lit encore « offert par la collectivité ». « Modifier la durée » puis « Enregistrer » corrige ce libellé.',
+  );
+});

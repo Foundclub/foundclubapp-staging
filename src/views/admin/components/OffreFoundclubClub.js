@@ -28,6 +28,9 @@ import { getErrorMessage, getServerErrorCode } from '@/utils/errors/displayError
 const MOTIF_MAX = 200;
 // « 1 an » d abord : une offre qui s eteint toute seule, sans que personne n ait a y penser.
 const DUREE_PAR_DEFAUT = '1y';
+// Le plan de l offre FoundClub (admin subscription-catalog.ts). Une offre posee AVANT la console
+// (07/10, « Aix-Perd en Buvette ») porte celui de la Ville : l app y lit « collectivité ».
+const PLAN_FOUNDCLUB = 'fc_foundclub_club';
 
 /**
  * Un jour lisible : « 7 octobre 2027 ».
@@ -134,6 +137,8 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
   const nom = String(clubName || '').trim();
   const lecture = useFoundclubClubOffer(clubId);
   const [feuilleOuverte, setFeuilleOuverte] = useState(false);
+  // « Modifier la durée » (offre en cours) ou « Offrir l’abonnement » (club gratuit).
+  const [modification, setModification] = useState(false);
   const [retraitOuvert, setRetraitOuvert] = useState(false);
   const [duree, setDuree] = useState(DUREE_PAR_DEFAUT);
   const [motif, setMotif] = useState('');
@@ -157,8 +162,19 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
   const ouvrir = () => {
     offre.reset?.();
     setCompteRendu(null);
+    setModification(false);
     setDuree(DUREE_PAR_DEFAUT);
     setMotif(t('offreFoundclub.motifParDefaut'));
+    setFeuilleOuverte(true);
+  };
+  // Reoffrir une offre en cours : le serveur garde le meme abonnement, change sa fin (a partir
+  // d aujourd hui) et, pour une offre posee avant la console, son plan.
+  const modifier = (/** @type {any} */ enCours) => {
+    offre.reset?.();
+    setCompteRendu(null);
+    setModification(true);
+    setDuree(enCours?.until ? DUREE_PAR_DEFAUT : 'none');
+    setMotif(String(enCours?.reason || '').trim() || t('offreFoundclub.motifParDefaut'));
     setFeuilleOuverte(true);
   };
   const fermer = () => {
@@ -205,6 +221,15 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
             {t('offreFoundclub.motif', { motif: etat.reason, ...SANS_ECHAPPEMENT })}
           </Text>
         ) : null}
+        {etat.planCode && etat.planCode !== PLAN_FOUNDCLUB ? (
+          <Text style={[Fonts.p3, Fonts.warning500]}>{t('offreFoundclub.ancienPlan')}</Text>
+        ) : null}
+        <Button
+          onPress={() => modifier(etat)}
+          size="sm"
+          title={t('offreFoundclub.modifierLaDuree')}
+          variant="Secondary"
+        />
         <Button
           onPress={() => { setCompteRendu(null); setRetraitOuvert(true); }}
           size="sm"
@@ -264,13 +289,15 @@ function OffreFoundclubClub({ clubId, clubName = null }) {
         onClose={fermer}
         primary={{
           isLoading: Boolean(offre.isPending),
-          label: t('offreFoundclub.offrir'),
+          label: modification ? t('offreFoundclub.enregistrer') : t('offreFoundclub.offrir'),
           onPress: () => offre.mutate({ clubId, duration: duree, reason: motif.trim() }),
         }}
         secondary={{ label: t('offreFoundclub.annuler'), onPress: fermer }}
         subtitle={nom || null}
         testID="offre-foundclub-feuille"
-        title={t('offreFoundclub.offrirLAbonnement')}
+        title={modification
+          ? t('offreFoundclub.modifierLaDuree')
+          : t('offreFoundclub.offrirLAbonnement')}
         visible={feuilleOuverte}
       >
         <View style={{ gap: 6 }}>

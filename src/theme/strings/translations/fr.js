@@ -14026,6 +14026,8 @@ export default {
     title: 'Notifications',
   },
   offreFoundclub: {
+    // eslint-disable-next-line max-len
+    ancienPlan: 'Posée avant la console : le club lit encore « offert par la collectivité ». « Modifier la durée » puis « Enregistrer » corrige ce libellé.',
     annuler: 'Annuler',
     dejaPaye: 'Ce club paie déjà son abonnement : rien n’a été posé.',
     depuis: 'Depuis le {{date}}',
@@ -14036,6 +14038,7 @@ export default {
       unAn: '1 an',
       unMois: '1 mois',
     },
+    enregistrer: 'Enregistrer',
     erreurs: {
       clubIntrouvable: 'Ce club n’existe plus.',
       duree: 'Choisis une durée.',
@@ -14048,6 +14051,7 @@ export default {
     listeImpossible: 'Impossible de lire les abonnements offerts.',
     listeTitre: 'Abonnements offerts',
     listeVide: 'Aucun abonnement offert pour l’instant.',
+    modifierLaDuree: 'Modifier la durée',
     motif: 'Motif : {{motif}}',
     motifFacultatif: 'Motif (facultatif)',
     motifParDefaut: 'Offert par FoundClub',

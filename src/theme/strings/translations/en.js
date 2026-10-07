@@ -13303,6 +13303,7 @@ export default {
     title: 'Notifications',
   },
   offreFoundclub: {
+    ancienPlan: 'Set before the console: the club still reads “offered by the local authority”. “Change the duration” then “Save” fixes this label.',
     annuler: 'Cancel',
     dejaPaye: 'This club already pays for its plan: nothing was added.',
     depuis: 'Since {{date}}',
@@ -13313,6 +13314,7 @@ export default {
       unAn: '1 year',
       unMois: '1 month',
     },
+    enregistrer: 'Save',
     erreurs: {
       clubIntrouvable: 'This club no longer exists.',
       duree: 'Choose a duration.',
@@ -13325,6 +13327,7 @@ export default {
     listeImpossible: 'Unable to load the gifted plans.',
     listeTitre: 'Gifted plans',
     listeVide: 'No gifted plan for now.',
+    modifierLaDuree: 'Change the duration',
     motif: 'Reason: {{motif}}',
     motifFacultatif: 'Reason (optional)',
     motifParDefaut: 'Offered by FoundClub',
