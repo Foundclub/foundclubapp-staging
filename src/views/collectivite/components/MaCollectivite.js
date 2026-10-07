@@ -121,10 +121,22 @@ function MaCollectivite({ clubId }) {
       );
     }
     if (choix === 'refusee') {
+      // « refus B » (Adel, 07/10 ~18h05) : le club peut redemander.
       return (
-        <Text style={[Fonts.p3, Fonts.error300]}>
-          {t('collectiviteRattachement.ma.refused', 'Elle a refusé ta demande')}
-        </Text>
+        <View style={{ gap: 8 }}>
+          <Text style={[Fonts.p3, Fonts.error300]}>
+            {t('collectiviteRattachement.ma.refused', 'Elle a refusé ta demande')}
+          </Text>
+          <Button
+            isLoading={demander.isPending
+              && demander.variables?.collectiviteId === ville.documentId}
+            onPress={() => geste(demander, ville.documentId, { collectiviteId: ville.documentId })}
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            title={t('collectiviteRattachement.ma.requestAgain', 'Demander de nouveau')}
+            variant="Secondary"
+          />
+        </View>
       );
     }
     if (choix === 'aRepondre') {

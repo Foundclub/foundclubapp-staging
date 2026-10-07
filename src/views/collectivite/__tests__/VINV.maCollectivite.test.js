@@ -139,6 +139,7 @@ beforeEach(() => {
       ville({ documentId: 'ville-m', inCommune: true, name: 'Ville de Montrivage' }),
       ville({ documentId: 'ville-p', name: 'Ville de Portvieux', proposal: { documentId: 'p1', state: 'pending' } }),
       ville({ documentId: 'ville-r', name: 'Ville de Rochebrune', request: { documentId: 'r1', state: 'pending' } }),
+      ville({ documentId: 'ville-x', name: 'Ville de Sauveterre', request: { documentId: 'r2', state: 'refused' } }),
     ],
     error: null,
     isLoading: false,
@@ -165,6 +166,11 @@ describe('VINV voie 3 · « Ma collectivité », le dirigeant', () => {
     await act(async () => { boutons(dans(arbre, 'ma-collectivite-ville-p'), 'Accepter sa demande')[0].props.onPress(); });
     expect(mockRepondre.mutate).toHaveBeenCalledWith({ accept: true, clubId: 'club-e', invitationId: 'p1' }, expect.any(Object));
     expect(textes(dans(arbre, 'ma-collectivite-ville-r'))).toContain('Demande envoyée');
+    // « refus B » (Adel, 07/10 ~18h05) : après un refus de la Ville, le club peut redemander.
+    const refus = dans(arbre, 'ma-collectivite-ville-x');
+    expect(textes(refus)).toContain('Elle a refusé ta demande');
+    await act(async () => { boutons(refus, 'Demander de nouveau')[0].props.onPress(); });
+    expect(mockDemander.mutate).toHaveBeenLastCalledWith({ clubId: 'club-e', collectiviteId: 'ville-x' }, expect.any(Object));
   });
 
   it('K3 une demande en cours : son état, sans seconde recherche', async () => {

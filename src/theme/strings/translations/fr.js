@@ -2085,7 +2085,6 @@ export default {
     COLLECTIVITE_INVITATION_ANSWERED_BY_FOUNDCLUB: 'L’équipe FoundClub rattache les clubs qui le demandent.',
     COLLECTIVITE_INVITATION_DECIDED: 'Cette demande a déjà reçu sa réponse.',
     COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
-    COLLECTIVITE_PROPOSAL_REFUSED: 'Ce club a refusé la demande de la Ville.',
     // eslint-disable-next-line max-len
     COLLECTIVITE_PROPOSAL_REMIND_TOO_SOON: 'Une relance par jour : le club a été prévenu il y a moins de 24 heures.',
     COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
@@ -5645,6 +5644,7 @@ export default {
       outside: 'Hors de la commune',
       refused: 'Le club a refusé votre demande',
       requested: 'Ce club demande déjà à vous rejoindre',
+      resend: 'Renvoyer la demande',
       searchLabel: 'Nom du club',
       searchPlaceholder: 'Le nom du club',
       send: 'Envoyer la demande',
@@ -5679,6 +5679,7 @@ export default {
       refuseConfirm: 'Refuser la demande de {{club}} ?',
       refuseYes: 'Oui, refuser',
       remind: 'Relancer',
+      resend: 'Renvoyer la demande',
       title: 'Demandes de rattachement',
     },
     // VOIE 3 (« collectivité A », 07/10) — « Ma collectivité », dans « Gérer mon club » (« tu »).
@@ -5699,6 +5700,7 @@ export default {
       proposes: 'Elle te propose déjà le rattachement',
       refused: 'Elle a refusé ta demande',
       request: 'Demander le rattachement',
+      requestAgain: 'Demander de nouveau',
       row: 'Ma collectivité',
       rowPending: 'Demande en cours',
       rowProposal: 'Une Ville te propose',

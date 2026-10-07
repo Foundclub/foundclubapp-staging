@@ -112,6 +112,10 @@ function CollectiviteInviteClub() {
   const ville = collectivite?.name
     ? formatCollectiviteOfferedBy(collectivite.name)
     : t('collectiviteClubs.detail.theCity', 'la Ville');
+  // T18 (07/10) : le texte PARTAGÉ commence par la Ville — « La Ville de … vous invite »,
+  // jamais « la Ville ». Au milieu d'une phrase (« le lien de la Ville de … »), `ville` garde
+  // sa minuscule.
+  const villeEnTete = ville ? ville.charAt(0).toUpperCase() + ville.slice(1) : ville;
   const token = /** @type {any} */ (lien.data)?.token || null;
   const adresse = token ? buildPublicWebUrl({ path: cheminDuLienDeLaVille(token) }) : null;
 
@@ -132,7 +136,7 @@ function CollectiviteInviteClub() {
         message: t(
           'collectiviteClubs.invite.shareMessage',
           '{{ville}} vous invite à inscrire votre club sur FoundClub : {{adresse}}',
-          { adresse, ville, ...SANS_ECHAPPEMENT },
+          { adresse, ville: villeEnTete, ...SANS_ECHAPPEMENT },
         ),
         title: t('collectiviteClubs.invite.shareTitle', 'Invitation de la Ville sur FoundClub'),
         url: adresse,

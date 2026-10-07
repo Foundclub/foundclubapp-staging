@@ -12,6 +12,7 @@ import Button from '@/components/atoms/button/Button';
 import {
   useAnswerCollectiviteAttachRequest,
   useCancelCollectiviteProposal,
+  useProposeCollectiviteClub,
   useRemindCollectiviteProposal,
 } from '@/services/collectivite/collectiviteRattachementQueries';
 
@@ -38,6 +39,7 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
   const repondre = useAnswerCollectiviteAttachRequest();
   const relancer = useRemindCollectiviteProposal();
   const annuler = useCancelCollectiviteProposal();
+  const renvoyer = useProposeCollectiviteClub();
   const [aConfirmer, setAConfirmer] = useState(/** @type {string | null} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
@@ -83,6 +85,8 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
       : t('collectiviteRattachement.demandes.fromCity', 'Votre demande');
     const relancee = Number(demande?.remindCount) || 0;
     const club = demande?.club?.name || '';
+    const renvoyable = demande?.kind === 'proposal' && demande?.state === 'refused'
+      && Boolean(demande?.club?.documentId);
     return (
       <View
         key={id}
@@ -175,6 +179,28 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
               />
             ) : null}
           </View>
+        ) : null}
+        {/* « refus B » (Adel, 07/10 ~18h05) : la Ville peut renvoyer une demande refusée. */}
+        {renvoyable ? (
+          <Button
+            isLoading={renvoyer.isPending && renvoyer.variables?.clubId === demande.club.documentId}
+            isOption
+            onPress={() => {
+              if (!collectiviteId) return;
+              setErreurs((/** @type {Record<string, string>} */ avant) => ({ ...avant, [id]: '' }));
+              renvoyer.mutate({ clubId: demande.club.documentId, collectiviteId }, {
+                onError: (/** @type {any} */ erreur) => setErreurs(
+                  (/** @type {Record<string, string>} */ avant) => ({
+                    ...avant, [id]: getErrorMessage(erreur),
+                  }),
+                ),
+              });
+            }}
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            title={t('collectiviteRattachement.demandes.resend', 'Renvoyer la demande')}
+            variant="SecondaryLight"
+          />
         ) : null}
         {erreurs[id] ? (
           <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error300]}>{erreurs[id]}</Text>

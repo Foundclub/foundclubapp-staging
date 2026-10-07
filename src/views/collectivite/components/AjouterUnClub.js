@@ -122,10 +122,21 @@ function AjouterUnClub({ collectiviteId, onInviterParLien }) {
       );
     }
     if (geste === 'refusee') {
+      // « refus B » (Adel, 07/10 ~18h05) : la Ville peut renvoyer sa demande.
       return (
-        <Text style={[Fonts.p3, Fonts.error300]}>
-          {t('collectiviteRattachement.ajouter.refused', 'Le club a refusé votre demande')}
-        </Text>
+        <View style={{ gap: 8 }}>
+          <Text style={[Fonts.p3, Fonts.error300]}>
+            {t('collectiviteRattachement.ajouter.refused', 'Le club a refusé votre demande')}
+          </Text>
+          <Button
+            isLoading={enCours(proposer)}
+            onPress={() => envoyer(club)}
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            title={t('collectiviteRattachement.ajouter.resend', 'Renvoyer la demande')}
+            variant="Secondary"
+          />
+        </View>
       );
     }
     if (geste === 'aRepondre') {
