@@ -6037,6 +6037,8 @@ export default {
   compositionMessageBubble: {
     calledUp_one: '{{count}} called up',
     calledUp_other: '{{count}} called up',
+    edit: 'Edit',
+    editPlacement: 'Edit positions',
     expand: 'Enlarge',
     locationNotSpecified: 'Location not specified',
     matchLineUp: 'Match line-up',
@@ -6044,6 +6046,7 @@ export default {
     onTheBench: 'On the bench',
     onThePitch: 'On the pitch',
     open: 'Open',
+    openComposition: 'Open the line-up',
     openFullScreen: 'See the line-up full screen',
     openHint: 'Opens the line-up',
     otherTeams_one: '+ {{count}} other team in this line-up',

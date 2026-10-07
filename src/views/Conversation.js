@@ -5602,19 +5602,32 @@ function Conversation({ navigation, route }) {
 
       return wrapWithMessageInteractions(
         currentMessage, (
-          <View style={{
-            marginBottom,
-            marginTop,
-          }}
-          >
-            {/* FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil (GiftedChat
-                ne la redessine pas quand les participants arrivent après elle). */}
-            <CompositionMessageBubbleDuFil
-              chatId={chatId}
-              composition={currentMessage.composition}
-              currentEvent={currentMessage.event}
-              isMe={!isLeft}
-            />
+          <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
+            {/* 📋 MSG1A (§3.7) — la carte de composition dans le cadre commun (nom, queue), et
+                l'heure avant son pied. FINITIONS15 point 6 : la carte s'abonne elle-même à la
+                fiche du fil (GiftedChat ne la redessine pas quand les participants arrivent). */}
+            <BulleDuFil
+              couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+              estAMoi={estAMoi}
+              estDernier={estDernierDuGroupe}
+              nom={nomEnTete}
+              testID="bulle-composition"
+            >
+              <CompositionMessageBubbleDuFil
+                chatId={chatId}
+                composition={currentMessage.composition}
+                currentEvent={currentMessage.event}
+                dansLaBulle
+                isMe={!isLeft}
+                meta={(
+                  <MetaDuMessage
+                    estAMoi={estAMoi}
+                    etat={etatDEnvoi(currentMessage)}
+                    heure={heureDuMessage(currentMessage.createdAt)}
+                  />
+                )}
+              />
+            </BulleDuFil>
           </View>
         ),
       );

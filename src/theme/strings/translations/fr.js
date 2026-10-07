@@ -6430,6 +6430,8 @@ export default {
     // COMPOMSG — la carte compte les convoqués (terrain + banc), plus « 1 equipe(s) ».
     calledUp_one: '{{count}} convoqué',
     calledUp_other: '{{count}} convoqués',
+    edit: 'Modifier',
+    editPlacement: 'Modifier le placement',
     expand: 'Agrandir',
     locationNotSpecified: 'Lieu non précisé',
     matchLineUp: 'Composition du match',
@@ -6438,6 +6440,7 @@ export default {
     onTheBench: 'Sur le banc',
     onThePitch: 'Sur le terrain',
     open: 'Ouvrir',
+    openComposition: 'Ouvrir la composition',
     openFullScreen: 'Voir la composition en plein écran',
     openHint: 'Ouvre la composition',
     otherTeams_one: '+ {{count}} autre équipe dans cette composition',

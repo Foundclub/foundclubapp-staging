@@ -329,9 +329,10 @@ const jouerLeSon = (niveaux, pasMs = 50) => {
 };
 
 // ⏱️ MSG1A — le PREMIER cas charge tout l'ecran de conversation (plus de 7 000 lignes et la
-// messagerie) dans son budget de temps : 5,5 a 7,8 s mesures sous charge le 07/10, au-dela des
-// 5 s par defaut. Meme regle que ConversationWebCOMPOCARTE et ConversationWebCOLLC4A3.
-jest.setTimeout(30000);
+// messagerie) dans son budget de temps : de 5,5 s (machine calme) a 28 s (deux autres lots en
+// portes) mesures le 07/10, au-dela des 5 s par defaut. Meme regle que ConversationWebCOMPOCARTE
+// et ConversationWebCOLLC4A3, avec la marge de la mesure la plus lente.
+jest.setTimeout(60000);
 
 describe('MSGLIVE — le vocal : le son bouge, et il ne coûte pas cher', () => {
   beforeEach(() => {
