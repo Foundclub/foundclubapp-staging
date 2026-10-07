@@ -16,6 +16,8 @@ import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
+// MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
+import { couleurDuNom } from '@/domains/messaging/habillageDuFil';
 import {
   formatChatTimestamp,
   getChatLastMessage,
@@ -66,7 +68,6 @@ import {
   estModifiable,
   etatDesCoches,
   evenementDuMessage,
-  indiceDeCouleur,
   libelleDuJour,
   rangerLeFil,
 } from '@/views/conversationWeb/filDuSite';
@@ -106,6 +107,8 @@ import {
   useGetMyBlockedUsers,
   useUnblockUser,
 } from '@/services/userBlock/userBlockQueries';
+// MSG1W — les jetons de la messagerie (MSG1A), lus par les composants du fil.
+import { colors, withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext'
 import {
@@ -376,49 +379,39 @@ const REACTION_HOVER_STYLE = `
 `;
 
 /**
- * MSG1W (07/10) — LES VALEURS DU PACK « MODELE WHATSAPP » (SPECS §0), EN UN SEUL ENDROIT.
- *
- * ponytail: valeurs ecrites ici, dans le fichier du site exempte du contrat de theme, le temps
- * que MESSAGERIE-1A pose les jetons de la messagerie dans `app/src/theme/` ; sortie : remplacer
- * chaque valeur par son jeton au message du chef « staging avance (jetons de la messagerie) ».
- * Aucune autre couleur du fil ne doit s ecrire en dur ailleurs que dans cet objet.
+ * MSG1W (07/10) — LES COULEURS DU FIL, lues dans les jetons de la messagerie (MSG1A, SPECS §0),
+ * avec les memes opacites que le telephone (`bulleDuFil/`). Les composants du fil vivent hors
+ * du rendu de l ecran : ils lisent les jetons ici, une fois (le theme n a qu un jeu de couleurs).
  */
 const PALETTE_DU_FIL = {
-  accent: '#01b3f4',
-  barre: '#021219',
-  bulleMienne: '#0b5875',
-  bulleRecue: '#173844',
-  carteMienne: 'rgba(0, 0, 0, 0.22)',
-  carteRecue: 'rgba(0, 10, 14, 0.30)',
-  champ: '#0b2530',
-  champBord: '#173844',
-  cochesEnvoye: 'rgba(255, 255, 255, 0.5)',
-  cochesLu: '#ffffff',
-  danger: '#ff5a74',
-  encre: '#001218',
-  feuille: '#0f2a34',
-  fil: '#03141b',
-  filet: 'rgba(255, 255, 255, 0.06)',
-  menu: '#142e39',
-  menuBord: 'rgba(255, 255, 255, 0.08)',
-  metaMienne: 'rgba(255, 255, 255, 0.72)',
-  metaRecue: 'rgba(255, 255, 255, 0.62)',
-  noticeFond: 'rgba(2, 20, 27, 0.55)',
-  noticeTexte: 'rgba(255, 255, 255, 0.62)',
-  placeholder: '#8a9599',
-  puce: 'rgba(2, 20, 27, 0.84)',
-  revenirEnBas: 'rgba(23, 56, 68, 0.98)',
-  role: 'rgba(255, 255, 255, 0.55)',
-  texte: '#ffffff',
-  texteDoux: 'rgba(255, 255, 255, 0.6)',
-  voile: 'rgba(0, 0, 0, 0.45)',
+  accent: colors.primary500,
+  barre: colors.chatBar,
+  bulleMienne: colors.chatBubbleMine,
+  bulleRecue: colors.primary700,
+  carteMienne: withAlpha(colors.neutral900, 0.22),
+  carteRecue: withAlpha(colors.primary900, 0.3),
+  champ: colors.primary800,
+  champBord: colors.primary700,
+  cochesEnvoye: withAlpha(colors.neutral00, 0.5),
+  cochesLu: colors.neutral00,
+  danger: colors.chatDanger,
+  encre: colors.primary900,
+  feuille: colors.chatSheet,
+  fil: colors.chatBackground,
+  filet: withAlpha(colors.neutral00, 0.06),
+  menu: colors.chatMenu,
+  menuBord: withAlpha(colors.neutral00, 0.08),
+  metaMienne: withAlpha(colors.neutral00, 0.72),
+  metaRecue: withAlpha(colors.neutral00, 0.62),
+  noticeFond: withAlpha(colors.chatBar, 0.55),
+  noticeTexte: withAlpha(colors.neutral00, 0.62),
+  puce: withAlpha(colors.chatBar, 0.84),
+  revenirEnBas: withAlpha(colors.primary700, 0.98),
+  role: withAlpha(colors.neutral00, 0.55),
+  texte: colors.neutral00,
+  texteDoux: withAlpha(colors.neutral00, 0.6),
+  voile: withAlpha(colors.neutral900, 0.45),
 };
-
-/** Les couleurs des noms (SPECS §0) : une par personne, la meme dans tous les fils. */
-const COULEURS_DES_NOMS = [
-  '#5fe3b5', '#f598d8', '#ffad5c', '#a99bff', '#ff7a93', '#a5e36b', '#ff9670',
-  '#6fd3ff', '#ffd84d', '#5ee0e0', '#e59cff', '#c9b28a', '#ffcf70',
-];
 
 /** Le style d un texte LU par le lecteur d ecran mais invisible a l ecran. */
 /** @type {import('react').CSSProperties} */
@@ -435,13 +428,12 @@ const TEXTE_MASQUE = {
 };
 
 /**
- * La couleur du nom d une personne dans le fil.
+ * La couleur du nom d une personne dans le fil : la MEME que sur le telephone (meme identifiant,
+ * meme hachage, `habillageDuFil.couleurDuNom`).
  * @param {any} personne - L expediteur.
  * @returns {string} Sa couleur.
  */
-const couleurDeLaPersonne = (personne) => COULEURS_DES_NOMS[
-  indiceDeCouleur(String(personne?.documentId || personne?.id || ''), COULEURS_DES_NOMS.length)
-];
+const couleurDeLaPersonne = (personne) => couleurDuNom(colors, getEntityDocumentId(personne));
 
 /**
  * MSG1W — l heure et les coches, DANS la bulle (README §3.1, SPECS §1). Les coches ne se

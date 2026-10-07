@@ -130,22 +130,6 @@ export const etatDesCoches = (message) => {
 };
 
 /**
- * La place d une personne dans la palette des noms : stable d un affichage a l autre, et la
- * meme pour une personne dans tous les fils (SPECS §0, « attribution stable par utilisateur »).
- * @param {string} identifiant - Le documentId de la personne.
- * @param {number} taille - Le nombre de couleurs de la palette.
- * @returns {number} Un indice entre 0 et taille - 1.
- */
-export const indiceDeCouleur = (identifiant, taille) => {
-  if (!taille) return 0;
-  let somme = 0;
-  String(identifiant || '').split('').forEach((caractere) => {
-    somme = ((somme * 31) + caractere.charCodeAt(0)) % 100000;
-  });
-  return somme % taille;
-};
-
-/**
  * Les messages dont le texte ne se modifie pas : la MEME liste que le serveur (chat-message.ts,
  * `NON_EDITABLE_COMPOSITION_TYPES`) et que le telephone (Conversation.js).
  */

@@ -3,7 +3,6 @@ import {
   estModifiable,
   etatDesCoches,
   evenementDuMessage,
-  indiceDeCouleur,
   libelleDuJour,
   rangerLeFil,
 } from '../filDuSite';
@@ -84,16 +83,6 @@ describe('etatDesCoches', () => {
     expect(etatDesCoches({})).toBe('envoye');
     expect(etatDesCoches({ pending: true })).toBe('en-cours');
     expect(etatDesCoches({ failed: true, pending: true })).toBe('echec');
-  });
-});
-
-describe('indiceDeCouleur', () => {
-  it('donne toujours la meme couleur a la meme personne, dans la palette', () => {
-    const indice = indiceDeCouleur('bruno-msg1w', 13);
-    expect(indice).toBe(indiceDeCouleur('bruno-msg1w', 13));
-    expect(indice).toBeGreaterThanOrEqual(0);
-    expect(indice).toBeLessThan(13);
-    expect(indiceDeCouleur('', 0)).toBe(0);
   });
 });
 

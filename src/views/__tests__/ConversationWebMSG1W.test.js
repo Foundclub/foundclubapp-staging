@@ -325,6 +325,22 @@ describe('MSG1W §3.1 — « Bruno écrit… » sur le site', () => {
   });
 });
 
+// 📐 §3.1 — LA COULEUR D UN NOM. Le pack : une couleur par personne, la MEME partout. Le site
+// hachait l identifiant a sa facon : Bruno n avait pas la couleur que le telephone lui donne
+// (habillageDuFil.couleurDuNom, MSG1A 273e6a17).
+describe('MSG1W §3.1 — la couleur d un nom, la même que sur le téléphone', () => {
+  test('le nom de Bruno prend la couleur que le telephone lui donne', async () => {
+    const karim = { documentId: 'karim', firstname: 'Karim' };
+    mockFil = { ...mockFil, participants: [MOI, BRUNO, karim] };
+    const { arbre } = await monter();
+    const [nom] = parTestId(arbre, 'MSG1W-nom-m1');
+    const [libelle] = nom.findAll((/** @type {any} */ n) => n.type === 'span');
+    const { colors } = jest.requireActual('@/theme/colors');
+    const { couleurDuNom } = jest.requireActual('@/domains/messaging/habillageDuFil');
+    expect(libelle.props.style.color).toBe(couleurDuNom(colors, BRUNO.documentId));
+  });
+});
+
 // 📐 §3.10 — L AVERTISSEMENT DU DIRIGEANT (decision d Adel du 07/10 : « avertissement B »). Le
 // telephone l affichait en bandeau fixe ; le site ne l affichait PAS DU TOUT. Il devient une
 // notice centree EN TETE DU FIL, qui defile avec lui, comme la mention de chiffrement de WhatsApp.
