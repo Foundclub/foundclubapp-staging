@@ -5675,7 +5675,10 @@ export default {
     pastille: {
       chaqueSemaine: 'Every week',
       complet: 'Full',
+      // VILLE-T18C (07/10) — a refused card of a series (round T18, G51).
+      datesDeLaSerie: '{{nombre}} dates of the series',
       placesLibres: '{{nombre}} spots free',
+      uneDateDeLaSerie: 'One date of the series',
       uneFois: 'Once',
       unePlaceLibre: '1 spot free',
       votreClub: 'Request from your club',

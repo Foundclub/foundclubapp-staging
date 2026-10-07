@@ -6054,7 +6054,10 @@ export default {
     pastille: {
       chaqueSemaine: 'Chaque semaine',
       complet: 'Complet',
+      // VILLE-T18C (07/10) — une carte refusée d’une série (tournée T18, G51).
+      datesDeLaSerie: '{{nombre}} dates de la série',
       placesLibres: '{{nombre}} places libres',
+      uneDateDeLaSerie: 'Une date de la série',
       uneFois: 'Une fois',
       unePlaceLibre: '1 place libre',
       votreClub: 'Demande de votre club',

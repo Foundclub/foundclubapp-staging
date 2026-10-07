@@ -791,3 +791,67 @@ describe('FINITIONS16 21 — planche 32 sur le site : « Demandes de la Ville »
     expect(lus.filter((texte) => texte === 'Demandes de la Ville')).toHaveLength(1);
   });
 });
+
+// 🗓️ VILLE-T18C (07/10) — point 4, tournée T18 (G51) : dans « Traitées », deux cartes de la MÊME
+// série au texte IDENTIQUE (« chaque jeudi, de 19:00 à 20:00 … jusqu’au 15 octobre »), l'une
+// Refusée, l'autre Acceptée : la refusée ne disait pas QUELLE date. `series` décrit la récurrence
+// entière (ses séances non annulées : les dates MAINTENUES). Côté club, « Tes demandes à la Ville »
+// le savait déjà (FINITIONS13-COLL) ; la règle est désormais partagée (domaine). ROUGE avant.
+describe('VILLE-T18C point 4 — « Traitées » : une carte refusée d’une série dit SES dates', () => {
+  const ACCEPTEE = {
+    ...SERIE,
+    documentId: 'rq-s1',
+    series: { ...SERIE.series, until: '2030-10-23', untilLabel: '23 oct.' },
+    seriesCount: 2,
+    status: 'approved',
+    updatedAt: '2030-10-05T09:00:00.000Z',
+  };
+  const REFUSEE = {
+    ...ACCEPTEE,
+    decisionReason: 'Date non retenue : la Ville a accepté les autres dates de la série.',
+    documentId: 'rq-s2',
+    requestedEnd: '2030-10-16T17:00:00.000Z',
+    requestedStart: '2030-10-16T15:30:00.000Z',
+    seriesCount: 1,
+    status: 'refused',
+  };
+  const lireTraitees = async (/** @type {any[]} */ cartes) => {
+    mockGet.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ config) => {
+      if (url === '/collectivites/mine') return { data: { data: [VILLE] } };
+      if (url === '/collectivites/ville-de-recette/requests') {
+        return { data: { data: config?.params?.status === 'decided' ? cartes : mockEnAttente } };
+      }
+      throw new Error(`GET inattendu ${url}`);
+    });
+    const arbre = await monter();
+    await appuyer(arbre, 'onglet-decided');
+    await attendre(() => textes(arbre).includes('Refusée'));
+    return textes(arbre);
+  };
+
+  it('une date refusée : sa date, et la pastille « Une date de la série »', async () => {
+    const lus = await lireTraitees([REFUSEE, ACCEPTEE]);
+    expect(lus).toEqual(expect.arrayContaining([
+      // eslint-disable-next-line max-len
+      `Montrivage Basket demande le ${jourLong(REFUSEE.requestedStart)}, de ${heure(REFUSEE.requestedStart)} à ${heure(REFUSEE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket.`,
+      'Une date de la série',
+      // eslint-disable-next-line max-len
+      `Montrivage Basket demande chaque mercredi, de ${heure(ACCEPTEE.requestedStart)} à ${heure(ACCEPTEE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket, jusqu’au 23 octobre.`,
+      'Chaque semaine',
+    ]));
+  });
+
+  // AJOUT T18 (chef, 07/10 ~19h10) : une série REFUSÉE se lit jusqu'à SA dernière date (le serveur
+  // décrit désormais une carte tranchée par ses propres dates : admin VILLE-T18C).
+  // eslint-disable-next-line max-len
+  it('trois dates refusées : la série jusqu’à sa dernière date, pastille « 3 dates de la série »', async () => {
+    const lus = await lireTraitees([{
+      ...REFUSEE, series: { ...REFUSEE.series, until: '2030-10-30' }, seriesCount: 3,
+    }]);
+    expect(lus).toEqual(expect.arrayContaining([
+      // eslint-disable-next-line max-len
+      `Montrivage Basket demande chaque mercredi, de ${heure(REFUSEE.requestedStart)} à ${heure(REFUSEE.requestedEnd)}, au Gymnase de la Recette, pour ses Seniors Basket, jusqu’au 30 octobre.`,
+      '3 dates de la série',
+    ]));
+  });
+});

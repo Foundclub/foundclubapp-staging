@@ -38,6 +38,22 @@ const lireDate = (valeur) => {
 // eslint-disable-next-line max-len
 export const estDemandeHebdo = (demande) => Boolean(demande?.series) || Boolean(demande?.event?.isRecurring);
 
+/**
+ * 🗓️ VILLE-T18C (07/10, tournée T18 G51) — UNE CARTE REFUSÉE D'UNE SÉRIE dit SES dates, jamais la
+ * période de la série : `series` (serveur, `describeSeries`) décrit la récurrence entière, ses
+ * séances NON annulées, donc les dates maintenues. Deux cartes de la même série, « Acceptée » et
+ * « Refusée », disaient la même phrase. Règle de « Tes demandes à la Ville » (FINITIONS13-COLL),
+ * partagée avec « Demandes de la Ville ».
+ * @param {any} demande - Une carte de demande (une série repliée porte `seriesCount`).
+ * @returns {number} Le nombre de dates refusées que la carte porte (1 et plus) ; 0 quand la carte
+ *   se lit normalement (en attente, acceptée, ou demande d'une seule fois).
+ */
+export const datesRefuseesDUneSerie = (demande) => (
+  demande?.status === 'refused' && estDemandeHebdo(demande) && demande?.series
+    ? Math.max(1, Number(demande?.seriesCount || 1))
+    : 0
+);
+
 // ponytail: la préposition se devine par le PREMIER mot du nom, comme côté serveur
 // (season-slot/utils, facilityPlaceLabel). Plafond : un nom féminin hors de la liste reçoit
 // « au ». Sortie : un champ « genre » sur l'installation, si une Ville le demande.
