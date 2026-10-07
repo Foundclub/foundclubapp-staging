@@ -943,8 +943,10 @@ function Profile({ navigation, route }) {
   const accountNonLogoutRows = [
     // Garde-fou du 14/09 : pas de choix de langue tant que l anglais est fermé (production).
     ...(anglaisDisponible() ? languageRows : []),
+    // VILLE-T18B point 3 (T18, G12) — l'icône « personnes » de la planche P1-porte-tel. `share2`
+    // est une TUILE opaque (fond bleu) : teintée par la rangée, elle devenait un carré plein.
     {
-      icon: Images.share2,
+      icon: Images.users,
       key: 'switchAccount',
       label: t('profile.actions.switchAccount'),
       onPress: handleToggleAccountSwitcher,
