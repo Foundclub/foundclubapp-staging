@@ -188,7 +188,7 @@ export const touchedCountLabel = (t, carte) => {
   const total = Number(carte?.sessionsCount) || 0;
   const lignes = Array.isArray(carte?.sessions) ? carte.sessions : [];
   const creneaux = lignes.filter((ligne) => ligne?.kind === 'slot').length;
-  const seances = (count) => t('collectiviteFermetures.carte.seances', {
+  const seances = (/** @type {number} */ count) => t('collectiviteFermetures.carte.seances', {
     count,
     defaultValue_one: '{{count}} séance touchée',
     defaultValue_other: '{{count}} séances touchées',
