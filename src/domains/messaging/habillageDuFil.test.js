@@ -71,3 +71,36 @@ describe('MSG1A — habillage du fil', () => {
       .forEach((type) => expect(estUnTeteATete(type)).toBe(false));
   });
 });
+
+describe('MSG1A — §3.3 la citation', () => {
+  // eslint-disable-next-line global-require
+  const { auteurDuMessageCite, extraitDuMessageCite } = require('./habillageDuFil');
+  const t = (cle, repli) => repli;
+
+  test('Q1 — un texte se cite tel quel, sans icone', () => {
+    expect(extraitDuMessageCite({ message: 'Je ramene les plots' }, t))
+      .toEqual({ icone: '', texte: 'Je ramene les plots' });
+  });
+
+  test('Q2 — un contenu riche se dit avec son icone', () => {
+    expect(extraitDuMessageCite({ composition: { question: 'Quel creneau ?', type: 'poll' } }, t))
+      .toEqual({ icone: 'chartSimpleHorizontal', texte: 'Quel creneau ?' });
+    expect(extraitDuMessageCite({ composition: { type: 'voice_note' } }, t))
+      .toEqual({ icone: 'microphone', texte: 'Message vocal' });
+    expect(extraitDuMessageCite({ composition: { eventDisplayName: 'Match vs US Pelican', type: 'lineup_share' } }, t))
+      .toEqual({ icone: 'users', texte: 'Composition · Match vs US Pelican' });
+    expect(extraitDuMessageCite({ image: 'https://x/y.jpg', text: '' }, t))
+      .toEqual({ icone: 'image', texte: 'Photo' });
+    expect(extraitDuMessageCite({ attachments: [{ mime: 'application/pdf', name: 'Programme.pdf' }] }, t).icone)
+      .toBe('file');
+  });
+
+  test('Q3 — l auteur cite : « Vous » si c est moi, sinon prenom nom', () => {
+    expect(auteurDuMessageCite({ sender: { documentId: 'moi', firstname: 'Adel' } }, 'moi', t))
+      .toEqual({ identifiant: 'moi', nom: 'Vous' });
+    expect(auteurDuMessageCite({ sender: { documentId: 'k', firstname: 'Karim', lastname: 'Benali' } }, 'moi', t))
+      .toEqual({ identifiant: 'k', nom: 'Karim Benali' });
+    expect(auteurDuMessageCite({ user: { _id: 'k', name: 'Karim B' } }, 'moi', t))
+      .toEqual({ identifiant: 'k', nom: 'Karim B' });
+  });
+});

@@ -527,3 +527,79 @@ describe('MSG1A — §3.2 appui long', () => {
     expect(ecran.root.findByType(MessageReactionOverlay).props.canReply).toBe(true);
   });
 });
+
+describe('MSG1A — §3.3 glisser pour repondre', () => {
+  /* eslint-disable global-require */
+  const BarreDeReponse = require('@/components/molecules/bulleDuFil/BarreDeReponse').default;
+  const BulleDuFil = require('@/components/molecules/bulleDuFil/BulleDuFil').default;
+  const CitationDansLaBulle = require('@/components/molecules/bulleDuFil/CitationDansLaBulle').default;
+  const { View: VueRN } = require('react-native');
+  /* eslint-enable global-require */
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('R1 — la citation est DANS la bulle : nom de l auteur cite et extrait', () => {
+    const { gifted } = monterLaConversation();
+    const reponse = msg('r1', 'karim', '2026-10-07T10:05:00', {
+      replyTo: { documentId: 'm0', message: 'Quelqu un peut me deposer ?', sender: { documentId: 'moi', firstname: 'Adel' } },
+    });
+
+    const arbre = rendreLaBulle(gifted, { currentMessage: reponse, position: 'left' });
+    const citation = arbre.root.findByType(BulleDuFil).findByType(CitationDansLaBulle).props;
+
+    expect(citation.nom).toBe('Vous');
+    expect(citation.texte).toBe('Quelqu un peut me deposer ?');
+  });
+
+  test('R2 — glisser une bulle ouvre la barre « reponse en cours » au-dessus de la saisie', () => {
+    const { gifted } = monterLaConversation();
+    const cible = msg('a1', 'karim', '2026-10-07T10:00:00');
+    const arbre = rendreLaBulle(gifted, { currentMessage: cible, position: 'left' });
+
+    // La doublure de Swipeable est une View : on declenche son ouverture a la main.
+    const glisser = arbre.root.findAll((n) => typeof n.props?.onSwipeableOpen === 'function')[0];
+    act(() => { glisser.props.onSwipeableOpen(); });
+
+    const giftedApres = mockGiftedRenders[mockGiftedRenders.length - 1];
+    /** @type {any} */
+    let barre;
+    act(() => { barre = renderer.create(giftedApres.renderInputToolbar({ text: '' })); });
+    aDemonter.push(() => { act(() => { barre.unmount(); }); });
+
+    const props = barre.root.findByType(BarreDeReponse).props;
+    expect(props.nom).toBe('Karim Benali');
+    expect(props.texte).toBe('Texte a1');
+    expect(VueRN).toBeDefined();
+  });
+
+  test('R3 — dans un canal d annonce, le geste est coupe ; dans un groupe, il marche', () => {
+    mockChatData = FIL_DE_CLUB;
+    const club = monterLaConversation();
+    const bulleClub = rendreLaBulle(club.gifted, {
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'), position: 'left',
+    });
+    const enabledClub = bulleClub.root.findAll((n) => typeof n.props?.onSwipeableOpen === 'function')[0]
+      .props.enabled;
+
+    mockChatData = GROUPE_NOMME;
+    const groupe = monterLaConversation();
+    const bulleGroupe = rendreLaBulle(groupe.gifted, {
+      currentMessage: msg('a2', 'karim', '2026-10-07T10:00:00'), position: 'left',
+    });
+    const enabledGroupe = bulleGroupe.root.findAll((n) => typeof n.props?.onSwipeableOpen === 'function')[0]
+      .props.enabled;
+
+    expect(enabledClub).toBe(false);
+    expect(enabledGroupe).toBe(true);
+  });
+});

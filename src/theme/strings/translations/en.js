@@ -6422,6 +6422,16 @@ export default {
       sendError: 'Unable to send the proposal.',
       sent: 'Your proposal has been sent!',
     },
+    quote: {
+      contact: 'Contact',
+      event: 'Event',
+      hint: 'Scrolls back to the quoted message',
+      lineup: 'Line-up',
+      location: 'Location',
+      photo: 'Photo',
+      poll: 'Poll',
+      voice: 'Voice message',
+    },
     reactions: {
       add: 'React to this message',
       categories: {
@@ -6447,6 +6457,7 @@ export default {
     readOnly: 'Announcement channel (read-only)',
     reload: 'Reload the conversation',
     reply: {
+      cancel: 'Cancel reply',
       replyingTo: 'Replying to',
     },
     replyPreview: {

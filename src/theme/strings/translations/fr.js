@@ -6834,6 +6834,16 @@ export default {
       sendError: "Impossible d'envoyer la proposition.",
       sent: 'Ta proposition a été envoyée !',
     },
+    quote: {
+      contact: 'Contact',
+      event: 'Événement',
+      hint: 'Remonte au message cité',
+      lineup: 'Composition',
+      location: 'Localisation',
+      photo: 'Photo',
+      poll: 'Sondage',
+      voice: 'Message vocal',
+    },
     reactions: {
       add: 'Réagir à ce message',
       categories: {
@@ -6859,6 +6869,7 @@ export default {
     readOnly: "Canal d'annonce (lecture seule)",
     reload: 'Recharger la conversation',
     reply: {
+      cancel: 'Annuler la réponse',
       replyingTo: 'Répondre a',
     },
     replyPreview: {

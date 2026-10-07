@@ -12,6 +12,7 @@ import * as ReactI18next from 'react-i18next';
 import 'dayjs/locale/fr';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   ImageBackground,
   Keyboard,
@@ -45,8 +46,10 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  auteurDuMessageCite,
   couleurDuNom,
   estUnTeteATete,
+  extraitDuMessageCite,
   placeDansLeGroupe,
   reserveDeLHeure,
 } from '@/domains/messaging/habillageDuFil';
@@ -83,9 +86,10 @@ import Button from '@/components/atoms/button/Button';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
-import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
+import CitationDansLaBulle from '@/components/molecules/bulleDuFil/CitationDansLaBulle';
 import DegradeDePhoto from '@/components/molecules/bulleDuFil/DegradeDePhoto';
 import MetaDuMessage, { etatDEnvoi, heureDuMessage } from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import {
@@ -240,8 +244,11 @@ const TYPING_START_THROTTLE_MS = 1000;
 // la frappe, c'est quelqu'un qui a posé son téléphone (ou perdu le réseau).
 const TYPING_IDLE_TIMEOUT_MS = 6000;
 
-const MESSAGE_REPLY_SWIPE_THRESHOLD = 44;
-const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 68;
+// MSG1A (§3.3) — le geste du pack (SPECS.md §2) : seuil a 56, la bulle suit le doigt
+// jusqu'a 64, puis resiste (x 0,25).
+const MESSAGE_REPLY_SWIPE_THRESHOLD = 56;
+const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 64;
+const MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION = 4;
 
 const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'contact_share',
@@ -450,6 +457,11 @@ const margesDeLaBulle = (estAMoi, typeDuFil) => {
 };
 
 const stylesDuFil = StyleSheet.create({
+  actionDeGlisser: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
+  },
   // La place de l'avatar de 28 sur les bulles du groupe qui n'en portent pas.
   avatarVide: {
     borderRadius: 14,
@@ -474,6 +486,16 @@ const stylesDuFil = StyleSheet.create({
     width: 40,
   },
   // En-tete : 62 sous la zone sure, 12 sur les cotes, filet du bas.
+  disqueRepondre: {
+    alignItems: 'center',
+    borderRadius: 16,
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   enTete: {
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -494,6 +516,11 @@ const stylesDuFil = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     minWidth: 0,
+  },
+  // Dans une bulle compacte (photo), la citation garde le retrait du texte.
+  citationSurPhoto: {
+    paddingHorizontal: 7,
+    paddingTop: 4,
   },
   legendeDePhoto: {
     paddingBottom: 4,
@@ -562,6 +589,10 @@ const stylesDuFil = StyleSheet.create({
     opacity: 1,
     right: 12,
     width: 40,
+  },
+  rondRepondre: {
+    height: 32,
+    width: 32,
   },
   texte: {
     marginBottom: 0,
@@ -1313,6 +1344,8 @@ function Conversation({ navigation, route }) {
   // 🎨 FINITIONS13-COLL (04/10) — un envoi refusé faute de connexion le DIT au pied du fil, tant
   // que la connexion manque (tournée T13, C2_3b : la bannière passe et s'en va ; rien ne restait).
   const [envoiRefuse, setEnvoiRefuse] = useState(false);
+  // MSG1A (§3.3) — `canWrite` se calcule plus bas ; le glisser le lit a l'appel, par ce ref.
+  const peutEcrireRef = useRef(true);
   const [replyingTo, setReplyingTo] = useState(/** @type {(import('react-native-gifted-chat').IMessage & {documentId?: string}) | null} */ (null));
   const [composerText, setComposerText] = useState('');
   // COLL-C4A2 (02/10) — « Demander au club de compléter sa fiche » ouvre la conversation privée
@@ -5207,32 +5240,43 @@ function Conversation({ navigation, route }) {
     }
   };
 
-  const renderReplySwipeAction = useCallback(() => (
-    <View
-      style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: MESSAGE_REPLY_SWIPE_ACTION_WIDTH,
-      }}
-    >
-      <View
-        style={{
-          alignItems: 'center',
-          backgroundColor: 'rgba(1, 179, 244, 0.18)',
-          borderColor: Colors.primary500,
-          borderRadius: 16,
-          borderWidth: 1,
-          justifyContent: 'center',
-          minHeight: 32,
-          minWidth: 32,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-        }}
-      >
-        <SvgIcon color={Colors.primary500} height={14} name="reply" width={14} />
+  // ↩️ MSG1A (§3.3) — le rond « repondre » du pack : 32, il grandit avec le geste et passe
+  // au CYAN au seuil (deux disques superposes : seule l'opacite s'anime, ce que le pilote
+  // natif de Swipeable sait faire).
+  const renderReplySwipeAction = useCallback((/** @type {any} */ _progress, /** @type {any} */ dragX) => {
+    const avancee = dragX.interpolate({
+      extrapolate: 'clamp',
+      inputRange: [-MESSAGE_REPLY_SWIPE_THRESHOLD, 0, MESSAGE_REPLY_SWIPE_THRESHOLD],
+      outputRange: [1, 0, 1],
+    });
+    const auSeuil = dragX.interpolate({
+      extrapolate: 'clamp',
+      inputRange: [
+        -MESSAGE_REPLY_SWIPE_THRESHOLD,
+        -(MESSAGE_REPLY_SWIPE_THRESHOLD - 1),
+        MESSAGE_REPLY_SWIPE_THRESHOLD - 1,
+        MESSAGE_REPLY_SWIPE_THRESHOLD,
+      ],
+      outputRange: [1, 0, 0, 1],
+    });
+    const echelle = avancee.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
+    return (
+      <View style={stylesDuFil.actionDeGlisser}>
+        <Animated.View style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}>
+          <View
+            style={[stylesDuFil.disqueRepondre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
+          >
+            <GlyphIcon color={Colors.neutral00} name="reply" size={18} />
+          </View>
+          <Animated.View
+            style={[stylesDuFil.disqueRepondre, { backgroundColor: Colors.primary500, opacity: auSeuil }]}
+          >
+            <GlyphIcon color={Colors.primary900} name="reply" size={18} />
+          </Animated.View>
+        </Animated.View>
       </View>
-    </View>
-  ), [Colors.primary500]);
+    );
+  }, [Colors.neutral00, Colors.primary500, Colors.primary900]);
 
   const wrapWithMessageInteractions = useCallback((currentMessage, children, options = {}) => {
     if (!currentMessage) return children;
@@ -5259,11 +5303,14 @@ function Conversation({ navigation, route }) {
 
     return (
       <Swipeable
-        friction={2}
+        // MSG1A (§3.3) — pas de reponse dans un canal ou l'on ne peut pas ecrire.
+        enabled={peutEcrireRef.current}
+        friction={1}
         leftThreshold={MESSAGE_REPLY_SWIPE_THRESHOLD}
         onSwipeableOpen={handleSwipeableOpen}
-        overshootLeft={false}
-        overshootRight={false}
+        overshootFriction={MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION}
+        overshootLeft
+        overshootRight
         ref={setSwipeableRef}
         renderLeftActions={renderReplySwipeAction}
         renderRightActions={renderReplySwipeAction}
@@ -5535,41 +5582,24 @@ function Conversation({ navigation, route }) {
 
     const isPending = Boolean(currentMessage.pending);
     const isFailed = Boolean(currentMessage.failed);
-    const replyAuthorName = String(
-      currentMessage?.replyTo?.sender?.firstname
-      || currentMessage?.replyTo?.sender?.name
-      || currentMessage?.replyTo?.user?.name
-      || t('conversation.replyPreview.defaultAuthor', 'Membre'),
-    ).trim();
-    const replyPreviewText = String(
-      currentMessage?.replyTo?.message
-      || currentMessage?.replyTo?.text
-      || t('conversation.replyPreview.defaultText', 'Message'),
-    );
-    const replyPreviewNode = currentMessage.replyTo ? (
-      <TouchableOpacity
-        activeOpacity={0.85}
+    // 💬 MSG1A (§3.3) — LA CITATION PASSE DANS LA BULLE (SPECS.md §1) : filet et nom a la
+    // couleur de l'auteur cite (« Vous » si c'est moi), extrait d'une ligne avec l'icone du
+    // contenu. Un appui remonte au message cite, comme avant.
+    const auteurCite = currentMessage.replyTo
+      ? auteurDuMessageCite(currentMessage.replyTo, userData?.documentId || '', t)
+      : null;
+    const extraitCite = currentMessage.replyTo
+      ? extraitDuMessageCite(currentMessage.replyTo, t)
+      : null;
+    const citationNode = auteurCite && extraitCite ? (
+      <CitationDansLaBulle
+        couleur={couleurDuNom(Colors, auteurCite.identifiant)}
+        estAMoi={estAMoi}
+        icone={extraitCite.icone}
+        nom={auteurCite.nom}
         onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
-        style={{
-          backgroundColor: 'rgba(1,179,244,0.12)',
-          borderColor: Colors.primary700,
-          borderRadius: 8,
-          borderWidth: 1,
-          marginBottom: 4,
-          marginHorizontal: 12,
-          marginTop: marginTop + 4,
-          padding: 8,
-        }}
-      >
-        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-          {t('conversation.replyPreview.label', 'Réponse à')}
-          {' '}
-          {replyAuthorName}
-        </Text>
-        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-          {replyPreviewText}
-        </Text>
-      </TouchableOpacity>
+        texte={extraitCite.texte}
+      />
     ) : null;
     const normalizedCurrentAttachments = normalizeMessageAttachments(currentMessage?.attachments);
     const hasDocumentAttachment = normalizedCurrentAttachments.some((attachment) => (
@@ -5590,7 +5620,6 @@ function Conversation({ navigation, route }) {
         currentMessage,
         (
           <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
-            {replyPreviewNode}
             {/* MSG1A (§3.1) — le document devient une CARTE DANS LA BULLE (SPECS.md §1,
                 `DocBody`) : meme cadre que le texte (nom, queue, heure dessous). La carte
                 garde ses boutons Ouvrir / Telecharger / Partager, inchanges. */}
@@ -5601,6 +5630,7 @@ function Conversation({ navigation, route }) {
               nom={nomEnTete}
               testID="bulle-document"
             >
+              {citationNode}
               <DocumentMessageBubble
                 attachments={normalizedCurrentAttachments}
                 caption={documentCaption}
@@ -5648,29 +5678,6 @@ function Conversation({ navigation, route }) {
       currentMessage,
       (
         <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
-          {currentMessage.replyTo ? (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => handleReplyPreviewPress(currentMessage.replyTo)}
-              style={{
-                backgroundColor: 'rgba(1,179,244,0.12)',
-                borderColor: Colors.primary700,
-                borderRadius: 8,
-                borderWidth: 1,
-                marginBottom: 4,
-                padding: 8,
-              }}
-            >
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {t('conversation.replyPreview.label', 'Réponse à')}
-                {' '}
-                {replyAuthorName}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>
-                {replyPreviewText}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
           <BulleDuFil
             compacte={Boolean(imageDuMessage)}
             couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
@@ -5679,6 +5686,9 @@ function Conversation({ navigation, route }) {
             nom={nomEnTete}
             testID="bulle-texte"
           >
+            {citationNode ? (
+              <View style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}>{citationNode}</View>
+            ) : null}
             {imageDuMessage}
             {aDuTexte ? (
               <View style={imageDuMessage ? stylesDuFil.legendeDePhoto : null}>
@@ -5910,6 +5920,8 @@ function Conversation({ navigation, route }) {
     return false;
   }, [chatData, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
 
+  peutEcrireRef.current = canWrite;
+
   /**
    * Render custom actions (attachment buttons)
    * @returns {React.ReactNode} Rendered actions component
@@ -5980,11 +5992,17 @@ function Conversation({ navigation, route }) {
       <View style={Spaces.gap[8]}>
         {hasMediaDraft ? (
           <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
             Spaces.padding[8],
             Alignments.row,
             Alignments.alignCenter,
-            { borderRadius: 14, gap: 10 },
+            {
+              // MSG1A (§3.3) — aux couleurs du champ de saisie (il etait clair sur fond nuit).
+              backgroundColor: Colors.primary800,
+              borderColor: Colors.primary700,
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 10,
+            },
           ]}
           >
             <Image
@@ -5997,12 +6015,12 @@ function Conversation({ navigation, route }) {
               }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary700 }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.previewTitle', 'Photo prête à envoyer')}
               </Text>
               <Text
                 numberOfLines={2}
-                style={[Fonts.p4, { color: Colors.neutral700 }]}
+                style={[Fonts.p4, { color: withAlpha(Colors.neutral00, 0.7) }]}
               >
                 {composerText?.trim()
                   ? t('conversation.attachments.previewWithCaption', 'La légende sera envoyée avec la photo.')
@@ -6027,30 +6045,20 @@ function Conversation({ navigation, route }) {
           </View>
         ) : null}
 
-        {hasReplyPreview ? (
-          <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[8],
-            Alignments.row,
-            Alignments.justifySpaceBetween,
-            Alignments.alignCenter,
-          ]}
-          >
-            <View>
-              <Text style={[Fonts.p3Bold, Fonts.primary700]}>
-                {i18n.t('conversation.reply.replyingTo', 'Répondre a')}
-                {' '}
-                {replyingTo.user?.name}
-              </Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral700]}>{replyingTo.text}</Text>
-            </View>
-            <Button
-              onPress={() => setReplyingTo(null)}
-              title="X"
-              variant="SecondaryLight"
+        {/* 💬 MSG1A (§3.3) — la barre « reponse en cours » du pack, au-dessus de la saisie. */}
+        {hasReplyPreview ? (() => {
+          const auteur = auteurDuMessageCite(replyingTo, userData?.documentId || '', t);
+          const extrait = extraitDuMessageCite(replyingTo, t);
+          return (
+            <BarreDeReponse
+              couleur={couleurDuNom(Colors, auteur.identifiant)}
+              icone={extrait.icone}
+              nom={auteur.nom}
+              onFermer={() => setReplyingTo(null)}
+              texte={extrait.texte}
             />
-          </View>
-        ) : null}
+          );
+        })() : null}
       </View>
     );
   };
