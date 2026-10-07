@@ -36,6 +36,7 @@ import {
   describeMatchStatsEmptyReason,
   MATCH_STATS_EMPTY_REASONS,
 } from '@/utils/matchStatsEmptyReason';
+import texteInsecable from '@/utils/texteInsecable';
 
 // ==========================================================================
 // 📋 ST-MATCH (écran 6, design des statistiques validé le 02/10) — « MATCHS EN
@@ -292,7 +293,10 @@ function PendingMatchStatsScreen({ navigation }) {
           { backgroundColor: colors.background, borderRadius: 999 },
         ]}
       >
-        <Text style={[Fonts.p4Bold, { color: colors.text }]}>{label}</Text>
+        {/* FINITIONS19 2 (T17, photo P6b) — « À répondre » coupé en « À » sur Android 16 : un
+            texte gras de plusieurs mots, dans une boîte à sa largeur mesurée, perd son dernier
+            mot. Une pastille ne s'étire pas ⇒ espaces insécables (utils/texteInsecable). */}
+        <Text style={[Fonts.p4Bold, { color: colors.text }]}>{texteInsecable(label)}</Text>
       </View>
     );
   };

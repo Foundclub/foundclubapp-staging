@@ -152,9 +152,12 @@ const monter = (/** @type {any} */ requete, largeur = 390) => {
   });
   return arbre.root;
 };
+// FINITIONS19 2 — les pastilles portent des espaces insécables (`texteInsecable`) : on lit ici des
+// espaces simples ; le témoin du bas de fichier, lui, les lit EN BRUT.
 const textes = (/** @type {any} */ racine) => racine.findAllByType(Text)
   .map((/** @type {any} */ n) => [].concat(n.props.children).filter((c) => typeof c === 'string').join(''))
-  .filter(Boolean);
+  .filter(Boolean)
+  .map((texte) => texte.replace(/\u00a0/g, ' '));
 const parId = (/** @type {any} */ racine, /** @type {string} */ id) => racine
   .findAll((/** @type {any} */ n) => n.props?.testID === id)[0];
 const jour = (/** @type {string} */ iso) => {
@@ -441,5 +444,45 @@ describe('FINITIONS14 · point 4 — les cartes titrent « club — adversaire �
     const racine = monter({ data: { items: [joueur({ label: 'Match vs Test-COMPO' })] } });
 
     expect(textes(racine)).toContain('Match vs Test-COMPO');
+  });
+});
+
+// ==========================================================================
+// ✂️ FINITIONS19 · POINT 2 (tournée T17 §7.2, photo P6b) — la pastille « À répondre » coupée
+// en « À » sur 2 cartes « Pour moi » sur 3, téléphone Android 16 : un texte GRAS de plusieurs
+// mots, dans une boîte qui épouse sa largeur mesurée, perd son DERNIER MOT (sans « … »).
+// Parade du dépôt pour une pastille (elle ne peut pas s'étirer) : `texteInsecable` — ses
+// espaces deviennent insécables, le texte se comporte comme un mot seul. Lu ici en BRUT : le
+// témoin compte les points de coupure qu'Android verrait. ROUGE avant.
+// ==========================================================================
+const INSECABLE = String.fromCharCode(160);
+const textesBruts = (/** @type {any} */ racine) => racine.findAllByType(Text)
+  .map((/** @type {any} */ n) => [].concat(n.props.children).filter((c) => typeof c === 'string').join(''))
+  .filter(Boolean);
+
+describe('FINITIONS19 2 — une pastille ne se coupe jamais', () => {
+  test('🔴 téléphone — « À répondre » et « Score à saisir » d un seul tenant', () => {
+    mockUtilisateur = null;
+    const racine = monter({ data: { items: [joueur(), entraineur()] } });
+    const vus = textesBruts(racine);
+
+    expect(vus).toContain(`À${INSECABLE}répondre`);
+    expect(vus).toContain(`Score${INSECABLE}à${INSECABLE}saisir`);
+    expect(vus.filter((texte) => ['À répondre', 'Score à saisir'].includes(texte))).toEqual([]);
+  });
+
+  test('🔴 ordinateur — la pastille du tableau est la même', () => {
+    mockUtilisateur = null;
+    const racine = monter({ data: { items: [entraineur()] } }, 1280);
+
+    expect(textesBruts(parId(racine, 'st-match-attente-tableau'))).toContain(`Score${INSECABLE}à${INSECABLE}saisir`);
+  });
+
+  test('le libellé lu par le lecteur d écran garde ses espaces simples', () => {
+    mockUtilisateur = null;
+    const racine = monter({ data: { items: [joueur()] } });
+
+    expect(parId(racine, 'st-match-attente-carte-event:match-19h:u15:self').props.accessibilityLabel)
+      .toMatch(/, À répondre$/);
   });
 });
