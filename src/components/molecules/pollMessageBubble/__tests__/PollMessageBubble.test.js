@@ -226,4 +226,34 @@ describe('MSG1A — PollMessageBubble (caracterisation)', () => {
     expect(option.props.accessibilityLabel).toContain('Leo Martin');
     expect(option.props.accessibilityLabel).not.toContain('Membre');
   });
+
+  // MSG1A x SECU-SONDAGE-ANONYME — un sondage anonyme du serveur neuf ne porte que des
+  // COMPTEURS ; l'app y pose MON choix (`voters: [moi]` sur mes options). La bulle : mon option
+  // cochee, les compteurs du serveur, et AUCUN votant (ni pastille, ni nom, meme pas moi).
+  test('P11 — anonyme du serveur neuf : mon choix coche, compteurs du serveur, aucun votant', () => {
+    const anonyme = {
+      ...SONDAGE,
+      isAnonymous: true,
+      options: [
+        { id: 'o1', label: 'Mardi 19h', voteCount: 4, voters: [] },
+        { id: 'o2', label: 'Jeudi 20h', voteCount: 3, voters: ['moi'] },
+        { id: 'o3', label: 'Samedi 10h', voteCount: 0, voters: [] },
+      ],
+    };
+    const arbre = rendre({ onVote: jest.fn(), poll: anonyme });
+
+    const coche = arbre.root.findAll(
+      (n) => n.props?.testID === 'sondage-rond-coche' && typeof n.type === 'string',
+    );
+    expect(coche).toHaveLength(1);
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['4', '3', '0']));
+    expect(
+      arbre.root.findAll((n) => String(n.props?.testID || '').startsWith('avatar-')),
+    ).toHaveLength(0);
+    const etiquettes = arbre.root
+      .findAll((n) => typeof n.props?.accessibilityLabel === 'string')
+      .map((n) => n.props.accessibilityLabel)
+      .join(' | ');
+    expect(etiquettes).not.toMatch(/Adel|Karim|Lea|Membre/);
+  });
 });

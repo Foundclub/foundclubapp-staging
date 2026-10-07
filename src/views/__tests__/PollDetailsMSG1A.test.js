@@ -37,7 +37,7 @@ jest.mock('react-native-svg', () => {
 
 // SONDAGE-NOMS — le crochet qui lit les noms au serveur est double : ce temoin ne parle qu'a
 // la bulle ; les profils rendus par le serveur se reglent par `mockProfils`.
-let mockProfils = new Map();
+const mockProfils = new Map();
 jest.mock('@/domains/messaging/usePollVoterProfiles', () => ({
   __esModule: true,
   default: () => mockProfils,
