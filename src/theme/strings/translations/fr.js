@@ -2217,14 +2217,15 @@ export default {
     },
   },
   autocompleteAddressInput: {
-    // ADRESSE-CARTE (07/10) — « Adresse introuvable ? Placez-la sur la carte » (champ d'adresse partagé).
+    // ADRESSE-CARTE (07/10) — « Adresse introuvable ? Placez-la sur la carte » (champ d'adresse).
     lieu: {
       aide: 'Déplacez la carte pour mettre l’épingle sur le lieu, puis donnez-lui un nom.',
       annuler: 'Annuler',
       erreurs: {
         connexion: 'Connectez-vous pour poser un lieu.',
         debit: 'Trop de lieux posés d’un coup : réessayez dans quelques minutes.',
-        donneePersonnelle: 'Un lieu est visible par tous : pas de courriel, de téléphone ni de lien.',
+        donneePersonnelle:
+          'Un lieu est visible par tous : pas de courriel, de téléphone ni de lien.',
         nom: 'Donnez un nom au lieu (3 caractères au moins).',
         panne: 'Le lieu n’a pas pu être enregistré. Réessayez.',
         plafond: 'Vous avez posé beaucoup de lieux : réessayez demain.',

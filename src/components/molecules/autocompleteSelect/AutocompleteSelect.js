@@ -296,7 +296,8 @@ const AutocompleteSelect = forwardRef(
       }
     };
 
-    // ADRESSE-CARTE — referme SANS persister : chercher ailleurs ne doit pas effacer l'adresse d'avant.
+    // ADRESSE-CARTE — referme SANS persister : chercher ailleurs ne doit pas effacer
+    // l'adresse d'avant.
     const handleLienSousLesOptions = () => {
       const lien = props.lienSousLesOptions;
       handleCloseModal(false);

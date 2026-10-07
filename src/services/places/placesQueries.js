@@ -38,7 +38,8 @@ export const useGetPlacesFromCoordinates = ({ lat, lon, options }) => useQuery({
  * ADRESSE-CARTE (07/10) — poser un lieu sur la carte. Le refus se dit DANS la carte (traduit par
  * l'écran) : le filet global ne pose pas d'alerte par-dessus. Après un lieu posé, les recherches
  * d'adresse gardées une heure sur l'appareil sont oubliées : la suivante doit le proposer.
- * @returns {import('@tanstack/react-query').UseMutationResult<{ existing: boolean, place: Place }, unknown, Parameters<typeof createLieu>[0]>}
+ * @returns {import('@tanstack/react-query').UseMutationResult<
+ *   { existing: boolean, place: Place }, unknown, Parameters<typeof createLieu>[0]>}
  */
 export const useCreateLieu = () => {
   const queryClient = useQueryClient();

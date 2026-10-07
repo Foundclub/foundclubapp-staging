@@ -205,16 +205,24 @@ function AutocompleteAddressInput({
   }, [onSelect, setAddress]);
 
   // ADRESSE-CARTE — le lien se montre une fois la recherche FAITE (frappe posée, réponse rendue),
-  // qu'elle ait trouvé ou non : « introuvable » se juge aussi devant une liste qui ne contient pas le lieu.
+  // qu'elle ait trouvé ou non : « introuvable » se juge aussi devant une liste qui ne contient pas
+  // le lieu.
   const rechercheFaite = debouncedAddressSearch.length >= safeMinChars
     && debouncedAddressSearch === (addressSearch?.trim() || '')
     && !isLoading;
   const lienCarte = permettreLieuSurCarte && rechercheFaite
     ? {
-      label: t('autocompleteAddressInput.lieu.lien', 'Adresse introuvable ? Placez-la sur la carte'),
+      label: t(
+        'autocompleteAddressInput.lieu.lien',
+        'Adresse introuvable ? Placez-la sur la carte',
+      ),
       onPress: () => {
-        const premier = placesOptions.find((option) => Number.isFinite(option.lat) && Number.isFinite(option.lng));
-        setCarte({ premierResultat: premier ? { lat: Number(premier.lat), lng: Number(premier.lng) } : null });
+        const premier = placesOptions.find(
+          (option) => Number.isFinite(option.lat) && Number.isFinite(option.lng),
+        );
+        setCarte({
+          premierResultat: premier ? { lat: Number(premier.lat), lng: Number(premier.lng) } : null,
+        });
       },
     }
     : undefined;
