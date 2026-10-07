@@ -15,7 +15,7 @@ import { Linking } from 'react-native';
  * Témoin : src/navigation/__tests__/LIENSAPP.lienDeLancementUneFois.test.js.
  */
 
-/** Même délai que React Navigation (useLinking.native.tsx, react-native#25675). */
+/** Même délai que React Navigation (useLinking.native.tsx, ticket 25675 de react-native). */
 const DELAI_MS = 150;
 
 let dejaLu = false;
