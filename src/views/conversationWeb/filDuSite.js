@@ -168,3 +168,47 @@ export const estModifiable = (message) => {
   const type = String(message?.composition?.type || '').trim().toLowerCase();
   return !type || !TYPES_NON_MODIFIABLES.has(type);
 };
+
+/**
+ * MSG1W §3.8 — L EVENEMENT D UN MESSAGE, pour la bulle du telephone (EventMessageBubble) : la
+ * relation `event` du message, completee par l apercu que porte un partage (`event_share`), ou
+ * reconstruite depuis ce partage. Meme regle que le telephone (`resolveMessageEventPayload`) :
+ * une valeur VIDE de la relation n efface pas celle de l apercu.
+ * @param {any} message - Le message.
+ * @returns {any | null} L evenement a dessiner, ou null.
+ */
+export const evenementDuMessage = (message) => {
+  const composition = message?.composition;
+  const relation = message?.event;
+  const estUnPartage = composition?.type === 'event_share';
+  const id = String(
+    relation?.documentId
+    || relation?.id
+    || (typeof relation === 'string' ? relation : '')
+    || composition?.eventDocumentId
+    || '',
+  ).trim();
+  if (!id) return null;
+  const apercu = estUnPartage && composition?.eventPreview
+    && typeof composition.eventPreview === 'object'
+    ? composition.eventPreview
+    : null;
+  const repli = estUnPartage ? {
+    date: composition?.eventDate || null,
+    documentId: id,
+    locationDetails: composition?.locationLabel || '',
+    name: composition?.eventName || 'Événement',
+    team: composition?.teamName ? { name: composition.teamName } : null,
+    type: { name: 'Événement' },
+  } : null;
+  const base = apercu || repli;
+  if (relation && typeof relation === 'object') {
+    if (!base) return relation;
+    const fusion = { ...base };
+    Object.entries(relation).forEach(([cle, valeur]) => {
+      if (valeur !== null && valeur !== undefined && valeur !== '') fusion[cle] = valeur;
+    });
+    return { ...fusion, documentId: id };
+  }
+  return base ? { ...base, documentId: id } : null;
+};

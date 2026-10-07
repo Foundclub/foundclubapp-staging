@@ -132,19 +132,37 @@ jest.mock('@/services/league/leagueMatchService', () => ({
 jest.mock('@/services/messageReport/messageReportService', () => ({
   createMessageReport: jest.fn(),
 }));
+const mockAbsent = jest.fn(() => Promise.resolve({}));
 jest.mock('@/services/event/eventService', () => ({
   getEventConvocation: jest.fn(),
   getEvents: jest.fn(() => Promise.resolve({
     data: [], meta: { pagination: { page: 1, pageCount: 1 } },
   })),
-  missingEvent: jest.fn(),
-  respondToEventRsvp: jest.fn(),
+  missingEvent: (/** @type {any} */ id) => mockAbsent(id),
+  respondToEventRsvp: jest.fn(() => Promise.resolve({})),
 }));
 jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: {} }));
 // MSG1W §3.5 — les fenetres du « + » (grande carte d evenement, sondage du telephone) : leurs
 // modules natifs ne se chargent pas dans ce banc, et ce temoin ne les regarde pas.
 jest.mock('@/components/molecules/eventCard/EventCardNew', () => () => null);
+// §3.8 — la bulle d evenement du telephone : le banc la remplace par une doublure qui expose
+// ses gestes (Présent / Absent / Rejoindre), pour verifier QUI le site appelle.
+jest.mock('@/components/molecules/eventMessageBubble/EventMessageBubble', () => {
+  const react = jest.requireActual('react');
+  return function BulleEvenementDouble(/** @type {any} */ props) {
+    return react.createElement('div', {
+      'data-testid': 'MSG1W-bulle-evenement-double',
+      onDecline: props.onDecline,
+      onJoin: props.onJoin,
+      onParticipate: props.onParticipate,
+    }, String(props.event?.name || ''));
+  };
+});
+const mockParticipation = jest.fn(() => Promise.resolve({ data: {} }));
+jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
+  createEventParticipation: (/** @type {any} */ donnees) => mockParticipation(donnees),
+}));
 jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => () => null);
 
 jest.mock('@/components/templates/ScreenContainer', () => {
@@ -358,5 +376,43 @@ describe('MSG1W §3.11 — « Canal d annonce (lecture seule) »', () => {
     const { arbre } = await monter();
     expect(champDeSaisie(arbre)).toHaveLength(1);
     expect(parTestId(arbre, 'MSG1W-lecture-seule')).toHaveLength(0);
+  });
+});
+
+// 📐 §3.8 — L EVENEMENT PARTAGE : la bulle du telephone, et ses reponses branchees sur les MEMES
+// routes que le telephone (Conversation.js : participation, `missing`, reponse de stage).
+describe('MSG1W §3.8 — Présent / Absent depuis la bulle d un événement', () => {
+  const PARTAGE = {
+    composition: {
+      eventDocumentId: 'evt-1',
+      eventName: 'Entraînement du jeudi',
+      eventPreview: { documentId: 'evt-1', name: 'Entraînement du jeudi', rsvpEnabled: true },
+      type: 'event_share',
+    },
+    createdAt: '2026-10-07T09:00:00.000Z',
+    documentId: 'm-evt',
+    event: { documentId: 'evt-1', name: 'Entraînement du jeudi' },
+    message: 'Partage',
+    sender: BRUNO,
+  };
+
+  test('la bulle du telephone recoit l evenement ; « Partage » ne s affiche plus', async () => {
+    mockMessagesDuFil = [PARTAGE];
+    const { arbre } = await monter();
+    const [bulle] = parTestId(arbre, 'MSG1W-bulle-evenement-double');
+    expect(bulle).toBeDefined();
+    expect(texteDe(bulle)).toBe('Entraînement du jeudi');
+    expect(texteDe(arbre.root).split(' ')).not.toContain('Partage');
+  });
+
+  test('« Absent » appelle POST /events/:id/missing, la route du telephone', async () => {
+    mockMessagesDuFil = [PARTAGE];
+    mockAbsent.mockClear();
+    mockParticipation.mockClear();
+    const { arbre } = await monter();
+    const [bulle] = parTestId(arbre, 'MSG1W-bulle-evenement-double');
+
+    await act(async () => { bulle.props.onDecline({ documentId: 'evt-1' }); });
+    expect(mockAbsent).toHaveBeenCalledWith('evt-1');
   });
 });

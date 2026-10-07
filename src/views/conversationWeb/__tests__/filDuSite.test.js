@@ -2,6 +2,7 @@ import {
   cleDuJour,
   estModifiable,
   etatDesCoches,
+  evenementDuMessage,
   indiceDeCouleur,
   libelleDuJour,
   rangerLeFil,
@@ -102,5 +103,38 @@ describe('estModifiable', () => {
     expect(estModifiable({ composition: { type: 'lineup_share' } })).toBe(true);
     ['poll', 'voice_note', 'event_share', 'location_share', 'contact_share', 'proposal']
       .forEach((type) => expect(estModifiable({ composition: { type } })).toBe(false));
+  });
+});
+
+describe('evenementDuMessage', () => {
+  it('un partage sans relation : l apercu du partage', () => {
+    const apercu = { documentId: 'e1', name: 'Match', team: { name: 'U15' } };
+    expect(evenementDuMessage({
+      composition: { eventDocumentId: 'e1', eventPreview: apercu, type: 'event_share' },
+    })).toEqual(apercu);
+  });
+
+  it('la relation complete l apercu, sans effacer ce qu elle ne porte pas', () => {
+    const evenement = evenementDuMessage({
+      composition: {
+        eventDocumentId: 'e1',
+        eventPreview: { name: 'Match', team: { name: 'U15' } },
+        type: 'event_share',
+      },
+      event: { documentId: 'e1', rsvpEnabled: true, team: null },
+    });
+    expect(evenement).toEqual({
+      documentId: 'e1', name: 'Match', rsvpEnabled: true, team: { name: 'U15' },
+    });
+  });
+
+  it('un partage sans apercu : reconstruit depuis le partage ; rien sans identifiant', () => {
+    expect(evenementDuMessage({
+      composition: {
+        eventDocumentId: 'e2', eventName: 'Tournoi', teamName: 'Seniors', type: 'event_share',
+      },
+    })).toMatchObject({ documentId: 'e2', name: 'Tournoi', team: { name: 'Seniors' } });
+    expect(evenementDuMessage({ composition: { type: 'event_share' } })).toBeNull();
+    expect(evenementDuMessage({ message: 'Salut' })).toBeNull();
   });
 });

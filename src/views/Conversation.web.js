@@ -20,7 +20,6 @@ import { getConversationName } from '@/domains/messaging/messagingUseCases'
 import {
   applyOptimisticPollVote,
   createPollComposition,
-  getPollVoteCount,
 } from '@/domains/messaging/pollUseCases'
 import {
   getMyReactionEmoji,
@@ -29,6 +28,10 @@ import {
   REACTION_EMOJIS,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging'
+import {
+  getParticipationErrorMessage,
+  resolveParticipationFlow,
+} from '@/domains/participation/participationFlow';
 // MSG1W (07/10) — « Bruno écrit… » : la regle de la minuterie du telephone.
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
@@ -38,12 +41,16 @@ import { BREAKPOINTS } from '@/responsive'
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
 // MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+// MSG1W §3.4 / §3.8 — les bulles PARTAGEES du telephone (restylees par MESSAGERIE-1A).
+import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
+import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // MSG1W (07/10) — la forme du fil (groupes, puces de date, coches), sans rendu.
 import {
   estModifiable,
   etatDesCoches,
+  evenementDuMessage,
   indiceDeCouleur,
   libelleDuJour,
   rangerLeFil,
@@ -70,6 +77,7 @@ import {
 import { createChatMessage } from '@/services/chat/chatService'
 import client from '@/services/client'
 import { useGetEvents } from '@/services/event/eventQueries'
+import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import {
   createLeagueProposal,
   respondToLeagueProposal,
@@ -84,6 +92,7 @@ import {
 } from '@/utils/documentAttachment'
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import { getImageUrl } from '@/utils/imageUrl'
+import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildCanonicalLeagueProposalPayload,
   buildLeagueProposalPayload,
@@ -1972,44 +1981,50 @@ function Conversation({ navigation, route }) {
     </div>
   ), [baseTextColor, borderColor, mutedTextColor, primaryColor])
 
+  // MSG1W §3.4 — les noms des votants : les participants du fil, puis les auteurs des messages.
+  // ponytail: annuaire simple (le lot SONDAGE-NOMS corrige la resolution du telephone) ; sortie :
+  // brancher ici le resolveur partage que ce lot posera.
+  const annuaireDesVotants = useMemo(() => {
+    const annuaire = new Map();
+    const inscrire = (/** @type {any} */ personne) => {
+      const id = String(personne?.documentId || personne?.id || '').trim();
+      if (id && !annuaire.has(id)) annuaire.set(id, getDisplayName(personne));
+    };
+    // @ts-ignore: FIXME: Baseline TS regression
+    (Array.isArray(chatData?.participants) ? chatData.participants : []).forEach(inscrire);
+    messages.forEach((/** @type {any} */ message) => inscrire(message?.sender));
+    inscrire(userData);
+    return annuaire;
+  }, [chatData?.participants, messages, userData]);
+  const resolveVoterName = useCallback(
+    (/** @type {string} */ id) => annuaireDesVotants.get(String(id)) || 'Membre',
+    [annuaireDesVotants],
+  );
+
+  // §3.4 — toucher la carte d un sondage ouvre « Détail du sondage » (PollDetails.web.js).
+  const ouvrirLesVotes = useCallback((/** @type {any} */ message) => {
+    const id = getMessageId(message);
+    if (!chatId || !id) return;
+    navigation.navigate(RouteNames.PollDetails, { chatId, messageId: id, pollId: id });
+  }, [chatId, navigation]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const renderComposition = useCallback((message, isMine = false) => {
     const composition = message?.composition
     if (!composition?.type) return null
 
+    // MSG1W §3.4 — la bulle de sondage du TELEPHONE (ronds, barres, votants, « voir les votes »).
     if (composition.type === 'poll') {
-      const options = Array.isArray(composition?.options) ? composition.options : []
       return (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
-            {composition?.question || 'Sondage'}
-          </div>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {options.map((option) => (
-              <button
-                key={option?.id || option?.label}
-                onClick={() => handleVoteOnPoll(message, option?.id)}
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: 12,
-                  color: baseTextColor,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '10px 12px',
-                }}
-                type="button"
-              >
-                <span>{option?.label || 'Option'}</span>
-                <span style={{ color: mutedTextColor }}>
-                  {getPollVoteCount(option)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )
+        <PollMessageBubble
+          currentUserId={userData?.documentId || ''}
+          isMe={isMine}
+          onOpenDetails={() => ouvrirLesVotes(message)}
+          onVote={(/** @type {string} */ optionId) => handleVoteOnPoll(message, optionId)}
+          poll={composition}
+          resolveVoterName={resolveVoterName}
+        />
+      );
     }
 
     if (composition.type === 'proposal') {
@@ -2243,7 +2258,10 @@ function Conversation({ navigation, route }) {
     handleVoteOnPoll,
     mutedTextColor,
     navigation,
+    ouvrirLesVotes,
     primaryColor,
+    resolveVoterName,
+    userData?.documentId,
   ])
 
   /**
@@ -2519,6 +2537,58 @@ function Conversation({ navigation, route }) {
     }
   }, [chatId, deleteMessage, messageASupprimer, queryClient, t]);
 
+  // MSG1W §3.8 — repondre a un evenement depuis sa bulle : les MEMES gestes que le telephone
+  // (Conversation.js : handleParticipateToEvent, handleDeclineEvent, handleJoinEvent). Ce que le
+  // site ne sait pas faire dans le fil (reservation, choix d un creneau, seance parente) ouvre la
+  // fiche de l evenement.
+  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
+  const participationMutation = useMutation({
+    mutationFn: createEventParticipation,
+    onError: (/** @type {any} */ erreur) => {
+      setAnnonce(getParticipationErrorMessage(
+        erreur,
+        t('common.errorOccurred', 'Une erreur est survenue.'),
+      ));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
+      setAnnonce(t('eventDetails.participationSuccess', 'Ta participation est enregistrée.'));
+    },
+  });
+  const ouvrirLEvenement = useCallback((/** @type {string} */ eventId) => {
+    if (eventId) navigation.navigate(RouteNames.EventDetails, { eventId });
+  }, [navigation]);
+  const participerALEvenement = useCallback((/** @type {any} */ evenement) => {
+    const flux = resolveParticipationFlow(evenement, { user: userData });
+    if (!flux?.canAct) {
+      setAnnonce(flux?.blockedReason || t('common.errorOccurred', 'Une erreur est survenue.'));
+      return;
+    }
+    if (flux?.submitMode === 'redirect-parent') {
+      ouvrirLEvenement(evenement?.parentEvent?.documentId);
+      return;
+    }
+    if (flux?.kind === 'reservation-recruiting' || flux?.submitMode === 'detection-slot-picker') {
+      ouvrirLEvenement(evenement?.documentId);
+      return;
+    }
+    if (evenement?.documentId && userData?.documentId) {
+      participationMutation.mutate({ event: evenement.documentId, user: userData.documentId });
+    }
+  }, [ouvrirLEvenement, participationMutation, t, userData]);
+  const declinerLEvenement = useCallback((/** @type {any} */ evenement) => {
+    if (!evenement?.documentId) return;
+    if (String(evenement?.eventFormat || '').toLowerCase() === 'stage_day') {
+      respondToEventRsvpMutation.mutate({ answer: 'absent', eventId: evenement.documentId });
+      return;
+    }
+    missingEventMutation.mutate(evenement.documentId);
+  }, [missingEventMutation, respondToEventRsvpMutation]);
+  const rejoindreLEvenement = useCallback((/** @type {any} */ evenement) => {
+    ouvrirLEvenement(evenement?.parentEvent?.documentId || evenement?.documentId);
+  }, [ouvrirLEvenement]);
+
   // MSG1W §3.5 — la fenetre « Créer un sondage » du telephone (PollCreationModal) : elle valide
   // la question et 2 a 6 options ; ici on n envoie que ce qu elle rend.
   const envoyerLeSondage = useCallback(async (/** @type {any} */ sondage) => {
@@ -2600,10 +2670,16 @@ function Conversation({ navigation, route }) {
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo
-    const texte = String(message?.message || '').trim();
-    // La carte de composition du telephone porte deja son cadre : elle se pose SANS bulle.
-    const estCarteNue = message?.composition?.type === 'lineup_share'
-      && Boolean(String(message?.composition?.eventId || '').trim());
+    // MSG1W §3.8 — un evenement (relation ou partage) se dessine avec la bulle du telephone ; le
+    // mot « Partage » envoye avec lui ne s affiche plus.
+    const evenement = evenementDuMessage(message);
+    const texte = evenement ? '' : String(message?.message || '').trim();
+    // Les cartes du telephone (composition, sondage, evenement) portent deja leur cadre : elles
+    // se posent SANS bulle.
+    const estCarteNue = Boolean(evenement)
+      || message?.composition?.type === 'poll'
+      || (message?.composition?.type === 'lineup_share'
+        && Boolean(String(message?.composition?.eventId || '').trim()));
     const fondDeBulle = isMine ? PALETTE_DU_FIL.bulleMienne : PALETTE_DU_FIL.bulleRecue;
     const messageReactions = getReactionsForMessage(reactionsByMessage, idMessage);
     const myReactionEmoji = getMyReactionEmoji(messageReactions, userData?.documentId);
@@ -2754,7 +2830,16 @@ function Conversation({ navigation, route }) {
               </button>
             ) : null}
             {shouldRenderAttachments ? renderAttachments(attachments) : null}
-            {message?.composition ? renderComposition(message, isMine) : null}
+            {evenement ? (
+              <EventMessageBubble
+                event={evenement}
+                isMe={isMine}
+                onDecline={() => declinerLEvenement(evenement)}
+                onJoin={() => rejoindreLEvenement(evenement)}
+                onParticipate={() => participerALEvenement(evenement)}
+              />
+            ) : null}
+            {message?.composition && !evenement ? renderComposition(message, isMine) : null}
             {texte ? (
               <div
                 style={{
@@ -3118,10 +3203,13 @@ function Conversation({ navigation, route }) {
     reactionBarAnchor,
     reactionBarMessageId,
     reactionsByMessage,
-    renderAttachments,
+    declinerLEvenement,
     menuDuMessage?.id,
     ouvrirLeMenu,
+    participerALEvenement,
     peutEcrire,
+    rejoindreLEvenement,
+    renderAttachments,
     renderComposition,
     repondreA,
     userData?.documentId,
