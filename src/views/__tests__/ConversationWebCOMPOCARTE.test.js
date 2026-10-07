@@ -149,6 +149,10 @@ jest.mock('@/services/messageReport/messageReportService', () => ({
 }));
 jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: {} }));
+// MSG1W §3.5 — les fenetres du « + » (grande carte d evenement, sondage du telephone) : leurs
+// modules natifs ne se chargent pas dans ce banc, et ce temoin ne les regarde pas.
+jest.mock('@/components/molecules/eventCard/EventCardNew', () => () => null);
+jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => () => null);
 
 jest.mock('@/services/event/eventService', () => ({
   getEventConvocation: jest.fn(() => {

@@ -36,6 +36,9 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
+// MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
+import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
+import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // MSG1W (07/10) — la forme du fil (groupes, puces de date, coches), sans rendu.
 import {
@@ -92,7 +95,6 @@ import {
 
 const { openUrl } = links || {}
 const { pickDocument, pickImage, recordVoiceNote } = media || {}
-const EMPTY_POLL_OPTIONS = ['', '', '']
 
 // @ts-ignore: FIXME: Baseline TS regression
 const formatDateTime = (value, options = {}) => {
@@ -679,6 +681,105 @@ const DESSIN_RETOUR = (
   </svg>
 );
 
+/**
+ * MSG1W §3.5 — UNE FENETRE DU SITE : les feuilles du bas du telephone deviennent des fenetres
+ * centrees (titre, croix, contenu qui defile). Echap la ferme (effet de l ecran).
+ * @param {{ children: any, compacte?: boolean, idTitre: string, onFermer: () => void,
+ *   titre: string }} props - Le contenu, la taille (telephone), le titre et la fermeture.
+ * @returns {import('react').ReactElement} La fenetre.
+ */
+function FenetreDuSite({
+  children, compacte = false, idTitre, onFermer, titre,
+}) {
+  return (
+    <div
+      style={{
+        alignItems: 'center',
+        background: PALETTE_DU_FIL.voile,
+        display: 'flex',
+        inset: 0,
+        justifyContent: 'center',
+        position: 'fixed',
+        zIndex: 1100,
+      }}
+    >
+      <div
+        aria-labelledby={idTitre}
+        aria-modal="true"
+        role="dialog"
+        style={{
+          background: PALETTE_DU_FIL.feuille,
+          borderRadius: 22,
+          boxSizing: 'border-box',
+          display: 'grid',
+          gap: 14,
+          gridTemplateRows: 'auto minmax(0, 1fr)',
+          // Sur telephone, la barre d onglets du site couvre le bas de l ecran.
+          maxHeight: compacte ? 'calc(100vh - 200px)' : 'calc(100vh - 48px)',
+          padding: 20,
+          width: 'min(560px, calc(100vw - 32px))',
+        }}
+      >
+        <div
+          style={{
+            alignItems: 'center', display: 'flex', gap: 10, justifyContent: 'space-between',
+          }}
+        >
+          <h2
+            id={idTitre}
+            style={{
+              color: PALETTE_DU_FIL.texte,
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              fontSize: 18,
+              margin: 0,
+            }}
+          >
+            {titre}
+          </h2>
+          <button
+            aria-label={i18next.t('common.actions.close', 'Fermer')}
+            onClick={onFermer}
+            style={{
+              alignItems: 'center',
+              background: PALETTE_DU_FIL.menuBord,
+              border: 0,
+              borderRadius: 999,
+              color: PALETTE_DU_FIL.texte,
+              cursor: 'pointer',
+              display: 'flex',
+              flexShrink: 0,
+              height: 32,
+              justifyContent: 'center',
+              padding: 0,
+              width: 32,
+            }}
+            type="button"
+          >
+            {DESSIN_FERMER}
+          </button>
+        </div>
+        <div style={{ display: 'grid', gap: 12, minHeight: 0, overflowY: 'auto' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Un champ d une fenetre du site (proposition de match). */
+const STYLE_CHAMP_DE_FENETRE = {
+  background: PALETTE_DU_FIL.champ,
+  border: `1px solid ${PALETTE_DU_FIL.champBord}`,
+  borderRadius: 14,
+  boxSizing: 'border-box',
+  color: PALETTE_DU_FIL.texte,
+  fontFamily: 'Montserrat-Regular, sans-serif',
+  fontSize: 15,
+  outline: 'none',
+  padding: '12px 14px',
+  width: '100%',
+};
+
 /** MSG1W §3.2 — l icone de chaque action du menu (cles de messageActions.js). */
 const ICONES_DU_MENU = {
   copy: DESSIN_COPIER,
@@ -768,10 +869,6 @@ function Conversation({ navigation, route }) {
   const [replyTarget, setReplyTarget] = useState(null)
   const [isSending, setIsSending] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [pollQuestion, setPollQuestion] = useState('')
-  const [pollOptions, setPollOptions] = useState(EMPTY_POLL_OPTIONS)
-  const [allowMultipleVotes, setAllowMultipleVotes] = useState(false)
-  const [isAnonymousPoll, setIsAnonymousPoll] = useState(false)
   const [proposalDate, setProposalDate] = useState('')
   const [proposalStartTime, setProposalStartTime] = useState('')
   const [proposalEndTime, setProposalEndTime] = useState('')
@@ -779,7 +876,6 @@ function Conversation({ navigation, route }) {
   const [proposalAddress, setProposalAddress] = useState('')
   const [isRecordingVoice, setIsRecordingVoice] = useState(false)
   const [isStoppingVoice, setIsStoppingVoice] = useState(false)
-  const [isSubmittingPoll, setIsSubmittingPoll] = useState(false)
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
   const [, setReportedMessageId] = useState('')
   // REACT-WEB — le message dont la barre de six emojis est ouverte, ou une chaine
@@ -830,6 +926,10 @@ function Conversation({ navigation, route }) {
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
   const [messageASupprimer, setMessageASupprimer] = useState(/** @type {any} */ (null));
   const [annonce, setAnnonce] = useState('');
+  // MSG1W §3.5 — la fenetre ouverte depuis le « + » : '', 'evenement', 'contact', 'proposition'.
+  const [fenetre, setFenetre] = useState('');
+  const [sondageOuvert, setSondageOuvert] = useState(false);
+  const [contactChoisi, setContactChoisi] = useState('');
 
   const {
     data: chatData,
@@ -1528,50 +1628,6 @@ function Conversation({ navigation, route }) {
     })
   }, [replyTarget, sendChatPayload])
 
-  const handleSubmitPoll = useCallback(async () => {
-    const question = pollQuestion.trim()
-    const options = pollOptions.map((option) => option.trim()).filter(Boolean)
-    if (!question || options.length < 2) {
-      window.alert(i18next.t(
-        'conversation.web.poll.incomplete',
-        'Ajoute une question et au moins deux options.',
-      ))
-      return
-    }
-
-    setIsSubmittingPoll(true)
-    try {
-      await sendChatPayload({
-        composition: createPollComposition({
-          allowMultipleVotes,
-          createdBy: userData?.documentId || '',
-          isAnonymous: isAnonymousPoll,
-          options,
-          question,
-        }),
-      })
-      setPollQuestion('')
-      setPollOptions(EMPTY_POLL_OPTIONS)
-      setAllowMultipleVotes(false)
-      setIsAnonymousPoll(false)
-    } catch (error) {
-      // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || i18next.t(
-        'conversation.web.poll.createError',
-        'Impossible de créer ce sondage.',
-      ))
-    } finally {
-      setIsSubmittingPoll(false)
-    }
-  }, [
-    allowMultipleVotes,
-    isAnonymousPoll,
-    pollOptions,
-    pollQuestion,
-    sendChatPayload,
-    userData?.documentId,
-  ])
-
   // @ts-ignore: FIXME: Baseline TS regression
   const handleVoteOnPoll = useCallback(async (message, optionId) => {
     const messageId = getMessageId(message)
@@ -1736,13 +1792,6 @@ function Conversation({ navigation, route }) {
     respondToProposal,
   ])
 
-  // @ts-ignore: FIXME: Baseline TS regression
-  const updatePollOption = useCallback((index, value) => {
-    setPollOptions((current) => current.map((option, optionIndex) => (
-      optionIndex === index ? value : option
-    )))
-  }, [])
-
   const baseTextColor = Colors?.neutral00 || '#ffffff'
   const mutedTextColor = Colors?.neutral300 || '#adb1b2'
   const panelBackground = 'rgba(4, 18, 28, 0.78)'
@@ -1754,13 +1803,6 @@ function Conversation({ navigation, route }) {
     && !isUploading
     && !isRecordingVoice
     && !isStoppingVoice
-  const validPollOptionCount = pollOptions.map((option) => option.trim()).filter(Boolean).length
-  const canSubmitPoll = Boolean(pollQuestion.trim())
-    && validPollOptionCount >= 2
-    && canUseConversationActions
-    && !isSubmittingPoll
-    && !isUploading
-    && !isRecordingVoice
   const canSubmitProposal = Boolean(proposalDate && proposalStartTime)
     && canUseConversationActions
     && !isSubmittingProposal
@@ -2477,6 +2519,31 @@ function Conversation({ navigation, route }) {
     }
   }, [chatId, deleteMessage, messageASupprimer, queryClient, t]);
 
+  // MSG1W §3.5 — la fenetre « Créer un sondage » du telephone (PollCreationModal) : elle valide
+  // la question et 2 a 6 options ; ici on n envoie que ce qu elle rend.
+  const envoyerLeSondage = useCallback(async (/** @type {any} */ sondage) => {
+    await sendChatPayload({
+      composition: createPollComposition({
+        allowMultipleVotes: Boolean(sondage?.allowMultipleVotes),
+        createdBy: userData?.documentId || '',
+        isAnonymous: Boolean(sondage?.isAnonymous),
+        options: Array.isArray(sondage?.options) ? sondage.options : [],
+        question: String(sondage?.question || '').trim(),
+      }),
+    });
+    setSondageOuvert(false);
+  }, [sendChatPayload, userData?.documentId]);
+
+  // Echap ferme la fenetre ouverte depuis le « + ».
+  useEffect(() => {
+    if (!fenetre) return undefined;
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key === 'Escape') setFenetre('');
+    };
+    document.addEventListener('keydown', surTouche);
+    return () => document.removeEventListener('keydown', surTouche);
+  }, [fenetre]);
+
   /**
    * MSG1W §3.1 — UNE BULLE DU FIL, au dessin du pack « modele WhatsApp » (SPECS §1) :
    * groupee par expediteur (nom sur la premiere, avatar et queue sur la derniere), heure et
@@ -3168,7 +3235,6 @@ function Conversation({ navigation, route }) {
     || (!isRecordingVoice && !isVoiceRecordingSupported)
     || isUploading
     || isSending
-    || isSubmittingPoll
     || isSubmittingProposal;
   const sousTitreDuFil = filDeLaVille.sousTitre || `${
     Array.isArray(chatData?.participants) ? chatData.participants.length : 0
@@ -3200,16 +3266,40 @@ function Conversation({ navigation, route }) {
       libelle: t('conversation.attachments.document', 'Document'),
     },
     {
+      action: () => setSondageOuvert(true),
+      cle: 'poll',
+      libelle: t('conversation.attachments.poll', 'Sondage'),
+    },
+    {
+      action: () => setFenetre('evenement'),
+      cle: 'event',
+      libelle: t('conversation.attachments.event', 'Événement'),
+    },
+    {
       action: handleShareLocation,
       cle: 'location',
       libelle: t('conversation.attachments.location', 'Localisation'),
     },
+    {
+      action: () => {
+        setContactChoisi('');
+        setFenetre('contact');
+      },
+      cle: 'contact',
+      libelle: t('conversation.attachments.contact', 'Contact'),
+    },
+    // Un fil League : la proposition de creneau (le panneau permanent d avant).
+    ...(isLeagueConversation ? [{
+      action: () => setFenetre('proposition'),
+      cle: 'proposal',
+      libelle: i18next.t('conversation.web.proposal.title', 'Proposition de match'),
+    }] : []),
   ];
 
-  // MSG1W §3.1 — les panneaux d avant (Partager, Sondage, Proposition League). Sur ordinateur ils
-  // restent a droite du fil ; sur un telephone ils passent SOUS la messagerie, hors du cadre a
-  // hauteur d ecran. Ils seront remplaces par le menu « + » et ses fenetres (§3.5).
-  const panneauDeDroite = (
+  // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
+  // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un telephone, la
+  // liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
+  const panneauDeDroite = filDeLaVille.estFil && filDeLaVille.membres ? (
     <aside
       style={{
         alignContent: 'start',
@@ -3221,235 +3311,32 @@ function Conversation({ navigation, route }) {
       }}
     >
       {/* COLL-C4A2 — P3c-canal-ordi : « Dans ce canal », liste calculée, sans « Ajouter ». */}
-      {filDeLaVille.estFil && filDeLaVille.membres ? (
-        <section
-          style={{
-            background: panelBackground,
-            border: `1px solid ${borderColor}`,
-            borderRadius: 24,
-            display: 'grid',
-            gap: 14,
-            padding: 22,
-          }}
-        >
-          <h2
-            style={{
-              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-            }}
-          >
-            {filDeLaVille.estCanal
-              ? t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal')
-              : t('collectiviteCanaux.membres.titrePrivee', 'Dans cette conversation')}
-          </h2>
-          <ListeDesMembresDuFil
-            espaceVille={route?.params?.espace === 'ville'}
-            fil={filDeLaVille.membres}
-          />
-        </section>
-      ) : null}
-      <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22 }}>
+      <section
+        style={{
+          background: panelBackground,
+          border: `1px solid ${borderColor}`,
+          borderRadius: 24,
+          display: 'grid',
+          gap: 14,
+          padding: 22,
+        }}
+      >
         <h2
           style={{
             color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
           }}
         >
-          Partager
+          {filDeLaVille.estCanal
+            ? t('collectiviteCanaux.membres.titreCanal', 'Dans ce canal')
+            : t('collectiviteCanaux.membres.titrePrivee', 'Dans cette conversation')}
         </h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <button onClick={handleShareLocation} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Position</button>
-          <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Photo</button>
-          <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Fichier</button>
-        </div>
-
-        <div style={{ display: 'grid', gap: 10 }}>
-          <h3
-            style={{
-              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
-            }}
-          >
-            Contacts
-          </h3>
-          {shareableContacts.length === 0 ? (
-            <div style={{ color: mutedTextColor, fontSize: 13 }}>
-              {i18next.t(
-                'conversation.web.share.noContact',
-                'Aucun contact partageable dans cette conversation.',
-              )}
-            </div>
-          ) : shareableContacts.slice(0, 6).map((contact) => {
-            const fullName = getDisplayName(contact);
-            return (
-              <button
-                key={contact.documentId}
-                onClick={() => handleShareContact(contact)}
-                style={{
-                  alignItems: 'center',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: 14,
-                  color: baseTextColor,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  gap: 12,
-                  padding: '10px 12px',
-                  textAlign: 'left',
-                }}
-                type="button"
-              >
-                <span style={{
-                  alignItems: 'center',
-                  background: 'rgba(1, 179, 244, 0.14)',
-                  borderRadius: '50%',
-                  display: 'inline-flex',
-                  height: 34,
-                  justifyContent: 'center',
-                  minWidth: 34,
-                }}
-                >
-                  {getInitials(fullName)}
-                </span>
-                <span style={{ display: 'grid', gap: 4 }}>
-                  <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{fullName}</span>
-                  <span style={{ color: mutedTextColor, fontSize: 12 }}>{contact?.role?.name || contact?.role?.type || contact?.role || ''}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ display: 'grid', gap: 10 }}>
-          <h3
-            style={{
-              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0,
-            }}
-          >
-            {i18next.t('conversation.web.share.events', 'Événements')}
-          </h3>
-          {shareableEvents.length === 0 ? (
-            <div style={{ color: mutedTextColor, fontSize: 13 }}>
-              {i18next.t(
-                'conversation.web.share.noEvent',
-                'Aucun événement récent à partager.',
-              )}
-            </div>
-          ) : shareableEvents.slice(0, 6).map((event) => (
-            <button
-              key={getEntityDocumentId(event)}
-              onClick={() => handleShareEvent(event)}
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 14,
-                color: baseTextColor,
-                cursor: 'pointer',
-                display: 'grid',
-                gap: 4,
-                padding: '10px 12px',
-                textAlign: 'left',
-              }}
-              type="button"
-            >
-              <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 13 }}>{event?.name || 'Événement'}</span>
-              <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                {formatDay(event?.date)}
-                {' '}
-                •
-                {' '}
-                {event?.team?.name || ''}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ListeDesMembresDuFil
+          espaceVille={route?.params?.espace === 'ville'}
+          fil={filDeLaVille.membres}
+        />
       </section>
-
-      <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-        <h2
-          style={{
-            color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-          }}
-        >
-          Sondage
-        </h2>
-        <input onChange={(event) => setPollQuestion(event.target.value)} placeholder={i18next.t('conversation.web.poll.questionPlaceholder', 'Question du sondage')} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={pollQuestion} />
-        {pollOptions.map((option, index) => (
-          <input
-            key={`poll-option-${index}`}
-            onChange={(event) => updatePollOption(index, event.target.value)}
-            placeholder={`Option ${index + 1}`}
-            style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }}
-            value={option}
-          />
-        ))}
-        <label style={{ alignItems: 'center', color: mutedTextColor, display: 'flex', gap: 8, fontSize: 13 }}>
-          <input checked={allowMultipleVotes} onChange={(event) => setAllowMultipleVotes(event.target.checked)} type="checkbox" />
-          Autoriser plusieurs votes
-        </label>
-        <label style={{ alignItems: 'center', color: mutedTextColor, display: 'flex', gap: 8, fontSize: 13 }}>
-          <input checked={isAnonymousPoll} onChange={(event) => setIsAnonymousPoll(event.target.checked)} type="checkbox" />
-          Sondage anonyme
-        </label>
-        <button
-          disabled={!canSubmitPoll}
-          onClick={handleSubmitPoll}
-          style={{
-            background: primaryColor,
-            border: 0,
-            borderRadius: 999,
-            color: '#001218',
-            cursor: !canSubmitPoll ? 'not-allowed' : 'pointer',
-            fontFamily: 'Montserrat-Bold, sans-serif',
-            opacity: !canSubmitPoll ? 0.6 : 1,
-            padding: '12px 16px',
-          }}
-          type="button"
-        >
-          {isSubmittingPoll ? 'Envoi...' : i18next.t(
-            'conversation.web.poll.send',
-            'Envoyer le sondage',
-          )}
-        </button>
-      </section>
-
-      {isLeagueConversation ? (
-        <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-          <h2
-            style={{
-              color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0,
-            }}
-          >
-            {i18next.t('conversation.web.proposal.title', 'Proposition de match')}
-          </h2>
-          <input onChange={(event) => setProposalDate(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="date" value={proposalDate} />
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-            <input onChange={(event) => setProposalStartTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalStartTime} />
-            <input onChange={(event) => setProposalEndTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalEndTime} />
-          </div>
-          <input onChange={(event) => setProposalVenue(event.target.value)} placeholder="Lieu" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalVenue} />
-          <input onChange={(event) => setProposalAddress(event.target.value)} placeholder="Adresse" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={proposalAddress} />
-          <button
-            disabled={!canSubmitProposal}
-            onClick={handleSendProposal}
-            style={{
-              background: primaryColor,
-              border: 0,
-              borderRadius: 999,
-              color: '#001218',
-              cursor: !canSubmitProposal ? 'not-allowed' : 'pointer',
-              fontFamily: 'Montserrat-Bold, sans-serif',
-              opacity: !canSubmitProposal ? 0.6 : 1,
-              padding: '12px 16px',
-            }}
-            type="button"
-          >
-            {isSubmittingProposal ? 'Envoi...' : i18next.t(
-              'conversation.web.proposal.send',
-              'Envoyer la proposition',
-            )}
-          </button>
-        </section>
-      ) : null}
     </aside>
-  );
+  ) : null;
 
   return (
     <ScreenContainer
@@ -3466,7 +3353,7 @@ function Conversation({ navigation, route }) {
           display: 'grid',
           gap: 16,
           // §3.11 — un canal en lecture seule n offre ni partage ni sondage : pas de panneau.
-          gridTemplateColumns: peutEcrire || avecColonneDeLaVille
+          gridTemplateColumns: panneauDeDroite || avecColonneDeLaVille
             ? colonnesDeLaGrille
             : 'minmax(0, 1fr)',
           // MSG1W §3.1 — LE CADRE A LA HAUTEUR DE L ECRAN : c est le fil qui defile ;
@@ -3946,6 +3833,7 @@ function Conversation({ navigation, route }) {
                   </button>
                   {menuAjouterOuvert ? (
                     <div
+                      aria-label={t('conversation.attachments.title', 'Ajouter')}
                       role="menu"
                       style={{
                         background: PALETTE_DU_FIL.menu,
@@ -4089,9 +3977,175 @@ function Conversation({ navigation, route }) {
           )}
         </section>
 
-        {isDesktop && peutEcrire ? panneauDeDroite : null}
+        {isDesktop ? panneauDeDroite : null}
       </div>
-      {!isDesktop && peutEcrire ? panneauDeDroite : null}
+      {isDesktop ? null : panneauDeDroite}
+      <PollCreationModal
+        isVisible={sondageOuvert}
+        onClose={() => setSondageOuvert(false)}
+        onSubmit={envoyerLeSondage}
+      />
+      {fenetre === 'evenement' ? (
+        <FenetreDuSite
+          compacte={!isDesktop}
+          idTitre="msg1w-titre-evenements"
+          onFermer={() => setFenetre('')}
+          titre={t('conversation.shareEvent.planningTitle', 'Événements de mon planning')}
+        >
+          {shareableEvents.length === 0 ? (
+            <p style={{ color: PALETTE_DU_FIL.texteDoux, margin: 0, textAlign: 'center' }}>
+              {t('conversation.shareEvent.empty', 'Aucun événement disponible.')}
+            </p>
+          ) : shareableEvents.map((evenement) => (
+            <View key={`partage-${getEntityDocumentId(evenement)}`}>
+              <EventCardNew
+                item={evenement}
+                mode="share"
+                onPress={(/** @type {any} */ choisi) => {
+                  setFenetre('');
+                  handleShareEvent(choisi);
+                }}
+              />
+            </View>
+          ))}
+          <button
+            onClick={() => {
+              setFenetre('');
+              navigation.navigate(RouteNames.ConversationPublicEventPicker, { chatId });
+            }}
+            style={STYLE_BOUTON_CONTOUR}
+            type="button"
+          >
+            {t('conversation.shareEvent.sharePublicAction', 'Partager un événement public')}
+          </button>
+        </FenetreDuSite>
+      ) : null}
+      {fenetre === 'contact' ? (
+        <FenetreDuSite
+          compacte={!isDesktop}
+          idTitre="msg1w-titre-contact"
+          onFermer={() => setFenetre('')}
+          titre={t('conversation.shareContact.title', 'Partager un contact')}
+        >
+          {shareableContacts.length === 0 ? (
+            <p style={{ color: PALETTE_DU_FIL.texteDoux, margin: 0, textAlign: 'center' }}>
+              {t('conversation.shareContact.empty', 'Aucun contact partageable dans ce chat.')}
+            </p>
+          ) : (
+            <div
+              aria-label={t('conversation.shareContact.title', 'Partager un contact')}
+              role="radiogroup"
+              style={{ display: 'grid', gap: 8 }}
+            >
+              {shareableContacts.map((/** @type {any} */ contact) => (
+                <label
+                  key={`contact-${contact.documentId}`}
+                  style={{
+                    alignItems: 'center',
+                    border: `1px solid ${contactChoisi === contact.documentId
+                      ? PALETTE_DU_FIL.accent
+                      : PALETTE_DU_FIL.menuBord}`,
+                    borderRadius: 12,
+                    color: PALETTE_DU_FIL.texte,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    gap: 12,
+                    padding: '10px 12px',
+                  }}
+                >
+                  <input
+                    checked={contactChoisi === contact.documentId}
+                    name="msg1w-contact"
+                    onChange={() => setContactChoisi(contact.documentId)}
+                    type="radio"
+                  />
+                  <AvatarDuGroupe idMessage={`contact-${contact.documentId}`} personne={contact} />
+                  <span style={{ display: 'grid', gap: 2 }}>
+                    <span style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
+                      {getDisplayName(contact)}
+                    </span>
+                    <span style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 12.5 }}>
+                      {contact?.role?.name || contact?.role?.type || ''}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          <button
+            disabled={!contactChoisi}
+            onClick={() => {
+              const contact = shareableContacts.find(
+                (/** @type {any} */ personne) => personne.documentId === contactChoisi,
+              );
+              setFenetre('');
+              if (contact) handleShareContact(contact);
+            }}
+            style={{ ...STYLE_BOUTON_PLEIN, opacity: contactChoisi ? 1 : 0.6 }}
+            type="button"
+          >
+            {t('conversation.shareContact.send', 'Partager')}
+          </button>
+        </FenetreDuSite>
+      ) : null}
+      {fenetre === 'proposition' ? (
+        <FenetreDuSite
+          compacte={!isDesktop}
+          idTitre="msg1w-titre-proposition"
+          onFermer={() => setFenetre('')}
+          titre={i18next.t('conversation.web.proposal.title', 'Proposition de match')}
+        >
+          <input
+            aria-label="Date"
+            onChange={(event) => setProposalDate(event.target.value)}
+            style={STYLE_CHAMP_DE_FENETRE}
+            type="date"
+            value={proposalDate}
+          />
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+            <input
+              aria-label="Début"
+              onChange={(event) => setProposalStartTime(event.target.value)}
+              style={STYLE_CHAMP_DE_FENETRE}
+              type="time"
+              value={proposalStartTime}
+            />
+            <input
+              aria-label="Fin"
+              onChange={(event) => setProposalEndTime(event.target.value)}
+              style={STYLE_CHAMP_DE_FENETRE}
+              type="time"
+              value={proposalEndTime}
+            />
+          </div>
+          <input
+            onChange={(event) => setProposalVenue(event.target.value)}
+            placeholder="Lieu"
+            style={STYLE_CHAMP_DE_FENETRE}
+            value={proposalVenue}
+          />
+          <input
+            onChange={(event) => setProposalAddress(event.target.value)}
+            placeholder="Adresse"
+            style={STYLE_CHAMP_DE_FENETRE}
+            value={proposalAddress}
+          />
+          <button
+            disabled={!canSubmitProposal}
+            onClick={async () => {
+              await handleSendProposal();
+              setFenetre('');
+            }}
+            style={{ ...STYLE_BOUTON_PLEIN, opacity: canSubmitProposal ? 1 : 0.6 }}
+            type="button"
+          >
+            {isSubmittingProposal ? 'Envoi...' : i18next.t(
+              'conversation.web.proposal.send',
+              'Envoyer la proposition',
+            )}
+          </button>
+        </FenetreDuSite>
+      ) : null}
       {messageDuMenu && menuDuMessage ? (
         <div
           ref={menuDuMessageRef}
