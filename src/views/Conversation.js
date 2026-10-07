@@ -471,6 +471,20 @@ const stylesDuFil = StyleSheet.create({
     width: 28,
   },
   // Retour : rond de 40, liseré cyan de 1,5, fleche de 20 (SPECS.md §1).
+  barreLectureSeule: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  barreLectureSeuleTexte: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13.5,
+    lineHeight: 18,
+  },
   boutonRetour: {
     alignItems: 'center',
     borderWidth: 1.5,
@@ -572,6 +586,26 @@ const stylesDuFil = StyleSheet.create({
     marginHorizontal: 32,
     marginTop: 6,
     maxWidth: 280,
+  },
+  noticeDeTete: {
+    alignItems: 'flex-start',
+    alignSelf: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+    marginHorizontal: 24,
+    marginTop: 14,
+    maxWidth: 300,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  noticeDeTeteTexte: {
+    flexShrink: 1,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   photo: {
     borderRadius: 15,
@@ -6318,17 +6352,21 @@ function Conversation({ navigation, route }) {
    */
   const renderInputToolbar = (props) => {
     if (!canWrite) {
+      // 🔒 MSG1A (§3.11) — la barre opaque du pack, avec un cadenas, a la place de la saisie.
       return (
-        <View style={[
-          ApplicationStyle.borderRadius32,
-          ApplicationStyle.backgroundColor.neutral100,
-          Spaces.padding[16],
-          Alignments.alignCenter,
-          Alignments.justifyCenter,
-          { marginBottom: composerBottomInset },
-        ]}
+        <View
+          style={[
+            stylesDuFil.barreLectureSeule,
+            {
+              backgroundColor: Colors.chatBar,
+              borderTopColor: withAlpha(Colors.neutral00, 0.06),
+              paddingBottom: 16 + composerBottomInset,
+            },
+          ]}
+          testID="conversation-lecture-seule"
         >
-          <Text style={[Fonts.p2, Fonts.neutral500]}>
+          <GlyphIcon color={withAlpha(Colors.neutral00, 0.72)} name="lock" size={16} />
+          <Text style={[stylesDuFil.barreLectureSeuleTexte, { color: withAlpha(Colors.neutral00, 0.72) }]}>
             {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
         </View>
@@ -6467,22 +6505,30 @@ function Conversation({ navigation, route }) {
 
   /**
    * L'avertissement de lecture par le dirigeant, en tête du fil.
-   * @returns {React.ReactNode} La ligne, ou rien si le fil n'a pas de club.
+   *
+   * 🔔 MSG1A (§3.10, decision d'Adel `avertissement B`, 07/10) — ce n'est plus un bandeau
+   * FIXE sous l'en-tete : c'est une notice centree au tout debut de l'historique, qui
+   * defile avec les messages (comme la mention de chiffrement de WhatsApp). Elle est posee
+   * en pied de la liste INVERSEE (= en haut du fil), et seulement quand le plus ancien
+   * message est charge : plus haut, il n'y a plus rien.
+   * @returns {React.ReactElement | null} La notice, ou rien si le fil n'a pas de club.
    */
   const renderClubReadNotice = () => {
     if (!clubReadNoticeClubId) return null;
 
     return (
-      <View style={[
-        Alignments.row,
-        Alignments.alignCenter,
-        Spaces.paddingHorizontal[16],
-        Spaces.paddingVertical[8],
-        { backgroundColor: 'rgba(255,255,255,0.06)' },
-      ]}
+      <View
+        style={[
+          stylesDuFil.noticeDeTete,
+          {
+            backgroundColor: withAlpha(Colors.chatBackground, 0.9),
+            borderColor: withAlpha(Colors.primary500, 0.22),
+          },
+        ]}
       >
+        <GlyphIcon color={Colors.primary500} name="information" size={16} />
         <Text
-          style={[Fonts.p4, { color: Colors.neutral300, flex: 1 }]}
+          style={[stylesDuFil.noticeDeTeteTexte, { color: withAlpha(Colors.neutral00, 0.82) }]}
           testID="conversation-club-read-notice"
         >
           {t(
@@ -6493,6 +6539,7 @@ function Conversation({ navigation, route }) {
       </View>
     );
   };
+  const noticeDeTete = hasNextPage ? null : renderClubReadNotice();
 
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
@@ -6721,7 +6768,6 @@ function Conversation({ navigation, route }) {
           style={StyleSheet.absoluteFill}
           testID="conversation-motif"
         />
-        {renderClubReadNotice()}
         {renderLeagueNegotiationBanner()}
         {/* COLL-C4A2 — club détaché : « Tu ne fais plus partie de ce canal » (écran 6). */}
         {filDeLaVille.estQuitte ? (
@@ -6776,12 +6822,16 @@ function Conversation({ navigation, route }) {
             inverted
             // FINITIONS13-COLL (04/10) — un fil VIDE occupe toute la hauteur : sa phrase se centre
             // (tournée T13, C2_3a : collée en bas). Avec des messages, rien ne change.
-            listViewProps={messagesAvecReactions.length
-              ? { onScrollToIndexFailed: handleScrollToIndexFailed }
-              : {
-                contentContainerStyle: { flexGrow: 1 },
-                onScrollToIndexFailed: handleScrollToIndexFailed,
-              }}
+            listViewProps={{
+              ...(messagesAvecReactions.length
+                ? { onScrollToIndexFailed: handleScrollToIndexFailed }
+                : {
+                  contentContainerStyle: { flexGrow: 1 },
+                  onScrollToIndexFailed: handleScrollToIndexFailed,
+                }),
+              // 🔔 MSG1A (§3.10) — la notice du dirigeant, en haut du fil (pied de la liste inversee).
+              ...(noticeDeTete ? { ListFooterComponent: noticeDeTete } : {}),
+            }}
             loadEarlier={hasNextPage}
             locale={localeDesFormats().slice(0, 2)}
             messageContainerRef={messageContainerRef}

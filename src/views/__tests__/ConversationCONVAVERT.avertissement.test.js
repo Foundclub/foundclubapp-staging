@@ -16,6 +16,12 @@ import renderer, { act } from 'react-test-renderer';
 //    où la phrase serait fausse.
 //
 // ⛔ CE TEMOIN NE TESTE PAS UNE COPIE : il monte le VRAI écran.
+//
+// 🔔 MSG1A (§3.10, décision d'Adel `avertissement B`, 07/10) — la phrase n'est plus un
+// bandeau FIXE sous l'en-tête : elle est EN TÊTE DU FIL, au-dessus du plus ancien message,
+// et défile avec lui. Elle vit donc dans la liste (pied de la liste inversée) : ce témoin
+// la cherche là, et C4-6 vérifie qu'elle n'est plus fixe. Les cinq règles C4-1 à C4-5
+// (où elle doit être, où elle serait fausse) ne changent pas.
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 let mockChatData;
@@ -278,7 +284,7 @@ const FIL_D_EQUIPE_SANS_CLUB = {
 
 /**
  * Monte le VRAI écran et rend ce qu'il a construit.
- * @returns {{avertissements: any[]}} Les bandeaux trouvés.
+ * @returns {{avertissements: any[], fixes: any[]}} La phrase en tête du fil, et hors du fil.
  */
 const monterLaConversation = () => {
   // eslint-disable-next-line global-require
@@ -318,11 +324,23 @@ const monterLaConversation = () => {
     clientRequetes.clear();
   });
 
+  // 🔔 MSG1A — le haut du fil : le pied de la liste inversée que l'écran confie à GiftedChat.
+  const gifted = mockGiftedRenders[mockGiftedRenders.length - 1];
+  const teteDuFil = gifted?.listViewProps?.ListFooterComponent || null;
+  /** @type {any} */
+  let arbreDeTete = null;
+  if (teteDuFil) {
+    act(() => { arbreDeTete = renderer.create(teteDuFil); });
+    aDemonter.push(() => { act(() => { arbreDeTete.unmount(); }); });
+  }
+  const trouver = (/** @type {any} */ arbre) => (arbre ? arbre.root.findAll(
+    (/** @type {any} */ noeud) => noeud?.props?.testID === TEST_ID,
+    { deep: true },
+  ) : []);
+
   return {
-    avertissements: ecran.root.findAll(
-      (/** @type {any} */ noeud) => noeud?.props?.testID === TEST_ID,
-      { deep: true },
-    ),
+    avertissements: trouver(arbreDeTete),
+    fixes: trouver(ecran),
   };
 };
 
@@ -377,5 +395,12 @@ describe("CONVAVERT — l'avertissement en tête de conversation", () => {
     const { avertissements } = monterLaConversation();
 
     expect(avertissements).toHaveLength(0);
+  });
+
+  test('C4-6 — MSG1A : la phrase est EN TÊTE DU FIL, plus jamais en bandeau fixe', () => {
+    const { avertissements, fixes } = monterLaConversation();
+
+    expect(avertissements.length).toBeGreaterThan(0);
+    expect(fixes).toHaveLength(0);
   });
 });

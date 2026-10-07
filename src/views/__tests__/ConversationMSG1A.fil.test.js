@@ -661,3 +661,33 @@ describe('MSG1A — §3.18 adresses cliquables', () => {
     expect(ecran.root.findByType(FeuilleDAdresse).props.adresse).toEqual({ label: '12 rue Pasteur' });
   });
 });
+
+describe('MSG1A — §3.11 canal d annonce en lecture seule', () => {
+  // eslint-disable-next-line global-require
+  const GlyphIcon = require('@/components/atoms/glyphIcon/GlyphIcon').default;
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = FIL_DE_CLUB;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('LS1 — la saisie est remplacee par une barre opaque avec un cadenas et le libelle existant', () => {
+    const { gifted } = monterLaConversation();
+    /** @type {any} */
+    let barre;
+    act(() => { barre = renderer.create(gifted.renderInputToolbar({ text: '' })); });
+    aDemonter.push(() => { act(() => { barre.unmount(); }); });
+
+    const conteneur = barre.root.findAll((n) => n.props?.testID === 'conversation-lecture-seule')[0];
+    expect(conteneur).toBeDefined();
+    expect(conteneur.findByType(GlyphIcon).props.name).toBe('lock');
+    expect(contientLeTexte(gifted.renderInputToolbar({ text: '' }), LECTURE_SEULE)).toBe(true);
+  });
+});
