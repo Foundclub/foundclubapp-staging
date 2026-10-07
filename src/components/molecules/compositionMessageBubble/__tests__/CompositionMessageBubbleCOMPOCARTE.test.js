@@ -255,10 +255,10 @@ describe('COMPO-CARTE-SITE · témoin 2 — le lecteur d écran trouve deux bout
   });
 });
 
-// 🎨 MSG1A (07/10) — le pack « modele WhatsApp » change VOLONTAIREMENT trois choses que ce
-// temoin figeait : « quand · equipe » sur UNE ligne, et, pour qui ne gere pas la composition,
-// un seul bouton « Ouvrir la composition » (le pied « N convoques · Ouvrir » devient de vrais
-// boutons). Le reste (ordre, terrain, noms, aiguillage) ne bouge pas.
+// 🎨 MSG1A (07/10) — le pack « modele WhatsApp » change VOLONTAIREMENT une chose que ce
+// temoin figeait : « quand · equipe » sur UNE ligne. Le pied « N convoques · Ouvrir » reste
+// celui de la carte HORS bulle (le site) ; les vrais boutons du pack vivent DANS la bulle du
+// fil (K1, K2). Le reste (ordre, terrain, noms, aiguillage) ne bouge pas.
 describe('COMPO-CARTE-SITE · témoin 3 — ce que voit un voyant ne change pas', () => {
   test('les mêmes textes, dans le même ordre', () => {
     expect(textesDansLOrdre(rendre())).toEqual([
@@ -277,7 +277,7 @@ describe('COMPO-CARTE-SITE · témoin 3 — ce que voit un voyant ne change pas'
       'Sur le banc · 1',
       'Paul Veuillet',
       '2 convoqués',
-      'Ouvrir la composition',
+      'Ouvrir',
     ]);
   });
 
@@ -295,14 +295,14 @@ describe('COMPO-CARTE-SITE · témoin 3 — ce que voit un voyant ne change pas'
       .toBeGreaterThan(0);
     const textes = cadre.findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
     expect(textes).toContain('Match vs US Pelican');
-    expect(textes).toContain('Ouvrir la composition');
+    expect(textes).toContain('Ouvrir');
   });
 
   test('toucher le titre, les noms ou « Ouvrir » : l aiguillage de la carte', () => {
     // Un convoque (le lecteur de ce temoin) va sur « Tu es convoque ».
     const arbre = rendre();
 
-    ['Match vs US Pelican', 'Adel Ferchichi', 'Ouvrir la composition'].forEach((texte) => {
+    ['Match vs US Pelican', 'Adel Ferchichi', 'Ouvrir'].forEach((texte) => {
       mockNavigate.mockClear();
       const bouton = boutonSous(arbre, texte);
       expect(bouton).not.toBeNull();
@@ -348,14 +348,14 @@ describe('MSG1A — contrat de la carte avec MSG1C', () => {
   };
 
   test('K1 — sans onEdit : un seul bouton « Ouvrir la composition », pas de « Modifier »', () => {
-    const textes = textesDansLOrdre(rendreAvec({}));
+    const textes = textesDansLOrdre(rendreAvec({ dansLaBulle: true }));
     expect(textes).toContain('Ouvrir la composition');
     expect(textes).not.toContain('Modifier');
   });
 
   test('K2 — avec onEdit : « Modifier » appelle onEdit(), le terrain onEdit(« placement »)', () => {
     const onEdit = jest.fn();
-    const arbre = rendreAvec({ onEdit });
+    const arbre = rendreAvec({ dansLaBulle: true, onEdit });
 
     act(() => { boutonSous(arbre, 'Modifier').props.onPress(); });
     expect(onEdit).toHaveBeenLastCalledWith();
@@ -391,7 +391,7 @@ describe('MSG1A — contrat de la carte avec MSG1C', () => {
 
     expect(lien.props.accessibilityRole).toBe('link');
     // ⛔ Aucun bouton dans un bouton : aucun ancetre du lien n'est le bouton de la carte.
-    let parent = lien.parent;
+    let { parent } = lien;
     while (parent) {
       expect(parent.props?.accessibilityRole === 'button' && parent.props?.accessibilityLabel)
         .toBeFalsy();

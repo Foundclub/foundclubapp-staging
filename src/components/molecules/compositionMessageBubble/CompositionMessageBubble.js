@@ -606,7 +606,7 @@ function CompositionMessageBubble({
 
       {/* 🧾 R6 — QUI EST CONVOQUE (memes mots que l'onglet « Convocation »), deux lignes au
           plus par groupe (le pack). Masque aux lecteurs d'ecran : la carte le dit deja. */}
-      {starterNames.length > 0 || benchNames.length > 0 ? (
+      {starterNames.length > 0 || benchNames.length > 0 || !dansLaBulle ? (
         <TouchableOpacity
           accessible={false}
           activeOpacity={0.85}
@@ -638,6 +638,19 @@ function CompositionMessageBubble({
           {otherTeamsLine ? (
             <Text style={[styles.rosterNoms, { color: withAlpha(Colors.neutral00, 0.7) }]}>{otherTeamsLine}</Text>
           ) : null}
+          {/* 🌐 HORS DE LA BULLE (le site, tant que MESSAGERIE-1W n'a pas adopte le pack) :
+              l'ancien bas de carte « N convoques · Ouvrir », meme toucher que la carte et
+              masque aux lecteurs d'ecran (temoins COMPO-CARTE-SITE du site et de l'app). */}
+          {!dansLaBulle ? (
+            <View style={[styles.footerHorsBulle, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
+              <Text numberOfLines={1} style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+                {calledUpLine}
+              </Text>
+              <Text style={[styles.boutonPiedTexte, { color: Colors.primary500 }]}>
+                {t('compositionMessageBubble.open', 'Ouvrir')}
+              </Text>
+            </View>
+          ) : null}
         </TouchableOpacity>
       ) : null}
 
@@ -656,46 +669,48 @@ function CompositionMessageBubble({
 
       {meta ? <View style={styles.meta}>{meta}</View> : null}
 
-      {/* MSG1A (§3.7) — le pied du pack : DEUX vrais boutons pour qui gere la composition
-          (« Modifier » en contour, « Ouvrir » plein), un seul « Ouvrir la composition » pour
-          les autres. Le nombre de convoques reste dit, au-dessus. */}
-      <View style={[styles.footer, dansLaBulle ? styles.footerDansLaBulle : null, { borderTopColor: withAlpha(Colors.neutral00, 0.14) }]}>
-        {calledUpLine ? (
-          <Text numberOfLines={1} style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}>
-            {calledUpLine}
-          </Text>
-        ) : null}
-        <View style={styles.footerBoutons}>
-          {peutModifierIci ? (
+      {/* MSG1A (§3.7) — le pied du pack, DANS la bulle du fil : DEUX vrais boutons pour qui
+          gere la composition (« Modifier » en contour, « Ouvrir » plein), un seul « Ouvrir la
+          composition » pour les autres. Le nombre de convoques reste dit, au-dessus. */}
+      {dansLaBulle ? (
+        <View style={[styles.footer, styles.footerDansLaBulle, { borderTopColor: withAlpha(Colors.neutral00, 0.14) }]}>
+          {calledUpLine ? (
+            <Text numberOfLines={1} style={[styles.footerText, { color: withAlpha(Colors.neutral00, 0.7) }]}>
+              {calledUpLine}
+            </Text>
+          ) : null}
+          <View style={styles.footerBoutons}>
+            {peutModifierIci ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                activeOpacity={0.85}
+                onPress={() => onEdit()}
+                style={[styles.boutonPied, { borderColor: Colors.primary500, borderWidth: 1.5 }]}
+                testID="composition-modifier"
+              >
+                <GlyphIcon color={Colors.primary500} name="penSquare" size={16} />
+                <Text style={[styles.boutonPiedTexte, { color: Colors.primary500 }]}>
+                  {t('compositionMessageBubble.edit', 'Modifier')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               accessibilityRole="button"
               activeOpacity={0.85}
-              onPress={() => onEdit()}
-              style={[styles.boutonPied, { borderColor: Colors.primary500, borderWidth: 1.5 }]}
-              testID="composition-modifier"
+              onPress={handlePress}
+              style={[styles.boutonPied, { backgroundColor: Colors.primary500 }]}
+              testID="composition-ouvrir"
             >
-              <GlyphIcon color={Colors.primary500} name="penSquare" size={16} />
-              <Text style={[styles.boutonPiedTexte, { color: Colors.primary500 }]}>
-                {t('compositionMessageBubble.edit', 'Modifier')}
+              <Text style={[styles.boutonPiedTexte, { color: Colors.primary900 }]}>
+                {peutModifierIci
+                  ? t('compositionMessageBubble.open', 'Ouvrir')
+                  : t('compositionMessageBubble.openComposition', 'Ouvrir la composition')}
               </Text>
+              <GlyphIcon color={Colors.primary900} name="chevronRight" size={16} />
             </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            accessibilityRole="button"
-            activeOpacity={0.85}
-            onPress={handlePress}
-            style={[styles.boutonPied, { backgroundColor: Colors.primary500 }]}
-            testID="composition-ouvrir"
-          >
-            <Text style={[styles.boutonPiedTexte, { color: Colors.primary900 }]}>
-              {peutModifierIci
-                ? t('compositionMessageBubble.open', 'Ouvrir')
-                : t('compositionMessageBubble.openComposition', 'Ouvrir la composition')}
-            </Text>
-            <GlyphIcon color={Colors.primary900} name="chevronRight" size={16} />
-          </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -769,6 +784,14 @@ const styles = StyleSheet.create({
   footerDansLaBulle: {
     marginBottom: -7,
     marginHorizontal: -10,
+  },
+  footerHorsBulle: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    minHeight: 44,
   },
   footerText: {
     fontFamily: REGULIER_FAMILLE,
