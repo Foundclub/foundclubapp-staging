@@ -38,14 +38,30 @@ const mockSaveCollectivite = jest.fn();
 // « Marseille (13001) », [5.405, 43.282] — indice du chef d orchestre).
 const mockReponsesDuServeur = {
   luminy: {
-    address_line: 'Avenue de Luminy', city: 'Marseille', confidence: 0.92, country: 'FR',
-    label: 'Avenue de Luminy 13009 Marseille', lat: 43.2318, lng: 5.4356, postcode: '13009',
-    provider: 'ban', provider_id: '13209_5530', source: 'autocomplete',
+    address_line: 'Avenue de Luminy',
+    city: 'Marseille',
+    confidence: 0.92,
+    country: 'FR',
+    label: 'Avenue de Luminy 13009 Marseille',
+    lat: 43.2318,
+    lng: 5.4356,
+    postcode: '13009',
+    provider: 'ban',
+    provider_id: '13209_5530',
+    source: 'autocomplete',
   },
   marseille: {
-    address_line: 'Marseille', city: 'Marseille', confidence: 0.97, country: 'FR',
-    label: 'Marseille', lat: 43.282, lng: 5.405, postcode: '13001',
-    provider: 'ban', provider_id: '13201', source: 'autocomplete',
+    address_line: 'Marseille',
+    city: 'Marseille',
+    confidence: 0.97,
+    country: 'FR',
+    label: 'Marseille',
+    lat: 43.282,
+    lng: 5.405,
+    postcode: '13001',
+    provider: 'ban',
+    provider_id: '13201',
+    source: 'autocomplete',
   },
 };
 const mockClientGet = jest.fn(async (/** @type {string} */ chemin, /** @type {any} */ options) => {
@@ -381,7 +397,7 @@ describe('VILLE-INSTALLATION 1 — « Créer » cree l installation avec l adres
   // Ce qu Adel decrit : « le libellé reste rouge » APRES avoir choisi la rue. Rechoisir une ligne
   // de la liste doit effacer le refus et laisser partir l envoi. (Avant le correctif, le premier
   // « Créer » est refuse ; apres, il part deja : on juge donc le DERNIER envoi.)
-  it('apres un refus, rechoisir la rue dans la liste efface l erreur et « Créer » part', async () => {
+  it('apres un refus, rechoisir la rue efface l erreur et « Créer » part', async () => {
     const arbre = await monterVille();
     await remplirCommeAdel(arbre);
     await appuyer(parTexte(arbre, LIBELLE_LUMINY));
