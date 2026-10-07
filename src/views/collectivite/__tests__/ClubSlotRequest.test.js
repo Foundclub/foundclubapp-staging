@@ -191,7 +191,7 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  // VILLE-T18A : les puces écrivent leurs espaces en insécables (Android 16) ; on les lit en espaces.
+  // VILLE-T18A : les puces écrivent leurs espaces en insécables ; on les lit en espaces.
   return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
