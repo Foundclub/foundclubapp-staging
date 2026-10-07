@@ -5672,6 +5672,7 @@ export default {
       aPartirDu: 'À partir du',
       attribuerA: 'Attribuer à',
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
+      aucuneLibre: 'Aucune heure libre ce {{jour}}.',
       changerHeure: 'Changer l’heure',
       chaqueSemaine: 'Chaque {{jour}} de la saison ({{periode}}). Le club est prévenu.',
       club: 'Club',
@@ -5691,6 +5692,7 @@ export default {
       installation: 'Installation',
       jour: 'Jour',
       libre: '{{moment}} : place libre',
+      libreCe: 'Libre ce {{jour}} :',
       periode: 'Période',
       personne: 'Personne n’y est.',
       places: 'Places prises : {{prises}} sur {{capacite}}',
@@ -5705,6 +5707,7 @@ export default {
       toutLaSaison: 'Toute la saison · {{periode}}',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
+      voirLibres: 'Voir les heures libres du {{jour}}',
     },
     creneaux: {
       attribuer: 'Attribuer un créneau',

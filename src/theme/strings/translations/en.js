@@ -5303,6 +5303,7 @@ export default {
       aPartirDu: 'From',
       attribuerA: 'Assign to',
       aucunClub: 'No club is attached to the town: invite one from “Clubs”.',
+      aucuneLibre: 'No free time this {{jour}}.',
       changerHeure: 'Change the time',
       chaqueSemaine: 'Every {{jour}} of the season ({{periode}}). The club is notified.',
       club: 'Club',
@@ -5322,6 +5323,7 @@ export default {
       installation: 'Facility',
       jour: 'Day',
       libre: '{{moment}}: place available',
+      libreCe: 'Free this {{jour}}:',
       periode: 'Period',
       personne: 'Nobody is there.',
       places: 'Places taken: {{prises}} of {{capacite}}',
@@ -5336,6 +5338,7 @@ export default {
       toutLaSaison: 'The whole season · {{periode}}',
       toutLeClub: 'The whole club',
       valider: 'Assign the slot',
+      voirLibres: 'See the free times on {{jour}}',
     },
     creneaux: {
       attribuer: 'Assign a slot',
