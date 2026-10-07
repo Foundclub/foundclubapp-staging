@@ -21,6 +21,11 @@ import {
   getChatMessagePreview,
   isLeagueChat,
 } from '@/domains/messaging/messagingUseCases';
+import {
+  estUneRouteAbsente,
+  noterRouteNonLuAbsente,
+  routeNonLuAbsente,
+} from '@/domains/messaging/routesDuServeur1B';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -40,6 +45,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import ApercuDuFil from '@/views/chat/ApercuDuFil';
 // COLL-C4A (02/10) — les canaux de la Ville, épinglés en tête de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
@@ -128,8 +134,15 @@ function Messaging({ navigation, route }) {
 
   const {
     archiveChatAsync, getConversationName, getUnreadStatus,
-    joinChat, pinChatAsync, unpinChatAsync,
+    joinChat, markChatUnread, pinChatAsync, sendReadReceipt, unpinChatAsync,
+    updateLastReadMessage,
   } = useMessaging();
+  // 👁️ MSG1BA (§3.14) — l'apercu ouvert par un appui long : la ligne, son titre, ses non-lus.
+  const [apercu, setApercu] = useState(
+    /** @type {{ chat: Chat, epingle: boolean, nonLu: boolean, titre: string } | null} */ (null),
+  );
+  // Serveur d'avant 1B : « Marquer comme non lu » a deja repondu 404, on ne le propose plus.
+  const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
   const canCreateConversation = userData?.role?.name === 'Entraîneur'
@@ -546,6 +559,65 @@ function Messaging({ navigation, route }) {
     );
   };
 
+  /**
+   * MSG1BA (§3.14) — le menu de l'apercu : « Marquer comme lu / non lu », « Épingler »,
+   * « Archiver » (ces deux-la sont les gestes deja proposes en glissant la ligne).
+   * @param {{ chat: Chat, epingle: boolean, nonLu: boolean }} ligne
+   * @returns {import('@/views/chat/ApercuDuFil').EntreeDeLApercu[]}
+   */
+  const entreesDeLApercu = ({ chat, epingle, nonLu }) => {
+    const chatId = String(chat?.documentId || '').trim();
+    /** @type {import('@/views/chat/ApercuDuFil').EntreeDeLApercu[]} */
+    const entrees = [];
+    if (nonLu) {
+      entrees.push({
+        cle: 'marquer-lu',
+        icone: 'checkDouble',
+        libelle: t('messaging.preview.markRead', 'Marquer comme lu'),
+        // Le « lu » local (pastille immediate) ET le curseur du serveur (`read-message`).
+        onPress: () => {
+          updateLastReadMessage(chatId);
+          sendReadReceipt(chatId);
+        },
+      });
+    } else if (!nonLuAbsent) {
+      entrees.push({
+        cle: 'marquer-non-lu',
+        icone: 'envelope',
+        libelle: t('messaging.preview.markUnread', 'Marquer comme non lu'),
+        onPress: async () => {
+          try {
+            await markChatUnread(chatId);
+          } catch (actionError) {
+            if (estUneRouteAbsente(actionError)) {
+              // Serveur d'avant 1B : pas d'erreur rouge, le geste disparait.
+              noterRouteNonLuAbsente();
+              setNonLuAbsent(true);
+              return;
+            }
+            showMessagingAlert(actionError, t(
+              'messaging.preview.markUnreadError',
+              'Impossible de marquer cette conversation comme non lue.',
+            ));
+          }
+        },
+      });
+    }
+    entrees.push({
+      cle: 'epingler',
+      icone: 'thumbtack',
+      libelle: epingle ? t('messaging.unpin', 'Désépingler') : t('messaging.pin', 'Épingler'),
+      onPress: () => handleTogglePin(chat),
+    });
+    entrees.push({
+      cle: 'archiver',
+      icone: 'boxArchive',
+      libelle: t('messaging.archive', 'Archiver'),
+      onPress: () => handleArchive(chat),
+    });
+    return entrees;
+  };
+
   const renderErrorState = () => (
     <View style={[
       ApplicationStyle.backgroundColor.primary900,
@@ -631,6 +703,15 @@ function Messaging({ navigation, route }) {
         renderRightActions={(p, d) => renderRightActions(p, d, chat)}
       >
         <TouchableOpacity
+          delayLongPress={450}
+          // 👁️ MSG1BA (§3.14) — appui long (450 ms, le pack) : l'apercu, sans marquer comme lu.
+          // Au telephone seulement : la liste du site appartient a MESSAGERIE-1W.
+          onLongPress={isWeb ? undefined : () => setApercu({
+            chat,
+            epingle: Boolean(isPinned),
+            nonLu: Boolean(hasUnread),
+            titre: String(titreDeLaLigne || ''),
+          })}
           onPress={() => handleChatPress(chat)}
           style={stylesDeLaListe.ligne}
           testID={`liste-fil-${chat.documentId}`}
@@ -941,6 +1022,24 @@ function Messaging({ navigation, route }) {
               </View>
             </TouchableOpacity>
           </WebFloatingOverlay>
+        ) : null}
+        {apercu ? (
+          <ApercuDuFil
+            chat={apercu.chat}
+            entrees={entreesDeLApercu(apercu)}
+            espaceVille={espaceVille}
+            meId={String(userData?.documentId || '')}
+            myTeams={allMyTeams}
+            nonLu={apercu.nonLu}
+            onClose={() => setApercu(null)}
+            onOuvrir={() => {
+              const { chat } = apercu;
+              setApercu(null);
+              handleChatPress(chat);
+            }}
+            titre={apercu.titre}
+            visible
+          />
         ) : null}
       </ScreenContainer>
     </TutorialFlowBoundary>

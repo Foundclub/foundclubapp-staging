@@ -441,6 +441,21 @@ export const leaveGroupChat = async (chatId) => {
 };
 
 /**
+ * MSG1BA (§3.14) — MARQUER UNE CONVERSATION COMME NON LUE (contrat MESSAGERIE-1B §3,
+ * `POST /api/chats/:id/unread`, sans corps). Le serveur recule le curseur de lecture juste
+ * avant le dernier message recu : le fil compte 1 non-lu. 200 `{ data: { chatDocumentId,
+ * markedUnread, unreadCount, unreadTotal } }` ; `markedUnread: false` si le fil n'a aucun
+ * message recu. Serveur d'avant 1B : 404 (le geste est alors cache par l'ecran).
+ * @param {string} chatId
+ * @returns {Promise<{ chatDocumentId?: string, markedUnread?: boolean, unreadCount?: number,
+ *   unreadTotal?: number }>}
+ */
+export const markChatUnread = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/unread`);
+  return response.data?.data ?? response.data;
+};
+
+/**
  * Update group metadata
  * @param {string} chatId
  * @param {{ groupName?: string; addAdminIds?: string[]; removeAdminIds?: string[] }} data

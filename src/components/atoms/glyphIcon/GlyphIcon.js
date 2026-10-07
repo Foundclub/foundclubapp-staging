@@ -27,7 +27,8 @@ import TRACES_MESSAGERIE from './tracesMessagerie';
  *   | 'triangleExclamation' | 'wifiSlash'
  *   | 'checkDouble' | 'chevronUp' | 'lockOpen' | 'lockShut' | 'microphone'
  *   | 'pause' | 'play' | 'plus2' | 'send' | 'stop' | 'trashAlt'
- *   | 'camera' | 'chartSimpleHorizontal' | 'check' | 'chevronDown' | 'file' | 'fileCopy'
+ *   | 'boxArchive' | 'camera' | 'chartSimpleHorizontal' | 'check' | 'chevronDown' | 'eye'
+ *   | 'file' | 'fileCopy'
  *   | 'flag' | 'image' | 'information' | 'locationPin' | 'penSquare' | 'pencil' | 'reply'
  *   | 'search' | 'shieldCheck' | 'thumbtack' | 'userMinus' | 'userPlus' | 'users' | 'xmark'} GlyphIconName
  */

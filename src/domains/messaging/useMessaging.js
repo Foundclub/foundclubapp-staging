@@ -37,6 +37,7 @@ import {
   deleteMessage,
   editMessage,
   getChats,
+  markChatUnread as markChatUnreadRequest,
   pinChat,
   reactToChatMessage,
   removeGroupMember,
@@ -802,6 +803,29 @@ const useMessaging = (currentChatId) => {
     });
   }, [queryClient]);
 
+  /**
+   * MSG1BA (§3.14) — `chat-unread-updated` (contrat 1B §7) : un autre appareil du compte a
+   * marque un fil non lu, ou a quitte un groupe. Les comptes du serveur sont absolus : on les
+   * pose tels quels (rejouer l'evenement ne change rien). Apres un depart, on relit la liste,
+   * d'ou le groupe est sorti.
+   */
+  const handleChatUnreadUpdated = useCallback((/** @type {any} */ payload) => {
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    if (!chatDocumentId) return;
+    if (payload?.left) {
+      queryClient.refetchQueries({ queryKey: ['chats'], type: 'all' });
+      return;
+    }
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, chatDocumentId, {
+        ok: true,
+        unreadCount: payload?.unreadCount,
+        unreadTotal: payload?.unreadTotal,
+      }),
+    );
+  }, [queryClient]);
+
   const handleSocketError = useCallback((/** @type {any} */ error) => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
     const errorPayload = {
@@ -844,6 +868,7 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, handleSocketError);
+    socket.on(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
 
     // Cleanup: leave chat and remove listeners
     return () => {
@@ -859,6 +884,7 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.MESSAGE_READ, handleMessageRead);
       socket.off(EVENTS.JOINED, handleJoined);
       socket.off(EVENTS.ERROR, handleSocketError);
+      socket.off(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
       if (safeCurrentChatId) {
         updateLastReadMessage(safeCurrentChatId);
       }
@@ -871,6 +897,7 @@ const useMessaging = (currentChatId) => {
     handleMessageRead,
     handleJoined,
     handleSocketError,
+    handleChatUnreadUpdated,
     currentChatId,
     isConnected,
     updateLastReadMessage,
@@ -1242,6 +1269,31 @@ const useMessaging = (currentChatId) => {
     if (socket && safeChatId) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: safeChatId });
   }, [socket]);
 
+  /**
+   * MSG1BA (§3.14) — « Marquer comme non lu » depuis l'apercu d'une conversation. Le serveur
+   * rend les comptes recalcules (fil et total) : on les pose dans la liste, ou la pastille du
+   * fil, de l'onglet et de l'accueil les lisent. Une erreur remonte a l'ecran (un 404 = serveur
+   * d'avant 1B : l'ecran cache alors le geste).
+   * @param {string} chatId - Le fil.
+   * @returns {Promise<any>} La reponse du serveur.
+   */
+  const markChatUnread = useCallback(async (/** @type {string} */ chatId) => {
+    const safeChatId = normalizeChatId(chatId);
+    if (!safeChatId) return null;
+    const resultat = await markChatUnreadRequest(safeChatId);
+    if (resultat?.markedUnread) {
+      queryClient.setQueriesData(
+        { queryKey: ['chats'] },
+        (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, safeChatId, {
+          ok: true,
+          unreadCount: resultat?.unreadCount,
+          unreadTotal: resultat?.unreadTotal,
+        }),
+      );
+    }
+    return resultat;
+  }, [queryClient]);
+
   const sendReadReceipt = useCallback((/** @type {string} */ chatId, /** @type {string | undefined} */ lastSeenMessageId) => {
     const safeChatId = normalizeChatId(chatId);
     const safeLastSeenId = normalizeChatId(lastSeenMessageId || '');
@@ -1551,6 +1603,7 @@ const useMessaging = (currentChatId) => {
     isSocketConnected: isConnected,
     joinChat,
     leaveChat,
+    markChatUnread,
     pinChat: pinChatMutation.mutate,
     pinChatAsync: pinChatMutation.mutateAsync,
     reactToMessage,
