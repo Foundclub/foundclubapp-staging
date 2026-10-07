@@ -61,13 +61,14 @@ jest.mock('@/theme/themeContext', () => {
   return { __esModule: true, default: () => theme };
 });
 
+/** @type {any} */
+let mockMoi = null;
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     allMyTeams: [],
-    userData: {
-      documentId: 'moi', firstname: 'Adel', lastname: 'Ferchichi', role: { type: 'coach' },
-    },
+    hasClubAccess: (/** @type {string} */ clubId) => clubId === 'club-1',
+    userData: mockMoi,
   }),
 }));
 
@@ -236,6 +237,9 @@ beforeEach(() => {
   queryClient = creerQueryClientDeTest();
   mockLargeur = 1280;
   mockSocket = fausseSocket();
+  mockMoi = {
+    documentId: 'moi', firstname: 'Adel', lastname: 'Ferchichi', role: { type: 'coach' },
+  };
   mockFil = {
     documentId: CHAT_ID,
     name: 'Seniors A',
@@ -287,5 +291,68 @@ describe('MSG1W §3.1 — « Bruno écrit… » sur le site', () => {
       mockSocket.emettre(EVENTS.TYPING_STARTED, { ...FRAPPE_DE_BRUNO, userDocumentId: 'moi' });
     });
     expect(parTestId(arbre, 'MSG1W-qui-ecrit')).toHaveLength(0);
+  });
+});
+
+// 📐 §3.10 — L AVERTISSEMENT DU DIRIGEANT (decision d Adel du 07/10 : « avertissement B »). Le
+// telephone l affichait en bandeau fixe ; le site ne l affichait PAS DU TOUT. Il devient une
+// notice centree EN TETE DU FIL, qui defile avec lui, comme la mention de chiffrement de WhatsApp.
+describe('MSG1W §3.10 — « consultées par son dirigeant », en tête du fil', () => {
+  const NOTICE = 'Les conversations de ce club peuvent être consultées par son dirigeant.';
+
+  test('un fil d equipe rattache a un club porte la notice, DANS le fil qui defile', async () => {
+    const { arbre } = await monter();
+    const [fil] = parTestId(arbre, 'MSG1W-fil');
+    const notices = fil.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'conversation-club-read-notice',
+    );
+    expect(notices.length).toBeGreaterThan(0);
+    expect(texteDe(notices[0])).toContain(NOTICE);
+  });
+
+  test('un tete-a-tete (aucun club) ne la porte pas : la phrase y serait fausse', async () => {
+    mockFil = { ...mockFil, team: null, type: 'whisper' };
+    const { arbre } = await monter();
+    expect(texteDe(arbre.root)).not.toContain(NOTICE);
+  });
+});
+
+// 📐 §3.11 — LE CANAL EN LECTURE SEULE. Le site offrait la saisie partout ; le serveur refusait
+// ensuite l envoi dans un canal de club. La regle est celle du telephone (canWriteInChat.js).
+describe('MSG1W §3.11 — « Canal d annonce (lecture seule) »', () => {
+  const champDeSaisie = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.type === 'textarea',
+  );
+
+  test('un joueur dans le canal de son club : pas de saisie, la barre au cadenas', async () => {
+    mockFil = {
+      club: { documentId: 'club-1', name: 'Aix-Perd en Buvette' },
+      documentId: CHAT_ID,
+      participants: [MOI],
+      type: 'club',
+    };
+    mockMoi = { ...mockMoi, role: { type: 'player' } };
+    const { arbre } = await monter();
+    expect(champDeSaisie(arbre)).toHaveLength(0);
+    const [barre] = parTestId(arbre, 'MSG1W-lecture-seule');
+    expect(barre).toBeDefined();
+    expect(texteDe(barre)).toContain("Canal d'annonce (lecture seule)");
+  });
+
+  test('le dirigeant de ce club y ecrit ; dans un fil d equipe, tout le monde ecrit', async () => {
+    mockFil = {
+      club: { documentId: 'club-1', name: 'Aix-Perd en Buvette' },
+      documentId: CHAT_ID,
+      participants: [MOI],
+      type: 'club',
+    };
+    mockMoi = { ...mockMoi, role: { type: 'president' } };
+    expect(champDeSaisie((await monter()).arbre)).toHaveLength(1);
+
+    mockFil = { ...mockFil, club: null, type: 'team' };
+    mockMoi = { ...mockMoi, role: { type: 'player' } };
+    const { arbre } = await monter();
+    expect(champDeSaisie(arbre)).toHaveLength(1);
+    expect(parTestId(arbre, 'MSG1W-lecture-seule')).toHaveLength(0);
   });
 });

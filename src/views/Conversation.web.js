@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { useWindowDimensions, View } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
+import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { getConversationName } from '@/domains/messaging/messagingUseCases'
 import {
@@ -625,6 +626,7 @@ function Conversation({ navigation, route }) {
     Colors,
   } = useTheme()
   const {
+    hasClubAccess,
     userData,
   } = useAuth()
   const {
@@ -981,6 +983,25 @@ function Conversation({ navigation, route }) {
       ...SANS_ECHAPPEMENT,
     });
   }, [chatData?.participants, quiEcrit, t]);
+
+  // MSG1W §3.11 — qui peut ecrire ici : la regle du telephone (canWriteInChat.js). Un canal de
+  // club ou omnisport ferme sa saisie a qui n en est pas dirigeant.
+  const peutEcrire = useMemo(
+    () => canWriteInChat({ chat: chatData, hasClubAccess, user: userData }),
+    [chatData, hasClubAccess, userData],
+  );
+  // MSG1W §3.10 (« avertissement B », Adel 07/10) — un fil rattache a un club (fil de club, fil
+  // d equipe) peut etre lu par son dirigeant : une notice EN TETE DU FIL le dit. Un tete-a-tete ou
+  // un groupe libre n a pas de club (createWhisperChat) : la phrase y serait fausse (CONVAVERT).
+  const clubDuFil = String(
+    chatData?.club?.documentId
+    || chatData?.club?.id
+    // @ts-ignore: FIXME: Baseline TS regression
+    || chatData?.team?.club?.documentId
+    // @ts-ignore: FIXME: Baseline TS regression
+    || chatData?.team?.club?.id
+    || '',
+  ).trim();
 
   const filCharge = Boolean(chatData);
   useEffect(() => {
@@ -3053,7 +3074,10 @@ function Conversation({ navigation, route }) {
           color: baseTextColor,
           display: 'grid',
           gap: 16,
-          gridTemplateColumns: colonnesDeLaGrille,
+          // §3.11 — un canal en lecture seule n offre ni partage ni sondage : pas de panneau.
+          gridTemplateColumns: peutEcrire || avecColonneDeLaVille
+            ? colonnesDeLaGrille
+            : 'minmax(0, 1fr)',
           // MSG1W §3.1 — LE CADRE A LA HAUTEUR DE L ECRAN : c est le fil qui defile ;
           // l en-tete et la saisie restent en place (README §3.1, « bloc fixe »).
           height: hauteurDuCadre || 'calc(100vh - 116px)',
@@ -3219,6 +3243,32 @@ function Conversation({ navigation, route }) {
                 padding: '8px 6px 18px',
               }}
             >
+              {clubDuFil ? (
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 6px' }}>
+                  <span
+                    data-testid="conversation-club-read-notice"
+                    style={{
+                      alignItems: 'center',
+                      background: PALETTE_DU_FIL.noticeFond,
+                      borderRadius: 8,
+                      color: PALETTE_DU_FIL.noticeTexte,
+                      display: 'inline-flex',
+                      fontSize: 11.5,
+                      gap: 6,
+                      lineHeight: '15px',
+                      maxWidth: 320,
+                      padding: '6px 12px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <GlyphIcon color={PALETTE_DU_FIL.noticeTexte} name="lockShut" size={12} />
+                    {t(
+                      'conversation.clubReadNotice',
+                      'Les conversations de ce club peuvent être consultées par son dirigeant.',
+                    )}
+                  </span>
+                </div>
+              ) : null}
               {hasNextPage ? (
                 <button
                   onClick={() => fetchNextPage()}
@@ -3398,193 +3448,216 @@ function Conversation({ navigation, route }) {
             ) : null}
           </div>
 
-          <footer
-            style={{
-              background: PALETTE_DU_FIL.barre,
-              borderTop: `1px solid ${PALETTE_DU_FIL.filet}`,
-              display: 'grid',
-              gap: 8,
-              padding: '8px 12px 12px',
-            }}
-          >
-            {replyTarget ? (
-              <div style={{
-                alignItems: 'center',
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 16,
-                display: 'flex',
-                gap: 12,
-                justifyContent: 'space-between',
-                padding: '12px 14px',
+          {peutEcrire ? (
+            <footer
+              style={{
+                background: PALETTE_DU_FIL.barre,
+                borderTop: `1px solid ${PALETTE_DU_FIL.filet}`,
+                display: 'grid',
+                gap: 8,
+                padding: '8px 12px 12px',
               }}
-              >
-                <div style={{ display: 'grid', gap: 4 }}>
-                  <span style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
-                    Reponse a {getDisplayName(replyTarget?.sender)}
-                  </span>
-                  <span style={{ color: baseTextColor, fontSize: 13 }}>
-                    {String(replyTarget?.message || '').trim() || 'Message partagé'}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setReplyTarget(null)}
-                  style={{ background: 'transparent', border: 0, color: primaryColor, cursor: 'pointer' }}
-                  type="button"
+            >
+              {replyTarget ? (
+                <div style={{
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 16,
+                  display: 'flex',
+                  gap: 12,
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                }}
                 >
-                  Retirer
-                </button>
-              </div>
-            ) : null}
-            {isRecordingVoice ? (
-              <div role="status" style={{ color: PALETTE_DU_FIL.danger, fontSize: 12.5 }}>
-                {i18next.t(
-                  'conversation.web.voice.recording',
-                  'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.',
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <span style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
+                      Reponse a {getDisplayName(replyTarget?.sender)}
+                    </span>
+                    <span style={{ color: baseTextColor, fontSize: 13 }}>
+                      {String(replyTarget?.message || '').trim() || 'Message partagé'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setReplyTarget(null)}
+                    style={{ background: 'transparent', border: 0, color: primaryColor, cursor: 'pointer' }}
+                    type="button"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ) : null}
+              {isRecordingVoice ? (
+                <div role="status" style={{ color: PALETTE_DU_FIL.danger, fontSize: 12.5 }}>
+                  {i18next.t(
+                    'conversation.web.voice.recording',
+                    'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.',
+                  )}
+                </div>
+              ) : null}
+              <div style={{ alignItems: 'flex-end', display: 'flex', gap: 8 }}>
+                <div ref={menuAjouterRef} style={{ position: 'relative' }}>
+                  <button
+                    aria-expanded={menuAjouterOuvert}
+                    aria-haspopup="menu"
+                    disabled={!canUseConversationActions}
+                    onClick={() => setMenuAjouterOuvert((ouvert) => !ouvert)}
+                    style={styleDuBoutonRond}
+                    type="button"
+                  >
+                    <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={22} />
+                    <span style={TEXTE_MASQUE}>
+                      {t('conversation.attachments.title', 'Ajouter')}
+                    </span>
+                  </button>
+                  {menuAjouterOuvert ? (
+                    <div
+                      role="menu"
+                      style={{
+                        background: PALETTE_DU_FIL.menu,
+                        border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                        borderRadius: 16,
+                        bottom: 54,
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+                        display: 'grid',
+                        left: 0,
+                        minWidth: 220,
+                        padding: 6,
+                        position: 'absolute',
+                        zIndex: 30,
+                      }}
+                    >
+                      {entreesDuMenuAjouter.map((entree) => (
+                        <button
+                          key={entree.cle}
+                          onClick={() => {
+                            setMenuAjouterOuvert(false);
+                            entree.action();
+                          }}
+                          role="menuitem"
+                          style={{
+                            background: 'transparent',
+                            border: 0,
+                            borderRadius: 10,
+                            color: PALETTE_DU_FIL.texte,
+                            cursor: 'pointer',
+                            fontFamily: 'Montserrat-Regular, sans-serif',
+                            fontSize: 15,
+                            minHeight: 44,
+                            padding: '0 14px',
+                            textAlign: 'left',
+                          }}
+                          type="button"
+                        >
+                          {entree.libelle}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <textarea
+                  aria-label={placeholderDeLaSaisie}
+                  onChange={(event) => setComposerText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      if (!isSending && composerText.trim()) {
+                        handleSendText();
+                      }
+                    }
+                  }}
+                  placeholder={placeholderDeLaSaisie}
+                  ref={saisieRef}
+                  rows={1}
+                  style={{
+                    background: PALETTE_DU_FIL.champ,
+                    border: `1px solid ${PALETTE_DU_FIL.champBord}`,
+                    borderRadius: 22,
+                    boxSizing: 'border-box',
+                    color: PALETTE_DU_FIL.texte,
+                    flex: 1,
+                    fontFamily: 'Montserrat-Regular, sans-serif',
+                    fontSize: 16,
+                    lineHeight: '20px',
+                    maxHeight: 140,
+                    minHeight: 44,
+                    minWidth: 0,
+                    outline: 'none',
+                    padding: '11px 16px',
+                    resize: 'none',
+                  }}
+                  value={composerText}
+                />
+                {aDuTexte ? (
+                  <button
+                    aria-busy={isSending}
+                    disabled={!canSendText}
+                    onClick={handleSendText}
+                    style={{
+                      ...styleDuBoutonRond,
+                      cursor: canSendText ? 'pointer' : 'not-allowed',
+                      opacity: canSendText ? 1 : 0.6,
+                    }}
+                    type="button"
+                  >
+                    <GlyphIcon color={PALETTE_DU_FIL.encre} name="send" size={20} />
+                    <span style={TEXTE_MASQUE}>Envoyer</span>
+                  </button>
+                ) : (
+                  <button
+                    disabled={micIndisponible}
+                    onClick={handleVoiceNote}
+                    style={{
+                      ...styleDuBoutonRond,
+                      background: isRecordingVoice ? PALETTE_DU_FIL.danger : PALETTE_DU_FIL.accent,
+                      cursor: micIndisponible ? 'not-allowed' : 'pointer',
+                      opacity: micIndisponible ? 0.6 : 1,
+                    }}
+                    title={isVoiceRecordingSupported ? undefined : i18next.t(
+                      'conversation.web.voice.unsupported',
+                      'Les notes vocales ne sont pas prises en charge par ce navigateur.',
+                    )}
+                    type="button"
+                  >
+                    <GlyphIcon
+                      color={PALETTE_DU_FIL.encre}
+                      name={isRecordingVoice ? 'stop' : 'microphone'}
+                      size={20}
+                    />
+                    <span style={TEXTE_MASQUE}>
+                      {isRecordingVoice
+                        ? i18next.t('conversation.web.voice.stop', 'Arrêter la note vocale')
+                        : 'Note vocale'}
+                    </span>
+                  </button>
                 )}
               </div>
-            ) : null}
-            <div style={{ alignItems: 'flex-end', display: 'flex', gap: 8 }}>
-              <div ref={menuAjouterRef} style={{ position: 'relative' }}>
-                <button
-                  aria-expanded={menuAjouterOuvert}
-                  aria-haspopup="menu"
-                  disabled={!canUseConversationActions}
-                  onClick={() => setMenuAjouterOuvert((ouvert) => !ouvert)}
-                  style={styleDuBoutonRond}
-                  type="button"
-                >
-                  <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={22} />
-                  <span style={TEXTE_MASQUE}>{t('conversation.attachments.title', 'Ajouter')}</span>
-                </button>
-                {menuAjouterOuvert ? (
-                  <div
-                    role="menu"
-                    style={{
-                      background: PALETTE_DU_FIL.menu,
-                      border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
-                      borderRadius: 16,
-                      bottom: 54,
-                      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
-                      display: 'grid',
-                      left: 0,
-                      minWidth: 220,
-                      padding: 6,
-                      position: 'absolute',
-                      zIndex: 30,
-                    }}
-                  >
-                    {entreesDuMenuAjouter.map((entree) => (
-                      <button
-                        key={entree.cle}
-                        onClick={() => {
-                          setMenuAjouterOuvert(false);
-                          entree.action();
-                        }}
-                        role="menuitem"
-                        style={{
-                          background: 'transparent',
-                          border: 0,
-                          borderRadius: 10,
-                          color: PALETTE_DU_FIL.texte,
-                          cursor: 'pointer',
-                          fontFamily: 'Montserrat-Regular, sans-serif',
-                          fontSize: 15,
-                          minHeight: 44,
-                          padding: '0 14px',
-                          textAlign: 'left',
-                        }}
-                        type="button"
-                      >
-                        {entree.libelle}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <textarea
-                aria-label={placeholderDeLaSaisie}
-                onChange={(event) => setComposerText(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    if (!isSending && composerText.trim()) {
-                      handleSendText();
-                    }
-                  }
-                }}
-                placeholder={placeholderDeLaSaisie}
-                ref={saisieRef}
-                rows={1}
-                style={{
-                  background: PALETTE_DU_FIL.champ,
-                  border: `1px solid ${PALETTE_DU_FIL.champBord}`,
-                  borderRadius: 22,
-                  boxSizing: 'border-box',
-                  color: PALETTE_DU_FIL.texte,
-                  flex: 1,
-                  fontFamily: 'Montserrat-Regular, sans-serif',
-                  fontSize: 16,
-                  lineHeight: '20px',
-                  maxHeight: 140,
-                  minHeight: 44,
-                  minWidth: 0,
-                  outline: 'none',
-                  padding: '11px 16px',
-                  resize: 'none',
-                }}
-                value={composerText}
-              />
-              {aDuTexte ? (
-                <button
-                  aria-busy={isSending}
-                  disabled={!canSendText}
-                  onClick={handleSendText}
-                  style={{
-                    ...styleDuBoutonRond,
-                    cursor: canSendText ? 'pointer' : 'not-allowed',
-                    opacity: canSendText ? 1 : 0.6,
-                  }}
-                  type="button"
-                >
-                  <GlyphIcon color={PALETTE_DU_FIL.encre} name="send" size={20} />
-                  <span style={TEXTE_MASQUE}>Envoyer</span>
-                </button>
-              ) : (
-                <button
-                  disabled={micIndisponible}
-                  onClick={handleVoiceNote}
-                  style={{
-                    ...styleDuBoutonRond,
-                    background: isRecordingVoice ? PALETTE_DU_FIL.danger : PALETTE_DU_FIL.accent,
-                    cursor: micIndisponible ? 'not-allowed' : 'pointer',
-                    opacity: micIndisponible ? 0.6 : 1,
-                  }}
-                  title={isVoiceRecordingSupported ? undefined : i18next.t(
-                    'conversation.web.voice.unsupported',
-                    'Les notes vocales ne sont pas prises en charge par ce navigateur.',
-                  )}
-                  type="button"
-                >
-                  <GlyphIcon
-                    color={PALETTE_DU_FIL.encre}
-                    name={isRecordingVoice ? 'stop' : 'microphone'}
-                    size={20}
-                  />
-                  <span style={TEXTE_MASQUE}>
-                    {isRecordingVoice
-                      ? i18next.t('conversation.web.voice.stop', 'Arrêter la note vocale')
-                      : 'Note vocale'}
-                  </span>
-                </button>
-              )}
-            </div>
-          </footer>
+            </footer>
+          ) : (
+            <footer
+              data-testid="MSG1W-lecture-seule"
+              style={{
+                alignItems: 'center',
+                background: PALETTE_DU_FIL.barre,
+                borderTop: `1px solid ${PALETTE_DU_FIL.filet}`,
+                color: PALETTE_DU_FIL.texteDoux,
+                display: 'flex',
+                fontSize: 14,
+                gap: 8,
+                justifyContent: 'center',
+                minHeight: 60,
+                padding: '8px 12px 12px',
+              }}
+            >
+              <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="lockShut" size={16} />
+              {t('conversation.readOnly', "Canal d'annonce (lecture seule)")}
+            </footer>
+          )}
         </section>
 
-        {isDesktop ? panneauDeDroite : null}
+        {isDesktop && peutEcrire ? panneauDeDroite : null}
       </div>
-      {isDesktop ? null : panneauDeDroite}
+      {!isDesktop && peutEcrire ? panneauDeDroite : null}
     </ScreenContainer>
   )
 }
