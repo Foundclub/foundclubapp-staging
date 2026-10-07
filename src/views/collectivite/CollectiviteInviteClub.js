@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
+import { cheminDuLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -30,13 +31,6 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import { share } from '@/platform/share';
-
-/**
- * Le chemin de la page publique du lien, sur le site (route CollectiviteJoin).
- * @param {string} token - Le code du lien.
- * @returns {string} Le chemin.
- */
-export const cheminDuLienDeLaVille = (token) => `/invitation-ville/${token}`;
 
 /**
  * Copie un texte : le presse-papiers du navigateur sur le site, le module natif sur le

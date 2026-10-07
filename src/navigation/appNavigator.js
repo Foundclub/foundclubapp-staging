@@ -27,6 +27,13 @@ const appNavigatorLogger = createLogger('app-navigator');
 // iOS, lui, exclut ces pages (apple-app-site-association du site).
 // Temoin : src/navigation/__tests__/linking.routesAtteignables.test.js.
 const EVENT_DETAILS_LINK = { alias: ['events/:eventId'], path: 'event/:eventId' };
+// LIENS-APP (2026-10-07, TestFlight 2.6.70, ligne 5a) -- le lien d invitation de la Ville,
+// `https://foundclub.app/invitation-ville/<jeton>` (CollectiviteInviteClub.js), ouvrait le site :
+// ni le telephone (fichier iOS du site, manifeste Android) ni cette table ne le connaissaient.
+// Connecte : la page du lien, et sa suite /rattacher. Sans compte : la page du lien (publique),
+// qui propose la connexion -- la demande de rattachement exige un compte.
+const VILLE_LINK = 'invitation-ville/:token';
+const VILLE_REQUEST_LINK = 'invitation-ville/:token/rattacher';
 const WEB_LINK_ORIGINS = ['https://foundclub.app', 'https://www.foundclub.app', 'https://staging.foundclub.app'];
 
 /**
@@ -83,6 +90,8 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
               [RouteNames.Club]: 'club/:clubId',
             },
           },
+          [RouteNames.CollectiviteJoin]: VILLE_LINK,
+          [RouteNames.CollectiviteJoinRequest]: VILLE_REQUEST_LINK,
           [RouteNames.EventStack]: {
             screens: {
               [RouteNames.EventDetails]: EVENT_DETAILS_LINK,
@@ -97,6 +106,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
         }
         : {
           [RouteNames.Club]: 'club/:clubId',
+          [RouteNames.CollectiviteJoin]: { alias: [VILLE_REQUEST_LINK], path: VILLE_LINK },
           [RouteNames.EventDetails]: EVENT_DETAILS_LINK,
           [RouteNames.PublicAuthStack]: {
             screens: {
@@ -120,6 +130,8 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
       // LIENS-EVENEMENT : les liens https que le telephone confie a l app. Seuls les
       // chemins que l app RECLAME arrivent ici (AndroidManifest.xml, filtre autoVerify ;
       // apple-app-site-association du site) ; un chemin sans ecran ne fait rien.
+      // LIENS-APP : les trois listes sont comparees (linking.routesAtteignables.test.js ;
+      // web, scripts/__tests__/LIENS-APP-trois-listes.test.mjs).
       ...WEB_LINK_ORIGINS,
     ],
   };

@@ -189,15 +189,15 @@ const cheminExemple = (motif) => motif.split('/')
   .join('/');
 
 /**
- * Les liens declares que React Navigation abandonnerait, avec l ecran vise et
- * le fichier ou il est reellement monte.
- * @param {{ screens: Record<string, any> }} config la config linking
+ * Ce que React Navigation abandonnerait d un etat tire d une adresse : l ecran vise et
+ * le fichier ou il est reellement monte (LIENS-APP : sorti de liensMorts pour servir
+ * aussi aux adresses https).
+ * @param {any} etat l etat rendu par getStateFromPath
  * @param {string} racine le fichier du navigateur racine du mode
- * @returns {string[]} un message par lien mort
+ * @param {string} lien l adresse, pour le message
+ * @returns {string[]} un message si le lien est mort, rien sinon
  */
-const liensMorts = (config, racine) => motifsDe(config.screens).flatMap((motif) => {
-  const lien = `foundclub://${cheminExemple(motif)}`;
-  const etat = /** @type {any} */ (getStateFromPath(cheminExemple(motif), config));
+const mortsDeLEtat = (etat, racine, lien) => {
   if (!etat) return [`${lien} : aucun ecran ne correspond au motif`];
 
   const noms = /** @type {string[]} */ ([]);
@@ -237,7 +237,20 @@ const liensMorts = (config, racine) => motifsDe(config.screens).flatMap((motif) 
     if (!routesDe(fichier).has(noms[i])) return mort(noms[i], fichier);
   }
   return [];
-});
+};
+
+/**
+ * Les liens declares que React Navigation abandonnerait, avec l ecran vise et
+ * le fichier ou il est reellement monte.
+ * @param {{ screens: Record<string, any> }} config la config linking
+ * @param {string} racine le fichier du navigateur racine du mode
+ * @returns {string[]} un message par lien mort
+ */
+const liensMorts = (config, racine) => motifsDe(config.screens).flatMap((motif) => mortsDeLEtat(
+  getStateFromPath(cheminExemple(motif), config),
+  racine,
+  `foundclub://${cheminExemple(motif)}`,
+));
 
 /**
  * Monte appNavigator.js dans un etat d authentification et rend la config linking
@@ -465,5 +478,143 @@ describe('LIENS-EVENEMENT -- https://<site>/events/<id> mene a la fiche de l eve
     [CONNECTE, DECONNECTE].forEach((etatApp) => {
       expect(parcours(etatApp, invitation).prise).toBe(false);
     });
+  });
+});
+
+// LIENS-APP (2026-10-07, TestFlight 2.6.70, registre TEST_PROD_2_6_70 ligne 5a) -- le lien
+// d invitation de la Ville, partage depuis Ville > Clubs > Inviter un club, ouvrait LE SITE sur
+// l iPhone qui a l app. Son adresse : `https://foundclub.app/invitation-ville/<jeton>`
+// (CollectiviteInviteClub.js, buildPublicWebUrl + cheminDuLienDeLaVille). Mesure avant le lot :
+// ni le fichier iOS du site (/i/*, /install.html, /suppression.html, /events/*), ni le manifeste
+// Android (/i/, /install.html, /events/), ni cette table ne le connaissaient.
+// eslint-disable-next-line import/no-dynamic-require, global-require
+const { extractPathFromURL: extraireLeChemin } = require(path.join(
+  path.dirname(require.resolve('@react-navigation/native/package.json')),
+  'lib/module/extractPathFromURL.js',
+));
+// eslint-disable-next-line global-require
+const { cheminDuLienDeLaVille } = require('@/domains/collectivite/lienDeLaVille');
+// eslint-disable-next-line global-require
+const { buildPublicWebUrl } = require('@/utils/shareLinks');
+
+/**
+ * Ce que l app fait d une adresse https recue : la fenetre d invitation la garde, ou bien React
+ * Navigation la prend et la mene a un etat (memes trois pas que useLinking.native.tsx:125-132).
+ * @param {any} etatApp { auth, isAddingAccount }
+ * @param {string} url l adresse recue
+ * @returns {{ etat: any, prise: boolean }} l etat (s il est pris) et la prise
+ */
+const recevoir = (etatApp, url) => {
+  const { config, filter, prefixes } = linkingDuMode(etatApp);
+  const prise = typeof filter !== 'function' || filter(url);
+  const chemin = prise ? extraireLeChemin(prefixes, url) : undefined;
+  return { etat: chemin === undefined ? undefined : getStateFromPath(chemin, config), prise };
+};
+
+/**
+ * L ecran au bout d un etat, et ses parametres.
+ * @param {any} etat l etat rendu par getStateFromPath
+ * @returns {{ ecran: string, params: any } | null} la feuille
+ */
+const feuille = (etat) => {
+  let route = etat?.routes?.[etat.routes.length - 1];
+  while (route?.state?.routes?.length) route = route.state.routes[route.state.routes.length - 1];
+  return route ? { ecran: route.name, params: route.params } : null;
+};
+
+describe('LIENS-APP -- le lien de la Ville ouvre la page du lien DANS l app', () => {
+  const SITES = ['https://foundclub.app', 'https://www.foundclub.app', 'https://staging.foundclub.app'];
+
+  it.each([
+    ['connecte', CONNECTE, 'CollectiviteJoin', 'CollectiviteJoinRequest'],
+    // Sans compte, la page du lien est publique (PublicMainNavigator) et propose la connexion ;
+    // la demande de rattachement, qui exige un compte, y ramene.
+    ['deconnecte', DECONNECTE, 'CollectiviteJoin', 'CollectiviteJoin'],
+    ['ajout de compte', AJOUT_DE_COMPTE, 'CollectiviteJoin', 'CollectiviteJoin'],
+  ])('%s : le lien partage par la Ville, et sa suite /rattacher', (_mode, etatApp, page, suite) => {
+    SITES.forEach((site) => {
+      const lien = buildPublicWebUrl({ path: cheminDuLienDeLaVille('jeton-42'), webUrl: site });
+      expect(lien).toBe(`${site}/invitation-ville/jeton-42`);
+
+      expect({
+        page: feuille(recevoir(etatApp, lien).etat),
+        prise: recevoir(etatApp, lien).prise,
+        suite: feuille(recevoir(etatApp, `${lien}/rattacher`).etat),
+      }).toEqual({
+        page: { ecran: page, params: { token: 'jeton-42' } },
+        prise: true,
+        suite: { ecran: suite, params: { token: 'jeton-42' } },
+      });
+    });
+  });
+});
+
+// LIENS-APP -- LES TROIS LISTES SE TIENNENT. Un chemin que le telephone confie a l app sans ecran
+// dans cette table « ne fait rien » : l app s ouvre sur l accueil, plus mal que le site. Et un
+// lien partage que l app sait ouvrir, mais que le telephone ne lui confie pas, ouvre le site (5a).
+// Ce filet lit le manifeste Android (filtre autoVerify de foundclub.app) et cette table ; le
+// fichier iOS du site est compare au MEME manifeste par le site (web,
+// scripts/__tests__/LIENS-APP-trois-listes.test.mjs). Un chemin oublie dans l une des trois
+// listes rougit l un des deux.
+describe('LIENS-APP -- chaque chemin confie a l app par Android mene a un ecran', () => {
+  const MANIFESTE = path.join(SOURCES, '..', 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+
+  /**
+   * Les prefixes du filtre verifie de foundclub.app.
+   * @returns {string[]} les android:pathPrefix
+   */
+  const prefixesAndroid = () => {
+    const filtre = [...fs.readFileSync(MANIFESTE, 'utf8')
+      .matchAll(/<intent-filter android:autoVerify="true">([\s\S]*?)<\/intent-filter>/g)]
+      .map((m) => m[1])
+      .find((bloc) => bloc.includes('android:host="foundclub.app"'));
+    return [...String(filtre).matchAll(/android:pathPrefix="([^"]+)"/g)].map((m) => m[1]);
+  };
+
+  // Un exemple d adresse REELLE par chemin reclame. Un prefixe ajoute au manifeste sans exemple
+  // ici rougit : ajoute l exemple ET l ecran de la table.
+  const EXEMPLES = {
+    '/events/': ['/events/evt-1'],
+    '/i/': ['/i/team/t-1?c=AbCdEfGhIjKlMnOpQrStUv12', '/i/event/e-1'],
+    // La page d installation porte des invitations (inviteLink.js, forme 2).
+    '/install.html': ['/install.html?type=team&id=t-1&invite=true'],
+    '/invitation-ville/': [cheminDuLienDeLaVille('jeton-42'), `${cheminDuLienDeLaVille('jeton-42')}/rattacher`],
+  };
+  // Les pages du site qui ne doivent JAMAIS partir a l app : vitrine et annuaire (SEO), paiement,
+  // QR des affiches (une redirection du site), et l ecran de la Ville qui fabrique le lien.
+  const PAGES_DU_SITE = [
+    '/annuaire/clubs/c-1/mon-club/',
+    '/licenses/pay/tok-1',
+    '/qr/abc123',
+    '/collectivite/v-1/inviter-un-club',
+    '/',
+  ];
+
+  /**
+   * Le prefixe Android qui reclame un chemin (pathPrefix : le debut du chemin, sans la query).
+   * @param {string} chemin le chemin
+   * @returns {string | undefined} le prefixe
+   */
+  const reclamePar = (chemin) => prefixesAndroid().find((p) => chemin.split('?')[0].startsWith(p));
+
+  it('chaque prefixe du manifeste a ses exemples, et chaque exemple est reclame', () => {
+    expect(prefixesAndroid().length).toBeGreaterThan(2);
+    expect(prefixesAndroid().filter((p) => !EXEMPLES[p])).toEqual([]);
+    expect(Object.values(EXEMPLES).flat().filter((chemin) => !reclamePar(chemin))).toEqual([]);
+    expect(PAGES_DU_SITE.filter((chemin) => reclamePar(chemin))).toEqual([]);
+  });
+
+  it.each([
+    ['connecte', CONNECTE, RACINE_CONNECTEE],
+    ['deconnecte', DECONNECTE, RACINE_DECONNECTEE],
+    ['ajout de compte', AJOUT_DE_COMPTE, RACINE_DECONNECTEE],
+  ])('%s : chaque exemple va a la fenetre d invitation ou a un ecran monte', (_mode, etatApp, racine) => {
+    const morts = Object.values(EXEMPLES).flat().flatMap((chemin) => {
+      const lien = `https://foundclub.app${chemin}`;
+      const { etat, prise } = recevoir(etatApp, lien);
+      return prise ? mortsDeLEtat(etat, racine, lien) : [];
+    });
+
+    expect(morts).toEqual([]);
   });
 });

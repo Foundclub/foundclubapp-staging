@@ -37,6 +37,7 @@ import { commonOptions } from '@/navigation/commonOptions';
 import { navigate as navigateRoot, navigationRef } from '@/navigation/navigationService';
 import { readPendingSquadInviteLink } from '@/navigation/pendingSquadInviteLink';
 import { RouteNames } from '@/navigation/routeNames';
+import useRetourAuLienDeLaVille from '@/navigation/useRetourAuLienDeLaVille';
 
 import {
   useMyCollectivites,
@@ -216,6 +217,13 @@ function PrivateNavigator() {
     userDataError,
     userDataLoading,
   ]);
+
+  // LIENS-APP (07/10) — le lien de la Ville ouvert sans compte : une fois connecté, et l'accueil
+  // fait (et la pile montée : pas pendant la lecture « Ville seule »), l'app revient à la page du lien.
+  useRetourAuLienDeLaVille(
+    Boolean(userData?.documentId) && !userDataLoading && !userDataError && !villeEnLecture
+      && !firstPendingOnboardingRoute,
+  );
 
   const canShowView = useCallback((/** @type {string} */ routeName) => {
     const view = onboardingViews?.views?.find((item) => item.route === routeName);
