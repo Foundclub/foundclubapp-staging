@@ -5665,8 +5665,11 @@ function Conversation({ navigation, route }) {
     // false` du bas et s affichait « Canal d annonce (lecture seule) ». Ce
     // n etait pas un choix — le serveur, lui, l autorise (chat-message.ts,
     // `ensureUserCanWriteInChat` ne restreint que `club` et `multisport`).
+    // 🐛 MSG1A (G1) — `group` manquait de la meme facon : tout groupe cree depuis
+    // « Nouvelle discussion » s'affichait en canal d'annonce.
     if (
       chatData.type === 'whisper'
+      || chatData.type === 'group'
       || chatData.type === 'team'
       || isLeagueConversation
       || isFriendlyMatchChat(chatData)
