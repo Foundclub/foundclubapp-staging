@@ -1359,7 +1359,6 @@ function Conversation({ navigation, route }) {
             {composition?.question || 'Sondage'}
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {options.map((option) => (
               <button
                 key={option?.id || option?.label}
@@ -2437,11 +2436,9 @@ function Conversation({ navigation, route }) {
               >
                 <div style={{ display: 'grid', gap: 4 }}>
                   <span style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
-                    // @ts-ignore: FIXME: Baseline TS regression
                     Reponse a {getDisplayName(replyTarget?.sender)}
                   </span>
                   <span style={{ color: baseTextColor, fontSize: 13 }}>
-                    // @ts-ignore: FIXME: Baseline TS regression
                     {String(replyTarget?.message || '').trim() || 'Message partagé'}
                   </span>
                 </div>
