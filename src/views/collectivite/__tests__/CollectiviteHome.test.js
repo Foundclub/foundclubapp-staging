@@ -1020,3 +1020,53 @@ describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesur
     expect(mockChiffresSemaine.refetch).toHaveBeenCalledTimes(1);
   });
 });
+
+// 🚧 VILLE-T18B (c) (07/10) — ajout de la T18, point 3 (G42b) : « Fermeture à venir » n'en
+// montrait que DEUX, sans rien pour voir les autres : la fermeture du Stade (« Ascension », 8 oct.)
+// et celle de « T18 Salle essai » (13 oct.) avaient disparu de l'accueil. Le serveur les rend
+// toutes (triées) ; l'accueil coupait à deux. Toutes doivent rester accessibles. ROUGE avant le lot.
+describe('VILLE-T18B (c) — toutes les fermetures à venir restent accessibles', () => {
+  const fermeture = (/** @type {number} */ n, /** @type {string} */ nom) => ({
+    documentId: `f${n}`,
+    endDate: `2030-10-0${n}`,
+    endTime: null,
+    facility: { documentId: `inst-${n}`, name: nom },
+    kind: 'closure',
+    reason: 'travaux',
+    startDate: `2030-10-0${n}`,
+    startTime: null,
+  });
+  const QUATRE = [
+    fermeture(1, 'Gymnase des Tilleuls'),
+    fermeture(2, 'T18 Salle essai'),
+    fermeture(3, 'Stade municipal de Montrivage'),
+    fermeture(4, 'Dojo municipal'),
+  ];
+  const cartes = (/** @type {any} */ arbre) => textes(arbre)
+    .filter((texte) => texte === 'Fermeture à venir').length;
+
+  it('4 à venir : les 2 premières, puis « Voir les 4 fermetures à venir » qui les montre toutes', async () => {
+    mockFermetures = lu({ data: QUATRE });
+    const arbre = await monter();
+    expect(cartes(arbre)).toBe(2);
+    expect(textes(arbre)).toContain('Voir les 4 fermetures à venir');
+
+    await appuyer(arbre, 'collectivite-home-fermetures-toutes');
+    expect(cartes(arbre)).toBe(4);
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      'Stade municipal de Montrivage', 'Dojo municipal',
+    ]));
+    await appuyer(arbre, 'collectivite-home-fermeture-f4');
+    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-montrivage', facilityId: 'inst-4', onglet: 'fermetures',
+    });
+  });
+
+  it('🔒 jumeau : 2 à venir, les deux, et aucun lien de plus', async () => {
+    mockFermetures = lu({ data: QUATRE.slice(0, 2) });
+    const arbre = await monter();
+    expect(cartes(arbre)).toBe(2);
+    expect(textes(arbre).some((texte) => texte.startsWith('Voir les ') && texte.includes('fermeture')))
+      .toBe(false);
+  });
+});

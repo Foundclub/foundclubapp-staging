@@ -154,8 +154,13 @@ function CollectiviteHome() {
   // COLL-C4B (02/10) — « Fermeture à venir » (P3v2-accueil, point d accroche de COLL-ACCUEIL) :
   // ce qui dure ou vient, toutes installations ; les deux premières.
   const fermetures = useCollectiviteClosures(collectiviteId);
-  const fermeturesAVenir = (Array.isArray(fermetures.data?.data) ? fermetures.data.data : [])
-    .slice(0, 2);
+  // VILLE-T18B (c) (T18, G42b) — les deux premières, et « Voir les N fermetures à venir » les
+  // montre toutes : couper à deux sans rien de plus en faisait disparaître (Stade, 8 oct.).
+  const [toutesLesFermetures, setToutesLesFermetures] = useState(false);
+  const listeDesFermetures = Array.isArray(fermetures.data?.data) ? fermetures.data.data : [];
+  const fermeturesAVenir = toutesLesFermetures
+    ? listeDesFermetures
+    : listeDesFermetures.slice(0, 2);
 
   const refetchPending = pending.refetch;
   // Au retour d'une demande tranchée, le compteur doit déjà être juste.
@@ -511,6 +516,23 @@ function CollectiviteHome() {
   const blocDesFermetures = fermeturesAVenir.length ? (
     <View style={{ gap: 8 }} testID="collectivite-home-fermetures">
       {fermeturesAVenir.map(carteDeFermeture)}
+      {listeDesFermetures.length > fermeturesAVenir.length ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          hitSlop={{
+            bottom: 8, left: 8, right: 8, top: 8,
+          }}
+          onPress={() => setToutesLesFermetures(true)}
+          style={{ alignSelf: 'flex-start' }}
+          testID="collectivite-home-fermetures-toutes"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {t('collectiviteFermetures.accueil.voirToutes', 'Voir les {{count}} fermetures à venir', {
+              count: listeDesFermetures.length,
+            })}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   ) : null;
 

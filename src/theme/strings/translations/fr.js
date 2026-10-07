@@ -6106,6 +6106,8 @@ export default {
       aVenir: 'Fermeture à venir',
       // FINITIONS11-COLL (03/10) — planches 2-3.
       personneAPrevenir: 'Aucun club n’y a de séance : personne à prévenir.',
+      // VILLE-T18B (c) : au-delà de deux, l'accueil les montre toutes sur demande.
+      voirToutes: 'Voir les {{count}} fermetures à venir',
     },
     bandeau: {
       bloque: 'Bloquée par la Ville, {{heures}}',
