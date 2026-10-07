@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  FlatList,
   Image,
   ScrollView,
   Text,
@@ -18,6 +19,7 @@ import {
   COLLECTIVITE_TYPES,
   collectiviteTypeLabel,
   nomOfficielDeCommune,
+  nomOfficielDIntercommunalite,
 } from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -25,6 +27,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
+import { normaliserLieu } from '@/components/organisms/filtersSheet/lieuDesFiltresClub';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import {
   continuerSurOrdinateur,
@@ -35,6 +38,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 import {
+  useCollectiviteReferentiel,
   useCollectiviteSignupSearch,
   useCommuneSearch,
   useCreateManagerRequest,
@@ -49,6 +53,33 @@ import { useIsDesktop } from '@/responsive';
  *   type: string }} ChoixCollectivite
  */
 /** @typedef {'firstname' | 'lastname' | 'jobTitle' | 'professionalEmail'} ChampVous */
+/**
+ * Une ligne de la liste de l'étape 1 : une collectivité à choisir…
+ * @typedef {{ choix: ChoixCollectivite, kind: 'choix', precision: string, recherche?: string,
+ *   testID: string }} LigneChoix
+ */
+/**
+ * … ou un département à ouvrir.
+ * @typedef {{ code: string, kind: 'departement', name: string, testID: string }} LigneDepartement
+ */
+/** @typedef {LigneChoix | LigneDepartement} Ligne */
+
+/**
+ * Les morceaux non vides, séparés par « · ».
+ * @param {...unknown} morceaux - Les morceaux.
+ * @returns {string} La ligne.
+ */
+const joindre = (...morceaux) => morceaux.filter(Boolean).join(' · ');
+
+/**
+ * Une fois chaque ligne (la clef de la liste est son testID).
+ * @param {Ligne[]} lignes - Les lignes.
+ * @returns {Ligne[]} Les lignes, sans doublon.
+ */
+const sansDoublon = (lignes) => {
+  const vues = new Set();
+  return lignes.filter((ligne) => !vues.has(ligne.testID) && Boolean(vues.add(ligne.testID)));
+};
 
 /**
  * Le message d'un refus du serveur que la personne peut lire (clefs de CET espace de noms) ;
@@ -84,7 +115,10 @@ const refusLisible = (t, code) => {
  * `P1-inscription-tel` et `-ordi`. Choisi au statut (UserRole), cet écran remplace TOUTES les
  * questions de sport : deux étapes, au VOUS (décision d'Adel « ton A »).
  *   1. Votre collectivité : son type, puis son nom ; une collectivité déjà sur FoundClub se
- *      choisit dans la liste, une autre devient une demande d'ouverture.
+ *      choisit dans la liste, une autre devient une demande d'ouverture. VILLE-INSCRIPTION
+ *      (07/10) : la liste du référentiel de l'État s'affiche DÈS L'OUVERTURE (régions,
+ *      départements, intercommunalités ; pour une commune, les départements puis leurs
+ *      communes), et taper la filtre. Référentiel muet : la saisie libre d'avant.
  *   2. Vous : prénom, nom, fonction, e-mail professionnel — ce qu'il faut pour vérifier, rien
  *      d'autre ; l'erreur s'écrit sous son champ dès qu'on le quitte.
  * L'envoi crée une DEMANDE DE GESTIONNAIRE (décision « console oui ») : aucun accès n'est
@@ -105,6 +139,10 @@ function CollectiviteSignup() {
   const [type, setType] = useState('commune');
   const [recherche, setRecherche] = useState('');
   const [choix, setChoix] = useState(/** @type {ChoixCollectivite | null} */ (null));
+  // VILLE-INSCRIPTION — le département ouvert, quand on cherche sa commune sans la taper.
+  const [departement, setDepartement] = useState(
+    /** @type {{ code: string, name: string } | null} */ (null),
+  );
   const [champs, setChamps] = useState({
     firstname: userData?.firstname || '',
     jobTitle: '',
@@ -119,12 +157,31 @@ function CollectiviteSignup() {
   // COLL-CONSOLE-BIS (03/10) — « Chercher la commune » (planches 7 et 8) : le référentiel de
   // l'État, lu par le serveur, pour une COMMUNE seulement.
   const communes = useCommuneSearch(recherche, { enabled: type === 'commune' });
+  // VILLE-INSCRIPTION (07/10) — les listes COMPLÈTES du référentiel, lues par le serveur. Les
+  // départements servent toujours : la porte d'entrée des communes, et le nom du département
+  // écrit sur chaque ligne de commune (« Démouville » n'est pas la démo : elle est dans le
+  // Calvados).
+  const enCommune = type === 'commune';
+  const departements = useCollectiviteReferentiel('departement');
+  const referentiel = useCollectiviteReferentiel(type, {
+    departement: departement?.code || null,
+    enabled: !enCommune || Boolean(departement),
+  });
   const envoi = /** @type {any} */ (useCreateManagerRequest());
   const fautes = signupContactErrors(champs);
 
   const resultats = (Array.isArray(trouvees.data) ? trouvees.data : [])
     .filter((collectivite) => collectivite?.type === type);
   const texte = recherche.trim();
+  // Une commune se cherche dans toute la France dès 3 lettres (le chemin d'avant) ; sinon, on
+  // parcourt la liste (les départements, puis les communes du département ouvert).
+  const rechercheNationale = enCommune && texte.length >= 3;
+  const parDepartements = enCommune && !departement && !rechercheNationale;
+  const liste = parDepartements ? departements : referentiel;
+  const listeEnChargement = !rechercheNationale && Boolean(liste.isLoading);
+  const listeDisponible = Array.isArray(liste.data) && liste.data.length > 0;
+  const nomsDesDepartements = new Map((Array.isArray(departements.data) ? departements.data : [])
+    .map((ligne) => [ligne?.code, ligne?.name]));
   // Les communes du référentiel : celle qui est DÉJÀ sur FoundClub se choisit comme une
   // existante (une fois), une absente garde son code INSEE pour la demande.
   const dejaListees = new Set(resultats.map((collectivite) => collectivite?.documentId));
@@ -134,13 +191,132 @@ function CollectiviteSignup() {
   ));
   const communesAbsentes = communesTrouvees.filter((commune) => !commune?.collectivite?.documentId);
   // Une collectivité absente de FoundClub reste possible : la demande servira à l'ouvrir. Quand
-  // le référentiel a trouvé des communes, on choisit parmi elles (avec leur code) ; sinon (autre
-  // type, référentiel muet ou en panne), la saisie libre d'avant reste.
-  const absente = texte.length >= 3 && !trouvees.isLoading && !communes.isLoading
+  // le référentiel a trouvé des communes, on choisit parmi elles (avec leur code) ; quand il donne
+  // la liste d'un autre type, on choisit dans la liste ; sinon (référentiel muet ou en panne), la
+  // saisie libre d'avant reste.
+  const saisieLibre = enCommune || (!listeDisponible && !listeEnChargement);
+  const absente = saisieLibre && texte.length >= 3 && !trouvees.isLoading && !communes.isLoading
     && communesTrouvees.length === 0
     && !resultats.some((collectivite) => (
       String(collectivite?.name).toLowerCase() === texte.toLowerCase()
     ));
+
+  const dejaSur = t('collectiviteAccueil.inscription.collectivite.dejaSur', 'Déjà sur FoundClub');
+  const pasEncore = t(
+    'collectiviteAccueil.inscription.collectivite.pasEncore',
+    'Pas encore sur FoundClub',
+  );
+
+  /**
+   * Une commune du référentiel (recherche ou département ouvert), choisie avec son code INSEE.
+   * @param {any} commune - La ligne du serveur.
+   * @returns {LigneChoix} La ligne.
+   */
+  const ligneDeCommune = (commune) => {
+    const nomDuDepartement = nomsDesDepartements.get(commune?.departement);
+    if (commune?.collectivite?.documentId) {
+      return {
+        choix: {
+          documentId: commune.collectivite.documentId,
+          name: commune.collectivite.name,
+          type: 'commune',
+        },
+        kind: 'choix',
+        precision: joindre(dejaSur, nomDuDepartement),
+        recherche: normaliserLieu(`${commune.collectivite.name} ${commune.name}`),
+        testID: `collectivite-inscription-trouvee-${commune.collectivite.documentId}`,
+      };
+    }
+    const nom = nomOfficielDeCommune(t, commune?.name);
+    return {
+      choix: {
+        codeInsee: commune?.codeInsee, documentId: null, name: nom, type: 'commune',
+      },
+      kind: 'choix',
+      precision: joindre(
+        Array.isArray(commune?.codesPostaux) ? commune.codesPostaux[0] : null,
+        nomDuDepartement,
+        t('collectiviteConsoleBis.commune.codeInsee', 'Code INSEE {{code}}', {
+          code: commune?.codeInsee,
+        }),
+      ),
+      recherche: normaliserLieu(`${nom} ${commune?.name} ${commune?.codesPostaux?.[0] || ''}`),
+      testID: `collectivite-inscription-commune-${commune?.codeInsee}`,
+    };
+  };
+
+  /**
+   * Une région, un département ou une intercommunalité de la liste du référentiel.
+   * @param {any} ligne - La ligne du serveur.
+   * @returns {LigneChoix} La ligne.
+   */
+  const ligneDuReferentiel = (ligne) => {
+    if (enCommune) return ligneDeCommune(ligne);
+    const surFoundClub = Boolean(ligne?.collectivite?.documentId);
+    let nom = String(ligne?.name || '');
+    if (surFoundClub) nom = ligne.collectivite.name;
+    else if (type === 'intercommunalite') nom = nomOfficielDIntercommunalite(ligne?.name);
+    let detail = '';
+    if (type === 'departement') detail = String(ligne?.code || '');
+    if (type === 'intercommunalite') {
+      detail = (Array.isArray(ligne?.departements) ? ligne.departements : [])
+        .map((/** @type {string} */ code) => nomsDesDepartements.get(code))
+        .filter(Boolean)
+        .join(', ');
+    }
+    return {
+      choix: { documentId: surFoundClub ? ligne.collectivite.documentId : null, name: nom, type },
+      kind: 'choix',
+      precision: joindre(detail, surFoundClub ? dejaSur : pasEncore),
+      recherche: normaliserLieu(`${nom} ${ligne?.name} ${ligne?.code || ''}`),
+      testID: surFoundClub
+        ? `collectivite-inscription-trouvee-${ligne.collectivite.documentId}`
+        : `collectivite-inscription-referentiel-${ligne?.code}`,
+    };
+  };
+
+  /** @type {Ligne[]} */
+  let lignes = [];
+  if (rechercheNationale || (!listeDisponible && !parDepartements)) {
+    // Le chemin d'avant : la recherche tapée (et, référentiel muet, la saisie libre).
+    lignes = [
+      ...resultats.map((collectivite) => /** @type {Ligne} */ ({
+        choix: {
+          documentId: collectivite.documentId, name: collectivite.name, type: collectivite.type,
+        },
+        kind: 'choix',
+        precision: joindre(dejaSur, nomsDesDepartements.get(communesTrouvees.find((commune) => (
+          commune?.collectivite?.documentId === collectivite.documentId
+        ))?.departement)),
+        testID: `collectivite-inscription-trouvee-${collectivite.documentId}`,
+      })),
+      ...communesSurFoundClub.map(ligneDeCommune),
+      ...communesAbsentes.map(ligneDeCommune),
+      ...(absente ? [
+        /** @type {Ligne} */ ({
+          choix: { documentId: null, name: texte, type },
+          kind: 'choix',
+          precision: pasEncore,
+          testID: 'collectivite-inscription-nouvelle',
+        }),
+      ] : []),
+    ];
+  } else if (parDepartements) {
+    lignes = (Array.isArray(liste.data) ? [...liste.data] : [])
+      .sort((a, b) => String(a?.name).localeCompare(String(b?.name), 'fr', { sensitivity: 'base' }))
+      .map((ligne) => /** @type {Ligne} */ ({
+        code: ligne.code,
+        kind: 'departement',
+        name: ligne.name,
+        testID: `collectivite-inscription-departement-${ligne.code}`,
+      }));
+  } else {
+    // La liste du référentiel, filtrée par le texte tapé (sans accent ni majuscule).
+    const cherche = normaliserLieu(texte);
+    lignes = (Array.isArray(liste.data) ? liste.data : []).map(ligneDuReferentiel)
+      .filter((ligne) => !cherche || String(ligne.recherche || '').includes(cherche));
+  }
+  lignes = sansDoublon(lignes);
 
   const messageDeFaute = (/** @type {ChampVous} */ nom) => {
     if (!(quittes[nom] || envoiTente) || !fautes[nom]) return undefined;
@@ -198,6 +374,7 @@ function CollectiviteSignup() {
         onPress={() => {
           setType(valeur);
           setChoix(null);
+          setDepartement(null);
         }}
         style={[
           ApplicationStyle.borderRadius12,
@@ -263,6 +440,44 @@ function CollectiviteSignup() {
       </TouchableOpacity>
     );
   };
+
+  // VILLE-INSCRIPTION — un département à ouvrir (sa commune se cherche sans la taper).
+  const ligneDepartement = (
+    /** @type {{ code: string, name: string, testID: string }} */ ligne,
+  ) => (
+    <TouchableOpacity
+      accessibilityLabel={t(
+        'collectiviteAccueil.inscription.collectivite.departementA11y',
+        'Voir les communes : {{nom}}',
+        { nom: ligne.name, ...SANS_ECHAPPEMENT },
+      )}
+      accessibilityRole="button"
+      onPress={() => setDepartement({ code: ligne.code, name: ligne.name })}
+      style={[
+        ApplicationStyle.borderRadius12,
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.padding[12],
+        {
+          backgroundColor: withAlpha(Colors.neutral00, 0.04),
+          borderColor: withAlpha(Colors.neutral00, 0.1),
+          borderWidth: 1,
+          gap: 12,
+          minHeight: 56,
+        },
+      ]}
+      testID={ligne.testID}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.name}</Text>
+        <Text style={[Fonts.p3, Fonts.neutral300]}>{ligne.code}</Text>
+      </View>
+      <Image
+        source={Images.arrowRight}
+        style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.primary500]}
+      />
+    </TouchableOpacity>
+  );
 
   const libelleEtape = t('collectiviteAccueil.inscription.etape', 'Étape {{numero}} sur 2', {
     numero: etape,
@@ -342,67 +557,89 @@ function CollectiviteSignup() {
         testID="collectivite-inscription-nom"
         value={recherche}
       />
-      <View accessibilityRole="list" style={{ gap: 8 }}>
-        {resultats.map((collectivite) => ligneChoix(
-          { documentId: collectivite.documentId, name: collectivite.name, type: collectivite.type },
-          t('collectiviteAccueil.inscription.collectivite.dejaSur', 'Déjà sur FoundClub'),
-          `collectivite-inscription-trouvee-${collectivite.documentId}`,
-        ))}
-        {communesSurFoundClub.map((commune) => ligneChoix(
-          {
-            documentId: commune.collectivite.documentId,
-            name: commune.collectivite.name,
-            type: 'commune',
-          },
-          t('collectiviteAccueil.inscription.collectivite.dejaSur', 'Déjà sur FoundClub'),
-          `collectivite-inscription-trouvee-${commune.collectivite.documentId}`,
-        ))}
-        {communesAbsentes.map((commune) => ligneChoix(
-          {
-            codeInsee: commune.codeInsee,
-            documentId: null,
-            name: nomOfficielDeCommune(t, commune.name),
-            type: 'commune',
-          },
-          [
-            Array.isArray(commune.codesPostaux) ? commune.codesPostaux[0] : null,
-            t('collectiviteConsoleBis.commune.codeInsee', 'Code INSEE {{code}}', {
-              code: commune.codeInsee,
-            }),
-          ].filter(Boolean).join(' · '),
-          `collectivite-inscription-commune-${commune.codeInsee}`,
-        ))}
-        {absente ? ligneChoix(
-          { documentId: null, name: texte, type },
-          t('collectiviteAccueil.inscription.collectivite.pasEncore', 'Pas encore sur FoundClub'),
-          'collectivite-inscription-nouvelle',
-        ) : null}
-      </View>
-      {choix && !choix.documentId ? (
-        <View
-          style={[
-            ApplicationStyle.borderRadius12,
-            Spaces.padding[12],
-            {
-              backgroundColor: withAlpha(Colors.primary500, 0.1),
-              borderColor: withAlpha(Colors.primary500, 0.3),
-              borderWidth: 1,
-            },
-          ]}
-          testID="collectivite-inscription-ouverture"
-        >
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
+      {parDepartements && listeDisponible ? (
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'collectiviteAccueil.inscription.collectivite.choisirDepartement',
+            'Votre commune : choisissez son département, ou tapez son nom.',
+          )}
+        </Text>
+      ) : null}
+      {enCommune && departement && !rechercheNationale ? (
+        <View style={{ gap: 4 }}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setDepartement(null)}
+            style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
+            testID="collectivite-inscription-tous-departements"
+          >
+            <Image
+              source={Images.arrowLeft}
+              style={[ApplicationStyle.icon16, ApplicationStyle.tintColor.primary500]}
+            />
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t(
+                'collectiviteAccueil.inscription.collectivite.tousLesDepartements',
+                'Tous les départements',
+              )}
+            </Text>
+          </TouchableOpacity>
+          <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
             {t(
-              'collectiviteAccueil.inscription.collectivite.ouverture',
-              // eslint-disable-next-line max-len
-              '{{nom}} n’a pas encore d’espace FoundClub. Continuez : votre demande servira à l’ouvrir.',
-              { nom: choix.name, ...SANS_ECHAPPEMENT },
+              'collectiviteAccueil.inscription.collectivite.departement',
+              'Département {{code}} · {{nom}}',
+              { code: departement.code, nom: departement.name, ...SANS_ECHAPPEMENT },
             )}
           </Text>
         </View>
       ) : null}
     </View>
   );
+
+  // Ce que dit la liste quand elle n'a aucune ligne : elle se charge, l'État ne répond pas (la
+  // saisie libre reste), ou rien ne correspond au texte tapé.
+  let listeVide = null;
+  if (listeEnChargement) {
+    listeVide = t(
+      'collectiviteAccueil.inscription.collectivite.chargement',
+      'Chargement de la liste…',
+    );
+  } else if (!listeDisponible && !rechercheNationale && texte.length < 3) {
+    listeVide = t(
+      'collectiviteAccueil.inscription.collectivite.indisponible',
+      'La liste n’est pas disponible pour le moment : tapez le nom.',
+    );
+  } else if (listeDisponible && !rechercheNationale && texte) {
+    listeVide = t(
+      'collectiviteAccueil.inscription.collectivite.aucune',
+      'Aucune collectivité ne correspond à « {{texte}} ».',
+      { texte, ...SANS_ECHAPPEMENT },
+    );
+  }
+
+  const bandeauOuverture = choix && !choix.documentId ? (
+    <View
+      style={[
+        ApplicationStyle.borderRadius12,
+        Spaces.padding[12],
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.1),
+          borderColor: withAlpha(Colors.primary500, 0.3),
+          borderWidth: 1,
+        },
+      ]}
+      testID="collectivite-inscription-ouverture"
+    >
+      <Text style={[Fonts.p2, Fonts.neutral200]}>
+        {t(
+          'collectiviteAccueil.inscription.collectivite.ouverture',
+          // eslint-disable-next-line max-len
+          '{{nom}} n’a pas encore d’espace FoundClub. Continuez : votre demande servira à l’ouvrir.',
+          { nom: choix.name, ...SANS_ECHAPPEMENT },
+        )}
+      </Text>
+    </View>
+  ) : null;
 
   const champ = (
     /** @type {ChampVous} */ nom,
@@ -461,49 +698,87 @@ function CollectiviteSignup() {
       bgImage="bg2"
       contentContainerStyle={[Spaces.paddingVertical[16], Alignments.fill]}
     >
-      <ScrollView
-        contentContainerStyle={{
-          alignSelf: 'center', gap: 24, maxWidth: 560, paddingBottom: 24, width: '100%',
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {enTete}
-        {etape === 1 ? etapeCollectivite : etapeVous}
-      </ScrollView>
+      {etape === 1 ? (
+        // VILLE-INSCRIPTION — une liste VIRTUALISÉE : 1 255 intercommunalités ne se montent pas
+        // d'un coup. L'en-tête (étape, type, nom) défile avec elle.
+        <FlatList
+          accessibilityRole="list"
+          contentContainerStyle={{
+            alignSelf: 'center', gap: 8, maxWidth: 560, paddingBottom: 24, width: '100%',
+          }}
+          data={lignes}
+          initialNumToRender={20}
+          keyboardShouldPersistTaps="handled"
+          keyExtractor={(ligne) => ligne.testID}
+          ListEmptyComponent={listeVide ? (
+            <Text style={[Fonts.p2, Fonts.neutral300]}>{listeVide}</Text>
+          ) : null}
+          ListHeaderComponent={(
+            <View style={{ gap: 24, paddingBottom: 8 }}>
+              {enTete}
+              {etapeCollectivite}
+            </View>
+          )}
+          maxToRenderPerBatch={20}
+          renderItem={({ item }) => (item.kind === 'departement'
+            ? ligneDepartement(item)
+            : ligneChoix(item.choix, item.precision, item.testID))}
+          testID="collectivite-inscription-liste"
+          windowSize={11}
+        />
+      ) : (
+        <ScrollView
+          contentContainerStyle={{
+            alignSelf: 'center', gap: 24, maxWidth: 560, paddingBottom: 24, width: '100%',
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {enTete}
+          {etapeVous}
+        </ScrollView>
+      )}
       <View
-        style={[
-          { alignSelf: 'center', maxWidth: 560, width: '100%' },
-          // FINITIONS18 11 (planche 8, etat A) : sur ordinateur, « Annuler » puis « Continuer »,
-          // a droite.
-          surOrdinateur ? { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' } : null,
-        ]}
+        style={{
+          alignSelf: 'center', gap: 12, maxWidth: 560, width: '100%',
+        }}
       >
-        {surOrdinateur && etape === 1 ? (
-          <Button
-            onPress={retour}
-            style={{ minWidth: 120 }}
-            title={t('common.actions.cancel', 'Annuler')}
-            variant="Ghost"
-          />
-        ) : null}
-        {etape === 1 ? (
-          <Button
-            disabled={!choix}
-            onPress={() => setEtape(2)}
-            style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
-            title={t('collectiviteAccueil.inscription.continuer', 'Continuer')}
-            variant="Primary"
-          />
-        ) : (
-          <Button
-            disabled={Boolean(envoi.isPending)}
-            isLoading={Boolean(envoi.isPending)}
-            onPress={envoyer}
-            style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
-            title={t('collectiviteAccueil.inscription.envoyer', 'Envoyer ma demande')}
-            variant="Primary"
-          />
-        )}
+        {/* Le bandeau d'ouverture reste en vue au-dessus du bouton : la ligne choisie peut être
+            loin dans une liste longue. */}
+        {etape === 1 ? bandeauOuverture : null}
+        <View
+          style={[
+            // FINITIONS18 11 (planche 8, etat A) : sur ordinateur, « Annuler » puis « Continuer »,
+            // a droite.
+            surOrdinateur ? { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' } : null,
+          ]}
+        >
+          {surOrdinateur && etape === 1 ? (
+            <Button
+              onPress={retour}
+              style={{ minWidth: 120 }}
+              title={t('common.actions.cancel', 'Annuler')}
+              variant="Ghost"
+            />
+          ) : null}
+          {etape === 1 ? (
+            <Button
+              disabled={!choix}
+              onPress={() => setEtape(2)}
+              style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
+              title={t('collectiviteAccueil.inscription.continuer', 'Continuer')}
+              variant="Primary"
+            />
+          ) : (
+            <Button
+              disabled={Boolean(envoi.isPending)}
+              isLoading={Boolean(envoi.isPending)}
+              onPress={envoyer}
+              style={surOrdinateur ? STYLE_CONTINUER_ORDINATEUR : undefined}
+              title={t('collectiviteAccueil.inscription.envoyer', 'Envoyer ma demande')}
+              variant="Primary"
+            />
+          )}
+        </View>
       </View>
     </FormScreenContainer>
   );
