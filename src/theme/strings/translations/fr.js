@@ -6758,6 +6758,7 @@ export default {
         selectedBadge: 'Ton vote',
       },
       common: {
+        deletedAccount: 'Compte supprimé',
         member: 'Membre',
         vote: 'vote',
       },

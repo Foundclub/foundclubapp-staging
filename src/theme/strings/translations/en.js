@@ -6347,6 +6347,7 @@ export default {
         selectedBadge: 'Your vote',
       },
       common: {
+        deletedAccount: 'Deleted account',
         member: 'Member',
         vote: 'vote',
       },
