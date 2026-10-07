@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubSlotRequest from '../ClubSlotRequest';
@@ -21,6 +21,11 @@ import ClubSlotRequest from '../ClubSlotRequest';
 const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
+// VILLE-T18C (07/10) — l'écran écoute « quitter l'écran » (`beforeRemove`) : le témoin garde
+// l'écouteur pour jouer un Retour.
+/** @type {Record<string, (evenement: any) => void>} */
+const mockEcouteurs = {};
 let mockParams = {};
 
 jest.mock('@/services/client', () => ({
@@ -39,7 +44,15 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
-  useNavigation: () => ({ goBack: jest.fn(), navigate: mockNavigate }),
+  useNavigation: () => ({
+    addListener: (/** @type {string} */ nom, /** @type {(e: any) => void} */ ecouteur) => {
+      mockEcouteurs[nom] = ecouteur;
+      return () => {};
+    },
+    dispatch: mockDispatch,
+    goBack: jest.fn(),
+    navigate: mockNavigate,
+  }),
   useRoute: () => ({ params: mockParams }),
 }));
 jest.mock('react-i18next', () => {
@@ -108,8 +121,13 @@ jest.mock('@/components/molecules/input/Input', () => {
 jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN } = jest.requireActual('react-native');
+  // VILLE-T18C (07/10) — deux champs de date (« Jour », « Jusqu’au ») : reconnus par leur libellé,
+  // l'indice (placeholder) affiché quand le champ est vide, comme le vrai champ.
   return function DatePickerMock(/** @type {any} */ props) {
-    return reactActuel.createElement(TexteRN, { testID: 'demande-jour' }, props.value);
+    return reactActuel.createElement(TexteRN, {
+      onChange: props.onChange,
+      testID: props.label === 'Jour' ? 'demande-jour' : `demande-date-${props.label}`,
+    }, props.value || props.placeholder || '');
   };
 });
 
@@ -243,6 +261,8 @@ beforeEach(() => {
   mockGet.mockReset();
   mockPost.mockReset();
   mockNavigate.mockReset();
+  mockDispatch.mockReset();
+  Object.keys(mockEcouteurs).forEach((nom) => { delete mockEcouteurs[nom]; });
   mockGet.mockImplementation(async (/** @type {string} */ url) => {
     // eslint-disable-next-line max-len
     if (url === '/clubs/club-A/collectivite-installations') return { data: { data: [INSTALLATION] } };
@@ -654,5 +674,139 @@ describe('FINITIONS12-COLL point 6 — « Si la mairie refuse, la séance sera a
     const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
     await attendre(() => textes(arbre).some((texte) => /posé|dirigeant/.test(texte)));
     expect(textes(arbre)).not.toContain(PHRASE);
+  });
+});
+
+// 🚚 VILLE-T18C (07/10) — point 1, tournée T18 (D09b) : « Chaque semaine » partait en 36 POST
+// /api/events UN PAR UN, 44 s, pendant lesquelles le formulaire restait affiché tel quel (un 2ᵉ
+// appui renvoyait tout) ; et aucun champ de fin : la série courait jusqu'au 24 juin. Le serveur n'a
+// AUCUNE route de série (admin `src/api/event/routes/event-custom.ts`, mesuré le 07/10) : l'envoi
+// reste une séance par date. ROUGE avant le lot :
+//   - la 1re date part SEULE (le serveur ne prévient la Ville qu'une fois par série, en cherchant
+//     une demande plus ancienne de la même série : elle doit exister avant les autres), puis les
+//     autres TROIS à la fois (`createEventsWithConcurrency`, comme l'assistant d'événement) ;
+//   - l'écran dit où en est l'envoi ; un 2ᵉ appui ne renvoie rien ; Retour pendant l'envoi est
+//     retenu ;
+//   - « Jusqu’au » : la série s'arrête à la date choisie (sans date : fin de saison).
+// eslint-disable-next-line max-len
+describe('VILLE-T18C point 1 — une série part vite, dit où elle en est, et ne se double pas', () => {
+  /** @type {Array<() => void>} */
+  let liberer = [];
+  let barriere = false;
+  /** @type {string[]} */
+  let journal = [];
+  let enVol = 0;
+  let maxEnVol = 0;
+  const posesLentes = () => {
+    liberer = [];
+    barriere = false;
+    journal = [];
+    enVol = 0;
+    maxEnVol = 0;
+    mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
+      if (url !== '/events') return { data: {} };
+      const rang = mockPost.mock.calls.filter(([u]) => u === '/events').length;
+      journal.push(`debut-${rang}`);
+      enVol += 1;
+      maxEnVol = Math.max(maxEnVol, enVol);
+      if (barriere && rang > 1) await new Promise((r) => { liberer.push(() => r(null)); });
+      else await new Promise((r) => { setTimeout(r, 1); });
+      enVol -= 1;
+      journal.push(`fin-${rang}`);
+      return {
+        data: {
+          corps,
+          data: {
+            documentId: `ev-${rang}`,
+            pendingReason: 'facility_overbooking',
+            status: 'pending_validation',
+          },
+        },
+      };
+    });
+  };
+  const poses = () => mockPost.mock.calls.filter(([url]) => url === '/events');
+  const appuyerSansAttendre = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
+    const cible = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === testID
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { cible.props.onPress(); });
+  };
+
+  // eslint-disable-next-line max-len
+  it('la 1re date part seule, puis trois à la fois ; l’écran dit où il en est ; ni 2ᵉ appui ni Retour ne dérangent', async () => {
+    posesLentes();
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    barriere = true;
+    await appuyerSansAttendre(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => liberer.length === 3);
+    expect(journal.slice(0, 3)).toEqual(['debut-1', 'fin-1', 'debut-2']);
+    expect(maxEnVol).toBe(3);
+    expect(textes(arbre))
+      .toContain('Envoi en cours : 1 sur 39 dates envoyées. Reste sur cet écran.');
+
+    await appuyerSansAttendre(arbre, 'bouton-Envoyer la demande');
+    expect(poses()).toHaveLength(4);
+
+    const retenir = jest.fn();
+    await act(async () => {
+      mockEcouteurs.beforeRemove?.({
+        data: { action: { type: 'GO_BACK' } }, preventDefault: retenir,
+      });
+    });
+    expect(retenir).toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith(
+      'Envoi en cours',
+      'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+    );
+    expect(mockDispatch).not.toHaveBeenCalled();
+
+    barriere = false;
+    await act(async () => { liberer.forEach((suite) => suite()); });
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(poses()).toHaveLength(39);
+    alerte.mockRestore();
+  });
+
+  it('un double appui sur « Envoyer » n’envoie la demande qu’une fois', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
+    const cible = bouton(arbre, 'Envoyer la demande');
+    await act(async () => {
+      cible.props.onPress();
+      cible.props.onPress();
+    });
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(poses()).toHaveLength(1);
+  });
+
+  // eslint-disable-next-line max-len
+  it('« Jusqu’au » : la série s’arrête à la date choisie ; sans date, à la fin de la saison', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => textes(arbre).includes('39 dates, jusqu’au jeudi 26 juin.'));
+    expect(textes(arbre)).toContain('Fin de la saison');
+    const champ = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'demande-date-Jusqu’au' && typeof n.props?.onChange === 'function'
+    ))[0];
+    await act(async () => { champ.props.onChange('24/10/2030'); });
+    await attendre(() => textes(arbre).includes('4 dates, jusqu’au jeudi 24 octobre.'));
+    const apercus = mockGet.mock.calls
+      .filter(([url]) => url === '/facilities/gym-ville/season-slots/preview')
+      .map(([, options]) => options?.params || {});
+    expect(apercus.at(-1))
+      .toEqual(expect.objectContaining({ validFrom: JOUR, validUntil: '2030-10-24' }));
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    await appuyer(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(poses().map(([, corps]) => corps.data.date.slice(0, 10)))
+      .toEqual(['2030-10-03', '2030-10-10', '2030-10-17', '2030-10-24']);
+    // eslint-disable-next-line max-len
+    expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 24 octobre · Gymnase des Tilleuls');
   });
 });

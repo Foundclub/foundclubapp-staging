@@ -2,9 +2,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -15,6 +18,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import {
   datesDeLaDemande,
+  finDeLaSerie,
   finDeSaison,
   horsOuverture,
 } from '@/domains/collectivite/collectiviteDemandes';
@@ -41,7 +45,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetEventTypes } from '@/services/event/eventQueries';
-import { announceEventSeries, createEventsSequentially } from '@/services/event/eventService';
+import { announceEventSeries, createEventsWithConcurrency } from '@/services/event/eventService';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import { useClubTeamsForSlot, useSeasonSlotPreview } from '@/services/seasonSlot/seasonSlotQueries';
@@ -51,6 +55,9 @@ import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
 
 // Au-delà de cette largeur (ordinateur), la saisie et la place côte à côte.
 const LARGEUR_DEUX_COLONNES = 1024;
+// VILLE-T18C (07/10) — les dates d'une série qui partent EN MÊME TEMPS, après la première (même
+// réglage que l'assistant d'événement, `CREATE_EVENT_BATCH_CONCURRENCY` d'EventWizardRecap).
+const ENVOIS_EN_MEME_TEMPS = 3;
 
 /**
  * Un jour « JJ/MM/AAAA » (le champ date) en « AAAA-MM-JJ », ou ''.
@@ -119,7 +126,15 @@ function ClubSlotRequest({
   const [debut, setDebut] = useState(params.startTime || '');
   const [fin, setFin] = useState(params.endTime || '');
   const [mot, setMot] = useState('');
+  // VILLE-T18C (07/10) — la fin choisie d'une série (« Jusqu’au », JJ/MM/AAAA) ; vide : la saison.
+  const [jusquA, setJusquA] = useState('');
   const [envoi, setEnvoi] = useState(false);
+  // VILLE-T18C — où en est l'envoi d'une série : { fait, total }.
+  const [avancement, setAvancement] = useState(
+    /** @type {{ fait: number, total: number } | null} */ (null),
+  );
+  // VILLE-T18C — un 2ᵉ appui arrive avant que `envoi` soit relu : le verrou est une référence.
+  const enCours = useRef(false);
   const [erreur, setErreur] = useState('');
   const [resultat, setResultat] = useState(/** @type {any} */ (null));
 
@@ -134,6 +149,19 @@ function ClubSlotRequest({
     .find((type) => isTrainingEventType(type?.name)) || null;
 
   const jourIso = versIso(jour);
+  const jusquAIso = versIso(jusquA);
+  const datesDeLaSerie = useMemo(
+    () => (hebdo ? datesDeLaDemande(jourIso, true, jusquAIso) : []),
+    [hebdo, jourIso, jusquAIso],
+  );
+  const derniereDate = datesDeLaSerie.at(-1);
+  const motsDeLaSerie = derniereDate
+    ? {
+      jour: format(parse(derniereDate, 'yyyy-MM-dd', new Date()), 'EEEE d MMMM', { locale: fr }),
+      nombre: datesDeLaSerie.length,
+      ...SANS_ECHAPPEMENT,
+    }
+    : null;
   // eslint-disable-next-line max-len
   const heuresLisibles = isTime(debut) && isTime(fin) && (toMinutes(debut) ?? 0) < (toMinutes(fin) ?? 0);
   const ouverture = toMinutes(installation?.openingTime);
@@ -155,11 +183,11 @@ function ClubSlotRequest({
         startTime: debut,
         ...(equipe ? { team: equipe } : {}),
         validFrom: jourIso,
-        validUntil: hebdo ? finDeSaison(jourIso) : jourIso,
+        validUntil: hebdo ? finDeLaSerie(jourIso, jusquAIso) : jourIso,
         weekday: isoWeekdayOf(parse(jourIso, 'yyyy-MM-dd', new Date())),
       }
       : null
-  ), [clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso]);
+  ), [clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso, jusquAIso]);
   const apercu = useSeasonSlotPreview(installationId, parametresApercu);
   const place = apercu.data?.data || null;
   // Ce que le serveur fera : `direct`, `dirigeant`, `mairie`, `complet` ; absent (serveur
@@ -207,14 +235,16 @@ function ClubSlotRequest({
   const pourLaMairie = !posee && issue !== 'dirigeant';
 
   const envoyer = async () => {
+    if (enCours.current) return;
     // eslint-disable-next-line max-len
     if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || horsHeures || refusee) return;
+    enCours.current = true;
     setEnvoi(true);
     setErreur('');
     try {
       const corps = payloadsDeLaDemande({
         clubId,
-        dates: datesDeLaDemande(jourIso, hebdo),
+        dates: datesDeLaDemande(jourIso, hebdo, jusquAIso),
         debut,
         facilityId: installationId,
         fin,
@@ -228,10 +258,25 @@ function ClubSlotRequest({
       // joueurs une fois posée (les séances posées d'office dans le créneau du club ; celles en
       // attente de la mairie ne s'annoncent pas). Chaque séance part donc « j'annoncerai ».
       const serie = Boolean(corps[0]?.recurrenceGroupId);
-      const { created, failed } = await createEventsSequentially(corps, {
-        announceSeriesLater: serie,
-        suppressCelebration: true,
-      });
+      // 🚚 VILLE-T18C (07/10, tournée T18 D09b) — 36 dates partaient UNE PAR UNE (44 s). Le
+      // serveur n'a pas de route de série : une séance par date, mais la 1re SEULE, puis trois à
+      // la fois. La 1re d'abord : le serveur ne prévient la Ville qu'une fois par série, en
+      // cherchant une demande plus ancienne de la même série (admin
+      // facility-override-request.ts, la poussée « nouvelle demande ») ; elle doit exister avant
+      // que les autres la cherchent.
+      const options = { announceSeriesLater: serie, suppressCelebration: true };
+      const total = corps.length;
+      if (total > 1) setAvancement({ fait: 0, total });
+      const premiere = await createEventsWithConcurrency(corps.slice(0, 1), options);
+      const suite = total > 1
+        ? await createEventsWithConcurrency(corps.slice(1), {
+          ...options,
+          concurrency: ENVOIS_EN_MEME_TEMPS,
+          onProgress: ({ completed }) => setAvancement({ fait: 1 + completed, total }),
+        })
+        : { created: [], failed: [] };
+      const created = [...premiere.created, ...suite.created];
+      const failed = [...premiere.failed, ...suite.failed];
       if (!created.length) {
         setErreur(getErrorMessage(/** @type {any} */ (failed[0]?.error)));
         return;
@@ -261,9 +306,30 @@ function ClubSlotRequest({
     } catch (error) {
       setErreur(getErrorMessage(/** @type {any} */ (error)));
     } finally {
+      enCours.current = false;
       setEnvoi(false);
+      setAvancement(null);
     }
   };
+
+  // VILLE-T18C (07/10) — RETOUR PENDANT L'ENVOI : une série coupée en route laisserait une partie
+  // de ses dates au serveur et l'autre nulle part. On retient, et on dit pourquoi.
+  // ponytail: sur le site, le « retour » du NAVIGATEUR ne passe pas par `beforeRemove` (même limite
+  // qu'AdminCollectiviteForm) ; la flèche de l'écran, si.
+  useEffect(() => {
+    if (enPanneau) return undefined;
+    return navigation.addListener?.('beforeRemove', (/** @type {any} */ evenement) => {
+      if (!enCours.current) return;
+      evenement.preventDefault();
+      Alert.alert(
+        t('collectiviteDemandes.club.envoiEnCoursTitre', 'Envoi en cours'),
+        t(
+          'collectiviteDemandes.club.envoiEnCoursAttends',
+          'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+        ),
+      );
+    });
+  }, [enPanneau, navigation, t]);
 
   // COLL-C3B-BIS (planche 43) — en panneau, le planning dessine la place demandée en pointillé
   // pendant la saisie : il reçoit le brouillon (jour, heures, équipe), et rien une fois envoyé.
@@ -306,7 +372,7 @@ function ClubSlotRequest({
           // COLL-FIX2 (T10) : la DERNIÈRE séance de la série (celle que le serveur et la Ville
           // disent), pas la fin de saison : « 30 juin » ici, « 24 juin » chez la Ville.
           // eslint-disable-next-line max-len
-          jusquAu: format(parse(datesDeLaDemande(jourIso, true).at(-1) || finDeSaison(jourIso), 'yyyy-MM-dd', new Date()), 'd MMMM', { locale: fr }),
+          jusquAu: format(parse(datesDeLaDemande(jourIso, true, jusquAIso).at(-1) || finDeSaison(jourIso), 'yyyy-MM-dd', new Date()), 'd MMMM', { locale: fr }),
           lieu: installation?.name || '',
           ...SANS_ECHAPPEMENT,
         },
@@ -642,9 +708,36 @@ function ClubSlotRequest({
       <DatePickerInput
         label={t('collectiviteDemandes.club.jour', 'Jour')}
         minimumDate={new Date()}
-        onChange={(/** @type {string} */ valeur) => setJour(valeur)}
+        onChange={(/** @type {string} */ valeur) => {
+          setJour(valeur);
+          // Une fin choisie AVANT le nouveau jour ne vaut plus : la saison reprend.
+          if (jusquAIso && jusquAIso < versIso(valeur)) setJusquA('');
+        }}
         value={jour}
       />
+      {/* VILLE-T18C (07/10, tournée T18 D09) — une série choisit sa fin ; sans date, la saison. */}
+      {hebdo ? (
+        <View style={{ gap: 4 }}>
+          <DatePickerInput
+            label={t('collectiviteDemandes.club.jusquAu', 'Jusqu’au')}
+            // eslint-disable-next-line max-len
+            maximumDate={jourIso ? parse(finDeSaison(jourIso), 'yyyy-MM-dd', new Date()) : undefined}
+            minimumDate={jourIso ? parse(jourIso, 'yyyy-MM-dd', new Date()) : new Date()}
+            onChange={(/** @type {string} */ valeur) => setJusquA(valeur)}
+            placeholder={t('collectiviteDemandes.club.finDeLaSaison', 'Fin de la saison')}
+            value={jusquA}
+          />
+          {motsDeLaSerie ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]} testID="demande-serie-compte">
+              {datesDeLaSerie.length === 1
+                // eslint-disable-next-line max-len
+                ? t('collectiviteDemandes.club.serieUneDate', 'Une seule date : le {{jour}}.', motsDeLaSerie)
+                // eslint-disable-next-line max-len
+                : t('collectiviteDemandes.club.serieCompte', '{{nombre}} dates, jusqu’au {{jour}}.', motsDeLaSerie)}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       <View style={[Alignments.row, { gap: 12 }]}>
         <View style={{ flex: 1 }}>
           <Input
@@ -735,6 +828,20 @@ function ClubSlotRequest({
         </Text>
       ) : null}
       {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
+      {/* VILLE-T18C (07/10) — l'envoi d'une série dit où il en est (avant : 44 s sans un mot). */}
+      {envoi && avancement ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[Fonts.p3Bold, Fonts.neutral100]}
+          testID="demande-avancement"
+        >
+          {t(
+            'collectiviteDemandes.club.envoiEnCours',
+            'Envoi en cours : {{fait}} sur {{total}} dates envoyées. Reste sur cet écran.',
+            { fait: avancement.fait, total: avancement.total },
+          )}
+        </Text>
+      ) : null}
       <Button
         // eslint-disable-next-line max-len
         disabled={envoi || Boolean(horsHeures) || refusee || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
