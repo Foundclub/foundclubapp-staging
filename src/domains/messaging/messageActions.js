@@ -22,8 +22,13 @@
  * trois seuls faits dont l ecran dispose au moment de l appui long — et c est
  * voulu : ces trois-la sont deja calcules par la vue, les recalculer ici
  * demanderait d y importer la moitie de la messagerie.
- * @type {{condition: (etat: {canCopy: boolean, canEdit: boolean, isMine: boolean}) => boolean,
- *   destructive?: boolean, fallback: string, key: string, labelKey: string}[]}
+ *
+ * MESSAGERIE-1C — « Modifier la composition » (pack §3.2, §3.12) : sous la carte d'une
+ * convocation publiee, pour qui peut convoquer dans cette equipe (`canEditComposition`, calcule
+ * par la vue : entraineur de l'equipe ou super-admin). `icone` sert au menu de MESSAGERIE-1A.
+ * @type {{condition: (etat: {canCopy: boolean, canEdit: boolean, canEditComposition: boolean,
+ *   isMine: boolean}) => boolean, destructive?: boolean, fallback: string, icone?: string,
+ *   key: string, labelKey: string}[]}
  */
 export const MESSAGE_ACTIONS = [
   {
@@ -48,6 +53,13 @@ export const MESSAGE_ACTIONS = [
     labelKey: 'conversation.actions.edit',
   },
   {
+    condition: ({ canEditComposition }) => Boolean(canEditComposition),
+    fallback: 'Modifier la composition',
+    icone: 'penSquare',
+    key: 'editComposition',
+    labelKey: 'conversationConvocation.longPressEdit',
+  },
+  {
     condition: ({ isMine }) => Boolean(isMine),
     destructive: true,
     fallback: 'Supprimer',
@@ -66,7 +78,8 @@ export const MESSAGE_ACTIONS = [
 
 /**
  * Les actions a afficher pour un message donne.
- * @param {{canCopy?: boolean, canEdit?: boolean, isMine?: boolean}} [etat]
+ * @param {{canCopy?: boolean, canEdit?: boolean, canEditComposition?: boolean,
+ *   isMine?: boolean}} [etat]
  *   Ce que la vue sait du message.
  * @returns {typeof MESSAGE_ACTIONS} Les actions retenues, dans l ordre
  *   d affichage.
@@ -75,6 +88,7 @@ export const getMessageActions = (etat) => {
   const faits = {
     canCopy: Boolean(etat?.canCopy),
     canEdit: Boolean(etat?.canEdit),
+    canEditComposition: Boolean(etat?.canEditComposition),
     isMine: Boolean(etat?.isMine),
   };
 

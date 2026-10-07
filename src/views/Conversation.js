@@ -109,6 +109,12 @@ import {
   useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
+import ConvocationWizardDiffere from '@/views/conversationConvocation/ConvocationWizardDiffere';
+import {
+  canConvokeFromChat,
+  getTeamIdOfChat,
+} from '@/views/conversationConvocation/convocationWizardUtils';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -863,6 +869,24 @@ function Conversation({ navigation, route }) {
     userData?.team?.documentId,
   ]);
   const isGroupChat = chatData?.type === 'group';
+
+  // MESSAGERIE-1C — LA CONVOCATION DEPUIS LE GROUPE D'EQUIPE : qui peut convoquer (entraineur de
+  // l'equipe du fil, super-admin), et l'assistant, monte seulement quand on l'ouvre.
+  const peutConvoquer = useMemo(
+    () => canConvokeFromChat({ chat: chatData, user: userData }),
+    [chatData, userData],
+  );
+  const [demandeConvocation, setDemandeConvocation] = useState(/** @type {any} */ (null));
+  const ouvrirModificationConvocation = useCallback((/** @type {any} */ demande) => {
+    const composition = demande?.composition;
+    if (!composition?.eventId) return;
+    setDemandeConvocation({
+      eventId: String(composition.eventId),
+      eventSummary: composition,
+      mode: 'edit',
+      startStep: demande?.startStep === 3 ? 3 : 2,
+    });
+  }, []);
 
   // 🔒 CONVAVERT (C4) — CE FIL EST-IL RATTACHE A UN CLUB ?
   //
@@ -3071,9 +3095,16 @@ function Conversation({ navigation, route }) {
         label: t('conversation.attachments.event', 'Événement'),
         unavailableReason: eventReason,
       },
+      // MESSAGERIE-1C (pack §3.5) — fil d'equipe, entraineur ou super-admin seulement.
+      ...(peutConvoquer ? [{
+        icon: 'CV',
+        key: 'convocation',
+        label: t('conversationConvocation.entry', 'Convocation'),
+      }] : []),
     ];
   }, [
     isUploading,
+    peutConvoquer,
     shareableContacts.length,
     t,
   ]);
@@ -3085,6 +3116,10 @@ function Conversation({ navigation, route }) {
         break;
       case 'contact':
         runAttachmentAction(() => setIsContactShareModalVisible(true));
+        break;
+      // MESSAGERIE-1C — l'assistant de convocation, apres la fermeture de la feuille.
+      case 'convocation':
+        runAttachmentAction(() => setDemandeConvocation({ mode: 'create' }));
         break;
       case 'document':
         runAttachmentAction(handlePickFile);
@@ -4969,18 +5004,29 @@ function Conversation({ navigation, route }) {
   // ⚠️ IL EST DECLARE APRES LES CINQ, ET IL DOIT LE RESTER : son tableau de
   // dependances est evalue AU RENDU. Le placer plus haut citerait des `const`
   // pas encore initialisees — ReferenceError, et la conversation ne s ouvre plus.
+  // MESSAGERIE-1C — « Modifier la composition » sous la carte d'une convocation publiee.
+  const canEditSelectedComposition = peutConvoquer
+    && selectedMessage?.composition?.type === 'lineup_share'
+    && Boolean(selectedMessage?.composition?.eventId);
+
   const handleMessageAction = useCallback((clef) => {
     if (clef === 'reply') handleReplySelectedMessage();
     else if (clef === 'copy') handleCopySelectedMessage();
     else if (clef === 'edit') handleOpenEditForSelectedMessage();
     else if (clef === 'delete') handleDeleteSelectedMessage();
     else if (clef === 'report') handleOpenReportForSelectedMessage();
+    else if (clef === 'editComposition') {
+      setIsMessageActionsVisible(false);
+      ouvrirModificationConvocation({ composition: selectedMessage?.composition, startStep: 2 });
+    }
   }, [
     handleCopySelectedMessage,
     handleDeleteSelectedMessage,
     handleOpenEditForSelectedMessage,
     handleOpenReportForSelectedMessage,
     handleReplySelectedMessage,
+    ouvrirModificationConvocation,
+    selectedMessage,
   ]);
 
   // 🚫 BLOQUER (K3) — la confirmation passe par `openConversationPrompt`,
@@ -5389,12 +5435,23 @@ function Conversation({ navigation, route }) {
           >
             {/* FINITIONS15 point 6 : la carte s'abonne elle-même à la fiche du fil (GiftedChat
                 ne la redessine pas quand les participants arrivent après elle). */}
-            <CompositionMessageBubbleDuFil
+            {/* MESSAGERIE-1C : notice, « Modifier » et bloc « Reponses » des convocations. */}
+            <ConvocationLineupMessage
               chatId={chatId}
               composition={currentMessage.composition}
-              currentEvent={currentMessage.event}
-              isMe={!isLeft}
-            />
+              onEdit={peutConvoquer ? ouvrirModificationConvocation : undefined}
+            >
+              {(/** @type {any} */ convocation) => (
+                <CompositionMessageBubbleDuFil
+                  chatId={chatId}
+                  composition={currentMessage.composition}
+                  currentEvent={currentMessage.event}
+                  isMe={!isLeft}
+                  onEdit={convocation.onEdit}
+                  renderReponses={convocation.renderReponses}
+                />
+              )}
+            </ConvocationLineupMessage>
           </View>
         ),
       );
@@ -6884,10 +6941,25 @@ function Conversation({ navigation, route }) {
           memes libelles — seul leur cadre a change, pour qu elles partagent un
           unique calque avec la pilule plutot que de se superposer a elle.
         */}
+        {demandeConvocation ? (
+          <ConvocationWizardDiffere
+            chatId={chatId}
+            eventSummary={demandeConvocation.eventSummary}
+            initialEventId={demandeConvocation.eventId}
+            mode={demandeConvocation.mode}
+            onClose={() => setDemandeConvocation(null)}
+            startStep={demandeConvocation.startStep}
+            teamId={getTeamIdOfChat(chatData)}
+            teamName={chatData?.team?.name || ''}
+            visible
+          />
+        ) : null}
+
         <MessageReactionOverlay
           anchor={reactionAnchor}
           canCopy={canCopySelectedMessage}
           canEdit={canEditSelectedMessage}
+          canEditComposition={canEditSelectedComposition}
           isMine={isSelectedMessageOwn}
           myEmoji={myEmojiOnSelectedMessage}
           onAction={handleMessageAction}

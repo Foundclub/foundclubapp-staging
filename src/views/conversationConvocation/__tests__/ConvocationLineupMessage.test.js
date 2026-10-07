@@ -1,12 +1,16 @@
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import CompositionMessageBubbleDuFil
+  from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
+
 import ConvocationLineupMessage from '../ConvocationLineupMessage';
 
 // MESSAGERIE-1C — CE QUE 1C AJOUTE A LA CARTE D'UNE CONVOCATION DANS LE FIL : « Modifier » pour
 // qui peut convoquer, le bloc « Reponses » (joueurs a la main comptes presents), et la notice
 // « Composition modifiee ». La carte elle-meme est doublee : on observe les props qu'elle recoit
-// (elles traversent la VRAIE `CompositionMessageBubbleDuFil`).
+// (elles traversent la VRAIE `CompositionMessageBubbleDuFil`, montee en fonction-enfant comme
+// dans le fil).
 
 const TEAM = 'equipe-seniors';
 
@@ -153,7 +157,16 @@ const rendre = (composition) => {
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <ConvocationLineupMessage chatId="fil" composition={composition} onEdit={onEdit} />,
+      <ConvocationLineupMessage chatId="fil" composition={composition} onEdit={onEdit}>
+        {(/** @type {any} */ extras) => (
+          <CompositionMessageBubbleDuFil
+            chatId="fil"
+            composition={composition}
+            onEdit={extras.onEdit}
+            renderReponses={extras.renderReponses}
+          />
+        )}
+      </ConvocationLineupMessage>,
     );
   });
   return { arbre, onEdit };

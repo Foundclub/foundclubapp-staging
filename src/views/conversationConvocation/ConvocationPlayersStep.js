@@ -12,6 +12,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import { buildManualCallUpPlayer } from '@/views/matchCallUp/matchCallUpUtils';
@@ -21,7 +22,6 @@ import {
   getCompositionPlayerLabel,
 } from '@/utils/compositionPlayer';
 
-import ConvocationGlyph from './ConvocationGlyph';
 import {
   getRowAnswer,
   selectWholeSquad,

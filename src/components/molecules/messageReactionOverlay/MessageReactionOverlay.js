@@ -87,6 +87,8 @@ const ESPACE_SOUS_LE_BORD = RAYON_FEUILLE;
  *   La bulle visee, mesuree a l ecran (`measureInWindow`).
  * @param {boolean} [props.canCopy] Le message porte-t-il du texte a copier ?
  * @param {boolean} [props.canEdit] Puis-je le modifier ?
+ * @param {boolean} [props.canEditComposition] MESSAGERIE-1C : la carte d'une convocation que je
+ *   peux modifier (« Modifier la composition »).
  * @param {boolean} [props.isMine] Est-il a moi ? La pilule et le menu se rangent a droite.
  * @param {string} [props.myEmoji] L emoji que j ai deja pose sur ce message.
  * @param {(key: string) => void} props.onAction Appelee avec la clef de l action choisie.
@@ -99,6 +101,7 @@ function MessageReactionOverlay({
   anchor = null,
   canCopy = false,
   canEdit = false,
+  canEditComposition = false,
   isMine = false,
   myEmoji = '',
   onAction,
@@ -114,8 +117,10 @@ function MessageReactionOverlay({
   const [famille, setFamille] = useState(EMOJI_CATALOG[0]?.key ?? '');
 
   const actions = useMemo(
-    () => getMessageActions({ canCopy, canEdit, isMine }),
-    [canCopy, canEdit, isMine],
+    () => getMessageActions({
+      canCopy, canEdit, canEditComposition, isMine,
+    }),
+    [canCopy, canEdit, canEditComposition, isMine],
   );
 
   const hauteurMenu = (actions.length * MENU_LIGNE) + (MENU_MARGE * 2);

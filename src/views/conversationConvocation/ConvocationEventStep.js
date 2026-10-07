@@ -6,9 +6,8 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
-
-import ConvocationGlyph from './ConvocationGlyph';
 
 /**
  * MESSAGERIE-1C — ETAPE 1 « EVENEMENT » (pack messagerie §3.12, §5).
