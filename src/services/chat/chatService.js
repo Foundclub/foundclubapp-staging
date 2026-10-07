@@ -505,7 +505,10 @@ export const editMessage = async (messageId, data) => {
  * Vote on a poll message
  * @param {string} messageId
  * @param {string} optionId
- * @returns {Promise<{ success: boolean; chatDocumentId?: string; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
+ * SECU-SONDAGE-ANONYME — `myOptionIds` : MON choix, rendu à moi seul (un sondage anonyme ne nomme
+ * plus personne dans sa composition, il n'y a que les compteurs).
+ * @returns {Promise<{ success: boolean; chatDocumentId?: string; changed: boolean;
+ *   composition: any; messageDocumentId: string; myOptionIds?: string[]; updatedAt: string }>}
  */
 export const votePollMessage = async (messageId, optionId) => {
   const response = await client.post(`/chat-messages/${messageId}/poll-vote`, {
@@ -519,8 +522,10 @@ export const votePollMessage = async (messageId, optionId) => {
  * ne garde que des identifiants : sans cette lecture, un membre d un fil de club
  * qui n a rien ecrit s affiche « Membre ». Aucun nom pour un sondage anonyme.
  * @param {string} messageId Le message du sondage.
+ * SECU-SONDAGE-ANONYME — `myOptionIds` : le choix de CELUI QUI LIT (sondage anonyme compris).
  * @returns {Promise<{ chatDocumentId: string; data: Array<{ avatar: { url: string } | null;
- *   documentId: string; firstname: string; lastname: string }>; messageDocumentId: string }>}
+ *   documentId: string; firstname: string; lastname: string }>; messageDocumentId: string;
+ *   myOptionIds?: string[] }>}
  */
 export const getPollVoterProfiles = async (messageId) => {
   const response = await client.get(`/chat-messages/${messageId}/poll-voters`);
