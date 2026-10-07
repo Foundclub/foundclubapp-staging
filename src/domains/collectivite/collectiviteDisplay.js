@@ -207,6 +207,29 @@ export const nomOfficielDeCommune = (t, nom) => {
   });
 };
 
+// VILLE-INSCRIPTION (07/10/2026) — le referentiel de l Etat abrege les intercommunalites (989
+// « CC », 230 « CA », 14 « CU » sur 1 255, mesure du 07/10). Le nom OFFICIEL (D59) les ecrit en
+// toutes lettres, en francais quelle que soit la langue de l ecran.
+const ABREVIATIONS_EPCI = [
+  { enToutesLettres: 'Communauté de communes ', motif: /^CC /u },
+  { enToutesLettres: 'Communauté d’agglomération ', motif: /^CA /u },
+  { enToutesLettres: 'Communauté urbaine ', motif: /^CU /u },
+];
+
+/**
+ * VILLE-INSCRIPTION (07/10/2026) — le NOM OFFICIEL d une intercommunalite du referentiel (D59) :
+ * « CC Faucigny - Glières » → « Communauté de communes Faucigny - Glières », « CA du Grand
+ * Annecy » → « Communauté d’agglomération du Grand Annecy ». Un autre nom (« Metz Métropole »)
+ * reste tel quel : l equipe le corrige a la validation, comme une saisie libre.
+ * @param {unknown} nom - Le nom, tel que le referentiel l ecrit.
+ * @returns {string} Le nom officiel, ou '' sans nom.
+ */
+export const nomOfficielDIntercommunalite = (nom) => {
+  const propre = String(nom || '').trim();
+  const abreviation = ABREVIATIONS_EPCI.find(({ motif }) => motif.test(propre));
+  return abreviation ? propre.replace(abreviation.motif, abreviation.enToutesLettres) : propre;
+};
+
 /**
  * Lit le formulaire de creation : les champs nettoyes, et la liste des fautes (cles de
  * traduction sous `adminCollectivites.form.errors`). Vide = pret a partir. Le serveur
