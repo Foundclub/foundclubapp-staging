@@ -16,7 +16,12 @@ import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
-import { getConversationName } from '@/domains/messaging/messagingUseCases'
+import {
+  formatChatTimestamp,
+  getChatLastMessage,
+  getChatMessagePreview,
+  getConversationName,
+} from '@/domains/messaging/messagingUseCases';
 import {
   applyOptimisticPollVote,
   createPollComposition,
@@ -34,12 +39,14 @@ import {
 } from '@/domains/participation/participationFlow';
 // MSG1W §3.16 — bloquer une personne et cacher ses messages : la regle du telephone (K3, K4).
 import {
+  hideBlockedChats,
   hideBlockedMessages,
   resolveOtherParticipantId,
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
 // MSG1W (07/10) — « Bruno écrit… » : la regle de la minuterie du telephone.
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
+import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { BREAKPOINTS } from '@/responsive'
@@ -61,6 +68,8 @@ import {
   libelleDuJour,
   rangerLeFil,
 } from '@/views/conversationWeb/filDuSite';
+// MSG1W §3.13 — la liste « Messages » de la colonne de gauche, avec les regles de la messagerie.
+import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
@@ -377,6 +386,7 @@ const COULEURS_DES_NOMS = [
 ];
 
 /** Le style d un texte LU par le lecteur d ecran mais invisible a l ecran. */
+/** @type {import('react').CSSProperties} */
 const TEXTE_MASQUE = {
   border: 0,
   clip: 'rect(0 0 0 0)',
@@ -451,7 +461,7 @@ function MetaDuMessage({
       {coches ? (
         <span style={{ display: 'inline-flex' }}>
           {coches}
-          <span style={TEXTE_MASQUE}>{libellesDesCoches[etat]}</span>
+          <span style={TEXTE_MASQUE}>{libellesDesCoches[etat || 'envoye']}</span>
         </span>
       ) : null}
     </span>
@@ -702,6 +712,216 @@ const DESSIN_RETOUR = (
 );
 
 /**
+ * MSG1W §3.13 — LA COLONNE « MESSAGES » DU SITE, A GAUCHE DU FIL (WhatsApp Web ; SPECS §7) : la
+ * liste de la messagerie (memes fils, memes regles : `filsDeLaMessagerie`, personnes bloquees
+ * cachees), le fil ouvert marque. Toucher une ligne ouvre son fil a droite, sans quitter la page.
+ * @param {{ chatId: string, chats: any[], meId: string, navigation: any, t: any }} props
+ * @returns {import('react').ReactElement} La colonne.
+ */
+function ColonneDesConversations({
+  chatId, chats, meId, navigation, t,
+}) {
+  return (
+    <aside
+      aria-label={t('conversation.web.fil.titreListe', 'Messages')}
+      data-testid="MSG1W-colonne-messages"
+      style={{
+        background: PALETTE_DU_FIL.fil,
+        border: `1px solid ${PALETTE_DU_FIL.filet}`,
+        borderRadius: 20,
+        display: 'grid',
+        gridTemplateRows: 'auto minmax(0, 1fr)',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          alignItems: 'center',
+          background: PALETTE_DU_FIL.barre,
+          borderBottom: `1px solid ${PALETTE_DU_FIL.filet}`,
+          boxSizing: 'border-box',
+          display: 'flex',
+          justifyContent: 'space-between',
+          minHeight: 62,
+          padding: '10px 14px 10px 18px',
+        }}
+      >
+        <h2
+          style={{
+            color: PALETTE_DU_FIL.texte,
+            fontFamily: 'Montserrat-Bold, sans-serif',
+            fontSize: 20,
+            margin: 0,
+          }}
+        >
+          {t('conversation.web.fil.titreListe', 'Messages')}
+        </h2>
+        <button
+          aria-label={t('conversation.web.fil.nouvelleDiscussion', 'Nouvelle discussion')}
+          onClick={() => navigation.navigate(RouteNames.NewConversation)}
+          style={{
+            alignItems: 'center',
+            background: PALETTE_DU_FIL.accent,
+            border: 0,
+            borderRadius: 999,
+            cursor: 'pointer',
+            display: 'flex',
+            height: 36,
+            justifyContent: 'center',
+            padding: 0,
+            width: 36,
+          }}
+          type="button"
+        >
+          <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={20} />
+        </button>
+      </div>
+      <nav style={{ overflowY: 'auto' }}>
+        {chats.map((/** @type {any} */ fil) => {
+          const id = String(fil?.documentId || '');
+          const titre = titreDuFil(t, { chat: fil }) || getConversationName({
+            chatClub: fil?.club,
+            chatGroupName: fil?.groupName,
+            chatLeagueMatch: fil?.league_match,
+            chatMultisportClub: fil?.multisportClub,
+            chatParticipants: fil?.participants,
+            chatTeam: fil?.team,
+            chatType: fil?.type,
+            meId,
+          }) || t('common.chat', 'Conversation');
+          const dernier = getChatLastMessage(fil);
+          const deMoi = Boolean(meId) && dernier?.sender?.documentId === meId;
+          const nonLus = formatThreadUnreadBadge(fil?.unreadCount);
+          const ouvert = id === chatId;
+          const prenom = !deMoi && fil?.type !== 'whisper'
+            ? String(dernier?.sender?.firstname || '').trim()
+            : '';
+          return (
+            <button
+              aria-current={ouvert ? 'page' : undefined}
+              data-testid={`MSG1W-ligne-${id}`}
+              key={`ligne-${id}`}
+              onClick={() => {
+                if (ouvert) return;
+                navigation.navigate(RouteNames.Conversation, { chatId: id, chatType: fil?.type });
+              }}
+              style={{
+                alignItems: 'center',
+                background: ouvert ? PALETTE_DU_FIL.bulleRecue : 'transparent',
+                border: 0,
+                borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+                color: PALETTE_DU_FIL.texte,
+                cursor: 'pointer',
+                display: 'flex',
+                gap: 12,
+                minHeight: 72,
+                padding: '8px 14px',
+                textAlign: 'left',
+                width: '100%',
+              }}
+              type="button"
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  alignItems: 'center',
+                  background: couleurDeLaPersonne({ documentId: id }),
+                  borderRadius: '50%',
+                  color: PALETTE_DU_FIL.encre,
+                  display: 'inline-flex',
+                  flexShrink: 0,
+                  fontFamily: 'Montserrat-Bold, sans-serif',
+                  fontSize: 16,
+                  height: 52,
+                  justifyContent: 'center',
+                  width: 52,
+                }}
+              >
+                {getInitials(titre)}
+              </span>
+              <span
+                style={{
+                  display: 'grid', flex: 1, gap: 4, minWidth: 0,
+                }}
+              >
+                <span
+                  style={{
+                    alignItems: 'baseline',
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'Montserrat-Bold, sans-serif',
+                      fontSize: 16,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {titre}
+                  </span>
+                  <span
+                    style={{
+                      color: nonLus ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.texteDoux,
+                      flexShrink: 0,
+                      fontFamily: nonLus ? 'Montserrat-Bold, sans-serif' : undefined,
+                      fontSize: 12.5,
+                    }}
+                  >
+                    {dernier ? formatChatTimestamp(dernier.createdAt) : ''}
+                  </span>
+                </span>
+                <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
+                  {deMoi ? (
+                    <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="checkDouble" size={16} />
+                  ) : null}
+                  <span
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.58)',
+                      flex: 1,
+                      fontSize: 14,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {prenom ? (
+                      <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{`${prenom} : `}</span>
+                    ) : null}
+                    {dernier ? getChatMessagePreview(dernier, t) : ''}
+                  </span>
+                  {nonLus ? (
+                    <span
+                      style={{
+                        background: PALETTE_DU_FIL.accent,
+                        borderRadius: 999,
+                        color: PALETTE_DU_FIL.encre,
+                        flexShrink: 0,
+                        fontFamily: 'Montserrat-Bold, sans-serif',
+                        fontSize: 11.5,
+                        minWidth: 20,
+                        padding: '2px 6px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {nonLus}
+                    </span>
+                  ) : null}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+/**
  * MSG1W §3.5 — UNE FENETRE DU SITE : les feuilles du bas du telephone deviennent des fenetres
  * centrees (titre, croix, contenu qui defile). Echap la ferme (effet de l ecran).
  * @param {{ children: any, compacte?: boolean, idTitre: string, onFermer: () => void,
@@ -778,7 +998,11 @@ function FenetreDuSite({
             {DESSIN_FERMER}
           </button>
         </div>
-        <div style={{ display: 'grid', gap: 12, minHeight: 0, overflowY: 'auto' }}>
+        <div
+          style={{
+            display: 'grid', gap: 12, minHeight: 0, overflowY: 'auto',
+          }}
+        >
           {children}
         </div>
       </div>
@@ -868,6 +1092,7 @@ function ConfirmationDuSite({
 }
 
 /** Un champ d une fenetre du site (proposition de match). */
+/** @type {import('react').CSSProperties} */
 const STYLE_CHAMP_DE_FENETRE = {
   background: PALETTE_DU_FIL.champ,
   border: `1px solid ${PALETTE_DU_FIL.champBord}`,
@@ -891,6 +1116,7 @@ const ICONES_DU_MENU = {
 };
 
 /** Le bouton au contour d une fenetre (« Annuler »). */
+/** @type {import('react').CSSProperties} */
 const STYLE_BOUTON_CONTOUR = {
   background: 'transparent',
   border: `1.5px solid ${PALETTE_DU_FIL.accent}`,
@@ -904,6 +1130,7 @@ const STYLE_BOUTON_CONTOUR = {
 };
 
 /** Le bouton plein d une fenetre (« Enregistrer »). */
+/** @type {import('react').CSSProperties} */
 const STYLE_BOUTON_PLEIN = {
   ...STYLE_BOUTON_CONTOUR,
   background: PALETTE_DU_FIL.accent,
@@ -969,7 +1196,7 @@ function Conversation({ navigation, route }) {
   useEffect(() => {
     if (brouillonDuFil) setComposerText((actuel) => actuel || String(brouillonDuFil));
   }, [brouillonDuFil]);
-  const [replyTarget, setReplyTarget] = useState(null)
+  const [replyTarget, setReplyTarget] = useState(/** @type {any} */ (null));
   const [isSending, setIsSending] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [proposalDate, setProposalDate] = useState('')
@@ -1088,13 +1315,15 @@ function Conversation({ navigation, route }) {
   // fils est la requête de la messagerie : la socket la réécrit, la colonne suit sans recharger.
   // Le type `Chat` ne connaît pas encore la Ville d'un fil (COLL-C4A2) : lue telle quelle.
   const villeDuFil = String(/** @type {any} */ (chatData)?.collectivite?.documentId || '');
+  // MSG1W §3.13 — sur ordinateur, hors de l espace de la Ville, la liste « Messages » a gauche.
+  const avecColonneDesMessages = isDesktop && route?.params?.espace !== 'ville';
   const avecColonneDeLaVille = Boolean(
     isDesktop && route?.params?.espace === 'ville' && filDeLaVille.estFil && villeDuFil,
   );
   const { data: listeDesFils } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
-  }, { enabled: avecColonneDeLaVille });
+  }, { enabled: avecColonneDeLaVille || avecColonneDesMessages });
   const filsDeLaColonne = useMemo(() => {
     const pages = listeDesFils?.pages;
     return Array.isArray(pages)
@@ -1102,6 +1331,9 @@ function Conversation({ navigation, route }) {
       : [];
   }, [listeDesFils]);
   let colonnesDeLaGrille = isDesktop ? 'minmax(0, 1fr) minmax(300px, 360px)' : 'minmax(0, 1fr)';
+  if (avecColonneDesMessages) {
+    colonnesDeLaGrille = 'minmax(280px, 360px) minmax(0, 1fr) minmax(280px, 340px)';
+  }
   if (avecColonneDeLaVille) {
     // MSG1W — le fil du milieu garde 360 px au moins : a 1 280 il etait ecrase a ~190 px.
     colonnesDeLaGrille = 'minmax(220px, 280px) minmax(360px, 1fr) minmax(260px, 320px)';
@@ -2376,7 +2608,10 @@ function Conversation({ navigation, route }) {
    * @param {string} emoji L emoji cliqué, pris dans le jeu ferme.
    * @returns {Promise<void>} Rien : le resultat arrive par la reserve react-query.
    */
-  const handleToggleReaction = useCallback(async (messageDocumentId, emoji) => {
+  const handleToggleReaction = useCallback(async (
+    /** @type {string} */ messageDocumentId,
+    /** @type {string} */ emoji,
+  ) => {
     if (!messageDocumentId || !emoji) return;
     setReactionBarMessageId('');
 
@@ -2502,7 +2737,9 @@ function Conversation({ navigation, route }) {
   // une photo se charge) le refermait sous les yeux de la personne (temoin instable sous charge).
   useEffect(() => {
     if (!menuDuMessage) return undefined;
-    menuDuMessageRef.current?.querySelector?.('[role="menuitem"]')?.focus?.();
+    /** @type {HTMLElement | null | undefined} */ (
+      menuDuMessageRef.current?.querySelector?.('[role="menuitem"]')
+    )?.focus?.();
     const surTouche = (/** @type {KeyboardEvent} */ event) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();
@@ -3599,6 +3836,7 @@ function Conversation({ navigation, route }) {
       </span>
     </>
   );
+  /** @type {import('react').CSSProperties} */
   const styleDuBoutonRond = {
     alignItems: 'center',
     background: PALETTE_DU_FIL.accent,
@@ -3659,6 +3897,12 @@ function Conversation({ navigation, route }) {
   // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
   // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un
   // telephone, la liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
+  // La liste « Messages » : memes fils et memes regles que la page de la messagerie.
+  const filsDeLaListe = hideBlockedChats(
+    filsDeLaMessagerie(filsDeLaColonne, { monClubId: userData?.club?.documentId || null }),
+    userData?.documentId,
+    personnesBloquees,
+  );
   const panneauDeDroite = filDeLaVille.estFil && filDeLaVille.membres ? (
     <aside
       style={{
@@ -3698,6 +3942,12 @@ function Conversation({ navigation, route }) {
     </aside>
   ) : null;
 
+  let colonnesDuCadre = 'minmax(0, 1fr)';
+  if (avecColonneDeLaVille) colonnesDuCadre = colonnesDeLaGrille;
+  else if (avecColonneDesMessages && panneauDeDroite) colonnesDuCadre = colonnesDeLaGrille;
+  else if (avecColonneDesMessages) colonnesDuCadre = 'minmax(280px, 360px) minmax(0, 1fr)';
+  else if (panneauDeDroite) colonnesDuCadre = colonnesDeLaGrille;
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -3713,15 +3963,22 @@ function Conversation({ navigation, route }) {
           display: 'grid',
           gap: 16,
           // §3.11 — un canal en lecture seule n offre ni partage ni sondage : pas de panneau.
-          gridTemplateColumns: panneauDeDroite || avecColonneDeLaVille
-            ? colonnesDeLaGrille
-            : 'minmax(0, 1fr)',
+          gridTemplateColumns: colonnesDuCadre,
           // MSG1W §3.1 — LE CADRE A LA HAUTEUR DE L ECRAN : c est le fil qui defile ;
           // l en-tete et la saisie restent en place (README §3.1, « bloc fixe »).
           height: hauteurDuCadre || 'calc(100vh - 116px)',
           minHeight: 0,
         }}
       >
+        {avecColonneDesMessages ? (
+          <ColonneDesConversations
+            chatId={chatId}
+            chats={filsDeLaListe}
+            meId={String(userData?.documentId || '')}
+            navigation={navigation}
+            t={t}
+          />
+        ) : null}
         {avecColonneDeLaVille ? (
           <aside
             style={{
@@ -3766,27 +4023,31 @@ function Conversation({ navigation, route }) {
               padding: '10px 14px',
             }}
           >
-            <button
-              aria-label={t('common.back', 'Retour')}
-              onClick={() => navigation.navigate(RouteNames.Chat)}
-              style={{
-                alignItems: 'center',
-                background: 'transparent',
-                border: `1.5px solid ${PALETTE_DU_FIL.accent}`,
-                borderRadius: 999,
-                color: PALETTE_DU_FIL.accent,
-                cursor: 'pointer',
-                display: 'flex',
-                flexShrink: 0,
-                height: 40,
-                justifyContent: 'center',
-                padding: 0,
-                width: 40,
-              }}
-              type="button"
-            >
-              {DESSIN_RETOUR}
-            </button>
+            {/* §3.13 — sur ordinateur, une liste est a gauche (Messages, ou les fils de la Ville) :
+                pas de bouton retour. */}
+            {avecColonneDesMessages || avecColonneDeLaVille ? null : (
+              <button
+                aria-label={t('common.back', 'Retour')}
+                onClick={() => navigation.navigate(RouteNames.Chat)}
+                style={{
+                  alignItems: 'center',
+                  background: 'transparent',
+                  border: `1.5px solid ${PALETTE_DU_FIL.accent}`,
+                  borderRadius: 999,
+                  color: PALETTE_DU_FIL.accent,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexShrink: 0,
+                  height: 40,
+                  justifyContent: 'center',
+                  padding: 0,
+                  width: 40,
+                }}
+                type="button"
+              >
+                {DESSIN_RETOUR}
+              </button>
+            )}
             {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
             <View testID="fil-de-la-ville-ecusson">
               <EcussonDuFil
@@ -3882,7 +4143,7 @@ function Conversation({ navigation, route }) {
                     zIndex: 30,
                   }}
                 >
-                  {entreesDuMenuOptions.map((entree) => (
+                  {entreesDuMenuOptions.map((/** @type {any} */ entree) => (
                     <button
                       className="MSG1W-ligne-menu"
                       disabled={entree.cle === 'bloquer' && (blocageEnCours || deblocageEnCours)}
@@ -4263,7 +4524,7 @@ function Conversation({ navigation, route }) {
                         zIndex: 30,
                       }}
                     >
-                      {entreesDuMenuAjouter.map((entree) => (
+                      {entreesDuMenuAjouter.map((/** @type {any} */ entree) => (
                         <button
                           key={entree.cle}
                           onClick={() => {
@@ -4415,6 +4676,11 @@ function Conversation({ navigation, route }) {
               <EventCardNew
                 item={evenement}
                 mode="share"
+                // La feuille du telephone ne branche que le toucher de la carte (partager).
+                onDecline={() => {}}
+                onJoin={() => {}}
+                onLogin={() => {}}
+                onParticipate={() => {}}
                 onPress={(/** @type {any} */ choisi) => {
                   setFenetre('');
                   handleShareEvent(choisi);

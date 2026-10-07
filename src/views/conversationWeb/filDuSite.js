@@ -38,7 +38,7 @@ export const libelleDuJour = (valeur, {
 }) => {
   const date = new Date(valeur);
   if (Number.isNaN(date.getTime())) return '';
-  const minuit = (instant) => new Date(
+  const minuit = (/** @type {Date} */ instant) => new Date(
     instant.getFullYear(),
     instant.getMonth(),
     instant.getDate(),
@@ -101,7 +101,7 @@ export const rangerLeFil = (messages) => {
     const precedent = liste[index - 1];
     const suivant = liste[index + 1];
     // Une ligne systeme n appartient a aucun groupe, et coupe celui qui l entoure.
-    const memeGroupe = (voisin) => Boolean(auteur)
+    const memeGroupe = (/** @type {any} */ voisin) => Boolean(auteur)
       && idDeLExpediteur(voisin) === auteur
       && cleDuJour(voisin?.createdAt) === jour;
     entrees.push({
