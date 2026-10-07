@@ -59,7 +59,8 @@ const heureDeLEvenement = (evenement) => {
  * montrent donc la meme reponse (README : « rattachee a l'evenement »).
  * @param {object} props
  * @param {any} props.event - L'apercu porte par le message.
- * @param {boolean} [props.isMe] - Message envoye par moi (le fil le passe ; le dessin est le meme).
+ * @param {boolean} [props.isMe] - Message envoye par moi : l'anneau des visages prend la couleur
+ *   de MA bulle.
  * @param {import('react').ReactNode} [props.meta] - L'heure et les coches, avant le pied.
  * @param {() => any} [props.onDecline] - « Absent ».
  * @param {() => any} [props.onJoin] - Garde pour le contrat du fil : la bulle du pack n'offre
@@ -72,6 +73,7 @@ const heureDeLEvenement = (evenement) => {
  */
 function EventMessageBubble({
   event,
+  isMe = false,
   meta = null,
   onDecline = () => {},
   onOpenAddress = undefined,
@@ -233,7 +235,7 @@ function EventMessageBubble({
                   style={[
                     styles.visage,
                     index ? styles.visageSuivant : null,
-                    { borderColor: Colors.chatSheet },
+                    { borderColor: isMe ? Colors.chatBubbleMine : Colors.primary700 },
                   ]}
                 >
                   <ProfileAvatar
