@@ -1,5 +1,6 @@
 import {
   cleDuJour,
+  estModifiable,
   etatDesCoches,
   indiceDeCouleur,
   libelleDuJour,
@@ -92,5 +93,14 @@ describe('indiceDeCouleur', () => {
     expect(indice).toBeGreaterThanOrEqual(0);
     expect(indice).toBeLessThan(13);
     expect(indiceDeCouleur('', 0)).toBe(0);
+  });
+});
+
+describe('estModifiable', () => {
+  it('texte ou composition : oui ; sondage, vocal, partage ou proposition : non', () => {
+    expect(estModifiable({ message: 'Salut' })).toBe(true);
+    expect(estModifiable({ composition: { type: 'lineup_share' } })).toBe(true);
+    ['poll', 'voice_note', 'event_share', 'location_share', 'contact_share', 'proposal']
+      .forEach((type) => expect(estModifiable({ composition: { type } })).toBe(false));
   });
 });

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import i18next from 'i18next';
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -13,6 +14,8 @@ import { useWindowDimensions, View } from 'react-native'
 import useAuth from '@/domains/auth/useAuth'
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
+// MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
+import { getMessageActions } from '@/domains/messaging/messageActions';
 import { getConversationName } from '@/domains/messaging/messagingUseCases'
 import {
   applyOptimisticPollVote,
@@ -36,6 +39,7 @@ import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMes
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // MSG1W (07/10) — la forme du fil (groupes, puces de date, coches), sans rendu.
 import {
+  estModifiable,
   etatDesCoches,
   indiceDeCouleur,
   libelleDuJour,
@@ -299,6 +303,9 @@ const REACTION_HOVER_STYLE = `
     40% { opacity: 1; transform: translateY(-3px); }
   }
   .MSG1W-point { animation: MSG1W-point 1.2s infinite ease-in-out; }
+  @media (hover: none) { .REACTWEB-hote .MSG1W-sur-souris { display: none; } }
+  .MSG1W-ligne-menu:hover,
+  .MSG1W-ligne-menu:focus-visible { background: rgba(255, 255, 255, 0.06); }
   @media (prefers-reduced-motion: reduce) { .MSG1W-point { animation: none; } }
 `;
 
@@ -323,6 +330,7 @@ const PALETTE_DU_FIL = {
   cochesLu: '#ffffff',
   danger: '#ff5a74',
   encre: '#001218',
+  feuille: '#0f2a34',
   fil: '#03141b',
   filet: 'rgba(255, 255, 255, 0.06)',
   menu: '#142e39',
@@ -337,6 +345,7 @@ const PALETTE_DU_FIL = {
   role: 'rgba(255, 255, 255, 0.55)',
   texte: '#ffffff',
   texteDoux: 'rgba(255, 255, 255, 0.6)',
+  voile: 'rgba(0, 0, 0, 0.45)',
 };
 
 /** Les couleurs des noms (SPECS §0) : une par personne, la meme dans tous les fils. */
@@ -490,15 +499,18 @@ function AvatarDuGroupe({ idMessage, personne }) {
 /**
  * MSG1W — un petit bouton rond de la barre qui apparait au survol d une bulle. Son libelle est
  * un TEXTE masque (lu par le lecteur d ecran, trouve par `getByRole`), pas un `aria-label`.
- * @param {{ children: any, libelle: string, onClick: (event: any) => void, testId?: string }} props
+ * @param {{ children: any, classeEnPlus?: string, libelle: string, menu?: boolean,
+ *   menuOuvert?: boolean, onClick: (event: any) => void, testId?: string }} props
  * @returns {import('react').ReactElement} Le bouton.
  */
 function BoutonDuSurvol({
-  children, libelle, onClick, testId,
+  children, classeEnPlus = '', libelle, menu = false, menuOuvert = false, onClick, testId,
 }) {
   return (
     <button
-      className="REACTWEB-declencheur"
+      aria-expanded={menu ? menuOuvert : undefined}
+      aria-haspopup={menu ? 'menu' : undefined}
+      className={`REACTWEB-declencheur ${classeEnPlus}`.trim()}
       data-testid={testId}
       onClick={onClick}
       style={{
@@ -561,6 +573,77 @@ const DESSIN_SIGNALER = (
   </svg>
 );
 
+/** La fleche du survol qui ouvre le menu d un message. */
+const DESSIN_PLUS_D_ACTIONS = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="15"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2.2"
+    viewBox="0 0 24 24"
+    width="15"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+/** Copier : deux feuilles. */
+const DESSIN_COPIER = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="20"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="20"
+  >
+    <rect height="13" rx="2" width="13" x="9" y="9" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+/** Modifier : un crayon. */
+const DESSIN_MODIFIER = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="20"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    width="20"
+  >
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
+/** La croix d une barre ou d une fenetre. */
+const DESSIN_FERMER = (
+  <svg
+    aria-hidden="true"
+    fill="none"
+    height="16"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2.2"
+    viewBox="0 0 24 24"
+    width="16"
+  >
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
+  </svg>
+);
+
 /** La fleche vers le bas du bouton « revenir en bas ». */
 const DESSIN_VERS_LE_BAS = (
   <svg
@@ -596,6 +679,36 @@ const DESSIN_RETOUR = (
   </svg>
 );
 
+/** MSG1W §3.2 — l icone de chaque action du menu (cles de messageActions.js). */
+const ICONES_DU_MENU = {
+  copy: DESSIN_COPIER,
+  delete: <GlyphIcon color={PALETTE_DU_FIL.danger} name="trashAlt" size={20} />,
+  edit: DESSIN_MODIFIER,
+  reply: DESSIN_REPONDRE,
+  report: DESSIN_SIGNALER,
+};
+
+/** Le bouton au contour d une fenetre (« Annuler »). */
+const STYLE_BOUTON_CONTOUR = {
+  background: 'transparent',
+  border: `1.5px solid ${PALETTE_DU_FIL.accent}`,
+  borderRadius: 999,
+  color: PALETTE_DU_FIL.accent,
+  cursor: 'pointer',
+  fontFamily: 'Montserrat-Bold, sans-serif',
+  fontSize: 15,
+  minHeight: 46,
+  padding: '0 18px',
+};
+
+/** Le bouton plein d une fenetre (« Enregistrer »). */
+const STYLE_BOUTON_PLEIN = {
+  ...STYLE_BOUTON_CONTOUR,
+  background: PALETTE_DU_FIL.accent,
+  border: 0,
+  color: PALETTE_DU_FIL.encre,
+};
+
 /**
  * Le mot d une puce de date « [Aujourd'hui] » (format de moment, celui du telephone) sans ses
  * crochets.
@@ -630,6 +743,8 @@ function Conversation({ navigation, route }) {
     userData,
   } = useAuth()
   const {
+    deleteMessage,
+    editMessage,
     joinChat,
     leaveChat,
     reactToMessage,
@@ -666,7 +781,7 @@ function Conversation({ navigation, route }) {
   const [isStoppingVoice, setIsStoppingVoice] = useState(false)
   const [isSubmittingPoll, setIsSubmittingPoll] = useState(false)
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
-  const [reportedMessageId, setReportedMessageId] = useState('')
+  const [, setReportedMessageId] = useState('')
   // REACT-WEB — le message dont la barre de six emojis est ouverte, ou une chaine
   // vide. UN SEUL ETAT : un booleen « ouverte » doublé d un identifiant pourraient
   // se contredire, et deux barres s ouvrir en meme temps.
@@ -698,9 +813,23 @@ function Conversation({ navigation, route }) {
   const cadreRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const [hauteurDuCadre, setHauteurDuCadre] = useState(0);
   const [loinDuBas, setLoinDuBas] = useState(false);
+  // Vrai tant que le fil est colle en bas : une photo qui se charge l y laisse.
+  const colleAuBasRef = useRef(true);
+  const contenuDuFilRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const [menuAjouterOuvert, setMenuAjouterOuvert] = useState(false);
   const menuAjouterRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const saisieRef = useRef(/** @type {HTMLTextAreaElement | null} */ (null));
+  // MSG1W §3.2 — le menu d un message (clic droit, ou la fleche du survol), et ses fenetres.
+  const [menuDuMessage, setMenuDuMessage] = useState(
+    /** @type {{ id: string, left: number, top: number } | null} */ (null),
+  );
+  const menuDuMessageRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const declencheurDuMenuRef = useRef(/** @type {HTMLElement | null} */ (null));
+  const [messageEnEdition, setMessageEnEdition] = useState(/** @type {any} */ (null));
+  const [texteEnEdition, setTexteEnEdition] = useState('');
+  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+  const [messageASupprimer, setMessageASupprimer] = useState(/** @type {any} */ (null));
+  const [annonce, setAnnonce] = useState('');
 
   const {
     data: chatData,
@@ -1019,6 +1148,39 @@ function Conversation({ navigation, route }) {
     window.addEventListener('resize', mesurer);
     return () => window.removeEventListener('resize', mesurer);
   }, [filCharge, isDesktop]);
+
+  // MSG1W §3.1 — UN FIL COLLE EN BAS LE RESTE. Une photo qui se charge, une reaction ou une
+  // carte qui se dessine apres coup font grandir le fil SOUS les yeux : sans ceci, le dernier
+  // message glissait hors de l ecran (vu au banc : « Revenir en bas » apparaissait seul).
+  useEffect(() => {
+    const contenu = contenuDuFilRef.current;
+    /** @type {any} */
+    const fil = messagePaneRef.current;
+    if (!contenu || !fil || typeof window.ResizeObserver === 'undefined') return undefined;
+    const observateur = new window.ResizeObserver(() => {
+      if (colleAuBasRef.current) fil.scrollTop = fil.scrollHeight;
+    });
+    observateur.observe(contenu);
+    // Les gestes qui DECOLLENT le fil du bas : la molette vers le haut, le doigt, le clavier,
+    // et un clic sur la barre de defilement elle-meme (il tombe sur le fil, pas sur un message).
+    const decoller = () => { colleAuBasRef.current = false; };
+    const surMolette = (/** @type {WheelEvent} */ event) => { if (event.deltaY < 0) decoller(); };
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (['ArrowUp', 'Home', 'PageUp'].includes(event.key)) decoller();
+    };
+    const surClic = (/** @type {MouseEvent} */ event) => { if (event.target === fil) decoller(); };
+    fil.addEventListener('wheel', surMolette, { passive: true });
+    fil.addEventListener('touchmove', decoller, { passive: true });
+    fil.addEventListener('keydown', surTouche);
+    fil.addEventListener('mousedown', surClic);
+    return () => {
+      observateur.disconnect();
+      fil.removeEventListener('wheel', surMolette);
+      fil.removeEventListener('touchmove', decoller);
+      fil.removeEventListener('keydown', surTouche);
+      fil.removeEventListener('mousedown', surClic);
+    };
+  }, [filCharge]);
 
   // MSG1W §3.1 — la saisie grandit avec le texte, jusqu a 140 px, puis defile.
   useEffect(() => {
@@ -2112,6 +2274,209 @@ function Conversation({ navigation, route }) {
     };
   }, [reactionBarMessageId]);
 
+  // MSG1W §3.3 — repondre a un message : la barre au-dessus de la saisie, et le curseur y va.
+  const repondreA = useCallback((/** @type {any} */ message) => {
+    setReplyTarget(message);
+    window.requestAnimationFrame?.(() => saisieRef.current?.focus?.());
+  }, []);
+
+  // MSG1W — une phrase breve (« Copié »), lue par le lecteur d ecran, qui s efface seule.
+  useEffect(() => {
+    if (!annonce) return undefined;
+    const minuterie = setTimeout(() => setAnnonce(''), 2500);
+    return () => clearTimeout(minuterie);
+  }, [annonce]);
+
+  /**
+   * MSG1W §3.2 — les actions d un message : les regles de `messageActions.js` (WHATSAPP2),
+   * telles quelles, et « Répondre » retire quand on ne peut pas ecrire (chef, 07/10).
+   * @param {any} message - Le message.
+   * @returns {ReturnType<typeof getMessageActions>} Les actions, dans l ordre d affichage.
+   */
+  const actionsDuMessage = useCallback((/** @type {any} */ message) => {
+    const mien = areSameEntityId(message?.sender?.documentId, userData?.documentId);
+    return getMessageActions({
+      canCopy: Boolean(String(message?.message || '').trim()),
+      canEdit: mien && estModifiable(message),
+      isMine: mien,
+    }).filter((action) => peutEcrire || action.key !== 'reply');
+  }, [peutEcrire, userData?.documentId]);
+
+  const fermerLeMenu = useCallback((/** @type {boolean} */ rendreLeFocus) => {
+    setMenuDuMessage(null);
+    if (rendreLeFocus) declencheurDuMenuRef.current?.focus?.();
+  }, []);
+
+  /**
+   * MSG1W §3.2 — ouvre le menu d un message la ou on a clique (clic droit), ou sous la fleche
+   * du survol ; il reste dans la fenetre.
+   * @param {any} message - Le message.
+   * @param {{ x: number, y: number }} point - Ou l ouvrir, en pixels d ecran.
+   * @param {HTMLElement | null} declencheur - Ce qui reprendra le focus a la fermeture.
+   */
+  const ouvrirLeMenu = useCallback((
+    /** @type {any} */ message,
+    /** @type {{ x: number, y: number }} */ point,
+    /** @type {HTMLElement | null} */ declencheur,
+  ) => {
+    const id = getMessageId(message);
+    if (!id || typeof window === 'undefined') return;
+    declencheurDuMenuRef.current = declencheur;
+    setReactionBarMessageId('');
+    const largeur = 252;
+    const hauteur = 64 + (48 * actionsDuMessage(message).length) + 16;
+    // Le bas utile de l ecran : sur telephone, la barre d onglets du site (5,75 rem) le couvre.
+    const bas = window.innerHeight - (isDesktop ? 8 : 100);
+    // Pas la place en dessous : le menu s ouvre AU-DESSUS du point.
+    const haut = point.y + hauteur > bas ? point.y - hauteur : point.y;
+    setMenuDuMessage({
+      id,
+      left: Math.max(8, Math.min(point.x, window.innerWidth - largeur - 8)),
+      top: Math.max(8, Math.min(haut, bas - hauteur)),
+    });
+  }, [actionsDuMessage, isDesktop]);
+
+  // MSG1W §3.2 — le menu prend le focus (premiere ligne) ; Echap le ferme et rend le focus a ce
+  // qui l a ouvert ; un clic a cote, la molette ou le doigt le ferment (il est fixe a l ecran).
+  // ⚠️ Pas l evenement « scroll » : un defilement PROGRAMME (le fil qui reste colle en bas quand
+  // une photo se charge) le refermait sous les yeux de la personne (temoin instable sous charge).
+  useEffect(() => {
+    if (!menuDuMessage) return undefined;
+    menuDuMessageRef.current?.querySelector?.('[role="menuitem"]')?.focus?.();
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      fermerLeMenu(true);
+    };
+    const surClic = (/** @type {MouseEvent} */ event) => {
+      if (menuDuMessageRef.current?.contains(/** @type {Node} */ (event.target))) return;
+      fermerLeMenu(false);
+    };
+    const surDefilement = (/** @type {Event} */ event) => {
+      if (menuDuMessageRef.current?.contains(/** @type {Node} */ (event.target))) return;
+      fermerLeMenu(false);
+    };
+    document.addEventListener('keydown', surTouche);
+    document.addEventListener('mousedown', surClic);
+    document.addEventListener('wheel', surDefilement, true);
+    document.addEventListener('touchmove', surDefilement, true);
+    return () => {
+      document.removeEventListener('keydown', surTouche);
+      document.removeEventListener('mousedown', surClic);
+      document.removeEventListener('wheel', surDefilement, true);
+      document.removeEventListener('touchmove', surDefilement, true);
+    };
+  }, [fermerLeMenu, menuDuMessage]);
+
+  // Les fleches du clavier passent d une ligne du menu a l autre.
+  const naviguerDansLeMenu = useCallback((/** @type {any} */ event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const lignes = Array.from(
+      menuDuMessageRef.current?.querySelectorAll('[role="menuitem"]') || [],
+    );
+    if (!lignes.length) return;
+    const ici = lignes.indexOf(/** @type {any} */ (document.activeElement));
+    const pas = event.key === 'ArrowDown' ? 1 : -1;
+    const suivante = /** @type {any} */ (lignes[(ici + pas + lignes.length) % lignes.length]);
+    suivante?.focus?.();
+  }, []);
+
+  const lancerAction = useCallback(async (
+    /** @type {string} */ cle,
+    /** @type {any} */ message,
+  ) => {
+    fermerLeMenu(false);
+    if (cle === 'reply') {
+      repondreA(message);
+      return;
+    }
+    if (cle === 'copy') {
+      try {
+        await navigator.clipboard.writeText(String(message?.message || '').trim());
+        setAnnonce(t('conversation.actions.copySuccess.title', 'Copié'));
+      } catch {
+        setAnnonce(t(
+          'conversation.actions.copyUnavailable',
+          'Le presse-papiers est indisponible sur cette build.',
+        ));
+      }
+      return;
+    }
+    if (cle === 'edit') {
+      setTexteEnEdition(String(message?.message || ''));
+      setMessageEnEdition(message);
+      return;
+    }
+    if (cle === 'delete') {
+      setMessageASupprimer(message);
+      return;
+    }
+    if (cle === 'report') handleReportMessage(message);
+  }, [fermerLeMenu, handleReportMessage, repondreA, t]);
+
+  // MSG1W §3.2 — la fenetre « Modifier » prend le focus ; Echap ferme les deux fenetres.
+  const champEditionRef = useRef(/** @type {HTMLTextAreaElement | null} */ (null));
+  useEffect(() => {
+    if (!messageEnEdition && !messageASupprimer) return undefined;
+    if (messageEnEdition) champEditionRef.current?.focus?.();
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key !== 'Escape') return;
+      setMessageEnEdition(null);
+      setMessageASupprimer(null);
+    };
+    document.addEventListener('keydown', surTouche);
+    return () => document.removeEventListener('keydown', surTouche);
+  }, [messageASupprimer, messageEnEdition]);
+
+  // MSG1W §3.2 — « Modifier » : le texte seul. Les pieces jointes ne sont pas envoyees, le serveur
+  // les garde telles quelles (chat-message.ts, `hasAttachmentField`).
+  const enregistrerLEdition = useCallback(async () => {
+    const id = getMessageId(messageEnEdition);
+    if (!id || typeof editMessage !== 'function') return;
+    const aDesPiecesJointes = Array.isArray(messageEnEdition?.attachments)
+      && messageEnEdition.attachments.length > 0;
+    if (!texteEnEdition.trim() && !aDesPiecesJointes) {
+      setAnnonce(t('conversation.edit.emptyMessage', 'Le message ne peut pas être vide.'));
+      return;
+    }
+    setEnregistrementEnCours(true);
+    try {
+      await editMessage({ chatId, data: { message: texteEnEdition }, messageId: id });
+      setMessageEnEdition(null);
+    } catch {
+      setAnnonce(t('conversation.edit.error', 'Impossible de modifier ce message.'));
+    } finally {
+      setEnregistrementEnCours(false);
+    }
+  }, [chatId, editMessage, messageEnEdition, t, texteEnEdition]);
+
+  // MSG1W §3.2 — « Supprimer », apres confirmation : pour tout le monde. Le serveur previent les
+  // autres par la socket ; ici, la bulle part tout de suite.
+  const confirmerLaSuppression = useCallback(async () => {
+    const id = getMessageId(messageASupprimer);
+    setMessageASupprimer(null);
+    if (!id || typeof deleteMessage !== 'function') return;
+    try {
+      await deleteMessage(id);
+      const sansLui = (/** @type {any} */ ancien) => {
+        if (!ancien?.pages) return ancien;
+        return {
+          ...ancien,
+          pages: ancien.pages.map((/** @type {any} */ page) => ({
+            ...page,
+            data: Array.isArray(page?.data)
+              ? page.data.filter((/** @type {any} */ entree) => getMessageId(entree) !== id)
+              : [],
+          })),
+        };
+      };
+      queryClient.setQueriesData({ queryKey: ['chat-messages', chatId] }, sansLui);
+    } catch {
+      setAnnonce(t('conversation.actions.deleteError', 'Impossible de supprimer ce message.'));
+    }
+  }, [chatId, deleteMessage, messageASupprimer, queryClient, t]);
+
   /**
    * MSG1W §3.1 — UNE BULLE DU FIL, au dessin du pack « modele WhatsApp » (SPECS §1) :
    * groupee par expediteur (nom sur la premiere, avatar et queue sur la derniere), heure et
@@ -2225,6 +2590,11 @@ function Conversation({ navigation, route }) {
         >
           <div
             data-testid={`REACTWEB-bulle-${idMessage}`}
+            // MSG1W §3.2 — l appui long du telephone devient le CLIC DROIT.
+            onContextMenu={(event) => {
+              event.preventDefault();
+              ouvrirLeMenu(message, { x: event.clientX, y: event.clientY }, null);
+            }}
             style={{
               alignSelf: isMine ? 'flex-end' : 'flex-start',
               background: estCarteNue ? 'transparent' : fondDeBulle,
@@ -2272,6 +2642,7 @@ function Conversation({ navigation, route }) {
             {replyPreview ? (
               <button
                 onClick={() => {
+                  colleAuBasRef.current = false;
                   const cible = document.querySelector(
                     `[data-msg1w-id="${getMessageId(replyPreview)}"]`,
                   );
@@ -2467,24 +2838,28 @@ function Conversation({ navigation, route }) {
                 <path d="M9 9.5h.01M15 9.5h.01" />
               </svg>
             </button>
-            <BoutonDuSurvol
-              libelle={i18next.t('conversation.actions.reply', 'Répondre')}
-              onClick={() => setReplyTarget(message)}
-              testId={`MSG1W-repondre-${idMessage}`}
-            >
-              {DESSIN_REPONDRE}
-            </BoutonDuSurvol>
-            {!isMine ? (
+            {peutEcrire ? (
               <BoutonDuSurvol
-                libelle={reportMessageMutation.isPending && reportedMessageId === idMessage
-                  ? 'Signalement...'
-                  : i18next.t('conversation.actions.report', 'Signaler')}
-                onClick={() => handleReportMessage(message)}
-                testId={`MSG1W-signaler-${idMessage}`}
+                classeEnPlus="MSG1W-sur-souris"
+                libelle={i18next.t('conversation.actions.reply', 'Répondre')}
+                onClick={() => repondreA(message)}
+                testId={`MSG1W-repondre-${idMessage}`}
               >
-                {DESSIN_SIGNALER}
+                {DESSIN_REPONDRE}
               </BoutonDuSurvol>
             ) : null}
+            <BoutonDuSurvol
+              libelle={i18next.t('conversation.web.fil.plusDActions', 'Plus d’actions')}
+              menu
+              menuOuvert={menuDuMessage?.id === idMessage}
+              onClick={(event) => {
+                const cadre = event.currentTarget.getBoundingClientRect();
+                ouvrirLeMenu(message, { x: cadre.left, y: cadre.bottom + 4 }, event.currentTarget);
+              }}
+              testId={`MSG1W-plus-${idMessage}`}
+            >
+              {DESSIN_PLUS_D_ACTIONS}
+            </BoutonDuSurvol>
           </div>
           {reactionBarMessageId === getMessageId(message) && reactionBarAnchor && !clavierOuvert ? (
             <div
@@ -2669,7 +3044,6 @@ function Conversation({ navigation, route }) {
     clavierOuvert,
     familleEmoji,
     filDeLaVille,
-    handleReportMessage,
     handleRetryFailedMessage,
     handleToggleReaction,
     isDesktop,
@@ -2678,9 +3052,11 @@ function Conversation({ navigation, route }) {
     reactionBarMessageId,
     reactionsByMessage,
     renderAttachments,
+    menuDuMessage?.id,
+    ouvrirLeMenu,
+    peutEcrire,
     renderComposition,
-    reportMessageMutation.isPending,
-    reportedMessageId,
+    repondreA,
     userData?.documentId,
   ])
 
@@ -2770,6 +3146,21 @@ function Conversation({ navigation, route }) {
     )
   }
 
+  // MSG1W §3.2 — le message dont le menu est ouvert, ses actions, et ma reaction a lui.
+  const messageDuMenu = menuDuMessage
+    ? messages.find(
+      (/** @type {any} */ message) => getMessageId(message) === menuDuMessage.id,
+    ) || null
+    : null;
+  const actionsDuMenu = messageDuMenu ? actionsDuMessage(messageDuMenu) : [];
+  const maReactionDuMenu = menuDuMessage
+    ? getMyReactionEmoji(
+      getReactionsForMessage(reactionsByMessage, menuDuMessage.id),
+      userData?.documentId,
+    )
+    : '';
+  const filVideHorsVille = !isMessagesLoading && !messagesError && !messages.length
+    && !filDeLaVille.estFil;
   const placeholderDeLaSaisie = filDeLaVille.placeholder
     || t('conversation.messagePlaceholder', 'Message');
   const aDuTexte = Boolean(composerText.trim());
@@ -3229,7 +3620,11 @@ function Conversation({ navigation, route }) {
               data-testid="MSG1W-fil"
               onScroll={(event) => {
                 const fil = event.currentTarget;
-                setLoinDuBas(fil.scrollHeight - fil.scrollTop - fil.clientHeight > 160);
+                const distance = fil.scrollHeight - fil.scrollTop - fil.clientHeight;
+                // Revenu en bas, il s y recolle ; il ne s en DECOLLE que par un geste (effet plus
+                // haut) : un defilement programme (photo chargee au 1er rendu) ne compte pas.
+                if (distance < 40) colleAuBasRef.current = true;
+                setLoinDuBas(distance > 160 && !colleAuBasRef.current);
               }}
               ref={messagePaneRef}
               style={{
@@ -3243,175 +3638,180 @@ function Conversation({ navigation, route }) {
                 padding: '8px 6px 18px',
               }}
             >
-              {clubDuFil ? (
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 6px' }}>
-                  <span
-                    data-testid="conversation-club-read-notice"
-                    style={{
-                      alignItems: 'center',
-                      background: PALETTE_DU_FIL.noticeFond,
-                      borderRadius: 8,
-                      color: PALETTE_DU_FIL.noticeTexte,
-                      display: 'inline-flex',
-                      fontSize: 11.5,
-                      gap: 6,
-                      lineHeight: '15px',
-                      maxWidth: 320,
-                      padding: '6px 12px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <GlyphIcon color={PALETTE_DU_FIL.noticeTexte} name="lockShut" size={12} />
-                    {t(
-                      'conversation.clubReadNotice',
-                      'Les conversations de ce club peuvent être consultées par son dirigeant.',
-                    )}
-                  </span>
-                </div>
-              ) : null}
-              {hasNextPage ? (
-                <button
-                  onClick={() => fetchNextPage()}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 999,
-                    color: baseTextColor,
-                    cursor: 'pointer',
-                    justifySelf: 'center',
-                    padding: '10px 16px',
-                  }}
-                  type="button"
-                >
-                  {isFetchingNextPage ? 'Chargement...' : i18next.t(
-                    'conversation.web.loadEarlier',
-                    'Afficher les messages precedents',
-                  )}
-                </button>
-              ) : null}
-
-              {isMessagesLoading ? (
-                <div style={{ color: mutedTextColor }}>
-                  {i18next.t('conversation.web.loading.messages', 'Chargement des messages...')}
-                </div>
-              ) : null}
-
-              {!isMessagesLoading && filDeLaVille.estQuitte ? (
-                <FilDeLaVilleQuitte
-                  estCanal={filDeLaVille.estCanal}
-                  onRetour={() => navigation.navigate(RouteNames.Chat)}
-                />
-              ) : null}
-              {!isMessagesLoading && messagesError && !filDeLaVille.estQuitte ? (
-                <div style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: 18,
-                  color: mutedTextColor,
-                  display: 'grid',
-                  gap: 12,
-                  padding: 18,
-                }}
-                >
-                  <div>
-                    {getErrorMessage(messagesError, i18next.t(
-                      'conversation.web.loading.messagesError',
-                      'Impossible de charger les messages de cette conversation.',
-                    ))}
+              <div
+                ref={contenuDuFilRef}
+                style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}
+              >
+                {clubDuFil ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 6px' }}>
+                    <span
+                      data-testid="conversation-club-read-notice"
+                      style={{
+                        alignItems: 'center',
+                        background: PALETTE_DU_FIL.noticeFond,
+                        borderRadius: 8,
+                        color: PALETTE_DU_FIL.noticeTexte,
+                        display: 'inline-flex',
+                        fontSize: 11.5,
+                        gap: 6,
+                        lineHeight: '15px',
+                        maxWidth: 320,
+                        padding: '6px 12px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <GlyphIcon color={PALETTE_DU_FIL.noticeTexte} name="lockShut" size={12} />
+                      {t(
+                        'conversation.clubReadNotice',
+                        'Les conversations de ce club peuvent être consultées par son dirigeant.',
+                      )}
+                    </span>
                   </div>
+                ) : null}
+                {hasNextPage ? (
                   <button
-                    onClick={() => refetchMessages()}
+                    onClick={() => fetchNextPage()}
                     style={{
                       background: 'transparent',
                       border: `1px solid ${borderColor}`,
                       borderRadius: 999,
                       color: baseTextColor,
                       cursor: 'pointer',
-                      justifySelf: 'start',
-                      padding: '10px 14px',
+                      justifySelf: 'center',
+                      padding: '10px 16px',
                     }}
                     type="button"
                   >
-                    {i18next.t('conversation.web.retry', 'Réessayer')}
+                    {isFetchingNextPage ? 'Chargement...' : i18next.t(
+                      'conversation.web.loadEarlier',
+                      'Afficher les messages precedents',
+                    )}
                   </button>
-                </div>
-              ) : null}
+                ) : null}
 
-              {!isMessagesLoading && !messagesError && !messages.length && filDeLaVille.estFil ? (
-                <VideDuFilDeLaVille
-                  chat={chatData}
-                  clubsCount={filDeLaVille.clubsCount}
-                  espaceVille={route?.params?.espace === 'ville'}
-                />
-              ) : null}
-              {!isMessagesLoading && !messagesError && !messages.length && !filDeLaVille.estFil ? (
-                <div style={{ color: mutedTextColor }}>
-                  {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
-                </div>
-              ) : null}
-              <style>{REACTION_HOVER_STYLE}</style>
-              {!messagesError ? entreesDuFil.map((entree) => (entree.type === 'jour' ? (
-                <div
-                  key={entree.cle}
-                  style={{
-                    display: 'flex', justifyContent: 'center', marginBottom: 4, marginTop: 16,
+                {isMessagesLoading ? (
+                  <div style={{ color: mutedTextColor }}>
+                    {i18next.t('conversation.web.loading.messages', 'Chargement des messages...')}
+                  </div>
+                ) : null}
+
+                {!isMessagesLoading && filDeLaVille.estQuitte ? (
+                  <FilDeLaVilleQuitte
+                    estCanal={filDeLaVille.estCanal}
+                    onRetour={() => navigation.navigate(RouteNames.Chat)}
+                  />
+                ) : null}
+                {!isMessagesLoading && messagesError && !filDeLaVille.estQuitte ? (
+                  <div style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: 18,
+                    color: mutedTextColor,
+                    display: 'grid',
+                    gap: 12,
+                    padding: 18,
                   }}
-                >
-                  <span
-                    data-testid="MSG1W-puce-date"
+                  >
+                    <div>
+                      {getErrorMessage(messagesError, i18next.t(
+                        'conversation.web.loading.messagesError',
+                        'Impossible de charger les messages de cette conversation.',
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => refetchMessages()}
+                      style={{
+                        background: 'transparent',
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: 999,
+                        color: baseTextColor,
+                        cursor: 'pointer',
+                        justifySelf: 'start',
+                        padding: '10px 14px',
+                      }}
+                      type="button"
+                    >
+                      {i18next.t('conversation.web.retry', 'Réessayer')}
+                    </button>
+                  </div>
+                ) : null}
+
+                {!isMessagesLoading && !messagesError && !messages.length && filDeLaVille.estFil ? (
+                  <VideDuFilDeLaVille
+                    chat={chatData}
+                    clubsCount={filDeLaVille.clubsCount}
+                    espaceVille={route?.params?.espace === 'ville'}
+                  />
+                ) : null}
+                {filVideHorsVille ? (
+                  <div style={{ color: mutedTextColor }}>
+                    {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+                  </div>
+                ) : null}
+                <style>{REACTION_HOVER_STYLE}</style>
+                {!messagesError ? entreesDuFil.map((entree) => (entree.type === 'jour' ? (
+                  <div
+                    key={entree.cle}
                     style={{
-                      backdropFilter: 'blur(12px)',
-                      background: PALETTE_DU_FIL.puce,
-                      border: `1px solid ${PALETTE_DU_FIL.filet}`,
-                      borderRadius: 999,
-                      color: PALETTE_DU_FIL.texte,
-                      fontFamily: 'Montserrat-Bold, sans-serif',
-                      fontSize: 12,
-                      padding: '5px 12px',
+                      display: 'flex', justifyContent: 'center', marginBottom: 4, marginTop: 16,
                     }}
                   >
-                    {libelleDuJour(entree.date, {
-                      aujourdhui: libelleAujourdhui,
-                      hier: libelleHier,
-                      locale: i18next.language === 'en' ? 'en-GB' : 'fr-FR',
-                    })}
-                  </span>
-                </div>
-              ) : renderMessageCard(entree))) : null}
-              {quiEcrit.length ? (
-                <div
-                  aria-label={libelleQuiEcrit}
-                  role="status"
-                  style={{ display: 'flex', marginTop: 10, paddingLeft: 8 }}
-                >
-                  <span
-                    style={{
-                      alignItems: 'center',
-                      background: PALETTE_DU_FIL.bulleRecue,
-                      borderRadius: 18,
-                      display: 'inline-flex',
-                      gap: 4,
-                      height: 34,
-                      padding: '0 14px',
-                    }}
+                    <span
+                      data-testid="MSG1W-puce-date"
+                      style={{
+                        backdropFilter: 'blur(12px)',
+                        background: PALETTE_DU_FIL.puce,
+                        border: `1px solid ${PALETTE_DU_FIL.filet}`,
+                        borderRadius: 999,
+                        color: PALETTE_DU_FIL.texte,
+                        fontFamily: 'Montserrat-Bold, sans-serif',
+                        fontSize: 12,
+                        padding: '5px 12px',
+                      }}
+                    >
+                      {libelleDuJour(entree.date, {
+                        aujourdhui: libelleAujourdhui,
+                        hier: libelleHier,
+                        locale: i18next.language === 'en' ? 'en-GB' : 'fr-FR',
+                      })}
+                    </span>
+                  </div>
+                ) : renderMessageCard(entree))) : null}
+                {quiEcrit.length ? (
+                  <div
+                    aria-label={libelleQuiEcrit}
+                    role="status"
+                    style={{ display: 'flex', marginTop: 10, paddingLeft: 8 }}
                   >
-                    {[0, 1, 2].map((point) => (
-                      <span
-                        className="MSG1W-point"
-                        key={point}
-                        style={{
-                          animationDelay: `${point * 0.2}s`,
-                          background: PALETTE_DU_FIL.texteDoux,
-                          borderRadius: '50%',
-                          display: 'inline-block',
-                          height: 7,
-                          width: 7,
-                        }}
-                      />
-                    ))}
-                  </span>
-                </div>
-              ) : null}
+                    <span
+                      style={{
+                        alignItems: 'center',
+                        background: PALETTE_DU_FIL.bulleRecue,
+                        borderRadius: 18,
+                        display: 'inline-flex',
+                        gap: 4,
+                        height: 34,
+                        padding: '0 14px',
+                      }}
+                    >
+                      {[0, 1, 2].map((point) => (
+                        <span
+                          className="MSG1W-point"
+                          key={point}
+                          style={{
+                            animationDelay: `${point * 0.2}s`,
+                            background: PALETTE_DU_FIL.texteDoux,
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            height: 7,
+                            width: 7,
+                          }}
+                        />
+                      ))}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
             </div>
             {loinDuBas ? (
               <button
@@ -3459,31 +3859,65 @@ function Conversation({ navigation, route }) {
               }}
             >
               {replyTarget ? (
-                <div style={{
-                  alignItems: 'center',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: 16,
-                  display: 'flex',
-                  gap: 12,
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                }}
+                <div
+                  data-testid="MSG1W-barre-reponse"
+                  style={{
+                    alignItems: 'center',
+                    background: PALETTE_DU_FIL.champ,
+                    borderLeft: `4px solid ${couleurDeLaPersonne(replyTarget?.sender)}`,
+                    borderRadius: 16,
+                    display: 'flex',
+                    gap: 10,
+                    padding: '8px 10px 8px 12px',
+                  }}
                 >
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    <span style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
-                      Reponse a {getDisplayName(replyTarget?.sender)}
+                  <div
+                    style={{
+                      display: 'grid', flex: 1, gap: 2, minWidth: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: couleurDeLaPersonne(replyTarget?.sender),
+                        fontFamily: 'Montserrat-Bold, sans-serif',
+                        fontSize: 12.5,
+                      }}
+                    >
+                      {getDisplayName(replyTarget?.sender)}
                     </span>
-                    <span style={{ color: baseTextColor, fontSize: 13 }}>
-                      {String(replyTarget?.message || '').trim() || 'Message partagé'}
+                    <span
+                      style={{
+                        color: PALETTE_DU_FIL.texteDoux,
+                        fontSize: 13,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {String(replyTarget?.message || '').trim()
+                        || t('conversation.web.fil.messagePartage', 'Message partagé')}
                     </span>
                   </div>
                   <button
+                    aria-label={t('conversation.web.fil.annulerReponse', 'Annuler la réponse')}
                     onClick={() => setReplyTarget(null)}
-                    style={{ background: 'transparent', border: 0, color: primaryColor, cursor: 'pointer' }}
+                    style={{
+                      alignItems: 'center',
+                      background: PALETTE_DU_FIL.menuBord,
+                      border: 0,
+                      borderRadius: 999,
+                      color: PALETTE_DU_FIL.texte,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexShrink: 0,
+                      height: 28,
+                      justifyContent: 'center',
+                      padding: 0,
+                      width: 28,
+                    }}
                     type="button"
                   >
-                    Retirer
+                    {DESSIN_FERMER}
                   </button>
                 </div>
               ) : null}
@@ -3658,6 +4092,291 @@ function Conversation({ navigation, route }) {
         {isDesktop && peutEcrire ? panneauDeDroite : null}
       </div>
       {!isDesktop && peutEcrire ? panneauDeDroite : null}
+      {messageDuMenu && menuDuMessage ? (
+        <div
+          ref={menuDuMessageRef}
+          style={{
+            display: 'grid',
+            gap: 8,
+            justifyItems: 'start',
+            left: menuDuMessage.left,
+            position: 'fixed',
+            top: menuDuMessage.top,
+            width: 252,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            aria-label={t('conversation.reactions.pick', 'Choisir une réaction')}
+            data-testid="MSG1W-menu-reactions"
+            role="group"
+            style={{
+              alignItems: 'center',
+              background: PALETTE_DU_FIL.menu,
+              border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+              borderRadius: 999,
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+              display: 'flex',
+              gap: 2,
+              padding: '6px 8px',
+            }}
+          >
+            {REACTION_EMOJIS.map((emoji) => (
+              <button
+                aria-label={emoji}
+                aria-pressed={maReactionDuMenu === emoji}
+                key={`menu-${emoji}`}
+                onClick={() => {
+                  fermerLeMenu(false);
+                  handleToggleReaction(menuDuMessage.id, emoji);
+                }}
+                style={{
+                  background: maReactionDuMenu === emoji
+                    ? 'rgba(255, 255, 255, 0.18)'
+                    : 'transparent',
+                  border: 0,
+                  borderRadius: 999,
+                  cursor: 'pointer',
+                  fontSize: 22,
+                  height: 36,
+                  lineHeight: 1,
+                  padding: 0,
+                  width: 36,
+                }}
+                type="button"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <div
+            aria-label={t('conversation.actions.modalTitle', 'Actions du message')}
+            onKeyDown={naviguerDansLeMenu}
+            role="menu"
+            style={{
+              background: PALETTE_DU_FIL.menu,
+              border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+              borderRadius: 16,
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+              overflow: 'hidden',
+              width: 236,
+            }}
+            tabIndex={-1}
+          >
+            {actionsDuMenu.map((action) => (
+              <Fragment key={action.key}>
+                {action.destructive ? (
+                  <div
+                    role="separator"
+                    style={{ borderTop: `1px solid ${PALETTE_DU_FIL.menuBord}` }}
+                  />
+                ) : null}
+                <button
+                  className="MSG1W-ligne-menu"
+                  onClick={() => lancerAction(action.key, messageDuMenu)}
+                  role="menuitem"
+                  style={{
+                    alignItems: 'center',
+                    background: 'transparent',
+                    border: 0,
+                    color: action.destructive ? PALETTE_DU_FIL.danger : PALETTE_DU_FIL.texte,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    fontFamily: 'Montserrat-Regular, sans-serif',
+                    fontSize: 15.5,
+                    gap: 12,
+                    minHeight: 48,
+                    outline: 'none',
+                    padding: '0 16px',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                  type="button"
+                >
+                  {ICONES_DU_MENU[/** @type {keyof typeof ICONES_DU_MENU} */ (action.key)]}
+                  {t(action.labelKey, action.fallback)}
+                </button>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {messageEnEdition ? (
+        <div
+          style={{
+            alignItems: 'center',
+            background: PALETTE_DU_FIL.voile,
+            display: 'flex',
+            inset: 0,
+            justifyContent: 'center',
+            position: 'fixed',
+            zIndex: 1100,
+          }}
+        >
+          <div
+            aria-labelledby="msg1w-titre-edition"
+            aria-modal="true"
+            role="dialog"
+            style={{
+              background: PALETTE_DU_FIL.feuille,
+              borderRadius: 20,
+              boxSizing: 'border-box',
+              display: 'grid',
+              gap: 14,
+              padding: 20,
+              width: 'min(480px, calc(100vw - 32px))',
+            }}
+          >
+            <h2
+              id="msg1w-titre-edition"
+              style={{
+                color: PALETTE_DU_FIL.texte,
+                fontFamily: 'Montserrat-Bold, sans-serif',
+                fontSize: 18,
+                margin: 0,
+              }}
+            >
+              {t('conversation.actions.editModal.title', 'Modifier le message')}
+            </h2>
+            <textarea
+              aria-label={t('conversation.actions.editModal.title', 'Modifier le message')}
+              onChange={(event) => setTexteEnEdition(event.target.value)}
+              placeholder={t('conversation.actions.editModal.placeholder', 'Modifier le texte...')}
+              ref={champEditionRef}
+              rows={4}
+              style={{
+                background: PALETTE_DU_FIL.champ,
+                border: `1px solid ${PALETTE_DU_FIL.champBord}`,
+                borderRadius: 14,
+                boxSizing: 'border-box',
+                color: PALETTE_DU_FIL.texte,
+                fontFamily: 'Montserrat-Regular, sans-serif',
+                fontSize: 15,
+                lineHeight: '20px',
+                outline: 'none',
+                padding: '12px 14px',
+                resize: 'vertical',
+                width: '100%',
+              }}
+              value={texteEnEdition}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setMessageEnEdition(null)}
+                style={STYLE_BOUTON_CONTOUR}
+                type="button"
+              >
+                {t('common.actions.cancel', 'Annuler')}
+              </button>
+              <button
+                aria-busy={enregistrementEnCours}
+                disabled={enregistrementEnCours}
+                onClick={enregistrerLEdition}
+                style={{ ...STYLE_BOUTON_PLEIN, opacity: enregistrementEnCours ? 0.6 : 1 }}
+                type="button"
+              >
+                {t('common.actions.save', 'Enregistrer')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {messageASupprimer ? (
+        <div
+          style={{
+            alignItems: 'center',
+            background: PALETTE_DU_FIL.voile,
+            display: 'flex',
+            inset: 0,
+            justifyContent: 'center',
+            position: 'fixed',
+            zIndex: 1100,
+          }}
+        >
+          <div
+            aria-describedby="msg1w-texte-suppression"
+            aria-labelledby="msg1w-titre-suppression"
+            aria-modal="true"
+            role="alertdialog"
+            style={{
+              background: PALETTE_DU_FIL.feuille,
+              borderRadius: 20,
+              boxSizing: 'border-box',
+              display: 'grid',
+              gap: 12,
+              padding: 20,
+              textAlign: 'center',
+              width: 'min(300px, calc(100vw - 32px))',
+            }}
+          >
+            <h2
+              id="msg1w-titre-suppression"
+              style={{
+                color: PALETTE_DU_FIL.texte,
+                fontFamily: 'Montserrat-Bold, sans-serif',
+                fontSize: 17,
+                margin: 0,
+              }}
+            >
+              {t('conversation.actions.deleteConfirm.title', 'Supprimer le message')}
+            </h2>
+            <p
+              id="msg1w-texte-suppression"
+              style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}
+            >
+              {t(
+                'conversation.actions.deleteConfirm.description',
+                'Ce message sera supprimé pour tous les participants.',
+              )}
+            </p>
+            <div
+              style={{
+                display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr', marginTop: 6,
+              }}
+            >
+              <button
+                onClick={() => setMessageASupprimer(null)}
+                style={STYLE_BOUTON_CONTOUR}
+                type="button"
+              >
+                {t('common.actions.cancel', 'Annuler')}
+              </button>
+              <button
+                onClick={confirmerLaSuppression}
+                style={{
+                  ...STYLE_BOUTON_CONTOUR,
+                  background: 'rgba(255, 90, 116, 0.16)',
+                  border: `1.5px solid ${PALETTE_DU_FIL.danger}`,
+                  color: PALETTE_DU_FIL.danger,
+                }}
+                type="button"
+              >
+                {t('common.actions.delete', 'Supprimer')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {annonce ? (
+        <div
+          role="status"
+          style={{
+            background: PALETTE_DU_FIL.menu,
+            border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+            borderRadius: 999,
+            bottom: 96,
+            color: PALETTE_DU_FIL.texte,
+            fontSize: 14,
+            left: '50%',
+            padding: '8px 16px',
+            position: 'fixed',
+            transform: 'translateX(-50%)',
+            zIndex: 1200,
+          }}
+        >
+          {annonce}
+        </div>
+      ) : null}
     </ScreenContainer>
   )
 }

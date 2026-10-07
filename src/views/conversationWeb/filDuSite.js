@@ -144,3 +144,27 @@ export const indiceDeCouleur = (identifiant, taille) => {
   });
   return somme % taille;
 };
+
+/**
+ * Les messages dont le texte ne se modifie pas : la MEME liste que le serveur (chat-message.ts,
+ * `NON_EDITABLE_COMPOSITION_TYPES`) et que le telephone (Conversation.js).
+ */
+const TYPES_NON_MODIFIABLES = new Set([
+  'contact_share',
+  'event_share',
+  'location_share',
+  'poll',
+  'proposal',
+  'voice_note',
+]);
+
+/**
+ * Le texte de ce message peut-il etre modifie (s il est a moi) ? Un sondage, un vocal, un partage
+ * ou une proposition ne le peuvent pas.
+ * @param {any} message - Le message.
+ * @returns {boolean} Vrai si « Modifier » a un sens.
+ */
+export const estModifiable = (message) => {
+  const type = String(message?.composition?.type || '').trim().toLowerCase();
+  return !type || !TYPES_NON_MODIFIABLES.has(type);
+};
