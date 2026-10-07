@@ -3196,12 +3196,15 @@ function Conversation({ navigation, route }) {
     const estAPlusieurs = chatData?.type !== 'whisper';
     const montrerNom = (!isMine && estAPlusieurs && premier) || Boolean(maVoix && premier);
     const montrerAvatar = !isMine && estAPlusieurs && dernier;
-    // MSG1B-1 (serveur, contrat du 07/10) : `sender.staffRole` vaut `dirigeant` ou `entraineur`
-    // dans les fils d equipe, de club et omnisport. Absent : rien ne s affiche.
+    // MSG1B-1 (serveur, contrat du 07/10, §2.3) : `sender.staffRole` vaut `dirigeant` ou
+    // `entraineur` dans les fils d equipe, de club et omnisport, en repli `chat.staffRoles`
+    // (la regle du telephone, « genre A »). Absent : rien ne s affiche.
+    const cleDuRole = message?.sender?.staffRole
+      || chatData?.staffRoles?.[getEntityDocumentId(message?.sender)];
     const roleDuStaff = {
       dirigeant: i18next.t('conversation.web.fil.roleDirigeant', 'Dirigeant'),
       entraineur: i18next.t('conversation.web.fil.roleEntraineur', 'Entraîneur'),
-    }[String(message?.sender?.staffRole || '')] || '';
+    }[String(cleDuRole || '')] || '';
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo
@@ -3728,6 +3731,7 @@ function Conversation({ navigation, route }) {
   }, [
     baseTextColor,
     borderColor,
+    chatData?.staffRoles,
     chatData?.type,
     clavierOuvert,
     familleEmoji,
@@ -4268,9 +4272,11 @@ function Conversation({ navigation, route }) {
 
           <div
             style={{
-              // MSG1W (SPECS §1) — le motif sportif en filigrane (MSG1A, tuile de 240), derriere le
-              // fil seulement, comme sur le telephone : il reste en place quand les messages defilent.
-              backgroundImage: Images?.motifDuFil?.uri ? `url("${Images.motifDuFil.uri}")` : undefined,
+              // MSG1W (SPECS §1) — le motif sportif en filigrane (MSG1A, tuile de 240), derriere
+              // le fil seulement, comme sur le telephone : il reste en place quand le fil defile.
+              backgroundImage: Images?.motifDuFil?.uri
+                ? `url("${Images.motifDuFil.uri}")`
+                : undefined,
               backgroundRepeat: 'repeat',
               backgroundSize: '240px 240px',
               minHeight: 0,

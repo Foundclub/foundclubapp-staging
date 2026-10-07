@@ -341,6 +341,24 @@ describe('MSG1W §3.1 — la couleur d un nom, la même que sur le téléphone',
   });
 });
 
+// 📐 §3.1 — « genre A » (Adel, 07/10) : « Dirigeant » / « Entraîneur » a cote du nom. Le contrat
+// 1B §2.3 porte la clef sur `sender.staffRole`, et en repli sur `chat.staffRoles[expediteur]` : le
+// telephone lit les deux (MSG1A f2a86c52) ; le site ne lisait que la premiere.
+describe('MSG1W §3.1 — le rôle du staff à côté du nom (« genre A »)', () => {
+  test('sans staffRole, le repli chat.staffRoles nomme Bruno « Entraîneur »', async () => {
+    mockFil = { ...mockFil, staffRoles: { bruno: 'entraineur' } };
+    const { arbre } = await monter();
+    const [nom] = parTestId(arbre, 'MSG1W-nom-m1');
+    expect(texteDe(nom)).toBe('Bruno Dupont Entraîneur');
+  });
+
+  test('sans aucune clef (serveur d avant 1B), rien ne s ajoute au nom', async () => {
+    const { arbre } = await monter();
+    const [nom] = parTestId(arbre, 'MSG1W-nom-m1');
+    expect(texteDe(nom)).toBe('Bruno Dupont');
+  });
+});
+
 // 📐 §3.10 — L AVERTISSEMENT DU DIRIGEANT (decision d Adel du 07/10 : « avertissement B »). Le
 // telephone l affichait en bandeau fixe ; le site ne l affichait PAS DU TOUT. Il devient une
 // notice centree EN TETE DU FIL, qui defile avec lui, comme la mention de chiffrement de WhatsApp.
