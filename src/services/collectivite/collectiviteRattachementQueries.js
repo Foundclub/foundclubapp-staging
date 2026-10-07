@@ -1,0 +1,153 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import {
+  answerCollectiviteAttachRequest,
+  answerCollectiviteProposal,
+  cancelCollectiviteProposal,
+  getClubCollectiviteRequests,
+  getCollectiviteClubRequests,
+  proposeCollectiviteClub,
+  remindCollectiviteProposal,
+  searchCollectiviteClubs,
+} from './collectiviteRattachementService';
+
+/**
+ * 🏛️ VILLE-INVITER-CLUB (07/10/2026) — les lectures et les gestes du rattachement dans les deux
+ * sens. Un fichier à part, qui n'importe PAS `collectiviteQueries.js` : celui-ci charge le client
+ * HTTP dès son import, et la carte du club vit dans la fiche du club (ClubDetails), dont les
+ * témoins ne le doublent pas.
+ * Les clefs de la Ville commencent par `['collectivite', id]`, comme celles de
+ * `collectiviteQueries.js` : un geste invalide ce préfixe, donc aussi la liste des clubs
+ * rattachés et les invitations. Celles du club par `['club', id]` : la fiche du club, son bloc
+ * « De la Ville » et son offre suivent un rattachement.
+ */
+
+const unwrapRows = (/** @type {any} */ response) => (
+  Array.isArray(response?.data) ? response.data : []
+);
+
+/**
+ * La clef de la recherche de clubs de la Ville.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {string} q - Le texte cherché.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteClubSearchQueryKey = (collectiviteId, q) => [
+  'collectivite', collectiviteId, 'club-search', q,
+];
+
+/**
+ * La clef des demandes de rattachement de la Ville.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const collectiviteClubRequestsQueryKey = (collectiviteId) => [
+  'collectivite', collectiviteId, 'club-requests',
+];
+
+/**
+ * La clef des demandes de rattachement d'un club.
+ * @param {string | null | undefined} clubId - documentId.
+ * @returns {Array<string | null | undefined>} La clef.
+ */
+export const clubCollectiviteRequestsQueryKey = (clubId) => [
+  'club', clubId, 'collectivite-requests',
+];
+
+/**
+ * La Ville cherche un club déjà sur FoundClub. Sans texte : les clubs de sa commune.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @param {string} q - Le texte cherché (au moins 2 caractères pour chercher hors de la commune).
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La lecture.
+ */
+export const useCollectiviteClubSearch = (collectiviteId, q) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: async () => unwrapRows(await searchCollectiviteClubs(String(collectiviteId), q)),
+  queryKey: collectiviteClubSearchQueryKey(collectiviteId, q),
+  staleTime: 30_000,
+});
+
+/**
+ * Les demandes de rattachement de la Ville, dans les deux sens.
+ * @param {string | null | undefined} collectiviteId - documentId.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La lecture.
+ */
+export const useCollectiviteClubRequests = (collectiviteId) => useQuery({
+  enabled: Boolean(collectiviteId),
+  queryFn: async () => unwrapRows(await getCollectiviteClubRequests(String(collectiviteId))),
+  queryKey: collectiviteClubRequestsQueryKey(collectiviteId),
+  staleTime: 60_000,
+});
+
+/**
+ * Un geste de la Ville, puis la relecture de tout ce qui porte sa clef (recherche, demandes,
+ * clubs rattachés, invitations).
+ * @param {(variables: any) => Promise<any>} mutationFn - Le geste du service.
+ * @returns {any} La mutation ; variables avec `collectiviteId`.
+ */
+const useGesteDeLaVille = (mutationFn) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSettled: async (_data, _erreur, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: ['collectivite', variables?.collectiviteId],
+      });
+    },
+  });
+};
+
+/**
+ * « Envoyer la demande » : variables `{ collectiviteId, clubId }`.
+ * @returns {any} La mutation.
+ */
+export const useProposeCollectiviteClub = () => useGesteDeLaVille(proposeCollectiviteClub);
+/**
+ * « Relancer » : variables `{ collectiviteId, invitationId }`.
+ * @returns {any} La mutation.
+ */
+export const useRemindCollectiviteProposal = () => useGesteDeLaVille(remindCollectiviteProposal);
+/**
+ * « Annuler » : variables `{ collectiviteId, invitationId }`.
+ * @returns {any} La mutation.
+ */
+export const useCancelCollectiviteProposal = () => useGesteDeLaVille(cancelCollectiviteProposal);
+/**
+ * « Accepter » / « Refuser » une demande venue du lien :
+ * `{ collectiviteId, invitationId, accept }`.
+ * @returns {any} La mutation.
+ */
+export const useAnswerCollectiviteAttachRequest = () => useGesteDeLaVille(
+  answerCollectiviteAttachRequest,
+);
+
+/**
+ * Les demandes de rattachement d'un club, pour ses dirigeants.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {{ enabled?: boolean }} [options] - `enabled` : le compte dirige ce club.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La lecture.
+ */
+export const useClubCollectiviteRequests = (clubId, { enabled = true } = {}) => useQuery({
+  enabled: Boolean(clubId) && enabled,
+  queryFn: async () => unwrapRows(await getClubCollectiviteRequests(String(clubId))),
+  queryKey: clubCollectiviteRequestsQueryKey(clubId),
+  // Un dirigeant qui n'a pas le droit de lire (dirigeant d'un club parent, par exemple) : la
+  // carte ne s'affiche pas, inutile d'insister.
+  retry: false,
+  staleTime: 60_000,
+});
+
+/**
+ * Un dirigeant répond à la demande de la Ville : variables `{ clubId, invitationId, accept }`.
+ * Accepter rattache tout de suite : la fiche du club (son offre, son bloc « De la Ville ») suit.
+ * @returns {any} La mutation.
+ */
+export const useAnswerCollectiviteProposal = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: answerCollectiviteProposal,
+    onSettled: async (_data, _erreur, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['club', variables?.clubId] });
+    },
+  });
+};

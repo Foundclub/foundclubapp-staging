@@ -117,11 +117,15 @@ export const collectiviteInitial = (name) => {
  */
 export const splitAdminInvitations = (rows) => {
   const lignes = Array.isArray(rows) ? rows : [];
+  // VILLE-INVITER-CLUB (07/10, « lien A ») : la Ville juge les demandes venues de son lien ; une
+  // demande qu'elle a REFUSÉE (`answer`) est traitée, plus « à rattacher ».
+  const traitee = (/** @type {any} */ ligne) => ligne?.status === 'attached'
+    || (ligne?.kind === 'attach_request' && ligne?.answer === 'refused');
   const enAttente = (/** @type {string} */ kind) => lignes
-    .filter((ligne) => ligne?.kind === kind && ligne?.status !== 'attached');
+    .filter((ligne) => ligne?.kind === kind && !traitee(ligne));
   return {
     attachRequests: enAttente('attach_request'),
-    done: lignes.filter((ligne) => ligne?.status === 'attached'),
+    done: lignes.filter(traitee),
     foundclub: enAttente('foundclub'),
   };
 };

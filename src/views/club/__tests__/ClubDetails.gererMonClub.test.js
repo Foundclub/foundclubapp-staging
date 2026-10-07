@@ -59,6 +59,9 @@ const mockWeekendQuery = jest.fn(() => ({
   data: undefined, error: null, isLoading: false, refetch: jest.fn(),
 }));
 const mockGetClubWeekendResults = jest.fn();
+// VILLE-INVITER-CLUB (07/10) : les demandes de rattachement du club (carte en tete du hub).
+/** @type {jest.Mock<any, any[]>} */
+const mockRattachementQuery = jest.fn(() => ({ data: [], error: null, isLoading: false }));
 const mockRemindClubWeekendScore = jest.fn(() => Promise.resolve({
   alreadyRemindedCount: 0, remindedCount: 1, trainerCount: 1,
 }));
@@ -86,11 +89,11 @@ jest.mock('@tanstack/react-query', () => ({
   })),
   // STATS-FIX2 · point 2 : la carte « Résultats du week-end » a sa propre lecture,
   // observee par `mockWeekendQuery` ; toutes les autres gardent la reponse vide.
-  useQuery: (/** @type {any} */ options) => (
-    options?.queryKey?.[0] === 'club-weekend-results'
-      ? mockWeekendQuery(options)
-      : { data: [], isLoading: false, refetch: jest.fn() }
-  ),
+  useQuery: (/** @type {any} */ options) => {
+    if (options?.queryKey?.[0] === 'club-weekend-results') return mockWeekendQuery(options);
+    if (options?.queryKey?.[2] === 'collectivite-requests') return mockRattachementQuery(options);
+    return { data: [], isLoading: false, refetch: jest.fn() };
+  },
   // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
   // rafraichir « Demandes », « Accueil » et « Mes equipes » apres une demande
   // d'adhesion (`joinClub`). Sans cette doublure, le rendu jette.
@@ -1349,5 +1352,56 @@ describe('ECRAN18-ENTETE · l en-tête compact de « Gérer mon club » sur ordi
 
     expect(enTete(arbre)).toHaveLength(0);
     expect(texteDe(arbre.root)).not.toContain('Gestion du club');
+  });
+});
+
+// VILLE-INVITER-CLUB (07/10/2026, « club A » d'Adel) — la Ville a cherché le club et demande à le
+// rattacher : la demande attend le dirigeant EN TÊTE de son hub, avec Accepter / Refuser. Et le
+// dirigeant y lit l'état des demandes de son club (constat du chef en prod : Adel avait cru son
+// club rattaché alors que sa demande attendait). ROUGE avant le lot : le hub n'en disait rien.
+describe('ClubDetails — VILLE-INVITER-CLUB : la demande de la Ville en tête du hub', () => {
+  const PROPOSITION = {
+    canAnswer: true,
+    collectivite: { name: 'Ville de Montrivage', type: 'commune' },
+    documentId: 'p-1',
+    kind: 'proposal',
+    offerIncluded: false,
+    state: 'pending',
+  };
+
+  it('le dirigeant la voit en tête du hub, avec Accepter et Refuser', () => {
+    mockRattachementQuery.mockReturnValue({ data: [PROPOSITION], error: null, isLoading: false });
+    const arbre = monter();
+    const lus = texteDe(arbre.root);
+    expect(lus).toContain('La Ville de Montrivage propose de rattacher ton club');
+    expect(lus.indexOf('propose de rattacher ton club')).toBeLessThan(lus.indexOf('Installations'));
+    expect(pressableAvecTexte(arbre, 'Accepter')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Refuser')).toBeDefined();
+    expect(mockRattachementQuery).toHaveBeenCalledWith(expect.objectContaining({
+      enabled: true,
+      queryKey: ['club', 'club-1', 'collectivite-requests'],
+    }));
+  });
+
+  it('il y lit aussi l état de la demande faite par le lien', () => {
+    mockRattachementQuery.mockReturnValue({
+      data: [{
+        ...PROPOSITION, canAnswer: false, documentId: 'r-1', kind: 'attach_request',
+      }],
+      error: null,
+      isLoading: false,
+    });
+    expect(texteDe(monter().root))
+      .toContain('Ta demande de rattachement à la Ville de Montrivage attend sa réponse.');
+  });
+
+  it('un compte qui ne dirige pas le club ne la lit même pas', () => {
+    mockHasClubAccess.mockReturnValue(false);
+    mockUserData = { documentId: 'u-9', role: { name: 'player' }, trainedTeams: [] };
+    mockRattachementQuery.mockReturnValue({ data: [PROPOSITION], error: null, isLoading: false });
+    const lus = texteDe(monter().root);
+    expect(lus).not.toContain('propose de rattacher ton club');
+    // Le hub ne s ouvre pas pour lui : la carte n est pas montee, ou sa lecture reste coupee.
+    mockRattachementQuery.mock.calls.forEach(([options]) => expect(options.enabled).toBe(false));
   });
 });

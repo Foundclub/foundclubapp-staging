@@ -52,6 +52,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
+import RattachementDuClub from '@/views/collectivite/components/RattachementDuClub';
 import ClubCompactHeader from '@/views/multisportClub/components/ClubCompactHeader';
 import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
 import WeekendResultsCard, {
@@ -3127,6 +3128,10 @@ function ClubDetails({ navigation, route }) {
 
           {isClubHub ? (
             <View style={[Spaces.gap[16]]}>
+              {/* VILLE-INVITER-CLUB (07/10) — en tete de l'espace du dirigeant : la demande de
+                  la Ville (« club A » : Accepter rattache tout de suite) et l'etat des demandes
+                  de rattachement du club, dans les deux sens. Rien sans demande. */}
+              <RattachementDuClub clubId={clubId ? String(clubId) : null} enabled={canEdit} />
               {isDesktop ? (
                 <ClubResultsBoard
                   onOpenTeamStats={handleOpenTeamStats}

@@ -309,19 +309,26 @@ function AdminCollectiviteInvitations() {
     );
   };
 
-  const carteFaite = (/** @type {any} */ demande) => (
-    <View key={demande.documentId} style={carteStyle} testID={`demande-${demande.documentId}`}>
-      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-        {demande?.club?.name || demande?.clubName || ''}
-      </Text>
-      <Text style={[Fonts.p3Bold, Fonts.success500]}>
-        {t('collectiviteConsole.demandes.rattacheA', 'Rattaché à {{ville}}', {
-          ville: demande?.collectivite?.name || '', ...SANS_ECHAPPEMENT,
-        })}
-      </Text>
-      {retourDe(demande)}
-    </View>
-  );
+  // VILLE-INVITER-CLUB (07/10, « lien A ») : une demande du lien REFUSÉE par la Ville est
+  // traitée, elle aussi ; la carte le dit, sans bouton (la console garde « Rattacher » sur la
+  // fiche de la Ville).
+  const carteFaite = (/** @type {any} */ demande) => {
+    const refusee = demande?.status !== 'attached' && demande?.answer === 'refused';
+    const valeurs = { ville: demande?.collectivite?.name || '', ...SANS_ECHAPPEMENT };
+    return (
+      <View key={demande.documentId} style={carteStyle} testID={`demande-${demande.documentId}`}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {demande?.club?.name || demande?.clubName || ''}
+        </Text>
+        <Text style={[Fonts.p3Bold, refusee ? Fonts.error300 : Fonts.success500]}>
+          {refusee
+            ? t('collectiviteConsole.demandes.refuseeParLaVille', 'Refusée par {{ville}}', valeurs)
+            : t('collectiviteConsole.demandes.rattacheA', 'Rattaché à {{ville}}', valeurs)}
+        </Text>
+        {retourDe(demande)}
+      </View>
+    );
+  };
 
   const vides = {
     faits: t(
