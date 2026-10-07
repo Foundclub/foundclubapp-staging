@@ -13235,6 +13235,7 @@ export default {
     errors: {
       delete: 'Unable to delete the notification.',
       eventNotFound: 'Unable to find the event linked to this notification.',
+      load: 'Could not load notifications.',
       markAll: 'Unable to mark all notifications as read.',
       markRead: 'Unable to mark the notification as read.',
       markReadShort: 'Unable to mark as read.',
@@ -13262,6 +13263,7 @@ export default {
       title: 'No notifications',
     },
     errors: {
+      load: 'Could not load notifications.',
       markAll: 'Could not mark all notifications as read.',
       markRead: 'Could not mark as read.',
     },
