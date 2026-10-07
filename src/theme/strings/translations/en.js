@@ -5612,6 +5612,9 @@ export default {
     },
     fenetre: {
       accepterSerie: 'Accept the series',
+      // VILLE-T18C (07/10) — deciding a series: what is being written, while waiting (T18, G49c).
+      // eslint-disable-next-line max-len
+      accordEnCours: 'Accepting {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       demandePar: 'Requested by {{personne}}',
       depasse: '{{equipes}} for {{places}} at that time.',
       fermer: 'Close',
@@ -5620,6 +5623,8 @@ export default {
       poignee: 'Close the window',
       prevenuDemandeur: '{{personne}} ({{club}}), who asks',
       prevenusDejaLa: 'and the clubs already there: {{clubs}}',
+      // eslint-disable-next-line max-len
+      refusEnCours: 'Refusing {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       refusAideSerie: 'The club receives your reason; the trainings of the series are cancelled.',
       refuserEtAnnuler: 'Refuse and cancel the training',
       refuserSerie: 'Refuse the series',

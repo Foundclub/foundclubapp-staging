@@ -507,6 +507,30 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
             value={message}
           />
           {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
+          {/* ⏳ VILLE-T18C (07/10, tournée T18 G49c) — une série se tranche en quelques secondes
+              (36 dates : 15,3 s au refus) : la fenêtre dit ce qui s'écrit, pas seulement un
+              bouton qui tourne. */}
+          {enCours && serie ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[Fonts.p3Bold, Fonts.neutral100]}
+              testID="decision-serie-en-cours"
+            >
+              {estRefus
+                ? t(
+                  'collectiviteDemandes.fenetre.refusEnCours',
+                  // eslint-disable-next-line max-len
+                  'Refus des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
+                  { nombre: Number(demande?.seriesCount || 1) },
+                )
+                : t(
+                  'collectiviteDemandes.fenetre.accordEnCours',
+                  // eslint-disable-next-line max-len
+                  'Accord des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
+                  { nombre: enPartie ? cochees.length : Number(demande?.seriesCount || 1) },
+                )}
+            </Text>
+          ) : null}
 
           {/* Deux boutons EMPILÉS, libellés entiers (P6-fenetre). */}
           <View style={{ gap: 12 }}>

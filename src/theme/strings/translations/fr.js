@@ -5991,6 +5991,9 @@ export default {
     },
     fenetre: {
       accepterSerie: 'Accepter la série',
+      // VILLE-T18C (07/10) — trancher une série : ce qui s’écrit, pendant l’attente (T18, G49c).
+      // eslint-disable-next-line max-len
+      accordEnCours: 'Accord des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
       demandePar: 'Demandé par {{personne}}',
       depasse: '{{equipes}} pour {{places}} à ce moment.',
       fermer: 'Fermer',
@@ -5999,6 +6002,8 @@ export default {
       poignee: 'Fermer la fenêtre',
       prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
       prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
+      // eslint-disable-next-line max-len
+      refusEnCours: 'Refus des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
       refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
       refuserEtAnnuler: 'Refuser et annuler l’entraînement',
       refuserSerie: 'Refuser la série',

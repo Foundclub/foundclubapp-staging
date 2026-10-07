@@ -855,3 +855,30 @@ describe('VILLE-T18C point 4 — « Traitées » : une carte refusée d’une s�
     ]));
   });
 });
+
+// ⏳ VILLE-T18C (07/10) — ajout T18 du chef (G49c) : « Refuser la série » attendait 15,3 s avec
+// pour seul signe un bouton qui tourne. Le serveur répond désormais avant de prévenir (admin
+// VILLE-T18C) ; la fenêtre dit en plus ce qui s'écrit, pendant l'attente. ROUGE avant.
+describe('VILLE-T18C point 4 — trancher une série : la fenêtre dit ce qui s’écrit', () => {
+  it('refuser la série : « Refus des 30 dates en cours… » pendant l’attente', async () => {
+    mockEnAttente = [SERIE];
+    /** La réponse du serveur, tenue jusqu’à la fin de la mesure. @type {(valeur: any) => void} */
+    let repondre = () => {};
+    mockPost.mockImplementation(() => new Promise((resolve) => { repondre = resolve; }));
+    const arbre = await monter((l) => l.some((texte) => (
+      texte.startsWith('Montrivage Basket demande chaque')
+    )));
+    await appuyer(arbre, 'bouton-Refuser');
+    await appuyer(arbre, 'motif-complet');
+    const bouton = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'bouton-Refuser et annuler les entraînements'
+      && typeof n.props?.onPress === 'function'
+    ))[0];
+    await act(async () => { bouton.props.onPress(); });
+    await attendre(() => textes(arbre).some((texte) => texte.startsWith('Refus des 30 dates')));
+    expect(textes(arbre)).toContain(
+      'Refus des 30 dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
+    );
+    await act(async () => { repondre({ data: { data: { documentId: 'rq-serie' } } }); });
+  });
+});
