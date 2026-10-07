@@ -107,6 +107,8 @@ const ESPACE_SOUS_LE_BORD = RAYON_FEUILLE;
  *   La bulle visee, mesuree a l ecran (`measureInWindow`).
  * @param {boolean} [props.canCopy] Le message porte-t-il du texte a copier ?
  * @param {boolean} [props.canEdit] Puis-je le modifier ?
+ * @param {boolean} [props.canEditComposition] MESSAGERIE-1C : la carte d'une convocation que je
+ *   peux modifier (« Modifier la composition »).
  * @param {boolean} [props.canReply] Puis-je ecrire dans ce fil ? Non (canal d'annonce) :
  *   pas de « Repondre ».
  * @param {boolean} [props.isMine] Est-il a moi ? La pilule et le menu se rangent a droite.
@@ -121,6 +123,7 @@ function MessageReactionOverlay({
   anchor = null,
   canCopy = false,
   canEdit = false,
+  canEditComposition = false,
   canReply = true,
   isMine = false,
   myEmoji = '',
@@ -140,9 +143,9 @@ function MessageReactionOverlay({
 
   const actions = useMemo(
     () => getMessageActions({
-      canCopy, canEdit, canReply, isMine,
+      canCopy, canEdit, canEditComposition, canReply, isMine,
     }),
-    [canCopy, canEdit, canReply, isMine],
+    [canCopy, canEdit, canEditComposition, canReply, isMine],
   );
   // Le filet rouge ne se pose que si une action rouge suit une action ordinaire.
   const indexDuFilet = actions.findIndex((action, index) => action.alerte && index > 0);

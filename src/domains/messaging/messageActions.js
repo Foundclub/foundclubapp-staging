@@ -27,9 +27,14 @@
  * et met en ROUGE Supprimer et Signaler (`alerte`). `destructive` garde son sens : seule
  * « Supprimer » detruit. Et « Repondre » disparait quand on ne peut pas ecrire dans le fil
  * (`canReply` faux, canal d'annonce) : il ouvrait une reponse sans champ de saisie.
+ *
+ * MESSAGERIE-1C — « Modifier la composition » (pack §3.2, §3.12) : sous la carte d'une
+ * convocation publiee, pour qui peut convoquer dans cette equipe (`canEditComposition`, calcule
+ * par la vue : entraineur de l'equipe ou super-admin).
  * @type {{alerte?: boolean, condition: (etat: {canCopy: boolean, canEdit: boolean,
- *   canReply: boolean, isMine: boolean}) => boolean, destructive?: boolean, fallback: string,
- *   icone: string, key: string, labelKey: string}[]}
+ *   canEditComposition: boolean, canReply: boolean, isMine: boolean}) => boolean,
+ *   destructive?: boolean, fallback: string, icone: string, key: string,
+ *   labelKey: string}[]}
  */
 export const MESSAGE_ACTIONS = [
   {
@@ -57,6 +62,13 @@ export const MESSAGE_ACTIONS = [
     labelKey: 'conversation.actions.edit',
   },
   {
+    condition: ({ canEditComposition }) => Boolean(canEditComposition),
+    fallback: 'Modifier la composition',
+    icone: 'penSquare',
+    key: 'editComposition',
+    labelKey: 'conversationConvocation.longPressEdit',
+  },
+  {
     alerte: true,
     condition: ({ isMine }) => Boolean(isMine),
     destructive: true,
@@ -79,7 +91,8 @@ export const MESSAGE_ACTIONS = [
 
 /**
  * Les actions a afficher pour un message donne.
- * @param {{canCopy?: boolean, canEdit?: boolean, canReply?: boolean, isMine?: boolean}} [etat]
+ * @param {{canCopy?: boolean, canEdit?: boolean, canEditComposition?: boolean,
+ *   canReply?: boolean, isMine?: boolean}} [etat]
  *   Ce que la vue sait du message. `canReply` absent vaut vrai (la regle d'avant MSG1A).
  * @returns {typeof MESSAGE_ACTIONS} Les actions retenues, dans l ordre
  *   d affichage.
@@ -88,6 +101,7 @@ export const getMessageActions = (etat) => {
   const faits = {
     canCopy: Boolean(etat?.canCopy),
     canEdit: Boolean(etat?.canEdit),
+    canEditComposition: Boolean(etat?.canEditComposition),
     canReply: etat?.canReply !== false,
     isMine: Boolean(etat?.isMine),
   };

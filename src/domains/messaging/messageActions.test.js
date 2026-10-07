@@ -92,10 +92,24 @@ describe('WHATSAPP2 — quelles actions pour quel message', () => {
     expect(Array.isArray(getMessageActions())).toBe(true);
   });
 
-  it('MESSAGE_ACTIONS decrit les cinq actions, sans doublon de clef', () => {
+  // MESSAGERIE-1C : une 6e action, « Modifier la composition » (pack §3.2, §3.12).
+  it('MESSAGE_ACTIONS decrit les six actions, sans doublon de clef', () => {
     const toutes = MESSAGE_ACTIONS.map((action) => action.key);
-    expect(toutes).toHaveLength(5);
-    expect(new Set(toutes).size).toBe(5);
+    expect(toutes).toHaveLength(6);
+    expect(new Set(toutes).size).toBe(6);
+  });
+
+  it('MESSAGERIE-1C : « Modifier la composition » seulement pour qui peut convoquer', () => {
+    expect(cles({ canEditComposition: true, isMine: true }))
+      .toEqual(['reply', 'editComposition', 'delete']);
+    expect(cles({ canEditComposition: true, isMine: false }))
+      .toEqual(['reply', 'editComposition', 'report']);
+    expect(cles({ canEditComposition: false, isMine: false })).not.toContain('editComposition');
+    const [action] = getMessageActions({ canEditComposition: true })
+      .filter((entree) => entree.key === 'editComposition');
+    expect(action.labelKey).toBe('conversationConvocation.longPressEdit');
+    expect(action.fallback).toBe('Modifier la composition');
+    expect(action.destructive).toBeUndefined();
   });
 });
 
@@ -105,8 +119,14 @@ describe('WHATSAPP2 — quelles actions pour quel message', () => {
 describe('MSG1A — le menu de l appui long', () => {
   it('A1 — chaque action porte son glyphe du jeu FOUNDCLUB', () => {
     const icones = Object.fromEntries(MESSAGE_ACTIONS.map((action) => [action.key, action.icone]));
+    // MESSAGERIE-1C (fusion avec 1A) : « Modifier la composition » porte le meme crayon.
     expect(icones).toEqual({
-      copy: 'fileCopy', delete: 'trashAlt', edit: 'penSquare', reply: 'reply', report: 'flag',
+      copy: 'fileCopy',
+      delete: 'trashAlt',
+      edit: 'penSquare',
+      editComposition: 'penSquare',
+      reply: 'reply',
+      report: 'flag',
     });
   });
 

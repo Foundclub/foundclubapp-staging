@@ -139,6 +139,12 @@ import {
   useFilDeLaVille,
   VideDuFilDeLaVille,
 } from '@/views/collectivite/components/FilDeLaVille';
+import ConvocationLineupMessage from '@/views/conversationConvocation/ConvocationLineupMessage';
+import ConvocationWizardDiffere from '@/views/conversationConvocation/ConvocationWizardDiffere';
+import {
+  canConvokeFromChat,
+  getTeamIdOfChat,
+} from '@/views/conversationConvocation/convocationWizardUtils';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -1117,6 +1123,24 @@ function Conversation({ navigation, route }) {
     userData?.team?.documentId,
   ]);
   const isGroupChat = chatData?.type === 'group';
+
+  // MESSAGERIE-1C — LA CONVOCATION DEPUIS LE GROUPE D'EQUIPE : qui peut convoquer (entraineur de
+  // l'equipe du fil, super-admin), et l'assistant, monte seulement quand on l'ouvre.
+  const peutConvoquer = useMemo(
+    () => canConvokeFromChat({ chat: chatData, user: userData }),
+    [chatData, userData],
+  );
+  const [demandeConvocation, setDemandeConvocation] = useState(/** @type {any} */ (null));
+  const ouvrirModificationConvocation = useCallback((/** @type {any} */ demande) => {
+    const composition = demande?.composition;
+    if (!composition?.eventId) return;
+    setDemandeConvocation({
+      eventId: String(composition.eventId),
+      eventSummary: composition,
+      mode: 'edit',
+      startStep: demande?.startStep === 3 ? 3 : 2,
+    });
+  }, []);
 
   // 🔒 CONVAVERT (C4) — CE FIL EST-IL RATTACHE A UN CLUB ?
   //
@@ -3424,9 +3448,16 @@ function Conversation({ navigation, route }) {
         label: t('conversation.attachments.contact', 'Contact'),
         unavailableReason: contactReason,
       },
+      // MESSAGERIE-1C (pack §3.5) — fil d'equipe, entraineur ou super-admin seulement.
+      ...(peutConvoquer ? [{
+        icon: 'CV',
+        key: 'convocation',
+        label: t('conversationConvocation.entry', 'Convocation'),
+      }] : []),
     ];
   }, [
     isUploading,
+    peutConvoquer,
     shareableContacts.length,
     t,
   ]);
@@ -3438,6 +3469,10 @@ function Conversation({ navigation, route }) {
         break;
       case 'contact':
         runAttachmentAction(() => setIsContactShareModalVisible(true));
+        break;
+      // MESSAGERIE-1C — l'assistant de convocation, apres la fermeture de la feuille.
+      case 'convocation':
+        runAttachmentAction(() => setDemandeConvocation({ mode: 'create' }));
         break;
       case 'document':
         runAttachmentAction(handlePickFile);
@@ -5352,18 +5387,30 @@ function Conversation({ navigation, route }) {
   // ⚠️ IL EST DECLARE APRES LES CINQ, ET IL DOIT LE RESTER : son tableau de
   // dependances est evalue AU RENDU. Le placer plus haut citerait des `const`
   // pas encore initialisees — ReferenceError, et la conversation ne s ouvre plus.
+  // MESSAGERIE-1C — « Modifier la composition » sous la carte d'une convocation publiee.
+  const compositionChoisie = /** @type {any} */ (selectedMessage)?.composition;
+  const canEditSelectedComposition = peutConvoquer
+    && compositionChoisie?.type === 'lineup_share'
+    && Boolean(compositionChoisie?.eventId);
+
   const handleMessageAction = useCallback((clef) => {
     if (clef === 'reply') handleReplySelectedMessage();
     else if (clef === 'copy') handleCopySelectedMessage();
     else if (clef === 'edit') handleOpenEditForSelectedMessage();
     else if (clef === 'delete') handleDeleteSelectedMessage();
     else if (clef === 'report') handleOpenReportForSelectedMessage();
+    else if (clef === 'editComposition') {
+      setIsMessageActionsVisible(false);
+      ouvrirModificationConvocation({ composition: compositionChoisie, startStep: 2 });
+    }
   }, [
     handleCopySelectedMessage,
     handleDeleteSelectedMessage,
     handleOpenEditForSelectedMessage,
     handleOpenReportForSelectedMessage,
     handleReplySelectedMessage,
+    compositionChoisie,
+    ouvrirModificationConvocation,
   ]);
 
   // 🚫 BLOQUER (K3) — la confirmation passe par `openConversationPrompt`,
@@ -5807,30 +5854,41 @@ function Conversation({ navigation, route }) {
             {/* 📋 MSG1A (§3.7) — la carte de composition dans le cadre commun (nom, queue), et
                 l'heure avant son pied. FINITIONS15 point 6 : la carte s'abonne elle-même à la
                 fiche du fil (GiftedChat ne la redessine pas quand les participants arrivent). */}
-            <BulleDuFil
-              couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
-              estAMoi={estAMoi}
-              estDernier={estDernierDuGroupe}
-              nom={nomEnTete}
-              role={roleEnTete}
-              testID="bulle-composition"
+            {/* MESSAGERIE-1C : notice, « Modifier » et bloc « Reponses » des convocations. */}
+            <ConvocationLineupMessage
+              chatId={chatId}
+              composition={currentMessage.composition}
+              onEdit={peutConvoquer ? ouvrirModificationConvocation : undefined}
             >
-              <CompositionMessageBubbleDuFil
-                chatId={chatId}
-                composition={currentMessage.composition}
-                currentEvent={currentMessage.event}
-                dansLaBulle
-                isMe={!isLeft}
-                meta={(
-                  <MetaDuMessage
-                    estAMoi={estAMoi}
-                    etat={etatDEnvoi(currentMessage)}
-                    heure={heureDuMessage(currentMessage.createdAt)}
+              {(/** @type {any} */ convocation) => (
+                <BulleDuFil
+                  couleurDuNom={couleurDuNom(Colors, currentMessage.user?._id)}
+                  estAMoi={estAMoi}
+                  estDernier={estDernierDuGroupe}
+                  nom={nomEnTete}
+                  role={roleEnTete}
+                  testID="bulle-composition"
+                >
+                  <CompositionMessageBubbleDuFil
+                    chatId={chatId}
+                    composition={currentMessage.composition}
+                    currentEvent={currentMessage.event}
+                    dansLaBulle
+                    isMe={!isLeft}
+                    meta={(
+                      <MetaDuMessage
+                        estAMoi={estAMoi}
+                        etat={etatDEnvoi(currentMessage)}
+                        heure={heureDuMessage(currentMessage.createdAt)}
+                      />
+                    )}
+                    onEdit={convocation.onEdit}
+                    onOpenAddress={setAdresseOuverte}
+                    renderReponses={convocation.renderReponses}
                   />
-                )}
-                onOpenAddress={setAdresseOuverte}
-              />
-            </BulleDuFil>
+                </BulleDuFil>
+              )}
+            </ConvocationLineupMessage>
           </View>
         ),
       );
@@ -7380,6 +7438,20 @@ function Conversation({ navigation, route }) {
           memes libelles — seul leur cadre a change, pour qu elles partagent un
           unique calque avec la pilule plutot que de se superposer a elle.
         */}
+        {demandeConvocation ? (
+          <ConvocationWizardDiffere
+            chatId={chatId}
+            eventSummary={demandeConvocation.eventSummary}
+            initialEventId={demandeConvocation.eventId}
+            mode={demandeConvocation.mode}
+            onClose={() => setDemandeConvocation(null)}
+            startStep={demandeConvocation.startStep}
+            teamId={getTeamIdOfChat(chatData)}
+            teamName={chatData?.team?.name || ''}
+            visible
+          />
+        ) : null}
+
         <FeuilleDAdresse
           adresse={adresseOuverte}
           onClose={() => setAdresseOuverte(null)}
@@ -7389,6 +7461,7 @@ function Conversation({ navigation, route }) {
           anchor={reactionAnchor}
           canCopy={canCopySelectedMessage}
           canEdit={canEditSelectedMessage}
+          canEditComposition={canEditSelectedComposition}
           // MSG1A (§3.2) — canal en lecture seule : pas de « Repondre » (il ouvrait une
           // reponse sans champ de saisie).
           canReply={canWrite}
