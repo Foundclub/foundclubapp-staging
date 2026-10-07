@@ -809,6 +809,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
+  // 📍 MSG1A (§3.18) — le lieu en lien (pack : epingle 14, texte 13 souligne, cyan).
+  lienAdresse: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  lienAdresseTexte: {
+    flexShrink: 1,
+    textDecorationLine: 'underline',
+  },
   meta: {
     alignItems: 'flex-end',
     marginTop: 8,

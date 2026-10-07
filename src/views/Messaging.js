@@ -674,50 +674,66 @@ function Messaging({ navigation, route }) {
               ) : null}
             </View>
 
-            <View style={stylesDeLaListe.rangee}>
-              <View style={stylesDeLaListe.apercu}>
-                {lastMessage && isMyMessage ? (
+            {/* Sans dernier message, ni punaise, ni non-lu : pas de seconde ligne vide, le titre
+                se centre dans la ligne de 72 (constate sur l'emulateur, 07/10). */}
+            {lastMessage || isPinned || hasUnread ? (
+              <View style={stylesDeLaListe.rangee}>
+                <View style={stylesDeLaListe.apercu}>
+                  {lastMessage && isMyMessage ? (
                   // Coches cyan si le serveur dit « lu » (meme regle que la bulle : `etatDEnvoi`).
-                  <GlyphIcon
-                    color={etatDEnvoi(lastMessage) === 'lu' ? Colors.primary500 : sourdine}
-                    name="checkDouble"
-                    size={16}
-                  />
-                ) : null}
-                {auteurDuDernier ? (
-                  <Text style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}>
-                    {`${auteurDuDernier}\u00A0:`}
-                  </Text>
-                ) : null}
-                {extrait.icone ? <GlyphIcon color={sourdine} name={extrait.icone} size={15} /> : null}
-                <Text
-                  numberOfLines={1}
-                  style={[stylesDeLaListe.apercuTexte, stylesDeLaListe.apercuFin, { color: sourdine }]}
-                >
-                  {lastMessage ? getChatMessagePreview(lastMessage, t) : ''}
-                </Text>
-              </View>
-              {isPinned ? (
-                <View accessibilityLabel={t('messaging.pinnedBadge', 'ÉPINGLÉ')} accessible>
-                  <GlyphIcon color={withAlpha(Colors.neutral00, 0.45)} name="thumbtack" size={15} />
-                </View>
-              ) : null}
-              {hasUnread ? (
-                <View
-                  accessibilityLabel={unreadBadge
-                    ? `${unreadBadge} ${t('messaging.unread.badge', 'Non lu')}`
-                    : t('messaging.unread.badge', 'Non lu')}
-                  accessible
-                  style={[stylesDeLaListe.pastille, { backgroundColor: Colors.primary500 }]}
-                >
-                  {unreadBadge ? (
-                    <Text style={[stylesDeLaListe.pastilleTexte, { color: Colors.primary900 }]}>
-                      {unreadBadge}
+                    <GlyphIcon
+                      color={etatDEnvoi(lastMessage) === 'lu' ? Colors.primary500 : sourdine}
+                      name="checkDouble"
+                      size={16}
+                    />
+                  ) : null}
+                  {auteurDuDernier ? (
+                    <Text
+                      style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.8) }]}
+                    >
+                      {`${auteurDuDernier}\u00A0:`}
                     </Text>
                   ) : null}
+                  {extrait.icone ? (
+                    <GlyphIcon color={sourdine} name={extrait.icone} size={15} />
+                  ) : null}
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      stylesDeLaListe.apercuTexte,
+                      stylesDeLaListe.apercuFin,
+                      { color: sourdine },
+                    ]}
+                  >
+                    {lastMessage ? getChatMessagePreview(lastMessage, t) : ''}
+                  </Text>
                 </View>
-              ) : null}
-            </View>
+                {isPinned ? (
+                  <View accessibilityLabel={t('messaging.pinnedBadge', 'ÉPINGLÉ')} accessible>
+                    <GlyphIcon
+                      color={withAlpha(Colors.neutral00, 0.45)}
+                      name="thumbtack"
+                      size={15}
+                    />
+                  </View>
+                ) : null}
+                {hasUnread ? (
+                  <View
+                    accessibilityLabel={unreadBadge
+                      ? `${unreadBadge} ${t('messaging.unread.badge', 'Non lu')}`
+                      : t('messaging.unread.badge', 'Non lu')}
+                    accessible
+                    style={[stylesDeLaListe.pastille, { backgroundColor: Colors.primary500 }]}
+                  >
+                    {unreadBadge ? (
+                      <Text style={[stylesDeLaListe.pastilleTexte, { color: Colors.primary900 }]}>
+                        {unreadBadge}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
           {renderWebChatActions(chat)}
         </TouchableOpacity>

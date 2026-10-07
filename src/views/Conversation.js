@@ -59,6 +59,7 @@ import {
   applyOptimisticPollVote,
   createPollComposition,
 } from '@/domains/messaging/pollUseCases';
+import { ancreSurLEcran } from '@/domains/messaging/reactionPillPlacement';
 import {
   getMyReactionEmoji,
   getReactionsForMessage,
@@ -5110,9 +5111,14 @@ function Conversation({ navigation, route }) {
         /** @type {number} */ y,
         /** @type {number} */ width,
         /** @type {number} */ height,
-      ) => ouvrir({
+      ) => ouvrir(ancreSurLEcran({
         height, width, x, y,
-      }));
+      }, {
+        // MSG1A (§3.2) — sur Android, la mesure part du bas de la barre d'etat ; le calque,
+        // du haut de l'ecran (constate : 142 px de decalage sur l'emulateur, 07/10).
+        hauteurBarreDEtat: StatusBar.currentHeight,
+        os: Platform.OS,
+      })));
       return;
     }
 
