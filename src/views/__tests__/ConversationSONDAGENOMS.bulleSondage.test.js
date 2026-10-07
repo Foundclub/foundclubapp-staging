@@ -356,9 +356,17 @@ describe('SONDAGE-NOMS — la bulle du sondage nomme un votant qui n a rien écr
     });
 
     const rendu = textes(arbreBulle);
+    // MSG1A (07/10) — la bulle du pack « modele WhatsApp » dessine les votants en PASTILLES (le
+    // nom en toutes lettres vit dans le detail « Voir les votes ») : le nom lu au serveur est
+    // donc lu ici sur l'etiquette de l'option, celle qu'entend le lecteur d'ecran.
+    const etiquettes = arbreBulle.root
+      .findAll((/** @type {any} */ n) => typeof n.props?.accessibilityLabel === 'string')
+      .map((/** @type {any} */ n) => n.props.accessibilityLabel)
+      .join(' | ');
     expect(rendu).toContain('Samedi 14h');
     expect(rendu).not.toContain('Membre');
-    expect(rendu).toContain('Leo Martin');
+    expect(etiquettes).not.toContain('Membre');
+    expect(etiquettes).toContain('Leo Martin');
     expect(mockGet).toHaveBeenCalledWith('/chat-messages/msg-sondage/poll-voters');
   });
 });

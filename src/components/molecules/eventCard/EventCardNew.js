@@ -54,7 +54,7 @@ const normalizeTypeName = (typeName) => (typeName?.toLowerCase() || '')
  * @param {boolean} [isStageEvent] - Événement au format stage.
  * @returns {any} - Source du fond illustré.
  */
-const getBackgroundImage = (typeName, Images, isStageEvent = false) => {
+export const getBackgroundImage = (typeName, Images, isStageEvent = false) => {
   const normalizedType = normalizeTypeName(typeName);
   if (normalizedType.includes('match')) return Images.eventCardMatch;
   if (normalizedType.includes('entrainement')) return Images.eventCardTraining;
@@ -71,7 +71,7 @@ const getBackgroundImage = (typeName, Images, isStageEvent = false) => {
  * @param {any} eventItem - Événement affiché.
  * @returns {string} - Libellé du chip type.
  */
-const getHeaderTitle = (typeName, eventItem) => {
+export const getHeaderTitle = (typeName, eventItem) => {
   const normalizedType = normalizeTypeName(typeName);
   if (normalizedType.includes('match')) return 'MATCH';
   if (normalizedType.includes('entrainement')) {
@@ -106,7 +106,7 @@ const getHeaderTitle = (typeName, eventItem) => {
  * @param {Record<string, string>} Colors - Jetons couleur du thème.
  * @returns {string} - Couleur d'accent du chip.
  */
-const getTypeAccentColor = (typeName, isStageEvent, Colors) => {
+export const getTypeAccentColor = (typeName, isStageEvent, Colors) => {
   const normalizedType = normalizeTypeName(typeName);
   if (normalizedType.includes('detection')) return Colors.primary500;
   if (normalizedType.includes('entrainement')) return Colors.success500;
@@ -160,7 +160,7 @@ const stripMatchPrefix = (value) => String(value || '')
  * @param {any} value - Date source.
  * @returns {string} - Date longue capitalisée.
  */
-const formatEventDateLabel = (value) => {
+export const formatEventDateLabel = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const formatted = format(date, 'EEEE dd MMMM', { locale: fr });

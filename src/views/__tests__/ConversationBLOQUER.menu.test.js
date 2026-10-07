@@ -20,6 +20,9 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 const mockBoutons = /** @type {any[]} */ ([]);
+// MSG1A (§3.16) — le ⋮ n'est plus une feuille de `Button` mais le petit menu du pack
+// (`MenuDuFil`) : on capte ses entrees, et on les lit comme des boutons (libelle + geste).
+const mockMenus = /** @type {any[]} */ ([]);
 let mockChatData;
 let mockMessagesPage;
 let mockBlockedRows;
@@ -219,6 +222,11 @@ jest.mock('@/components/atoms/button/Button', () => (/** @type {any} */ props) =
   return null;
 });
 
+jest.mock('@/views/chat/MenuDuFil', () => (/** @type {any} */ props) => {
+  mockMenus.push(props);
+  return null;
+});
+
 // La feuille du menu rend ses enfants : sans ca, ses boutons ne seraient
 // jamais construits et le temoin serait vert sur un menu vide.
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
@@ -311,10 +319,16 @@ const monterLaConversation = () => {
   });
 
   const propsGifted = mockGiftedRenders[mockGiftedRenders.length - 1];
+  const menu = mockMenus[mockMenus.length - 1];
+  const entrees = (menu?.entrees || []).map((/** @type {any} */ entree) => ({
+    onPress: entree.onPress,
+    title: entree.libelle,
+  }));
+  const boutons = [...entrees, ...mockBoutons];
   return {
-    boutons: mockBoutons,
+    boutons,
     messages: propsGifted?.messages || [],
-    titres: mockBoutons.map((/** @type {any} */ props) => props?.title).filter(Boolean),
+    titres: boutons.map((/** @type {any} */ props) => props?.title).filter(Boolean),
   };
 };
 
@@ -322,6 +336,7 @@ describe('BLOQUER — le menu de la conversation', () => {
   beforeEach(() => {
     mockGiftedRenders.length = 0;
     mockBoutons.length = 0;
+    mockMenus.length = 0;
     mockChatData = FIL_A_DEUX;
     mockMessagesPage = PAGE_VIDE;
     mockBlockedRows = [];

@@ -427,6 +427,20 @@ export const removeGroupMember = async (chatId, userId) => {
 };
 
 /**
+ * MSG1A (§3.16, decision d'Adel `quitter maintenant`, 07/10) — QUITTER UN GROUPE, pour tout
+ * membre. Route du lot serveur MESSAGERIE-1B (`feat/MSG1B-serveur` 01dd1b59, contrat
+ * `admin/docs/CONTRAT_MESSAGERIE_1B.md` §5.6) : 200 `{ data: { chatDocumentId, left: true,
+ * newAdmin: { documentId } | null } }` ; 403 non-membre ; 400 si le fil n'est pas un groupe.
+ * Le serveur pose lui-meme les notices `member_left` / `admin_inherited`.
+ * @param {string} chatId
+ * @returns {Promise<any>}
+ */
+export const leaveGroupChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/leave`);
+  return response.data?.data ?? response.data;
+};
+
+/**
  * Update group metadata
  * @param {string} chatId
  * @param {{ groupName?: string; addAdminIds?: string[]; removeAdminIds?: string[] }} data
