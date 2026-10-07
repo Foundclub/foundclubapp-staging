@@ -54,6 +54,47 @@ export const gesteDeRecherche = (club) => {
 };
 
 /**
+ * VOIE 3 (« collectivité A », 07/10) — la valeur de la rangée « Ma collectivité » du hub du
+ * dirigeant : le nom de la Ville qui tient le club ; sinon une Ville lui propose ; sinon sa
+ * demande attend ; sinon « Rechercher ». Une lecture absente ou étrange ne fait rien inventer.
+ * @param {Traduire} t - La traduction de l'écran.
+ * @param {any} ma - `GET /clubs/:id/ma-collectivite` (`{ attached, commune, lead }`).
+ * @param {any} demandes - `GET /clubs/:id/collectivite-requests`.
+ * @returns {string} La valeur.
+ */
+export const valeurDeMaCollectivite = (t, ma, demandes) => {
+  const tenante = ma && !Array.isArray(ma) ? ma.attached : null;
+  if (tenante?.name) return String(tenante.name);
+  const lignes = Array.isArray(demandes) ? demandes : [];
+  if (lignes.some((demande) => demande?.kind === 'proposal' && demande?.canAnswer)) {
+    return t('collectiviteRattachement.ma.rowProposal', 'Une Ville te propose');
+  }
+  const enAttente = (/** @type {any} */ demande) => (
+    demande?.kind === 'attach_request' && demande?.state === 'pending'
+  );
+  if (lignes.some(enAttente)) {
+    return t('collectiviteRattachement.ma.rowPending', 'Demande en cours');
+  }
+  return t('collectiviteRattachement.ma.rowSearch', 'Rechercher');
+};
+
+/**
+ * VOIE 3 — le geste que propose au dirigeant une collectivité trouvée :
+ * `rattache`, `ailleurs` (son club est rattaché à une autre), `aRepondre` (cette Ville lui
+ * propose déjà : il accepte sa demande), `envoyee` / `refusee` (sa demande), ou `demander`.
+ * @param {any} ville - Une ligne de `GET /clubs/:id/collectivite-search`.
+ * @returns {'rattache'|'ailleurs'|'aRepondre'|'envoyee'|'refusee'|'demander'} Le geste.
+ */
+export const gesteDuClub = (ville) => {
+  if (ville?.attached) return 'rattache';
+  if (ville?.attachedElsewhere) return 'ailleurs';
+  if (ville?.proposal?.state === 'pending') return 'aRepondre';
+  if (ville?.request?.state === 'pending') return 'envoyee';
+  if (ville?.request?.state === 'refused') return 'refusee';
+  return 'demander';
+};
+
+/**
  * Ce que la MAIRIE lit d'une demande de rattachement (les deux sens) : une pastille, son ton et
  * une ligne. Au « vous ».
  * @param {Traduire} t - La traduction de l'écran.

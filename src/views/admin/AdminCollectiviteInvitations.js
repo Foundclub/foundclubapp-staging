@@ -23,16 +23,17 @@ import CollectiviteTargetSearch from '@/views/admin/components/CollectiviteTarge
 
 import {
   useAdminCollectiviteInvitations,
+  useAdminCollectiviteLeads,
   useAttachAdminCollectiviteClub,
   useLinkAdminCollectiviteInvitationClub,
 } from '@/services/collectivite/collectiviteQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
-/** @typedef {'rattachements' | 'foundclub' | 'faits'} Onglet */
+/** @typedef {'rattachements' | 'foundclub' | 'faits' | 'pistes'} Onglet */
 /** @typedef {{ ok: boolean, texte: string } | null} Retour */
 
-const ONGLETS = /** @type {Onglet[]} */ (['rattachements', 'foundclub', 'faits']);
+const ONGLETS = /** @type {Onglet[]} */ (['rattachements', 'foundclub', 'faits', 'pistes']);
 
 /**
  * L'onglet demandé, ou « Rattachements ».
@@ -73,6 +74,9 @@ function AdminCollectiviteInvitations() {
   const [relierId, setRelierId] = useState(/** @type {string | null} */ (null));
   const [retours, setRetours] = useState(/** @type {Record<string, Retour>} */ ({}));
   const demandes = useAdminCollectiviteInvitations();
+  // VOIE 3 (« collectivité A », 07/10) : les pistes « Prévenir ma mairie », leur propre lecture.
+  const pistes = useAdminCollectiviteLeads();
+  const lesPistes = Array.isArray(pistes.data) ? pistes.data : [];
   const rattacher = useAttachAdminCollectiviteClub();
   const relier = useLinkAdminCollectiviteInvitationClub();
   const enCours = Boolean(rattacher.isPending || relier.isPending);
@@ -106,6 +110,7 @@ function AdminCollectiviteInvitations() {
   const pileDe = {
     faits: piles.done,
     foundclub: piles.foundclub,
+    pistes: lesPistes,
     rattachements: piles.attachRequests,
   };
   const affichees = pileDe[onglet];
@@ -330,6 +335,43 @@ function AdminCollectiviteInvitations() {
     );
   };
 
+  // VOIE 3 — une piste : le club, la mairie à contacter (sa commune du référentiel), la date, le
+  // contact GÉNÉRAL du club (déjà public dans l'annuaire, D15). Aucune personne.
+  const cartePiste = (/** @type {any} */ piste) => {
+    const contact = [piste?.club?.email, piste?.club?.phoneNumber, piste?.club?.websiteUrl]
+      .filter(Boolean);
+    const commune = [piste?.communeName, piste?.communeCode ? `(${piste.communeCode})` : null]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <View key={piste.documentId} style={carteStyle} testID={`piste-${piste.documentId}`}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{piste?.club?.name || ''}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+          {t('collectiviteConsole.demandes.pisteCommune', 'Mairie à contacter : {{commune}}', {
+            commune, ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('collectiviteConsole.demandes.pisteLe', 'Signalée par un dirigeant le {{date}}', {
+            date: dateDe(piste?.createdAt),
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+        {contact.map((ligne) => (
+          <Text key={ligne} selectable style={[Fonts.p3, Fonts.neutral100]}>{ligne}</Text>
+        ))}
+        {piste?.attached ? (
+          <Text style={[Fonts.p3Bold, Fonts.success500]}>
+            {t(
+              'collectiviteConsole.demandes.pisteRattache',
+              'Rattaché depuis à une collectivité : rien à faire.',
+            )}
+          </Text>
+        ) : null}
+      </View>
+    );
+  };
+
   const vides = {
     faits: t(
       'collectiviteConsole.demandes.videFaits',
@@ -339,13 +381,20 @@ function AdminCollectiviteInvitations() {
       'collectiviteConsole.demandes.videFoundClub',
       'Aucune invitation « Par FoundClub » en attente.',
     ),
+    pistes: t(
+      'collectiviteConsole.demandes.videPistes',
+      'Aucune piste « Prévenir ma mairie » pour l’instant.',
+    ),
     rattachements: t(
       'collectiviteConsole.demandes.videRattachements',
       'Aucune demande de rattachement en attente.',
     ),
   };
   const carteDe = {
-    faits: carteFaite, foundclub: carteParFoundClub, rattachements: carteRattachement,
+    faits: carteFaite,
+    foundclub: carteParFoundClub,
+    pistes: cartePiste,
+    rattachements: carteRattachement,
   };
 
   return (
@@ -410,6 +459,12 @@ function AdminCollectiviteInvitations() {
                 nombre: piles.done.length,
               }),
               value: 'faits',
+            },
+            {
+              label: t('collectiviteConsole.demandes.ongletPistes', 'Pistes ({{nombre}})', {
+                nombre: lesPistes.length,
+              }),
+              value: 'pistes',
             },
           ]}
           value={onglet}

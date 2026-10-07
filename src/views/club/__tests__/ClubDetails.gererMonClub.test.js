@@ -62,6 +62,9 @@ const mockGetClubWeekendResults = jest.fn();
 // VILLE-INVITER-CLUB (07/10) : les demandes de rattachement du club (carte en tete du hub).
 /** @type {jest.Mock<any, any[]>} */
 const mockRattachementQuery = jest.fn(() => ({ data: [], error: null, isLoading: false }));
+// VOIE 3 (07/10) : « Ma collectivité » (la rangée du hub et sa sous-page).
+/** @type {jest.Mock<any, any[]>} */
+const mockMaCollectiviteQuery = jest.fn(() => ({ data: null, error: null, isLoading: false }));
 const mockRemindClubWeekendScore = jest.fn(() => Promise.resolve({
   alreadyRemindedCount: 0, remindedCount: 1, trainerCount: 1,
 }));
@@ -92,6 +95,7 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: (/** @type {any} */ options) => {
     if (options?.queryKey?.[0] === 'club-weekend-results') return mockWeekendQuery(options);
     if (options?.queryKey?.[2] === 'collectivite-requests') return mockRattachementQuery(options);
+    if (options?.queryKey?.[2] === 'ma-collectivite') return mockMaCollectiviteQuery(options);
     return { data: [], isLoading: false, refetch: jest.fn() };
   },
   // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
@@ -1403,5 +1407,45 @@ describe('ClubDetails — VILLE-INVITER-CLUB : la demande de la Ville en tête d
     expect(lus).not.toContain('propose de rattacher ton club');
     // Le hub ne s ouvre pas pour lui : la carte n est pas montee, ou sa lecture reste coupee.
     mockRattachementQuery.mock.calls.forEach(([options]) => expect(options.enabled).toBe(false));
+  });
+});
+
+// VILLE-INVITER-CLUB, VOIE 3 (07/10/2026, « collectivité A » d'Adel) — « Gérer mon club » a une
+// rangée « Ma collectivité » : le nom de la Ville quand le club est rattaché, sa demande, ou
+// « Rechercher » ; elle ouvre SA sous-page (`section`), sans route neuve. ROUGE avant le lot.
+describe('ClubDetails — VILLE-INVITER-CLUB voie 3 : « Ma collectivité » dans « Gérer »', () => {
+  // Les doublures gardent leur valeur d'un cas a l'autre : chaque cas pose la sienne.
+  beforeEach(() => {
+    mockRattachementQuery.mockReturnValue({ data: [], error: null, isLoading: false });
+  });
+
+  it('la rangée dit la Ville du club rattaché, et ouvre sa sous-page empilée', () => {
+    mockMaCollectiviteQuery.mockReturnValue({
+      data: {
+        attached: { name: 'Ville de Montrivage', type: 'commune' }, commune: null, lead: null,
+      },
+      error: null,
+      isLoading: false,
+    });
+    const arbre = monter();
+    const rangee = pressableAvecTexte(arbre, 'Ma collectivité, Ville de Montrivage');
+    expect(rangee).toBeDefined();
+    expect(mockMaCollectiviteQuery).toHaveBeenCalledWith(expect.objectContaining({
+      enabled: true,
+      queryKey: ['club', 'club-1', 'ma-collectivite'],
+    }));
+    act(() => { rangee.props.onPress(); });
+    expect(mockNavigation.push)
+      .toHaveBeenCalledWith('Club', { clubId: 'club-1', section: 'collectivite' });
+  });
+
+  it('sans Ville : « Rechercher » ; et la sous-page montre « Ma collectivité »', () => {
+    mockMaCollectiviteQuery.mockReturnValue({
+      data: { attached: null, commune: null, lead: null }, error: null, isLoading: false,
+    });
+    expect(pressableAvecTexte(monter(), 'Ma collectivité, Rechercher')).toBeDefined();
+    const sousPage = texteDe(monter('collectivite').root);
+    expect(sousPage).toContain('Ma collectivité');
+    expect(sousPage).toContain('Rechercher ma collectivité');
   });
 });

@@ -19,6 +19,10 @@ import CollectiviteInviteClub from '../CollectiviteInviteClub';
 //        lien, Relancer / Annuler celles que la Ville a envoyées ; « Invitations » ne garde que
 //        les invitations « Par FoundClub ».
 
+// Un ecran entier monte sous charge (suite complete, PC occupe) : le premier cas qui monte le
+// champ de saisie paie le chargement des modules et depassait les 5 s par defaut (COLL-CONSOLE).
+jest.setTimeout(30000);
+
 /** @type {any} */
 let mockRoute;
 /** @type {any} */

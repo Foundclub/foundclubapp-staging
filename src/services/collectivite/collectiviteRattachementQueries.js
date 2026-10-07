@@ -6,9 +6,13 @@ import {
   cancelCollectiviteProposal,
   getClubCollectiviteRequests,
   getCollectiviteClubRequests,
+  getMaCollectivite,
+  notifyMairie,
   proposeCollectiviteClub,
   remindCollectiviteProposal,
+  requestClubAttach,
   searchCollectiviteClubs,
+  searchCollectivitesForClub,
 } from './collectiviteRattachementService';
 
 /**
@@ -136,6 +140,65 @@ export const useClubCollectiviteRequests = (clubId, { enabled = true } = {}) => 
   retry: false,
   staleTime: 60_000,
 });
+
+// ─── VOIE 3 (« collectivité A », 07/10) : « Ma collectivité » ────────────────────────────────
+
+/**
+ * La case « Ma collectivité » du dirigeant : `{ attached, commune, lead }`.
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {{ enabled?: boolean }} [options] - `enabled` : le compte dirige ce club.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any, Error>} La lecture.
+ */
+export const useMaCollectivite = (clubId, { enabled = true } = {}) => useQuery({
+  enabled: Boolean(clubId) && enabled,
+  queryFn: async () => (await getMaCollectivite(String(clubId)))?.data ?? null,
+  queryKey: ['club', clubId, 'ma-collectivite'],
+  retry: false,
+  staleTime: 60_000,
+});
+
+/**
+ * Le dirigeant cherche sa collectivité (sans texte : celle de sa commune).
+ * @param {string | null | undefined} clubId - documentId du club.
+ * @param {string} q - Le texte cherché.
+ * @param {{ enabled?: boolean }} [options] - `enabled` : faux quand il n'y a rien à chercher
+ *   (club rattaché, demande en cours).
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], Error>} La lecture.
+ */
+export const useCollectivitesForClubSearch = (clubId, q, { enabled = true } = {}) => useQuery({
+  enabled: Boolean(clubId) && enabled,
+  queryFn: async () => unwrapRows(await searchCollectivitesForClub(String(clubId), q)),
+  queryKey: ['club', clubId, 'collectivite-search', q],
+  retry: false,
+  staleTime: 30_000,
+});
+
+/**
+ * Un geste du club, puis la relecture de tout ce qui porte sa clef.
+ * @param {(variables: any) => Promise<any>} mutationFn - Le geste du service.
+ * @returns {any} La mutation ; variables avec `clubId`.
+ */
+const useGesteDuClub = (mutationFn) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSettled: async (_data, _erreur, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['club', variables?.clubId] });
+    },
+  });
+};
+
+/**
+ * « Demander le rattachement » : variables `{ clubId, collectiviteId }`.
+ * @returns {any} La mutation.
+ */
+export const useRequestClubAttach = () => useGesteDuClub(requestClubAttach);
+
+/**
+ * « Prévenir ma mairie » : variables `{ clubId, communeName }`.
+ * @returns {any} La mutation.
+ */
+export const useNotifyMairie = () => useGesteDuClub(notifyMairie);
 
 /**
  * Un dirigeant répond à la demande de la Ville : variables `{ clubId, invitationId, accept }`.

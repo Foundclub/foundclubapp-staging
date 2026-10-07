@@ -105,6 +105,50 @@ export const getClubCollectiviteRequests = async (clubId) => corps(
   (await client()).get(`/clubs/${enc(clubId)}/collectivite-requests`),
 );
 
+// ─── VOIE 3 (« collectivité A », 07/10) : « Ma collectivité », dans « Gérer mon club » ─────────
+
+/**
+ * La case du dirigeant : la collectivité qui tient le club, sa commune, la piste déjà signalée.
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<any>} `{ data: { attached, commune, lead } }`.
+ */
+export const getMaCollectivite = async (clubId) => corps(
+  (await client()).get(`/clubs/${enc(clubId)}/ma-collectivite`),
+);
+
+/**
+ * Le dirigeant cherche SA collectivité (sans texte : celle de la commune du club).
+ * @param {string} clubId - documentId du club.
+ * @param {string} q - Le texte cherché.
+ * @returns {Promise<any>} `{ data: [...] }`.
+ */
+export const searchCollectivitesForClub = async (clubId, q) => corps(
+  (await client()).get(`/clubs/${enc(clubId)}/collectivite-search`, { params: { q: q || '' } }),
+);
+
+/**
+ * « Demander le rattachement » : la même demande que par le lien ; la Ville accepte ou refuse.
+ * @param {{ clubId: string, collectiviteId: string }} params - Le club et la collectivité.
+ * @returns {Promise<any>} `{ data: { state, outsideCommune } }`.
+ */
+export const requestClubAttach = async ({ clubId, collectiviteId }) => corps(
+  (await client()).post(`/clubs/${enc(clubId)}/collectivite-requests`, {
+    data: { collectiviteDocumentId: collectiviteId },
+  }),
+);
+
+/**
+ * « Prévenir ma mairie » : une piste pour l'équipe FoundClub (sa commune ; à défaut, celle donnée).
+ * @param {{ clubId: string, communeName?: string | null }} params - Le club, et sa commune si
+ *   sa fiche n'en a pas.
+ * @returns {Promise<any>} `{ data: { communeName, createdAt } }`.
+ */
+export const notifyMairie = async ({ clubId, communeName = null }) => corps(
+  (await client()).post(`/clubs/${enc(clubId)}/collectivite-leads`, {
+    data: communeName ? { communeName } : {},
+  }),
+);
+
 /**
  * Un dirigeant du club répond à la demande de la Ville (« club A » : accepter rattache).
  * @param {{ accept: boolean, invitationId: string }} params - La réponse.

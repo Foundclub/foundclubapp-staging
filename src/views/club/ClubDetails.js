@@ -24,6 +24,7 @@ import {
   collectiviteInitial,
   formatOpeningHours,
 } from '@/domains/collectivite/collectiviteDisplay';
+import { valeurDeMaCollectivite } from '@/domains/collectivite/collectiviteRattachement';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -52,6 +53,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
+import MaCollectivite from '@/views/collectivite/components/MaCollectivite';
 import RattachementDuClub from '@/views/collectivite/components/RattachementDuClub';
 import ClubCompactHeader from '@/views/multisportClub/components/ClubCompactHeader';
 import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
@@ -82,6 +84,10 @@ import { useGetMyClubInterestRequests } from '@/services/clubInterestRequest/clu
 import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { createClubRequest, getPendingClubCreationRequests } from '@/services/clubRequest/clubRequestService';
+import {
+  useClubCollectiviteRequests,
+  useMaCollectivite,
+} from '@/services/collectivite/collectiviteRattachementQueries';
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
@@ -1855,6 +1861,13 @@ function ClubDetails({ navigation, route }) {
     .filter(Boolean)
     .join(' · ');
   const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
+  // VILLE-INVITER-CLUB, VOIE 3 (« collectivité A », 07/10) — la rangée « Ma collectivité » du hub :
+  // le nom de la Ville, sa demande, ou « Rechercher » (domaine pur). Lues pour le seul dirigeant.
+  const maCollectivite = useMaCollectivite(clubId, { enabled: canEdit });
+  const demandesDeRattachement = useClubCollectiviteRequests(clubId, { enabled: canEdit });
+  const valeurMaCollectivite = maCollectivite.isLoading
+    ? '…'
+    : valeurDeMaCollectivite(t, maCollectivite.data, demandesDeRattachement.data);
 
   // STATS-FIX2 · point 2 (T10, ecran 18) — « Résultats du week-end » n'existait que dans
   // `CMDashboard` (club omnisport) : le dirigeant d'un club SIMPLE n'y avait aucune porte.
@@ -3189,6 +3202,15 @@ function ClubDetails({ navigation, route }) {
                   onPress={() => navigation.navigate(RouteNames.ClubMemberRoles, { clubId })}
                   value={t('clubDetails.hub.rows.memberRolesValue', 'Attribuer')}
                 />
+                {/* VOIE 3 (« collectivité A », 07/10) — « Ma collectivité » : sa sous-page,
+                    comme les autres rangées (`section`), sans route neuve. */}
+                <ClubHubRow
+                  divider
+                  icon={Images.stadium}
+                  label={t('collectiviteRattachement.ma.row', 'Ma collectivité')}
+                  onPress={() => openClubHubSection('collectivite')}
+                  value={valeurMaCollectivite}
+                />
               </ClubHubGroup>
 
               <ClubHubGroup label={t('clubDetails.hub.groups.membership', 'Adhésions')}>
@@ -3231,6 +3253,11 @@ function ClubDetails({ navigation, route }) {
               {/* COLL-C4A (02/10) — « De la Ville de … » : la dernière actualité de la Ville
                   d'un club rattaché, pour SES membres, et l'interrupteur D68. Rien pour un club
                   rattaché à personne (le bloc ne s'affiche pas). */}
+              {/* VOIE 3 (« collectivité A », 07/10) — la sous-page « Ma collectivité » du
+                  dirigeant ; un visiteur ne la voit jamais (pas `showsClubSection`). */}
+              {isClubSubPage && hubSection === 'collectivite' && clubId ? (
+                <MaCollectivite clubId={String(clubId)} />
+              ) : null}
               {isMember && clubId ? (
                 <BlocDeLaVille
                   clubId={String(clubId)}
