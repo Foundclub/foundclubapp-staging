@@ -350,9 +350,10 @@ const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.u
  * Cherche un club a rattacher, ou un compte a nommer gestionnaire.
  * @param {'club' | 'user'} kind - Ce qu on cherche.
  * @param {string} query - Le texte tape.
+ * @param {{ signal?: AbortSignal }} [options] - VT18E : pour couper une recherche depassee.
  * @returns {Promise<any>} `{ data: [{ documentId, label, subtitle }] }`.
  */
-export const searchAdminCollectiviteTargets = async (kind, query) => (
+export const searchAdminCollectiviteTargets = async (kind, query, options) => (
   searchSuperadminRelations(SEARCH_UIDS[kind], {
     fields: SEARCH_FIELDS[kind],
     // COLL-CONSOLE-BIS (03/10) — 20 clubs : la proximite les range ensuite (commune d abord).
@@ -360,7 +361,7 @@ export const searchAdminCollectiviteTargets = async (kind, query) => (
     ...(SEARCH_POPULATE[/** @type {'club'} */ (kind)]
       ? { populate: SEARCH_POPULATE[/** @type {'club'} */ (kind)] } : {}),
     q: String(query || '').trim(),
-  })
+  }, options)
 );
 
 // ─── COLL-ACCUEIL (01/10/2026) : LA DEMANDE DE GESTIONNAIRE ────────────────────────────

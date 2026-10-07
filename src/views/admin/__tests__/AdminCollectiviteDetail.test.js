@@ -153,13 +153,16 @@ const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
 
 /**
  * Laisse tourner react-query jusqu a ce que la condition tienne (borne).
+ * VT18E (07/10) — bornée en TEMPS, plus en tours : la recherche part 300 ms après la dernière
+ * lettre (anti-rebond), ce que 80 tours ne couvrent pas sous charge.
  * @param {() => boolean} condition - Ce qu on attend.
  * @returns {Promise<void>}
  */
 const attendre = async (condition) => {
-  for (let i = 0; i < 80 && !condition(); i += 1) {
+  const fin = Date.now() + 5000;
+  while (!condition() && Date.now() < fin) {
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((suite) => { setTimeout(suite, 10); }); });
   }
 };
 
@@ -308,7 +311,7 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
       pageSize: 20,
       populate: { activites: { fields: ['name'] } },
       q: 'mont',
-    });
+    }, { signal: expect.any(AbortSignal) });
 
     // Un club déjà rattaché ici ne se rattache pas deux fois.
     // eslint-disable-next-line max-len
@@ -422,7 +425,7 @@ describe('D61 — écran 2 : le détail d une collectivité', () => {
     await chercher(arbre, 'admin-collectivite-recherche-compte', 'lemaire');
     expect(mockPost).toHaveBeenCalledWith(RECHERCHE_COMPTE, {
       fields: ['documentId', 'firstname', 'lastname', 'email'], pageSize: 10, q: 'lemaire',
-    });
+    }, { signal: expect.any(AbortSignal) });
     const dejaLa = parTestID(arbre.root, 'admin-collectivite-recherche-compte-resultat-karim');
     expect(bouton(dejaLa, 'Déjà gestionnaire').props.disabled).toBe(true);
 

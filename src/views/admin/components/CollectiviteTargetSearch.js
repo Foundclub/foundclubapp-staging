@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
@@ -14,11 +14,20 @@ import { useAdminCollectiviteSearch } from '@/services/collectivite/collectivite
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
+// VT18E (07/10) — la tournée T18 a vu UNE recherche par lettre tapée (sept pour « Recette
+// Stripe », servies en 3,7 à 17,3 s) : la recherche part quand la frappe s arrête (même délai que
+// AdminClubList). Un club se cherche dès TROIS lettres : deux ne sont servies par aucun index
+// trigramme (488 ms au banc de 223 118 clubs, ~2 ms dès la troisième). Témoin :
+// src/views/admin/__tests__/VT18E.recherche.unSeulEnvoi.test.js
+const DELAI_FRAPPE_MS = 300;
+const LETTRES_MINIMUM = { club: 3, user: 2 };
+
 /**
  * 🏛️ CHERCHER UN CLUB OU UN COMPTE DANS LA CONSOLE — sortie telle quelle de la fiche d une
  * collectivite (AdminCollectiviteDetail, D61) par COLL-CONSOLE (02/10), pour que l ecran des
  * demandes RELIE une demande « Par FoundClub » a son club avec la MEME recherche.
- * Deux lettres au moins ; ce qui est deja pris se lit `dejaTexte` et ne se choisit pas.
+ * Trois lettres au moins pour un club, deux pour un compte (VT18E) ; ce qui est deja pris se lit
+ * `dejaTexte` et ne se choisit pas.
  * COLL-CONSOLE-BIS (03/10) — un club dit sa VILLE et son SPORT ; avec `codeInseeProche` (la
  * collectivite de la fiche), les clubs de la commune viennent d abord, puis ceux du
  * departement (planche 15).
@@ -36,14 +45,23 @@ function CollectiviteTargetSearch({
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const [texte, setTexte] = useState('');
-  const resultats = useAdminCollectiviteSearch(kind, texte);
+  const [texteCherche, setTexteCherche] = useState('');
+  useEffect(() => {
+    const minuterie = setTimeout(() => setTexteCherche(texte), DELAI_FRAPPE_MS);
+    return () => clearTimeout(minuterie);
+  }, [texte]);
+  const minimum = LETTRES_MINIMUM[kind] || 2;
+  const resultats = useAdminCollectiviteSearch(
+    kind,
+    texteCherche.trim().length >= minimum ? texteCherche : '',
+  );
   const recus = Array.isArray(resultats.data) ? resultats.data : [];
   const lignes = kind === 'club' ? sortClubsByProximity(recus, codeInseeProche) : recus;
   const champStyle = { borderColor: `${Colors.primary500}80`, color: Colors.neutral00 };
 
   let contenu = null;
-  if (texte.trim().length >= 2) {
-    if (resultats.isLoading) {
+  if (texte.trim().length >= minimum) {
+    if (texte.trim() !== texteCherche.trim() || resultats.isLoading) {
       contenu = (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t('adminCollectivites.detail.searching', 'Recherche…')}

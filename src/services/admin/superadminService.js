@@ -132,8 +132,12 @@ export const bulkSuperadminEntries = async (uid, action, payload) => {
 /**
  * @param {string} targetUid
  * @param {Record<string, any>} [payload]
+ * @param {{ signal?: AbortSignal }} [options] - VT18E : pour couper une recherche dépassée.
  */
-export const searchSuperadminRelations = async (targetUid, payload = {}) => {
-  const response = await client.post(`/superadmin/relations/${encodeUid(targetUid)}/search`, payload);
+export const searchSuperadminRelations = async (targetUid, payload = {}, options = {}) => {
+  const url = `/superadmin/relations/${encodeUid(targetUid)}/search`;
+  const response = options.signal
+    ? await client.post(url, payload, { signal: options.signal })
+    : await client.post(url, payload);
   return unwrap(response);
 };

@@ -160,10 +160,13 @@ const aplatirTexte = (/** @type {any} */ enfants) => {
 };
 const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
   .map((/** @type {any} */ n) => aplatirTexte(n.props.children).trim());
+// VT18E (07/10) — bornée en TEMPS, plus en tours : la recherche « Relier » part 300 ms après la
+// dernière lettre (anti-rebond), ce que 80 tours ne couvrent pas sous charge.
 const attendre = async (/** @type {() => boolean} */ condition) => {
-  for (let i = 0; i < 80 && !condition(); i += 1) {
+  const fin = Date.now() + 5000;
+  while (!condition() && Date.now() < fin) {
     // eslint-disable-next-line no-await-in-loop
-    await act(async () => { await new Promise((fin) => { setImmediate(fin); }); });
+    await act(async () => { await new Promise((suite) => { setTimeout(suite, 10); }); });
   }
 };
 const parTestID = (/** @type {any} */ noeud, /** @type {string} */ testID) => noeud.find(
@@ -330,7 +333,7 @@ describe('COLL-CONSOLE — l écran des demandes de rattachement et « Par Found
       pageSize: 20,
       populate: { activites: { fields: ['name'] } },
       q: 'judo',
-    });
+    }, { signal: expect.any(AbortSignal) });
     await appuyer(bouton(parTestID(arbre.root, 'relier-demande-f1-resultat-judo-club'), 'Relier'));
     await attendre(() => mockPut.mock.calls.length > 0);
     expect(mockPut).toHaveBeenCalledWith(
