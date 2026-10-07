@@ -277,8 +277,8 @@ const attendre = async (/** @type {number} */ ms) => {
 
 /** @type {any[]} */
 const arbres = [];
-const monterVille = async () => {
-  mockRoute = { params: { collectiviteId: 'ville-marseille' } };
+const monterVille = async (/** @type {any} */ extra = {}) => {
+  mockRoute = { params: { collectiviteId: 'ville-marseille', ...extra } };
   /** @type {any} */
   let arbre;
   await act(async () => { arbre = renderer.create(<FacilityForm />); });
@@ -425,5 +425,54 @@ describe('VILLE-INSTALLATION 1 — « Créer » cree l installation avec l adres
 
     expect(mockSaveCollectivite).toHaveBeenCalledTimes(1);
     expect(mockSaveCollectivite.mock.calls[0][0].data.address).toEqual(ADRESSE_ENVOYEE);
+  });
+});
+
+// 📍 VILLE-INSTALLATION 5 (07/10) — tournee T18 (recette, capture G23a) : « Modifier
+// l'installation » montrait l'INDICE « Ex: 12 Rue du Stade... » dans « Où », sous un « GPS
+// activé », alors que la liste affiche « Rouvres (28260) ». La mairie croit son adresse perdue.
+// Une adresse ENREGISTREE revient du serveur sous la forme { description, geometry } (celle
+// qu'ecrit normalizeAddressPayload) : sans `label`, le champ n'avait rien a montrer.
+const INSTALLATION_DE_ROUVRES = {
+  address: {
+    description: 'Rouvres (28260)',
+    geometry: { coordinates: [1.4932, 48.8466], type: 'Point' },
+  },
+  capacityConflictMode: 'pending_validation',
+  documentId: 'salle-t18',
+  maxSlots: 1,
+  name: 'T18 Salle essai',
+  planningColor: null,
+  type: 'Salle de sport',
+};
+
+describe('VILLE-INSTALLATION 5 — modifier : l adresse enregistree se lit, et reste', () => {
+  it('le champ « Où » montre l adresse enregistree, pas l indice', async () => {
+    const arbre = await monterVille({
+      facility: INSTALLATION_DE_ROUVRES, facilityId: 'salle-t18',
+    });
+
+    expect(textes(arbre)).toContain('Rouvres (28260)');
+    expect(textes(arbre)).not.toContain(INVITE_ADRESSE);
+  });
+
+  it('rouvrir puis refermer le champ, et « Enregistrer » : elle reste', async () => {
+    const arbre = await monterVille({
+      facility: INSTALLATION_DE_ROUVRES, facilityId: 'salle-t18',
+    });
+    await appuyer(parTexte(arbre, 'Rouvres (28260)'));
+    await appuyer(parTexte(arbre, 'Sélectionner'));
+    await attendre(50);
+
+    expect(textes(arbre)).toContain('Rouvres (28260)');
+    await appuyer(parTexte(arbre, 'Enregistrer'));
+
+    expect(textes(arbre)).not.toContain(REFUS_ADRESSE);
+    expect(mockSaveCollectivite).toHaveBeenCalledTimes(1);
+    // Non touchee et geolocalisee : elle repart TELLE QUELLE (seule une adresse sans point reste
+    // hors de l envoi, FINITIONS3). Avant le lot, rouvrir le champ la vidait : refus a l envoi.
+    expect(mockSaveCollectivite.mock.calls[0][0].data.address)
+      .toEqual(INSTALLATION_DE_ROUVRES.address);
+    expect(mockSaveCollectivite.mock.calls[0][0].facilityId).toBe('salle-t18');
   });
 });
