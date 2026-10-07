@@ -350,9 +350,10 @@ const SEARCH_UIDS = { club: 'api::club.club', user: 'plugin::users-permissions.u
  * Cherche un club a rattacher, ou un compte a nommer gestionnaire.
  * @param {'club' | 'user'} kind - Ce qu on cherche.
  * @param {string} query - Le texte tape.
+ * @param {{ signal?: AbortSignal }} [options] - VT18E : pour couper une recherche depassee.
  * @returns {Promise<any>} `{ data: [{ documentId, label, subtitle }] }`.
  */
-export const searchAdminCollectiviteTargets = async (kind, query) => (
+export const searchAdminCollectiviteTargets = async (kind, query, options) => (
   searchSuperadminRelations(SEARCH_UIDS[kind], {
     fields: SEARCH_FIELDS[kind],
     // COLL-CONSOLE-BIS (03/10) — 20 clubs : la proximite les range ensuite (commune d abord).
@@ -360,7 +361,7 @@ export const searchAdminCollectiviteTargets = async (kind, query) => (
     ...(SEARCH_POPULATE[/** @type {'club'} */ (kind)]
       ? { populate: SEARCH_POPULATE[/** @type {'club'} */ (kind)] } : {}),
     q: String(query || '').trim(),
-  })
+  }, options)
 );
 
 // ─── COLL-ACCUEIL (01/10/2026) : LA DEMANDE DE GESTIONNAIRE ────────────────────────────
@@ -477,6 +478,18 @@ export const decideManagerRequest = async (decision) => {
  */
 export const getAdminCollectiviteInvitations = async () => {
   const response = await client.get('/superadmin/collectivite-invitations');
+  return response.data;
+};
+
+/**
+ * VILLE-INVITER-CLUB, VOIE 3 (« collectivité A », 07/10) — les PISTES « Prévenir ma mairie » : un
+ * dirigeant dont la collectivité n'est pas sur FoundClub l'a signalée (le club, sa commune, son
+ * contact général). Pour l'équipe FoundClub et ses agents commerciaux.
+ * @returns {Promise<any>} `{ data: [{ documentId, club, communeCode, communeName, createdAt,
+ *   attached }] }`.
+ */
+export const getAdminCollectiviteLeads = async () => {
+  const response = await client.get('/superadmin/collectivite-leads');
   return response.data;
 };
 

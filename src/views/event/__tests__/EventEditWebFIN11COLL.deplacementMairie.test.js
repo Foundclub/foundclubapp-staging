@@ -188,3 +188,41 @@ describe('FINITIONS11-COLL (7) — le site dit aussi « Si la mairie refuse, la 
     expect(texte.indexOf(ANNULEE)).toBeLessThan(texte.lastIndexOf('Annuler'));
   });
 });
+
+// 🧪 VILLE-T18B (a) (07/10) — côté SITE, la même garde que le téléphone : « Modifier » ne laisse
+// plus partir une fin restée derrière un début déplacé (tournée T18, « 18:00 – 17:00 »). Sur le
+// site, `joi` est une doublure qui ne valide rien : la garde vit dans l'envoi. ROUGE avant le lot.
+describe('VILLE-T18B (a) — le site refuse aussi une fin qui n’est pas après le début', () => {
+  const RAISON = "L'heure de fin doit être après l'heure de début.";
+  const champsHeure = () => arbre.root.findAll(
+    (/** @type {any} */ n) => n.type === 'input' && n.props.type === 'time',
+  );
+  const deplacerLeDebut = async (/** @type {string} */ heure) => {
+    await act(async () => { champsHeure()[0].props.onChange({ target: { value: heure } }); });
+  };
+  const envoyer = async () => {
+    const [formulaire] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'form');
+    await act(async () => { await formulaire.props.onSubmit({ preventDefault: () => {} }); });
+  };
+
+  test('début déplacé à 21:00, fin restée à 20:00 : rien ne part, la raison est écrite', async () => {
+    eventService.updateEvent.mockClear();
+    await monter();
+    expect(champsHeure().map((n) => n.props.value)).toEqual(['18:30', '20:00']);
+    await deplacerLeDebut('21:00');
+    await envoyer();
+
+    expect(eventService.updateEvent).not.toHaveBeenCalled();
+    expect(aplatir(arbre.toJSON())).toContain(RAISON);
+  });
+
+  test('🔒 jumeau : début déplacé à 19:00 avant la fin de 20:00 : l’enregistrement part', async () => {
+    eventService.updateEvent.mockClear();
+    await monter();
+    await deplacerLeDebut('19:00');
+    await envoyer();
+
+    expect(eventService.updateEvent).toHaveBeenCalledTimes(1);
+    expect(aplatir(arbre.toJSON())).not.toContain(RAISON);
+  });
+});

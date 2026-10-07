@@ -64,8 +64,19 @@ import {
   MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE,
   PARENTAL_POWER_ENDS_AGE,
 } from '@/constants/parentalDeclaration';
+import { getItem, removeItem, setItem } from '@/platform/storage';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
+
+/**
+ * 🏛️ VILLE-T18B point 4 (T18, G12b) — la clé, sur l'appareil, de la Ville que gère un compte
+ * « Ville seule ». La feuille « Changer de compte » ne sait d'un compte NON actif que ce que sa
+ * session a gardé (son rôle « Authenticated », « Membre ») : la Ville qu'il gère ne se lit
+ * (`/collectivites/mine`) qu'en étant ce compte. « Mon compte » l'écrit, la feuille la relit.
+ * @param {string | null | undefined} userDocumentId - Le compte.
+ * @returns {string} La clé de stockage.
+ */
+const cleVilleGeree = (userDocumentId) => `coll-compte:ville-geree:${userDocumentId || 'anonyme'}`;
 
 // Design 13c « l'abonnement au centre » : jetons de surface locaux (translucides,
 // hors palette de tokens car spécifiques à cet écran).
@@ -203,6 +214,18 @@ function Profile({ navigation, route }) {
     ? demandesEnAttente.data.length
     : 0;
   const estVilleSeule = currentRoleKey === 'new' && managedCollectivites.length > 0;
+  // VILLE-T18B point 4 — « Mon compte » est la porte de la feuille « Changer de compte » : il
+  // retient, pour CE compte, la Ville qu'il gère (ou l'efface quand il n'en gère plus), et la
+  // feuille ouverte depuis un AUTRE compte la relit (cleVilleGeree).
+  // ponytail: une Ville retirée à un compte reste écrite sur l'appareil jusqu'à sa prochaine
+  // ouverture de « Mon compte » ; voie de sortie : la Ville gérée rendue par /users/me.
+  const villeGereeRetenue = estVilleSeule ? (premiereVilleGeree?.name || '') : '';
+  useEffect(() => {
+    if (!userData?.documentId || !Array.isArray(myCollectivites)) return;
+    const cle = cleVilleGeree(userData.documentId);
+    if (villeGereeRetenue) setItem(cle, villeGereeRetenue);
+    else removeItem(cle);
+  }, [myCollectivites, userData?.documentId, villeGereeRetenue]);
 
   /**
    * Retient la langue choisie et la parle tout de suite.
@@ -525,11 +548,16 @@ function Profile({ navigation, route }) {
     TEAM: 'team',
   }[paidSubscriptionAccessLevel] || 'free';
   let subscriptionStatusText = t(`profile.subscription.status.${subscriptionStatusKey}`);
-  if (offerPayer?.kind === 'collectivite' && !uncoveredActiveClub) {
+  // OFFRIR-ABONNEMENT (07/10) — offerte par FoundClub (console SuperAdmin) : la meme phrase
+  // que l'offre de la Ville, jamais « Payé par ton club ».
+  const offertePar = offerPayer?.kind === 'foundclub'
+    ? 'FoundClub'
+    : offerPayer?.kind === 'collectivite' && formatCollectiviteOfferedBy(offerPayer.name);
+  if (offertePar && !uncoveredActiveClub) {
     subscriptionStatusText = t(
       'profile.subscription.offeredBy',
       'Offert par {{who}} : toutes les équipes de ton club sont couvertes.',
-      { who: formatCollectiviteOfferedBy(offerPayer.name), ...SANS_ECHAPPEMENT },
+      { who: offertePar, ...SANS_ECHAPPEMENT },
     );
   } else if (offerPayer?.kind === 'trial' && !uncoveredActiveClub) {
     subscriptionStatusText = offerPayer.endsAt
@@ -943,8 +971,10 @@ function Profile({ navigation, route }) {
   const accountNonLogoutRows = [
     // Garde-fou du 14/09 : pas de choix de langue tant que l anglais est fermé (production).
     ...(anglaisDisponible() ? languageRows : []),
+    // VILLE-T18B point 3 (T18, G12) — l'icône « personnes » de la planche P1-porte-tel. `share2`
+    // est une TUILE opaque (fond bleu) : teintée par la rangée, elle devenait un carré plein.
     {
-      icon: Images.share2,
+      icon: Images.users,
       key: 'switchAccount',
       label: t('profile.actions.switchAccount'),
       onPress: handleToggleAccountSwitcher,
@@ -1047,6 +1077,18 @@ function Profile({ navigation, route }) {
             `profile.identity.roles.${sessionRoleKey}`,
             t('profile.identity.roles.new'),
           );
+          // VILLE-T18B point 4 (T18, G12b) — la carte d'un compte « Ville seule » dit
+          // « Gestionnaire · Ville de X » depuis COLL-ACCUEIL : la feuille la suit encore.
+          // « Membre » reste le mot d'un compte sans rôle sportif ni Ville.
+          const villeGeree = isCurrent
+            ? villeGereeRetenue
+            : getItem(cleVilleGeree(user?.documentId));
+          if (sessionRoleKey === 'new' && villeGeree) {
+            roleName = t('collectiviteAccueil.compte.gestionnaire', 'Gestionnaire · {{ville}}', {
+              ville: villeGeree,
+              ...SANS_ECHAPPEMENT,
+            });
+          }
         }
         const avatarUrl = isCurrent ? userData?.avatar?.url : session?.user?.avatar?.url;
 

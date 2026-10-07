@@ -518,7 +518,11 @@ function InstallationCreneaux() {
         withDays
       />
 
+      {/* VILLE-T18A (T18 G28a) — 4 onglets (P4v3-fermer-ordi) : en défilement, « Infos » sortait
+          de l écran (22 px visibles). Largeur égale, libellés d un mot rétrécis pour tenir. */}
       <SegmentedControl
+        centerContent
+        fitLabels
         onChange={choisirOnglet}
         options={[
           { label: t('collectiviteCreneaux.creneaux.onglet', 'Créneaux'), value: ONGLETS.creneaux },

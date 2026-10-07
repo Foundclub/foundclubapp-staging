@@ -143,7 +143,7 @@ describe('COLL-C2B — la grille, sans les options : celle d avant', () => {
     const arbre = await monter({});
     expect(casesLibres(arbre)).toHaveLength(0);
     expect(textes(arbre)).not.toContain('Plateau A');
-    expect(textes(arbre)).not.toContain('8:00');
+    expect(textes(arbre)).not.toContain('08:00');
     expect(textes(arbre)).toContain('18:00');
   });
 });

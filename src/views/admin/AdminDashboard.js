@@ -24,6 +24,7 @@ import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
+import OffresFoundclubListe from '@/views/admin/components/OffresFoundclubListe';
 import useCollectivitesTile from '@/views/admin/components/useCollectivitesTile';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -2007,6 +2008,9 @@ function AdminDashboard() {
               <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Claims</Text>
             </TouchableOpacity>
           </View>
+
+          {/* OFFRIR-ABONNEMENT (07/10) — les abonnements offerts par FoundClub. */}
+          <OffresFoundclubListe />
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[20], Spaces.marginBottom[12]]}>
             {t('adminDashboard.subscriptionOps.recentSubscriptions', 'Subscriptions recentes')}

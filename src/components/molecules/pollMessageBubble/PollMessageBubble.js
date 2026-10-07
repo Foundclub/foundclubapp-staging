@@ -13,6 +13,7 @@ import {
   getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
+import usePollVoterProfiles, { nameOfPollVoter } from '@/domains/messaging/usePollVoterProfiles';
 import useTheme from '@/theme/themeContext';
 
 const styles = StyleSheet.create({
@@ -121,6 +122,9 @@ const styles = StyleSheet.create({
  * @param {string} [props.currentUserId]
  * @param {boolean} [props.fullWidth]
  * @param {boolean} [props.isMe]
+ * @param {string} [props.messageId] - SONDAGE-NOMS : le message du sondage. Donné, la bulle
+ *   lit ELLE-MÊME les noms des votants au serveur : dans le fil, GiftedChat ne la redessine pas
+ *   quand l'écran apprend un nom après coup (piège de FINITIONS15).
  * @param {() => void} [props.onOpenDetails]
  * @param {(optionId: string) => Promise<void> | void} [props.onVote]
  * @param {object | null | undefined} props.poll
@@ -133,6 +137,7 @@ function PollMessageBubble({
   currentUserId = '',
   fullWidth = false,
   isMe = false,
+  messageId,
   onOpenDetails,
   onVote,
   poll,
@@ -143,6 +148,7 @@ function PollMessageBubble({
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const [loadingOptionId, setLoadingOptionId] = useState('');
+  const voterProfiles = usePollVoterProfiles(messageId, poll);
   const options = Array.isArray(poll?.options) ? poll.options : [];
   const totalVotes = getPollTotalVotes(options);
 
@@ -225,6 +231,8 @@ function PollMessageBubble({
             ? []
             : voters
               .map((voterId) => {
+                const serverName = nameOfPollVoter(voterProfiles.get(voterId));
+                if (serverName) return { label: serverName, voterId };
                 if (typeof resolveVoterName === 'function') {
                   const voterName = resolveVoterName(voterId);
                   const label = typeof voterName === 'string' ? voterName.trim() : '';

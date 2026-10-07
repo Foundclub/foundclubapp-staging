@@ -14,9 +14,17 @@ import {
   shouldRefetchUnreadOnMessage,
 } from '@/domains/messaging/messagingUseCases';
 import {
+  getMyPollOptionIds,
+  isAnonymousPollNamingNoOne,
+  withMyAnonymousPollVotes,
+} from '@/domains/messaging/pollUseCases';
+import {
   indexReactionsByMessage,
   withMessageReactions,
 } from '@/domains/messaging/reactionUseCases';
+import useMyAnonymousPollVotes, {
+  myAnonymousPollVotesKey,
+} from '@/domains/messaging/useMyAnonymousPollVotes';
 import { storage } from '@/store/appContext';
 
 import {
@@ -282,6 +290,8 @@ const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
   const { allMyTeams, userData } = useAuth();
+  // SECU-SONDAGE-ANONYME (07/10) — mon choix dans les sondages anonymes du fil ouvert.
+  useMyAnonymousPollVotes(currentChatId, userData?.documentId);
   const pendingTimeoutsRef = useRef(
     /** @type {Map<string, ReturnType<typeof setTimeout>>} */ (new Map()),
   );
@@ -609,6 +619,10 @@ const useMessaging = (currentChatId) => {
       getMessageEntityId(updatedMessage),
     );
     if (!chatDocumentId || !messageDocumentId) return;
+    // SECU-SONDAGE-ANONYME (07/10) — MON choix, rendu par la réponse de MON vote (jamais diffusé).
+    const explicitMyOptionIds = payload?.message && Array.isArray(payload?.myOptionIds)
+      ? payload.myOptionIds
+      : null;
 
     queryClient.setQueriesData(
       { queryKey: ['chat-messages', chatDocumentId] },
@@ -622,9 +636,22 @@ const useMessaging = (currentChatId) => {
               ? page.data.map((/** @type {ChatMessage} */ message) => {
                 const existingId = normalizeChatId(getMessageEntityId(message));
                 if (existingId !== messageDocumentId) return message;
+                // SECU-SONDAGE-ANONYME (07/10) — un sondage anonyme arrive du serveur SANS votant
+                // (compteurs seuls) : mon choix est reposé — celui que la réponse de MON vote
+                // vient de rendre, sinon celui déjà posé dans le cache (sans quoi chaque vote des
+                // autres l'effacerait de l'écran).
+                const keepsMyChoice = isAnonymousPollNamingNoOne(updatedMessage?.composition);
                 return {
                   ...message,
                   ...updatedMessage,
+                  ...(keepsMyChoice ? {
+                    composition: withMyAnonymousPollVotes(
+                      updatedMessage.composition,
+                      explicitMyOptionIds
+                        || getMyPollOptionIds(message?.composition, userData?.documentId || ''),
+                      userData?.documentId || '',
+                    ),
+                  } : {}),
                   documentId: updatedMessage?.documentId || message.documentId,
                   id: updatedMessage?.id || message.id,
                 };
@@ -634,7 +661,7 @@ const useMessaging = (currentChatId) => {
         };
       },
     );
-  }, [queryClient]);
+  }, [queryClient, userData?.documentId]);
 
   const handleMessageRead = useCallback((/** @type {any} */ payload) => {
     const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
@@ -908,6 +935,12 @@ const useMessaging = (currentChatId) => {
         || currentChatId,
       );
       const messageDocumentId = normalizeChatId(data?.messageDocumentId || variables?.messageId);
+      // SECU-SONDAGE-ANONYME (07/10) — la réponse de MON vote porte MON choix (`myOptionIds`) :
+      // pour un sondage anonyme, c'est la seule source (la composition ne nomme plus personne).
+      const myOptionIds = Array.isArray(data?.myOptionIds) ? data.myOptionIds : null;
+      if (messageDocumentId && myOptionIds) {
+        queryClient.setQueryData(myAnonymousPollVotesKey(messageDocumentId), { myOptionIds });
+      }
 
       if (chatDocumentId && messageDocumentId && data?.composition) {
         handleMessageUpdated({
@@ -917,6 +950,7 @@ const useMessaging = (currentChatId) => {
             documentId: messageDocumentId,
             updatedAt: data?.updatedAt,
           },
+          myOptionIds,
         });
         markMessagingPerf('messaging_poll_vote_cache_updated', {
           changed: Boolean(data?.changed),

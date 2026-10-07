@@ -1,4 +1,7 @@
-import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  collectiviteInitial,
+  formatCollectiviteDay,
+} from '@/domains/collectivite/collectiviteDisplay';
 
 /**
  * 📰 COLL-C4A (02/10/2026) — LES ACTUALITÉS DE LA VILLE, en fonctions PURES : aucun appel réseau,
@@ -196,14 +199,12 @@ export const bandeauMairie = (actualites, masquee, maintenant = new Date()) => {
 
 /**
  * L'initiale d'une Ville pour son écusson, faute de blason : « Ville de Montrivage » ⇒ « M ».
+ * VT18E (07/10) — la règle unique de collectiviteDisplay (le DERNIER mot donnait « E » pour
+ * « Ville de Rouvres T18 essai ») ; le nom reste exporté : le site (AppShell.tsx) le lit.
  * @param {unknown} nom - Le nom de la collectivité.
  * @returns {string} Une lettre majuscule, ou « ? ».
  */
-export const villeInitiale = (nom) => {
-  const mots = String(nom || '').trim().split(/[\s\-']+/u).filter((mot) => /\p{L}/u.test(mot));
-  const dernier = mots[mots.length - 1] || '';
-  return (dernier.match(/\p{L}/u) || ['?'])[0].toUpperCase();
-};
+export const villeInitiale = (nom) => collectiviteInitial(/** @type {any} */ (nom));
 
 /**
  * Une pièce jointe est-elle une image ?

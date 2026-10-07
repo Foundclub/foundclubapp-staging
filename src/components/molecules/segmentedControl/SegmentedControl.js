@@ -41,10 +41,12 @@ const SHRINK_MIN_SCALE = 0.72;
  * @param {boolean} [props.centerContent]
  * @param {boolean} [props.fitLabels] S5 : UNE ligne, le texte retrecit pour tenir.
  * @param {boolean} [props.fullLabels] Libelles systeme : jamais tronques.
+ * @param {boolean} [props.wrapLabels] VT18E : les onglets passent a la ligne, rien n est coupe.
  * @returns {import('react').ReactElement}
  */
 function SegmentedControl({
   centerContent = false, fitLabels = false, fullLabels = false, onChange, options, value,
+  wrapLabels = false,
 }) {
   const { Colors, Fonts } = useTheme();
   const isWeb = Platform.OS === 'web';
@@ -125,6 +127,10 @@ function SegmentedControl({
     },
     containerEqualWidth: {
       alignItems: 'stretch',
+    },
+    containerWrap: {
+      flexWrap: 'wrap',
+      rowGap: horizontalGap,
     },
     scroll: {
       width: '100%',
@@ -267,6 +273,17 @@ function SegmentedControl({
   if (useEqualWidthLayout) {
     content = (
       <View style={[styles.container, styles.containerCentered, styles.containerEqualWidth]}>
+        {segmentButtons}
+      </View>
+    );
+  } else if (wrapLabels) {
+    // 📐 VT18E (07/10) — un QUATRIEME mode, opt-in : chaque onglet garde sa taille et son texte
+    // entier ; celui qui ne tient plus passe a la ligne. « Rattachements et invitations » (trois
+    // onglets comptes, ~461 dp pour ~363 dp sur un Pixel 9) coupait le troisieme au bord ; ni
+    // `fitLabels` (72 % ne suffit pas) ni `fullLabels` (« Rattachements » casse au milieu) ne
+    // tiennent. `centerContent` (largeurs egales) prime s il est aussi passe.
+    content = (
+      <View style={[styles.container, styles.containerWrap]}>
         {segmentButtons}
       </View>
     );

@@ -1,9 +1,14 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { retenirLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
+import {
+  oublierLeRetourAuLien,
+  retenirLeRetourAuLien,
+  retenirLienDeLaVille,
+} from '@/domains/collectivite/lienDeLaVille';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -60,12 +65,23 @@ function CollectiviteJoin() {
     .toUpperCase();
   const installations = Array.isArray(page?.installations) ? page.installations : [];
 
+  // LIENS-APP (07/10) : le lien s'ouvre dans l'app, souvent SANS compte. La connexion remonte toute
+  // la navigation : le repère de retour fait rouvrir cette page une fois connecté
+  // (useLiensEnAttente), et la page, ouverte avec un compte, l'efface.
+  useEffect(() => {
+    if (connecte) oublierLeRetourAuLien();
+  }, [connecte]);
+  const seConnecterPuisRevenir = () => {
+    retenirLeRetourAuLien(token);
+    openPublicAuthFlow(navigation);
+  };
+
   const inscrireMonClub = () => {
     // COLL-ACCUEIL-BIS (03/10, planche 38) : le lien est RETENU (il survit au détour par la
     // connexion) ; la création du club l'envoie, et la demande de rattachement part toute seule.
     retenirLienDeLaVille(token);
     if (!connecte) {
-      openPublicAuthFlow(navigation);
+      seConnecterPuisRevenir();
       return;
     }
     /** @type {any} */ (navigation).navigate(RouteNames.ClubStack, {
@@ -75,7 +91,7 @@ function CollectiviteJoin() {
   };
   const monClubEstDejaLa = () => {
     if (!connecte) {
-      openPublicAuthFlow(navigation);
+      seConnecterPuisRevenir();
       return;
     }
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteJoinRequest, { token });

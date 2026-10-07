@@ -115,6 +115,9 @@
         <data android:pathPrefix="/install.html"/>
         <!-- LIENS-EVENEMENT (15/09) : le lien d'evenement partage, foundclub.app/events/<id>. -->
         <data android:pathPrefix="/events/"/>
+        <!-- LIENS-APP (07/10/2026) : le lien d invitation de la Ville, foundclub.app/invitation-ville/<jeton>
+             (et sa suite /rattacher). Ouvrait le site (TestFlight 2.6.70, ligne 5a). -->
+        <data android:pathPrefix="/invitation-ville/"/>
       </intent-filter>
     </activity>
   </application>
