@@ -374,14 +374,19 @@ export const createTeamChat = async (team) => {
 
 /**
  * Create a new group chat
- * @param {{ groupName: string; participants: string[] }} params
+ * MSG1BA (§3.15) — `permissions` (contrat 1B §5.3) : les autorisations reglees a la creation,
+ * partielles ; n'est envoye que s'il est fourni (un serveur d'avant 1B l'ignore).
+ * @param {{
+ *   groupName: string; participants: string[]; permissions?: Record<string, boolean>
+ * }} params
  * @returns {Promise<Chat>}
  */
-export const createGroupChat = async ({ groupName, participants }) => {
+export const createGroupChat = async ({ groupName, participants, permissions }) => {
   const response = await client.post('/chats/group', {
     data: {
       groupName,
       participants,
+      ...(permissions ? { permissions } : {}),
     },
   });
 

@@ -8,6 +8,7 @@ import {
   couleurDuNom, estUnTeteATete, extraitDuMessageCite,
 } from '@/domains/messaging/habillageDuFil';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
@@ -116,6 +117,7 @@ function ApercuDuFil({
           accessibilityLabel={t('messaging.preview.openLabel', {
             defaultValue: 'Ouvrir {{title}}',
             title: titre,
+            ...SANS_ECHAPPEMENT,
           })}
           accessibilityRole="button"
           onPress={onOuvrir}

@@ -1529,7 +1529,15 @@ const useMessaging = (currentChatId) => {
     return result;
   };
 
-  const startGroupChat = async (/** @type {{ groupName: string, participants: string[] }} */ { groupName, participants }) => {
+  /**
+   * Cree un groupe. MSG1BA (§3.15) — `permissions` : les autorisations reglees a la creation
+   * (contrat 1B §5.3, partiel) ; absentes, la requete garde sa forme d'avant 1B.
+   * @param {{
+   *   groupName: string, participants: string[], permissions?: Record<string, boolean>
+   * }} params
+   * @returns {Promise<any>}
+   */
+  const startGroupChat = async ({ groupName, participants, permissions }) => {
     const currentUserId = normalizeChatId(userData?.documentId || '');
     if (!currentUserId) return undefined;
 
@@ -1555,6 +1563,7 @@ const useMessaging = (currentChatId) => {
     return createGroupChatMutation.mutateAsync({
       groupName: safeGroupName,
       participants: memberIds,
+      ...(permissions && Object.keys(permissions).length ? { permissions } : {}),
     });
   };
 
