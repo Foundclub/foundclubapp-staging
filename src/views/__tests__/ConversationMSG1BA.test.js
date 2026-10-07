@@ -546,3 +546,60 @@ describe('MSG1BA — §3.16 les gestes d « Infos du groupe » partent au serveu
     expect(mockSetGroupPhoto).not.toHaveBeenCalled();
   });
 });
+
+describe('MSG1BA — §3.17 les notices de groupe disent « Vous »', () => {
+  /**
+   * Une page avec une seule notice.
+   * @param {any} systemNotice
+   * @param {string} message
+   * @returns {any}
+   */
+  const pageAvecNotice = (systemNotice, message) => ({
+    data: [{
+      createdAt: '2026-10-07T10:00:00.000Z',
+      documentId: 'n1',
+      message,
+      sender: null,
+      systemNotice,
+    }],
+    meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+  });
+
+  test('NS2 — mon renommage : « Vous avez renommé… », en notice discrete', () => {
+    mockMessagesPage = pageAvecNotice({
+      actor: { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+      groupName: 'Les U13 bis',
+      kind: 'group_renamed',
+      targets: [],
+      version: 1,
+    }, 'Adel F a renommé le groupe en « Les U13 bis ».');
+    const { gifted } = monterLaConversation();
+    const notice = gifted.messages.find((m) => m.documentId === 'n1');
+    expect(notice.system).toBe(true);
+    expect(notice.text).toBe('Vous avez renommé le groupe en « Les U13 bis ».');
+  });
+
+  test('NS3 — on m ajoute : « Karim Benali vous a ajouté. »', () => {
+    mockMessagesPage = pageAvecNotice({
+      actor: { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' },
+      kind: 'member_added',
+      targets: [{ documentId: 'moi', firstname: 'Adel', lastname: 'F' }],
+      version: 1,
+    }, 'Karim Benali a ajouté Adel F.');
+    const { gifted } = monterLaConversation();
+    expect(gifted.messages.find((m) => m.documentId === 'n1').text)
+      .toBe('Karim Benali vous a ajouté.');
+  });
+
+  test('NS4 — une sorte inconnue : la phrase du serveur, intacte', () => {
+    mockMessagesPage = pageAvecNotice(
+      {
+        actor: null, kind: 'group_archived', targets: [], version: 2,
+      },
+      'Le groupe a été archivé.',
+    );
+    const { gifted } = monterLaConversation();
+    expect(gifted.messages.find((m) => m.documentId === 'n1').text)
+      .toBe('Le groupe a été archivé.');
+  });
+});

@@ -77,7 +77,10 @@ export const choisirLaPhotoDuGroupe = async (source, t) => {
   const image = reponse?.assets?.[0];
   if (!image?.uri) {
     return {
-      erreur: t('profile.errors.photoNotRetrieved', 'La photo n\'a pas pu être récupérée. Réessaie.'),
+      erreur: t(
+        'profile.errors.photoNotRetrieved',
+        'La photo n\'a pas pu être récupérée. Réessaie.',
+      ),
     };
   }
   const refus = checkImageSize(image.fileSize);

@@ -179,3 +179,25 @@ describe('ApercuDuFil (§3.14)', () => {
     );
   });
 });
+
+describe('ApercuDuFil (§3.17)', () => {
+  test('AF5 — une notice de groupe s y lit aussi pour moi : « Vous avez… »', () => {
+    mockPages = {
+      pages: [{
+        data: [{
+          createdAt: '2026-10-07T10:02:00.000Z',
+          documentId: 'n1',
+          message: 'Adel a changé la photo du groupe.',
+          sender: null,
+          systemNotice: {
+            actor: { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+            kind: 'group_photo_changed',
+            targets: [],
+            version: 1,
+          },
+        }],
+      }],
+    };
+    expect(textes(rendre().arbre)).toContain('Vous avez changé la photo du groupe.');
+  });
+});

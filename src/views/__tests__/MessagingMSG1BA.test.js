@@ -376,3 +376,36 @@ describe('MSG1BA (§3.14) — l apercu par appui long', () => {
     expect(mockArchiveChatAsync).toHaveBeenCalledWith('chat-1');
   });
 });
+
+describe('MSG1BA (§3.17) — une notice de groupe en apercu de la liste', () => {
+  test('NL-1 — ma notice : « Vous avez renommé… », sans « Prénom : »', async () => {
+    mockChatsQuery = etatListe({
+      data: {
+        pages: [{
+          data: [{
+            ...CHATS[0],
+            messages: [{
+              createdAt: '2026-10-07T10:00:00.000Z',
+              documentId: 'n1',
+              message: 'Adel F a renommé le groupe en « Les U13 bis ».',
+              sender: null,
+              systemNotice: {
+                actor: { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+                groupName: 'Les U13 bis',
+                kind: 'group_renamed',
+                targets: [],
+                version: 1,
+              },
+            }],
+          }],
+          meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
+        }],
+      },
+      hasNextPage: false,
+    });
+    const arbre = await monter();
+    const tout = JSON.stringify(arbre.toJSON());
+    expect(tout).toContain('Vous avez renommé le groupe en « Les U13 bis ».');
+    expect(tout).not.toContain('Adel F a renommé');
+  });
+});

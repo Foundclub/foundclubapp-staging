@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   couleurDuNom, estUnTeteATete, extraitDuMessageCite,
 } from '@/domains/messaging/habillageDuFil';
+import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -173,7 +174,9 @@ function ApercuDuFil({
                       },
                     ]}
                   >
-                    {String(message?.message || '')}
+                    {message?.systemNotice
+                      ? texteDeLaNotice(message.systemNotice, meId, t, message?.message)
+                      : String(message?.message || '')}
                   </Text>
                 );
               }

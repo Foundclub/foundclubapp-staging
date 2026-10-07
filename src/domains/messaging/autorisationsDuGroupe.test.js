@@ -42,7 +42,8 @@ describe('autorisationsDuGroupe', () => {
 
   test('AG4 — admin : tout ; membre : selon la clef ; serveur d avant : admins seuls', () => {
     const ouvert = { ...AUTORISATIONS_PAR_DEFAUT, membersCanEditName: true };
-    expect(peutDansLeGroupe({ autorisations: null, estAdmin: true }, 'membersCanEditName')).toBe(true);
+    expect(peutDansLeGroupe({ autorisations: null, estAdmin: true }, 'membersCanEditName'))
+      .toBe(true);
     expect(peutDansLeGroupe({ autorisations: ouvert, estAdmin: false }, 'membersCanEditName'))
       .toBe(true);
     expect(peutDansLeGroupe({ autorisations: ouvert, estAdmin: false }, 'membersCanEditPhoto'))

@@ -6548,6 +6548,73 @@ export default {
       },
       venueToBeDefined: 'Venue to be confirmed',
     },
+    notice: {
+      added: {
+        me: '{{name}} added you.',
+        other: '{{name}} added {{targets}}.',
+        you: 'You added {{targets}}.',
+      },
+      adminAdded: {
+        me: '{{name}} made you a group admin.',
+        other: '{{name}} made {{targets}} a group admin.',
+        you: 'You made {{targets}} a group admin.',
+      },
+      adminInherited: {
+        me: 'You are now a group admin.',
+        other: '{{targets}} is now a group admin.',
+      },
+      adminRemoved: {
+        me: '{{name}} removed your admin role.',
+        other: '{{name}} removed the admin role from {{targets}}.',
+        you: 'You removed the admin role from {{targets}}.',
+      },
+      adminsAdded: {
+        other: '{{name}} made {{targets}} group admins.',
+        you: 'You made {{targets}} group admins.',
+      },
+      created: {
+        other: '{{name}} created the group “{{group}}”.',
+        you: 'You created the group “{{group}}”.',
+      },
+      left: {
+        other: '{{name}} left the group.',
+        you: 'You left the group.',
+      },
+      list: '{{debut}} and {{dernier}}',
+      permission: {
+        addMembersOff: 'restricted adding members to admins',
+        addMembersOn: 'allowed members to add members',
+        editNameOff: 'restricted editing the group name to admins',
+        editNameOn: 'allowed members to edit the group name',
+        editPhotoOff: 'restricted editing the group photo to admins',
+        editPhotoOn: 'allowed members to edit the group photo',
+        permissions: 'changed the group permissions',
+        sendMessagesOff: 'restricted sending messages to admins',
+        sendMessagesOn: 'allowed all members to send messages',
+      },
+      photoChanged: {
+        other: '{{name}} changed the group photo.',
+        you: 'You changed the group photo.',
+      },
+      photoRemoved: {
+        other: '{{name}} removed the group photo.',
+        you: 'You removed the group photo.',
+      },
+      removed: {
+        me: '{{name}} removed you.',
+        other: '{{name}} removed {{targets}}.',
+        you: 'You removed {{targets}}.',
+      },
+      renamed: {
+        other: '{{name}} renamed the group to “{{group}}”.',
+        you: 'You renamed the group to “{{group}}”.',
+      },
+      someone: 'A member',
+      someoneDid: '{{name}} {{action}}.',
+      someoneLower: 'a member',
+      youDid: 'You {{action}}.',
+      youLower: 'you',
+    },
     picker: {
       cameraOpenError: 'Unable to open the camera',
       cameraPermissionError: 'Unable to check the camera permission.',

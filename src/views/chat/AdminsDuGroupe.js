@@ -76,7 +76,10 @@ function AdminsDuGroupe({
   ];
 
   const page = (
-    <View style={[styles.page, { backgroundColor: Colors.chatBackground }]} testID="admins-du-groupe">
+    <View
+      style={[styles.page, { backgroundColor: Colors.chatBackground }]}
+      testID="admins-du-groupe"
+    >
       <View style={[styles.enTete, { backgroundColor: Colors.chatBar, paddingTop: top }]}>
         <TouchableOpacity
           accessibilityLabel={t('common.back', 'Retour')}
@@ -88,7 +91,10 @@ function AdminsDuGroupe({
           <GlyphIcon color={Colors.neutral00} name="chevronLeft" size={20} />
         </TouchableOpacity>
         <View style={styles.textes}>
-          <Text accessibilityRole="header" style={[styles.titreEnTete, { color: Colors.neutral00 }]}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.titreEnTete, { color: Colors.neutral00 }]}
+          >
             {t('conversation.groupPermissions.editAdmins', 'Modifier les admins')}
           </Text>
           <Text style={[styles.sousTitre, { color: withAlpha(Colors.neutral00, 0.6) }]}>

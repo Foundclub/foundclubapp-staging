@@ -238,19 +238,6 @@ const appuyer = async (arbre, motif) => {
   });
 };
 
-/**
- * Valide la selection : avant MSG1A, un seul bouton ; apres, « Suivant » puis « Creer le groupe ».
- * @param {any} arbre
- */
-const validerLeGroupe = async (arbre) => {
-  if (touchable(arbre, 'Suivant')) {
-    await appuyer(arbre, 'Suivant');
-    await appuyer(arbre, 'Créer le groupe');
-  } else {
-    await appuyer(arbre, 'Créer un groupe');
-  }
-};
-
 beforeEach(() => {
   [
     mockStartWhisperChat,

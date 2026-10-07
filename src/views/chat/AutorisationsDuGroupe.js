@@ -186,7 +186,8 @@ function AutorisationsDuGroupe({
         <Text style={[styles.note, { color: withAlpha(Colors.neutral00, 0.6) }]}>
           {t(
             'conversation.groupPermissions.adminsCan',
-            'Les admins peuvent renommer le groupe, changer sa photo, ajouter et retirer des membres, et modifier ces autorisations.',
+            'Les admins peuvent renommer le groupe, changer sa photo, ajouter et retirer des '
+              + 'membres, et modifier ces autorisations.',
           )}
         </Text>
       </ScrollView>

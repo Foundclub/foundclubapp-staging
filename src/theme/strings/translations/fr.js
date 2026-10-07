@@ -6981,6 +6981,73 @@ export default {
       },
       venueToBeDefined: 'Lieu à définir',
     },
+    notice: {
+      added: {
+        me: '{{name}} vous a ajouté.',
+        other: '{{name}} a ajouté {{targets}}.',
+        you: 'Vous avez ajouté {{targets}}.',
+      },
+      adminAdded: {
+        me: '{{name}} vous a nommé admin du groupe.',
+        other: '{{name}} a nommé {{targets}} admin du groupe.',
+        you: 'Vous avez nommé {{targets}} admin du groupe.',
+      },
+      adminInherited: {
+        me: 'Vous devenez admin du groupe.',
+        other: '{{targets}} devient admin du groupe.',
+      },
+      adminRemoved: {
+        me: '{{name}} vous a retiré le rôle d’admin.',
+        other: '{{name}} a retiré le rôle d’admin à {{targets}}.',
+        you: 'Vous avez retiré le rôle d’admin à {{targets}}.',
+      },
+      adminsAdded: {
+        other: '{{name}} a nommé {{targets}} admins du groupe.',
+        you: 'Vous avez nommé {{targets}} admins du groupe.',
+      },
+      created: {
+        other: '{{name}} a créé le groupe « {{group}} ».',
+        you: 'Vous avez créé le groupe « {{group}} ».',
+      },
+      left: {
+        other: '{{name}} a quitté le groupe.',
+        you: 'Vous avez quitté le groupe.',
+      },
+      list: '{{debut}} et {{dernier}}',
+      permission: {
+        addMembersOff: 'réservé aux admins l’ajout de membres',
+        addMembersOn: 'autorisé les membres à ajouter des membres',
+        editNameOff: 'réservé aux admins la modification du nom du groupe',
+        editNameOn: 'autorisé les membres à modifier le nom du groupe',
+        editPhotoOff: 'réservé aux admins la modification de la photo du groupe',
+        editPhotoOn: 'autorisé les membres à modifier la photo du groupe',
+        permissions: 'changé les autorisations du groupe',
+        sendMessagesOff: 'réservé l’envoi de messages aux admins',
+        sendMessagesOn: 'autorisé tous les membres à envoyer des messages',
+      },
+      photoChanged: {
+        other: '{{name}} a changé la photo du groupe.',
+        you: 'Vous avez changé la photo du groupe.',
+      },
+      photoRemoved: {
+        other: '{{name}} a supprimé la photo du groupe.',
+        you: 'Vous avez supprimé la photo du groupe.',
+      },
+      removed: {
+        me: '{{name}} vous a retiré.',
+        other: '{{name}} a retiré {{targets}}.',
+        you: 'Vous avez retiré {{targets}}.',
+      },
+      renamed: {
+        other: '{{name}} a renommé le groupe en « {{group}} ».',
+        you: 'Vous avez renommé le groupe en « {{group}} ».',
+      },
+      someone: 'Un membre',
+      someoneDid: '{{name}} a {{action}}.',
+      someoneLower: 'un membre',
+      youDid: 'Vous avez {{action}}.',
+      youLower: 'vous',
+    },
     picker: {
       cameraOpenError: "Impossible d'ouvrir la camera",
       cameraPermissionError: 'Impossible de vérifier la permission caméra.',

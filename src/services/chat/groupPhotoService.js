@@ -45,7 +45,8 @@ export const setGroupPhoto = async (chatId, photo) => {
 
   const corps = await reponse.json().catch(() => null);
   if (!reponse.ok) {
-    const erreur = /** @type {any} */ (new Error(corps?.error?.message || `HTTP ${reponse.status}`));
+    const message = corps?.error?.message || `HTTP ${reponse.status}`;
+    const erreur = /** @type {any} */ (new Error(message));
     erreur.response = { data: corps, status: reponse.status };
     throw erreur;
   }

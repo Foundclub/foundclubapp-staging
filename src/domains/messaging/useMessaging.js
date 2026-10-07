@@ -826,6 +826,63 @@ const useMessaging = (currentChatId) => {
     );
   }, [queryClient]);
 
+  /**
+   * MSG1BA (§3.17) — `group-notice` (contrat 1B §7) : une notice de groupe (« Adel a renomme
+   * le groupe… »), JAMAIS emise par `message-received`. Elle entre dans le fil telle quelle
+   * (avec `systemNotice`, que l'ecran recrit en « Vous »), une seule fois meme recue par la
+   * salle du fil ET par la mienne ; elle devient l'apercu de la liste SANS toucher aux non-lus
+   * (une notice ne compte jamais) ni a l'archivage ; et le detail du groupe est relu : nom,
+   * photo, admins et autorisations ont pu changer.
+   */
+  const handleGroupNotice = useCallback((/** @type {any} */ payload) => {
+    const notice = payload?.message && typeof payload.message === 'object' ? payload.message : null;
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    const noticeId = normalizeChatId(getMessageEntityId(notice));
+    if (!chatDocumentId || !notice || !noticeId) return;
+
+    queryClient.setQueriesData(
+      { queryKey: ['chat-messages', chatDocumentId] },
+      (/** @type {any} */ oldData) => {
+        if (!oldData?.pages?.length) return oldData;
+        const dejaLa = oldData.pages.some((/** @type {any} */ page) => (
+          Array.isArray(page?.data) && page.data.some((/** @type {ChatMessage} */ message) => (
+            normalizeChatId(getMessageEntityId(message)) === noticeId
+          ))
+        ));
+        if (dejaLa) return oldData;
+        const [premiere, ...suivantes] = oldData.pages;
+        return {
+          ...oldData,
+          pages: [
+            {
+              ...premiere,
+              data: [notice, ...(Array.isArray(premiere?.data) ? premiere.data : [])],
+            },
+            ...suivantes,
+          ],
+        };
+      },
+    );
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((/** @type {any} */ page) => ({
+            ...page,
+            data: Array.isArray(page?.data) ? page.data.map((/** @type {Chat} */ chat) => (
+              normalizeChatId(chat?.documentId) === chatDocumentId
+                ? { ...chat, messages: [notice] }
+                : chat
+            )) : page?.data,
+          })),
+        };
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ['chat', chatDocumentId] });
+  }, [queryClient]);
+
   const handleSocketError = useCallback((/** @type {any} */ error) => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
     const errorPayload = {
@@ -869,6 +926,7 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, handleSocketError);
     socket.on(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
+    socket.on(EVENTS.GROUP_NOTICE, handleGroupNotice);
 
     // Cleanup: leave chat and remove listeners
     return () => {
@@ -885,6 +943,7 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.JOINED, handleJoined);
       socket.off(EVENTS.ERROR, handleSocketError);
       socket.off(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
+      socket.off(EVENTS.GROUP_NOTICE, handleGroupNotice);
       if (safeCurrentChatId) {
         updateLastReadMessage(safeCurrentChatId);
       }
@@ -898,6 +957,7 @@ const useMessaging = (currentChatId) => {
     handleJoined,
     handleSocketError,
     handleChatUnreadUpdated,
+    handleGroupNotice,
     currentChatId,
     isConnected,
     updateLastReadMessage,

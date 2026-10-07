@@ -9,7 +9,10 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
  * detail d'un groupe : son ABSENCE dit un serveur d'avant 1B, qui n'en sait rien.
  */
 
-/** @typedef {'membersCanAddMembers' | 'membersCanEditName' | 'membersCanEditPhoto' | 'membersCanSendMessages'} CleDAutorisation */
+/**
+ * @typedef {'membersCanAddMembers' | 'membersCanEditName' | 'membersCanEditPhoto'
+ *   | 'membersCanSendMessages'} CleDAutorisation
+ */
 
 /** Les valeurs par defaut du serveur (contrat 1B §5.1). */
 export const AUTORISATIONS_PAR_DEFAUT = Object.freeze({
@@ -91,7 +94,9 @@ export const envoiReserveAuxAdmins = ({ autorisations, estAdmin }) => (
  */
 export const resumeDesAutorisations = (valeurs, t) => {
   const permis = [
-    valeurs?.membersCanSendMessages ? t('conversation.groupPermissions.summaryWrite', 'écrire') : '',
+    valeurs?.membersCanSendMessages
+      ? t('conversation.groupPermissions.summaryWrite', 'écrire')
+      : '',
     valeurs?.membersCanEditName ? t('conversation.groupPermissions.summaryRename', 'renommer') : '',
     valeurs?.membersCanEditPhoto
       ? t('conversation.groupPermissions.summaryPhoto', 'changer la photo')

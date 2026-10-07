@@ -21,6 +21,7 @@ import {
   getChatMessagePreview,
   isLeagueChat,
 } from '@/domains/messaging/messagingUseCases';
+import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
 import {
   estUneRouteAbsente,
   noterRouteNonLuAbsente,
@@ -786,7 +787,18 @@ function Messaging({ navigation, route }) {
                       { color: sourdine },
                     ]}
                   >
-                    {lastMessage ? getChatMessagePreview(lastMessage, t) : ''}
+                    {/* 🔔 MSG1BA (§3.17) — une notice de groupe en apercu : « Vous avez… ». */}
+                    {lastMessage?.systemNotice
+                      ? texteDeLaNotice(
+                        lastMessage.systemNotice,
+                        String(userData?.documentId || ''),
+                        t,
+                        lastMessage.message,
+                      )
+                      : null}
+                    {lastMessage && !lastMessage.systemNotice
+                      ? getChatMessagePreview(lastMessage, t)
+                      : null}
                   </Text>
                 </View>
                 {isPinned ? (

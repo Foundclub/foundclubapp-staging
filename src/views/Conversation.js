@@ -59,6 +59,7 @@ import {
   reserveDeLHeure,
 } from '@/domains/messaging/habillageDuFil';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
+import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
 import { choisirLaPhotoDuGroupe } from '@/domains/messaging/photoDuGroupe';
 import {
   applyOptimisticPollVote,
@@ -4133,7 +4134,18 @@ function Conversation({ navigation, route }) {
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
         ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
-        text: msg.message,
+        // 🔔 MSG1BA (§3.17) — la notice recrite pour moi : « Vous avez renomme… », « … vous a
+        // ajoute » ; une sorte inconnue garde la phrase du serveur.
+        text: msg?.systemNotice != null
+          ? texteDeLaNotice(
+            msg.systemNotice,
+            String(userData?.documentId || ''),
+            (cle, repli) => (typeof repli === 'string'
+              ? i18n.t(cle, repli)
+              : i18n.t(cle, repli?.defaultValue, repli)),
+            msg.message,
+          )
+          : msg.message,
         user: {
           _id: senderEntityId,
           avatar: avatarUrl,
@@ -4146,7 +4158,19 @@ function Conversation({ navigation, route }) {
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, chatData?.staffRoles, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [
+    blockedUserIds,
+    chatData?.staffRoles,
+    filDeLaVille,
+    messagesPages,
+    getAnonymizedName,
+    getPrimaryImageUriFromMessage,
+    isImageAttachmentMessage,
+    logAttachmentDebug,
+    normalizeMessageAttachments,
+    resolveMediaUri,
+    userData?.documentId,
+  ]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
