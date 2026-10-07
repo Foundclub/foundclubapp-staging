@@ -63,6 +63,7 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
+import { cheminFicheAnnuaire } from '@/services/annuaire/slugAnnuaire';
 import {
   leaveClub,
   removeManagerFromClub,
@@ -965,14 +966,20 @@ function ClubDetails({ navigation, route }) {
 
   const handleOpenClubPoster = useCallback(() => {
     if (!clubId) return;
+    // LIENS-APP (07/10, décision d'Adel « liens2 B ») : le lien partagé avec l'affiche est la
+    // fiche PUBLIQUE du club (/annuaire/clubs/<id>/<slug>/, l'adresse exacte que le site sert),
+    // lisible sans compte — /clubs/<id> est une route privée. Sans nom chargé, l'ancienne adresse.
+    const fichePublique = club?.name
+      ? cheminFicheAnnuaire({ documentId: clubId, name: club.name })
+      : null;
     navigation.navigate(RouteNames.VisualShowcase, {
       chatShareEnabled: false,
-      shareUrl: buildPublicWebUrl({ path: `/clubs/${clubId}` }),
+      shareUrl: buildPublicWebUrl({ path: fichePublique || `/clubs/${clubId}` }),
       subjectId: clubId,
       subjectType: 'club',
       template: 'affiche-club',
     });
-  }, [clubId, navigation]);
+  }, [club?.name, clubId, navigation]);
 
   const handleSelectManagedClub = useCallback(async (selectedClub) => {
     const selectedClubId = String(selectedClub?.documentId || selectedClub?.id || '').trim();
