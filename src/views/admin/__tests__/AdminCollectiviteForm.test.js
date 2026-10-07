@@ -446,7 +446,8 @@ describe('VT18E — l aperçu porte l écusson de la Ville', () => {
     const lus = textesSous(apercu);
     expect(lus).toEqual(['CE QUE LIRONT LES CLUBS', 'R', 'Offert par la Ville de Rouvres']);
 
-    await taper(arbre, 'name', 'T18 Ville essai Rouvres');
+    // Le nom créé en recette T18 : la lettre du nom propre, pas celle du dernier mot (« E »).
+    await taper(arbre, 'name', 'Ville de Rouvres T18 essai');
     const apercuEssai = arbre.root
       .findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0];
     expect(textesSous(apercuEssai)).toEqual(expect.arrayContaining(['R']));

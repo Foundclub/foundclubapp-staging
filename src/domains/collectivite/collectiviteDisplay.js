@@ -82,19 +82,25 @@ export const formatOpeningHours = (openingTime, closingTime) => {
 
 // COLL-C2C (02/10) — l ÉCUSSON d une collectivité, faute de logo (planches P8-club-tel et
 // P8-abonnement-tel) : l initiale de son nom propre, « Ville de Montrivage » => « M ».
-// ponytail: seuls les noms communs ci-dessous sont sautés (« Communauté de communes du Val »
-// donne « C ») ; voie de sortie : un logo de collectivité, champ à créer.
-const NOM_COMMUN_DE_COLLECTIVITE = /^(ville|commune|mairie|m[ée]tropole|r[ée]gion|d[ée]partement|collectivit[ée])\s+(de\s+(la\s+|l['’])?|du\s+|des\s+|d['’])?/i;
+// VT18E (07/10, tournée T18 SITE_S04) — C'EST LA SEULE RÈGLE : la console (collectiviteConsole)
+// et le menu de la Ville (villeInitiale, aussi lu par le site) prenaient le DERNIER mot
+// (« Ville de Rouvres T18 essai » => « E », « Ville de Saint-Priest » => « P ») ; elles
+// réexportent celle-ci. Les intercommunalités sont sautées aussi (« Communauté de communes du
+// Val » => « V », plus « C »). Témoin : collectiviteInitiale.VT18E.test.js
+// ponytail: seuls les noms communs ci-dessous sont sautés ; voie de sortie : un logo de
+// collectivité, champ à créer.
+const NOM_COMMUN_DE_COLLECTIVITE = /^(ville|commune|mairie|m[ée]tropole|r[ée]gion|d[ée]partement|collectivit[ée]|communaut[ée]\s+(de\s+communes|d['’]agglom[ée]ration|urbaine)|agglom[ée]ration|conseil\s+(d[ée]partemental|r[ée]gional)|syndicat(\s+intercommunal)?)\s+(de\s+(la\s+|l['’])?|du\s+|des\s+|d['’])?/i;
 
 /**
  * L initiale d une collectivité, pour son écusson.
  * @param {string | null | undefined} name - Son nom (« Ville de Montrivage »).
- * @returns {string} Une lettre capitale, ou vide.
+ * @returns {string} Une lettre capitale, ou « ? ».
  */
 export const collectiviteInitial = (name) => {
   const nom = String(name || '').trim();
   const propre = nom.replace(NOM_COMMUN_DE_COLLECTIVITE, '').trim() || nom;
-  return propre.charAt(0).toLocaleUpperCase();
+  const lettre = propre.match(/\p{L}/u);
+  return lettre ? lettre[0].toLocaleUpperCase('fr') : '?';
 };
 
 /**
