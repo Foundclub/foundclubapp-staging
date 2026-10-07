@@ -77,6 +77,7 @@ import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMemb
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
 import { ColonneDesFilsDeLaVille } from '@/views/collectivite/components/CanauxDeLaVille';
 import {
+  BoutonMembresDuFil,
   EcussonDuFil,
   FilDeLaVilleQuitte,
   useFilDeLaVille,
@@ -4129,80 +4130,90 @@ function Conversation({ navigation, route }) {
                 {blocDuTitre}
               </div>
             )}
-            <div ref={menuOptionsRef} style={{ position: 'relative' }}>
-              <button
-                aria-expanded={menuOptionsOuvert}
-                aria-haspopup="menu"
-                aria-label={t('conversation.web.fil.options', 'Plus d’options')}
-                onClick={() => setMenuOptionsOuvert((ouvert) => !ouvert)}
-                style={{
-                  alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: 0,
-                  borderRadius: 999,
-                  color: PALETTE_DU_FIL.texte,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexShrink: 0,
-                  height: 40,
-                  justifyContent: 'center',
-                  padding: 0,
-                  width: 40,
-                }}
-                type="button"
-              >
-                <GlyphIcon color={PALETTE_DU_FIL.texte} name="dotsVertical" size={20} />
-              </button>
-              {menuOptionsOuvert ? (
-                <div
+            {/* COLL-C4A2 (regle du telephone) — un fil de la Ville : « Qui est dans ce canal »
+                remplace le menu ⋮. Sur ordinateur, la colonne de droite montre ses membres. */}
+            {filDeLaVille.estFil && !isDesktop ? (
+              <BoutonMembresDuFil
+                estCanal={filDeLaVille.estCanal}
+                onPress={filDeLaVille.ouvrirMembres}
+              />
+            ) : null}
+            {filDeLaVille.estFil ? null : (
+              <div ref={menuOptionsRef} style={{ position: 'relative' }}>
+                <button
+                  aria-expanded={menuOptionsOuvert}
+                  aria-haspopup="menu"
                   aria-label={t('conversation.web.fil.options', 'Plus d’options')}
-                  role="menu"
+                  onClick={() => setMenuOptionsOuvert((ouvert) => !ouvert)}
                   style={{
-                    background: PALETTE_DU_FIL.menu,
-                    border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
-                    borderRadius: 16,
-                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
-                    display: 'grid',
-                    minWidth: 230,
-                    padding: 6,
-                    position: 'absolute',
-                    right: 0,
-                    top: 46,
-                    zIndex: 30,
+                    alignItems: 'center',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: 0,
+                    borderRadius: 999,
+                    color: PALETTE_DU_FIL.texte,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexShrink: 0,
+                    height: 40,
+                    justifyContent: 'center',
+                    padding: 0,
+                    width: 40,
                   }}
+                  type="button"
                 >
-                  {entreesDuMenuOptions.map((/** @type {any} */ entree) => (
-                    <button
-                      className="MSG1W-ligne-menu"
-                      disabled={entree.cle === 'bloquer' && (blocageEnCours || deblocageEnCours)}
-                      key={entree.cle}
-                      onClick={() => {
-                        setMenuOptionsOuvert(false);
-                        entree.action();
-                      }}
-                      role="menuitem"
-                      style={{
-                        background: 'transparent',
-                        border: 0,
-                        borderRadius: 10,
-                        color: entree.cle === 'bloquer'
-                          ? PALETTE_DU_FIL.danger
-                          : PALETTE_DU_FIL.texte,
-                        cursor: 'pointer',
-                        fontFamily: 'Montserrat-Regular, sans-serif',
-                        fontSize: 15,
-                        minHeight: 44,
-                        padding: '0 14px',
-                        textAlign: 'left',
-                      }}
-                      type="button"
-                    >
-                      {entree.libelle}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+                  <GlyphIcon color={PALETTE_DU_FIL.texte} name="dotsVertical" size={20} />
+                </button>
+                {menuOptionsOuvert ? (
+                  <div
+                    aria-label={t('conversation.web.fil.options', 'Plus d’options')}
+                    role="menu"
+                    style={{
+                      background: PALETTE_DU_FIL.menu,
+                      border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                      borderRadius: 16,
+                      boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+                      display: 'grid',
+                      minWidth: 230,
+                      padding: 6,
+                      position: 'absolute',
+                      right: 0,
+                      top: 46,
+                      zIndex: 30,
+                    }}
+                  >
+                    {entreesDuMenuOptions.map((/** @type {any} */ entree) => (
+                      <button
+                        className="MSG1W-ligne-menu"
+                        disabled={entree.cle === 'bloquer' && (blocageEnCours || deblocageEnCours)}
+                        key={entree.cle}
+                        onClick={() => {
+                          setMenuOptionsOuvert(false);
+                          entree.action();
+                        }}
+                        role="menuitem"
+                        style={{
+                          background: 'transparent',
+                          border: 0,
+                          borderRadius: 10,
+                          color: entree.cle === 'bloquer'
+                            ? PALETTE_DU_FIL.danger
+                            : PALETTE_DU_FIL.texte,
+                          cursor: 'pointer',
+                          fontFamily: 'Montserrat-Regular, sans-serif',
+                          fontSize: 15,
+                          minHeight: 44,
+                          padding: '0 14px',
+                          textAlign: 'left',
+                        }}
+                        type="button"
+                      >
+                        {entree.libelle}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </header>
 
           <div style={{ minHeight: 0, position: 'relative' }}>
