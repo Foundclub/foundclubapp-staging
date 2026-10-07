@@ -84,6 +84,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn(async () => ({})) }));
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  // VILLE-INSCRIPTION (07/10) — les listes du référentiel, muettes ici : la saisie libre reste.
+  useCollectiviteReferentiel: () => ({ data: [], isLoading: false }),
   useCollectiviteSignupSearch: () => mockTrouvees,
   // COLL-CONSOLE-BIS (03/10) — le référentiel des communes, muet ici : la saisie libre reste.
   useCommuneSearch: () => ({ data: [], isLoading: false }),
@@ -382,5 +384,117 @@ describe('COLL-ACCUEIL — planche 5 (états 5, 6), P2-gestion (état 7) : la de
       index: 0,
       routes: [{ name: 'CollectiviteSpace', params: { collectiviteId: 'ville-montrivage' } }],
     });
+  });
+});
+
+// 🏛️ VINSC2 (07/10/2026) — trouvé par la tournée T18 sur le site (capture
+// SITE_I06_site_apres_compris_espace_ouvert_montrivage) : un compte DÉJÀ gestionnaire d'une
+// Ville (Montrivage) qui demande une AUTRE Ville (Rouvres) voyait, après « Compris », « Votre
+// espace est ouvert · Vous gérez désormais la Ville de Montrivage » — et RIEN sur sa demande en
+// attente. ROUGE avant le lot : l'écran ne montrait qu'UN état, et « espace ouvert » gagnait.
+// Les dates sont relatives à aujourd'hui : aucun témoin daté en dur (TEMOINS-DATES).
+describe('VINSC2 — une demande en attente ne disparaît jamais derrière un autre état', () => {
+  const JOUR = 24 * 60 * 60 * 1000;
+  const ilYA = (/** @type {number} */ jours) => new Date(Date.now() - jours * JOUR).toISOString();
+  const VILLE_ROUVRES = {
+    documentId: 'ville-rouvres', name: 'Ville de Rouvres', type: 'commune',
+  };
+  const MONTRIVAGE_ACCEPTEE = {
+    collectivite: MONTRIVAGE,
+    createdAt: ilYA(20),
+    decidedAt: ilYA(19),
+    documentId: 'dm-montrivage',
+    refusalReason: null,
+    status: 'accepted',
+  };
+  const ROUVRES_EN_ATTENTE = {
+    collectivite: VILLE_ROUVRES,
+    createdAt: ilYA(0),
+    decidedAt: null,
+    documentId: 'dm-rouvres',
+    refusalReason: null,
+    status: 'pending',
+  };
+  const servir = (/** @type {any[]} */ data) => ({ data, isLoading: false, refetch: jest.fn() });
+
+  it('🔴 T18 : gère Montrivage, demande Rouvres ⇒ après « Compris », les DEUX', async () => {
+    mockParams = { justSent: true };
+    mockDemandes = servir([MONTRIVAGE_ACCEPTEE, ROUVRES_EN_ATTENTE]);
+    mockVilles = servir([MONTRIVAGE]);
+    const arbre = await monter(CollectiviteSignupStatus);
+    expect(textes(arbre).join(' ')).toContain('vous représentez bien la Ville de Rouvres');
+    await appuyer(arbre, 'bouton-Compris');
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      'Votre espace est ouvert',
+      'Vous gérez désormais la Ville de Montrivage sur FoundClub.',
+      'Demande en cours de vérification',
+      'Ville de Rouvres',
+    ]));
+    expect(lus.some((texte) => texte.startsWith('Demande envoyée le '))).toBe(true);
+    // L'espace ouvert reste le geste principal.
+    await appuyer(arbre, 'bouton-Ouvrir mon espace');
+    expect(mockReset).toHaveBeenCalledWith(expect.objectContaining({
+      routes: [expect.objectContaining({ params: { collectiviteId: 'ville-montrivage' } })],
+    }));
+  });
+
+  it('🔴 déjà gestionnaire : le REFUS récent d une autre Ville se lit, motif compris', async () => {
+    mockDemandes = servir([MONTRIVAGE_ACCEPTEE, {
+      ...ROUVRES_EN_ATTENTE,
+      decidedAt: ilYA(0),
+      refusalReason: 'Lien non vérifié.',
+      status: 'refused',
+    }]);
+    mockVilles = servir([MONTRIVAGE]);
+    expect(textes(await monter(CollectiviteSignupStatus))).toEqual(expect.arrayContaining([
+      'Votre espace est ouvert', 'Demande refusée', 'Ville de Rouvres', '« Lien non vérifié. »',
+    ]));
+  });
+
+  it('🔒 un refus de plus de 30 jours ne s affiche plus à côté de l espace ouvert', async () => {
+    mockDemandes = servir([MONTRIVAGE_ACCEPTEE, {
+      ...ROUVRES_EN_ATTENTE,
+      createdAt: ilYA(45),
+      decidedAt: ilYA(40),
+      refusalReason: 'Lien non vérifié.',
+      status: 'refused',
+    }]);
+    mockVilles = servir([MONTRIVAGE]);
+    const lus = textes(await monter(CollectiviteSignupStatus));
+    expect(lus).toContain('Votre espace est ouvert');
+    expect(lus).not.toContain('Demande refusée');
+  });
+
+  it('🔴 deux demandes en attente, aucun espace : les DEUX Villes se lisent', async () => {
+    mockDemandes = servir([
+      {
+        ...ROUVRES_EN_ATTENTE, collectivite: MONTRIVAGE, createdAt: ilYA(3), documentId: 'dm-2',
+      },
+      ROUVRES_EN_ATTENTE,
+    ]);
+    const lus = textes(await monter(CollectiviteSignupStatus));
+    expect(lus).toEqual(expect.arrayContaining([
+      'Demande en cours de vérification', 'Ville de Rouvres', 'Ville de Montrivage',
+    ]));
+  });
+
+  it('🔴 la plus récente REFUSÉE, une plus ancienne EN ATTENTE : les deux se lisent', async () => {
+    mockDemandes = servir([
+      {
+        ...ROUVRES_EN_ATTENTE, collectivite: MONTRIVAGE, createdAt: ilYA(3), documentId: 'dm-2',
+      },
+      {
+        ...ROUVRES_EN_ATTENTE,
+        decidedAt: ilYA(0),
+        refusalReason: 'Adresse non officielle.',
+        status: 'refused',
+      },
+    ]);
+    const lus = textes(await monter(CollectiviteSignupStatus));
+    expect(lus).toEqual(expect.arrayContaining([
+      'Demande refusée', '« Adresse non officielle. »',
+      'Demande en cours de vérification', 'Ville de Montrivage',
+    ]));
   });
 });
