@@ -262,14 +262,33 @@ describe('COLL-C5 — planche 30 : « Chiffres et export »', () => {
     ]));
   });
 
-  it('sans horaires d’ouverture nulle part : le taux s’écrit « — », jamais 0', async () => {
+  // INVERSÉ PAR VILLE-T18B (e) (07/10) — motif : ajout de la T18 (chef d'orchestre). Avant :
+  // « Taux d’occupation : — (horaires d’ouverture non renseignés). », un renvoi vers un champ
+  // RETIRÉ (décision d'Adel). Sans horaires, la page dit ce qui se mesure sans eux, comme l'accueil
+  // de la Ville : les séances et les heures réservées. Jamais 0, jamais « — ».
+  it('sans horaires d’ouverture nulle part : les séances et les heures réservées', async () => {
     mockChiffres = {
       ...mockChiffres,
       data: { ...SEMAINE, ville: { capaciteMinutes: null, minutes: 750, taux: null } },
     };
-    expect(textes(await monter())).toContain(
-      'Taux d’occupation : — (horaires d’ouverture non renseignés).',
-    );
+    const lus = textes(await monter());
+    expect(lus).toContain('8 séances · 12 h 30 réservées sur la période.');
+    expect(lus.some((texte) => texte.includes('horaires d’ouverture'))).toBe(false);
+    expect(lus.some((texte) => texte.startsWith('Taux d’occupation'))).toBe(false);
+  });
+
+  // VILLE-T18B (e) — la même règle, ligne par ligne, pour le lecteur d'écran : une installation
+  // sans taux (le Dojo) ne lit plus « taux d’occupation — » ; une installation avec taux le garde.
+  it('le lecteur d’écran : sans taux, les heures réservées ; avec taux, le taux', async () => {
+    const arbre = await monter();
+    const etiquettes = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'string'
+        && /^(Dojo municipal|Gymnase des Tilleuls) : /.test(String(n.props?.accessibilityLabel || '')),
+    ).map((/** @type {any} */ n) => n.props.accessibilityLabel);
+    expect([...new Set(etiquettes)].sort()).toEqual([
+      'Dojo municipal : 2 h réservées',
+      'Gymnase des Tilleuls : 10 h 30, taux d’occupation 6 %',
+    ]);
   });
 
   it('changer de période relit les chiffres de cette période', async () => {

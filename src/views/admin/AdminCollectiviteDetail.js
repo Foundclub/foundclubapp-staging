@@ -6,6 +6,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -49,6 +50,10 @@ import {
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+
+// 🖥️ VT18E (07/10, tournée T18 SITE_S13) — au-delà de cette largeur (site), la fiche passe en
+// DEUX colonnes (planche P2-fiche-ordi), comme la file des demandes de gestionnaire.
+const LARGEUR_COLONNES = 1024;
 
 /** @typedef {{ ok: boolean, texte: string } | null} Retour */
 /**
@@ -112,7 +117,10 @@ function MenuDActions({ actions, testID }) {
       testID={`${testID}-menu`}
     >
       {actions.map((action) => (
+        // ♿ VT18E (07/10, capture S10a) — « Détacher de la Ville » manquait à l arbre
+        // d accessibilité : chaque action porte son libellé, pas seulement son texte enfant.
         <TouchableOpacity
+          accessibilityLabel={action.label}
           accessibilityRole="button"
           key={action.label}
           onPress={action.onPress}
@@ -173,6 +181,8 @@ function AdminCollectiviteDetail() {
   // COLL-CONSOLE (02/10) — le geste qui retire, en attente de sa fenetre (planche P2-fenetres).
   const [aConfirmer, setAConfirmer] = useState(/** @type {AConfirmer} */ (null));
   const erreur = (/** @type {any} */ e) => ({ ok: false, texte: getErrorMessage(e) });
+  const { width } = useWindowDimensions();
+  const enColonnes = width >= LARGEUR_COLONNES;
 
   const rattacher = useAttachAdminCollectiviteClub();
   const detacher = useDetachAdminCollectiviteClub();
@@ -459,6 +469,56 @@ function AdminCollectiviteDetail() {
       ? t('collectiviteConsole.fiche.siren', 'SIREN {{code}}', { code: detail.siren }) : null,
   ].filter(Boolean).join(' · ');
 
+  // 🖥️ VT18E — sur ordinateur, à gauche sous les clubs ; sur téléphone, en dernier, comme avant.
+  const carteInstallations = (
+    <View
+      style={[carteStyle, enColonnes ? { flexDirection: 'row', flexWrap: 'wrap' } : null]}
+      testID="admin-collectivite-installations"
+    >
+      {titreSection(t(
+        'adminCollectivites.detail.installationsCount',
+        'Installations : {{nombre}}',
+        { nombre: detail.installations.length },
+      ))}
+      {detail.installations.length === 0 ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'adminCollectivites.detail.noInstallation',
+            'Aucune installation : le gestionnaire les ajoute depuis « Ma collectivité ».',
+          )}
+        </Text>
+      ) : detail.installations.map((/** @type {any} */ installation) => (
+        <View
+          key={installation.documentId}
+          style={enColonnes ? { flexBasis: '30%', flexGrow: 1, gap: 2 } : { gap: 2 }}
+        >
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+            <View
+              style={{
+                backgroundColor: resolveFacilityPlanningColor(installation) ?? undefined,
+                borderRadius: 6,
+                height: 12,
+                width: 12,
+              }}
+              testID={`admin-collectivite-installation-${installation.documentId}-couleur`}
+            />
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{installation.name}</Text>
+          </View>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {[
+              installation.type,
+              installation.maxSlots === null ? null : t('collectiviteConsole.fiche.equipes', {
+                count: installation.maxSlots,
+                defaultValue_one: '{{count}} équipe à la fois',
+                defaultValue_other: '{{count}} équipes à la fois',
+              }),
+            ].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -479,246 +539,245 @@ function AdminCollectiviteDetail() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
-        <View style={{ gap: 6 }}>
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-            {t('adminCollectivites.list.title', 'Collectivités').toUpperCase()}
-          </Text>
-          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-            {detail.name}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral300]}>{identite}</Text>
-        </View>
-
-        {justCreated ? (
+        <View
+          style={enColonnes ? {
+            alignSelf: 'center', flexDirection: 'row', gap: 32, maxWidth: 1200, width: '100%',
+          } : { gap: 16 }}
+          testID={enColonnes ? 'admin-collectivite-colonnes' : undefined}
+        >
           <View
-            accessibilityRole="summary"
-            style={[
-              ApplicationStyle.borderRadius16,
-              Spaces.padding[16],
-              {
-                backgroundColor: withAlpha(Colors.success500, 0.12),
-                borderColor: withAlpha(Colors.success500, 0.4),
-                borderWidth: 1,
-                gap: 4,
-              },
-            ]}
-            testID="admin-collectivite-creee"
+            style={enColonnes ? { flex: 2, gap: 16, minWidth: 0 } : { gap: 16 }}
+            testID={enColonnes ? 'admin-collectivite-colonne-principale' : undefined}
           >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t('collectiviteConsole.creer.creee', '{{name}} est créée, inactive.', {
-                name: detail.name, ...SANS_ECHAPPEMENT,
-              })}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t(
-                'collectiviteConsole.creer.ensuite',
-                'Ensuite : rattache ses clubs, nomme un gestionnaire, puis active-la.',
-              )}
-            </Text>
-          </View>
-        ) : null}
+            <View style={{ gap: 6 }}>
+              <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                {t('adminCollectivites.list.title', 'Collectivités').toUpperCase()}
+              </Text>
+              <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
+                {detail.name}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral300]}>{identite}</Text>
+            </View>
 
-        <CollectiviteActivation collectivite={detail} etats={etats} />
-
-        <View style={carteStyle} testID="admin-collectivite-clubs">
-          {titreSection(t('adminCollectivites.list.clubsCount', 'Clubs rattachés : {{nombre}}', {
-            nombre: detail.clubs.length,
-          }))}
-          {detail.clubs.length === 0 ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'collectiviteConsole.fiche.aucunClub',
-                'Aucun club rattaché. Cherche les clubs de la commune par leur nom.',
-              )}
-            </Text>
-          ) : detail.clubs.map((/** @type {any} */ club) => (
-            <View key={club.documentId} style={{ gap: 4 }}>
+            {justCreated ? (
               <View
-                style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
-                testID={`admin-collectivite-club-${club.documentId}`}
+                accessibilityRole="summary"
+                style={[
+                  ApplicationStyle.borderRadius16,
+                  Spaces.padding[16],
+                  {
+                    backgroundColor: withAlpha(Colors.success500, 0.12),
+                    borderColor: withAlpha(Colors.success500, 0.4),
+                    borderWidth: 1,
+                    gap: 4,
+                  },
+                ]}
+                testID="admin-collectivite-creee"
               >
-                <ClubLogoMark logoUrl={club.logoUrl} name={club.name} size={36} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {club.name}
-                  </Text>
-                  {club.city ? (
-                    <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{club.city}</Text>
-                  ) : null}
-                  {pastilleOffre(club.documentId)}
-                </View>
-                <PlusDActions
-                  libelle={t('collectiviteConsole.fiche.plusDActions', 'Plus d’actions : {{nom}}', {
-                    nom: club.name, ...SANS_ECHAPPEMENT,
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('collectiviteConsole.creer.creee', '{{name}} est créée, inactive.', {
+                    name: detail.name, ...SANS_ECHAPPEMENT,
                   })}
-                  onBasculer={() => basculerMenu(`club-${club.documentId}`)}
-                  ouvert={menuOuvert === `club-${club.documentId}`}
-                  testID={`admin-collectivite-club-${club.documentId}-actions`}
-                />
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'collectiviteConsole.creer.ensuite',
+                    'Ensuite : rattache ses clubs, nomme un gestionnaire, puis active-la.',
+                  )}
+                </Text>
               </View>
-              {menuOuvert === `club-${club.documentId}` ? (
-                <MenuDActions
-                  actions={[
-                    {
-                      label: t('collectiviteConsole.fiche.voirClub', 'Voir la fiche du club'),
-                      onPress: () => {
-                        setMenuOuvert(null);
-                        navigation.navigate(RouteNames.AdminClubDetail, {
-                          clubId: club.documentId,
-                        });
-                      },
-                    },
-                    {
-                      danger: true,
-                      label: t('collectiviteConsole.fiche.detacher', 'Détacher de la Ville'),
-                      onPress: () => onDetacher(club),
-                    },
-                  ]}
-                  testID={`admin-collectivite-club-${club.documentId}-actions`}
+            ) : null}
+
+            <CollectiviteActivation collectivite={detail} etats={etats} />
+
+            <View style={carteStyle} testID="admin-collectivite-clubs">
+              {titreSection(t(
+                'adminCollectivites.list.clubsCount',
+                'Clubs rattachés : {{nombre}}',
+                {
+                  nombre: detail.clubs.length,
+                },
+              ))}
+              {detail.clubs.length === 0 ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'collectiviteConsole.fiche.aucunClub',
+                    'Aucun club rattaché. Cherche les clubs de la commune par leur nom.',
+                  )}
+                </Text>
+              ) : detail.clubs.map((/** @type {any} */ club) => (
+                <View key={club.documentId} style={{ gap: 4 }}>
+                  <View
+                    style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+                    testID={`admin-collectivite-club-${club.documentId}`}
+                  >
+                    <ClubLogoMark logoUrl={club.logoUrl} name={club.name} size={36} />
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {club.name}
+                      </Text>
+                      {club.city ? (
+                        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>
+                          {club.city}
+                        </Text>
+                      ) : null}
+                      {pastilleOffre(club.documentId)}
+                    </View>
+                    <PlusDActions
+                      libelle={t(
+                        'collectiviteConsole.fiche.plusDActions',
+                        'Plus d’actions : {{nom}}',
+                        {
+                          nom: club.name, ...SANS_ECHAPPEMENT,
+                        },
+                      )}
+                      onBasculer={() => basculerMenu(`club-${club.documentId}`)}
+                      ouvert={menuOuvert === `club-${club.documentId}`}
+                      testID={`admin-collectivite-club-${club.documentId}-actions`}
+                    />
+                  </View>
+                  {menuOuvert === `club-${club.documentId}` ? (
+                    <MenuDActions
+                      actions={[
+                        {
+                          label: t('collectiviteConsole.fiche.voirClub', 'Voir la fiche du club'),
+                          onPress: () => {
+                            setMenuOuvert(null);
+                            navigation.navigate(RouteNames.AdminClubDetail, {
+                              clubId: club.documentId,
+                            });
+                          },
+                        },
+                        {
+                          danger: true,
+                          label: t('collectiviteConsole.fiche.detacher', 'Détacher de la Ville'),
+                          onPress: () => onDetacher(club),
+                        },
+                      ]}
+                      testID={`admin-collectivite-club-${club.documentId}-actions`}
+                    />
+                  ) : null}
+                </View>
+              ))}
+              <CollectiviteTargetSearch
+                codeInseeProche={detail.codeInsee}
+                deja={new Set(detail.clubs.map((/** @type {any} */ club) => club.documentId))}
+                dejaTexte={t('adminCollectivites.detail.alreadyAttached', 'Déjà rattaché')}
+                enCours={rattacher.isPending}
+                kind="club"
+                libelleAction={t('adminCollectivites.detail.attach', 'Rattacher')}
+                onChoisir={onRattacher}
+                placeholder={t(
+                  'adminCollectivites.detail.searchClub',
+                  'Rattacher un club : son nom',
+                )}
+                testID="admin-collectivite-recherche-club"
+              />
+              {afficherRetour(retourClubs)}
+              {nbDemandesClubs > 0 ? (
+                <Button
+                  onPress={() => navigation.navigate(RouteNames.AdminCollectiviteInvitations, {
+                    collectiviteId: detail.documentId,
+                    onglet: demandesDeLaVille.attachRequests.length > 0
+                      ? 'rattachements' : 'foundclub',
+                  })}
+                  size="sm"
+                  title={t('collectiviteConsole.fiche.demandesClubs', {
+                    count: nbDemandesClubs,
+                    defaultValue_one: '{{count}} demande de club pour cette collectivité',
+                    defaultValue_other: '{{count}} demandes de clubs pour cette collectivité',
+                  })}
+                  variant="Ghost"
                 />
               ) : null}
             </View>
-          ))}
-          <CollectiviteTargetSearch
-            codeInseeProche={detail.codeInsee}
-            deja={new Set(detail.clubs.map((/** @type {any} */ club) => club.documentId))}
-            dejaTexte={t('adminCollectivites.detail.alreadyAttached', 'Déjà rattaché')}
-            enCours={rattacher.isPending}
-            kind="club"
-            libelleAction={t('adminCollectivites.detail.attach', 'Rattacher')}
-            onChoisir={onRattacher}
-            placeholder={t('adminCollectivites.detail.searchClub', 'Rattacher un club : son nom')}
-            testID="admin-collectivite-recherche-club"
-          />
-          {afficherRetour(retourClubs)}
-          {nbDemandesClubs > 0 ? (
-            <Button
-              onPress={() => navigation.navigate(RouteNames.AdminCollectiviteInvitations, {
-                collectiviteId: detail.documentId,
-                onglet: demandesDeLaVille.attachRequests.length > 0 ? 'rattachements' : 'foundclub',
-              })}
-              size="sm"
-              title={t('collectiviteConsole.fiche.demandesClubs', {
-                count: nbDemandesClubs,
-                defaultValue_one: '{{count}} demande de club pour cette collectivité',
-                defaultValue_other: '{{count}} demandes de clubs pour cette collectivité',
-              })}
-              variant="Ghost"
-            />
-          ) : null}
-        </View>
 
-        <View style={carteStyle} testID="admin-collectivite-gestionnaires">
-          {titreSection(t('adminCollectivites.detail.managersCount', 'Gestionnaires : {{nombre}}', {
-            nombre: detail.gestionnaires.length,
-          }))}
-          {detail.gestionnaires.length === 0 ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('adminCollectivites.detail.noManager', 'Aucun gestionnaire.')}
-            </Text>
-          ) : detail.gestionnaires.map((/** @type {any} */ compte) => {
-            const nom = compte.name || compte.email || compte.documentId;
-            const email = managerEmail(compte);
-            const initiales = splitDisplayName(compte.name);
-            return (
-              <View key={compte.documentId} style={{ gap: 4 }}>
-                <View
-                  style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
-                  testID={`admin-collectivite-gestionnaire-${compte.documentId}`}
-                >
-                  <MemberAvatar
-                    firstname={initiales.firstname}
-                    lastname={initiales.lastname}
-                    size={40}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>
-                    {email ? (
-                      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{email}</Text>
+            {enColonnes ? carteInstallations : null}
+          </View>
+          <View
+            style={enColonnes ? { flex: 1, gap: 16, minWidth: 0 } : { gap: 16 }}
+            testID={enColonnes ? 'admin-collectivite-colonne-laterale' : undefined}
+          >
+            <View style={carteStyle} testID="admin-collectivite-gestionnaires">
+              {titreSection(t(
+                'adminCollectivites.detail.managersCount',
+                'Gestionnaires : {{nombre}}',
+                {
+                  nombre: detail.gestionnaires.length,
+                },
+              ))}
+              {detail.gestionnaires.length === 0 ? (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('adminCollectivites.detail.noManager', 'Aucun gestionnaire.')}
+                </Text>
+              ) : detail.gestionnaires.map((/** @type {any} */ compte) => {
+                const nom = compte.name || compte.email || compte.documentId;
+                const email = managerEmail(compte);
+                const initiales = splitDisplayName(compte.name);
+                return (
+                  <View key={compte.documentId} style={{ gap: 4 }}>
+                    <View
+                      style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+                      testID={`admin-collectivite-gestionnaire-${compte.documentId}`}
+                    >
+                      <MemberAvatar
+                        firstname={initiales.firstname}
+                        lastname={initiales.lastname}
+                        size={40}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>
+                        {email ? (
+                          <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>
+                            {email}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <PlusDActions
+                        libelle={t(
+                          'collectiviteConsole.fiche.plusDActions',
+                          'Plus d’actions : {{nom}}',
+                          { nom, ...SANS_ECHAPPEMENT },
+                        )}
+                        onBasculer={() => basculerMenu(`gestionnaire-${compte.documentId}`)}
+                        ouvert={menuOuvert === `gestionnaire-${compte.documentId}`}
+                        testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
+                      />
+                    </View>
+                    {menuOuvert === `gestionnaire-${compte.documentId}` ? (
+                      <MenuDActions
+                        actions={[{
+                          danger: true,
+                          label: t('adminCollectivites.detail.removeManager', 'Retirer'),
+                          onPress: () => onRetirer({ documentId: compte.documentId, name: nom }),
+                        }]}
+                        testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
+                      />
                     ) : null}
                   </View>
-                  <PlusDActions
-                    libelle={t(
-                      'collectiviteConsole.fiche.plusDActions',
-                      'Plus d’actions : {{nom}}',
-                      { nom, ...SANS_ECHAPPEMENT },
-                    )}
-                    onBasculer={() => basculerMenu(`gestionnaire-${compte.documentId}`)}
-                    ouvert={menuOuvert === `gestionnaire-${compte.documentId}`}
-                    testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
-                  />
-                </View>
-                {menuOuvert === `gestionnaire-${compte.documentId}` ? (
-                  <MenuDActions
-                    actions={[{
-                      danger: true,
-                      label: t('adminCollectivites.detail.removeManager', 'Retirer'),
-                      onPress: () => onRetirer({ documentId: compte.documentId, name: nom }),
-                    }]}
-                    testID={`admin-collectivite-gestionnaire-${compte.documentId}-actions`}
-                  />
-                ) : null}
-              </View>
-            );
-          })}
-          <CollectiviteTargetSearch
-            deja={new Set(detail.gestionnaires.map((/** @type {any} */ c) => c.documentId))}
-            dejaTexte={t('adminCollectivites.detail.alreadyManager', 'Déjà gestionnaire')}
-            enCours={nommer.isPending}
-            kind="user"
-            libelleAction={t('adminCollectivites.detail.addManager', 'Ajouter')}
-            onChoisir={onNommer}
-            placeholder={t(
-              'collectiviteConsole.fiche.ajouterGestionnaire',
-              'Ajouter : nom ou e-mail',
-            )}
-            testID="admin-collectivite-recherche-compte"
-          />
-          {afficherRetour(retourGestionnaires)}
-          {/* COLL-ACCUEIL (01/10) — le lien « Ouvrir dans la file », s'il y a une demande. */}
-          <ManagerRequestsLink collectiviteId={collectiviteId} />
+                );
+              })}
+              <CollectiviteTargetSearch
+                deja={new Set(detail.gestionnaires.map((/** @type {any} */ c) => c.documentId))}
+                dejaTexte={t('adminCollectivites.detail.alreadyManager', 'Déjà gestionnaire')}
+                enCours={nommer.isPending}
+                kind="user"
+                libelleAction={t('adminCollectivites.detail.addManager', 'Ajouter')}
+                onChoisir={onNommer}
+                placeholder={t(
+                  'collectiviteConsole.fiche.ajouterGestionnaire',
+                  'Ajouter : nom ou e-mail',
+                )}
+                testID="admin-collectivite-recherche-compte"
+              />
+              {afficherRetour(retourGestionnaires)}
+              {/* COLL-ACCUEIL (01/10) — le lien « Ouvrir dans la file », s'il y a une demande. */}
+              <ManagerRequestsLink collectiviteId={collectiviteId} />
+            </View>
+            {enColonnes ? null : carteInstallations}
+          </View>
         </View>
 
-        <View style={carteStyle} testID="admin-collectivite-installations">
-          {titreSection(t(
-            'adminCollectivites.detail.installationsCount',
-            'Installations : {{nombre}}',
-            { nombre: detail.installations.length },
-          ))}
-          {detail.installations.length === 0 ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'adminCollectivites.detail.noInstallation',
-                'Aucune installation : le gestionnaire les ajoute depuis « Ma collectivité ».',
-              )}
-            </Text>
-          ) : detail.installations.map((/** @type {any} */ installation) => (
-            <View key={installation.documentId} style={{ gap: 2 }}>
-              <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
-                <View
-                  style={{
-                    backgroundColor: resolveFacilityPlanningColor(installation) ?? undefined,
-                    borderRadius: 6,
-                    height: 12,
-                    width: 12,
-                  }}
-                  testID={`admin-collectivite-installation-${installation.documentId}-couleur`}
-                />
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{installation.name}</Text>
-              </View>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {[
-                  installation.type,
-                  installation.maxSlots === null ? null : t('collectiviteConsole.fiche.equipes', {
-                    count: installation.maxSlots,
-                    defaultValue_one: '{{count}} équipe à la fois',
-                    defaultValue_other: '{{count}} équipes à la fois',
-                  }),
-                ].filter(Boolean).join(' · ')}
-              </Text>
-            </View>
-          ))}
-        </View>
       </ScrollView>
       <ConsoleSheet
         error={echecDuGeste ? getErrorMessage(/** @type {any} */ (echecDuGeste)) : null}

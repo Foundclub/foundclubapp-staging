@@ -194,10 +194,36 @@ describe('COLL-ACCUEIL-BIS — planche 38 : revenu de la création, « Demande e
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
       'Demande envoyée',
-      'L’équipe FoundClub vérifie que ton club est bien à Montrivage, puis le rattache à la Ville. Tu seras prévenu.',
+      // VILLE-INVITER-CLUB (07/10, « lien A » d'Adel) : la Ville juge elle-meme sa demande.
+      'La Ville accepte ou refuse ta demande. Tu seras prévenu, et tu suis sa réponse sur la page de ton club.',
       'D’ici là, ton club fonctionne déjà normalement.',
     ]));
     await act(async () => { bouton(arbre, 'Aller à mon club').props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith('Club', { clubId: 'club-neuf' });
+  });
+});
+
+// LIENS-APP (07/10/2026, registre TEST_PROD_2_6_70 ligne 5a) — le lien de la Ville s'ouvre
+// désormais DANS l'app. Sans compte, les deux boutons mènent à la connexion : ils posent un repère
+// de RETOUR (useLiensEnAttente le lit après la connexion et rouvre cette page) ; la page,
+// ouverte avec un compte, l'efface — on n'y revient qu'une fois. ROUGE avant le lot.
+describe('LIENS-APP — sans compte, la connexion ramène à la page du lien', () => {
+  const retourRetenu = () => JSON.parse(mockRangement.get('coll-invitation-ville-retour') || 'null')?.token || null;
+
+  it.each([['Inscrire mon club'], ['Mon club est déjà sur FoundClub']])(
+    'sans compte, « %s » pose le repère de retour, puis ouvre la connexion',
+    async (titre) => {
+      const arbre = await monter(CollectiviteJoin);
+      await act(async () => { bouton(arbre, titre).props.onPress(); });
+      expect(retourRetenu()).toBe(LIEN);
+      expect(mockOuvrirConnexion).toHaveBeenCalled();
+    },
+  );
+
+  it('connecté, la page du lien efface le repère : on n y revient qu une fois', async () => {
+    mockRangement.set('coll-invitation-ville-retour', JSON.stringify({ at: Date.now(), token: LIEN }));
+    mockUtilisateur = { documentId: 'karim' };
+    await monter(CollectiviteJoin);
+    expect(retourRetenu()).toBeNull();
   });
 });

@@ -277,8 +277,11 @@ describe('D61 — écran 3 : créer une collectivité (planche P2-creer)', () =>
     await taper(arbre, 'name', 'Ville de Valfleuri');
     // eslint-disable-next-line max-len
     const apercu = arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0];
+    // INVERSÉ PAR VT18E point 5 (07/10) — motif : l écusson « TC » du club fictif « Ton club » se
+    // lisait comme les initiales de la Ville (tournée T18, S05d) ; l aperçu porte l écusson de la
+    // Ville (« V » pour Valfleuri), comme la page du club.
     expect(textesSous(apercu)).toEqual(expect.arrayContaining([
-      'CE QUE LIRONT LES CLUBS', 'Ton club', 'Offert par la Ville de Valfleuri',
+      'CE QUE LIRONT LES CLUBS', 'V', 'Offert par la Ville de Valfleuri',
     ]));
     await taper(arbre, 'name', 'Département du Var');
     expect(textes(arbre)).toContain('Offert par le Département du Var');
@@ -426,5 +429,29 @@ describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande av
 
     expect(feuille(arbre)).toBeUndefined();
     expect(mockSortie).toHaveBeenCalledWith({ type: 'REPLACE' });
+  });
+});
+
+// 🛡️ VT18E (07/10/2026), point 5 — tournée T18 (capture S05d) : pour « T18 Ville essai Rouvres »,
+// l aperçu « Ce que liront les clubs » montrait un écusson « TC » — celui d un club fictif
+// « Ton club », dont le nom était caché sous le bouton fixé en bas. Ce que le club lit vraiment
+// (sa page, ClubDetails) : l écusson DE LA VILLE, à l initiale de son nom propre, et « Offert par
+// … ». L aperçu montre désormais cela. ROUGE avant le lot.
+describe('VT18E — l aperçu porte l écusson de la Ville', () => {
+  it('« Ville de Rouvres » ⇒ l écusson « R », « Offert par … », plus de club fictif', async () => {
+    const arbre = await monter();
+    await taper(arbre, 'name', 'Ville de Rouvres');
+    // eslint-disable-next-line max-len
+    const apercu = arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0];
+    const lus = textesSous(apercu);
+    expect(lus).toEqual(['CE QUE LIRONT LES CLUBS', 'R', 'Offert par la Ville de Rouvres']);
+
+    // Le nom créé en recette T18 : la lettre du nom propre, pas celle du dernier mot (« E »).
+    await taper(arbre, 'name', 'Ville de Rouvres T18 essai');
+    const apercuEssai = arbre.root
+      .findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0];
+    expect(textesSous(apercuEssai)).toEqual(expect.arrayContaining(['R']));
+    expect(textes(arbre)).not.toContain('TC');
+    expect(textes(arbre)).not.toContain('Ton club');
   });
 });

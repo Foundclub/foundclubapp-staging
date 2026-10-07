@@ -90,10 +90,12 @@ function NotificationBadge({
     && (isBootstrapResolved || allowUnreadFallbackFetch);
 
   const {
+    isError,
     isLoading,
     markAllAsRead,
     markAsRead,
     notifications,
+    refreshNotifications,
     unreadCount,
   } = useNotificationController({
     notificationsEnabled: shouldLoadNotifications,
@@ -211,12 +213,14 @@ function NotificationBadge({
 
       {!onPress && (
       <NotificationPopup
+        isError={isError}
         isLoading={isLoading}
         isVisible={isPopupVisible}
         notifications={notifications}
         onClose={handleClose}
         onMarkAllAsRead={markAllAsRead}
         onMarkAsRead={markAsRead}
+        onRetry={refreshNotifications}
       />
       )}
     </>

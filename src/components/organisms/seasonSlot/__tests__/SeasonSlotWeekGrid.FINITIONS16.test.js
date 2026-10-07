@@ -122,3 +122,20 @@ describe('FINITIONS16 21 — planche 23 : des blocs lisibles quand la place manq
     expect(bloc.props.accessibilityLabel).toContain('Montrivage Basket');
   });
 });
+
+// 🎨 VILLE-T18A (07/10), tournée T18 point 4b (site, capture SITE_G37b) — panneau
+// « Attribuer » ouvert : sous « Mar. », le moment complet s affichait « comple… » (une
+// seule ligne imposée dans une colonne de ~66 px). Il passe à la ligne, centré :
+// « complet » puis ses heures, rien de coupé. ROUGE avant.
+describe('VILLE-T18A 4b — le moment complet de l en-tête ne se coupe pas', () => {
+  it('panneau ouvert (66 px par jour) : « complet 14:00 – 17:00 » passe à la ligne', () => {
+    const arbre = monter(540);
+    const [complet] = arbre.root.findAllByType(Text)
+      .filter((/** @type {any} */ n) => String(n.props.children).startsWith('complet'));
+    expect(String(complet.props.children)).toBe('complet 14:00 – 17:00');
+    const lignes = complet.props.numberOfLines;
+    expect(lignes === undefined || lignes >= 3).toBe(true);
+    const style = jest.requireActual('react-native').StyleSheet.flatten(complet.props.style);
+    expect(style.textAlign).toBe('center');
+  });
+});

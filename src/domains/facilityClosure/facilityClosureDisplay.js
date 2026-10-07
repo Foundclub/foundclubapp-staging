@@ -175,6 +175,43 @@ export const closuresOfBanner = (meta) => {
 };
 
 /**
+ * 🟨 VILLE-T18A (07/10, tournée T18, G54a) — LE TITRE DE LA CARTE « touchées » : un
+ * créneau de saison sans séance posée (`kind: 'slot'`) n est pas une séance — « 1 séance
+ * touchée, 1 créneau touché », plus « 2 séances touchées ». Le serveur rend au plus
+ * 30 lignes : au-delà, la répartition n est plus connue, et un créneau vu dit « séances ou
+ * créneaux ».
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
+ * @param {any} carte - La carte du serveur (`affected` : `sessions`, `sessionsCount`).
+ * @returns {string} « 1 séance touchée, 1 créneau touché » (sans les clubs).
+ */
+export const touchedCountLabel = (t, carte) => {
+  const total = Number(carte?.sessionsCount) || 0;
+  const lignes = Array.isArray(carte?.sessions) ? carte.sessions : [];
+  const creneaux = lignes.filter((ligne) => ligne?.kind === 'slot').length;
+  const seances = (/** @type {number} */ count) => t('collectiviteFermetures.carte.seances', {
+    count,
+    defaultValue_one: '{{count}} séance touchée',
+    defaultValue_other: '{{count}} séances touchées',
+  });
+  if (!creneaux) return seances(total);
+  if (lignes.length < total) {
+    return t('collectiviteFermetures.carte.seancesOuCreneaux', {
+      count: total,
+      defaultValue_one: '{{count}} séance ou créneau touché',
+      defaultValue_other: '{{count}} séances ou créneaux touchés',
+    });
+  }
+  return [
+    total > creneaux ? seances(total - creneaux) : null,
+    t('collectiviteFermetures.carte.creneaux', {
+      count: creneaux,
+      defaultValue_one: '{{count}} créneau touché',
+      defaultValue_other: '{{count}} créneaux touchés',
+    }),
+  ].filter(Boolean).join(', ');
+};
+
+/**
  * Une seance touchee, telle que la carte la dit : « AS Montrivage · U15, 18:00 – 19:30 ».
  * @param {{ club?: { name?: string|null }|null, team?: { name?: string|null }|null,
  *   startTime?: string|null, endTime?: string|null, date?: string|null }} seance - La seance.

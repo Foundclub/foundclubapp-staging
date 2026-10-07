@@ -21,6 +21,7 @@ import {
   detachAdminCollectiviteClub,
   getAdminCollectivite,
   getAdminCollectiviteInvitations,
+  getAdminCollectiviteLeads,
   getAdminCollectivites,
   getAdminManagerRequests,
   getCollectiviteChiffres,
@@ -512,7 +513,10 @@ export const useAdminCollectiviteSearch = (kind, query) => {
   const texte = String(query || '').trim();
   return useQuery({
     enabled: texte.length >= 2,
-    queryFn: async () => unwrapRows(await searchAdminCollectiviteTargets(kind, texte)),
+    // VT18E (07/10) — une recherche depassee par la frappe est coupee, pas attendue.
+    queryFn: async ({ signal }) => unwrapRows(
+      await searchAdminCollectiviteTargets(kind, texte, { signal }),
+    ),
     queryKey: [...ADMIN_COLLECTIVITES_QUERY_KEY, 'search', kind, texte],
     staleTime: 30_000,
   });
@@ -777,6 +781,18 @@ export const ADMIN_COLLECTIVITE_INVITATIONS_QUERY_KEY = [
 export const useAdminCollectiviteInvitations = (options = {}) => useQuery({
   queryFn: async () => unwrapRows(await getAdminCollectiviteInvitations()),
   queryKey: ADMIN_COLLECTIVITE_INVITATIONS_QUERY_KEY,
+  staleTime: 0,
+  ...options,
+});
+
+/**
+ * VOIE 3 (« collectivité A », 07/10) — les pistes « Prévenir ma mairie » (console super-admin).
+ * @param {QueryOptions} [options] - Options react-query.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useAdminCollectiviteLeads = (options = {}) => useQuery({
+  queryFn: async () => unwrapRows(await getAdminCollectiviteLeads()),
+  queryKey: [...ADMIN_COLLECTIVITES_QUERY_KEY, 'leads'],
   staleTime: 0,
   ...options,
 });
