@@ -28,7 +28,7 @@ const MAP_ID = 'pin-map-native';
  * Chargé SEULEMENT par `maps.native.js`, à l'ouverture (voir l'en-tête de `renderPinMap`).
  * @param {object} props
  * @param {number} props.height
- * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(region: object) => void} [props.onRegionChangeComplete] - Le nouveau centre.
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
  */
@@ -54,7 +54,9 @@ function PinMapNative({ height, onRegionChangeComplete, regionHint = null }) {
       initialState: etat,
       mapId: MAP_ID,
       markerColor: Colors.primary500,
-      tileAttribution: tomTomApiKey ? TOMTOM_TILE_PROVIDER.attribution : LEGACY_TILE_PROVIDER.attribution,
+      tileAttribution: tomTomApiKey
+        ? TOMTOM_TILE_PROVIDER.attribution
+        : LEGACY_TILE_PROVIDER.attribution,
       tileProbeUrl: tomTomApiKey ? buildTomTomProbeUrl(tomTomApiKey) : '',
       tileUrl: tomTomApiKey ? buildTomTomTileUrl(tomTomApiKey) : LEGACY_TILE_PROVIDER.url,
     });
@@ -76,7 +78,12 @@ function PinMapNative({ height, onRegionChangeComplete, regionHint = null }) {
   };
 
   return (
-    <View style={[Alignments.relative, { backgroundColor: Colors.primary900, height, overflow: 'hidden' }]}>
+    <View
+      style={[
+        Alignments.relative,
+        { backgroundColor: Colors.primary900, height, overflow: 'hidden' },
+      ]}
+    >
       <WebView
         domStorageEnabled
         javaScriptEnabled
@@ -92,7 +99,12 @@ function PinMapNative({ height, onRegionChangeComplete, regionHint = null }) {
       {!prete ? (
         <View
           pointerEvents="none"
-          style={[Alignments.absolute, Alignments.fullSize, Alignments.alignCenter, Alignments.justifyCenter]}
+          style={[
+            Alignments.absolute,
+            Alignments.fullSize,
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+          ]}
         >
           <ActivityIndicator color={Colors.primary500} size="small" />
         </View>

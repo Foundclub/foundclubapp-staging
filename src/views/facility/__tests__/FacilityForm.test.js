@@ -1219,7 +1219,7 @@ describe('FacilityForm — ADRESSE-CARTE : un lieu posé sur la carte', () => {
     expect(dernieresProps(mockAddressProps).permettreLieuSurCarte).toBe(true);
   });
 
-  it('nom + lieu posé : la création part avec le point de l épingle, comme une adresse de la liste', async () => {
+  it('nom + lieu posé : la création part avec le point de l épingle', async () => {
     const arbre = await monterEcran();
     await saisirNom('Stade de Luminy');
     await choisirAdresse(LIEU_POSE);

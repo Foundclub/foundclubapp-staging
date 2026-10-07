@@ -205,6 +205,10 @@ function SearchMapIframeRuntime({
     return () => window.removeEventListener('message', handleWindowMessage);
   }, [mapId, onOpenItem, onRegionChangeComplete, onRenderStats, onSelectItem]);
 
+  // ADRESSE-CARTE — sans message (la carte à épingle), pas de bandeau vide en bas.
+  const afficherLeMessage = mapStatus === 'ready' && Boolean(message)
+    && items.length === 0 && (!renderItems || renderItems.length === 0);
+
   return (
     <View
       style={{
@@ -326,7 +330,7 @@ function SearchMapIframeRuntime({
         </View>
       ) : null}
 
-      {mapStatus === 'ready' && message && items.length === 0 && (!renderItems || renderItems.length === 0) ? (
+      {afficherLeMessage ? (
         <View
           style={{
             alignItems: 'center',
@@ -455,7 +459,7 @@ export const renderMap = ({
  * déplacement (`onRegionChangeComplete`).
  * @param {object} props
  * @param {number} [props.height]
- * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {(region: object) => void} [props.onRegionChangeComplete] - Le nouveau centre.
  * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
  * @returns {import('react').ReactElement}
  */
@@ -472,7 +476,9 @@ export const renderPinMap = ({ height = 360, onRegionChangeComplete, regionHint 
       message=""
       onRegionChangeComplete={onRegionChangeComplete}
       regionHint={regionHint}
-      tileAttribution={tomTomApiKey ? TOMTOM_TILE_PROVIDER.attribution : LEGACY_TILE_PROVIDER.attribution}
+      tileAttribution={tomTomApiKey
+        ? TOMTOM_TILE_PROVIDER.attribution
+        : LEGACY_TILE_PROVIDER.attribution}
       tileProbeUrl={tomTomApiKey ? buildTomTomProbeUrl(tomTomApiKey) : ''}
       tileUrl={tomTomApiKey ? buildTomTomTileUrl(tomTomApiKey) : LEGACY_TILE_PROVIDER.url}
     />

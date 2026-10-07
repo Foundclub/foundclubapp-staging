@@ -131,8 +131,12 @@ const mapGeoLocationToPlace = (/** @type {any} */ location) => ({
  * un nom). Il rejoint la base de lieux du serveur : la recherche d'adresse suivante, par n'importe
  * qui, le propose avant le géocodeur. Le serveur rend le lieu à la forme d'une proposition de
  * `/geo/search` : il devient une adresse comme une autre pour le formulaire.
- * @param {{ name: string, lat: number, lng: number, addressLine?: string, city?: string, postcode?: string }} lieu
- * @returns {Promise<{ existing: boolean, place: Place }>} `existing` : le même lieu était déjà posé.
+ * @param {{
+ *   name: string, lat: number, lng: number,
+ *   addressLine?: string, city?: string, postcode?: string,
+ * }} lieu - Le lieu : son nom, son point, son adresse approchée.
+ * @returns {Promise<{ existing: boolean, place: Place }>} `existing` : le même lieu était
+ *   déjà posé.
  */
 export const createLieu = async (lieu) => {
   const response = await client.post('/lieux', { data: lieu });

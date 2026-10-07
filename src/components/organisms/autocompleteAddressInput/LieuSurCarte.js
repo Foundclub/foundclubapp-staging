@@ -48,9 +48,15 @@ const messageDuRefus = (t, erreur) => {
         'Ce point ne peut pas être enregistré. Déplacez la carte et réessayez.',
       );
     case 'LIEU_LIMIT_REACHED':
-      return t('autocompleteAddressInput.lieu.erreurs.plafond', 'Vous avez posé beaucoup de lieux : réessayez demain.');
+      return t(
+        'autocompleteAddressInput.lieu.erreurs.plafond',
+        'Vous avez posé beaucoup de lieux : réessayez demain.',
+      );
     case 'LIEU_NAME_REQUIRED':
-      return t('autocompleteAddressInput.lieu.erreurs.nom', 'Donnez un nom au lieu (3 caractères au moins).');
+      return t(
+        'autocompleteAddressInput.lieu.erreurs.nom',
+        'Donnez un nom au lieu (3 caractères au moins).',
+      );
     case 'LIEU_PERSONAL_DATA':
       return t(
         'autocompleteAddressInput.lieu.erreurs.donneePersonnelle',
@@ -61,20 +67,31 @@ const messageDuRefus = (t, erreur) => {
   }
   const statut = getErrorStatus(erreur);
   if (statut === 429) {
-    return t('autocompleteAddressInput.lieu.erreurs.debit', 'Trop de lieux posés d’un coup : réessayez dans quelques minutes.');
+    return t(
+      'autocompleteAddressInput.lieu.erreurs.debit',
+      'Trop de lieux posés d’un coup : réessayez dans quelques minutes.',
+    );
   }
   if (statut === 401 || statut === 403) {
-    return t('autocompleteAddressInput.lieu.erreurs.connexion', 'Connectez-vous pour poser un lieu.');
+    return t(
+      'autocompleteAddressInput.lieu.erreurs.connexion',
+      'Connectez-vous pour poser un lieu.',
+    );
   }
-  return t('autocompleteAddressInput.lieu.erreurs.panne', 'Le lieu n’a pas pu être enregistré. Réessayez.');
+  return t(
+    'autocompleteAddressInput.lieu.erreurs.panne',
+    'Le lieu n’a pas pu être enregistré. Réessayez.',
+  );
 };
 
 /**
  * La carte ouverte. Tous les états vivent ici : chaque ouverture repart d'une page blanche.
  * @param {object} props
- * @param {{ lat: number, lng: number } | null} props.premierResultat - La 1re proposition de la liste.
+ * @param {{ lat: number, lng: number } | null} props.premierResultat - La 1re proposition
+ *   de la liste.
  * @param {() => void} props.onFermer - Referme sans rien changer.
- * @param {(place: import('@/services/places/types').Place) => void} props.onLieuPose - Le lieu posé.
+ * @param {(place: import('@/services/places/types').Place) => void} props.onLieuPose - Le
+ *   lieu posé.
  * @returns {import('react').ReactElement}
  */
 function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
@@ -123,9 +140,15 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
 
   let indication = '';
   if (!zoomSuffisant) {
-    indication = t('autocompleteAddressInput.lieu.zoomer', 'Zoomez jusqu’à la rue pour placer le lieu précisément.');
+    indication = t(
+      'autocompleteAddressInput.lieu.zoomer',
+      'Zoomez jusqu’à la rue pour placer le lieu précisément.',
+    );
   } else if (!nomSuffisant) {
-    indication = t('autocompleteAddressInput.lieu.erreurs.nom', 'Donnez un nom au lieu (3 caractères au moins).');
+    indication = t(
+      'autocompleteAddressInput.lieu.erreurs.nom',
+      'Donnez un nom au lieu (3 caractères au moins).',
+    );
   }
 
   const placer = async () => {
@@ -161,13 +184,24 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
           <Text accessibilityRole="header" style={[Fonts.h3Bold, Fonts.neutral00, Alignments.fill]}>
             {t('autocompleteAddressInput.lieu.titre', 'Placer le lieu sur la carte')}
           </Text>
-          <TouchableOpacity accessibilityRole="button" onPress={onFermer} style={[Spaces.padding[8]]}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={onFermer}
+            style={[Spaces.padding[8]]}
+          >
             <Text style={[Fonts.p2Bold, Fonts.primary500]}>
               {t('autocompleteAddressInput.lieu.annuler', 'Annuler')}
             </Text>
           </TouchableOpacity>
         </View>
-        <Text style={[Fonts.p3, Fonts.neutral300, Spaces.paddingHorizontal[16], Spaces.paddingBottom[12]]}>
+        <Text
+          style={[
+            Fonts.p3,
+            Fonts.neutral300,
+            Spaces.paddingHorizontal[16],
+            Spaces.paddingBottom[12],
+          ]}
+        >
           {t(
             'autocompleteAddressInput.lieu.aide',
             'Déplacez la carte pour mettre l’épingle sur le lieu, puis donnez-lui un nom.',
@@ -192,11 +226,20 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
             pointerEvents="none"
-            style={[Alignments.absolute, Alignments.fullSize, Alignments.alignCenter, Alignments.justifyCenter]}
+            style={[
+              Alignments.absolute,
+              Alignments.fullSize,
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+            ]}
           >
             <Image
               source={Images.pin}
-              style={[ApplicationStyle.icon48, ApplicationStyle.tintColor.primary500, { marginBottom: 48 }]}
+              style={[
+                ApplicationStyle.icon48,
+                ApplicationStyle.tintColor.primary500,
+                { marginBottom: 48 },
+              ]}
             />
           </View>
         </View>
@@ -204,7 +247,11 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
         <View style={[Spaces.padding[16], Spaces.gap[12], { paddingBottom: insets.bottom + 16 }]}>
           {zoomSuffisant && proprietes?.label ? (
             <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral300]}>
-              {t('autocompleteAddressInput.lieu.presDe', 'Près de : {{adresse}}', { adresse: proprietes.label })}
+              {t(
+                'autocompleteAddressInput.lieu.presDe',
+                'Près de : {{adresse}}',
+                { adresse: proprietes.label },
+              )}
             </Text>
           ) : null}
           <Input
@@ -222,10 +269,15 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
             <Text style={[Fonts.p3, Fonts.neutral300]}>{indication}</Text>
           ) : null}
           {erreur ? (
-            <Text accessibilityLiveRegion="polite" style={[Fonts.p2, Fonts.error500]}>{erreur}</Text>
+            <Text accessibilityLiveRegion="polite" style={[Fonts.p2, Fonts.error500]}>
+              {erreur}
+            </Text>
           ) : null}
           <Button
-            accessibilityHint={t('autocompleteAddressInput.lieu.placerAide', 'Pose le lieu sous l’épingle, au centre de la carte.')}
+            accessibilityHint={t(
+              'autocompleteAddressInput.lieu.placerAide',
+              'Pose le lieu sous l’épingle, au centre de la carte.',
+            )}
             disabled={!zoomSuffisant || !nomSuffisant}
             isLoading={creerLieu.isPending}
             onPress={placer}
@@ -242,16 +294,24 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
  * La carte « Placez-la sur la carte ». Fermée, elle ne rend rien et ne charge rien.
  * @param {object} props
  * @param {boolean} props.visible - Ouverte ou non.
- * @param {{ lat: number, lng: number } | null} [props.premierResultat] - La 1re proposition de la liste.
+ * @param {{ lat: number, lng: number } | null} [props.premierResultat] - La 1re
+ *   proposition de la liste.
  * @param {() => void} props.onFermer - Referme sans rien changer.
- * @param {(place: import('@/services/places/types').Place) => void} props.onLieuPose - Le lieu posé.
+ * @param {(place: import('@/services/places/types').Place) => void} props.onLieuPose - Le
+ *   lieu posé.
  * @returns {import('react').ReactElement | null}
  */
 function LieuSurCarte({
   onFermer, onLieuPose, premierResultat = null, visible,
 }) {
   if (!visible) return null;
-  return <LieuSurCarteOuvert onFermer={onFermer} onLieuPose={onLieuPose} premierResultat={premierResultat} />;
+  return (
+    <LieuSurCarteOuvert
+      onFermer={onFermer}
+      onLieuPose={onLieuPose}
+      premierResultat={premierResultat}
+    />
+  );
 }
 
 export default LieuSurCarte;

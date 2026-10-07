@@ -27,7 +27,8 @@ jest.mock('react-i18next', () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => {
       const texte = typeof repli === 'string' ? repli : cle;
       const vars = typeof repli === 'object' ? repli : valeurs;
-      return Object.entries(vars || {}).reduce((acc, [k, v]) => acc.replace(`{{${k}}}`, String(v)), texte);
+      return Object.entries(vars || {})
+        .reduce((acc, [k, v]) => acc.replace(`{{${k}}}`, String(v)), texte);
     },
   }),
 }));
@@ -125,7 +126,11 @@ jest.mock('@/components/atoms/button/Button', () => {
     default: (/** @type {any} */ {
       disabled, isLoading, onPress, title,
     }) => (
-      <Pressable accessibilityState={{ disabled: Boolean(disabled || isLoading) }} disabled={disabled || isLoading} onPress={onPress}>
+      <Pressable
+        accessibilityState={{ disabled: Boolean(disabled || isLoading) }}
+        disabled={disabled || isLoading}
+        onPress={onPress}
+      >
         <TexteRN>{title}</TexteRN>
       </Pressable>
     ),
@@ -152,11 +157,17 @@ const PLACER = 'Placer ici';
 const RUE = {
   geometry: { coordinates: [5.4352, 43.2321] },
   properties: {
-    city: 'Marseille', id: 'ban-rue', label: 'Route de Luminy 13009 Marseille', name: 'Route de Luminy', postcode: '13009', type: 'street',
+    city: 'Marseille',
+    id: 'ban-rue',
+    label: 'Route de Luminy 13009 Marseille',
+    name: 'Route de Luminy',
+    postcode: '13009',
+    type: 'street',
   },
 };
 
-// Ce que le serveur rend pour un lieu posé (POST /lieux), à la forme d'une proposition de /geo/search.
+// Ce que le serveur rend pour un lieu posé (POST /lieux), à la forme d'une proposition de
+// /geo/search.
 const LIEU_POSE = {
   existing: false,
   place: {
@@ -189,7 +200,10 @@ const texteVisible = (/** @type {any} */ arbre) => aplatirTexte(arbre.toJSON());
  */
 const monter = (proprietes = {}) => {
   const client = new QueryClient({
-    defaultOptions: { mutations: { retry: false }, queries: { gcTime: 0, retry: false, staleTime: 60 * 60 * 1000 } },
+    defaultOptions: {
+      mutations: { retry: false },
+      queries: { gcTime: 0, retry: false, staleTime: 60 * 60 * 1000 },
+    },
   });
   let arbre;
   act(() => {
@@ -232,7 +246,8 @@ const ouvrirEtTaper = async (/** @type {any} */ arbre, /** @type {string} */ tex
 };
 
 const appuyerSurLeTexte = async (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
-  const texte = arbre.root.findAllByType(Text).find((/** @type {any} */ n) => aplatirTexte(n.props.children) === libelle);
+  const texte = arbre.root.findAllByType(Text)
+    .find((/** @type {any} */ n) => aplatirTexte(n.props.children) === libelle);
   if (!texte) throw new Error(`« ${libelle} » absent de l'écran`);
   let noeud = texte;
   while (noeud && typeof noeud.props?.onPress !== 'function') noeud = noeud.parent;
@@ -243,7 +258,8 @@ const appuyerSurLeTexte = async (/** @type {any} */ arbre, /** @type {string} */
 };
 
 const pressableDe = (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
-  let noeud = arbre.root.findAllByType(Text).find((/** @type {any} */ n) => aplatirTexte(n.props.children) === libelle);
+  let noeud = arbre.root.findAllByType(Text)
+    .find((/** @type {any} */ n) => aplatirTexte(n.props.children) === libelle);
   while (noeud && typeof noeud.props?.onPress !== 'function') noeud = noeud.parent;
   return noeud;
 };
@@ -265,20 +281,20 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     jest.useRealTimers();
   });
 
-  it('① adresse introuvable ⇒ le lien apparaît sous la liste (champ qui enregistre un lieu public)', async () => {
+  it('① adresse introuvable ⇒ le lien sous la liste (champ d un lieu public)', async () => {
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade de luminy');
     expect(mockSearchPlaces).toHaveBeenCalledWith('stade de luminy', undefined);
     expect(texteVisible(arbre)).toContain(LIEN);
   });
 
-  it('① bis sans le réglage, le champ ne propose JAMAIS de poser un lieu (adresse personnelle, filtres, conversation)', async () => {
+  it('① bis sans le réglage : JAMAIS le lien (profil, filtres, conversation)', async () => {
     const { arbre } = monter();
     await ouvrirEtTaper(arbre, 'stade de luminy');
     expect(texteVisible(arbre)).not.toContain(LIEN);
   });
 
-  it('② le lien ouvre la carte centrée sur ce qui a été tapé (la 1re proposition), sans rien demander', async () => {
+  it('② la carte part de la 1re proposition tapée, sans rien demander', async () => {
     mockSearchPlaces.mockResolvedValue([RUE]);
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'luminy');
@@ -291,7 +307,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     expect(mockPositionSiAccordee).not.toHaveBeenCalled();
   });
 
-  it('② bis rien de trouvé : la carte part de la position SEULEMENT si elle est déjà accordée — jamais une demande neuve', async () => {
+  it('② bis rien trouvé : la position SEULEMENT si déjà accordée, jamais demandée', async () => {
     mockPositionSiAccordee.mockResolvedValue({ lat: 45.76, lng: 4.83 });
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade inconnu');
@@ -303,7 +319,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     expect(derniereCarte().regionHint).toEqual({ lat: 45.76, lng: 4.83, zoom: 16 });
   });
 
-  it('② ter ni proposition ni position accordée : la France entière, et « Placer ici » attend qu on zoome jusqu à la rue', async () => {
+  it('② ter sinon la France, et « Placer ici » attend le zoom de la rue', async () => {
     const { arbre } = monter({ permettreLieuSurCarte: true });
     await ouvrirEtTaper(arbre, 'stade inconnu');
     await appuyerSurLeTexte(arbre, LIEN);
@@ -318,7 +334,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     expect(texteVisible(arbre)).toContain('Zoomez jusqu’à la rue');
   });
 
-  it('③ épingle posée + nom ⇒ le lieu part au serveur, et le FORMULAIRE reçoit le point (comme une adresse de la liste)', async () => {
+  it('③ épingle + nom ⇒ le lieu part, le FORMULAIRE reçoit le point', async () => {
     mockSearchPlaces.mockResolvedValue([RUE]);
     const setAddress = jest.fn();
     const { arbre } = monter({ address: undefined, permettreLieuSurCarte: true, setAddress });
@@ -340,7 +356,12 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     await appuyerSurLeTexte(arbre, PLACER);
 
     expect(mockCreateLieu).toHaveBeenCalledWith({
-      addressLine: 'Route de Luminy', city: 'Marseille', lat: 43.2289, lng: 5.4371, name: 'Stade de Luminy', postcode: '13009',
+      addressLine: 'Route de Luminy',
+      city: 'Marseille',
+      lat: 43.2289,
+      lng: 5.4371,
+      name: 'Stade de Luminy',
+      postcode: '13009',
     });
     expect(setAddress).toHaveBeenLastCalledWith(expect.objectContaining({
       city: 'Marseille',
@@ -369,15 +390,18 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     expect(setAddress).not.toHaveBeenCalled();
   });
 
-  it('④ bis un refus du serveur se DIT dans la carte (donnée personnelle), et le formulaire ne reçoit rien', async () => {
+  it('④ bis un refus du serveur se DIT dans la carte ; le formulaire ne reçoit rien', async () => {
     mockSearchPlaces.mockResolvedValue([RUE]);
-    mockCreateLieu.mockRejectedValue({ response: { data: { error: { details: { code: 'LIEU_PERSONAL_DATA' } }, status: 400 } } });
+    mockCreateLieu.mockRejectedValue({
+      response: { data: { error: { details: { code: 'LIEU_PERSONAL_DATA' } }, status: 400 } },
+    });
     const setAddress = jest.fn();
     const { arbre } = monter({ permettreLieuSurCarte: true, setAddress });
     await ouvrirEtTaper(arbre, 'luminy');
     await appuyerSurLeTexte(arbre, LIEN);
     await act(async () => {
-      arbre.root.findByProps({ testID: `saisie:${NOM}` }).props.onChangeText('Chez Paul 06 12 34 56 78');
+      arbre.root.findByProps({ testID: `saisie:${NOM}` })
+        .props.onChangeText('Chez Paul 06 12 34 56 78');
     });
     await appuyerSurLeTexte(arbre, PLACER);
 
@@ -402,7 +426,7 @@ describe('ADRESSE-CARTE — « Adresse introuvable ? Placez-la sur la carte »',
     expect(texteVisible(arbre)).toContain('Ancienne adresse');
   });
 
-  it('⑥ le lieu posé est proposé à la recherche SUIVANTE : le cache local des adresses est vidé', async () => {
+  it('⑥ le lieu posé est proposé à la recherche SUIVANTE (cache local vidé)', async () => {
     mockSearchPlaces.mockResolvedValue([RUE]);
     const { arbre } = monter({ permettreLieuSurCarte: true, setAddress: jest.fn() });
     await ouvrirEtTaper(arbre, 'luminy');

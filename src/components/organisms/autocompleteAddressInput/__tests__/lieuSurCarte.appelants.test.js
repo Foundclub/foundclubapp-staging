@@ -6,7 +6,8 @@ import path from 'path';
 //
 // Un lieu posé rejoint la base de lieux PUBLIQUE : la recherche d'adresse suivante, par n'importe
 // qui, le propose. Le lien n'a donc sa place que dans un champ qui enregistre un lieu PUBLIC (une
-// installation, le lieu d'un événement, d'une annonce, l'adresse d'un club, le terrain d'une équipe).
+// installation, le lieu d'un événement, d'une annonce, l'adresse d'un club, le terrain d'une
+// équipe).
 //
 // ⛔ Jamais dans un champ d'adresse PERSONNELLE (l'inscription, le profil) ni dans le partage de
 // position d'une conversation : on y poserait son domicile (« Chez Paul »), visible de tous.
@@ -16,6 +17,8 @@ import path from 'path';
 // source : un appelant qui s'ajoute ou change d'avis doit changer cette liste, consciemment.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
+// Le champ lui-même (et ses témoins) n'est pas un appelant.
+const LE_CHAMP = 'components/organisms/autocompleteAddressInput/';
 
 const LIEU_PUBLIC = [
   'components/organisms/facilitySelector/FacilitySelector.js',
@@ -37,11 +40,18 @@ const JAMAIS = [
 ];
 
 /**
+ * Les entrées d'un dossier.
+ * @param {string} dossier - Le dossier.
+ * @returns {fs.Dirent[]} Ses entrées.
+ */
+const entreesDe = (dossier) => fs.readdirSync(dossier, { withFileTypes: true });
+
+/**
  * Tous les fichiers de production qui montent le champ d'adresse partagé.
  * @param {string} dossier - Le dossier à parcourir.
  * @returns {string[]} Les chemins relatifs à `src`.
  */
-const appelants = (dossier = SRC) => fs.readdirSync(dossier, { withFileTypes: true }).flatMap((entree) => {
+const appelants = (dossier = SRC) => entreesDe(dossier).flatMap((entree) => {
   const complet = path.join(dossier, entree.name);
   if (entree.isDirectory()) return entree.name === '__tests__' ? [] : appelants(complet);
   if (!/\.(js|jsx|ts|tsx)$/.test(entree.name) || /\.test\./.test(entree.name)) return [];
@@ -54,9 +64,9 @@ const usagesDe = (/** @type {string} */ fichier) => {
   return [...source.matchAll(/<AutocompleteAddressInput\b([\s\S]*?)\/>/g)].map((m) => m[1]);
 };
 
-describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où il n est jamais', () => {
+describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
   it('la carte des appelants tient toujours (30 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith('components/organisms/autocompleteAddressInput/')).length).toBe(30);
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(30);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {
@@ -69,9 +79,9 @@ describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, o
     expect(fs.readFileSync(path.join(SRC, fichier), 'utf8')).not.toMatch(/permettreLieuSurCarte/);
   });
 
-  it('aucun autre appelant ne l a (filtres, recherche d adversaire, écrans encore sans témoin)', () => {
+  it('aucun autre appelant ne l a (filtres, adversaire, écrans sans témoin)', () => {
     const autres = appelants().filter((f) => !LIEU_PUBLIC.includes(f)
-      && !f.startsWith('components/organisms/autocompleteAddressInput/'));
+      && !f.startsWith(LE_CHAMP));
     const porteurs = autres.filter((f) => /permettreLieuSurCarte/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
     expect(porteurs).toEqual([]);
   });
