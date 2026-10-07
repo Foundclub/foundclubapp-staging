@@ -361,12 +361,20 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     expect(debut.props.value).toBe('19:30');
   });
 
-  it('hors des heures d’ouverture : le seul blocage, l’erreur dit l’heure', async () => {
+  // VILLE-INSTALLATION (07/10) — décision d Adel « on ne met pas d ouverture ni de fermeture »,
+  // puis décision du chef d orchestre, dans sa ligne : des horaires que plus personne ne peut
+  // modifier ne BLOQUENT plus rien. Cette installation garde 08:00 - 22:00 en base (comme
+  // l installation 73 de la prod) : finir à 22:30 ne dit plus rien et s envoie.
+  it('hors des heures d’ouverture enregistrées : ni blocage, ni avertissement', async () => {
     const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
     await saisir(arbre, 'demande-fin', '22:30');
-    // eslint-disable-next-line max-len
-    expect(textes(arbre)).toContain('L’installation ferme à 22:00. Termine à 22:00, ou commence plus tôt.');
-    expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(true);
+    expect(textes(arbre).join(' | ')).not.toMatch(/L’installation (ferme|ouvre) à/);
+    expect(arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'demande-hors-ouverture',
+    )).toHaveLength(0);
+    await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
+    expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(false);
   });
 
   // eslint-disable-next-line max-len
