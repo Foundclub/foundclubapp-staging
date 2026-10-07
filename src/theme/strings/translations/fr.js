@@ -4846,6 +4846,7 @@ export default {
       ficheDes: '{{nombre}} demandes de gestionnaire pour cette collectivité',
       ficheUne: '1 demande de gestionnaire pour cette collectivité',
       fonction: 'Fonction : {{fonction}}',
+      gereDeja: 'Gère déjà : {{collectivites}}',
       gestionnairesActuels: 'gestionnaires : {{noms}}',
       inactive: 'Inactive',
       inscrite: 'Inscrite le {{date}}',

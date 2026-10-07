@@ -4520,6 +4520,7 @@ export default {
       ficheDes: '{{nombre}} manager requests for this local authority',
       ficheUne: '1 manager request for this local authority',
       fonction: 'Position: {{fonction}}',
+      gereDeja: 'Already manages: {{collectivites}}',
       gestionnairesActuels: 'managers: {{noms}}',
       inactive: 'Inactive',
       inscrite: 'Signed up on {{date}}',
