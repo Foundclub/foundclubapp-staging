@@ -1,5 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { colors } from '@/theme/colors';
+
 import ChatAttachmentActionIcon from '../ChatAttachmentActionIcon';
 
 // E6 (MESSAGERIE-1C) — LE JEU D'ICONES DE LA FEUILLE « + » DU FIL, caracterise AVANT d'y ajouter
@@ -15,7 +17,9 @@ const dessin = (actionKey) => {
   /** @type {any} */
   let arbre;
   act(() => {
-    arbre = renderer.create(<ChatAttachmentActionIcon actionKey={actionKey} color="#01b3f4" />);
+    arbre = renderer.create(
+      <ChatAttachmentActionIcon actionKey={actionKey} color={colors.primary500} />,
+    );
   });
   const noeuds = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
     || (n.type && typeof n.type === 'object'))
