@@ -224,7 +224,7 @@ function AdWizardCoachProfile({ navigation }) {
             <Text style={[Fonts.p4, Fonts.neutral300]}>
               {t(
                 'adWizardCoachProfile.certificationsHelper',
-                'Separer chaque certification par une virgule.',
+                'Séparer chaque certification par une virgule.',
               )}
             </Text>
           </View>

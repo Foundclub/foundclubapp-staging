@@ -84,7 +84,9 @@ const versSaisie = (jour) => {
  * « P4v3-fermer-tel » ecrans 1, 2 et 3 ; « P4v3-fermer-ordi » ; contrat C2A §13).
  *
  * FERMER : des journees (du … au …), un motif (travaux, vacances, manifestation, autre), un mot
- * facultatif aux clubs, et « Publier aussi une actualite Fermeture », cochee par defaut (lot C4A).
+ * facultatif aux clubs, et « Publier aussi une actualite Fermeture », DECOCHEE par defaut
+ * (FINITIONS19 3, decision d Adel « actualité A » du 07/10 ; cochee depuis le lot C4A, un appui
+ * distrait publiait une actualite a tous les membres des clubs rattaches).
  * BLOQUER : une plage d UN jour pour la Ville (« Forum des associations »). Pendant la saisie, une
  * carte nomme les seances touchees et les clubs prevenus. La confirmation redit le lieu, les jours
  * et les clubs ; le geste se defait par « Rouvrir » (onglet « Fermetures »).
@@ -289,7 +291,7 @@ function FormulaireDeFermeture({
   const [heureFin, setHeureFin] = useState(
     String(existante?.endTime || params.endTime || '').slice(0, 5),
   );
-  const [publier, setPublier] = useState(true);
+  const [publier, setPublier] = useState(false);
   const [confirmer, setConfirmer] = useState(false);
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
 

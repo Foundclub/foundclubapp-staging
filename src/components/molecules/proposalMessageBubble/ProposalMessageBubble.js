@@ -30,13 +30,13 @@ const STATUS_CONFIG = {
     bg: 'rgba(76, 175, 80, 0.18)',
     border: 'rgba(76, 175, 80, 0.45)',
     colorToken: 'success500',
-    label: 'Accepte',
+    label: 'Accepté',
   },
   declined: {
     bg: 'rgba(244, 67, 54, 0.18)',
     border: 'rgba(244, 67, 54, 0.45)',
     colorToken: 'error500',
-    label: 'Refuse',
+    label: 'Refusé',
   },
   pending: {
     bg: 'rgba(212, 175, 55, 0.18)',
@@ -49,7 +49,7 @@ const STATUS_CONFIG = {
 const getProposalMeta = (/** @type {any} */ { isMe, status, t }) => {
   if (status === 'accepted') {
     return {
-      badgeLabel: t('proposalMessageBubble.badge.accepted', 'Acceptee'),
+      badgeLabel: t('proposalMessageBubble.badge.accepted', 'Acceptée'),
       title: isMe ? t('proposalMessageBubble.title.mine', 'Ta proposition') : t(
         'proposalMessageBubble.title.opponent',
         'Proposition adverse',

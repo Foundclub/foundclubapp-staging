@@ -573,7 +573,7 @@ function EventEdit({ navigation, route }) {
 
           {isBootstrapping ? (
             <div style={{ color: mutedTextColor }}>
-              {t('eventEdit.loadingTheEvent', 'Chargement de l événement...')}
+              {t('eventEdit.loadingTheEvent', 'Chargement de l’événement...')}
             </div>
           ) : null}
 
@@ -859,7 +859,7 @@ function EventEdit({ navigation, route }) {
                     <div style={{ color: mutedTextColor, fontSize: 12, lineHeight: 1.5 }}>
                       {t(
                         'eventEdit.clickATeamToAdd',
-                        'Clique sur une équipe pour l ajouter ou la retirer, sans combinaison '
+                        'Clique sur une équipe pour l’ajouter ou la retirer, sans combinaison '
                           + 'clavier.',
                       )}
                     </div>
@@ -966,7 +966,7 @@ function EventEdit({ navigation, route }) {
                 <span>
                   {t(
                     'eventEdit.theFeaturingRequestIsMade',
-                    'La demande de mise à la une se fait depuis la fiche de l événement après '
+                    'La demande de mise à la une se fait depuis la fiche de l’événement après '
                       + 'création.',
                   )}
                 </span>

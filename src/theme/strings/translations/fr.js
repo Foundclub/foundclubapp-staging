@@ -1299,12 +1299,12 @@ export default {
       all: 'Tous',
       events: 'Événements',
       rejected: 'Refusés',
-      resolved: 'Resolus',
+      resolved: 'Résolus',
     },
     noDetail: 'Signalement sans détail.',
     openConversation: 'Ouvrir la conversation',
     openEvent: "Ouvrir l'événement",
-    shownCount: 'signalement(s) affiche(s)',
+    shownCount: 'signalement(s) affiché(s)',
     source: {
       event: 'Événement',
     },
@@ -1545,7 +1545,7 @@ export default {
   adWizardCoachProfile: {
     availabilityLabel: 'Disponibilités attendues',
     availabilityPlaceholder: 'Ex. Mardi et jeudi soir, match le week-end',
-    certificationsHelper: 'Separer chaque certification par une virgule.',
+    certificationsHelper: 'Séparer chaque certification par une virgule.',
     certificationsLabel: 'Certifications souhaitées',
     certificationsPlaceholder: 'Ex. BMF, BPJEPS, expérience formation jeunes',
     coachRoles: {
@@ -7910,7 +7910,7 @@ export default {
     linkedFees: 'Cotisations liées',
     loadingCampaigns: 'Chargement des campagnes...',
     loadingFailed: 'Chargement impossible',
-    loadingTheEvent: 'Chargement de l événement...',
+    loadingTheEvent: 'Chargement de l’événement...',
     locationUnknown: 'Lieu à confirmer',
     manageMyRegisteredTeam: 'Gérer mon équipe inscrite',
     manageMyTeam: 'Gérer mon équipe',
@@ -8495,7 +8495,7 @@ export default {
     chooseATeam: 'Choisir une équipe',
     chooseAType: 'Choisir un type',
     // eslint-disable-next-line max-len
-    clickATeamToAdd: 'Clique sur une équipe pour l ajouter ou la retirer, sans combinaison clavier.',
+    clickATeamToAdd: 'Clique sur une équipe pour l’ajouter ou la retirer, sans combinaison clavier.',
     createAnEvent: 'Créer un événement',
     describeTheEventTheMeeting: "Décris l'événement, le rendez-vous, les consignes...",
     editAnEvent: 'Modifier un événement',
@@ -8654,7 +8654,7 @@ export default {
     loading: {
       description: "Chargement de l'événement… Le bouton s'active dès que tout est affiché.",
     },
-    loadingTheEvent: 'Chargement de l événement...',
+    loadingTheEvent: 'Chargement de l’événement...',
     locationMode: {
       club: 'Club',
       clubHint: 'Installation du club',
@@ -8711,7 +8711,7 @@ export default {
     team: 'Équipe',
     teamFallback: 'Équipe',
     // eslint-disable-next-line max-len
-    theFeaturingRequestIsMade: 'La demande de mise à la une se fait depuis la fiche de l événement après création.',
+    theFeaturingRequestIsMade: 'La demande de mise à la une se fait depuis la fiche de l’événement après création.',
     // eslint-disable-next-line max-len
     theScopeBelowDecidesWhether: 'La portee ci-dessous determine si la mise à jour s applique à cet événement seulement, aux suivants, ou à toute la série.',
     // eslint-disable-next-line max-len
@@ -15769,7 +15769,7 @@ export default {
       unavailableBody: 'Cette annonce n’est plus disponible ou n’a pas pu être chargée.',
     },
     status: {
-      accepted: 'Accepte',
+      accepted: 'Accepté',
       declined: 'Refusé',
       pending: 'En attente',
     },

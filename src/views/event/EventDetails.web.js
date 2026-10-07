@@ -2361,7 +2361,7 @@ function EventDetails({ navigation, route }) {
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, padding: 22,
           }}
           >
-            {t('eventDetails.loadingTheEvent', 'Chargement de l événement...')}
+            {t('eventDetails.loadingTheEvent', 'Chargement de l’événement...')}
           </section>
         ) : null}
 
