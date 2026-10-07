@@ -39,6 +39,11 @@ const EVENT_DETAILS_LINK = { alias: ['events/:eventId'], path: 'event/:eventId' 
 // qui propose la connexion -- la demande de rattachement exige un compte.
 const VILLE_LINK = 'invitation-ville/:token';
 const VILLE_REQUEST_LINK = 'invitation-ville/:token/rattacher';
+// ANNONCE-PUBLIQUE (2026-10-07, decision d Adel « annonce a ») -- le bouton « Postuler dans l app »
+// de la page publique d une annonce (site, /annuaire/annonces/<id>/<slug>/) ouvre l app par le
+// schema : foundclub://recruitment/<id>. Connecte seulement : la fiche lit une route reservee aux
+// comptes. La page publique, elle, reste au site (aucune des trois listes ne la reclame).
+const RECRUITMENT_AD_LINK = 'recruitment/:adId';
 const WEB_LINK_ORIGINS = ['https://foundclub.app', 'https://www.foundclub.app', 'https://staging.foundclub.app'];
 
 /**
@@ -97,6 +102,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
           },
           [RouteNames.CollectiviteJoin]: VILLE_LINK,
           [RouteNames.CollectiviteJoinRequest]: VILLE_REQUEST_LINK,
+          [RouteNames.RecruitmentAdDetails]: RECRUITMENT_AD_LINK,
           [RouteNames.EventStack]: {
             screens: {
               [RouteNames.EventDetails]: EVENT_DETAILS_LINK,

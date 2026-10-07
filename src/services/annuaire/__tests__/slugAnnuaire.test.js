@@ -1,4 +1,4 @@
-import { cheminFicheAnnuaire, slugAnnuaire } from '../slugAnnuaire';
+import { cheminAnnonceAnnuaire, cheminFicheAnnuaire, slugAnnuaire } from '../slugAnnuaire';
 
 // ANNUAIRE-E1 (29/09) — le slug d'un nom et l'adresse PUBLIQUE d'une fiche club.
 //
@@ -57,5 +57,35 @@ describe('cheminFicheAnnuaire — l adresse publique de la fiche, celle que Goog
   test('⛔ un club multisport n a pas de fiche d annuaire : aucun lien', () => {
     const omnisport = { _type: 'multisport', documentId: 'cm-1', name: 'Omnisport' };
     expect(cheminFicheAnnuaire(omnisport)).toBeNull();
+  });
+});
+
+// ANNONCE-PUBLIQUE (07/10, décision d'Adel « annonce a ») — l'adresse PUBLIQUE d'une annonce de
+// recrutement : la MÊME que le serveur (admin utils/cheminAnnuaireClub.ts, cheminAnnonceAnnuaire ;
+// mêmes exemples dans admin tests/authz/ANNONCE-PUBLIQUE-2-qr-et-affiche.test.js). Le slug dit le
+// poste et la catégorie ; jamais la ville (le champ `city` d'une annonce peut porter la rue), jamais
+// le texte libre du rôle « autre ».
+describe('cheminAnnonceAnnuaire — la page publique d une annonce, comme le serveur', () => {
+  test.each([
+    [{ category: { name: 'U15' }, documentId: 'ad-7', position: 'Gardien' }, '/annuaire/annonces/ad-7/gardien-u15/'],
+    [
+      {
+        audienceType: 'coach', category: { name: 'Seniors' }, coachRole: 'entraineur_adjoint',
+        coachRoleOther: 'Jean Dupont 06 12 34 56 78', documentId: 'ad-8',
+      },
+      '/annuaire/annonces/ad-8/entraineur-adjoint-seniors/',
+    ],
+    [{ audienceType: 'coach', coachRole: 'other', coachRoleOther: 'Paul Dupont', documentId: 'ad-9' }, '/annuaire/annonces/ad-9/entraineur/'],
+    [{ documentId: 'ad-10' }, '/annuaire/annonces/ad-10/joueur/'],
+    [{ category: 'U17', documentId: 'ad-11', position: 'Défenseur central' }, '/annuaire/annonces/ad-11/defenseur-central-u17/'],
+    [{ city: '12 Rue du Stade 13008 Marseille', documentId: 'ad-12', position: 'Ailier' }, '/annuaire/annonces/ad-12/ailier/'],
+    [{ documentId: 'ad-13', position: '***' }, '/annuaire/annonces/ad-13/annonce/'],
+  ])('%p → %p', (annonce, attendu) => {
+    expect(cheminAnnonceAnnuaire(annonce)).toBe(attendu);
+  });
+
+  test('⛔ sans documentId : aucun lien', () => {
+    expect(cheminAnnonceAnnuaire({ position: 'Gardien' })).toBeNull();
+    expect(cheminAnnonceAnnuaire(null)).toBeNull();
   });
 });

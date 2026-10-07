@@ -36,3 +36,27 @@ export const cheminFicheAnnuaire = (club) => {
   const slug = slugAnnuaire(club?.name) || documentId;
   return `/annuaire/clubs/${encodeURIComponent(documentId)}/${encodeURIComponent(slug)}/`;
 };
+
+/**
+ * ANNONCE-PUBLIQUE (07/10/2026, décision d'Adel « annonce a ») — l'adresse PUBLIQUE d'une annonce de
+ * recrutement, `/annuaire/annonces/<documentId>/<slug>/`, la MÊME que le serveur (admin
+ * utils/cheminAnnuaireClub.ts, cheminAnnonceAnnuaire). Le slug dit le poste et la catégorie :
+ * pour un entraîneur, la VALEUR de son rôle (« entraineur_adjoint »), jamais le texte libre du rôle
+ * « autre » ; jamais la ville (le champ `city` d'une annonce peut porter la rue). La page du site ne
+ * lit que l'identifiant : un slug qui différerait y mène quand même.
+ * @param {any} annonce L'annonce (`documentId`, `audienceType`, `position`, `coachRole`, `category`).
+ * @returns {string | null} L'adresse, ou null sans identifiant.
+ */
+export const cheminAnnonceAnnuaire = (annonce) => {
+  const documentId = String(annonce?.documentId || '').trim();
+  if (!documentId) return null;
+  const role = String(annonce?.coachRole || '').trim();
+  const poste = annonce?.audienceType === 'coach'
+    ? (role && role !== 'other' ? role : 'entraineur')
+    : (String(annonce?.position || '').trim() || 'joueur');
+  const categorie = annonce?.category && typeof annonce.category === 'object'
+    ? annonce.category.name
+    : annonce?.category;
+  const slug = slugAnnuaire(`${poste} ${categorie || ''}`) || 'annonce';
+  return `/annuaire/annonces/${encodeURIComponent(documentId)}/${encodeURIComponent(slug)}/`;
+};

@@ -41,6 +41,7 @@ import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailabili
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
+import { cheminAnnonceAnnuaire } from '@/services/annuaire/slugAnnuaire';
 import {
   acceptEventParticipation,
   declineEventParticipation,
@@ -857,7 +858,11 @@ function RecruitmentAdDetails() {
     if (!subjectId) return;
     navigation.navigate(RouteNames.VisualShowcase, {
       chatShareEnabled: false,
-      shareUrl: buildPublicWebUrl(/** @type {any} */ ({ path: `/recruitment/${subjectId}` })),
+      // ANNONCE-PUBLIQUE (07/10, « annonce a ») : la page PUBLIQUE de l'annonce, lisible sans compte.
+      // Avant : /recruitment/<id>, une page privée du site (mur de connexion).
+      shareUrl: buildPublicWebUrl(/** @type {any} */ ({
+        path: cheminAnnonceAnnuaire({ ...ad, documentId: subjectId }),
+      })),
       subjectId,
       subjectType: 'recruitment-ad',
       template: 'avis-de-recherche',

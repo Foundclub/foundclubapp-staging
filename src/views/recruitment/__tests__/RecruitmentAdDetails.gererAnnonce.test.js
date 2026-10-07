@@ -329,6 +329,23 @@ describe('RecruitmentAdDetails — caracterisation (ce qui ne bouge pas)', () =>
       template: 'avis-de-recherche',
     }));
   });
+
+  // ANNONCE-PUBLIQUE (07/10, décision d'Adel « annonce a ») : le lien partagé menait à
+  // /recruitment/<id>, une page PRIVÉE du site (mur de connexion). Il mène à la page PUBLIQUE.
+  it('ANNONCE-PUBLIQUE : le lien partagé avec l affiche mène à la page PUBLIQUE de l annonce', async () => {
+    const tree = await renderFor(ENTRAINEUR_DE_L_EQUIPE, {
+      ...AD,
+      category: { name: 'U15' },
+      city: '12 Rue du Stade 13008 Marseille',
+      position: 'Défenseur central',
+    });
+
+    await act(async () => { findButton(tree, 'Créer l’affiche à partager').props.onPress(); });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('VisualShowcase', expect.objectContaining({
+      shareUrl: 'https://site.test/annuaire/annonces/ad-u15/defenseur-central-u15/',
+    }));
+  });
 });
 
 // FINITIONS-AUDIT (3) : une annonce sans poste (sport sans postes) s'intitule
