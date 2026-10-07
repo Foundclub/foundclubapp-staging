@@ -169,6 +169,13 @@ jest.mock('@/services/event/eventService', () => ({
 }));
 jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: {} }));
+// MSG1W §3.5 — les fenetres du « + » (grande carte d evenement, sondage du telephone) : leurs
+// modules natifs ne se chargent pas dans ce banc, et ce temoin ne les regarde pas.
+jest.mock('@/components/molecules/eventCard/EventCardNew', () => () => null);
+jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => () => null);
+// L assistant de convocation (MESSAGERIE-1C) charge le mur payant et son stockage natif :
+// une doublure ici ; les temoins Playwright du site ouvrent le vrai.
+jest.mock('@/views/conversationConvocation/ConvocationWizard', () => () => null);
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const react = jest.requireActual('react');
@@ -461,8 +468,11 @@ describe('FINITIONS16 20 — le canal des dirigeants, sur le site', () => {
   test('🔴 la grille du fil ne s etire plus : une bulle d une ligne reste d une ligne', async () => {
     mockMessagesDuFil = [MON_MESSAGE];
     const { arbre } = await monter();
+    // MSG1W (07/10) : le fil est repere par son nom de temoin ; il n est plus une grille a
+    // 16 px d ecart (les bulles se groupent par marges), mais il ne doit toujours pas s etirer.
     const fil = hotes(arbre, 'div').find(
-      (/** @type {any} */ n) => n.props.style?.overflowY === 'auto' && n.props.style?.gap === 16,
+      (/** @type {any} */ n) => n.props['data-testid'] === 'MSG1W-fil'
+        && n.props.style?.overflowY === 'auto',
     );
     expect(fil).toBeDefined();
     expect(fil.props.style.alignContent).toBe('start');
@@ -483,7 +493,10 @@ describe('FINITIONS16 20 — le canal des dirigeants, sur le site', () => {
     const texte = texteDe(arbre.root);
     expect(texte).toContain('Répondre');
     expect(texte).not.toContain('Repondre');
-    expect(texte).toMatch(/\d{2}\/\d{2}\/\d{4} à \d{2}:\d{2}/);
+    // MSG1W (07/10, pack « modele WhatsApp » §3.1) : la date complete sous chaque bulle
+    // (« 06/10/2026 à 04:23 ») laisse la place a l heure DANS la bulle et a une puce par jour.
+    expect(texte).toMatch(/\d{2}:\d{2}/);
+    expect(texte).not.toMatch(/\d{2}\/\d{2}\/\d{4} à/);
   });
 
   test('🔴 le bouton « Réagir » n est pas un emoji', async () => {
