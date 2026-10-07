@@ -397,6 +397,24 @@ export const searchCommunes = async (query) => {
 };
 
 /**
+ * VILLE-INSCRIPTION (07/10/2026) — la LISTE COMPLETE d un type, que l etape 1 de l inscription
+ * affiche des l ouverture : regions, departements, intercommunalites ; les communes D UN
+ * departement. Referentiel de l Etat lu par le serveur (cache 24 h), meme route que la recherche,
+ * avec `referentiel`. Une ligne deja sur FoundClub porte sa collectivite ; celles-la d abord.
+ * Referentiel en panne : une liste vide.
+ * @param {string} type - `region`, `departement`, `intercommunalite` ou `commune`.
+ * @param {string} [departement] - Le code du departement (communes seulement).
+ * @returns {Promise<any>} `{ data: [{ code, name, collectivite, ... }] }` ; pour les communes, la
+ *   forme de `searchCommunes`.
+ */
+export const getCollectiviteReferentiel = async (type, departement) => {
+  const response = await client.get('/collectivite-manager-requests/collectivites', {
+    params: { referentiel: type, ...(departement ? { departement } : {}) },
+  });
+  return response.data;
+};
+
+/**
  * Envoie MA demande de gestionnaire.
  * @param {{ codeInsee?: string, collectiviteDocumentId?: string, collectiviteName?: string,
  *   collectiviteType?: string, jobTitle: string, professionalEmail: string }} data - La demande.

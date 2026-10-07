@@ -4964,14 +4964,22 @@ export default {
     },
     inscription: {
       collectivite: {
+        // VILLE-INSCRIPTION (07/10) : la liste du référentiel de l'État, dès l'ouverture.
+        aucune: 'Aucune collectivité ne correspond à « {{texte}} ».',
+        chargement: 'Chargement de la liste…',
+        choisirDepartement: 'Votre commune : choisissez son département, ou tapez son nom.',
         dejaSur: 'Déjà sur FoundClub',
+        departement: 'Département {{code}} · {{nom}}',
+        departementA11y: 'Voir les communes : {{nom}}',
         dit: 'Laquelle représentez-vous ? FoundClub vérifie, puis vous en confie la gestion.',
+        indisponible: 'La liste n’est pas disponible pour le moment : tapez le nom.',
         nom: 'Nom de la collectivité',
         nomCommune: 'Nom de la commune',
         // eslint-disable-next-line max-len
         ouverture: '{{nom}} n’a pas encore d’espace FoundClub. Continuez : votre demande servira à l’ouvrir.',
         pasEncore: 'Pas encore sur FoundClub',
         titre: 'Votre collectivité',
+        tousLesDepartements: 'Tous les départements',
         type: 'Type',
         typeA11y: 'Type de collectivité',
       },
