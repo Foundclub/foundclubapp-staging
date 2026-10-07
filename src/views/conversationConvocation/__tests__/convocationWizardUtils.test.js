@@ -3,6 +3,7 @@ import {
   buildConvocationPack,
   buildConvocationRows,
   buildDetailsMessageText,
+  buildEventSummary,
   buildLineupUpdateNotice,
   buildPitchPlacements,
   buildSelectionFromPack,
@@ -10,6 +11,7 @@ import {
   clampPitchPercent,
   filterTeamEvents,
   findLastPublishedManualPlayers,
+  isConvocableEvent,
   isLatestLineupComposition,
   selectWholeSquad,
   toggleConvocationSelection,
@@ -351,5 +353,25 @@ describe('MESSAGERIE-1C · le reste', () => {
     expect(buildDetailsMessageText({ infos: ' maillot bleu ', meetingPoint: '13h30 au club' }))
       .toBe('Rendez-vous : 13h30 au club\nInfos : maillot bleu');
     expect(buildDetailsMessageText({ infos: '', meetingPoint: '  ' })).toBe('');
+  });
+
+  test('ni detection (pas de carte au fil), ni reservation, ni tournoi, ni stage parent', () => {
+    expect(isConvocableEvent({ type: { name: 'Match' } })).toBe(true);
+    expect(isConvocableEvent({ type: { name: 'Entraînement' } })).toBe(true);
+    expect(isConvocableEvent({ type: { name: 'Détection' } })).toBe(false);
+    expect(isConvocableEvent({ type: { name: 'Réservation' } })).toBe(false);
+    expect(isConvocableEvent({ type: { name: 'Tournoi' } })).toBe(false);
+    expect(isConvocableEvent({ eventFormat: 'stage_parent', type: { name: 'Stage' } })).toBe(false);
+  });
+
+  test('le rappel se lit sur une carte d evenement comme sur une convocation publiee', () => {
+    expect(buildEventSummary({
+      facility: { name: 'Stade Bonal' }, name: 'Match vs US Pelican', type: { name: 'Match' },
+    })).toMatchObject({
+      place: 'Stade Bonal', title: 'Match vs US Pelican', typeKey: 'match', typeLabel: 'Match',
+    });
+    expect(buildEventSummary({
+      eventAddress: '12 rue du Stade', eventDisplayName: 'Entraînement', typeName: 'Entraînement',
+    })).toMatchObject({ place: '12 rue du Stade', title: 'Entraînement', typeKey: 'training' });
   });
 });

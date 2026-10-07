@@ -31,12 +31,17 @@ import {
   buildPlayerIndex,
 } from '@/views/matchCallUp/matchConvocationUtils';
 import { getMatchFormations } from '@/views/matchCallUp/matchFormationCatalog';
+import {
+  formatConvocationDay,
+  formatConvocationTime,
+} from '@/views/playerConvocation/playerConvocationUtils';
 
 import {
   getCompositionPlayerId,
   getCompositionPlayerLabel,
   isCompositionPerson,
 } from '@/utils/compositionPlayer';
+import { getShortAddress } from '@/utils/location';
 
 /** Les 4 etapes de l'assistant, dans l'ordre du pack. */
 export const CONVOCATION_STEPS = ['event', 'players', 'placement', 'details'];
@@ -130,6 +135,61 @@ export const filterTeamEvents = (events, teamId) => {
       return true;
     })
     .sort((left, right) => (Date.parse(left?.date) || 0) - (Date.parse(right?.date) || 0));
+};
+
+const normalizeTypeName = (/** @type {any} */ value) => String(value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+/**
+ * L'evenement peut-il recevoir une convocation depuis le groupe ?
+ *
+ * ⛔ Une detection n'a pas de carte dans le fil d'equipe (le serveur ne la poste pas,
+ * `publishLineupShareToTeamChat`), une reservation ou un tournoi n'ont pas de composition
+ * d'equipe, et un stage se convoque jour par jour.
+ * @param {any} event
+ * @returns {boolean}
+ */
+export const isConvocableEvent = (event) => {
+  const typeName = normalizeTypeName(event?.type?.name || event?.type);
+  if (['detection', 'reservation', 'tournoi'].some((word) => typeName.includes(word))) return false;
+  return normalizeTypeName(event?.eventFormat) !== 'stage_parent';
+};
+
+/**
+ * Le rappel de l'evenement en tete des etapes 2 a 4 : son type, son titre, quand et ou.
+ * Il se lit sur une carte d'evenement (`useGetEvents`) comme sur la carte d'une convocation
+ * deja publiee (`eventDisplayName`, `eventDate`, `eventAddress`).
+ * @param {any} event
+ * @returns {{ place: string, title: string, typeKey: 'match' | 'training' | 'other',
+ *   typeLabel: string, when: string }}
+ */
+export const buildEventSummary = (event) => {
+  const typeLabel = String(event?.type?.name || event?.typeName || '').trim();
+  const normalized = normalizeTypeName(typeLabel);
+  let typeKey = /** @type {'match' | 'training' | 'other'} */ ('other');
+  if (normalized.includes('match')) typeKey = 'match';
+  else if (normalized.includes('entrainement') || normalized.includes('training')) {
+    typeKey = 'training';
+  }
+  const date = event?.date || event?.eventDate || '';
+  return {
+    place: String(
+      event?.facility?.name
+      || getShortAddress(event?.locationDetails)
+      || getShortAddress(event?.location)
+      || event?.eventAddress
+      || '',
+    ).trim(),
+    title: String(
+      event?.displayName || event?.eventDisplayName || event?.name || event?.eventName || typeLabel,
+    ).trim(),
+    typeKey,
+    typeLabel,
+    when: [formatConvocationDay(date), formatConvocationTime(date)].filter(Boolean).join(' · '),
+  };
 };
 
 /**
