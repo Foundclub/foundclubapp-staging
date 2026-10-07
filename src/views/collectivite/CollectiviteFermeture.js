@@ -17,6 +17,7 @@ import {
   closureErrorMessage,
   phraseForFacilityType,
   reasonLabel,
+  touchedCountLabel,
   touchedSessionLine,
 } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { withAlpha } from '@/theme/colors';
@@ -424,11 +425,7 @@ function FormulaireDeFermeture({
     >
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
         {Number(carte.sessionsCount) > 0
-          ? `${t('collectiviteFermetures.carte.seances', {
-            count: Number(carte.sessionsCount),
-            defaultValue_one: '{{count}} séance touchée',
-            defaultValue_other: '{{count}} séances touchées',
-          })}, ${t('collectiviteFermetures.carte.clubs', {
+          ? `${touchedCountLabel(t, carte)}, ${t('collectiviteFermetures.carte.clubs', {
             count: Number(carte.clubsCount) || 0,
             defaultValue_one: '{{count}} club prévenu',
             defaultValue_other: '{{count}} clubs prévenus',
@@ -447,6 +444,10 @@ function FormulaireDeFermeture({
             testID="fermeture-carte-seance"
           >
             {touchedSessionLine(seance, { withDay: plusieursJours })}
+            {/* VILLE-T18A (T18, G54a) — un créneau sans séance posée se dit comme tel. */}
+            {seance?.kind === 'slot'
+              ? ` (${t('collectiviteFermetures.carte.creneau', 'créneau')})`
+              : null}
           </Text>
         ),
       )}

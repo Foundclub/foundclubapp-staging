@@ -6129,6 +6129,10 @@ export default {
       clubs_other: '{{count}} clubs prévenus',
       // FINITIONS18 12 (T16) — « 0 club prévenu » se dit « Aucun club prévenu ».
       clubs_zero: 'Aucun club prévenu',
+      // VILLE-T18A (T18, G54a) — un créneau sans séance posée se compte et se dit à part.
+      creneau: 'créneau',
+      creneaux_one: '{{count}} créneau touché',
+      creneaux_other: '{{count}} créneaux touchés',
       etAutres_one: 'et {{count}} autre',
       etAutres_other: 'et {{count}} autres',
       pasAnnulee: 'Sa séance n’est pas annulée : le club la déplace ou l’annule lui-même.',
@@ -6136,6 +6140,8 @@ export default {
       pasAnnulees: 'Leurs séances ne sont pas annulées : chaque club les déplace ou les annule lui-même.',
       seances_one: '{{count}} séance touchée',
       seances_other: '{{count}} séances touchées',
+      seancesOuCreneaux_one: '{{count}} séance ou créneau touché',
+      seancesOuCreneaux_other: '{{count}} séances ou créneaux touchés',
     },
     confirmer: {
       annuler: 'Annuler',

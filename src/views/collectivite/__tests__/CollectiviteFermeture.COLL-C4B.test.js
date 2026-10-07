@@ -523,3 +523,34 @@ test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermet
   expect(champ('Pour quoi')).toBeDefined();
   expect(champ('Nom (facultatif)')).toBeUndefined();
 });
+
+// 🟨 VILLE-T18A (07/10, tournée T18 point 3, G54a) — « 2 séances touchées, 2 clubs prévenus » quand
+// Montrivage FC n a qu un CRÉNEAU ce jour-là (aucune séance posée) : le serveur rend chaque ligne avec
+// son `kind` ; un créneau se compte et se dit à part. ROUGE avant le lot.
+test('VILLE-T18A (2) une séance et un créneau touchés se comptent à part, le créneau se dit', async () => {
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [
+        { documentId: 'club-as', name: 'AS Montrivage' },
+        { documentId: 'club-fc', name: 'Montrivage FC' },
+      ],
+      clubsCount: 2,
+      sessions: [
+        {
+          club: { documentId: 'club-as', name: 'AS Montrivage' }, date: '2026-10-13', endTime: '19:30', kind: 'event', startTime: '18:00', team: { name: 'U15' },
+        },
+        {
+          club: { documentId: 'club-fc', name: 'Montrivage FC' }, date: '2026-10-13', endTime: '19:30', kind: 'slot', startTime: '18:00', team: null,
+        },
+      ],
+      sessionsCount: 2,
+    },
+  });
+  const arbre = await rendre();
+  await choisirDate('Du', '13/10/2026');
+  const lu = textes(arbre);
+  expect(lu).toContain('1 séance touchée, 1 créneau touché, 2 clubs prévenus');
+  expect(lu).not.toContain('2 séances touchées, 2 clubs prévenus');
+  expect(lu).toContain('AS Montrivage · U15, 18:00 – 19:30');
+  expect(lu).toContain('Montrivage FC, 18:00 – 19:30 (créneau)');
+});
