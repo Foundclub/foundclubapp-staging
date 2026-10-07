@@ -6823,6 +6823,7 @@ export default {
         votes_other: '{{count}} votes',
       },
       common: {
+        deletedAccount: 'Compte supprimé',
         member: 'Membre',
         vote: 'vote',
       },

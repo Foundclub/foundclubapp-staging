@@ -11,6 +11,17 @@ import PollMessageBubble from '../PollMessageBubble';
 // rien ne s'affiche pour autre chose qu'un sondage.
 // Les blocs P1-P5 sont verts AVANT et APRES ; P6-P8 decrivent le pack (rouges avant).
 
+// SONDAGE-NOMS — le crochet qui lit les noms au serveur est double : ce temoin ne parle qu'a
+// la bulle ; les profils rendus par le serveur se reglent par `mockProfils`.
+let mockProfils = new Map();
+jest.mock('@/domains/messaging/usePollVoterProfiles', () => ({
+  __esModule: true,
+  default: () => mockProfils,
+  nameOfPollVoter: (/** @type {any} */ profil) => (
+    `${String(profil?.firstname || '').trim()} ${String(profil?.lastname || '').trim()}`.trim()
+  ),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
@@ -198,5 +209,21 @@ describe('MSG1A — PollMessageBubble (caracterisation)', () => {
     expect(detail).toHaveLength(1);
     const dedans = detail[0].findAllByType(Text).map((n) => [].concat(n.props.children).join(''));
     expect(dedans.join(' ')).not.toMatch(/Mardi 19h|Jeudi 20h|Samedi 10h/);
+  });
+
+  // MSG1A x SONDAGE-NOMS — le nom lu au SERVEUR l'emporte (un fil de club n'a pas de
+  // participants) : il est sur la pastille du votant et dans l'etiquette de l'option.
+  test('P10 — le nom du serveur nomme le votant : pastille et etiquette, jamais « Membre »', () => {
+    mockProfils = new Map([['a', { documentId: 'a', firstname: 'Leo', lastname: 'Martin' }]]);
+    const arbre = rendre({ onVote: jest.fn() });
+    mockProfils = new Map();
+
+    const avatars = arbre.root.findAll((n) => n.props?.testID === 'avatar-Leo Martin');
+    expect(avatars.length).toBeGreaterThan(0);
+    const option = arbre.root.findAll(
+      (n) => n.props?.testID === 'sondage-option-o1' && typeof n.props?.accessibilityLabel === 'string',
+    )[0];
+    expect(option.props.accessibilityLabel).toContain('Leo Martin');
+    expect(option.props.accessibilityLabel).not.toContain('Membre');
   });
 });

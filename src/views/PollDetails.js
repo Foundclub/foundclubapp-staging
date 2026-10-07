@@ -22,6 +22,7 @@ import {
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
@@ -230,6 +231,7 @@ function PollDetails({ navigation, route }) {
     if (initialPoll?.type === 'poll') return initialPoll;
     return null;
   }, [initialPoll, pollMessage?.composition]);
+  const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
 
   const voterDirectory = useMemo(() => {
     /** @type {Map<string, { avatarUrl: string; displayName: string; firstname: string; lastname: string }>} */
@@ -267,8 +269,13 @@ function PollDetails({ navigation, route }) {
       });
     }
 
+    // SONDAGE-NOMS — les votants lus au serveur EN DERNIER : un fil de club n'a pas de
+    // participants, et le serveur est le seul à savoir qu'un compte a été supprimé (le nom
+    // figé dans un vieux message ne le sait pas).
+    pollVoterProfiles.forEach((profile) => registerUser(profile));
+
     return directory;
-  }, [chatData?.participants, messagesPages?.pages, userData, t]);
+  }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData, t]);
 
   const resolveVoterName = (/** @type {string} */ voterId) => {
     if (!voterId) return t('conversation.poll.common.member', 'Membre');

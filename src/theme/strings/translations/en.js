@@ -6412,6 +6412,7 @@ export default {
         votes_other: '{{count}} votes',
       },
       common: {
+        deletedAccount: 'Deleted account',
         member: 'Member',
         vote: 'vote',
       },

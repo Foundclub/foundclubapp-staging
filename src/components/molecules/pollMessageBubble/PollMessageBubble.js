@@ -12,6 +12,7 @@ import {
   getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
+import usePollVoterProfiles, { nameOfPollVoter } from '@/domains/messaging/usePollVoterProfiles';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -143,6 +144,9 @@ const styles = StyleSheet.create({
  * @param {boolean} [props.dansLaBulle] - Pose dans le cadre `BulleDuFil` du fil : sans fond.
  * @param {boolean} [props.fullWidth] - Toute la largeur (detail du sondage).
  * @param {boolean} [props.isMe]
+ * @param {string} [props.messageId] - SONDAGE-NOMS : le message du sondage. Donné, la bulle
+ *   lit ELLE-MÊME les noms des votants au serveur : dans le fil, GiftedChat ne la redessine pas
+ *   quand l'écran apprend un nom après coup (piège de FINITIONS15).
  * @param {import('react').ReactNode} [props.meta] - L'heure (et les coches), avant le pied.
  * @param {() => void} [props.onOpenDetails]
  * @param {(optionId: string) => Promise<void> | void} [props.onVote]
@@ -158,6 +162,7 @@ function PollMessageBubble({
   dansLaBulle = false,
   fullWidth = false,
   isMe = false,
+  messageId = undefined,
   meta = null,
   onOpenDetails,
   onVote,
@@ -171,6 +176,7 @@ function PollMessageBubble({
   const { t } = useTranslation();
   const { Colors } = useTheme();
   const [loadingOptionId, setLoadingOptionId] = useState('');
+  const voterProfiles = usePollVoterProfiles(messageId, poll);
   const options = Array.isArray(poll?.options) ? poll.options : [];
 
   if (!poll || poll.type !== 'poll') return null;
@@ -193,6 +199,10 @@ function PollMessageBubble({
   };
 
   const nomDuVotant = (/** @type {string} */ voterId) => {
+    // SONDAGE-NOMS — le nom lu au serveur d'abord (un fil de club n'a pas de participants, et
+    // seul le serveur sait qu'un compte est supprime), la resolution de l'ecran ensuite.
+    const nomDuServeur = nameOfPollVoter(voterProfiles.get(voterId));
+    if (nomDuServeur) return nomDuServeur;
     if (typeof resolveVoterName !== 'function') return '';
     const nom = resolveVoterName(voterId);
     return typeof nom === 'string' ? nom.trim() : '';
@@ -301,11 +311,17 @@ function PollMessageBubble({
             </>
           );
 
-          const libelleAccessible = `${optionLabel}, ${t('conversation.poll.bubble.votes', {
-            count: voteCount,
-            defaultValue_one: '{{count}} vote',
-            defaultValue_other: '{{count}} votes',
-          })}`;
+          // SONDAGE-NOMS x MSG1A — la bulle du pack dessine des PASTILLES ; les noms y restent
+          // pour le lecteur d'ecran (jamais pour un sondage anonyme : la liste est vide).
+          const libelleAccessible = [
+            optionLabel,
+            t('conversation.poll.bubble.votes', {
+              count: voteCount,
+              defaultValue_one: '{{count}} vote',
+              defaultValue_other: '{{count}} votes',
+            }),
+            ...nomsDesVotants,
+          ].join(', ');
 
           return canVote ? (
             <TouchableOpacity

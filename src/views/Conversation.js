@@ -5640,6 +5640,8 @@ function Conversation({ navigation, route }) {
                   currentUserId={userData?.documentId || ''}
                   dansLaBulle
                   isMe={!isLeft}
+                  // SONDAGE-NOMS — donne, la bulle lit elle-meme les noms des votants au serveur.
+                  messageId={currentMessage?.documentId || currentMessage?._id || currentMessage?.id}
                   meta={(
                     <MetaDuMessage
                       estAMoi={estAMoi}
