@@ -287,8 +287,10 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   createTeamMembershipRequest: jest.fn(),
 }));
 
+// LIENS-APP (07/10) : la doublure rend le CHEMIN recu (elle rendait une adresse figee, qui ne
+// disait pas quelle page l affiche partageait).
 jest.mock('@/utils/shareLinks', () => ({
-  buildPublicWebUrl: () => 'https://foundclub.app/clubs/club-1',
+  buildPublicWebUrl: ({ path }) => `https://foundclub.app${path}`,
 }));
 
 jest.mock(
@@ -1306,7 +1308,13 @@ describe('ECRAN18-ENTETE · l en-tête compact de « Gérer mon club » sur ordi
 
     act(() => pressableAvecTexte(dansLEnTete, 'Affiche — Rejoindre le club').props.onPress());
     expect(mockNavigation.navigate).toHaveBeenCalledWith('VisualShowcase', expect.objectContaining({
-      subjectId: 'club-1', subjectType: 'club', template: 'affiche-club',
+      // LIENS-APP (07/10, decision d Adel « liens2 B ») : le lien partage avec l affiche est la
+      // fiche PUBLIQUE du club, lisible sans compte, a l adresse exacte que le site sert
+      // (/clubs/<id> est une route privee : un mur de connexion pour qui n a pas de compte).
+      shareUrl: 'https://foundclub.app/annuaire/clubs/club-1/stade-marseillais-universite-club/',
+      subjectId: 'club-1',
+      subjectType: 'club',
+      template: 'affiche-club',
     }));
 
     const encart = pressableAvecTexte(dansLEnTete, 'Offert par la Ville de Montrivage');
