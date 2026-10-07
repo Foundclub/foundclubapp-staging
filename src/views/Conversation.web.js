@@ -1141,7 +1141,7 @@ const STYLE_CHAMP_DE_FENETRE = {
   width: '100%',
 };
 
-/** MSG1W §3.5 — l icone de chaque entree du « + » (pastille ronde, comme la feuille du telephone). */
+/** MSG1W §3.5 — l icone de chaque entree du « + » (pastille ronde, feuille du telephone). */
 const ICONES_DU_PLUS = {
   contact: 'idCard',
   document: 'fileArrowUp',
@@ -4622,12 +4622,12 @@ function Conversation({ navigation, route }) {
                     >
                       {entreesDuMenuAjouter.map((/** @type {any} */ entree) => (
                         <button
+                          className="MSG1W-ligne-menu"
                           key={entree.cle}
                           onClick={() => {
                             setMenuAjouterOuvert(false);
                             entree.action();
                           }}
-                          className="MSG1W-ligne-menu"
                           role="menuitem"
                           style={{
                             alignItems: 'center',
