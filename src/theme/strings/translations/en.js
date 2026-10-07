@@ -6291,6 +6291,10 @@ export default {
     },
     groupInfo: {
       adminError: 'Could not change the group admins.',
+      leave: 'Leave the group',
+      leaveConfirm: 'Leave “{{name}}”?',
+      leaveConfirmAction: 'Leave',
+      leaveError: 'Could not leave the group right now.',
       makeAdmin: 'Make group admin',
       membersCaps_one: '{{count}} MEMBER',
       membersCaps_other: '{{count}} MEMBERS',
@@ -6550,6 +6554,10 @@ export default {
       placeholder: 'Search for an address',
       send: 'Share',
       title: 'Share a location',
+    },
+    staffRole: {
+      dirigeant: 'Manager',
+      entraineur: 'Coach',
     },
     typing: {
       header_one: '{{names}} is typing…',

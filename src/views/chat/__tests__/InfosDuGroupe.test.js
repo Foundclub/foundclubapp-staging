@@ -156,4 +156,20 @@ describe('InfosDuGroupe (§3.16)', () => {
     expect(appels.onSignaler).toHaveBeenCalled();
     expect(appels.onAjouter).toHaveBeenCalled();
   });
+
+  test('IG7 — « Quitter le groupe » pour tout membre : confirmation, puis le depart', () => {
+    const onQuitter = jest.fn();
+    const { arbre } = rendre({ adminIds: ['karim'], estAdmin: false, onQuitter });
+    act(() => { parId(arbre, 'infos-du-groupe-quitter').props.onPress(); });
+    expect(textes(arbre)).toContain('Quitter « Covoit U15 » ?');
+    expect(onQuitter).not.toHaveBeenCalled();
+
+    act(() => { parId(arbre, 'infos-du-groupe-confirmer-depart').props.onPress(); });
+    expect(onQuitter).toHaveBeenCalledTimes(1);
+  });
+
+  test('IG8 — sans onQuitter, pas de ligne « Quitter »', () => {
+    const { arbre } = rendre();
+    expect(parId(arbre, 'infos-du-groupe-quitter')).toBeUndefined();
+  });
 });

@@ -39,6 +39,8 @@ const nomDe = (membre) => `${membre?.firstname || ''} ${membre?.lastname || ''}`
  *   `removeAdminIds`, admin seulement), « Retirer du groupe » avec confirmation — plus
  *   de bouton « Retirer » sur chaque ligne ;
  * - « Signaler le groupe ».
+ * - « Quitter le groupe » (decision d'Adel `quitter maintenant`), pour TOUT membre, avec
+ *   confirmation — l'appel vit dans une fonction de service isolee (`leaveGroupChat`).
  * La photo du groupe et les « Autorisations du groupe » demandent le serveur : lot
  * MESSAGERIE-1B.
  * @param {object} props
@@ -51,6 +53,7 @@ const nomDe = (membre) => `${membre?.firstname || ''} ${membre?.lastname || ''}`
  * @param {(membre: any, devientAdmin: boolean) => void} props.onBasculerAdmin
  * @param {() => void} props.onClose
  * @param {(membre: any) => void} props.onEnvoyerUnMessage
+ * @param {() => void} [props.onQuitter] - Appele APRES la confirmation ; absent = pas de ligne.
  * @param {(nom: string) => Promise<any>} props.onRenommer
  * @param {(membre: any) => void} props.onRetirer - Appele APRES la confirmation.
  * @param {() => void} props.onSignaler
@@ -68,6 +71,7 @@ function InfosDuGroupe({
   onBasculerAdmin,
   onClose,
   onEnvoyerUnMessage,
+  onQuitter = undefined,
   onRenommer,
   onRetirer,
   onSignaler,
@@ -82,12 +86,14 @@ function InfosDuGroupe({
   const [brouillon, setBrouillon] = useState(nomDuGroupe);
   const [membreOuvert, setMembreOuvert] = useState(/** @type {any} */ (null));
   const [aRetirer, setARetirer] = useState(/** @type {any} */ (null));
+  const [departAConfirmer, setDepartAConfirmer] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setEnEdition(false);
       setMembreOuvert(null);
       setARetirer(null);
+      setDepartAConfirmer(false);
     }
     setBrouillon(nomDuGroupe);
   }, [nomDuGroupe, visible]);
@@ -288,6 +294,20 @@ function InfosDuGroupe({
                 {t('conversation.groupInfo.report', 'Signaler le groupe')}
               </Text>
             </TouchableOpacity>
+            {onQuitter ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={occupe}
+                onPress={() => setDepartAConfirmer(true)}
+                style={[styles.ligneSignaler, { borderTopColor: filet, borderTopWidth: 1 }]}
+                testID="infos-du-groupe-quitter"
+              >
+                <GlyphIcon color={Colors.chatDanger} name="userMinus" size={20} />
+                <Text style={[LIGNE_DE_MENU, { color: Colors.chatDanger }]}>
+                  {t('conversation.groupInfo.leave', 'Quitter le groupe')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </ScrollView>
 
@@ -348,6 +368,52 @@ function InfosDuGroupe({
               ) : null}
             </Pressable>
           </Pressable>
+        ) : null}
+
+        {departAConfirmer ? (
+          <View style={[styles.voileCentre, { backgroundColor: withAlpha(Colors.neutral900, 0.55) }]}>
+            <View
+              style={[styles.boite, { backgroundColor: Colors.chatSheet, borderColor: withAlpha(Colors.neutral00, 0.08) }]}
+              testID="infos-du-groupe-confirmation-depart"
+            >
+              <Text style={[styles.boiteTitre, { color: Colors.neutral00 }]}>
+                {t('conversation.groupInfo.leaveConfirm', {
+                  defaultValue: 'Quitter « {{name}} » ?',
+                  name: nomDuGroupe || t('conversation.groupInfo.untitled', 'Groupe'),
+                  ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
+              <View style={styles.boutons}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => setDepartAConfirmer(false)}
+                  style={[styles.bouton, styles.boutonBoite, { borderColor: withAlpha(Colors.neutral00, 0.3), borderWidth: 1.5 }]}
+                >
+                  <Text style={[styles.boutonTexte, { color: Colors.neutral00 }]}>
+                    {t('common.cancel', 'Annuler')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => { setDepartAConfirmer(false); onQuitter?.(); }}
+                  style={[
+                    styles.bouton,
+                    styles.boutonBoite,
+                    {
+                      backgroundColor: withAlpha(Colors.chatDanger, 0.16),
+                      borderColor: Colors.chatDanger,
+                      borderWidth: 1.5,
+                    },
+                  ]}
+                  testID="infos-du-groupe-confirmer-depart"
+                >
+                  <Text style={[styles.boutonTexte, { color: Colors.chatDanger }]}>
+                    {t('conversation.groupInfo.leaveConfirmAction', 'Quitter')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         ) : null}
 
         {/* La confirmation, DANS la page : une seconde fenetre par-dessus une page deja

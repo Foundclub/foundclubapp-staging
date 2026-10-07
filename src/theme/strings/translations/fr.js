@@ -6700,6 +6700,10 @@ export default {
     },
     groupInfo: {
       adminError: 'Impossible de changer les admins du groupe.',
+      leave: 'Quitter le groupe',
+      leaveConfirm: 'Quitter « {{name}} » ?',
+      leaveConfirmAction: 'Quitter',
+      leaveError: 'Impossible de quitter le groupe pour le moment.',
       makeAdmin: 'Nommer admin du groupe',
       membersCaps_one: '{{count}} MEMBRE',
       membersCaps_other: '{{count}} MEMBRES',
@@ -6964,6 +6968,10 @@ export default {
       placeholder: 'Rechercher une adresse',
       send: 'Partager',
       title: 'Partager une localisation',
+    },
+    staffRole: {
+      dirigeant: 'Dirigeant',
+      entraineur: 'Entraîneur',
     },
     typing: {
       header_one: '{{names}} écrit…',

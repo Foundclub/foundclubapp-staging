@@ -156,6 +156,7 @@ import {
   useGetChatMessageReactions,
   useGetChatMessages,
 } from '@/services/chat/chatQueriesCompat';
+import { leaveGroupChat } from '@/services/chat/chatService';
 import {
   deleteVoiceNoteFile,
   isVoiceNoteRecordingSupported,
@@ -3272,6 +3273,27 @@ function Conversation({ navigation, route }) {
     }
   };
 
+  // 🚪 MSG1A (§3.16, decision d'Adel `quitter maintenant`) — quitter le groupe, pour tout
+  // membre. L'appel est isole dans `leaveGroupChat` (route du lot serveur 1B).
+  const handleLeaveGroup = async () => {
+    if (!chatId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await leaveGroupChat(chatId);
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      setIsGroupManagementVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      conversationLogger.warn('Failed to leave group', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupInfo.leaveError',
+        'Impossible de quitter le groupe pour le moment.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
   const handleReportFromMenu = () => {
     setIsMenuVisible(false);
     setIsGroupManagementVisible(false);
@@ -3948,18 +3970,23 @@ function Conversation({ navigation, route }) {
         replyTo: msg.replyTo,
         senderDocumentId: senderEntityId,
         // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : ligne centrée, sans bulle.
-        ...(filDeLaVille.estLigneSysteme(msg) ? { system: true } : {}),
+        // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
+        // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
+        ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
         text: msg.message,
         user: {
           _id: senderEntityId,
           avatar: avatarUrl,
           // COLL-C4A2 — dans un fil de la Ville, qui écrit ET pour quel club.
           name: filDeLaVille.nomDeLExpediteur(msg) || getAnonymizedName(msg.sender),
+          // 🏷️ MSG1A (§3.1, decision d'Adel `genre A`) — la CLEF du role du staff dans ce fil
+          // (contrat 1B §2.3 : `sender.staffRole`, repli `chat.staffRoles`). Absente = rien.
+          staffRole: msg.sender?.staffRole || chatData?.staffRoles?.[senderEntityId] || undefined,
         },
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, chatData?.staffRoles, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
@@ -5529,6 +5556,15 @@ function Conversation({ navigation, route }) {
     const nomEnTete = isLeft && estPremierDuGroupe && !estUnTeteATete(chatData?.type)
       ? String(currentMessage.user?.name || '').trim()
       : '';
+    // 🏷️ MSG1A (§3.1, `genre A`) — « Karim · Entraîneur » : la clef du serveur, un libelle
+    // unique pour tout le monde (le serveur ne connait pas le genre).
+    const libellesDesRoles = {
+      dirigeant: t('conversation.staffRole.dirigeant', 'Dirigeant'),
+      entraineur: t('conversation.staffRole.entraineur', 'Entraîneur'),
+    };
+    const roleEnTete = nomEnTete
+      ? libellesDesRoles[String(currentMessage.user?.staffRole || '')] || ''
+      : '';
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
@@ -5541,6 +5577,7 @@ function Conversation({ navigation, route }) {
               estAMoi={estAMoi}
               estDernier={estDernierDuGroupe}
               nom={nomEnTete}
+              role={roleEnTete}
               testID="bulle-evenement-partage"
             >
               <EventMessageBubble
@@ -5577,6 +5614,7 @@ function Conversation({ navigation, route }) {
                 estAMoi={estAMoi}
                 estDernier={estDernierDuGroupe}
                 nom={nomEnTete}
+                role={roleEnTete}
                 testID="bulle-sondage"
               >
                 <PollMessageBubble
@@ -5706,6 +5744,7 @@ function Conversation({ navigation, route }) {
                 estAMoi={estAMoi}
                 estDernier={estDernierDuGroupe}
                 nom={nomEnTete}
+                role={roleEnTete}
                 testID="bulle-vocal"
               >
                 <VoiceNoteBubble
@@ -5752,6 +5791,7 @@ function Conversation({ navigation, route }) {
               estAMoi={estAMoi}
               estDernier={estDernierDuGroupe}
               nom={nomEnTete}
+              role={roleEnTete}
               testID="bulle-composition"
             >
               <CompositionMessageBubbleDuFil
@@ -5823,6 +5863,7 @@ function Conversation({ navigation, route }) {
               estAMoi={estAMoi}
               estDernier={estDernierDuGroupe}
               nom={nomEnTete}
+              role={roleEnTete}
               testID="bulle-document"
             >
               {citationNode}
@@ -5879,6 +5920,7 @@ function Conversation({ navigation, route }) {
             estAMoi={estAMoi}
             estDernier={estDernierDuGroupe}
             nom={nomEnTete}
+            role={roleEnTete}
             testID="bulle-texte"
           >
             {citationNode ? (
@@ -7038,6 +7080,7 @@ function Conversation({ navigation, route }) {
           onBasculerAdmin={handleToggleGroupAdmin}
           onClose={() => setIsGroupManagementVisible(false)}
           onEnvoyerUnMessage={handleMessageGroupMember}
+          onQuitter={handleLeaveGroup}
           onRenommer={handleSaveGroupName}
           onRetirer={handleRemoveGroupMember}
           onSignaler={handleReportFromMenu}
