@@ -28,6 +28,9 @@ import {
 
 import InstallationCreneaux from '../InstallationCreneaux';
 
+// Un écran entier, monté sous la charge des portes : le délai par défaut (5 s) ne suffit pas.
+jest.setTimeout(30000);
+
 // Les phrases passent par le vrai i18next (interpolation comprise).
 const i18nextTemoin = require('i18next');
 
@@ -46,6 +49,8 @@ let mockNavigation;
 const mockInputProps = [];
 /** @type {any[]} */
 const mockDateProps = [];
+/** @type {any[]} */
+const mockOnglets = [];
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -169,7 +174,9 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   const {
     Text: TexteRN, TouchableOpacity: PressableRN, View: VueRN,
   } = jest.requireActual('react-native');
-  return function SegmentedControlMock(/** @type {any} */ { onChange, options }) {
+  return function SegmentedControlMock(/** @type {any} */ props) {
+    const { onChange, options } = props;
+    mockOnglets.push(props);
     return reactActuel.createElement(VueRN, null, (options || []).map(
       (/** @type {any} */ option) => reactActuel.createElement(
         PressableRN,
@@ -400,5 +407,19 @@ describe('VILLE-T18A point 1 — un créneau à période raccourcie s ouvre depu
     expect(lus).toContain('1 sept. 2026 – 15 juin 2027');
     expect(parTexte(arbre, 'Modifier le créneau')).toBeDefined();
     expect(parTexte(arbre, 'Retirer le créneau')).toBeDefined();
+  });
+});
+
+// POINT 4 — T18 G28a : la fiche a 4 onglets (Créneaux · Planning · Fermetures · Infos, comme
+// P4v3-fermer-ordi) ; sur téléphone ils défilaient et « Infos » était coupé au bord droit
+// (22 px visibles). Ils se partagent maintenant la largeur, le texte rétrécit pour tenir.
+describe('VILLE-T18A point 4 — la fiche : les 4 onglets tiennent dans la largeur', () => {
+  it('Créneaux · Planning · Fermetures · Infos, à largeur égale, libellés rétrécis (jamais coupés)', async () => {
+    await rendre();
+    const onglets = mockOnglets.at(-1);
+    expect(onglets.options.map((/** @type {any} */ option) => option.label))
+      .toEqual(['Créneaux', 'Planning', 'Fermetures', 'Infos']);
+    expect(onglets.centerContent).toBe(true);
+    expect(onglets.fitLabels).toBe(true);
   });
 });

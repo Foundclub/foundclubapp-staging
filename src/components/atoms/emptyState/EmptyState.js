@@ -4,6 +4,8 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /**
  * L'ecran « il n'y a rien ici » : un titre, et tout le reste est facultatif.
  *
@@ -60,10 +62,13 @@ function EmptyState({
       )}
       {actionLabel && onAction && (
       <View style={[Spaces.marginTop[16]]}>
+        {/* VILLE-T18A (T18 G28a) — le bouton épouse son libellé GRAS (boîte centrée) : sous
+            Android 16, « Attribuer le premier » perdait son dernier mot (« Attribuer le »).
+            Espaces insécables : le libellé se comporte comme un mot seul (texteInsecable). */}
         <Button
           isOption // Assuming this prop makes it smaller/fit content
           onPress={onAction}
-          title={actionLabel}
+          title={texteInsecable(actionLabel)}
           variant="SecondaryLight"
         />
       </View>
