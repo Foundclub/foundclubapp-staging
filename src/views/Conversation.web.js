@@ -3185,7 +3185,7 @@ function Conversation({ navigation, route }) {
       navigation.navigate(RouteNames.Chat);
     } catch {
       setAnnonce(t(
-        'conversation.web.fil.quitterErreur',
+        'conversation.groupInfo.leaveError',
         'Impossible de quitter le groupe pour le moment.',
       ));
     }
@@ -3259,8 +3259,8 @@ function Conversation({ navigation, route }) {
     const cleDuRole = message?.sender?.staffRole
       || rolesDuStaff?.[getEntityDocumentId(message?.sender)];
     const roleDuStaff = {
-      dirigeant: i18next.t('conversation.web.fil.roleDirigeant', 'Dirigeant'),
-      entraineur: i18next.t('conversation.web.fil.roleEntraineur', 'Entraîneur'),
+      dirigeant: i18next.t('conversation.staffRole.dirigeant', 'Dirigeant'),
+      entraineur: i18next.t('conversation.staffRole.entraineur', 'Entraîneur'),
     }[String(cleDuRole || '')] || '';
     const attachments = Array.isArray(message?.attachments) ? message.attachments : []
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
@@ -5406,7 +5406,7 @@ function Conversation({ navigation, route }) {
             style={STYLE_BOUTON_ROUGE_DES_INFOS}
             type="button"
           >
-            {t('conversation.web.fil.quitter', 'Quitter le groupe')}
+            {t('conversation.groupInfo.leave', 'Quitter le groupe')}
           </button>
           <button
             onClick={() => setAnnonce(texteDuSignalement)}
@@ -5420,11 +5420,11 @@ function Conversation({ navigation, route }) {
       {departAConfirmer ? (
         <ConfirmationDuSite
           id="msg1w-depart"
-          libelleAction={t('conversation.web.fil.quitterAction', 'Quitter')}
+          libelleAction={t('conversation.groupInfo.leaveConfirmAction', 'Quitter')}
           onAnnuler={() => setDepartAConfirmer(false)}
           onConfirmer={quitterLeGroupe}
-          titre={t('conversation.web.fil.quitterConfirm', {
-            defaultValue: 'Quitter « {{name}} » ?',
+          titre={t('conversation.groupInfo.leaveConfirm', {
+            defaultValue: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
             name: conversationName,
             ...SANS_ECHAPPEMENT,
           })}
