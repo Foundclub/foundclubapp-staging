@@ -5674,6 +5674,7 @@ export default {
       aPartirDu: 'À partir du',
       attribuerA: 'Attribuer à',
       aucunClub: 'Aucun club n’est rattaché à la Ville : invitez-en un depuis « Clubs ».',
+      aucuneLibre: 'Aucune heure libre ce {{jour}}.',
       changerHeure: 'Changer l’heure',
       chaqueSemaine: 'Chaque {{jour}} de la saison ({{periode}}). Le club est prévenu.',
       club: 'Club',
@@ -5693,6 +5694,7 @@ export default {
       installation: 'Installation',
       jour: 'Jour',
       libre: '{{moment}} : place libre',
+      libreCe: 'Libre ce {{jour}} :',
       periode: 'Période',
       personne: 'Personne n’y est.',
       places: 'Places prises : {{prises}} sur {{capacite}}',
@@ -5707,6 +5709,7 @@ export default {
       toutLaSaison: 'Toute la saison · {{periode}}',
       toutLeClub: 'Tout le club',
       valider: 'Attribuer le créneau',
+      voirLibres: 'Voir les heures libres du {{jour}}',
     },
     creneaux: {
       attribuer: 'Attribuer un créneau',
@@ -6130,6 +6133,10 @@ export default {
       clubs_other: '{{count}} clubs prévenus',
       // FINITIONS18 12 (T16) — « 0 club prévenu » se dit « Aucun club prévenu ».
       clubs_zero: 'Aucun club prévenu',
+      // VILLE-T18A (T18, G54a) — un créneau sans séance posée se compte et se dit à part.
+      creneau: 'créneau',
+      creneaux_one: '{{count}} créneau touché',
+      creneaux_other: '{{count}} créneaux touchés',
       etAutres_one: 'et {{count}} autre',
       etAutres_other: 'et {{count}} autres',
       pasAnnulee: 'Sa séance n’est pas annulée : le club la déplace ou l’annule lui-même.',
@@ -6137,6 +6144,8 @@ export default {
       pasAnnulees: 'Leurs séances ne sont pas annulées : chaque club les déplace ou les annule lui-même.',
       seances_one: '{{count}} séance touchée',
       seances_other: '{{count}} séances touchées',
+      seancesOuCreneaux_one: '{{count}} séance ou créneau touché',
+      seancesOuCreneaux_other: '{{count}} séances ou créneaux touchés',
     },
     confirmer: {
       annuler: 'Annuler',
@@ -6208,6 +6217,8 @@ export default {
       rouvrir: 'Rouvrir',
       rouvrirPrevient: 'Rouvrir prévient les mêmes clubs.',
       rouvrirQuestion: 'Rouvrir ? Les mêmes clubs seront prévenus.',
+      // VILLE-T18A (T18, G57b) — une fermeture qui n a prévenu aucun club.
+      rouvrirQuestionSansClub: 'Rouvrir ? Aucun club n’est à prévenir.',
       vide: 'Aucune fermeture prévue',
       // eslint-disable-next-line max-len
       videTexte: 'Fermer l’installation prévient les clubs qui y ont une séance ; rien n’est annulé à leur place.',
