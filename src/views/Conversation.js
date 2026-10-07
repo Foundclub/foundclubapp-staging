@@ -7185,6 +7185,9 @@ function Conversation({ navigation, route }) {
           anchor={reactionAnchor}
           canCopy={canCopySelectedMessage}
           canEdit={canEditSelectedMessage}
+          // MSG1A (§3.2) — canal en lecture seule : pas de « Repondre » (il ouvrait une
+          // reponse sans champ de saisie).
+          canReply={canWrite}
           isMine={isSelectedMessageOwn}
           myEmoji={myEmojiOnSelectedMessage}
           onAction={handleMessageAction}

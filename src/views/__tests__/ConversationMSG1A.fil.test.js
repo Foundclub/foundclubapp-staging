@@ -494,3 +494,36 @@ describe('MSG1A — §3.1 habillage du fil', () => {
     expect(sousTitre.props.children).toBe('Karim, Léa, Vous');
   });
 });
+
+describe('MSG1A — §3.2 appui long', () => {
+  /* eslint-disable global-require */
+  const MessageReactionOverlay = require(
+    '@/components/molecules/messageReactionOverlay/MessageReactionOverlay',
+  ).default;
+  /* eslint-enable global-require */
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('L1 — dans un canal d annonce (on ne peut pas ecrire), le menu ne propose pas « Repondre »', () => {
+    mockChatData = FIL_DE_CLUB;
+    const { ecran } = monterLaConversation();
+
+    expect(ecran.root.findByType(MessageReactionOverlay).props.canReply).toBe(false);
+  });
+
+  test('L2 — dans un groupe, « Repondre » reste propose', () => {
+    mockChatData = GROUPE_NOMME;
+    const { ecran } = monterLaConversation();
+
+    expect(ecran.root.findByType(MessageReactionOverlay).props.canReply).toBe(true);
+  });
+});
