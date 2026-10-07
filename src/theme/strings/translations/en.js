@@ -4693,6 +4693,7 @@ export default {
       complet: 'full {{moment}}',
       libre: 'free',
       planning: 'Schedule',
+      reservees: '{{duree}} booked this week',
       seances: '{{nombre}} sessions',
       titre: 'This week',
       uneSeance: '1 session',

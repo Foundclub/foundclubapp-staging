@@ -5028,6 +5028,8 @@ export default {
       complet: 'complet {{moment}}',
       libre: 'libre',
       planning: 'Planning',
+      // VILLE-T18B (b) : une installation sans horaires (pas de taux).
+      reservees: '{{duree}} réservées cette semaine',
       seances: '{{nombre}} séances',
       titre: 'Cette semaine',
       uneSeance: '1 séance',

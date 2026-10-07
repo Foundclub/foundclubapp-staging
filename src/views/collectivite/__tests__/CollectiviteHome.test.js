@@ -405,12 +405,15 @@ describe('COLL-ACCUEIL — planche 1 : l accueil de la Ville, version 2', () => 
     expect(lus).toEqual(expect.arrayContaining([
       'Cette semaine',
       'Gymnase des Tilleuls',
-      // COLL-C5 (03/10) — la ligne de la planche : « 9 séances · occupation : — » sans taux.
-      '3 séances · occupation : —',
+      // INVERSÉ PAR VILLE-T18B (b) (07/10) — motif : décision du chef d'orchestre (T18, G03b).
+      // Avant (COLL-C5) : « 3 séances · occupation : — » sans taux. Sans taux, la ligne dit ce qui
+      // se mesure sans horaires ; ici « Chiffres » ne rend pas de minutes : le nombre seul.
+      '3 séances',
       'Dojo municipal',
       'Aucune séance',
       'libre',
     ]));
+    expect(lus).not.toContain('3 séances · occupation : —');
     expect(lus.some((texte) => /^complet .+ 18:00$/.test(texte))).toBe(true);
     await appuyer(arbre, 'collectivite-home-voir-planning');
     expect(mockNavigate)
@@ -650,7 +653,10 @@ describe('COLL-C5 — planches 2 et 3 : la jauge d occupation de la semaine', ()
         && typeof n.props?.accessibilityLabel === 'string',
     )[0];
     expect(jauge(TILLEULS.documentId).props.accessibilityLabel).toBe('Occupation : 23 %');
-    expect(jauge(DOJO.documentId).props.accessibilityLabel).toBe('Occupation : —');
+    // INVERSÉ PAR VILLE-T18B (b) (07/10) — motif : décision du chef d'orchestre (tournée T18,
+    // G03b) : une installation sans taux (sans horaires) n'a plus de jauge vide « Occupation : — » ;
+    // sa ligne dit ce qui se mesure sans horaires (voir « VILLE-T18B (b) » plus bas).
+    expect(jauge(DOJO.documentId)).toBeUndefined();
   });
 });
 
@@ -954,5 +960,63 @@ describe('VILLE-T18B point 2 — la jauge des places ne vient qu’avec sa phras
     expect(jauges(arbre).map((/** @type {any} */ n) => n.props.accessibilityLabel))
       .toEqual(['2 places prises sur 2']);
     expect(textes(arbre)).toContain('Accepter met 3 équipes pour 2 places.');
+  });
+});
+
+// 🧮 VILLE-T18B (b) (07/10) — ajout de la T18, décision du chef d'orchestre (G03b) : une
+// installation SANS HORAIRES (pas de taux : « Chiffres » rend `taux: null`) affichait une jauge vide
+// « Occupation : — » et « … · occupation : — ». Les horaires étant retirés (décision d'Adel), toutes
+// les installations neuves finiront ainsi. Sans horaires, la ligne dit ce qui se mesure sans eux :
+// « 6 séances · 9 h réservées cette semaine » ; avec horaires, le taux reste. Et « tirer pour
+// rafraîchir » relit aussi « Chiffres » : une installation créée pendant la visite y manquait
+// (ligne « — »). ROUGE avant le lot.
+describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesure, pas un tiret', () => {
+  const jaugeDe = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === `collectivite-home-jauge-${id}`,
+  )[0];
+  const chiffres = (/** @type {any[]} */ installations) => ({
+    data: { installations }, error: null, isLoading: false, refetch: jest.fn(),
+  });
+
+  it('sans horaires : « 6 séances · 9 h réservées cette semaine », sans jauge vide', async () => {
+    mockChiffresSemaine = chiffres([
+      { capaciteMinutes: null, documentId: TILLEULS.documentId, minutes: 540, seances: 6, taux: null },
+      { capaciteMinutes: null, documentId: DOJO.documentId, minutes: 0, seances: 0, taux: null },
+    ]);
+    const arbre = await monter();
+    const lus = textes(arbre);
+    expect(lus).toEqual(expect.arrayContaining([
+      '6 séances · 9 h réservées cette semaine',
+      'Aucune séance',
+    ]));
+    expect(lus.some((texte) => texte.includes('occupation : —'))).toBe(false);
+    expect(jaugeDe(arbre, TILLEULS.documentId)).toBeUndefined();
+    expect(jaugeDe(arbre, DOJO.documentId)).toBeUndefined();
+  });
+
+  it('une séance d’une heure et demie : « 1 séance · 1 h 30 réservées cette semaine »', async () => {
+    mockChiffresSemaine = chiffres([
+      { capaciteMinutes: null, documentId: TILLEULS.documentId, minutes: 90, seances: 1, taux: null },
+    ]);
+    expect(textes(await monter())).toContain('1 séance · 1 h 30 réservées cette semaine');
+  });
+
+  it('🔒 jumeau : avec horaires (Ville de Démo), le taux et sa jauge restent', async () => {
+    mockChiffresSemaine = chiffres([
+      { capaciteMinutes: 2400, documentId: TILLEULS.documentId, minutes: 540, seances: 6, taux: 23 },
+    ]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('6 séances · occupation : 23 %');
+    expect(jaugeDe(arbre, TILLEULS.documentId)).toBeDefined();
+  });
+
+  it('« tirer pour rafraîchir » relit aussi « Chiffres »', async () => {
+    mockChiffresSemaine = chiffres([]);
+    const arbre = await monter();
+    const [tirer] = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.props?.onRefresh === 'function',
+    );
+    await act(async () => { tirer.props.onRefresh(); });
+    expect(mockChiffresSemaine.refetch).toHaveBeenCalledTimes(1);
   });
 });

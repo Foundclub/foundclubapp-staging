@@ -29,6 +29,7 @@ import {
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
 import {
+  dureeLisible,
   phraseOccupation,
   seancesDeLInstallation,
 } from '@/domains/collectivite/collectiviteChiffres';
@@ -253,6 +254,9 @@ function CollectiviteHome() {
     installations.refetch?.();
     clubs.refetch?.();
     semaine.forEach(({ query }) => query?.refetch?.());
+    // VILLE-T18B (b) — « Chiffres » aussi : une installation créée pendant la visite y manquait
+    // (sa ligne disait « — », tournée T18, G03b).
+    chiffresSemaine.refetch?.();
   };
 
   const lienFleche = (
@@ -774,17 +778,43 @@ function CollectiviteHome() {
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });
   };
 
+  // La ligne de « Chiffres » d'une installation, ou null tant qu'elle ne se lit pas.
+  const ligneDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
+    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
+    return Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) || null : null;
+  };
+
   // COLL-C5 (03/10) : le taux d une installation, ou null (jamais un 0 invente).
   const tauxDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
-    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
-    const ligne = Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) : null;
+    const ligne = ligneDeLaSemaine(facilityId);
     return typeof ligne?.taux === 'number' ? ligne.taux : null;
   };
+
+  // 🧮 VILLE-T18B (b) (07/10) — décision du chef d'orchestre (tournée T18, G03b) : une installation
+  // LUE sans taux (sans horaires : les horaires sont retirés, décision d'Adel) n'a pas de jauge
+  // vide « Occupation : — » ; sa ligne dit ce qui se mesure sans eux, les heures réservées.
+  const sansTauxMesurable = (/** @type {string | undefined} */ facilityId) => (
+    Boolean(ligneDeLaSemaine(facilityId)) && tauxDeLaSemaine(facilityId) === null
+  );
 
   // La planche dit « occupation » seulement quand il y a des séances (sinon « Aucune séance »).
   const seancesDansLaSemaine = (/** @type {string | undefined} */ facilityId) => (
     seancesSelonChiffres(facilityId) || 0
   );
+
+  const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
+    if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId);
+    if (!sansTauxMesurable(facilityId)) {
+      return `${libelleSeances(facilityId)} · ${phraseOccupation(t, tauxDeLaSemaine(facilityId))}`;
+    }
+    const minutes = ligneDeLaSemaine(facilityId)?.minutes;
+    if (typeof minutes !== 'number') return libelleSeances(facilityId);
+    return `${libelleSeances(facilityId)} · ${t(
+      'collectiviteAccueil.semaine.reservees',
+      '{{duree}} réservées cette semaine',
+      { duree: dureeLisible(minutes), ...SANS_ECHAPPEMENT },
+    )}`;
+  };
 
   const renderSemaine = () => {
     let corps;
@@ -840,20 +870,17 @@ function CollectiviteHome() {
                   {etat}
                 </View>
                 {/* COLL-C5 (03/10) — planches 2 et 3 : la jauge d'occupation de la semaine */}
-                {/* (contrat §5) ; sans taux (pas d horaires, lecture en cours ou en panne), */}
-                {/* elle reste vide et dit « — ». */}
-                <JaugeOccupation
-                  couleur={complet ? Colors.warning500 : installation?.planningColor}
-                  taux={tauxDeLaSemaine(installation?.documentId)}
-                  testID={`collectivite-home-jauge-${installation?.documentId}`}
-                />
+                {/* (contrat §5) ; lecture en cours ou en panne, elle reste vide et dit « — ». */}
+                {/* VILLE-T18B (b) : lue SANS taux (pas d'horaires), pas de jauge du tout. */}
+                {sansTauxMesurable(installation?.documentId) ? null : (
+                  <JaugeOccupation
+                    couleur={complet ? Colors.warning500 : installation?.planningColor}
+                    taux={tauxDeLaSemaine(installation?.documentId)}
+                    testID={`collectivite-home-jauge-${installation?.documentId}`}
+                  />
+                )}
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {seancesDansLaSemaine(installation?.documentId) > 0
-                    ? `${libelleSeances(installation?.documentId)} · ${phraseOccupation(
-                      t,
-                      tauxDeLaSemaine(installation?.documentId),
-                    )}`
-                    : libelleSeances(installation?.documentId)}
+                  {libelleDeLaSemaine(installation?.documentId)}
                 </Text>
               </View>
             );
