@@ -310,7 +310,7 @@ describe('FINITIONS8 · point 9 — la liste des comptes dit le role en francais
 // compte « Ville seule » a changé, la feuille non. Et la feuille ne sait d'un compte NON actif
 // que ce que sa session a gardé (son rôle « Authenticated ») : la Ville qu'il gère ne se lit
 // qu'en étant ce compte. ROUGE avant le lot.
-describe('VILLE-T18B · point 4 — un compte « Ville seule » est « Gestionnaire » dans la feuille', () => {
+describe('VILLE-T18B · point 4 — un compte « Ville seule » est « Gestionnaire »', () => {
   const { clearScoped } = jest.requireActual('@/platform/storage');
   const MONTRIVAGE = { data: [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage' }] };
   const AUTH_MAIRIE = {
@@ -346,10 +346,9 @@ describe('VILLE-T18B · point 4 — un compte « Ville seule » est « Gestionna
     mockAuth = { ...AUTH_MAIRIE, authSessions: SESSIONS };
     /** @type {any} */
     let arbre;
+    const navigation = { navigate: jest.fn(), setParams: jest.fn() };
     act(() => {
-      arbre = renderer.create(
-        <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
-      );
+      arbre = renderer.create(<Profile navigation={navigation} route={{ params: {} }} />);
     });
     arbres.push(arbre);
     return arbre;
@@ -383,7 +382,7 @@ describe('VILLE-T18B · point 4 — un compte « Ville seule » est « Gestionna
     expect(lus).not.toContain('Membre');
   });
 
-  it('G12b : Hugo actif, Recette Mairie dans la liste est « Gestionnaire · Ville de Montrivage »', () => {
+  it('G12b : Hugo actif, Recette Mairie est « Gestionnaire · Ville de Montrivage »', () => {
     passerParMonCompteDeLaMairie(MONTRIVAGE);
     mockVillesGerees = { data: [] };
     AUTH_PAR_ROLE.player.authSessions = SESSIONS;

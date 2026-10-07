@@ -51,7 +51,8 @@ describe('collectiviteDisplay', () => {
   // plage : il donne le début seul (la ligne en base, c'est le chef qui la répare). ROUGE avant.
   it('une fin au début ou avant ne s écrit pas : le début seul', () => {
     const debut = new Date(2030, 9, 11, 18, 0).toISOString();
-    expect(formatSlot(debut, new Date(2030, 9, 11, 17, 0).toISOString())).toBe('ven. 11 oct. · 18:00');
+    const finAvant = new Date(2030, 9, 11, 17, 0).toISOString();
+    expect(formatSlot(debut, finAvant)).toBe('ven. 11 oct. · 18:00');
     expect(formatSlot(debut, debut)).toBe('ven. 11 oct. · 18:00');
     expect(formatSlot(debut, new Date(2030, 9, 11, 19, 30).toISOString()))
       .toBe('ven. 11 oct. · 18:00 – 19:30');

@@ -398,7 +398,8 @@ function EventEdit({ navigation, route }) {
       return;
     }
 
-    // VILLE-T18B (a) — une fin restée derrière un début déplacé ne part plus (T18 : « 18:00 – 17:00 »).
+    // VILLE-T18B (a) — une fin restée derrière un début déplacé ne part plus
+    // (tournée T18 : « 18:00 – 17:00 »).
     if (isEndTimeNotAfterStart(formState.startTime, formState.endTime)) {
       setSubmitError(t(
         'eventWizard.errors.invalidTimeRange',

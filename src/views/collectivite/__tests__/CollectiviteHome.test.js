@@ -654,8 +654,8 @@ describe('COLL-C5 — planches 2 et 3 : la jauge d occupation de la semaine', ()
     )[0];
     expect(jauge(TILLEULS.documentId).props.accessibilityLabel).toBe('Occupation : 23 %');
     // INVERSÉ PAR VILLE-T18B (b) (07/10) — motif : décision du chef d'orchestre (tournée T18,
-    // G03b) : une installation sans taux (sans horaires) n'a plus de jauge vide « Occupation : — » ;
-    // sa ligne dit ce qui se mesure sans horaires (voir « VILLE-T18B (b) » plus bas).
+    // G03b) : une installation sans taux (sans horaires) n'a plus de jauge vide
+    // « Occupation : — » ; sa ligne dit ce qui se mesure sans horaires (« VILLE-T18B (b) »).
     expect(jauge(DOJO.documentId)).toBeUndefined();
   });
 });
@@ -964,24 +964,33 @@ describe('VILLE-T18B point 2 — la jauge des places ne vient qu’avec sa phras
 });
 
 // 🧮 VILLE-T18B (b) (07/10) — ajout de la T18, décision du chef d'orchestre (G03b) : une
-// installation SANS HORAIRES (pas de taux : « Chiffres » rend `taux: null`) affichait une jauge vide
-// « Occupation : — » et « … · occupation : — ». Les horaires étant retirés (décision d'Adel), toutes
-// les installations neuves finiront ainsi. Sans horaires, la ligne dit ce qui se mesure sans eux :
-// « 6 séances · 9 h réservées cette semaine » ; avec horaires, le taux reste. Et « tirer pour
-// rafraîchir » relit aussi « Chiffres » : une installation créée pendant la visite y manquait
-// (ligne « — »). ROUGE avant le lot.
-describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesure, pas un tiret', () => {
+// installation SANS HORAIRES (pas de taux : « Chiffres » rend `taux: null`) affichait une jauge
+// vide « Occupation : — » et « … · occupation : — ». Les horaires étant retirés (décision
+// d'Adel), toutes les installations neuves finiront ainsi. Sans horaires, la ligne dit ce qui se
+// mesure sans eux : « 6 séances · 9 h réservées cette semaine » ; avec horaires, le taux reste.
+// Et « tirer pour rafraîchir » relit aussi « Chiffres » : une installation créée pendant la visite
+// y manquait (ligne « — »). ROUGE avant le lot.
+describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesure', () => {
   const jaugeDe = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
     (/** @type {any} */ n) => n.props?.testID === `collectivite-home-jauge-${id}`,
   )[0];
   const chiffres = (/** @type {any[]} */ installations) => ({
     data: { installations }, error: null, isLoading: false, refetch: jest.fn(),
   });
+  // Une ligne de « Chiffres » : sans taux, sa capacité aussi est inconnue (pas d'horaires).
+  const ligne = (
+    /** @type {string} */ documentId,
+    /** @type {number} */ minutes,
+    /** @type {number} */ seances,
+    /** @type {number | null} */ taux = null,
+  ) => ({
+    capaciteMinutes: taux === null ? null : 2400, documentId, minutes, seances, taux,
+  });
 
   it('sans horaires : « 6 séances · 9 h réservées cette semaine », sans jauge vide', async () => {
     mockChiffresSemaine = chiffres([
-      { capaciteMinutes: null, documentId: TILLEULS.documentId, minutes: 540, seances: 6, taux: null },
-      { capaciteMinutes: null, documentId: DOJO.documentId, minutes: 0, seances: 0, taux: null },
+      ligne(TILLEULS.documentId, 540, 6),
+      ligne(DOJO.documentId, 0, 0),
     ]);
     const arbre = await monter();
     const lus = textes(arbre);
@@ -994,17 +1003,13 @@ describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesur
     expect(jaugeDe(arbre, DOJO.documentId)).toBeUndefined();
   });
 
-  it('une séance d’une heure et demie : « 1 séance · 1 h 30 réservées cette semaine »', async () => {
-    mockChiffresSemaine = chiffres([
-      { capaciteMinutes: null, documentId: TILLEULS.documentId, minutes: 90, seances: 1, taux: null },
-    ]);
+  it('une séance d’une heure et demie : « 1 séance · 1 h 30 réservées… »', async () => {
+    mockChiffresSemaine = chiffres([ligne(TILLEULS.documentId, 90, 1)]);
     expect(textes(await monter())).toContain('1 séance · 1 h 30 réservées cette semaine');
   });
 
   it('🔒 jumeau : avec horaires (Ville de Démo), le taux et sa jauge restent', async () => {
-    mockChiffresSemaine = chiffres([
-      { capaciteMinutes: 2400, documentId: TILLEULS.documentId, minutes: 540, seances: 6, taux: 23 },
-    ]);
+    mockChiffresSemaine = chiffres([ligne(TILLEULS.documentId, 540, 6, 23)]);
     const arbre = await monter();
     expect(textes(arbre)).toContain('6 séances · occupation : 23 %');
     expect(jaugeDe(arbre, TILLEULS.documentId)).toBeDefined();
@@ -1022,9 +1027,9 @@ describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesur
 });
 
 // 🚧 VILLE-T18B (c) (07/10) — ajout de la T18, point 3 (G42b) : « Fermeture à venir » n'en
-// montrait que DEUX, sans rien pour voir les autres : la fermeture du Stade (« Ascension », 8 oct.)
-// et celle de « T18 Salle essai » (13 oct.) avaient disparu de l'accueil. Le serveur les rend
-// toutes (triées) ; l'accueil coupait à deux. Toutes doivent rester accessibles. ROUGE avant le lot.
+// montrait que DEUX, sans rien pour voir les autres : la fermeture du Stade (« Ascension »,
+// 8 oct.) et celle de « T18 Salle essai » (13 oct.) avaient disparu de l'accueil. Le serveur les
+// rend toutes (triées) ; l'accueil coupait à deux. Toutes doivent rester accessibles. ROUGE avant.
 describe('VILLE-T18B (c) — toutes les fermetures à venir restent accessibles', () => {
   const fermeture = (/** @type {number} */ n, /** @type {string} */ nom) => ({
     documentId: `f${n}`,
@@ -1045,7 +1050,7 @@ describe('VILLE-T18B (c) — toutes les fermetures à venir restent accessibles'
   const cartes = (/** @type {any} */ arbre) => textes(arbre)
     .filter((texte) => texte === 'Fermeture à venir').length;
 
-  it('4 à venir : les 2 premières, puis « Voir les 4 fermetures à venir » qui les montre toutes', async () => {
+  it('4 à venir : les 2 premières, puis « Voir les 4 fermetures à venir » les montre', async () => {
     mockFermetures = lu({ data: QUATRE });
     const arbre = await monter();
     expect(cartes(arbre)).toBe(2);
@@ -1066,7 +1071,8 @@ describe('VILLE-T18B (c) — toutes les fermetures à venir restent accessibles'
     mockFermetures = lu({ data: QUATRE.slice(0, 2) });
     const arbre = await monter();
     expect(cartes(arbre)).toBe(2);
-    expect(textes(arbre).some((texte) => texte.startsWith('Voir les ') && texte.includes('fermeture')))
-      .toBe(false);
+    const liens = textes(arbre)
+      .filter((texte) => texte.startsWith('Voir les ') && texte.includes('fermeture'));
+    expect(liens).toEqual([]);
   });
 });

@@ -945,7 +945,10 @@ function EventEdit({ navigation, route }) {
       if (isEndTimeNotAfterStart(data.startTime, data.endTime)) {
         Alert.alert(
           t('common.error', 'Erreur'),
-          t('eventWizard.errors.invalidTimeRange', "L'heure de fin doit être après l'heure de début."),
+          t(
+            'eventWizard.errors.invalidTimeRange',
+            "L'heure de fin doit être après l'heure de début.",
+          ),
         );
         return;
       }

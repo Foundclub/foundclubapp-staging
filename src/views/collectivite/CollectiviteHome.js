@@ -401,9 +401,10 @@ function CollectiviteHome() {
           {`${demande?.facility?.name || ''} · ${
             formatSlot(demande?.requestedStart, demande?.requestedEnd)}`}
         </Text>
-        {/* VILLE-T18B point 2 (T18, G02) — la jauge ne vient qu'avec sa légende, « Accepter met… » :
-            sur une demande qui a de la place, elle n'était que des pastilles grises sans mot, et la
-            pastille d'en-tête dit déjà « 2 places libres » (planche P3v2-accueil : Complet seul). */}
+        {/* VILLE-T18B point 2 (T18, G02) — la jauge ne vient qu'avec sa légende,
+            « Accepter met… » : sur une demande qui a de la place, elle n'était que des pastilles
+            grises sans mot, et la pastille d'en-tête dit déjà « 2 places libres » (planche
+            P3v2-accueil : Complet seul). */}
         {conflit?.full && !compacte ? (
           <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
             <View
@@ -527,9 +528,11 @@ function CollectiviteHome() {
           testID="collectivite-home-fermetures-toutes"
         >
           <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-            {t('collectiviteFermetures.accueil.voirToutes', 'Voir les {{count}} fermetures à venir', {
-              count: listeDesFermetures.length,
-            })}
+            {t(
+              'collectiviteFermetures.accueil.voirToutes',
+              'Voir les {{count}} fermetures à venir',
+              { count: listeDesFermetures.length },
+            )}
           </Text>
         </TouchableOpacity>
       ) : null}
