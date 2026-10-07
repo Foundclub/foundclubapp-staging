@@ -68,6 +68,7 @@ import {
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
 import {
   getParticipationErrorMessage,
@@ -1172,6 +1173,13 @@ function Conversation({ navigation, route }) {
       .filter(Boolean);
   }, [chatData?.groupAdmins]);
   const isGroupAdmin = isGroupChat && groupAdminIds.includes(String(userData?.documentId || ''));
+  // 🏷️ MSG1BA (§3.1) — le role de chaque membre, lu seulement quand « Infos du groupe » s'ouvre.
+  const idsDesMembres = useMemo(() => (Array.isArray(chatData?.participants)
+    ? chatData.participants.map((/** @type {any} */ membre) => String(membre?.documentId || ''))
+    : []), [chatData?.participants]);
+  const rolesDesMembres = useRolesDesMembres(idsDesMembres, {
+    enabled: isGroupChat && isGroupManagementVisible,
+  });
 
   // 🚫 BLOQUER (K3) — LE SECOND ENDROIT QU APPLE REGARDE : le menu du fil.
   //
@@ -7165,6 +7173,7 @@ function Conversation({ navigation, route }) {
           onRetirer={handleRemoveGroupMember}
           onSignaler={handleReportFromMenu}
           resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+          roles={rolesDesMembres}
           visible={isGroupManagementVisible && isGroupChat}
         />
 

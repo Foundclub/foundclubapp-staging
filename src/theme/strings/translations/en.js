@@ -6559,6 +6559,8 @@ export default {
     staffRole: {
       dirigeant: 'Manager',
       entraineur: 'Coach',
+      joueur: 'Player',
+      parent: 'Parent',
     },
     typing: {
       header_one: '{{names}} is typing…',

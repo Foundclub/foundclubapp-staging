@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -71,6 +72,8 @@ const nomDe = (membre) => `${membre?.firstname || ''} ${membre?.lastname || ''}`
  * @param {(membre: any) => void} props.onRetirer - Appele APRES la confirmation.
  * @param {() => void} props.onSignaler
  * @param {(personne: any) => string} [props.resolveAvatar]
+ * @param {Record<string, string>} [props.roles] - MSG1BA (§3.1) : documentId -> nom du role
+ *   (`role.name`) ; absent = « Membre ».
  * @param {boolean} props.visible
  * @returns {import('react').ReactElement}
  */
@@ -89,6 +92,7 @@ function InfosDuGroupe({
   onRetirer,
   onSignaler,
   resolveAvatar = () => '',
+  roles = {},
   visible,
 }) {
   const { Colors } = useTheme();
@@ -132,6 +136,11 @@ function InfosDuGroupe({
   };
 
   const membreEstAdmin = (/** @type {any} */ membre) => adminIds.includes(idDe(membre));
+  // 🏷️ MSG1BA (§3.1) — « Entraîneur », « Joueur »... sous le nom ; sans role connu, « Membre ».
+  const roleDe = (/** @type {any} */ membre) => libelleDuRole(
+    roles[idDe(membre)] || membre?.role?.name,
+    t,
+  );
 
   const ligneDeFiche = (
     /** @type {any} */ icone,
@@ -304,7 +313,7 @@ function InfosDuGroupe({
                       {cEstMoi ? t('conversation.header.you', 'Vous') : nomDe(membre)}
                     </Text>
                     <Text numberOfLines={1} style={[styles.roleMembre, { color: sourdine }]}>
-                      {membre?.role?.name || t('conversation.group.member', 'Membre')}
+                      {roleDe(membre)}
                     </Text>
                   </View>
                   {membreEstAdmin(membre) ? (
@@ -386,8 +395,8 @@ function InfosDuGroupe({
                   </Text>
                   <Text style={[styles.roleMembre, { color: withAlpha(Colors.neutral00, 0.6) }]}>
                     {membreEstAdmin(membreOuvert)
-                      ? t('conversation.group.admin', 'Admin')
-                      : membreOuvert?.role?.name || t('conversation.group.member', 'Membre')}
+                      ? `${t('conversation.group.admin', 'Admin')} · ${roleDe(membreOuvert)}`
+                      : roleDe(membreOuvert)}
                   </Text>
                 </View>
               </View>
