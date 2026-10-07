@@ -12418,7 +12418,7 @@ export default {
     },
     searchPlaceholder: 'Search a conversation...',
     searchUserPlaceholder: 'Search a member...',
-    title: 'Private messages',
+    title: 'Messages',
     unpin: 'Unpin',
     unpinError: 'Unable to unpin this conversation.',
     unread: {

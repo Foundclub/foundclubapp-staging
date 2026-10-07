@@ -13197,7 +13197,7 @@ export default {
     },
     searchPlaceholder: 'Rechercher une conversation...',
     searchUserPlaceholder: 'Rechercher un membre...',
-    title: 'Messages privés',
+    title: 'Messages',
     unpin: 'Désépingler',
     unpinError: 'Impossible de désépingler cette conversation.',
     unread: {
