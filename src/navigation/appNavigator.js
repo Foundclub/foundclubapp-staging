@@ -7,6 +7,11 @@ import useTheme from '@/theme/themeContext';
 
 import TourBanner from '@/components/molecules/tour/TourBanner';
 
+import {
+  ecouterLesLiens,
+  lireLeLienDeLancement,
+  mettreLeLienEnAttente,
+} from '@/navigation/lienDeLancement';
 import { navigationRef } from '@/navigation/navigationService';
 import PrivateNavigator from '@/navigation/private/PrivateNavigator';
 
@@ -125,6 +130,20 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
     // qu il refuse. Sans ce filtre, foundclub://club/<id>?invite=true ouvrait la fiche
     // AVANT la reponse. Temoin : src/navigation/__tests__/linking.routesAtteignables.test.js.
     filter: (/** @type {string} */ url) => !readInviteLink(url).ok,
+    // LIENS-APP (2026-10-07) -- le lien qui a LANCE l app est lu UNE fois par lancement
+    // (lienDeLancement.js) : ce conteneur est remonte a chaque changement de compte, et React
+    // Navigation le relisait a chaque montage -- apres la connexion, son ecran ouvrait la pile
+    // seul (aucun Retour) et passait devant l accueil d un compte neuf (controle d age).
+    // Connecte, il n ouvre plus la pile : il attend l accueil, puis s empile (useLiensEnAttente).
+    // Temoin : src/navigation/__tests__/LIENSAPP.lienDeLancementUneFois.test.js.
+    getInitialURL: async () => {
+      const url = await lireLeLienDeLancement();
+      if (url && isPrivateMode) {
+        mettreLeLienEnAttente(url);
+        return null;
+      }
+      return url;
+    },
     prefixes: [
       'foundclub://',
       // LIENS-EVENEMENT : les liens https que le telephone confie a l app. Seuls les
@@ -134,6 +153,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
       // web, scripts/__tests__/LIENS-APP-trois-listes.test.mjs).
       ...WEB_LINK_ORIGINS,
     ],
+    subscribe: ecouterLesLiens,
   };
   const navigationContainerKey = [
     auth?.token || 'no-token',

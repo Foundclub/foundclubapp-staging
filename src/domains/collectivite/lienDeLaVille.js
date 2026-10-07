@@ -105,7 +105,7 @@ export const oublierLienDeLaVille = () => {
  * LIENS-APP (07/10/2026) — LE RETOUR AU LIEN APRÈS LA CONNEXION. Le lien de la Ville ouvert sans
  * compte mène à la connexion, qui remonte toute la navigation : la page du lien disparaît. Ce
  * repère, posé par la page juste avant, la fait rouvrir une fois connecté
- * (navigation/useRetourAuLienDeLaVille.js), puis la page l'efface. À part du lien retenu 48 h :
+ * (navigation/useLiensEnAttente.js), puis la page l'efface. À part du lien retenu 48 h :
  * celui-là attend la création d'un club, celui-ci ne sert qu'une fois.
  * ponytail: borné à 1 h — une connexion abandonnée puis reprise le lendemain ne ramène plus au
  * lien ; voie de sortie : allonger la durée si la recette montre des inscriptions plus longues.

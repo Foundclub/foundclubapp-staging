@@ -67,7 +67,7 @@ function CollectiviteJoin() {
 
   // LIENS-APP (07/10) : le lien s'ouvre dans l'app, souvent SANS compte. La connexion remonte toute
   // la navigation : le repère de retour fait rouvrir cette page une fois connecté
-  // (useRetourAuLienDeLaVille), et la page, ouverte avec un compte, l'efface.
+  // (useLiensEnAttente), et la page, ouverte avec un compte, l'efface.
   useEffect(() => {
     if (connecte) oublierLeRetourAuLien();
   }, [connecte]);

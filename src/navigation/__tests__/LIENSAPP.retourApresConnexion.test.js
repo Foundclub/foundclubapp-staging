@@ -25,14 +25,15 @@ jest.mock('@/platform/storage', () => ({
   },
 }));
 
-let mockPret = true;
 let mockRouteCourante = /** @type {string | null} */ ('HomeTab');
-const mockNaviguer = jest.fn(() => mockPret);
+const mockNaviguer = jest.fn(() => true);
+const mockPilePrete = jest.fn(() => true);
 jest.mock('@/navigation/navigationService', () => ({
   __esModule: true,
   navigate: (/** @type {any[]} */ ...args) => mockNaviguer(...args),
   navigationRef: {
     getCurrentRoute: () => (mockRouteCourante ? { name: mockRouteCourante } : null),
+    isReady: () => mockPilePrete(),
   },
 }));
 
@@ -55,13 +56,13 @@ const poserLeRetour = (age = 0) => {
  */
 const monterPuisAttendre = async (pret) => {
   // eslint-disable-next-line global-require
-  const useRetourAuLienDeLaVille = require('../useRetourAuLienDeLaVille').default;
+  const useLiensEnAttente = require('../useLiensEnAttente').default;
   /**
    * Un composant qui ne fait qu appeler le crochet.
    * @returns {null} rien a l ecran
    */
   function Sonde() {
-    useRetourAuLienDeLaVille(pret);
+    useLiensEnAttente(pret);
     return null;
   }
   await act(async () => { renderer.create(createElement(Sonde)); });
@@ -72,7 +73,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   mockRangement.clear();
   mockNaviguer.mockClear();
-  mockPret = true;
+  mockPilePrete.mockClear();
   mockRouteCourante = 'HomeTab';
 });
 
@@ -93,7 +94,7 @@ describe('LIENS-APP -- apres la connexion, l app revient a la page du lien de la
     expect(mockNaviguer).not.toHaveBeenCalled();
   });
 
-  it('deja sur la page du lien (lien de lancement rejoue) : pas une 2e fois', async () => {
+  it('deja sur la page du lien : pas une 2e fois', async () => {
     poserLeRetour();
     mockRouteCourante = 'CollectiviteJoin';
     await monterPuisAttendre(true);
@@ -109,10 +110,11 @@ describe('LIENS-APP -- apres la connexion, l app revient a la page du lien de la
 
   it('navigation pas encore prete : il reessaie', async () => {
     poserLeRetour();
-    mockNaviguer.mockImplementationOnce(() => false);
+    mockPilePrete.mockImplementationOnce(() => false);
     await monterPuisAttendre(true);
-    expect(mockNaviguer).toHaveBeenCalledTimes(2);
-    expect(mockNaviguer).toHaveBeenLastCalledWith('CollectiviteJoin', { token: LIEN });
+    expect(mockPilePrete).toHaveBeenCalledTimes(2);
+    expect(mockNaviguer).toHaveBeenCalledTimes(1);
+    expect(mockNaviguer).toHaveBeenCalledWith('CollectiviteJoin', { token: LIEN });
   });
 });
 
@@ -120,7 +122,7 @@ describe('LIENS-APP -- PrivateNavigator branche le crochet APRES l accueil', () 
   it('l appel attend le compte charge et AUCUNE etape d accueil en attente', () => {
     const fichier = path.join(__dirname, '..', 'private', 'PrivateNavigator.js');
     const source = fs.readFileSync(fichier, 'utf8');
-    const appel = source.match(/useRetourAuLienDeLaVille\(([\s\S]*?)\);/)?.[1] || '';
+    const appel = source.match(/useLiensEnAttente\(([\s\S]*?)\);/)?.[1] || '';
 
     expect({
       accueil: appel.includes('!firstPendingOnboardingRoute'),

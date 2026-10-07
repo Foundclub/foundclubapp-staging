@@ -204,7 +204,7 @@ describe('COLL-ACCUEIL-BIS — planche 38 : revenu de la création, « Demande e
 
 // LIENS-APP (07/10/2026, registre TEST_PROD_2_6_70 ligne 5a) — le lien de la Ville s'ouvre
 // désormais DANS l'app. Sans compte, les deux boutons mènent à la connexion : ils posent un repère
-// de RETOUR (useRetourAuLienDeLaVille le lit après la connexion et rouvre cette page) ; la page,
+// de RETOUR (useLiensEnAttente le lit après la connexion et rouvre cette page) ; la page,
 // ouverte avec un compte, l'efface — on n'y revient qu'une fois. ROUGE avant le lot.
 describe('LIENS-APP — sans compte, la connexion ramène à la page du lien', () => {
   const retourRetenu = () => JSON.parse(mockRangement.get('coll-invitation-ville-retour') || 'null')?.token || null;
