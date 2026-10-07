@@ -128,6 +128,14 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock(/** @ty
   mockInputProps.push(props);
   return null;
 });
+// SITE-VILLE-FINITIONS (T19) : « De » et « À » d un blocage sont des selecteurs d heure ; meme releve.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, onChangeText: props.onChange });
+    return null;
+  },
+);
 /** @type {any[]} */
 const mockDateProps = [];
 jest.mock(

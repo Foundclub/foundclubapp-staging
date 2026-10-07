@@ -30,6 +30,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -575,24 +576,22 @@ function FormulaireDeFermeture({
         onChange={(/** @type {string} */ valeur) => setDebut(valeur)}
         value={debut}
       />
+      {/* SITE-VILLE-FINITIONS (T19) — les heures se CHOISISSENT, comme dans « Attribuer » et
+          « Modifier le créneau » (VILLE-T18A) : elles se tapaient au clavier. Valeur « HH:MM ». */}
       <View style={[Alignments.row, { gap: 12 }]}>
         <View style={{ flex: 1 }}>
-          <Input
-            density="compact"
+          <TimePickerInput
             label={t('collectiviteFermetures.form.de', 'De')}
-            onChangeText={(/** @type {string} */ valeur) => setHeureDebut(valeur.trim())}
+            onChange={(/** @type {string} */ valeur) => setHeureDebut(String(valeur || '').trim())}
             placeholder="09:00"
-            testID="fermeture-heure-debut"
             value={heureDebut}
           />
         </View>
         <View style={{ flex: 1 }}>
-          <Input
-            density="compact"
+          <TimePickerInput
             label={t('collectiviteFermetures.form.a', 'À')}
-            onChangeText={(/** @type {string} */ valeur) => setHeureFin(valeur.trim())}
+            onChange={(/** @type {string} */ valeur) => setHeureFin(String(valeur || '').trim())}
             placeholder="13:00"
-            testID="fermeture-heure-fin"
             value={heureFin}
           />
         </View>

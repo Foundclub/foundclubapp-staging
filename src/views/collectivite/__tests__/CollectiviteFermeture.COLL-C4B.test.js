@@ -136,6 +136,15 @@ jest.mock(
     return null;
   },
 );
+// SITE-VILLE-FINITIONS (T19) : « De » et « À » d un blocage sont des selecteurs d heure ; meme
+// releve, leur `onChange` se lit comme le `onChangeText` d un champ.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, composant: 'TimePickerInput', onChangeText: props.onChange });
+    return null;
+  },
+);
 jest.mock(
   '@/components/molecules/datePickerInput/DatePickerInput',
   () => function DatePickerInputMock(/** @type {any} */ props) {
@@ -592,4 +601,28 @@ test('VILLE-T18A fermer A : venue de la fiche de cette installation, on y revien
   expect(mockNavigation.goBack).toHaveBeenCalled();
   expect(mockNavigation.replace).not.toHaveBeenCalled();
   expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CollectiviteInstallation', expect.anything());
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10, tournée T19, site) — « Bloquer un créneau » : « De » et « À »
+// étaient des champs TEXTE à taper (« 09:00 »), alors qu « Attribuer » et « Modifier le créneau »
+// ont le sélecteur d heure depuis VILLE-T18A. Même sélecteur, même valeur « HH:MM ». ROUGE avant.
+test('SVF (3) BLOQUER : « De » et « À » se choisissent au sélecteur d heure, comme Attribuer', async () => {
+  mockParams = {
+    collectiviteId: 'ville-montrivage', date: '2026-10-03', endTime: '13:00', facilityId: 'gym-tilleuls', mode: 'bloquer', startTime: '09:00',
+  };
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [], clubsCount: 0, sessions: [], sessionsCount: 0,
+    },
+  });
+  await rendre();
+  expect(champ('De').composant).toBe('TimePickerInput');
+  expect(champ('À').composant).toBe('TimePickerInput');
+  expect(champ('De').value).toBe('09:00');
+  expect(champ('À').value).toBe('13:00');
+
+  await saisir('De', '10:30');
+  expect(previewFacilityClosure).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({
+    endTime: '13:00', kind: 'block', startTime: '10:30',
+  }));
 });
