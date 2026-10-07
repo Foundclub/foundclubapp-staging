@@ -6213,6 +6213,8 @@ export default {
       rouvrir: 'Rouvrir',
       rouvrirPrevient: 'Rouvrir prévient les mêmes clubs.',
       rouvrirQuestion: 'Rouvrir ? Les mêmes clubs seront prévenus.',
+      // VILLE-T18A (T18, G57b) — une fermeture qui n a prévenu aucun club.
+      rouvrirQuestionSansClub: 'Rouvrir ? Aucun club n’est à prévenir.',
       vide: 'Aucune fermeture prévue',
       // eslint-disable-next-line max-len
       videTexte: 'Fermer l’installation prévient les clubs qui y ont une séance ; rien n’est annulé à leur place.',

@@ -5825,6 +5825,7 @@ export default {
       rouvrir: 'Reopen',
       rouvrirPrevient: 'Reopening notifies the same clubs.',
       rouvrirQuestion: 'Reopen? The same clubs will be notified.',
+      rouvrirQuestionSansClub: 'Reopen? No club needs to be notified.',
       vide: 'No closure planned',
       // eslint-disable-next-line max-len
       videTexte: 'Closing the facility notifies the clubs that have a session there; nothing is cancelled for them.',
