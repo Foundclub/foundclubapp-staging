@@ -58,7 +58,7 @@ export const nameOfPollVoter = (profile) => (
  * anonyme, un message pas encore enregistré, ou tant que la lecture n'a pas abouti).
  * @param {string | number | null | undefined} messageId Le message du sondage.
  * @param {any} poll La composition du sondage.
- * @returns {Map<string, { avatar: { url: string } | null; documentId: string;
+ * @returns {Map<string, { avatar: { url: string } | null; deleted?: boolean; documentId: string;
  *   firstname: string; lastname: string }>} Les votants nommés, par identifiant.
  */
 export default function usePollVoterProfiles(messageId, poll) {
