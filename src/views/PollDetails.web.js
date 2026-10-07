@@ -8,6 +8,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   applyOptimisticPollVote,
   getPollTotalVotes,
+  getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -126,7 +127,8 @@ function PollDetails({ navigation, route }) {
   const optionSections = useMemo(() => {
     if (!Array.isArray(poll?.options)) return [];
     return poll.options.map((option, index) => ({
-      count: getPollVoters(option).length,
+      // SECU-SONDAGE-ANONYME — le compteur du serveur (un sondage anonyme ne nomme personne).
+      count: getPollVoteCount(option),
       id: String(option?.id || `option-${index}`),
       isSelected: getPollVoters(option).includes(String(userData?.documentId || '').trim()),
       label: String(
