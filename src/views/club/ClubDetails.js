@@ -114,6 +114,7 @@ import {
   pendingChildRequestKeys,
   resolveClubDetailsActionMatrix,
   resolveEmptyClubClaimGesture,
+  showsCityNewsBlock,
 } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
@@ -1735,6 +1736,14 @@ function ClubDetails({ navigation, route }) {
   const { data: mesEnfantsBruts } = useGetMyDeclaredChildren({
     enabled: Boolean(isAuthenticated),
   });
+  // VILLE-T18D 6 (« parent prevenu B ») — le bloc « De la Ville » : un membre, ou le parent d'un
+  // joueur mineur du club ; le serveur juge (can-read-club-news).
+  const afficheLeBlocDeLaVille = showsCityNewsBlock({
+    clubId,
+    enfants: mesEnfantsBruts,
+    isMember,
+    isParentRole: isAuthenticated && userData?.role?.name === USER_ROLES.parent,
+  });
   // ⛔ On ne remonte QUE des tranches : ni la matrice ni cette fiche n ont de
   // raison de manipuler le prenom ou la date de naissance d un mineur.
   const { childrenUnder13Count, minorChildrenCount } = useMemo(
@@ -3225,8 +3234,9 @@ function ClubDetails({ navigation, route }) {
             <>
               {/* COLL-C4A (02/10) — « De la Ville de … » : la dernière actualité de la Ville
                   d'un club rattaché, pour SES membres, et l'interrupteur D68. Rien pour un club
-                  rattaché à personne (le bloc ne s'affiche pas). */}
-              {isMember && clubId ? (
+                  rattaché à personne (le bloc ne s'affiche pas). VILLE-T18D 6 (« parent prévenu
+                  B ») : aussi pour le parent d'un joueur mineur du club ; le serveur juge. */}
+              {afficheLeBlocDeLaVille ? (
                 <BlocDeLaVille
                   clubId={String(clubId)}
                   encadrant={isClubStaffRole}
