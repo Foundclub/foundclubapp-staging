@@ -1039,9 +1039,10 @@ function FenetreDuSite({
 
 /**
  * MSG1W — UNE CONFIRMATION DU SITE (SPECS §4 : boite de 300, titre centre, « Annuler » au contour,
- * l action en rouge). Pour supprimer un message, retirer un membre, bloquer une personne.
+ * l action en rouge). Pour supprimer un message, retirer un membre, bloquer une personne,
+ * quitter un groupe (la question seule, sans texte, comme le telephone).
  * @param {{ id: string, libelleAction: string, onAnnuler: () => void, onConfirmer: () => void,
- *   texte: string, titre: string }} props - Les mots et les deux gestes.
+ *   texte?: string, titre: string }} props - Les mots et les deux gestes.
  * @returns {import('react').ReactElement} La confirmation.
  */
 function ConfirmationDuSite({
@@ -1060,7 +1061,7 @@ function ConfirmationDuSite({
       }}
     >
       <div
-        aria-describedby={`${id}-texte`}
+        aria-describedby={texte ? `${id}-texte` : undefined}
         aria-labelledby={`${id}-titre`}
         aria-modal="true"
         role="alertdialog"
@@ -1086,12 +1087,14 @@ function ConfirmationDuSite({
         >
           {titre}
         </h2>
-        <p
-          id={`${id}-texte`}
-          style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}
-        >
-          {texte}
-        </p>
+        {texte ? (
+          <p
+            id={`${id}-texte`}
+            style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}
+          >
+            {texte}
+          </p>
+        ) : null}
         <div
           style={{
             display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr', marginTop: 6,
@@ -1104,7 +1107,7 @@ function ConfirmationDuSite({
             onClick={onConfirmer}
             style={{
               ...STYLE_BOUTON_CONTOUR,
-              background: 'rgba(255, 90, 116, 0.16)',
+              background: withAlpha(PALETTE_DU_FIL.danger, 0.16),
               border: `1.5px solid ${PALETTE_DU_FIL.danger}`,
               color: PALETTE_DU_FIL.danger,
             }}
@@ -1220,6 +1223,19 @@ const STYLE_BOUTON_PLEIN = {
   background: PALETTE_DU_FIL.accent,
   border: 0,
   color: PALETTE_DU_FIL.encre,
+};
+
+/** Les gestes rouges du bas des infos du groupe (« Quitter le groupe », « Signaler le groupe »). */
+/** @type {import('react').CSSProperties} */
+const STYLE_BOUTON_ROUGE_DES_INFOS = {
+  background: 'transparent',
+  border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+  borderRadius: 14,
+  color: PALETTE_DU_FIL.danger,
+  cursor: 'pointer',
+  fontFamily: 'Montserrat-Bold, sans-serif',
+  fontSize: 15,
+  minHeight: 48,
 };
 
 /**
@@ -1351,6 +1367,7 @@ function Conversation({ navigation, route }) {
   const [infosOuvertes, setInfosOuvertes] = useState(false);
   const [nomEnEdition, setNomEnEdition] = useState(/** @type {string | null} */ (null));
   const [membreARetirer, setMembreARetirer] = useState(/** @type {any} */ (null));
+  const [departAConfirmer, setDepartAConfirmer] = useState(false);
   const [blocageAConfirmer, setBlocageAConfirmer] = useState(false);
 
   const {
@@ -3095,8 +3112,9 @@ function Conversation({ navigation, route }) {
     if (!infosOuvertes && !membreARetirer && !blocageAConfirmer) return undefined;
     const surTouche = (/** @type {KeyboardEvent} */ event) => {
       if (event.key !== 'Escape') return;
-      if (membreARetirer) {
+      if (membreARetirer || departAConfirmer) {
         setMembreARetirer(null);
+        setDepartAConfirmer(false);
         return;
       }
       setBlocageAConfirmer(false);
@@ -3105,7 +3123,7 @@ function Conversation({ navigation, route }) {
     };
     document.addEventListener('keydown', surTouche);
     return () => document.removeEventListener('keydown', surTouche);
-  }, [blocageAConfirmer, infosOuvertes, membreARetirer]);
+  }, [blocageAConfirmer, departAConfirmer, infosOuvertes, membreARetirer]);
 
   const enregistrerLeNom = useCallback(async () => {
     const nom = String(nomEnEdition || '').trim();
@@ -3138,6 +3156,27 @@ function Conversation({ navigation, route }) {
       setAnnonce(t('conversation.group.removeError', 'Impossible de retirer ce membre.'));
     }
   }, [chatId, membreARetirer, queryClient, removeGroupMember, t]);
+
+  // MSG1W (§3.16, decision d Adel `quitter maintenant`) — QUITTER LE GROUPE, pour tout membre,
+  // par la route du serveur 1B (contrat MESSAGERIE-1B §5.6), puis retour a la liste.
+  // ponytail: l appel est ecrit ici ; le telephone l isole dans chatService.leaveGroupChat
+  // (MSG1A f2a86c52, pas encore dans staging). Sortie : a la recolte de 1A, appeler
+  // leaveGroupChat(chatId) a la place de cette ligne.
+  const quitterLeGroupe = useCallback(async () => {
+    setDepartAConfirmer(false);
+    if (!chatId) return;
+    try {
+      await client.post(`/chats/${chatId}/leave`);
+      setInfosOuvertes(false);
+      await queryClient.invalidateQueries({ queryKey: ['chats'] });
+      navigation.navigate(RouteNames.Chat);
+    } catch {
+      setAnnonce(t(
+        'conversation.web.fil.quitterErreur',
+        'Impossible de quitter le groupe pour le moment.',
+      ));
+    }
+  }, [chatId, navigation, queryClient, t]);
 
   // Echap ferme la fenetre ouverte depuis le « + ».
   useEffect(() => {
@@ -5345,23 +5384,35 @@ function Conversation({ navigation, route }) {
               );
             })}
           </div>
+          {/* Decision d Adel `quitter maintenant` : pour TOUT membre, admin ou non. */}
+          <button
+            onClick={() => setDepartAConfirmer(true)}
+            style={STYLE_BOUTON_ROUGE_DES_INFOS}
+            type="button"
+          >
+            {t('conversation.web.fil.quitter', 'Quitter le groupe')}
+          </button>
           <button
             onClick={() => setAnnonce(texteDuSignalement)}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
-              borderRadius: 14,
-              color: PALETTE_DU_FIL.danger,
-              cursor: 'pointer',
-              fontFamily: 'Montserrat-Bold, sans-serif',
-              fontSize: 15,
-              minHeight: 48,
-            }}
+            style={STYLE_BOUTON_ROUGE_DES_INFOS}
             type="button"
           >
             {t('conversation.web.fil.signalerLeGroupe', 'Signaler le groupe')}
           </button>
         </FenetreDuSite>
+      ) : null}
+      {departAConfirmer ? (
+        <ConfirmationDuSite
+          id="msg1w-depart"
+          libelleAction={t('conversation.web.fil.quitterAction', 'Quitter')}
+          onAnnuler={() => setDepartAConfirmer(false)}
+          onConfirmer={quitterLeGroupe}
+          titre={t('conversation.web.fil.quitterConfirm', {
+            defaultValue: 'Quitter « {{name}} » ?',
+            name: conversationName,
+            ...SANS_ECHAPPEMENT,
+          })}
+        />
       ) : null}
       {membreARetirer ? (
         <ConfirmationDuSite

@@ -6959,6 +6959,11 @@ export default {
         nouvelleDiscussion: 'Nouvelle discussion',
         options: 'Plus d’options',
         plusDActions: 'Plus d’actions',
+        // Decision d Adel `quitter maintenant` (07/10) : les mots du telephone (MSG1A).
+        quitter: 'Quitter le groupe',
+        quitterAction: 'Quitter',
+        quitterConfirm: 'Quitter « {{name}} » ?',
+        quitterErreur: 'Impossible de quitter le groupe pour le moment.',
         renommer: 'Renommer le groupe',
         revenirEnBas: 'Revenir en bas',
         roleDirigeant: 'Dirigeant',
