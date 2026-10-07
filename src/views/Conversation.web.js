@@ -1141,6 +1141,63 @@ const STYLE_CHAMP_DE_FENETRE = {
   width: '100%',
 };
 
+/** MSG1W §3.5 — l icone de chaque entree du « + » (pastille ronde, comme la feuille du telephone). */
+const ICONES_DU_PLUS = {
+  contact: 'idCard',
+  document: 'fileArrowUp',
+  event: 'calendar',
+  // Le jeu de glyphes de l app n a ni photo ni repere : deux dessins au trait.
+  location: (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke={PALETTE_DU_FIL.accent}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  ),
+  photos: (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke={PALETTE_DU_FIL.accent}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <rect height="16" rx="2" width="18" x="3" y="4" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m21 16-5-5-9 9" />
+    </svg>
+  ),
+  poll: 'chartColumn',
+  proposal: 'calendarDays',
+};
+
+/**
+ * L icone d une entree du « + » : un glyphe de l app (nom), ou un dessin.
+ * @param {{ cle: string }} props - La clef de l entree.
+ * @returns {import('react').ReactElement | null} L icone.
+ */
+function IconeDuPlus({ cle }) {
+  /** @type {any} */
+  const icone = ICONES_DU_PLUS[/** @type {keyof typeof ICONES_DU_PLUS} */ (cle)];
+  if (typeof icone === 'string') {
+    return <GlyphIcon color={PALETTE_DU_FIL.accent} name={icone} size={18} />;
+  }
+  return icone || null;
+}
+
 /** MSG1W §3.2 — l icone de chaque action du menu (cles de messageActions.js). */
 const ICONES_DU_MENU = {
   copy: DESSIN_COPIER,
@@ -4570,21 +4627,40 @@ function Conversation({ navigation, route }) {
                             setMenuAjouterOuvert(false);
                             entree.action();
                           }}
+                          className="MSG1W-ligne-menu"
                           role="menuitem"
                           style={{
+                            alignItems: 'center',
                             background: 'transparent',
                             border: 0,
                             borderRadius: 10,
                             color: PALETTE_DU_FIL.texte,
                             cursor: 'pointer',
+                            display: 'flex',
                             fontFamily: 'Montserrat-Regular, sans-serif',
                             fontSize: 15,
-                            minHeight: 44,
-                            padding: '0 14px',
+                            gap: 12,
+                            minHeight: 48,
+                            padding: '0 10px',
                             textAlign: 'left',
                           }}
                           type="button"
                         >
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              alignItems: 'center',
+                              background: 'rgba(1, 179, 244, 0.16)',
+                              borderRadius: '50%',
+                              display: 'inline-flex',
+                              flexShrink: 0,
+                              height: 34,
+                              justifyContent: 'center',
+                              width: 34,
+                            }}
+                          >
+                            <IconeDuPlus cle={entree.cle} />
+                          </span>
                           {entree.libelle}
                         </button>
                       ))}
