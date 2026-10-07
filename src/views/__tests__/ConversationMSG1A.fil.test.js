@@ -14,7 +14,6 @@ import renderer, { act } from 'react-test-renderer';
 // accepte les messages (`chat-message.ts` ne restreint pas les groupes).
 // 🔴 ROUGE avant MSG1A : G1-1. 🟢 G1-2 tient la porte d'un vrai canal fermee.
 
-
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 let mockChatData;
 let mockMessagesPage;
@@ -35,8 +34,12 @@ jest.mock('react-native-gifted-chat', () => {
   return {
     Bubble: VueRN,
     Composer: VueRN,
+    // MSG1A — la bulle de texte rend le `MessageText` de GiftedChat dans son propre cadre,
+    // et la puce de date son `Day`.
+    Day: VueRN,
     GiftedChat: (/** @type {any} */ props) => { mockGiftedRenders.push(props); return null; },
     InputToolbar: VueRN,
+    MessageText: VueRN,
     Time: VueRN,
   };
 });
@@ -171,8 +174,8 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
 jest.mock('@/services/chat/chatQueriesCompat', () => ({
   // MSGREACT — les reactions emoji du fil. Aucune par defaut : les temoins de
   // cet ecran ne parlent pas de reactions, et une rangee vide ne se dessine pas.
-  useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatById: () => ({ data: mockChatData, isLoading: false }),
+  useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatMessages: () => ({
     data: { pages: [mockMessagesPage] },
     fetchNextPage: jest.fn(),
@@ -334,12 +337,160 @@ describe('MSG1A — G1 : on écrit dans un groupe', () => {
     expect(contientLeTexte(barre, LECTURE_SEULE)).toBe(false);
   });
 
-  test("G1-2 — un fil de CLUB lu par un joueur reste en lecture seule", () => {
+  test('G1-2 — un fil de CLUB lu par un joueur reste en lecture seule', () => {
     mockChatData = FIL_DE_CLUB;
     const { gifted } = monterLaConversation();
 
     const barre = gifted.renderInputToolbar({ text: '' });
 
     expect(contientLeTexte(barre, LECTURE_SEULE)).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MSG1A §3.1 — L'HABILLAGE DU FIL (SPECS.md §1), lu sur ce que GiftedChat recoit.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GROUPE_NOMME = {
+  documentId: 'chat-1',
+  groupAdmins: [{ documentId: 'karim' }],
+  groupName: 'Seniors 1',
+  participants: [
+    { documentId: 'moi', firstname: 'Adel' },
+    { documentId: 'karim', firstname: 'Karim' },
+    { documentId: 'lea', firstname: 'Léa' },
+  ],
+  type: 'group',
+};
+
+const TETE_A_TETE = {
+  documentId: 'chat-1',
+  participants: [{ documentId: 'moi', firstname: 'Adel' }, { documentId: 'karim', firstname: 'Karim' }],
+  type: 'whisper',
+};
+
+/**
+ * Un message au format GiftedChat.
+ * @param {string} id
+ * @param {string} auteur
+ * @param {string} quand
+ * @param {Record<string, any>} [extra]
+ * @returns {any} Le message.
+ */
+const msg = (id, auteur, quand, extra = {}) => ({
+  _id: id,
+  createdAt: new Date(quand),
+  documentId: id,
+  text: `Texte ${id}`,
+  user: { _id: auteur, name: auteur === 'karim' ? 'Karim Benali' : 'Adel F' },
+  ...extra,
+});
+
+/**
+ * Rend la bulle que l'ecran fabrique pour ce message.
+ * @param {any} gifted Les props de GiftedChat.
+ * @param {any} props Les props de bulle (currentMessage, voisins, position).
+ * @returns {any} L'arbre rendu.
+ */
+const rendreLaBulle = (gifted, props) => {
+  /** @type {any} */
+  let arbre;
+  act(() => { arbre = renderer.create(gifted.renderBubble(props)); });
+  aDemonter.push(() => { act(() => { arbre.unmount(); }); });
+  return arbre;
+};
+
+describe('MSG1A — §3.1 habillage du fil', () => {
+  /* eslint-disable global-require */
+  const BulleDuFil = require('@/components/molecules/bulleDuFil/BulleDuFil').default;
+  const MetaDuMessage = require('@/components/molecules/bulleDuFil/MetaDuMessage').default;
+  /* eslint-enable global-require */
+
+  beforeEach(() => {
+    mockGiftedRenders.length = 0;
+    mockChatData = GROUPE_NOMME;
+    mockMessagesPage = PAGE_VIDE;
+  });
+
+  afterEach(() => {
+    while (aDemonter.length) {
+      /** @type {any} */ (aDemonter.pop())();
+    }
+  });
+
+  test('H1 — groupe : la 1re bulle porte le NOM, la derniere la QUEUE', () => {
+    const { gifted } = monterLaConversation();
+    const a1 = msg('a1', 'karim', '2026-10-07T10:00:00');
+    const a2 = msg('a2', 'karim', '2026-10-07T10:01:00');
+
+    const premiere = rendreLaBulle(gifted, { currentMessage: a1, nextMessage: a2, position: 'left' });
+    const derniere = rendreLaBulle(gifted, { currentMessage: a2, position: 'left', previousMessage: a1 });
+
+    const cadre1 = premiere.root.findByType(BulleDuFil).props;
+    const cadre2 = derniere.root.findByType(BulleDuFil).props;
+    expect(cadre1.nom).toBe('Karim Benali');
+    expect(cadre1.estDernier).toBe(false);
+    expect(cadre2.nom).toBe('');
+    expect(cadre2.estDernier).toBe(true);
+  });
+
+  test('H2 — le texte garde le moteur de liens de GiftedChat, avec la place de l heure', () => {
+    const { gifted } = monterLaConversation();
+    const arbre = rendreLaBulle(gifted, {
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'), position: 'left',
+    });
+
+    const texte = arbre.root.findAll((n) => n.props?.currentMessage && n.props?.textStyle)[0];
+    expect(texte.props.currentMessage.text).toMatch(/^Texte a1\u00A0+$/);
+  });
+
+  test('H3 — heure et coches DANS la bulle ; mon message en cours d envoi le dit', () => {
+    const { gifted } = monterLaConversation();
+    const arbre = rendreLaBulle(gifted, {
+      currentMessage: msg('m1', 'moi', '2026-10-07T10:02:00', { pending: true }), position: 'right',
+    });
+
+    const meta = arbre.root.findByType(MetaDuMessage).props;
+    expect(meta.estAMoi).toBe(true);
+    expect(meta.etat).toBe('enCours');
+    expect(meta.heure).toBe('10:02');
+  });
+
+  test('H4 — tete-a-tete : ni nom au-dessus des bulles, ni avatar', () => {
+    mockChatData = TETE_A_TETE;
+    const { gifted } = monterLaConversation();
+    const arbre = rendreLaBulle(gifted, {
+      currentMessage: msg('a1', 'karim', '2026-10-07T10:00:00'), position: 'left',
+    });
+
+    expect(arbre.root.findByType(BulleDuFil).props.nom).toBe('');
+    expect(gifted.renderAvatar).toBeNull();
+  });
+
+  test('H5 — groupe : avatar de 28, puces de date, notices, « revenir en bas » au-dela de 160', () => {
+    const { gifted } = monterLaConversation();
+
+    expect(typeof gifted.renderAvatar).toBe('function');
+    expect(typeof gifted.renderDay).toBe('function');
+    expect(gifted.isScrollToBottomEnabled).toBe(true);
+    expect(gifted.scrollToBottomOffset).toBe(160);
+    expect(gifted.imageStyle.left).toEqual(expect.objectContaining({ height: 28, width: 28 }));
+  });
+
+  test('H6 — une ligne sans auteur devient une notice discrete', () => {
+    const { gifted } = monterLaConversation();
+    const notice = gifted.renderSystemMessage({ currentMessage: { text: 'Karim a rejoint le canal' } });
+
+    expect(contientLeTexte(notice, 'Karim a rejoint le canal')).toBe(true);
+    expect(gifted.renderSystemMessage({ currentMessage: { text: '  ' } })).toBeNull();
+  });
+
+  test('H7 — l en-tete d un groupe nomme ses membres, puis « Vous »', () => {
+    const { ecran } = monterLaConversation();
+
+    const sousTitre = ecran.root.findAll(
+      (n) => n.props?.testID === 'conversation-sous-titre' && typeof n.type === 'string',
+    )[0];
+    expect(sousTitre.props.children).toBe('Karim, Léa, Vous');
   });
 });

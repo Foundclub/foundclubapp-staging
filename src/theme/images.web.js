@@ -33,6 +33,8 @@ export const images = {
   flag: createAssetSource('../assets/icons/flag.png'),
   home: createAssetSource('../assets/icons/home.png'),
   logo: createAssetSource('../assets/pictures/logo.png'),
+  // MSG1A (§3.1) — le motif sportif en filigrane du fil (pack messagerie, tuile de 240).
+  motifDuFil: createAssetSource('../assets/pictures/motif-du-fil.png'),
   roundAvatar: createAssetSource('../assets/pictures/avatar-round.png'),
   // COLL-ACCUEIL (01/10) — l onglet « Demandes » de l espace de la Ville (ICONES, « Icone ok »).
   division01: createAssetSource('../assets/league/divisions/Div-1.png'),
