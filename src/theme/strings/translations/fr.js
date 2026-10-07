@@ -2064,10 +2064,16 @@ export default {
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
     // D61 (29/09) — console super-admin : code INSEE ou SIREN deja pris (409)
     COLLECTIVITE_ALREADY_EXISTS: 'Une collectivité porte déjà ce code INSEE ou ce SIREN.',
+    // VILLE-INVITER-CLUB (07/10) — la demande de la Ville et celles venues de son lien (409, 403)
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_ATTACH_REQUEST_PENDING: 'Ce club demande déjà à rejoindre la Ville : acceptez sa demande.',
     // D61 (29/09) — console super-admin : club deja rattache ailleurs (409), club absent
     // eslint-disable-next-line max-len
     COLLECTIVITE_CLUB_ALREADY_ATTACHED: 'Ce club est déjà rattaché à une autre collectivité : détache-le d’abord.',
     COLLECTIVITE_CLUB_NOT_FOUND: 'Ce club est introuvable.',
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_CLUB_WITHOUT_LEADER: 'Ce club n’a aucun dirigeant sur FoundClub : invitez-le par le lien de la Ville.',
+    COLLECTIVITE_DEMO_FORBIDDEN: 'La Ville de démonstration n’envoie aucune demande.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Vous ne gérez pas cette collectivité.',
     // eslint-disable-next-line max-len
@@ -2075,7 +2081,12 @@ export default {
     // eslint-disable-next-line max-len
     COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : le nom, le type, les horaires (HH:MM) ou la capacité.',
     // D61 (29/09) — console super-admin : la collectivite visee n existe pas (ou plus)
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_INVITATION_ANSWERED_BY_FOUNDCLUB: 'L’équipe FoundClub rattache les clubs qui le demandent.',
+    COLLECTIVITE_INVITATION_DECIDED: 'Cette demande a déjà reçu sa réponse.',
     COLLECTIVITE_NOT_FOUND: 'Cette collectivité est introuvable : elle a peut-être été supprimée.',
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_PROPOSAL_REMIND_TOO_SOON: 'Une relance par jour : le club a été prévenu il y a moins de 24 heures.',
     COLLECTIVITE_USER_NOT_FOUND: 'Ce compte est introuvable.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
@@ -5352,7 +5363,7 @@ export default {
       // eslint-disable-next-line max-len
       linkHint: 'Le même lien sert à tous les clubs. Vous pouvez le changer à tout moment : l’ancien ne marche plus.',
       // eslint-disable-next-line max-len
-      linkIntro: 'Un club n’est pas encore sur FoundClub ? Envoyez-lui le lien de {{ville}} : il inscrit son club, puis l’équipe FoundClub le rattache à la Ville.',
+      linkIntro: 'Un club n’est pas encore sur FoundClub ? Envoyez-lui le lien de {{ville}} : il inscrit son club et demande à vous rejoindre ; vous acceptez sa demande dans vos clubs.',
       linkLabel: 'Lien d’invitation de la Ville',
       send: 'Transmettre à l’équipe FoundClub',
       // eslint-disable-next-line max-len
@@ -5384,13 +5395,13 @@ export default {
       // COLL-ACCUEIL-BIS (03/10, planche 38) : la demande part toute seule à la création du club.
       noClub: 'Tu ne diriges aucun club sur FoundClub. Inscris ton club : sa demande de rattachement partira toute seule.',
       onlyYours: 'Seuls les clubs dont tu es dirigeant sont proposés.',
-      outsideBody: 'L’équipe FoundClub vérifiera avec la Ville avant de le rattacher.',
+      outsideBody: 'La Ville le verra avant de répondre à ta demande.',
       outsideTitle: 'Ce club n’est pas à {{commune}}',
       pick: 'Quel club veux-tu rattacher à {{ville}} ?',
       register: 'Inscrire mon club',
       request: 'Demander le rattachement',
       // eslint-disable-next-line max-len
-      sentBody: 'L’équipe FoundClub vérifie que ton club est bien à {{commune}}, puis le rattache à la Ville. Tu seras prévenu.',
+      sentBody: 'La Ville accepte ou refuse ta demande. Tu seras prévenu, et tu suis sa réponse sur la page de ton club.',
       sentMeanwhile: 'D’ici là, ton club fonctionne déjà normalement.',
       sentTitle: 'Demande envoyée',
       title: '{{ville}} t’invite à inscrire ton club sur FoundClub',
@@ -5400,7 +5411,7 @@ export default {
       one: 'Dirigeant : {{noms}}',
     },
     list: {
-      emptyHint: 'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Invitez-le.',
+      emptyHint: 'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
       error: 'Les clubs n’ont pas pu être lus.',
       invite: 'Inviter un club absent de FoundClub',
       inviteDesktop: 'Inviter un club absent',
@@ -5453,7 +5464,7 @@ export default {
       delier: 'Délier ce club',
       dirigeantsPrevenus: 'Ses dirigeants sont prévenus.',
       // eslint-disable-next-line max-len
-      dit: 'Une demande de rattachement vient d’un dirigeant qui a ouvert le lien de sa Ville. Une invitation « Par FoundClub » vient d’une mairie : le club n’est pas encore inscrit. Vérifie, puis rattache.',
+      dit: 'Une demande de rattachement vient d’un dirigeant qui a ouvert le lien de sa Ville : la Ville l’accepte ou la refuse elle-même, et tu peux encore rattacher ou détacher. Une invitation « Par FoundClub » vient d’une mairie : le club n’est pas encore inscrit. Vérifie, puis rattache.',
       entete: 'Rattachements',
       // eslint-disable-next-line max-len
       horsCommune: 'Hors de la commune : vérifie que le club joue bien à {{ville}} avant de le rattacher.',
@@ -5461,10 +5472,16 @@ export default {
       inscrit: 'Inscrit sur FoundClub : {{club}}',
       ongletFaits: 'Rattachés ({{nombre}})',
       ongletFoundClub: 'Par FoundClub ({{nombre}})',
+      // VOIE 3 (« collectivité A », 07/10) : les pistes « Prévenir ma mairie », pour les agents.
+      ongletPistes: 'Pistes ({{nombre}})',
       ongletRattachements: 'Rattachements ({{nombre}})',
+      pisteCommune: 'Mairie à contacter : {{commune}}',
+      pisteLe: 'Signalée par un dirigeant le {{date}}',
+      pisteRattache: 'Rattaché depuis à une collectivité : rien à faire.',
       pourVille: 'Pour {{ville}} · le {{date}}',
       rattacheA: 'Rattaché à {{ville}}',
       rattacher: 'Rattacher à {{ville}}',
+      refuseeParLaVille: 'Refusée par {{ville}}',
       relancee_one: 'Relancée {{count}} fois, le {{date}}',
       relancee_other: 'Relancée {{count}} fois, la dernière le {{date}}',
       relie: 'Demande reliée à {{club}}.',
@@ -5474,6 +5491,7 @@ export default {
       toutesLesVilles: 'Voir les demandes de toutes les Villes',
       videFaits: 'Aucun club rattaché par ces demandes pour l’instant.',
       videFoundClub: 'Aucune invitation « Par FoundClub » en attente.',
+      videPistes: 'Aucune piste « Prévenir ma mairie » pour l’instant.',
       videRattachements: 'Aucune demande de rattachement en attente.',
     },
     fenetres: {
@@ -5609,6 +5627,116 @@ export default {
       colonneIssue: 'Issue',
       colonneLe: 'Le',
       colonnePersonne: 'Personne',
+    },
+  },
+  // VILLE-INVITER-CLUB (07/10/2026) — le rattachement dans les deux sens (« club A » et « lien A »
+  // d'Adel) : la Ville cherche un club déjà sur FoundClub et lui envoie sa demande, elle juge
+  // celles venues de son lien ; le club répond et suit ses demandes. La mairie est vouvoyée
+  // (`ajouter`, `add`, `demandes`, `ville`), le club tutoyé (`club`).
+  collectiviteRattachement: {
+    add: {
+      button: 'Ajouter un club',
+      tile: 'Ajouter un club déjà sur FoundClub',
+    },
+    ajouter: {
+      acceptRequest: 'Accepter sa demande',
+      attached: 'Déjà rattaché à la Ville',
+      communeHint: 'Sans texte : les clubs de votre commune.',
+      elsewhere: 'Rattaché à une autre collectivité',
+      // eslint-disable-next-line max-len
+      empty: 'Aucun club trouvé. Il n’est peut-être pas encore sur FoundClub : invitez-le par le lien.',
+      hasLeader: 'Un dirigeant est sur FoundClub',
+      // eslint-disable-next-line max-len
+      intro: 'Cherchez le club par son nom. Ses dirigeants reçoivent votre demande et l’acceptent ou la refusent : accepté, il est rattaché à la Ville.',
+      inviteByLink: 'Inviter par le lien',
+      loading: 'Recherche…',
+      // eslint-disable-next-line max-len
+      noLeader: 'Aucun dirigeant sur FoundClub : personne ne pourrait accepter. Invitez-le par le lien.',
+      outside: 'Hors de la commune',
+      refused: 'Le club a refusé votre demande',
+      requested: 'Ce club demande déjà à vous rejoindre',
+      resend: 'Renvoyer la demande',
+      searchLabel: 'Nom du club',
+      searchPlaceholder: 'Le nom du club',
+      send: 'Envoyer la demande',
+      sent: 'Demande envoyée',
+      tab: 'Déjà sur FoundClub',
+      title: 'Ajouter un club déjà sur FoundClub',
+    },
+    club: {
+      accept: 'Accepter',
+      accepted: '{{sujet}} a accepté ta demande.',
+      attached: 'Ton club est rattaché à {{ville}}.',
+      kicker: 'Rattachement à la Ville',
+      pending: 'Ta demande de rattachement à {{ville}} attend sa réponse.',
+      // eslint-disable-next-line max-len
+      proposalGains: 'Rattaché, ton club voit les installations et les créneaux de la Ville, peut y demander des créneaux et reçoit ses actualités.',
+      // eslint-disable-next-line max-len
+      proposalOffer: 'Avec {{ville}}, ton club reçoit l’offre Club de FoundClub, offerte par la Ville.',
+      proposalTitle: '{{sujet}} propose de rattacher ton club',
+      refuse: 'Refuser',
+      refuseConfirm: 'Refuser la demande de {{ville}} ? Elle ne pourra pas te la renvoyer.',
+      refused: '{{sujet}} n’a pas accepté ta demande de rattachement.',
+      refuseYes: 'Oui, refuser',
+      youAccepted: 'Tu as accepté la demande de {{ville}}.',
+      youRefused: 'Tu as refusé la demande de {{ville}}.',
+    },
+    demandes: {
+      accept: 'Accepter',
+      cancel: 'Annuler la demande',
+      fromCity: 'Votre demande',
+      fromClub: 'Demande du club',
+      refuse: 'Refuser',
+      refuseConfirm: 'Refuser la demande de {{club}} ?',
+      refuseYes: 'Oui, refuser',
+      remind: 'Relancer',
+      resend: 'Renvoyer la demande',
+      title: 'Demandes de rattachement',
+    },
+    // VOIE 3 (« collectivité A », 07/10) — « Ma collectivité », dans « Gérer mon club » (« tu »).
+    ma: {
+      acceptProposal: 'Accepter sa demande',
+      attachedHere: 'Ton club y est rattaché',
+      communeLabel: 'Ta commune',
+      communePlaceholder: 'Le nom de ta commune',
+      elsewhere: 'Ton club est rattaché à une autre collectivité',
+      empty: 'Aucune collectivité trouvée.',
+      inCommune: 'Dans ta commune',
+      // eslint-disable-next-line max-len
+      intro: 'Rattaché à sa Ville, ton club voit ses installations et ses créneaux, peut y demander des créneaux et reçoit ses actualités. Son planning reste entre la Ville et ses clubs.',
+      leadDone: 'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      leadIntro: 'Préviens ta mairie : l’équipe FoundClub la contactera de ta part.',
+      missingTitle: 'Ta collectivité n’est pas sur FoundClub ?',
+      notify: 'Prévenir ma mairie',
+      proposes: 'Elle te propose déjà le rattachement',
+      refused: 'Elle a refusé ta demande',
+      request: 'Demander le rattachement',
+      requestAgain: 'Demander de nouveau',
+      row: 'Ma collectivité',
+      rowPending: 'Demande en cours',
+      rowProposal: 'Une Ville te propose',
+      rowSearch: 'Rechercher',
+      searchHint: 'Sans texte : celle de ta commune.',
+      searchLabel: 'Nom de la collectivité',
+      searchPlaceholder: 'Ville, communauté…',
+      searchTitle: 'Rechercher ma collectivité',
+      sent: 'Demande envoyée',
+      title: 'Ma collectivité',
+    },
+    ville: {
+      accepted: 'Acceptée',
+      acceptedLine: 'Acceptée, mais le club n’est pas (ou plus) rattaché.',
+      attached: 'Rattaché',
+      attachedElsewhere: 'Ce club a été rattaché à une autre collectivité entre-temps.',
+      attachedLine: 'Il apparaît dans vos clubs.',
+      outside: 'Il n’est pas dans la commune.',
+      pending: 'En attente',
+      pendingProposal: 'Envoyée au club : ses dirigeants acceptent ou refusent.',
+      pendingRequest: 'Le club demande à rejoindre la Ville.',
+      refused: 'Refusée',
+      refusedByClub: 'Le club a refusé votre demande.',
+      refusedByYou: 'Vous avez refusé sa demande.',
+      toAnswer: 'À traiter',
     },
   },
   // COLL-C2B (02/10) — installations, creneaux de saison et planning, cote mairie.

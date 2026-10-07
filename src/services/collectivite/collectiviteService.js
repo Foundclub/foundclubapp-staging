@@ -482,6 +482,18 @@ export const getAdminCollectiviteInvitations = async () => {
 };
 
 /**
+ * VILLE-INVITER-CLUB, VOIE 3 (« collectivité A », 07/10) — les PISTES « Prévenir ma mairie » : un
+ * dirigeant dont la collectivité n'est pas sur FoundClub l'a signalée (le club, sa commune, son
+ * contact général). Pour l'équipe FoundClub et ses agents commerciaux.
+ * @returns {Promise<any>} `{ data: [{ documentId, club, communeCode, communeName, createdAt,
+ *   attached }] }`.
+ */
+export const getAdminCollectiviteLeads = async () => {
+  const response = await client.get('/superadmin/collectivite-leads');
+  return response.data;
+};
+
+/**
  * Relie une demande « Par FoundClub » au club qui s est inscrit depuis (ou la delie, avec
  * `clubId` vide : une erreur de liaison se corrige).
  * @param {{ clubId?: string | null, invitationId: string }} params - documentIds.
