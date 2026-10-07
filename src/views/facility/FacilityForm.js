@@ -69,6 +69,12 @@ const RESERVES_AU_CLUB = { 'Club House': true, 'Salle vidéo': true };
 const TYPES_DE_MAIRIE = FACILITY_TYPES.filter(
   (type) => !(/** @type {Record<string, boolean>} */ (RESERVES_AU_CLUB))[type.value],
 );
+// VILLE-INSTALLATION (07/10) — la feuille « Type » a une HAUTEUR DECLAREE. Taillee sur ses 11
+// lignes (~790 pt), elle montait jusqu a son plafond (encoche + 20), sous la fleche de retour de
+// l ecran, et sa zone defilante ne descendait pas jusqu a la derniere ligne (essai d Adel, 2.6.70 ;
+// piege BottomModal sans `snapPoints`, cf. D19). 78 % : la hauteur des listes de choix
+// d AutocompleteSelect. Temoin : __tests__/FacilityForm.VILLE-INSTALLATION.feuilleType.test.js.
+const FEUILLE_TYPE_HAUTEUR = ['78%'];
 // D66, contrat C2A §8 : un nom par plateau, court (le cycle de vie du serveur refuse au-dela).
 const PLATEAU_NOM_MAX = 40;
 const LETTRES_DE_PLATEAU = 'ABCDEFGHIJ';
@@ -885,6 +891,7 @@ function FacilityForm() {
     <BottomModal
       close={() => setFeuilleTypeOuverte(false)}
       isVisible={feuilleTypeOuverte}
+      snapPoints={FEUILLE_TYPE_HAUTEUR}
       webPresentation="dialog"
     >
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 8 }]}>
