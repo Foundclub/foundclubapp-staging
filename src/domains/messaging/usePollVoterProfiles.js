@@ -31,7 +31,7 @@ const POLL_VOTERS_STALE_MS = 60 * 1000;
 export const listPollVoterIdsToName = (poll) => {
   if (!poll || poll.type !== 'poll' || poll.isAnonymous) return [];
   const ids = new Set();
-  (Array.isArray(poll.options) ? poll.options : []).forEach((option) => {
+  (Array.isArray(poll.options) ? poll.options : []).forEach((/** @type {any} */ option) => {
     getPollVoters(option).forEach((voterId) => ids.add(voterId));
   });
   return [...ids].sort();
@@ -70,7 +70,8 @@ export default function usePollVoterProfiles(messageId, poll) {
 
   return useMemo(() => {
     const profiles = new Map();
-    (Array.isArray(data?.data) ? data.data : []).forEach((profile) => {
+    const voters = data?.data;
+    (Array.isArray(voters) ? voters : []).forEach((profile) => {
       const voterId = String(profile?.documentId || '').trim();
       if (voterId) profiles.set(voterId, profile);
     });
