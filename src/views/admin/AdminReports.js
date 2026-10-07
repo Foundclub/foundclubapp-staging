@@ -55,7 +55,7 @@ const STATUS_FILTERS = [
   },
   {
     get label() {
-      return i18next.t('adminReports.filters.resolved', 'Resolus');
+      return i18next.t('adminReports.filters.resolved', 'Résolus');
     },
     value: 'resolved',
   },
@@ -288,7 +288,7 @@ function AdminReports() {
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {filteredReports.length}
               {' '}
-              {t('adminReports.shownCount', 'signalement(s) affiche(s)')}
+              {t('adminReports.shownCount', 'signalement(s) affiché(s)')}
             </Text>
           </View>
         )}

@@ -1799,7 +1799,7 @@ function EventEdit({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {t(
                   'eventEdit.featuringRequestFromEventPage',
-                  "La demande de mise a la une se fait depuis la fiche de l'evenement une fois enregistre.",
+                  "La demande de mise à la une se fait depuis la fiche de l'événement une fois enregistré.",
                 )}
               </Text>
             </View>

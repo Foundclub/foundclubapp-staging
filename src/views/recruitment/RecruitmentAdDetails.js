@@ -145,7 +145,7 @@ const getParticipationStatusMeta = (/** @type {any} */ status, /** @type {any} *
     return {
       backgroundColor: `${colors.success500}18`,
       borderColor: `${colors.success500}45`,
-      label: i18next.t('recruitmentAdDetails.status.accepted', 'Accepte'),
+      label: i18next.t('recruitmentAdDetails.status.accepted', 'Accepté'),
       textColor: colors.success500,
     };
   }
