@@ -275,8 +275,12 @@ jest.mock('@/services/clubRequest/clubRequestService', () => ({
   getPendingClubCreationRequests: jest.fn(() => Promise.resolve([])),
 }));
 
+// VILLE-T18C (07/10) — les installations du contexte, reglables par temoin (club, Ville).
+let mockInstallations = [];
 jest.mock('@/services/facility/facilityQueries', () => ({
-  useClubFacilityContext: () => ({ data: { allFacilities: [], cmId: null }, isLoading: false }),
+  useClubFacilityContext: () => ({
+    data: { allFacilities: mockInstallations, cmId: null }, isLoading: false,
+  }),
 }));
 
 jest.mock('@/services/facility/facilityService', () => ({
@@ -519,6 +523,7 @@ const boutonDeConfirmation = (index = 0) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockHasClubAccess.mockReturnValue(true);
+  mockInstallations = [];
 
   mockUserData = {
     documentId: 'u-1',
@@ -1349,5 +1354,37 @@ describe('ECRAN18-ENTETE · l en-tête compact de « Gérer mon club » sur ordi
 
     expect(enTete(arbre)).toHaveLength(0);
     expect(texteDe(arbre.root)).not.toContain('Gestion du club');
+  });
+});
+
+// 🏟️ VILLE-T18C (07/10) — point 5, tournée T18 (D01a) : la rangée « Installations » disait « 5 »
+// pour 1 installation du club et 4 de la Ville (planche 40, état 1 : « 1 + 3 de la Ville », lu
+// « Installations : 1 au club et 3 de la Ville »). Les deux nombres se disent séparément, comme la
+// liste des installations (TEXTES-COLLECTIVITES). Sans installation de la Ville : un seul nombre.
+// ROUGE avant le lot.
+describe('VILLE-T18C point 5 — « Installations » : celles du club, puis celles de la Ville', () => {
+  const installation = (/** @type {string} */ id, /** @type {string} */ ownerType) => ({
+    documentId: id,
+    name: id,
+    ownerName: ownerType === 'collectivite' ? 'Ville de Montrivage' : '',
+    ownerType,
+  });
+
+  it('1 au club et 4 de la Ville : « 1 + 4 de la Ville », dit en entier au lecteur d’écran', () => {
+    mockInstallations = [
+      installation('salle-annexe', 'club'),
+      installation('gymnase', 'collectivite'),
+      installation('dojo', 'collectivite'),
+      installation('stade', 'collectivite'),
+      installation('t18', 'collectivite'),
+    ];
+    const rangee = pressableAvecTexte(monter(), 'Installations');
+    expect(texteDe(rangee)).toContain('1 + 4 de la Ville');
+    expect(rangee.props.accessibilityLabel).toBe('Installations, 1 au club et 4 de la Ville');
+  });
+
+  it('sans installation de la Ville : un seul nombre, comme avant', () => {
+    mockInstallations = [installation('salle-annexe', 'club'), installation('terrain', 'club')];
+    expect(pressableAvecTexte(monter(), 'Installations, 2')).toBeDefined();
   });
 });

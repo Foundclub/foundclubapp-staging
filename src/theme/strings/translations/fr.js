@@ -2802,6 +2802,9 @@ export default {
         coachAllowed: 'Délégation',
         ownerOnly: 'Dirigeant',
       },
+      // VILLE-T18C (07/10) — la rangée « Installations » (planche 40, tournée T18 D01a).
+      installationsAvecVille: '{{club}} + {{ville}} de la Ville',
+      installationsAvecVilleDit: '{{club}} au club et {{ville}} de la Ville',
       owner: 'dirigeant',
       owners: 'dirigeants',
       rows: {
@@ -5911,6 +5914,7 @@ export default {
       entrainementAnnule: 'l’entraînement est annulé',
       // VILLE-T18C (07/10) — une série en cours d’envoi (tournée T18, D09b).
       envoiEnCours: 'Envoi en cours : {{fait}} sur {{total}} dates envoyées. Reste sur cet écran.',
+      // eslint-disable-next-line max-len
       envoiEnCoursAttends: 'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
       envoiEnCoursTitre: 'Envoi en cours',
       envoyee: 'Demande envoyée à la {{ville}}',
@@ -5936,11 +5940,11 @@ export default {
       ouvre: 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.',
       posee: 'C’est posé : c’est dans ton créneau',
       quandMeme: 'Tu peux demander quand même : la mairie décidera.',
+      quiDecide: 'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
       // VILLE-T18C (07/10) — Retour sur une saisie modifiée (tournée T18, D07).
       quitter: 'Quitter',
       quitterPerdu: 'Ce que tu as saisi sera perdu.',
       quitterTitre: 'Quitter sans envoyer ?',
-      quiDecide: 'La {{ville}} accepte ou refuse ; tu reçois sa réponse en notification.',
       ratees: '{{nombre}} date(s) n’ont pas pu être envoyées : réessaie depuis ton planning.',
       rester: 'Rester',
       serieCompte: '{{nombre}} dates, jusqu’au {{jour}}.',
@@ -6002,9 +6006,9 @@ export default {
       poignee: 'Fermer la fenêtre',
       prevenuDemandeur: '{{personne}} ({{club}}), qui demande',
       prevenusDejaLa: 'et les clubs déjà là : {{clubs}}',
+      refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
       // eslint-disable-next-line max-len
       refusEnCours: 'Refus des {{nombre}} dates en cours : patientez quelques secondes, la fenêtre se fermera seule.',
-      refusAideSerie: 'Le club reçoit votre motif ; les entraînements de la série sont annulés.',
       refuserEtAnnuler: 'Refuser et annuler l’entraînement',
       refuserSerie: 'Refuser la série',
       refuserSerieEtAnnuler: 'Refuser et annuler les entraînements',

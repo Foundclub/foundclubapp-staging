@@ -2569,6 +2569,9 @@ export default {
         coachAllowed: 'Delegated',
         ownerOnly: 'Club manager',
       },
+      // VILLE-T18C (07/10) — the « Facilities » row (board 40, round T18 D01a).
+      installationsAvecVille: '{{club}} + {{ville}} from the town',
+      installationsAvecVilleDit: '{{club}} at the club and {{ville}} from the town',
       owner: 'club manager',
       owners: 'club managers',
       rows: {
@@ -5562,11 +5565,11 @@ export default {
       ouvre: 'The facility opens at {{heure}}. Start at {{heure}}, or later.',
       posee: 'Done: it is in your slot',
       quandMeme: 'You can still ask: the town hall will decide.',
+      quiDecide: '{{ville}} accepts or refuses; you get its answer as a notification.',
       // VILLE-T18C (07/10) — Back on a changed form (round T18, D07).
       quitter: 'Leave',
       quitterPerdu: 'What you entered will be lost.',
       quitterTitre: 'Leave without sending?',
-      quiDecide: '{{ville}} accepts or refuses; you get its answer as a notification.',
       ratees: '{{nombre}} date(s) could not be sent: try again from your planning.',
       rester: 'Stay',
       serieCompte: '{{nombre}} dates, until {{jour}}.',
@@ -5604,7 +5607,6 @@ export default {
       siRefusAnnulee: 'If the town hall refuses, the session will be cancelled.',
       // VILLE-T18C (07/10, round T18 D07c) — set at once: why (the town management).
       tuGeres: 'You manage this facility for the town: your training will be set right away, no request.',
-      // eslint-disable-next-line max-len
       tuGeresComplet: 'You manage this facility for the town: your training will be set right away, even when full.',
     },
     erreur: {
@@ -5613,7 +5615,6 @@ export default {
     fenetre: {
       accepterSerie: 'Accept the series',
       // VILLE-T18C (07/10) — deciding a series: what is being written, while waiting (T18, G49c).
-      // eslint-disable-next-line max-len
       accordEnCours: 'Accepting {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       demandePar: 'Requested by {{personne}}',
       depasse: '{{equipes}} for {{places}} at that time.',
@@ -5623,9 +5624,8 @@ export default {
       poignee: 'Close the window',
       prevenuDemandeur: '{{personne}} ({{club}}), who asks',
       prevenusDejaLa: 'and the clubs already there: {{clubs}}',
-      // eslint-disable-next-line max-len
-      refusEnCours: 'Refusing {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       refusAideSerie: 'The club receives your reason; the trainings of the series are cancelled.',
+      refusEnCours: 'Refusing {{nombre}} dates: please wait a few seconds, the window will close by itself.',
       refuserEtAnnuler: 'Refuse and cancel the training',
       refuserSerie: 'Refuse the series',
       refuserSerieEtAnnuler: 'Refuse and cancel the trainings',
