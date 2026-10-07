@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { toTimeInput } from '@/domains/collectivite/collectiviteDisplay';
 import { seasonSlotErrorMessage } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
@@ -59,9 +58,6 @@ import {
 // cartes des installations y lisent aussi le libelle.
 import { FACILITY_TYPES, getFacilityTypeLabel } from '@/utils/facilityTypes';
 
-// COLL1C : un horaire d ouverture tel qu un agent le tape (« 08:00 »).
-const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
-
 // COLL-C2B (02/10) — design P4-form, ecran 2 : la feuille « Type » d une MAIRIE propose ses 11
 // types ; « Salle video » et « Club House » sont des types de club. Ecrits en NOMS DE PROPRIETE :
 // ce sont des valeurs du serveur (meme raison que dans utils/facilityTypes).
@@ -79,18 +75,6 @@ const FEUILLE_TYPE_HAUTEUR = ['78%'];
 const PLATEAU_NOM_MAX = 40;
 const LETTRES_DE_PLATEAU = 'ABCDEFGHIJ';
 
-/**
- * Un horaire facultatif « HH:MM » (COLL1C, mode collectivite).
- * @returns {import('joi').StringSchema} La regle.
- */
-const buildTimeRule = () => Joi.string().allow('').pattern(HEURE).optional()
-  .messages({
-    'string.pattern.base': i18next.t(
-      'facilityForm.validation.timeFormat',
-      'Format attendu : HH:MM (ex. 08:00)',
-    ),
-  });
-
 // I18N-4 : le schema est construit a chaque rendu -- ses messages sont lus dans la langue
 // courante (un schema de module les figeait dans celle du demarrage).
 // TEXTES-COLLECTIVITES (01/10, « ton A ») : en mode collectivite, la mairie est VOUVOYEE —
@@ -106,7 +90,6 @@ const buildSchema = (isCollectiviteMode = false) => Joi.object({
     FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
   ).required(),
-  closingTime: buildTimeRule(),
   maxSlots: Joi.number().min(1).required().messages({
     'any.required': i18next.t(
       'facilityForm.validation.capacityRequired',
@@ -120,7 +103,6 @@ const buildSchema = (isCollectiviteMode = false) => Joi.object({
   name: Joi.string().required().messages({
     'string.empty': i18next.t('facilityForm.validation.nameRequired', 'Le nom est requis'),
   }),
-  openingTime: buildTimeRule(),
   // COLL-C2B (02/10) — les plateaux nommes (mairie seulement) : juges dans handleSave.
   planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages(
     isCollectiviteMode
@@ -314,19 +296,18 @@ const CONFLICT_HINT_STYLE = {
   minHeight: 38,
 };
 
+// VILLE-INSTALLATION (07/10) — plus d horaires d ouverture : décision d Adel « on ne met pas
+// d ouverture ni de fermeture » (essai de la 2.6.70). Ceux deja en base restent : le formulaire
+// ne les envoie plus, et un champ absent reste inchange au serveur (readInstallationPayload).
 /**
- * @type {{ address: any, capacityConflictMode: string, closingTime: string, maxSlots: number,
- *   name: string, openingTime: string, planningColor: string, plateaux: string[],
- *   plateauxActifs: boolean, type: string }}
+ * @type {{ address: any, capacityConflictMode: string, maxSlots: number, name: string,
+ *   planningColor: string, plateaux: string[], plateauxActifs: boolean, type: string }}
  */
 const DEFAULT_FORM_VALUES = {
   address: null,
   capacityConflictMode: FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
-  // COLL1C : les horaires d ouverture ne se saisissent qu en mode collectivite.
-  closingTime: '',
   maxSlots: 1,
   name: '',
-  openingTime: '',
   planningColor: FACILITY_PLANNING_PALETTE[0],
   // COLL-C2B (02/10) : les plateaux nommes ne se saisissent qu en mode collectivite.
   plateaux: [],
@@ -437,10 +418,8 @@ function FacilityForm() {
         ...DEFAULT_FORM_VALUES,
         address: facility?.address || null,
         capacityConflictMode: String(getFacilityConflictMode(facility) || FACILITY_CONFLICT_MODES.PENDING_VALIDATION),
-        closingTime: toTimeInput(facility?.closingTime),
         maxSlots: Number(facility?.maxSlots || 1),
         name: facility?.name || '',
-        openingTime: toTimeInput(facility?.openingTime),
         planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
         plateaux: Array.isArray(facility?.plateaux) ? facility.plateaux.map(String) : [],
         plateauxActifs: Array.isArray(facility?.plateaux) && facility.plateaux.length > 0,
@@ -580,27 +559,14 @@ function FacilityForm() {
       clearErrors('address');
     }
 
-    // COLL1C : les horaires ne partent QUE par la route de la collectivite ; le chemin
-    // club garde exactement le corps d avant (les plateaux non plus ne partent pas).
+    // Le chemin club garde exactement le corps d avant (les plateaux ne partent pas).
     const {
       address,
-      closingTime,
-      openingTime,
       plateaux: plateauxSaisis,
       plateauxActifs: plateauxAllumes,
       ...clubFields
     } = data;
     const addressField = normalizedAddress ? { address: normalizedAddress } : {};
-    if (isCollectiviteMode && openingTime && closingTime && openingTime >= closingTime) {
-      setError('closingTime', {
-        message: t(
-          'facilityForm.errors.closingBeforeOpening',
-          'La fermeture doit suivre l’ouverture.',
-        ),
-        type: 'manual',
-      });
-      refus += 1;
-    }
     // D66 (contrat C2A §8) : autant de plateaux que d equipes a la fois, chacun nomme.
     const nombreDePlateaux = Number(data.maxSlots) || 1;
     const nomsDePlateaux = isCollectiviteMode && plateauxAllumes && nombreDePlateaux >= 2
@@ -643,10 +609,8 @@ function FacilityForm() {
           data: {
             ...addressField,
             capacityConflictMode: formattedData.capacityConflictMode,
-            closingTime: closingTime || null,
             maxSlots: data.maxSlots,
             name: data.name,
-            openingTime: openingTime || null,
             planningColor: data.planningColor,
             type: data.type,
             ...champPlateaux,
@@ -785,9 +749,10 @@ function FacilityForm() {
     );
   }
 
-  // COLL-C2B (02/10) — design P4-form : la mairie lit SIX groupes nommes, dans l ordre ou l on
-  // pense (l essentiel, ou, quand, combien, quand c est plein, la couleur), « Enregistrer » fixe
-  // en bas. Le club garde sa page d avant, a l identique : memes blocs, meme ordre, memes textes.
+  // COLL-C2B (02/10) — design P4-form : la mairie lit ses groupes nommes, dans l ordre ou l on
+  // pense (l essentiel, ou, combien, quand c est plein, la couleur ; « quand » est parti avec les
+  // horaires, VILLE-INSTALLATION 07/10), « Enregistrer » fixe en bas. Le club garde sa page
+  // d avant, a l identique : memes blocs, meme ordre, memes textes.
   const blocNom = (
     <Controller
       control={control}
@@ -966,44 +931,6 @@ function FacilityForm() {
       )}
     />
   );
-
-  // COLL1C : les horaires d ouverture (SPEC §2 B), en mode collectivite seulement.
-  const blocHoraires = isCollectiviteMode ? (
-    <View style={[Alignments.row, Spaces.gap[12]]}>
-      <View style={{ flex: 1 }}>
-        <Controller
-          control={control}
-          name="openingTime"
-          render={({ field: { onChange, value } }) => (
-            <Input
-              density="compact"
-              error={errors.openingTime?.message}
-              label={t('facilityForm.fields.openingTime', 'Ouverture')}
-              onChangeText={onChange}
-              placeholder="08:00"
-              value={value}
-            />
-          )}
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Controller
-          control={control}
-          name="closingTime"
-          render={({ field: { onChange, value } }) => (
-            <Input
-              density="compact"
-              error={errors.closingTime?.message}
-              label={t('facilityForm.fields.closingTime', 'Fermeture')}
-              onChangeText={onChange}
-              placeholder="22:00"
-              value={value}
-            />
-          )}
-        />
-      </View>
-    </View>
-  ) : null;
 
   const blocConflit = (
     <Controller
@@ -1424,7 +1351,7 @@ function FacilityForm() {
                 ),
               ),
               groupe(t('collectiviteCreneaux.formulaire.ou', 'Où'), blocAdresse),
-              groupe(t('collectiviteCreneaux.formulaire.quand', 'Quand'), blocHoraires),
+              // VILLE-INSTALLATION (07/10) : le groupe « Quand » (Ouverture / Fermeture) est parti.
               groupe(
                 t('collectiviteCreneaux.formulaire.combien', 'Combien d’équipes à la fois'), (
                   <>
