@@ -6543,6 +6543,7 @@ export default {
         title: 'Modifier le message',
       },
       manageGroup: 'Gérer le groupe',
+      menu: 'Options de la conversation',
       modalTitle: 'Actions du message',
       reply: 'Répondre',
       report: 'Signaler',
@@ -6576,6 +6577,7 @@ export default {
       noContact: 'Aucun contact partageable',
       openErrorDescription: 'Le document n a pas pu être ouvert.',
       openErrorTitle: 'Ouverture impossible',
+      photo: 'Photo',
       photos: 'Photos',
       pickFile: 'Envoyer un fichier',
       pickMedia: 'Envoyer un média',
@@ -6660,6 +6662,10 @@ export default {
       thisMember: 'ce membre',
       title: 'Gestion du groupe',
     },
+    header: {
+      openGroupHint: 'Ouvre les infos du groupe',
+      you: 'Vous',
+    },
     league: {
       cancelBody: 'Cette action annulera le match et supprimera la conversation.',
       cancelError: "Impossible d'annuler le match.",
@@ -6671,6 +6677,12 @@ export default {
       teamA: 'Équipe A',
     },
     messagePlaceholder: 'Message',
+    meta: {
+      failed: 'Non envoyé',
+      read: 'Lu',
+      sending: 'Envoi en cours',
+      sent: 'Envoyé',
+    },
     modals: {
       actions: {
         cancel: 'Annuler',
@@ -6840,6 +6852,7 @@ export default {
       me: 'Toi',
       more: "Plus d'emojis",
       pick: 'Choisir une réaction',
+      summary: 'Réactions : {{detail}}',
       title_one: '{{count}} réaction',
       title_other: '{{count}} réactions',
     },
@@ -6861,6 +6874,7 @@ export default {
     reservation: {
       joined: 'Réservation rejointe.',
     },
+    scrollToBottom: 'Revenir en bas',
     sending: 'Envoi en cours...',
     shareContact: {
       empty: 'Aucun contact partageable dans ce chat.',
@@ -6882,8 +6896,11 @@ export default {
       title: 'Partager une localisation',
     },
     typing: {
+      header_one: '{{names}} écrit…',
+      header_other: '{{names}} écrivent…',
       named_one: '{{names}} écrit...',
       named_other: '{{names}} écrivent...',
+      short: 'écrit…',
       someone: "Quelqu'un écrit...",
     },
     viewMatch: 'Voir la fiche match',
@@ -13124,6 +13141,8 @@ export default {
     onboarding: {
       main: 'Recherche une conversation, ouvre un chat et utilise les actions rapides.',
     },
+    pin: 'Épingler',
+    pinError: "Impossible d'épingler cette conversation.",
     pinnedBadge: 'ÉPINGLÉ',
     preview: {
       attachment: 'Pièce jointe',
@@ -13147,6 +13166,8 @@ export default {
     searchPlaceholder: 'Rechercher une conversation...',
     searchUserPlaceholder: 'Rechercher un membre...',
     title: 'Messages privés',
+    unpin: 'Désépingler',
+    unpinError: 'Impossible de désépingler cette conversation.',
     unread: {
       badge: 'Non lu',
     },

@@ -3,10 +3,11 @@ import {
   Animated,
   Easing,
   Platform,
-  Text,
   View,
 } from 'react-native';
+import { Path, Svg } from 'react-native-svg';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import useReduceMotion from '@/hooks/useReduceMotion';
@@ -18,7 +19,8 @@ export const TYPING_DOT_TEST_ID = 'conversation-typing-dot';
 /** Les trois points, toujours trois : c'est la forme que tout le monde connaît. */
 const DOTS = [0, 1, 2];
 /** Un aller-retour complet d'un point. */
-const CYCLE_MS = 900;
+// MSG1A (§3.1) — 1,2 s, comme le pack (SPECS.md §1 « … écrit »).
+const CYCLE_MS = 1200;
 /** Le décalage d'un point sur le suivant : c'est lui qui fait la « vague ». */
 const STAGGER_MS = 160;
 /** Le point au repos reste VISIBLE : il ne disparaît jamais tout à fait. */
@@ -43,14 +45,18 @@ const OPACITY_MIN = 0.3;
 // motif que `useMarqueeLoop`.
 
 /**
- * La bulle « untel est en train d'écrire » : trois points animés et la phrase.
- * @param {{ label: string }} props - La phrase déjà traduite et accordée.
+ * La bulle « untel est en train d'écrire » : trois points animés.
+ *
+ * 🫧 MSG1A (§3.1) — c'est une BULLE RECUE du fil (fond `primary700`, 34 de haut, queue a
+ * gauche, points de 7 a 72 % de blanc), precedee de l'avatar de celui qui ecrit dans un fil
+ * a plusieurs. La phrase « Prenom ecrit… » est passee dans l'en-tete du fil ; ici elle reste
+ * l'etiquette lue par le lecteur d'ecran.
+ * @param {{ avatar?: import('react').ReactNode, label: string }} props - La phrase deja
+ *   traduite et accordee ; l'avatar (28) de celui qui ecrit, ou rien.
  * @returns {import('react').ReactElement | null} La bulle, ou rien sans phrase.
  */
-function TypingIndicator({ label }) {
-  const {
-    Alignments, Colors, Fonts, Spaces,
-  } = useTheme();
+function TypingIndicator({ avatar = null, label }) {
+  const { Colors } = useTheme();
   const reduceMotion = useReduceMotion();
   // Un `Animated.Value` par point, créé UNE fois pour la vie du composant.
   const progressions = useRef(DOTS.map(() => new Animated.Value(0))).current;
@@ -95,39 +101,48 @@ function TypingIndicator({ label }) {
     <View
       accessibilityLabel={label}
       accessibilityRole="text"
-      style={[
-        Alignments.row,
-        Alignments.alignCenter,
-        Spaces.padding[8],
-        Spaces.marginLeft[16],
-        { gap: 8 },
-      ]}
+      style={{
+        alignItems: 'flex-end',
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 10,
+        paddingLeft: 8,
+        paddingRight: 40,
+      }}
       testID={TYPING_INDICATOR_TEST_ID}
     >
+      {avatar}
       <View
-        // Les points ne disent rien que la phrase ne dise déjà : le lecteur
-        // d'écran les saute au lieu d'annoncer trois cases vides.
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={[
-          Alignments.row,
-          Alignments.alignCenter,
-          {
-            backgroundColor: Colors.neutral100,
-            borderRadius: 12,
-            gap: 4,
-            paddingHorizontal: 10,
-            paddingVertical: 7,
-          },
-        ]}
+        style={{
+          alignItems: 'center',
+          backgroundColor: Colors.primary700,
+          borderRadius: 18,
+          flexDirection: 'row',
+          gap: 4,
+          height: 34,
+          paddingHorizontal: 14,
+        }}
       >
+        <Svg
+          height={18}
+          style={{ bottom: 0, left: -6, position: 'absolute' }}
+          viewBox="0 0 24 18"
+          width={24}
+        >
+          <Path
+            d="M6 0V9C6 13.5 3.8 16.6 0 18C4.6 18.6 8.8 17.6 11.6 15.6C13.6 17.2 16.4 18 20 18H24V0Z"
+            fill={Colors.primary700}
+          />
+        </Svg>
         {DOTS.map((rang) => (
           <Animated.View
             key={`typing-dot-${rang}`}
             style={{
-              backgroundColor: Colors.primary500,
-              borderRadius: 3,
-              height: 6,
+              backgroundColor: withAlpha(Colors.neutral00, 0.72),
+              borderRadius: 4,
+              height: 7,
               opacity: progressions[rang].interpolate({
                 inputRange: [0, 1],
                 outputRange: [OPACITY_MIN, 1],
@@ -138,13 +153,12 @@ function TypingIndicator({ label }) {
                   outputRange: [0, -3],
                 }),
               }],
-              width: 6,
+              width: 7,
             }}
             testID={TYPING_DOT_TEST_ID}
           />
         ))}
       </View>
-      <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral500]}>{label}</Text>
     </View>
   );
 }

@@ -60,6 +60,36 @@ export const colors = {
   // Verrou des fonctionnalites de l'offre Club (handoff design, decision 7).
   violet200: '#b7a5ff',
   violet500: '#8567ff',
+
+  // MSG1A — la messagerie « modele WhatsApp » (pack d'Adel du 07/10, SPECS.md §0).
+  // La bulle recue reste primary700, le champ primary800, l'accent primary500.
+  chatBackground: '#03141b',
+  // En-tete, saisie, barres du bas : OPAQUES (« bloc fixe et pas transparent »).
+  // Aussi la base des puces de date et des notices (a 84 % et 55 %).
+  chatBar: '#021219',
+  // Ma bulle : bleu petrole, texte blanc (choix « C » de l'equipe).
+  chatBubbleMine: '#0b5875',
+  chatSheet: '#0f2a34',
+  // Menus flottants (appui long, ⋮).
+  chatMenu: '#142e39',
+  // Supprimer, Absent, Signaler dans la messagerie.
+  chatDanger: '#ff5a74',
+  // Sans reponse, Non pointe.
+  chatStatusGrey: '#9aa6ab',
+  // Une couleur de nom par personne, attribution stable (SPECS.md §0).
+  chatName1: '#5fe3b5',
+  chatName10: '#5ee0e0',
+  chatName11: '#e59cff',
+  chatName12: '#c9b28a',
+  chatName13: '#ffcf70',
+  chatName2: '#f598d8',
+  chatName3: '#ffad5c',
+  chatName4: '#a99bff',
+  chatName5: '#ff7a93',
+  chatName6: '#a5e36b',
+  chatName7: '#ff9670',
+  chatName8: '#6fd3ff',
+  chatName9: '#ffd84d',
 };
 
 const HEX_SHORT = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i;

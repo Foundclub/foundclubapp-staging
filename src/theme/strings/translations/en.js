@@ -6141,6 +6141,7 @@ export default {
         title: 'Edit message',
       },
       manageGroup: 'Manage group',
+      menu: 'Conversation options',
       modalTitle: 'Message actions',
       reply: 'Reply',
       report: 'Report',
@@ -6173,6 +6174,7 @@ export default {
       noContact: 'No contact available to share',
       openErrorDescription: "The document couldn't be opened.",
       openErrorTitle: 'Unable to open',
+      photo: 'Photo',
       photos: 'Photos',
       pickFile: 'Send a file',
       pickMedia: 'Send media',
@@ -6252,6 +6254,10 @@ export default {
       thisMember: 'this member',
       title: 'Group management',
     },
+    header: {
+      openGroupHint: 'Opens the group info',
+      you: 'You',
+    },
     league: {
       cancelBody: 'This will cancel the match and delete the conversation.',
       cancelError: 'Unable to cancel the match.',
@@ -6263,6 +6269,12 @@ export default {
       teamA: 'Team A',
     },
     messagePlaceholder: 'Message',
+    meta: {
+      failed: 'Not sent',
+      read: 'Read',
+      sending: 'Sending',
+      sent: 'Sent',
+    },
     modals: {
       actions: {
         cancel: 'Cancel',
@@ -6428,6 +6440,7 @@ export default {
       me: 'You',
       more: 'More emojis',
       pick: 'Choose a reaction',
+      summary: 'Reactions: {{detail}}',
       title_one: '{{count}} reaction',
       title_other: '{{count}} reactions',
     },
@@ -6448,6 +6461,7 @@ export default {
     reservation: {
       joined: 'Booking joined.',
     },
+    scrollToBottom: 'Scroll to bottom',
     sending: 'Sending...',
     shareContact: {
       empty: 'No contact available to share in this chat.',
@@ -6469,8 +6483,11 @@ export default {
       title: 'Share a location',
     },
     typing: {
+      header_one: '{{names}} is typing…',
+      header_other: '{{names}} are typing…',
       named_one: '{{names}} is typing...',
       named_other: '{{names}} are typing...',
+      short: 'typing…',
       someone: 'Someone is typing...',
     },
     viewMatch: 'View match details',
@@ -12345,6 +12362,8 @@ export default {
     onboarding: {
       main: 'Search a conversation, open a chat and use the quick actions.',
     },
+    pin: 'Pin',
+    pinError: 'Unable to pin this conversation.',
     pinnedBadge: 'PINNED',
     preview: {
       attachment: 'Attachment',
@@ -12368,6 +12387,8 @@ export default {
     searchPlaceholder: 'Search a conversation...',
     searchUserPlaceholder: 'Search a member...',
     title: 'Private messages',
+    unpin: 'Unpin',
+    unpinError: 'Unable to unpin this conversation.',
     unread: {
       badge: 'Unread',
     },
