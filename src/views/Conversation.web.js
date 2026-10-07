@@ -3200,10 +3200,13 @@ function Conversation({ navigation, route }) {
     const { dernier, message, premier } = entree;
     const idMessage = getMessageId(message);
     // COLL-C4A2 — « … a rejoint le canal » n'a pas d'expéditeur : une notice centrée, sans bulle.
-    if (filDeLaVille.estLigneSysteme(message)) {
+    // MSG1W §3.17 — de meme pour une notice de groupe (contrat 1B §6 : `systemNotice` present,
+    // jamais sur un message ordinaire) : sa phrase, dans le style discret du pack.
+    if (filDeLaVille.estLigneSysteme(message) || message?.systemNotice != null) {
       return (
         <div
           data-msg1w-id={idMessage}
+          data-testid={`MSG1W-notice-${idMessage}`}
           key={idMessage}
           style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}
         >

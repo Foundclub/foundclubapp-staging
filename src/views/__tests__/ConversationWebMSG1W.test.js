@@ -359,6 +359,29 @@ describe('MSG1W §3.1 — le rôle du staff à côté du nom (« genre A »)', (
   });
 });
 
+// 📐 §3.17 — LES NOTICES DE GROUPE (contrat MESSAGERIE-1B §6) : un message SANS expediteur qui
+// porte `systemNotice` se rend comme une notice discrete avec sa phrase, jamais comme une bulle.
+// Le telephone le fait depuis MSG1A f2a86c52 ; le site en faisait une bulle anonyme.
+describe('MSG1W §3.17 — une notice de groupe est une notice, pas une bulle', () => {
+  test('« Bruno Dupont a renommé le groupe… » : centree, sans bulle ni nom', async () => {
+    const phrase = 'Bruno Dupont a renommé le groupe en « Les U13 bis ».';
+    mockMessagesDuFil = [...mockMessagesDuFil, {
+      createdAt: '2026-10-07T08:05:00.000Z',
+      documentId: 'n1',
+      message: phrase,
+      sender: null,
+      systemNotice: {
+        actor: BRUNO, groupName: 'Les U13 bis', kind: 'group_renamed', targets: [], version: 1,
+      },
+    }];
+    const { arbre } = await monter();
+    const [notice] = parTestId(arbre, 'MSG1W-notice-n1');
+    expect(notice).toBeDefined();
+    expect(texteDe(notice)).toBe(phrase);
+    expect(parTestId(arbre, 'MSG1W-meta-n1')).toHaveLength(0);
+  });
+});
+
 // 📐 §3.10 — L AVERTISSEMENT DU DIRIGEANT (decision d Adel du 07/10 : « avertissement B »). Le
 // telephone l affichait en bandeau fixe ; le site ne l affichait PAS DU TOUT. Il devient une
 // notice centree EN TETE DU FIL, qui defile avec lui, comme la mention de chiffrement de WhatsApp.
