@@ -5902,9 +5902,11 @@ export default {
     },
     installations: {
       a11y: '{{nom}}: {{heures}}, occupancy {{taux}}',
+      a11ySansTaux: '{{nom}}: {{heures}} booked',
       aucune: 'No facility yet.',
+      reservees_one: '{{count}} session · {{duree}} booked over the period.',
+      reservees_other: '{{count}} sessions · {{duree}} booked over the period.',
       taux: 'Occupancy rate: {{taux}}.',
-      tauxSansHoraires: 'Occupancy rate: — (opening hours not set).',
       titre: 'Session hours, by facility',
     },
     jauge: {

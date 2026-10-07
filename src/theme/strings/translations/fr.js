@@ -6292,9 +6292,12 @@ export default {
     },
     installations: {
       a11y: '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
+      // VILLE-T18B (e) : sans horaires (retirés), ce qui se mesure sans eux, jamais « — ».
+      a11ySansTaux: '{{nom}} : {{heures}} réservées',
       aucune: 'Aucune installation pour l’instant.',
+      reservees_one: '{{count}} séance · {{duree}} réservées sur la période.',
+      reservees_other: '{{count}} séances · {{duree}} réservées sur la période.',
       taux: 'Taux d’occupation : {{taux}}.',
-      tauxSansHoraires: 'Taux d’occupation : — (horaires d’ouverture non renseignés).',
       titre: 'Heures de séances, par installation',
     },
     // COLL-C5 point 3 — la jauge d'occupation de l'accueil (planches 2 et 3).
