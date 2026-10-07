@@ -6168,6 +6168,8 @@ export default {
       quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
       // FINITIONS11-COLL (03/10) — « deplacer A » : une séance déplacée hors créneau.
       siRefusAnnulee: 'Si la mairie refuse, la séance sera annulée.',
+      // DOUBLES-TRACES (08/10, « doubles B ») — dirigeant ET gestionnaire : il accepte sa demande.
+      tuAcceptes: 'Ta demande partira à la Ville ; tu pourras l’accepter toi-même dans Demandes.',
       // VILLE-T18C (07/10, tournée T18 D07c) — posée d’office : pourquoi (la gestion de la Ville).
       // eslint-disable-next-line max-len
       tuGeres: 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.',
