@@ -1250,6 +1250,7 @@ function Conversation({ navigation, route }) {
   const isDesktop = width >= BREAKPOINTS.desktop
   const {
     Colors,
+    Images,
   } = useTheme()
   const {
     hasClubAccess,
@@ -4265,7 +4266,17 @@ function Conversation({ navigation, route }) {
             )}
           </header>
 
-          <div style={{ minHeight: 0, position: 'relative' }}>
+          <div
+            style={{
+              // MSG1W (SPECS §1) — le motif sportif en filigrane (MSG1A, tuile de 240), derriere le
+              // fil seulement, comme sur le telephone : il reste en place quand les messages defilent.
+              backgroundImage: Images?.motifDuFil?.uri ? `url("${Images.motifDuFil.uri}")` : undefined,
+              backgroundRepeat: 'repeat',
+              backgroundSize: '240px 240px',
+              minHeight: 0,
+              position: 'relative',
+            }}
+          >
             <div
               data-testid="MSG1W-fil"
               onScroll={(event) => {
