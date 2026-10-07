@@ -126,6 +126,23 @@ const mapGeoLocationToPlace = (/** @type {any} */ location) => ({
   },
 });
 
+/**
+ * ADRESSE-CARTE (07/10) — POSER sur la carte un lieu que la recherche ne trouve pas (une épingle et
+ * un nom). Il rejoint la base de lieux du serveur : la recherche d'adresse suivante, par n'importe
+ * qui, le propose avant le géocodeur. Le serveur rend le lieu à la forme d'une proposition de
+ * `/geo/search` : il devient une adresse comme une autre pour le formulaire.
+ * @param {{ name: string, lat: number, lng: number, addressLine?: string, city?: string, postcode?: string }} lieu
+ * @returns {Promise<{ existing: boolean, place: Place }>} `existing` : le même lieu était déjà posé.
+ */
+export const createLieu = async (lieu) => {
+  const response = await client.post('/lieux', { data: lieu });
+  const location = await geoLocationSchema.validateAsync(response.data?.data);
+  return {
+    existing: Boolean(response.data?.meta?.existing),
+    place: mapGeoLocationToPlace(location),
+  };
+};
+
 const fetchPlacesFromGeoSearch = async (/** @type {string} */ search, /** @type {string | undefined} */ type) => {
   /** @type {{ limit: number; q: string; type?: string }} */
   const params = {

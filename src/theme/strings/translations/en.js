@@ -2035,6 +2035,30 @@ export default {
       firebaseNotConfigured: 'Firebase Web is not configured for this app.',
     },
   },
+  autocompleteAddressInput: {
+    // ADRESSE-CARTE (07/10) — "Address not found? Place it on the map" (shared address field).
+    lieu: {
+      aide: 'Move the map to put the pin on the place, then give it a name.',
+      annuler: 'Cancel',
+      erreurs: {
+        connexion: 'Sign in to add a place.',
+        debit: 'Too many places added at once: try again in a few minutes.',
+        donneePersonnelle: 'A place is visible to everyone: no email, phone number or link.',
+        nom: 'Give the place a name (at least 3 characters).',
+        panne: 'The place could not be saved. Try again.',
+        plafond: 'You have added many places: try again tomorrow.',
+        point: 'This point cannot be saved. Move the map and try again.',
+      },
+      lien: 'Address not found? Place it on the map',
+      nom: 'Place name',
+      nomExemple: 'E.g. Luminy Stadium',
+      placer: 'Place here',
+      placerAide: 'Adds the place under the pin, at the centre of the map.',
+      presDe: 'Near: {{adresse}}',
+      titre: 'Place it on the map',
+      zoomer: 'Zoom in to street level to place it precisely.',
+    },
+  },
   bookingCalendar: {
     availableSlots: 'Available slots -',
     chooseDate: 'Choose a date',
