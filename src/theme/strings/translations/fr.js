@@ -5237,6 +5237,10 @@ export default {
     header: 'Actualités de la Ville',
     modifiee: 'Modifiée',
     modifier: 'Modifier',
+    photo: {
+      agrandir: 'Agrandir la photo',
+      fermer: 'Fermer la photo',
+    },
     pieceJointe: {
       ouvrir: 'Ouvrir {{nom}}',
       retirer: 'Retirer la pièce jointe',

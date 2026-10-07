@@ -4894,6 +4894,10 @@ export default {
     header: 'City news',
     modifiee: 'Edited',
     modifier: 'Edit',
+    photo: {
+      agrandir: 'Enlarge the photo',
+      fermer: 'Close the photo',
+    },
     pieceJointe: {
       ouvrir: 'Open {{nom}}',
       retirer: 'Remove the attachment',
