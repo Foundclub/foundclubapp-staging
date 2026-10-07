@@ -6940,6 +6940,7 @@ export default {
         roleEntraineur: 'Entraîneur',
         signalerLeGroupe: 'Signaler le groupe',
         titreListe: 'Messages',
+        voirLesVotes: 'Voir les votes',
       },
       // eslint-disable-next-line max-len
       footerNote: 'Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.',

@@ -6524,6 +6524,7 @@ export default {
         roleEntraineur: 'Coach',
         signalerLeGroupe: 'Report group',
         titreListe: 'Messages',
+        voirLesVotes: 'See the votes',
       },
       footerNote: 'Text, replies, attachments, shares, polls and proposals already use the shared hooks, services and sockets. Voice notes use the browser microphone when supported.',
       league: {

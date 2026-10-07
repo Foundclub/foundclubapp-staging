@@ -55,7 +55,9 @@ import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMes
 // MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 // MSG1W §3.4 / §3.8 — les bulles PARTAGEES du telephone (restylees par MESSAGERIE-1A).
+import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
+import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import ScreenContainer from '@/components/templates/ScreenContainer'
@@ -263,6 +265,37 @@ const REACTION_PICKER_WIDTH = 320;
 const REACTION_PICKER_HEIGHT = 280;
 
 /**
+ * MSG1W — L ORIGINE DES ELEMENTS « FIXES » DE CETTE PAGE.
+ *
+ * 🪟 Sur le site, le cadre de la page (`.shell-main`) porte un FLOU D ARRIERE-PLAN
+ * (backdrop-filter, index.css). Un ancetre qui floute, transforme ou filtre devient le repere
+ * des elements en `position: fixed` : poses aux coordonnees de l ECRAN, ils sortaient decales
+ * de la largeur du menu lateral (264 px a 1 280). Mesure du 07/10 : le « + » de la barre des
+ * reactions tombait hors de l ecran des que le fil etait a droite (colonne « Messages »).
+ * On cherche ce repere et on retire son origine aux coordonnees d ecran.
+ * @param {Element | null | undefined} element - Un element de la page (le declencheur).
+ * @returns {{ x: number, y: number }} L origine du repere des elements fixes, en pixels d ecran.
+ */
+const origineDuRepereFixe = (element) => {
+  let noeud = element?.parentElement || null;
+  while (noeud && typeof window !== 'undefined' && window.getComputedStyle) {
+    const style = window.getComputedStyle(noeud);
+    const flou = style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter');
+    if (
+      style.transform !== 'none'
+      || style.filter !== 'none'
+      || (flou && flou !== 'none')
+      || style.perspective !== 'none'
+    ) {
+      const cadre = noeud.getBoundingClientRect();
+      return { x: cadre.left, y: cadre.top };
+    }
+    noeud = noeud.parentElement;
+  }
+  return { x: 0, y: 0 };
+};
+
+/**
  * REACT-WEB — OU POSER LA BARRE, EN COORDONNEES D ECRAN.
  *
  * 🪟 ELLE EST EN `position: fixed`, ET C EST TOUT LE POINT : la liste des messages
@@ -294,15 +327,16 @@ const getReactionBarAnchor = (
 ) => {
   const rect = trigger.getBoundingClientRect();
   const placeAuDessus = rect.top > hauteur + 12;
+  const origine = origineDuRepereFixe(trigger);
 
   return {
     left: Math.max(8, Math.min(
       rect.right - largeur,
       window.innerWidth - largeur - 8,
-    )),
-    top: placeAuDessus
+    )) - origine.x,
+    top: (placeAuDessus
       ? rect.top - hauteur - 6
-      : rect.bottom + 6,
+      : rect.bottom + 6) - origine.y,
   };
 };
 
@@ -2348,14 +2382,34 @@ function Conversation({ navigation, route }) {
     // MSG1W §3.4 — la bulle de sondage du TELEPHONE (ronds, barres, votants, « voir les votes »).
     if (composition.type === 'poll') {
       return (
-        <PollMessageBubble
-          currentUserId={userData?.documentId || ''}
-          isMe={isMine}
-          onOpenDetails={() => ouvrirLesVotes(message)}
-          onVote={(/** @type {string} */ optionId) => handleVoteOnPoll(message, optionId)}
-          poll={composition}
-          resolveVoterName={resolveVoterName}
-        />
+        <div style={{ display: 'grid', gap: 4 }}>
+          {/* ⚠️ Sans `onOpenDetails` : sur le site, la carte cliquable devient un <button> qui
+              contient les boutons de vote (HTML invalide, votes injoignables au lecteur d ecran).
+              « Voir les votes » est donc un bouton a part, sous la carte. */}
+          <PollMessageBubble
+            currentUserId={userData?.documentId || ''}
+            isMe={isMine}
+            onVote={(/** @type {string} */ optionId) => handleVoteOnPoll(message, optionId)}
+            poll={composition}
+            resolveVoterName={resolveVoterName}
+          />
+          <button
+            onClick={() => ouvrirLesVotes(message)}
+            style={{
+              background: 'transparent',
+              border: 0,
+              borderTop: '1px solid rgba(255, 255, 255, 0.14)',
+              color: PALETTE_DU_FIL.accent,
+              cursor: 'pointer',
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              fontSize: 15,
+              padding: '10px 0 4px',
+            }}
+            type="button"
+          >
+            {i18next.t('conversation.web.fil.voirLesVotes', 'Voir les votes')}
+          </button>
+        </div>
       );
     }
 
@@ -2456,51 +2510,21 @@ function Conversation({ navigation, route }) {
       )
     }
 
+    // MSG1W §3.18 — contact et position : les bulles du TELEPHONE (restylees par MESSAGERIE-1A).
     if (composition.type === 'contact_share') {
-      const fullName = `${composition?.firstname || ''} ${composition?.lastname || ''}`.trim()
       return (
-        <div style={{ display: 'grid', gap: 8 }}>
-          <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
-            {fullName || 'Contact partage'}
-          </div>
-          <div style={{ color: mutedTextColor, fontSize: 13 }}>
-            {composition?.roleLabel || 'Membre FoundClub'}
-          </div>
-        </div>
-      )
+        <ContactShareBubble
+          composition={composition}
+          isMe={isMine}
+          onPressContact={(/** @type {string} */ userId) => {
+            if (userId) navigation.navigate(RouteNames.UserDetails, { userId });
+          }}
+        />
+      );
     }
 
     if (composition.type === 'location_share') {
-      const shareUrl = composition?.lat && composition?.lng
-        ? `https://www.google.com/maps?q=${composition.lat},${composition.lng}`
-        : ''
-      return (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
-            {composition?.label || 'Position partagee'}
-          </div>
-          <div style={{ color: mutedTextColor, fontSize: 13 }}>
-            {composition?.address || ''}
-          </div>
-          {shareUrl ? (
-            <button
-              onClick={() => openUrl(shareUrl)}
-              style={{
-                alignSelf: 'flex-start',
-                background: 'transparent',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 999,
-                color: baseTextColor,
-                cursor: 'pointer',
-                padding: '10px 14px',
-              }}
-              type="button"
-            >
-              {i18next.t('conversation.web.openInMaps', 'Ouvrir dans Maps')}
-            </button>
-          ) : null}
-        </div>
-      )
+      return <LocationShareBubble composition={composition} isMe={isMine} />;
     }
 
     if (composition.type === 'voice_note') {
@@ -2724,10 +2748,12 @@ function Conversation({ navigation, route }) {
     const bas = window.innerHeight - (isDesktop ? 8 : 100);
     // Pas la place en dessous : le menu s ouvre AU-DESSUS du point.
     const haut = point.y + hauteur > bas ? point.y - hauteur : point.y;
+    // Le repere des elements fixes de la page (voir origineDuRepereFixe).
+    const origine = origineDuRepereFixe(declencheur || messagePaneRef.current);
     setMenuDuMessage({
       id,
-      left: Math.max(8, Math.min(point.x, window.innerWidth - largeur - 8)),
-      top: Math.max(8, Math.min(haut, bas - hauteur)),
+      left: Math.max(8, Math.min(point.x, window.innerWidth - largeur - 8)) - origine.x,
+      top: Math.max(8, Math.min(haut, bas - hauteur)) - origine.y,
     });
   }, [actionsDuMessage, isDesktop]);
 
@@ -3135,7 +3161,8 @@ function Conversation({ navigation, route }) {
     // Les cartes du telephone (composition, sondage, evenement) portent deja leur cadre : elles
     // se posent SANS bulle.
     const estCarteNue = Boolean(evenement)
-      || message?.composition?.type === 'poll'
+      || ['contact_share', 'location_share', 'poll']
+        .includes(String(message?.composition?.type || ''))
       || (message?.composition?.type === 'lineup_share'
         && Boolean(String(message?.composition?.eventId || '').trim()));
     const fondDeBulle = isMine ? PALETTE_DU_FIL.bulleMienne : PALETTE_DU_FIL.bulleRecue;
@@ -4080,6 +4107,7 @@ function Conversation({ navigation, route }) {
             {/* MSG1W §3.16 — toucher le titre d un groupe ouvre ses infos (README §3.16). */}
             {estUnGroupe ? (
               <button
+                data-testid="MSG1W-titre-du-fil"
                 onClick={() => setInfosOuvertes(true)}
                 style={{
                   background: 'transparent',
