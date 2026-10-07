@@ -186,6 +186,7 @@ function ConvocationWizard({
     || payload?.draft?.sportContext
     || payload?.bootstrap?.composition?.sportContext
     || selectedEvent?.team?.activities?.[0]?.name
+    || eventSummary?.sportContext
     || '',
   );
   const category = String(selectedEvent?.team?.category?.name || '');
@@ -206,12 +207,16 @@ function ConvocationWizard({
 
   // Les pastilles suivent la liste : un nouveau titulaire prend un poste libre de la compo type,
   // un joueur retire du terrain perd sa pastille.
+  // 🐛 Attendre l'amorce de l'evenement : sinon, dans le meme passage, l'amorce pose les places
+  // PUBLIEES et cet effet (encore sans titulaire) les efface — le temoin « Mettre a jour » l'a vu.
   const starterKey = pitch.map((row) => row.id).join('|');
+  const isInitialized = Boolean(eventId) && initializedFor === eventId;
   useEffect(() => {
+    if (!isInitialized) return;
     setPlacements((current) => buildPitchPlacements({
       category, placements: current, sport, starterIds: starterKey ? starterKey.split('|') : [],
     }));
-  }, [category, sport, starterKey]);
+  }, [category, isInitialized, sport, starterKey]);
 
   const stepKey = CONVOCATION_STEPS[step - 1];
   const stepName = t(`conversationConvocation.steps.${stepKey}`);

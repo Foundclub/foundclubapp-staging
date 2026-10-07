@@ -1,7 +1,12 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { publishEventConvocation, saveEventCompositionDraft } from '@/services/event/eventService';
+
 import ConvocationWizard from '../ConvocationWizard';
+
+const brouillon = /** @type {any} */ (saveEventCompositionDraft);
+const publication = /** @type {any} */ (publishEventConvocation);
 
 // MESSAGERIE-1C — L'ASSISTANT « CONVOCATION » DU GROUPE D'EQUIPE, etape par etape.
 //
@@ -86,6 +91,10 @@ const mockSendMessage = jest.fn(() => 'temp-1');
 jest.mock('@/domains/messaging/useMessaging', () => ({
   __esModule: true,
   default: () => ({ sendMessage: mockSendMessage }),
+}));
+
+jest.mock('@/domains/subscription/subscriptionDecision', () => ({
+  extractSubscriptionDecisionFromError: (/** @type {any} */ erreur) => erreur?.decision || null,
 }));
 
 jest.mock('@/domains/refresh/afterAction', () => ({
@@ -520,5 +529,195 @@ describe('MESSAGERIE-1C · etape 3 « Placement »', () => {
     act(() => { hugo.props.onAccessibilityAction({ nativeEvent: { actionName: 'up' } }); });
     // 93 % - 5 % = 88 % de 450 px.
     expect(centre(arbre, 'hugo')).toEqual({ x: 150, y: 396 });
+  });
+});
+
+/**
+ * Du terrain aux Details.
+ * @returns {{ arbre: any, onClose: jest.Mock }}
+ */
+const allerAuxDetails = () => {
+  const ouvert = allerAuTerrain();
+  appuyer(ouvert.arbre, 'convocation-wizard-next');
+  return ouvert;
+};
+
+/**
+ * Appuie sur le bouton d'envoi et laisse partir les appels au serveur.
+ * @param {any} arbre
+ * @param {string} [id]
+ * @returns {Promise<void>}
+ */
+const envoyer = async (arbre, id = 'convocation-wizard-next') => {
+  const [bouton] = parTestId(arbre, id);
+  await act(async () => { await bouton.props.onPress(); });
+};
+
+describe('MESSAGERIE-1C · etape 4 « Details » et envoi', () => {
+  test('« Rendez-vous » prerempli, « Infos », « Demander Present / Absent » allume', () => {
+    const { arbre } = allerAuxDetails();
+    const vus = textes(arbre);
+    expect(vus).toContain('Étape 4 sur 4 · Détails');
+    expect(vus).toEqual(expect.arrayContaining([
+      'RENDEZ-VOUS', 'INFOS', 'Demander Présent / Absent', '2 sur le terrain · 1 sur le banc',
+      'Envoyer la convocation',
+    ]));
+    expect(arbre.root.findByProps({ testID: 'convocation-meeting' }).props.value)
+      .toBe('13h30 au club');
+    expect(arbre.root.findByProps({ testID: 'convocation-ask' }).props.value).toBe(true);
+  });
+
+  test('« Envoyer » : la publication EXISTANTE, avec les positions du terrain', async () => {
+    const { arbre, onClose } = allerAuTerrain();
+    // Hugo est deplace avant l'envoi.
+    act(() => { terrain(arbre).props.onResponderGrant(toucher(150, 418.5)); });
+    act(() => { terrain(arbre).props.onResponderMove(toucher(180, 328.5)); });
+    act(() => { terrain(arbre).props.onResponderRelease(toucher(180, 328.5)); });
+    appuyer(arbre, 'convocation-wizard-next');
+    act(() => {
+      arbre.root.findByProps({ testID: 'convocation-infos' }).props.onChangeText('Maillot bleu');
+    });
+    await envoyer(arbre);
+
+    expect(brouillon).toHaveBeenCalledTimes(1);
+    const [eventId, { draft, teamId }] = brouillon.mock.calls[0];
+    expect(eventId).toBe('match-samedi');
+    expect(teamId).toBe(TEAM);
+    expect(draft.teams[0].placements).toEqual([
+      {
+        playerId: 'hugo', positionX: 60, positionY: 73, slotId: null,
+      },
+      {
+        playerId: 'sami', positionX: 86, positionY: 76, slotId: null,
+      },
+    ]);
+    expect(draft.reservePlayerIds).toEqual(['theo']);
+    expect(draft.requireResponse).toBe(true);
+    expect(draft.visibility).toBe('team');
+
+    // Le brouillon AVANT la publication (sinon on publierait l etat precedent).
+    expect(publication).toHaveBeenCalledWith('match-samedi', { teamId: TEAM });
+    expect(brouillon.mock.invocationCallOrder[0])
+      .toBeLessThan(publication.mock.invocationCallOrder[0]);
+
+    // Le rendez-vous et les infos partent dans le groupe, en message.
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      'fil-equipe',
+      'Rendez-vous : 13h30 au club\nInfos : Maillot bleu',
+      expect.any(Object),
+    );
+    expect(onClose).toHaveBeenCalledWith({ published: true });
+  });
+
+  test('un joueur a la main COCHE part dans la composition, un repropose decoche non', async () => {
+    mockState.messages = [{
+      composition: {
+        manualPlayers: [
+          {
+            documentId: 'manual_1',
+            firstname: 'Kévin',
+            id: 'manual_1',
+            isManual: true,
+            lastname: 'A',
+          },
+          {
+            documentId: 'manual_2', firstname: 'Léo', id: 'manual_2', isManual: true, lastname: 'B',
+          },
+        ],
+        publishedAt: '2026-10-01T10:00:00.000Z',
+        teamId: TEAM,
+        type: 'lineup_share',
+      },
+    }];
+    const { arbre } = allerAuxJoueurs();
+    appuyer(arbre, 'convocation-check-hugo');
+    appuyer(arbre, 'convocation-check-manual_1');
+    appuyer(arbre, 'convocation-wizard-next');
+    appuyer(arbre, 'convocation-wizard-next');
+    await envoyer(arbre);
+
+    const [, { draft }] = brouillon.mock.calls[0];
+    expect(draft.manualPlayers.map((p) => p.documentId)).toEqual(['manual_1']);
+    expect(draft.selectedPlayerIds).toEqual(['hugo', 'manual_1']);
+  });
+
+  test('reponses non demandees : pack a false ; rendez-vous vide : aucun message', async () => {
+    const { arbre } = allerAuxDetails();
+    act(() => {
+      arbre.root.findByProps({ testID: 'convocation-ask' }).props.onValueChange(false);
+      arbre.root.findByProps({ testID: 'convocation-meeting' }).props.onChangeText('');
+    });
+    await envoyer(arbre);
+    expect(brouillon.mock.calls[0][1].draft.requireResponse).toBe(false);
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  test('reponses coupees par l organisateur : interrupteur verrouille, pack a false', async () => {
+    mockState.composition[matchSamedi.documentId].rsvpEnabled = false;
+    const { arbre } = allerAuxDetails();
+    const interrupteur = arbre.root.findByProps({ testID: 'convocation-ask' });
+    expect(interrupteur.props.value).toBe(false);
+    expect(interrupteur.props.disabled).toBe(true);
+    expect(textes(arbre)).toContain(
+      'Les réponses sont coupées sur cet événement : personne ne pourra répondre.',
+    );
+    await envoyer(arbre);
+    expect(brouillon.mock.calls[0][1].draft.requireResponse).toBe(false);
+  });
+
+  test('un refus du serveur : l entraineur est prevenu, l assistant reste ouvert', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    publication.mockRejectedValueOnce(new Error('refus'));
+    const { arbre, onClose } = allerAuxDetails();
+    await envoyer(arbre);
+    expect(alerte).toHaveBeenCalledWith(
+      'Convocation non envoyée',
+      'La convocation n\'a pas pu partir. Réessaie dans un instant.',
+    );
+    expect(onClose).not.toHaveBeenCalled();
+    alerte.mockRestore();
+  });
+
+  test('un refus d abonnement montre l offre (mur payant), comme le plateau', async () => {
+    brouillon.mockRejectedValueOnce({ decision: { reason: 'offre' } });
+    const { arbre, onClose } = allerAuxDetails();
+    await envoyer(arbre);
+    expect(textes(arbre)).toContain('MUR PAYANT');
+    expect(publication).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test('modification : « Mettre a jour » publie des l etape Joueurs, sans message', async () => {
+    mockState.composition[matchSamedi.documentId] = {
+      eligiblePlayers: effectif,
+      published: {
+        reservePlayerIds: [],
+        snapshotPlayers: effectif,
+        sportContext: 'Football',
+        teams: [{ placements: [{ playerId: 'hugo', positionX: 40, positionY: 60 }] }],
+        version: 2,
+      },
+      responses: { byPlayerId: { hugo: 'present' } },
+      rsvpEnabled: true,
+    };
+    const { arbre, onClose } = ouvrir({
+      initialEventId: matchSamedi.documentId, mode: 'edit', startStep: 2,
+    });
+    appuyer(arbre, 'convocation-check-sami');
+    await envoyer(arbre, 'convocation-wizard-update');
+
+    const [, { draft }] = brouillon.mock.calls[0];
+    // Hugo garde SA place publiee ; Sami, nouveau titulaire, prend un poste libre du 4-3-3.
+    expect(draft.teams[0].placements).toEqual([
+      {
+        playerId: 'hugo', positionX: 40, positionY: 60, slotId: null,
+      },
+      {
+        playerId: 'sami', positionX: 50, positionY: 93, slotId: null,
+      },
+    ]);
+    expect(publication).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledWith({ published: true });
   });
 });
