@@ -11,8 +11,11 @@ import {
   clampPitchPercent,
   filterTeamEvents,
   findLastPublishedManualPlayers,
+  findPlacementAt,
   isConvocableEvent,
   isLatestLineupComposition,
+  nudgePlacement,
+  pointToPercent,
   selectWholeSquad,
   toggleConvocationSelection,
 } from '../convocationWizardUtils';
@@ -233,6 +236,36 @@ describe('MESSAGERIE-1C · le terrain', () => {
     expect(placements.map((p) => [p.positionX, p.positionY])).toEqual([[14, 44], [32, 44]]);
     expect(clampPitchPercent(140)).toBe(95);
     expect(clampPitchPercent(-3)).toBe(5);
+  });
+
+  test('un toucher en pixels devient une place en %, bornee au terrain', () => {
+    expect(pointToPercent({
+      height: 450, width: 300, x: 150, y: 225,
+    })).toEqual({ positionX: 50, positionY: 50 });
+    expect(pointToPercent({
+      height: 450, width: 300, x: -40, y: 900,
+    })).toEqual({ positionX: 5, positionY: 95 });
+  });
+
+  test('la pastille sous le doigt : la plus proche, et rien hors de portee', () => {
+    const placements = [
+      { playerId: 'a', positionX: 50, positionY: 50 },
+      { playerId: 'b', positionX: 55, positionY: 50 },
+    ];
+    expect(findPlacementAt({
+      height: 400, placements, width: 300, x: 162, y: 200,
+    })).toBe('b');
+    expect(findPlacementAt({
+      height: 400, placements, width: 300, x: 20, y: 20,
+    })).toBe('');
+  });
+
+  test('sans glisser : « Avancer » monte de 5 %, et ne sort jamais du terrain', () => {
+    const placements = [{ playerId: 'a', positionX: 50, positionY: 7 }];
+    expect(nudgePlacement(placements, 'a', 'left')[0])
+      .toMatchObject({ positionX: 45, positionY: 7 });
+    expect(nudgePlacement(placements, 'a', 'up')[0]).toMatchObject({ positionY: 5 });
+    expect(nudgePlacement(placements, 'inconnu', 'up')).toEqual(placements);
   });
 
   test('cocher puis decocher', () => {

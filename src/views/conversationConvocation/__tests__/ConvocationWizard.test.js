@@ -427,3 +427,98 @@ describe('MESSAGERIE-1C · modifier une convocation publiee', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * Va jusqu'au terrain : Hugo et Sami titulaires, Theo au banc, terrain de 300 x 450.
+ * @returns {{ arbre: any, onClose: jest.Mock }}
+ */
+const allerAuTerrain = () => {
+  const ouvert = allerAuxJoueurs();
+  const { arbre } = ouvert;
+  appuyer(arbre, 'convocation-check-hugo');
+  appuyer(arbre, 'convocation-check-sami');
+  appuyer(arbre, 'convocation-check-theo');
+  const [banc] = arbre.root.findByProps({ testID: 'convocation-row-theo' })
+    .findAll((/** @type {any} */ n) => n.props.testID === 'convocation-side-bench'
+      && n.type === TouchableOpacity);
+  act(() => { banc.props.onPress(); });
+  appuyer(arbre, 'convocation-wizard-next');
+  const [cadre] = arbre.root.findAll((/** @type {any} */ n) => (
+    n.props.testID === 'convocation-field-box')
+    && typeof n.props.onLayout === 'function');
+  act(() => { cadre.props.onLayout({ nativeEvent: { layout: { height: 450, width: 300 } } }); });
+  return ouvert;
+};
+
+const terrain = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => (
+  n.props.testID === 'convocation-field' && typeof n.props.onResponderGrant === 'function'))[0];
+
+const pastille = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+  (/** @type {any} */ n) => n.props.testID === `convocation-token-${id}`
+    && typeof n.props.onAccessibilityAction === 'function',
+)[0];
+
+/**
+ * Le centre d'une pastille, en pixels du terrain de 300 x 450.
+ * @param {any} arbre
+ * @param {string} id
+ * @returns {{ x: number, y: number }}
+ */
+const centre = (/** @type {any} */ arbre, /** @type {string} */ id) => {
+  const style = [].concat(pastille(arbre, id).props.style).reduce(
+    (/** @type {any} */ acc, /** @type {any} */ s) => ({ ...acc, ...(s || {}) }),
+    {},
+  );
+  return { x: style.left + 37, y: style.top + 18 };
+};
+
+const toucher = (/** @type {number} */ x, /** @type {number} */ y) => ({
+  nativeEvent: {
+    locationX: x, locationY: y, pageX: x, pageY: y,
+  },
+});
+
+describe('MESSAGERIE-1C · etape 3 « Placement »', () => {
+  test('une pastille d initiales par titulaire, en 4-3-3 ; les remplacants dessous', () => {
+    const { arbre } = allerAuTerrain();
+    const vus = textes(arbre);
+    expect(vus).toContain('Étape 3 sur 4 · Placement');
+    expect(vus).toEqual(expect.arrayContaining([
+      'HM', 'Hugo', 'SD', 'Sami', 'BANC · 1', 'Théo Garcia',
+    ]));
+    // Le gardien en bas au centre (50 %, 93 %), le 2e poste du 4-3-3 a (86 %, 76 %).
+    expect(centre(arbre, 'hugo')).toEqual({ x: 150, y: 418.5 });
+    expect(centre(arbre, 'sami')).toEqual({ x: 258, y: 342 });
+  });
+
+  test('glisser une pastille la deplace librement', () => {
+    const { arbre } = allerAuTerrain();
+    const champ = terrain(arbre);
+    act(() => { champ.props.onResponderGrant(toucher(150, 418.5)); });
+    act(() => { champ.props.onResponderMove(toucher(180, 328.5)); });
+    act(() => { terrain(arbre).props.onResponderRelease(toucher(180, 328.5)); });
+    expect(centre(arbre, 'hugo')).toEqual({ x: 180, y: 328.5 });
+  });
+
+  test('sans glisser : toucher une pastille, puis la place voulue', () => {
+    const { arbre } = allerAuTerrain();
+    act(() => { terrain(arbre).props.onResponderGrant(toucher(258, 342)); });
+    act(() => { terrain(arbre).props.onResponderRelease(toucher(258, 342)); });
+    expect(textes(arbre)).toContain('Touche le terrain pour placer Sami Diallo.');
+
+    act(() => { terrain(arbre).props.onResponderGrant(toucher(60, 90)); });
+    act(() => { terrain(arbre).props.onResponderRelease(toucher(60, 90)); });
+    expect(centre(arbre, 'sami')).toEqual({ x: 60, y: 90 });
+  });
+
+  test('au lecteur d ecran : « Avancer » monte la pastille de 5 %', () => {
+    const { arbre } = allerAuTerrain();
+    const hugo = pastille(arbre, 'hugo');
+    expect(hugo.props.accessibilityLabel).toBe('Hugo Martin, sur le terrain');
+    expect(hugo.props.accessibilityActions.map((a) => a.label))
+      .toEqual(['Avancer', 'Reculer', 'Vers la gauche', 'Vers la droite']);
+    act(() => { hugo.props.onAccessibilityAction({ nativeEvent: { actionName: 'up' } }); });
+    // 93 % - 5 % = 88 % de 450 px.
+    expect(centre(arbre, 'hugo')).toEqual({ x: 150, y: 396 });
+  });
+});

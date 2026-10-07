@@ -453,6 +453,80 @@ export const buildPitchPlacements = ({
   });
 };
 
+/** Le pas d'un deplacement au lecteur d'ecran (« Avancer », « Vers la gauche »…), en %. */
+export const ACCESSIBLE_STEP_PERCENT = 5;
+
+/**
+ * Un point du terrain (en pixels) en pourcentages, borne au terrain.
+ * @param {object} input
+ * @param {number} input.height Hauteur du terrain dessine.
+ * @param {number} input.width Largeur du terrain dessine.
+ * @param {number} input.x
+ * @param {number} input.y
+ * @returns {{ positionX: number, positionY: number }}
+ */
+export const pointToPercent = ({
+  height, width, x, y,
+}) => ({
+  positionX: clampPitchPercent(width > 0 ? (x / width) * 100 : 50),
+  positionY: clampPitchPercent(height > 0 ? (y / height) * 100 : 50),
+});
+
+/**
+ * La pastille sous le doigt : la plus proche, a moins de `radius` pixels de son centre.
+ * @param {object} input
+ * @param {number} input.height
+ * @param {any[]} input.placements
+ * @param {number} [input.radius]
+ * @param {number} input.width
+ * @param {number} input.x
+ * @param {number} input.y
+ * @returns {string} L'identifiant du joueur, ou vide.
+ */
+export const findPlacementAt = ({
+  height, placements, radius = 26, width, x, y,
+}) => {
+  let best = '';
+  let bestDistance = radius;
+  asArray(placements).forEach((placement) => {
+    const dx = ((Number(placement?.positionX) || 0) / 100) * width - x;
+    const dy = ((Number(placement?.positionY) || 0) / 100) * height - y;
+    const distance = Math.sqrt((dx * dx) + (dy * dy));
+    if (distance <= bestDistance) {
+      best = toId(placement?.playerId);
+      bestDistance = distance;
+    }
+  });
+  return best;
+};
+
+/**
+ * Deplace une pastille d'un cran, pour qui ne peut pas glisser (lecteur d'ecran). « Avancer »
+ * va vers le but adverse, en HAUT du terrain debout.
+ * @param {any[]} placements
+ * @param {string} playerId
+ * @param {'up' | 'down' | 'left' | 'right' | string} direction
+ * @returns {any[]}
+ */
+export const nudgePlacement = (placements, playerId, direction) => {
+  const current = asArray(placements)
+    .find((placement) => toId(placement?.playerId) === toId(playerId));
+  if (!current) return asArray(placements);
+  const deltas = {
+    down: [0, ACCESSIBLE_STEP_PERCENT],
+    left: [-ACCESSIBLE_STEP_PERCENT, 0],
+    right: [ACCESSIBLE_STEP_PERCENT, 0],
+    up: [0, -ACCESSIBLE_STEP_PERCENT],
+  };
+  const [dx, dy] = deltas[/** @type {'up'} */ (direction)] || [0, 0];
+  return movePlacement(
+    placements,
+    playerId,
+    (Number(current.positionX) || 0) + dx,
+    (Number(current.positionY) || 0) + dy,
+  );
+};
+
 /**
  * Deplace une pastille, en la gardant dans le terrain.
  * @param {any[]} placements
