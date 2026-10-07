@@ -438,7 +438,7 @@ describe('TEXTES-COLLECTIVITES — « Annuler », et « retour » qui demande av
 // (sa page, ClubDetails) : l écusson DE LA VILLE, à l initiale de son nom propre, et « Offert par
 // … ». L aperçu montre désormais cela. ROUGE avant le lot.
 describe('VT18E — l aperçu porte l écusson de la Ville', () => {
-  it('« Ville de Rouvres » ⇒ l écusson « R » et « Offert par la Ville de Rouvres », plus de club fictif', async () => {
+  it('« Ville de Rouvres » ⇒ l écusson « R », « Offert par … », plus de club fictif', async () => {
     const arbre = await monter();
     await taper(arbre, 'name', 'Ville de Rouvres');
     // eslint-disable-next-line max-len
@@ -447,8 +447,9 @@ describe('VT18E — l aperçu porte l écusson de la Ville', () => {
     expect(lus).toEqual(['CE QUE LIRONT LES CLUBS', 'R', 'Offert par la Ville de Rouvres']);
 
     await taper(arbre, 'name', 'T18 Ville essai Rouvres');
-    expect(textesSous(arbre.root.findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0]))
-      .toEqual(expect.arrayContaining(['R']));
+    const apercuEssai = arbre.root
+      .findAll((n) => n.props?.testID === 'admin-collectivite-form-apercu')[0];
+    expect(textesSous(apercuEssai)).toEqual(expect.arrayContaining(['R']));
     expect(textes(arbre)).not.toContain('TC');
     expect(textes(arbre)).not.toContain('Ton club');
   });
