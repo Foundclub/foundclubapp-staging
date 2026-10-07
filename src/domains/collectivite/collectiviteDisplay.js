@@ -165,6 +165,15 @@ export const isOfficialCollectiviteName = (name, type) => {
 };
 
 /**
+ * Un nom qui s elide (« d’Aix », « d’AS Montrivage », « d’Étoile ») : il commence par une voyelle
+ * ou un h (muet le plus souvent). VILLE-T18C (07/10) : sortie de `nomOfficielDeCommune` pour servir
+ * aussi au nom d un club.
+ * @param {unknown} nom - Le nom.
+ * @returns {boolean} Vrai s il s elide.
+ */
+export const nomQuiSElide = (nom) => /^[aeiouyhàâäéèêëîïôöùûüœæ]/iu.test(String(nom || '').trim());
+
+/**
  * COLL-CONSOLE-BIS (03/10/2026) — le NOM OFFICIEL d une commune trouvee dans le referentiel de
  * l Etat (D59), avec son article : « Valfleuri » → « Ville de Valfleuri », « Aix » → « Ville
  * d’Aix », « Le Havre » → « Ville du Havre », « Les Mureaux » → « Ville des Mureaux ». « La »
@@ -188,7 +197,7 @@ export const nomOfficielDeCommune = (t, nom) => {
       nom: propre.slice(4), ...SANS_ECHAPPEMENT,
     });
   }
-  if (/^[aeiouyhàâäéèêëîïôöùûüœæ]/iu.test(propre)) {
+  if (nomQuiSElide(propre)) {
     return t('collectiviteConsoleBis.commune.nomElide', 'Ville d’{{nom}}', {
       nom: propre, ...SANS_ECHAPPEMENT,
     });

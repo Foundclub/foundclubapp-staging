@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { CONVERSATION_CLUB } from '@/domains/collectivite/collectiviteCanaux';
+import { nomQuiSElide } from '@/domains/collectivite/collectiviteDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -135,17 +136,25 @@ function EcrireAuxDirigeants({
   if (premierMessage !== null) {
     return (
       <View style={{ alignSelf: 'stretch', gap: 8 }} testID={`${testID}-saisie`}>
+        {/* VILLE-T18C (07/10, tournée T18 G62) : « d’AS Montrivage », et la mairie VOUVOYÉE
+            (ce bouton est celui de la Ville : fiche d'un club, clubs rattachés, son planning). */}
         <Text style={[Fonts.p2, Fonts.neutral00]}>
-          {t(
-            'collectiviteCanaux.privee.premierMessageTitre',
-            'Premier message aux dirigeants de {{club}}',
-            { club: club.name || '', ...SANS_ECHAPPEMENT },
-          )}
+          {nomQuiSElide(club.name)
+            ? t(
+              'collectiviteCanaux.privee.premierMessageTitreElide',
+              'Premier message aux dirigeants d’{{club}}',
+              { club: club.name || '', ...SANS_ECHAPPEMENT },
+            )
+            : t(
+              'collectiviteCanaux.privee.premierMessageTitre',
+              'Premier message aux dirigeants de {{club}}',
+              { club: club.name || '', ...SANS_ECHAPPEMENT },
+            )}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t(
             'collectiviteCanaux.privee.premierMessageAide',
-            'La conversation s’ouvre quand tu envoies ce message.',
+            'La conversation s’ouvre quand vous envoyez ce message.',
           )}
         </Text>
         <Input

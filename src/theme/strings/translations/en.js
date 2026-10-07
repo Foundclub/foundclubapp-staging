@@ -4751,6 +4751,8 @@ export default {
       envoyer: 'Send',
       premierMessageAide: 'The conversation opens when you send this message.',
       premierMessageTitre: 'First message to the managers of {{club}}',
+      // VILLE-T18C (07/10) — French elides « de » before a vowel; English does not.
+      premierMessageTitreElide: 'First message to the managers of {{club}}',
     },
     quitte: {
       retour: 'Back to messages',

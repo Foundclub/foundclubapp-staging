@@ -5087,8 +5087,10 @@ export default {
       demanderFiche: 'Demander au club de compléter sa fiche',
       ecrire: 'Écrire aux dirigeants',
       envoyer: 'Envoyer',
-      premierMessageAide: 'La conversation s’ouvre quand tu envoies ce message.',
+      // VILLE-T18C (07/10) — la mairie est vouvoyée ; « d’AS » devant une voyelle (T18, G62).
+      premierMessageAide: 'La conversation s’ouvre quand vous envoyez ce message.',
       premierMessageTitre: 'Premier message aux dirigeants de {{club}}',
+      premierMessageTitreElide: 'Premier message aux dirigeants d’{{club}}',
     },
     quitte: {
       retour: 'Retour à la messagerie',
