@@ -219,27 +219,32 @@ function AutocompleteAddressInput({
     }
     : undefined;
 
+  // Le champ garde sa forme d'origine (une constante, même indentation) : seul le lien s'y ajoute.
+  const champ = (
+    <AutocompleteSelect
+      disabled={disabled}
+      error={error}
+      isLoading={isLoading}
+      isSearchable
+      label={label || ''}
+      lienSousLesOptions={lienCarte}
+      lightMode={lightMode}
+      onBlur={onBlur}
+      onFocus={onFocus}
+      options={options}
+      placeholder={placeholder}
+      ref={selectRef}
+      searchValue={addressSearch}
+      setSearchValue={setAddressSearch}
+      setValue={handleSetValue}
+      value={selectedAddress?.label || ''}
+      wrapperStyle={wrapperStyle}
+    />
+  );
+
   return (
     <>
-      <AutocompleteSelect
-        disabled={disabled}
-        error={error}
-        isLoading={isLoading}
-        isSearchable
-        label={label || ''}
-        lienSousLesOptions={lienCarte}
-        lightMode={lightMode}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        options={options}
-        placeholder={placeholder}
-        ref={selectRef}
-        searchValue={addressSearch}
-        setSearchValue={setAddressSearch}
-        setValue={handleSetValue}
-        value={selectedAddress?.label || ''}
-        wrapperStyle={wrapperStyle}
-      />
+      {champ}
       <LieuSurCarte
         onFermer={() => setCarte(null)}
         onLieuPose={(place) => {
