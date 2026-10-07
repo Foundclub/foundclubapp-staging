@@ -31,6 +31,7 @@ import {
   getCollectiviteInvitationLink,
   getCollectiviteInvitationPreview,
   getCollectiviteInvitations,
+  getCollectiviteReferentiel,
   getCollectiviteRequests,
   getMyClubsForCollectiviteInvitation,
   getMyCollectivites,
@@ -664,6 +665,27 @@ export const useCommuneSearch = (query, { enabled = true } = {}) => {
     staleTime: 5 * 60_000,
   });
 };
+
+/**
+ * VILLE-INSCRIPTION (07/10/2026) — la LISTE COMPLETE d un type (referentiel de l Etat, lu par le
+ * serveur), affichee des l ouverture de l etape 1 de l inscription. Les communes ne se lisent
+ * qu avec un departement.
+ * @param {string} type - `region`, `departement`, `intercommunalite` ou `commune`.
+ * @param {{ departement?: string | null, enabled?: boolean }} [options] - Le departement (communes)
+ *   ; `enabled: false` : rien n est demande.
+ * @returns {RowsQuery} Le resultat react-query ; `data` est un tableau.
+ */
+export const useCollectiviteReferentiel = (
+  type,
+  { departement = null, enabled = true } = {},
+) => useQuery({
+  enabled: enabled && Boolean(type) && (type !== 'commune' || Boolean(departement)),
+  queryFn: async () => unwrapRows(await getCollectiviteReferentiel(type, departement || undefined)),
+  queryKey: ['collectivite-manager-requests', 'referentiel', type, departement || ''],
+  // Le serveur garde ces listes 24 h ; ici, seule la marque « Deja sur FoundClub » peut
+  // vieillir.
+  staleTime: 10 * 60_000,
+});
 
 /**
  * Envoie MA demande, puis relit mes demandes.
