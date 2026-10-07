@@ -24,8 +24,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { EcussonCollectivite } from '@/views/admin/components/CollectiviteBadges';
 import ConsoleSheet from '@/views/admin/components/ConsoleSheet';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -307,7 +307,6 @@ function AdminCollectiviteForm() {
   const offertPar = t('collectiviteConsole.creer.offertPar', 'Offert par {{collectivite}}', {
     collectivite: formatCollectiviteOfferedBy(form.name.trim()), ...SANS_ECHAPPEMENT,
   });
-  const nomDuClub = t('collectiviteConsole.creer.apercuClub', 'Ton club');
   const apercu = nomSaisi ? (
     <View
       style={[
@@ -326,8 +325,10 @@ function AdminCollectiviteForm() {
       <Text style={[Fonts.p3Bold, Fonts.primary200, Alignments.selfStart]}>
         {t('collectiviteConsole.creer.apercuTitre', 'Ce que liront les clubs').toUpperCase()}
       </Text>
-      <ClubLogoMark name={nomDuClub} size={60} />
-      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{nomDuClub}</Text>
+      {/* 🛡️ VT18E (07/10, capture S05d) — l écusson DE LA VILLE, comme sur la page du club
+          (ClubDetails : écusson à l initiale + « Offert par … ») ; plus le club fictif « Ton
+          club », dont l écusson « TC » se lisait comme les initiales de la Ville. */}
+      <EcussonCollectivite name={form.name} size={60} />
       <View
         style={[
           Spaces.paddingHorizontal[12],
