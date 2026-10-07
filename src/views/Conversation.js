@@ -87,6 +87,7 @@ import Button from '@/components/atoms/button/Button';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
@@ -5410,7 +5411,8 @@ function Conversation({ navigation, route }) {
 
   // ↩️ MSG1A (§3.3) — le rond « repondre » du pack : 32, il grandit avec le geste et passe
   // au CYAN au seuil (deux disques superposes : seule l'opacite s'anime, ce que le pilote
-  // natif de Swipeable sait faire).
+  // natif de Swipeable sait faire). L'icone reste celle choisie pour cette place par le lot
+  // ICONES (« icone go » d'Adel, 01/10 ; temoin `iconesALeurPlace` 2).
   const renderReplySwipeAction = useCallback((/** @type {any} */ _progress, /** @type {any} */ dragX) => {
     const avancee = dragX.interpolate({
       extrapolate: 'clamp',
@@ -5434,12 +5436,12 @@ function Conversation({ navigation, route }) {
           <View
             style={[stylesDuFil.disqueRepondre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
           >
-            <GlyphIcon color={Colors.neutral00} name="reply" size={18} />
+            <SvgIcon color={Colors.neutral00} height={18} name="reply" width={18} />
           </View>
           <Animated.View
             style={[stylesDuFil.disqueRepondre, { backgroundColor: Colors.primary500, opacity: auSeuil }]}
           >
-            <GlyphIcon color={Colors.primary900} name="reply" size={18} />
+            <SvgIcon color={Colors.primary900} height={18} name="reply" width={18} />
           </Animated.View>
         </Animated.View>
       </View>
