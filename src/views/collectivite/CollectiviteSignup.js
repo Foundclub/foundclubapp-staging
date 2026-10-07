@@ -54,10 +54,15 @@ import { useIsDesktop } from '@/responsive';
  */
 /** @typedef {'firstname' | 'lastname' | 'jobTitle' | 'professionalEmail'} ChampVous */
 /**
- * Une ligne de la liste de l'étape 1 : une collectivité à choisir, ou un département à ouvrir.
+ * Une ligne de la liste de l'étape 1 : une collectivité à choisir…
  * @typedef {{ choix: ChoixCollectivite, kind: 'choix', precision: string, recherche?: string,
- *   testID: string } | { code: string, kind: 'departement', name: string, testID: string }} Ligne
+ *   testID: string }} LigneChoix
  */
+/**
+ * … ou un département à ouvrir.
+ * @typedef {{ code: string, kind: 'departement', name: string, testID: string }} LigneDepartement
+ */
+/** @typedef {LigneChoix | LigneDepartement} Ligne */
 
 /**
  * Les morceaux non vides, séparés par « · ».
@@ -205,7 +210,7 @@ function CollectiviteSignup() {
   /**
    * Une commune du référentiel (recherche ou département ouvert), choisie avec son code INSEE.
    * @param {any} commune - La ligne du serveur.
-   * @returns {Ligne} La ligne.
+   * @returns {LigneChoix} La ligne.
    */
   const ligneDeCommune = (commune) => {
     const nomDuDepartement = nomsDesDepartements.get(commune?.departement);
@@ -243,7 +248,7 @@ function CollectiviteSignup() {
   /**
    * Une région, un département ou une intercommunalité de la liste du référentiel.
    * @param {any} ligne - La ligne du serveur.
-   * @returns {Ligne} La ligne.
+   * @returns {LigneChoix} La ligne.
    */
   const ligneDuReferentiel = (ligne) => {
     if (enCommune) return ligneDeCommune(ligne);
@@ -255,7 +260,7 @@ function CollectiviteSignup() {
     if (type === 'departement') detail = String(ligne?.code || '');
     if (type === 'intercommunalite') {
       detail = (Array.isArray(ligne?.departements) ? ligne.departements : [])
-        .map((code) => nomsDesDepartements.get(code))
+        .map((/** @type {string} */ code) => nomsDesDepartements.get(code))
         .filter(Boolean)
         .join(', ');
     }
@@ -308,7 +313,7 @@ function CollectiviteSignup() {
   } else {
     // La liste du référentiel, filtrée par le texte tapé (sans accent ni majuscule).
     const cherche = normaliserLieu(texte);
-    lignes = liste.data.map(ligneDuReferentiel)
+    lignes = (Array.isArray(liste.data) ? liste.data : []).map(ligneDuReferentiel)
       .filter((ligne) => !cherche || String(ligne.recherche || '').includes(cherche));
   }
   lignes = sansDoublon(lignes);
