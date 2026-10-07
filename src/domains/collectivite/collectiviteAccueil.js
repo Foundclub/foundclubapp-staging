@@ -355,6 +355,33 @@ export const latestManagerRequest = (demandes) => {
   return [...demandes].sort((a, b) => horodatage(b?.createdAt) - horodatage(a?.createdAt))[0];
 };
 
+/**
+ * VINSC2 (07/10/2026, tournée T18) — mes demandes EN ATTENTE, la plus récente d'abord. Aucune ne
+ * doit disparaître derrière un autre état de l'écran (un espace déjà ouvert, un refus).
+ * @param {unknown} demandes - `/collectivite-manager-requests/mine`.
+ * @returns {any[]} Les demandes en attente.
+ */
+export const pendingManagerRequests = (demandes) => (Array.isArray(demandes) ? demandes : [])
+  .filter((demande) => demande?.status === 'pending')
+  .sort((a, b) => horodatage(b?.createdAt) - horodatage(a?.createdAt));
+
+// VINSC2 — au-delà, un refus ne se montre plus à côté d'un espace déjà ouvert.
+const REFUS_RECENT_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * VINSC2 (07/10/2026) — ma demande la plus récente, si c'est un refus de moins de 30 jours : un
+ * gestionnaire qui demandait une AUTRE collectivité doit lire ce refus à côté de son espace.
+ * @param {unknown} demandes - `/collectivite-manager-requests/mine`.
+ * @param {number} [maintenant] - L'instant de référence (ms).
+ * @returns {any | null} Le refus récent, ou null.
+ */
+export const recentRefusedManagerRequest = (demandes, maintenant = Date.now()) => {
+  const derniere = latestManagerRequest(demandes);
+  if (derniere?.status !== 'refused') return null;
+  const decidee = horodatage(derniere?.decidedAt);
+  return Number.isFinite(decidee) && maintenant - decidee <= REFUS_RECENT_MS ? derniere : null;
+};
+
 // ─── LES PREMIERS PAS D'UNE VILLE TOUTE NEUVE (planche P1v3-premiers-pas) ─────────────────
 
 /**
