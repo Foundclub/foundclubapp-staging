@@ -93,17 +93,10 @@ export const countAdminCollectivitesByFilter = (rows) => {
   return { active: actives, all: lignes.length, inactive: lignes.length - actives };
 };
 
-/**
- * La lettre de l ecusson d une collectivite : celle de son nom propre, le DERNIER mot
- * (« Ville de Montrivage » → M, « Département du Var » → V, « Région Sud » → S).
- * @param {string} name - Le nom officiel.
- * @returns {string} Une lettre majuscule, ou « ? ».
- */
-export const collectiviteInitial = (name) => {
-  const mots = String(name || '').trim().split(/[\s'’-]+/).filter(Boolean);
-  const dernier = mots[mots.length - 1] || '';
-  return dernier ? dernier[0].toLocaleUpperCase('fr') : '?';
-};
+// VT18E (07/10) — la lettre de l ecusson d une collectivite : UNE regle, celle de
+// collectiviteDisplay (l initiale du nom propre ; le DERNIER mot donnait « E » pour « Ville de
+// Rouvres T18 essai »).
+export { collectiviteInitial } from '@/domains/collectivite/collectiviteDisplay';
 
 /**
  * Les demandes de la console, rangees comme ses onglets (lot COLL-CLUBS, serveur

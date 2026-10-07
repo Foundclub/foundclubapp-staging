@@ -512,7 +512,10 @@ export const useAdminCollectiviteSearch = (kind, query) => {
   const texte = String(query || '').trim();
   return useQuery({
     enabled: texte.length >= 2,
-    queryFn: async () => unwrapRows(await searchAdminCollectiviteTargets(kind, texte)),
+    // VT18E (07/10) — une recherche depassee par la frappe est coupee, pas attendue.
+    queryFn: async ({ signal }) => unwrapRows(
+      await searchAdminCollectiviteTargets(kind, texte, { signal }),
+    ),
     queryKey: [...ADMIN_COLLECTIVITES_QUERY_KEY, 'search', kind, texte],
     staleTime: 30_000,
   });
