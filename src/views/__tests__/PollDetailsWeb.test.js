@@ -25,10 +25,24 @@ const mockUseAuth = jest.fn();
 const mockVotePoll = jest.fn();
 
 jest.mock('@tanstack/react-query', () => ({
+  // SONDAGE-NOMS — la lecture des noms des votants au serveur. Aucune ici : ces
+  // temoins donnent des participants remplis (le cas « fil de club », lui, est
+  // garde par PollDetailsWebSONDAGENOMS.test.js).
+  keepPreviousData: (/** @type {any} */ data) => data,
+  useQuery: () => ({ data: undefined }),
   useQueryClient: () => ({
     invalidateQueries: jest.fn(),
     setQueriesData: jest.fn(),
   }),
+}));
+
+// `.env` est gitignore, donc absent de toute copie de travail : la lecture des
+// noms charge le client HTTP, qui mourrait au chargement sans adresse d API.
+jest.mock('@/services/client', () => ({
+  __esModule: true,
+  default: {
+    delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn(),
+  },
 }));
 
 // Le VRAI catalogue, pas une identite : l'ecran demande deux libelles a la

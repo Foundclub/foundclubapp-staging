@@ -11,6 +11,7 @@ import {
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import { BREAKPOINTS } from '@/responsive';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -85,6 +86,7 @@ function PollDetails({ navigation, route }) {
     if (initialPoll?.type === 'poll') return initialPoll;
     return null;
   }, [initialPoll, pollMessage?.composition]);
+  const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
 
   const voterDirectory = useMemo(() => {
     const map = new Map();
@@ -98,13 +100,16 @@ function PollDetails({ navigation, route }) {
       });
     };
 
+    // SONDAGE-NOMS — les votants nommés par le serveur D'ABORD : un fil de club n'a pas de
+    // participants. Les sources locales ci-dessous passent par-dessus, comme avant.
+    pollVoterProfiles.forEach(registerUser);
     registerUser(userData);
     if (Array.isArray(chatData?.participants)) {
       chatData.participants.forEach(registerUser);
     }
     flattenMessages(messagesPages?.pages).forEach((message) => registerUser(message?.sender));
     return map;
-  }, [chatData?.participants, messagesPages?.pages, userData]);
+  }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData]);
 
   const resolveVoterProfile = useCallback((voterId) => {
     return voterDirectory.get(String(voterId || '').trim()) || {
