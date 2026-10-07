@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
@@ -326,7 +327,9 @@ function ConvocationPlayersStep({
               ) : null}
               {row.isManual && !isChecked ? (
                 <TouchableOpacity
-                  accessibilityLabel={t('conversationConvocation.players.removeLabel', { name })}
+                  accessibilityLabel={t('conversationConvocation.players.removeLabel', {
+                    name, ...SANS_ECHAPPEMENT,
+                  })}
                   accessibilityRole="button"
                   hitSlop={8}
                   onPress={() => onRemoveManualPlayer(row.id)}
