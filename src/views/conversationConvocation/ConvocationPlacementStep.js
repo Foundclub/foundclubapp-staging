@@ -33,10 +33,9 @@ const DRAG_THRESHOLD = 4;
 
 const ACCESSIBLE_MOVES = ['up', 'down', 'left', 'right'];
 
-// ponytail: le pack dessine des pastilles a INITIALES ; Adel avait demande le 26/08 « la photo
-// quand il y en a une » (ConvocationFieldPreview). Question posee (chef, 07/10) : la bascule tient
-// en cette ligne.
-const TOKEN_SHOWS_PHOTO = false;
+// 📸 Adel, 07/10 ~17h30 : « sur le terrain de la convocation, c'est la PHOTO ; sinon, les
+// initiales » (joueur sans photo, ou ajoute a la main). Le lecteur d'ecran dit le nom complet.
+const TOKEN_SHOWS_PHOTO = true;
 
 /**
  * Le prenom sous la pastille (le nom entier s'il n'y en a pas).
@@ -49,8 +48,8 @@ const firstNameOf = (player) => sanitizeCompositionText(player?.firstname)
 /**
  * MESSAGERIE-1C — ETAPE 3 « PLACEMENT » (pack messagerie §3.12, §5).
  *
- * Le terrain debout du sport (`RenderedTacticalField`, le meme que partout), une pastille
- * d'initiales par titulaire, GLISSEE librement (bornee de 5 a 95 %), et les remplacants en puces
+ * Le terrain debout du sport (`RenderedTacticalField`, le meme que partout), une pastille par
+ * titulaire (sa photo, ses initiales a defaut), GLISSEE librement (bornee de 5 a 95 %), et les remplacants en puces
  * ambrees dessous.
  *
  * ♿ Deplacer SANS glisser (prompt 1C) : toucher une pastille la choisit, toucher ensuite le
@@ -231,6 +230,7 @@ function ConvocationPlacementStep({
                     >
                       {TOKEN_SHOWS_PHOTO && getCompositionPlayerAvatarUrl(row?.player) ? (
                         <ProfileAvatar
+                          enablePreview={false}
                           imageUrl={getCompositionPlayerAvatarUrl(row?.player)}
                           name={name}
                           size={TOKEN_SIZE - 4}
@@ -288,11 +288,20 @@ function ConvocationPlacementStep({
                 key={row.id}
                 style={[styles.chip, { backgroundColor: withAlpha(Colors.warning400, 0.14) }]}
               >
-                <View style={[styles.chipDot, { backgroundColor: Colors.warning400 }]}>
-                  <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
-                    {getCompositionPlayerInitials(row.player)}
-                  </Text>
-                </View>
+                {TOKEN_SHOWS_PHOTO && getCompositionPlayerAvatarUrl(row.player) ? (
+                  <ProfileAvatar
+                    enablePreview={false}
+                    imageUrl={getCompositionPlayerAvatarUrl(row.player)}
+                    name={getCompositionPlayerLabel(row.player)}
+                    size={22}
+                  />
+                ) : (
+                  <View style={[styles.chipDot, { backgroundColor: Colors.warning400 }]}>
+                    <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
+                      {getCompositionPlayerInitials(row.player)}
+                    </Text>
+                  </View>
+                )}
                 <Text style={[Fonts.p3Bold, styles.chipName, { color: Colors.neutral00 }]}>
                   {getCompositionPlayerLabel(row.player)}
                 </Text>

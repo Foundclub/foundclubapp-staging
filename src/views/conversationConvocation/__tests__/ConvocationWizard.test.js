@@ -500,6 +500,26 @@ describe('MESSAGERIE-1C · etape 3 « Placement »', () => {
     expect(centre(arbre, 'sami')).toEqual({ x: 258, y: 342 });
   });
 
+  test('« la PHOTO ; sinon, les initiales » (Adel, 07/10) : pastille et puce du banc', () => {
+    mockState.composition[matchSamedi.documentId].eligiblePlayers = [
+      { ...effectif[0], avatar: 'https://cdn.foundclub.test/hugo.jpg' },
+      effectif[1],
+      { ...effectif[2], avatar: { url: 'https://cdn.foundclub.test/theo.jpg' } },
+    ];
+    const { arbre } = allerAuTerrain();
+    const photos = arbre.root.findAll((/** @type {any} */ n) => typeof n.props.imageUrl === 'string'
+      && n.props.imageUrl.startsWith('https://cdn.foundclub.test/'));
+    expect(photos.map((n) => n.props.imageUrl)).toEqual(expect.arrayContaining([
+      'https://cdn.foundclub.test/hugo.jpg',
+      'https://cdn.foundclub.test/theo.jpg',
+    ]));
+    // Hugo et Theo ont une photo : plus d'initiales pour eux ; Sami n'en a pas : ses initiales.
+    const vus = textes(arbre);
+    expect(vus).toContain('SD');
+    expect(vus).not.toContain('TG');
+    expect(pastille(arbre, 'hugo').props.accessibilityLabel).toBe('Hugo Martin, sur le terrain');
+  });
+
   test('glisser une pastille la deplace librement', () => {
     const { arbre } = allerAuTerrain();
     const champ = terrain(arbre);
