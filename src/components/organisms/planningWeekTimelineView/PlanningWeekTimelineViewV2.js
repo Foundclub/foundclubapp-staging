@@ -60,6 +60,20 @@ const REMONTEE_DE_L_ETIQUETTE = 8;
  * @returns {string} « 08:00 ».
  */
 const etiquetteDHeure = (heure) => `${String(heure).padStart(2, '0')}:00`;
+/**
+ * VILLE-T18A (tournée T18, site, SITE_G45b) — LA CLÉ D UN BLOC. Un créneau de saison n a pas de
+ * `documentId` : sa clé était « jour-hauteur », la MÊME pour deux créneaux à la même heure. Clés
+ * en double : quand la grille se tasse (un panneau s ouvre) et que les deux blocs deviennent une
+ * grappe, React gardait un bloc FANTÔME par-dessus. Le créneau, puis le club, la départagent.
+ * @param {any} event - Le bloc place (jour, hauteur, colonne).
+ * @returns {string} Une clé unique dans la grille.
+ */
+const cleDuBloc = (event) => event?.documentId || [
+  event?.raw?.slot?.documentId || event?.club?.documentId || event?.title || 'bloc',
+  event?.dayIndex,
+  event?.top,
+  event?.colIndex ?? 0,
+].join('-');
 // COLL-FIX-PLANNING (tournee T9, capture T9_C29_2) — sous cette largeur (en points), un bloc ne
 // montre plus que deux ou trois lettres par ligne (« AS / … / 1… ») : les seances qui se
 // chevauchent se REGROUPENT alors en une seule carte (« 2 séances », voir layoutEvents).
@@ -717,7 +731,7 @@ function PlanningWeekTimelineView({
         <View style={styles.grappeDots}>
           {seances.map((/** @type {any} */ e) => (
             <View
-              key={`${e.documentId || e.title}-${e.top}`}
+              key={cleDuBloc(e)}
               style={[styles.grappeDot, { backgroundColor: e.color || Colors.primary500 }]}
             />
           ))}
@@ -872,7 +886,7 @@ function PlanningWeekTimelineView({
       <EventBlock
         accessibilityLabel={blockAccessibilityLabel}
         event={event}
-        key={event.documentId || `${event.dayIndex}-${event.top}`}
+        key={cleDuBloc(event)}
         onEventPress={onEventPress}
         onReadOnlyEventPress={onReadOnlyEventPress}
         style={[styles.eventCard, {

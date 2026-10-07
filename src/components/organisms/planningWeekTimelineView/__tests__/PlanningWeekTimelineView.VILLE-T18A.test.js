@@ -164,3 +164,56 @@ describe('VILLE-T18A point 5 — le planning semaine : des heures entières, à 
     expect(getPlanningTimeLabel({ endTime: '18:00', startTime: '18:00' })).toBe('18:00');
   });
 });
+
+// 🎨 VILLE-T18A (07/10), tournée T18 point 4b (site, captures SITE_G45b, SITE_G58, SITE_G37b) — un
+// panneau s ouvre à droite (fiche d un bloc, Attribuer, Fermer) : la grille se tasse, les deux
+// créneaux du mardi se regroupent en « 2 créneaux »… et le bloc « AS… U15 » restait dessiné PAR-DESSUS.
+// Cause : un créneau n a pas de `documentId` ; sa clé était « jour-hauteur », la MÊME pour deux
+// créneaux à la même heure. Clés en double : React ne retire pas l ancien bloc. ROUGE avant le lot.
+describe('VILLE-T18A point 4b — la grille se tasse : aucun bloc fantôme sur la grappe', () => {
+  const creneau = (/** @type {any} */ champs) => bloc({
+    endAt: '2026-10-06T17:30:00.000Z',
+    endTime: '19:30:00.000',
+    startAt: '2026-10-06T16:00:00.000Z',
+    startTime: '18:00:00.000',
+    ...champs,
+  });
+  const AS_U15 = creneau({
+    club: { documentId: 'club-as', name: 'AS Montrivage' }, slot: { documentId: 'upk2' }, team: { name: 'U15' }, title: 'AS Montrivage · U15',
+  });
+  const MFC = creneau({
+    club: { documentId: 'club-fc', name: 'Montrivage FC' }, slot: { documentId: 'pt2i' }, team: null, title: 'Montrivage FC',
+  });
+  const mesurer = async (/** @type {any} */ arbre, /** @type {number} */ largeur) => {
+    const grille = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.type === 'string' && n.props.testID === 'planning-grille'
+    ))[0];
+    await act(async () => {
+      grille.props.onLayout({ nativeEvent: { layout: { height: 600, width: largeur } } });
+    });
+  };
+  const blocsDe = (/** @type {any} */ arbre, /** @type {string} */ debut) => arbre.root.findAll((/** @type {any} */ n) => (
+    typeof n.type === 'string' && String(n.props.accessibilityLabel || '').startsWith(debut)
+  ));
+
+  it('deux créneaux à la même heure : la grille large les pose côte à côte, la grille tassée n en garde QUE la grappe', async () => {
+    const erreurs = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const arbre = await monter([AS_U15, MFC]);
+      await mesurer(arbre, 1000);
+      expect(blocsDe(arbre, 'AS Montrivage · U15')).toHaveLength(1);
+      expect(blocsDe(arbre, 'Montrivage FC')).toHaveLength(1);
+
+      // Un panneau s ouvre : 200 px pour 7 jours, deux colonnes ne tiennent plus.
+      await mesurer(arbre, 200);
+      const grappes = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.props.testID === 'planning-grappe');
+      expect(grappes).toHaveLength(1);
+      expect(blocsDe(arbre, 'AS Montrivage · U15')).toHaveLength(0);
+      expect(blocsDe(arbre, 'Montrivage FC')).toHaveLength(0);
+      const clesEnDouble = erreurs.mock.calls.filter((appel) => String(appel[0]).includes('same key'));
+      expect(clesEnDouble).toHaveLength(0);
+    } finally {
+      erreurs.mockRestore();
+    }
+  });
+});
