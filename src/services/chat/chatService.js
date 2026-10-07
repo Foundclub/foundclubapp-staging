@@ -519,8 +519,10 @@ export const votePollMessage = async (messageId, optionId) => {
  * ne garde que des identifiants : sans cette lecture, un membre d un fil de club
  * qui n a rien ecrit s affiche « Membre ». Aucun nom pour un sondage anonyme.
  * @param {string} messageId Le message du sondage.
+ * Un compte supprimé arrive avec `deleted: true` et des noms vides.
  * @returns {Promise<{ chatDocumentId: string; data: Array<{ avatar: { url: string } | null;
- *   documentId: string; firstname: string; lastname: string }>; messageDocumentId: string }>}
+ *   deleted?: boolean; documentId: string; firstname: string; lastname: string }>;
+ *   messageDocumentId: string }>}
  */
 export const getPollVoterProfiles = async (messageId) => {
   const response = await client.get(`/chat-messages/${messageId}/poll-voters`);
