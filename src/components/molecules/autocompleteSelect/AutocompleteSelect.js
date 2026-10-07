@@ -73,6 +73,10 @@ import Input, {
  * @property {import('react-native').TextStyle
  * | Array<import('react-native').TextStyle>} [optionTextStyle]
  *  - Optional text style applied to option labels.
+ * @property {{ label: string, onPress: () => void }} [lienSousLesOptions] - ADRESSE-CARTE
+ *  (07/10) : un lien SOUS les propositions (« Adresse introuvable ? Placez-la sur la carte »).
+ *  L'appui referme la feuille SANS toucher à la valeur choisie, puis appelle `onPress`.
+ *  Absent : rien ne change.
  */
 
 /**
@@ -271,6 +275,13 @@ const AutocompleteSelect = forwardRef(
       if (props.onActionPress) {
         props.onActionPress();
       }
+    };
+
+    // ADRESSE-CARTE — referme SANS persister : chercher ailleurs ne doit pas effacer l'adresse d'avant.
+    const handleLienSousLesOptions = () => {
+      const lien = props.lienSousLesOptions;
+      handleCloseModal(false);
+      lien?.onPress();
     };
 
     /**
@@ -618,6 +629,17 @@ const AutocompleteSelect = forwardRef(
                     {t('common.messages.noData')}
                   </Text>
                 ) : null}
+              {props.lienSousLesOptions ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={handleLienSousLesOptions}
+                  style={[Spaces.marginTop[8], Spaces.paddingVertical[8]]}
+                >
+                  <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                    {props.lienSousLesOptions.label}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
         </BottomModal>

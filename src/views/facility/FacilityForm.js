@@ -938,6 +938,7 @@ function FacilityForm() {
             address={value}
             error={errors.address?.message}
             label={t('facilityForm.fields.address', 'Adresse (lieu exact)')}
+            permettreLieuSurCarte
             placeholder={t('facilityForm.placeholders.address', 'Ex: 12 Rue du Stade...')}
             setAddress={onChange}
           />

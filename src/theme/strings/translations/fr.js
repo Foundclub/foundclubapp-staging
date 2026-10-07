@@ -2205,6 +2205,30 @@ export default {
       firebaseNotConfigured: 'Firebase Web n’est pas configuré pour cette application.',
     },
   },
+  autocompleteAddressInput: {
+    // ADRESSE-CARTE (07/10) — « Adresse introuvable ? Placez-la sur la carte » (champ d'adresse partagé).
+    lieu: {
+      aide: 'Déplacez la carte pour mettre l’épingle sur le lieu, puis donnez-lui un nom.',
+      annuler: 'Annuler',
+      erreurs: {
+        connexion: 'Connectez-vous pour poser un lieu.',
+        debit: 'Trop de lieux posés d’un coup : réessayez dans quelques minutes.',
+        donneePersonnelle: 'Un lieu est visible par tous : pas de courriel, de téléphone ni de lien.',
+        nom: 'Donnez un nom au lieu (3 caractères au moins).',
+        panne: 'Le lieu n’a pas pu être enregistré. Réessayez.',
+        plafond: 'Vous avez posé beaucoup de lieux : réessayez demain.',
+        point: 'Ce point ne peut pas être enregistré. Déplacez la carte et réessayez.',
+      },
+      lien: 'Adresse introuvable ? Placez-la sur la carte',
+      nom: 'Nom du lieu',
+      nomExemple: 'Ex. Stade de Luminy',
+      placer: 'Placer ici',
+      placerAide: 'Pose le lieu sous l’épingle, au centre de la carte.',
+      presDe: 'Près de : {{adresse}}',
+      titre: 'Placer le lieu sur la carte',
+      zoomer: 'Zoomez jusqu’à la rue pour placer le lieu précisément.',
+    },
+  },
   bookingCalendar: {
     availableSlots: 'Créneaux disponibles -',
     chooseDate: 'Choisir une date',

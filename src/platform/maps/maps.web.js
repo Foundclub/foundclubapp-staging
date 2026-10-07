@@ -19,6 +19,7 @@ import {
   getSearchMapProviderErrorMessage,
   SEARCH_MAP_ERROR_REASONS,
 } from '@/platform/maps/searchMapCopy';
+import { readCurrentSearchMapLocationIfGranted } from '@/platform/maps/searchMapGeolocation';
 import {
   getSearchMapProvider,
   getTomTomApiKey,
@@ -325,7 +326,7 @@ function SearchMapIframeRuntime({
         </View>
       ) : null}
 
-      {mapStatus === 'ready' && items.length === 0 && (!renderItems || renderItems.length === 0) ? (
+      {mapStatus === 'ready' && message && items.length === 0 && (!renderItems || renderItems.length === 0) ? (
         <View
           style={{
             alignItems: 'center',
@@ -448,11 +449,46 @@ export const renderMap = ({
   );
 };
 
+/**
+ * ADRESSE-CARTE (07/10) — la carte « à épingle » : la MÊME carte Leaflet, sans résultat ni
+ * message, cadrée sur un point. L'écran pose l'épingle au centre et relit le centre à chaque
+ * déplacement (`onRegionChangeComplete`).
+ * @param {object} props
+ * @param {number} [props.height]
+ * @param {(region: { lat: number; lng: number; zoom?: number }) => void} [props.onRegionChangeComplete]
+ * @param {{ lat: number, lng: number, zoom?: number } | null} [props.regionHint]
+ * @returns {import('react').ReactElement}
+ */
+export const renderPinMap = ({ height = 360, onRegionChangeComplete, regionHint = null } = {}) => {
+  // Les tuiles suivent la carte de recherche (TomTom si la clé est là), mais une carte à épingle
+  // n'a pas d'état « clé manquante » : le site n'a pas de clé TomTom, il prend OpenStreetMap.
+  const tomTomApiKey = getTomTomApiKey();
+  return (
+    <SearchMapIframeRuntime
+      errorMessage={getSearchMapProviderErrorMessage(SEARCH_MAP_ERROR_REASONS.tilesUnavailable)}
+      focusMode="region"
+      height={height}
+      items={[]}
+      message=""
+      onRegionChangeComplete={onRegionChangeComplete}
+      regionHint={regionHint}
+      tileAttribution={tomTomApiKey ? TOMTOM_TILE_PROVIDER.attribution : LEGACY_TILE_PROVIDER.attribution}
+      tileProbeUrl={tomTomApiKey ? buildTomTomProbeUrl(tomTomApiKey) : ''}
+      tileUrl={tomTomApiKey ? buildTomTomTileUrl(tomTomApiKey) : LEGACY_TILE_PROVIDER.url}
+    />
+  );
+};
+
 // CONVOC (26/09) — la copie web d'`openExternalMap` (jamais appelee) est
 // remplacee par l'aide partagee, qui ouvre Google Maps dans un onglet sur le site.
 export { openExternalMap };
 
+// ADRESSE-CARTE (07/10) — la position SEULEMENT si le site l'a déjà reçue (jamais de demande).
+export const readCurrentLocationIfGranted = () => readCurrentSearchMapLocationIfGranted();
+
 export default {
   openExternalMap,
+  readCurrentLocationIfGranted,
   renderMap,
+  renderPinMap,
 };
