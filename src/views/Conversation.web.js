@@ -3445,18 +3445,21 @@ function Conversation({ navigation, route }) {
     }
   }, [chatId, navigation, queryClient, t]);
 
-  // Echap ferme la fenetre ouverte depuis le « + », ou celle d une adresse.
+  // Echap ferme la fenetre ouverte depuis le « + » (« Créer un sondage » compris : SMF, T20),
+  // ou celle d une adresse. ⚠️ Ecoutee A LA DESCENTE (`true`) : les champs du sondage sont des
+  // TextInput de react-native-web, qui arretent la touche (`stopPropagation`) avant le document.
   useEffect(() => {
-    if (!fenetre && !adresseOuverte) return undefined;
+    if (!fenetre && !adresseOuverte && !sondageOuvert) return undefined;
     if (typeof document === 'undefined') return undefined;
     const surTouche = (/** @type {KeyboardEvent} */ event) => {
       if (event.key !== 'Escape') return;
       setFenetre('');
       setAdresseOuverte('');
+      setSondageOuvert(false);
     };
-    document.addEventListener('keydown', surTouche);
-    return () => document.removeEventListener('keydown', surTouche);
-  }, [adresseOuverte, fenetre]);
+    document.addEventListener('keydown', surTouche, true);
+    return () => document.removeEventListener('keydown', surTouche, true);
+  }, [adresseOuverte, fenetre, sondageOuvert]);
 
   const copierLAdresse = useCallback(async () => {
     const adresse = adresseOuverte;
