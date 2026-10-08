@@ -177,6 +177,15 @@ const AutocompleteSelect = forwardRef(
       }
 
       if (tokenSet.size === 0) return undefined;
+      // SITE-VILLE-FINITIONS (T19) : deux adresses au meme point ont la meme `value` ; l option
+      // dont la valeur ET le libelle sont ceux de la valeur passe d abord.
+      const lesDeux = props.options.find((option) => {
+        const optionTokens = [
+          ...toComparableTokens(option?.value), ...toComparableTokens(option?.label),
+        ];
+        return optionTokens.length > 1 && optionTokens.every((token) => tokenSet.has(token));
+      });
+      if (lesDeux) return lesDeux;
       return props.options.find((option) => {
         const optionTokens = [...toComparableTokens(option?.value), ...toComparableTokens(option?.label)];
         return optionTokens.some((token) => tokenSet.has(token));
@@ -316,9 +325,14 @@ const AutocompleteSelect = forwardRef(
         );
       }
       const singleOption = selectedOptions;
-      return Boolean(
-        singleOption && !Array.isArray(singleOption) && singleOption.value === option.value,
-      );
+      if (!singleOption || Array.isArray(singleOption) || singleOption.value !== option.value) {
+        return false;
+      }
+      // SITE-VILLE-FINITIONS (T19) : « 12 Rue de la Mairie » (un lieu pose sur la carte) et « Rue
+      // de la Mairie » (la base d adresses) au meme point s allumaient ensemble : a valeur egale,
+      // le libelle departage.
+      const memeValeur = props.options.filter((opt) => opt?.value === option.value).length;
+      return memeValeur < 2 || singleOption.label === option.label;
     };
 
     const getDisplayValue = () => {

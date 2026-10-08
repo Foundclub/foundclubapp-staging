@@ -204,3 +204,49 @@ describe('R03 · AutocompleteSelect — ce qu il rend quand on DESELECTIONNE', (
     expect(setValue).toHaveBeenCalledWith(undefined);
   });
 });
+
+// 🎨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — la feuille
+// d adresse : toucher « 12 Rue de la Mairie 28260 Rouvres » (un lieu posé sur la carte) allumait
+// AUSSI « Rue de la Mairie 28260 Rouvres » (la base d adresses) : les deux options d adresse ont
+// la même `value` (« longitude|latitude ») quand elles sont au même point. À valeur égale, le
+// libellé départage. ROUGE avant.
+describe('SVF · AutocompleteSelect — deux options au même point', () => {
+  const MEME_POINT = '1.486565|48.840303';
+  const ADRESSES = [
+    { label: 'Rue de la Mairie 28260 Rouvres', value: MEME_POINT },
+    { label: '12 Rue de la Mairie 28260 Rouvres', value: MEME_POINT },
+  ];
+  const coche = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props.testID === `option-${libelle}`)[0]
+    .props.accessibilityState.checked;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest
+      .spyOn(InteractionManager, 'runAfterInteractions')
+      .mockImplementation((/** @type {any} */ tache) => {
+        if (typeof tache === 'function') tache();
+        return /** @type {any} */ ({ cancel: () => {} });
+      });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it('toucher l une n allume qu elle, et c est elle qui remonte', () => {
+    const { arbre, setValue } = monterEtOuvrir({ label: 'Adresse', options: ADRESSES, value: '' });
+    appuyerSur(arbre, 'option-12 Rue de la Mairie 28260 Rouvres');
+    expect(coche(arbre, '12 Rue de la Mairie 28260 Rouvres')).toBe(true);
+    expect(coche(arbre, 'Rue de la Mairie 28260 Rouvres')).toBe(false);
+    appuyerSur(arbre, 'bouton-modals.actions.select');
+    expect(setValue).toHaveBeenCalledWith(ADRESSES[1]);
+  });
+
+  it('à la réouverture, seule l adresse enregistrée est cochée', () => {
+    const { arbre } = monterEtOuvrir({ label: 'Adresse', options: ADRESSES, value: ADRESSES[1] });
+    expect(coche(arbre, '12 Rue de la Mairie 28260 Rouvres')).toBe(true);
+    expect(coche(arbre, 'Rue de la Mairie 28260 Rouvres')).toBe(false);
+  });
+});
