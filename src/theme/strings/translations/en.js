@@ -4732,6 +4732,7 @@ export default {
       aucuneInstallation: 'No facility yet.',
       aucuneSeance: 'No session',
       complet: 'full {{moment}}',
+      installations: 'Facilities',
       libre: 'free',
       planning: 'Schedule',
       reservees: '{{duree}} booked this week',

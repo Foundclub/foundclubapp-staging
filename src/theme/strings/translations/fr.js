@@ -5074,6 +5074,8 @@ export default {
       aucuneInstallation: 'Aucune installation pour l’instant.',
       aucuneSeance: 'Aucune séance',
       complet: 'complet {{moment}}',
+      // FINITIONS-VILLE (T20) : le lien mène à la liste des installations.
+      installations: 'Installations',
       libre: 'libre',
       planning: 'Planning',
       // VILLE-T18B (b) : une installation sans horaires (pas de taux).
