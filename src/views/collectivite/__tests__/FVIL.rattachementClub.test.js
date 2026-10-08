@@ -2,12 +2,15 @@
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import MaCollectivite from '../components/MaCollectivite';
 import RattachementDuClub from '../components/RattachementDuClub';
 
 // 🏛️ FINITIONS-VILLE (08/10/2026, tournée T20 lot 5) — le rattachement VU DU CLUB.
 // Ce que ce témoin fige (ROUGE avant le lot) :
 //   R1 — refuser la demande de la Ville ne dit plus « Elle ne pourra pas te la renvoyer » : la
 //        Ville renvoie (« refus B », 07/10).
+//   R2 — la carte dit l'état COURANT seul ; « Annuler ma demande » (serveur FVIL F5).
+//   R3 — « Ta mairie d’Agy … depuis le jeudi 8 octobre. » : l'élision, un seul point.
 
 jest.setTimeout(30000);
 
@@ -159,5 +162,17 @@ describe('FVIL lot 5 · le rattachement vu du club', () => {
       canAnswer: false, collectivite: MONTRIVAGE, documentId: 'r3', kind: 'attach_request', state: 'pending',
     }];
     expect(boutons(await monter(<RattachementDuClub clubId="club-k" enabled />), 'Annuler ma demande')).toHaveLength(0);
+  });
+
+  it('R3 « Ta mairie d’Agy » (élision), « du Havre », et UN seul point après la date', async () => {
+    const lead = (/** @type {string} */ communeName) => ({
+      attached: null, commune: null, lead: { communeName, createdAt: '2026-10-08T12:00:00.000Z' },
+    });
+    mockMa.data = lead('Agy');
+    expect(textes(await monter(<MaCollectivite clubId="club-k" />))).toContain('Ta mairie d’Agy est signalée à l’équipe FoundClub depuis le jeudi 8 octobre.');
+    mockMa.data = lead('Montrivage');
+    expect(textes(await monter(<MaCollectivite clubId="club-k" />))).toContain('Ta mairie de Montrivage est signalée à l’équipe FoundClub depuis le jeudi 8 octobre.');
+    mockMa.data = lead('Le Havre');
+    expect(textes(await monter(<MaCollectivite clubId="club-k" />))).toContain('Ta mairie du Havre est signalée à l’équipe FoundClub depuis le jeudi 8 octobre.');
   });
 });

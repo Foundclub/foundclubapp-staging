@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
+import { deLaCommune } from '@/domains/collectivite/collectiviteDisplay';
 import { gesteDuClub } from '@/domains/collectivite/collectiviteRattachement';
+import { closureDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -217,10 +218,12 @@ function MaCollectivite({ clubId }) {
         <Text style={[Fonts.p2, Fonts.success200]}>
           {t(
             'collectiviteRattachement.ma.leadDone',
-            'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+            'Ta mairie {{deCommune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
             {
               commune: piste.communeName || '',
-              date: formatCollectiviteDay(piste.createdAt) || '',
+              // FINITIONS-VILLE (T20) : « d’Agy », et la date LONGUE (« oct.. » : deux points).
+              date: closureDay(piste.createdAt, { long: true }),
+              deCommune: deLaCommune(piste.communeName),
               ...SANS_ECHAPPEMENT,
             },
           )}

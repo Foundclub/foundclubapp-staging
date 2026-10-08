@@ -5751,7 +5751,7 @@ export default {
       inCommune: 'Dans ta commune',
       // eslint-disable-next-line max-len
       intro: 'Rattaché à sa Ville, ton club voit ses installations et ses créneaux, peut y demander des créneaux et reçoit ses actualités. Son planning reste entre la Ville et ses clubs.',
-      leadDone: 'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      leadDone: 'Ta mairie {{deCommune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
       leadIntro: 'Préviens ta mairie : l’équipe FoundClub la contactera de ta part.',
       missingTitle: 'Ta collectivité n’est pas sur FoundClub ?',
       notify: 'Prévenir ma mairie',
