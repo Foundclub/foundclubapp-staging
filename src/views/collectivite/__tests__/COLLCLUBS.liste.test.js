@@ -283,3 +283,19 @@ describe('VILLE-T18C — tableau des clubs : « Demander de compléter » tient 
     expect(boutonTitre(arbre, 'Demander au club de compléter sa fiche')).toBeDefined();
   });
 });
+
+// 🏛️ FINITIONS-VILLE — décision d'Adel `dirigeant A` (08/10, relayée par le chef) : la Ville GARDE
+// « Dirigeant : <nom> » sous chaque club (SPEC D15). La phrase de l'écran qui disait « jamais le
+// nom d'un membre » devient VRAIE : les dirigeants, oui ; les autres membres, jamais.
+// ROUGE avant : la phrase contredisait la carte juste en dessous.
+describe('FINITIONS-VILLE — la phrase de la page Clubs dit ce que la Ville voit', () => {
+  it('« le nom de ses dirigeants » ; « jamais les autres membres »', async () => {
+    const lus = textes(await monter());
+    expect(lus).toContain('Dirigeant : Karim Benali');
+    expect(lus).toContain(
+      // eslint-disable-next-line max-len
+      'Le contact général de chaque club, le nom de ses dirigeants et des nombres : jamais les autres membres.',
+    );
+    expect(lus.some((texte) => texte.includes('jamais le nom d’un membre'))).toBe(false);
+  });
+});

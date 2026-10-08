@@ -4586,6 +4586,23 @@ export default {
       missing: 'Renseigne au moins le nom et l\'adresse du club.',
       name: 'Nom',
       phone: 'Téléphone',
+      // FINITIONS-VILLE (« créateur C », 08/10).
+      quiDirige: {
+        aide: 'Sans dirigeant, personne ne gère le club et une Ville ne peut pas l’inviter.',
+        autre: 'Quelqu’un d’autre, je l’inviterai',
+        autreSuite: 'Ton club est en ligne. Invite son dirigeant à ouvrir sa fiche '
+          + 'et à toucher « Je dirige ce club ». '
+          + 'L’équipe FoundClub vérifiera sa demande.',
+        inconnu: 'Je ne sais pas encore',
+        invitation: 'Rejoins {{clubName}} sur FoundClub avec ton compte dirigeant. '
+          + 'Sur la fiche, touche « Je dirige ce club » pour demander sa gestion ; '
+          + 'FoundClub vérifiera ta demande.',
+        inviter: 'Inviter le dirigeant',
+        moi: 'Moi',
+        partageErreur: 'Le partage a échoué. Tu peux partager la fiche du club plus tard.',
+        plusTard: 'Plus tard',
+        titre: 'Qui dirige ce club ?',
+      },
       sports: 'Sports',
       subtitle: 'Vérifie les informations avant de créer ton club.',
       successDescription: 'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
@@ -4731,7 +4748,9 @@ export default {
       counts: 'Équipes : {{teams}} · Membres : {{members}}',
       empty: 'Aucun club rattaché pour l’instant.',
       header: 'Clubs rattachés',
-      hint: 'Le contact général de chaque club et des nombres : jamais le nom d’un membre.',
+      // FINITIONS-VILLE (décision d'Adel « dirigeant A », 08/10) : la Ville voit les dirigeants.
+      // eslint-disable-next-line max-len
+      hint: 'Le contact général de chaque club, le nom de ses dirigeants et des nombres : jamais les autres membres.',
       noContact: 'Pas de contact renseigné par le club.',
       title: 'Clubs rattachés : {{nombre}}',
     },
@@ -15669,7 +15688,7 @@ export default {
   pollDetails: {
     anonymousVotes: 'Votes anonymes',
     back: 'Retour',
-    createdBy: 'Creé par',
+    createdBy: 'Créé par',
     information: 'Informations',
     loadingThePoll: 'Chargement du sondage…',
     member: 'Membre',
@@ -15687,7 +15706,7 @@ export default {
     totalVotes: 'Total votes',
     unableToSaveThisVote: 'Impossible de sauvegarder ce vote.',
     vote: 'Voter',
-    voteSaved: 'Vote enregistre',
+    voteSaved: 'Vote enregistré',
     votesCount_one: '{{count}} vote',
     votesCount_other: '{{count}} votes',
     votesVisibleToAllParticipants: 'Votes visibles pour tous les participants',

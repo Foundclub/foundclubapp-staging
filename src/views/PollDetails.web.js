@@ -298,7 +298,7 @@ function PollDetails({ navigation, route }) {
                         >
                           {section.isSelected ? t(
                             'pollDetails.voteSaved',
-                            'Vote enregistre',
+                            'Vote enregistré',
                           ) : t('pollDetails.vote', 'Voter')}
                         </button>
                       </div>
@@ -350,7 +350,7 @@ function PollDetails({ navigation, route }) {
                 <div style={{ display: 'grid', gap: 10 }}>
                   <div style={{ display: 'grid', gap: 4 }}>
                     <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                      {t('pollDetails.createdBy', 'Creé par')}
+                      {t('pollDetails.createdBy', 'Créé par')}
                     </span>
                     <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
                       {poll?.createdBy ? (resolveVoterProfile(String(poll.createdBy)).displayName) : t(

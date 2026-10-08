@@ -3,7 +3,11 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
-import { attachCreatedClubToProfile, markOnboardingComplete } from '@/domains/auth/authUseCases';
+import {
+  attachCreatedClubToProfile,
+  getUserRoleKey,
+  markOnboardingComplete,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { lienDeLaVilleRetenu, oublierLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
@@ -11,17 +15,31 @@ import useTheme from '@/theme/themeContext';
 
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import { LigneDeChoix } from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
+import { cheminFicheAnnuaire } from '@/services/annuaire/slugAnnuaire';
 import { createSelfOnboardClub } from '@/services/club/clubService';
 
+import { buildPublicWebUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
+
+// L'alias plateforme est « unknown » pour perfectionist mais « internal » pour import/order.
+import SharePlatform from '@/platform/share';
+
+// eslint-disable-next-line perfectionist/sort-imports
 import { useClubWizard } from './ClubWizardContext';
 
 const STEP_COUNT = 5;
 
+// FINITIONS-VILLE — décision d'Adel « créateur C » (08/10) : qui dirige le club que crée un
+// ENTRAÎNEUR. « Moi » le rend dirigeant (`alsoDirector`) ; sans dirigeant, personne n'a « Gérer
+// mon club » et une Ville ne peut pas l'inviter.
+const REPONSES_QUI_DIRIGE = Object.freeze(['moi', 'autre', 'inconnu']);
+
 /**
+ * Une ligne du récapitulatif du club.
  * @param {any} props
  * @returns {import('react').ReactElement}
  */
@@ -64,6 +82,10 @@ function ClubWizardRecap({ navigation, route }) {
   // (un second appui créait un second club pendant que le profil se relisait).
   const [cree, setCree] = useState(false);
   const [duplicates, setDuplicates] = useState(/** @type {any[]} */ ([]));
+  // « créateur C » : la réponse est OBLIGATOIRE pour un entraîneur (un dirigeant l'est déjà).
+  const roleDuCreateur = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  const doitDireQuiDirige = roleDuCreateur === 'coach';
+  const [quiDirige, setQuiDirige] = useState(/** @type {string | null} */ (null));
 
   const activityNames = useMemo(() => {
     const list = Array.isArray(activities) ? activities : [];
@@ -197,6 +219,7 @@ function ClubWizardRecap({ navigation, route }) {
   };
 
   const submit = async ({ forceCreate = false } = {}) => {
+    if (cree || isSubmitting || (doitDireQuiDirige && !quiDirige)) return;
     const option = state.addressOption || {};
     const hasCoordinates = Number.isFinite(option?.lat) && Number.isFinite(option?.lng);
     if (!String(state.name || '').trim() || !hasCoordinates) {
@@ -215,7 +238,7 @@ function ClubWizardRecap({ navigation, route }) {
         activityDocumentIds: state.activityDocumentIds,
         addressDetails: option?.label,
         addressLabel: option?.label,
-        alsoDirector: state.alsoDirector === true,
+        alsoDirector: doitDireQuiDirige && quiDirige === 'moi',
         coordinates: { lat: option.lat, lng: option.lng },
         email: state.email,
         forceCreate,
@@ -233,16 +256,64 @@ function ClubWizardRecap({ navigation, route }) {
       if (lienDeLaVille) oublierLienDeLaVille();
       setCree(true);
 
+      const autreDirigeant = doitDireQuiDirige && quiDirige === 'autre';
+      const nomDuClub = result?.club?.name || String(state.name).trim();
+      const lienDuClub = buildPublicWebUrl({
+        path: cheminFicheAnnuaire({ ...result?.club, name: nomDuClub }),
+      });
+      const inviterDirigeant = async () => {
+        try {
+          await SharePlatform.share({
+            message: buildShareMessageWithUrl({
+              intro: t(
+                'clubWizard.recap.quiDirige.invitation',
+                'Rejoins {{clubName}} sur FoundClub avec ton compte dirigeant. '
+                  + 'Sur la fiche, touche « Je dirige ce club » pour demander sa gestion ; '
+                  + 'FoundClub vérifiera ta demande.',
+                { clubName: nomDuClub },
+              ),
+              url: lienDuClub,
+            }),
+            title: nomDuClub,
+            url: lienDuClub,
+          });
+        } catch (error) {
+          if (error?.name === 'AbortError') return;
+          Alert.alert(
+            t('common.error', 'Erreur'),
+            t(
+              'clubWizard.recap.quiDirige.partageErreur',
+              'Le partage a échoué. Tu peux partager la fiche du club plus tard.',
+            ),
+          );
+        }
+      };
+
       // FINITIONS-VILLE (T19-bis, T20 P09) : l'alerte INFORME, elle ne commande plus la suite. La
       // suite attendait son « OK » (sur le site, un `window.confirm` : « Annuler » laissait le
       // récapitulatif affiché, bouton rallumé) ; elle part maintenant, quoi qu'on réponde.
       Alert.alert(
         t('clubWizard.recap.successTitle', 'Club créé !'),
-        t(
-          'clubWizard.recap.successDescription',
-          'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
-        ),
-        [{ text: t('common.actions.ok', 'OK') }],
+        // « créateur C » : un entraîneur ne peut pas nommer un dirigeant ; le dirigeant le demande
+        // lui-même depuis la fiche du club (« Je dirige ce club »), l'équipe FoundClub valide.
+        autreDirigeant
+          ? t(
+            'clubWizard.recap.quiDirige.autreSuite',
+            'Ton club est en ligne. Invite son dirigeant à ouvrir sa fiche '
+              + 'et à toucher « Je dirige ce club ». '
+              + 'L’équipe FoundClub vérifiera sa demande.',
+          )
+          : t(
+            'clubWizard.recap.successDescription',
+            'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
+          ),
+        autreDirigeant && lienDuClub ? [
+          { style: 'cancel', text: t('clubWizard.recap.quiDirige.plusTard', 'Plus tard') },
+          {
+            onPress: inviterDirigeant,
+            text: t('clubWizard.recap.quiDirige.inviter', 'Inviter le dirigeant'),
+          },
+        ] : [{ text: t('common.actions.ok', 'OK') }],
       );
       await resumeAfterSuccess(
         result?.club,
@@ -267,7 +338,7 @@ function ClubWizardRecap({ navigation, route }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={cree || (!hasDuplicates && !canSubmit)}
+      isNextDisabled={cree || (!hasDuplicates && !canSubmit) || (doitDireQuiDirige && !quiDirige)}
       isNextLoading={isSubmitting || cree}
       nextLabel={hasDuplicates
         ? t('clubWizard.recap.createAnyway', 'Créer quand même')
@@ -311,6 +382,35 @@ function ClubWizardRecap({ navigation, route }) {
         />
       </View>
 
+      {doitDireQuiDirige ? (
+        <View style={[Spaces.marginTop[24], { gap: 8 }]} testID="club-wizard-qui-dirige">
+          <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
+            {t('clubWizard.recap.quiDirige.titre', 'Qui dirige ce club ?')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'clubWizard.recap.quiDirige.aide',
+              'Sans dirigeant, personne ne gère le club et une Ville ne peut pas l’inviter.',
+            )}
+          </Text>
+          {REPONSES_QUI_DIRIGE.map((cle) => {
+            let libelle = t('clubWizard.recap.quiDirige.inconnu', 'Je ne sais pas encore');
+            if (cle === 'moi') libelle = t('clubWizard.recap.quiDirige.moi', 'Moi');
+            if (cle === 'autre') {
+              libelle = t('clubWizard.recap.quiDirige.autre', 'Quelqu’un d’autre, je l’inviterai');
+            }
+            return (
+              <LigneDeChoix
+                coche={quiDirige === cle}
+                key={cle}
+                libelle={libelle}
+                onPress={() => setQuiDirige(cle)}
+              />
+            );
+          })}
+        </View>
+      ) : null}
+
       {hasDuplicates ? (
         <View style={[Spaces.marginTop[24]]}>
           <Text style={[Fonts.p3Bold, { color: Colors.error700 }, Spaces.marginBottom[8]]}>
@@ -319,7 +419,8 @@ function ClubWizardRecap({ navigation, route }) {
           <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginBottom[12]]}>
             {t(
               'clubWizard.recap.duplicateHint',
-              'Rejoins-le s\'il s\'agit du tien, ou touche « Créer quand même » si c\'est un autre club.',
+              'Rejoins-le s\'il s\'agit du tien, ou touche « Créer quand même » '
+                + 'si c\'est un autre club.',
             )}
           </Text>
           {duplicates.map((club) => (

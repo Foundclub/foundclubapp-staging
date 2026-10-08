@@ -134,6 +134,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 
 jest.mock('@/domains/auth/authUseCases', () => ({
+  // FINITIONS-VILLE (« créateur C ») : le récapitulatif lit le rôle (« Qui dirige ce club ? »).
+  getUserRoleKey: jest.requireActual('@/domains/auth/authUseCases').getUserRoleKey,
   // Le rattachement est mesure ailleurs (`parcoursNouveauDirigeant`) : ici on
   // garde la VRAIE fonction, pour ne pas rendre ce filet aveugle a une
   // regression de sa signature.

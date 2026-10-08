@@ -4261,6 +4261,22 @@ export default {
       missing: "Enter at least the club's name and address.",
       name: 'Name',
       phone: 'Phone',
+      quiDirige: {
+        aide: 'Without a manager, nobody runs the club and a town cannot invite it.',
+        autre: 'Someone else, I will invite them',
+        autreSuite: 'Your club is online. Invite its manager to open the club page '
+          + 'and tap "I manage this club". '
+          + 'The FoundClub team will review their request.',
+        inconnu: 'I do not know yet',
+        invitation: 'Join {{clubName}} on FoundClub with your manager account. '
+          + 'On the club page, tap "I manage this club" to request access; '
+          + 'FoundClub will review your request.',
+        inviter: 'Invite the manager',
+        moi: 'Me',
+        partageErreur: 'Sharing failed. You can share the club page later.',
+        plusTard: 'Later',
+        titre: 'Who runs this club?',
+      },
       sports: 'Sports',
       subtitle: 'Check the details before creating your club.',
       successDescription: 'Your club is live. Our team will review it soon.',
@@ -4404,7 +4420,7 @@ export default {
       counts: 'Teams: {{teams}} · Members: {{members}}',
       empty: 'No attached club yet.',
       header: 'Attached clubs',
-      hint: "Each club's general contact and numbers: never a member's name.",
+      hint: "Each club's general contact, its leaders' names and numbers: never the other members.",
       noContact: 'No contact provided by the club.',
       title: 'Attached clubs: {{nombre}}',
     },
