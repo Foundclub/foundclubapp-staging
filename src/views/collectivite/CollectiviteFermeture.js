@@ -437,14 +437,16 @@ function FormulaireDeFermeture({
     { long: true },
   );
 
+  // FINITIONS-VILLE (T20 V12) : sans séance touchée, c'est une bonne nouvelle — boîte neutre.
+  const tonDeLaCarte = Number(carte?.sessionsCount) > 0 ? Colors.warning500 : Colors.neutral00;
   const carteDesSeances = carte ? (
     <View
       accessibilityLiveRegion="polite"
       style={[
         Spaces.padding[12],
         {
-          backgroundColor: withAlpha(Colors.warning500, 0.08),
-          borderColor: withAlpha(Colors.warning500, 0.45),
+          backgroundColor: withAlpha(tonDeLaCarte, Number(carte.sessionsCount) > 0 ? 0.08 : 0.04),
+          borderColor: withAlpha(tonDeLaCarte, Number(carte.sessionsCount) > 0 ? 0.45 : 0.1),
           borderRadius: 14,
           borderWidth: 1,
           gap: 6,
