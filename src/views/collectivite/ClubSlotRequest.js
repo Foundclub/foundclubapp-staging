@@ -38,6 +38,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -781,24 +782,22 @@ function ClubSlotRequest({
           ) : null}
         </View>
       ) : null}
+      {/* SITE-VILLE-FINITIONS (T19) — les heures se CHOISISSENT, comme dans « Attribuer » et
+          « Modifier le créneau » (VILLE-T18A) : elles se tapaient au clavier. Valeur « HH:MM ». */}
       <View style={[Alignments.row, { gap: 12 }]}>
         <View style={{ flex: 1 }}>
-          <Input
-            density="compact"
+          <TimePickerInput
             label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
-            onChangeText={(/** @type {string} */ valeur) => setDebut(valeur.trim())}
+            onChange={(/** @type {string} */ valeur) => setDebut(String(valeur || '').trim())}
             placeholder="18:00"
-            testID="demande-debut"
             value={debut}
           />
         </View>
         <View style={{ flex: 1 }}>
-          <Input
-            density="compact"
+          <TimePickerInput
             label={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
-            onChangeText={(/** @type {string} */ valeur) => setFin(valeur.trim())}
+            onChange={(/** @type {string} */ valeur) => setFin(String(valeur || '').trim())}
             placeholder="19:30"
-            testID="demande-fin"
             value={fin}
           />
         </View>

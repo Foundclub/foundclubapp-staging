@@ -118,6 +118,20 @@ jest.mock('@/components/molecules/input/Input', () => {
     });
   };
 });
+// SITE-VILLE-FINITIONS (T19) : Début et Fin sont des sélecteurs d heure (TimePickerInput) ; même
+// relevé que le champ, son `onChange` lu comme `onChangeText`, et il dit ce qu il est.
+jest.mock('@/components/molecules/timePickerInput/TimePickerInput', () => {
+  const reactActuel = jest.requireActual('react');
+  const { TextInput: SaisieRN } = jest.requireActual('react-native');
+  return function TimePickerInputMock(/** @type {any} */ props) {
+    return reactActuel.createElement(SaisieRN, {
+      composant: 'TimePickerInput',
+      onChangeText: props.onChange,
+      testID: props.label === 'Début' ? 'demande-debut' : 'demande-fin',
+      value: props.value,
+    });
+  };
+});
 jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN } = jest.requireActual('react-native');
@@ -930,5 +944,22 @@ describe('VILLE-T18C point 3 — le nombre d’équipes suit la liste (le pic, p
     mockApercu = { ...TROIS_SUR_DEUX, occurrences: undefined };
     const arbre = await monter((l) => l.includes('Il y a déjà 3 équipes : c’est complet.'));
     expect(textes(arbre)).toContain('Il y a déjà 3 équipes : c’est complet.');
+  });
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — « Demander un
+// créneau » : Début et Fin se TAPAIENT au clavier (« 18:00 »), alors qu « Attribuer » et
+// « Modifier le créneau » ont le sélecteur d heure (VILLE-T18A). Valeur « HH:MM ». ROUGE avant.
+describe('SVF — Début et Fin au sélecteur d heure', () => {
+  it('Début et Fin sont des sélecteurs d heure, et une heure choisie se lit', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    const champ = (/** @type {string} */ testID) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === testID
+        && typeof n.props?.onChangeText === 'function',
+    )[0];
+    expect(champ('demande-debut').props.composant).toBe('TimePickerInput');
+    expect(champ('demande-fin').props.composant).toBe('TimePickerInput');
+    await saisir(arbre, 'demande-debut', '17:00');
+    expect(champ('demande-debut').props.value).toBe('17:00');
   });
 });
