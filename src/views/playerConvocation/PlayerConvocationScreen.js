@@ -53,6 +53,8 @@ import {
   formatConvocationTime,
   getConvocationPlayerResponse,
   getPlayerConvocationResponse,
+  ligneDeRendezVous,
+  lireRendezVous,
   resolveConvocationNote,
 } from './playerConvocationUtils';
 // `import/order` veut l'alias `@/` avant les freres `./`, `perfectionist/sort-imports`
@@ -93,6 +95,9 @@ import { openExternalMap } from '@/platform/maps/externalMap';
  * La colonne RDV cede donc sa place a la DATE (l'ecran n'ecrivait que l'heure),
  * et ce texte s'affiche tel quel sous les colonnes (« Infos »). Toujours rien
  * d'invente : on montre ce que l'entraineur a ecrit, ou rien.
+ * 🕐 CONVOC-RDV (08/10) — le serveur range desormais le rendez-vous dans la
+ * convocation (`published.rendezVous`, choisi a l'etape 4 de l'assistant du fil) :
+ * il s'affiche sous les colonnes, « RDV · 13:30 · Au club ». Sans lui, rien.
  *
  * 🔎 COMPOMSG — LE TERRAIN : les jetons portent la PHOTO (`PlayerHeadToken`, le
  * meme jeton que la carte du fil — la cause des photos absentes etait un dessin
@@ -273,6 +278,8 @@ function PlayerConvocationScreen() {
   // COMPOMSG — le texte de l'entraineur (souvent le RDV), tel qu'il l'a ecrit.
   // Deja a l'ecran sous forme de nom du match ? On ne le repete pas.
   const note = resolveConvocationNote(event, [eventDisplayName]);
+  // CONVOC-RDV — le rendez-vous de la convocation, la ou la carte du fil l'affiche aussi.
+  const rendezVous = ligneDeRendezVous(lireRendezVous(view.published?.rendezVous));
 
   // COMPOMSG — le plein ecran recoit le pack de CET ecran, deja a jour : pas de
   // relecture a demander. `null` quand il n'y a rien a dessiner (garde D6).
@@ -418,6 +425,18 @@ function PlayerConvocationScreen() {
               <View key={column.key} style={styles.column}>{renderColumnTexts(column)}</View>
             )))}
           </View>
+
+          {rendezVous ? (
+            <View
+              style={[styles.note, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}
+              testID="convocation-rendez-vous"
+            >
+              <Text style={[Fonts.p4Bold, styles.columnLabel, { color: Colors.neutral300 }]}>
+                {t('playerConvocation.columns.meeting').toUpperCase()}
+              </Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{rendezVous}</Text>
+            </View>
+          ) : null}
 
           {/* COMPOMSG — le texte de l'entraineur, la ou la carte du fil l'affiche
               aussi. Sans texte, aucune ligne vide. */}

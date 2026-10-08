@@ -3,9 +3,12 @@ import {
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+
 import { publishEventConvocation, saveEventCompositionDraft } from '@/services/event/eventService';
 
 import ConvocationWizard from '../ConvocationWizard';
+import { exempleHeureDeRendezVous } from '../convocationWizardUtils';
 
 const brouillon = /** @type {any} */ (saveEventCompositionDraft);
 const publication = /** @type {any} */ (publishEventConvocation);
@@ -592,16 +595,17 @@ const envoyer = async (arbre, id = 'convocation-wizard-next') => {
 };
 
 describe('MESSAGERIE-1C · etape 4 « Details » et envoi', () => {
-  test('« Rendez-vous » prerempli, « Infos », « Demander Present / Absent » allume', () => {
+  // CONVOC-RDV (08/10) : le rendez-vous n'est plus pre-rempli en VRAIE valeur (« 13h30 au club »
+  // partait tel quel) ; l'heure se choisit au selecteur, qui s'ouvre sur un exemple.
+  test('« Rendez-vous » (heure + lieu), « Infos », « Demander Present / Absent » allume', () => {
     const { arbre } = allerAuxDetails();
     const vus = textes(arbre);
     expect(vus).toContain('Étape 4 sur 4 · Détails');
     expect(vus).toEqual(expect.arrayContaining([
-      'RENDEZ-VOUS', 'INFOS', 'Demander Présent / Absent', '2 sur le terrain · 1 sur le banc',
-      'Envoyer la convocation',
+      'RENDEZ-VOUS', 'Heure', 'Lieu', 'INFOS', 'Demander Présent / Absent',
+      '2 sur le terrain · 1 sur le banc', 'Envoyer la convocation',
     ]));
-    expect(arbre.root.findByProps({ testID: 'convocation-meeting' }).props.value)
-      .toBe('13h30 au club');
+    expect(arbre.root.findByType(TimePickerInput).props.value).toBe('');
     expect(arbre.root.findByProps({ testID: 'convocation-ask' }).props.value).toBe(true);
   });
 
@@ -638,12 +642,13 @@ describe('MESSAGERIE-1C · etape 4 « Details » et envoi', () => {
     expect(brouillon.mock.invocationCallOrder[0])
       .toBeLessThan(publication.mock.invocationCallOrder[0]);
 
-    // Le rendez-vous et les infos partent dans le groupe, en message.
+    // Les infos partent dans le groupe, en message ; aucun rendez-vous choisi, aucun invente.
     expect(mockSendMessage).toHaveBeenCalledWith(
       'fil-equipe',
-      'Rendez-vous : 13h30 au club\nInfos : Maillot bleu',
+      'Infos : Maillot bleu',
       expect.any(Object),
     );
+    expect(Object.prototype.hasOwnProperty.call(draft, 'rendezVous')).toBe(false);
     expect(onClose).toHaveBeenCalledWith({ published: true });
   });
 
@@ -683,7 +688,6 @@ describe('MESSAGERIE-1C · etape 4 « Details » et envoi', () => {
     const { arbre } = allerAuxDetails();
     act(() => {
       arbre.root.findByProps({ testID: 'convocation-ask' }).props.onValueChange(false);
-      arbre.root.findByProps({ testID: 'convocation-meeting' }).props.onChangeText('');
     });
     await envoyer(arbre);
     expect(brouillon.mock.calls[0][1].draft.requireResponse).toBe(false);
@@ -757,5 +761,129 @@ describe('MESSAGERIE-1C · etape 4 « Details » et envoi', () => {
     expect(publication).toHaveBeenCalledTimes(1);
     expect(mockSendMessage).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith({ published: true });
+  });
+});
+
+// ==========================================================================
+// CONVOC-RDV (decision d'Adel du 08/10, `rdv lot`) — L'HEURE DU RENDEZ-VOUS AU SELECTEUR,
+// LE LIEU DANS UN CHAMP, LES DEUX DANS LA CONVOCATION.
+//
+// Avant : un texte libre, pre-rempli « 13h30 au club », envoye en MESSAGE apres la carte. Le
+// serveur range desormais `rendezVous: { time, place }` dans la convocation et le rend dans la
+// reponse de publication : c'est ce retour qui dit a l'app s'il le connait. Un serveur d'avant ne
+// le rend pas : le rendez-vous repart alors en message texte, comme avant (repli, aucune erreur).
+// ==========================================================================
+describe('CONVOC-RDV · etape 4 : le rendez-vous', () => {
+  const STADE = 'Stade Georges Ricard';
+
+  beforeEach(() => {
+    mockState.events = [{ ...matchSamedi, facility: { name: STADE } }, entrainement];
+  });
+
+  const heure = (/** @type {any} */ arbre) => arbre.root.findByType(TimePickerInput);
+  const lieu = (/** @type {any} */ arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props.testID === 'convocation-meeting-place'
+      && typeof n.props.onChangeText === 'function',
+  )[0];
+  /**
+   * Choisit l'heure au selecteur, puis (si donne) tape le lieu.
+   * @param {any} arbre
+   * @param {string} valeurHeure
+   * @param {string} [valeurLieu]
+   */
+  const choisir = (arbre, valeurHeure, valeurLieu) => {
+    act(() => { heure(arbre).props.onChange(valeurHeure); });
+    if (valeurLieu !== undefined) act(() => { lieu(arbre).props.onChangeText(valeurLieu); });
+  };
+
+  test('heure au SELECTEUR, vide, ouverte sur le coup d envoi - 1 h ; lieu de l evenement', () => {
+    const { arbre } = allerAuxDetails();
+    expect(heure(arbre).props.value).toBe('');
+    expect(heure(arbre).props.placeholder).toBe(exempleHeureDeRendezVous(matchSamedi.date));
+    expect(heure(arbre).props.testID).toBe('convocation-meeting-time');
+    expect(lieu(arbre).props.value).toBe(STADE);
+    expect(lieu(arbre).props.maxLength).toBe(120);
+  });
+
+  test('choisi : le RDV part dans la convocation ; seules les infos en message', async () => {
+    publication.mockResolvedValueOnce({
+      published: { rendezVous: { place: 'Au club', time: '13:30' }, version: 1 },
+    });
+    const { arbre, onClose } = allerAuxDetails();
+    choisir(arbre, '13:30', 'Au club');
+    act(() => {
+      arbre.root.findByProps({ testID: 'convocation-infos' }).props.onChangeText('Maillot bleu');
+    });
+    await envoyer(arbre);
+
+    expect(brouillon.mock.calls[0][1].draft.rendezVous)
+      .toEqual({ place: 'Au club', time: '13:30' });
+    expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage)
+      .toHaveBeenCalledWith('fil-equipe', 'Infos : Maillot bleu', expect.any(Object));
+    expect(onClose).toHaveBeenCalledWith({ published: true });
+  });
+
+  test('l heure seule garde le lieu de l evenement', async () => {
+    publication.mockResolvedValueOnce({ published: { rendezVous: null, version: 1 } });
+    const { arbre } = allerAuxDetails();
+    choisir(arbre, '14:00');
+    await envoyer(arbre);
+    expect(brouillon.mock.calls[0][1].draft.rendezVous).toEqual({ place: STADE, time: '14:00' });
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  test('serveur SANS le champ : le RDV repart en message texte, aucune erreur', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const { arbre, onClose } = allerAuxDetails();
+    choisir(arbre, '13:30', 'Au club');
+    await envoyer(arbre);
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      'fil-equipe',
+      'Rendez-vous : 13:30 · Au club',
+      expect.any(Object),
+    );
+    expect(alerte).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledWith({ published: true });
+    alerte.mockRestore();
+  });
+
+  test('un telephone dans le lieu : dit SOUS le champ, et l envoi attend', async () => {
+    const { arbre } = allerAuxDetails();
+    choisir(arbre, '13:30', 'Appelle au 06 12 34 56 78');
+    expect(textes(arbre)).toContain(
+      'Le lieu est lu par toute l’équipe : ni téléphone, ni courriel, ni lien.',
+    );
+    expect(estActif(arbre, 'convocation-wizard-next')).toBe(false);
+    await envoyer(arbre);
+    expect(brouillon).not.toHaveBeenCalled();
+  });
+
+  test('modifier : le RDV publie revient, et « Mettre a jour » seul le garde', async () => {
+    mockState.composition[matchSamedi.documentId] = {
+      eligiblePlayers: effectif,
+      published: {
+        rendezVous: { place: 'Gymnase', time: '10:00' },
+        reservePlayerIds: [],
+        snapshotPlayers: effectif,
+        teams: [{ placements: [{ playerId: 'hugo', positionX: 40, positionY: 60 }] }],
+        version: 2,
+      },
+      responses: { byPlayerId: {} },
+      rsvpEnabled: true,
+    };
+    const { arbre } = ouvrir({
+      initialEventId: matchSamedi.documentId, mode: 'edit', startStep: 2,
+    });
+    await envoyer(arbre, 'convocation-wizard-update');
+    // Absent ≠ vide : la cle n'est pas envoyee, le serveur garde le rendez-vous publie.
+    expect(Object.prototype.hasOwnProperty.call(brouillon.mock.calls[0][1].draft, 'rendezVous'))
+      .toBe(false);
+
+    const second = ouvrir({ initialEventId: matchSamedi.documentId, mode: 'edit', startStep: 3 });
+    appuyer(second.arbre, 'convocation-wizard-next');
+    expect(heure(second.arbre).props.value).toBe('10:00');
+    expect(lieu(second.arbre).props.value).toBe('Gymnase');
   });
 });

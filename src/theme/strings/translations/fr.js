@@ -6695,6 +6695,8 @@ export default {
     otherTeams_one: '+ {{count}} autre équipe dans cette composition',
     otherTeams_other: '+ {{count}} autres équipes dans cette composition',
     published: 'Composition publiée',
+    // CONVOC-RDV — « RDV 13:30 · Au club », le rendez-vous rangé dans la convocation.
+    rendezVous: 'RDV',
     tapToSeeTheLine: 'Appuyer pour voir la composition',
     team: 'Équipe',
     teamLineUpPublished: "Composition d'équipes publiée",
@@ -7465,8 +7467,8 @@ export default {
   conversationConvocation: {
     alerts: {
       // eslint-disable-next-line max-len
-      detailsNotSent: 'La convocation est partie, mais pas le message du rendez-vous. Écris-le dans le groupe.',
-      detailsNotSentTitle: 'Rendez-vous non envoyé',
+      detailsNotSent: 'La convocation est partie, mais pas le message qui la suit. Écris-le dans le groupe.',
+      detailsNotSentTitle: 'Message non envoyé',
       errorMessage: "La convocation n'a pas pu partir. Réessaie dans un instant.",
       errorTitle: 'Convocation non envoyée',
       loadError: 'Impossible de charger la composition de cet événement.',
@@ -7483,9 +7485,13 @@ export default {
       infosPlaceholder: 'Ex : maillot bleu, apportez vos gourdes',
       meeting: 'RENDEZ-VOUS',
       meetingLabel: 'Rendez-vous',
-      meetingPlaceholder: 'Ex : 13h30 au club',
-      // eslint-disable-next-line max-len
-      postedHint: 'Le rendez-vous et les infos partent dans le groupe, juste après la convocation.',
+      // CONVOC-RDV (08/10) — l'heure au sélecteur, le lieu dans un champ.
+      meetingPlace: 'Lieu',
+      meetingPlaceError: 'Le lieu est lu par toute l’équipe : ni téléphone, ni courriel, ni lien.',
+      meetingPlaceholder: 'Ex : au club',
+      meetingPlaceLabel: 'Lieu du rendez-vous',
+      meetingTime: 'Heure',
+      postedHint: 'Le rendez-vous s’affiche sur la convocation ; les infos partent dans le groupe.',
       summary: '{{pitch}} sur le terrain · {{bench}} sur le banc',
     },
     entry: 'Convocation',
@@ -15375,10 +15381,9 @@ export default {
       // COMPOMSG — l'écran n'écrivait que l'heure : le joueur ne savait pas QUEL jour.
       day: 'Date',
       kickOff: 'Coup d’envoi',
+      // CONVOC-RDV (08/10) — le rendez-vous de la convocation (`published.rendezVous`).
       meeting: 'RDV',
-      // ⚠️ Le modèle serveur n'a AUCUN champ d'heure de rendez-vous
-      // (mesuré le 2026-08-15 sur `event/schema.json`). On le dit, on ne
-      // l'invente pas — le pack interdit les promesses fausses.
+      // Une donnée absente se DIT, elle ne s'invente pas — le pack interdit les promesses fausses.
       notSpecified: 'Non précisé',
       place: 'Lieu',
     },

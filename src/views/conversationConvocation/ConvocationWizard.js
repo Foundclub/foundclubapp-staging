@@ -29,6 +29,10 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import { readPlacementsFromPack } from '@/views/matchCallUp/matchCompositionUtils';
+import {
+  ligneDeRendezVous,
+  lireRendezVous,
+} from '@/views/playerConvocation/playerConvocationUtils';
 
 import { useGetChatMessages } from '@/services/chat/chatQueriesCompat';
 import { createChatMessage } from '@/services/chat/chatService';
@@ -44,13 +48,17 @@ import {
   buildConvocationPack,
   buildConvocationRows,
   buildDetailsMessageText,
+  buildEventSummary,
   buildPitchPlacements,
   buildSelectionFromPack,
+  construireRendezVous,
   CONVOCATION_STEPS,
-  DEFAULT_MEETING_POINT,
+  exempleHeureDeRendezVous,
   filterTeamEvents,
   findLastPublishedManualPlayers,
   isConvocableEvent,
+  lieuPorteUneDonneePersonnelle,
+  RENDEZ_VOUS_LIEU_MAX,
   splitSelection,
 } from './convocationWizardUtils';
 
@@ -117,7 +125,11 @@ function ConvocationWizard({
   const [placements, setPlacements] = useState(/** @type {any[]} */ (EMPTY_LIST));
   const [addedManualPlayers, setAddedManualPlayers] = useState(/** @type {any[]} */ (EMPTY_LIST));
   const [removedIds, setRemovedIds] = useState(/** @type {string[]} */ (EMPTY_LIST));
-  const [meetingPoint, setMeetingPoint] = useState(isEditMode ? '' : DEFAULT_MEETING_POINT);
+  // CONVOC-RDV — l'heure (`HH:mm`) et le lieu du rendez-vous. `rendezVousTouche` : la cle ne part
+  // au serveur que si l'entraineur y a touche (absent ≠ vide : sinon le serveur garde le sien).
+  const [meetingTime, setMeetingTime] = useState('');
+  const [meetingPlace, setMeetingPlace] = useState('');
+  const [rendezVousTouche, setRendezVousTouche] = useState(false);
   const [infos, setInfos] = useState('');
   const [askResponses, setAskResponses] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -192,6 +204,12 @@ function ConvocationWizard({
   );
   const category = String(selectedEvent?.team?.category?.name || '');
   const responsesAreOpen = isRsvpEnabled(payload);
+  const eventForDetails = selectedEvent || eventSummary || null;
+  const lieuDeLEvenement = buildEventSummary(eventForDetails).place;
+  const lieuRefuse = rendezVousTouche && lieuPorteUneDonneePersonnelle(meetingPlace);
+  const exempleHeure = exempleHeureDeRendezVous(
+    eventForDetails?.date || eventForDetails?.eventDate,
+  );
 
   // --- L'amorce : une seule fois par evenement, quand sa composition arrive. Une convocation
   // deja publiee rouvre sa selection, son terrain et son reglage de reponse.
@@ -201,7 +219,15 @@ function ConvocationWizard({
     setSelection(buildSelectionFromPack(published));
     setPlacements(readPlacementsFromPack(published));
     setAskResponses(published ? published.requireResponse !== false : true);
-  }, [eventId, initializedFor, isPayloadReady, published]);
+    // CONVOC-RDV — le rendez-vous deja publie revient dans les champs ; sinon, le lieu de
+    // l'evenement.
+    const rendezVousPublie = lireRendezVous(published?.rendezVous);
+    setMeetingTime(rendezVousPublie?.time || '');
+    setMeetingPlace(rendezVousPublie
+      ? rendezVousPublie.place
+      : lieuDeLEvenement.slice(0, RENDEZ_VOUS_LIEU_MAX));
+    setRendezVousTouche(false);
+  }, [eventId, initializedFor, isPayloadReady, lieuDeLEvenement, published]);
 
   const { bench, pitch } = splitSelection(rows, selection);
   const calledUpCount = pitch.length + bench.length;
@@ -225,7 +251,7 @@ function ConvocationWizard({
   let canGoNext = true;
   if (step === 1) canGoNext = isEventReady;
   else if (step === 2) canGoNext = isEventReady && calledUpCount > 0;
-  else canGoNext = isEventReady && calledUpCount > 0;
+  else canGoNext = isEventReady && calledUpCount > 0 && !lieuRefuse;
 
   const handleBack = useCallback(() => {
     if (isPublishing) return;
@@ -264,10 +290,23 @@ function ConvocationWizard({
     }
   }, [chatId, sendMessage, userData]);
 
+  const changerHeure = useCallback((/** @type {string} */ value) => {
+    setMeetingTime(value);
+    setRendezVousTouche(true);
+  }, []);
+  const changerLieu = useCallback((/** @type {string} */ value) => {
+    setMeetingPlace(value);
+    setRendezVousTouche(true);
+  }, []);
+
   const handlePublish = useCallback(async () => {
     if (isPublishing || !eventId || !teamId || !isEventReady || calledUpCount === 0) return;
+    if (lieuRefuse) return;
     setIsPublishing(true);
     try {
+      const rendezVous = construireRendezVous({
+        eventPlace: lieuDeLEvenement, place: meetingPlace, time: meetingTime,
+      });
       const pack = buildConvocationPack({
         basePack: published || payload?.draft || null,
         category,
@@ -280,15 +319,23 @@ function ConvocationWizard({
       });
       // La compo part TOUJOURS avant la convocation : publier ce qui n'a pas ete enregistre
       // publierait l'etat precedent (meme ordre que le plateau).
-      await saveEventCompositionDraft(eventId, { draft: pack, teamId });
-      await publishEventConvocation(eventId, { teamId });
+      const draft = rendezVousTouche ? { ...pack, rendezVous } : pack;
+      await saveEventCompositionDraft(eventId, { draft, teamId });
+      const resultat = await publishEventConvocation(eventId, { teamId });
       invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
 
+      // CONVOC-RDV — la reponse de publication rend `published.rendezVous` quand le serveur
+      // connait le champ. Un serveur d'avant ne le rend pas : le rendez-vous repart en message,
+      // comme avant.
+      const serveurConnaitLeRendezVous = Boolean(resultat?.published)
+        && Object.prototype.hasOwnProperty.call(resultat.published, 'rendezVous');
       const detailsText = buildDetailsMessageText({
         infos,
         infosLabel: t('conversationConvocation.details.infosLabel'),
         meetingLabel: t('conversationConvocation.details.meetingLabel'),
-        meetingPoint,
+        meetingPoint: rendezVousTouche && !serveurConnaitLeRendezVous
+          ? ligneDeRendezVous(rendezVous)
+          : '',
       });
       if (detailsText) {
         const sent = await sendDetailsMessage(detailsText);
@@ -314,8 +361,9 @@ function ConvocationWizard({
       setIsPublishing(false);
     }
   }, [
-    askResponses, calledUpCount, category, eventId, infos, isEventReady, isPublishing, meetingPoint,
-    onClose, payload, placements, published, queryClient, responsesAreOpen, rows, selection,
+    askResponses, calledUpCount, category, eventId, infos, isEventReady, isPublishing,
+    lieuDeLEvenement, lieuRefuse, meetingPlace, meetingTime, onClose, payload, placements,
+    published, queryClient, rendezVousTouche, responsesAreOpen, rows, selection,
     sendDetailsMessage, sport, t, teamId, teamName,
   ]);
 
@@ -354,11 +402,10 @@ function ConvocationWizard({
   const showCounter = step === 2 && !isUpdate;
   const showUpdate = isUpdate && step < CONVOCATION_STEPS.length;
 
-  const recapEvent = selectedEvent || eventSummary || null;
   const recap = step > 1 ? (
     <View style={styles.recap}>
       <ConvocationEventRecap
-        event={recapEvent}
+        event={eventForDetails}
         onChange={isEditMode ? undefined : () => setStep(1)}
       />
     </View>
@@ -417,10 +464,14 @@ function ConvocationWizard({
         askResponses={responsesAreOpen && askResponses}
         benchCount={bench.length}
         infos={infos}
-        meetingPoint={meetingPoint}
+        meetingPlace={meetingPlace}
+        meetingPlaceRefused={lieuRefuse}
+        meetingTime={meetingTime}
+        meetingTimeExample={exempleHeure}
         onChangeAsk={setAskResponses}
         onChangeInfos={setInfos}
-        onChangeMeetingPoint={setMeetingPoint}
+        onChangeMeetingPlace={changerLieu}
+        onChangeMeetingTime={changerHeure}
         pitchCount={pitch.length}
         responsesLocked={!responsesAreOpen}
       />

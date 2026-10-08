@@ -6,12 +6,20 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
+
+import { RENDEZ_VOUS_LIEU_MAX } from './convocationWizardUtils';
+
 /**
  * MESSAGERIE-1C — ETAPE 4 « DETAILS » (pack messagerie §3.12, §5).
  *
- * « Rendez-vous » (prerempli « 13h30 au club » a la creation), « Infos » (texte libre), et
- * l'interrupteur « Demander Present / Absent ». Le rendez-vous et les infos n'ont aucun champ
- * dans la composition : ils partent dans le groupe, en message, juste apres la convocation.
+ * « Rendez-vous », « Infos » (texte libre), et l'interrupteur « Demander Present / Absent ». Les
+ * infos partent dans le groupe, en message, juste apres la convocation.
+ *
+ * 🕐 CONVOC-RDV (decision d'Adel du 08/10, `rdv lot`) — LE RENDEZ-VOUS N'EST PLUS TAPE. L'heure se
+ * choisit au selecteur partage (`TimePickerInput`, decision `heure A` : la roue s'ouvre sur
+ * l'exemple et « OK » l'ecrit) ; le lieu est un champ court, pre-rempli avec celui de l'evenement.
+ * Les deux partent DANS la convocation (`rendezVous`), et la carte les affiche.
  *
  * 🔒 Un evenement dont l'organisateur a coupe les reponses (`rsvpEnabled: false`) : le serveur
  * refuserait toute reponse. L'interrupteur est alors eteint et verrouille, et le dit (meme regle
@@ -20,10 +28,14 @@ import useTheme from '@/theme/themeContext';
  * @param {boolean} props.askResponses
  * @param {number} props.benchCount
  * @param {string} props.infos
- * @param {string} props.meetingPoint
+ * @param {string} props.meetingPlace
+ * @param {boolean} [props.meetingPlaceRefused] - Le lieu porte un telephone, un courriel, un lien.
+ * @param {string} props.meetingTime - `HH:mm`, ou vide.
+ * @param {string} props.meetingTimeExample - L'exemple sur lequel la roue s'ouvre.
  * @param {(value: boolean) => void} props.onChangeAsk
  * @param {(value: string) => void} props.onChangeInfos
- * @param {(value: string) => void} props.onChangeMeetingPoint
+ * @param {(value: string) => void} props.onChangeMeetingPlace
+ * @param {(value: string) => void} props.onChangeMeetingTime
  * @param {number} props.pitchCount
  * @param {boolean} [props.responsesLocked]
  * @returns {import('react').ReactElement}
@@ -32,16 +44,21 @@ function ConvocationDetailsStep({
   askResponses,
   benchCount,
   infos,
-  meetingPoint,
+  meetingPlace,
+  meetingPlaceRefused = false,
+  meetingTime,
+  meetingTimeExample,
   onChangeAsk,
   onChangeInfos,
-  onChangeMeetingPoint,
+  onChangeMeetingPlace,
+  onChangeMeetingTime,
   pitchCount,
   responsesLocked = false,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const caps = [Fonts.p3Bold, styles.caps, { color: withAlpha(Colors.neutral00, 0.6) }];
+  const bordureDuLieu = meetingPlaceRefused ? Colors.error500 : withAlpha(Colors.neutral00, 0.14);
   const field = [
     Fonts.p2,
     styles.field,
@@ -55,15 +72,46 @@ function ConvocationDetailsStep({
   return (
     <View style={styles.root} testID="convocation-step-details">
       <Text style={caps}>{t('conversationConvocation.details.meeting')}</Text>
-      <TextInput
-        accessibilityLabel={t('conversationConvocation.details.meetingLabel')}
-        onChangeText={onChangeMeetingPoint}
-        placeholder={t('conversationConvocation.details.meetingPlaceholder')}
-        placeholderTextColor={Colors.neutral400}
-        style={[field, styles.single]}
-        testID="convocation-meeting"
-        value={meetingPoint}
-      />
+      {/* Le lieu prend la forme de la boite du selecteur d'heure : la rangee se lit d'un bloc. */}
+      <View style={styles.rendezVous}>
+        <View style={styles.heure}>
+          <TimePickerInput
+            label={t('conversationConvocation.details.meetingTime')}
+            onChange={onChangeMeetingTime}
+            placeholder={meetingTimeExample}
+            testID="convocation-meeting-time"
+            value={meetingTime}
+          />
+        </View>
+        <View style={styles.lieu}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('conversationConvocation.details.meetingPlace')}
+          </Text>
+          <TextInput
+            accessibilityLabel={t('conversationConvocation.details.meetingPlaceLabel')}
+            maxLength={RENDEZ_VOUS_LIEU_MAX}
+            onChangeText={onChangeMeetingPlace}
+            placeholder={t('conversationConvocation.details.meetingPlaceholder')}
+            placeholderTextColor={Colors.neutral300}
+            style={[
+              Fonts.p1,
+              styles.lieuChamp,
+              {
+                backgroundColor: Colors.primary700,
+                borderColor: bordureDuLieu,
+                color: Colors.neutral00,
+              },
+            ]}
+            testID="convocation-meeting-place"
+            value={meetingPlace}
+          />
+        </View>
+      </View>
+      {meetingPlaceRefused ? (
+        <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+          {t('conversationConvocation.details.meetingPlaceError')}
+        </Text>
+      ) : null}
 
       <Text style={[caps, styles.spaced]}>{t('conversationConvocation.details.infos')}</Text>
       <TextInput
@@ -142,6 +190,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 14,
   },
+  heure: {
+    width: 128,
+  },
+  lieu: {
+    flex: 1,
+    gap: 4,
+  },
+  // La hauteur de la boite du selecteur : 16 + 23 + 16 de texte, 1 + 1 de bordure.
+  lieuChamp: {
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 57,
+    lineHeight: undefined,
+    paddingHorizontal: 16,
+    paddingVertical: 0,
+  },
   multi: {
     lineHeight: 21,
     minHeight: 88,
@@ -152,11 +216,12 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     textAlign: 'center',
   },
-  root: {
+  rendezVous: {
+    flexDirection: 'row',
     gap: 10,
   },
-  single: {
-    height: 46,
+  root: {
+    gap: 10,
   },
   spaced: {
     marginTop: 8,
