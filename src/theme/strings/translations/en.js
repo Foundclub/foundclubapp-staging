@@ -8720,6 +8720,14 @@ export default {
         reason: "That didn't work. Check your connection, then tap Save again.",
         title: "Saving didn't go through",
       },
+      // SERIES (08/10) — after « Edit the series »: the dates the server put on hold.
+      seriesOutcome: {
+        awaitingCity_one: '{{count}} date of the series is waiting for the City’s decision: it stays on hold until the City answers. If the City refuses, this session will be cancelled.',
+        awaitingCity_other: '{{count}} dates of the series are waiting for the City’s decision: they stay on hold until the City answers. If the City refuses, these sessions will be cancelled.',
+        awaitingClub_one: '{{count}} date is waiting for a club manager’s approval: the club’s slot is already full that day.',
+        awaitingClub_other: '{{count}} dates are waiting for a club manager’s approval: the club’s slot is already full on those days.',
+        title: 'Changes saved',
+      },
       stillLoading: {
         description: 'Let the event finish loading: saving now would erase its tasks, invited teams and location.',
         title: "The page hasn't finished loading",

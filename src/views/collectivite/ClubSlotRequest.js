@@ -45,7 +45,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useManagingCollectiviteId } from '@/services/collectivite/collectiviteQueries';
 import { useGetEventTypes } from '@/services/event/eventQueries';
-import { announceEventSeries, createEventsWithConcurrency } from '@/services/event/eventService';
+import { announceEventSeries, createEventSeries } from '@/services/event/eventService';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import { useClubTeamsForSlot, useSeasonSlotPreview } from '@/services/seasonSlot/seasonSlotQueries';
@@ -265,25 +265,22 @@ function ClubSlotRequest({
       // joueurs une fois posée (les séances posées d'office dans le créneau du club ; celles en
       // attente de la mairie ne s'annoncent pas). Chaque séance part donc « j'annoncerai ».
       const serie = Boolean(corps[0]?.recurrenceGroupId);
-      // 🚚 VILLE-T18C (07/10, tournée T18 D09b) — 36 dates partaient UNE PAR UNE (44 s). Le
-      // serveur n'a pas de route de série : une séance par date, mais la 1re SEULE, puis trois à
-      // la fois. La 1re d'abord : le serveur ne prévient la Ville qu'une fois par série, en
-      // cherchant une demande plus ancienne de la même série (admin
-      // facility-override-request.ts, la poussée « nouvelle demande ») ; elle doit exister avant
-      // que les autres la cherchent.
-      const options = { announceSeriesLater: serie, suppressCelebration: true };
+      // 🚀 SERIES (08/10, point 3) — la série part en UNE requête (`createEventSeries` : la
+      // liste des dates à la racine ; 36 dates prenaient 54 s en recette, T19). Un serveur
+      // d'avant n'en pose que la 1re : les suivantes partent alors trois à la fois, comme depuis
+      // VILLE-T18C (07/10) — la 1re d'abord, puisque le serveur ne prévient la Ville qu'une fois
+      // par série, en cherchant une demande plus ancienne de la même série (admin
+      // facility-override-request.ts).
       const total = corps.length;
       if (total > 1) setAvancement({ fait: 0, total });
-      const premiere = await createEventsWithConcurrency(corps.slice(0, 1), options);
-      const suite = total > 1
-        ? await createEventsWithConcurrency(corps.slice(1), {
-          ...options,
-          concurrency: ENVOIS_EN_MEME_TEMPS,
-          onProgress: ({ completed }) => setAvancement({ fait: 1 + completed, total }),
-        })
-        : { created: [], failed: [] };
-      const created = [...premiere.created, ...suite.created];
-      const failed = [...premiere.failed, ...suite.failed];
+      const { created, failed } = await createEventSeries(corps, {
+        announceSeriesLater: serie,
+        concurrency: ENVOIS_EN_MEME_TEMPS,
+        onProgress: ({ completed }) => {
+          if (total > 1) setAvancement({ fait: completed, total });
+        },
+        suppressCelebration: true,
+      });
       if (!created.length) {
         setErreur(getErrorMessage(/** @type {any} */ (failed[0]?.error)));
         return;

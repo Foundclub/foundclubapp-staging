@@ -273,6 +273,139 @@ export const createEventsWithConcurrency = async (payloads = [], options = {}) =
 };
 
 /**
+ * SERIES (08/10, point 3) — les corps d'une série ne diffèrent que par la date : le serveur
+ * pose chaque date à partir du 1er corps et de la liste des dates.
+ * @param {FCEventForm[]} payloads
+ * @returns {boolean}
+ */
+const isPlainSeries = (payloads) => {
+  const sansDate = (/** @type {any} */ payload) => JSON.stringify({
+    ...payload,
+    date: undefined,
+    endDate: undefined,
+  });
+  const modele = sansDate(payloads[0]);
+  return payloads.length > 1
+    && Boolean(payloads[0]?.recurrenceGroupId)
+    && payloads.every((payload) => Boolean(payload?.date) && sansDate(payload) === modele);
+};
+
+/**
+ * Une date refusée par le serveur, dans la forme d'une erreur de requête (l'écran la lit
+ * comme un refus date par date).
+ * @param {string} code - Le code du refus.
+ * @returns {any}
+ */
+const seriesRefusal = (code) => ({
+  response: {
+    data: { error: { details: { code }, message: code } },
+    status: 400,
+  },
+});
+
+/**
+ * SERIES (08/10, décision d'Adel « séries lot », point 3) — UNE SÉRIE « CHAQUE SEMAINE » EN
+ * UNE REQUÊTE. Avant : une requête par date (36 dates = 54 s en recette, tournée T19). La liste
+ * des dates voyage À LA RACINE du corps (`dates`, comme `announceSeriesLater`) :
+ *   - serveur neuf : la série entière, en une requête ; la réponse est rendue dans la forme de
+ *     `createEventsWithConcurrency` (`created[].response.data`, `failed[]`) ;
+ *   - serveur d'avant : il ignore la racine et pose la 1re date seule (`data`) ; les suivantes
+ *     partent date par date, `concurrency` à la fois, comme avant ;
+ *   - serveur neuf qui refuse la série (4xx : rien n'est écrit) : date par date, comme avant ;
+ *   - réseau coupé ou 5xx : aucun renvoi (la série a pu être posée) — toutes en échec.
+ * Une date seule, ou des corps qui diffèrent autrement que par la date : date par date.
+ * Témoin : eventService.series.test.js.
+ * @param {FCEventForm[]} payloads
+ * @param {{ announceSeriesLater?: boolean, concurrency?: number, onProgress?: (progress: {
+ *   completed: number, created: number, failed: number, total: number }) => void,
+ *   suppressCelebration?: boolean }} [options]
+ * @returns {Promise<{
+ *   created: Array<{payload: FCEventForm, response: any, documentId: string | null}>,
+ *   failed: Array<{payload: FCEventForm, error: any}>,
+ *   series: Record<string, any> | null,
+ * }>}
+ */
+export const createEventSeries = async (payloads = [], options = {}) => {
+  if (!isPlainSeries(payloads)) {
+    return { ...(await createEventsWithConcurrency(payloads, options)), series: null };
+  }
+  const total = payloads.length;
+  const [first] = payloads;
+  const avancement = (/** @type {number} */ completed, /** @type {number} */ created) => {
+    options.onProgress?.({
+      completed,
+      created,
+      failed: completed - created,
+      total,
+    });
+  };
+  avancement(0, 0);
+  /** @type {any} */
+  let reponse;
+  try {
+    reponse = (await client.post('/events', {
+      ...(options?.announceSeriesLater === true ? { announceSeriesLater: true } : {}),
+      data: first,
+      dates: payloads.map((payload) => ({ date: payload.date, endDate: payload.endDate ?? null })),
+    })).data;
+  } catch (/** @type {any} */ error) {
+    const status = Number(error?.response?.status || 0);
+    if (status >= 400 && status < 500) {
+      return { ...(await createEventsWithConcurrency(payloads, options)), series: null };
+    }
+    avancement(total, 0);
+    return { created: [], failed: payloads.map((payload) => ({ error, payload })), series: null };
+  }
+  if (options?.suppressCelebration !== true) {
+    celebrate('event_created', {
+      eventId: null,
+      eventName: first?.name || '',
+      teamId: first?.team || null,
+    });
+  }
+  emitGuidanceAction('event.created', { eventType: first?.type || null });
+
+  if (Array.isArray(reponse?.data) && reponse?.meta?.series) {
+    const instant = (/** @type {any} */ value) => new Date(value).getTime();
+    const posees = new Map(reponse.data.map((/** @type {any} */ row) => [instant(row?.date), row]));
+    const refus = new Map((reponse.meta.series.failed || [])
+      .map((/** @type {any} */ item) => [instant(item?.date), item]));
+    /** @type {Array<{payload: FCEventForm, response: any, documentId: string | null}>} */
+    const created = [];
+    /** @type {Array<{payload: FCEventForm, error: any}>} */
+    const failed = [];
+    payloads.forEach((payload) => {
+      const row = posees.get(instant(payload.date));
+      if (row) {
+        created.push({ documentId: row.documentId || null, payload, response: { data: row } });
+        return;
+      }
+      const code = refus.get(instant(payload.date))?.code || 'EVENT_CREATE_ERROR';
+      failed.push({ error: seriesRefusal(code), payload });
+    });
+    avancement(total, created.length);
+    return { created, failed, series: reponse.meta.series };
+  }
+
+  // Serveur d'avant : la 1re date est posée ; les suivantes, date par date.
+  const premiere = {
+    documentId: reponse?.data?.documentId || reponse?.documentId || null,
+    payload: first,
+    response: reponse,
+  };
+  const suite = await createEventsWithConcurrency(payloads.slice(1), {
+    ...options,
+    onProgress: (progress) => options.onProgress?.({
+      completed: progress.completed + 1,
+      created: progress.created + 1,
+      failed: progress.failed,
+      total,
+    }),
+  });
+  return { created: [premiere, ...suite.created], failed: suite.failed, series: null };
+};
+
+/**
  * Rollback events by cancelling all provided documentIds.
  * @param {string[]} documentIds
  * @returns {Promise<PromiseSettledResult<any>[]>}

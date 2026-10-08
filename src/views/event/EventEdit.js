@@ -21,6 +21,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { isEndTimeNotAfterStart } from '@/domains/event/eventUseCases';
+import { seriesUpdateMessage } from '@/domains/event/seriesUpdateOutcome';
 import useEvent from '@/domains/event/useEvent';
 import { seanceDeplacee } from '@/domains/seasonSlot/seasonSlotDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -973,8 +974,10 @@ function EventEdit({ navigation, route }) {
         // d'alerte (les trois portees). Le message, lui, est deja affiche par
         // le `onError` de la mutation (D1) — un seul endroit, une seule fenetre.
         const updateEventWithMode = async (/** @type {'future' | 'all'} */ recurrenceMode) => {
+          /** @type {any} */
+          let reponse;
           try {
-            await updateEventMutation.mutateAsync({
+            reponse = await updateEventMutation.mutateAsync({
               documentId: eventId,
               eventData: normalizedEvents[0],
               recurrenceMode,
@@ -983,6 +986,13 @@ function EventEdit({ navigation, route }) {
             // ⛔ On ne navigue pas, et on ne reparle pas : `onError` vient de le
             // dire. La personne reste sur son formulaire, avec ses saisies.
             return;
+          }
+          // SERIES (08/10, point 5) — la série modifiée a mis des dates en attente (la Ville,
+          // le dirigeant) : on le dit, et ce qui arrive si la Ville refuse. Sans bilan : rien.
+          const bilan = recurrenceMode ? seriesUpdateMessage(reponse, t) : null;
+          if (bilan) {
+            const titre = t('eventEdit.modals.seriesOutcome.title', 'Modification enregistrée');
+            Alert.alert(titre, bilan);
           }
           // 🔴 EVENTEDIT-SAISIE (D3) — ON REVIENT A LA FICHE, ON N'EN POSE PAS
           // UNE DE PLUS. `replace` mettait une NOUVELLE fiche a la place de cet

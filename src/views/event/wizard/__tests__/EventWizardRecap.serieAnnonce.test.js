@@ -96,6 +96,8 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () =
 jest.mock('@/services/event/eventService', () => ({
   announceEventSeries: (/** @type {any[]} */ ...args) => mockAnnoncerLaSerie(...args),
   createEventsWithConcurrency: (/** @type {any[]} */ ...args) => mockCreerEnLot(...args),
+  // SERIES (08/10) — une serie part par `createEventSeries` (une requete) : le meme lot, vu d ici.
+  createEventSeries: (/** @type {any[]} */ ...args) => mockCreerEnLot(...args),
   getEventById: () => Promise.resolve(null),
   requestFeatured: () => Promise.resolve(null),
   rollbackEventsByCancel: () => Promise.resolve([]),
