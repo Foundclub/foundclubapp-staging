@@ -308,3 +308,38 @@ describe('FINITIONS16 6 — sur le site, un vrai champ d heure du navigateur', (
     expect(textes).toContain('Heure de début');
   });
 });
+
+// T19 (08/10, téléphone Android, « Attribuer un créneau ») — « CANCEL » sur le
+// sélecteur natif ÉCRIVAIT l'heure du moment dans le champ (17:30 ⇒ 02:00).
+// La bibliothèque rappelle `onChange` aussi à la fermeture, avec
+// `{ type: 'dismissed' }` et la valeur d'origine : le champ ne regardait pas le
+// type. Annuler ne doit RIEN écrire ; choisir (« set ») écrit l'heure choisie.
+describe('T19 — Android : « Annuler » sur le sélecteur natif n écrit rien', () => {
+  const osDOrigine = Platform.OS;
+
+  beforeEach(() => {
+    Platform.OS = 'android';
+  });
+
+  afterEach(() => {
+    Platform.OS = osDOrigine;
+  });
+
+  test('🔴 fermer le sélecteur (dismissed) ne change pas le champ', () => {
+    afficherLeChamp({ value: '' });
+    presserLeTexte('HH:mm');
+    const maintenant = new Date();
+    act(() => derniereRoue().onChange({ type: 'dismissed' }, maintenant));
+
+    expect(heuresRendues).toEqual([]);
+  });
+
+  test('choisir une heure (set) l écrit au format HH:mm', () => {
+    afficherLeChamp({ value: '17:30' });
+    presserLeTexte('17:30');
+    const choisie = new Date(2026, 9, 8, 18, 45, 0, 0);
+    act(() => derniereRoue().onChange({ type: 'set' }, choisie));
+
+    expect(heuresRendues).toEqual(['18:45']);
+  });
+});
