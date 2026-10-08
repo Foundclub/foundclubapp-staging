@@ -285,8 +285,12 @@ export const getTeams = async (params = {}) => {
     const primaryResponse = await client.get('/teams', { params: buildRequestParams(false) });
     let validationResult = await validateResponse(primaryResponse);
 
+    // T19-RESTES (T19-bis) — le repli ne vaut que pour un ancien identifiant NUMÉRIQUE : un
+    // `documentId` dans `filters[club][id]` fait répondre 500 au serveur. Au téléphone ce repli
+    // ne partait jamais (Joi change la liste vide en `undefined`) ; sur le site, la doublure de
+    // Joi la garde : tout club sans équipe y affichait « Failed to fetch teams ».
     if (
-      clubId
+      /^\d+$/.test(String(clubId || '').trim())
       && Array.isArray(validationResult?.data)
       && validationResult.data.length === 0
     ) {
