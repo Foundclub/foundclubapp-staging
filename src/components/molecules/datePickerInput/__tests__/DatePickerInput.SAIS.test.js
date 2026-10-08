@@ -125,3 +125,70 @@ describe.each(['ios', 'android'])('SAIS lot 1 — la date vide, au téléphone (
     expect(enErreur.borderColor).not.toBe(cadre.borderColor);
   });
 });
+
+// 📅 SAIS — DÉCISION D'ADEL « heure A » (08/10 ~16h15), même règle pour la date : le calendrier
+// s'ouvre sur la valeur, sinon sur aujourd'hui (ramené dans les bornes) ; « OK » ÉCRIT la date
+// affichée (iPhone : il ne faisait que fermer) ; « Annuler » (iPhone) n'écrit rien. ROUGES avant.
+describe('SAIS heure A — la date : « OK » sans toucher écrit la date affichée', () => {
+  /** @type {string[]} */
+  let ecrites = [];
+  const ouvrir = (/** @type {any} */ props) => {
+    ecrites = [];
+    monter({ onChange: (/** @type {string} */ date) => ecrites.push(date), ...props });
+    act(() => { arbre.root.findAllByType(TouchableOpacity)[0].props.onPress(); });
+  };
+  const selecteur = () => mockSelecteurs[mockSelecteurs.length - 1];
+  const presser = (/** @type {string} */ libelle) => {
+    // Le bouton le plus INTÉRIEUR qui porte ce texte (le voile de la feuille le contient aussi).
+    const cible = arbre.root.findAllByType(TouchableOpacity).filter(
+      (/** @type {any} */ noeud) => noeud.findAllByType(Text)
+        .some((/** @type {any} */ texte) => [].concat(texte.props.children).join('') === libelle),
+    ).pop();
+    if (!cible) throw new Error(`aucun bouton « ${libelle} »`);
+    act(() => { cible.props.onPress(); });
+  };
+  const jj = (/** @type {Date} */ date) => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+  const demain = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    return date;
+  };
+
+  describe('iPhone', () => {
+    beforeEach(() => { Platform.OS = 'ios'; });
+
+    test('vide : le calendrier s’ouvre sur aujourd’hui, « OK » l’écrit', () => {
+      ouvrir({});
+      expect(jj(selecteur().value)).toBe(jj(new Date()));
+      presser('OK');
+      expect(ecrites).toEqual([jj(new Date())]);
+    });
+
+    test('vide avec un minimum à demain : il s’ouvre sur demain, « OK » écrit demain', () => {
+      ouvrir({ minimumDate: demain() });
+      expect(jj(selecteur().value)).toBe(jj(demain()));
+      presser('OK');
+      expect(ecrites).toEqual([jj(demain())]);
+    });
+
+    test('tourner puis « Annuler » : rien n’est écrit ; tourner puis « OK » : la date tournée', () => {
+      ouvrir({ value: '07/10/2026' });
+      act(() => { selecteur().onChange({ type: 'set' }, new Date(2026, 9, 31)); });
+      expect(ecrites).toEqual([]);
+      presser('Annuler');
+      expect(ecrites).toEqual([]);
+      act(() => { arbre.root.findAllByType(TouchableOpacity)[0].props.onPress(); });
+      act(() => { selecteur().onChange({ type: 'set' }, new Date(2026, 9, 31)); });
+      presser('OK');
+      expect(ecrites).toEqual(['31/10/2026']);
+    });
+  });
+
+  test('Android : vide avec un minimum à demain, le calendrier s’ouvre sur demain', () => {
+    Platform.OS = 'android';
+    ouvrir({ minimumDate: demain() });
+    expect(jj(selecteur().value)).toBe(jj(demain()));
+    act(() => { selecteur().onChange({ type: 'set' }, selecteur().value); });
+    expect(ecrites).toEqual([jj(demain())]);
+  });
+});

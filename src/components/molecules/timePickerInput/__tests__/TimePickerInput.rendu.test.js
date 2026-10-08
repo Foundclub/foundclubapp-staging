@@ -199,13 +199,23 @@ describe('D19 — le selecteur d heure, etat du 2026-08-07', () => {
     expect(derniereRoue().value.getMinutes()).toBe(30);
   });
 
-  test('tourner la roue rend l heure au format HH:mm', () => {
+  // SAIS (08/10, décision d'Adel « heure A ») — sur iPhone, tourner ne fait que bouger la roue ;
+  // c'est « OK » qui ÉCRIT (avant : chaque cran écrivait, et « OK » sans tourner n'écrivait rien).
+  test('tourner la roue puis « OK » rend l heure au format HH:mm', () => {
     afficherLeChamp();
     presserLeTexte('09:30');
 
     const choisie = new Date();
     choisie.setHours(7, 5, 0, 0);
     act(() => derniereRoue().onChange({}, choisie));
+    expect(heuresRendues).toEqual([]);
+
+    const ok = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+        && textesSous(noeud).includes('OK'),
+      { deep: true },
+    ).pop();
+    act(() => ok.props.onPress());
 
     expect(heuresRendues).toEqual(['07:05']);
   });

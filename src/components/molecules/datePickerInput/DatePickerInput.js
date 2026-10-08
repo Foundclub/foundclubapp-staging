@@ -40,16 +40,29 @@ function DatePickerInput({
   } = useTheme();
   const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
+  // SAIS (heure A) — iPhone : la date que montre la roue, écrite seulement par « OK ».
+  const [brouillon, setBrouillon] = useState(/** @type {Date | null} */ (null));
 
-  // Parse the value (DD/MM/YYYY) to a Date object for the picker
+  // 📅 SAIS — DÉCISION D'ADEL « heure A » (08/10, tournée T20 lot 1) : le calendrier s'ouvre sur
+  // la valeur, sinon sur aujourd'hui, RAMENÉ dans les bornes (sinon la roue montrait une date
+  // que le champ ne prenait pas).
   const getDateFromValue = () => {
-    if (value) {
-      const parsed = parse(value, 'dd/MM/yyyy', new Date());
-      if (isValid(parsed)) {
-        return parsed;
-      }
-    }
-    return new Date();
+    const parsed = value ? parse(value, 'dd/MM/yyyy', new Date()) : null;
+    if (parsed && isValid(parsed)) return parsed;
+    const aujourdhui = new Date();
+    if (minimumDate && aujourdhui < minimumDate) return new Date(minimumDate);
+    if (maximumDate && aujourdhui > maximumDate) return new Date(maximumDate);
+    return aujourdhui;
+  };
+
+  const ouvrir = () => {
+    setBrouillon(getDateFromValue());
+    setShowPicker(true);
+  };
+  // iPhone : « Annuler », le voile ou le retour ferment SANS rien écrire (la valeur d'avant reste).
+  const annuler = () => {
+    setShowPicker(false);
+    setBrouillon(null);
   };
 
   // Format the date from Date to DD/MM/YYYY string
@@ -87,13 +100,19 @@ function DatePickerInput({
     // T19 (08/10) — Android rappelle onChange a la fermeture (« Annuler ») avec
     // { type: 'dismissed' } et la valeur d'origine : annuler ne doit rien ecrire.
     if (event?.type === 'dismissed') return;
-    if (selectedDate) {
-      onChange(formatDate(selectedDate));
-    }
+    if (!selectedDate) return;
+    // SAIS (heure A) — iPhone : la roue ne fait que bouger le brouillon ; « OK » l'écrit.
+    // Android : le calendrier rend « set » au OK, même sans geste (la date montrée).
+    if (Platform.OS === 'ios') setBrouillon(selectedDate);
+    else onChange(formatDate(selectedDate));
   };
 
+  // SAIS (heure A) — « OK » ÉCRIT la date que montre la roue, tournée ou non (avant : il ne
+  // faisait que fermer).
   const handleConfirm = () => {
+    onChange(formatDate(brouillon || getDateFromValue()));
     setShowPicker(false);
+    setBrouillon(null);
   };
 
   // Display formatted date or placeholder
@@ -153,7 +172,7 @@ function DatePickerInput({
         // SAIS (T20 lot 1) — un CADRE (sur une feuille de sa couleur, « Attribuer », la boîte
         // disparaissait) et une icône calendrier, vide ou rempli.
         <TouchableOpacity
-          onPress={() => setShowPicker(true)}
+          onPress={ouvrir}
           style={[
             ApplicationStyle.borderRadius12,
             ApplicationStyle.backgroundColor.primary700,
@@ -188,13 +207,13 @@ function DatePickerInput({
       {Platform.OS === 'ios' && showPicker && (
         <Modal
           animationType="slide"
-          onRequestClose={() => setShowPicker(false)}
+          onRequestClose={annuler}
           transparent
           visible={showPicker}
         >
           <TouchableOpacity
             activeOpacity={1}
-            onPress={() => setShowPicker(false)}
+            onPress={annuler}
             style={{ backgroundColor: 'rgba(0,0,0,0.5)', flex: 1 }}
           >
             <View style={{ flex: 1 }} />
@@ -214,7 +233,7 @@ function DatePickerInput({
                 { borderBottomColor: Colors.neutral100, borderBottomWidth: 1 },
               ]}
               >
-                <TouchableOpacity onPress={() => setShowPicker(false)}>
+                <TouchableOpacity onPress={annuler}>
                   <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
                     {t('datePickerInput.cancel', 'Annuler')}
                   </Text>
@@ -234,7 +253,7 @@ function DatePickerInput({
                 onChange={handleChange}
                 style={{ height: 200 }}
                 textColor={Colors.neutral00}
-                value={getDateFromValue()}
+                value={brouillon || getDateFromValue()}
               />
             </View>
           </TouchableOpacity>
