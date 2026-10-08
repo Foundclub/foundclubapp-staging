@@ -4731,7 +4731,9 @@ export default {
       counts: 'Équipes : {{teams}} · Membres : {{members}}',
       empty: 'Aucun club rattaché pour l’instant.',
       header: 'Clubs rattachés',
-      hint: 'Le contact général de chaque club et des nombres : jamais le nom d’un membre.',
+      // FINITIONS-VILLE (décision d'Adel « dirigeant A », 08/10) : la Ville voit les dirigeants.
+      // eslint-disable-next-line max-len
+      hint: 'Le contact général de chaque club, le nom de ses dirigeants et des nombres : jamais les autres membres.',
       noContact: 'Pas de contact renseigné par le club.',
       title: 'Clubs rattachés : {{nombre}}',
     },

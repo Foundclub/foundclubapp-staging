@@ -544,7 +544,9 @@ function CollectiviteClubs() {
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t(
               'collectivite.clubs.hint',
-              'Le contact général de chaque club et des nombres : jamais le nom d’un membre.',
+              // FINITIONS-VILLE (« dirigeant A », 08/10) : les dirigeants oui, les autres non.
+              // eslint-disable-next-line max-len
+              'Le contact général de chaque club, le nom de ses dirigeants et des nombres : jamais les autres membres.',
             )}
           </Text>
         </View>

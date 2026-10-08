@@ -4404,7 +4404,7 @@ export default {
       counts: 'Teams: {{teams}} · Members: {{members}}',
       empty: 'No attached club yet.',
       header: 'Attached clubs',
-      hint: "Each club's general contact and numbers: never a member's name.",
+      hint: "Each club's general contact, its leaders' names and numbers: never the other members.",
       noContact: 'No contact provided by the club.',
       title: 'Attached clubs: {{nombre}}',
     },
