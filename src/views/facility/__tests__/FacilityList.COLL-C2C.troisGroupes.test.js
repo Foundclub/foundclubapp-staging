@@ -256,8 +256,10 @@ describe('COLL-C2C — Tes installations en 3 groupes', () => {
   // COLL-C2C (02/10) — l écran de C3B est récolté (staging 34d22001) : le point d accroche y mène.
   it('« Demander » ouvre l écran du lot C3B, l installation déjà choisie', () => {
     const arbre = rendre();
-    appuyer(arbre, 'Demander une heure');
-    appuyer(arbre, 'Demander un créneau');
+    // FINITIONS-VILLE (T20 K01) : UN seul libellé pour le même geste (plus « Demander une heure »).
+    expect(textes(arbre)).not.toContain('Demander une heure');
+    appuyer(arbre, 'Demander un créneau', 0);
+    appuyer(arbre, 'Demander un créneau', 1);
     expect(mockNavigate.mock.calls).toEqual([
       ['ClubSlotRequest', { clubId: 'as-montrivage', facilityId: 'gym-tilleuls' }],
       ['ClubSlotRequest', { clubId: 'as-montrivage', facilityId: 'dojo' }],
