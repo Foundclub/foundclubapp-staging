@@ -5761,7 +5761,13 @@ export default {
       inCommune: 'Dans ta commune',
       // eslint-disable-next-line max-len
       intro: 'Rattaché à sa Ville, ton club voit ses installations et ses créneaux, peut y demander des créneaux et reçoit ses actualités. Son planning reste entre la Ville et ses clubs.',
-      leadDone: 'Ta mairie {{deCommune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      leadDone: 'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      // FINITIONS-VILLE (T20) : « d’Agy », « du Havre », « des Mureaux ».
+      // eslint-disable-next-line max-len
+      leadDoneDes: 'Ta mairie des {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      leadDoneDu: 'Ta mairie du {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      // eslint-disable-next-line max-len
+      leadDoneElide: 'Ta mairie d’{{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
       leadIntro: 'Préviens ta mairie : l’équipe FoundClub la contactera de ta part.',
       missingTitle: 'Ta collectivité n’est pas sur FoundClub ?',
       notify: 'Prévenir ma mairie',

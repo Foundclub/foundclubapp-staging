@@ -184,17 +184,17 @@ export const nomQuiSElide = (nom) => /^[aeiouyhàâäéèêëîïôöùûüœæ]
 
 /**
  * FINITIONS-VILLE (T20, 08/10) — « de » devant le nom d une commune, accordé : « d’Agy », « du
- * Havre », « des Mureaux », « de Montrivage » (même règle que `nomOfficielDeCommune`). Grammaire
- * FRANÇAISE : la phrase anglaise ne l’emploie pas (elle garde `{{commune}}`).
+ * Havre », « des Mureaux », « de Montrivage » (même règle que `nomOfficielDeCommune`). Rend la
+ * FORME et le nom qui suit : l écran choisit SA clef de traduction (une par forme, chacune avec
+ * `{{commune}}` — l anglais n accorde rien).
  * @param {unknown} nom - Le nom de la commune.
- * @returns {string} « de … » accordé, ou '' sans nom.
+ * @returns {{ forme: 'de' | 'du' | 'des' | 'elide', nom: string }} La forme, et le nom à écrire.
  */
-export const deLaCommune = (nom) => {
+export const formeDeLaCommune = (nom) => {
   const propre = String(nom || '').trim();
-  if (!propre) return '';
-  if (/^le /iu.test(propre)) return `du ${propre.slice(3)}`;
-  if (/^les /iu.test(propre)) return `des ${propre.slice(4)}`;
-  return nomQuiSElide(propre) ? `d’${propre}` : `de ${propre}`;
+  if (/^le /iu.test(propre)) return { forme: 'du', nom: propre.slice(3) };
+  if (/^les /iu.test(propre)) return { forme: 'des', nom: propre.slice(4) };
+  return { forme: nomQuiSElide(propre) ? 'elide' : 'de', nom: propre };
 };
 
 /**
