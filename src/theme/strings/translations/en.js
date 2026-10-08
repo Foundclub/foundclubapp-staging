@@ -6903,6 +6903,8 @@ export default {
       empty: 'No messages yet.',
       fil: {
         annulerReponse: 'Cancel reply',
+        aucunFilChoisi: 'Choose a conversation',
+        aucunFilChoisiAide: 'It will open here, next to the list.',
         echec: 'Not sent',
         enCours: 'Sending',
         envoye: 'Sent',
@@ -12833,6 +12835,7 @@ export default {
     filters: {
       all: 'All',
       classic: 'Classic',
+      label: 'Conversations to show',
       league: 'League',
     },
     loadError: 'Unable to load conversations.',

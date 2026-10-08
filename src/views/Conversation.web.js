@@ -20,10 +20,13 @@ import { getMessageActions } from '@/domains/messaging/messageActions';
 import { couleurDuNom, sousTitreDesMembres } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
+  estEpinglePourMoi,
+  filtrerLesFils,
   formatChatTimestamp,
   getChatLastMessage,
   getChatMessagePreview,
   getConversationName,
+  trierLesFils,
 } from '@/domains/messaging/messagingUseCases';
 import {
   applyOptimisticPollVote,
@@ -44,6 +47,7 @@ import {
 import {
   hideBlockedChats,
   hideBlockedMessages,
+  peutBloquer,
   resolveOtherParticipantId,
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
@@ -79,7 +83,9 @@ import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiv
 // COLL-C4A2 (02/10) — les fils de la Ville (canal des dirigeants, conversation privee).
 import { ListeDesMembresDuFil } from '@/views/collectivite/CollectiviteCanalMembres';
 // COLL-C4A3 (03/10) — la colonne de gauche de la Ville et l'écusson de l'en-tête (planche 47).
-import { ColonneDesFilsDeLaVille } from '@/views/collectivite/components/CanauxDeLaVille';
+import CanauxDeLaVille, {
+  ColonneDesFilsDeLaVille,
+} from '@/views/collectivite/components/CanauxDeLaVille';
 import {
   BoutonMembresDuFil,
   EcussonDuFil,
@@ -758,23 +764,86 @@ const DESSIN_RETOUR = (
  * 🗂️ ARCHIVEES (08/10, README §3.14) — mes fils archives n y sont plus : la ligne « Archivées »,
  * en tete, bascule la colonne sur eux ; le clic droit ou le « … » d une ligne ouvre « Archiver »
  * (fil ordinaire) ou « Désarchiver » (fil archive).
- * @param {{ archivees?: any[], chatId: string, chats: any[], meId: string, navigation: any,
- *   onBasculerArchive?: (fil: any) => void, t: any }} props
+ * 🧭 SMF (T20, 08/10) — UNE SEULE LISTE SUR ORDINATEUR : la colonne sert aussi `/messages` (sans
+ * fil choisi, `MessagesDuSite`), qui montrait une 2e liste. Elle charge donc elle-meme la liste de
+ * la page du telephone (meme requete, meme cache) et en reprend ce qui lui manquait : la
+ * recherche, « Toutes / Classique / League », les canaux de la Ville en tete, mes epingles en
+ * tete (et « Épingler » dans le menu), les pages suivantes. L ordre et le filtre sont les regles
+ * partagees `trierLesFils` / `filtrerLesFils`.
+ * @param {{ chatId: string, gestes: { archiveChatAsync: (id: string) => Promise<any>,
+ *   pinChatAsync: (id: string) => Promise<any>, unarchiveChatAsync: (id: string) => Promise<any>,
+ *   unpinChatAsync: (id: string) => Promise<any> }, navigation: any, t: any }} props
  * @returns {import('react').ReactElement} La colonne.
  */
 function ColonneDesConversations({
-  archivees = [], chatId, chats, meId, navigation, onBasculerArchive = () => {}, t,
+  chatId, gestes, navigation, t,
 }) {
+  const { allMyTeams, userData } = useAuth();
+  const meId = String(userData?.documentId || '');
+  // La requete de la page du telephone (Messaging.js) : meme clef, donc meme cache.
+  const mesEquipes = useMemo(() => (Array.isArray(allMyTeams)
+    ? Array.from(new Set(allMyTeams
+      .map((/** @type {any} */ equipe) => String(equipe?.documentId || '').trim())
+      .filter(Boolean)))
+    : []), [allMyTeams]);
+  const {
+    data: listeDesFils,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useGetChats({
+    currentUserClubId: userData?.club?.documentId,
+    currentUserId: userData?.documentId,
+    currentUserTeamIds: mesEquipes,
+  });
+  const { data: mesBlocages } = /** @type {{ data?: any[] }} */ (
+    useGetMyBlockedUsers({ enabled: peutBloquer(userData) })
+  );
+  const [recherche, setRecherche] = useState('');
+  const [portee, setPortee] = useState('all');
   const [afficheArchivees, setAfficheArchivees] = useState(false);
   const [menu, setMenu] = useState(
     /** @type {{ declencheur: HTMLElement, fil: any, x: number, y: number } | null} */ (null),
   );
   const menuRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const listeRef = useRef(/** @type {HTMLElement | null} */ (null));
+  const finDeListeRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+
+  const filsTries = useMemo(() => {
+    const pages = /** @type {any} */ (listeDesFils)?.pages;
+    const fils = Array.isArray(pages)
+      ? pages.flatMap((/** @type {any} */ page) => page?.data || [])
+      : [];
+    return trierLesFils(hideBlockedChats(fils, meId, toBlockedUserIdSet(mesBlocages || [])), meId);
+  }, [listeDesFils, meId, mesBlocages]);
+  const monClubId = userData?.club?.documentId || null;
+  const actifs = filsTries.filter((fil) => !estArchivePourMoi(fil, meId));
+  const archivees = filsDeLaMessagerie(
+    filsTries.filter((fil) => estArchivePourMoi(fil, meId)),
+    { monClubId },
+  );
   // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
   const enModeArchivees = afficheArchivees && archivees.length > 0;
   useEffect(() => {
     if (archivees.length === 0) setAfficheArchivees(false);
   }, [archivees.length]);
+  // La liste arrive par pages de 20, archives melees : la page des archives lit les suivantes
+  // (comme le telephone).
+  useEffect(() => {
+    if (enModeArchivees && hasNextPage && !isFetchingNextPage) fetchNextPage?.();
+  }, [enModeArchivees, fetchNextPage, hasNextPage, isFetchingNextPage]);
+  // Les pages suivantes : des que le bas de la liste parait (FlashList.onEndReached au telephone).
+  useEffect(() => {
+    const fin = finDeListeRef.current;
+    if (!fin || !hasNextPage) return undefined;
+    if (typeof window.IntersectionObserver === 'undefined') return undefined;
+    const observateur = new window.IntersectionObserver((entrees) => {
+      if (entrees.some((entree) => entree.isIntersecting) && !isFetchingNextPage) fetchNextPage?.();
+    }, { root: listeRef.current, rootMargin: '0px 0px 200px 0px' });
+    observateur.observe(fin);
+    return () => observateur.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
   // Le menu prend le focus ; Echap le ferme et rend le focus a ce qui l a ouvert ; un clic a cote
   // le ferme aussi (comme le menu ⋮ du fil).
   useEffect(() => {
@@ -799,8 +868,75 @@ function ColonneDesConversations({
       document.removeEventListener('mousedown', surClic);
     };
   }, [menu]);
+
+  const nomDuFil = (/** @type {any} */ fil) => titreDuFil(t, { chat: fil }) || getConversationName({
+    chatClub: fil?.club,
+    chatGroupName: fil?.groupName,
+    chatLeagueMatch: fil?.league_match,
+    chatMultisportClub: fil?.multisportClub,
+    chatParticipants: fil?.participants,
+    chatTeam: fil?.team,
+    chatType: fil?.type,
+    meId,
+  }) || t('common.chat', 'Conversation');
+  const fils = filtrerLesFils(
+    enModeArchivees ? archivees : filsDeLaMessagerie(actifs, { monClubId }),
+    { nomDuFil, portee, recherche },
+  );
+  let listeVide = t('messaging.noData', 'Aucune conversation trouvée.');
+  if (recherche.trim()) listeVide = t('messaging.noSearchResults', 'Aucune conversation trouvée.');
+  else if (portee === 'league') {
+    listeVide = t('messaging.noLeagueData', 'Aucune conversation League.');
+  } else if (portee === 'classic') {
+    listeVide = t('messaging.noClassicData', 'Aucune conversation classique.');
+  }
+
+  // Le meme geste archive un fil ordinaire et desarchive un fil archive (comme le telephone) ;
+  // idem pour epingler.
+  const basculer = async (/** @type {'archive' | 'epingle'} */ geste, /** @type {any} */ fil) => {
+    const id = String(fil?.documentId || '');
+    if (!id) return;
+    const deja = geste === 'archive' ? estArchivePourMoi(fil, meId) : estEpinglePourMoi(fil, meId);
+    let erreurParDefaut = deja
+      ? t('messaging.unpinError', 'Impossible de désépingler cette conversation.')
+      : t('messaging.pinError', "Impossible d'épingler cette conversation.");
+    if (geste === 'archive') {
+      erreurParDefaut = deja
+        ? t('messaging.unarchiveError', 'Impossible de désarchiver cette conversation.')
+        : t('messaging.archiveError', "Impossible d'archiver cette conversation.");
+    }
+    try {
+      if (geste === 'archive') {
+        await (deja ? gestes.unarchiveChatAsync(id) : gestes.archiveChatAsync(id));
+      } else {
+        await (deja ? gestes.unpinChatAsync(id) : gestes.pinChatAsync(id));
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-alert -- le meme retour que les autres gestes du fil du site
+      window.alert(getErrorMessage(error, erreurParDefaut));
+    }
+  };
   const libelleDuMenu = t('messaging.conversationOptions', 'Options de la conversation');
-  const fils = enModeArchivees ? archivees : chats;
+  const portees = [
+    { libelle: t('messaging.filters.all', 'Toutes'), valeur: 'all' },
+    { libelle: t('messaging.filters.classic', 'Classique'), valeur: 'classic' },
+    { libelle: t('messaging.filters.league', 'League'), valeur: 'league' },
+  ];
+  const styleDeLEntree = {
+    alignItems: 'center',
+    background: 'transparent',
+    border: 0,
+    borderRadius: 10,
+    color: PALETTE_DU_FIL.texte,
+    cursor: 'pointer',
+    display: 'flex',
+    fontFamily: 'Montserrat-Regular, sans-serif',
+    fontSize: 15,
+    gap: 12,
+    minHeight: 44,
+    padding: '0 14px',
+    textAlign: /** @type {const} */ ('left'),
+  };
   return (
     <aside
       aria-label={t('conversation.web.fil.titreListe', 'Messages')}
@@ -817,48 +953,120 @@ function ColonneDesConversations({
     >
       <div
         style={{
-          alignItems: 'center',
           background: PALETTE_DU_FIL.barre,
           borderBottom: `1px solid ${PALETTE_DU_FIL.filet}`,
           boxSizing: 'border-box',
-          display: 'flex',
-          justifyContent: 'space-between',
-          minHeight: 62,
-          padding: '10px 14px 10px 18px',
+          display: 'grid',
+          gap: 10,
+          padding: '10px 14px 12px 18px',
         }}
       >
-        <h2
+        <div
           style={{
-            color: PALETTE_DU_FIL.texte,
-            fontFamily: 'Montserrat-Bold, sans-serif',
-            fontSize: 20,
-            margin: 0,
+            alignItems: 'center', display: 'flex', justifyContent: 'space-between', minHeight: 42,
           }}
         >
-          {t('conversation.web.fil.titreListe', 'Messages')}
-        </h2>
-        <button
-          aria-label={t('conversation.web.fil.nouvelleDiscussion', 'Nouvelle discussion')}
-          onClick={() => navigation.navigate(RouteNames.NewConversation)}
+          <h2
+            style={{
+              color: PALETTE_DU_FIL.texte,
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              fontSize: 20,
+              margin: 0,
+            }}
+          >
+            {t('conversation.web.fil.titreListe', 'Messages')}
+          </h2>
+          <button
+            aria-label={t('conversation.web.fil.nouvelleDiscussion', 'Nouvelle discussion')}
+            onClick={() => navigation.navigate(RouteNames.NewConversation)}
+            style={{
+              alignItems: 'center',
+              background: PALETTE_DU_FIL.accent,
+              border: 0,
+              borderRadius: 999,
+              cursor: 'pointer',
+              display: 'flex',
+              height: 36,
+              justifyContent: 'center',
+              padding: 0,
+              width: 36,
+            }}
+            type="button"
+          >
+            <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={20} />
+          </button>
+        </div>
+        {/* SMF — la recherche et la portee de la page de la messagerie (README §3.13). */}
+        <div
           style={{
             alignItems: 'center',
-            background: PALETTE_DU_FIL.accent,
-            border: 0,
+            background: PALETTE_DU_FIL.menu,
+            border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
             borderRadius: 999,
-            cursor: 'pointer',
             display: 'flex',
-            height: 36,
-            justifyContent: 'center',
-            padding: 0,
-            width: 36,
+            gap: 8,
+            minHeight: 40,
+            padding: '0 14px',
           }}
-          type="button"
         >
-          <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={20} />
-        </button>
+          <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="search" size={16} />
+          <input
+            aria-label={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
+            onChange={(event) => setRecherche(event.target.value)}
+            placeholder={t('messaging.searchPlaceholder', 'Rechercher une conversation...')}
+            style={{
+              background: 'transparent',
+              border: 0,
+              color: PALETTE_DU_FIL.texte,
+              flex: 1,
+              fontFamily: 'Montserrat-Regular, sans-serif',
+              fontSize: 14,
+              minWidth: 0,
+              outline: 'none',
+            }}
+            type="search"
+            value={recherche}
+          />
+        </div>
+        <div
+          aria-label={t('messaging.filters.label', 'Conversations à afficher')}
+          role="group"
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
+        >
+          {portees.map(({ libelle, valeur }) => (
+            <button
+              aria-pressed={portee === valeur}
+              key={valeur}
+              onClick={() => setPortee(valeur)}
+              style={{
+                background: portee === valeur ? PALETTE_DU_FIL.accent : 'transparent',
+                border: `1px solid ${
+                  portee === valeur ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.menuBord
+                }`,
+                borderRadius: 999,
+                color: portee === valeur ? PALETTE_DU_FIL.encre : PALETTE_DU_FIL.texte,
+                cursor: 'pointer',
+                fontFamily: 'Montserrat-Bold, sans-serif',
+                fontSize: 13,
+                minHeight: 32,
+                padding: '0 14px',
+              }}
+              type="button"
+            >
+              {libelle}
+            </button>
+          ))}
+        </div>
       </div>
-      <nav style={{ overflowY: 'auto' }}>
+      <nav ref={listeRef} style={{ overflowY: 'auto' }}>
         <style>{ARCHIVEES_STYLE}</style>
+        {/* SMF — les canaux de la Ville, en tete comme sur la page de la messagerie : le canal
+            des dirigeants n est dans aucune ligne (filsDeLaMessagerie l ecarte). */}
+        {enModeArchivees || recherche.trim() ? null : (
+          <div style={{ padding: '12px 14px 0' }}>
+            <CanauxDeLaVille chats={actifs} navigation={navigation} />
+          </div>
+        )}
         {archivees.length > 0 ? (
           <button
             data-testid="ARCH-colonne-archivees"
@@ -903,22 +1111,23 @@ function ColonneDesConversations({
             </span>
           </button>
         ) : null}
+        {fils.length === 0 && filsTries.length > 0 ? (
+          <p
+            style={{
+              color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0, padding: '18px 14px',
+            }}
+          >
+            {listeVide}
+          </p>
+        ) : null}
         {fils.map((/** @type {any} */ fil) => {
           const id = String(fil?.documentId || '');
-          const titre = titreDuFil(t, { chat: fil }) || getConversationName({
-            chatClub: fil?.club,
-            chatGroupName: fil?.groupName,
-            chatLeagueMatch: fil?.league_match,
-            chatMultisportClub: fil?.multisportClub,
-            chatParticipants: fil?.participants,
-            chatTeam: fil?.team,
-            chatType: fil?.type,
-            meId,
-          }) || t('common.chat', 'Conversation');
+          const titre = nomDuFil(fil);
           const dernier = getChatLastMessage(fil);
           const deMoi = Boolean(meId) && dernier?.sender?.documentId === meId;
           const nonLus = formatThreadUnreadBadge(fil?.unreadCount);
           const ouvert = id === chatId;
+          const epingle = estEpinglePourMoi(fil, meId);
           const prenom = !deMoi && fil?.type !== 'whisper'
             ? String(dernier?.sender?.firstname || '').trim()
             : '';
@@ -1026,6 +1235,17 @@ function ColonneDesConversations({
                       ) : null}
                       {dernier ? getChatMessagePreview(dernier, t) : ''}
                     </span>
+                    {/* SMF — l epingle de 15 (SPECS §7), avant la pastille de non-lus. */}
+                    {epingle ? (
+                      <span
+                        aria-label={t('messaging.pinnedBadge', 'Épinglé')}
+                        data-testid={`SMF-epingle-${id}`}
+                        role="img"
+                        style={{ display: 'inline-flex', flexShrink: 0 }}
+                      >
+                        <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="thumbtack" size={15} />
+                      </span>
+                    ) : null}
                     {nonLus ? (
                       <span
                         style={{
@@ -1081,6 +1301,8 @@ function ColonneDesConversations({
             </div>
           );
         })}
+        {/* SMF — le bas de la liste : quand il parait, la page suivante se charge. */}
+        <div aria-hidden="true" ref={finDeListeRef} style={{ height: 1 }} />
       </nav>
       {menu ? (
         <div
@@ -1097,33 +1319,36 @@ function ColonneDesConversations({
             minWidth: 230,
             padding: 6,
             position: 'fixed',
-            top: Math.max(8, Math.min(menu.y, window.innerHeight - 64)),
+            top: Math.max(8, Math.min(menu.y, window.innerHeight - 108)),
             zIndex: 1100,
           }}
         >
+          {/* SMF — « Épingler » / « Désépingler », comme l apercu du telephone (MSG1BA §3.14). */}
           <button
             className="MSG1W-ligne-menu"
             onClick={() => {
               const { fil } = menu;
               setMenu(null);
-              onBasculerArchive(fil);
+              basculer('epingle', fil);
             }}
             role="menuitem"
-            style={{
-              alignItems: 'center',
-              background: 'transparent',
-              border: 0,
-              borderRadius: 10,
-              color: PALETTE_DU_FIL.texte,
-              cursor: 'pointer',
-              display: 'flex',
-              fontFamily: 'Montserrat-Regular, sans-serif',
-              fontSize: 15,
-              gap: 12,
-              minHeight: 44,
-              padding: '0 14px',
-              textAlign: 'left',
+            style={styleDeLEntree}
+            type="button"
+          >
+            <GlyphIcon color={PALETTE_DU_FIL.texte} name="thumbtack" size={18} />
+            {estEpinglePourMoi(menu.fil, meId)
+              ? t('messaging.unpin', 'Désépingler')
+              : t('messaging.pin', 'Épingler')}
+          </button>
+          <button
+            className="MSG1W-ligne-menu"
+            onClick={() => {
+              const { fil } = menu;
+              setMenu(null);
+              basculer('archive', fil);
             }}
+            role="menuitem"
+            style={styleDeLEntree}
             type="button"
           >
             <GlyphIcon color={PALETTE_DU_FIL.texte} name="boxArchive" size={18} />
@@ -1135,6 +1360,34 @@ function ColonneDesConversations({
       ) : null}
     </aside>
   );
+}
+
+/**
+ * MSG1W §3.1 — LE CADRE A LA HAUTEUR DE L ECRAN : sa hauteur, mesuree sous ce qui le precede, et
+ * remesuree quand la fenetre change ou que `declencheur` change (le fil vient d arriver).
+ * @param {{ current: HTMLElement | null }} cadreRef - Le cadre.
+ * @param {boolean} isDesktop - Ordinateur (20 px de marge en bas) ou telephone (96 : les onglets).
+ * @param {unknown} declencheur - Ce qui oblige a remesurer.
+ * @returns {number} La hauteur, 0 tant qu elle n est pas mesuree.
+ */
+function useHauteurDuCadre(cadreRef, isDesktop, declencheur) {
+  const [hauteurDuCadre, setHauteurDuCadre] = useState(0);
+  useEffect(() => {
+    // Le banc jest (react-native) n a pas de fenetre a mesurer : rien a faire.
+    if (typeof window === 'undefined') return undefined;
+    if (typeof window.addEventListener !== 'function') return undefined;
+    const mesurer = () => {
+      const cadre = cadreRef.current;
+      if (!cadre?.getBoundingClientRect) return;
+      const haut = cadre.getBoundingClientRect().top + (window.scrollY || 0);
+      const reserveDuBas = isDesktop ? 20 : 96;
+      setHauteurDuCadre(Math.max(420, Math.round(window.innerHeight - haut - reserveDuBas)));
+    };
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    return () => window.removeEventListener('resize', mesurer);
+  }, [cadreRef, declencheur, isDesktop]);
+  return hauteurDuCadre;
 }
 
 /**
@@ -1489,6 +1742,7 @@ function Conversation({ navigation, route }) {
     editMessage,
     joinChat,
     leaveChat,
+    pinChatAsync,
     reactToMessage,
     removeGroupMember,
     respondToProposal,
@@ -1499,6 +1753,7 @@ function Conversation({ navigation, route }) {
     sendTypingStop,
     socket,
     unarchiveChatAsync,
+    unpinChatAsync,
     updateGroupMeta,
     votePoll,
   } = useMessaging(chatId)
@@ -1551,7 +1806,6 @@ function Conversation({ navigation, route }) {
   const voiceRecorderRef = useRef(null)
   // MSG1W §3.1 — le cadre a la hauteur de l ecran, « revenir en bas », le menu « + », la saisie.
   const cadreRef = useRef(/** @type {HTMLDivElement | null} */ (null));
-  const [hauteurDuCadre, setHauteurDuCadre] = useState(0);
   const [loinDuBas, setLoinDuBas] = useState(false);
   // Vrai tant que le fil est colle en bas : une photo qui se charge l y laisse.
   const colleAuBasRef = useRef(true);
@@ -1637,10 +1891,11 @@ function Conversation({ navigation, route }) {
   const avecColonneDeLaVille = Boolean(
     isDesktop && route?.params?.espace === 'ville' && filDeLaVille.estFil && villeDuFil,
   );
+  // La colonne « Messages » charge sa liste elle-meme (SMF) ; celle-ci ne sert qu a la Ville.
   const { data: listeDesFils } = useGetChats({
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
-  }, { enabled: avecColonneDeLaVille || avecColonneDesMessages });
+  }, { enabled: avecColonneDeLaVille });
   const filsDeLaColonne = useMemo(() => {
     const pages = listeDesFils?.pages;
     return Array.isArray(pages)
@@ -1892,21 +2147,7 @@ function Conversation({ navigation, route }) {
   ).trim();
 
   const filCharge = Boolean(chatData);
-  useEffect(() => {
-    // Le banc jest (react-native) n a pas de fenetre a mesurer : rien a faire.
-    if (typeof window === 'undefined') return undefined;
-    if (typeof window.addEventListener !== 'function') return undefined;
-    const mesurer = () => {
-      const cadre = cadreRef.current;
-      if (!cadre?.getBoundingClientRect) return;
-      const haut = cadre.getBoundingClientRect().top + (window.scrollY || 0);
-      const reserveDuBas = isDesktop ? 20 : 96;
-      setHauteurDuCadre(Math.max(420, Math.round(window.innerHeight - haut - reserveDuBas)));
-    };
-    mesurer();
-    window.addEventListener('resize', mesurer);
-    return () => window.removeEventListener('resize', mesurer);
-  }, [filCharge, isDesktop]);
+  const hauteurDuCadre = useHauteurDuCadre(cadreRef, isDesktop, filCharge);
 
   // MSG1W §3.1 — UN FIL COLLE EN BAS LE RESTE. Une photo qui se charge, une reaction ou une
   // carte qui se dessine apres coup font grandir le fil SOUS les yeux : sans ceci, le dernier
@@ -4343,32 +4584,6 @@ function Conversation({ navigation, route }) {
   // MSG1W §3.5 — a droite du fil, il ne reste que « Dans ce canal » d un fil de la Ville :
   // partager, sondage et proposition League sont passes dans le « + » et ses fenetres. Sur un
   // telephone, la liste passe SOUS la messagerie, hors du cadre a hauteur d ecran.
-  // La liste « Messages » : memes fils et memes regles que la page de la messagerie.
-  const filsDeLaListe = hideBlockedChats(
-    filsDeLaMessagerie(filsDeLaColonne, { monClubId: userData?.club?.documentId || null }),
-    userData?.documentId,
-    personnesBloquees,
-  );
-  // 🗂️ ARCHIVEES — mes fils archives quittent la colonne ; sa ligne « Archivees » les retrouve.
-  const filsActifsDeLaListe = filsDeLaListe
-    .filter((fil) => !estArchivePourMoi(fil, userData?.documentId));
-  const filsArchivesDeLaListe = filsDeLaListe
-    .filter((fil) => estArchivePourMoi(fil, userData?.documentId));
-  // Le meme geste archive un fil ordinaire et desarchive un fil archive (comme le telephone).
-  const basculerArchive = async (/** @type {any} */ fil) => {
-    const id = String(fil?.documentId || '');
-    if (!id) return;
-    const archive = estArchivePourMoi(fil, userData?.documentId);
-    try {
-      if (archive) await unarchiveChatAsync(id);
-      else await archiveChatAsync(id);
-    } catch (error) {
-      // eslint-disable-next-line no-alert -- le meme retour que les autres gestes du fil du site
-      window.alert(getErrorMessage(error, archive
-        ? t('messaging.unarchiveError', 'Impossible de désarchiver cette conversation.')
-        : t('messaging.archiveError', "Impossible d'archiver cette conversation.")));
-    }
-  };
   const panneauDeDroite = filDeLaVille.estFil && filDeLaVille.membres ? (
     <aside
       style={{
@@ -4438,12 +4653,11 @@ function Conversation({ navigation, route }) {
       >
         {avecColonneDesMessages ? (
           <ColonneDesConversations
-            archivees={filsArchivesDeLaListe}
             chatId={chatId}
-            chats={filsActifsDeLaListe}
-            meId={String(userData?.documentId || '')}
+            gestes={{
+              archiveChatAsync, pinChatAsync, unarchiveChatAsync, unpinChatAsync,
+            }}
             navigation={navigation}
-            onBasculerArchive={basculerArchive}
             t={t}
           />
         ) : null}
@@ -5877,6 +6091,84 @@ function Conversation({ navigation, route }) {
       ) : null}
     </ScreenContainer>
   )
+}
+
+/**
+ * 🧭 SMF (T20, 08/10) — `/messages` SUR ORDINATEUR : la colonne « Messages » a gauche (la MEME
+ * que celle d un fil ouvert) et, a droite, la place du fil. La page du telephone (Messaging.js)
+ * y montrait une 2e liste, differente (SITE_M14a). L aiguillage est dans Messaging.web.js.
+ * @param {{ navigation: any }} props - La navigation.
+ * @returns {import('react').ReactElement} La page.
+ */
+export function MessagesDuSite({ navigation }) {
+  const { t } = useTranslation();
+  const {
+    archiveChatAsync, pinChatAsync, unarchiveChatAsync, unpinChatAsync,
+  } = useMessaging();
+  const cadreRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const hauteurDuCadre = useHauteurDuCadre(cadreRef, true, null);
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      contentWidth="full"
+      responsivePadding
+      // @ts-ignore: FIXME: Baseline TS regression
+      style={{ paddingBottom: 0 }}
+    >
+      <div
+        ref={cadreRef}
+        style={{
+          display: 'grid',
+          gap: 16,
+          gridTemplateColumns: 'minmax(280px, 360px) minmax(0, 1fr)',
+          height: hauteurDuCadre || 'calc(100vh - 116px)',
+          minHeight: 0,
+        }}
+      >
+        <ColonneDesConversations
+          chatId=""
+          gestes={{
+            archiveChatAsync, pinChatAsync, unarchiveChatAsync, unpinChatAsync,
+          }}
+          navigation={navigation}
+          t={t}
+        />
+        <section
+          data-testid="SMF-aucun-fil-choisi"
+          style={{
+            alignContent: 'center',
+            background: PALETTE_DU_FIL.fil,
+            border: `1px solid ${PALETTE_DU_FIL.filet}`,
+            borderRadius: 20,
+            display: 'grid',
+            gap: 8,
+            justifyItems: 'center',
+            minHeight: 0,
+            padding: 24,
+            textAlign: 'center',
+          }}
+        >
+          <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="envelope" size={40} />
+          <h2
+            style={{
+              color: PALETTE_DU_FIL.texte,
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              fontSize: 18,
+              margin: 0,
+            }}
+          >
+            {t('conversation.web.fil.aucunFilChoisi', 'Choisis une conversation')}
+          </h2>
+          <p style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 14, margin: 0 }}>
+            {t(
+              'conversation.web.fil.aucunFilChoisiAide',
+              'Elle s’ouvrira ici, à côté de la liste.',
+            )}
+          </p>
+        </section>
+      </div>
+    </ScreenContainer>
+  );
 }
 
 export default Conversation

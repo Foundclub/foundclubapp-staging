@@ -7349,6 +7349,8 @@ export default {
       // MSG1W (07/10) — la messagerie du site au dessin du telephone (pack « modele WhatsApp »).
       fil: {
         annulerReponse: 'Annuler la réponse',
+        aucunFilChoisi: 'Choisis une conversation',
+        aucunFilChoisiAide: 'Elle s’ouvrira ici, à côté de la liste.',
         echec: 'Non envoyé',
         enCours: 'Envoi en cours',
         envoye: 'Envoyé',
@@ -13646,6 +13648,7 @@ export default {
     filters: {
       all: 'Toutes',
       classic: 'Classique',
+      label: 'Conversations à afficher',
       league: 'League',
     },
     loadError: 'Impossible de charger les conversations.',
