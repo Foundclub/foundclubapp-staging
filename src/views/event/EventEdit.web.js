@@ -14,6 +14,7 @@ import {
   isTrainingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
+import { seriesUpdateMessage } from '@/domains/event/seriesUpdateOutcome';
 import { eventFacilityOptions } from '@/domains/seasonSlot/clubInstallations';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -311,14 +312,26 @@ function EventEdit({ navigation, route }) {
   });
 
   const updateEventMutation = useMutation({
-    mutationFn: ({ documentId, eventData }) => updateEvent({ documentId, eventData }),
-    onSuccess: async () => {
+    // SERIES (08/10) — la portée choisie (« Cet événement et les suivants », « Toute la série »)
+    // part avec l'enregistrement : avant, elle était jetée ici et le site ne modifiait qu'UNE date.
+    mutationFn: ({ documentId, eventData, recurrenceMode }) => (
+      updateEvent({ documentId, eventData, recurrenceMode })
+    ),
+    onSuccess: async (reponse, { recurrenceMode }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event', eventId, 'edit'] }),
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] }),
       ]);
+      // SERIES (08/10, point 5) — des dates de la série attendent la Ville ou le dirigeant : on le
+      // dit (fenêtre du navigateur, comme la messagerie du site), puis on ouvre la fiche.
+      const bilan = recurrenceMode ? seriesUpdateMessage(reponse, t) : null;
+      if (bilan && typeof window !== 'undefined' && typeof window.alert === 'function') {
+        const titre = t('eventEdit.modals.seriesOutcome.title', 'Modification enregistrée');
+        // eslint-disable-next-line no-alert -- fenetre du navigateur, comme la messagerie du site
+        window.alert([titre, bilan].join('\n\n'));
+      }
       navigation.replace(RouteNames.EventDetails, { eventId });
     },
   });
