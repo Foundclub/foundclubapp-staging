@@ -988,18 +988,16 @@ function Messaging({ navigation, route }) {
           <View style={[Alignments.fill]}>
             {espaceVille ? null : renderChatScopeFilter()}
             {renderSearch()}
-            {renderLigneArchivees()}
             {/* COLL-C4A (02/10) — en tête : le canal des actualités de la Ville (le membre d'un
-                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ».
-                ARCHIVEES — pas sur la page des archives : elle ne montre que les fils archivés. */}
-            {enModeArchivees ? null : (
-              <CanauxDeLaVille
-                chats={allChats}
-                collectiviteId={route?.params?.collectiviteId || null}
-                espaceVille={route?.params?.espace === 'ville'}
-                navigation={navigation}
-              />
-            )}
+                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ». */}
+            <CanauxDeLaVille
+              chats={allChats}
+              collectiviteId={route?.params?.collectiviteId || null}
+              espaceVille={route?.params?.espace === 'ville'}
+              navigation={navigation}
+            />
+            {/* ARCHIVEES — en tête de la liste des conversations, sous le canal épinglé. */}
+            {renderLigneArchivees()}
             {isLoading && (
               <WithDataWrapper
                 isLoading
