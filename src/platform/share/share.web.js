@@ -1,9 +1,15 @@
 import i18next from 'i18next';
 
+// SITE-VILLE-FINITIONS (T19) : un message qui CONTIENT deja le lien ne le renvoie pas une
+// deuxieme fois (navigator.share colle le texte puis l adresse : le lien s ecrivait deux fois).
+const lienDejaDansLeTexte = (payload = {}) => Boolean(
+  payload?.url && String(payload?.message || payload?.text || '').includes(payload.url),
+);
+
 const buildShareText = (payload = {}) => [
   payload?.title,
   payload?.message || payload?.text,
-  payload?.url,
+  lienDejaDansLeTexte(payload) ? null : payload?.url,
 ].filter(Boolean).join('\n\n');
 
 const normalizeWebSharePayload = (payload = {}) => {
@@ -17,7 +23,7 @@ const normalizeWebSharePayload = (payload = {}) => {
     normalized.text = payload.message || payload.text;
   }
 
-  if (payload?.url) {
+  if (payload?.url && !lienDejaDansLeTexte(payload)) {
     normalized.url = payload.url;
   }
 
