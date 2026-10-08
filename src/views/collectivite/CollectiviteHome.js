@@ -505,10 +505,12 @@ function CollectiviteHome() {
               'collectiviteFermetures.accueil.personneAPrevenir',
               'Aucun club n’y a de séance : personne à prévenir.',
             )
-            : t('collectiviteFermetures.carte.seances', {
+            // FINITIONS-VILLE (registre n° 50) : le serveur compte les blocs du planning, séances
+            // ET créneaux sans séance — la répartition n'est pas connue ici (touchedCountLabel).
+            : t('collectiviteFermetures.carte.seancesOuCreneaux', {
               count: fermeture.touchedSessionsCount,
-              defaultValue_one: '{{count}} séance touchée',
-              defaultValue_other: '{{count}} séances touchées',
+              defaultValue_one: '{{count}} séance ou créneau touché',
+              defaultValue_other: '{{count}} séances ou créneaux touchés',
             })}
         </Text>
       ) : null}

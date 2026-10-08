@@ -886,7 +886,10 @@ describe('FINITIONS11-COLL (2) — la fermeture a venir dit qui est a prevenir',
   it('des seances touchees : leur nombre, et jamais « personne a prevenir »', async () => {
     mockFermetures = lu({ data: [{ ...VACANCES, touchedSessionsCount: 3 }] });
     const lus = textes(await monter());
-    expect(lus).toContain('3 séances touchées');
+    // FINITIONS-VILLE (registre n° 50, T19 A21) : le serveur compte les BLOCS du planning
+    // (séances ET créneaux sans séance) ; « 2 séances touchées » pour 2 créneaux était faux.
+    expect(lus).toContain('3 séances ou créneaux touchés');
+    expect(lus).not.toContain('3 séances touchées');
     expect(lus).not.toContain(personne);
   });
 
