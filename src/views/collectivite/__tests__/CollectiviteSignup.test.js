@@ -73,11 +73,14 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// SITE-VILLE-FINITIONS : le compte peut arriver APRÈS l ouverture de l écran (site, adresse tapée).
+/** @type {any} */
+let mockUserData = { documentId: 'agent', firstname: '', lastname: '' };
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     refetchUserData: jest.fn(async () => {}),
-    userData: { documentId: 'agent', firstname: '', lastname: '' },
+    userData: mockUserData,
   }),
 }));
 
@@ -525,5 +528,46 @@ describe('SVF — l écusson de la demande suit la règle des collectivités', (
     expect(lus).toContain('Ville de Rouvres T18 essai');
     expect(lus).toContain('R');
     expect(lus).not.toContain('RE');
+  });
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — étape 2 de
+// l inscription : Prénom et Nom VIDES pour un compte qui les a. L écran ne lisait le compte qu à
+// sa première image ; sur le site, une adresse ouverte directement affiche l écran AVANT que le
+// compte soit lu. ROUGE avant.
+describe('SVF — le prénom et le nom du compte, même lus après l ouverture', () => {
+  const valeur = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.type === TextInput && n.props.testID === testID)[0]
+    .props.value;
+  const allerAVous = async (/** @type {any} */ arbre) => {
+    await saisir(arbre, 'collectivite-inscription-nom', 'Montriv');
+    await appuyer(arbre, 'collectivite-inscription-trouvee-ville-montrivage');
+    await appuyer(arbre, 'bouton-Continuer');
+  };
+  afterEach(() => {
+    mockUserData = { documentId: 'agent', firstname: '', lastname: '' };
+  });
+
+  it('le compte arrive après l écran : Prénom et Nom se remplissent', async () => {
+    mockUserData = { documentId: 'agent' };
+    mockTrouvees = { data: [MONTRIVAGE], isLoading: false };
+    const arbre = await monter(CollectiviteSignup);
+    mockUserData = { documentId: 'agent', firstname: 'Recette', lastname: 'Mairie' };
+    await act(async () => { arbre.update(<CollectiviteSignup />); });
+    await allerAVous(arbre);
+    expect(valeur(arbre, 'collectivite-inscription-firstname')).toBe('Recette');
+    expect(valeur(arbre, 'collectivite-inscription-lastname')).toBe('Mairie');
+  });
+
+  it('🔒 ce que la personne a tapé n est pas écrasé', async () => {
+    mockUserData = { documentId: 'agent' };
+    mockTrouvees = { data: [MONTRIVAGE], isLoading: false };
+    const arbre = await monter(CollectiviteSignup);
+    await allerAVous(arbre);
+    await saisir(arbre, 'collectivite-inscription-firstname', 'Adèle');
+    mockUserData = { documentId: 'agent', firstname: 'Recette', lastname: 'Mairie' };
+    await act(async () => { arbre.update(<CollectiviteSignup />); });
+    expect(valeur(arbre, 'collectivite-inscription-firstname')).toBe('Adèle');
+    expect(valeur(arbre, 'collectivite-inscription-lastname')).toBe('Mairie');
   });
 });
