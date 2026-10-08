@@ -17,7 +17,7 @@ import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
-import { couleurDuNom } from '@/domains/messaging/habillageDuFil';
+import { couleurDuNom, sousTitreDesMembres } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
   formatChatTimestamp,
@@ -4217,9 +4217,14 @@ function Conversation({ navigation, route }) {
     || isUploading
     || isSending
     || isSubmittingProposal;
-  const sousTitreDuFil = filDeLaVille.sousTitre || `${
-    Array.isArray(chatData?.participants) ? chatData.participants.length : 0
-  } participants`;
+  // SMF (T20) — la regle du telephone (MSG1A §3.1) : les prenoms des membres puis « Vous », et
+  // rien quand le serveur ne les joint pas (fil d equipe : « 0 participants » avant).
+  const prenomsDuFil = filDeLaVille.estFil ? '' : sousTitreDesMembres({
+    chat: chatData,
+    meId: userData?.documentId,
+    vous: t('conversation.header.you', 'Vous'),
+  });
+  const sousTitreDuFil = filDeLaVille.sousTitre || prenomsDuFil;
   // MSG1W §3.1 — le titre du fil et sa ligne (« … écrit » en cyan). §3.16 : dans un groupe, il
   // ouvre les infos du groupe.
   // @ts-ignore: FIXME: Baseline TS regression
