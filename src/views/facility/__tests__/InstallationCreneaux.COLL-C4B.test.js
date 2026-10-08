@@ -490,4 +490,16 @@ describe('VILLE-T18A (3) la carte d une fermeture : sa date entière, « Rouvrir
     expect(lus).toContain('Rouvrir ? Aucun club n’est à prévenir.');
     expect(lus).not.toContain('Rouvrir ? Les mêmes clubs seront prévenus.');
   });
+
+  it('FINITIONS-VILLE (T20) : aucun club prévenu nulle part ⇒ pas de pied « Rouvrir prévient les mêmes clubs. »', async () => {
+    /** @type {any} */ (listFacilityClosures).mockResolvedValue({
+      data: [{ ...FERMETURE, notifiedClubsCount: 0 }],
+      meta: { bandeau: null, canManage: true, facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' } },
+    });
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Fermetures'));
+    const lus = textes(arbre);
+    expect(lus).toContain('Toute la journée · Aucun club prévenu');
+    expect(lus).not.toContain('Rouvrir prévient les mêmes clubs.');
+  });
 });

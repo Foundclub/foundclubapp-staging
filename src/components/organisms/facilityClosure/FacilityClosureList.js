@@ -203,6 +203,10 @@ function FacilityClosureList({
   const fermetures = useFacilityClosures(facilityId);
   const canManage = fermetures.data?.meta?.canManage === true;
   const lignes = Array.isArray(fermetures.data?.data) ? fermetures.data.data : [];
+  // FINITIONS-VILLE (T20) : le pied ne promet de prévenir « les mêmes clubs » que s'il y en a.
+  const desClubsPrevenus = lignes.some(
+    (/** @type {any} */ fermeture) => Number(fermeture?.notifiedClubsCount) > 0,
+  );
 
   if (fermetures.isLoading) return <Loader />;
   if (fermetures.error) {
@@ -255,9 +259,14 @@ function FacilityClosureList({
             title={t('collectiviteFermetures.liste.bloquer', 'Bloquer un créneau')}
             variant="Ghost"
           />
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {t('collectiviteFermetures.liste.rouvrirPrevient', 'Rouvrir prévient les mêmes clubs.')}
-          </Text>
+          {desClubsPrevenus ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t(
+                'collectiviteFermetures.liste.rouvrirPrevient',
+                'Rouvrir prévient les mêmes clubs.',
+              )}
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </View>
