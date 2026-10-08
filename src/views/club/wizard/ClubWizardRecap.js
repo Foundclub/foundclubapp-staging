@@ -60,6 +60,9 @@ function ClubWizardRecap({ navigation, route }) {
 
   const entry = route?.params?.entry || 'search';
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // FINITIONS-VILLE (T19-bis, T20 P09) : le club est créé — le bouton ne se rallume plus jamais
+  // (un second appui créait un second club pendant que le profil se relisait).
+  const [cree, setCree] = useState(false);
   const [duplicates, setDuplicates] = useState(/** @type {any[]} */ ([]));
 
   const activityNames = useMemo(() => {
@@ -228,22 +231,23 @@ function ClubWizardRecap({ navigation, route }) {
       }
       // Le club est cree : le lien a servi, un second club ne repart pas vers la meme Ville.
       if (lienDeLaVille) oublierLienDeLaVille();
+      setCree(true);
 
+      // FINITIONS-VILLE (T19-bis, T20 P09) : l'alerte INFORME, elle ne commande plus la suite. La
+      // suite attendait son « OK » (sur le site, un `window.confirm` : « Annuler » laissait le
+      // récapitulatif affiché, bouton rallumé) ; elle part maintenant, quoi qu'on réponde.
       Alert.alert(
         t('clubWizard.recap.successTitle', 'Club créé !'),
         t(
           'clubWizard.recap.successDescription',
           'Ton club est en ligne. Notre équipe le vérifiera prochainement.',
         ),
-        [{
-          onPress: () => resumeAfterSuccess(
-            result?.club,
-            result?.collectiviteInvitation,
-            lienDeLaVille,
-          ),
-          text: t('common.actions.ok', 'OK'),
-        }],
-        { cancelable: false },
+        [{ text: t('common.actions.ok', 'OK') }],
+      );
+      await resumeAfterSuccess(
+        result?.club,
+        result?.collectiviteInvitation,
+        lienDeLaVille,
       );
     } catch (error) {
       Alert.alert(
@@ -263,8 +267,8 @@ function ClubWizardRecap({ navigation, route }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!hasDuplicates && !canSubmit}
-      isNextLoading={isSubmitting}
+      isNextDisabled={cree || (!hasDuplicates && !canSubmit)}
+      isNextLoading={isSubmitting || cree}
       nextLabel={hasDuplicates
         ? t('clubWizard.recap.createAnyway', 'Créer quand même')
         : t('clubWizard.recap.create', 'Créer mon club')}

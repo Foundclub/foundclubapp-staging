@@ -106,8 +106,8 @@ const creerLeClub = async (/** @type {any} */ navigation, entry = 'search') => {
     renderer.create(createElement(ClubWizardRecap, { navigation, route: { params: { entry } } }));
   });
   await act(async () => { mockProprietesEtape[mockProprietesEtape.length - 1].onNext(); });
-  const boutonOk = /** @type {any} */ (Alert.alert).mock.calls.at(-1)?.[2]?.[0];
-  await act(async () => { await boutonOk.onPress(); });
+  // FINITIONS-VILLE (08/10) : « OK » ne commande plus la suite (elle part seule) ; l'alerte informe.
+  expect(/** @type {any} */ (Alert.alert).mock.calls.at(-1)?.[0]).toBe('Club créé !');
 };
 
 beforeEach(() => {
@@ -173,5 +173,35 @@ describe('COLL-ACCUEIL-BIS — planche 38 : la création du club emporte le lien
     expect(navigation.parent.navigate).toHaveBeenCalledWith('UserAffiliationGuideSuite', { clubId: 'club-neuf' });
     expect(navigation.parent.navigate).not.toHaveBeenCalledWith('CollectiviteJoinRequest', expect.anything());
     expect(mockRangement.has('coll-invitation-ville')).toBe(false);
+  });
+});
+
+// 🏟️ FINITIONS-VILLE (08/10/2026, tournées T19-bis et T20 P09) — après le 201, le récapitulatif
+// restait affiché 12 à 20 s, « Créer mon club » RALLUMÉ : la suite n'était lancée qu'au « OK » de
+// l'alerte (sur le site, un `window.confirm`), et le bouton se rallumait dès la réponse — un
+// second appui créait un second club. Désormais : l'écran part sans attendre « OK », et le bouton
+// reste éteint dès l'envoi. ROUGE avant le lot.
+describe('FINITIONS-VILLE — le club créé, l’assistant part tout seul et ne recrée rien', () => {
+  it('le bouton reste éteint après le 201 ; l’écran suivant s’ouvre sans « OK »', async () => {
+    let finDuProfil = () => {};
+    mockAuthentification.refetchUserData.mockImplementation(() => new Promise((resoudre) => {
+      finDuProfil = () => resoudre(undefined);
+    }));
+    const navigation = navigationDuTunnel();
+    mockProprietesEtape.length = 0;
+    await act(async () => {
+      renderer.create(createElement(ClubWizardRecap, { navigation, route: { params: { entry: 'search' } } }));
+    });
+    await act(async () => { mockProprietesEtape.at(-1).onNext(); });
+    expect(mockCreerClub).toHaveBeenCalledTimes(1);
+    // Le profil se relit encore : l'écran est là, mais « Créer mon club » ne se rallume pas.
+    expect(mockProprietesEtape.at(-1).isNextDisabled).toBe(true);
+    expect(navigation.reset).not.toHaveBeenCalled();
+    await act(async () => { finDuProfil(); });
+    // Sans toucher « OK » : la fiche du club s'ouvre.
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 0, routes: [{ name: 'Club', params: { clubId: 'club-neuf' } }],
+    });
+    mockAuthentification.refetchUserData.mockReset();
   });
 });
