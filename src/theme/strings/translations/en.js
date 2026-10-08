@@ -18631,6 +18631,9 @@ export default {
     },
     form: {
       allowedTypes: 'Allowed types',
+      // SAIS (08/10, T20) — labels of the console date and time pickers.
+      champDate: 'Date',
+      champHeure: 'Time',
       documentIdToAdd: 'documentId to add',
       editableFields: 'Editable fields',
       mediaMultipleAllowed: 'Multiple media allowed',

@@ -19548,6 +19548,9 @@ export default {
     },
     form: {
       allowedTypes: 'Types autorisés',
+      // SAIS (08/10, T20) — les libellés des sélecteurs de date et d’heure de la console.
+      champDate: 'Date',
+      champHeure: 'Heure',
       documentIdToAdd: 'documentId à ajouter',
       editableFields: 'Champs éditables',
       mediaMultipleAllowed: 'Média multiple autorisé',

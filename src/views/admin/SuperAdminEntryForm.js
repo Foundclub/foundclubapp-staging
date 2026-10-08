@@ -1439,6 +1439,7 @@ function SuperAdminEntryForm({ navigation, route }) {
             {type === 'time' ? null : (
               <View style={{ flex: 1 }}>
                 <DatePickerInput
+                  label={t('superAdminContentManager.form.champDate', 'Date')}
                   onChange={ecrireLaDate}
                   testID={`champ-${fieldName}-date`}
                   value={type === 'date' ? versSaisieDeDate(value) : instant?.date || ''}
@@ -1448,6 +1449,7 @@ function SuperAdminEntryForm({ navigation, route }) {
             {type === 'date' ? null : (
               <View style={{ flex: 1 }}>
                 <TimePickerInput
+                  label={t('superAdminContentManager.form.champHeure', 'Heure')}
                   onChange={ecrireLHeure}
                   testID={`champ-${fieldName}-heure`}
                   value={type === 'time' ? String(value || '').slice(0, 5) : instant?.heure || ''}
