@@ -259,13 +259,11 @@ function FormulaireDeFermeture({
     : t('collectiviteFermetures.form.titreFermer', 'Fermer une installation');
   useLayoutEffect(() => {
     // COLL-C4B-BIS : en panneau, l en-tete est celui du planning ; il ne se reecrit pas.
+    // FINITIONS-VILLE (T20) : en page, le titre s ecrivait deux fois (en-tete + page) ; la page
+    // le porte, l en-tete se tait (FINITIONS13-COLL point 8).
     if (enPanneau) return;
-    navigation.setOptions?.({
-      headerTitle: modification
-        ? t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture')
-        : titre,
-    });
-  }, [enPanneau, modification, navigation, t, titre]);
+    navigation.setOptions?.({ headerTitle: '' });
+  }, [enPanneau, navigation]);
 
   const installations = useCollectiviteInstallations(collectiviteId);
   const liste = (Array.isArray(installations.data) ? installations.data : []).filter(

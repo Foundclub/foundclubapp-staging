@@ -651,3 +651,13 @@ test('FINITIONS-VILLE : « Aucune séance touchée » n’est pas dans une boît
   expect(textes(arbre)).toContain('Aucune séance touchée : aucun club à prévenir.');
   expect(bordDeLaCarte(arbre)).not.toBe(withAlpha(couleurs.warning500, 0.45));
 });
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20 T04a/T06a) — « Fermer une installation » et « Bloquer un
+// créneau » s'écrivaient DEUX fois au téléphone (en-tête + titre de la page). La page porte le
+// titre ; l'en-tête se tait (FINITIONS13-COLL point 8). ROUGE avant le lot.
+test('FINITIONS-VILLE : Fermer / Bloquer — le titre s’écrit une fois, l’en-tête se tait', async () => {
+  const arbre = await rendre();
+  expect(textes(arbre).filter((texte) => texte === 'Fermer une installation')).toHaveLength(1);
+  expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
+  expect(mockNavigation.setOptions).not.toHaveBeenCalledWith({ headerTitle: 'Fermer une installation' });
+});

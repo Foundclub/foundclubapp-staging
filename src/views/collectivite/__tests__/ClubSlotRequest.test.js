@@ -23,6 +23,7 @@ const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockNavigate = jest.fn();
 const mockDispatch = jest.fn();
+const mockSetOptions = jest.fn();
 // VILLE-T18C (07/10) — l'écran écoute « quitter l'écran » (`beforeRemove`) : le témoin garde
 // l'écouteur pour jouer un Retour.
 /** @type {Record<string, (evenement: any) => void>} */
@@ -53,6 +54,7 @@ jest.mock('@react-navigation/native', () => ({
     dispatch: mockDispatch,
     goBack: jest.fn(),
     navigate: mockNavigate,
+    setOptions: mockSetOptions,
   }),
   useRoute: () => ({ params: mockParams }),
 }));
@@ -1023,4 +1025,13 @@ describe('SVF — Début et Fin au sélecteur d heure', () => {
     await saisir(arbre, 'demande-debut', '17:00');
     expect(champ('demande-debut').props.value).toBe('17:00');
   });
+});
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20) — au téléphone, « Demander un créneau » s'écrivait DEUX
+// fois : l'en-tête de navigation ET le titre de la page. Comme « Tes demandes à la Ville »
+// (FINITIONS13-COLL point 8) : la page porte le titre, l'en-tête se tait. ROUGE avant le lot.
+test('FINITIONS-VILLE : le titre s’écrit une fois, l’en-tête de navigation se tait', async () => {
+  const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+  expect(textes(arbre).filter((texte) => texte === 'Demander un créneau')).toHaveLength(1);
+  expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: '' });
 });

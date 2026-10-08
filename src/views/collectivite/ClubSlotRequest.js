@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  useEffect, useMemo, useRef, useState,
+  useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -120,6 +120,11 @@ function ClubSlotRequest({
   const { width } = useWindowDimensions();
   const deuxColonnes = !enPanneau && width >= LARGEUR_DEUX_COLONNES;
   const queryClient = useQueryClient();
+  // FINITIONS-VILLE (T20) : la page porte « Demander un créneau » ; l'en-tête se tait (le titre
+  // s'écrivait deux fois au téléphone). En panneau, l'en-tête est celui du planning.
+  useLayoutEffect(() => {
+    if (!enPanneau) navigation.setOptions?.({ headerTitle: '' });
+  }, [enPanneau, navigation]);
 
   const [installationId, setInstallationId] = useState(params.facilityId || null);
   const [equipe, setEquipe] = useState(params.teamId || null);
