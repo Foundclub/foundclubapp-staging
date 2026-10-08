@@ -631,3 +631,38 @@ test('SVF (3) BLOQUER : « De » et « À » se choisissent au sélecteur d heur
     endTime: '13:00', kind: 'block', startTime: '10:30',
   }));
 });
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20 V12) — « Aucune séance touchée : aucun club à prévenir. »
+// s'affichait dans la boîte ORANGE des séances touchées : un ton d'avertissement pour une bonne
+// nouvelle. Sans séance touchée, la boîte est neutre. ROUGE avant le lot.
+test('FINITIONS-VILLE : « Aucune séance touchée » n’est pas dans une boîte orange', async () => {
+  const couleurs = jest.requireActual('@/theme/colors').default();
+  const { withAlpha } = jest.requireActual('@/theme/colors');
+  const bordDeLaCarte = (/** @type {any} */ arbre) => {
+    const [carte] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'fermeture-carte');
+    const style = [carte.props.style].flat(Infinity).reduce((tout, part) => ({ ...tout, ...part }), {});
+    return style.borderColor;
+  };
+  const arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  expect(bordDeLaCarte(arbre)).toBe(withAlpha(couleurs.warning500, 0.45));
+
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [], clubsCount: 0, sessions: [], sessionsCount: 0,
+    },
+  });
+  await choisirDate('Du', '03/10/2026');
+  expect(textes(arbre)).toContain('Aucune séance touchée : aucun club à prévenir.');
+  expect(bordDeLaCarte(arbre)).not.toBe(withAlpha(couleurs.warning500, 0.45));
+});
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20 T04a/T06a) — « Fermer une installation » et « Bloquer un
+// créneau » s'écrivaient DEUX fois au téléphone (en-tête + titre de la page). La page porte le
+// titre ; l'en-tête se tait (FINITIONS13-COLL point 8). ROUGE avant le lot.
+test('FINITIONS-VILLE : Fermer / Bloquer — le titre s’écrit une fois, l’en-tête se tait', async () => {
+  const arbre = await rendre();
+  expect(textes(arbre).filter((texte) => texte === 'Fermer une installation')).toHaveLength(1);
+  expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
+  expect(mockNavigation.setOptions).not.toHaveBeenCalledWith({ headerTitle: 'Fermer une installation' });
+});

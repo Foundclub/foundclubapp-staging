@@ -18,6 +18,7 @@ import {
   MOTIFS_DE_REFUS,
   prevenusDe,
 } from '@/domains/collectivite/collectiviteDemandes';
+import { MOTIFS_DE_REFUS_RATTACHEMENT } from '@/domains/collectivite/collectiviteRattachement';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -56,12 +57,20 @@ const PLACE_PRISE_ENTRE_TEMPS = 'FACILITY_OVERRIDE_CAPACITY_CHANGED';
  * FINITIONS12-COLL (03/10) — `collectiviteId` : si la réponse se perd (délai dépassé, réseau),
  * la mutation relit la file de cette Ville avant de dire « Erreur » (tournée T11 : une décision
  * écrite affichée en erreur, fenêtre ouverte).
+ * FINITIONS-VILLE (T20, 08/10) — `refusDeRattachement` : la MÊME fenêtre refuse une demande de
+ * RATTACHEMENT d'un club (motifs fréquents du rattachement, motif obligatoire) ;
+ * `onRefuse(motif)` l'envoie (le serveur le donne au club). Le rappel dit le club et `ligne`
+ * (« Demande du club · … »).
  * @param {{ collectiviteId?: string | null, decision: Decision | null,
- *   onClose: () => void }} props - La Ville, la décision en cours (null : fenêtre fermée) et sa
- *   fermeture.
+ *   onClose: () => void,
+ *   refusDeRattachement?: { ligne: string, onRefuse: (motif: string) => Promise<any> } | null,
+ * }} props - La Ville, la décision en cours (null : fenêtre fermée), sa fermeture, et le refus
+ *   d'un rattachement.
  * @returns {import('react').ReactElement} La fenêtre.
  */
-function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
+function DecisionCreneauModal({
+  collectiviteId = null, decision, onClose, refusDeRattachement = null,
+}) {
   const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -76,7 +85,8 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
   const [decochees, setDecochees] = useState(/** @type {string[]} */ ([]));
   const approve = /** @type {any} */ (useApproveFacilityOverrideRequest());
   const refuse = /** @type {any} */ (useRefuseFacilityOverrideRequest());
-  const enCours = Boolean(approve.isPending || refuse.isPending);
+  const [envoiRattachement, setEnvoiRattachement] = useState(false);
+  const enCours = Boolean(approve.isPending || refuse.isPending || envoiRattachement);
 
   // Chaque ouverture repart d'une fenêtre vide.
   useEffect(() => {
@@ -89,7 +99,7 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
 
   const demande = decision?.request;
   const serie = estDemandeHebdo(demande) && Boolean(demande?.series);
-  const estRefus = decision?.kind === 'refuse' || refusForce;
+  const estRefus = decision?.kind === 'refuse' || refusForce || Boolean(refusDeRattachement);
 
   const fermer = () => {
     if (enCours) return;
@@ -131,6 +141,18 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
       ));
       return;
     }
+    if (refusDeRattachement) {
+      setEnvoiRattachement(true);
+      try {
+        await refusDeRattachement.onRefuse(decisionReason);
+        onClose();
+      } catch (error) {
+        setErreur(getErrorMessage(/** @type {any} */ (error)));
+      } finally {
+        setEnvoiRattachement(false);
+      }
+      return;
+    }
     const mutation = estRefus ? refuse : approve;
     try {
       await mutation.mutateAsync({
@@ -167,10 +189,11 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
   if (demande?.requesterFunction === 'trainer') {
     fonction = t('collectiviteDemandes.fonction.trainer', 'entraîneur');
   }
-  const demandeur = [prevenus.personne, fonction].filter(Boolean).join(', ');
+  const demandeur = refusDeRattachement
+    ? '' : [prevenus.personne, fonction].filter(Boolean).join(', ');
   const qui = [demande?.club?.name, demande?.team?.name].filter(Boolean).join(' · ');
   // eslint-disable-next-line max-len
-  const ou = [demande?.facility?.name, moment?.jourCourt, moment ? `${moment.debut} – ${moment.fin}` : '']
+  const ou = refusDeRattachement?.ligne || [demande?.facility?.name, moment?.jourCourt, moment ? `${moment.debut} – ${moment.fin}` : '']
     .filter(Boolean).join(' · ');
   const nombreDEquipes = (/** @type {number} */ nombre) => (nombre === 1
     ? t('collectiviteDemandes.nombre.uneEquipe', '1 équipe')
@@ -200,11 +223,25 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
         nombre: cochees.length, total: datesDeLaSerie.length,
       });
   }
-  if (estRefus) {
+  if (estRefus && refusDeRattachement) {
+    boutonPrincipal = t('collectiviteRattachement.demandes.refuseWindowYes', 'Refuser la demande');
+  } else if (estRefus) {
     boutonPrincipal = serie
       // eslint-disable-next-line max-len
       ? t('collectiviteDemandes.fenetre.refuserSerieEtAnnuler', 'Refuser et annuler les entraînements')
       : t('collectiviteDemandes.fenetre.refuserEtAnnuler', 'Refuser et annuler l’entraînement');
+  }
+
+  let aideDuRefus = serie
+    // eslint-disable-next-line max-len
+    ? t('collectiviteDemandes.fenetre.refusAideSerie', 'Le club reçoit votre motif ; les entraînements de la série sont annulés.')
+    // eslint-disable-next-line max-len
+    : t('collectivite.requests.modal.refuseHint', 'Le club reçoit votre motif ; son entraînement est annulé.');
+  if (refusDeRattachement) {
+    aideDuRefus = t(
+      'collectiviteRattachement.demandes.refuseHint',
+      'Le club reçoit votre motif ; il n’est pas rattaché.',
+    );
   }
 
   const rappel = (
@@ -240,7 +277,17 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
   );
 
   // Les motifs en un appui, chacun par sa clé (le texte vit dans les traductions).
+  const motifsFrequents = refusDeRattachement ? MOTIFS_DE_REFUS_RATTACHEMENT : MOTIFS_DE_REFUS;
   const texteDuMotif = (/** @type {string} */ motif) => {
+    if (motif === 'horsCommune') {
+      return t('collectiviteRattachement.demandes.motifs.horsCommune', 'Club hors de la commune');
+    }
+    if (motif === 'inconnu') {
+      return t('collectiviteRattachement.demandes.motifs.inconnu', 'Club inconnu de nos services');
+    }
+    if (motif === 'doublon') {
+      return t('collectiviteRattachement.demandes.motifs.doublon', 'Demande en double');
+    }
     if (motif === 'fermeture') return t('collectiviteDemandes.motifs.fermeture', 'Fermeture');
     if (motif === 'manifestation') {
       return t('collectiviteDemandes.motifs.manifestation', 'Manifestation de la Ville');
@@ -433,13 +480,7 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
               <Text style={[Fonts.p2, Fonts.neutral200]}>{quiSeraPrevenu()}</Text>
             </View>
           ) : (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {serie
-                // eslint-disable-next-line max-len
-                ? t('collectiviteDemandes.fenetre.refusAideSerie', 'Le club reçoit votre motif ; les entraînements de la série sont annulés.')
-                // eslint-disable-next-line max-len
-                : t('collectivite.requests.modal.refuseHint', 'Le club reçoit votre motif ; son entraînement est annulé.')}
-            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{aideDuRefus}</Text>
           )}
 
           {estRefus ? (
@@ -451,7 +492,7 @@ function DecisionCreneauModal({ collectiviteId = null, decision, onClose }) {
                 accessibilityRole="radiogroup"
                 style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}
               >
-                {MOTIFS_DE_REFUS.map((motif) => {
+                {motifsFrequents.map((motif) => {
                   const texte = texteDuMotif(motif);
                   const choisi = message.trim() === texte;
                   return (

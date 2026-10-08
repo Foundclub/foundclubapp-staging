@@ -4888,7 +4888,8 @@ export default {
       gereDeja: 'Gère déjà : {{collectivites}}',
       gestionnairesActuels: 'gestionnaires : {{noms}}',
       inactive: 'Inactive',
-      inscrite: 'Inscrite le {{date}}',
+      // FINITIONS-VILLE (registre n° 50) : la date est celle de la DEMANDE, pas d une inscription.
+      inscrite: 'Demande envoyée le {{date}}',
       laPersonne: 'La personne',
       laVille: 'La collectivité demandée',
       ongletAttente: 'En attente ({{nombre}})',
@@ -5074,6 +5075,8 @@ export default {
       aucuneInstallation: 'Aucune installation pour l’instant.',
       aucuneSeance: 'Aucune séance',
       complet: 'complet {{moment}}',
+      // FINITIONS-VILLE (T20) : le lien mène à la liste des installations.
+      installations: 'Installations',
       libre: 'libre',
       planning: 'Planning',
       // VILLE-T18B (b) : une installation sans horaires (pas de taux).
@@ -5712,6 +5715,7 @@ export default {
       accept: 'Accepter',
       accepted: '{{sujet}} a accepté ta demande.',
       attached: 'Ton club est rattaché à {{ville}}.',
+      cancelMine: 'Annuler ma demande',
       kicker: 'Rattachement à la Ville',
       pending: 'Ta demande de rattachement à {{ville}} attend sa réponse.',
       // eslint-disable-next-line max-len
@@ -5720,7 +5724,8 @@ export default {
       proposalOffer: 'Avec {{ville}}, ton club reçoit l’offre Club de FoundClub, offerte par la Ville.',
       proposalTitle: '{{sujet}} propose de rattacher ton club',
       refuse: 'Refuser',
-      refuseConfirm: 'Refuser la demande de {{ville}} ? Elle ne pourra pas te la renvoyer.',
+      // eslint-disable-next-line max-len
+      refuseConfirm: 'Refuser la demande de {{ville}} ? Ton club ne sera pas rattaché ; elle pourra te la renvoyer plus tard.',
       refused: '{{sujet}} n’a pas accepté ta demande de rattachement.',
       refuseYes: 'Oui, refuser',
       youAccepted: 'Tu as accepté la demande de {{ville}}.',
@@ -5731,8 +5736,15 @@ export default {
       cancel: 'Annuler la demande',
       fromCity: 'Votre demande',
       fromClub: 'Demande du club',
+      motifs: {
+        doublon: 'Demande en double',
+        horsCommune: 'Club hors de la commune',
+        inconnu: 'Club inconnu de nos services',
+      },
       refuse: 'Refuser',
       refuseConfirm: 'Refuser la demande de {{club}} ?',
+      refuseHint: 'Le club reçoit votre motif ; il n’est pas rattaché.',
+      refuseWindowYes: 'Refuser la demande',
       refuseYes: 'Oui, refuser',
       remind: 'Relancer',
       resend: 'Renvoyer la demande',
@@ -5750,6 +5762,12 @@ export default {
       // eslint-disable-next-line max-len
       intro: 'Rattaché à sa Ville, ton club voit ses installations et ses créneaux, peut y demander des créneaux et reçoit ses actualités. Son planning reste entre la Ville et ses clubs.',
       leadDone: 'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      // FINITIONS-VILLE (T20) : « d’Agy », « du Havre », « des Mureaux ».
+      // eslint-disable-next-line max-len
+      leadDoneDes: 'Ta mairie des {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      leadDoneDu: 'Ta mairie du {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
+      // eslint-disable-next-line max-len
+      leadDoneElide: 'Ta mairie d’{{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
       leadIntro: 'Préviens ta mairie : l’équipe FoundClub la contactera de ta part.',
       missingTitle: 'Ta collectivité n’est pas sur FoundClub ?',
       notify: 'Prévenir ma mairie',

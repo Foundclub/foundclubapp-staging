@@ -214,3 +214,27 @@ export const ligneDeDemandeDuClub = (t, demande) => {
     valeurs,
   );
 };
+
+/**
+ * FINITIONS-VILLE (T20, 08/10) — L'ÉTAT COURANT du rattachement, vu du club : une seule ligne,
+ * jamais « ta demande attend » et « tu as refusé » ensemble. Le rattachement qui tient d'abord,
+ * sinon la demande qui attend, sinon la plus récente (réponse, puis création).
+ * @param {any[]} demandes - Les demandes du club que la carte ne fait pas trancher.
+ * @returns {any | null} La demande courante, ou null.
+ */
+export const demandeCouranteDuClub = (demandes) => {
+  const lignes = (Array.isArray(demandes) ? demandes : []).filter(Boolean);
+  const quand = (/** @type {any} */ demande) => (
+    Date.parse(String(demande?.respondedAt || demande?.createdAt || '')) || 0
+  );
+  return lignes.find((demande) => demande?.state === 'attached')
+    || lignes.find((demande) => demande?.state === 'pending')
+    || [...lignes].sort((a, b) => quand(b) - quand(a))[0]
+    || null;
+};
+
+/**
+ * FINITIONS-VILLE (T20, 08/10) — les MOTIFS FRÉQUENTS d'un refus de rattachement par la Ville,
+ * en un appui dans la fenêtre « Refuser la demande » (celle des créneaux), chacun par sa clé.
+ */
+export const MOTIFS_DE_REFUS_RATTACHEMENT = Object.freeze(['horsCommune', 'inconnu', 'doublon']);

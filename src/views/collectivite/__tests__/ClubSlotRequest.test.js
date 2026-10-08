@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -22,6 +23,7 @@ const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockNavigate = jest.fn();
 const mockDispatch = jest.fn();
+const mockSetOptions = jest.fn();
 // VILLE-T18C (07/10) — l'écran écoute « quitter l'écran » (`beforeRemove`) : le témoin garde
 // l'écouteur pour jouer un Retour.
 /** @type {Record<string, (evenement: any) => void>} */
@@ -52,6 +54,7 @@ jest.mock('@react-navigation/native', () => ({
     dispatch: mockDispatch,
     goBack: jest.fn(),
     navigate: mockNavigate,
+    setOptions: mockSetOptions,
   }),
   useRoute: () => ({ params: mockParams }),
 }));
@@ -139,6 +142,8 @@ jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
   // l'indice (placeholder) affiché quand le champ est vide, comme le vrai champ.
   return function DatePickerMock(/** @type {any} */ props) {
     return reactActuel.createElement(TexteRN, {
+      // FINITIONS-VILLE (T20) : les bornes se lisent.
+      maximumDate: props.maximumDate,
       onChange: props.onChange,
       testID: props.label === 'Jour' ? 'demande-jour' : `demande-date-${props.label}`,
     }, props.value || props.placeholder || '');
@@ -933,6 +938,19 @@ describe('VILLE-T18C point 2 — la phrase dit pourquoi, « Jour » a un indice,
     expect(aplatir(jour.props.children)).toBe('Choisis un jour');
   });
 
+  it('FINITIONS-VILLE (T20 K02) : « Jusqu’au » sans jour, borné à la fin de saison', async () => {
+    mockParams = { clubId: 'club-A', facilityId: 'gym-ville' };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    const champ = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'demande-date-Jusqu’au' && typeof n.props?.onChange === 'function'
+    ))[0];
+    const { finDeSaison } = jest.requireActual('@/domains/collectivite/collectiviteDemandes');
+    const attendu = finDeSaison(format(new Date(), 'yyyy-MM-dd'));
+    expect(champ.props.maximumDate).toBeInstanceOf(Date);
+    expect(format(champ.props.maximumDate, 'yyyy-MM-dd')).toBe(attendu);
+  });
+
   // eslint-disable-next-line max-len
   it('Retour : libre tant que rien n’est saisi ; une saisie modifiée demande avant de la perdre', async () => {
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -1064,4 +1082,13 @@ describe('SVF — Début et Fin au sélecteur d heure', () => {
     await saisir(arbre, 'demande-debut', '17:00');
     expect(champ('demande-debut').props.value).toBe('17:00');
   });
+});
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20) — au téléphone, « Demander un créneau » s'écrivait DEUX
+// fois : l'en-tête de navigation ET le titre de la page. Comme « Tes demandes à la Ville »
+// (FINITIONS13-COLL point 8) : la page porte le titre, l'en-tête se tait. ROUGE avant le lot.
+test('FINITIONS-VILLE : le titre s’écrit une fois, l’en-tête de navigation se tait', async () => {
+  const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+  expect(textes(arbre).filter((texte) => texte === 'Demander un créneau')).toHaveLength(1);
+  expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: '' });
 });

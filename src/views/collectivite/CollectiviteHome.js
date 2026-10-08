@@ -505,10 +505,12 @@ function CollectiviteHome() {
               'collectiviteFermetures.accueil.personneAPrevenir',
               'Aucun club n’y a de séance : personne à prévenir.',
             )
-            : t('collectiviteFermetures.carte.seances', {
+            // FINITIONS-VILLE (registre n° 50) : le serveur compte les blocs du planning, séances
+            // ET créneaux sans séance — la répartition n'est pas connue ici (touchedCountLabel).
+            : t('collectiviteFermetures.carte.seancesOuCreneaux', {
               count: fermeture.touchedSessionsCount,
-              defaultValue_one: '{{count}} séance touchée',
-              defaultValue_other: '{{count}} séances touchées',
+              defaultValue_one: '{{count}} séance ou créneau touché',
+              defaultValue_other: '{{count}} séances ou créneaux touchés',
             })}
         </Text>
       ) : null}
@@ -878,8 +880,21 @@ function CollectiviteHome() {
                 </Text>
               );
             }
+            // FINITIONS-VILLE (T20) : la ligne ouvre le planning de SA semaine (comme l'onglet
+            // « Planning » de l'installation).
             return (
-              <View key={installation?.documentId} style={{ gap: 4 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                key={installation?.documentId}
+                onPress={() => navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+                  contextDetailLabel: installation?.name || null,
+                  espace: 'ville',
+                  facilityId: installation?.documentId,
+                  sourceType: 'facility',
+                })}
+                style={{ gap: 4 }}
+                testID={`collectivite-home-semaine-${installation?.documentId}`}
+              >
                 <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
                   <View
                     style={{
@@ -907,7 +922,7 @@ function CollectiviteHome() {
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {libelleDeLaSemaine(installation?.documentId)}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -917,8 +932,9 @@ function CollectiviteHome() {
       <View style={{ gap: 12 }}>
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           {titreSection(t('collectiviteAccueil.semaine.titre', 'Cette semaine'))}
+          {/* FINITIONS-VILLE (T20) : il ouvre la liste des installations, il le dit. */}
           {lienFleche(
-            t('collectiviteAccueil.semaine.planning', 'Planning'),
+            t('collectiviteAccueil.semaine.installations', 'Installations'),
             'collectivite-home-voir-planning',
             () => ouvrir(RouteNames.CollectiviteInstallations),
           )}

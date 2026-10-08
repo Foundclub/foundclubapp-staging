@@ -1309,9 +1309,8 @@ function FacilityList() {
                 facility: item,
               })}
               size="sm"
-              title={kind === 'avecCreneaux'
-                ? t('clubInstallations.actions.demanderHeure', 'Demander une heure')
-                : t('clubInstallations.actions.demanderCreneau', 'Demander un créneau')}
+              // FINITIONS-VILLE (T20 K01) : un seul libellé pour le même geste.
+              title={t('clubInstallations.actions.demanderCreneau', 'Demander un créneau')}
               variant={kind === 'avecCreneaux' ? 'Secondary' : 'Primary'}
             />
           </View>

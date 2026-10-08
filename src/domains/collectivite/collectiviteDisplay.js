@@ -183,6 +183,21 @@ export const isOfficialCollectiviteName = (name, type) => {
 export const nomQuiSElide = (nom) => /^[aeiouyhàâäéèêëîïôöùûüœæ]/iu.test(String(nom || '').trim());
 
 /**
+ * FINITIONS-VILLE (T20, 08/10) — « de » devant le nom d une commune, accordé : « d’Agy », « du
+ * Havre », « des Mureaux », « de Montrivage » (même règle que `nomOfficielDeCommune`). Rend la
+ * FORME et le nom qui suit : l écran choisit SA clef de traduction (une par forme, chacune avec
+ * `{{commune}}` — l anglais n accorde rien).
+ * @param {unknown} nom - Le nom de la commune.
+ * @returns {{ forme: 'de' | 'du' | 'des' | 'elide', nom: string }} La forme, et le nom à écrire.
+ */
+export const formeDeLaCommune = (nom) => {
+  const propre = String(nom || '').trim();
+  if (/^le /iu.test(propre)) return { forme: 'du', nom: propre.slice(3) };
+  if (/^les /iu.test(propre)) return { forme: 'des', nom: propre.slice(4) };
+  return { forme: nomQuiSElide(propre) ? 'elide' : 'de', nom: propre };
+};
+
+/**
  * COLL-CONSOLE-BIS (03/10/2026) — le NOM OFFICIEL d une commune trouvee dans le referentiel de
  * l Etat (D59), avec son article : « Valfleuri » → « Ville de Valfleuri », « Aix » → « Ville
  * d’Aix », « Le Havre » → « Ville du Havre », « Les Mureaux » → « Ville des Mureaux ». « La »

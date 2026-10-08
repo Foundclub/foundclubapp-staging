@@ -262,6 +262,13 @@ describe('COLL-ACCUEIL — planche 6 : la file des demandes de gestionnaire', ()
     ).toBe(true);
   });
 
+  it('FINITIONS-VILLE (registre n° 50) : la date de la DEMANDE, dite telle', async () => {
+    const arbre = await monter(<AdminManagerRequests />);
+    await appuyer(arbre, 'gestionnaire-demande-dm-1');
+    expect(textes(arbre)).toContain('Demande envoyée le jeu. 1 oct.');
+    expect(textes(arbre).some((texte) => texte.startsWith('Inscrite le'))).toBe(false);
+  });
+
   it('valider une Ville EXISTANTE : la personne devient gestionnaire', async () => {
     const arbre = await monter(<AdminManagerRequests />);
     await appuyer(arbre, 'gestionnaire-demande-dm-1');

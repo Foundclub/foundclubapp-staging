@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
+import { formeDeLaCommune } from '@/domains/collectivite/collectiviteDisplay';
 import { gesteDuClub } from '@/domains/collectivite/collectiviteRattachement';
+import { closureDay } from '@/domains/facilityClosure/facilityClosureDisplay';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -49,7 +50,9 @@ function MaCollectivite({ clubId }) {
   } = useTheme();
   const [texte, setTexte] = useState('');
   const [q, setQ] = useState('');
-  const [communeSaisie, setCommuneSaisie] = useState('');
+  // FINITIONS-VILLE (T20) : null tant que le dirigeant n'a rien tapé — le champ montre alors la
+  // commune que le serveur lit dans l'adresse du club (`communeSuggestion`).
+  const [communeSaisie, setCommuneSaisie] = useState(/** @type {string | null} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
 
@@ -207,24 +210,39 @@ function MaCollectivite({ clubId }) {
 
   const commune = donnees?.commune || null;
   const piste = donnees?.lead || null;
-  const communeDonnee = communeSaisie.trim();
+  const communeAffichee = communeSaisie ?? String(donnees?.communeSuggestion || '');
+  const communeDonnee = communeAffichee.trim();
+  // FINITIONS-VILLE (T20) : « Ta mairie d’Agy … depuis le jeudi 8 octobre. » — la forme accordée
+  // (une clef par forme) et la date LONGUE (« jeu. 8 oct.. » faisait deux points).
+  const phraseDeLaPiste = (/** @type {any} */ laPiste) => {
+    const { forme, nom } = formeDeLaCommune(laPiste?.communeName);
+    const valeurs = {
+      commune: nom,
+      date: closureDay(laPiste?.createdAt, { long: true }),
+      ...SANS_ECHAPPEMENT,
+    };
+    if (forme === 'elide') {
+      // eslint-disable-next-line max-len
+      return t('collectiviteRattachement.ma.leadDoneElide', 'Ta mairie d’{{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.', valeurs);
+    }
+    if (forme === 'du') {
+      // eslint-disable-next-line max-len
+      return t('collectiviteRattachement.ma.leadDoneDu', 'Ta mairie du {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.', valeurs);
+    }
+    if (forme === 'des') {
+      // eslint-disable-next-line max-len
+      return t('collectiviteRattachement.ma.leadDoneDes', 'Ta mairie des {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.', valeurs);
+    }
+    // eslint-disable-next-line max-len
+    return t('collectiviteRattachement.ma.leadDone', 'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.', valeurs);
+  };
   const renderPrevenir = () => (
     <View style={carte} testID="ma-collectivite-prevenir">
       <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
         {t('collectiviteRattachement.ma.missingTitle', 'Ta collectivité n’est pas sur FoundClub ?')}
       </Text>
       {piste ? (
-        <Text style={[Fonts.p2, Fonts.success200]}>
-          {t(
-            'collectiviteRattachement.ma.leadDone',
-            'Ta mairie de {{commune}} est signalée à l’équipe FoundClub depuis le {{date}}.',
-            {
-              commune: piste.communeName || '',
-              date: formatCollectiviteDay(piste.createdAt) || '',
-              ...SANS_ECHAPPEMENT,
-            },
-          )}
-        </Text>
+        <Text style={[Fonts.p2, Fonts.success200]}>{phraseDeLaPiste(piste)}</Text>
       ) : (
         <>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
@@ -243,7 +261,7 @@ function MaCollectivite({ clubId }) {
                 'Le nom de ta commune',
               )}
               testID="ma-collectivite-commune"
-              value={communeSaisie}
+              value={communeAffichee}
             />
           )}
           <Button

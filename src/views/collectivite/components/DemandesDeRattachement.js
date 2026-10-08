@@ -4,10 +4,10 @@ import { Text, View } from 'react-native';
 
 import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { etatDeDemandeVille } from '@/domains/collectivite/collectiviteRattachement';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
 
 import {
   useAnswerCollectiviteAttachRequest,
@@ -26,6 +26,8 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  *     tout de suite, l'offre de la Ville comprise) ou la refuse, après confirmation ;
  *   - envoyée par la Ville à un club déjà inscrit (« club A ») : elle attend ses dirigeants ;
  *     « Relancer » (une fois par jour, le serveur le dit) et « Annuler » tant qu'elle attend.
+ * FINITIONS-VILLE (T20, 08/10) : « Refuser » ouvre la fenêtre « Refuser la demande » des créneaux
+ * (motifs fréquents + motif obligatoire, envoyé au club), plus une confirmation sans motif.
  * L'état et les gestes permis viennent du serveur (`state`, `canAnswer`, `canRemind`,
  * `canCancel`) : l'écran n'en déduit aucun. « vous » : la mairie.
  * @param {{ collectiviteId: string | null, demandes: any[] }} props - La Ville et ses demandes.
@@ -40,7 +42,9 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
   const relancer = useRemindCollectiviteProposal();
   const annuler = useCancelCollectiviteProposal();
   const renvoyer = useProposeCollectiviteClub();
-  const [aConfirmer, setAConfirmer] = useState(/** @type {string | null} */ (null));
+  // La décision de la fenêtre de refus, gardée telle quelle : un objet neuf à chaque rendu ferait
+  // repartir la fenêtre à vide (motif et erreur effacés) dès que la page se redessine.
+  const [aRefuser, setARefuser] = useState(/** @type {any} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
 
@@ -70,11 +74,17 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
           ...avant, [id]: getErrorMessage(erreur),
         }),
       ),
-      onSuccess: () => setAConfirmer(null),
     });
   };
   const enCours = (/** @type {any} */ mutation, /** @type {string} */ id) => mutation.isPending
     && mutation.variables?.invitationId === id;
+
+  // « Demande du club · jeu. 8 oct. » : le rappel de la fenêtre de refus.
+  const ligneDuRappel = (/** @type {any} */ demande) => {
+    const date = formatCollectiviteDay(demande?.createdAt);
+    const sens = t('collectiviteRattachement.demandes.fromClub', 'Demande du club');
+    return date ? `${sens} · ${date}` : sens;
+  };
 
   const renderDemande = (/** @type {any} */ demande) => {
     const id = demande?.documentId;
@@ -115,7 +125,7 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
             })}
           </Text>
         ) : null}
-        {demande?.canAnswer && aConfirmer !== id ? (
+        {demande?.canAnswer ? (
           <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
             <Button
               isLoading={enCours(repondre, id) && repondre.variables?.accept === true}
@@ -124,37 +134,11 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
               title={t('collectiviteRattachement.demandes.accept', 'Accepter')}
             />
             <Button
-              onPress={() => setAConfirmer(id)}
+              onPress={() => setARefuser({ kind: 'refuse', request: demande })}
               size="sm"
               title={t('collectiviteRattachement.demandes.refuse', 'Refuser')}
               variant="Ghost"
             />
-          </View>
-        ) : null}
-        {demande?.canAnswer && aConfirmer === id ? (
-          <View style={{ gap: 8 }}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t(
-                'collectiviteRattachement.demandes.refuseConfirm',
-                'Refuser la demande de {{club}} ?',
-                { club, ...SANS_ECHAPPEMENT },
-              )}
-            </Text>
-            <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-              <Button
-                isLoading={enCours(repondre, id) && repondre.variables?.accept === false}
-                onPress={() => geste(repondre, id, { accept: false })}
-                size="sm"
-                title={t('collectiviteRattachement.demandes.refuseYes', 'Oui, refuser')}
-                variant="Danger"
-              />
-              <Button
-                onPress={() => setAConfirmer(null)}
-                size="sm"
-                title={t('common.cancel', 'Annuler')}
-                variant="Ghost"
-              />
-            </View>
           </View>
         ) : null}
         {demande?.canRemind || demande?.canCancel ? (
@@ -215,6 +199,24 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
         {t('collectiviteRattachement.demandes.title', 'Demandes de rattachement')}
       </Text>
       {demandes.map(renderDemande)}
+      {aRefuser ? (
+        <DecisionCreneauModal
+          collectiviteId={collectiviteId}
+          decision={aRefuser}
+          onClose={() => setARefuser(null)}
+          refusDeRattachement={{
+            ligne: ligneDuRappel(aRefuser.request),
+            onRefuse: (/** @type {string} */ motif) => new Promise((resoudre, rejeter) => {
+              repondre.mutate({
+                accept: false,
+                collectiviteId,
+                invitationId: aRefuser.request?.documentId,
+                reason: motif,
+              }, { onError: rejeter, onSuccess: resoudre });
+            }),
+          }}
+        />
+      ) : null}
     </View>
   );
 }

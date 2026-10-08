@@ -284,6 +284,12 @@ function CollectiviteActualiteForm() {
     }
   };
 
+  // FINITIONS-VILLE (T20 V26) : UNE pastille choisie dans l'espace de la Ville, celle de « Fermer »
+  // (PuceDeChoix : cyan plein, texte foncé ; pilule) — ce formulaire avait la sienne (fond sombre +
+  // liseré). Hauteur 44 gardée (cible tactile).
+  // ponytail: le rendu de PuceDeChoix recopié, pas importé — l'importer charge SeasonSlotForm et
+  // ses services ; voie de sortie : sortir PuceDeChoix en molécule (après la récolte de SAISIE,
+  // qui modifie ces lignes de SeasonSlotForm) et l'importer ici.
   const puce = (
     /** @type {string} */ valeur,
     /** @type {string} */ libelle,
@@ -297,12 +303,10 @@ function CollectiviteActualiteForm() {
       key={valeur}
       onPress={onPress}
       style={[
-        ApplicationStyle.borderRadius12,
         {
-          backgroundColor: actif
-            ? withAlpha(Colors.primary500, 0.22)
-            : withAlpha(Colors.neutral00, 0.05),
-          borderColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.12),
+          backgroundColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.04),
+          borderColor: actif ? Colors.primary500 : withAlpha(Colors.neutral00, 0.18),
+          borderRadius: 999,
           borderWidth: 1,
           justifyContent: 'center',
           minHeight: 44,
@@ -311,7 +315,7 @@ function CollectiviteActualiteForm() {
       ]}
       testID={testID}
     >
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{libelle}</Text>
+      <Text style={[Fonts.p2Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>{libelle}</Text>
     </TouchableOpacity>
   );
 

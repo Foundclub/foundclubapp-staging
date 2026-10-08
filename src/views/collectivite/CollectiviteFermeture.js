@@ -260,13 +260,11 @@ function FormulaireDeFermeture({
     : t('collectiviteFermetures.form.titreFermer', 'Fermer une installation');
   useLayoutEffect(() => {
     // COLL-C4B-BIS : en panneau, l en-tete est celui du planning ; il ne se reecrit pas.
+    // FINITIONS-VILLE (T20) : en page, le titre s ecrivait deux fois (en-tete + page) ; la page
+    // le porte, l en-tete se tait (FINITIONS13-COLL point 8).
     if (enPanneau) return;
-    navigation.setOptions?.({
-      headerTitle: modification
-        ? t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture')
-        : titre,
-    });
-  }, [enPanneau, modification, navigation, t, titre]);
+    navigation.setOptions?.({ headerTitle: '' });
+  }, [enPanneau, navigation]);
 
   const installations = useCollectiviteInstallations(collectiviteId);
   const liste = (Array.isArray(installations.data) ? installations.data : []).filter(
@@ -485,14 +483,16 @@ function FormulaireDeFermeture({
     { long: true },
   );
 
+  // FINITIONS-VILLE (T20 V12) : sans séance touchée, c'est une bonne nouvelle — boîte neutre.
+  const tonDeLaCarte = Number(carte?.sessionsCount) > 0 ? Colors.warning500 : Colors.neutral00;
   const carteDesSeances = carte ? (
     <View
       accessibilityLiveRegion="polite"
       style={[
         Spaces.padding[12],
         {
-          backgroundColor: withAlpha(Colors.warning500, 0.08),
-          borderColor: withAlpha(Colors.warning500, 0.45),
+          backgroundColor: withAlpha(tonDeLaCarte, Number(carte.sessionsCount) > 0 ? 0.08 : 0.04),
+          borderColor: withAlpha(tonDeLaCarte, Number(carte.sessionsCount) > 0 ? 0.45 : 0.1),
           borderRadius: 14,
           borderWidth: 1,
           gap: 6,

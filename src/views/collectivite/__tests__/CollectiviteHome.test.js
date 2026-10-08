@@ -886,7 +886,10 @@ describe('FINITIONS11-COLL (2) — la fermeture a venir dit qui est a prevenir',
   it('des seances touchees : leur nombre, et jamais « personne a prevenir »', async () => {
     mockFermetures = lu({ data: [{ ...VACANCES, touchedSessionsCount: 3 }] });
     const lus = textes(await monter());
-    expect(lus).toContain('3 séances touchées');
+    // FINITIONS-VILLE (registre n° 50, T19 A21) : le serveur compte les BLOCS du planning
+    // (séances ET créneaux sans séance) ; « 2 séances touchées » pour 2 créneaux était faux.
+    expect(lus).toContain('3 séances ou créneaux touchés');
+    expect(lus).not.toContain('3 séances touchées');
     expect(lus).not.toContain(personne);
   });
 
@@ -1074,5 +1077,30 @@ describe('VILLE-T18B (c) — toutes les fermetures à venir restent accessibles'
     const liens = textes(arbre)
       .filter((texte) => texte.startsWith('Voir les ') && texte.includes('fermeture'));
     expect(liens).toEqual([]);
+  });
+});
+
+// 🏛️ FINITIONS-VILLE (08/10/2026, tournée T20 lot 6) — l'accueil de la Ville au téléphone :
+// les lignes de « Cette semaine » ne s'ouvraient pas, et le lien « Planning » ouvrait la liste
+// des installations. Une ligne ouvre le planning de SA semaine ; le lien dit « Installations ».
+describe('FINITIONS-VILLE — « Cette semaine » : des lignes qui s’ouvrent, un lien juste', () => {
+  it('le lien dit « Installations » (il ouvre la liste des installations)', async () => {
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('Installations');
+    expect(textes(arbre)).not.toContain('Planning');
+    await appuyer(arbre, 'collectivite-home-voir-planning');
+    expect(mockNavigate)
+      .toHaveBeenCalledWith('CollectiviteInstallations', { collectiviteId: 'ville-montrivage' });
+  });
+
+  it('toucher une installation ouvre le planning de sa semaine', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'collectivite-home-semaine-tilleuls');
+    expect(mockNavigate).toHaveBeenCalledWith('PlanningWeekFullscreen', {
+      contextDetailLabel: 'Gymnase des Tilleuls',
+      espace: 'ville',
+      facilityId: 'tilleuls',
+      sourceType: 'facility',
+    });
   });
 });

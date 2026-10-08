@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -121,6 +121,11 @@ function ClubSlotRequest({
   const { width } = useWindowDimensions();
   const deuxColonnes = !enPanneau && width >= LARGEUR_DEUX_COLONNES;
   const queryClient = useQueryClient();
+  // FINITIONS-VILLE (T20) : la page porte « Demander un créneau » ; l'en-tête se tait (le titre
+  // s'écrivait deux fois au téléphone). En panneau, l'en-tête est celui du planning.
+  useLayoutEffect(() => {
+    if (!enPanneau) navigation.setOptions?.({ headerTitle: '' });
+  }, [enPanneau, navigation]);
 
   const [installationId, setInstallationId] = useState(params.facilityId || null);
   const [equipe, setEquipe] = useState(params.teamId || null);
@@ -760,8 +765,9 @@ function ClubSlotRequest({
         <View style={{ gap: 4 }}>
           <DatePickerInput
             label={t('collectiviteDemandes.club.jusquAu', 'Jusqu’au')}
+            // FINITIONS-VILLE (T20 K02) : borné à la fin de saison, même AVANT de choisir le jour.
             // eslint-disable-next-line max-len
-            maximumDate={jourIso ? parse(finDeSaison(jourIso), 'yyyy-MM-dd', new Date()) : undefined}
+            maximumDate={parse(finDeSaison(jourIso || format(new Date(), 'yyyy-MM-dd')), 'yyyy-MM-dd', new Date())}
             minimumDate={jourIso ? parse(jourIso, 'yyyy-MM-dd', new Date()) : new Date()}
             onChange={(/** @type {string} */ valeur) => setJusquA(valeur)}
             placeholder={t('collectiviteDemandes.club.finDeLaSaison', 'Fin de la saison')}

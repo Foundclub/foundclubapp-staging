@@ -115,6 +115,12 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
   useRemindCollectiviteProposal: () => mockRelancer,
 }));
 
+// FINITIONS-VILLE (08/10) : « Refuser » ouvre la fenêtre des créneaux, qui lit ces deux crochets.
+jest.mock('@/services/facility/facilityQueries', () => ({
+  useApproveFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useRefuseFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
+}));
+
 jest.mock('@/utils/shareLinks', () => ({
   buildPublicWebUrl: ({ path }) => `https://foundclub.example.invalid${path}`,
 }));
@@ -319,7 +325,7 @@ describe('VINV · côté mairie — « Demandes de rattachement » dans « Clubs
     };
   });
 
-  it('E5 la demande venue du lien : Accepter, ou Refuser après confirmation', async () => {
+  it('E5 la demande venue du lien : Accepter, ou Refuser avec un motif (FINITIONS-VILLE : la fenêtre « Refuser la demande »)', async () => {
     const arbre = await monter(CollectiviteClubs);
     expect(textes(arbre)).toContain('Demandes de rattachement');
     const demande = dans(arbre, 'demande-rattachement-r1');
@@ -333,10 +339,13 @@ describe('VINV · côté mairie — « Demandes de rattachement » dans « Clubs
     );
     await act(async () => { boutons(demande, 'Refuser')[0].props.onPress(); });
     expect(mockRepondre.mutate).toHaveBeenCalledTimes(1);
-    expect(textes(arbre)).toContain('Refuser la demande de Recette Stripe FC ?');
-    await act(async () => { boutons(arbre, 'Oui, refuser')[0].props.onPress(); });
+    expect(textes(arbre)).toContain('Le club reçoit votre motif ; il n’est pas rattaché.');
+    await act(async () => { dans(arbre, 'motif-inconnu').props.onPress(); });
+    await act(async () => { boutons(arbre, 'Refuser la demande')[0].props.onPress(); });
     expect(mockRepondre.mutate).toHaveBeenLastCalledWith(
-      { accept: false, collectiviteId: 'ville-de-recette', invitationId: 'r1' },
+      {
+        accept: false, collectiviteId: 'ville-de-recette', invitationId: 'r1', reason: 'Club inconnu de nos services',
+      },
       expect.any(Object),
     );
   });

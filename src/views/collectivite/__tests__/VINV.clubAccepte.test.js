@@ -65,6 +65,8 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
     mockLecture(clubId, options);
     return mockDemandes;
   },
+  // FINITIONS-VILLE (08/10) : « Annuler ma demande » passe par la demande du club.
+  useRequestClubAttach: () => mockRepondre,
 }));
 
 /**
@@ -130,11 +132,11 @@ describe('VINV · côté club — la demande de la Ville, et l’état de ses de
     );
   });
 
-  it('C1 Refuser demande confirmation : la Ville ne pourra pas renvoyer sa demande', async () => {
+  it('C1 Refuser demande confirmation (FINITIONS-VILLE : la Ville pourra la renvoyer, « refus B »)', async () => {
     const arbre = await monter({ clubId: 'club-e', enabled: true });
     await act(async () => { boutons(arbre, 'Refuser')[0].props.onPress(); });
     expect(mockRepondre.mutate).not.toHaveBeenCalled();
-    expect(textes(arbre)).toContain('Refuser la demande de la Ville de Montrivage ? Elle ne pourra pas te la renvoyer.');
+    expect(textes(arbre)).toContain('Refuser la demande de la Ville de Montrivage ? Ton club ne sera pas rattaché ; elle pourra te la renvoyer plus tard.');
     await act(async () => { boutons(arbre, 'Oui, refuser')[0].props.onPress(); });
     expect(mockRepondre.mutate).toHaveBeenCalledWith(
       { accept: false, clubId: 'club-e', invitationId: 'p1' },

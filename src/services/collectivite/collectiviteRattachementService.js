@@ -83,16 +83,18 @@ export const cancelCollectiviteProposal = async ({ collectiviteId, invitationId 
 );
 
 /**
- * La Ville accepte ou refuse une demande venue de son lien (« lien A »).
- * @param {{ accept: boolean, collectiviteId: string, invitationId: string }} params - La réponse.
+ * La Ville accepte ou refuse une demande venue de son lien (« lien A »). FINITIONS-VILLE (T20) :
+ * un refus porte son motif (`reason`), que le club lit dans sa notification.
+ * @param {{accept: boolean, collectiviteId: string, invitationId: string, reason?: string}} params
+ *   - La réponse.
  * @returns {Promise<any>} `{ data: demande }`.
  */
 export const answerCollectiviteAttachRequest = async ({
-  accept, collectiviteId, invitationId,
+  accept, collectiviteId, invitationId, reason = '',
 }) => corps(
   (await client()).post(
     `/collectivites/${enc(collectiviteId)}/club-requests/${enc(invitationId)}/answer`,
-    { data: { accept: accept === true } },
+    { data: { accept: accept === true, ...(accept !== true && reason ? { reason } : {}) } },
   ),
 );
 
@@ -128,12 +130,14 @@ export const searchCollectivitesForClub = async (clubId, q) => corps(
 
 /**
  * « Demander le rattachement » : la même demande que par le lien ; la Ville accepte ou refuse.
- * @param {{ clubId: string, collectiviteId: string }} params - Le club et la collectivité.
- * @returns {Promise<any>} `{ data: { state, outsideCommune } }`.
+ * FINITIONS-VILLE (T20) : `cancel` retire la demande EN ATTENTE (« Annuler ma demande »).
+ * @param {{ cancel?: boolean, clubId: string, collectiviteId: string }} params - Le club et la
+ *   collectivité ; `cancel` pour retirer sa demande.
+ * @returns {Promise<any>} `{ data: { state, outsideCommune } }`, ou `{ data: { cancelled } }`.
  */
-export const requestClubAttach = async ({ clubId, collectiviteId }) => corps(
+export const requestClubAttach = async ({ cancel = false, clubId, collectiviteId }) => corps(
   (await client()).post(`/clubs/${enc(clubId)}/collectivite-requests`, {
-    data: { collectiviteDocumentId: collectiviteId },
+    data: { collectiviteDocumentId: collectiviteId, ...(cancel === true ? { cancel: true } : {}) },
   }),
 );
 
