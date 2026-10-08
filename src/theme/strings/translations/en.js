@@ -6070,6 +6070,7 @@ export default {
       accept: 'Accept',
       accepted: '{{sujet}} accepted your request.',
       attached: 'Your club is attached to {{ville}}.',
+      cancelMine: 'Cancel my request',
       kicker: 'Attachment to the town',
       pending: 'Your request to be attached to {{ville}} is waiting for its answer.',
       proposalGains: "Once attached, your club sees the town's facilities and slots, can request slots there and receives its news.",

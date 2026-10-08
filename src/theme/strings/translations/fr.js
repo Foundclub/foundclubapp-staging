@@ -5712,6 +5712,7 @@ export default {
       accept: 'Accepter',
       accepted: '{{sujet}} a accepté ta demande.',
       attached: 'Ton club est rattaché à {{ville}}.',
+      cancelMine: 'Annuler ma demande',
       kicker: 'Rattachement à la Ville',
       pending: 'Ta demande de rattachement à {{ville}} attend sa réponse.',
       // eslint-disable-next-line max-len

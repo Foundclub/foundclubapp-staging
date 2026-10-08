@@ -65,6 +65,8 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
     mockLecture(clubId, options);
     return mockDemandes;
   },
+  // FINITIONS-VILLE (08/10) : « Annuler ma demande » passe par la demande du club.
+  useRequestClubAttach: () => mockRepondre,
 }));
 
 /**

@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import { ligneDeDemandeDuClub, villeSujet } from '@/domains/collectivite/collectiviteRattachement';
+import {
+  demandeCouranteDuClub,
+  ligneDeDemandeDuClub,
+  villeSujet,
+} from '@/domains/collectivite/collectiviteRattachement';
 import { formatCollectiviteOfferedBy } from '@/domains/subscription/subscriptionDecision';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -12,6 +16,7 @@ import Button from '@/components/atoms/button/Button';
 import {
   useAnswerCollectiviteProposal,
   useClubCollectiviteRequests,
+  useRequestClubAttach,
 } from '@/services/collectivite/collectiviteRattachementQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -26,6 +31,9 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  *   la Ville pourra la renvoyer, « refus B »).
  * - Constat du chef en prod (07/10) : le dirigeant voit aussi l'état de la demande qu'il a faite
  *   par le LIEN de la Ville — Adel avait cru son club rattaché alors qu'elle attendait.
+ * - FINITIONS-VILLE (T20, 08/10) : la carte des états ne dit que l'état COURANT (jamais « ta
+ *   demande attend » et « tu as refusé » ensemble) ; sa demande en attente s'annule (« Annuler ma
+ *   demande », quand le serveur dit `canCancel`).
  * Le serveur est le juge (dirigeant de CE club) : un compte qui n'a pas le droit de lire ne voit
  * rien, sans message. Jamais la Ville de Démo (le serveur ne la rend pas). « tu » : le club.
  * @param {{ clubId: string | null, enabled: boolean }} props - Le club, et « ce compte le dirige ».
@@ -38,6 +46,7 @@ function RattachementDuClub({ clubId, enabled }) {
   } = useTheme();
   const demandes = useClubCollectiviteRequests(clubId, { enabled: Boolean(enabled) });
   const repondre = useAnswerCollectiviteProposal();
+  const annuler = useRequestClubAttach();
   const [aConfirmer, setAConfirmer] = useState(/** @type {string | null} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
@@ -164,12 +173,25 @@ function RattachementDuClub({ clubId, enabled }) {
     demande?.kind === 'proposal' && demande?.canAnswer
   );
   const propositions = lignes.filter(aRepondre);
-  const etats = lignes.filter((demande) => !aRepondre(demande));
+  const courante = demandeCouranteDuClub(lignes.filter((demande) => !aRepondre(demande)));
+  const annulerMaDemande = (/** @type {any} */ demande) => {
+    if (!clubId || !demande?.collectiviteId) return;
+    setErreurs((/** @type {Record<string, string>} */ avant) => ({
+      ...avant, [demande.documentId]: '',
+    }));
+    annuler.mutate({ cancel: true, clubId, collectiviteId: demande.collectiviteId }, {
+      onError: (/** @type {any} */ erreur) => setErreurs(
+        (/** @type {Record<string, string>} */ avant) => ({
+          ...avant, [demande.documentId]: getErrorMessage(erreur),
+        }),
+      ),
+    });
+  };
 
   return (
     <View style={{ gap: 12 }} testID="rattachement-du-club">
       {propositions.map(renderProposition)}
-      {etats.length ? (
+      {courante ? (
         <View
           style={[
             ApplicationStyle.card,
@@ -186,11 +208,18 @@ function RattachementDuClub({ clubId, enabled }) {
           <Text style={[Fonts.p3Bold, Fonts.primary200]}>
             {t('collectiviteRattachement.club.kicker', 'Rattachement à la Ville').toUpperCase()}
           </Text>
-          {etats.map((demande) => (
-            <Text key={demande.documentId} style={[Fonts.p2, Fonts.neutral100]}>
-              {ligneDeDemandeDuClub(t, demande)}
-            </Text>
-          ))}
+          <Text style={[Fonts.p2, Fonts.neutral100]}>{ligneDeDemandeDuClub(t, courante)}</Text>
+          {courante.canCancel === true && courante.collectiviteId ? (
+            <Button
+              isLoading={annuler.isPending}
+              onPress={() => annulerMaDemande(courante)}
+              size="sm"
+              style={{ alignSelf: 'flex-start' }}
+              title={t('collectiviteRattachement.club.cancelMine', 'Annuler ma demande')}
+              variant="Ghost"
+            />
+          ) : null}
+          {erreurDe(courante)}
         </View>
       ) : null}
     </View>

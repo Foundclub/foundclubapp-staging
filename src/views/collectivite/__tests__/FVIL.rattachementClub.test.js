@@ -119,4 +119,45 @@ describe('FVIL lot 5 · le rattachement vu du club', () => {
     expect(lus).toContain('Refuser la demande de la Ville de Montrivage ? Ton club ne sera pas rattaché ; elle pourra te la renvoyer plus tard.');
     expect(lus.some((texte) => texte.includes('ne pourra pas'))).toBe(false);
   });
+
+  it('R2 la carte dit l’état COURANT seul (pas « attend » ET « tu as refusé ») ; « Annuler ma demande » sur la demande en attente', async () => {
+    // Le cas de la tournée T20 : le club avait refusé la proposition de la Ville, puis a demandé.
+    mockDemandes.data = [
+      {
+        canAnswer: false, canCancel: true, collectivite: MONTRIVAGE, collectiviteId: 'ville-m', createdAt: '2026-10-08T12:30:00.000Z', documentId: 'r1', kind: 'attach_request', state: 'pending',
+      },
+      {
+        canAnswer: false, collectivite: MONTRIVAGE, createdAt: '2026-10-08T12:00:00.000Z', documentId: 'p1', kind: 'proposal', respondedAt: '2026-10-08T12:10:00.000Z', state: 'refused',
+      },
+    ];
+    const arbre = await monter(<RattachementDuClub clubId="club-k" enabled />);
+    const lus = textes(arbre);
+    expect(lus).toContain('Ta demande de rattachement à la Ville de Montrivage attend sa réponse.');
+    expect(lus).not.toContain('Tu as refusé la demande de la Ville de Montrivage.');
+    await act(async () => { boutons(arbre, 'Annuler ma demande')[0].props.onPress(); });
+    expect(mockDemander.mutate).toHaveBeenCalledWith(
+      { cancel: true, clubId: 'club-k', collectiviteId: 'ville-m' },
+      expect.any(Object),
+    );
+
+    // Rattaché : c'est lui qui tient, même plus ancien qu'un refus.
+    mockDemandes.data = [
+      {
+        canAnswer: false, collectivite: { name: 'Ville de Portvieux', type: 'commune' }, createdAt: '2026-10-08T13:00:00.000Z', documentId: 'r2', kind: 'attach_request', respondedAt: '2026-10-08T13:05:00.000Z', state: 'refused',
+      },
+      {
+        canAnswer: false, collectivite: MONTRIVAGE, createdAt: '2026-10-01T12:00:00.000Z', documentId: 'p2', kind: 'proposal', state: 'attached',
+      },
+    ];
+    const rattache = await monter(<RattachementDuClub clubId="club-k" enabled />);
+    expect(textes(rattache)).toContain('Ton club est rattaché à la Ville de Montrivage.');
+    expect(textes(rattache).some((texte) => texte.includes('Portvieux'))).toBe(false);
+    expect(boutons(rattache, 'Annuler ma demande')).toHaveLength(0);
+
+    // Un serveur d'avant ne dit pas `canCancel` : pas de bouton.
+    mockDemandes.data = [{
+      canAnswer: false, collectivite: MONTRIVAGE, documentId: 'r3', kind: 'attach_request', state: 'pending',
+    }];
+    expect(boutons(await monter(<RattachementDuClub clubId="club-k" enabled />), 'Annuler ma demande')).toHaveLength(0);
+  });
 });
