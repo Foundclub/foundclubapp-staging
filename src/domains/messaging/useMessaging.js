@@ -37,6 +37,7 @@ import {
   deleteMessage,
   editMessage,
   getChats,
+  markChatUnread as markChatUnreadRequest,
   pinChat,
   reactToChatMessage,
   removeGroupMember,
@@ -802,6 +803,86 @@ const useMessaging = (currentChatId) => {
     });
   }, [queryClient]);
 
+  /**
+   * MSG1BA (§3.14) — `chat-unread-updated` (contrat 1B §7) : un autre appareil du compte a
+   * marque un fil non lu, ou a quitte un groupe. Les comptes du serveur sont absolus : on les
+   * pose tels quels (rejouer l'evenement ne change rien). Apres un depart, on relit la liste,
+   * d'ou le groupe est sorti.
+   */
+  const handleChatUnreadUpdated = useCallback((/** @type {any} */ payload) => {
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    if (!chatDocumentId) return;
+    if (payload?.left) {
+      queryClient.refetchQueries({ queryKey: ['chats'], type: 'all' });
+      return;
+    }
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, chatDocumentId, {
+        ok: true,
+        unreadCount: payload?.unreadCount,
+        unreadTotal: payload?.unreadTotal,
+      }),
+    );
+  }, [queryClient]);
+
+  /**
+   * MSG1BA (§3.17) — `group-notice` (contrat 1B §7) : une notice de groupe (« Adel a renomme
+   * le groupe… »), JAMAIS emise par `message-received`. Elle entre dans le fil telle quelle
+   * (avec `systemNotice`, que l'ecran recrit en « Vous »), une seule fois meme recue par la
+   * salle du fil ET par la mienne ; elle devient l'apercu de la liste SANS toucher aux non-lus
+   * (une notice ne compte jamais) ni a l'archivage ; et le detail du groupe est relu : nom,
+   * photo, admins et autorisations ont pu changer.
+   */
+  const handleGroupNotice = useCallback((/** @type {any} */ payload) => {
+    const notice = payload?.message && typeof payload.message === 'object' ? payload.message : null;
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    const noticeId = normalizeChatId(getMessageEntityId(notice));
+    if (!chatDocumentId || !notice || !noticeId) return;
+
+    queryClient.setQueriesData(
+      { queryKey: ['chat-messages', chatDocumentId] },
+      (/** @type {any} */ oldData) => {
+        if (!oldData?.pages?.length) return oldData;
+        const dejaLa = oldData.pages.some((/** @type {any} */ page) => (
+          Array.isArray(page?.data) && page.data.some((/** @type {ChatMessage} */ message) => (
+            normalizeChatId(getMessageEntityId(message)) === noticeId
+          ))
+        ));
+        if (dejaLa) return oldData;
+        const [premiere, ...suivantes] = oldData.pages;
+        return {
+          ...oldData,
+          pages: [
+            {
+              ...premiere,
+              data: [notice, ...(Array.isArray(premiere?.data) ? premiere.data : [])],
+            },
+            ...suivantes,
+          ],
+        };
+      },
+    );
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((/** @type {any} */ page) => ({
+            ...page,
+            data: Array.isArray(page?.data) ? page.data.map((/** @type {Chat} */ chat) => (
+              normalizeChatId(chat?.documentId) === chatDocumentId
+                ? { ...chat, messages: [notice] }
+                : chat
+            )) : page?.data,
+          })),
+        };
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ['chat', chatDocumentId] });
+  }, [queryClient]);
+
   const handleSocketError = useCallback((/** @type {any} */ error) => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
     const errorPayload = {
@@ -844,6 +925,8 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, handleSocketError);
+    socket.on(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
+    socket.on(EVENTS.GROUP_NOTICE, handleGroupNotice);
 
     // Cleanup: leave chat and remove listeners
     return () => {
@@ -859,6 +942,8 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.MESSAGE_READ, handleMessageRead);
       socket.off(EVENTS.JOINED, handleJoined);
       socket.off(EVENTS.ERROR, handleSocketError);
+      socket.off(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
+      socket.off(EVENTS.GROUP_NOTICE, handleGroupNotice);
       if (safeCurrentChatId) {
         updateLastReadMessage(safeCurrentChatId);
       }
@@ -871,6 +956,8 @@ const useMessaging = (currentChatId) => {
     handleMessageRead,
     handleJoined,
     handleSocketError,
+    handleChatUnreadUpdated,
+    handleGroupNotice,
     currentChatId,
     isConnected,
     updateLastReadMessage,
@@ -1242,6 +1329,31 @@ const useMessaging = (currentChatId) => {
     if (socket && safeChatId) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: safeChatId });
   }, [socket]);
 
+  /**
+   * MSG1BA (§3.14) — « Marquer comme non lu » depuis l'apercu d'une conversation. Le serveur
+   * rend les comptes recalcules (fil et total) : on les pose dans la liste, ou la pastille du
+   * fil, de l'onglet et de l'accueil les lisent. Une erreur remonte a l'ecran (un 404 = serveur
+   * d'avant 1B : l'ecran cache alors le geste).
+   * @param {string} chatId - Le fil.
+   * @returns {Promise<any>} La reponse du serveur.
+   */
+  const markChatUnread = useCallback(async (/** @type {string} */ chatId) => {
+    const safeChatId = normalizeChatId(chatId);
+    if (!safeChatId) return null;
+    const resultat = await markChatUnreadRequest(safeChatId);
+    if (resultat?.markedUnread) {
+      queryClient.setQueriesData(
+        { queryKey: ['chats'] },
+        (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, safeChatId, {
+          ok: true,
+          unreadCount: resultat?.unreadCount,
+          unreadTotal: resultat?.unreadTotal,
+        }),
+      );
+    }
+    return resultat;
+  }, [queryClient]);
+
   const sendReadReceipt = useCallback((/** @type {string} */ chatId, /** @type {string | undefined} */ lastSeenMessageId) => {
     const safeChatId = normalizeChatId(chatId);
     const safeLastSeenId = normalizeChatId(lastSeenMessageId || '');
@@ -1477,7 +1589,15 @@ const useMessaging = (currentChatId) => {
     return result;
   };
 
-  const startGroupChat = async (/** @type {{ groupName: string, participants: string[] }} */ { groupName, participants }) => {
+  /**
+   * Cree un groupe. MSG1BA (§3.15) — `permissions` : les autorisations reglees a la creation
+   * (contrat 1B §5.3, partiel) ; absentes, la requete garde sa forme d'avant 1B.
+   * @param {{
+   *   groupName: string, participants: string[], permissions?: Record<string, boolean>
+   * }} params
+   * @returns {Promise<any>}
+   */
+  const startGroupChat = async ({ groupName, participants, permissions }) => {
     const currentUserId = normalizeChatId(userData?.documentId || '');
     if (!currentUserId) return undefined;
 
@@ -1503,6 +1623,7 @@ const useMessaging = (currentChatId) => {
     return createGroupChatMutation.mutateAsync({
       groupName: safeGroupName,
       participants: memberIds,
+      ...(permissions && Object.keys(permissions).length ? { permissions } : {}),
     });
   };
 
@@ -1551,6 +1672,7 @@ const useMessaging = (currentChatId) => {
     isSocketConnected: isConnected,
     joinChat,
     leaveChat,
+    markChatUnread,
     pinChat: pinChatMutation.mutate,
     pinChatAsync: pinChatMutation.mutateAsync,
     reactToMessage,

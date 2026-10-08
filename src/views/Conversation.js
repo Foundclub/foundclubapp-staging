@@ -47,6 +47,10 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import {
+  autorisationsDuGroupe,
+  envoiReserveAuxAdmins,
+} from '@/domains/messaging/autorisationsDuGroupe';
+import {
   auteurDuMessageCite,
   couleurDuNom,
   estUnTeteATete,
@@ -55,6 +59,8 @@ import {
   reserveDeLHeure,
 } from '@/domains/messaging/habillageDuFil';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
+import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
+import { choisirLaPhotoDuGroupe } from '@/domains/messaging/photoDuGroupe';
 import {
   applyOptimisticPollVote,
   createPollComposition,
@@ -68,6 +74,7 @@ import {
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
 import {
   getParticipationErrorMessage,
@@ -169,6 +176,7 @@ import {
   useGetChatMessages,
 } from '@/services/chat/chatQueriesCompat';
 import { leaveGroupChat } from '@/services/chat/chatService';
+import { removeGroupPhoto, setGroupPhoto } from '@/services/chat/groupPhotoService';
 import {
   deleteVoiceNoteFile,
   isVoiceNoteRecordingSupported,
@@ -1177,6 +1185,23 @@ function Conversation({ navigation, route }) {
       .filter(Boolean);
   }, [chatData?.groupAdmins]);
   const isGroupAdmin = isGroupChat && groupAdminIds.includes(String(userData?.documentId || ''));
+  // 🏷️ MSG1BA (§3.1) — le role de chaque membre, lu seulement quand « Infos du groupe » s'ouvre.
+  const idsDesMembres = useMemo(() => (Array.isArray(chatData?.participants)
+    ? chatData.participants.map((/** @type {any} */ membre) => String(membre?.documentId || ''))
+    : []), [chatData?.participants]);
+  const rolesDesMembres = useRolesDesMembres(idsDesMembres, {
+    enabled: isGroupChat && isGroupManagementVisible,
+  });
+  // 🛡️ MSG1BA (§3.16) — les autorisations du groupe (contrat 1B §5) ; `null` = serveur d'avant
+  // 1B, qui n'en sait rien : tout se passe alors comme avant.
+  const autorisationsDuFil = useMemo(
+    () => (isGroupChat ? autorisationsDuGroupe(chatData) : null),
+    [chatData, isGroupChat],
+  );
+  const envoiReserve = isGroupChat && envoiReserveAuxAdmins({
+    autorisations: autorisationsDuFil,
+    estAdmin: isGroupAdmin,
+  });
 
   // 🚫 BLOQUER (K3) — LE SECOND ENDROIT QU APPLE REGARDE : le menu du fil.
   //
@@ -3300,6 +3325,101 @@ function Conversation({ navigation, route }) {
     }
   };
 
+  // 🛡️ MSG1BA (§3.16) — un interrupteur de « Autorisations du groupe » : la seule clef changee
+  // (`PATCH …/group-meta { permissions }`, partiel, contrat 1B §5.3). Le serveur pose la notice.
+  const handleChangeGroupPermission = async (
+    /** @type {string} */ cle,
+    /** @type {boolean} */ valeur,
+  ) => {
+    if (!chatId || !cle) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({ chatId, data: { permissions: { [cle]: Boolean(valeur) } } });
+    } catch (error) {
+      conversationLogger.warn('Failed to update group permissions', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupPermissions.updateError',
+        'Impossible de changer les autorisations du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // 🛡️ MSG1BA (§3.16) — « Modifier les admins » + « Valider » : UNE requete (contrat 1B §5.5).
+  // On n'envoie que ce qui change ; je ne me retire jamais moi-meme (le serveur le refuse).
+  const handleValidateGroupAdmins = async (/** @type {string[]} */ admins) => {
+    if (!chatId) return;
+    const moi = String(userData?.documentId || '');
+    const choisis = new Set((admins || []).map((id) => String(id || '')).filter(Boolean));
+    const addAdminIds = Array.from(choisis).filter((id) => !groupAdminIds.includes(id));
+    const removeAdminIds = groupAdminIds.filter((id) => !choisis.has(id) && id !== moi);
+    if (!addAdminIds.length && !removeAdminIds.length) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({
+        chatId,
+        data: {
+          ...(addAdminIds.length ? { addAdminIds } : {}),
+          ...(removeAdminIds.length ? { removeAdminIds } : {}),
+        },
+      });
+    } catch (error) {
+      conversationLogger.warn('Failed to update group admins', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupInfo.adminError',
+        'Impossible de changer les admins du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // 🖼️ MSG1BA (§3.16) — la photo du groupe : choisie (reduite comme l'avatar du profil), puis
+  // envoyee (`POST …/group-photo`) ; « Supprimer la photo » (`DELETE`). Le detail et la liste
+  // sont relus : la photo s'affiche dans l'en-tete et dans « Messages ».
+  const handleChooseGroupPhoto = async (/** @type {'camera' | 'galerie'} */ source) => {
+    if (!chatId) return;
+    const choix = await choisirLaPhotoDuGroupe(source, (cle, repli) => i18n.t(cle, repli));
+    if (!choix) return;
+    if ('erreur' in choix) {
+      showErrorBanner(choix.erreur);
+      return;
+    }
+    try {
+      setIsGroupMutationLoading(true);
+      await setGroupPhoto(chatId, choix.fichier);
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    } catch (error) {
+      conversationLogger.warn('Failed to change group photo', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupPhoto.updateError',
+        'Impossible de changer la photo du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  const handleRemoveGroupPhoto = async () => {
+    if (!chatId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await removeGroupPhoto(chatId);
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    } catch (error) {
+      conversationLogger.warn('Failed to remove group photo', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupPhoto.removeError',
+        'Impossible de supprimer la photo du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
   // MSG1A (§3.16) — « Envoyer un message » depuis la fiche d'un membre : la discussion
   // privee existante. `push`, pas `navigate` : vers l'ecran DEJA affiche, `navigate`
   // remplacerait ses parametres et « Retour » sauterait ce fil.
@@ -4033,7 +4153,18 @@ function Conversation({ navigation, route }) {
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
         ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
-        text: msg.message,
+        // 🔔 MSG1BA (§3.17) — la notice recrite pour moi : « Vous avez renomme… », « … vous a
+        // ajoute » ; une sorte inconnue garde la phrase du serveur.
+        text: msg?.systemNotice != null
+          ? texteDeLaNotice(
+            msg.systemNotice,
+            String(userData?.documentId || ''),
+            (cle, repli) => (typeof repli === 'string'
+              ? i18n.t(cle, repli)
+              : i18n.t(cle, repli?.defaultValue, repli)),
+            msg.message,
+          )
+          : msg.message,
         user: {
           _id: senderEntityId,
           avatar: avatarUrl,
@@ -4057,6 +4188,7 @@ function Conversation({ navigation, route }) {
     logAttachmentDebug,
     normalizeMessageAttachments,
     resolveMediaUri,
+    userData?.documentId,
   ]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
@@ -6287,9 +6419,10 @@ function Conversation({ navigation, route }) {
     // `ensureUserCanWriteInChat` ne restreint que `club` et `multisport`).
     // 🐛 MSG1A (G1) — `group` manquait de la meme facon : tout groupe cree depuis
     // « Nouvelle discussion » s'affichait en canal d'annonce.
+    // 🛡️ MSG1BA (§3.16) — sauf « Seuls les admins peuvent envoyer des messages ».
+    if (chatData.type === 'group') return !envoiReserve;
     if (
       chatData.type === 'whisper'
-      || chatData.type === 'group'
       || chatData.type === 'team'
       || isLeagueConversation
       || isFriendlyMatchChat(chatData)
@@ -6316,7 +6449,7 @@ function Conversation({ navigation, route }) {
     }
 
     return false;
-  }, [chatData, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
+  }, [chatData, envoiReserve, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
 
   peutEcrireRef.current = canWrite;
 
@@ -6591,7 +6724,9 @@ function Conversation({ navigation, route }) {
               { color: withAlpha(Colors.neutral00, 0.72) },
             ]}
           >
-            {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
+            {envoiReserve
+              ? t('conversation.adminsOnlySend', 'Seuls les admins peuvent envoyer des messages.')
+              : t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
         </View>
       );
@@ -7228,19 +7363,25 @@ function Conversation({ navigation, route }) {
 
         <InfosDuGroupe
           adminIds={groupAdminIds}
+          autorisations={autorisationsDuFil}
           chat={chatData}
           estAdmin={isGroupAdmin}
           meId={String(userData?.documentId || '')}
           occupe={isGroupMutationLoading}
           onAjouter={handleAddGroupMembers}
           onBasculerAdmin={handleToggleGroupAdmin}
+          onChangerAutorisation={handleChangeGroupPermission}
+          onChoisirPhoto={handleChooseGroupPhoto}
           onClose={() => setIsGroupManagementVisible(false)}
           onEnvoyerUnMessage={handleMessageGroupMember}
           onQuitter={handleLeaveGroup}
           onRenommer={handleSaveGroupName}
           onRetirer={handleRemoveGroupMember}
           onSignaler={handleReportFromMenu}
+          onSupprimerPhoto={handleRemoveGroupPhoto}
+          onValiderAdmins={handleValidateGroupAdmins}
           resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+          roles={rolesDesMembres}
           visible={isGroupManagementVisible && isGroupChat}
         />
 

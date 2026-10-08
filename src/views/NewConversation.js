@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,14 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import {
+  AUTORISATIONS_PAR_DEFAUT,
+  autorisationsModifiees,
+  resumeDesAutorisations,
+} from '@/domains/messaging/autorisationsDuGroupe';
+import { choisirLaPhotoDuGroupe } from '@/domains/messaging/photoDuGroupe';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
+import { estUneRouteAbsente } from '@/domains/messaging/routesDuServeur1B';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
@@ -23,10 +31,14 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
+import AutorisationsDuGroupe from '@/views/chat/AutorisationsDuGroupe';
+import FeuillePhotoDuGroupe from '@/views/chat/FeuillePhotoDuGroupe';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetChatById } from '@/services/chat/chatQueriesCompat';
+import { setGroupPhoto } from '@/services/chat/groupPhotoService';
 import client from '@/services/client';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -158,7 +170,9 @@ function NewConversation({ navigation, route }) {
     addGroupMembers,
     startGroupChat,
     startWhisperChat,
+    updateGroupMeta,
   } = useMessaging();
+  const queryClient = useQueryClient();
   const roleType = String(userData?.role?.type || '').trim().toLowerCase();
   const currentRoleName = String(userData?.role?.name || '').trim().toLowerCase();
   const isSuperAdminUser = roleType === 'superadmin' || currentRoleName === 'superadmin';
@@ -176,6 +190,18 @@ function NewConversation({ navigation, route }) {
   const [nomDuGroupe, setNomDuGroupe] = useState('');
   // Les personnes choisies, gardees meme quand une recherche les sort de la liste.
   const personnesChoisiesRef = useRef(/** @type {Map<string, User>} */ (new Map()));
+  // 🖼️ MSG1BA (§3.15) — la photo, les autorisations et les admins, reglables des la creation.
+  const [photoDuGroupe, setPhotoDuGroupe] = useState(
+    /** @type {import('@/domains/messaging/photoDuGroupe').PhotoChoisie | null} */ (null),
+  );
+  const [feuillePhotoVisible, setFeuillePhotoVisible] = useState(false);
+  const [autorisations, setAutorisations] = useState(
+    /** @type {Record<string, boolean>} */ ({ ...AUTORISATIONS_PAR_DEFAUT }),
+  );
+  const [pageAutorisations, setPageAutorisations] = useState(false);
+  const [pageAdmins, setPageAdmins] = useState(false);
+  // Les AUTRES admins choisis (le createur l'est d'office, cote serveur).
+  const [adminsChoisis, setAdminsChoisis] = useState(/** @type {string[]} */ ([]));
   // Mode ajout : les membres DEJA dans le groupe sont grises (« Deja dans le groupe »).
   const { data: groupeExistant } = useGetChatById(addMembersChatId, { enabled: isAddMembersMode });
   const dejaMembres = useMemo(() => new Set(
@@ -321,6 +347,7 @@ function NewConversation({ navigation, route }) {
     if (newSet.has(userId)) {
       newSet.delete(userId);
       personnesChoisiesRef.current.delete(userId);
+      setAdminsChoisis((avant) => avant.filter((id) => id !== userId));
     } else {
       newSet.add(userId);
       personnesChoisiesRef.current.set(userId, user);
@@ -333,6 +360,63 @@ function NewConversation({ navigation, route }) {
   const nomComplet = (/** @type {any} */ personne) => [personne?.firstname, personne?.lastname]
     .filter(Boolean).join(' ');
   const nomParDefaut = `Groupe (${selectedUserIds.size + 1})`;
+  const meId = getUserIdentifier(userData);
+
+  /**
+   * Une alerte (le site n'a pas d'`Alert`) — la meme que celle de l'echec de creation.
+   * @param {string} message
+   * @returns {void}
+   */
+  const prevenir = (message) => {
+    const surLeSite = Platform.OS === 'web' && typeof window !== 'undefined';
+    if (surLeSite && typeof window.alert === 'function') {
+      window.alert(message);
+    } else {
+      Alert.alert(t('messaging.title', 'Messagerie'), message);
+    }
+  };
+
+  // 🖼️ MSG1BA (§3.15) — la photo choisie reste locale jusqu'a la creation du groupe.
+  const choisirLaPhoto = async (/** @type {'camera' | 'galerie'} */ source) => {
+    const choix = await choisirLaPhotoDuGroupe(source, t);
+    if (!choix) return;
+    if ('erreur' in choix) {
+      prevenir(choix.erreur);
+      return;
+    }
+    setPhotoDuGroupe(choix);
+  };
+
+  /**
+   * MSG1BA (§3.15) — APRES la creation : les admins choisis (`addAdminIds`, une requete) et la
+   * photo (`POST …/group-photo`). Aucun des deux ne bloque l'ouverture du groupe ; la photo
+   * refusee contre un serveur d'avant 1B (404) se tait, toute autre erreur se dit.
+   * @param {string} chatId
+   * @returns {Promise<void>}
+   */
+  const completerLeGroupe = async (chatId) => {
+    if (adminsChoisis.length) {
+      try {
+        await updateGroupMeta({ chatId, data: { addAdminIds: adminsChoisis } });
+      } catch (error) {
+        newConversationLogger.warn('Failed to name group admins', error?.message || error);
+      }
+    }
+    if (photoDuGroupe) {
+      try {
+        await setGroupPhoto(chatId, photoDuGroupe.fichier);
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+      } catch (error) {
+        if (!estUneRouteAbsente(error)) {
+          newConversationLogger.warn('Failed to upload group photo', error?.message || error);
+          prevenir(t(
+            'newConversation.groupPhotoError',
+            'Le groupe est créé, mais sa photo n’a pas pu être envoyée.',
+          ));
+        }
+      }
+    }
+  };
 
   const handleCreate = async () => {
     if (selectedUserIds.size === 0 || !userData?.documentId) return;
@@ -347,13 +431,20 @@ function NewConversation({ navigation, route }) {
         navigation.goBack();
       } else {
         const shouldCreateGroup = isGroupChatEnabled && participants.length > 1;
+        // MSG1BA (§3.15) — seulement ce qui differe des defauts : rien de change = la requete
+        // garde exactement sa forme d'avant 1B.
+        const permissions = autorisationsModifiees(autorisations);
         const chat = shouldCreateGroup
           ? await startGroupChat({
             // MSG1A (§3.15) — le nom tape a l'etape « Nouveau groupe », sinon « Groupe (N) ».
             groupName: nomDuGroupe.trim() || `Groupe (${participants.length + 1})`,
             participants,
+            ...(permissions ? { permissions } : {}),
           })
           : await startWhisperChat(participants);
+        if (chat && shouldCreateGroup) {
+          await completerLeGroupe(chat.documentId);
+        }
         if (chat) {
           navigation.replace(RouteNames.Conversation, { chatId: chat.documentId });
         }
@@ -369,11 +460,7 @@ function NewConversation({ navigation, route }) {
         error,
         t('messaging.createConversationError', 'Impossible de démarrer cette conversation.'),
       );
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
-        window.alert(safeMessage);
-      } else {
-        Alert.alert(t('messaging.title', 'Messagerie'), safeMessage);
-      }
+      prevenir(safeMessage);
     } finally {
       setIsCreating(false);
     }
@@ -562,7 +649,33 @@ function NewConversation({ navigation, route }) {
               `groupName`, sans nom on garde « Groupe (N) » et on le dit. La photo et les
               autorisations du pack demandent le serveur : lot MESSAGERIE-1B. */}
           <View style={[stylesDuChoix.carteNom, { backgroundColor: Colors.primary800 }]}>
-            <ClubLogoMark name={nomDuGroupe.trim() || 'Groupe'} size={58} />
+            {/* 🖼️ MSG1BA (§3.15) — la photo du groupe : toucher l'avatar ouvre la feuille. */}
+            <TouchableOpacity
+              accessibilityLabel={photoDuGroupe
+                ? t('newConversation.changeGroupPhoto', 'Changer la photo du groupe')
+                : t('newConversation.addGroupPhoto', 'Ajouter une photo de groupe')}
+              accessibilityRole="button"
+              onPress={() => setFeuillePhotoVisible(true)}
+              testID="nouveau-groupe-photo"
+            >
+              {photoDuGroupe ? (
+                <Image
+                  source={{ uri: photoDuGroupe.apercu }}
+                  style={stylesDuChoix.photo}
+                  testID="nouveau-groupe-photo-apercu"
+                />
+              ) : (
+                <ClubLogoMark name={nomDuGroupe.trim() || 'Groupe'} size={58} />
+              )}
+              <View
+                style={[
+                  stylesDuChoix.pastillePhoto,
+                  { backgroundColor: Colors.primary500, borderColor: Colors.primary800 },
+                ]}
+              >
+                <GlyphIcon color={Colors.primary900} name="camera" size={14} />
+              </View>
+            </TouchableOpacity>
             <TextInput
               autoFocus
               maxLength={40}
@@ -585,6 +698,30 @@ function NewConversation({ navigation, route }) {
               name: nomParDefaut,
             })}
           </Text>
+          {/* 🛡️ MSG1BA (§3.15) — les autorisations (et les admins), des la creation. */}
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setPageAutorisations(true)}
+            style={[stylesDuChoix.ligneAutorisations, { backgroundColor: Colors.primary800 }]}
+            testID="nouveau-groupe-autorisations"
+          >
+            <GlyphIcon color={Colors.primary500} name="shieldCheck" size={22} />
+            <View style={stylesDuChoix.barreTextes}>
+              <Text style={[stylesDuChoix.ligneNom, { color: Colors.neutral00 }]}>
+                {t('conversation.groupPermissions.title', 'Autorisations du groupe')}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
+              >
+                {`${resumeDesAutorisations(autorisations, t)} · ${t('newConversation.adminsCount', {
+                  count: adminsChoisis.length + 1,
+                  defaultValue: '{{count}} admins',
+                })}`}
+              </Text>
+            </View>
+            <GlyphIcon color={withAlpha(Colors.neutral00, 0.5)} name="chevronRight" size={20} />
+          </TouchableOpacity>
           <Text style={[stylesDuChoix.titreDeSection, { color: withAlpha(Colors.neutral00, 0.6) }]}>
             {t('newConversation.membersCount', {
               count: nombreChoisi + 1,
@@ -640,6 +777,11 @@ function NewConversation({ navigation, route }) {
                   >
                     {personne?.firstname || nomComplet(personne)}
                   </Text>
+                  {adminsChoisis.includes(id) ? (
+                    <Text style={[stylesDuChoix.tuileRole, { color: Colors.primary500 }]}>
+                      {t('newConversation.admin', 'Admin')}
+                    </Text>
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
@@ -852,6 +994,76 @@ function NewConversation({ navigation, route }) {
         </View>
       ) : null}
 
+      {/* 🖼️🛡️ MSG1BA (§3.15) — la feuille photo, les autorisations et les admins (montes
+          seulement ouverts : rien ne tourne tant qu'on n'y touche pas). */}
+      {feuillePhotoVisible ? (
+        <FeuillePhotoDuGroupe
+          aPhoto={Boolean(photoDuGroupe)}
+          enFenetre
+          onChoisir={choisirLaPhoto}
+          onClose={() => setFeuillePhotoVisible(false)}
+          onSupprimer={() => setPhotoDuGroupe(null)}
+          visible
+        />
+      ) : null}
+      {pageAutorisations && !pageAdmins ? (
+        <AutorisationsDuGroupe
+          admins={[
+            {
+              avatar: userData?.avatar?.url,
+              id: meId,
+              nom: t('conversation.header.you', 'Vous'),
+              role: libelleDuRole(userData?.role?.name, t),
+            },
+            ...personnesChoisies
+              .filter((personne) => adminsChoisis.includes(getUserIdentifier(personne)))
+              .map((personne) => ({
+                avatar: personne?.avatar?.url,
+                id: getUserIdentifier(personne),
+                nom: nomComplet(personne),
+                role: libelleDuRole(personne?.role?.name, t),
+              })),
+          ]}
+          enFenetre
+          onChanger={(cle, valeur) => setAutorisations((avant) => ({ ...avant, [cle]: valeur }))}
+          onClose={() => setPageAutorisations(false)}
+          onModifierLesAdmins={() => setPageAdmins(true)}
+          valeurs={autorisations}
+          visible
+        />
+      ) : null}
+      {pageAdmins ? (
+        <AdminsDuGroupe
+          adminsInitiaux={[meId, ...adminsChoisis]}
+          enFenetre
+          meId={meId}
+          membres={[
+            {
+              avatar: userData?.avatar?.url,
+              id: meId,
+              nom: t('conversation.header.you', 'Vous'),
+              role: libelleDuRole(userData?.role?.name, t),
+            },
+            ...personnesChoisies.map((personne) => ({
+              avatar: personne?.avatar?.url,
+              id: getUserIdentifier(personne),
+              nom: nomComplet(personne),
+              role: libelleDuRole(personne?.role?.name, t),
+            })),
+          ]}
+          note={t(
+            'newConversation.creatorStaysAdmin',
+            'Tu as créé le groupe : tu en restes admin.',
+          )}
+          onClose={() => setPageAdmins(false)}
+          onValider={(admins) => {
+            setAdminsChoisis(admins.filter((id) => id !== meId));
+            setPageAdmins(false);
+          }}
+          visible
+        />
+      ) : null}
+
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={clubVerificationSummary?.clubDocumentId || userData?.club?.documentId || null}
@@ -865,6 +1077,7 @@ function NewConversation({ navigation, route }) {
 }
 
 const stylesDuChoix = StyleSheet.create({
+  // MSG1BA (§3.15) — la ligne « Autorisations du groupe » (62 de haut, carte de 18).
   aide: {
     fontFamily: 'Montserrat-Regular',
     fontSize: 12.5,
@@ -954,6 +1167,15 @@ const stylesDuChoix = StyleSheet.create({
     height: 64,
     paddingHorizontal: 8,
   },
+  ligneAutorisations: {
+    alignItems: 'center',
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 14,
+    height: 62,
+    marginTop: 18,
+    paddingHorizontal: 16,
+  },
   ligneGrisee: {
     opacity: 0.5,
   },
@@ -971,6 +1193,22 @@ const stylesDuChoix = StyleSheet.create({
     flex: 1,
     gap: 2,
     minWidth: 0,
+  },
+  pastillePhoto: {
+    alignItems: 'center',
+    borderRadius: 13,
+    borderWidth: 2,
+    bottom: -2,
+    height: 26,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    width: 26,
+  },
+  photo: {
+    borderRadius: 29,
+    height: 58,
+    width: 58,
   },
   pilule: {
     alignItems: 'center',
