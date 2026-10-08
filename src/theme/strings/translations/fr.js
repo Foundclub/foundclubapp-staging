@@ -13634,7 +13634,10 @@ export default {
   messaging: {
     addGroupMembers: 'Ajouter des membres',
     archive: 'Archiver',
+    archived: 'Archivées',
+    archivedBack: 'Retour aux discussions',
     archiveError: "Impossible d'archiver cette conversation.",
+    conversationOptions: 'Options de la conversation',
     createConversationError: 'Impossible de démarrer cette conversation.',
     errors: {
       cannotMessageSelf: 'Impossible de lancer une conversation avec ton propre compte.',
@@ -13684,6 +13687,8 @@ export default {
     searchPlaceholder: 'Rechercher une conversation...',
     searchUserPlaceholder: 'Rechercher un membre...',
     title: 'Messages',
+    unarchive: 'Désarchiver',
+    unarchiveError: 'Impossible de désarchiver cette conversation.',
     unpin: 'Désépingler',
     unpinError: 'Impossible de désépingler cette conversation.',
     unread: {

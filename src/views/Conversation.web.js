@@ -19,6 +19,7 @@ import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
 import { couleurDuNom } from '@/domains/messaging/habillageDuFil';
 import {
+  estArchivePourMoi,
   formatChatTimestamp,
   getChatLastMessage,
   getChatMessagePreview,
@@ -754,12 +755,52 @@ const DESSIN_RETOUR = (
  * MSG1W §3.13 — LA COLONNE « MESSAGES » DU SITE, A GAUCHE DU FIL (WhatsApp Web ; SPECS §7) : la
  * liste de la messagerie (memes fils, memes regles : `filsDeLaMessagerie`, personnes bloquees
  * cachees), le fil ouvert marque. Toucher une ligne ouvre son fil a droite, sans quitter la page.
- * @param {{ chatId: string, chats: any[], meId: string, navigation: any, t: any }} props
+ * 🗂️ ARCHIVEES (08/10, README §3.14) — mes fils archives n y sont plus : la ligne « Archivées »,
+ * en tete, bascule la colonne sur eux ; le clic droit ou le « … » d une ligne ouvre « Archiver »
+ * (fil ordinaire) ou « Désarchiver » (fil archive).
+ * @param {{ archivees?: any[], chatId: string, chats: any[], meId: string, navigation: any,
+ *   onBasculerArchive?: (fil: any) => void, t: any }} props
  * @returns {import('react').ReactElement} La colonne.
  */
 function ColonneDesConversations({
-  chatId, chats, meId, navigation, t,
+  archivees = [], chatId, chats, meId, navigation, onBasculerArchive = () => {}, t,
 }) {
+  const [afficheArchivees, setAfficheArchivees] = useState(false);
+  const [menu, setMenu] = useState(
+    /** @type {{ declencheur: HTMLElement, fil: any, x: number, y: number } | null} */ (null),
+  );
+  const menuRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
+  const enModeArchivees = afficheArchivees && archivees.length > 0;
+  useEffect(() => {
+    if (archivees.length === 0) setAfficheArchivees(false);
+  }, [archivees.length]);
+  // Le menu prend le focus ; Echap le ferme et rend le focus a ce qui l a ouvert ; un clic a cote
+  // le ferme aussi (comme le menu ⋮ du fil).
+  useEffect(() => {
+    if (!menu) return undefined;
+    const premiere = /** @type {HTMLElement | null | undefined} */ (
+      menuRef.current?.querySelector('[role="menuitem"]')
+    );
+    premiere?.focus?.();
+    const surTouche = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key !== 'Escape') return;
+      setMenu(null);
+      menu.declencheur?.focus?.();
+    };
+    const surClic = (/** @type {MouseEvent} */ event) => {
+      if (menuRef.current?.contains(/** @type {Node} */ (event.target))) return;
+      setMenu(null);
+    };
+    document.addEventListener('keydown', surTouche);
+    document.addEventListener('mousedown', surClic);
+    return () => {
+      document.removeEventListener('keydown', surTouche);
+      document.removeEventListener('mousedown', surClic);
+    };
+  }, [menu]);
+  const libelleDuMenu = t('messaging.conversationOptions', 'Options de la conversation');
+  const fils = enModeArchivees ? archivees : chats;
   return (
     <aside
       aria-label={t('conversation.web.fil.titreListe', 'Messages')}
@@ -817,7 +858,52 @@ function ColonneDesConversations({
         </button>
       </div>
       <nav style={{ overflowY: 'auto' }}>
-        {chats.map((/** @type {any} */ fil) => {
+        <style>{ARCHIVEES_STYLE}</style>
+        {archivees.length > 0 ? (
+          <button
+            data-testid="ARCH-colonne-archivees"
+            onClick={() => setAfficheArchivees(!enModeArchivees)}
+            style={{
+              alignItems: 'center',
+              background: 'transparent',
+              border: 0,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+              color: PALETTE_DU_FIL.texte,
+              cursor: 'pointer',
+              display: 'flex',
+              fontFamily: 'Montserrat-Bold, sans-serif',
+              fontSize: 15,
+              gap: 12,
+              minHeight: 52,
+              padding: '0 14px',
+              textAlign: 'left',
+              width: '100%',
+            }}
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              style={{ display: 'inline-flex', justifyContent: 'center', width: 52 }}
+            >
+              <GlyphIcon color={withAlpha(colors.neutral00, 0.7)} name="boxArchive" size={20} />
+            </span>
+            <span style={{ flex: 1 }}>
+              {enModeArchivees
+                ? t('messaging.archivedBack', 'Retour aux discussions')
+                : t('messaging.archived', 'Archivées')}
+            </span>
+            <span
+              style={{
+                color: withAlpha(colors.neutral00, 0.5),
+                fontFamily: 'Montserrat-Regular, sans-serif',
+                fontSize: 13,
+              }}
+            >
+              {archivees.length}
+            </span>
+          </button>
+        ) : null}
+        {fils.map((/** @type {any} */ fil) => {
           const id = String(fil?.documentId || '');
           const titre = titreDuFil(t, { chat: fil }) || getConversationName({
             chatClub: fil?.club,
@@ -837,128 +923,234 @@ function ColonneDesConversations({
             ? String(dernier?.sender?.firstname || '').trim()
             : '';
           return (
-            <button
-              aria-current={ouvert ? 'page' : undefined}
-              data-testid={`MSG1W-ligne-${id}`}
-              key={`ligne-${id}`}
-              onClick={() => {
-                if (ouvert) return;
-                navigation.navigate(RouteNames.Conversation, { chatId: id, chatType: fil?.type });
-              }}
-              style={{
-                alignItems: 'center',
-                background: ouvert ? PALETTE_DU_FIL.bulleRecue : 'transparent',
-                border: 0,
-                borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
-                color: PALETTE_DU_FIL.texte,
-                cursor: 'pointer',
-                display: 'flex',
-                gap: 12,
-                minHeight: 72,
-                padding: '8px 14px',
-                textAlign: 'left',
-                width: '100%',
-              }}
-              type="button"
-            >
-              <span
-                aria-hidden="true"
+            <div className="ARCH-ligne" key={`ligne-${id}`} style={{ position: 'relative' }}>
+              <button
+                aria-current={ouvert ? 'page' : undefined}
+                data-testid={`MSG1W-ligne-${id}`}
+                onClick={() => {
+                  if (ouvert) return;
+                  navigation.navigate(RouteNames.Conversation, { chatId: id, chatType: fil?.type });
+                }}
+                // ARCHIVEES — le clic droit ouvre le menu de la ligne, la ou on a clique.
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setMenu({
+                    declencheur: event.currentTarget, fil, x: event.clientX, y: event.clientY,
+                  });
+                }}
                 style={{
                   alignItems: 'center',
-                  background: couleurDeLaPersonne({ documentId: id }),
-                  borderRadius: '50%',
-                  color: PALETTE_DU_FIL.encre,
-                  display: 'inline-flex',
-                  flexShrink: 0,
-                  fontFamily: 'Montserrat-Bold, sans-serif',
-                  fontSize: 16,
-                  height: 52,
-                  justifyContent: 'center',
-                  width: 52,
+                  background: ouvert ? PALETTE_DU_FIL.bulleRecue : 'transparent',
+                  border: 0,
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+                  color: PALETTE_DU_FIL.texte,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  gap: 12,
+                  minHeight: 72,
+                  padding: '8px 14px',
+                  textAlign: 'left',
+                  width: '100%',
                 }}
-              >
-                {getInitials(titre)}
-              </span>
-              <span
-                style={{
-                  display: 'grid', flex: 1, gap: 4, minWidth: 0,
-                }}
+                type="button"
               >
                 <span
+                  aria-hidden="true"
                   style={{
-                    alignItems: 'baseline',
-                    display: 'flex',
-                    gap: 8,
-                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: couleurDeLaPersonne({ documentId: id }),
+                    borderRadius: '50%',
+                    color: PALETTE_DU_FIL.encre,
+                    display: 'inline-flex',
+                    flexShrink: 0,
+                    fontFamily: 'Montserrat-Bold, sans-serif',
+                    fontSize: 16,
+                    height: 52,
+                    justifyContent: 'center',
+                    width: 52,
+                  }}
+                >
+                  {getInitials(titre)}
+                </span>
+                <span
+                  style={{
+                    display: 'grid', flex: 1, gap: 4, minWidth: 0,
                   }}
                 >
                   <span
                     style={{
-                      fontFamily: 'Montserrat-Bold, sans-serif',
-                      fontSize: 16,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      alignItems: 'baseline',
+                      display: 'flex',
+                      gap: 8,
+                      justifyContent: 'space-between',
                     }}
                   >
-                    {titre}
-                  </span>
-                  <span
-                    style={{
-                      color: nonLus ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.texteDoux,
-                      flexShrink: 0,
-                      fontFamily: nonLus ? 'Montserrat-Bold, sans-serif' : undefined,
-                      fontSize: 12.5,
-                    }}
-                  >
-                    {dernier ? formatChatTimestamp(dernier.createdAt) : ''}
-                  </span>
-                </span>
-                <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
-                  {deMoi ? (
-                    <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="checkDouble" size={16} />
-                  ) : null}
-                  <span
-                    style={{
-                      color: 'rgba(255, 255, 255, 0.58)',
-                      flex: 1,
-                      fontSize: 14,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {prenom ? (
-                      <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{`${prenom} : `}</span>
-                    ) : null}
-                    {dernier ? getChatMessagePreview(dernier, t) : ''}
-                  </span>
-                  {nonLus ? (
                     <span
                       style={{
-                        background: PALETTE_DU_FIL.accent,
-                        borderRadius: 999,
-                        color: PALETTE_DU_FIL.encre,
-                        flexShrink: 0,
                         fontFamily: 'Montserrat-Bold, sans-serif',
-                        fontSize: 11.5,
-                        minWidth: 20,
-                        padding: '2px 6px',
-                        textAlign: 'center',
+                        fontSize: 16,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      {nonLus}
+                      {titre}
                     </span>
-                  ) : null}
+                    <span
+                      style={{
+                        color: nonLus ? PALETTE_DU_FIL.accent : PALETTE_DU_FIL.texteDoux,
+                        flexShrink: 0,
+                        fontFamily: nonLus ? 'Montserrat-Bold, sans-serif' : undefined,
+                        fontSize: 12.5,
+                      }}
+                    >
+                      {dernier ? formatChatTimestamp(dernier.createdAt) : ''}
+                    </span>
+                  </span>
+                  <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
+                    {deMoi ? (
+                      <GlyphIcon color={PALETTE_DU_FIL.texteDoux} name="checkDouble" size={16} />
+                    ) : null}
+                    <span
+                      style={{
+                        color: 'rgba(255, 255, 255, 0.58)',
+                        flex: 1,
+                        fontSize: 14,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {prenom ? (
+                        <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{`${prenom} : `}</span>
+                      ) : null}
+                      {dernier ? getChatMessagePreview(dernier, t) : ''}
+                    </span>
+                    {nonLus ? (
+                      <span
+                        style={{
+                          background: PALETTE_DU_FIL.accent,
+                          borderRadius: 999,
+                          color: PALETTE_DU_FIL.encre,
+                          flexShrink: 0,
+                          fontFamily: 'Montserrat-Bold, sans-serif',
+                          fontSize: 11.5,
+                          minWidth: 20,
+                          padding: '2px 6px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {nonLus}
+                      </span>
+                    ) : null}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+              {/* ARCHIVEES — le « … » de la ligne (au survol, au clavier, toujours au doigt). */}
+              <button
+                aria-expanded={menu?.fil === fil}
+                aria-haspopup="menu"
+                aria-label={libelleDuMenu}
+                className="ARCH-options"
+                data-testid={`ARCH-options-${id}`}
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  setMenu({
+                    declencheur: event.currentTarget, fil, x: rect.left, y: rect.bottom + 4,
+                  });
+                }}
+                style={{
+                  alignItems: 'center',
+                  background: PALETTE_DU_FIL.menu,
+                  border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+                  borderRadius: 999,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  height: 28,
+                  justifyContent: 'center',
+                  padding: 0,
+                  position: 'absolute',
+                  right: 8,
+                  top: 22,
+                  width: 28,
+                }}
+                type="button"
+              >
+                <GlyphIcon color={PALETTE_DU_FIL.texte} name="dotsVertical" size={16} />
+              </button>
+            </div>
           );
         })}
       </nav>
+      {menu ? (
+        <div
+          aria-label={libelleDuMenu}
+          ref={menuRef}
+          role="menu"
+          style={{
+            background: PALETTE_DU_FIL.menu,
+            border: `1px solid ${PALETTE_DU_FIL.menuBord}`,
+            borderRadius: 16,
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+            display: 'grid',
+            left: Math.max(8, Math.min(menu.x, window.innerWidth - 238)),
+            minWidth: 230,
+            padding: 6,
+            position: 'fixed',
+            top: Math.max(8, Math.min(menu.y, window.innerHeight - 64)),
+            zIndex: 1100,
+          }}
+        >
+          <button
+            className="MSG1W-ligne-menu"
+            onClick={() => {
+              const { fil } = menu;
+              setMenu(null);
+              onBasculerArchive(fil);
+            }}
+            role="menuitem"
+            style={{
+              alignItems: 'center',
+              background: 'transparent',
+              border: 0,
+              borderRadius: 10,
+              color: PALETTE_DU_FIL.texte,
+              cursor: 'pointer',
+              display: 'flex',
+              fontFamily: 'Montserrat-Regular, sans-serif',
+              fontSize: 15,
+              gap: 12,
+              minHeight: 44,
+              padding: '0 14px',
+              textAlign: 'left',
+            }}
+            type="button"
+          >
+            <GlyphIcon color={PALETTE_DU_FIL.texte} name="boxArchive" size={18} />
+            {estArchivePourMoi(menu.fil, meId)
+              ? t('messaging.unarchive', 'Désarchiver')
+              : t('messaging.archive', 'Archiver')}
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }
+
+/**
+ * ARCHIVEES — le « … » d une ligne de la colonne n apparait qu au survol de la ligne (ou au focus
+ * clavier) ; au doigt il n existe aucun survol, il reste donc visible (memes regles que
+ * `REACTION_HOVER_STYLE`). Transparent, il ne prend aucun clic.
+ */
+const ARCHIVEES_STYLE = `
+  .ARCH-ligne .ARCH-options { opacity: 0; pointer-events: none; }
+  .ARCH-ligne:hover .ARCH-options,
+  .ARCH-ligne:focus-within .ARCH-options,
+  .ARCH-options[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
+  @media (hover: none) {
+    .ARCH-ligne .ARCH-options { opacity: 1; pointer-events: auto; }
+  }
+`;
 
 /**
  * MSG1W §3.5 — UNE FENETRE DU SITE : les feuilles du bas du telephone deviennent des fenetres
@@ -1289,6 +1481,7 @@ function Conversation({ navigation, route }) {
     userData,
   } = useAuth()
   const {
+    archiveChatAsync,
     deleteMessage,
     editMessage,
     joinChat,
@@ -1302,6 +1495,7 @@ function Conversation({ navigation, route }) {
     sendTypingStart,
     sendTypingStop,
     socket,
+    unarchiveChatAsync,
     updateGroupMeta,
     votePoll,
   } = useMessaging(chatId)
@@ -4144,6 +4338,26 @@ function Conversation({ navigation, route }) {
     userData?.documentId,
     personnesBloquees,
   );
+  // 🗂️ ARCHIVEES — mes fils archives quittent la colonne ; sa ligne « Archivees » les retrouve.
+  const filsActifsDeLaListe = filsDeLaListe
+    .filter((fil) => !estArchivePourMoi(fil, userData?.documentId));
+  const filsArchivesDeLaListe = filsDeLaListe
+    .filter((fil) => estArchivePourMoi(fil, userData?.documentId));
+  // Le meme geste archive un fil ordinaire et desarchive un fil archive (comme le telephone).
+  const basculerArchive = async (/** @type {any} */ fil) => {
+    const id = String(fil?.documentId || '');
+    if (!id) return;
+    const archive = estArchivePourMoi(fil, userData?.documentId);
+    try {
+      if (archive) await unarchiveChatAsync(id);
+      else await archiveChatAsync(id);
+    } catch (error) {
+      // eslint-disable-next-line no-alert -- le meme retour que les autres gestes du fil du site
+      window.alert(getErrorMessage(error, archive
+        ? t('messaging.unarchiveError', 'Impossible de désarchiver cette conversation.')
+        : t('messaging.archiveError', "Impossible d'archiver cette conversation.")));
+    }
+  };
   const panneauDeDroite = filDeLaVille.estFil && filDeLaVille.membres ? (
     <aside
       style={{
@@ -4213,10 +4427,12 @@ function Conversation({ navigation, route }) {
       >
         {avecColonneDesMessages ? (
           <ColonneDesConversations
+            archivees={filsArchivesDeLaListe}
             chatId={chatId}
-            chats={filsDeLaListe}
+            chats={filsActifsDeLaListe}
             meId={String(userData?.documentId || '')}
             navigation={navigation}
+            onBasculerArchive={basculerArchive}
             t={t}
           />
         ) : null}

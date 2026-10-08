@@ -16,6 +16,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
+  estArchivePourMoi,
   formatChatTimestamp,
   getChatLastMessage,
   getChatMessagePreview,
@@ -139,7 +140,7 @@ function Messaging({ navigation, route }) {
 
   const {
     archiveChatAsync, getConversationName, getUnreadStatus,
-    joinChat, markChatUnread, pinChatAsync, sendReadReceipt, unpinChatAsync,
+    joinChat, markChatUnread, pinChatAsync, sendReadReceipt, unarchiveChatAsync, unpinChatAsync,
     updateLastReadMessage,
   } = useMessaging();
   // 👁️ MSG1BA (§3.14) — l'apercu ouvert par un appui long : la ligne, son titre, ses non-lus.
@@ -184,7 +185,7 @@ function Messaging({ navigation, route }) {
   });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
 
-  const allChats = useMemo(() => {
+  const filsTries = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
       /** @type {Chat[]} */([]),
@@ -210,7 +211,6 @@ function Messaging({ navigation, route }) {
     // groupe, un club, une equipe et la discussion a trois du mineur avec son
     // parent restent en place.
     return hideBlockedChats(chats, userData?.documentId, blockedUserIds)
-      .filter((chat) => !chat.archivedBy?.some((u) => u.documentId === userData?.documentId))
       .sort((a, b) => {
         const isPinnedA = a.pinnedBy?.some((u) => u.documentId === userData?.documentId);
         const isPinnedB = b.pinnedBy?.some((u) => u.documentId === userData?.documentId);
@@ -226,6 +226,31 @@ function Messaging({ navigation, route }) {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
   }, [blockedUserIds, chatsData?.pages, userData]);
+  // 🗂️ ARCHIVEES (08/10, « archivées A ») — mes fils archives quittent la liste ; la ligne
+  // « Archivées » (README §3.14, prototype `p1a-app.jsx`) les retrouve, et on les y desarchive.
+  const allChats = useMemo(
+    () => filsTries.filter((chat) => !estArchivePourMoi(chat, userData?.documentId)),
+    [filsTries, userData?.documentId],
+  );
+  const filsArchives = useMemo(
+    () => filsTries.filter((chat) => estArchivePourMoi(chat, userData?.documentId)),
+    [filsTries, userData?.documentId],
+  );
+  const [afficheArchivees, setAfficheArchivees] = useState(false);
+  const nombreArchivees = useMemo(() => filsDeLaMessagerie(filsArchives, {
+    collectiviteId: villeId,
+    espaceVille,
+    monClubId: userData?.club?.documentId || null,
+  }).length, [espaceVille, filsArchives, userData?.club?.documentId, villeId]);
+  // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
+  const enModeArchivees = afficheArchivees && nombreArchivees > 0;
+  useEffect(() => {
+    if (nombreArchivees === 0) setAfficheArchivees(false);
+  }, [nombreArchivees]);
+  // La liste arrive par pages de 20, archives melees : la page des archives lit les suivantes.
+  useEffect(() => {
+    if (enModeArchivees && hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [enModeArchivees, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     if (routeChatScope == null) return;
@@ -316,7 +341,7 @@ function Messaging({ navigation, route }) {
   };
 
   const filteredChats = useMemo(() => {
-    const filsAffiches = filsDeLaMessagerie(allChats, {
+    const filsAffiches = filsDeLaMessagerie(enModeArchivees ? filsArchives : allChats, {
       collectiviteId: villeId,
       espaceVille,
       monClubId: userData?.club?.documentId || null,
@@ -344,7 +369,8 @@ function Messaging({ navigation, route }) {
       return name?.toLowerCase()?.includes(lowerQuery);
     });
   }, [
-    allChats, chatScopeFilter, espaceVille, searchQuery, getConversationName, t, userData, villeId,
+    allChats, chatScopeFilter, enModeArchivees, espaceVille, filsArchives, searchQuery,
+    getConversationName, t, userData, villeId,
   ]);
 
   const getEmptyListMessage = () => {
@@ -409,6 +435,33 @@ function Messaging({ navigation, route }) {
     </View>
   );
 
+  // 🗂️ ARCHIVEES (§3.14, prototype `p1a-app.jsx`) — la ligne « Archivées » en tete de liste, des
+  // qu un fil est archive : elle bascule la liste sur les archives (« Retour aux discussions »).
+  // Son icone tient dans la colonne des avatars (52), son libelle s aligne sur les titres.
+  const renderLigneArchivees = () => (nombreArchivees > 0 ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => setAfficheArchivees(!enModeArchivees)}
+      style={stylesDeLaListe.ligneArchivees}
+      testID="liste-archivees"
+    >
+      <View style={stylesDeLaListe.iconeArchivees}>
+        <GlyphIcon color={withAlpha(Colors.neutral00, 0.7)} name="boxArchive" size={20} />
+      </View>
+      <Text style={[stylesDeLaListe.libelleArchivees, { color: Colors.neutral00 }]}>
+        {enModeArchivees
+          ? t('messaging.archivedBack', 'Retour aux discussions')
+          : t('messaging.archived', 'Archivées')}
+      </Text>
+      <Text
+        style={[stylesDeLaListe.heure, { color: withAlpha(Colors.neutral00, 0.5) }]}
+        testID="liste-archivees-compte"
+      >
+        {String(nombreArchivees)}
+      </Text>
+    </TouchableOpacity>
+  ) : null);
+
   const renderLeftActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => {
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
     return (
@@ -440,22 +493,28 @@ function Messaging({ navigation, route }) {
     );
   };
 
+  // ARCHIVEES — « Archiver » sur un fil ordinaire, « Désarchiver » sur un fil archive.
+  const libelleArchive = (/** @type {Chat} */ chat) => (estArchivePourMoi(chat, userData?.documentId)
+    ? t('messaging.unarchive', 'Désarchiver')
+    : t('messaging.archive', 'Archiver'));
+
   const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => (
     <TouchableOpacity
-      onPress={() => archiveChatAsync(chat.documentId).catch((actionError) => {
-        showMessagingAlert(actionError, t('messaging.archiveError', "Impossible d'archiver cette conversation."));
-      })}
+      onPress={() => handleArchive(chat)}
       style={{
         alignItems: 'center',
-        backgroundColor: Colors.error500, // Or warning color
+        backgroundColor: estArchivePourMoi(chat, userData?.documentId)
+          ? Colors.primary700
+          : Colors.error500, // Or warning color
         borderRadius: 2,
         justifyContent: 'center',
         marginBottom: 8,
         width: 80,
       }}
+      testID={`liste-fil-${chat.documentId}-glisser`}
     >
       <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-        {t('messaging.archive', 'Archiver')}
+        {libelleArchive(chat)}
       </Text>
     </TouchableOpacity>
   );
@@ -485,16 +544,21 @@ function Messaging({ navigation, route }) {
     }
   };
 
+  // ARCHIVEES — le meme geste archive un fil ordinaire et desarchive un fil archive.
   const handleArchive = async (/** @type {Chat} */ chat) => {
     const chatId = String(chat?.documentId || '').trim();
     if (!chatId) return;
 
+    const archive = estArchivePourMoi(chat, userData?.documentId);
     setPendingChatAction({ chatId, type: 'archive' });
 
     try {
-      await archiveChatAsync(chatId);
+      if (archive) await unarchiveChatAsync(chatId);
+      else await archiveChatAsync(chatId);
     } catch (actionError) {
-      showMessagingAlert(actionError, t('messaging.archiveError', "Impossible d'archiver cette conversation."));
+      showMessagingAlert(actionError, archive
+        ? t('messaging.unarchiveError', 'Impossible de désarchiver cette conversation.')
+        : t('messaging.archiveError', "Impossible d'archiver cette conversation."));
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
     }
@@ -551,13 +615,15 @@ function Messaging({ navigation, route }) {
             Spaces.paddingHorizontal[12],
             Spaces.paddingVertical[8],
             {
-              backgroundColor: Colors.error500,
+              backgroundColor: estArchivePourMoi(chat, userData?.documentId)
+                ? Colors.primary700
+                : Colors.error500,
               opacity: isPendingAction ? 0.6 : 1,
             },
           ]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {isArchivePending ? t('common.loading', 'Chargement...') : t('messaging.archive', 'Archiver')}
+            {isArchivePending ? t('common.loading', 'Chargement...') : libelleArchive(chat)}
           </Text>
         </TouchableOpacity>
       </View>
@@ -615,9 +681,9 @@ function Messaging({ navigation, route }) {
       onPress: () => handleTogglePin(chat),
     });
     entrees.push({
-      cle: 'archiver',
+      cle: estArchivePourMoi(chat, userData?.documentId) ? 'desarchiver' : 'archiver',
       icone: 'boxArchive',
-      libelle: t('messaging.archive', 'Archiver'),
+      libelle: libelleArchive(chat),
       onPress: () => handleArchive(chat),
     });
     return entrees;
@@ -922,14 +988,18 @@ function Messaging({ navigation, route }) {
           <View style={[Alignments.fill]}>
             {espaceVille ? null : renderChatScopeFilter()}
             {renderSearch()}
+            {renderLigneArchivees()}
             {/* COLL-C4A (02/10) — en tête : le canal des actualités de la Ville (le membre d'un
-                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ». */}
-            <CanauxDeLaVille
-              chats={allChats}
-              collectiviteId={route?.params?.collectiviteId || null}
-              espaceVille={route?.params?.espace === 'ville'}
-              navigation={navigation}
-            />
+                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ».
+                ARCHIVEES — pas sur la page des archives : elle ne montre que les fils archivés. */}
+            {enModeArchivees ? null : (
+              <CanauxDeLaVille
+                chats={allChats}
+                collectiviteId={route?.params?.collectiviteId || null}
+                espaceVille={route?.params?.espace === 'ville'}
+                navigation={navigation}
+              />
+            )}
             {isLoading && (
               <WithDataWrapper
                 isLoading
@@ -1098,11 +1168,27 @@ const stylesDeLaListe = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 17,
   },
+  iconeArchivees: {
+    alignItems: 'center',
+    width: 52,
+  },
+  libelleArchivees: {
+    flex: 1,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+  },
   ligne: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
     height: 72,
+  },
+  ligneArchivees: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    height: 52,
   },
   pastille: {
     alignItems: 'center',
