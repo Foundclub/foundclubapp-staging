@@ -15628,7 +15628,7 @@ export default {
   pollDetails: {
     anonymousVotes: 'Votes anonymes',
     back: 'Retour',
-    createdBy: 'Creé par',
+    createdBy: 'Créé par',
     information: 'Informations',
     loadingThePoll: 'Chargement du sondage…',
     member: 'Membre',
@@ -15646,7 +15646,7 @@ export default {
     totalVotes: 'Total votes',
     unableToSaveThisVote: 'Impossible de sauvegarder ce vote.',
     vote: 'Voter',
-    voteSaved: 'Vote enregistre',
+    voteSaved: 'Vote enregistré',
     votesCount_one: '{{count}} vote',
     votesCount_other: '{{count}} votes',
     votesVisibleToAllParticipants: 'Votes visibles pour tous les participants',

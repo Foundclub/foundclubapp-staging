@@ -302,7 +302,7 @@ describe('le site rend le detail d un sondage', () => {
     expect(rendu).toContain('3 votes');
     expect(rendu).toContain('1 vote');
     expect(rendu).not.toContain('0 vote');
-    expect(buttonWithText(root, 'Vote enregistre')).toBeTruthy();
+    expect(buttonWithText(root, 'Vote enregistré')).toBeTruthy();
   });
 
   test('voter transmet au service le message et l option choisis', async () => {
@@ -313,10 +313,10 @@ describe('le site rend le detail d un sondage', () => {
     expect(mockVotePoll).toHaveBeenCalledWith(MESSAGE_ID, 'opt-1');
   });
 
-  test('l option deja choisie porte « Vote enregistre » au lieu de « Voter »', () => {
+  test('l option deja choisie porte « Vote enregistré » au lieu de « Voter »', () => {
     const root = mountScreen();
 
-    expect(buttonWithText(root, 'Vote enregistre')).toBeTruthy();
+    expect(buttonWithText(root, 'Vote enregistré')).toBeTruthy();
   });
 
   test('une option sans libelle retombe sur le repli numerote du catalogue', () => {
