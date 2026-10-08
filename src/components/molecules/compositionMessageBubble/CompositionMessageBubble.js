@@ -22,6 +22,8 @@ import {
   formatConvocationTime,
   getPersonName,
   getViewerConvocationRole,
+  ligneDeRendezVous,
+  lireRendezVous,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -144,6 +146,7 @@ function CompositionMessageBubble({
     manualPlayers = [],
     placements = [],
     publishedVersion,
+    rendezVous,
     reservePlayers: reservePlayersPublies = [],
     schemaVersion = 2,
     snapshotPlayers: snapshotPlayersPublies = [],
@@ -277,6 +280,12 @@ function CompositionMessageBubble({
     ? noteText
     : '';
   const hasEventContext = Boolean(title || whenLine);
+  // 🕐 CONVOC-RDV (decision d'Adel du 08/10, `rdv lot`) — le rendez-vous range dans la convocation
+  // (« RDV 13:30 · Au club »). Une carte postee AVANT n'a pas la cle : aucune ligne.
+  const rendezVousTexte = ligneDeRendezVous(lireRendezVous(rendezVous));
+  const rendezVousLine = rendezVousTexte
+    ? `${t('compositionMessageBubble.rendezVous', 'RDV')} ${rendezVousTexte}`
+    : '';
 
   const kicker = type === 'lineup_share'
     ? t('compositionMessageBubble.published', 'Composition publiée')
@@ -454,6 +463,7 @@ function CompositionMessageBubble({
     title,
     whenLine,
     teamName,
+    rendezVousLine,
     hasEventContext ? addressLine : '',
     note,
     calledUpLine,
@@ -534,6 +544,15 @@ function CompositionMessageBubble({
                 style={[styles.contexte, { color: withAlpha(Colors.neutral00, 0.7) }]}
               >
                 {[whenLine, teamName].filter(Boolean).join(' · ')}
+              </Text>
+            ) : null}
+            {rendezVousLine ? (
+              <Text
+                numberOfLines={2}
+                style={[styles.contexte, styles.rendezVous, { color: Colors.neutral00 }]}
+                testID="composition-rendez-vous"
+              >
+                {rendezVousLine}
               </Text>
             ) : null}
             {hasEventContext && !adresseCliquable ? (
@@ -896,6 +915,9 @@ const styles = StyleSheet.create({
     fontFamily: GRAS_FAMILLE,
     fontSize: 11.5,
     lineHeight: 15,
+  },
+  rendezVous: {
+    fontFamily: GRAS_FAMILLE,
   },
   roster: {
     gap: 10,

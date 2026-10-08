@@ -481,6 +481,32 @@ export const resolveConvocationNote = (event, alreadyShown = []) => {
   return alreadyShown.map(comparable).includes(comparable(note)) ? '' : note;
 };
 
+/** Une heure `HH:mm` (00:00 a 23:59). */
+const HEURE_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * CONVOC-RDV (decision d'Adel du 08/10, `rdv lot`) — LE RENDEZ-VOUS D'UNE CONVOCATION PUBLIEE.
+ * Le serveur le range dans la convocation (`rendezVous: { time, place }`) et le pose sur la carte
+ * du fil. Une convocation d'avant n'a pas la cle ; une valeur abimee ne s'imprime jamais.
+ * @param {any} value
+ * @returns {{ place: string, time: string } | null}
+ */
+export const lireRendezVous = (value) => {
+  if (!value || typeof value !== 'object') return null;
+  const heure = typeof value.time === 'string' ? value.time.trim() : '';
+  const time = HEURE_HHMM.test(heure) ? heure : '';
+  const place = typeof value.place === 'string' ? value.place.replace(/\s+/g, ' ').trim() : '';
+  return time || place ? { place, time } : null;
+};
+
+/**
+ * « 13:30 · Au club », ou ce qui existe ; vide sans rendez-vous.
+ * @param {{ place?: string | null, time?: string | null } | null} rendezVous
+ * @returns {string}
+ */
+export const ligneDeRendezVous = (rendezVous) => [rendezVous?.time, rendezVous?.place]
+  .filter(Boolean).join(' · ');
+
 /**
  * COMPOMSG — le JOUR d'un horodatage, au format du telephone (`lun. 28/09/2026`).
  * « Tu es convoque » n'ecrivait que l'heure : un joueur ne savait pas QUEL jour

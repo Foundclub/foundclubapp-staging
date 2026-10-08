@@ -34,6 +34,7 @@ import { getMatchFormations } from '@/views/matchCallUp/matchFormationCatalog';
 import {
   formatConvocationDay,
   formatConvocationTime,
+  lireRendezVous,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
 import {
@@ -54,8 +55,55 @@ export const SIDE_BENCH = 'bench';
 /** Le message du fil qui porte une composition publiee. */
 export const LINEUP_SHARE_TYPE = 'lineup_share';
 
-/** Le rendez-vous propose par defaut (pack §3.12, etape Details). */
-export const DEFAULT_MEETING_POINT = '13h30 au club';
+// CONVOC-RDV (decision d'Adel du 08/10, `rdv lot`) — LE RENDEZ-VOUS : UNE HEURE ET UN LIEU.
+// L'heure se choisit au selecteur partage, qui s'ouvre sur un EXEMPLE (decision `heure A`) ; plus
+// rien n'est pre-rempli en vraie valeur : « 13h30 au club » partait tel quel si l'entraineur n'y
+// touchait pas. Le lieu suit la regle du serveur (`admin/src/utils/public-text.ts`) : 120
+// caracteres, ni telephone, ni courriel, ni lien. Elle est repetee ici pour le dire SOUS le champ.
+
+/** L'exemple d'heure quand le coup d'envoi est inconnu. */
+const EXEMPLE_HEURE_PAR_DEFAUT = '13:30';
+/** Le lieu du rendez-vous tient en 120 caracteres (le serveur refuse au-dela). */
+export const RENDEZ_VOUS_LIEU_MAX = 120;
+const COURRIEL = /[^\s@]+@[^\s@]+\.[^\s@]+/;
+const TELEPHONE = /(?:\+?\d[\s.-]?){8,}/;
+const LIEN = /https?:\/\/|www\./i;
+
+/**
+ * L'exemple du selecteur : le coup d'envoi moins une heure, arrondi aux 5 minutes de la roue.
+ * @param {any} eventDate
+ * @returns {string} `HH:mm`
+ */
+export const exempleHeureDeRendezVous = (eventDate) => {
+  const coupDEnvoi = new Date(String(eventDate ?? ''));
+  if (!eventDate || Number.isNaN(coupDEnvoi.getTime())) return EXEMPLE_HEURE_PAR_DEFAUT;
+  const rendezVous = new Date(coupDEnvoi.getTime() - 60 * 60 * 1000);
+  const minutes = rendezVous.getMinutes() - (rendezVous.getMinutes() % 5);
+  return `${String(rendezVous.getHours()).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+/**
+ * Le lieu porte-t-il un telephone, un courriel ou un lien ? (la regle du serveur)
+ * @param {string} texte
+ * @returns {boolean}
+ */
+export const lieuPorteUneDonneePersonnelle = (texte) => {
+  const valeur = String(texte || '');
+  return COURRIEL.test(valeur) || TELEPHONE.test(valeur) || LIEN.test(valeur);
+};
+
+/**
+ * Le rendez-vous qui part au serveur, ou `null` quand rien n'est choisi. Le lieu de l'evenement,
+ * pre-rempli et laisse tel quel SANS heure, ne fait pas un rendez-vous : la carte le dit deja.
+ * @param {{ eventPlace?: string, place?: string, time?: string }} input
+ * @returns {{ place: string | null, time: string | null } | null}
+ */
+export const construireRendezVous = ({ eventPlace = '', place = '', time = '' }) => {
+  const lu = lireRendezVous({ place, time });
+  const lieuDeLEvenement = String(eventPlace || '').replace(/\s+/g, ' ').trim();
+  if (!lu || (!lu.time && lu.place === lieuDeLEvenement)) return null;
+  return { place: lu.place || null, time: lu.time || null };
+};
 
 /** Une pastille ne sort jamais du terrain : 5 % de marge de chaque cote (pack §5). */
 export const PITCH_MIN_PERCENT = 5;
@@ -764,9 +812,10 @@ export const isLatestLineupComposition = ({ composition, messages = [] }) => {
 };
 
 /**
- * Le message texte qui suit la convocation : « Rendez-vous » et « Infos » n'ont AUCUN champ dans
- * la composition ni dans sa carte (l'« Infos » de la carte est la description de l'evenement,
- * `event-composition.ts:2344`). Ils partent donc dans le fil, comme un message de l'entraineur.
+ * Le message texte qui suit la convocation : les « Infos » n'ont AUCUN champ dans la composition
+ * ni dans sa carte (l'« Infos » de la carte est la description de l'evenement). Elles partent donc
+ * dans le fil, comme un message de l'entraineur. CONVOC-RDV : le rendez-vous a desormais son champ
+ * (`rendezVous`) ; il ne passe ici qu'en REPLI, face a un serveur qui ne le connait pas encore.
  * @param {object} input
  * @param {string} [input.infos]
  * @param {string} [input.infosLabel]
