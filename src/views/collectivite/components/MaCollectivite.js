@@ -50,7 +50,9 @@ function MaCollectivite({ clubId }) {
   } = useTheme();
   const [texte, setTexte] = useState('');
   const [q, setQ] = useState('');
-  const [communeSaisie, setCommuneSaisie] = useState('');
+  // FINITIONS-VILLE (T20) : null tant que le dirigeant n'a rien tapé — le champ montre alors la
+  // commune que le serveur lit dans l'adresse du club (`communeSuggestion`).
+  const [communeSaisie, setCommuneSaisie] = useState(/** @type {string | null} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
 
@@ -208,7 +210,8 @@ function MaCollectivite({ clubId }) {
 
   const commune = donnees?.commune || null;
   const piste = donnees?.lead || null;
-  const communeDonnee = communeSaisie.trim();
+  const communeAffichee = communeSaisie ?? String(donnees?.communeSuggestion || '');
+  const communeDonnee = communeAffichee.trim();
   const renderPrevenir = () => (
     <View style={carte} testID="ma-collectivite-prevenir">
       <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -246,7 +249,7 @@ function MaCollectivite({ clubId }) {
                 'Le nom de ta commune',
               )}
               testID="ma-collectivite-commune"
-              value={communeSaisie}
+              value={communeAffichee}
             />
           )}
           <Button

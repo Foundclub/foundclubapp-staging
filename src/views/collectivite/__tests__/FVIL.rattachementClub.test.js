@@ -10,7 +10,8 @@ import RattachementDuClub from '../components/RattachementDuClub';
 //   R1 — refuser la demande de la Ville ne dit plus « Elle ne pourra pas te la renvoyer » : la
 //        Ville renvoie (« refus B », 07/10).
 //   R2 — la carte dit l'état COURANT seul ; « Annuler ma demande » (serveur FVIL F5).
-//   R3 — « Ta mairie d’Agy … depuis le jeudi 8 octobre. » : l'élision, un seul point.
+//   R3 — « Ta mairie d’Agy … depuis le jeudi 8 octobre. » : l'élision, un seul point ;
+//   R4 — « Ta commune » pré-remplie avec la commune de l'adresse du club (serveur FVIL F4).
 
 jest.setTimeout(30000);
 
@@ -174,5 +175,26 @@ describe('FVIL lot 5 · le rattachement vu du club', () => {
     expect(textes(await monter(<MaCollectivite clubId="club-k" />))).toContain('Ta mairie de Montrivage est signalée à l’équipe FoundClub depuis le jeudi 8 octobre.');
     mockMa.data = lead('Le Havre');
     expect(textes(await monter(<MaCollectivite clubId="club-k" />))).toContain('Ta mairie du Havre est signalée à l’équipe FoundClub depuis le jeudi 8 octobre.');
+  });
+
+  it('R4 « Ta commune » pré-remplie avec celle de l’adresse du club ; le dirigeant peut la changer', async () => {
+    mockMa.data = {
+      attached: null, commune: null, communeSuggestion: 'Agy', lead: null,
+    };
+    const arbre = await monter(<MaCollectivite clubId="club-k" />);
+    const champ = () => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'ma-collectivite-commune' && typeof n.props?.onChangeText === 'function',
+    )[0];
+    expect(champ().props.value).toBe('Agy');
+    expect(boutons(arbre, 'Prévenir ma mairie')[0].props.disabled).toBe(false);
+    await act(async () => { boutons(arbre, 'Prévenir ma mairie')[0].props.onPress(); });
+    expect(mockPrevenir.mutate).toHaveBeenCalledWith({ clubId: 'club-k', communeName: 'Agy' }, expect.any(Object));
+
+    await act(async () => { champ().props.onChangeText(''); });
+    expect(champ().props.value).toBe('');
+    expect(boutons(arbre, 'Prévenir ma mairie')[0].props.disabled).toBe(true);
+    await act(async () => { champ().props.onChangeText('Bayeux'); });
+    await act(async () => { boutons(arbre, 'Prévenir ma mairie')[0].props.onPress(); });
+    expect(mockPrevenir.mutate).toHaveBeenLastCalledWith({ clubId: 'club-k', communeName: 'Bayeux' }, expect.any(Object));
   });
 });
