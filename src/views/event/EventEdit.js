@@ -13,7 +13,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -30,7 +29,6 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
-import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
@@ -360,14 +358,10 @@ function EventEdit({ navigation, route }) {
   const {
     createEventUpdatePayload,
     createReccurrentEventPayload,
-    formatDateInput,
-    formatTimeInput,
     getDateFromDateInput,
     getEventEditSupport,
-    getReccurrenceDayOptions,
     hasExternalAudience,
     isTrainingEventType,
-    recurrenceFrequencyOptions,
     resolveTrainingOpenConfig,
     sessionStatusOptions,
     validationModeOptions,
@@ -1480,54 +1474,6 @@ function EventEdit({ navigation, route }) {
                   )}
                 />
 
-                <Controller
-                  control={control}
-                  name="startTime"
-                  render={({
-                    field: {
-                      name, onBlur, onChange, ref, value,
-                    },
-                  }) => (
-                    <Input
-                      enterKeyHint="next"
-                      error={getFieldError({ errors: formErrors, fieldName: name })}
-                      inputMode="numeric"
-                      keyboardType="numeric"
-                      label={t('eventEdit.fields.startTime.label')}
-                      maxLength={5}
-                      onBlur={onBlur}
-                      onChangeText={(val) => onChange(formatTimeInput(val))}
-                      placeholder="HH:mm"
-                      ref={ref}
-                      value={value}
-                    />
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="endTime"
-                  render={({
-                    field: {
-                      name, onBlur, onChange, ref, value,
-                    },
-                  }) => (
-                    <Input
-                      enterKeyHint="done"
-                      error={getFieldError({ errors: formErrors, fieldName: name })}
-                      inputMode="numeric"
-                      keyboardType="numeric"
-                      label={t('eventEdit.fields.endTime.label')}
-                      maxLength={5}
-                      onBlur={onBlur}
-                      onChangeText={(val) => onChange(formatTimeInput(val))}
-                      placeholder="HH:mm"
-                      ref={ref}
-                      value={value}
-                    />
-                  )}
-                />
-
               </>
             )}
 
@@ -1656,148 +1602,6 @@ function EventEdit({ navigation, route }) {
               )}
             />
 
-            {eventId ? null : (
-              <Controller
-                control={control}
-                name="isRecurrent"
-                render={({
-                  field: {
-                    name, onChange, value,
-                  },
-                }) => (
-                  <View style={[Spaces.gap[24]]}>
-                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-                      <Switch
-                        key={name}
-                        onValueChange={(newValue) => {
-                          onChange(newValue);
-                          if (newValue) {
-                            const dateValue = watch('date');
-                            if (dateValue) {
-                              setValue('recurrenceStartDate', dateValue);
-                            }
-                          }
-                        }}
-                        trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
-                        value={value}
-                      />
-                      <Text style={[Fonts.p1, Fonts.neutral00]}>
-                        {t('eventEdit.fields.isRecurrent.label')}
-                      </Text>
-                    </View>
-                    {value && (
-                      <View style={[Spaces.gap[16]]}>
-                        <Controller
-                          control={control}
-                          name="recurrenceStartDate"
-                          render={({
-                            field: {
-                              name: fieldName, onBlur,
-                              onChange: onFieldChange, ref, value: fieldValue,
-                            },
-                          }) => (
-                            <Input
-                              enterKeyHint="done"
-                              error={getFieldError({ errors: formErrors, fieldName })}
-                              inputMode="numeric"
-                              keyboardType="numeric"
-                              label={t('eventEdit.fields.recurrenceStartDate.label')}
-                              maxLength={10}
-                              onBlur={onBlur}
-                              onChangeText={(val) => onFieldChange(formatDateInput(val))}
-                              placeholder="DD/MM/YYYY"
-                              ref={ref}
-                              value={fieldValue}
-                            />
-                          )}
-                        />
-
-                        <Controller
-                          control={control}
-                          name="recurrenceEndDate"
-                          render={({
-                            field: {
-                              name: fieldName, onBlur,
-                              onChange: onFieldChange, ref, value: fieldValue,
-                            },
-                          }) => (
-                            <Input
-                              enterKeyHint="done"
-                              error={getFieldError({ errors: formErrors, fieldName })}
-                              inputMode="numeric"
-                              keyboardType="numeric"
-                              label={t('eventEdit.fields.recurrenceEndDate.label')}
-                              maxLength={10}
-                              onBlur={onBlur}
-                              onChangeText={(val) => onFieldChange(formatDateInput(val))}
-                              placeholder="DD/MM/YYYY"
-                              ref={ref}
-                              value={fieldValue}
-                            />
-                          )}
-                        />
-
-                        <Controller
-                          control={control}
-                          name="recurrenceFrequency"
-                          render={({
-                            field: {
-                              name: fieldName, onBlur, onChange: onFieldChange, value: fieldValue,
-                            },
-                          }) => (
-                            <AutocompleteSelect
-                              error={getFieldError({ errors: formErrors, fieldName })}
-                              label={t('eventEdit.fields.recurrenceFrequency.label')}
-                              onBlur={onBlur}
-                              options={recurrenceFrequencyOptions}
-                              setValue={(/** @type {Option} */option) => onFieldChange(option?.value || '')}
-                              value={recurrenceFrequencyOptions.find((option) => option.value === fieldValue)?.label || ''}
-                            />
-                          )}
-                        />
-
-                        {recurrenceFrequency === 'week' ? (
-                          <View style={[Spaces.gap[8]]}>
-                            <Text style={[Fonts.p2, Fonts.neutral00]}>
-                              {t('eventEdit.fields.recurrenceDays.label', 'Jours de récurrence')}
-                            </Text>
-                            <Controller
-                              control={control}
-                              name="recurrenceDays"
-                              render={({ field: { onChange: onDaysChange, value: selectedDays } }) => (
-                                <DayPicker
-                                  onChange={onDaysChange}
-                                  selectedDays={selectedDays || []}
-                                />
-                              )}
-                            />
-                          </View>
-                        ) : (
-                          <Controller
-                            control={control}
-                            name="recurrenceDay"
-                            render={({
-                              field: {
-                                name: fieldName, onBlur, onChange: onFieldChange, value: fieldValue,
-                              },
-                            }) => (
-                              <AutocompleteSelect
-                                error={getFieldError({ errors: formErrors, fieldName })}
-                                label={t('eventEdit.fields.recurrenceDay.label')}
-                                onBlur={onBlur}
-                                options={getReccurrenceDayOptions(recurrenceFrequency)}
-                                setValue={(/** @type {Option} */ option) => onFieldChange(option?.value || '')}
-                                value={getReccurrenceDayOptions(recurrenceFrequency).find((option) => option.value === fieldValue)?.label || ''}
-                              />
-                            )}
-                          />
-                        )}
-                      </View>
-                    )}
-                  </View>
-                )}
-              />
-            )}
             <View
               style={[
                 ApplicationStyle.backgroundColor.primary900,
