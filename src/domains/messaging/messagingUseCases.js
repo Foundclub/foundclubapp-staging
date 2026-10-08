@@ -58,6 +58,64 @@ export const estArchivePourMoi = (chat, meId) => Boolean(meId)
   && chat.archivedBy.some((/** @type {any} */ u) => u?.documentId === meId);
 
 /**
+ * Ce fil est-il epingle PAR MOI (`pinnedBy`) ?
+ * @param {Chat | null | undefined | Record<string, any>} chat
+ * @param {string | null | undefined} meId
+ * @returns {boolean}
+ */
+export const estEpinglePourMoi = (chat, meId) => Array.isArray(chat?.pinnedBy)
+  && chat.pinnedBy.some((/** @type {any} */ u) => u?.documentId === meId);
+
+/** Le rang d un type de fil : club multisport, club, League, equipe, groupe, tete-a-tete. */
+const RANG_DU_TYPE_DE_FIL = /** @type {Record<string, number>} */ ({
+  club: 1,
+  group: 2.5,
+  league_match: 1.5,
+  multisport: 0,
+  team: 2,
+  whisper: 3,
+});
+
+/**
+ * SMF (T20) — L ORDRE DE LA LISTE DES CONVERSATIONS, une seule regle pour la page du telephone
+ * (Messaging.js, d ou elle sort telle quelle) et la colonne « Messages » du site : mes fils
+ * epingles d abord, puis le rang du type, puis le plus recent.
+ * @param {any[]} chats - Les fils.
+ * @param {string | null | undefined} meId - Moi.
+ * @returns {any[]} Une copie triee.
+ */
+export const trierLesFils = (chats, meId) => [...(Array.isArray(chats) ? chats : [])]
+  .sort((a, b) => {
+    const epingleA = estEpinglePourMoi(a, meId);
+    const epingleB = estEpinglePourMoi(b, meId);
+    if (epingleA && !epingleB) return -1;
+    if (!epingleA && epingleB) return 1;
+    const rangA = RANG_DU_TYPE_DE_FIL[String(a?.type)] ?? 99;
+    const rangB = RANG_DU_TYPE_DE_FIL[String(b?.type)] ?? 99;
+    if (rangA !== rangB) return rangA - rangB;
+    return new Date(b?.updatedAt).getTime() - new Date(a?.updatedAt).getTime();
+  });
+
+/**
+ * SMF (T20) — CE QUE MONTRE LA LISTE : la portee « Toutes / Classique / League », puis la
+ * recherche sur le nom du fil. Meme regle au telephone et dans la colonne du site.
+ * @param {any[]} chats - Les fils deja tries.
+ * @param {{ nomDuFil: (chat: any) => string, portee?: string, recherche?: string }} options -
+ *   Le nom affiche d un fil, la portee choisie, le texte cherche.
+ * @returns {any[]} Les fils a afficher, dans le meme ordre.
+ */
+export const filtrerLesFils = (chats, { nomDuFil, portee = 'all', recherche = '' }) => {
+  const parPortee = (Array.isArray(chats) ? chats : []).filter((chat) => {
+    if (portee === 'league') return isLeagueChat(chat);
+    if (portee === 'classic') return !isLeagueChat(chat);
+    return true;
+  });
+  if (!recherche) return parPortee;
+  const cherche = recherche.toLowerCase();
+  return parPortee.filter((chat) => Boolean(nomDuFil(chat)?.toLowerCase()?.includes(cherche)));
+};
+
+/**
  * Checks whether a chat is the thread opened by a friendly match proposal.
  *
  * Le serveur ouvre ce fil au moment de la candidature pour que les DEUX staffs

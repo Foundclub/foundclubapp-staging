@@ -17,10 +17,12 @@ import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiv
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
+  filtrerLesFils,
   formatChatTimestamp,
   getChatLastMessage,
   getChatMessagePreview,
   isLeagueChat,
+  trierLesFils,
 } from '@/domains/messaging/messagingUseCases';
 import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
 import {
@@ -191,40 +193,18 @@ function Messaging({ navigation, route }) {
       /** @type {Chat[]} */([]),
     ) : [];
 
-    // Sort: Multisport > Club > Team > Whisper
-    // We want Multisport (m) at top, then Club (c)
-    // Map types to priority
-    /** @type {Record<'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper', number>} */
-    const priority = {
-      club: 1,
-      group: 2.5,
-      league_match: 1.5, // High priority but after club/multisport? Or top? Let's put it high.
-      multisport: 0,
-      team: 2,
-      whisper: 3,
-    };
-
     // 🙈 BLOQUER (K4) — un tete-a-tete avec une personne bloquee quitte la
     // liste. Ce n est pas la barriere (le serveur REFUSE deja d ouvrir ce fil) :
     // sans ca, la ligne resterait affichee et mener a une erreur au premier
     // appui. 🧒 K5 : seuls les fils STRICTEMENT a deux disparaissent — un
     // groupe, un club, une equipe et la discussion a trois du mineur avec son
     // parent restent en place.
-    return hideBlockedChats(chats, userData?.documentId, blockedUserIds)
-      .sort((a, b) => {
-        const isPinnedA = a.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-        const isPinnedB = b.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-
-        if (isPinnedA && !isPinnedB) return -1;
-        if (!isPinnedA && isPinnedB) return 1;
-
-        const pA = priority[/** @type {'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper'} */ (a.type)] ?? 99;
-        const pB = priority[/** @type {'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper'} */ (b.type)] ?? 99;
-
-        if (pA !== pB) return pA - pB;
-
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
+    // SMF — l ordre (epingles, type, plus recent) est une regle partagee avec la colonne du
+    // site : messagingUseCases.trierLesFils.
+    return trierLesFils(
+      hideBlockedChats(chats, userData?.documentId, blockedUserIds),
+      userData?.documentId,
+    );
   }, [blockedUserIds, chatsData?.pages, userData]);
   // 🗂️ ARCHIVEES (08/10, « archivées A ») — mes fils archives quittent la liste ; la ligne
   // « Archivées » (README §3.14, prototype `p1a-app.jsx`) les retrouve, et on les y desarchive.
@@ -346,17 +326,9 @@ function Messaging({ navigation, route }) {
       espaceVille,
       monClubId: userData?.club?.documentId || null,
     });
-    const scopeFilteredChats = filsAffiches.filter((chat) => {
-      if (chatScopeFilter === 'league') return isLeagueChat(chat);
-      if (chatScopeFilter === 'classic') return !isLeagueChat(chat);
-      return true;
-    });
-
-    if (!searchQuery) return scopeFilteredChats;
-    const lowerQuery = searchQuery.toLowerCase();
-
-    return scopeFilteredChats.filter((chat) => {
-      const name = titreDuFil(t, { chat, espaceVille }) || getConversationName({
+    // SMF — portee puis recherche : regle partagee avec la colonne du site (filtrerLesFils).
+    return filtrerLesFils(filsAffiches, {
+      nomDuFil: (chat) => titreDuFil(t, { chat, espaceVille }) || getConversationName({
         chatClub: chat.club,
         chatGroupName: chat.groupName,
         chatLeagueMatch: chat.league_match,
@@ -365,8 +337,9 @@ function Messaging({ navigation, route }) {
         chatTeam: chat.team,
         chatType: chat.type,
         meId: userData?.documentId,
-      });
-      return name?.toLowerCase()?.includes(lowerQuery);
+      }),
+      portee: chatScopeFilter,
+      recherche: searchQuery,
     });
   }, [
     allChats, chatScopeFilter, enModeArchivees, espaceVille, filsArchives, searchQuery,
