@@ -46,6 +46,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
+import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import {
   autorisationsDuGroupe,
   envoiReserveAuxAdmins,
@@ -4060,32 +4061,20 @@ function Conversation({ navigation, route }) {
   const voterNameDirectory = useMemo(() => {
     /** @type {Map<string, string>} */
     const directory = new Map();
-
-    const registerUser = (/** @type {any} */ user) => {
-      const userId = user?.documentId || user?.id;
-      if (!userId) return;
-
-      const firstname = (user?.firstname || '').trim();
-      const lastname = (user?.lastname || '').trim();
-      const fullName = `${firstname} ${lastname}`.trim();
-      const fallbackName = (user?.username || user?.email || '').trim();
-      const nextName = fullName || fallbackName || 'Membre';
-      directory.set(String(userId), nextName);
-    };
-
-    registerUser(userData);
-
-    if (Array.isArray(chatData?.participants)) {
-      chatData.participants.forEach((/** @type {any} */ participant) => registerUser(participant));
-    }
-
-    if (Array.isArray(messagesPages?.pages)) {
-      messagesPages.pages.forEach((/** @type {any} */ page) => {
-        if (!Array.isArray(page?.data)) return;
-        page.data.forEach((/** @type {any} */ msg) => registerUser(msg?.sender));
-      });
-    }
-
+    // T19-RESTES — la règle commune : le nom le plus frais l'emporte (participants, mon compte,
+    // puis les messages du plus récent au plus ancien). Avant, le nom figé dans le PLUS VIEUX
+    // message gagnait : la pastille de Karim disait « M » (« mouri nio ») jusqu'au serveur.
+    annuaireDesMembres({
+      messages: (Array.isArray(messagesPages?.pages) ? messagesPages.pages : [])
+        .flatMap((/** @type {any} */ page) => (Array.isArray(page?.data) ? page.data : [])),
+      participants: chatData?.participants,
+      userData,
+    }).forEach((user, userId) => {
+      const prenom = String(user?.firstname || '').trim();
+      const nom = String(user?.lastname || '').trim();
+      const repli = String(user?.username || user?.email || '').trim();
+      directory.set(userId, `${prenom} ${nom}`.trim() || repli || 'Membre');
+    });
     return directory;
   }, [chatData?.participants, messagesPages?.pages, userData]);
 

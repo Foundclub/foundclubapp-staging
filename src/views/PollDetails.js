@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import {
   applyOptimisticPollVote,
   getPollTotalVotes,
@@ -236,44 +237,27 @@ function PollDetails({ navigation, route }) {
   const voterDirectory = useMemo(() => {
     /** @type {Map<string, { avatarUrl: string; displayName: string; firstname: string; lastname: string }>} */
     const directory = new Map();
-
-    const registerUser = (/** @type {any} */ user) => {
-      const userId = user?.documentId || user?.id;
-      if (!userId) return;
-      const firstname = (user?.firstname || '').trim();
-      const lastname = (user?.lastname || '').trim();
-      const fullName = `${firstname} ${lastname}`.trim();
-      const fallbackName = (user?.username || user?.email || '').trim();
-      const previous = directory.get(String(userId));
-      directory.set(String(userId), {
-        avatarUrl: String(user?.avatar?.url || previous?.avatarUrl || '').trim(),
-        displayName: fullName || fallbackName || previous?.displayName || t(
-          'pollDetails.member',
-          'Membre',
-        ),
-        firstname: firstname || previous?.firstname || '',
-        lastname: lastname || previous?.lastname || '',
+    // T19-RESTES — la règle commune : le nom le plus frais l'emporte (votants lus au serveur,
+    // participants, mon compte, puis les messages du plus récent au plus ancien). Avant, le nom
+    // figé dans le PLUS VIEUX message gagnait (« Créé par mouri nio »).
+    annuaireDesMembres({
+      messages: (Array.isArray(messagesPages?.pages) ? messagesPages.pages : [])
+        .flatMap((page) => (Array.isArray(page?.data) ? page.data : [])),
+      participants: chatData?.participants,
+      userData,
+      votants: pollVoterProfiles,
+    }).forEach((user, userId) => {
+      const firstname = String(user?.firstname || '').trim();
+      const lastname = String(user?.lastname || '').trim();
+      const fallbackName = String(user?.username || user?.email || '').trim();
+      directory.set(userId, {
+        avatarUrl: String(user?.avatar?.url || '').trim(),
+        displayName: `${firstname} ${lastname}`.trim() || fallbackName
+          || t('pollDetails.member', 'Membre'),
+        firstname,
+        lastname,
       });
-    };
-
-    registerUser(userData);
-
-    if (Array.isArray(chatData?.participants)) {
-      chatData.participants.forEach((participant) => registerUser(participant));
-    }
-
-    if (Array.isArray(messagesPages?.pages)) {
-      messagesPages.pages.forEach((page) => {
-        if (!Array.isArray(page?.data)) return;
-        page.data.forEach((message) => registerUser(message?.sender));
-      });
-    }
-
-    // SONDAGE-NOMS — les votants lus au serveur EN DERNIER : un fil de club n'a pas de
-    // participants, et le serveur est le seul à savoir qu'un compte a été supprimé (le nom
-    // figé dans un vieux message ne le sait pas).
-    pollVoterProfiles.forEach((profile) => registerUser(profile));
-
+    });
     return directory;
   }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData, t]);
 

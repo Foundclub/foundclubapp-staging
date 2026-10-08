@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { useWindowDimensions, View } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
+import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
@@ -2433,19 +2434,16 @@ function Conversation({ navigation, route }) {
     </div>
   ), [baseTextColor, borderColor, mutedTextColor, primaryColor])
 
-  // MSG1W §3.4 — les noms des votants : les participants du fil, puis les auteurs des messages.
-  // ponytail: annuaire simple (le lot SONDAGE-NOMS corrige la resolution du telephone) ; sortie :
-  // brancher ici le resolveur partage que ce lot posera.
+  // MSG1W §3.4 — les noms des votants. T19-RESTES : la règle commune du téléphone (le nom le plus
+  // frais l'emporte : participants, mon compte, puis les messages du plus récent au plus ancien).
+  // Avant, le PLUS VIEUX message passait devant mon compte : « Oui, 1 vote, mouri nio ».
   const annuaireDesVotants = useMemo(() => {
     const annuaire = new Map();
-    const inscrire = (/** @type {any} */ personne) => {
-      const id = String(personne?.documentId || personne?.id || '').trim();
-      if (id && !annuaire.has(id)) annuaire.set(id, getDisplayName(personne));
-    };
-    // @ts-ignore: FIXME: Baseline TS regression
-    (Array.isArray(chatData?.participants) ? chatData.participants : []).forEach(inscrire);
-    messages.forEach((/** @type {any} */ message) => inscrire(message?.sender));
-    inscrire(userData);
+    annuaireDesMembres({
+      messages,
+      participants: chatData?.participants,
+      userData,
+    }).forEach((personne, id) => annuaire.set(id, getDisplayName(personne)));
     return annuaire;
   }, [chatData?.participants, messages, userData]);
   const resolveVoterName = useCallback(
@@ -2494,6 +2492,9 @@ function Conversation({ navigation, route }) {
           <PollMessageBubble
             currentUserId={userData?.documentId || ''}
             isMe={isMine}
+            // T19-RESTES — donné, la bulle lit elle-même les noms des votants au serveur
+            // (`poll-voters`), comme au téléphone : le site ne les demandait jamais.
+            messageId={getMessageId(message)}
             onVote={(/** @type {string} */ optionId) => handleVoteOnPoll(message, optionId)}
             poll={composition}
             resolveVoterName={resolveVoterName}

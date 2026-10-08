@@ -5,6 +5,7 @@ import { useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import useAuth from '@/domains/auth/useAuth';
+import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import {
   applyOptimisticPollVote,
   getPollTotalVotes,
@@ -91,24 +92,20 @@ function PollDetails({ navigation, route }) {
 
   const voterDirectory = useMemo(() => {
     const map = new Map();
-
-    const registerUser = (user) => {
-      const userId = String(user?.documentId || user?.id || '').trim();
-      if (!userId) return;
+    // T19-RESTES — la règle commune : le nom le plus frais l'emporte (votants lus au serveur,
+    // participants, mon compte, puis les messages du plus récent au plus ancien). Avant, le nom
+    // figé dans le PLUS VIEUX message gagnait (« Créé par mouri nio »).
+    annuaireDesMembres({
+      messages: flattenMessages(messagesPages?.pages),
+      participants: chatData?.participants,
+      userData,
+      votants: pollVoterProfiles,
+    }).forEach((user, userId) => {
       map.set(userId, {
         avatarUrl: getImageUrl(user?.avatar?.url || ''),
         displayName: getDisplayName(user),
       });
-    };
-
-    registerUser(userData);
-    if (Array.isArray(chatData?.participants)) {
-      chatData.participants.forEach(registerUser);
-    }
-    flattenMessages(messagesPages?.pages).forEach((message) => registerUser(message?.sender));
-    // SONDAGE-NOMS — les votants lus au serveur EN DERNIER : un fil de club n'a pas de
-    // participants, et le serveur est le seul à savoir qu'un compte a été supprimé.
-    pollVoterProfiles.forEach(registerUser);
+    });
     return map;
   }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData]);
 
