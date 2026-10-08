@@ -11,6 +11,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { lienDeLaVilleRetenu, oublierLienDeLaVille } from '@/domains/collectivite/lienDeLaVille';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
@@ -270,7 +271,7 @@ function ClubWizardRecap({ navigation, route }) {
                 'Rejoins {{clubName}} sur FoundClub avec ton compte dirigeant. '
                   + 'Sur la fiche, touche « Je dirige ce club » pour demander sa gestion ; '
                   + 'FoundClub vérifiera ta demande.',
-                { clubName: nomDuClub },
+                { ...SANS_ECHAPPEMENT, clubName: nomDuClub },
               ),
               url: lienDuClub,
             }),
