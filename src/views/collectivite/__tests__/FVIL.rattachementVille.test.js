@@ -124,4 +124,22 @@ describe('FVIL lot 5 · la Ville refuse un rattachement avec un motif', () => {
       expect.any(Object),
     );
   });
+
+  it('V2 la page se redessine (lecture, envoi en cours) : la fenêtre garde le motif tapé', async () => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<DemandesDeRattachement collectiviteId="ville-m" demandes={[DEMANDE]} />);
+    });
+    await act(async () => { boutons(arbre, 'Refuser')[0].props.onPress(); });
+    const champ = () => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'collectivite-request-message'
+        && typeof n.props?.onChangeText === 'function',
+    )[0];
+    await act(async () => { champ().props.onChangeText('Club inconnu'); });
+    await act(async () => {
+      arbre.update(<DemandesDeRattachement collectiviteId="ville-m" demandes={[{ ...DEMANDE }]} />);
+    });
+    expect(champ().props.value).toBe('Club inconnu');
+  });
 });

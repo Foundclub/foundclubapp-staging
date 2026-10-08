@@ -42,6 +42,8 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
   const relancer = useRemindCollectiviteProposal();
   const annuler = useCancelCollectiviteProposal();
   const renvoyer = useProposeCollectiviteClub();
+  // La décision de la fenêtre de refus, gardée telle quelle : un objet neuf à chaque rendu ferait
+  // repartir la fenêtre à vide (motif et erreur effacés) dès que la page se redessine.
   const [aRefuser, setARefuser] = useState(/** @type {any} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
@@ -132,7 +134,7 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
               title={t('collectiviteRattachement.demandes.accept', 'Accepter')}
             />
             <Button
-              onPress={() => setARefuser(demande)}
+              onPress={() => setARefuser({ kind: 'refuse', request: demande })}
               size="sm"
               title={t('collectiviteRattachement.demandes.refuse', 'Refuser')}
               variant="Ghost"
@@ -200,13 +202,16 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
       {aRefuser ? (
         <DecisionCreneauModal
           collectiviteId={collectiviteId}
-          decision={{ kind: 'refuse', request: aRefuser }}
+          decision={aRefuser}
           onClose={() => setARefuser(null)}
           refusDeRattachement={{
-            ligne: ligneDuRappel(aRefuser),
+            ligne: ligneDuRappel(aRefuser.request),
             onRefuse: (/** @type {string} */ motif) => new Promise((resoudre, rejeter) => {
               repondre.mutate({
-                accept: false, collectiviteId, invitationId: aRefuser.documentId, reason: motif,
+                accept: false,
+                collectiviteId,
+                invitationId: aRefuser.request?.documentId,
+                reason: motif,
               }, { onError: rejeter, onSuccess: resoudre });
             }),
           }}
