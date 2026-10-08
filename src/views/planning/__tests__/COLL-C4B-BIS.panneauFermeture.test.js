@@ -611,7 +611,8 @@ describe('SVF 4b — fermer A aussi dans le panneau de droite', () => {
     const arbre = await rendre();
     await act(async () => { date('Jour').onChange('04/03/2026'); });
     await attendre();
-    await act(async () => { champ('Pour quoi').onChangeText('Forum'); });
+    // SAIS (08/10, T20 lot 2) : « Pour quoi » est devenu « Nom (facultatif) » (+ pastilles Motif).
+    await act(async () => { champ('Nom (facultatif)').onChangeText('Forum'); });
     await attendre();
     await envoyerEtConfirmer(arbre);
     expect(closeFacility).toHaveBeenCalled();

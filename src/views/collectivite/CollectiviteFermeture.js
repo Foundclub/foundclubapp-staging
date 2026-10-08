@@ -47,6 +47,7 @@ import {
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { getFacilityTypeNoun } from '@/utils/facilityTypes';
 
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
 import { useIsDesktop } from '@/responsive';
 
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -271,28 +272,35 @@ function FormulaireDeFermeture({
   const liste = (Array.isArray(installations.data) ? installations.data : []).filter(
     (installation) => installation?.documentId,
   );
-  const [facilityId, setFacilityId] = useState(
-    existante?.facility?.documentId || params.facilityId || null,
-  );
+  // SAIS (T20 lot 2) — la saisie telle que l ecran l a recue : la garde de sortie s y compare.
+  const [depart] = useState(() => ({
+    debut: versSaisie(existante?.startDate || params.date),
+    facilityId: existante?.facility?.documentId || params.facilityId || null,
+    fin: versSaisie(existante?.endDate || params.date),
+    heureDebut: String(existante?.startTime || params.startTime || '').slice(0, 5),
+    heureFin: String(existante?.endTime || params.endTime || '').slice(0, 5),
+    mot: existante?.message || '',
+    motif: existante?.reason || (bloquer ? null : 'travaux'),
+    nom: existante?.label || '',
+  }));
+  const [facilityId, setFacilityId] = useState(depart.facilityId);
   const [choisir, setChoisir] = useState(!facilityId);
   const installation = liste.find((ligne) => ligne.documentId === facilityId)
     || (existante?.facility?.documentId === facilityId ? existante.facility : null)
     || (params.facilityName ? { documentId: facilityId, name: params.facilityName } : null);
   const nom = installation?.name || '';
 
-  const [debut, setDebut] = useState(versSaisie(existante?.startDate || params.date));
-  const [fin, setFin] = useState(versSaisie(existante?.endDate || params.date));
-  const [motif, setMotif] = useState(existante?.reason || (bloquer ? null : 'travaux'));
-  const [mot, setMot] = useState(existante?.message || '');
-  const [pourQuoi, setPourQuoi] = useState(existante?.label || '');
+  const [debut, setDebut] = useState(depart.debut);
+  const [fin, setFin] = useState(depart.fin);
+  const [motif, setMotif] = useState(depart.motif);
+  const [mot, setMot] = useState(depart.mot);
   // FINITIONS12-COLL (03/10, decision d Adel « ferie B ») — le NOM d une fermeture (« Ascension »).
-  const [nomDeFermeture, setNomDeFermeture] = useState(bloquer ? '' : existante?.label || '');
-  const [heureDebut, setHeureDebut] = useState(
-    String(existante?.startTime || params.startTime || '').slice(0, 5),
-  );
-  const [heureFin, setHeureFin] = useState(
-    String(existante?.endTime || params.endTime || '').slice(0, 5),
-  );
+  // SAIS (T20 lot 2) : aussi celui d un blocage, qui prend les pastilles « Motif » de Fermer au
+  // lieu de son « Pour quoi » libre ; sans nom, le motif le nomme (le serveur exige un nom de
+  // blocage).
+  const [nomDeFermeture, setNomDeFermeture] = useState(depart.nom);
+  const [heureDebut, setHeureDebut] = useState(depart.heureDebut);
+  const [heureFin, setHeureFin] = useState(depart.heureFin);
   const [publier, setPublier] = useState(false);
   const [confirmer, setConfirmer] = useState(false);
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
@@ -320,9 +328,10 @@ function FormulaireDeFermeture({
 
   // COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») : la saisie, dite au planning (panneau), qui la
   // hachure et cerne les seances touchees « pendant la saisie ». Rien quand elle ne se lit pas.
-  const motDuBlocage = pourQuoi.trim() || null;
   const nomRetenu = nomDeFermeture.trim() || null;
-  const motifRetenu = bloquer ? null : motif;
+  const motifRetenu = motif || null;
+  // SAIS — le nom d un blocage : le sien, sinon son motif (« Manifestation »).
+  const nomDuBlocage = nomRetenu || (motifRetenu ? reasonLabel(t, motifRetenu) : null);
   const idDeLaFermeture = existante?.documentId || null;
   useEffect(() => {
     if (!onDraftChange) return;
@@ -332,35 +341,72 @@ function FormulaireDeFermeture({
         endDate: apercuParams.endDate,
         endTime: apercuParams.endTime || null,
         kind: apercuParams.kind,
-        label: bloquer ? motDuBlocage : nomRetenu,
+        label: bloquer ? nomDuBlocage : nomRetenu,
         reason: motifRetenu,
         startDate: apercuParams.startDate,
         startTime: apercuParams.startTime || null,
       }
       : null);
-  }, [apercuParams, bloquer, idDeLaFermeture, motDuBlocage, motifRetenu, nomRetenu, onDraftChange]);
+  }, [apercuParams, bloquer, idDeLaFermeture, motifRetenu, nomDuBlocage, nomRetenu, onDraftChange]);
   // En partant (envoye, annule, autre panneau), le planning efface le brouillon.
   useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
 
   const fermer = useCloseFacility();
   const modifier = useModifyFacilityClosure();
   const enCours = fermer.isPending || modifier.isPending;
-  const pret = Boolean(facilityId)
-    && datesLisibles
-    && heuresLisibles
-    && (bloquer ? Boolean(pourQuoi.trim()) : Boolean(motif));
+  // SAIS : un blocage d avant n a qu un nom (aucun motif) ; il se modifie tel quel.
+  const motifOuNom = bloquer ? Boolean(motifRetenu || nomRetenu) : Boolean(motif);
+  const pret = Boolean(facilityId) && datesLisibles && heuresLisibles && motifOuNom;
 
+  // SAIS (T20 lot 2) — UNE phrase, celle d « Attribuer » (SeasonSlotForm), pour les dates comme
+  // pour les heures ; elle s affiche SOUS les champs qu elle juge (`ligneDErreur`).
   let erreurDeSaisie = null;
   if (debut && fin && !bloquer && jourDebut && jourFin && jourFin < jourDebut) {
-    erreurDeSaisie = t('collectiviteFermetures.form.ordreDates', 'La fin suit le début.');
+    erreurDeSaisie = t('collectiviteFermetures.form.ordreDates', 'La fin doit suivre le début.');
   } else if (bloquer && heureDebut && heureFin && !heuresLisibles) {
     erreurDeSaisie = HEURE.test(heureDebut) && HEURE.test(heureFin)
-      ? t('collectiviteFermetures.form.ordreHeures', 'L’heure de fin suit l’heure de début.')
+      ? t('collectiviteFermetures.form.ordreHeures', 'La fin doit suivre le début.')
       : t(
         'collectiviteFermetures.form.formatHeure',
         'Une heure s’écrit HH:MM (par exemple 09:00).',
       );
   }
+
+  // SAIS (T20 lot 2) — un bouton grisé dit ce qui manque : le premier manque, dans l ordre de
+  // l écran. Rien quand une erreur de saisie le dit déjà.
+  let ceQuiManque = null;
+  if (!pret && !erreurDeSaisie) {
+    if (!facilityId) {
+      ceQuiManque = t(
+        'collectiviteFermetures.form.manque.installation',
+        'Choisissez l’installation.',
+      );
+    } else if (!datesLisibles) {
+      ceQuiManque = bloquer
+        ? t('collectiviteFermetures.form.manque.jour', 'Choisissez le jour.')
+        : t('collectiviteFermetures.form.manque.dates', 'Choisissez les dates.');
+    } else if (!heuresLisibles) {
+      ceQuiManque = t('collectiviteFermetures.form.manque.heures', 'Choisissez les heures.');
+    } else if (!motifOuNom) {
+      ceQuiManque = t('collectiviteFermetures.form.manque.motif', 'Choisissez un motif.');
+    }
+  }
+
+  // SAIS (T20 lot 2) — au téléphone, un Retour sur une saisie modifiée demande avant de la perdre
+  // (la garde de « Demander un créneau »). Le panneau d ordinateur a sa croix : pas de garde.
+  const saisieModifiee = publier || debut !== depart.debut || fin !== depart.fin
+    || facilityId !== depart.facilityId || heureDebut !== depart.heureDebut
+    || heureFin !== depart.heureFin || mot !== depart.mot || motif !== depart.motif
+    || nomDeFermeture !== depart.nom;
+  const sortieLibre = useGardeDeSortie(enPanneau ? null : navigation, {
+    actif: saisieModifiee,
+    textes: {
+      message: t('collectiviteFermetures.form.quitterPerdu', 'Ce que vous avez saisi sera perdu.'),
+      quitter: t('collectiviteFermetures.form.quitter', 'Quitter'),
+      rester: t('collectiviteFermetures.form.rester', 'Rester'),
+      titre: t('collectiviteFermetures.form.quitterTitre', 'Quitter sans enregistrer ?'),
+    },
+  });
 
   // VILLE-T18A « fermer A » (décision du chef d'orchestre, 07/10, T18 point 3, G54a) : après
   // « Fermer », la fermeture se lit dans l'onglet « Fermetures » de l'installation (« N clubs
@@ -388,12 +434,12 @@ function FormulaireDeFermeture({
       message: mot.trim() || null,
       startDate: jourDebut,
     };
+    data.reason = motifRetenu;
     if (bloquer) {
       data.startTime = heureDebut;
       data.endTime = heureFin;
-      data.label = pourQuoi.trim();
+      data.label = nomDuBlocage;
     } else {
-      data.reason = motif;
       data.label = nomRetenu;
     }
     try {
@@ -410,6 +456,8 @@ function FormulaireDeFermeture({
         });
       }
       setConfirmer(false);
+      // SAIS : envoyée, la saisie part sans question (remplacée par la fiche, ou Retour).
+      sortieLibre.current = true;
       if (onDone) {
         onDone();
         // SITE-VILLE-FINITIONS (T19) — « fermer A » aussi dans le panneau de droite (ordinateur) :
@@ -567,6 +615,8 @@ function FormulaireDeFermeture({
               onPress={() => {
                 setFacilityId(ligne.documentId);
                 setChoisir(false);
+                // SAIS : sur ordinateur, le planning REMPLACE cet écran : une sortie voulue.
+                if (onFacilityChange) sortieLibre.current = true;
                 onFacilityChange?.(ligne.documentId, ligne.name || null);
               }}
               testID={`fermeture-installation-${ligne.documentId}`}
@@ -575,6 +625,46 @@ function FormulaireDeFermeture({
         </View>
       ) : null}
     </View>
+  );
+
+  // SAIS (T20 lot 2) — la phrase d erreur SOUS les dates ou les heures qu elle juge (elle tombait
+  // sous « Nom » ou « Pour quoi »), comme dans « Attribuer ».
+  const ligneDErreur = erreurDeSaisie
+    ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurDeSaisie}</Text>
+    : null;
+  // Fermer ET bloquer : les pastilles « Motif », puis un nom facultatif (SAIS : le « Pour quoi »
+  // libre d un blocage devient ce couple ; son exemple reste « Forum des associations »).
+  const motifEtNom = (
+    <>
+      <View style={{ gap: 8 }}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+          {t('collectiviteFermetures.form.motif', 'Motif')}
+        </Text>
+        <View accessibilityRole="radiogroup" style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
+          {CLOSURE_REASONS.map((raison) => (
+            <PuceDeChoix
+              actif={motif === raison}
+              key={raison}
+              libelle={reasonLabel(t, raison)}
+              onPress={() => setMotif(raison)}
+              testID={`fermeture-motif-${raison}`}
+            />
+          ))}
+        </View>
+      </View>
+      {/* FINITIONS12-COLL : le nom s imprime (planning, bandeau, affiches), donc court. */}
+      <Input
+        density="compact"
+        label={t('collectiviteFermetures.form.nom', 'Nom (facultatif)')}
+        maxLength={CLOSURE_MAX_NAME_LENGTH}
+        onChangeText={setNomDeFermeture}
+        placeholder={bloquer
+          ? t('collectiviteFermetures.form.pourQuoiExemple', 'Forum des associations')
+          : t('collectiviteFermetures.form.nomExemple', 'Ascension')}
+        testID="fermeture-nom"
+        value={nomDeFermeture}
+      />
+    </>
   );
 
   const champsDeDates = bloquer ? (
@@ -605,14 +695,8 @@ function FormulaireDeFermeture({
           />
         </View>
       </View>
-      <Input
-        density="compact"
-        label={t('collectiviteFermetures.form.pourQuoi', 'Pour quoi')}
-        onChangeText={setPourQuoi}
-        placeholder={t('collectiviteFermetures.form.pourQuoiExemple', 'Forum des associations')}
-        testID="fermeture-pour-quoi"
-        value={pourQuoi}
-      />
+      {ligneDErreur}
+      {motifEtNom}
     </View>
   ) : (
     <View style={{ gap: 12 }}>
@@ -637,32 +721,8 @@ function FormulaireDeFermeture({
           />
         </View>
       </View>
-      <View style={{ gap: 8 }}>
-        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-          {t('collectiviteFermetures.form.motif', 'Motif')}
-        </Text>
-        <View accessibilityRole="radiogroup" style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-          {CLOSURE_REASONS.map((raison) => (
-            <PuceDeChoix
-              actif={motif === raison}
-              key={raison}
-              libelle={reasonLabel(t, raison)}
-              onPress={() => setMotif(raison)}
-              testID={`fermeture-motif-${raison}`}
-            />
-          ))}
-        </View>
-      </View>
-      {/* FINITIONS12-COLL : le nom s imprime (planning, bandeau, affiches), donc court. */}
-      <Input
-        density="compact"
-        label={t('collectiviteFermetures.form.nom', 'Nom (facultatif)')}
-        maxLength={CLOSURE_MAX_NAME_LENGTH}
-        onChangeText={setNomDeFermeture}
-        placeholder={t('collectiviteFermetures.form.nomExemple', 'Ascension')}
-        testID="fermeture-nom"
-        value={nomDeFermeture}
-      />
+      {ligneDErreur}
+      {motifEtNom}
     </View>
   );
 
@@ -769,7 +829,6 @@ function FormulaireDeFermeture({
     <>
       {enPanneau ? null : choixDeLInstallation}
       {champsDeDates}
-      {erreurDeSaisie ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurDeSaisie}</Text> : null}
       {facilityId ? carteDesSeances : null}
       {apercu.error ? (
         <Text style={[Fonts.p3, Fonts.error500]}>
@@ -843,6 +902,9 @@ function FormulaireDeFermeture({
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
           {erreur}
         </Text>
+      ) : null}
+      {ceQuiManque ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]} testID="fermeture-manque">{ceQuiManque}</Text>
       ) : null}
       <Button
         disabled={!pret || enCours}

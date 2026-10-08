@@ -409,7 +409,9 @@ test('C4B-A1/5 BLOQUER : un jour, deux heures, pour quoi ; ouvert depuis le plan
   expect(parTestID(arbre, 'fermeture-publier')).toBeUndefined();
   expect(parTestID(arbre, 'fermeture-envoyer').props.disabled).toBe(true);
 
-  await saisir('Pour quoi', 'Forum des associations');
+  // SAIS (08/10, T20 lot 2) : « Pour quoi » est devenu les pastilles « Motif » + « Nom (facultatif) ».
+  await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
+  await saisir('Nom (facultatif)', 'Forum des associations');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre)).toContain(
     'Bloquer le Gymnase des Tilleuls le samedi 3 octobre, de 09:00 à 13:00 ?',
@@ -423,6 +425,7 @@ test('C4B-A1/5 BLOQUER : un jour, deux heures, pour quoi ; ouvert depuis le plan
     kind: 'block',
     label: 'Forum des associations',
     message: null,
+    reason: 'manifestation', // SAIS : le motif d un blocage part aussi
     startDate: '2026-10-03',
     startTime: '09:00',
   });
@@ -534,8 +537,10 @@ test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermet
     collectiviteId: 'ville-montrivage', date: '2026-10-03', facilityId: 'gym-tilleuls', mode: 'bloquer',
   };
   await rendre();
-  expect(champ('Pour quoi')).toBeDefined();
-  expect(champ('Nom (facultatif)')).toBeUndefined();
+  // SAIS (08/10, T20 lot 2) : un blocage a désormais le même « Nom (facultatif) » (son ancien
+  // « Pour quoi »), avec son exemple ; le témoin complet est CollectiviteFermeture.SAIS.test.js.
+  expect(champ('Pour quoi')).toBeUndefined();
+  expect(champ('Nom (facultatif)').placeholder).toBe('Forum des associations');
 });
 
 // 🟨 VILLE-T18A (07/10, tournée T18 point 3, G54a) — « 2 séances touchées, 2 clubs prévenus » quand
