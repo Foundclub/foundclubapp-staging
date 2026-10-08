@@ -128,6 +128,20 @@ describe('DatePickerInput — ce qu il fait sur le telephone (E6, vert avant)', 
 
     expect(onChange).toHaveBeenCalledWith('05/01/2026');
   });
+
+  // T19 (08/10) — meme defaut que le selecteur d'heure : « Annuler » sur la boite
+  // native rappelle onChange avec { type: 'dismissed' } ; rien ne doit s'ecrire.
+  test('Android : « Annuler » (dismissed) n ecrit rien', () => {
+    Platform.OS = 'android';
+    const onChange = jest.fn();
+    monter({ onChange, value: '07/10/2026' });
+
+    act(() => { arbre.root.findAllByType(TouchableOpacity)[0].props.onPress(); });
+    const selecteur = mockSelecteurs[mockSelecteurs.length - 1];
+    act(() => { selecteur.onChange({ type: 'dismissed' }, new Date(2026, 9, 7)); });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
 
 describe('FINITIONS16 3 — sur le site, un vrai champ de date du navigateur', () => {

@@ -67,6 +67,9 @@ function TimePickerInput({
     if (Platform.OS === 'android') {
       setShowPicker(false);
     }
+    // T19 (08/10) — Android rappelle onChange a la fermeture (« Annuler ») avec
+    // { type: 'dismissed' } et la valeur d'origine : annuler ne doit rien ecrire.
+    if (event?.type === 'dismissed') return;
     if (selectedDate) {
       onChange(formatTime(selectedDate));
     }
