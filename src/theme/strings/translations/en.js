@@ -12821,7 +12821,10 @@ export default {
   messaging: {
     addGroupMembers: 'Add members',
     archive: 'Archive',
+    archived: 'Archived',
+    archivedBack: 'Back to chats',
     archiveError: 'Unable to archive this conversation.',
+    conversationOptions: 'Conversation options',
     createConversationError: 'Unable to start this conversation.',
     errors: {
       cannotMessageSelf: "You can't start a conversation with your own account.",
@@ -12871,6 +12874,8 @@ export default {
     searchPlaceholder: 'Search a conversation...',
     searchUserPlaceholder: 'Search a member...',
     title: 'Messages',
+    unarchive: 'Unarchive',
+    unarchiveError: 'Unable to unarchive this conversation.',
     unpin: 'Unpin',
     unpinError: 'Unable to unpin this conversation.',
     unread: {

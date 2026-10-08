@@ -46,6 +46,18 @@ export const isLeagueChat = (chat) => {
 };
 
 /**
+ * ARCHIVEES (08/10) — ce fil est-il archive PAR MOI ? `archivedBy` porte tous ceux qui l ont
+ * archive : celui d un autre membre ne le retire pas de MA liste. Une seule regle pour la liste
+ * du telephone et la colonne « Messages » du site.
+ * @param {Chat | null | undefined | Record<string, any>} chat
+ * @param {string | null | undefined} meId
+ * @returns {boolean}
+ */
+export const estArchivePourMoi = (chat, meId) => Boolean(meId)
+  && Array.isArray(chat?.archivedBy)
+  && chat.archivedBy.some((/** @type {any} */ u) => u?.documentId === meId);
+
+/**
  * Checks whether a chat is the thread opened by a friendly match proposal.
  *
  * Le serveur ouvre ce fil au moment de la candidature pour que les DEUX staffs
