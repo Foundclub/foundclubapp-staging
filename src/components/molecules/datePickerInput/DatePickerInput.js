@@ -7,8 +7,11 @@ import {
   Modal, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
+
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 /**
  * DatePickerInput - A date input component with native iOS picker
@@ -69,6 +72,9 @@ function DatePickerInput({
     return parsed && isValid(parsed) ? formatInputDate(parsed) : '';
   };
 
+  // SAIS (T20 lot 1) — le cadre du champ, au téléphone comme au site (le même que l'heure).
+  const cadre = { borderColor: withAlpha(Colors.neutral00, 0.14), borderWidth: 1 };
+
   // Format for display (more readable)
   const formatDisplayDate = (date) => format(date, 'EEEE d MMMM yyyy', { locale: fr });
 
@@ -97,7 +103,8 @@ function DatePickerInput({
       }
       return value;
     }
-    return placeholder;
+    // SAIS (T20 lot 1) — une date vide le DIT, partout : le modèle de « Demander un créneau ».
+    return placeholder ?? t('datePickerInput.choisirUnJour', 'Choisis un jour');
   };
 
   return (
@@ -117,6 +124,7 @@ function DatePickerInput({
           ApplicationStyle.borderRadius12,
           ApplicationStyle.backgroundColor.primary700,
           Spaces.padding[16],
+          cadre,
           error && { borderColor: Colors.error500, borderWidth: 1 },
         ]}
         >
@@ -140,22 +148,30 @@ function DatePickerInput({
           />
         </View>
       ) : (
+        // SAIS (T20 lot 1) — un CADRE (sur une feuille de sa couleur, « Attribuer », la boîte
+        // disparaissait) et une icône calendrier, vide ou rempli.
         <TouchableOpacity
           onPress={() => setShowPicker(true)}
           style={[
             ApplicationStyle.borderRadius12,
             ApplicationStyle.backgroundColor.primary700,
             Spaces.padding[16],
+            Alignments.row,
+            Alignments.alignCenter,
+            cadre,
+            { gap: 12 },
             error && { borderColor: Colors.error500, borderWidth: 1 },
           ]}
         >
           <Text style={[
             Fonts.p1,
             value ? Fonts.neutral00 : { color: Colors.neutral300 },
+            { flex: 1 },
           ]}
           >
             {getDisplayValue()}
           </Text>
+          <SvgIcon color={Colors.neutral300} height={18} name="calendar-days" width={18} />
         </TouchableOpacity>
       )}
 

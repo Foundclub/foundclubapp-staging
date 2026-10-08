@@ -5,6 +5,7 @@ import {
   Modal, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
@@ -85,6 +86,9 @@ function TimePickerInput({
   };
 
   const displayValue = value || placeholder;
+  // SAIS (T20 lot 1) — un CADRE : sur une feuille de sa couleur (« Attribuer »), la boîte
+  // disparaissait et l'exemple flottait comme du texte. Le même que le sélecteur de date.
+  const cadre = { borderColor: withAlpha(Colors.neutral00, 0.14), borderWidth: 1 };
 
   return (
     <View style={[Spaces.gap[4], { zIndex: 1 }]}>
@@ -102,6 +106,7 @@ function TimePickerInput({
           ApplicationStyle.borderRadius12,
           ApplicationStyle.backgroundColor.primary700,
           Spaces.padding[16],
+          cadre,
           error && { borderColor: Colors.error500, borderWidth: 1 },
         ]}
         >
@@ -129,6 +134,7 @@ function TimePickerInput({
             ApplicationStyle.borderRadius12,
             ApplicationStyle.backgroundColor.primary700,
             Spaces.padding[16],
+            cadre,
             error && { borderColor: Colors.error500, borderWidth: 1 },
           ]}
         >

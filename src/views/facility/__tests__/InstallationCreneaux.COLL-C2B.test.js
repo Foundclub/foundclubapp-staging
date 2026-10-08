@@ -168,10 +168,14 @@ jest.mock(
     return null;
   },
 );
+// SAIS (T20 lot 1) : la doublure garde aussi les proprietes des feuilles OUVERTES (leur hauteur).
+/** @type {any[]} */
+const mockFeuilles = [];
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
-  /** @type {any} */ { children, isVisible },
+  /** @type {any} */ props,
 ) {
-  return isVisible ? children : null;
+  if (props.isVisible) mockFeuilles.push(props);
+  return props.isVisible ? props.children : null;
 });
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   const reactActuel = jest.requireActual('react');
@@ -416,6 +420,15 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {
       club: 'club-as', endTime: '19:00', startTime: '17:30', team: 'team-u13', weekday: 3,
     });
+  });
+
+  // SAIS (08/10, T20 lot 1, capture T07b) — « Annuler » finissait coupé au bas de la feuille :
+  // elle peut désormais prendre 85 % de l écran (0,7 par défaut). ROUGE avant le lot.
+  it('SAIS : la feuille « Attribuer » peut prendre 85 % de l écran', async () => {
+    const arbre = await rendre();
+    mockFeuilles.length = 0;
+    await appuyer(parTexte(arbre, 'Attribuer un créneau'));
+    expect(mockFeuilles.at(-1)?.maxContentHeightRatio).toBe(0.85);
   });
 
   it('un 409 de capacite : rien n est ecrit, puis « Attribuer quand meme »', async () => {

@@ -35,7 +35,9 @@ import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
-import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
+import SeasonSlotForm, {
+  HAUTEUR_DE_LA_FEUILLE,
+} from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
@@ -869,7 +871,12 @@ function CollectiviteClubDetails() {
         {contenu}
       </ScrollView>
       {isDesktop ? null : (
-        <BottomModal close={fermerAttribuer} isVisible={Boolean(panneauAttribuer)}>
+        <BottomModal
+          close={fermerAttribuer}
+          isVisible={Boolean(panneauAttribuer)}
+          // SAIS (T20 lot 1) : « Annuler » finissait coupé au bas de la feuille « Attribuer ».
+          maxContentHeightRatio={HAUTEUR_DE_LA_FEUILLE}
+        >
           <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
             {panneauAttribuer}
           </View>

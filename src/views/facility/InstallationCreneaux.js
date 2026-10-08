@@ -35,7 +35,9 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import FacilityClosureList from '@/components/organisms/facilityClosure/FacilityClosureList';
-import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
+import SeasonSlotForm, {
+  HAUTEUR_DE_LA_FEUILLE,
+} from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import SeasonSlotManage from '@/components/organisms/seasonSlot/SeasonSlotManage';
 import SeasonSlotWeekGrid from '@/components/organisms/seasonSlot/SeasonSlotWeekGrid';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -628,7 +630,12 @@ function InstallationCreneaux() {
         ) : null}
       </View>
       {isDesktop ? null : (
-        <BottomModal close={fermer} isVisible={Boolean(panneauRendu)}>
+        <BottomModal
+          close={fermer}
+          isVisible={Boolean(panneauRendu)}
+          // SAIS (T20 lot 1) : « Annuler » finissait coupé au bas de la feuille « Attribuer ».
+          maxContentHeightRatio={HAUTEUR_DE_LA_FEUILLE}
+        >
           <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
             {panneauRendu}
           </View>

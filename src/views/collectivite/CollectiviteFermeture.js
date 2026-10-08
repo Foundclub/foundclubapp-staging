@@ -667,12 +667,15 @@ function FormulaireDeFermeture({
     </>
   );
 
+  // SAIS (T20 lot 1) — une date vide le dit ; l espace de la Ville vouvoie.
+  const choisirUnJour = t('collectiviteFermetures.form.choisirUnJour', 'Choisissez un jour');
   const champsDeDates = bloquer ? (
     <View style={{ gap: 12 }}>
       <DatePickerInput
         label={t('collectiviteFermetures.form.jour', 'Jour')}
         minimumDate={new Date()}
         onChange={(/** @type {string} */ valeur) => setDebut(valeur)}
+        placeholder={choisirUnJour}
         value={debut}
       />
       {/* SITE-VILLE-FINITIONS (T19) — les heures se CHOISISSENT, comme dans « Attribuer » et
@@ -709,6 +712,7 @@ function FormulaireDeFermeture({
               setDebut(valeur);
               if (!fin || (versJour(fin) || '') < (versJour(valeur) || '')) setFin(valeur);
             }}
+            placeholder={choisirUnJour}
             value={debut}
           />
         </View>
@@ -717,6 +721,7 @@ function FormulaireDeFermeture({
             label={t('collectiviteFermetures.form.au', 'Au')}
             minimumDate={new Date()}
             onChange={(/** @type {string} */ valeur) => setFin(valeur)}
+            placeholder={choisirUnJour}
             value={fin}
           />
         </View>

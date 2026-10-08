@@ -6385,6 +6385,8 @@ export default {
       boutonFermerJoursMasculin: 'Fermer le {{lieu}} ces jours-là',
       changer: 'Changer',
       choisirInstallation: 'Choisissez l’installation',
+      // SAIS (08/10, T20 lot 1) — une date vide le dit (l’espace de la Ville vouvoie).
+      choisirUnJour: 'Choisissez un jour',
       de: 'De',
       du: 'Du',
       enregistrer: 'Enregistrer les changements',
@@ -7659,6 +7661,8 @@ export default {
   },
   datePickerInput: {
     cancel: 'Annuler',
+    // SAIS (08/10, T20 lot 1) — une date vide le dit, partout (modèle « Demander un créneau »).
+    choisirUnJour: 'Choisis un jour',
   },
   dateTimeSelector: {
     select: 'Sélectionner',

@@ -45,6 +45,16 @@ import texteInsecable from '@/utils/texteInsecable';
 const ENTRE_DEUX = /** @type {const} */ ({ gap: 8, justifyContent: 'space-between' });
 
 /**
+ * SAIS (08/10, tournée T20 lot 1, capture T07b) — la part de l écran que la FEUILLE « Attribuer
+ * un créneau » peut prendre au téléphone (`maxContentHeightRatio` de BottomModal, 0,7 par
+ * défaut). À 0,7, le formulaire dépassait : « Annuler » finissait coupé au bas de la feuille.
+ * ponytail: un ratio, pas un pied fixe ; avec beaucoup de clubs rattachés (plusieurs rangées de
+ * pastilles), la feuille défile de nouveau. Voie de sortie : les deux boutons en
+ * `footerComponent` de BottomModal.
+ */
+export const HAUTEUR_DE_LA_FEUILLE = 0.85;
+
+/**
  * Une puce a choisir (design `chip-c`) : un bouton radio.
  * @param {{ actif: boolean, libelle: string, onPress: () => void, testID?: string }} props
  * @returns {import('react').ReactElement} La puce.
@@ -185,7 +195,12 @@ function SeasonSlotForm({
     fixedClubId || slot?.club?.documentId || (clubs.length === 1 ? clubs[0].documentId : null),
   );
   const [equipe, setEquipe] = useState(slot?.team?.documentId || null);
-  const [jour, setJour] = useState(Number(slot?.weekday || initial.weekday) || null);
+  // SAIS (T20 lot 1) — « Attribuer » s'ouvre sur un jour, comme au site : aujourd'hui, sauf si
+  // l'écran en apporte un (une case du planning) ; « Modifier » garde le sien.
+  const [jour, setJour] = useState(
+    Number(slot?.weekday || initial.weekday)
+      || (modification || repartition ? null : isoWeekdayOf(new Date())),
+  );
   const [debut, setDebut] = useState(
     String(slot?.startTime || initial.startTime || '').slice(0, 5),
   );

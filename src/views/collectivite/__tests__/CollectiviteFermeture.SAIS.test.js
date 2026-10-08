@@ -406,6 +406,16 @@ test('SAIS-2/7 une fermeture ENVOYÉE sort sans question (le remplacement par la
   expect(alerte).not.toHaveBeenCalled();
 });
 
+// SAIS lot 1 (T20) — une date vide le dit (captures T04a, T06a : boîtes VIDES) ; la Ville vouvoie.
+test('SAIS-1/ville une date vide dit « Choisissez un jour » (Fermer : Du, Au ; Bloquer : Jour)', async () => {
+  await rendre();
+  expect(champ('Du').placeholder).toBe('Choisissez un jour');
+  expect(champ('Au').placeholder).toBe('Choisissez un jour');
+  mockParams = { collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', mode: 'bloquer' };
+  await rendre();
+  expect(champ('Jour').placeholder).toBe('Choisissez un jour');
+});
+
 test('SAIS-2/8 dans le panneau d ordinateur, aucune garde : le planning a sa croix', async () => {
   await rendre(
     <PanneauDeFermeture

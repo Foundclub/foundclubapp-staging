@@ -5873,6 +5873,8 @@ export default {
       boutonFermerJoursMasculin: 'Close the {{lieu}} on those days',
       changer: 'Change',
       choisirInstallation: 'Choose the facility',
+      // SAIS (08/10, T20 lot 1) — an empty date says so.
+      choisirUnJour: 'Choose a day',
       de: 'From',
       du: 'From',
       enregistrer: 'Save changes',
@@ -7206,6 +7208,8 @@ export default {
   },
   datePickerInput: {
     cancel: 'Cancel',
+    // SAIS (08/10, T20 lot 1) — an empty date says so, everywhere.
+    choisirUnJour: 'Choose a day',
   },
   dateTimeSelector: {
     select: 'Select',
