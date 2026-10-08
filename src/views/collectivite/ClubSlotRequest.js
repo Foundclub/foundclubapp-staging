@@ -3,11 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
-  useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -53,6 +52,8 @@ import { useClubTeamsForSlot, useSeasonSlotPreview } from '@/services/seasonSlot
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
+
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
 
 // Au-delà de cette largeur (ordinateur), la saisie et la place côte à côte.
 const LARGEUR_DEUX_COLONNES = 1024;
@@ -137,8 +138,6 @@ function ClubSlotRequest({
   );
   // VILLE-T18C — un 2ᵉ appui arrive avant que `envoi` soit relu : le verrou est une référence.
   const enCours = useRef(false);
-  // VILLE-T18C — « Quitter » confirmé : la sortie rejouée ne redemande pas.
-  const sortieLibre = useRef(false);
   const [erreur, setErreur] = useState('');
   const [resultat, setResultat] = useState(/** @type {any} */ (null));
 
@@ -334,41 +333,26 @@ function ClubSlotRequest({
 
   // VILLE-T18C (07/10) — RETOUR PENDANT L'ENVOI : une série coupée en route laisserait une partie
   // de ses dates au serveur et l'autre nulle part. On retient, et on dit pourquoi.
-  // ponytail: sur le site, le « retour » du NAVIGATEUR ne passe pas par `beforeRemove` (même limite
-  // qu'AdminCollectiviteForm) ; la flèche de l'écran, si.
-  useEffect(() => {
-    if (enPanneau) return undefined;
-    return navigation.addListener?.('beforeRemove', (/** @type {any} */ evenement) => {
-      if (enCours.current) {
-        evenement.preventDefault();
-        Alert.alert(
-          t('collectiviteDemandes.club.envoiEnCoursTitre', 'Envoi en cours'),
-          t(
-            'collectiviteDemandes.club.envoiEnCoursAttends',
-            'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
-          ),
-        );
-        return;
-      }
-      if (!saisieModifiee || sortieLibre.current) return;
-      evenement.preventDefault();
-      Alert.alert(
-        t('collectiviteDemandes.club.quitterTitre', 'Quitter sans envoyer ?'),
-        t('collectiviteDemandes.club.quitterPerdu', 'Ce que tu as saisi sera perdu.'),
-        [
-          { style: 'cancel', text: t('collectiviteDemandes.club.rester', 'Rester') },
-          {
-            onPress: () => {
-              sortieLibre.current = true;
-              navigation.dispatch?.(evenement.data.action);
-            },
-            style: 'destructive',
-            text: t('collectiviteDemandes.club.quitter', 'Quitter'),
-          },
-        ],
-      );
-    });
-  }, [enPanneau, navigation, saisieModifiee, t]);
+  // SAIS (08/10) : la garde vit dans `useGardeDeSortie`, partagée avec « Fermer » / « Bloquer ».
+  const envoiEnCoursRetient = useCallback(() => (enCours.current
+    ? {
+      message: t(
+        'collectiviteDemandes.club.envoiEnCoursAttends',
+        'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+      ),
+      titre: t('collectiviteDemandes.club.envoiEnCoursTitre', 'Envoi en cours'),
+    }
+    : null), [t]);
+  useGardeDeSortie(enPanneau ? null : navigation, {
+    actif: saisieModifiee,
+    retenir: envoiEnCoursRetient,
+    textes: {
+      message: t('collectiviteDemandes.club.quitterPerdu', 'Ce que tu as saisi sera perdu.'),
+      quitter: t('collectiviteDemandes.club.quitter', 'Quitter'),
+      rester: t('collectiviteDemandes.club.rester', 'Rester'),
+      titre: t('collectiviteDemandes.club.quitterTitre', 'Quitter sans envoyer ?'),
+    },
+  });
 
   // COLL-C3B-BIS (planche 43) — en panneau, le planning dessine la place demandée en pointillé
   // pendant la saisie : il reçoit le brouillon (jour, heures, équipe), et rien une fois envoyé.

@@ -5873,23 +5873,39 @@ export default {
       boutonFermerJoursMasculin: 'Close the {{lieu}} on those days',
       changer: 'Change',
       choisirInstallation: 'Choose the facility',
+      // SAIS (08/10, T20 lot 1) — an empty date says so.
+      choisirUnJour: 'Choose a day',
       de: 'From',
       du: 'From',
       enregistrer: 'Save changes',
       formatHeure: 'Write a time as HH:MM (for example 09:00).',
       jour: 'Day',
+      // SAIS (08/10, T20 lot 2) — a greyed-out button says what is missing.
+      manque: {
+        dates: 'Choose the dates.',
+        heures: 'Choose the times.',
+        installation: 'Choose the facility.',
+        jour: 'Choose the day.',
+        motif: 'Choose a reason.',
+      },
       mot: 'A note for the clubs (optional)',
       motExemple: 'Floor renovation',
       motif: 'Reason',
       // FINITIONS12-COLL (03/10) — the name of a closed day.
       nom: 'Name (optional)',
       nomExemple: 'Ascension Day',
-      ordreDates: 'The end follows the start.',
-      ordreHeures: 'The end time follows the start time.',
+      // SAIS (T20 lot 2) — one sentence, the one of “Assign”, for dates and times.
+      ordreDates: 'The end must come after the start.',
+      ordreHeures: 'The end must come after the start.',
       pourQuoi: 'What for',
       pourQuoiExemple: 'Clubs fair',
       publier: 'Also publish a “Closure” news item',
       publierPourQui: 'For all members of the attached clubs.',
+      // SAIS (T20 lot 2) — the leave guard, on the phone.
+      quitter: 'Leave',
+      quitterPerdu: 'What you entered will be lost.',
+      quitterTitre: 'Leave without saving?',
+      rester: 'Stay',
       titreBloquer: 'Block a time slot',
       titreFermer: 'Close a facility',
       titreModifier: 'Edit the closure',
@@ -7192,6 +7208,8 @@ export default {
   },
   datePickerInput: {
     cancel: 'Cancel',
+    // SAIS (08/10, T20 lot 1) — an empty date says so, everywhere.
+    choisirUnJour: 'Choose a day',
   },
   dateTimeSelector: {
     select: 'Select',
@@ -18613,6 +18631,9 @@ export default {
     },
     form: {
       allowedTypes: 'Allowed types',
+      // SAIS (08/10, T20) — labels of the console date and time pickers.
+      champDate: 'Date',
+      champHeure: 'Time',
       documentIdToAdd: 'documentId to add',
       editableFields: 'Editable fields',
       mediaMultipleAllowed: 'Multiple media allowed',

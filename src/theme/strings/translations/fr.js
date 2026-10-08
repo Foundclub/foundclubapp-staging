@@ -6385,23 +6385,39 @@ export default {
       boutonFermerJoursMasculin: 'Fermer le {{lieu}} ces jours-là',
       changer: 'Changer',
       choisirInstallation: 'Choisissez l’installation',
+      // SAIS (08/10, T20 lot 1) — une date vide le dit (l’espace de la Ville vouvoie).
+      choisirUnJour: 'Choisissez un jour',
       de: 'De',
       du: 'Du',
       enregistrer: 'Enregistrer les changements',
       formatHeure: 'Une heure s’écrit HH:MM (par exemple 09:00).',
       jour: 'Jour',
+      // SAIS (08/10, T20 lot 2) — un bouton grisé dit ce qui manque.
+      manque: {
+        dates: 'Choisissez les dates.',
+        heures: 'Choisissez les heures.',
+        installation: 'Choisissez l’installation.',
+        jour: 'Choisissez le jour.',
+        motif: 'Choisissez un motif.',
+      },
       mot: 'Un mot pour les clubs (facultatif)',
       motExemple: 'Réfection du sol',
       motif: 'Motif',
       // FINITIONS12-COLL (03/10) — décision d’Adel « férié B » : le nom d’une journée fermée.
       nom: 'Nom (facultatif)',
       nomExemple: 'Ascension',
-      ordreDates: 'La fin suit le début.',
-      ordreHeures: 'L’heure de fin suit l’heure de début.',
+      // SAIS (T20 lot 2) — une seule phrase, celle d’« Attribuer », pour les dates et les heures.
+      ordreDates: 'La fin doit suivre le début.',
+      ordreHeures: 'La fin doit suivre le début.',
       pourQuoi: 'Pour quoi',
       pourQuoiExemple: 'Forum des associations',
       publier: 'Publier aussi une actualité « Fermeture »',
       publierPourQui: 'Pour tous les membres des clubs rattachés.',
+      // SAIS (T20 lot 2) — la garde de sortie, au téléphone.
+      quitter: 'Quitter',
+      quitterPerdu: 'Ce que vous avez saisi sera perdu.',
+      quitterTitre: 'Quitter sans enregistrer ?',
+      rester: 'Rester',
       titreBloquer: 'Bloquer un créneau',
       titreFermer: 'Fermer une installation',
       titreModifier: 'Modifier la fermeture',
@@ -7645,6 +7661,8 @@ export default {
   },
   datePickerInput: {
     cancel: 'Annuler',
+    // SAIS (08/10, T20 lot 1) — une date vide le dit, partout (modèle « Demander un créneau »).
+    choisirUnJour: 'Choisis un jour',
   },
   dateTimeSelector: {
     select: 'Sélectionner',
@@ -19530,6 +19548,9 @@ export default {
     },
     form: {
       allowedTypes: 'Types autorisés',
+      // SAIS (08/10, T20) — les libellés des sélecteurs de date et d’heure de la console.
+      champDate: 'Date',
+      champHeure: 'Heure',
       documentIdToAdd: 'documentId à ajouter',
       editableFields: 'Champs éditables',
       mediaMultipleAllowed: 'Média multiple autorisé',
