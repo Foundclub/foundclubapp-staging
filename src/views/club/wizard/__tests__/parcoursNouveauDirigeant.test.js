@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
 import { createElement } from 'react';
-import { Alert } from 'react-native';
+import { Alert, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
@@ -264,6 +264,12 @@ const creerMonClub = async () => {
       route: { params: { entry: 'search' } },
     }));
   });
+
+  // Créateur C : l'entraîneur répond explicitement avant de créer, tout en restant entraîneur.
+  const sansDirigeant = arbre.root.findAllByType(TouchableOpacity)
+    .find((/** @type {any} */ ligne) => ligne.props.accessibilityLabel === 'Je ne sais pas encore');
+  expect(sansDirigeant).toBeDefined();
+  await act(async () => { sansDirigeant.props.onPress(); });
 
   await act(async () => { derniereEtape().onNext(); });
 
