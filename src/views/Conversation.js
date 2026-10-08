@@ -47,6 +47,10 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { motifDAdresse } from '@/domains/messaging/adresseDansLeTexte';
 import {
+  autorisationsDuGroupe,
+  envoiReserveAuxAdmins,
+} from '@/domains/messaging/autorisationsDuGroupe';
+import {
   auteurDuMessageCite,
   couleurDuNom,
   estUnTeteATete,
@@ -55,6 +59,8 @@ import {
   reserveDeLHeure,
 } from '@/domains/messaging/habillageDuFil';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
+import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
+import { choisirLaPhotoDuGroupe } from '@/domains/messaging/photoDuGroupe';
 import {
   applyOptimisticPollVote,
   createPollComposition,
@@ -68,6 +74,7 @@ import {
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
 import {
   getParticipationErrorMessage,
@@ -95,7 +102,10 @@ import BarreDeReponse from '@/components/molecules/bulleDuFil/BarreDeReponse';
 import BulleDuFil from '@/components/molecules/bulleDuFil/BulleDuFil';
 import CitationDansLaBulle from '@/components/molecules/bulleDuFil/CitationDansLaBulle';
 import DegradeDePhoto from '@/components/molecules/bulleDuFil/DegradeDePhoto';
-import MetaDuMessage, { etatDEnvoi, heureDuMessage } from '@/components/molecules/bulleDuFil/MetaDuMessage';
+import MetaDuMessage, {
+  etatDEnvoi,
+  heureDuMessage,
+} from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import {
   NOTICE,
   PUCE_DE_DATE,
@@ -166,6 +176,7 @@ import {
   useGetChatMessages,
 } from '@/services/chat/chatQueriesCompat';
 import { leaveGroupChat } from '@/services/chat/chatService';
+import { removeGroupPhoto, setGroupPhoto } from '@/services/chat/groupPhotoService';
 import {
   deleteVoiceNoteFile,
   isVoiceNoteRecordingSupported,
@@ -466,7 +477,9 @@ const isDocumentPickerCancellation = (documentPicker, error) => (
  */
 const margesDeLaBulle = (estAMoi, typeDuFil) => {
   if (estAMoi) return { alignItems: 'flex-end', marginLeft: 56, marginRight: 2 };
-  if (estUnTeteATete(typeDuFil)) return { alignItems: 'flex-start', marginLeft: 2, marginRight: 64 };
+  if (estUnTeteATete(typeDuFil)) {
+    return { alignItems: 'flex-start', marginLeft: 2, marginRight: 64 };
+  }
   return { alignItems: 'flex-start', marginRight: 40 };
 };
 
@@ -1172,6 +1185,23 @@ function Conversation({ navigation, route }) {
       .filter(Boolean);
   }, [chatData?.groupAdmins]);
   const isGroupAdmin = isGroupChat && groupAdminIds.includes(String(userData?.documentId || ''));
+  // 🏷️ MSG1BA (§3.1) — le role de chaque membre, lu seulement quand « Infos du groupe » s'ouvre.
+  const idsDesMembres = useMemo(() => (Array.isArray(chatData?.participants)
+    ? chatData.participants.map((/** @type {any} */ membre) => String(membre?.documentId || ''))
+    : []), [chatData?.participants]);
+  const rolesDesMembres = useRolesDesMembres(idsDesMembres, {
+    enabled: isGroupChat && isGroupManagementVisible,
+  });
+  // 🛡️ MSG1BA (§3.16) — les autorisations du groupe (contrat 1B §5) ; `null` = serveur d'avant
+  // 1B, qui n'en sait rien : tout se passe alors comme avant.
+  const autorisationsDuFil = useMemo(
+    () => (isGroupChat ? autorisationsDuGroupe(chatData) : null),
+    [chatData, isGroupChat],
+  );
+  const envoiReserve = isGroupChat && envoiReserveAuxAdmins({
+    autorisations: autorisationsDuFil,
+    estAdmin: isGroupAdmin,
+  });
 
   // 🚫 BLOQUER (K3) — LE SECOND ENDROIT QU APPLE REGARDE : le menu du fil.
   //
@@ -1549,10 +1579,18 @@ function Conversation({ navigation, route }) {
   // Personne ne l'atteignait : la carte du fil cachait ses boutons (`mode="share"`) ;
   // la bulle du pack montre « Present | Absent ».
   // ponytail: troisieme copie de la meme fonction ; l'unifier touche deux ecrans hors du lot.
-  const handleParticipateToEvent = async (/** @type {{ documentId?: string; eventFormat?: string; parentEvent?: { documentId?: string } }} */ event) => {
+  const handleParticipateToEvent = async (
+    /**
+     * @type {{ documentId?: string; eventFormat?: string;
+     *   parentEvent?: { documentId?: string } }}
+     */ event,
+  ) => {
     if (String(event?.eventFormat || '').toLowerCase() === 'stage_day' && event?.documentId) {
       try {
-        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
       } catch {
         // Le retour d'erreur est porte par la mutation.
       }
@@ -1595,7 +1633,10 @@ function Conversation({ navigation, route }) {
     // AA01 — un membre convie REPOND (`POST /events/:id/rsvp`), il ne demande pas.
     if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
       try {
-        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
       } catch {
         // Le retour d'erreur est porte par la mutation.
       }
@@ -3261,7 +3302,10 @@ function Conversation({ navigation, route }) {
 
   // MSG1A (§3.16) — « Nommer admin du groupe » / « Retirer le role d'admin » : le serveur
   // le sait deja (`updateGroupMeta`, `addAdminIds` / `removeAdminIds`, admins seulement).
-  const handleToggleGroupAdmin = async (/** @type {any} */ member, /** @type {boolean} */ devientAdmin) => {
+  const handleToggleGroupAdmin = async (
+    /** @type {any} */ member,
+    /** @type {boolean} */ devientAdmin,
+  ) => {
     const memberId = String(member?.documentId || member?.id || '').trim();
     if (!chatId || !memberId) return;
     try {
@@ -3275,6 +3319,101 @@ function Conversation({ navigation, route }) {
       showErrorBanner(i18n.t(
         'conversation.groupInfo.adminError',
         'Impossible de changer les admins du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // 🛡️ MSG1BA (§3.16) — un interrupteur de « Autorisations du groupe » : la seule clef changee
+  // (`PATCH …/group-meta { permissions }`, partiel, contrat 1B §5.3). Le serveur pose la notice.
+  const handleChangeGroupPermission = async (
+    /** @type {string} */ cle,
+    /** @type {boolean} */ valeur,
+  ) => {
+    if (!chatId || !cle) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({ chatId, data: { permissions: { [cle]: Boolean(valeur) } } });
+    } catch (error) {
+      conversationLogger.warn('Failed to update group permissions', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupPermissions.updateError',
+        'Impossible de changer les autorisations du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // 🛡️ MSG1BA (§3.16) — « Modifier les admins » + « Valider » : UNE requete (contrat 1B §5.5).
+  // On n'envoie que ce qui change ; je ne me retire jamais moi-meme (le serveur le refuse).
+  const handleValidateGroupAdmins = async (/** @type {string[]} */ admins) => {
+    if (!chatId) return;
+    const moi = String(userData?.documentId || '');
+    const choisis = new Set((admins || []).map((id) => String(id || '')).filter(Boolean));
+    const addAdminIds = Array.from(choisis).filter((id) => !groupAdminIds.includes(id));
+    const removeAdminIds = groupAdminIds.filter((id) => !choisis.has(id) && id !== moi);
+    if (!addAdminIds.length && !removeAdminIds.length) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await updateGroupMeta({
+        chatId,
+        data: {
+          ...(addAdminIds.length ? { addAdminIds } : {}),
+          ...(removeAdminIds.length ? { removeAdminIds } : {}),
+        },
+      });
+    } catch (error) {
+      conversationLogger.warn('Failed to update group admins', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupInfo.adminError',
+        'Impossible de changer les admins du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  // 🖼️ MSG1BA (§3.16) — la photo du groupe : choisie (reduite comme l'avatar du profil), puis
+  // envoyee (`POST …/group-photo`) ; « Supprimer la photo » (`DELETE`). Le detail et la liste
+  // sont relus : la photo s'affiche dans l'en-tete et dans « Messages ».
+  const handleChooseGroupPhoto = async (/** @type {'camera' | 'galerie'} */ source) => {
+    if (!chatId) return;
+    const choix = await choisirLaPhotoDuGroupe(source, (cle, repli) => i18n.t(cle, repli));
+    if (!choix) return;
+    if ('erreur' in choix) {
+      showErrorBanner(choix.erreur);
+      return;
+    }
+    try {
+      setIsGroupMutationLoading(true);
+      await setGroupPhoto(chatId, choix.fichier);
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    } catch (error) {
+      conversationLogger.warn('Failed to change group photo', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupPhoto.updateError',
+        'Impossible de changer la photo du groupe.',
+      ));
+    } finally {
+      setIsGroupMutationLoading(false);
+    }
+  };
+
+  const handleRemoveGroupPhoto = async () => {
+    if (!chatId) return;
+    try {
+      setIsGroupMutationLoading(true);
+      await removeGroupPhoto(chatId);
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+    } catch (error) {
+      conversationLogger.warn('Failed to remove group photo', error);
+      showErrorBanner(i18n.t(
+        'conversation.groupPhoto.removeError',
+        'Impossible de supprimer la photo du groupe.',
       ));
     } finally {
       setIsGroupMutationLoading(false);
@@ -4014,7 +4153,18 @@ function Conversation({ navigation, route }) {
         // 🔔 MSG1A (§3.17) — une notice de groupe (contrat MESSAGERIE-1B §6 : `systemNotice`,
         // jamais sur un message ordinaire) se dit en notice discrete, avec sa phrase `message`.
         ...(filDeLaVille.estLigneSysteme(msg) || msg?.systemNotice != null ? { system: true } : {}),
-        text: msg.message,
+        // 🔔 MSG1BA (§3.17) — la notice recrite pour moi : « Vous avez renomme… », « … vous a
+        // ajoute » ; une sorte inconnue garde la phrase du serveur.
+        text: msg?.systemNotice != null
+          ? texteDeLaNotice(
+            msg.systemNotice,
+            String(userData?.documentId || ''),
+            (cle, repli) => (typeof repli === 'string'
+              ? i18n.t(cle, repli)
+              : i18n.t(cle, repli?.defaultValue, repli)),
+            msg.message,
+          )
+          : msg.message,
         user: {
           _id: senderEntityId,
           avatar: avatarUrl,
@@ -4027,7 +4177,19 @@ function Conversation({ navigation, route }) {
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, chatData?.staffRoles, filDeLaVille, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [
+    blockedUserIds,
+    chatData?.staffRoles,
+    filDeLaVille,
+    messagesPages,
+    getAnonymizedName,
+    getPrimaryImageUriFromMessage,
+    isImageAttachmentMessage,
+    logAttachmentDebug,
+    normalizeMessageAttachments,
+    resolveMediaUri,
+    userData?.documentId,
+  ]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
@@ -5276,11 +5438,17 @@ function Conversation({ navigation, route }) {
     const clipboard = getClipboardModule();
     if (clipboard && typeof clipboard.setString === 'function' && texte) {
       clipboard.setString(texte);
-      showSuccessBanner(t('conversation.address.copied', 'Adresse copiée'), t('conversation.actions.copySuccess.title', 'Copié'));
+      showSuccessBanner(
+        t('conversation.address.copied', 'Adresse copiée'),
+        t('conversation.actions.copySuccess.title', 'Copié'),
+      );
       return;
     }
     showErrorBanner(
-      t('conversation.actions.copyUnavailable', 'Le presse-papiers est indisponible sur cette build.'),
+      t(
+        'conversation.actions.copyUnavailable',
+        'Le presse-papiers est indisponible sur cette build.',
+      ),
       t('common.error', 'Erreur'),
     );
   }, [showErrorBanner, showSuccessBanner, t]);
@@ -5473,7 +5641,10 @@ function Conversation({ navigation, route }) {
   // au CYAN au seuil (deux disques superposes : seule l'opacite s'anime, ce que le pilote
   // natif de Swipeable sait faire). L'icone reste celle choisie pour cette place par le lot
   // ICONES (« icone go » d'Adel, 01/10 ; temoin `iconesALeurPlace` 2).
-  const renderReplySwipeAction = useCallback((/** @type {any} */ _progress, /** @type {any} */ dragX) => {
+  const renderReplySwipeAction = useCallback((
+    /** @type {any} */ _progress,
+    /** @type {any} */ dragX,
+  ) => {
     const avancee = dragX.interpolate({
       extrapolate: 'clamp',
       inputRange: [-MESSAGE_REPLY_SWIPE_THRESHOLD, 0, MESSAGE_REPLY_SWIPE_THRESHOLD],
@@ -5492,14 +5663,22 @@ function Conversation({ navigation, route }) {
     const echelle = avancee.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
     return (
       <View style={stylesDuFil.actionDeGlisser}>
-        <Animated.View style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}>
+        <Animated.View
+          style={[stylesDuFil.rondRepondre, { opacity: avancee, transform: [{ scale: echelle }] }]}
+        >
           <View
-            style={[stylesDuFil.disqueRepondre, { backgroundColor: withAlpha(Colors.neutral00, 0.14) }]}
+            style={[
+              stylesDuFil.disqueRepondre,
+              { backgroundColor: withAlpha(Colors.neutral00, 0.14) },
+            ]}
           >
             <SvgIcon color={Colors.neutral00} height={18} name="reply" width={18} />
           </View>
           <Animated.View
-            style={[stylesDuFil.disqueRepondre, { backgroundColor: Colors.primary500, opacity: auSeuil }]}
+            style={[
+              stylesDuFil.disqueRepondre,
+              { backgroundColor: Colors.primary500, opacity: auSeuil },
+            ]}
           >
             <SvgIcon color={Colors.primary900} height={18} name="reply" width={18} />
           </Animated.View>
@@ -5634,7 +5813,8 @@ function Conversation({ navigation, route }) {
 
     const resolvedMessageEvent = resolveMessageEventPayload(currentMessage);
     if (resolvedMessageEvent) {
-      // 📅 MSG1A (§3.8) — l'evenement partage dans le cadre commun : nom, queue, heure avant le pied.
+      // 📅 MSG1A (§3.8) — l'evenement partage dans le cadre commun : nom, queue, heure avant le
+      // pied.
       return wrapWithMessageInteractions(
         currentMessage, (
           <View style={margesDeLaBulle(estAMoi, chatData?.type)}>
@@ -5688,7 +5868,9 @@ function Conversation({ navigation, route }) {
                   dansLaBulle
                   isMe={!isLeft}
                   // SONDAGE-NOMS — donne, la bulle lit elle-meme les noms des votants au serveur.
-                  messageId={currentMessage?.documentId || currentMessage?._id || currentMessage?.id}
+                  messageId={
+                    currentMessage?.documentId || currentMessage?._id || currentMessage?.id
+                  }
                   meta={(
                     <MetaDuMessage
                       estAMoi={estAMoi}
@@ -5839,7 +6021,16 @@ function Conversation({ navigation, route }) {
                 />
               </BulleDuFil>
               {currentMessage.failed ? (
-                <Text style={[Fonts.p4Bold, { color: Colors.chatDanger, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
+                <Text
+                  style={[
+                    Fonts.p4Bold,
+                    {
+                      color: Colors.chatDanger,
+                      marginTop: 4,
+                      textAlign: isLeft ? 'left' : 'right',
+                    },
+                  ]}
+                >
                   {t('common.retry', 'Réessayer')}
                 </Text>
               ) : null}
@@ -5933,7 +6124,9 @@ function Conversation({ navigation, route }) {
       return wrapWithMessageInteractions(
         currentMessage,
         (
-          <View style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}>
+          <View
+            style={[margesDeLaBulle(estAMoi, chatData?.type), { opacity: isPending ? 0.5 : 1 }]}
+          >
             {/* MSG1A (§3.1) — le document devient une CARTE DANS LA BULLE (SPECS.md §1,
                 `DocBody`) : meme cadre que le texte (nom, queue, heure dessous). La carte
                 garde ses boutons Ouvrir / Telecharger / Partager, inchanges. */}
@@ -6003,7 +6196,11 @@ function Conversation({ navigation, route }) {
             testID="bulle-texte"
           >
             {citationNode ? (
-              <View style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}>{citationNode}</View>
+              <View
+                style={imageDuMessage ? stylesDuFil.citationSurPhoto : null}
+              >
+                {citationNode}
+              </View>
             ) : null}
             {imageDuMessage}
             {aDuTexte ? (
@@ -6222,9 +6419,10 @@ function Conversation({ navigation, route }) {
     // `ensureUserCanWriteInChat` ne restreint que `club` et `multisport`).
     // 🐛 MSG1A (G1) — `group` manquait de la meme facon : tout groupe cree depuis
     // « Nouvelle discussion » s'affichait en canal d'annonce.
+    // 🛡️ MSG1BA (§3.16) — sauf « Seuls les admins peuvent envoyer des messages ».
+    if (chatData.type === 'group') return !envoiReserve;
     if (
       chatData.type === 'whisper'
-      || chatData.type === 'group'
       || chatData.type === 'team'
       || isLeagueConversation
       || isFriendlyMatchChat(chatData)
@@ -6251,7 +6449,7 @@ function Conversation({ navigation, route }) {
     }
 
     return false;
-  }, [chatData, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
+  }, [chatData, envoiReserve, filDeLaVille.estFil, hasClubAccess, isLeagueConversation, userData]);
 
   peutEcrireRef.current = canWrite;
 
@@ -6520,8 +6718,15 @@ function Conversation({ navigation, route }) {
           testID="conversation-lecture-seule"
         >
           <GlyphIcon color={withAlpha(Colors.neutral00, 0.72)} name="lock" size={16} />
-          <Text style={[stylesDuFil.barreLectureSeuleTexte, { color: withAlpha(Colors.neutral00, 0.72) }]}>
-            {t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
+          <Text
+            style={[
+              stylesDuFil.barreLectureSeuleTexte,
+              { color: withAlpha(Colors.neutral00, 0.72) },
+            ]}
+          >
+            {envoiReserve
+              ? t('conversation.adminsOnlySend', 'Seuls les admins peuvent envoyer des messages.')
+              : t('conversation.readOnly', 'Canal d\'annonce (lecture seule)')}
           </Text>
         </View>
       );
@@ -6792,14 +6997,19 @@ function Conversation({ navigation, route }) {
         names: prenomsQuiEcrivent.slice(0, 2).join(', '),
         ...SANS_ECHAPPEMENT,
       });
-  } else if (!sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil) {
+  } else if (
+    !sousTitreDeLEnTete && chatData && !estUnTeteATete(chatData?.type) && !filDeLaVille.estFil
+  ) {
     const prenomsDesMembres = (Array.isArray(chatData?.participants) ? chatData.participants : [])
-      .filter((/** @type {any} */ membre) => String(membre?.documentId || '') !== String(userData?.documentId || ''))
+      .filter((/** @type {any} */ membre) => (
+        String(membre?.documentId || '') !== String(userData?.documentId || '')
+      ))
       .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
       .filter(Boolean)
       .slice(0, 30);
     if (prenomsDesMembres.length > 0) {
-      sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${t('conversation.header.you', 'Vous')}`;
+      const vous = t('conversation.header.you', 'Vous');
+      sousTitreDeLEnTete = `${prenomsDesMembres.join(', ')}, ${vous}`;
     }
   }
   const peutOuvrirLaGestionDuGroupe = isGroupChat;
@@ -6984,7 +7194,8 @@ function Conversation({ navigation, route }) {
                   contentContainerStyle: { flexGrow: 1 },
                   onScrollToIndexFailed: handleScrollToIndexFailed,
                 }),
-              // 🔔 MSG1A (§3.10) — la notice du dirigeant, en haut du fil (pied de la liste inversee).
+              // 🔔 MSG1A (§3.10) — la notice du dirigeant, en haut du fil (pied de la liste
+              // inversee).
               ...(noticeDeTete ? { ListFooterComponent: noticeDeTete } : {}),
             }}
             loadEarlier={hasNextPage}
@@ -7152,19 +7363,25 @@ function Conversation({ navigation, route }) {
 
         <InfosDuGroupe
           adminIds={groupAdminIds}
+          autorisations={autorisationsDuFil}
           chat={chatData}
           estAdmin={isGroupAdmin}
           meId={String(userData?.documentId || '')}
           occupe={isGroupMutationLoading}
           onAjouter={handleAddGroupMembers}
           onBasculerAdmin={handleToggleGroupAdmin}
+          onChangerAutorisation={handleChangeGroupPermission}
+          onChoisirPhoto={handleChooseGroupPhoto}
           onClose={() => setIsGroupManagementVisible(false)}
           onEnvoyerUnMessage={handleMessageGroupMember}
           onQuitter={handleLeaveGroup}
           onRenommer={handleSaveGroupName}
           onRetirer={handleRemoveGroupMember}
           onSignaler={handleReportFromMenu}
+          onSupprimerPhoto={handleRemoveGroupPhoto}
+          onValiderAdmins={handleValidateGroupAdmins}
           resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
+          roles={rolesDesMembres}
           visible={isGroupManagementVisible && isGroupChat}
         />
 
@@ -7184,7 +7401,12 @@ function Conversation({ navigation, route }) {
               <Text style={[stylesDuFil.titreDeFeuille, { color: Colors.neutral00 }]}>
                 {t('conversation.attachments.title', 'Ajouter')}
               </Text>
-              <Text style={[stylesDuFil.sousTitreDeFeuille, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+              <Text
+                style={[
+                  stylesDuFil.sousTitreDeFeuille,
+                  { color: withAlpha(Colors.neutral00, 0.6) },
+                ]}
+              >
                 {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
               </Text>
             </View>

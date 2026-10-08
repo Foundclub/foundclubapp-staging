@@ -161,7 +161,7 @@ describe('BLOQUER · témoin C — le filtre est BRANCHÉ sur la liste des discu
 });
 
 describe('VILLE-NOTIFS — qui peut bloquer (et donc lire « mes blocages »)', () => {
-  test('V1 — un compte « Ville seule » (role Authenticated) : non — le serveur lui repond 403', () => {
+  test('V1 — compte « Ville seule » (role Authenticated) : non, le serveur repond 403', () => {
     expect(peutBloquer({ documentId: 'mairie', role: { name: 'Authenticated' } })).toBe(false);
     expect(peutBloquer({ documentId: 'mairie', role: { type: 'authenticated' } })).toBe(false);
   });
@@ -172,7 +172,7 @@ describe('VILLE-NOTIFS — qui peut bloquer (et donc lire « mes blocages »)', 
     });
   });
 
-  test('V3 — role absent de la charge : comportement d avant (K3, exigence d Apple) ; sans compte : non', () => {
+  test('V3 — role absent : comportement d avant (K3, exigence d Apple) ; sans compte : non', () => {
     expect(peutBloquer({ documentId: 'x' })).toBe(true);
     expect(peutBloquer(null)).toBe(false);
   });

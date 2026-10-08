@@ -199,6 +199,9 @@ let mockStatut = 'pending_validation';
 // DECISIONS-SOIR (02/10) — qui décide d'une séance en attente : la mairie (`facility_overbooking`)
 // ou le dirigeant du club (`club_slot_overflow`, D32). Le serveur le dit dans `pendingReason`.
 let mockRaison = 'facility_overbooking';
+// DOUBLES-TRACES (08/10) — `/collectivites/mine` : vide pour un compte de club pur.
+/** @type {any[]} */
+let mockVillesGerees = [];
 
 // 🧯 COLL-FIX-DEMANDES (02/10) — LE DOUBLE DU SERVEUR APPLIQUE SA RÈGLE DES ENTRAÎNEMENTS.
 // Tournée G3 : aucune demande ne partait, POST /api/events répondait 400 « Les entrainements
@@ -270,6 +273,7 @@ beforeEach(() => {
   mockApercu = APERCU_LIBRE;
   mockStatut = 'pending_validation';
   mockRaison = 'facility_overbooking';
+  mockVillesGerees = [];
   mockParams = {
     clubId: 'club-A', date: JOUR, endTime: '19:30', facilityId: 'gym-ville', startTime: '18:00',
   };
@@ -292,6 +296,9 @@ beforeEach(() => {
       // eslint-disable-next-line max-len
       return { data: { data: [bloc('club-A'), bloc('club-B')], meta: { facility: { maxSlots: 2 } } } };
     }
+    // DOUBLES-TRACES (08/10) — les Villes que le compte gère, et leurs installations.
+    if (url === '/collectivites/mine') return { data: { data: mockVillesGerees } };
+    if (url === '/collectivites/ville/installations') return { data: { data: [INSTALLATION] } };
     throw new Error(`GET inattendu ${url}`);
   });
   mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
@@ -944,6 +951,44 @@ describe('VILLE-T18C point 3 — le nombre d’équipes suit la liste (le pic, p
     mockApercu = { ...TROIS_SUR_DEUX, occurrences: undefined };
     const arbre = await monter((l) => l.includes('Il y a déjà 3 équipes : c’est complet.'));
     expect(textes(arbre)).toContain('Il y a déjà 3 équipes : c’est complet.');
+  });
+});
+
+// 🧾 DOUBLES-TRACES (08/10, décision d'Adel `doubles B`) — le compte à la fois dirigeant du club ET
+// gestionnaire de la Ville ne pose plus d'office la séance de son club hors de son créneau : le
+// serveur la juge comme celle d'un dirigeant pur (admin season-slot.ts `needsCityApproval`) et
+// l'aperçu dit `mairie`. La phrase de VILLE-T18C (« Tu gères cette installation pour la Ville :
+// ton entraînement sera posé tout de suite, même au complet. ») devient fausse ; l'écran dit la
+// vérité : sa demande part à la Ville, et c'est lui qui pourra l'accepter. ROUGE avant le lot.
+describe('DOUBLES-TRACES — le compte double lit que sa demande part à la Ville', () => {
+  const TU_ACCEPTES = 'Ta demande partira à la Ville ; '
+    + 'tu pourras l’accepter toi-même dans Demandes.';
+
+  it('place libre ou complet : sa demande part à la Ville, il l’acceptera lui-même', async () => {
+    mockVillesGerees = [{ documentId: 'ville', name: 'Ville de Montrivage' }];
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const libre = await monter((l) => l.includes(TU_ACCEPTES));
+    expect(textes(libre)).toContain(TU_ACCEPTES);
+    // eslint-disable-next-line max-len
+    expect(textes(libre)).not.toContain('Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.');
+    expect(textes(libre)).toContain('Envoyer la demande');
+    const tuGeres = (/** @type {string} */ texte) => texte.startsWith('Tu gères cette');
+    expect(textes(libre).some(tuGeres)).toBe(false);
+
+    mockApercu = { ...APERCU_COMPLET, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const complet = await monter((l) => l.includes(TU_ACCEPTES));
+    expect(textes(complet)).toContain(TU_ACCEPTES);
+    expect(textes(complet)).not.toContain('Tu peux demander quand même : la mairie décidera.');
+    expect(textes(complet)).toContain('Envoyer quand même');
+  });
+
+  it('un compte de club pur (aucune Ville gérée) : la phrase de la mairie, inchangée', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const phrase = 'Hors des créneaux de ton club : '
+      + 'la mairie décidera, même s’il reste de la place.';
+    const arbre = await monter((l) => l.includes(phrase));
+    expect(textes(arbre)).toContain(phrase);
+    expect(textes(arbre)).not.toContain(TU_ACCEPTES);
   });
 });
 

@@ -6168,6 +6168,8 @@ export default {
       quiDecideDirigeant: 'Ton dirigeant accepte ou refuse ; tu reçois sa réponse en notification.',
       // FINITIONS11-COLL (03/10) — « deplacer A » : une séance déplacée hors créneau.
       siRefusAnnulee: 'Si la mairie refuse, la séance sera annulée.',
+      // DOUBLES-TRACES (08/10, « doubles B ») — dirigeant ET gestionnaire : il accepte sa demande.
+      tuAcceptes: 'Ta demande partira à la Ville ; tu pourras l’accepter toi-même dans Demandes.',
       // VILLE-T18C (07/10, tournée T18 D07c) — posée d’office : pourquoi (la gestion de la Ville).
       // eslint-disable-next-line max-len
       tuGeres: 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.',
@@ -6789,6 +6791,7 @@ export default {
       openIn: 'Ouvrir dans {{app}}',
       title: 'Adresse',
     },
+    adminsOnlySend: 'Seuls les admins peuvent envoyer des messages.',
     attachmentErrors: {
       addFailed: "Impossible d'ajouter cette pièce jointe.",
       invalidFormat: 'Format de pièce jointe invalide.',
@@ -6920,8 +6923,15 @@ export default {
       thisMember: 'ce membre',
       title: 'Gestion du groupe',
     },
+    groupAdmins: {
+      cannotRemoveSelf: 'Tu ne peux pas te retirer toi-même le rôle d’admin.',
+      count_one: '{{count}} admin',
+      count_other: '{{count}} admins',
+      validate: 'Valider',
+    },
     groupInfo: {
       adminError: 'Impossible de changer les admins du groupe.',
+      editPhoto: 'Modifier la photo du groupe',
       leave: 'Quitter le groupe',
       leaveConfirm: 'Quitter le groupe « {{name}} » ? Tu ne recevras plus ses messages.',
       leaveConfirmAction: 'Quitter',
@@ -6939,6 +6949,35 @@ export default {
       summary_other: 'Groupe · {{count}} membres',
       title: 'Infos du groupe',
       untitled: 'Groupe',
+    },
+    groupPermissions: {
+      addMembers: 'Ajouter des membres',
+      // eslint-disable-next-line max-len
+      adminsCan: 'Les admins peuvent renommer le groupe, changer sa photo, ajouter et retirer des membres, et modifier ces autorisations.',
+      adminsKeepAll: 'Ce que tu désactives reste possible pour les admins.',
+      adminsTitle: 'Admins · {{count}}',
+      editAdmins: 'Modifier les admins',
+      editName: 'Modifier le nom du groupe',
+      editPhoto: 'Modifier la photo du groupe',
+      membersCan: 'Les membres peuvent',
+      sendMessages: 'Envoyer des messages',
+      sendMessagesHint: 'Désactivé : seuls les admins écrivent, les autres lisent.',
+      summary: 'Les membres peuvent {{actions}}',
+      summaryAdd: 'ajouter des membres',
+      summaryAdminsOnly: 'Seuls les admins peuvent agir',
+      summaryPhoto: 'changer la photo',
+      summaryRename: 'renommer',
+      summaryWrite: 'écrire',
+      title: 'Autorisations du groupe',
+      updateError: 'Impossible de changer les autorisations du groupe.',
+    },
+    groupPhoto: {
+      camera: 'Prendre une photo',
+      library: 'Choisir dans la galerie',
+      remove: 'Supprimer la photo',
+      removeError: 'Impossible de supprimer la photo du groupe.',
+      title: 'Photo du groupe',
+      updateError: 'Impossible de changer la photo du groupe.',
     },
     header: {
       openGroupHint: 'Ouvre les infos du groupe',
@@ -7018,6 +7057,73 @@ export default {
         sent: 'Ta proposition attend une réponse',
       },
       venueToBeDefined: 'Lieu à définir',
+    },
+    notice: {
+      added: {
+        me: '{{name}} vous a ajouté.',
+        other: '{{name}} a ajouté {{targets}}.',
+        you: 'Vous avez ajouté {{targets}}.',
+      },
+      adminAdded: {
+        me: '{{name}} vous a nommé admin du groupe.',
+        other: '{{name}} a nommé {{targets}} admin du groupe.',
+        you: 'Vous avez nommé {{targets}} admin du groupe.',
+      },
+      adminInherited: {
+        me: 'Vous devenez admin du groupe.',
+        other: '{{targets}} devient admin du groupe.',
+      },
+      adminRemoved: {
+        me: '{{name}} vous a retiré le rôle d’admin.',
+        other: '{{name}} a retiré le rôle d’admin à {{targets}}.',
+        you: 'Vous avez retiré le rôle d’admin à {{targets}}.',
+      },
+      adminsAdded: {
+        other: '{{name}} a nommé {{targets}} admins du groupe.',
+        you: 'Vous avez nommé {{targets}} admins du groupe.',
+      },
+      created: {
+        other: '{{name}} a créé le groupe « {{group}} ».',
+        you: 'Vous avez créé le groupe « {{group}} ».',
+      },
+      left: {
+        other: '{{name}} a quitté le groupe.',
+        you: 'Vous avez quitté le groupe.',
+      },
+      list: '{{debut}} et {{dernier}}',
+      permission: {
+        addMembersOff: 'réservé aux admins l’ajout de membres',
+        addMembersOn: 'autorisé les membres à ajouter des membres',
+        editNameOff: 'réservé aux admins la modification du nom du groupe',
+        editNameOn: 'autorisé les membres à modifier le nom du groupe',
+        editPhotoOff: 'réservé aux admins la modification de la photo du groupe',
+        editPhotoOn: 'autorisé les membres à modifier la photo du groupe',
+        permissions: 'changé les autorisations du groupe',
+        sendMessagesOff: 'réservé l’envoi de messages aux admins',
+        sendMessagesOn: 'autorisé tous les membres à envoyer des messages',
+      },
+      photoChanged: {
+        other: '{{name}} a changé la photo du groupe.',
+        you: 'Vous avez changé la photo du groupe.',
+      },
+      photoRemoved: {
+        other: '{{name}} a supprimé la photo du groupe.',
+        you: 'Vous avez supprimé la photo du groupe.',
+      },
+      removed: {
+        me: '{{name}} vous a retiré.',
+        other: '{{name}} a retiré {{targets}}.',
+        you: 'Vous avez retiré {{targets}}.',
+      },
+      renamed: {
+        other: '{{name}} a renommé le groupe en « {{group}} ».',
+        you: 'Vous avez renommé le groupe en « {{group}} ».',
+      },
+      someone: 'Un membre',
+      someoneDid: '{{name}} a {{action}}.',
+      someoneLower: 'un membre',
+      youDid: 'Vous avez {{action}}.',
+      youLower: 'vous',
     },
     picker: {
       cameraOpenError: "Impossible d'ouvrir la camera",
@@ -7195,6 +7301,8 @@ export default {
     staffRole: {
       dirigeant: 'Dirigeant',
       entraineur: 'Entraîneur',
+      joueur: 'Joueur',
+      parent: 'Parent',
     },
     typing: {
       header_one: '{{names}} écrit…',
@@ -7238,6 +7346,26 @@ export default {
         unavailable: 'Ce contenu ne peut pas s’afficher sur le site.',
       },
       empty: 'Aucun message pour le moment.',
+      // MSG1W (07/10) — la messagerie du site au dessin du telephone (pack « modele WhatsApp »).
+      fil: {
+        annulerReponse: 'Annuler la réponse',
+        echec: 'Non envoyé',
+        enCours: 'Envoi en cours',
+        envoye: 'Envoyé',
+        groupeMembres_one: 'Groupe · {{count}} membre',
+        groupeMembres_other: 'Groupe · {{count}} membres',
+        infosDuGroupe: 'Infos du groupe',
+        lu: 'Lu',
+        messagePartage: 'Message partagé',
+        nouvelleDiscussion: 'Nouvelle discussion',
+        options: 'Plus d’options',
+        plusDActions: 'Plus d’actions',
+        renommer: 'Renommer le groupe',
+        revenirEnBas: 'Revenir en bas',
+        signalerLeGroupe: 'Signaler le groupe',
+        titreListe: 'Messages',
+        voirLesVotes: 'Voir les votes',
+      },
       // eslint-disable-next-line max-len
       footerNote: 'Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.',
       league: {
@@ -13539,6 +13667,10 @@ export default {
       lineupShare: 'Composition publiée',
       lineupShareNamed: 'Composition : {{team}}',
       locationShare: 'Localisation',
+      markRead: 'Marquer comme lu',
+      markUnread: 'Marquer comme non lu',
+      markUnreadError: 'Impossible de marquer cette conversation comme non lue.',
+      openLabel: 'Ouvrir {{title}}',
       photo: 'Photo',
       poll: 'Sondage',
       pollNamed: 'Sondage : {{question}}',
@@ -13546,6 +13678,7 @@ export default {
       proposalMatch: 'Proposition de match',
       proposalTeam: '{{team}} propose un match',
       proposalWhen: '{{team}} propose un match — {{when}}',
+      staysUnread: 'Aperçu : reste non lu',
       voiceNote: 'Note vocale',
     },
     searchPlaceholder: 'Rechercher une conversation...',
@@ -14292,10 +14425,15 @@ export default {
     },
   },
   newConversation: {
+    addGroupPhoto: 'Ajouter une photo de groupe',
     admin: 'Admin',
+    adminsCount_one: '{{count}} admin',
+    adminsCount_other: '{{count}} admins',
     alreadyInGroup: 'Déjà dans le groupe',
     atLeastTwo: 'Ajoute au moins 2 membres pour créer un groupe.',
+    changeGroupPhoto: 'Changer la photo du groupe',
     createGroup: 'Créer le groupe',
+    creatorStaysAdmin: 'Tu as créé le groupe : tu en restes admin.',
     cta: {
       addTitle: 'Ajouter au groupe',
       next: 'Suivant',
@@ -14305,6 +14443,7 @@ export default {
     },
     groupNameHint: 'Sans nom, il s’appellera « {{name}} ». Tu pourras le changer plus tard.',
     groupNamePlaceholder: 'Nom du groupe (facultatif)',
+    groupPhotoError: 'Le groupe est créé, mais sa photo n’a pas pu être envoyée.',
     membersCount: 'MEMBRES · {{count}}',
     membersPlusYou_one: '{{count}} membre + vous',
     membersPlusYou_other: '{{count}} membres + vous',

@@ -13,9 +13,10 @@ import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
  * MSG1A — L'AVATAR D'UNE CONVERSATION, UNE SEULE REGLE POUR LA LISTE ET L'EN-TETE DU FIL.
  *
  * Repris de `Messaging.js` (`renderConversationAvatar`), le meme `switch` par type de fil,
- * avec un seul changement voulu par le pack (§3.13, §3.16) : un GROUPE porte son ecusson
- * aux initiales de son nom (il n'a pas de photo cote serveur), plus la photo du premier
- * autre membre — qui faisait passer un groupe pour un tete-a-tete.
+ * avec un seul changement voulu par le pack (§3.13, §3.16) : un GROUPE porte sa PHOTO de
+ * groupe (MSG1BA : `groupPhoto` du serveur 1B, contrat §4), sinon son ecusson aux initiales
+ * de son nom — plus la photo du premier autre membre, qui faisait passer un groupe pour un
+ * tete-a-tete.
  *
  * Tailles du pack : 52 dans la liste ; dans l'en-tete, 38 pour un fil a plusieurs, 36 pour
  * une personne. L'ecusson se dessine a 90 % de la place (SPECS.md §1).
@@ -67,11 +68,22 @@ function AvatarDuFil({
       );
       break;
     }
-    case 'group':
-      contenu = (
+    case 'group': {
+      // 🖼️ MSG1BA (§3.13) — `groupPhoto: { url } | null` ; absente (serveur d'avant 1B) = ecusson.
+      const photo = String(chat?.groupPhoto?.url || '').trim();
+      contenu = photo ? (
+        <ProfileAvatar
+          enablePreview={false}
+          imageStyle={{ borderRadius: size }}
+          imageUrl={photo}
+          name={String(chat?.groupName || '').trim()}
+          size={size}
+        />
+      ) : (
         <ClubLogoMark name={String(chat?.groupName || '').trim() || 'Groupe'} size={ecusson} />
       );
       break;
+    }
     case 'league_match':
       contenu = (
         <View

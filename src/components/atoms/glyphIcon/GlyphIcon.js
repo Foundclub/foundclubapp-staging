@@ -27,9 +27,11 @@ import TRACES_MESSAGERIE from './tracesMessagerie';
  *   | 'triangleExclamation' | 'wifiSlash'
  *   | 'checkDouble' | 'chevronUp' | 'lockOpen' | 'lockShut' | 'microphone'
  *   | 'pause' | 'play' | 'plus2' | 'send' | 'stop' | 'trashAlt'
- *   | 'camera' | 'chartSimpleHorizontal' | 'check' | 'chevronDown' | 'file' | 'fileCopy'
+ *   | 'boxArchive' | 'camera' | 'chartSimpleHorizontal' | 'check' | 'chevronDown' | 'eye'
+ *   | 'file' | 'fileCopy'
  *   | 'flag' | 'image' | 'information' | 'locationPin' | 'penSquare' | 'pencil' | 'reply'
- *   | 'search' | 'shieldCheck' | 'thumbtack' | 'userMinus' | 'userPlus' | 'users' | 'xmark'} GlyphIconName
+ *   | 'search' | 'shieldCheck' | 'thumbtack' | 'userMinus' | 'userPlus' | 'users'
+ *   | 'xmark'} GlyphIconName
  */
 
 /* eslint-disable max-len -- tracés recopiés tels quels de la maquette VOCAL (décalages cuits) */
@@ -70,7 +72,10 @@ function GlyphIcon({
   if (Object.prototype.hasOwnProperty.call(TRACES_MESSAGERIE, name)) {
     return (
       <Svg height={size} viewBox="0 0 24 24" width={size}>
-        <Path d={/** @type {Record<string, string>} */ (TRACES_MESSAGERIE)[name]} fill={strokeColor} />
+        <Path
+          d={/** @type {Record<string, string>} */ (TRACES_MESSAGERIE)[name]}
+          fill={strokeColor}
+        />
       </Svg>
     );
   }

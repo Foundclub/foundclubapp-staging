@@ -326,6 +326,7 @@ describe('COMPO-CARTE-SITE · témoin 3 — ce que voit un voyant ne change pas'
 // 🔴 ROUGE avant MSG1A : K1, K2, K3 (la carte n'avait ni « Modifier », ni bloc sous elle).
 describe('MSG1A — contrat de la carte avec MSG1C', () => {
   /**
+   * Rend la carte avec les proprietes du contrat a eprouver.
    * @param {any} props
    * @returns {any} L'arbre.
    */
@@ -362,7 +363,9 @@ describe('MSG1A — contrat de la carte avec MSG1C', () => {
 
     act(() => { boutonTerrain(arbre).props.onPress(); });
     expect(onEdit).toHaveBeenLastCalledWith('placement');
-    expect(textesDansLOrdre(arbre)).toEqual(expect.arrayContaining(['Ouvrir', 'Modifier le placement']));
+    expect(textesDansLOrdre(arbre)).toEqual(
+      expect.arrayContaining(['Ouvrir', 'Modifier le placement']),
+    );
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -374,11 +377,13 @@ describe('MSG1A — contrat de la carte avec MSG1C', () => {
   test('K4 — dans la bulle du fil : ni fond ni liseré propres, 276 de large', () => {
     const arbre = rendreAvec({ dansLaBulle: true });
     const cadre = arbre.root.findAll((n) => typeof n.type !== 'string').find((n) => {
-      const style = [n.props?.style].flat(Infinity).reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
+      const style = [n.props?.style].flat(Infinity)
+        .reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
       return style.width === 276;
     });
     expect(cadre).toBeDefined();
-    const style = [cadre.props.style].flat(Infinity).reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
+    const style = [cadre.props.style].flat(Infinity)
+      .reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
     expect(style.backgroundColor).toBeUndefined();
     expect(style.borderWidth).toBeUndefined();
   });

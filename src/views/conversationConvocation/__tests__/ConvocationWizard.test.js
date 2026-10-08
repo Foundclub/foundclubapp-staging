@@ -1,4 +1,6 @@
-import { Alert, Text, TouchableOpacity } from 'react-native';
+import {
+  Alert, StyleSheet, Text, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { publishEventConvocation, saveEventCompositionDraft } from '@/services/event/eventService';
@@ -311,6 +313,22 @@ const estCoche = (/** @type {any} */ arbre, /** @type {string} */ id) => parTest
 )[0].props.accessibilityState.checked;
 
 describe('MESSAGERIE-1C · etape 2 « Joueurs »', () => {
+  // 🐞 Recolte 1W (08/10) : sur le SITE, le « Suivant » compact du pied (a cote de « N convoques »)
+  // etait rogne en « ivant » : `flex: 0` passe tel quel au navigateur (0 1 0 %), le bouton se
+  // repliait sur ses marges. Il se dimensionne desormais a son texte, sans jamais retrecir.
+  test('le « Suivant » compact garde son libelle entier et ne retrecit pas sous 44', () => {
+    const { arbre } = allerAuxJoueurs();
+    const [bouton] = parTestId(arbre, 'convocation-wizard-next');
+    const style = StyleSheet.flatten(bouton.props.style);
+    expect(style.flex).toBeUndefined();
+    expect(style.flexBasis).toBeUndefined();
+    expect(style.flexShrink).toBe(0);
+    expect(style.minWidth).toBeGreaterThanOrEqual(44);
+    const libelles = bouton.findAllByType(Text)
+      .map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
+    expect(libelles).toContain('Suivant');
+  });
+
   test('l effectif a cocher ; « Tout l effectif » ; les compteurs suivent', () => {
     const { arbre } = allerAuxJoueurs();
     expect(textes(arbre)).toEqual(expect.arrayContaining([

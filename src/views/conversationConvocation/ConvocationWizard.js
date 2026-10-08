@@ -647,8 +647,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 22,
   },
+  // 🐞 Recolte 1W (08/10) : PAS de `flex: 0` — react-native-web le passe tel quel au navigateur
+  // (0 1 0 %) et le bouton se repliait sur ses marges (« ivant » a 1 280 px). Taille du texte,
+  // jamais retreci, 44 au moins (cible tactile).
   footerButtonCompact: {
-    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+    minWidth: 44,
   },
   footerButtonWide: {
     flex: 1,

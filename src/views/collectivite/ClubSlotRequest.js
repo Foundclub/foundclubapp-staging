@@ -44,6 +44,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useManagingCollectiviteId } from '@/services/collectivite/collectiviteQueries';
 import { useGetEventTypes } from '@/services/event/eventQueries';
 import { announceEventSeries, createEventsWithConcurrency } from '@/services/event/eventService';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
@@ -198,6 +199,10 @@ function ClubSlotRequest({
   /** @type {{ inClubSlot?: boolean, outcome?: string } | null} */
   const decision = place?.decision || null;
   const issue = decision?.outcome || null;
+  // 🧾 DOUBLES-TRACES (08/10, `doubles B`) — la Ville que ce compte GÈRE et qui possède
+  // l'installation : dirigeant ET gestionnaire, il acceptera lui-même sa demande. Lu seulement
+  // quand la mairie décide (un compte de club pur : un appel, liste vide).
+  const villeGeree = useManagingCollectiviteId(installationId, { enabled: issue === 'mairie' });
 
   // Les heures libres du même jour (P8v2, état 2) : l'ouverture moins les moments complets.
   const planningDuJour = useQuery({
@@ -601,6 +606,9 @@ function ClubSlotRequest({
       // sans dire pourquoi. Hors d'un créneau du club, sur une installation de la Ville (les
       // seules de cet écran), le serveur ne pose d'office que pour qui tranche lui-même : la
       // gestion de la Ville (admin season-slot.ts `judgeSession` ⇒ `needsCityApproval`).
+      // ponytail: depuis DOUBLES-TRACES, le serveur ne le dit plus pour un compte de CLUB (il
+      // rend `mairie`, phrase plus bas) ; seul un serveur d'avant le lot arrive ici, et la phrase
+      // y reste vraie (recette reconstruite après Metro). Sortie : retirer quand tous l'ont.
       couleurDeLaSuite = Colors.success500;
       suite = complet
         ? t(
@@ -617,6 +625,13 @@ function ClubSlotRequest({
       suite = t(
         'collectiviteDemandes.decision.dirigeant',
         'Ton club est déjà au complet dans son créneau : ton dirigeant décidera.',
+      );
+    } else if (issue === 'mairie' && villeGeree) {
+      // DOUBLES-TRACES — sa séance de club passe par une demande à la Ville, qu'il accepte lui-même
+      // (2 gestes), donc tracée : « Traitées », chiffres de la Ville.
+      suite = t(
+        'collectiviteDemandes.decision.tuAcceptes',
+        'Ta demande partira à la Ville ; tu pourras l’accepter toi-même dans Demandes.',
       );
     } else if (refusee) {
       couleurDeLaSuite = Colors.error500;

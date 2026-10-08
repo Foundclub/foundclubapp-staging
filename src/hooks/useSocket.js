@@ -10,7 +10,11 @@ import {
 } from '@/services/socket/socketManager';
 
 export const EVENTS = {
+  // MSG1BA — contrat MESSAGERIE-1B §7 : « marquer non lu » / depart, vus des autres appareils
+  // du compte ; et les notices de groupe (jamais par `message-received`).
+  CHAT_UNREAD_UPDATED: 'chat-unread-updated',
   ERROR: 'error',
+  GROUP_NOTICE: 'group-notice',
   JOIN_CHAT: 'join-chat',
   JOINED: 'joined',
   LEAVE_CHAT: 'leave-chat',

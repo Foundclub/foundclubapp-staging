@@ -149,6 +149,24 @@ jest.mock('@/services/messageReport/messageReportService', () => ({
 }));
 jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: {} }));
+// MSG1W §3.5 — les fenetres du « + » (grande carte d evenement, sondage du telephone) : leurs
+// modules natifs ne se chargent pas dans ce banc, et ce temoin ne les regarde pas.
+jest.mock('@/components/molecules/eventCard/EventCardNew', () => () => null);
+jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => () => null);
+// L assistant de convocation (MESSAGERIE-1C) charge le mur payant et son stockage natif :
+// une doublure ici ; les temoins Playwright du site ouvrent le vrai.
+jest.mock('@/views/conversationConvocation/ConvocationWizard', () => () => null);
+// MSG1W §3.8 — la bulle d evenement du telephone, doublee : elle ecrit le nom qu elle recoit.
+jest.mock('@/components/molecules/eventMessageBubble/EventMessageBubble', () => {
+  const react = jest.requireActual('react');
+  return function BulleEvenementDouble(/** @type {any} */ props) {
+    return react.createElement(
+      'div',
+      { 'data-testid': 'bulle-evenement' },
+      String(props.event?.name || ''),
+    );
+  };
+});
 
 jest.mock('@/services/event/eventService', () => ({
   getEventConvocation: jest.fn(() => {
@@ -527,15 +545,21 @@ describe('COMPO-CARTE-SITE · caractérisation (E6) — les autres charges ne bo
     expect(texte).toContain('Dimanche 10h');
   });
 
-  test('un événement partagé garde son nom et son bouton', async () => {
+  // MSG1W §3.8 (07/10, pack « modele WhatsApp ») : l evenement partage prend la bulle du
+  // TELEPHONE (EventMessageBubble, grande carte + Présent / Absent) ; le bouton du site « Voir l
+  // événement » disparait (la carte s ouvre elle-meme). Le nom, lui, ne doit pas se perdre.
+  test('un événement partagé garde son nom, dans la bulle du téléphone', async () => {
     const arbre = await monterLeFil([{
       eventDocumentId: 'evt-9',
       eventName: 'Tournoi de Noël',
       type: 'event_share',
     }]);
-    const texte = texteDe(arbre.root);
+    const bulle = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.['data-testid'] === 'bulle-evenement',
+    );
 
-    expect(texte).toContain('Tournoi de Noël');
-    expect(texte).toContain('Voir l événement');
+    expect(bulle).toHaveLength(1);
+    expect(texteDe(bulle[0])).toBe('Tournoi de Noël');
+    expect(texteDe(arbre.root)).not.toContain('Voir l événement');
   });
 });

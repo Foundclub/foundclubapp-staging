@@ -137,6 +137,7 @@ describe('MSG1A — le menu de l appui long', () => {
 
   it('A3 — fil en lecture seule (canReply false) : plus de « Repondre », le reste inchange', () => {
     expect(cles({ canCopy: true, canReply: false, isMine: false })).toEqual(['copy', 'report']);
-    expect(cles({ canCopy: true, canReply: true, isMine: false })).toEqual(['reply', 'copy', 'report']);
+    expect(cles({ canCopy: true, canReply: true, isMine: false }))
+      .toEqual(['reply', 'copy', 'report']);
   });
 });

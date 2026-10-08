@@ -187,3 +187,29 @@ export const searchUsers = async (params = {}) => {
   const response = await client.get('/users', { params: filters });
   return response.data;
 };
+
+/**
+ * MSG1BA (§3.1) — LE ROLE DE QUELQUES COMPTES, par leur identifiant (« Infos du groupe »).
+ * Meme route que la recherche de « Nouvelle discussion » ; on ne demande que le nom du role.
+ * @param {string[]} ids - Les identifiants (documentId).
+ * @returns {Promise<Record<string, string>>} documentId -> `role.name` ('' si inconnu).
+ */
+export const getUserRolesByIds = async (ids) => {
+  const uniques = Array.from(new Set((ids || []).map((id) => String(id || '').trim())))
+    .filter(Boolean);
+  if (uniques.length === 0) return {};
+
+  const response = await client.get('/users', {
+    params: {
+      fields: ['firstname'],
+      filters: { documentId: { $in: uniques } },
+      limit: uniques.length,
+      populate: { role: { fields: ['name'] } },
+      start: 0,
+    },
+  });
+  const comptes = Array.isArray(response?.data) ? response.data : [];
+  return Object.fromEntries(comptes
+    .map((compte) => [String(compte?.documentId || ''), String(compte?.role?.name || '')])
+    .filter(([id]) => id));
+};

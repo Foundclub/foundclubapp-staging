@@ -374,14 +374,19 @@ export const createTeamChat = async (team) => {
 
 /**
  * Create a new group chat
- * @param {{ groupName: string; participants: string[] }} params
+ * MSG1BA (§3.15) — `permissions` (contrat 1B §5.3) : les autorisations reglees a la creation,
+ * partielles ; n'est envoye que s'il est fourni (un serveur d'avant 1B l'ignore).
+ * @param {{
+ *   groupName: string; participants: string[]; permissions?: Record<string, boolean>
+ * }} params
  * @returns {Promise<Chat>}
  */
-export const createGroupChat = async ({ groupName, participants }) => {
+export const createGroupChat = async ({ groupName, participants, permissions }) => {
   const response = await client.post('/chats/group', {
     data: {
       groupName,
       participants,
+      ...(permissions ? { permissions } : {}),
     },
   });
 
@@ -437,6 +442,21 @@ export const removeGroupMember = async (chatId, userId) => {
  */
 export const leaveGroupChat = async (chatId) => {
   const response = await client.post(`/chats/${chatId}/leave`);
+  return response.data?.data ?? response.data;
+};
+
+/**
+ * MSG1BA (§3.14) — MARQUER UNE CONVERSATION COMME NON LUE (contrat MESSAGERIE-1B §3,
+ * `POST /api/chats/:id/unread`, sans corps). Le serveur recule le curseur de lecture juste
+ * avant le dernier message recu : le fil compte 1 non-lu. 200 `{ data: { chatDocumentId,
+ * markedUnread, unreadCount, unreadTotal } }` ; `markedUnread: false` si le fil n'a aucun
+ * message recu. Serveur d'avant 1B : 404 (le geste est alors cache par l'ecran).
+ * @param {string} chatId
+ * @returns {Promise<{ chatDocumentId?: string, markedUnread?: boolean, unreadCount?: number,
+ *   unreadTotal?: number }>}
+ */
+export const markChatUnread = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/unread`);
   return response.data?.data ?? response.data;
 };
 

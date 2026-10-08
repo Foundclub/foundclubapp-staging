@@ -46,7 +46,9 @@ function ChatReactionsRow({
       || a.index - b.index)
     .map(({ reaction }) => reaction);
   const total = triees.reduce((somme, reaction) => somme + (Number(reaction?.count) || 0), 0);
-  const detail = triees.map((reaction) => `${reaction?.emoji} ${Number(reaction?.count) || 0}`).join(', ');
+  const detail = triees
+    .map((reaction) => `${reaction?.emoji} ${Number(reaction?.count) || 0}`)
+    .join(', ');
 
   return (
     <View
