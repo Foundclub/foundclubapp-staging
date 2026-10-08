@@ -5670,6 +5670,8 @@ export default {
       quiDecideDirigeant: 'Your club manager accepts or refuses; you get the answer as a notification.',
       // FINITIONS11-COLL (03/10) — Adel's decision "deplacer A": a session moved outside the slot.
       siRefusAnnulee: 'If the town hall refuses, the session will be cancelled.',
+      // DOUBLES-TRACES (08/10, "doubles B") — club manager AND town manager: a request they accept themselves.
+      tuAcceptes: 'Your request will go to the town; you can accept it yourself in Requests.',
       // VILLE-T18C (07/10, round T18 D07c) — set at once: why (the town management).
       tuGeres: 'You manage this facility for the town: your training will be set right away, no request.',
       tuGeresComplet: 'You manage this facility for the town: your training will be set right away, even when full.',
