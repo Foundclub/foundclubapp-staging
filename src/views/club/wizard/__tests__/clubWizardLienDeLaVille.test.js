@@ -43,8 +43,8 @@ jest.mock('react-i18next', () => ({
 jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => mockAuthentification }));
 jest.mock('@/domains/auth/authUseCases', () => ({
   // FINITIONS-VILLE (« créateur C ») : le récapitulatif lit le rôle (« Qui dirige ce club ? »).
-  getUserRoleKey: jest.requireActual('@/domains/auth/authUseCases').getUserRoleKey,
   attachCreatedClubToProfile: jest.requireActual('@/domains/auth/authUseCases').attachCreatedClubToProfile,
+  getUserRoleKey: jest.requireActual('@/domains/auth/authUseCases').getUserRoleKey,
   markOnboardingComplete: jest.fn(),
 }));
 jest.mock('@/theme/themeContext', () => {
