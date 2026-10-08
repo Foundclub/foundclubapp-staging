@@ -779,8 +779,9 @@ function ClubSlotRequest({
         <View style={{ gap: 4 }}>
           <DatePickerInput
             label={t('collectiviteDemandes.club.jusquAu', 'Jusqu’au')}
+            // FINITIONS-VILLE (T20 K02) : borné à la fin de saison, même AVANT de choisir le jour.
             // eslint-disable-next-line max-len
-            maximumDate={jourIso ? parse(finDeSaison(jourIso), 'yyyy-MM-dd', new Date()) : undefined}
+            maximumDate={parse(finDeSaison(jourIso || format(new Date(), 'yyyy-MM-dd')), 'yyyy-MM-dd', new Date())}
             minimumDate={jourIso ? parse(jourIso, 'yyyy-MM-dd', new Date()) : new Date()}
             onChange={(/** @type {string} */ valeur) => setJusquA(valeur)}
             placeholder={t('collectiviteDemandes.club.finDeLaSaison', 'Fin de la saison')}

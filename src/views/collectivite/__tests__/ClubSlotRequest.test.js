@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -139,6 +140,8 @@ jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
   // l'indice (placeholder) affiché quand le champ est vide, comme le vrai champ.
   return function DatePickerMock(/** @type {any} */ props) {
     return reactActuel.createElement(TexteRN, {
+      // FINITIONS-VILLE (T20) : les bornes se lisent.
+      maximumDate: props.maximumDate,
       onChange: props.onChange,
       testID: props.label === 'Jour' ? 'demande-jour' : `demande-date-${props.label}`,
     }, props.value || props.placeholder || '');
@@ -874,6 +877,19 @@ describe('VILLE-T18C point 2 — la phrase dit pourquoi, « Jour » a un indice,
     const jour = arbre.root
       .findAll((/** @type {any} */ n) => n.props?.testID === 'demande-jour')[0];
     expect(aplatir(jour.props.children)).toBe('Choisis un jour');
+  });
+
+  it('FINITIONS-VILLE (T20 K02) : « Jusqu’au » sans jour, borné à la fin de saison', async () => {
+    mockParams = { clubId: 'club-A', facilityId: 'gym-ville' };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    const champ = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'demande-date-Jusqu’au' && typeof n.props?.onChange === 'function'
+    ))[0];
+    const { finDeSaison } = jest.requireActual('@/domains/collectivite/collectiviteDemandes');
+    const attendu = finDeSaison(format(new Date(), 'yyyy-MM-dd'));
+    expect(champ.props.maximumDate).toBeInstanceOf(Date);
+    expect(format(champ.props.maximumDate, 'yyyy-MM-dd')).toBe(attendu);
   });
 
   // eslint-disable-next-line max-len
