@@ -72,6 +72,11 @@ const dedupeTeams = (teams = []) => {
 };
 
 /**
+ * SERIES (08/10) — ce que le formulaire du site envoie à « Enregistrer » (la portée comprise).
+ * @typedef {{ documentId: string, eventData: any, recurrenceMode?: 'future' | 'all' }} EnvoiDuSite
+ */
+
+/**
  *
  * @param root0
  * @param root0.navigation
@@ -314,10 +319,10 @@ function EventEdit({ navigation, route }) {
   const updateEventMutation = useMutation({
     // SERIES (08/10) — la portée choisie (« Cet événement et les suivants », « Toute la série »)
     // part avec l'enregistrement : avant, elle était jetée ici et le site ne modifiait qu'UNE date.
-    mutationFn: ({ documentId, eventData, recurrenceMode }) => (
+    mutationFn: (/** @type {EnvoiDuSite} */ { documentId, eventData, recurrenceMode }) => (
       updateEvent({ documentId, eventData, recurrenceMode })
     ),
-    onSuccess: async (reponse, { recurrenceMode }) => {
+    onSuccess: async (reponse, /** @type {EnvoiDuSite} */ { recurrenceMode }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event', eventId, 'edit'] }),
