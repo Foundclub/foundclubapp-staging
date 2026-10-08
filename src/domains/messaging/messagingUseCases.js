@@ -53,9 +53,12 @@ export const isLeagueChat = (chat) => {
  * @param {string | null | undefined} meId
  * @returns {boolean}
  */
-export const estArchivePourMoi = (chat, meId) => Boolean(meId)
-  && Array.isArray(chat?.archivedBy)
-  && chat.archivedBy.some((/** @type {any} */ u) => u?.documentId === meId);
+export const estArchivePourMoi = (chat, meId) => {
+  const archivePar = chat?.archivedBy;
+  return Boolean(meId)
+    && Array.isArray(archivePar)
+    && archivePar.some((/** @type {any} */ u) => u?.documentId === meId);
+};
 
 /**
  * Ce fil est-il epingle PAR MOI (`pinnedBy`) ?
