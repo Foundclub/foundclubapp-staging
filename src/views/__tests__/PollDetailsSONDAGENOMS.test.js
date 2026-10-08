@@ -113,16 +113,27 @@ const aDemonter = [];
  * Monte le détail d'un sondage d'un fil de CLUB : `participants: []`, et le seul message
  * chargé est le sondage lui-même, posé par Karim. Léo a voté sans jamais écrire.
  * @param {any} poll - Le sondage.
+ * @param {any[]} [autresMessages] - T19R : d'autres messages chargés, après le sondage.
+ * @param {any} [moi] - T19R : le compte connecté.
  * @returns {Promise<any>} La racine du rendu, une fois la lecture des noms aboutie.
  */
-const monter = async (poll) => {
+const monter = async (
+  poll,
+  autresMessages = [],
+  moi = { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+) => {
   mockChat.data = { documentId: 'chat-club', participants: [], type: 'club' };
   mockPages.data = {
-    pages: [{ data: [{ composition: poll, documentId: MESSAGE_ID, sender: KARIM }] }],
+    pages: [{
+      data: [
+        {
+          composition: poll, createdAt: poll.createdAt, documentId: MESSAGE_ID, sender: KARIM,
+        },
+        ...autresMessages,
+      ],
+    }],
   };
-  mockUseAuth.mockReturnValue({
-    userData: { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
-  });
+  mockUseAuth.mockReturnValue({ userData: moi });
   const client = new QueryClient({ defaultOptions: { queries: { gcTime: 0, retry: false } } });
 
   /** @type {any} */
@@ -216,5 +227,45 @@ describe('SONDAGE-NOMS — le détail mobile nomme un votant qui n a rien écrit
     await monter(buildPoll({ isAnonymous: true }));
 
     expect(mockGet).not.toHaveBeenCalledWith(`/chat-messages/${MESSAGE_ID}/poll-voters`);
+  });
+});
+
+// 🐞 T19-RESTES (08/10, recette) — « Créé par mouri nio » sur un sondage ANONYME de Karim. Le
+// serveur garde dans chaque message une copie FIGÉE du nom de l'auteur à l'envoi : Karim
+// s'appelait « mouri nio » dans ses messages du 29/09. L'écran inscrivait les auteurs du plus
+// récent au plus ancien, et le DERNIER inscrit gagnait (journal :
+// `.recette/t19r/JOURNAL_voterDirectory_site.txt`). ROUGE avant le lot.
+describe('T19R — « Créé par » nomme l auteur sous son nom d aujourd hui', () => {
+  const VIEUX_MESSAGE = {
+    createdAt: '2026-09-29T19:14:15.726Z',
+    documentId: 'vieux-message',
+    message: 'Composition du samedi',
+    sender: { documentId: KARIM.documentId, firstname: 'mouri', lastname: 'nio' },
+  };
+
+  test('lu par un autre membre : le message le plus récent de l auteur fait foi', async () => {
+    const root = await monter(
+      buildPoll({ createdAt: '2026-10-08T00:08:30.019Z', isAnonymous: true }),
+      [VIEUX_MESSAGE],
+    );
+
+    const rendu = textes(root);
+    expect(rendu).toContain('Karim Benali');
+    expect(rendu).not.toContain('mouri nio');
+  });
+
+  test('lu par l auteur lui-même : son compte l emporte sur la copie figée', async () => {
+    const root = await monter(
+      buildPoll({ createdAt: '2026-10-08T00:08:30.019Z', isAnonymous: true }),
+      [
+        VIEUX_MESSAGE,
+        { ...VIEUX_MESSAGE, createdAt: '2026-09-28T22:15:19.309Z', documentId: 'v2' },
+      ],
+      KARIM,
+    );
+
+    const rendu = textes(root);
+    expect(rendu).toContain('Karim Benali');
+    expect(rendu).not.toContain('mouri nio');
   });
 });

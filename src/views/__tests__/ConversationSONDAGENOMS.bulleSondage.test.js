@@ -17,6 +17,8 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 const mockGet = jest.fn();
+// T19R — d'autres messages chargés, APRÈS le sondage (page du plus récent au plus ancien).
+const mockAutresMessages = /** @type {any[]} */ ([]);
 
 jest.mock('react-native-gesture-handler', () => (
   // eslint-disable-next-line global-require
@@ -199,7 +201,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
           documentId: 'msg-sondage',
           message: '',
           sender: { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' },
-        }],
+        }, ...mockAutresMessages],
         meta: { pagination: { page: 1, pageCount: 1, total: 1 } },
       }],
     },
@@ -284,6 +286,7 @@ describe('SONDAGE-NOMS — la bulle du sondage nomme un votant qui n a rien écr
   });
 
   afterEach(() => {
+    mockAutresMessages.length = 0;
     while (aDemonter.length) {
       /** @type {any} */ (aDemonter.pop())();
     }
@@ -368,5 +371,89 @@ describe('SONDAGE-NOMS — la bulle du sondage nomme un votant qui n a rien écr
     expect(etiquettes).not.toContain('Membre');
     expect(etiquettes).toContain('Leo Martin');
     expect(mockGet).toHaveBeenCalledWith('/chat-messages/msg-sondage/poll-voters');
+  });
+
+  // 🐞 T19-RESTES (08/10, recette) — au téléphone, la pastille du vote de Karim affichait « M.. »
+  // quelques secondes avant que le serveur réponde : l'annuaire de l'écran retenait la copie
+  // FIGÉE de son nom dans ses messages du 29/09 (« mouri nio »), inscrite en DERNIER (la page va
+  // du plus récent au plus ancien). Tant que le serveur n'a pas répondu, c'est cet annuaire qui
+  // nomme : il doit retenir le nom le plus récent. ROUGE avant le lot.
+  test('T19R — avant la réponse du serveur, Karim garde son nom d aujourd hui', async () => {
+    mockGet.mockImplementation(() => new Promise(() => {}));
+    mockAutresMessages.push({
+      createdAt: '2026-09-29T19:14:15.726Z',
+      documentId: 'vieux-message',
+      message: 'Composition du samedi',
+      sender: { documentId: 'karim', firstname: 'mouri', lastname: 'nio' },
+    });
+    // eslint-disable-next-line global-require
+    const { QueryClient, QueryClientProvider } = require('@tanstack/react-query');
+    // eslint-disable-next-line global-require
+    const { createElement } = require('react');
+    // eslint-disable-next-line global-require
+    const Conversation = require('../Conversation').default;
+    const clientRequetes = new QueryClient({
+      defaultOptions: {
+        mutations: { gcTime: 0, retry: false },
+        queries: { gcTime: 0, retry: false },
+      },
+    });
+
+    /** @type {any} */
+    let ecran = null;
+    act(() => {
+      ecran = renderer.create(createElement(
+        QueryClientProvider,
+        { client: clientRequetes },
+        createElement(Conversation, {
+          navigation: {
+            addListener: () => () => {},
+            goBack: jest.fn(),
+            navigate: jest.fn(),
+            setOptions: jest.fn(),
+          },
+          route: { params: { chatId: 'chat-club' } },
+        }),
+      ));
+    });
+    const propsGifted = mockGiftedRenders[mockGiftedRenders.length - 1];
+    const bulle = propsGifted.renderBubble({
+      currentMessage: {
+        _id: 'msg-sondage',
+        composition: {
+          ...SONDAGE,
+          options: [
+            { id: 'opt-1', label: 'Oui', voters: [KARIM.documentId] },
+            { id: 'opt-2', label: 'Non', voters: [] },
+          ],
+        },
+        documentId: 'msg-sondage',
+        user: { _id: KARIM.documentId },
+      },
+      nextMessage: {},
+      position: 'left',
+      previousMessage: {},
+    });
+    /** @type {any} */
+    let arbreBulle = null;
+    act(() => {
+      arbreBulle = renderer.create(createElement(
+        QueryClientProvider,
+        { client: clientRequetes },
+        bulle,
+      ));
+    });
+    aDemonter.push(() => {
+      act(() => { arbreBulle.unmount(); });
+      act(() => { ecran.unmount(); });
+      clientRequetes.clear();
+    });
+
+    const etiquettes = arbreBulle.root
+      .findAll((/** @type {any} */ n) => typeof n.props?.accessibilityLabel === 'string')
+      .map((/** @type {any} */ n) => n.props.accessibilityLabel)
+      .join(' | ');
+    expect(etiquettes).toContain('Karim Benali');
+    expect(etiquettes).not.toContain('mouri nio');
   });
 });

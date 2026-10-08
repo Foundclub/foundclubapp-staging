@@ -221,3 +221,60 @@ describe('SONDAGE-NOMS — le détail du site nomme un votant qui n a rien écri
     expect(rendu).not.toContain('Paul Ancien');
   });
 });
+
+// 🐞 T19-RESTES (08/10, recette) — le même « Créé par mouri nio », côté site : le serveur garde
+// dans chaque message une copie FIGÉE du nom de l'auteur à l'envoi, et le plus VIEUX message
+// inscrit gagnait, même contre le compte connecté (journal du site :
+// `.recette/t19r/JOURNAL_voterDirectory_site.txt`). ROUGE avant le lot.
+describe('T19R — « Créé par » nomme l auteur sous son nom d aujourd hui (site)', () => {
+  const monterLeDetail = async () => {
+    act(() => {
+      mounted = renderer.create(createElement(
+        QueryClientProvider,
+        { client },
+        createElement(PollDetailsWeb, {
+          navigation: { goBack: jest.fn() },
+          route: { params: { chatId: 'chat-club', messageId: MESSAGE_ID } },
+        }),
+      ));
+    });
+    await act(async () => {
+      await new Promise((fini) => { setTimeout(fini, 20); });
+    });
+    return textOf(mounted.root);
+  };
+
+  beforeEach(() => {
+    mockPages.data = {
+      pages: [{
+        data: [
+          {
+            composition: { ...POLL, createdAt: '2026-10-08T00:08:30.019Z', isAnonymous: true },
+            createdAt: '2026-10-08T00:08:30.019Z',
+            documentId: MESSAGE_ID,
+            sender: KARIM,
+          },
+          {
+            createdAt: '2026-09-29T19:14:15.726Z',
+            documentId: 'vieux-message',
+            message: 'Composition du samedi',
+            sender: { documentId: KARIM.documentId, firstname: 'mouri', lastname: 'nio' },
+          },
+        ],
+      }],
+    };
+  });
+
+  test('lu par un autre membre : le message le plus récent de l auteur fait foi', async () => {
+    const rendu = await monterLeDetail();
+    expect(rendu).toContain('Karim Benali');
+    expect(rendu).not.toContain('mouri nio');
+  });
+
+  test('lu par Karim lui-même (le cas de la T19) : son compte l emporte', async () => {
+    mockUseAuth.mockReturnValue({ userData: KARIM });
+    const rendu = await monterLeDetail();
+    expect(rendu).toContain('Karim Benali');
+    expect(rendu).not.toContain('mouri nio');
+  });
+});

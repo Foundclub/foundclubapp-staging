@@ -125,8 +125,12 @@ jest.mock('@/services/client', () => ({
   default: { get: jest.fn(), post: jest.fn(), put: jest.fn() },
 }));
 const mockQuitterLeGroupe = jest.fn(() => Promise.resolve({ left: true }));
+// T19R — les noms des votants lus au serveur (`GET /chat-messages/:id/poll-voters`).
+// (le comportement est posé par chaque témoin qui affiche un sondage)
+const mockLireLesVotants = jest.fn();
 jest.mock('@/services/chat/chatService', () => ({
   createChatMessage: jest.fn(),
+  getPollVoterProfiles: (/** @type {string} */ id) => mockLireLesVotants(id),
   leaveGroupChat: (/** @type {string} */ id) => mockQuitterLeGroupe(id),
 }));
 jest.mock('@/services/league/leagueMatchService', () => ({
@@ -543,5 +547,79 @@ describe('MSG1W §3.16 — une personne bloquée ne s affiche plus dans le fil d
     const texte = texteDe(arbre.root);
     expect(texte).not.toContain('Message de Bruno');
     expect(texte).toContain('Mon message');
+  });
+});
+
+// 🐞 T19-RESTES (08/10, recette) — LA BULLE DE SONDAGE DU SITE NOMMAIT MAL LES VOTANTS : « Oui, 1
+// vote, mouri nio » (c'était Karim) et « Non, 1 vote, Membre » (c'était Hugo). Deux causes :
+// (1) le site ne demandait jamais les noms au serveur (`poll-voters`) pour un sondage visible —
+// la bulle ne le fait que si on lui donne le message ; (2) son annuaire inscrivait les auteurs
+// du PLUS VIEUX au plus récent, le premier inscrit gagnant : la copie FIGÉE du nom de Karim dans
+// ses messages du 29/09 (« mouri nio ») passait devant son compte. ROUGE avant le lot.
+describe('T19R — la bulle de sondage du site nomme les votants comme le téléphone', () => {
+  const KARIM = { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' };
+  const HUGO = { documentId: 'hugo', firstname: 'Hugo', lastname: 'Lemaire' };
+  const etiquettes = (/** @type {any} */ arbre) => arbre.root
+    .findAll((/** @type {any} */ n) => typeof n.props?.accessibilityLabel === 'string')
+    .map((/** @type {any} */ n) => n.props.accessibilityLabel)
+    .join(' | ');
+
+  beforeEach(() => {
+    mockLireLesVotants.mockReset();
+    mockLireLesVotants.mockImplementation(() => new Promise(() => {}));
+    mockMoi = { ...KARIM, role: { type: 'coach' } };
+    // Le fil d'equipe U15 de la recette : aucun participant (le serveur ne les remplit pas).
+    mockFil = { ...mockFil, participants: [] };
+    mockMessagesDuFil = [
+      {
+        createdAt: '2026-09-29T19:14:15.726Z',
+        documentId: 'vieux-message',
+        message: 'Composition du samedi',
+        sender: { documentId: 'karim', firstname: 'mouri', lastname: 'nio' },
+      },
+      {
+        composition: {
+          allowMultipleVotes: false,
+          createdBy: 'karim',
+          isAnonymous: false,
+          options: [
+            { id: 'opt-1', label: 'Oui', voters: ['karim'] },
+            { id: 'opt-2', label: 'Non', voters: ['hugo'] },
+          ],
+          pollId: 'poll-1',
+          question: 'T19 sondage noms',
+          type: 'poll',
+        },
+        createdAt: '2026-10-08T00:06:24.241Z',
+        documentId: 'msg-sondage',
+        message: '',
+        sender: KARIM,
+      },
+    ];
+  });
+
+  test('la bulle demande les noms au serveur, et les affiche', async () => {
+    mockLireLesVotants.mockImplementation(() => Promise.resolve({
+      chatDocumentId: CHAT_ID, data: [KARIM, HUGO], messageDocumentId: 'msg-sondage',
+    }));
+    const { arbre } = await monter();
+    await act(async () => {
+      await new Promise((fini) => { setTimeout(fini, 20); });
+    });
+
+    expect(mockLireLesVotants).toHaveBeenCalledWith('msg-sondage');
+    const lu = etiquettes(arbre);
+    expect(lu).toContain('Karim Benali');
+    expect(lu).toContain('Hugo Lemaire');
+    expect(lu).not.toContain('mouri nio');
+    expect(lu).not.toContain('Membre');
+  });
+
+  test('avant la reponse du serveur : Karim garde son nom d aujourd hui', async () => {
+    const { arbre } = await monter();
+
+    const lu = etiquettes(arbre);
+    expect(lu).toContain('Karim Benali');
+    expect(lu).not.toContain('mouri nio');
   });
 });
