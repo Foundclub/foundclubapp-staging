@@ -83,16 +83,18 @@ export const cancelCollectiviteProposal = async ({ collectiviteId, invitationId 
 );
 
 /**
- * La Ville accepte ou refuse une demande venue de son lien (« lien A »).
- * @param {{ accept: boolean, collectiviteId: string, invitationId: string }} params - La réponse.
+ * La Ville accepte ou refuse une demande venue de son lien (« lien A »). FINITIONS-VILLE (T20) :
+ * un refus porte son motif (`reason`), que le club lit dans sa notification.
+ * @param {{accept: boolean, collectiviteId: string, invitationId: string, reason?: string}} params
+ *   - La réponse.
  * @returns {Promise<any>} `{ data: demande }`.
  */
 export const answerCollectiviteAttachRequest = async ({
-  accept, collectiviteId, invitationId,
+  accept, collectiviteId, invitationId, reason = '',
 }) => corps(
   (await client()).post(
     `/collectivites/${enc(collectiviteId)}/club-requests/${enc(invitationId)}/answer`,
-    { data: { accept: accept === true } },
+    { data: { accept: accept === true, ...(accept !== true && reason ? { reason } : {}) } },
   ),
 );
 

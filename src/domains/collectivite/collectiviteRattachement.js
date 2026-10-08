@@ -232,3 +232,9 @@ export const demandeCouranteDuClub = (demandes) => {
     || [...lignes].sort((a, b) => quand(b) - quand(a))[0]
     || null;
 };
+
+/**
+ * FINITIONS-VILLE (T20, 08/10) — les MOTIFS FRÉQUENTS d'un refus de rattachement par la Ville,
+ * en un appui dans la fenêtre « Refuser la demande » (celle des créneaux), chacun par sa clé.
+ */
+export const MOTIFS_DE_REFUS_RATTACHEMENT = Object.freeze(['horsCommune', 'inconnu', 'doublon']);
