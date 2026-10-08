@@ -430,3 +430,21 @@ describe('FINITIONS16 21 — planche 18 sur le site : le titre et la croix', () 
     expect(croixDe(arbre)).toBeUndefined();
   });
 });
+
+// 🎨 FINITIONS-VILLE (08/10/2026, tournée T20 V26) — DEUX styles de pastille choisie dans l'espace
+// de la Ville : « Nouvelle actualité » (fond sombre + liseré) et « Fermer » (cyan plein). Une seule
+// pastille : celle de Fermer (PuceDeChoix, cyan plein). ROUGE avant le lot.
+describe('FINITIONS-VILLE — une seule pastille choisie dans l’espace Ville', () => {
+  it('le type et « Pour qui » choisis : cyan plein, comme le motif de « Fermer »', async () => {
+    const couleurs = jest.requireActual('@/theme/colors').default();
+    const fond = (/** @type {any} */ noeud) => [noeud.props.style].flat(Infinity)
+      .reduce((tout, part) => ({ ...tout, ...part }), {}).backgroundColor;
+    const arbre = await monter(<CollectiviteActualiteForm />);
+    await appuyer(parTestID(arbre, 'actualite-form-type-travaux'));
+    await appuyer(parTestID(arbre, 'actualite-form-pour-installation'));
+    expect(fond(parTestID(arbre, 'actualite-form-type-travaux'))).toBe(couleurs.primary500);
+    expect(fond(parTestID(arbre, 'actualite-form-pour-installation'))).toBe(couleurs.primary500);
+    const autre = parTestID(arbre, 'actualite-form-type-subventions');
+    expect(fond(autre)).not.toBe(couleurs.primary500);
+  });
+});
