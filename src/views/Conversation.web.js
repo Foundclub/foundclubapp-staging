@@ -1229,9 +1229,12 @@ function FenetreDuSite({
             {DESSIN_FERMER}
           </button>
         </div>
+        {/* SMF (T20) — des lignes a la hauteur de leur contenu : sans `max-content`, la grille
+            tassait ses lignes a la hauteur de la fenetre des que le contenu la depassait, et
+            les grandes cartes du planning (EventCardNew, `minHeight: 0`) s empilaient. */}
         <div
           style={{
-            display: 'grid', gap: 12, minHeight: 0, overflowY: 'auto',
+            display: 'grid', gap: 12, gridAutoRows: 'max-content', minHeight: 0, overflowY: 'auto',
           }}
         >
           {children}
