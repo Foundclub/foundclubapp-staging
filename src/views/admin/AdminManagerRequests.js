@@ -425,7 +425,7 @@ function AdminManagerRequests() {
             {nomDe(demande)}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('collectiviteAccueil.console.inscrite', 'Inscrite le {{date}}', {
+            {t('collectiviteAccueil.console.inscrite', 'Demande envoyée le {{date}}', {
               date: dateDe(demande?.createdAt),
               ...SANS_ECHAPPEMENT,
             })}

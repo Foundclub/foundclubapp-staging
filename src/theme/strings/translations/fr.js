@@ -4888,7 +4888,8 @@ export default {
       gereDeja: 'Gère déjà : {{collectivites}}',
       gestionnairesActuels: 'gestionnaires : {{noms}}',
       inactive: 'Inactive',
-      inscrite: 'Inscrite le {{date}}',
+      // FINITIONS-VILLE (registre n° 50) : la date est celle de la DEMANDE, pas d une inscription.
+      inscrite: 'Demande envoyée le {{date}}',
       laPersonne: 'La personne',
       laVille: 'La collectivité demandée',
       ongletAttente: 'En attente ({{nombre}})',

@@ -4556,7 +4556,7 @@ export default {
       gereDeja: 'Already manages: {{collectivites}}',
       gestionnairesActuels: 'managers: {{noms}}',
       inactive: 'Inactive',
-      inscrite: 'Signed up on {{date}}',
+      inscrite: 'Request sent on {{date}}',
       laPersonne: 'The person',
       laVille: 'The requested local authority',
       ongletAttente: 'Pending ({{nombre}})',
