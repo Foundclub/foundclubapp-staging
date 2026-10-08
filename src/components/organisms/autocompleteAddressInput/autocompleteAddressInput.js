@@ -179,9 +179,18 @@ function AutocompleteAddressInput({
 
   const placesOptions = useMemo(() => {
     if (!Array.isArray(places) || places.length === 0) return [];
+    // FINITIONS-VILLE (T20 C00g) : la base d'adresses rend parfois DEUX fois la même adresse (même
+    // point, même libellé) ; deux lignes identiques s'allumaient ensemble. Une seule ligne.
+    const vues = new Set();
     return places
       .map(placeToOption)
-      .filter((option) => option.label && option.value);
+      .filter((option) => option.label && option.value)
+      .filter((option) => {
+        const cle = `${option.label}|${option.value}`;
+        if (vues.has(cle)) return false;
+        vues.add(cle);
+        return true;
+      });
   }, [places]);
 
   const options = useMemo(() => {
