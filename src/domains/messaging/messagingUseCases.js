@@ -63,8 +63,11 @@ export const estArchivePourMoi = (chat, meId) => Boolean(meId)
  * @param {string | null | undefined} meId
  * @returns {boolean}
  */
-export const estEpinglePourMoi = (chat, meId) => Array.isArray(chat?.pinnedBy)
-  && chat.pinnedBy.some((/** @type {any} */ u) => u?.documentId === meId);
+export const estEpinglePourMoi = (chat, meId) => {
+  const epinglePar = chat?.pinnedBy;
+  return Array.isArray(epinglePar)
+    && epinglePar.some((/** @type {any} */ u) => u?.documentId === meId);
+};
 
 /** Le rang d un type de fil : club multisport, club, League, equipe, groupe, tete-a-tete. */
 const RANG_DU_TYPE_DE_FIL = /** @type {Record<string, number>} */ ({
