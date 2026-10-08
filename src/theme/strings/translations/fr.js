@@ -5720,7 +5720,8 @@ export default {
       proposalOffer: 'Avec {{ville}}, ton club reçoit l’offre Club de FoundClub, offerte par la Ville.',
       proposalTitle: '{{sujet}} propose de rattacher ton club',
       refuse: 'Refuser',
-      refuseConfirm: 'Refuser la demande de {{ville}} ? Elle ne pourra pas te la renvoyer.',
+      // eslint-disable-next-line max-len
+      refuseConfirm: 'Refuser la demande de {{ville}} ? Ton club ne sera pas rattaché ; elle pourra te la renvoyer plus tard.',
       refused: '{{sujet}} n’a pas accepté ta demande de rattachement.',
       refuseYes: 'Oui, refuser',
       youAccepted: 'Tu as accepté la demande de {{ville}}.',

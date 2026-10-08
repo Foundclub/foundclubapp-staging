@@ -22,8 +22,8 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  *
  * - « club A » d'Adel : la Ville a cherché le club et lui demande de le rattacher. La carte dit
  *   ce que ça change (une phrase : installations, créneaux, actualités), l'offre quand la Ville la
- *   donne, et « Accepter » (rattaché tout de suite) / « Refuser » (confirmé : la Ville ne pourra
- *   pas renvoyer sa demande).
+ *   donne, et « Accepter » (rattaché tout de suite) / « Refuser » (confirmé ; FINITIONS-VILLE :
+ *   la Ville pourra la renvoyer, « refus B »).
  * - Constat du chef en prod (07/10) : le dirigeant voit aussi l'état de la demande qu'il a faite
  *   par le LIEN de la Ville — Adel avait cru son club rattaché alors qu'elle attendait.
  * Le serveur est le juge (dirigeant de CE club) : un compte qui n'a pas le droit de lire ne voit
@@ -118,7 +118,8 @@ function RattachementDuClub({ clubId, enabled }) {
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
               {t(
                 'collectiviteRattachement.club.refuseConfirm',
-                'Refuser la demande de {{ville}} ? Elle ne pourra pas te la renvoyer.',
+                // eslint-disable-next-line max-len
+                'Refuser la demande de {{ville}} ? Ton club ne sera pas rattaché ; elle pourra te la renvoyer plus tard.',
                 valeurs,
               )}
             </Text>

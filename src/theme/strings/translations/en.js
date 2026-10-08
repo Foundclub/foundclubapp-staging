@@ -6076,7 +6076,7 @@ export default {
       proposalOffer: "With {{ville}}, your club gets FoundClub's Club offer, paid for by the town.",
       proposalTitle: '{{sujet}} offers to attach your club',
       refuse: 'Decline',
-      refuseConfirm: 'Decline the request from {{ville}}? It will not be able to send it again.',
+      refuseConfirm: 'Decline the request from {{ville}}? Your club will not be attached; it can send it again later.',
       refused: '{{sujet}} did not accept your attachment request.',
       refuseYes: 'Yes, decline',
       youAccepted: 'You accepted the request from {{ville}}.',
