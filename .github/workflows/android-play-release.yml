@@ -318,8 +318,12 @@ jobs:
           echo "Fichier de correspondance R8 : $(wc -c < android/app/build/outputs/mapping/productionRelease/mapping.txt) octets"
           echo "path=android/app/build/outputs/mapping/productionRelease/mapping.txt" >> "$GITHUB_OUTPUT"
 
+      # 08/10 (chef) : copies de SECOURS seulement — l'envoi a Google Play lit le .aab et le mapping
+      # directement. Le quota de stockage des artefacts GitHub plein a fait SAUTER l'envoi de la
+      # 2.6.71 apres 51 min de construction : une copie de secours ne doit jamais bloquer l'envoi.
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: foundclub-android-play-aab
           path: ${{ steps.aab.outputs.path }}
@@ -329,6 +333,7 @@ jobs:
       # (retrace de l Android SDK) si la Play Console ne le fait pas.
       - name: Upload R8 mapping artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: foundclub-android-play-mapping
           path: ${{ steps.mapping.outputs.path }}
