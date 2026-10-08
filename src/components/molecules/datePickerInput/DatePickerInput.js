@@ -23,6 +23,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
  * @param {string} [props.error] - Error message
  * @param {Date} [props.minimumDate] - Minimum selectable date
  * @param {Date} [props.maximumDate] - Maximum selectable date
+ * @param {string} [props.testID] - Repère du champ (témoins)
  */
 function DatePickerInput({
   error,
@@ -31,6 +32,7 @@ function DatePickerInput({
   minimumDate,
   onChange,
   placeholder = undefined,
+  testID = undefined,
   value,
 }) {
   const {
@@ -162,6 +164,7 @@ function DatePickerInput({
             { gap: 12 },
             error && { borderColor: Colors.error500, borderWidth: 1 },
           ]}
+          testID={testID}
         >
           <Text style={[
             Fonts.p1,

@@ -140,6 +140,17 @@ const isDateLikeField = (/** @type {string} */ key = '') => (
 const formatDate = (/** @type {any} */ value) => {
   const normalized = normalizeString(value);
   if (!normalized) return '';
+  // SAIS (T20, hors lots) — une date SEULE n'a pas d'heure : `new Date('2026-10-08')` la lisait
+  // comme minuit UTC, affiché « 08/10/2026 02:00 » à Paris. Lue en jour LOCAL, sans heure.
+  const jourSeul = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
+  if (jourSeul) {
+    return new Date(Number(jourSeul[1]), Number(jourSeul[2]) - 1, Number(jourSeul[3]))
+      .toLocaleDateString(localeDesFormats(), {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      });
+  }
+  // Une heure seule (« 18:30:00.000 ») se dit HH:mm.
+  if (/^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(normalized)) return normalized.slice(0, 5);
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) return normalized;
   return parsed.toLocaleString(localeDesFormats(), {

@@ -34,9 +34,10 @@ const ROUE_NATIVE_STYLE = { alignSelf: 'center' };
  * @param {Function} props.onChange - Callback when time changes
  * @param {string} [props.placeholder] - Placeholder text
  * @param {string} [props.error] - Error message
+ * @param {string} [props.testID] - Repère du champ (témoins)
  */
 function TimePickerInput({
-  error, label, onChange, placeholder = 'HH:mm', value,
+  error, label, onChange, placeholder = 'HH:mm', testID = undefined, value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -137,6 +138,7 @@ function TimePickerInput({
             cadre,
             error && { borderColor: Colors.error500, borderWidth: 1 },
           ]}
+          testID={testID}
         >
           <Text style={[
             Fonts.p1,
