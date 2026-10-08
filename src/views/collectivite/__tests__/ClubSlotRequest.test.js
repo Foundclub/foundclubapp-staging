@@ -845,6 +845,63 @@ describe('VILLE-T18C point 1 — une série part vite, dit où elle en est, et n
   });
 });
 
+// 🚀 SERIES (08/10, décision d'Adel « séries lot », point 3) — 36 dates prenaient 54 s en
+// recette (T19 : 36 POST /events, 3 à la fois). Le serveur neuf pose la série en UNE requête si
+// la liste des dates voyage À LA RACINE du corps (`dates`). ROUGE avant le lot : 39 POST. Un
+// serveur d'avant (il ignore la racine et ne pose que la 1re date) garde le chemin d'avant : la
+// 1re seule, puis trois à la fois — c'est le témoin VILLE-T18C point 1 ci-dessus, inchangé.
+describe('SERIES point 3 — serveur neuf : la série part en UNE requête', () => {
+  // eslint-disable-next-line max-len
+  it('39 jeudis : un seul POST /events (`dates` à la racine) ; l’écran dit 0 sur 39, puis « Demande envoyée »', async () => {
+    /** @type {null | ((valeur: any) => void)} */
+    let liberer = null;
+    mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
+      if (url !== '/events') return { data: {} };
+      if (!Array.isArray(corps?.dates)) throw new Error('POST date par date inattendu');
+      regleDesEntrainementsDuServeur(corps);
+      await new Promise((r) => { liberer = r; });
+      const posees = corps.dates.map((/** @type {any} */ d, /** @type {number} */ i) => ({
+        date: d.date,
+        documentId: `ev-${i}`,
+        endDate: d.endDate,
+        id: i + 1,
+        pendingReason: 'facility_overbooking',
+        status: 'pending_validation',
+      }));
+      const total = corps.dates.length;
+      return {
+        data: {
+          data: posees,
+          meta: {
+            series: {
+              awaitingCity: total, awaitingClub: 0, created: total, failed: [], total,
+            },
+          },
+        },
+      };
+    });
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    const cible = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'bouton-Envoyer la demande' && typeof n.props?.onPress === 'function'
+    ))[0];
+    await act(async () => { cible.props.onPress(); });
+    await attendre(() => typeof liberer === 'function');
+    expect(textes(arbre))
+      .toContain('Envoi en cours : 0 sur 39 dates envoyées. Reste sur cet écran.');
+    await act(async () => { /** @type {any} */ (liberer)(null); });
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    const poses = mockPost.mock.calls.filter(([url]) => url === '/events');
+    expect(poses).toHaveLength(1);
+    expect(poses[0][1].dates).toHaveLength(39);
+    expect(poses[0][1].announceSeriesLater).toBe(true);
+    expect(poses[0][1].data.recurrenceGroupId).toBeTruthy();
+    expect(mockPost.mock.calls.some(([url]) => url === '/events/ev-0/announce-series')).toBe(true);
+  });
+});
+
 // 🗣️ VILLE-T18C (07/10) — point 2, tournée T18 (D07c) : U13 dans le créneau des U15, au T18 :
 // « Il y a déjà 2 équipes : c’est complet. … Ton entraînement sera posé tout de suite. » —
 // CONTRADICTOIRE, sans dire pourquoi. Le compte (Karim) est dirigeant du club ET gestionnaire de la

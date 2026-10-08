@@ -40,6 +40,7 @@ import {
 } from '@/services/celebrations/celebrationRuntime';
 import {
   announceEventSeries,
+  createEventSeries,
   createEventsWithConcurrency,
   getEventById,
   requestFeatured,
@@ -712,7 +713,11 @@ function EventWizardRecap({ navigation }) {
   };
 
   const runCreateBatch = async (payloads) => {
-    const result = await createEventsWithConcurrency(payloads, {
+    // SERIES (08/10, point 3) — une série part en UNE requête (`createEventSeries` ; un
+    // serveur d'avant en pose la 1re, puis les suivantes partent comme avant). Une date
+    // seule : comme avant.
+    const creer = isSeriesBatch ? createEventSeries : createEventsWithConcurrency;
+    const result = await creer(payloads, {
       announceSeriesLater: isSeriesBatch,
       concurrency: CREATE_EVENT_BATCH_CONCURRENCY,
       onProgress: setSubmitProgress,

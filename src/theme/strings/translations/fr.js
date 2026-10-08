@@ -9239,6 +9239,18 @@ export default {
         reason: "Ça n'a pas marché. Vérifie ta connexion, puis appuie de nouveau sur Enregistrer.",
         title: "L'enregistrement n'est pas passé",
       },
+      // SERIES (08/10) — après « Modifier la série » : les dates que le serveur a mises en attente.
+      seriesOutcome: {
+        // eslint-disable-next-line max-len
+        awaitingCity_one: '{{count}} date de la série attend la décision de la Ville : elle reste en attente jusqu’à sa réponse. Si la Ville refuse, cette séance sera annulée.',
+        // eslint-disable-next-line max-len
+        awaitingCity_other: '{{count}} dates de la série attendent la décision de la Ville : elles restent en attente jusqu’à sa réponse. Si la Ville refuse, ces séances seront annulées.',
+        // eslint-disable-next-line max-len
+        awaitingClub_one: '{{count}} date attend l’accord d’un dirigeant du club : le créneau du club est déjà complet ce jour-là.',
+        // eslint-disable-next-line max-len
+        awaitingClub_other: '{{count}} dates attendent l’accord d’un dirigeant du club : le créneau du club est déjà complet ces jours-là.',
+        title: 'Modification enregistrée',
+      },
       stillLoading: {
         // eslint-disable-next-line max-len
         description: "Laisse l'événement finir de s'afficher : enregistrer maintenant effacerait ses tâches, ses équipes conviées et son lieu.",

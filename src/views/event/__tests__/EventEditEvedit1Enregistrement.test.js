@@ -665,6 +665,88 @@ describe('D2 — l echec d un evenement RECURRENT se dit aussi', () => {
     expect(charge.recurrenceMode).toBe('all');
     alerte.mockRestore();
   });
+
+  // SERIES (08/10, point 5) — le serveur neuf juge chaque date deplacee de la serie et rend son
+  // bilan (`meta.recurrence`). AVANT : l ecran revenait a la fiche sans un mot, meme quand des
+  // dates partaient en attente de la Ville. Texte exact :
+  // domains/event/__tests__/seriesUpdateOutcome.SERIES.
+  // eslint-disable-next-line max-len
+  test('SERIES — « Tous les evenements » qui met des dates en attente le DIT, puis emmene a la fiche', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const remplacer = jest.fn();
+    eventService.getEventByIdForEdit.mockResolvedValue(
+      evenementRempli({ recurrenceGroupId: 'serie-1' }),
+    );
+    eventService.updateEvent.mockResolvedValue({
+      data: {
+        documentId: 'event-1',
+        pendingReason: 'facility_overbooking',
+        status: 'pending_validation',
+      },
+      meta: {
+        recurrence: {
+          awaitingCity: 2, awaitingClub: 0, moved: 2, updated: 2,
+        },
+      },
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { gcTime: Infinity, retry: false } },
+    });
+
+    act(() => {
+      arbre = renderer.create(createElement(
+        QueryClientProvider,
+        { client },
+        createElement(EventEdit, {
+          navigation: {
+            canGoBack: () => false,
+            goBack: jest.fn(),
+            navigate: jest.fn(),
+            popTo: remplacer,
+            replace: remplacer,
+            setOptions: jest.fn(),
+          },
+          route: { params: { eventId: 'event-1' } },
+        }),
+      ));
+    });
+    await laisserRepondre();
+
+    await act(async () => {
+      await boutonEnregistrer(arbre.root).props.onPress();
+    });
+    await choisirLaPortee(alerte, 'Tous les');
+
+    const bilan = 'eventEdit.modals.seriesOutcome.awaitingCity';
+    expect(alerte).toHaveBeenCalledWith('Modification enregistrée', bilan);
+    expect(remplacer).toHaveBeenCalledWith('EventDetails', { eventId: 'event-1' }, { merge: true });
+    alerte.mockRestore();
+  });
+
+  // eslint-disable-next-line max-len
+  test('SERIES — sans bilan (serveur d avant), ou « Cet evenement » : rien n est dit en plus', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    eventService.updateEvent.mockResolvedValue({
+      data: {
+        documentId: 'event-1',
+        pendingReason: 'facility_overbooking',
+        status: 'pending_validation',
+      },
+      meta: {
+        recurrence: {
+          awaitingCity: 2, awaitingClub: 0, moved: 2, updated: 2,
+        },
+      },
+    });
+    const racine = await monterSur(evenementRempli({ recurrenceGroupId: 'serie-1' }));
+    await act(async () => {
+      await boutonEnregistrer(racine).props.onPress();
+    });
+    await choisirLaPortee(alerte, 'Cet');
+    const bilans = alerte.mock.calls.filter(([titre]) => titre === 'Modification enregistrée');
+    expect(bilans).toHaveLength(0);
+    alerte.mockRestore();
+  });
 });
 
 // ---------------------------------------------------------------------------
