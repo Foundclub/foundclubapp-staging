@@ -498,3 +498,32 @@ describe('VINSC2 — une demande en attente ne disparaît jamais derrière un au
     ]));
   });
 });
+
+// 🎨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — l écusson de la
+// demande valait « RE » pour « Ville de Rouvres T18 essai » sur cet écran, « R » dans la console :
+// il prenait les initiales d un CLUB. La règle unique des collectivités (collectiviteInitial,
+// VT18E) s applique ici aussi. ROUGE avant.
+describe('SVF — l écusson de la demande suit la règle des collectivités', () => {
+  it('« Ville de Rouvres T18 essai » : « R », comme la console', async () => {
+    mockParams = {};
+    mockDemandes = {
+      data: [{
+        collectivite: {
+          documentId: 'ville-rouvres-t18', name: 'Ville de Rouvres T18 essai', type: 'commune',
+        },
+        createdAt: new Date().toISOString(),
+        decidedAt: null,
+        documentId: 'dm-rouvres-t18',
+        refusalReason: null,
+        status: 'pending',
+      }],
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    mockVilles = { data: [], isLoading: false, refetch: jest.fn() };
+    const lus = textes(await monter(CollectiviteSignupStatus));
+    expect(lus).toContain('Ville de Rouvres T18 essai');
+    expect(lus).toContain('R');
+    expect(lus).not.toContain('RE');
+  });
+});
