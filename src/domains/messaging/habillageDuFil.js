@@ -130,6 +130,26 @@ export const placeDansLeGroupe = ({ courant, precedent, suivant }) => ({
 export const estUnTeteATete = (typeDuFil) => typeDuFil === 'whisper';
 
 /**
+ * MSG1A (§3.1) — LA LIGNE SOUS LE TITRE D'UN FIL A PLUSIEURS : les prenoms des autres membres,
+ * puis « Vous » (regle du telephone, Conversation.js). Rien pour un tete-a-tete, ni quand le
+ * serveur ne joint pas les membres (fil d'equipe, de club : MSG1/N4) — le site en tirait
+ * « 0 participants » (SMF, T20).
+ * @param {{ chat: any, meId?: string | null, vous: string }} params - Le fil, moi, « Vous ».
+ * @returns {string} La ligne, ou '' s'il n'y a rien a dire.
+ */
+export const sousTitreDesMembres = ({ chat, meId = null, vous }) => {
+  if (!chat || estUnTeteATete(chat?.type)) return '';
+  const prenoms = (Array.isArray(chat?.participants) ? chat.participants : [])
+    .filter((/** @type {any} */ membre) => (
+      String(membre?.documentId || '') !== String(meId || '')
+    ))
+    .map((/** @type {any} */ membre) => String(membre?.firstname || '').trim())
+    .filter(Boolean)
+    .slice(0, 30);
+  return prenoms.length > 0 ? `${prenoms.join(', ')}, ${vous}` : '';
+};
+
+/**
  * MSG1A (§3.3) — CE QUE DIT UNE CITATION (dans la bulle, et dans la barre « reponse en
  * cours »). Le message cite peut arriver sous deux formes : un message GiftedChat (`text`,
  * `image`, `attachments`, `composition`) ou la citation que le serveur joint au message

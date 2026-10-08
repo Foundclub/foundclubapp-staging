@@ -7365,6 +7365,8 @@ export default {
       // MSG1W (07/10) — la messagerie du site au dessin du telephone (pack « modele WhatsApp »).
       fil: {
         annulerReponse: 'Annuler la réponse',
+        aucunFilChoisi: 'Choisis une conversation',
+        aucunFilChoisiAide: 'Elle s’ouvrira ici, à côté de la liste.',
         echec: 'Non envoyé',
         enCours: 'Envoi en cours',
         envoye: 'Envoyé',
@@ -13664,7 +13666,10 @@ export default {
   messaging: {
     addGroupMembers: 'Ajouter des membres',
     archive: 'Archiver',
+    archived: 'Archivées',
+    archivedBack: 'Retour aux discussions',
     archiveError: "Impossible d'archiver cette conversation.",
+    conversationOptions: 'Options de la conversation',
     createConversationError: 'Impossible de démarrer cette conversation.',
     errors: {
       cannotMessageSelf: 'Impossible de lancer une conversation avec ton propre compte.',
@@ -13673,6 +13678,7 @@ export default {
     filters: {
       all: 'Toutes',
       classic: 'Classique',
+      label: 'Conversations à afficher',
       league: 'League',
     },
     loadError: 'Impossible de charger les conversations.',
@@ -13714,6 +13720,8 @@ export default {
     searchPlaceholder: 'Rechercher une conversation...',
     searchUserPlaceholder: 'Rechercher un membre...',
     title: 'Messages',
+    unarchive: 'Désarchiver',
+    unarchiveError: 'Impossible de désarchiver cette conversation.',
     unpin: 'Désépingler',
     unpinError: 'Impossible de désépingler cette conversation.',
     unread: {

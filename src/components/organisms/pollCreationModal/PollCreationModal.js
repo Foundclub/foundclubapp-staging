@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -317,6 +318,10 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
   const [duplicateOptionIdSet, setDuplicateOptionIdSet] = useState(() => new Set());
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [error, setError] = useState('');
+  // SMF (T20) — le champ que l erreur concerne : sur le site, elle s affiche SOUS lui.
+  const [champEnErreur, setChampEnErreur] = useState(
+    /** @type {'' | 'question' | 'options'} */ (''),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [options, setOptions] = useState(() => getDefaultOptions().map(({ id }) => ({ id })));
   const optionValuesRef = useRef({});
@@ -329,6 +334,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     setDuplicateOptionIdSet(new Set());
     setIsAnonymous(false);
     setError('');
+    setChampEnErreur('');
     setIsSubmitting(false);
     setOptions(defaultOptions);
     optionValuesRef.current = Object.fromEntries(defaultOptions.map((option) => [option.id, '']));
@@ -423,6 +429,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     });
 
     if (!trimmedQuestion) {
+      setChampEnErreur('question');
       setError(t(
         'conversation.poll.errors.questionRequired',
         'Ajoute une question pour ton sondage.',
@@ -431,12 +438,14 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     }
 
     if (normalizedOptions.length < MIN_OPTIONS) {
+      setChampEnErreur('options');
       setError(t('conversation.poll.errors.minOptions', 'Ajoute au moins deux options.'));
       return;
     }
 
     if (duplicateIds.size > 0) {
       setDuplicateOptionIdSet(duplicateIds);
+      setChampEnErreur('options');
       setError(t(
         'conversation.poll.errors.duplicateOptions',
         'Chaque option doit être differente.',
@@ -453,6 +462,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
         question: trimmedQuestion,
       });
     } catch (submitError) {
+      setChampEnErreur('');
       setError(
         submitError?.message
         || t('conversation.poll.errors.createFailed', 'Impossible de créer ce sondage.'),
@@ -495,14 +505,85 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
     },
   ];
 
+  // 🖥️ SMF (T20, SITE_M04) — SUR LE SITE, la fenetre suit la regle du systeme de design : la
+  // croix et le titre en tete FIXE, « Envoyer le sondage » dans un pied FIXE (il etait sous le
+  // pli d un ecran de 900 px), un clic sur le voile ferme (Echap : Conversation.web.js), et
+  // l erreur s affiche sous le champ qu elle concerne. Le telephone ne change pas.
+  const surLeSite = Platform.OS === 'web';
+  let lieuDeLErreur = '';
+  if (error) lieuDeLErreur = surLeSite && champEnErreur ? champEnErreur : 'pied';
+  const styleDErreurSousLeChamp = [Fonts.p3, { color: Colors.chatDanger }];
+
+  // MSG1A (§3.4) — en-tete du pack : fermer (rond de 36) a gauche, titre 18, sous-titre.
+  const enTete = (
+    <View style={[stylesDuPack.enTete, surLeSite ? null : Spaces.marginBottom[8]]}>
+      <TouchableOpacity
+        accessibilityLabel={t('common.close', 'Fermer')}
+        accessibilityRole="button"
+        onPress={handleClose}
+        style={[stylesDuPack.fermer, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}
+        testID="sondage-fermer"
+      >
+        <GlyphIcon color={Colors.neutral00} name="xmark" size={18} />
+      </TouchableOpacity>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[stylesDuPack.titre, { color: Colors.neutral00 }]}>
+          {t('conversation.attachments.createPoll', 'Créer un sondage')}
+        </Text>
+        <Text style={[stylesDuPack.sousTitre, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+          {t(
+            'conversation.poll.form.subtitle',
+            'Pose une question, ajoute des options et lance le vote.',
+          )}
+        </Text>
+      </View>
+    </View>
+  );
+  const erreurDuPied = lieuDeLErreur === 'pied' ? (
+    <Text
+      accessibilityLiveRegion="polite"
+      style={[
+        Fonts.p3,
+        { color: Colors.chatDanger, textAlign: 'center' },
+        surLeSite ? Spaces.marginBottom[12] : null,
+      ]}
+    >
+      {error}
+    </Text>
+  ) : null;
+  const boutonEnvoyer = (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
+      disabled={isSubmitting}
+      onPress={handleSubmit}
+      style={[stylesDuPack.boutonEnvoyer, { backgroundColor: Colors.primary500 }]}
+    >
+      {isSubmitting ? (
+        <ActivityIndicator color={Colors.primary900} />
+      ) : (
+        <Text style={[stylesDuPack.boutonEnvoyerTexte, { color: Colors.primary900 }]}>
+          {t('conversation.poll.form.submit', 'Envoyer le sondage')}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <BottomModal
       androidKeyboardInputMode="adjustResize"
       close={handleClose}
-      closeOnBackdropPress={false}
+      closeOnBackdropPress={surLeSite}
       contentContainerStyle={modalContentContainerStyle}
       enableContentPanningGesture={false}
       enablePanDownToClose={false}
+      footerComponent={surLeSite ? (
+        <>
+          {erreurDuPied}
+          {boutonEnvoyer}
+        </>
+      ) : undefined}
+      headerComponent={surLeSite ? enTete : undefined}
       isVisible={isVisible}
       keyboardBehavior="interactive"
       scrollViewProps={MODAL_SCROLL_VIEW_PROPS}
@@ -511,30 +592,7 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
       // feuille pleine largeur. Le telephone ignore ce reglage (BottomModal.js).
       webPresentation="dialog"
     >
-      {/* MSG1A (§3.4) — en-tete du pack : fermer (rond de 36) a gauche, titre 18,
-          sous-titre. */}
-      <View style={[stylesDuPack.enTete, Spaces.marginBottom[8]]}>
-        <TouchableOpacity
-          accessibilityLabel={t('common.close', 'Fermer')}
-          accessibilityRole="button"
-          onPress={handleClose}
-          style={[stylesDuPack.fermer, { backgroundColor: withAlpha(Colors.neutral00, 0.08) }]}
-          testID="sondage-fermer"
-        >
-          <GlyphIcon color={Colors.neutral00} name="xmark" size={18} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[stylesDuPack.titre, { color: Colors.neutral00 }]}>
-            {t('conversation.attachments.createPoll', 'Créer un sondage')}
-          </Text>
-          <Text style={[stylesDuPack.sousTitre, { color: withAlpha(Colors.neutral00, 0.6) }]}>
-            {t(
-              'conversation.poll.form.subtitle',
-              'Pose une question, ajoute des options et lance le vote.',
-            )}
-          </Text>
-        </View>
-      </View>
+      {surLeSite ? null : enTete}
 
       <QuestionInputField
         Alignments={Alignments}
@@ -552,6 +610,14 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
         Spaces={Spaces}
         style={inputStyle}
       />
+      {lieuDeLErreur === 'question' ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[...styleDErreurSousLeChamp, { marginTop: -12 }]}
+        >
+          {error}
+        </Text>
+      ) : null}
 
       <View style={[Spaces.gap[12], Spaces.marginBottom[8]]}>
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
@@ -608,6 +674,9 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
             />
           );
         })}
+        {lieuDeLErreur === 'options' ? (
+          <Text accessibilityLiveRegion="polite" style={styleDErreurSousLeChamp}>{error}</Text>
+        ) : null}
 
         {/* « + Ajouter une option » : un lien cyan, tant qu'on n'est pas a 6. */}
         {options.length < MAX_OPTIONS ? (
@@ -655,27 +724,8 @@ function PollCreationModal({ isVisible, onClose, onSubmit }) {
         ))}
       </View>
 
-      {error ? (
-        <Text style={[Fonts.p3, { color: Colors.chatDanger, textAlign: 'center' }]}>{error}</Text>
-      ) : null}
-
-      <View style={Spaces.paddingTop[8]}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
-          disabled={isSubmitting}
-          onPress={handleSubmit}
-          style={[stylesDuPack.boutonEnvoyer, { backgroundColor: Colors.primary500 }]}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={Colors.primary900} />
-          ) : (
-            <Text style={[stylesDuPack.boutonEnvoyerTexte, { color: Colors.primary900 }]}>
-              {t('conversation.poll.form.submit', 'Envoyer le sondage')}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {surLeSite ? null : erreurDuPied}
+      {surLeSite ? null : <View style={Spaces.paddingTop[8]}>{boutonEnvoyer}</View>}
     </BottomModal>
   );
 }

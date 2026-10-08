@@ -6919,6 +6919,8 @@ export default {
       empty: 'No messages yet.',
       fil: {
         annulerReponse: 'Cancel reply',
+        aucunFilChoisi: 'Choose a conversation',
+        aucunFilChoisiAide: 'It will open here, next to the list.',
         echec: 'Not sent',
         enCours: 'Sending',
         envoye: 'Sent',
@@ -12847,7 +12849,10 @@ export default {
   messaging: {
     addGroupMembers: 'Add members',
     archive: 'Archive',
+    archived: 'Archived',
+    archivedBack: 'Back to chats',
     archiveError: 'Unable to archive this conversation.',
+    conversationOptions: 'Conversation options',
     createConversationError: 'Unable to start this conversation.',
     errors: {
       cannotMessageSelf: "You can't start a conversation with your own account.",
@@ -12856,6 +12861,7 @@ export default {
     filters: {
       all: 'All',
       classic: 'Classic',
+      label: 'Conversations to show',
       league: 'League',
     },
     loadError: 'Unable to load conversations.',
@@ -12897,6 +12903,8 @@ export default {
     searchPlaceholder: 'Search a conversation...',
     searchUserPlaceholder: 'Search a member...',
     title: 'Messages',
+    unarchive: 'Unarchive',
+    unarchiveError: 'Unable to unarchive this conversation.',
     unpin: 'Unpin',
     unpinError: 'Unable to unpin this conversation.',
     unread: {

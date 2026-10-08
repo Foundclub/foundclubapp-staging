@@ -40,9 +40,14 @@ const useSafeTimers = () => {
     timersRef.current.clear();
   }, []);
 
-  useEffect(() => () => {
-    isMountedRef.current = false;
-    clearAllSafeTimers();
+  // SITE-MSG-FENETRES (T20) — le mode strict du site de dev demonte puis REMONTE : sans ce
+  // retour a `true`, chaque minuterie posee apres le remontage ne sonnait plus jamais.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      clearAllSafeTimers();
+    };
   }, [clearAllSafeTimers]);
 
   return {
