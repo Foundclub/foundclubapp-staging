@@ -7491,7 +7491,7 @@ export default {
       meetingPlaceholder: 'Ex : au club',
       meetingPlaceLabel: 'Lieu du rendez-vous',
       meetingTime: 'Heure',
-      postedHint: 'Le rendez-vous s’affiche sur la convocation ; les infos partent dans le groupe.',
+      postedHint: 'Le RDV s’affiche sur la convocation et part dans le groupe, avec les infos.',
       summary: '{{pitch}} sur le terrain · {{bench}} sur le banc',
     },
     entry: 'Convocation',

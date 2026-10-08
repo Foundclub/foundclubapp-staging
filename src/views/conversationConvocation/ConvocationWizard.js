@@ -321,21 +321,20 @@ function ConvocationWizard({
       // publierait l'etat precedent (meme ordre que le plateau).
       const draft = rendezVousTouche ? { ...pack, rendezVous } : pack;
       await saveEventCompositionDraft(eventId, { draft, teamId });
-      const resultat = await publishEventConvocation(eventId, { teamId });
+      await publishEventConvocation(eventId, { teamId });
       invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
 
-      // CONVOC-RDV — la reponse de publication rend `published.rendezVous` quand le serveur
-      // connait le champ. Un serveur d'avant ne le rend pas : le rendez-vous repart en message,
-      // comme avant.
-      const serveurConnaitLeRendezVous = Boolean(resultat?.published)
-        && Object.prototype.hasOwnProperty.call(resultat.published, 'rendezVous');
+      // CONVOC-RDV — `rdv doublon B` (chef d'orchestre, 08/10) : le rendez-vous part AUSSI en
+      // message, que le serveur le range ou non. Un joueur en 2.6.70 / 2.6.71 ne lit pas la ligne
+      // « RDV » de la carte, et un serveur d'avant jette le champ : sans ce message, l'un comme
+      // l'autre perdrait l'heure du rendez-vous.
+      // ponytail: doublon voulu (la 2.6.72 voit le RDV sur la carte ET en message). A retirer
+      // quand update-gate exige au moins la 2.6.72 : n'envoyer alors que les infos.
       const detailsText = buildDetailsMessageText({
         infos,
         infosLabel: t('conversationConvocation.details.infosLabel'),
         meetingLabel: t('conversationConvocation.details.meetingLabel'),
-        meetingPoint: rendezVousTouche && !serveurConnaitLeRendezVous
-          ? ligneDeRendezVous(rendezVous)
-          : '',
+        meetingPoint: rendezVousTouche ? ligneDeRendezVous(rendezVous) : '',
       });
       if (detailsText) {
         const sent = await sendDetailsMessage(detailsText);

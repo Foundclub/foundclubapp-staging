@@ -7039,7 +7039,7 @@ export default {
       meetingPlaceholder: 'E.g. at the club',
       meetingPlaceLabel: 'Meeting place',
       meetingTime: 'Time',
-      postedHint: 'The meeting point shows on the call-up; the info is posted in the group.',
+      postedHint: 'The meeting point shows on the call-up and is posted in the group, with the info.',
       summary: '{{pitch}} on the pitch · {{bench}} on the bench',
     },
     entry: 'Call-up',

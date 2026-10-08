@@ -805,7 +805,9 @@ describe('CONVOC-RDV · etape 4 : le rendez-vous', () => {
     expect(lieu(arbre).props.maxLength).toBe(120);
   });
 
-  test('choisi : le RDV part dans la convocation ; seules les infos en message', async () => {
+  // `rdv doublon B` (chef d'orchestre, 08/10) : un joueur en 2.6.70 / 2.6.71 ne lit pas la ligne
+  // RDV de la carte. Le rendez-vous part donc AUSSI en message, meme quand le serveur le connait.
+  test('choisi : le RDV part dans la convocation ET en message, avec les infos', async () => {
     publication.mockResolvedValueOnce({
       published: { rendezVous: { place: 'Au club', time: '13:30' }, version: 1 },
     });
@@ -819,18 +821,27 @@ describe('CONVOC-RDV · etape 4 : le rendez-vous', () => {
     expect(brouillon.mock.calls[0][1].draft.rendezVous)
       .toEqual({ place: 'Au club', time: '13:30' });
     expect(mockSendMessage).toHaveBeenCalledTimes(1);
-    expect(mockSendMessage)
-      .toHaveBeenCalledWith('fil-equipe', 'Infos : Maillot bleu', expect.any(Object));
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      'fil-equipe',
+      'Rendez-vous : 13:30 · Au club\nInfos : Maillot bleu',
+      expect.any(Object),
+    );
     expect(onClose).toHaveBeenCalledWith({ published: true });
   });
 
-  test('l heure seule garde le lieu de l evenement', async () => {
-    publication.mockResolvedValueOnce({ published: { rendezVous: null, version: 1 } });
+  test('l heure seule garde le lieu de l evenement, et part aussi en message', async () => {
+    publication.mockResolvedValueOnce({
+      published: { rendezVous: { place: STADE, time: '14:00' }, version: 1 },
+    });
     const { arbre } = allerAuxDetails();
     choisir(arbre, '14:00');
     await envoyer(arbre);
     expect(brouillon.mock.calls[0][1].draft.rendezVous).toEqual({ place: STADE, time: '14:00' });
-    expect(mockSendMessage).not.toHaveBeenCalled();
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      'fil-equipe',
+      `Rendez-vous : 14:00 · ${STADE}`,
+      expect.any(Object),
+    );
   });
 
   test('serveur SANS le champ : le RDV repart en message texte, aucune erreur', async () => {
