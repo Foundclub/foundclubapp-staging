@@ -10,6 +10,7 @@ import {
 } from '@/services/collectivite/collectiviteService';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import {
+  closeFacility,
   listFacilityClosures,
   previewFacilityClosure,
 } from '@/services/facilityClosure/facilityClosureService';
@@ -568,5 +569,52 @@ describe('COLL-C4B-BIS point 6 — le bandeau suit la fermeture qui dure ou appr
     });
     const lus = textes(await rendre());
     expect(lus).toContain('L’installation est fermée le mercredi 4 mars');
+  });
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10), tournée T19 (site, SITE_A21c) — « fermer A » (décision du chef
+// d orchestre du 07/10) : après « Fermer », l onglet « Fermetures » de l installation s ouvre.
+// VILLE-T18A l avait posé sur l écran plein (téléphone) ; dans le PANNEAU de droite (ordinateur),
+// le site restait sur le planning. Bloquer et modifier ne bougent pas. ROUGE avant.
+describe('SVF 4b — fermer A aussi dans le panneau de droite', () => {
+  const parID = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ noeud) => noeud.props?.testID === testID
+      && typeof noeud.props?.onPress === 'function')[0];
+  const envoyerEtConfirmer = async (/** @type {any} */ arbre) => {
+    await act(async () => { parID(arbre, 'fermeture-envoyer').props.onPress(); });
+    await attendre();
+    await act(async () => { parID(arbre, 'fermeture-confirmer').props.onPress(); });
+    await attendre();
+  };
+
+  it('13. « Fermer » : le panneau se ferme, puis l onglet Fermetures de l installation', async () => {
+    gereLaVille();
+    /** @type {any} */ (closeFacility).mockResolvedValue({ data: { documentId: 'f9' } });
+    mockRoute.params = { ...mockRoute.params, fermeture: 'fermer' };
+    const arbre = await rendre();
+    await act(async () => { date('Du').onChange('04/03/2026'); });
+    await attendre();
+    await envoyerEtConfirmer(arbre);
+    expect(closeFacility).toHaveBeenCalled();
+    expect(panneau(arbre)).toBeUndefined();
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+      collectiviteId: 'ville-1', facilityId: 'gym-ville', onglet: 'fermetures',
+    });
+  });
+
+  it('14. « Bloquer » : le panneau se ferme, on reste sur le planning (inchangé)', async () => {
+    gereLaVille();
+    /** @type {any} */ (closeFacility).mockResolvedValue({ data: { documentId: 'b9' } });
+    mockRoute.params = {
+      ...mockRoute.params, endTime: '18:30', fermeture: 'bloquer', startTime: '17:00',
+    };
+    const arbre = await rendre();
+    await act(async () => { date('Jour').onChange('04/03/2026'); });
+    await attendre();
+    await act(async () => { champ('Pour quoi').onChangeText('Forum'); });
+    await attendre();
+    await envoyerEtConfirmer(arbre);
+    expect(closeFacility).toHaveBeenCalled();
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CollectiviteInstallation', expect.anything());
   });
 });

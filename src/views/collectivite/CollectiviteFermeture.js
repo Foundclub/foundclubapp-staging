@@ -410,8 +410,17 @@ function FormulaireDeFermeture({
         });
       }
       setConfirmer(false);
-      if (onDone) onDone();
-      else if (!modification && !bloquer) versLesFermetures();
+      if (onDone) {
+        onDone();
+        // SITE-VILLE-FINITIONS (T19) — « fermer A » aussi dans le panneau de droite (ordinateur) :
+        // il se ferme, puis l'onglet Fermetures de l'installation s'ouvre ; le planning reste
+        // derrière (Retour). Bloquer et modifier restent sur le planning.
+        if (!modification && !bloquer && collectiviteId) {
+          navigation.navigate?.(RouteNames.CollectiviteInstallation, {
+            collectiviteId, facilityId, onglet: 'fermetures',
+          });
+        }
+      } else if (!modification && !bloquer) versLesFermetures();
       else navigation.goBack?.();
     } catch (refus) {
       setConfirmer(false);
