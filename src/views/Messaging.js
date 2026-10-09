@@ -54,7 +54,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
-// COLL-C4A (02/10) — les canaux de la Ville, épinglés en tête de la messagerie.
+// IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
 import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
 
@@ -199,7 +199,7 @@ function Messaging({ navigation, route }) {
     // appui. 🧒 K5 : seuls les fils STRICTEMENT a deux disparaissent — un
     // groupe, un club, une equipe et la discussion a trois du mineur avec son
     // parent restent en place.
-    // SMF — l ordre (epingles, type, plus recent) est une regle partagee avec la colonne du
+    // IPH09 — l ordre (mes epingles, club, dernier message) est partage avec la colonne du
     // site : messagingUseCases.trierLesFils.
     return trierLesFils(
       hideBlockedChats(chats, userData?.documentId, blockedUserIds),
@@ -688,6 +688,7 @@ function Messaging({ navigation, route }) {
             opacity: isLoading ? 0.6 : 1,
           },
         ]}
+        testID="messaging-retry"
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
           {t('common.retry', 'Réessayer')}
@@ -961,52 +962,27 @@ function Messaging({ navigation, route }) {
           <View style={[Alignments.fill]}>
             {espaceVille ? null : renderChatScopeFilter()}
             {renderSearch()}
-            {/* COLL-C4A (02/10) — en tête : le canal des actualités de la Ville (le membre d'un
-                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ». */}
-            <CanauxDeLaVille
-              chats={allChats}
-              collectiviteId={route?.params?.collectiviteId || null}
-              espaceVille={route?.params?.espace === 'ville'}
-              navigation={navigation}
-            />
-            {/* ARCHIVEES — en tête de la liste des conversations, sous le canal épinglé. */}
-            {renderLigneArchivees()}
-            {isLoading && (
-              <WithDataWrapper
-                isLoading
-                wrapperStyle={[Alignments.fill]}
-              >
-                <View style={[
-                  Alignments.fill,
-                  ApplicationStyle.borderRadius2]}
-                >
-                  <FlashList
-                    contentContainerStyle={{ paddingBottom: chatListBottomInset }}
-                    data={filteredChats}
-                    keyExtractor={(item) => item.documentId}
-                    ListEmptyComponent={renderEmptyList}
-                    onEndReached={handleEndReached}
-                    onEndReachedThreshold={0.5}
-                    onRefresh={handlePullRefresh}
-                    refreshing={isPullRefreshing}
-                    renderItem={renderChat}
-                    showsVerticalScrollIndicator={false}
-                  />
-                </View>
-              </WithDataWrapper>
-            )}
-            {!isLoading && error && renderErrorState()}
-            {!isLoading && !error && (
-              <View style={[
-                Alignments.fill,
-                ApplicationStyle.borderRadius2]}
-              >
+            {/* IPH09 — un seul defilement : Ville, archives et fils dans la meme FlashList. */}
+            <WithDataWrapper isLoading={isLoading} wrapperStyle={[Alignments.fill]}>
+              <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
                 <FlashList
                   contentContainerStyle={{ paddingBottom: chatListBottomInset }}
-                  data={filteredChats}
+                  data={error ? [] : filteredChats}
+                  keyboardShouldPersistTaps="handled"
                   keyExtractor={(item) => item.documentId}
-                  ListEmptyComponent={renderEmptyList}
-                  onEndReached={handleEndReached}
+                  ListEmptyComponent={error ? renderErrorState : renderEmptyList}
+                  ListHeaderComponent={(
+                    <>
+                      <CanauxDeLaVille
+                        chats={allChats}
+                        collectiviteId={villeId}
+                        espaceVille={espaceVille}
+                        navigation={navigation}
+                      />
+                      {renderLigneArchivees()}
+                    </>
+                  )}
+                  onEndReached={error ? undefined : handleEndReached}
                   onEndReachedThreshold={0.5}
                   onRefresh={handlePullRefresh}
                   refreshing={isPullRefreshing}
@@ -1014,7 +990,7 @@ function Messaging({ navigation, route }) {
                   showsVerticalScrollIndicator={false}
                 />
               </View>
-            )}
+            </WithDataWrapper>
           </View>
         </OnboardingWrapper>
 
@@ -1153,13 +1129,14 @@ const stylesDeLaListe = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
-    height: 72,
+    minHeight: 72,
+    paddingVertical: 8,
   },
   ligneArchivees: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
-    height: 52,
+    minHeight: 52,
   },
   pastille: {
     alignItems: 'center',
