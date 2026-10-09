@@ -1,5 +1,9 @@
-import { ScrollView, Text, View } from 'react-native';
+import {
+  Alert as NativeAlert, ScrollView, Text, View,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { leaveTeam } from '@/services/team/teamService';
 
 import TeamDetails from '../TeamDetails';
 
@@ -157,12 +161,16 @@ jest.mock('@react-navigation/native', () => ({
 // `setQueryData` : le temoin du point 3 rejoue la reussite d'un retrait de joueur.
 const mockOptionsMutations = [];
 const mockSetQueryData = jest.fn();
+const mockInvalidateQueries = jest.fn().mockResolvedValue(undefined);
+const mockMutate = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => {
     mockOptionsMutations.push(options);
-    return { isPending: false, mutate: jest.fn() };
+    return { isPending: false, mutate: mockMutate };
   },
-  useQueryClient: () => ({ invalidateQueries: jest.fn(), setQueryData: mockSetQueryData }),
+  useQueryClient: () => ({
+    invalidateQueries: mockInvalidateQueries, setQueryData: mockSetQueryData,
+  }),
 }));
 
 // La doublure de `t` rend le repli quand il existe : sans lui, les libelles
@@ -905,5 +913,59 @@ describe('FINITIONS14 · un joueur retire quitte la fiche des la reponse du serv
     expect(ficheApres.trainers).toBe(EQUIPE.trainers);
     expect(ecriture[1](undefined)).toBeUndefined();
     expect(mockReponseEquipe.refetch).toHaveBeenCalled();
+  });
+});
+
+describe('IPH09-SORTIE — le depart rafraichit les liens reels', () => {
+  const depart = () => mockOptionsMutations.find(
+    (/** @type {any} */ options) => options.mutationFn === leaveTeam,
+  );
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockOptionsMutations.length = 0;
+    mockInvalidateQueries.mockClear();
+    AUTH_DIRIGEANT.refetchUserData.mockClear();
+    mockMutate.mockClear();
+  });
+  afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); });
+
+  test('une reussite relit club/chats et le profil au dela des 5 s inter-repliques', async () => {
+    monterLaFiche();
+    await act(async () => { await depart().onSuccess({ leftClubDocumentId: 'club-1' }); });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['club'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['chats'] });
+    expect(AUTH_DIRIGEANT.refetchUserData).toHaveBeenCalledTimes(1);
+    act(() => { jest.advanceTimersByTime(6000); });
+    const lecturesProfil = mockInvalidateQueries.mock.calls.filter(
+      ([args]) => args.queryKey[0] === 'get-me',
+    );
+    expect(lecturesProfil).toHaveLength(2);
+  });
+
+  test('une erreur affiche le refus sans relire le profil ni annoncer un depart', () => {
+    monterLaFiche();
+    const alerte = jest.spyOn(NativeAlert, 'alert').mockImplementation(() => {});
+    act(() => { depart().onError(new Error('depart refuse')); });
+    expect(alerte).toHaveBeenCalled();
+    expect(AUTH_DIRIGEANT.refetchUserData).not.toHaveBeenCalled();
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    alerte.mockRestore();
+  });
+
+  test('deux confirmations lancent un seul depart ; un echec permet de reessayer', () => {
+    const racine = monterLaFiche();
+    const alerte = jest.spyOn(NativeAlert, 'alert').mockImplementation(() => {});
+    ouvrirLeMenu(racine);
+    const rangee = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+        && textesPortant(noeud, "Quitter l'équipe").length > 0,
+    ).pop();
+    act(() => { rangee.props.onPress(); });
+    const confirmer = alerte.mock.calls[0][2][1].onPress;
+    act(() => { confirmer(); confirmer(); });
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    act(() => { depart().onSettled(); confirmer(); });
+    expect(mockMutate).toHaveBeenCalledTimes(2);
+    alerte.mockRestore();
   });
 });

@@ -34,8 +34,8 @@ const RACINE_SOURCES = path.resolve(__dirname, '../../..');
  *    n'existe QUE sous cette forme ;
  *  · `buildNormalizedQueryKey(['racine', id], params)` — la forme de
  *    `clubMembershipRequests` et `teamMembershipRequests` ;
- *  · `export const getXQueryKey = (…) => ['racine', …]` — celle de
- *    `clubInterestRequests` et de `requestsHub`.
+ *  · `export const xQueryKey = (…) => ['racine', …]` — celle de
+ *    `clubInterestRequests`, `requestsHub` et `clubMemberRoles` (IPH09).
  *
  * 🧨 U05 — POURQUOI LES DEUX DERNIERES ONT ETE AJOUTEES, et c'est un vrai piege
  * de mesure : ce temoin passait au vert en lisant les `queryKey:` ecrits dans
@@ -51,7 +51,7 @@ const lireRacinesDeClesReelles = () => {
   const litteral = /queryKey:\s*\[\s*'([^']+)'/g;
   const constante = /^export const [A-Z0-9_]+\s*=\s*\[+\s*'([^']+)'/gm;
   const normalisee = /buildNormalizedQueryKey\(\s*\[\s*'([^']+)'/g;
-  const fabrique = /^export const get[A-Za-z]*QueryKey\s*=\s*\([^)]*\)\s*=>\s*\[\s*'([^']+)'/gm;
+  const fabrique = /^export const [A-Za-z]*QueryKey\s*=\s*\([^)]*\)\s*=>\s*\[\s*'([^']+)'/gm;
 
   /** @param {string} repertoire */
   const parcourir = (repertoire) => {
