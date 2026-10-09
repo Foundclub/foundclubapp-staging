@@ -80,6 +80,14 @@ function Button({
   const sizeTextStyle = isSmall ? Fonts.p2Bold : null;
   /** @type {import('react-native').TextStyle} */
   const labelFillStyle = { flexGrow: 1, textAlign: 'center' };
+  /** @type {import('react-native').TextStyle | null} */
+  const iconLabelStyle = icon ? {
+    flexShrink: 1,
+    // IPH09 : TextKit réduit la police, mais conserve l'interligne imposé.
+    // Une boîte intrinsèque arrondie peut alors faire rétrécir même « Accepter ».
+    // Sur iOS, réserver la largeur restante et laisser la police porter sa hauteur.
+    ...(Platform.OS === 'ios' ? { ...labelFillStyle, lineHeight: undefined } : {}),
+  } : null;
   const isDisabled = isLoading || disabled;
 
   /**
@@ -156,6 +164,7 @@ function Button({
                   !icon && labelFillStyle,
                   sizeTextStyle,
                   ApplicationStyle[`buttonText${variant}`],
+                  iconLabelStyle,
                   textStyle,
                 ]}
               >
