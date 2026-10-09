@@ -1,21 +1,23 @@
 import {
+  estArchivePourMoi,
   estEpinglePourMoi,
   filtrerLesFils,
   trierLesFils,
 } from './messagingUseCases';
 
 // SMF (T20, 08/10) — UNE SEULE LISTE DES CONVERSATIONS. L ordre et le filtre vivaient en ligne dans
+// IPH09 (09/10) actualise la regle produit : seul le club garde sa priorite automatique.
 // Messaging.js (la page du telephone) ; la colonne « Messages » du site n en avait aucun : ni
 // epingles en tete, ni recherche, ni « Toutes / Classique / League ». Ces regles en sortent telles
 // quelles et servent aux deux (MessagingMSG1A, MessagingARCHIVEES, MessagingMSG1BA restent verts).
 
 const MOI = 'moi';
 const fil = (documentId, type, updatedAt, extra = {}) => ({
-  documentId, type, updatedAt, ...extra,
+  documentId, messages: updatedAt ? [{ createdAt: updatedAt }] : [], type, updatedAt, ...extra,
 });
 
 describe('trierLesFils — la regle de Messaging.js', () => {
-  test('mes epingles d abord, puis le rang du type, puis le plus recent', () => {
+  test('IPH09 — mes epingles et le club, puis tous les types par dernier message', () => {
     const fils = [
       fil('prive-recent', 'whisper', '2026-10-08T10:00:00Z'),
       fil('equipe-ancienne', 'team', '2026-10-01T10:00:00Z'),
@@ -31,15 +33,56 @@ describe('trierLesFils — la regle de Messaging.js', () => {
     ];
     expect(trierLesFils(fils, MOI).map(({ documentId }) => documentId)).toEqual([
       'prive-epingle',
-      'multisport',
       'club',
-      'ligue',
-      'equipe-recente',
-      'equipe-ancienne',
+      'inconnu',
       'groupe-epingle-par-un-autre',
       'prive-recent',
-      'inconnu',
+      'equipe-recente',
+      'equipe-ancienne',
+      'multisport',
+      'ligue',
     ]);
+  });
+
+  test('IPH09 — renommer, lire ou rejoindre ne fait pas remonter un vieux message', () => {
+    const recent = fil('prive', 'whisper', '2026-10-09T10:00:00Z');
+    const ancien = fil('groupe-renomme', 'group', '2026-10-09T12:00:00Z', {
+      messages: [{ createdAt: '2026-10-08T10:00:00Z', updatedAt: '2026-10-09T12:00:00Z' }],
+    });
+    expect(trierLesFils([ancien, recent], MOI).map(({ documentId }) => documentId))
+      .toEqual(['prive', 'groupe-renomme']);
+    const nouveau = { ...ancien, messages: [...ancien.messages, { createdAt: '2026-10-09T13:00:00Z' }] };
+    expect(trierLesFils([recent, nouveau], MOI).map(({ documentId }) => documentId))
+      .toEqual(['groupe-renomme', 'prive']);
+  });
+
+  test('IPH09 — dates identiques/manquantes/invalides : ordre stable, sans privilegier le type', () => {
+    const fils = [
+      fil('sans-message', 'group', '2026-10-09T23:00:00Z', { messages: [] }),
+      fil('invalide', 'team', '', { messages: [{ createdAt: 'invalide' }] }),
+      fil('prive', 'whisper', '2026-10-09T10:00:00Z'),
+      fil('groupe', 'group', '2026-10-09T10:00:00Z'),
+      fil('ancien', 'team', '', {
+        messages: [{ createdAt: 'invalide' }, { createdAt: '2026-10-08T10:00:00Z' }],
+      }),
+    ];
+    Object.freeze(fils);
+    expect(trierLesFils(fils, MOI).map(({ documentId }) => documentId))
+      .toEqual(['prive', 'groupe', 'ancien', 'sans-message', 'invalide']);
+  });
+
+  test('IPH09 — archives personnelles et epingles individuelles conservent leur etat', () => {
+    const fils = [
+      fil('archive-autre', 'group', '2026-10-09T10:00:00Z', { archivedBy: [{ documentId: 'autre' }] }),
+      fil('epingle', 'whisper', '2026-09-01T10:00:00Z', { pinnedBy: [{ documentId: MOI }] }),
+      fil('archive-moi', 'team', '2026-10-09T11:00:00Z', { archivedBy: [{ documentId: MOI }] }),
+    ];
+    const tries = trierLesFils(fils, MOI);
+    expect(tries.filter((chat) => !estArchivePourMoi(chat, MOI)).map(({ documentId }) => documentId))
+      .toEqual(['epingle', 'archive-autre']);
+    expect(tries.filter((chat) => estArchivePourMoi(chat, MOI)).map(({ documentId }) => documentId))
+      .toEqual(['archive-moi']);
+    expect(fils[1].pinnedBy).toEqual([{ documentId: MOI }]);
   });
 
   test('rend une copie, ne touche pas la liste recue ; une liste absente vaut vide', () => {
