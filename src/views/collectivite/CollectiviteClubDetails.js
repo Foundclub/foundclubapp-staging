@@ -133,6 +133,7 @@ function AttribuerAuClub({
       clubs={[club]}
       facilities={liste}
       fixedClubId={club.documentId}
+      guided
       onCancel={onCancel}
       onDone={onDone}
     />

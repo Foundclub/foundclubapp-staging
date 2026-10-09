@@ -78,6 +78,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 44,
+  }),
+}));
+
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
@@ -370,7 +376,7 @@ describe('COLL-C2B planche 3 — 1. l onglet Creneaux liste ce que rend §4.1', 
     expect(lus).toContain('Montrivage FC · Senior B');
     expect(lus).toContain('17:30 – 19:00');
     expect(lus.indexOf('Mardi')).toBeLessThan(lus.indexOf('Jeudi · complet 18:00 – 19:30'));
-    expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
+    expect(mockNavigation.setOptions).toHaveBeenCalledWith(expect.objectContaining({ headerTitle: '' }));
   });
 
   it('aucun creneau : on dit ce qu est un creneau, et « Attribuer le premier »', async () => {
@@ -397,10 +403,15 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
   const remplir = async (/** @type {any} */ arbre) => {
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'U13'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
   };
 
   it('la carte « place libre » se lit pendant la saisie, et le bon corps part', async () => {
@@ -511,10 +522,13 @@ describe('COLL-C2B planche 3 — 4. gerer, modifier, retirer (D67), retablir (§
     await appuyer(parTestID(arbre, 'creneau-mar-u15'));
     await appuyer(parTexte(arbre, 'Modifier le créneau'));
     expect(textes(arbre)).toContain('Modifier le créneau');
+    await appuyer(parTexte(arbre, 'Suivant'));
     expect(champ('Début').value).toBe('17:30');
-    await act(async () => { mockDateProps[mockDateProps.length - 1].onChange('13/10/2026'); });
     await saisir('Début', '18:30');
     await saisir('Fin', '20:00');
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await act(async () => { mockDateProps[mockDateProps.length - 1].onChange('13/10/2026'); });
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Enregistrer'));
     expect(modifySeasonSlot).toHaveBeenCalledWith('mar-u15', {
       effectiveFrom: '2026-10-13', endTime: '20:00', startTime: '18:30', weekday: 2,
@@ -564,13 +578,18 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     });
     const arbre = await rendre();
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
-    expect(textes(arbre)).toContain('Plateau');
-    expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
+    expect(textes(arbre)).toContain('Plateau');
+    expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'Plateau A'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({
       plateau: 1,
@@ -606,7 +625,10 @@ describe('COLL-C2B planche 3 — 7. aucun nom de personne a la mairie', () => {
     await appuyer(parTexte(arbre, 'Fermer'));
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     vus.push(...textes(arbre));

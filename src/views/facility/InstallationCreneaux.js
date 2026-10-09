@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {
   RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -190,14 +191,10 @@ function InstallationCreneaux() {
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
   const isDesktop = useIsDesktop();
+  const insets = useSafeAreaInsets();
   const params = /** @type {any} */ (route.params) || {};
   const collectiviteId = params.collectiviteId || null;
   const facilityId = params.facilityId || null;
-
-  // Design P4v2 : la page porte le nom de l installation ; l en-tete de navigation se tait.
-  useLayoutEffect(() => {
-    navigation.setOptions?.({ headerTitle: '' });
-  }, [navigation]);
 
   // COLL-C4B : l accueil de la Ville (« Fermeture a venir ») ouvre l onglet « Fermetures ».
   const [onglet, setOnglet] = useState(
@@ -205,6 +202,12 @@ function InstallationCreneaux() {
   );
   // Ce qui est ouvert : « attribuer » (avec un jour pre-rempli), « gerer » ou « modifier ».
   const [panneau, setPanneau] = useState(/** @type {any} */ (null));
+  const panneauMobileOuvert = !isDesktop && Boolean(panneau);
+  // IPH09 FC-001 : la navigation du fond ne concurrence pas la vue active.
+  useLayoutEffect(() => {
+    navigation.setOptions?.({ headerShown: !panneauMobileOuvert, headerTitle: '' });
+    return () => navigation.setOptions?.({ headerShown: true });
+  }, [navigation, panneauMobileOuvert]);
 
   const installations = useCollectiviteInstallations(collectiviteId);
   const actifs = useFacilitySeasonSlots(facilityId, 'active');
@@ -462,6 +465,7 @@ function InstallationCreneaux() {
       <SeasonSlotForm
         clubs={clubsRattaches}
         facilityId={facilityId}
+        guided
         initial={panneau.initial}
         key={`attribuer-${panneau.initial?.weekday || 0}-${panneau.initial?.startTime || ''}`}
         onCancel={fermer}
@@ -474,6 +478,7 @@ function InstallationCreneaux() {
       <SeasonSlotForm
         clubs={clubsRattaches}
         facilityId={facilityId}
+        guided
         key={`modifier-${panneau.creneau.documentId}`}
         onCancel={fermer}
         onDone={fermer}
@@ -597,7 +602,10 @@ function InstallationCreneaux() {
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.fill]}>
       <View style={[Alignments.fill, { flexDirection: isDesktop ? 'row' : 'column', gap: 24 }]}>
         <ScrollView
+          accessibilityElementsHidden={panneauMobileOuvert}
           contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[16]]}
+          importantForAccessibility={panneauMobileOuvert ? 'no-hide-descendants' : 'auto'}
+          pointerEvents={panneauMobileOuvert ? 'none' : 'auto'}
           refreshControl={(
             <RefreshControl
               colors={[Colors.primary500]}
@@ -632,11 +640,13 @@ function InstallationCreneaux() {
       {isDesktop ? null : (
         <BottomModal
           close={fermer}
+          contentBottomPaddingOverride={16 + insets.bottom}
+          contentContainerStyle={{ paddingTop: 24 }}
           isVisible={Boolean(panneauRendu)}
           // SAIS (T20 lot 1) : « Annuler » finissait coupé au bas de la feuille « Attribuer ».
           maxContentHeightRatio={HAUTEUR_DE_LA_FEUILLE}
         >
-          <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
+          <View>
             {panneauRendu}
           </View>
         </BottomModal>
