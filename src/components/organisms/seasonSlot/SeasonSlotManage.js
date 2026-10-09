@@ -85,7 +85,7 @@ function SeasonSlotManage({
 
   const rangee = (/** @type {string} */ libelle, /** @type {string} */ valeur) => (
     <View key={libelle} style={{ flexDirection: 'row', gap: 12, justifyContent: 'space-between' }}>
-      <Text style={[Fonts.p3, Fonts.neutral300]}>{libelle}</Text>
+      <Text style={[Fonts.p3, Fonts.neutral300, { flexShrink: 1 }]}>{libelle}</Text>
       <Text style={[Fonts.p2Bold, Fonts.neutral00, { flexShrink: 1, textAlign: 'right' }]}>
         {valeur}
       </Text>
@@ -233,21 +233,23 @@ function SeasonSlotManage({
           entrainements,
         ) : null}
       </View>
-      {gere ? (
-        <View style={{ gap: 4 }}>
-          <Button
-            onPress={() => onModify(slot)}
-            title={t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
-            variant="Secondary"
-          />
-          <Button
-            onPress={() => setEtape('retirer')}
-            title={t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
-            variant="Danger"
-          />
-        </View>
-      ) : null}
-      <Button onPress={onClose} title={t('common.close', 'Fermer')} variant="Ghost" />
+      <View style={{ gap: 8 }}>
+        {gere ? (
+          <>
+            <Button
+              onPress={() => onModify(slot)}
+              title={t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')}
+              variant="Secondary"
+            />
+            <Button
+              onPress={() => setEtape('retirer')}
+              title={t('collectiviteCreneaux.gerer.retirer', 'Retirer le créneau')}
+              variant="Danger"
+            />
+          </>
+        ) : null}
+        <Button onPress={onClose} title={t('common.close', 'Fermer')} variant="Ghost" />
+      </View>
     </View>
   );
 }
