@@ -162,6 +162,10 @@ jest.mock('@tanstack/react-query', () => ({
   }),
 }));
 
+jest.mock('@/services/facility/facilityQueries', () => ({
+  useGetFacilityOccupancy: () => ({ data: { blocked: false }, isError: false, isLoading: false }),
+}));
+
 jest.mock('@/domains/event/useEvent', () => ({
   __esModule: true,
   default: () => ({

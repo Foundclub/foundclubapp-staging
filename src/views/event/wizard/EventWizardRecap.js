@@ -50,6 +50,7 @@ import {
 
 import EventTasksEditor from '../components/EventTasksEditor';
 import { useEventWizard } from './EventWizardContext';
+import { getCreationErrorMessage, getErrorCode } from './eventWizardCreationErrors';
 import {
   EVENT_WIZARD_RETURN_TO_RECAP,
   getDefaultSessionStatusForEventType,
@@ -59,6 +60,7 @@ import {
   isMatchEventType,
   isStageEventType,
   isTournamentEventType,
+  needsTrainingExternalPlaces,
   shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 import { keepAudiencesForEventType } from './useEventWizardAudiences';
@@ -104,15 +106,6 @@ const FEATURED_SCOPE_OPTIONS = [
     value: 'CM',
   },
 ];
-
-const getErrorCode = (error) => (
-  error?.details?.code
-  || error?.code
-  || error?.response?.data?.error?.details?.code
-  || error?.response?.data?.error?.code
-  || error?.response?.data?.code
-  || null
-);
 
 const delay = (durationMs) => new Promise((resolve) => {
   setTimeout(resolve, durationMs);
@@ -233,13 +226,7 @@ const preloadCreatedEventDetail = async ({
   await fetchAttempt(0);
 };
 
-const getErrorMessage = (error, fallback) => (
-  error?.response?.data?.error?.message
-  || error?.response?.data?.error
-  || error?.response?.data?.message
-  || error?.message
-  || fallback
-);
+const getErrorMessage = (error, fallback) => getCreationErrorMessage(error, fallback, i18next.t);
 
 const buildWizardFormData = (wizardState) => {
   const isTournament = isTournamentEventType(wizardState?.type?.name);
@@ -617,7 +604,8 @@ function EventWizardRecap({ navigation }) {
     },
   ];
   const completedQuickOverviewCount = quickOverviewItems.filter((item) => item.complete).length;
-  const isRecapReady = completedQuickOverviewCount === quickOverviewItems.length;
+  const missingExternalPlaces = needsTrainingExternalPlaces(state);
+  const isRecapReady = completedQuickOverviewCount === quickOverviewItems.length && !missingExternalPlaces;
   const hasFeaturedRequestSelection = selectedFeaturedScopes.length > 0;
 
   const toggleFeaturedScope = (scope) => {
@@ -972,6 +960,10 @@ function EventWizardRecap({ navigation }) {
   };
 
   const handleSubmit = async () => {
+    if (missingExternalPlaces) {
+      navigation.push(RouteNames.EventWizardParticipants, EVENT_WIZARD_RETURN_TO_RECAP);
+      return;
+    }
     setIsSubmitting(true);
     setSubmitProgress(null);
     try {
@@ -1012,7 +1004,7 @@ function EventWizardRecap({ navigation }) {
       }
       Alert.alert(
         t('common.error', 'Erreur'),
-        submitError?.message || t('eventWizard.errors.genericCreate'),
+        getErrorMessage(submitError, t('eventWizard.errors.genericCreate')),
       );
     } finally {
       setIsSubmitting(false);
@@ -1106,6 +1098,23 @@ function EventWizardRecap({ navigation }) {
         )}
         title={t('eventWizard.steps.recap.title')}
       >
+        {missingExternalPlaces ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => navigation.push(RouteNames.EventWizardParticipants, EVENT_WIZARD_RETURN_TO_RECAP)}
+            style={[Spaces.padding[16]]}
+          >
+            <Text style={[Fonts.p3, Fonts.error700]}>
+              {t(
+                'eventEdit.trainingOpen.externalLimitRequired',
+                'Indique combien de places externes tu ouvres pour cet entraînement.',
+              )}
+            </Text>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('eventWizard.steps.participants.externalQuotaLabel', 'Places externes')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         <View style={[Spaces.gap[12]]}>
           {/* La carte « Vue d'ensemble » et ses 5 pastilles disparaissent :
               elles recopiaient mot pour mot Type, Equipe, Date, Lieu et
