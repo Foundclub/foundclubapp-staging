@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -78,6 +81,7 @@ function DecisionCreneauModal({
   const { width } = useWindowDimensions();
   const centree = width >= LARGEUR_FENETRE;
   const [message, setMessage] = useState('');
+  const [saisieActive, setSaisieActive] = useState(false);
   const [erreur, setErreur] = useState('');
   const [placePrise, setPlacePrise] = useState(false);
   const [refusForce, setRefusForce] = useState(false);
@@ -87,10 +91,19 @@ function DecisionCreneauModal({
   const refuse = /** @type {any} */ (useRefuseFacilityOverrideRequest());
   const [envoiRattachement, setEnvoiRattachement] = useState(false);
   const enCours = Boolean(approve.isPending || refuse.isPending || envoiRattachement);
+  const contenuRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
+  const champActifRef = useRef(false);
+  // FC-007 : après le redimensionnement par le clavier, remontrer le motif et
+  // les actions. Aucun minuteur : la nouvelle mesure de la vue déclenche le défilement.
+  const montrerMotif = () => {
+    if (champActifRef.current) contenuRef.current?.scrollToEnd({ animated: true });
+  };
 
   // Chaque ouverture repart d'une fenêtre vide.
   useEffect(() => {
     setMessage('');
+    setSaisieActive(false);
+    champActifRef.current = false;
     setErreur('');
     setPlacePrise(false);
     setRefusForce(false);
@@ -411,7 +424,10 @@ function DecisionCreneauModal({
 
   return (
     <Modal animationType="fade" onRequestClose={fermer} transparent visible={Boolean(decision)}>
-      <View
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        enabled={Platform.OS !== 'web'}
+        keyboardVerticalOffset={0}
         style={[
           Alignments.fill,
           centree ? Alignments.justifyCenter : { justifyContent: 'flex-end' },
@@ -420,13 +436,20 @@ function DecisionCreneauModal({
           { backgroundColor: `${Colors.neutral900}B3` },
         ]}
       >
-        <View
+        <ScrollView
           accessibilityViewIsModal
+          contentContainerStyle={{ gap: 16, padding: 20 }}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={montrerMotif}
+          onLayout={montrerMotif}
+          ref={contenuRef}
           style={[
             ApplicationStyle.backgroundColor.primary700,
             ApplicationStyle.borderWidth1,
-            Spaces.gap[16],
-            { borderColor: `${Colors.primary500}66`, padding: 20 },
+            {
+              borderColor: `${Colors.primary500}66`, flexGrow: 0, flexShrink: 1, maxHeight: '100%',
+            },
             ...fenetreStyle,
           ]}
         >
@@ -529,7 +552,13 @@ function DecisionCreneauModal({
               // eslint-disable-next-line max-len
               : t('collectivite.requests.modal.approvePlaceholder', 'Un mot pour le club (facultatif)')}
             multiline
+            onBlur={() => { champActifRef.current = false; setSaisieActive(false); }}
             onChangeText={(texte) => { setMessage(texte); if (erreur) setErreur(''); }}
+            onFocus={() => {
+              champActifRef.current = true;
+              setSaisieActive(true);
+              montrerMotif();
+            }}
             placeholder={estRefus
               // eslint-disable-next-line max-len
               ? t('collectivite.requests.modal.refusePlaceholder', 'Le motif du refus (obligatoire)')
@@ -547,6 +576,13 @@ function DecisionCreneauModal({
             testID="collectivite-request-message"
             value={message}
           />
+          {Platform.OS === 'ios' && saisieActive ? (
+            <Button
+              onPress={() => Keyboard.dismiss()}
+              title={t('common.finish', 'Terminer')}
+              variant="Ghost"
+            />
+          ) : null}
           {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
           {/* ⏳ VILLE-T18C (07/10, tournée T18 G49c) — une série se tranche en quelques secondes
               (36 dates : 15,3 s au refus) : la fenêtre dit ce qui s'écrit, pas seulement un
@@ -591,8 +627,8 @@ function DecisionCreneauModal({
               variant="Ghost"
             />
           </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
