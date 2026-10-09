@@ -12,6 +12,18 @@ export const isDetectionEventType = (typeName = '') => normalizeTypeLabel(typeNa
 export const isStageEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
 export const isTournamentEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
 export const isTrainingEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('entrainement');
+
+/**
+ * The creation wizard requires an explicit external quota; legacy capacity is not a choice.
+ * @param {any} state Current wizard draft.
+ * @returns {boolean} Whether the places step must be completed.
+ */
+export const needsTrainingExternalPlaces = (state) => (
+  isTrainingEventType(state?.type?.name)
+  && state?.sessionStatus === 'open'
+  && (!Number.isInteger(Number(state?.externalParticipantLimit))
+    || Number(state?.externalParticipantLimit) < 1)
+);
 // Y02 — un match, et donc le seul parcours qui traverse « Contre qui ? ».
 // ⚠️ `includes('match')` attrape aussi « Match amical », et c'est voulu : lui
 // aussi a un adversaire.

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -10,6 +10,8 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
 
 import { useEventWizard } from './EventWizardContext';
 import {
@@ -57,6 +59,23 @@ function EventWizardLocation({ navigation, route }) {
     end: buildDateTimeIso(state.date, state.endTime),
     start: buildDateTimeIso(state.date, state.startTime),
   };
+  if (occupancyWindow.end && occupancyWindow.start
+    && occupancyWindow.end <= occupancyWindow.start) {
+    const end = new Date(occupancyWindow.end);
+    end.setDate(end.getDate() + 1);
+    occupancyWindow.end = end.toISOString();
+  }
+  // The shared selector skips occupancy inside a club allocation. An absolute closure
+  // still applies there. The same query key deduplicates requests outside allocations.
+  const availability = useGetFacilityOccupancy(facilityId, occupancyWindow, {
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+  const isBlocked = Boolean(facilityId && availability.data?.data?.blocked);
+  const isAvailabilityUnknown = Boolean(facilityId && (
+    !occupancyWindow.start || !occupancyWindow.end || availability.isFetching
+    || availability.isLoading || availability.isError
+  ));
   const requiresApproval = Boolean(
     facilityId
     && selectedOccupancy?.saturated
@@ -67,9 +86,10 @@ function EventWizardLocation({ navigation, route }) {
     && selectedOccupancy?.saturated
     && selectedOccupancy?.allowsImmediateConfirmation,
   );
-  const canGoNext = Boolean(location || facilityId);
+  const canGoNext = Boolean(location || facilityId) && !isBlocked && !isAvailabilityUnknown;
 
   const handleNext = () => {
+    if (isBlocked || isAvailabilityUnknown) return;
     dispatch({
       payload: { facility: facilityId, location },
       type: 'SET_LOCATION',
@@ -104,7 +124,7 @@ function EventWizardLocation({ navigation, route }) {
           cmId={cmId}
           facilityId={facilityId}
           location={location}
-          occupancyWindow={occupancyWindow}
+          occupancyWindow={isBlocked ? undefined : occupancyWindow}
           onAddFacility={canManageFacilities ? handleAddFacility : undefined}
           onChange={({ facilityId: nextFacilityId, location: nextLocation }) => {
             setLocation(nextLocation || null);
@@ -118,7 +138,38 @@ function EventWizardLocation({ navigation, route }) {
           teamId={state.team?.documentId || null}
           withVilleSlots
         />
-        {!canGoNext ? (
+        {isBlocked ? (
+          <Text style={[Fonts.p3, Fonts.error700]}>
+            {t(
+              'eventWizard.steps.location.facilityClosed',
+              'La mairie a rendu cette installation indisponible sur ce créneau. '
+                + 'Choisissez un autre horaire ou une autre installation.',
+            )}
+          </Text>
+        ) : null}
+        {isAvailabilityUnknown ? (
+          <View>
+            <Text style={[Fonts.p3, Fonts.warning500]}>
+              {availability.isError
+                ? t(
+                  'eventWizard.steps.location.availabilityFailed',
+                  'Impossible de vérifier la disponibilité. Réessayez avant de continuer.',
+                )
+                : t(
+                  'eventWizard.steps.location.checkingAvailability',
+                  'Vérification de la disponibilité…',
+                )}
+            </Text>
+            {availability.isError ? (
+              <TouchableOpacity accessibilityRole="button" onPress={() => availability.refetch()}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('common.actions.retry', 'Réessayer')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+        {!location && !facilityId ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>
             {t(
               'eventWizard.steps.location.disabledNextHint',
