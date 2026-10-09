@@ -1,6 +1,10 @@
 import { QueryClient } from '@tanstack/react-query';
+import {
+  Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { refuseFacilityOverrideRequest } from '@/services/facility/facilityService';
 import {
   acceptTeamMembershipRequest,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
@@ -314,6 +318,44 @@ describe('Y04 — accepter une demande : la fenetre, la vitesse, et l echec', ()
       arbreMonte = null;
     }
     mockClientDeTest.clear();
+  });
+
+  it('FC007 — le refus installation protège le motif et ferme seulement le clavier', async () => {
+    const originalOS = Platform.OS;
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    Platform.OS = 'ios';
+    try {
+      const demande = {
+        ...DEMANDE_EQUIPE,
+        id: 'installation:fabricated-request',
+        meta: { requestId: 'fabricated-request' },
+        type: 'installation',
+      };
+      const tree = await monterLeHub([demande]);
+      const carte = tree.root.findAll((node) => node.props?.item?.id === demande.id
+        && typeof node.props?.onSecondaryPress === 'function')[0];
+      await act(async () => carte.props.onSecondaryPress(demande));
+      expect(tree.root.findByType(KeyboardAvoidingView).props.behavior).toBe('padding');
+      const input = tree.root.findByType(TextInput);
+      const scroll = tree.root.findByType(KeyboardAvoidingView).findByType(ScrollView);
+      expect(scroll.props.keyboardShouldPersistTaps).toBe('handled');
+      act(() => {
+        input.props.onFocus();
+        input.props.onChangeText('Complet\nDeux équipes présentes.');
+      });
+      act(() => bouton(tree, 'Terminer').props.onPress());
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      act(() => input.props.onBlur());
+      expect(bouton(tree, 'Terminer')).toBeUndefined();
+      expect(tree.root.findByType(TextInput).props.value).toBe('Complet\nDeux équipes présentes.');
+      expect(refuseFacilityOverrideRequest).not.toHaveBeenCalled();
+      await act(async () => bouton(tree, 'Refuser').props.onPress());
+      expect(refuseFacilityOverrideRequest)
+        .toHaveBeenCalledWith('fabricated-request', 'Complet\nDeux équipes présentes.');
+    } finally {
+      Platform.OS = originalOS;
+      dismiss.mockRestore();
+    }
   });
 
   it('temoin 3 — une source en panne propose « Reessayer »', async () => {

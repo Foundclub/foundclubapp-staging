@@ -6,8 +6,12 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -154,6 +158,16 @@ function RequestsHub({ navigation, route }) {
   );
   const [installationRefusalItem, setInstallationRefusalItem] = useState(null);
   const [installationRefusalReason, setInstallationRefusalReason] = useState('');
+  const [refusalInputFocused, setRefusalInputFocused] = useState(false);
+  const refusalContentRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
+  const refusalInputFocusedRef = useRef(false);
+  // FC-007 : le Modal natif a sa propre fenêtre ; le clavier du conteneur
+  // derrière lui ne protège pas ce formulaire. Défiler après sa nouvelle mesure.
+  const showRefusalInput = () => {
+    if (refusalInputFocusedRef.current) {
+      refusalContentRef.current?.scrollToEnd({ animated: true });
+    }
+  };
   const [processingItemId, setProcessingItemId] = useState('');
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const [subscriptionPaywallClubId, setSubscriptionPaywallClubId] = useState('');
@@ -320,6 +334,8 @@ function RequestsHub({ navigation, route }) {
   const closeInstallationRefusalModal = useCallback(() => {
     setInstallationRefusalItem(null);
     setInstallationRefusalReason('');
+    setRefusalInputFocused(false);
+    refusalInputFocusedRef.current = false;
   }, []);
 
   const closeInterestResponseModal = useCallback(() => {
@@ -764,7 +780,10 @@ function RequestsHub({ navigation, route }) {
         transparent
         visible={Boolean(installationRefusalItem)}
       >
-        <View
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          enabled={Platform.OS !== 'web'}
+          keyboardVerticalOffset={0}
           style={[
             Alignments.fill,
             Alignments.justifyCenter,
@@ -772,15 +791,22 @@ function RequestsHub({ navigation, route }) {
             { backgroundColor: 'rgba(0, 0, 0, 0.55)' },
           ]}
         >
-          <View
+          <ScrollView
+            contentContainerStyle={{ gap: 16, padding: 20 }}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={showRefusalInput}
+            onLayout={showRefusalInput}
+            ref={refusalContentRef}
             style={[
               ApplicationStyle.backgroundColor.primary700,
               ApplicationStyle.borderRadius16,
               ApplicationStyle.borderWidth1,
-              { padding: 20 },
-              Spaces.gap[16],
               {
                 borderColor: `${Colors.warning500}66`,
+                flexGrow: 0,
+                flexShrink: 1,
+                maxHeight: '100%',
               },
             ]}
           >
@@ -798,7 +824,16 @@ function RequestsHub({ navigation, route }) {
 
             <TextInput
               multiline
+              onBlur={() => {
+                refusalInputFocusedRef.current = false;
+                setRefusalInputFocused(false);
+              }}
               onChangeText={setInstallationRefusalReason}
+              onFocus={() => {
+                refusalInputFocusedRef.current = true;
+                setRefusalInputFocused(true);
+                showRefusalInput();
+              }}
               placeholder={t(
                 'requestsHub.installation.refusalModalPlaceholder',
                 'Exemple: capacité déjà atteinte pour ce créneau.',
@@ -820,6 +855,14 @@ function RequestsHub({ navigation, route }) {
               value={installationRefusalReason}
             />
 
+            {Platform.OS === 'ios' && refusalInputFocused ? (
+              <Button
+                onPress={() => Keyboard.dismiss()}
+                title={t('common.finish', 'Terminer')}
+                variant="Ghost"
+              />
+            ) : null}
+
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
                 <Button
@@ -838,8 +881,8 @@ function RequestsHub({ navigation, route }) {
                 />
               </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
