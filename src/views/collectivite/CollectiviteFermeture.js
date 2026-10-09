@@ -925,29 +925,29 @@ function FormulaireDeFermeture({
     <BottomModal close={() => setConfirmer(false)} isVisible={confirmer} webPresentation="dialog">
       <View
         accessibilityRole="alert"
-        style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16], { gap: 12 }]}
+        style={[Spaces.paddingTop[12], Spaces.paddingBottom[16], { gap: 16 }]}
         testID="fermeture-confirmation"
       >
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{questionDeConfirmation}</Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>{quiEstPrevenu}</Text>
-        <View style={[Alignments.row, { gap: 8, justifyContent: 'flex-end' }]}>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
           <Button
             onPress={() => setConfirmer(false)}
-            size="small"
+            style={{ flex: 1 }}
             title={t('collectiviteFermetures.confirmer.annuler', 'Annuler')}
-            variant="Ghost"
+            variant="Secondary"
           />
           <Button
             isLoading={enCours}
             onPress={envoyer}
-            size="small"
+            style={{ flex: 1 }}
             testID="fermeture-confirmer"
             title={
                 bloquer
                   ? t('collectiviteFermetures.confirmer.bloquer', 'Bloquer')
                   : t('collectiviteFermetures.confirmer.fermer', 'Fermer')
               }
-            variant="Primary"
+            variant="DangerFilled"
           />
         </View>
       </View>
