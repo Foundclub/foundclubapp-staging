@@ -51,6 +51,7 @@ import {
   autorisationsDuGroupe,
   envoiReserveAuxAdmins,
 } from '@/domains/messaging/autorisationsDuGroupe';
+import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
 import {
   auteurDuMessageCite,
   couleurDuNom,
@@ -1598,6 +1599,17 @@ function Conversation({ navigation, route }) {
       return;
     }
 
+    // La bulle et le détail autorisent le membre à changer sa réponse.
+    // Le flux des DEMANDES bloque « déjà présent » ; ce n'est pas le flux RSVP.
+    if (event?.documentId && presenceDansLeFil({ evenement: event, utilisateur: userData })) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({ answer: 'present', eventId: event.documentId });
+      } catch {
+        // La mutation porte l'erreur et invalide les mêmes requêtes que le détail.
+      }
+      return;
+    }
+
     const participationFlow = resolveParticipationFlow(event, { user: userData });
 
     if (!participationFlow?.canAct) {
@@ -1676,15 +1688,14 @@ function Conversation({ navigation, route }) {
   const handleDeclineEvent = (
     /** @type {{ documentId?: string; eventFormat?: string }} */ event,
   ) => {
-    if (!event?.documentId) return;
+    if (!event?.documentId) return Promise.resolve();
     if (String(event?.eventFormat || '').toLowerCase() === 'stage_day') {
-      respondToEventRsvpMutation.mutate({
+      return respondToEventRsvpMutation.mutateAsync({
         answer: 'absent',
         eventId: event.documentId,
       });
-      return;
     }
-    missingEventMutation.mutate(event.documentId);
+    return missingEventMutation.mutateAsync(event.documentId);
   };
 
   const handleJoinEvent = (/** @type {{ documentId?: string; team?: Team; parentEvent?: { documentId?: string } }} */ event) => {
@@ -5506,6 +5517,9 @@ function Conversation({ navigation, route }) {
   const handleDeleteSelectedMessage = useCallback(() => {
     if (!selectedMessageDocumentId || !isSelectedMessageOwn) return;
 
+    // Éviter deux Modal iOS visibles à la fois et leurs calques natifs superposés.
+    // Garder la sélection pour la confirmation, fermer d'abord le menu d'actions.
+    setIsMessageActionsVisible(false);
     openConversationPrompt({
       body: t('conversation.actions.deleteConfirm.description', 'Ce message sera supprimé pour tous les participants.'),
       primaryAction: {
@@ -5825,10 +5839,10 @@ function Conversation({ navigation, route }) {
                     heure={heureDuMessage(currentMessage.createdAt)}
                   />
                 )}
-                onDecline={() => handleDeclineEvent(resolvedMessageEvent)}
+                onDecline={(eventToAnswer = resolvedMessageEvent) => handleDeclineEvent(eventToAnswer)}
                 onJoin={() => handleJoinEvent(resolvedMessageEvent)}
                 onOpenAddress={setAdresseOuverte}
-                onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
+                onParticipate={(eventToAnswer = resolvedMessageEvent) => handleParticipateToEvent(eventToAnswer)}
                 resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
               />
             </BulleDuFil>
@@ -7402,8 +7416,9 @@ function Conversation({ navigation, route }) {
           ) : null}
           hideCloseButton
           isVisible={isAttachmentMenuVisible}
-          keyboardBehavior="extend"
+          keyboardBehavior="interactive"
           onDismissed={handleAttachmentSheetDismissed}
+          snapPoints={['70%']}
         >
           {isAttachmentSheetV2Enabled ? (
             <ChatAttachmentSheet

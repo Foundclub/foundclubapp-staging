@@ -577,9 +577,6 @@ const useMessaging = (currentChatId) => {
   }, [queryClient, clearPendingTimeout, currentChatId, userData?.documentId]);
 
   const handleMessageDeleted = useCallback((/** @type {MessageDeletionData} */ data) => {
-    const chatDocumentId = normalizeChatId(data?.chatDocumentId || data?.chat?.documentId);
-    if (!chatDocumentId) return;
-
     const deletedMessageId = normalizeChatId(
       data?.messageId
       || data?.documentId
@@ -587,24 +584,70 @@ const useMessaging = (currentChatId) => {
     );
     if (!deletedMessageId) return;
 
+    const cachedMessageQuery = queryClient.getQueriesData({ queryKey: ['chat-messages'] })
+      .find(([, cached]) => /** @type {any} */ (cached)?.pages?.some((/** @type {any} */ page) => (
+        page.data?.some((/** @type {any} */ msg) => normalizeChatId(getMessageEntityId(msg)) === deletedMessageId)
+      )));
+    const chatDocumentId = normalizeChatId(
+      data?.chatDocumentId || data?.chat?.documentId || cachedMessageQuery?.[0]?.[1],
+    );
+    // Le lifecycle prod émet seulement documentId. Il est globalement unique :
+    // on peut enlever CET identifiant des caches, sans attribuer l'événement au fil ouvert.
+    const messageFilter = {
+      queryKey: chatDocumentId ? ['chat-messages', chatDocumentId] : ['chat-messages'],
+    };
     queryClient.setQueriesData(
-      { queryKey: ['chat-messages', chatDocumentId] },
+      messageFilter,
       (/** @type {any} */ oldData) => {
         if (!oldData || !oldData.pages) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((/** @type {{ data: Array<{ id: string }> }} */ page) => ({
-            ...page,
-            data: Array.isArray(page.data)
-              ? page.data.filter((msg) => {
-                const msgId = normalizeChatId(getMessageEntityId(msg));
-                return msgId !== deletedMessageId;
-              })
-              : [],
-          })),
-        };
+        let changed = false;
+        const pages = oldData.pages.map((/** @type {any} */ page) => {
+          if (!Array.isArray(page.data)) return page;
+          const remaining = page.data.filter((/** @type {any} */ msg) => (
+            normalizeChatId(getMessageEntityId(msg)) !== deletedMessageId
+          ));
+          if (remaining.length === page.data.length) return page;
+          changed = true;
+          return { ...page, data: remaining };
+        });
+        // Le serveur émet deux fois : garder les références évite de réveiller les effets.
+        return changed ? { ...oldData, pages } : oldData;
       },
     );
+
+    // Retirer aussi l'aperçu supprimé. Le serveur prod protège son snapshot contre
+    // les messages plus anciens : une relecture immédiate ramènerait le texte effacé.
+    const survivors = chatDocumentId ? queryClient.getQueriesData(messageFilter)
+      .flatMap(([, cached]) => /** @type {any} */ (cached)?.pages || [])
+      .flatMap((page) => page.data || []) : [];
+    const latestSurvivor = survivors.reduce((latest, message) => (
+      !latest || new Date(message.createdAt).getTime() > new Date(latest.createdAt).getTime()
+        ? message : latest
+    ), null);
+    queryClient.setQueriesData({ queryKey: ['chats'] }, (/** @type {any} */ oldData) => {
+      const updatePage = (/** @type {any} */ page) => {
+        if (!Array.isArray(page?.data)) return page;
+        let changed = false;
+        const chats = page.data.map((/** @type {any} */ chat) => {
+          if (chatDocumentId && chat.documentId !== chatDocumentId) return chat;
+          if (!chat.messages?.some((/** @type {any} */ msg) => (
+            normalizeChatId(getMessageEntityId(msg)) === deletedMessageId
+          ))) return chat;
+          changed = true;
+          const remaining = chat.messages.filter((/** @type {any} */ msg) => (
+            normalizeChatId(getMessageEntityId(msg)) !== deletedMessageId
+          ));
+          const messages = remaining.length ? remaining : [latestSurvivor].filter(Boolean);
+          return { ...chat, messages };
+        });
+        return changed ? { ...page, data: chats } : page;
+      };
+      if (!oldData?.pages) return updatePage(oldData);
+      const pages = oldData.pages.map(updatePage);
+      return pages.some((/** @type {any} */ page, /** @type {number} */ index) => (
+        page !== oldData.pages[index]
+      )) ? { ...oldData, pages } : oldData;
+    });
   }, [queryClient]);
 
   const handleMessageUpdated = useCallback((/** @type {any} */ payload) => {
@@ -978,10 +1021,12 @@ const useMessaging = (currentChatId) => {
 
   const deleteMessageMutation = useMutation({
     mutationFn: deleteMessage,
-    onSuccess: () => {
-      // Optimistic or Real update? The socket will handle real update for others.
-      // For me, I can remove it immediately if socket delay is high.
-      // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
+    onSuccess: (result, messageId) => {
+      // Le succès HTTP suffit ; un socket absent/lent ne doit pas figer le message.
+      handleMessageDeleted({
+        chatDocumentId: result?.chatDocumentId || currentChatId,
+        messageDocumentId: result?.messageDocumentId || messageId,
+      });
     },
   });
 

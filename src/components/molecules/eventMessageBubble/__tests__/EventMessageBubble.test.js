@@ -182,6 +182,7 @@ describe('EventMessageBubble — l evenement partage du fil (pack MSG1A)', () =>
       expect(onDecline).toHaveBeenCalledTimes(1);
       // L'option appuyee s'allume tout de suite, et le libelle passe a « Ta reponse ».
       expect(parId(arbre, 'evenement-presence-absent')[0].props.accessibilityState).toEqual({
+        busy: true,
         selected: true,
       });
       expect(textes(arbre)).toContain('Ta réponse');
