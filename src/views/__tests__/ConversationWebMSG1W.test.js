@@ -63,6 +63,8 @@ jest.mock('@/theme/themeContext', () => {
 
 /** @type {any} */
 let mockMoi = null;
+/** @type {any[]} */
+let mockListeIPH09 = [];
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
@@ -104,7 +106,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
-  useGetChats: () => ({ data: { pages: [{ data: [] }] }, isLoading: false }),
+  useGetChats: () => ({ data: { pages: [{ data: mockListeIPH09 }] }, isLoading: false }),
 }));
 
 jest.mock('@/services/collectivite/collectiviteCanauxQueries', () => ({
@@ -277,6 +279,7 @@ const monter = async (params = {}) => {
 beforeEach(() => {
   queryClient = creerQueryClientDeTest();
   mockLargeur = 1280;
+  mockListeIPH09 = [];
   mockSocket = fausseSocket();
   mockBloques = [];
   mockMoi = {
@@ -621,5 +624,38 @@ describe('T19R — la bulle de sondage du site nomme les votants comme le télé
     const lu = etiquettes(arbre);
     expect(lu).toContain('Karim Benali');
     expect(lu).not.toContain('mouri nio');
+  });
+});
+
+// IPH09 — le vrai appelant web conserve archives et epingles, et melange tous les autres types.
+describe('IPH09 — ordre de la colonne Messages du site', () => {
+  test('club/epingles puis dernier message ; le groupe renomme ne depasse pas le prive', async () => {
+    const fil = (documentId, type, createdAt, extra = {}) => ({
+      documentId,
+      groupName: documentId,
+      messages: createdAt ? [{ createdAt, message: 'Message de test', sender: BRUNO }] : [],
+      participants: [MOI, BRUNO],
+      type,
+      updatedAt: '2026-10-09T23:00:00Z',
+      ...extra,
+    });
+    mockListeIPH09 = [
+      fil('equipe', 'team', '2026-10-01T10:00:00Z'),
+      fil('groupe-renomme', 'group', '2026-10-08T10:00:00Z'),
+      fil('prive', 'whisper', '2026-10-09T10:00:00Z'),
+      fil('club', 'club', '', { club: { documentId: 'club-1', name: 'Club de test' } }),
+      fil('epingle', 'whisper', '', { pinnedBy: [{ documentId: 'moi' }] }),
+      fil('archive', 'group', '2026-10-09T11:00:00Z', { archivedBy: [{ documentId: 'moi' }] }),
+    ];
+    const { arbre } = await monter();
+    const lignes = () => arbre.root.findAll((n) => n.type === 'button'
+      && String(n.props['data-testid'] || '').startsWith('MSG1W-ligne-'))
+      .map((n) => n.props['data-testid']);
+    expect(lignes()).toEqual([
+      'MSG1W-ligne-epingle', 'MSG1W-ligne-club', 'MSG1W-ligne-prive',
+      'MSG1W-ligne-groupe-renomme', 'MSG1W-ligne-equipe',
+    ]);
+    await act(async () => { parTestId(arbre, 'ARCH-colonne-archivees')[0].props.onClick(); });
+    expect(lignes()).toEqual(['MSG1W-ligne-archive']);
   });
 });

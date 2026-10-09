@@ -72,34 +72,38 @@ export const estEpinglePourMoi = (chat, meId) => {
     && epinglePar.some((/** @type {any} */ u) => u?.documentId === meId);
 };
 
-/** Le rang d un type de fil : club multisport, club, League, equipe, groupe, tete-a-tete. */
-const RANG_DU_TYPE_DE_FIL = /** @type {Record<string, number>} */ ({
-  club: 1,
-  group: 2.5,
-  league_match: 1.5,
-  multisport: 0,
-  team: 2,
-  whisper: 3,
-});
+/**
+ * Date de creation d un message ; les dates absentes/invalides viennent apres les dates connues.
+ * @param {any} message - Le message.
+ * @returns {number} Son horodatage, ou moins l infini.
+ */
+const dateDuMessage = (message) => {
+  if (!message?.createdAt) return Number.NEGATIVE_INFINITY;
+  const date = new Date(message.createdAt).getTime();
+  return Number.isFinite(date) ? date : Number.NEGATIVE_INFINITY;
+};
 
 /**
- * SMF (T20) — L ORDRE DE LA LISTE DES CONVERSATIONS, une seule regle pour la page du telephone
- * (Messaging.js, d ou elle sort telle quelle) et la colonne « Messages » du site : mes fils
- * epingles d abord, puis le rang du type, puis le plus recent.
+ * IPH09 (09/10, regle d Adel) — mes epingles, puis le canal du club restent en tete.
+ * Tous les autres types se melangent par DERNIER MESSAGE, jamais par `chat.updatedAt`
+ * (renommage, lecture, adhesion). Les ex aequo et fils sans date gardent l ordre recu.
+ * Regle partagee par Messaging.js et la colonne de Conversation.web.js.
  * @param {any[]} chats - Les fils.
  * @param {string | null | undefined} meId - Moi.
- * @returns {any[]} Une copie triee.
+ * @returns {any[]} Une copie triee, sans modifier les fils.
  */
 export const trierLesFils = (chats, meId) => [...(Array.isArray(chats) ? chats : [])]
   .sort((a, b) => {
     const epingleA = estEpinglePourMoi(a, meId);
     const epingleB = estEpinglePourMoi(b, meId);
-    if (epingleA && !epingleB) return -1;
-    if (!epingleA && epingleB) return 1;
-    const rangA = RANG_DU_TYPE_DE_FIL[String(a?.type)] ?? 99;
-    const rangB = RANG_DU_TYPE_DE_FIL[String(b?.type)] ?? 99;
-    if (rangA !== rangB) return rangA - rangB;
-    return new Date(b?.updatedAt).getTime() - new Date(a?.updatedAt).getTime();
+    if (epingleA !== epingleB) return epingleA ? -1 : 1;
+    const clubA = a?.type === 'club';
+    const clubB = b?.type === 'club';
+    if (clubA !== clubB) return clubA ? -1 : 1;
+    const dateA = dateDuMessage(getChatLastMessage(a));
+    const dateB = dateDuMessage(getChatLastMessage(b));
+    if (dateA === dateB) return 0;
+    return dateA > dateB ? -1 : 1;
   });
 
 /**
@@ -243,8 +247,8 @@ export const getChatLastMessage = (chat) => {
   return messages.reduce((latest, message) => {
     if (!message) return latest;
     if (!latest) return message;
-    const latestTime = new Date(latest?.createdAt || 0).getTime();
-    const messageTime = new Date(message?.createdAt || 0).getTime();
+    const latestTime = dateDuMessage(latest);
+    const messageTime = dateDuMessage(message);
     return messageTime > latestTime ? message : latest;
   }, /** @type {any} */ (null)) || null;
 };
