@@ -146,10 +146,15 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['home-summary'],
   ],
 
-  /** Quitter une equipe. */
+  /** Quitter une equipe peut aussi retirer le dernier lien au club (IPH09). */
   leaveTeam: [
     ['team'],
     ['teams'],
+    ['club'],
+    ['clubs'],
+    ['clubMemberRoles'],
+    ['chats'],
+    ['chat'],
     ['events'],
     ['planning'],
     ['app-bootstrap'],

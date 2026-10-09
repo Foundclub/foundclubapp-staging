@@ -755,14 +755,27 @@ function TeamDetails({ navigation, route }) {
     },
   }));
 
+  const leaveTeamPendingRef = useRef(false);
   const leaveTeamMutation = /** @type {any} */ (useMutation({
     mutationFn: leaveTeam,
-    onSuccess: () => {
-      refetchUserData();
+    onError: (/** @type {any} */ mutationError) => {
+      Alert.alert(t('common.error', 'Erreur'), getErrorMessage(mutationError));
+    },
+    onSettled: () => { leaveTeamPendingRef.current = false; },
+    onSuccess: async () => {
+      // Le serveur decide equipe ET club dans une transaction. On relit son
+      // resultat aussi avec l'ancien serveur, sans inventer de depart de club.
+      invalidateAfterAction(queryClient, 'leaveTeam').catch(() => {});
+      await refetchUserData();
       refetch();
-      // C20 : « Mes équipes » (TeamListContent) refiltre sur userData.myTeams ;
-      // invalider aussi la liste des équipes évite qu'une équipe quittée y traîne.
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      // Meme fenetre que le changement de role (ROLES2) : les autres repliques
+      // memorisent 5 s la version des profils et listes. Le client de cache
+      // survit a la navigation ; cette seconde lecture en sort.
+      setTimeout(() => {
+        [['app-bootstrap'], ['get-me'], ['chats']].forEach((queryKey) => {
+          queryClient.invalidateQueries({ queryKey }).catch(() => {});
+        });
+      }, 6000);
     },
   }));
 
@@ -1785,7 +1798,8 @@ function TeamDetails({ navigation, route }) {
   }, [getErrorMessage, isAuthenticated, navigation, openTeamAuthFlow, startWhisperChat, t, trainerContactIds]);
 
   const handleLeaveTeam = useCallback(() => {
-    if (teamId && currentUser?.documentId) {
+    if (teamId && currentUser?.documentId && !leaveTeamPendingRef.current) {
+      leaveTeamPendingRef.current = true;
       leaveTeamMutation.mutate(teamId);
     }
   }, [teamId, currentUser?.documentId, leaveTeamMutation]);
