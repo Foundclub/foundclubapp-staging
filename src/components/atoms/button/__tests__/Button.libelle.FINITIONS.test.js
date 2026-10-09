@@ -85,11 +85,16 @@ describe('FINITIONS — le libellé du bouton partagé n est plus rétréci à s
     act(() => arbre.unmount());
   });
 
-  it('avec icône : texte et icône restent groupés au centre', () => {
+  it('avec icône : rangée centrée et place réservée au libellé sur iOS', () => {
     const { arbre, boite, libelle } = monter({ icon: 'check' });
 
     expect(boite.justifyContent).toBe('center');
-    expect(libelle.flexGrow).toBeUndefined();
+    // IPH09 : l'ancienne attente « largeur intrinsèque avec icône » laissait
+    // TextKit rétrécir excessivement les libellés sur iPhone. La rangée et
+    // l'alignement restent centrés, le texte prend désormais la place disponible.
+    expect(libelle.flexGrow).toBe(1);
+    expect(libelle.flexShrink).toBe(1);
+    expect(libelle.textAlign).toBe('center');
     act(() => arbre.unmount());
   });
 
