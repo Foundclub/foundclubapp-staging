@@ -74,7 +74,7 @@ function LigneDeCanal({
       {ecusson || <EcussonVille nom={nomVille} taille={40} />}
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
         <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
             {titre}
           </Text>
           {heure ? (
@@ -86,7 +86,7 @@ function LigneDeCanal({
             </Text>
           ) : null}
         </View>
-        <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{precision}</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>{precision}</Text>
       </View>
       {compteur > 0 ? (
         <View

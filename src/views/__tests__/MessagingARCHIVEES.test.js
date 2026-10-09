@@ -27,6 +27,7 @@ jest.mock('@shopify/flash-list', () => {
       return reactActuel.createElement(
         VueRN,
         null,
+        props.ListHeaderComponent,
         (props.data || []).map((/** @type {any} */ element, /** @type {number} */ index) => (
           reactActuel.createElement(
             VueRN,
