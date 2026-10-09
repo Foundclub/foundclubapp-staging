@@ -69,12 +69,12 @@ const heureDeLEvenement = (evenement) => {
  * @param {boolean} [props.isMe] - Message envoye par moi : l'anneau des visages prend la couleur
  *   de MA bulle.
  * @param {import('react').ReactNode} [props.meta] - L'heure et les coches, avant le pied.
- * @param {() => any} [props.onDecline] - « Absent ».
+ * @param {(event: any) => any} [props.onDecline] - « Absent », avec la fiche autorisée.
  * @param {() => any} [props.onJoin] - Garde pour le contrat du fil : la bulle du pack n'offre
  *   rien a qui n'est pas convie, il passe par « Ouvrir l'evenement ».
  * @param {(cible: { label: string, latitude?: *, longitude?: * }) => void} [props.onOpenAddress]
  *   - MSG1A (§3.18) : le lieu devient un lien.
- * @param {() => any} [props.onParticipate] - « Present ».
+ * @param {(event: any) => any} [props.onParticipate] - « Present », avec la fiche autorisée.
  * @param {(personne: any) => string} [props.resolveAvatar] - L'adresse de la photo d'une personne.
  * @returns {import('react').ReactElement | null}
  */
@@ -143,10 +143,21 @@ function EventMessageBubble({
     });
   };
 
-  const repondre = (/** @type {'present' | 'absent'} */ choix) => {
+  const repondre = async (/** @type {'present' | 'absent'} */ choix) => {
     setAppui({ choix, depuis: dataUpdatedAt });
-    if (choix === 'present') onParticipate();
-    else onDecline();
+    try {
+      const resultat = choix === 'present'
+        ? onParticipate(evenement) : onDecline(evenement);
+      // Les appelants web utilisant mutate ne rendent pas de promesse :
+      // la relecture ou le délai existant garde alors la main sur l'appui.
+      if (resultat && typeof resultat.then === 'function') {
+        await resultat;
+        setAppui(null);
+      }
+    } catch {
+      // Le hook de réponse affiche l'erreur ; l'appui ne devient pas un faux succès.
+      setAppui(null);
+    }
   };
 
   const ligne = (
@@ -177,9 +188,9 @@ function EventMessageBubble({
     return (
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityState={{ selected: choisie }}
+        accessibilityState={{ ...(appui ? { busy: true } : {}), selected: choisie }}
         activeOpacity={0.85}
-        disabled={choisie}
+        disabled={Boolean(appui) || choisie}
         onPress={() => repondre(cle)}
         style={[styles.option, { backgroundColor: fond }]}
         testID={`evenement-presence-${cle}`}

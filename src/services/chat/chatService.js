@@ -476,10 +476,11 @@ export const updateGroupMeta = async (chatId, data) => {
 /**
  * Delete a message
  * @param {string} messageId - The message id
- * @returns {Promise<void>}
+ * @returns {Promise<{ chatDocumentId?: string, deleted?: boolean, messageDocumentId?: string }>}
  */
 export const deleteMessage = async (messageId) => {
-  await client.delete(`/chat-messages/${messageId}`);
+  const response = await client.delete(`/chat-messages/${messageId}`);
+  return response.data;
 };
 
 /**
