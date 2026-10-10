@@ -9,6 +9,8 @@ import {
 } from '@/services/collectivite/collectiviteService';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import {
+  attributeSeasonSlot,
+  getClubTeamsForSlot,
   getSeasonSlot,
   listFacilitySeasonSlots,
   previewFacilitySeasonSlot,
@@ -302,7 +304,7 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
@@ -451,15 +453,44 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
   });
 
   it('une heure libre ⇒ « Attribuer pour la saison », deja remplie', async () => {
+    /** @type {any} */ (getClubTeamsForSlot).mockResolvedValue([]);
+    /** @type {any} */ (attributeSeasonSlot).mockResolvedValue({
+      data: { documentId: 'slot-neuf' },
+    });
     const arbre = await rendre();
     expect(typeof grille().onFreeSlotPress).toBe('function');
     await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4), 17); });
     await attendre();
     const lus = textes(arbre);
     expect(lus).toContain('Mercredi 17:00 – 18:30');
+    // IPH09 : la confirmation n'apparaît qu'après les cinq étapes de saisie.
+    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
+    expect(textes(arbre)).toContain('Étape 1/6');
+    const club = parTexte(arbre, 'US Ville B');
+    expect(club.props.accessibilityRole).toBe('radio');
+    await act(async () => { club.props.onPress(); });
+    await attendre();
+    for (let etape = 1; etape <= 5; etape += 1) {
+      expect(textes(arbre)).toContain(`Étape ${etape}/6`);
+      expect(attributeSeasonSlot).not.toHaveBeenCalled();
+      const suivant = parTexte(arbre, 'Suivant');
+      expect(suivant).toBeDefined();
+      expect(suivant.props.disabled).not.toBe(true);
+      // eslint-disable-next-line no-await-in-loop -- chaque étape dépend de la précédente
+      await act(async () => { suivant.props.onPress(); });
+      // eslint-disable-next-line no-await-in-loop -- attendre le rendu de l'étape suivante
+      await attendre();
+    }
+    expect(textes(arbre)).toContain('Étape 6/6');
     expect(parTexte(arbre, 'Attribuer pour la saison')).toBeDefined();
     const attendu = expect.objectContaining({ endTime: '18:30', startTime: '17:00', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-ville', attendu);
+    await act(async () => { parTexte(arbre, 'Attribuer pour la saison').props.onPress(); });
+    await attendre();
+    expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
+    expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-ville', {
+      club: 'club-B', endTime: '18:30', startTime: '17:00', weekday: 3,
+    });
   });
 
   it('la Liste : chaque journee libre se touche pour attribuer', async () => {

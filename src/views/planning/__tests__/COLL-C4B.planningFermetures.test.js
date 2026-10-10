@@ -9,6 +9,12 @@ import {
   getMyCollectivites,
 } from '@/services/collectivite/collectiviteService';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
+import {
+  attributeSeasonSlot,
+  getClubTeamsForSlot,
+  listFacilitySeasonSlots,
+  previewFacilitySeasonSlot,
+} from '@/services/seasonSlot/seasonSlotService';
 
 import PlanningWeekFullscreen from '../PersonalPlanningWeekFullscreen';
 
@@ -287,7 +293,7 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
@@ -411,12 +417,46 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
   });
 
   it('3. une heure libre : « Bloquer pour la Ville », deja rempli du jour et des heures', async () => {
+    /** @type {any} */ (getClubTeamsForSlot).mockResolvedValue([]);
+    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
+      data: [],
+      meta: {
+        canManage: true,
+        facility: { maxSlots: 2, name: 'Gymnase de la Ville', plateaux: [] },
+        season: { validFrom: '2025-09-01', validUntil: '2026-06-30' },
+      },
+    });
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 2, needsConfirmation: false, occupants: [], peak: 0, remaining: 2, teamsAfter: 1,
+      },
+    });
     gereLaVille();
     const arbre = await rendre();
     await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4), 17); });
     await attendre();
+    // IPH09 : la confirmation n'apparaît qu'après les cinq étapes de saisie.
+    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
+    expect(textes(arbre)).toContain('Étape 1/6');
+    const club = parTexte(arbre, 'US Ville B');
+    expect(club.props.accessibilityRole).toBe('radio');
+    await act(async () => { club.props.onPress(); });
+    await attendre();
+    for (let etape = 1; etape <= 5; etape += 1) {
+      expect(textes(arbre)).toContain(`Étape ${etape}/6`);
+      expect(attributeSeasonSlot).not.toHaveBeenCalled();
+      const suivant = parTexte(arbre, 'Suivant');
+      expect(suivant).toBeDefined();
+      expect(suivant.props.disabled).not.toBe(true);
+      // eslint-disable-next-line no-await-in-loop -- chaque étape dépend de la précédente
+      await act(async () => { suivant.props.onPress(); });
+      // eslint-disable-next-line no-await-in-loop -- attendre le rendu de l'étape suivante
+      await attendre();
+    }
+    expect(textes(arbre)).toContain('Étape 6/6');
     expect(parTexte(arbre, 'Attribuer pour la saison')).toBeDefined();
     await act(async () => { parTexte(arbre, 'Bloquer pour la Ville').props.onPress(); });
+    expect(attributeSeasonSlot).not.toHaveBeenCalled();
     expect(mockNavigation.navigate).toHaveBeenLastCalledWith('CollectiviteFermeture', {
       collectiviteId: 'ville-1',
       date: '2026-03-04',
