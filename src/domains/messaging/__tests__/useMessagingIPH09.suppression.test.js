@@ -16,6 +16,7 @@ import { creerQueryClientDeTest } from '@/testSupport/queryClientDeTest';
 let mockMessaging;
 const mockDeleteMessage = jest.fn();
 const mockGetChatMessages = jest.fn();
+const mockMountedProbes = new Set();
 
 jest.mock('@/services/client', () => ({
   __esModule: true,
@@ -97,12 +98,13 @@ const unMessage = (documentId, texte) => ({
 const monterMessagerie = (clientRequetes) => {
   // eslint-disable-next-line global-require
   const useMessaging = require('@/domains/messaging/useMessaging').default;
+  let messaging;
   /**
    * Sonde minimale : elle ne fait qu'allumer le crochet.
    * @returns {null} Rien à l'écran.
    */
   function Sonde() {
-    mockMessaging = useMessaging('chat-1');
+    messaging = useMessaging('chat-1');
     return null;
   }
   let arbre;
@@ -113,7 +115,10 @@ const monterMessagerie = (clientRequetes) => {
       createElement(Sonde),
     ));
   });
-  return { arbre };
+  // Une ancienne sonde qui se réveille ne doit pas remplacer la sonde courante.
+  mockMessaging = messaging;
+  mockMountedProbes.add(arbre);
+  return { arbre, messaging };
 };
 
 /**
@@ -135,10 +140,17 @@ describe('IPH09 — suppression HTTP et socket sur le vrai cache', () => {
     clientRequetes.setQueryData(CLEF_MESSAGES, {
       pageParams: [1], pages: [{ data: [unMessage('dernier', 'Nouveau'), unMessage('ancien', 'Salut')] }],
     });
-    mockDeleteMessage.mockResolvedValue({ chatDocumentId: 'chat-1', deleted: true, messageDocumentId: 'dernier' });
+    mockDeleteMessage.mockReset().mockImplementation((messageDocumentId) => Promise.resolve({
+      chatDocumentId: 'chat-1', deleted: true, messageDocumentId,
+    }));
     monterMessagerie(clientRequetes);
   });
-  afterEach(() => clientRequetes.clear());
+  afterEach(() => {
+    act(() => { mockMountedProbes.forEach((arbre) => arbre.unmount()); });
+    mockMountedProbes.clear();
+    clientRequetes.clear();
+    mockMessaging = undefined;
+  });
 
   test('HTTP réussi retire seulement le bon message sans attendre le socket', async () => {
     await act(async () => { await mockMessaging.deleteMessage('dernier'); });
@@ -164,7 +176,6 @@ describe('IPH09 — suppression HTTP et socket sur le vrai cache', () => {
   });
   test('supprimer le dernier puis le seul message laisse un cache vide stable', async () => {
     await act(async () => { await mockMessaging.deleteMessage('dernier'); });
-    mockDeleteMessage.mockResolvedValue({ chatDocumentId: 'chat-1', deleted: true, messageDocumentId: 'ancien' });
     await act(async () => { await mockMessaging.deleteMessage('ancien'); });
     const empty = clientRequetes.getQueryData(CLEF_MESSAGES);
     expect(messagesEnCache(clientRequetes)).toEqual([]);
@@ -175,6 +186,30 @@ describe('IPH09 — suppression HTTP et socket sur le vrai cache', () => {
   test('un événement d’un autre fil ne retire rien du fil ouvert', () => {
     emettreDuServeur('message-deleted', { chatDocumentId: 'chat-autre', documentId: 'dernier' });
     expect(messagesEnCache(clientRequetes)).toHaveLength(2);
+  });
+  test('une mutation d’une sonde antérieure ne détourne pas la suppression du cache courant', async () => {
+    const previousClient = creerQueryClientDeTest();
+    previousClient.setQueryData(CLEF_MESSAGES, { pages: [{ data: [unMessage('ancien', 'Autre cache')] }] });
+    const previousProbe = monterMessagerie(previousClient);
+    const previousMessaging = mockMessaging;
+    const currentProbe = monterMessagerie(clientRequetes);
+    const currentMessaging = mockMessaging;
+    try {
+      await act(async () => { await currentMessaging.deleteMessage('dernier'); });
+      // La notification React Query de l'ancien arbre arrive entre deux suppressions.
+      await act(async () => {
+        await previousMessaging.deleteMessage('ancien');
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
+      });
+      await act(async () => { await mockMessaging.deleteMessage('ancien'); });
+      expect(mockDeleteMessage.mock.calls.map(([id]) => id)).toEqual(['dernier', 'ancien', 'ancien']);
+      expect(messagesEnCache(clientRequetes)).toEqual([]);
+    } finally {
+      act(() => { previousProbe.arbre.unmount(); currentProbe.arbre.unmount(); });
+      mockMountedProbes.delete(previousProbe.arbre);
+      mockMountedProbes.delete(currentProbe.arbre);
+      previousClient.clear();
+    }
   });
   test('la suppression du dernier remplace son aperçu, avec le contrat lifecycle puis controller', () => {
     const other = { documentId: 'autre-fil', messages: [unMessage('ailleurs', 'Autre')] };
