@@ -9,6 +9,12 @@ import {
   getMyCollectivites,
 } from '@/services/collectivite/collectiviteService';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
+import {
+  attributeSeasonSlot,
+  getClubTeamsForSlot,
+  listFacilitySeasonSlots,
+  previewFacilitySeasonSlot,
+} from '@/services/seasonSlot/seasonSlotService';
 
 import PlanningWeekFullscreen from '../PersonalPlanningWeekFullscreen';
 
@@ -311,7 +317,7 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
@@ -429,6 +435,23 @@ describe('COLL-FIX-PLANNING G4 — les fenetres du planning de la Ville, hors na
   });
 
   it('4. la plage fermee et le panneau d attribution s ouvrent aussi sans planter', async () => {
+    /** @type {any} */ (getClubTeamsForSlot).mockResolvedValue([]);
+    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
+      data: [],
+      meta: {
+        canManage: true,
+        facility: { maxSlots: 2, name: 'Gymnase de la Ville', plateaux: [] },
+        season: { validFrom: '2025-09-01', validUntil: '2026-06-30' },
+      },
+    });
+    /** @type {any} */ (previewFacilitySeasonSlot).mockResolvedValue({
+      data: {
+        capacity: 2, needsConfirmation: false, occupants: [], peak: 0, remaining: 2, teamsAfter: 1,
+      },
+    });
+    /** @type {any} */ (attributeSeasonSlot).mockResolvedValue({
+      data: { documentId: 'slot-neuf' },
+    });
     gereLaVille();
     avecFermeture();
     const arbre = await rendre();
@@ -437,8 +460,31 @@ describe('COLL-FIX-PLANNING G4 — les fenetres du planning de la Ville, hors na
     expect(textes(arbre)).toContain('Fermeture · travaux');
     await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4), 10); });
     await attendre();
+    // IPH09 : la confirmation n'apparaît qu'après les cinq étapes de saisie.
+    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
+    expect(textes(arbre)).toContain('Étape 1/6');
+    const club = parTexte(arbre, 'US Ville B');
+    expect(club.props.accessibilityRole).toBe('radio');
+    await act(async () => { club.props.onPress(); });
+    await attendre();
+    for (let etape = 1; etape <= 5; etape += 1) {
+      expect(textes(arbre)).toContain(`Étape ${etape}/6`);
+      expect(attributeSeasonSlot).not.toHaveBeenCalled();
+      const suivant = parTexte(arbre, 'Suivant');
+      expect(suivant).toBeDefined();
+      expect(suivant.props.disabled).not.toBe(true);
+      // eslint-disable-next-line no-await-in-loop -- chaque étape dépend de la précédente
+      await act(async () => { suivant.props.onPress(); });
+      // eslint-disable-next-line no-await-in-loop -- attendre le rendu de l'étape suivante
+      await attendre();
+    }
+    expect(textes(arbre)).toContain('Étape 6/6');
     await act(async () => { parTexte(arbre, 'Attribuer pour la saison').props.onPress(); });
     await attendre();
     expect(arbre.root.findAllByType(Text).length).toBeGreaterThan(0);
+    expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
+    expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-ville', {
+      club: 'club-B', endTime: '11:30', startTime: '10:00', weekday: 3,
+    });
   });
 });
