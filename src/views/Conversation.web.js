@@ -15,6 +15,7 @@ import useAuth from '@/domains/auth/useAuth'
 import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
+import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
@@ -3488,7 +3489,16 @@ function Conversation({ navigation, route }) {
   const ouvrirLEvenement = useCallback((/** @type {string} */ eventId) => {
     if (eventId) navigation.navigate(RouteNames.EventDetails, { eventId });
   }, [navigation]);
-  const participerALEvenement = useCallback((/** @type {any} */ evenement) => {
+  const participerALEvenement = useCallback(async (/** @type {any} */ evenement) => {
+    if (evenement?.documentId && (
+      String(evenement?.eventFormat || '').toLowerCase() === 'stage_day'
+      || presenceDansLeFil({ evenement, utilisateur: userData })
+    )) {
+      await respondToEventRsvpMutation.mutateAsync({
+        answer: 'present', eventId: evenement.documentId,
+      });
+      return;
+    }
     const flux = resolveParticipationFlow(evenement, { user: userData });
     if (!flux?.canAct) {
       setAnnonce(flux?.blockedReason || t('common.errorOccurred', 'Une erreur est survenue.'));
@@ -3503,16 +3513,19 @@ function Conversation({ navigation, route }) {
       return;
     }
     if (evenement?.documentId && userData?.documentId) {
-      participationMutation.mutate({ event: evenement.documentId, user: userData.documentId });
+      await participationMutation.mutateAsync({
+        event: evenement.documentId, user: userData.documentId,
+      });
     }
-  }, [ouvrirLEvenement, participationMutation, t, userData]);
+  }, [ouvrirLEvenement, participationMutation, respondToEventRsvpMutation, t, userData]);
   const declinerLEvenement = useCallback((/** @type {any} */ evenement) => {
-    if (!evenement?.documentId) return;
+    if (!evenement?.documentId) return Promise.resolve();
     if (String(evenement?.eventFormat || '').toLowerCase() === 'stage_day') {
-      respondToEventRsvpMutation.mutate({ answer: 'absent', eventId: evenement.documentId });
-      return;
+      return respondToEventRsvpMutation.mutateAsync({
+        answer: 'absent', eventId: evenement.documentId,
+      });
     }
-    missingEventMutation.mutate(evenement.documentId);
+    return missingEventMutation.mutateAsync(evenement.documentId);
   }, [missingEventMutation, respondToEventRsvpMutation]);
   const rejoindreLEvenement = useCallback((/** @type {any} */ evenement) => {
     ouvrirLEvenement(evenement?.parentEvent?.documentId || evenement?.documentId);
@@ -3946,9 +3959,9 @@ function Conversation({ navigation, route }) {
               <EventMessageBubble
                 event={evenement}
                 isMe={isMine}
-                onDecline={() => declinerLEvenement(evenement)}
+                onDecline={(eventHydrate = evenement) => declinerLEvenement(eventHydrate)}
                 onJoin={() => rejoindreLEvenement(evenement)}
-                onParticipate={() => participerALEvenement(evenement)}
+                onParticipate={(eventHydrate = evenement) => participerALEvenement(eventHydrate)}
               />
             ) : null}
             {message?.composition && !evenement ? renderComposition(message, isMine) : null}
