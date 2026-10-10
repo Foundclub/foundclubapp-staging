@@ -67,6 +67,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Le paquet natif Nitro a echoue avant l'envoi le 11/10/2026.
+      # Mesurer le disque et retirer uniquement les outils inutilises du runner
+      # ephemere ; Android, Java, Node et tous les controles restent en place.
+      - name: Prepare Android build disk space
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_ENVIRONMENT}" = "github-hosted"
+          test "${RUNNER_OS}" = "Linux"
+          df -h . /tmp
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h . /tmp
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -286,12 +299,14 @@ jobs:
       - name: Build production AAB
         shell: bash
         run: |
+          trap 'df -h . /tmp' EXIT
+          df -h . /tmp
           set -a
           . ./.env.production
           set +a
           cd android
           chmod +x gradlew
-          ./gradlew bundleProductionRelease --no-daemon \
+          ./gradlew bundleProductionRelease --no-daemon --stacktrace \
             "-PRELEASE_STORE_PASSWORD=${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}" \
             "-PRELEASE_KEY_PASSWORD=${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}" \
             "-PversionCode=${ANDROID_VERSION_CODE}" \
