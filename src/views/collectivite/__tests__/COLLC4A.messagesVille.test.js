@@ -15,8 +15,9 @@ import CanauxDeLaVille from '../components/CanauxDeLaVille';
 //     actualité » ; puis « Conversations » ;
 //   - dans la messagerie d'un membre (dirigeant, entraîneur, joueur, parent) : épinglé en tête,
 //     pour chaque Ville de ses clubs, « Actualités de la Ville » et la dernière, vers le canal ;
-//   - sans Ville : rien ; la messagerie le pose sous la recherche ; l'onglet « Messages » de la
-//     Ville dit qu'il vient de l'espace de la Ville.
+//   - sans Ville : rien ; l'onglet « Messages » de la Ville dit qu'il vient de son espace.
+// IPH09 — Ville et conversations dans le contenu defilant sont couvertes comportementalement
+// par MessagingIPH09.liste.test.js ; aucun voisinage JSX fixe sous la recherche n est impose.
 
 /** @type {any} */
 let mockMine;
@@ -161,9 +162,7 @@ describe('COLL-C4A — planche 4 : le canal épinglé dans la messagerie du memb
     expect((await monter(<CanauxDeLaVille navigation={navigation} />)).toJSON()).toBeNull();
   });
 
-  it('la messagerie les pose sous la recherche ; l onglet de la Ville dit d où il vient', () => {
-    const messagerie = readFileSync(join(__dirname, '..', '..', 'Messaging.js'), 'utf8');
-    expect(messagerie).toMatch(/\{renderSearch\(\)\}\s*\{\/\*[^*]*\*\/\}\s*<CanauxDeLaVille/);
+  it('l onglet Messages de la Ville conserve sa portee et son espace', () => {
     const dossierNavigation = join(__dirname, '..', '..', '..', 'navigation', 'private');
     const cheminOnglets = join(dossierNavigation, 'CollectiviteTabNavigator.js');
     const onglets = readFileSync(cheminOnglets, 'utf8');
