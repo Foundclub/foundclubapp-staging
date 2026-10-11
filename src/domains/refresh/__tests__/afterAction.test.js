@@ -207,6 +207,7 @@ describe('T08 — ce qui devient faux apres une action', () => {
     expect(Object.keys(AFTER_ACTION_CACHES).sort()).toEqual([
       'acceptRequest',
       'answerEvent',
+      'childInterestAnswered',
       'createClub',
       'createEvent',
       'joinClub',

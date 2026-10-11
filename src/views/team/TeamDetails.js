@@ -615,6 +615,18 @@ function TeamDetails({ navigation, route }) {
     return players.filter((/** @type {any} */ player) => Boolean(player?.documentId));
   }, [team?.isLeague, team?.players]);
 
+  // PAR-006 : une fiche enfant acceptee n'est pas un compte utilisateur.
+  // Le serveur ne la rend qu'a l'encadrement, dans declaredChildren.
+  // La garder a part evite de lui proposer un profil, un chat ou un retrait
+  // via les routes reservees aux joueurs ayant un compte.
+  const declaredChildren = useMemo(() => (
+    team?.isLeague || !Array.isArray(team?.declaredChildren)
+      ? []
+      : team.declaredChildren.filter((/** @type {any} */ child) => (
+        child?.documentId && child?.participantSource === 'declared_child'
+      ))
+  ), [team?.isLeague, team?.declaredChildren]);
+
   const areTeamMembersHidden = team?.membersAreHidden === true;
 
   const isMyClub = useMemo(
@@ -1094,8 +1106,8 @@ function TeamDetails({ navigation, route }) {
     if (areTeamMembersHidden && Number.isFinite(explicitCount) && explicitCount >= 0) {
       return explicitCount;
     }
-    return filteredPlayers.length || 0;
-  }, [areTeamMembersHidden, filteredPlayers, team?.playersCount]);
+    return filteredPlayers.length + declaredChildren.length;
+  }, [areTeamMembersHidden, declaredChildren, filteredPlayers, team?.playersCount]);
   const renderMembersHiddenCard = useCallback((message) => (
     <View
       style={[
@@ -3353,6 +3365,38 @@ function TeamDetails({ navigation, route }) {
                             />
                           </View>
                           )}
+                        </View>
+                      ))}
+                      {declaredChildren.map((/** @type {any} */ child) => (
+                        <View
+                          key={`declared-child-${child.documentId}`}
+                          style={[
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            Spaces.padding[16],
+                            Spaces.gap[16],
+                          ]}
+                        >
+                          <ProfileAvatar
+                            enablePreview={false}
+                            imageStyle={{ borderRadius: 40 }}
+                            imageUrl={child?.avatar?.url}
+                            name={[child.firstname, child.lastname].filter(Boolean).join(' ')}
+                            size={40}
+                            style={[
+                              ApplicationStyle.borderWidth1,
+                              ApplicationStyle.borderColor.neutral00,
+                              { borderRadius: 40 },
+                            ]}
+                          />
+                          <Text
+                            numberOfLines={2}
+                            style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}
+                          >
+                            {[child.firstname, child.lastname].filter(Boolean).join(' ')}
+                          </Text>
                         </View>
                       ))}
                       {!playersCount && canManageTeam ? (

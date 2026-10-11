@@ -278,7 +278,10 @@ jest.mock('@/components/atoms/button/Button', () => {
   const reactActuel = jest.requireActual('react');
 
   return function ButtonMock(/** @type {any} */ props) {
-    return reactActuel.createElement(TexteRN, null, props.title);
+    return reactActuel.createElement(TexteRN, {
+      onPress: props.onPress,
+      testID: `button-${props.icon || 'title'}`,
+    }, props.title);
   };
 });
 
@@ -426,5 +429,77 @@ describe('ROLES3 — page d equipe : l entraineur qui joue est chez les joueurs'
     expect(joueurs).toEqual(expect.arrayContaining(['Ada L', 'Bo M']));
     expect(joueurs).not.toContain('Coach Simple');
     expect(rubrique(racine, 'teamDetails.sections.trainers')).toContain('Coach Simple');
+  });
+});
+
+// PAR-006 : la fiche enfant acceptee vient de declaredChildren, pas de players.
+// Le serveur ne lui cree aucun compte. Elle doit etre visible sans recevoir
+// les actions d'un compte utilisateur (profil public, chat ou suppression joueur).
+const ENFANT_ACCEPTE = {
+  avatar: null,
+  documentId: 'enfant-1',
+  firstname: 'Lea',
+  id: 'enfant-1',
+  isManual: true,
+  lastname: 'Test',
+  number: null,
+  participantSource: 'declared_child',
+  position: null,
+};
+
+describe('PAR006 - enfant accepte visible dans effectif encadrant', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('seul enfant accepte : son nom apparait et equipe plus vide', () => {
+    const racine = monterLaPage({
+      ...equipe({ players: [], trainers: [ENTRAINEUR_QUI_NE_JOUE_PAS] }),
+      declaredChildren: [ENFANT_ACCEPTE],
+    });
+    expect(rubrique(racine, 'teamDetails.sections.players')).toContain('Lea Test');
+    expect(textesDansLOrdre(racine)).not.toContain("Personne pour l'instant");
+  });
+
+  test('enfant et comptes joueurs restent visibles ensemble', () => {
+    const racine = monterLaPage({
+      ...equipe({ players: [JOUEUSE], trainers: [] }),
+      declaredChildren: [ENFANT_ACCEPTE],
+    });
+    expect(rubrique(racine, 'teamDetails.sections.players')).toEqual(
+      expect.arrayContaining(['Lea Test', 'Bo M']),
+    );
+  });
+
+  test('fiche enfant : pas de profil utilisateur ni de retrait comme compte joueur', () => {
+    const racine = monterLaPage({
+      ...equipe({ players: [], trainers: [] }),
+      declaredChildren: [ENFANT_ACCEPTE],
+    });
+    expect(rubrique(racine, 'teamDetails.sections.players')).toContain('Lea Test');
+    const [nom] = racine.findAll(
+      (node) => node.type === Text && node.props.children === 'Lea Test',
+    );
+    let { parent } = nom;
+    while (parent) {
+      expect(parent.props?.onPress).toBeUndefined();
+      parent = parent.parent;
+    }
+    expect(racine.findAllByProps({ testID: 'button-trash' })).toHaveLength(0);
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  test('sans liste enfant, les comptes joueurs restent inchanges', () => {
+    const racine = monterLaPage(equipe({ players: [JOUEUSE], trainers: [] }));
+    expect(rubrique(racine, 'teamDetails.sections.players')).toContain('Bo M');
+    expect(textesDansLOrdre(racine)).not.toContain('Lea Test');
+  });
+
+  test('effectif masque : aucune identite enfant meme si donnees presentes', () => {
+    const racine = monterLaPage({
+      ...equipe({ players: [], trainers: [] }),
+      declaredChildren: [ENFANT_ACCEPTE],
+      membersAreHidden: true,
+      playersCount: 1,
+    });
+    expect(textesDansLOrdre(racine)).not.toContain('Lea Test');
   });
 });
