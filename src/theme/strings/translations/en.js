@@ -6041,6 +6041,7 @@ export default {
     jauge: {
       a11y: 'Occupancy: {{taux}}',
       occupation: 'occupancy: {{taux}}',
+      occupationSur24h: 'occupancy: {{taux}} over 24 hours',
     },
     lien: 'Figures and export',
     periodes: {

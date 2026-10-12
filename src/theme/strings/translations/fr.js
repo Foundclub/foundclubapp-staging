@@ -6579,6 +6579,8 @@ export default {
     jauge: {
       a11y: 'Occupation : {{taux}}',
       occupation: 'occupation : {{taux}}',
+      // VILLE-TAUX-24H (12/10) : sans horaires, le taux de la semaine se calcule sur 24 h.
+      occupationSur24h: 'occupation : {{taux}} sur 24 h',
     },
     lien: 'Chiffres et export',
     periodes: {
