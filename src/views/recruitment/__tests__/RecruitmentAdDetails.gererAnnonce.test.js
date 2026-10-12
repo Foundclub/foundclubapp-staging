@@ -332,7 +332,7 @@ describe('RecruitmentAdDetails — caracterisation (ce qui ne bouge pas)', () =>
 
   // ANNONCE-PUBLIQUE (07/10, décision d'Adel « annonce a ») : le lien partagé menait à
   // /recruitment/<id>, une page PRIVÉE du site (mur de connexion). Il mène à la page PUBLIQUE.
-  it('ANNONCE-PUBLIQUE : le lien partagé avec l affiche mène à la page PUBLIQUE de l annonce', async () => {
+  it('ANNONCE-PUBLIQUE : le lien partagé avec l affiche mène à la page PUBLIQUE', async () => {
     const tree = await renderFor(ENTRAINEUR_DE_L_EQUIPE, {
       ...AD,
       category: { name: 'U15' },

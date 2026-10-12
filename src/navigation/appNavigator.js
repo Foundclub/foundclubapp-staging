@@ -102,12 +102,12 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
           },
           [RouteNames.CollectiviteJoin]: VILLE_LINK,
           [RouteNames.CollectiviteJoinRequest]: VILLE_REQUEST_LINK,
-          [RouteNames.RecruitmentAdDetails]: RECRUITMENT_AD_LINK,
           [RouteNames.EventStack]: {
             screens: {
               [RouteNames.EventDetails]: EVENT_DETAILS_LINK,
             },
           },
+          [RouteNames.RecruitmentAdDetails]: RECRUITMENT_AD_LINK,
           [RouteNames.SquadDetails]: 'squad/:teamId',
           [RouteNames.TeamStack]: {
             screens: {

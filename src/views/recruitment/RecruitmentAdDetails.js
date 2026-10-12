@@ -858,7 +858,7 @@ function RecruitmentAdDetails() {
     if (!subjectId) return;
     navigation.navigate(RouteNames.VisualShowcase, {
       chatShareEnabled: false,
-      // ANNONCE-PUBLIQUE (07/10, « annonce a ») : la page PUBLIQUE de l'annonce, lisible sans compte.
+      // ANNONCE-PUBLIQUE (07/10, « annonce a ») : la page PUBLIQUE de l'annonce, sans compte.
       // Avant : /recruitment/<id>, une page privée du site (mur de connexion).
       shareUrl: buildPublicWebUrl(/** @type {any} */ ({
         path: cheminAnnonceAnnuaire({ ...ad, documentId: subjectId }),
