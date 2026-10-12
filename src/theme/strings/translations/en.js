@@ -16319,8 +16319,12 @@ export default {
     create: {
       desc: 'Give your search a name to receive notifications.',
       events: 'An event / a booking?',
+      needCity: 'Choose a city, then tap “Create this alert”.',
       profiles: 'A profile?',
+      retry: 'Try again',
+      submit: 'Create this alert',
       title: 'Create an alert',
+      withoutAlert: 'See results without creating an alert',
     },
     created: {
       body: 'You will be notified as soon as a new event like these is published.',
@@ -16371,6 +16375,14 @@ export default {
       editBody: 'This profile alert can no longer be edited on a player account.',
       launchBody: 'This profile alert is only visible on a manager or coach account.',
       title: 'Profile alert unavailable',
+    },
+    refus: {
+      connexion: 'No connection.',
+      delai: 'The server is slow to respond: check My alerts before trying again.',
+      droit: 'Your account cannot create alerts yet.',
+      inconnue: 'Try again in a moment.',
+      limite: 'You already have {{maximum}} alerts: delete one in My alerts.',
+      titre: 'The alert was not created.',
     },
     sheet: {
       error: 'The alert could not be created. Try again in a moment.',

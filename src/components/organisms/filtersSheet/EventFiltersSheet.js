@@ -55,6 +55,16 @@ import FiltersSheet from './FiltersSheet';
  * perdue en passant a cette feuille. Elle confie le BROUILLON (ce qui est regle
  * ici, meme non applique) a `onCreateAlert`, et dit ce qu'on lui repond. Sans
  * `onCreateAlert`, pas d'etoile : la feuille reste celle d'avant.
+ *
+ * 🔔 PAR-L10 (12/10, E22 / E23 de la recette parent) — OUVERTE POUR UNE ALERTE
+ * (`pourUneAlerte`), LA FEUILLE LA CREE ELLE-MEME. Adel touchait « Voir les
+ * resultats » et croyait son alerte faite : le geste qui cree etait une petite
+ * etoile en haut. Dans ce mode : titre « Creer une alerte », pied « Creer cette
+ * alerte » (plein) et « Voir les resultats sans creer d'alerte » (texte), plus
+ * d'etoile (deux boutons pour un meme geste). Le succes n'est dit qu'apres
+ * l'enregistrement, puis la recherche prend les criteres et la feuille part ;
+ * un echec garde la feuille, ses criteres, et dit pourquoi (`raisonDuRefus`).
+ * Hors de ce mode, la feuille « Filtrer » ne change pas.
  */
 
 const RAYON_PAR_DEFAUT = 20;
@@ -100,8 +110,10 @@ const libelleDeLaSelection = (options, valeurs, repli) => {
  *  onClose: () => void;
  *  onCreateAlert?: (filters: Record<string, any>) => Promise<string>;
  *  pourUneAlerte?: boolean;
+ *  raisonDuRefus?: string;
  * }} props `pourUneAlerte` : ouverte pour creer une alerte, la feuille s'ouvre
- *   sur la rangee Ville et dit qu'une ville est necessaire.
+ *   sur la rangee Ville, dit qu'une ville est necessaire et cree l'alerte.
+ *   `raisonDuRefus` : la phrase du dernier refus, lue sous le titre.
  * @returns {import('react').ReactElement} La feuille.
  */
 function EventFiltersSheet({
@@ -111,6 +123,7 @@ function EventFiltersSheet({
   onClose,
   onCreateAlert = undefined,
   pourUneAlerte = false,
+  raisonDuRefus = '',
 }) {
   const { t } = useTranslation();
   const TOUS_SPORTS = t('eventFiltersSheet.allSports', 'Tous les sports');
@@ -141,6 +154,8 @@ function EventFiltersSheet({
     note: noteAlerte,
     setNote: setNoteAlerte,
   } = useEtoileAlerte(onCreateAlert);
+  const modeCreation = pourUneAlerte && Boolean(onCreateAlert);
+  const [creationEnCours, setCreationEnCours] = useState(false);
 
   const etaitOuverteRef = useRef(false);
 
@@ -253,10 +268,53 @@ function EventFiltersSheet({
     onClose();
   };
 
-  const etoile = onCreateAlert
+  // PAR-L10 — « Creer cette alerte » : le succes est dit par la creation, APRES
+  // l'enregistrement ; la recherche prend alors les criteres de l'alerte.
+  const creerCetteAlerte = async () => {
+    if (!onCreateAlert || creationEnCours) return;
+    const criteres = brouillon();
+    setCreationEnCours(true);
+    let statut = StatutAlerte.erreur;
+    try {
+      statut = await onCreateAlert(criteres);
+    } catch {
+      statut = StatutAlerte.erreur;
+    } finally {
+      setCreationEnCours(false);
+    }
+    if (statut === StatutAlerte.creee) {
+      onApply(criteres);
+      onClose();
+      return;
+    }
+    // '' : un envoi etait deja parti, la note en cours reste.
+    if (statut) setNoteAlerte(statut);
+  };
+
+  const etoile = onCreateAlert && !modeCreation
     ? <EtoileAlerte enCours={alerteEnCours} onPress={() => creerAlerte(brouillon())} />
     : undefined;
-  const noteDeLEtoile = noteAlerte ? <NoteAlerte statut={noteAlerte} /> : null;
+
+  let noteDeLEtoile = noteAlerte ? <NoteAlerte statut={noteAlerte} /> : null;
+  if (noteAlerte === StatutAlerte.erreur && raisonDuRefus) {
+    noteDeLEtoile = (
+      <View accessibilityLiveRegion="polite" style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p2Bold, { color: Colors.error500 }]}>
+          {t('searchAlerts.refus.titre', 'L\'alerte n\'a pas été créée.')}
+        </Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{raisonDuRefus}</Text>
+      </View>
+    );
+  } else if (modeCreation && noteAlerte === StatutAlerte.villeManquante) {
+    noteDeLEtoile = (
+      <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+        {t(
+          'searchAlerts.create.needCity',
+          'Choisis une ville, puis touche « Créer cette alerte ».',
+        )}
+      </Text>
+    );
+  }
 
   // « Reinitialiser » vide TOUT, comme le faisait « Effacer les filtres » de
   // l'ecran plein : la barre de recherche partait deja avec le reste.
@@ -437,6 +495,29 @@ function EventFiltersSheet({
       value: team?.label || TOUTES,
     },
   ];
+
+  if (modeCreation) {
+    return (
+      <FiltersSheet
+        applyEnCours={creationEnCours}
+        applyLabel={noteAlerte === StatutAlerte.erreur
+          ? t('searchAlerts.create.retry', 'Réessayer')
+          : t('searchAlerts.create.submit', 'Créer cette alerte')}
+        headerNote={noteDeLEtoile}
+        isVisible={isVisible}
+        onApply={creerCetteAlerte}
+        onClose={onClose}
+        onReset={appliquer}
+        rangeeInitiale="city"
+        resetLabel={t(
+          'searchAlerts.create.withoutAlert',
+          'Voir les résultats sans créer d\'alerte',
+        )}
+        rows={rows}
+        title={t('searchAlerts.create.title', 'Créer une alerte')}
+      />
+    );
+  }
 
   return (
     <FiltersSheet

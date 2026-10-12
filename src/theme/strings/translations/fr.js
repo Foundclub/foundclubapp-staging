@@ -17104,8 +17104,13 @@ export default {
     create: {
       desc: 'Donne un nom à ta recherche pour recevoir des notifications.',
       events: 'Un événement / Une réservation ?',
+      // PAR-L10 (12/10) — la feuille ouverte pour créer une alerte (E22).
+      needCity: 'Choisis une ville, puis touche « Créer cette alerte ».',
       profiles: 'Un profil ?',
+      retry: 'Réessayer',
+      submit: 'Créer cette alerte',
       title: 'Créer une alerte',
+      withoutAlert: "Voir les résultats sans créer d'alerte",
     },
     created: {
       body: "Tu seras prévenu·e dès qu'un nouvel événement comme ceux-ci est publié.",
@@ -17164,6 +17169,15 @@ export default {
       // eslint-disable-next-line max-len
       launchBody: 'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraîneur.',
       title: 'Alerte profils indisponible',
+    },
+    // PAR-L10 (12/10) — pourquoi une alerte n'a pas été créée (E23, `refusAlerte.js`).
+    refus: {
+      connexion: 'Pas de connexion.',
+      delai: 'Le serveur met du temps à répondre : regarde dans Mes alertes avant de réessayer.',
+      droit: "Ton compte ne peut pas encore créer d'alerte.",
+      inconnue: 'Réessaie dans un instant.',
+      limite: 'Tu as déjà {{maximum}} alertes : supprimes-en une dans Mes alertes.',
+      titre: "L'alerte n'a pas été créée.",
     },
     sheet: {
       error: "L'alerte n'a pas pu être créée. Réessaie dans un instant.",
