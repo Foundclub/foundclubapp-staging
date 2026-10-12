@@ -6059,6 +6059,8 @@ export default {
       fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
       libreSemaine: 'libre toute la semaine',
+      // COLL-R-APP-PLANNING (12/10, COL-014) — demande sans réponse, son heure est passée.
+      nonTrancheeDatePassee: 'Non tranchée, date passée',
       origineAttente: 'Demande en attente de décision',
       origineClub: 'Séance du club',
       origineCreneau: 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',

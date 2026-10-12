@@ -149,12 +149,18 @@ export const useCollectiviteInstallations = (collectiviteId, options = {}) => us
  * leurs installations, memes clefs que ci-dessus) : l app ne deduit rien du role du
  * compte. Un compte qui ne gere aucune collectivite ne fait qu un appel, deja en cache
  * si « Mon compte » l a fait.
+ * 📱 COLL-R-APP-PLANNING (12/10, COL-009) — ET SI LA REPONSE EST SURE : `connue` est faux tant
+ * qu une des deux lectures est en cours ou en erreur (null ne veut alors ni dire « oui » ni
+ * « non »). Le compte DOUBLE (il gere la Ville et dirige un club) voyait « Demander un creneau »,
+ * le bouton d un club, pendant cette attente (capture S12 de la recette du 11/10).
  * @param {string | null | undefined} facilityId - documentId de l installation.
  * @param {{ enabled?: boolean }} [options] - `enabled` faux : aucun appel.
- * @returns {string | null} documentId de la collectivite, ou null.
+ * @returns {{ collectiviteId: string | null, connue: boolean }} La collectivite (documentId) ou
+ *   null, et si cette reponse est sure (sans appel : rien a savoir, donc sure).
  */
-export const useManagingCollectiviteId = (facilityId, { enabled = true } = {}) => {
-  const mine = useMyCollectivites({ enabled: enabled && Boolean(facilityId) });
+export const useManagingCollectivite = (facilityId, { enabled = true } = {}) => {
+  const actif = enabled && Boolean(facilityId);
+  const mine = useMyCollectivites({ enabled: actif });
   const collectivites = Array.isArray(mine.data) ? mine.data : [];
   const installations = useQueries({
     queries: collectivites.map(({ documentId }) => ({
@@ -167,8 +173,22 @@ export const useManagingCollectiviteId = (facilityId, { enabled = true } = {}) =
     Array.isArray(query.data)
     && query.data.some((installation) => installation?.documentId === facilityId)
   ));
-  return index >= 0 ? collectivites[index]?.documentId || null : null;
+  const collectiviteId = index >= 0 ? collectivites[index]?.documentId || null : null;
+  const connue = !actif || Boolean(collectiviteId)
+    || (mine.isSuccess && installations.every((query) => query.isSuccess));
+  return { collectiviteId, connue };
 };
+
+/**
+ * La collectivite que JE gere et qui possede cette installation, ou null (`useManagingCollectivite`
+ * sans dire si la reponse est sure : ce que lisent ses autres appelants).
+ * @param {string | null | undefined} facilityId - documentId de l installation.
+ * @param {{ enabled?: boolean }} [options] - `enabled` faux : aucun appel.
+ * @returns {string | null} documentId de la collectivite, ou null.
+ */
+export const useManagingCollectiviteId = (facilityId, options = {}) => (
+  useManagingCollectivite(facilityId, options).collectiviteId
+);
 
 /**
  * COLL-ACCUEIL (01/10) — « Cette semaine » de l accueil de la Ville : le planning de la

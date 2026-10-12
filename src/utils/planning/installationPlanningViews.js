@@ -126,6 +126,40 @@ export const ligneDesDemandesEnAttente = (t, vue, nombre) => {
 };
 
 /**
+ * 🏛️ COLL-R-APP-PLANNING (12/10, COL-014) — CE QUE LA VILLE A A TRANCHER, ecrit UNE fois.
+ *
+ * « Trancher » ouvrait « En attente (0) » alors que le bandeau annoncait « 1 demande en attente
+ * cette semaine » : le bandeau comptait toute place `pending` (jours passes compris, et la seance
+ * qui attend SON DIRIGEANT, D32), la liste « En attente » ne montre que les demandes a la Ville
+ * dont la fin n est pas passee (regle T05 du serveur, `pending-requests.ts`). C est la regle de la
+ * liste qui vaut, ici aussi : origine « demande », en attente, fin pas passee. Une fin illisible
+ * n est JAMAIS perimee (comme le serveur : on garde, un humain tranche).
+ * Le bandeau, la legende, la grille et la liste du jour la lisent ; le calcul de place, non (une
+ * place en attente, quelle qu elle soit, n en prend pas).
+ * @param {any} bloc - Un bloc normalise du planning d une installation (`raw` : contrat C2A §7).
+ * @param {Date} [maintenant] - L heure de reference.
+ * @returns {'aTrancher' | 'datePassee' | null} `aTrancher` : la Ville peut encore decider ;
+ *   `datePassee` : restee sans reponse, son heure est passee (dessinee, jamais comptee) ;
+ *   null : ce n est pas une demande en attente.
+ */
+export const etatDeLaDemande = (bloc, maintenant = new Date()) => {
+  const brut = bloc?.raw || {};
+  if (brut.origin !== 'request' || brut.pending !== true) return null;
+  const fin = brut.endAt ? new Date(brut.endAt).getTime() : Number.NaN;
+  return Number.isFinite(fin) && fin < maintenant.getTime() ? 'datePassee' : 'aTrancher';
+};
+
+/**
+ * La Ville a-t-elle encore ce bloc a trancher ? (`etatDeLaDemande`)
+ * @param {any} bloc - Un bloc normalise.
+ * @param {Date} [maintenant] - L heure de reference.
+ * @returns {boolean} Vrai pour une demande en attente dont la fin n est pas passee.
+ */
+export const aTrancherParLaVille = (bloc, maintenant = new Date()) => (
+  etatDeLaDemande(bloc, maintenant) === 'aTrancher'
+);
+
+/**
  * Le jour suivant (ou precedent) selon la vue : un jour, trois jours, une semaine, un mois.
  * @param {string} vue - La vue.
  * @param {Date} date - Le jour affiche.

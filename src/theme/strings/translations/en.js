@@ -5551,6 +5551,8 @@ export default {
       fermeJour: 'closed that day',
       libreJour: 'free all day',
       libreSemaine: 'free all week',
+      // COLL-R-APP-PLANNING (12/10, COL-014) — a request never answered, its time has passed.
+      nonTrancheeDatePassee: 'Not decided, date passed',
       origineAttente: 'Request awaiting a decision',
       origineClub: 'Club session',
       origineCreneau: 'Assigned slot: every {{jour}}, from {{debut}} to {{fin}}',
