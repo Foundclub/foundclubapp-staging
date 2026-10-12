@@ -417,30 +417,20 @@ function CollectiviteChiffres() {
         ...SANS_ECHAPPEMENT,
       });
     }
-    // 🕛 VILLE-TAUX-24H (12/10, Adel « Sur 24 h ») : sans horaires, le serveur compte la capacité
-    // sur 24 h par jour et pose `sur24h` sur la ligne ; la phrase du taux le dit.
-    const mesurees = lignes.filter(
-      (/** @type {any} */ l) => typeof l?.capaciteMinutes === 'number',
-    );
-    const sur24h = mesurees.filter((/** @type {any} */ l) => l?.sur24h === true).length;
-    let phraseTaux = t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
-      taux: tauxLisible(tauxVille),
-      ...SANS_ECHAPPEMENT,
-    });
-    if (sur24h === mesurees.length && sur24h > 0) {
-      phraseTaux = t(
+    // 🕛 VILLE-TAUX-24H (12/10, Adel « Sur 24 h » puis « 2- B ») : le serveur compte TOUTE
+    // installation sur 24 h par jour et pose `sur24h` sur ses lignes ; la phrase du taux le dit,
+    // toujours dans sa version courte. Un serveur d'avant le lot ne le pose pas : phrase d'avant.
+    const sur24h = lignes.some((/** @type {any} */ l) => l?.sur24h === true);
+    const phraseTaux = sur24h
+      ? t(
         'collectiviteChiffres.installations.taux24h',
         'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
         { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
-      );
-    } else if (sur24h > 0) {
-      phraseTaux = t(
-        'collectiviteChiffres.installations.taux24hSansHoraires',
-        'Taux d’occupation : {{taux}}, calculé sur 24 h par jour '
-          + 'pour les installations sans horaires.',
-        { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
-      );
-    }
+      )
+      : t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
+        taux: tauxLisible(tauxVille),
+        ...SANS_ECHAPPEMENT,
+      });
     return (
       <BlocDeChiffres
         testID="chiffres-installations"

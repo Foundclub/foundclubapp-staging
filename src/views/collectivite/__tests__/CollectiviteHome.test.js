@@ -1030,8 +1030,8 @@ describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesur
 });
 
 // 🕛 VILLE-TAUX-24H (12/10) — décision du chef d'orchestre (« accueil 24h B »), après celle d'Adel
-// (« Sur 24 h ») : une installation SANS horaires a désormais un taux, compté sur 24 h par jour
-// (le serveur pose `sur24h: true` sur sa ligne). La ligne de l'accueil le dit, comme la page
+// (« Sur 24 h », puis « 2- B » : toutes les installations) : le taux est compté sur 24 h par jour
+// (le serveur pose `sur24h: true` sur chaque ligne). La ligne de l'accueil le dit, comme la page
 // « Chiffres ». ROUGE avant.
 describe('VILLE-TAUX-24H — « Cette semaine » : le taux sur 24 h se dit', () => {
   const chiffres = (/** @type {any[]} */ installations) => ({
@@ -1052,7 +1052,7 @@ describe('VILLE-TAUX-24H — « Cette semaine » : le taux sur 24 h se dit', () 
     expect(jaugeDe(arbre, TILLEULS.documentId)).toBeDefined();
   });
 
-  it('🔒 jumeau : avec horaires (ou serveur d’avant le lot), la ligne ne change pas', async () => {
+  it('🔒 jumeau : serveur d’avant le lot (sans `sur24h`), la ligne ne change pas', async () => {
     mockChiffresSemaine = chiffres([ligne(false, 23)]);
     const lus = textes(await monter());
     expect(lus).toContain('6 séances · occupation : 23 %');

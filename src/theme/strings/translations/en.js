@@ -6035,7 +6035,6 @@ export default {
       reservees_other: '{{count}} sessions · {{duree}} booked over the period.',
       taux: 'Occupancy rate: {{taux}}.',
       taux24h: 'Occupancy rate: {{taux}}, based on 24 hours a day.',
-      taux24hSansHoraires: 'Occupancy rate: {{taux}}, based on 24 hours a day for facilities without opening hours.',
       titre: 'Session hours, by facility',
     },
     jauge: {
