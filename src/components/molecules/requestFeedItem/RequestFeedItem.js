@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -129,6 +130,15 @@ function RequestFeedItem({
   const sourceTeamName = item?.meta?.sourceTeamName || '';
   const isInstallationRequest = item?.type === 'installation';
   const isInterestRequest = item?.type === 'interest';
+  // 👪 PAR-L2L3 · L3 (PAR-007) — une place demandee pour un ENFANT : la carte
+  // montre l'enfant (son initiale, jamais une photo) et nomme le parent en
+  // second. Meme critere que l'ecran pour Accepter / Refuser (`meta.childId`).
+  const isChildPlaceRequest = isInterestRequest && Boolean(item?.meta?.childId);
+  // 📚 PAR-L2L3 · L2 (PAR-008) — la carte d'interet d'un ADULTE empile ses deux
+  // boutons en pleine largeur : cote a cote, chaque libelle n'avait qu'environ
+  // 84 points et le retrecissement automatique d'iOS le faisait tomber a ~4
+  // points. ⛔ Leur ORDRE et leurs libelles appartiennent au lot L9a.
+  const stackActions = isInterestRequest && !isChildPlaceRequest;
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
   const isTeamInvitation = item?.type === 'teamInvite';
   // S10-C / D1 — la date de l evenement, avec LE formateur deja present dans ce
@@ -143,6 +153,10 @@ function RequestFeedItem({
   const hasPrimaryAction = Boolean(item?.actions?.primary);
   const hasSecondaryAction = Boolean(item?.actions?.secondary);
   const hasActions = hasPrimaryAction || hasSecondaryAction;
+  const actionSlotStyle = stackActions ? null : { flex: 1 };
+  const requesterProfileLabel = isChildPlaceRequest
+    ? t('requestsHub.childInterest.viewParent', 'Profil du parent')
+    : t('requestsHub.actions.viewProfile', 'Voir le profil');
   const installationWindowLabel = formatWindowLabel(
     item?.meta?.windowStart,
     item?.meta?.windowEnd,
@@ -190,7 +204,31 @@ function RequestFeedItem({
     </Text>
   );
 
-  if (isMembershipRequest || isInterestRequest) {
+  if (isChildPlaceRequest) {
+    // Pas de lien vers le profil ici : l'initiale est celle de l'enfant, le
+    // parent s'ouvre par son bouton nomme, « Profil du parent ».
+    bodyContent = (
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl=""
+          name={item?.meta?.childFirstname || ''}
+          size={40}
+        />
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+            {item?.subtitle}
+          </Text>
+          <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral300, { marginTop: 4 }]}>
+            {t('requestsHub.childInterest.parent', 'Parent : {{name}}', {
+              name: requesterName,
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        </View>
+      </View>
+    );
+  } else if (isMembershipRequest || isInterestRequest) {
     bodyContent = renderRequesterWrapper(
       <>
         <ProfileAvatar
@@ -204,11 +242,11 @@ function RequestFeedItem({
             {item?.subtitle}
           </Text>
           {isInterestRequest && interestTeamName ? (
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary200, { marginTop: 4 }]}>
-              {t('requestsHub.interest.targetTeam', 'Équipe visee')}
-              :
-              {' '}
-              {interestTeamName}
+            <Text numberOfLines={2} style={[Fonts.p3, Fonts.primary200, { marginTop: 4 }]}>
+              {t('requestsHub.interest.targetTeam', 'Équipe visée : {{team}}', {
+                team: interestTeamName,
+                ...SANS_ECHAPPEMENT,
+              })}
             </Text>
           ) : null}
         </View>
@@ -369,7 +407,9 @@ function RequestFeedItem({
             ]}
           >
             <Text style={[Fonts.p4Bold, isInstallationRequest ? Fonts.warning500 : Fonts.primary500]}>
-              {getTypeLabel(item?.type, t)}
+              {isChildPlaceRequest
+                ? t('requestsHub.types.childPlace', 'Place enfant')
+                : getTypeLabel(item?.type, t)}
             </Text>
           </View>
           {featuredScopeLabel ? (
@@ -398,17 +438,13 @@ function RequestFeedItem({
       {canOpenRequesterProfile ? (
         <View>
           <Button
-            accessibilityHint={t(
-              'requestsHub.actions.viewProfileHint',
-              'Ouvre le profil du demandeur',
-            )}
-            accessibilityLabel={t(
-              'requestsHub.actions.viewProfile',
-              'Voir le profil',
-            )}
+            accessibilityHint={isChildPlaceRequest
+              ? t('requestsHub.childInterest.viewParentHint', 'Ouvre le profil du parent')
+              : t('requestsHub.actions.viewProfileHint', 'Ouvre le profil du demandeur')}
+            accessibilityLabel={requesterProfileLabel}
             disabled={isBusy}
             onPress={() => onRequesterPress && onRequesterPress(item)}
-            title={t('requestsHub.actions.viewProfile', 'Voir le profil')}
+            title={requesterProfileLabel}
             variant="Secondary"
           />
         </View>
@@ -429,13 +465,13 @@ function RequestFeedItem({
       ) : null}
 
       {hasActions ? (
-        <View style={[Alignments.row, Spaces.gap[12]]}>
+        <View style={stackActions ? [Spaces.gap[12]] : [Alignments.row, Spaces.gap[12]]}>
           {hasSecondaryAction ? (
-            <View style={{ flex: 1 }}>
+            <View style={actionSlotStyle}>
               <Button
                 disabled={isBusy}
                 icon={item?.actions?.secondary === 'chat' ? undefined : 'close'}
-                isOption
+                isOption={!stackActions}
                 onPress={() => onSecondaryPress && onSecondaryPress(item)}
                 title={getActionLabel(item?.actions?.secondary, item, t)}
                 variant="Secondary"
@@ -443,11 +479,11 @@ function RequestFeedItem({
             </View>
           ) : null}
           {hasPrimaryAction ? (
-            <View style={{ flex: 1 }}>
+            <View style={actionSlotStyle}>
               <Button
                 disabled={isBusy}
                 icon={item?.actions?.primary === 'validate' ? 'check' : 'check'}
-                isOption
+                isOption={!stackActions}
                 onPress={() => onPrimaryPress && onPrimaryPress(item)}
                 title={getActionLabel(item?.actions?.primary, item, t)}
                 variant="Primary"

@@ -15972,8 +15972,10 @@ export default {
       sentTitle: 'Your match proposal',
     },
     interest: {
+      childAsk: 'Requesting a place in {{destination}}.',
       childPlace: '{{requester}} is requesting a place for {{child}} in {{destination}}.',
       childPlaceTitle: 'Place for a child',
+      childTitleWithAge: '{{firstname}}, {{age}} years old',
       childWithAge: '{{firstname}} ({{age}} years old)',
       club: '{{requester}} is interested in the club {{club}}.',
       team: '{{requester}} is interested in {{team}}.',
@@ -16055,8 +16057,11 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
+      parent: 'Parent: {{name}}',
       refuseMessage: 'The request for {{firstname}} will be deleted. Their parent will be notified.',
       refuseTitle: 'Decline the request?',
+      viewParent: "Parent's profile",
+      viewParentHint: "Open the parent's profile",
     },
     clubAssignedMessage: '{{name}} has been added to the club. Do you want to assign them to a team now?',
     clubAssignedTitle: 'Coach added',
@@ -16089,7 +16094,7 @@ export default {
       responseMissing: 'Choose a response to process this interest.',
       responsePreview: 'Message sent',
       responseTitle: 'Reply to this interest',
-      targetTeam: 'Target team',
+      targetTeam: 'Target team: {{team}}',
     },
     invitations: {
       respond: 'Respond to the invitation',
@@ -16109,6 +16114,7 @@ export default {
     rejectFeaturedTitle: 'Decline the request?',
     title: 'Requests',
     types: {
+      childPlace: 'Child place',
       club: 'Club',
       event: 'Event',
       featured: 'Featured',

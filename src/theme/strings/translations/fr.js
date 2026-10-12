@@ -16827,8 +16827,10 @@ export default {
       sentTitle: 'Ta proposition de match',
     },
     interest: {
+      childAsk: 'Demande une place dans {{destination}}.',
       childPlace: '{{requester}} demande une place pour {{child}} dans {{destination}}.',
       childPlaceTitle: 'Place pour un enfant',
+      childTitleWithAge: '{{firstname}}, {{age}} ans',
       childWithAge: '{{firstname}} ({{age}} ans)',
       club: '{{requester}} est intéressé par le club {{club}}.',
       team: '{{requester}} est intéressé par {{team}}.',
@@ -16917,8 +16919,11 @@ export default {
       unknown: 'La demande est acceptée.',
     },
     childInterest: {
+      parent: 'Parent : {{name}}',
       refuseMessage: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
       refuseTitle: 'Refuser la demande ?',
+      viewParent: 'Profil du parent',
+      viewParentHint: 'Ouvre le profil du parent',
     },
     clubAssignedMessage: "{{name}} a été ajouté au club. Veux-tu l'assigner à une équipe maintenant ?",
     clubAssignedTitle: 'Entraîneur ajouté',
@@ -16951,7 +16956,7 @@ export default {
       responseMissing: 'Choisis une réponse pour traiter cet intérêt.',
       responsePreview: 'Message envoyé',
       responseTitle: 'Répondre à cet intérêt',
-      targetTeam: 'Équipe visee',
+      targetTeam: 'Équipe visée : {{team}}',
     },
     // S10-C — les invitations d'équipe reçues. Le libellé du bouton dit où l'on
     // va ET ce qu'on y fera : accepter et refuser vivent à UN seul endroit, la
@@ -16978,6 +16983,8 @@ export default {
     rejectFeaturedTitle: 'Refuser la demande ?',
     title: 'Demandes',
     types: {
+      // PAR-L2L3 · L3 — la pastille d'une place demandée pour un enfant.
+      childPlace: 'Place enfant',
       club: 'Club',
       event: 'Événement',
       featured: 'À la une',
