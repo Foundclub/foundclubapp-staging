@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -8,6 +9,8 @@ import {
 } from '@/services/collectivite/collectiviteService';
 // eslint-disable-next-line max-len
 import { getClubCollectiviteFacilities, getFacilityPlanning } from '@/services/facility/facilityService';
+
+import { retenirVue, VUES } from '@/utils/planning/installationPlanningViews';
 
 import PlanningWeekFullscreen from '../PersonalPlanningWeekFullscreen';
 
@@ -29,6 +32,22 @@ const frTemoin = require('@/theme/strings/translations/fr');
 });
 
 const PORTRAIT = { height: 844, width: 390 };
+const COULEURS = jest.requireActual('@/theme/colors').default();
+
+// COLL-R-APP-PLANNING (12/10) — la regle « a trancher » lit l HEURE : seul `Date` est fige (au
+// mercredi 4 mars 2026, 12:00 UTC, avant les blocs de ce fichier), les minuteries restent vraies
+// (act et react-query en dependent) — le motif FIGER_LA_DATE de TEMOINS-DATES.
+const FIGER_LA_DATE = {
+  doNotFake: [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval',
+    'clearInterval', 'setTimeout', 'clearTimeout',
+  ],
+  now: new Date('2026-03-04T12:00:00.000Z'),
+};
+beforeEach(() => { jest.useFakeTimers(FIGER_LA_DATE); });
+afterEach(() => { jest.useRealTimers(); });
 
 /** @type {any} */
 let mockRoute;
@@ -298,5 +317,128 @@ describe('COLL-C3B — point 4 : la demande en attente du club, a sa place', () 
     await rendre();
     const attente = grille().events.find((/** @type {any} */ e) => e.raw?.origin === 'request');
     expect(attente.participationStatus).toBe('pending');
+  });
+});
+
+// 🏛️ COLL-R-APP-PLANNING (12/10), COL-014 — « Trancher » ouvrait « En attente (0) ».
+// Lu en prod par le chef : a Demouville, UNE demande a la Ville restee en attente, samedi 10/10
+// 12:00 – 13:00 UTC, FIN PASSEE. La liste « En attente » l ecarte (regle T05 du serveur) ; le
+// bandeau, la legende et la liste du jour comptaient toute place `pending` — et une seance qui
+// attend SON DIRIGEANT (D32, aucune demande a la Ville) passait aussi pour une « demande ».
+// UNE regle (installationPlanningViews : origine « demande », en attente, fin pas passee) pour le
+// bandeau, la legende et la liste du jour. Une demande non tranchee dont la date est passee reste
+// DESSINEE (rien n est detruit, T05), en gris, « Non tranchee, date passee », et n est pas comptee.
+// Le calcul de place ne change pas : une place en attente, quelle qu elle soit, n en prend pas.
+// ROUGE avant le lot.
+const aplatir = (/** @type {any} */ enfants) => {
+  if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
+  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
+  if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
+  return String(enfants);
+};
+const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+  .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
+const parTestId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
+  .findAllByType(TouchableOpacity)
+  .find((/** @type {any} */ noeud) => noeud.props.testID === id);
+const gereLaVille = () => {
+  /** @type {any} */ (getMyCollectivites).mockResolvedValue({
+    data: [{ documentId: 'ville-1', name: 'Ville de Montrivage' }],
+  });
+  /** @type {any} */ (getCollectiviteInstallations).mockResolvedValue({
+    data: [{ documentId: 'gym-ville', maxSlots: 2, name: 'Gymnase de la Ville' }],
+  });
+};
+// Le matin du mercredi 4 mars, 08:00 – 09:00 (Paris) : passe a 12:00 UTC.
+const DEMANDE_PASSEE = {
+  ...BLOC_EN_ATTENTE,
+  club: { documentId: 'club-B', name: 'US Ville B' },
+  endAt: '2026-03-04T08:00:00.000Z',
+  endTime: '09:00:00.000',
+  startAt: '2026-03-04T07:00:00.000Z',
+  startTime: '08:00:00.000',
+  team: { name: 'U11' },
+  title: 'US Ville B · U11',
+};
+// D32 : posee dans le creneau du club deja complet, elle attend son DIRIGEANT, pas la Ville.
+const SEANCE_QUI_ATTEND_SON_DIRIGEANT = {
+  ...BLOC_EN_ATTENTE,
+  club: { documentId: 'club-B', name: 'US Ville B' },
+  origin: 'club',
+  team: { name: 'U15' },
+  title: 'US Ville B · U15',
+};
+// Une ABSENCE ne se lit qu une fois la mairie reconnue (ses deux lectures revenues) : sinon le
+// bandeau manque parce que l app ne sait pas encore, et le temoin serait vert pour rien. Attente
+// bornee en TEMPS (2 s), pas en tours (instable sous charge).
+const rendreEnMairie = async () => {
+  const arbre = await rendre();
+  let essai = 0;
+  while (typeof grille()?.onReadOnlyEventPress !== 'function' && essai < 100) {
+    essai += 1;
+    // eslint-disable-next-line no-await-in-loop
+    await attendre();
+  }
+  expect(typeof grille().onReadOnlyEventPress).toBe('function');
+  return arbre;
+};
+const blocDe = (/** @type {string} */ equipe) => [...grille().events]
+  .reverse()
+  .find((/** @type {any} */ evenement) => evenement.team?.name === equipe);
+
+describe('COL-014 — la Ville ne compte que ce qu elle a encore a trancher', () => {
+  beforeEach(() => {
+    gereLaVille();
+    // La vue choisie est RETENUE sur l appareil : le temoin « Liste » la laisserait au suivant.
+    retenirVue(VUES.jour);
+  });
+
+  it('une demande a la date passee : dessinee en gris, ni comptee ni « en attente »', async () => {
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue(
+      reponse([BLOC_DE_MON_CLUB, DEMANDE_PASSEE]),
+    );
+    const arbre = await rendreEnMairie();
+    const lus = textes(arbre);
+    expect(lus.join(' | ')).not.toMatch(/demandes? en attente sur ce jour|Trancher/);
+    expect(lus).not.toContain('Demande en attente');
+    const passee = blocDe('U11');
+    expect(passee).toBeDefined();
+    expect(passee.participationStatus).not.toBe('pending');
+    expect(passee.displayColor).toBe(COULEURS.neutral500);
+    // La fiche du bloc le dit.
+    await act(async () => { grille().onReadOnlyEventPress(passee); });
+    expect(textes(arbre)).toContain('Non tranchée, date passée');
+  });
+
+  it('bandeau, legende et liste du jour : le meme nombre que la liste « En attente »', async () => {
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue(
+      reponse([BLOC_DE_MON_CLUB, BLOC_EN_ATTENTE, DEMANDE_PASSEE]),
+    );
+    const arbre = await rendreEnMairie();
+    let lus = textes(arbre);
+    expect(lus).toContain('1 demande en attente sur ce jour.');
+    expect(lus).toContain('Demande en attente');
+    expect(blocDe('U13').participationStatus).toBe('pending');
+    // La vue Liste : « En attente » pour la demande a trancher, « date passee » pour l autre.
+    await act(async () => { parTestId(arbre, 'vue-list').props.onPress(); });
+    await attendre();
+    lus = textes(arbre);
+    expect(lus.filter((texte) => texte.startsWith('En attente :'))).toEqual([
+      'En attente : AS Ville A · U13',
+    ]);
+    expect(lus).toContain('Non tranchée, date passée');
+  });
+
+  it('la seance qui attend son dirigeant n est pas une « demande en attente »', async () => {
+    /** @type {any} */ (getFacilityPlanning).mockResolvedValue(
+      reponse([BLOC_DE_MON_CLUB, SEANCE_QUI_ATTEND_SON_DIRIGEANT]),
+    );
+    const arbre = await rendreEnMairie();
+    const lus = textes(arbre);
+    expect(lus.join(' | ')).not.toMatch(/demandes? en attente sur ce jour|Trancher/);
+    expect(lus).not.toContain('Demande en attente');
+    expect(blocDe('U15').participationStatus).not.toBe('pending');
+    // Le calcul de place ne change pas : elle ne prend toujours pas de place.
+    expect(lus).toContain('2 équipes à la fois · 1 place libre au plus chargé');
   });
 });

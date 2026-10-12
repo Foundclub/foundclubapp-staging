@@ -107,6 +107,8 @@ import {
 import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
 import { toParisIsoFromLocalSelection } from '@/utils/parisTime';
 import {
+  aTrancherParLaVille,
+  etatDeLaDemande,
   ligneDesDemandesEnAttente,
   lireVueRetenue,
   pageDAujourdhui,
@@ -369,11 +371,20 @@ function PlanningWeekFullscreen() {
   // droite (ordinateur) : « le jour ferme se hachure pendant la saisie, et les seances touchees se
   // cernent d orange ». Rien n est ecrit tant que la mairie n a pas confirme.
   const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
+  // 🏛️ COLL-R-APP-PLANNING (COL-014) — l instant de la regle « a trancher par la Ville », LE MEME
+  // pour la grille, le bandeau, la legende et la liste de ce rendu. Relu a chaque rendu : une
+  // demande dont l heure passe pendant que la page est ouverte cesse d etre comptee au suivant.
+  const instantDuRendu = Date.now();
   const events = useMemo(() => {
     if (!isFacilitySource) return normalizedEvents;
+    const maintenant = new Date(instantDuRendu);
     return assignClubPlanningColors(normalizedEvents).map((/** @type {any} */ evenement) => {
       const brut = evenement.raw || {};
       const duClubDuLecteur = Boolean(evenement.documentId) || brut.isOwnClub === true;
+      // COL-014 : une demande restee sans reponse et dont l heure est passee reste DESSINEE (T05 :
+      // rien n est detruit), en gris ; « en attente » ne dit plus que ce que la Ville peut trancher
+      // (une seance qui attend SON DIRIGEANT, D32, n est pas une demande a la Ville).
+      const etatDemande = etatDeLaDemande(evenement, maintenant);
       // Le brouillon cerne ce qu il toucherait ; en MODIFIANT une fermeture, il libere aussi ce
       // qu elle ne touche plus (la regle du serveur, §13.3 : closureTouchesBlock).
       const touche = closureTouchesBlock(evenement, brouillon);
@@ -390,17 +401,18 @@ function PlanningWeekFullscreen() {
       return {
         ...evenement,
         ...cerne,
-        displayColor: readsAsOrganizer || duClubDuLecteur
+        displayColor: (readsAsOrganizer || duClubDuLecteur) && etatDemande !== 'datePassee'
           ? evenement.displayColor
           : Colors.neutral500,
         // COLL-C3B (02/10) — et le club qui DEMANDE voit sa demande « en attente de la mairie »,
         // a sa place (P8v2-demande, etat 4 : « Comme dans ton planning »).
-        participationStatus: (readsAsOrganizer || duClubDuLecteur) && brut.pending === true
+        participationStatus: (readsAsOrganizer || duClubDuLecteur) && etatDemande === 'aTrancher'
           ? 'pending'
           : evenement.participationStatus,
       };
     });
-  }, [Colors.neutral500, brouillon, isFacilitySource, normalizedEvents, readsAsOrganizer]);
+  }, [Colors.neutral500, brouillon, instantDuRendu, isFacilitySource, normalizedEvents,
+    readsAsOrganizer]);
   const hasEvents = events.length > 0;
   // SPEC Collectivites §2 C : la mairie touche le bloc d'un AUTRE club -> une fiche en
   // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
@@ -638,8 +650,9 @@ function PlanningWeekFullscreen() {
     }
     return events;
   }, [currentDate, events, vue]);
+  // COL-014 : la regle de la liste « En attente » (T05), pas toute place `pending`.
   const blocsEnAttente = readsAsOrganizer
-    ? blocsDeLaPage.filter((/** @type {any} */ evenement) => evenement.raw?.pending === true)
+    ? blocsDeLaPage.filter((bloc) => aTrancherParLaVille(bloc, new Date(instantDuRendu)))
     : [];
   const ligneDeCapacite = useMemo(() => {
     if (!isFacilitySource || !facilityPlanningSummary || !readsAsOrganizer) return null;
@@ -774,6 +787,13 @@ function PlanningWeekFullscreen() {
       );
     }
     if (brut.origin === 'request') {
+      // COL-014 : restee sans reponse et passee, elle ne se tranche plus (T05).
+      if (etatDeLaDemande(bloc, new Date(instantDuRendu)) === 'datePassee') {
+        return t(
+          'collectiviteCreneaux.planning.nonTrancheeDatePassee',
+          'Non tranchée, date passée',
+        );
+      }
       return brut.pending
         ? t('collectiviteCreneaux.planning.origineAttente', 'Demande en attente de décision')
         : t('collectiviteCreneaux.planning.origineDemande', 'Demande acceptée');

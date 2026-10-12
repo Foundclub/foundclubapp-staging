@@ -43,6 +43,21 @@ const frTemoin = require('@/theme/strings/translations/fr');
 const COULEURS = jest.requireActual('@/theme/colors').default();
 const PORTRAIT = { height: 844, width: 390 };
 const PAYSAGE = { height: 390, width: 844 };
+// COLL-R-APP-PLANNING (12/10, COL-014) — « en attente » ne dit plus que ce que la Ville peut
+// encore trancher (fin pas passee) : la demande de ce fichier, du mercredi 4 mars 2026, est passee.
+// Seul `Date` est fige, au dimanche 1er mars 2026 (avant elle, et pas « aujourd hui » pour la
+// barre) ; les minuteries restent vraies (motif FIGER_LA_DATE, TEMOINS-DATES).
+const FIGER_LA_DATE = {
+  doNotFake: [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval',
+    'clearInterval', 'setTimeout', 'clearTimeout',
+  ],
+  now: new Date('2026-03-01T12:00:00.000Z'),
+};
+beforeEach(() => { jest.useFakeTimers(FIGER_LA_DATE); });
+afterEach(() => { jest.useRealTimers(); });
 
 /** @type {any} */
 let mockRoute;

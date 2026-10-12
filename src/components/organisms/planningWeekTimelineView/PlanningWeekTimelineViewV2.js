@@ -34,6 +34,7 @@ import useTheme from '@/theme/themeContext';
 import Hachures from '@/components/atoms/hachures/Hachures';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { etatDeLaDemande } from '@/utils/planning/installationPlanningViews';
 import {
   getPlanningDefaultDate,
   getPlanningDisplayTitle,
@@ -798,7 +799,13 @@ function PlanningWeekTimelineView({
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
     // COLL-C3B (02/10, design P8v2-demande-ordi) — une place DEMANDEE a la Ville et en attente
     // de sa decision (contrat C2A §7 : origin « request », pending) : pointilles orange.
-    const isPendingRequest = event?.raw?.origin === 'request' && event?.raw?.pending === true;
+    // COLL-R-APP-PLANNING (12/10, COL-014) : la regle « a trancher par la Ville », ecrite une fois
+    // (fin pas passee). Passee, elle reste dessinee (T05), grise, « Non tranchee, date passee ».
+    const etatDemande = etatDeLaDemande(event);
+    const isPendingRequest = etatDemande === 'aTrancher';
+    const nonTranchee = etatDemande === 'datePassee'
+      ? t('collectiviteCreneaux.planning.nonTrancheeDatePassee', 'Non tranchée, date passée')
+      : null;
     const isCompact = event.height < 62;
     const isTiny = event.height < 38;
     const cardContent = resolvePlanningCardContent(event, { profile: cardDisplayProfile });
@@ -878,8 +885,11 @@ function PlanningWeekTimelineView({
 
     // Le lecteur d'ecran entend le bloc entier, meme quand une ligne ne tient pas.
     const blockAccessibilityLabel = isClubFocusedCard
-      ? [[primaryLabel, contextLabel].filter(Boolean).join(' · '), getPlanningTimeLabel(event)]
-        .filter(Boolean).join(', ')
+      ? [
+        [primaryLabel, contextLabel].filter(Boolean).join(' · '),
+        getPlanningTimeLabel(event),
+        nonTranchee,
+      ].filter(Boolean).join(', ')
       : undefined;
 
     return (
@@ -961,6 +971,21 @@ function PlanningWeekTimelineView({
                 {` · ${t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}`}
               </Text>
             ) : null}
+            {nonTranchee ? (
+              <Text style={{ color: Colors.neutral300 }} testID="non-tranchee">
+                {` · ${nonTranchee}`}
+              </Text>
+            ) : null}
+          </Text>
+        ) : null}
+        {/* COL-014 : seule, quand il n y a pas de deuxieme ligne (comme « a deplacer »). */}
+        {nonTranchee && !isTiny && !canShowSecondary ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3Bold, { color: Colors.neutral300, fontSize: mode === 'week' ? 8 : 10 }]}
+            testID="non-tranchee"
+          >
+            {nonTranchee}
           </Text>
         ) : null}
         {/* COLL-C4B-BIS : « a deplacer » sous le club et l equipe, comme la planche (ecran 4). */}
