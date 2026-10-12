@@ -297,3 +297,65 @@ describe('FINITIONS13-COLL point 8 — « Tes demandes à la Ville »', () => {
     expect(lus.join(' | ')).not.toMatch(/jusqu’au/);
   });
 });
+
+// ⏳ COLL-S-DEMANDE-PERIMEE (12/10, décision d'Adel « 1- A ») — une demande que la Ville n'a pas
+// tranchée avant la fin de sa séance EXPIRE (serveur : statut `expired`). ROUGE avant le lot :
+// l'écran ne connaissait que trois états et la disait « En attente », en orange, pour toujours.
+describe('COLL-S-DEMANDE-PERIMEE — une demande expirée se dit', () => {
+  const EXPIREE = ligne({ documentId: 'rq-7', status: 'expired' });
+  const SERIE_EXPIREE = ligne({
+    documentId: 'rq-8',
+    isRecurring: true,
+    series: { until: '2030-10-10' },
+    seriesCount: 2,
+    status: 'expired',
+  });
+  // Le texte qui dit `texte`, et la couleur que son style lui donne.
+  const etiquette = (/** @type {any} */ arbre, /** @type {string} */ texte) => arbre.root
+    .findAllByType(Text)
+    .find((/** @type {any} */ n) => aplatir(n.props.children).trim() === texte);
+  const couleurDe = (/** @type {any} */ noeud) => [].concat(noeud.props.style).reduce(
+    (/** @type {any} */ c, /** @type {any} */ s) => (s && s.color ? s.color : c),
+    null,
+  );
+
+  it('« Expirée », en gris, et « non traitée à temps » après le moment', async () => {
+    mockLignes = [EXPIREE];
+    const arbre = await monter((l) => l.includes('Expirée'));
+    expect(textes(arbre)).toContain(`${MOMENT} · non traitée à temps`);
+    expect(textes(arbre)).not.toContain('En attente');
+    // eslint-disable-next-line global-require
+    const couleurs = require('@/theme/colors').default();
+    expect(couleurDe(etiquette(arbre, 'Expirée'))).toBe(couleurs.neutral300);
+  });
+
+  it('une série expirée dit SES dates, jamais « jusqu’au »', async () => {
+    mockLignes = [SERIE_EXPIREE];
+    const lus = textes(await monter((l) => l.includes('Expirée')));
+    // eslint-disable-next-line max-len
+    expect(lus).toContain(`Chaque jeudi, ${heure(SERIE_EXPIREE.requestedStart)} – ${heure(SERIE_EXPIREE.requestedEnd)} · 2 dates · non traitée à temps`);
+    expect(lus.join(' | ')).not.toMatch(/jusqu’au/);
+  });
+
+  it('sur ordinateur, la colonne « Réponse » dit « Expirée »', async () => {
+    mockDimensions = {
+      fontScale: 1, height: 900, scale: 1, width: 1280,
+    };
+    mockLignes = [EXPIREE];
+    const lus = textes(await monter((l) => l.includes('Mot de la mairie')));
+    expect(lus).toContain('Expirée');
+  });
+
+  it('l’avis « Demande non traitée à temps » ouvre CETTE demande', () => {
+    // eslint-disable-next-line global-require, max-len
+    const { resolveNotificationDestination } = require('@/utils/notifications/notificationNavigation');
+    expect(resolveNotificationDestination({
+      ctaParams: { clubId: 'club-A', requestId: 'rq-7' },
+      ctaRoute: 'ClubSlotRequests',
+      decision: 'expired',
+      dedupeKey: 'overbookingRequest:expired:rq-7',
+      eventId: 'ev-expire',
+      type: 'overbookingRequest',
+    })).toEqual({ params: { clubId: 'club-A', requestId: 'rq-7' }, route: 'ClubSlotRequests' });
+  });
+});

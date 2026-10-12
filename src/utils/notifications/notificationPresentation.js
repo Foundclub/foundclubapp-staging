@@ -126,6 +126,8 @@ const iconeDUneDemande = (data) => {
   if (data?.audience === 'occupant') return 'stadium';
   if (data?.decision === 'approved') return 'check';
   if (data?.decision === 'refused') return 'close';
+  // COLL-S-DEMANDE-PERIMEE (12/10) — personne n'a tranché avant la fin de la séance : l'horloge.
+  if (data?.decision === 'expired') return 'clock-two-thirty';
   return 'calendar';
 };
 
