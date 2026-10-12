@@ -143,3 +143,39 @@ describe('PAR-L14 point 1 — le portrait tient dans son cadre, le tableau est o
     expect(opacite(style(panneau(historique)).backgroundColor)).toBe(1);
   });
 });
+
+// Toutes les polices React Native rendues : [texte, taille affichee].
+const polices = (arbre) => arbre.root
+  .findAll((n) => n.type === 'Text')
+  .map((n) => [[].concat(n.props.children).join(''), style(n).fontSize]);
+
+const VERROUILLEE = {
+  ...COMPLETE, historique: [], locked: true, nom: 'BENALI', numero: '7', photo: undefined,
+};
+
+describe('PAR-L14 point 2 — aucun texte sous 10 px a la largeur d un petit telephone', () => {
+  const CAS = [
+    ['carte complete', COMPLETE],
+    ['carte verrouillee d un 13-14 ans', VERROUILLEE],
+    ['carte sans historique', { ...COMPLETE, historique: [] }],
+    ['panneau tactique (galerie)', {
+      ...COMPLETE, bottomPanel: 'tactique', disposition: '4-2-3-1',
+    }],
+  ];
+  // 327 = iPhone SE (375 - 2 x 24) ; 312 = Android de 360 dp.
+  [[SE, 'iPhone SE'], [312, 'Android 360 dp']].forEach(([largeur, nom]) => {
+    it.each(CAS)(`${nom} : %s`, (_cas, props) => {
+      const tropPetits = polices(monter(props, largeur)).filter(([, taille]) => !(taille >= 10));
+
+      expect(tropPetits).toEqual([]);
+    });
+  });
+
+  it('nom du club sur 2 lignes si la place le permet ; saison et niveau DESSOUS', () => {
+    const arbre = monter({ ...COMPLETE, historique: [COMPLETE.historique[1]] });
+
+    const [club] = texte(arbre, 'SPORTING CLUB MONTREDON BONNEVEINE');
+    expect(club.props.numberOfLines).toBe(2);
+    expect(texte(arbre, '2020–2022 · Régional 1 · Seniors, U20')).toHaveLength(1);
+  });
+});

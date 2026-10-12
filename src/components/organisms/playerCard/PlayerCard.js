@@ -63,6 +63,71 @@ export const RARITY_THEME = {
 const CYAN = '#01b3f4';
 const INK = '#001218';
 
+/**
+ * PAR-L14 — la mise en page, en unites de dessin (base 992 x 1262).
+ * Aucune police sous 32 unites : la carte est reduite a la largeur de l'ecran, et
+ * 32 unites font 10,5 pt sur un iPhone SE (carte de 327 pt, x0,33) et 10,1 dp sur
+ * un Android de 360 dp (312, x0,31). Elle en avait de 15 a 21 (5 a 7 pt).
+ * Hauteurs de ligne explicites : la place de l'historique se CALCULE
+ * (planHistorique), la carte a hauteur fixe ne rogne jamais rien.
+ */
+const LAYOUT = Object.freeze({
+  clubLine: 40,
+  entryPadV: 5,
+  footerGap: 14,
+  footerH: 118,
+  hairline: 4, // un trait de 1 pt d'ecran vaut au plus 4 unites (echelle >= 0,25)
+  headerH: 56,
+  histGap: 14,
+  histListGap: 4,
+  histPadV: 14,
+  histTitleH: 38,
+  identityGap: 12,
+  identityH: 360,
+  infoGap: 16,
+  infoPadV: 4,
+  metaLine: 38,
+  padBottom: 28,
+  padH: 44,
+  padTop: 28,
+  rowH: 52,
+});
+const INTERIOR_H = CARD_EXPORT_HEIGHT - 6;
+
+/**
+ * Combien de lignes d'historique tiennent sous un tableau de `rangees` rangees,
+ * et sur combien de lignes s'ecrit le nom du club (2 si la place le permet).
+ * On montre d'abord le plus de clubs possible (3 au plus), puis on leur donne
+ * 2 lignes. Le compteur de l'en-tete compte TOUS les clubs.
+ * @param {number} rangees rangees du tableau
+ * @param {number} disponibles lignes d'historique a montrer
+ * @returns {{ lignes: number, lignesClub: 1|2 }}
+ */
+export const planHistorique = (rangees, disponibles) => {
+  const L = LAYOUT;
+  const fixe = L.padTop + L.padBottom + L.headerH + L.identityGap + L.identityH
+    + L.infoGap + 2 * L.infoPadV + L.histGap + 2 * L.histPadV + L.histTitleH + L.histListGap
+    + L.footerGap + L.footerH + L.hairline * (rangees + 3);
+  const place = INTERIOR_H - fixe - rangees * L.rowH;
+  const hauteur = (lignesClub) => 2 * L.entryPadV + lignesClub * L.clubLine + L.metaLine;
+  for (let n = Math.min(3, disponibles); n > 0; n -= 1) {
+    if (n * hauteur(2) <= place) return { lignes: n, lignesClub: 2 };
+    if (n * hauteur(1) <= place) return { lignes: n, lignesClub: 1 };
+  }
+  return { lignes: 0, lignesClub: 1 };
+};
+
+/**
+ * Style d'un texte de la carte : taille et hauteur de ligne a l'echelle.
+ * @param {number} s echelle (largeur / 992)
+ * @param {number} size taille en unites de dessin
+ * @param {number} line hauteur de ligne en unites de dessin
+ * @returns {{ fontSize: number, includeFontPadding: boolean, lineHeight: number }}
+ */
+const font = (s, size, line) => ({
+  fontSize: size * s, includeFontPadding: false, lineHeight: line * s,
+});
+
 // Extremites de degrades pour les angles CSS utilises (155/165/115 deg).
 const ANGLES = {
   115: {
@@ -165,7 +230,7 @@ function RarityBadge({ label, s }) {
       onLayout={(e) => setSize({
         h: e.nativeEvent.layout.height, w: e.nativeEvent.layout.width,
       })}
-      style={[styles.row, { paddingHorizontal: 34 * s, paddingVertical: 14 * s }]}
+      style={[styles.row, { paddingHorizontal: 28 * s, paddingVertical: 9 * s }]}
     >
       {size ? (
         <Svg height={size.h} pointerEvents="none" style={StyleSheet.absoluteFill} width={size.w}>
@@ -203,7 +268,7 @@ function RarityBadge({ label, s }) {
           />
         </Svg>
       ) : null}
-      <Svg height={17 * s} viewBox="0 0 17 17" width={17 * s}>
+      <Svg height={24 * s} viewBox="0 0 17 17" width={24 * s}>
         <Defs>
           <SvgLinearGradient id="gem" x1="0%" x2="100%" y1="0%" y2="100%">
             <Stop offset="0" stopColor="#d8f4ff" />
@@ -220,8 +285,8 @@ function RarityBadge({ label, s }) {
         style={{
           color: '#eaf7fd',
           fontFamily: 'Montserrat-Black',
-          fontSize: 19 * s,
-          letterSpacing: 2.5 * s,
+          ...font(s, 32, 38),
+          letterSpacing: 2 * s,
           marginLeft: 12 * s,
         }}
       >
@@ -396,14 +461,14 @@ function InfoRow({
       style={[styles.row, {
         borderBottomColor: 'rgba(255,255,255,0.07)',
         borderBottomWidth: isLast ? 0 : 1,
-        height: 47 * s,
+        height: LAYOUT.rowH * s,
         justifyContent: 'space-between',
       }]}
     >
       <Text
         allowFontScaling={false}
         style={{
-          color: '#adb1b2', fontFamily: 'Montserrat-Bold', fontSize: 17 * s, letterSpacing: 2.5 * s,
+          color: '#adb1b2', fontFamily: 'Montserrat-Bold', ...font(s, 32, 38), letterSpacing: 2 * s,
         }}
       >
         {label}
@@ -413,7 +478,7 @@ function InfoRow({
           allowFontScaling={false}
           numberOfLines={1}
           style={{
-            color: '#ffffff', fontFamily: 'Montserrat-Black', fontSize: 21 * s, maxWidth: '62%',
+            color: '#ffffff', fontFamily: 'Montserrat-Black', ...font(s, 36, 44), maxWidth: '62%',
           }}
         >
           {value}
@@ -487,6 +552,7 @@ function PlayerCardBase({
   const angle = ANGLES[theme.borderAngle] || ANGLES[155];
   const isAvailable = up(statut) === 'DISPONIBLE';
   const statusColor = isAvailable ? '#27d6a3' : '#ff284f';
+  const plan = planHistorique(6, historique.length);
 
   return (
     <View collapsable={false} style={{ height: h, width }}>
@@ -572,19 +638,19 @@ function PlayerCardBase({
         <View
           style={{
             flex: 1,
-            paddingBottom: 40 * s,
-            paddingHorizontal: 44 * s,
-            paddingTop: 36 * s,
+            paddingBottom: LAYOUT.padBottom * s,
+            paddingHorizontal: LAYOUT.padH * s,
+            paddingTop: LAYOUT.padTop * s,
           }}
         >
           {/* En-tête */}
-          <View style={[styles.row, { height: 54 * s, justifyContent: 'space-between' }]}>
+          <View style={[styles.row, { height: LAYOUT.headerH * s, justifyContent: 'space-between' }]}>
             <Wordmark s={s} size={30} />
             <RarityBadge label={rarityLabel || RARITY_LABELS[rarity] || rarity} s={s} />
           </View>
 
           {/* Bloc identité */}
-          <View style={{ height: 372 * s, marginTop: 16 * s }}>
+          <View style={{ height: LAYOUT.identityH * s, marginTop: LAYOUT.identityGap * s }}>
             {/* Halo derrière le portrait */}
             <Svg
               height={640 * s}
@@ -609,10 +675,8 @@ function PlayerCardBase({
                 style={{
                   color: CYAN,
                   fontFamily: 'Montserrat-Black',
-                  fontSize: 208 * s,
-                  includeFontPadding: false,
+                  ...font(s, 184, 166),
                   letterSpacing: -8 * s,
-                  lineHeight: 208 * 0.9 * s,
                   textShadowColor: 'rgba(1,179,244,0.55)',
                   textShadowRadius: 54 * s,
                   transform: [{ skewX: '-8deg' }],
@@ -626,9 +690,9 @@ function PlayerCardBase({
                 style={{
                   color: '#eaf7fd',
                   fontFamily: 'Montserrat-Bold',
-                  fontSize: 31 * s,
-                  letterSpacing: 9 * s,
-                  marginTop: 26 * s,
+                  ...font(s, 32, 38),
+                  letterSpacing: 8 * s,
+                  marginTop: 16 * s,
                 }}
               >
                 {up(prenom)}
@@ -639,9 +703,8 @@ function PlayerCardBase({
                 style={{
                   color: '#ffffff',
                   fontFamily: 'Montserrat-Black',
-                  fontSize: 64 * s,
-                  lineHeight: 64 * s,
-                  marginTop: 6 * s,
+                  ...font(s, 64, 64),
+                  marginTop: 4 * s,
                 }}
               >
                 {up(nom)}
@@ -656,17 +719,18 @@ function PlayerCardBase({
                     borderColor: 'rgba(1,179,244,0.55)',
                     borderRadius: 999,
                     borderWidth: 1.5 * s,
-                    marginTop: 18 * s,
-                    paddingHorizontal: 24 * s,
-                    paddingVertical: 9 * s,
+                    marginTop: 12 * s,
+                    paddingHorizontal: 22 * s,
+                    paddingVertical: 8 * s,
                   }}
                 >
                   <Text
                     allowFontScaling={false}
+                    numberOfLines={1}
                     style={{
                       color: CYAN,
                       fontFamily: 'Montserrat-Black',
-                      fontSize: 20 * s,
+                      ...font(s, 32, 38),
                       letterSpacing: 3 * s,
                       textShadowColor: 'rgba(1,179,244,0.4)',
                       textShadowRadius: 8 * s,
@@ -687,12 +751,12 @@ function PlayerCardBase({
                 borderColor: 'rgba(1,179,244,0.25)',
                 borderRadius: 26 * s,
                 borderWidth: 1,
-                height: 372 * s,
+                height: LAYOUT.identityH * s,
                 padding: 6 * s,
                 position: 'absolute',
                 right: 0,
                 top: 0,
-                width: 340 * s,
+                width: 328 * s,
               }}
             >
               {photo ? (
@@ -711,7 +775,10 @@ function PlayerCardBase({
 
           {/* Panneau infos */}
           <View style={[styles.glass, {
-            borderRadius: 20 * s, marginTop: 18 * s, paddingHorizontal: 30 * s, paddingVertical: 5 * s,
+            borderRadius: 20 * s,
+            marginTop: LAYOUT.infoGap * s,
+            paddingHorizontal: 30 * s,
+            paddingVertical: LAYOUT.infoPadV * s,
           }]}
           >
             <InfoRow label={t('playerCard.info.position', 'POSTE')} s={s} value={up(poste)} />
@@ -732,10 +799,10 @@ function PlayerCardBase({
                   <View
                     style={{
                       backgroundColor: statusColor,
-                      borderRadius: 5 * s,
-                      height: 10 * s,
-                      marginRight: 10 * s,
-                      width: 10 * s,
+                      borderRadius: 7 * s,
+                      height: 14 * s,
+                      marginRight: 12 * s,
+                      width: 14 * s,
                     }}
                   />
                   <Text
@@ -743,7 +810,7 @@ function PlayerCardBase({
                     style={{
                       color: statusColor,
                       fontFamily: 'Montserrat-Black',
-                      fontSize: 21 * s,
+                      ...font(s, 36, 44),
                       textShadowColor: statusColor,
                       textShadowRadius: 9 * s,
                     }}
@@ -757,7 +824,11 @@ function PlayerCardBase({
 
           {/* Panneau bas */}
           <View style={[styles.glass, {
-            borderRadius: 20 * s, flexGrow: 1, marginTop: 16 * s, paddingHorizontal: 30 * s, paddingVertical: 16 * s,
+            borderRadius: 20 * s,
+            flexGrow: 1,
+            marginTop: LAYOUT.histGap * s,
+            paddingHorizontal: 30 * s,
+            paddingVertical: LAYOUT.histPadV * s,
           }]}
           >
             {bottomPanel === 'tactique' ? (
@@ -766,14 +837,17 @@ function PlayerCardBase({
                   <Text
                     allowFontScaling={false}
                     style={{
-                      color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 18 * s, letterSpacing: 2.5 * s,
+                      color: '#eaf7fd',
+                      fontFamily: 'Montserrat-Black',
+                      ...font(s, 32, 38),
+                      letterSpacing: 2 * s,
                     }}
                   >
                     {t('playerCard.preferredFormation', 'DISPOSITION PRÉFÉRÉE')}
                   </Text>
                   <Text
                     allowFontScaling={false}
-                    style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 25 * s }}
+                    style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 36, 44) }}
                   >
                     {up(disposition)}
                   </Text>
@@ -788,11 +862,16 @@ function PlayerCardBase({
               </>
             ) : (
               <>
-                <View style={[styles.row, { justifyContent: 'space-between' }]}>
+                <View
+                  style={[styles.row, { height: LAYOUT.histTitleH * s, justifyContent: 'space-between' }]}
+                >
                   <Text
                     allowFontScaling={false}
                     style={{
-                      color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 18 * s, letterSpacing: 2.5 * s,
+                      color: '#eaf7fd',
+                      fontFamily: 'Montserrat-Black',
+                      ...font(s, 32, 38),
+                      letterSpacing: 2 * s,
                     }}
                   >
                     {t('playerCard.history.title', 'HISTORIQUE SPORTIF')}
@@ -800,7 +879,7 @@ function PlayerCardBase({
                   {historique.length ? (
                     <Text
                       allowFontScaling={false}
-                      style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 20 * s }}
+                      style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
                     >
                       {t(
                         'playerCard.history.clubCount',
@@ -810,14 +889,18 @@ function PlayerCardBase({
                     </Text>
                   ) : null}
                 </View>
+                {/* PAR-L14 : un club par ligne, nom sur 2 lignes si la place le
+                    permet, saison et niveau DESSOUS (la colonne niveau ecrasait le
+                    nom). Les lignes se centrent dans le panneau : plus de grand
+                    vide sous l'historique. */}
                 {!historique.length ? (
-                  <View style={[styles.center, { flexGrow: 1, paddingVertical: 24 * s }]}>
+                  <View style={[styles.center, { flexGrow: 1 }]}>
                     <Text
                       allowFontScaling={false}
                       style={{
                         color: '#5f7c89',
                         fontFamily: 'Montserrat-Bold',
-                        fontSize: 17 * s,
+                        ...font(s, 32, 38),
                         letterSpacing: 2 * s,
                       }}
                     >
@@ -827,55 +910,68 @@ function PlayerCardBase({
                       ))}
                     </Text>
                   </View>
-                ) : null}
-                {historique.slice(0, 3).map((entry, index) => (
+                ) : (
                   <View
-                    key={`${entry.periode}-${entry.club}`}
-                    style={[styles.row, { height: 54 * s }]}
+                    style={{ flexGrow: 1, justifyContent: 'center', marginTop: LAYOUT.histListGap * s }}
                   >
-                    <View
-                      style={{
-                        backgroundColor: CYAN,
-                        borderRadius: 4.5 * s,
-                        height: 9 * s,
-                        marginRight: 16 * s,
-                        opacity: [1, 0.55, 0.35][index] || 0.35,
-                        width: 9 * s,
-                      }}
-                    />
-                    <Text
-                      allowFontScaling={false}
-                      style={{
-                        color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 17 * s, width: 150 * s,
-                      }}
-                    >
-                      {up(entry.periode)}
-                    </Text>
-                    <Text
-                      allowFontScaling={false}
-                      numberOfLines={1}
-                      style={{
-                        color: '#ffffff', flex: 1, fontFamily: 'Montserrat-Black', fontSize: 21 * s,
-                      }}
-                    >
-                      {up(entry.club)}
-                    </Text>
-                    <Text
-                      allowFontScaling={false}
-                      style={{
-                        color: '#adb1b2', fontFamily: 'Montserrat-Bold', fontSize: 16 * s,
-                      }}
-                    >
-                      {up(entry.categorie)}
-                    </Text>
+                    {historique.slice(0, plan.lignes).map((entry, index) => (
+                      <View
+                        key={`${entry.periode}-${entry.club}`}
+                        style={[styles.row, {
+                          alignItems: 'flex-start', paddingVertical: LAYOUT.entryPadV * s,
+                        }]}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: CYAN,
+                            borderRadius: 6 * s,
+                            height: 12 * s,
+                            marginRight: 18 * s,
+                            marginTop: ((LAYOUT.clubLine - 12) / 2) * s,
+                            opacity: [1, 0.55, 0.35][index] || 0.35,
+                            width: 12 * s,
+                          }}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            allowFontScaling={false}
+                            numberOfLines={plan.lignesClub}
+                            style={{
+                              color: '#ffffff',
+                              fontFamily: 'Montserrat-Black',
+                              ...font(s, 34, LAYOUT.clubLine),
+                            }}
+                          >
+                            {up(entry.club)}
+                          </Text>
+                          <Text
+                            allowFontScaling={false}
+                            numberOfLines={1}
+                            style={{
+                              color: CYAN,
+                              fontFamily: 'Montserrat-Bold',
+                              ...font(s, 32, LAYOUT.metaLine),
+                            }}
+                          >
+                            {[entry.periode, entry.categorie].filter(Boolean).join(' · ')}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                )}
               </>
             )}
           </View>
 
           {/* Pied */}
-          <View style={[styles.row, { justifyContent: 'space-between', marginTop: 24 * s }]}>
+          <View
+            style={[styles.row, {
+              height: LAYOUT.footerH * s,
+              justifyContent: 'space-between',
+              marginTop: LAYOUT.footerGap * s,
+            }]}
+          >
             <Wordmark s={s} size={28} />
             <View
               style={{
@@ -884,11 +980,14 @@ function PlayerCardBase({
                 borderColor: 'rgba(1,179,244,0.55)',
                 borderRadius: 16 * s,
                 borderWidth: 1.5 * s,
-                height: 118 * s,
+                height: LAYOUT.footerH * s,
                 justifyContent: 'center',
-                width: 118 * s,
+                width: LAYOUT.footerH * s,
               }}
             >
+              {/* PAR-L14 : le « FC » ne se pose plus SUR le code (a 32 unites il
+                  en cacherait le tiers et le code ne se lirait plus) ; il reste
+                  dans la case vide de la carte verrouillee. */}
               {qrValue && !locked ? (
                 <QRCode
                   backgroundColor="transparent"
@@ -897,23 +996,14 @@ function PlayerCardBase({
                   size={92 * s}
                   value={qrValue}
                 />
-              ) : null}
-              <View
-                style={{
-                  backgroundColor: 'rgba(3,34,46,0.92)',
-                  borderRadius: 5 * s,
-                  paddingHorizontal: 7 * s,
-                  paddingVertical: 3 * s,
-                  position: 'absolute',
-                }}
-              >
+              ) : (
                 <Text
                   allowFontScaling={false}
-                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 15 * s }}
+                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
                 >
                   FC
                 </Text>
-              </View>
+              )}
             </View>
           </View>
         </View>
@@ -926,6 +1016,7 @@ function PlayerCardBase({
               backgroundColor: 'rgba(2,24,32,0.55)',
               justifyContent: 'flex-end',
               paddingBottom: 210 * s,
+              paddingHorizontal: 30 * s,
             }]}
           >
             <View
@@ -941,7 +1032,11 @@ function PlayerCardBase({
               <Text
                 allowFontScaling={false}
                 style={{
-                  color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 19 * s, letterSpacing: 1.5 * s,
+                  color: '#eaf7fd',
+                  fontFamily: 'Montserrat-Black',
+                  ...font(s, 32, 38),
+                  letterSpacing: 1.5 * s,
+                  textAlign: 'center',
                 }}
               >
                 {t('playerCard.parentalConsentPreview', 'APERÇU — ACCORD PARENTAL REQUIS')}
