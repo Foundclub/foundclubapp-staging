@@ -290,3 +290,17 @@ describe('PAR-L14 point 6 — suites de la relecture contradictoire', () => {
     expect(meta.props.numberOfLines).toBe(2);
   });
 });
+
+describe('PAR-L14 point 6 bis — le bandeau « aperçu » ne cache plus le parcours vide', () => {
+  // Sans le pied (point 6), le panneau d'historique descend jusqu'au bas de la
+  // carte et « PARCOURS À COMPLÉTER » se centre plus bas : a 210 unites du bas,
+  // le bandeau tombait dessus (banc du site, 12/10). Il reprend sa place d'avant :
+  // en bas du panneau d'historique, a moins de 100 unites du bas de la carte.
+  it('le bandeau se pose en bas du panneau, sous le parcours vide (centre)', () => {
+    const arbre = monter(VERROUILLEE);
+    const [bandeau] = texte(arbre, 'APERÇU — ACCORD PARENTAL REQUIS');
+    const voile = ancetre(bandeau, (n) => style(n).justifyContent === 'flex-end');
+
+    expect(style(voile).paddingBottom / (SE / 992)).toBeLessThan(100);
+  });
+});

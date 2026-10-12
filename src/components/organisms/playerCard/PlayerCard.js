@@ -1030,7 +1030,8 @@ function PlayerCardBase({
               alignItems: 'center',
               backgroundColor: 'rgba(2,24,32,0.55)',
               justifyContent: 'flex-end',
-              paddingBottom: 210 * s,
+              // En bas du panneau d'historique, comme avant le retrait du pied (PAR-L14).
+              paddingBottom: (LAYOUT.padBottom + LAYOUT.histPadV) * s,
               paddingHorizontal: 30 * s,
             }]}
           >
