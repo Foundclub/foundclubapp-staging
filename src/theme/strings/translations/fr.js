@@ -4812,6 +4812,8 @@ export default {
       retry: 'Réessayer',
       status: {
         approved: 'Acceptée',
+        // COLL-S-DEMANDE-PERIMEE (12/10) — la Ville n’a pas tranché avant la fin de la séance.
+        expired: 'Expirée',
         refused: 'Refusée',
       },
       tabs: {
@@ -6160,6 +6162,8 @@ export default {
       momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'Un mot pour la mairie (facultatif)',
+      // COLL-S-DEMANDE-PERIMEE (12/10, décision d’Adel « 1- A ») — une demande expirée.
+      nonTraiteeATemps: 'non traitée à temps',
       ouvre: 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.',
       posee: 'C’est posé : c’est dans ton créneau',
       quandMeme: 'Tu peux demander quand même : la mairie décidera.',

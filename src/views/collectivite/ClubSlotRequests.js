@@ -93,6 +93,11 @@ function ClubSlotRequests() {
       // eslint-disable-next-line max-len
       return { couleur: Colors.error500, texte: t('collectivite.requests.status.refused', 'Refusée') };
     }
+    // ⏳ COLL-S-DEMANDE-PERIMEE (12/10) — pas tranchée avant la fin de la séance : en gris.
+    if (demande?.status === 'expired') {
+      // eslint-disable-next-line max-len
+      return { couleur: Colors.neutral300, texte: t('collectivite.requests.status.expired', 'Expirée') };
+    }
     // eslint-disable-next-line max-len
     return { couleur: Colors.warning500, texte: t('collectiviteDemandes.club.enAttente', 'En attente') };
   };
@@ -150,6 +155,9 @@ function ClubSlotRequests() {
     }
     if (demande?.status === 'refused') {
       suite.push(t('collectiviteDemandes.club.entrainementAnnule', 'l’entraînement est annulé'));
+    }
+    if (demande?.status === 'expired') {
+      suite.push(t('collectiviteDemandes.club.nonTraiteeATemps', 'non traitée à temps'));
     }
     return (
       <View

@@ -4480,6 +4480,8 @@ export default {
       retry: 'Try again',
       status: {
         approved: 'Accepted',
+        // COLL-S-DEMANDE-PERIMEE (12/10) — the town hall did not decide before the session ended.
+        expired: 'Expired',
         refused: 'Refused',
       },
       tabs: {
@@ -5646,6 +5648,8 @@ export default {
       momentSerie: '{{equipe}} · every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'A note for the town hall (optional)',
+      // COLL-S-DEMANDE-PERIMEE (12/10) — an expired request.
+      nonTraiteeATemps: 'not handled in time',
       ouvre: 'The facility opens at {{heure}}. Start at {{heure}}, or later.',
       posee: 'Done: it is in your slot',
       quandMeme: 'You can still ask: the town hall will decide.',
