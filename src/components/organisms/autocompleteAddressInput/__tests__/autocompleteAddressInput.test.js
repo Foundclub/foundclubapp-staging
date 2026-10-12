@@ -279,4 +279,42 @@ describe('AutocompleteAddressInput — la recherche de ville, de l\'appui aux pr
     expect(texte).toContain('Lyonnais (département)');
     expect(texte.indexOf('Lyonnais (département)')).toBeLessThan(texte.indexOf('Lyon (69000)'));
   });
+
+  // 🏟️ FINITIONS-VILLE (08/10/2026, tournée T20 C00g) — l'assistant de club proposait DEUX lignes
+  // « 1 Chemin du Château 14400 Agy » (même point, même libellé : deux réponses de la base
+  // d'adresses) qui s'allumaient ensemble. Une option identique (même point ET même libellé)
+  // ne s'affiche qu'une fois ; le même libellé ailleurs reste deux lignes. ROUGE avant le lot.
+  it('FINITIONS-VILLE : même point ET même libellé = une seule ligne', async () => {
+    const agy = (/** @type {string} */ id, /** @type {number[]} */ point) => ({
+      geometry: { coordinates: point },
+      properties: {
+        city: 'Agy',
+        id,
+        label: '1 Chemin du Château 14400 Agy',
+        postcode: '14400',
+        type: 'housenumber',
+      },
+    });
+    mockSearchPlaces.mockResolvedValue([
+      agy('ban-a', [-0.77, 49.23]), agy('ban-b', [-0.77, 49.23]), agy('ban-c', [-0.78, 49.24]),
+    ]);
+    const arbre = monter();
+    appuyerSurLeChamp(arbre);
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+    const saisie = arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ noeud) => noeud.props.editable !== false);
+    await act(async () => {
+      saisie.props.onChangeText('chemin du chateau agy');
+    });
+    for (let tour = 0; tour < 5; tour += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+    }
+    const texte = texteVisible(arbre);
+    expect(texte.split('1 Chemin du Château 14400 Agy').length - 1).toBe(2);
+  });
 });

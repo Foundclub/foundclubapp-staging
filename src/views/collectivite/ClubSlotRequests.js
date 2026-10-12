@@ -12,7 +12,11 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { estDemandeHebdo, momentDeLaDemande } from '@/domains/collectivite/collectiviteDemandes';
+import {
+  datesRefuseesDUneSerie,
+  estDemandeHebdo,
+  momentDeLaDemande,
+} from '@/domains/collectivite/collectiviteDemandes';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -98,15 +102,16 @@ function ClubSlotRequests() {
     if (!moment) return '';
     // 🎨 FINITIONS13-COLL (04/10) — une carte REFUSÉE d'une série ne dit pas la période de la série
     // (celle des dates maintenues, tournée T13 C2_1e) : sa date, ou « chaque jeudi … · 3 dates ».
-    const refusee = demande?.status === 'refused';
-    const nombre = Number(demande?.seriesCount || 1);
-    if (estDemandeHebdo(demande) && demande?.series && refusee && nombre > 1) {
+    // VILLE-T18C (07/10) : la règle vit dans le domaine, partagée avec « Demandes de la Ville ».
+    const refusees = datesRefuseesDUneSerie(demande);
+    if (refusees > 1) {
       // eslint-disable-next-line max-len
       return t('collectiviteDemandes.club.ligneSerieDates', 'Chaque {{jour}}, {{debut}} – {{fin}} · {{nombre}} dates', {
-        debut: moment.debut, fin: moment.fin, jour: moment.jourSemaine, nombre, ...SANS_ECHAPPEMENT,
+        // eslint-disable-next-line max-len
+        debut: moment.debut, fin: moment.fin, jour: moment.jourSemaine, nombre: refusees, ...SANS_ECHAPPEMENT,
       });
     }
-    if (estDemandeHebdo(demande) && demande?.series && !refusee) {
+    if (estDemandeHebdo(demande) && demande?.series && !refusees) {
       // eslint-disable-next-line max-len
       return t('collectiviteDemandes.club.ligneSerie', 'Chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}}', {
         // eslint-disable-next-line max-len

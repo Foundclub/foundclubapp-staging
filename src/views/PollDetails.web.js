@@ -5,12 +5,15 @@ import { useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import useAuth from '@/domains/auth/useAuth';
+import annuaireDesMembres from '@/domains/messaging/annuaireDesMembres';
 import {
   applyOptimisticPollVote,
   getPollTotalVotes,
+  getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import usePollVoterProfiles from '@/domains/messaging/usePollVoterProfiles';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import { BREAKPOINTS } from '@/responsive';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -85,26 +88,26 @@ function PollDetails({ navigation, route }) {
     if (initialPoll?.type === 'poll') return initialPoll;
     return null;
   }, [initialPoll, pollMessage?.composition]);
+  const pollVoterProfiles = usePollVoterProfiles(effectiveMessageId, poll);
 
   const voterDirectory = useMemo(() => {
     const map = new Map();
-
-    const registerUser = (user) => {
-      const userId = String(user?.documentId || user?.id || '').trim();
-      if (!userId) return;
+    // T19-RESTES — la règle commune : le nom le plus frais l'emporte (votants lus au serveur,
+    // participants, mon compte, puis les messages du plus récent au plus ancien). Avant, le nom
+    // figé dans le PLUS VIEUX message gagnait (« Créé par mouri nio »).
+    annuaireDesMembres({
+      messages: flattenMessages(messagesPages?.pages),
+      participants: chatData?.participants,
+      userData,
+      votants: pollVoterProfiles,
+    }).forEach((user, userId) => {
       map.set(userId, {
         avatarUrl: getImageUrl(user?.avatar?.url || ''),
         displayName: getDisplayName(user),
       });
-    };
-
-    registerUser(userData);
-    if (Array.isArray(chatData?.participants)) {
-      chatData.participants.forEach(registerUser);
-    }
-    flattenMessages(messagesPages?.pages).forEach((message) => registerUser(message?.sender));
+    });
     return map;
-  }, [chatData?.participants, messagesPages?.pages, userData]);
+  }, [chatData?.participants, messagesPages?.pages, pollVoterProfiles, userData]);
 
   const resolveVoterProfile = useCallback((voterId) => {
     return voterDirectory.get(String(voterId || '').trim()) || {
@@ -121,7 +124,8 @@ function PollDetails({ navigation, route }) {
   const optionSections = useMemo(() => {
     if (!Array.isArray(poll?.options)) return [];
     return poll.options.map((option, index) => ({
-      count: getPollVoters(option).length,
+      // SECU-SONDAGE-ANONYME — le compteur du serveur (un sondage anonyme ne nomme personne).
+      count: getPollVoteCount(option),
       id: String(option?.id || `option-${index}`),
       isSelected: getPollVoters(option).includes(String(userData?.documentId || '').trim()),
       label: String(
@@ -294,7 +298,7 @@ function PollDetails({ navigation, route }) {
                         >
                           {section.isSelected ? t(
                             'pollDetails.voteSaved',
-                            'Vote enregistre',
+                            'Vote enregistré',
                           ) : t('pollDetails.vote', 'Voter')}
                         </button>
                       </div>
@@ -346,7 +350,7 @@ function PollDetails({ navigation, route }) {
                 <div style={{ display: 'grid', gap: 10 }}>
                   <div style={{ display: 'grid', gap: 4 }}>
                     <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                      {t('pollDetails.createdBy', 'Creé par')}
+                      {t('pollDetails.createdBy', 'Créé par')}
                     </span>
                     <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
                       {poll?.createdBy ? (resolveVoterProfile(String(poll.createdBy)).displayName) : t(

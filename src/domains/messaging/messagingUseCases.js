@@ -46,6 +46,86 @@ export const isLeagueChat = (chat) => {
 };
 
 /**
+ * ARCHIVEES (08/10) — ce fil est-il archive PAR MOI ? `archivedBy` porte tous ceux qui l ont
+ * archive : celui d un autre membre ne le retire pas de MA liste. Une seule regle pour la liste
+ * du telephone et la colonne « Messages » du site.
+ * @param {Chat | null | undefined | Record<string, any>} chat
+ * @param {string | null | undefined} meId
+ * @returns {boolean}
+ */
+export const estArchivePourMoi = (chat, meId) => {
+  const archivePar = chat?.archivedBy;
+  return Boolean(meId)
+    && Array.isArray(archivePar)
+    && archivePar.some((/** @type {any} */ u) => u?.documentId === meId);
+};
+
+/**
+ * Ce fil est-il epingle PAR MOI (`pinnedBy`) ?
+ * @param {Chat | null | undefined | Record<string, any>} chat
+ * @param {string | null | undefined} meId
+ * @returns {boolean}
+ */
+export const estEpinglePourMoi = (chat, meId) => {
+  const epinglePar = chat?.pinnedBy;
+  return Array.isArray(epinglePar)
+    && epinglePar.some((/** @type {any} */ u) => u?.documentId === meId);
+};
+
+/**
+ * Date de creation d un message ; les dates absentes/invalides viennent apres les dates connues.
+ * @param {any} message - Le message.
+ * @returns {number} Son horodatage, ou moins l infini.
+ */
+const dateDuMessage = (message) => {
+  if (!message?.createdAt) return Number.NEGATIVE_INFINITY;
+  const date = new Date(message.createdAt).getTime();
+  return Number.isFinite(date) ? date : Number.NEGATIVE_INFINITY;
+};
+
+/**
+ * IPH09 (09/10, regle d Adel) — mes epingles, puis le canal du club restent en tete.
+ * Tous les autres types se melangent par DERNIER MESSAGE, jamais par `chat.updatedAt`
+ * (renommage, lecture, adhesion). Les ex aequo et fils sans date gardent l ordre recu.
+ * Regle partagee par Messaging.js et la colonne de Conversation.web.js.
+ * @param {any[]} chats - Les fils.
+ * @param {string | null | undefined} meId - Moi.
+ * @returns {any[]} Une copie triee, sans modifier les fils.
+ */
+export const trierLesFils = (chats, meId) => [...(Array.isArray(chats) ? chats : [])]
+  .sort((a, b) => {
+    const epingleA = estEpinglePourMoi(a, meId);
+    const epingleB = estEpinglePourMoi(b, meId);
+    if (epingleA !== epingleB) return epingleA ? -1 : 1;
+    const clubA = a?.type === 'club';
+    const clubB = b?.type === 'club';
+    if (clubA !== clubB) return clubA ? -1 : 1;
+    const dateA = dateDuMessage(getChatLastMessage(a));
+    const dateB = dateDuMessage(getChatLastMessage(b));
+    if (dateA === dateB) return 0;
+    return dateA > dateB ? -1 : 1;
+  });
+
+/**
+ * SMF (T20) — CE QUE MONTRE LA LISTE : la portee « Toutes / Classique / League », puis la
+ * recherche sur le nom du fil. Meme regle au telephone et dans la colonne du site.
+ * @param {any[]} chats - Les fils deja tries.
+ * @param {{ nomDuFil: (chat: any) => string, portee?: string, recherche?: string }} options -
+ *   Le nom affiche d un fil, la portee choisie, le texte cherche.
+ * @returns {any[]} Les fils a afficher, dans le meme ordre.
+ */
+export const filtrerLesFils = (chats, { nomDuFil, portee = 'all', recherche = '' }) => {
+  const parPortee = (Array.isArray(chats) ? chats : []).filter((chat) => {
+    if (portee === 'league') return isLeagueChat(chat);
+    if (portee === 'classic') return !isLeagueChat(chat);
+    return true;
+  });
+  if (!recherche) return parPortee;
+  const cherche = recherche.toLowerCase();
+  return parPortee.filter((chat) => Boolean(nomDuFil(chat)?.toLowerCase()?.includes(cherche)));
+};
+
+/**
  * Checks whether a chat is the thread opened by a friendly match proposal.
  *
  * Le serveur ouvre ce fil au moment de la candidature pour que les DEUX staffs
@@ -167,8 +247,8 @@ export const getChatLastMessage = (chat) => {
   return messages.reduce((latest, message) => {
     if (!message) return latest;
     if (!latest) return message;
-    const latestTime = new Date(latest?.createdAt || 0).getTime();
-    const messageTime = new Date(message?.createdAt || 0).getTime();
+    const latestTime = dateDuMessage(latest);
+    const messageTime = dateDuMessage(message);
     return messageTime > latestTime ? message : latest;
   }, /** @type {any} */ (null)) || null;
 };

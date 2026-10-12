@@ -8,42 +8,55 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, Platform, Text, TextInput, TouchableOpacity, View,
+  Alert, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import { filsDeLaMessagerie, titreDuFil } from '@/domains/collectivite/collectiviteCanaux';
+import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
+  estArchivePourMoi,
+  filtrerLesFils,
   formatChatTimestamp,
   getChatLastMessage,
   getChatMessagePreview,
   isLeagueChat,
-  resolveFriendlyMatchOpponent,
+  trierLesFils,
 } from '@/domains/messaging/messagingUseCases';
+import { texteDeLaNotice } from '@/domains/messaging/noticesDeGroupe';
+import {
+  estUneRouteAbsente,
+  noterRouteNonLuAbsente,
+  routeNonLuAbsente,
+} from '@/domains/messaging/routesDuServeur1B';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
-import { hideBlockedChats, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
+import {
+  hideBlockedChats,
+  peutBloquer,
+  toBlockedUserIdSet,
+} from '@/domains/userBlock/userBlockFilters';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
-import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
-import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import { etatDEnvoi } from '@/components/molecules/bulleDuFil/MetaDuMessage';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
-import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-// COLL-C4A (02/10) — les canaux de la Ville, épinglés en tête de la messagerie.
-import { EcussonVille } from '@/views/collectivite/components/BlocDeLaVille';
+import ApercuDuFil from '@/views/chat/ApercuDuFil';
+// IPH09 — les canaux de la Ville appartiennent au contenu defilant de la messagerie.
+import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
-import { IconeDuCanal } from '@/views/collectivite/components/FilDeLaVille';
 
 import { getFloatingActionContainerStyle } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
@@ -129,8 +142,15 @@ function Messaging({ navigation, route }) {
 
   const {
     archiveChatAsync, getConversationName, getUnreadStatus,
-    joinChat, pinChatAsync, unpinChatAsync,
+    joinChat, markChatUnread, pinChatAsync, sendReadReceipt, unarchiveChatAsync, unpinChatAsync,
+    updateLastReadMessage,
   } = useMessaging();
+  // 👁️ MSG1BA (§3.14) — l'apercu ouvert par un appui long : la ligne, son titre, ses non-lus.
+  const [apercu, setApercu] = useState(
+    /** @type {{ chat: Chat, epingle: boolean, nonLu: boolean, titre: string } | null} */ (null),
+  );
+  // Serveur d'avant 1B : « Marquer comme non lu » a deja repondu 404, on ne le propose plus.
+  const [nonLuAbsent, setNonLuAbsent] = useState(routeNonLuAbsente);
   const { floatingActionBottomOffset, sceneBottomInset } = useBottomDockLayout();
   const isWeb = Platform.OS === 'web';
   const canCreateConversation = userData?.role?.name === 'Entraîneur'
@@ -162,28 +182,16 @@ function Messaging({ navigation, route }) {
   // tete-a-tete de la liste. Une seule requete, partagee avec la fiche d une
   // personne et le menu d une conversation (meme clef react-query).
   const { data: myBlockedRows } = useGetMyBlockedUsers({
-    enabled: Boolean(userData?.documentId),
+    // VILLE-NOTIFS — pas d'appel (403) pour un compte sans role de club.
+    enabled: peutBloquer(userData),
   });
   const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
 
-  const allChats = useMemo(() => {
+  const filsTries = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
       /** @type {Chat[]} */([]),
     ) : [];
-
-    // Sort: Multisport > Club > Team > Whisper
-    // We want Multisport (m) at top, then Club (c)
-    // Map types to priority
-    /** @type {Record<'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper', number>} */
-    const priority = {
-      club: 1,
-      group: 2.5,
-      league_match: 1.5, // High priority but after club/multisport? Or top? Let's put it high.
-      multisport: 0,
-      team: 2,
-      whisper: 3,
-    };
 
     // 🙈 BLOQUER (K4) — un tete-a-tete avec une personne bloquee quitte la
     // liste. Ce n est pas la barriere (le serveur REFUSE deja d ouvrir ce fil) :
@@ -191,23 +199,38 @@ function Messaging({ navigation, route }) {
     // appui. 🧒 K5 : seuls les fils STRICTEMENT a deux disparaissent — un
     // groupe, un club, une equipe et la discussion a trois du mineur avec son
     // parent restent en place.
-    return hideBlockedChats(chats, userData?.documentId, blockedUserIds)
-      .filter((chat) => !chat.archivedBy?.some((u) => u.documentId === userData?.documentId))
-      .sort((a, b) => {
-        const isPinnedA = a.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-        const isPinnedB = b.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-
-        if (isPinnedA && !isPinnedB) return -1;
-        if (!isPinnedA && isPinnedB) return 1;
-
-        const pA = priority[/** @type {'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper'} */ (a.type)] ?? 99;
-        const pB = priority[/** @type {'multisport' | 'club' | 'league_match' | 'group' | 'team' | 'whisper'} */ (b.type)] ?? 99;
-
-        if (pA !== pB) return pA - pB;
-
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      });
+    // IPH09 — l ordre (mes epingles, club, dernier message) est partage avec la colonne du
+    // site : messagingUseCases.trierLesFils.
+    return trierLesFils(
+      hideBlockedChats(chats, userData?.documentId, blockedUserIds),
+      userData?.documentId,
+    );
   }, [blockedUserIds, chatsData?.pages, userData]);
+  // 🗂️ ARCHIVEES (08/10, « archivées A ») — mes fils archives quittent la liste ; la ligne
+  // « Archivées » (README §3.14, prototype `p1a-app.jsx`) les retrouve, et on les y desarchive.
+  const allChats = useMemo(
+    () => filsTries.filter((chat) => !estArchivePourMoi(chat, userData?.documentId)),
+    [filsTries, userData?.documentId],
+  );
+  const filsArchives = useMemo(
+    () => filsTries.filter((chat) => estArchivePourMoi(chat, userData?.documentId)),
+    [filsTries, userData?.documentId],
+  );
+  const [afficheArchivees, setAfficheArchivees] = useState(false);
+  const nombreArchivees = useMemo(() => filsDeLaMessagerie(filsArchives, {
+    collectiviteId: villeId,
+    espaceVille,
+    monClubId: userData?.club?.documentId || null,
+  }).length, [espaceVille, filsArchives, userData?.club?.documentId, villeId]);
+  // Le dernier fil desarchive : la liste ordinaire revient seule (prototype : `showArch`).
+  const enModeArchivees = afficheArchivees && nombreArchivees > 0;
+  useEffect(() => {
+    if (nombreArchivees === 0) setAfficheArchivees(false);
+  }, [nombreArchivees]);
+  // La liste arrive par pages de 20, archives melees : la page des archives lit les suivantes.
+  useEffect(() => {
+    if (enModeArchivees && hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [enModeArchivees, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     if (routeChatScope == null) return;
@@ -273,104 +296,6 @@ function Messaging({ navigation, route }) {
     });
   };
 
-  /**
-   * Render the avatar for a conversation
-   * @param {Chat} chat
-   * @returns {import('react').ReactElement} The rendered avatar
-   */
-  const renderConversationAvatar = (chat) => {
-    switch (chat.type) {
-      case 'club':
-        return (
-          <ClubLogoMark
-            club={chat?.club}
-            isNeutral
-            size={48}
-          />
-        );
-      // COLL-C4A2 — la conversation privée porte l'écusson d'en face (le club côté Ville, la Ville
-      // côté club) ; le canal des dirigeants, sa tuile.
-      case 'collectivite_club':
-        return espaceVille
-          ? <ClubLogoMark club={chat?.collectiviteClub} isNeutral size={48} />
-          : <EcussonVille nom={String(chat?.collectivite?.name || '')} taille={48} />;
-      case 'collectivite_dirigeants':
-        return <IconeDuCanal taille={48} />;
-      case 'friendly_match': {
-        // AC05 constat 3 — « ça doit afficher le logo adverse ou l'écusson
-        // adverse ». Le fil d'amical n'a AUCUNE équipe attachée côté serveur
-        // (friendly-match-workflow.ts:591) : le camp d'en face se lit dans le
-        // titre « Match amical : A vs B », et se dessine alors en initiales.
-        // Quand on ne sait pas lequel des deux camps est l'adversaire, on garde
-        // le repli neutre — jamais un écusson qui ferait croire à un vrai club.
-        const opponent = resolveFriendlyMatchOpponent({ chat, myTeams: allMyTeams });
-        if (!opponent) return <ProfileAvatar enablePreview={false} size={48} />;
-        return (
-          <ClubLogoMark
-            logoUrl={opponent.logoUrl}
-            name={opponent.name}
-            size={48}
-          />
-        );
-      }
-      case 'group':
-      case 'whisper': {
-        const participant = chat.participants?.find(
-          (p) => p.documentId !== userData?.documentId,
-        ) || chat.participants?.[0];
-        return (
-          <ProfileAvatar
-            imageStyle={{ borderRadius: 40 }}
-            imageUrl={participant?.avatar?.url}
-            name={[participant?.firstname, participant?.lastname].filter(Boolean).join(' ')}
-            size={40}
-            style={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.borderColor.neutral00,
-              { borderRadius: 40 },
-            ]}
-          />
-        );
-      }
-      case 'league_match':
-        return (
-          <View style={{
-            alignItems: 'center',
-            backgroundColor: Colors.neutral900,
-            borderColor: Colors.gold500,
-            borderRadius: 24,
-            borderWidth: 2,
-            height: 48,
-            justifyContent: 'center',
-            width: 48,
-          }}
-          >
-            <SvgIcon color={Colors.gold500} height={22} name="trophy" width={22} />
-          </View>
-        );
-      case 'multisport':
-        return (
-          <ClubLogoMark
-            club={chat?.multisportClub}
-            isNeutral
-            size={48}
-          />
-        );
-      case 'team':
-        return (
-          <ClubLogoMark
-            club={chat?.team}
-            name={chat?.team?.club?.name || chat?.team?.name}
-            size={48}
-          />
-        );
-      default:
-        // Type de conversation inconnu : aucun nom fiable a montrer, donc le
-        // repli neutre de ProfileAvatar (et non plus un dessin de personne).
-        return <ProfileAvatar enablePreview={false} size={48} />;
-    }
-  };
-
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingChatAction, setPendingChatAction] = useState({ chatId: '', type: '' });
   const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Merci de réessayer plus tard.');
@@ -396,22 +321,14 @@ function Messaging({ navigation, route }) {
   };
 
   const filteredChats = useMemo(() => {
-    const filsAffiches = filsDeLaMessagerie(allChats, {
+    const filsAffiches = filsDeLaMessagerie(enModeArchivees ? filsArchives : allChats, {
       collectiviteId: villeId,
       espaceVille,
       monClubId: userData?.club?.documentId || null,
     });
-    const scopeFilteredChats = filsAffiches.filter((chat) => {
-      if (chatScopeFilter === 'league') return isLeagueChat(chat);
-      if (chatScopeFilter === 'classic') return !isLeagueChat(chat);
-      return true;
-    });
-
-    if (!searchQuery) return scopeFilteredChats;
-    const lowerQuery = searchQuery.toLowerCase();
-
-    return scopeFilteredChats.filter((chat) => {
-      const name = titreDuFil(t, { chat, espaceVille }) || getConversationName({
+    // SMF — portee puis recherche : regle partagee avec la colonne du site (filtrerLesFils).
+    return filtrerLesFils(filsAffiches, {
+      nomDuFil: (chat) => titreDuFil(t, { chat, espaceVille }) || getConversationName({
         chatClub: chat.club,
         chatGroupName: chat.groupName,
         chatLeagueMatch: chat.league_match,
@@ -420,11 +337,13 @@ function Messaging({ navigation, route }) {
         chatTeam: chat.team,
         chatType: chat.type,
         meId: userData?.documentId,
-      });
-      return name?.toLowerCase()?.includes(lowerQuery);
+      }),
+      portee: chatScopeFilter,
+      recherche: searchQuery,
     });
   }, [
-    allChats, chatScopeFilter, espaceVille, searchQuery, getConversationName, t, userData, villeId,
+    allChats, chatScopeFilter, enModeArchivees, espaceVille, filsArchives, searchQuery,
+    getConversationName, t, userData, villeId,
   ]);
 
   const getEmptyListMessage = () => {
@@ -489,6 +408,33 @@ function Messaging({ navigation, route }) {
     </View>
   );
 
+  // 🗂️ ARCHIVEES (§3.14, prototype `p1a-app.jsx`) — la ligne « Archivées » en tete de liste, des
+  // qu un fil est archive : elle bascule la liste sur les archives (« Retour aux discussions »).
+  // Son icone tient dans la colonne des avatars (52), son libelle s aligne sur les titres.
+  const renderLigneArchivees = () => (nombreArchivees > 0 ? (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => setAfficheArchivees(!enModeArchivees)}
+      style={stylesDeLaListe.ligneArchivees}
+      testID="liste-archivees"
+    >
+      <View style={stylesDeLaListe.iconeArchivees}>
+        <GlyphIcon color={withAlpha(Colors.neutral00, 0.7)} name="boxArchive" size={20} />
+      </View>
+      <Text style={[stylesDeLaListe.libelleArchivees, { color: Colors.neutral00 }]}>
+        {enModeArchivees
+          ? t('messaging.archivedBack', 'Retour aux discussions')
+          : t('messaging.archived', 'Archivées')}
+      </Text>
+      <Text
+        style={[stylesDeLaListe.heure, { color: withAlpha(Colors.neutral00, 0.5) }]}
+        testID="liste-archivees-compte"
+      >
+        {String(nombreArchivees)}
+      </Text>
+    </TouchableOpacity>
+  ) : null);
+
   const renderLeftActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => {
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
     return (
@@ -520,22 +466,28 @@ function Messaging({ navigation, route }) {
     );
   };
 
+  // ARCHIVEES — « Archiver » sur un fil ordinaire, « Désarchiver » sur un fil archive.
+  const libelleArchive = (/** @type {Chat} */ chat) => (estArchivePourMoi(chat, userData?.documentId)
+    ? t('messaging.unarchive', 'Désarchiver')
+    : t('messaging.archive', 'Archiver'));
+
   const renderRightActions = (/** @type {any} */ progress, /** @type {any} */ dragX, /** @type {Chat} */ chat) => (
     <TouchableOpacity
-      onPress={() => archiveChatAsync(chat.documentId).catch((actionError) => {
-        showMessagingAlert(actionError, t('messaging.archiveError', "Impossible d'archiver cette conversation."));
-      })}
+      onPress={() => handleArchive(chat)}
       style={{
         alignItems: 'center',
-        backgroundColor: Colors.error500, // Or warning color
+        backgroundColor: estArchivePourMoi(chat, userData?.documentId)
+          ? Colors.primary700
+          : Colors.error500, // Or warning color
         borderRadius: 2,
         justifyContent: 'center',
         marginBottom: 8,
         width: 80,
       }}
+      testID={`liste-fil-${chat.documentId}-glisser`}
     >
       <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-        {t('messaging.archive', 'Archiver')}
+        {libelleArchive(chat)}
       </Text>
     </TouchableOpacity>
   );
@@ -565,16 +517,21 @@ function Messaging({ navigation, route }) {
     }
   };
 
+  // ARCHIVEES — le meme geste archive un fil ordinaire et desarchive un fil archive.
   const handleArchive = async (/** @type {Chat} */ chat) => {
     const chatId = String(chat?.documentId || '').trim();
     if (!chatId) return;
 
+    const archive = estArchivePourMoi(chat, userData?.documentId);
     setPendingChatAction({ chatId, type: 'archive' });
 
     try {
-      await archiveChatAsync(chatId);
+      if (archive) await unarchiveChatAsync(chatId);
+      else await archiveChatAsync(chatId);
     } catch (actionError) {
-      showMessagingAlert(actionError, t('messaging.archiveError', "Impossible d'archiver cette conversation."));
+      showMessagingAlert(actionError, archive
+        ? t('messaging.unarchiveError', 'Impossible de désarchiver cette conversation.')
+        : t('messaging.archiveError', "Impossible d'archiver cette conversation."));
     } finally {
       setPendingChatAction({ chatId: '', type: '' });
     }
@@ -631,17 +588,78 @@ function Messaging({ navigation, route }) {
             Spaces.paddingHorizontal[12],
             Spaces.paddingVertical[8],
             {
-              backgroundColor: Colors.error500,
+              backgroundColor: estArchivePourMoi(chat, userData?.documentId)
+                ? Colors.primary700
+                : Colors.error500,
               opacity: isPendingAction ? 0.6 : 1,
             },
           ]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            {isArchivePending ? t('common.loading', 'Chargement...') : t('messaging.archive', 'Archiver')}
+            {isArchivePending ? t('common.loading', 'Chargement...') : libelleArchive(chat)}
           </Text>
         </TouchableOpacity>
       </View>
     );
+  };
+
+  /**
+   * MSG1BA (§3.14) — le menu de l'apercu : « Marquer comme lu / non lu », « Épingler »,
+   * « Archiver » (ces deux-la sont les gestes deja proposes en glissant la ligne).
+   * @param {{ chat: Chat, epingle: boolean, nonLu: boolean }} ligne
+   * @returns {import('@/views/chat/ApercuDuFil').EntreeDeLApercu[]}
+   */
+  const entreesDeLApercu = ({ chat, epingle, nonLu }) => {
+    const chatId = String(chat?.documentId || '').trim();
+    /** @type {import('@/views/chat/ApercuDuFil').EntreeDeLApercu[]} */
+    const entrees = [];
+    if (nonLu) {
+      entrees.push({
+        cle: 'marquer-lu',
+        icone: 'checkDouble',
+        libelle: t('messaging.preview.markRead', 'Marquer comme lu'),
+        // Le « lu » local (pastille immediate) ET le curseur du serveur (`read-message`).
+        onPress: () => {
+          updateLastReadMessage(chatId);
+          sendReadReceipt(chatId);
+        },
+      });
+    } else if (!nonLuAbsent) {
+      entrees.push({
+        cle: 'marquer-non-lu',
+        icone: 'envelope',
+        libelle: t('messaging.preview.markUnread', 'Marquer comme non lu'),
+        onPress: async () => {
+          try {
+            await markChatUnread(chatId);
+          } catch (actionError) {
+            if (estUneRouteAbsente(actionError)) {
+              // Serveur d'avant 1B : pas d'erreur rouge, le geste disparait.
+              noterRouteNonLuAbsente();
+              setNonLuAbsent(true);
+              return;
+            }
+            showMessagingAlert(actionError, t(
+              'messaging.preview.markUnreadError',
+              'Impossible de marquer cette conversation comme non lue.',
+            ));
+          }
+        },
+      });
+    }
+    entrees.push({
+      cle: 'epingler',
+      icone: 'thumbtack',
+      libelle: epingle ? t('messaging.unpin', 'Désépingler') : t('messaging.pin', 'Épingler'),
+      onPress: () => handleTogglePin(chat),
+    });
+    entrees.push({
+      cle: estArchivePourMoi(chat, userData?.documentId) ? 'desarchiver' : 'archiver',
+      icone: 'boxArchive',
+      libelle: libelleArchive(chat),
+      onPress: () => handleArchive(chat),
+    });
+    return entrees;
   };
 
   const renderErrorState = () => (
@@ -670,6 +688,7 @@ function Messaging({ navigation, route }) {
             opacity: isLoading ? 0.6 : 1,
           },
         ]}
+        testID="messaging-retry"
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral900 }]}>
           {t('common.retry', 'Réessayer')}
@@ -703,12 +722,25 @@ function Messaging({ navigation, route }) {
       ));
 
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
-    let chatBackgroundStyle = ApplicationStyle.backgroundColor.transparent;
-    if (hasUnread) {
-      chatBackgroundStyle = ApplicationStyle.backgroundColor.primary700;
-    } else if (chatIsLeague) {
-      chatBackgroundStyle = { backgroundColor: 'rgba(212, 175, 55, 0.1)' };
-    }
+    // 🗂️ MSG1A (§3.13) — la ligne du pack : avatar 52, titre 16, heure (cyan si non lu),
+    // apercu 14 avec « Prenom : » dans les fils a plusieurs, coches si c'est moi, icone du
+    // contenu riche, epingle et pastille de non-lus cyan. Un SEUL bouton par ligne (l'avatar
+    // n'en est plus un second, imbrique).
+    const extrait = lastMessage ? extraitDuMessageCite(lastMessage, t) : { icone: '', texte: '' };
+    const auteurDuDernier = lastMessage && !isMyMessage && !estUnTeteATete(chat?.type)
+      ? String(lastMessage?.sender?.firstname || '').trim()
+      : '';
+    const sourdine = withAlpha(Colors.neutral00, 0.58);
+    const titreDeLaLigne = titreDuFil(t, { chat, espaceVille }) || getConversationName({
+      chatClub: chat.club,
+      chatGroupName: chat.groupName,
+      chatLeagueMatch: chat.league_match,
+      chatMultisportClub: chat.multisportClub,
+      chatParticipants: chat.participants,
+      chatTeam: chat.team,
+      chatType: chat.type,
+      meId: userData?.documentId,
+    });
 
     return (
       <Swipeable
@@ -716,114 +748,137 @@ function Messaging({ navigation, route }) {
         renderRightActions={(p, d) => renderRightActions(p, d, chat)}
       >
         <TouchableOpacity
+          delayLongPress={450}
+          // 👁️ MSG1BA (§3.14) — appui long (450 ms, le pack) : l'apercu, sans marquer comme lu.
+          // Au telephone seulement : la liste du site appartient a MESSAGERIE-1W.
+          onLongPress={isWeb ? undefined : () => setApercu({
+            chat,
+            epingle: Boolean(isPinned),
+            nonLu: Boolean(hasUnread),
+            titre: String(titreDeLaLigne || ''),
+          })}
           onPress={() => handleChatPress(chat)}
-          style={[
-            ApplicationStyle.borderRadius2,
-            Spaces.padding[16],
-            Spaces.marginBottom[8],
-            chatBackgroundStyle,
-            isPinned && { borderLeftColor: Colors.primary500, borderLeftWidth: 4 },
-            chatIsLeague && { borderLeftColor: Colors.gold500, borderLeftWidth: 4 },
-          ]}
+          style={stylesDeLaListe.ligne}
+          testID={`liste-fil-${chat.documentId}`}
         >
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-            <TouchableOpacity
-              onPress={() => handleChatPress(chat)}
-              style={[
-                ApplicationStyle.borderRadius24,
-                { height: 48, width: 48 },
-              ]}
-            >
-              {renderConversationAvatar(chat)}
-            </TouchableOpacity>
-            <View style={[Alignments.fill, Alignments.column]}>
-              <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-                {/*
-                  MARQUEE — le nom de la conversation (club, équipe, groupe) se
-                  lit en entier : c'est lui qui dit à qui on parle.
-                */}
-                <MarqueeText
-                  containerStyle={{ flex: 1 }}
-                  style={[
-                    Fonts.p2Bold,
-                    Fonts.neutral00,
-                    hasUnread && Fonts.neutral00,
-                  ]}
-                  text={titreDuFil(t, { chat, espaceVille }) || getConversationName({
-                    chatClub: chat.club,
-                    chatGroupName: chat.groupName,
-                    chatLeagueMatch: chat.league_match,
-                    chatMultisportClub: chat.multisportClub,
-                    chatParticipants: chat.participants,
-                    chatTeam: chat.team,
-                    chatType: chat.type,
-                    meId: userData?.documentId,
-                  })}
-                />
-                {chatIsLeague && (
-                <View style={{
-                  backgroundColor: Colors.gold500,
-                  borderRadius: 4,
-                  marginLeft: 8,
-                  paddingHorizontal: 6,
-                  paddingVertical: 2,
-                }}
-                >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
-                </View>
-                )}
-                {isPinned && (
-                <View style={{
-                  backgroundColor: Colors.primary500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
-                }}
-                >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>
-                    {t('messaging.pinnedBadge', 'ÉPINGLÉ')}
-                  </Text>
-                </View>
-                )}
+          <AvatarDuFil
+            chat={chat}
+            espaceVille={espaceVille}
+            meId={userData?.documentId}
+            myTeams={allMyTeams}
+            size={52}
+          />
+          <View
+            style={[
+              stylesDeLaListe.corps,
+              { borderBottomColor: withAlpha(Colors.neutral00, 0.07) },
+            ]}
+          >
+            <View style={stylesDeLaListe.rangee}>
+              {/*
+                MARQUEE — le nom de la conversation (club, équipe, groupe) se
+                lit en entier : c'est lui qui dit à qui on parle.
+              */}
+              <MarqueeText
+                containerStyle={{ flex: 1 }}
+                style={[stylesDeLaListe.titre, { color: Colors.neutral00 }]}
+                text={titreDeLaLigne}
+              />
+              {chatIsLeague && (
+              <View style={[stylesDeLaListe.puceLigue, { backgroundColor: Colors.gold500 }]}>
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
               </View>
+              )}
+              {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon. En cyan tant que la
+                  conversation n'est pas lue. */}
+              {lastMessage ? (
+                <Text
+                  style={[
+                    stylesDeLaListe.heure,
+                    hasUnread
+                      ? { color: Colors.primary500, fontFamily: 'Montserrat-Bold' }
+                      : { color: withAlpha(Colors.neutral00, 0.5) },
+                  ]}
+                >
+                  {formatChatTimestamp(lastMessage.createdAt)}
+                </Text>
+              ) : null}
+            </View>
 
-              {lastMessage && (
-                <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            {/* Sans dernier message, ni punaise, ni non-lu : pas de seconde ligne vide, le titre
+                se centre dans la ligne de 72 (constate sur l'emulateur, 07/10). */}
+            {lastMessage || isPinned || hasUnread ? (
+              <View style={stylesDeLaListe.rangee}>
+                <View style={stylesDeLaListe.apercu}>
+                  {lastMessage && isMyMessage ? (
+                  // Coches cyan si le serveur dit « lu » (meme regle que la bulle : `etatDEnvoi`).
+                    <GlyphIcon
+                      color={etatDEnvoi(lastMessage) === 'lu' ? Colors.primary500 : sourdine}
+                      name="checkDouble"
+                      size={16}
+                    />
+                  ) : null}
+                  {auteurDuDernier ? (
+                    <Text
+                      style={[
+                        stylesDeLaListe.apercuTexte,
+                        { color: withAlpha(Colors.neutral00, 0.8) },
+                      ]}
+                    >
+                      {`${auteurDuDernier}\u00A0:`}
+                    </Text>
+                  ) : null}
+                  {extrait.icone ? (
+                    <GlyphIcon color={sourdine} name={extrait.icone} size={15} />
+                  ) : null}
                   <Text
                     numberOfLines={1}
                     style={[
-                      Fonts.p3Bold,
-                      hasUnread ? Fonts.neutral00 : Fonts.neutral300,
-                      Alignments.fill,
+                      stylesDeLaListe.apercuTexte,
+                      stylesDeLaListe.apercuFin,
+                      { color: sourdine },
                     ]}
                   >
-                    {getChatMessagePreview(lastMessage, t)}
+                    {/* 🔔 MSG1BA (§3.17) — une notice de groupe en apercu : « Vous avez… ». */}
+                    {lastMessage?.systemNotice
+                      ? texteDeLaNotice(
+                        lastMessage.systemNotice,
+                        String(userData?.documentId || ''),
+                        t,
+                        lastMessage.message,
+                      )
+                      : null}
+                    {lastMessage && !lastMessage.systemNotice
+                      ? getChatMessagePreview(lastMessage, t)
+                      : null}
                   </Text>
-                  {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon.
-                      En surbrillance tant que la conversation n'est pas lue. */}
-                  <Text style={[
-                    Fonts.p3Bold,
-                    hasUnread ? { color: Colors.error500 } : Fonts.neutral500,
-                  ]}
-                  >
-                    {formatChatTimestamp(lastMessage.createdAt)}
-                  </Text>
-                  {unreadBadge ? (
-                    <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                      {unreadBadge}
-                    </Text>
-                  ) : null}
-                  {hasUnread ? (
-                    <View
-                      accessibilityLabel={t('messaging.unread.badge', 'Non lu')}
-                      style={{
-                        backgroundColor: Colors.error500,
-                        borderRadius: 999,
-                        height: 8,
-                        width: 8,
-                      }}
-                    />
-                  ) : null}
                 </View>
-              )}
-            </View>
+                {isPinned ? (
+                  <View accessibilityLabel={t('messaging.pinnedBadge', 'ÉPINGLÉ')} accessible>
+                    <GlyphIcon
+                      color={withAlpha(Colors.neutral00, 0.45)}
+                      name="thumbtack"
+                      size={15}
+                    />
+                  </View>
+                ) : null}
+                {hasUnread ? (
+                  <View
+                    accessibilityLabel={unreadBadge
+                      ? `${unreadBadge} ${t('messaging.unread.badge', 'Non lu')}`
+                      : t('messaging.unread.badge', 'Non lu')}
+                    accessible
+                    style={[stylesDeLaListe.pastille, { backgroundColor: Colors.primary500 }]}
+                  >
+                    {unreadBadge ? (
+                      <Text style={[stylesDeLaListe.pastilleTexte, { color: Colors.primary900 }]}>
+                        {unreadBadge}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
           {renderWebChatActions(chat)}
         </TouchableOpacity>
@@ -883,7 +938,8 @@ function Messaging({ navigation, route }) {
             <ProfileButton />
           </View>
         </View>
-        <Text style={[Fonts.p1Black, Fonts.neutral00, Spaces.marginTop[16]]}>
+        {/* MSG1A (§3.13, decision d'Adel « titre Messages ») — « Messages », 28 en gras. */}
+        <Text style={[stylesDeLaListe.titreDeLaPage, Fonts.neutral00, Spaces.marginTop[16]]}>
           {t('messaging.title')}
         </Text>
         <OnboardingWrapper
@@ -906,50 +962,27 @@ function Messaging({ navigation, route }) {
           <View style={[Alignments.fill]}>
             {espaceVille ? null : renderChatScopeFilter()}
             {renderSearch()}
-            {/* COLL-C4A (02/10) — en tête : le canal des actualités de la Ville (le membre d'un
-                club rattaché), ou, dans l'espace de la Ville, son canal et « Publier ». */}
-            <CanauxDeLaVille
-              chats={allChats}
-              collectiviteId={route?.params?.collectiviteId || null}
-              espaceVille={route?.params?.espace === 'ville'}
-              navigation={navigation}
-            />
-            {isLoading && (
-              <WithDataWrapper
-                isLoading
-                wrapperStyle={[Alignments.fill]}
-              >
-                <View style={[
-                  Alignments.fill,
-                  ApplicationStyle.borderRadius2]}
-                >
-                  <FlashList
-                    contentContainerStyle={{ paddingBottom: chatListBottomInset }}
-                    data={filteredChats}
-                    keyExtractor={(item) => item.documentId}
-                    ListEmptyComponent={renderEmptyList}
-                    onEndReached={handleEndReached}
-                    onEndReachedThreshold={0.5}
-                    onRefresh={handlePullRefresh}
-                    refreshing={isPullRefreshing}
-                    renderItem={renderChat}
-                    showsVerticalScrollIndicator={false}
-                  />
-                </View>
-              </WithDataWrapper>
-            )}
-            {!isLoading && error && renderErrorState()}
-            {!isLoading && !error && (
-              <View style={[
-                Alignments.fill,
-                ApplicationStyle.borderRadius2]}
-              >
+            {/* IPH09 — un seul defilement : Ville, archives et fils dans la meme FlashList. */}
+            <WithDataWrapper isLoading={isLoading} wrapperStyle={[Alignments.fill]}>
+              <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
                 <FlashList
                   contentContainerStyle={{ paddingBottom: chatListBottomInset }}
-                  data={filteredChats}
+                  data={error ? [] : filteredChats}
+                  keyboardShouldPersistTaps="handled"
                   keyExtractor={(item) => item.documentId}
-                  ListEmptyComponent={renderEmptyList}
-                  onEndReached={handleEndReached}
+                  ListEmptyComponent={error ? renderErrorState : renderEmptyList}
+                  ListHeaderComponent={(
+                    <>
+                      <CanauxDeLaVille
+                        chats={allChats}
+                        collectiviteId={villeId}
+                        espaceVille={espaceVille}
+                        navigation={navigation}
+                      />
+                      {renderLigneArchivees()}
+                    </>
+                  )}
+                  onEndReached={error ? undefined : handleEndReached}
                   onEndReachedThreshold={0.5}
                   onRefresh={handlePullRefresh}
                   refreshing={isPullRefreshing}
@@ -957,7 +990,7 @@ function Messaging({ navigation, route }) {
                   showsVerticalScrollIndicator={false}
                 />
               </View>
-            )}
+            </WithDataWrapper>
           </View>
         </OnboardingWrapper>
 
@@ -1031,8 +1064,113 @@ function Messaging({ navigation, route }) {
             </TouchableOpacity>
           </WebFloatingOverlay>
         ) : null}
+        {apercu ? (
+          <ApercuDuFil
+            chat={apercu.chat}
+            entrees={entreesDeLApercu(apercu)}
+            espaceVille={espaceVille}
+            meId={String(userData?.documentId || '')}
+            myTeams={allMyTeams}
+            nonLu={apercu.nonLu}
+            onClose={() => setApercu(null)}
+            onOuvrir={() => {
+              const { chat } = apercu;
+              setApercu(null);
+              handleChatPress(chat);
+            }}
+            titre={apercu.titre}
+            visible
+          />
+        ) : null}
       </ScreenContainer>
     </TutorialFlowBoundary>
   );
 }
+const stylesDeLaListe = StyleSheet.create({
+  apercu: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+    minWidth: 0,
+  },
+  apercuFin: {
+    flexShrink: 1,
+  },
+  apercuTexte: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  corps: {
+    alignSelf: 'stretch',
+    borderBottomWidth: 1,
+    flex: 1,
+    gap: 3,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  heure: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  iconeArchivees: {
+    alignItems: 'center',
+    width: 52,
+  },
+  libelleArchivees: {
+    flex: 1,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  ligne: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 72,
+    paddingVertical: 8,
+  },
+  ligneArchivees: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 52,
+  },
+  pastille: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 20,
+    justifyContent: 'center',
+    minWidth: 20,
+    paddingHorizontal: 6,
+  },
+  pastilleTexte: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 11.5,
+    lineHeight: 14,
+  },
+  puceLigue: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  rangee: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  titre: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  titreDeLaPage: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 28,
+    lineHeight: 34,
+  },
+});
+
 export default Messaging;

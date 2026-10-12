@@ -262,6 +262,13 @@ describe('COLL-ACCUEIL — planche 6 : la file des demandes de gestionnaire', ()
     ).toBe(true);
   });
 
+  it('FINITIONS-VILLE (registre n° 50) : la date de la DEMANDE, dite telle', async () => {
+    const arbre = await monter(<AdminManagerRequests />);
+    await appuyer(arbre, 'gestionnaire-demande-dm-1');
+    expect(textes(arbre)).toContain('Demande envoyée le jeu. 1 oct.');
+    expect(textes(arbre).some((texte) => texte.startsWith('Inscrite le'))).toBe(false);
+  });
+
   it('valider une Ville EXISTANTE : la personne devient gestionnaire', async () => {
     const arbre = await monter(<AdminManagerRequests />);
     await appuyer(arbre, 'gestionnaire-demande-dm-1');
@@ -407,5 +414,41 @@ describe('COLL-ACCUEIL — planche 6 : les portes de la file dans la console', (
     });
     const autre = await monter(<ManagerRequestsLink collectiviteId="ville-sans-demande" />);
     expect(autre.toJSON()).toBeNull();
+  });
+});
+
+// VT18E (07/10/2026), ajout T18 (a) — tournée T18 (SITE_S14) : « Recette Mairie » gérait déjà la
+// Ville de Montrivage et demandait Rouvres ; rien ne le disait. Le serveur porte désormais
+// `requester.managedCollectivites` (admin, COLL-ACCUEIL G12) : la ligne de la file ET la demande
+// ouverte le disent. Rien quand la personne ne gère rien. ROUGE avant le lot.
+describe('VT18E — la personne gère déjà une autre collectivité', () => {
+  it('la ligne de la file et la demande ouverte disent « Gère déjà : … »', async () => {
+    mockEnAttente = lu([
+      {
+        ...MONTRIVAGE,
+        collectivite: {
+          ...MONTRIVAGE.collectivite, documentId: 'ville-rouvres', name: 'Ville de Rouvres',
+        },
+        requester: {
+          ...MONTRIVAGE.requester,
+          managedCollectivites: [
+            { documentId: 'ville-montrivage', name: 'Ville de Montrivage' },
+            { documentId: 'ville-autre', name: 'Autre Ville' },
+          ],
+        },
+      },
+      VALFLEURI,
+    ]);
+    const arbre = await monter(<AdminManagerRequests />);
+    const deja = 'Gère déjà : Ville de Montrivage, Autre Ville';
+    const lire = (/** @type {string} */ testID) => arbre.root
+      .findAll((n) => n.props?.testID === testID && n.type === Text)
+      .map((n) => aplatirTexte(n.props.children).trim());
+    expect(lire('gestionnaire-gere-deja-dm-1')).toEqual([deja]);
+    // La personne de Valfleuri ne gère rien : sa ligne ne dit rien.
+    expect(textes(arbre).filter((texte) => texte.startsWith('Gère déjà'))).toEqual([deja]);
+
+    await appuyer(arbre, 'gestionnaire-demande-dm-1');
+    expect(lire('gestionnaire-gere-deja-fiche')).toEqual([deja]);
   });
 });

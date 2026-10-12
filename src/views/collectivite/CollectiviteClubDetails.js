@@ -35,7 +35,9 @@ import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
-import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
+import SeasonSlotForm, {
+  HAUTEUR_DE_LA_FEUILLE,
+} from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
 
@@ -131,6 +133,7 @@ function AttribuerAuClub({
       clubs={[club]}
       facilities={liste}
       fixedClubId={club.documentId}
+      guided
       onCancel={onCancel}
       onDone={onDone}
     />
@@ -465,6 +468,14 @@ function CollectiviteClubDetails() {
               }),
             ...SANS_ECHAPPEMENT,
           })}
+        </Text>
+        {/* VILLE-T18C (07/10, tournée T18 SITE_G63) — « 38 refusées » pour UNE série refusée :
+            elle compte une fois par date. Même règle et même phrase que « Chiffres ». */}
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'collectiviteChiffres.demandes.unite',
+            'Une demande « chaque semaine » compte une fois par date.',
+          )}
         </Text>
         <TouchableOpacity
           accessibilityRole="link"
@@ -861,7 +872,12 @@ function CollectiviteClubDetails() {
         {contenu}
       </ScrollView>
       {isDesktop ? null : (
-        <BottomModal close={fermerAttribuer} isVisible={Boolean(panneauAttribuer)}>
+        <BottomModal
+          close={fermerAttribuer}
+          isVisible={Boolean(panneauAttribuer)}
+          // SAIS (T20 lot 1) : « Annuler » finissait coupé au bas de la feuille « Attribuer ».
+          maxContentHeightRatio={HAUTEUR_DE_LA_FEUILLE}
+        >
           <View style={[Spaces.paddingHorizontal[16], Spaces.paddingBottom[16]]}>
             {panneauAttribuer}
           </View>

@@ -106,6 +106,7 @@ function FriendlyMatchWizardLocation({ navigation }) {
             ? state.location
             : undefined}
           label={t('friendlyMatchWizardLocation.cityOrAddress', 'Ville ou adresse')}
+          permettreLieuSurCarte
           placeholder={t(
             'friendlyMatchWizardLocation.eGMarseilleStadeVelodrome',
             'Ex : Marseille, Stade Vélodrome...',

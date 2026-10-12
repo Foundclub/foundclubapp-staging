@@ -63,6 +63,31 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// VILLE-T18C (07/10) — l'ordinateur (le tableau), réglable par témoin ; le téléphone par défaut.
+let mockBureau = false;
+jest.mock('@/responsive', () => ({
+  ...jest.requireActual('@/responsive'),
+  useIsDesktop: () => mockBureau,
+}));
+
+// VILLE-INVITER-CLUB (07/10) : les demandes de rattachement vivent dans un module a part ;
+// `data` absent = un serveur d'avant le lot : l'ecran garde « Invitations » comme avant.
+// FINITIONS-VILLE (08/10) : « Refuser » une demande de rattachement ouvre la fenêtre des créneaux
+// (DecisionCreneauModal), qui lit ces deux crochets ; sans doublure, le client réseau se charge.
+jest.mock('@/services/facility/facilityQueries', () => ({
+  useApproveFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useRefuseFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
+}));
+
+jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
+  useAnswerCollectiviteAttachRequest: () => ({ isPending: false, mutate: jest.fn() }),
+  useCancelCollectiviteProposal: () => ({ isPending: false, mutate: jest.fn() }),
+  useCollectiviteClubRequests: () => ({ data: undefined, error: null, isLoading: false }),
+  useCollectiviteClubSearch: () => ({ data: [], error: null, isLoading: false }),
+  useProposeCollectiviteClub: () => ({ isPending: false, mutate: jest.fn() }),
+  useRemindCollectiviteProposal: () => ({ isPending: false, mutate: jest.fn() }),
+}));
+
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
   useCollectiviteInvitations: () => mockInvitations,
@@ -158,6 +183,7 @@ const boutonTitre = (/** @type {any} */ arbre, /** @type {string} */ titre) => a
 
 beforeEach(() => {
   mockNavigate.mockClear();
+  mockBureau = false;
   mockClubs = {
     data: [AS_MONTRIVAGE, MONTRIVAGE_FC, MASQUE], error: null, isLoading: false, refetch: jest.fn(),
   };
@@ -226,7 +252,50 @@ describe('COLL-CLUBS — planche 1 : la liste des clubs rattachés', () => {
     };
     expect(textes(await monter())).toEqual(expect.arrayContaining([
       'Aucun club rattaché pour l’instant.',
-      'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Invitez-le.',
+      // VILLE-INVITER-CLUB (07/10) : la Ville ajoute elle-meme un club deja inscrit (« club A »).
+      'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
     ]));
+  });
+});
+
+// 🎨 VILLE-T18C (07/10) — ajout T18 du chef (19h25, SITE_G60) : dans le tableau du site, « Demander
+// au club de compléter sa fiche » DÉBORDAIT de sa colonne (texte coupé, bord de la carte traversé).
+// Planche 36 (P7-clubs-ordi) : « Demander de compléter » dans la colonne « Contact général ». Le
+// bouton ne dépasse plus sa colonne. Au téléphone, le libellé entier reste. ROUGE avant.
+describe('VILLE-T18C — tableau des clubs : « Demander de compléter » tient dans sa colonne', () => {
+  it('ordinateur : le libellé de la planche, et le bouton borné à sa colonne', async () => {
+    mockBureau = true;
+    const arbre = await monter();
+    expect(boutonTitre(arbre, 'Demander de compléter')).toBeDefined();
+    expect(boutonTitre(arbre, 'Demander au club de compléter sa fiche')).toBeUndefined();
+    const bouton = boutonTitre(arbre, 'Demander de compléter');
+    // La boîte du bouton (EcrireAuxDirigeants) ne dépasse pas la colonne.
+    const styleDe = (/** @type {any} */ noeud) => (
+      Object.assign({}, ...[].concat(noeud?.props?.style))
+    );
+    let boite = bouton.parent;
+    while (boite && !('alignSelf' in styleDe(boite))) boite = boite.parent;
+    expect(styleDe(boite)).toEqual(expect.objectContaining({ maxWidth: '100%' }));
+  });
+
+  it('téléphone : le libellé entier', async () => {
+    const arbre = await monter();
+    expect(boutonTitre(arbre, 'Demander au club de compléter sa fiche')).toBeDefined();
+  });
+});
+
+// 🏛️ FINITIONS-VILLE — décision d'Adel `dirigeant A` (08/10, relayée par le chef) : la Ville GARDE
+// « Dirigeant : <nom> » sous chaque club (SPEC D15). La phrase de l'écran qui disait « jamais le
+// nom d'un membre » devient VRAIE : les dirigeants, oui ; les autres membres, jamais.
+// ROUGE avant : la phrase contredisait la carte juste en dessous.
+describe('FINITIONS-VILLE — la phrase de la page Clubs dit ce que la Ville voit', () => {
+  it('« le nom de ses dirigeants » ; « jamais les autres membres »', async () => {
+    const lus = textes(await monter());
+    expect(lus).toContain('Dirigeant : Karim Benali');
+    expect(lus).toContain(
+      // eslint-disable-next-line max-len
+      'Le contact général de chaque club, le nom de ses dirigeants et des nombres : jamais les autres membres.',
+    );
+    expect(lus.some((texte) => texte.includes('jamais le nom d’un membre'))).toBe(false);
   });
 });

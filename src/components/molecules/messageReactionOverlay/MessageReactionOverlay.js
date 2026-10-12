@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Animated,
+  Easing,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -16,7 +22,13 @@ import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { getMessageActions } from '@/domains/messaging/messageActions';
 import { computeMessageMenuLayout } from '@/domains/messaging/reactionPillPlacement';
 import { REACTION_EMOJIS } from '@/domains/messaging/reactionUseCases';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import { LIGNE_DE_MENU } from '@/components/molecules/bulleDuFil/typographieDuFil';
+
+import useReduceMotion from '@/hooks/useReduceMotion';
 
 /**
  * 👆 44 POINTS, ET CE N EST PAS NEGOCIABLE : c est le minimum tactile d Apple et
@@ -32,17 +44,25 @@ const BOUTON = 44;
  * severite) et on cede sur l ecart (severite moyenne) — c est aussi ce que fait
  * WhatsApp.
  */
-const ECART = 4;
-const MARGE_INTERNE = 6;
+// MSG1A (§3.2) — le pack serre l'ecart a 2 et pose des marges de 6 / 8 (SPECS.md §2) :
+// 7 x 44 + 6 x 2 + 16 = 336, toujours sous la largeur utile d'un iPhone SE (359).
+const ECART = 2;
+const MARGE_VERTICALE = 6;
+const MARGE_HORIZONTALE = 8;
 
 /** 6 raccourcis + le « + » : sept boutons, leurs ecarts, le cadre. */
-export const REACTION_PILL_WIDTH = (BOUTON * 7) + (ECART * 6) + (MARGE_INTERNE * 2);
-export const REACTION_PILL_HEIGHT = BOUTON + (MARGE_INTERNE * 2);
+export const REACTION_PILL_WIDTH = (BOUTON * 7) + (ECART * 6) + (MARGE_HORIZONTALE * 2);
+export const REACTION_PILL_HEIGHT = BOUTON + (MARGE_VERTICALE * 2);
 
-/** Le menu d actions : une rangee par action, toutes a la taille tactile. */
-const MENU_WIDTH = 224;
+/** Le menu d actions du pack : 236 de large, une rangee de 48 par action (SPECS.md §2). */
+const MENU_WIDTH = 236;
 const MENU_LIGNE = 48;
-const MENU_MARGE = 6;
+/** Le filet qui precede la premiere action rouge. */
+const MENU_FILET = 1;
+
+/** « pop » du pack : de 0,6 a 1 en 220 ms, courbe `cubic-bezier(.2,.9,.3,1.2)`. */
+const POP_MS = 220;
+const POP_DEPART = 0.6;
 
 /** Le clavier d emojis occupe un peu plus de la moitie de l ecran, comme sur WhatsApp. */
 const RATIO_CLAVIER = 0.55;
@@ -61,7 +81,7 @@ const COLONNES = 8;
  * ⇒ La regle, desormais explicite : le premier contenu d une feuille commence AU
  * MOINS au niveau du rayon de ses coins.
  */
-const RAYON_FEUILLE = 24;
+const RAYON_FEUILLE = 22;
 const ESPACE_SOUS_LE_BORD = RAYON_FEUILLE;
 
 /**
@@ -87,6 +107,10 @@ const ESPACE_SOUS_LE_BORD = RAYON_FEUILLE;
  *   La bulle visee, mesuree a l ecran (`measureInWindow`).
  * @param {boolean} [props.canCopy] Le message porte-t-il du texte a copier ?
  * @param {boolean} [props.canEdit] Puis-je le modifier ?
+ * @param {boolean} [props.canEditComposition] MESSAGERIE-1C : la carte d'une convocation que je
+ *   peux modifier (« Modifier la composition »).
+ * @param {boolean} [props.canReply] Puis-je ecrire dans ce fil ? Non (canal d'annonce) :
+ *   pas de « Repondre ».
  * @param {boolean} [props.isMine] Est-il a moi ? La pilule et le menu se rangent a droite.
  * @param {string} [props.myEmoji] L emoji que j ai deja pose sur ce message.
  * @param {(key: string) => void} props.onAction Appelee avec la clef de l action choisie.
@@ -99,6 +123,8 @@ function MessageReactionOverlay({
   anchor = null,
   canCopy = false,
   canEdit = false,
+  canEditComposition = false,
+  canReply = true,
   isMine = false,
   myEmoji = '',
   onAction,
@@ -112,13 +138,48 @@ function MessageReactionOverlay({
   const { height: hauteurEcran, width: largeurEcran } = useWindowDimensions();
   const [clavierOuvert, setClavierOuvert] = useState(false);
   const [famille, setFamille] = useState(EMOJI_CATALOG[0]?.key ?? '');
+  const reduireLesAnimations = useReduceMotion();
+  const pop = useRef(new Animated.Value(1)).current;
 
   const actions = useMemo(
-    () => getMessageActions({ canCopy, canEdit, isMine }),
-    [canCopy, canEdit, isMine],
+    () => getMessageActions({
+      canCopy, canEdit, canEditComposition, canReply, isMine,
+    }),
+    [canCopy, canEdit, canEditComposition, canReply, isMine],
   );
+  // Le filet rouge ne se pose que si une action rouge suit une action ordinaire.
+  const indexDuFilet = actions.findIndex((action, index) => action.alerte && index > 0);
 
-  const hauteurMenu = (actions.length * MENU_LIGNE) + (MENU_MARGE * 2);
+  const hauteurMenu = (actions.length * MENU_LIGNE) + (indexDuFilet > 0 ? MENU_FILET : 0);
+
+  // MSG1A (§3.2) — la barre et le menu « poussent » a l'ouverture (sauf si le systeme
+  // demande de reduire les animations).
+  useEffect(() => {
+    if (!visible) return undefined;
+    if (reduireLesAnimations) {
+      pop.setValue(1);
+      return undefined;
+    }
+    pop.setValue(0);
+    const animation = Animated.timing(pop, {
+      duration: POP_MS,
+      easing: Easing.bezier(0.2, 0.9, 0.3, 1.2),
+      toValue: 1,
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [pop, reduireLesAnimations, visible]);
+  // 👆 La PILULE apparait en fondu SEUL : ses boutons sont des cibles tactiles, ils doivent
+  // mesurer 44 des la premiere image (rouge de la recolte 3a : 40,4 px mesures pendant
+  // l'agrandissement, whatsapp2-menu.spec.ts:124). Le MENU garde l'effet du pack.
+  const styleFondu = {
+    opacity: pop.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+  };
+  const stylePop = {
+    ...styleFondu,
+    transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [POP_DEPART, 1] }) }],
+  };
 
   const place = useMemo(() => computeMessageMenuLayout({
     alignEnd: isMine,
@@ -145,7 +206,14 @@ function MessageReactionOverlay({
     onSelect(emoji);
   };
 
-  const VOILE = 'rgba(0, 0, 0, 0.55)';
+  // MSG1A (§3.2) — le voile du pack, `rgba(0,6,9,0.55)`, lu sur l'encre primary900.
+  const VOILE = withAlpha(Colors.primary900, 0.55);
+
+  // ⚖️ MSG1A (§3.2) — LE FLOU DU PACK (14) N'EST PAS POSE, et c'est un choix mesure :
+  // `@sbaiahmed1/react-native-blur` n'est pas transformable par jest (il ferait tomber les
+  // 13 suites de l'ecran de conversation), et sur Android un flou pose DANS la fenetre du
+  // `Modal` ne voit pas l'ecran d'en dessous. Le voile du pack, seul, garde le message net
+  // et en avant (il est decoupe autour de lui).
 
   /**
    * Le voile, DECOUPE AUTOUR DU MESSAGE.
@@ -170,7 +238,8 @@ function MessageReactionOverlay({
     // Le type est ecrit : sans lui, `position` est vu comme une chaine quelconque
     // et TypeScript refuse le style (TS2322).
     const bande = /** @type {import('react-native').ViewStyle} */ ({
-      backgroundColor: VOILE, position: 'absolute',
+      backgroundColor: VOILE,
+      position: 'absolute',
     });
 
     return (
@@ -242,24 +311,25 @@ function MessageReactionOverlay({
 
         {!clavierOuvert ? (
           <>
-            <View
+            {/* MSG1A (§3.2) — la barre des 6 reactions du pack : pilule `chatMenu`, marges
+                6 / 8, boutons de 44, emoji de 27, ma reaction sur un fond clair a 18 %. Le
+                « + » du clavier d'emojis (lot WHATSAPP) reste : le pack ne le dessine pas,
+                mais il marche, et le serveur accepte ses 1 069 emojis. */}
+            <Animated.View
               accessibilityLabel={t('conversation.reactions.pick', 'Choisir une réaction')}
               accessibilityRole="menu"
-              style={{
-                alignItems: 'center',
-                backgroundColor: Colors.neutral800,
-                borderColor: Colors.neutral600,
-                borderRadius: 999,
-                borderWidth: 1,
-                flexDirection: 'row',
-                gap: ECART,
-                height: REACTION_PILL_HEIGHT,
-                left: place.pill.left,
-                padding: MARGE_INTERNE,
-                position: 'absolute',
-                top: place.pill.top,
-                width: REACTION_PILL_WIDTH,
-              }}
+              style={[
+                styles.pilule,
+                {
+                  backgroundColor: Colors.chatMenu,
+                  borderColor: withAlpha(Colors.neutral00, 0.08),
+                  left: place.pill.left,
+                  shadowColor: Colors.neutral900,
+                  top: place.pill.top,
+                  transformOrigin: isMine ? 'right bottom' : 'left bottom',
+                },
+                styleFondu,
+              ]}
               testID="WHATSAPP-pilule"
             >
               {REACTION_EMOJIS.map((emoji) => (
@@ -270,16 +340,16 @@ function MessageReactionOverlay({
                   activeOpacity={0.6}
                   key={`pilule-${emoji}`}
                   onPress={() => choisir(emoji)}
-                  style={{
-                    alignItems: 'center',
-                    backgroundColor: myEmoji === emoji ? Colors.primary700 : Colors.transparent,
-                    borderRadius: 999,
-                    height: BOUTON,
-                    justifyContent: 'center',
-                    width: BOUTON,
-                  }}
+                  style={[
+                    styles.boutonDeLaPilule,
+                    {
+                      backgroundColor: myEmoji === emoji
+                        ? withAlpha(Colors.neutral00, 0.18)
+                        : Colors.transparent,
+                    },
+                  ]}
                 >
-                  <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                  <Text style={styles.emojiDeLaPilule}>{emoji}</Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
@@ -287,70 +357,71 @@ function MessageReactionOverlay({
                 accessibilityRole="button"
                 activeOpacity={0.6}
                 onPress={() => setClavierOuvert(true)}
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: Colors.neutral700,
-                  borderRadius: 999,
-                  height: BOUTON,
-                  justifyContent: 'center',
-                  width: BOUTON,
-                }}
+                style={[
+                  styles.boutonDeLaPilule,
+                  { backgroundColor: withAlpha(Colors.neutral00, 0.12) },
+                ]}
                 testID="WHATSAPP-plus"
               >
-                <Text style={{ color: Colors.neutral00, fontSize: 24, lineHeight: 28 }}>+</Text>
+                <GlyphIcon color={Colors.neutral00} name="plus2" size={22} />
               </TouchableOpacity>
-            </View>
+            </Animated.View>
 
-            <View
+            {/* MSG1A (§3.2) — le menu compact du pack : 236 de large, rangees de 48 (icone 20
+                + libelle 15,5), Supprimer / Signaler en rouge, precedes d'un filet. */}
+            <Animated.View
               accessibilityRole="menu"
-              style={{
-                backgroundColor: Colors.neutral800,
-                borderColor: Colors.neutral600,
-                borderRadius: 14,
-                borderWidth: 1,
-                left: place.menu.left,
-                paddingVertical: MENU_MARGE,
-                position: 'absolute',
-                top: place.menu.top,
-                width: MENU_WIDTH,
-              }}
+              style={[
+                styles.menu,
+                {
+                  backgroundColor: Colors.chatMenu,
+                  borderColor: withAlpha(Colors.neutral00, 0.08),
+                  left: place.menu.left,
+                  shadowColor: Colors.neutral900,
+                  top: place.menu.top,
+                  transformOrigin: isMine ? 'right top' : 'left top',
+                },
+                stylePop,
+              ]}
               testID="WHATSAPP-menu"
             >
-              {actions.map((action) => (
-                <TouchableOpacity
-                  accessibilityLabel={t(action.labelKey, action.fallback)}
-                  accessibilityRole="menuitem"
-                  activeOpacity={0.6}
-                  key={action.key}
-                  onPress={() => onAction(action.key)}
-                  style={{
-                    height: MENU_LIGNE,
-                    justifyContent: 'center',
-                    paddingHorizontal: 16,
-                  }}
-                  testID={`WHATSAPP-action-${action.key}`}
-                >
-                  <Text
-                    style={{
-                    // 🔴 « Supprimer » est la seule action qui detruit : elle porte la
-                    // couleur d alerte, et elle est la derniere de la liste.
-                      color: action.destructive ? Colors.error500 : Colors.neutral00,
-                      fontSize: 16,
-                      lineHeight: 22,
-                    }}
-                  >
-                    {t(action.labelKey, action.fallback)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+              {actions.map((action, index) => {
+                const couleur = action.alerte ? Colors.chatDanger : Colors.neutral00;
+                return (
+                  <View key={action.key}>
+                    {index === indexDuFilet ? (
+                      <View
+                        style={[
+                          styles.filet,
+                          { backgroundColor: withAlpha(Colors.neutral00, 0.08) },
+                        ]}
+                      />
+                    ) : null}
+                    <TouchableOpacity
+                      accessibilityLabel={t(action.labelKey, action.fallback)}
+                      accessibilityRole="menuitem"
+                      activeOpacity={0.6}
+                      onPress={() => onAction(action.key)}
+                      style={styles.ligneDuMenu}
+                      testID={`WHATSAPP-action-${action.key}`}
+                    >
+                      <GlyphIcon color={couleur} name={action.icone} size={20} />
+                      <Text style={[LIGNE_DE_MENU, { color: couleur }]}>
+                        {t(action.labelKey, action.fallback)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </Animated.View>
           </>
         ) : null}
 
         {clavierOuvert ? (
           <View
             style={{
-              backgroundColor: Colors.neutral800,
+              // MSG1A (§3.2) — la feuille du pack (`chatSheet`, rayon 22).
+              backgroundColor: Colors.chatSheet,
               borderTopLeftRadius: RAYON_FEUILLE,
               borderTopRightRadius: RAYON_FEUILLE,
               bottom: 0,
@@ -429,5 +500,57 @@ function MessageReactionOverlay({
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  boutonDeLaPilule: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: BOUTON,
+    justifyContent: 'center',
+    width: BOUTON,
+  },
+  emojiDeLaPilule: {
+    fontSize: 27,
+    lineHeight: 32,
+  },
+  filet: {
+    height: MENU_FILET,
+    marginHorizontal: 16,
+  },
+  ligneDuMenu: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 14,
+    height: MENU_LIGNE,
+    paddingHorizontal: 18,
+  },
+  menu: {
+    borderRadius: 16,
+    borderWidth: 1,
+    elevation: 12,
+    overflow: 'hidden',
+    position: 'absolute',
+    shadowOffset: { height: 14, width: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    width: MENU_WIDTH,
+  },
+  pilule: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    elevation: 10,
+    flexDirection: 'row',
+    gap: ECART,
+    height: REACTION_PILL_HEIGHT,
+    paddingHorizontal: MARGE_HORIZONTALE,
+    paddingVertical: MARGE_VERTICALE,
+    position: 'absolute',
+    shadowOffset: { height: 10, width: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 15,
+    width: REACTION_PILL_WIDTH,
+  },
+});
 
 export default MessageReactionOverlay;

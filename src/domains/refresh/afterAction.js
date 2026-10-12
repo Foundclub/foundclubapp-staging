@@ -52,6 +52,7 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['teamMembershipRequests'],
     ['clubMembershipRequests'],
     ['clubInterestRequests'],
+    ['declaredChildren'],
     ['pendingEvents'],
     // U05 — LES DEUX RACINES QUI MANQUAIENT, mesurees sur le SEUL ecran qui
     // traite reellement les sept familles de demandes (`RequestsHub`, la
@@ -146,10 +147,15 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['home-summary'],
   ],
 
-  /** Quitter une equipe. */
+  /** Quitter une equipe peut aussi retirer le dernier lien au club (IPH09). */
   leaveTeam: [
     ['team'],
     ['teams'],
+    ['club'],
+    ['clubs'],
+    ['clubMemberRoles'],
+    ['chats'],
+    ['chat'],
     ['events'],
     ['planning'],
     ['app-bootstrap'],
@@ -187,6 +193,15 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['app-bootstrap'],
     ['get-me'],
     ['home-summary'],
+  ],
+
+  // PAR-006 : l'enfant rejoint l'equipe sur sa fiche, pas sur le compte
+  // du parent. Une reponse d'interet relit ces donnees sans changer
+  // l'identite du parent ni rafraichir ses conversations privees.
+  childInterestAnswered: [
+    ['declaredChildren'],
+    ['clubInterestRequests'],
+    ['requestsHub'],
   ],
 
   /**
@@ -350,6 +365,7 @@ export const REQUEST_ARRIVAL_NOTIFICATION_TYPES = Object.freeze([
  */
 export const resolveNotificationRefreshAction = (notificationType) => {
   const type = String(notificationType || '').trim();
+  if (type === 'clubInterestResponse') return 'childInterestAnswered';
   if (MEMBERSHIP_NOTIFICATION_TYPES.includes(type)) return 'membershipChanged';
   if (REQUEST_ARRIVAL_NOTIFICATION_TYPES.includes(type)) return 'requestArrived';
   return '';

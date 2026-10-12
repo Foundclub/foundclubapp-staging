@@ -30,6 +30,22 @@ export const isSearchMapGeolocationSupported = () => Boolean(getNavigatorGeoloca
 // `getCurrentPosition`. Il n'y a rien à réclamer en amont.
 export const ensureSearchMapGeolocationPermission = async () => true;
 
+// ADRESSE-CARTE (07/10) — la position SEULEMENT si le site l'a déjà reçue : l'API Permissions
+// répond sans ouvrir de demande. Un navigateur qui ne la connaît pas répond NON.
+export const isSearchMapGeolocationAlreadyGranted = async () => {
+  const permissions = typeof navigator !== 'undefined' ? navigator?.permissions : null;
+  if (!permissions || typeof permissions.query !== 'function') {
+    return false;
+  }
+
+  try {
+    const etat = await permissions.query({ name: 'geolocation' });
+    return etat?.state === 'granted';
+  } catch (error) {
+    return false;
+  }
+};
+
 /**
  * @param {(position: any) => void} onSuccess
  * @param {() => void} onFailure
@@ -48,5 +64,6 @@ export const getCurrentSearchMapPosition = (onSuccess, onFailure, options) => {
 export default {
   ensureSearchMapGeolocationPermission,
   getCurrentSearchMapPosition,
+  isSearchMapGeolocationAlreadyGranted,
   isSearchMapGeolocationSupported,
 };

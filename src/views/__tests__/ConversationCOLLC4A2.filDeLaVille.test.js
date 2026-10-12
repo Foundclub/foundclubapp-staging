@@ -44,8 +44,12 @@ jest.mock('react-native-gifted-chat', () => {
   return {
     Bubble: VueRN,
     Composer: VueRN,
+    // MSG1A — la bulle de texte rend le `MessageText` de GiftedChat dans son propre cadre,
+    // et la puce de date son `Day`.
+    Day: VueRN,
     GiftedChat: (/** @type {any} */ props) => { mockGiftedRenders.push(props); return null; },
     InputToolbar: VueRN,
+    MessageText: VueRN,
     Time: VueRN,
   };
 });

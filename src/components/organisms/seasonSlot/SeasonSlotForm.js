@@ -8,6 +8,9 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import {
   formatDay,
   formatPeriod,
+  freeRanges,
+  fromMinutes,
+  fullRangesOfSlots,
   isoWeekdayOf,
   isTime,
   overCapacityPreviewOf,
@@ -24,7 +27,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
-import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import RondsDePlaces from '@/components/organisms/seasonSlot/RondsDePlaces';
 
 import {
@@ -36,9 +39,20 @@ import {
 } from '@/services/seasonSlot/seasonSlotQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+import texteInsecable from '@/utils/texteInsecable';
 
 // Deux elements aux deux bouts d une rangee.
 const ENTRE_DEUX = /** @type {const} */ ({ gap: 8, justifyContent: 'space-between' });
+
+/**
+ * SAIS (08/10, tournée T20 lot 1, capture T07b) — la part de l écran que la FEUILLE « Attribuer
+ * un créneau » peut prendre au téléphone (`maxContentHeightRatio` de BottomModal, 0,7 par
+ * défaut). À 0,7, le formulaire dépassait : « Annuler » finissait coupé au bas de la feuille.
+ * ponytail: un ratio, pas un pied fixe ; avec beaucoup de clubs rattachés (plusieurs rangées de
+ * pastilles), la feuille défile de nouveau. Voie de sortie : les deux boutons en
+ * `footerComponent` de BottomModal.
+ */
+export const HAUTEUR_DE_LA_FEUILLE = 0.85;
 
 /**
  * Une puce a choisir (design `chip-c`) : un bouton radio.
@@ -67,7 +81,11 @@ export function PuceDeChoix({
       ]}
       testID={testID}
     >
-      <Text style={[Fonts.p3Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>{libelle}</Text>
+      {/* VILLE-T18A — une puce epouse son texte GRAS : sous Android 16, « AS Montrivage » choisi
+          devenait « AS » (capture T18 G29a). Espaces insecables : le libelle reste entier. */}
+      <Text style={[Fonts.p3Bold, actif ? Fonts.primary900 : Fonts.neutral100]}>
+        {texteInsecable(libelle)}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -122,12 +140,18 @@ const versSaisie = (jour) => (jour ? format(parseISO(String(jour)), 'dd/MM/yyyy'
  * COLL-C2C (02/10) — D32 : `repartition` = le DIRIGEANT repartit un creneau de son club entre ses
  * equipes. Seule l equipe change (et la date d effet) : ni jour, ni heures, ni plateau, ni carte
  * de place ; le serveur refuse tout le reste (admin tests/authz/COLL-C2C-repartition.test.js).
+ *
+ * VILLE-T18A (07/10, tournee T18) — planche 23, etat 3 : des que la carte de place dit « complet »
+ * PENDANT la saisie (et plus seulement apres un 409), les 3 gestes de la planche : « Voir les
+ * heures libres du <jour> » (les heures ou il reste une place, un appui les pose),
+ * « Attribuer quand meme » (confirme d emblee) et « Changer l heure ».
  * @param {{
  *   clubs?: Array<{ documentId: string, name: string }>,
  *   compact?: boolean,
  *   facilities?: Array<{ documentId: string, name: string }>,
  *   facilityId?: string | null,
  *   fixedClubId?: string | null,
+ *   guided?: boolean,
  *   initial?: { weekday?: number, startTime?: string, endTime?: string, plateau?: number | null },
  *   onCancel?: () => void,
  *   onDone: (creneau: any) => void,
@@ -142,6 +166,7 @@ function SeasonSlotForm({
   facilities = [],
   facilityId: installationFixee = null,
   fixedClubId = null,
+  guided = false,
   initial = {},
   onCancel,
   onDone,
@@ -153,6 +178,18 @@ function SeasonSlotForm({
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const modification = Boolean(slot?.documentId);
+  // IPH09 : tunnel local. La repartition du dirigeant garde son seul choix d'equipe.
+  const parcoursGuide = guided && !repartition;
+  const etapes = modification
+    ? ['jour', 'horaires', 'periode', 'recap']
+    : [
+      ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
+      'club', 'equipe', 'jour', 'horaires', 'periode', 'recap',
+    ];
+  const [etape, setEtape] = useState(0);
+  const etapeCourante = etapes[etape];
+  const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ;
+  const confirmationFinale = !parcoursGuide || etapeCourante === 'recap';
 
   const [installationChoisie, setInstallationChoisie] = useState(
     installationFixee
@@ -172,7 +209,12 @@ function SeasonSlotForm({
     fixedClubId || slot?.club?.documentId || (clubs.length === 1 ? clubs[0].documentId : null),
   );
   const [equipe, setEquipe] = useState(slot?.team?.documentId || null);
-  const [jour, setJour] = useState(Number(slot?.weekday || initial.weekday) || null);
+  // SAIS (T20 lot 1) — « Attribuer » s'ouvre sur un jour, comme au site : aujourd'hui, sauf si
+  // l'écran en apporte un (une case du planning) ; « Modifier » garde le sien.
+  const [jour, setJour] = useState(
+    Number(slot?.weekday || initial.weekday)
+      || (modification || repartition ? null : isoWeekdayOf(new Date())),
+  );
   const [debut, setDebut] = useState(
     String(slot?.startTime || initial.startTime || '').slice(0, 5),
   );
@@ -197,6 +239,8 @@ function SeasonSlotForm({
     || Boolean(nouveauDebut && nouvelleFin && nouvelleFin >= nouveauDebut);
   const [conflit, setConflit] = useState(/** @type {any} */ (null));
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
+  // VILLE-T18A — « Voir les heures libres du <jour> » : la liste est ouverte.
+  const [voirLibres, setVoirLibres] = useState(false);
 
   const equipes = useClubTeamsForSlot(modification && !repartition ? null : club);
   const attribuer = useAttributeSeasonSlot();
@@ -228,6 +272,23 @@ function SeasonSlotForm({
   ]);
   const apercu = useSeasonSlotPreview(facilityId, parametresApercu);
   const place = conflit || apercu.data?.data || null;
+  // VILLE-T18A — planche 23, etat 3 : le « complet » se decide pendant la saisie, ou par le 409.
+  const besoinDeConfirmer = Boolean(conflit)
+    || Boolean(parametresApercu && apercu.data?.data?.needsConfirmation);
+
+  // VILLE-T18A — les heures ou il reste une place ce jour-la : la semaine type de l installation
+  // (deja lue), moins les moments complets ; le creneau qu on modifie ne compte pas.
+  // ponytail: ouverture 08:00 – 22:00 (defaut de `freeRanges`) : la liste des creneaux ne dit pas
+  // les horaires de l installation, et leur retrait est decide (VILLE-INSTALLATION). Le serveur
+  // refuse toujours une heure hors horaires (`seasonSlotErrorMessage`).
+  const heuresLibres = useMemo(() => {
+    if (!jour) return [];
+    /** @type {any[]} */
+    const creneauxDuJour = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
+      .filter((creneau) => Number(creneau?.weekday) === Number(jour)
+        && creneau?.documentId !== slot?.documentId);
+    return freeRanges(fullRangesOfSlots(creneauxDuJour, capacite));
+  }, [capacite, jour, lecture.data, slot?.documentId]);
 
   const nomDuClub = slot?.club?.name
     || clubs.find((ligne) => ligne.documentId === club)?.name
@@ -249,6 +310,27 @@ function SeasonSlotForm({
   const toucherLaSaisie = () => {
     setConflit(null);
     setErreur(null);
+  };
+
+  // VILLE-T18A — une heure libre choisie d un appui : son debut, et la duree deja saisie
+  // (1 h 30 sans saisie lisible), sans deborder de la plage libre.
+  const poserLaPlage = (/** @type {{ start: number, end: number }} */ plage) => {
+    const duree = ordreJuste ? Number(toMinutes(fin)) - Number(toMinutes(debut)) : 90;
+    setDebut(fromMinutes(plage.start));
+    setFin(fromMinutes(Math.min(plage.start + duree, plage.end)));
+    setVoirLibres(false);
+    toucherLaSaisie();
+  };
+  // « Changer l heure » : les heures sont a choisir de nouveau, les heures libres sous les yeux.
+  // En mode compact (planning), les heures viennent de la case : rien a vider.
+  const changerLHeure = () => {
+    if (parcoursGuide) setEtape(etapes.indexOf('horaires'));
+    if (!compact) {
+      setDebut('');
+      setFin('');
+    }
+    setVoirLibres(true);
+    toucherLaSaisie();
   };
 
   const envoyer = async (/** @type {boolean} */ quandMeme = false) => {
@@ -307,7 +389,6 @@ function SeasonSlotForm({
   // ─── La carte « Place libre » (§4.2) ────────────────────────────────────────────────
   const carteDeLaPlace = (() => {
     if (!parametresApercu || !place) return null;
-    const besoinDeConfirmer = Boolean(conflit) || Boolean(place.needsConfirmation);
     const moment = `${weekdayName(Number(jour))} ${timeRange(debut, fin)}`;
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
     const surPlateau = place.plateau && typeof place.plateau === 'object' ? place.plateau : null;
@@ -390,9 +471,60 @@ function SeasonSlotForm({
           <Text key={ligne} style={[Fonts.p3, Fonts.neutral200]}>{ligne}</Text>
         ))}
         {depassement ? <Text style={[Fonts.p3Bold, Fonts.warning500]}>{depassement}</Text> : null}
+        {/* VILLE-T18A — planche 23, etat 3. Les heures libres se lisent sur l installation : un
+            plateau deja pris (D66) n a pas cette liste. Texte GRAS dans une boite a sa largeur :
+            espaces insecables (Android 16, piege du dernier mot perdu). */}
+        {besoinDeConfirmer && !surPlateau && !repartition ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setVoirLibres(true)}
+            style={[Alignments.row, Alignments.alignCenter, { minHeight: 32 }]}
+            testID="attribuer-voir-libres"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {texteInsecable(t(
+                'collectiviteCreneaux.attribuer.voirLibres',
+                'Voir les heures libres du {{jour}}',
+                { jour: weekdayName(Number(jour)).toLocaleLowerCase(), ...SANS_ECHAPPEMENT },
+              ))}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   })();
+
+  // VILLE-T18A — « Libre ce mardi : » et une puce par plage ; un appui pose ses heures.
+  const lesHeuresLibres = voirLibres && jour && !repartition ? (
+    <View style={{ gap: 8 }} testID="attribuer-heures-libres">
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+        {t('collectiviteCreneaux.attribuer.libreCe', 'Libre ce {{jour}} :', {
+          jour: weekdayName(Number(jour)).toLocaleLowerCase(),
+          ...SANS_ECHAPPEMENT,
+        })}
+      </Text>
+      {heuresLibres.length ? (
+        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+          {heuresLibres.map((plage) => (
+            <PuceDeChoix
+              actif={false}
+              key={`libre-${plage.start}`}
+              libelle={timeRange(fromMinutes(plage.start), fromMinutes(plage.end))}
+              onPress={() => poserLaPlage(plage)}
+              testID={`attribuer-libre-${fromMinutes(plage.start)}`}
+            />
+          ))}
+        </View>
+      ) : (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('collectiviteCreneaux.attribuer.aucuneLibre', 'Aucune heure libre ce {{jour}}.', {
+            jour: weekdayName(Number(jour)).toLocaleLowerCase(),
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      )}
+    </View>
+  ) : null;
 
   const titreDuChamp = (/** @type {string} */ texte) => (
     <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{texte}</Text>
@@ -409,8 +541,48 @@ function SeasonSlotForm({
     })
     : t('collectiviteCreneaux.attribuer.saison', 'Toute la saison');
 
+  const nomEquipe = equipe
+    ? equipes.data?.find((/** @type {any} */ ligne) => ligne.documentId === equipe)?.name
+    : t('collectiviteCreneaux.attribuer.toutLeClub', 'Tout le club');
+
   return (
     <View style={{ gap: 16 }}>
+      {parcoursGuide ? (
+        <View
+          accessibilityLabel={t('eventWizard.common.stepCounter', {
+            current: etape + 1, total: etapes.length,
+          })}
+          style={{ gap: 12 }}
+          testID="season-slot-step"
+        >
+          <Button
+            disabled={envoiEnCours}
+            icon="arrowLeft"
+            onPress={() => { if (etape > 0) setEtape(etape - 1); else onCancel?.(); }}
+            style={{ alignSelf: 'flex-start', minHeight: 44 }}
+            title={t('common.back', 'Retour')}
+            variant="Ghost"
+          />
+          <Text accessibilityLiveRegion="polite" style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {t('eventWizard.common.stepCounter', { current: etape + 1, total: etapes.length })}
+          </Text>
+          <View
+            accessibilityRole="progressbar"
+            accessibilityValue={{
+              max: etapes.length, min: 1, now: etape + 1,
+            }}
+            style={{ backgroundColor: Colors.neutral700, borderRadius: 2, height: 4 }}
+          >
+            <View style={{
+              backgroundColor: Colors.primary500,
+              borderRadius: 2,
+              height: 4,
+              width: `${((etape + 1) / etapes.length) * 100}%`,
+            }}
+            />
+          </View>
+        </View>
+      ) : null}
       {compact ? null : (
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {modification
@@ -427,7 +599,7 @@ function SeasonSlotForm({
       )}
 
       {/* Depuis la fiche d un club (point 6) : l installation se choisit ici. */}
-      {!installationFixee && !modification && facilities.length > 1 ? (
+      {visible('installation') && !installationFixee && !modification && facilities.length > 1 ? (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.installation', 'Installation'))}
           {rangee(facilities.map((ligne) => (
@@ -445,7 +617,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {modification ? null : (
+      {!visible('club') || modification ? null : (
         <View style={{ gap: 8 }}>
           {titreDuChamp(compact
             ? t('collectiviteCreneaux.attribuer.attribuerA', 'Attribuer à')
@@ -474,7 +646,7 @@ function SeasonSlotForm({
         </View>
       )}
 
-      {(!modification || repartition) && club ? (
+      {visible('equipe') && (!modification || repartition) && club ? (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.equipe', 'Équipe (facultatif)'))}
           {rangee([
@@ -496,7 +668,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {compact || repartition ? null : (
+      {!visible('jour') || compact || repartition ? null : (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
           {rangee(SEASON_SLOT_WEEKDAYS.map((numero) => (
@@ -514,14 +686,16 @@ function SeasonSlotForm({
         </View>
       )}
 
-      {compact || repartition ? null : (
+      {/* VILLE-T18A (T18 G29a, G32a) — les heures se CHOISISSENT : le sélecteur d heure de la
+          création d événement (décision d Adel du 07/10, « réutiliser ce qu on a déjà ») ; elles
+          se tapaient au clavier. Même valeur « HH:MM ». */}
+      {!visible('horaires') || compact || repartition ? null : (
         <View style={[Alignments.row, { gap: 12 }]}>
           <View style={{ flex: 1 }}>
-            <Input
-              density="compact"
+            <TimePickerInput
               label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
-              onChangeText={(/** @type {string} */ valeur) => {
-                setDebut(valeur.trim());
+              onChange={(/** @type {string} */ valeur) => {
+                setDebut(String(valeur || '').trim());
                 toucherLaSaisie();
               }}
               placeholder="17:30"
@@ -529,11 +703,10 @@ function SeasonSlotForm({
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Input
-              density="compact"
+            <TimePickerInput
               label={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
-              onChangeText={(/** @type {string} */ valeur) => {
-                setFin(valeur.trim());
+              onChange={(/** @type {string} */ valeur) => {
+                setFin(String(valeur || '').trim());
                 toucherLaSaisie();
               }}
               placeholder="19:00"
@@ -542,9 +715,11 @@ function SeasonSlotForm({
           </View>
         </View>
       )}
-      {erreurHeures ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurHeures}</Text> : null}
+      {visible('horaires') && erreurHeures ? (
+        <Text style={[Fonts.p3, Fonts.error500]}>{erreurHeures}</Text>
+      ) : null}
 
-      {avecPeriode ? (
+      {visible('periode') && avecPeriode ? (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
           {dejaCommence ? (
@@ -586,7 +761,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {modification ? (
+      {visible('periode') && modification ? (
         <DatePickerInput
           label={t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')}
           minimumDate={new Date()}
@@ -598,9 +773,10 @@ function SeasonSlotForm({
         />
       ) : null}
 
-      {carteDeLaPlace}
+      {visible('horaires') || confirmationFinale ? carteDeLaPlace : null}
+      {visible('horaires') || confirmationFinale ? lesHeuresLibres : null}
 
-      {modification || compact ? null : (
+      {!visible('periode') || modification || (compact && !parcoursGuide) ? null : (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.periode', 'Période'))}
           <Text style={[Fonts.p2, Fonts.neutral00]}>{periode}</Text>
@@ -608,7 +784,7 @@ function SeasonSlotForm({
       )}
 
       {/* D66 : le champ « Plateau » n existe que si l installation a des plateaux nommes. */}
-      {plateaux.length && !repartition ? (
+      {visible('horaires') && plateaux.length && !repartition ? (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.plateau', 'Plateau'))}
           {rangee([
@@ -636,7 +812,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {compact && jour ? (
+      {confirmationFinale && compact && jour ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {t(
             'collectiviteCreneaux.attribuer.chaqueSemaine',
@@ -659,7 +835,7 @@ function SeasonSlotForm({
           )}
         </Text>
       ) : null}
-      {!compact && !repartition && nomDuClub ? (
+      {confirmationFinale && !compact && !repartition && nomDuClub ? (
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {modification
             ? t(
@@ -678,52 +854,106 @@ function SeasonSlotForm({
         </Text>
       ) : null}
 
+      {parcoursGuide && compact && (visible('jour') || visible('horaires')) ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+        </Text>
+      ) : null}
+      {parcoursGuide && confirmationFinale ? (
+        <View style={{ gap: 8 }} testID="season-slot-recap">
+          <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('eventWizard.steps.recap.title', 'Récapitulatif')}
+          </Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {modification ? slotWho(slot) : [nomDuClub, nomEquipe].filter(Boolean).join(' · ')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>{installation?.name}</Text>
+          <Text style={[Fonts.p2, Fonts.neutral00]}>
+            {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {avecPeriode ? formatPeriod(nouveauDebut, nouvelleFin) : periode}
+          </Text>
+          {modification ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {`${t('collectiviteCreneaux.attribuer.aPartirDu', 'À partir du')} ${aPartirDu}`}
+            </Text>
+          ) : null}
+          {plateau && plateaux.length ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{plateaux[plateau - 1]}</Text>
+          ) : null}
+        </View>
+      ) : null}
+
       {erreur ? (
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>{erreur}</Text>
       ) : null}
 
-      <View style={{ gap: 4 }}>
-        {conflit ? (
-          <>
+      {confirmationFinale ? (
+        <View style={{ gap: 8 }}>
+          {besoinDeConfirmer ? (
+            <>
+              <Button
+                disabled={!pret}
+                isLoading={envoiEnCours}
+                onPress={() => envoyer(true)}
+                title={modification
+                  ? t(
+                    'collectiviteCreneaux.attribuer.enregistrerQuandMeme',
+                    'Enregistrer quand même',
+                  )
+                  : t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même')}
+                variant="Primary"
+              />
+              <Button
+                onPress={changerLHeure}
+                title={t('collectiviteCreneaux.attribuer.changerHeure', 'Changer l’heure')}
+                variant="Ghost"
+              />
+            </>
+          ) : (
             <Button
+              disabled={!pret}
               isLoading={envoiEnCours}
-              onPress={() => envoyer(true)}
-              title={modification
-                ? t('collectiviteCreneaux.attribuer.enregistrerQuandMeme', 'Enregistrer quand même')
-                : t('collectiviteCreneaux.attribuer.quandMeme', 'Attribuer quand même')}
+              onPress={() => envoyer(false)}
+              title={(() => {
+                if (modification) {
+                  return t('collectiviteCreneaux.attribuer.enregistrer', 'Enregistrer');
+                }
+                if (compact) {
+                  return t(
+                    'collectiviteCreneaux.attribuer.pourLaSaison',
+                    'Attribuer pour la saison',
+                  );
+                }
+                return t('collectiviteCreneaux.attribuer.valider', 'Attribuer le créneau');
+              })()}
               variant="Primary"
             />
+          )}
+          {onCancel && !besoinDeConfirmer && !parcoursGuide ? (
             <Button
-              onPress={toucherLaSaisie}
-              title={t('collectiviteCreneaux.attribuer.changerHeure', 'Changer l’heure')}
+              onPress={onCancel}
+              title={t('common.cancel', 'Annuler')}
               variant="Ghost"
             />
-          </>
-        ) : (
-          <Button
-            disabled={!pret}
-            isLoading={envoiEnCours}
-            onPress={() => envoyer(false)}
-            title={(() => {
-              if (modification) {
-                return t('collectiviteCreneaux.attribuer.enregistrer', 'Enregistrer');
-              }
-              if (compact) {
-                return t('collectiviteCreneaux.attribuer.pourLaSaison', 'Attribuer pour la saison');
-              }
-              return t('collectiviteCreneaux.attribuer.valider', 'Attribuer le créneau');
-            })()}
-            variant="Primary"
-          />
-        )}
-        {onCancel && !conflit ? (
-          <Button
-            onPress={onCancel}
-            title={t('common.cancel', 'Annuler')}
-            variant="Ghost"
-          />
-        ) : null}
-      </View>
+          ) : null}
+        </View>
+      ) : (
+        <Button
+          disabled={envoiEnCours || (() => {
+            if (etapeCourante === 'installation') return !facilityId;
+            if (etapeCourante === 'club' || etapeCourante === 'equipe') return !club;
+            if (etapeCourante === 'jour') return !jour;
+            if (etapeCourante === 'horaires') return !ordreJuste;
+            const dateEffetValide = isValid(parse(aPartirDu, 'dd/MM/yyyy', new Date()));
+            return !periodeJuste || (modification && !dateEffetValide);
+          })()}
+          onPress={() => setEtape(Math.min(etape + 1, etapes.length - 1))}
+          title={t('common.next', 'Suivant')}
+          variant="Primary"
+        />
+      )}
     </View>
   );
 }

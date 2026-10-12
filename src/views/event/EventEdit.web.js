@@ -10,9 +10,11 @@ import {
   createEventUpdatePayload,
   getEventEditSupport,
   hasExternalAudience,
+  isEndTimeNotAfterStart,
   isTrainingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
+import { seriesUpdateMessage } from '@/domains/event/seriesUpdateOutcome';
 import { eventFacilityOptions } from '@/domains/seasonSlot/clubInstallations';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -68,6 +70,11 @@ const dedupeTeams = (teams = []) => {
     return true;
   });
 };
+
+/**
+ * SERIES (08/10) — ce que le formulaire du site envoie à « Enregistrer » (la portée comprise).
+ * @typedef {{ documentId: string, eventData: any, recurrenceMode?: 'future' | 'all' }} EnvoiDuSite
+ */
 
 /**
  *
@@ -310,14 +317,26 @@ function EventEdit({ navigation, route }) {
   });
 
   const updateEventMutation = useMutation({
-    mutationFn: ({ documentId, eventData }) => updateEvent({ documentId, eventData }),
-    onSuccess: async () => {
+    // SERIES (08/10) — la portée choisie (« Cet événement et les suivants », « Toute la série »)
+    // part avec l'enregistrement : avant, elle était jetée ici et le site ne modifiait qu'UNE date.
+    mutationFn: (/** @type {EnvoiDuSite} */ { documentId, eventData, recurrenceMode }) => (
+      updateEvent({ documentId, eventData, recurrenceMode })
+    ),
+    onSuccess: async (reponse, /** @type {EnvoiDuSite} */ { recurrenceMode }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
         queryClient.invalidateQueries({ queryKey: ['event', eventId, 'edit'] }),
         queryClient.invalidateQueries({ queryKey: ['events'] }),
         queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] }),
       ]);
+      // SERIES (08/10, point 5) — des dates de la série attendent la Ville ou le dirigeant : on le
+      // dit (fenêtre du navigateur, comme la messagerie du site), puis on ouvre la fiche.
+      const bilan = recurrenceMode ? seriesUpdateMessage(reponse, t) : null;
+      if (bilan && typeof window !== 'undefined' && typeof window.alert === 'function') {
+        const titre = t('eventEdit.modals.seriesOutcome.title', 'Modification enregistrée');
+        // eslint-disable-next-line no-alert -- fenetre du navigateur, comme la messagerie du site
+        window.alert([titre, bilan].join('\n\n'));
+      }
       navigation.replace(RouteNames.EventDetails, { eventId });
     },
   });
@@ -393,6 +412,16 @@ function EventEdit({ navigation, route }) {
       setSubmitError(t(
         'eventEdit.typeTeamDateAndStart',
         'Type, équipe, date et heure de début sont obligatoires.',
+      ));
+      return;
+    }
+
+    // VILLE-T18B (a) — une fin restée derrière un début déplacé ne part plus
+    // (tournée T18 : « 18:00 – 17:00 »).
+    if (isEndTimeNotAfterStart(formState.startTime, formState.endTime)) {
+      setSubmitError(t(
+        'eventWizard.errors.invalidTimeRange',
+        "L'heure de fin doit être après l'heure de début.",
       ));
       return;
     }

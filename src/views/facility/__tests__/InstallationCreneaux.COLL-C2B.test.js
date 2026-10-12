@@ -78,6 +78,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 44,
+  }),
+}));
+
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
@@ -152,6 +158,15 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock(/** @ty
   mockInputProps.push(props);
   return null;
 });
+// VILLE-T18A : Début et Fin sont des sélecteurs d heure (TimePickerInput) ; même relevé,
+// leur `onChange` se lit comme le `onChangeText` d un champ.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, onChangeText: props.onChange });
+    return null;
+  },
+);
 jest.mock(
   '@/components/molecules/datePickerInput/DatePickerInput',
   () => function DatePickerInputMock(/** @type {any} */ props) {
@@ -159,10 +174,14 @@ jest.mock(
     return null;
   },
 );
+// SAIS (T20 lot 1) : la doublure garde aussi les proprietes des feuilles OUVERTES (leur hauteur).
+/** @type {any[]} */
+const mockFeuilles = [];
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
-  /** @type {any} */ { children, isVisible },
+  /** @type {any} */ props,
 ) {
-  return isVisible ? children : null;
+  if (props.isVisible) mockFeuilles.push(props);
+  return props.isVisible ? props.children : null;
 });
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   const reactActuel = jest.requireActual('react');
@@ -241,7 +260,8 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  // VILLE-T18A : les puces écrivent leurs espaces en insécables ; on les lit en espaces.
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
@@ -356,7 +376,7 @@ describe('COLL-C2B planche 3 — 1. l onglet Creneaux liste ce que rend §4.1', 
     expect(lus).toContain('Montrivage FC · Senior B');
     expect(lus).toContain('17:30 – 19:00');
     expect(lus.indexOf('Mardi')).toBeLessThan(lus.indexOf('Jeudi · complet 18:00 – 19:30'));
-    expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
+    expect(mockNavigation.setOptions).toHaveBeenCalledWith(expect.objectContaining({ headerTitle: '' }));
   });
 
   it('aucun creneau : on dit ce qu est un creneau, et « Attribuer le premier »', async () => {
@@ -383,10 +403,15 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
   const remplir = async (/** @type {any} */ arbre) => {
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'U13'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
   };
 
   it('la carte « place libre » se lit pendant la saisie, et le bon corps part', async () => {
@@ -406,6 +431,15 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {
       club: 'club-as', endTime: '19:00', startTime: '17:30', team: 'team-u13', weekday: 3,
     });
+  });
+
+  // SAIS (08/10, T20 lot 1, capture T07b) — « Annuler » finissait coupé au bas de la feuille :
+  // elle peut désormais prendre 85 % de l écran (0,7 par défaut). ROUGE avant le lot.
+  it('SAIS : la feuille « Attribuer » peut prendre 85 % de l écran', async () => {
+    const arbre = await rendre();
+    mockFeuilles.length = 0;
+    await appuyer(parTexte(arbre, 'Attribuer un créneau'));
+    expect(mockFeuilles.at(-1)?.maxContentHeightRatio).toBe(0.85);
   });
 
   it('un 409 de capacite : rien n est ecrit, puis « Attribuer quand meme »', async () => {
@@ -488,10 +522,13 @@ describe('COLL-C2B planche 3 — 4. gerer, modifier, retirer (D67), retablir (§
     await appuyer(parTestID(arbre, 'creneau-mar-u15'));
     await appuyer(parTexte(arbre, 'Modifier le créneau'));
     expect(textes(arbre)).toContain('Modifier le créneau');
+    await appuyer(parTexte(arbre, 'Suivant'));
     expect(champ('Début').value).toBe('17:30');
-    await act(async () => { mockDateProps[mockDateProps.length - 1].onChange('13/10/2026'); });
     await saisir('Début', '18:30');
     await saisir('Fin', '20:00');
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await act(async () => { mockDateProps[mockDateProps.length - 1].onChange('13/10/2026'); });
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Enregistrer'));
     expect(modifySeasonSlot).toHaveBeenCalledWith('mar-u15', {
       effectiveFrom: '2026-10-13', endTime: '20:00', startTime: '18:30', weekday: 2,
@@ -541,13 +578,18 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     });
     const arbre = await rendre();
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
-    expect(textes(arbre)).toContain('Plateau');
-    expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
+    expect(textes(arbre)).toContain('Plateau');
+    expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'Plateau A'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({
       plateau: 1,
@@ -583,7 +625,10 @@ describe('COLL-C2B planche 3 — 7. aucun nom de personne a la mairie', () => {
     await appuyer(parTexte(arbre, 'Fermer'));
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     vus.push(...textes(arbre));

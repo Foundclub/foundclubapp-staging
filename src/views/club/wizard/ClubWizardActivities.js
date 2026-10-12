@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
-import Input from '@/components/molecules/input/Input';
-import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -18,25 +16,20 @@ const STEP_COUNT = 5;
 
 /**
  * Étape 3/5 — sports/activités du club (multi-sélection, au moins un).
+ * FINITIONS-VILLE (T20 P09) : LE choix du sport de l'app (`ChoixDuSport`, décision A09 d'Adel) —
+ * les populaires d'abord, la recherche, puis de A à Z, les doublons de la base fondus — au lieu
+ * d'une liste alphabétique maison ; choix multiple, sans « Tous les sports ».
  * @param {any} props
  * @returns {import('react').ReactElement}
  */
 function ClubWizardActivities({ navigation, route }) {
   const { t } = useTranslation();
-  const { Colors, Fonts, Spaces } = useTheme();
+  const { Colors, Spaces } = useTheme();
   const { dispatch, state } = useClubWizard();
 
   const entry = route?.params?.entry || 'search';
-  const [search, setSearch] = useState('');
 
   const { data: activities, isLoading } = useGetActivities();
-
-  const filtered = useMemo(() => {
-    const list = Array.isArray(activities) ? activities : [];
-    const query = search.trim().toLowerCase();
-    if (!query) return list;
-    return list.filter((activity) => String(activity?.name || '').toLowerCase().includes(query));
-  }, [activities, search]);
 
   const selected = Array.isArray(state.activityDocumentIds) ? state.activityDocumentIds : [];
   const canContinue = selected.length > 0;
@@ -56,35 +49,20 @@ function ClubWizardActivities({ navigation, route }) {
       )}
       title={t('clubWizard.activities.title', 'Quels sports pratiques-tu ?')}
     >
-      <Input
-        label={t('clubWizard.activities.searchLabel', 'Rechercher un sport')}
-        onChangeText={setSearch}
-        placeholder={t('clubWizard.activities.searchPlaceholder', 'Football, basket…')}
-        value={search}
-      />
-
       {isLoading ? (
         <View style={[Spaces.marginTop[24]]}>
           <ActivityIndicator color={Colors.primary500} />
         </View>
       ) : (
-        <View style={[Spaces.marginTop[16]]}>
-          {filtered.length === 0 ? (
-            <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {t('clubWizard.activities.empty', 'Aucun sport ne correspond.')}
-            </Text>
-          ) : filtered.map((activity) => (
-            <View key={activity.documentId} style={[Spaces.marginBottom[8]]}>
-              <WizardOptionCard
-                compact
-                multi
-                onPress={() => dispatch({ payload: activity.documentId, type: 'TOGGLE_ACTIVITY' })}
-                selected={selected.includes(activity.documentId)}
-                title={activity.name}
-              />
-            </View>
-          ))}
-        </View>
+        <ChoixDuSport
+          multiple
+          onChoisir={(/** @type {string} */ cle) => dispatch({
+            payload: cle, type: 'TOGGLE_ACTIVITY',
+          })}
+          sansTousLesSports
+          sports={activities}
+          valeurs={selected}
+        />
       )}
     </WizardStepLayout>
   );

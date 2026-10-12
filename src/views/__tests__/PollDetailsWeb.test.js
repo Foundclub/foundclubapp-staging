@@ -25,10 +25,24 @@ const mockUseAuth = jest.fn();
 const mockVotePoll = jest.fn();
 
 jest.mock('@tanstack/react-query', () => ({
+  // SONDAGE-NOMS — la lecture des noms des votants au serveur. Aucune ici : ces
+  // temoins donnent des participants remplis (le cas « fil de club », lui, est
+  // garde par PollDetailsWebSONDAGENOMS.test.js).
+  keepPreviousData: (/** @type {any} */ data) => data,
+  useQuery: () => ({ data: undefined }),
   useQueryClient: () => ({
     invalidateQueries: jest.fn(),
     setQueriesData: jest.fn(),
   }),
+}));
+
+// `.env` est gitignore, donc absent de toute copie de travail : la lecture des
+// noms charge le client HTTP, qui mourrait au chargement sans adresse d API.
+jest.mock('@/services/client', () => ({
+  __esModule: true,
+  default: {
+    delete: jest.fn(), get: jest.fn(), post: jest.fn(), put: jest.fn(),
+  },
 }));
 
 // Le VRAI catalogue, pas une identite : l'ecran demande deux libelles a la
@@ -267,6 +281,30 @@ describe('le site rend le detail d un sondage', () => {
     expect(root.findAllByType('img')).toHaveLength(0);
   });
 
+  // SECU-SONDAGE-ANONYME (07/10) — le serveur ne met plus, dans un sondage anonyme, que les
+  // COMPTEURS (aucun votant) ; mon choix est posé par la couche données (`voters: [moi]`).
+  test('un sondage anonyme du serveur neuf affiche ses COMPTEURS, et mon choix surligné', () => {
+    const root = mountScreen({
+      poll: buildPoll({
+        isAnonymous: true,
+        options: [
+          {
+            id: 'opt-1', label: 'Samedi 14h', voteCount: 3, voters: [],
+          },
+          {
+            id: 'opt-2', label: 'Dimanche 10h', voteCount: 1, voters: ['user-1'],
+          },
+        ],
+      }),
+    });
+
+    const rendu = textOf(root);
+    expect(rendu).toContain('3 votes');
+    expect(rendu).toContain('1 vote');
+    expect(rendu).not.toContain('0 vote');
+    expect(buttonWithText(root, 'Vote enregistré')).toBeTruthy();
+  });
+
   test('voter transmet au service le message et l option choisis', async () => {
     const root = mountScreen();
 
@@ -275,10 +313,10 @@ describe('le site rend le detail d un sondage', () => {
     expect(mockVotePoll).toHaveBeenCalledWith(MESSAGE_ID, 'opt-1');
   });
 
-  test('l option deja choisie porte « Vote enregistre » au lieu de « Voter »', () => {
+  test('l option deja choisie porte « Vote enregistré » au lieu de « Voter »', () => {
     const root = mountScreen();
 
-    expect(buttonWithText(root, 'Vote enregistre')).toBeTruthy();
+    expect(buttonWithText(root, 'Vote enregistré')).toBeTruthy();
   });
 
   test('une option sans libelle retombe sur le repli numerote du catalogue', () => {

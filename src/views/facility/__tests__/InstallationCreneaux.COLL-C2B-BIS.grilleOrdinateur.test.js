@@ -64,6 +64,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 // L ordinateur.
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 44,
+  }),
+}));
+
 jest.mock('@/responsive', () => ({ useIsDesktop: () => true }));
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   getSeasonSlot: jest.fn(),

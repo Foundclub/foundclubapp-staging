@@ -238,12 +238,12 @@ describe('PLANNING-PORTRAIT 4 — chaque bloc dit le club et l equipe, une fois'
     expect(StyleSheet.flatten(ligneDuClub.props.style).flexShrink).toBe(0);
   });
 
-  test('lecteur d ecran : « Montrivage FC · Senior B, 18:00 - 19:30 »', async () => {
+  test('lecteur d ecran : « Montrivage FC · Senior B, 18:00 – 19:30 »', async () => {
     const arbre = await monter({ cardDisplayProfile: 'clubFocused', mode: 'day' });
     const bloc = lignee(arbre, 'Montrivage FC')
       .find((/** @type {any} */ noeud) => noeud.props?.accessible);
 
-    expect(bloc.props.accessibilityLabel).toBe('Montrivage FC · Senior B, 18:00 - 19:30');
+    expect(bloc.props.accessibilityLabel).toBe('Montrivage FC · Senior B, 18:00 – 19:30');
   });
 });
 

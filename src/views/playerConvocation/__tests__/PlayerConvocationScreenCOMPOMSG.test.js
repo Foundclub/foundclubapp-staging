@@ -429,3 +429,39 @@ describe('FINITIONS — les pastilles de « Tu es convoqué » ne se coupent plu
     expect(texteDe(pastille)).not.toContain(' ');
   });
 });
+
+// ==========================================================================
+// CONVOC-RDV (décision d'Adel du 08/10, `rdv lot`) — le serveur range enfin le
+// rendez-vous dans la convocation (`published.rendezVous`) : « Tu es convoqué »
+// l'affiche, sous les colonnes, comme la carte du fil (« RDV 13:30 · Au club »).
+// Une convocation d'AVANT n'a pas la clé : l'écran reste tel qu'il était.
+// ==========================================================================
+describe('CRDV · écran 3 — le RENDEZ-VOUS de la convocation', () => {
+  /**
+   * Les blocs « rendez-vous » de l'arbre rendu.
+   * @param {any} arbre
+   * @returns {any[]}
+   */
+  const blocsRdv = (arbre) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === 'convocation-rendez-vous'
+      && typeof n.type === 'string',
+  );
+
+  test('🥇 l’heure et le lieu du rendez-vous sont à l’écran', () => {
+    mockConvocation.branches[0].published = {
+      ...PACK, rendezVous: { place: 'Au club', time: '13:30' },
+    };
+    const arbre = rendre();
+    const [bloc] = blocsRdv(arbre);
+
+    expect(bloc).toBeDefined();
+    expect(texteVisible(arbre)).toContain('RDV | 13:30 · Au club');
+  });
+
+  test('🔒 une convocation d’avant (sans la clé) ou abîmée : aucun bloc', () => {
+    expect(blocsRdv(rendre())).toHaveLength(0);
+
+    mockConvocation.branches[0].published = { ...PACK, rendezVous: { place: 42, time: '13h30' } };
+    expect(blocsRdv(rendre())).toHaveLength(0);
+  });
+});

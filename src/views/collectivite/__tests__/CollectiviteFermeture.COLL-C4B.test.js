@@ -136,6 +136,15 @@ jest.mock(
     return null;
   },
 );
+// SITE-VILLE-FINITIONS (T19) : « De » et « À » d un blocage sont des selecteurs d heure ; meme
+// releve, leur `onChange` se lit comme le `onChangeText` d un champ.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, composant: 'TimePickerInput', onChangeText: props.onChange });
+    return null;
+  },
+);
 jest.mock(
   '@/components/molecules/datePickerInput/DatePickerInput',
   () => function DatePickerInputMock(/** @type {any} */ props) {
@@ -324,7 +333,12 @@ test('C4B-A1/3 la confirmation redit le lieu, le jour et les clubs ; « Fermer �
     reason: 'travaux',
     startDate: '2026-10-02',
   });
-  expect(mockNavigation.goBack).toHaveBeenCalled();
+  // VILLE-T18A « fermer A » (décision du chef, 07/10) : la fermeture se lit ensuite dans l onglet
+  // « Fermetures » de l installation (avant : retour à l accueil, sans rien).
+  expect(mockNavigation.navigate).toHaveBeenCalledWith('CollectiviteInstallation', {
+    collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'fermetures',
+  });
+  expect(mockNavigation.goBack).not.toHaveBeenCalled();
 });
 
 test('C4B-A1/4 cochee par la Ville, la case envoie l actualite ; plusieurs jours : « ces jours-la »', async () => {
@@ -395,7 +409,9 @@ test('C4B-A1/5 BLOQUER : un jour, deux heures, pour quoi ; ouvert depuis le plan
   expect(parTestID(arbre, 'fermeture-publier')).toBeUndefined();
   expect(parTestID(arbre, 'fermeture-envoyer').props.disabled).toBe(true);
 
-  await saisir('Pour quoi', 'Forum des associations');
+  // SAIS (08/10, T20 lot 2) : « Pour quoi » est devenu les pastilles « Motif » + « Nom (facultatif) ».
+  await appuyer(parTestID(arbre, 'fermeture-motif-manifestation'));
+  await saisir('Nom (facultatif)', 'Forum des associations');
   await appuyer(parTestID(arbre, 'fermeture-envoyer'));
   expect(textes(arbre)).toContain(
     'Bloquer le Gymnase des Tilleuls le samedi 3 octobre, de 09:00 à 13:00 ?',
@@ -409,6 +425,7 @@ test('C4B-A1/5 BLOQUER : un jour, deux heures, pour quoi ; ouvert depuis le plan
     kind: 'block',
     label: 'Forum des associations',
     message: null,
+    reason: 'manifestation', // SAIS : le motif d un blocage part aussi
     startDate: '2026-10-03',
     startTime: '09:00',
   });
@@ -520,6 +537,132 @@ test('FIN12-COLL/12 « Nom (facultatif) » : « Ascension » part avec la fermet
     collectiviteId: 'ville-montrivage', date: '2026-10-03', facilityId: 'gym-tilleuls', mode: 'bloquer',
   };
   await rendre();
-  expect(champ('Pour quoi')).toBeDefined();
-  expect(champ('Nom (facultatif)')).toBeUndefined();
+  // SAIS (08/10, T20 lot 2) : un blocage a désormais le même « Nom (facultatif) » (son ancien
+  // « Pour quoi »), avec son exemple ; le témoin complet est CollectiviteFermeture.SAIS.test.js.
+  expect(champ('Pour quoi')).toBeUndefined();
+  expect(champ('Nom (facultatif)').placeholder).toBe('Forum des associations');
+});
+
+// 🟨 VILLE-T18A (07/10, tournée T18 point 3, G54a) — « 2 séances touchées, 2 clubs prévenus » quand
+// Montrivage FC n a qu un CRÉNEAU ce jour-là (aucune séance posée) : le serveur rend chaque ligne avec
+// son `kind` ; un créneau se compte et se dit à part. ROUGE avant le lot.
+test('VILLE-T18A (2) une séance et un créneau touchés se comptent à part, le créneau se dit', async () => {
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [
+        { documentId: 'club-as', name: 'AS Montrivage' },
+        { documentId: 'club-fc', name: 'Montrivage FC' },
+      ],
+      clubsCount: 2,
+      sessions: [
+        {
+          club: { documentId: 'club-as', name: 'AS Montrivage' }, date: '2026-10-13', endTime: '19:30', kind: 'event', startTime: '18:00', team: { name: 'U15' },
+        },
+        {
+          club: { documentId: 'club-fc', name: 'Montrivage FC' }, date: '2026-10-13', endTime: '19:30', kind: 'slot', startTime: '18:00', team: null,
+        },
+      ],
+      sessionsCount: 2,
+    },
+  });
+  const arbre = await rendre();
+  await choisirDate('Du', '13/10/2026');
+  const lu = textes(arbre);
+  expect(lu).toContain('1 séance touchée, 1 créneau touché, 2 clubs prévenus');
+  expect(lu).not.toContain('2 séances touchées, 2 clubs prévenus');
+  expect(lu).toContain('AS Montrivage · U15, 18:00 – 19:30');
+  expect(lu).toContain('Montrivage FC, 18:00 – 19:30 (créneau)');
+});
+
+// VILLE-T18A « fermer A » (décision du chef d orchestre, 07/10, T18 point 3, G54a) — après « Fermer »,
+// la fermeture se lit dans l onglet « Fermetures » de l installation (« N clubs prévenus ») :
+// depuis la fiche (bouton « Fermer l installation » de cet onglet), on Y REVIENT ; depuis l accueil,
+// la fiche REMPLACE le formulaire (Retour ne rouvre pas un formulaire déjà envoyé). ROUGE avant.
+test('VILLE-T18A fermer A : venue de l accueil, la fiche de l installation remplace le formulaire', async () => {
+  mockNavigation.replace = jest.fn();
+  const arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  await appuyer(parTestID(arbre, 'fermeture-envoyer'));
+  await appuyer(parTestID(arbre, 'fermeture-confirmer'));
+  expect(mockNavigation.replace).toHaveBeenCalledWith('CollectiviteInstallation', {
+    collectiviteId: 'ville-montrivage', facilityId: 'gym-tilleuls', onglet: 'fermetures',
+  });
+  expect(mockNavigation.goBack).not.toHaveBeenCalled();
+});
+
+test('VILLE-T18A fermer A : venue de la fiche de cette installation, on y revient (onglet Fermetures)', async () => {
+  mockNavigation.replace = jest.fn();
+  mockNavigation.getState = () => ({
+    index: 1,
+    routes: [
+      { name: 'CollectiviteInstallation', params: { facilityId: 'gym-tilleuls', onglet: 'fermetures' } },
+      { name: 'CollectiviteFermeture', params: mockParams },
+    ],
+  });
+  const arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  await appuyer(parTestID(arbre, 'fermeture-envoyer'));
+  await appuyer(parTestID(arbre, 'fermeture-confirmer'));
+  expect(mockNavigation.goBack).toHaveBeenCalled();
+  expect(mockNavigation.replace).not.toHaveBeenCalled();
+  expect(mockNavigation.navigate).not.toHaveBeenCalledWith('CollectiviteInstallation', expect.anything());
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10, tournée T19, site) — « Bloquer un créneau » : « De » et « À »
+// étaient des champs TEXTE à taper (« 09:00 »), alors qu « Attribuer » et « Modifier le créneau »
+// ont le sélecteur d heure depuis VILLE-T18A. Même sélecteur, même valeur « HH:MM ». ROUGE avant.
+test('SVF (3) BLOQUER : « De » et « À » se choisissent au sélecteur d heure, comme Attribuer', async () => {
+  mockParams = {
+    collectiviteId: 'ville-montrivage', date: '2026-10-03', endTime: '13:00', facilityId: 'gym-tilleuls', mode: 'bloquer', startTime: '09:00',
+  };
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [], clubsCount: 0, sessions: [], sessionsCount: 0,
+    },
+  });
+  await rendre();
+  expect(champ('De').composant).toBe('TimePickerInput');
+  expect(champ('À').composant).toBe('TimePickerInput');
+  expect(champ('De').value).toBe('09:00');
+  expect(champ('À').value).toBe('13:00');
+
+  await saisir('De', '10:30');
+  expect(previewFacilityClosure).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({
+    endTime: '13:00', kind: 'block', startTime: '10:30',
+  }));
+});
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20 V12) — « Aucune séance touchée : aucun club à prévenir. »
+// s'affichait dans la boîte ORANGE des séances touchées : un ton d'avertissement pour une bonne
+// nouvelle. Sans séance touchée, la boîte est neutre. ROUGE avant le lot.
+test('FINITIONS-VILLE : « Aucune séance touchée » n’est pas dans une boîte orange', async () => {
+  const couleurs = jest.requireActual('@/theme/colors').default();
+  const { withAlpha } = jest.requireActual('@/theme/colors');
+  const bordDeLaCarte = (/** @type {any} */ arbre) => {
+    const [carte] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'fermeture-carte');
+    const style = [carte.props.style].flat(Infinity).reduce((tout, part) => ({ ...tout, ...part }), {});
+    return style.borderColor;
+  };
+  const arbre = await rendre();
+  await choisirDate('Du', '02/10/2026');
+  expect(bordDeLaCarte(arbre)).toBe(withAlpha(couleurs.warning500, 0.45));
+
+  /** @type {any} */ (previewFacilityClosure).mockResolvedValue({
+    data: {
+      clubs: [], clubsCount: 0, sessions: [], sessionsCount: 0,
+    },
+  });
+  await choisirDate('Du', '03/10/2026');
+  expect(textes(arbre)).toContain('Aucune séance touchée : aucun club à prévenir.');
+  expect(bordDeLaCarte(arbre)).not.toBe(withAlpha(couleurs.warning500, 0.45));
+});
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20 T04a/T06a) — « Fermer une installation » et « Bloquer un
+// créneau » s'écrivaient DEUX fois au téléphone (en-tête + titre de la page). La page porte le
+// titre ; l'en-tête se tait (FINITIONS13-COLL point 8). ROUGE avant le lot.
+test('FINITIONS-VILLE : Fermer / Bloquer — le titre s’écrit une fois, l’en-tête se tait', async () => {
+  const arbre = await rendre();
+  expect(textes(arbre).filter((texte) => texte === 'Fermer une installation')).toHaveLength(1);
+  expect(mockNavigation.setOptions).toHaveBeenCalledWith({ headerTitle: '' });
+  expect(mockNavigation.setOptions).not.toHaveBeenCalledWith({ headerTitle: 'Fermer une installation' });
 });

@@ -255,14 +255,17 @@ describe('COMPO-CARTE-SITE · témoin 2 — le lecteur d écran trouve deux bout
   });
 });
 
+// 🎨 MSG1A (07/10) — le pack « modele WhatsApp » change VOLONTAIREMENT une chose que ce
+// temoin figeait : « quand · equipe » sur UNE ligne. Le pied « N convoques · Ouvrir » reste
+// celui de la carte HORS bulle (le site) ; les vrais boutons du pack vivent DANS la bulle du
+// fil (K1, K2). Le reste (ordre, terrain, noms, aiguillage) ne bouge pas.
 describe('COMPO-CARTE-SITE · témoin 3 — ce que voit un voyant ne change pas', () => {
   test('les mêmes textes, dans le même ordre', () => {
     expect(textesDansLOrdre(rendre())).toEqual([
       'Composition publiée',
       'Version 2',
       'Match vs US Pelican',
-      expect.stringContaining(' · '),
-      'Aix-Perd en Buvette',
+      expect.stringMatching(/ · .* · Aix-Perd en Buvette$/),
       'Pélissanne (13330)',
       'Infos',
       'RDV 19h30 au stade',
@@ -316,5 +319,91 @@ describe('COMPO-CARTE-SITE · témoin 3 — ce que voit un voyant ne change pas'
 
     expect(derniereRoute()?.screen).toBe('MatchCompositionBoard');
     expect(derniereRoute()?.params?.readOnly).toBe(true);
+  });
+});
+
+// MSG1A (§3.7) — LE CONTRAT AVEC MSG1C (07/10) : `onEdit(target?)` et `renderReponses()`.
+// 🔴 ROUGE avant MSG1A : K1, K2, K3 (la carte n'avait ni « Modifier », ni bloc sous elle).
+describe('MSG1A — contrat de la carte avec MSG1C', () => {
+  /**
+   * Rend la carte avec les proprietes du contrat a eprouver.
+   * @param {any} props
+   * @returns {any} L'arbre.
+   */
+  const rendreAvec = (props) => {
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <CompositionMessageBubble
+          composition={COMPO}
+          dansLaBulle={props.dansLaBulle}
+          onEdit={props.onEdit}
+          onOpenAddress={props.onOpenAddress}
+          renderReponses={props.renderReponses}
+        />,
+      );
+    });
+    montes.push(arbre);
+    return arbre;
+  };
+
+  test('K1 — sans onEdit : un seul bouton « Ouvrir la composition », pas de « Modifier »', () => {
+    const textes = textesDansLOrdre(rendreAvec({ dansLaBulle: true }));
+    expect(textes).toContain('Ouvrir la composition');
+    expect(textes).not.toContain('Modifier');
+  });
+
+  test('K2 — avec onEdit : « Modifier » appelle onEdit(), le terrain onEdit(« placement »)', () => {
+    const onEdit = jest.fn();
+    const arbre = rendreAvec({ dansLaBulle: true, onEdit });
+
+    act(() => { boutonSous(arbre, 'Modifier').props.onPress(); });
+    expect(onEdit).toHaveBeenLastCalledWith();
+
+    act(() => { boutonTerrain(arbre).props.onPress(); });
+    expect(onEdit).toHaveBeenLastCalledWith('placement');
+    expect(textesDansLOrdre(arbre)).toEqual(
+      expect.arrayContaining(['Ouvrir', 'Modifier le placement']),
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test('K3 — renderReponses : son rendu se pose sous la carte', () => {
+    const arbre = rendreAvec({ renderReponses: () => <Text>Présents · 3</Text> });
+    expect(textesDansLOrdre(arbre)).toContain('Présents · 3');
+  });
+
+  test('K4 — dans la bulle du fil : ni fond ni liseré propres, 276 de large', () => {
+    const arbre = rendreAvec({ dansLaBulle: true });
+    const cadre = arbre.root.findAll((n) => typeof n.type !== 'string').find((n) => {
+      const style = [n.props?.style].flat(Infinity)
+        .reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
+      return style.width === 276;
+    });
+    expect(cadre).toBeDefined();
+    const style = [cadre.props.style].flat(Infinity)
+      .reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
+    expect(style.backgroundColor).toBeUndefined();
+    expect(style.borderWidth).toBeUndefined();
+  });
+
+  test('K5 — avec onOpenAddress, le lieu est un LIEN a part, hors du bouton de la carte', () => {
+    const onOpenAddress = jest.fn();
+    const arbre = rendreAvec({ onOpenAddress });
+    const lien = arbre.root.findAll((n) => n.props?.testID === 'composition-adresse'
+      && typeof n.props?.onPress === 'function')[0];
+
+    expect(lien.props.accessibilityRole).toBe('link');
+    // ⛔ Aucun bouton dans un bouton : aucun ancetre du lien n'est le bouton de la carte.
+    let { parent } = lien;
+    while (parent) {
+      expect(parent.props?.accessibilityRole === 'button' && parent.props?.accessibilityLabel)
+        .toBeFalsy();
+      parent = parent.parent;
+    }
+
+    act(() => { lien.props.onPress(); });
+    expect(onOpenAddress).toHaveBeenCalledWith({ label: 'Pélissanne (13330)' });
   });
 });

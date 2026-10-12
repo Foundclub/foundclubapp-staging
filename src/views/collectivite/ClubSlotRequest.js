@@ -2,7 +2,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Pressable,
@@ -15,8 +17,8 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import {
   datesDeLaDemande,
+  finDeLaSerie,
   finDeSaison,
-  horsOuverture,
 } from '@/domains/collectivite/collectiviteDemandes';
 import { payloadsDeLaDemande } from '@/domains/collectivite/collectiviteDemandesEnvoi';
 import { isTrainingEventType } from '@/domains/event/eventUseCases';
@@ -35,13 +37,15 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import Input from '@/components/molecules/input/Input';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import { PuceDeChoix } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useManagingCollectiviteId } from '@/services/collectivite/collectiviteQueries';
 import { useGetEventTypes } from '@/services/event/eventQueries';
-import { announceEventSeries, createEventsSequentially } from '@/services/event/eventService';
+import { announceEventSeries, createEventSeries } from '@/services/event/eventService';
 import { useClubCollectiviteFacilities } from '@/services/facility/facilityQueries';
 import { getFacilityPlanning } from '@/services/facility/facilityService';
 import { useClubTeamsForSlot, useSeasonSlotPreview } from '@/services/seasonSlot/seasonSlotQueries';
@@ -49,8 +53,13 @@ import { useClubTeamsForSlot, useSeasonSlotPreview } from '@/services/seasonSlot
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { getPlanningItemWindow } from '@/utils/planning/planningSlots';
 
+import useGardeDeSortie from '@/hooks/useGardeDeSortie';
+
 // Au-delà de cette largeur (ordinateur), la saisie et la place côte à côte.
 const LARGEUR_DEUX_COLONNES = 1024;
+// VILLE-T18C (07/10) — les dates d'une série qui partent EN MÊME TEMPS, après la première (même
+// réglage que l'assistant d'événement, `CREATE_EVENT_BATCH_CONCURRENCY` d'EventWizardRecap).
+const ENVOIS_EN_MEME_TEMPS = 3;
 
 /**
  * Un jour « JJ/MM/AAAA » (le champ date) en « AAAA-MM-JJ », ou ''.
@@ -79,11 +88,12 @@ const versChamp = (valeur) => {
  * depuis « Tes demandes à la Ville ». La PLACE se lit pendant la saisie (contrat C2A §4.2, qui
  * compte aussi les séances datées : D75), avec qui est déjà là : club et équipe, jamais un nom
  * de personne (D71, D2). Complet ⇒ on ne bloque pas (« Tu peux demander quand même : la mairie
- * décidera »), et les heures libres du même jour se choisissent d'un appui. Seul blocage : hors
- * des heures d'ouverture. L'envoi pose l'entraînement (une date, ou chaque semaine jusqu'à la fin
- * de la saison) ; hors des créneaux du club, le serveur en fait une demande à la mairie, place
- * libre ou non (SPEC-PLACE, DECISIONS-SOIR 02/10), « Un mot pour la mairie » en est le motif. Puis
- * l'accusé de réception, qui dit qui décide, et « Tes demandes à la Ville ».
+ * décidera »), et les heures libres du même jour se choisissent d'un appui. Plus aucun blocage
+ * par les heures d'ouverture (VILLE-INSTALLATION, 07/10). L'envoi pose l'entraînement (une
+ * date, ou chaque semaine jusqu'à la fin de la saison) ; hors des créneaux du club, le serveur
+ * en fait une demande à la mairie, place libre ou non (SPEC-PLACE, DECISIONS-SOIR 02/10),
+ * « Un mot pour la mairie » en est le motif. Puis l'accusé de réception, qui dit qui décide, et
+ * « Tes demandes à la Ville ».
  * Au « tu » : c'est un club qui lit.
  * COLL-C3B-BIS (03/10) — planche 43 : « Changer » d'installation ; et sur ORDINATEUR, la même
  * saisie s'ouvre en PANNEAU à droite du planning de l'installation (`enPanneau`), qui dessine
@@ -111,6 +121,11 @@ function ClubSlotRequest({
   const { width } = useWindowDimensions();
   const deuxColonnes = !enPanneau && width >= LARGEUR_DEUX_COLONNES;
   const queryClient = useQueryClient();
+  // FINITIONS-VILLE (T20) : la page porte « Demander un créneau » ; l'en-tête se tait (le titre
+  // s'écrivait deux fois au téléphone). En panneau, l'en-tête est celui du planning.
+  useLayoutEffect(() => {
+    if (!enPanneau) navigation.setOptions?.({ headerTitle: '' });
+  }, [enPanneau, navigation]);
 
   const [installationId, setInstallationId] = useState(params.facilityId || null);
   const [equipe, setEquipe] = useState(params.teamId || null);
@@ -119,7 +134,15 @@ function ClubSlotRequest({
   const [debut, setDebut] = useState(params.startTime || '');
   const [fin, setFin] = useState(params.endTime || '');
   const [mot, setMot] = useState('');
+  // VILLE-T18C (07/10) — la fin choisie d'une série (« Jusqu’au », JJ/MM/AAAA) ; vide : la saison.
+  const [jusquA, setJusquA] = useState('');
   const [envoi, setEnvoi] = useState(false);
+  // VILLE-T18C — où en est l'envoi d'une série : { fait, total }.
+  const [avancement, setAvancement] = useState(
+    /** @type {{ fait: number, total: number } | null} */ (null),
+  );
+  // VILLE-T18C — un 2ᵉ appui arrive avant que `envoi` soit relu : le verrou est une référence.
+  const enCours = useRef(false);
   const [erreur, setErreur] = useState('');
   const [resultat, setResultat] = useState(/** @type {any} */ (null));
 
@@ -134,15 +157,28 @@ function ClubSlotRequest({
     .find((type) => isTrainingEventType(type?.name)) || null;
 
   const jourIso = versIso(jour);
+  const jusquAIso = versIso(jusquA);
+  const datesDeLaSerie = useMemo(
+    () => (hebdo ? datesDeLaDemande(jourIso, true, jusquAIso) : []),
+    [hebdo, jourIso, jusquAIso],
+  );
+  const derniereDate = datesDeLaSerie.at(-1);
+  const motsDeLaSerie = derniereDate
+    ? {
+      jour: format(parse(derniereDate, 'yyyy-MM-dd', new Date()), 'EEEE d MMMM', { locale: fr }),
+      nombre: datesDeLaSerie.length,
+      ...SANS_ECHAPPEMENT,
+    }
+    : null;
   // eslint-disable-next-line max-len
   const heuresLisibles = isTime(debut) && isTime(fin) && (toMinutes(debut) ?? 0) < (toMinutes(fin) ?? 0);
+  // 📍 VILLE-INSTALLATION (07/10) — LES HEURES D'OUVERTURE NE BLOQUENT PLUS. Décision d'Adel
+  // (« on ne met pas d'ouverture ni de fermeture » : la Ville ne les saisit plus), puis du chef
+  // d'orchestre dans sa ligne : celles restées en base ne doivent plus rien bloquer. Elles ne
+  // bornent plus que les heures libres PROPOSÉES ci-dessous (une suggestion, pas un refus).
+  // Témoin : __tests__/ClubSlotRequest.test.js, « plus aucun blocage, ni avertissement ».
   const ouverture = toMinutes(installation?.openingTime);
   const fermeture = toMinutes(installation?.closingTime);
-  const horsHeures = heuresLisibles
-    ? horsOuverture({
-      debut: toMinutes(debut), fermeture, fin: toMinutes(fin), ouverture,
-    })
-    : null;
 
   // 🧭 COLL-FIX2 (03/10) — l'aperçu est demandé AU NOM du club et de l'équipe : le serveur dit
   // alors ce qu'il fera de la séance (`decision`, mêmes juges qu'event.create : D32, la place,
@@ -155,11 +191,11 @@ function ClubSlotRequest({
         startTime: debut,
         ...(equipe ? { team: equipe } : {}),
         validFrom: jourIso,
-        validUntil: hebdo ? finDeSaison(jourIso) : jourIso,
+        validUntil: hebdo ? finDeLaSerie(jourIso, jusquAIso) : jourIso,
         weekday: isoWeekdayOf(parse(jourIso, 'yyyy-MM-dd', new Date())),
       }
       : null
-  ), [clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso]);
+  ), [clubId, debut, equipe, fin, hebdo, heuresLisibles, installationId, jourIso, jusquAIso]);
   const apercu = useSeasonSlotPreview(installationId, parametresApercu);
   const place = apercu.data?.data || null;
   // Ce que le serveur fera : `direct`, `dirigeant`, `mairie`, `complet` ; absent (serveur
@@ -167,6 +203,10 @@ function ClubSlotRequest({
   /** @type {{ inClubSlot?: boolean, outcome?: string } | null} */
   const decision = place?.decision || null;
   const issue = decision?.outcome || null;
+  // 🧾 DOUBLES-TRACES (08/10, `doubles B`) — la Ville que ce compte GÈRE et qui possède
+  // l'installation : dirigeant ET gestionnaire, il acceptera lui-même sa demande. Lu seulement
+  // quand la mairie décide (un compte de club pur : un appel, liste vide).
+  const villeGeree = useManagingCollectiviteId(installationId, { enabled: issue === 'mairie' });
 
   // Les heures libres du même jour (P8v2, état 2) : l'ouverture moins les moments complets.
   const planningDuJour = useQuery({
@@ -207,14 +247,16 @@ function ClubSlotRequest({
   const pourLaMairie = !posee && issue !== 'dirigeant';
 
   const envoyer = async () => {
+    if (enCours.current) return;
     // eslint-disable-next-line max-len
-    if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || horsHeures || refusee) return;
+    if (!clubId || !installationId || !equipe || !typeEntrainement || !jourIso || !heuresLisibles || refusee) return;
+    enCours.current = true;
     setEnvoi(true);
     setErreur('');
     try {
       const corps = payloadsDeLaDemande({
         clubId,
-        dates: datesDeLaDemande(jourIso, hebdo),
+        dates: datesDeLaDemande(jourIso, hebdo, jusquAIso),
         debut,
         facilityId: installationId,
         fin,
@@ -228,8 +270,20 @@ function ClubSlotRequest({
       // joueurs une fois posée (les séances posées d'office dans le créneau du club ; celles en
       // attente de la mairie ne s'annoncent pas). Chaque séance part donc « j'annoncerai ».
       const serie = Boolean(corps[0]?.recurrenceGroupId);
-      const { created, failed } = await createEventsSequentially(corps, {
+      // 🚀 SERIES (08/10, point 3) — la série part en UNE requête (`createEventSeries` : la
+      // liste des dates à la racine ; 36 dates prenaient 54 s en recette, T19). Un serveur
+      // d'avant n'en pose que la 1re : les suivantes partent alors trois à la fois, comme depuis
+      // VILLE-T18C (07/10) — la 1re d'abord, puisque le serveur ne prévient la Ville qu'une fois
+      // par série, en cherchant une demande plus ancienne de la même série (admin
+      // facility-override-request.ts).
+      const total = corps.length;
+      if (total > 1) setAvancement({ fait: 0, total });
+      const { created, failed } = await createEventSeries(corps, {
         announceSeriesLater: serie,
+        concurrency: ENVOIS_EN_MEME_TEMPS,
+        onProgress: ({ completed }) => {
+          if (total > 1) setAvancement({ fait: completed, total });
+        },
         suppressCelebration: true,
       });
       if (!created.length) {
@@ -261,9 +315,46 @@ function ClubSlotRequest({
     } catch (error) {
       setErreur(getErrorMessage(/** @type {any} */ (error)));
     } finally {
+      enCours.current = false;
       setEnvoi(false);
+      setAvancement(null);
     }
   };
+
+  // VILLE-T18C (07/10, tournée T18 D07) — une saisie MODIFIÉE (par rapport à ce que l'écran a reçu)
+  // ne se perd plus sur un Retour sans question. Rien de modifié, ou déjà envoyée : on sort.
+  const saisieModifiee = !resultat && (
+    equipe !== (params.teamId || null)
+    || hebdo
+    || jour !== versChamp(params.date)
+    || debut !== (params.startTime || '')
+    || fin !== (params.endTime || '')
+    || Boolean(mot.trim())
+    || installationId !== (params.facilityId || null)
+  );
+
+  // VILLE-T18C (07/10) — RETOUR PENDANT L'ENVOI : une série coupée en route laisserait une partie
+  // de ses dates au serveur et l'autre nulle part. On retient, et on dit pourquoi.
+  // SAIS (08/10) : la garde vit dans `useGardeDeSortie`, partagée avec « Fermer » / « Bloquer ».
+  const envoiEnCoursRetient = useCallback(() => (enCours.current
+    ? {
+      message: t(
+        'collectiviteDemandes.club.envoiEnCoursAttends',
+        'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+      ),
+      titre: t('collectiviteDemandes.club.envoiEnCoursTitre', 'Envoi en cours'),
+    }
+    : null), [t]);
+  useGardeDeSortie(enPanneau ? null : navigation, {
+    actif: saisieModifiee,
+    retenir: envoiEnCoursRetient,
+    textes: {
+      message: t('collectiviteDemandes.club.quitterPerdu', 'Ce que tu as saisi sera perdu.'),
+      quitter: t('collectiviteDemandes.club.quitter', 'Quitter'),
+      rester: t('collectiviteDemandes.club.rester', 'Rester'),
+      titre: t('collectiviteDemandes.club.quitterTitre', 'Quitter sans envoyer ?'),
+    },
+  });
 
   // COLL-C3B-BIS (planche 43) — en panneau, le planning dessine la place demandée en pointillé
   // pendant la saisie : il reçoit le brouillon (jour, heures, équipe), et rien une fois envoyé.
@@ -306,7 +397,7 @@ function ClubSlotRequest({
           // COLL-FIX2 (T10) : la DERNIÈRE séance de la série (celle que le serveur et la Ville
           // disent), pas la fin de saison : « 30 juin » ici, « 24 juin » chez la Ville.
           // eslint-disable-next-line max-len
-          jusquAu: format(parse(datesDeLaDemande(jourIso, true).at(-1) || finDeSaison(jourIso), 'yyyy-MM-dd', new Date()), 'd MMMM', { locale: fr }),
+          jusquAu: format(parse(datesDeLaDemande(jourIso, true, jusquAIso).at(-1) || finDeSaison(jourIso), 'yyyy-MM-dd', new Date()), 'd MMMM', { locale: fr }),
           lieu: installation?.name || '',
           ...SANS_ECHAPPEMENT,
         },
@@ -412,22 +503,15 @@ function ClubSlotRequest({
 
   // ─── La place pendant la saisie (P8v2, états 1 et 2) ─────────────────────────────────────
   let carteDeLaPlace = null;
-  if (horsHeures) {
-    const heure = fromMinutes(horsHeures.heure);
-    carteDeLaPlace = (
-      <View style={[carte, { borderColor: Colors.error500 }]} testID="demande-hors-ouverture">
-        <Text style={[Fonts.p2Bold, Fonts.error500]}>
-          {horsHeures.cas === 'ferme'
-            // eslint-disable-next-line max-len
-            ? t('collectiviteDemandes.club.ferme', 'L’installation ferme à {{heure}}. Termine à {{heure}}, ou commence plus tôt.', { heure, ...SANS_ECHAPPEMENT })
-            // eslint-disable-next-line max-len
-            : t('collectiviteDemandes.club.ouvre', 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.', { heure, ...SANS_ECHAPPEMENT })}
-        </Text>
-      </View>
-    );
-  } else if (place) {
+  if (place) {
     const occupants = Array.isArray(place.occupants) ? place.occupants : [];
-    const equipesLa = Math.max(0, Number(place.capacity) - Number(place.remaining));
+    // 🧮 VILLE-T18C (07/10, tournée T18 D09a) — « il y a déjà 2 équipes » puis 3 noms : la capacité
+    // moins la place restante (jamais sous zéro) plafonne à la capacité. Le serveur rend le PIC
+    // (`peak`) ; un serveur qui ne le rend pas garde le calcul d'avant.
+    const pic = Number(place.peak);
+    const equipesLa = Number.isFinite(pic) && place.peak !== null && place.peak !== undefined
+      ? Math.max(0, pic)
+      : Math.max(0, Number(place.capacity) - Number(place.remaining));
     // 🧮 FINITIONS12-COLL (03/10) — UNE SÉRIE SE LIT DATE PAR DATE (tournée T11 : « Il y a déjà
     // 39 équipes : c'est complet » pour 38 jeudis dont UN plein). Le serveur rend une ligne
     // d'occupant par séance datée de la période et la place au PIC ; `occurrences` dit combien
@@ -497,18 +581,43 @@ function ClubSlotRequest({
       )
       : null;
     let couleurDeLaSuite = Colors.warning500;
-    if (posee) {
+    if (posee && decision?.inClubSlot) {
       couleurDeLaSuite = Colors.success500;
-      suite = decision?.inClubSlot
+      suite = t(
+        'collectiviteDemandes.decision.creneauDuClub',
+        'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+      );
+    } else if (posee) {
+      // 🗣️ VILLE-T18C (07/10, tournée T18 D07c) — « c’est complet » puis « posé tout de suite »,
+      // sans dire pourquoi. Hors d'un créneau du club, sur une installation de la Ville (les
+      // seules de cet écran), le serveur ne pose d'office que pour qui tranche lui-même : la
+      // gestion de la Ville (admin season-slot.ts `judgeSession` ⇒ `needsCityApproval`).
+      // ponytail: depuis DOUBLES-TRACES, le serveur ne le dit plus pour un compte de CLUB (il
+      // rend `mairie`, phrase plus bas) ; seul un serveur d'avant le lot arrive ici, et la phrase
+      // y reste vraie (recette reconstruite après Metro). Sortie : retirer quand tous l'ont.
+      couleurDeLaSuite = Colors.success500;
+      suite = complet
         ? t(
-          'collectiviteDemandes.decision.creneauDuClub',
-          'C’est dans le créneau de ton club : ton entraînement sera posé tout de suite.',
+          'collectiviteDemandes.decision.tuGeresComplet',
+          // eslint-disable-next-line max-len
+          'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, même au complet.',
         )
-        : t('collectiviteDemandes.decision.posee', 'Ton entraînement sera posé tout de suite.');
+        : t(
+          'collectiviteDemandes.decision.tuGeres',
+          // eslint-disable-next-line max-len
+          'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.',
+        );
     } else if (issue === 'dirigeant') {
       suite = t(
         'collectiviteDemandes.decision.dirigeant',
         'Ton club est déjà au complet dans son créneau : ton dirigeant décidera.',
+      );
+    } else if (issue === 'mairie' && villeGeree) {
+      // DOUBLES-TRACES — sa séance de club passe par une demande à la Ville, qu'il accepte lui-même
+      // (2 gestes), donc tracée : « Traitées », chiffres de la Ville.
+      suite = t(
+        'collectiviteDemandes.decision.tuAcceptes',
+        'Ta demande partira à la Ville ; tu pourras l’accepter toi-même dans Demandes.',
       );
     } else if (refusee) {
       couleurDeLaSuite = Colors.error500;
@@ -642,27 +751,55 @@ function ClubSlotRequest({
       <DatePickerInput
         label={t('collectiviteDemandes.club.jour', 'Jour')}
         minimumDate={new Date()}
-        onChange={(/** @type {string} */ valeur) => setJour(valeur)}
+        onChange={(/** @type {string} */ valeur) => {
+          setJour(valeur);
+          // Une fin choisie AVANT le nouveau jour ne vaut plus : la saison reprend.
+          if (jusquAIso && jusquAIso < versIso(valeur)) setJusquA('');
+        }}
+        // VILLE-T18C (07/10, tournée T18 D07) : vide, le champ ne disait rien.
+        placeholder={t('collectiviteDemandes.club.choisirJour', 'Choisis un jour')}
         value={jour}
       />
+      {/* VILLE-T18C (07/10, tournée T18 D09) — une série choisit sa fin ; sans date, la saison. */}
+      {hebdo ? (
+        <View style={{ gap: 4 }}>
+          <DatePickerInput
+            label={t('collectiviteDemandes.club.jusquAu', 'Jusqu’au')}
+            // FINITIONS-VILLE (T20 K02) : borné à la fin de saison, même AVANT de choisir le jour.
+            // eslint-disable-next-line max-len
+            maximumDate={parse(finDeSaison(jourIso || format(new Date(), 'yyyy-MM-dd')), 'yyyy-MM-dd', new Date())}
+            minimumDate={jourIso ? parse(jourIso, 'yyyy-MM-dd', new Date()) : new Date()}
+            onChange={(/** @type {string} */ valeur) => setJusquA(valeur)}
+            placeholder={t('collectiviteDemandes.club.finDeLaSaison', 'Fin de la saison')}
+            value={jusquA}
+          />
+          {motsDeLaSerie ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]} testID="demande-serie-compte">
+              {datesDeLaSerie.length === 1
+                // eslint-disable-next-line max-len
+                ? t('collectiviteDemandes.club.serieUneDate', 'Une seule date : le {{jour}}.', motsDeLaSerie)
+                // eslint-disable-next-line max-len
+                : t('collectiviteDemandes.club.serieCompte', '{{nombre}} dates, jusqu’au {{jour}}.', motsDeLaSerie)}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      {/* SITE-VILLE-FINITIONS (T19) — les heures se CHOISISSENT, comme dans « Attribuer » et
+          « Modifier le créneau » (VILLE-T18A) : elles se tapaient au clavier. Valeur « HH:MM ». */}
       <View style={[Alignments.row, { gap: 12 }]}>
         <View style={{ flex: 1 }}>
-          <Input
-            density="compact"
+          <TimePickerInput
             label={t('collectiviteCreneaux.attribuer.debut', 'Début')}
-            onChangeText={(/** @type {string} */ valeur) => setDebut(valeur.trim())}
+            onChange={(/** @type {string} */ valeur) => setDebut(String(valeur || '').trim())}
             placeholder="18:00"
-            testID="demande-debut"
             value={debut}
           />
         </View>
         <View style={{ flex: 1 }}>
-          <Input
-            density="compact"
+          <TimePickerInput
             label={t('collectiviteCreneaux.attribuer.fin', 'Fin')}
-            onChangeText={(/** @type {string} */ valeur) => setFin(valeur.trim())}
+            onChange={(/** @type {string} */ valeur) => setFin(String(valeur || '').trim())}
             placeholder="19:30"
-            testID="demande-fin"
             value={fin}
           />
         </View>
@@ -735,9 +872,23 @@ function ClubSlotRequest({
         </Text>
       ) : null}
       {erreur ? <Text style={[Fonts.p3Bold, Fonts.error500]}>{erreur}</Text> : null}
+      {/* VILLE-T18C (07/10) — l'envoi d'une série dit où il en est (avant : 44 s sans un mot). */}
+      {envoi && avancement ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[Fonts.p3Bold, Fonts.neutral100]}
+          testID="demande-avancement"
+        >
+          {t(
+            'collectiviteDemandes.club.envoiEnCours',
+            'Envoi en cours : {{fait}} sur {{total}} dates envoyées. Reste sur cet écran.',
+            { fait: avancement.fait, total: avancement.total },
+          )}
+        </Text>
+      ) : null}
       <Button
         // eslint-disable-next-line max-len
-        disabled={envoi || Boolean(horsHeures) || refusee || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
+        disabled={envoi || refusee || !equipe || !installationId || !jourIso || !heuresLisibles || !typeEntrainement}
         isLoading={envoi}
         onPress={envoyer}
         title={titreDuBouton}

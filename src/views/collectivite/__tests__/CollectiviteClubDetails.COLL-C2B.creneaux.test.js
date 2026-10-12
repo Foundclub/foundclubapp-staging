@@ -129,14 +129,27 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock(/** @ty
   mockInputProps.push(props);
   return null;
 });
+// VILLE-T18A : Début et Fin sont des sélecteurs d heure (TimePickerInput) ; même relevé,
+// leur `onChange` se lit comme le `onChangeText` d un champ.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, onChangeText: props.onChange });
+    return null;
+  },
+);
 jest.mock(
   '@/components/molecules/datePickerInput/DatePickerInput',
   () => function DatePickerInputMock() { return null; },
 );
+// SAIS (T20 lot 1) : la doublure garde aussi les proprietes des feuilles OUVERTES (leur hauteur).
+/** @type {any[]} */
+const mockFeuilles = [];
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock(
-  /** @type {any} */ { children, isVisible },
+  /** @type {any} */ props,
 ) {
-  return isVisible ? children : null;
+  if (props.isVisible) mockFeuilles.push(props);
+  return props.isVisible ? props.children : null;
 });
 
 // Des secrets SEMES la ou le serveur ne doit rien mettre : s ils s affichent, la mairie lirait
@@ -210,7 +223,8 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  // VILLE-T18A : les puces écrivent leurs espaces en insécables ; on les lit en espaces.
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
@@ -336,20 +350,35 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
     expect(textes(arbre)).toContain('Attribuer un créneau à AS Montrivage');
     // Le club est fixe : une seule puce, la sienne ; l installation se choisit.
-    expect(parTexte(arbre, 'AS Montrivage')).toBeDefined();
     await appuyer(parTexte(arbre, 'Gymnase des Tilleuls'));
+    await appuyer(parTexte(arbre, 'Suivant'));
+    expect(parTexte(arbre, 'AS Montrivage')).toBeDefined();
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'U13'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
     const attendu = expect.objectContaining({ endTime: '19:00', startTime: '17:30', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', attendu);
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {
       club: 'as-montrivage', endTime: '19:00', startTime: '17:30', team: 'team-u13', weekday: 3,
     });
     expect(mockFiche.refetch).toHaveBeenCalled();
     expect(textes(arbre)).not.toContain('Attribuer un créneau à AS Montrivage');
+  });
+
+  // SAIS (08/10, T20 lot 1, capture T07b) — « Annuler » finissait coupé au bas de la feuille :
+  // elle peut désormais prendre 85 % de l écran (0,7 par défaut). ROUGE avant le lot.
+  it('SAIS : la feuille « Attribuer » peut prendre 85 % de l écran', async () => {
+    const arbre = await rendre();
+    mockFeuilles.length = 0;
+    await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
+    expect(mockFeuilles.at(-1)?.maxContentHeightRatio).toBe(0.85);
   });
 
   it('4. une Ville sans installation : on le dit, aucun formulaire', async () => {

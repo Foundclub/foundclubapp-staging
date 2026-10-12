@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text } from 'react-native';
+import { format } from 'date-fns';
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubSlotRequest from '../ClubSlotRequest';
@@ -21,6 +22,12 @@ import ClubSlotRequest from '../ClubSlotRequest';
 const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockNavigate = jest.fn();
+const mockDispatch = jest.fn();
+const mockSetOptions = jest.fn();
+// VILLE-T18C (07/10) — l'écran écoute « quitter l'écran » (`beforeRemove`) : le témoin garde
+// l'écouteur pour jouer un Retour.
+/** @type {Record<string, (evenement: any) => void>} */
+const mockEcouteurs = {};
 let mockParams = {};
 
 jest.mock('@/services/client', () => ({
@@ -39,7 +46,16 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
-  useNavigation: () => ({ goBack: jest.fn(), navigate: mockNavigate }),
+  useNavigation: () => ({
+    addListener: (/** @type {string} */ nom, /** @type {(e: any) => void} */ ecouteur) => {
+      mockEcouteurs[nom] = ecouteur;
+      return () => {};
+    },
+    dispatch: mockDispatch,
+    goBack: jest.fn(),
+    navigate: mockNavigate,
+    setOptions: mockSetOptions,
+  }),
   useRoute: () => ({ params: mockParams }),
 }));
 jest.mock('react-i18next', () => {
@@ -105,11 +121,32 @@ jest.mock('@/components/molecules/input/Input', () => {
     });
   };
 });
+// SITE-VILLE-FINITIONS (T19) : Début et Fin sont des sélecteurs d heure (TimePickerInput) ; même
+// relevé que le champ, son `onChange` lu comme `onChangeText`, et il dit ce qu il est.
+jest.mock('@/components/molecules/timePickerInput/TimePickerInput', () => {
+  const reactActuel = jest.requireActual('react');
+  const { TextInput: SaisieRN } = jest.requireActual('react-native');
+  return function TimePickerInputMock(/** @type {any} */ props) {
+    return reactActuel.createElement(SaisieRN, {
+      composant: 'TimePickerInput',
+      onChangeText: props.onChange,
+      testID: props.label === 'Début' ? 'demande-debut' : 'demande-fin',
+      value: props.value,
+    });
+  };
+});
 jest.mock('@/components/molecules/datePickerInput/DatePickerInput', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN } = jest.requireActual('react-native');
+  // VILLE-T18C (07/10) — deux champs de date (« Jour », « Jusqu’au ») : reconnus par leur libellé,
+  // l'indice (placeholder) affiché quand le champ est vide, comme le vrai champ.
   return function DatePickerMock(/** @type {any} */ props) {
-    return reactActuel.createElement(TexteRN, { testID: 'demande-jour' }, props.value);
+    return reactActuel.createElement(TexteRN, {
+      // FINITIONS-VILLE (T20) : les bornes se lisent.
+      maximumDate: props.maximumDate,
+      onChange: props.onChange,
+      testID: props.label === 'Jour' ? 'demande-jour' : `demande-date-${props.label}`,
+    }, props.value || props.placeholder || '');
   };
 });
 
@@ -167,6 +204,9 @@ let mockStatut = 'pending_validation';
 // DECISIONS-SOIR (02/10) — qui décide d'une séance en attente : la mairie (`facility_overbooking`)
 // ou le dirigeant du club (`club_slot_overflow`, D32). Le serveur le dit dans `pendingReason`.
 let mockRaison = 'facility_overbooking';
+// DOUBLES-TRACES (08/10) — `/collectivites/mine` : vide pour un compte de club pur.
+/** @type {any[]} */
+let mockVillesGerees = [];
 
 // 🧯 COLL-FIX-DEMANDES (02/10) — LE DOUBLE DU SERVEUR APPLIQUE SA RÈGLE DES ENTRAÎNEMENTS.
 // Tournée G3 : aucune demande ne partait, POST /api/events répondait 400 « Les entrainements
@@ -191,7 +231,8 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  // VILLE-T18A : les puces écrivent leurs espaces en insécables ; on les lit en espaces.
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ n) => aplatir(n.props.children).trim());
@@ -237,12 +278,15 @@ beforeEach(() => {
   mockApercu = APERCU_LIBRE;
   mockStatut = 'pending_validation';
   mockRaison = 'facility_overbooking';
+  mockVillesGerees = [];
   mockParams = {
     clubId: 'club-A', date: JOUR, endTime: '19:30', facilityId: 'gym-ville', startTime: '18:00',
   };
   mockGet.mockReset();
   mockPost.mockReset();
   mockNavigate.mockReset();
+  mockDispatch.mockReset();
+  Object.keys(mockEcouteurs).forEach((nom) => { delete mockEcouteurs[nom]; });
   mockGet.mockImplementation(async (/** @type {string} */ url) => {
     // eslint-disable-next-line max-len
     if (url === '/clubs/club-A/collectivite-installations') return { data: { data: [INSTALLATION] } };
@@ -257,6 +301,9 @@ beforeEach(() => {
       // eslint-disable-next-line max-len
       return { data: { data: [bloc('club-A'), bloc('club-B')], meta: { facility: { maxSlots: 2 } } } };
     }
+    // DOUBLES-TRACES (08/10) — les Villes que le compte gère, et leurs installations.
+    if (url === '/collectivites/mine') return { data: { data: mockVillesGerees } };
+    if (url === '/collectivites/ville/installations') return { data: { data: [INSTALLATION] } };
     throw new Error(`GET inattendu ${url}`);
   });
   mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
@@ -361,12 +408,20 @@ describe('COLL-C3B — planche P8v2 : le club demande un créneau', () => {
     expect(debut.props.value).toBe('19:30');
   });
 
-  it('hors des heures d’ouverture : le seul blocage, l’erreur dit l’heure', async () => {
+  // VILLE-INSTALLATION (07/10) — décision d Adel « on ne met pas d ouverture ni de fermeture »,
+  // puis décision du chef d orchestre, dans sa ligne : des horaires que plus personne ne peut
+  // modifier ne BLOQUENT plus rien. Cette installation garde 08:00 - 22:00 en base (comme
+  // l installation 73 de la prod) : finir à 22:30 ne dit plus rien et s envoie.
+  it('hors des heures d’ouverture enregistrées : ni blocage, ni avertissement', async () => {
     const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
     await saisir(arbre, 'demande-fin', '22:30');
-    // eslint-disable-next-line max-len
-    expect(textes(arbre)).toContain('L’installation ferme à 22:00. Termine à 22:00, ou commence plus tôt.');
-    expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(true);
+    expect(textes(arbre).join(' | ')).not.toMatch(/L’installation (ferme|ouvre) à/);
+    expect(arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'demande-hors-ouverture',
+    )).toHaveLength(0);
+    await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
+    expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(false);
   });
 
   // eslint-disable-next-line max-len
@@ -570,10 +625,14 @@ describe('COLL-FIX2 — l’aperçu dit qui décidera (D32, SPEC-PLACE)', () => 
     expect(bouton(arbre, 'Envoyer la demande').props.disabled).toBe(true);
   });
 
+  // VILLE-T18C (07/10, tournée T18 D07c) : la phrase dit désormais POURQUOI (la gestion de la
+  // Ville).
   it('qui tranche lui-même, place libre : posé tout de suite', async () => {
     mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'direct' } };
-    const arbre = await monter((l) => l.includes('Ton entraînement sera posé tout de suite.'));
-    expect(textes(arbre)).toContain('Ton entraînement sera posé tout de suite.');
+    // eslint-disable-next-line max-len
+    const phrase = 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, sans demande.';
+    const arbre = await monter((l) => l.includes(phrase));
+    expect(textes(arbre)).toContain(phrase);
     expect(textes(arbre)).toContain('Poser l’entraînement');
     expect(textes(arbre)).not.toContain(LA_VILLE_REPOND);
   });
@@ -655,4 +714,381 @@ describe('FINITIONS12-COLL point 6 — « Si la mairie refuse, la séance sera a
     await attendre(() => textes(arbre).some((texte) => /posé|dirigeant/.test(texte)));
     expect(textes(arbre)).not.toContain(PHRASE);
   });
+});
+
+// 🚚 VILLE-T18C (07/10) — point 1, tournée T18 (D09b) : « Chaque semaine » partait en 36 POST
+// /api/events UN PAR UN, 44 s, pendant lesquelles le formulaire restait affiché tel quel (un 2ᵉ
+// appui renvoyait tout) ; et aucun champ de fin : la série courait jusqu'au 24 juin. Le serveur n'a
+// AUCUNE route de série (admin `src/api/event/routes/event-custom.ts`, mesuré le 07/10) : l'envoi
+// reste une séance par date. ROUGE avant le lot :
+//   - la 1re date part SEULE (le serveur ne prévient la Ville qu'une fois par série, en cherchant
+//     une demande plus ancienne de la même série : elle doit exister avant les autres), puis les
+//     autres TROIS à la fois (`createEventsWithConcurrency`, comme l'assistant d'événement) ;
+//   - l'écran dit où en est l'envoi ; un 2ᵉ appui ne renvoie rien ; Retour pendant l'envoi est
+//     retenu ;
+//   - « Jusqu’au » : la série s'arrête à la date choisie (sans date : fin de saison).
+// eslint-disable-next-line max-len
+describe('VILLE-T18C point 1 — une série part vite, dit où elle en est, et ne se double pas', () => {
+  /** @type {Array<() => void>} */
+  let liberer = [];
+  let barriere = false;
+  /** @type {string[]} */
+  let journal = [];
+  let enVol = 0;
+  let maxEnVol = 0;
+  const posesLentes = () => {
+    liberer = [];
+    barriere = false;
+    journal = [];
+    enVol = 0;
+    maxEnVol = 0;
+    mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
+      if (url !== '/events') return { data: {} };
+      const rang = mockPost.mock.calls.filter(([u]) => u === '/events').length;
+      journal.push(`debut-${rang}`);
+      enVol += 1;
+      maxEnVol = Math.max(maxEnVol, enVol);
+      if (barriere && rang > 1) await new Promise((r) => { liberer.push(() => r(null)); });
+      else await new Promise((r) => { setTimeout(r, 1); });
+      enVol -= 1;
+      journal.push(`fin-${rang}`);
+      return {
+        data: {
+          corps,
+          data: {
+            documentId: `ev-${rang}`,
+            pendingReason: 'facility_overbooking',
+            status: 'pending_validation',
+          },
+        },
+      };
+    });
+  };
+  const poses = () => mockPost.mock.calls.filter(([url]) => url === '/events');
+  const appuyerSansAttendre = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
+    const cible = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === testID
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { cible.props.onPress(); });
+  };
+
+  // eslint-disable-next-line max-len
+  it('la 1re date part seule, puis trois à la fois ; l’écran dit où il en est ; ni 2ᵉ appui ni Retour ne dérangent', async () => {
+    posesLentes();
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    barriere = true;
+    await appuyerSansAttendre(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => liberer.length === 3);
+    expect(journal.slice(0, 3)).toEqual(['debut-1', 'fin-1', 'debut-2']);
+    expect(maxEnVol).toBe(3);
+    expect(textes(arbre))
+      .toContain('Envoi en cours : 1 sur 39 dates envoyées. Reste sur cet écran.');
+
+    await appuyerSansAttendre(arbre, 'bouton-Envoyer la demande');
+    expect(poses()).toHaveLength(4);
+
+    const retenir = jest.fn();
+    await act(async () => {
+      mockEcouteurs.beforeRemove?.({
+        data: { action: { type: 'GO_BACK' } }, preventDefault: retenir,
+      });
+    });
+    expect(retenir).toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith(
+      'Envoi en cours',
+      'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
+    );
+    expect(mockDispatch).not.toHaveBeenCalled();
+
+    barriere = false;
+    await act(async () => { liberer.forEach((suite) => suite()); });
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(poses()).toHaveLength(39);
+    alerte.mockRestore();
+  });
+
+  it('un double appui sur « Envoyer » n’envoie la demande qu’une fois', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await attendre(() => bouton(arbre, 'Envoyer la demande').props.disabled === false);
+    const cible = bouton(arbre, 'Envoyer la demande');
+    await act(async () => {
+      cible.props.onPress();
+      cible.props.onPress();
+    });
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(poses()).toHaveLength(1);
+  });
+
+  // eslint-disable-next-line max-len
+  it('« Jusqu’au » : la série s’arrête à la date choisie ; sans date, à la fin de la saison', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => textes(arbre).includes('39 dates, jusqu’au jeudi 26 juin.'));
+    expect(textes(arbre)).toContain('Fin de la saison');
+    const champ = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'demande-date-Jusqu’au' && typeof n.props?.onChange === 'function'
+    ))[0];
+    await act(async () => { champ.props.onChange('24/10/2030'); });
+    await attendre(() => textes(arbre).includes('4 dates, jusqu’au jeudi 24 octobre.'));
+    const apercus = mockGet.mock.calls
+      .filter(([url]) => url === '/facilities/gym-ville/season-slots/preview')
+      .map(([, options]) => options?.params || {});
+    expect(apercus.at(-1))
+      .toEqual(expect.objectContaining({ validFrom: JOUR, validUntil: '2030-10-24' }));
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    await appuyer(arbre, 'bouton-Envoyer la demande');
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    expect(poses().map(([, corps]) => corps.data.date.slice(0, 10)))
+      .toEqual(['2030-10-03', '2030-10-10', '2030-10-17', '2030-10-24']);
+    // eslint-disable-next-line max-len
+    expect(textes(arbre)).toContain('U13 · chaque jeudi, 18:00 – 19:30, jusqu’au 24 octobre · Gymnase des Tilleuls');
+  });
+});
+
+// 🚀 SERIES (08/10, décision d'Adel « séries lot », point 3) — 36 dates prenaient 54 s en
+// recette (T19 : 36 POST /events, 3 à la fois). Le serveur neuf pose la série en UNE requête si
+// la liste des dates voyage À LA RACINE du corps (`dates`). ROUGE avant le lot : 39 POST. Un
+// serveur d'avant (il ignore la racine et ne pose que la 1re date) garde le chemin d'avant : la
+// 1re seule, puis trois à la fois — c'est le témoin VILLE-T18C point 1 ci-dessus, inchangé.
+describe('SERIES point 3 — serveur neuf : la série part en UNE requête', () => {
+  // eslint-disable-next-line max-len
+  it('39 jeudis : un seul POST /events (`dates` à la racine) ; l’écran dit 0 sur 39, puis « Demande envoyée »', async () => {
+    /** @type {null | ((valeur: any) => void)} */
+    let liberer = null;
+    mockPost.mockImplementation(async (/** @type {string} */ url, /** @type {any} */ corps) => {
+      if (url !== '/events') return { data: {} };
+      if (!Array.isArray(corps?.dates)) throw new Error('POST date par date inattendu');
+      regleDesEntrainementsDuServeur(corps);
+      await new Promise((r) => { liberer = r; });
+      const posees = corps.dates.map((/** @type {any} */ d, /** @type {number} */ i) => ({
+        date: d.date,
+        documentId: `ev-${i}`,
+        endDate: d.endDate,
+        id: i + 1,
+        pendingReason: 'facility_overbooking',
+        status: 'pending_validation',
+      }));
+      const total = corps.dates.length;
+      return {
+        data: {
+          data: posees,
+          meta: {
+            series: {
+              awaitingCity: total, awaitingClub: 0, created: total, failed: [], total,
+            },
+          },
+        },
+      };
+    });
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    await appuyer(arbre, 'demande-equipe-u13');
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => bouton(arbre, 'Envoyer la demande')?.props.disabled === false);
+    const cible = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'bouton-Envoyer la demande' && typeof n.props?.onPress === 'function'
+    ))[0];
+    await act(async () => { cible.props.onPress(); });
+    await attendre(() => typeof liberer === 'function');
+    expect(textes(arbre))
+      .toContain('Envoi en cours : 0 sur 39 dates envoyées. Reste sur cet écran.');
+    await act(async () => { /** @type {any} */ (liberer)(null); });
+    await attendre(() => textes(arbre).includes('Demande envoyée à la Ville de Montrivage'));
+    const poses = mockPost.mock.calls.filter(([url]) => url === '/events');
+    expect(poses).toHaveLength(1);
+    expect(poses[0][1].dates).toHaveLength(39);
+    expect(poses[0][1].announceSeriesLater).toBe(true);
+    expect(poses[0][1].data.recurrenceGroupId).toBeTruthy();
+    expect(mockPost.mock.calls.some(([url]) => url === '/events/ev-0/announce-series')).toBe(true);
+  });
+});
+
+// 🗣️ VILLE-T18C (07/10) — point 2, tournée T18 (D07c) : U13 dans le créneau des U15, au T18 :
+// « Il y a déjà 2 équipes : c’est complet. … Ton entraînement sera posé tout de suite. » —
+// CONTRADICTOIRE, sans dire pourquoi. Le compte (Karim) est dirigeant du club ET gestionnaire de la
+// Ville : il tranche lui-même. Le serveur ne pose « tout de suite » hors d'un créneau du club que
+// pour qui tranche lui-même (admin season-slot.ts `judgeSession` : sur une installation de la
+// Ville, `needsCityApproval` est faux seulement pour elle ou lui) ; et cet écran ne propose que les
+// installations de la Ville. ROUGE avant le lot : la phrase dit pourquoi ; « Jour » vide a un
+// indice ; Retour sur une saisie modifiée demande avant de la perdre.
+// eslint-disable-next-line max-len
+describe('VILLE-T18C point 2 — la phrase dit pourquoi, « Jour » a un indice, Retour demande', () => {
+  // eslint-disable-next-line max-len
+  const TU_GERES_COMPLET = 'Tu gères cette installation pour la Ville : ton entraînement sera posé tout de suite, même au complet.';
+
+  it('complet, mais posé tout de suite hors créneau du club : la phrase dit pourquoi', async () => {
+    mockApercu = { ...APERCU_COMPLET, decision: { inClubSlot: false, outcome: 'direct' } };
+    const arbre = await monter((l) => l.includes(TU_GERES_COMPLET));
+    const lus = textes(arbre);
+    expect(lus).toContain('Il y a déjà 2 équipes : c’est complet.');
+    expect(lus).toContain(TU_GERES_COMPLET);
+    expect(lus).not.toContain('Ton entraînement sera posé tout de suite.');
+    expect(lus).toContain('Poser l’entraînement');
+  });
+
+  it('« Jour » vide : un indice', async () => {
+    mockParams = { clubId: 'club-A', facilityId: 'gym-ville' };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    const jour = arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'demande-jour')[0];
+    expect(aplatir(jour.props.children)).toBe('Choisis un jour');
+  });
+
+  it('FINITIONS-VILLE (T20 K02) : « Jusqu’au » sans jour, borné à la fin de saison', async () => {
+    mockParams = { clubId: 'club-A', facilityId: 'gym-ville' };
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    const champ = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.testID === 'demande-date-Jusqu’au' && typeof n.props?.onChange === 'function'
+    ))[0];
+    const { finDeSaison } = jest.requireActual('@/domains/collectivite/collectiviteDemandes');
+    const attendu = finDeSaison(format(new Date(), 'yyyy-MM-dd'));
+    expect(champ.props.maximumDate).toBeInstanceOf(Date);
+    expect(format(champ.props.maximumDate, 'yyyy-MM-dd')).toBe(attendu);
+  });
+
+  // eslint-disable-next-line max-len
+  it('Retour : libre tant que rien n’est saisi ; une saisie modifiée demande avant de la perdre', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    const retenirAvant = jest.fn();
+    await act(async () => {
+      mockEcouteurs.beforeRemove?.({
+        data: { action: { type: 'GO_BACK' } }, preventDefault: retenirAvant,
+      });
+    });
+    expect(retenirAvant).not.toHaveBeenCalled();
+
+    await appuyer(arbre, 'demande-equipe-u13');
+    const retenir = jest.fn();
+    await act(async () => {
+      mockEcouteurs.beforeRemove?.({
+        data: { action: { type: 'GO_BACK' } }, preventDefault: retenir,
+      });
+    });
+    expect(retenir).toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledWith(
+      'Quitter sans envoyer ?',
+      'Ce que tu as saisi sera perdu.',
+      expect.any(Array),
+    );
+    const boutons = /** @type {any[]} */ (alerte.mock.calls.at(-1)?.[2]);
+    expect(boutons.map((b) => b.text)).toEqual(['Rester', 'Quitter']);
+    await act(async () => { boutons[1].onPress(); });
+    expect(mockDispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+    alerte.mockRestore();
+  });
+});
+
+// 🧮 VILLE-T18C (07/10) — point 3, tournée T18 (D09a) : « Complet chaque semaine : il y a déjà 2
+// équipes. » puis « Déjà là » nomme 3 équipes, sur un gymnase à 2 places. Le serveur rend le PIC
+// (`peak` : 3 équipes en même temps) ; l'écran lisait la capacité moins la place restante, qui ne
+// descend jamais sous zéro (2 − 0 = 2). Le nombre suit désormais le pic, donc la liste. (Les
+// séances refusées, elles, ne comptent déjà pas : le serveur les annule, `status: cancelled`,
+// `isActive: false`, et l'aperçu les écarte — admin planning-slot.ts, buildBasePlanningFilters.)
+describe('VILLE-T18C point 3 — le nombre d’équipes suit la liste (le pic, pas la capacité)', () => {
+  const ligne = (/** @type {string} */ club, /** @type {string} */ equipe) => ({
+    club: { documentId: club === 'AS Montrivage' ? 'club-A' : 'club-B', name: club },
+    endTime: '19:30',
+    startTime: '18:00',
+    team: { name: equipe },
+    validFrom: JOUR,
+    validUntil: JOUR,
+  });
+  const TROIS_SUR_DEUX = {
+    capacity: 2,
+    occupants: [
+      ligne('AS Montrivage', 'U13'),
+      ligne('Montrivage FC', 'Loisir mixtes'),
+      ligne('Montrivage FC', 'Senior B'),
+    ],
+    occurrences: { count: 36, fullCount: 36, fullDates: [JOUR] },
+    peak: 3,
+    remaining: 0,
+  };
+
+  // eslint-disable-next-line max-len
+  it('chaque semaine, 3 équipes sur 2 places : « il y a déjà 3 équipes », comme la liste', async () => {
+    mockApercu = TROIS_SUR_DEUX;
+    const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+    await appuyer(arbre, 'demande-chaque-semaine');
+    await attendre(() => textes(arbre).some((t) => t.startsWith('Complet chaque semaine')));
+    const lus = textes(arbre);
+    expect(lus).toContain('Complet chaque semaine : il y a déjà 3 équipes.');
+    expect(lus.join(' | ')).not.toMatch(/déjà 2 équipes/);
+  });
+
+  it('une fois, 3 équipes sur 2 places : « Il y a déjà 3 équipes : c’est complet. »', async () => {
+    mockApercu = { ...TROIS_SUR_DEUX, occurrences: undefined };
+    const arbre = await monter((l) => l.includes('Il y a déjà 3 équipes : c’est complet.'));
+    expect(textes(arbre)).toContain('Il y a déjà 3 équipes : c’est complet.');
+  });
+});
+
+// 🧾 DOUBLES-TRACES (08/10, décision d'Adel `doubles B`) — le compte à la fois dirigeant du club ET
+// gestionnaire de la Ville ne pose plus d'office la séance de son club hors de son créneau : le
+// serveur la juge comme celle d'un dirigeant pur (admin season-slot.ts `needsCityApproval`) et
+// l'aperçu dit `mairie`. La phrase de VILLE-T18C (« Tu gères cette installation pour la Ville :
+// ton entraînement sera posé tout de suite, même au complet. ») devient fausse ; l'écran dit la
+// vérité : sa demande part à la Ville, et c'est lui qui pourra l'accepter. ROUGE avant le lot.
+describe('DOUBLES-TRACES — le compte double lit que sa demande part à la Ville', () => {
+  const TU_ACCEPTES = 'Ta demande partira à la Ville ; '
+    + 'tu pourras l’accepter toi-même dans Demandes.';
+
+  it('place libre ou complet : sa demande part à la Ville, il l’acceptera lui-même', async () => {
+    mockVillesGerees = [{ documentId: 'ville', name: 'Ville de Montrivage' }];
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const libre = await monter((l) => l.includes(TU_ACCEPTES));
+    expect(textes(libre)).toContain(TU_ACCEPTES);
+    // eslint-disable-next-line max-len
+    expect(textes(libre)).not.toContain('Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.');
+    expect(textes(libre)).toContain('Envoyer la demande');
+    const tuGeres = (/** @type {string} */ texte) => texte.startsWith('Tu gères cette');
+    expect(textes(libre).some(tuGeres)).toBe(false);
+
+    mockApercu = { ...APERCU_COMPLET, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const complet = await monter((l) => l.includes(TU_ACCEPTES));
+    expect(textes(complet)).toContain(TU_ACCEPTES);
+    expect(textes(complet)).not.toContain('Tu peux demander quand même : la mairie décidera.');
+    expect(textes(complet)).toContain('Envoyer quand même');
+  });
+
+  it('un compte de club pur (aucune Ville gérée) : la phrase de la mairie, inchangée', async () => {
+    mockApercu = { ...APERCU_LIBRE, decision: { inClubSlot: false, outcome: 'mairie' } };
+    const phrase = 'Hors des créneaux de ton club : '
+      + 'la mairie décidera, même s’il reste de la place.';
+    const arbre = await monter((l) => l.includes(phrase));
+    expect(textes(arbre)).toContain(phrase);
+    expect(textes(arbre)).not.toContain(TU_ACCEPTES);
+  });
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — « Demander un
+// créneau » : Début et Fin se TAPAIENT au clavier (« 18:00 »), alors qu « Attribuer » et
+// « Modifier le créneau » ont le sélecteur d heure (VILLE-T18A). Valeur « HH:MM ». ROUGE avant.
+describe('SVF — Début et Fin au sélecteur d heure', () => {
+  it('Début et Fin sont des sélecteurs d heure, et une heure choisie se lit', async () => {
+    const arbre = await monter((l) => l.includes('Il y a déjà 1 équipe : il reste 1 place.'));
+    const champ = (/** @type {string} */ testID) => arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === testID
+        && typeof n.props?.onChangeText === 'function',
+    )[0];
+    expect(champ('demande-debut').props.composant).toBe('TimePickerInput');
+    expect(champ('demande-fin').props.composant).toBe('TimePickerInput');
+    await saisir(arbre, 'demande-debut', '17:00');
+    expect(champ('demande-debut').props.value).toBe('17:00');
+  });
+});
+
+// 🎨 FINITIONS-VILLE (08/10, tournée T20) — au téléphone, « Demander un créneau » s'écrivait DEUX
+// fois : l'en-tête de navigation ET le titre de la page. Comme « Tes demandes à la Ville »
+// (FINITIONS13-COLL point 8) : la page porte le titre, l'en-tête se tait. ROUGE avant le lot.
+test('FINITIONS-VILLE : le titre s’écrit une fois, l’en-tête de navigation se tait', async () => {
+  const arbre = await monter((l) => l.includes('Gymnase des Tilleuls'));
+  expect(textes(arbre).filter((texte) => texte === 'Demander un créneau')).toHaveLength(1);
+  expect(mockSetOptions).toHaveBeenCalledWith({ headerTitle: '' });
 });

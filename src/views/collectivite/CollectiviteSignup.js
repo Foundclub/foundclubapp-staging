@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -149,6 +149,19 @@ function CollectiviteSignup() {
     lastname: userData?.lastname || '',
     professionalEmail: '',
   });
+  // SITE-VILLE-FINITIONS (T19) : sur le site, une adresse ouverte directement montre l'écran AVANT
+  // que le compte soit lu : Prénom et Nom restaient vides. Ils se remplissent à son arrivée, sans
+  // écraser ce que la personne a déjà tapé.
+  const prenomDuCompte = userData?.firstname || '';
+  const nomDuCompte = userData?.lastname || '';
+  useEffect(() => {
+    if (!prenomDuCompte && !nomDuCompte) return;
+    setChamps((avant) => ({
+      ...avant,
+      firstname: avant.firstname || prenomDuCompte,
+      lastname: avant.lastname || nomDuCompte,
+    }));
+  }, [nomDuCompte, prenomDuCompte]);
   const [quittes, setQuittes] = useState(/** @type {Record<string, boolean>} */ ({}));
   const [envoiTente, setEnvoiTente] = useState(false);
   const [erreurServeur, setErreurServeur] = useState('');

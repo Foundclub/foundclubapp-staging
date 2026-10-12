@@ -232,9 +232,10 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     expect(mockOuvrir).not.toHaveBeenCalled();
     expect(mockPremier).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+    // VILLE-T18C (07/10, tournée T18 G62) : « d’AS » (élision) et la mairie VOUVOYÉE.
     expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Premier message aux dirigeants de AS Montrivage',
-      'La conversation s’ouvre quand tu envoies ce message.',
+      'Premier message aux dirigeants d’AS Montrivage',
+      'La conversation s’ouvre quand vous envoyez ce message.',
       'Envoyer',
       'Annuler',
     ]));
@@ -312,5 +313,22 @@ describe('COLL-FIX-DEMANDES — la conversation privée naît au premier message
     expect(arbre.root.findAllByProps({ testID: 'ecrire-aux-dirigeants-erreur' }).length)
       .toBeGreaterThan(0);
     expect(valeurDe(arbre, 'ecrire-aux-dirigeants-premier-message')).toBe('Bonjour');
+  });
+});
+
+// VILLE-T18C (07/10) — point 6, tournée T18 (G62) : « Premier message aux dirigeants de AS
+// Montrivage » ⇒ « d’AS ». Devant une consonne, « de » reste. ROUGE avant le lot.
+describe('VILLE-T18C point 6 — « d’AS Montrivage », « de Montrivage FC »', () => {
+  it.each([
+    ['AS Montrivage', 'Premier message aux dirigeants d’AS Montrivage'],
+    ['Étoile de Rouvres', 'Premier message aux dirigeants d’Étoile de Rouvres'],
+    ['Montrivage FC', 'Premier message aux dirigeants de Montrivage FC'],
+  ])('%s', async (nom, attendu) => {
+    mockTrouver.mockResolvedValue(AUCUNE);
+    const arbre = await monter(
+      <EcrireAuxDirigeants club={{ ...CLUB, name: nom }} collectiviteId="ville-1" />,
+    );
+    await appuyer(arbre, 'ecrire-aux-dirigeants');
+    expect(textes(arbre)).toContain(attendu);
   });
 });

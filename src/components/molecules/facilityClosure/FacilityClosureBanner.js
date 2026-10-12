@@ -72,9 +72,13 @@ function FacilityClosureBanner({
   if (!closure) return null;
   const { texte, titre } = closureBannerText(t, closure, { facilityType, withDays });
   const gestes = Boolean(onMove || onCancel);
+  // FINITIONS-VILLE (T20) : lu d'une traite, le titre (sans point) se collait au nom de la
+  // fermeture (« … 4 novembre T20 essai. ») : la région se lit « titre. nom. ».
+  const lecture = [titre ? `${titre}.` : '', texte].filter(Boolean).join(' ');
   return (
     <View style={{ gap: 8 }} testID={testID}>
       <View
+        accessibilityLabel={lecture}
         accessibilityRole="summary"
         style={[
           Spaces.padding[12],

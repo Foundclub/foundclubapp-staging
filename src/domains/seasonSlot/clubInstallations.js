@@ -137,7 +137,7 @@ export const eventFacilityOptions = ({
 export const ROUTE_DEMANDE_A_LA_VILLE = RouteNames.ClubSlotRequest;
 
 /**
- * « Demander un créneau » / « Demander une heure » à la Ville.
+ * « Demander un créneau » à la Ville.
  * @param {any} navigation - La navigation de l écran.
  * @param {{ clubId?: string | null, facility: any }} contexte - Le club et l installation.
  * @returns {void}

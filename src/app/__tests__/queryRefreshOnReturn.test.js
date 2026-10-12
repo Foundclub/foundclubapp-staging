@@ -240,7 +240,7 @@ describe('Y05 — le retour au premier plan relit ce qui bouge, et rien d\'autre
   });
 
   test('MESURE — le pire cas est borne par les familles, pas par la taille du cache', async () => {
-    // Les 18 familles montees EN MEME TEMPS — ce qu'aucun ecran reel ne fait.
+    // Les 19 familles montees EN MEME TEMPS — ce qu'aucun ecran reel ne fait.
     // CONVOC (26/09) : 17 -> 18. `answerEvent` porte desormais `eventConvocation`
     // (« Tu es convoque » affiche les reponses de toute l'equipe) : une reponse
     // donnee pendant l'absence — par la notification, ou par un coequipier — est
@@ -261,9 +261,10 @@ describe('Y05 — le retour au premier plan relit ce qui bouge, et rien d\'autre
     const appels = montees.reduce((total, { queryFn }) => total + queryFn.mock.calls.length, 0);
 
     expect(endormies).toHaveLength(30);
-    expect(montees).toHaveLength(18);
-    // 18 montages + 18 relectures : jamais les 30 endormies.
-    expect(appels).toBe(36);
+    // PAR-006 : une seule famille de plus, les fiches enfants du parent.
+    expect(montees).toHaveLength(19);
+    // 19 montages + 19 relectures : jamais les 30 endormies.
+    expect(appels).toBe(38);
 
     montees.forEach(({ unsubscribe }) => unsubscribe());
   });

@@ -13,7 +13,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -21,6 +20,8 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { isEndTimeNotAfterStart } from '@/domains/event/eventUseCases';
+import { seriesUpdateMessage } from '@/domains/event/seriesUpdateOutcome';
 import useEvent from '@/domains/event/useEvent';
 import { seanceDeplacee } from '@/domains/seasonSlot/seasonSlotDisplay';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -29,7 +30,6 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
-import DayPicker from '@/components/molecules/dayPicker/DayPicker';
 import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import FacilitySelector from '@/components/organisms/facilitySelector/FacilitySelector';
@@ -359,14 +359,10 @@ function EventEdit({ navigation, route }) {
   const {
     createEventUpdatePayload,
     createReccurrentEventPayload,
-    formatDateInput,
-    formatTimeInput,
     getDateFromDateInput,
     getEventEditSupport,
-    getReccurrenceDayOptions,
     hasExternalAudience,
     isTrainingEventType,
-    recurrenceFrequencyOptions,
     resolveTrainingOpenConfig,
     sessionStatusOptions,
     validationModeOptions,
@@ -939,6 +935,19 @@ function EventEdit({ navigation, route }) {
         }
       }
 
+      // VILLE-T18B (a) — une fin restée derrière un début déplacé ne part plus : la demande à la
+      // Ville disait « 18:00 – 17:00 » (tournée T18). La création le refusait déjà.
+      if (isEndTimeNotAfterStart(data.startTime, data.endTime)) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          t(
+            'eventWizard.errors.invalidTimeRange',
+            "L'heure de fin doit être après l'heure de début.",
+          ),
+        );
+        return;
+      }
+
       console.log('Form submitted with data:', data);
       const payloadData = {
         ...data,
@@ -965,8 +974,10 @@ function EventEdit({ navigation, route }) {
         // d'alerte (les trois portees). Le message, lui, est deja affiche par
         // le `onError` de la mutation (D1) — un seul endroit, une seule fenetre.
         const updateEventWithMode = async (/** @type {'future' | 'all'} */ recurrenceMode) => {
+          /** @type {any} */
+          let reponse;
           try {
-            await updateEventMutation.mutateAsync({
+            reponse = await updateEventMutation.mutateAsync({
               documentId: eventId,
               eventData: normalizedEvents[0],
               recurrenceMode,
@@ -975,6 +986,13 @@ function EventEdit({ navigation, route }) {
             // ⛔ On ne navigue pas, et on ne reparle pas : `onError` vient de le
             // dire. La personne reste sur son formulaire, avec ses saisies.
             return;
+          }
+          // SERIES (08/10, point 5) — la série modifiée a mis des dates en attente (la Ville,
+          // le dirigeant) : on le dit, et ce qui arrive si la Ville refuse. Sans bilan : rien.
+          const bilan = recurrenceMode ? seriesUpdateMessage(reponse, t) : null;
+          if (bilan) {
+            const titre = t('eventEdit.modals.seriesOutcome.title', 'Modification enregistrée');
+            Alert.alert(titre, bilan);
           }
           // 🔴 EVENTEDIT-SAISIE (D3) — ON REVIENT A LA FICHE, ON N'EN POSE PAS
           // UNE DE PLUS. `replace` mettait une NOUVELLE fiche a la place de cet
@@ -1466,54 +1484,6 @@ function EventEdit({ navigation, route }) {
                   )}
                 />
 
-                <Controller
-                  control={control}
-                  name="startTime"
-                  render={({
-                    field: {
-                      name, onBlur, onChange, ref, value,
-                    },
-                  }) => (
-                    <Input
-                      enterKeyHint="next"
-                      error={getFieldError({ errors: formErrors, fieldName: name })}
-                      inputMode="numeric"
-                      keyboardType="numeric"
-                      label={t('eventEdit.fields.startTime.label')}
-                      maxLength={5}
-                      onBlur={onBlur}
-                      onChangeText={(val) => onChange(formatTimeInput(val))}
-                      placeholder="HH:mm"
-                      ref={ref}
-                      value={value}
-                    />
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="endTime"
-                  render={({
-                    field: {
-                      name, onBlur, onChange, ref, value,
-                    },
-                  }) => (
-                    <Input
-                      enterKeyHint="done"
-                      error={getFieldError({ errors: formErrors, fieldName: name })}
-                      inputMode="numeric"
-                      keyboardType="numeric"
-                      label={t('eventEdit.fields.endTime.label')}
-                      maxLength={5}
-                      onBlur={onBlur}
-                      onChangeText={(val) => onChange(formatTimeInput(val))}
-                      placeholder="HH:mm"
-                      ref={ref}
-                      value={value}
-                    />
-                  )}
-                />
-
               </>
             )}
 
@@ -1642,148 +1612,6 @@ function EventEdit({ navigation, route }) {
               )}
             />
 
-            {eventId ? null : (
-              <Controller
-                control={control}
-                name="isRecurrent"
-                render={({
-                  field: {
-                    name, onChange, value,
-                  },
-                }) => (
-                  <View style={[Spaces.gap[24]]}>
-                    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-                      <Switch
-                        key={name}
-                        onValueChange={(newValue) => {
-                          onChange(newValue);
-                          if (newValue) {
-                            const dateValue = watch('date');
-                            if (dateValue) {
-                              setValue('recurrenceStartDate', dateValue);
-                            }
-                          }
-                        }}
-                        trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
-                        value={value}
-                      />
-                      <Text style={[Fonts.p1, Fonts.neutral00]}>
-                        {t('eventEdit.fields.isRecurrent.label')}
-                      </Text>
-                    </View>
-                    {value && (
-                      <View style={[Spaces.gap[16]]}>
-                        <Controller
-                          control={control}
-                          name="recurrenceStartDate"
-                          render={({
-                            field: {
-                              name: fieldName, onBlur,
-                              onChange: onFieldChange, ref, value: fieldValue,
-                            },
-                          }) => (
-                            <Input
-                              enterKeyHint="done"
-                              error={getFieldError({ errors: formErrors, fieldName })}
-                              inputMode="numeric"
-                              keyboardType="numeric"
-                              label={t('eventEdit.fields.recurrenceStartDate.label')}
-                              maxLength={10}
-                              onBlur={onBlur}
-                              onChangeText={(val) => onFieldChange(formatDateInput(val))}
-                              placeholder="DD/MM/YYYY"
-                              ref={ref}
-                              value={fieldValue}
-                            />
-                          )}
-                        />
-
-                        <Controller
-                          control={control}
-                          name="recurrenceEndDate"
-                          render={({
-                            field: {
-                              name: fieldName, onBlur,
-                              onChange: onFieldChange, ref, value: fieldValue,
-                            },
-                          }) => (
-                            <Input
-                              enterKeyHint="done"
-                              error={getFieldError({ errors: formErrors, fieldName })}
-                              inputMode="numeric"
-                              keyboardType="numeric"
-                              label={t('eventEdit.fields.recurrenceEndDate.label')}
-                              maxLength={10}
-                              onBlur={onBlur}
-                              onChangeText={(val) => onFieldChange(formatDateInput(val))}
-                              placeholder="DD/MM/YYYY"
-                              ref={ref}
-                              value={fieldValue}
-                            />
-                          )}
-                        />
-
-                        <Controller
-                          control={control}
-                          name="recurrenceFrequency"
-                          render={({
-                            field: {
-                              name: fieldName, onBlur, onChange: onFieldChange, value: fieldValue,
-                            },
-                          }) => (
-                            <AutocompleteSelect
-                              error={getFieldError({ errors: formErrors, fieldName })}
-                              label={t('eventEdit.fields.recurrenceFrequency.label')}
-                              onBlur={onBlur}
-                              options={recurrenceFrequencyOptions}
-                              setValue={(/** @type {Option} */option) => onFieldChange(option?.value || '')}
-                              value={recurrenceFrequencyOptions.find((option) => option.value === fieldValue)?.label || ''}
-                            />
-                          )}
-                        />
-
-                        {recurrenceFrequency === 'week' ? (
-                          <View style={[Spaces.gap[8]]}>
-                            <Text style={[Fonts.p2, Fonts.neutral00]}>
-                              {t('eventEdit.fields.recurrenceDays.label', 'Jours de récurrence')}
-                            </Text>
-                            <Controller
-                              control={control}
-                              name="recurrenceDays"
-                              render={({ field: { onChange: onDaysChange, value: selectedDays } }) => (
-                                <DayPicker
-                                  onChange={onDaysChange}
-                                  selectedDays={selectedDays || []}
-                                />
-                              )}
-                            />
-                          </View>
-                        ) : (
-                          <Controller
-                            control={control}
-                            name="recurrenceDay"
-                            render={({
-                              field: {
-                                name: fieldName, onBlur, onChange: onFieldChange, value: fieldValue,
-                              },
-                            }) => (
-                              <AutocompleteSelect
-                                error={getFieldError({ errors: formErrors, fieldName })}
-                                label={t('eventEdit.fields.recurrenceDay.label')}
-                                onBlur={onBlur}
-                                options={getReccurrenceDayOptions(recurrenceFrequency)}
-                                setValue={(/** @type {Option} */ option) => onFieldChange(option?.value || '')}
-                                value={getReccurrenceDayOptions(recurrenceFrequency).find((option) => option.value === fieldValue)?.label || ''}
-                              />
-                            )}
-                          />
-                        )}
-                      </View>
-                    )}
-                  </View>
-                )}
-              />
-            )}
             <View
               style={[
                 ApplicationStyle.backgroundColor.primary900,

@@ -113,6 +113,14 @@ describe('DatePickerInput — ce qu il fait sur le telephone (E6, vert avant)', 
     const selecteur = mockSelecteurs[mockSelecteurs.length - 1];
     expect(selecteur.mode).toBe('date');
     act(() => { selecteur.onChange({ type: 'set' }, new Date(2026, 9, 31)); });
+    // SAIS (08/10, décision d'Adel « heure A ») — sur iPhone, c'est « OK » qui ÉCRIT la date de la
+    // roue (avant : chaque cran écrivait, et « OK » sans tourner n'écrivait rien).
+    expect(onChange).not.toHaveBeenCalled();
+    const ok = arbre.root.findAllByType(TouchableOpacity).filter(
+      (/** @type {any} */ noeud) => noeud.findAllByType(Text)
+        .some((/** @type {any} */ texte) => [].concat(texte.props.children).join('') === 'OK'),
+    ).pop();
+    act(() => { ok.props.onPress(); });
 
     expect(onChange).toHaveBeenCalledWith('31/10/2026');
   });
@@ -127,6 +135,20 @@ describe('DatePickerInput — ce qu il fait sur le telephone (E6, vert avant)', 
     act(() => { selecteur.onChange({ type: 'set' }, new Date(2026, 0, 5)); });
 
     expect(onChange).toHaveBeenCalledWith('05/01/2026');
+  });
+
+  // T19 (08/10) — meme defaut que le selecteur d'heure : « Annuler » sur la boite
+  // native rappelle onChange avec { type: 'dismissed' } ; rien ne doit s'ecrire.
+  test('Android : « Annuler » (dismissed) n ecrit rien', () => {
+    Platform.OS = 'android';
+    const onChange = jest.fn();
+    monter({ onChange, value: '07/10/2026' });
+
+    act(() => { arbre.root.findAllByType(TouchableOpacity)[0].props.onPress(); });
+    const selecteur = mockSelecteurs[mockSelecteurs.length - 1];
+    act(() => { selecteur.onChange({ type: 'dismissed' }, new Date(2026, 9, 7)); });
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 

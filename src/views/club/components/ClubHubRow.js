@@ -24,7 +24,10 @@ import useTheme from '@/theme/themeContext';
  *  label: string;
  *  onPress: () => void;
  *  value: string;
- * }} props - Les proprietes de la rangee.
+ *  valueLabel?: string;
+ * }} props - Les proprietes de la rangee. `valueLabel` : la valeur dite au lecteur d'ecran,
+ *  quand le compteur s'abrege a l'ecran (VILLE-T18C : « 1 + 4 de la Ville » se dit « 1 au club
+ *  et 4 de la Ville ») ; sinon le compteur.
  * @returns {import('react').ReactElement} La rangee.
  */
 export function ClubHubRow({
@@ -33,6 +36,7 @@ export function ClubHubRow({
   label,
   onPress,
   value,
+  valueLabel = undefined,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
@@ -40,7 +44,7 @@ export function ClubHubRow({
 
   return (
     <TouchableOpacity
-      accessibilityLabel={`${label}, ${value}`}
+      accessibilityLabel={`${label}, ${valueLabel || value}`}
       accessibilityRole="button"
       activeOpacity={0.8}
       onPress={onPress}

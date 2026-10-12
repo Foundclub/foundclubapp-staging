@@ -129,7 +129,7 @@ function EventWizardParticipants({ navigation, route }) {
   ));
   const [capacityValue, setCapacityValue] = useState(state.capacity || DEFAULT_CAPACITY);
   const [externalParticipantLimitValue, setExternalParticipantLimitValue] = useState(
-    state.externalParticipantLimit || 3,
+    state.externalParticipantLimit ?? 3,
   );
   const [totalPlayersValue, setTotalPlayersValue] = useState(state.totalPlayers || 5);
 
@@ -209,7 +209,10 @@ function EventWizardParticipants({ navigation, route }) {
   );
 
   const clampedCapacity = clampParticipants(capacityValue);
-  const clampedExternalParticipantLimit = clampParticipants(externalParticipantLimitValue);
+  const clampedExternalParticipantLimit = Math.max(0, Math.min(MAX_PARTICIPANTS, Number(externalParticipantLimitValue) || 0));
+  const hasInvalidExternalQuota = isOpenTraining && (
+    !Number.isInteger(clampedExternalParticipantLimit) || clampedExternalParticipantLimit < 1
+  );
   const clampedTotalPlayers = clampParticipants(totalPlayersValue);
   /** @type {number | null} */
   let normalizedCapacity = null;
@@ -406,6 +409,7 @@ function EventWizardParticipants({ navigation, route }) {
   ]);
 
   const handleNext = () => {
+    if (hasInvalidExternalQuota) return;
     if (
       isReservation
       && normalizedCapacity !== null
@@ -488,7 +492,7 @@ function EventWizardParticipants({ navigation, route }) {
   return (
     <WizardStepLayout
       headerVariant="focus"
-      isNextDisabled={hasInvalidPlayersConfig || slotsExceedCapacity}
+      isNextDisabled={hasInvalidPlayersConfig || slotsExceedCapacity || hasInvalidExternalQuota}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       // ⚠️ Hors chaine (entrainement prive ouvert depuis le Recap), le rang vaut
@@ -740,6 +744,14 @@ function EventWizardParticipants({ navigation, route }) {
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {t('eventWizard.steps.participants.externalQuotaLabel', 'Places externes')}
+            </Text>
+            <Text style={[Fonts.p3, hasInvalidExternalQuota ? Fonts.error700 : Fonts.neutral200]}>
+              {t(
+                'eventEdit.trainingOpen.externalLimitRequired',
+                'Indique combien de places externes tu ouvres pour cet entraînement.',
+              )}
+              {' '}
+              {t('eventWizard.steps.participants.minimumExternalPlaces', 'Minimum : 1 place externe.')}
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
               <TouchableOpacity

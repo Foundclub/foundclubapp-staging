@@ -17,6 +17,8 @@
  * parent ne disparaissent JAMAIS de la liste.
  */
 
+import { getUserRoleKey } from '@/domains/auth/authUseCases';
+
 /** Le type de fil qui peut etre un tete-a-tete. */
 const ONE_TO_ONE_CHAT_TYPE = 'whisper';
 
@@ -134,3 +136,19 @@ export const toBlockedUserIdSet = (rows) => new Set(
     .map((row) => String(row?.user?.documentId || '').trim())
     .filter(Boolean),
 );
+
+/**
+ * VILLE-NOTIFS (decision du chef « B », 07/10) — QUI PEUT BLOQUER : un compte qui a un role
+ * de club. Le role « Authenticated » (clef `new` : les comptes « Ville seule ») n'a ni
+ * `user-block.mine`, ni `block`, ni `unblock` au serveur : la liste et le fil lui valaient un
+ * 403 a CHAQUE ouverture. L'app n'appelle donc pas la route et ne propose pas « Bloquer ».
+ * ⛔ Un role ABSENT de la charge garde le comportement d'avant (« Bloquer » est une exigence
+ * d'Apple, K3) : on ne coupe que sur un role CONNU qui n'y a pas droit.
+ * @param {any} user - Le compte connecte.
+ * @returns {boolean}
+ */
+export const peutBloquer = (user) => {
+  if (!user?.documentId) return false;
+  const nomDuRole = String(user?.role?.name || user?.role?.type || '').trim();
+  return !nomDuRole || getUserRoleKey(nomDuRole) !== 'new';
+};

@@ -7,8 +7,11 @@ import {
   Svg,
 } from 'react-native-svg';
 
+import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
+
 /**
- * @typedef {'photos' | 'camera' | 'location' | 'contact' | 'document' | 'poll' | 'event'} ChatAttachmentActionKey
+ * @typedef {'photos' | 'camera' | 'location' | 'contact' | 'document' | 'poll' | 'event'
+ *   | 'convocation'} ChatAttachmentActionKey
  */
 
 /**
@@ -82,6 +85,9 @@ function ChatAttachmentActionIcon({
           />
         </Svg>
       );
+    // MESSAGERIE-1C — l'entree « Convocation » (pack §3.5) : le presse-papiers du jeu FOUNDCLUB.
+    case 'convocation':
+      return <ConvocationGlyph color={color} name="clipboardUser" size={size} />;
     case 'document':
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>

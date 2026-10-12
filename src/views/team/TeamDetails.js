@@ -615,6 +615,18 @@ function TeamDetails({ navigation, route }) {
     return players.filter((/** @type {any} */ player) => Boolean(player?.documentId));
   }, [team?.isLeague, team?.players]);
 
+  // PAR-006 : une fiche enfant acceptee n'est pas un compte utilisateur.
+  // Le serveur ne la rend qu'a l'encadrement, dans declaredChildren.
+  // La garder a part evite de lui proposer un profil, un chat ou un retrait
+  // via les routes reservees aux joueurs ayant un compte.
+  const declaredChildren = useMemo(() => (
+    team?.isLeague || !Array.isArray(team?.declaredChildren)
+      ? []
+      : team.declaredChildren.filter((/** @type {any} */ child) => (
+        child?.documentId && child?.participantSource === 'declared_child'
+      ))
+  ), [team?.isLeague, team?.declaredChildren]);
+
   const areTeamMembersHidden = team?.membersAreHidden === true;
 
   const isMyClub = useMemo(
@@ -755,14 +767,27 @@ function TeamDetails({ navigation, route }) {
     },
   }));
 
+  const leaveTeamPendingRef = useRef(false);
   const leaveTeamMutation = /** @type {any} */ (useMutation({
     mutationFn: leaveTeam,
-    onSuccess: () => {
-      refetchUserData();
+    onError: (/** @type {any} */ mutationError) => {
+      Alert.alert(t('common.error', 'Erreur'), getErrorMessage(mutationError));
+    },
+    onSettled: () => { leaveTeamPendingRef.current = false; },
+    onSuccess: async () => {
+      // Le serveur decide equipe ET club dans une transaction. On relit son
+      // resultat aussi avec l'ancien serveur, sans inventer de depart de club.
+      invalidateAfterAction(queryClient, 'leaveTeam').catch(() => {});
+      await refetchUserData();
       refetch();
-      // C20 : « Mes équipes » (TeamListContent) refiltre sur userData.myTeams ;
-      // invalider aussi la liste des équipes évite qu'une équipe quittée y traîne.
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      // Meme fenetre que le changement de role (ROLES2) : les autres repliques
+      // memorisent 5 s la version des profils et listes. Le client de cache
+      // survit a la navigation ; cette seconde lecture en sort.
+      setTimeout(() => {
+        [['app-bootstrap'], ['get-me'], ['chats']].forEach((queryKey) => {
+          queryClient.invalidateQueries({ queryKey }).catch(() => {});
+        });
+      }, 6000);
     },
   }));
 
@@ -1081,8 +1106,8 @@ function TeamDetails({ navigation, route }) {
     if (areTeamMembersHidden && Number.isFinite(explicitCount) && explicitCount >= 0) {
       return explicitCount;
     }
-    return filteredPlayers.length || 0;
-  }, [areTeamMembersHidden, filteredPlayers, team?.playersCount]);
+    return filteredPlayers.length + declaredChildren.length;
+  }, [areTeamMembersHidden, declaredChildren, filteredPlayers, team?.playersCount]);
   const renderMembersHiddenCard = useCallback((message) => (
     <View
       style={[
@@ -1785,7 +1810,8 @@ function TeamDetails({ navigation, route }) {
   }, [getErrorMessage, isAuthenticated, navigation, openTeamAuthFlow, startWhisperChat, t, trainerContactIds]);
 
   const handleLeaveTeam = useCallback(() => {
-    if (teamId && currentUser?.documentId) {
+    if (teamId && currentUser?.documentId && !leaveTeamPendingRef.current) {
+      leaveTeamPendingRef.current = true;
       leaveTeamMutation.mutate(teamId);
     }
   }, [teamId, currentUser?.documentId, leaveTeamMutation]);
@@ -3339,6 +3365,38 @@ function TeamDetails({ navigation, route }) {
                             />
                           </View>
                           )}
+                        </View>
+                      ))}
+                      {declaredChildren.map((/** @type {any} */ child) => (
+                        <View
+                          key={`declared-child-${child.documentId}`}
+                          style={[
+                            ApplicationStyle.borderRadius24,
+                            ApplicationStyle.backgroundColor.primary700,
+                            Alignments.row,
+                            Alignments.alignCenter,
+                            Spaces.padding[16],
+                            Spaces.gap[16],
+                          ]}
+                        >
+                          <ProfileAvatar
+                            enablePreview={false}
+                            imageStyle={{ borderRadius: 40 }}
+                            imageUrl={child?.avatar?.url}
+                            name={[child.firstname, child.lastname].filter(Boolean).join(' ')}
+                            size={40}
+                            style={[
+                              ApplicationStyle.borderWidth1,
+                              ApplicationStyle.borderColor.neutral00,
+                              { borderRadius: 40 },
+                            ]}
+                          />
+                          <Text
+                            numberOfLines={2}
+                            style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}
+                          >
+                            {[child.firstname, child.lastname].filter(Boolean).join(' ')}
+                          </Text>
                         </View>
                       ))}
                       {!playersCount && canManageTeam ? (

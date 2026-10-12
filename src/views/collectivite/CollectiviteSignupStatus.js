@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 
 import {
-  clubInitials,
   latestManagerRequest,
   pendingManagerRequests,
   recentRefusedManagerRequest,
 } from '@/domains/collectivite/collectiviteAccueil';
-import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
+import {
+  collectiviteInitial,
+  formatCollectiviteDay,
+} from '@/domains/collectivite/collectiviteDisplay';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -131,8 +133,9 @@ function CollectiviteSignupStatus() {
           ]}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {clubInitials(String(demande?.collectivite?.name || '')
-              .replace(/^(Ville|Commune) (de |d['’])/u, ''))}
+            {/* SITE-VILLE-FINITIONS (T19) : la regle unique des collectivites (VT18E), comme la
+                console ; « RE » pour « Ville de Rouvres T18 essai » (initiales d un club). */}
+            {collectiviteInitial(demande?.collectivite?.name)}
           </Text>
         </View>
         <View style={{ flex: 1 }}>

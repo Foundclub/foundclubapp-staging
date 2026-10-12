@@ -5,6 +5,7 @@ import {
   Modal, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
@@ -25,6 +26,9 @@ import useTheme from '@/theme/themeContext';
  */
 const ROUE_NATIVE_STYLE = { alignSelf: 'center' };
 
+// Une heure « HH:mm » : la seule forme d'exemple qui puisse servir de départ à la roue.
+const HEURE_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 /**
  * TimePickerInput - A time input component with native iOS picker
  * @param {object} props
@@ -33,20 +37,27 @@ const ROUE_NATIVE_STYLE = { alignSelf: 'center' };
  * @param {Function} props.onChange - Callback when time changes
  * @param {string} [props.placeholder] - Placeholder text
  * @param {string} [props.error] - Error message
+ * @param {string} [props.testID] - Repère du champ (témoins)
  */
 function TimePickerInput({
-  error, label, onChange, placeholder = 'HH:mm', value,
+  error, label, onChange, placeholder = 'HH:mm', testID = undefined, value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
+  // SAIS (heure A) — iPhone : l'heure que montre la roue, écrite seulement par « OK ».
+  const [brouillon, setBrouillon] = useState(/** @type {Date | null} */ (null));
 
-  // Parse the value to a Date object for the picker
+  // ⏰ SAIS — DÉCISION D'ADEL « heure A » (08/10, tournée T20 lot 1) : la roue / le cadran
+  // s'ouvre sur la valeur, sinon sur l'EXEMPLE affiché s'il a la forme HH:mm (« 17:30 » gris
+  // ressemblait à une valeur choisie, alors que la roue s'ouvrait sur l'heure du moment), sinon
+  // sur une heure ronde.
   const getDateFromValue = () => {
-    if (value) {
-      const [hours, minutes] = value.split(':').map(Number);
+    const depart = value || (HEURE_HHMM.test(String(placeholder || '')) ? placeholder : '');
+    if (depart) {
+      const [hours, minutes] = depart.split(':').map(Number);
       const date = new Date();
       date.setHours(hours || 0, minutes || 0, 0, 0);
       return date;
@@ -54,6 +65,16 @@ function TimePickerInput({
     const now = new Date();
     now.setMinutes(0, 0, 0);
     return now;
+  };
+
+  const ouvrir = () => {
+    setBrouillon(getDateFromValue());
+    setShowPicker(true);
+  };
+  // iPhone : « Annuler », le voile ou le retour ferment SANS rien écrire (la valeur d'avant reste).
+  const annuler = () => {
+    setShowPicker(false);
+    setBrouillon(null);
   };
 
   // Format the time from Date to HH:mm string
@@ -67,13 +88,22 @@ function TimePickerInput({
     if (Platform.OS === 'android') {
       setShowPicker(false);
     }
-    if (selectedDate) {
-      onChange(formatTime(selectedDate));
-    }
+    // T19 (08/10) — Android rappelle onChange a la fermeture (« Annuler ») avec
+    // { type: 'dismissed' } et la valeur d'origine : annuler ne doit rien ecrire.
+    if (event?.type === 'dismissed') return;
+    if (!selectedDate) return;
+    // SAIS (heure A) — iPhone : chaque cran de roue ne fait que bouger le brouillon ; « OK »
+    // l'écrit. Android : le cadran rend « set » au OK, même sans geste (la valeur montrée).
+    if (Platform.OS === 'ios') setBrouillon(selectedDate);
+    else onChange(formatTime(selectedDate));
   };
 
+  // SAIS (heure A) — « OK » ÉCRIT l'heure que montre la roue, tournée ou non (avant : il ne
+  // faisait que fermer ; « OK direct, ça ne s'enregistre pas », TestFlight 2.6.71).
   const handleConfirm = () => {
+    onChange(formatTime(brouillon || getDateFromValue()));
     setShowPicker(false);
+    setBrouillon(null);
   };
 
   // FINITIONS16 · POINT 6 — le champ du navigateur parle deja HH:mm : la valeur passe telle quelle.
@@ -82,6 +112,9 @@ function TimePickerInput({
   };
 
   const displayValue = value || placeholder;
+  // SAIS (T20 lot 1) — un CADRE : sur une feuille de sa couleur (« Attribuer »), la boîte
+  // disparaissait et l'exemple flottait comme du texte. Le même que le sélecteur de date.
+  const cadre = { borderColor: withAlpha(Colors.neutral00, 0.14), borderWidth: 1 };
 
   return (
     <View style={[Spaces.gap[4], { zIndex: 1 }]}>
@@ -99,6 +132,7 @@ function TimePickerInput({
           ApplicationStyle.borderRadius12,
           ApplicationStyle.backgroundColor.primary700,
           Spaces.padding[16],
+          cadre,
           error && { borderColor: Colors.error500, borderWidth: 1 },
         ]}
         >
@@ -121,13 +155,15 @@ function TimePickerInput({
         </View>
       ) : (
         <TouchableOpacity
-          onPress={() => setShowPicker(true)}
+          onPress={ouvrir}
           style={[
             ApplicationStyle.borderRadius12,
             ApplicationStyle.backgroundColor.primary700,
             Spaces.padding[16],
+            cadre,
             error && { borderColor: Colors.error500, borderWidth: 1 },
           ]}
+          testID={testID}
         >
           <Text style={[
             Fonts.p1,
@@ -149,13 +185,13 @@ function TimePickerInput({
       {Platform.OS === 'ios' && showPicker && (
         <Modal
           animationType="slide"
-          onRequestClose={() => setShowPicker(false)}
+          onRequestClose={annuler}
           transparent
           visible={showPicker}
         >
           <TouchableOpacity
             activeOpacity={1}
-            onPress={() => setShowPicker(false)}
+            onPress={annuler}
             style={{ backgroundColor: 'rgba(0,0,0,0.5)', flex: 1 }}
           >
             <View style={{ flex: 1 }} />
@@ -177,7 +213,7 @@ function TimePickerInput({
                 { borderBottomColor: Colors.neutral100, borderBottomWidth: 1 },
               ]}
               >
-                <TouchableOpacity onPress={() => setShowPicker(false)} style={{ flex: 1 }}>
+                <TouchableOpacity onPress={annuler} style={{ flex: 1 }}>
                   <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
                     {t('timePickerInput.cancel', 'Annuler')}
                   </Text>
@@ -202,7 +238,7 @@ function TimePickerInput({
                 onChange={handleChange}
                 style={ROUE_NATIVE_STYLE}
                 textColor={Colors.neutral00}
-                value={getDateFromValue()}
+                value={brouillon || getDateFromValue()}
               />
             </View>
           </TouchableOpacity>

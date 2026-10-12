@@ -136,16 +136,26 @@ export function Intertitre({ children }) {
  *  libelle?: string,
  *  multiple?: boolean,
  *  onChoisir: (cle: string) => void,
+ *  sansTousLesSports?: boolean,
  *  sports: any[] | undefined,
  *  valeurs: unknown,
  * }} props `cle` : ce qui identifie un sport pour l'appelant — l'identifiant (clubs, événements,
  *   profils, réservations) ou le NOM (les annonces filtrent par nom). `valeurs` : la ou les clefs
  *   choisies, texte ou liste (vide = « Tous les sports »). `libelle` : l'intitulé du champ, dans
- *   les écrans-formulaires (il est dans la rangée des feuilles « Filtrer »).
+ *   les écrans-formulaires (il est dans la rangée des feuilles « Filtrer »). `sansTousLesSports`
+ *   (FINITIONS-VILLE, l'assistant de club) : un choix qui n'est pas un filtre — pas de ligne
+ *   « Tous les sports », pas d'intertitre « Sport actuel » tant que rien n'est choisi.
  * @returns {import('react').ReactElement} Le choix.
  */
 function ChoixDuSport({
-  auFocus = false, cle = 'documentId', libelle = '', multiple = false, onChoisir, sports, valeurs,
+  auFocus = false,
+  cle = 'documentId',
+  libelle = '',
+  multiple = false,
+  onChoisir,
+  sansTousLesSports = false,
+  sports,
+  valeurs,
 }) {
   const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
@@ -224,12 +234,15 @@ function ChoixDuSport({
         </View>
       ) : (
         <View style={[Spaces.gap[8]]}>
-          <Intertitre>
-            {actuels.length > 1
-              ? t('pastillesFiltresClub.sport.currentMany', 'Sports choisis')
-              : t('pastillesFiltresClub.sport.current', 'Sport actuel')}
-          </Intertitre>
-          {actuels.length ? actuels.map(ligne) : ligneTousLesSports(true)}
+          {actuels.length || !sansTousLesSports ? (
+            <Intertitre>
+              {actuels.length > 1
+                ? t('pastillesFiltresClub.sport.currentMany', 'Sports choisis')
+                : t('pastillesFiltresClub.sport.current', 'Sport actuel')}
+            </Intertitre>
+          ) : null}
+          {actuels.length ? actuels.map(ligne) : null}
+          {!actuels.length && !sansTousLesSports ? ligneTousLesSports(true) : null}
           {populaires.some((sport) => !estChoisi(sport)) ? (
             <Intertitre>{t('pastillesFiltresClub.sport.popular', 'Sports populaires')}</Intertitre>
           ) : null}
@@ -237,7 +250,7 @@ function ChoixDuSport({
           {toutAfficher ? (
             <>
               <Intertitre>{TOUT_DE_A_A_Z}</Intertitre>
-              {actuels.length ? ligneTousLesSports(false) : null}
+              {actuels.length && !sansTousLesSports ? ligneTousLesSports(false) : null}
               {alphabetiques.map(ligne)}
             </>
           ) : (

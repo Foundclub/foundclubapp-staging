@@ -194,7 +194,8 @@ describe('COLL-ACCUEIL-BIS — planche 38 : revenu de la création, « Demande e
     const lus = textes(arbre);
     expect(lus).toEqual(expect.arrayContaining([
       'Demande envoyée',
-      'L’équipe FoundClub vérifie que ton club est bien à Montrivage, puis le rattache à la Ville. Tu seras prévenu.',
+      // VILLE-INVITER-CLUB (07/10, « lien A » d'Adel) : la Ville juge elle-meme sa demande.
+      'La Ville accepte ou refuse ta demande. Tu seras prévenu, et tu suis sa réponse sur la page de ton club.',
       'D’ici là, ton club fonctionne déjà normalement.',
     ]));
     await act(async () => { bouton(arbre, 'Aller à mon club').props.onPress(); });

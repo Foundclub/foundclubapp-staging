@@ -1,3 +1,6 @@
+import {
+  format, isValid, parse,
+} from 'date-fns';
 import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +20,9 @@ import useTheme from '@/theme/themeContext';
 
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
+import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerInput';
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -387,6 +392,58 @@ const buildPayloadFromForm = (attributes, formValues) => {
 
   // @ts-ignore: FIXME: Baseline TS regression
   return { data, errors };
+};
+
+// 🗓️ SAIS (08/10, tournée T20, hors lots) — les champs date, heure et date + heure se CHOISISSENT
+// aux sélecteurs de l'app (ils se tapaient en texte ISO) ; le serveur reçoit le MÊME format
+// qu'avant : « AAAA-MM-JJ », « HH:mm:ss.SSS », ISO complet. Vide reste vide (null au serveur).
+const SAISIE_DE_DATE = 'dd/MM/yyyy';
+
+/**
+ * « 2026-10-08 » (serveur) en « 08/10/2026 » (sélecteur), ou ''.
+ * @param {any} jour - La valeur du serveur.
+ * @returns {string} La saisie.
+ */
+const versSaisieDeDate = (jour) => {
+  const date = jour ? parse(String(jour).slice(0, 10), 'yyyy-MM-dd', new Date()) : null;
+  return date && isValid(date) ? format(date, SAISIE_DE_DATE) : '';
+};
+
+/**
+ * « 08/10/2026 » (sélecteur) en « 2026-10-08 » (serveur), ou ''.
+ * @param {string} saisie - La saisie.
+ * @returns {string} Le jour civil.
+ */
+const versJourDuServeur = (saisie) => {
+  const date = saisie ? parse(saisie, SAISIE_DE_DATE, new Date()) : null;
+  return date && isValid(date) ? format(date, 'yyyy-MM-dd') : '';
+};
+
+/**
+ * Un instant ISO, lu en date et heure LOCALES.
+ * @param {any} valeur - L'instant du serveur.
+ * @returns {{ date: string, heure: string }} La saisie.
+ */
+const lireInstant = (valeur) => {
+  const instant = valeur ? new Date(String(valeur)) : null;
+  return instant && isValid(instant)
+    ? { date: format(instant, SAISIE_DE_DATE), heure: format(instant, 'HH:mm') }
+    : { date: '', heure: '' };
+};
+
+/**
+ * Une date et une heure LOCALES en instant ISO ; sans date, le jour d'aujourd'hui ; sans heure,
+ * minuit.
+ * @param {string} date - « 08/10/2026 », ou ''.
+ * @param {string} heure - « 11:00 », ou ''.
+ * @returns {string} L'instant ISO, ou '' (date vidée).
+ */
+const composerInstant = (date, heure) => {
+  const jour = parse(date || format(new Date(), SAISIE_DE_DATE), SAISIE_DE_DATE, new Date());
+  if (!isValid(jour)) return '';
+  const [heures, minutes] = String(heure || '00:00').split(':').map(Number);
+  jour.setHours(heures || 0, minutes || 0, 0, 0);
+  return jour.toISOString();
 };
 
 // @ts-ignore: FIXME: Baseline TS regression
@@ -964,7 +1021,6 @@ function SuperAdminEntryForm({ navigation, route }) {
         </Text>
 
         <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
-          // @ts-ignore: FIXME: Baseline TS regression
           {selected.map((relationId) => (
             <View
               key={relationId}
@@ -1094,7 +1150,6 @@ function SuperAdminEntryForm({ navigation, route }) {
 
         {results.length > 0 ? (
           <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {results.map((item) => (
               <TouchableOpacity
                 key={item?.documentId}
@@ -1108,7 +1163,6 @@ function SuperAdminEntryForm({ navigation, route }) {
                 ]}
               >
                 <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>{item?.label || item?.documentId}</Text>
-                // @ts-ignore: FIXME: Baseline TS regression
                 <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[2]]}>
                   {item?.subtitle || item?.documentId}
                 </Text>
@@ -1216,7 +1270,6 @@ function SuperAdminEntryForm({ navigation, route }) {
           </Text>
         ) : (
           <View style={[Spaces.marginTop[8], Spaces.gap[8]]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {selectedItems.map((item, index) => {
               const itemKey = `${getMediaKey(item) || 'media'}-${index}`;
               const itemLabel = item?.name || item?.url || item?.documentId || item?.id || t(
@@ -1332,7 +1385,6 @@ function SuperAdminEntryForm({ navigation, route }) {
         >
           <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{getFieldLabel(attribute)}</Text>
           <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8], Spaces.marginTop[8]]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {options.map((option) => (
               <TouchableOpacity
                 key={option}
@@ -1349,6 +1401,61 @@ function SuperAdminEntryForm({ navigation, route }) {
                 <Text style={[Fonts.p2, { color: Colors.neutral00 }]}>{option}</Text>
               </TouchableOpacity>
             ))}
+          </View>
+        </View>
+      );
+    }
+
+    // SAIS (T20, hors lots) — date, heure, date + heure : les sélecteurs de l'app.
+    if (type === 'date' || type === 'time' || type === 'datetime') {
+      const instant = type === 'datetime' ? lireInstant(value) : null;
+      const ecrireLaDate = (/** @type {string} */ saisie) => {
+        if (type === 'date') handleFieldValue(fieldName, versJourDuServeur(saisie));
+        else {
+          handleFieldValue(fieldName, saisie ? composerInstant(saisie, instant?.heure || '') : '');
+        }
+      };
+      const ecrireLHeure = (/** @type {string} */ heure) => {
+        if (type === 'time') handleFieldValue(fieldName, heure ? `${heure}:00.000` : '');
+        else handleFieldValue(fieldName, heure ? composerInstant(instant?.date || '', heure) : '');
+      };
+      return (
+        <View
+          key={fieldName}
+          style={[
+            ApplicationStyle.backgroundColor.neutral800,
+            ApplicationStyle.borderRadius16,
+            Spaces.padding[superAdminLayout.cardPadding],
+            Spaces.marginBottom[12],
+          ]}
+        >
+          <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{getFieldLabel(attribute)}</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
+            {t('superAdminContentManager.form.type', 'Type')}
+            {': '}
+            {type}
+          </Text>
+          <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[8]]}>
+            {type === 'time' ? null : (
+              <View style={{ flex: 1 }}>
+                <DatePickerInput
+                  label={t('superAdminContentManager.form.champDate', 'Date')}
+                  onChange={ecrireLaDate}
+                  testID={`champ-${fieldName}-date`}
+                  value={type === 'date' ? versSaisieDeDate(value) : instant?.date || ''}
+                />
+              </View>
+            )}
+            {type === 'date' ? null : (
+              <View style={{ flex: 1 }}>
+                <TimePickerInput
+                  label={t('superAdminContentManager.form.champHeure', 'Heure')}
+                  onChange={ecrireLHeure}
+                  testID={`champ-${fieldName}-heure`}
+                  value={type === 'time' ? String(value || '').slice(0, 5) : instant?.heure || ''}
+                />
+              </View>
+            )}
           </View>
         </View>
       );
@@ -1379,7 +1486,7 @@ function SuperAdminEntryForm({ navigation, route }) {
           keyboardType={keyboardType}
           multiline={multiline}
           onChangeText={(nextValue) => handleFieldValue(fieldName, nextValue)}
-          placeholder={type === 'datetime' ? '2026-03-07T10:30:00.000Z' : ''}
+          placeholder=""
           placeholderTextColor={Colors.neutral300}
           style={[
             ApplicationStyle.backgroundColor.neutral700,
@@ -1410,9 +1517,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         {description ? (
           <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[4]]}>{description}</Text>
         ) : null}
-        // @ts-ignore: FIXME: Baseline TS regression
         <View style={Spaces.marginTop[10]}>
-          // @ts-ignore: FIXME: Baseline TS regression
           {attributes.map((attribute) => renderScalarField(attribute))}
         </View>
       </View>
@@ -1432,7 +1537,6 @@ function SuperAdminEntryForm({ navigation, route }) {
   return (
     <ScreenContainer bgImage="bg2">
       <ScrollView contentContainerStyle={[{ paddingHorizontal: pageHorizontalPadding }, Spaces.paddingBottom[32]]}>
-        // @ts-ignore: FIXME: Baseline TS regression
         <View style={[Spaces.marginTop[superAdminLayout.pageTop], Spaces.marginBottom[12]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
             {isEditMode
@@ -1461,7 +1565,6 @@ function SuperAdminEntryForm({ navigation, route }) {
             {`${t('superAdminContentManager.form.editableFields', 'Champs editables')} (${editableAttributes.length})`}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-            // @ts-ignore: FIXME: Baseline TS regression
             {editableAttributes.map((attribute) => attribute?.name).join(', ')
               || t('superAdminContentManager.form.noEditableFields', 'Aucun champ détecté')}
           </Text>
@@ -1522,7 +1625,6 @@ function SuperAdminEntryForm({ navigation, route }) {
               <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
                 {t('superAdminContentManager.form.rawFallbackHint', 'Champs non totalement supportes en mode guide:')}
                 {' '}
-                // @ts-ignore: FIXME: Baseline TS regression
                 {unsupportedAttributes.map((attribute) => attribute?.name).join(', ')}
               </Text>
             ) : null}

@@ -86,6 +86,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 44,
+  }),
+}));
+
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
@@ -160,6 +166,15 @@ jest.mock('@/components/molecules/input/Input', () => function InputMock(/** @ty
   mockInputProps.push(props);
   return null;
 });
+// VILLE-T18A : Début et Fin sont des sélecteurs d heure (TimePickerInput) ; même relevé,
+// leur `onChange` se lit comme le `onChangeText` d un champ.
+jest.mock(
+  '@/components/molecules/timePickerInput/TimePickerInput',
+  () => function TimePickerInputMock(/** @type {any} */ props) {
+    mockInputProps.push({ ...props, onChangeText: props.onChange });
+    return null;
+  },
+);
 jest.mock(
   '@/components/molecules/datePickerInput/DatePickerInput',
   () => function DatePickerInputMock(/** @type {any} */ props) {
@@ -249,7 +264,8 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (Array.isArray(enfants)) return enfants.map(aplatir).join('');
   if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
-  return String(enfants);
+  // VILLE-T18A : les puces écrivent leurs espaces en insécables ; on les lit en espaces.
+  return String(enfants).replace(/\u00a0/g, ' ');
 };
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
@@ -381,10 +397,15 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     const arbre = await rendre();
     await appuyer(parTexte(arbre, 'Attribuer un créneau'));
     await appuyer(parTexte(arbre, 'AS Montrivage'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'U13'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
+    await appuyer(parTexte(arbre, 'Suivant'));
+    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
 
     expect(mockAlerte).not.toHaveBeenCalled();

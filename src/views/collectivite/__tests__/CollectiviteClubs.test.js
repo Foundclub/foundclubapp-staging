@@ -58,6 +58,24 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// VILLE-INVITER-CLUB (07/10) : les demandes de rattachement vivent dans un module a part ;
+// `data` absent = un serveur d'avant le lot : l'ecran garde « Invitations » comme avant.
+// FINITIONS-VILLE (08/10) : « Refuser » une demande de rattachement ouvre la fenêtre des créneaux
+// (DecisionCreneauModal), qui lit ces deux crochets ; sans doublure, le client réseau se charge.
+jest.mock('@/services/facility/facilityQueries', () => ({
+  useApproveFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useRefuseFacilityOverrideRequest: () => ({ isPending: false, mutateAsync: jest.fn() }),
+}));
+
+jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
+  useAnswerCollectiviteAttachRequest: () => ({ isPending: false, mutate: jest.fn() }),
+  useCancelCollectiviteProposal: () => ({ isPending: false, mutate: jest.fn() }),
+  useCollectiviteClubRequests: () => ({ data: undefined, error: null, isLoading: false }),
+  useCollectiviteClubSearch: () => ({ data: [], error: null, isLoading: false }),
+  useProposeCollectiviteClub: () => ({ isPending: false, mutate: jest.fn() }),
+  useRemindCollectiviteProposal: () => ({ isPending: false, mutate: jest.fn() }),
+}));
+
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
   // COLL-CLUBS (01/10) : les invitations en cours, sous la liste (temoin COLLCLUBS.inviter).

@@ -63,14 +63,15 @@ afterEach(() => {
 /**
  * Monte la grille ; `largeur` : la largeur mesuree du cadre (onLayout), ou rien.
  * @param {number | null} largeur
+ * @param {any[]} [creneaux] - Les créneaux (le vendredi de la T15 par défaut).
  * @returns {any} L'arbre.
  */
-const monter = (largeur) => {
+const monter = (largeur, creneaux = VENDREDI) => {
   /** @type {any} */
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <SeasonSlotWeekGrid capacite={2} creneaux={VENDREDI} onCreneau={jest.fn()} />,
+      <SeasonSlotWeekGrid capacite={2} creneaux={creneaux} onCreneau={jest.fn()} />,
     );
   });
   montes.push(arbre);
@@ -120,5 +121,44 @@ describe('FINITIONS16 21 — planche 23 : des blocs lisibles quand la place manq
         && typeof n.props?.onPress === 'function',
     );
     expect(bloc.props.accessibilityLabel).toContain('Montrivage Basket');
+  });
+});
+
+// 🎨 VILLE-T18A (07/10), tournée T18 point 4b (site, capture SITE_G37b) — panneau
+// « Attribuer » ouvert : sous « Mar. », le moment complet s affichait « comple… » (une
+// seule ligne imposée dans une colonne de ~66 px). Il passe à la ligne, centré :
+// « complet » puis ses heures, rien de coupé. ROUGE avant.
+describe('VILLE-T18A 4b — le moment complet de l en-tête ne se coupe pas', () => {
+  it('panneau ouvert (66 px par jour) : « complet 14:00 – 17:00 » passe à la ligne', () => {
+    const arbre = monter(540);
+    const [complet] = arbre.root.findAllByType(Text)
+      .filter((/** @type {any} */ n) => String(n.props.children).startsWith('complet'));
+    expect(String(complet.props.children)).toBe('complet 14:00 – 17:00');
+    const lignes = complet.props.numberOfLines;
+    expect(lignes === undefined || lignes >= 3).toBe(true);
+    const style = jest.requireActual('react-native').StyleSheet.flatten(complet.props.style);
+    expect(style.textAlign).toBe('center');
+  });
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10), tournée T19 (site, 1 280 px, captures SITE_A18) — panneau
+// « Attribuer » ouvert : les DEUX créneaux du mardi (AS Montrivage U15, Montrivage FC) restaient
+// SANS TEXTE. Le cadre mesure ~492 px : (492 - 80) / 7 = 59 px par jour, 29 px par voie, juste
+// sous les 30 px des initiales. Entre 26 et 30 px, les initiales s'écrivent plus petit, avec
+// moins de marge ; sous 26 px, toujours rien (cas ci-dessus, 22 px). ROUGE avant.
+describe('SVF 4a — panneau ouvert : deux créneaux côte à côte gardent leurs initiales', () => {
+  const MARDI = [
+    { ...creneau('m1', 'AS Montrivage', 'U15'), weekday: 2 },
+    { ...creneau('m2', 'Montrivage FC', ''), team: null, weekday: 2 },
+  ];
+
+  it('une voie de 29 px : « AM », « MF » (sans l équipe, qui serait coupée)', () => {
+    const arbre = monter(492, MARDI);
+    expect(texteDuBloc(arbre, 'm1')).toEqual(['AM']);
+    expect(texteDuBloc(arbre, 'm2')).toEqual(['MF']);
+  });
+
+  it('panneau fermé (38 px par voie et plus) : rien ne change, initiales et équipe', () => {
+    expect(texteDuBloc(monter(880, MARDI), 'm1')).toEqual(['AM', 'U15']);
   });
 });

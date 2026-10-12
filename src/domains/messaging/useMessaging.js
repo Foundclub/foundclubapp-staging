@@ -14,9 +14,17 @@ import {
   shouldRefetchUnreadOnMessage,
 } from '@/domains/messaging/messagingUseCases';
 import {
+  getMyPollOptionIds,
+  isAnonymousPollNamingNoOne,
+  withMyAnonymousPollVotes,
+} from '@/domains/messaging/pollUseCases';
+import {
   indexReactionsByMessage,
   withMessageReactions,
 } from '@/domains/messaging/reactionUseCases';
+import useMyAnonymousPollVotes, {
+  myAnonymousPollVotesKey,
+} from '@/domains/messaging/useMyAnonymousPollVotes';
 import { storage } from '@/store/appContext';
 
 import {
@@ -29,6 +37,7 @@ import {
   deleteMessage,
   editMessage,
   getChats,
+  markChatUnread as markChatUnreadRequest,
   pinChat,
   reactToChatMessage,
   removeGroupMember,
@@ -282,6 +291,8 @@ const useMessaging = (currentChatId) => {
   const queryClient = useQueryClient();
   const { isConnected, socket } = useSocket();
   const { allMyTeams, userData } = useAuth();
+  // SECU-SONDAGE-ANONYME (07/10) — mon choix dans les sondages anonymes du fil ouvert.
+  useMyAnonymousPollVotes(currentChatId, userData?.documentId);
   const pendingTimeoutsRef = useRef(
     /** @type {Map<string, ReturnType<typeof setTimeout>>} */ (new Map()),
   );
@@ -566,9 +577,6 @@ const useMessaging = (currentChatId) => {
   }, [queryClient, clearPendingTimeout, currentChatId, userData?.documentId]);
 
   const handleMessageDeleted = useCallback((/** @type {MessageDeletionData} */ data) => {
-    const chatDocumentId = normalizeChatId(data?.chatDocumentId || data?.chat?.documentId);
-    if (!chatDocumentId) return;
-
     const deletedMessageId = normalizeChatId(
       data?.messageId
       || data?.documentId
@@ -576,24 +584,70 @@ const useMessaging = (currentChatId) => {
     );
     if (!deletedMessageId) return;
 
+    const cachedMessageQuery = queryClient.getQueriesData({ queryKey: ['chat-messages'] })
+      .find(([, cached]) => /** @type {any} */ (cached)?.pages?.some((/** @type {any} */ page) => (
+        page.data?.some((/** @type {any} */ msg) => normalizeChatId(getMessageEntityId(msg)) === deletedMessageId)
+      )));
+    const chatDocumentId = normalizeChatId(
+      data?.chatDocumentId || data?.chat?.documentId || cachedMessageQuery?.[0]?.[1],
+    );
+    // Le lifecycle prod émet seulement documentId. Il est globalement unique :
+    // on peut enlever CET identifiant des caches, sans attribuer l'événement au fil ouvert.
+    const messageFilter = {
+      queryKey: chatDocumentId ? ['chat-messages', chatDocumentId] : ['chat-messages'],
+    };
     queryClient.setQueriesData(
-      { queryKey: ['chat-messages', chatDocumentId] },
+      messageFilter,
       (/** @type {any} */ oldData) => {
         if (!oldData || !oldData.pages) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((/** @type {{ data: Array<{ id: string }> }} */ page) => ({
-            ...page,
-            data: Array.isArray(page.data)
-              ? page.data.filter((msg) => {
-                const msgId = normalizeChatId(getMessageEntityId(msg));
-                return msgId !== deletedMessageId;
-              })
-              : [],
-          })),
-        };
+        let changed = false;
+        const pages = oldData.pages.map((/** @type {any} */ page) => {
+          if (!Array.isArray(page.data)) return page;
+          const remaining = page.data.filter((/** @type {any} */ msg) => (
+            normalizeChatId(getMessageEntityId(msg)) !== deletedMessageId
+          ));
+          if (remaining.length === page.data.length) return page;
+          changed = true;
+          return { ...page, data: remaining };
+        });
+        // Le serveur émet deux fois : garder les références évite de réveiller les effets.
+        return changed ? { ...oldData, pages } : oldData;
       },
     );
+
+    // Retirer aussi l'aperçu supprimé. Le serveur prod protège son snapshot contre
+    // les messages plus anciens : une relecture immédiate ramènerait le texte effacé.
+    const survivors = chatDocumentId ? queryClient.getQueriesData(messageFilter)
+      .flatMap(([, cached]) => /** @type {any} */ (cached)?.pages || [])
+      .flatMap((page) => page.data || []) : [];
+    const latestSurvivor = survivors.reduce((latest, message) => (
+      !latest || new Date(message.createdAt).getTime() > new Date(latest.createdAt).getTime()
+        ? message : latest
+    ), null);
+    queryClient.setQueriesData({ queryKey: ['chats'] }, (/** @type {any} */ oldData) => {
+      const updatePage = (/** @type {any} */ page) => {
+        if (!Array.isArray(page?.data)) return page;
+        let changed = false;
+        const chats = page.data.map((/** @type {any} */ chat) => {
+          if (chatDocumentId && chat.documentId !== chatDocumentId) return chat;
+          if (!chat.messages?.some((/** @type {any} */ msg) => (
+            normalizeChatId(getMessageEntityId(msg)) === deletedMessageId
+          ))) return chat;
+          changed = true;
+          const remaining = chat.messages.filter((/** @type {any} */ msg) => (
+            normalizeChatId(getMessageEntityId(msg)) !== deletedMessageId
+          ));
+          const messages = remaining.length ? remaining : [latestSurvivor].filter(Boolean);
+          return { ...chat, messages };
+        });
+        return changed ? { ...page, data: chats } : page;
+      };
+      if (!oldData?.pages) return updatePage(oldData);
+      const pages = oldData.pages.map(updatePage);
+      return pages.some((/** @type {any} */ page, /** @type {number} */ index) => (
+        page !== oldData.pages[index]
+      )) ? { ...oldData, pages } : oldData;
+    });
   }, [queryClient]);
 
   const handleMessageUpdated = useCallback((/** @type {any} */ payload) => {
@@ -609,6 +663,10 @@ const useMessaging = (currentChatId) => {
       getMessageEntityId(updatedMessage),
     );
     if (!chatDocumentId || !messageDocumentId) return;
+    // SECU-SONDAGE-ANONYME (07/10) — MON choix, rendu par la réponse de MON vote (jamais diffusé).
+    const explicitMyOptionIds = payload?.message && Array.isArray(payload?.myOptionIds)
+      ? payload.myOptionIds
+      : null;
 
     queryClient.setQueriesData(
       { queryKey: ['chat-messages', chatDocumentId] },
@@ -622,9 +680,22 @@ const useMessaging = (currentChatId) => {
               ? page.data.map((/** @type {ChatMessage} */ message) => {
                 const existingId = normalizeChatId(getMessageEntityId(message));
                 if (existingId !== messageDocumentId) return message;
+                // SECU-SONDAGE-ANONYME (07/10) — un sondage anonyme arrive du serveur SANS votant
+                // (compteurs seuls) : mon choix est reposé — celui que la réponse de MON vote
+                // vient de rendre, sinon celui déjà posé dans le cache (sans quoi chaque vote des
+                // autres l'effacerait de l'écran).
+                const keepsMyChoice = isAnonymousPollNamingNoOne(updatedMessage?.composition);
                 return {
                   ...message,
                   ...updatedMessage,
+                  ...(keepsMyChoice ? {
+                    composition: withMyAnonymousPollVotes(
+                      updatedMessage.composition,
+                      explicitMyOptionIds
+                        || getMyPollOptionIds(message?.composition, userData?.documentId || ''),
+                      userData?.documentId || '',
+                    ),
+                  } : {}),
                   documentId: updatedMessage?.documentId || message.documentId,
                   id: updatedMessage?.id || message.id,
                 };
@@ -634,7 +705,7 @@ const useMessaging = (currentChatId) => {
         };
       },
     );
-  }, [queryClient]);
+  }, [queryClient, userData?.documentId]);
 
   const handleMessageRead = useCallback((/** @type {any} */ payload) => {
     const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
@@ -775,6 +846,86 @@ const useMessaging = (currentChatId) => {
     });
   }, [queryClient]);
 
+  /**
+   * MSG1BA (§3.14) — `chat-unread-updated` (contrat 1B §7) : un autre appareil du compte a
+   * marque un fil non lu, ou a quitte un groupe. Les comptes du serveur sont absolus : on les
+   * pose tels quels (rejouer l'evenement ne change rien). Apres un depart, on relit la liste,
+   * d'ou le groupe est sorti.
+   */
+  const handleChatUnreadUpdated = useCallback((/** @type {any} */ payload) => {
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    if (!chatDocumentId) return;
+    if (payload?.left) {
+      queryClient.refetchQueries({ queryKey: ['chats'], type: 'all' });
+      return;
+    }
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, chatDocumentId, {
+        ok: true,
+        unreadCount: payload?.unreadCount,
+        unreadTotal: payload?.unreadTotal,
+      }),
+    );
+  }, [queryClient]);
+
+  /**
+   * MSG1BA (§3.17) — `group-notice` (contrat 1B §7) : une notice de groupe (« Adel a renomme
+   * le groupe… »), JAMAIS emise par `message-received`. Elle entre dans le fil telle quelle
+   * (avec `systemNotice`, que l'ecran recrit en « Vous »), une seule fois meme recue par la
+   * salle du fil ET par la mienne ; elle devient l'apercu de la liste SANS toucher aux non-lus
+   * (une notice ne compte jamais) ni a l'archivage ; et le detail du groupe est relu : nom,
+   * photo, admins et autorisations ont pu changer.
+   */
+  const handleGroupNotice = useCallback((/** @type {any} */ payload) => {
+    const notice = payload?.message && typeof payload.message === 'object' ? payload.message : null;
+    const chatDocumentId = normalizeChatId(payload?.chatDocumentId);
+    const noticeId = normalizeChatId(getMessageEntityId(notice));
+    if (!chatDocumentId || !notice || !noticeId) return;
+
+    queryClient.setQueriesData(
+      { queryKey: ['chat-messages', chatDocumentId] },
+      (/** @type {any} */ oldData) => {
+        if (!oldData?.pages?.length) return oldData;
+        const dejaLa = oldData.pages.some((/** @type {any} */ page) => (
+          Array.isArray(page?.data) && page.data.some((/** @type {ChatMessage} */ message) => (
+            normalizeChatId(getMessageEntityId(message)) === noticeId
+          ))
+        ));
+        if (dejaLa) return oldData;
+        const [premiere, ...suivantes] = oldData.pages;
+        return {
+          ...oldData,
+          pages: [
+            {
+              ...premiere,
+              data: [notice, ...(Array.isArray(premiere?.data) ? premiere.data : [])],
+            },
+            ...suivantes,
+          ],
+        };
+      },
+    );
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((/** @type {any} */ page) => ({
+            ...page,
+            data: Array.isArray(page?.data) ? page.data.map((/** @type {Chat} */ chat) => (
+              normalizeChatId(chat?.documentId) === chatDocumentId
+                ? { ...chat, messages: [notice] }
+                : chat
+            )) : page?.data,
+          })),
+        };
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ['chat', chatDocumentId] });
+  }, [queryClient]);
+
   const handleSocketError = useCallback((/** @type {any} */ error) => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
     const errorPayload = {
@@ -817,6 +968,8 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, handleSocketError);
+    socket.on(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
+    socket.on(EVENTS.GROUP_NOTICE, handleGroupNotice);
 
     // Cleanup: leave chat and remove listeners
     return () => {
@@ -832,6 +985,8 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.MESSAGE_READ, handleMessageRead);
       socket.off(EVENTS.JOINED, handleJoined);
       socket.off(EVENTS.ERROR, handleSocketError);
+      socket.off(EVENTS.CHAT_UNREAD_UPDATED, handleChatUnreadUpdated);
+      socket.off(EVENTS.GROUP_NOTICE, handleGroupNotice);
       if (safeCurrentChatId) {
         updateLastReadMessage(safeCurrentChatId);
       }
@@ -844,6 +999,8 @@ const useMessaging = (currentChatId) => {
     handleMessageRead,
     handleJoined,
     handleSocketError,
+    handleChatUnreadUpdated,
+    handleGroupNotice,
     currentChatId,
     isConnected,
     updateLastReadMessage,
@@ -864,10 +1021,12 @@ const useMessaging = (currentChatId) => {
 
   const deleteMessageMutation = useMutation({
     mutationFn: deleteMessage,
-    onSuccess: () => {
-      // Optimistic or Real update? The socket will handle real update for others.
-      // For me, I can remove it immediately if socket delay is high.
-      // But wait, socket emits MESSAGE_DELETED which calls handleMessageDeleted.
+    onSuccess: (result, messageId) => {
+      // Le succès HTTP suffit ; un socket absent/lent ne doit pas figer le message.
+      handleMessageDeleted({
+        chatDocumentId: result?.chatDocumentId || currentChatId,
+        messageDocumentId: result?.messageDocumentId || messageId,
+      });
     },
   });
 
@@ -908,6 +1067,12 @@ const useMessaging = (currentChatId) => {
         || currentChatId,
       );
       const messageDocumentId = normalizeChatId(data?.messageDocumentId || variables?.messageId);
+      // SECU-SONDAGE-ANONYME (07/10) — la réponse de MON vote porte MON choix (`myOptionIds`) :
+      // pour un sondage anonyme, c'est la seule source (la composition ne nomme plus personne).
+      const myOptionIds = Array.isArray(data?.myOptionIds) ? data.myOptionIds : null;
+      if (messageDocumentId && myOptionIds) {
+        queryClient.setQueryData(myAnonymousPollVotesKey(messageDocumentId), { myOptionIds });
+      }
 
       if (chatDocumentId && messageDocumentId && data?.composition) {
         handleMessageUpdated({
@@ -917,6 +1082,7 @@ const useMessaging = (currentChatId) => {
             documentId: messageDocumentId,
             updatedAt: data?.updatedAt,
           },
+          myOptionIds,
         });
         markMessagingPerf('messaging_poll_vote_cache_updated', {
           changed: Boolean(data?.changed),
@@ -1208,6 +1374,31 @@ const useMessaging = (currentChatId) => {
     if (socket && safeChatId) socket.emit(EVENTS.TYPING_STOP, { chatDocumentId: safeChatId });
   }, [socket]);
 
+  /**
+   * MSG1BA (§3.14) — « Marquer comme non lu » depuis l'apercu d'une conversation. Le serveur
+   * rend les comptes recalcules (fil et total) : on les pose dans la liste, ou la pastille du
+   * fil, de l'onglet et de l'accueil les lisent. Une erreur remonte a l'ecran (un 404 = serveur
+   * d'avant 1B : l'ecran cache alors le geste).
+   * @param {string} chatId - Le fil.
+   * @returns {Promise<any>} La reponse du serveur.
+   */
+  const markChatUnread = useCallback(async (/** @type {string} */ chatId) => {
+    const safeChatId = normalizeChatId(chatId);
+    if (!safeChatId) return null;
+    const resultat = await markChatUnreadRequest(safeChatId);
+    if (resultat?.markedUnread) {
+      queryClient.setQueriesData(
+        { queryKey: ['chats'] },
+        (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, safeChatId, {
+          ok: true,
+          unreadCount: resultat?.unreadCount,
+          unreadTotal: resultat?.unreadTotal,
+        }),
+      );
+    }
+    return resultat;
+  }, [queryClient]);
+
   const sendReadReceipt = useCallback((/** @type {string} */ chatId, /** @type {string | undefined} */ lastSeenMessageId) => {
     const safeChatId = normalizeChatId(chatId);
     const safeLastSeenId = normalizeChatId(lastSeenMessageId || '');
@@ -1443,7 +1634,15 @@ const useMessaging = (currentChatId) => {
     return result;
   };
 
-  const startGroupChat = async (/** @type {{ groupName: string, participants: string[] }} */ { groupName, participants }) => {
+  /**
+   * Cree un groupe. MSG1BA (§3.15) — `permissions` : les autorisations reglees a la creation
+   * (contrat 1B §5.3, partiel) ; absentes, la requete garde sa forme d'avant 1B.
+   * @param {{
+   *   groupName: string, participants: string[], permissions?: Record<string, boolean>
+   * }} params
+   * @returns {Promise<any>}
+   */
+  const startGroupChat = async ({ groupName, participants, permissions }) => {
     const currentUserId = normalizeChatId(userData?.documentId || '');
     if (!currentUserId) return undefined;
 
@@ -1469,6 +1668,7 @@ const useMessaging = (currentChatId) => {
     return createGroupChatMutation.mutateAsync({
       groupName: safeGroupName,
       participants: memberIds,
+      ...(permissions && Object.keys(permissions).length ? { permissions } : {}),
     });
   };
 
@@ -1517,6 +1717,7 @@ const useMessaging = (currentChatId) => {
     isSocketConnected: isConnected,
     joinChat,
     leaveChat,
+    markChatUnread,
     pinChat: pinChatMutation.mutate,
     pinChatAsync: pinChatMutation.mutateAsync,
     reactToMessage,

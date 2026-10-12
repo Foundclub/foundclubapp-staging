@@ -32,6 +32,10 @@ const FIN_DU_JOUR = (23 * 60) + 59;
 // couleur, son nom pour le lecteur d ecran, et s ouvre au clic.
 const VOIE_NOM_ENTIER = 72;
 const VOIE_INITIALES = 30;
+// SITE-VILLE-FINITIONS (T19) : panneau « Attribuer » ouvert, deux creneaux cote a cote font
+// ~29 px chacun et restaient muets. Jusqu a 26 px, les initiales tiennent en 10 px avec moins
+// de marge (sans l equipe, qu on couperait).
+const VOIE_SERREE = 26;
 // Le cadre de la grille : 12 px de marge de chaque cote.
 const MARGES_DU_CADRE = 24;
 
@@ -97,8 +101,10 @@ function SeasonSlotWeekGrid({
           <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
             {weekdayName(jour, { short: true })}
           </Text>
+          {/* VILLE-T18A (T18, site SITE_G37b) — panneau ouvert, colonne de ~66 px : sur UNE ligne,
+              « complet 18:00 – 19:30 » devenait « comple… ». Il passe à la ligne, centré. */}
           {complet[0] ? (
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.warning500]}>
+            <Text numberOfLines={3} style={[Fonts.p3, Fonts.warning500, { textAlign: 'center' }]}>
               {t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
                 heures: timeRange(fromMinutes(complet[0].start), fromMinutes(complet[0].end)),
                 ...SANS_ECHAPPEMENT,
@@ -215,6 +221,8 @@ function SeasonSlotWeekGrid({
     let contenu = 'rien';
     if (largeurVoie >= VOIE_NOM_ENTIER) contenu = 'entier';
     else if (largeurVoie >= VOIE_INITIALES) contenu = 'initiales';
+    else if (largeurVoie >= VOIE_SERREE) contenu = 'serre';
+    const serre = contenu === 'serre';
     return (
       <TouchableOpacity
         accessibilityLabel={t(
@@ -233,7 +241,7 @@ function SeasonSlotWeekGrid({
         style={{
           height: Math.max(20, ((place.fin - place.debut) * PAR_MINUTE) - 2),
           left: `${(place.voie * 100) / place.voies}%`,
-          paddingHorizontal: 2,
+          paddingHorizontal: serre ? 1 : 2,
           position: 'absolute',
           top: ((place.debut - bande.debut) * PAR_MINUTE) + 1,
           width: `${100 / place.voies}%`,
@@ -243,6 +251,7 @@ function SeasonSlotWeekGrid({
         <View
           style={[
             contenu === 'entier' ? Spaces.paddingHorizontal[8] : Spaces.paddingHorizontal[4],
+            serre ? { paddingHorizontal: 2 } : null,
             Spaces.paddingVertical[4],
             {
               backgroundColor: withAlpha(Colors.primary800, 0.92),
@@ -257,13 +266,13 @@ function SeasonSlotWeekGrid({
           ]}
         >
           {contenu === 'rien' ? null : (
-            <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.neutral00]}>
+            <Text numberOfLines={1} style={[serre ? Fonts.p4Bold : Fonts.p3Bold, Fonts.neutral00]}>
               {contenu === 'entier'
                 ? creneau.club?.name || ''
-                : getClubInitials(creneau.club?.name || '').slice(0, 3)}
+                : getClubInitials(creneau.club?.name || '').slice(0, serre ? 2 : 3)}
             </Text>
           )}
-          {contenu !== 'rien' && creneau.team?.name ? (
+          {contenu !== 'rien' && !serre && creneau.team?.name ? (
             <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{creneau.team.name}</Text>
           ) : null}
           {contenu === 'entier' && place.fin - place.debut >= 75 ? (

@@ -73,11 +73,14 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// SITE-VILLE-FINITIONS : le compte peut arriver APRÈS l ouverture de l écran (site, adresse tapée).
+/** @type {any} */
+let mockUserData = { documentId: 'agent', firstname: '', lastname: '' };
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     refetchUserData: jest.fn(async () => {}),
-    userData: { documentId: 'agent', firstname: '', lastname: '' },
+    userData: mockUserData,
   }),
 }));
 
@@ -496,5 +499,75 @@ describe('VINSC2 — une demande en attente ne disparaît jamais derrière un au
       'Demande refusée', '« Adresse non officielle. »',
       'Demande en cours de vérification', 'Ville de Montrivage',
     ]));
+  });
+});
+
+// 🎨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — l écusson de la
+// demande valait « RE » pour « Ville de Rouvres T18 essai » sur cet écran, « R » dans la console :
+// il prenait les initiales d un CLUB. La règle unique des collectivités (collectiviteInitial,
+// VT18E) s applique ici aussi. ROUGE avant.
+describe('SVF — l écusson de la demande suit la règle des collectivités', () => {
+  it('« Ville de Rouvres T18 essai » : « R », comme la console', async () => {
+    mockParams = {};
+    mockDemandes = {
+      data: [{
+        collectivite: {
+          documentId: 'ville-rouvres-t18', name: 'Ville de Rouvres T18 essai', type: 'commune',
+        },
+        createdAt: new Date().toISOString(),
+        decidedAt: null,
+        documentId: 'dm-rouvres-t18',
+        refusalReason: null,
+        status: 'pending',
+      }],
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    mockVilles = { data: [], isLoading: false, refetch: jest.fn() };
+    const lus = textes(await monter(CollectiviteSignupStatus));
+    expect(lus).toContain('Ville de Rouvres T18 essai');
+    expect(lus).toContain('R');
+    expect(lus).not.toContain('RE');
+  });
+});
+
+// 🟨 SITE-VILLE-FINITIONS (08/10, tournée T19, complément du chef d orchestre) — étape 2 de
+// l inscription : Prénom et Nom VIDES pour un compte qui les a. L écran ne lisait le compte qu à
+// sa première image ; sur le site, une adresse ouverte directement affiche l écran AVANT que le
+// compte soit lu. ROUGE avant.
+describe('SVF — le prénom et le nom du compte, même lus après l ouverture', () => {
+  const valeur = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
+    .findAll((/** @type {any} */ n) => n.type === TextInput && n.props.testID === testID)[0]
+    .props.value;
+  const allerAVous = async (/** @type {any} */ arbre) => {
+    await saisir(arbre, 'collectivite-inscription-nom', 'Montriv');
+    await appuyer(arbre, 'collectivite-inscription-trouvee-ville-montrivage');
+    await appuyer(arbre, 'bouton-Continuer');
+  };
+  afterEach(() => {
+    mockUserData = { documentId: 'agent', firstname: '', lastname: '' };
+  });
+
+  it('le compte arrive après l écran : Prénom et Nom se remplissent', async () => {
+    mockUserData = { documentId: 'agent' };
+    mockTrouvees = { data: [MONTRIVAGE], isLoading: false };
+    const arbre = await monter(CollectiviteSignup);
+    mockUserData = { documentId: 'agent', firstname: 'Recette', lastname: 'Mairie' };
+    await act(async () => { arbre.update(<CollectiviteSignup />); });
+    await allerAVous(arbre);
+    expect(valeur(arbre, 'collectivite-inscription-firstname')).toBe('Recette');
+    expect(valeur(arbre, 'collectivite-inscription-lastname')).toBe('Mairie');
+  });
+
+  it('🔒 ce que la personne a tapé n est pas écrasé', async () => {
+    mockUserData = { documentId: 'agent' };
+    mockTrouvees = { data: [MONTRIVAGE], isLoading: false };
+    const arbre = await monter(CollectiviteSignup);
+    await allerAVous(arbre);
+    await saisir(arbre, 'collectivite-inscription-firstname', 'Adèle');
+    mockUserData = { documentId: 'agent', firstname: 'Recette', lastname: 'Mairie' };
+    await act(async () => { arbre.update(<CollectiviteSignup />); });
+    expect(valeur(arbre, 'collectivite-inscription-firstname')).toBe('Adèle');
+    expect(valeur(arbre, 'collectivite-inscription-lastname')).toBe('Mairie');
   });
 });

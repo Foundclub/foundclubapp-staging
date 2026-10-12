@@ -374,3 +374,32 @@ describe('A17 + A21 — aucune destination de l accueil n est perdue', () => {
     });
   });
 });
+
+// 🧮 VILLE-T18B point 3 (07/10) — tournée T18, capture G12 (« Mon compte » de Recette Mairie) : la
+// rangée « Changer de compte » montrait un CARRÉ BLEU PLEIN. Son image était `share2.png`, une
+// TUILE opaque (fond bleu, glyphe noir), que la rangée teinte en entier (`tintColor`). La planche
+// P1-porte-tel dessine l'icône « personnes » (`i-personnes`). La rangée est commune à tous les
+// comptes. ROUGE avant le lot.
+describe('VILLE-T18B point 3 — « Changer de compte » porte une icône, pas une tuile pleine', () => {
+  /**
+   * L'image teintée d'une rangée, par le nom que la doublure du thème lui donne.
+   * @param {renderer.ReactTestRenderer} arbre
+   * @param {string} libelle
+   * @returns {string | undefined}
+   */
+  const iconeDe = (arbre, libelle) => {
+    const rangee = arbre.root.find((n) => typeof n.type === 'string'
+      && n.props.accessibilityRole === 'button'
+      && texteDe(n) === libelle);
+    const [image] = rangee.findAll((n) => typeof n.type === 'string' && n.props.source);
+    return image?.props.source?.testUri;
+  };
+
+  it.each(['player', 'coach', 'president', 'superAdmin', 'parent'])(
+    '%s : l’icône « personnes » de la planche, jamais la tuile share2',
+    (role) => {
+      const { arbre } = monter(/** @type {any} */ (role));
+      expect(iconeDe(arbre, 'Changer de compte')).toBe('users');
+    },
+  );
+});

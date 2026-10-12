@@ -20,6 +20,7 @@ import {
   getEventWizardNextRoute,
   getEventWizardStepCount,
   isTournamentEventType,
+  needsTrainingExternalPlaces,
 } from './eventWizardDetectionUtils';
 
 // D08 — L'ACCES DE L'EVENEMENT EN UN SEUL ECRAN.
@@ -226,6 +227,12 @@ function EventWizardAccess({ navigation, route }) {
       });
     }
 
+    // Participants precedes Access: opening a private training must collect its quota first,
+    // including an Access edit opened from the recap.
+    if (needsTrainingExternalPlaces(projectedState)) {
+      navigation.navigate(RouteNames.EventWizardParticipants, route?.params);
+      return;
+    }
     navigation.navigate(getEventWizardExitRoute(
       getEventWizardNextRoute(RouteNames.EventWizardAccess, projectedState),
       route?.params,

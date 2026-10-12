@@ -1,7 +1,7 @@
 /* eslint-disable max-len -- des phrases et des appels entiers, compares tels quels */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import EventEdit from '../EventEdit';
@@ -290,5 +290,46 @@ describe('FINITIONS11-COLL (7) — « Si la mairie refuse, la séance sera annul
     const rangBouton = enfants.findIndex((/** @type {any} */ enfant) => enfant.props?.title === 'eventEdit.actions.save');
     expect(rangAvertissement).toBeGreaterThanOrEqual(0);
     expect(rangBouton).toBe(rangAvertissement + 1);
+  });
+});
+
+// 🧪 VILLE-T18B (a) (07/10) — tournée T18 : « Gymnase des Tilleuls · ven. 9 oct. · 18:00 – 17:00 ».
+// En T11, une séance 14:00 – 17:00 a été déplacée par « Modifier » ; la demande à la Ville a gardé
+// une fin AVANT le début. La création refuse déjà « fin ≤ début » (assistant, et serveur :
+// validateCreateEventBody) ; « Modifier » laissait partir une fin restée derrière un début
+// déplacé. ROUGE avant le lot.
+describe('VILLE-T18B (a) — « Modifier » refuse une fin qui n’est pas après le début', () => {
+  const RAISON = "L'heure de fin doit être après l'heure de début.";
+  const saisirHeure = async (/** @type {string} */ libelle, /** @type {string} */ valeur) => {
+    await act(async () => { noeud(`heure-${libelle}`).props.onChange(valeur); });
+    await laisserRepondre();
+  };
+  const enregistrer = async () => {
+    await act(async () => { await noeud('bouton-eventEdit.actions.save').props.onPress(); });
+    await laisserRepondre();
+  };
+
+  test('début déplacé à 21:00, fin restée à 20:00 : rien ne part, la raison est dite', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    eventService.updateEvent.mockClear();
+    await monter();
+    await saisirHeure('eventEdit.fields.startTime.label', '21:00');
+    await enregistrer();
+
+    expect(eventService.updateEvent).not.toHaveBeenCalled();
+    expect(alerte.mock.calls.map(([, message]) => message)).toContain(RAISON);
+    alerte.mockRestore();
+  });
+
+  test('🔒 jumeau : début déplacé à 19:00 avant la fin de 20:00 : l’enregistrement part', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    eventService.updateEvent.mockClear();
+    await monter();
+    await saisirHeure('eventEdit.fields.startTime.label', '19:00');
+    await enregistrer();
+
+    expect(eventService.updateEvent).toHaveBeenCalledTimes(1);
+    expect(alerte.mock.calls.map(([, message]) => message)).not.toContain(RAISON);
+    alerte.mockRestore();
   });
 });

@@ -208,7 +208,15 @@ const choisirDansLaRoue = (arbre, etiquette, valeur) => {
   const roue = mockRoues[mockRoues.length - 1];
   act(() => roue.onChange({ type: 'set' }, valeur));
 
-  appuyer(champ, 'OK');
+  // SAIS (08/10, décision d'Adel « heure A ») — sur iPhone, c'est « OK » qui ÉCRIT la roue, et le
+  // voile ANNULE. Or le voile de la feuille ENGLOBE « OK » : la cible « la plus englobante »
+  // d'`appuyer` était le voile (invisible tant que la roue écrivait à chaque cran). On appuie sur
+  // le vrai bouton, le plus intérieur.
+  const ok = champ.findAll(
+    (/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function'
+      && textesSous(noeud).includes('OK'),
+  ).pop();
+  act(() => ok.props.onPress());
 };
 
 /**

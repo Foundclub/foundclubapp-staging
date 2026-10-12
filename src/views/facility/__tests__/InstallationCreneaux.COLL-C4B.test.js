@@ -81,6 +81,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 44,
+  }),
+}));
+
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
@@ -458,5 +464,48 @@ describe('COLL-C4B planche 1 — l onglet « Fermetures »', () => {
     fermetures(true);
     const lus = textes(await rendre());
     expect(lus.join(' ')).not.toMatch(/est fermée/);
+  });
+});
+
+// 🎨 VILLE-T18A (07/10, tournée T18 point 3, G57b) — l onglet « Fermetures » : la date d un blocage
+// s affichait « jeu. 8 » (« oct. » perdu : la boîte épousait sa largeur mesurée, piège Android 16) ;
+// et « Rouvrir ? Les mêmes clubs seront prévenus. » sur un blocage qui n avait prévenu AUCUN club.
+describe('VILLE-T18A (3) la carte d une fermeture : sa date entière, « Rouvrir » sans club', () => {
+  it('la date s étire jusqu au bord droit (elle ne se coupe plus)', async () => {
+    fermetures(true);
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Fermetures'));
+    const date = arbre.root.findAllByType(Text)
+      .find((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim() === 'sam. 3 oct.');
+    const style = jest.requireActual('react-native').StyleSheet.flatten(date.props.style);
+    expect(style).toEqual(expect.objectContaining({ flexGrow: 1, textAlign: 'right' }));
+  });
+
+  it('un blocage qui n a prévenu aucun club : « Rouvrir ? Aucun club n’est à prévenir. »', async () => {
+    /** @type {any} */ (listFacilityClosures).mockResolvedValue({
+      data: [{ ...BLOCAGE, notifiedClubsCount: 0 }],
+      meta: { bandeau: null, canManage: true, facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' } },
+    });
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Fermetures'));
+    const rouvrir = arbre.root.findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ noeud) => noeud.findAllByType(Text)
+        .some((/** @type {any} */ texte) => aplatir(texte.props.children).trim() === 'Rouvrir'));
+    await appuyer(rouvrir[0]);
+    const lus = textes(arbre);
+    expect(lus).toContain('Rouvrir ? Aucun club n’est à prévenir.');
+    expect(lus).not.toContain('Rouvrir ? Les mêmes clubs seront prévenus.');
+  });
+
+  it('FINITIONS-VILLE (T20) : aucun club prévenu nulle part ⇒ pas de pied « Rouvrir prévient les mêmes clubs. »', async () => {
+    /** @type {any} */ (listFacilityClosures).mockResolvedValue({
+      data: [{ ...FERMETURE, notifiedClubsCount: 0 }],
+      meta: { bandeau: null, canManage: true, facility: { documentId: 'gym-tilleuls', name: 'Gymnase des Tilleuls' } },
+    });
+    const arbre = await rendre();
+    await appuyer(parTexte(arbre, 'Fermetures'));
+    const lus = textes(arbre);
+    expect(lus).toContain('Toute la journée · Aucun club prévenu');
+    expect(lus).not.toContain('Rouvrir prévient les mêmes clubs.');
   });
 });

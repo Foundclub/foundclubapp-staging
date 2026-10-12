@@ -28,6 +28,9 @@ import EventWizardRecap from '../EventWizardRecap';
 
 /** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
 const mockProprietesDuGabarit = [];
+let mockPayloadReel = false;
+/** @type {any[][]} */
+const mockEnvoisCreation = [];
 
 jest.mock('react-i18next', () => ({
   // `EventWizardAccess` tire `@/domains/event/eventUseCases`, qui charge
@@ -105,7 +108,7 @@ jest.mock('@/domains/auth/useAuth', () => {
 
 jest.mock('@/domains/event/useEvent', () => ({
   __esModule: true,
-  default: () => ({
+  default: () => (mockPayloadReel ? jest.requireActual('@/domains/event/useEvent').default() : {
     createReccurrentEventPayload: () => [{}],
     createStageEventPayload: () => ({}),
   }),
@@ -132,7 +135,10 @@ jest.mock('@/services/team/teamService', () => ({
 }));
 
 jest.mock('@/services/event/eventService', () => ({
-  createEventsWithConcurrency: () => Promise.resolve({ created: [], failed: [] }),
+  createEventsWithConcurrency: (/** @type {any[]} */ payloads) => {
+    mockEnvoisCreation.push(payloads);
+    return Promise.resolve({ created: [], failed: [] });
+  },
   getEventById: () => Promise.resolve(null),
   requestFeatured: () => Promise.resolve(null),
   rollbackEventsByCancel: () => Promise.resolve([]),
@@ -333,6 +339,101 @@ const monter = (Ecran, etatSeme = {}, navigation = {}) => {
 
 beforeEach(() => {
   mockProprietesDuGabarit.length = 0;
+  mockPayloadReel = false;
+  mockEnvoisCreation.length = 0;
+});
+
+describe('IPH09 FC-006 — quota externe avant creation', () => {
+  const entrainement = {
+    sessionStatus: 'open',
+    team: EQUIPE,
+    type: { documentId: 'training', name: 'Entraînement' },
+  };
+
+  it('passer de Prive a Public collecte le quota avant Description', () => {
+    const { arbre, demonter, nav } = monter(EventWizardAccess, {
+      ...entrainement, sessionStatus: 'closed',
+    });
+    act(() => pressableQuiPorte(arbre, 'Public').props.onPress());
+    act(() => dernierGabarit().onNext());
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardParticipants);
+    demonter();
+  });
+
+  it('un entrainement ferme continue sans imposer de places externes', () => {
+    const { demonter, nav } = monter(EventWizardAccess, {
+      ...entrainement, externalParticipantLimit: 0, sessionStatus: 'closed',
+    });
+    act(() => dernierGabarit().onNext());
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardDescription);
+    demonter();
+  });
+
+  it.each([null, 0])('Acces demande les places manquantes (%s)', (quota) => {
+    const { demonter, nav } = monter(EventWizardAccess, {
+      ...entrainement, externalParticipantLimit: quota,
+    });
+    act(() => dernierGabarit().onNext());
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardParticipants);
+    demonter();
+  });
+
+  it.each([1, 4])('Acces conserve un quota deja renseigne (%s)', (quota) => {
+    const { demonter, nav } = monter(EventWizardAccess, {
+      ...entrainement, externalParticipantLimit: quota,
+    });
+    act(() => dernierGabarit().onNext());
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardDescription);
+    demonter();
+  });
+
+  it('Participants garde un zero explicite, explique le minimum et refuse Suivant', () => {
+    const { arbre, demonter, nav } = monter(EventWizardParticipants, {
+      ...entrainement, externalParticipantLimit: 0,
+    });
+    expect(contenuDe(arbre)).toContain('0');
+    expect(contenuDe(arbre)).toContain('Indique combien de places externes tu ouvres pour cet entraînement.');
+    expect(dernierGabarit().isNextDisabled).toBe(true);
+    act(() => dernierGabarit().onNext());
+    expect(destinationsDe(nav)).toEqual([]);
+    demonter();
+  });
+
+  it('Recap refuse un brouillon ouvert sans quota et retourne aux places', async () => {
+    const { demonter, nav } = monter(EventWizardRecap, {
+      ...entrainement,
+      date: new Date('2026-10-12T15:00:00Z'),
+      endTime: new Date('2026-10-12T16:00:00Z'),
+      externalParticipantLimit: 0,
+      facility: 'gymnase',
+      startTime: new Date('2026-10-12T15:00:00Z'),
+    });
+    expect(dernierGabarit().isNextDisabled).toBe(true);
+    await act(async () => dernierGabarit().onNext());
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardParticipants);
+    demonter();
+  });
+
+  it.each([1, 4])('Recap transmet le quota %s au service avec le vrai constructeur de payload', async (quota) => {
+    mockPayloadReel = true;
+    const { demonter } = monter(EventWizardRecap, {
+      ...entrainement,
+      date: new Date('2026-10-12T15:00:00Z'),
+      endTime: new Date('2026-10-12T16:00:00Z'),
+      externalParticipantLimit: quota,
+      facility: 'gymnase',
+      startTime: new Date('2026-10-12T15:00:00Z'),
+    });
+    expect(dernierGabarit().isNextDisabled).toBe(false);
+    await act(async () => dernierGabarit().onNext());
+    expect(mockEnvoisCreation).toHaveLength(1);
+    expect(mockEnvoisCreation[0]).toEqual([expect.objectContaining({
+      externalParticipantLimit: quota,
+      externalParticipantValidationMode: 'manual',
+      sessionStatus: 'open',
+    })]);
+    demonter();
+  });
 });
 
 describe('D10 — etape 5 · Participants', () => {

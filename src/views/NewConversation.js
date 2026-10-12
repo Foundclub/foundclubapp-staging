@@ -1,26 +1,44 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, FlatList, Image, Platform, SectionList, Text, TextInput, TouchableOpacity, View,
+  Alert, FlatList, Image, Platform, SectionList, StyleSheet, Text, TextInput, TouchableOpacity,
+  View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import {
+  AUTORISATIONS_PAR_DEFAUT,
+  autorisationsModifiees,
+  resumeDesAutorisations,
+} from '@/domains/messaging/autorisationsDuGroupe';
+import { choisirLaPhotoDuGroupe } from '@/domains/messaging/photoDuGroupe';
+import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
+import { estUneRouteAbsente } from '@/domains/messaging/routesDuServeur1B';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
+import AutorisationsDuGroupe from '@/views/chat/AutorisationsDuGroupe';
+import FeuillePhotoDuGroupe from '@/views/chat/FeuillePhotoDuGroupe';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetChatById } from '@/services/chat/chatQueriesCompat';
+import { setGroupPhoto } from '@/services/chat/groupPhotoService';
 import client from '@/services/client';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
@@ -152,7 +170,9 @@ function NewConversation({ navigation, route }) {
     addGroupMembers,
     startGroupChat,
     startWhisperChat,
+    updateGroupMeta,
   } = useMessaging();
+  const queryClient = useQueryClient();
   const roleType = String(userData?.role?.type || '').trim().toLowerCase();
   const currentRoleName = String(userData?.role?.name || '').trim().toLowerCase();
   const isSuperAdminUser = roleType === 'superadmin' || currentRoleName === 'superadmin';
@@ -165,6 +185,30 @@ function NewConversation({ navigation, route }) {
   const [selectedTeamId, setSelectedTeamId] = useState(/** @type {string | null} */ (null));
   const [isCreating, setIsCreating] = useState(false);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  // 🧭 MSG1A (§3.15) — deux etapes : choisir les membres, puis (2 et plus) nommer le groupe.
+  const [etape, setEtape] = useState(/** @type {'choix' | 'nom'} */ ('choix'));
+  const [nomDuGroupe, setNomDuGroupe] = useState('');
+  // Les personnes choisies, gardees meme quand une recherche les sort de la liste.
+  const personnesChoisiesRef = useRef(/** @type {Map<string, User>} */ (new Map()));
+  // 🖼️ MSG1BA (§3.15) — la photo, les autorisations et les admins, reglables des la creation.
+  const [photoDuGroupe, setPhotoDuGroupe] = useState(
+    /** @type {import('@/domains/messaging/photoDuGroupe').PhotoChoisie | null} */ (null),
+  );
+  const [feuillePhotoVisible, setFeuillePhotoVisible] = useState(false);
+  const [autorisations, setAutorisations] = useState(
+    /** @type {Record<string, boolean>} */ ({ ...AUTORISATIONS_PAR_DEFAUT }),
+  );
+  const [pageAutorisations, setPageAutorisations] = useState(false);
+  const [pageAdmins, setPageAdmins] = useState(false);
+  // Les AUTRES admins choisis (le createur l'est d'office, cote serveur).
+  const [adminsChoisis, setAdminsChoisis] = useState(/** @type {string[]} */ ([]));
+  // Mode ajout : les membres DEJA dans le groupe sont grises (« Deja dans le groupe »).
+  const { data: groupeExistant } = useGetChatById(addMembersChatId, { enabled: isAddMembersMode });
+  const dejaMembres = useMemo(() => new Set(
+    (/** @type {any} */ (groupeExistant)?.participants || [])
+      .map((/** @type {User} */ membre) => getUserIdentifier(membre))
+      .filter(Boolean),
+  ), [groupeExistant]);
   const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Merci de réessayer plus tard.');
 
   const resolveConversationErrorMessage = (sourceError, fallbackMessage = '') => {
@@ -298,14 +342,80 @@ function NewConversation({ navigation, route }) {
 
   const toggleSelection = (/** @type {User} */ user) => {
     const userId = getUserIdentifier(user);
-    if (!userId) return;
+    if (!userId || dejaMembres.has(userId)) return;
     const newSet = new Set(selectedUserIds);
     if (newSet.has(userId)) {
       newSet.delete(userId);
+      personnesChoisiesRef.current.delete(userId);
+      setAdminsChoisis((avant) => avant.filter((id) => id !== userId));
     } else {
       newSet.add(userId);
+      personnesChoisiesRef.current.set(userId, user);
     }
     setSelectedUserIds(newSet);
+  };
+  const personnesChoisies = Array.from(selectedUserIds)
+    .map((userId) => personnesChoisiesRef.current.get(userId))
+    .filter(Boolean);
+  const nomComplet = (/** @type {any} */ personne) => [personne?.firstname, personne?.lastname]
+    .filter(Boolean).join(' ');
+  const nomParDefaut = `Groupe (${selectedUserIds.size + 1})`;
+  const meId = getUserIdentifier(userData);
+
+  /**
+   * Une alerte (le site n'a pas d'`Alert`) — la meme que celle de l'echec de creation.
+   * @param {string} message
+   * @returns {void}
+   */
+  const prevenir = (message) => {
+    const surLeSite = Platform.OS === 'web' && typeof window !== 'undefined';
+    if (surLeSite && typeof window.alert === 'function') {
+      window.alert(message);
+    } else {
+      Alert.alert(t('messaging.title', 'Messagerie'), message);
+    }
+  };
+
+  // 🖼️ MSG1BA (§3.15) — la photo choisie reste locale jusqu'a la creation du groupe.
+  const choisirLaPhoto = async (/** @type {'camera' | 'galerie'} */ source) => {
+    const choix = await choisirLaPhotoDuGroupe(source, t);
+    if (!choix) return;
+    if ('erreur' in choix) {
+      prevenir(choix.erreur);
+      return;
+    }
+    setPhotoDuGroupe(choix);
+  };
+
+  /**
+   * MSG1BA (§3.15) — APRES la creation : les admins choisis (`addAdminIds`, une requete) et la
+   * photo (`POST …/group-photo`). Aucun des deux ne bloque l'ouverture du groupe ; la photo
+   * refusee contre un serveur d'avant 1B (404) se tait, toute autre erreur se dit.
+   * @param {string} chatId
+   * @returns {Promise<void>}
+   */
+  const completerLeGroupe = async (chatId) => {
+    if (adminsChoisis.length) {
+      try {
+        await updateGroupMeta({ chatId, data: { addAdminIds: adminsChoisis } });
+      } catch (error) {
+        newConversationLogger.warn('Failed to name group admins', error?.message || error);
+      }
+    }
+    if (photoDuGroupe) {
+      try {
+        await setGroupPhoto(chatId, photoDuGroupe.fichier);
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+      } catch (error) {
+        if (!estUneRouteAbsente(error)) {
+          newConversationLogger.warn('Failed to upload group photo', error?.message || error);
+          prevenir(t(
+            'newConversation.groupPhotoError',
+            'Le groupe est créé, mais sa photo n’a pas pu être envoyée.',
+          ));
+        }
+      }
+    }
   };
 
   const handleCreate = async () => {
@@ -321,12 +431,20 @@ function NewConversation({ navigation, route }) {
         navigation.goBack();
       } else {
         const shouldCreateGroup = isGroupChatEnabled && participants.length > 1;
+        // MSG1BA (§3.15) — seulement ce qui differe des defauts : rien de change = la requete
+        // garde exactement sa forme d'avant 1B.
+        const permissions = autorisationsModifiees(autorisations);
         const chat = shouldCreateGroup
           ? await startGroupChat({
-            groupName: `Groupe (${participants.length + 1})`,
+            // MSG1A (§3.15) — le nom tape a l'etape « Nouveau groupe », sinon « Groupe (N) ».
+            groupName: nomDuGroupe.trim() || `Groupe (${participants.length + 1})`,
             participants,
+            ...(permissions ? { permissions } : {}),
           })
           : await startWhisperChat(participants);
+        if (chat && shouldCreateGroup) {
+          await completerLeGroupe(chat.documentId);
+        }
         if (chat) {
           navigation.replace(RouteNames.Conversation, { chatId: chat.documentId });
         }
@@ -342,11 +460,7 @@ function NewConversation({ navigation, route }) {
         error,
         t('messaging.createConversationError', 'Impossible de démarrer cette conversation.'),
       );
-      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
-        window.alert(safeMessage);
-      } else {
-        Alert.alert(t('messaging.title', 'Messagerie'), safeMessage);
-      }
+      prevenir(safeMessage);
     } finally {
       setIsCreating(false);
     }
@@ -361,31 +475,35 @@ function NewConversation({ navigation, route }) {
   const renderItem = (/** @type {{ item: User }} */ { item }) => {
     const itemId = getUserIdentifier(item);
     const isSelected = itemId ? selectedUserIds.has(itemId) : false;
+    const dejaDansLeGroupe = itemId ? dejaMembres.has(itemId) : false;
+    // 🧑 MSG1A (§3.15) — ligne de 64 : avatar 44, nom, role (ou « Deja dans le groupe », grise).
     return (
       <TouchableOpacity
+        accessibilityState={{ checked: isSelected, disabled: dejaDansLeGroupe }}
+        disabled={dejaDansLeGroupe}
         onPress={() => toggleSelection(item)}
         style={[
-          Alignments.row,
-          Alignments.alignCenter,
-          Spaces.padding[12],
-          ApplicationStyle.borderRadius16,
-          Spaces.marginBottom[8],
-          isSelected ? { backgroundColor: 'rgba(255, 255, 255, 0.1)' } : {},
+          stylesDuChoix.ligne,
+          isSelected ? { backgroundColor: withAlpha(Colors.primary500, 0.08) } : null,
+          dejaDansLeGroupe ? stylesDuChoix.ligneGrisee : null,
         ]}
       >
         <ProfileAvatar
           imageUrl={item.avatar?.url}
-          name={[item.firstname, item.lastname].filter(Boolean).join(' ')}
-          size={48}
+          name={nomComplet(item)}
+          size={44}
         />
-        <View style={[Spaces.marginLeft[12], Alignments.fill]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {item.firstname}
-            {' '}
-            {item.lastname}
+        <View style={stylesDuChoix.ligneTextes}>
+          <Text numberOfLines={1} style={[stylesDuChoix.ligneNom, { color: Colors.neutral00 }]}>
+            {nomComplet(item)}
           </Text>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {item.role?.name || t('common.member')}
+          <Text
+            numberOfLines={1}
+            style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
+          >
+            {dejaDansLeGroupe
+              ? t('newConversation.alreadyInGroup', 'Déjà dans le groupe')
+              : item.role?.name || t('common.member')}
           </Text>
         </View>
         <View style={{
@@ -406,11 +524,48 @@ function NewConversation({ navigation, route }) {
     );
   };
 
-  let createButtonTitle = t('common.start', 'Démarrer la discussion');
-  if (isAddMembersMode) {
-    createButtonTitle = t('messaging.addMembersCta', `Ajouter (${selectedUserIds.size})`);
-  } else if (selectedUserIds.size > 1) {
-    createButtonTitle = t('messaging.createGroup', `Créer un groupe (${selectedUserIds.size})`);
+  // 🧾 MSG1A (§3.15) — la barre du bas ANNONCE le resultat avant qu'on appuie.
+  const nombreChoisi = selectedUserIds.size;
+  const vaVersLeNom = !isAddMembersMode && isGroupChatEnabled && nombreChoisi > 1;
+  /** @type {{ titre: string, sous: string, bouton: string, suivant?: boolean } | null} */
+  let appelALAction = null;
+  if (nombreChoisi > 0) {
+    if (isAddMembersMode) {
+      appelALAction = {
+        bouton: t('messaging.addMembersCta', `Ajouter (${nombreChoisi})`),
+        sous: personnesChoisies.map((personne) => personne?.firstname).filter(Boolean).join(', '),
+        titre: t('newConversation.cta.addTitle', 'Ajouter au groupe'),
+      };
+    } else if (nombreChoisi === 1 || !isGroupChatEnabled) {
+      appelALAction = {
+        bouton: t('newConversation.cta.start', 'Démarrer'),
+        sous: t('newConversation.cta.privateWith', {
+          defaultValue: 'avec {{name}}',
+          ...SANS_ECHAPPEMENT,
+          name: personnesChoisies.map(nomComplet).join(', '),
+        }),
+        titre: t('newConversation.cta.privateTitle', 'Discussion privée'),
+      };
+    } else {
+      appelALAction = {
+        bouton: t('newConversation.cta.next', 'Suivant'),
+        sous: t('newConversation.membersPlusYou', {
+          count: nombreChoisi,
+          defaultValue: '{{count}} membres + vous',
+        }),
+        suivant: true,
+        titre: t('newConversation.newGroup', 'Nouveau groupe'),
+      };
+    }
+  }
+  let sousTitreDeLEnTete = isAddMembersMode
+    ? t('newConversation.subtitle.add', 'Choisis qui ajouter')
+    : t('newConversation.subtitle.rule', '1 personne = privé · 2 et plus = groupe');
+  if (nombreChoisi > 0) {
+    sousTitreDeLEnTete = t('newConversation.subtitle.selected', {
+      count: nombreChoisi,
+      defaultValue: '{{count}} sélectionnés',
+    });
   }
   const headerTitle = isAddMembersMode
     ? t('messaging.addGroupMembers', 'Ajouter des membres')
@@ -465,40 +620,208 @@ function NewConversation({ navigation, route }) {
         Alignments.fill,
       ]}
     >
-      {/* Header */}
+      {/* Header — MSG1A (§3.15) : titre et sous-titre qui disent la regle, puis le compte. */}
       <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter]}>
-        <HeaderBackButton onPress={() => navigation.goBack()} />
-        <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginLeft[16]]}>
-          {headerTitle}
-        </Text>
+        <HeaderBackButton
+          onPress={() => (etape === 'nom' ? setEtape('choix') : navigation.goBack())}
+        />
+        <View style={[Spaces.marginLeft[16], Alignments.fill]}>
+          <Text numberOfLines={1} style={[Fonts.h3, Fonts.neutral00]}>
+            {etape === 'nom' ? t('newConversation.newGroup', 'Nouveau groupe') : headerTitle}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[stylesDuChoix.sousTitre, { color: withAlpha(Colors.neutral00, 0.6) }]}
+          >
+            {etape === 'nom'
+              ? t('newConversation.membersPlusYou', {
+                count: nombreChoisi,
+                defaultValue: '{{count}} membres + vous',
+              })
+              : sousTitreDeLEnTete}
+          </Text>
+        </View>
       </View>
+
+      {etape === 'nom' ? (
+        <View style={Alignments.fill}>
+          {/* 🏷️ MSG1A (§3.15) — l'etape « Nouveau groupe » : le nom (facultatif) part dans
+              `groupName`, sans nom on garde « Groupe (N) » et on le dit. La photo et les
+              autorisations du pack demandent le serveur : lot MESSAGERIE-1B. */}
+          <View style={[stylesDuChoix.carteNom, { backgroundColor: Colors.primary800 }]}>
+            {/* 🖼️ MSG1BA (§3.15) — la photo du groupe : toucher l'avatar ouvre la feuille. */}
+            <TouchableOpacity
+              accessibilityLabel={photoDuGroupe
+                ? t('newConversation.changeGroupPhoto', 'Changer la photo du groupe')
+                : t('newConversation.addGroupPhoto', 'Ajouter une photo de groupe')}
+              accessibilityRole="button"
+              onPress={() => setFeuillePhotoVisible(true)}
+              testID="nouveau-groupe-photo"
+            >
+              {photoDuGroupe ? (
+                <Image
+                  source={{ uri: photoDuGroupe.apercu }}
+                  style={stylesDuChoix.photo}
+                  testID="nouveau-groupe-photo-apercu"
+                />
+              ) : (
+                <ClubLogoMark name={nomDuGroupe.trim() || 'Groupe'} size={58} />
+              )}
+              <View
+                style={[
+                  stylesDuChoix.pastillePhoto,
+                  { backgroundColor: Colors.primary500, borderColor: Colors.primary800 },
+                ]}
+              >
+                <GlyphIcon color={Colors.primary900} name="camera" size={14} />
+              </View>
+            </TouchableOpacity>
+            <TextInput
+              autoFocus
+              maxLength={40}
+              onChangeText={setNomDuGroupe}
+              placeholder={t('newConversation.groupNamePlaceholder', 'Nom du groupe (facultatif)')}
+              placeholderTextColor={withAlpha(Colors.neutral00, 0.5)}
+              style={[
+                stylesDuChoix.champNom,
+                { borderBottomColor: Colors.primary500, color: Colors.neutral00 },
+              ]}
+              testID="nouveau-groupe-nom"
+              value={nomDuGroupe}
+            />
+          </View>
+          <Text style={[stylesDuChoix.aide, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+            {t('newConversation.groupNameHint', {
+              defaultValue:
+                'Sans nom, il s’appellera « {{name}} ». Tu pourras le changer plus tard.',
+              ...SANS_ECHAPPEMENT,
+              name: nomParDefaut,
+            })}
+          </Text>
+          {/* 🛡️ MSG1BA (§3.15) — les autorisations (et les admins), des la creation. */}
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => setPageAutorisations(true)}
+            style={[stylesDuChoix.ligneAutorisations, { backgroundColor: Colors.primary800 }]}
+            testID="nouveau-groupe-autorisations"
+          >
+            <GlyphIcon color={Colors.primary500} name="shieldCheck" size={22} />
+            <View style={stylesDuChoix.barreTextes}>
+              <Text style={[stylesDuChoix.ligneNom, { color: Colors.neutral00 }]}>
+                {t('conversation.groupPermissions.title', 'Autorisations du groupe')}
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
+              >
+                {`${resumeDesAutorisations(autorisations, t)} · ${t('newConversation.adminsCount', {
+                  count: adminsChoisis.length + 1,
+                  defaultValue: '{{count}} admins',
+                })}`}
+              </Text>
+            </View>
+            <GlyphIcon color={withAlpha(Colors.neutral00, 0.5)} name="chevronRight" size={20} />
+          </TouchableOpacity>
+          <Text style={[stylesDuChoix.titreDeSection, { color: withAlpha(Colors.neutral00, 0.6) }]}>
+            {t('newConversation.membersCount', {
+              count: nombreChoisi + 1,
+              defaultValue: 'MEMBRES · {{count}}',
+            })}
+          </Text>
+          <View style={stylesDuChoix.grille}>
+            <View style={stylesDuChoix.tuile}>
+              <ProfileAvatar
+                imageUrl={userData?.avatar?.url}
+                name={nomComplet(userData)}
+                size={56}
+              />
+              <Text style={[stylesDuChoix.tuileNom, { color: Colors.neutral00 }]}>
+                {t('conversation.header.you', 'Vous')}
+              </Text>
+              <Text style={[stylesDuChoix.tuileRole, { color: Colors.primary500 }]}>
+                {t('newConversation.admin', 'Admin')}
+              </Text>
+            </View>
+            {personnesChoisies.map((personne) => {
+              const id = getUserIdentifier(personne);
+              return (
+                <TouchableOpacity
+                  accessibilityLabel={t('newConversation.remove', {
+                    defaultValue: 'Retirer {{name}}',
+                    ...SANS_ECHAPPEMENT,
+                    name: nomComplet(personne),
+                  })}
+                  key={id}
+                  onPress={() => toggleSelection(/** @type {User} */ (personne))}
+                  style={stylesDuChoix.tuile}
+                  testID={`groupe-retirer-${id}`}
+                >
+                  <View>
+                    <ProfileAvatar
+                      imageUrl={personne?.avatar?.url}
+                      name={nomComplet(personne)}
+                      size={56}
+                    />
+                    <View
+                      style={[
+                        stylesDuChoix.retirer,
+                        { backgroundColor: Colors.neutral500, borderColor: Colors.chatBackground },
+                      ]}
+                    >
+                      <GlyphIcon color={Colors.neutral00} name="xmark" size={12} />
+                    </View>
+                  </View>
+                  <Text
+                    numberOfLines={1}
+                    style={[stylesDuChoix.tuileNom, { color: Colors.neutral00 }]}
+                  >
+                    {personne?.firstname || nomComplet(personne)}
+                  </Text>
+                  {adminsChoisis.includes(id) ? (
+                    <Text style={[stylesDuChoix.tuileRole, { color: Colors.primary500 }]}>
+                      {t('newConversation.admin', 'Admin')}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {nombreChoisi < 2 ? (
+            <Text style={[stylesDuChoix.alerte, { color: Colors.chatDanger }]}>
+              {t('newConversation.atLeastTwo', 'Ajoute au moins 2 membres pour créer un groupe.')}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
       {/* Search */}
-      <View style={[
-        ApplicationStyle.backgroundColor.primary700,
-        ApplicationStyle.borderRadius24,
-        Alignments.row,
-        Alignments.alignCenter,
-        Spaces.paddingHorizontal[16],
-        Spaces.paddingVertical[12],
-        Spaces.gap[12],
-      ]}
-      >
-        <Image
-          source={Images.search}
-          style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral300]}
-        />
-        <TextInput
-          onChangeText={setSearchQuery}
-          placeholder={t('messaging.searchUserPlaceholder', 'Rechercher un membre...')}
-          placeholderTextColor={Colors.neutral300}
-          style={[Fonts.p2, { color: Colors.neutral00, flex: 1, padding: 0 }]}
-          value={searchQuery}
-        />
-      </View>
+      {etape === 'choix' ? (
+        <View style={[
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          Alignments.row,
+          Alignments.alignCenter,
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[12],
+          Spaces.gap[12],
+        ]}
+        >
+          <Image
+            source={Images.search}
+            style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.neutral300]}
+          />
+          <TextInput
+            onChangeText={setSearchQuery}
+            placeholder={t('messaging.searchUserPlaceholder', 'Rechercher un membre...')}
+            placeholderTextColor={Colors.neutral300}
+            style={[Fonts.p2, { color: Colors.neutral00, flex: 1, padding: 0 }]}
+            value={searchQuery}
+          />
+        </View>
+      ) : null}
 
       {/* Team Filters */}
-      {accessibleTeams.length > 0 && (
+      {etape === 'choix' && accessibleTeams.length > 0 && (
         <View>
           <FlatList
             contentContainerStyle={Spaces.gap[8]}
@@ -541,28 +864,205 @@ function NewConversation({ navigation, route }) {
           />
         </View>
       )}
-      {/* User List */}
-      <View style={Alignments.fill}>
-        {userListContent}
-      </View>
+      {/* 👥 MSG1A (§3.15) — le bandeau des choisis : toucher une pastille la retire. */}
+      {etape === 'choix' && personnesChoisies.length > 0 ? (
+        <FlatList
+          contentContainerStyle={stylesDuChoix.bandeau}
+          data={personnesChoisies}
+          horizontal
+          keyExtractor={(personne) => `choisi:${getUserIdentifier(personne)}`}
+          renderItem={({ item: personne }) => (
+            <TouchableOpacity
+              accessibilityLabel={t('newConversation.remove', {
+                defaultValue: 'Retirer {{name}}',
+                ...SANS_ECHAPPEMENT,
+                name: nomComplet(personne),
+              })}
+              onPress={() => toggleSelection(/** @type {User} */ (personne))}
+              style={stylesDuChoix.choisi}
+              testID={`selection-retirer-${getUserIdentifier(personne)}`}
+            >
+              <View>
+                <ProfileAvatar
+                  imageUrl={personne?.avatar?.url}
+                  name={nomComplet(personne)}
+                  size={48}
+                />
+                <View
+                  style={[
+                    stylesDuChoix.retirer,
+                    { backgroundColor: Colors.neutral500, borderColor: Colors.chatBackground },
+                  ]}
+                >
+                  <GlyphIcon color={Colors.neutral00} name="xmark" size={12} />
+                </View>
+              </View>
+              <Text
+                numberOfLines={1}
+                style={[stylesDuChoix.choisiNom, { color: withAlpha(Colors.neutral00, 0.85) }]}
+              >
+                {personne?.firstname || nomComplet(personne)}
+              </Text>
+            </TouchableOpacity>
+          )}
+          showsHorizontalScrollIndicator={false}
+          style={[
+            stylesDuChoix.bandeauConteneur,
+            { borderBottomColor: withAlpha(Colors.neutral00, 0.06) },
+          ]}
+        />
+      ) : null}
 
-      {/* Create Button */}
-      {selectedUserIds.size > 0 && (
-        <View style={{
-          bottom: 20,
-          left: 20,
-          position: 'absolute',
-          right: 20,
-        }}
-        >
-          <Button
-            isLoading={isCreating}
-            onPress={handleCreate}
-            title={createButtonTitle}
-            variant="Primary"
-          />
+      {/* User List */}
+      {etape === 'choix' ? (
+        <View style={Alignments.fill}>
+          {userListContent}
         </View>
-      )}
+      ) : null}
+
+      {/* 🧾 MSG1A (§3.15) — la barre du bas : ce qui va se passer, puis le bouton. */}
+      {etape === 'choix' && appelALAction ? (
+        <View
+          style={[
+            stylesDuChoix.barre,
+            { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) },
+          ]}
+        >
+          <View style={stylesDuChoix.barreTextes}>
+            <Text numberOfLines={1} style={[stylesDuChoix.barreTitre, { color: Colors.neutral00 }]}>
+              {appelALAction.titre}
+            </Text>
+            <Text
+              numberOfLines={1}
+              style={[stylesDuChoix.barreSous, { color: withAlpha(Colors.neutral00, 0.6) }]}
+            >
+              {appelALAction.sous}
+            </Text>
+          </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            disabled={isCreating}
+            onPress={vaVersLeNom ? () => setEtape('nom') : handleCreate}
+            style={[
+              stylesDuChoix.pilule,
+              { backgroundColor: Colors.primary500 },
+              isCreating ? stylesDuChoix.piluleEteinte : null,
+            ]}
+            testID="nouvelle-discussion-valider"
+          >
+            <Text
+              style={[stylesDuChoix.piluleTexte, { color: Colors.primary900 }]}
+            >
+              {appelALAction.bouton}
+            </Text>
+            {appelALAction.suivant ? (
+              <GlyphIcon color={Colors.primary900} name="chevronRight" size={18} />
+            ) : null}
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {etape === 'nom' ? (
+        <View
+          style={[
+            stylesDuChoix.barre,
+            { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) },
+          ]}
+        >
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ disabled: nombreChoisi < 2 || isCreating }}
+            disabled={nombreChoisi < 2 || isCreating}
+            onPress={handleCreate}
+            style={[
+              stylesDuChoix.pilule,
+              stylesDuChoix.piluleLarge,
+              { backgroundColor: Colors.primary500 },
+              nombreChoisi < 2 || isCreating ? stylesDuChoix.piluleEteinte : null,
+            ]}
+            testID="nouveau-groupe-creer"
+          >
+            <Text
+              style={[
+                stylesDuChoix.piluleTexte,
+                stylesDuChoix.piluleTexteLarge,
+                { color: Colors.primary900 },
+              ]}
+            >
+              {t('newConversation.createGroup', 'Créer le groupe')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {/* 🖼️🛡️ MSG1BA (§3.15) — la feuille photo, les autorisations et les admins (montes
+          seulement ouverts : rien ne tourne tant qu'on n'y touche pas). */}
+      {feuillePhotoVisible ? (
+        <FeuillePhotoDuGroupe
+          aPhoto={Boolean(photoDuGroupe)}
+          enFenetre
+          onChoisir={choisirLaPhoto}
+          onClose={() => setFeuillePhotoVisible(false)}
+          onSupprimer={() => setPhotoDuGroupe(null)}
+          visible
+        />
+      ) : null}
+      {pageAutorisations && !pageAdmins ? (
+        <AutorisationsDuGroupe
+          admins={[
+            {
+              avatar: userData?.avatar?.url,
+              id: meId,
+              nom: t('conversation.header.you', 'Vous'),
+              role: libelleDuRole(userData?.role?.name, t),
+            },
+            ...personnesChoisies
+              .filter((personne) => adminsChoisis.includes(getUserIdentifier(personne)))
+              .map((personne) => ({
+                avatar: personne?.avatar?.url,
+                id: getUserIdentifier(personne),
+                nom: nomComplet(personne),
+                role: libelleDuRole(personne?.role?.name, t),
+              })),
+          ]}
+          enFenetre
+          onChanger={(cle, valeur) => setAutorisations((avant) => ({ ...avant, [cle]: valeur }))}
+          onClose={() => setPageAutorisations(false)}
+          onModifierLesAdmins={() => setPageAdmins(true)}
+          valeurs={autorisations}
+          visible
+        />
+      ) : null}
+      {pageAdmins ? (
+        <AdminsDuGroupe
+          adminsInitiaux={[meId, ...adminsChoisis]}
+          enFenetre
+          meId={meId}
+          membres={[
+            {
+              avatar: userData?.avatar?.url,
+              id: meId,
+              nom: t('conversation.header.you', 'Vous'),
+              role: libelleDuRole(userData?.role?.name, t),
+            },
+            ...personnesChoisies.map((personne) => ({
+              avatar: personne?.avatar?.url,
+              id: getUserIdentifier(personne),
+              nom: nomComplet(personne),
+              role: libelleDuRole(personne?.role?.name, t),
+            })),
+          ]}
+          note={t(
+            'newConversation.creatorStaysAdmin',
+            'Tu as créé le groupe : tu en restes admin.',
+          )}
+          onClose={() => setPageAdmins(false)}
+          onValider={(admins) => {
+            setAdminsChoisis(admins.filter((id) => id !== meId));
+            setPageAdmins(false);
+          }}
+          visible
+        />
+      ) : null}
 
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
@@ -575,5 +1075,207 @@ function NewConversation({ navigation, route }) {
     </ScreenContainer>
   );
 }
+
+const stylesDuChoix = StyleSheet.create({
+  // MSG1BA (§3.15) — la ligne « Autorisations du groupe » (62 de haut, carte de 18).
+  aide: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginHorizontal: 4,
+    marginTop: 8,
+  },
+  alerte: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 18,
+    textAlign: 'center',
+  },
+  bandeau: {
+    gap: 12,
+    paddingBottom: 12,
+    paddingTop: 10,
+  },
+  bandeauConteneur: {
+    borderBottomWidth: 1,
+    flexGrow: 0,
+  },
+  barre: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: -24,
+    marginHorizontal: -24,
+    paddingBottom: 34,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  barreSous: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  barreTextes: {
+    flex: 1,
+    minWidth: 0,
+  },
+  barreTitre: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  carteNom: {
+    alignItems: 'center',
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 18,
+    padding: 14,
+  },
+  champNom: {
+    borderBottomWidth: 2,
+    flex: 1,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 16,
+    minWidth: 0,
+    paddingVertical: 8,
+  },
+  choisi: {
+    alignItems: 'center',
+    gap: 4,
+    paddingTop: 4,
+    width: 58,
+  },
+  choisiNom: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 11.5,
+    lineHeight: 15,
+    maxWidth: 58,
+  },
+  grille: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 18,
+  },
+  ligne: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    height: 64,
+    paddingHorizontal: 8,
+  },
+  ligneAutorisations: {
+    alignItems: 'center',
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 14,
+    height: 62,
+    marginTop: 18,
+    paddingHorizontal: 16,
+  },
+  ligneGrisee: {
+    opacity: 0.5,
+  },
+  ligneNom: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15.5,
+    lineHeight: 20,
+  },
+  ligneSous: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    lineHeight: 17,
+  },
+  ligneTextes: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  pastillePhoto: {
+    alignItems: 'center',
+    borderRadius: 13,
+    borderWidth: 2,
+    bottom: -2,
+    height: 26,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    width: 26,
+  },
+  photo: {
+    borderRadius: 29,
+    height: 58,
+    width: 58,
+  },
+  pilule: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    height: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  piluleEteinte: {
+    opacity: 0.4,
+  },
+  piluleLarge: {
+    flex: 1,
+    height: 52,
+  },
+  piluleTexte: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  piluleTexteLarge: {
+    fontSize: 16,
+  },
+  retirer: {
+    alignItems: 'center',
+    borderRadius: 11,
+    borderWidth: 2,
+    height: 22,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -5,
+    top: -3,
+    width: 22,
+  },
+  sousTitre: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  titreDeSection: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 12,
+    letterSpacing: 1,
+    lineHeight: 16,
+    marginBottom: 14,
+    marginHorizontal: 4,
+    marginTop: 26,
+  },
+  tuile: {
+    alignItems: 'center',
+    gap: 6,
+    width: '25%',
+  },
+  tuileNom: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 12.5,
+    lineHeight: 16,
+    maxWidth: 76,
+  },
+  tuileRole: {
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 11,
+    lineHeight: 14,
+    marginTop: -4,
+  },
+});
 
 export default NewConversation;

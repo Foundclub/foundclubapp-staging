@@ -9,149 +9,184 @@ import {
 } from 'react-native';
 
 import {
-  getPollTotalVotes,
   getPollVoteCount,
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
+import usePollVoterProfiles, { nameOfPollVoter } from '@/domains/messaging/usePollVoterProfiles';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import { GRAS_FAMILLE, REGULIER_FAMILLE } from '@/components/molecules/bulleDuFil/typographieDuFil';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+
+/** Largeur du contenu d'une bulle de sondage (SPECS.md §3). */
+const LARGEUR_DU_SONDAGE = 274;
+
 const styles = StyleSheet.create({
-  badgePill: {
-    alignSelf: 'flex-start',
+  avatarDeVotant: {
     borderRadius: 999,
-    borderWidth: 1,
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderWidth: 1.5,
   },
-  container: {
-    borderRadius: 14,
-    borderWidth: 1,
-    marginVertical: 6,
-    maxWidth: '90%',
-    minWidth: 260,
+  barre: {
+    borderRadius: 3,
+    height: 6,
+    marginTop: 7,
     overflow: 'hidden',
-    width: '100%',
   },
-  detailsHint: {
-    marginTop: 10,
-    textAlign: 'center',
+  carteSeule: {
+    borderRadius: 18,
+    paddingBottom: 7,
+    paddingHorizontal: 10,
+    paddingTop: 6,
   },
-  footer: {
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 12,
-    paddingTop: 2,
+  compte: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 13,
+    lineHeight: 18,
+    minWidth: 8,
+    textAlign: 'right',
   },
-  footerChip: {
-    alignSelf: 'center',
-    borderRadius: 999,
-    borderWidth: 1,
-    maxWidth: '84%',
-    minWidth: 150,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  headerRow: {
+  consigne: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 5,
+    marginTop: 4,
   },
-  optionButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 12,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  optionFill: {
-    bottom: 0,
-    left: 0,
-    opacity: 0.18,
-    position: 'absolute',
-    top: 0,
-  },
-  optionLabelRow: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    marginRight: 12,
-  },
-  optionMetaColumn: {
-    alignItems: 'flex-end',
-    minWidth: 68,
-  },
-  optionRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 52,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  voterChip: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: 'rgba(255,255,255,0.16)',
-    borderRadius: 999,
-    borderWidth: 1,
-    marginBottom: 6,
-    marginRight: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  voterChipText: {
+  consigneTexte: {
+    flexShrink: 1,
+    fontFamily: REGULIER_FAMILLE,
     fontSize: 12,
     lineHeight: 16,
   },
-  votersChipsRow: {
+  enTeteDOption: {
+    alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+    minHeight: 22,
   },
-  votersContainer: {
+  libelle: {
+    flexShrink: 1,
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  option: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 7,
+  },
+  options: {
+    gap: 2,
+    marginTop: 8,
+  },
+  pied: {
+    alignItems: 'center',
     borderTopWidth: 1,
-    paddingBottom: 8,
-    paddingHorizontal: 12,
-    paddingTop: 6,
+    marginBottom: -7,
+    marginHorizontal: -10,
+    marginTop: 7,
+    paddingBottom: 12,
+    paddingTop: 11,
+  },
+  piedTexte: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  question: {
+    fontFamily: GRAS_FAMILLE,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  rondCoche: {
+    alignItems: 'center',
+    borderRadius: 11,
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
+  },
+  rondVide: {
+    borderRadius: 11,
+    borderWidth: 2,
+    height: 22,
+    width: 22,
+  },
+  votants: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  votantsNoms: {
+    fontFamily: REGULIER_FAMILLE,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
   },
 });
 
 /**
- * Bubble to display and vote on chat polls.
+ * La bulle de sondage d'un fil (et sa carte, dans le detail du sondage).
+ *
+ * 🎨 MSG1A (§3.4) — LE DESSIN DU PACK (SPECS.md §3 « Sondage ») : question 15/700, consigne
+ * avec son icone (un choix / plusieurs, « · anonyme »), une ligne par option avec un ROND
+ * (coche cyan = mon vote), le libelle, 2 avatars de votants et le compte, puis une barre
+ * de 6 proportionnelle a l'option la plus votee ; pied « Voir les votes ». Le contraste est
+ * renforce a la demande de l'equipe (piste a 20 %, textes blancs).
+ * Rien ne change dans ce que fait la bulle : un appui vote (ou retire le vote), le pied ouvre
+ * le detail, un sondage anonyme ne montre personne, et les noms viennent TOUJOURS de
+ * `resolveVoterName` (la resolution des noms n'est pas l'affaire de ce composant).
  * @param {object} props
  * @param {string} [props.currentUserId]
- * @param {boolean} [props.fullWidth]
+ * @param {boolean} [props.dansLaBulle] - Pose dans le cadre `BulleDuFil` du fil : sans fond.
+ * @param {boolean} [props.fullWidth] - Toute la largeur (detail du sondage).
  * @param {boolean} [props.isMe]
+ * @param {string} [props.messageId] - SONDAGE-NOMS : le message du sondage. Donné, la bulle
+ *   lit ELLE-MÊME les noms des votants au serveur : dans le fil, GiftedChat ne la redessine pas
+ *   quand l'écran apprend un nom après coup (piège de FINITIONS15).
+ * @param {import('react').ReactNode} [props.meta] - L'heure (et les coches), avant le pied.
  * @param {() => void} [props.onOpenDetails]
  * @param {(optionId: string) => Promise<void> | void} [props.onVote]
  * @param {object | null | undefined} props.poll
+ * @param {(voterId: string) => string} [props.resolveVoterAvatar] - L'adresse de l'avatar.
  * @param {(voterId: string) => string} [props.resolveVoterName]
- * @param {boolean} [props.showSelectedBadge]
- * @param {boolean} [props.showVoterChips]
+ * @param {boolean} [props.showSelectedBadge] - Garde pour compatibilite : le rond coche le dit.
+ * @param {boolean} [props.showVoterChips] - Les noms des votants sous chaque option (detail).
  * @returns {import('react').ReactElement | null}
  */
 function PollMessageBubble({
   currentUserId = '',
+  dansLaBulle = false,
   fullWidth = false,
   isMe = false,
+  messageId = undefined,
+  meta = null,
   onOpenDetails,
   onVote,
   poll,
+  resolveVoterAvatar,
   resolveVoterName,
+  // eslint-disable-next-line no-unused-vars -- garde pour les appelants d'avant MSG1A
   showSelectedBadge = true,
   showVoterChips = false,
 }) {
   const { t } = useTranslation();
-  const { Colors, Fonts } = useTheme();
+  const { Colors } = useTheme();
   const [loadingOptionId, setLoadingOptionId] = useState('');
+  const voterProfiles = usePollVoterProfiles(messageId, poll);
   const options = Array.isArray(poll?.options) ? poll.options : [];
-  const totalVotes = getPollTotalVotes(options);
 
   if (!poll || poll.type !== 'poll') return null;
   if (options.length === 0) return null;
 
   const isAnonymousPoll = !!poll?.isAnonymous;
-  const canOpenDetails = typeof onOpenDetails === 'function';
   const canVote = typeof onVote === 'function';
+  const maximum = Math.max(1, ...options.map((option) => getPollVoteCount(option)));
+  const fondDeLaBulle = isMe ? Colors.chatBubbleMine : Colors.primary700;
+  const sousTexte = withAlpha(Colors.neutral00, 0.7);
 
   const handleOptionPress = async (/** @type {string} */ optionId) => {
     if (!onVote || !optionId || loadingOptionId) return;
@@ -163,52 +198,36 @@ function PollMessageBubble({
     }
   };
 
-  const cardStyle = [
-    styles.container,
-    {
-      alignSelf: isMe ? 'flex-end' : 'flex-start',
-      backgroundColor: 'rgba(20, 39, 52, 0.92)',
-      borderColor: 'rgba(1, 179, 244, 0.34)',
-      maxWidth: fullWidth ? '100%' : '90%',
-      minWidth: fullWidth ? 0 : 260,
-    },
-  ];
+  const nomDuVotant = (/** @type {string} */ voterId) => {
+    // SONDAGE-NOMS — le nom lu au serveur d'abord (un fil de club n'a pas de participants, et
+    // seul le serveur sait qu'un compte est supprime), la resolution de l'ecran ensuite.
+    const nomDuServeur = nameOfPollVoter(voterProfiles.get(voterId));
+    if (nomDuServeur) return nomDuServeur;
+    if (typeof resolveVoterName !== 'function') return '';
+    const nom = resolveVoterName(voterId);
+    return typeof nom === 'string' ? nom.trim() : '';
+  };
 
-  const modeLabel = poll.allowMultipleVotes
-    ? t('conversation.poll.modes.multiple', 'multiple')
-    : t('conversation.poll.modes.single', 'unique');
-  const visibilityLabel = isAnonymousPoll
-    ? t('conversation.poll.visibility.anonymous', 'anonyme')
-    : t('conversation.poll.visibility.visible', 'visible');
+  const consigne = (poll.allowMultipleVotes
+    ? t('conversation.poll.bubble.pickMany', 'Sélectionne une ou plusieurs options')
+    : t('conversation.poll.bubble.pickOne', 'Sélectionne une option'))
+    + (isAnonymousPoll ? ` · ${t('conversation.poll.visibility.anonymous', 'anonyme')}` : '');
 
-  const cardContent = (
+  const contenu = (
     <>
-      <View style={{ paddingHorizontal: 14, paddingVertical: 14 }}>
-        <View style={[styles.headerRow, { marginBottom: 4 }]}>
-          <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-            {t('conversation.attachments.poll', 'Sondage')}
-          </Text>
-          {isAnonymousPoll ? (
-            <View
-              style={{
-                backgroundColor: 'rgba(1, 179, 244, 0.14)',
-                borderColor: 'rgba(1, 179, 244, 0.42)',
-                borderRadius: 999,
-                borderWidth: 1,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-              }}
-            >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                {t('conversation.poll.bubble.anonymousBadge', 'Sondage anonyme')}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-          {poll.question || t('conversation.poll.bubble.questionFallback', 'Question')}
-        </Text>
+      <Text style={[styles.question, { color: Colors.neutral00 }]}>
+        {poll.question || t('conversation.poll.bubble.questionFallback', 'Question')}
+      </Text>
+      <View style={styles.consigne}>
+        <GlyphIcon
+          color={sousTexte}
+          name={poll.allowMultipleVotes ? 'checkDouble' : 'check'}
+          size={14}
+        />
+        <Text style={[styles.consigneTexte, { color: sousTexte }]}>{consigne}</Text>
+      </View>
 
+      <View style={styles.options}>
         {options.map((option, index) => {
           const optionId = String(option?.id || `option-${index}`);
           const optionLabel = String(
@@ -219,195 +238,155 @@ function PollMessageBubble({
           );
           const voters = getPollVoters(option);
           const voteCount = getPollVoteCount(option);
-          const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
           const isSelected = !!currentUserId && voters.includes(currentUserId);
-          const voterEntries = isAnonymousPoll
+          const votantsVisibles = isAnonymousPoll ? [] : voters.slice(0, 2);
+          const nomsDesVotants = isAnonymousPoll
             ? []
-            : voters
-              .map((voterId) => {
-                if (typeof resolveVoterName === 'function') {
-                  const voterName = resolveVoterName(voterId);
-                  const label = typeof voterName === 'string' ? voterName.trim() : '';
-                  return { label, voterId };
-                }
-                return { label: '', voterId };
-              })
-              .filter((value) => value.label.length > 0);
-          const optionStyle = [
-            styles.optionButton,
-            {
-              backgroundColor: isSelected
-                ? 'rgba(1, 179, 244, 0.14)'
-                : 'rgba(255,255,255,0.04)',
-              borderColor: isSelected ? Colors.primary500 : 'rgba(255,255,255,0.16)',
-            },
-          ];
+            : voters.map((voterId) => nomDuVotant(voterId)).filter(Boolean);
 
-          const optionBody = (
+          const ligne = (
             <>
-              <View
-                style={[
-                  styles.optionFill,
-                  {
-                    backgroundColor: Colors.primary500,
-                    width: `${Math.max(percentage, voteCount > 0 ? 6 : 0)}%`,
-                  },
-                ]}
-              />
-              <View style={styles.optionRow}>
-                <View style={styles.optionLabelRow}>
-                  <Text
-                    numberOfLines={2}
-                    style={[Fonts.p2Bold, { color: Colors.neutral00, flexShrink: 1 }]}
-                  >
-                    {optionLabel}
-                  </Text>
-                  {showSelectedBadge && isSelected ? (
-                    <View style={[styles.badgePill, { borderColor: Colors.primary500 }]}>
-                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                        {t('conversation.poll.bubble.selectedBadge', 'Ton vote')}
-                      </Text>
-                    </View>
-                  ) : null}
+              {isSelected ? (
+                <View
+                  style={[styles.rondCoche, { backgroundColor: Colors.primary500 }]}
+                  testID="sondage-rond-coche"
+                >
+                  <GlyphIcon color={Colors.primary900} name="check" size={14} />
                 </View>
-                <View style={styles.optionMetaColumn}>
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                    {percentage}
-                    %
-                  </Text>
-                  <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                    {voteCount}
-                    {' '}
-                    {t('conversation.poll.common.vote', 'vote')}
-                    {voteCount > 1 ? 's' : ''}
-                  </Text>
-                </View>
-                {canVote && loadingOptionId === optionId ? (
-                  <ActivityIndicator
-                    color={Colors.primary500}
-                    size="small"
-                    style={{ marginLeft: 8 }}
-                  />
-                ) : null}
-              </View>
-              {!isAnonymousPoll && voterEntries.length > 0 ? (
-                <View style={[styles.votersContainer, { borderTopColor: 'rgba(255,255,255,0.1)' }]}>
-                  {showVoterChips ? (
-                    <View style={styles.votersChipsRow}>
-                      {voterEntries.slice(0, 6).map((entry) => (
-                        <View
-                          key={`${optionId}-voter-${entry.voterId}`}
-                          style={styles.voterChip}
-                        >
-                          <Text
-                            style={[Fonts.p4, styles.voterChipText, { color: Colors.neutral300 }]}
-                          >
-                            {entry.label}
-                          </Text>
-                        </View>
-                      ))}
-                      {voterEntries.length > 6 ? (
-                        <View style={styles.voterChip}>
-                          <Text
+              ) : (
+                <View
+                  style={[styles.rondVide, { borderColor: withAlpha(Colors.neutral00, 0.55) }]}
+                  testID="sondage-rond-vide"
+                />
+              )}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={styles.enTeteDOption}>
+                  <Text style={[styles.libelle, { color: Colors.neutral00 }]}>{optionLabel}</Text>
+                  <View style={styles.votants}>
+                    {votantsVisibles.length > 0 ? (
+                      <View style={{ flexDirection: 'row' }}>
+                        {votantsVisibles.map((voterId, rang) => (
+                          <View
+                            key={`${optionId}-avatar-${voterId}`}
                             style={[
-                              Fonts.p4Bold,
-                              styles.voterChipText,
-                              { color: Colors.primary500 },
+                              styles.avatarDeVotant,
+                              { borderColor: fondDeLaBulle, marginLeft: rang ? -6 : 0 },
                             ]}
                           >
-                            +
-                            {voterEntries.length - 6}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  ) : (
-                    <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                      {voterEntries.map((entry) => entry.label).join(' | ')}
-                    </Text>
-                  )}
+                            <ProfileAvatar
+                              enablePreview={false}
+                              imageUrl={resolveVoterAvatar?.(voterId) || undefined}
+                              name={nomDuVotant(voterId)}
+                              size={18}
+                            />
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                    {canVote && loadingOptionId === optionId ? (
+                      <ActivityIndicator color={Colors.primary500} size="small" />
+                    ) : (
+                      <Text style={[styles.compte, { color: Colors.neutral00 }]}>
+                        {String(voteCount)}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              ) : null}
+                <View style={[styles.barre, { backgroundColor: withAlpha(Colors.neutral00, 0.2) }]}>
+                  <View
+                    style={{
+                      backgroundColor: Colors.primary500,
+                      borderRadius: 3,
+                      height: '100%',
+                      width: `${(voteCount / maximum) * 100}%`,
+                    }}
+                  />
+                </View>
+                {showVoterChips && nomsDesVotants.length > 0 ? (
+                  <Text numberOfLines={2} style={[styles.votantsNoms, { color: sousTexte }]}>
+                    {nomsDesVotants.join(' · ')}
+                  </Text>
+                ) : null}
+              </View>
             </>
           );
 
-          if (canVote) {
-            return (
-              <TouchableOpacity
-                accessibilityRole="button"
-                activeOpacity={0.85}
-                key={optionId}
-                onPress={(event) => {
-                  event?.stopPropagation?.();
-                  handleOptionPress(optionId);
-                }}
-                style={optionStyle}
-              >
-                {optionBody}
-              </TouchableOpacity>
-            );
-          }
+          // SONDAGE-NOMS x MSG1A — la bulle du pack dessine des PASTILLES ; les noms y restent
+          // pour le lecteur d'ecran (jamais pour un sondage anonyme : la liste est vide).
+          const libelleAccessible = [
+            optionLabel,
+            t('conversation.poll.bubble.votes', {
+              count: voteCount,
+              defaultValue_one: '{{count}} vote',
+              defaultValue_other: '{{count}} votes',
+            }),
+            ...nomsDesVotants,
+          ].join(', ');
 
-          return (
-            <View key={optionId} style={optionStyle}>
-              {optionBody}
+          return canVote ? (
+            <TouchableOpacity
+              accessibilityLabel={libelleAccessible}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: isSelected }}
+              activeOpacity={0.85}
+              key={optionId}
+              onPress={(event) => {
+                event?.stopPropagation?.();
+                handleOptionPress(optionId);
+              }}
+              style={styles.option}
+              testID={`sondage-option-${optionId}`}
+            >
+              {ligne}
+            </TouchableOpacity>
+          ) : (
+            <View
+              accessibilityLabel={libelleAccessible}
+              accessible
+              key={optionId}
+              style={styles.option}
+              testID={`sondage-option-${optionId}`}
+            >
+              {ligne}
             </View>
           );
         })}
-
-        {canOpenDetails ? (
-          <Text style={[Fonts.p4, { color: Colors.neutral300 }, styles.detailsHint]}>
-            {t(
-              'conversation.poll.bubble.detailsHint',
-              'Appuie sur une option pour voter ou modifier ton vote. '
-                + 'Appuie à nouveau pour le retirer, ou ouvre la carte pour les détails.',
-            )}
-          </Text>
-        ) : null}
       </View>
 
-      <View style={styles.footer}>
-        <View style={[styles.footerChip, { borderColor: 'rgba(255,255,255,0.14)' }]}>
-          <Text
-            numberOfLines={1}
-            style={[Fonts.p4, { color: Colors.neutral300, textAlign: 'center' }]}
-          >
-            {totalVotes}
-            {' '}
-            {t('conversation.poll.common.vote', 'vote')}
-            {totalVotes > 1 ? 's' : ''}
-            {' '}
-            |
-            {' '}
-            {t('conversation.poll.footer.mode', 'mode')}
-            {' '}
-            {modeLabel}
-            {' '}
-            |
-            {' '}
-            {visibilityLabel}
+      {meta ? <View style={{ alignItems: 'flex-end', marginTop: 4 }}>{meta}</View> : null}
+
+      {typeof onOpenDetails === 'function' ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          onPress={onOpenDetails}
+          style={[styles.pied, { borderTopColor: withAlpha(Colors.neutral00, 0.14) }]}
+          testID="sondage-voir-les-votes"
+        >
+          <Text style={[styles.piedTexte, { color: Colors.primary500 }]}>
+            {t('conversation.poll.bubble.seeVotes', 'Voir les votes')}
           </Text>
-        </View>
-      </View>
+        </TouchableOpacity>
+      ) : null}
     </>
   );
 
-  if (canOpenDetails) {
-    return (
-      <TouchableOpacity
-        accessibilityRole="button"
-        activeOpacity={0.95}
-        onPress={onOpenDetails}
-        style={cardStyle}
-      >
-        {cardContent}
-      </TouchableOpacity>
-    );
+  if (dansLaBulle) {
+    return <View style={{ width: LARGEUR_DU_SONDAGE }}>{contenu}</View>;
   }
 
   return (
-    <View style={cardStyle}>
-      {cardContent}
+    <View
+      style={[
+        styles.carteSeule,
+        {
+          alignSelf: isMe ? 'flex-end' : 'flex-start',
+          backgroundColor: fondDeLaBulle,
+          width: fullWidth ? '100%' : LARGEUR_DU_SONDAGE + 20,
+        },
+      ]}
+    >
+      {contenu}
     </View>
   );
 }

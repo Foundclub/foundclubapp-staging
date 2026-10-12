@@ -24,6 +24,7 @@ import {
   collectiviteInitial,
   formatOpeningHours,
 } from '@/domains/collectivite/collectiviteDisplay';
+import { valeurDeMaCollectivite } from '@/domains/collectivite/collectiviteRattachement';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -52,6 +53,8 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bloc « De la Ville de … » (planche P3b-actu-tel, écran 5 ; D68).
 import BlocDeLaVille from '@/views/collectivite/components/BlocDeLaVille';
+import MaCollectivite from '@/views/collectivite/components/MaCollectivite';
+import RattachementDuClub from '@/views/collectivite/components/RattachementDuClub';
 import ClubCompactHeader from '@/views/multisportClub/components/ClubCompactHeader';
 import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
 import WeekendResultsCard, {
@@ -82,6 +85,10 @@ import { useGetMyClubInterestRequests } from '@/services/clubInterestRequest/clu
 import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { createClubRequest, getPendingClubCreationRequests } from '@/services/clubRequest/clubRequestService';
+import {
+  useClubCollectiviteRequests,
+  useMaCollectivite,
+} from '@/services/collectivite/collectiviteRattachementQueries';
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
@@ -115,6 +122,7 @@ import {
   pendingChildRequestKeys,
   resolveClubDetailsActionMatrix,
   resolveEmptyClubClaimGesture,
+  showsCityNewsBlock,
 } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
@@ -886,6 +894,23 @@ function ClubDetails({ navigation, route }) {
     if (duContexte.length || isAuthenticated) return duContexte;
     return Array.isArray(club?.publicFacilities) ? club.publicFacilities : [];
   }, [club?.publicFacilities, facilityContext?.allFacilities, isAuthenticated]);
+  // 🏟️ VILLE-T18C (07/10, tournée T18 D01a ; planche 40, état 1) — « Installations, 5 » pour 1 au
+  // club et 4 de la Ville : les deux nombres se disent séparément, comme la liste des
+  // installations (TEXTES-COLLECTIVITES). Sans installation de la Ville : un seul nombre.
+  const deLaVille = facilities
+    .filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite').length;
+  const compteDesInstallations = deLaVille
+    ? {
+      affiche: t('clubDetails.hub.installationsAvecVille', '{{club}} + {{ville}} de la Ville', {
+        club: facilities.length - deLaVille, ville: deLaVille,
+      }),
+      dit: t(
+        'clubDetails.hub.installationsAvecVilleDit',
+        '{{club}} au club et {{ville}} de la Ville',
+        { club: facilities.length - deLaVille, ville: deLaVille },
+      ),
+    }
+    : { affiche: String(facilities.length), dit: undefined };
   // COLL-C2C (02/10) — planche P8-installations-tel, etat 3 (le membre) : « Au club », puis la
   // Ville nommee UNE fois, dans le titre de son groupe. « Pretees » est retire (vague 2) : le club
   // n a que des creneaux, la Ville gere.
@@ -1742,6 +1767,14 @@ function ClubDetails({ navigation, route }) {
   const { data: mesEnfantsBruts } = useGetMyDeclaredChildren({
     enabled: Boolean(isAuthenticated),
   });
+  // VILLE-T18D 6 (« parent prevenu B ») — le bloc « De la Ville » : un membre, ou le parent d'un
+  // joueur mineur du club ; le serveur juge (can-read-club-news).
+  const afficheLeBlocDeLaVille = showsCityNewsBlock({
+    clubId,
+    enfants: mesEnfantsBruts,
+    isMember,
+    isParentRole: isAuthenticated && userData?.role?.name === USER_ROLES.parent,
+  });
   // ⛔ On ne remonte QUE des tranches : ni la matrice ni cette fiche n ont de
   // raison de manipuler le prenom ou la date de naissance d un mineur.
   const { childrenUnder13Count, minorChildrenCount } = useMemo(
@@ -1861,6 +1894,13 @@ function ClubDetails({ navigation, route }) {
     .filter(Boolean)
     .join(' · ');
   const showsClubSection = (sectionName) => !canEdit || hubSection === sectionName;
+  // VILLE-INVITER-CLUB, VOIE 3 (« collectivité A », 07/10) — la rangée « Ma collectivité » du hub :
+  // le nom de la Ville, sa demande, ou « Rechercher » (domaine pur). Lues pour le seul dirigeant.
+  const maCollectivite = useMaCollectivite(clubId, { enabled: canEdit });
+  const demandesDeRattachement = useClubCollectiviteRequests(clubId, { enabled: canEdit });
+  const valeurMaCollectivite = maCollectivite.isLoading
+    ? '…'
+    : valeurDeMaCollectivite(t, maCollectivite.data, demandesDeRattachement.data);
 
   // STATS-FIX2 · point 2 (T10, ecran 18) — « Résultats du week-end » n'existait que dans
   // `CMDashboard` (club omnisport) : le dirigeant d'un club SIMPLE n'y avait aucune porte.
@@ -3134,6 +3174,10 @@ function ClubDetails({ navigation, route }) {
 
           {isClubHub ? (
             <View style={[Spaces.gap[16]]}>
+              {/* VILLE-INVITER-CLUB (07/10) — en tete de l'espace du dirigeant : la demande de
+                  la Ville (« club A » : Accepter rattache tout de suite) et l'etat des demandes
+                  de rattachement du club, dans les deux sens. Rien sans demande. */}
+              <RattachementDuClub clubId={clubId ? String(clubId) : null} enabled={canEdit} />
               {isDesktop ? (
                 <ClubResultsBoard
                   onOpenTeamStats={handleOpenTeamStats}
@@ -3152,7 +3196,8 @@ function ClubDetails({ navigation, route }) {
                   icon={Images.stadium}
                   label={t('facilityList.title', 'Installations')}
                   onPress={handleOpenFacilityList}
-                  value={facilitiesLoading ? '…' : String(facilities.length)}
+                  value={facilitiesLoading ? '…' : compteDesInstallations.affiche}
+                  valueLabel={facilitiesLoading ? undefined : compteDesInstallations.dit}
                 />
                 <ClubHubRow
                   divider
@@ -3190,6 +3235,15 @@ function ClubDetails({ navigation, route }) {
                   label={t('clubDetails.hub.rows.memberRoles', 'Membres et rôles')}
                   onPress={() => navigation.navigate(RouteNames.ClubMemberRoles, { clubId })}
                   value={t('clubDetails.hub.rows.memberRolesValue', 'Attribuer')}
+                />
+                {/* VOIE 3 (« collectivité A », 07/10) — « Ma collectivité » : sa sous-page,
+                    comme les autres rangées (`section`), sans route neuve. */}
+                <ClubHubRow
+                  divider
+                  icon={Images.stadium}
+                  label={t('collectiviteRattachement.ma.row', 'Ma collectivité')}
+                  onPress={() => openClubHubSection('collectivite')}
+                  value={valeurMaCollectivite}
                 />
               </ClubHubGroup>
 
@@ -3232,8 +3286,14 @@ function ClubDetails({ navigation, route }) {
             <>
               {/* COLL-C4A (02/10) — « De la Ville de … » : la dernière actualité de la Ville
                   d'un club rattaché, pour SES membres, et l'interrupteur D68. Rien pour un club
-                  rattaché à personne (le bloc ne s'affiche pas). */}
-              {isMember && clubId ? (
+                  rattaché à personne (le bloc ne s'affiche pas). VILLE-T18D 6 (« parent prévenu
+                  B ») : aussi pour le parent d'un joueur mineur du club ; le serveur juge. */}
+              {/* VOIE 3 (« collectivité A », 07/10) — la sous-page « Ma collectivité » du
+                  dirigeant ; un visiteur ne la voit jamais (pas `showsClubSection`). */}
+              {isClubSubPage && hubSection === 'collectivite' && clubId ? (
+                <MaCollectivite clubId={String(clubId)} />
+              ) : null}
+              {afficheLeBlocDeLaVille ? (
                 <BlocDeLaVille
                   clubId={String(clubId)}
                   encadrant={isClubStaffRole}

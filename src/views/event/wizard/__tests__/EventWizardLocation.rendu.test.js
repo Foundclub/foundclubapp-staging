@@ -19,6 +19,10 @@ import EventWizardLocation from '../EventWizardLocation';
 const mockGabarits = [];
 /** Proprietes recues par le selecteur d'installation. */
 const mockSelecteurs = [];
+let mockDisponibilite = { data: { data: { blocked: false } }, isError: false, isLoading: false };
+jest.mock('@/services/facility/facilityQueries', () => ({
+  useGetFacilityOccupancy: () => mockDisponibilite,
+}));
 
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
@@ -132,8 +136,29 @@ const afficherLEcran = () => {
 const dernierGabarit = () => mockGabarits[mockGabarits.length - 1];
 
 afterEach(() => {
+  mockDisponibilite = { data: { data: { blocked: false } }, isError: false, isLoading: false };
   if (arbre) act(() => arbre.unmount());
   arbre = null;
+});
+
+describe('IPH09 FC-004 — refus immediat au lieu', () => {
+  test('une fermeture mairie interdit Suivant meme avec un creneau attribue', () => {
+    mockDisponibilite = { data: { data: { blocked: true } }, isError: false, isLoading: false };
+    afficherLEcran();
+    act(() => mockSelecteurs[0].onChange({ facilityId: 'ville-fermee', location: null }));
+    expect(dernierGabarit().isNextDisabled).toBe(true);
+    expect(textesSous(arbre.root).join(' ')).toMatch(/mairie.*indisponible/);
+    act(() => dernierGabarit().onNext());
+    expect(destinations).toEqual([]);
+  });
+  test.each(['isLoading', 'isError'])('ne confirme pas une disponibilite inconnue (%s)', (champ) => {
+    mockDisponibilite = {
+      data: undefined, isError: champ === 'isError', isLoading: champ === 'isLoading',
+    };
+    afficherLEcran();
+    act(() => mockSelecteurs[0].onChange({ facilityId: 'ville', location: null }));
+    expect(dernierGabarit().isNextDisabled).toBe(true);
+  });
 });
 
 describe('D09 — l ecran « Lieu », etat du 2026-08-06', () => {

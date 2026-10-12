@@ -226,6 +226,21 @@ const getTimeParts = (value) => {
 };
 
 /**
+ * VILLE-T18B (a) (07/10) — la fin d'un événement tombe-t-elle au début ou avant ? La règle de la
+ * création (assistant, et serveur : validateCreateEventBody, EVENT_INVALID_TIME_RANGE), sur le même
+ * jour, que « Modifier » n'appliquait pas : la tournée T18 a lu une demande « 18:00 – 17:00 ».
+ * @param {string | Date | undefined} startTime - Le début (« HH:MM » ou une date).
+ * @param {string | Date | undefined} endTime - La fin.
+ * @returns {boolean} Vrai si les deux heures se lisent et que la fin n'est pas après le début.
+ */
+export const isEndTimeNotAfterStart = (startTime, endTime) => {
+  const debut = getTimeParts(startTime);
+  const fin = getTimeParts(endTime);
+  if (!debut || !fin) return false;
+  return (fin.hours * 60) + fin.minutes <= (debut.hours * 60) + debut.minutes;
+};
+
+/**
  * Format a date string to send
  * @param {string | Date | undefined} dateString - The date string to format
  * @param {string | Date | undefined} timeString - The time string to format

@@ -220,6 +220,24 @@ function AdminManagerRequests() {
       Colors.warning500,
     ));
 
+  // VT18E (07/10, tournée T18 SITE_S14) — ce que la personne GÈRE DÉJÀ (serveur :
+  // `requester.managedCollectivites`, jamais la collectivité demandée) : « Recette Mairie »
+  // gérait Montrivage et demandait Rouvres, et rien ne le disait. Rien quand elle ne gère rien.
+  const gereDeja = (/** @type {any} */ demande, /** @type {string} */ testID) => {
+    const noms = (Array.isArray(demande?.requester?.managedCollectivites)
+      ? demande.requester.managedCollectivites : [])
+      .map((/** @type {any} */ collectivite) => collectivite?.name)
+      .filter(Boolean);
+    return noms.length ? (
+      <Text style={[Fonts.p3Bold, Fonts.warning500]} testID={testID}>
+        {t('collectiviteAccueil.console.gereDeja', 'Gère déjà : {{collectivites}}', {
+          collectivites: noms.join(', '),
+          ...SANS_ECHAPPEMENT,
+        })}
+      </Text>
+    ) : null;
+  };
+
   const renderCarteFile = (/** @type {any} */ demande) => {
     const choisie = ouverte?.documentId === demande?.documentId;
     return (
@@ -247,6 +265,7 @@ function AdminManagerRequests() {
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{demande?.collectivite?.name}</Text>
           {pastilleVille(demande)}
         </View>
+        {gereDeja(demande, `gestionnaire-gere-deja-${demande?.documentId}`)}
       </TouchableOpacity>
     );
   };
@@ -406,7 +425,7 @@ function AdminManagerRequests() {
             {nomDe(demande)}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('collectiviteAccueil.console.inscrite', 'Inscrite le {{date}}', {
+            {t('collectiviteAccueil.console.inscrite', 'Demande envoyée le {{date}}', {
               date: dateDe(demande?.createdAt),
               ...SANS_ECHAPPEMENT,
             })}
@@ -437,6 +456,7 @@ function AdminManagerRequests() {
                 ...SANS_ECHAPPEMENT,
               })}
             </Text>
+            {gereDeja(demande, 'gestionnaire-gere-deja-fiche')}
           </View>
           <View style={{ flex: enColonnes ? 1 : undefined, gap: 6 }}>
             <Text style={[Fonts.p3Bold, Fonts.neutral300]}>

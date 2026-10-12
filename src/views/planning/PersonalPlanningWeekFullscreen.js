@@ -1354,6 +1354,7 @@ function PlanningWeekFullscreen() {
           clubs={clubsPourAttribuer}
           compact={panneau.type === 'attribuer' && panneau.compact !== false}
           facilityId={facilityId}
+          guided
           initial={panneau.initial}
           key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
           onCancel={fermerPanneau}

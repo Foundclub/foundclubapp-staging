@@ -92,9 +92,52 @@ describe('WHATSAPP2 — quelles actions pour quel message', () => {
     expect(Array.isArray(getMessageActions())).toBe(true);
   });
 
-  it('MESSAGE_ACTIONS decrit les cinq actions, sans doublon de clef', () => {
+  // MESSAGERIE-1C : une 6e action, « Modifier la composition » (pack §3.2, §3.12).
+  it('MESSAGE_ACTIONS decrit les six actions, sans doublon de clef', () => {
     const toutes = MESSAGE_ACTIONS.map((action) => action.key);
-    expect(toutes).toHaveLength(5);
-    expect(new Set(toutes).size).toBe(5);
+    expect(toutes).toHaveLength(6);
+    expect(new Set(toutes).size).toBe(6);
+  });
+
+  it('MESSAGERIE-1C : « Modifier la composition » seulement pour qui peut convoquer', () => {
+    expect(cles({ canEditComposition: true, isMine: true }))
+      .toEqual(['reply', 'editComposition', 'delete']);
+    expect(cles({ canEditComposition: true, isMine: false }))
+      .toEqual(['reply', 'editComposition', 'report']);
+    expect(cles({ canEditComposition: false, isMine: false })).not.toContain('editComposition');
+    const [action] = getMessageActions({ canEditComposition: true })
+      .filter((entree) => entree.key === 'editComposition');
+    expect(action.labelKey).toBe('conversationConvocation.longPressEdit');
+    expect(action.fallback).toBe('Modifier la composition');
+    expect(action.destructive).toBeUndefined();
+  });
+});
+
+// MSG1A (§3.2) — LE MENU DU PACK : une icone par action, deux actions en rouge, et
+// « Repondre » retire quand on ne peut PAS ecrire dans le fil (canal d'annonce).
+// 🔴 ROUGE avant MSG1A : A1, A2, A3.
+describe('MSG1A — le menu de l appui long', () => {
+  it('A1 — chaque action porte son glyphe du jeu FOUNDCLUB', () => {
+    const icones = Object.fromEntries(MESSAGE_ACTIONS.map((action) => [action.key, action.icone]));
+    // MESSAGERIE-1C (fusion avec 1A) : « Modifier la composition » porte le meme crayon.
+    expect(icones).toEqual({
+      copy: 'fileCopy',
+      delete: 'trashAlt',
+      edit: 'penSquare',
+      editComposition: 'penSquare',
+      reply: 'reply',
+      report: 'flag',
+    });
+  });
+
+  it('A2 — Supprimer et Signaler sont en rouge ; Supprimer reste la seule DESTRUCTRICE', () => {
+    const rouges = MESSAGE_ACTIONS.filter((action) => action.alerte).map((action) => action.key);
+    expect(rouges).toEqual(['delete', 'report']);
+  });
+
+  it('A3 — fil en lecture seule (canReply false) : plus de « Repondre », le reste inchange', () => {
+    expect(cles({ canCopy: true, canReply: false, isMine: false })).toEqual(['copy', 'report']);
+    expect(cles({ canCopy: true, canReply: true, isMine: false }))
+      .toEqual(['reply', 'copy', 'report']);
   });
 });

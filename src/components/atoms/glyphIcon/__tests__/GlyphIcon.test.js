@@ -64,6 +64,27 @@ const NOMS = [
   'send',
   'stop',
   'trashAlt',
+  // MSG1A — les glyphes de la messagerie « modele WhatsApp » (pack du 07/10).
+  'camera',
+  'chartSimpleHorizontal',
+  'check',
+  'chevronDown',
+  'file',
+  'fileCopy',
+  'flag',
+  'image',
+  'information',
+  'locationPin',
+  'penSquare',
+  'pencil',
+  'reply',
+  'search',
+  'shieldCheck',
+  'thumbtack',
+  'userMinus',
+  'userPlus',
+  'users',
+  'xmark',
 ];
 
 // Les cinq primitives que le pont Vite du site sait rendre

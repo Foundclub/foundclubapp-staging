@@ -29,6 +29,7 @@ import {
   summarizeConflict,
 } from '@/domains/collectivite/collectiviteAccueil';
 import {
+  dureeLisible,
   phraseOccupation,
   seancesDeLInstallation,
 } from '@/domains/collectivite/collectiviteChiffres';
@@ -153,8 +154,13 @@ function CollectiviteHome() {
   // COLL-C4B (02/10) — « Fermeture à venir » (P3v2-accueil, point d accroche de COLL-ACCUEIL) :
   // ce qui dure ou vient, toutes installations ; les deux premières.
   const fermetures = useCollectiviteClosures(collectiviteId);
-  const fermeturesAVenir = (Array.isArray(fermetures.data?.data) ? fermetures.data.data : [])
-    .slice(0, 2);
+  // VILLE-T18B (c) (T18, G42b) — les deux premières, et « Voir les N fermetures à venir » les
+  // montre toutes : couper à deux sans rien de plus en faisait disparaître (Stade, 8 oct.).
+  const [toutesLesFermetures, setToutesLesFermetures] = useState(false);
+  const listeDesFermetures = Array.isArray(fermetures.data?.data) ? fermetures.data.data : [];
+  const fermeturesAVenir = toutesLesFermetures
+    ? listeDesFermetures
+    : listeDesFermetures.slice(0, 2);
 
   const refetchPending = pending.refetch;
   // Au retour d'une demande tranchée, le compteur doit déjà être juste.
@@ -253,6 +259,9 @@ function CollectiviteHome() {
     installations.refetch?.();
     clubs.refetch?.();
     semaine.forEach(({ query }) => query?.refetch?.());
+    // VILLE-T18B (b) — « Chiffres » aussi : une installation créée pendant la visite y manquait
+    // (sa ligne disait « — », tournée T18, G03b).
+    chiffresSemaine.refetch?.();
   };
 
   const lienFleche = (
@@ -392,7 +401,11 @@ function CollectiviteHome() {
           {`${demande?.facility?.name || ''} · ${
             formatSlot(demande?.requestedStart, demande?.requestedEnd)}`}
         </Text>
-        {conflit && !compacte ? (
+        {/* VILLE-T18B point 2 (T18, G02) — la jauge ne vient qu'avec sa légende,
+            « Accepter met… » : sur une demande qui a de la place, elle n'était que des pastilles
+            grises sans mot, et la pastille d'en-tête dit déjà « 2 places libres » (planche
+            P3v2-accueil : Complet seul). */}
+        {conflit?.full && !compacte ? (
           <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
             <View
               accessibilityLabel={t(
@@ -417,19 +430,17 @@ function CollectiviteHome() {
                 />
               ))}
             </View>
-            {conflit.full ? (
-              <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
-                {t(
-                  'collectiviteAccueil.attente.accepterMet',
-                  'Accepter met {{equipes}} équipes pour {{places}} places.',
-                  {
-                    equipes: conflit.teamsIfAccepted,
-                    places: conflit.maxSlots,
-                    ...SANS_ECHAPPEMENT,
-                  },
-                )}
-              </Text>
-            ) : null}
+            <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
+              {t(
+                'collectiviteAccueil.attente.accepterMet',
+                'Accepter met {{equipes}} équipes pour {{places}} places.',
+                {
+                  equipes: conflit.teamsIfAccepted,
+                  places: conflit.maxSlots,
+                  ...SANS_ECHAPPEMENT,
+                },
+              )}
+            </Text>
           </View>
         ) : null}
         {compacte ? null : (
@@ -494,10 +505,12 @@ function CollectiviteHome() {
               'collectiviteFermetures.accueil.personneAPrevenir',
               'Aucun club n’y a de séance : personne à prévenir.',
             )
-            : t('collectiviteFermetures.carte.seances', {
+            // FINITIONS-VILLE (registre n° 50) : le serveur compte les blocs du planning, séances
+            // ET créneaux sans séance — la répartition n'est pas connue ici (touchedCountLabel).
+            : t('collectiviteFermetures.carte.seancesOuCreneaux', {
               count: fermeture.touchedSessionsCount,
-              defaultValue_one: '{{count}} séance touchée',
-              defaultValue_other: '{{count}} séances touchées',
+              defaultValue_one: '{{count}} séance ou créneau touché',
+              defaultValue_other: '{{count}} séances ou créneaux touchés',
             })}
         </Text>
       ) : null}
@@ -506,6 +519,25 @@ function CollectiviteHome() {
   const blocDesFermetures = fermeturesAVenir.length ? (
     <View style={{ gap: 8 }} testID="collectivite-home-fermetures">
       {fermeturesAVenir.map(carteDeFermeture)}
+      {listeDesFermetures.length > fermeturesAVenir.length ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          hitSlop={{
+            bottom: 8, left: 8, right: 8, top: 8,
+          }}
+          onPress={() => setToutesLesFermetures(true)}
+          style={{ alignSelf: 'flex-start' }}
+          testID="collectivite-home-fermetures-toutes"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {t(
+              'collectiviteFermetures.accueil.voirToutes',
+              'Voir les {{count}} fermetures à venir',
+              { count: listeDesFermetures.length },
+            )}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   ) : null;
 
@@ -773,17 +805,43 @@ function CollectiviteHome() {
     return t('collectiviteAccueil.semaine.seances', '{{nombre}} séances', { nombre: total });
   };
 
+  // La ligne de « Chiffres » d'une installation, ou null tant qu'elle ne se lit pas.
+  const ligneDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
+    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
+    return Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) || null : null;
+  };
+
   // COLL-C5 (03/10) : le taux d une installation, ou null (jamais un 0 invente).
   const tauxDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
-    const lignes = /** @type {any} */ (chiffresSemaine.data)?.installations;
-    const ligne = Array.isArray(lignes) ? lignes.find((l) => l?.documentId === facilityId) : null;
+    const ligne = ligneDeLaSemaine(facilityId);
     return typeof ligne?.taux === 'number' ? ligne.taux : null;
   };
+
+  // 🧮 VILLE-T18B (b) (07/10) — décision du chef d'orchestre (tournée T18, G03b) : une installation
+  // LUE sans taux (sans horaires : les horaires sont retirés, décision d'Adel) n'a pas de jauge
+  // vide « Occupation : — » ; sa ligne dit ce qui se mesure sans eux, les heures réservées.
+  const sansTauxMesurable = (/** @type {string | undefined} */ facilityId) => (
+    Boolean(ligneDeLaSemaine(facilityId)) && tauxDeLaSemaine(facilityId) === null
+  );
 
   // La planche dit « occupation » seulement quand il y a des séances (sinon « Aucune séance »).
   const seancesDansLaSemaine = (/** @type {string | undefined} */ facilityId) => (
     seancesSelonChiffres(facilityId) || 0
   );
+
+  const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
+    if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId);
+    if (!sansTauxMesurable(facilityId)) {
+      return `${libelleSeances(facilityId)} · ${phraseOccupation(t, tauxDeLaSemaine(facilityId))}`;
+    }
+    const minutes = ligneDeLaSemaine(facilityId)?.minutes;
+    if (typeof minutes !== 'number') return libelleSeances(facilityId);
+    return `${libelleSeances(facilityId)} · ${t(
+      'collectiviteAccueil.semaine.reservees',
+      '{{duree}} réservées cette semaine',
+      { duree: dureeLisible(minutes), ...SANS_ECHAPPEMENT },
+    )}`;
+  };
 
   const renderSemaine = () => {
     let corps;
@@ -822,8 +880,21 @@ function CollectiviteHome() {
                 </Text>
               );
             }
+            // FINITIONS-VILLE (T20) : la ligne ouvre le planning de SA semaine (comme l'onglet
+            // « Planning » de l'installation).
             return (
-              <View key={installation?.documentId} style={{ gap: 4 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                key={installation?.documentId}
+                onPress={() => navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+                  contextDetailLabel: installation?.name || null,
+                  espace: 'ville',
+                  facilityId: installation?.documentId,
+                  sourceType: 'facility',
+                })}
+                style={{ gap: 4 }}
+                testID={`collectivite-home-semaine-${installation?.documentId}`}
+              >
                 <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
                   <View
                     style={{
@@ -839,22 +910,19 @@ function CollectiviteHome() {
                   {etat}
                 </View>
                 {/* COLL-C5 (03/10) — planches 2 et 3 : la jauge d'occupation de la semaine */}
-                {/* (contrat §5) ; sans taux (pas d horaires, lecture en cours ou en panne), */}
-                {/* elle reste vide et dit « — ». */}
-                <JaugeOccupation
-                  couleur={complet ? Colors.warning500 : installation?.planningColor}
-                  taux={tauxDeLaSemaine(installation?.documentId)}
-                  testID={`collectivite-home-jauge-${installation?.documentId}`}
-                />
+                {/* (contrat §5) ; lecture en cours ou en panne, elle reste vide et dit « — ». */}
+                {/* VILLE-T18B (b) : lue SANS taux (pas d'horaires), pas de jauge du tout. */}
+                {sansTauxMesurable(installation?.documentId) ? null : (
+                  <JaugeOccupation
+                    couleur={complet ? Colors.warning500 : installation?.planningColor}
+                    taux={tauxDeLaSemaine(installation?.documentId)}
+                    testID={`collectivite-home-jauge-${installation?.documentId}`}
+                  />
+                )}
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {seancesDansLaSemaine(installation?.documentId) > 0
-                    ? `${libelleSeances(installation?.documentId)} · ${phraseOccupation(
-                      t,
-                      tauxDeLaSemaine(installation?.documentId),
-                    )}`
-                    : libelleSeances(installation?.documentId)}
+                  {libelleDeLaSemaine(installation?.documentId)}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -864,8 +932,9 @@ function CollectiviteHome() {
       <View style={{ gap: 12 }}>
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           {titreSection(t('collectiviteAccueil.semaine.titre', 'Cette semaine'))}
+          {/* FINITIONS-VILLE (T20) : il ouvre la liste des installations, il le dit. */}
           {lienFleche(
-            t('collectiviteAccueil.semaine.planning', 'Planning'),
+            t('collectiviteAccueil.semaine.installations', 'Installations'),
             'collectivite-home-voir-planning',
             () => ouvrir(RouteNames.CollectiviteInstallations),
           )}

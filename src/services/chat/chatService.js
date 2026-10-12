@@ -374,14 +374,19 @@ export const createTeamChat = async (team) => {
 
 /**
  * Create a new group chat
- * @param {{ groupName: string; participants: string[] }} params
+ * MSG1BA (§3.15) — `permissions` (contrat 1B §5.3) : les autorisations reglees a la creation,
+ * partielles ; n'est envoye que s'il est fourni (un serveur d'avant 1B l'ignore).
+ * @param {{
+ *   groupName: string; participants: string[]; permissions?: Record<string, boolean>
+ * }} params
  * @returns {Promise<Chat>}
  */
-export const createGroupChat = async ({ groupName, participants }) => {
+export const createGroupChat = async ({ groupName, participants, permissions }) => {
   const response = await client.post('/chats/group', {
     data: {
       groupName,
       participants,
+      ...(permissions ? { permissions } : {}),
     },
   });
 
@@ -427,6 +432,35 @@ export const removeGroupMember = async (chatId, userId) => {
 };
 
 /**
+ * MSG1A (§3.16, decision d'Adel `quitter maintenant`, 07/10) — QUITTER UN GROUPE, pour tout
+ * membre. Route du lot serveur MESSAGERIE-1B (`feat/MSG1B-serveur` 01dd1b59, contrat
+ * `admin/docs/CONTRAT_MESSAGERIE_1B.md` §5.6) : 200 `{ data: { chatDocumentId, left: true,
+ * newAdmin: { documentId } | null } }` ; 403 non-membre ; 400 si le fil n'est pas un groupe.
+ * Le serveur pose lui-meme les notices `member_left` / `admin_inherited`.
+ * @param {string} chatId
+ * @returns {Promise<any>}
+ */
+export const leaveGroupChat = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/leave`);
+  return response.data?.data ?? response.data;
+};
+
+/**
+ * MSG1BA (§3.14) — MARQUER UNE CONVERSATION COMME NON LUE (contrat MESSAGERIE-1B §3,
+ * `POST /api/chats/:id/unread`, sans corps). Le serveur recule le curseur de lecture juste
+ * avant le dernier message recu : le fil compte 1 non-lu. 200 `{ data: { chatDocumentId,
+ * markedUnread, unreadCount, unreadTotal } }` ; `markedUnread: false` si le fil n'a aucun
+ * message recu. Serveur d'avant 1B : 404 (le geste est alors cache par l'ecran).
+ * @param {string} chatId
+ * @returns {Promise<{ chatDocumentId?: string, markedUnread?: boolean, unreadCount?: number,
+ *   unreadTotal?: number }>}
+ */
+export const markChatUnread = async (chatId) => {
+  const response = await client.post(`/chats/${chatId}/unread`);
+  return response.data?.data ?? response.data;
+};
+
+/**
  * Update group metadata
  * @param {string} chatId
  * @param {{ groupName?: string; addAdminIds?: string[]; removeAdminIds?: string[] }} data
@@ -442,10 +476,11 @@ export const updateGroupMeta = async (chatId, data) => {
 /**
  * Delete a message
  * @param {string} messageId - The message id
- * @returns {Promise<void>}
+ * @returns {Promise<{ chatDocumentId?: string, deleted?: boolean, messageDocumentId?: string }>}
  */
 export const deleteMessage = async (messageId) => {
-  await client.delete(`/chat-messages/${messageId}`);
+  const response = await client.delete(`/chat-messages/${messageId}`);
+  return response.data;
 };
 
 /**
@@ -505,12 +540,31 @@ export const editMessage = async (messageId, data) => {
  * Vote on a poll message
  * @param {string} messageId
  * @param {string} optionId
- * @returns {Promise<{ success: boolean; chatDocumentId?: string; changed: boolean; composition: any; messageDocumentId: string; updatedAt: string }>}
+ * SECU-SONDAGE-ANONYME — `myOptionIds` : MON choix, rendu à moi seul (un sondage anonyme ne nomme
+ * plus personne dans sa composition, il n'y a que les compteurs).
+ * @returns {Promise<{ success: boolean; chatDocumentId?: string; changed: boolean;
+ *   composition: any; messageDocumentId: string; myOptionIds?: string[]; updatedAt: string }>}
  */
 export const votePollMessage = async (messageId, optionId) => {
   const response = await client.post(`/chat-messages/${messageId}/poll-vote`, {
     optionId,
   });
+  return response.data;
+};
+
+/**
+ * SONDAGE-NOMS — les noms des votants d un sondage (prenom, nom, photo). Le vote
+ * ne garde que des identifiants : sans cette lecture, un membre d un fil de club
+ * qui n a rien ecrit s affiche « Membre ». Aucun nom pour un sondage anonyme.
+ * @param {string} messageId Le message du sondage.
+ * Un compte supprimé arrive avec `deleted: true` et des noms vides.
+ * SECU-SONDAGE-ANONYME — `myOptionIds` : le choix de CELUI QUI LIT (sondage anonyme compris).
+ * @returns {Promise<{ chatDocumentId: string; data: Array<{ avatar: { url: string } | null;
+ *   deleted?: boolean; documentId: string; firstname: string; lastname: string }>;
+ *   messageDocumentId: string; myOptionIds?: string[] }>}
+ */
+export const getPollVoterProfiles = async (messageId) => {
+  const response = await client.get(`/chat-messages/${messageId}/poll-voters`);
   return response.data;
 };
 
