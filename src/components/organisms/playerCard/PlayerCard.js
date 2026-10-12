@@ -198,6 +198,7 @@ const RARITY_STYLES = {
 };
 
 const up = (value) => String(value ?? '').toUpperCase();
+const estVide = (value) => ['', '-', '—'].includes(String(value ?? '').trim());
 
 /**
  * Wordmark FOUNDCLUB — logo officiel de l'app (demande Adel : pas de texte).
@@ -555,7 +556,16 @@ function PlayerCardBase({
   const angle = ANGLES[theme.borderAngle] || ANGLES[155];
   const isAvailable = up(statut) === 'DISPONIBLE';
   const statusColor = isAvailable ? '#27d6a3' : '#ff284f';
-  const plan = planHistorique(6, historique.length);
+  // PAR-L14 : une rangee « — » (ou vide) n'apprend rien. On la retire, et la place
+  // rendue va a l'historique. STATUT est toujours la, en dernier.
+  const rangees = [
+    [t('playerCard.info.position', 'POSTE'), poste],
+    [t('playerCard.info.age', 'ÂGE'), age],
+    [t('playerCard.info.nationality', 'NATIONALITÉ'), nationalite],
+    [t('playerCard.info.club', 'CLUB'), club],
+    [t('playerCard.info.city', 'VILLE'), ville],
+  ].filter(([, valeur]) => !estVide(valeur));
+  const plan = planHistorique(rangees.length + 1, historique.length);
 
   return (
     <View collapsable={false} style={{ height: h, width }}>
@@ -784,15 +794,9 @@ function PlayerCardBase({
             paddingVertical: LAYOUT.infoPadV * s,
           }]}
           >
-            <InfoRow label={t('playerCard.info.position', 'POSTE')} s={s} value={up(poste)} />
-            <InfoRow label={t('playerCard.info.age', 'ÂGE')} s={s} value={up(age)} />
-            <InfoRow
-              label={t('playerCard.info.nationality', 'NATIONALITÉ')}
-              s={s}
-              value={up(nationalite)}
-            />
-            <InfoRow label={t('playerCard.info.club', 'CLUB')} s={s} value={up(club)} />
-            <InfoRow label={t('playerCard.info.city', 'VILLE')} s={s} value={up(ville)} />
+            {rangees.map(([label, valeur]) => (
+              <InfoRow key={label} label={label} s={s} value={up(valeur)} />
+            ))}
             <InfoRow
               isLast
               label="STATUT"

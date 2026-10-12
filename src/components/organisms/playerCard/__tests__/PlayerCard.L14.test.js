@@ -13,7 +13,7 @@ import { createElement } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import PlayerCard from '../PlayerCard';
+import PlayerCard, { planHistorique } from '../PlayerCard';
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (...args) => jest.requireActual('i18next').t(...args) }),
@@ -189,5 +189,54 @@ describe('PAR-L14 point 3 — le compteur compte des clubs, au singulier comme a
     const arbre = monter({ ...COMPLETE, historique: [COMPLETE.historique[0]], historiqueTotal: 1 });
 
     expect(texte(arbre, '1 CLUB')).toHaveLength(1);
+  });
+});
+
+// Ce que l'ecran envoie quand le profil ne dit rien : « — ».
+const SANS_POSTE_NI_VILLE = {
+  ...COMPLETE, nationalite: '—', poste: '—', ville: '—',
+};
+
+describe('PAR-L14 point 4 — les rangees vides sont retirees, l historique prend la place', () => {
+  it('une rangee « — » n apprend rien : POSTE, NATIONALITÉ et VILLE disparaissent', () => {
+    const arbre = monter(SANS_POSTE_NI_VILLE);
+
+    ['POSTE', 'NATIONALITÉ', 'VILLE', '—'].forEach((absent) => {
+      expect(texte(arbre, absent)).toHaveLength(0);
+    });
+    ['ÂGE', '26 ANS', 'CLUB', 'STATUT', 'DISPONIBLE'].forEach((present) => {
+      expect(texte(arbre, present)).toHaveLength(1);
+    });
+  });
+
+  it('une valeur vide compte comme absente ; la derniere rangee montree n a pas de trait', () => {
+    const arbre = monter({ ...SANS_POSTE_NI_VILLE, age: '' });
+
+    expect(texte(arbre, 'ÂGE')).toHaveLength(0);
+    const [statut] = texte(arbre, 'STATUT');
+    const rangee = ancetre(statut, (n) => style(n).height !== undefined);
+    expect(style(rangee).borderBottomWidth).toBe(0);
+  });
+
+  it('avec 3 rangees, deux clubs gardent leur nom sur 2 lignes (6 rangees : 1 seule)', () => {
+    const NOMS = ['STADE MARSEILLAIS UNIVERSITÉ CLUB', 'SPORTING CLUB MONTREDON BONNEVEINE'];
+    const clubs = (props) => NOMS
+      .map((nom) => texte(monter(props), nom)[0].props.numberOfLines);
+
+    expect(clubs(SANS_POSTE_NI_VILLE)).toEqual([2, 2]);
+    expect(clubs(COMPLETE)).toEqual([1, 1]);
+  });
+
+  it('la place de l historique se calcule : jamais plus que la carte ne contient', () => {
+    expect([2, 3, 4, 5, 6].map((rangees) => planHistorique(rangees, 3))).toEqual([
+      { lignes: 3, lignesClub: 2 },
+      { lignes: 3, lignesClub: 1 },
+      { lignes: 3, lignesClub: 1 },
+      { lignes: 2, lignesClub: 1 },
+      { lignes: 2, lignesClub: 1 },
+    ]);
+    expect(planHistorique(3, 2)).toEqual({ lignes: 2, lignesClub: 2 });
+    expect(planHistorique(6, 1)).toEqual({ lignes: 1, lignesClub: 2 });
+    expect(planHistorique(4, 0)).toEqual({ lignes: 0, lignesClub: 1 });
   });
 });
