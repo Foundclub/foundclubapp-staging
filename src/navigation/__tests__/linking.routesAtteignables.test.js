@@ -587,6 +587,8 @@ describe('LIENS-APP -- chaque chemin confie a l app par Android mene a un ecran'
   // QR des affiches (une redirection du site), et l ecran de la Ville qui fabrique le lien.
   const PAGES_DU_SITE = [
     '/annuaire/clubs/c-1/mon-club/',
+    // ANNONCE-PUBLIQUE (07/10) : la page publique d une annonce reste au site (référencement).
+    '/annuaire/annonces/ad-1/gardien-u15/',
     '/licenses/pay/tok-1',
     '/qr/abc123',
     '/collectivite/v-1/inviter-un-club',
@@ -619,5 +621,25 @@ describe('LIENS-APP -- chaque chemin confie a l app par Android mene a un ecran'
     });
 
     expect(morts).toEqual([]);
+  });
+});
+
+// ANNONCE-PUBLIQUE (07/10, décision d'Adel « annonce a ») -- la page publique d une annonce reste
+// au SITE (elle n est dans aucune des trois listes, cf. PAGES_DU_SITE ci-dessus) ; son bouton
+// « Postuler dans l app » ouvre l app par le schema, foundclub://recruitment/<id>, sur la fiche de
+// l annonce. Sans compte, la fiche lit une route reservee aux comptes : le lien ne mene nulle part,
+// l app s ouvre sur son accueil.
+describe('ANNONCE-PUBLIQUE -- foundclub://recruitment/<id> ouvre la fiche de l annonce', () => {
+  it('connecte : la fiche de CETTE annonce', () => {
+    expect(feuille(recevoir(CONNECTE, 'foundclub://recruitment/ad-42').etat))
+      .toEqual({ ecran: 'RecruitmentAdDetails', params: { adId: 'ad-42' } });
+  });
+
+  it('sans compte : aucun ecran (pas de fiche vide)', () => {
+    expect(recevoir(DECONNECTE, 'foundclub://recruitment/ad-42').etat).toBeUndefined();
+  });
+
+  it('la page publique du site n ouvre PAS l app, meme connecte', () => {
+    expect(recevoir(CONNECTE, 'https://foundclub.app/annuaire/annonces/ad-42/gardien-u15/').etat).toBeUndefined();
   });
 });
