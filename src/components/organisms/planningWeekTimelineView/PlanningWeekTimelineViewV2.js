@@ -764,6 +764,18 @@ function PlanningWeekTimelineView({
     // COLL-C4B-BIS (03/10) : de VRAIES hachures (`.ferme-bande` : rayures a 135 degres) et un bord
     // PLEIN, comme la planche — plus des pointilles sur un fond uni.
     if (event?.raw?.closureBand) {
+      // 🧱 COLL-R-APP-PLANNING (incident 1) — une seance (ou une grappe) qui couvre le HAUT de la
+      // plage posait son titre sur le sien (« Bloqué par la Ville · » sous « FoundClub », capture
+      // S17) : le titre descend sous elle, ou se tait s il n a plus la place (le lecteur d ecran
+      // le lit toujours).
+      const basDesBlocsDuHaut = layoutEvents
+        .filter((/** @type {any} */ autre) => !autre?.raw?.closureBand
+          && autre.dayIndex === event.dayIndex
+          && autre.top <= event.top + 2
+          && autre.top + autre.height > event.top + 2)
+        .map((/** @type {any} */ autre) => autre.top + autre.height - event.top);
+      const descenteDuTitre = basDesBlocsDuHaut.length ? Math.max(...basDesBlocsDuHaut) : 0;
+      const titreDeLaPlage = descenteDuTitre + 14 <= event.height;
       return (
         <EventBlock
           accessibilityLabel={[event.title, getPlanningTimeLabel(event)].filter(Boolean).join(', ')}
@@ -784,18 +796,21 @@ function PlanningWeekTimelineView({
           }]}
         >
           <Hachures color={pendingAccentColor} />
-          <Text
-            numberOfLines={4}
-            style={[
-              Fonts.p3Bold,
-              {
-                color: Colors.warning400 || pendingAccentColor,
-                fontSize: mode === 'week' ? 9 : 11,
-              },
-            ]}
-          >
-            {event.title}
-          </Text>
+          {titreDeLaPlage ? (
+            <Text
+              numberOfLines={4}
+              style={[
+                Fonts.p3Bold,
+                {
+                  color: Colors.warning400 || pendingAccentColor,
+                  fontSize: mode === 'week' ? 9 : 11,
+                  ...(descenteDuTitre ? { marginTop: descenteDuTitre } : {}),
+                },
+              ]}
+            >
+              {event.title}
+            </Text>
+          ) : null}
         </EventBlock>
       );
     }
@@ -890,6 +905,29 @@ function PlanningWeekTimelineView({
       primaryMinimumFontScale = mode === 'week' ? 0.72 : 0.78;
     }
 
+    // 🧱 COLL-R-APP-PLANNING (incident 1) — APRES le titre et la deuxieme ligne (leurs regles ne
+    // changent pas), une ligne ne s affiche que si elle TIENT entiere dans le bloc : sur le site,
+    // une ligne de trop se tassait et passait SOUS la suivante (« Basket · à déplacer » sous
+    // « 19:00 – 20:00 », capture S15 ; une heure fait 44 points en plein ecran). Hauteurs : celles
+    // des styles ci-dessous (marge de 2 + ~1,25 fois la taille du texte).
+    const bordure = aDeplacer ? 2 : 1;
+    let placeRestante = event.height - 2 - (2 * bordure) - (2 * (mode === 'week' ? 4 : 6))
+      - (primaryFontSize + 2) - (canShowSecondary ? 2 + 2 + secondaryFontSize + 2 : 0);
+    const tient = (/** @type {number} */ taille) => {
+      const hauteur = 2 + Math.ceil(taille * 1.25);
+      if (hauteur > placeRestante) return false;
+      placeRestante -= hauteur;
+      return true;
+    };
+    const tailleSeule = mode === 'week' ? 8 : 10;
+    const nonTrancheeSeule = Boolean(nonTranchee) && !isTiny && !canShowSecondary
+      && tient(tailleSeule);
+    const aDeplacerSeul = aDeplacer && !isTiny && !canShowSecondary && tient(tailleSeule);
+    const montreTertiaire = canShowTertiary && tient(9);
+    const libelleHeure = !isTiny && !isTeamFocusedCard ? getPlanningTimeLabel(event) : null;
+    const montreHeure = Boolean(libelleHeure) && tient(9);
+    const montreMeta = canShowMeta && tient(8);
+
     // Le lecteur d'ecran entend le bloc entier, meme quand une ligne ne tient pas.
     const blockAccessibilityLabel = isClubFocusedCard
       ? [
@@ -965,6 +1003,7 @@ function PlanningWeekTimelineView({
             numberOfLines={1}
             style={[isTeamFocusedCard ? Fonts.p3 : Fonts.p3Bold, {
               color: Colors.neutral00,
+              flexShrink: 0,
               fontSize: secondaryFontSize,
               lineHeight: mode === 'week' ? secondaryFontSize + 2 : secondaryFontSize + 2,
               marginTop: 2,
@@ -986,10 +1025,10 @@ function PlanningWeekTimelineView({
           </Text>
         ) : null}
         {/* COL-014 : seule, quand il n y a pas de deuxieme ligne (comme « a deplacer »). */}
-        {nonTranchee && !isTiny && !canShowSecondary ? (
+        {nonTrancheeSeule ? (
           <Text
             numberOfLines={1}
-            style={[Fonts.p3Bold, { color: Colors.neutral300, fontSize: mode === 'week' ? 8 : 10 }]}
+            style={[Fonts.p3Bold, { color: Colors.neutral300, flexShrink: 0, fontSize: tailleSeule }]}
             testID="non-tranchee"
           >
             {nonTranchee}
@@ -997,23 +1036,24 @@ function PlanningWeekTimelineView({
         ) : null}
         {/* COLL-C4B-BIS : « a deplacer » sous le club et l equipe, comme la planche (ecran 4). */}
         {/* FINITIONS12-COLL : seul, quand il n y a pas de deuxieme ligne. */}
-        {aDeplacer && !isTiny && !canShowSecondary ? (
+        {aDeplacerSeul ? (
           <Text
             numberOfLines={1}
             style={[
               Fonts.p3Bold,
-              { color: pendingAccentColor, fontSize: mode === 'week' ? 8 : 10 },
+              { color: pendingAccentColor, flexShrink: 0, fontSize: tailleSeule },
             ]}
             testID="a-deplacer"
           >
             {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
           </Text>
         ) : null}
-        {canShowTertiary ? (
+        {montreTertiaire ? (
           <Text
             numberOfLines={1}
             style={[isTeamFocusedCard ? Fonts.p3 : Fonts.p3Bold, {
               color: isTeamFocusedCard ? Colors.neutral200 : color,
+              flexShrink: 0,
               fontSize: 9,
               marginTop: 2,
             }]}
@@ -1021,13 +1061,23 @@ function PlanningWeekTimelineView({
             {tertiaryLabel}
           </Text>
         ) : null}
-        {!isTiny && !isTeamFocusedCard && getPlanningTimeLabel(event) ? (
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
-            {getPlanningTimeLabel(event)}
+        {montreHeure ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3, {
+              color: Colors.neutral300, flexShrink: 0, fontSize: 9, marginTop: 2,
+            }]}
+          >
+            {libelleHeure}
           </Text>
         ) : null}
-        {canShowMeta ? (
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 8, marginTop: 2 }]}>
+        {montreMeta ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3, {
+              color: Colors.neutral300, flexShrink: 0, fontSize: 8, marginTop: 2,
+            }]}
+          >
             {metaLabel}
           </Text>
         ) : null}

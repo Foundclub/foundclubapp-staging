@@ -1,8 +1,8 @@
 import { format } from 'date-fns';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { normalizePlanningItems } from '@/utils/planning/planningSlots';
+import { getPlanningTimeLabel, normalizePlanningItems } from '@/utils/planning/planningSlots';
 
 import PlanningWeekTimelineView from '../PlanningWeekTimelineViewV2';
 
@@ -12,6 +12,8 @@ import PlanningWeekTimelineView from '../PlanningWeekTimelineViewV2';
 //     qui reste (c est la grille qui defile dedans) ; hors plein ecran, rien ne change.
 //   - COL-012 : des fleches pour changer de semaine AUSSI dans la rangee des jours (‹ dans la case
 //     vide a gauche de LUN, › apres DIM), avec les fonctions et les noms qui existent deja.
+//   - Incident 1 de la fiche : TEXTES SUPERPOSES dans les petits blocs (site, S15 : « Basket · à
+//     déplacer » sous « 19:00 – 20:00 » ; S17 : « Bloqué par la Ville · » sous « FoundClub »).
 // Doublures reprises de PlanningWeekTimelineView.COLL-C3B.test.js.
 
 jest.mock('@/theme/themeContext', () => {
@@ -191,5 +193,81 @@ describe('COL-012 — des fleches aussi dans la rangee des jours', () => {
   it('sans la demande (les autres plannings) : aucune fleche dans la rangee', async () => {
     const arbre = await monter();
     expect(parId(arbre, 'rangee-des-jours')[0].findAllByType(TouchableOpacity)).toHaveLength(0);
+  });
+});
+
+// 🧱 Incident 1 — un bloc ne montre que les lignes qui TIENNENT (sur le site, une ligne de trop
+// se tassait et passait SOUS la suivante) ; le titre d une plage fermee descend sous la seance qui
+// en couvre le haut. ROUGE avant le lot.
+const carte = (/** @type {any} */ arbre, /** @type {string} */ debut) => arbre.root.findAll(
+  (/** @type {any} */ n) => typeof n.type === 'string'
+    && String(n.props.accessibilityLabel || '').startsWith(debut),
+)[0];
+const lignesDe = (/** @type {any} */ noeud) => noeud.findAllByType(Text)
+  .map((/** @type {any} */ texte) => texte);
+const heureDe = (/** @type {any} */ champs) => getPlanningTimeLabel(
+  normalizePlanningItems([bloc(champs)])[0],
+);
+const UNE_HEURE = {
+  endAt: '2026-10-07T17:00:00.000Z',
+  endTime: '19:00:00.000',
+  team: { name: 'Basket' },
+};
+
+describe('Incident 1 — aucun texte superpose dans les petits blocs', () => {
+  it('un bloc d une heure (44 points) : club, equipe, sans l heure qui ne tient pas', async () => {
+    const arbre = await monter({ events: [bloc(UNE_HEURE)] });
+    const lus = lignesDe(carte(arbre, 'AS Ville A'))
+      .map((/** @type {any} */ t) => [].concat(t.props.children).join(''));
+    expect(lus).toContain('AS Ville A');
+    expect(lus).not.toContain(heureDe(UNE_HEURE));
+  });
+
+  it('un bloc d une heure et demie : l heure tient, elle reste', async () => {
+    const arbre = await monter({ events: [bloc({})] });
+    const lus = lignesDe(carte(arbre, 'AS Ville A'))
+      .map((/** @type {any} */ t) => [].concat(t.props.children).join(''));
+    expect(lus).toContain(heureDe({}));
+  });
+
+  it('aucune ligne ne se tasse : de trop, elle est coupee, jamais posee dessus', async () => {
+    const arbre = await monter({ events: [bloc(UNE_HEURE), bloc({ club: { name: 'Autre' } })] });
+    const lignes = arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && String(n.props.accessibilityLabel || '').length > 0)
+      .flatMap((/** @type {any} */ noeud) => lignesDe(noeud));
+    expect(lignes.length).toBeGreaterThan(0);
+    lignes.forEach((/** @type {any} */ ligne) => {
+      expect(StyleSheet.flatten(ligne.props.style)?.flexShrink).toBe(0);
+    });
+  });
+
+  it('le titre de la plage descend sous la seance qui en couvre le haut', async () => {
+    const BANDE = {
+      closureBand: { documentId: 'b1', kind: 'block', reason: 'musculation' },
+      documentId: null,
+      endAt: '2026-10-07T14:00:00.000Z',
+      hasExplicitTime: true,
+      startAt: '2026-10-07T12:00:00.000Z',
+      title: 'Bloqué par la Ville · Musculation',
+    };
+    const DEMANDE = bloc({
+      endAt: '2026-10-07T13:00:00.000Z',
+      endTime: '15:00:00.000',
+      origin: 'request',
+      pending: true,
+      startAt: '2026-10-07T12:00:00.000Z',
+      startTime: '14:00:00.000',
+    });
+    const arbre = await monter({ events: [BANDE, DEMANDE] });
+    const titre = lignesDe(carte(arbre, 'Bloqué par la Ville'))
+      .find((/** @type {any} */ t) => t.props.children === BANDE.title);
+    // Une heure en plein ecran = 44 points : le titre passe sous la seance (ou se tait).
+    if (titre) expect(StyleSheet.flatten(titre.props.style).marginTop).toBeGreaterThanOrEqual(42);
+    // Seule, la plage garde son titre en haut.
+    const seule = await monter({ events: [BANDE] });
+    const enHaut = lignesDe(carte(seule, 'Bloqué par la Ville'))
+      .find((/** @type {any} */ t) => t.props.children === BANDE.title);
+    expect(StyleSheet.flatten(enHaut.props.style).marginTop || 0).toBe(0);
+    expect(titre === undefined || StyleSheet.flatten(titre.props.style).marginTop >= 42).toBe(true);
   });
 });
