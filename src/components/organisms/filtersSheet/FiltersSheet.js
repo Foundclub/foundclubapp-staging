@@ -44,6 +44,10 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
  * `FiltersSheet.test.js`). Le titre ne passe dans une rangee QUE s'il y a une
  * action, et il y prend `flex: 1` : a sa largeur mesuree, un titre gras de
  * plusieurs mots perdrait son dernier mot sous Android 16.
+ *
+ * PAR-L10 (12/10) — `applyEnCours`, FACULTATIF : le bouton plein devient « occupé »
+ * (désactivé, annoncé au lecteur d'écran) pendant que son action attend le serveur
+ * — la création d'une alerte. Sans lui, le bouton est celui d'avant, au noeud près.
  */
 
 /** @typedef {{ key: string, label: string, value: string, content: import('react').ReactNode }} FilterRow */
@@ -58,6 +62,7 @@ const SNAP_POINTS = ['78%'];
 
 /**
  * @param {{
+ *  applyEnCours?: boolean;
  *  applyLabel?: string;
  *  headerAction?: import('react').ReactNode;
  *  headerNote?: import('react').ReactNode;
@@ -73,6 +78,7 @@ const SNAP_POINTS = ['78%'];
  * @returns {import('react').ReactElement} La feuille.
  */
 function FiltersSheet({
+  applyEnCours = false,
   applyLabel = undefined,
   headerAction = undefined,
   headerNote = undefined,
@@ -131,6 +137,8 @@ function FiltersSheet({
         <View>
           <TouchableOpacity
             accessibilityRole="button"
+            accessibilityState={applyEnCours ? { busy: true, disabled: true } : undefined}
+            disabled={applyEnCours || undefined}
             onPress={onApply}
             style={[
               Alignments.alignCenter,
@@ -139,6 +147,7 @@ function FiltersSheet({
                 backgroundColor: Colors.primary500,
                 borderRadius: 999,
                 minHeight: 52,
+                ...(applyEnCours ? { opacity: 0.6 } : {}),
               },
             ]}
           >

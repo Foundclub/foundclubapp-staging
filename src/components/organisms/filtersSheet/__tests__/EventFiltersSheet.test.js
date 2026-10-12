@@ -662,7 +662,12 @@ describe('ALERTES (A20.4) — l étoile en haut à droite de la feuille', () => 
       pourUneAlerte: true,
     });
     expect(trouver(tree, 'adresse')).toBeDefined();
-    expect(texteVisible(tree)).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
+    // PAR-L10 (12/10, E22) : ouverte pour une alerte, la feuille la crée elle-même ;
+    // la note nomme le bouton qui le fait (l'étoile n'y est plus).
+    const texte = texteVisible(tree);
+    expect(texte).toContain('Choisis une ville, puis touche « Créer cette alerte ».');
+    expect(texte).toContain('Créer cette alerte');
+    expect(texte).toContain('Voir les résultats sans créer d\'alerte');
   });
 });
 

@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import usePlaces from '@/domains/places/usePlaces';
+import { lireLeRefus, phraseDuRefus } from '@/domains/searchAlert/refusAlerte';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -274,7 +275,9 @@ function EventFilters({ navigation }) {
     } catch (err) {
       const typedError = /** @type {any} */ (err);
       console.error(typedError);
-      Alert.alert(t('common.error', 'Erreur'), typedError?.response?.data?.error?.message || t('eventFilters.errorWhileSaving', 'Erreur lors de la sauvegarde'));
+      // PAR-L10 (12/10) — le client rejette la charge Strapi déballée : la raison se lit
+      // là, pas dans `response.data.error` (toujours vide, d'où « Erreur lors de la sauvegarde »).
+      Alert.alert(t('common.error', 'Erreur'), phraseDuRefus(lireLeRefus(typedError), t));
     } finally {
       setIsCreatingAlert(false);
     }

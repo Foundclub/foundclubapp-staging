@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import usePlaces from '@/domains/places/usePlaces';
@@ -14,6 +14,7 @@ import {
   SorteAlerte,
   StatutAlerte,
 } from '@/domains/searchAlert/alerteEvenement';
+import { lireLeRefus, phraseDuRefus } from '@/domains/searchAlert/refusAlerte';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import coordonneesDeLaVille from '@/components/organisms/filtersSheet/cityCoordinates';
@@ -38,11 +39,16 @@ import { useAppFeedback } from '@/context/AppFeedbackContext';
  * `EventFilters` (`handleCreateAlert`, `handleSaveAlert`), qui reste en place pour
  * « Gérer mes alertes ». Une alerte d'annonces n'a pas de zone : la recherche
  * d'annonces ne connaît qu'une ville en texte (`alerteAnnonce.js`).
+ *
+ * PAR-L10 (12/10) — un refus dit POURQUOI (`refusAlerte.js`) : la raison part dans
+ * la bannière et reste lisible dans `raisonDuRefus` pour la feuille ouverte, qui
+ * couvre la bannière. Un appui pendant un envoi ne crée rien de plus : il rend ''.
  * @param {string} sorte `SorteAlerte.evenement` ou `SorteAlerte.annonce`.
  * @returns {{
  *   creer: (filtres: Record<string, any> | undefined, publicChoisi?: string) => Promise<string>;
  *   enCours: boolean;
  *   estDejaCreee: (filtres: Record<string, any> | undefined, publicChoisi?: string) => boolean;
+ *   raisonDuRefus: string;
  *   sports: any[] | undefined;
  * }} Ce que la recherche en utilise. `publicChoisi` ne sert qu'aux annonces.
  */
@@ -54,6 +60,9 @@ function useAlerteRecherche(sorte) {
   const { data: sports } = useGetActivities();
   const [enCours, setEnCours] = useState(false);
   const [signatureCreee, setSignatureCreee] = useState('');
+  const [raisonDuRefus, setRaisonDuRefus] = useState('');
+  // Un état ne protège pas de deux appuis dans la même image : la référence, si.
+  const envoiEnCoursRef = useRef(false);
   const pourAnnonces = sorte === SorteAlerte.annonce;
 
   const versAlerte = useCallback((
@@ -71,8 +80,11 @@ function useAlerteRecherche(sorte) {
   ) => {
     const alerte = /** @type {any} */ (versAlerte(filtres, publicChoisi));
     if (!alerte) return StatutAlerte.villeManquante;
+    if (envoiEnCoursRef.current) return '';
 
+    envoiEnCoursRef.current = true;
     setEnCours(true);
+    setRaisonDuRefus('');
     try {
       // Le nom dépend des alertes déjà rangées ; les lire ne doit jamais
       // empêcher de créer (même repli que l'écran plein).
@@ -129,16 +141,18 @@ function useAlerteRecherche(sorte) {
       });
       return StatutAlerte.creee;
     } catch (erreur) {
-      // Le serveur dit POURQUOI il refuse (la limite de 10 alertes, par exemple) :
-      // on le répète tel quel plutôt qu'un message générique.
-      const motif = /** @type {any} */ (erreur)?.response?.data?.error?.message;
+      // Le serveur dit POURQUOI il refuse (le droit, la limite de 10 alertes…) :
+      // on le dit plutôt qu'un message générique.
+      const phrase = phraseDuRefus(lireLeRefus(erreur), t);
+      setRaisonDuRefus(phrase);
       showBanner({
-        body: motif || t('eventFilters.errorWhileSaving', 'Erreur lors de la sauvegarde'),
-        title: t('common.error', 'Erreur'),
+        body: phrase,
+        title: t('searchAlerts.refus.titre', 'L\'alerte n\'a pas été créée.'),
         tone: 'error',
       });
       return StatutAlerte.erreur;
     } finally {
+      envoiEnCoursRef.current = false;
       setEnCours(false);
     }
   }, [getGeohashForPointAndRadius, navigation, pourAnnonces, showBanner, sports, t, versAlerte]);
@@ -155,6 +169,7 @@ function useAlerteRecherche(sorte) {
     creer,
     enCours,
     estDejaCreee,
+    raisonDuRefus,
     sports,
   };
 }
