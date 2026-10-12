@@ -314,16 +314,22 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
   // les responsables voient son PRENOM et son AGE, et ils TRANCHENT. La ligne dit
   // donc pour qui, et propose Accepter / Refuser — pas « Repondre », qui laisserait
   // la demande traitee sans que l'enfant soit jamais entre dans l'equipe.
+  //
+  // 👪 PAR-L2L3 · L3 (12/10, PAR-007) — L'ENFANT AU PREMIER PLAN. Le coach doit
+  // reconnaitre l'enfant, pas deduire qui il est d'une phrase sur son parent :
+  // le TITRE est l'enfant (« Anissa, 11 ans »), la phrase dit ce qu'il demande,
+  // et le parent reste dans `meta` (la carte le nomme en second). Prenom et age
+  // SEULEMENT, comme avant : rien de plus d'un mineur avant l'acceptation.
   const child = request?.declaredChild;
   const childId = normalizeString(child?.documentId);
   if (childId) {
     const childFirstname = normalizeString(child?.firstname);
     const childAge = Number.isFinite(child?.age) ? child.age : null;
-    const childLabel = childAge === null
+    const childTitle = childAge === null
       ? childFirstname
       : i18next.t(
-        'requestMappers.interest.childWithAge',
-        '{{firstname}} ({{age}} ans)',
+        'requestMappers.interest.childTitleWithAge',
+        '{{firstname}}, {{age}} ans',
         { age: childAge, firstname: childFirstname, ...SANS_ECHAPPEMENT },
       );
     const destination = teamName || clubName;
@@ -347,16 +353,12 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
       },
       status: 'pending',
       subtitle: i18next.t(
-        'requestMappers.interest.childPlace',
-        '{{requester}} demande une place pour {{child}} dans {{destination}}.',
-        {
-          child: childLabel,
-          destination,
-          requester: requesterName,
-          ...SANS_ECHAPPEMENT,
-        },
+        'requestMappers.interest.childAsk',
+        'Demande une place dans {{destination}}.',
+        { destination, ...SANS_ECHAPPEMENT },
       ),
-      title: i18next.t('requestMappers.interest.childPlaceTitle', 'Place pour un enfant'),
+      title: childTitle
+        || i18next.t('requestMappers.interest.childPlaceTitle', 'Place pour un enfant'),
       type: 'interest',
     };
   }
