@@ -938,10 +938,6 @@ function Messaging({ navigation, route }) {
             <ProfileButton />
           </View>
         </View>
-        {/* MSG1A (§3.13, decision d'Adel « titre Messages ») — « Messages », 28 en gras. */}
-        <Text style={[stylesDeLaListe.titreDeLaPage, Fonts.neutral00, Spaces.marginTop[16]]}>
-          {t('messaging.title')}
-        </Text>
         <OnboardingWrapper
           description={t(
             'messaging.onboarding.main',
@@ -960,9 +956,10 @@ function Messaging({ navigation, route }) {
           title="Messagerie"
         >
           <View style={[Alignments.fill]}>
-            {espaceVille ? null : renderChatScopeFilter()}
-            {renderSearch()}
-            {/* IPH09 — un seul defilement : Ville, archives et fils dans la meme FlashList. */}
+            {/* IPH09 — un seul defilement : Ville, archives et fils dans la meme FlashList.
+                COL-007 (D6 A, pack MSG1A `p1a-app.jsx:83-104`) — le titre, les puces et la
+                recherche y defilent aussi ; seule la rangee FOUNDCLUB reste fixe. L en-tete est
+                passe en ELEMENT : en fonction, FlashList remonterait le champ a chaque lettre. */}
             <WithDataWrapper isLoading={isLoading} wrapperStyle={[Alignments.fill]}>
               <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
                 <FlashList
@@ -973,6 +970,19 @@ function Messaging({ navigation, route }) {
                   ListEmptyComponent={error ? renderErrorState : renderEmptyList}
                   ListHeaderComponent={(
                     <>
+                      {/* MSG1A (§3.13, decision d'Adel « titre Messages ») — 28 en gras. */}
+                      <Text
+                        style={[
+                          stylesDeLaListe.titreDeLaPage,
+                          Fonts.neutral00,
+                          Spaces.marginTop[16],
+                          Spaces.marginBottom[24],
+                        ]}
+                      >
+                        {t('messaging.title')}
+                      </Text>
+                      {espaceVille ? null : renderChatScopeFilter()}
+                      {renderSearch()}
                       <CanauxDeLaVille
                         chats={allChats}
                         collectiviteId={villeId}
