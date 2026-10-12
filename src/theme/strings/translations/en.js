@@ -13431,8 +13431,11 @@ export default {
     },
     form: {
       addTitle: 'Add a child',
+      birthdateDayLabel: 'Day',
       birthdateKeepHint: 'Leave blank to keep it unchanged.',
       birthdateLabel: 'Date of birth',
+      birthdateMonthLabel: 'Month',
+      birthdateYearLabel: 'Year',
       editTitle: 'Edit profile',
       errors: {
         futureDate: "The date of birth can't be in the future.",

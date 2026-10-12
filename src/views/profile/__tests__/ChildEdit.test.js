@@ -513,3 +513,223 @@ describe('DATENAISS — une date de naissance dans le futur', () => {
     expect(texteVisible(arbre)).toContain('pour le moment');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAR-L1-DATE-ENFANT (PAR-001, recette iPhone d'Adel du 11/10) — la date de
+// naissance se tapait case par case : après « 03 », il fallait toucher la case
+// du mois à la main, puis celle de l'année. Et une date impossible ne se disait
+// qu'en bas de l'écran, après « Déclarer mon enfant ». Le motif du passage
+// automatique existe déjà dans l'inscription (UserName.js, JJ ⇒ MM ⇒ AAAA) :
+// cet écran le reprend.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PAR-L1 — la date de naissance passe seule de case en case', () => {
+  const CASES_DATE = ['child-day', 'child-month', 'child-year'];
+
+  /**
+   * Le champ portant ce repère.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} repere - Le `testID` du champ.
+   * @returns {any} Le nœud du champ.
+   */
+  const champ = (arbre, repere) => arbre.root.findAll((/** @type {any} */ noeud) => (
+    noeud.type === TextInput && noeud.props?.testID === repere
+  ))[0];
+
+  /**
+   * 🎯 UN ESPION DE CURSEUR PAR CASE. Le `TextInput` du préréglage jest partage
+   * UN SEUL `focus` sur son prototype : sans espion propre à chaque case, on ne
+   * saurait pas QUELLE case a reçu le curseur.
+   * @param {any} arbre - L'arbre rendu.
+   * @returns {Record<string, jest.Mock>} Un espion par repère.
+   */
+  const espionnerCurseur = (arbre) => Object.fromEntries(CASES_DATE.map((repere) => {
+    const { instance } = champ(arbre, repere);
+    instance.focus = jest.fn();
+    return [repere, instance.focus];
+  }));
+
+  /**
+   * Appuie sur la touche « effacer » du clavier dans une case.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} repere - Le `testID` de la case.
+   * @returns {Promise<void>} Rien.
+   */
+  const effacer = async (arbre, repere) => {
+    const noeud = champ(arbre, repere);
+    await act(async () => { noeud.props.onKeyPress?.({ nativeEvent: { key: 'Backspace' } }); });
+  };
+
+  /**
+   * Le message d'erreur affiché SOUS la date, ou rien.
+   * @param {any} arbre - L'arbre rendu.
+   * @returns {string} Son texte, ou une chaîne vide.
+   */
+  const erreurSousLaDate = (arbre) => {
+    const blocDate = arbre.root.findAll((/** @type {any} */ noeud) => (
+      noeud.props?.testID === 'child-birthdate'
+    ))[0];
+    if (!blocDate) return '';
+    const erreur = blocDate.findAll((/** @type {any} */ noeud) => (
+      noeud.type === Text && noeud.props?.testID === 'child-birthdate-error'
+    ))[0];
+    return erreur ? aplatirTexte(erreur.props.children) : '';
+  };
+
+  /**
+   * Combien de fois ce texte apparaît à l'écran.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} texte - Le texte cherché.
+   * @returns {number} Le nombre d'apparitions.
+   */
+  const occurrences = (arbre, texte) => texteVisible(arbre).split(texte).length - 1;
+
+  test('PAR-L1 ① 2 chiffres dans le jour ⇒ le curseur passe au mois (pas 1)', async () => {
+    const arbre = await rendre();
+    const curseur = espionnerCurseur(arbre);
+
+    await saisir(arbre, 'child-day', '0');
+    expect(curseur['child-month']).not.toHaveBeenCalled();
+
+    await saisir(arbre, 'child-day', '03');
+    expect(curseur['child-month']).toHaveBeenCalledTimes(1);
+    expect(curseur['child-year']).not.toHaveBeenCalled();
+  });
+
+  test('PAR-L1 ② 2 chiffres dans le mois ⇒ le curseur passe à l’année', async () => {
+    const arbre = await rendre();
+    const curseur = espionnerCurseur(arbre);
+
+    await saisir(arbre, 'child-month', '0');
+    expect(curseur['child-year']).not.toHaveBeenCalled();
+
+    await saisir(arbre, 'child-month', '05');
+    expect(curseur['child-year']).toHaveBeenCalledTimes(1);
+  });
+
+  test('PAR-L1 ③ la touche « suivant » du clavier fait le même chemin', async () => {
+    const arbre = await rendre();
+    const curseur = espionnerCurseur(arbre);
+
+    expect(champ(arbre, 'child-day').props.enterKeyHint).toBe('next');
+    expect(champ(arbre, 'child-month').props.enterKeyHint).toBe('next');
+    expect(champ(arbre, 'child-year').props.enterKeyHint).toBe('done');
+
+    await act(async () => { champ(arbre, 'child-day').props.onSubmitEditing(); });
+    expect(curseur['child-month']).toHaveBeenCalledTimes(1);
+    await act(async () => { champ(arbre, 'child-month').props.onSubmitEditing(); });
+    expect(curseur['child-year']).toHaveBeenCalledTimes(1);
+  });
+
+  test('PAR-L1 ④ effacer dans une case VIDE revient à la case d’avant', async () => {
+    const arbre = await rendre();
+    const curseur = espionnerCurseur(arbre);
+
+    // Le mois est vide : « effacer » ramène au jour.
+    await effacer(arbre, 'child-month');
+    expect(curseur['child-day']).toHaveBeenCalledTimes(1);
+
+    // L'année est vide : « effacer » ramène au mois.
+    await effacer(arbre, 'child-year');
+    expect(curseur['child-month']).toHaveBeenCalledTimes(1);
+
+    // Une case qui a encore un chiffre : « effacer » efface ce chiffre, le
+    // curseur ne bouge pas.
+    await saisir(arbre, 'child-year', '2');
+    await effacer(arbre, 'child-year');
+    expect(curseur['child-month']).toHaveBeenCalledTimes(1);
+
+    // Le jour n'a pas de case d'avant : rien ne bouge.
+    await effacer(arbre, 'child-day');
+    expect(curseur['child-day']).toHaveBeenCalledTimes(1);
+  });
+
+  test('PAR-L1 ⑤ on peut toujours corriger une case : 03/05/2016 devient 03/06/2016', async () => {
+    const arbre = await rendre();
+    const curseur = espionnerCurseur(arbre);
+
+    await saisir(arbre, 'child-firstname', 'Léa');
+    await saisir(arbre, 'child-lastname', 'Martin');
+    await saisir(arbre, 'child-day', '03');
+    await saisir(arbre, 'child-month', '05');
+    await saisir(arbre, 'child-year', '2016');
+
+    // Le parent retouche le mois : il l'efface, tape « 06 », et le curseur
+    // repart vers l'année comme au premier passage.
+    await saisir(arbre, 'child-month', '0');
+    await saisir(arbre, 'child-month', '06');
+    expect(curseur['child-year']).toHaveBeenCalledTimes(2);
+
+    await enregistrer(arbre);
+    expect(mockCreer).toHaveBeenCalledTimes(1);
+    expect(mockCreer.mock.calls[0][0].birthdate).toBe('2016-06-03');
+  });
+
+  test('PAR-L1 ⑥ chaque case a un nom pour le lecteur d’écran : Jour, Mois, Année', async () => {
+    const arbre = await rendre();
+
+    expect(CASES_DATE.map((repere) => champ(arbre, repere).props.accessibilityLabel))
+      .toEqual(['Jour', 'Mois', 'Année']);
+  });
+
+  test('PAR-L1 ⑦ 31/02/2016 ⇒ « Cette date n’existe pas. » SOUS la date, sans envoi', async () => {
+    const arbre = await rendre();
+
+    await saisir(arbre, 'child-firstname', 'Léa');
+    await saisir(arbre, 'child-lastname', 'Martin');
+    await saisir(arbre, 'child-day', '31');
+    await saisir(arbre, 'child-month', '02');
+    await saisir(arbre, 'child-year', '2016');
+
+    expect(erreurSousLaDate(arbre)).toBe('Cette date n’existe pas.');
+
+    // À l'envoi, la fiche ne part pas, et la phrase n'est pas dite deux fois.
+    await enregistrer(arbre);
+    expect(mockCreer).not.toHaveBeenCalled();
+    expect(occurrences(arbre, 'Cette date n’existe pas.')).toBe(1);
+  });
+
+  test('PAR-L1 ⑧ tant que l’année n’est pas finie, aucune erreur ne s’affiche', async () => {
+    const arbre = await rendre();
+
+    await saisir(arbre, 'child-day', '31');
+    await saisir(arbre, 'child-month', '02');
+    await saisir(arbre, 'child-year', '201');
+
+    expect(erreurSousLaDate(arbre)).toBe('');
+  });
+
+  test('PAR-L1 ⑨ corriger le jour efface l’erreur', async () => {
+    const arbre = await rendre();
+
+    await saisir(arbre, 'child-day', '31');
+    await saisir(arbre, 'child-month', '02');
+    await saisir(arbre, 'child-year', '2016');
+    expect(erreurSousLaDate(arbre)).toBe('Cette date n’existe pas.');
+
+    await saisir(arbre, 'child-day', '2');
+    await saisir(arbre, 'child-day', '28');
+    expect(erreurSousLaDate(arbre)).toBe('');
+  });
+
+  test('PAR-L1 ⑩ une date future se dit SOUS la date, avant même d’enregistrer', async () => {
+    const arbre = await rendre();
+    const demain = new Date();
+    demain.setDate(demain.getDate() + 1);
+
+    await saisir(arbre, 'child-day', String(demain.getDate()).padStart(2, '0'));
+    await saisir(arbre, 'child-month', String(demain.getMonth() + 1).padStart(2, '0'));
+    await saisir(arbre, 'child-year', String(demain.getFullYear()));
+
+    expect(erreurSousLaDate(arbre)).toBe('La date de naissance ne peut pas être dans le futur.');
+  });
+
+  test('PAR-L1 ⑪ 14 ans ⇒ le palier des 13 ans se dit sous la date (règle inchangée)', async () => {
+    const arbre = await rendre();
+
+    await saisir(arbre, 'child-day', '01');
+    await saisir(arbre, 'child-month', '01');
+    await saisir(arbre, 'child-year', String(new Date().getFullYear() - 14));
+
+    expect(erreurSousLaDate(arbre)).toContain('13 ans');
+  });
+});
