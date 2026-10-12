@@ -165,6 +165,10 @@ const Input = forwardRef(
                 onChangeText={props.onChangeText}
                 onEndEditing={handleEndEditing}
                 onFocus={handleFocus}
+                // PAR-L1 (12/10) — « effacer » dans une case vide de la date de
+                // naissance ramene a la case d avant (ChildEdit). Aucun autre
+                // appelant ne le passe : `undefined`, rendu inchange.
+                onKeyPress={props.onKeyPress}
                 onPressIn={props.onPressIn}
                 onSubmitEditing={props.onSubmitEditing}
                 placeholder={props.placeholder}

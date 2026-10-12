@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
@@ -107,6 +109,10 @@ function ChildEdit() {
   );
   const [position, setPosition] = useState(enfantExistant?.position || '');
   const [erreur, setErreur] = useState('');
+  const [envoiTente, setEnvoiTente] = useState(false);
+  const refJour = useRef(null);
+  const refMois = useRef(null);
+  const refAnnee = useRef(null);
 
   /**
    * Assemble la date saisie, ou rien du tout.
@@ -124,8 +130,56 @@ function ChildEdit() {
     return `${annee.padStart(4, '0')}-${mois.padStart(2, '0')}-${jour.padStart(2, '0')}`;
   }, [day, month, year]);
 
+  /**
+   * 📅 CE QUE LA DATE SAISIE A DE FAUX, À CHAQUE FRAPPE (PAR-L1, recette du 11/10).
+   *
+   * Les règles et leur ordre sont ceux de l'envoi, et ils ne vivent plus qu'ici :
+   * l'envoi relit ce verdict au lieu de le refaire. Avant, un 31/02 ne se disait
+   * qu'en bas de l'écran, après « Déclarer mon enfant ».
+   * @returns {string} La phrase à dire sous la date, ou une chaîne vide.
+   */
+  const verdictDate = useMemo(() => {
+    const naissance = dateSaisie();
+    if (!naissance) return '';
+
+    // ② La date existe-t-elle vraiment ? Un 31 février n'est pas une date, et
+    //    `new Date('2017-02-31')` ne le dit pas franchement selon les moteurs.
+    const [a, m, j] = naissance.split('-').map(Number);
+    const date = new Date(Date.UTC(a, m - 1, j));
+    const existe = date.getUTCFullYear() === a
+      && date.getUTCMonth() === m - 1
+      && date.getUTCDate() === j;
+    if (!existe) {
+      return t('myChildren.form.errors.invalidDate', 'Cette date n’existe pas.');
+    }
+
+    // ③ 📅 PAS DANS LE FUTUR. Le palier ci-dessous ne le voit pas : un âge
+    //    négatif est bien « moins de 13 ans ».
+    if (isBirthdateInFuture(naissance)) {
+      return t(
+        'myChildren.form.errors.futureDate',
+        'La date de naissance ne peut pas être dans le futur.',
+      );
+    }
+
+    // ④ 🧒 LE PALIER 13, DIT AVANT L'ALLER-RETOUR.
+    if (!isBirthdateUnderParentAccountAge(naissance)) {
+      return t(
+        'myChildren.form.errors.tooOld',
+        'Une fiche enfant est réservée aux moins de 13 ans.',
+      );
+    }
+    return '';
+  }, [dateSaisie, t]);
+
+  // Le verdict se montre dès que l'année a ses 4 chiffres : avant, la date est
+  // en cours de frappe. Après un appui sur le bouton, il se montre quoi qu'il
+  // arrive — une année de 3 chiffres envoyée doit dire pourquoi elle bloque.
+  const erreurDate = year.trim().length === 4 || envoiTente ? verdictDate : '';
+
   const enregistrer = useCallback(() => {
     setErreur('');
+    setEnvoiTente(true);
     const naissance = dateSaisie();
 
     // ① Les trois obligatoires. En modification, la date PEUT rester vide : le
@@ -138,38 +192,9 @@ function ChildEdit() {
       return;
     }
 
-    // ② La date existe-t-elle vraiment ? Un 31 février n'est pas une date, et
-    //    `new Date('2017-02-31')` ne le dit pas franchement selon les moteurs.
-    if (naissance) {
-      const [a, m, j] = naissance.split('-').map(Number);
-      const date = new Date(Date.UTC(a, m - 1, j));
-      const existe = date.getUTCFullYear() === a
-        && date.getUTCMonth() === m - 1
-        && date.getUTCDate() === j;
-      if (!existe) {
-        setErreur(t('myChildren.form.errors.invalidDate', 'Cette date n’existe pas.'));
-        return;
-      }
-
-      // ③ 📅 PAS DANS LE FUTUR. Le palier ci-dessous ne le voit pas : un âge
-      //    négatif est bien « moins de 13 ans ».
-      if (isBirthdateInFuture(naissance)) {
-        setErreur(t(
-          'myChildren.form.errors.futureDate',
-          'La date de naissance ne peut pas être dans le futur.',
-        ));
-        return;
-      }
-
-      // ④ 🧒 LE PALIER 13, DIT AVANT L'ALLER-RETOUR.
-      if (!isBirthdateUnderParentAccountAge(naissance)) {
-        setErreur(t(
-          'myChildren.form.errors.tooOld',
-          'Une fiche enfant est réservée aux moins de 13 ans.',
-        ));
-        return;
-      }
-    }
+    // ②③④ La date : sa phrase est déjà dite SOUS la date (`erreurDate`). On ne
+    //    la répète pas en bas, on n'envoie pas.
+    if (verdictDate) return;
 
     const payload = buildChildPayload({
       birthdate: naissance,
@@ -214,15 +239,52 @@ function ChildEdit() {
   }, [
     continuerLInscription, creerEnfant, dateSaisie, documentIdVise, estUneEtapeDInscription,
     estUneModification, firstname, lastname, modifierEnfant, navigation, number, position, t,
+    verdictDate,
   ]);
 
-  const caseDate = (valeur, poser, repere, indication, longueur) => (
+  /**
+   * Une case de la date.
+   *
+   * ⏭️ LE MOTIF DE L'INSCRIPTION, REPRIS (UserName.js, JJ ⇒ MM ⇒ AAAA) : la case
+   * pleine passe le curseur à la suivante, la touche « suivant » aussi.
+   * ⏮️ ET LE RETOUR : « effacer » dans une case VIDE ramène à celle d'avant.
+   * Sans lui, revenir corriger le jour depuis le mois obligeait à viser une
+   * case de 60 px du doigt. Toucher une case reste toujours possible.
+   * @param {object} c - La case.
+   * @param {string} c.indication - Le texte gris (JJ, MM, AAAA).
+   * @param {number} c.longueur - Le nombre de chiffres de la case.
+   * @param {string} c.nom - Son nom pour le lecteur d'écran.
+   * @param {(texte: string) => void} c.poser - Range la saisie.
+   * @param {any} [c.precedente] - La case d'avant (référence), s'il y en a une.
+   * @param {any} c.reference - La référence de cette case.
+   * @param {string} c.repere - Le `testID`.
+   * @param {any} [c.suivante] - La case d'après (référence), s'il y en a une.
+   * @param {string} c.valeur - Ce qui est saisi.
+   * @returns {import('react').ReactElement} La case.
+   */
+  const caseDate = ({
+    indication, longueur, nom, poser, precedente, reference, repere, suivante, valeur,
+  }) => (
     <Input
+      accessibilityLabel={nom}
+      enterKeyHint={suivante ? 'next' : 'done'}
       inputMode="numeric"
       keyboardType="number-pad"
       maxLength={longueur}
-      onChangeText={poser}
+      onChangeText={(texte) => {
+        poser(texte);
+        if (suivante && texte.length === longueur) {
+          suivante.current?.focus();
+        }
+      }}
+      onKeyPress={({ nativeEvent }) => {
+        if (precedente && nativeEvent?.key === 'Backspace' && !valeur) {
+          precedente.current?.focus();
+        }
+      }}
+      onSubmitEditing={suivante ? () => suivante.current?.focus() : undefined}
       placeholder={indication}
+      ref={reference}
       testID={repere}
       value={valeur}
       wrapperStyle={{ width: longueur === 4 ? 84 : 60 }}
@@ -269,17 +331,55 @@ function ChildEdit() {
           value={lastname}
         />
 
-        <View style={[Spaces.gap[8]]}>
+        <View style={[Spaces.gap[8]]} testID="child-birthdate">
           <Text style={[Fonts.p2, Fonts.neutral00]}>
             {t('myChildren.form.birthdateLabel', 'Date de naissance')}
           </Text>
           <View style={[Alignments.row, Alignments.alignEnd, Spaces.gap[16]]}>
-            {caseDate(day, setDay, 'child-day', 'JJ', 2)}
+            {caseDate({
+              indication: 'JJ',
+              longueur: 2,
+              nom: t('myChildren.form.birthdateDayLabel', 'Jour'),
+              poser: setDay,
+              reference: refJour,
+              repere: 'child-day',
+              suivante: refMois,
+              valeur: day,
+            })}
             <Text style={[Fonts.h1Bold, Fonts.neutral00]}>/</Text>
-            {caseDate(month, setMonth, 'child-month', 'MM', 2)}
+            {caseDate({
+              indication: 'MM',
+              longueur: 2,
+              nom: t('myChildren.form.birthdateMonthLabel', 'Mois'),
+              poser: setMonth,
+              precedente: refJour,
+              reference: refMois,
+              repere: 'child-month',
+              suivante: refAnnee,
+              valeur: month,
+            })}
             <Text style={[Fonts.h1Bold, Fonts.neutral00]}>/</Text>
-            {caseDate(year, setYear, 'child-year', 'AAAA', 4)}
+            {caseDate({
+              indication: 'AAAA',
+              longueur: 4,
+              nom: t('myChildren.form.birthdateYearLabel', 'Année'),
+              poser: setYear,
+              precedente: refMois,
+              reference: refAnnee,
+              repere: 'child-year',
+              valeur: year,
+            })}
           </View>
+          {/* 📅 L'erreur de la date se dit SOUS la date, pas en bas de l'écran. */}
+          {erreurDate ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[Fonts.p3, Fonts.error300]}
+              testID="child-birthdate-error"
+            >
+              {erreurDate}
+            </Text>
+          ) : null}
           {/* 🔒 On explique le vide au lieu de le laisser inquiéter. */}
           {estUneModification ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
