@@ -1018,6 +1018,8 @@ function PlanningWeekFullscreen() {
   // Design P5-semaine-ordi : sur le site, la mairie choisit l installation en haut (une
   // pastille a la couleur de chacune) ; un bloc ouvert = un panneau a droite.
   const isDesktop = useIsDesktop();
+  // 🏛️ COLL-R-APP-PLANNING (COL-012) — sur ordinateur, les fleches du haut entourent les dates.
+  const flechesAutourDesDates = isFacilitySource && isDesktop;
   // 🖥️ COLL-C4B-BIS — ouvert par « Fermer une installation » sur ordinateur (CollectiviteFermeture
   // cede la place au planning) : le panneau de la fermeture, d emblee.
   const fermetureDemandee = route?.params?.fermeture || null;
@@ -1269,9 +1271,13 @@ function PlanningWeekFullscreen() {
         // Recolte 03/10 : avec COLL-C3B-BIS, les blocs affiches portent aussi la place « U13 ? » en pointille.
         events={[...bandesDeFermeture, ...evenementsAffiches]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
+        // 🏛️ COLL-R-APP-PLANNING (COL-012) : des fleches aussi dans la rangee des jours (la ou est
+        // le regard), les memes que celles du haut, avec leurs noms.
+        flechesDesJours={isFacilitySource}
         laneOf={colonnesDePlateaux ? colonneDuBloc : undefined}
         lanes={colonnesDePlateaux}
         mode={vue}
+        nomsDesFleches={[flecheGauche, flecheDroite]}
         onDateChange={vue === VUES.troisJours
           ? (/** @type {Date} */ ancre) => setCurrentDate(addDays(ancre, 1))
           : setCurrentDate}
@@ -1654,6 +1660,9 @@ function PlanningWeekFullscreen() {
             },
           ]}
         >
+          {/* COL-012 (planches P5v2-vues-ordi, P5-semaine-ordi) : sur ordinateur, les */}
+          {/* fleches ENTOURENT les dates ; le telephone les garde aux deux bouts (P5-jour-tel). */}
+          {flechesAutourDesDates ? <View style={{ flex: 1 }} /> : null}
           <TouchableOpacity
             accessibilityLabel={flecheGauche}
             accessibilityRole="button"
@@ -1674,7 +1683,11 @@ function PlanningWeekFullscreen() {
             />
           </TouchableOpacity>
 
-          <View style={{ flex: 1, paddingHorizontal: 6 }}>
+          <View
+            style={flechesAutourDesDates
+              ? { flexShrink: 1, minWidth: 200, paddingHorizontal: 6 }
+              : { flex: 1, paddingHorizontal: 6 }}
+          >
             <Text
               numberOfLines={1}
               style={[{
@@ -1730,6 +1743,7 @@ function PlanningWeekFullscreen() {
               style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
             />
           </TouchableOpacity>
+          {flechesAutourDesDates ? <View style={{ flex: 1 }} /> : null}
 
           <TouchableOpacity
             accessibilityLabel={t(

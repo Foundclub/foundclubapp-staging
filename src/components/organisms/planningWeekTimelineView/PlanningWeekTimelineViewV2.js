@@ -203,6 +203,11 @@ function EventBlock({
  * @param {boolean} [root0.expandToContent]
  * @param {boolean} [root0.showHeader]
  * @param {boolean} [root0.showUntimedSection]
+ * @param {boolean} [root0.flechesDesJours] - COLL-R-APP-PLANNING (COL-012) : des fleches pour
+ *   changer de page AUSSI dans la rangee des jours (‹ dans la case vide a gauche du premier jour,
+ *   › apres le dernier), les memes que celles de l en-tete.
+ * @param {string[]} [root0.nomsDesFleches] - Leurs noms pour le lecteur d ecran
+ *   (« Semaine precedente », « Semaine suivante »… : ceux des fleches de l ecran).
  * @param {number} [root0.firstHour] - COLL-C2B : la grille commence au plus tard a cette heure
  *   (l ouverture de l installation), pour qu une heure libre du matin se touche.
  * @param {(jour: Date, heure: number, colonne?: number) => void} [root0.onFreeSlotPress] -
@@ -220,9 +225,11 @@ function PlanningWeekTimelineView({
   events = [],
   expandToContent = false,
   firstHour,
+  flechesDesJours = false,
   laneOf,
   lanes,
   mode = '3days',
+  nomsDesFleches = [],
   onDateChange,
   onEventPress,
   onFreeSlotPress,
@@ -1321,8 +1328,32 @@ function PlanningWeekTimelineView({
       >
         {summarySection}
 
-        <View style={[styles.daysRow, compactFullscreen ? styles.compactDaysRow : null, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
-          <View style={{ width: timeColumnWidth }} />
+        <View
+          style={[
+            styles.daysRow,
+            compactFullscreen ? styles.compactDaysRow : null,
+            { borderBottomColor: 'rgba(255,255,255,0.12)' },
+          ]}
+          testID="rangee-des-jours"
+        >
+          {/* COLL-R-APP-PLANNING (COL-012) : ‹ dans la case vide a gauche du premier jour. */}
+          <View style={[styles.caseDesHeures, { width: timeColumnWidth }]}>
+            {flechesDesJours ? (
+              <TouchableOpacity
+                accessibilityLabel={nomsDesFleches[0]}
+                accessibilityRole="button"
+                hitSlop={styles.hitSlop}
+                onPress={handlePrevPage}
+                style={styles.flecheDesJours}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={Images.arrowLeft}
+                  style={[styles.flecheDesJoursImage, { tintColor: Colors.primary500 }]}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
           {weekDays.map((day) => {
             const dayKey = getDayKey(day);
             const isTodayColumn = isSameDay(day, nowReference);
@@ -1387,6 +1418,23 @@ function PlanningWeekTimelineView({
               </View>
             );
           })}
+          {/* COL-012 : › apres le dernier jour, posee sur son bord droit (les colonnes de la */}
+          {/* rangee restent alignees sur celles de la grille). */}
+          {flechesDesJours ? (
+            <TouchableOpacity
+              accessibilityLabel={nomsDesFleches[1]}
+              accessibilityRole="button"
+              hitSlop={styles.hitSlop}
+              onPress={handleNextPage}
+              style={[styles.flecheDesJours, styles.flecheDesJoursDroite]}
+            >
+              <Image
+                resizeMode="contain"
+                source={Images.arrowRight}
+                style={[styles.flecheDesJoursImage, { tintColor: Colors.primary500 }]}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {tetesDePlateaux}
@@ -1570,6 +1618,7 @@ function PlanningWeekTimelineView({
 }
 
 const styles = StyleSheet.create({
+  caseDesHeures: { alignItems: 'center', alignSelf: 'stretch', justifyContent: 'flex-end' },
   collapsedText: { color: '#6E7C84', fontSize: 10 },
   compactDayBadge: { height: 24, minWidth: 24, width: 24 },
   compactDayLabel: { fontSize: 8, marginBottom: 1 },
@@ -1605,6 +1654,11 @@ const styles = StyleSheet.create({
   eventCard: {
     borderRadius: 8, borderWidth: 1, overflow: 'hidden', position: 'absolute',
   },
+  flecheDesJours: {
+    alignItems: 'center', borderRadius: 10, height: 30, justifyContent: 'center', width: 30,
+  },
+  flecheDesJoursDroite: { bottom: 3, position: 'absolute', right: 0 },
+  flecheDesJoursImage: { height: 12, width: 12 },
   grappeDot: { borderRadius: 999, height: 6, width: 6 },
   grappeDots: { flexDirection: 'row', gap: 3, marginBottom: 2 },
   gridContainer: {

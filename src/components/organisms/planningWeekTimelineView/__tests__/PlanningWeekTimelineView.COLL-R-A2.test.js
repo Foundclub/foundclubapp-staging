@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native';
+import { format } from 'date-fns';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { normalizePlanningItems } from '@/utils/planning/planningSlots';
@@ -9,6 +10,8 @@ import PlanningWeekTimelineView from '../PlanningWeekTimelineViewV2';
 // compte collectivite du 11/10 (suivi docs/RECETTE_COLLECTIVITES_2026-10-12_SUIVI.md) :
 //   - COL-009 : en plein ecran sur telephone, le cadre de la grille ne depasse jamais la place
 //     qui reste (c est la grille qui defile dedans) ; hors plein ecran, rien ne change.
+//   - COL-012 : des fleches pour changer de semaine AUSSI dans la rangee des jours (‹ dans la case
+//     vide a gauche de LUN, › apres DIM), avec les fonctions et les noms qui existent deja.
 // Doublures reprises de PlanningWeekTimelineView.COLL-C3B.test.js.
 
 jest.mock('@/theme/themeContext', () => {
@@ -96,7 +99,14 @@ afterEach(async () => {
     arbresMontes.splice(0).forEach((arbre) => arbre.unmount());
   });
 });
-const monter = async ({ compactFullscreen = true } = {}) => {
+const monter = async ({
+  compactFullscreen = true,
+  events = [bloc({})],
+  flechesDesJours = false,
+  mode = 'week',
+  nomsDesFleches = /** @type {string[] | undefined} */ (undefined),
+  onDateChange = /** @type {any} */ (undefined),
+} = {}) => {
   /** @type {any} */
   let arbre;
   await act(async () => {
@@ -105,8 +115,11 @@ const monter = async ({ compactFullscreen = true } = {}) => {
         cardDisplayProfile="clubFocused"
         compactFullscreen={compactFullscreen}
         currentDate={MERCREDI}
-        events={normalizePlanningItems([bloc({})])}
-        mode="week"
+        events={normalizePlanningItems(events)}
+        flechesDesJours={flechesDesJours}
+        mode={mode}
+        nomsDesFleches={nomsDesFleches}
+        onDateChange={onDateChange}
         showHeader={false}
         showUntimedSection={false}
       />,
@@ -130,5 +143,53 @@ describe('COL-009 — le cadre de la grille, en plein ecran sur telephone', () =
   it('hors plein ecran (onglet Planning) : rien ne change', async () => {
     const arbre = await monter({ compactFullscreen: false });
     expect(styleDe(arbre, 'planning-cadre').flexShrink).toBeUndefined();
+  });
+});
+
+const fleche = (/** @type {any} */ arbre, /** @type {string} */ nom) => arbre.root
+  .findAllByType(TouchableOpacity)
+  .find((/** @type {any} */ noeud) => noeud.props.accessibilityLabel === nom);
+const SEMAINE = ['Semaine précédente', 'Semaine suivante'];
+
+// ROUGE avant le lot : la rangee des jours n avait aucune fleche.
+describe('COL-012 — des fleches aussi dans la rangee des jours', () => {
+  it('› apres DIM : la semaine suivante ; ‹ avant LUN : la precedente', async () => {
+    const onDateChange = jest.fn();
+    const arbre = await monter({ flechesDesJours: true, nomsDesFleches: SEMAINE, onDateChange });
+    await act(async () => { fleche(arbre, 'Semaine suivante').props.onPress(); });
+    expect(format(onDateChange.mock.calls[0][0], 'yyyy-MM-dd')).toBe('2026-10-14');
+    await act(async () => { fleche(arbre, 'Semaine précédente').props.onPress(); });
+    expect(format(onDateChange.mock.calls[1][0], 'yyyy-MM-dd')).toBe('2026-09-30');
+  });
+
+  it('elles sont DANS la rangee des jours, et se touchent (44 points au moins)', async () => {
+    const arbre = await monter({ flechesDesJours: true, nomsDesFleches: SEMAINE });
+    const rangee = parId(arbre, 'rangee-des-jours')[0];
+    const noms = rangee.findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ noeud) => noeud.props.accessibilityLabel);
+    expect(noms).toEqual(['Semaine précédente', 'Semaine suivante']);
+    rangee.findAllByType(TouchableOpacity).forEach((/** @type {any} */ noeud) => {
+      const { height, width } = StyleSheet.flatten(noeud.props.style);
+      const marge = noeud.props.hitSlop;
+      expect(width + marge.left + marge.right).toBeGreaterThanOrEqual(44);
+      expect(height + marge.top + marge.bottom).toBeGreaterThanOrEqual(44);
+    });
+  });
+
+  it('en vue Jour aussi, avec le nom de la vue', async () => {
+    const onDateChange = jest.fn();
+    const arbre = await monter({
+      flechesDesJours: true,
+      mode: 'day',
+      nomsDesFleches: ['Jour précédent', 'Jour suivant'],
+      onDateChange,
+    });
+    await act(async () => { fleche(arbre, 'Jour suivant').props.onPress(); });
+    expect(format(onDateChange.mock.calls[0][0], 'yyyy-MM-dd')).toBe('2026-10-08');
+  });
+
+  it('sans la demande (les autres plannings) : aucune fleche dans la rangee', async () => {
+    const arbre = await monter();
+    expect(parId(arbre, 'rangee-des-jours')[0].findAllByType(TouchableOpacity)).toHaveLength(0);
   });
 });
