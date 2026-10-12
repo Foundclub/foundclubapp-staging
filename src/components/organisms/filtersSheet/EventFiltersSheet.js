@@ -274,7 +274,7 @@ function EventFiltersSheet({
     if (!onCreateAlert || creationEnCours) return;
     const criteres = brouillon();
     setCreationEnCours(true);
-    let statut = StatutAlerte.erreur;
+    let statut = /** @type {string} */ (StatutAlerte.erreur);
     try {
       statut = await onCreateAlert(criteres);
     } catch {

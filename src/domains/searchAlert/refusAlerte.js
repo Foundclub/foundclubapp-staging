@@ -68,7 +68,7 @@ export const lireLeRefus = (erreur) => {
 /**
  * La phrase lue par l'utilisateur, sous « L'alerte n'a pas été créée. ».
  * @param {Refus} refus La raison (`lireLeRefus`).
- * @param {(cle: string, repli: string, options?: Record<string, any>) => string} t La traduction.
+ * @param {(...args: any[]) => any} t La traduction (`t` d'i18next, `(cle, repli, options)`).
  * @returns {string} La phrase.
  */
 export const phraseDuRefus = (refus, t) => {
