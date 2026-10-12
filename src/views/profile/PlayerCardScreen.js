@@ -111,12 +111,15 @@ function PlayerCardScreen({ navigation, route }) {
   const cardProps = useMemo(() => ({
     age: model.age != null ? `${model.age} ${t('playerCard.field.yearsUnit', 'ANS')}` : '—',
     club: model.hasClub ? model.clubName : t('playerCard.noClub', 'SANS CLUB'),
-    historique: model.history.map((entry) => ({
-      categorie: entry.level || entry.category || '',
+    // PAR-L14 : une ligne par club et par saison, niveau puis categories reunies
+    // (« Régional 1 · Seniors, U20 ») ; le compteur compte les clubs.
+    historique: model.historyGroups.map((entry) => ({
+      categorie: [entry.levels.join(', '), entry.categories.join(', ')].filter(Boolean).join(' · '),
       club: entry.clubName,
       periode: formatHistoryPeriod(entry, t('playerCard.nowShort', 'AUJ.')),
     })),
     historiqueEmptyLabel: t('playerCard.historyEmpty', 'Parcours à compléter'),
+    historiqueTotal: model.historyClubCount,
     locked: consent.isLockedPreview,
     nationalite: model.nationality || '—',
     nom: model.lastname || '—',
@@ -314,6 +317,7 @@ function PlayerCardScreen({ navigation, route }) {
             club={cardProps.club}
             historique={cardProps.historique}
             historiqueEmptyLabel={cardProps.historiqueEmptyLabel}
+            historiqueTotal={cardProps.historiqueTotal}
             locked={cardProps.locked}
             nationalite={cardProps.nationalite}
             nom={cardProps.nom}
@@ -395,6 +399,7 @@ function PlayerCardScreen({ navigation, route }) {
             club={cardProps.club}
             historique={cardProps.historique}
             historiqueEmptyLabel={cardProps.historiqueEmptyLabel}
+            historiqueTotal={cardProps.historiqueTotal}
             locked={false}
             nationalite={cardProps.nationalite}
             nom={cardProps.nom}

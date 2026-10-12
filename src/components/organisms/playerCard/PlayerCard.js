@@ -498,6 +498,8 @@ function InfoRow({
  * @param props.club
  * @param props.disposition
  * @param props.historique
+ * @param {string} [props.historiqueEmptyLabel]
+ * @param {number} [props.historiqueTotal] clubs distincts (PAR-L14), sinon le nombre de lignes
  * @param props.locked
  * @param props.nationalite
  * @param props.nom
@@ -521,6 +523,7 @@ function PlayerCardBase({
   disposition,
   historique = [],
   historiqueEmptyLabel = undefined,
+  historiqueTotal = undefined,
   locked = false,
   nationalite,
   nom,
@@ -881,11 +884,10 @@ function PlayerCardBase({
                       allowFontScaling={false}
                       style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
                     >
-                      {t(
-                        'playerCard.history.clubCount',
-                        '{{total}} CLUBS',
-                        { total: historique.length },
-                      )}
+                      {t('playerCard.history.clubCount', {
+                        count: historiqueTotal ?? historique.length,
+                        defaultValue: '{{count}} CLUBS',
+                      })}
                     </Text>
                   ) : null}
                 </View>

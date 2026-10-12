@@ -14574,6 +14574,9 @@ export default {
     generating: 'Generating image…',
     history: {
       clubCount: '{{total}} CLUBS',
+      // PAR-L14 : le compteur compte des clubs, au singulier comme au pluriel.
+      clubCount_one: '{{count}} CLUB',
+      clubCount_other: '{{count}} CLUBS',
       empty: 'CAREER TO COMPLETE',
       title: 'SPORTS HISTORY',
     },

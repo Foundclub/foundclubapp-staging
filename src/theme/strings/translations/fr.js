@@ -15307,6 +15307,9 @@ export default {
     generating: 'Génération de l\'image…',
     history: {
       clubCount: '{{total}} CLUBS',
+      // PAR-L14 : le compteur compte des clubs, au singulier comme au pluriel.
+      clubCount_one: '{{count}} CLUB',
+      clubCount_other: '{{count}} CLUBS',
       empty: 'PARCOURS À COMPLÉTER',
       title: 'HISTORIQUE SPORTIF',
     },

@@ -179,3 +179,15 @@ describe('PAR-L14 point 2 — aucun texte sous 10 px a la largeur d un petit tel
     expect(texte(arbre, '2020–2022 · Régional 1 · Seniors, U20')).toHaveLength(1);
   });
 });
+
+describe('PAR-L14 point 3 — le compteur compte des clubs, au singulier comme au pluriel', () => {
+  it('il lit le total de clubs donne par l ecran, pas le nombre de lignes', () => {
+    expect(texte(monter({ ...COMPLETE, historiqueTotal: 4 }), '4 CLUBS')).toHaveLength(1);
+  });
+
+  it('un seul club : « 1 CLUB »', () => {
+    const arbre = monter({ ...COMPLETE, historique: [COMPLETE.historique[0]], historiqueTotal: 1 });
+
+    expect(texte(arbre, '1 CLUB')).toHaveLength(1);
+  });
+});
