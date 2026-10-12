@@ -82,7 +82,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
-  useManagingCollectiviteId,
+  useManagingCollectivite,
 } from '@/services/collectivite/collectiviteQueries';
 import {
   getClubPlanning,
@@ -350,7 +350,11 @@ function PlanningWeekFullscreen() {
   // le compte est « joueur » lisait le texte du membre. C'est le serveur qui dit qu'il la
   // gere (ses collectivites, puis leurs installations), jamais le role du compte.
   const { userData } = /** @type {any} */ (useAuth()) || {};
-  const managingCollectiviteId = useManagingCollectiviteId(facilityId, {
+  // COL-009 : `gestionConnue` — la reponse est sure (lectures revenues sans erreur).
+  const {
+    collectiviteId: managingCollectiviteId,
+    connue: gestionConnue,
+  } = useManagingCollectivite(facilityId, {
     enabled: isFacilitySource,
   });
   const readsAsOrganizer = Boolean(managingCollectiviteId)
@@ -749,6 +753,17 @@ function PlanningWeekFullscreen() {
   const nombreEnAttente = managingCollectiviteId ? blocsEnAttente.length : 0;
   // FINITIONS13-COLL (04/10) : la période de la VUE (T13 : « cette semaine » en vue Mois).
   const ligneEnAttente = ligneDesDemandesEnAttente(t, vue, nombreEnAttente);
+  // 📱 COLL-R-APP-PLANNING (12/10, COL-009) — TELEPHONE COUCHE (hors site), planche validee
+  // P5-semaine-paysage et remede « G43 B » : UNE barre compacte (fleches, nom, dates, ligne de
+  // capacite, croix), puis la grille ; le bandeau, la legende, la phrase, le bouton et la ligne des
+  // demandes sont replies (ils prenaient ~60 % de la hauteur : une heure de grille, capture S12).
+  const barreCompacte = isFacilitySource && isLandscape && Platform.OS !== 'web';
+  // La phrase du dirigeant : une fois SUR que le compte ne gere pas l installation (compte double).
+  // Incident 13 : places libres, la ligne de capacite le dit deja (deux lignes disaient « 1 place
+  // libre ») ; complet, elle dit ce que devient un depassement.
+  const phraseDuDirigeant = readsAsOrganizer && gestionConnue && !managingCollectiviteId
+    && Boolean(facilitySummaryMessage)
+    && (Boolean(facilityPlanningSummary?.reachedCapacity) || !ligneDeCapacite);
   // Contrat C2A §7 : d ou vient la place (creneau attribue, demande, seance du club).
   const origineDe = (/** @type {any} */ bloc) => {
     const brut = bloc?.raw || {};
@@ -877,10 +892,14 @@ function PlanningWeekFullscreen() {
   // touche une heure libre du planning d une installation de la Ville ⇒ « Demander ce creneau »,
   // deja rempli du jour et de l heure. La Ville decide (le serveur fait la demande).
   const clubDuLecteur = userData?.club?.documentId || null;
+  // COL-009 : seulement une fois SUR que le compte ne gere pas l installation (le compte double
+  // voyait le bouton du club pendant la lecture de ses Villes).
   const villesDuClub = useClubCollectiviteFacilities(
-    isFacilitySource && !managingCollectiviteId && readsAsOrganizer ? clubDuLecteur : null,
+    isFacilitySource && gestionConnue && !managingCollectiviteId && readsAsOrganizer
+      ? clubDuLecteur
+      : null,
   );
-  const peutDemander = !peutAttribuer && Boolean(clubDuLecteur)
+  const peutDemander = !peutAttribuer && gestionConnue && Boolean(clubDuLecteur)
     && (Array.isArray(villesDuClub.data) ? villesDuClub.data : [])
       .some((/** @type {any} */ installation) => installation?.documentId === facilityId);
   // COLL-C3B-BIS (planche 43) : sur ordinateur, la demande s'ouvre en PANNEAU, à droite.
@@ -1628,7 +1647,8 @@ function PlanningWeekFullscreen() {
               borderColor: `${Colors.primary500}26`,
               borderRadius: 16,
               borderWidth: 1,
-              minHeight: 40,
+              // COL-009 (planche P5-semaine-paysage) : couche, UNE barre de 44 points.
+              minHeight: barreCompacte ? 44 : 40,
               paddingHorizontal: 6,
               width: '100%',
             },
@@ -1676,6 +1696,20 @@ function PlanningWeekFullscreen() {
               {pageLabel}
             </Text>
           </View>
+
+          {/* COL-009 : couche, la ligne de capacite monte dans la barre (P5-semaine-paysage). */}
+          {barreCompacte && ligneDeCapacite ? (
+            <Text
+              numberOfLines={1}
+              style={[
+                Fonts.p3Bold,
+                ligneDeCapacite.plein ? Fonts.warning500 : Fonts.success500,
+                { flexShrink: 1, marginHorizontal: 6 },
+              ]}
+            >
+              {ligneDeCapacite.texte}
+            </Text>
+          ) : null}
 
           <TouchableOpacity
             accessibilityLabel={flecheDroite}
@@ -1798,7 +1832,9 @@ function PlanningWeekFullscreen() {
           </Text>
         ) : null}
 
-        {isFacilitySource && facilityPlanningSummary ? (
+        {/* COL-009 : couche, tout ce bloc est replie ; il revient des qu on redresse. La */}
+        {/* fermeture reste lisible dans la grille (hachures « Fermé · vacances »). */}
+        {isFacilitySource && facilityPlanningSummary && !barreCompacte ? (
           <View style={[Spaces.marginBottom[8], { gap: 6 }]}>
             {/* COLL-C4B (02/10) — la fermeture de la page, pour TOUS les lecteurs (P3b). */}
             <FacilityClosureBanner
@@ -1827,7 +1863,10 @@ function PlanningWeekFullscreen() {
             ) : null}
             {/* Un dirigeant ou un entraineur garde la phrase qui lui dit ce que devient un */}
             {/* depassement (COLL1D) ; la mairie, qui tranche, lit « n demandes » plus bas. */}
-            {readsAsOrganizer && !managingCollectiviteId && facilitySummaryMessage ? (
+            {/* COL-009 : une fois sur que le compte ne gere pas l installation. Incident 13 : */}
+            {/* places libres, la ligne de capacite le dit deja ; la phrase reste quand c est */}
+            {/* complet (ce que devient un depassement). */}
+            {phraseDuDirigeant ? (
               <Text style={[Fonts.p4, Fonts.neutral200]}>{facilitySummaryMessage}</Text>
             ) : null}
             {/* COLL-C3B (02/10) — « Demander un creneau » (P8v2) : le club demande a la Ville. */}

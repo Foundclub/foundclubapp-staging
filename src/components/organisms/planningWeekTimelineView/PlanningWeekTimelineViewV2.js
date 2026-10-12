@@ -1310,8 +1310,14 @@ function PlanningWeekTimelineView({
         style={[
           styles.panel,
           compactFullscreen ? styles.compactPanel : null,
+          // 📱 COLL-R-APP-PLANNING (COL-009) : en plein ecran sur telephone, le cadre ne depasse
+          // jamais la place qui reste ; c est la grille qui defile dedans (08:00 a 23:00). Sans
+          // lui, un cadre plus haut que l ecran peut empecher le defilement (capture S12). Le site
+          // garde sa mise en page (la page y defile).
+          compactFullscreen && Platform.OS !== 'web' ? styles.compactPanelBorne : null,
           { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.10)' },
         ]}
+        testID="planning-cadre"
       >
         {summarySection}
 
@@ -1573,6 +1579,7 @@ const styles = StyleSheet.create({
   compactHeaderDate: { fontSize: 12 },
   compactHeaderSpacing: { paddingBottom: 2, paddingTop: 1 },
   compactPanel: { borderRadius: 14, paddingHorizontal: 2 },
+  compactPanelBorne: { flexShrink: 1 },
   compactScrollContent: { paddingBottom: 8, paddingTop: REMONTEE_DE_L_ETIQUETTE },
   compactUntimedCard: { marginBottom: 4, paddingHorizontal: 6, paddingVertical: 4 },
   compactUntimedSection: { marginTop: 6, paddingBottom: 4, paddingTop: 4 },
