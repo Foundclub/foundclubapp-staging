@@ -6029,10 +6029,13 @@ export default {
     installations: {
       a11y: '{{nom}}: {{heures}}, occupancy {{taux}}',
       a11ySansTaux: '{{nom}}: {{heures}} booked',
+      a11ySur24h: '{{nom}}: {{heures}}, occupancy {{taux}} over 24 hours',
       aucune: 'No facility yet.',
       reservees_one: '{{count}} session · {{duree}} booked over the period.',
       reservees_other: '{{count}} sessions · {{duree}} booked over the period.',
       taux: 'Occupancy rate: {{taux}}.',
+      taux24h: 'Occupancy rate: {{taux}}, based on 24 hours a day.',
+      taux24hSansHoraires: 'Occupancy rate: {{taux}}, based on 24 hours a day for facilities without opening hours.',
       titre: 'Session hours, by facility',
     },
     jauge: {

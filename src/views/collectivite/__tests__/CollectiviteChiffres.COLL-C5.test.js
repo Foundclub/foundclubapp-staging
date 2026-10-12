@@ -343,3 +343,65 @@ describe('COLL-C5 — planche 30 : « Chiffres et export »', () => {
     expect(refetch).toHaveBeenCalled();
   });
 });
+
+// 🕛 VILLE-TAUX-24H (12/10) — décision d'Adel « Sur 24 h » : une installation SANS horaires a
+// désormais un taux, compté sur 24 h par jour ; le serveur pose `sur24h: true` sur sa ligne. La
+// page le dit en une phrase, avec le taux. Une Ville dont toutes les installations ont des
+// horaires (ou un serveur d'avant le lot, sans `sur24h`) ne change pas. ROUGE avant le lot.
+describe('VILLE-TAUX-24H — le taux calculé sur 24 h se dit', () => {
+  // La semaine du banc serveur APRÈS le lot (admin tests/authz/VILLE-TAUX-24H-chiffres.test.js).
+  const DOJO_24H = {
+    ...SEMAINE.installations[0], capaciteMinutes: 8640, sur24h: true, taux: 1,
+  };
+  const GYMNASE = { ...SEMAINE.installations[1], sur24h: false };
+
+  it('toutes sans horaires : « Taux d’occupation : 1 %, calculé sur 24 h par jour. »', async () => {
+    mockChiffres = {
+      ...mockChiffres,
+      data: {
+        ...SEMAINE,
+        installations: [DOJO_24H],
+        ville: { capaciteMinutes: 8640, minutes: 120, taux: 1 },
+      },
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('Taux d’occupation : 1 %, calculé sur 24 h par jour.');
+    expect(lus.some((texte) => texte.includes('horaires'))).toBe(false);
+  });
+
+  it('les deux sortes (la recette) : seules celles sans horaires comptent 24 h', async () => {
+    mockChiffres = {
+      ...mockChiffres,
+      data: {
+        ...SEMAINE,
+        installations: [DOJO_24H, GYMNASE],
+        ville: { capaciteMinutes: 19920, minutes: 750, taux: 4 },
+      },
+    };
+    expect(textes(await monter())).toContain(
+      'Taux d’occupation : 4 %, calculé sur 24 h par jour pour les installations sans horaires.',
+    );
+  });
+
+  it('le lecteur d’écran : le taux d’une installation sans horaires dit « sur 24 h »', async () => {
+    mockChiffres = {
+      ...mockChiffres,
+      data: { ...SEMAINE, installations: [DOJO_24H, GYMNASE] },
+    };
+    const arbre = await monter();
+    const etiquettes = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'string'
+        && /^(Dojo municipal|Gymnase des Tilleuls) : /.test(String(n.props?.accessibilityLabel || '')),
+    ).map((/** @type {any} */ n) => n.props.accessibilityLabel);
+    expect([...new Set(etiquettes)].sort()).toEqual([
+      'Dojo municipal : 2 h, taux d’occupation 1 % sur 24 h',
+      'Gymnase des Tilleuls : 10 h 30, taux d’occupation 6 %',
+    ]);
+  });
+
+  it('🔒 jumeau : avec horaires, ou serveur d’avant le lot : la phrase ne change pas', async () => {
+    const lus = textes(await monter());
+    expect(lus).toContain('Taux d’occupation : 6 %.');
+    expect(lus.some((texte) => texte.includes('24 h'))).toBe(false);
+  });
+});

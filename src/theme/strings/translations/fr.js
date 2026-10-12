@@ -6564,10 +6564,15 @@ export default {
       a11y: '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
       // VILLE-T18B (e) : sans horaires (retirés), ce qui se mesure sans eux, jamais « — ».
       a11ySansTaux: '{{nom}} : {{heures}} réservées',
+      // VILLE-TAUX-24H (12/10, Adel « Sur 24 h ») : sans horaires, le taux se calcule sur 24 h.
+      a11ySur24h: '{{nom}} : {{heures}}, taux d’occupation {{taux}} sur 24 h',
       aucune: 'Aucune installation pour l’instant.',
       reservees_one: '{{count}} séance · {{duree}} réservées sur la période.',
       reservees_other: '{{count}} séances · {{duree}} réservées sur la période.',
       taux: 'Taux d’occupation : {{taux}}.',
+      taux24h: 'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
+      taux24hSansHoraires: 'Taux d’occupation : {{taux}}, calculé sur 24 h par jour '
+        + 'pour les installations sans horaires.',
       titre: 'Heures de séances, par installation',
     },
     // COLL-C5 point 3 — la jauge d'occupation de l'accueil (planches 2 et 3).
