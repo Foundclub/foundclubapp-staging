@@ -664,11 +664,11 @@ describe('PAR-L1 — la date de naissance passe seule de case en case', () => {
     expect(mockCreer.mock.calls[0][0].birthdate).toBe('2016-06-03');
   });
 
-  test('PAR-L1 ⑥ chaque case a un nom pour le lecteur d’écran : Jour, Mois, Année', async () => {
+  test('PAR-L1 ⑥ chaque case a un nom pour le lecteur d’écran : Jour de naissance, Mois de naissance, Année de naissance (noms B)', async () => {
     const arbre = await rendre();
 
     expect(CASES_DATE.map((repere) => champ(arbre, repere).props.accessibilityLabel))
-      .toEqual(['Jour', 'Mois', 'Année']);
+      .toEqual(['Jour de naissance', 'Mois de naissance', 'Année de naissance']);
   });
 
   test('PAR-L1 ⑦ 31/02/2016 ⇒ « Cette date n’existe pas. » SOUS la date, sans envoi', async () => {

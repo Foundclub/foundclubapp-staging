@@ -22780,9 +22780,9 @@ export default {
       birthdateKeepHint: 'Laisse vide pour ne pas la changer.',
       birthdateLabel: 'Date de naissance',
       // PAR-L1 (12/10) : le nom de chaque case pour le lecteur d'écran.
-      birthdateDayLabel: 'Jour',
-      birthdateMonthLabel: 'Mois',
-      birthdateYearLabel: 'Année',
+      birthdateDayLabel: 'Jour de naissance',
+      birthdateMonthLabel: 'Mois de naissance',
+      birthdateYearLabel: 'Année de naissance',
       errors: {
         // 📅 DATENAISS (22/09) : une date après aujourd'hui est dite AVANT
         // d'envoyer, comme le palier 13 (Sentry SERVEUR-STRAPI-T).

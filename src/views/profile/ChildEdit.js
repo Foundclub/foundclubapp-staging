@@ -339,7 +339,7 @@ function ChildEdit() {
             {caseDate({
               indication: 'JJ',
               longueur: 2,
-              nom: t('myChildren.form.birthdateDayLabel', 'Jour'),
+              nom: t('myChildren.form.birthdateDayLabel', 'Jour de naissance'),
               poser: setDay,
               reference: refJour,
               repere: 'child-day',
@@ -350,7 +350,7 @@ function ChildEdit() {
             {caseDate({
               indication: 'MM',
               longueur: 2,
-              nom: t('myChildren.form.birthdateMonthLabel', 'Mois'),
+              nom: t('myChildren.form.birthdateMonthLabel', 'Mois de naissance'),
               poser: setMonth,
               precedente: refJour,
               reference: refMois,
@@ -362,7 +362,7 @@ function ChildEdit() {
             {caseDate({
               indication: 'AAAA',
               longueur: 4,
-              nom: t('myChildren.form.birthdateYearLabel', 'Année'),
+              nom: t('myChildren.form.birthdateYearLabel', 'Année de naissance'),
               poser: setYear,
               precedente: refMois,
               reference: refAnnee,
