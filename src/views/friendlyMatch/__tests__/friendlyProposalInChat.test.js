@@ -219,9 +219,17 @@ test('S03 témoin 4 — accepter depuis le FIL prend le MÊME chemin que l annon
   let carte;
   act(() => {
     carte = renderer.create(
+      // AMICAUX-PROPOSITIONS (13/10) : une proposition COMPLETE (date, heure, lieu de
+      // l annonce qui recoit) — une incomplete ouvre d abord « ce qui manque ».
       <FriendlyMatchApplicationCard
-        ad={{ applicationsCount: 1 }}
-        application={{ documentId: 'app-1', status: 'pending', team: { name: 'AS Candidats U15' } }}
+        ad={{ applicationsCount: 1, location: { label: 'Stade des Annonceurs' } }}
+        application={{
+          chosenDate: '2099-05-15T16:00:00.000Z',
+          chosenHosting: 'AWAY',
+          documentId: 'app-1',
+          status: 'pending',
+          team: { name: 'AS Candidats U15' },
+        }}
         onOpenConversation={() => {}}
         onResponded={() => {}}
       />,

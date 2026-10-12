@@ -16,21 +16,41 @@ import {
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
+import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 
 import { applyToFriendlyMatchAd } from '@/services/friendlyMatch/friendlyMatchService';
 
 import { createLogger } from '@/utils/logger/logger';
 
-import { toShortDay } from '../friendlyMatchDateLabels';
+import { getSlotHoursLabel, toShortDay } from '../friendlyMatchDateLabels';
+import { getProposalSlotNeeds } from '../friendlyMatchSlot';
 
 const logger = createLogger('friendly-match-apply');
 
 const MESSAGE_MAX_LENGTH = 400;
+const VENUE_MAX_LENGTH = 120;
+
+/**
+ * « la date », « l’horaire et le lieu »… : ce qui manque, dit en une phrase.
+ * @param {Array<'date' | 'place' | 'time'>} missing
+ * @returns {string}
+ */
+const joinMissing = (missing) => {
+  const labels = missing.map((part) => ({
+    date: i18next.t('friendlyMatchApplySheet.missingDate', 'la date'),
+    place: i18next.t('friendlyMatchApplySheet.missingPlace', 'le lieu'),
+    time: i18next.t('friendlyMatchApplySheet.missingTime', 'l’horaire'),
+  }[part]));
+  if (labels.length < 2) return labels[0] || '';
+  const and = i18next.t('friendlyMatchApplySheet.and', 'et');
+  return `${labels.slice(0, -1).join(', ')} ${and} ${labels[labels.length - 1]}`;
+};
 
 /** Ce que le candidat annonce faire, dit de SON point de vue. */
 // I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
@@ -85,6 +105,8 @@ function FriendlyMatchApplySheet({
   const [teamId, setTeamId] = useState('');
   const [chosenHosting, setChosenHosting] = useState('');
   const [chosenDate, setChosenDate] = useState('');
+  const [chosenTime, setChosenTime] = useState('');
+  const [venue, setVenue] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -103,13 +125,12 @@ function FriendlyMatchApplySheet({
     [ad?.hostingPreference],
   );
 
-  const dateOptions = useMemo(() => [
-    { label: t('friendlyMatchApplySheet.any', 'Peu importe'), value: '' },
-    ...normalizeCandidateDates(ad?.candidateDates).map((slot) => ({
-      label: slot.start ? `${toShortDay(slot.date)} ${slot.start}` : toShortDay(slot.date),
-      value: slot.date,
-    })),
-  ], [ad?.candidateDates, t]);
+  // AMICAUX-PROPOSITIONS (13/10) — plus de « Peu importe » : une proposition donne toujours
+  // une date de l annonce (decision d Adel du 12/10, le serveur refuse sinon).
+  const dateOptions = useMemo(() => normalizeCandidateDates(ad?.candidateDates).map((slot) => ({
+    label: slot.start ? `${toShortDay(slot.date)} ${slot.start}` : toShortDay(slot.date),
+    value: slot.date,
+  })), [ad?.candidateDates]);
 
   // Rouvrir la feuille repart d un formulaire propre : garder un brouillon
   // abandonne ferait envoyer une proposition que personne n a relue.
@@ -118,11 +139,22 @@ function FriendlyMatchApplySheet({
     setTeamId(eligibleTeams.length === 1 ? getTeamKey(eligibleTeams[0]) : '');
     setChosenHosting('');
     setChosenDate('');
+    setChosenTime('');
+    setVenue('');
     setMessage('');
     setErrorMessage('');
   }, [eligibleTeams, visible]);
 
-  const canSubmit = Boolean(teamId) && allowedHostings.includes(chosenHosting) && !isSubmitting;
+  // Ce que l annonce donne deja (horaire du jour, son lieu quand elle recoit) se reprend ;
+  // le reste, le proposant le donne. Meme regle que le serveur (friendlyMatchSlot.js).
+  const slotNeeds = getProposalSlotNeeds(ad, {
+    chosenDate, chosenHosting, chosenTime, proposedVenue: venue,
+  });
+
+  const canSubmit = Boolean(teamId)
+    && allowedHostings.includes(chosenHosting)
+    && slotNeeds.missing.length === 0
+    && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -130,9 +162,11 @@ function FriendlyMatchApplySheet({
     setErrorMessage('');
     try {
       const application = await applyToFriendlyMatchAd(ad?.documentId || ad?.id, {
+        chosenDate,
         chosenHosting,
         team: teamId,
-        ...(chosenDate ? { chosenDate } : {}),
+        ...(slotNeeds.asksTime ? { chosenTime } : {}),
+        ...(slotNeeds.asksPlace ? { proposedVenue: venue.trim() } : {}),
         ...(message.trim() ? { message: message.trim() } : {}),
       });
       onSubmitted(application);
@@ -240,17 +274,69 @@ function FriendlyMatchApplySheet({
               title={t('friendlyMatchApplySheet.forThisMatch', 'Pour ce match')}
             />
 
-            {dateOptions.length > 1 ? (
+            {dateOptions.length > 0 ? (
               <ChoiceChipGroup
-                hint={t(
-                  'friendlyMatchApplySheet.youCanAgreeOnThe',
-                  'Tu pourras convenir de l’heure exacte dans la discussion.',
-                )}
                 onSelect={(value) => setChosenDate(String(value))}
                 options={dateOptions}
                 selectedValue={chosenDate}
                 title={t('friendlyMatchApplySheet.whichDate', 'Quelle date')}
               />
+            ) : null}
+
+            {slotNeeds.adStart ? (
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+                {t('friendlyMatchApplySheet.hoursOfTheListing', 'Horaire : {{hours}}', {
+                  hours: getSlotHoursLabel(normalizeCandidateDates(ad?.candidateDates)
+                    .find((slot) => slot.date === chosenDate)),
+                  ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
+            ) : null}
+
+            {slotNeeds.asksTime ? (
+              <TimePickerInput
+                label={t('friendlyMatchTermsSheet.kickOffTime', 'Heure du coup d’envoi')}
+                onChange={setChosenTime}
+                value={chosenTime}
+              />
+            ) : null}
+
+            {chosenHosting && !slotNeeds.asksPlace ? (
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+                {t('friendlyMatchApplySheet.venueOfTheListing', 'Lieu : {{venue}}', {
+                  ...SANS_ECHAPPEMENT,
+                  venue: slotNeeds.adPlace,
+                })}
+              </Text>
+            ) : null}
+
+            {chosenHosting && slotNeeds.asksPlace ? (
+              <View style={[Spaces.gap[8]]}>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
+                  {t('friendlyMatchApplySheet.whereIsTheMatch', 'Où se joue le match')}
+                </Text>
+                <TextInput
+                  accessibilityLabel={t('friendlyMatchTermsSheet.matchVenue', 'Lieu du match')}
+                  maxLength={VENUE_MAX_LENGTH}
+                  onChangeText={setVenue}
+                  placeholder={t(
+                    'friendlyMatchTermsSheet.eGNorthStadiumPitch',
+                    'Ex : Stade Nord, terrain 2',
+                  )}
+                  placeholderTextColor={Colors.neutral400}
+                  style={[Fonts.p1, {
+                    backgroundColor: withAlpha(Colors.primary900, 0.94),
+                    borderColor: withAlpha(Colors.primary500, 0.15),
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    color: Colors.neutral00,
+                    minHeight: 48,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                  }]}
+                  value={venue}
+                />
+              </View>
             ) : null}
 
             <View style={[Spaces.gap[8]]}>
@@ -297,11 +383,20 @@ function FriendlyMatchApplySheet({
               </View>
             ) : null}
 
+            {slotNeeds.missing.length > 0 ? (
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                {t(
+                  'friendlyMatchApplySheet.missingBeforeSending',
+                  'Pour envoyer, choisis {{missing}}.',
+                  { ...SANS_ECHAPPEMENT, missing: joinMissing(slotNeeds.missing) },
+                )}
+              </Text>
+            ) : null}
+
             <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
               {t(
-                'friendlyMatchApplySheet.sendingOpensAConversationBetween',
-                'Envoyer ouvre une discussion entre les deux staffs. C’est là que la date, '
-                  + 'l’heure et le lieu se décident.',
+                'friendlyMatchAdDetails.answeringOpensAConversationBetween',
+                'Répondre ouvre une discussion entre les deux staffs.',
               )}
             </Text>
           </ScrollView>

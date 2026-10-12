@@ -10723,6 +10723,8 @@ export default {
     // eslint-disable-next-line max-len
     otherApplicationsWarning_other: 'Les {{count}} autres propositions seront refusées automatiquement.',
     preferredDate: 'Date souhaitée : {{day}}',
+    preferredDateAndTime: 'Date souhaitée : {{day}} à {{time}}',
+    proposedVenue: 'Lieu proposé : {{venue}}',
     statusAccepted: 'Acceptée',
     statusCancelled: 'Annulée',
     statusDeclined: 'Refusée',
@@ -10731,6 +10733,7 @@ export default {
     tryAgainInAMoment: 'Réessaie dans un instant.',
   },
   friendlyMatchApplySheet: {
+    and: 'et',
     any: 'Peu importe',
     aWordOptional: 'Un mot (facultatif)',
     close: 'Fermer',
@@ -10738,8 +10741,13 @@ export default {
     forThisMatch: 'Pour ce match',
     hostingAway: 'Je me déplace',
     hostingHost: 'Je reçois',
+    hoursOfTheListing: 'Horaire : {{hours}}',
     itDecidesWhereTheMatch: ' c’est lui qui décide où le match se joue.',
     messageForTheListingS: 'Message pour le staff de l’annonce',
+    missingBeforeSending: 'Pour envoyer, choisis {{missing}}.',
+    missingDate: 'la date',
+    missingPlace: 'le lieu',
+    missingTime: 'l’horaire',
     myTeam: 'Mon équipe',
     proposeAMatch: 'Proposer un match',
     // eslint-disable-next-line max-len
@@ -10748,6 +10756,8 @@ export default {
     thisChoiceDecidesWhereThe: 'C’est ce choix qui décide où le match se joue.',
     thisListingOnlyAllowsThis: 'Cette annonce n’autorise que ce choix, mais il reste à cocher :',
     unableToSendTheProposal: "Impossible d'envoyer la proposition.",
+    venueOfTheListing: 'Lieu : {{venue}}',
+    whereIsTheMatch: 'Où se joue le match',
     whichDate: 'Quelle date',
     whichTeam: 'Quelle équipe',
     youCanAgreeOnThe: 'Tu pourras convenir de l’heure exacte dans la discussion.',
@@ -10847,6 +10857,9 @@ export default {
   friendlyMatchTermsSheet: {
     chooseADayToBe: 'Choisis un jour pour pouvoir enregistrer.',
     close: 'Fermer',
+    // eslint-disable-next-line max-len
+    completeBeforeAccepting: 'Cette proposition ne dit pas tout du match : complète-la, puis accepte. Le match sera créé avec ce jour, cette heure et ce lieu.',
+    completeToAccept: 'Choisis le jour, l’heure et le lieu du match pour pouvoir accepter.',
     // eslint-disable-next-line max-len
     discussItInTheThread: 'Discutez-en dans le fil, puis note ici ce sur quoi vous tombez d’accord. C’est ce que le match affichera dans les plannings.',
     eGNorthStadiumPitch: 'Ex : Stade Nord, terrain 2',

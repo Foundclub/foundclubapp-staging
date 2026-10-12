@@ -14,6 +14,7 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 import { createLogger } from '@/utils/logger/logger';
 
 import { getSlotHoursLabel, toReadableDay } from '../friendlyMatchDateLabels';
+import { getAcceptanceNeeds } from '../friendlyMatchSlot';
 import FriendlyMatchTermsSheet from './FriendlyMatchTermsSheet';
 
 const logger = createLogger('friendly-match-application');
@@ -87,10 +88,21 @@ function FriendlyMatchApplicationCard({
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTermsSheetVisible, setIsTermsSheetVisible] = useState(false);
+  // AMICAUX-PROPOSITIONS (13/10) — la feuille sert deux gestes : noter ce qui est convenu,
+  // ou COMPLETER une proposition incomplete au moment de l accepter.
+  const [isAcceptingInSheet, setIsAcceptingInSheet] = useState(false);
 
   const isPending = application?.status === 'pending';
   const isAccepted = application?.status === 'accepted';
   const chosenDayLabel = toReadableDay(application?.chosenDate);
+  // Depuis ce lot, `chosenDate` porte l heure du coup d envoi ; une proposition d avant porte
+  // un jour seul, range a minuit UTC (aucune heure a afficher).
+  const chosenDate = String(application?.chosenDate || '');
+  const chosenTimeLabel = /T(?!00:00:00(.000)?Z$)/.test(chosenDate)
+    ? new Date(chosenDate).toTimeString().slice(0, 5)
+    : '';
+  const acceptanceNeeds = getAcceptanceNeeds(ad, application);
+  const otherCount = Math.max(0, Number(ad?.applicationsCount || 0) - 1);
 
   // Ce qui est convenu (§4.4) prime sur ce que le candidat avait coche : c est
   // cette date-la qui deviendra celle du match a l acceptation.
@@ -131,7 +143,6 @@ function FriendlyMatchApplicationCard({
   };
 
   const confirmAccept = () => {
-    const otherCount = Math.max(0, Number(ad?.applicationsCount || 0) - 1);
     Alert.alert(
       t('friendlyMatchApplicationCard.acceptThisTeam', 'Accepter cette équipe ?'),
       [
@@ -190,7 +201,11 @@ function FriendlyMatchApplicationCard({
 
       {chosenDayLabel ? (
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-          {t(
+          {chosenTimeLabel ? t(
+            'friendlyMatchApplicationCard.preferredDateAndTime',
+            'Date souhaitée : {{day}} à {{time}}',
+            { day: chosenDayLabel, time: chosenTimeLabel, ...SANS_ECHAPPEMENT },
+          ) : t(
             'friendlyMatchApplicationCard.preferredDate',
             'Date souhaitée : {{day}}',
             { day: chosenDayLabel, ...SANS_ECHAPPEMENT },
@@ -204,6 +219,16 @@ function FriendlyMatchApplicationCard({
           )}
         </Text>
       )}
+
+      {application?.proposedVenue ? (
+        <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+          {t(
+            'friendlyMatchApplicationCard.proposedVenue',
+            'Lieu proposé : {{venue}}',
+            { venue: application.proposedVenue, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
 
       {application?.message ? (
         <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{application.message}</Text>
@@ -229,7 +254,10 @@ function FriendlyMatchApplicationCard({
           <>
             <Button
               disabled={isSubmitting}
-              onPress={() => setIsTermsSheetVisible(true)}
+              onPress={() => {
+                setIsAcceptingInSheet(false);
+                setIsTermsSheetVisible(true);
+              }}
               title={agreedLabel ? t(
                 'friendlyMatchApplicationCard.editWhatWasAgreed',
                 'Modifier ce qui est convenu',
@@ -242,7 +270,12 @@ function FriendlyMatchApplicationCard({
             <Button
               disabled={isSubmitting}
               isLoading={isSubmitting}
-              onPress={confirmAccept}
+              onPress={acceptanceNeeds.length > 0 ? () => {
+                // Il manque la date, l heure ou le lieu : on les demande au lieu d un refus du
+                // serveur (« Il manque … »). Refuser, lui, reste a un appui.
+                setIsAcceptingInSheet(true);
+                setIsTermsSheetVisible(true);
+              } : confirmAccept}
               title={t('friendlyMatchApplicationCard.acceptThisMatch', 'Accepter ce match')}
               variant="Primary"
             />
@@ -257,13 +290,16 @@ function FriendlyMatchApplicationCard({
       </View>
 
       <FriendlyMatchTermsSheet
+        acceptMode={isAcceptingInSheet}
         ad={ad}
         application={application}
+        needs={acceptanceNeeds}
         onClose={() => setIsTermsSheetVisible(false)}
         onSaved={() => {
           setIsTermsSheetVisible(false);
           onResponded();
         }}
+        otherApplicationsWarning={otherCount > 0 ? buildOtherApplicationsWarning(otherCount) : ''}
         visible={isTermsSheetVisible}
       />
     </View>
