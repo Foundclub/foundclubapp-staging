@@ -9,7 +9,7 @@
  * Contraintes techniques respectees :
  *  - degrades/eclats/terrain : react-native-svg + react-native-linear-gradient
  *    (deja lies, AUCUNE dependance native nouvelle) ;
- *  - pas de backdrop-filter en RN -> panneaux verre en rgba(4,28,38,0.85) ;
+ *  - pas de backdrop-filter en RN -> panneaux opaques #041c26 (PAR-L14) ;
  *  - italique : l'APK n'embarque que Montserrat Regular/Bold/Black -> faux
  *    italique via skewX(-8deg) (ajouter Montserrat-BlackItalic.ttf + rebuild
  *    pour la vraie italique) ; weight 800 rendu en Montserrat-Black ;
@@ -678,20 +678,21 @@ function PlayerCardBase({
               ) : null}
             </View>
 
-            {/* Portrait */}
+            {/* Portrait — PAR-L14 : contenu dans le bloc identite. Il etait pose en
+                debord (442 de haut dans un bloc de 372, 12 au-dessus) pour un portrait
+                detoure ; une vraie photo, opaque, descendait sur la rangee POSTE. */}
             <View
               style={{
                 backgroundColor: 'rgba(3,26,35,0.45)',
                 borderColor: 'rgba(1,179,244,0.25)',
                 borderRadius: 26 * s,
                 borderWidth: 1,
-                height: 442 * s,
+                height: 372 * s,
                 padding: 6 * s,
                 position: 'absolute',
-                right: -10 * s,
-                top: -12 * s,
-                width: 404 * s,
-                zIndex: 2,
+                right: 0,
+                top: 0,
+                width: 340 * s,
               }}
             >
               {photo ? (
@@ -708,10 +709,9 @@ function PlayerCardBase({
             </View>
           </View>
 
-          {/* Panneau infos — zIndex > portrait : une photo opaque glisse DERRIERE
-              le panneau verre (la maquette suppose un portrait detoure). */}
+          {/* Panneau infos */}
           <View style={[styles.glass, {
-            borderRadius: 20 * s, marginTop: 18 * s, paddingHorizontal: 30 * s, paddingVertical: 5 * s, zIndex: 3,
+            borderRadius: 20 * s, marginTop: 18 * s, paddingHorizontal: 30 * s, paddingVertical: 5 * s,
           }]}
           >
             <InfoRow label={t('playerCard.info.position', 'POSTE')} s={s} value={up(poste)} />
@@ -961,8 +961,9 @@ export default PlayerCard;
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
+  // PAR-L14 : opaque (il etait transparent a 15 % : le fond et la photo passaient dessous).
   glass: {
-    backgroundColor: 'rgba(4,28,38,0.85)',
+    backgroundColor: '#041c26',
     borderColor: 'rgba(1,179,244,0.35)',
     borderWidth: 1,
   },
