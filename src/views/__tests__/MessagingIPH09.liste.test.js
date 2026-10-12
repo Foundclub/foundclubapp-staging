@@ -1,6 +1,9 @@
 import { StyleSheet, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
+import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
+import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 
 import Messaging from '../Messaging';
@@ -296,5 +299,71 @@ describe('IPH09 — la Ville defile avec les conversations', () => {
     expect(contenu(arbre).findAll((n) => n.props.title === 'Publier une actualité')).toHaveLength(1);
     act(() => parId(contenu(arbre), 'canal-dirigeants-mairie').props.onPress());
     expect(mockNavigate).toHaveBeenLastCalledWith('Conversation', expect.objectContaining({ espace: 'ville' }));
+  });
+});
+
+// COL-007 (recette collectivite du 11/10, decision D6 A) — comme le pack MSG1A
+// (`p1a-app.jsx:83-104`, un seul conteneur qui defile) : le titre « Messages »,
+// les puces et la recherche partent avec la liste ; seule la rangee FOUNDCLUB
+// (bascule League, cloche, profil) reste fixe, comme sur Accueil et Equipes.
+describe('COL-007 — le haut de « Messages » defile avec la liste', () => {
+  const titre = (racine) => racine.findAll(
+    (n) => n.type === Text && n.props.children === 'messaging.title',
+  );
+  const ordre = (racine, noeud) => racine.findAll(() => true).indexOf(noeud);
+
+  test('titre, puces et recherche DANS la liste, avant la Ville et « Archivees »', async () => {
+    const archive = { ...CHATS[0], archivedBy: [{ documentId: 'moi' }], documentId: 'archive' };
+    mockChatsQuery = etatListe({ data: { pages: [{ data: [...CHATS, archive] }] } });
+    const arbre = await monter();
+    const liste = contenu(arbre);
+    expect(titre(liste)).toHaveLength(1);
+    expect(liste.findAllByType(SegmentedControl)).toHaveLength(1);
+    expect(liste.findAllByType(TextInput)).toHaveLength(1);
+    // Rien du haut ne reste en double hors de la liste.
+    expect(titre(arbre.root)).toHaveLength(1);
+    expect(arbre.root.findAllByType(TextInput)).toHaveLength(1);
+    const rangTitre = ordre(liste, titre(liste)[0]);
+    const rangPuces = ordre(liste, liste.findByType(SegmentedControl));
+    const rangRecherche = ordre(liste, liste.findByType(TextInput));
+    expect(rangTitre).toBeLessThan(rangPuces);
+    expect(rangPuces).toBeLessThan(rangRecherche);
+    expect(rangRecherche).toBeLessThan(ordre(liste, parId(liste, 'canaux-de-la-ville-membre')));
+    expect(rangRecherche).toBeLessThan(ordre(liste, parId(liste, 'liste-archivees')));
+  });
+
+  test('la rangee FOUNDCLUB (League, cloche, profil) reste fixe, hors de la liste', async () => {
+    mockChatsQuery = etatListe();
+    const arbre = await monter();
+    const liste = contenu(arbre);
+    [LeagueHeaderSwitch, NotificationBadge, ProfileButton].forEach((Composant) => {
+      expect(arbre.root.findAllByType(Composant)).toHaveLength(1);
+      expect(liste.findAllByType(Composant)).toHaveLength(0);
+    });
+  });
+
+  test('espace de la Ville : titre et recherche defilent, toujours sans puces', async () => {
+    mockChatsQuery = etatListe();
+    const arbre = await monter({ collectiviteId: 'demouville-test', espace: 'ville' });
+    const liste = contenu(arbre);
+    expect(titre(liste)).toHaveLength(1);
+    expect(liste.findAllByType(TextInput)).toHaveLength(1);
+    expect(arbre.root.findAllByType(SegmentedControl)).toHaveLength(0);
+    expect(ordre(liste, liste.findByType(TextInput)))
+      .toBeLessThan(ordre(liste, parId(liste, 'canaux-de-la-ville-mairie')));
+  });
+
+  test('la frappe ne remonte pas le champ : en-tete passe en ELEMENT, meme instance', async () => {
+    mockChatsQuery = etatListe();
+    const arbre = await monter();
+    // FlashList 2.2 (`getValidComponent`) rend un element tel quel mais CREE un
+    // composant neuf a partir d une fonction : le champ serait remonte a chaque
+    // lettre et le clavier se fermerait.
+    expect(typeof dernieresProps().ListHeaderComponent).not.toBe('function');
+    const avant = arbre.root.findByType(TextInput).instance;
+    act(() => arbre.root.findByType(TextInput).props.onChangeText('U'));
+    act(() => arbre.root.findByType(TextInput).props.onChangeText('U1'));
+    expect(arbre.root.findByType(TextInput).props.value).toBe('U1');
+    expect(arbre.root.findByType(TextInput).instance).toBe(avant);
   });
 });
