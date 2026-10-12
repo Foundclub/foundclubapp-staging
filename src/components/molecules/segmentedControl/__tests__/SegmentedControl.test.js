@@ -1,7 +1,9 @@
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { horizontalScale, moderateScale } from '@/theme/scaling';
 
 import SegmentedControl from '../SegmentedControl';
 
@@ -332,5 +334,91 @@ describe('SegmentedControl — VT18E : le mode qui passe a la ligne au lieu de c
     });
 
     expect(onChange).toHaveBeenCalledWith('faits');
+  });
+});
+
+// 🔠 COL-004 (recette collectivité du 11/10, iPhone) — Gymnase Cosec : « Créneaux »,
+// « Planning » et « Fermetures » plus petits que « Infos », et plus bas.
+//
+// 🧨 Sur iPhone, la nouvelle architecture de React Native IGNORE `minimumFontScale` : le
+// plancher de 72 % n'existe pas (RCTTextLayoutManager.mm:243-246). « Fermetures » demande
+// ~66 pt et n'en a que ~40 (4 onglets égaux, ~15 pt de marge de chaque côté) : il descend à
+// ~60 %. Et l'interligne FIXE garde le décalage de ligne calculé pour la grande police : le
+// texte réduit retombe sur sa ligne de base, plus bas que « Infos ».
+// ⇒ En mode `fitLabels` : sur iPhone, l'interligne suit la police (comme IPH09 pour les
+// boutons) ; en largeurs égales, la marge intérieure passe de 16 à 6 (même échelle).
+// Les trois écrans concernés (carte du 12/10) : EventDetails, InstallationCreneaux,
+// MatchStatsEditor — tous en `centerContent`. Écrit ROUGE.
+const ONGLETS_DE_L_INSTALLATION = [
+  { label: 'Créneaux', value: 'creneaux' },
+  { label: 'Planning', value: 'planning' },
+  { label: 'Fermetures', value: 'fermetures' },
+  { label: 'Infos', value: 'infos' },
+];
+
+describe('SegmentedControl — COL-004 : le mode qui retrecit, sur iPhone', () => {
+  const plateformeDOrigine = Platform.OS;
+  afterEach(() => {
+    Platform.OS = plateformeDOrigine;
+  });
+
+  /**
+   * Monte les onglets de l installation sur une plateforme.
+   * @param {'ios'|'android'|'web'} plateforme - La plateforme simulee.
+   * @param {any} props - Les modes passes au controle.
+   * @returns {{ libelles: any[], segments: any[] }} - Les styles aplatis.
+   */
+  const monterSur = (plateforme, props) => {
+    Platform.OS = /** @type {any} */ (plateforme);
+    const arbre = monter({ options: ONGLETS_DE_L_INSTALLATION, value: 'creneaux', ...props });
+    return {
+      libelles: libellesRendus(arbre).map(styleAplati),
+      segments: arbre.root.findAllByType(TouchableOpacity).map(styleAplati),
+    };
+  };
+
+  it('🔴 iPhone, fitLabels : aucun libelle (choisi ou non) n a d interligne fixe', () => {
+    const { libelles } = monterSur('ios', { centerContent: true, fitLabels: true });
+
+    expect(libelles).toHaveLength(4);
+    libelles.forEach((style) => {
+      expect(style.lineHeight).toBeUndefined();
+      expect(style.fontSize).toBe(moderateScale(12.87));
+    });
+  });
+
+  it('🔴 fitLabels en largeurs egales : la marge interieure passe de 16 a 6', () => {
+    const iphone = monterSur('ios', { centerContent: true, fitLabels: true }).segments;
+    const site = monterSur('web', { centerContent: true, fitLabels: true }).segments;
+
+    iphone.forEach((style) => expect(style.paddingHorizontal).toBe(horizontalScale(6)));
+    site.forEach((style) => expect(style.paddingHorizontal).toBe(6));
+  });
+
+  it('🔒 Android et site, fitLabels : l interligne fixe reste (le plancher 72 % y vaut)', () => {
+    const android = monterSur('android', { centerContent: true, fitLabels: true }).libelles;
+    const site = monterSur('web', { centerContent: true, fitLabels: true }).libelles;
+
+    android.forEach((style) => expect(style.lineHeight).toBe(moderateScale(18)));
+    site.forEach((style) => expect(style.lineHeight).toBe(18));
+  });
+
+  it('🔒 sans fitLabels, rien ne bouge sur iPhone : interligne et marge d origine', () => {
+    // Les 12 autres ecrans en largeurs egales, et le defilement par defaut.
+    [{ centerContent: true }, {}].forEach((props) => {
+      const { libelles, segments } = monterSur('ios', props);
+      libelles.forEach((style) => expect(style.lineHeight).toBe(moderateScale(18)));
+      segments.forEach((style) => expect(style.paddingHorizontal).toBe(horizontalScale(16)));
+    });
+  });
+
+  it('🔒 fullLabels (FacilityForm) ne bouge pas : interligne et marge d origine', () => {
+    const { libelles, segments } = monterSur('ios', { centerContent: true, fullLabels: true });
+
+    libelles.forEach((style) => {
+      expect(style.lineHeight).toBe(moderateScale(18));
+      expect(style.flexShrink).toBe(0);
+    });
+    segments.forEach((style) => expect(style.paddingHorizontal).toBe(horizontalScale(16)));
   });
 });
