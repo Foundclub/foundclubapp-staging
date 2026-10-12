@@ -15331,6 +15331,8 @@ export default {
     screenSubtitle: 'Partage ta carte, gagne en visibilité et fais-toi détecter.',
     screenTitle: 'Ma carte de collection',
     shareCta: 'Partager ma carte',
+    // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
+    shareShortCta: 'Partager',
     // Carte (contenu)
     coachChip: 'COACH',
     field: {

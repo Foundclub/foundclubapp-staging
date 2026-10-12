@@ -14651,6 +14651,8 @@ export default {
     sharePermissionError: "FoundClub isn't allowed to save to your phone. Allow it in settings, then try again.",
     shareSavedGallery: 'Your card is saved to your photos (FoundClub album). Now choose where to post it.',
     shareSaveError: 'Saving failed. Your phone may be low on storage.',
+    // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
+    shareShortCta: 'Share',
     shareSubtitle: 'Choose a channel to share your collector card.',
     shareTitle: 'Share my card',
     shareViaOther: 'Share via… (SMS, Mail, Save)',

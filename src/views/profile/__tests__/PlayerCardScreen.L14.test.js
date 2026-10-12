@@ -7,8 +7,17 @@
  * parcours cree une entree par categorie cochee : mesure du chef en production
  * (12/10), 10 groupes en double sur 5 comptes, 8 sur 10 different par la seule
  * categorie, que la carte ne montrait pas. On reunit A L'AFFICHAGE.
+ *
+ * Point 5 : « Partager » et « Modifier » cote a cote JUSTE SOUS la carte. Sur un
+ * iPhone SE, « Partager ma carte » tombait a 723 px pour un ecran de 667 (banc du
+ * site, 12/10) : il fallait defiler pour partager.
  */
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import PlayerCard from '@/components/organisms/playerCard/PlayerCard';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import PlayerCardScreen from '../PlayerCardScreen';
 
@@ -215,5 +224,50 @@ describe('PAR-L14 point 3 — une ligne par club et par saison, categories reuni
     monter();
 
     expect(carteMontree().historiqueTotal).toBe(4);
+  });
+});
+
+const textesDe = (noeud) => noeud.findAllByType(Text)
+  .map((n) => [].concat(n.props.children).join(''));
+const geste = (arbre, nom) => arbre.root.findAllByType(TouchableOpacity)
+  .find((n) => n.props.accessibilityLabel === nom);
+const ancetreRendu = (noeud) => {
+  let courant = noeud.parent;
+  while (courant && typeof courant.type !== 'string') courant = courant.parent;
+  return courant;
+};
+
+describe('PAR-L14 point 5 — partager et modifier, cote a cote, juste sous la carte', () => {
+  it('juste apres la carte : une rangee « Partager » | « Modifier », rien entre les deux', () => {
+    const { arbre } = monter();
+    const rendus = arbre.root.findAll((n) => typeof n.type === 'string');
+    const place = (n) => rendus.indexOf(n);
+
+    const emplacement = ancetreRendu(arbre.root.findAllByType(PlayerCard)[0]);
+    const partager = geste(arbre, 'Partager ma carte');
+    const modifier = geste(arbre, 'Modifier mes infos');
+    const rangee = ancetreRendu(partager);
+
+    expect(textesDe(partager)).toEqual(['Partager']);
+    expect(textesDe(modifier)).toEqual(['Modifier']);
+    expect(ancetreRendu(modifier)).toBe(rangee);
+    expect(StyleSheet.flatten(rangee.props.style).flexDirection).toBe('row');
+    // Aucun geste entre la carte et la rangee, et aucun AVANT la carte.
+    const premierRendu = (n) => n.findAll((m) => typeof m.type === 'string')[0];
+    const gestesAvant = arbre.root.findAllByType(TouchableOpacity)
+      .filter((n) => place(premierRendu(n)) < place(rangee))
+      .map((n) => n.props.accessibilityLabel);
+    expect(gestesAvant).toEqual([]);
+    expect(place(emplacement)).toBeLessThan(place(rangee));
+  });
+
+  it('les deux gestes font ce qu ils faisaient', () => {
+    const { arbre, navigation } = monter();
+
+    act(() => geste(arbre, 'Partager ma carte').props.onPress());
+    expect(mockShareModalProps[mockShareModalProps.length - 1].isVisible).toBe(true);
+    act(() => geste(arbre, 'Modifier mes infos').props.onPress());
+    expect(navigation.navigate)
+      .toHaveBeenCalledWith(RouteNames.ProfileEdit, { source: 'player_card' });
   });
 });
