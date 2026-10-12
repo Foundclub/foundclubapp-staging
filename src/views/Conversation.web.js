@@ -3798,11 +3798,11 @@ function Conversation({ navigation, route }) {
     // mot « Partage » envoye avec lui ne s affiche plus.
     const evenement = evenementDuMessage(message);
     const texte = evenement ? '' : String(message?.message || '').trim();
-    // Les cartes du telephone (composition, sondage, evenement) portent deja leur cadre : elles
-    // se posent SANS bulle.
-    const estCarteNue = Boolean(evenement)
-      || ['contact_share', 'location_share', 'poll']
-        .includes(String(message?.composition?.type || ''))
+    // Les cartes du telephone (composition, sondage) portent deja leur cadre : elles se posent
+    // SANS bulle. COL-015 — PAS l evenement : depuis MSG1A §3.8, EventMessageBubble se pose DANS
+    // la bulle (BulleDuFil sur le telephone) ; nue, elle tombait sur le fond nuit du fil.
+    const estCarteNue = ['contact_share', 'location_share', 'poll']
+      .includes(String(message?.composition?.type || ''))
       || (message?.composition?.type === 'lineup_share'
         && Boolean(String(message?.composition?.eventId || '').trim()));
     const fondDeBulle = isMine ? PALETTE_DU_FIL.bulleMienne : PALETTE_DU_FIL.bulleRecue;
@@ -3959,6 +3959,8 @@ function Conversation({ navigation, route }) {
               <EventMessageBubble
                 event={evenement}
                 isMe={isMine}
+                // COL-015 — l heure DANS la carte, au-dessus du pied (Conversation.js, `meta`).
+                meta={meta}
                 onDecline={(eventHydrate = evenement) => declinerLEvenement(eventHydrate)}
                 onJoin={() => rejoindreLEvenement(evenement)}
                 onParticipate={(eventHydrate = evenement) => participerALEvenement(eventHydrate)}
@@ -4007,11 +4009,12 @@ function Conversation({ navigation, route }) {
             ) : null}
             {texte ? (
               <span style={{ bottom: 6, position: 'absolute', right: 10 }}>{meta}</span>
-            ) : (
+            ) : null}
+            {!texte && !evenement ? (
               <span style={{ alignSelf: 'flex-end', paddingRight: estCarteNue ? 8 : 0 }}>
                 {meta}
               </span>
-            )}
+            ) : null}
             {messageReactions.length > 0 ? (
               <span
                 data-testid={`MSGREACT-rangee-${idMessage}`}
