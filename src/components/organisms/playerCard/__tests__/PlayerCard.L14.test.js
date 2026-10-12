@@ -218,25 +218,75 @@ describe('PAR-L14 point 4 — les rangees vides sont retirees, l historique pren
     expect(style(rangee).borderBottomWidth).toBe(0);
   });
 
-  it('avec 3 rangees, deux clubs gardent leur nom sur 2 lignes (6 rangees : 1 seule)', () => {
+  // Point 4 : 3 rangees au lieu de 6 -> deux clubs sur 2 lignes (6 rangees : 1 seule).
+  // Point 6 (QR a cote du tableau) : la place gagnee donne en plus 2 lignes a la
+  // saison et aux categories quand il y a 3 rangees, 1 ligne avec 6.
+  it('moins de rangees, plus de place : les lignes d historique s allongent', () => {
     const NOMS = ['STADE MARSEILLAIS UNIVERSITÉ CLUB', 'SPORTING CLUB MONTREDON BONNEVEINE'];
-    const clubs = (props) => NOMS
-      .map((nom) => texte(monter(props), nom)[0].props.numberOfLines);
+    const lignes = (props) => {
+      const arbre = monter(props);
+      return NOMS.map((nom) => {
+        const [club] = texte(arbre, nom);
+        const colonne = ancetre(club, (n) => style(n).flex === 1);
+        const meta = colonne.findAll((n) => n.type === 'Text')[1];
+        return [club.props.numberOfLines, meta.props.numberOfLines];
+      });
+    };
 
-    expect(clubs(SANS_POSTE_NI_VILLE)).toEqual([2, 2]);
-    expect(clubs(COMPLETE)).toEqual([1, 1]);
+    expect(lignes(SANS_POSTE_NI_VILLE)).toEqual([[2, 2], [2, 2]]);
+    expect(lignes(COMPLETE)).toEqual([[2, 1], [2, 1]]);
   });
 
   it('la place de l historique se calcule : jamais plus que la carte ne contient', () => {
+    // Toujours 3 clubs (le plus de donnees), puis le nom sur 2 lignes, puis la saison.
     expect([2, 3, 4, 5, 6].map((rangees) => planHistorique(rangees, 3))).toEqual([
-      { lignes: 3, lignesClub: 2 },
-      { lignes: 3, lignesClub: 1 },
-      { lignes: 3, lignesClub: 1 },
-      { lignes: 2, lignesClub: 1 },
-      { lignes: 2, lignesClub: 1 },
+      { lignes: 3, lignesClub: 2, lignesMeta: 1 },
+      { lignes: 3, lignesClub: 2, lignesMeta: 1 },
+      { lignes: 3, lignesClub: 2, lignesMeta: 1 },
+      { lignes: 3, lignesClub: 1, lignesMeta: 1 },
+      { lignes: 3, lignesClub: 1, lignesMeta: 1 },
     ]);
-    expect(planHistorique(3, 2)).toEqual({ lignes: 2, lignesClub: 2 });
-    expect(planHistorique(6, 1)).toEqual({ lignes: 1, lignesClub: 2 });
-    expect(planHistorique(4, 0)).toEqual({ lignes: 0, lignesClub: 1 });
+    expect(planHistorique(3, 2)).toEqual({ lignes: 2, lignesClub: 2, lignesMeta: 2 });
+    expect(planHistorique(6, 2)).toEqual({ lignes: 2, lignesClub: 2, lignesMeta: 1 });
+    expect(planHistorique(6, 1)).toEqual({ lignes: 1, lignesClub: 2, lignesMeta: 2 });
+    expect(planHistorique(4, 0)).toEqual({ lignes: 0, lignesClub: 1, lignesMeta: 1 });
+  });
+});
+
+describe('PAR-L14 point 6 — suites de la relecture contradictoire', () => {
+  it('carte verrouillee : le dos de maillot garde sa taille d avant (cadre >= 404)', () => {
+    const arbre = monter(VERROUILLEE);
+    const [dos] = arbre.root.findAll((n) => n.type?.name === 'BackJerseyFallback');
+    const cadre = ancetre(dos, (n) => style(n).position === 'absolute');
+    const c = style(cadre);
+
+    // Le flocage (BackJerseyFallback, viewBox 100 « meet ») suit le PLUS PETIT cote du cadre.
+    expect(Math.min(c.width, c.height) / (SE / 992)).toBeGreaterThanOrEqual(404);
+  });
+
+  it('un profil complet (6 rangees) montre ses 3 clubs, pas 2', () => {
+    const TROIS = [
+      ...COMPLETE.historique,
+      { categorie: 'U19', club: 'ES Pennes Mirabeau', periode: '2016–2019' },
+    ];
+    const arbre = monter({ ...COMPLETE, historique: TROIS });
+
+    expect(texte(arbre, 'ES PENNES MIRABEAU')).toHaveLength(1);
+    expect(planHistorique(6, 3).lignes).toBe(3);
+  });
+
+  it('une valeur du tableau prend toute la place libre, sans plafond de 62 %', () => {
+    const arbre = monter(COMPLETE);
+    const [valeur] = texte(arbre, 'AIX-PERD EN BUVETTE');
+
+    expect(style(valeur).maxWidth).toBeUndefined();
+    expect(style(valeur).flexShrink).toBe(1);
+  });
+
+  it('saison, niveau et categories reunies passent sur 2 lignes quand la place le permet', () => {
+    const arbre = monter(SANS_POSTE_NI_VILLE);
+    const [meta] = texte(arbre, '2020–2022 · Régional 1 · Seniors, U20');
+
+    expect(meta.props.numberOfLines).toBe(2);
   });
 });

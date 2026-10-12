@@ -199,8 +199,18 @@ describe('cardModel - historique regroupe (PAR-L14)', () => {
       { club: SPORTING, endYear: 2022, startYear: 2020 },
       { customClubName: 'ES Pennes', endYear: 2016, startYear: 2014 },
       { endYear: 2012, startYear: 2010 },
-    ])).toBe(2);
+    ])).toBe(3); // le club supprime (sans nom) compte : la carte en montre la ligne
     expect(countHistoryClubs(null)).toBe(0);
+  });
+
+  test('un club supprime (sans nom) n est jamais fusionne, et il compte', () => {
+    const histories = [
+      { club: null, endYear: 2022, startYear: 2020 },
+      { club: null, endYear: 2022, startYear: 2020 },
+    ];
+    expect(groupHistory(histories)).toHaveLength(2);
+    expect(countHistoryClubs(histories)).toBe(2);
+    expect(countHistoryClubs([{ club: SPORTING, startYear: 2020 }, { startYear: 2018 }])).toBe(2);
   });
 
   test('la rarete garde ses 3 lignes BRUTES : le regroupement ne change que l affichage', () => {

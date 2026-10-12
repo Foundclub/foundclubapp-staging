@@ -148,6 +148,14 @@ describe('PAR-L14 — caracterisation de la carte (ce qui doit survivre)', () =>
     expect(lus).toMatch(/Régional 1/i);
   });
 
+  // Relecture PAR-L14 : un profil COMPLET (6 rangees) montrait ses 3 clubs ; il doit continuer.
+  it('carte d adulte complete : les TROIS clubs de l historique sont montres', () => {
+    const lus = textes(monter(ADULTE)).join(' | ');
+
+    expect(lus).toContain('ES PENNES MIRABEAU');
+    expect(lus).toContain('2016–2019');
+  });
+
   it('carte d adulte : la photo est montree et le code QR porte le lien', () => {
     const arbre = monter(ADULTE);
 

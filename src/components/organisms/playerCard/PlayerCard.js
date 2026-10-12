@@ -70,12 +70,13 @@ const INK = '#001218';
  * un Android de 360 dp (312, x0,31). Elle en avait de 15 a 21 (5 a 7 pt).
  * Hauteurs de ligne explicites : la place de l'historique se CALCULE
  * (planHistorique), la carte a hauteur fixe ne rogne jamais rien.
+ * Le portrait garde 404 x 404 (son ancienne largeur) : le dos de maillot floque
+ * de la carte verrouillee ne retrecit pas. Le code QR passe a cote du tableau :
+ * le pied, qui repetait le logo de l'en-tete, rend sa place a l'historique.
  */
 const LAYOUT = Object.freeze({
   clubLine: 40,
   entryPadV: 5,
-  footerGap: 14,
-  footerH: 118,
   hairline: 4, // un trait de 1 pt d'ecran vaut au plus 4 unites (echelle >= 0,25)
   headerH: 56,
   histGap: 14,
@@ -83,38 +84,42 @@ const LAYOUT = Object.freeze({
   histPadV: 14,
   histTitleH: 38,
   identityGap: 12,
-  identityH: 360,
+  identityH: 404,
   infoGap: 16,
   infoPadV: 4,
   metaLine: 38,
   padBottom: 28,
   padH: 44,
   padTop: 28,
+  portraitW: 404,
+  qrBox: 118,
+  qrGap: 16,
   rowH: 52,
 });
 const INTERIOR_H = CARD_EXPORT_HEIGHT - 6;
 
 /**
- * Combien de lignes d'historique tiennent sous un tableau de `rangees` rangees,
- * et sur combien de lignes s'ecrit le nom du club (2 si la place le permet).
- * On montre d'abord le plus de clubs possible (3 au plus), puis on leur donne
- * 2 lignes. Le compteur de l'en-tete compte TOUS les clubs.
- * @param {number} rangees rangees du tableau
+ * Combien de lignes d'historique tiennent sous un tableau de `rangees` rangees.
+ * D'abord le plus de clubs possible (3 au plus), puis le nom du club sur 2 lignes,
+ * puis « saison · niveau · categories » sur 2 lignes. Le compteur de l'en-tete
+ * compte TOUS les clubs.
+ * @param {number} rangees rangees du tableau (STATUT compris)
  * @param {number} disponibles lignes d'historique a montrer
- * @returns {{ lignes: number, lignesClub: 1|2 }}
+ * @returns {{ lignes: number, lignesClub: 1|2, lignesMeta: 1|2 }}
  */
 export const planHistorique = (rangees, disponibles) => {
   const L = LAYOUT;
+  const tableau = 2 * L.infoPadV + rangees * L.rowH + L.hairline * (rangees + 1);
   const fixe = L.padTop + L.padBottom + L.headerH + L.identityGap + L.identityH
-    + L.infoGap + 2 * L.infoPadV + L.histGap + 2 * L.histPadV + L.histTitleH + L.histListGap
-    + L.footerGap + L.footerH + L.hairline * (rangees + 3);
-  const place = INTERIOR_H - fixe - rangees * L.rowH;
-  const hauteur = (lignesClub) => 2 * L.entryPadV + lignesClub * L.clubLine + L.metaLine;
+    + L.infoGap + Math.max(tableau, L.qrBox)
+    + L.histGap + 2 * L.histPadV + L.histTitleH + L.histListGap + 2 * L.hairline;
+  const place = INTERIOR_H - fixe;
+  const hauteur = (club, meta) => 2 * L.entryPadV + club * L.clubLine + meta * L.metaLine;
   for (let n = Math.min(3, disponibles); n > 0; n -= 1) {
-    if (n * hauteur(2) <= place) return { lignes: n, lignesClub: 2 };
-    if (n * hauteur(1) <= place) return { lignes: n, lignesClub: 1 };
+    const forme = [[2, 2], [2, 1], [1, 1]].find(([club, meta]) => n * hauteur(club, meta) <= place);
+    if (forme) return { lignes: n, lignesClub: forme[0], lignesMeta: forme[1] };
   }
-  return { lignes: 0, lignesClub: 1 };
+  return { lignes: 0, lignesClub: 1, lignesMeta: 1 };
 };
 
 /**
@@ -469,17 +474,28 @@ function InfoRow({
       <Text
         allowFontScaling={false}
         style={{
-          color: '#adb1b2', fontFamily: 'Montserrat-Bold', ...font(s, 32, 38), letterSpacing: 2 * s,
+          color: '#adb1b2',
+          flexShrink: 0,
+          fontFamily: 'Montserrat-Bold',
+          ...font(s, 32, 38),
+          letterSpacing: 2 * s,
         }}
       >
         {label}
       </Text>
+      {/* PAR-L14 : la valeur prend toute la place que le libelle laisse (plus de
+          plafond a 62 %) ; a 34 unites, un nom de club de 25 a 30 lettres tient. */}
       {typeof value === 'string' ? (
         <Text
           allowFontScaling={false}
           numberOfLines={1}
           style={{
-            color: '#ffffff', fontFamily: 'Montserrat-Black', ...font(s, 36, 44), maxWidth: '62%',
+            color: '#ffffff',
+            flexShrink: 1,
+            fontFamily: 'Montserrat-Black',
+            ...font(s, 34, 42),
+            marginLeft: 24 * s,
+            textAlign: 'right',
           }}
         >
           {value}
@@ -769,7 +785,7 @@ function PlayerCardBase({
                 position: 'absolute',
                 right: 0,
                 top: 0,
-                width: 328 * s,
+                width: LAYOUT.portraitW * s,
               }}
             >
               {photo ? (
@@ -786,47 +802,83 @@ function PlayerCardBase({
             </View>
           </View>
 
-          {/* Panneau infos */}
-          <View style={[styles.glass, {
-            borderRadius: 20 * s,
-            marginTop: LAYOUT.infoGap * s,
-            paddingHorizontal: 30 * s,
-            paddingVertical: LAYOUT.infoPadV * s,
-          }]}
-          >
-            {rangees.map(([label, valeur]) => (
-              <InfoRow key={label} label={label} s={s} value={up(valeur)} />
-            ))}
-            <InfoRow
-              isLast
-              label="STATUT"
-              s={s}
-              value={(
-                <View style={styles.row}>
-                  <View
-                    style={{
-                      backgroundColor: statusColor,
-                      borderRadius: 7 * s,
-                      height: 14 * s,
-                      marginRight: 12 * s,
-                      width: 14 * s,
-                    }}
-                  />
-                  <Text
-                    allowFontScaling={false}
-                    style={{
-                      color: statusColor,
-                      fontFamily: 'Montserrat-Black',
-                      ...font(s, 36, 44),
-                      textShadowColor: statusColor,
-                      textShadowRadius: 9 * s,
-                    }}
-                  >
-                    {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
-                  </Text>
-                </View>
+          {/* Panneau infos et code QR, cote a cote (PAR-L14 : le QR etait dans un
+              pied qui repetait le logo de l'en-tete) */}
+          <View style={[styles.row, { marginTop: LAYOUT.infoGap * s }]}>
+            <View style={[styles.glass, {
+              borderRadius: 20 * s,
+              flex: 1,
+              paddingHorizontal: 30 * s,
+              paddingVertical: LAYOUT.infoPadV * s,
+            }]}
+            >
+              {rangees.map(([label, valeur]) => (
+                <InfoRow key={label} label={label} s={s} value={up(valeur)} />
+              ))}
+              <InfoRow
+                isLast
+                label="STATUT"
+                s={s}
+                value={(
+                  <View style={styles.row}>
+                    <View
+                      style={{
+                        backgroundColor: statusColor,
+                        borderRadius: 7 * s,
+                        height: 14 * s,
+                        marginRight: 12 * s,
+                        width: 14 * s,
+                      }}
+                    />
+                    <Text
+                      allowFontScaling={false}
+                      style={{
+                        color: statusColor,
+                        fontFamily: 'Montserrat-Black',
+                        ...font(s, 36, 44),
+                        textShadowColor: statusColor,
+                        textShadowRadius: 9 * s,
+                      }}
+                    >
+                      {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
+                    </Text>
+                  </View>
+                )}
+              />
+            </View>
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: '#03222e',
+                borderColor: 'rgba(1,179,244,0.55)',
+                borderRadius: 16 * s,
+                borderWidth: 1.5 * s,
+                height: LAYOUT.qrBox * s,
+                justifyContent: 'center',
+                marginLeft: LAYOUT.qrGap * s,
+                width: LAYOUT.qrBox * s,
+              }}
+            >
+              {/* PAR-L14 : le « FC » ne se pose plus SUR le code (a 32 unites il
+                  en cacherait le tiers et le code ne se lirait plus) ; il reste
+                  dans la case vide de la carte verrouillee. */}
+              {qrValue && !locked ? (
+                <QRCode
+                  backgroundColor="transparent"
+                  color="#eaf7fd"
+                  ecl="H"
+                  size={92 * s}
+                  value={qrValue}
+                />
+              ) : (
+                <Text
+                  allowFontScaling={false}
+                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
+                >
+                  FC
+                </Text>
               )}
-            />
+            </View>
           </View>
 
           {/* Panneau bas */}
@@ -952,7 +1004,7 @@ function PlayerCardBase({
                           </Text>
                           <Text
                             allowFontScaling={false}
-                            numberOfLines={1}
+                            numberOfLines={plan.lignesMeta}
                             style={{
                               color: CYAN,
                               fontFamily: 'Montserrat-Bold',
@@ -968,49 +1020,6 @@ function PlayerCardBase({
                 )}
               </>
             )}
-          </View>
-
-          {/* Pied */}
-          <View
-            style={[styles.row, {
-              height: LAYOUT.footerH * s,
-              justifyContent: 'space-between',
-              marginTop: LAYOUT.footerGap * s,
-            }]}
-          >
-            <Wordmark s={s} size={28} />
-            <View
-              style={{
-                alignItems: 'center',
-                backgroundColor: '#03222e',
-                borderColor: 'rgba(1,179,244,0.55)',
-                borderRadius: 16 * s,
-                borderWidth: 1.5 * s,
-                height: LAYOUT.footerH * s,
-                justifyContent: 'center',
-                width: LAYOUT.footerH * s,
-              }}
-            >
-              {/* PAR-L14 : le « FC » ne se pose plus SUR le code (a 32 unites il
-                  en cacherait le tiers et le code ne se lirait plus) ; il reste
-                  dans la case vide de la carte verrouillee. */}
-              {qrValue && !locked ? (
-                <QRCode
-                  backgroundColor="transparent"
-                  color="#eaf7fd"
-                  ecl="H"
-                  size={92 * s}
-                  value={qrValue}
-                />
-              ) : (
-                <Text
-                  allowFontScaling={false}
-                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
-                >
-                  FC
-                </Text>
-              )}
-            </View>
           </View>
         </View>
 

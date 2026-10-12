@@ -107,9 +107,11 @@ const sansCasse = (nom) => String(nom || '').trim().toLowerCase();
  */
 export const groupHistory = (histories) => {
   const groupes = new Map();
-  pickTopHistory(histories, Infinity).forEach((h) => {
+  pickTopHistory(histories, Infinity).forEach((h, rang) => {
     const fin = h.isCurrentlyActive ? 'actif' : h.endYear;
-    const cle = [sansCasse(h.clubName), h.startYear, fin].join('|');
+    // Un club supprime n'a plus de nom : deux clubs supprimes ne sont pas le meme club.
+    const club = sansCasse(h.clubName) || `sans-nom-${rang}`;
+    const cle = [club, h.startYear, fin].join('|');
     const groupe = groupes.get(cle) || {
       categories: [],
       clubName: h.clubName,
@@ -132,11 +134,13 @@ export const groupHistory = (histories) => {
 /**
  * PAR-L14 — le compteur de la carte compte des CLUBS, pas des lignes.
  * @param {Array<object>} histories user-histories brutes
- * @returns {number} nombre de clubs distincts (nom sans casse ni espaces autour)
+ * @returns {number} clubs distincts (nom sans casse ni espaces autour) ; une entree dont le
+ *   club a ete supprime (plus de nom) compte pour un club, comme sa ligne sur la carte.
  */
-export const countHistoryClubs = (histories) => new Set(
-  pickTopHistory(histories, Infinity).map((h) => sansCasse(h.clubName)).filter(Boolean),
-).size;
+export const countHistoryClubs = (histories) => {
+  const noms = pickTopHistory(histories, Infinity).map((h) => sansCasse(h.clubName));
+  return new Set(noms.filter(Boolean)).size + noms.filter((nom) => !nom).length;
+};
 
 // Poids de niveau normalises (libelles FR usuels FoundClub). Insensible casse.
 const LEVEL_WEIGHTS = {
