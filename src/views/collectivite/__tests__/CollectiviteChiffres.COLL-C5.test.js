@@ -343,3 +343,59 @@ describe('COLL-C5 — planche 30 : « Chiffres et export »', () => {
     expect(refetch).toHaveBeenCalled();
   });
 });
+
+// 🕛 VILLE-TAUX-24H (12/10) — décisions d'Adel « Sur 24 h » puis « 2- B » : TOUTE installation a un
+// taux compté sur 24 h par jour, horaires ou pas ; le serveur pose `sur24h: true` sur chaque ligne.
+// La page le dit en une phrase courte, avec le taux. Un serveur d'avant le lot (sans `sur24h`) : la
+// phrase ne change pas. ROUGE avant le lot. INVERSÉ PAR « 2- B » : la phrase longue « … pour les
+// installations sans horaires » (deux sortes d'installations) est retirée, toujours la courte.
+describe('VILLE-TAUX-24H — le taux calculé sur 24 h se dit', () => {
+  // La semaine du banc serveur APRÈS le lot (admin tests/authz/VILLE-TAUX-24H-chiffres.test.js).
+  const DOJO_24H = {
+    ...SEMAINE.installations[0], capaciteMinutes: 8640, sur24h: true, taux: 1,
+  };
+  const GYMNASE_24H = {
+    ...SEMAINE.installations[1], capaciteMinutes: 19680, sur24h: true, taux: 3,
+  };
+  const SUR_24H = {
+    ...SEMAINE,
+    installations: [DOJO_24H, GYMNASE_24H],
+    ville: { capaciteMinutes: 28320, minutes: 750, taux: 3 },
+  };
+
+  it('« Taux d’occupation : 3 %, calculé sur 24 h par jour. »', async () => {
+    mockChiffres = { ...mockChiffres, data: SUR_24H };
+    const lus = textes(await monter());
+    expect(lus).toContain('Taux d’occupation : 3 %, calculé sur 24 h par jour.');
+    expect(lus.some((texte) => texte.includes('horaires'))).toBe(false);
+  });
+
+  it('« 2- B » : toujours la version courte, même si une ligne ne dit pas `sur24h`', async () => {
+    mockChiffres = {
+      ...mockChiffres,
+      data: { ...SUR_24H, installations: [DOJO_24H, { ...GYMNASE_24H, sur24h: false }] },
+    };
+    const lus = textes(await monter());
+    expect(lus).toContain('Taux d’occupation : 3 %, calculé sur 24 h par jour.');
+    expect(lus.some((texte) => texte.includes('horaires'))).toBe(false);
+  });
+
+  it('le lecteur d’écran : chaque taux dit « sur 24 h »', async () => {
+    mockChiffres = { ...mockChiffres, data: SUR_24H };
+    const arbre = await monter();
+    const etiquettes = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type === 'string'
+        && /^(Dojo municipal|Gymnase des Tilleuls) : /.test(String(n.props?.accessibilityLabel || '')),
+    ).map((/** @type {any} */ n) => n.props.accessibilityLabel);
+    expect([...new Set(etiquettes)].sort()).toEqual([
+      'Dojo municipal : 2 h, taux d’occupation 1 % sur 24 h',
+      'Gymnase des Tilleuls : 10 h 30, taux d’occupation 3 % sur 24 h',
+    ]);
+  });
+
+  it('🔒 jumeau : serveur d’avant le lot (sans `sur24h`) : la phrase ne change pas', async () => {
+    const lus = textes(await monter());
+    expect(lus).toContain('Taux d’occupation : 6 %.');
+    expect(lus.some((texte) => texte.includes('24 h'))).toBe(false);
+  });
+});

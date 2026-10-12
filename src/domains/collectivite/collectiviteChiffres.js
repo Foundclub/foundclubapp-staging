@@ -75,14 +75,16 @@ export const tauxLisible = (taux) => {
 
 /**
  * « occupation : 6 % » (ou « occupation : — ») : la fin de la ligne « 9 séances · … » de
- * l'accueil (planches 2 et 3).
+ * l'accueil (planches 2 et 3). VILLE-TAUX-24H (12/10) : « occupation : 3 % sur 24 h » quand le
+ * serveur a compté l'installation sur 24 h par jour (pas d'horaires).
  * @param {Traduire} t - La traduction.
  * @param {unknown} taux - Le taux de la semaine, ou null.
+ * @param {boolean} [sur24h] - Le `sur24h` de la ligne de « Chiffres ».
  * @returns {string} Le libellé.
  */
-export const phraseOccupation = (t, taux) => t(
-  'collectiviteChiffres.jauge.occupation',
-  'occupation : {{taux}}',
+export const phraseOccupation = (t, taux, sur24h = false) => t(
+  sur24h ? 'collectiviteChiffres.jauge.occupationSur24h' : 'collectiviteChiffres.jauge.occupation',
+  sur24h ? 'occupation : {{taux}} sur 24 h' : 'occupation : {{taux}}',
   { taux: tauxLisible(taux), ...SANS_ECHAPPEMENT },
 );
 
