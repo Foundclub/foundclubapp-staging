@@ -15307,6 +15307,9 @@ export default {
     generating: 'Génération de l\'image…',
     history: {
       clubCount: '{{total}} CLUBS',
+      // PAR-L14 : le compteur compte des clubs, au singulier comme au pluriel.
+      clubCount_one: '{{count}} CLUB',
+      clubCount_other: '{{count}} CLUBS',
       empty: 'PARCOURS À COMPLÉTER',
       title: 'HISTORIQUE SPORTIF',
     },
@@ -15328,6 +15331,8 @@ export default {
     screenSubtitle: 'Partage ta carte, gagne en visibilité et fais-toi détecter.',
     screenTitle: 'Ma carte de collection',
     shareCta: 'Partager ma carte',
+    // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
+    shareShortCta: 'Partager',
     // Carte (contenu)
     coachChip: 'COACH',
     field: {

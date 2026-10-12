@@ -14577,6 +14577,9 @@ export default {
     generating: 'Generating image…',
     history: {
       clubCount: '{{total}} CLUBS',
+      // PAR-L14 : le compteur compte des clubs, au singulier comme au pluriel.
+      clubCount_one: '{{count}} CLUB',
+      clubCount_other: '{{count}} CLUBS',
       empty: 'CAREER TO COMPLETE',
       title: 'SPORTS HISTORY',
     },
@@ -14651,6 +14654,8 @@ export default {
     sharePermissionError: "FoundClub isn't allowed to save to your phone. Allow it in settings, then try again.",
     shareSavedGallery: 'Your card is saved to your photos (FoundClub album). Now choose where to post it.',
     shareSaveError: 'Saving failed. Your phone may be low on storage.',
+    // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
+    shareShortCta: 'Share',
     shareSubtitle: 'Choose a channel to share your collector card.',
     shareTitle: 'Share my card',
     shareViaOther: 'Share via… (SMS, Mail, Save)',

@@ -1,8 +1,8 @@
 // Port jest du harnais pur (perimetre identique a cardLogic.harness.mjs).
 // A executer dans le projet app : `yarn jest cardModel`.
 import {
-  buildPlayerCardModel, computeAge, computeCompleteness, computeRarity, evaluateMinorGuard,
-  extractCity, pickTopHistory, RARITY, resolveJerseyNumber,
+  buildPlayerCardModel, computeAge, computeCompleteness, computeRarity, countHistoryClubs,
+  evaluateMinorGuard, extractCity, groupHistory, pickTopHistory, RARITY, resolveJerseyNumber,
 } from '../cardModel';
 
 const NOW = new Date('2026-07-11T12:00:00Z');
@@ -144,5 +144,87 @@ describe('cardModel - logique pure carte joueur', () => {
     });
     expect(model.hasPhoto).toBe(true);
     expect(model.photoUrl).toBe('https://cdn/leo.jpg');
+  });
+});
+
+// PAR-L14 — une ligne par club et par saison ; le compteur compte des clubs.
+describe('cardModel - historique regroupe (PAR-L14)', () => {
+  const SPORTING = { name: 'Sporting Club Montredon Bonneveine' };
+  const R1 = { name: 'Régional 1' };
+
+  test('groupHistory reunit les categories d un meme club et d une meme saison', () => {
+    const groupes = groupHistory([
+      {
+        category: { name: 'Seniors' }, club: SPORTING, endYear: 2022, level: R1, startYear: 2020,
+      },
+      {
+        category: { name: 'U20' }, club: SPORTING, endYear: 2022, level: R1, startYear: 2020,
+      },
+      {
+        category: { name: 'U17' }, club: SPORTING, endYear: 2019, startYear: 2017,
+      },
+    ]);
+    expect(groupes).toEqual([
+      {
+        categories: ['Seniors', 'U20'],
+        clubName: 'Sporting Club Montredon Bonneveine',
+        endYear: 2022,
+        isCurrentlyActive: false,
+        levels: ['Régional 1'],
+        startYear: 2020,
+      },
+      expect.objectContaining({ categories: ['U17'], levels: [], startYear: 2017 }),
+    ]);
+  });
+
+  test('groupHistory : un nom saisi a la main avec une autre casse reste le meme club', () => {
+    const groupes = groupHistory([
+      { customClubName: 'AS Pennes ', endYear: 2016, startYear: 2014 },
+      { customClubName: 'as pennes', endYear: 2016, startYear: 2014 },
+    ]);
+    expect(groupes).toHaveLength(1);
+  });
+
+  test('groupHistory : un club en cours n est pas confondu avec la meme saison terminee', () => {
+    const groupes = groupHistory([
+      { club: SPORTING, isCurrentlyActive: true, startYear: 2024 },
+      { club: SPORTING, endYear: 2025, startYear: 2024 },
+    ]);
+    expect(groupes.map((g) => g.isCurrentlyActive)).toEqual([true, false]);
+  });
+
+  test('countHistoryClubs compte les clubs distincts, toutes saisons confondues', () => {
+    expect(countHistoryClubs([
+      { club: SPORTING, endYear: 2019, startYear: 2018 },
+      { club: SPORTING, endYear: 2022, startYear: 2020 },
+      { customClubName: 'ES Pennes', endYear: 2016, startYear: 2014 },
+      { endYear: 2012, startYear: 2010 },
+    ])).toBe(3); // le club supprime (sans nom) compte : la carte en montre la ligne
+    expect(countHistoryClubs(null)).toBe(0);
+  });
+
+  test('un club supprime (sans nom) n est jamais fusionne, et il compte', () => {
+    const histories = [
+      { club: null, endYear: 2022, startYear: 2020 },
+      { club: null, endYear: 2022, startYear: 2020 },
+    ];
+    expect(groupHistory(histories)).toHaveLength(2);
+    expect(countHistoryClubs(histories)).toBe(2);
+    expect(countHistoryClubs([{ club: SPORTING, startYear: 2020 }, { startYear: 2018 }])).toBe(2);
+  });
+
+  test('la rarete garde ses 3 lignes BRUTES : le regroupement ne change que l affichage', () => {
+    const histories = [
+      {
+        category: { name: 'Seniors' }, club: SPORTING, endYear: 2022, level: R1, startYear: 2020,
+      },
+      {
+        category: { name: 'U20' }, club: SPORTING, endYear: 2022, level: R1, startYear: 2020,
+      },
+    ];
+    const model = buildPlayerCardModel({ histories, now: NOW, user: { documentId: 'x' } });
+    expect(model.history).toHaveLength(2);
+    expect(model.historyGroups).toHaveLength(1);
+    expect(model.historyClubCount).toBe(1);
   });
 });

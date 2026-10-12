@@ -92,6 +92,56 @@ export const pickTopHistory = (histories, limit = 3) => {
   }));
 };
 
+const sansCasse = (nom) => String(nom || '').trim().toLowerCase();
+
+/**
+ * PAR-L14 — l'historique de la carte, UNE ligne par club et par saison.
+ * L'assistant de parcours cree une entree par categorie cochee
+ * (HistoryWizardSingle) : « Sporting Club, 2020-2022, Seniors » puis « … U20 »,
+ * deux lignes identiques a l'oeil sur la carte, qui n'en montrait que le niveau.
+ * On les reunit A L'AFFICHAGE (les donnees ne changent pas) : niveaux et
+ * categories cumules dans l'ordre, sans doublon. Meme tri que pickTopHistory.
+ * @param {Array<object>} histories user-histories brutes
+ * @returns {Array<{ categories: string[], clubName: string, endYear: number|null,
+ *   isCurrentlyActive: boolean, levels: string[], startYear: number|null }>}
+ */
+export const groupHistory = (histories) => {
+  const groupes = new Map();
+  pickTopHistory(histories, Infinity).forEach((h, rang) => {
+    const fin = h.isCurrentlyActive ? 'actif' : h.endYear;
+    // Un club supprime n'a plus de nom : deux clubs supprimes ne sont pas le meme club.
+    const club = sansCasse(h.clubName) || `sans-nom-${rang}`;
+    const cle = [club, h.startYear, fin].join('|');
+    const groupe = groupes.get(cle) || {
+      categories: [],
+      clubName: h.clubName,
+      endYear: h.endYear,
+      isCurrentlyActive: h.isCurrentlyActive,
+      levels: [],
+      startYear: h.startYear,
+    };
+    const ajouter = (liste, valeur) => {
+      const deja = [...groupe.levels, ...groupe.categories].map(sansCasse);
+      if (valeur && !deja.includes(sansCasse(valeur))) liste.push(valeur);
+    };
+    ajouter(groupe.levels, h.level);
+    ajouter(groupe.categories, h.category);
+    groupes.set(cle, groupe);
+  });
+  return [...groupes.values()];
+};
+
+/**
+ * PAR-L14 — le compteur de la carte compte des CLUBS, pas des lignes.
+ * @param {Array<object>} histories user-histories brutes
+ * @returns {number} clubs distincts (nom sans casse ni espaces autour) ; une entree dont le
+ *   club a ete supprime (plus de nom) compte pour un club, comme sa ligne sur la carte.
+ */
+export const countHistoryClubs = (histories) => {
+  const noms = pickTopHistory(histories, Infinity).map((h) => sansCasse(h.clubName));
+  return new Set(noms.filter(Boolean)).size + noms.filter((nom) => !nom).length;
+};
+
 // Poids de niveau normalises (libelles FR usuels FoundClub). Insensible casse.
 const LEVEL_WEIGHTS = {
   departemental: 1,
@@ -251,7 +301,11 @@ export const buildPlayerCardModel = ({
     hasClub: Boolean(clubName),
     hasCustomNumber: hasExplicitNumber,
     hasPhoto: showPhoto,
+    // `history` (3 lignes brutes) nourrit la rarete et la completude, inchangees.
+    // La carte AFFICHE `historyGroups` et compte `historyClubCount` (PAR-L14).
     history: topHistory,
+    historyClubCount: countHistoryClubs(histories),
+    historyGroups: groupHistory(histories),
     isAvailable: Boolean(user.isLookingForClub),
     lastname: String(user.lastname || '').trim().toUpperCase(),
     nationality: String(user.nationality || '').trim(),
