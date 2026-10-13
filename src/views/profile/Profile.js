@@ -48,6 +48,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import EntreeComplexe from '@/views/complexe/components/EntreeComplexe';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
@@ -58,6 +59,7 @@ import {
   useMyCollectivites,
 } from '@/services/collectivite/collectiviteQueries';
 
+import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import {
   isBirthdateUnderAge,
@@ -1260,6 +1262,11 @@ function Profile({ navigation, route }) {
               {profileActivitySection}
             </OnboardingWrapper>
           ) : profileActivitySection}
+
+          {/* RESA-L5A1 (13/10) — « Je gère un complexe » (planche E-G01, état 1, AT-01), caché
+              par l'interrupteur `COMPLEXES_GERANT` tant que le serveur des complexes n'est pas
+              livré. */}
+          {COMPLEXES_GERANT ? <EntreeComplexe compteId={userData?.documentId || null} /> : null}
 
           {accountSection}
 

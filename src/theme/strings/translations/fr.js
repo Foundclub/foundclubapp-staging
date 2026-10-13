@@ -6741,6 +6741,59 @@ export default {
     prestigeDivision: 'Division 1 prestige.',
     seasonLabel: '| Saison:',
   },
+  // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
+  // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Au « tu », gérant compris.
+  complexeGerant: {
+    badge: {
+      court: 'Complexe',
+      long: 'Complexe de réservation',
+    },
+    bascule: {
+      gere: 'Tu gères {{nom}}.',
+      joueEtGere: 'Tu joues aussi, et tu gères {{nom}}.',
+      // eslint-disable-next-line max-len
+      joueurDescription: "Tu vois l'app comme un joueur. Ton complexe et tes droits de gestionnaire sont intacts.",
+      modeComplexe: 'Mode complexe',
+      modeJoueur: 'Mode joueur',
+      revenir: 'Revenir en mode complexe',
+    },
+    creneaux: {
+      deA: 'de {{de}} à {{a}}',
+      nCreneaux: '{{nombre}} créneaux',
+      resumePlage: '{{de}} – {{a}} · créneaux de {{duree}} · {{creneaux}}',
+      touteLaJournee: 'toute la journée',
+      unCreneau: '1 créneau',
+    },
+    entree: {
+      jeGere: 'Je gère un complexe',
+      monComplexe: 'Mon complexe',
+      sousTitre: 'Foot à 5, padel, tennis… Sur ce même compte.',
+    },
+    lieu: {
+      exterieur: 'Extérieur',
+      interieur: 'Intérieur',
+    },
+    mode: {
+      automatique: 'Automatique',
+      manuel: 'Validation manuelle',
+      telephone: 'Téléphone seulement',
+    },
+    prix: {
+      leCreneau: '{{prix}} le créneau',
+      parJoueur: '{{prix}} par joueur',
+      pourJoueurs: '{{prix}} pour {{joueurs}} joueurs',
+      soitParJoueur: 'soit {{prix}} par joueur à {{joueurs}}',
+    },
+    terrain: {
+      aucunCreneau: 'Aucun créneau ouvert',
+      joueurs: '{{nombre}} joueurs',
+      ouvert: 'Ouvert : {{heures}}',
+      ouvrirA11y: '{{nom}} : ouvrir la fiche',
+      pasReservable: 'Pas réservable',
+      plusA11y: 'Plus d’actions : {{nom}}',
+      unJoueur: '1 joueur',
+    },
+  },
   composition: {
     shareTitle: 'Partager la composition',
   },

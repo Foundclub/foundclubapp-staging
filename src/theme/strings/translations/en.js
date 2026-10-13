@@ -6307,6 +6307,58 @@ export default {
     prestigeDivision: 'Prestige Division 1.',
     seasonLabel: '| Season:',
   },
+  // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans
+  // (P00, RB, E-G01, E-G02, E-G07, E-G08, E-G09, E-G16). Same keys as fr.js.
+  complexeGerant: {
+    badge: {
+      court: 'Venue',
+      long: 'Booking venue',
+    },
+    bascule: {
+      gere: 'You manage {{nom}}.',
+      joueEtGere: 'You also play, and you manage {{nom}}.',
+      joueurDescription: 'You see the app as a player. Your venue and your manager rights are intact.',
+      modeComplexe: 'Venue mode',
+      modeJoueur: 'Player mode',
+      revenir: 'Back to venue mode',
+    },
+    creneaux: {
+      deA: 'from {{de}} to {{a}}',
+      nCreneaux: '{{nombre}} slots',
+      resumePlage: '{{de}} – {{a}} · {{duree}} slots · {{creneaux}}',
+      touteLaJournee: 'all day',
+      unCreneau: '1 slot',
+    },
+    entree: {
+      jeGere: 'I manage a venue',
+      monComplexe: 'My venue',
+      sousTitre: '5-a-side, padel, tennis… On this same account.',
+    },
+    lieu: {
+      exterieur: 'Outdoor',
+      interieur: 'Indoor',
+    },
+    mode: {
+      automatique: 'Automatic',
+      manuel: 'Manual approval',
+      telephone: 'Phone only',
+    },
+    prix: {
+      leCreneau: '{{prix}} per slot',
+      parJoueur: '{{prix}} per player',
+      pourJoueurs: '{{prix}} for {{joueurs}} players',
+      soitParJoueur: 'i.e. {{prix}} per player with {{joueurs}}',
+    },
+    terrain: {
+      aucunCreneau: 'No open slot',
+      joueurs: '{{nombre}} players',
+      ouvert: 'Open: {{heures}}',
+      ouvrirA11y: '{{nom}}: open the court page',
+      pasReservable: 'Not bookable',
+      plusA11y: 'More actions: {{nom}}',
+      unJoueur: '1 player',
+    },
+  },
   composition: {
     shareTitle: 'Share the line-up',
   },

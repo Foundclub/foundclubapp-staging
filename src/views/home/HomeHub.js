@@ -65,6 +65,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
+import BasculeComplexe from '@/views/complexe/components/BasculeComplexe';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
@@ -77,7 +78,11 @@ import { useHomeSummary } from '@/services/home/homeSummaryQueries';
 import { setTutorialDebugState, tutorialDebugLog } from '@/utils/logger/tutorialDebug';
 import { markBootStep } from '@/utils/performance/bootPerformance';
 
-import { CARTES_ACCUEIL_MASQUEES, LEAGUE_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
+import {
+  CARTES_ACCUEIL_MASQUEES,
+  COMPLEXES_GERANT,
+  LEAGUE_SUR_ACCUEIL,
+} from '@/config/fonctionsMasquees';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { ENABLE_STARTUP_TUTORIALS } from '@/constants/runtimeFlags';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -2574,13 +2579,26 @@ function HomeHubContent({ auth, navigation, route }) {
         />
         {/* COLL-ACCUEIL (01/10) — compte mixte : la porte discrète vers l'espace de sa Ville. */}
         <CollectivitePorteRow />
-        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour. */}
-        <PlayerModeBanner
-          accountRoleKey={getUserRoleKey(roleName)}
-          canUsePlayerMode={canUsePlayerMode === true}
-          isPlayerMode={isPlayerMode === true}
-          onChange={setPlayerMode}
-        />
+        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour.
+            RESA-L5A1 (13/10) — un compte qui gère un complexe lit, au même endroit, la bascule
+            « mode complexe / mode joueur » (planche RB), qui reprend ce bandeau ; cachée par
+            l'interrupteur `COMPLEXES_GERANT`. */}
+        {COMPLEXES_GERANT ? (
+          <BasculeComplexe
+            accountRoleKey={getUserRoleKey(roleName)}
+            canUsePlayerMode={canUsePlayerMode === true}
+            compteId={userData?.documentId || null}
+            isPlayerMode={isPlayerMode === true}
+            onChange={setPlayerMode}
+          />
+        ) : (
+          <PlayerModeBanner
+            accountRoleKey={getUserRoleKey(roleName)}
+            canUsePlayerMode={canUsePlayerMode === true}
+            isPlayerMode={isPlayerMode === true}
+            onChange={setPlayerMode}
+          />
+        )}
         {headBanner ? (
           <HomeHeadBanner
             actions={headBanner.actions}

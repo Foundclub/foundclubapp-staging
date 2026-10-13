@@ -1,3 +1,5 @@
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 /**
  * LE TERRAIN D'UN COMPLEXE, EN MOTS — RESA-L5A1 (13/10/2026), chantier Réservation.
  *
@@ -15,7 +17,8 @@
  * Témoin : `complexeTerrain.test.js`.
  */
 
-const NBSP = ' ';
+// L'espace insécable (U+00A0) entre le montant et « € » : « 60 € » ne se coupe jamais.
+const NBSP = '\u00a0';
 const JOUR_MINUTES = 24 * 60;
 const HEURE_RE = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
 const JOURS_COURTS = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
@@ -85,11 +88,13 @@ export const lignesDePrix = (t, { basePrice, capacity, priceUnit }) => {
     return {
       principal: t('complexeGerant.prix.parJoueur', '{{prix}} par joueur', {
         prix: formatEuros(montant),
+        ...SANS_ECHAPPEMENT,
       }),
       secondaire: joueurs
         ? t('complexeGerant.prix.pourJoueurs', '{{prix}} pour {{joueurs}} joueurs', {
           joueurs,
           prix: formatEuros(Math.round(montant * joueurs * 100) / 100),
+          ...SANS_ECHAPPEMENT,
         })
         : null,
     };
@@ -97,11 +102,13 @@ export const lignesDePrix = (t, { basePrice, capacity, priceUnit }) => {
   return {
     principal: t('complexeGerant.prix.leCreneau', '{{prix}} le créneau', {
       prix: formatEuros(montant),
+      ...SANS_ECHAPPEMENT,
     }),
     secondaire: joueurs
       ? t('complexeGerant.prix.soitParJoueur', 'soit {{prix}} par joueur à {{joueurs}}', {
         joueurs,
         prix: formatEuros(partParJoueur(montant, joueurs)),
+        ...SANS_ECHAPPEMENT,
       })
       : null,
   };
@@ -334,6 +341,7 @@ export const resumePlage = (t, plage) => {
       creneaux,
       de: texteHeure(plage.from),
       duree: texteDuree(Number(plage.durationMinutes)),
+      ...SANS_ECHAPPEMENT,
     },
   );
 };
@@ -350,6 +358,7 @@ export const resumeTarif = (t, tarif) => (
     : t('complexeGerant.creneaux.deA', 'de {{de}} à {{a}}', {
       a: texteHeure(tarif.to),
       de: texteHeure(tarif.from),
+      ...SANS_ECHAPPEMENT,
     })
 );
 
@@ -494,5 +503,8 @@ export const resumeOuverture = (t, plan) => {
   const morceaux = [...groupes.entries()]
     .sort((a, b) => a[1][0] - b[1][0])
     .map(([heures, jours]) => `${joursEnSeries(jours)} ${heures}`);
-  return t('complexeGerant.terrain.ouvert', 'Ouvert : {{heures}}', { heures: morceaux.join(', ') });
+  return t('complexeGerant.terrain.ouvert', 'Ouvert : {{heures}}', {
+    heures: morceaux.join(', '),
+    ...SANS_ECHAPPEMENT,
+  });
 };

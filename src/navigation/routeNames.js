@@ -416,4 +416,9 @@ export const RouteNames = /** @type {const} */ ({
   // COLL-C5 (03/10/2026) — les chiffres de la Ville et leur export (design HY521H1, page 5,
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',
+  // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation, toile BLG79NHv2) : son
+  // espace (accueil E-G02, en onglets) et « Devenir gérant » (E-G01). Cachés par l'interrupteur
+  // `COMPLEXES_GERANT` (src/config/fonctionsMasquees.js).
+  ComplexeDevenirGerant: 'ComplexeDevenirGerant',
+  ComplexeEspace: 'ComplexeEspace',
 });
