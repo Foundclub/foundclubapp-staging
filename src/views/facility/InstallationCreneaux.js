@@ -238,7 +238,9 @@ function InstallationCreneaux() {
   const creneauxRetires = canManage && Array.isArray(retires.data?.data) ? retires.data.data : [];
   const clubsRattaches = (Array.isArray(clubs.data) ? clubs.data : [])
     .filter((club) => club?.documentId && club?.name)
-    .map((club) => ({ documentId: club.documentId, name: club.name }));
+    .map((club) => ({
+      documentId: club.documentId, logoUrl: club.logo?.url || null, name: club.name,
+    }));
   const annees = seasonYears(meta.season);
 
   const fermer = () => setPanneau(null);
@@ -487,6 +489,10 @@ function InstallationCreneaux() {
   );
 
   // ─── Le panneau : feuille du bas (telephone) ou colonne de droite (ordinateur) ──────
+  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » s'ouvre
+  // en PLEIN ECRAN (la fenetre du formulaire), plus dans la feuille ; le site en grand ecran
+  // garde son panneau de droite.
+  const enPleinEcran = !isDesktop && panneau?.type === 'attribuer';
   let titreDuPanneau = null;
   let contenuDuPanneau = null;
   if (panneau?.type === 'attribuer') {
@@ -500,6 +506,7 @@ function InstallationCreneaux() {
         key={`attribuer-${panneau.initial?.weekday || 0}-${panneau.initial?.startTime || ''}`}
         onCancel={fermer}
         onDone={fermer}
+        pleinEcran={enPleinEcran}
       />
     );
   } else if (panneau?.type === 'modifier') {
@@ -527,7 +534,7 @@ function InstallationCreneaux() {
       />
     );
   }
-  const panneauRendu = contenuDuPanneau ? (
+  const panneauRendu = contenuDuPanneau && !enPleinEcran ? (
     <View style={{ gap: 12 }}>
       {titreDuPanneau ? (
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
@@ -685,6 +692,7 @@ function InstallationCreneaux() {
           </View>
         </BottomModal>
       )}
+      {enPleinEcran ? contenuDuPanneau : null}
     </ScreenContainer>
   );
 }

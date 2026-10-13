@@ -7,6 +7,7 @@ import renderer, { act } from 'react-test-renderer';
 import { computeMessageMenuLayout } from '@/domains/messaging/reactionPillPlacement';
 
 import Calque from '@/components/molecules/messageReactionOverlay/MessageReactionOverlay';
+import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import LieuSurCarte from '@/components/organisms/autocompleteAddressInput/LieuSurCarte';
 import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
 import ApercuDuFil from '@/views/chat/ApercuDuFil';
@@ -25,6 +26,9 @@ import InfosDuGroupe from '@/views/chat/InfosDuGroupe';
 //   GlobalPromptModal, EventDetails « en retard ».
 // Ce témoin garde l'acquis : une 14ᵉ fenêtre translucide le fait rougir tant qu'elle n'est pas
 // triée ici, et chaque feuille rendue rougit si sa marge basse redevient fixe.
+// 📐 COLL-R-A7 (13/10, COL-005) — 14ᵉ, triée : le tunnel « Attribuer un créneau » en plein écran
+// (`FenetrePleinEcran` de SeasonSlotForm). Son bas est celui du gabarit des tunnels
+// (WizardStepLayout, `insets.bottom + 12`, D53) : RÉSERVE la barre, mesuré ci-dessous.
 
 let mockInsets = {
   bottom: 48, left: 0, right: 0, top: 24,
@@ -76,6 +80,19 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => () => null);
+// COLL-R-A7 : le conteneur du gabarit des tunnels, réduit à la marge qu'il reçoit (son fond
+// d'écran, un dégradé natif, reste hors du banc).
+jest.mock('@/components/templates/ScreenContainer', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return function ScreenContainerMock(/** @type {any} */ { children, contentContainerStyle }) {
+    return reactActuel.createElement(
+      VueRN,
+      { style: contentContainerStyle, testID: 'ecran-du-tunnel' },
+      children,
+    );
+  };
+});
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => () => null);
 jest.mock('@/views/chat/AvatarDuFil', () => () => null);
 jest.mock('@/services/chat/chatQueriesCompat', () => ({
@@ -283,13 +300,27 @@ const FEUILLES = [
     toucher(arbre, 'WHATSAPP-plus');
     return margeBasseDe(natif(arbre, 'WHATSAPP-clavier'));
   }],
+  ['SeasonSlotForm — bas du tunnel plein écran (WizardStepLayout)', 12, () => margeBasseDe(natif(
+    monter(
+      <WizardStepLayout
+        headerVariant="focus"
+        onNext={rien}
+        stepCount={5}
+        stepIndex={1}
+        title="Pour quel club ?"
+      >
+        {null}
+      </WizardStepLayout>,
+    ),
+    'ecran-du-tunnel',
+  ))],
 ];
 
 // Le premier montage charge les feuilles et leurs dépendances.
 jest.setTimeout(60000);
 
 describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d’Android', () => {
-  test('R — il y a 13 <Modal statusBarTranslucent> dans src/, toutes triées ici', () => {
+  test('R — il y a 14 <Modal statusBarTranslucent> dans src/, toutes triées ici', () => {
     const racine = path.join(__dirname, '..', '..');
     /** @type {string[]} */
     const trouvees = [];
@@ -322,6 +353,7 @@ describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d�
       'components/organisms/feuilleDAdresse/FeuilleDAdresse.js ×1',
       'components/organisms/notifications/SmartNotificationHost.js ×1',
       'components/organisms/popup/GlobalPromptModal.js ×1',
+      'components/organisms/seasonSlot/SeasonSlotForm.js ×1',
       'views/chat/AdminsDuGroupe.js ×1',
       'views/chat/ApercuDuFil.js ×1',
       'views/chat/AutorisationsDuGroupe.js ×1',

@@ -1,6 +1,6 @@
 /* eslint-disable max-len -- des phrases entieres de l ecran, comparees telles quelles */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -50,6 +50,8 @@ let mockAuth;
 /** @type {any} */
 let mockDimensions = PORTRAIT;
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => mockDimensions,
@@ -437,7 +439,11 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
     await attendre();
     // IPH09 : la confirmation n'apparaît qu'au récapitulatif. COLL-R-A7 (COL-005) : depuis une
     // heure libre, Jour, Horaires et Période sont sautés (la case les apporte) : 3 étapes.
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
+    // COLL-R-A7 (COL-005, planche P4v4-attribuer « Planning 3/3 ») : au téléphone, le tunnel
+    // s'ouvre en PLEIN ÉCRAN et son bouton dit « Attribuer le créneau » (la période est au
+    // récapitulatif). ROUGE avant : une feuille du bas, « Attribuer pour la saison ».
+    expect(arbre.root.findByType(Modal).props.presentationStyle).toBe('fullScreen');
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeUndefined();
     expect(textes(arbre)).toContain('Étape 1/3');
     const club = parTexte(arbre, 'US Ville B');
     expect(club.props.accessibilityRole).toBe('radio');
@@ -455,7 +461,7 @@ describe('COLL-C4B planche 2 — les fermetures dans le planning', () => {
       await attendre();
     }
     expect(textes(arbre)).toContain('Étape 3/3');
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeDefined();
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeDefined();
     await act(async () => { parTexte(arbre, 'Bloquer pour la Ville').props.onPress(); });
     expect(attributeSeasonSlot).not.toHaveBeenCalled();
     expect(mockNavigation.navigate).toHaveBeenLastCalledWith('CollectiviteFermeture', {

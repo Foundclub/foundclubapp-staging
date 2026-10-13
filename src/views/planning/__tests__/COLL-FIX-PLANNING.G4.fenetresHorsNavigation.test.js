@@ -1,6 +1,6 @@
 /* eslint-disable max-len -- des phrases entieres de l ecran, comparees telles quelles */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -54,6 +54,8 @@ let mockAuth;
 /** @type {any} */
 let mockDimensions = PORTRAIT;
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => mockDimensions,
@@ -462,7 +464,11 @@ describe('COLL-FIX-PLANNING G4 — les fenetres du planning de la Ville, hors na
     await attendre();
     // IPH09 : la confirmation n'apparaît qu'au récapitulatif. COLL-R-A7 (COL-005) : depuis une
     // heure libre, Jour, Horaires et Période sont sautés (la case les apporte) : 3 étapes.
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
+    // COLL-R-A7 (COL-005, planche P4v4-attribuer « Planning 3/3 ») : au téléphone, le tunnel
+    // s'ouvre en PLEIN ÉCRAN et son bouton dit « Attribuer le créneau » (la période est au
+    // récapitulatif). ROUGE avant : une feuille du bas, « Attribuer pour la saison ».
+    expect(arbre.root.findByType(Modal).props.presentationStyle).toBe('fullScreen');
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeUndefined();
     expect(textes(arbre)).toContain('Étape 1/3');
     const club = parTexte(arbre, 'US Ville B');
     expect(club.props.accessibilityRole).toBe('radio');
@@ -480,7 +486,7 @@ describe('COLL-FIX-PLANNING G4 — les fenetres du planning de la Ville, hors na
       await attendre();
     }
     expect(textes(arbre)).toContain('Étape 3/3');
-    await act(async () => { parTexte(arbre, 'Attribuer pour la saison').props.onPress(); });
+    await act(async () => { parTexte(arbre, 'Attribuer le créneau').props.onPress(); });
     await attendre();
     expect(arbre.root.findAllByType(Text).length).toBeGreaterThan(0);
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);

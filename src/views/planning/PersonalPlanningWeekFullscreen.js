@@ -1018,7 +1018,9 @@ function PlanningWeekFullscreen() {
   };
   const clubsPourAttribuer = (Array.isArray(attachedClubs.data) ? attachedClubs.data : [])
     .filter((club) => club?.documentId && club?.name)
-    .map((club) => ({ documentId: club.documentId, name: club.name }));
+    .map((club) => ({
+      documentId: club.documentId, logoUrl: club.logo?.url || null, name: club.name,
+    }));
 
   // Design P5-semaine-ordi : sur le site, la mairie choisit l installation en haut (une
   // pastille a la couleur de chacune) ; un bloc ouvert = un panneau a droite.
@@ -1393,7 +1395,39 @@ function PlanningWeekFullscreen() {
   ) : null;
 
   let panneauRendu = null;
-  if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {
+  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » s'ouvre en
+  // PLEIN ECRAN (la fenetre du formulaire) ; le site en grand ecran garde son panneau de droite.
+  // Une heure libre : « Bloquer pour la Ville » reste sous la main, au bas du tunnel.
+  let tunnelPleinEcran = null;
+  const bloquerLaCase = () => {
+    fermerPanneau();
+    ouvrirLaFermeture({
+      date: panneau.date,
+      endTime: panneau.initial?.endTime,
+      facilityName: contextDetailLabel,
+      mode: 'bloquer',
+      startTime: panneau.initial?.startTime,
+    });
+  };
+  if (panneau?.type === 'attribuer' && !isDesktop) {
+    tunnelPleinEcran = (
+      <SeasonSlotForm
+        actionSecondaire={panneau.date && peutAttribuer ? {
+          libelle: t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville'),
+          onPress: bloquerLaCase,
+        } : null}
+        clubs={clubsPourAttribuer}
+        compact={panneau.compact !== false}
+        facilityId={facilityId}
+        guided
+        initial={panneau.initial}
+        key={`${panneau.type}-${panneau.titre || ''}`}
+        onCancel={fermerPanneau}
+        onDone={fermerPanneau}
+        pleinEcran
+      />
+    );
+  } else if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {
     const titre = panneau.type === 'modifier'
       ? t('collectiviteCreneaux.gerer.modifier', 'Modifier le créneau')
       : panneau.titre || t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau');
@@ -1414,16 +1448,7 @@ function PlanningWeekFullscreen() {
         {/* COLL-C4B (02/10) — une heure libre : « Bloquer pour la Ville », deja rempli (P5v2). */}
         {panneau.type === 'attribuer' && panneau.date && peutAttribuer ? (
           <Button
-            onPress={() => {
-              fermerPanneau();
-              ouvrirLaFermeture({
-                date: panneau.date,
-                endTime: panneau.initial?.endTime,
-                facilityName: contextDetailLabel,
-                mode: 'bloquer',
-                startTime: panneau.initial?.startTime,
-              });
-            }}
+            onPress={bloquerLaCase}
             title={t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville')}
             variant="Secondary"
           />
@@ -2076,6 +2101,7 @@ function PlanningWeekFullscreen() {
       >
         {ficheDeFermeture}
       </BottomModal>
+      {tunnelPleinEcran}
     </ScreenContainer>
   );
 }

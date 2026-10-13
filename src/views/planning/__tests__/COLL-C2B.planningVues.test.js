@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text, TouchableOpacity } from 'react-native';
+import { Modal, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -61,6 +61,8 @@ let mockAuth;
 /** @type {any} */
 let mockDimensions = PORTRAIT;
 
+// COLL-R-A7 (COL-005) : le tunnel plein écran rend le vrai gabarit des tunnels ; la marge du dépôt.
+jest.setTimeout(30000);
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => mockDimensions,
@@ -462,10 +464,17 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
     await act(async () => { grille().onFreeSlotPress(new Date(2026, 2, 4), 17); });
     await attendre();
     const lus = textes(arbre);
-    expect(lus).toContain('Mercredi 17:00 – 18:30');
+    // COLL-R-A7 (COL-005) : le moment de la case, au sous-titre du plein écran (et l'installation).
+    expect(lus).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^Mercredi 17:00 – 18:30( · .+)?$/),
+    ]));
     // IPH09 : la confirmation n'apparaît qu'au récapitulatif. COLL-R-A7 (COL-005) : depuis une
     // heure libre, Jour, Horaires et Période sont sautés (la case les apporte) : 3 étapes.
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
+    // COLL-R-A7 (COL-005, planche P4v4-attribuer « Planning 3/3 ») : au téléphone, le tunnel
+    // s'ouvre en PLEIN ÉCRAN et son bouton dit « Attribuer le créneau » (la période est au
+    // récapitulatif). ROUGE avant : une feuille du bas, « Attribuer pour la saison ».
+    expect(arbre.root.findByType(Modal).props.presentationStyle).toBe('fullScreen');
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeUndefined();
     expect(textes(arbre)).toContain('Étape 1/3');
     const club = parTexte(arbre, 'US Ville B');
     expect(club.props.accessibilityRole).toBe('radio');
@@ -483,10 +492,10 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
       await attendre();
     }
     expect(textes(arbre)).toContain('Étape 3/3');
-    expect(parTexte(arbre, 'Attribuer pour la saison')).toBeDefined();
+    expect(parTexte(arbre, 'Attribuer le créneau')).toBeDefined();
     const attendu = expect.objectContaining({ endTime: '18:30', startTime: '17:00', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-ville', attendu);
-    await act(async () => { parTexte(arbre, 'Attribuer pour la saison').props.onPress(); });
+    await act(async () => { parTexte(arbre, 'Attribuer le créneau').props.onPress(); });
     await attendre();
     expect(attributeSeasonSlot).toHaveBeenCalledTimes(1);
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-ville', {
@@ -503,7 +512,9 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
     expect(textes(arbre)).toContain('Libre toute la journée');
     await act(async () => { libre.props.onPress(); });
     await attendre();
-    expect(textes(arbre)).toContain('Dimanche 08:00 – 09:30');
+    expect(textes(arbre)).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^Dimanche 08:00 – 09:30( · .+)?$/),
+    ]));
   });
 
   it('un creneau attribue ⇒ « Modifier le creneau », « Retirer le creneau » (D67)', async () => {

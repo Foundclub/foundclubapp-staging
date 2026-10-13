@@ -40,6 +40,12 @@ const mockInputProps = [];
 /** @type {any[]} */
 const mockDateProps = [];
 
+// COLL-R-A7 (COL-005) : le formulaire importe le gabarit des tunnels (son plein écran) ; le fond
+// d'écran de ce gabarit (dégradé natif) reste hors de ce banc, comme dans les témoins d'écran.
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => function ScreenContainerMock({ children }) { return children; },
+);
 jest.mock('@/services/seasonSlot/seasonSlotService', () => ({
   attributeSeasonSlot: jest.fn(),
   getClubTeamsForSlot: jest.fn(),

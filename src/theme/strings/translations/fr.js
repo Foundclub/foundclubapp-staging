@@ -6099,6 +6099,28 @@ export default {
       tonClub: '{{club}}, ton club',
       trancher: 'Trancher',
     },
+    // 📐 COLL-R-A7 (13/10, COL-005, décision d'Adel D4 A) — « Attribuer un créneau » en plein
+    // écran (planche P4v4-attribuer) : la question de chaque étape, ce que son sous-titre relit,
+    // les lignes du récapitulatif.
+    tunnel: {
+      chaqueJour: 'Chaque {{jour}} · {{suite}}',
+      chaqueSemaine: '{{qui}} · chaque semaine de la saison',
+      club: 'Pour quel club ?',
+      equipe: 'Pour quelle équipe ?',
+      equipeFacultative: '{{club}} · facultatif',
+      horaires: 'À quelle heure ?',
+      installation: 'Dans quelle installation ?',
+      jour: 'Quel jour ?',
+      libresDuJour: 'Libre ce {{jour}} : {{heures}}.',
+      modifierLaLigne: '{{cle}} : {{valeur}}. Modifier',
+      periode: 'Quelle période ?',
+      pourLeClub: 'Pour {{club}}',
+      recapClub: 'Club · équipe',
+      recapHeures: 'Jour et heures',
+      relisezAttribuez: 'Relisez, puis attribuez. Le club est prévenu.',
+      relisezEnregistrez: 'Relisez, puis enregistrez. Le club est prévenu.',
+      toutLeClubDit: 'Le club répartit lui-même ses équipes.',
+    },
     vues: {
       enAttente: 'En attente : {{qui}}',
       heureLibre: 'Heure libre, {{jour}} {{heure}} : attribuer',
