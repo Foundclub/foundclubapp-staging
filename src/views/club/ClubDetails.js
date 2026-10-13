@@ -1077,8 +1077,9 @@ function ClubDetails({ navigation, route }) {
   /**
    * Handle delete sponsor action
    * @param {Sponsor} sponsor
+   * @param {number} sponsorIndex - Sa place dans `club.sponsor`.
    */
-  const handleDeleteSponsor = (sponsor) => {
+  const handleDeleteSponsor = (sponsor, sponsorIndex) => {
     Alert.alert(
       t('clubDetails.alerts.deleteSponsor.title', {
         sponsorName: sponsor.title, ...SANS_ECHAPPEMENT,
@@ -1092,9 +1093,15 @@ function ClubDetails({ navigation, route }) {
         {
           onPress: () => {
             if (club) {
+              // SPONSOR (13/10) : on vise l'`id` du partenaire, jamais son lien —
+              // facultatif, il est vide (ou partage) chez plusieurs partenaires, qui
+              // partaient tous ensemble. Un ancien partenaire sans id : sa place.
+              const sansId = sponsor.id === undefined || sponsor.id === null;
               const newClub = {
                 ...club,
-                sponsor: (club?.sponsor || []).filter((s) => s.link !== sponsor.link),
+                sponsor: (club?.sponsor || []).filter((s, index) => (
+                  sansId ? index !== sponsorIndex : s.id !== sponsor.id
+                )),
               };
               updateClubMutation.mutate(newClub);
             }
@@ -3575,7 +3582,7 @@ function ClubDetails({ navigation, route }) {
                   >
                     {club?.sponsor?.map((/** @type {Sponsor} */ sponsor, sponsorIndex) => (
                       <View
-                        key={sponsor.link}
+                        key={sponsor.id ?? `rang-${sponsorIndex}`}
                         style={[
                           Alignments.row,
                           Alignments.alignCenter,
@@ -3614,7 +3621,7 @@ function ClubDetails({ navigation, route }) {
                             hitSlop={{
                               bottom: 8, left: 8, right: 8, top: 8,
                             }}
-                            onPress={() => handleDeleteSponsor(sponsor)}
+                            onPress={() => handleDeleteSponsor(sponsor, sponsorIndex)}
                             style={[
                               Alignments.alignCenter,
                               Alignments.justifyCenter,

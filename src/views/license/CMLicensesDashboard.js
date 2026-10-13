@@ -496,7 +496,12 @@ function CMLicensesDashboard({ navigation, route }) {
   }, [navigation]);
 
   return (
-    <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+    <ScreenContainer
+      bottomInsetMode="tab-scene"
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+      withHeaderPadding
+    >
       <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
           <Text style={[Fonts.h2, Fonts.neutral00]}>

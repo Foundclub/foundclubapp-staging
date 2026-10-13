@@ -298,11 +298,22 @@ function TournamentSettingsEdit({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
       </View>
-      <WithDataWrapper data={event} error={error} isLoading={isLoading} onRetry={refetch}>
+      <WithDataWrapper
+        data={event}
+        error={error}
+        isLoading={isLoading}
+        onRetry={refetch}
+        // 🤖 ANDROIDBAR-3 — hauteur bornée, comme TournamentTeamDetails : sans elle, le
+        // ScrollView prend la hauteur de son contenu et rien ne se raccourcit au clavier.
+        wrapperStyle={{ flex: 1 }}
+      >
         <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>

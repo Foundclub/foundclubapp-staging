@@ -587,7 +587,11 @@ function TournamentTeamDetails({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer bottomInsetMode="tab-scene">
+    <ScreenContainer
+      bottomInsetMode="tab-scene"
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <WithDataWrapper
         data={team}
         error={error}

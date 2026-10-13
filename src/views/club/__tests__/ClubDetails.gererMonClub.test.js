@@ -1494,3 +1494,108 @@ describe('ClubDetails — VILLE-INVITER-CLUB voie 3 : « Ma collectivité » dan
     expect(sousPage).toContain('Rechercher ma collectivité');
   });
 });
+
+// SPONSOR (13/10) : le partenaire a retirer etait vise par son LIEN
+// (`s.link !== sponsor.link`), et sa rangee portait le lien pour cle. Or le lien
+// est FACULTATIF (`AddSponsor.js`) : le serveur rend `null` pour chaque partenaire
+// sans site, et en retirer UN emportait TOUS ceux qui n'en ont pas — ou qui
+// partagent la meme adresse. Chaque entree du composant repetable `sponsor.sponsor`
+// a un `id` : c'est lui qu'on vise, et sa place dans la liste quand un ancien
+// partenaire n'en a pas.
+describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', () => {
+  /**
+   * Un partenaire tel que le serveur le rend.
+   * @param {string} title - Son nom.
+   * @param {string | null} link - Son site, facultatif.
+   * @param {number} [id] - L'id de l'entree ; absent chez un ancien partenaire.
+   * @returns {any} Le partenaire.
+   */
+  const partenaire = (title, link, id) => ({
+    ...(id === undefined ? {} : { id }), link, logo: { url: '/uploads/logo.png' }, title,
+  });
+
+  /**
+   * Monte la sous-page « Partenaires » avec ces partenaires-la.
+   * @param {any[]} partenaires - Le tableau `sponsor` du club.
+   * @returns {any} L'arbre monte.
+   */
+  const monterAvec = (partenaires) => {
+    mockClubQuery = { ...mockClubQuery, data: { ...CLUB, sponsor: partenaires } };
+    return monter('partners');
+  };
+
+  /**
+   * Appuie sur la corbeille d'un partenaire, confirme, et rend ce qui part au serveur.
+   * @param {any} arbre - L'arbre monte.
+   * @param {string} nom - Le nom du partenaire a retirer.
+   * @returns {any[]} Le tableau `sponsor` envoye a `updateClub`.
+   */
+  const retirer = (arbre, nom) => {
+    act(() => {
+      pressableAvecTexte(arbre, `Supprimer le sponsor ${nom}`).props.onPress();
+    });
+    act(() => {
+      boutonDeConfirmation().onPress();
+    });
+    return /** @type {any} */ (updateClub).mock.calls[0][0].sponsor;
+  };
+
+  /**
+   * Les noms de ces partenaires.
+   * @param {any[]} partenaires - Des partenaires.
+   * @returns {string[]} Leurs noms, dans l'ordre.
+   */
+  const noms = (partenaires) => partenaires.map((/** @type {any} */ s) => s.title);
+
+  // En PREMIER dans ce bloc : React ne previent qu'une fois par composant d'une cle
+  // absente ; un temoin plus haut qui l'aurait declenchee rendrait celui-ci muet.
+  it('montre chaque partenaire sur sa rangee, chacune avec sa propre cle', () => {
+    const erreurs = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const textes = texteDe(monterAvec([
+      partenaire('Boulangerie Martin', null, 11),
+      partenaire('Garage Durand', null, 12),
+      partenaire('Mairie', 'https://mairie.fr'),
+      partenaire('Office des sports', 'https://mairie.fr'),
+    ]).root);
+
+    ['Boulangerie Martin', 'Garage Durand', 'Mairie', 'Office des sports']
+      .forEach((nom) => expect(textes).toContain(nom));
+    const avertissementsDeCle = erreurs.mock.calls
+      .map((/** @type {any[]} */ appel) => appel.map(String).join(' '))
+      .filter((/** @type {string} */ message) => /same key|unique "key"/.test(message));
+    expect(avertissementsDeCle).toEqual([]);
+  });
+
+  it('deux partenaires SANS site : en retirer un garde l autre', () => {
+    const arbre = monterAvec([
+      partenaire('Boulangerie Martin', null, 11),
+      partenaire('Garage Durand', null, 12),
+      partenaire('Elseve', 'https://elseve.fr', 13),
+    ]);
+
+    const restants = retirer(arbre, 'Boulangerie Martin');
+
+    expect(noms(restants)).toEqual(['Garage Durand', 'Elseve']);
+    // Les `id` repartent tels quels : c'est par eux que le serveur garde les logos.
+    expect(restants.map((/** @type {any} */ s) => s.id)).toEqual([12, 13]);
+  });
+
+  it('deux partenaires avec le MEME site : en retirer un garde l autre', () => {
+    const arbre = monterAvec([
+      partenaire('Mairie', 'https://mairie.fr', 21),
+      partenaire('Office des sports', 'https://mairie.fr', 22),
+    ]);
+
+    expect(noms(retirer(arbre, 'Office des sports'))).toEqual(['Mairie']);
+  });
+
+  it('ancien partenaire SANS id : on vise sa place dans la liste', () => {
+    const arbre = monterAvec([
+      partenaire('Boulangerie Martin', ''),
+      partenaire('Garage Durand', ''),
+    ]);
+
+    expect(noms(retirer(arbre, 'Garage Durand'))).toEqual(['Boulangerie Martin']);
+  });
+});

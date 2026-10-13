@@ -1485,6 +1485,8 @@ function SubscriptionOffers({ navigation, route }) {
       // panneau touchait les bords gauche et droit, mais pas le bas.
       bottomInsetMode="edge-to-edge"
       contentContainerStyle={[Spaces.paddingBottom[0], Spaces.paddingTop[0]]}
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
     >
       <View style={[Alignments.fill, { marginHorizontal: -24 }]}>
         <ScrollView

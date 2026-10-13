@@ -370,6 +370,8 @@ function RecruitmentAdEdit({ navigation, route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
       onGoBack={() => navigation.goBack()}
       title={t('recruitmentAdEdit.title', "Modifier l'annonce")}
     >

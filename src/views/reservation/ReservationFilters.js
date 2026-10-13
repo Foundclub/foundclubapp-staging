@@ -167,6 +167,8 @@ function ReservationFilters({ navigation }) {
         { paddingBottom: insets.bottom },
       ]}
       contentWidth={WEB_FILTER_SURFACE_PROPS.contentWidth}
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
       responsivePadding={WEB_FILTER_SURFACE_PROPS.responsivePadding}
       surface={WEB_FILTER_SURFACE_PROPS.surface}
     >
