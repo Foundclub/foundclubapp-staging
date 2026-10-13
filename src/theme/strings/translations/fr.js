@@ -6447,6 +6447,21 @@ export default {
       introuvable: 'Cette fermeture n’existe plus.',
       saisie: 'Vérifiez les dates, les heures et le motif.',
     },
+    // CRFERM (13/10, COL-010, « D8 B », planche P8v4-fermee) — la marque sur la carte d’une séance.
+    etiquette: {
+      bloque: 'Bloqué par la Ville à cette heure',
+      bloqueDeplacer: 'Bloqué par la Ville · à déplacer',
+      deplacer: 'Installation fermée · à déplacer',
+      deplacerAide: 'Ouvre la modification de la séance.',
+      deplacerFeminin: '{{lieu}} fermée · à déplacer',
+      deplacerMasculin: '{{lieu}} fermé · à déplacer',
+      fermeHeure: 'Installation fermée à cette heure',
+      fermeHeureFeminin: '{{lieu}} fermée à cette heure',
+      fermeHeureMasculin: '{{lieu}} fermé à cette heure',
+      fermeJour: 'Installation fermée ce jour-là',
+      fermeJourFeminin: '{{lieu}} fermée ce jour-là',
+      fermeJourMasculin: '{{lieu}} fermé ce jour-là',
+    },
     form: {
       a: 'À',
       au: 'Au',
@@ -6560,6 +6575,8 @@ export default {
       annuler: 'Annuler l’entraînement',
       deplacer: 'Changer l’heure ou le lieu',
       joueurs: 'Les joueurs ne sont prévenus que si le club déplace ou annule.',
+      // CRFERM (13/10, « D8 B ») — le bandeau d’un joueur ou d’un parent, sans geste.
+      membre: 'Ton club peut déplacer ou annuler la séance : tu seras prévenu·e.',
     },
   },
   // COLL-C5 (03/10/2026) — les chiffres de la Ville : la page « Chiffres et export » (planche 30),

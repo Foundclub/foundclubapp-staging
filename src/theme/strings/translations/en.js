@@ -5911,6 +5911,21 @@ export default {
       introuvable: 'This closure no longer exists.',
       saisie: 'Check the dates, times and reason.',
     },
+    // CRFERM (13/10, COL-010) — the mark on a session card.
+    etiquette: {
+      bloque: 'Blocked by the town at this time',
+      bloqueDeplacer: 'Blocked by the town · to move',
+      deplacer: 'Facility closed · to move',
+      deplacerAide: 'Opens the session editing.',
+      deplacerFeminin: '{{lieu}} closed · to move',
+      deplacerMasculin: '{{lieu}} closed · to move',
+      fermeHeure: 'Facility closed at this time',
+      fermeHeureFeminin: '{{lieu}} closed at this time',
+      fermeHeureMasculin: '{{lieu}} closed at this time',
+      fermeJour: 'Facility closed that day',
+      fermeJourFeminin: '{{lieu}} closed that day',
+      fermeJourMasculin: '{{lieu}} closed that day',
+    },
     form: {
       a: 'To',
       au: 'To',
@@ -6023,6 +6038,8 @@ export default {
       annuler: 'Cancel the training session',
       deplacer: 'Change the time or place',
       joueurs: 'Players are only notified if the club moves or cancels.',
+      // CRFERM (13/10) — the banner of a player or a parent, without any action.
+      membre: 'Your club may move or cancel the session: you will be notified.',
     },
   },
   // COLL-C5 (03/10/2026) — the City's figures (same keys as fr.js).

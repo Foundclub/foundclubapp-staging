@@ -8204,12 +8204,15 @@ function EventDetails({ navigation, route }) {
             {/* COLL-C4B (02/10) — D16 : la Ville a ferme l installation ce jour-la
                 (`facilityClosure` de la fiche). Le bandeau et les deux gestes du CLUB
                 (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}
-            {event?.facilityClosure && canEdit ? (
+            {/* CRFERM (13/10, « D8 B ») : TOUS les membres lisent le bandeau ; un joueur, sans
+                les gestes ni le mot de la Ville (planche P8v4-fermee, état 3). */}
+            {event?.facilityClosure ? (
               <FacilityClosureBanner
                 closure={event.facilityClosure}
                 facilityType={event?.facility?.type}
-                onCancel={handleCancelEvent}
-                onMove={handleEditEvent}
+                onCancel={canEdit ? handleCancelEvent : undefined}
+                onMove={canEdit ? handleEditEvent : undefined}
+                pourUnMembre={!canEdit}
               />
             ) : null}
             {ligneDAttente ? (
