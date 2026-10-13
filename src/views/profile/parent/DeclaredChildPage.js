@@ -140,6 +140,8 @@ function Lien({
  *      « Chercher un club pour Anissa » ;
  *   3. « Ses demandes » en attente (masque s il n y en a pas) — sans « Annuler la demande » :
  *      la route serveur n existe pas encore (lot L8) ;
+ *   3 bis. PAR-L13 (13/10, E29, prototype planche 3) — « Sa carte » (moins de 13 ans) : son
+ *      numéro et son poste, « Carte de collection », « Voir » ouvre sa carte ;
  *   4. « Infos sportives » (maillot, poste), « Compléter » / « Modifier » ;
  *   5. « Stats et retours de match » (moins de 13 ans) ;
  *   6. « Modifier sa fiche », « Supprimer la fiche ».
@@ -155,6 +157,7 @@ function Lien({
  * @param {(enfant: any) => void} [props.onDelete] - « Supprimer la fiche ».
  * @param {(enfant: any) => void} [props.onEdit] - « Modifier sa fiche » / « Compléter ».
  * @param {(enfant: any) => void} [props.onGiveAccount] - F20 « Donner un compte à Lina ».
+ * @param {(enfant: any) => void} [props.onOpenCard] - PAR-L13 « Voir » sa carte de collection.
  * @param {() => void} [props.onRetryDemandes] - Relire les demandes.
  * @param {(enfant: any) => void} props.onSearchClub - « Chercher un club pour Lea ».
  * @returns {import('react').ReactElement} - La page.
@@ -166,6 +169,7 @@ function DeclaredChildPage({
   onDelete = undefined,
   onEdit = undefined,
   onGiveAccount = undefined,
+  onOpenCard = undefined,
   onRetryDemandes = undefined,
   onSearchClub,
 }) {
@@ -309,6 +313,27 @@ function DeclaredChildPage({
               ) : null}
             </View>
           ))}
+        </Carte>
+      ) : null}
+
+      {moinsDe13Ans && onOpenCard ? (
+        <Carte
+          action={(
+            <Lien
+              libelle={t('myChildren.card.blockOpen')}
+              onPress={() => onOpenCard(enfant)}
+              testID="declared-child-card-open"
+            />
+          )}
+          testID="declared-child-card"
+          titre={t('myChildren.card.blockTitle')}
+        >
+          {maillot || poste ? (
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {[maillot, poste].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+          <Text style={[Fonts.p3, Fonts.neutral200]}>{t('myChildren.card.blockCaption')}</Text>
         </Carte>
       ) : null}
 

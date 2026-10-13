@@ -349,3 +349,69 @@ describe('PAR-L5L6 E07 — la fiche de l enfant', () => {
     expect(onGiveAccount).toHaveBeenCalledWith(lina);
   });
 });
+
+// PAR-L13 (13/10, design parent E29, prototype planche 3) — sur la fiche d un enfant de moins de
+// 13 ans, un bloc « Sa carte » après « Ses demandes » : son numéro et son poste, « Carte de
+// collection », et « Voir » qui ouvre sa carte.
+describe('PAR-L13 — le bloc « Sa carte » de la fiche', () => {
+  const ANISSA = {
+    ...LEA, age: 11, documentId: 'anissa', firstname: 'Anissa', number: 7, position: 'Meneuse',
+  };
+
+  /**
+   * Monte la fiche avec ses propriétés.
+   * @param {any} props - Les propriétés.
+   * @returns {Promise<any>} L arbre rendu.
+   */
+  const monter = async (props) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      // eslint-disable-next-line react/jsx-props-no-spreading
+      arbre = renderer.create(<DeclaredChildPage onSearchClub={jest.fn()} {...props} />);
+    });
+    return arbre;
+  };
+
+  test('🔴 moins de 13 ans : « Sa carte », numéro et poste, « Voir » ouvre SA carte', async () => {
+    const onOpenCard = jest.fn();
+    const arbre = await monter({ enfant: ANISSA, onOpenCard });
+
+    expect(texteVisible(arbre)).toContain('Sa carte | Voir | 7 · Meneuse | Carte de collection');
+    const voir = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onPress === 'function' && n.props.testID === 'declared-child-card-open'
+    ))[0];
+    await act(async () => { voir.props.onPress(); });
+    expect(onOpenCard).toHaveBeenCalledWith(ANISSA);
+  });
+
+  test('carte encore vide : seulement « Carte de collection »', async () => {
+    const texte = texteVisible(await monter({ enfant: LEA, onOpenCard: jest.fn() }));
+
+    expect(texte).toContain('Sa carte | Voir | Carte de collection');
+  });
+
+  test('🔴 l ordre : ses demandes, SA CARTE, puis les infos sportives', async () => {
+    const texte = texteVisible(await monter({
+      demandes: [{
+        club: { name: 'FoundClub' }, documentId: 'd', status: 'pending', team: { name: 'U11' },
+      }],
+      enfant: ANISSA,
+      onEdit: jest.fn(),
+      onOpenCard: jest.fn(),
+    }));
+    const ordre = ['Ses demandes', 'Sa carte', 'Infos sportives']
+      .map((bloc) => texte.indexOf(bloc));
+
+    expect(ordre.every((place) => place > -1)).toBe(true);
+    expect([...ordre].sort((a, b) => a - b)).toEqual(ordre);
+  });
+
+  test('13 ans et plus : pas de carte d enfant (D10 vise les moins de 13 ans)', async () => {
+    const texte = texteVisible(await monter({
+      enfant: { ...ANISSA, age: 13 }, onOpenCard: jest.fn(),
+    }));
+
+    expect(texte).not.toContain('Sa carte');
+  });
+});

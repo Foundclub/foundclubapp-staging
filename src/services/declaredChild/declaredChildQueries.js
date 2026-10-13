@@ -5,6 +5,7 @@ import {
   createDeclaredChild,
   deleteDeclaredChild,
   getMyDeclaredChildren,
+  setDeclaredChildPhoto,
   updateDeclaredChild,
 } from './declaredChildService';
 
@@ -83,6 +84,16 @@ export const useUpdateDeclaredChild = (options = {}) => useChildMutation(
  * @param {object} [options] - Options react-query.
  * @returns {object} La mutation.
  */
+/**
+ * PAR-L13 — poser ou changer la photo de la carte d'un enfant (un FICHIER, jamais un identifiant).
+ * @param {object} [options] - Options de `useMutation`.
+ * @returns {object} La mutation.
+ */
+export const useSetDeclaredChildPhoto = (options = {}) => useChildMutation(
+  ({ documentId, photo }) => setDeclaredChildPhoto(documentId, photo),
+  options,
+);
+
 export const useDeleteDeclaredChild = (options = {}) => useChildMutation(
   (documentId) => deleteDeclaredChild(documentId),
   options,

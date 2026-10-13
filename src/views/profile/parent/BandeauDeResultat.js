@@ -7,8 +7,11 @@ import useTheme from '@/theme/themeContext';
 
 import Icone from '@/components/atoms/SvgIcon/SvgIcon';
 
-/** Un prenom qui commence par une voyelle (ou un h) s elide : « la fiche d'Anissa ». */
-const S_ELIDE = /^[aeiouyhàâäéèêëîïôöùûüœæ]/i;
+/**
+ * Un prenom qui commence par une voyelle (ou un h) s elide : « la fiche d'Anissa ».
+ * PAR-L13 — partage avec la carte de l enfant (« La carte d'Anissa »).
+ */
+export const S_ELIDE = /^[aeiouyhàâäéèêëîïôöùûüœæ]/i;
 
 /**
  * PAR-L5L6 (13/10, design parent E05 et E08) — LE BANDEAU QUI DIT CE QUI VIENT D ARRIVER, en
