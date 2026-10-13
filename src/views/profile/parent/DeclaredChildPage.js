@@ -50,7 +50,8 @@ function Carte({
         <Text style={[Fonts.h4Bold, Fonts.neutral00, { flexGrow: 1, flexShrink: 1 }]}>{titre}</Text>
         {action}
       </View>
-      <View style={{ backgroundColor: withAlpha(Colors.primary500, 0.24), height: 1 }} />
+      {/* Le filet est une BORDURE, pas un fond : aucun texte ne se pose sur du primary500. */}
+      <View style={{ borderTopColor: withAlpha(Colors.primary500, 0.24), borderTopWidth: 1 }} />
       {children}
     </View>
   );
