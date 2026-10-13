@@ -180,6 +180,14 @@ const rendre = (brouillon = {}, installations = null) => {
 };
 
 /**
+ * AMICAUX-CORRECTIFS 83 — les pastilles s ecrivent en espaces INSECABLES (parade Android 16,
+ * `texteInsecable`) : on lit le texte comme l oeil le voit, espaces ordinaires.
+ * @param {string} texte Le texte rendu.
+ * @returns {string} Le meme texte, espaces ordinaires.
+ */
+const commeAffiche = (texte) => texte.replace(/\u00a0/g, ' ');
+
+/**
  * Tous les textes reellement affiches, dans l'ordre du rendu.
  * @param {any} arbre L'arbre rendu.
  * @returns {string[]} Les textes affiches.
@@ -190,7 +198,7 @@ const textesVisibles = (arbre) => {
   const parcourir = (/** @type {any} */ noeud) => {
     if (noeud === null || noeud === undefined || typeof noeud === 'boolean') return;
     if (typeof noeud === 'string' || typeof noeud === 'number') {
-      sortie.push(String(noeud));
+      sortie.push(commeAffiche(String(noeud)));
       return;
     }
     if (Array.isArray(noeud)) {
@@ -236,7 +244,7 @@ const textesSous = (composant) => {
   const sortie = [];
   const parcourir = (/** @type {any} */ noeud) => {
     if (typeof noeud === 'string') {
-      sortie.push(noeud);
+      sortie.push(commeAffiche(noeud));
       return;
     }
     if (noeud && Array.isArray(noeud.children)) noeud.children.forEach(parcourir);
