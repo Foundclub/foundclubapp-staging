@@ -4,7 +4,7 @@ import {
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Modal, Text, TouchableOpacity, View,
+  ImageBackground, Modal, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -232,10 +232,13 @@ function LigneDuRecap({
  * posee par l ecran : aucune route neuve. Elle passe sous les barres d Android
  * (`statusBarTranslucent`) ; le gabarit des tunnels reserve le haut (ScreenContainer) et le bas
  * (`insets.bottom + 12`). Le retour d Android appelle `onRequestClose`.
+ * Elle peint son propre fond (le fond de l app) : sur le site, une fenetre est BLANCHE par defaut
+ * et le gabarit compte sur le fond de la page (banc du site, 13/10 : titre blanc sur blanc).
  * @param {{ children: import('react').ReactNode, onRequestClose: () => void }} props
  * @returns {import('react').ReactElement} La fenetre.
  */
 export function FenetrePleinEcran({ children, onRequestClose }) {
+  const { Colors, Images } = useTheme();
   return (
     <Modal
       animationType="slide"
@@ -245,7 +248,13 @@ export function FenetrePleinEcran({ children, onRequestClose }) {
       transparent={false}
       visible
     >
-      {children}
+      <ImageBackground
+        resizeMode="cover"
+        source={Images.bg2}
+        style={{ backgroundColor: Colors.primary700, flex: 1 }}
+      >
+        {children}
+      </ImageBackground>
     </Modal>
   );
 }

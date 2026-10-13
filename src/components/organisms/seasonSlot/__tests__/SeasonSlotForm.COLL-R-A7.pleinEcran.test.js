@@ -1,6 +1,8 @@
 /* eslint-disable max-len -- donnees de test : les fixtures se lisent mieux sur une ligne */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Modal, Text } from 'react-native';
+import {
+  ImageBackground, Modal, StyleSheet, Text,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -204,6 +206,10 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     }));
     expect(tunnel(arbre).onBack).toBeUndefined();
     expect(lus(arbre)).not.toContain('Club');
+    // Banc du site (390 px, 13/10) : une fenêtre y est BLANCHE par défaut et le gabarit compte sur
+    // le fond de la page ⇒ titre blanc sur blanc. La fenêtre peint donc son propre fond.
+    const fond = StyleSheet.flatten(arbre.root.findByType(Modal).findByType(ImageBackground).props.style);
+    expect(fond).toEqual(expect.objectContaining({ backgroundColor: expect.any(String), flex: 1 }));
     await appeler(() => tunnel(arbre).onClose());
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
