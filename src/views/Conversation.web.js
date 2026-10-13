@@ -69,6 +69,9 @@ import ContactShareBubble from '@/components/molecules/contactShareBubble/Contac
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
+// AMICAUX-CORRECTIFS 81 — la bulle de proposition AMICALE du telephone, et ses regles.
+// eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
+import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // MSG1W (07/10) — la forme du fil (groupes, puces de date, coches), sans rendu.
@@ -140,6 +143,12 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import { getImageUrl } from '@/utils/imageUrl'
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
+import {
+  buildFriendlyProposalConfirmation,
+  canAcceptFriendlyProposal,
+  isFriendlyProposal,
+  respondToFriendlyProposal,
+} from '@/views/friendlyMatch/friendlyProposalInChat';
 import {
   buildCanonicalLeagueProposalPayload,
   buildLeagueProposalPayload,
@@ -2653,9 +2662,22 @@ function Conversation({ navigation, route }) {
   const handleProposalResponse = useCallback(async (message, status) => {
     const messageId = getMessageId(message)
     const matchId = String(message?.composition?.matchId || leagueMatchId || '').trim()
+    // AMICAUX-CORRECTIFS 81 — un match AMICAL se repond par SON workflow, comme au telephone : le
+    // match se cree, les autres propositions sont refusees. La reponse generique ne changeait que
+    // l etiquette de la bulle. Accepter est lourd : on confirme d abord.
+    const amical = isFriendlyProposal(message?.composition);
+    if (amical && status === 'accepted') {
+      const confirmation = buildFriendlyProposalConfirmation();
+      // eslint-disable-next-line no-alert -- la confirmation native du site, comme « Signaler »
+      if (!window.confirm(`${confirmation.title}\n\n${confirmation.body}`)) return;
+    }
 
     try {
-      if (status === 'accepted' && matchId) {
+      if (amical) {
+        const action = status === 'accepted' ? 'accept' : 'decline';
+        await respondToFriendlyProposal(message.composition, action);
+        await queryClient.invalidateQueries({ queryKey: ['friendly-match-ads'] });
+      } else if (status === 'accepted' && matchId) {
         const legalAcceptance = requestWebLeagueLegalAcceptance(
           LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE,
           matchId,
@@ -2689,6 +2711,7 @@ function Conversation({ navigation, route }) {
     chatData?.type,
     leagueLegalMatchLabel,
     leagueMatchId,
+    queryClient,
     requestWebLeagueLegalAcceptance,
     respondToProposal,
   ])
@@ -2955,6 +2978,22 @@ function Conversation({ navigation, route }) {
             {i18next.t('conversation.web.fil.voirLesVotes', 'Voir les votes')}
           </button>
         </div>
+      );
+    }
+
+    // AMICAUX-CORRECTIFS 81 — la proposition de match AMICAL : la bulle du TELEPHONE. Ses boutons
+    // ne vont qu a ceux que le SERVEUR designe (`canAcceptUserIds`) : la carte generique ci-dessous
+    // les montrait aussi a l equipe qui a ENVOYE la proposition.
+    // Temoin : views/__tests__/ConversationWebAMIC81.test.js.
+    if (isFriendlyProposal(composition)) {
+      return (
+        <ProposalMessageBubble
+          allowResponseActions
+          isMe={!canAcceptFriendlyProposal(composition, userData?.documentId)}
+          onAccept={() => handleProposalResponse(message, 'accepted')}
+          onDecline={() => handleProposalResponse(message, 'declined')}
+          proposal={composition}
+        />
       );
     }
 
@@ -3797,12 +3836,22 @@ function Conversation({ navigation, route }) {
     // MSG1W §3.8 — un evenement (relation ou partage) se dessine avec la bulle du telephone ; le
     // mot « Partage » envoye avec lui ne s affiche plus.
     const evenement = evenementDuMessage(message);
-    const texte = evenement ? '' : String(message?.message || '').trim();
+    // AMICAUX-CORRECTIFS 81 — le texte de secours d une proposition amicale parle au camp qui
+    // RECOIT (« … se deplace chez vous ») : faux pour celui qui l a envoyee, et la bulle dit deja
+    // tout, petit mot compris (AMIC-82). Seule une proposition d avant ce lot, sans petit mot dans
+    // la bulle, le garde — et seulement pour le camp qui recoit.
+    const propositionAmicale = isFriendlyProposal(message?.composition);
+    const texteDeSecoursInutile = propositionAmicale && (
+      Boolean(String(message?.composition?.staffMessage || '').trim())
+      || !canAcceptFriendlyProposal(message?.composition, userData?.documentId)
+    );
+    const texte = evenement || texteDeSecoursInutile ? '' : String(message?.message || '').trim();
     // Les cartes du telephone (composition, sondage) portent deja leur cadre : elles se posent
     // SANS bulle. COL-015 — PAS l evenement : depuis MSG1A §3.8, EventMessageBubble se pose DANS
     // la bulle (BulleDuFil sur le telephone) ; nue, elle tombait sur le fond nuit du fil.
     const estCarteNue = ['contact_share', 'location_share', 'poll']
       .includes(String(message?.composition?.type || ''))
+      || propositionAmicale
       || (message?.composition?.type === 'lineup_share'
         && Boolean(String(message?.composition?.eventId || '').trim()));
     const fondDeBulle = isMine ? PALETTE_DU_FIL.bulleMienne : PALETTE_DU_FIL.bulleRecue;
