@@ -9351,7 +9351,19 @@ export default {
         allowAndNotifyConflict: 'This slot exceeds capacity, but it will remain allowed and will notify the club managers.',
         allowAndNotifyHint: 'Slot full at this time — the club allows it anyway, the event stays confirmed.',
         capacityAvailable: 'This facility still has capacity for this slot.',
+        // CRFERM (13/10, COL-011) — the back arrow, named.
+        changerLaDate: 'Change the date',
         disabledNextHint: 'Select a club facility or enter an external address to continue.',
+        // CRFERM (13/10, COL-011) — the closed facility, told to the club: place, days, reason.
+        fermeture: {
+          bloque: 'This facility is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
+          bloqueFeminin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
+          bloqueMasculin: '{{lieu}} is booked by the town {{quand}}{{motif}}. Choose another time or another facility.',
+          ferme: 'This facility is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          fermeFeminin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          fermeMasculin: '{{lieu}} is closed {{quand}}{{motif}}. Choose another day or another facility.',
+          sansDetail: 'The town has closed this facility at that time. Choose another day or another facility.',
+        },
         focusSubtitle: 'Where does the event take place?',
         helper: 'Select a club venue or enter an external address.',
         installationHelper: 'Choose an existing facility from your club.',

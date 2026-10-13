@@ -9950,8 +9950,27 @@ export default {
         // eslint-disable-next-line max-len
         allowAndNotifyHint: "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
         capacityAvailable: 'Cette installation a encore de la capacité pour ce créneau.',
+        // CRFERM (13/10, COL-011) — le geste de la flèche Retour, nommé.
+        changerLaDate: 'Changer la date',
         // eslint-disable-next-line max-len
         disabledNextHint: 'Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.',
+        // CRFERM (13/10, COL-011) — l’installation fermée, dite au club : lieu, jours, motif.
+        fermeture: {
+          // eslint-disable-next-line max-len
+          bloque: 'Cette installation est réservée par la Ville {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          bloqueFeminin: '{{lieu}} est réservée par la Ville {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          bloqueMasculin: '{{lieu}} est réservé par la Ville {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.',
+          // eslint-disable-next-line max-len
+          ferme: 'Cette installation est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeFeminin: '{{lieu}} est fermée {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          fermeMasculin: '{{lieu}} est fermé {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.',
+          // eslint-disable-next-line max-len
+          sansDetail: 'La Ville a fermé cette installation à ce moment-là. Choisis un autre jour ou une autre installation.',
+        },
         focusSubtitle: "Où se déroule l'événement ?",
         helper: 'Sélectionne un lieu du club ou saisis une adresse externe.',
         installationHelper: 'Choisis une installation existante de ton club.',

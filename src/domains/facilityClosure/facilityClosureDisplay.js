@@ -1,6 +1,7 @@
 import { eachDayOfInterval, format, parseISO } from 'date-fns';
 import { enGB, fr } from 'date-fns/locale';
 
+import { genreDuLieu, lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
@@ -416,6 +417,75 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
         title: libelle(fermeture),
       };
     }));
+};
+
+/**
+ * 🚧 CRFERM (13/10, COL-011) — LE REFUS D UNE INSTALLATION FERMÉE, DIT AU CLUB (« tu ») : le lieu,
+ * les jours (et les heures d un blocage ou d une plage), le motif — « Le Gymnase Cosec est fermé du
+ * dimanche 11 octobre au jeudi 15 octobre (vacances). Choisis un autre jour ou une autre
+ * installation. » Jamais le mot de la Ville (le serveur ne l envoie pas : route publique). Sans
+ * fermeture lue (serveur d avant), une phrase au « tu » sans détail.
+ * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
+ * @param {any} fermeture - `closure` de l occupation ou du refus EVENT_FACILITY_CLOSED, ou null.
+ * @param {string | null | undefined} [nomDuLieu] - Le nom de l installation.
+ * @returns {string} La phrase.
+ */
+export const closureRefusalText = (t, fermeture, nomDuLieu = null) => {
+  if (!fermeture?.startDate) {
+    return t(
+      'eventWizard.steps.location.fermeture.sansDetail',
+      'La Ville a fermé cette installation à ce moment-là. '
+        + 'Choisis un autre jour ou une autre installation.',
+    );
+  }
+  const blocage = fermeture.kind === 'block';
+  const unJour = !fermeture.endDate || fermeture.endDate === fermeture.startDate;
+  let quand = closureDaysLabel(t, fermeture, { long: true });
+  if (blocage && fermeture.startTime && fermeture.endTime) {
+    quand = `${quand} ${t('collectiviteFermetures.jours.deA', 'de {{debut}} à {{fin}}', {
+      debut: heureCourte(fermeture.startTime),
+      fin: heureCourte(fermeture.endTime),
+      ...SANS_ECHAPPEMENT,
+    })}`;
+  }
+  if (unJour) {
+    quand = t('collectiviteFermetures.confirmer.le', 'le {{jour}}', {
+      jour: quand, ...SANS_ECHAPPEMENT,
+    });
+  }
+  const motif = blocage
+    ? String(fermeture.label || '').trim()
+    : closureName(fermeture) || reasonLabel(t, fermeture.reason).toLocaleLowerCase();
+  const nom = String(nomDuLieu || '').trim();
+  const valeurs = {
+    ...SANS_ECHAPPEMENT,
+    lieu: nom ? lieuAvecArticle(nom, t).replace(/^./, (lettre) => lettre.toLocaleUpperCase()) : '',
+    motif: motif ? ` (${motif})` : '',
+    quand,
+  };
+  let genre = 'generique';
+  if (nom) genre = genreDuLieu(nom) === 'feminin' ? 'feminin' : 'masculin';
+  // Les phrases par défaut (fr.js porte les mêmes) : le sujet accordé, puis la suite.
+  const sujets = blocage
+    ? {
+      feminin: '{{lieu}} est réservée par la Ville',
+      generique: 'Cette installation est réservée par la Ville',
+      masculin: '{{lieu}} est réservé par la Ville',
+    }
+    : {
+      feminin: '{{lieu}} est fermée',
+      generique: 'Cette installation est fermée',
+      masculin: '{{lieu}} est fermé',
+    };
+  const suite = blocage
+    ? ' {{quand}}{{motif}}. Choisis une autre heure ou une autre installation.'
+    : ' {{quand}}{{motif}}. Choisis un autre jour ou une autre installation.';
+  const suffixe = { feminin: 'Feminin', generique: '', masculin: 'Masculin' }[genre];
+  return t(
+    `eventWizard.steps.location.fermeture.${blocage ? 'bloque' : 'ferme'}${suffixe}`,
+    `${sujets[genre]}${suite}`,
+    valeurs,
+  );
 };
 
 /**
