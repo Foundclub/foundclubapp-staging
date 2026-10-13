@@ -5,6 +5,8 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /**
  * Un groupe de pastilles, a choix unique ou a choix MULTIPLE.
  *
@@ -94,7 +96,10 @@ function ChoiceChipGroup({
                 { color: isActive ? Colors.primary500 : Colors.neutral200 },
               ]}
               >
-                {option.label}
+                {/* AMICAUX-CORRECTIFS 83 — « Valbrune U13 » cochee devenait « Valbrune » sur
+                    Android 16 (meme defaut que 72). Temoin :
+                    AMIC72-pastillesInsecables.test.js (friendlyMatchListContent). */}
+                {texteInsecable(option.label)}
               </Text>
             </TouchableOpacity>
           );

@@ -5349,6 +5349,21 @@ export default {
     vide: 'Aucune actualité publiée. Les membres de vos clubs la liront dans leurs messages.',
   },
   collectiviteClubs: {
+    // COLL-R-A6 (13/10/2026, COL-001, planche P7v4-clubs, D1 A′) : la carte d'un club en 3 lignes.
+    carte: {
+      ecrire: 'Écrire aux dirigeants de {{club}}',
+      ecrireElide: 'Écrire aux dirigeants d’{{club}}',
+      equipes: '{{nombre}} équipes',
+      equipesUne: '{{nombre}} équipe',
+      membres: '{{nombre}} membres',
+      membresUn: '{{nombre}} membre',
+      seances: '{{nombre}} séances cette semaine',
+      seancesAucune: 'aucune séance cette semaine',
+      seancesUne: '{{nombre}} séance cette semaine',
+      semaine: '{{nombre}} séances',
+      semaineAucune: 'aucune',
+      semaineUne: '{{nombre}} séance',
+    },
     detail: {
       acceptedMany: '{{nombre}} acceptées',
       acceptedOne: '{{nombre}} acceptée',
@@ -5480,7 +5495,9 @@ export default {
       one: 'Dirigeant : {{noms}}',
     },
     list: {
-      emptyHint: 'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+      // COLL-R-A6 (13/10, planche P7v4-clubs état « vide », « Comme P7 ») : un seul bouton.
+      // eslint-disable-next-line max-len
+      emptyHint: 'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
       error: 'Les clubs n’ont pas pu être lus.',
       invite: 'Inviter un club absent de FoundClub',
       inviteDesktop: 'Inviter un club absent',
@@ -5767,6 +5784,8 @@ export default {
       refuseHint: 'Le club reçoit votre motif ; il n’est pas rattaché.',
       refuseWindowYes: 'Refuser la demande',
       refuseYes: 'Oui, refuser',
+      // COLL-R-A6 (13/10, COL-001, planche P7v4-clubs état 4).
+      rejoindre: '{{club}} demande à rejoindre la Ville',
       remind: 'Relancer',
       resend: 'Renvoyer la demande',
       title: 'Demandes de rattachement',
@@ -5932,6 +5951,8 @@ export default {
       completDe: 'complet {{heures}}',
       du: 'du {{debut}} au {{fin}}',
       erreur: 'Impossible de charger les créneaux',
+      // COLL-R-A6 (13/10, COL-019, planche P7v4-couleur) : la légende, au-delà de 2 clubs.
+      legende: 'Couleurs des clubs',
       onglet: 'Créneaux',
       ongletInfos: 'Infos',
       ongletPlanning: 'Planning',
@@ -10924,6 +10945,9 @@ export default {
     edit: 'Modifier',
     goBackToThisStep: 'Retourne à cette étape pour la modifier',
     iCan: 'Je peux',
+    iCanAway: 'Me déplacer',
+    iCanBoth: 'Recevoir ou me déplacer',
+    iCanHost: 'Recevoir',
     incompleteSummary: 'Récapitulatif incomplet',
     listingPublished: 'Annonce publiée',
     notFilledIn: 'non renseigné',
@@ -16210,6 +16234,7 @@ export default {
       date: 'Date',
       host: 'Qui reçoit',
       level: 'Niveau',
+      note: 'Message',
       section: 'Section',
       time: 'Heure',
       venue: 'Lieu',
@@ -22750,6 +22775,15 @@ export default {
       pendingForChild: 'Demande envoyée au numéro finissant par {{hint}} (pour {{firstname}}).',
       title: 'Les comptes de mes enfants',
     },
+    // PAR-L5L6 (13/10, design parent E05) — ce qui vient d'arriver, dit en tête de la liste.
+    // Deux formes : « de Martin », « d’Anissa » (l'élision devant une voyelle ou un h).
+    banner: {
+      // E08 — après « Déclarer mon enfant ». « La fiche de… » : l'app ne connaît pas le genre.
+      created: 'La fiche de {{firstname}} est créée.',
+      createdElided: 'La fiche d’{{firstname}} est créée.',
+      deleted: 'La fiche de {{firstname}} est supprimée.',
+      deletedElided: 'La fiche d’{{firstname}} est supprimée.',
+    },
     confirmDelete: {
       cancel: 'Annuler',
       confirm: 'Supprimer',
@@ -22783,6 +22817,10 @@ export default {
       birthdateDayLabel: 'Jour de naissance',
       birthdateMonthLabel: 'Mois de naissance',
       birthdateYearLabel: 'Année de naissance',
+      // PAR-L5L6 (E08) — motif de l'app : bouton plein, puis « Annuler » en lien.
+      cancel: 'Annuler',
+      // PAR-L5L6 (E09) — en modification, sous maillot et poste : vider, c'est effacer.
+      clearHint: 'Vider un champ l’efface.',
       errors: {
         // 📅 DATENAISS (22/09) : une date après aujourd'hui est dite AVANT
         // d'envoyer, comme le palier 13 (Sentry SERVEUR-STRAPI-T).
@@ -22812,11 +22850,56 @@ export default {
         + ' ni adresse : c’est toi qu’on contacte.',
       lastnameLabel: 'Nom',
       lastnamePlaceholder: 'Martin',
+      // PAR-L5L6 (E08) — sous « réservée aux moins de 13 ans » : l'issue, au lieu d'un mur.
+      linkAccount: 'Relier son compte',
       numberLabel: 'Numéro de maillot (facultatif)',
       positionLabel: 'Poste (facultatif)',
       positionPlaceholder: 'Gardienne, attaquant…',
       submitAdd: 'Déclarer mon enfant',
       submitEdit: 'Enregistrer',
+    },
+    // PAR-L5L6 (13/10, design parent E06) — « Comment ça marche ? » : les explications de
+    // « Mes enfants », mot pour mot, dans une feuille.
+    help: {
+      title: 'Comment ça marche ?',
+      yourChild: 'ton enfant',
+    },
+    // PAR-L5L6 (13/10, design parent E04) — « Mes enfants » : une carte courte par enfant, et
+    // le club sur SA ligne (« on voit bien que les enfants sont dans aucun club », Adel, 13/10).
+    list: {
+      cancelLink: 'Annuler la demande de lien',
+      clubLabel: 'Club',
+      // C4 du design : « Annuler » partait sans confirmation et sans message d'erreur.
+      confirmCancelLink: {
+        confirm: 'Annuler la demande',
+        keep: 'Garder',
+        message: 'Le numéro finissant par {{hint}} ne pourra plus l’accepter.'
+          + ' Tu pourras en envoyer une autre.',
+        title: 'Annuler la demande de lien ?',
+      },
+      count_one: '{{count}} enfant',
+      count_other: '{{count}} enfants',
+      errors: {
+        cancelLink: 'Impossible d’annuler cette demande pour le moment.',
+      },
+      linkAccountEmpty: 'Ton enfant a 13 ans ou plus ? Relier son compte',
+      loadError: 'Impossible de charger tes enfants.',
+      requestedTeamLabel: 'Équipe demandée',
+      state: {
+        hasAccount: 'A son compte',
+        inTeam: 'En équipe',
+        pending_one: 'Demande en attente',
+        pending_other: '{{count}} demandes en attente',
+      },
+      teamLabel_one: 'Équipe',
+      teamLabel_other: 'Équipes',
+    },
+    // PAR-L5L6 (13/10, design parent E05) — le menu « … » d'un enfant : une feuille, pas une
+    // alerte (sur le site, Alert n'a que deux choix).
+    menu: {
+      delete: 'Supprimer la fiche',
+      edit: 'Modifier sa fiche',
+      open: 'Actions pour {{firstname}}',
     },
     screen: {
       // ⚠️ Pluriel i18next : « _one » / « _other », jamais « _plural » (morte depuis
@@ -22841,6 +22924,21 @@ export default {
       years_other: '{{count}} ans',
       // 18 ans : le lien parental s'éteint tout seul, c'est la loi.
       adultHint: '{{firstname}} est majeur : il gère son compte seul.',
+    },
+    // PAR-L5L6 (13/10, design parent E07, planche 3) — la fiche d'un enfant : son équipe (le
+    // club sur SA ligne), ses demandes en attente, ses infos sportives.
+    sheet: {
+      acceptedOn: 'Acceptée le {{date}}',
+      complete: 'Compléter',
+      edit: 'Modifier',
+      numberLabel: 'Numéro de maillot',
+      pending: 'En attente',
+      positionLabel: 'Poste',
+      requestsError: 'Impossible de charger ses demandes.',
+      requestsTitle: 'Ses demandes',
+      sentOn: 'Envoyée le {{date}}',
+      sportTitle: 'Infos sportives',
+      teamTitle: 'Son équipe',
     },
   },
   // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.

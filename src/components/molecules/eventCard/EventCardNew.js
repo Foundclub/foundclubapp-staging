@@ -253,6 +253,44 @@ const resolveTeamFocusedPrimaryTitle = ({
   return teamName || clubName || 'Match';
 };
 
+/**
+ * AMICAUX-CORRECTIFS 68 — MON equipe quand je suis l INVITEE d un match (je me deplace).
+ * Le serveur ne peut ecrire qu un nom, « vs <invitee> », juste pour l equipe qui recoit : sans ce
+ * retournement, l equipe qui se deplace lisait son PROPRE nom en adversaire. Rend `null` des que
+ * ce n est pas tranche — membre de l equipe qui organise (ou des deux), ou d aucune (parent,
+ * ancien parc) : la carte garde alors son titre d aujourd hui.
+ * Temoin : __tests__/EventCardNewAMIC68.test.js.
+ * @param {any} item - Evenement.
+ * @param {any} userData - Utilisateur connecte.
+ * @returns {any} L equipe invitee qui est la mienne, ou null.
+ */
+const resolveMyGuestTeam = (item, userData) => {
+  const myTeamIds = new Set([...(userData?.myTeams || []), ...(userData?.trainedTeams || [])]
+    .map((team) => String(team?.documentId || '').trim())
+    .filter(Boolean));
+  const organizerTeamId = String(item?.team?.documentId || '').trim();
+  if (!organizerTeamId || myTeamIds.has(organizerTeamId)) return null;
+  const invitedTeams = Array.isArray(item?.invitedTeams) ? item.invitedTeams : [];
+  return invitedTeams.find(
+    (/** @type {any} */ team) => myTeamIds.has(String(team?.documentId || '').trim()),
+  ) || null;
+};
+
+/**
+ * L equipe qui recoit, dite par son club puis son nom (« Montrivage Olympique U13 ») ; son nom
+ * seul quand il porte deja le club.
+ * @param {any} team - Equipe organisatrice.
+ * @returns {string} - Le libelle, vide si rien n est connu.
+ */
+const hostTeamLabel = (team) => {
+  const club = String(team?.club?.name || '').trim();
+  const name = String(team?.name || '').trim();
+  if (!club || normalizeComparableText(name).includes(normalizeComparableText(club))) {
+    return name || club;
+  }
+  return [club, name].filter(Boolean).join(' ');
+};
+
 // Encart d'info spécifique au type (handoff, tour 3) — construit uniquement
 // avec les données déjà présentes sur l'événement, masqué sinon.
 /**
@@ -523,7 +561,9 @@ function EventCardNew({
   const matchDisplay = isMatchEvent
     ? resolveExternalMatchDisplay(item)
     : { contextLabel: '', title: '' };
-  const eventTitle = matchDisplay.title;
+  const myGuestTeam = isMatchEvent ? resolveMyGuestTeam(item, userData) : null;
+  const guestOpponentLabel = myGuestTeam ? hostTeamLabel(item?.team) : '';
+  const eventTitle = guestOpponentLabel ? `VS ${guestOpponentLabel}` : matchDisplay.title;
   const matchContextLabel = matchDisplay.contextLabel;
   const defaultPrimaryTitle = isMatchEvent && eventTitle ? eventTitle : (item?.name || clubName);
   const defaultSecondaryTitle = isMatchEvent && eventTitle
@@ -568,7 +608,7 @@ function EventCardNew({
     })
     : defaultPrimaryTitle;
   const secondaryTitle = isTeamFocusedCard
-    ? [teamName, clubName]
+    ? (guestOpponentLabel ? [myGuestTeam?.name, myGuestTeam?.club?.name] : [teamName, clubName])
       .filter((value, index, values) => value && values.indexOf(value) === index)
       .join(' • ')
     : defaultSecondaryTitle;

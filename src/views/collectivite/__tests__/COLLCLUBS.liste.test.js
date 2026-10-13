@@ -190,16 +190,17 @@ beforeEach(() => {
 });
 
 describe('COLL-CLUBS — planche 1 : la liste des clubs rattachés', () => {
+  // COLL-R-A6 (13/10, COL-001, D1 A′) : les nombres et les séances sur UNE ligne (P7v4-clubs) ;
+  // les lieux des séances sont sur la fiche du club.
   it('chaque carte nomme ses dirigeants et dit ses séances de la semaine', async () => {
     const lus = textes(await monter());
     expect(lus).toEqual(expect.arrayContaining([
       'Clubs rattachés : 3',
       'Dirigeant : Karim Benali',
-      'Cette semaine : 2 séances · Dojo municipal, Gymnase des Tilleuls',
+      '2 équipes · 2 membres · 2 séances cette semaine',
       'Dirigeants : Lea Martin, Paul Morel',
-      'Cette semaine : —',
-      'Équipes : 3 · Membres : —',
-      'Cette semaine : aucune séance sur vos installations',
+      '3 équipes · — membres · — séances cette semaine',
+      '1 équipe · 0 membre · aucune séance cette semaine',
     ]));
   });
 
@@ -253,7 +254,8 @@ describe('COLL-CLUBS — planche 1 : la liste des clubs rattachés', () => {
     expect(textes(await monter())).toEqual(expect.arrayContaining([
       'Aucun club rattaché pour l’instant.',
       // VILLE-INVITER-CLUB (07/10) : la Ville ajoute elle-meme un club deja inscrit (« club A »).
-      'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+      // COLL-R-A6 (13/10, planche P7v4-clubs état « vide ») : « Un club manque ? Ajoutez-le. »
+      'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
     ]));
   });
 });
@@ -262,25 +264,21 @@ describe('COLL-CLUBS — planche 1 : la liste des clubs rattachés', () => {
 // au club de compléter sa fiche » DÉBORDAIT de sa colonne (texte coupé, bord de la carte traversé).
 // Planche 36 (P7-clubs-ordi) : « Demander de compléter » dans la colonne « Contact général ». Le
 // bouton ne dépasse plus sa colonne. Au téléphone, le libellé entier reste. ROUGE avant.
+// ⇒ COLL-R-A6 (13/10, COL-001, D1 A′ d'Adel) : la colonne « Contact général » quitte le tableau et
+// le contact quitte la carte ; « Demander au club de compléter sa fiche » reste sur la FICHE
+// (CollectiviteClubDetails, témoin COLLC4A2.ecrireAuxDirigeants).
 describe('VILLE-T18C — tableau des clubs : « Demander de compléter » tient dans sa colonne', () => {
-  it('ordinateur : le libellé de la planche, et le bouton borné à sa colonne', async () => {
+  it('ordinateur : plus de colonne « Contact général », plus ce bouton dans la liste', async () => {
     mockBureau = true;
     const arbre = await monter();
-    expect(boutonTitre(arbre, 'Demander de compléter')).toBeDefined();
+    expect(textes(arbre)).not.toContain('Contact général');
+    expect(boutonTitre(arbre, 'Demander de compléter')).toBeUndefined();
     expect(boutonTitre(arbre, 'Demander au club de compléter sa fiche')).toBeUndefined();
-    const bouton = boutonTitre(arbre, 'Demander de compléter');
-    // La boîte du bouton (EcrireAuxDirigeants) ne dépasse pas la colonne.
-    const styleDe = (/** @type {any} */ noeud) => (
-      Object.assign({}, ...[].concat(noeud?.props?.style))
-    );
-    let boite = bouton.parent;
-    while (boite && !('alignSelf' in styleDe(boite))) boite = boite.parent;
-    expect(styleDe(boite)).toEqual(expect.objectContaining({ maxWidth: '100%' }));
   });
 
-  it('téléphone : le libellé entier', async () => {
+  it('téléphone : pas sur la carte non plus', async () => {
     const arbre = await monter();
-    expect(boutonTitre(arbre, 'Demander au club de compléter sa fiche')).toBeDefined();
+    expect(boutonTitre(arbre, 'Demander au club de compléter sa fiche')).toBeUndefined();
   });
 });
 

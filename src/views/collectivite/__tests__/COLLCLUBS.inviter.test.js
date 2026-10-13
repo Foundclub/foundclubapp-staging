@@ -226,11 +226,15 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
     expect(textes(arbre)).toContain('Le contact du club, pas celui d’une personne.');
   });
 
-  it('« Clubs rattachés » : « Inviter un club » ouvre cet écran, depuis l’état vide', async () => {
+  // COLL-R-A6 (13/10, COL-001, planche P7v4-clubs, D1 A′) : UN seul bouton, « Ajouter un club » ; il
+  // ouvre cet écran (onglet « Déjà sur FoundClub »), où « Par FoundClub » invite un club absent.
+  it('« Clubs rattachés » : « Ajouter un club » ouvre cet écran, depuis l’état vide', async () => {
     const arbre = await monter(CollectiviteClubs);
-    await act(async () => { bouton(arbre, 'Inviter un club').props.onPress(); });
+    expect(bouton(arbre, 'Inviter un club')).toBeUndefined();
+    await act(async () => { bouton(arbre, 'Ajouter un club').props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInviteClub', {
       collectiviteId: 'ville-de-recette',
+      onglet: 'recherche',
     });
   });
 
@@ -264,17 +268,24 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
       'Judo Club', 'Envoyée', 'Le jeu. 1 oct. · Transmise à l’équipe FoundClub · pas encore inscrit.',
       'Recette Stripe FC', 'Inscrit',
       'Le jeu. 1 oct. · Hors de la commune : l’équipe FoundClub vérifie avec vous avant de le rattacher.',
-      'Tennis Club', 'Rattaché', 'Le dim. 20 sept. · Il apparaît dans vos clubs.',
     ]));
+    // COLL-R-A6 (13/10, « invitations B » du chef d'orchestre) : une invitation dont le club est
+    // rattaché ne s'affiche plus — il est dans la liste juste au-dessus (le doublon de COL-001).
+    expect(lus).not.toContain('Tennis Club');
+    expect(lus).not.toContain('Le dim. 20 sept. · Il apparaît dans vos clubs.');
     const relancer = arbre.root.findAll(
       (/** @type {any} */ n) => n.props?.title === 'Relancer' && typeof n.props?.onPress === 'function',
     );
     expect(relancer).toHaveLength(1);
     await act(async () => { relancer[0].props.onPress(); });
     expect(mockRelancer.mutate).toHaveBeenCalledWith({ collectiviteId: 'ville-de-recette', invitationId: 'i1' });
-    await act(async () => { parTestID(arbre, 'collectivite-clubs-inviter').props.onPress(); });
+    // COLL-R-A6 (13/10, D1 A′) : le bouton en pointillés « Inviter un club absent » a laissé la
+    // place au seul « Ajouter un club » (au-dessus des clubs).
+    expect(parTestID(arbre, 'collectivite-clubs-inviter')).toBeUndefined();
+    await act(async () => { bouton(arbre, 'Ajouter un club').props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInviteClub', {
       collectiviteId: 'ville-de-recette',
+      onglet: 'recherche',
     });
   });
 });

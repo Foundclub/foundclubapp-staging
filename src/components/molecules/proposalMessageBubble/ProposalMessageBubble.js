@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import 'dayjs/locale/fr';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
@@ -186,6 +187,8 @@ const styles = StyleSheet.create({
  *   levelLabel?: string,
  *   sectionLabel?: string,
  *   timeLabel?: string,
+ *   kind?: string,
+ *   staffMessage?: string,
  * }} ProposalBubblePayload
  */
 
@@ -227,15 +230,33 @@ function ProposalMessageBubble({
     dateLabel,
     endDate,
     hostTeamName,
+    kind,
     levelLabel,
     sectionLabel,
+    staffMessage,
     status = 'pending',
     timeLabel,
     venue,
   } = proposal;
 
-  const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  // AMICAUX-CORRECTIFS — l or est celui de la League (decision de design du 01/10). La bulle
+  // d un match AMICAL prend le cyan FoundClub, et son « En attente » l orange d avertissement
+  // (Adel, 12/10 ~23h21, « ok reco »). La bulle LEAGUE ne bouge pas.
+  // Temoin : views/friendlyMatch/__tests__/AMIC-bulleAmicale.test.js.
+  const isFriendlyMatch = kind === 'friendly_match';
+  const baseStatusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  const statusConfig = isFriendlyMatch && baseStatusConfig === STATUS_CONFIG.pending
+    ? {
+      ...baseStatusConfig,
+      bg: withAlpha(Colors.warning500, 0.18),
+      border: withAlpha(Colors.warning500, 0.45),
+      colorToken: 'warning500',
+    }
+    : baseStatusConfig;
   const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
+  const restingBorderColor = isFriendlyMatch
+    ? withAlpha(Colors.primary500, 0.9)
+    : 'rgba(212, 175, 55, 0.9)';
   const proposalMeta = getProposalMeta({ isMe, status, t });
   const venueLabel = getProposalLocationLabel(venue) || t(
     'proposalMessageBubble.venueToBeDefined',
@@ -269,6 +290,8 @@ function ProposalMessageBubble({
     { label: t('proposalMessageBubble.rows.level', 'Niveau'), value: levelLabel },
     { label: t('proposalMessageBubble.rows.category', 'Catégorie'), value: categoryLabel },
     { label: t('proposalMessageBubble.rows.section', 'Section'), value: sectionLabel },
+    // AMICAUX-CORRECTIFS 82 — le petit mot du proposeur, que seul le texte de secours portait.
+    { label: t('proposalMessageBubble.rows.note', 'Message'), value: staffMessage },
   ].filter((row) => Boolean(row.value));
   // « Catégorie » est plus large que « Date » : sans une gouttière commune, les
   // valeurs partent en escalier. Appliquée SEULEMENT quand les lignes en plus
@@ -315,7 +338,7 @@ function ProposalMessageBubble({
         {
           alignSelf: isMe ? 'flex-end' : 'flex-start',
           backgroundColor: 'rgba(20, 39, 52, 0.92)',
-          borderColor: isHighlighted ? Colors.primary500 : 'rgba(212, 175, 55, 0.9)',
+          borderColor: isHighlighted ? Colors.primary500 : restingBorderColor,
           shadowColor: isHighlighted ? Colors.primary500 : '#000',
           shadowOffset: { height: 10, width: 0 },
           shadowOpacity: isHighlighted ? 0.18 : 0,

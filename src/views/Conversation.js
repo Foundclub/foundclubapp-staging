@@ -1303,8 +1303,33 @@ function Conversation({ navigation, route }) {
   // Safe area insets (notch + home indicator)
   const { bottom, top } = useSafeAreaInsets();
   const safeBottomInset = Math.max(bottom, 10);
-  const composerBottomInset = Platform.OS === 'ios' ? Math.max(bottom, 14) : 10;
+  // 🤖 ANDROIDBAR-1 — Android : jamais moins que la barre système. Android 15 et 16 dessinent
+  // l'écran SOUS elle (bord à bord imposé) : 10 dp fixes laissaient le « + », le champ et le
+  // micro sous les 3 boutons. Android ≤ 14 donne `bottom` 0 : 10, inchangé.
+  const composerBottomInset = Platform.OS === 'ios' ? Math.max(bottom, 14) : safeBottomInset;
   const giftedChatBottomOffset = Platform.OS === 'ios' ? 0 : safeBottomInset;
+  // 🤖 ANDROIDBAR-1 — clavier ouvert, le corps du fil lui laisse sa place. Le moteur de clavier
+  // de GiftedChat n'est pas dans l'app Android (react-native.config.js) et `adjustResize` n'agit
+  // plus en bord à bord : rien ne remontait. Motif maison (BottomModal) : la hauteur qu'Android
+  // envoie, clavier SANS la barre système — que `composerBottomInset` garde déjà.
+  // ⛔ Pas de KeyboardAvoidingView : à la fermeture, Android lui envoie la hauteur VISIBLE
+  // (ReactRootView.java) et le corps restait rétréci de la barre d'état (banc ANDROIDBAR-1).
+  // ponytail: réservé à Android 15+ (la condition de la barre d'état, plus haut) ; si
+  // `edgeToEdgeEnabled` passe à true, Android ≤ 14 en aura besoin aussi.
+  const [hauteurDuClavierAndroid, setHauteurDuClavierAndroid] = useState(0);
+  useEffect(() => {
+    if (!shouldAvoidDeprecatedSystemBarColors) return undefined;
+    const hauteur = (/** @type {any} */ coordonnees) => Math.max(0, coordonnees?.height || 0);
+    if (Keyboard.isVisible?.()) setHauteurDuClavierAndroid(hauteur(Keyboard.metrics?.()));
+    const ouvert = Keyboard.addListener('keyboardDidShow', (evenement) => {
+      setHauteurDuClavierAndroid(hauteur(evenement?.endCoordinates));
+    });
+    const ferme = Keyboard.addListener('keyboardDidHide', () => setHauteurDuClavierAndroid(0));
+    return () => {
+      ouvert.remove();
+      ferme.remove();
+    };
+  }, [shouldAvoidDeprecatedSystemBarColors]);
   const apiBaseUrl = useMemo(() => toApiBaseUrl(getApiBaseUrl()), []);
   const publicApiOrigin = useMemo(() => toPublicApiOrigin(getPublicApiOrigin()), []);
   const resolveMediaUri = useCallback((/** @type {unknown} */ rawUri) => {
@@ -7125,7 +7150,7 @@ function Conversation({ navigation, route }) {
         )}
       </View>
 
-      <View style={[Alignments.fill]}>
+      <View style={[Alignments.fill, { paddingBottom: hauteurDuClavierAndroid }]}>
         {/* MSG1A (§3.1) — le motif sportif en filigrane (cyan a 8 %, tuile de 240), derriere
             le fil seulement : ni l'en-tete ni la saisie ne le portent. */}
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -7212,6 +7237,9 @@ function Conversation({ navigation, route }) {
             // MSG1A (§3.1) — avatar de 28 en bas des groupes (aucun en tete-a-tete), puces
             // de date, notices discretes, et « revenir en bas » au-dela de 160.
             imageStyle={/** @type {any} */ ({ left: stylesDuFil.avatarVide })}
+            // 🤖 ANDROIDBAR-1 — sur Android, c'est le corps du fil qui laisse la place au clavier :
+            // le moteur de GiftedChat ne doit pas s'y ajouter si on le rebranche un jour.
+            isKeyboardInternallyHandled={Platform.OS !== 'android'}
             isScrollToBottomEnabled
             renderAvatar={estUnTeteATete(chatData?.type) ? null : renderAvatarDuFil}
             renderBubble={renderBubble}

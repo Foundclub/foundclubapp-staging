@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Linking, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -31,6 +32,7 @@ import { buildExternalMapLinks, listExternalMapApps } from '@/platform/maps/exte
 function FeuilleDAdresse({ adresse, onClose, onCopy }) {
   const { Colors } = useTheme();
   const { t } = useTranslation();
+  const { bottom } = useSafeAreaInsets();
   const [applis, setApplis] = useState(/** @type {{ key: string, url: string }[]} */ ([]));
   const liens = adresse ? buildExternalMapLinks(adresse) : null;
 
@@ -98,7 +100,14 @@ function FeuilleDAdresse({ adresse, onClose, onCopy }) {
       >
         <Pressable
           onPress={() => {}}
-          style={[styles.feuille, { backgroundColor: Colors.chatSheet }]}
+          // ANDROIDBAR-2 — `statusBarTranslucent` : Android 15/16 dessine cette
+          // fenetre SOUS sa barre (emulateur, 13/10 : « Copier l'adresse » a 14 dp
+          // dessous en 3 boutons). 34 = la marge du pack (barre d'accueil de l'iPhone) :
+          // iPhone, navigation par gestes et Android <= 14 inchanges.
+          style={[
+            styles.feuille,
+            { backgroundColor: Colors.chatSheet, paddingBottom: Math.max(34, bottom) },
+          ]}
           testID="feuille-adresse"
         >
           <View style={[styles.poignee, { backgroundColor: withAlpha(Colors.neutral00, 0.25) }]} />
@@ -159,7 +168,6 @@ const styles = StyleSheet.create({
   feuille: {
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    paddingBottom: 34,
     paddingHorizontal: 16,
     paddingTop: 10,
   },

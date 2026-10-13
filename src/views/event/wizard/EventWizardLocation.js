@@ -20,6 +20,7 @@ import {
   getEventWizardNextRoute,
   getEventWizardStepCount,
 } from './eventWizardDetectionUtils';
+import useMairieDecideALaCreation from './useMairieDecideALaCreation';
 
 const buildDateTimeIso = (baseDate, timeValue) => {
   if (!baseDate || !timeValue) return null;
@@ -71,20 +72,27 @@ function EventWizardLocation({ navigation, route }) {
     refetchOnMount: 'always',
     staleTime: 0,
   });
+  // 🏛️ COLL-R-APP-CREATION (13/10, COL-003, « D2- A ») — la mairie decidera-t-elle ? Pour
+  // l installation COCHEE (avant « Suivant ») ; la carte orange est ecrite par le selecteur.
+  const decisionDeLaVille = useMairieDecideALaCreation(state, facilityId);
   const isBlocked = Boolean(facilityId && availability.data?.data?.blocked);
   const isAvailabilityUnknown = Boolean(facilityId && (
     !occupancyWindow.start || !occupancyWindow.end || availability.isFetching
     || availability.isLoading || availability.isError
   ));
+  // Sur un gymnase de la Ville ou la mairie decide, ni « validation au club » ni « le club
+  // l autorise » : le serveur l envoie a la mairie, place libre ou non (SPEC-PLACE).
   const requiresApproval = Boolean(
     facilityId
     && selectedOccupancy?.saturated
-    && selectedOccupancy?.requiresApproval,
+    && selectedOccupancy?.requiresApproval
+    && !decisionDeLaVille.mairie,
   );
   const allowsImmediateConfirmation = Boolean(
     facilityId
     && selectedOccupancy?.saturated
-    && selectedOccupancy?.allowsImmediateConfirmation,
+    && selectedOccupancy?.allowsImmediateConfirmation
+    && !decisionDeLaVille.mairie,
   );
   const canGoNext = Boolean(location || facilityId) && !isBlocked && !isAvailabilityUnknown;
 
@@ -122,6 +130,7 @@ function EventWizardLocation({ navigation, route }) {
         <FacilitySelector
           clubId={clubId}
           cmId={cmId}
+          decisionDeLaVille={decisionDeLaVille}
           facilityId={facilityId}
           location={location}
           occupancyWindow={isBlocked ? undefined : occupancyWindow}

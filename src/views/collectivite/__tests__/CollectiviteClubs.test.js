@@ -9,6 +9,7 @@ import CollectiviteClubs from '../CollectiviteClubs';
 //   - chaque club : son nom, son CONTACT GENERAL (e-mail, telephone, site du club, D15) et
 //     des NOMBRES — equipes, membres ; un nombre illisible s affiche « — », jamais 0 ;
 //   - toucher l e-mail ou le telephone ouvre la messagerie ou le telephone ;
+//     ⇒ COLL-R-A6 (13/10, D1 A′) : le contact passe sur la fiche du club, plus sur la carte ;
 //   - aucune personne : l ecran n affiche que ce que le serveur rend (le serveur, lui, ne
 //     rend aucun membre : temoin admin COLL1C C12 et banc vrai moteur C1c).
 
@@ -154,34 +155,33 @@ afterEach(() => {
 });
 
 describe('COLLECTIVITES 1c — écran 5 : les clubs rattachés', () => {
-  it('chaque club : son nom, son contact général et des NOMBRES', async () => {
+  // COLL-R-A6 (13/10, COL-001, D1 A′ d'Adel « Ok je valide tout ») : la carte tient en 3 lignes ;
+  // le contact général (e-mail, téléphone, site) passe sur la fiche du club, à un appui.
+  it('chaque club : son nom et des NOMBRES ; un nombre illisible s’écrit « — »', async () => {
     const lus = textes(await monter());
     expect(lus).toEqual(expect.arrayContaining([
       'AIKI',
-      'Équipes : 2 · Membres : 14',
-      'contact@aiki.example.invalid',
-      '0102030405',
-      'https://aiki.example.invalid',
+      '2 équipes · 14 membres · — séances cette semaine',
       'Test Fc',
-      'Équipes : 1 · Membres : —',
+      '1 équipe · — membres · — séances cette semaine',
       'Clubs rattachés : 2',
     ]));
   });
 
-  it('un club sans contact le dit, sans rien inventer', async () => {
+  it('le contact général n’est plus sur la carte, il est sur la fiche (COLL-R-A6)', async () => {
     const lus = textes(await monter());
-    expect(lus).toContain('Pas de contact renseigné par le club.');
+    ['contact@aiki.example.invalid', '0102030405', 'https://aiki.example.invalid',
+      'Pas de contact renseigné par le club.'].forEach((texte) => expect(lus).not.toContain(texte));
   });
 
-  it('toucher l e-mail ouvre la messagerie, le téléphone ouvre le téléphone', async () => {
+  it('aucun lien d’e-mail ni de téléphone sur la carte (COLL-R-A6)', async () => {
     const arbre = await monter();
     const pressable = (/** @type {string} */ testID) => arbre.root.findAll(
       (/** @type {any} */ n) => n.props?.testID === testID && typeof n.props?.onPress === 'function',
     )[0];
-    await act(async () => { pressable('collectivite-club-aiki-email').props.onPress(); });
-    await act(async () => { pressable('collectivite-club-aiki-phone').props.onPress(); });
-    expect(Linking.openURL).toHaveBeenCalledWith('mailto:contact@aiki.example.invalid');
-    expect(Linking.openURL).toHaveBeenCalledWith('tel:0102030405');
+    expect(pressable('collectivite-club-aiki-email')).toBeUndefined();
+    expect(pressable('collectivite-club-aiki-phone')).toBeUndefined();
+    expect(Linking.openURL).not.toHaveBeenCalled();
   });
 
   it('aucun club rattaché : l écran le dit', async () => {

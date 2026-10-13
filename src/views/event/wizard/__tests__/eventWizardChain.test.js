@@ -74,6 +74,14 @@ const mockDonnees = {
 
 const NOM_DE_L_EQUIPE = mockDonnees.equipes[0].name;
 
+// COLL-R-APP-CREATION (13/10) — « la mairie décidera ? » a son propre témoin
+// (useMairieDecideALaCreation.CRA4.test.js) : ici, la mairie ne décide pas.
+jest.mock('../useMairieDecideALaCreation', () => ({
+  __esModule: true,
+  default: () => ({
+    complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
+  }),
+}));
 jest.mock('react-i18next', () => ({
   // `EventWizardAccess` tire `@/domains/event/eventUseCases`, qui charge
   // `@/theme/strings` et appelle `i18n.use(initReactI18next)` au chargement :

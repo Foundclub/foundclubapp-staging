@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -29,9 +29,11 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * 📰 LE CANAL DE LA VILLE, CÔTÉ MEMBRE — COLL-C4A (02/10/2026), planche P3v2-messages-tel
  * (écran 3, « Ce que lit un membre d'un club ») du design validé HY521H1 page 3.
  *
- * Les actualités de la Ville pour les clubs rattachés, de la plus ancienne à la plus récente
- * (comme une conversation). Il LIT, il ne répond pas : aucune zone de saisie, aucune réaction —
- * « Lecture seule ». La Ville parle en son nom ; le membre est tutoyé.
+ * Les actualités de la Ville pour les clubs rattachés, de la plus RÉCENTE à la plus ancienne, et
+ * l'écran s'ouvre EN HAUT — COLL-R-A6 (13/10, COL-006, décision d'Adel D5 = A du 12/10 17 h 53),
+ * comme la liste de la mairie et le bloc « De la Ville » ; avant, l'ordre d'une conversation (la
+ * plus récente en bas, l'écran descendu tout seul). Il LIT, il ne répond pas : aucune saisie,
+ * aucune réaction — « Lecture seule ». La Ville parle en son nom ; le membre est tutoyé.
  *
  * Y mènent : la notification d'une actualité (ctaRoute du serveur), le bloc « De la Ville » de
  * la fiche du club, le bandeau de l'accueil (planche 3), la messagerie (planche 4).
@@ -50,7 +52,6 @@ function CollectiviteActualitesCanal() {
     ?.collectiviteId || null;
   const lecture = useMesActualitesDeLaVille();
   const vues = useMarquerActualitesVues();
-  const defilement = useRef(/** @type {any} */ (null));
   const enAttente = lecture.data?.bandeau?.actualite?.documentId || null;
   const marquer = vues.mutate;
 
@@ -68,9 +69,8 @@ function CollectiviteActualitesCanal() {
   const actualites = (Array.isArray(lecture.data?.actualites) ? lecture.data.actualites : [])
     .filter((/** @type {any} */ actualite) => (
       !collectiviteId || actualite?.collectivite?.documentId === collectiviteId
-    ))
-    .slice()
-    .reverse();
+    ));
+  // Le serveur rend la plus récente d'abord (collectivite-actualite.ts) : son ordre est gardé.
 
   // Le titre de l'écran : le nom de LA Ville quand il n'y en a qu'une (planche : « Ville de
   // Montrivage »).
@@ -143,8 +143,6 @@ function CollectiviteActualitesCanal() {
     >
       <ScrollView
         contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}
-        onContentSizeChange={() => defilement.current?.scrollToEnd?.({ animated: false })}
-        ref={defilement}
         refreshControl={(
           <RefreshControl
             colors={[Colors.primary500]}
