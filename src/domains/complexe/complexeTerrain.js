@@ -372,7 +372,7 @@ export const resumeTarif = (t, tarif) => (
  * @param {unknown} valeur - Ce que le serveur a rendu.
  * @returns {any[]} La liste.
  */
-const liste = (valeur) => (Array.isArray(valeur) ? valeur : []);
+const listeDe = (valeur) => (Array.isArray(valeur) ? valeur : []);
 
 /**
  * Le prix d'un créneau : le tarif le PLUS PRÉCIS qui couvre son heure de début (jour et heure,
@@ -385,7 +385,7 @@ const liste = (valeur) => (Array.isArray(valeur) ? valeur : []);
  * @returns {number | null} Le prix.
  */
 export const prixDuCreneau = (plan, prixDeBase, jour, minutes) => {
-  const tarifs = liste(plan?.rates);
+  const tarifs = listeDe(plan?.rates);
   const parHeure = tarifs.find((tarif) => tarif.from !== undefined && tarif.from !== null
     && tarif.days.includes(jour)
     && minutes >= /** @type {number} */ (minutesDe(tarif.from))
@@ -406,9 +406,9 @@ export const prixDuCreneau = (plan, prixDeBase, jour, minutes) => {
  * @returns {Array<{ a: string, de: string, prix: Array<number | null> }>} La grille.
  */
 export const prixDeLaSemaine = (plan, prixDeBase) => {
-  const plages = liste(plan?.ranges);
+  const plages = listeDe(plan?.ranges);
   if (!plages.length) return [];
-  const tarifs = liste(plan?.rates);
+  const tarifs = listeDe(plan?.rates);
   const bornes = new Set();
   plages.forEach((plage) => {
     bornes.add(minutesDe(plage.from));
@@ -499,7 +499,7 @@ export const creneauxDuJour = (plan, date) => {
  * @returns {string | null} La ligne, ou null.
  */
 export const resumeOuverture = (t, plan) => {
-  const plages = liste(plan?.ranges);
+  const plages = listeDe(plan?.ranges);
   if (!plages.length) return null;
   const heuresDuJour = [1, 2, 3, 4, 5, 6, 7].map((jour) => plages
     .filter((plage) => plage.days.includes(jour))
