@@ -273,3 +273,18 @@ describe('COL-019 — site : la semaine type, chaque bloc à la couleur de son c
       .toBeGreaterThan(0);
   });
 });
+
+// ➕ COLL-R-A6 (13/10/2026) — COL-004, reste du lot A1 : « Attribuer un créneau » porte l'icône
+// « + » de la planche validée P4v2-creneaux-tel (l.28), avant le texte. Le correctif de taille de
+// texte du lot A1 (Button.js) n'est pas retouché : un bouton à icône y passe déjà. ROUGE avant.
+describe('COL-004 — « + Attribuer un créneau » (planche P4v2-creneaux-tel)', () => {
+  it('le bouton porte l’icône « plus », au téléphone comme sur le site', async () => {
+    const bouton = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props.title === 'Attribuer un créneau'
+      && typeof n.props.onPress === 'function')[0];
+    const telephone = bouton(await rendre());
+    expect(telephone.props.icon).toBe('plus');
+    expect(telephone.props.iconPosition).toBe('before');
+    mockBureau = true;
+    expect(bouton(await rendre()).props.icon).toBe('plus');
+  });
+});

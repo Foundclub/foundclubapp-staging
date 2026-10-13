@@ -270,6 +270,9 @@ describe('COL-001 — la carte d’un club en 3 lignes (téléphone, planche P7v
     const arbre = await monter();
     const ajouter = boutons(arbre, 'Ajouter un club');
     expect(ajouter).toHaveLength(1);
+    // « + Ajouter un club » : l'icône AVANT le texte, comme la planche (i-plus puis le libellé).
+    expect(ajouter[0].props.icon).toBe('plus');
+    expect(ajouter[0].props.iconPosition).toBe('before');
     expect(boutons(arbre, 'Ajouter un club déjà sur FoundClub')).toHaveLength(0);
     expect(pressable(arbre, 'collectivite-clubs-inviter')).toBeUndefined();
     expect(textesDe(arbre.root)).not.toContain('Inviter un club absent de FoundClub');

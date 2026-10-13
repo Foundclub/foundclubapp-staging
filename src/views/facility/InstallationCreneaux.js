@@ -603,7 +603,11 @@ function InstallationCreneaux() {
           ) : null}
           {/* COLL-C2B-BIS : sur ordinateur aussi (la grille ne montre pas les heures repliees). */}
           {canManage && creneaux.length > 0 ? (
+            // COLL-R-A6 (13/10, COL-004) : « + Attribuer un créneau », l'icône de la planche
+            // validée P4v2-creneaux-tel (l.28), avant le texte.
             <Button
+              icon="plus"
+              iconPosition="before"
               onPress={() => attribuer()}
               title={t('collectiviteCreneaux.creneaux.attribuer', 'Attribuer un créneau')}
               variant="Primary"

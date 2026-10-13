@@ -393,6 +393,7 @@ function CollectiviteClubs() {
   const boutonAjouter = (
     <Button
       icon="plus"
+      iconPosition="before"
       onPress={ajouter}
       size={isDesktop ? 'sm' : undefined}
       testID="collectivite-clubs-ajouter"
