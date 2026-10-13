@@ -516,7 +516,9 @@ function PrivateNavigator() {
           name={RouteNames.CollectiviteClubs}
           options={{
             ...commonOptions,
-            headerTitle: t('collectivite.clubs.header', 'Clubs rattachés'),
+            // COLL-R-A6 (13/10, COL-001, planche P7v4-clubs) : la flèche seule ; la page écrit
+            // déjà « Clubs rattachés : N » (le titre apparaissait deux fois).
+            headerTitle: '',
           }}
         />
         <Stack.Screen

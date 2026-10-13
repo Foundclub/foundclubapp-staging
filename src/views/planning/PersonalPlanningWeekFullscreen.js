@@ -371,6 +371,11 @@ function PlanningWeekFullscreen() {
     () => withViewerChildrenTitles(normalizePlanningItems(data?.data || []), t),
     [data, t],
   );
+  // 🎨 COLL-R-A6 (13/10, COL-019, D13 A) : la liste des clubs de la Ville est lue dès que la Ville
+  // GÈRE l'installation (avant : seulement en ouvrant un bloc) — l'ordre de cette liste donne à
+  // chaque club SA couleur, la même chaque semaine et dans « Créneaux » (même requête, même ordre).
+  const attachedClubs = useCollectiviteClubs(managingCollectiviteId);
+  const clubsDeLaVille = Array.isArray(attachedClubs.data) ? attachedClubs.data : null;
   // 🖥️ COLL-C4B-BIS (03/10, « P4v3-fermer-ordi ») — la fermeture EN SAISIE dans le panneau de
   // droite (ordinateur) : « le jour ferme se hachure pendant la saisie, et les seances touchees se
   // cernent d orange ». Rien n est ecrit tant que la mairie n a pas confirme.
@@ -382,7 +387,10 @@ function PlanningWeekFullscreen() {
   const events = useMemo(() => {
     if (!isFacilitySource) return normalizedEvents;
     const maintenant = new Date(instantDuRendu);
-    return assignClubPlanningColors(normalizedEvents).map((/** @type {any} */ evenement) => {
+    return assignClubPlanningColors(
+      normalizedEvents,
+      clubsDeLaVille,
+    ).map((/** @type {any} */ evenement) => {
       const brut = evenement.raw || {};
       const duClubDuLecteur = Boolean(evenement.documentId) || brut.isOwnClub === true;
       // COL-014 : une demande restee sans reponse et dont l heure est passee reste DESSINEE (T05 :
@@ -415,8 +423,8 @@ function PlanningWeekFullscreen() {
           : evenement.participationStatus,
       };
     });
-  }, [Colors.neutral500, brouillon, instantDuRendu, isFacilitySource, normalizedEvents,
-    readsAsOrganizer]);
+  }, [Colors.neutral500, brouillon, clubsDeLaVille, instantDuRendu, isFacilitySource,
+    normalizedEvents, readsAsOrganizer]);
   const hasEvents = events.length > 0;
   // SPEC Collectivites §2 C : la mairie touche le bloc d'un AUTRE club -> une fiche en
   // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
@@ -436,9 +444,6 @@ function PlanningWeekFullscreen() {
     setFermetureOuverte(null);
     setPanneau(null);
   }), [navigation]);
-  const attachedClubs = useCollectiviteClubs(
-    readOnlyBlock || panneau ? managingCollectiviteId : null,
-  );
   const readOnlyBlockContact = (attachedClubs.data || []).find(
     (club) => club?.documentId && club.documentId === readOnlyBlock?.club?.documentId,
   ) || null;

@@ -2,7 +2,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking,
   RefreshControl,
   ScrollView,
   Text,
@@ -14,7 +13,6 @@ import { clePremierPas } from '@/domains/collectivite/collectiviteAccueil';
 import {
   etatDInvitation,
   ligneDirigeants,
-  ligneSeancesDeLaSemaine,
   nombreOuTiret,
 } from '@/domains/collectivite/collectiviteClubsDisplay';
 import {
@@ -71,6 +69,12 @@ import { useIsDesktop } from '@/responsive';
  * dans les deux sens (« lien A » : la Ville accepte ou refuse celles venues de son lien).
  * Les demandes du lien quittent alors « Invitations », qui ne garde que « Par FoundClub » ;
  * tant que le serveur ne rend pas ces demandes (serveur d'avant le lot), elle les garde.
+ * COLL-R-A6 (13/10, COL-001, planche P7v4-clubs, D1 A′ d'Adel) : la carte tient en 3 lignes — le
+ * nom avec « Écrire » en bouton rond, les nombres, les dirigeants. L'e-mail, le téléphone et le
+ * site sont sur la fiche du club, à un appui. UN bouton « Ajouter un club » (l'écran à 3 onglets :
+ * déjà sur FoundClub, par un lien, par FoundClub). Les demandes de rattachement en attente passent
+ * AU-DESSUS des clubs ; « Invitations » (P7v3) reste en dessous. Sur ordinateur, le tableau perd la
+ * colonne « Contact général ».
  * @returns {import('react').ReactElement} L ecran.
  */
 function CollectiviteClubs() {
@@ -103,15 +107,9 @@ function CollectiviteClubs() {
   const clubs = useCollectiviteClubs(collectiviteId);
   const liste = Array.isArray(clubs.data) ? clubs.data : [];
 
-  const ouvrir = (/** @type {string} */ adresse) => {
-    Linking.openURL(adresse).catch(() => {});
-  };
   const invitations = useCollectiviteInvitations(collectiviteId);
   const relancer = useRemindCollectiviteInvitation();
   const lesInvitations = Array.isArray(invitations.data) ? invitations.data : [];
-  const inviter = () => {
-    /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, { collectiviteId });
-  };
   const ajouter = () => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInviteClub, {
       collectiviteId,
@@ -120,11 +118,14 @@ function CollectiviteClubs() {
   };
   const demandes = useCollectiviteClubRequests(collectiviteId);
   const demandesLues = Array.isArray(demandes.data);
-  const invitationsAffichees = demandesLues
+  // COLL-R-A6 (13/10, « invitations B » du chef) : une invitation dont le club est RATTACHÉ ne se
+  // montre plus : le club est dans la liste juste au-dessus (le doublon des demandes, COL-001).
+  const invitationsAffichees = (demandesLues
     ? lesInvitations.filter(
       (/** @type {any} */ invitation) => invitation?.kind !== 'attach_request',
     )
-    : lesInvitations;
+    : lesInvitations
+  ).filter((/** @type {any} */ invitation) => invitation?.status !== 'attached');
   const ouvrirLaFiche = (/** @type {any} */ club) => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteClubDetails, {
       clubId: club?.documentId,
@@ -137,111 +138,107 @@ function CollectiviteClubs() {
     borderWidth: 1,
   };
 
-  // VILLE-T18C (07/10) : `court` — dans la colonne du tableau (ordinateur), le libellé court.
-  const renderContact = (/** @type {any} */ club, court = false) => {
-    const liens = [
-      club?.email ? { adresse: `mailto:${club.email}`, cle: 'email', texte: club.email } : null,
-      club?.phoneNumber
-        ? { adresse: `tel:${club.phoneNumber}`, cle: 'phone', texte: club.phoneNumber }
-        : null,
-      club?.websiteUrl
-        ? { adresse: club.websiteUrl, cle: 'website', texte: club.websiteUrl }
-        : null,
-    ].filter(Boolean);
-    if (liens.length === 0) {
-      return (
-        <View style={{ gap: 6 }}>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {t('collectivite.clubs.noContact', 'Pas de contact renseigné par le club.')}
-          </Text>
-          <EcrireAuxDirigeants
-            club={club}
-            collectiviteId={collectiviteId}
-            compact
-            court={court}
-            demanderFiche
-            testID={`collectivite-club-${club?.documentId}-demander-fiche`}
-          />
-        </View>
-      );
-    }
-    return liens.map((/** @type {any} */ lien) => (
-      <TouchableOpacity
-        accessibilityRole="link"
-        key={lien.cle}
-        onPress={() => ouvrir(lien.adresse)}
-        style={{ alignSelf: 'flex-start' }}
-        testID={`collectivite-club-${club?.documentId}-${lien.cle}`}
-      >
-        <Text numberOfLines={1} style={[Fonts.p3Bold, Fonts.primary200]}>{lien.texte}</Text>
-      </TouchableOpacity>
+  // COLL-R-A6 (P7v4-clubs) : « 2 équipes · 2 membres · 2 séances cette semaine ». Zéro et un au
+  // singulier (« 0 membre ») ; un nombre illisible s'écrit « — », jamais un 0 inventé.
+  const avecNombre = (
+    /** @type {unknown} */ valeur,
+    /** @type {[string, string]} */ [cleUne, repliUne],
+    /** @type {[string, string]} */ [cle, repli],
+  ) => (Number.isInteger(valeur) && Number(valeur) <= 1
+    ? t(cleUne, repliUne, { nombre: nombreOuTiret(valeur) })
+    : t(cle, repli, { nombre: nombreOuTiret(valeur) }));
+  const ligneDesNombres = (/** @type {any} */ club) => [
+    avecNombre(
+      club?.teamsCount,
+      ['collectiviteClubs.carte.equipesUne', '{{nombre}} équipe'],
+      ['collectiviteClubs.carte.equipes', '{{nombre}} équipes'],
+    ),
+    avecNombre(
+      club?.membersCount,
+      ['collectiviteClubs.carte.membresUn', '{{nombre}} membre'],
+      ['collectiviteClubs.carte.membres', '{{nombre}} membres'],
+    ),
+    club?.sessionsThisWeek?.count === 0
+      ? t('collectiviteClubs.carte.seancesAucune', 'aucune séance cette semaine')
+      : avecNombre(
+        club?.sessionsThisWeek?.count,
+        ['collectiviteClubs.carte.seancesUne', '{{nombre}} séance cette semaine'],
+        ['collectiviteClubs.carte.seances', '{{nombre}} séances cette semaine'],
+      ),
+  ].join(' · ');
+  // La colonne « Cette semaine » du tableau : « 2 séances », « aucune », « — ».
+  const semaineCourte = (/** @type {any} */ club) => (club?.sessionsThisWeek?.count === 0
+    ? t('collectiviteClubs.carte.semaineAucune', 'aucune')
+    : avecNombre(
+      club?.sessionsThisWeek?.count,
+      ['collectiviteClubs.carte.semaineUne', '{{nombre}} séance'],
+      ['collectiviteClubs.carte.semaine', '{{nombre}} séances'],
     ));
-  };
 
-  const compte = (/** @type {any} */ club) => t(
-    'collectivite.clubs.counts',
-    'Équipes : {{teams}} · Membres : {{members}}',
-    { members: nombreOuTiret(club?.membersCount), teams: nombreOuTiret(club?.teamsCount) },
+  const ecrire = (/** @type {any} */ club) => (
+    <EcrireAuxDirigeants
+      club={club}
+      collectiviteId={collectiviteId}
+      icone
+      testID={`collectivite-club-${club?.documentId}-ecrire`}
+    />
   );
 
-  const renderSeances = (/** @type {any} */ club) => (
-    <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
-      <SvgIcon color={Colors.primary200} height={12} name="calendar" width={12} />
-      <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
-        {ligneSeancesDeLaSemaine(t, club?.sessionsThisWeek)}
-      </Text>
-    </View>
+  // Toute la carte ouvre la fiche (COLL-CLUBS, 01/10), mais elle ne se présente pas comme UN seul
+  // élément au lecteur d'écran (`accessible={false}`) : sinon VoiceOver ne trouvait pas « Écrire »
+  // dedans. Le nom porte le geste « ouvrir la fiche », le bouton rond le sien (planche P7v4).
+  const nomQuiOuvre = (/** @type {any} */ club, /** @type {any} */ police) => (
+    <TouchableOpacity
+      accessibilityHint={t('collectiviteClubs.list.openHint', 'Ouvre la fiche du club.')}
+      accessibilityLabel={club?.name}
+      accessibilityRole="button"
+      activeOpacity={0.8}
+      onPress={() => ouvrirLaFiche(club)}
+      style={[Alignments.row, Alignments.alignCenter, { flex: 1, gap: 12, minHeight: 44 }]}
+    >
+      <ClubLogoMark logoUrl={club?.logo?.url} name={club?.name} size={40} />
+      <Text numberOfLines={2} style={[police, Fonts.neutral00, { flex: 1 }]}>{club?.name}</Text>
+    </TouchableOpacity>
   );
 
+  const retrait = { paddingLeft: 52 };
   const renderCarte = (/** @type {any} */ club) => {
     const dirigeants = ligneDirigeants(t, club?.leaders);
     return (
       <TouchableOpacity
-        accessibilityHint={t('collectiviteClubs.list.openHint', 'Ouvre la fiche du club.')}
-        accessibilityLabel={club?.name}
-        accessibilityRole="button"
+        accessible={false}
         activeOpacity={0.8}
         key={club?.documentId}
         onPress={() => ouvrirLaFiche(club)}
-        style={[ApplicationStyle.card, Spaces.padding[16], carteStyle, { gap: 8 }]}
+        style={[ApplicationStyle.card, Spaces.padding[16], carteStyle, { gap: 4 }]}
         testID={`collectivite-club-${club?.documentId}`}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
-          <ClubLogoMark logoUrl={club?.logo?.url} name={club?.name} size={40} />
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={2} style={[Fonts.p1Black, Fonts.neutral00]}>{club?.name}</Text>
-            <Text style={[Fonts.p3, Fonts.neutral200]}>{compte(club)}</Text>
-          </View>
+        {/* La saisie du premier message (après « Écrire ») passe sous le nom, toute largeur. */}
+        <View style={[Alignments.row, Alignments.alignCenter, { flexWrap: 'wrap', gap: 12 }]}>
+          {nomQuiOuvre(club, Fonts.h5Bold)}
+          {ecrire(club)}
         </View>
-        {dirigeants ? <Text style={[Fonts.p3, Fonts.neutral200]}>{dirigeants}</Text> : null}
-        {renderSeances(club)}
-        {renderContact(club)}
-        <EcrireAuxDirigeants
-          club={club}
-          collectiviteId={collectiviteId}
-          compact
-          testID={`collectivite-club-${club?.documentId}-ecrire`}
-        />
+        <Text style={[Fonts.p3, Fonts.neutral200, retrait]}>{ligneDesNombres(club)}</Text>
+        {dirigeants ? (
+          <Text style={[Fonts.p3, Fonts.neutral200, retrait]}>{dirigeants}</Text>
+        ) : null}
       </TouchableOpacity>
     );
   };
 
-  // Sur ordinateur, une ligne par club (P7-clubs-ordi) : club et dirigeants, equipes, membres,
-  // seances de la semaine, contact general. Toute la ligne ouvre la fiche.
+  // Sur ordinateur, une ligne par club (P7v4-clubs-ordi, A′) : club et dirigeants, equipes,
+  // membres, seances de la semaine, « Ecrire » en bouton rond. Toute la ligne ouvre la fiche.
   const colonnes = /** @type {const} */ ([
     { cle: 'club', flex: 3, titre: t('collectiviteClubs.table.club', 'Club') },
     { cle: 'teams', flex: 1, titre: t('collectiviteClubs.table.teams', 'Équipes') },
     { cle: 'members', flex: 1, titre: t('collectiviteClubs.table.members', 'Membres') },
-    { cle: 'week', flex: 3, titre: t('collectiviteClubs.table.week', 'Cette semaine') },
-    { cle: 'contact', flex: 3, titre: t('collectiviteClubs.table.contact', 'Contact général') },
+    { cle: 'week', flex: 2, titre: t('collectiviteClubs.table.week', 'Cette semaine') },
   ]);
   const renderLigne = (/** @type {any} */ club) => {
     const dirigeants = ligneDirigeants(t, club?.leaders);
     return (
       <TouchableOpacity
-        accessibilityHint={t('collectiviteClubs.list.openHint', 'Ouvre la fiche du club.')}
-        accessibilityLabel={club?.name}
-        accessibilityRole="button"
+        accessible={false}
         activeOpacity={0.8}
         key={club?.documentId}
         onPress={() => ouvrirLaFiche(club)}
@@ -249,33 +246,28 @@ function CollectiviteClubs() {
           Alignments.row,
           Alignments.alignCenter,
           Spaces.paddingVertical[12],
-          { borderTopColor: `${Colors.neutral00}17`, borderTopWidth: 1, gap: 12 },
+          {
+            borderTopColor: `${Colors.neutral00}17`, borderTopWidth: 1, flexWrap: 'wrap', gap: 12,
+          },
         ]}
         testID={`collectivite-club-${club?.documentId}`}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, { flex: colonnes[0].flex, gap: 12 }]}>
-          <ClubLogoMark logoUrl={club?.logo?.url} name={club?.name} size={40} />
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>{club?.name}</Text>
-            {dirigeants ? <Text style={[Fonts.p3, Fonts.neutral300]}>{dirigeants}</Text> : null}
-          </View>
+        <View style={{ flex: colonnes[0].flex, gap: 2 }}>
+          {nomQuiOuvre(club, Fonts.p2Bold)}
+          {dirigeants ? (
+            <Text style={[Fonts.p3, Fonts.neutral200, retrait]}>{dirigeants}</Text>
+          ) : null}
         </View>
-        <Text style={[Fonts.p2, Fonts.neutral100, { flex: colonnes[1].flex }]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: colonnes[1].flex }]}>
           {nombreOuTiret(club?.teamsCount)}
         </Text>
-        <Text style={[Fonts.p2, Fonts.neutral100, { flex: colonnes[2].flex }]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: colonnes[2].flex }]}>
           {nombreOuTiret(club?.membersCount)}
         </Text>
-        <View style={{ flex: colonnes[3].flex }}>{renderSeances(club)}</View>
-        <View style={{ flex: colonnes[4].flex, gap: 6 }}>
-          {renderContact(club, true)}
-          <EcrireAuxDirigeants
-            club={club}
-            collectiviteId={collectiviteId}
-            compact
-            testID={`collectivite-club-${club?.documentId}-ecrire`}
-          />
-        </View>
+        <Text style={[Fonts.p2, Fonts.neutral100, { flex: colonnes[3].flex }]}>
+          {semaineCourte(club)}
+        </Text>
+        {ecrire(club)}
       </TouchableOpacity>
     );
   };
@@ -356,19 +348,15 @@ function CollectiviteClubs() {
         <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
           {t(
             'collectiviteClubs.list.emptyHint',
-            'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+            'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
           )}
         </Text>
+        {/* COLL-R-A6 (P7v4-clubs, état « vide ») : un seul bouton, « Ajouter un club ». */}
         <Button
+          isOption
           onPress={ajouter}
           size="sm"
           title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
-        />
-        <Button
-          isOption
-          onPress={inviter}
-          size="sm"
-          title={t('collectiviteClubs.list.inviteShort', 'Inviter un club')}
           variant="SecondaryLight"
         />
       </View>
@@ -387,49 +375,33 @@ function CollectiviteClubs() {
           {colonnes.map((colonne) => (
             <Text
               key={colonne.cle}
-              style={[Fonts.p3Bold, Fonts.neutral300, { flex: colonne.flex }]}
+              style={[Fonts.p3Bold, Fonts.primary200, { flex: colonne.flex }]}
             >
               {colonne.titre}
             </Text>
           ))}
+          {/* La place du bouton rond « Écrire » (44 px), sans titre (planche P7v4-clubs-ordi). */}
+          <View style={{ width: 44 }} />
         </View>
         {liste.map(renderLigne)}
       </View>
     );
   } else {
-    contenu = (
-      <View style={{ gap: 12 }}>
-        {liste.map(renderCarte)}
-        <Button
-          onPress={ajouter}
-          title={t('collectiviteRattachement.add.tile', 'Ajouter un club déjà sur FoundClub')}
-        />
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={inviter}
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            {
-              backgroundColor: `${Colors.primary500}0F`,
-              borderColor: Colors.primary500,
-              borderRadius: 16,
-              borderStyle: 'dashed',
-              borderWidth: 1.5,
-              gap: 8,
-              justifyContent: 'center',
-              minHeight: 52,
-            },
-          ]}
-          testID="collectivite-clubs-inviter"
-        >
-          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-            {t('collectiviteClubs.list.invite', 'Inviter un club absent de FoundClub')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    );
+    contenu = <View style={{ gap: 12 }}>{liste.map(renderCarte)}</View>;
   }
+  // COLL-R-A6 : le bouton « Ajouter un club », en haut, quand la liste est là (vide : dans l'état
+  // vide ; chargement et erreur : aucun, comme la planche).
+  const avecListe = !clubs.isLoading && !clubs.error && liste.length > 0;
+  const boutonAjouter = (
+    <Button
+      icon="plus"
+      iconPosition="before"
+      onPress={ajouter}
+      size={isDesktop ? 'sm' : undefined}
+      title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
+      variant="Secondary"
+    />
+  );
 
   // Les invitations en cours, SOUS la liste (P7v3, etat 2) : ce que le serveur LIT de chacune
   // (envoyee, inscrit, rattache). « Relancer » seulement pour une demande « Par FoundClub » que
@@ -525,23 +497,9 @@ function CollectiviteClubs() {
           </Text>
           <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
             <Text style={[Fonts.h2Black, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
-            {isDesktop ? (
-              <Button
-                onPress={ajouter}
-                size="sm"
-                title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
-              />
-            ) : null}
-            {isDesktop ? (
-              <Button
-                onPress={inviter}
-                size="sm"
-                title={t('collectiviteClubs.list.inviteDesktop', 'Inviter un club absent')}
-                variant="Secondary"
-              />
-            ) : null}
+            {isDesktop && avecListe ? boutonAjouter : null}
           </View>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t(
               'collectivite.clubs.hint',
               // FINITIONS-VILLE (« dirigeant A », 08/10) : les dirigeants oui, les autres non.
@@ -550,10 +508,12 @@ function CollectiviteClubs() {
             )}
           </Text>
         </View>
-        {contenu}
+        {/* COLL-R-A6 (P7v4-clubs, état 4) : ce qui attend la Ville passe AU-DESSUS des clubs. */}
         {demandesLues ? (
           <DemandesDeRattachement collectiviteId={collectiviteId} demandes={demandes.data} />
         ) : null}
+        {!isDesktop && avecListe ? boutonAjouter : null}
+        {contenu}
         {invitationsAffichees.length ? (
           <View style={{ gap: 12 }} testID="collectivite-invitations">
             <Text accessibilityRole="header" style={[Fonts.h4Black, Fonts.neutral00]}>

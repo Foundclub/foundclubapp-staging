@@ -219,6 +219,9 @@ function SeasonSlotForm({
     String(slot?.startTime || initial.startTime || '').slice(0, 5),
   );
   const [fin, setFin] = useState(String(slot?.endTime || initial.endTime || '').slice(0, 5));
+  // COLL-R-A6 (COL-018) : une case de la semaine type apporte le jour ET les heures.
+  const depuisUneCase = !modification
+    && Boolean(initial.weekday && initial.startTime && initial.endTime);
   const [plateau, setPlateau] = useState(
     Number(slot?.plateau?.number || initial.plateau) || null,
   );
@@ -597,6 +600,15 @@ function SeasonSlotForm({
             ].filter(Boolean).join(' · ')}
         </Text>
       )}
+      {/* 📍 COLL-R-A6 (13/10, COL-018) — ouvert depuis une case vide de la semaine type (le site
+          apporte le jour ET les heures), le panneau le dit dès l'étape 1, à chaque étape (le
+          récapitulatif le redit) : planche P4v2-creneaux-ordi, « déjà rempli du jour et de
+          l'heure ». Le panneau compact du planning garde sa ligne, plus bas. */}
+      {parcoursGuide && !compact && depuisUneCase && etapeCourante !== 'recap' ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="season-slot-moment">
+          {`${weekdayName(Number(jour))} · ${timeRange(debut, fin)}`}
+        </Text>
+      ) : null}
 
       {/* Depuis la fiche d un club (point 6) : l installation se choisit ici. */}
       {visible('installation') && !installationFixee && !modification && facilities.length > 1 ? (

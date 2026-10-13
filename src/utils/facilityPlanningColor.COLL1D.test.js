@@ -4,6 +4,7 @@ import {
   assignClubPlanningColors,
   CLUB_PLANNING_PALETTE,
   FACILITY_PLANNING_PALETTE,
+  legendeDesClubs,
 } from './facilityPlanningColor';
 
 // COLL1D (29/09) — « UNE COULEUR PAR CLUB » dans le planning d'une installation
@@ -93,5 +94,50 @@ describe('COLL1D — lisible en sombre ET en clair (contraste WCAG calcule)', ()
     CLUB_PLANNING_PALETTE.slice(0, 4).forEach((couleur) => {
       expect(contraste(couleur, couleursDuTheme.neutral00)).toBeGreaterThanOrEqual(3);
     });
+  });
+});
+
+// 🎨 COLL-R-A6 (13/10/2026, COL-019, décision d'Adel D13 = A, planche P7v4-couleur validée) :
+// la couleur AUTOMATIQUE d'un club est STABLE — son rang dans la liste des clubs de la Ville, pas
+// son rang parmi les clubs présents cette semaine-là (facilityPlanningColor.js:116 avant le lot).
+// ROUGE avant : seul, un club prenait la 1re couleur ; après un autre, la 2e.
+const VILLE = [A, C, B];
+
+describe('COLL-R-A6 — un club = une couleur stable partout (liste de la Ville)', () => {
+  it('une semaine où le club est SEUL et une où il vient APRÈS un autre : la MÊME couleur', () => {
+    const [seul] = assignClubPlanningColors([bloc(B)], VILLE);
+    const [, apresUnAutre] = assignClubPlanningColors([bloc(A), bloc(B)], VILLE);
+    expect(seul.displayColor).toBeTruthy();
+    expect(apresUnAutre.displayColor).toBe(seul.displayColor);
+  });
+
+  it('la couleur suit le rang dans la liste de la Ville (3e club = 3e couleur)', () => {
+    const [b] = assignClubPlanningColors([bloc(B)], VILLE);
+    const [c] = assignClubPlanningColors([bloc(C)], VILLE);
+    expect(b.displayColor).toBe(CLUB_PLANNING_PALETTE[2]);
+    expect(c.displayColor).toBe(CLUB_PLANNING_PALETTE[1]);
+  });
+
+  it('un club absent de la liste (pas rattaché) : une couleur APRÈS celles de la Ville', () => {
+    const AUTRE = { documentId: 'club-Z', name: 'Club de passage' };
+    const [, z] = assignClubPlanningColors([bloc(A), bloc(AUTRE)], VILLE);
+    expect(z.displayColor).toBe(CLUB_PLANNING_PALETTE[3]);
+  });
+
+  it('sans la liste (pas la Ville) : comme avant, par nom des clubs présents', () => {
+    const [seul] = assignClubPlanningColors([bloc(B)]);
+    expect(seul.displayColor).toBe(CLUB_PLANNING_PALETTE[0]);
+  });
+
+  it('la légende : un club par couleur, rangés par nom, sans les blocs sans club', () => {
+    const blocs = assignClubPlanningColors(
+      [bloc(B), bloc(A), bloc(B, '-2'), { documentId: 'evt-x', title: 'Fermeture' }],
+      VILLE,
+    );
+    expect(legendeDesClubs(blocs)).toEqual([
+      { couleur: CLUB_PLANNING_PALETTE[0], nom: 'AS Ville A' },
+      { couleur: CLUB_PLANNING_PALETTE[2], nom: 'US Ville B' },
+    ]);
+    expect(legendeDesClubs(null)).toEqual([]);
   });
 });

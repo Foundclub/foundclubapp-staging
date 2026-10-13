@@ -4,9 +4,11 @@ import { Text, View } from 'react-native';
 
 import { formatCollectiviteDay } from '@/domains/collectivite/collectiviteDisplay';
 import { etatDeDemandeVille } from '@/domains/collectivite/collectiviteRattachement';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import DecisionCreneauModal from '@/views/collectivite/components/DecisionCreneauModal';
 
 import {
@@ -17,6 +19,8 @@ import {
 } from '@/services/collectivite/collectiviteRattachementQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
+
+import { useIsDesktop } from '@/responsive';
 
 /**
  * 🏛️ « DEMANDES DE RATTACHEMENT » — VILLE-INVITER-CLUB (07/10/2026), dans « Clubs rattachés ».
@@ -30,6 +34,12 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * (motifs fréquents + motif obligatoire, envoyé au club), plus une confirmation sans motif.
  * L'état et les gestes permis viennent du serveur (`state`, `canAnswer`, `canRemind`,
  * `canCancel`) : l'écran n'en déduit aucun. « vous » : la mairie.
+ * COLL-R-A6 (13/10, COL-001, planche P7v4-clubs état 4) : seules restent les demandes EN ATTENTE
+ * et les refus que la Ville peut renvoyer — une demande acceptée, rattachée ou refusée par la Ville
+ * n'attend plus rien (« Rattaché · Il apparaît dans vos clubs. » doublait la liste). Ce qui est à
+ * trancher passe en tête ; plusieurs demandes : la première, puis « Voir les N demandes ». Celle
+ * venue d'un club se lit comme la planche : « À trancher », « <club> demande à rejoindre la
+ * Ville », la date, puis Refuser | Accepter côte à côte ; plus de titre de section au-dessus.
  * @param {{ collectiviteId: string | null, demandes: any[] }} props - La Ville et ses demandes.
  * @returns {import('react').ReactElement | null} La section, ou rien sans demande.
  */
@@ -38,6 +48,7 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const isDesktop = useIsDesktop();
   const repondre = useAnswerCollectiviteAttachRequest();
   const relancer = useRemindCollectiviteProposal();
   const annuler = useCancelCollectiviteProposal();
@@ -47,8 +58,19 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
   const [aRefuser, setARefuser] = useState(/** @type {any} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
+  const [toutes, setToutes] = useState(false);
 
-  if (!Array.isArray(demandes) || demandes.length === 0) return null;
+  const renvoyable = (/** @type {any} */ demande) => demande?.kind === 'proposal'
+    && demande?.state === 'refused' && Boolean(demande?.club?.documentId);
+  const enAttente = (Array.isArray(demandes) ? demandes : []).filter(
+    (/** @type {any} */ demande) => demande?.state === 'pending' || renvoyable(demande),
+  );
+  const aMontrer = [
+    ...enAttente.filter((/** @type {any} */ demande) => demande?.canAnswer),
+    ...enAttente.filter((/** @type {any} */ demande) => !demande?.canAnswer),
+  ];
+  if (aMontrer.length === 0) return null;
+  const visibles = toutes ? aMontrer : aMontrer.slice(0, 1);
 
   const tons = {
     cyan: Colors.primary200,
@@ -86,7 +108,101 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
     return date ? `${sens} · ${date}` : sens;
   };
 
+  // COLL-R-A6 (P7v4-clubs, état 4) : la demande d'un club que la Ville tranche.
+  const renderATrancher = (/** @type {any} */ demande) => {
+    const id = demande?.documentId;
+    let precision = null;
+    if (demande?.attachedElsewhere) {
+      precision = t(
+        'collectiviteRattachement.ville.attachedElsewhere',
+        'Ce club a été rattaché à une autre collectivité entre-temps.',
+      );
+    } else if (demande?.outsideCommune === true) {
+      precision = t('collectiviteRattachement.ville.outside', 'Il n’est pas dans la commune.');
+    }
+    const cadre = [
+      ApplicationStyle.card,
+      Spaces.padding[16],
+      {
+        backgroundColor: `${Colors.primary500}14`,
+        borderColor: `${Colors.primary500}73`,
+        borderWidth: 1,
+        gap: 6,
+      },
+    ];
+    const lignes = (
+      <>
+        <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+          {t('collectiviteClubs.detail.toDecide', 'À trancher')}
+        </Text>
+        <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {t(
+            'collectiviteRattachement.demandes.rejoindre',
+            '{{club}} demande à rejoindre la Ville',
+            { club: demande?.club?.name || '', ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>{ligneDuRappel(demande)}</Text>
+        {precision ? <Text style={[Fonts.p3, Fonts.neutral200]}>{precision}</Text> : null}
+      </>
+    );
+    const refuser = (
+      <Button
+        onPress={() => setARefuser({ kind: 'refuse', request: demande })}
+        size="sm"
+        title={t('collectiviteRattachement.demandes.refuse', 'Refuser')}
+        variant="Ghost"
+      />
+    );
+    const accepter = (
+      <Button
+        isLoading={enCours(repondre, id) && repondre.variables?.accept === true}
+        onPress={() => geste(repondre, id, { accept: true })}
+        size="sm"
+        title={t('collectiviteRattachement.demandes.accept', 'Accepter')}
+      />
+    );
+    const erreur = erreurs[id] ? (
+      <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error300]}>{erreurs[id]}</Text>
+    ) : null;
+    // Sur ordinateur (P7v4-clubs-ordi, état 3) : l'écusson, la phrase, puis les deux gestes.
+    if (isDesktop) {
+      return (
+        <View
+          key={id}
+          style={[...cadre, Alignments.row, Alignments.alignCenter, { gap: 16 }]}
+          testID={`demande-rattachement-${id}`}
+        >
+          <ClubLogoMark
+            logoUrl={demande?.club?.logo?.url}
+            name={demande?.club?.name}
+            size={40}
+          />
+          <View style={{ flex: 1, gap: 2 }}>
+            {lignes}
+            {erreur}
+          </View>
+          {refuser}
+          {accepter}
+        </View>
+      );
+    }
+    return (
+      <View key={id} style={cadre} testID={`demande-rattachement-${id}`}>
+        {lignes}
+        <View style={[Alignments.row, { gap: 8 }]}>
+          <View style={{ flex: 1 }}>{refuser}</View>
+          <View style={{ flex: 1 }}>{accepter}</View>
+        </View>
+        {erreur}
+      </View>
+    );
+  };
+
+  // Le serveur ne pose `canAnswer` que sur une demande VENUE D'UN CLUB (collectivite-invitation.ts,
+  // liste de la Ville) : elle a sa carte ; les autres (celles de la Ville) gardent la leur.
   const renderDemande = (/** @type {any} */ demande) => {
+    if (demande?.kind === 'attach_request' && demande?.canAnswer) return renderATrancher(demande);
     const id = demande?.documentId;
     const etat = etatDeDemandeVille(t, demande);
     const date = formatCollectiviteDay(demande?.createdAt);
@@ -95,8 +211,6 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
       : t('collectiviteRattachement.demandes.fromCity', 'Votre demande');
     const relancee = Number(demande?.remindCount) || 0;
     const club = demande?.club?.name || '';
-    const renvoyable = demande?.kind === 'proposal' && demande?.state === 'refused'
-      && Boolean(demande?.club?.documentId);
     return (
       <View
         key={id}
@@ -125,22 +239,6 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
             })}
           </Text>
         ) : null}
-        {demande?.canAnswer ? (
-          <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-            <Button
-              isLoading={enCours(repondre, id) && repondre.variables?.accept === true}
-              onPress={() => geste(repondre, id, { accept: true })}
-              size="sm"
-              title={t('collectiviteRattachement.demandes.accept', 'Accepter')}
-            />
-            <Button
-              onPress={() => setARefuser({ kind: 'refuse', request: demande })}
-              size="sm"
-              title={t('collectiviteRattachement.demandes.refuse', 'Refuser')}
-              variant="Ghost"
-            />
-          </View>
-        ) : null}
         {demande?.canRemind || demande?.canCancel ? (
           <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
             {demande?.canRemind ? (
@@ -165,7 +263,7 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
           </View>
         ) : null}
         {/* « refus B » (Adel, 07/10 ~18h05) : la Ville peut renvoyer une demande refusée. */}
-        {renvoyable ? (
+        {renvoyable(demande) ? (
           <Button
             isLoading={renvoyer.isPending && renvoyer.variables?.clubId === demande.club.documentId}
             isOption
@@ -195,10 +293,19 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
 
   return (
     <View style={{ gap: 12 }} testID="collectivite-demandes-rattachement">
-      <Text accessibilityRole="header" style={[Fonts.h4Black, Fonts.neutral00]}>
-        {t('collectiviteRattachement.demandes.title', 'Demandes de rattachement')}
-      </Text>
-      {demandes.map(renderDemande)}
+      {visibles.map(renderDemande)}
+      {visibles.length < aMontrer.length ? (
+        <Button
+          isOption
+          onPress={() => setToutes(true)}
+          size="sm"
+          style={{ alignSelf: 'flex-start' }}
+          title={t('collectiviteAccueil.attente.voirToutes', 'Voir les {{nombre}} demandes', {
+            nombre: aMontrer.length,
+          })}
+          variant="SecondaryLight"
+        />
+      ) : null}
       {aRefuser ? (
         <DecisionCreneauModal
           collectiviteId={collectiviteId}

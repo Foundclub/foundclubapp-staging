@@ -5349,6 +5349,21 @@ export default {
     vide: 'Aucune actualité publiée. Les membres de vos clubs la liront dans leurs messages.',
   },
   collectiviteClubs: {
+    // COLL-R-A6 (13/10/2026, COL-001, planche P7v4-clubs, D1 A′) : la carte d'un club en 3 lignes.
+    carte: {
+      ecrire: 'Écrire aux dirigeants de {{club}}',
+      ecrireElide: 'Écrire aux dirigeants d’{{club}}',
+      equipes: '{{nombre}} équipes',
+      equipesUne: '{{nombre}} équipe',
+      membres: '{{nombre}} membres',
+      membresUn: '{{nombre}} membre',
+      seances: '{{nombre}} séances cette semaine',
+      seancesAucune: 'aucune séance cette semaine',
+      seancesUne: '{{nombre}} séance cette semaine',
+      semaine: '{{nombre}} séances',
+      semaineAucune: 'aucune',
+      semaineUne: '{{nombre}} séance',
+    },
     detail: {
       acceptedMany: '{{nombre}} acceptées',
       acceptedOne: '{{nombre}} acceptée',
@@ -5480,7 +5495,9 @@ export default {
       one: 'Dirigeant : {{noms}}',
     },
     list: {
-      emptyHint: 'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+      // COLL-R-A6 (13/10, planche P7v4-clubs état « vide », « Comme P7 ») : un seul bouton.
+      // eslint-disable-next-line max-len
+      emptyHint: 'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
       error: 'Les clubs n’ont pas pu être lus.',
       invite: 'Inviter un club absent de FoundClub',
       inviteDesktop: 'Inviter un club absent',
@@ -5767,6 +5784,8 @@ export default {
       refuseHint: 'Le club reçoit votre motif ; il n’est pas rattaché.',
       refuseWindowYes: 'Refuser la demande',
       refuseYes: 'Oui, refuser',
+      // COLL-R-A6 (13/10, COL-001, planche P7v4-clubs état 4).
+      rejoindre: '{{club}} demande à rejoindre la Ville',
       remind: 'Relancer',
       resend: 'Renvoyer la demande',
       title: 'Demandes de rattachement',
@@ -5932,6 +5951,8 @@ export default {
       completDe: 'complet {{heures}}',
       du: 'du {{debut}} au {{fin}}',
       erreur: 'Impossible de charger les créneaux',
+      // COLL-R-A6 (13/10, COL-019, planche P7v4-couleur) : la légende, au-delà de 2 clubs.
+      legende: 'Couleurs des clubs',
       onglet: 'Créneaux',
       ongletInfos: 'Infos',
       ongletPlanning: 'Planning',

@@ -249,35 +249,54 @@ function SeasonSlotWeekGrid({
         testID={`creneau-${creneau.documentId}`}
       >
         <View
-          style={[
-            contenu === 'entier' ? Spaces.paddingHorizontal[8] : Spaces.paddingHorizontal[4],
-            serre ? { paddingHorizontal: 2 } : null,
-            Spaces.paddingVertical[4],
-            {
-              backgroundColor: withAlpha(Colors.primary800, 0.92),
-              borderColor: withAlpha(Colors.neutral00, 0.12),
-              borderLeftColor: Colors.primary500,
-              borderLeftWidth: 3,
-              borderRadius: 10,
-              borderWidth: 1,
-              flex: 1,
-              overflow: 'hidden',
-            },
-          ]}
+          style={{
+            backgroundColor: withAlpha(Colors.primary800, 0.92),
+            borderColor: withAlpha(Colors.neutral00, 0.12),
+            // 🎨 COLL-R-A6 (13/10, COL-019, planche P7v4-couleur-ordi) : le liseré et le fond
+            // teinté à la couleur du club (`displayColor`, posée par InstallationCreneaux) ;
+            // sans elle, le cyan d'avant.
+            borderLeftColor: creneau.displayColor || Colors.primary500,
+            borderLeftWidth: 3,
+            borderRadius: 10,
+            borderWidth: 1,
+            flex: 1,
+            overflow: 'hidden',
+          }}
         >
-          {contenu === 'rien' ? null : (
-            <Text numberOfLines={1} style={[serre ? Fonts.p4Bold : Fonts.p3Bold, Fonts.neutral00]}>
-              {contenu === 'entier'
-                ? creneau.club?.name || ''
-                : getClubInitials(creneau.club?.name || '').slice(0, serre ? 2 : 3)}
-            </Text>
-          )}
-          {contenu !== 'rien' && !serre && creneau.team?.name ? (
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{creneau.team.name}</Text>
-          ) : null}
-          {contenu === 'entier' && place.fin - place.debut >= 75 ? (
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{heures}</Text>
-          ) : null}
+          <View
+            style={[
+              contenu === 'entier' ? Spaces.paddingHorizontal[8] : Spaces.paddingHorizontal[4],
+              serre ? { paddingHorizontal: 2 } : null,
+              Spaces.paddingVertical[4],
+              {
+                backgroundColor: creneau.displayColor
+                  ? withAlpha(creneau.displayColor, 0.18)
+                  : 'transparent',
+                flex: 1,
+              },
+            ]}
+          >
+            {/* Le nom en entier, sur deux lignes au besoin (planche : la couleur aide sans le
+                remplacer) ; en initiales, une ligne. */}
+            {contenu === 'rien' ? null : (
+              <Text
+                numberOfLines={contenu === 'entier' ? 2 : 1}
+                style={[serre ? Fonts.p4Bold : Fonts.p3Bold, Fonts.neutral00]}
+              >
+                {contenu === 'entier'
+                  ? creneau.club?.name || ''
+                  : getClubInitials(creneau.club?.name || '').slice(0, serre ? 2 : 3)}
+              </Text>
+            )}
+            {contenu !== 'rien' && !serre && creneau.team?.name ? (
+              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>
+                {creneau.team.name}
+              </Text>
+            ) : null}
+            {contenu === 'entier' && place.fin - place.debut >= 75 ? (
+              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{heures}</Text>
+            ) : null}
+          </View>
         </View>
       </TouchableOpacity>
     );

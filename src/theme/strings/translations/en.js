@@ -4993,6 +4993,21 @@ export default {
     vide: 'No news published yet. Members of your clubs will read it in their messages.',
   },
   collectiviteClubs: {
+    // COLL-R-A6 (13/10/2026, COL-001, P7v4-clubs board, D1 A′): a club card in 3 lines.
+    carte: {
+      ecrire: 'Write to the leaders of {{club}}',
+      ecrireElide: 'Write to the leaders of {{club}}',
+      equipes: '{{nombre}} teams',
+      equipesUne: '{{nombre}} team',
+      membres: '{{nombre}} members',
+      membresUn: '{{nombre}} member',
+      seances: '{{nombre}} sessions this week',
+      seancesAucune: 'no session this week',
+      seancesUne: '{{nombre}} session this week',
+      semaine: '{{nombre}} sessions',
+      semaineAucune: 'none',
+      semaineUne: '{{nombre}} session',
+    },
     detail: {
       acceptedMany: '{{nombre}} accepted',
       acceptedOne: '{{nombre}} accepted',
@@ -5114,7 +5129,7 @@ export default {
       one: 'Club leader: {{noms}}',
     },
     list: {
-      emptyHint: 'Add a club already on FoundClub, or invite a club that is not.',
+      emptyHint: 'The FoundClub team attaches the clubs of the town. A club is missing? Add it.',
       error: 'The clubs could not be loaded.',
       invite: 'Invite a club that is not on FoundClub',
       inviteDesktop: 'Invite a missing club',
@@ -5425,6 +5440,8 @@ export default {
       completDe: 'full {{heures}}',
       du: 'from {{debut}} to {{fin}}',
       erreur: 'Unable to load the slots',
+      // COLL-R-A6 (13/10, COL-019, P7v4-couleur board): the legend, beyond 2 clubs.
+      legende: 'Club colours',
       onglet: 'Slots',
       ongletInfos: 'Info',
       ongletPlanning: 'Schedule',
@@ -6140,6 +6157,8 @@ export default {
       refuseHint: 'The club receives your reason; it is not attached.',
       refuseWindowYes: 'Decline the request',
       refuseYes: 'Yes, decline',
+      // COLL-R-A6 (13/10, COL-001, P7v4-clubs board state 4).
+      rejoindre: '{{club}} is asking to join the town',
       remind: 'Send a reminder',
       resend: 'Send the request again',
       title: 'Attachment requests',

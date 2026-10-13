@@ -450,3 +450,35 @@ describe('PLANNING-PORTRAIT ton A — le planning ne tutoie ni ne vouvoie person
     expect(lu).not.toMatch(/Réessaie|récupère/);
   });
 });
+
+// 🎨 COLL-R-A6 (13/10/2026, COL-019, décision d'Adel D13 = A, planche P7v4-couleur) : dans le
+// planning de la Ville, la couleur d'un club suit son rang dans la LISTE DES CLUBS DE LA VILLE.
+// ROUGE avant : la couleur dépendait des clubs présents dans la semaine (seul : la 1re, après un
+// autre : la 2e) — elle changeait d'une semaine à l'autre ; la liste n'était lue qu'en ouvrant
+// un bloc.
+describe('COLL-R-A6 — un club garde SA couleur d une semaine a l autre (Ville)', () => {
+  test('US Ville B : seul cette semaine, ou apres AS Ville A, la meme couleur', async () => {
+    gereLaVille();
+    getCollectiviteClubs.mockResolvedValue({
+      data: [
+        { documentId: 'club-A', name: 'AS Ville A' },
+        { documentId: 'club-B', name: 'US Ville B' },
+      ],
+    });
+    getFacilityPlanning.mockResolvedValue({
+      ...installationAvec(2), data: [BLOC_D_UN_AUTRE_CLUB],
+    });
+    await rendre();
+    const seul = derniereGrille().events
+      .find((/** @type {any} */ e) => e.title === 'US Ville B · Seniors B');
+
+    getFacilityPlanning.mockResolvedValue(installationAvec(2));
+    await rendre();
+    const apresUnAutre = derniereGrille().events
+      .find((/** @type {any} */ e) => e.title === 'US Ville B · Seniors B');
+
+    expect(getCollectiviteClubs).toHaveBeenCalledWith('ville-1');
+    expect(seul.displayColor).toBeTruthy();
+    expect(apresUnAutre.displayColor).toBe(seul.displayColor);
+  });
+});
