@@ -382,4 +382,33 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     await appeler(() => tunnel(arbre).onNext());
     expect(modifySeasonSlot).toHaveBeenCalledWith('slot-1', expect.objectContaining({ endTime: '20:00', startTime: '17:30', weekday: 2 }));
   });
+
+  // Décision d'Adel « jours : oui » (13/10 ~02h22, planche P4v4-attribuer 3/5) : un jour déjà plein
+  // à certaines heures le dit sous son nom, avec les mots de la planche P4v2 (« complet … »).
+  // ROUGE avant : le jour ne disait rien, la place ne se lisait qu'à l'étape des heures.
+  test('11. « Quel jour ? » : « complet 18:00 – 19:30 » sous le jeudi plein, rien sous les autres', async () => {
+    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
+      data: [
+        {
+          club: { name: 'AS Montrivage' }, documentId: 'jeu-1', endTime: '19:30', startTime: '18:00', weekday: 4, ...SAISON,
+        },
+        {
+          club: { name: 'Montrivage FC' }, documentId: 'jeu-2', endTime: '20:00', startTime: '17:30', weekday: 4, ...SAISON,
+        },
+        {
+          club: { name: 'AS Montrivage' }, documentId: 'mar-1', endTime: '19:00', startTime: '17:30', weekday: 2, ...SAISON,
+        },
+      ],
+      meta: { facility: { ...INSTALLATIONS[0], plateaux: [] }, season: SAISON },
+    });
+    const arbre = await monter();
+    await choisir(arbre, 'Montrivage Basket');
+    await avancer(arbre);
+    await avancer(arbre);
+    expect(tunnel(arbre).title).toBe('Quel jour ?');
+    const jeudi = choix(arbre, 'Jeudi');
+    expect(jeudi.findAllByType(Text).map((n) => [].concat(n.props.children).join(''))).toEqual(['Jeudi', 'complet 18:00 – 19:30']);
+    expect(choix(arbre, 'Mardi').findAllByType(Text)).toHaveLength(1);
+    expect(choix(arbre, 'Lundi').findAllByType(Text)).toHaveLength(1);
+  });
 });

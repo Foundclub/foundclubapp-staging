@@ -251,6 +251,17 @@ export function FenetrePleinEcran({ children, onRequestClose }) {
 }
 
 /**
+ * Les creneaux d un jour de la semaine type, sans celui qu on modifie.
+ * @param {any} creneaux - Les creneaux de l installation (lecture).
+ * @param {number | null} numero - Le jour ISO.
+ * @param {string | undefined} exclu - Le creneau modifie.
+ * @returns {any[]} Les creneaux de ce jour.
+ */
+const creneauxDuJour = (creneaux, numero, exclu) => (Array.isArray(creneaux) ? creneaux : [])
+  .filter((creneau) => Number(creneau?.weekday) === Number(numero)
+    && creneau?.documentId !== exclu);
+
+/**
  * Le prochain jour civil (aujourd hui compris) qui tombe un jour ISO donne.
  * @param {number} jour - 1 a 7.
  * @returns {Date} La date.
@@ -478,11 +489,10 @@ function SeasonSlotForm({
   // refuse toujours une heure hors horaires (`seasonSlotErrorMessage`).
   const heuresLibres = useMemo(() => {
     if (!jour) return [];
-    /** @type {any[]} */
-    const creneauxDuJour = (Array.isArray(lecture.data?.data) ? lecture.data.data : [])
-      .filter((creneau) => Number(creneau?.weekday) === Number(jour)
-        && creneau?.documentId !== slot?.documentId);
-    return freeRanges(fullRangesOfSlots(creneauxDuJour, capacite));
+    return freeRanges(fullRangesOfSlots(
+      creneauxDuJour(lecture.data?.data, jour, slot?.documentId),
+      capacite,
+    ));
   }, [capacite, jour, lecture.data, slot?.documentId]);
 
   const nomDuClub = slot?.club?.name
@@ -1091,17 +1101,32 @@ function SeasonSlotForm({
       {!visible('jour') || heuresFigees || repartition ? null : (
         <View style={{ gap: 8 }}>
           {libelleDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
-          {listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => ({
-            actif: numero === jour,
-            key: `jour-${numero}`,
-            libelle: weekdayName(numero),
-            libelleCourt: weekdayName(numero, { short: true }),
-            onPress: () => {
-              setJour(numero);
-              toucherLaSaisie();
-            },
-            testID: `jour-${numero}`,
-          })))}
+          {listeDeChoix(SEASON_SLOT_WEEKDAYS.map((numero) => {
+            // « Jours : oui » (Adel, 13/10, planche P4v4-attribuer 3/5) : un jour plein a
+            // certaines heures le dit sous son nom (les mots de la planche P4v2).
+            const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
+            const pleines = tunnelPleinEcran ? fullRangesOfSlots(ceJour, capacite) : [];
+            return {
+              actif: numero === jour,
+              avertissement: pleines.length > 0,
+              detail: pleines.length
+                ? t('collectiviteCreneaux.creneaux.completDe', 'complet {{heures}}', {
+                  heures: pleines
+                    .map((plage) => timeRange(fromMinutes(plage.start), fromMinutes(plage.end)))
+                    .join(', '),
+                  ...SANS_ECHAPPEMENT,
+                })
+                : null,
+              key: `jour-${numero}`,
+              libelle: weekdayName(numero),
+              libelleCourt: weekdayName(numero, { short: true }),
+              onPress: () => {
+                setJour(numero);
+                toucherLaSaisie();
+              },
+              testID: `jour-${numero}`,
+            };
+          }))}
         </View>
       )}
 
