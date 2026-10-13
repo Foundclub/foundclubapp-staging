@@ -217,7 +217,9 @@ describe('COLL-C4A2 — planche 3 : « Écrire aux dirigeants »', () => {
     expect(fiche).toMatch(/demanderFiche[\s\S]*?testID="fiche-club-demander-fiche"/);
     const liste = lire('collectivite/CollectiviteClubs.js');
     expect(liste).toMatch(/-ecrire`/);
-    expect(liste).toMatch(/-demander-fiche`/);
+    // COLL-R-A6 (13/10, COL-001, D1 A′) : « Demander de compléter » quitte la liste (contact) ;
+    // il reste sur la fiche du club (`fiche-club-demander-fiche`, ci-dessus).
+    expect(liste).not.toMatch(/-demander-fiche`/);
     const planning = lire('planning/PersonalPlanningWeekFullscreen.js');
     expect(planning).toMatch(/testID="planning-ecrire-aux-dirigeants"/);
     expect(planning).not.toMatch(/POINT D ACCROCHE, aucun bouton tant que la conversation/);

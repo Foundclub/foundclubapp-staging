@@ -30,6 +30,10 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * (motifs fréquents + motif obligatoire, envoyé au club), plus une confirmation sans motif.
  * L'état et les gestes permis viennent du serveur (`state`, `canAnswer`, `canRemind`,
  * `canCancel`) : l'écran n'en déduit aucun. « vous » : la mairie.
+ * COLL-R-A6 (13/10, COL-001, planche P7v4-clubs état 4) : seules restent les demandes EN ATTENTE
+ * et les refus que la Ville peut renvoyer — une demande acceptée, rattachée ou refusée par la Ville
+ * n'attend plus rien (« Rattaché · Il apparaît dans vos clubs. » doublait la liste). Ce qui est à
+ * trancher passe en tête ; plusieurs demandes : la première, puis « Voir les N demandes ».
  * @param {{ collectiviteId: string | null, demandes: any[] }} props - La Ville et ses demandes.
  * @returns {import('react').ReactElement | null} La section, ou rien sans demande.
  */
@@ -47,8 +51,19 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
   const [aRefuser, setARefuser] = useState(/** @type {any} */ (null));
   /** @type {[Record<string, string>, Function]} */
   const [erreurs, setErreurs] = useState({});
+  const [toutes, setToutes] = useState(false);
 
-  if (!Array.isArray(demandes) || demandes.length === 0) return null;
+  const renvoyable = (/** @type {any} */ demande) => demande?.kind === 'proposal'
+    && demande?.state === 'refused' && Boolean(demande?.club?.documentId);
+  const enAttente = (Array.isArray(demandes) ? demandes : []).filter(
+    (/** @type {any} */ demande) => demande?.state === 'pending' || renvoyable(demande),
+  );
+  const aMontrer = [
+    ...enAttente.filter((/** @type {any} */ demande) => demande?.canAnswer),
+    ...enAttente.filter((/** @type {any} */ demande) => !demande?.canAnswer),
+  ];
+  if (aMontrer.length === 0) return null;
+  const visibles = toutes ? aMontrer : aMontrer.slice(0, 1);
 
   const tons = {
     cyan: Colors.primary200,
@@ -95,8 +110,6 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
       : t('collectiviteRattachement.demandes.fromCity', 'Votre demande');
     const relancee = Number(demande?.remindCount) || 0;
     const club = demande?.club?.name || '';
-    const renvoyable = demande?.kind === 'proposal' && demande?.state === 'refused'
-      && Boolean(demande?.club?.documentId);
     return (
       <View
         key={id}
@@ -165,7 +178,7 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
           </View>
         ) : null}
         {/* « refus B » (Adel, 07/10 ~18h05) : la Ville peut renvoyer une demande refusée. */}
-        {renvoyable ? (
+        {renvoyable(demande) ? (
           <Button
             isLoading={renvoyer.isPending && renvoyer.variables?.clubId === demande.club.documentId}
             isOption
@@ -198,7 +211,20 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
       <Text accessibilityRole="header" style={[Fonts.h4Black, Fonts.neutral00]}>
         {t('collectiviteRattachement.demandes.title', 'Demandes de rattachement')}
       </Text>
-      {demandes.map(renderDemande)}
+      {visibles.map(renderDemande)}
+      {visibles.length < aMontrer.length ? (
+        <Button
+          isOption
+          onPress={() => setToutes(true)}
+          size="sm"
+          style={{ alignSelf: 'flex-start' }}
+          testID="collectivite-demandes-voir-toutes"
+          title={t('collectiviteAccueil.attente.voirToutes', 'Voir les {{nombre}} demandes', {
+            nombre: aMontrer.length,
+          })}
+          variant="SecondaryLight"
+        />
+      ) : null}
       {aRefuser ? (
         <DecisionCreneauModal
           collectiviteId={collectiviteId}

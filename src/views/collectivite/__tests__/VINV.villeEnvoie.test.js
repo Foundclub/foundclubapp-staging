@@ -352,6 +352,10 @@ describe('VINV · côté mairie — « Demandes de rattachement » dans « Clubs
 
   it('E5 la demande de la Ville : Relancer, Annuler ; refusée, plus rien à faire ; « Invitations » ne garde que « Par FoundClub »', async () => {
     const arbre = await monter(CollectiviteClubs);
+    // COLL-R-A6 (13/10, planche P7v4-clubs état 4) : plusieurs demandes, la première (celle à
+    // trancher) puis « Voir les 3 demandes ».
+    expect(dans(arbre, 'demande-rattachement-p1')).toBeUndefined();
+    await act(async () => { boutons(arbre, 'Voir les 3 demandes')[0].props.onPress(); });
     const envoyee = dans(arbre, 'demande-rattachement-p1');
     expect(textes(envoyee)).toEqual(expect.arrayContaining([
       'Judo Club E', 'En attente', 'Envoyée au club : ses dirigeants acceptent ou refusent.', 'Relancée 1 fois.',

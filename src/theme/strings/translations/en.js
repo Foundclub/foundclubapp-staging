@@ -4993,6 +4993,21 @@ export default {
     vide: 'No news published yet. Members of your clubs will read it in their messages.',
   },
   collectiviteClubs: {
+    // COLL-R-A6 (13/10/2026, COL-001, P7v4-clubs board, D1 A′): a club card in 3 lines.
+    carte: {
+      ecrire: 'Write to the leaders of {{club}}',
+      ecrireElide: 'Write to the leaders of {{club}}',
+      equipes: '{{nombre}} teams',
+      equipesUne: '{{nombre}} team',
+      membres: '{{nombre}} members',
+      membresUn: '{{nombre}} member',
+      seances: '{{nombre}} sessions this week',
+      seancesAucune: 'no session this week',
+      seancesUne: '{{nombre}} session this week',
+      semaine: '{{nombre}} sessions',
+      semaineAucune: 'none',
+      semaineUne: '{{nombre}} session',
+    },
     detail: {
       acceptedMany: '{{nombre}} accepted',
       acceptedOne: '{{nombre}} accepted',

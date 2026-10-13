@@ -5349,6 +5349,21 @@ export default {
     vide: 'Aucune actualité publiée. Les membres de vos clubs la liront dans leurs messages.',
   },
   collectiviteClubs: {
+    // COLL-R-A6 (13/10/2026, COL-001, planche P7v4-clubs, D1 A′) : la carte d'un club en 3 lignes.
+    carte: {
+      ecrire: 'Écrire aux dirigeants de {{club}}',
+      ecrireElide: 'Écrire aux dirigeants d’{{club}}',
+      equipes: '{{nombre}} équipes',
+      equipesUne: '{{nombre}} équipe',
+      membres: '{{nombre}} membres',
+      membresUn: '{{nombre}} membre',
+      seances: '{{nombre}} séances cette semaine',
+      seancesAucune: 'aucune séance cette semaine',
+      seancesUne: '{{nombre}} séance cette semaine',
+      semaine: '{{nombre}} séances',
+      semaineAucune: 'aucune',
+      semaineUne: '{{nombre}} séance',
+    },
     detail: {
       acceptedMany: '{{nombre}} acceptées',
       acceptedOne: '{{nombre}} acceptée',

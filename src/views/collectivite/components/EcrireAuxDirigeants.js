@@ -1,7 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import {
+  ActivityIndicator, Text, TouchableOpacity, View,
+} from 'react-native';
 
 import { CONVERSATION_CLUB } from '@/domains/collectivite/collectiviteCanaux';
 import { nomQuiSElide } from '@/domains/collectivite/collectiviteDisplay';
@@ -9,6 +11,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Input from '@/components/molecules/input/Input';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -61,16 +64,20 @@ const useNavigationSiPresente = () => {
  * fenêtre lui passe donc SA navigation (`navigation`) ; sans navigation du tout, rien.
  * @param {{ club: { documentId?: string, name?: string } | null | undefined,
  *   collectiviteId: string | null | undefined, compact?: boolean, court?: boolean,
- *   demanderFiche?: boolean, navigation?: { navigate: Function } | null, testID?: string }} props
+ *   demanderFiche?: boolean, icone?: boolean, navigation?: { navigate: Function } | null,
+ *   testID?: string }} props
  *   `court` : le libellé court de « compléter sa fiche » (colonne du tableau, planche 36).
+ *   `icone` : COLL-R-A6 (13/10, COL-001, D1 A′) — un bouton ROND, icône seule (44 px), nommé
+ *   « Écrire aux dirigeants de <club> » pour le lecteur d'écran ; la saisie du premier message
+ *   prend alors toute la largeur (elle passe sous la ligne du nom, dans « Clubs rattachés »).
  * @returns {import('react').ReactElement | null} Le bouton, ou rien sans club, Ville ou navigation.
  */
 function EcrireAuxDirigeants({
-  club, collectiviteId, compact = false, court = false, demanderFiche = false,
+  club, collectiviteId, compact = false, court = false, demanderFiche = false, icone = false,
   navigation: navigationRecue = null, testID = 'ecrire-aux-dirigeants',
 }) {
   const { t } = useTranslation();
-  const { Fonts } = useTheme();
+  const { Colors, Fonts } = useTheme();
   const navigationDeLEcran = useNavigationSiPresente();
   const navigation = /** @type {any} */ (navigationRecue || navigationDeLEcran);
   const [enCours, setEnCours] = useState(false);
@@ -136,7 +143,10 @@ function EcrireAuxDirigeants({
 
   if (premierMessage !== null) {
     return (
-      <View style={{ alignSelf: 'stretch', gap: 8 }} testID={`${testID}-saisie`}>
+      <View
+        style={{ alignSelf: 'stretch', gap: 8, ...(icone ? { width: '100%' } : {}) }}
+        testID={`${testID}-saisie`}
+      >
         {/* VILLE-T18C (07/10, tournée T18 G62) : « d’AS Montrivage », et la mairie VOUVOYÉE
             (ce bouton est celui de la Ville : fiche d'un club, clubs rattachés, son planning). */}
         <Text style={[Fonts.p2, Fonts.neutral00]}>
@@ -182,6 +192,42 @@ function EcrireAuxDirigeants({
         />
         {ligneErreur}
       </View>
+    );
+  }
+
+  if (icone) {
+    const nomme = nomQuiSElide(club.name)
+      ? t('collectiviteClubs.carte.ecrireElide', 'Écrire aux dirigeants d’{{club}}', {
+        club: club.name || '', ...SANS_ECHAPPEMENT,
+      })
+      : t('collectiviteClubs.carte.ecrire', 'Écrire aux dirigeants de {{club}}', {
+        club: club.name || '', ...SANS_ECHAPPEMENT,
+      });
+    return (
+      <>
+        <TouchableOpacity
+          accessibilityLabel={nomme}
+          accessibilityRole="button"
+          accessibilityState={{ busy: enCours, disabled: enCours }}
+          disabled={enCours}
+          onPress={ecrire}
+          style={{
+            alignItems: 'center',
+            borderColor: Colors.primary500,
+            borderRadius: 22,
+            borderWidth: 1,
+            height: 44,
+            justifyContent: 'center',
+            width: 44,
+          }}
+          testID={testID}
+        >
+          {enCours
+            ? <ActivityIndicator color={Colors.primary500} size="small" />
+            : <SvgIcon color={Colors.primary500} height={20} name="envelope" width={20} />}
+        </TouchableOpacity>
+        {ligneErreur ? <View style={{ width: '100%' }}>{ligneErreur}</View> : null}
+      </>
     );
   }
 
