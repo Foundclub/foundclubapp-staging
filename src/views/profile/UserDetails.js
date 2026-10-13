@@ -380,6 +380,7 @@ function UserDetails({ navigation, route }) {
     Spaces,
   } = useTheme();
   const {
+    isParentMode,
     refetchUserData,
     USER_ROLES,
     userData: currentUser,
@@ -1066,7 +1067,11 @@ function UserDetails({ navigation, route }) {
   // Restent rendus ci-dessous, inchanges : le profil de QUELQU'UN D'AUTRE avec
   // son masquage « Prive » et ses douze points d'entree — et ce meme rendu en
   // mode APERCU, quand on regarde son propre profil comme le voient les autres.
-  if (isOwnerView) {
+  // PAR-L12 (13/10, décision D6 A d'Adel du 12/10) — en MODE PARENT (choix d'affichage d'un
+  // compte sportif qui a des enfants), « Mon profil » est celui d'un parent : l'écran sportif
+  // (« voir = modifier ») revient d'un geste, depuis le bandeau de l'accueil.
+  const enModeParent = isOwnerView && isParentMode === true;
+  if (isOwnerView && !enModeParent) {
     const selfRoleKey = getUserRoleKey(user?.role?.type || user?.role?.name);
     if (selfRoleKey === 'president') {
       return <SelfProfileUnified navigation={navigation} />;
@@ -1081,8 +1086,8 @@ function UserDetails({ navigation, route }) {
   // sportif : ni retours du coach (toujours vides pour lui), ni historique, ni profil sportif,
   // ni équipes. Seulement en PROPRIÉTAIRE (`isOwnerView`) : le profil d'un parent vu par
   // quelqu'un d'autre, et son aperçu, ne changent pas.
-  const estMonProfilDeParent = isOwnerView
-    && getUserRoleKey(user?.role?.type || user?.role?.name) === 'parent';
+  const estMonProfilDeParent = enModeParent || (isOwnerView
+    && getUserRoleKey(user?.role?.type || user?.role?.name) === 'parent');
 
   const renderTeamCard = (team, index, prefix = 'team') => (
     <TouchableOpacity
@@ -1223,7 +1228,10 @@ function UserDetails({ navigation, route }) {
           ]}
         />
         {isParentOfMinorViewer ? null : (
-          <Text style={[Fonts.p2Bold, Fonts.primary500]}>{roleLabel}</Text>
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {/* PAR-L12 — en mode parent, le rôle LU est celui de la vue (comme l'accueil). */}
+            {enModeParent ? formatRoleLabel('Parent') : roleLabel}
+          </Text>
         )}
       </View>
 

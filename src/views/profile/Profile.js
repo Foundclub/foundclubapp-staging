@@ -133,6 +133,7 @@ function Profile({ navigation, route }) {
     clubVerificationSummary,
     entitlementsSummary,
     freeUsageSummary,
+    isParentMode,
     logoutMutation,
     refetchUserData,
     subscriptionAccessLevel,
@@ -165,7 +166,8 @@ function Profile({ navigation, route }) {
     || currentRoleKey === 'president';
   // PAR-L7 (13/10, design E02) — le parent lit combien il a d'enfants (« Mes enfants · 2 »).
   // Les autres rôles gardent leur menu tel quel : rien n'est lu pour eux.
-  const estParent = currentRoleKey === 'parent';
+  // PAR-L12 (D6 A) — un compte sportif en MODE PARENT lit aussi « Mon compte » comme un parent.
+  const estParent = currentRoleKey === 'parent' || isParentMode === true;
   const mesEnfants = useMesEnfantsEnBref({ actif: estParent });
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],

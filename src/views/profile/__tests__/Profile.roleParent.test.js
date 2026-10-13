@@ -19,6 +19,8 @@ import Profile from '../Profile';
 
 /** @type {any} */
 let mockUserData;
+/** PAR-L12 — le mode parent d'un compte sportif (choix d'affichage, `useAuth`). */
+let mockIsParentMode = false;
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
@@ -56,6 +58,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     canEditClub: () => false,
     canManageTeam: () => false,
     freeUsageSummary: null,
+    isParentMode: mockIsParentMode,
     logoutMutation: { mutate: jest.fn() },
     refetchUserData: jest.fn(),
     subscriptionAccessLevel: 'free',
@@ -294,5 +297,32 @@ describe('PAR-L7 — « Mon compte » d un Parent commence par ses enfants', () 
     expect(libelles).not.toContain('Ma famille et mon profil');
     expect(libelles.indexOf('Mes enfants')).toBeGreaterThan(libelles.indexOf('Voir mon profil'));
     expect(useMesEnfantsEnBref.appels.every((options) => options.actif === false)).toBe(true);
+  });
+});
+
+// PAR-L12 (13/10, design parent §2 bis, décision D6 A d'Adel du 12/10) — en MODE PARENT, un
+// compte sportif lit « Mon compte » comme un parent : sa famille d'abord. Son rôle ne change pas.
+describe('PAR-L12 — un joueur en mode parent lit « Mon compte » comme un parent', () => {
+  const useMesEnfantsEnBref = jest
+    .requireMock('@/views/profile/parent/useMesEnfantsEnBref').default;
+
+  afterEach(() => {
+    mockIsParentMode = false;
+    useMesEnfantsEnBref.appels.length = 0;
+  });
+
+  it('« Ma famille et mon profil », « Mes enfants » en tête, et ses enfants comptés', async () => {
+    mockIsParentMode = true;
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+
+    expect(libelles).toContain('Ma famille et mon profil');
+    expect(libelles.indexOf('Mes enfants')).toBeLessThan(libelles.indexOf('Voir mon profil'));
+    expect(useMesEnfantsEnBref.appels.at(-1)).toEqual({ actif: true });
+  });
+
+  it('hors mode parent, son menu de joueur ne bouge pas', async () => {
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+
+    expect(libelles).toContain('Profil & activité');
   });
 });

@@ -34,6 +34,8 @@ let mockFetchedUser;
 let mockPersonalStats;
 /** @type {any} */
 let mockPersonalStatsError;
+/** PAR-L12 — le mode parent d'un compte sportif. */
+let mockIsParentMode = false;
 const mockNavigate = jest.fn();
 
 // BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
@@ -283,6 +285,8 @@ const rendre = async (utilisateurCourant, parametresRoute = {}) => {
       superAdmin: 'SuperAdmin',
     },
     userData: utilisateurCourant,
+    // PAR-L12 — le mode parent (choix d'affichage) : faux, sauf quand un temoin le demande.
+    isParentMode: mockIsParentMode,
   };
   /** @type {any} */
   let arbre;
@@ -569,5 +573,36 @@ describe('PAR-L7 — « Mon profil » d un PARENT : ses enfants, ses infos, rien
     expect(texte).toContain('INFOS PROFIL');
     expect(texte).toContain('Profil sportif');
     expect(texte).not.toContain('Mes enfants');
+  });
+});
+
+// PAR-L12 (13/10, design parent §2 bis, décision D6 A d'Adel du 12/10) — EN MODE PARENT, « Mon
+// profil » d'un compte sportif est celui d'un parent (ses enfants, ses infos) ; hors mode parent,
+// son écran sportif (« voir = modifier ») ne change pas. Son rôle de compte reste le sien.
+describe('PAR-L12 — « Mon profil » suit le mode parent', () => {
+  const joueurConnecte = {
+    documentId: 'user-j',
+    firstname: 'Youss',
+    lastname: 'B',
+    role: { name: 'Joueur', type: 'joueur' },
+  };
+
+  afterEach(() => { mockIsParentMode = false; });
+
+  it('en mode parent : « MON PROFIL », « PARENT », ses enfants, sans l ecran sportif', async () => {
+    mockIsParentMode = true;
+    const texte = texteVisible(await rendre(joueurConnecte));
+
+    expect(texte).toContain('MON PROFIL');
+    expect(texte).toContain('PARENT');
+    expect(texte).toContain('Mes enfants');
+    expect(texte).not.toContain('ECRAN PROFIL JOUEUR OU ENTRAINEUR');
+    expect(texte).not.toContain('Profil sportif');
+  });
+
+  it('hors mode parent : son ecran de joueur, comme avant', async () => {
+    const texte = texteVisible(await rendre(joueurConnecte));
+
+    expect(texte).toContain('ECRAN PROFIL JOUEUR OU ENTRAINEUR');
   });
 });
