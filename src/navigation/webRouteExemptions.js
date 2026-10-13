@@ -179,6 +179,12 @@ const MOBILE_ONLY_SCREENS = {
   // .../installations, /messages) ; sur le site, le menu lateral de l AppShell les porte.
   [RouteNames.CollectiviteSpace]:
     'Tab navigator of the town space; on the website, the AppShell side menu carries its tabs',
+
+  // --- RESA-L5A1 (13/10/2026) ---
+  // Le gérant de complexe : écrans cachés par l interrupteur COMPLEXES_GERANT (serveur non
+  // livré). Leur adresse sur le site viendra avec le lot web du gérant (screenRegistry.tsx).
+  [RouteNames.ComplexeDevenirGerant]:
+    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
 };
 
 /**

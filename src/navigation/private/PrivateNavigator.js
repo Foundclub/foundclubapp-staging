@@ -50,6 +50,10 @@ import { useAppMode } from '@/context/AppModeContext';
 
 const Stack = createStackNavigator();
 
+// RESA-L5A1 (13/10/2026) — l'interrupteur du gérant de complexe. Lu par `require` : un `import`
+// ici ferait se contredire les deux règles d'ordre des imports (import/order et perfectionist).
+const { COMPLEXES_GERANT } = require('@/config/fonctionsMasquees');
+
 /**
  *
  */
@@ -1381,6 +1385,17 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
+        {/* RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation) : ses écrans ne
+            sont DÉCLARÉS que si l'interrupteur `COMPLEXES_GERANT` est allumé (éteint : aucune
+            porte, aucun lien ne les atteint).
+            E-G01 « Devenir gérant » : le tunnel pose son propre en-tête. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeDevenirGerant').default}
+            name={RouteNames.ComplexeDevenirGerant}
+            options={{ headerShown: false }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>
