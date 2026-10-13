@@ -102,6 +102,14 @@ function FriendlyMatchWizardRecap({ navigation }) {
 
   const slots = Array.isArray(state.candidateDates) ? state.candidateDates : [];
   const hostingSummary = getHostingSummary({ hostingPreference: state.hostingPreference });
+  // AMICAUX-CORRECTIFS 73 — la rangee commence par « Je peux » : sa valeur se lit a la suite
+  // (« Je peux : Recevoir »). getHostingSummary parle a la 3e personne, pour la page d une annonce.
+  // Temoin : __tests__/AMIC73-recapJePeux.test.js.
+  const iCanLabel = {
+    away: t('friendlyMatchWizardRecap.iCanAway', 'Me déplacer'),
+    both: t('friendlyMatchWizardRecap.iCanBoth', 'Recevoir ou me déplacer'),
+    host: t('friendlyMatchWizardRecap.iCanHost', 'Recevoir'),
+  }[hostingSummary.tone] || hostingSummary.label;
   const formatLabel = state.format === 'Autre' ? state.formatOther : state.format;
 
   const handlePublish = async () => {
@@ -238,7 +246,7 @@ function FriendlyMatchWizardRecap({ navigation }) {
     >
       <View style={[Spaces.gap[12]]}>
         {renderRow(t('friendlyMatchWizardRecap.team', 'Équipe'), state.team?.name || '', 'team')}
-        {renderRow(t('friendlyMatchWizardRecap.iCan', 'Je peux'), hostingSummary.label, 'hosting')}
+        {renderRow(t('friendlyMatchWizardRecap.iCan', 'Je peux'), iCanLabel, 'hosting')}
         {renderRow(
           slots.length > 1
             ? t('friendlyMatchWizardRecap.datesCount', '{{total}} dates', { total: slots.length })
