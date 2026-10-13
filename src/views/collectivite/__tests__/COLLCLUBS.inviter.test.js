@@ -268,8 +268,11 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
       'Judo Club', 'Envoyée', 'Le jeu. 1 oct. · Transmise à l’équipe FoundClub · pas encore inscrit.',
       'Recette Stripe FC', 'Inscrit',
       'Le jeu. 1 oct. · Hors de la commune : l’équipe FoundClub vérifie avec vous avant de le rattacher.',
-      'Tennis Club', 'Rattaché', 'Le dim. 20 sept. · Il apparaît dans vos clubs.',
     ]));
+    // COLL-R-A6 (13/10, « invitations B » du chef d'orchestre) : une invitation dont le club est
+    // rattaché ne s'affiche plus — il est dans la liste juste au-dessus (le doublon de COL-001).
+    expect(lus).not.toContain('Tennis Club');
+    expect(lus).not.toContain('Le dim. 20 sept. · Il apparaît dans vos clubs.');
     const relancer = arbre.root.findAll(
       (/** @type {any} */ n) => n.props?.title === 'Relancer' && typeof n.props?.onPress === 'function',
     );

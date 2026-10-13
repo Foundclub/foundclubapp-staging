@@ -26,6 +26,8 @@ import CollectiviteClubs from '../CollectiviteClubs';
 let mockClubs;
 /** @type {any} */
 let mockDemandes;
+/** @type {any[]} */
+let mockInvitations = [];
 const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -92,7 +94,7 @@ jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
 
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useCollectiviteClubs: () => mockClubs,
-  useCollectiviteInvitations: () => ({ data: [] }),
+  useCollectiviteInvitations: () => ({ data: mockInvitations }),
   useMyCollectivites: () => ({
     data: [{ documentId: 'ville-de-recette', name: 'Ville de Recette' }],
     isLoading: false,
@@ -226,6 +228,7 @@ beforeEach(() => {
     refetch: jest.fn(),
   };
   mockDemandes = { data: [], error: null, isLoading: false };
+  mockInvitations = [];
 });
 
 describe('COL-001 — la carte d’un club en 3 lignes (téléphone, planche P7v4-clubs-tel, A′)', () => {
@@ -399,6 +402,60 @@ describe('COL-001 — sur ordinateur (planche P7v4-clubs-ordi, A′)', () => {
     const ecrire = pressable(arbre, 'collectivite-club-as-montrivage-ecrire');
     expect(ecrire.props.accessibilityLabel).toBe('Écrire aux dirigeants d’AS Montrivage');
     expect(textesDe(ecrire)).toEqual([]);
+  });
+});
+
+// 📨 COLL-R-A6 (13/10, décision du chef « invitations B ») : le bloc « Invitations » (P7v3) avait
+// le même doublon que les demandes, « Tennis Club · Rattaché · Il apparaît dans vos clubs. », alors
+// que le club est déjà dans la liste. Une invitation rattachée ne s'affiche plus ; « Envoyée » et
+// « Inscrit » restent (il y a encore quelque chose à suivre). ROUGE avant.
+describe('COL-001 — le bloc « Invitations » sans le doublon « Rattaché »', () => {
+  const INVITATIONS = [
+    {
+      clubName: 'Judo Club',
+      createdAt: '2026-10-01T08:00:00.000Z',
+      documentId: 'i1',
+      kind: 'foundclub',
+      remindCount: 0,
+      status: 'sent',
+    },
+    {
+      clubName: 'Recette Stripe FC',
+      createdAt: '2026-10-01T08:00:00.000Z',
+      documentId: 'i2',
+      kind: 'foundclub',
+      outsideCommune: true,
+      remindCount: 0,
+      status: 'registered',
+    },
+    {
+      clubName: 'Tennis Club',
+      createdAt: '2026-09-20T08:00:00.000Z',
+      documentId: 'i3',
+      kind: 'foundclub',
+      outsideCommune: false,
+      remindCount: 0,
+      status: 'attached',
+    },
+  ];
+
+  it('une invitation au club rattaché ne s’affiche plus ; les autres restent', async () => {
+    mockInvitations = INVITATIONS;
+    const arbre = await monter();
+    const tout = textesDe(arbre.root);
+    expect(tout).toEqual(expect.arrayContaining(['Invitations', 'Judo Club', 'Recette Stripe FC']));
+    expect(tout).not.toContain('Tennis Club');
+    expect(tout).not.toContain('Rattaché');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-invitation-i3')).toHaveLength(0);
+  });
+
+  it('seules des invitations rattachées : pas de bloc « Invitations » du tout', async () => {
+    mockInvitations = [INVITATIONS[2]];
+    const arbre = await monter();
+    expect(textesDe(arbre.root)).not.toContain('Invitations');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-invitations')).toHaveLength(0);
   });
 });
 

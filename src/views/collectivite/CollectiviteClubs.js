@@ -118,11 +118,14 @@ function CollectiviteClubs() {
   };
   const demandes = useCollectiviteClubRequests(collectiviteId);
   const demandesLues = Array.isArray(demandes.data);
-  const invitationsAffichees = demandesLues
+  // COLL-R-A6 (13/10, « invitations B » du chef) : une invitation dont le club est RATTACHÉ ne se
+  // montre plus : le club est dans la liste juste au-dessus (le doublon des demandes, COL-001).
+  const invitationsAffichees = (demandesLues
     ? lesInvitations.filter(
       (/** @type {any} */ invitation) => invitation?.kind !== 'attach_request',
     )
-    : lesInvitations;
+    : lesInvitations
+  ).filter((/** @type {any} */ invitation) => invitation?.status !== 'attached');
   const ouvrirLaFiche = (/** @type {any} */ club) => {
     /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteClubDetails, {
       clubId: club?.documentId,
