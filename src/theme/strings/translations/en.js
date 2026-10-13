@@ -13467,6 +13467,33 @@ export default {
       submitAdd: 'Register my child',
       submitEdit: 'Save',
     },
+    list: {
+      cancelLink: 'Cancel the link request',
+      clubLabel: 'Club',
+      confirmCancelLink: {
+        confirm: 'Cancel the request',
+        keep: 'Keep it',
+        message: 'The number ending in {{hint}} will no longer be able to accept it.'
+          + ' You can send another one.',
+        title: 'Cancel this link request?',
+      },
+      count_one: '{{count}} child',
+      count_other: '{{count}} children',
+      errors: {
+        cancelLink: 'Unable to cancel this request right now.',
+      },
+      linkAccountEmpty: 'Is your child 13 or older? Link their account',
+      loadError: 'Unable to load your children.',
+      requestedTeamLabel: 'Requested team',
+      state: {
+        hasAccount: 'Has their own account',
+        inTeam: 'On a team',
+        pending_one: 'Request pending',
+        pending_other: '{{count}} requests pending',
+      },
+      teamLabel_one: 'Team',
+      teamLabel_other: 'Teams',
+    },
     screen: {
       adultHint: '{{firstname}} is an adult: they manage their own account.',
       count_one: '{{count}} child registered',

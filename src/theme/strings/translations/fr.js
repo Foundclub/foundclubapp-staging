@@ -22818,6 +22818,36 @@ export default {
       submitAdd: 'Déclarer mon enfant',
       submitEdit: 'Enregistrer',
     },
+    // PAR-L5L6 (13/10, design parent E04) — « Mes enfants » : une carte courte par enfant, et
+    // le club sur SA ligne (« on voit bien que les enfants sont dans aucun club », Adel, 13/10).
+    list: {
+      cancelLink: 'Annuler la demande de lien',
+      clubLabel: 'Club',
+      // C4 du design : « Annuler » partait sans confirmation et sans message d'erreur.
+      confirmCancelLink: {
+        confirm: 'Annuler la demande',
+        keep: 'Garder',
+        message: 'Le numéro finissant par {{hint}} ne pourra plus l’accepter.'
+          + ' Tu pourras en envoyer une autre.',
+        title: 'Annuler la demande de lien ?',
+      },
+      count_one: '{{count}} enfant',
+      count_other: '{{count}} enfants',
+      errors: {
+        cancelLink: 'Impossible d’annuler cette demande pour le moment.',
+      },
+      linkAccountEmpty: 'Ton enfant a 13 ans ou plus ? Relier son compte',
+      loadError: 'Impossible de charger tes enfants.',
+      requestedTeamLabel: 'Équipe demandée',
+      state: {
+        hasAccount: 'A son compte',
+        inTeam: 'En équipe',
+        pending_one: 'Demande en attente',
+        pending_other: '{{count}} demandes en attente',
+      },
+      teamLabel_one: 'Équipe',
+      teamLabel_other: 'Équipes',
+    },
     screen: {
       // ⚠️ Pluriel i18next : « _one » / « _other », jamais « _plural » (morte depuis
       // i18next 21), et l'appelant DOIT passer « count ».

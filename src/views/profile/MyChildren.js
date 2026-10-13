@@ -1,15 +1,17 @@
 // @ts-nocheck
 import { useNavigation } from '@react-navigation/native';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Icone from '@/components/atoms/SvgIcon/SvgIcon';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -19,14 +21,20 @@ import {
   newFeedbackKeys,
   seenFeedbackKeys,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
-import { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
+import { equipesParClub } from '@/views/profile/parent/ChildIdentityCard';
+import ClubEtEquipe from '@/views/profile/parent/ClubEtEquipe';
 import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
+import { demandesDe, etatDeLEnfant } from '@/views/profile/parent/demandesDeLEnfant';
+import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import { useGetUserById } from '@/services/auth/authQueries';
+import {
+  useGetMyClubInterestRequests,
+} from '@/services/clubInterestRequest/clubInterestRequestQueries';
 import { useGetCoachFeedbackFollow } from '@/services/coachFeedback/coachFeedbackQueries';
 import {
   useDeleteDeclaredChild,
@@ -41,17 +49,29 @@ import {
 import { parentalPowerForAge } from '@/constants/parentalDeclaration';
 
 /**
+ * L age d un enfant, ou rien (« 11 ans »).
+ * @param {any} t - La traduction.
+ * @param {unknown} age - L age rendu par le serveur.
+ * @returns {string} - « 11 ans », ou une chaine vide.
+ */
+const lAge = (t, age) => (typeof age === 'number'
+  ? t('myChildren.screen.years', '{{count}} ans', { count: age })
+  : '');
+
+/**
  * LA CARTE D UN ENFANT RELIE dans « Mes enfants » (planche 22, etat 1) : elle ouvre SON profil,
  * ou vivent « Retours du coach » et sa fiche.
  * - ST-RETOURS (02/10) : les retours de son entraineur que le parent n a pas encore lus — il
  *   sait s il y a du neuf sans ouvrir. Rien tant que « ce que j ai deja lu » n est pas arrive :
  *   on n annonce pas tout comme neuf.
- * - ST-RETOURS2 · point 2 bis : « 14 ans · U15 · AS Montrivage ». L age vient du lien ;
- *   l equipe et le club, de son profil public — la lecture que fait deja SA fiche
- *   (`UserDetails`, meme cle de cache : la fiche s ouvre donc deja remplie). Profil pas
- *   encore lu : l age seul, sans trou.
+ * - ST-RETOURS2 · point 2 bis : son age vient du lien ; ses equipes et son club, de son profil
+ *   public — la lecture que fait deja SA fiche (`UserDetails`, meme cle de cache : la fiche
+ *   s ouvre donc deja remplie). Profil pas encore lu : l age seul, sans trou.
  * - ST-RETOURS2 · point 2 ter : la « carte-bloc » de la planche, VIVE quand il y a du neuf,
  *   et une fleche ; « Voir son profil » reste dit au lecteur d ecran.
+ * - PAR-L5L6 (13/10, design parent E04) : la MEME forme que la carte d une fiche — l age, la
+ *   pastille « A son compte », et chaque club sur SA ligne avec ses equipes dessous (remarque
+ *   d Adel du 13/10 : « 14 ans · U15 · FoundClub » ne laissait pas voir le club).
  * @param {object} props - Les proprietes.
  * @param {any} props.compte - L enfant relie (`/parent-links/as-parent`).
  * @param {any} props.follow - Ce que le parent a deja lu
@@ -69,6 +89,8 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
   const retours = Array.isArray(stats?.recentCoachFeedback) ? stats.recentCoachFeedback : [];
   const nouveaux = follow ? newFeedbackKeys(retours, seenFeedbackKeys(follow, id)).size : 0;
   const equipes = Array.isArray(profil?.myTeams) ? profil.myTeams : [];
+  const groupes = equipesParClub({ clubName: profil?.club?.name, teams: equipes });
+  const age = lAge(t, compte?.age);
 
   return (
     <TouchableOpacity
@@ -79,16 +101,19 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
       testID={`linked-child-${id}`}
     >
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
-        <ProfileAvatar enablePreview={false} imageUrl={compte?.avatar?.url} name={nom} size={40} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{nom}</Text>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {ligneDIdentite(t, {
-              age: compte?.age,
-              clubName: profil?.club?.name,
-              teams: equipes,
-            })}
-          </Text>
+        <ProfileAvatar enablePreview={false} imageUrl={compte?.avatar?.url} name={nom} size={48} />
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>{nom}</Text>
+          {age ? <Text style={[Fonts.p3, Fonts.neutral200]}>{age}</Text> : null}
+          <PastilleDEtat texte={t('myChildren.list.state.hasAccount')} ton="compte" />
+          {groupes.map((groupe) => (
+            <ClubEtEquipe
+              club={groupe.club}
+              equipes={groupe.equipes}
+              key={`${groupe.club}|${groupe.equipes.join('|')}`}
+              testID={`linked-child-club-${id}`}
+            />
+          ))}
         </View>
         <Icone color={Colors.primary500} height={12} name="arrow-right" width={12} />
       </View>
@@ -108,6 +133,145 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
 }
 
 /**
+ * PAR-L5L6 (13/10, design parent E04, planche 2) — LA CARTE COURTE D UN ENFANT DECLARE.
+ *
+ * Son nom, son age, et CE QUI COMPTE AUJOURD HUI dans une pastille : « En équipe »,
+ * « Demande en attente », ou « Pas encore d'équipe ». Quand il y a un club, il a SA ligne,
+ * precede du mot « Club », et l equipe la sienne (remarque d Adel du 13/10). Les explications
+ * ne vivent plus ici (« Comment ça marche ? ») ; « Chercher un club » est sur SA fiche, et
+ * seulement quand il n a pas d equipe (E07).
+ * @param {object} props - Les proprietes.
+ * @param {any[]} props.demandes - Ses demandes (`demandesDe`).
+ * @param {any} props.enfant - La fiche.
+ * @param {(enfant: any) => void} props.onDelete - « Supprimer ».
+ * @param {(enfant: any) => void} props.onEdit - « Modifier ».
+ * @param {(enfant: any) => void} props.onGiveAccount - F20 « Donner un compte à Lina ».
+ * @param {(enfant: any) => void} props.onOpen - Ouvre SA fiche (moins de 13 ans).
+ * @param {boolean} props.suppressionEnCours - Une suppression part.
+ * @returns {import('react').ReactElement} - La carte.
+ */
+function CarteDeLaFiche({
+  demandes, enfant, onDelete, onEdit, onGiveAccount, onOpen, suppressionEnCours,
+}) {
+  const { t } = useTranslation();
+  const { Alignments, Colors, Fonts } = useTheme();
+  const id = enfant?.documentId;
+  const prenom = enfant?.firstname || '';
+  const nomComplet = `${prenom} ${enfant?.lastname || ''}`.trim();
+  const pouvoir = parentalPowerForAge(enfant?.age);
+  const age = lAge(t, enfant?.age);
+  const etat = etatDeLEnfant(enfant, demandes);
+  const texteDeLEtat = {
+    attente: t('myChildren.list.state.pending', { count: etat.enAttente }),
+    neutre: t('myChildren.screen.noTeam', 'Pas encore d’équipe'),
+    ok: t('myChildren.list.state.inTeam'),
+  }[etat.ton];
+  // ST-RETOURS2 · point 4 — moins de 13 ans : la carte ouvre SA page.
+  const aSaPage = pouvoir === 'full';
+  const Rangee = aSaPage ? TouchableOpacity : View;
+  const porte = aSaPage
+    ? {
+      accessibilityLabel: `${nomComplet}, ${t('myChildren.declared.open')}`,
+      accessibilityRole: 'button',
+      onPress: () => onOpen(enfant),
+      testID: `declared-child-${id}`,
+    }
+    : {};
+  const texteDuLien = [Fonts.p2Bold, { color: Colors.primary300 }];
+
+  return (
+    <View style={feedbackCardStyle(Colors, false)}>
+      <Rangee
+        // eslint-disable-next-line react/jsx-props-no-spreading
+        {...porte}
+        style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+      >
+        <ProfileAvatar
+          enablePreview={false}
+          imageUrl={enfant?.photo?.url}
+          name={nomComplet}
+          size={48}
+        />
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>{nomComplet}</Text>
+          {age ? <Text style={[Fonts.p3, Fonts.neutral200]}>{age}</Text> : null}
+          <PastilleDEtat
+            testID={`declared-child-state-${id}`}
+            texte={texteDeLEtat}
+            ton={etat.ton}
+          />
+          <ClubEtEquipe
+            club={etat.club}
+            equipes={etat.equipes}
+            libelleEquipe={etat.ton === 'attente' ? t('myChildren.list.requestedTeamLabel') : ''}
+            testID={`declared-child-club-${id}`}
+          />
+        </View>
+        {aSaPage ? (
+          <Icone color={Colors.primary500} height={12} name="arrow-right" width={12} />
+        ) : null}
+      </Rangee>
+
+      {/* On EXPLIQUE l'absence de « chercher un club » a partir de 13 ans (E17). */}
+      {pouvoir === 'view' ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'myChildren.screen.tooOldHint',
+            'À partir de 13 ans, {{firstname}} fait ses demandes lui-même.',
+            { firstname: prenom, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+
+      {/* 🔑 F20 — à 13 ans, la fiche reçoit la clé : Lina crée SON compte, et la fiche y est
+          accrochée quand elle accepte le lien. */}
+      {age && pouvoir === 'view' && !enfant?.account ? (
+        <TouchableOpacity onPress={() => onGiveAccount(enfant)}>
+          <Text style={texteDuLien}>
+            {t(
+              'myChildren.actions.giveAccount',
+              'Donner un compte à {{firstname}}',
+              { firstname: prenom, ...SANS_ECHAPPEMENT },
+            )}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+      {enfant?.account ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'myChildren.screen.hasAccount',
+            '{{firstname}} a son propre compte.',
+            { firstname: prenom, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+      {pouvoir === 'none' ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'myChildren.screen.adultHint',
+            '{{firstname}} est majeur : il gère son compte seul.',
+            { firstname: prenom, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+
+      <View style={[Alignments.row, { gap: 20 }]}>
+        <TouchableOpacity onPress={() => onEdit(enfant)}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+            {t('myChildren.actions.edit', 'Modifier')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity disabled={suppressionEnCours} onPress={() => onDelete(enfant)}>
+          <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+            {t('myChildren.actions.delete', 'Supprimer')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+/**
  * PARENT P2 — ÉCRAN 7 : « MES ENFANTS ».
  *
  * 🧒 POURQUOI CET ÉCRAN EXISTE. Un enfant de moins de 13 ans n'a pas de compte —
@@ -117,7 +281,7 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
  *
  * 🔒 LES TROIS TRANCHES D'ÂGE SE VOIENT ICI (E17, tranché par Adel le 07/09) —
  * et l'écran EXPLIQUE au lieu de faire disparaître un bouton sans un mot :
- *   · moins de 13 ans → « Chercher un club pour Léa » ;
+ *   · moins de 13 ans → sa fiche, où l'on cherche un club pour Léa ;
  *   · 13 à 17 ans     → l'ado fait ses demandes lui-même ;
  *   · 18 ans et plus  → le lien parental s'éteint, c'est la loi.
  * Le pouvoir se CALCULE à partir de l'âge rendu par le serveur : rien n'est
@@ -126,6 +290,11 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
  * ⛔ CE QUE CET ÉCRAN NE MONTRE PAS, et c'est voulu : la date de naissance. Le
  * serveur ne la rend jamais — il rend un âge calculé, exactement comme le profil
  * public d'un compte.
+ *
+ * 📋 PAR-L5L6 (13/10, design parent E04, planche 2) — une carte COURTE par enfant, la même
+ * forme pour une fiche et un compte relié (jamais fusionnés : la fiche ouvre SA page, le
+ * compte ouvre SON profil). Les demandes de place de chaque enfant se lisent en une fois
+ * (`/club-interest-requests/mine`, avec celles des enfants et l'historique, sans club).
  *
  * 📄 ST-RETOURS2 (planche 22, état 6) — avec `childDocumentId`, la route montre la PAGE
  * d'un enfant de moins de 13 ans, au lieu de la liste.
@@ -144,6 +313,7 @@ function MyChildren({ route } = {}) {
     data: enfantsBruts,
     error: erreurEnfants,
     isLoading: chargementEnfants,
+    refetch: relireLesEnfants,
   } = useGetMyDeclaredChildren();
   const { isPending: suppressionEnCours, mutate: supprimerEnfant } = useDeleteDeclaredChild();
 
@@ -164,6 +334,17 @@ function MyChildren({ route } = {}) {
   const { data: suiviDesRetours } = useGetCoachFeedbackFollow({
     enabled: comptesRelies.length > 0,
   });
+
+  // PAR-L5L6 — les demandes de place de MES ENFANTS : une lecture pour toutes les fiches. Sa
+  // clé de cache porte `includeChildRequests` (elle ne se mélange pas à celle de la fiche club).
+  const { data: mesDemandes } = useGetMyClubInterestRequests(
+    { includeChildRequests: true, includeHistory: true },
+    { enabled: enfants.length > 0 },
+  );
+  const lignesDeDemandes = useMemo(
+    () => (Array.isArray(mesDemandes?.data) ? mesDemandes.data : []),
+    [mesDemandes?.data],
+  );
 
   const relierUnCompte = useCallback((enfant) => {
     // Ecran pas encore route sur le site (webRouteExemptions) : le site EXPLIQUE au lieu
@@ -229,8 +410,29 @@ function MyChildren({ route } = {}) {
     );
   }, [supprimerEnfant, t]);
 
-  // ST-RETOURS2 · point 2 ter — la « carte-bloc » de la planche 22 (etat 1), celle des retours.
-  const carteStyle = feedbackCardStyle(Colors, false);
+  // C4 du design parent — « Annuler » une demande de lien partait SANS confirmation et sans
+  // message d'erreur. Deux choix : sur le site, `Alert` devient `window.confirm`.
+  const confirmerLAnnulation = useCallback((demande) => {
+    Alert.alert(
+      t('myChildren.list.confirmCancelLink.title'),
+      t('myChildren.list.confirmCancelLink.message', {
+        hint: demande?.phoneHint || '··', ...SANS_ECHAPPEMENT,
+      }),
+      [
+        { style: 'cancel', text: t('myChildren.list.confirmCancelLink.keep') },
+        {
+          onPress: () => annulerDemande(demande?.documentId, {
+            onError: () => Alert.alert(
+              t('common.error', 'Erreur'),
+              t('myChildren.list.errors.cancelLink'),
+            ),
+          }),
+          style: 'destructive',
+          text: t('myChildren.list.confirmCancelLink.confirm'),
+        },
+      ],
+    );
+  }, [annulerDemande, t]);
 
   // ST-RETOURS2 · point 4 (planche 22, etat 6) — LA PAGE D UN ENFANT DE MOINS DE 13 ANS. Une
   // vue de cette route, comme « Retours du coach » sur celle du profil : aucune route neuve,
@@ -263,6 +465,13 @@ function MyChildren({ route } = {}) {
     );
   }
 
+  const total = comptesRelies.length + enfants.length;
+  // Rien du tout — ni fiche, ni compte relié, ni demande de lien : l'écran vide du design.
+  const rienDuTout = !chargementLiens && !erreurLiens && total === 0
+    && demandesEnvoyees.length === 0;
+  // ErrorWrapper pose son pavé SUR ses enfants, à leur taille : sans contenu, il ne se voit pas.
+  const placeDuPave = <View style={{ minHeight: 140 }} />;
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -274,6 +483,14 @@ function MyChildren({ route } = {}) {
           {t('myChildren.screen.title', 'Mes enfants').toUpperCase()}
         </Text>
         <View style={{ backgroundColor: Colors.neutral00, height: 2, width: 80 }} />
+        {total > 0 ? (
+          <Text
+            style={[Fonts.p3Bold, Fonts.primary300, { letterSpacing: 1 }]}
+            testID="my-children-count"
+          >
+            {t('myChildren.list.count', { count: total }).toUpperCase()}
+          </Text>
+        ) : null}
       </View>
 
       <ScrollView
@@ -282,44 +499,84 @@ function MyChildren({ route } = {}) {
         style={[Alignments.fill]}
       >
         {/* STATS-FIX2 · 8-22 (tournee T10, ecran 22) — les comptes relies D ABORD (planche 22,
-            etat 1) : c est la que vivent les retours de l entraineur ; les fiches declarees
-            (moins de 13 ans surtout) viennent ensuite. */}
-        {/* 🔗 PARENT-LIEN — « LES COMPTES DE MES ENFANTS ». Une rangée par ado relié : elle
-            ouvre SON profil, où vit « Retours du coach ». Le lien ne s'écrit qu'avec SON
-            accord, et il peut le retirer. */}
-        <View style={[Spaces.marginTop[12], { gap: 12 }]} testID="my-children-accounts">
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('myChildren.accounts.title', 'Les comptes de mes enfants')}
-          </Text>
-          <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>
-            <View style={{ gap: 12 }}>
-              {comptesRelies.length === 0 ? (
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t(
-                    'myChildren.accounts.empty',
-                    'Ton enfant a 13 ans ou plus et son propre compte ? Relie-le au tien :'
-                    + ' tu verras les retours de son coach, jamais ses messages.',
-                  )}
-                </Text>
-              ) : null}
+            etat 1) : c est la que vivent les retours de l entraineur. */}
+        <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>
+          <View style={{ gap: 12 }} testID="my-children-accounts">
+            {erreurLiens ? placeDuPave : null}
+            {comptesRelies.map((compte) => (
+              <CarteDuCompteRelie
+                compte={compte}
+                follow={suiviDesRetours}
+                key={compte?.documentId}
+                onOpen={ouvrirLeProfil}
+              />
+            ))}
+          </View>
+        </WithDataWrapper>
 
-              {comptesRelies.map((compte) => (
-                <CarteDuCompteRelie
-                  compte={compte}
-                  follow={suiviDesRetours}
-                  key={compte?.documentId}
-                  onOpen={ouvrirLeProfil}
+        <WithDataWrapper
+          error={erreurEnfants}
+          errorMessage={t('myChildren.list.loadError')}
+          isLoading={chargementEnfants}
+          onRetry={relireLesEnfants ? () => relireLesEnfants() : undefined}
+        >
+          {erreurEnfants ? placeDuPave : null}
+          {rienDuTout && !erreurEnfants ? (
+            <View style={{ gap: 12 }} testID="my-children-empty">
+              <EmptyState
+                description={t(
+                  'myChildren.screen.emptyHint',
+                  'Déclare-le ici, puis cherche-lui un club.',
+                )}
+                title={t('myChildren.screen.empty', 'Tu n’as pas encore déclaré d’enfant.')}
+              />
+              <Button
+                onPress={() => ouvrirFormulaire(null)}
+                title={t('myChildren.actions.add', 'Ajouter un enfant')}
+              />
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => relierUnCompte(null)}
+                style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
+                testID="my-children-link-account-empty"
+              >
+                <Text style={[Fonts.p2Bold, { color: Colors.primary300, textAlign: 'center' }]}>
+                  {t('myChildren.list.linkAccountEmpty')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {!rienDuTout && !erreurEnfants ? (
+            <View style={{ gap: 12 }} testID="my-children-list">
+              {enfants.map((enfant) => (
+                <CarteDeLaFiche
+                  demandes={demandesDe(enfant?.documentId, lignesDeDemandes)}
+                  enfant={enfant}
+                  key={enfant?.documentId}
+                  onDelete={demanderSuppression}
+                  onEdit={ouvrirFormulaire}
+                  onGiveAccount={relierUnCompte}
+                  onOpen={ouvrirLaFiche}
+                  suppressionEnCours={suppressionEnCours}
                 />
               ))}
 
-              {/* 🤐 Une demande s'affiche « envoyée » jusqu'à sa réponse ou son échéance :
-                  le numéro ne dit jamais s'il existe un compte derrière. */}
+              {/* 🤐 Une demande de lien s'affiche « envoyée » jusqu'à sa réponse ou son
+                  échéance : le numéro ne dit jamais s'il existe un compte derrière. */}
               {demandesEnvoyees.map((demande) => (
                 <View
                   key={demande?.documentId}
-                  style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
+                  style={{
+                    borderColor: withAlpha(Colors.primary500, 0.45),
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    gap: 4,
+                    padding: 12,
+                  }}
+                  testID={`link-request-${demande?.documentId}`}
                 >
-                  <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
+                  <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {demande?.declaredChild?.firstname
                       ? t(
                         'myChildren.accounts.pendingForChild',
@@ -337,17 +594,23 @@ function MyChildren({ route } = {}) {
                       )}
                   </Text>
                   <TouchableOpacity
+                    accessibilityRole="button"
                     disabled={annulationEnCours}
-                    onPress={() => annulerDemande(demande.documentId)}
+                    onPress={() => confirmerLAnnulation(demande)}
+                    style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
                     testID={`cancel-link-${demande?.documentId}`}
                   >
-                    <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                      {t('myChildren.accounts.cancel', 'Annuler')}
+                    <Text style={[Fonts.p2Bold, { color: Colors.error300 }]}>
+                      {t('myChildren.list.cancelLink')}
                     </Text>
                   </TouchableOpacity>
                 </View>
               ))}
 
+              <Button
+                onPress={() => ouvrirFormulaire(null)}
+                title={t('myChildren.actions.add', 'Ajouter un enfant')}
+              />
               <Button
                 onPress={() => relierUnCompte(null)}
                 testID="my-children-link-account"
@@ -355,202 +618,7 @@ function MyChildren({ route } = {}) {
                 variant="Secondary"
               />
             </View>
-          </WithDataWrapper>
-        </View>
-        {/* ST-RETOURS2 · point 2 (planche 22, etat 1) — la seconde section a son titre, comme
-            la premiere : les fiches que le parent declare pour ses enfants sans compte. */}
-        <Text style={[Spaces.marginTop[12], Fonts.h4Bold, Fonts.neutral00]}>
-          {t('myChildren.declared.title')}
-        </Text>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {t(
-            'myChildren.screen.hint',
-            'Tu déclares tes enfants depuis TON compte :'
-            + ' avant 13 ans, ils n’ont pas de compte à eux.',
-          )}
-        </Text>
-
-        <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
-          {enfants.length === 0 ? (
-            <View style={[Spaces.marginTop[12], { gap: 16 }]}>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {t('myChildren.screen.empty', 'Tu n’as pas encore déclaré d’enfant.')}
-              </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'myChildren.screen.emptyHint',
-                  'Déclare-le ici, puis cherche-lui un club.',
-                )}
-              </Text>
-              <Button
-                onPress={() => ouvrirFormulaire(null)}
-                title={t('myChildren.actions.add', 'Ajouter un enfant')}
-              />
-            </View>
-          ) : (
-            <View style={{ gap: 12 }}>
-              {/* ⚠️ Pluriel : la clef porte « _one » / « _other » et l'appel
-                  DOIT passer `count` — sans lui, i18next rend toujours le
-                  singulier (piège maison, « cle_plural » est morte depuis
-                  i18next 21). */}
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'myChildren.screen.count',
-                  '{{count}} enfants déclarés',
-                  { count: enfants.length },
-                )}
-              </Text>
-
-              {enfants.map((enfant) => {
-                const prenom = enfant?.firstname || '';
-                const nomComplet = `${prenom} ${enfant?.lastname || ''}`.trim();
-                const pouvoir = parentalPowerForAge(enfant?.age);
-                const aUnAge = typeof enfant?.age === 'number';
-                // ST-RETOURS2 · point 4 — moins de 13 ans : la rangee ouvre SA page.
-                const aSaPage = pouvoir === 'full';
-                const Rangee = aSaPage ? TouchableOpacity : View;
-                const porte = aSaPage
-                  ? {
-                    accessibilityLabel: `${nomComplet}, ${t('myChildren.declared.open')}`,
-                    accessibilityRole: 'button',
-                    onPress: () => ouvrirLaFiche(enfant),
-                    testID: `declared-child-${enfant?.documentId}`,
-                  }
-                  : {};
-
-                return (
-                  <View key={enfant?.documentId} style={carteStyle}>
-                    <Rangee
-                      // eslint-disable-next-line react/jsx-props-no-spreading
-                      {...porte}
-                      style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
-                    >
-                      <ProfileAvatar
-                        enablePreview={false}
-                        imageUrl={enfant?.photo?.url}
-                        name={nomComplet}
-                        size={40}
-                      />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                          {nomComplet}
-                        </Text>
-                        <Text style={[Fonts.p3, Fonts.neutral300]}>
-                          {aUnAge
-                            ? t('myChildren.screen.years', '{{count}} ans', { count: enfant.age })
-                            : ''}
-                          {aUnAge ? ' · ' : ''}
-                          {enfant?.team?.name
-                            || t('myChildren.screen.noTeam', 'Pas encore d’équipe')}
-                        </Text>
-                      </View>
-                      {aSaPage ? (
-                        <Icone
-                          color={Colors.primary500}
-                          height={12}
-                          name="arrow-right"
-                          width={12}
-                        />
-                      ) : null}
-                    </Rangee>
-
-                    {/* 🔒 E17 — la SEULE tranche où le parent agit encore. */}
-                    {pouvoir === 'full' ? (
-                      <TouchableOpacity onPress={() => chercherUnClub(enfant)}>
-                        <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
-                          {t(
-                            'myChildren.actions.searchClub',
-                            'Chercher un club pour {{firstname}}',
-                            { firstname: prenom, ...SANS_ECHAPPEMENT },
-                          )}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-
-                    {/* ST-RETOURS (planche 22, etat 6) — moins de 13 ans : pas de compte, donc ni
-                        questionnaire, ni stats, ni retours de match. La carte le dit. */}
-                    {pouvoir === 'full' ? (
-                      <View style={{ gap: 2 }}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                          {t('stRetours.parent.under13Title')}
-                        </Text>
-                        <Text style={[Fonts.p3, Fonts.neutral200]}>
-                          {t('stRetours.parent.under13Hint', {
-                            firstname: prenom,
-                            ...SANS_ECHAPPEMENT,
-                          })}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {/* On EXPLIQUE l'absence du bouton, on ne la subit pas. */}
-                    {pouvoir === 'view' ? (
-                      <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {t(
-                          'myChildren.screen.tooOldHint',
-                          'À partir de 13 ans, {{firstname}} fait ses demandes lui-même.',
-                          { firstname: prenom, ...SANS_ECHAPPEMENT },
-                        )}
-                      </Text>
-                    ) : null}
-
-                    {/* 🔑 F20 — à 13 ans, la fiche reçoit la clé : Lina crée SON compte,
-                        et la fiche y est accrochée quand elle accepte le lien. */}
-                    {aUnAge && pouvoir === 'view' && !enfant?.account ? (
-                      <TouchableOpacity onPress={() => relierUnCompte(enfant)}>
-                        <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
-                          {t(
-                            'myChildren.actions.giveAccount',
-                            'Donner un compte à {{firstname}}',
-                            { firstname: prenom, ...SANS_ECHAPPEMENT },
-                          )}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {enfant?.account ? (
-                      <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {t(
-                          'myChildren.screen.hasAccount',
-                          '{{firstname}} a son propre compte.',
-                          { firstname: prenom, ...SANS_ECHAPPEMENT },
-                        )}
-                      </Text>
-                    ) : null}
-                    {pouvoir === 'none' ? (
-                      <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {t(
-                          'myChildren.screen.adultHint',
-                          '{{firstname}} est majeur : il gère son compte seul.',
-                          { firstname: prenom, ...SANS_ECHAPPEMENT },
-                        )}
-                      </Text>
-                    ) : null}
-
-                    <View style={[Alignments.row, { gap: 20 }]}>
-                      <TouchableOpacity onPress={() => ouvrirFormulaire(enfant)}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                          {t('myChildren.actions.edit', 'Modifier')}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        disabled={suppressionEnCours}
-                        onPress={() => demanderSuppression(enfant)}
-                      >
-                        <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                          {t('myChildren.actions.delete', 'Supprimer')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })}
-
-              <Button
-                onPress={() => ouvrirFormulaire(null)}
-                title={t('myChildren.actions.add', 'Ajouter un enfant')}
-              />
-            </View>
-          )}
+          ) : null}
         </WithDataWrapper>
       </ScrollView>
     </ScreenContainer>

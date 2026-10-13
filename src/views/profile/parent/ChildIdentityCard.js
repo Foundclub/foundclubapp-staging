@@ -7,6 +7,45 @@ import useTheme from '@/theme/themeContext';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 /**
+ * PAR-L5L6 (13/10) — LES EQUIPES D UN ENFANT, RANGEES SOUS LEUR CLUB. C est la regle de
+ * `ligneDIdentite` (FINITIONS15 9d), sortie pour qu un ecran puisse la DIRE ligne par ligne
+ * (« Club », puis « Equipe ») : remarque d Adel du 13/10, un club ecrit en petit au bout de la
+ * ligne ne se voit pas — surtout quand il s appelle « FoundClub ».
+ * @param {object} enfant - Ce qu on sait de l enfant (memes champs que `ligneDIdentite`).
+ * @param {string | null} [enfant.clubName] - Son club.
+ * @param {string | null} [enfant.teamName] - Son equipe.
+ * @param {Array<string | null | undefined>} [enfant.teamNames] - Toutes ses equipes.
+ * @param {Array<any>} [enfant.teams] - Ses equipes AVEC leur club ; prime sur `teamNames`.
+ * @returns {Array<{ club: string, equipes: string[] }>} - Le club de l enfant d abord ; un club
+ *   sans nom lu vaut `''` ; rien du tout = tableau vide.
+ */
+export const equipesParClub = ({
+  clubName, teamName, teamNames, teams,
+}) => {
+  const principal = String(clubName || '').trim();
+  if (Array.isArray(teams) && teams.length > 0) {
+    /** @type {Map<string, string[]>} */
+    const parClub = new Map(principal ? [[principal, []]] : []);
+    teams.forEach((equipe) => {
+      const nom = String(equipe?.name || '').trim();
+      if (!nom) return;
+      const club = String(equipe?.club?.name || '').trim() || principal;
+      const liste = parClub.get(club) || [];
+      if (!liste.includes(nom)) liste.push(nom);
+      parClub.set(club, liste);
+    });
+    const groupes = [...parClub].filter(([, noms]) => noms.length > 0);
+    if (groupes.length > 0) return groupes.map(([club, equipes]) => ({ club, equipes }));
+  }
+  const nommees = [...new Set((Array.isArray(teamNames) ? teamNames : [])
+    .map((nom) => String(nom || '').trim())
+    .filter(Boolean))];
+  const equipes = nommees.length > 0 ? nommees : [String(teamName || '').trim()].filter(Boolean);
+  if (!principal && equipes.length === 0) return [];
+  return [{ club: principal, equipes }];
+};
+
+/**
  * ST-RETOURS2 (planche 22) — LA LIGNE SOUS LE NOM D UN ENFANT : « 14 ans · U15 · AS Montrivage ».
  * L age, l equipe, le club ; ce qui manque est saute, sans trou. UNE regle pour les trois
  * endroits ou le parent lit son enfant : « Mes enfants », sa fiche, la page d un moins de 13 ans.
@@ -31,34 +70,14 @@ export const ligneDIdentite = (t, {
   // Seniors A est une equipe d un AUTRE club, la ligne la rangeait sous celui du profil. Chaque
   // equipe va sous SON club (« equipe · club », la grammaire de la planche 22) ; le club de
   // l enfant d abord ; une equipe sans club lu reste sous le sien.
-  if (Array.isArray(teams) && teams.length > 0) {
-    const principal = String(clubName || '').trim();
-    /** @type {Map<string, string[]>} */
-    const parClub = new Map(principal ? [[principal, []]] : []);
-    teams.forEach((equipe) => {
-      const nom = String(equipe?.name || '').trim();
-      if (!nom) return;
-      const club = String(equipe?.club?.name || '').trim() || principal;
-      const liste = parClub.get(club) || [];
-      if (!liste.includes(nom)) liste.push(nom);
-      parClub.set(club, liste);
-    });
-    const groupes = [...parClub].filter(([, noms]) => noms.length > 0);
-    if (groupes.length > 0) {
-      return [lAge, ...groupes.flatMap(([club, noms]) => [...noms, club])]
-        .filter(Boolean).join(' · ');
-    }
-  }
   // FINITIONS13-STATS (3, T13, tranche par le chef « A ») — Hugo joue en U13 ET en U15 : la
   // ligne prenait sa PREMIERE equipe et disait « 14 ans · U13 ». Elle les dit toutes, une fois.
-  const equipes = [...new Set((Array.isArray(teamNames) ? teamNames : [])
-    .map((nom) => String(nom || '').trim())
-    .filter(Boolean))];
-  return [
-    lAge,
-    ...(equipes.length > 0 ? equipes : [teamName]),
-    clubName,
-  ].filter(Boolean).join(' · ');
+  // PAR-L5L6 : le rangement vit dans `equipesParClub` (ci-dessus), la ligne ne fait que le dire.
+  const groupes = equipesParClub({
+    clubName, teamName, teamNames, teams,
+  });
+  return [lAge, ...groupes.flatMap(({ club, equipes }) => [...equipes, club])]
+    .filter(Boolean).join(' · ');
 };
 
 /**
