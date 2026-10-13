@@ -161,15 +161,40 @@ const ECRANS = [
   { champ: 'AdminLeagueDisputes.js:243', fichier: 'admin/AdminLeagueDisputes.js', rang: 1 },
   { champ: 'AdminPopupCampaignForm.js:484', fichier: 'admin/AdminPopupCampaignForm.js', rang: 1 },
   { champ: 'AdminRevenue.js:786', fichier: 'admin/AdminRevenue.js', rang: 1 },
+  { champ: 'SuperAdminEntryForm.js:1643', fichier: 'admin/SuperAdminEntryForm.js', rang: 2 },
+  // Les 5 pages LEAGUE posent leur champ dans le gabarit commun : son conteneur est le leur.
+  ...[
+    'SuperAdminLeagueDisputes.js:287',
+    'SuperAdminLeagueMatches.js:21',
+    'SuperAdminLeagueSettings.js:89',
+    'SuperAdminLeagueSquads.js:37',
+    'SuperAdminLicensesDashboard.js:1192',
+  ].map((champ) => ({
+    champ,
+    fichier: 'admin/components/SuperAdminLeagueLayout.js',
+    porteur: `admin/${champ.split(':')[0]}`,
+    rang: 1,
+  })),
 ].map((ecran) => ({
   ...ecran,
   source: fs.readFileSync(path.join(VUES, ecran.fichier), 'utf8'),
 }));
 
+const PAGES_LEAGUE = ECRANS.filter(({ porteur }) => porteur).map(({ porteur }) => ({
+  porteur,
+  source: fs.readFileSync(path.join(VUES, String(porteur)), 'utf8'),
+}));
+
 describe('ANDROIDBAR-3 — les champs « probables » restent au-dessus du clavier', () => {
-  it('le balayage lit bien les 27 écrans (20 côté utilisateurs + 7 de la console)', () => {
+  it('le balayage lit bien les 33 écrans (20 côté utilisateurs + 13 de la console)', () => {
     // Témoin anti-faux-vert : un balayage qui ne lit rien passe au vert.
-    expect(ECRANS.filter(({ source }) => source.includes('<ScreenContainer'))).toHaveLength(27);
+    expect(ECRANS.filter(({ source }) => source.includes('<ScreenContainer'))).toHaveLength(33);
+  });
+
+  it.each(PAGES_LEAGUE)('$porteur : son champ est rendu dans le gabarit LEAGUE', ({ source }) => {
+    // Sans ce lien, l'évitement posé sur le gabarit ne prouverait rien pour cette page.
+    expect(source).toMatch(/<SuperAdminLeagueLayout[\s>]/);
+    expect(source).toMatch(/<TextInput[\s>]/);
   });
 
   it.each(ECRANS)('$fichier ($champ) : le conteneur évite le clavier', ({ rang, source }) => {
