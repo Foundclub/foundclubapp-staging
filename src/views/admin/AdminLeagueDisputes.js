@@ -130,7 +130,11 @@ function AdminLeagueDisputes() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer
+      bgImage="bg2"
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[24], { paddingBottom: 120 }]}>
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.marginBottom[16]]}>
           <View>

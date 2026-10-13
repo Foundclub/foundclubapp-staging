@@ -47,6 +47,7 @@ import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
 import useReduceMotion from '@/hooks/useReduceMotion';
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 import {
   FILE_SHARE_CAPABILITIES, FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES, getFileShareCapability,
 } from '@/platform/share/fileShareContract';
@@ -122,6 +123,11 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // maison) : `headerHeightNative || insets.top`, ici sans en-tête natif possible.
   // Un nombre en dur casserait d'un modèle de téléphone à l'autre.
   const insets = useSafeAreaInsets();
+  // 🤖 ANDROIDBAR-4 — l'évitement du clavier est la RACINE de l'écran, posée à l'écran 0 (pas
+  // d'en-tête) : son décalage calculé vaut 0 (D23, ScreenContainer). Il valait 100, écrit en
+  // dur : 100 dp perdus au-dessus du clavier, et sur Android 15/16 jusqu'à 202 dp de vide sous
+  // l'écran une fois le clavier refermé. Android 15/16 : l'écoute partagée, l'évitement se tait.
+  const clavierAndroid = useRetraitDuClavierAndroid(0);
 
   // CE QUI VA SE PASSER quand on presse, décidé une seule fois dans la couche
   // plateforme (fileShareContract). L'écran n'interroge PAS Platform.OS pour ça :
@@ -318,8 +324,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={100}
-      style={styles.flex}
+      enabled={!clavierAndroid.ecoute}
+      keyboardVerticalOffset={0}
+      style={[styles.flex, { paddingBottom: clavierAndroid.retrait }]}
     >
       <ScrollView
         contentContainerStyle={[styles.container, {

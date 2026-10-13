@@ -532,6 +532,8 @@ function AdminCollectiviteForm() {
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
     >
       <ScrollView
         contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 12 }}
