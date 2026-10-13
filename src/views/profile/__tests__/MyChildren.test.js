@@ -1,7 +1,7 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { effacerLAnnonce } from '@/views/profile/parent/annonceDeLaFiche';
+import { annoncer, effacerLAnnonce } from '@/views/profile/parent/annonceDeLaFiche';
 
 import MyChildren from '../MyChildren';
 
@@ -1349,5 +1349,58 @@ describe('PAR-L5L6 E07 — la fiche, branchée sur la route', () => {
 
     expect(mockGoBack).not.toHaveBeenCalled();
     alerte.mockRestore();
+  });
+});
+
+// ===========================================================================
+// PAR-L5L6 (13/10) — E08 CÔTÉ LISTE : « La fiche d'Anissa est créée. » et l'étape suivante.
+// ===========================================================================
+
+describe('PAR-L5L6 E08 — le bandeau après une création', () => {
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant({
+      age: 11, documentId: 'anissa', firstname: 'Anissa', lastname: 'Test',
+    })];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  test('🔴 « La fiche d’Anissa est créée. » + « Chercher un club pour Anissa »', async () => {
+    annoncer({ documentId: 'anissa', firstname: 'Anissa', type: 'creee' });
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain(
+      'La fiche d’Anissa est créée. | Chercher un club pour Anissa',
+    );
+    await act(async () => { porteDe(arbre, 'my-children-banner-search').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'HomeTab',
+      {
+        params: {
+          params: { childDocumentId: 'anissa', childFirstname: 'Anissa' },
+          pop: true,
+          screen: 'SearchClubs',
+        },
+        screen: 'Search',
+      },
+      { pop: true },
+    );
+  });
+
+  test('« La fiche de Martin est créée. » (sans élision)', async () => {
+    annoncer({ documentId: 'martin', firstname: 'Martin', type: 'creee' });
+
+    expect(texteVisible(await rendre())).toContain('La fiche de Martin est créée.');
+  });
+
+  test('une suppression ne propose pas de chercher un club', async () => {
+    annoncer({ firstname: 'Martin', type: 'supprimee' });
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('La fiche de Martin est supprimée.');
+    expect(porteDe(arbre, 'my-children-banner-search')).toBeUndefined();
   });
 });

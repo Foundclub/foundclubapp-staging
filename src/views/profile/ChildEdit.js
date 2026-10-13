@@ -4,7 +4,7 @@ import {
   useCallback, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -13,6 +13,10 @@ import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
+import { annoncer } from '@/views/profile/parent/annonceDeLaFiche';
+
+import { RouteNames } from '@/navigation/routeNames';
+import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
 import {
   useCreateDeclaredChild,
@@ -172,6 +176,12 @@ function ChildEdit() {
     return '';
   }, [dateSaisie, t]);
 
+  // Le texte du palier des 13 ans : sous la date, il porte « Relier son compte » (E08).
+  const texteTropGrand = t(
+    'myChildren.form.errors.tooOld',
+    'Une fiche enfant est réservée aux moins de 13 ans.',
+  );
+
   // Le verdict se montre dès que l'année a ses 4 chiffres : avant, la date est
   // en cours de frappe. Après un appui sur le bouton, il se montre quoi qu'il
   // arrive — une année de 3 chiffres envoyée doit dire pourquoi elle bloque.
@@ -224,9 +234,22 @@ function ChildEdit() {
       ));
     // Depuis le profil on revient d ou l on vient ; pendant l inscription on
     // AVANCE — revenir en arriere renverrait le parent sur la photo.
-    const surSucces = () => (estUneEtapeDInscription
-      ? continuerLInscription()
-      : navigation.goBack());
+    // PAR-L5L6 (E08) — une fiche CREEE se dit sur la liste : « La fiche d'Anissa est créée. »
+    // et « Chercher un club pour Anissa » (aujourd'hui : aucun message).
+    const surSucces = (/** @type {any} */ cree) => {
+      if (estUneEtapeDInscription) {
+        continuerLInscription();
+        return;
+      }
+      if (!estUneModification) {
+        annoncer({
+          documentId: cree?.documentId,
+          firstname: cree?.firstname || firstname.trim(),
+          type: 'creee',
+        });
+      }
+      navigation.goBack();
+    };
 
     if (estUneModification) {
       modifierEnfant(
@@ -380,6 +403,20 @@ function ChildEdit() {
               {erreurDate}
             </Text>
           ) : null}
+          {/* PAR-L5L6 (E08) — 13 ans ou plus : le palier ne laisse pas sans issue. Hors du
+              tunnel d'inscription seulement (l'écran du lien n'y vit pas). */}
+          {erreurDate && erreurDate === texteTropGrand && !estUneEtapeDInscription ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => navigateOrExplainOnWeb(navigation, RouteNames.ParentLinkInvite)}
+              style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
+              testID="child-birthdate-link-account"
+            >
+              <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+                {t('myChildren.form.linkAccount')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           {/* 🔒 On explique le vide au lieu de le laisser inquiéter. */}
           {estUneModification ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -388,22 +425,29 @@ function ChildEdit() {
           ) : null}
         </View>
 
-        <Input
-          inputMode="numeric"
-          keyboardType="number-pad"
-          label={t('myChildren.form.numberLabel', 'Numéro de maillot (facultatif)')}
-          maxLength={2}
-          onChangeText={setNumber}
-          testID="child-number"
-          value={number}
-        />
-        <Input
-          label={t('myChildren.form.positionLabel', 'Poste (facultatif)')}
-          onChangeText={setPosition}
-          placeholder={t('myChildren.form.positionPlaceholder', '')}
-          testID="child-position"
-          value={position}
-        />
+        {/* PAR-L5L6 (E08, D2 « C » d'Adel du 12/10) — la CRÉATION garde trois champs : le
+            maillot et le poste se demanderont sur la carte de l'enfant (lot L13). Ils restent
+            en modification, où on les retrouve et les corrige. */}
+        {estUneModification ? (
+          <>
+            <Input
+              inputMode="numeric"
+              keyboardType="number-pad"
+              label={t('myChildren.form.numberLabel', 'Numéro de maillot (facultatif)')}
+              maxLength={2}
+              onChangeText={setNumber}
+              testID="child-number"
+              value={number}
+            />
+            <Input
+              label={t('myChildren.form.positionLabel', 'Poste (facultatif)')}
+              onChangeText={setPosition}
+              placeholder={t('myChildren.form.positionPlaceholder', '')}
+              testID="child-position"
+              value={position}
+            />
+          </>
+        ) : null}
 
         {erreur ? (
           <Text style={[Fonts.p3, { color: Colors.error500 }]}>{erreur}</Text>
@@ -423,6 +467,20 @@ function ChildEdit() {
             ? t('myChildren.form.submitEdit', 'Enregistrer')
             : t('myChildren.form.submitAdd', 'Déclarer mon enfant')}
         />
+        {/* Motif de l'app : bouton plein, puis « Annuler » en lien (hors inscription, où
+            « Plus tard » tient ce rôle). */}
+        {!estUneEtapeDInscription ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => navigation.goBack()}
+            style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
+            testID="child-edit-cancel"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral200]}>
+              {t('myChildren.form.cancel')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         {estUneEtapeDInscription ? (
           <OnboardingSkipLink
             hint={t(

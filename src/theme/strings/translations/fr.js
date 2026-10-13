@@ -22753,6 +22753,9 @@ export default {
     // PAR-L5L6 (13/10, design parent E05) — ce qui vient d'arriver, dit en tête de la liste.
     // Deux formes : « de Martin », « d’Anissa » (l'élision devant une voyelle ou un h).
     banner: {
+      // E08 — après « Déclarer mon enfant ». « La fiche de… » : l'app ne connaît pas le genre.
+      created: 'La fiche de {{firstname}} est créée.',
+      createdElided: 'La fiche d’{{firstname}} est créée.',
       deleted: 'La fiche de {{firstname}} est supprimée.',
       deletedElided: 'La fiche d’{{firstname}} est supprimée.',
     },
@@ -22789,6 +22792,8 @@ export default {
       birthdateDayLabel: 'Jour de naissance',
       birthdateMonthLabel: 'Mois de naissance',
       birthdateYearLabel: 'Année de naissance',
+      // PAR-L5L6 (E08) — motif de l'app : bouton plein, puis « Annuler » en lien.
+      cancel: 'Annuler',
       errors: {
         // 📅 DATENAISS (22/09) : une date après aujourd'hui est dite AVANT
         // d'envoyer, comme le palier 13 (Sentry SERVEUR-STRAPI-T).
@@ -22818,6 +22823,8 @@ export default {
         + ' ni adresse : c’est toi qu’on contacte.',
       lastnameLabel: 'Nom',
       lastnamePlaceholder: 'Martin',
+      // PAR-L5L6 (E08) — sous « réservée aux moins de 13 ans » : l'issue, au lieu d'un mur.
+      linkAccount: 'Relier son compte',
       numberLabel: 'Numéro de maillot (facultatif)',
       positionLabel: 'Poste (facultatif)',
       positionPlaceholder: 'Gardienne, attaquant…',

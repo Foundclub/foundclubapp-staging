@@ -557,7 +557,7 @@ function MyChildren({ route } = {}) {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
-        <BandeauDeResultat annonce={annonce} />
+        <BandeauDeResultat annonce={annonce} onSearchClub={chercherUnClub} />
         {/* STATS-FIX2 · 8-22 (tournee T10, ecran 22) — les comptes relies D ABORD (planche 22,
             etat 1) : c est la que vivent les retours de l entraineur. */}
         <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>

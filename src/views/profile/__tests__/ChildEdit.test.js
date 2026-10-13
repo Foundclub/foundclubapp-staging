@@ -67,6 +67,12 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   useUpdateDeclaredChild: () => ({ isPending: false, mutate: mockModifier }),
 }));
 
+// PAR-L5L6 (E08) — une fiche CRÉÉE est annoncée à la liste (« La fiche d'Anissa est créée. »).
+const mockAnnoncer = jest.fn();
+jest.mock('@/views/profile/parent/annonceDeLaFiche', () => ({
+  annoncer: (/** @type {any} */ annonce) => mockAnnoncer(annonce),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
   useRoute: () => ({ name: mockRouteName, params: mockParams }),
@@ -210,13 +216,14 @@ test("P2/8 ① l'écran ne demande QUE les champs autorisés", async () => {
     .filter(Boolean)
     .sort();
 
+  // PAR-L5L6 (E08, D2 « C » d'Adel du 12/10) — la CRÉATION garde trois champs (la date en
+  // trois cases) : maillot et poste se demanderont sur la carte de l'enfant (lot L13). Ils
+  // restent en MODIFICATION (témoin E09).
   expect(champs).toEqual([
     'child-day',
     'child-firstname',
     'child-lastname',
     'child-month',
-    'child-number',
-    'child-position',
     'child-year',
   ]);
 
@@ -244,19 +251,20 @@ test('P2/8 ② un enfant complet part avec ses trois champs obligatoires', async
   });
 });
 
+// PAR-L5L6 (E08) — le maillot ne se saisit plus à la création : la règle « un champ vide
+// n'est pas un zéro » se vérifie là où il vit, en MODIFICATION (une fiche SANS numéro).
 test('P2/8 ③ 🔢 un numéro de maillot laissé VIDE ne part pas en zéro', async () => {
+  mockParams = { childDocumentId: 'enfant-1' };
+  mockEnfants = [{
+    age: 9, documentId: 'enfant-1', firstname: 'Léa', lastname: 'Martin', number: null,
+  }];
   const arbre = await rendre();
 
-  await saisir(arbre, 'child-firstname', 'Léa');
-  await saisir(arbre, 'child-lastname', 'Martin');
-  await saisir(arbre, 'child-day', '04');
-  await saisir(arbre, 'child-month', '05');
-  await saisir(arbre, 'child-year', '2017');
   await saisir(arbre, 'child-number', '');
   await enregistrer(arbre);
 
-  const charge = mockCreer.mock.calls[0][0];
-  expect(Object.prototype.hasOwnProperty.call(charge, 'number')).toBe(false);
+  const { payload } = mockModifier.mock.calls[0][0];
+  expect(Object.prototype.hasOwnProperty.call(payload, 'number')).toBe(false);
 });
 
 test("P2/8 ④ 🧒 LE PALIER 13 EST DIT AVANT D'ENVOYER : 25 ans n'atteint pas le serveur", async () => {
@@ -731,5 +739,122 @@ describe('PAR-L1 — la date de naissance passe seule de case en case', () => {
     await saisir(arbre, 'child-year', String(new Date().getFullYear() - 14));
 
     expect(erreurSousLaDate(arbre)).toContain('13 ans');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAR-L5L6 (13/10) — E08 : AJOUTER UN ENFANT EN TROIS CHAMPS (design parent, planche 4).
+// Le texte « Trois informations suffisent » devient vrai ; après « Déclarer mon enfant », la
+// liste dit « La fiche d'Anissa est créée. » ; le palier des 13 ans ouvre une issue.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PAR-L5L6 E08 — ajouter un enfant', () => {
+  /**
+   * Remplit les trois champs de la création.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} annee - L'année de naissance.
+   * @returns {Promise<void>} Rien.
+   */
+  const remplir = async (arbre, annee = '2015') => {
+    await saisir(arbre, 'child-firstname', 'Anissa');
+    await saisir(arbre, 'child-lastname', 'Test');
+    await saisir(arbre, 'child-day', '03');
+    await saisir(arbre, 'child-month', '05');
+    await saisir(arbre, 'child-year', annee);
+  };
+
+  test('🔴 « Trois informations suffisent » : et il n y en a QUE trois', async () => {
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('Trois informations suffisent.');
+    expect(texteVisible(arbre)).not.toContain('Numéro de maillot');
+    expect(texteVisible(arbre)).not.toContain('Poste');
+  });
+
+  test('🔴 fiche créée : la liste l annonce, avec l enfant, puis on y revient', async () => {
+    const arbre = await rendre();
+    await remplir(arbre);
+    await enregistrer(arbre);
+
+    expect(mockCreer.mock.calls[0][0]).toEqual({
+      birthdate: '2015-05-03', firstname: 'Anissa', lastname: 'Test',
+    });
+    await act(async () => {
+      mockCreer.mock.calls[0][1].onSuccess({ documentId: 'anissa', firstname: 'Anissa' });
+    });
+
+    expect(mockAnnoncer).toHaveBeenCalledWith({
+      documentId: 'anissa', firstname: 'Anissa', type: 'creee',
+    });
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('un échec ne s annonce pas comme un succès', async () => {
+    const arbre = await rendre();
+    await remplir(arbre);
+    await enregistrer(arbre);
+    await act(async () => { mockCreer.mock.calls[0][1].onError(new Error('réseau')); });
+
+    expect(mockAnnoncer).not.toHaveBeenCalled();
+    expect(mockGoBack).not.toHaveBeenCalled();
+    expect(texteVisible(arbre)).toContain('Impossible d’enregistrer cette fiche pour le moment.');
+  });
+
+  test('une MODIFICATION réussie revient sans annonce de création', async () => {
+    mockParams = { childDocumentId: 'enfant-1' };
+    mockEnfants = [{
+      age: 9, documentId: 'enfant-1', firstname: 'Léa', lastname: 'Martin',
+    }];
+    const arbre = await rendre();
+    await enregistrer(arbre);
+    await act(async () => { mockModifier.mock.calls[0][1].onSuccess({ documentId: 'enfant-1' }); });
+
+    expect(mockAnnoncer).not.toHaveBeenCalled();
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('pendant l inscription, on AVANCE sans annonce (pas de passage par la liste)', async () => {
+    mockRouteName = 'UserChild';
+    mockProchaineEtape = 'Welcome';
+    const arbre = await rendre();
+    await remplir(arbre);
+    await enregistrer(arbre);
+    await act(async () => { mockCreer.mock.calls[0][1].onSuccess({ documentId: 'anissa' }); });
+
+    expect(mockAnnoncer).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('Welcome');
+  });
+
+  test('🔴 14 ans : sous le palier, « Relier son compte » ouvre l écran du lien', async () => {
+    const annee = String(new Date().getFullYear() - 14);
+    const arbre = await rendre();
+    await remplir(arbre, annee);
+
+    expect(texteVisible(arbre)).toContain('Une fiche enfant est réservée aux moins de 13 ans.');
+    const lien = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onPress === 'function' && n.props.testID === 'child-birthdate-link-account'
+    ))[0];
+    expect(aplatirTexte(lien.props.children)).toBe('Relier son compte');
+    await act(async () => { lien.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('ParentLinkInvite', undefined);
+  });
+
+  test('pendant l inscription, le palier n offre pas ce lien (l écran n y vit pas)', async () => {
+    mockRouteName = 'UserChild';
+    const arbre = await rendre();
+    await remplir(arbre, String(new Date().getFullYear() - 14));
+
+    expect(texteVisible(arbre)).not.toContain('Relier son compte');
+  });
+
+  test('« Annuler » revient en arrière ; pendant l inscription, c est « Plus tard »', async () => {
+    const arbre = await rendre();
+    const annuler = arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onPress === 'function' && n.props.testID === 'child-edit-cancel'
+    ))[0];
+    await act(async () => { annuler.props.onPress(); });
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+
+    mockRouteName = 'UserChild';
+    expect(texteVisible(await rendre())).not.toContain('Annuler');
   });
 });

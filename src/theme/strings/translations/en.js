@@ -13425,6 +13425,8 @@ export default {
       searchClub: 'Find a club for {{firstname}}',
     },
     banner: {
+      created: "{{firstname}}'s profile has been created.",
+      createdElided: "{{firstname}}'s profile has been created.",
       deleted: "{{firstname}}'s profile has been deleted.",
       deletedElided: "{{firstname}}'s profile has been deleted.",
     },
@@ -13449,6 +13451,7 @@ export default {
       birthdateLabel: 'Date of birth',
       birthdateMonthLabel: 'Month of birth',
       birthdateYearLabel: 'Year of birth',
+      cancel: 'Cancel',
       editTitle: 'Edit profile',
       errors: {
         futureDate: "The date of birth can't be in the future.",
@@ -13465,6 +13468,7 @@ export default {
       lastnamePlaceholder: 'Martin',
       later: 'Later',
       laterHint: 'You can register them whenever you want, from your profile.',
+      linkAccount: 'Link their account',
       numberLabel: 'Shirt number (optional)',
       positionLabel: 'Position (optional)',
       positionPlaceholder: 'Goalkeeper, striker…',
