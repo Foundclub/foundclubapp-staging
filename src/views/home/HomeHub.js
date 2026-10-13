@@ -67,6 +67,8 @@ import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauA
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
+import { lignesAAfficher, peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
+import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -176,7 +178,7 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  highlighted?: boolean;
  *  locked?: boolean;
  *  premiumScope?: 'club' | 'team';
- *  subtitleLines?: 1 | 2;
+ *  subtitleLines?: number;
  *  tutorial?: any;
  * }} HomeCard
  */
@@ -462,6 +464,12 @@ function HomeHubContent({ auth, navigation, route }) {
   // P0 — `getUserRoleKey` rend deja 'parent' (authUseCases.js:37) : le trou
   // n'etait pas la, il etait ici, ou personne ne lisait cette valeur.
   const isParent = roleKey === 'parent';
+  // PAR-L7 (13/10, design parent E01) — mes enfants en bref : les lectures de « Mes enfants »,
+  // avec ses cles (l'ecran s'ouvrira deja rempli). Sur le role du COMPTE : les quatre roles du
+  // club peuvent avoir des enfants ; le super admin et un compte neuf, non (rien ne part).
+  const mesEnfants = useMesEnfantsEnBref({
+    actif: Boolean(userData?.documentId) && peutAvoirDesEnfants(getUserRoleKey(roleName)),
+  });
   // D72 — « Mon abonnement » et « Ma cotisation » sont RETIREES du super admin
   // (pack accueil, tache 3) : il ne paie ni l'un ni l'autre.
   const canShowSubscriptionExperience = isCoach || isPresident;
@@ -2412,37 +2420,41 @@ function HomeHubContent({ auth, navigation, route }) {
     // jusqu a la fiche du club (`MyChildren.js`, `chercherUnClub`).
     // 🧪 `accueilParRole.test.js` compte les cases qui ouvrent la recherche de
     // clubs : il en exige UNE.
-    if (isParent) {
-      // 👨‍👧 PARENT P2 (10/09) — LA PORTE QUI MANQUAIT.
-      //
-      // 🖥️ Trouve sur emulateur : l accueil du parent n avait AUCUN chemin vers
-      // « Mes enfants ». Il fallait passer par le menu du profil — pour
-      // quelqu un dont c est la SEULE raison d etre dans l app. Le plan le
-      // demandait deja (A3) : « Mes enfants » sur l accueil du parent.
-      //
-      // ⛔ Elle ne lit PAS la liste des enfants : ce serait une requete de plus
-      // sur le premier ecran de l app, pour un libelle. C est une PORTE, et
-      // l ecran qu elle ouvre sait dire s il est vide.
-      // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
-      // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
-      // (meme raison que « Mes reponses », posee par D57).
-      const carteMesEnfants = {
-        accentColor: Colors.primary500,
-        emphasis: 'primary',
-        icon: 'users',
-        key: 'search-my-children',
-        layout: 'full',
-        onPress: () => navigation.navigate(RouteNames.ProfileStack, {
-          screen: RouteNames.MyChildren,
-        }),
-        subtitle: t(
+    // 👨‍👧 LA PORTE « MES ENFANTS »
+    // PARENT P2 (10/09) — LA PORTE QUI MANQUAIT. 🖥️ Trouve sur emulateur : l accueil
+    // du parent n avait AUCUN chemin vers « Mes enfants ». Il fallait passer par le menu
+    // du profil — pour quelqu un dont c est la SEULE raison d etre dans l app.
+    //
+    // PAR-L7 (13/10, design parent E01, decision D1 A d'Adel du 12/10) — elle DIT ses
+    // enfants : « Anissa · U11 Filles », « Martin · Demande en attente », 3 au plus puis
+    // « + 2 autres » (`useMesEnfantsEnBref`, les lectures de « Mes enfants » et leurs
+    // cles). Tant qu'elles n'ont pas repondu, ou si elles echouent, la phrase d'avant :
+    // la carte ne bloque jamais l'accueil, et l'ecran qu'elle ouvre sait dire s'il est vide.
+    // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
+    // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
+    // (meme raison que « Mes reponses », posee par D57).
+    const lignesDesEnfants = lignesAAfficher(t, mesEnfants);
+    const carteMesEnfants = {
+      accentColor: Colors.primary500,
+      emphasis: /** @type {const} */ ('primary'),
+      icon: 'users',
+      key: 'search-my-children',
+      layout: /** @type {const} */ ('full'),
+      onPress: () => navigation.navigate(RouteNames.ProfileStack, {
+        screen: RouteNames.MyChildren,
+      }),
+      subtitle: mesEnfants.total > 0
+        ? lignesDesEnfants.join('\n')
+        : t(
           'homeHub.cards.search.myChildren.subtitle',
           'Declare-les, corrige leur fiche, cherche-leur un club.',
         ),
-        subtitleLines: 2,
-        title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
-      };
+      // Une ligne par enfant nomme (et « + 2 autres ») : rien n'est coupe par « … ».
+      subtitleLines: Math.max(2, lignesDesEnfants.length),
+      title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
+    };
 
+    if (isParent) {
       // ⚠️ Pour poser une 2e case en tete : UN SEUL `unshift(a, b)`. Deux
       // `unshift` successifs sortent dans l ordre INVERSE, et le temoin, qui lit
       // la source comme du texte, reste VERT (vu a l ecran le 10/09).
@@ -2450,6 +2462,11 @@ function HomeHubContent({ auth, navigation, route }) {
 
       return cards.filter(estVisiblePourLeParent).filter(estAfficheeSurLAccueil);
     }
+
+    // PAR-L7 — un Joueur, un Entraineur ou un Dirigeant qui a des enfants gagne la MEME
+    // porte, EN FIN de « Rechercher » : le role decide de l'INSISTANCE (le parent l'a en
+    // tete), jamais de la capacite (« avoir des enfants » est une capacite, GO Adel 07/09).
+    if (mesEnfants.total > 0) cards.push(carteMesEnfants);
 
     return cards.filter(estAfficheeSurLAccueil);
   }, [
@@ -2459,6 +2476,7 @@ function HomeHubContent({ auth, navigation, route }) {
     homeCounters,
     isParent,
     makeTutorial,
+    mesEnfants,
     navigation,
     scrollDownLabel,
     scrollToLeagueSection,

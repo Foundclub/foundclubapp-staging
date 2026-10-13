@@ -22940,6 +22940,13 @@ export default {
       sportTitle: 'Infos sportives',
       teamTitle: 'Son équipe',
     },
+    // PAR-L7 (13/10, design parent E01 / E03) — mes enfants EN BREF : la carte de l'accueil
+    // et le bloc de « Mon profil » nomment 3 enfants au plus, puis « + 2 autres ».
+    summary: {
+      more_one: '+ {{count}} autre',
+      more_other: '+ {{count}} autres',
+      seeAll: 'Voir tout',
+    },
   },
   // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.
   // 🤐 Aucun texte ne dit si un numéro correspond à un compte : le serveur ne le révèle pas, l'écran

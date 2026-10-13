@@ -13561,6 +13561,11 @@ export default {
       sportTitle: 'Sports info',
       teamTitle: 'Their team',
     },
+    summary: {
+      more_one: '+ {{count}} other',
+      more_other: '+ {{count}} others',
+      seeAll: 'See all',
+    },
   },
   myEventList: {
     actions: {

@@ -82,7 +82,8 @@ const FALLBACK_GLOW_RINGS = [
  *   pressable, l'appui ouvrant la feuille de vente (L10-C, stratégie paywall §2.3).
  *   Ne jamais l'utiliser sans `premiumScope` : griser en silence est interdit.
  * @param {'club' | 'team'} [props.premiumScope] - Offre couvrant l'action (badge informatif, handoff 12)
- * @param {1 | 2} [props.subtitleLines]
+ * @param {number} [props.subtitleLines] - PAR-L7 : plus de 2 sur la carte « Mes enfants »
+ *   de l'accueil (une ligne par enfant nommé).
  * @param {((node: any) => void) | { current: any }} [props.tutorialTargetRef]
  * @returns {import('react').ReactElement}
  */
