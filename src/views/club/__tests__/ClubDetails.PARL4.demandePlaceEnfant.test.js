@@ -370,6 +370,9 @@ const MARTIN_PLACE = {
 const LINA_ADO = {
   age: 14, documentId: 'c-lina', firstname: 'Lina', lastname: 'Dubelloy', team: null,
 };
+const NOE_SANS_AGE = {
+  age: null, documentId: 'c-noe', firstname: 'Noé', lastname: 'Dubelloy', team: null,
+};
 
 /**
  * Une demande de place en attente, pour un enfant et une equipe.
@@ -531,87 +534,32 @@ afterEach(() => {
 
 // ───────────────────────────────────────────────────────────────────────────
 // CARACTERISATION — l'existant au 13/10 (staging 8f862825), AVANT ce lot.
+//
+// Ce bloc a tourne VERT sur le code de staging (commit b9d91164 de ce lot, 10/10). Huit de
+// ses temoins decrivaient exactement ce que la recette PAR-009 / PAR-005 reprochait ; ils
+// sont devenus les temoins des points 2 a 4 ci-dessous, et leur « avant » reste ecrit ici :
+//   1. deux enfants : porte « Demander à rejoindre pour mes enfants », un bouton-prenom
+//      par enfant (→ point 2 : « Demander une place pour un enfant », 3 etapes) ;
+//   2. enfant puis equipe : confirmation par ALERTE systeme (→ recapitulatif dans la feuille) ;
+//   3. un seul enfant admissible : SON prenom sur la porte, l'autre ABSENT de la feuille
+//      (→ porte anonyme, tous les enfants visibles, le seul admissible coche et DIT) ;
+//   4. chaque enfant avec une demande ici : la porte DISPARAIT (→ elle reste, ci-dessous) ;
+//   5. tous les moins de 13 ans en equipe : ni porte ni phrase (→ la porte reste et explique) ;
+//   6. venu de la fiche de Martin : `childDocumentId` IGNORE (→ point 3) ;
+//   7. refus « deja en attente » : « Intérêt déjà envoyé. », libelle adulte (→ point 4) ;
+//   8. refus « deja dans une equipe » : « Ton enfant a déjà une équipe. » (→ point 4).
+// Restent ici les comportements qui ne bougent PAS.
 // ───────────────────────────────────────────────────────────────────────────
-describe('PAR-L4 caracterisation — la feuille « pour un enfant » telle qu elle est', () => {
-  it('deux enfants a placer : la porte est anonyme, la feuille demande « pour qui »', async () => {
-    const arbre = monter();
-
-    const porte = porteEnfant(arbre);
-    expect(porte).toBeDefined();
-    expect(texteDe(porte)).toBe('Demander à rejoindre pour mes enfants');
-
-    await appuyer(porte);
-
-    const ouverte = feuille(arbre);
-    expect(ouverte).toBeDefined();
-    expect(texteDe(ouverte)).toContain('Une place pour ton enfant');
-    // Un bouton par enfant, rien de choisi.
-    expect(pressableSous(ouverte, 'Anissa')).toBeDefined();
-    expect(pressableSous(ouverte, 'Martin')).toBeDefined();
-    // Pas de « club en general » pour un enfant : une place se demande dans une equipe.
-    expect(createClubInterestRequest).not.toHaveBeenCalled();
-  });
-
-  it('enfant puis equipe : une confirmation, puis la demande PORTE l enfant', async () => {
-    const arbre = monter();
-    await appuyer(porteEnfant(arbre));
-    await appuyer(pressableSous(feuille(arbre), 'Anissa'));
-
-    expect(texteDe(feuille(arbre))).toContain('Une place pour Anissa');
-
-    await appuyer(pressableSous(feuille(arbre), 'U11 Filles'));
-
-    // La confirmation est une alerte systeme.
-    const [titre, , boutons] = derniereAlerte();
-    expect(titre).toBe('Demander une place pour Anissa ?');
-    expect(createClubInterestRequest).not.toHaveBeenCalled();
-
-    await act(async () => {
-      boutons.find((/** @type {any} */ b) => b.style !== 'cancel').onPress();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(createClubInterestRequest).toHaveBeenCalledTimes(1);
-    expect(createClubInterestRequest).toHaveBeenCalledWith({
-      declaredChild: 'c-anissa',
-      team: 't-filles',
-    });
-    const [titreFin, messageFin] = derniereAlerte();
-    expect(titreFin).toBe('Demande envoyée');
-    expect(messageFin).toContain('U11 Filles');
-    expect(messageFin).toContain('Anissa');
-  });
-
-  it('un seul enfant a placer (l autre en equipe) : son prenom, l autre ABSENT', async () => {
-    mockEnfants = [ANISSA, MARTIN_PLACE];
-    const arbre = monter();
-
-    expect(texteDe(porteEnfant(arbre))).toBe('Demander à rejoindre au nom de Anissa');
-
-    await appuyer(porteEnfant(arbre));
-    const ouverte = feuille(arbre);
-    expect(texteDe(ouverte)).toContain('Une place pour Anissa');
-    // L'existant : l'enfant deja en equipe disparait de la feuille, sans un mot.
-    expect(texteDe(ouverte)).not.toContain('Martin');
-  });
-
-  it('chaque enfant a placer a deja une demande ici : la porte disparait', () => {
+describe('PAR-L4 caracterisation — ce qui ne bouge pas', () => {
+  it('(4, apres) chaque enfant a deja une demande ici : la porte RESTE', () => {
     mockDemandes = [
       demandeEnAttente('t-filles', 'c-anissa'),
       demandeEnAttente('t-garcons', 'c-martin'),
     ];
     const arbre = monter();
 
-    expect(porteEnfant(arbre)).toBeUndefined();
-  });
-
-  it('tous les enfants de moins de 13 ans sont en equipe : ni porte, ni phrase', () => {
-    mockEnfants = [MARTIN_PLACE];
-    const arbre = monter();
-
-    expect(porteEnfant(arbre)).toBeUndefined();
-    expect(texteDe(arbre.root)).not.toContain('fait sa demande');
+    // AVANT : `toBeUndefined()` — la porte s'effacait sans un mot.
+    expect(porteEnfant(arbre)).toBeDefined();
   });
 
   it('seulement un ado : pas de porte, une phrase (E17)', () => {
@@ -622,56 +570,6 @@ describe('PAR-L4 caracterisation — la feuille « pour un enfant » telle qu el
     expect(texteDe(arbre.root)).toContain(
       'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
     );
-  });
-
-  it('venu de la fiche de Martin (childDocumentId) : la feuille l ignore', async () => {
-    mockRoute = { params: { childDocumentId: 'c-martin', clubId: 'club-1' } };
-    const arbre = monter();
-
-    expect(texteDe(porteEnfant(arbre))).toBe('Demander à rejoindre pour mes enfants');
-    await appuyer(porteEnfant(arbre));
-    expect(texteDe(feuille(arbre))).toContain('Une place pour ton enfant');
-  });
-
-  it('refus « deja en attente » : le libelle ADULTE, sans le prenom', async () => {
-    /** @type {any} */ (createClubInterestRequest).mockRejectedValue({
-      response: { data: { error: { message: 'A request is already pending' } }, status: 400 },
-    });
-    const arbre = monter();
-    await appuyer(porteEnfant(arbre));
-    await appuyer(pressableSous(feuille(arbre), 'Anissa'));
-    await appuyer(pressableSous(feuille(arbre), 'U11 Filles'));
-    const [, , boutons] = derniereAlerte();
-    await act(async () => {
-      boutons.find((/** @type {any} */ b) => b.style !== 'cancel').onPress();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    const [titre, message] = derniereAlerte();
-    expect(titre).toBe('Erreur');
-    expect(message).toBe('Intérêt déjà envoyé.');
-  });
-
-  it('refus « deja dans une equipe » : « Ton enfant », jamais son prenom', async () => {
-    /** @type {any} */ (createClubInterestRequest).mockRejectedValue({
-      response: {
-        data: { error: { message: 'This child already belongs to a team' } },
-        status: 400,
-      },
-    });
-    const arbre = monter();
-    await appuyer(porteEnfant(arbre));
-    await appuyer(pressableSous(feuille(arbre), 'Anissa'));
-    await appuyer(pressableSous(feuille(arbre), 'U11 Filles'));
-    const [, , boutons] = derniereAlerte();
-    await act(async () => {
-      boutons.find((/** @type {any} */ b) => b.style !== 'cancel').onPress();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(derniereAlerte()[1]).toBe('Ton enfant a déjà une équipe.');
   });
 
   it('l interet ADULTE (« Intéressé par le club ») ne porte aucun enfant', async () => {
@@ -686,5 +584,340 @@ describe('PAR-L4 caracterisation — la feuille « pour un enfant » telle qu el
     });
 
     expect(createClubInterestRequest).toHaveBeenCalledWith({ team: 't-filles' });
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// LES TEMOINS DU LOT (design parent E10 a E13, planche 5).
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Le pressable qui porte cette etiquette de test, ou undefined.
+ * @param {any} racine - Le noeud de depart.
+ * @param {string} testID - L'etiquette.
+ * @returns {any} Le noeud.
+ */
+const parEtiquette = (racine, testID) => (racine
+  ? racine
+    .findAll((/** @type {any} */ noeud) => noeud.props?.testID === testID
+      && typeof noeud.props?.onPress === 'function')
+    // Le plus PROFOND : le pressable rendu (il porte `accessibilityState`), pas l'element appelant.
+    .pop()
+  : undefined);
+
+/**
+ * La rangee d'un enfant dans la feuille.
+ * @param {any} arbre - L'arbre rendu.
+ * @param {string} id - L'enfant.
+ * @returns {any} Le noeud.
+ */
+const rangeeEnfant = (arbre, id) => parEtiquette(feuille(arbre), `demande-enfant-choix-${id}`);
+
+/**
+ * La rangee d'une equipe dans la feuille.
+ * @param {any} arbre - L'arbre rendu.
+ * @param {string} id - L'equipe.
+ * @returns {any} Le noeud.
+ */
+const rangeeEquipe = (arbre, id) => parEtiquette(feuille(arbre), `demande-enfant-equipe-${id}`);
+
+/**
+ * Ouvre la feuille par la porte du parent.
+ * @param {any} arbre - L'arbre rendu.
+ * @returns {Promise<void>}
+ */
+const ouvrir = async (arbre) => {
+  await appuyer(porteEnfant(arbre));
+};
+
+/**
+ * Le bouton « suivant » de l'etape affichee.
+ * @param {any} arbre - L'arbre rendu.
+ * @returns {any} Le noeud.
+ */
+const suivant = (arbre) => parEtiquette(feuille(arbre), 'demande-enfant-suivant');
+
+/**
+ * Ouvre la feuille, choisit l'enfant, l'equipe, et arrive au recapitulatif.
+ * @param {any} arbre - L'arbre rendu.
+ * @param {string} enfant - L'enfant.
+ * @param {string} equipe - L'equipe.
+ * @returns {Promise<void>}
+ */
+const jusquAuRecapitulatif = async (arbre, enfant, equipe) => {
+  await ouvrir(arbre);
+  await appuyer(rangeeEnfant(arbre, enfant));
+  await appuyer(suivant(arbre));
+  await appuyer(rangeeEquipe(arbre, equipe));
+  await appuyer(suivant(arbre));
+};
+
+describe('PAR-L4 point 2 — une feuille en 3 etapes : l enfant, l equipe, l envoi', () => {
+  it('la porte dit « pour un enfant », la feuille demande « Pour quel enfant ? »', async () => {
+    const arbre = monter();
+
+    expect(texteDe(porteEnfant(arbre))).toBe('Demander une place pour un enfant');
+
+    await ouvrir(arbre);
+    const texte = texteDe(feuille(arbre));
+    expect(texte).toContain('Demander une place');
+    expect(texte).toContain('Étape 1/3');
+    expect(texte).toContain('Pour quel enfant ?');
+    expect(texteDe(rangeeEnfant(arbre, 'c-anissa'))).toContain('Anissa · 11 ans');
+    expect(texteDe(rangeeEnfant(arbre, 'c-anissa'))).toContain('Pas encore d’équipe');
+    expect(texteDe(rangeeEnfant(arbre, 'c-martin'))).toContain('Martin · 9 ans');
+    // Rien n'est choisi : on ne passe pas a l'equipe.
+    expect(suivant(arbre).props.disabled).toBe(true);
+    // Aucune equipe n'est montree avant d'avoir choisi l'enfant.
+    expect(rangeeEquipe(arbre, 't-filles')).toBeUndefined();
+  });
+
+  it('enfant, equipe, recapitulatif : la demande part sans alerte de confirmation', async () => {
+    const arbre = monter();
+    await ouvrir(arbre);
+    await appuyer(rangeeEnfant(arbre, 'c-anissa'));
+    expect(rangeeEnfant(arbre, 'c-anissa').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    await appuyer(suivant(arbre));
+
+    // Etape 2 : l'enfant reste visible, et on peut le changer.
+    let texte = texteDe(feuille(arbre));
+    expect(texte).toContain('Étape 2/3');
+    expect(texte).toContain('Pour Anissa (11 ans)');
+    expect(parEtiquette(feuille(arbre), 'demande-enfant-changer')).toBeDefined();
+    // Le nom de l'equipe en entier, et sa ligne de details.
+    expect(texteDe(rangeeEquipe(arbre, 't-filles'))).toContain('U11 Filles');
+    expect(texteDe(rangeeEquipe(arbre, 't-filles'))).toContain('Départemental');
+    expect(suivant(arbre).props.disabled).toBe(true);
+
+    await appuyer(rangeeEquipe(arbre, 't-filles'));
+    await appuyer(suivant(arbre));
+
+    // Etape 3 : le recapitulatif.
+    texte = texteDe(feuille(arbre));
+    expect(texte).toContain('Étape 3/3');
+    expect(texte).toContain('Anissa Dubelloy, 11 ans');
+    expect(texte).toContain('U11 Filles');
+    expect(texte).toContain('FoundClub');
+    expect(createClubInterestRequest).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
+
+    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+
+    expect(createClubInterestRequest).toHaveBeenCalledTimes(1);
+    expect(createClubInterestRequest).toHaveBeenCalledWith({
+      declaredChild: 'c-anissa',
+      team: 't-filles',
+    });
+  });
+
+  it('le resultat se dit avec l enfant et l equipe, et mene a SA fiche', async () => {
+    const arbre = monter();
+    await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
+    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+
+    expect(feuille(arbre)).toBeUndefined();
+    const [titre, message, boutons] = derniereAlerte();
+    expect(titre).toBe('Demande envoyée');
+    expect(message).toContain('Anissa');
+    expect(message).toContain('U11 Filles');
+    const voirSaFiche = boutons.find((/** @type {any} */ b) => b.text === 'Voir sa fiche');
+    expect(voirSaFiche).toBeDefined();
+
+    voirSaFiche.onPress();
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ProfileStack', {
+      params: { childDocumentId: 'c-anissa' },
+      screen: 'MyChildren',
+    });
+  });
+
+  it('« Retour » et « Changer » reviennent en arriere en gardant les choix', async () => {
+    const arbre = monter();
+    await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
+
+    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-retour'));
+    expect(texteDe(feuille(arbre))).toContain('Étape 2/3');
+    expect(rangeeEquipe(arbre, 't-filles').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+
+    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-changer'));
+    expect(texteDe(feuille(arbre))).toContain('Étape 1/3');
+    expect(rangeeEnfant(arbre, 'c-anissa').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+  });
+
+  it('les enfants NON admissibles restent visibles, grises, avec leur raison', async () => {
+    mockEnfants = [ANISSA, MARTIN_PLACE, LINA_ADO, NOE_SANS_AGE];
+    const arbre = monter();
+    await ouvrir(arbre);
+
+    expect(texteDe(rangeeEnfant(arbre, 'c-martin'))).toContain('Déjà dans U11 Garçons');
+    expect(rangeeEnfant(arbre, 'c-martin').props.disabled).toBe(true);
+    expect(texteDe(rangeeEnfant(arbre, 'c-lina'))).toContain(
+      'À partir de 13 ans, Lina fait sa demande depuis son propre compte.',
+    );
+    expect(rangeeEnfant(arbre, 'c-lina').props.disabled).toBe(true);
+    expect(texteDe(rangeeEnfant(arbre, 'c-noe'))).toContain(
+      'Âge inconnu : complète sa date de naissance',
+    );
+    expect(rangeeEnfant(arbre, 'c-noe').props.disabled).toBe(true);
+    expect(rangeeEnfant(arbre, 'c-anissa').props.disabled).toBe(false);
+  });
+
+  it('un seul enfant admissible : il est choisi, et la feuille le DIT', async () => {
+    mockEnfants = [ANISSA, MARTIN_PLACE];
+    const arbre = monter();
+    await ouvrir(arbre);
+
+    expect(rangeeEnfant(arbre, 'c-anissa').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(texteDe(feuille(arbre))).toContain(
+      'Choix fait pour toi : Anissa, seul enfant qui peut demander une place ici.',
+    );
+    expect(suivant(arbre).props.disabled).toBeFalsy();
+  });
+
+  it('aucun enfant admissible : la porte RESTE, et la feuille explique', async () => {
+    mockEnfants = [MARTIN_PLACE];
+    const arbre = monter();
+
+    expect(porteEnfant(arbre)).toBeDefined();
+    await ouvrir(arbre);
+    expect(texteDe(feuille(arbre))).toContain(
+      'Aucun de tes enfants ne peut demander une place ici pour le moment.',
+    );
+    expect(texteDe(rangeeEnfant(arbre, 'c-martin'))).toContain('Déjà dans U11 Garçons');
+    expect(suivant(arbre).props.disabled).toBe(true);
+  });
+
+  it('une demande en attente ici : l enfant reste choisissable, la PAIRE bloque', async () => {
+    mockDemandes = [demandeEnAttente('t-filles', 'c-anissa')];
+    const arbre = monter();
+
+    // La porte ne s'efface plus : Anissa peut encore demander une autre equipe.
+    expect(porteEnfant(arbre)).toBeDefined();
+    await ouvrir(arbre);
+    expect(texteDe(rangeeEnfant(arbre, 'c-anissa'))).toContain('1 demande en attente ici');
+    expect(rangeeEnfant(arbre, 'c-anissa').props.disabled).toBe(false);
+
+    await appuyer(rangeeEnfant(arbre, 'c-anissa'));
+    await appuyer(suivant(arbre));
+    expect(texteDe(rangeeEquipe(arbre, 't-filles'))).toContain(
+      'Demande déjà envoyée pour Anissa',
+    );
+    expect(rangeeEquipe(arbre, 't-filles').props.disabled).toBe(true);
+    expect(rangeeEquipe(arbre, 't-garcons').props.disabled).toBe(false);
+  });
+
+  it('jamais une demande partagee entre freres : celle d Anissa ne bloque pas Martin', async () => {
+    mockDemandes = [demandeEnAttente('t-filles', 'c-anissa')];
+    const arbre = monter();
+    await ouvrir(arbre);
+    await appuyer(rangeeEnfant(arbre, 'c-martin'));
+    await appuyer(suivant(arbre));
+
+    expect(rangeeEquipe(arbre, 't-filles').props.disabled).toBe(false);
+    await appuyer(rangeeEquipe(arbre, 't-filles'));
+    await appuyer(suivant(arbre));
+    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+
+    expect(createClubInterestRequest).toHaveBeenCalledWith({
+      declaredChild: 'c-martin',
+      team: 't-filles',
+    });
+  });
+});
+
+describe('PAR-L4 point 3 — l enfant transmis depuis SA fiche', () => {
+  it('venu de la fiche de Martin : la porte le nomme, la feuille l a deja coche', async () => {
+    mockRoute = { params: { childDocumentId: 'c-martin', clubId: 'club-1' } };
+    const arbre = monter();
+
+    expect(texteDe(porteEnfant(arbre))).toBe('Demander une place pour Martin');
+    await ouvrir(arbre);
+    expect(rangeeEnfant(arbre, 'c-martin').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(texteDe(feuille(arbre))).toContain(
+      'Tu viens de la fiche de Martin : son nom est déjà coché.',
+    );
+    // Modifiable : on peut choisir Anissa a la place.
+    await appuyer(rangeeEnfant(arbre, 'c-anissa'));
+    expect(rangeeEnfant(arbre, 'c-anissa').props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+    expect(rangeeEnfant(arbre, 'c-martin').props.accessibilityState).toMatchObject({
+      checked: false,
+    });
+  });
+
+  it('un identifiant qui n est pas un de MES enfants est ignore', async () => {
+    mockRoute = { params: { childDocumentId: 'c-inconnu', clubId: 'club-1' } };
+    const arbre = monter();
+
+    expect(texteDe(porteEnfant(arbre))).toBe('Demander une place pour un enfant');
+    await ouvrir(arbre);
+    expect(texteDe(feuille(arbre))).not.toContain('Tu viens de la fiche');
+  });
+});
+
+describe('PAR-L4 point 4 — les erreurs nomment l enfant, dans la feuille', () => {
+  /**
+   * Envoie la demande d'Anissa pour U11 Filles, refusee avec ce message.
+   * @param {string} message - Le message du serveur.
+   * @returns {Promise<any>} L'arbre.
+   */
+  const envoyerRefuse = async (message) => {
+    /** @type {any} */ (createClubInterestRequest).mockRejectedValue({
+      response: { data: { error: { message } }, status: 400 },
+    });
+    const arbre = monter();
+    await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
+    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+    return arbre;
+  };
+
+  /**
+   * Le texte de l'erreur affichee dans la feuille.
+   * @param {any} arbre - L'arbre rendu.
+   * @returns {string} Le texte.
+   */
+  const erreurDeLaFeuille = (arbre) => texteDe(
+    feuille(arbre)
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'demande-enfant-erreur')[0],
+  );
+
+  it('doublon : « Une demande pour Anissa est deja en attente dans U11 Filles. »', async () => {
+    const arbre = await envoyerRefuse('A request is already pending');
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(feuille(arbre)).toBeDefined();
+    expect(texteDe(feuille(arbre))).toContain('Étape 3/3');
+    expect(erreurDeLaFeuille(arbre)).toBe(
+      'Une demande pour Anissa est déjà en attente dans U11 Filles.',
+    );
+  });
+
+  it('deja placee : « Anissa a deja une equipe. »', async () => {
+    const arbre = await envoyerRefuse('This child already belongs to a team');
+    expect(erreurDeLaFeuille(arbre)).toBe('Anissa a déjà une équipe.');
+  });
+
+  it('trop grande : la regle des 13 ans, avec son prenom', async () => {
+    const arbre = await envoyerRefuse('Team places are reserved to children under 13');
+    expect(erreurDeLaFeuille(arbre)).toBe(
+      'À partir de 13 ans, Anissa fait sa demande depuis son propre compte.',
+    );
+  });
+
+  it('erreur inconnue : le prenom reste dans la phrase', async () => {
+    const arbre = await envoyerRefuse('boom');
+    expect(erreurDeLaFeuille(arbre)).toBe(
+      'Impossible d’envoyer la demande pour Anissa pour le moment.',
+    );
   });
 });

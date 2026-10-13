@@ -2570,6 +2570,10 @@ export default {
       title: 'À propos',
     },
     actions: {
+      // PAR-L4 (13/10, design parent E10) — la porte du parent. Le prenom n'apparait que pour
+      // l'enfant venu de SA fiche ; sinon la feuille demande « pour quel enfant ? ».
+      askPlaceForChild: 'Demander une place pour un enfant',
+      askPlaceForNamedChild: 'Demander une place pour {{firstname}}',
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait
       // l'AUTRE bouton : ce bouton-ci, lui, ouvre le formulaire « je suis deja
@@ -2756,17 +2760,51 @@ export default {
       alreadyPlaced: 'Ton enfant a déjà une équipe.',
       alreadySentShort: 'Demande envoyée',
       cardHint: 'Les responsables accepteront ou refuseront la demande.',
+      change: 'Changer',
+      childWithAge: '{{firstname}} · {{age}} ans',
+      chooseTeamAction: 'Choisir l’équipe',
       confirmDescription: 'Les responsables de {{teamName}} verront son prénom et son âge,'
         + ' et pourront accepter ou refuser.',
       confirmTitle: 'Demander une place pour {{firstname}} ?',
+      continueAction: 'Continuer',
+      errorDuplicate: 'Une demande pour {{firstname}} est déjà en attente dans {{teamName}}.',
+      errorForbidden: 'La demande pour {{firstname}} n’a pas pu partir : ton compte n’a pas'
+        + ' encore l’autorisation. Réessaie dans quelques instants.',
+      errorGeneric: 'Impossible d’envoyer la demande pour {{firstname}} pour le moment.',
+      errorPlaced: '{{firstname}} a déjà une équipe.',
+      errorTeamGone: '{{teamName}} n’est plus disponible. Choisis une autre équipe pour'
+        + ' {{firstname}}.',
+      forChild: 'Pour {{firstname}}',
+      forChildWithAge: 'Pour {{firstname}} ({{age}} ans)',
+      fromChildPage: 'Tu viens de la fiche de {{firstname}} : son nom est déjà coché.',
+      noneEligible: 'Aucun de tes enfants ne peut demander une place ici pour le moment.',
+      noTeamYet: 'Pas encore d’équipe',
+      onlyOneEligible: 'Choix fait pour toi : {{firstname}}, seul enfant qui peut demander'
+        + ' une place ici.',
+      pendingHereMany: '{{count}} demandes en attente ici',
+      pendingHereOne: '1 demande en attente ici',
       pickerDescription: 'Choisis l’équipe. Ses responsables verront le prénom et l’âge'
         + ' de ton enfant, et pourront accepter ou refuser.',
       pickerTitle: 'Une place pour ton enfant',
       pickerTitleNamed: 'Une place pour {{firstname}}',
+      reasonPlaced: 'Déjà dans {{teamName}}',
+      reasonTeen: 'À partir de 13 ans, {{firstname}} fait sa demande depuis son propre compte.',
+      reasonUnknownAge: 'Âge inconnu : complète sa date de naissance',
+      recapChild: 'Enfant',
+      recapChildValue: '{{name}}, {{age}} ans',
+      recapClub: 'Club',
+      recapTeam: 'Équipe',
       sendAction: 'Demander une place',
+      sendRequestAction: 'Envoyer la demande',
       sentDescription: 'Les responsables de {{teamName}} vont examiner la demande pour'
         + ' {{firstname}}. Tu recevras leur réponse.',
       sentTitle: 'Demande envoyée',
+      sheetTitle: 'Demander une place',
+      stepChild: 'Pour quel enfant ?',
+      stepRecap: 'Récapitulatif',
+      stepTeam: 'Quelle équipe ?',
+      teamAlreadyAsked: 'Demande déjà envoyée pour {{firstname}}',
+      viewChildPage: 'Voir sa fiche',
     },
     clubInterest: {
       alreadyMember: 'Tu es déjà rattaché à ce club.',
