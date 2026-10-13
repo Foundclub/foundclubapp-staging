@@ -21,6 +21,8 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetLevels } from '@/services/level/levelQueries';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 /** L etat « aucun filtre », partage avec la liste. */
 export const EMPTY_FRIENDLY_MATCH_FILTERS = Object.freeze({
   category: '',
@@ -197,7 +199,10 @@ function FriendlyMatchFiltersSheet({
                 { color: isActive ? Colors.primary500 : Colors.neutral200 },
               ]}
               >
-                {option.label}
+                {/* AMICAUX-CORRECTIFS 72 — « 30 jours » devenait « 30 » sur Android 16 : texte gras
+                    de plusieurs mots dans une pastille. Parade FINITIONS : espaces insecables.
+                    Temoin : __tests__/AMIC72-pastillesInsecables.test.js. */}
+                {texteInsecable(option.label)}
               </Text>
             </TouchableOpacity>
           );
