@@ -43,10 +43,11 @@ import {
   sanitizeUser,
 } from '@/domains/auth/authSanitizer';
 import {
+  canUseParentMode as canAccountUseParentMode,
   canUsePlayerMode as canAccountUsePlayerMode,
   resolveDisplayRoleKey,
-  usePlayerModeRequest,
-  writePlayerModeRequest,
+  useDisplayModeRequest,
+  writeDisplayModeRequest,
 } from '@/domains/auth/playerMode';
 import {
   getAccountSubscriptionAccessLevel,
@@ -608,17 +609,32 @@ const useAuth = () => {
   // ⛔ Les portes de droits (`canEditClub`, `hasClubAccess`) et le serveur ne
   // le voient pas ; `userData.role` n'est jamais réécrit.
   // Témoin : src/domains/auth/__tests__/useAuth.ROLES.modeJoueur.test.js.
-  const isPlayerModeRequested = usePlayerModeRequest(userData?.documentId);
+  //
+  // PAR-L12 (13/10, décision D6 A d'Adel du 12/10) — le MODE PARENT, troisième position du même
+  // choix d'affichage : un joueur, un entraîneur ou un dirigeant qui a des enfants voit l'app
+  // comme un parent (`displayRoleKey` vaut `parent`). Mêmes règles : ni droit, ni serveur.
+  // Témoin : src/domains/auth/__tests__/useAuth.L12.modeParent.test.js.
+  const displayModeRequest = useDisplayModeRequest(userData?.documentId);
   const displayRoleKey = resolveDisplayRoleKey({
     accountRoleKey: userRoleKey,
-    isPlayerModeRequested,
+    displayModeRequest,
     userData,
   });
-  const isPlayerMode = displayRoleKey !== userRoleKey;
+  const isPlayerMode = displayRoleKey === 'player' && userRoleKey !== 'player';
+  const isParentMode = displayRoleKey === 'parent' && userRoleKey !== 'parent';
   const canUsePlayerMode = canAccountUsePlayerMode(userRoleKey, userData);
-  const setPlayerMode = useCallback(
-    (/** @type {boolean} */ enabled) => writePlayerModeRequest(userData?.documentId, enabled),
+  const canUseParentMode = canAccountUseParentMode(userRoleKey);
+  const setDisplayMode = useCallback(
+    (/** @type {'player' | 'parent' | null} */ mode) => writeDisplayModeRequest(
+      userData?.documentId,
+      mode,
+    ),
     [userData?.documentId],
+  );
+  // L'appel d'avant L12 garde son sens : vrai = mode joueur, faux = retour au rôle du compte.
+  const setPlayerMode = useCallback(
+    (/** @type {boolean} */ enabled) => setDisplayMode(enabled ? 'player' : null),
+    [setDisplayMode],
   );
 
   const canEditEvent = useCallback(
@@ -917,6 +933,7 @@ const useAuth = () => {
     canPublishGovernedClubContent,
     canSendMessageToUser,
     canShowCodeButton: !!confirm,
+    canUseParentMode,
     canUsePlayerMode,
     clubIds,
     clubs,
@@ -944,6 +961,7 @@ const useAuth = () => {
     isCurrentClubVerified,
     isLoading: otpMutation.isPending || loginMutation.isPending,
     isNonPartnerCoach,
+    isParentMode,
     isPlayerMode,
     loginMutation,
     logoutMutation,
@@ -954,6 +972,7 @@ const useAuth = () => {
     refetchUserData,
     retryBoot,
     setConfirm,
+    setDisplayMode,
     setPlayerMode,
     subscriptionAccessLevel,
     subscriptionSummary,
