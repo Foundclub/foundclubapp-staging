@@ -45,6 +45,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
   default: () => ({ userData: { club: { documentId: 'club-A' }, role: { type: 'president' } } }),
 }));
 jest.mock('@react-navigation/native', () => ({
+  // COLL-R-APP-CREATION (13/10) : le catalogue des bandeaux importe navigationService.
+  createNavigationContainerRef: () => ({ isReady: () => false }),
   useFocusEffect: () => {},
   useNavigation: () => ({
     addListener: (/** @type {string} */ nom, /** @type {(e: any) => void} */ ecouteur) => {
