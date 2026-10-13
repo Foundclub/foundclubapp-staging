@@ -68,16 +68,23 @@ const suivreLeClavierIOS = (evenement) => {
  * Ce qu'un écran doit laisser en bas pour que son contenu s'arrête au haut du clavier.
  * @param {number} [reserveBasse] Ce que l'écran garde DÉJÀ en bas pour la barre système
  *   (dp) : 0 si rien, `insets.bottom` si son pied s'en charge.
- * @param {{ iPhone?: boolean }} [options] `iPhone` : suivre aussi le clavier d'iOS (fenêtre
- *   `<Modal>`, où iOS n'évite rien).
+ * @param {{ android?: boolean, iPhone?: boolean }} [options] `iPhone` : suivre aussi le clavier
+ *   d'iOS (fenêtre `<Modal>`, où iOS n'évite rien). `android: false` : ne PAS suivre celui
+ *   d'Android 15+, pour une `<Modal>` NON translucide — Android la remonte déjà (cadre
+ *   `fitsSystemWindows` + `adjustResize`, ReactModalHostView.kt) : la suivre aussi la
+ *   remonterait deux fois.
  * @returns {{ ecoute: boolean, retrait: number }} `ecoute` : le crochet suit le clavier
  *   (Android 15+, ou iPhone sur demande ; un `KeyboardAvoidingView` voisin doit alors se
  *   taire) ; `retrait` : la marge basse à poser, 0 clavier fermé.
  */
-export default function useRetraitDuClavierAndroid(reserveBasse = 0, { iPhone = false } = {}) {
+export default function useRetraitDuClavierAndroid(
+  reserveBasse = 0,
+  { android = true, iPhone = false } = {},
+) {
   const bottom = useBarreDuBas();
   const surIPhone = iPhone && Platform.OS === 'ios';
-  const ecoute = surIPhone || (Platform.OS === 'android'
+  const ecoute = surIPhone || (android
+    && Platform.OS === 'android'
     && typeof Platform.Version === 'number'
     && Platform.Version >= 35);
   const [hauteurDuClavier, setHauteurDuClavier] = useState(0);
