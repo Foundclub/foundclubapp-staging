@@ -96,7 +96,9 @@ describe('WizardOptionCard — caracterisation (avant PAR-L4)', () => {
     expect(carte(libre).props.accessibilityState).toEqual({ selected: false });
     expect(carte(choisie).props.accessibilityState).toEqual({ selected: true });
     expect(style(carte(libre)).borderColor).toMatch(/^rgba\(255, ?255, ?255, ?0\.10?\)$/);
-    expect(style(carte(choisie)).borderColor).toBe('#01b3f4');
+    // Le jeton du theme, jamais une valeur hexadecimale ecrite ici (contrat de theme).
+    const { primary500 } = jest.requireActual('@/theme/colors').default();
+    expect(style(carte(choisie)).borderColor).toBe(primary500);
     expect(style(carte(choisie)).backgroundColor).toMatch(/^rgba\(1, ?179, ?244, ?0\.08\)$/);
   });
 
