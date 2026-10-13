@@ -375,7 +375,7 @@ function ComplexeCreneaux() {
   const pas = (
     /** @type {string} */ libelle,
     /** @type {string} */ signe,
-    /** @type {() => void} */ ajout,
+    /** @type {number} */ ajout,
   ) => (
     <TouchableOpacity
       accessibilityLabel={libelle}
