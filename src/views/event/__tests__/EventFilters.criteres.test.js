@@ -113,14 +113,19 @@ jest.mock('react-i18next', () => {
     // mourir la suite sur « undefined module », loin du sujet.
     initReactI18next: { init: () => {}, type: '3rdParty' },
     useTranslation: () => ({
-      t: (/** @type {string} */ cle, /** @type {string} */ repli) => {
+      t: (/** @type {string} */ cle, /** @type {string} */ repli, /** @type {any} */ options) => {
         const valeur = String(cle).split('.').reduce(
           (/** @type {any} */ noeud, /** @type {string} */ morceau) => (
             noeud === undefined || noeud === null ? undefined : noeud[morceau]
           ),
           fr,
         );
-        return typeof valeur === 'string' ? valeur : (repli || cle);
+        const texte = typeof valeur === 'string' ? valeur : (repli || cle);
+        // PAR-L10 — comme i18next, `{{x}}` prend la valeur passée en troisième argument.
+        if (typeof texte !== 'string' || !options) return texte;
+        return texte.replace(/\{\{(\w+)\}\}/g, (tout, nom) => (
+          options[nom] === undefined ? tout : String(options[nom])
+        ));
       },
     }),
   };
@@ -464,5 +469,78 @@ describe('A09 — le sport : populaires en haut, recherche dans TOUS les sports'
     await choisirLeSport(tree, 'Équitation');
     await appuyerSur(tree, 'Appliquer les filtres');
     expect(mockDispatch.mock.calls[0][0].payload.activity).toEqual(['a-equit']);
+  });
+});
+
+// PAR-L10 (12/10) — l'appelant frère de `useAlerteRecherche` : l'écran plein lisait lui
+// aussi `err.response.data.error.message`, que le client HTTP ne rend jamais (il rejette
+// la charge Strapi déballée, `client.native.js:91-97`). Chaque refus devenait « Erreur
+// lors de la sauvegarde ».
+describe('PAR-L10 — l écran plein dit pourquoi l alerte n a pas été enregistrée', () => {
+  // eslint-disable-next-line global-require
+  const { Alert } = require('react-native');
+
+  const {
+    createSearchAlert,
+    getPreviewCount,
+    // eslint-disable-next-line global-require
+  } = require('@/services/searchAlert/searchAlertService');
+
+  /**
+   * Ouvre la fenêtre « Créer une alerte » par l'étoile, nomme l'alerte et l'enregistre,
+   * contre ce refus.
+   * @param {any} refus Ce que le client HTTP rejette.
+   * @returns {Promise<any[]>} Les arguments du message affiché.
+   */
+  const enregistrerContre = async (refus) => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const journal = jest.spyOn(console, 'error').mockImplementation(() => {});
+    createSearchAlert.mockRejectedValueOnce(refus);
+    // Le compteur « Pour le moment, N événements » passe par un pluriel que la
+    // doublure de `t` ne sait pas rendre : sans compteur, la fenêtre reste lisible.
+    getPreviewCount.mockRejectedValueOnce(new Error('compteur hors sujet'));
+    mockEventFilters = { city: MARSEILLE, radius: 25 };
+    const setOptions = jest.fn();
+    /** @type {any} */
+    let tree;
+    await act(async () => {
+      tree = renderer.create(
+        <EventFilters navigation={/** @type {any} */ ({ goBack: jest.fn(), setOptions })} />,
+      );
+    });
+    const entetes = setOptions.mock.calls.filter((appel) => appel[0]?.headerRight);
+    const etoile = entetes[entetes.length - 1][0].headerRight();
+    await act(async () => { await etoile.props.children.props.onPress(); });
+    const saisie = tree.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'saisie' && n.props?.onChangeText,
+    )[0];
+    await act(async () => { saisie.props.onChangeText('Matchs Marseille'); });
+    await appuyerSur(tree, 'Sauvegarder');
+    await act(async () => { await Promise.resolve(); });
+    const appels = alerte.mock.calls;
+    alerte.mockRestore();
+    journal.mockRestore();
+    expect(createSearchAlert).toHaveBeenCalled();
+    return appels[appels.length - 1];
+  };
+
+  it('limite de 10 alertes (400) : la phrase lisible, plus « Erreur lors… »', async () => {
+    const [titre, corps] = await enregistrerContre({
+      details: {},
+      message: 'Limite de 10 alertes atteinte. Supprimez une alerte existante.',
+      name: 'BadRequestError',
+      status: 400,
+    });
+
+    expect(titre).toBe('Erreur');
+    expect(corps).toBe('Tu as déjà 10 alertes : supprimes-en une dans Mes alertes.');
+  });
+
+  it('un refus de droit (403) : « Ton compte ne peut pas encore créer d alerte. »', async () => {
+    const [, corps] = await enregistrerContre({
+      details: {}, message: 'Forbidden', name: 'ForbiddenError', status: 403,
+    });
+
+    expect(corps).toBe('Ton compte ne peut pas encore créer d\'alerte.');
   });
 });

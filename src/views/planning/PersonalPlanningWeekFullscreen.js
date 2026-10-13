@@ -82,7 +82,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
-  useManagingCollectiviteId,
+  useManagingCollectivite,
 } from '@/services/collectivite/collectiviteQueries';
 import {
   getClubPlanning,
@@ -107,6 +107,8 @@ import {
 import { assignClubPlanningColors } from '@/utils/facilityPlanningColor';
 import { toParisIsoFromLocalSelection } from '@/utils/parisTime';
 import {
+  aTrancherParLaVille,
+  etatDeLaDemande,
   ligneDesDemandesEnAttente,
   lireVueRetenue,
   pageDAujourdhui,
@@ -348,7 +350,11 @@ function PlanningWeekFullscreen() {
   // le compte est « joueur » lisait le texte du membre. C'est le serveur qui dit qu'il la
   // gere (ses collectivites, puis leurs installations), jamais le role du compte.
   const { userData } = /** @type {any} */ (useAuth()) || {};
-  const managingCollectiviteId = useManagingCollectiviteId(facilityId, {
+  // COL-009 : `gestionConnue` — la reponse est sure (lectures revenues sans erreur).
+  const {
+    collectiviteId: managingCollectiviteId,
+    connue: gestionConnue,
+  } = useManagingCollectivite(facilityId, {
     enabled: isFacilitySource,
   });
   const readsAsOrganizer = Boolean(managingCollectiviteId)
@@ -369,11 +375,20 @@ function PlanningWeekFullscreen() {
   // droite (ordinateur) : « le jour ferme se hachure pendant la saisie, et les seances touchees se
   // cernent d orange ». Rien n est ecrit tant que la mairie n a pas confirme.
   const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
+  // 🏛️ COLL-R-APP-PLANNING (COL-014) — l instant de la regle « a trancher par la Ville », LE MEME
+  // pour la grille, le bandeau, la legende et la liste de ce rendu. Relu a chaque rendu : une
+  // demande dont l heure passe pendant que la page est ouverte cesse d etre comptee au suivant.
+  const instantDuRendu = Date.now();
   const events = useMemo(() => {
     if (!isFacilitySource) return normalizedEvents;
+    const maintenant = new Date(instantDuRendu);
     return assignClubPlanningColors(normalizedEvents).map((/** @type {any} */ evenement) => {
       const brut = evenement.raw || {};
       const duClubDuLecteur = Boolean(evenement.documentId) || brut.isOwnClub === true;
+      // COL-014 : une demande restee sans reponse et dont l heure est passee reste DESSINEE (T05 :
+      // rien n est detruit), en gris ; « en attente » ne dit plus que ce que la Ville peut trancher
+      // (une seance qui attend SON DIRIGEANT, D32, n est pas une demande a la Ville).
+      const etatDemande = etatDeLaDemande(evenement, maintenant);
       // Le brouillon cerne ce qu il toucherait ; en MODIFIANT une fermeture, il libere aussi ce
       // qu elle ne touche plus (la regle du serveur, §13.3 : closureTouchesBlock).
       const touche = closureTouchesBlock(evenement, brouillon);
@@ -390,17 +405,18 @@ function PlanningWeekFullscreen() {
       return {
         ...evenement,
         ...cerne,
-        displayColor: readsAsOrganizer || duClubDuLecteur
+        displayColor: (readsAsOrganizer || duClubDuLecteur) && etatDemande !== 'datePassee'
           ? evenement.displayColor
           : Colors.neutral500,
         // COLL-C3B (02/10) — et le club qui DEMANDE voit sa demande « en attente de la mairie »,
         // a sa place (P8v2-demande, etat 4 : « Comme dans ton planning »).
-        participationStatus: (readsAsOrganizer || duClubDuLecteur) && brut.pending === true
+        participationStatus: (readsAsOrganizer || duClubDuLecteur) && etatDemande === 'aTrancher'
           ? 'pending'
           : evenement.participationStatus,
       };
     });
-  }, [Colors.neutral500, brouillon, isFacilitySource, normalizedEvents, readsAsOrganizer]);
+  }, [Colors.neutral500, brouillon, instantDuRendu, isFacilitySource, normalizedEvents,
+    readsAsOrganizer]);
   const hasEvents = events.length > 0;
   // SPEC Collectivites §2 C : la mairie touche le bloc d'un AUTRE club -> une fiche en
   // lecture (club, equipe, horaires, contact GENERAL du club, D15). Pour tout autre
@@ -638,8 +654,9 @@ function PlanningWeekFullscreen() {
     }
     return events;
   }, [currentDate, events, vue]);
+  // COL-014 : la regle de la liste « En attente » (T05), pas toute place `pending`.
   const blocsEnAttente = readsAsOrganizer
-    ? blocsDeLaPage.filter((/** @type {any} */ evenement) => evenement.raw?.pending === true)
+    ? blocsDeLaPage.filter((bloc) => aTrancherParLaVille(bloc, new Date(instantDuRendu)))
     : [];
   const ligneDeCapacite = useMemo(() => {
     if (!isFacilitySource || !facilityPlanningSummary || !readsAsOrganizer) return null;
@@ -736,6 +753,17 @@ function PlanningWeekFullscreen() {
   const nombreEnAttente = managingCollectiviteId ? blocsEnAttente.length : 0;
   // FINITIONS13-COLL (04/10) : la période de la VUE (T13 : « cette semaine » en vue Mois).
   const ligneEnAttente = ligneDesDemandesEnAttente(t, vue, nombreEnAttente);
+  // 📱 COLL-R-APP-PLANNING (12/10, COL-009) — TELEPHONE COUCHE (hors site), planche validee
+  // P5-semaine-paysage et remede « G43 B » : UNE barre compacte (fleches, nom, dates, ligne de
+  // capacite, croix), puis la grille ; le bandeau, la legende, la phrase, le bouton et la ligne des
+  // demandes sont replies (ils prenaient ~60 % de la hauteur : une heure de grille, capture S12).
+  const barreCompacte = isFacilitySource && isLandscape && Platform.OS !== 'web';
+  // La phrase du dirigeant : une fois SUR que le compte ne gere pas l installation (compte double).
+  // Incident 13 : places libres, la ligne de capacite le dit deja (deux lignes disaient « 1 place
+  // libre ») ; complet, elle dit ce que devient un depassement.
+  const phraseDuDirigeant = readsAsOrganizer && gestionConnue && !managingCollectiviteId
+    && Boolean(facilitySummaryMessage)
+    && (Boolean(facilityPlanningSummary?.reachedCapacity) || !ligneDeCapacite);
   // Contrat C2A §7 : d ou vient la place (creneau attribue, demande, seance du club).
   const origineDe = (/** @type {any} */ bloc) => {
     const brut = bloc?.raw || {};
@@ -774,6 +802,13 @@ function PlanningWeekFullscreen() {
       );
     }
     if (brut.origin === 'request') {
+      // COL-014 : restee sans reponse et passee, elle ne se tranche plus (T05).
+      if (etatDeLaDemande(bloc, new Date(instantDuRendu)) === 'datePassee') {
+        return t(
+          'collectiviteCreneaux.planning.nonTrancheeDatePassee',
+          'Non tranchée, date passée',
+        );
+      }
       return brut.pending
         ? t('collectiviteCreneaux.planning.origineAttente', 'Demande en attente de décision')
         : t('collectiviteCreneaux.planning.origineDemande', 'Demande acceptée');
@@ -857,10 +892,14 @@ function PlanningWeekFullscreen() {
   // touche une heure libre du planning d une installation de la Ville ⇒ « Demander ce creneau »,
   // deja rempli du jour et de l heure. La Ville decide (le serveur fait la demande).
   const clubDuLecteur = userData?.club?.documentId || null;
+  // COL-009 : seulement une fois SUR que le compte ne gere pas l installation (le compte double
+  // voyait le bouton du club pendant la lecture de ses Villes).
   const villesDuClub = useClubCollectiviteFacilities(
-    isFacilitySource && !managingCollectiviteId && readsAsOrganizer ? clubDuLecteur : null,
+    isFacilitySource && gestionConnue && !managingCollectiviteId && readsAsOrganizer
+      ? clubDuLecteur
+      : null,
   );
-  const peutDemander = !peutAttribuer && Boolean(clubDuLecteur)
+  const peutDemander = !peutAttribuer && gestionConnue && Boolean(clubDuLecteur)
     && (Array.isArray(villesDuClub.data) ? villesDuClub.data : [])
       .some((/** @type {any} */ installation) => installation?.documentId === facilityId);
   // COLL-C3B-BIS (planche 43) : sur ordinateur, la demande s'ouvre en PANNEAU, à droite.
@@ -979,6 +1018,8 @@ function PlanningWeekFullscreen() {
   // Design P5-semaine-ordi : sur le site, la mairie choisit l installation en haut (une
   // pastille a la couleur de chacune) ; un bloc ouvert = un panneau a droite.
   const isDesktop = useIsDesktop();
+  // 🏛️ COLL-R-APP-PLANNING (COL-012) — sur ordinateur, les fleches du haut entourent les dates.
+  const flechesAutourDesDates = isFacilitySource && isDesktop;
   // 🖥️ COLL-C4B-BIS — ouvert par « Fermer une installation » sur ordinateur (CollectiviteFermeture
   // cede la place au planning) : le panneau de la fermeture, d emblee.
   const fermetureDemandee = route?.params?.fermeture || null;
@@ -1230,9 +1271,13 @@ function PlanningWeekFullscreen() {
         // Recolte 03/10 : avec COLL-C3B-BIS, les blocs affiches portent aussi la place « U13 ? » en pointille.
         events={[...bandesDeFermeture, ...evenementsAffiches]}
         firstHour={isFacilitySource ? Math.floor(ouvertureDuJour / 60) : undefined}
+        // 🏛️ COLL-R-APP-PLANNING (COL-012) : des fleches aussi dans la rangee des jours (la ou est
+        // le regard), les memes que celles du haut, avec leurs noms.
+        flechesDesJours={isFacilitySource}
         laneOf={colonnesDePlateaux ? colonneDuBloc : undefined}
         lanes={colonnesDePlateaux}
         mode={vue}
+        nomsDesFleches={[flecheGauche, flecheDroite]}
         onDateChange={vue === VUES.troisJours
           ? (/** @type {Date} */ ancre) => setCurrentDate(addDays(ancre, 1))
           : setCurrentDate}
@@ -1608,12 +1653,16 @@ function PlanningWeekFullscreen() {
               borderColor: `${Colors.primary500}26`,
               borderRadius: 16,
               borderWidth: 1,
-              minHeight: 40,
+              // COL-009 (planche P5-semaine-paysage) : couche, UNE barre de 44 points.
+              minHeight: barreCompacte ? 44 : 40,
               paddingHorizontal: 6,
               width: '100%',
             },
           ]}
         >
+          {/* COL-012 (planches P5v2-vues-ordi, P5-semaine-ordi) : sur ordinateur, les */}
+          {/* fleches ENTOURENT les dates ; le telephone les garde aux deux bouts (P5-jour-tel). */}
+          {flechesAutourDesDates ? <View style={{ flex: 1 }} /> : null}
           <TouchableOpacity
             accessibilityLabel={flecheGauche}
             accessibilityRole="button"
@@ -1634,7 +1683,11 @@ function PlanningWeekFullscreen() {
             />
           </TouchableOpacity>
 
-          <View style={{ flex: 1, paddingHorizontal: 6 }}>
+          <View
+            style={flechesAutourDesDates
+              ? { flexShrink: 1, minWidth: 200, paddingHorizontal: 6 }
+              : { flex: 1, paddingHorizontal: 6 }}
+          >
             <Text
               numberOfLines={1}
               style={[{
@@ -1657,6 +1710,20 @@ function PlanningWeekFullscreen() {
             </Text>
           </View>
 
+          {/* COL-009 : couche, la ligne de capacite monte dans la barre (P5-semaine-paysage). */}
+          {barreCompacte && ligneDeCapacite ? (
+            <Text
+              numberOfLines={1}
+              style={[
+                Fonts.p3Bold,
+                ligneDeCapacite.plein ? Fonts.warning500 : Fonts.success500,
+                { flexShrink: 1, marginHorizontal: 6 },
+              ]}
+            >
+              {ligneDeCapacite.texte}
+            </Text>
+          ) : null}
+
           <TouchableOpacity
             accessibilityLabel={flecheDroite}
             accessibilityRole="button"
@@ -1676,6 +1743,7 @@ function PlanningWeekFullscreen() {
               style={{ height: 12, tintColor: Colors.primary500, width: 12 }}
             />
           </TouchableOpacity>
+          {flechesAutourDesDates ? <View style={{ flex: 1 }} /> : null}
 
           <TouchableOpacity
             accessibilityLabel={t(
@@ -1778,7 +1846,9 @@ function PlanningWeekFullscreen() {
           </Text>
         ) : null}
 
-        {isFacilitySource && facilityPlanningSummary ? (
+        {/* COL-009 : couche, tout ce bloc est replie ; il revient des qu on redresse. La */}
+        {/* fermeture reste lisible dans la grille (hachures « Fermé · vacances »). */}
+        {isFacilitySource && facilityPlanningSummary && !barreCompacte ? (
           <View style={[Spaces.marginBottom[8], { gap: 6 }]}>
             {/* COLL-C4B (02/10) — la fermeture de la page, pour TOUS les lecteurs (P3b). */}
             <FacilityClosureBanner
@@ -1807,7 +1877,10 @@ function PlanningWeekFullscreen() {
             ) : null}
             {/* Un dirigeant ou un entraineur garde la phrase qui lui dit ce que devient un */}
             {/* depassement (COLL1D) ; la mairie, qui tranche, lit « n demandes » plus bas. */}
-            {readsAsOrganizer && !managingCollectiviteId && facilitySummaryMessage ? (
+            {/* COL-009 : une fois sur que le compte ne gere pas l installation. Incident 13 : */}
+            {/* places libres, la ligne de capacite le dit deja ; la phrase reste quand c est */}
+            {/* complet (ce que devient un depassement). */}
+            {phraseDuDirigeant ? (
               <Text style={[Fonts.p4, Fonts.neutral200]}>{facilitySummaryMessage}</Text>
             ) : null}
             {/* COLL-C3B (02/10) — « Demander un creneau » (P8v2) : le club demande a la Ville. */}

@@ -34,6 +34,7 @@ import useTheme from '@/theme/themeContext';
 import Hachures from '@/components/atoms/hachures/Hachures';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { etatDeLaDemande } from '@/utils/planning/installationPlanningViews';
 import {
   getPlanningDefaultDate,
   getPlanningDisplayTitle,
@@ -202,6 +203,11 @@ function EventBlock({
  * @param {boolean} [root0.expandToContent]
  * @param {boolean} [root0.showHeader]
  * @param {boolean} [root0.showUntimedSection]
+ * @param {boolean} [root0.flechesDesJours] - COLL-R-APP-PLANNING (COL-012) : des fleches pour
+ *   changer de page AUSSI dans la rangee des jours (‹ dans la case vide a gauche du premier jour,
+ *   › apres le dernier), les memes que celles de l en-tete.
+ * @param {string[]} [root0.nomsDesFleches] - Leurs noms pour le lecteur d ecran
+ *   (« Semaine precedente », « Semaine suivante »… : ceux des fleches de l ecran).
  * @param {number} [root0.firstHour] - COLL-C2B : la grille commence au plus tard a cette heure
  *   (l ouverture de l installation), pour qu une heure libre du matin se touche.
  * @param {(jour: Date, heure: number, colonne?: number) => void} [root0.onFreeSlotPress] -
@@ -219,9 +225,11 @@ function PlanningWeekTimelineView({
   events = [],
   expandToContent = false,
   firstHour,
+  flechesDesJours = false,
   laneOf,
   lanes,
   mode = '3days',
+  nomsDesFleches = [],
   onDateChange,
   onEventPress,
   onFreeSlotPress,
@@ -756,6 +764,18 @@ function PlanningWeekTimelineView({
     // COLL-C4B-BIS (03/10) : de VRAIES hachures (`.ferme-bande` : rayures a 135 degres) et un bord
     // PLEIN, comme la planche — plus des pointilles sur un fond uni.
     if (event?.raw?.closureBand) {
+      // 🧱 COLL-R-APP-PLANNING (incident 1) — une seance (ou une grappe) qui couvre le HAUT de la
+      // plage posait son titre sur le sien (« Bloqué par la Ville · » sous « FoundClub », capture
+      // S17) : le titre descend sous elle, ou se tait s il n a plus la place (le lecteur d ecran
+      // le lit toujours).
+      const basDesBlocsDuHaut = layoutEvents
+        .filter((/** @type {any} */ autre) => !autre?.raw?.closureBand
+          && autre.dayIndex === event.dayIndex
+          && autre.top <= event.top + 2
+          && autre.top + autre.height > event.top + 2)
+        .map((/** @type {any} */ autre) => autre.top + autre.height - event.top);
+      const descenteDuTitre = basDesBlocsDuHaut.length ? Math.max(...basDesBlocsDuHaut) : 0;
+      const titreDeLaPlage = descenteDuTitre + 14 <= event.height;
       return (
         <EventBlock
           accessibilityLabel={[event.title, getPlanningTimeLabel(event)].filter(Boolean).join(', ')}
@@ -776,18 +796,21 @@ function PlanningWeekTimelineView({
           }]}
         >
           <Hachures color={pendingAccentColor} />
-          <Text
-            numberOfLines={4}
-            style={[
-              Fonts.p3Bold,
-              {
-                color: Colors.warning400 || pendingAccentColor,
-                fontSize: mode === 'week' ? 9 : 11,
-              },
-            ]}
-          >
-            {event.title}
-          </Text>
+          {titreDeLaPlage ? (
+            <Text
+              numberOfLines={4}
+              style={[
+                Fonts.p3Bold,
+                {
+                  color: Colors.warning400 || pendingAccentColor,
+                  fontSize: mode === 'week' ? 9 : 11,
+                  ...(descenteDuTitre ? { marginTop: descenteDuTitre } : {}),
+                },
+              ]}
+            >
+              {event.title}
+            </Text>
+          ) : null}
         </EventBlock>
       );
     }
@@ -798,7 +821,13 @@ function PlanningWeekTimelineView({
     const cardAccentColor = isPendingParticipation ? pendingAccentColor : color;
     // COLL-C3B (02/10, design P8v2-demande-ordi) — une place DEMANDEE a la Ville et en attente
     // de sa decision (contrat C2A §7 : origin « request », pending) : pointilles orange.
-    const isPendingRequest = event?.raw?.origin === 'request' && event?.raw?.pending === true;
+    // COLL-R-APP-PLANNING (12/10, COL-014) : la regle « a trancher par la Ville », ecrite une fois
+    // (fin pas passee). Passee, elle reste dessinee (T05), grise, « Non tranchee, date passee ».
+    const etatDemande = etatDeLaDemande(event);
+    const isPendingRequest = etatDemande === 'aTrancher';
+    const nonTranchee = etatDemande === 'datePassee'
+      ? t('collectiviteCreneaux.planning.nonTrancheeDatePassee', 'Non tranchée, date passée')
+      : null;
     const isCompact = event.height < 62;
     const isTiny = event.height < 38;
     const cardContent = resolvePlanningCardContent(event, { profile: cardDisplayProfile });
@@ -876,10 +905,36 @@ function PlanningWeekTimelineView({
       primaryMinimumFontScale = mode === 'week' ? 0.72 : 0.78;
     }
 
+    // 🧱 COLL-R-APP-PLANNING (incident 1) — APRES le titre et la deuxieme ligne (leurs regles ne
+    // changent pas), une ligne ne s affiche que si elle TIENT entiere dans le bloc : sur le site,
+    // une ligne de trop se tassait et passait SOUS la suivante (« Basket · à déplacer » sous
+    // « 19:00 – 20:00 », capture S15 ; une heure fait 44 points en plein ecran). Hauteurs : celles
+    // des styles ci-dessous (marge de 2 + ~1,25 fois la taille du texte).
+    const bordure = aDeplacer ? 2 : 1;
+    let placeRestante = event.height - 2 - (2 * bordure) - (2 * (mode === 'week' ? 4 : 6))
+      - (primaryFontSize + 2) - (canShowSecondary ? 2 + 2 + secondaryFontSize + 2 : 0);
+    const tient = (/** @type {number} */ taille) => {
+      const hauteur = 2 + Math.ceil(taille * 1.25);
+      if (hauteur > placeRestante) return false;
+      placeRestante -= hauteur;
+      return true;
+    };
+    const tailleSeule = mode === 'week' ? 8 : 10;
+    const nonTrancheeSeule = Boolean(nonTranchee) && !isTiny && !canShowSecondary
+      && tient(tailleSeule);
+    const aDeplacerSeul = aDeplacer && !isTiny && !canShowSecondary && tient(tailleSeule);
+    const montreTertiaire = canShowTertiary && tient(9);
+    const libelleHeure = !isTiny && !isTeamFocusedCard ? getPlanningTimeLabel(event) : null;
+    const montreHeure = Boolean(libelleHeure) && tient(9);
+    const montreMeta = canShowMeta && tient(8);
+
     // Le lecteur d'ecran entend le bloc entier, meme quand une ligne ne tient pas.
     const blockAccessibilityLabel = isClubFocusedCard
-      ? [[primaryLabel, contextLabel].filter(Boolean).join(' · '), getPlanningTimeLabel(event)]
-        .filter(Boolean).join(', ')
+      ? [
+        [primaryLabel, contextLabel].filter(Boolean).join(' · '),
+        getPlanningTimeLabel(event),
+        nonTranchee,
+      ].filter(Boolean).join(', ')
       : undefined;
 
     return (
@@ -948,6 +1003,7 @@ function PlanningWeekTimelineView({
             numberOfLines={1}
             style={[isTeamFocusedCard ? Fonts.p3 : Fonts.p3Bold, {
               color: Colors.neutral00,
+              flexShrink: 0,
               fontSize: secondaryFontSize,
               lineHeight: mode === 'week' ? secondaryFontSize + 2 : secondaryFontSize + 2,
               marginTop: 2,
@@ -961,27 +1017,43 @@ function PlanningWeekTimelineView({
                 {` · ${t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}`}
               </Text>
             ) : null}
+            {nonTranchee ? (
+              <Text style={{ color: Colors.neutral300 }} testID="non-tranchee">
+                {` · ${nonTranchee}`}
+              </Text>
+            ) : null}
+          </Text>
+        ) : null}
+        {/* COL-014 : seule, quand il n y a pas de deuxieme ligne (comme « a deplacer »). */}
+        {nonTrancheeSeule ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3Bold, { color: Colors.neutral300, flexShrink: 0, fontSize: tailleSeule }]}
+            testID="non-tranchee"
+          >
+            {nonTranchee}
           </Text>
         ) : null}
         {/* COLL-C4B-BIS : « a deplacer » sous le club et l equipe, comme la planche (ecran 4). */}
         {/* FINITIONS12-COLL : seul, quand il n y a pas de deuxieme ligne. */}
-        {aDeplacer && !isTiny && !canShowSecondary ? (
+        {aDeplacerSeul ? (
           <Text
             numberOfLines={1}
             style={[
               Fonts.p3Bold,
-              { color: pendingAccentColor, fontSize: mode === 'week' ? 8 : 10 },
+              { color: pendingAccentColor, flexShrink: 0, fontSize: tailleSeule },
             ]}
             testID="a-deplacer"
           >
             {t('collectiviteFermetures.planning.aDeplacer', 'à déplacer')}
           </Text>
         ) : null}
-        {canShowTertiary ? (
+        {montreTertiaire ? (
           <Text
             numberOfLines={1}
             style={[isTeamFocusedCard ? Fonts.p3 : Fonts.p3Bold, {
               color: isTeamFocusedCard ? Colors.neutral200 : color,
+              flexShrink: 0,
               fontSize: 9,
               marginTop: 2,
             }]}
@@ -989,13 +1061,23 @@ function PlanningWeekTimelineView({
             {tertiaryLabel}
           </Text>
         ) : null}
-        {!isTiny && !isTeamFocusedCard && getPlanningTimeLabel(event) ? (
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, marginTop: 2 }]}>
-            {getPlanningTimeLabel(event)}
+        {montreHeure ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3, {
+              color: Colors.neutral300, flexShrink: 0, fontSize: 9, marginTop: 2,
+            }]}
+          >
+            {libelleHeure}
           </Text>
         ) : null}
-        {canShowMeta ? (
-          <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, fontSize: 8, marginTop: 2 }]}>
+        {montreMeta ? (
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3, {
+              color: Colors.neutral300, flexShrink: 0, fontSize: 8, marginTop: 2,
+            }]}
+          >
             {metaLabel}
           </Text>
         ) : null}
@@ -1285,13 +1367,43 @@ function PlanningWeekTimelineView({
         style={[
           styles.panel,
           compactFullscreen ? styles.compactPanel : null,
+          // 📱 COLL-R-APP-PLANNING (COL-009) : en plein ecran sur telephone, le cadre ne depasse
+          // jamais la place qui reste ; c est la grille qui defile dedans (08:00 a 23:00). Sans
+          // lui, un cadre plus haut que l ecran peut empecher le defilement (capture S12). Le site
+          // garde sa mise en page (la page y defile).
+          compactFullscreen && Platform.OS !== 'web' ? styles.compactPanelBorne : null,
           { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.10)' },
         ]}
+        testID="planning-cadre"
       >
         {summarySection}
 
-        <View style={[styles.daysRow, compactFullscreen ? styles.compactDaysRow : null, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
-          <View style={{ width: timeColumnWidth }} />
+        <View
+          style={[
+            styles.daysRow,
+            compactFullscreen ? styles.compactDaysRow : null,
+            { borderBottomColor: 'rgba(255,255,255,0.12)' },
+          ]}
+          testID="rangee-des-jours"
+        >
+          {/* COLL-R-APP-PLANNING (COL-012) : ‹ dans la case vide a gauche du premier jour. */}
+          <View style={[styles.caseDesHeures, { width: timeColumnWidth }]}>
+            {flechesDesJours ? (
+              <TouchableOpacity
+                accessibilityLabel={nomsDesFleches[0]}
+                accessibilityRole="button"
+                hitSlop={styles.hitSlop}
+                onPress={handlePrevPage}
+                style={styles.flecheDesJours}
+              >
+                <Image
+                  resizeMode="contain"
+                  source={Images.arrowLeft}
+                  style={[styles.flecheDesJoursImage, { tintColor: Colors.primary500 }]}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
           {weekDays.map((day) => {
             const dayKey = getDayKey(day);
             const isTodayColumn = isSameDay(day, nowReference);
@@ -1356,6 +1468,23 @@ function PlanningWeekTimelineView({
               </View>
             );
           })}
+          {/* COL-012 : › apres le dernier jour, posee sur son bord droit (les colonnes de la */}
+          {/* rangee restent alignees sur celles de la grille). */}
+          {flechesDesJours ? (
+            <TouchableOpacity
+              accessibilityLabel={nomsDesFleches[1]}
+              accessibilityRole="button"
+              hitSlop={styles.hitSlop}
+              onPress={handleNextPage}
+              style={[styles.flecheDesJours, styles.flecheDesJoursDroite]}
+            >
+              <Image
+                resizeMode="contain"
+                source={Images.arrowRight}
+                style={[styles.flecheDesJoursImage, { tintColor: Colors.primary500 }]}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {tetesDePlateaux}
@@ -1539,6 +1668,7 @@ function PlanningWeekTimelineView({
 }
 
 const styles = StyleSheet.create({
+  caseDesHeures: { alignItems: 'center', alignSelf: 'stretch', justifyContent: 'flex-end' },
   collapsedText: { color: '#6E7C84', fontSize: 10 },
   compactDayBadge: { height: 24, minWidth: 24, width: 24 },
   compactDayLabel: { fontSize: 8, marginBottom: 1 },
@@ -1548,6 +1678,7 @@ const styles = StyleSheet.create({
   compactHeaderDate: { fontSize: 12 },
   compactHeaderSpacing: { paddingBottom: 2, paddingTop: 1 },
   compactPanel: { borderRadius: 14, paddingHorizontal: 2 },
+  compactPanelBorne: { flexShrink: 1 },
   compactScrollContent: { paddingBottom: 8, paddingTop: REMONTEE_DE_L_ETIQUETTE },
   compactUntimedCard: { marginBottom: 4, paddingHorizontal: 6, paddingVertical: 4 },
   compactUntimedSection: { marginTop: 6, paddingBottom: 4, paddingTop: 4 },
@@ -1573,6 +1704,11 @@ const styles = StyleSheet.create({
   eventCard: {
     borderRadius: 8, borderWidth: 1, overflow: 'hidden', position: 'absolute',
   },
+  flecheDesJours: {
+    alignItems: 'center', borderRadius: 10, height: 30, justifyContent: 'center', width: 30,
+  },
+  flecheDesJoursDroite: { bottom: 3, position: 'absolute', right: 0 },
+  flecheDesJoursImage: { height: 12, width: 12 },
   grappeDot: { borderRadius: 999, height: 6, width: 6 },
   grappeDots: { flexDirection: 'row', gap: 3, marginBottom: 2 },
   gridContainer: {

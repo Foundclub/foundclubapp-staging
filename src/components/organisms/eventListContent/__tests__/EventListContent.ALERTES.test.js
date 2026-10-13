@@ -658,23 +658,30 @@ describe('A20.1 — sous les résultats : « Me prévenir des nouveaux événeme
 
     expect(mockClient.post).not.toHaveBeenCalled();
     const texte = texteVisible(tree);
-    expect(texte).toContain('Voir les résultats');
-    expect(texte).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
+    // PAR-L10 (E22) : la feuille s'ouvre en mode CRÉATION, son bouton dit ce qu'il fait.
+    expect(texte).toContain('Créer cette alerte');
+    expect(texte).toContain('Choisis une ville, puis touche « Créer cette alerte ».');
     // La rangée Ville est DÉJÀ dépliée : son champ d'adresse est là.
     expect(tree.root.findAll((/** @type {any} */ n) => n.props?.testID === 'adresse').length)
       .toBeGreaterThan(0);
   });
 
+  // PAR-L10 (12/10) — la forme de l'erreur est celle que REJETTE le client HTTP
+  // (`client.native.js:91-97` : la charge Strapi déballée, sans `.response` ;
+  // prouvé par `client.timeoutAbandon.test.js:98-113`). L'ancienne doublure
+  // simulait une erreur axios brute : ce témoin était vert à tort, et l'app
+  // affichait « Erreur lors de la sauvegarde » à chaque refus.
   it('un refus du serveur est DIT, pas avalé (limite de 10 alertes)', async () => {
     mockClient.post.mockRejectedValueOnce({
-      response: { data: { error: { message: REFUS_DU_SERVEUR } } },
+      details: {}, message: REFUS_DU_SERVEUR, name: 'BadRequestError', status: 400,
     });
     const tree = await monter({ filtres: { city: MONTRIVAGE, radius: 20 } });
 
     await appuyerSur(tree, 'Créer l\'alerte');
 
     expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
-      body: REFUS_DU_SERVEUR,
+      body: 'Tu as déjà 10 alertes : supprimes-en une dans Mes alertes.',
+      title: 'L\'alerte n\'a pas été créée.',
       tone: 'error',
     }));
     expect(texteVisible(tree)).not.toContain('Alerte créée');
@@ -746,8 +753,8 @@ describe('A20.2 — la PREMIÈRE ouverture propose de créer son alerte, une foi
 
     const texte = texteVisible(tree);
     expect(texte).not.toContain('Ne rate plus aucun événement');
-    expect(texte).toContain('Voir les résultats');
-    expect(texte).toContain("Choisis une ville, puis touche « Créer l'alerte ».");
+    expect(texte).toContain('Créer cette alerte');
+    expect(texte).toContain('Choisis une ville, puis touche « Créer cette alerte ».');
     expect(mockClient.post).not.toHaveBeenCalled();
   });
 
@@ -884,5 +891,290 @@ describe('A20.4 — l étoile en haut à droite des filtres', () => {
 
     expect(mockClient.get).toHaveBeenCalledWith('/search-alerts');
     expect(mockClient.post.mock.calls[0][1].data.label).toBe('Football · Montrivage (2)');
+  });
+});
+
+// PAR-L10 (12/10, recette parent PAR-013) — « Erreur lors de la sauvegarde », et
+// rien d'autre : l'alerte d'un parent ne partait pas (403 du rôle), et l'app ne
+// disait pas pourquoi. Deux défauts, deux blocs :
+//   · la RAISON du refus, lue dans la forme que rejette vraiment le client HTTP
+//     (la charge Strapi déballée, ou une chaîne nue sans réseau) ;
+//   · la feuille ouverte POUR une alerte (E22) : « Créer cette alerte » crée, le
+//     succès n'est dit qu'après l'enregistrement, l'échec garde les critères.
+
+const REFUS_DE_DROIT = Object.freeze({
+  details: {}, message: 'Forbidden', name: 'ForbiddenError', status: 403,
+});
+
+/**
+ * Une promesse qu'on tient en main : on la résout quand on veut.
+ * @returns {{ promesse: Promise<any>, resoudre: (valeur: any) => void }} La promesse et sa clef.
+ */
+const differe = () => {
+  let resoudre = (/** @type {any} */ valeur) => valeur;
+  const promesse = new Promise((ok) => { resoudre = ok; });
+  return { promesse, resoudre };
+};
+
+/**
+ * Le premier élément pressable qui porte exactement ce libellé, sans appuyer.
+ * @param {any} tree L'arbre.
+ * @param {string} libelle Le texte.
+ * @returns {any} L'élément, ou undefined.
+ */
+const boutonDeLibelle = (tree, libelle) => tree.root.findAll(
+  (/** @type {any} */ node) => (
+    typeof node.props?.onPress === 'function' && texteDuNoeud(node).trim() === libelle
+  ),
+  { deep: true },
+)[0];
+
+/**
+ * Choisit la ville dans la rangée Ville (déjà dépliée en mode création).
+ * @param {any} tree L'arbre.
+ * @param {{ label: string, value: string }} ville La ville.
+ */
+const choisirLaVille = async (tree, ville) => {
+  const champ = tree.root.findAll((/** @type {any} */ n) => n.props?.testID === 'adresse')[0];
+  await act(async () => { champ.props.setAddress(ville); });
+};
+
+/**
+ * Ouvre la feuille en mode création, par le bouton de la carte, sans ville.
+ * @returns {Promise<any>} L'arbre.
+ */
+const ouvrirLaFeuilleDeCreation = async () => {
+  const tree = await monter({ filtres: { activity: ['a-foot'] } });
+  await appuyerSur(tree, 'Choisir une ville');
+  return tree;
+};
+
+const appelsFiltres = () => mockDispatch.mock.calls
+  .map(([action]) => action)
+  .filter((action) => action?.type === 'SET_EVENT_FILTERS');
+
+describe('PAR-L10 — la raison d un refus, lue dans la VRAIE forme de l erreur', () => {
+  beforeEach(() => { propositionDejaVue('u-1'); });
+
+  /**
+   * Crée l'alerte depuis la carte (ville déjà choisie) contre ce refus.
+   * @param {any} refus Ce que le client HTTP rejette.
+   * @returns {Promise<any>} L'arbre.
+   */
+  const creerContre = async (refus) => {
+    mockClient.post.mockRejectedValueOnce(refus);
+    const tree = await monter({ filtres: { city: MONTRIVAGE, radius: 20 } });
+    await appuyerSur(tree, 'Créer l\'alerte');
+    return tree;
+  };
+
+  it('refus de droit (403, rôle Parent avant le 12/10) : « pas encore »', async () => {
+    const tree = await creerContre(REFUS_DE_DROIT);
+
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Ton compte ne peut pas encore créer d\'alerte.',
+      title: 'L\'alerte n\'a pas été créée.',
+      tone: 'error',
+    }));
+    expect(texteVisible(tree)).not.toContain('Alerte créée');
+  });
+
+  it('pas de réseau (le client rejette une chaîne nue) : « Pas de connexion. »', async () => {
+    await creerContre('Network Error');
+
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Pas de connexion.',
+      tone: 'error',
+    }));
+  });
+
+  it('délai dépassé : l alerte a pu partir, on dit de regarder avant de réessayer', async () => {
+    await creerContre({
+      code: 'REQUEST_TIMEOUT_ABANDONED',
+      message: 'Request timeout - please retry.',
+      name: 'RequestTimeoutAbandonError',
+      status: 0,
+    });
+
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Le serveur met du temps à répondre : regarde dans Mes alertes avant de réessayer.',
+      tone: 'error',
+    }));
+  });
+
+  it('un autre refus que le serveur explique (400) : sa phrase, telle quelle', async () => {
+    await creerContre({
+      details: {},
+      message: 'La ville est obligatoire pour une alerte.',
+      name: 'BadRequestError',
+      status: 400,
+    });
+
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'La ville est obligatoire pour une alerte.',
+      tone: 'error',
+    }));
+  });
+
+  it('une panne sans explication (500) : jamais le texte technique du serveur', async () => {
+    await creerContre({
+      details: {}, message: 'Internal Server Error', name: 'InternalServerError', status: 500,
+    });
+
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      body: 'Réessaie dans un instant.',
+      tone: 'error',
+    }));
+  });
+
+  it('la feuille « Filtrer » (étoile) dit aussi pourquoi, sous son titre', async () => {
+    mockClient.post.mockRejectedValueOnce(REFUS_DE_DROIT);
+    const tree = await monter({ filtres: { city: MONTRIVAGE, radius: 20 } });
+    await ouvrirLesFiltres(tree);
+
+    await act(async () => {
+      await parEtiquette(tree, 'Créer une alerte avec ces filtres').props.onPress();
+    });
+    await laisserFiler();
+
+    const texte = texteVisible(tree);
+    expect(texte).toContain('L\'alerte n\'a pas été créée.');
+    expect(texte).toContain('Ton compte ne peut pas encore créer d\'alerte.');
+  });
+});
+
+describe('PAR-L10 — E22 : la feuille ouverte pour créer une alerte', () => {
+  beforeEach(() => { propositionDejaVue('u-1'); });
+
+  // Pied : « Créer cette alerte » + « Voir les résultats sans créer d'alerte ».
+  it('titre « Créer une alerte », les deux boutons du pied, sans étoile', async () => {
+    const tree = await ouvrirLaFeuilleDeCreation();
+
+    const texte = texteVisible(tree);
+    expect(texte).toContain('Créer une alerte');
+    expect(texte).not.toContain('Filtrer');
+    expect(boutonDeLibelle(tree, 'Créer cette alerte')).toBeDefined();
+    expect(boutonDeLibelle(tree, 'Voir les résultats sans créer d\'alerte')).toBeDefined();
+    // Deux boutons pour un même geste, c'est un de trop : l'étoile disparaît ici.
+    expect(parEtiquette(tree, 'Créer une alerte avec ces filtres')).toBeUndefined();
+    expect(texte).not.toContain('Réinitialiser');
+  });
+
+  it('« Créer cette alerte » ENREGISTRE, puis annonce, applique et ferme', async () => {
+    const tree = await ouvrirLaFeuilleDeCreation();
+    await choisirLaVille(tree, MONTRIVAGE);
+
+    await appuyerSur(tree, 'Créer cette alerte');
+
+    expect(mockClient.post).toHaveBeenCalledTimes(1);
+    expect(mockClient.post.mock.calls[0][1].data).toEqual(expect.objectContaining({
+      filters: expect.objectContaining({ activity: ['a-foot'], city: MONTRIVAGE, radius: 20 }),
+      type: 'event',
+    }));
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      actionLabel: 'Gérer mes alertes',
+      title: 'Alerte créée',
+      tone: 'success',
+    }));
+    expect(appelsFiltres()).toEqual([
+      expect.objectContaining({ payload: expect.objectContaining({ city: MONTRIVAGE }) }),
+    ]);
+    expect(boutonDeLibelle(tree, 'Créer cette alerte')).toBeUndefined();
+  });
+
+  it('succès dit APRÈS l enregistrement ; un 2e appui pendant l envoi ne crée rien', async () => {
+    const envoi = differe();
+    mockClient.post.mockReturnValueOnce(envoi.promesse);
+    const tree = await ouvrirLaFeuilleDeCreation();
+    await choisirLaVille(tree, MONTRIVAGE);
+
+    await act(async () => { boutonDeLibelle(tree, 'Créer cette alerte').props.onPress(); });
+    await laisserFiler();
+
+    expect(mockClient.post).toHaveBeenCalledTimes(1);
+    expect(mockRetour.showBanner).not.toHaveBeenCalled();
+    expect(texteVisible(tree)).not.toContain('Alerte créée');
+    const occupe = boutonDeLibelle(tree, 'Créer cette alerte');
+    expect(occupe.props.accessibilityState).toEqual(expect.objectContaining({ busy: true }));
+
+    await act(async () => { occupe.props.onPress(); });
+    await laisserFiler();
+    expect(mockClient.post).toHaveBeenCalledTimes(1);
+
+    await act(async () => { envoi.resoudre({ data: { data: { documentId: 'al-1' } } }); });
+    await laisserFiler();
+    expect(mockRetour.showBanner).toHaveBeenCalledTimes(1);
+    expect(mockRetour.showBanner).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Alerte créée',
+    }));
+  });
+
+  it('échec : feuille et critères restent, la raison est dite, « Réessayer »', async () => {
+    mockClient.post.mockRejectedValueOnce(REFUS_DE_DROIT);
+    const tree = await ouvrirLaFeuilleDeCreation();
+    await choisirLaVille(tree, MONTRIVAGE);
+
+    await appuyerSur(tree, 'Créer cette alerte');
+
+    const texte = texteVisible(tree);
+    expect(texte).toContain('L\'alerte n\'a pas été créée.');
+    expect(texte).toContain('Ton compte ne peut pas encore créer d\'alerte.');
+    expect(texte).toContain('Montrivage · 20 km');
+    expect(texte).not.toContain('Alerte créée');
+    expect(appelsFiltres()).toEqual([]);
+
+    await appuyerSur(tree, 'Réessayer');
+
+    expect(mockClient.post).toHaveBeenCalledTimes(2);
+    expect(mockClient.post.mock.calls[1][1].data.filters.city).toEqual(MONTRIVAGE);
+    expect(mockRetour.showBanner).toHaveBeenLastCalledWith(expect.objectContaining({
+      title: 'Alerte créée',
+    }));
+  });
+
+  it('après la feuille, la carte dit « Alerte créée » : pas de deuxième création', async () => {
+    // La recherche prend VRAIMENT les critères rangés (le contexte suit le dispatch).
+    mockDispatch.mockImplementation((/** @type {any} */ action) => {
+      if (action?.type !== 'SET_EVENT_FILTERS') return;
+      mockContexte.valeur = [{ eventFilters: action.payload, searchMapSessions: {} }, mockDispatch];
+    });
+    try {
+      const tree = await ouvrirLaFeuilleDeCreation();
+      await choisirLaVille(tree, MONTRIVAGE);
+
+      await appuyerSur(tree, 'Créer cette alerte');
+
+      const texte = texteVisible(tree);
+      expect(texte).toContain('Alerte créée');
+      expect(boutonDeLibelle(tree, 'Créer l\'alerte')).toBeUndefined();
+      expect(mockClient.post).toHaveBeenCalledTimes(1);
+    } finally {
+      mockDispatch.mockReset();
+    }
+  });
+
+  it('« Voir les résultats sans créer d alerte » applique les critères, AUCUN appel', async () => {
+    const tree = await ouvrirLaFeuilleDeCreation();
+    await choisirLaVille(tree, MONTRIVAGE);
+
+    await appuyerSur(tree, 'Voir les résultats sans créer d\'alerte');
+
+    expect(mockClient.post).not.toHaveBeenCalled();
+    expect(appelsFiltres()).toEqual([
+      expect.objectContaining({ payload: expect.objectContaining({ city: MONTRIVAGE }) }),
+    ]);
+    expect(boutonDeLibelle(tree, 'Créer cette alerte')).toBeUndefined();
+  });
+
+  it('hors de ce mode, la feuille « Filtrer » ne change pas', async () => {
+    const tree = await monter();
+    await ouvrirLesFiltres(tree);
+
+    const texte = texteVisible(tree);
+    expect(texte).toContain('Filtrer');
+    expect(boutonDeLibelle(tree, 'Voir les résultats')).toBeDefined();
+    expect(boutonDeLibelle(tree, 'Réinitialiser')).toBeDefined();
+    expect(parEtiquette(tree, 'Créer une alerte avec ces filtres')).toBeDefined();
+    expect(texte).not.toContain('Créer cette alerte');
   });
 });

@@ -417,6 +417,20 @@ function CollectiviteChiffres() {
         ...SANS_ECHAPPEMENT,
       });
     }
+    // 🕛 VILLE-TAUX-24H (12/10, Adel « Sur 24 h » puis « 2- B ») : le serveur compte TOUTE
+    // installation sur 24 h par jour et pose `sur24h` sur ses lignes ; la phrase du taux le dit,
+    // toujours dans sa version courte. Un serveur d'avant le lot ne le pose pas : phrase d'avant.
+    const sur24h = lignes.some((/** @type {any} */ l) => l?.sur24h === true);
+    const phraseTaux = sur24h
+      ? t(
+        'collectiviteChiffres.installations.taux24h',
+        'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
+        { taux: tauxLisible(tauxVille), ...SANS_ECHAPPEMENT },
+      )
+      : t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
+        taux: tauxLisible(tauxVille),
+        ...SANS_ECHAPPEMENT,
+      });
     return (
       <BlocDeChiffres
         testID="chiffres-installations"
@@ -435,7 +449,9 @@ function CollectiviteChiffres() {
                 { heures: dureeLisible(ligne?.minutes), nom: ligne?.name, ...SANS_ECHAPPEMENT },
               )
               : t(
-                'collectiviteChiffres.installations.a11y',
+                ligne?.sur24h === true
+                  ? 'collectiviteChiffres.installations.a11ySur24h'
+                  : 'collectiviteChiffres.installations.a11y',
                 '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
                 {
                   heures: dureeLisible(ligne?.minutes),
@@ -452,12 +468,7 @@ function CollectiviteChiffres() {
           />
         ))}
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          {sansTaux(tauxVille)
-            ? phraseSansHoraires
-            : t('collectiviteChiffres.installations.taux', 'Taux d’occupation : {{taux}}.', {
-              taux: tauxLisible(tauxVille),
-              ...SANS_ECHAPPEMENT,
-            })}
+          {sansTaux(tauxVille) ? phraseSansHoraires : phraseTaux}
         </Text>
       </BlocDeChiffres>
     );

@@ -97,6 +97,8 @@ function PlayerCardScreen({ navigation, route }) {
     || (userData?.role?.type === 'entraineur' ? 'coach' : 'player');
 
   const consent = useMemo(() => getCardConsentState(userData || {}), [userData]);
+  // L'etat redessine par PAR-L14 (E31) : ni verrouille, ni celebration.
+  const isNormal = !isCelebration && !consent.isLockedPreview;
 
   const qrTarget = useMemo(() => buildCardQrTarget({ audience, user: userData || {} }), [userData, audience]);
 
@@ -111,12 +113,15 @@ function PlayerCardScreen({ navigation, route }) {
   const cardProps = useMemo(() => ({
     age: model.age != null ? `${model.age} ${t('playerCard.field.yearsUnit', 'ANS')}` : '—',
     club: model.hasClub ? model.clubName : t('playerCard.noClub', 'SANS CLUB'),
-    historique: model.history.map((entry) => ({
-      categorie: entry.level || entry.category || '',
+    // PAR-L14 : une ligne par club et par saison, niveau puis categories reunies
+    // (« Régional 1 · Seniors, U20 ») ; le compteur compte les clubs.
+    historique: model.historyGroups.map((entry) => ({
+      categorie: [entry.levels.join(', '), entry.categories.join(', ')].filter(Boolean).join(' · '),
       club: entry.clubName,
       periode: formatHistoryPeriod(entry, t('playerCard.nowShort', 'AUJ.')),
     })),
     historiqueEmptyLabel: t('playerCard.historyEmpty', 'Parcours à compléter'),
+    historiqueTotal: model.historyClubCount,
     locked: consent.isLockedPreview,
     nationalite: model.nationality || '—',
     nom: model.lastname || '—',
@@ -287,13 +292,19 @@ function PlayerCardScreen({ navigation, route }) {
               ? t('playerCard.revealTitle', 'Voici ta carte de collection')
               : t('playerCard.screenTitle', 'Ma carte de collection')}
           </Text>
-          <Text style={[Fonts.p2, Fonts.neutral200, { maxWidth: 320, textAlign: 'center' }]}>
-            {t('playerCard.screenSubtitle', 'Partage ta carte, gagne en visibilité et fais-toi détecter.')}
-          </Text>
+          {/* PAR-L14 (E31) : dans l'etat NORMAL, l'accroche et « Modifier mes
+              infos » quittent le haut de l'ecran — sur un iPhone SE, ils
+              poussaient « Partager » sous le bas de l'ecran (723 px pour 667).
+              Verrouille et celebration, non maquettes, restent a l'identique. */}
+          {!isNormal ? (
+            <Text style={[Fonts.p2, Fonts.neutral200, { maxWidth: 320, textAlign: 'center' }]}>
+              {t('playerCard.screenSubtitle', 'Partage ta carte, gagne en visibilité et fais-toi détecter.')}
+            </Text>
+          ) : null}
           {/* Bouton d'edition de toutes les infos de la carte (au-dessus de la
               carte : toujours atteignable, jamais recouvert par le bandeau du
               tour). Ouvre l'editeur de profil -> met a jour carte ET profil. */}
-          {!consent.isLockedPreview ? (
+          {isCelebration && !consent.isLockedPreview ? (
             <TouchableOpacity
               accessibilityRole="button"
               onPress={handleEditCard}
@@ -314,6 +325,7 @@ function PlayerCardScreen({ navigation, route }) {
             club={cardProps.club}
             historique={cardProps.historique}
             historiqueEmptyLabel={cardProps.historiqueEmptyLabel}
+            historiqueTotal={cardProps.historiqueTotal}
             locked={cardProps.locked}
             nationalite={cardProps.nationalite}
             nom={cardProps.nom}
@@ -329,6 +341,31 @@ function PlayerCardScreen({ navigation, route }) {
             width={visibleCardWidth}
           />
         </View>
+
+        {/* PAR-L14 (E31) : les deux gestes, cote a cote, JUSTE SOUS la carte :
+            visibles sans defiler sur un iPhone SE. Libelles courts a l'ecran,
+            libelles complets pour le lecteur d'ecran. */}
+        {isNormal ? (
+          <View style={[Alignments.row, Spaces.gap[12]]}>
+            <Button
+              accessibilityLabel={t('playerCard.shareCta', 'Partager ma carte')}
+              disabled={isBusy}
+              icon="share"
+              isLoading={isBusy}
+              onPress={openShare}
+              style={styles.geste}
+              title={t('playerCard.shareShortCta', 'Partager')}
+              variant="Primary"
+            />
+            <Button
+              accessibilityLabel={t('playerCard.editCardCta', 'Modifier mes infos')}
+              onPress={handleEditCard}
+              style={styles.geste}
+              title={t('common.edit', 'Modifier')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
 
         {/* Jauge de rarete (double usage : incite a completer le profil) */}
         <View style={[Spaces.gap[8]]}>
@@ -356,7 +393,16 @@ function PlayerCardScreen({ navigation, route }) {
               variant="Primary"
             />
           </View>
-        ) : (
+        ) : null}
+        {isNormal ? (
+          <Button
+            disabled={isBusy}
+            onPress={handleSaveToGallery}
+            title={t('playerCard.saveCta', 'Enregistrer l\'image')}
+            variant="Ghost"
+          />
+        ) : null}
+        {isCelebration && !consent.isLockedPreview ? (
           <View style={[Spaces.gap[12]]}>
             <Button
               disabled={isBusy}
@@ -375,7 +421,7 @@ function PlayerCardScreen({ navigation, route }) {
               variant="Ghost"
             />
           </View>
-        )}
+        ) : null}
 
         {isCelebration ? (
           <Button
@@ -395,6 +441,7 @@ function PlayerCardScreen({ navigation, route }) {
             club={cardProps.club}
             historique={cardProps.historique}
             historiqueEmptyLabel={cardProps.historiqueEmptyLabel}
+            historiqueTotal={cardProps.historiqueTotal}
             locked={false}
             nationalite={cardProps.nationalite}
             nom={cardProps.nom}
@@ -430,6 +477,7 @@ const styles = StyleSheet.create({
   gaugeTrack: {
     backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 8, overflow: 'hidden', width: '100%',
   },
+  geste: { flex: 1 },
   numberChip: {
     alignItems: 'center',
     alignSelf: 'center',

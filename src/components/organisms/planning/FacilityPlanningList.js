@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 
 import Hachures from '@/components/atoms/hachures/Hachures';
 
+import { etatDeLaDemande } from '@/utils/planning/installationPlanningViews';
 import { getPlanningItemDate } from '@/utils/planning/planningSlots';
 
 /**
@@ -83,6 +84,8 @@ function FacilityPlanningList({
   const debutDuJour = toMinutes(ouverture) ?? 8 * 60;
   const finDuJour = toMinutes(fermeture) ?? 22 * 60;
   const jours = Array.from({ length: 7 }, (_, index) => addDays(debutDeSemaine, index));
+  // COLL-R-APP-PLANNING (COL-014) : « En attente » = ce que la Ville a encore a trancher.
+  const maintenant = new Date();
 
   return (
     <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
@@ -156,11 +159,20 @@ function FacilityPlanningList({
               </View>
             ) : null}
             {duJour.map((bloc, index) => {
-              const enAttente = bloc?.raw?.pending === true;
+              // COL-014 : la regle du bandeau et de la liste « En attente » (T05). Une demande
+              // restee sans reponse et passee se lit, grise (sa couleur), sans « En attente ».
+              const etatDemande = etatDeLaDemande(bloc, maintenant);
+              const enAttente = etatDemande === 'aTrancher';
               // COLL-C4B (02/10) — touchee par une fermeture : elle garde sa place (D16), cernee.
               const aDeplacer = Boolean(bloc?.raw?.closure);
               const qui = slotWho(bloc);
-              const origine = origineDe ? origineDe(bloc) : null;
+              let origine = origineDe ? origineDe(bloc) : null;
+              if (etatDemande === 'datePassee') {
+                origine = t(
+                  'collectiviteCreneaux.planning.nonTrancheeDatePassee',
+                  'Non tranchée, date passée',
+                );
+              }
               const contenu = (
                 <>
                   <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>

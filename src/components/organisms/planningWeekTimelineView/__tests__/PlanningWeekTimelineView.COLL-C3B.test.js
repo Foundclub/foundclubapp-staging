@@ -62,6 +62,20 @@ jest.mock('react-native-gesture-handler', () => {
 const COULEURS = jest.requireActual('@/theme/colors').colors;
 // Mercredi 7 octobre 2026.
 const MERCREDI = new Date(2026, 9, 7, 12, 0, 0);
+// COLL-R-APP-PLANNING (12/10, COL-014) — la grille lit desormais l HEURE (une demande dont la fin
+// est passee n est plus « a trancher ») : la demande de ce fichier, du 07/10 18:00, serait passee
+// des le 07/10 19:30. Seul `Date` est fige, au 07/10 10:00 UTC (motif FIGER_LA_DATE).
+const FIGER_LA_DATE = {
+  doNotFake: [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame',
+    'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval',
+    'clearInterval', 'setTimeout', 'clearTimeout',
+  ],
+  now: new Date('2026-10-07T10:00:00.000Z'),
+};
+beforeEach(() => { jest.useFakeTimers(FIGER_LA_DATE); });
+afterEach(() => { jest.useRealTimers(); });
 const bloc = (/** @type {any} */ champs) => ({
   club: { documentId: 'club-A', name: 'AS Ville A' },
   documentId: null,
@@ -129,5 +143,31 @@ describe('COLL-C3B — point 4 : la place demandée, en attente de la mairie, en
     expect(attente.borderColor).toBe(COULEURS.warning500);
     const seance = styleDuBloc(arbre, 'Montrivage FC');
     expect(seance.borderStyle).not.toBe('dashed');
+  });
+});
+
+// 🏛️ COLL-R-APP-PLANNING (12/10), COL-014 — une demande restee sans reponse et dont l heure est
+// passee ne se tranche plus (regle T05 de la liste « En attente ») : elle reste DESSINEE (rien
+// n est detruit), sans pointilles orange, avec « Non tranchée, date passée » (lu aussi au lecteur
+// d ecran). ROUGE avant le lot : pointilles orange, comme une demande a trancher.
+describe('COL-014 — la demande non tranchee dont la date est passee', () => {
+  it('trait plein, et « Non tranchée, date passée » dans le bloc', async () => {
+    const PASSEE = bloc({
+      endAt: '2026-10-07T07:00:00.000Z',
+      endTime: '09:00:00.000',
+      origin: 'request',
+      pending: true,
+      startAt: '2026-10-07T06:00:00.000Z',
+      startTime: '08:00:00.000',
+    });
+    const arbre = await monter([PASSEE]);
+    const style = styleDuBloc(arbre, 'AS Ville A');
+    expect(style.borderStyle).not.toBe('dashed');
+    expect(arbre.root.findAll((/** @type {any} */ n) => (
+      typeof n.type === 'string' && String(n.props.accessibilityLabel || '')
+        .endsWith('Non tranchée, date passée')
+    )).length).toBeGreaterThan(0);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'non-tranchee').length)
+      .toBeGreaterThan(0);
   });
 });

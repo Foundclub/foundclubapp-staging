@@ -235,6 +235,7 @@ function EventListContent({
     creer: creerAlerteEvenement,
     enCours: alerteEnCours,
     estDejaCreee: alerteDejaCreee,
+    raisonDuRefus: raisonDuRefusDAlerte,
     sports: sportsConnus,
   } = useAlerteEvenement();
   const {
@@ -886,8 +887,8 @@ function EventListContent({
   }, []);
 
   // 🔔 A20.1 — « Me prévenir » crée l'alerte avec les filtres AFFICHÉS. Sans ville,
-  // le serveur la refuserait : on ouvre les filtres sur la rangée Ville, où
-  // l'étoile attend.
+  // le serveur la refuserait : on ouvre les filtres sur la rangée Ville, en mode
+  // création (PAR-L10 : « Créer cette alerte » y attend, à la place de l'étoile).
   const creerAlerteDepuisLaRecherche = useCallback(async () => {
     const statut = await creerAlerteEvenement(eventFilters);
     if (statut === StatutAlerte.villeManquante) {
@@ -1657,6 +1658,7 @@ function EventListContent({
         onClose={() => setFiltersSheetVisible(false)}
         onCreateAlert={peutProposerUneAlerte ? creerAlerteEvenement : undefined}
         pourUneAlerte={feuillePourAlerte}
+        raisonDuRefus={raisonDuRefusDAlerte}
       />
 
       {peutProposerUneAlerte ? (

@@ -9,7 +9,7 @@
  * Contraintes techniques respectees :
  *  - degrades/eclats/terrain : react-native-svg + react-native-linear-gradient
  *    (deja lies, AUCUNE dependance native nouvelle) ;
- *  - pas de backdrop-filter en RN -> panneaux verre en rgba(4,28,38,0.85) ;
+ *  - pas de backdrop-filter en RN -> panneaux opaques #041c26 (PAR-L14) ;
  *  - italique : l'APK n'embarque que Montserrat Regular/Bold/Black -> faux
  *    italique via skewX(-8deg) (ajouter Montserrat-BlackItalic.ttf + rebuild
  *    pour la vraie italique) ; weight 800 rendu en Montserrat-Black ;
@@ -62,6 +62,76 @@ export const RARITY_THEME = {
 
 const CYAN = '#01b3f4';
 const INK = '#001218';
+
+/**
+ * PAR-L14 — la mise en page, en unites de dessin (base 992 x 1262).
+ * Aucune police sous 32 unites : la carte est reduite a la largeur de l'ecran, et
+ * 32 unites font 10,5 pt sur un iPhone SE (carte de 327 pt, x0,33) et 10,1 dp sur
+ * un Android de 360 dp (312, x0,31). Elle en avait de 15 a 21 (5 a 7 pt).
+ * Hauteurs de ligne explicites : la place de l'historique se CALCULE
+ * (planHistorique), la carte a hauteur fixe ne rogne jamais rien.
+ * Le portrait garde 404 x 404 (son ancienne largeur) : le dos de maillot floque
+ * de la carte verrouillee ne retrecit pas. Le code QR passe a cote du tableau :
+ * le pied, qui repetait le logo de l'en-tete, rend sa place a l'historique.
+ */
+const LAYOUT = Object.freeze({
+  clubLine: 40,
+  entryPadV: 5,
+  hairline: 4, // un trait de 1 pt d'ecran vaut au plus 4 unites (echelle >= 0,25)
+  headerH: 56,
+  histGap: 14,
+  histListGap: 4,
+  histPadV: 14,
+  histTitleH: 38,
+  identityGap: 12,
+  identityH: 404,
+  infoGap: 16,
+  infoPadV: 4,
+  metaLine: 38,
+  padBottom: 28,
+  padH: 44,
+  padTop: 28,
+  portraitW: 404,
+  qrBox: 118,
+  qrGap: 16,
+  rowH: 52,
+});
+const INTERIOR_H = CARD_EXPORT_HEIGHT - 6;
+
+/**
+ * Combien de lignes d'historique tiennent sous un tableau de `rangees` rangees.
+ * D'abord le plus de clubs possible (3 au plus), puis le nom du club sur 2 lignes,
+ * puis « saison · niveau · categories » sur 2 lignes. Le compteur de l'en-tete
+ * compte TOUS les clubs.
+ * @param {number} rangees rangees du tableau (STATUT compris)
+ * @param {number} disponibles lignes d'historique a montrer
+ * @returns {{ lignes: number, lignesClub: 1|2, lignesMeta: 1|2 }}
+ */
+export const planHistorique = (rangees, disponibles) => {
+  const L = LAYOUT;
+  const tableau = 2 * L.infoPadV + rangees * L.rowH + L.hairline * (rangees + 1);
+  const fixe = L.padTop + L.padBottom + L.headerH + L.identityGap + L.identityH
+    + L.infoGap + Math.max(tableau, L.qrBox)
+    + L.histGap + 2 * L.histPadV + L.histTitleH + L.histListGap + 2 * L.hairline;
+  const place = INTERIOR_H - fixe;
+  const hauteur = (club, meta) => 2 * L.entryPadV + club * L.clubLine + meta * L.metaLine;
+  for (let n = Math.min(3, disponibles); n > 0; n -= 1) {
+    const forme = [[2, 2], [2, 1], [1, 1]].find(([club, meta]) => n * hauteur(club, meta) <= place);
+    if (forme) return { lignes: n, lignesClub: forme[0], lignesMeta: forme[1] };
+  }
+  return { lignes: 0, lignesClub: 1, lignesMeta: 1 };
+};
+
+/**
+ * Style d'un texte de la carte : taille et hauteur de ligne a l'echelle.
+ * @param {number} s echelle (largeur / 992)
+ * @param {number} size taille en unites de dessin
+ * @param {number} line hauteur de ligne en unites de dessin
+ * @returns {{ fontSize: number, includeFontPadding: boolean, lineHeight: number }}
+ */
+const font = (s, size, line) => ({
+  fontSize: size * s, includeFontPadding: false, lineHeight: line * s,
+});
 
 // Extremites de degrades pour les angles CSS utilises (155/165/115 deg).
 const ANGLES = {
@@ -133,6 +203,7 @@ const RARITY_STYLES = {
 };
 
 const up = (value) => String(value ?? '').toUpperCase();
+const estVide = (value) => ['', '-', '—'].includes(String(value ?? '').trim());
 
 /**
  * Wordmark FOUNDCLUB — logo officiel de l'app (demande Adel : pas de texte).
@@ -165,7 +236,7 @@ function RarityBadge({ label, s }) {
       onLayout={(e) => setSize({
         h: e.nativeEvent.layout.height, w: e.nativeEvent.layout.width,
       })}
-      style={[styles.row, { paddingHorizontal: 34 * s, paddingVertical: 14 * s }]}
+      style={[styles.row, { paddingHorizontal: 28 * s, paddingVertical: 9 * s }]}
     >
       {size ? (
         <Svg height={size.h} pointerEvents="none" style={StyleSheet.absoluteFill} width={size.w}>
@@ -203,7 +274,7 @@ function RarityBadge({ label, s }) {
           />
         </Svg>
       ) : null}
-      <Svg height={17 * s} viewBox="0 0 17 17" width={17 * s}>
+      <Svg height={24 * s} viewBox="0 0 17 17" width={24 * s}>
         <Defs>
           <SvgLinearGradient id="gem" x1="0%" x2="100%" y1="0%" y2="100%">
             <Stop offset="0" stopColor="#d8f4ff" />
@@ -220,8 +291,8 @@ function RarityBadge({ label, s }) {
         style={{
           color: '#eaf7fd',
           fontFamily: 'Montserrat-Black',
-          fontSize: 19 * s,
-          letterSpacing: 2.5 * s,
+          ...font(s, 32, 38),
+          letterSpacing: 2 * s,
           marginLeft: 12 * s,
         }}
       >
@@ -396,24 +467,35 @@ function InfoRow({
       style={[styles.row, {
         borderBottomColor: 'rgba(255,255,255,0.07)',
         borderBottomWidth: isLast ? 0 : 1,
-        height: 47 * s,
+        height: LAYOUT.rowH * s,
         justifyContent: 'space-between',
       }]}
     >
       <Text
         allowFontScaling={false}
         style={{
-          color: '#adb1b2', fontFamily: 'Montserrat-Bold', fontSize: 17 * s, letterSpacing: 2.5 * s,
+          color: '#adb1b2',
+          flexShrink: 0,
+          fontFamily: 'Montserrat-Bold',
+          ...font(s, 32, 38),
+          letterSpacing: 2 * s,
         }}
       >
         {label}
       </Text>
+      {/* PAR-L14 : la valeur prend toute la place que le libelle laisse (plus de
+          plafond a 62 %) ; a 34 unites, un nom de club de 25 a 30 lettres tient. */}
       {typeof value === 'string' ? (
         <Text
           allowFontScaling={false}
           numberOfLines={1}
           style={{
-            color: '#ffffff', fontFamily: 'Montserrat-Black', fontSize: 21 * s, maxWidth: '62%',
+            color: '#ffffff',
+            flexShrink: 1,
+            fontFamily: 'Montserrat-Black',
+            ...font(s, 34, 42),
+            marginLeft: 24 * s,
+            textAlign: 'right',
           }}
         >
           {value}
@@ -433,6 +515,8 @@ function InfoRow({
  * @param props.club
  * @param props.disposition
  * @param props.historique
+ * @param {string} [props.historiqueEmptyLabel]
+ * @param {number} [props.historiqueTotal] clubs distincts (PAR-L14), sinon le nombre de lignes
  * @param props.locked
  * @param props.nationalite
  * @param props.nom
@@ -456,6 +540,7 @@ function PlayerCardBase({
   disposition,
   historique = [],
   historiqueEmptyLabel = undefined,
+  historiqueTotal = undefined,
   locked = false,
   nationalite,
   nom,
@@ -487,6 +572,16 @@ function PlayerCardBase({
   const angle = ANGLES[theme.borderAngle] || ANGLES[155];
   const isAvailable = up(statut) === 'DISPONIBLE';
   const statusColor = isAvailable ? '#27d6a3' : '#ff284f';
+  // PAR-L14 : une rangee « — » (ou vide) n'apprend rien. On la retire, et la place
+  // rendue va a l'historique. STATUT est toujours la, en dernier.
+  const rangees = [
+    [t('playerCard.info.position', 'POSTE'), poste],
+    [t('playerCard.info.age', 'ÂGE'), age],
+    [t('playerCard.info.nationality', 'NATIONALITÉ'), nationalite],
+    [t('playerCard.info.club', 'CLUB'), club],
+    [t('playerCard.info.city', 'VILLE'), ville],
+  ].filter(([, valeur]) => !estVide(valeur));
+  const plan = planHistorique(rangees.length + 1, historique.length);
 
   return (
     <View collapsable={false} style={{ height: h, width }}>
@@ -572,19 +667,19 @@ function PlayerCardBase({
         <View
           style={{
             flex: 1,
-            paddingBottom: 40 * s,
-            paddingHorizontal: 44 * s,
-            paddingTop: 36 * s,
+            paddingBottom: LAYOUT.padBottom * s,
+            paddingHorizontal: LAYOUT.padH * s,
+            paddingTop: LAYOUT.padTop * s,
           }}
         >
           {/* En-tête */}
-          <View style={[styles.row, { height: 54 * s, justifyContent: 'space-between' }]}>
+          <View style={[styles.row, { height: LAYOUT.headerH * s, justifyContent: 'space-between' }]}>
             <Wordmark s={s} size={30} />
             <RarityBadge label={rarityLabel || RARITY_LABELS[rarity] || rarity} s={s} />
           </View>
 
           {/* Bloc identité */}
-          <View style={{ height: 372 * s, marginTop: 16 * s }}>
+          <View style={{ height: LAYOUT.identityH * s, marginTop: LAYOUT.identityGap * s }}>
             {/* Halo derrière le portrait */}
             <Svg
               height={640 * s}
@@ -609,10 +704,8 @@ function PlayerCardBase({
                 style={{
                   color: CYAN,
                   fontFamily: 'Montserrat-Black',
-                  fontSize: 208 * s,
-                  includeFontPadding: false,
+                  ...font(s, 184, 166),
                   letterSpacing: -8 * s,
-                  lineHeight: 208 * 0.9 * s,
                   textShadowColor: 'rgba(1,179,244,0.55)',
                   textShadowRadius: 54 * s,
                   transform: [{ skewX: '-8deg' }],
@@ -626,9 +719,9 @@ function PlayerCardBase({
                 style={{
                   color: '#eaf7fd',
                   fontFamily: 'Montserrat-Bold',
-                  fontSize: 31 * s,
-                  letterSpacing: 9 * s,
-                  marginTop: 26 * s,
+                  ...font(s, 32, 38),
+                  letterSpacing: 8 * s,
+                  marginTop: 16 * s,
                 }}
               >
                 {up(prenom)}
@@ -639,9 +732,8 @@ function PlayerCardBase({
                 style={{
                   color: '#ffffff',
                   fontFamily: 'Montserrat-Black',
-                  fontSize: 64 * s,
-                  lineHeight: 64 * s,
-                  marginTop: 6 * s,
+                  ...font(s, 64, 64),
+                  marginTop: 4 * s,
                 }}
               >
                 {up(nom)}
@@ -656,17 +748,18 @@ function PlayerCardBase({
                     borderColor: 'rgba(1,179,244,0.55)',
                     borderRadius: 999,
                     borderWidth: 1.5 * s,
-                    marginTop: 18 * s,
-                    paddingHorizontal: 24 * s,
-                    paddingVertical: 9 * s,
+                    marginTop: 12 * s,
+                    paddingHorizontal: 22 * s,
+                    paddingVertical: 8 * s,
                   }}
                 >
                   <Text
                     allowFontScaling={false}
+                    numberOfLines={1}
                     style={{
                       color: CYAN,
                       fontFamily: 'Montserrat-Black',
-                      fontSize: 20 * s,
+                      ...font(s, 32, 38),
                       letterSpacing: 3 * s,
                       textShadowColor: 'rgba(1,179,244,0.4)',
                       textShadowRadius: 8 * s,
@@ -678,20 +771,21 @@ function PlayerCardBase({
               ) : null}
             </View>
 
-            {/* Portrait */}
+            {/* Portrait — PAR-L14 : contenu dans le bloc identite. Il etait pose en
+                debord (442 de haut dans un bloc de 372, 12 au-dessus) pour un portrait
+                detoure ; une vraie photo, opaque, descendait sur la rangee POSTE. */}
             <View
               style={{
                 backgroundColor: 'rgba(3,26,35,0.45)',
                 borderColor: 'rgba(1,179,244,0.25)',
                 borderRadius: 26 * s,
                 borderWidth: 1,
-                height: 442 * s,
+                height: LAYOUT.identityH * s,
                 padding: 6 * s,
                 position: 'absolute',
-                right: -10 * s,
-                top: -12 * s,
-                width: 404 * s,
-                zIndex: 2,
+                right: 0,
+                top: 0,
+                width: LAYOUT.portraitW * s,
               }}
             >
               {photo ? (
@@ -708,56 +802,92 @@ function PlayerCardBase({
             </View>
           </View>
 
-          {/* Panneau infos — zIndex > portrait : une photo opaque glisse DERRIERE
-              le panneau verre (la maquette suppose un portrait detoure). */}
-          <View style={[styles.glass, {
-            borderRadius: 20 * s, marginTop: 18 * s, paddingHorizontal: 30 * s, paddingVertical: 5 * s, zIndex: 3,
-          }]}
-          >
-            <InfoRow label={t('playerCard.info.position', 'POSTE')} s={s} value={up(poste)} />
-            <InfoRow label={t('playerCard.info.age', 'ÂGE')} s={s} value={up(age)} />
-            <InfoRow
-              label={t('playerCard.info.nationality', 'NATIONALITÉ')}
-              s={s}
-              value={up(nationalite)}
-            />
-            <InfoRow label={t('playerCard.info.club', 'CLUB')} s={s} value={up(club)} />
-            <InfoRow label={t('playerCard.info.city', 'VILLE')} s={s} value={up(ville)} />
-            <InfoRow
-              isLast
-              label="STATUT"
-              s={s}
-              value={(
-                <View style={styles.row}>
-                  <View
-                    style={{
-                      backgroundColor: statusColor,
-                      borderRadius: 5 * s,
-                      height: 10 * s,
-                      marginRight: 10 * s,
-                      width: 10 * s,
-                    }}
-                  />
-                  <Text
-                    allowFontScaling={false}
-                    style={{
-                      color: statusColor,
-                      fontFamily: 'Montserrat-Black',
-                      fontSize: 21 * s,
-                      textShadowColor: statusColor,
-                      textShadowRadius: 9 * s,
-                    }}
-                  >
-                    {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
-                  </Text>
-                </View>
+          {/* Panneau infos et code QR, cote a cote (PAR-L14 : le QR etait dans un
+              pied qui repetait le logo de l'en-tete) */}
+          <View style={[styles.row, { marginTop: LAYOUT.infoGap * s }]}>
+            <View style={[styles.glass, {
+              borderRadius: 20 * s,
+              flex: 1,
+              paddingHorizontal: 30 * s,
+              paddingVertical: LAYOUT.infoPadV * s,
+            }]}
+            >
+              {rangees.map(([label, valeur]) => (
+                <InfoRow key={label} label={label} s={s} value={up(valeur)} />
+              ))}
+              <InfoRow
+                isLast
+                label="STATUT"
+                s={s}
+                value={(
+                  <View style={styles.row}>
+                    <View
+                      style={{
+                        backgroundColor: statusColor,
+                        borderRadius: 7 * s,
+                        height: 14 * s,
+                        marginRight: 12 * s,
+                        width: 14 * s,
+                      }}
+                    />
+                    <Text
+                      allowFontScaling={false}
+                      style={{
+                        color: statusColor,
+                        fontFamily: 'Montserrat-Black',
+                        ...font(s, 36, 44),
+                        textShadowColor: statusColor,
+                        textShadowRadius: 9 * s,
+                      }}
+                    >
+                      {isAvailable ? 'DISPONIBLE' : 'INDISPONIBLE'}
+                    </Text>
+                  </View>
+                )}
+              />
+            </View>
+            <View
+              style={{
+                alignItems: 'center',
+                backgroundColor: '#03222e',
+                borderColor: 'rgba(1,179,244,0.55)',
+                borderRadius: 16 * s,
+                borderWidth: 1.5 * s,
+                height: LAYOUT.qrBox * s,
+                justifyContent: 'center',
+                marginLeft: LAYOUT.qrGap * s,
+                width: LAYOUT.qrBox * s,
+              }}
+            >
+              {/* PAR-L14 : le « FC » ne se pose plus SUR le code (a 32 unites il
+                  en cacherait le tiers et le code ne se lirait plus) ; il reste
+                  dans la case vide de la carte verrouillee. */}
+              {qrValue && !locked ? (
+                <QRCode
+                  backgroundColor="transparent"
+                  color="#eaf7fd"
+                  ecl="H"
+                  size={92 * s}
+                  value={qrValue}
+                />
+              ) : (
+                <Text
+                  allowFontScaling={false}
+                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
+                >
+                  FC
+                </Text>
               )}
-            />
+            </View>
           </View>
 
           {/* Panneau bas */}
           <View style={[styles.glass, {
-            borderRadius: 20 * s, flexGrow: 1, marginTop: 16 * s, paddingHorizontal: 30 * s, paddingVertical: 16 * s,
+            borderRadius: 20 * s,
+            flexGrow: 1,
+            marginTop: LAYOUT.histGap * s,
+            paddingHorizontal: 30 * s,
+            paddingVertical: LAYOUT.histPadV * s,
           }]}
           >
             {bottomPanel === 'tactique' ? (
@@ -766,14 +896,17 @@ function PlayerCardBase({
                   <Text
                     allowFontScaling={false}
                     style={{
-                      color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 18 * s, letterSpacing: 2.5 * s,
+                      color: '#eaf7fd',
+                      fontFamily: 'Montserrat-Black',
+                      ...font(s, 32, 38),
+                      letterSpacing: 2 * s,
                     }}
                   >
                     {t('playerCard.preferredFormation', 'DISPOSITION PRÉFÉRÉE')}
                   </Text>
                   <Text
                     allowFontScaling={false}
-                    style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 25 * s }}
+                    style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 36, 44) }}
                   >
                     {up(disposition)}
                   </Text>
@@ -788,11 +921,16 @@ function PlayerCardBase({
               </>
             ) : (
               <>
-                <View style={[styles.row, { justifyContent: 'space-between' }]}>
+                <View
+                  style={[styles.row, { height: LAYOUT.histTitleH * s, justifyContent: 'space-between' }]}
+                >
                   <Text
                     allowFontScaling={false}
                     style={{
-                      color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 18 * s, letterSpacing: 2.5 * s,
+                      color: '#eaf7fd',
+                      fontFamily: 'Montserrat-Black',
+                      ...font(s, 32, 38),
+                      letterSpacing: 2 * s,
                     }}
                   >
                     {t('playerCard.history.title', 'HISTORIQUE SPORTIF')}
@@ -800,24 +938,27 @@ function PlayerCardBase({
                   {historique.length ? (
                     <Text
                       allowFontScaling={false}
-                      style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 20 * s }}
+                      style={{ color: CYAN, fontFamily: 'Montserrat-Black', ...font(s, 32, 38) }}
                     >
-                      {t(
-                        'playerCard.history.clubCount',
-                        '{{total}} CLUBS',
-                        { total: historique.length },
-                      )}
+                      {t('playerCard.history.clubCount', {
+                        count: historiqueTotal ?? historique.length,
+                        defaultValue: '{{count}} CLUBS',
+                      })}
                     </Text>
                   ) : null}
                 </View>
+                {/* PAR-L14 : un club par ligne, nom sur 2 lignes si la place le
+                    permet, saison et niveau DESSOUS (la colonne niveau ecrasait le
+                    nom). Les lignes se centrent dans le panneau : plus de grand
+                    vide sous l'historique. */}
                 {!historique.length ? (
-                  <View style={[styles.center, { flexGrow: 1, paddingVertical: 24 * s }]}>
+                  <View style={[styles.center, { flexGrow: 1 }]}>
                     <Text
                       allowFontScaling={false}
                       style={{
                         color: '#5f7c89',
                         fontFamily: 'Montserrat-Bold',
-                        fontSize: 17 * s,
+                        ...font(s, 32, 38),
                         letterSpacing: 2 * s,
                       }}
                     >
@@ -827,94 +968,58 @@ function PlayerCardBase({
                       ))}
                     </Text>
                   </View>
-                ) : null}
-                {historique.slice(0, 3).map((entry, index) => (
+                ) : (
                   <View
-                    key={`${entry.periode}-${entry.club}`}
-                    style={[styles.row, { height: 54 * s }]}
+                    style={{ flexGrow: 1, justifyContent: 'center', marginTop: LAYOUT.histListGap * s }}
                   >
-                    <View
-                      style={{
-                        backgroundColor: CYAN,
-                        borderRadius: 4.5 * s,
-                        height: 9 * s,
-                        marginRight: 16 * s,
-                        opacity: [1, 0.55, 0.35][index] || 0.35,
-                        width: 9 * s,
-                      }}
-                    />
-                    <Text
-                      allowFontScaling={false}
-                      style={{
-                        color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 17 * s, width: 150 * s,
-                      }}
-                    >
-                      {up(entry.periode)}
-                    </Text>
-                    <Text
-                      allowFontScaling={false}
-                      numberOfLines={1}
-                      style={{
-                        color: '#ffffff', flex: 1, fontFamily: 'Montserrat-Black', fontSize: 21 * s,
-                      }}
-                    >
-                      {up(entry.club)}
-                    </Text>
-                    <Text
-                      allowFontScaling={false}
-                      style={{
-                        color: '#adb1b2', fontFamily: 'Montserrat-Bold', fontSize: 16 * s,
-                      }}
-                    >
-                      {up(entry.categorie)}
-                    </Text>
+                    {historique.slice(0, plan.lignes).map((entry, index) => (
+                      <View
+                        key={`${entry.periode}-${entry.club}`}
+                        style={[styles.row, {
+                          alignItems: 'flex-start', paddingVertical: LAYOUT.entryPadV * s,
+                        }]}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: CYAN,
+                            borderRadius: 6 * s,
+                            height: 12 * s,
+                            marginRight: 18 * s,
+                            marginTop: ((LAYOUT.clubLine - 12) / 2) * s,
+                            opacity: [1, 0.55, 0.35][index] || 0.35,
+                            width: 12 * s,
+                          }}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            allowFontScaling={false}
+                            numberOfLines={plan.lignesClub}
+                            style={{
+                              color: '#ffffff',
+                              fontFamily: 'Montserrat-Black',
+                              ...font(s, 34, LAYOUT.clubLine),
+                            }}
+                          >
+                            {up(entry.club)}
+                          </Text>
+                          <Text
+                            allowFontScaling={false}
+                            numberOfLines={plan.lignesMeta}
+                            style={{
+                              color: CYAN,
+                              fontFamily: 'Montserrat-Bold',
+                              ...font(s, 32, LAYOUT.metaLine),
+                            }}
+                          >
+                            {[entry.periode, entry.categorie].filter(Boolean).join(' · ')}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                )}
               </>
             )}
-          </View>
-
-          {/* Pied */}
-          <View style={[styles.row, { justifyContent: 'space-between', marginTop: 24 * s }]}>
-            <Wordmark s={s} size={28} />
-            <View
-              style={{
-                alignItems: 'center',
-                backgroundColor: '#03222e',
-                borderColor: 'rgba(1,179,244,0.55)',
-                borderRadius: 16 * s,
-                borderWidth: 1.5 * s,
-                height: 118 * s,
-                justifyContent: 'center',
-                width: 118 * s,
-              }}
-            >
-              {qrValue && !locked ? (
-                <QRCode
-                  backgroundColor="transparent"
-                  color="#eaf7fd"
-                  ecl="H"
-                  size={92 * s}
-                  value={qrValue}
-                />
-              ) : null}
-              <View
-                style={{
-                  backgroundColor: 'rgba(3,34,46,0.92)',
-                  borderRadius: 5 * s,
-                  paddingHorizontal: 7 * s,
-                  paddingVertical: 3 * s,
-                  position: 'absolute',
-                }}
-              >
-                <Text
-                  allowFontScaling={false}
-                  style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 15 * s }}
-                >
-                  FC
-                </Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -925,7 +1030,9 @@ function PlayerCardBase({
               alignItems: 'center',
               backgroundColor: 'rgba(2,24,32,0.55)',
               justifyContent: 'flex-end',
-              paddingBottom: 210 * s,
+              // En bas du panneau d'historique, comme avant le retrait du pied (PAR-L14).
+              paddingBottom: (LAYOUT.padBottom + LAYOUT.histPadV) * s,
+              paddingHorizontal: 30 * s,
             }]}
           >
             <View
@@ -941,7 +1048,11 @@ function PlayerCardBase({
               <Text
                 allowFontScaling={false}
                 style={{
-                  color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 19 * s, letterSpacing: 1.5 * s,
+                  color: '#eaf7fd',
+                  fontFamily: 'Montserrat-Black',
+                  ...font(s, 32, 38),
+                  letterSpacing: 1.5 * s,
+                  textAlign: 'center',
                 }}
               >
                 {t('playerCard.parentalConsentPreview', 'APERÇU — ACCORD PARENTAL REQUIS')}
@@ -961,8 +1072,9 @@ export default PlayerCard;
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
+  // PAR-L14 : opaque (il etait transparent a 15 % : le fond et la photo passaient dessous).
   glass: {
-    backgroundColor: 'rgba(4,28,38,0.85)',
+    backgroundColor: '#041c26',
     borderColor: 'rgba(1,179,244,0.35)',
     borderWidth: 1,
   },

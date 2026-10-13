@@ -832,7 +832,12 @@ function CollectiviteHome() {
   const libelleDeLaSemaine = (/** @type {string | undefined} */ facilityId) => {
     if (seancesDansLaSemaine(facilityId) === 0) return libelleSeances(facilityId);
     if (!sansTauxMesurable(facilityId)) {
-      return `${libelleSeances(facilityId)} · ${phraseOccupation(t, tauxDeLaSemaine(facilityId))}`;
+      const occupation = phraseOccupation(
+        t,
+        tauxDeLaSemaine(facilityId),
+        ligneDeLaSemaine(facilityId)?.sur24h === true,
+      );
+      return `${libelleSeances(facilityId)} · ${occupation}`;
     }
     const minutes = ligneDeLaSemaine(facilityId)?.minutes;
     if (typeof minutes !== 'number') return libelleSeances(facilityId);

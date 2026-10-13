@@ -4480,6 +4480,8 @@ export default {
       retry: 'Try again',
       status: {
         approved: 'Accepted',
+        // COLL-S-DEMANDE-PERIMEE (12/10) — the town hall did not decide before the session ended.
+        expired: 'Expired',
         refused: 'Refused',
       },
       tabs: {
@@ -5551,6 +5553,8 @@ export default {
       fermeJour: 'closed that day',
       libreJour: 'free all day',
       libreSemaine: 'free all week',
+      // COLL-R-APP-PLANNING (12/10, COL-014) — a request never answered, its time has passed.
+      nonTrancheeDatePassee: 'Not decided, date passed',
       origineAttente: 'Request awaiting a decision',
       origineClub: 'Club session',
       origineCreneau: 'Assigned slot: every {{jour}}, from {{debut}} to {{fin}}',
@@ -5644,6 +5648,8 @@ export default {
       momentSerie: '{{equipe}} · every {{jour}}, {{debut}} – {{fin}}, until {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'A note for the town hall (optional)',
+      // COLL-S-DEMANDE-PERIMEE (12/10) — an expired request.
+      nonTraiteeATemps: 'not handled in time',
       ouvre: 'The facility opens at {{heure}}. Start at {{heure}}, or later.',
       posee: 'Done: it is in your slot',
       quandMeme: 'You can still ask: the town hall will decide.',
@@ -6029,15 +6035,18 @@ export default {
     installations: {
       a11y: '{{nom}}: {{heures}}, occupancy {{taux}}',
       a11ySansTaux: '{{nom}}: {{heures}} booked',
+      a11ySur24h: '{{nom}}: {{heures}}, occupancy {{taux}} over 24 hours',
       aucune: 'No facility yet.',
       reservees_one: '{{count}} session · {{duree}} booked over the period.',
       reservees_other: '{{count}} sessions · {{duree}} booked over the period.',
       taux: 'Occupancy rate: {{taux}}.',
+      taux24h: 'Occupancy rate: {{taux}}, based on 24 hours a day.',
       titre: 'Session hours, by facility',
     },
     jauge: {
       a11y: 'Occupancy: {{taux}}',
       occupation: 'occupancy: {{taux}}',
+      occupationSur24h: 'occupancy: {{taux}} over 24 hours',
     },
     lien: 'Figures and export',
     periodes: {
@@ -13443,8 +13452,11 @@ export default {
     },
     form: {
       addTitle: 'Add a child',
+      birthdateDayLabel: 'Day of birth',
       birthdateKeepHint: 'Leave blank to keep it unchanged.',
       birthdateLabel: 'Date of birth',
+      birthdateMonthLabel: 'Month of birth',
+      birthdateYearLabel: 'Year of birth',
       editTitle: 'Edit profile',
       errors: {
         futureDate: "The date of birth can't be in the future.",
@@ -14586,6 +14598,9 @@ export default {
     generating: 'Generating image…',
     history: {
       clubCount: '{{total}} CLUBS',
+      // PAR-L14 : le compteur compte des clubs, au singulier comme au pluriel.
+      clubCount_one: '{{count}} CLUB',
+      clubCount_other: '{{count}} CLUBS',
       empty: 'CAREER TO COMPLETE',
       title: 'SPORTS HISTORY',
     },
@@ -14660,6 +14675,8 @@ export default {
     sharePermissionError: "FoundClub isn't allowed to save to your phone. Allow it in settings, then try again.",
     shareSavedGallery: 'Your card is saved to your photos (FoundClub album). Now choose where to post it.',
     shareSaveError: 'Saving failed. Your phone may be low on storage.',
+    // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
+    shareShortCta: 'Share',
     shareSubtitle: 'Choose a channel to share your collector card.',
     shareTitle: 'Share my card',
     shareViaOther: 'Share via… (SMS, Mail, Save)',
@@ -15984,8 +16001,10 @@ export default {
       sentTitle: 'Your match proposal',
     },
     interest: {
+      childAsk: 'Requesting a place in {{destination}}.',
       childPlace: '{{requester}} is requesting a place for {{child}} in {{destination}}.',
       childPlaceTitle: 'Place for a child',
+      childTitleWithAge: '{{firstname}}, {{age}} years old',
       childWithAge: '{{firstname}} ({{age}} years old)',
       club: '{{requester}} is interested in the club {{club}}.',
       team: '{{requester}} is interested in {{team}}.',
@@ -16067,8 +16086,11 @@ export default {
       unknown: 'The request has been accepted.',
     },
     childInterest: {
+      parent: 'Parent: {{name}}',
       refuseMessage: 'The request for {{firstname}} will be deleted. Their parent will be notified.',
       refuseTitle: 'Decline the request?',
+      viewParent: "Parent's profile",
+      viewParentHint: "Open the parent's profile",
     },
     clubAssignedMessage: '{{name}} has been added to the club. Do you want to assign them to a team now?',
     clubAssignedTitle: 'Coach added',
@@ -16101,7 +16123,7 @@ export default {
       responseMissing: 'Choose a response to process this interest.',
       responsePreview: 'Message sent',
       responseTitle: 'Reply to this interest',
-      targetTeam: 'Target team',
+      targetTeam: 'Target team: {{team}}',
     },
     invitations: {
       respond: 'Respond to the invitation',
@@ -16121,6 +16143,7 @@ export default {
     rejectFeaturedTitle: 'Decline the request?',
     title: 'Requests',
     types: {
+      childPlace: 'Child place',
       club: 'Club',
       event: 'Event',
       featured: 'Featured',
@@ -16331,8 +16354,12 @@ export default {
     create: {
       desc: 'Give your search a name to receive notifications.',
       events: 'An event / a booking?',
+      needCity: 'Choose a city, then tap “Create this alert”.',
       profiles: 'A profile?',
+      retry: 'Try again',
+      submit: 'Create this alert',
       title: 'Create an alert',
+      withoutAlert: 'See results without creating an alert',
     },
     created: {
       body: 'You will be notified as soon as a new event like these is published.',
@@ -16383,6 +16410,14 @@ export default {
       editBody: 'This profile alert can no longer be edited on a player account.',
       launchBody: 'This profile alert is only visible on a manager or coach account.',
       title: 'Profile alert unavailable',
+    },
+    refus: {
+      connexion: 'No connection.',
+      delai: 'The server is slow to respond: check My alerts before trying again.',
+      droit: 'Your account cannot create alerts yet.',
+      inconnue: 'Try again in a moment.',
+      limite: 'You already have {{maximum}} alerts: delete one in My alerts.',
+      titre: 'The alert was not created.',
     },
     sheet: {
       error: 'The alert could not be created. Try again in a moment.',

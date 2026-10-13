@@ -4812,6 +4812,8 @@ export default {
       retry: 'Réessayer',
       status: {
         approved: 'Acceptée',
+        // COLL-S-DEMANDE-PERIMEE (12/10) — la Ville n’a pas tranché avant la fin de la séance.
+        expired: 'Expirée',
         refused: 'Refusée',
       },
       tabs: {
@@ -6059,6 +6061,8 @@ export default {
       fermeJour: 'fermeture ce jour-là',
       libreJour: 'libre toute la journée',
       libreSemaine: 'libre toute la semaine',
+      // COLL-R-APP-PLANNING (12/10, COL-014) — demande sans réponse, son heure est passée.
+      nonTrancheeDatePassee: 'Non tranchée, date passée',
       origineAttente: 'Demande en attente de décision',
       origineClub: 'Séance du club',
       origineCreneau: 'Créneau attribué : chaque {{jour}}, du {{debut}} au {{fin}}',
@@ -6158,6 +6162,8 @@ export default {
       momentSerie: '{{equipe}} · chaque {{jour}}, {{debut}} – {{fin}}, jusqu’au {{jusquAu}} · {{lieu}}',
       momentUnique: '{{equipe}} · {{jour}}, {{debut}} – {{fin}} · {{lieu}}',
       motPourLaMairie: 'Un mot pour la mairie (facultatif)',
+      // COLL-S-DEMANDE-PERIMEE (12/10, décision d’Adel « 1- A ») — une demande expirée.
+      nonTraiteeATemps: 'non traitée à temps',
       ouvre: 'L’installation ouvre à {{heure}}. Commence à {{heure}}, ou plus tard.',
       posee: 'C’est posé : c’est dans ton créneau',
       quandMeme: 'Tu peux demander quand même : la mairie décidera.',
@@ -6564,16 +6570,21 @@ export default {
       a11y: '{{nom}} : {{heures}}, taux d’occupation {{taux}}',
       // VILLE-T18B (e) : sans horaires (retirés), ce qui se mesure sans eux, jamais « — ».
       a11ySansTaux: '{{nom}} : {{heures}} réservées',
+      // VILLE-TAUX-24H (12/10, Adel « Sur 24 h », « 2- B ») : le taux se calcule sur 24 h.
+      a11ySur24h: '{{nom}} : {{heures}}, taux d’occupation {{taux}} sur 24 h',
       aucune: 'Aucune installation pour l’instant.',
       reservees_one: '{{count}} séance · {{duree}} réservées sur la période.',
       reservees_other: '{{count}} séances · {{duree}} réservées sur la période.',
       taux: 'Taux d’occupation : {{taux}}.',
+      taux24h: 'Taux d’occupation : {{taux}}, calculé sur 24 h par jour.',
       titre: 'Heures de séances, par installation',
     },
     // COLL-C5 point 3 — la jauge d'occupation de l'accueil (planches 2 et 3).
     jauge: {
       a11y: 'Occupation : {{taux}}',
       occupation: 'occupation : {{taux}}',
+      // VILLE-TAUX-24H (12/10) : sans horaires, le taux de la semaine se calcule sur 24 h.
+      occupationSur24h: 'occupation : {{taux}} sur 24 h',
     },
     lien: 'Chiffres et export',
     periodes: {
@@ -15320,6 +15331,9 @@ export default {
     generating: 'Génération de l\'image…',
     history: {
       clubCount: '{{total}} CLUBS',
+      // PAR-L14 : le compteur compte des clubs, au singulier comme au pluriel.
+      clubCount_one: '{{count}} CLUB',
+      clubCount_other: '{{count}} CLUBS',
       empty: 'PARCOURS À COMPLÉTER',
       title: 'HISTORIQUE SPORTIF',
     },
@@ -15341,6 +15355,8 @@ export default {
     screenSubtitle: 'Partage ta carte, gagne en visibilité et fais-toi détecter.',
     screenTitle: 'Ma carte de collection',
     shareCta: 'Partager ma carte',
+    // PAR-L14 : libelle court du bouton, a cote de « Modifier » (le lecteur d'ecran lit shareCta).
+    shareShortCta: 'Partager',
     // Carte (contenu)
     coachChip: 'COACH',
     field: {
@@ -16840,8 +16856,10 @@ export default {
       sentTitle: 'Ta proposition de match',
     },
     interest: {
+      childAsk: 'Demande une place dans {{destination}}.',
       childPlace: '{{requester}} demande une place pour {{child}} dans {{destination}}.',
       childPlaceTitle: 'Place pour un enfant',
+      childTitleWithAge: '{{firstname}}, {{age}} ans',
       childWithAge: '{{firstname}} ({{age}} ans)',
       club: '{{requester}} est intéressé par le club {{club}}.',
       team: '{{requester}} est intéressé par {{team}}.',
@@ -16930,8 +16948,11 @@ export default {
       unknown: 'La demande est acceptée.',
     },
     childInterest: {
+      parent: 'Parent : {{name}}',
       refuseMessage: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
       refuseTitle: 'Refuser la demande ?',
+      viewParent: 'Profil du parent',
+      viewParentHint: 'Ouvre le profil du parent',
     },
     clubAssignedMessage: "{{name}} a été ajouté au club. Veux-tu l'assigner à une équipe maintenant ?",
     clubAssignedTitle: 'Entraîneur ajouté',
@@ -16964,7 +16985,7 @@ export default {
       responseMissing: 'Choisis une réponse pour traiter cet intérêt.',
       responsePreview: 'Message envoyé',
       responseTitle: 'Répondre à cet intérêt',
-      targetTeam: 'Équipe visee',
+      targetTeam: 'Équipe visée : {{team}}',
     },
     // S10-C — les invitations d'équipe reçues. Le libellé du bouton dit où l'on
     // va ET ce qu'on y fera : accepter et refuser vivent à UN seul endroit, la
@@ -16991,6 +17012,8 @@ export default {
     rejectFeaturedTitle: 'Refuser la demande ?',
     title: 'Demandes',
     types: {
+      // PAR-L2L3 · L3 — la pastille d'une place demandée pour un enfant.
+      childPlace: 'Place enfant',
       club: 'Club',
       event: 'Événement',
       featured: 'À la une',
@@ -17117,8 +17140,13 @@ export default {
     create: {
       desc: 'Donne un nom à ta recherche pour recevoir des notifications.',
       events: 'Un événement / Une réservation ?',
+      // PAR-L10 (12/10) — la feuille ouverte pour créer une alerte (E22).
+      needCity: 'Choisis une ville, puis touche « Créer cette alerte ».',
       profiles: 'Un profil ?',
+      retry: 'Réessayer',
+      submit: 'Créer cette alerte',
       title: 'Créer une alerte',
+      withoutAlert: "Voir les résultats sans créer d'alerte",
     },
     created: {
       body: "Tu seras prévenu·e dès qu'un nouvel événement comme ceux-ci est publié.",
@@ -17177,6 +17205,15 @@ export default {
       // eslint-disable-next-line max-len
       launchBody: 'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraîneur.',
       title: 'Alerte profils indisponible',
+    },
+    // PAR-L10 (12/10) — pourquoi une alerte n'a pas été créée (E23, `refusAlerte.js`).
+    refus: {
+      connexion: 'Pas de connexion.',
+      delai: 'Le serveur met du temps à répondre : regarde dans Mes alertes avant de réessayer.',
+      droit: "Ton compte ne peut pas encore créer d'alerte.",
+      inconnue: 'Réessaie dans un instant.',
+      limite: 'Tu as déjà {{maximum}} alertes : supprimes-en une dans Mes alertes.',
+      titre: "L'alerte n'a pas été créée.",
     },
     sheet: {
       error: "L'alerte n'a pas pu être créée. Réessaie dans un instant.",
@@ -22755,6 +22792,10 @@ export default {
       // le DIT, au lieu d'afficher trois cases vides sans explication.
       birthdateKeepHint: 'Laisse vide pour ne pas la changer.',
       birthdateLabel: 'Date de naissance',
+      // PAR-L1 (12/10) : le nom de chaque case pour le lecteur d'écran.
+      birthdateDayLabel: 'Jour de naissance',
+      birthdateMonthLabel: 'Mois de naissance',
+      birthdateYearLabel: 'Année de naissance',
       errors: {
         // 📅 DATENAISS (22/09) : une date après aujourd'hui est dite AVANT
         // d'envoyer, comme le palier 13 (Sentry SERVEUR-STRAPI-T).

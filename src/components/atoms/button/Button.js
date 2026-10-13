@@ -83,11 +83,16 @@ function Button({
   /** @type {import('react-native').TextStyle | null} */
   const iconLabelStyle = icon ? {
     flexShrink: 1,
-    // IPH09 : TextKit réduit la police, mais conserve l'interligne imposé.
-    // Une boîte intrinsèque arrondie peut alors faire rétrécir même « Accepter ».
-    // Sur iOS, réserver la largeur restante et laisser la police porter sa hauteur.
-    ...(Platform.OS === 'ios' ? { ...labelFillStyle, lineHeight: undefined } : {}),
+    // IPH09 : sur iOS, réserver la largeur restante au libellé.
+    ...(Platform.OS === 'ios' ? labelFillStyle : {}),
   } : null;
+  // IPH09 puis COL-004 : TextKit réduit la police, mais conserve l'interligne imposé.
+  // Une boîte d'un rien plus basse que cet interligne (arrondi d'un écran 3x) ne laisse
+  // alors AUCUNE taille tenir, et la police tombe à 4 points (« Accepter », puis
+  // « Attribuer un créneau », sans icône). Sur iOS, la police porte sa hauteur, pour
+  // TOUS les libellés ; un interligne passé par l'appelant l'emporte toujours.
+  /** @type {import('react-native').TextStyle | null} */
+  const iosLabelStyle = Platform.OS === 'ios' ? { lineHeight: undefined } : null;
   const isDisabled = isLoading || disabled;
 
   /**
@@ -149,6 +154,8 @@ function Button({
               // ROLES2 — une seule ligne (hauteur fixe) : la police rétrécit
               // jusqu'à 70 % avant que le libellé ne soit coupé d'une ellipse
               // (« Publier la co… », recette Android 16 du 2026-09-28).
+              // ⚠️ Plancher lu par Android seul : la nouvelle architecture iOS
+              // ignore `minimumFontScale` (COL-004) ; le site ne rétrécit pas.
               <Text
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}
@@ -165,6 +172,7 @@ function Button({
                   sizeTextStyle,
                   ApplicationStyle[`buttonText${variant}`],
                   iconLabelStyle,
+                  iosLabelStyle,
                   textStyle,
                 ]}
               >

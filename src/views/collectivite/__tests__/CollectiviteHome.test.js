@@ -1029,6 +1029,37 @@ describe('VILLE-T18B (b) — « Cette semaine » sans horaires : ce qui se mesur
   });
 });
 
+// 🕛 VILLE-TAUX-24H (12/10) — décision du chef d'orchestre (« accueil 24h B »), après celle d'Adel
+// (« Sur 24 h », puis « 2- B » : toutes les installations) : le taux est compté sur 24 h par jour
+// (le serveur pose `sur24h: true` sur chaque ligne). La ligne de l'accueil le dit, comme la page
+// « Chiffres ». ROUGE avant.
+describe('VILLE-TAUX-24H — « Cette semaine » : le taux sur 24 h se dit', () => {
+  const chiffres = (/** @type {any[]} */ installations) => ({
+    data: { installations }, error: null, isLoading: false, refetch: jest.fn(),
+  });
+  const jaugeDe = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.props?.testID === `collectivite-home-jauge-${id}`,
+  )[0];
+  // 540 min sur 24 h x 2 places x 7 jours (20 160) = 2,7 % => 3 %.
+  const ligne = (/** @type {boolean} */ sur24h, /** @type {number} */ taux) => ({
+    capaciteMinutes: 20160, documentId: TILLEULS.documentId, minutes: 540, seances: 6, sur24h, taux,
+  });
+
+  it('sans horaires : « 6 séances · occupation : 3 % sur 24 h », avec sa jauge', async () => {
+    mockChiffresSemaine = chiffres([ligne(true, 3)]);
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('6 séances · occupation : 3 % sur 24 h');
+    expect(jaugeDe(arbre, TILLEULS.documentId)).toBeDefined();
+  });
+
+  it('🔒 jumeau : serveur d’avant le lot (sans `sur24h`), la ligne ne change pas', async () => {
+    mockChiffresSemaine = chiffres([ligne(false, 23)]);
+    const lus = textes(await monter());
+    expect(lus).toContain('6 séances · occupation : 23 %');
+    expect(lus.some((texte) => texte.includes('24 h'))).toBe(false);
+  });
+});
+
 // 🚧 VILLE-T18B (c) (07/10) — ajout de la T18, point 3 (G42b) : « Fermeture à venir » n'en
 // montrait que DEUX, sans rien pour voir les autres : la fermeture du Stade (« Ascension »,
 // 8 oct.) et celle de « T18 Salle essai » (13 oct.) avaient disparu de l'accueil. Le serveur les

@@ -30,6 +30,8 @@ import useTheme from '@/theme/themeContext';
 // ⚠️ C'EST UN PLANCHER, PAS UNE PROMESSE. Si le libelle ne tient toujours pas a
 // 72 % de sa taille, React Native l'ellipse — le contrat « jamais tronque » de
 // ce mode vaut TANT QUE 72 % suffit, et pas au-dela.
+// ⚠️ ANDROID SEULEMENT (COL-004) : la nouvelle architecture iOS ignore
+// `minimumFontScale` (plus de plancher), et le site ne retrecit pas du tout.
 const SHRINK_MIN_SCALE = 0.72;
 
 /**
@@ -60,6 +62,9 @@ function SegmentedControl({
   const containerMinHeight = isWeb ? 44 : verticalScale(37.52);
   const segmentMinHeight = isWeb ? 36 : verticalScale(32);
   const segmentHorizontalPadding = isWeb ? 16 : horizontalScale(16);
+  // COL-004 : en largeurs egales, le mode qui retrecit garde 6 de marge au lieu de 16.
+  // « Fermetures » (4 onglets) y retrouve ~58 pt au lieu de ~40 : ~88 % de sa taille.
+  const segmentFitHorizontalPadding = isWeb ? 6 : horizontalScale(6);
   const segmentVerticalPadding = isWeb ? 9 : verticalScale(8);
   const segmentTextSize = isWeb ? 13 : moderateScale(12.87);
   const segmentTextLineHeight = isWeb ? 18 : moderateScale(18);
@@ -164,6 +169,9 @@ function SegmentedControl({
       flex: 1,
       minWidth: 0,
     },
+    segmentFitEqualWidth: {
+      paddingHorizontal: segmentFitHorizontalPadding,
+    },
     segmentSelected: {
       backgroundColor: Colors.primary500,
       borderColor: Colors.primary500,
@@ -213,6 +221,7 @@ function SegmentedControl({
     containerMinHeight,
     horizontalGap,
     isWeb,
+    segmentFitHorizontalPadding,
     segmentHorizontalPadding,
     segmentMinHeight,
     segmentRadius,
@@ -233,13 +242,15 @@ function SegmentedControl({
         style={[
           styles.segment,
           useEqualWidthLayout && styles.segmentEqualWidth,
+          useEqualWidthLayout && fitLabels && styles.segmentFitEqualWidth,
           isSelected && styles.segmentSelected,
         ]}
       >
         {/* 🔠 S5 (vague S) — TROIS MODES, ET UN SEUL GAGNE A LA FOIS.
             · defaut          → une ligne, le texte se coupe (15 ecrans a onglets courts)
             · `fullLabels`    → DEUX lignes, jamais coupe (D63, FacilityForm)
-            · `fitLabels`     → UNE ligne, le texte RETRECIT jusqu a 72 %
+            · `fitLabels`     → UNE ligne, le texte RETRECIT jusqu a 72 % (Android ;
+                                l iPhone n a pas de plancher, COL-004)
 
             🧨 POURQUOI UN TROISIEME MODE PLUTOT QUE DE CORRIGER `fullLabels` :
             la recette du 25/08 a montre qu en deux lignes, « Participants » et
@@ -260,6 +271,10 @@ function SegmentedControl({
             styles.segmentText,
             fullLabels && !fitLabels && styles.segmentTextFull,
             isSelected && styles.segmentTextSelected,
+            // COL-004 (regle IPH09 du bouton) : sur iPhone, un interligne fixe garde le
+            // decalage calcule pour la grande police — le texte reduit tombe plus bas que
+            // ses voisins, et une boite d un rien trop basse le ferait chuter a 4 points.
+            fitLabels && Platform.OS === 'ios' && { lineHeight: undefined },
           ]}
         >
           {option.label}
