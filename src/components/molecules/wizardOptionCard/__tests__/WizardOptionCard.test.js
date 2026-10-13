@@ -113,3 +113,32 @@ describe('WizardOptionCard — caracterisation (avant PAR-L4)', () => {
     expect(carte(pointillee).props.children.filter(Boolean)).toHaveLength(1);
   });
 });
+
+describe('WizardOptionCard — PAR-L4 : un choix qui se dit, et un choix impossible', () => {
+  it('en mode « radio », le site lit l etat coche (aria-checked)', () => {
+    const arbre = monter({ accessibilityRole: 'radio', selected: true });
+    expect(carte(arbre).props.accessibilityRole).toBe('radio');
+    expect(carte(arbre).props.accessibilityState).toEqual({
+      checked: true, disabled: false, selected: true,
+    });
+  });
+
+  it('une carte INDISPONIBLE ne se touche pas, et le dit', () => {
+    const onPress = jest.fn();
+    const arbre = monter({ accessibilityRole: 'radio', disabled: true, onPress });
+    expect(carte(arbre).props.disabled).toBe(true);
+    expect(carte(arbre).props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
+  it('le titre et le sous-titre peuvent prendre plusieurs lignes', () => {
+    const arbre = monter({ subtitle: 'Basketball · U11', subtitleLines: 3, titleLines: 2 });
+    const [titre, sousTitre] = textes(arbre);
+    expect(titre.props.numberOfLines).toBe(2);
+    expect(sousTitre.props.numberOfLines).toBe(3);
+  });
+
+  it('elle porte son etiquette de test', () => {
+    const arbre = monter({ testID: 'carte-1' });
+    expect(carte(arbre).props.testID).toBe('carte-1');
+  });
+});
