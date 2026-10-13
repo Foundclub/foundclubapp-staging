@@ -2,7 +2,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  Image,
+  Linking,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -32,6 +39,10 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
 const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
+
+// OR1 (« le gérant au comptoir ») : la largeur à partir de laquelle l'accueil prend sa mise en
+// page d'ordinateur, la même que l'accueil de la Ville (CollectiviteHome, LARGEUR_COLONNES).
+const LARGEUR_ORDINATEUR = 1024;
 
 /**
  * Les chiffres de l'accueil (RC-G01) : réservations du jour, occupation de la semaine, demandes en
@@ -91,6 +102,7 @@ function ComplexeAccueil() {
   const [instant] = useState(() => new Date());
   const { date, minutes } = jourEtHeure(instant);
   const encadre = ROLES_QUI_ENCADRENT.includes(String(accountRoleKey || ''));
+  const surOrdinateur = useWindowDimensions().width >= LARGEUR_ORDINATEUR;
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
@@ -127,7 +139,11 @@ function ComplexeAccueil() {
         <Text
           accessibilityRole="header"
           numberOfLines={2}
-          style={[Fonts.p1Black, Fonts.neutral00, { flexGrow: 1, flexShrink: 1 }]}
+          style={[
+            surOrdinateur ? Fonts.h2Black : Fonts.p1Black,
+            Fonts.neutral00,
+            { flexGrow: 1, flexShrink: 1 },
+          ]}
         >
           {String(complexe?.name || '').toUpperCase()}
         </Text>
@@ -277,7 +293,11 @@ function ComplexeAccueil() {
           ...SANS_ECHAPPEMENT,
         }).toUpperCase()}
       </Text>
-      <FriseDuJour lignes={lignes} maintenant={minutes} />
+      <FriseDuJour
+        largeurNoms={surOrdinateur ? 120 : undefined}
+        lignes={lignes}
+        maintenant={minutes}
+      />
     </View>
   ) : null;
 
@@ -306,7 +326,10 @@ function ComplexeAccueil() {
     },
   ];
   const chiffres = (
-    <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]} testID="complexe-accueil-chiffres">
+    <View
+      style={[Alignments.row, { flexWrap: surOrdinateur ? 'nowrap' : 'wrap', gap: 12 }]}
+      testID="complexe-accueil-chiffres"
+    >
       {tuiles.map((tuile) => (
         <View
           accessibilityLabel={`${tuile.valeur} ${tuile.libelle}`}
@@ -316,7 +339,7 @@ function ComplexeAccueil() {
             carte,
             Spaces.padding[16],
             {
-              flexBasis: 140, flexGrow: 1, gap: 6, minHeight: 104,
+              flexBasis: surOrdinateur ? 0 : 140, flexGrow: 1, gap: 6, minHeight: 104,
             },
           ]}
           testID={`complexe-accueil-chiffre-${tuile.cle}`}
@@ -387,7 +410,11 @@ function ComplexeAccueil() {
                 carte,
                 Spaces.padding[16],
                 {
-                  flexBasis: 140, flexGrow: 1, gap: 8, minHeight: 88,
+                  // OR1 : sur ordinateur, les cases en grille de 3.
+                  flexBasis: surOrdinateur ? '31%' : 140,
+                  flexGrow: 1,
+                  gap: 8,
+                  minHeight: 88,
                 },
                 ouverte ? null : { opacity: 0.55 },
               ]}

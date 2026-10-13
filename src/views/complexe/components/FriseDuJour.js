@@ -34,10 +34,12 @@ const ETATS = /** @type {EtatDuCreneau[]} */ ([
  * l'accueil ne passe que des créneaux « libre ».
  * @param {object} props - Les propriétés.
  * @param {LigneDeLaFrise[]} props.lignes - Les terrains et leurs créneaux du jour.
+ * @param {number} [props.largeurNoms] - La colonne des noms : 84 sur téléphone, 120 sur
+ *   ordinateur (planche OR1 : « noms des terrains en clair »).
  * @param {number} props.maintenant - L'heure courante, en minutes depuis minuit.
  * @returns {import('react').ReactElement | null} La frise, ou rien sans créneau.
  */
-function FriseDuJour({ lignes, maintenant }) {
+function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const [legende, setLegende] = useState(false);
@@ -161,7 +163,7 @@ function FriseDuJour({ lignes, maintenant }) {
   return (
     <View style={{ gap: 8 }} testID="frise-du-jour">
       <View style={[Alignments.row, { gap: 8 }]}>
-        <View style={{ paddingTop: 18, width: NOMS }}>
+        <View style={{ paddingTop: 18, width: largeurNoms }} testID="frise-noms">
           {lignes.map((ligne) => (
             <View key={ligne.cle} style={[Alignments.justifyCenter, { height: HAUTEUR }]}>
               <Text numberOfLines={2} style={[Fonts.p3Bold, Fonts.neutral00]}>{ligne.nom}</Text>
