@@ -271,7 +271,9 @@ const resolveMyGuestTeam = (item, userData) => {
   const organizerTeamId = String(item?.team?.documentId || '').trim();
   if (!organizerTeamId || myTeamIds.has(organizerTeamId)) return null;
   const invitedTeams = Array.isArray(item?.invitedTeams) ? item.invitedTeams : [];
-  return invitedTeams.find((team) => myTeamIds.has(String(team?.documentId || '').trim())) || null;
+  return invitedTeams.find(
+    (/** @type {any} */ team) => myTeamIds.has(String(team?.documentId || '').trim()),
+  ) || null;
 };
 
 /**

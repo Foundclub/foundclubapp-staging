@@ -105,11 +105,11 @@ function FriendlyMatchWizardRecap({ navigation }) {
   // AMICAUX-CORRECTIFS 73 — la rangee commence par « Je peux » : sa valeur se lit a la suite
   // (« Je peux : Recevoir »). getHostingSummary parle a la 3e personne, pour la page d une annonce.
   // Temoin : __tests__/AMIC73-recapJePeux.test.js.
-  const iCanLabel = {
+  const iCanLabel = /** @type {Record<string, string>} */ ({
     away: t('friendlyMatchWizardRecap.iCanAway', 'Me déplacer'),
     both: t('friendlyMatchWizardRecap.iCanBoth', 'Recevoir ou me déplacer'),
     host: t('friendlyMatchWizardRecap.iCanHost', 'Recevoir'),
-  }[hostingSummary.tone] || hostingSummary.label;
+  })[hostingSummary.tone] || hostingSummary.label;
   const formatLabel = state.format === 'Autre' ? state.formatOther : state.format;
 
   const handlePublish = async () => {
