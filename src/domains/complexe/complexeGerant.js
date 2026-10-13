@@ -20,6 +20,30 @@ export const CHOIX_ANNULATION = Object.freeze([0, 2, 6, 12, 24, 48]);
 /** Les âges minimum pour réserver (R2, RG-AGE : de 13 à 18 ans, défaut 18). */
 export const CHOIX_AGE_MINIMUM = Object.freeze([13, 14, 15, 16, 17, 18]);
 
+/**
+ * Les règles du complexe telles que le serveur les juge (`RULE_SPECS`, `RULE_DEFAULTS` de
+ * `admin/src/api/complexe/services/complexe.ts`) : les bornes des compteurs de E-G16 et les
+ * défauts d'un complexe dont une règle manquerait.
+ */
+export const REGLES_DU_SERVEUR = Object.freeze({
+  bornes: Object.freeze({
+    autoBanNoShows: { max: 10, min: 0 },
+    collectDeadlineHours: { max: 72, min: 2 },
+    maxUpcomingPerUser: { max: 10, min: 1 },
+    minLeadTimeHours: { max: 24, min: 0 },
+  }),
+  defauts: Object.freeze({
+    autoBanNoShows: 3,
+    cancellationDelayHours: 24,
+    collectDeadlineHours: 24,
+    dayBeforeConfirmation: true,
+    maxUpcomingPerUser: 2,
+    minAge: 18,
+    minLeadTimeHours: 2,
+    morningDigest: true,
+  }),
+});
+
 /** Les règles d'un complexe neuf (les défauts du serveur, `RULE_DEFAULTS`). */
 export const REGLES_PAR_DEFAUT = Object.freeze({ ageMinimum: 18, annulation: 24 });
 

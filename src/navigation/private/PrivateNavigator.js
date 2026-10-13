@@ -1435,6 +1435,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* E-G16 — les réglages du complexe. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeReglages').default}
+            name={RouteNames.ComplexeReglages}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>
