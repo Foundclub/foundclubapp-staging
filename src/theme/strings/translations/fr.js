@@ -16210,6 +16210,7 @@ export default {
       date: 'Date',
       host: 'Qui reçoit',
       level: 'Niveau',
+      note: 'Message',
       section: 'Section',
       time: 'Heure',
       venue: 'Lieu',

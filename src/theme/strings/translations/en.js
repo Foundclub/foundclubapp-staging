@@ -15371,6 +15371,7 @@ export default {
       date: 'Date',
       host: 'Home team',
       level: 'Level',
+      note: 'Message',
       section: 'Section',
       time: 'Time',
       venue: 'Venue',
