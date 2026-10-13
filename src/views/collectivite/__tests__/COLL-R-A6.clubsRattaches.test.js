@@ -291,6 +291,21 @@ describe('COL-001 — la carte d’un club en 3 lignes (téléphone, planche P7v
   });
 });
 
+describe('COL-001 — l’état vide (planche P7v4-clubs, état 7 : « Comme P7 »)', () => {
+  it('qui rattache, « Un club manque ? Ajoutez-le. », UN bouton « Ajouter un club »', async () => {
+    mockClubs = {
+      data: [], error: null, isLoading: false, refetch: jest.fn(),
+    };
+    const arbre = await monter();
+    expect(textesDe(arbre.root)).toEqual(expect.arrayContaining([
+      'Aucun club rattaché pour l’instant.',
+      'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
+    ]));
+    expect(boutons(arbre, 'Ajouter un club')).toHaveLength(1);
+    expect(boutons(arbre, 'Inviter un club')).toHaveLength(0);
+  });
+});
+
 describe('COL-001 — les demandes de rattachement', () => {
   it('une demande déjà rattachée ne s’affiche plus (le doublon « Rattaché »)', async () => {
     mockDemandes = { data: [RATTACHEE], error: null, isLoading: false };

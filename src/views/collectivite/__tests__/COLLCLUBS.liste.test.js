@@ -254,7 +254,8 @@ describe('COLL-CLUBS — planche 1 : la liste des clubs rattachés', () => {
     expect(textes(await monter())).toEqual(expect.arrayContaining([
       'Aucun club rattaché pour l’instant.',
       // VILLE-INVITER-CLUB (07/10) : la Ville ajoute elle-meme un club deja inscrit (« club A »).
-      'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+      // COLL-R-A6 (13/10, planche P7v4-clubs état « vide ») : « Un club manque ? Ajoutez-le. »
+      'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
     ]));
   });
 });

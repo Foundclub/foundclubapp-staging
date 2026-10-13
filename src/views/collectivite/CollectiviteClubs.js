@@ -345,7 +345,7 @@ function CollectiviteClubs() {
         <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
           {t(
             'collectiviteClubs.list.emptyHint',
-            'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+            'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
           )}
         </Text>
         {/* COLL-R-A6 (P7v4-clubs, état « vide ») : un seul bouton, « Ajouter un club ». */}

@@ -5129,7 +5129,7 @@ export default {
       one: 'Club leader: {{noms}}',
     },
     list: {
-      emptyHint: 'Add a club already on FoundClub, or invite a club that is not.',
+      emptyHint: 'The FoundClub team attaches the clubs of the town. A club is missing? Add it.',
       error: 'The clubs could not be loaded.',
       invite: 'Invite a club that is not on FoundClub',
       inviteDesktop: 'Invite a missing club',

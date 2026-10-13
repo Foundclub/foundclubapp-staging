@@ -5495,7 +5495,9 @@ export default {
       one: 'Dirigeant : {{noms}}',
     },
     list: {
-      emptyHint: 'Ajoutez un club déjà sur FoundClub, ou invitez un club absent.',
+      // COLL-R-A6 (13/10, planche P7v4-clubs état « vide », « Comme P7 ») : un seul bouton.
+      // eslint-disable-next-line max-len
+      emptyHint: 'L’équipe FoundClub rattache les clubs de la commune. Un club manque ? Ajoutez-le.',
       error: 'Les clubs n’ont pas pu être lus.',
       invite: 'Inviter un club absent de FoundClub',
       inviteDesktop: 'Inviter un club absent',
