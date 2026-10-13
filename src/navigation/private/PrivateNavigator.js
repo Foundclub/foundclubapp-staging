@@ -9,6 +9,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { isVilleOnlyAccount } from '@/domains/collectivite/collectiviteAccueil';
+import { lireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 
 import Stepper from '@/components/atoms/stepper/Stepper';
@@ -125,9 +126,14 @@ function PrivateNavigator() {
         : RouteNames.CollectiviteSignupStatus;
     }
     if (route) return route;
+    // RESA-L5A1 (13/10/2026) — le mode complexe (planche RB, AT-01) : un choix d'affichage gardé
+    // sur le téléphone ; l'app s'ouvre alors sur l'espace du complexe. Après l'onboarding.
+    if (COMPLEXES_GERANT && lireModeComplexe(userData?.documentId)) {
+      return RouteNames.ComplexeEspace;
+    }
     if (isGold) return RouteNames.LeagueHomeTab;
     return RouteNames.HomeTab;
-  }, [onboardingViews, isGold, villeSeule, premiereVille?.documentId]);
+  }, [onboardingViews, isGold, villeSeule, premiereVille?.documentId, userData?.documentId]);
 
   const firstPendingOnboardingRoute = useMemo(() => {
     if (
@@ -136,6 +142,7 @@ function PrivateNavigator() {
       || initialRouteName === RouteNames.LeagueHomeTab
       || initialRouteName === RouteNames.CollectiviteSpace
       || initialRouteName === RouteNames.CollectiviteSignupStatus
+      || initialRouteName === RouteNames.ComplexeEspace
     ) {
       return null;
     }
@@ -1393,6 +1400,14 @@ function PrivateNavigator() {
           <Stack.Screen
             getComponent={() => require('@/views/complexe/ComplexeDevenirGerant').default}
             name={RouteNames.ComplexeDevenirGerant}
+            options={{ headerShown: false }}
+          />
+        ) : null}
+        {/* E-G02 — l'espace du complexe : l'accueil du gérant et la messagerie, en onglets. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('./ComplexeTabNavigator').default}
+            name={RouteNames.ComplexeEspace}
             options={{ headerShown: false }}
           />
         ) : null}

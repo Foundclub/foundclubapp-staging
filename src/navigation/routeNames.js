@@ -417,8 +417,14 @@ export const RouteNames = /** @type {const} */ ({
   // point E, P5v3-chiffres). Contrat : admin/docs/CONTRAT_CHIFFRES_VILLE.md.
   CollectiviteChiffres: 'CollectiviteChiffres',
   // RESA-L5A1 (13/10/2026) — le gérant de complexe (chantier Réservation, toile BLG79NHv2) : son
-  // espace (accueil E-G02, en onglets) et « Devenir gérant » (E-G01). Cachés par l'interrupteur
-  // `COMPLEXES_GERANT` (src/config/fonctionsMasquees.js).
+  // espace (accueil E-G02, en onglets), « Devenir gérant » (E-G01), ses terrains (E-G07, E-G08),
+  // leurs créneaux (E-G09) et ses réglages (E-G16). Cachés par l'interrupteur `COMPLEXES_GERANT`
+  // (src/config/fonctionsMasquees.js).
+  ComplexeAccueil: 'ComplexeAccueil',
+  ComplexeCreneaux: 'ComplexeCreneaux',
   ComplexeDevenirGerant: 'ComplexeDevenirGerant',
   ComplexeEspace: 'ComplexeEspace',
+  ComplexeInstallations: 'ComplexeInstallations',
+  ComplexeReglages: 'ComplexeReglages',
+  ComplexeTerrain: 'ComplexeTerrain',
 });

@@ -1,3 +1,5 @@
+import { RouteNames } from '@/navigation/routeNames';
+
 import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 
 import { isBirthdateUnderAge, PARENTAL_POWER_ENDS_AGE } from '@/constants/parentalDeclaration';
@@ -156,4 +158,69 @@ export const messageDeRefus = (t, erreur, repli) => {
     );
   }
   return repli;
+};
+
+// ---------------------------------------------------------------------------------------------
+// L'accueil du gérant (E-G02)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Les cases « Gérer » de l'accueil, dans l'ordre de la planche (A-G03 : les trois mots d'Adel
+ * d'abord, puis RC-G02). `route` : l'écran de ce lot qui s'ouvre ; sans elle, la case dit
+ * « Bientôt » (Gérer mon complexe E-G11, Demandes, Planning, Réservations : lots L5A2 ; Canal,
+ * Affiches, Fidélité, Clients, Statistiques : lot L4). Pas d'« Employés » en V1 (E-G18).
+ * @type {ReadonlyArray<{ cle: string, icone: string, route: string | null }>}
+ */
+export const CASES_GERER = Object.freeze([
+  { cle: 'complexe', icone: 'shield', route: null },
+  { cle: 'installations', icone: 'stadium', route: RouteNames.ComplexeInstallations },
+  { cle: 'demandes', icone: 'inboxArrowDown', route: null },
+  { cle: 'planning', icone: 'calendar', route: null },
+  { cle: 'reservations', icone: 'clock', route: null },
+  { cle: 'canal', icone: 'envelope', route: null },
+  { cle: 'affiches', icone: 'share2', route: null },
+  { cle: 'fidelite', icone: 'trophy', route: null },
+  { cle: 'clients', icone: 'users', route: null },
+  { cle: 'statistiques', icone: 'chart', route: null },
+  { cle: 'reglages', icone: 'edit', route: RouteNames.ComplexeReglages },
+]);
+
+/**
+ * Le complexe que l'accueil montre : celui de l'adresse s'il est parmi ceux du compte (sinon
+ * aucun : l'accès est retiré), le premier du compte sans adresse (un complexe par compte en V1).
+ * @param {unknown} liste - « Mes complexes ».
+ * @param {string | null | undefined} complexeId - Le complexe demandé.
+ * @returns {any | null} Le complexe, ou null.
+ */
+export const complexeChoisi = (liste, complexeId) => {
+  const complexes = Array.isArray(liste) ? liste : [];
+  if (complexeId) return complexes.find((c) => c?.documentId === complexeId) || null;
+  return complexes[0] || null;
+};
+
+/**
+ * Le terrain a-t-il des créneaux (au moins une plage ou un créneau ponctuel) ?
+ * @param {any} terrain - Le terrain.
+ * @returns {boolean} Vrai s'il en a.
+ */
+const aDesCreneaux = (terrain) => {
+  const plan = terrain?.slotPlan;
+  return Boolean(plan) && ((plan.ranges || []).length > 0 || (plan.extraSlots || []).length > 0);
+};
+
+/**
+ * LE bandeau d'état de l'accueil (E-G02 bloc 2) : le PREMIER vrai, un seul — retiré, suspendu (un
+ * statut qui n'est pas « actif » : D6, on agit après coup et le gérant garde son accueil), aucun
+ * terrain, un terrain sans créneaux.
+ * @param {any} complexe - Le complexe.
+ * @param {any[]} terrains - Ses terrains.
+ * @returns {{ cle: 'aucunTerrain' | 'retire' | 'sansCreneaux' | 'suspendu', terrain?: any }
+ *   | null} Le bandeau, ou null quand tout va bien.
+ */
+export const bandeauDeLAccueil = (complexe, terrains) => {
+  if (complexe?.status === 'retire') return { cle: 'retire' };
+  if (complexe?.status && complexe.status !== 'actif') return { cle: 'suspendu' };
+  if (!terrains.length) return { cle: 'aucunTerrain' };
+  const sansCreneaux = terrains.find((terrain) => !aDesCreneaux(terrain));
+  return sansCreneaux ? { cle: 'sansCreneaux', terrain: sansCreneaux } : null;
 };
