@@ -92,7 +92,9 @@ export default function useRetraitDuClavierAndroid(reserveBasse = 0, { iPhone = 
       hauteurPosee.current = valeur;
       setHauteurDuClavier(valeur);
     };
-    if (Keyboard.isVisible?.()) poser(hauteur(Keyboard.metrics?.()));
+    // L'état RÉEL du clavier au branchement : déjà ouvert, sa hauteur ; fermé, 0 — une fenêtre
+    // cachée clavier ouvert (`iPhone: visible`) ne garde pas l'ancienne hauteur en revenant.
+    poser(Keyboard.isVisible?.() ? hauteur(Keyboard.metrics?.()) : 0);
     const ouvert = Keyboard.addListener(
       surIPhone ? 'keyboardWillShow' : 'keyboardDidShow',
       (evenement) => poser(hauteur(evenement?.endCoordinates), evenement),

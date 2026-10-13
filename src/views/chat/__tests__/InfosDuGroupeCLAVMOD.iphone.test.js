@@ -1,5 +1,5 @@
 import {
-  DeviceEventEmitter, Platform, StyleSheet, TextInput, TouchableOpacity,
+  DeviceEventEmitter, LayoutAnimation, Platform, StyleSheet, TextInput, TouchableOpacity,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -73,7 +73,12 @@ const iPhone = (barreDuBas) => {
   mockInsets.bottom = barreDuBas;
 };
 
+/** @type {Array<() => void>} */
+const demontages = [];
 afterEach(() => {
+  // Chaque arbre est démonté : un arbre resté monté écouterait encore le clavier du témoin
+  // suivant.
+  demontages.splice(0).forEach((demonter) => demonter());
   act(() => {
     DeviceEventEmitter.emit('keyboardWillHide');
     DeviceEventEmitter.emit('keyboardDidHide');
@@ -110,37 +115,61 @@ const refermerLeClavier = async (/** @type {any} */ telephone) => act(async () =
   DeviceEventEmitter.emit('keyboardDidHide', chargeIOS(telephone, false));
 });
 
+const sansEffet = jest.fn();
+const renommerLeGroupe = jest.fn(() => Promise.resolve());
+
+/**
+ * « Infos du groupe », vue par un admin.
+ * @param {boolean} visible
+ * @returns {import('react').ReactElement}
+ */
+const fenetre = (visible) => (
+  <InfosDuGroupe
+    adminIds={['moi']}
+    chat={{
+      groupName: 'Covoit U15',
+      participants: [
+        { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' },
+        { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+      ],
+    }}
+    estAdmin
+    meId="moi"
+    onAjouter={sansEffet}
+    onBasculerAdmin={sansEffet}
+    onClose={sansEffet}
+    onEnvoyerUnMessage={sansEffet}
+    onRenommer={renommerLeGroupe}
+    onRetirer={sansEffet}
+    onSignaler={sansEffet}
+    visible={visible}
+  />
+);
+
+/**
+ * Monte la fenêtre ; `basculer` la montre ou la cache (elle reste montée, comme dans le fil).
+ * @param {boolean} visible
+ * @returns {{ arbre: any, basculer: (v: boolean) => void }}
+ */
+const monter = (visible) => {
+  /** @type {any} */
+  let arbre;
+  act(() => {
+    arbre = renderer.create(fenetre(visible));
+  });
+  demontages.push(() => act(() => arbre.unmount()));
+  const basculer = (/** @type {boolean} */ v) => act(() => {
+    arbre.update(fenetre(v));
+  });
+  return { arbre, basculer };
+};
+
 /**
  * Ouvre « Infos du groupe » en admin et passe le nom en modification (champ, clavier sorti).
  * @returns {any} L'arbre rendu.
  */
 const renommer = () => {
-  /** @type {any} */
-  let arbre;
-  act(() => {
-    arbre = renderer.create(
-      <InfosDuGroupe
-        adminIds={['moi']}
-        chat={{
-          groupName: 'Covoit U15',
-          participants: [
-            { documentId: 'karim', firstname: 'Karim', lastname: 'Benali' },
-            { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
-          ],
-        }}
-        estAdmin
-        meId="moi"
-        onAjouter={jest.fn()}
-        onBasculerAdmin={jest.fn()}
-        onClose={jest.fn()}
-        onEnvoyerUnMessage={jest.fn()}
-        onRenommer={jest.fn(() => Promise.resolve())}
-        onRetirer={jest.fn()}
-        onSignaler={jest.fn()}
-        visible
-      />,
-    );
-  });
+  const { arbre } = monter(true);
   const [nom] = arbre.root.findAll(
     (/** @type {any} */ n) => n.props.testID === 'infos-du-groupe-nom'
       && n.type === TouchableOpacity,
@@ -190,6 +219,35 @@ describe('CLAVIER-MODALES — infos du groupe, renommer, iPhone', () => {
   it('clavier jamais ouvert : rien ne bouge (0 pt)', () => {
     iPhone(34);
     const arbre = renommer();
+
+    expect(basDuDefilement(arbre, 852)).toBe(852);
+  });
+});
+
+// La fenêtre est montée EN PERMANENCE dans l'écran du fil (Conversation.js, `visible=…`) : le
+// clavier de la barre de saisie s'ouvre et se ferme sous elle toute la journée.
+describe('CLAVIER-MODALES — infos du groupe FERMÉE, sur iPhone', () => {
+  it('le clavier du fil ne la fait pas réagir : aucune animation lancée pour l écran', async () => {
+    iPhone(34);
+    monter(false);
+    const animer = jest.spyOn(LayoutAnimation, 'configureNext');
+
+    await ouvrirLeClavier(IPHONES[0]);
+    await refermerLeClavier(IPHONES[0]);
+
+    expect(animer).not.toHaveBeenCalled();
+    animer.mockRestore();
+  });
+
+  it('refermée clavier ouvert, rouverte clavier fermé : aucun vide (0 pt)', async () => {
+    iPhone(34);
+    const { arbre, basculer } = monter(true);
+    await ouvrirLeClavier(IPHONES[0]);
+    expect(basDuDefilement(arbre, 852)).toBe(516);
+
+    basculer(false);
+    await refermerLeClavier(IPHONES[0]);
+    basculer(true);
 
     expect(basDuDefilement(arbre, 852)).toBe(852);
   });
