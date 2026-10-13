@@ -17,8 +17,10 @@ import BlocDeLaVille from '../components/BlocDeLaVille';
 //     de la Ville » (le canal), et « Me prévenir des actualités de la Ville », DÉSACTIVÉ par
 //     défaut ; l'activer envoie VRAI au serveur ; un dirigeant ou un entraîneur lit qu'il est
 //     prévenu d'office, sans interrupteur ; un club rattaché à personne : aucun bloc ;
-//   - le canal : les actualités de la plus ancienne à la plus récente, « Lecture seule », AUCUNE
-//     zone de saisie ; une seule Ville quand la notification la désigne ;
+//   - le canal : les actualités de la plus RÉCENTE à la plus ancienne, l'écran ouvert EN HAUT
+//     (COLL-R-A6, COL-006, décision d'Adel D5 = A du 12/10 17 h 53 : avant, l'ordre d'une
+//     conversation, la plus récente en bas), « Lecture seule », AUCUNE zone de saisie ; une seule
+//     Ville quand la notification la désigne ;
 //   - la fiche du club pose le bloc pour SES membres.
 
 /** @type {any} */
@@ -222,17 +224,29 @@ describe('COLL-C4A — planche 2 : le bloc « De la Ville » de la fiche du club
 });
 
 describe('COLL-C4A — planche 2 : le canal de la Ville, côté membre', () => {
-  it('de la plus ancienne à la plus récente, « Lecture seule », sans zone de saisie', async () => {
+  // COLL-R-A6 (13/10, COL-006, D5 = A d'Adel le 12/10 17 h 53) : la plus récente EN HAUT, comme la
+  // liste de la mairie et le bloc « De la Ville » (avant : de la plus ancienne à la plus récente).
+  it('de la plus récente à la plus ancienne, « Lecture seule », sans zone de saisie', async () => {
     const arbre = await monter(<CollectiviteActualitesCanal />);
     const titres = arbre.root.findAllByType(ActualiteCarte)
       .map((/** @type {any} */ n) => n.props.actualite.title);
     expect(titres).toEqual([
-      'Subventions aux associations sportives 2027',
-      'Dojo municipal fermé pendant les vacances',
       'Forum de Valfleuri',
+      'Dojo municipal fermé pendant les vacances',
+      'Subventions aux associations sportives 2027',
     ]);
     expect(textes(arbre)).toContain('Lecture seule');
     expect(arbre.root.findAllByType(TextInput)).toHaveLength(0);
+  });
+
+  it('l’écran s’ouvre EN HAUT : rien ne le fait descendre tout seul (COL-006)', async () => {
+    const arbre = await monter(<CollectiviteActualitesCanal />);
+    const [defilement] = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.type !== 'string' && Boolean(n.props?.refreshControl),
+    );
+    expect(defilement).toBeDefined();
+    // Avant : chaque changement de taille (une image qui finit de charger) l'envoyait en bas.
+    expect(defilement.props.onContentSizeChange).toBeUndefined();
   });
 
   it('la notification désigne UNE Ville : ses actualités seules, et son nom en titre', async () => {
