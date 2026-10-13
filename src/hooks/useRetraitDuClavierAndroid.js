@@ -3,8 +3,8 @@ import { Keyboard, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 🤖 ANDROIDBAR-4 — le motif d'ANDROIDBAR-1 (Conversation) et d'ANDROIDBAR-3 (ScreenContainer),
-// pour les écrans qui ne passent par AUCUN des deux : fenêtres `<Modal statusBarTranslucent>`,
-// écran sans en-tête.
+// pour les écrans qui ne passent par AUCUN des deux : fenêtres `<Modal>` à barre d'état
+// translucide, écran sans en-tête.
 //
 // Android 15 et 16 imposent le bord à bord (targetSdk 35+) : `adjustResize` ne rétrécit plus la
 // fenêtre, rien ne remonte au-dessus du clavier. Un `KeyboardAvoidingView` ne suffit pas :
