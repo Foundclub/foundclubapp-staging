@@ -22,6 +22,14 @@ import EventWizardRecap from '../EventWizardRecap';
 const mockProprietesDuGabarit = [];
 const mockChargesCreees = [];
 
+// COLL-R-APP-CREATION (13/10) — « la mairie décidera ? » a son propre témoin
+// (useMairieDecideALaCreation.CRA4.test.js) : ici, la mairie ne décide pas.
+jest.mock('../useMairieDecideALaCreation', () => ({
+  __esModule: true,
+  default: () => ({
+    complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
+  }),
+}));
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({

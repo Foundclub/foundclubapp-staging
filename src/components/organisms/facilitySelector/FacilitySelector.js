@@ -51,11 +51,15 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
  * @param {{ documentId?: string, name?: string } | null} [props.currentFacility] - FIN13-COLL :
  *   l installation ACTUELLE de la seance modifiee, toujours proposee (T12/T13 : « Modifier » ne
  *   listait pas le Gymnase de la Ville ou la seance avait lieu).
+ * @param {Record<string, unknown> | null} [props.decisionDeLaVille] - COLL-R-APP-CREATION
+ *   (COL-003) : la reponse du serveur pour la seance, `{ mairie, complet, tuAcceptes }` (l etape
+ *   « Lieu » de la creation, `useMairieDecideALaCreation`) ; les autres appelants : rien.
  */
 function FacilitySelector({
   clubId,
   cmId,
   currentFacility = null,
+  decisionDeLaVille = null,
   error,
   facilityId,
   location,
@@ -171,6 +175,25 @@ function FacilitySelector({
       ...SANS_ECHAPPEMENT,
     });
   };
+  // COLL-R-APP-CREATION (13/10, COL-003, decision d Adel « D2- A ») — le SERVEUR a dit que la
+  // mairie decidera (hors des creneaux du club, place libre ou non : SPEC-PLACE) : sa reponse fait
+  // foi sur le jugement local du creneau. Sans reponse : la ligne d avant, jamais une promesse.
+  const laMairieDecide = Boolean(facilitePourCreneau?.isVilleSlot && decisionDeLaVille?.mairie);
+  let phraseDeLaMairie = t(
+    'collectiviteDemandes.decision.mairieLibre',
+    'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+  );
+  if (decisionDeLaVille?.tuAcceptes) {
+    phraseDeLaMairie = t(
+      'collectiviteDemandes.decision.tuAcceptes',
+      'Ta demande partira à la Ville ; tu pourras l’accepter toi-même dans Demandes.',
+    );
+  } else if (decisionDeLaVille?.complet) {
+    phraseDeLaMairie = t(
+      'collectiviteDemandes.club.quandMeme',
+      'Tu peux demander quand même : la mairie décidera.',
+    );
+  }
   const aDesInstallationsDeLaVille = facilities.some((facility) => facility.isVilleSlot);
   const isFocused = useIsFocused();
   const {
@@ -503,7 +526,7 @@ function FacilitySelector({
             ) : null}
           </View>
 
-          {creneauChoisi && occupancyWindow?.start ? (
+          {creneauChoisi && occupancyWindow?.start && !laMairieDecide ? (
             <View
               style={[
                 ApplicationStyle.card,
@@ -526,13 +549,35 @@ function FacilitySelector({
             </View>
           ) : null}
 
-          {facilitePourCreneau?.isVilleSlot && !creneauChoisi && occupancyWindow?.start ? (
-            <Text style={[Fonts.p3, Fonts.warning500]}>
-              {t(
-                'clubInstallations.lieu.horsCreneau',
-                'Hors de tes créneaux de la Ville à cette heure.',
-              )}
-            </Text>
+          {facilitePourCreneau?.isVilleSlot && !creneauChoisi && occupancyWindow?.start
+            && !laMairieDecide ? (
+              <Text style={[Fonts.p3, Fonts.warning500]}>
+                {t(
+                  'clubInstallations.lieu.horsCreneau',
+                  'Hors de tes créneaux de la Ville à cette heure.',
+                )}
+              </Text>
+            ) : null}
+
+          {/* COLL-R-APP-CREATION — la carte orange de « Modifier » (FINITIONS11-COLL). */}
+          {laMairieDecide && occupancyWindow?.start ? (
+            <View
+              style={[
+                Spaces.padding[16],
+                Spaces.gap[4],
+                ApplicationStyle.backgroundColor.warning100,
+                { borderColor: Colors.warning500, borderRadius: 8, borderWidth: 1 },
+              ]}
+              testID="facility-selector-mairie-decide"
+            >
+              <Text style={[Fonts.p2, Fonts.warning900]}>{phraseDeLaMairie}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.warning900]}>
+                {t(
+                  'collectiviteDemandes.decision.siRefusAnnulee',
+                  'Si la mairie refuse, la séance sera annulée.',
+                )}
+              </Text>
+            </View>
           ) : null}
 
           {!creneauChoisi && selectedFacility && occupancyWindow?.start && occupancyWindow?.end ? (
@@ -573,14 +618,18 @@ function FacilitySelector({
                       })}`
                       : ''}
                   </Text>
-                  <Text
-                    style={[
-                      Fonts.p3,
-                      occupancyTone,
-                    ]}
-                  >
-                    {occupancyMessage}
-                  </Text>
+                  {/* COLL-R-APP-CREATION — sur un gymnase de la Ville, la place ne decide pas :
+                      ni « encore de la capacite », ni « validation d un dirigeant ». */}
+                  {facilitePourCreneau?.isVilleSlot ? null : (
+                    <Text
+                      style={[
+                        Fonts.p3,
+                        occupancyTone,
+                      ]}
+                    >
+                      {occupancyMessage}
+                    </Text>
+                  )}
                 </>
               ) : null}
             </View>

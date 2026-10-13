@@ -20,6 +20,14 @@ const mockGabarits = [];
 /** Proprietes recues par le selecteur d'installation. */
 const mockSelecteurs = [];
 let mockDisponibilite = { data: { data: { blocked: false } }, isError: false, isLoading: false };
+// COLL-R-APP-CREATION (13/10) — « la mairie décidera ? » a son propre témoin
+// (useMairieDecideALaCreation.CRA4.test.js) : ici, la mairie ne décide pas.
+jest.mock('../useMairieDecideALaCreation', () => ({
+  __esModule: true,
+  default: () => ({
+    complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
+  }),
+}));
 jest.mock('@/services/facility/facilityQueries', () => ({
   useGetFacilityOccupancy: () => mockDisponibilite,
 }));
