@@ -22941,6 +22941,87 @@ export default {
       teamTitle: 'Son équipe',
     },
   },
+  // 👪 PAR-L11b (13/10, D4 B) — « Inscrire mes enfants » sur un evenement public
+  // (EventChildRegistration.js).
+  childEventRegistration: {
+    actions: {
+      addChild: 'Ajouter un enfant',
+      back: 'Retour',
+      cancel: 'Annuler',
+      close: 'Fermer',
+      continue: 'Continuer ({{count}})',
+      register: 'Inscrire mes enfants',
+      send_one: 'Envoyer 1 inscription',
+      send_other: 'Envoyer {{count}} inscriptions',
+    },
+    blocked: {
+      cancelled: 'Cet événement est annulé.',
+      externalQuotaFull: 'Plus de place pour les participants extérieurs.',
+      friendly: 'Ce match amical oppose des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+      full: 'Plus de place.',
+      invitedTeamsOnly: 'Réservé aux équipes invitées.',
+      past: 'Cet événement est passé.',
+      reservationClosed: 'Cette réservation ne cherche pas de joueurs.',
+      stageDay: 'On inscrit un enfant au stage entier, depuis la page du stage.',
+      teamsOnly: 'Cet événement inscrit des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+      tournament: 'Ce tournoi inscrit des équipes : '
+        + "l'encadrement de l'équipe de ton enfant s'en occupe.",
+    },
+    errors: {
+      alreadyDecided: 'Cette demande a déjà été traitée.',
+      generic: "L'inscription n'a pas pu être envoyée. Réessaie dans un instant.",
+    },
+    organizer: {
+      accept: 'Accepter',
+      accepted: 'Inscription acceptée',
+      childLine: '{{firstname}}, {{age}} ans',
+      errorTitle: 'Action impossible',
+      parentLine: 'Parent : {{name}}',
+      refuse: 'Refuser',
+      title: 'Enfants inscrits par leurs parents',
+    },
+    reasons: {
+      alreadyPending: "Demande déjà envoyée, en attente de l'organisateur.",
+      alreadyRegistered: 'Inscription déjà acceptée.',
+      tooOld: "À partir de 13 ans, {{firstname}} s'inscrit depuis son propre compte.",
+    },
+    recap: {
+      immediate: 'Inscription immédiate : une place par enfant.',
+      request: "L'organisateur valide chaque inscription.",
+      title: 'Récapitulatif',
+    },
+    result: {
+      accepted: '{{firstname}} — inscription confirmée',
+      pending: "{{firstname}} — demande envoyée, en attente de l'organisateur",
+      refused: {
+        ALREADY_PENDING: '{{firstname}} — demande déjà en attente',
+        ALREADY_REGISTERED: '{{firstname}} — inscription déjà acceptée',
+        CHILD_ALREADY_MEMBER: '{{firstname}} — son équipe est déjà conviée à cet événement',
+        CHILD_TOO_OLD: '{{firstname}} — à partir de 13 ans, '
+          + "l'inscription se fait depuis son propre compte",
+        default: '{{firstname}} — inscription impossible',
+        EXTERNAL_QUOTA_FULL: '{{firstname}} — plus de place pour les extérieurs',
+        FULL: '{{firstname}} — plus de place',
+      },
+      title: 'Résultat',
+    },
+    sheet: {
+      childLine: '{{firstname}} · {{age}} ans',
+      defaultType: 'Événement',
+      noChild: "Tu n'as pas encore déclaré d'enfant. "
+        + 'Ajoute-le depuis « Mes enfants », puis reviens ici.',
+      reminder: '{{type}} · {{date}}',
+      title: 'Qui inscris-tu ?',
+    },
+    status: {
+      accepted: '{{firstname}} — inscription confirmée',
+      declined: '{{firstname}} — demande refusée',
+      declinedWithReason: '{{firstname}} — demande refusée : {{reason}}',
+      pending: "{{firstname}} — en attente de l'organisateur",
+    },
+  },
   // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.
   // 🤐 Aucun texte ne dit si un numéro correspond à un compte : le serveur ne le révèle pas, l'écran
   // non plus. Et chaque écran dit ce que le parent voit (les retours du coach) et ce qu'il ne voit
