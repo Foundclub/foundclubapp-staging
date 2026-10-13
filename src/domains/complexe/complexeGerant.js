@@ -224,3 +224,87 @@ export const bandeauDeLAccueil = (complexe, terrains) => {
   const sansCreneaux = terrains.find((terrain) => !aDesCreneaux(terrain));
   return sansCreneaux ? { cle: 'sansCreneaux', terrain: sansCreneaux } : null;
 };
+
+// ---------------------------------------------------------------------------------------------
+// La fiche d'un terrain (E-G08, RA3)
+// ---------------------------------------------------------------------------------------------
+
+/** Le texte pré-rempli d'un terrain « téléphone seulement » (A-G16, celui du serveur). */
+export const TEXTE_TELEPHONE_PAR_DEFAUT = 'Ce terrain ne peut être réservé que par appel au';
+
+/** Une photo de terrain : 10 Mo au plus (planche EG08 état 4, valeur SUPPOSÉE de la planche). */
+export const PHOTO_OCTETS_MAX = 10 * 1024 * 1024;
+
+/** Les photos d'un terrain : 5 au plus (serveur, `PHOTOS_MAX`). */
+export const PHOTOS_MAX = 5;
+
+/** Le nombre de joueurs d'un terrain : de 1 à 50 (serveur, `CAPACITY_MIN` / `CAPACITY_MAX`). */
+export const JOUEURS_MIN = 1;
+export const JOUEURS_MAX = 50;
+
+const PRIX_RE = /^\d+(?:[.,]\d{1,2})?$/;
+
+/**
+ * Un prix saisi : « 60 », « 6,50 », « 6.5 » ; vide = pas de prix (null) ; illisible = undefined.
+ * @param {unknown} saisie - Le texte saisi.
+ * @returns {number | null | undefined} Le montant, null, ou undefined s'il est faux.
+ */
+export const lirePrix = (saisie) => {
+  const texte = String(saisie ?? '').replace(/\s+/g, '').replace('€', '');
+  if (!texte) return null;
+  if (!PRIX_RE.test(texte)) return undefined;
+  const montant = Number(texte.replace(',', '.'));
+  return montant <= 10000 ? montant : undefined;
+};
+
+/**
+ * Un montant à remettre dans le champ de saisie : 6.5 ⇒ « 6,50 », 60 ⇒ « 60 ».
+ * @param {unknown} montant - Le montant.
+ * @returns {string} Le texte du champ.
+ */
+export const prixEnSaisie = (montant) => {
+  if (montant === null || montant === undefined || montant === '') return '';
+  const valeur = Number(montant);
+  if (!Number.isFinite(valeur)) return '';
+  return Number.isInteger(valeur) ? String(valeur) : valeur.toFixed(2).replace('.', ',');
+};
+
+/**
+ * Les erreurs de la fiche d'un terrain, champ par champ (l'erreur s'écrit sous le champ).
+ * @param {{ nom?: string, prix?: string, sport?: string | null,
+ *   lieu?: string | null }} fiche - Ce qui est saisi.
+ * @returns {{ lieu?: boolean, nom?: boolean, prix?: boolean, sport?: boolean }} Les champs faux.
+ */
+export const erreursDuTerrain = (fiche) => {
+  /** @type {{ lieu?: boolean, nom?: boolean, prix?: boolean, sport?: boolean }} */
+  const erreurs = {};
+  if (String(fiche.nom || '').trim().length < 2) erreurs.nom = true;
+  if (!fiche.sport) erreurs.sport = true;
+  if (!fiche.lieu) erreurs.lieu = true;
+  if (lirePrix(fiche.prix) === undefined) erreurs.prix = true;
+  return erreurs;
+};
+
+/**
+ * Le corps de « Enregistrer » (`POST` ou `PUT /complexes/:id/terrains`) : la liste blanche du
+ * serveur (`readTerrainPayload`). Le numéro et le texte du « téléphone seulement » ne partent
+ * qu'avec ce mode (le serveur les pré-remplit s'ils manquent).
+ * @param {{ joueurs: number, lieu: string, mode: string, nom: string,
+ *   photos: Array<{ id: number }>, prix: string, sport: string, telephone?: string,
+ *   texteTelephone?: string, unite: string }} fiche - La fiche remplie.
+ * @returns {Record<string, any>} Le corps.
+ */
+export const payloadDuTerrain = (fiche) => ({
+  basePrice: lirePrix(fiche.prix) ?? null,
+  bookingMode: fiche.mode,
+  capacity: fiche.joueurs,
+  name: String(fiche.nom || '').replace(/\s+/g, ' ').trim(),
+  photos: fiche.photos.map((photo) => photo.id),
+  priceUnit: fiche.unite,
+  setting: fiche.lieu,
+  sport: fiche.sport,
+  ...(fiche.mode === 'telephone' ? {
+    bookingPhone: String(fiche.telephone || '').trim() || null,
+    bookingPhoneText: String(fiche.texteTelephone || '').trim() || null,
+  } : {}),
+});
