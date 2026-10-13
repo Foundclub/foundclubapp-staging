@@ -144,7 +144,7 @@ describe('P3/10 — une place pour mon enfant, sur la fiche club', () => {
     });
   });
 
-  it('age inconnu seulement : la porte (la feuille dira « Âge inconnu »), pas la phrase ado', () => {
+  it('age inconnu seulement : la porte (la feuille le dira), pas la phrase ado', () => {
     expect(resolveClubDetailsActionMatrix({
       childrenUnder13Count: 0,
       childrenWithUnknownAgeCount: 1,
