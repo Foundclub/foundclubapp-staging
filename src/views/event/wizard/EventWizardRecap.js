@@ -862,10 +862,32 @@ function EventWizardRecap({ navigation }) {
       eventName: firstCreatedItem?.payload?.name || firstCreatedItem?.payload?.description || '',
       teamId: firstCreatedItem?.payload?.team || firstCreatedItem?.payload?.team?.documentId || null,
     };
-    const creationCelebration = {
+    // COLL-R-APP-CREATION (13/10, COL-003, « D2- A ») — QUI DECIDE, le serveur le dit
+    // (statut et raison rendus par POST /events, comme « Demander un creneau ») ; l installation
+    // de la Ville dit que c est la mairie (sinon : le gestionnaire du lieu). Une date suffit.
+    const statutDe = (/** @type {any} */ item) => (
+      item?.response?.data?.status || item?.response?.status
+    );
+    const raisonDe = (/** @type {any} */ item) => (
+      item?.response?.data?.pendingReason || item?.response?.pendingReason
+    );
+    const attendLaMairie = decisionDeLaVille.deLaVille && created.some((item) => (
+      statutDe(item) === 'pending_validation' && raisonDe(item) === 'facility_overbooking'
+    ));
+    let creationCelebration = {
       actionKey: created.length > 1 ? 'event_batch_created' : 'event_created',
       payload: celebrationPayload,
     };
+    if (attendLaMairie) {
+      creationCelebration = {
+        actionKey: 'event_city_request_sent',
+        payload: {
+          ...celebrationPayload,
+          clubId: state.team?.club?.documentId || null,
+          ville: decisionDeLaVille.ville,
+        },
+      };
+    }
     const seededCreatedEvent = firstCreatedId && firstCreatedItem
       ? seedCreatedEventDetailCache({
         createdItem: firstCreatedItem,

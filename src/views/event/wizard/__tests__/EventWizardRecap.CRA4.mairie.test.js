@@ -80,8 +80,11 @@ jest.mock('@/domains/event/useEvent', () => ({
   }),
 }));
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () => {} }));
+// Ce que le serveur rend à « Créer » (POST /events) : statut et raison d'attente de la séance.
+/** @type {any[]} */
+let mockCreees = [];
 jest.mock('@/services/event/eventService', () => ({
-  createEventsWithConcurrency: async () => ({ created: [], failed: [] }),
+  createEventsWithConcurrency: async () => ({ created: mockCreees, failed: [] }),
   getEventById: () => Promise.resolve(null),
   requestFeatured: () => Promise.resolve(null),
   rollbackEventsByCancel: () => Promise.resolve([]),
@@ -113,6 +116,12 @@ const ETAT = {
   type: { documentId: 'type-entrainement', name: 'Entraînement' },
   validationMode: 'auto',
 };
+const creee = (/** @type {string} */ documentId, /** @type {any} */ donnees) => ({
+  documentId,
+  payload: { name: 'Entraînement U13', team: 'u13' },
+  response: { data: { documentId, ...donnees } },
+});
+const EN_ATTENTE_DE_LA_VILLE = { pendingReason: 'facility_overbooking', status: 'pending_validation' };
 
 let semer = (/** @type {any} */ action) => action;
 /**
@@ -131,11 +140,19 @@ const aplatir = (/** @type {any} */ enfants) => {
 };
 /** @type {any[]} */
 const arbresMontes = [];
+/** @type {any[]} */
+const mockResets = [];
 const monterLeRecap = () => {
   mockGabarits.length = 0;
   mockQuestions.length = 0;
+  mockResets.length = 0;
   const navigation = {
-    canGoBack: () => true, goBack: () => {}, navigate: () => {}, push: () => {}, replace: () => {}, reset: () => {},
+    canGoBack: () => true,
+    goBack: () => {},
+    navigate: () => {},
+    push: () => {},
+    replace: () => {},
+    reset: (/** @type {any} */ config) => { mockResets.push(config); },
   };
   const rendre = (/** @type {any} */ contenu) => createElement(EventWizardProvider, null, createElement(PriseDeCourant), contenu);
   /** @type {any} */
@@ -149,11 +166,65 @@ const monterLeRecap = () => {
 const ligneDeLaMairie = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'recap-mairie-decide' && typeof n.type === 'string');
 const texteDe = (/** @type {any} */ noeud) => aplatir(noeud.props.children).trim();
 
+/**
+ * Appuie sur « Créer » et rend la célébration que l'écran suivant rejouera.
+ * @returns {Promise<any>} `creationCelebration` du premier écran de la pile.
+ */
+const creer = async () => {
+  monterLeRecap();
+  const gabarit = mockGabarits[mockGabarits.length - 1];
+  await act(async () => { await gabarit.onNext(); });
+  return mockResets[0]?.routes?.[0]?.params?.creationCelebration;
+};
+
 afterEach(() => {
   mockDecision = {
     complet: false, deLaVille: false, mairie: false, tuAcceptes: false, ville: null,
   };
+  mockCreees = [];
   act(() => { arbresMontes.splice(0).forEach((arbre) => arbre.unmount()); });
+});
+
+// COLL-R-APP-CREATION, point 2 (« D2- A ») — APRÈS « CRÉER », la séance qui attend la mairie
+// n'annonce plus « Événement créé » : le bandeau « Demande envoyée à la Ville » (son catalogue :
+// celebrationCatalog.CRA4.demandeVille.test.js). C'est le SERVEUR qui le dit (statut rendu par
+// POST /events) ; l'installation de la Ville dit QUI décide (sinon : le gestionnaire du lieu).
+describe('COLL-R-APP-CREATION — après « Créer », « Demande envoyée à la Ville »', () => {
+  const VILLE = {
+    complet: false, deLaVille: true, mairie: true, tuAcceptes: false, ville: 'Ville de Montrivage',
+  };
+
+  test('la séance revient en attente, sur un gymnase de la Ville : le bandeau de la demande, avec la Ville et le club', async () => {
+    mockDecision = VILLE;
+    mockCreees = [creee('ev-1', EN_ATTENTE_DE_LA_VILLE)];
+    expect(await creer()).toEqual({
+      actionKey: 'event_city_request_sent',
+      payload: expect.objectContaining({ clubId: 'club-A', eventId: 'ev-1', ville: 'Ville de Montrivage' }),
+    });
+  });
+
+  test('une série dont une date attend la mairie : le même bandeau', async () => {
+    mockDecision = VILLE;
+    mockCreees = [creee('ev-1', { pendingReason: 'none', status: 'confirmed' }), creee('ev-2', EN_ATTENTE_DE_LA_VILLE)];
+    expect((await creer())?.actionKey).toBe('event_city_request_sent');
+  });
+
+  test('confirmée (dans le créneau du club) : « Événement créé », comme avant', async () => {
+    mockDecision = VILLE;
+    mockCreees = [creee('ev-1', { pendingReason: 'none', status: 'confirmed' })];
+    expect((await creer())?.actionKey).toBe('event_created');
+  });
+
+  test('en attente du dirigeant (créneau du club au complet) ou d un lieu de club : pas de bandeau de la Ville', async () => {
+    mockDecision = VILLE;
+    mockCreees = [creee('ev-1', { pendingReason: 'club_slot_overflow', status: 'pending_validation' })];
+    expect((await creer())?.actionKey).toBe('event_created');
+    mockDecision = {
+      ...VILLE, deLaVille: false, mairie: false, ville: null,
+    };
+    mockCreees = [creee('ev-1', EN_ATTENTE_DE_LA_VILLE)];
+    expect((await creer())?.actionKey).toBe('event_created');
+  });
 });
 
 describe('COLL-R-APP-CREATION — le récapitulatif dit, sous le lieu, que la mairie décidera', () => {
