@@ -79,7 +79,9 @@ jest.mock('@/components/templates/ScreenContainer', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: ({ children }) => reactActuel.createElement(VueRN, null, children),
+    // 🤖 ANDROIDBAR-3 — les props du gabarit restent lisibles : c'est lui qui évite le clavier.
+    default: ({ children, ...conteneur }) => reactActuel
+      .createElement(VueRN, { conteneur }, children),
   };
 });
 
@@ -631,5 +633,17 @@ describe('🧑‍⚖️ LA BASCULE DU TERRAIN SIGNE SON VERDICT', () => {
       invalidatedBy: null,
       isValid: true,
     }));
+  });
+});
+
+describe('⌨️ ANDROIDBAR-3 — la case en cours reste au-dessus du clavier', () => {
+  it('le gabarit ÉVITE le clavier, sans 2ᵉ défilement autour de celui de la séance guidée', () => {
+    const [conteneur] = rendre().root
+      .findAll((/** @type {any} */ noeud) => Boolean(noeud.props.conteneur))
+      .map((/** @type {any} */ noeud) => noeud.props.conteneur);
+
+    // `keyboardScroll` seul ne faisait RIEN : le gabarit ne le lit que sous `keyboardAvoiding`.
+    expect(conteneur.keyboardAvoiding).toBe(true);
+    expect(conteneur.keyboardScroll).toBeFalsy();
   });
 });
