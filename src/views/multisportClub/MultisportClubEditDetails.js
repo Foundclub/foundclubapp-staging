@@ -3,9 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView, Platform, ScrollView, View,
-} from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
@@ -225,10 +223,12 @@ function MultisportClubEditDetails({ navigation, route }) {
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={[Spaces.paddingVertical[24]]}
+      keyboardAvoiding
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
+      {/* 🤖 ANDROIDBAR-4 — l'évitement du clavier est celui du ScreenContainer : le
+          décalage écrit en dur (100) laissait 20 dp de vide sous le formulaire une fois le
+          clavier refermé, et passait 10 dp SOUS le clavier sur Android 15/16 (Pixel 9). */}
+      <View
         style={[Alignments.justifySpaceBetween, Alignments.fill]}
       >
         <ScrollView
@@ -345,7 +345,7 @@ function MultisportClubEditDetails({ navigation, route }) {
             variant="Primary"
           />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenContainer>
   );
 }
