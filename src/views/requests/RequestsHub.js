@@ -73,13 +73,6 @@ import {
 
 import { useClubScope } from '@/context/ClubScopeContext';
 
-// 👪 PAR-L9b (13/10, E17) — la feuille « Répondre » range les réponses types en deux
-// familles, chacune sous son intertitre.
-const INTEREST_PRESET_SECTIONS = [
-  { kind: 'reply', titleFallback: 'RÉPONDRE', titleKey: 'requestsHub.interest.sectionReply' },
-  { kind: 'refuse', titleFallback: 'REFUSER', titleKey: 'requestsHub.interest.sectionRefuse' },
-];
-
 const isValidFilter = (value) => REQUEST_HUB_FILTERS.includes(value);
 
 const normalizeFilter = (value) => {
@@ -868,6 +861,12 @@ function RequestsHub({ navigation, route }) {
       'Choisis une réponse rapide à envoyer à la personne intéressée.',
     );
   const interestNoteLabel = t('requestsHub.interest.noteLabel', 'Ajouter un mot (facultatif)');
+  // 👪 PAR-L9b (13/10, E17) — la feuille « Répondre » range les réponses types en deux
+  // familles, chacune sous son intertitre.
+  const interestPresetSections = [
+    { kind: 'reply', title: t('requestsHub.interest.sectionReply', 'RÉPONDRE') },
+    { kind: 'refuse', title: t('requestsHub.interest.sectionRefuse', 'REFUSER') },
+  ];
   const trimmedInterestNote = interestResponseNote.trim();
 
   const handleBackPress = useCallback(() => {
@@ -1052,10 +1051,10 @@ function RequestsHub({ navigation, route }) {
               </Text>
             </View>
 
-            {INTEREST_PRESET_SECTIONS.map((section) => (
+            {interestPresetSections.map((section) => (
               <View key={section.kind} style={[{ gap: 10 }]}>
                 <Text style={[Fonts.p4Bold, Fonts.primary200]}>
-                  {t(section.titleKey, section.titleFallback)}
+                  {section.title}
                 </Text>
                 {CLUB_INTEREST_RESPONSE_PRESETS
                   .filter((preset) => preset.kind === section.kind)
