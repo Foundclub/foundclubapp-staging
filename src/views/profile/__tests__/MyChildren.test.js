@@ -1404,3 +1404,35 @@ describe('PAR-L5L6 E08 — le bandeau après une création', () => {
     expect(porteDe(arbre, 'my-children-banner-search')).toBeUndefined();
   });
 });
+
+// ===========================================================================
+// PAR-L5L6 (13/10) — E04, ÉTAT « CHARGEMENT » : deux cartes en squelette, jamais l'écran vide
+// avant d'avoir lu (design parent E04 : « chargement (squelette de 2 cartes) »).
+// ===========================================================================
+
+describe('PAR-L5L6 E04 — le chargement', () => {
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  test('🔴 pendant la lecture : deux cartes en squelette, ni écran vide ni liste', async () => {
+    mockIsLoading = true;
+    const arbre = await rendre();
+
+    expect(hote(arbre, 'my-children-loading').children).toHaveLength(2);
+    expect(texteVisible(arbre)).not.toContain('Tu n’as pas encore déclaré d’enfant.');
+    expect(hote(arbre, 'my-children-list')).toBeUndefined();
+  });
+
+  test('lu : plus de squelette', async () => {
+    mockEnfants = [unEnfant()];
+    const arbre = await rendre();
+
+    expect(hote(arbre, 'my-children-loading')).toBeUndefined();
+    expect(hote(arbre, 'my-children-list')).toBeTruthy();
+  });
+});

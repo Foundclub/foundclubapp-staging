@@ -526,7 +526,7 @@ function MyChildren({ route } = {}) {
 
   const total = comptesRelies.length + enfants.length;
   // Rien du tout — ni fiche, ni compte relié, ni demande de lien : l'écran vide du design.
-  const rienDuTout = !chargementLiens && !erreurLiens && total === 0
+  const rienDuTout = !chargementEnfants && !chargementLiens && !erreurLiens && total === 0
     && demandesEnvoyees.length === 0;
   // ErrorWrapper pose son pavé SUR ses enfants, à leur taille : sans contenu, il ne se voit pas.
   const placeDuPave = <View style={{ minHeight: 140 }} />;
@@ -581,6 +581,15 @@ function MyChildren({ route } = {}) {
           onRetry={relireLesEnfants ? () => relireLesEnfants() : undefined}
         >
           {erreurEnfants ? placeDuPave : null}
+          {/* E04 — chargement : deux cartes en squelette (le shimmer de WithDataWrapper se pose
+              sur leurs formes), jamais l'écran vide avant d'avoir lu. */}
+          {chargementEnfants ? (
+            <View style={{ gap: 12 }} testID="my-children-loading">
+              {[0, 1].map((rang) => (
+                <View key={rang} style={[feedbackCardStyle(Colors, false), { minHeight: 96 }]} />
+              ))}
+            </View>
+          ) : null}
           {rienDuTout && !erreurEnfants ? (
             <View style={{ gap: 12 }} testID="my-children-empty">
               <EmptyState
@@ -607,7 +616,7 @@ function MyChildren({ route } = {}) {
             </View>
           ) : null}
 
-          {!rienDuTout && !erreurEnfants ? (
+          {!rienDuTout && !erreurEnfants && !chargementEnfants ? (
             <View style={{ gap: 12 }} testID="my-children-list">
               {enfants.map((enfant) => (
                 <CarteDeLaFiche
