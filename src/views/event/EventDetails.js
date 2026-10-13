@@ -118,6 +118,7 @@ import {
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SharePlatform from '@/platform/share';
 // 🧾 N2 — AUCUN MODULE NOUVEAU N'ENTRE ICI : `licenseQueries` etait deja
@@ -814,6 +815,10 @@ function EventDetails({ navigation, route }) {
   );
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
+  // 🤖 ANDROIDBAR-4 — Android 15/16 : à la fermeture du clavier, Android envoie la hauteur
+  // VISIBLE comme haut du clavier ; l'évitement de la fenêtre « retard » gardait barre du bas +
+  // barre d'état de retrait (102 dp) et la carte restait trop haut. L'écoute partagée le remplace.
+  const clavierAndroid = useRetraitDuClavierAndroid(0);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
   const [lateModalUser, setLateModalUser] = useState(/** @type {User | null} */ (null));
   const [lateModalMinutes, setLateModalMinutes] = useState('0');
@@ -9870,8 +9875,14 @@ function EventDetails({ navigation, route }) {
           >
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              enabled={!clavierAndroid.ecoute}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
-              style={[Alignments.fill, Alignments.justifyCenter, Spaces.paddingHorizontal[24]]}
+              style={[
+                Alignments.fill,
+                Alignments.justifyCenter,
+                Spaces.paddingHorizontal[24],
+                { paddingBottom: clavierAndroid.retrait },
+              ]}
             >
               <TouchableOpacity activeOpacity={1} onPress={() => null}>
                 <View
