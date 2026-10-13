@@ -137,6 +137,8 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => mockPa
 jest.mock('@/components/templates/ScreenContainer', () => mockPassePlat());
 
 jest.mock('@/services/auth/authService', () => ({ deleteAccount: jest.fn() }));
+// PAR-L7 (13/10) — « Mon compte » d'un parent compte ses enfants : doublure commune.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
 jest.mock('@/services/collectivite/collectiviteQueries', () => {
   const aucune = { data: [] };
   // COLL-ACCUEIL (01/10) : la pastille de la rangee de la Ville lit les demandes en attente.
@@ -297,9 +299,11 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
       'Dashboard admin classique', 'Dashboard League', 'Déconnexion',
     ]],
     // Le parent n'avait ni l'une ni l'autre sur l'accueil (P0) : rien ne change pour lui.
+    // PAR-L7 (13/10, design parent E02, D1 A) — SA FAMILLE D'ABORD : « Mes enfants » ouvre la
+    // section, puis son profil, ses alertes, et sa carte de collection en dernier (planche 1).
     ['parent', [
-      'Ma carte de collection', 'Voir mon profil', 'Modifier mon profil', 'Mes enfants',
-      'Gérer mes alertes', ...COMPTE, 'Déconnexion',
+      'Mes enfants', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
+      'Ma carte de collection', ...COMPTE, 'Déconnexion',
     ]],
   ])('%s', (role, attendu) => {
     const { arbre } = monter(/** @type {any} */ (role));

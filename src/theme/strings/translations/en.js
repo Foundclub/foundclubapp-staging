@@ -15271,6 +15271,7 @@ export default {
       account: 'Account',
       administration: 'Administration',
       contact: 'Contact details',
+      familyProfile: 'My family and my profile',
       followUp: 'Follow-up',
       profileActivity: 'Profile & activity',
       visibility: 'Visibility',

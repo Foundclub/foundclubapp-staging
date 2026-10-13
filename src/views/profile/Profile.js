@@ -48,6 +48,8 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
+import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
@@ -89,6 +91,26 @@ const SURFACE = {
   quotaTrack: 'rgba(255,255,255,0.08)',
   sectionBg: 'rgba(255,255,255,0.04)',
   sectionBorder: 'rgba(255,255,255,0.09)',
+};
+
+/**
+ * PAR-L7 (13/10, design parent E02, décision D1 A d'Adel du 12/10) — « MON COMPTE » D'UN PARENT :
+ * sa famille d'abord. L'ordre de la planche 1 : « Mes enfants », son profil (voir, modifier), ses
+ * alertes, puis sa carte de collection. Une rangée absente de cette liste garde sa place d'avant,
+ * après elles ; les rangées de la Ville restent EN TÊTE (COLL 1c : pour un agent municipal, c'est
+ * LA raison d'ouvrir l'app). Les autres rôles gardent leur ordre.
+ */
+const ORDRE_DU_PARENT = Object.freeze(['myChildren', 'view', 'edit', 'alerts', 'myCard']);
+
+/**
+ * Le rang d'une rangée dans « Mon compte » d'un parent (plus petit = plus haut).
+ * @param {{ key: string }} rangee - La rangée.
+ * @returns {number} - -1 pour la Ville, puis l'ordre de la planche, puis le reste.
+ */
+const rangPourLeParent = (rangee) => {
+  if (rangee.key.startsWith('collectivite-')) return -1;
+  const rang = ORDRE_DU_PARENT.indexOf(rangee.key);
+  return rang === -1 ? ORDRE_DU_PARENT.length : rang;
 };
 
 /**
@@ -141,6 +163,10 @@ function Profile({ navigation, route }) {
   const hasEditableProfilePage = currentRoleKey === 'player'
     || currentRoleKey === 'coach'
     || currentRoleKey === 'president';
+  // PAR-L7 (13/10, design E02) — le parent lit combien il a d'enfants (« Mes enfants · 2 »).
+  // Les autres rôles gardent leur menu tel quel : rien n'est lu pour eux.
+  const estParent = currentRoleKey === 'parent';
+  const mesEnfants = useMesEnfantsEnBref({ actif: estParent });
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],
     [userData?.multisportClubs],
@@ -719,11 +745,12 @@ function Profile({ navigation, route }) {
   /**
    * @param {{ key: string, icon: any, label: string, onPress: () => void,
    *   destructive?: boolean, isLast?: boolean, value?: string, badge?: number,
-   *   a11y?: string }} params
+   *   nombre?: number, a11y?: string }} params - `nombre` (PAR-L7) : un compte qui n'est pas
+   *   une alerte (« 2 » enfants), dit par une pastille cyan, jamais par la pastille rouge.
    */
   const renderAccountRow = ({
-    a11y = undefined, badge = 0, destructive = false, icon, isLast = false, key, label, onPress,
-    value = undefined,
+    a11y = undefined, badge = 0, destructive = false, icon, isLast = false, key, label,
+    nombre = 0, onPress, value = undefined,
   }) => (
     <TouchableOpacity
       accessibilityLabel={a11y}
@@ -771,6 +798,9 @@ function Profile({ navigation, route }) {
           <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral300]}>{value}</Text>
         ) : null}
       </View>
+      {nombre > 0 ? (
+        <PastilleDEtat testID={`${key}-nombre`} texte={String(nombre)} ton="compte" />
+      ) : null}
       {badge > 0 ? (
         <View
           style={{
@@ -901,6 +931,13 @@ function Profile({ navigation, route }) {
       key: 'myChildren',
       label: t('profile.actions.myChildren', 'Mes enfants'),
       onPress: () => navigation.navigate(RouteNames.MyChildren),
+      // PAR-L7 (E02) — le parent lit combien il en a ; « 0 » ne s'écrit jamais.
+      ...(mesEnfants.total > 0 ? {
+        a11y: `${t('profile.actions.myChildren', 'Mes enfants')}, ${t('myChildren.list.count', {
+          count: mesEnfants.total,
+        })}`,
+        nombre: mesEnfants.total,
+      } : {}),
     },
     // 🔗 PARENT-LIEN (30/09) — LA PORTE DE L ENFANT. Un parent DEMANDE le lien ; c est ici que
     // l enfant l accepte, la refuse, voit qui est relie et le retire. Visible de 13 a 17 ans
@@ -929,13 +966,21 @@ function Profile({ navigation, route }) {
   ];
 
   // COLL-ACCUEIL — compte Ville seule : l'espace de la Ville, rien de sportif.
-  const lignesActivite = estVilleSeule
-    ? activityRows.filter((row) => row.key.startsWith('collectivite-'))
-    : activityRows;
+  // PAR-L7 (E02) — un parent : sa famille d'abord (`ORDRE_DU_PARENT`, tri stable).
+  let lignesActivite = activityRows;
+  if (estVilleSeule) {
+    lignesActivite = activityRows.filter((row) => row.key.startsWith('collectivite-'));
+  } else if (estParent) {
+    lignesActivite = [...activityRows].sort((a, b) => rangPourLeParent(a) - rangPourLeParent(b));
+  }
 
   const profileActivitySection = (
     <View style={{ gap: 10 }}>
-      <Text style={sectionLabelStyle}>{t('profile.sections.profileActivity')}</Text>
+      <Text style={sectionLabelStyle}>
+        {estParent
+          ? t('profile.sections.familyProfile', 'Ma famille et mon profil')
+          : t('profile.sections.profileActivity')}
+      </Text>
       <View style={sectionCardStyle}>
         {lignesActivite.map((row, index) => renderAccountRow({
           ...row,

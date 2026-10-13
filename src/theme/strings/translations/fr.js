@@ -16031,6 +16031,8 @@ export default {
       account: 'Compte',
       administration: 'Administration',
       contact: 'Coordonnées',
+      // PAR-L7 (13/10, design parent E02) — la section de « Mon compte » d'un PARENT.
+      familyProfile: 'Ma famille et mon profil',
       followUp: 'Suivi',
       profileActivity: 'Profil & activité',
       visibility: 'Visibilité',
