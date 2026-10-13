@@ -147,15 +147,29 @@ const ECRANS = [
     fichier: 'club/ClubFilters.js',
     rang: 1,
   },
+  // 🤖 ANDROIDBAR-5 — la console interne (appelants.md §B, « Console interne (14) »).
+  // OffreFoundclubClub.js:418 n'y est pas : son champ vit dans une ConsoleSheet (<Modal>),
+  // pas sous un ScreenContainer.
+  { champ: 'AdminClaimDetail.js:395', fichier: 'admin/AdminClaimDetail.js', rang: 1 },
+  { champ: 'AdminClubForm.js:622', fichier: 'admin/AdminClubForm.js', rang: 1 },
+  {
+    champ: 'AdminCollectiviteDetail.js:662 (CollectiviteTargetSearch)',
+    fichier: 'admin/AdminCollectiviteDetail.js',
+    rang: 1,
+  },
+  { champ: 'AdminCollectiviteForm.js:419', fichier: 'admin/AdminCollectiviteForm.js', rang: 1 },
+  { champ: 'AdminLeagueDisputes.js:243', fichier: 'admin/AdminLeagueDisputes.js', rang: 1 },
+  { champ: 'AdminPopupCampaignForm.js:484', fichier: 'admin/AdminPopupCampaignForm.js', rang: 1 },
+  { champ: 'AdminRevenue.js:786', fichier: 'admin/AdminRevenue.js', rang: 1 },
 ].map((ecran) => ({
   ...ecran,
   source: fs.readFileSync(path.join(VUES, ecran.fichier), 'utf8'),
 }));
 
 describe('ANDROIDBAR-3 — les champs « probables » restent au-dessus du clavier', () => {
-  it('le balayage lit bien les 20 écrans', () => {
+  it('le balayage lit bien les 27 écrans (20 côté utilisateurs + 7 de la console)', () => {
     // Témoin anti-faux-vert : un balayage qui ne lit rien passe au vert.
-    expect(ECRANS.filter(({ source }) => source.includes('<ScreenContainer'))).toHaveLength(20);
+    expect(ECRANS.filter(({ source }) => source.includes('<ScreenContainer'))).toHaveLength(27);
   });
 
   it.each(ECRANS)('$fichier ($champ) : le conteneur évite le clavier', ({ rang, source }) => {
