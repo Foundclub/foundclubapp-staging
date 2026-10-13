@@ -19,6 +19,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // `edgeToEdgeEnabled` passe à true, Android ≤ 14 en aura besoin aussi.
 
 /**
+ * La barre du bas (dp), ou 0 sans fournisseur de zone sûre.
+ * ponytail: l'app a TOUJOURS son fournisseur (AppProviders) ; seul un écran monté seul (31
+ * suites d'EventDetails, qui n'en lisaient pas avant ce crochet) n'en a pas. `useSafeAreaInsets`
+ * lit son contexte AVANT de lever : l'ordre des crochets ne change pas. Sortie : un fournisseur
+ * dans ces suites, puis `useSafeAreaInsets().bottom` tout court.
+ * @returns {number}
+ */
+const useBarreDuBas = () => {
+  try {
+    return useSafeAreaInsets().bottom;
+  } catch {
+    return 0;
+  }
+};
+
+/**
  * Ce qu'un écran doit laisser en bas pour que son contenu s'arrête au haut du clavier.
  * @param {number} [reserveBasse] Ce que l'écran garde DÉJÀ en bas pour la barre système
  *   (dp) : 0 si rien, `insets.bottom` si son pied s'en charge.
@@ -27,7 +43,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  *   0 clavier fermé.
  */
 export default function useRetraitDuClavierAndroid(reserveBasse = 0) {
-  const { bottom } = useSafeAreaInsets();
+  const bottom = useBarreDuBas();
   const ecoute = Platform.OS === 'android'
     && typeof Platform.Version === 'number'
     && Platform.Version >= 35;
