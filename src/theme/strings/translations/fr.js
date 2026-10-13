@@ -3014,11 +3014,11 @@ export default {
     presets: {
       full: {
         label: 'Équipe complète',
-        message: "L'équipe est complété pour le moment, on garde ton profil pour la suite.",
+        message: "L'équipe est complète pour le moment, on garde ton profil pour la suite.",
       },
       profile: {
         label: 'Compléter le profil',
-        message: 'Peux-tu compléter ton profil et preciser ton poste/niveau ?',
+        message: 'Peux-tu compléter ton profil et préciser ton poste ou ton niveau ?',
       },
       thanks: {
         label: 'Merci, on revient vers toi',
@@ -3027,6 +3027,12 @@ export default {
       trial: {
         label: 'Proposer un essai',
         message: 'On peut te proposer un essai, envoie-nous tes disponibilités.',
+      },
+      // PAR-L9b (13/10, E17) — le refus motivé ajouté, connu du serveur sous la même clé.
+      unsuitable: {
+        label: "Profil non adapté à l'équipe",
+        message: "Ton profil ne correspond pas à ce que l'équipe recherche pour le moment. "
+          + 'Merci pour ton intérêt.',
       },
     },
   },
@@ -16970,6 +16976,21 @@ export default {
     clubAssignedTitle: 'Entraîneur ajouté',
     clubClaimAssignedMessage: '{{name}} a été ajouté comme dirigeant du club.',
     clubClaimAssignedTitle: 'Dirigeant ajouté',
+    // PAR-L9b (13/10, E16, D3) — « Ouvrir une conversation » : moi, ou un·e coach que je
+    // choisis. Aucun choix fait à la place du dirigeant.
+    conversation: {
+      coachRow: '{{name}} · coach {{team}}',
+      info: "Ouvrir une conversation ne vaut pas inscription dans l'équipe.",
+      listError: 'La liste des coachs est indisponible : tu peux discuter toi-même.',
+      listLoading: 'Chargement des coachs…',
+      noCoach: 'Aucun·e coach dans {{team}}',
+      open: 'Ouvrir la conversation',
+      optionCoach: 'Un·e coach de {{team}} — je choisis qui.',
+      optionMe: 'Moi — je discute directement avec {{firstname}}.',
+      subtitleClub: '{{name}} · intérêt pour le club',
+      subtitleTeam: '{{name}} · intérêt pour {{team}}',
+      title: 'Ouvrir une conversation',
+    },
     empty: 'Aucune demande en attente',
     filters: {
       all: 'Toutes',
@@ -16993,10 +17014,15 @@ export default {
       summary: "Une équipe supplémentaire demande ce créneau sur l'installation.",
     },
     interest: {
-      responseDescription: 'Choisis une réponse rapide à envoyer au joueur intéresse.',
+      // PAR-L9b (13/10, E17) — à qui part le message, les deux familles de réponses, le mot libre.
+      noteLabel: 'Ajouter un mot (facultatif)',
+      recipient: '{{firstname}} recevra ce message.',
+      responseDescription: 'Choisis une réponse rapide à envoyer à la personne intéressée.',
       responseMissing: 'Choisis une réponse pour traiter cet intérêt.',
       responsePreview: 'Message envoyé',
       responseTitle: 'Répondre à cet intérêt',
+      sectionRefuse: 'REFUSER',
+      sectionReply: 'RÉPONDRE',
       // PAR-L9a (13/10, E17) — le pied de la feuille et la fenêtre qui suit l'envoi :
       // « Réponse envoyée à Maryline. », jamais « Félicitations » (« Équipe complète »
       // n'est pas une victoire).

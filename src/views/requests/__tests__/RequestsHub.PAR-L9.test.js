@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // Le vrai i18next en français : les libellés viennent de fr.js, pas des replis.
@@ -103,6 +104,12 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
   default: () => ({ startWhisperChat: mockStartWhisperChat }),
 }));
 
+// L9b — la liste des coachs de l'équipe visée (E16), lue par la requête d'équipe existante.
+const mockUseGetTeam = jest.fn();
+jest.mock('@/services/team/teamQueries', () => ({
+  useGetTeam: (/** @type {any[]} */ ...args) => mockUseGetTeam(...args),
+}));
+
 jest.mock('@/context/ClubScopeContext', () => ({ useClubScope: () => ({}) }));
 
 jest.mock('@/domains/guidance/guidanceRuntime', () => ({
@@ -178,6 +185,16 @@ const INTERET_MARYLINE = {
   user: {
     documentId: 'u-maryline', firstname: 'Maryline', lastname: 'Monroe',
   },
+};
+
+/** L'équipe visée, avec ses deux coachs (la requête d'équipe la rend ainsi). */
+const EQUIPE_U11F = {
+  documentId: 'team-u11f',
+  name: 'U11 Filles',
+  trainers: [
+    { documentId: 'coach-karim', firstname: 'Karim', lastname: 'Benali' },
+    { documentId: 'coach-sarah', firstname: 'Sarah', lastname: 'Lopez' },
+  ],
 };
 
 let arbreMonte = /** @type {any} */ (null);
@@ -264,6 +281,7 @@ const appuyerSurLaCarte = async (tree, geste) => {
 // 7,9 s à froid contre ~0,2 s ensuite. On le paie une fois ici, hors des témoins,
 // pour qu'aucun ne rougisse sur le chronomètre de 5 s de jest.
 beforeAll(async () => {
+  mockUseGetTeam.mockReturnValue({ data: EQUIPE_U11F, isError: false, isLoading: false });
   mockClientDeTest = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   await monterLeHub([INTERET_MARYLINE]);
   await act(async () => { arbreMonte.unmount(); });
@@ -273,6 +291,7 @@ beforeAll(async () => {
 describe('PAR-L9 — répondre à une demande d intérêt (écran Demandes)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseGetTeam.mockReturnValue({ data: EQUIPE_U11F, isError: false, isLoading: false });
     mockClientDeTest = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     respondClubInterestRequest.mockResolvedValue({ data: {} });
     mockStartWhisperChat.mockResolvedValue({ documentId: 'fil-maryline' });
@@ -335,9 +354,86 @@ describe('PAR-L9 — répondre à une demande d intérêt (écran Demandes)', ()
   });
 });
 
-describe('PAR-L9 — ① l action « conversation » (caractérisation avant L9b)', () => {
+describe('PAR-L9b — ④ la feuille « Répondre » (E17) : refus motivés, mot libre', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseGetTeam.mockReturnValue({ data: EQUIPE_U11F, isError: false, isLoading: false });
+    mockClientDeTest = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    respondClubInterestRequest.mockResolvedValue({ data: {} });
+  });
+
+  afterEach(async () => {
+    if (arbreMonte) {
+      await act(async () => { arbreMonte.unmount(); });
+      arbreMonte = null;
+    }
+    mockClientDeTest.clear();
+  });
+
+  test('la feuille dit QUI recevra le message, et range « Répondre » / « Refuser »', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'respond');
+
+    const rendu = collecterTexte(tree.toJSON()).join(' | ');
+    expect(rendu).toContain('Maryline recevra ce message.');
+    expect(rendu).not.toContain('joueur intéresse');
+    const ordre = [
+      'RÉPONDRE', 'Merci, on revient vers toi', 'Proposer un essai', 'Compléter le profil',
+      'REFUSER', 'Équipe complète', "Profil non adapté à l'équipe",
+    ].map((texte) => rendu.indexOf(texte));
+    ordre.forEach((position) => expect(position).toBeGreaterThanOrEqual(0));
+    expect([...ordre].sort((a, b) => a - b)).toEqual(ordre);
+  });
+
+  test('« Profil non adapté » + un mot : les deux partent, et la fenêtre le dit', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'respond');
+    await act(async () => { bouton(tree, "Profil non adapté à l'équipe").props.onPress(); });
+    const champ = tree.root.findByType(TextInput);
+    expect(champ.props.maxLength).toBe(280);
+    expect(champ.props.placeholder).toBe('Ajouter un mot (facultatif)');
+    await act(async () => { champ.props.onChangeText('  On garde ton contact.  '); });
+    expect(collecterTexte(tree.toJSON()).join(' | ')).toContain('On garde ton contact.');
+    await act(async () => { await bouton(tree, 'Envoyer la réponse').props.onPress(); });
+
+    expect(respondClubInterestRequest).toHaveBeenCalledWith('interest-maryline', {
+      note: 'On garde ton contact.',
+      presetKey: 'unsuitable',
+      responseType: 'preset',
+    });
+    expect(collecterTexte(tree.toJSON()).join(' | ')).toContain('Réponse envoyée à Maryline.');
+  });
+
+  test('sans mot, aucune clé `note` ne part (un vieux serveur l ignorerait)', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'respond');
+    await act(async () => { tree.root.findByType(TextInput).props.onChangeText('   '); });
+    await act(async () => { await bouton(tree, 'Envoyer la réponse').props.onPress(); });
+
+    expect(respondClubInterestRequest).toHaveBeenCalledWith('interest-maryline', {
+      presetKey: 'thanks',
+      responseType: 'preset',
+    });
+  });
+
+  test('« Annuler » referme la feuille sans rien envoyer', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'respond');
+    await act(async () => { bouton(tree, 'Annuler').props.onPress(); });
+
+    expect(respondClubInterestRequest).not.toHaveBeenCalled();
+    expect(bouton(tree, 'Envoyer la réponse')).toBeUndefined();
+  });
+});
+
+describe('PAR-L9b — ③ « Ouvrir une conversation » : moi, ou un coach choisi (D3, D3 bis)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseGetTeam.mockReturnValue({ data: EQUIPE_U11F, isError: false, isLoading: false });
     mockClientDeTest = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     respondClubInterestRequest.mockResolvedValue({ data: {} });
     mockStartWhisperChat.mockResolvedValue({ documentId: 'fil-maryline' });
@@ -351,10 +447,32 @@ describe('PAR-L9 — ① l action « conversation » (caractérisation avant L9b
     mockClientDeTest.clear();
   });
 
-  test('ouvre un tête-à-tête avec la demandeuse, le lie à la demande, puis y emmène', async () => {
+  const MOI = 'Moi — je discute directement avec Maryline.';
+  const UN_COACH = 'Un·e coach de U11 Filles — je choisis qui.';
+  const OUVRIR = 'Ouvrir la conversation';
+
+  test('le bouton de la carte OUVRE LA FEUILLE : rien n est créé ni choisi d office', async () => {
     const tree = await monterLeHub([INTERET_MARYLINE]);
 
     await appuyerSurLaCarte(tree, 'chat');
+
+    expect(mockStartWhisperChat).not.toHaveBeenCalled();
+    expect(respondClubInterestRequest).not.toHaveBeenCalled();
+    const rendu = collecterTexte(tree.toJSON()).join(' | ');
+    expect(rendu).toContain('Maryline Monroe · intérêt pour U11 Filles');
+    expect(rendu).toContain("Ouvrir une conversation ne vaut pas inscription dans l'équipe.");
+    expect(bouton(tree, MOI).props.accessibilityState).toMatchObject({ checked: false });
+    expect(bouton(tree, UN_COACH).props.accessibilityState).toMatchObject({ checked: false });
+    expect(bouton(tree, OUVRIR).props.disabled).toBe(true);
+  });
+
+  test('« Moi » : un tête-à-tête avec la personne, lié à la demande, puis on y entre', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'chat');
+    await act(async () => { bouton(tree, MOI).props.onPress(); });
+    expect(bouton(tree, OUVRIR).props.disabled).toBe(false);
+    await act(async () => { await bouton(tree, OUVRIR).props.onPress(); });
 
     expect(mockStartWhisperChat).toHaveBeenCalledWith(['u-maryline']);
     expect(respondClubInterestRequest).toHaveBeenCalledWith('interest-maryline', {
@@ -365,11 +483,80 @@ describe('PAR-L9 — ① l action « conversation » (caractérisation avant L9b
       .toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'fil-maryline' });
   });
 
+  test('« Un·e coach » : la liste des coachs de l équipe, et il faut en choisir un', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'chat');
+    await act(async () => { bouton(tree, UN_COACH).props.onPress(); });
+
+    expect(mockUseGetTeam)
+      .toHaveBeenCalledWith('team-u11f', expect.objectContaining({ enabled: true }));
+    expect(bouton(tree, 'Karim B. · coach U11 Filles')).toBeDefined();
+    expect(bouton(tree, 'Sarah L. · coach U11 Filles')).toBeDefined();
+    expect(bouton(tree, OUVRIR).props.disabled).toBe(true);
+  });
+
+  test('coach choisi : conversation À TROIS, coach nommé au serveur, puis on y entre', async () => {
+    mockStartWhisperChat.mockResolvedValue({ documentId: 'fil-a-trois' });
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'chat');
+    await act(async () => { bouton(tree, UN_COACH).props.onPress(); });
+    await act(async () => { bouton(tree, 'Karim B. · coach U11 Filles').props.onPress(); });
+    await act(async () => { await bouton(tree, OUVRIR).props.onPress(); });
+
+    expect(mockStartWhisperChat).toHaveBeenCalledWith(['u-maryline', 'coach-karim']);
+    expect(respondClubInterestRequest).toHaveBeenCalledWith('interest-maryline', {
+      chatDocumentId: 'fil-a-trois',
+      coachDocumentId: 'coach-karim',
+      responseType: 'chat',
+    });
+    expect(navigation.navigate)
+      .toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'fil-a-trois' });
+  });
+
+  test('une équipe SANS autre coach que moi : la rangée le dit et ne se choisit pas', async () => {
+    mockUseGetTeam.mockReturnValue({
+      data: {
+        ...EQUIPE_U11F,
+        trainers: [{ documentId: 'u-dirigeant', firstname: 'Paul', lastname: 'Dirigeant' }],
+      },
+      isError: false,
+      isLoading: false,
+    });
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'chat');
+
+    // Une rangée désactivée n a PAS de geste : on la cherche par son nom seul.
+    const rangee = tree.root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'radio'
+        && node.props?.accessibilityLabel === 'Aucun·e coach dans U11 Filles',
+    )[0];
+    expect(rangee).toBeDefined();
+    expect(rangee.props.disabled).toBe(true);
+    expect(rangee.props.onPress).toBeUndefined();
+    expect(bouton(tree, UN_COACH)).toBeUndefined();
+  });
+
+  test('« Annuler » referme sans rien créer', async () => {
+    const tree = await monterLeHub([INTERET_MARYLINE]);
+
+    await appuyerSurLaCarte(tree, 'chat');
+    await act(async () => { bouton(tree, MOI).props.onPress(); });
+    await act(async () => { bouton(tree, 'Annuler').props.onPress(); });
+
+    expect(mockStartWhisperChat).not.toHaveBeenCalled();
+    expect(bouton(tree, OUVRIR)).toBeUndefined();
+  });
+
   test('si le fil ne s ouvre pas, rien n est lié et l erreur se voit', async () => {
     mockStartWhisperChat.mockRejectedValue(new Error('Offre FoundClub requise.'));
     const tree = await monterLeHub([INTERET_MARYLINE]);
 
     await appuyerSurLaCarte(tree, 'chat');
+    await act(async () => { bouton(tree, MOI).props.onPress(); });
+    await act(async () => { await bouton(tree, OUVRIR).props.onPress(); });
 
     expect(respondClubInterestRequest).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
