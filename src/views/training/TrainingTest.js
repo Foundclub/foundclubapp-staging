@@ -466,9 +466,12 @@ function TrainingTest({ navigation, route }) {
       bottomInsetMode="screen"
       // ⌨️ LE CLAVIER CACHAIT LE CHAMP EN COURS. Sur la dernière carte d'essai,
       // taper une valeur ouvrait un clavier qui recouvrait exactement la case
-      // qu'on remplissait : on tapait à l'aveugle. Le défilement au clavier est
-      // l'option que ce gabarit expose, et elle était laissée à « non ».
-      keyboardScroll
+      // qu'on remplissait : on tapait à l'aveugle.
+      // 🤖 ANDROIDBAR-3 — `keyboardScroll` seul ne faisait RIEN (le gabarit ne le lit que sous
+      // `keyboardAvoiding`). C'est l'évitement qu'il faut : le ScrollView de l'écran se
+      // raccourcit au-dessus du clavier, et Android y fait défiler la case en cours. Un 2ᵉ
+      // défilement du gabarit autour de lui casserait sa physique.
+      keyboardAvoiding
     >
       <ScrollView
         contentContainerStyle={[Spaces.paddingBottom[40]]}

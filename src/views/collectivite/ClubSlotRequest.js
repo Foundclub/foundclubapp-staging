@@ -912,7 +912,12 @@ function ClubSlotRequest({
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="screen"
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 16 }}>
         <Text style={[Fonts.h2Black, Fonts.neutral00]}>
           {t('collectiviteDemandes.club.titre', 'Demander un créneau')}

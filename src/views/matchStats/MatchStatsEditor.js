@@ -1531,6 +1531,8 @@ function MatchStatsEditor({ navigation, route }) {
       bgImage="bg2"
       boundedHeight
       contentContainerStyle={[SpacesAny.paddingTop[0], SpacesAny.paddingBottom[0], Alignments.fill]}
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
     >
       {/* 📐 ST-MATCH10-BIS (point 6) — le fil d'Ariane du site (planche P3-editeur-ordi) :
           « Planning › Match › Feuille de match ». Au téléphone, le retour de l'en-tête suffit. */}

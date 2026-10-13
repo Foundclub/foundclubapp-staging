@@ -297,7 +297,13 @@ function TrainingGuided({ navigation, route }) {
     ? Number(test.recoverySeconds) : RECUP_PAR_DEFAUT;
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen" keyboardScroll>
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="screen"
+      // 🤖 ANDROIDBAR-3 — l'évitement, pas `keyboardScroll` (seul, il ne faisait rien) : le
+      // ScrollView de l'écran se raccourcit au-dessus du clavier, sans 2ᵉ défilement autour.
+      keyboardAvoiding
+    >
       <View style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[Spaces.paddingBottom[24]]}

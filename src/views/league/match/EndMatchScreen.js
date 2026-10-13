@@ -966,7 +966,12 @@ function EndMatchScreen() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
+    <ScreenContainer
+      bgImage="bg2"
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+      style={[styles.screenContainer]}
+    >
       <SafeAreaView style={styles.container}>
         <View style={styles.headerBar}>
           <View style={styles.headerSide}>
