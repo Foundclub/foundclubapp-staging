@@ -983,7 +983,12 @@ function FormulaireDeFermeture({
     );
   }
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="screen"
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 16 }}>
         <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
           {modification

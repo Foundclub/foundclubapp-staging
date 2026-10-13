@@ -8125,7 +8125,14 @@ function EventDetails({ navigation, route }) {
   // (mode `none` = plancher seul) et deux temoins le gardent dans
   // `EventDetailsBottomActions.test.js`.
   return (
-    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
+    <ScreenContainer
+      bgImage="bg2"
+      contentContainerStyle={[Spaces.gap[32], Alignments.fill]}
+      gradient={null}
+      // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+      withHeaderPadding
+    >
       {/* 🧨 S6 (recette 2.6.27) — LA PASTILLE RESPIRE SOUS LA BARRE.
           `ScreenContainer` pose un rembourrage haut EGAL a la hauteur de la
           barre, et le `gap` du conteneur s applique ENTRE les enfants, jamais
