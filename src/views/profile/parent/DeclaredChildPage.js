@@ -232,7 +232,9 @@ function DeclaredChildPage({
             {dateDAcceptation ? (
               <PastilleDEtat
                 testID="declared-child-team-accepted"
-                texte={t('myChildren.sheet.acceptedOn', { date: dateDAcceptation })}
+                texte={t('myChildren.sheet.acceptedOn', {
+                  date: dateDAcceptation, ...SANS_ECHAPPEMENT,
+                })}
                 ton="ok"
               />
             ) : null}
@@ -300,7 +302,9 @@ function DeclaredChildPage({
               />
               {jourEtMois(demande?.createdAt) ? (
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('myChildren.sheet.sentOn', { date: jourEtMois(demande?.createdAt) })}
+                  {t('myChildren.sheet.sentOn', {
+                    date: jourEtMois(demande?.createdAt), ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
               ) : null}
             </View>
