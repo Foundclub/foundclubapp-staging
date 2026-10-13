@@ -243,6 +243,25 @@ function PlanningWeekTimelineView({
   const { Colors, Fonts } = useTheme();
   const [internalDate, setInternalDate] = useState(getPlanningDefaultDate());
   const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
+  const couleurDAttente = Colors.warning400 || pendingAccentColor;
+  // COLL-R-APP-CREATION (13/10, COL-003, decision d Adel « D3- B ») — une seance EN ATTENTE dit
+  // qui decide (`raw.pendingDecider`, pose par le serveur), avec les mots de sa fiche.
+  const libelleDAttente = (/** @type {any} */ event) => {
+    const decideur = String(event?.raw?.pendingDecider || '');
+    if (decideur === 'mairie') {
+      return t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie');
+    }
+    if (decideur === 'dirigeant') {
+      return t('collectiviteDemandes.club.enAttenteDuDirigeant', 'En attente de ton dirigeant');
+    }
+    if (decideur === 'proprietaire') {
+      return t(
+        'collectiviteDemandes.club.enAttenteDuProprietaire',
+        'En attente du gestionnaire de l’installation',
+      );
+    }
+    return null;
+  };
   const currentDate = propDate || internalDate;
   const nowReference = getPlanningDefaultDate();
   const scrollViewRef = useRef(null);
@@ -828,6 +847,8 @@ function PlanningWeekTimelineView({
     const nonTranchee = etatDemande === 'datePassee'
       ? t('collectiviteCreneaux.planning.nonTrancheeDatePassee', 'Non tranchée, date passée')
       : null;
+    // COLL-R-APP-CREATION (« D3- B », P8v2) : la seance qui attend une decision, en pointilles.
+    const attente = libelleDAttente(event);
     const isCompact = event.height < 62;
     const isTiny = event.height < 38;
     const cardContent = resolvePlanningCardContent(event, { profile: cardDisplayProfile });
@@ -920,6 +941,8 @@ function PlanningWeekTimelineView({
       return true;
     };
     const tailleSeule = mode === 'week' ? 8 : 10;
+    // L attente sur sa propre ligne si elle tient ; sinon, au bout de la deuxieme.
+    const attenteSeule = Boolean(attente) && !isTiny && tient(tailleSeule);
     const nonTrancheeSeule = Boolean(nonTranchee) && !isTiny && !canShowSecondary
       && tient(tailleSeule);
     const aDeplacerSeul = aDeplacer && !isTiny && !canShowSecondary && tient(tailleSeule);
@@ -934,6 +957,7 @@ function PlanningWeekTimelineView({
         [primaryLabel, contextLabel].filter(Boolean).join(' · '),
         getPlanningTimeLabel(event),
         nonTranchee,
+        attente,
       ].filter(Boolean).join(', ')
       : undefined;
 
@@ -951,7 +975,7 @@ function PlanningWeekTimelineView({
           borderLeftWidth: mode === 'week' ? 2 : 3,
           // COLL-C4B-BIS (03/10) : Android ne trace des pointilles que si les QUATRE bords ont la
           // meme epaisseur et la meme couleur ; sinon, un trait plein (photo T10_C25_5).
-          ...(isPendingRequest || aDeplacer ? {
+          ...(isPendingRequest || aDeplacer || attente ? {
             borderColor: pendingAccentColor,
             borderLeftColor: pendingAccentColor,
             borderLeftWidth: aDeplacer ? 2 : 1,
@@ -1022,6 +1046,23 @@ function PlanningWeekTimelineView({
                 {` · ${nonTranchee}`}
               </Text>
             ) : null}
+            {attente && !attenteSeule ? (
+              <Text style={{ color: couleurDAttente }} testID="seance-en-attente">
+                {` · ${attente}`}
+              </Text>
+            ) : null}
+          </Text>
+        ) : null}
+        {attenteSeule ? (
+          <Text
+            numberOfLines={1}
+            style={[
+              Fonts.p3Bold,
+              { color: couleurDAttente, flexShrink: 0, fontSize: tailleSeule },
+            ]}
+            testID="seance-en-attente"
+          >
+            {attente}
           </Text>
         ) : null}
         {/* COL-014 : seule, quand il n y a pas de deuxieme ligne (comme « a deplacer »). */}
