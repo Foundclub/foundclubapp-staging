@@ -8,11 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 import useTheme from '@/theme/themeContext';
 
-import {
-  commonOptions,
-  getFloatingTabBarScenePaddingBottom,
-  getTabScreenCommonOptions,
-} from '@/navigation/commonOptions';
+import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
 
@@ -85,17 +81,13 @@ function ComplexeTabNavigator() {
     }),
   });
 
+  // bottom-tabs 7 ne lit plus `sceneContainerStyle` (les autres barres du bas le posent encore,
+  // sans effet) : rien à poser ici, l'écran a le même rendu que l'espace Ville.
   return (
     <Tab.Navigator
       id={undefined}
       initialRouteName={RouteNames.ComplexeAccueil}
-      screenOptions={{
-        ...commonOptions,
-        sceneContainerStyle: {
-          backgroundColor: 'transparent',
-          paddingBottom: getFloatingTabBarScenePaddingBottom(insets.bottom),
-        },
-      }}
+      screenOptions={commonOptions}
     >
       {/* Deux déclarations EXPLICITES : le témoin de parité web lit chaque nom. */}
       <Tab.Screen

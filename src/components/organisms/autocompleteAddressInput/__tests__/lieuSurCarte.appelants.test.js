@@ -15,6 +15,8 @@ import path from 'path';
 //
 // Carte des appelants (R2) mesurée le 07/10 : 30 usages dans 30 fichiers. Ce témoin lit le code
 // source : un appelant qui s'ajoute ou change d'avis doit changer cette liste, consciemment.
+// RESA-L5A1 (13/10) : 31 — « Devenir gérant » (E-G01) enregistre l'adresse d'un complexe, un lieu
+// PUBLIC (sa page est publique, il est sur la carte), comme l'adresse d'un club.
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
@@ -24,6 +26,7 @@ const LIEU_PUBLIC = [
   'components/organisms/facilitySelector/FacilitySelector.js',
   'views/admin/clubWizard/AdminClubWizardAddress.js',
   'views/club/wizard/ClubWizardAddress.js',
+  'views/complexe/ComplexeDevenirGerant.js',
   'views/facility/FacilityForm.js',
   'views/friendlyMatch/wizard/FriendlyMatchWizardLocation.js',
   'views/team/TeamEdit.js',
@@ -65,8 +68,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (30 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(30);
+  it('la carte des appelants tient toujours (31 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(31);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {

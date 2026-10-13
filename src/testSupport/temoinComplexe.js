@@ -50,7 +50,7 @@ const texteDe = (enfants) => {
  * @returns {string[]} Les textes.
  */
 const textes = (arbre) => arbre.root.findAllByType(Text)
-  .map((noeud) => texteDe(noeud.props.children));
+  .map((/** @type {any} */ noeud) => texteDe(noeud.props.children));
 
 /**
  * Les textes affichés, espaces insécables rendus ordinaires : les puces et les états vides de l'app
@@ -73,11 +73,13 @@ const pressable = (arbre, libelle) => {
     .split(String.fromCharCode(160)).join(' ');
   const contient = (/** @type {unknown} */ texte) => ordinaire(String(texte || ''))
     .includes(libelle);
-  const noeuds = arbre.root.findAll((noeud) => typeof noeud.props?.onPress === 'function'
+  const noeuds = arbre.root.findAll((/** @type {any} */ noeud) => (
+    typeof noeud.props?.onPress === 'function'
     && typeof noeud.type !== 'string'
     && (contient(noeud.props?.title)
       || contient(noeud.props?.accessibilityLabel)
-      || noeud.findAllByType(Text).some((texte) => contient(texteDe(texte.props.children)))));
+      || noeud.findAllByType(Text)
+        .some((/** @type {any} */ texte) => contient(texteDe(texte.props.children))))));
   if (!noeuds.length) throw new Error(`Aucun élément pressable « ${libelle} »`);
   return noeuds[0];
 };
@@ -89,7 +91,9 @@ const pressable = (arbre, libelle) => {
  * @returns {any | null} Le nœud, ou null.
  */
 const parRepere = (arbre, testID) => {
-  const noeuds = arbre.root.findAll((noeud) => noeud.props?.testID === testID);
+  const noeuds = arbre.root.findAll((/** @type {any} */ noeud) => (
+    noeud.props?.testID === testID
+  ));
   return noeuds[0] || null;
 };
 

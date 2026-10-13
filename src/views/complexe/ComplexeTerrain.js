@@ -112,7 +112,7 @@ function ComplexeTerrain() {
     setSport(existant.sport?.documentId || null);
     setLieu(existant.setting || null);
     setJoueurs(Number(existant.capacity) || CAPACITE_PAR_DEFAUT);
-    setPhotos((existant.photos || []).filter((photo) => photo?.id));
+    setPhotos((existant.photos || []).filter((/** @type {any} */ photo) => photo?.id));
     setMode(existant.bookingMode || 'automatique');
     setTexteTelephone(existant.bookingPhoneText || TEXTE_TELEPHONE_PAR_DEFAUT);
     setTelephone(existant.bookingPhone || '');
@@ -264,7 +264,11 @@ function ComplexeTerrain() {
       <Text style={[Fonts.p3, Fonts.neutral200]}>{dit}</Text>
     </TouchableOpacity>
   );
-  const boutonJoueurs = (/** @type {string} */ libelle, /** @type {string} */ signe, pas) => (
+  const boutonJoueurs = (
+    /** @type {string} */ libelle,
+    /** @type {string} */ signe,
+    /** @type {number} */ pas,
+  ) => (
     <TouchableOpacity
       accessibilityLabel={libelle}
       accessibilityRole="button"
@@ -481,7 +485,7 @@ function ComplexeTerrain() {
             <PhoneInput
               label={t('complexeGerant.terrain.numero', 'Numéro')}
               onBlur={() => {}}
-              onChange={(valeur) => setTelephone(String(valeur || ''))}
+              onChange={(/** @type {string} */ valeur) => setTelephone(String(valeur || ''))}
               value={telephone}
             />
             <Text style={[Fonts.p3, Fonts.neutral200]}>

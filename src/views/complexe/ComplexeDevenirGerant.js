@@ -78,8 +78,12 @@ function ComplexeDevenirGerant() {
   const [telephoneTouche, setTelephoneTouche] = useState(false);
   const [sports, setSports] = useState(/** @type {string[]} */ ([]));
   const [siret, setSiret] = useState('');
-  const [ageMinimum, setAgeMinimum] = useState(REGLES_PAR_DEFAUT.ageMinimum);
-  const [annulation, setAnnulation] = useState(REGLES_PAR_DEFAUT.annulation);
+  const [ageMinimum, setAgeMinimum] = useState(
+    /** @type {number} */ (REGLES_PAR_DEFAUT.ageMinimum),
+  );
+  const [annulation, setAnnulation] = useState(
+    /** @type {number} */ (REGLES_PAR_DEFAUT.annulation),
+  );
   const [accepte, setAccepte] = useState(false);
   const [refus, setRefus] = useState('');
   const [doublon, setDoublon] = useState(/** @type {any} */ (null));
@@ -99,7 +103,10 @@ function ComplexeDevenirGerant() {
     .filter((id) => !populaires.some((sport) => sport.documentId === id))
     .map((id) => liste.find((activite) => String(activite?.documentId) === id))
     .filter(Boolean)
-    .map((activite) => ({ label: libelleSport(activite), value: String(activite.documentId) }));
+    .map((activite) => ({
+      label: libelleSport(activite),
+      value: String(activite?.documentId),
+    }));
   const optionsSports = [
     ...populaires.map((sport) => ({ label: sport.label, value: sport.documentId })),
     ...autres,
@@ -185,7 +192,7 @@ function ComplexeDevenirGerant() {
       <PhoneInput
         label={t('complexeGerant.creation.telephone', 'Téléphone montré aux joueurs')}
         onBlur={() => {}}
-        onChange={(valeur) => {
+        onChange={(/** @type {string} */ valeur) => {
           setTelephoneTouche(true);
           setTelephone(String(valeur || ''));
         }}

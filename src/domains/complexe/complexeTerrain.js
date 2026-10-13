@@ -1,6 +1,11 @@
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
+ * @typedef {any} Traduire - La traduction (TFunction d'i18next, qui ne se réduit pas à une
+ *   signature simple ; même choix que collectiviteChiffres.js).
+ */
+
+/**
  * LE TERRAIN D'UN COMPLEXE, EN MOTS — RESA-L5A1 (13/10/2026), chantier Réservation.
  *
  * Les règles PURES que les écrans du gérant partagent (planche P00 « langage visuel », RA3 « sport
@@ -74,7 +79,7 @@ const partParJoueur = (montant, joueurs) => Math.round((montant / joueurs) * 100
  * Le prix d'un terrain tel que le joueur le lit (RA3, bloc « Ce que voient les joueurs ») :
  * au créneau, « 60 € le créneau » puis « soit 6 € par joueur à 10 » ; par joueur, « 6 € par
  * joueur » puis « 24 € pour 4 joueurs ». Sans prix : null (« rien n'est inventé »).
- * @param {(cle: string, defaut: string, valeurs?: Record<string, any>) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {{ basePrice?: number | null, capacity?: number | null,
  *   priceUnit?: string | null }} terrain - Le prix de base, le nombre de joueurs, l'unité.
  * @returns {{ principal: string, secondaire: string | null } | null} Les deux lignes, ou null.
@@ -116,7 +121,7 @@ export const lignesDePrix = (t, { basePrice, capacity, priceUnit }) => {
 
 /**
  * Le mode d'un terrain, côté gérant (P00 bloc 5).
- * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {unknown} mode - `automatique | manuel | telephone`.
  * @returns {string} Le libellé, ou '' pour un mode inconnu.
  */
@@ -135,7 +140,7 @@ export const libelleMode = (t, mode) => {
 
 /**
  * Intérieur ou extérieur.
- * @param {(cle: string, defaut: string) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {unknown} lieu - `interieur | exterieur`.
  * @returns {string} Le libellé, ou ''.
  */
@@ -158,7 +163,7 @@ export const libelleSport = (sport) => {
 
 /**
  * La ligne d'une carte de terrain : « Foot à 5 · Extérieur · 10 joueurs » (E-G07).
- * @param {(cle: string, defaut: string, valeurs?: Record<string, any>) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {{ capacity?: number | null, setting?: string | null, sport?: any }} terrain - Le terrain.
  * @returns {string} La ligne.
  */
@@ -324,7 +329,7 @@ export const decoupagePlage = ({ durationMinutes, from, to }) => {
 
 /**
  * Le résumé d'une plage : « 17 h – 23 h · créneaux de 1 h · 6 créneaux » (RA4, « Tes plages »).
- * @param {(cle: string, defaut: string, valeurs?: Record<string, any>) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {{ durationMinutes: number, from: string, to: string }} plage - La plage.
  * @returns {string} Le résumé.
  */
@@ -348,7 +353,7 @@ export const resumePlage = (t, plage) => {
 
 /**
  * Les heures d'un tarif : « toute la journée » ou « de 18 h à 22 h » (RA4, « Tarifs »).
- * @param {(cle: string, defaut: string, valeurs?: Record<string, any>) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {{ from?: string, to?: string }} tarif - Le tarif.
  * @returns {string} Le texte.
  */
@@ -363,6 +368,13 @@ export const resumeTarif = (t, tarif) => (
 );
 
 /**
+ * Une liste lue du serveur : le tableau tel quel, sinon une liste vide.
+ * @param {unknown} valeur - Ce que le serveur a rendu.
+ * @returns {any[]} La liste.
+ */
+const liste = (valeur) => (Array.isArray(valeur) ? valeur : []);
+
+/**
  * Le prix d'un créneau : le tarif le PLUS PRÉCIS qui couvre son heure de début (jour et heure,
  * puis jour, puis prix de base) ; null quand rien n'est fixé. La règle du serveur
  * (`resolvePrice`), pour que l'aperçu dise ce que le joueur lira.
@@ -373,7 +385,7 @@ export const resumeTarif = (t, tarif) => (
  * @returns {number | null} Le prix.
  */
 export const prixDuCreneau = (plan, prixDeBase, jour, minutes) => {
-  const tarifs = Array.isArray(plan?.rates) ? plan.rates : [];
+  const tarifs = liste(plan?.rates);
   const parHeure = tarifs.find((tarif) => tarif.from !== undefined && tarif.from !== null
     && tarif.days.includes(jour)
     && minutes >= /** @type {number} */ (minutesDe(tarif.from))
@@ -394,9 +406,9 @@ export const prixDuCreneau = (plan, prixDeBase, jour, minutes) => {
  * @returns {Array<{ a: string, de: string, prix: Array<number | null> }>} La grille.
  */
 export const prixDeLaSemaine = (plan, prixDeBase) => {
-  const plages = Array.isArray(plan?.ranges) ? plan.ranges : [];
+  const plages = liste(plan?.ranges);
   if (!plages.length) return [];
-  const tarifs = Array.isArray(plan?.rates) ? plan.rates : [];
+  const tarifs = liste(plan?.rates);
   const bornes = new Set();
   plages.forEach((plage) => {
     bornes.add(minutesDe(plage.from));
@@ -454,9 +466,9 @@ export const creneauxDuJour = (plan, date) => {
   /** @type {Array<{ debut: number, from: string, to: string }>} */
   const creneaux = [];
   const periode = plan.period;
-  const dansLaPeriode = Boolean(periode)
-    && date >= periode.from
-    && (!periode.until || date <= periode.until);
+  const dansLaPeriode = periode
+    ? date >= periode.from && (!periode.until || date <= periode.until)
+    : false;
   if (dansLaPeriode) {
     const jour = jourDeLaSemaine(date);
     (plan.ranges || []).filter((plage) => plage.days.includes(jour)).forEach((plage) => {
@@ -482,12 +494,12 @@ export const creneauxDuJour = (plan, date) => {
  * La ligne « Ouvert : lun-ven 17 h – 23 h, sam-dim 9 h – 22 h » d'une carte de terrain (E-G07) :
  * les jours qui ont exactement les mêmes heures se regroupent ; deux plages un même jour
  * s'écrivent « 9 h – 12 h et 14 h – 23 h ». Aucune plage : null (« Aucun créneau ouvert »).
- * @param {(cle: string, defaut: string, valeurs?: Record<string, any>) => string} t - Traduction.
+ * @param {Traduire} t - Traduction.
  * @param {{ ranges?: any[] } | null | undefined} plan - Le modèle de créneaux.
  * @returns {string | null} La ligne, ou null.
  */
 export const resumeOuverture = (t, plan) => {
-  const plages = Array.isArray(plan?.ranges) ? plan.ranges : [];
+  const plages = liste(plan?.ranges);
   if (!plages.length) return null;
   const heuresDuJour = [1, 2, 3, 4, 5, 6, 7].map((jour) => plages
     .filter((plage) => plage.days.includes(jour))

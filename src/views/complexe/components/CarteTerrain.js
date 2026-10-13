@@ -40,7 +40,9 @@ function CarteTerrain({ onOuvrir, onPlus = undefined, terrain }) {
     priceUnit: terrain?.priceUnit,
   });
   const ouverture = resumeOuverture(t, terrain?.slotPlan);
-  const photo = Array.isArray(terrain?.photos) ? terrain.photos.find((p) => p?.url)?.url : null;
+  const photo = Array.isArray(terrain?.photos)
+    ? terrain.photos.find((/** @type {any} */ p) => p?.url)?.url
+    : null;
 
   return (
     <View

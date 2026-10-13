@@ -67,7 +67,9 @@ function ComplexeReglages() {
     setRegles((avant) => ({ ...avant, [cle]: valeur }));
   };
   const borne = (/** @type {string} */ cle, /** @type {number} */ valeur) => {
-    const { max, min } = REGLES_DU_SERVEUR.bornes[cle];
+    const { max, min } = /** @type {Record<string, { max: number, min: number }>} */ (
+      REGLES_DU_SERVEUR.bornes
+    )[cle];
     return Math.min(max, Math.max(min, valeur));
   };
 

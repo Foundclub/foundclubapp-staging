@@ -70,7 +70,13 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
     }
   };
 
-  const styleDe = (/** @type {EtatDuCreneau} */ etat, /** @type {string} */ couleur) => {
+  /**
+   * Le style d'un créneau selon son état.
+   * @param {EtatDuCreneau} etat - L'état.
+   * @param {string} couleur - La couleur du sport.
+   * @returns {import('react-native').ViewStyle} Le style.
+   */
+  const styleDe = (etat, couleur) => {
     switch (etat) {
       case 'app':
         return { backgroundColor: withAlpha(couleur, 0.85), borderColor: couleur };

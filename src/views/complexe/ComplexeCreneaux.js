@@ -372,7 +372,11 @@ function ComplexeCreneaux() {
       })}
     </View>
   );
-  const pas = (/** @type {string} */ libelle, /** @type {string} */ signe, ajout) => (
+  const pas = (
+    /** @type {string} */ libelle,
+    /** @type {string} */ signe,
+    /** @type {() => void} */ ajout,
+  ) => (
     <TouchableOpacity
       accessibilityLabel={libelle}
       accessibilityRole="button"
@@ -564,7 +568,7 @@ function ComplexeCreneaux() {
       <>
         <DatePickerInput
           label={t('complexeGerant.creneaux.du', 'Du')}
-          onChange={(saisie) => {
+          onChange={(/** @type {string} */ saisie) => {
             const date = enDate(saisie);
             if (date) changerPeriode({ from: date });
           }}
@@ -597,7 +601,7 @@ function ComplexeCreneaux() {
         {sansFin ? null : (
           <DatePickerInput
             label={t('complexeGerant.creneaux.au', 'Au')}
-            onChange={(saisie) => {
+            onChange={(/** @type {string} */ saisie) => {
               const date = enDate(saisie);
               if (date) changerPeriode({ until: date });
             }}
@@ -651,12 +655,12 @@ function ComplexeCreneaux() {
       )}
       <TimePickerInput
         label={t('complexeGerant.creneaux.ouverture', 'Ouverture')}
-        onChange={(valeur) => setPlage({ ...plage, de: String(valeur) })}
+        onChange={(/** @type {string} */ valeur) => setPlage({ ...plage, de: String(valeur) })}
         value={plage.de}
       />
       <TimePickerInput
         label={t('complexeGerant.creneaux.fermeture', 'Fermeture')}
-        onChange={(valeur) => setPlage({ ...plage, a: String(valeur) })}
+        onChange={(/** @type {string} */ valeur) => setPlage({ ...plage, a: String(valeur) })}
         value={plage.a}
       />
       <ChoiceChipGroup
@@ -740,12 +744,12 @@ function ComplexeCreneaux() {
         <>
           <TimePickerInput
             label={t('complexeGerant.creneaux.de', 'De')}
-            onChange={(valeur) => setTarif({ ...tarif, de: String(valeur) })}
+            onChange={(/** @type {string} */ valeur) => setTarif({ ...tarif, de: String(valeur) })}
             value={tarif.de}
           />
           <TimePickerInput
             label={t('complexeGerant.creneaux.a', 'À')}
-            onChange={(valeur) => setTarif({ ...tarif, a: String(valeur) })}
+            onChange={(/** @type {string} */ valeur) => setTarif({ ...tarif, a: String(valeur) })}
             value={tarif.a}
           />
         </>
@@ -767,17 +771,21 @@ function ComplexeCreneaux() {
       </Text>
       <DatePickerInput
         label={t('complexeGerant.creneaux.date', 'Date')}
-        onChange={(saisie) => setPonctuel({ ...ponctuel, date: String(saisie) })}
+        onChange={(/** @type {string} */ saisie) => setPonctuel({
+          ...ponctuel, date: String(saisie),
+        })}
         value={ponctuel.date}
       />
       <TimePickerInput
         label={t('complexeGerant.creneaux.de', 'De')}
-        onChange={(valeur) => setPonctuel({ ...ponctuel, de: String(valeur) })}
+        onChange={(/** @type {string} */ valeur) => setPonctuel({
+          ...ponctuel, de: String(valeur),
+        })}
         value={ponctuel.de}
       />
       <TimePickerInput
         label={t('complexeGerant.creneaux.a', 'À')}
-        onChange={(valeur) => setPonctuel({ ...ponctuel, a: String(valeur) })}
+        onChange={(/** @type {string} */ valeur) => setPonctuel({ ...ponctuel, a: String(valeur) })}
         value={ponctuel.a}
       />
     </View>
