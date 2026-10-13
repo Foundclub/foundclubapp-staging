@@ -45,6 +45,7 @@ let mockEnfants;
 let mockIsLoading;
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
+const mockGoBack = jest.fn();
 const mockSupprimer = jest.fn();
 
 jest.mock('react-i18next', () => {
@@ -110,6 +111,7 @@ jest.mock('@react-navigation/native', () => ({
       mockEcouteurs[type] = ecouteur;
       return () => { delete mockEcouteurs[type]; };
     },
+    goBack: mockGoBack,
     navigate: mockNavigate,
     push: mockPush,
   }),
@@ -840,8 +842,9 @@ describe('ST-RETOURS2 — la page d un enfant de moins de 13 ans (planche 22, et
     const texte = texteVisible(await rendreLaFiche('lea'));
 
     expect(texte).toContain('LEA');
-    expect(texte)
-      .toContain('AVATAR:Lea Test | Lea Test | 7 ans · Pas encore d’équipe | Mon enfant');
+    // PAR-L5L6 (E07) — la ligne sous le nom dit l'âge seul : l'équipe a SON bloc.
+    expect(texte).toContain('AVATAR:Lea Test | Lea Test | 7 ans | Mon enfant');
+    expect(texte).toContain('Son équipe | Pas encore d’équipe | Chercher un club pour Lea');
     expect(texte).toContain('Stats et retours de match');
     expect(texte).toContain('Ils arrivent quand Lea a 13 ans et son propre compte, relié au tien.');
     expect(texte).toContain('Chercher un club pour Lea');
@@ -1260,5 +1263,91 @@ describe('PAR-L5L6 E06 — « Comment ça marche ? »', () => {
     await act(async () => { pressable(arbre, 'Fermer').props.onPress(); });
 
     expect(hote(arbre, 'my-children-help')).toBeUndefined();
+  });
+});
+
+// ===========================================================================
+// PAR-L5L6 (13/10) — E07 BRANCHÉE : LA FICHE DE L'ENFANT DANS LA ROUTE « MES ENFANTS ».
+// La fiche lit SES demandes dans la lecture commune ; « Modifier sa fiche » ouvre le
+// formulaire ; « Supprimer la fiche » confirme, ramène à la liste et l'annonce.
+// ===========================================================================
+
+describe('PAR-L5L6 E07 — la fiche, branchée sur la route', () => {
+  const MARTIN = unEnfant({
+    age: 9, documentId: 'martin', firstname: 'Martin', lastname: 'Test',
+  });
+
+  /**
+   * Monte la fiche d'un enfant (la route « Mes enfants » avec \`childDocumentId\`).
+   * @param {string} childDocumentId - La fiche ouverte.
+   * @returns {Promise<any>} L arbre rendu.
+   */
+  const rendreSaFiche = async (childDocumentId) => {
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<MyChildren route={{ params: { childDocumentId } }} />);
+    });
+    return arbre;
+  };
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant(), MARTIN];
+    mockDemandes = [{
+      club: { documentId: 'club-smuc', name: 'SMUC' },
+      createdAt: '2026-10-11T09:00:00.000Z',
+      declaredChild: { documentId: 'martin', firstname: 'Martin' },
+      documentId: 'dem-m1',
+      status: 'pending',
+      team: { documentId: 'basket', name: 'Basket' },
+    }];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  test('🔴 la fiche de Martin montre SA demande ; celle de Léa, aucune', async () => {
+    expect(texteVisible(await rendreSaFiche('martin')))
+      .toContain('Ses demandes | En attente | Club  SMUC');
+    expect(texteVisible(await rendreSaFiche('enfant-1'))).not.toContain('Ses demandes');
+  });
+
+  test('« Modifier sa fiche » ouvre le formulaire de CETTE fiche', async () => {
+    const arbre = await rendreSaFiche('martin');
+
+    await act(async () => { pressable(arbre, 'Modifier sa fiche').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('ChildEdit', { childDocumentId: 'martin' });
+  });
+
+  test('🔴 « Supprimer la fiche » : confirmation, retour à la liste, et l annonce', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const fiche = await rendreSaFiche('martin');
+
+    await act(async () => { porteDe(fiche, 'declared-child-delete').props.onPress(); });
+    expect(alerte.mock.calls[0][0]).toBe('Supprimer la fiche de Martin ?');
+    await act(async () => { alerte.mock.calls[0][2][1].onPress(); });
+    expect(mockSupprimer).toHaveBeenCalledWith('martin', expect.any(Object));
+    expect(mockGoBack).not.toHaveBeenCalled();
+
+    await act(async () => { mockSupprimer.mock.calls[0][1].onSuccess(); });
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
+    // La liste, quand on y revient, le dit.
+    expect(texteVisible(await rendre())).toContain('La fiche de Martin est supprimée.');
+    alerte.mockRestore();
+  });
+
+  test('depuis le menu de la LISTE, une suppression ne fait pas « retour »', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const liste = await rendre();
+
+    await act(async () => { porteDe(liste, 'declared-child-menu-martin').props.onPress(); });
+    await act(async () => { porteDe(liste, 'child-menu-delete').props.onPress(); });
+    await act(async () => { alerte.mock.calls[0][2][1].onPress(); });
+    await act(async () => { mockSupprimer.mock.calls[0][1].onSuccess(); });
+
+    expect(mockGoBack).not.toHaveBeenCalled();
+    alerte.mockRestore();
   });
 });

@@ -22891,6 +22891,21 @@ export default {
       // 18 ans : le lien parental s'éteint tout seul, c'est la loi.
       adultHint: '{{firstname}} est majeur : il gère son compte seul.',
     },
+    // PAR-L5L6 (13/10, design parent E07, planche 3) — la fiche d'un enfant : son équipe (le
+    // club sur SA ligne), ses demandes en attente, ses infos sportives.
+    sheet: {
+      acceptedOn: 'Acceptée le {{date}}',
+      complete: 'Compléter',
+      edit: 'Modifier',
+      numberLabel: 'Numéro de maillot',
+      pending: 'En attente',
+      positionLabel: 'Poste',
+      requestsError: 'Impossible de charger ses demandes.',
+      requestsTitle: 'Ses demandes',
+      sentOn: 'Envoyée le {{date}}',
+      sportTitle: 'Infos sportives',
+      teamTitle: 'Son équipe',
+    },
   },
   // PARENT-LIEN (30/09, « lien B » d'Adel) — le lien parent ↔ compte d'un enfant de 13 à 17 ans.
   // 🤐 Aucun texte ne dit si un numéro correspond à un compte : le serveur ne le révèle pas, l'écran

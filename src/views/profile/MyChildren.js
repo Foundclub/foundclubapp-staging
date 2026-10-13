@@ -357,7 +357,11 @@ function MyChildren({ route } = {}) {
 
   // PAR-L5L6 — les demandes de place de MES ENFANTS : une lecture pour toutes les fiches. Sa
   // clé de cache porte `includeChildRequests` (elle ne se mélange pas à celle de la fiche club).
-  const { data: mesDemandes } = useGetMyClubInterestRequests(
+  const {
+    data: mesDemandes,
+    error: erreurDemandes,
+    refetch: relireLesDemandes,
+  } = useGetMyClubInterestRequests(
     { includeChildRequests: true, includeHistory: true },
     { enabled: enfants.length > 0 },
   );
@@ -405,7 +409,8 @@ function MyChildren({ route } = {}) {
     });
   }, [navigation]);
 
-  const demanderSuppression = useCallback((enfant) => {
+  // E07 — depuis SA fiche, une suppression réussie ramène aussi à la liste (`revenir`).
+  const demanderSuppression = useCallback((enfant, { revenir = false } = {}) => {
     const prenom = enfant?.firstname || '';
     Alert.alert(
       t('myChildren.confirmDelete.title', 'Supprimer cette fiche ?', {
@@ -423,14 +428,21 @@ function MyChildren({ route } = {}) {
               t('myChildren.errors.delete', 'Impossible de supprimer cette fiche pour le moment.'),
             ),
             // E05 — « La fiche d'Anissa est supprimée. » (aujourd'hui : aucun message).
-            onSuccess: () => annoncer({ firstname: prenom, type: 'supprimee' }),
+            onSuccess: () => {
+              annoncer({ firstname: prenom, type: 'supprimee' });
+              if (revenir) navigation.goBack();
+            },
           }),
           style: 'destructive',
           text: t('myChildren.confirmDelete.confirm', 'Supprimer'),
         },
       ],
     );
-  }, [supprimerEnfant, t]);
+  }, [navigation, supprimerEnfant, t]);
+  const supprimerDepuisLaFiche = useCallback(
+    (enfant) => demanderSuppression(enfant, { revenir: true }),
+    [demanderSuppression],
+  );
 
   // C4 du design parent — « Annuler » une demande de lien partait SANS confirmation et sans
   // message d'erreur. Deux choix : sur le site, `Alert` devient `window.confirm`.
@@ -491,7 +503,16 @@ function MyChildren({ route } = {}) {
         >
           <WithDataWrapper error={erreurEnfants?.message} isLoading={chargementEnfants}>
             {enfantOuvert ? (
-              <DeclaredChildPage enfant={enfantOuvert} onSearchClub={chercherUnClub} />
+              <DeclaredChildPage
+                demandes={demandesDe(enfantOuvert?.documentId, lignesDeDemandes)}
+                demandesEnErreur={Boolean(erreurDemandes)}
+                enfant={enfantOuvert}
+                onDelete={supprimerDepuisLaFiche}
+                onEdit={ouvrirFormulaire}
+                onGiveAccount={relierUnCompte}
+                onRetryDemandes={relireLesDemandes ? () => relireLesDemandes() : undefined}
+                onSearchClub={chercherUnClub}
+              />
             ) : (
               <Text style={[Fonts.p2, Fonts.neutral200]}>
                 {t('myChildren.declared.notFound')}

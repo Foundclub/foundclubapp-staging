@@ -13521,6 +13521,19 @@ export default {
       years_one: '{{count}} year old',
       years_other: '{{count}} years old',
     },
+    sheet: {
+      acceptedOn: 'Accepted on {{date}}',
+      complete: 'Complete',
+      edit: 'Edit',
+      numberLabel: 'Shirt number',
+      pending: 'Pending',
+      positionLabel: 'Position',
+      requestsError: 'Unable to load their requests.',
+      requestsTitle: 'Their requests',
+      sentOn: 'Sent on {{date}}',
+      sportTitle: 'Sports info',
+      teamTitle: 'Their team',
+    },
   },
   myEventList: {
     actions: {
