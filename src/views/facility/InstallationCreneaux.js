@@ -57,6 +57,7 @@ import {
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
+import { assignClubPlanningColors, legendeDesClubs } from '@/utils/facilityPlanningColor';
 import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 
 import { useIsDesktop } from '@/responsive';
@@ -226,6 +227,14 @@ function InstallationCreneaux() {
   const nom = installation.name || meta.facility?.name || '';
   const capacite = Math.max(1, Number(installation.maxSlots) || 1);
   const creneaux = Array.isArray(actifs.data?.data) ? actifs.data.data : [];
+  // 🎨 COLL-R-A6 (13/10, COL-019, décision d'Adel D13 = A) : chaque créneau à la couleur de SON
+  // club — son rang dans la liste des clubs de la Ville, la même règle et la même liste que
+  // « Planning » : un club a la même couleur sur toutes les installations. Légende au-delà de 2.
+  const creneauxColores = assignClubPlanningColors(
+    creneaux,
+    Array.isArray(clubs.data) ? clubs.data : null,
+  );
+  const legende = legendeDesClubs(creneauxColores);
   const creneauxRetires = canManage && Array.isArray(retires.data?.data) ? retires.data.data : [];
   const clubsRattaches = (Array.isArray(clubs.data) ? clubs.data : [])
     .filter((club) => club?.documentId && club?.name)
@@ -307,7 +316,7 @@ function InstallationCreneaux() {
         {
           backgroundColor: withAlpha(Colors.primary800, 0.6),
           borderColor: withAlpha(Colors.neutral00, 0.12),
-          borderLeftColor: Colors.primary500,
+          borderLeftColor: creneau.displayColor || Colors.primary500,
           borderLeftWidth: 3,
           borderRadius: 14,
           borderWidth: 1,
@@ -378,23 +387,44 @@ function InstallationCreneaux() {
         />
       );
     }
-    const parJour = groupSlotsByWeekday(creneaux);
+    const parJour = groupSlotsByWeekday(creneauxColores);
+    const blocLegende = legende.length > 2 ? (
+      <View
+        accessibilityLabel={t('collectiviteCreneaux.creneaux.legende', 'Couleurs des clubs')}
+        style={[Alignments.row, { columnGap: 16, flexWrap: 'wrap', rowGap: 6 }]}
+        testID="creneaux-legende"
+      >
+        {legende.map(({ couleur, nom: club }) => (
+          <View key={club} style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
+            <View style={{
+              backgroundColor: couleur, borderRadius: 3, height: 10, width: 10,
+            }}
+            />
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{club}</Text>
+          </View>
+        ))}
+      </View>
+    ) : null;
     if (isDesktop) {
       // Ordinateur (P4v2-ordi, etat A) : la semaine type A L ECHELLE DES HEURES. Un bloc se gere ;
       // une case vide ouvre « Attribuer », deja rempli du jour et de l heure (COLL-C2B-BIS).
       return (
-        <SeasonSlotWeekGrid
-          capacite={capacite}
-          creneaux={creneaux}
-          fermeture={toMinutes(installation.closingTime)}
-          onAttribuer={canManage ? attribuerALHeure : undefined}
-          onCreneau={(creneau) => setPanneau({ creneau, type: 'gerer' })}
-          ouverture={toMinutes(installation.openingTime)}
-        />
+        <View style={{ gap: 12 }}>
+          <SeasonSlotWeekGrid
+            capacite={capacite}
+            creneaux={creneauxColores}
+            fermeture={toMinutes(installation.closingTime)}
+            onAttribuer={canManage ? attribuerALHeure : undefined}
+            onCreneau={(creneau) => setPanneau({ creneau, type: 'gerer' })}
+            ouverture={toMinutes(installation.openingTime)}
+          />
+          {blocLegende}
+        </View>
       );
     }
     return (
       <View style={{ gap: 8 }}>
+        {blocLegende}
         {parJour.map(({ slots, weekday }) => (
           <View key={`jour-${weekday}`} style={{ gap: 8 }}>
             <Text

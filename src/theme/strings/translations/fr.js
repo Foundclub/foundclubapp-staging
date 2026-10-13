@@ -5947,6 +5947,8 @@ export default {
       completDe: 'complet {{heures}}',
       du: 'du {{debut}} au {{fin}}',
       erreur: 'Impossible de charger les créneaux',
+      // COLL-R-A6 (13/10, COL-019, planche P7v4-couleur) : la légende, au-delà de 2 clubs.
+      legende: 'Couleurs des clubs',
       onglet: 'Créneaux',
       ongletInfos: 'Infos',
       ongletPlanning: 'Planning',

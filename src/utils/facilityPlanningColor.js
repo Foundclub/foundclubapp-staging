@@ -104,31 +104,72 @@ export const CLUB_PLANNING_PALETTE = [1, 4, 5, 6, 0, 2, 3, 7, 8, 9]
 const clubKeyOf = (block) => String(block?.club?.documentId || block?.club?.name || '').trim();
 
 /**
+ * Les cles des clubs de la Ville, dans l'ordre de sa liste, sans doublon.
+ * @param {Array<{ documentId?: string, name?: string }> | null | undefined} clubsDeLaVille - La
+ *   liste des clubs rattaches, telle que le serveur la rend (par nom).
+ * @returns {string[]} Les cles.
+ */
+const clesDesClubsDeLaVille = (clubsDeLaVille) => [...new Set(
+  (Array.isArray(clubsDeLaVille) ? clubsDeLaVille : [])
+    .map((club) => String(club?.documentId || club?.name || '').trim())
+    .filter(Boolean),
+)];
+
+/**
  * Une couleur par club : chaque bloc recoit `displayColor`, la couleur de SON club.
- * Les clubs sont ranges par nom (puis identifiant) avant d'etre colores : un club
- * garde sa couleur quel que soit l'ordre des blocs de la semaine. Un bloc sans club
- * garde la couleur de son installation (pas de `displayColor`).
- * ponytail: au-dela de 10 clubs sur une meme installation, les couleurs se repetent
- * (la palette en compte 10) — voie de sortie : une legende par club.
+ * COLL-R-A6 (13/10/2026, COL-019, decision d'Adel D13 = A) — avec `clubsDeLaVille`, la couleur
+ * d'un club est son RANG DANS LA LISTE DES CLUBS DE LA VILLE : la meme dans « Creneaux », dans
+ * « Planning » et dans la legende, une semaine ou il est seul comme une semaine ou il en suit un
+ * autre. Avant, elle suivait son rang parmi les clubs PRESENTS dans la vue, ranges par nom : elle
+ * changeait d'une semaine et d'une installation a l'autre. Un club absent de la liste (pas rattache
+ * a cette Ville) prend les couleurs suivantes. Sans la liste (lecteur qui n'est pas la Ville), les
+ * clubs presents sont ranges par nom, comme avant. Un bloc sans club garde la couleur de son
+ * installation (pas de `displayColor`).
+ * ponytail: au-dela de 10 clubs, les couleurs se repetent (la palette en compte 10), et un club qui
+ * rejoint la Ville decale ceux qui le suivent — voie de sortie : la couleur choisie a la main par
+ * la Ville (lot « couleur a la main », un champ serveur).
  * @param {any[] | null | undefined} blocks - Les blocs du planning (deja normalises).
+ * @param {Array<{ documentId?: string, name?: string }> | null} [clubsDeLaVille] - Les clubs
+ *   rattaches a la Ville, dans l'ordre de sa liste.
  * @returns {any[]} Les memes blocs, colores par club.
  */
-export const assignClubPlanningColors = (blocks) => {
+export const assignClubPlanningColors = (blocks, clubsDeLaVille = null) => {
   if (!Array.isArray(blocks)) return [];
   const clubs = new Map();
   blocks.forEach((block) => {
     const key = clubKeyOf(block);
     if (key && !clubs.has(key)) clubs.set(key, String(block?.club?.name || ''));
   });
+  const ordreDeLaVille = clesDesClubsDeLaVille(clubsDeLaVille);
+  const horsDeLaListe = [...clubs.entries()]
+    .filter(([key]) => !ordreDeLaVille.includes(key))
+    .sort(([keyA, nameA], [keyB, nameB]) => (
+      nameA.localeCompare(nameB, 'fr') || keyA.localeCompare(keyB)
+    ))
+    .map(([key]) => key);
   const colorByClub = new Map(
-    [...clubs.entries()]
-      .sort(([keyA, nameA], [keyB, nameB]) => (
-        nameA.localeCompare(nameB, 'fr') || keyA.localeCompare(keyB)
-      ))
-      .map(([key], index) => [key, CLUB_PLANNING_PALETTE[index % CLUB_PLANNING_PALETTE.length]]),
+    [...ordreDeLaVille, ...horsDeLaListe]
+      .map((key, index) => [key, CLUB_PLANNING_PALETTE[index % CLUB_PLANNING_PALETTE.length]]),
   );
   return blocks.map((block) => {
     const color = colorByClub.get(clubKeyOf(block));
     return color ? { ...block, displayColor: color } : block;
   });
+};
+
+/**
+ * COLL-R-A6 (COL-019, planche P7v4-couleur) — la legende « couleur -> club » des blocs DEJA
+ * colores : un club par couleur, ranges par nom ; les blocs sans club n'y sont pas.
+ * @param {any[] | null | undefined} blocks - Les blocs colores (`assignClubPlanningColors`).
+ * @returns {Array<{ couleur: string, nom: string }>} La legende.
+ */
+export const legendeDesClubs = (blocks) => {
+  const vus = new Map();
+  (Array.isArray(blocks) ? blocks : []).forEach((block) => {
+    const key = clubKeyOf(block);
+    if (key && block?.displayColor && !vus.has(key)) {
+      vus.set(key, { couleur: block.displayColor, nom: String(block?.club?.name || '') });
+    }
+  });
+  return [...vus.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 };

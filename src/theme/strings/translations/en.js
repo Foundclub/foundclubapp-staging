@@ -5440,6 +5440,8 @@ export default {
       completDe: 'full {{heures}}',
       du: 'from {{debut}} to {{fin}}',
       erreur: 'Unable to load the slots',
+      // COLL-R-A6 (13/10, COL-019, P7v4-couleur board): the legend, beyond 2 clubs.
+      legende: 'Club colours',
       onglet: 'Slots',
       ongletInfos: 'Info',
       ongletPlanning: 'Schedule',
