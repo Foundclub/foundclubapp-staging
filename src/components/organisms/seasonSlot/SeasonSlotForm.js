@@ -180,12 +180,23 @@ function SeasonSlotForm({
   const modification = Boolean(slot?.documentId);
   // IPH09 : tunnel local. La repartition du dirigeant garde son seul choix d'equipe.
   const parcoursGuide = guided && !repartition;
-  const etapes = modification
+  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) — une etape sans rien a choisir est
+  // SAUTEE : « Periode » (toute la saison, ecrite au recapitulatif), « Club » quand il est fixe
+  // (fiche d'un club), « Jour » et « Horaires » depuis une heure libre du planning (la case les
+  // apporte ; « Changer l'heure » les ROUVRE). « Modifier » garde ses 4 etapes : la periode s'y
+  // choisit (COLL-C2B-BIS).
+  const [heuresRouvertes, setHeuresRouvertes] = useState(false);
+  const heuresFigees = compact && !heuresRouvertes;
+  const etapesDu = (/** @type {boolean} */ rouvertes) => (modification
     ? ['jour', 'horaires', 'periode', 'recap']
     : [
       ...(!installationFixee && facilities.length > 1 ? ['installation'] : []),
-      'club', 'equipe', 'jour', 'horaires', 'periode', 'recap',
-    ];
+      ...(fixedClubId ? [] : ['club']),
+      'equipe',
+      ...(compact && !rouvertes ? [] : ['jour', 'horaires']),
+      'recap',
+    ]);
+  const etapes = etapesDu(heuresRouvertes);
   const [etape, setEtape] = useState(0);
   const etapeCourante = etapes[etape];
   const visible = (/** @type {string} */ champ) => !parcoursGuide || etapeCourante === champ;
@@ -326,8 +337,12 @@ function SeasonSlotForm({
   };
   // « Changer l heure » : les heures sont a choisir de nouveau, les heures libres sous les yeux.
   // En mode compact (planning), les heures viennent de la case : rien a vider.
+  // COLL-R-A7 : depuis le planning, l etape « Horaires » etait sautee ; elle se rouvre ici.
   const changerLHeure = () => {
-    if (parcoursGuide) setEtape(etapes.indexOf('horaires'));
+    if (parcoursGuide) {
+      setHeuresRouvertes(true);
+      setEtape(etapesDu(true).indexOf('horaires'));
+    }
     if (!compact) {
       setDebut('');
       setFin('');
@@ -680,7 +695,7 @@ function SeasonSlotForm({
         </View>
       ) : null}
 
-      {!visible('jour') || compact || repartition ? null : (
+      {!visible('jour') || heuresFigees || repartition ? null : (
         <View style={{ gap: 8 }}>
           {titreDuChamp(t('collectiviteCreneaux.attribuer.jour', 'Jour'))}
           {rangee(SEASON_SLOT_WEEKDAYS.map((numero) => (
@@ -701,7 +716,7 @@ function SeasonSlotForm({
       {/* VILLE-T18A (T18 G29a, G32a) — les heures se CHOISISSENT : le sélecteur d heure de la
           création d événement (décision d Adel du 07/10, « réutiliser ce qu on a déjà ») ; elles
           se tapaient au clavier. Même valeur « HH:MM ». */}
-      {!visible('horaires') || compact || repartition ? null : (
+      {!visible('horaires') || heuresFigees || repartition ? null : (
         <View style={[Alignments.row, { gap: 12 }]}>
           <View style={{ flex: 1 }}>
             <TimePickerInput

@@ -349,11 +349,11 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     expect(parTexte(arbre, 'AS Montrivage')).toBeUndefined();
     await appuyer(parTexte(arbre, 'Attribuer un créneau à ce club'));
     expect(textes(arbre)).toContain('Attribuer un créneau à AS Montrivage');
-    // Le club est fixe : une seule puce, la sienne ; l installation se choisit.
+    // Le club est fixe : COLL-R-A7 (COL-005), plus d etape « Club » ; l installation se choisit.
     await appuyer(parTexte(arbre, 'Gymnase des Tilleuls'));
     await appuyer(parTexte(arbre, 'Suivant'));
-    expect(parTexte(arbre, 'AS Montrivage')).toBeDefined();
-    await appuyer(parTexte(arbre, 'Suivant'));
+    expect(parTexte(arbre, 'AS Montrivage')).toBeUndefined();
+    expect(parTexte(arbre, 'Tout le club')).toBeDefined();
     await appuyer(parTexte(arbre, 'U13'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTestID(arbre, 'jour-3'));
@@ -362,7 +362,6 @@ describe('COLL-C2B point 6 — « Ses creneaux de la Ville » sur la fiche d un 
     await saisir('Fin', '19:00');
     const attendu = expect.objectContaining({ endTime: '19:00', startTime: '17:30', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', attendu);
-    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenCalledWith('gym-tilleuls', {

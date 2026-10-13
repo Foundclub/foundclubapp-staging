@@ -404,7 +404,7 @@ describe('COLL-FIX-PLANNING 5 — un 409 : la confirmation de l ecran, sans aler
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // COLL-R-A7 (COL-005) : « Période » est sautée, écrite au récapitulatif.
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
 

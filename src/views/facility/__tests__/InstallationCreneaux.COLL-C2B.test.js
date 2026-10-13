@@ -410,7 +410,7 @@ describe('COLL-C2B planche 3 — 2. et 3. attribuer, avec la place libre, et le 
     await appuyer(parTexte(arbre, 'Suivant'));
     await saisir('Début', '17:30');
     await saisir('Fin', '19:00');
-    await appuyer(parTexte(arbre, 'Suivant'));
+    // COLL-R-A7 (COL-005) : « Période » est sautée, écrite au récapitulatif.
     await appuyer(parTexte(arbre, 'Suivant'));
   };
 
@@ -588,7 +588,6 @@ describe('COLL-C2B planche 3 — 5. le champ Plateau, seulement avec des plateau
     expect(textes(arbre)).toContain('Plateau');
     expect(textes(arbre)).toContain('Indifférent');
     await appuyer(parTexte(arbre, 'Plateau A'));
-    await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Suivant'));
     await appuyer(parTexte(arbre, 'Attribuer le créneau'));
     expect(attributeSeasonSlot).toHaveBeenLastCalledWith('gym-tilleuls', expect.objectContaining({

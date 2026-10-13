@@ -463,15 +463,16 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
     await attendre();
     const lus = textes(arbre);
     expect(lus).toContain('Mercredi 17:00 – 18:30');
-    // IPH09 : la confirmation n'apparaît qu'après les cinq étapes de saisie.
+    // IPH09 : la confirmation n'apparaît qu'au récapitulatif. COLL-R-A7 (COL-005) : depuis une
+    // heure libre, Jour, Horaires et Période sont sautés (la case les apporte) : 3 étapes.
     expect(parTexte(arbre, 'Attribuer pour la saison')).toBeUndefined();
-    expect(textes(arbre)).toContain('Étape 1/6');
+    expect(textes(arbre)).toContain('Étape 1/3');
     const club = parTexte(arbre, 'US Ville B');
     expect(club.props.accessibilityRole).toBe('radio');
     await act(async () => { club.props.onPress(); });
     await attendre();
-    for (let etape = 1; etape <= 5; etape += 1) {
-      expect(textes(arbre)).toContain(`Étape ${etape}/6`);
+    for (let etape = 1; etape <= 2; etape += 1) {
+      expect(textes(arbre)).toContain(`Étape ${etape}/3`);
       expect(attributeSeasonSlot).not.toHaveBeenCalled();
       const suivant = parTexte(arbre, 'Suivant');
       expect(suivant).toBeDefined();
@@ -481,7 +482,7 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
       // eslint-disable-next-line no-await-in-loop -- attendre le rendu de l'étape suivante
       await attendre();
     }
-    expect(textes(arbre)).toContain('Étape 6/6');
+    expect(textes(arbre)).toContain('Étape 3/3');
     expect(parTexte(arbre, 'Attribuer pour la saison')).toBeDefined();
     const attendu = expect.objectContaining({ endTime: '18:30', startTime: '17:00', weekday: 3 });
     expect(previewFacilitySeasonSlot).toHaveBeenLastCalledWith('gym-ville', attendu);
