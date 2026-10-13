@@ -1503,7 +1503,16 @@ describe('ClubDetails — VILLE-INVITER-CLUB voie 3 : « Ma collectivité » dan
 // a un `id` : c'est lui qu'on vise, et sa place dans la liste quand un ancien
 // partenaire n'en a pas.
 describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', () => {
-  const LOGO = { url: '/uploads/logo.png' };
+  /**
+   * Un partenaire tel que le serveur le rend.
+   * @param {string} title - Son nom.
+   * @param {string | null} link - Son site, facultatif.
+   * @param {number} [id] - L'id de l'entree ; absent chez un ancien partenaire.
+   * @returns {any} Le partenaire.
+   */
+  const partenaire = (title, link, id) => ({
+    ...(id === undefined ? {} : { id }), link, logo: { url: '/uploads/logo.png' }, title,
+  });
 
   /**
    * Monte la sous-page « Partenaires » avec ces partenaires-la.
@@ -1532,6 +1541,7 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
   };
 
   /**
+   * Les noms de ces partenaires.
    * @param {any[]} partenaires - Des partenaires.
    * @returns {string[]} Leurs noms, dans l'ordre.
    */
@@ -1543,10 +1553,10 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
     const erreurs = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     const textes = texteDe(monterAvec([
-      { id: 11, link: null, logo: LOGO, title: 'Boulangerie Martin' },
-      { id: 12, link: null, logo: LOGO, title: 'Garage Durand' },
-      { link: 'https://mairie.fr', logo: LOGO, title: 'Mairie' },
-      { link: 'https://mairie.fr', logo: LOGO, title: 'Office des sports' },
+      partenaire('Boulangerie Martin', null, 11),
+      partenaire('Garage Durand', null, 12),
+      partenaire('Mairie', 'https://mairie.fr'),
+      partenaire('Office des sports', 'https://mairie.fr'),
     ]).root);
 
     ['Boulangerie Martin', 'Garage Durand', 'Mairie', 'Office des sports']
@@ -1559,9 +1569,9 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
 
   it('deux partenaires SANS site : en retirer un garde l autre', () => {
     const arbre = monterAvec([
-      { id: 11, link: null, logo: LOGO, title: 'Boulangerie Martin' },
-      { id: 12, link: null, logo: LOGO, title: 'Garage Durand' },
-      { id: 13, link: 'https://elseve.fr', logo: LOGO, title: 'Elseve' },
+      partenaire('Boulangerie Martin', null, 11),
+      partenaire('Garage Durand', null, 12),
+      partenaire('Elseve', 'https://elseve.fr', 13),
     ]);
 
     const restants = retirer(arbre, 'Boulangerie Martin');
@@ -1573,8 +1583,8 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
 
   it('deux partenaires avec le MEME site : en retirer un garde l autre', () => {
     const arbre = monterAvec([
-      { id: 21, link: 'https://mairie.fr', logo: LOGO, title: 'Mairie' },
-      { id: 22, link: 'https://mairie.fr', logo: LOGO, title: 'Office des sports' },
+      partenaire('Mairie', 'https://mairie.fr', 21),
+      partenaire('Office des sports', 'https://mairie.fr', 22),
     ]);
 
     expect(noms(retirer(arbre, 'Office des sports'))).toEqual(['Mairie']);
@@ -1582,8 +1592,8 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
 
   it('ancien partenaire SANS id : on vise sa place dans la liste', () => {
     const arbre = monterAvec([
-      { link: '', logo: LOGO, title: 'Boulangerie Martin' },
-      { link: '', logo: LOGO, title: 'Garage Durand' },
+      partenaire('Boulangerie Martin', ''),
+      partenaire('Garage Durand', ''),
     ]);
 
     expect(noms(retirer(arbre, 'Garage Durand'))).toEqual(['Boulangerie Martin']);
