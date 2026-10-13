@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { useNavigation } from '@react-navigation/native';
-import { useCallback, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
@@ -21,10 +23,17 @@ import {
   newFeedbackKeys,
   seenFeedbackKeys,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
+import {
+  annoncer,
+  effacerLAnnonce,
+  useAnnonceDeLaFiche,
+} from '@/views/profile/parent/annonceDeLaFiche';
+import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';
 import { equipesParClub } from '@/views/profile/parent/ChildIdentityCard';
 import ClubEtEquipe from '@/views/profile/parent/ClubEtEquipe';
 import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
 import { demandesDe, etatDeLEnfant } from '@/views/profile/parent/demandesDeLEnfant';
+import MenuDeLEnfant from '@/views/profile/parent/MenuDeLEnfant';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
@@ -139,19 +148,18 @@ function CarteDuCompteRelie({ compte, follow, onOpen }) {
  * « Demande en attente », ou « Pas encore d'équipe ». Quand il y a un club, il a SA ligne,
  * precede du mot « Club », et l equipe la sienne (remarque d Adel du 13/10). Les explications
  * ne vivent plus ici (« Comment ça marche ? ») ; « Chercher un club » est sur SA fiche, et
- * seulement quand il n a pas d equipe (E07).
+ * seulement quand il n a pas d equipe (E07). « Modifier » et « Supprimer » sont dans son menu
+ * « … » (E05).
  * @param {object} props - Les proprietes.
  * @param {any[]} props.demandes - Ses demandes (`demandesDe`).
  * @param {any} props.enfant - La fiche.
- * @param {(enfant: any) => void} props.onDelete - « Supprimer ».
- * @param {(enfant: any) => void} props.onEdit - « Modifier ».
  * @param {(enfant: any) => void} props.onGiveAccount - F20 « Donner un compte à Lina ».
+ * @param {(enfant: any) => void} props.onMenu - Ouvre son menu « … ».
  * @param {(enfant: any) => void} props.onOpen - Ouvre SA fiche (moins de 13 ans).
- * @param {boolean} props.suppressionEnCours - Une suppression part.
  * @returns {import('react').ReactElement} - La carte.
  */
 function CarteDeLaFiche({
-  demandes, enfant, onDelete, onEdit, onGiveAccount, onOpen, suppressionEnCours,
+  demandes, enfant, onGiveAccount, onMenu, onOpen,
 }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
@@ -181,36 +189,60 @@ function CarteDeLaFiche({
 
   return (
     <View style={feedbackCardStyle(Colors, false)}>
-      <Rangee
-        // eslint-disable-next-line react/jsx-props-no-spreading
-        {...porte}
-        style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}
-      >
-        <ProfileAvatar
-          enablePreview={false}
-          imageUrl={enfant?.photo?.url}
-          name={nomComplet}
-          size={48}
-        />
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>{nomComplet}</Text>
-          {age ? <Text style={[Fonts.p3, Fonts.neutral200]}>{age}</Text> : null}
-          <PastilleDEtat
-            testID={`declared-child-state-${id}`}
-            texte={texteDeLEtat}
-            ton={etat.ton}
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+        <Rangee
+          // eslint-disable-next-line react/jsx-props-no-spreading
+          {...porte}
+          style={[Alignments.row, Alignments.alignCenter, { flex: 1, gap: 12 }]}
+        >
+          <ProfileAvatar
+            enablePreview={false}
+            imageUrl={enfant?.photo?.url}
+            name={nomComplet}
+            size={48}
           />
-          <ClubEtEquipe
-            club={etat.club}
-            equipes={etat.equipes}
-            libelleEquipe={etat.ton === 'attente' ? t('myChildren.list.requestedTeamLabel') : ''}
-            testID={`declared-child-club-${id}`}
-          />
-        </View>
-        {aSaPage ? (
-          <Icone color={Colors.primary500} height={12} name="arrow-right" width={12} />
-        ) : null}
-      </Rangee>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00]}>{nomComplet}</Text>
+            {age ? <Text style={[Fonts.p3, Fonts.neutral200]}>{age}</Text> : null}
+            <PastilleDEtat
+              testID={`declared-child-state-${id}`}
+              texte={texteDeLEtat}
+              ton={etat.ton}
+            />
+            <ClubEtEquipe
+              club={etat.club}
+              equipes={etat.equipes}
+              libelleEquipe={etat.ton === 'attente' ? t('myChildren.list.requestedTeamLabel') : ''}
+              testID={`declared-child-club-${id}`}
+            />
+          </View>
+          {aSaPage ? (
+            <Icone color={Colors.primary500} height={12} name="arrow-right" width={12} />
+          ) : null}
+        </Rangee>
+        {/* E05 — le bouton « … » rond, liseré cyan (motif des cotisations), 44 × 44. */}
+        <TouchableOpacity
+          accessibilityLabel={t('myChildren.menu.open', {
+            firstname: prenom, ...SANS_ECHAPPEMENT,
+          })}
+          accessibilityRole="button"
+          onPress={() => onMenu(enfant)}
+          style={[
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+            {
+              borderColor: withAlpha(Colors.primary500, 0.45),
+              borderRadius: 22,
+              borderWidth: 1,
+              height: 44,
+              width: 44,
+            },
+          ]}
+          testID={`declared-child-menu-${id}`}
+        >
+          <Icone color={Colors.primary200} height={20} name="dots-horizontal" width={20} />
+        </TouchableOpacity>
+      </View>
 
       {/* On EXPLIQUE l'absence de « chercher un club » a partir de 13 ans (E17). */}
       {pouvoir === 'view' ? (
@@ -254,19 +286,6 @@ function CarteDeLaFiche({
           )}
         </Text>
       ) : null}
-
-      <View style={[Alignments.row, { gap: 20 }]}>
-        <TouchableOpacity onPress={() => onEdit(enfant)}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-            {t('myChildren.actions.edit', 'Modifier')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity disabled={suppressionEnCours} onPress={() => onDelete(enfant)}>
-          <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-            {t('myChildren.actions.delete', 'Supprimer')}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -402,6 +421,8 @@ function MyChildren({ route } = {}) {
               t('common.error', 'Erreur'),
               t('myChildren.errors.delete', 'Impossible de supprimer cette fiche pour le moment.'),
             ),
+            // E05 — « La fiche d'Anissa est supprimée. » (aujourd'hui : aucun message).
+            onSuccess: () => annoncer({ firstname: prenom, type: 'supprimee' }),
           }),
           style: 'destructive',
           text: t('myChildren.confirmDelete.confirm', 'Supprimer'),
@@ -434,10 +455,23 @@ function MyChildren({ route } = {}) {
     );
   }, [annulerDemande, t]);
 
+  // E05 — le menu « … » d'un enfant : la fiche dont il est ouvert, ou rien.
+  const [menuDe, setMenuDe] = useState(/** @type {any} */ (null));
+  const fermerLeMenu = useCallback(() => setMenuDe(null), []);
+  // Le dernier geste réussi (« La fiche d'Anissa est supprimée. »), dit en tête de la liste.
+  const annonce = useAnnonceDeLaFiche();
+  const ficheOuverte = route?.params?.childDocumentId;
+  // L'annonce s'efface quand on QUITTE la liste — jamais depuis la fiche, qui en pose une
+  // juste avant de revenir.
+  useEffect(() => {
+    if (ficheOuverte) return undefined;
+    const desabonner = navigation?.addListener?.('blur', effacerLAnnonce);
+    return typeof desabonner === 'function' ? desabonner : undefined;
+  }, [ficheOuverte, navigation]);
+
   // ST-RETOURS2 · point 4 (planche 22, etat 6) — LA PAGE D UN ENFANT DE MOINS DE 13 ANS. Une
   // vue de cette route, comme « Retours du coach » sur celle du profil : aucune route neuve,
   // le site la sert deja. Les donnees : la liste deja lue. Placee apres tous les hooks.
-  const ficheOuverte = route?.params?.childDocumentId;
   if (ficheOuverte) {
     const enfantOuvert = enfants.find((enfant) => enfant?.documentId === ficheOuverte);
     return (
@@ -498,6 +532,7 @@ function MyChildren({ route } = {}) {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        <BandeauDeResultat annonce={annonce} />
         {/* STATS-FIX2 · 8-22 (tournee T10, ecran 22) — les comptes relies D ABORD (planche 22,
             etat 1) : c est la que vivent les retours de l entraineur. */}
         <WithDataWrapper error={erreurLiens?.message} isLoading={chargementLiens}>
@@ -554,11 +589,9 @@ function MyChildren({ route } = {}) {
                   demandes={demandesDe(enfant?.documentId, lignesDeDemandes)}
                   enfant={enfant}
                   key={enfant?.documentId}
-                  onDelete={demanderSuppression}
-                  onEdit={ouvrirFormulaire}
                   onGiveAccount={relierUnCompte}
+                  onMenu={suppressionEnCours ? () => {} : setMenuDe}
                   onOpen={ouvrirLaFiche}
-                  suppressionEnCours={suppressionEnCours}
                 />
               ))}
 
@@ -621,6 +654,13 @@ function MyChildren({ route } = {}) {
           ) : null}
         </WithDataWrapper>
       </ScrollView>
+      <MenuDeLEnfant
+        enfant={menuDe}
+        onClose={fermerLeMenu}
+        onDelete={demanderSuppression}
+        onEdit={ouvrirFormulaire}
+        onOpen={ouvrirLaFiche}
+      />
     </ScreenContainer>
   );
 }

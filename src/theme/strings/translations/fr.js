@@ -22750,6 +22750,12 @@ export default {
       pendingForChild: 'Demande envoyée au numéro finissant par {{hint}} (pour {{firstname}}).',
       title: 'Les comptes de mes enfants',
     },
+    // PAR-L5L6 (13/10, design parent E05) — ce qui vient d'arriver, dit en tête de la liste.
+    // Deux formes : « de Martin », « d’Anissa » (l'élision devant une voyelle ou un h).
+    banner: {
+      deleted: 'La fiche de {{firstname}} est supprimée.',
+      deletedElided: 'La fiche d’{{firstname}} est supprimée.',
+    },
     confirmDelete: {
       cancel: 'Annuler',
       confirm: 'Supprimer',
@@ -22847,6 +22853,13 @@ export default {
       },
       teamLabel_one: 'Équipe',
       teamLabel_other: 'Équipes',
+    },
+    // PAR-L5L6 (13/10, design parent E05) — le menu « … » d'un enfant : une feuille, pas une
+    // alerte (sur le site, Alert n'a que deux choix).
+    menu: {
+      delete: 'Supprimer la fiche',
+      edit: 'Modifier sa fiche',
+      open: 'Actions pour {{firstname}}',
     },
     screen: {
       // ⚠️ Pluriel i18next : « _one » / « _other », jamais « _plural » (morte depuis

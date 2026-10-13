@@ -1,7 +1,27 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { effacerLAnnonce } from '@/views/profile/parent/annonceDeLaFiche';
+
 import MyChildren from '../MyChildren';
+
+/**
+ * PAR-L5L6 — CHAQUE ARBRE MONTÉ EST DÉMONTÉ À LA FIN DE SON TÉMOIN. L'annonce du dernier geste
+ * (« La fiche de Martin est supprimée. ») vit en mémoire et PRÉVIENT tous les écrans montés :
+ * sans démontage, les arbres des témoins précédents se redessinaient tous à chaque annonce
+ * (mesuré : 4 témoins au-delà de 5 s dans la suite complète, 0,3 s seuls).
+ * @type {any[]}
+ */
+const arbresMontes = [];
+const creerUnArbre = renderer.create;
+renderer.create = (/** @type {any[]} */ ...args) => {
+  const arbre = creerUnArbre(...args);
+  arbresMontes.push(arbre);
+  return arbre;
+};
+afterEach(() => {
+  act(() => { arbresMontes.splice(0).forEach((arbre) => arbre.unmount()); });
+});
 
 /**
  * PARENT P2 — ÉCRAN 7 : « MES ENFANTS ».
@@ -82,9 +102,32 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
   }),
 }));
 
+/** @type {Record<string, () => void>} PAR-L5L6 — les écouteurs posés par l'écran (« blur »). */
+const mockEcouteurs = {};
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate, push: mockPush }),
+  useNavigation: () => ({
+    addListener: (/** @type {string} */ type, /** @type {() => void} */ ecouteur) => {
+      mockEcouteurs[type] = ecouteur;
+      return () => { delete mockEcouteurs[type]; };
+    },
+    navigate: mockNavigate,
+    push: mockPush,
+  }),
 }));
+
+// PAR-L5L6 (E05) — la feuille « … » : rendue telle quelle quand elle est ouverte, avec son pied.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children, footerComponent, isVisible }) => (isVisible ? (
+      <View testID="feuille">
+        {children}
+        {footerComponent}
+      </View>
+    ) : null),
+  };
+});
 
 // ST-RETOURS (02/10) — la carte d un enfant relie compte ses retours du coach pas encore lus :
 // elle lit ses retours (personal-stats, la reponse REDUITE au parent) et ce que le parent a deja
@@ -203,6 +246,8 @@ beforeEach(() => {
   mockIsLoading = false;
   mockDemandes = [];
   mockLecturesDesDemandes.length = 0;
+  // L'annonce vit en mémoire (module) : chaque témoin part sans elle.
+  effacerLAnnonce();
 });
 
 test('P2/7 ① aucun enfant : l\'écran le DIT et offre un grand bouton pour en ajouter', async () => {
@@ -991,5 +1036,175 @@ describe('PAR-L5L6 E04 — la carte courte d un enfant déclaré', () => {
 
     expect(texte).toContain('Lina Test | 14 ans | A son compte');
     expect(texte).not.toContain('Anissa Test | 11 ans | A son compte');
+  });
+});
+
+// ===========================================================================
+// PAR-L5L6 (13/10) — E05 : LE MENU « … » D'UN ENFANT, ET LE BANDEAU APRÈS SUPPRESSION.
+//
+// « Modifier » et « Supprimer » quittent la carte pour un menu « … » (une feuille, pas une
+// alerte : sur le site, Alert n'a que deux choix). Après une suppression, la liste le DIT :
+// « La fiche d'Anissa est supprimée. » (aujourd'hui : aucun message).
+// ===========================================================================
+
+describe('PAR-L5L6 E05 — le menu « … » et le bandeau après suppression', () => {
+  const MARTIN = unEnfant({
+    age: 9, documentId: 'martin', firstname: 'Martin', lastname: 'Test',
+  });
+  const ANISSA = unEnfant({
+    age: 11, documentId: 'anissa', firstname: 'Anissa', lastname: 'Test',
+  });
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  /**
+   * Ouvre le menu « … » d'un enfant.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {string} id - Le documentId de la fiche.
+   * @returns {Promise<void>} Rien.
+   */
+  const ouvrirLeMenu = async (arbre, id) => {
+    await act(async () => { porteDe(arbre, `declared-child-menu-${id}`).props.onPress(); });
+  };
+
+  test('🔴 « … » : 44 × 44, nommé pour le lecteur d écran, ouvre SA feuille', async () => {
+    mockEnfants = [MARTIN];
+    const arbre = await rendre();
+    const bouton = porteDe(arbre, 'declared-child-menu-martin');
+
+    expect(bouton).toBeTruthy();
+    expect(bouton.props.accessibilityLabel).toBe('Actions pour Martin');
+    expect(styleAPlat(bouton.props.style)).toEqual(expect.objectContaining({
+      height: 44, width: 44,
+    }));
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+
+    await ouvrirLeMenu(arbre, 'martin');
+    const feuille = texteVisible(arbre);
+    expect(feuille).toContain('Martin Test | 9 ans');
+    expect(feuille).toContain('Voir sa fiche');
+    expect(feuille).toContain('Modifier sa fiche');
+    expect(feuille).toContain('Supprimer la fiche');
+    expect(feuille).toContain('Fermer');
+  });
+
+  test('🔴 la carte ne porte plus « Modifier » / « Supprimer » en texte', async () => {
+    mockEnfants = [MARTIN];
+    const arbre = await rendre();
+
+    expect(pressable(arbre, 'Modifier')).toBeUndefined();
+    expect(pressable(arbre, 'Supprimer')).toBeUndefined();
+  });
+
+  test('« Voir sa fiche » ouvre SA page ; « Modifier sa fiche », le formulaire', async () => {
+    mockEnfants = [MARTIN];
+    const arbre = await rendre();
+
+    await ouvrirLeMenu(arbre, 'martin');
+    await act(async () => { porteDe(arbre, 'child-menu-open').props.onPress(); });
+    expect(mockPush).toHaveBeenCalledWith('MyChildren', { childDocumentId: 'martin' });
+    // La feuille se ferme avant le geste.
+    expect(hote(arbre, 'feuille')).toBeUndefined();
+
+    await ouvrirLeMenu(arbre, 'martin');
+    await act(async () => { porteDe(arbre, 'child-menu-edit').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('ChildEdit', { childDocumentId: 'martin' });
+  });
+
+  test('🔴 « Supprimer la fiche » : la confirmation existante, puis le bandeau', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockEnfants = [MARTIN];
+    const arbre = await rendre();
+
+    await ouvrirLeMenu(arbre, 'martin');
+    await act(async () => { porteDe(arbre, 'child-menu-delete').props.onPress(); });
+    const [titre, , boutons] = alerte.mock.calls[0];
+    expect(titre).toBe('Supprimer la fiche de Martin ?');
+    expect(mockSupprimer).not.toHaveBeenCalled();
+
+    await act(async () => { boutons[1].onPress(); });
+    expect(mockSupprimer).toHaveBeenCalledWith('martin', expect.any(Object));
+    expect(texteVisible(arbre)).not.toContain('est supprimée');
+
+    await act(async () => { mockSupprimer.mock.calls[0][1].onSuccess(); });
+    expect(hote(arbre, 'my-children-banner')).toBeTruthy();
+    expect(texteVisible(arbre)).toContain('La fiche de Martin est supprimée.');
+    alerte.mockRestore();
+  });
+
+  test('l élision : « La fiche d’Anissa est supprimée. »', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockEnfants = [ANISSA];
+    const arbre = await rendre();
+
+    await ouvrirLeMenu(arbre, 'anissa');
+    await act(async () => { porteDe(arbre, 'child-menu-delete').props.onPress(); });
+    await act(async () => { alerte.mock.calls[0][2][1].onPress(); });
+    await act(async () => { mockSupprimer.mock.calls[0][1].onSuccess(); });
+
+    expect(texteVisible(arbre)).toContain('La fiche d’Anissa est supprimée.');
+    alerte.mockRestore();
+  });
+
+  test('un échec de suppression se dit, et aucun bandeau ne ment', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockEnfants = [MARTIN];
+    const arbre = await rendre();
+
+    await ouvrirLeMenu(arbre, 'martin');
+    await act(async () => { porteDe(arbre, 'child-menu-delete').props.onPress(); });
+    await act(async () => { alerte.mock.calls[0][2][1].onPress(); });
+    await act(async () => { mockSupprimer.mock.calls[0][1].onError(); });
+
+    expect(alerte).toHaveBeenLastCalledWith(
+      expect.any(String),
+      'Impossible de supprimer cette fiche pour le moment.',
+    );
+    expect(hote(arbre, 'my-children-banner')).toBeUndefined();
+    alerte.mockRestore();
+  });
+
+  test('quitter la liste efface le bandeau', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockEnfants = [MARTIN];
+    const arbre = await rendre();
+    await ouvrirLeMenu(arbre, 'martin');
+    await act(async () => { porteDe(arbre, 'child-menu-delete').props.onPress(); });
+    await act(async () => { alerte.mock.calls[0][2][1].onPress(); });
+    await act(async () => { mockSupprimer.mock.calls[0][1].onSuccess(); });
+    expect(hote(arbre, 'my-children-banner')).toBeTruthy();
+
+    await act(async () => { mockEcouteurs.blur(); });
+    expect(hote(arbre, 'my-children-banner')).toBeUndefined();
+    alerte.mockRestore();
+  });
+
+  test('13 ans et plus : pas de « Voir sa fiche » (cette tranche n a pas de page)', async () => {
+    mockEnfants = [unEnfant({ age: 15 })];
+    const arbre = await rendre();
+
+    await ouvrirLeMenu(arbre, 'enfant-1');
+    expect(porteDe(arbre, 'child-menu-open')).toBeUndefined();
+    expect(porteDe(arbre, 'child-menu-edit')).toBeTruthy();
+    expect(porteDe(arbre, 'child-menu-delete')).toBeTruthy();
+  });
+
+  test('un compte relié n a pas de « … » (on ne modifie pas le compte d un ado)', async () => {
+    mockLiens = {
+      children: [{
+        age: 14, documentId: 'lina', firstname: 'Lina', lastname: 'Test',
+      }],
+      requests: [],
+    };
+    const arbre = await rendre();
+
+    expect(porteDe(arbre, 'declared-child-menu-lina')).toBeUndefined();
+    expect(texteVisible(arbre)).not.toContain('Actions pour Lina');
   });
 });

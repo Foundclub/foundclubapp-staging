@@ -13424,6 +13424,10 @@ export default {
       giveAccount: 'Give {{firstname}} an account',
       searchClub: 'Find a club for {{firstname}}',
     },
+    banner: {
+      deleted: "{{firstname}}'s profile has been deleted.",
+      deletedElided: "{{firstname}}'s profile has been deleted.",
+    },
     confirmDelete: {
       cancel: 'Cancel',
       confirm: 'Delete',
@@ -13493,6 +13497,11 @@ export default {
       },
       teamLabel_one: 'Team',
       teamLabel_other: 'Teams',
+    },
+    menu: {
+      delete: 'Delete the profile',
+      edit: 'Edit their profile',
+      open: 'Actions for {{firstname}}',
     },
     screen: {
       adultHint: '{{firstname}} is an adult: they manage their own account.',
