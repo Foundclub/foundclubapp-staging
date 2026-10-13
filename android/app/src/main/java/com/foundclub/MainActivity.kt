@@ -1,5 +1,6 @@
 package com.foundclub
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +20,13 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  /**
+   * react-native-screens (README, Installation > Android) : jeter l etat sauvegarde quand Android
+   * recree l activite (navigation systeme changee, retour apres un arret en arriere-plan) ; sinon
+   * "Screen fragments should never be restored" fait planter l app.
+   */
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(null)
+  }
 }
