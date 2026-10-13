@@ -5782,6 +5782,8 @@ export default {
       refuseHint: 'Le club reçoit votre motif ; il n’est pas rattaché.',
       refuseWindowYes: 'Refuser la demande',
       refuseYes: 'Oui, refuser',
+      // COLL-R-A6 (13/10, COL-001, planche P7v4-clubs état 4).
+      rejoindre: '{{club}} demande à rejoindre la Ville',
       remind: 'Relancer',
       resend: 'Renvoyer la demande',
       title: 'Demandes de rattachement',

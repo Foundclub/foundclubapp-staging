@@ -212,6 +212,10 @@ const boutons = (/** @type {any} */ arbre, /** @type {string} */ titre) => arbre
 const rang = (arbre, testID) => arbre.root.findAll(() => true)
   .findIndex((/** @type {any} */ n) => n.props?.testID === testID);
 
+const ecussons = (/** @type {any} */ noeud) => noeud.findAll(
+  (/** @type {any} */ n) => n.type?.name === 'ClubLogoMarkMock',
+);
+
 beforeEach(() => {
   mockNavigate.mockClear();
   mockBureau = false;
@@ -301,7 +305,7 @@ describe('COL-001 — les demandes de rattachement', () => {
   it('une demande en attente monte AU-DESSUS des clubs, avec Accepter et Refuser', async () => {
     mockDemandes = { data: [RATTACHEE, EN_ATTENTE], error: null, isLoading: false };
     const arbre = await monter();
-    expect(textesDe(arbre.root)).toContain('US Valbrune');
+    expect(textesDe(arbre.root)).toContain('US Valbrune demande à rejoindre la Ville');
     expect(boutons(arbre, 'Accepter')).toHaveLength(1);
     expect(boutons(arbre, 'Refuser')).toHaveLength(1);
     expect(rang(arbre, 'collectivite-demandes-rattachement'))
@@ -311,12 +315,54 @@ describe('COL-001 — les demandes de rattachement', () => {
   it('plusieurs demandes : la première, puis « Voir les 2 demandes »', async () => {
     mockDemandes = { data: [EN_ATTENTE, EN_ATTENTE_2], error: null, isLoading: false };
     const arbre = await monter();
-    expect(textesDe(arbre.root)).toContain('US Valbrune');
-    expect(textesDe(arbre.root)).not.toContain('Rivelac FC');
+    expect(textesDe(arbre.root)).toContain('US Valbrune demande à rejoindre la Ville');
+    expect(textesDe(arbre.root)).not.toContain('Rivelac FC demande à rejoindre la Ville');
     const voir = boutons(arbre, 'Voir les 2 demandes');
     expect(voir).toHaveLength(1);
     act(() => { voir[0].props.onPress(); });
-    expect(textesDe(arbre.root)).toContain('Rivelac FC');
+    expect(textesDe(arbre.root)).toContain('Rivelac FC demande à rejoindre la Ville');
+  });
+
+  // La carte de la planche (P7v4-clubs, état 4) : « À trancher », la phrase, la date, puis
+  // Refuser et Accepter côte à côte ; plus de titre « Demandes de rattachement » au-dessus.
+  it('la demande à trancher : « À trancher », la phrase, Refuser | Accepter', async () => {
+    mockDemandes = {
+      data: [{ ...EN_ATTENTE, outsideCommune: true }], error: null, isLoading: false,
+    };
+    const arbre = await monter();
+    const [carte] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'demande-rattachement-demande-valbrune');
+    expect(textesDe(carte)).toEqual([
+      'À trancher',
+      'US Valbrune demande à rejoindre la Ville',
+      'Demande du club · mer. 7 oct.',
+      'Il n’est pas dans la commune.',
+      'Refuser',
+      'Accepter',
+    ]);
+    expect(textesDe(arbre.root)).not.toContain('Demandes de rattachement');
+    expect(textesDe(arbre.root)).not.toContain('À traiter');
+    // Au téléphone, pas d'écusson : la phrase nomme le club (planche, état 4).
+    expect(ecussons(carte)).toHaveLength(0);
+  });
+
+  it('ordinateur (P7v4-clubs-ordi, état 3) : écusson, phrase, deux gestes en ligne', async () => {
+    mockBureau = true;
+    mockDemandes = { data: [EN_ATTENTE], error: null, isLoading: false };
+    const arbre = await monter();
+    const [carte] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'demande-rattachement-demande-valbrune');
+    expect(ecussons(carte)).toHaveLength(1);
+    const style = [carte.props.style].flat(Infinity)
+      .reduce((a, b) => ({ ...a, ...(b || {}) }), {});
+    expect(style.flexDirection).toBe('row');
+    expect(textesDe(carte)).toEqual([
+      'À trancher',
+      'US Valbrune demande à rejoindre la Ville',
+      'Demande du club · mer. 7 oct.',
+      'Refuser',
+      'Accepter',
+    ]);
   });
 });
 

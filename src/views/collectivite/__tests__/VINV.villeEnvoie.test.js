@@ -327,10 +327,12 @@ describe('VINV · côté mairie — « Demandes de rattachement » dans « Clubs
 
   it('E5 la demande venue du lien : Accepter, ou Refuser avec un motif (FINITIONS-VILLE : la fenêtre « Refuser la demande »)', async () => {
     const arbre = await monter(CollectiviteClubs);
-    expect(textes(arbre)).toContain('Demandes de rattachement');
+    // COLL-R-A6 (13/10, COL-001, planche P7v4-clubs état 4, D1 A′) : plus de titre de section ;
+    // la demande d'un club se lit « À trancher » · « <club> demande à rejoindre la Ville ».
+    expect(textes(arbre)).not.toContain('Demandes de rattachement');
     const demande = dans(arbre, 'demande-rattachement-r1');
     expect(textes(demande)).toEqual(expect.arrayContaining([
-      'Recette Stripe FC', 'À traiter', 'Le club demande à rejoindre la Ville. Il n’est pas dans la commune.',
+      'À trancher', 'Recette Stripe FC demande à rejoindre la Ville', 'Il n’est pas dans la commune.',
     ]));
     await act(async () => { boutons(demande, 'Accepter')[0].props.onPress(); });
     expect(mockRepondre.mutate).toHaveBeenCalledWith(

@@ -6157,6 +6157,8 @@ export default {
       refuseHint: 'The club receives your reason; it is not attached.',
       refuseWindowYes: 'Decline the request',
       refuseYes: 'Yes, decline',
+      // COLL-R-A6 (13/10, COL-001, P7v4-clubs board state 4).
+      rejoindre: '{{club}} is asking to join the town',
       remind: 'Send a reminder',
       resend: 'Send the request again',
       title: 'Attachment requests',
