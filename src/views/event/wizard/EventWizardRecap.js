@@ -64,6 +64,7 @@ import {
   shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 import { keepAudiencesForEventType } from './useEventWizardAudiences';
+import useMairieDecideALaCreation from './useMairieDecideALaCreation';
 
 const CREATE_EVENT_BATCH_CONCURRENCY = 3;
 // I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
@@ -479,6 +480,31 @@ function EventWizardRecap({ navigation }) {
   const dateValue = getFormattedDate();
   const timeValue = getFormattedTime();
   const locationValue = getLocationDisplayText();
+  // COLL-R-APP-CREATION (13/10, COL-003, « D2- A ») — la question de l etape 4, relue ici : un
+  // « Modifier » depuis le recap (date, heure, lieu) change la reponse sans repasser par l etape.
+  const decisionDeLaVille = useMairieDecideALaCreation(state, state.facility);
+  let ligneDeLaMairie = null;
+  if (decisionDeLaVille.mairie) {
+    let phrase = t(
+      'collectiviteDemandes.decision.mairieLibre',
+      'Hors des créneaux de ton club : la mairie décidera, même s’il reste de la place.',
+    );
+    if (decisionDeLaVille.tuAcceptes) {
+      phrase = t(
+        'collectiviteDemandes.decision.tuAcceptes',
+        'Ta demande partira à la Ville ; tu pourras l’accepter toi-même dans Demandes.',
+      );
+    } else if (decisionDeLaVille.complet) {
+      phrase = t(
+        'collectiviteDemandes.club.quandMeme',
+        'Tu peux demander quand même : la mairie décidera.',
+      );
+    }
+    ligneDeLaMairie = `${phrase} ${t(
+      'collectiviteDemandes.decision.siRefusAnnulee',
+      'Si la mairie refuse, la séance sera annulée.',
+    )}`;
+  }
   const eventTasks = Array.isArray(state.eventTasks) ? state.eventTasks : [];
   const teamAudiences = Array.isArray(state.teamAudiences) ? state.teamAudiences : [];
   const visibilityValue = state.sessionStatus === 'closed'
@@ -836,10 +862,32 @@ function EventWizardRecap({ navigation }) {
       eventName: firstCreatedItem?.payload?.name || firstCreatedItem?.payload?.description || '',
       teamId: firstCreatedItem?.payload?.team || firstCreatedItem?.payload?.team?.documentId || null,
     };
-    const creationCelebration = {
+    // COLL-R-APP-CREATION (13/10, COL-003, « D2- A ») — QUI DECIDE, le serveur le dit
+    // (statut et raison rendus par POST /events, comme « Demander un creneau ») ; l installation
+    // de la Ville dit que c est la mairie (sinon : le gestionnaire du lieu). Une date suffit.
+    const statutDe = (/** @type {any} */ item) => (
+      item?.response?.data?.status || item?.response?.status
+    );
+    const raisonDe = (/** @type {any} */ item) => (
+      item?.response?.data?.pendingReason || item?.response?.pendingReason
+    );
+    const attendLaMairie = decisionDeLaVille.deLaVille && created.some((item) => (
+      statutDe(item) === 'pending_validation' && raisonDe(item) === 'facility_overbooking'
+    ));
+    let creationCelebration = {
       actionKey: created.length > 1 ? 'event_batch_created' : 'event_created',
       payload: celebrationPayload,
     };
+    if (attendLaMairie) {
+      creationCelebration = {
+        actionKey: 'event_city_request_sent',
+        payload: {
+          ...celebrationPayload,
+          clubId: state.team?.club?.documentId || null,
+          ville: decisionDeLaVille.ville,
+        },
+      };
+    }
     const seededCreatedEvent = firstCreatedId && firstCreatedItem
       ? seedCreatedEventDetailCache({
         createdItem: firstCreatedItem,
@@ -1380,6 +1428,11 @@ function EventWizardRecap({ navigation }) {
               <Text style={[Fonts.p2, hasLocation ? Fonts.neutral00 : Fonts.gold500]}>
                 {locationValue}
               </Text>
+              {ligneDeLaMairie ? (
+                <Text style={[Fonts.p3, Fonts.warning500]} testID="recap-mairie-decide">
+                  {ligneDeLaMairie}
+                </Text>
+              ) : null}
             </View>
           ) : null}
 

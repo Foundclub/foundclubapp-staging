@@ -3,6 +3,9 @@ import i18next from 'i18next';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import { navigate } from '@/navigation/navigationService';
+import { RouteNames } from '@/navigation/routeNames';
+
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 const DEFAULT_DURATION_MS = 3200;
@@ -311,6 +314,32 @@ export const celebrationCatalog = {
     durationMs: DEFAULT_DURATION_MS,
     priority: 3,
     tone: 'success',
+    variant: 'banner',
+  },
+  // COLL-R-APP-CREATION (13/10, COL-003, decision d Adel « D2- A ») — la seance creee hors des
+  // creneaux du club, sur un gymnase de la Ville, ATTEND LA MAIRIE : « Evenement cree » mentait par
+  // omission (recette du 11/10). Les textes de l accuse de « Demander un creneau » (P8v2) ; le
+  // bandeau entier ouvre « Tes demandes a la Ville » du club. Pas d or : il est a la League.
+  event_city_request_sent: {
+    buildCopy: (context) => ({
+      actionLabel: i18next.t('collectiviteDemandes.club.voirMesDemandes', 'Voir mes demandes'),
+      body: i18next.t(
+        'collectiviteDemandes.club.ensuite',
+        'La mairie l’accepte ou la refuse. Tu reçois sa réponse en notification, avec son mot.',
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.event', 'EVENEMENT'),
+      onAction: () => navigate(RouteNames.ClubSlotRequests, { clubId: context?.clubId || null }),
+      title: i18next.t('collectiviteDemandes.club.envoyee', 'Demande envoyée à la {{ville}}', {
+        ville: toLabel(context?.ville, i18next.t('collectiviteDemandes.club.laVille', 'Ville')),
+        ...SANS_ECHAPPEMENT,
+      }),
+    }),
+    category: 'event',
+    channels: 'local_banner',
+    cooldownMs: 6000,
+    durationMs: CELEBRATION_DURATION_MS,
+    priority: 3,
+    tone: 'info',
     variant: 'banner',
   },
   event_external_team_accepted: {
@@ -955,8 +984,11 @@ export const buildCelebrationPayload = (actionKey, context = {}, overrides = {})
 
   const copy = definition.buildCopy(context || {});
   if (!copy?.title) return null;
+  // COLL-R-APP-CREATION — le geste du bandeau (l hote le lit sur la charge) ; absent : rien.
+  const onAction = overrides.onAction ?? copy.onAction;
 
   return {
+    ...(typeof onAction === 'function' ? { onAction } : {}),
     actionKey,
     actionLabel: overrides.actionLabel ?? copy.actionLabel,
     body: overrides.body ?? copy.body,
