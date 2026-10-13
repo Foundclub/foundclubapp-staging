@@ -14994,9 +14994,43 @@ export default {
       exit: 'Back to {{staff}} mode',
       title: 'Player mode',
     },
+    choice: {
+      parent: 'Parent mode',
+      player: 'Player mode',
+    },
     offer: {
       description: 'You also play in a team.',
       enter: 'See the app as a player',
+    },
+    parent: {
+      and: 'and',
+      back: 'Back to parent mode',
+      description: 'You see the app as a parent. Your {{staff}} rights are intact.',
+      enter: 'Switch to parent mode',
+      title: 'Parent mode',
+      waiting_one: '{{prenoms}} is waiting for you in parent mode.',
+      waiting_other: '{{prenoms}} are waiting for you in parent mode.',
+      waitingAll: 'Your children are waiting for you in parent mode.',
+    },
+    parentAccount: {
+      offer: 'Do you play a sport too?',
+    },
+    player: {
+      description: 'You see the app as a player.',
+      enter: 'Switch to player mode',
+    },
+    sheet: {
+      confirm: 'Yes, I play too',
+      done: 'Your account is now a Player account. You are in parent mode.',
+      error: 'Your account could not be changed. Try again.',
+      joinTeam: 'You can join a team and take part in events.',
+      keepChildren: 'You keep your children, their profiles and their requests.',
+      keepNamed_one: 'You keep {{prenoms}}, their profile and their requests.',
+      keepNamed_other: 'You keep {{prenoms}}, their profiles and their requests.',
+      later: 'Not now',
+      subtitle: 'Your account goes from Parent to Player.',
+      switch: 'At the top of the home screen, you switch between “Player” and “Parent” in one tap.',
+      title: 'Do you play a sport too?',
     },
     staff: {
       coach: 'coach',

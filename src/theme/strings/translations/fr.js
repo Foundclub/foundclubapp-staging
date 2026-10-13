@@ -15713,9 +15713,46 @@ export default {
       exit: 'Revenir en mode {{staff}}',
       title: 'Mode joueur',
     },
+    // PAR-L12 (13/10, design parent §2 bis / E25 / E27, décision D6 A d'Adel du 12/10) — le
+    // MODE PARENT : un dirigeant qui joue et a des enfants a deux portes ; un joueur qui a des
+    // enfants bascule d'un geste ; un compte Parent passe en Joueur par la feuille.
+    choice: {
+      parent: 'Mode parent',
+      player: 'Mode joueur',
+    },
     offer: {
       description: 'Tu joues aussi dans une équipe.',
       enter: "Voir l'app en joueur",
+    },
+    parent: {
+      and: 'et',
+      back: 'Revenir en mode parent',
+      description: 'Tu vois l’app comme un parent. Tes droits de {{staff}} sont intacts.',
+      enter: 'Basculer en mode parent',
+      title: 'Mode parent',
+      waiting_one: '{{prenoms}} t’attend dans le mode parent.',
+      waiting_other: '{{prenoms}} t’attendent dans le mode parent.',
+      waitingAll: 'Tes enfants t’attendent dans le mode parent.',
+    },
+    parentAccount: {
+      offer: 'Tu pratiques aussi un sport ?',
+    },
+    player: {
+      description: 'Tu vois l’app comme un joueur.',
+      enter: 'Basculer en mode joueur',
+    },
+    sheet: {
+      confirm: 'Oui, je pratique aussi',
+      done: 'Ton compte est passé en Joueur. Tu es en mode parent.',
+      error: 'Ton compte n’a pas pu changer. Réessaie.',
+      joinTeam: 'Tu peux rejoindre une équipe et participer à des événements.',
+      keepChildren: 'Tu gardes tes enfants, leurs fiches et leurs demandes.',
+      keepNamed_one: 'Tu gardes {{prenoms}}, sa fiche et ses demandes.',
+      keepNamed_other: 'Tu gardes {{prenoms}}, leurs fiches et leurs demandes.',
+      later: 'Pas maintenant',
+      subtitle: 'Ton compte passe de Parent à Joueur.',
+      switch: 'En haut de l’accueil, tu passes de « Joueur » à « Parent » d’un geste.',
+      title: 'Tu pratiques aussi un sport ?',
     },
     staff: {
       coach: 'entraîneur',

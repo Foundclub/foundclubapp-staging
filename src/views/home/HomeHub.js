@@ -65,6 +65,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 // COLL-C4A (02/10) — le bandeau « Actualité de la Ville » (planche P3b-bandeau-tel).
 import { BandeauActualiteMembre } from '@/views/collectivite/components/BandeauActualiteVille';
 import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePorteRow';
+import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
 import { lignesAAfficher, peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
@@ -404,14 +405,16 @@ function HomeHubContent({ auth, navigation, route }) {
   } = useStartupPhase();
   const {
     canPublishGovernedClubContent,
+    canUseParentMode,
     canUsePlayerMode,
     clubVerificationSummary,
     entitlementsSummary,
     freeUsageSummary,
     governedPublishingBlockReason,
+    isParentMode,
     isPlayerMode,
     nonPartnerCoachPublishingAccess,
-    setPlayerMode,
+    setDisplayMode,
     subscriptionAccessLevel,
     userData,
   } = auth;
@@ -457,7 +460,13 @@ function HomeHubContent({ auth, navigation, route }) {
   // LOT RÔLES (2026-09-28) — en MODE JOUEUR, l'accueil est celui d'un joueur :
   // tout ce qui suit (section Gérer, bandeau, cartes) se déduit de `roleKey`.
   // `userData` n'est pas réécrit, et les droits ne bougent pas (useAuth).
-  const roleKey = isPlayerMode ? 'player' : getUserRoleKey(roleName);
+  // PAR-L12 (13/10, décision D6 A d'Adel) — et en MODE PARENT (un sportif qui a des enfants),
+  // l'accueil est celui d'un parent : « Mes enfants » en tête, les mêmes cases que le parent.
+  /** @type {'player' | 'parent' | null} */
+  let modeActif = null;
+  if (isPlayerMode) modeActif = 'player';
+  else if (isParentMode) modeActif = 'parent';
+  const roleKey = modeActif || getUserRoleKey(roleName);
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
   const isSuperAdmin = roleKey === 'superAdmin';
@@ -470,6 +479,15 @@ function HomeHubContent({ auth, navigation, route }) {
   const mesEnfants = useMesEnfantsEnBref({
     actif: Boolean(userData?.documentId) && peutAvoirDesEnfants(getUserRoleKey(roleName)),
   });
+  // PAR-L12 (E25) — le bandeau nomme les enfants qui attendent dans le mode parent.
+  const prenomsDesEnfants = useMemo(
+    () => mesEnfants.lignes.map((ligne) => ligne.prenom),
+    [mesEnfants.lignes],
+  );
+  // PAR-L12 (E27) — « Tu pratiques aussi un sport ? » : le premier appui d'un compte Parent.
+  const [feuillePratiqueOuverte, setFeuillePratiqueOuverte] = useState(false);
+  const ouvrirLaFeuillePratique = useCallback(() => setFeuillePratiqueOuverte(true), []);
+  const fermerLaFeuillePratique = useCallback(() => setFeuillePratiqueOuverte(false), []);
   // D72 — « Mon abonnement » et « Ma cotisation » sont RETIREES du super admin
   // (pack accueil, tache 3) : il ne paie ni l'un ni l'autre.
   const canShowSubscriptionExperience = isCoach || isPresident;
@@ -2592,12 +2610,26 @@ function HomeHubContent({ auth, navigation, route }) {
         />
         {/* COLL-ACCUEIL (01/10) — compte mixte : la porte discrète vers l'espace de sa Ville. */}
         <CollectivitePorteRow />
-        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour. */}
+        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour.
+            PAR-L12 (E25) — trois positions : rôle du compte, joueur, parent. Le mode parent ne
+            s'offre qu'à un compte qui a des enfants ; le compte Parent ouvre la feuille E27. */}
         <PlayerModeBanner
           accountRoleKey={getUserRoleKey(roleName)}
+          canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
           canUsePlayerMode={canUsePlayerMode === true}
-          isPlayerMode={isPlayerMode === true}
-          onChange={setPlayerMode}
+          displayMode={modeActif}
+          onChange={setDisplayMode}
+          onPratiqueAussi={ouvrirLaFeuillePratique}
+          prenoms={prenomsDesEnfants}
+        />
+        <FeuillePratiqueAussi
+          isVisible={feuillePratiqueOuverte}
+          onClose={fermerLaFeuillePratique}
+          onDone={() => {
+            setFeuillePratiqueOuverte(false);
+            showBanner({ title: t('playerMode.sheet.done'), tone: 'success' });
+          }}
+          prenoms={prenomsDesEnfants}
         />
         {headBanner ? (
           <HomeHeadBanner
