@@ -62,3 +62,34 @@ export const buildChildPayload = ({
 
   return payload;
 };
+
+/**
+ * PAR-L5L6 (13/10, design parent E09) — LA CHARGE D UNE MODIFICATION : vider un champ
+ * facultatif l'EFFACE vraiment.
+ *
+ * `buildChildPayload` n'envoie pas un champ vide ; en modification, le serveur gardait donc
+ * l'ancien maillot du parent qui venait de l'effacer. Ici, un champ facultatif (maillot,
+ * poste) VIDE alors que l'écran MONTRAIT une valeur part à `null`. Vérifié en lecture côté
+ * serveur (`declared-child-rules.js`, `pickWritableFields`) : une clé présente est écrite,
+ * `null` efface le maillot, et le poste devient vide.
+ *
+ * 🔒 Ce que l'écran n'a pas montré n'est jamais effacé : sans valeur affichée, un champ vide
+ * ne part pas — une fiche ouverte avant d'être lue ne perd rien.
+ * @param {{ birthdate?: string, firstname?: string, lastname?: string,
+ *   number?: unknown, position?: string }} champs - Les champs du formulaire.
+ * @param {{ number?: unknown, position?: unknown }} [affiche] - Ce que l'écran montrait à
+ *   l'ouverture.
+ * @returns {object} La charge : celle de `buildChildPayload`, plus les effacements.
+ */
+export const buildChildEditPayload = (champs = {}, affiche = {}) => {
+  /** @type {Record<string, unknown>} */
+  const payload = buildChildPayload(champs);
+
+  const maillotVide = String(champs?.number ?? '').trim() === '';
+  if (maillotVide && toJerseyNumber(affiche?.number) !== null) payload.number = null;
+
+  const posteVide = String(champs?.position ?? '').trim() === '';
+  if (posteVide && String(affiche?.position ?? '').trim()) payload.position = null;
+
+  return payload;
+};

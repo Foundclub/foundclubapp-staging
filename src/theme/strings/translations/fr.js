@@ -22794,6 +22794,8 @@ export default {
       birthdateYearLabel: 'Année de naissance',
       // PAR-L5L6 (E08) — motif de l'app : bouton plein, puis « Annuler » en lien.
       cancel: 'Annuler',
+      // PAR-L5L6 (E09) — en modification, sous maillot et poste : vider, c'est effacer.
+      clearHint: 'Vider un champ l’efface.',
       errors: {
         // 📅 DATENAISS (22/09) : une date après aujourd'hui est dite AVANT
         // d'envoyer, comme le palier 13 (Sentry SERVEUR-STRAPI-T).

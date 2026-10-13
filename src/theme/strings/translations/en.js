@@ -13452,6 +13452,7 @@ export default {
       birthdateMonthLabel: 'Month of birth',
       birthdateYearLabel: 'Year of birth',
       cancel: 'Cancel',
+      clearHint: 'Clearing a field erases it.',
       editTitle: 'Edit profile',
       errors: {
         futureDate: "The date of birth can't be in the future.",

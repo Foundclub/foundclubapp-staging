@@ -23,7 +23,10 @@ import {
   useGetMyDeclaredChildren,
   useUpdateDeclaredChild,
 } from '@/services/declaredChild/declaredChildQueries';
-import { buildChildPayload } from '@/services/declaredChild/declaredChildRules';
+import {
+  buildChildEditPayload,
+  buildChildPayload,
+} from '@/services/declaredChild/declaredChildRules';
 
 import { getErrorStatus } from '@/utils/errors/displayError';
 
@@ -112,6 +115,12 @@ function ChildEdit() {
       : String(enfantExistant.number),
   );
   const [position, setPosition] = useState(enfantExistant?.position || '');
+  // PAR-L5L6 (E09) — ce que l'écran MONTRAIT à l'ouverture : seul un champ qui portait une
+  // valeur peut être effacé (jamais une valeur pas encore lue, site ouvert à froid).
+  const [affiche] = useState(() => ({
+    number: enfantExistant?.number ?? null,
+    position: enfantExistant?.position ?? null,
+  }));
   const [erreur, setErreur] = useState('');
   const [envoiTente, setEnvoiTente] = useState(false);
   const refJour = useRef(null);
@@ -206,13 +215,17 @@ function ChildEdit() {
     //    la répète pas en bas, on n'envoie pas.
     if (verdictDate) return;
 
-    const payload = buildChildPayload({
+    const champs = {
       birthdate: naissance,
       firstname,
       lastname,
       number,
       position,
-    });
+    };
+    // E09 — en modification, vider le maillot ou le poste l'EFFACE (`null`).
+    const payload = estUneModification
+      ? buildChildEditPayload(champs, affiche)
+      : buildChildPayload(champs);
 
     // Un 400 est un refus de VALIDATION : réessayer plus tard avec la même
     // saisie ne changera rien. Les contrôles ci-dessus arrêtent déjà les champs
@@ -260,9 +273,9 @@ function ChildEdit() {
     }
     creerEnfant(payload, { onError: surErreur, onSuccess: surSucces });
   }, [
-    continuerLInscription, creerEnfant, dateSaisie, documentIdVise, estUneEtapeDInscription,
-    estUneModification, firstname, lastname, modifierEnfant, navigation, number, position, t,
-    verdictDate,
+    affiche, continuerLInscription, creerEnfant, dateSaisie, documentIdVise,
+    estUneEtapeDInscription, estUneModification, firstname, lastname, modifierEnfant, navigation,
+    number, position, t, verdictDate,
   ]);
 
   /**
@@ -430,6 +443,17 @@ function ChildEdit() {
             en modification, où on les retrouve et les corrige. */}
         {estUneModification ? (
           <>
+            {/* E09 — « INFOS SPORTIVES » : l'intertitre de section de l'app (capitales). */}
+            <Text
+              style={[
+                Fonts.p3Bold,
+                Fonts.neutral200,
+                { letterSpacing: 1.2, marginBottom: -8, textTransform: 'uppercase' },
+              ]}
+              testID="child-sport-title"
+            >
+              {t('myChildren.sheet.sportTitle')}
+            </Text>
             <Input
               inputMode="numeric"
               keyboardType="number-pad"
@@ -446,6 +470,7 @@ function ChildEdit() {
               testID="child-position"
               value={position}
             />
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{t('myChildren.form.clearHint')}</Text>
           </>
         ) : null}
 

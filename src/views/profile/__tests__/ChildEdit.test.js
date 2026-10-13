@@ -858,3 +858,73 @@ describe('PAR-L5L6 E08 — ajouter un enfant', () => {
     expect(texteVisible(await rendre())).not.toContain('Annuler');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAR-L5L6 (13/10) — E09 : « INFOS SPORTIVES », EN MODIFICATION (design parent, planche 3).
+// Vider le maillot ou le poste l'EFFACE (le serveur reçoit `null` : vérifié en lecture dans
+// admin `declared-child-rules.js`, `pickWritableFields`). Ce qui n'a pas été vu n'est pas effacé.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PAR-L5L6 E09 — vider un champ l efface', () => {
+  const LEA = {
+    age: 9,
+    documentId: 'enfant-1',
+    firstname: 'Léa',
+    lastname: 'Martin',
+    number: 10,
+    position: 'Gardienne',
+  };
+
+  beforeEach(() => {
+    mockParams = { childDocumentId: 'enfant-1' };
+    mockEnfants = [LEA];
+  });
+
+  test('🔴 l intertitre « Infos sportives » et la phrase « Vider un champ l’efface. »', async () => {
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Infos sportives | Numéro de maillot (facultatif)');
+    expect(texte).toContain('Poste (facultatif)');
+    expect(texte).toContain('Vider un champ l’efface.');
+  });
+
+  test('🔴 maillot et poste vidés : la modification les envoie à null', async () => {
+    const arbre = await rendre();
+    await saisir(arbre, 'child-number', '');
+    await saisir(arbre, 'child-position', '');
+    await enregistrer(arbre);
+
+    const { payload } = mockModifier.mock.calls[0][0];
+    expect(payload).toEqual({
+      firstname: 'Léa', lastname: 'Martin', number: null, position: null,
+    });
+  });
+
+  test('valeurs gardées : elles repartent telles quelles, rien n est effacé', async () => {
+    const arbre = await rendre();
+    await enregistrer(arbre);
+
+    expect(mockModifier.mock.calls[0][0].payload).toEqual({
+      firstname: 'Léa', lastname: 'Martin', number: 10, position: 'Gardienne',
+    });
+  });
+
+  test('🔒 fiche ouverte AVANT d être lue : un champ vide n efface rien', async () => {
+    mockEnfants = [];
+    const arbre = await rendre();
+    await saisir(arbre, 'child-firstname', 'Léa');
+    await saisir(arbre, 'child-lastname', 'Martin');
+    await enregistrer(arbre);
+
+    const { payload } = mockModifier.mock.calls[0][0];
+    expect(Object.prototype.hasOwnProperty.call(payload, 'number')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(payload, 'position')).toBe(false);
+  });
+
+  test('la création n a ni l intertitre ni la phrase', async () => {
+    mockParams = undefined;
+    const texte = texteVisible(await rendre());
+
+    expect(texte).not.toContain('Infos sportives');
+    expect(texte).not.toContain('Vider un champ');
+  });
+});
