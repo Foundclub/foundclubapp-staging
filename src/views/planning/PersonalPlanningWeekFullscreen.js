@@ -1395,9 +1395,10 @@ function PlanningWeekFullscreen() {
   ) : null;
 
   let panneauRendu = null;
-  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » s'ouvre en
-  // PLEIN ECRAN (la fenetre du formulaire) ; le site en grand ecran garde son panneau de droite.
-  // Une heure libre : « Bloquer pour la Ville » reste sous la main, au bas du tunnel.
+  // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » et
+  // « Modifier » (« pareil », 4 etapes) s'ouvrent en PLEIN ECRAN (la fenetre du formulaire) ; le
+  // site en grand ecran garde son panneau de droite. Une heure libre : « Bloquer pour la Ville »
+  // reste sous la main, au bas du tunnel.
   let tunnelPleinEcran = null;
   const bloquerLaCase = () => {
     fermerPanneau();
@@ -1409,22 +1410,23 @@ function PlanningWeekFullscreen() {
       startTime: panneau.initial?.startTime,
     });
   };
-  if (panneau?.type === 'attribuer' && !isDesktop) {
+  if (['attribuer', 'modifier'].includes(panneau?.type) && !isDesktop) {
     tunnelPleinEcran = (
       <SeasonSlotForm
-        actionSecondaire={panneau.date && peutAttribuer ? {
+        actionSecondaire={panneau.type === 'attribuer' && panneau.date && peutAttribuer ? {
           libelle: t('collectiviteFermetures.form.boutonBloquer', 'Bloquer pour la Ville'),
           onPress: bloquerLaCase,
         } : null}
         clubs={clubsPourAttribuer}
-        compact={panneau.compact !== false}
+        compact={panneau.type === 'attribuer' && panneau.compact !== false}
         facilityId={facilityId}
         guided
         initial={panneau.initial}
-        key={`${panneau.type}-${panneau.titre || ''}`}
+        key={`${panneau.type}-${panneau.titre || panneau.creneau?.documentId || ''}`}
         onCancel={fermerPanneau}
         onDone={fermerPanneau}
         pleinEcran
+        slot={panneau.type === 'modifier' ? panneau.creneau : null}
       />
     );
   } else if (panneau?.type === 'attribuer' || panneau?.type === 'modifier') {

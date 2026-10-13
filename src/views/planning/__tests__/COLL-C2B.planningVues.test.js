@@ -535,6 +535,24 @@ describe('COLL-C2B planche 5 — la mairie touche pour agir', () => {
     );
   });
 
+  // 📐 COLL-R-A7 (13/10, COL-005, « modifier : pareil ») — au téléphone, « Modifier le créneau »
+  // ouvre le même plein écran que « Attribuer », en 4 étapes (jour, heures, période,
+  // récapitulatif). ROUGE avant : la feuille du bas.
+  it('COL-005 : « Modifier le créneau » s’ouvre en plein écran, 4 étapes', async () => {
+    const arbre = await rendre();
+    const { events, onReadOnlyEventPress } = grille();
+    await act(async () => {
+      onReadOnlyEventPress(events
+        .find((/** @type {any} */ evenement) => evenement.club?.name === 'US Ville B'));
+    });
+    await attendre();
+    await act(async () => { parTexte(arbre, 'Modifier le créneau').props.onPress(); });
+    await attendre();
+    const fenetre = arbre.root.findByType(Modal);
+    expect(fenetre.props.presentationStyle).toBe('fullScreen');
+    expect(textes(arbre)).toEqual(expect.arrayContaining(['Quel jour ?', 'Étape 1/4']));
+  });
+
   it('une seance du club ou une demande : ni Modifier ni Retirer', async () => {
     const arbre = await rendre();
     const { events, onReadOnlyEventPress } = grille();

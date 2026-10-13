@@ -351,4 +351,35 @@ describe('COLL-R-A7 — COL-005 : « Attribuer un créneau » en plein écran', 
     expect(tunnel(arbre).title).toBe('Pour quel club ?');
     expect(choix(arbre, 'Montrivage Basket').props.accessibilityState).toEqual({ checked: true });
   });
+
+  test('10. « Modifier un créneau » : le même plein écran, 4 étapes (jour, heures, période, récapitulatif)', async () => {
+    const arbre = await monter({
+      slot: {
+        club: { documentId: 'basket', name: 'Montrivage Basket' },
+        documentId: 'slot-1',
+        endTime: '19:00',
+        facility: { documentId: 'salle-t18' },
+        startTime: '17:30',
+        team: { documentId: 'u13', name: 'U13' },
+        weekday: 2,
+        ...SAISON,
+      },
+    });
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({ stepCount: 4, stepIndex: 1, title: 'Quel jour ?' }));
+    expect(choix(arbre, 'Mardi').props.accessibilityState).toEqual({ checked: true });
+    await avancer(arbre);
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Chaque mardi · T18 Salle essai', title: 'À quelle heure ?' }));
+    await choisirHeure('Fin', '20:00');
+    await avancer(arbre);
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({ subtitle: 'Chaque mardi · 17:30 – 20:00', title: 'Quelle période ?' }));
+    await avancer(arbre);
+    expect(tunnel(arbre)).toEqual(expect.objectContaining({
+      nextLabel: 'Enregistrer', subtitle: 'Relisez, puis enregistrez. Le club est prévenu.', title: 'Récapitulatif',
+    }));
+    expect(ligneDuRecap(arbre, 'club').props.onPress).toBeUndefined();
+    expect(typeof ligneDuRecap(arbre, 'periode').props.onPress).toBe('function');
+    expect(lus(arbre)).toContain('Montrivage Basket sera prévenu du changement.');
+    await appeler(() => tunnel(arbre).onNext());
+    expect(modifySeasonSlot).toHaveBeenCalledWith('slot-1', expect.objectContaining({ endTime: '20:00', startTime: '17:30', weekday: 2 }));
+  });
 });

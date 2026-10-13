@@ -536,8 +536,16 @@ describe('COLL-C2B planche 3 — 4. gerer, modifier, retirer (D67), retablir (§
   it('modifier : « a partir du », le meme formulaire, PUT sur le creneau', async () => {
     const arbre = await rendre();
     await appuyer(parTestID(arbre, 'creneau-mar-u15'));
+    mockFeuilles.length = 0;
     await appuyer(parTexte(arbre, 'Modifier le créneau'));
-    expect(textes(arbre)).toContain('Modifier le créneau');
+    // 📐 COLL-R-A7 (COL-005, « modifier : pareil ») : le même plein écran, 4 étapes. ROUGE avant :
+    // la feuille du bas, titrée « Modifier le créneau ».
+    expect(mockFeuilles).toHaveLength(0);
+    const fenetre = arbre.root.findByType(Modal);
+    expect(fenetre.props.presentationStyle).toBe('fullScreen');
+    expect(fenetre.findByType(WizardStepLayout).props).toEqual(expect.objectContaining({
+      headerVariant: 'focus', stepCount: 4, title: 'Quel jour ?',
+    }));
     await appuyer(parTexte(arbre, 'Suivant'));
     expect(champ('Début').value).toBe('17:30');
     await saisir('Début', '18:30');

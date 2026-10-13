@@ -490,9 +490,9 @@ function InstallationCreneaux() {
 
   // ─── Le panneau : feuille du bas (telephone) ou colonne de droite (ordinateur) ──────
   // 📐 COLL-R-A7 (13/10, COL-005, decision d'Adel D4 A) : au telephone, « Attribuer » s'ouvre
-  // en PLEIN ECRAN (la fenetre du formulaire), plus dans la feuille ; le site en grand ecran
-  // garde son panneau de droite.
-  const enPleinEcran = !isDesktop && panneau?.type === 'attribuer';
+  // en PLEIN ECRAN (la fenetre du formulaire), plus dans la feuille ; « Modifier » aussi
+  // (« pareil », 4 etapes). Le site en grand ecran garde son panneau de droite.
+  const enPleinEcran = !isDesktop && ['attribuer', 'modifier'].includes(panneau?.type);
   let titreDuPanneau = null;
   let contenuDuPanneau = null;
   if (panneau?.type === 'attribuer') {
@@ -519,6 +519,7 @@ function InstallationCreneaux() {
         key={`modifier-${panneau.creneau.documentId}`}
         onCancel={fermer}
         onDone={fermer}
+        pleinEcran={enPleinEcran}
         slot={panneau.creneau}
       />
     );
