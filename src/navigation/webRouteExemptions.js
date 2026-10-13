@@ -185,6 +185,8 @@ const MOBILE_ONLY_SCREENS = {
   // livré). Leur adresse sur le site viendra avec le lot web du gérant (screenRegistry.tsx).
   [RouteNames.ComplexeAccueil]:
     'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  [RouteNames.ComplexeCreneaux]:
+    'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexeDevenirGerant]:
     'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   [RouteNames.ComplexeEspace]:
