@@ -42,6 +42,8 @@ const mockServeur = {
 };
 
 jest.mock('@react-navigation/native', () => ({
+  // COLL-R-APP-CREATION (13/10) : le catalogue des bandeaux importe navigationService.
+  createNavigationContainerRef: () => ({ isReady: () => false }),
   useIsFocused: () => true,
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
