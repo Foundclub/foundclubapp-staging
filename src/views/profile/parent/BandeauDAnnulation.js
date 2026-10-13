@@ -37,8 +37,8 @@ const ISSUES = {
 function BandeauDAnnulation({ enfant, onRetry = undefined, resultat }) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
-  const issue = resultat ? ISSUES[resultat.situation] : null;
-  if (!issue) return null;
+  if (!resultat || !ISSUES[resultat.situation]) return null;
+  const issue = ISSUES[resultat.situation];
 
   const encre = {
     erreur: Colors.error500,
