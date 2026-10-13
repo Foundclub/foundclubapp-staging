@@ -339,3 +339,27 @@ test.each([1, 2])('IPH09 : écran court 320x568 / fontScale %s — contenu soupl
     dimensions.mockRestore();
   }
 });
+
+// 📍 COLL-R-A6 (13/10/2026, COL-018, décision prise par la fiche : affichage, réversible) — le
+// panneau « Attribuer » du site, ouvert depuis une case vide de la semaine type, dit d'emblée
+// « Mercredi · 17:00 – 18:30 » (planche validée P4v2-creneaux-ordi : « déjà rempli du jour et de
+// l'heure »). ROUGE avant : on ne le lisait qu'aux étapes 3 et 4 (la ligne n'existait qu'au panneau
+// compact du planning, SeasonSlotForm.js:857).
+describe('COLL-R-A6 — COL-018 : ouvert depuis une case, le jour et les heures dès l’étape 1', () => {
+  const lus = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+    .map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
+  const DE_LA_CASE = { endTime: '18:30', startTime: '17:00', weekday: 3 };
+
+  test('étape 1 (le club) puis étape 2 (l’équipe) : « Mercredi · 17:00 – 18:30 »', async () => {
+    const arbre = await monter({ initial: DE_LA_CASE });
+    expect(etape(arbre)).toBe('Étape 1/6');
+    expect(lus(arbre)).toContain('Mercredi · 17:00 – 18:30');
+    await suivant(arbre);
+    expect(lus(arbre)).toContain('Mercredi · 17:00 – 18:30');
+  });
+
+  test('ouvert par le bouton (aucune case) : pas de jour ni d’heures à l’étape 1', async () => {
+    const arbre = await monter({ initial: {} });
+    expect(lus(arbre).some((texte) => /· \d\d:\d\d – \d\d:\d\d$/.test(texte))).toBe(false);
+  });
+});
