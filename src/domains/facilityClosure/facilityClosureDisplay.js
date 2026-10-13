@@ -63,6 +63,13 @@ export const closureDay = (jour, { long = false } = {}) => {
 };
 
 /**
+ * « 14:00 » depuis « 14:00:00.000 », ou vide.
+ * @param {string | null | undefined} heure - L heure du serveur.
+ * @returns {string} HH:MM.
+ */
+const heureCourte = (heure) => (heure ? String(heure).slice(0, 5) : '');
+
+/**
  * Les jours d une fermeture : « ven. 2 oct. » ou « du sam. 17 oct. au dim. 25 oct. ».
  * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
  * @param {{ startDate?: string|null, endDate?: string|null }} fermeture - Les bornes.
@@ -72,26 +79,66 @@ export const closureDay = (jour, { long = false } = {}) => {
 export const closureDaysLabel = (t, fermeture, { long = false } = {}) => {
   const debut = closureDay(fermeture?.startDate, { long });
   const fin = closureDay(fermeture?.endDate, { long });
-  if (!fermeture?.endDate || fermeture.endDate === fermeture.startDate) return debut;
+  // CRFERM (13/10, « heures : plage ») : une fermeture peut dire l heure de son premier et de son
+  // dernier jour (« du vendredi 16 octobre à 14:00 au lundi 19 octobre à 12:00 »).
+  const heureDebut = fermeture?.kind === 'closure' ? heureCourte(fermeture?.startTime) : '';
+  const heureFin = fermeture?.kind === 'closure' ? heureCourte(fermeture?.endTime) : '';
+  if (!fermeture?.endDate || fermeture.endDate === fermeture.startDate) {
+    let heures = '';
+    if (heureDebut && heureFin) {
+      heures = t('collectiviteFermetures.jours.deA', 'de {{debut}} à {{fin}}', {
+        debut: heureDebut, fin: heureFin, ...SANS_ECHAPPEMENT,
+      });
+    } else if (heureDebut || heureFin) {
+      heures = heureDebut
+        ? t('collectiviteFermetures.jours.des', 'dès {{heure}}', {
+          heure: heureDebut, ...SANS_ECHAPPEMENT,
+        })
+        : t('collectiviteFermetures.jours.jusqua', 'jusqu’à {{heure}}', {
+          heure: heureFin, ...SANS_ECHAPPEMENT,
+        });
+    }
+    return [debut, heures].filter(Boolean).join(' ');
+  }
+  const aLHeure = (/** @type {string} */ jour, /** @type {string} */ heure) => (heure
+    ? t('collectiviteFermetures.jours.a', '{{jour}} à {{heure}}', {
+      heure, jour, ...SANS_ECHAPPEMENT,
+    })
+    : jour);
   return t('collectiviteFermetures.jours.du', 'du {{debut}} au {{fin}}', {
-    debut,
-    fin,
+    debut: aLHeure(debut, heureDebut),
+    fin: aLHeure(fin, heureFin),
     ...SANS_ECHAPPEMENT,
   });
 };
 
 /**
- * « Toute la journée » ou « 09:00 – 13:00 ».
+ * « Toute la journée » ou « 09:00 – 13:00 ». CRFERM (13/10) : une fermeture en plage dit les heures
+ * de son premier et de son dernier jour (« dès 14:00 · jusqu’à 12:00 »).
  * @param {any} t - i18next (TFunction ; `any` comme ailleurs dans src/domains).
- * @param {{ kind?: string, startTime?: string|null, endTime?: string|null }} fermeture - La
- *   fermeture.
+ * @param {{ kind?: string, startDate?: string|null, endDate?: string|null,
+ *   startTime?: string|null, endTime?: string|null }} fermeture - La fermeture.
  * @returns {string} Les heures.
  */
 export const closureHoursLabel = (t, fermeture) => {
-  if (fermeture?.kind !== 'block' || !fermeture.startTime || !fermeture.endTime) {
+  const debut = heureCourte(fermeture?.startTime);
+  const fin = heureCourte(fermeture?.endTime);
+  const unJour = fermeture?.kind === 'block' || fermeture?.startDate === fermeture?.endDate;
+  if (unJour && debut && fin) return `${debut} – ${fin}`;
+  if (fermeture?.kind === 'block' || (!debut && !fin)) {
     return t('collectiviteFermetures.jours.journee', 'Toute la journée');
   }
-  return `${String(fermeture.startTime).slice(0, 5)} – ${String(fermeture.endTime).slice(0, 5)}`;
+  const des = debut
+    ? t('collectiviteFermetures.jours.des', 'dès {{heure}}', {
+      heure: debut, ...SANS_ECHAPPEMENT,
+    })
+    : '';
+  const jusqua = fin
+    ? t('collectiviteFermetures.jours.jusqua', 'jusqu’à {{heure}}', {
+      heure: fin, ...SANS_ECHAPPEMENT,
+    })
+    : '';
+  return [des, jusqua].filter(Boolean).join(' · ');
 };
 
 /**
@@ -307,13 +354,21 @@ export const closureTouchesBlock = (bloc, fermeture) => {
   if (!fermeture || bloc?.raw?.closureBand) return false;
   const fenetre = getPlanningItemWindow(bloc);
   if (!fenetre) return false;
-  if (!closureCoversDay(fermeture, format(fenetre.startAt, 'yyyy-MM-dd'))) return false;
-  if (fermeture.kind !== 'block') return true;
+  const jour = format(fenetre.startAt, 'yyyy-MM-dd');
+  if (!closureCoversDay(fermeture, jour)) return false;
+  const debut = fenetre.startAt.getHours() * 60 + fenetre.startAt.getMinutes();
+  const fin = debut + Math.round((fenetre.endAt.getTime() - fenetre.startAt.getTime()) / 60000);
+  if (fermeture.kind !== 'block') {
+    // CRFERM (13/10) : une fermeture en plage — le premier jour dès son heure, le dernier
+    // jusqu a la sienne, les jours du milieu en entier (la regle du serveur, admin CRFERM-3).
+    const de = jour === fermeture.startDate ? minutesDe(fermeture.startTime) : null;
+    const a = jour === fermeture.endDate ? minutesDe(fermeture.endTime) : null;
+    if (de === null && a === null) return true;
+    return debut < (a ?? 24 * 60) && (de ?? 0) < fin;
+  }
   const de = minutesDe(fermeture.startTime);
   const a = minutesDe(fermeture.endTime);
   if (de === null || a === null) return false;
-  const debut = fenetre.startAt.getHours() * 60 + fenetre.startAt.getMinutes();
-  const fin = debut + Math.round((fenetre.endAt.getTime() - fenetre.startAt.getTime()) / 60000);
   return debut < a && de < fin;
 };
 
@@ -338,8 +393,13 @@ export const closureBandsForRange = (fermetures, plage, heures, libelle) => {
     .filter((jour) => closureCoversDay(fermeture, format(jour, 'yyyy-MM-dd')))
     .map((jour) => {
       const bloc = fermeture.kind === 'block';
-      const de = (bloc ? minutesDe(fermeture.startTime) : null) ?? heures.opening;
-      const a = (bloc ? minutesDe(fermeture.endTime) : null) ?? heures.closing;
+      // CRFERM (13/10) : une fermeture en plage hachure son premier jour dès son heure, son dernier
+      // jusqu a la sienne.
+      const iso = format(jour, 'yyyy-MM-dd');
+      const de = (bloc || iso === fermeture.startDate ? minutesDe(fermeture.startTime) : null)
+        ?? heures.opening;
+      const a = (bloc || iso === fermeture.endDate ? minutesDe(fermeture.endTime) : null)
+        ?? heures.closing;
       const instant = (/** @type {number} */ minutes) => new Date(
         jour.getFullYear(),
         jour.getMonth(),

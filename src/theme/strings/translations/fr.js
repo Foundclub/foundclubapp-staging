@@ -6417,6 +6417,17 @@ export default {
       seancesOuCreneaux_one: '{{count}} séance ou créneau touché',
       seancesOuCreneaux_other: '{{count}} séances ou créneaux touchés',
     },
+    // CRFERM (13/10, planche P4v4 états 1, 7, 8, 9) — depuis l’accueil : d’abord l’installation.
+    choix: {
+      ajouter: 'Ajouter une installation',
+      erreur: 'Les installations n’ont pas pu être lues.',
+      erreurAide: 'Vérifiez la connexion, puis réessayez. Rien n’a été perdu.',
+      question: 'Quelle installation fermez-vous ?',
+      questionBloquer: 'Quelle installation bloquez-vous ?',
+      reessayer: 'Réessayer',
+      vide: 'Aucune installation à fermer',
+      videAide: 'Ajoutez d’abord vos gymnases, terrains et salles.',
+    },
     confirmer: {
       annuler: 'Annuler',
       bloquer: 'Bloquer',
@@ -6440,6 +6451,9 @@ export default {
       a: 'À',
       au: 'Au',
       boutonBloquer: 'Bloquer pour la Ville',
+      // CRFERM (13/10, planche P4v4 état 3 bis) : certaines heures seulement.
+      boutonFermer: 'Fermer l’installation',
+      boutonFermerFeminin: 'Fermer la {{lieu}}',
       boutonFermerJour: 'Fermer l’installation ce jour-là',
       // FINITIONS11-COLL (03/10) — planche 25 : accordé au type de l’installation.
       boutonFermerJourFeminin: 'Fermer la {{lieu}} ce jour-là',
@@ -6447,14 +6461,22 @@ export default {
       boutonFermerJours: 'Fermer l’installation ces jours-là',
       boutonFermerJoursFeminin: 'Fermer la {{lieu}} ces jours-là',
       boutonFermerJoursMasculin: 'Fermer le {{lieu}} ces jours-là',
+      boutonFermerMasculin: 'Fermer le {{lieu}}',
       changer: 'Changer',
+      // CRFERM (13/10, COL-008) — une date vide attend « Choisir » : court, sur une ligne.
+      choisir: 'Choisir',
       choisirInstallation: 'Choisissez l’installation',
       // SAIS (08/10, T20 lot 1) — une date vide le dit (l’espace de la Ville vouvoie).
       choisirUnJour: 'Choisissez un jour',
       de: 'De',
+      // CRFERM (13/10, planche P4v4 état 4) — le nom et le mot, repliés.
+      deplier: 'Ajouter un nom ou un mot pour les clubs',
       du: 'Du',
       enregistrer: 'Enregistrer les changements',
       formatHeure: 'Une heure s’écrit HH:MM (par exemple 09:00).',
+      // CRFERM (13/10, « heures : plage ») — l’heure du premier et du dernier jour.
+      heureDebut: 'Heure de début',
+      heureFin: 'Heure de fin',
       jour: 'Jour',
       // SAIS (08/10, T20 lot 2) — un bouton grisé dit ce qui manque.
       manque: {
@@ -6482,13 +6504,20 @@ export default {
       quitterPerdu: 'Ce que vous avez saisi sera perdu.',
       quitterTitre: 'Quitter sans enregistrer ?',
       rester: 'Rester',
+      sinonLesHeures: 'Sinon, choisissez les heures.',
       titreBloquer: 'Bloquer un créneau',
       titreFermer: 'Fermer une installation',
       titreModifier: 'Modifier la fermeture',
+      touteLaJournee: 'Toute la journée',
     },
     jours: {
+      // CRFERM (13/10, « heures : plage ») : l’heure du premier et du dernier jour.
+      a: '{{jour}} à {{heure}}',
+      deA: 'de {{debut}} à {{fin}}',
+      des: 'dès {{heure}}',
       du: 'du {{debut}} au {{fin}}',
       journee: 'Toute la journée',
+      jusqua: 'jusqu’à {{heure}}',
     },
     liste: {
       bloquer: 'Bloquer un créneau',
