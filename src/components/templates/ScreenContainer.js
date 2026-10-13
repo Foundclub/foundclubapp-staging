@@ -1,7 +1,9 @@
 import { HeaderHeightContext } from '@react-navigation/elements';
-import { useContext, useMemo } from 'react';
 import {
-  ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
+  useContext, useEffect, useMemo, useState,
+} from 'react';
+import {
+  ImageBackground, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
   useWindowDimensions, View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -145,6 +147,40 @@ function ScreenContainer({
     withHeaderPadding,
   ]);
 
+  // 🤖 ANDROIDBAR-3 — Android 15 et 16 (bord à bord imposé) : PAS de KeyboardAvoidingView.
+  // Mesuré à l'émulateur le 13/10/2026 (écran de connexion) : clavier ouvert, il évitait
+  // pile ; REFERMÉ, il laissait 54 dp de vide sous l'écran — la barre d'état. À la
+  // fermeture, Android lui envoie la hauteur VISIBLE comme haut du clavier
+  // (ReactRootView.java), et il en déduit qu'il reste 54 dp à éviter.
+  // Motif maison (BottomModal, Conversation ANDROIDBAR-1) : la hauteur qu'Android envoie,
+  // clavier SANS la barre système, remise à 0 à la fermeture. On en retire ce que la marge
+  // basse du conteneur évite déjà : c'est le calcul du KeyboardAvoidingView à l'ouverture.
+  // Android ≤ 14 garde `adjustResize` (sa barre d'état est opaque : rien ne reste), iPhone
+  // garde `padding` : inchangés.
+  // ponytail: réservé à Android 15+ comme Conversation ; si `edgeToEdgeEnabled` passe à
+  // true, Android ≤ 14 en aura besoin aussi.
+  const ecouteLeClavierAndroid = keyboardAvoiding
+    && Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35;
+  const [hauteurDuClavierAndroid, setHauteurDuClavierAndroid] = useState(0);
+  useEffect(() => {
+    if (!ecouteLeClavierAndroid) return undefined;
+    const hauteur = (/** @type {any} */ coordonnees) => Math.max(0, coordonnees?.height || 0);
+    if (Keyboard.isVisible?.()) setHauteurDuClavierAndroid(hauteur(Keyboard.metrics?.()));
+    const ouvert = Keyboard.addListener('keyboardDidShow', (evenement) => {
+      setHauteurDuClavierAndroid(hauteur(evenement?.endCoordinates));
+    });
+    const ferme = Keyboard.addListener('keyboardDidHide', () => setHauteurDuClavierAndroid(0));
+    return () => {
+      ouvert.remove();
+      ferme.remove();
+    };
+  }, [ecouteLeClavierAndroid]);
+  const retraitDuClavierAndroid = hauteurDuClavierAndroid > 0
+    ? Math.max(0, hauteurDuClavierAndroid + insets.bottom - (containerSpaces.paddingBottom || 0))
+    : 0;
+
   // C06 — quand le clavier s'ouvre, le champ actif doit rester visible : les
   // conteneurs de formulaire (FormScreenContainer) activent `keyboardAvoiding`
   // pour remonter le contenu au-dessus du clavier.
@@ -192,31 +228,42 @@ function ScreenContainer({
     </View>
   );
 
-  const body = keyboardAvoiding ? (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+  const contenuEvite = keyboardScroll ? (
+    <ScrollView
+      automaticallyAdjustKeyboardInsets
+      contentContainerStyle={[
+        Alignments.grow1,
+        ...toScrollableContentStyle(safeContentContainerStyle),
+      ]}
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      keyboardShouldPersistTaps="handled"
+      // Clavier ferme, l'ecran doit rester celui d'hier : pas de barre de
+      // defilement qui apparaitrait sur un contenu qui tient deja.
+      showsVerticalScrollIndicator={false}
       style={Alignments.fill}
     >
-      {keyboardScroll ? (
-        <ScrollView
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={[
-            Alignments.grow1,
-            ...toScrollableContentStyle(safeContentContainerStyle),
-          ]}
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-          keyboardShouldPersistTaps="handled"
-          // Clavier ferme, l'ecran doit rester celui d'hier : pas de barre de
-          // defilement qui apparaitrait sur un contenu qui tient deja.
-          showsVerticalScrollIndicator={false}
-          style={Alignments.fill}
-        >
-          {children}
-        </ScrollView>
-      ) : staticContent}
-    </KeyboardAvoidingView>
+      {children}
+    </ScrollView>
   ) : staticContent;
+
+  let body = staticContent;
+  if (ecouteLeClavierAndroid) {
+    body = (
+      <View style={[Alignments.fill, { paddingBottom: retraitDuClavierAndroid }]}>
+        {contenuEvite}
+      </View>
+    );
+  } else if (keyboardAvoiding) {
+    body = (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+        style={Alignments.fill}
+      >
+        {contenuEvite}
+      </KeyboardAvoidingView>
+    );
+  }
 
   if (gradient) {
     return (
