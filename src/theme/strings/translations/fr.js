@@ -6861,6 +6861,14 @@ export default {
       statistiques: 'Statistiques',
       titre: 'Gérer',
     },
+    installations: {
+      creneaux: 'Créneaux',
+      erreur: 'Impossible de charger tes terrains.',
+      nTerrains: '{{nombre}} terrains',
+      titre: 'Mes installations',
+      unTerrain: '1 terrain',
+      vide: 'Tu n’as pas encore de terrain.',
+    },
     lieu: {
       exterieur: 'Extérieur',
       interieur: 'Intérieur',

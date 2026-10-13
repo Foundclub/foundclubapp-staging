@@ -53,6 +53,15 @@ const textes = (arbre) => arbre.root.findAllByType(Text)
   .map((noeud) => texteDe(noeud.props.children));
 
 /**
+ * Les textes affichés, espaces insécables rendus ordinaires : les puces et les états vides de l'app
+ * écrivent leurs mots avec des espaces insécables (`texteInsecable`).
+ * @param {any} arbre - L'arbre.
+ * @returns {string[]} Les textes.
+ */
+const lisibles = (arbre) => textes(arbre)
+  .map((texte) => texte.split(String.fromCharCode(160)).join(' '));
+
+/**
  * Le premier élément pressable dont le libellé (texte, `title` ou `accessibilityLabel`) contient
  * `libelle`.
  * @param {any} arbre - L'arbre.
@@ -60,12 +69,15 @@ const textes = (arbre) => arbre.root.findAllByType(Text)
  * @returns {any} Le nœud ; lève une erreur s'il n'existe pas.
  */
 const pressable = (arbre, libelle) => {
+  const ordinaire = (/** @type {string} */ texte) => texte
+    .split(String.fromCharCode(160)).join(' ');
+  const contient = (/** @type {unknown} */ texte) => ordinaire(String(texte || ''))
+    .includes(libelle);
   const noeuds = arbre.root.findAll((noeud) => typeof noeud.props?.onPress === 'function'
     && typeof noeud.type !== 'string'
-    && (String(noeud.props?.title || '').includes(libelle)
-      || String(noeud.props?.accessibilityLabel || '').includes(libelle)
-      || noeud.findAllByType(Text)
-        .some((texte) => texteDe(texte.props.children).includes(libelle))));
+    && (contient(noeud.props?.title)
+      || contient(noeud.props?.accessibilityLabel)
+      || noeud.findAllByType(Text).some((texte) => contient(texteDe(texte.props.children)))));
   if (!noeuds.length) throw new Error(`Aucun élément pressable « ${libelle} »`);
   return noeuds[0];
 };
@@ -134,6 +146,7 @@ const PLAN_OUVERT = Object.freeze({
 
 module.exports = {
   COMPLEXE_FIVE,
+  lisibles,
   parRepere,
   PLAN_OUVERT,
   pressable,

@@ -6424,6 +6424,14 @@ export default {
       statistiques: 'Statistics',
       titre: 'Manage',
     },
+    installations: {
+      creneaux: 'Slots',
+      erreur: 'Your courts could not be loaded.',
+      nTerrains: '{{nombre}} courts',
+      titre: 'My courts',
+      unTerrain: '1 court',
+      vide: 'You have no court yet.',
+    },
     lieu: {
       exterieur: 'Outdoor',
       interieur: 'Indoor',

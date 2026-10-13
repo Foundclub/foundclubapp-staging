@@ -1411,6 +1411,14 @@ function PrivateNavigator() {
             options={{ headerShown: false }}
           />
         ) : null}
+        {/* E-G07 — « Mes installations ». */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeInstallations').default}
+            name={RouteNames.ComplexeInstallations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>
