@@ -331,6 +331,38 @@ function RequestsHub({ navigation, route }) {
     ));
   }, [t]);
 
+  /**
+   * 👪 PAR-L9a (13/10, E17) — APRES UNE REPONSE « MESSAGE TYPE », LA FENETRE DIT A QUI
+   * ELLE EST PARTIE, ET RIEN DE PLUS. Elle disait « Felicitations / Ta reponse est
+   * partie. », meme pour « Equipe complete » : un refus ne se felicite pas.
+   * ⛔ Comme `celebrateAcceptance` : seulement depuis le chemin de succes.
+   * @param {any} item La demande a laquelle on vient de repondre.
+   * @param {string} message Le texte parti chez la personne.
+   */
+  const announceInterestResponse = useCallback((item, message) => {
+    const firstname = String(item?.meta?.requesterFirstname || '').trim();
+    setCelebration({
+      closeLabel: t('common.actions.close', 'Fermer'),
+      message: message
+        ? t('requestsHub.interest.sentMessage', {
+          defaultValue: 'Message envoyé : « {{message}} »',
+          message,
+          ...SANS_ECHAPPEMENT,
+        })
+        : '',
+      title: firstname
+        ? t('requestsHub.interest.sentTitle', {
+          defaultValue: 'Réponse envoyée à {{firstname}}.',
+          firstname,
+          ...SANS_ECHAPPEMENT,
+        })
+        : t('requestsHub.interest.sentTitleNoName', 'Réponse envoyée.'),
+    });
+    setSettledItemIds((current) => (
+      item?.id && !current.includes(item.id) ? [...current, item.id] : current
+    ));
+  }, [t]);
+
   const closeInstallationRefusalModal = useCallback(() => {
     setInstallationRefusalItem(null);
     setInstallationRefusalReason('');
@@ -677,7 +709,7 @@ function RequestsHub({ navigation, route }) {
         presetKey: selectedPreset.key,
         responseType: 'preset',
       });
-      celebrateAcceptance(interestResponseItem);
+      announceInterestResponse(interestResponseItem, selectedPreset.message);
       invalidateRequestsInBackground();
       emitGuidanceAction('requests.processed', {
         requestType: 'interest',
@@ -697,7 +729,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [celebrateAcceptance, interestResponseItem, interestResponsePresetKey, invalidateRequestsInBackground, openSubscriptionPaywall, t]);
+  }, [announceInterestResponse, interestResponseItem, interestResponsePresetKey, invalidateRequestsInBackground, openSubscriptionPaywall, t]);
 
   const handleRequesterPress = useCallback((item) => {
     const requesterId = String(item?.meta?.requesterId || '').trim();
@@ -928,7 +960,9 @@ function RequestsHub({ navigation, route }) {
                 const isSelected = preset.key === interestResponsePresetKey;
                 return (
                   <TouchableOpacity
+                    accessibilityLabel={preset.label}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
                     disabled={Boolean(processingItemId)}
                     key={preset.key}
                     onPress={() => setInterestResponsePresetKey(preset.key)}
@@ -977,7 +1011,7 @@ function RequestsHub({ navigation, route }) {
                   disabled={Boolean(processingItemId)}
                   isLoading={processingItemId === interestResponseItem?.id}
                   onPress={handleInterestResponseConfirm}
-                  title={t('requestsHub.actions.respond', 'Repondre')}
+                  title={t('requestsHub.interest.send', 'Envoyer la réponse')}
                   variant="Primary"
                 />
               </View>
@@ -1159,7 +1193,7 @@ function RequestsHub({ navigation, route }) {
             </Text>
             <Button
               onPress={closeCelebration}
-              title={t('requestsHub.celebration.close', 'Super')}
+              title={celebration?.closeLabel || t('requestsHub.celebration.close', 'Super')}
               variant="Primary"
             />
           </View>

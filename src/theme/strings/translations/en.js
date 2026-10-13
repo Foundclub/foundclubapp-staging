@@ -16077,7 +16077,7 @@ export default {
       childWithAge: '{{firstname}} ({{age}} years old)',
       club: '{{requester}} is interested in the club {{club}}.',
       team: '{{requester}} is interested in {{team}}.',
-      title: 'Club interest',
+      title: 'Interest in the club',
     },
     requesterFallback: 'User',
     team: {
@@ -16134,7 +16134,7 @@ export default {
     actions: {
       approveOverflow: 'Allow',
       open: 'View proposal',
-      openChat: 'Open chat',
+      openChat: 'Open a conversation',
       respond: 'Reply',
       viewEvent: 'View event',
       viewProfile: 'View profile',
@@ -16192,6 +16192,10 @@ export default {
       responseMissing: 'Choose a response to process this interest.',
       responsePreview: 'Message sent',
       responseTitle: 'Reply to this interest',
+      send: 'Send the reply',
+      sentMessage: 'Message sent: “{{message}}”',
+      sentTitle: 'Reply sent to {{firstname}}.',
+      sentTitleNoName: 'Reply sent.',
       targetTeam: 'Target team: {{team}}',
     },
     invitations: {

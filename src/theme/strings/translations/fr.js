@@ -16873,9 +16873,9 @@ export default {
       childPlaceTitle: 'Place pour un enfant',
       childTitleWithAge: '{{firstname}}, {{age}} ans',
       childWithAge: '{{firstname}} ({{age}} ans)',
-      club: '{{requester}} est intéressé par le club {{club}}.',
-      team: '{{requester}} est intéressé par {{team}}.',
-      title: 'Intérêt club',
+      club: '{{requester}} est intéressé·e par le club {{club}}.',
+      team: '{{requester}} est intéressé·e par {{team}}.',
+      title: 'Intérêt pour le club',
     },
     requesterFallback: 'Utilisateur',
     team: {
@@ -16932,7 +16932,7 @@ export default {
     actions: {
       approveOverflow: 'Autoriser',
       open: 'Voir la proposition',
-      openChat: 'Ouvrir chat',
+      openChat: 'Ouvrir une conversation',
       respond: 'Répondre',
       viewEvent: "Voir l'événement",
       viewProfile: 'Voir le profil',
@@ -16997,6 +16997,13 @@ export default {
       responseMissing: 'Choisis une réponse pour traiter cet intérêt.',
       responsePreview: 'Message envoyé',
       responseTitle: 'Répondre à cet intérêt',
+      // PAR-L9a (13/10, E17) — le pied de la feuille et la fenêtre qui suit l'envoi :
+      // « Réponse envoyée à Maryline. », jamais « Félicitations » (« Équipe complète »
+      // n'est pas une victoire).
+      send: 'Envoyer la réponse',
+      sentMessage: 'Message envoyé : « {{message}} »',
+      sentTitle: 'Réponse envoyée à {{firstname}}.',
+      sentTitleNoName: 'Réponse envoyée.',
       targetTeam: 'Équipe visée : {{team}}',
     },
     // S10-C — les invitations d'équipe reçues. Le libellé du bouton dit où l'on
