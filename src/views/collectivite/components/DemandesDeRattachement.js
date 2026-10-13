@@ -300,7 +300,6 @@ function DemandesDeRattachement({ collectiviteId, demandes }) {
           onPress={() => setToutes(true)}
           size="sm"
           style={{ alignSelf: 'flex-start' }}
-          testID="collectivite-demandes-voir-toutes"
           title={t('collectiviteAccueil.attente.voirToutes', 'Voir les {{nombre}} demandes', {
             nombre: aMontrer.length,
           })}

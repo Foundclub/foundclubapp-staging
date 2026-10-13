@@ -353,7 +353,6 @@ function CollectiviteClubs() {
           isOption
           onPress={ajouter}
           size="sm"
-          testID="collectivite-clubs-ajouter"
           title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
           variant="SecondaryLight"
         />
@@ -396,7 +395,6 @@ function CollectiviteClubs() {
       iconPosition="before"
       onPress={ajouter}
       size={isDesktop ? 'sm' : undefined}
-      testID="collectivite-clubs-ajouter"
       title={t('collectiviteRattachement.add.button', 'Ajouter un club')}
       variant="Secondary"
     />

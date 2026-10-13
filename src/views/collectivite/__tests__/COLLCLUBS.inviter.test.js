@@ -279,7 +279,7 @@ describe('COLL-CLUBS — planche 3, côté mairie : inviter un club absent', () 
     // COLL-R-A6 (13/10, D1 A′) : le bouton en pointillés « Inviter un club absent » a laissé la
     // place au seul « Ajouter un club » (au-dessus des clubs).
     expect(parTestID(arbre, 'collectivite-clubs-inviter')).toBeUndefined();
-    await act(async () => { parTestID(arbre, 'collectivite-clubs-ajouter').props.onPress(); });
+    await act(async () => { bouton(arbre, 'Ajouter un club').props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteInviteClub', {
       collectiviteId: 'ville-de-recette',
       onglet: 'recherche',

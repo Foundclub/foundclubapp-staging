@@ -286,8 +286,9 @@ describe('COL-001 — la carte d’un club en 3 lignes (téléphone, planche P7v
       onglet: 'recherche',
     });
     // Il passe AVANT les clubs (planche : sous le titre).
-    expect(rang(arbre, 'collectivite-clubs-ajouter'))
-      .toBeLessThan(rang(arbre, 'collectivite-club-as-montrivage'));
+    const rangDuBouton = arbre.root.findAll(() => true).indexOf(ajouter[0]);
+    expect(rangDuBouton).toBeGreaterThan(-1);
+    expect(rangDuBouton).toBeLessThan(rang(arbre, 'collectivite-club-as-montrivage'));
   });
 });
 
