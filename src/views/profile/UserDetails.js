@@ -48,6 +48,7 @@ import {
   wantsChildFeedbackAlert,
 } from '@/views/profile/coachFeedback/coachFeedbackModel';
 import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
+import BlocMesEnfants from '@/views/profile/parent/BlocMesEnfants';
 import ChildIdentityCard, { ligneDIdentite } from '@/views/profile/parent/ChildIdentityCard';
 import SelfProfilePlayerCoach from '@/views/profile/SelfProfilePlayerCoach';
 import SelfProfileUnified from '@/views/profile/SelfProfileUnified';
@@ -1075,6 +1076,14 @@ function UserDetails({ navigation, route }) {
     }
   }
 
+  // PAR-L7 (13/10, design parent E03, décision D1 A d'Adel du 12/10) — « MON PROFIL » D'UN
+  // PARENT : son identité, SES ENFANTS (`BlocMesEnfants`), ses infos personnelles. Rien de
+  // sportif : ni retours du coach (toujours vides pour lui), ni historique, ni profil sportif,
+  // ni équipes. Seulement en PROPRIÉTAIRE (`isOwnerView`) : le profil d'un parent vu par
+  // quelqu'un d'autre, et son aperçu, ne changent pas.
+  const estMonProfilDeParent = isOwnerView
+    && getUserRoleKey(user?.role?.type || user?.role?.name) === 'parent';
+
   const renderTeamCard = (team, index, prefix = 'team') => (
     <TouchableOpacity
       key={`${prefix}-${String(team?.documentId || team?.id || team?.name || index)}`}
@@ -1202,7 +1211,9 @@ function UserDetails({ navigation, route }) {
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {isParentOfMinorViewer && user?.firstname
             ? String(user.firstname).toUpperCase()
-            : t('userDetails.title', 'Infos profil').toUpperCase()}
+            : (estMonProfilDeParent
+              ? t('profile.titles.unified', 'Mon profil')
+              : t('userDetails.title', 'Infos profil')).toUpperCase()}
         </Text>
         <View
           style={[
@@ -1302,6 +1313,8 @@ function UserDetails({ navigation, route }) {
             </View>
           )}
 
+          {estMonProfilDeParent ? <BlocMesEnfants navigation={navigation} toujours /> : null}
+
           {/* D54 — les stats de match sont un bloc JOUEUR : le pack les
               range en « heritage joueur » et les interdit sur un profil d'entraineur.
               ST-VUES (planche 17, decisions d Adel du 02/10 « profil A » et « b oui ») :
@@ -1319,7 +1332,7 @@ function UserDetails({ navigation, route }) {
 
           {/* Les retours du coach sont PRIVES : jamais sur une vue publique,
               donc jamais dans l'apercu non plus (pack, regle « vie privee »). */}
-          {isOwnerView ? (
+          {isOwnerView && !estMonProfilDeParent ? (
             <SectionCard
               ApplicationStyle={ApplicationStyle}
               Colors={Colors}
@@ -1462,104 +1475,108 @@ function UserDetails({ navigation, route }) {
               propre compte (d'ou `userId` ci-dessous, inchange), mais on
               montre ce que voient les autres. Corbeilles, « + Ajouter » et
               appui pour modifier y restaient actifs — et marchaient. */}
-          <UserHistorySection
-            bestLevel={bestLevelValue || undefined}
-            isOwnProfile={isOwnerView}
-            // D40 marche 3 — ces deux boutons vivent DANS la liste : ils
-            // doivent y ramener. Ils annoncaient `Profile`, donc on ajoutait
-            // depuis sa liste et on atterrissait ailleurs — il fallait
-            // retraverser pour en ajouter une seconde.
-            onAddPress={
-              isOwnerView
-                ? () => navigation.navigate(RouteNames.HistoryWizardCategory, {
-                  resetContext: true,
-                  returnRoute: RouteNames.UserDetails,
-                })
-                : undefined
-            }
-            onEditPress={
-              isOwnerView
-                ? (entry) => navigation.navigate(RouteNames.HistoryWizardCategory, {
-                  editingEntry: entry,
-                  returnRoute: RouteNames.UserDetails,
-                })
-                : undefined
-            }
-            preferredSport={preferredSportValue || undefined}
-            userId={isSelfProfile ? undefined : targetUserId}
-          />
+          {estMonProfilDeParent ? null : (
+            <UserHistorySection
+              bestLevel={bestLevelValue || undefined}
+              isOwnProfile={isOwnerView}
+              // D40 marche 3 — ces deux boutons vivent DANS la liste : ils
+              // doivent y ramener. Ils annoncaient `Profile`, donc on ajoutait
+              // depuis sa liste et on atterrissait ailleurs — il fallait
+              // retraverser pour en ajouter une seconde.
+              onAddPress={
+                isOwnerView
+                  ? () => navigation.navigate(RouteNames.HistoryWizardCategory, {
+                    resetContext: true,
+                    returnRoute: RouteNames.UserDetails,
+                  })
+                  : undefined
+              }
+              onEditPress={
+                isOwnerView
+                  ? (entry) => navigation.navigate(RouteNames.HistoryWizardCategory, {
+                    editingEntry: entry,
+                    returnRoute: RouteNames.UserDetails,
+                  })
+                  : undefined
+              }
+              preferredSport={preferredSportValue || undefined}
+              userId={isSelfProfile ? undefined : targetUserId}
+            />
+          )}
 
-          <SectionCard
-            ApplicationStyle={ApplicationStyle}
-            Colors={Colors}
-            Fonts={Fonts}
-            Spaces={Spaces}
-            title={t('userDetails.sections.sport', 'Profil sportif')}
-          >
-            <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.running}
-                label={t('userDetails.fields.sport', 'Sport')}
-                Spaces={Spaces}
-                value={formatNullableValue(preferredSportValue, fallbackValue)}
-              />
-              <InfoItem
-                Alignments={Alignments}
-                Colors={Colors}
-                compact={isCompactScreen}
-                Fonts={Fonts}
-                icon={Images.shield}
-                label={t('userDetails.fields.bestLevel', 'Niveau')}
-                Spaces={Spaces}
-                value={formatNullableValue(bestLevelValue, fallbackValue)}
-              />
-              {/* D54 — la grille du coach n'est pas vidée, elle est RESTREINTE :
-                  le pack lui laisse « Âge, Ville, Sport, Meilleur niveau » et
-                  lui retire poste / section / catégorie, qui n'ont pas de sens
-                  pour quelqu'un qui ne joue pas. */}
-              {showsPlayerBlocks ? (
+          {estMonProfilDeParent ? null : (
+            <SectionCard
+              ApplicationStyle={ApplicationStyle}
+              Colors={Colors}
+              Fonts={Fonts}
+              Spaces={Spaces}
+              title={t('userDetails.sections.sport', 'Profil sportif')}
+            >
+              <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
                 <InfoItem
                   Alignments={Alignments}
                   Colors={Colors}
                   compact={isCompactScreen}
                   Fonts={Fonts}
-                  icon={Images.pin}
-                  label={t('userDetails.fields.position', 'Poste')}
+                  icon={Images.running}
+                  label={t('userDetails.fields.sport', 'Sport')}
                   Spaces={Spaces}
-                  value={formatNullableValue(user?.position, fallbackValue)}
+                  value={formatNullableValue(preferredSportValue, fallbackValue)}
                 />
-              ) : null}
-              {showsPlayerBlocks ? (
                 <InfoItem
                   Alignments={Alignments}
                   Colors={Colors}
                   compact={isCompactScreen}
                   Fonts={Fonts}
-                  icon={Images.users}
-                  label={t('userDetails.fields.section', 'Section')}
+                  icon={Images.shield}
+                  label={t('userDetails.fields.bestLevel', 'Niveau')}
                   Spaces={Spaces}
-                  value={formatNullableValue(sectionLabel, fallbackValue)}
+                  value={formatNullableValue(bestLevelValue, fallbackValue)}
                 />
-              ) : null}
-              {showsPlayerBlocks ? (
-                <InfoItem
-                  Alignments={Alignments}
-                  Colors={Colors}
-                  compact={isCompactScreen}
-                  Fonts={Fonts}
-                  fullWidth
-                  icon={Images.edit}
-                  label={t('userDetails.fields.category', 'Catégorie')}
-                  Spaces={Spaces}
-                  value={formatNullableValue(user?.category, fallbackValue)}
-                />
-              ) : null}
-            </View>
-          </SectionCard>
+                {/* D54 — la grille du coach n'est pas vidée, elle est RESTREINTE :
+                    le pack lui laisse « Âge, Ville, Sport, Meilleur niveau » et
+                    lui retire poste / section / catégorie, qui n'ont pas de sens
+                    pour quelqu'un qui ne joue pas. */}
+                {showsPlayerBlocks ? (
+                  <InfoItem
+                    Alignments={Alignments}
+                    Colors={Colors}
+                    compact={isCompactScreen}
+                    Fonts={Fonts}
+                    icon={Images.pin}
+                    label={t('userDetails.fields.position', 'Poste')}
+                    Spaces={Spaces}
+                    value={formatNullableValue(user?.position, fallbackValue)}
+                  />
+                ) : null}
+                {showsPlayerBlocks ? (
+                  <InfoItem
+                    Alignments={Alignments}
+                    Colors={Colors}
+                    compact={isCompactScreen}
+                    Fonts={Fonts}
+                    icon={Images.users}
+                    label={t('userDetails.fields.section', 'Section')}
+                    Spaces={Spaces}
+                    value={formatNullableValue(sectionLabel, fallbackValue)}
+                  />
+                ) : null}
+                {showsPlayerBlocks ? (
+                  <InfoItem
+                    Alignments={Alignments}
+                    Colors={Colors}
+                    compact={isCompactScreen}
+                    Fonts={Fonts}
+                    fullWidth
+                    icon={Images.edit}
+                    label={t('userDetails.fields.category', 'Catégorie')}
+                    Spaces={Spaces}
+                    value={formatNullableValue(user?.category, fallbackValue)}
+                  />
+                ) : null}
+              </View>
+            </SectionCard>
+          )}
 
           <SectionCard
             ApplicationStyle={ApplicationStyle}
@@ -1688,7 +1705,7 @@ function UserDetails({ navigation, route }) {
             </View>
           </SectionCard>
 
-          {shouldShowTeamsSection ? (
+          {shouldShowTeamsSection && !estMonProfilDeParent ? (
             <SectionCard
               ApplicationStyle={ApplicationStyle}
               Colors={Colors}

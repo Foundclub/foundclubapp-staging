@@ -30,6 +30,7 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ouvrirUneVueDuProfil from '@/views/profile/ouvrirUneVueDuProfil';
+import BlocMesEnfants from '@/views/profile/parent/BlocMesEnfants';
 import {
   buildChoiceOptions,
   buildProfileFormValues,
@@ -673,6 +674,10 @@ function SelfProfilePlayerCoach({ navigation }) {
             </View>
           ) : null}
         </View>
+
+        {/* PAR-L7 (13/10, design parent E03) — un sportif qui a des enfants les retrouve ici,
+            sous son identité ; sans enfant, rien (`BlocMesEnfants` ne rend rien). */}
+        <BlocMesEnfants navigation={navigation} />
 
         {/* ── Voir mon profil comme les autres ───────────────────────── */}
         <TouchableOpacity

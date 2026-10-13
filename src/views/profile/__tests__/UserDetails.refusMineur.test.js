@@ -28,6 +28,10 @@ let mockErreurContact;
 const mockNavigate = jest.fn();
 const mockStartWhisperChat = jest.fn();
 
+// PAR-L7 (13/10) — « Mon profil » porte le bloc « Mes enfants » (`useMesEnfantsEnBref`, qui lit
+// trois services) : doublure commune, « aucun enfant » par defaut.
+jest.mock('@/views/profile/parent/useMesEnfantsEnBref');
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
