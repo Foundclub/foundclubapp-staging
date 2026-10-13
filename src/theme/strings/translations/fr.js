@@ -22824,6 +22824,12 @@ export default {
       submitAdd: 'Déclarer mon enfant',
       submitEdit: 'Enregistrer',
     },
+    // PAR-L5L6 (13/10, design parent E06) — « Comment ça marche ? » : les explications de
+    // « Mes enfants », mot pour mot, dans une feuille.
+    help: {
+      title: 'Comment ça marche ?',
+      yourChild: 'ton enfant',
+    },
     // PAR-L5L6 (13/10, design parent E04) — « Mes enfants » : une carte courte par enfant, et
     // le club sur SA ligne (« on voit bien que les enfants sont dans aucun club », Adel, 13/10).
     list: {

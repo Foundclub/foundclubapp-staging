@@ -31,6 +31,7 @@ import {
 import BandeauDeResultat from '@/views/profile/parent/BandeauDeResultat';
 import { equipesParClub } from '@/views/profile/parent/ChildIdentityCard';
 import ClubEtEquipe from '@/views/profile/parent/ClubEtEquipe';
+import CommentCaMarche from '@/views/profile/parent/CommentCaMarche';
 import DeclaredChildPage from '@/views/profile/parent/DeclaredChildPage';
 import { demandesDe, etatDeLEnfant } from '@/views/profile/parent/demandesDeLEnfant';
 import MenuDeLEnfant from '@/views/profile/parent/MenuDeLEnfant';
@@ -458,6 +459,9 @@ function MyChildren({ route } = {}) {
   // E05 — le menu « … » d'un enfant : la fiche dont il est ouvert, ou rien.
   const [menuDe, setMenuDe] = useState(/** @type {any} */ (null));
   const fermerLeMenu = useCallback(() => setMenuDe(null), []);
+  // E06 — « Comment ça marche ? » : les explications quittent la liste pour une feuille.
+  const [aideOuverte, setAideOuverte] = useState(false);
+  const fermerLAide = useCallback(() => setAideOuverte(false), []);
   // Le dernier geste réussi (« La fiche d'Anissa est supprimée. »), dit en tête de la liste.
   const annonce = useAnnonceDeLaFiche();
   const ficheOuverte = route?.params?.childDocumentId;
@@ -650,10 +654,21 @@ function MyChildren({ route } = {}) {
                 title={t('myChildren.accounts.link', 'Relier le compte de mon enfant')}
                 variant="Secondary"
               />
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => setAideOuverte(true)}
+                style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
+                testID="my-children-help-link"
+              >
+                <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+                  {t('myChildren.help.title')}
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : null}
         </WithDataWrapper>
       </ScrollView>
+      <CommentCaMarche onClose={fermerLAide} visible={aideOuverte} />
       <MenuDeLEnfant
         enfant={menuDe}
         onClose={fermerLeMenu}

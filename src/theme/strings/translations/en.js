@@ -13471,6 +13471,10 @@ export default {
       submitAdd: 'Register my child',
       submitEdit: 'Save',
     },
+    help: {
+      title: 'How does it work?',
+      yourChild: 'your child',
+    },
     list: {
       cancelLink: 'Cancel the link request',
       clubLabel: 'Club',

@@ -1208,3 +1208,57 @@ describe('PAR-L5L6 E05 — le menu « … » et le bandeau après suppression', 
     expect(texteVisible(arbre)).not.toContain('Actions pour Lina');
   });
 });
+
+// ===========================================================================
+// PAR-L5L6 (13/10) — E06 : « COMMENT ÇA MARCHE ? ».
+//
+// Les trois paragraphes qui chargeaient la liste (capture S03) partent dans une feuille, mot
+// pour mot. Seul « ton enfant » remplace le prénom.
+// ===========================================================================
+
+describe('PAR-L5L6 E06 — « Comment ça marche ? »', () => {
+  const FR = jest.requireActual('@/theme/strings/translations/fr').default;
+
+  beforeEach(() => {
+    mockLiens = { children: [], requests: [] };
+    mockEnfants = [unEnfant()];
+  });
+
+  afterEach(() => {
+    mockLiens = undefined;
+  });
+
+  test('🔴 les trois explications quittent la liste', async () => {
+    const texte = texteVisible(await rendre());
+
+    expect(texte).not.toContain(FR.myChildren.screen.hint);
+    expect(texte).not.toContain(FR.myChildren.accounts.empty);
+    expect(texte).not.toContain('Stats et retours de match');
+  });
+
+  test('🔴 le lien « Comment ça marche ? » (44 px) ouvre la feuille, MOT POUR MOT', async () => {
+    const arbre = await rendre();
+    const lien = porteDe(arbre, 'my-children-help-link');
+
+    expect(styleAPlat(lien.props.style).minHeight).toBe(44);
+    expect(hote(arbre, 'my-children-help')).toBeUndefined();
+    await act(async () => { lien.props.onPress(); });
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('Comment ça marche ?');
+    expect(texte).toContain(FR.myChildren.screen.hint);
+    expect(texte).toContain(FR.myChildren.accounts.empty);
+    expect(texte).toContain(FR.stRetours.parent.under13Title);
+    expect(texte).toContain(
+      'Ils arrivent quand ton enfant a 13 ans et son propre compte, relié au tien.',
+    );
+  });
+
+  test('« Fermer » ferme la feuille', async () => {
+    const arbre = await rendre();
+    await act(async () => { porteDe(arbre, 'my-children-help-link').props.onPress(); });
+    await act(async () => { pressable(arbre, 'Fermer').props.onPress(); });
+
+    expect(hote(arbre, 'my-children-help')).toBeUndefined();
+  });
+});
