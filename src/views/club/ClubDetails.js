@@ -227,11 +227,17 @@ const LONGUEUR_A_PROPOS_REPLIE = 220;
 /**
  * ANNUAIRE-E1 — le cadre de la fiche : l'écran de l'app, ou, sur l'annuaire du site, une simple
  * boîte (la page du site porte déjà sa barre et son fond). En deux colonnes sur grand écran.
- * @param {{ annuaire: boolean, children: import('react').ReactNode, deuxColonnes: boolean }} props
- *   Les props.
+ * @param {{
+ *  annuaire: boolean,
+ *  children: import('react').ReactNode,
+ *  deuxColonnes: boolean,
+ *  evitementDuClavier?: boolean,
+ * }} props Les props.
  * @returns {import('react').ReactElement} Le cadre.
  */
-function CadreDeLaFiche({ annuaire, children, deuxColonnes }) {
+function CadreDeLaFiche({
+  annuaire, children, deuxColonnes, evitementDuClavier = false,
+}) {
   const { Alignments, Spaces } = useTheme();
   if (annuaire) {
     return (
@@ -253,6 +259,7 @@ function CadreDeLaFiche({ annuaire, children, deuxColonnes }) {
         Alignments.fill,
         Alignments.relative,
       ]}
+      keyboardAvoiding={evitementDuClavier}
     >
       {children}
     </ScreenContainer>
@@ -2791,8 +2798,18 @@ function ClubDetails({ navigation, route }) {
     );
   }
 
+  // 🤖 ANDROIDBAR-3BIS — sur Android 15 et 16, le clavier couvrait « Ta commune », le champ du
+  // bas de « Ma collectivité », rendu DANS la fiche. Le cadre évite donc le clavier sur cette
+  // sous-page, et seulement elle. Le pied d'actions flottant, qui monterait avec lui, n'y existe
+  // pas : la sous-page exige `canEdit` (président membre du club), pour qui la matrice n'allume
+  // aucun de ses boutons. La fiche publique et le hub, où vit le pied, ne bougent pas.
+  // Témoin : __tests__/ClubDetails.ANDROIDBAR3BIS.clavier.test.js.
   return (
-    <CadreDeLaFiche annuaire={annuaire} deuxColonnes={actionsEnColonne}>
+    <CadreDeLaFiche
+      annuaire={annuaire}
+      deuxColonnes={actionsEnColonne}
+      evitementDuClavier={isClubSubPage && hubSection === 'collectivite'}
+    >
       <DefilementDeLaFiche
         annuaire={annuaire}
         contentContainerStyle={[
