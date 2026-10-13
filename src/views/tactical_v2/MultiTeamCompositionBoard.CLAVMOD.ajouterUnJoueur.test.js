@@ -19,8 +19,10 @@ import MultiTeamCompositionBoard from './MultiTeamCompositionBoard';
 //   34), iPhone SE (667, 260, 0).
 // - Android 15/16 : la fenêtre n'est PAS translucide : Android la remonte lui-même (cadre
 //   `fitsSystemWindows` + `adjustResize`, ReactModalHostView.kt:327 et :353-355). Un retrait de
-//   plus la remonterait deux fois : GARDE, aucun retrait. (Le clavier évité par Android dans
-//   cette fenêtre : SUPPOSÉ fort, mesure demandée à la séance émulateur du 13/10, doute 4.)
+//   plus la remonterait deux fois : GARDE, aucun retrait. MESURÉ sur la fenêtre JUMELLE « Proposer
+//   un match » (même <Modal transparent> non translucide ; séance émulateur, Pixel 9, Android 16,
+//   14/10 00:47) : bouton du bas 2127 px → 1370 clavier ouvert (haut du clavier 1541) → 2127
+//   refermé. Cette fenêtre-ci : doute 4 de la même séance.
 // Le glisser-déposer (ANDROIDBAR-3BIS, ses témoins E6) n'est pas touché : la fenêtre est hors
 // du plateau.
 

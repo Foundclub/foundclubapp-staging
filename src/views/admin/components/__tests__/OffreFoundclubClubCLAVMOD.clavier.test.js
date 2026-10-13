@@ -18,9 +18,10 @@ import OffreFoundclubClub from '../OffreFoundclubClub';
 // - Android 15/16 : la ConsoleSheet n'est PAS translucide. Android la remonte lui-même (cadre
 //   `fitsSystemWindows` + `adjustResize`, ReactModalHostView.kt:327 et :353-355 ; pour la barre,
 //   MESURÉ par ANDROIDBAR-2, garde G de ANDROIDBAR2.feuillesEtBarre.test.js). Un retrait de plus
-//   la remonterait deux fois : GARDE, aucun retrait. (Le clavier au-dessus de la fenêtre remontée
-//   par Android : SUPPOSÉ fort, à confirmer à l'émulateur — même famille que « Ajouter un joueur »,
-//   doute 4 de la séance émulateur du 13/10.)
+//   la remonterait deux fois : GARDE, aucun retrait. MESURÉ sur la fenêtre JUMELLE « Proposer un
+//   match » (même <Modal transparent> non translucide, aucun évitement dans son code ; séance
+//   émulateur, Pixel 9, Android 16, 14/10 00:47) : bouton du bas 2127 px clavier fermé, 1370 px
+//   clavier ouvert (haut du clavier 1541), 2127 refermé — Android la remonte, 0 px de vide.
 
 jest.setTimeout(30000);
 
