@@ -15,6 +15,12 @@ jest.mock('react-i18next', () => ({
     },
   }),
 }));
+// ANDROIDBAR-2 — la feuille lit la barre du bas du systeme (iPhone : 34).
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 47,
+  }),
+}));
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {

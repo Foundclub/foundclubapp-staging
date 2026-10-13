@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
@@ -174,6 +175,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const shownActionPromptKeyRef = useRef(/** @type {string | null} */ (null));
   const shownCounterProposalKeyRef = useRef(/** @type {string | null} */ (null));
   const { height, width } = useWindowDimensions();
+  const { bottom: barreDuBas } = useSafeAreaInsets();
   const {
     ApplicationStyle, Colors, Fonts,
   } = useTheme();
@@ -1167,7 +1169,10 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       {shouldShowPrompt ? (
         <BottomModal
           close={dismissForSession}
-          contentBottomPaddingOverride={6}
+          // ANDROIDBAR-2 — Android 15/16 : la feuille descend sous la barre systeme
+          // (bord a bord) ; 6 laissait la fin du defilement dessous. iPhone, site et
+          // Android <= 14 : 6, inchange.
+          contentBottomPaddingOverride={Platform.OS === 'android' ? Math.max(6, barreDuBas) : 6}
           isVisible={isVisible}
           preventStartupPresentation
           snapPoints={[modalSnapPoint]}
