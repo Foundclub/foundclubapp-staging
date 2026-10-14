@@ -14495,6 +14495,24 @@ export default {
       teamsOnly: "This event registers teams: your child's team staff handles it.",
       tournament: "This tournament registers teams: your child's team staff handles it.",
     },
+    // 👪 PAR-L11c (14/10) — "Cancel the registration": sheet, then outcome banner.
+    cancel: {
+      confirm: 'Cancel the registration',
+      confirmMessage: 'The organizer of "{{event}}" will no longer see it. '
+        + 'You can register {{firstname}} again.',
+      confirmTitle: 'Cancel the registration for {{firstname}}?',
+      done: 'Registration cancelled.',
+      doneHint: 'You can register {{firstname}} again.',
+      failed: 'The registration could not be cancelled.',
+      failedHint: 'Check your connection, then try again.',
+      gone: 'This registration no longer exists.',
+      goneHint: 'There is nothing left to cancel.',
+      keep: 'Keep the registration',
+      link: 'Cancel the registration',
+      linkLabel: 'Cancel the registration for {{firstname}}',
+      unavailable: 'Cancelling is not available yet.',
+      unavailableHint: 'The registration is still there. Try again later.',
+    },
     errors: {
       alreadyDecided: 'This request has already been handled.',
       generic: 'The registration could not be sent. Try again in a moment.',

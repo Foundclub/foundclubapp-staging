@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
 import {
+  canCancelRegistration,
   describeChildChoices,
   errorKey,
   resolveChildRegistrationOffer,
@@ -16,6 +17,12 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
+import {
+  ChildRegistrationCancelBanner,
+  ChildRegistrationCancelLink,
+  ChildRegistrationCancelSheet,
+  useChildRegistrationCancel,
+} from '@/views/event/components/ChildRegistrationCancel';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -35,6 +42,8 @@ import {
  * l evenement, il retrouve ensuite l etat de chacun (« en attente », « confirmee »,
  * « refusee : motif »). Tournoi, match amical, ferme : pas de bouton, une phrase qui dit
  * pourquoi. Le serveur reste juge ; l ecran ne fait que montrer (`childRegistrationFlow.js`).
+ * PAR-L11c (14/10) : sous chaque ligne en attente ou confirmee, « Annuler l inscription »
+ * (feuille + bandeau, `ChildRegistrationCancel.js`).
  *
  * ⚠️ Ce module charge des services : chaque temoin qui monte `EventDetails` le double
  * (EventDetails.js:123-128). Temoin : `__tests__/EventChildRegistration.PARL11.test.js`.
@@ -91,10 +100,12 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
   } = useTheme();
   const tones = toneStyles(Fonts);
   const eventId = event?.documentId || '';
-  const offer = resolveChildRegistrationOffer(
-    event,
-    typeof nowMs === 'number' ? nowMs : Date.now(),
-  );
+  const now = typeof nowMs === 'number' ? nowMs : Date.now();
+  const offer = resolveChildRegistrationOffer(event, now);
+  // Le nom dit dans la feuille d annulation : le sien, sinon son type.
+  const eventName = String(event?.name || event?.type?.name || '').trim()
+    || t('childEventRegistration.sheet.defaultType');
+  const cancel = useChildRegistrationCancel();
 
   const { data: children = [] } = useGetMyDeclaredChildren();
   const { data: registrations = [] } = useMyChildRegistrations(eventId);
@@ -303,12 +314,23 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
 
   return (
     <View style={[Spaces.gap[12]]} testID="child-registration-block">
+      <ChildRegistrationCancelBanner onRetry={cancel.retry} outcome={cancel.outcome} />
       {registrations.map((registration) => {
         const line = statusLine(registration);
         return (
-          <Text key={registration.documentId} style={[Fonts.p2, tones[line.tone]]}>
-            {t(line.key, { ...line.params, ...SANS_ECHAPPEMENT })}
-          </Text>
+          <View key={registration.documentId}>
+            <Text style={[Fonts.p2, tones[line.tone]]}>
+              {t(line.key, { ...line.params, ...SANS_ECHAPPEMENT })}
+            </Text>
+            {canCancelRegistration(registration, now) ? (
+              <ChildRegistrationCancelLink
+                disabled={cancel.pendingId === registration.documentId}
+                firstname={String(registration?.child?.firstname || '')}
+                onPress={() => cancel.ask(registration)}
+                testID={`child-registration-cancel-${registration.documentId}`}
+              />
+            ) : null}
+          </View>
         );
       })}
       {offer.canAct ? (
@@ -337,6 +359,12 @@ function EventChildRegistration({ event, navigation = null, nowMs = undefined })
         {step === 'recap' ? renderRecap() : null}
         {step === 'result' ? renderResult() : null}
       </BottomModal>
+      <ChildRegistrationCancelSheet
+        eventName={eventName}
+        onClose={cancel.close}
+        onConfirm={cancel.confirm}
+        registration={cancel.toCancel}
+      />
     </View>
   );
 }

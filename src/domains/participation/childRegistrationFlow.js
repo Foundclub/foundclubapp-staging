@@ -204,3 +204,43 @@ const ERROR_KEY_BY_CODE = {
  */
 export const errorKey = (error) => ERROR_KEY_BY_CODE[String(error?.details?.code || '')]
   || 'childEventRegistration.errors.generic';
+
+const CANCELLABLE_STATUSES = new Set(['accepted', 'pending']);
+
+/**
+ * 👪 PAR-L11c (14/10) — le parent peut-il annuler cette ligne ? En attente ou confirmee, et
+ * l evenement pas encore commence. Une ligne refusee n a rien a annuler. Sans date lue, le
+ * lien reste : le serveur est juge (`cancel` efface la ligne et rend une place immediate).
+ * @param {any} registration - Sa ligne (`status`, `event.date`).
+ * @param {number} nowMs - L instant.
+ * @returns {boolean} Vrai si « Annuler l inscription » se montre.
+ */
+export const canCancelRegistration = (registration, nowMs) => {
+  if (!CANCELLABLE_STATUSES.has(String(registration?.status || ''))) return false;
+  const start = new Date(String(registration?.event?.date || '')).getTime();
+  return !Number.isFinite(start) || start > nowMs;
+};
+
+/** Le message du serveur quand la ligne n existe plus (admin `event-child-registration.ts`). */
+const GONE_MESSAGE = 'registration not found';
+
+/**
+ * 👪 PAR-L11c (14/10) — CE QUE VEUT DIRE LE REFUS D UNE ANNULATION (meme lecture que PAR-L8,
+ * `annulationDeLaDemande.js`) :
+ *   · 404 « Registration not found » : la ligne est deja effacee        → 'gone' ;
+ *   · un autre 404 (route absente) ou un 403 (droit absent) : un serveur d AVANT
+ *                                                                        → 'unavailable' ;
+ *   · le reste (pas de reseau, abandon, panne)                           → 'failed' (on relance).
+ * Le client rejette `response.data.error` (`client.native.js`) : status et message y sont.
+ * @param {any} error - L erreur rejetee.
+ * @returns {'gone'|'unavailable'|'failed'} La situation.
+ */
+export const cancelSituation = (error) => {
+  const status = Number(error?.status || error?.response?.status) || 0;
+  const message = String(typeof error === 'string' ? error : error?.message || '')
+    .trim()
+    .toLowerCase();
+  if (status === 404 && message === GONE_MESSAGE) return 'gone';
+  if (status === 403 || status === 404 || message === 'not found') return 'unavailable';
+  return 'failed';
+};

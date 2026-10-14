@@ -23175,6 +23175,26 @@ export default {
       tournament: 'Ce tournoi inscrit des équipes : '
         + "l'encadrement de l'équipe de ton enfant s'en occupe.",
     },
+    // 👪 PAR-L11c (14/10) — « Annuler l'inscription » : feuille, puis issue en bandeau
+    // (ChildRegistrationCancel.js). Même motif que myChildren.cancelRequest (PAR-L8).
+    cancel: {
+      confirm: "Annuler l'inscription",
+      confirmMessage: "L'organisateur de « {{event}} » ne la verra plus. "
+        + 'Tu pourras inscrire {{firstname}} de nouveau.',
+      confirmTitle: "Annuler l'inscription pour {{firstname}} ?",
+      done: 'Inscription annulée.',
+      doneHint: 'Tu peux inscrire {{firstname}} de nouveau.',
+      failed: "L'inscription n'a pas pu être annulée.",
+      failedHint: 'Vérifie ta connexion, puis réessaie.',
+      gone: "Cette inscription n'existe plus.",
+      goneHint: "Il n'y a plus rien à annuler.",
+      keep: "Garder l'inscription",
+      link: "Annuler l'inscription",
+      linkLabel: "Annuler l'inscription pour {{firstname}}",
+      // Un serveur d'avant : ni la route, ni le droit. Rien n'est parti, rien n'est perdu.
+      unavailable: "L'annulation n'est pas encore disponible.",
+      unavailableHint: "L'inscription est toujours là. Réessaie plus tard.",
+    },
     errors: {
       alreadyDecided: 'Cette demande a déjà été traitée.',
       generic: "L'inscription n'a pas pu être envoyée. Réessaie dans un instant.",

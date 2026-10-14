@@ -5,10 +5,10 @@ import client from '../client';
  * 👪 PAR-L11b (13/10) — LES SIX GESTES DU TIROIR « INSCRIPTION D UN ENFANT DECLARE ».
  *
  * Le serveur (admin `api/event-child-registration/`) n a QUE six routes, aucune par
- * defaut : ce fichier ne peut pas en inventer une septieme. Le parent inscrit et relit
- * SES lignes (annuler existe au serveur, pas encore a l ecran) ; l organisateur lit celles
- * de son evenement, accepte, refuse. Chaque reponse est deja reduite par le serveur :
- * prenom et age de l enfant, nom du parent, jamais une date de naissance ni une coordonnee.
+ * defaut : ce fichier ne peut pas en inventer une septieme. Le parent inscrit, relit et
+ * annule SES lignes (PAR-L11c) ; l organisateur lit celles de son evenement, accepte,
+ * refuse. Chaque reponse est deja reduite par le serveur : prenom et age de l enfant, nom
+ * du parent, jamais une date de naissance ni une coordonnee.
  */
 
 /**
@@ -35,6 +35,17 @@ export const getMyChildRegistrations = async (eventId) => {
     params: { event: eventId },
   });
   return Array.isArray(response?.data?.data) ? response.data.data : [];
+};
+
+/**
+ * 👪 PAR-L11c (14/10) — DELETE /event-child-registrations/:id : le parent annule SA ligne. Le
+ * serveur l efface (une inscription immediate rend sa place a la reservation).
+ * @param {string} registrationId - La ligne.
+ * @returns {Promise<any>} `{ deleted, documentId }`.
+ */
+export const cancelChildRegistration = async (registrationId) => {
+  const response = await client.delete(`/event-child-registrations/${registrationId}`);
+  return response?.data?.data || null;
 };
 
 /**

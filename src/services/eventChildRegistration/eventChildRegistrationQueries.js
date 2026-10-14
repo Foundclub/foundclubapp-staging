@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  cancelChildRegistration,
   decideChildRegistration,
   getEventChildRegistrations,
   getMyChildRegistrations,
@@ -94,6 +95,26 @@ export const useRegisterChildren = (eventId) => useRegistrationMutation(
   (childIds) => registerChildrenToEvent({ childIds, eventId }),
   [['event', eventId]],
 );
+
+/**
+ * 👪 PAR-L11c (14/10) — le parent annule une de SES lignes (`mutate(registration)`). Ses
+ * listes sont relues dans TOUS les cas, reussite ou refus : une ligne deja effacee doit
+ * disparaitre aussi. La fiche de l evenement est relue : une reservation rend sa place.
+ * @returns {object} La mutation.
+ */
+export const useCancelChildRegistration = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (registration) => cancelChildRegistration(registration?.documentId),
+    onSettled: async (_data, _error, registration) => {
+      const eventId = registration?.event?.documentId;
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['eventChildRegistrations', 'mine'] }),
+        ...(eventId ? [queryClient.invalidateQueries({ queryKey: ['event', eventId] })] : []),
+      ]);
+    },
+  });
+};
 
 /**
  * L organisateur accepte ou refuse.
