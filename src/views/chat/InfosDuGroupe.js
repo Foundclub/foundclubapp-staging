@@ -126,7 +126,9 @@ function InfosDuGroupe({
   // 🤖 ANDROIDBAR-4 — fenêtre translucide : sur Android 15 et 16, rien ne la remonte au-dessus
   // du clavier ; le défilement (et « Annuler / Enregistrer » du nom) continuait dessous. La page
   // laisse la place du clavier, barre comprise : le défilement s'arrête à son haut.
-  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(0);
+  // 📱 CLAVIER-MODALES — sur iPhone non plus, rien ne la remonte : même retrait. Seulement
+  // fenêtre OUVERTE : elle reste montée dans le fil, sous le clavier de la barre de saisie.
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(0, { iPhone: visible });
   const nomDuGroupe = String(chat?.groupName || '').trim();
   const [enEdition, setEnEdition] = useState(false);
   const [brouillon, setBrouillon] = useState(nomDuGroupe);
