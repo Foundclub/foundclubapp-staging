@@ -36,6 +36,7 @@ import useTheme from '@/theme/themeContext';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
+import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
   peutRelireSaNote,
@@ -225,6 +226,7 @@ function EventDetails({ navigation, route }) {
   });
   const [isSharing, setIsSharing] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [isTrainingSettingsVisible, setIsTrainingSettingsVisible] = useState(false);
   const [trainingOpenLimitDraft, setTrainingOpenLimitDraft] = useState('');
   const creationCelebrationShownRef = useRef(false);
@@ -1254,7 +1256,8 @@ function EventDetails({ navigation, route }) {
   }, [eventId, queryClient, refetch]);
 
   const createParticipationMutation = useMutation({
-    mutationFn: () => createEventParticipation({
+    mutationFn: (acceptance = {}) => createEventParticipation({
+      ...(isDetectionEvent ? { acceptRiskDeclaration: acceptance.acceptRiskDeclaration === true } : {}),
       event: eventId,
       user: userData?.documentId || '',
     }),
@@ -1439,6 +1442,10 @@ function EventDetails({ navigation, route }) {
       });
       return;
     }
+    if (isDetectionEvent) {
+      setIsJoinModalVisible(true);
+      return;
+    }
     try {
       await createParticipationMutation.mutateAsync();
     } catch (joinError) {
@@ -1447,7 +1454,17 @@ function EventDetails({ navigation, route }) {
         'Impossible de rejoindre cet événement.',
       ));
     }
-  }, [createParticipationMutation, isSignedIn, navigation, t]);
+  }, [createParticipationMutation, isDetectionEvent, isSignedIn, navigation, t]);
+
+  const handleConfirmDetectionParticipation = useCallback(async (acceptance) => {
+    setActionError('');
+    try {
+      await createParticipationMutation.mutateAsync(acceptance);
+      setIsJoinModalVisible(false);
+    } catch (joinError) {
+      setActionError(joinError?.message || t('eventDetails.unableToJoinThisEvent'));
+    }
+  }, [createParticipationMutation, t]);
 
   const handleCancelParticipation = useCallback(async () => {
     if (!activeParticipationRequestId) return;
@@ -3500,6 +3517,15 @@ function EventDetails({ navigation, route }) {
           </div>
         ) : null}
       </div>
+      <JoinEventModal
+        clubName={event?.team?.club?.name || event?.club?.name || ''}
+        errorMessage={actionError}
+        eventId={eventId || ''}
+        isSubmitting={createParticipationMutation.isPending}
+        isVisible={isJoinModalVisible}
+        onClose={() => setIsJoinModalVisible(false)}
+        onConfirm={handleConfirmDetectionParticipation}
+      />
     </ScreenContainer>
   );
 }

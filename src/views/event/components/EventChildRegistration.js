@@ -53,7 +53,8 @@ import {
 
 /**
  * Ce que ce bloc lit des crochets react-query (leurs modules sont en `@ts-nocheck`).
- * @typedef {{ data?: any[], isError?: boolean, isFetching?: boolean, refetch?: () => Promise<any> }} ListeLue
+ * @typedef {{ data?: any[], isError?: boolean, isFetching?: boolean,
+ * refetch?: () => Promise<any> }} ListeLue
  * @typedef {{ isPending: boolean, mutateAsync: (variables: any) => Promise<any> }} GesteServeur
  */
 

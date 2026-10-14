@@ -35,6 +35,12 @@ const mockNavigate = jest.fn();
 const mockUseAuth = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
+const mockJoinModal = { props: null };
+
+jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => ({
+  __esModule: true,
+  default: (props) => { mockJoinModal.props = props; return null; },
+}));
 
 // 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services :
 // double ici par son NOM, pour verifier QUI le voit (FINITIONS16 1 / PAR-L11b, plus bas).
@@ -376,6 +382,26 @@ const click = async (/** @type {any} */ root, /** @type {string} */ label) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockJoinModal.props = null;
+});
+
+describe('PARTREG — consentement a une detection sur le site', () => {
+  const joueur = { canManageEvent: () => false, userData: { documentId: 'player-1', role: { name: 'Joueur' } } };
+  test('Participer ouvre la declaration sans envoyer une demande', async () => {
+    const root = mountScreen({ auth: joueur, event: buildEvent({ type: { name: 'Détection' } }) });
+    await click(root, 'Participer');
+    expect(createEventParticipation).not.toHaveBeenCalled();
+    expect(mockJoinModal.props.isVisible).toBe(true);
+  });
+  test('la confirmation transmet la declaration et ferme la feuille apres succes', async () => {
+    const root = mountScreen({ auth: joueur, event: buildEvent({ type: { name: 'Détection' } }) });
+    await click(root, 'Participer');
+    await act(async () => { await mockJoinModal.props.onConfirm({ acceptRiskDeclaration: true }); });
+    expect(createEventParticipation).toHaveBeenCalledWith({
+      acceptRiskDeclaration: true, event: 'event-1', user: 'player-1',
+    });
+    expect(mockJoinModal.props.isVisible).toBe(false);
+  });
 });
 
 afterEach(() => {

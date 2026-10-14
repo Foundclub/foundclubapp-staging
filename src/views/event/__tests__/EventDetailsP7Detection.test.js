@@ -24,6 +24,7 @@ import {
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
+const mockCreateParticipation = jest.fn(() => Promise.resolve());
 const mockEventQuery = { data: /** @type {any} */ (null) };
 // Les deux mutations que la fiche candidat doit REUTILISER (jamais un second
 // chemin d'ecriture) : on les garde stables pour pouvoir les observer.
@@ -248,7 +249,7 @@ jest.mock('../hooks/useEventMutations', () => {
       bookFullMutation: idleMutation(),
       cancelEventMutation: idleMutation(),
       coachArrivalMutation: idleMutation(),
-      createEventParticipationMutation: idleMutation(),
+      createEventParticipationMutation: { isPending: false, mutateAsync: mockCreateParticipation },
       declineParticipationMutation: { isPending: false, mutate: mockRefuserParticipation },
       deleteParticipationMutation: idleMutation(),
       joinReservationMutation: idleMutation(),
@@ -546,6 +547,7 @@ const monter = (/** @type {any} */ {
   // `mockClear` n'efface QUE les appels, pas les `mockResolvedValueOnce` poses
   // juste avant le montage.
   mockAccepterParticipation.mockClear();
+  mockCreateParticipation.mockClear();
   mockRefuserParticipation.mockClear();
   mockLireLesCandidatures.mockClear();
   mockInviterDansLEquipe.mockClear();
@@ -1127,6 +1129,17 @@ describe('R9 - POSTULER SANS VISER UN POSTE PRECIS', () => {
     // comme tout chemin generique — mais elle n annonce AUCUN poste.
     expect(capteurModaleParticipation.props.isVisible).toBe(true);
     expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
+  });
+
+  test.each([true, false])('PARTREG — la confirmation sans poste transmet le consentement %s', async (accepted) => {
+    const root = ouvrirLeSelecteur();
+    appuyerSur(root, 'Participer sans poste');
+    await act(async () => {
+      await capteurModaleParticipation.props.onConfirm({ acceptRiskDeclaration: accepted });
+    });
+    expect(mockCreateParticipation).toHaveBeenCalledWith(expect.objectContaining({
+      acceptRiskDeclaration: accepted,
+    }));
   });
 
   test('R9 · temoin 20 — choisir un VRAI poste continue de l annoncer', () => {

@@ -3025,7 +3025,9 @@ function EventDetails({ navigation, route }) {
     });
   }, [event?.documentId, mutations.respondToEventRsvpMutation]);
 
-  const handleConfirmParticipation = useCallback(async () => {
+  const handleConfirmParticipation = useCallback(async (
+    /** @type {{ acceptRiskDeclaration?: boolean }} */ acceptance = {},
+  ) => {
     if (!event?.documentId) return;
 
     if (!currentParticipationFlow?.canAct) {
@@ -3041,6 +3043,7 @@ function EventDetails({ navigation, route }) {
       } else {
         if (!userData?.documentId) return;
         await mutations.createEventParticipationMutation.mutateAsync({
+          acceptRiskDeclaration: acceptance.acceptRiskDeclaration === true,
           event: event.documentId,
           user: userData.documentId,
         });
