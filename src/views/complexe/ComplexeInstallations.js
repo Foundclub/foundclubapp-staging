@@ -13,7 +13,9 @@ import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import CarteTerrain from '@/views/complexe/components/CarteTerrain';
+import FeuilleRetrait from '@/views/complexe/components/FeuilleRetrait';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -26,9 +28,9 @@ import { useIsDesktop } from '@/responsive';
  * installations » (les mots d'Adel). Modèle : `FacilityList.js` en mode Ville (carte à liseré,
  * menu « Plus d'actions »). Une carte par terrain : photo ou pictogramme, « Foot à 5 · Extérieur ·
  * 10 joueurs », le mode, le prix indicatif, les horaires — ou « Aucun créneau ouvert » en orange.
- * Le menu « … » propose « Créneaux » (E-G09) ; « Fermetures » (E-G10), « Voir le planning »
- * (E-G03) et « Retirer » attendent les lots L5A2 / L2A (le serveur ne sait pas encore retirer un
- * terrain) et n'y figurent pas.
+ * Le menu « … » propose « Créneaux » (E-G09) ; RESA-L5A2 (14/10/2026) y ajoute « Fermetures »
+ * (E-G10), « Voir le planning » (E-G03) et « Retirer » (le compte des réservations à venir,
+ * puis le retrait : serveur RESA-L2A).
  * Paramètre de route : `complexeId`. Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
  */
@@ -44,6 +46,8 @@ function ComplexeInstallations() {
   const terrainsLus = useTerrains(complexeId);
   const surOrdinateur = useIsDesktop();
   const [menu, setMenu] = useState(/** @type {any} */ (null));
+  const [aRetirer, setARetirer] = useState(/** @type {any} */ (null));
+  const [message, setMessage] = useState('');
 
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];
   const ajouter = () => navigation.navigate(RouteNames.ComplexeTerrain, { complexeId });
@@ -57,6 +61,26 @@ function ComplexeInstallations() {
       complexeId,
       terrainId: terrain.documentId,
     });
+  };
+  // RESA-L5A2 — Fermetures (E-G10), Voir le planning (E-G03), Retirer.
+  const ouvrirLesFermetures = (/** @type {any} */ terrain) => {
+    setMenu(null);
+    navigation.navigate(RouteNames.ComplexeFermetures, {
+      complexeId,
+      terrainId: terrain.documentId,
+    });
+  };
+  const voirLePlanning = (/** @type {any} */ terrain) => {
+    setMenu(null);
+    navigation.navigate(RouteNames.ComplexeEspace, {
+      params: { complexeId, terrainId: terrain.documentId },
+      screen: RouteNames.ComplexePlanning,
+    });
+  };
+  const proposerLeRetrait = (/** @type {any} */ terrain) => {
+    setMenu(null);
+    setMessage('');
+    setARetirer(terrain);
   };
 
   let sousTitre = '';
@@ -194,36 +218,67 @@ function ComplexeInstallations() {
         style={[Alignments.fill]}
       >
         {enTete}
+        {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
         {corps}
       </ScrollView>
       <BottomModal close={() => setMenu(null)} isVisible={Boolean(menu)} webPresentation="dialog">
         <View style={{ gap: 8 }}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{String(menu?.name || '')}</Text>
-          <TouchableOpacity
-            accessibilityRole="menuitem"
-            onPress={() => ouvrirLesCreneaux(menu)}
-            style={[
-              Alignments.row,
-              Alignments.alignCenter,
-              {
-                backgroundColor: withAlpha(Colors.neutral00, 0.04),
-                borderColor: withAlpha(Colors.neutral00, 0.1),
-                borderRadius: 14,
-                borderWidth: 1,
-                gap: 12,
-                minHeight: 52,
-                paddingHorizontal: 16,
-              },
-            ]}
-          >
-            <Image
-              source={Images.calendar}
-              style={[ApplicationStyle.icon20, ApplicationStyle.tintColor.primary500]}
-            />
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {t('complexeGerant.installations.creneaux', 'Créneaux')}
-            </Text>
-          </TouchableOpacity>
+          {[
+            {
+              icone: Images.calendar,
+              libelle: t('complexeGerant.installations.creneaux', 'Créneaux'),
+              onPress: () => ouvrirLesCreneaux(menu),
+            },
+            {
+              icone: Images.close,
+              libelle: t('complexeReservations.installations.fermetures', 'Fermetures'),
+              onPress: () => ouvrirLesFermetures(menu),
+            },
+            {
+              icone: Images.calendar,
+              libelle: t('complexeReservations.installations.voirPlanning', 'Voir le planning'),
+              onPress: () => voirLePlanning(menu),
+            },
+            {
+              danger: true,
+              icone: Images.trash,
+              libelle: t('complexeReservations.installations.retirer', 'Retirer'),
+              onPress: () => proposerLeRetrait(menu),
+            },
+          ].map((entree) => (
+            <TouchableOpacity
+              accessibilityRole="menuitem"
+              key={entree.libelle}
+              onPress={entree.onPress}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                {
+                  backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                  borderColor: withAlpha(Colors.neutral00, 0.1),
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  gap: 12,
+                  minHeight: 52,
+                  paddingHorizontal: 16,
+                },
+              ]}
+            >
+              <Image
+                source={entree.icone}
+                style={[
+                  ApplicationStyle.icon20,
+                  entree.danger
+                    ? ApplicationStyle.tintColor.error500
+                    : ApplicationStyle.tintColor.primary500,
+                ]}
+              />
+              <Text style={[Fonts.p2Bold, entree.danger ? Fonts.error300 : Fonts.neutral00]}>
+                {entree.libelle}
+              </Text>
+            </TouchableOpacity>
+          ))}
           <Button
             onPress={() => setMenu(null)}
             title={t('complexeGerant.creation.fermer', 'Fermer')}
@@ -231,6 +286,27 @@ function ComplexeInstallations() {
           />
         </View>
       </BottomModal>
+      <FeuilleRetrait
+        complexeId={complexeId || null}
+        onFermer={() => setARetirer(null)}
+        onRetire={({ annulees, nom }) => {
+          setARetirer(null);
+          setMessage(t(
+            'complexeReservations.retrait.fait',
+            '{{nom}} est retiré. {{count}} réservations annulées, les joueurs sont prévenus.',
+            {
+              count: annulees,
+              defaultValue_one:
+                '{{nom}} est retiré. {{count}} réservation annulée, le joueur est prévenu.',
+              defaultValue_other:
+                '{{nom}} est retiré. {{count}} réservations annulées, les joueurs sont prévenus.',
+              nom,
+              ...SANS_ECHAPPEMENT,
+            },
+          ));
+        }}
+        terrain={aRetirer}
+      />
     </ScreenContainer>
   );
 }

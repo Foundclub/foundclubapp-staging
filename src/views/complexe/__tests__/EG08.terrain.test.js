@@ -21,19 +21,28 @@ import {
 
 const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
+const mockGoBack = jest.fn();
 let mockParams = /** @type {any} */ ({ complexeId: 'cx-five' });
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
-    navigate: mockNavigate, replace: mockReplace, setOptions: jest.fn(),
+    goBack: mockGoBack, navigate: mockNavigate, replace: mockReplace, setOptions: jest.fn(),
   }),
   useRoute: () => ({ params: mockParams }),
 }));
 
 const mockEnregistrer = jest.fn();
 let mockTerrains = /** @type {any} */ ({ data: [], isLoading: false });
+const mockRetirer = jest.fn();
+let mockDemandes = /** @type {any} */ ({ data: undefined });
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  useApercuRetrait: () => ({
+    isPending: false,
+    mutateAsync: async () => ({ data: { dryRun: true, reservationsTouchees: 4 } }),
+  }),
   useComplexeGere: () => ({ data: { phoneNumber: '+33639981234' } }),
   useEnregistrerTerrain: () => ({ isPending: false, mutateAsync: mockEnregistrer }),
+  useReservationsDuComplexe: () => mockDemandes,
+  useRetirerTerrain: () => ({ isPending: false, mutateAsync: mockRetirer }),
   useTerrains: () => mockTerrains,
 }));
 jest.mock('@/services/complexe/complexeService', () => ({ televerserPhoto: jest.fn() }));
@@ -317,5 +326,53 @@ describe('RESA-L5A1 E-G08 — modifier un terrain (états 3 et 7)', () => {
     await appuyer(arbre, 'Intérieur');
     await appuyer(arbre, 'Enregistrer');
     expect(lisibles(arbre)).toContain('Un complexe compte 30 terrains au plus.');
+  });
+});
+
+describe('RESA-L5A2 E-G08 — modifier un terrain qui a des réservations', () => {
+  beforeEach(() => {
+    mockParams = { complexeId: 'cx-five', terrainId: 't-1' };
+    mockDemandes = {
+      data: { pages: [{ items: [], pagination: { page: 1, pageSize: 20, total: 2 } }] },
+    };
+    mockRetirer.mockResolvedValue({ data: { reservationsAnnulees: 4, retired: true } });
+  });
+
+  it('quitter la validation manuelle : les demandes en attente restent à trancher', async () => {
+    mockTerrains = { data: [terrainDeTemoin({ bookingMode: 'manuel' })], isLoading: false };
+    const arbre = await monter();
+    await appuyer(arbre, 'Automatique');
+    await appuyer(arbre, 'Enregistrer');
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Modifications enregistrées.',
+      '2 demandes attendent ta réponse : elles restent à trancher dans Demandes.',
+    ]));
+  });
+
+  it('passer en « Téléphone seulement » : les réservations à venir sont gardées', async () => {
+    mockTerrains = { data: [terrainDeTemoin()], isLoading: false };
+    const arbre = await monter();
+    await appuyer(arbre, 'Téléphone seulement');
+    await appuyer(arbre, 'Enregistrer');
+    expect(lisibles(arbre)).toContain('Les 4 réservations à venir sont gardées.');
+  });
+
+  it('« Voir le planning » et « Retirer ce terrain »', async () => {
+    mockTerrains = { data: [terrainDeTemoin()], isLoading: false };
+    const arbre = await monter();
+    await appuyer(arbre, 'Voir le planning');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeEspace, {
+      params: { complexeId: 'cx-five', terrainId: 't-1' },
+      screen: RouteNames.ComplexePlanning,
+    });
+    await appuyer(arbre, 'Retirer ce terrain');
+    expect(lisibles(arbre)).toContain('Retirer Terrain 1 ?');
+    const confirmer = parRepere(arbre, 'retrait-confirmer')
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')[0];
+    await act(async () => {
+      await confirmer.props.onPress();
+    });
+    expect(mockRetirer).toHaveBeenCalledWith({ complexeId: 'cx-five', terrainId: 't-1' });
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 });

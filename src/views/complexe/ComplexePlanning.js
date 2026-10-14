@@ -1,5 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
@@ -96,6 +96,13 @@ function ComplexePlanning() {
   const [fin, setFin] = useState('');
   const [erreurFeuille, setErreurFeuille] = useState('');
   const [message, setMessage] = useState('');
+
+  // L'onglet est déjà monté quand la frise de l'accueil ou « Voir le planning » l'ouvre : il se
+  // place sur le jour et le terrain de l'adresse.
+  useEffect(() => {
+    if (params?.date) setDate(params.date);
+    if (params?.terrainId) setTerrainChoisi(params.terrainId);
+  }, [params?.date, params?.terrainId]);
 
   const terrainsLus = useTerrains(complexeId);
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];

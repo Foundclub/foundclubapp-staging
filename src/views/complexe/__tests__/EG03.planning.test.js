@@ -468,3 +468,16 @@ describe('RESA-L5A2 E-G03 — aucun terrain, chargement, erreur (états 5 à 7)'
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('RESA-L5A2 E-G03 — l’onglet suit l’adresse (frise, « Voir le planning »)', () => {
+  it('un nouveau jour, un nouveau terrain dans l’adresse : le planning s’y place', async () => {
+    const arbre = await monter();
+    mockParams = { complexeId: 'cx-five', date: '2026-10-20', terrainId: 't-2' };
+    await act(async () => {
+      arbre.update(<ComplexePlanning />);
+    });
+    expect(mockPeriodes[mockPeriodes.length - 1]).toEqual({
+      from: '2026-10-20', terrain: 't-2', to: '2026-10-20',
+    });
+  });
+});
