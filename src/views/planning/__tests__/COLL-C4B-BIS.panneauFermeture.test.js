@@ -612,6 +612,9 @@ describe('SVF 4b — fermer A aussi dans le panneau de droite', () => {
     await act(async () => { date('Jour').onChange('04/03/2026'); });
     await attendre();
     // SAIS (08/10, T20 lot 2) : « Pour quoi » est devenu « Nom (facultatif) » (+ pastilles Motif).
+    // CRFERM (13/10, planche P4v4) : le nom est replié derrière « Ajouter un nom ou un mot ».
+    await act(async () => { parID(arbre, 'fermeture-deplier').props.onPress(); });
+    await attendre();
     await act(async () => { champ('Nom (facultatif)').onChangeText('Forum'); });
     await attendre();
     await envoyerEtConfirmer(arbre);

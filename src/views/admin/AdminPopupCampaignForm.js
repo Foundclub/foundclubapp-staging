@@ -499,7 +499,12 @@ function AdminPopupCampaignForm() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24]]}>
+    <ScreenContainer
+      bgImage="bg2"
+      contentContainerStyle={[Spaces.paddingVertical[24]]}
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[32], Spaces.gap[16]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>
           {campaignId

@@ -155,7 +155,8 @@ describe('IPH09 FC-004 — refus immediat au lieu', () => {
     afficherLEcran();
     act(() => mockSelecteurs[0].onChange({ facilityId: 'ville-fermee', location: null }));
     expect(dernierGabarit().isNextDisabled).toBe(true);
-    expect(textesSous(arbre.root).join(' ')).toMatch(/mairie.*indisponible/);
+    // CRFERM (13/10, COL-011) : la phrase est au « tu » (témoin : EventWizardLocation.CRFERM).
+    expect(textesSous(arbre.root).join(' ')).toMatch(/Ville a fermé.*Choisis un autre jour/);
     act(() => dernierGabarit().onNext());
     expect(destinations).toEqual([]);
   });
