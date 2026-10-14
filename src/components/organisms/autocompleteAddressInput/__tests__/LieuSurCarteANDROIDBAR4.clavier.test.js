@@ -223,23 +223,10 @@ describe('ANDROIDBAR-4 — lieu sur la carte : Android 15 et 16, clavier ouvert'
   });
 });
 
-describe('ANDROIDBAR-4 — caractérisation : iPhone et Android ≤ 14 ne bougent pas', () => {
-  it('iPhone : le panneau ne bouge pas (barre + 16)', async () => {
-    telephone('ios', '18.0', 34);
-    const arbre = ouvrirLaCarte();
-    await act(async () => {
-      DeviceEventEmitter.emit('keyboardWillShow', {
-        duration: 0,
-        easing: 'keyboard',
-        endCoordinates: {
-          height: 336, screenX: 0, screenY: 852 - 336, width: 393,
-        },
-      });
-    });
-
-    expect(basDuBouton(arbre)).toBeCloseTo(ECRAN - 34 - 16, 5);
-  });
-
+// 📱 CLAVIER-MODALES (13/10) — l'iPhone ne fait plus partie de cette caractérisation : le clavier
+// y recouvrait aussi « Placer ici », le panneau le suit désormais. Témoin :
+// LieuSurCarteCLAVMOD.iphone.test.js.
+describe('ANDROIDBAR-4 — caractérisation : Android ≤ 14 ne bouge pas', () => {
   it.each([30, 34])('Android API %s : le panneau ne bouge pas (fenêtre rétrécie)', async (api) => {
     telephone('android', api, 0);
     const arbre = ouvrirLaCarte();

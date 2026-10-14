@@ -36,6 +36,7 @@ import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedI
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import InterestConversationSheet from '@/views/requests/InterestConversationSheet';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -156,6 +157,10 @@ function RequestsHub({ navigation, route }) {
   const [interestResponsePresetKey, setInterestResponsePresetKey] = useState(
     CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks',
   );
+  // 👪 PAR-L9b (13/10) — le mot libre de la feuille « Répondre » (E17), et la demande dont
+  // on ouvre la conversation (E16 : moi, ou un·e coach que je choisis).
+  const [interestResponseNote, setInterestResponseNote] = useState('');
+  const [conversationItem, setConversationItem] = useState(/** @type {any | null} */ (null));
   const [installationRefusalItem, setInstallationRefusalItem] = useState(null);
   const [installationRefusalReason, setInstallationRefusalReason] = useState('');
   const [refusalInputFocused, setRefusalInputFocused] = useState(false);
@@ -331,6 +336,41 @@ function RequestsHub({ navigation, route }) {
     ));
   }, [t]);
 
+  /**
+   * 👪 PAR-L9a (13/10, E17) — APRES UNE REPONSE « MESSAGE TYPE », LA FENETRE DIT A QUI
+   * ELLE EST PARTIE, ET RIEN DE PLUS. Elle disait « Felicitations / Ta reponse est
+   * partie. », meme pour « Equipe complete » : un refus ne se felicite pas.
+   * ⛔ Comme `celebrateAcceptance` : seulement depuis le chemin de succes.
+   * @param {any} item La demande a laquelle on vient de repondre.
+   * @param {string} message Le texte parti chez la personne.
+   */
+  const announceInterestResponse = useCallback((
+    /** @type {any} */ item,
+    /** @type {string} */ message,
+  ) => {
+    const firstname = String(item?.meta?.requesterFirstname || '').trim();
+    setCelebration({
+      closeLabel: t('common.actions.close', 'Fermer'),
+      message: message
+        ? t('requestsHub.interest.sentMessage', {
+          defaultValue: 'Message envoyé : « {{message}} »',
+          message,
+          ...SANS_ECHAPPEMENT,
+        })
+        : '',
+      title: firstname
+        ? t('requestsHub.interest.sentTitle', {
+          defaultValue: 'Réponse envoyée à {{firstname}}.',
+          firstname,
+          ...SANS_ECHAPPEMENT,
+        })
+        : t('requestsHub.interest.sentTitleNoName', 'Réponse envoyée.'),
+    });
+    setSettledItemIds((current) => (
+      item?.id && !current.includes(item.id) ? [...current, item.id] : current
+    ));
+  }, [t]);
+
   const closeInstallationRefusalModal = useCallback(() => {
     setInstallationRefusalItem(null);
     setInstallationRefusalReason('');
@@ -342,6 +382,12 @@ function RequestsHub({ navigation, route }) {
     if (processingItemId) return;
     setInterestResponseItem(null);
     setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
+    setInterestResponseNote('');
+  }, [processingItemId]);
+
+  const closeConversationSheet = useCallback(() => {
+    if (processingItemId) return;
+    setConversationItem(null);
   }, [processingItemId]);
 
   const closeSubscriptionPaywall = useCallback(() => {
@@ -514,33 +560,20 @@ function RequestsHub({ navigation, route }) {
     if (item?.type === 'interest' && action === 'respond') {
       setInterestResponseItem(item);
       setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
+      setInterestResponseNote('');
+      return;
+    }
+
+    // 👪 PAR-L9b (13/10, D3) — « Ouvrir une conversation » ne crée plus le fil d'office :
+    // la feuille demande d'abord AVEC QUI (moi, ou un·e coach que je choisis). Le fil se
+    // crée dans `handleConversationConfirm`, une fois le choix fait.
+    if (item?.type === 'interest' && action === 'chat') {
+      setConversationItem(item);
       return;
     }
 
     try {
       setProcessingItemId(itemId);
-
-      if (item?.type === 'interest') {
-        if (!requestId) throw new Error('Missing club interest request identifier');
-        if (action === 'chat') {
-          const requesterId = item?.meta?.requesterId;
-          if (!requesterId) throw new Error('Missing requester identifier');
-          const chat = await startWhisperChat([requesterId]);
-          const chatDocumentId = chat?.documentId || /** @type {any} */ (chat)?.data?.documentId;
-          if (!chatDocumentId) throw new Error('Missing conversation identifier');
-
-          await respondClubInterestRequest(requestId, {
-            chatDocumentId,
-            responseType: 'chat',
-          });
-          invalidateRequestsInBackground();
-          emitGuidanceAction('requests.processed', {
-            requestType: item?.type || 'unknown',
-          });
-          navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
-          return;
-        }
-      }
 
       if (item?.type === 'team') {
         if (!requestId) throw new Error('Missing request identifier');
@@ -625,7 +658,71 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [celebrateAcceptance, closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequestsInBackground, navigation, openSubscriptionPaywall, startWhisperChat, t]);
+  }, [celebrateAcceptance, closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequestsInBackground, navigation, openSubscriptionPaywall, t]);
+
+  /**
+   * 👪 PAR-L9b (13/10, D3 + D3 bis A) — LE CHOIX EST FAIT : on crée le fil, on le lie a la
+   * demande, on y entre. « Moi » : un tête-à-tête avec la personne intéressée. Un·e coach :
+   * un fil à TROIS (la route ajoute toujours son créateur) — le serveur vérifie que ce coach
+   * entraîne l'équipe visée, et le prévient.
+   * ⛔ Rien n'est lié tant que le fil n'existe pas ; un échec se dit, la demande reste.
+   * @param {{ coach: any | null }} choice Le coach choisi, ou null pour « moi ».
+   */
+  const handleConversationConfirm = useCallback(async (
+    /** @type {{ coach: any | null }} */ { coach },
+  ) => {
+    const item = conversationItem;
+    if (!item) return;
+
+    try {
+      setProcessingItemId(item.id);
+      const requestId = item?.meta?.requestId;
+      const requesterId = item?.meta?.requesterId;
+      if (!requestId) throw new Error('Missing club interest request identifier');
+      if (!requesterId) throw new Error('Missing requester identifier');
+      const coachDocumentId = String(coach?.documentId || '').trim();
+
+      const chat = await startWhisperChat(
+        coachDocumentId ? [requesterId, coachDocumentId] : [requesterId],
+      );
+      const chatDocumentId = chat?.documentId || /** @type {any} */ (chat)?.data?.documentId;
+      if (!chatDocumentId) throw new Error('Missing conversation identifier');
+
+      await respondClubInterestRequest(requestId, {
+        chatDocumentId,
+        ...(coachDocumentId ? { coachDocumentId } : {}),
+        responseType: 'chat',
+      });
+      setConversationItem(null);
+      setSettledItemIds((current) => (
+        item?.id && !current.includes(item.id) ? [...current, item.id] : current
+      ));
+      invalidateRequestsInBackground();
+      emitGuidanceAction('requests.processed', { requestType: 'interest' });
+      navigation.navigate(RouteNames.Conversation, { chatId: chatDocumentId });
+    } catch (conversationError) {
+      const subscriptionDecision = extractSubscriptionDecisionFromError(conversationError);
+      if (subscriptionDecision) {
+        setConversationItem(null);
+        openSubscriptionPaywall(subscriptionDecision, item?.meta?.clubId);
+        return;
+      }
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        /** @type {any} */ (conversationError)?.message
+          || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
+      );
+    } finally {
+      setProcessingItemId('');
+    }
+  }, [
+    conversationItem,
+    invalidateRequestsInBackground,
+    navigation,
+    openSubscriptionPaywall,
+    startWhisperChat,
+    t,
+  ]);
 
   const handlePrimaryPress = useCallback(
     (item) => runItemAction(item, 'primary'),
@@ -671,19 +768,27 @@ function RequestsHub({ navigation, route }) {
       return;
     }
 
+    // PAR-L9b (E17) — le mot libre suit la réponse type ; vide, AUCUNE clé ne part.
+    const note = interestResponseNote.trim();
+
     try {
       setProcessingItemId(interestResponseItem.id);
       await respondClubInterestRequest(requestId, {
+        ...(note ? { note } : {}),
         presetKey: selectedPreset.key,
         responseType: 'preset',
       });
-      celebrateAcceptance(interestResponseItem);
+      announceInterestResponse(
+        interestResponseItem,
+        note ? `${selectedPreset.message}\n${note}` : selectedPreset.message,
+      );
       invalidateRequestsInBackground();
       emitGuidanceAction('requests.processed', {
         requestType: 'interest',
       });
       setInterestResponseItem(null);
       setInterestResponsePresetKey(CLUB_INTEREST_RESPONSE_PRESETS[0]?.key || 'thanks');
+      setInterestResponseNote('');
     } catch (responseError) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(responseError);
       if (subscriptionDecision) {
@@ -697,7 +802,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [celebrateAcceptance, interestResponseItem, interestResponsePresetKey, invalidateRequestsInBackground, openSubscriptionPaywall, t]);
+  }, [announceInterestResponse, interestResponseItem, interestResponseNote, interestResponsePresetKey, invalidateRequestsInBackground, openSubscriptionPaywall, t]);
 
   const handleRequesterPress = useCallback((item) => {
     const requesterId = String(item?.meta?.requesterId || '').trim();
@@ -747,6 +852,27 @@ function RequestsHub({ navigation, route }) {
   const selectedInterestPreset = CLUB_INTEREST_RESPONSE_PRESETS.find(
     (preset) => preset.key === interestResponsePresetKey,
   );
+  const interestRecipientFirstname = String(
+    interestResponseItem?.meta?.requesterFirstname || '',
+  ).trim();
+  const interestRecipientLabel = interestRecipientFirstname
+    ? t('requestsHub.interest.recipient', {
+      defaultValue: '{{firstname}} recevra ce message.',
+      firstname: interestRecipientFirstname,
+      ...SANS_ECHAPPEMENT,
+    })
+    : t(
+      'requestsHub.interest.responseDescription',
+      'Choisis une réponse rapide à envoyer à la personne intéressée.',
+    );
+  const interestNoteLabel = t('requestsHub.interest.noteLabel', 'Ajouter un mot (facultatif)');
+  // 👪 PAR-L9b (13/10, E17) — la feuille « Répondre » range les réponses types en deux
+  // familles, chacune sous son intertitre.
+  const interestPresetSections = [
+    { kind: 'reply', title: t('requestsHub.interest.sectionReply', 'RÉPONDRE') },
+    { kind: 'refuse', title: t('requestsHub.interest.sectionRefuse', 'REFUSER') },
+  ];
+  const trimmedInterestNote = interestResponseNote.trim();
 
   const handleBackPress = useCallback(() => {
     if (canGoBack) {
@@ -891,7 +1017,13 @@ function RequestsHub({ navigation, route }) {
         transparent
         visible={Boolean(interestResponseItem)}
       >
-        <View
+        {/* 👪 PAR-L9b (13/10, E17) — À QUI part le message, deux familles (répondre /
+            refuser), un mot libre. Le champ vit dans un défilement que le clavier ne cache
+            pas : même montage que le refus d'installation (FC-007). */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          enabled={Platform.OS !== 'web'}
+          keyboardVerticalOffset={0}
           style={[
             Alignments.fill,
             Alignments.justifyCenter,
@@ -899,15 +1031,19 @@ function RequestsHub({ navigation, route }) {
             { backgroundColor: 'rgba(0, 0, 0, 0.55)' },
           ]}
         >
-          <View
+          <ScrollView
+            contentContainerStyle={[Spaces.gap[16], { padding: 20 }]}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyboardShouldPersistTaps="handled"
             style={[
               ApplicationStyle.backgroundColor.primary700,
               ApplicationStyle.borderRadius16,
               ApplicationStyle.borderWidth1,
-              { padding: 20 },
-              Spaces.gap[16],
               {
                 borderColor: `${Colors.primary500}66`,
+                flexGrow: 0,
+                flexShrink: 1,
+                maxHeight: '100%',
               },
             ]}
           >
@@ -915,76 +1051,115 @@ function RequestsHub({ navigation, route }) {
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                 {t('requestsHub.interest.responseTitle', 'Répondre à cet intérêt')}
               </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'requestsHub.interest.responseDescription',
-                  'Choisis une réponse rapide à envoyer au joueur intéresse.',
-                )}
+              <Text style={[Fonts.p3, Fonts.primary200]}>
+                {interestRecipientLabel}
               </Text>
             </View>
 
-            <View style={[{ gap: 10 }]}>
-              {CLUB_INTEREST_RESPONSE_PRESETS.map((preset) => {
-                const isSelected = preset.key === interestResponsePresetKey;
-                return (
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    disabled={Boolean(processingItemId)}
-                    key={preset.key}
-                    onPress={() => setInterestResponsePresetKey(preset.key)}
-                    style={[
-                      ApplicationStyle.borderRadius16,
-                      ApplicationStyle.borderWidth1,
-                      Spaces.padding[12],
-                      Spaces.gap[4],
-                      {
-                        backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255,255,255,0.04)',
-                        borderColor: isSelected ? Colors.primary500 : `${Colors.primary500}33`,
-                      },
-                    ]}
-                  >
-                    <Text style={[Fonts.p3Bold, isSelected ? Fonts.primary100 : Fonts.neutral00]}>
-                      {preset.label}
-                    </Text>
-                    <Text style={[Fonts.p4, Fonts.neutral200]}>
-                      {preset.message}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {interestPresetSections.map((section) => (
+              <View key={section.kind} style={[{ gap: 10 }]}>
+                <Text style={[Fonts.p4Bold, Fonts.primary200]}>
+                  {section.title}
+                </Text>
+                {CLUB_INTEREST_RESPONSE_PRESETS
+                  .filter((preset) => preset.kind === section.kind)
+                  .map((preset) => {
+                    const isSelected = preset.key === interestResponsePresetKey;
+                    const labelColor = isSelected ? Fonts.primary100 : Fonts.neutral00;
+                    return (
+                      <TouchableOpacity
+                        accessibilityLabel={preset.label}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
+                        disabled={Boolean(processingItemId)}
+                        key={preset.key}
+                        onPress={() => setInterestResponsePresetKey(preset.key)}
+                        style={[
+                          ApplicationStyle.borderRadius16,
+                          ApplicationStyle.borderWidth1,
+                          Spaces.padding[12],
+                          Spaces.gap[4],
+                          {
+                            backgroundColor: isSelected ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255,255,255,0.04)',
+                            borderColor: isSelected ? Colors.primary500 : `${Colors.primary500}33`,
+                            minHeight: 44,
+                          },
+                        ]}
+                      >
+                        <Text style={[Fonts.p3Bold, labelColor]}>
+                          {preset.label}
+                        </Text>
+                        <Text style={[Fonts.p4, Fonts.neutral200]}>
+                          {preset.message}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            ))}
+
+            <TextInput
+              accessibilityLabel={interestNoteLabel}
+              editable={!processingItemId}
+              maxLength={280}
+              multiline
+              onChangeText={setInterestResponseNote}
+              placeholder={interestNoteLabel}
+              placeholderTextColor={Colors.neutral400}
+              style={[
+                ApplicationStyle.borderRadius16,
+                ApplicationStyle.borderWidth1,
+                Fonts.p2,
+                Fonts.neutral00,
+                Spaces.padding[16],
+                {
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  borderColor: `${Colors.primary500}44`,
+                  minHeight: 72,
+                  textAlignVertical: 'top',
+                },
+              ]}
+              value={interestResponseNote}
+            />
 
             {selectedInterestPreset ? (
-              <Text style={[Fonts.p4, Fonts.neutral300]}>
+              <Text style={[Fonts.p4, Fonts.neutral200]}>
                 {t('requestsHub.interest.responsePreview', 'Message envoyé')}
-                :
-                {' '}
+                {' : '}
                 {selectedInterestPreset.message}
+                {trimmedInterestNote ? `\n${trimmedInterestNote}` : ''}
               </Text>
             ) : null}
 
-            <View style={[Alignments.row, Spaces.gap[12]]}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  disabled={Boolean(processingItemId)}
-                  onPress={closeInterestResponseModal}
-                  title={t('common.actions.cancel', 'Annuler')}
-                  variant="Secondary"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  disabled={Boolean(processingItemId)}
-                  isLoading={processingItemId === interestResponseItem?.id}
-                  onPress={handleInterestResponseConfirm}
-                  title={t('requestsHub.actions.respond', 'Repondre')}
-                  variant="Primary"
-                />
-              </View>
+            <View style={[Spaces.gap[8]]}>
+              <Button
+                disabled={Boolean(processingItemId)}
+                isLoading={processingItemId === interestResponseItem?.id}
+                onPress={handleInterestResponseConfirm}
+                title={t('requestsHub.interest.send', 'Envoyer la réponse')}
+                variant="Primary"
+              />
+              <Button
+                disabled={Boolean(processingItemId)}
+                onPress={closeInterestResponseModal}
+                title={t('common.actions.cancel', 'Annuler')}
+                variant="Ghost"
+              />
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
+
+      {/* Montée seulement quand elle s ouvre : sa requête d équipe ne part que pour elle. */}
+      {conversationItem ? (
+        <InterestConversationSheet
+          currentUserId={userData?.documentId || ''}
+          isBusy={processingItemId === conversationItem.id}
+          item={conversationItem}
+          onCancel={closeConversationSheet}
+          onConfirm={handleConversationConfirm}
+        />
+      ) : null}
 
       <WithDataWrapper
         error={requestsQuery?.error?.message}
@@ -1159,7 +1334,7 @@ function RequestsHub({ navigation, route }) {
             </Text>
             <Button
               onPress={closeCelebration}
-              title={t('requestsHub.celebration.close', 'Super')}
+              title={celebration?.closeLabel || t('requestsHub.celebration.close', 'Super')}
               variant="Primary"
             />
           </View>

@@ -168,7 +168,11 @@ export const normalizeNotificationPayload = (payload) => {
     merged.notificationId = notificationId;
   }
 
-  const chatId = normalizeEntityId(firstDefinedValue(merged.chatId, merged.conversationId));
+  // PAR-L9a (13/10) — la reponse a une demande d interet nomme son fil `chatDocumentId`
+  // (admin/.../club-interest-request/services/notification.ts) : meme fil, meme cle.
+  const chatId = normalizeEntityId(
+    firstDefinedValue(merged.chatId, merged.conversationId, merged.chatDocumentId),
+  );
   if (chatId) {
     merged.chatId = chatId;
     merged.conversationId = chatId;
@@ -643,6 +647,28 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
   }
 
   switch (type) {
+    // 👪 PAR-L9a (13/10, PAR-011) — LES DEUX NOTIFICATIONS D INTERET MENAIENT NULLE PART :
+    // l app ne connaissait pas leurs etiquettes (ecrites a la main cote serveur,
+    // admin/.../user-fcm-token/types/index.ts). Un fil nomme ⇒ ce fil : la reponse « conversation »
+    // du club au demandeur, ou la conversation confiee a un coach (L9b). Sans fil : la reponse
+    // « message type » s ouvre en detail (son texte entier), la demande recue dans « Demandes ».
+    // Temoin : src/utils/notifications/__tests__/reponseInteretAtterrissage.test.js.
+    case 'clubInterestRequest':
+    case 'clubInterestResponse': {
+      const interestChat = chatDestination(payload.chatId);
+      if (interestChat) return adaptDestinationForCurrentPlatform(payload, interestChat);
+      if (type === 'clubInterestResponse') {
+        return adaptDestinationForCurrentPlatform(payload, notificationDetailsDestination(payload));
+      }
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: {
+          initialFilter: 'interest',
+          source: 'notification',
+        },
+        route: RouteNames.RequestsHub,
+      });
+    }
+
     // Notif superadmin « Nouveau club a verifier » (self-onboard) : type serveur 'newSelfServiceClub'.
     case 'newSelfServiceClub':
       return adaptDestinationForCurrentPlatform(payload, {

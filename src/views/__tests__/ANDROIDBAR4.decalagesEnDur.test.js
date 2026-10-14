@@ -28,6 +28,12 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 // vraies briques, et joue les charges qu'Android et iOS envoient réellement — géométrie mesurée
 // à l'émulateur par ANDROIDBAR-3 (Pixel 9, Android 16, 3 boutons). Monter les 7 écrans demande
 // serveur, session et club moqués ; leur construction, elle, se lit.
+//
+// 🤖 ANDROIDBAR-6 — trois formulaires de plus, dont l'évitement à décalage 0 (ou 0 sur Android,
+// 100 sur iPhone) vit lui aussi DANS le ScreenContainer, sous l'en-tête : SquadEditScreen,
+// CreateSectionScreen, FacilityForm. Calcul : ≈ 110 dp SOUS le clavier sur un Pixel 9 (en-tête
+// 56 + barre d'état 54). Et un téléphone de plus, le clavier MESURÉ à la séance émulateur du
+// 14/10 : Gboard affiche sa barre de suggestions, le haut du clavier est à 1541 px, pas 1657.
 
 const RACINE = path.resolve(__dirname, '..', '..', '..');
 
@@ -39,12 +45,21 @@ const ECRANS = [
   'src/views/multisportClub/MultisportClubEditDetails.js',
   'src/views/profile/ProfileEdit.js',
   'src/views/team/TeamEdit.js',
+  // ANDROIDBAR-6
+  'src/views/facility/FacilityForm.js',
+  'src/views/league/edit/SquadEditScreen.js',
+  'src/views/multisportClub/CreateSectionScreen.js',
 ];
+
+// Le seul formulaire qui ne pose aucune marge à son contenu (son défilement porte la sienne).
+const SANS_MARGE = new Set(['src/views/league/edit/SquadEditScreen.js']);
 
 const DENSITE = 2.625;
 const ECRAN_PIXEL_9 = 2424 / DENSITE;
 const HAUT_DU_CLAVIER_PIXEL_9 = 1657 / DENSITE;
 const CLAVIER_PIXEL_9 = ECRAN_PIXEL_9 - HAUT_DU_CLAVIER_PIXEL_9 - 48;
+// ANDROIDBAR-6 — mesuré le 14/10 (`ime frame=[0,1541][1080,2424]`, barre de suggestions de Gboard).
+const CLAVIER_MESURE_PIXEL_9 = ECRAN_PIXEL_9 - 1541 / DENSITE - 48;
 
 /** @type {{ bottom: number, left: number, right: number, top: number }} */
 const mockInsets = {
@@ -118,7 +133,7 @@ const attribut = (/** @type {any} */ element, /** @type {string} */ nom) => elem
 /**
  * La construction du formulaire, telle que le code de l'écran l'écrit.
  * @param {string} relatif
- * @returns {{ evitementDuConteneur: boolean, decalages: number[], marge: number }}
+ * @returns {{ evitementDuConteneur: boolean, decalages: Decalage[], marge: number }}
  */
 const lireLaConstruction = (relatif) => {
   const arbre = parse(fs.readFileSync(path.join(RACINE, relatif), 'utf8'), {
@@ -141,6 +156,14 @@ const lireLaConstruction = (relatif) => {
     const decalage = attribut(kav, 'keyboardVerticalOffset');
     if (!decalage) return 0;
     const expression = decalage.value && decalage.value.expression;
+    // ANDROIDBAR-6 — `Platform.OS === 'ios' ? 100 : 0` (FacilityForm) : un décalage par système.
+    if (expression && expression.type === 'ConditionalExpression'
+      && expression.test.type === 'BinaryExpression'
+      && expression.test.right.value === 'ios'
+      && expression.consequent.type === 'NumericLiteral'
+      && expression.alternate.type === 'NumericLiteral') {
+      return { android: expression.alternate.value, ios: expression.consequent.value };
+    }
     if (!expression || expression.type !== 'NumericLiteral') {
       throw new Error(`${relatif} : décalage non lisible (${expression && expression.type})`);
     }
@@ -161,6 +184,8 @@ const lireLaConstruction = (relatif) => {
 
   return { decalages, evitementDuConteneur, marge: marges[0] || 0 };
 };
+
+/** @typedef {number | { android: number, ios: number }} Decalage */
 
 // ─── Les téléphones ──────────────────────────────────────────────────────────
 
@@ -186,9 +211,10 @@ const lireLaConstruction = (relatif) => {
  * @param {number} version
  * @param {number} barreDEtat
  * @param {number} barreDuBas
+ * @param {number} [clavier] Hauteur du clavier sans la barre système (dp).
  * @returns {Telephone}
  */
-const androidBordABord = (nom, version, barreDEtat, barreDuBas) => ({
+const androidBordABord = (nom, version, barreDEtat, barreDuBas, clavier = CLAVIER_PIXEL_9) => ({
   bas: barreDuBas,
   entete: 56 + barreDEtat,
   fenetre: ECRAN_PIXEL_9,
@@ -199,13 +225,13 @@ const androidBordABord = (nom, version, barreDEtat, barreDuBas) => ({
     height: 0, screenX: 0, screenY: ECRAN_PIXEL_9 - barreDuBas - barreDEtat, width: 411,
   },
   haut: barreDEtat,
-  hautDuClavier: ECRAN_PIXEL_9 - CLAVIER_PIXEL_9 - barreDuBas,
+  hautDuClavier: ECRAN_PIXEL_9 - clavier - barreDuBas,
   nom,
   os: 'android',
   ouverture: {
-    height: CLAVIER_PIXEL_9,
+    height: clavier,
     screenX: 0,
-    screenY: ECRAN_PIXEL_9 - CLAVIER_PIXEL_9 - barreDuBas,
+    screenY: ECRAN_PIXEL_9 - clavier - barreDuBas,
     width: 411,
   },
   version,
@@ -261,6 +287,13 @@ const iphone = (nom, ecran, barreDEtat, barreDuBas, clavier) => ({
 
 const ANDROID_15_16 = [
   androidBordABord('Android 16, Pixel 9, 3 boutons', 36, 142 / DENSITE, 48),
+  androidBordABord(
+    'Android 16, Pixel 9, 3 boutons, clavier mesuré 1541 px',
+    36,
+    142 / DENSITE,
+    48,
+    CLAVIER_MESURE_PIXEL_9,
+  ),
   androidBordABord('Android 15, Pixel 9, gestes', 35, 142 / DENSITE, 24),
   androidBordABord('Android 15, barre d état 24 dp, 3 boutons', 35, 24, 48),
 ];
@@ -292,7 +325,7 @@ const lire = (/** @type {any} */ style, /** @type {'Top' | 'Bottom'} */ cote) =>
 
 /**
  * Remonte la construction de l'écran sur un téléphone et joue ouverture puis fermeture.
- * @param {{ evitementDuConteneur: boolean, decalages: number[], marge: number }} construction
+ * @param {{ evitementDuConteneur: boolean, decalages: Decalage[], marge: number }} construction
  * @param {Telephone} tel
  * @returns {Promise<{ ferme: number, ouvert: number, referme: number }>} y (dp, coordonnées de
  *   la vue racine) du bas du formulaire — là où s'arrêtent ses boutons.
@@ -328,7 +361,9 @@ const jouer = async (construction, tel) => {
           contentContainerStyle={[{ paddingVertical: construction.marge }]}
           keyboardAvoiding={construction.evitementDuConteneur}
         >
-          {formulaire(construction.decalages[0])}
+          {formulaire(typeof construction.decalages[0] === 'object'
+            ? construction.decalages[0][tel.os]
+            : construction.decalages[0])}
         </ScreenContainer>
       </HeaderHeightContext.Provider>,
     );
@@ -446,7 +481,8 @@ describe.each(ECRANS)('ANDROIDBAR-4 — %s', (relatif) => {
   const construction = lireLaConstruction(relatif);
 
   it('la construction se lit : une marge verticale, au plus un évitement', () => {
-    expect(construction.marge).toBeGreaterThan(0);
+    if (SANS_MARGE.has(relatif)) expect(construction.marge).toBe(0);
+    else expect(construction.marge).toBeGreaterThan(0);
     expect(construction.decalages.length).toBeLessThanOrEqual(1);
   });
 
