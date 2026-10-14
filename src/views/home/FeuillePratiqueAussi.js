@@ -40,7 +40,8 @@ function FeuillePratiqueAussi({
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const { refetchUserData, setDisplayMode } = useAuth();
-  const { data: roles } = useGetRoles({ enabled: isVisible });
+  // Lue seulement feuille ouverte (`useGetRoles` déclare des options complètes, d'où le type).
+  const { data: roles } = useGetRoles(/** @type {any} */ ({ enabled: isVisible }));
   const [erreur, setErreur] = useState(false);
 
   const passage = useMutation({
@@ -67,7 +68,8 @@ function FeuillePratiqueAussi({
       setErreur(true);
       return;
     }
-    passage.mutate({ role: roleJoueur });
+    // La même mise à jour que `UserRole.js` : seul le rôle part (`updateMe` est typé « User »).
+    passage.mutate(/** @type {any} */ ({ role: roleJoueur }));
   };
 
   const noms = (Array.isArray(prenoms) ? prenoms : []).filter(Boolean);
@@ -93,13 +95,11 @@ function FeuillePratiqueAussi({
             disabled={passage.isPending}
             isLoading={passage.isPending}
             onPress={confirmer}
-            testID="feuille-pratique-aussi-oui"
             title={t('playerMode.sheet.confirm')}
             variant="Primary"
           />
           <Button
             onPress={onClose}
-            testID="feuille-pratique-aussi-plus-tard"
             title={t('playerMode.sheet.later')}
             variant="Ghost"
           />

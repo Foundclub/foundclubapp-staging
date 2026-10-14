@@ -65,10 +65,9 @@ jest.mock('@/components/atoms/button/Button', () => {
   const { Text: TexteRN, TouchableOpacity } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ {
-      disabled, onPress, testID, title,
-    }) => (
-      <TouchableOpacity disabled={disabled} onPress={onPress} testID={testID}>
+    // `Button` ne transmet pas `testID` : la doublure non plus. On trouve un bouton à son libellé.
+    default: (/** @type {any} */ { disabled, onPress, title }) => (
+      <TouchableOpacity accessibilityRole="button" disabled={disabled} onPress={onPress}>
         <TexteRN>{title}</TexteRN>
       </TouchableOpacity>
     ),
@@ -109,9 +108,12 @@ const monter = (prenoms) => {
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => [].concat(noeud.props.children).join(''));
 
-const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
+const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
   const cible = arbre.root.find((/** @type {any} */ noeud) => typeof noeud.type === 'string'
-    && noeud.props.testID === testID);
+    && noeud.props.accessibilityRole === 'button'
+    && noeud.findAllByType(Text).some((/** @type {any} */ texte) => (
+      [].concat(texte.props.children).join('') === libelle
+    )));
   await act(async () => { cible.props.onClick(); });
 };
 
@@ -136,7 +138,7 @@ test('« Oui » : le compte passe en Joueur, RESTE en mode parent, puis est relu
   mockAuth.refetchUserData.mockImplementation(() => { ordre.push('relu'); });
   const { arbre, onDone } = monter(['Anissa']);
 
-  await appuyer(arbre, 'feuille-pratique-aussi-oui');
+  await appuyer(arbre, 'Oui, je pratique aussi');
 
   expect(updateMe).toHaveBeenCalledTimes(1);
   expect(updateMe.mock.calls[0][0]).toEqual({ role: 'r-joueur' });
@@ -148,7 +150,7 @@ test('le serveur refuse : rien ne change, et elle le dit', async () => {
   updateMe.mockRejectedValue(new Error('403'));
   const { arbre, onDone } = monter(['Anissa']);
 
-  await appuyer(arbre, 'feuille-pratique-aussi-oui');
+  await appuyer(arbre, 'Oui, je pratique aussi');
 
   expect(textes(arbre)).toContain('Ton compte n’a pas pu changer. Réessaie.');
   expect(mockAuth.setDisplayMode).not.toHaveBeenCalled();
@@ -158,7 +160,7 @@ test('le serveur refuse : rien ne change, et elle le dit', async () => {
 test('« Pas maintenant » referme, sans rien envoyer', async () => {
   const { arbre, onClose } = monter([]);
 
-  await appuyer(arbre, 'feuille-pratique-aussi-plus-tard');
+  await appuyer(arbre, 'Pas maintenant');
 
   expect(onClose).toHaveBeenCalledTimes(1);
   expect(updateMe).not.toHaveBeenCalled();

@@ -2452,12 +2452,14 @@ function HomeHubContent({ auth, navigation, route }) {
     // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
     // (meme raison que « Mes reponses », posee par D57).
     const lignesDesEnfants = lignesAAfficher(t, mesEnfants);
-    const carteMesEnfants = {
+    // `cards` est typé par sa PREMIÈRE case (littéral) : une case posée en tête ou en fin
+    // depuis une variable n'y entre pas sans ce trait (même erreur, déjà là, avant L7).
+    const carteMesEnfants = /** @type {any} */ ({
       accentColor: Colors.primary500,
-      emphasis: /** @type {const} */ ('primary'),
+      emphasis: 'primary',
       icon: 'users',
       key: 'search-my-children',
-      layout: /** @type {const} */ ('full'),
+      layout: 'full',
       onPress: () => navigation.navigate(RouteNames.ProfileStack, {
         screen: RouteNames.MyChildren,
       }),
@@ -2470,7 +2472,7 @@ function HomeHubContent({ auth, navigation, route }) {
       // Une ligne par enfant nomme (et « + 2 autres ») : rien n'est coupe par « … ».
       subtitleLines: Math.max(2, lignesDesEnfants.length),
       title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
-    };
+    });
 
     if (isParent) {
       // ⚠️ Pour poser une 2e case en tete : UN SEUL `unshift(a, b)`. Deux

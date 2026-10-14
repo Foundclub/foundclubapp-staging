@@ -23,8 +23,9 @@ import { useParentLinksAsParent } from '@/services/parentLink/parentLinkQueries'
  */
 export default function useMesEnfantsEnBref({ actif }) {
   const { t } = useTranslation();
-  const { data: fiches } = useGetMyDeclaredChildren({ enabled: actif });
-  const { data: liens } = useParentLinksAsParent({ enabled: actif });
+  // Ces deux crochets se déclarent `@returns {object}` : leur `data` se lit comme ailleurs.
+  const { data: fiches } = /** @type {any} */ (useGetMyDeclaredChildren({ enabled: actif }));
+  const { data: liens } = /** @type {any} */ (useParentLinksAsParent({ enabled: actif }));
   const aDesFiches = Array.isArray(fiches) && fiches.length > 0;
   const { data: demandes } = useGetMyClubInterestRequests(
     { includeChildRequests: true, includeHistory: true },
