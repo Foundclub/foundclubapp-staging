@@ -47,6 +47,8 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 import texteInsecable from '@/utils/texteInsecable';
 
+import { useAppFeedback } from '@/context/AppFeedbackContext';
+
 // Deux elements aux deux bouts d une rangee.
 const ENTRE_DEUX = /** @type {const} */ ({ gap: 8, justifyContent: 'space-between' });
 
@@ -395,6 +397,7 @@ function SeasonSlotForm({
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const { showBanner } = useAppFeedback();
   const modification = Boolean(slot?.documentId);
   // IPH09 : tunnel local. La repartition du dirigeant garde son seul choix d'equipe.
   const parcoursGuide = guided && !repartition;
@@ -616,6 +619,22 @@ function SeasonSlotForm({
         });
       }
       setConflit(null);
+      // 📐 COLL-R-A7-FINITIONS (planche P4v4-attribuer-entrees-tel, « Attribué ») : le tunnel se
+      // ferme, la bannière de l'app confirme sur l'écran d'origine. Le panneau du site, lui, ne
+      // change pas.
+      if (tunnelPleinEcran) {
+        showBanner({
+          body: nomDuClub
+            ? t('collectiviteCreneaux.tunnel.estPrevenu', '{{club}} est prévenu.', {
+              club: nomDuClub, ...SANS_ECHAPPEMENT,
+            })
+            : undefined,
+          title: modification
+            ? t('collectiviteCreneaux.tunnel.modifie', 'Créneau modifié')
+            : t('collectiviteCreneaux.tunnel.attribue', 'Créneau attribué'),
+          tone: 'success',
+        });
+      }
       onDone(reponse?.data || null);
     } catch (refus) {
       const apercuDuRefus = overCapacityPreviewOf(refus);
