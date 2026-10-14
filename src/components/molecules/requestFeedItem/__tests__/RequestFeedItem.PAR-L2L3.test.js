@@ -255,17 +255,34 @@ describe('PAR-L2L3 · L2 — la carte d intérêt d un ADULTE, boutons lisibles'
     act(() => carte.arbre.unmount());
   });
 
-  test('l ordre des boutons ne change pas (il appartient au lot L9a)', () => {
+  // 👪 PAR-L9a (13/10, E15) — l'ordre que le lot L2 avait laissé à L9a : la
+  // conversation d'abord (bouton plein, enveloppe), « Répondre » ensuite, et le
+  // profil en LIEN, sous les deux gestes.
+  test('L9a — « Ouvrir une conversation », « Répondre », puis le lien « Voir le profil »', () => {
     const carte = monter(INTERET_ADULTE);
 
-    expect(carte.titres).toEqual(['Voir le profil', 'Ouvrir chat', 'Répondre']);
+    expect(carte.titres).toEqual(['Ouvrir une conversation', 'Répondre', 'Voir le profil']);
+    expect(carte.bouton('Ouvrir une conversation').props).toMatchObject({
+      icon: 'envelope', variant: 'Primary',
+    });
+    expect(carte.bouton('Répondre').props.variant).toBe('Secondary');
+    expect(carte.bouton('Répondre').props.icon).toBeUndefined();
+    expect(carte.bouton('Voir le profil').props.variant).toBe('Ghost');
     act(() => carte.arbre.unmount());
   });
 
-  test('« Ouvrir chat » et « Répondre » sont EMPILÉS, en pleine largeur', () => {
+  test('L9a — le titre dit « Intérêt pour le club », la phrase est inclusive', () => {
     const carte = monter(INTERET_ADULTE);
 
-    ['Ouvrir chat', 'Répondre'].forEach((titre) => {
+    expect(carte.textes[0]).toBe('Intérêt pour le club');
+    expect(carte.textes).toContain('Maryline Monroe est intéressé·e par U11 Filles.');
+    act(() => carte.arbre.unmount());
+  });
+
+  test('« Ouvrir une conversation » et « Répondre » sont EMPILÉS, en pleine largeur', () => {
+    const carte = monter(INTERET_ADULTE);
+
+    ['Ouvrir une conversation', 'Répondre'].forEach((titre) => {
       const bouton = carte.bouton(titre);
       // Aucun étage entre le bouton et la carte ne le met en rangée, ne le
       // partage avec un voisin, ni ne le resserre sur son contenu.
@@ -284,7 +301,7 @@ describe('PAR-L2L3 · L2 — la carte d intérêt d un ADULTE, boutons lisibles'
   test('les trois boutons ont la même hauteur que « Voir le profil » (≥ 44 points)', () => {
     const carte = monter(INTERET_ADULTE);
 
-    const hauteurs = ['Voir le profil', 'Ouvrir chat', 'Répondre'].map((titre) => (
+    const hauteurs = ['Voir le profil', 'Ouvrir une conversation', 'Répondre'].map((titre) => (
       StyleSheet.flatten(carte.bouton(titre).findByType(TouchableOpacity).props.style).height
     ));
     expect(new Set(hauteurs).size).toBe(1);
@@ -301,11 +318,13 @@ describe('PAR-L2L3 · L2 — la carte d intérêt d un ADULTE, boutons lisibles'
     });
 
     act(() => carte.bouton('Voir le profil').findByType(TouchableOpacity).props.onPress());
-    act(() => carte.bouton('Ouvrir chat').findByType(TouchableOpacity).props.onPress());
+    act(() => carte.bouton('Ouvrir une conversation').findByType(TouchableOpacity).props.onPress());
     act(() => carte.bouton('Répondre').findByType(TouchableOpacity).props.onPress());
     expect(surProfil).toHaveBeenCalledWith(carte.item);
     expect(surSecondaire).toHaveBeenCalledWith(carte.item);
     expect(surPrincipal).toHaveBeenCalledWith(carte.item);
+    // L9a — la conversation est le geste PRINCIPAL de la carte, « Répondre » le second.
+    expect(carte.item.actions).toEqual({ primary: 'chat', secondary: 'respond' });
     act(() => carte.arbre.unmount());
   });
 });

@@ -607,3 +607,19 @@ describe('ANNUAIRE-E1 — le drapeau « annuaire » de la route', () => {
     expect(mockCoquille.props.annuaire).toBe(false);
   });
 });
+
+// 👶 PAR-L4 (13/10, recette PAR-009) — « Chercher un club pour Anissa », depuis SA fiche, arrive
+// ici avec `childDocumentId` : la liste de clubs le garde pour l'emmener jusqu'a la fiche club.
+describe('PAR-L4 — l enfant venu de sa fiche traverse la recherche', () => {
+  test('✅ childDocumentId de la route est transmis a la liste de clubs', async () => {
+    await monter({ activeType: 'clubs', childDocumentId: 'c-anissa', childFirstname: 'Anissa' });
+
+    expect(mockPanneaux.clubs.props.childDocumentId).toBe('c-anissa');
+  });
+
+  test('📌 sans lui (la recherche ordinaire), la liste ne recoit rien', async () => {
+    await monter({ activeType: 'clubs' });
+
+    expect(mockPanneaux.clubs.props.childDocumentId).toBeUndefined();
+  });
+});

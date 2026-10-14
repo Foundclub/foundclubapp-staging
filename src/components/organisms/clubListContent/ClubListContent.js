@@ -140,6 +140,7 @@ const mergeClubCollections = (...collections) => {
  * Club list element to inject on home page or a dedicated one.
  * @param {{
  *  annuaire?: boolean;
+ *  childDocumentId?: string;
  *  enableMapMode?: boolean;
  *  refreshSignal?: number;
  *  screenActive?: boolean;
@@ -147,10 +148,14 @@ const mergeClubCollections = (...collections) => {
  *   `annuaire` (ANNUAIRE-E1, posé par l'annuaire du site seulement) : la liste défile AVEC la page
  *   (cartes à plat, « Voir plus » au lieu du défilement sans fin) et chaque carte est un vrai lien
  *   vers sa fiche publique. Absent, rien ne change — le téléphone garde sa liste.
+ *   `childDocumentId` (PAR-L4, recette PAR-009) : l'enfant venu de SA fiche (« Chercher un club
+ *   pour Anissa ») ; la carte l'emmene jusqu'a la fiche club, qui coche cet enfant dans
+ *   « Demander une place ». Son identifiant seul : le prenom se relit la-bas, dans MA liste.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
   annuaire = false,
+  childDocumentId = undefined,
   enableMapMode = false,
   refreshSignal = 0,
   screenActive = true,
@@ -647,12 +652,12 @@ function ClubListContent({
   const handleClubSelection = useCallback((/** @type {string | undefined} */ documentId) => {
     if (documentId) {
       navigateToStackScreenOrScreen(navigation, {
-        params: { clubId: documentId },
+        params: { clubId: documentId, ...(childDocumentId ? { childDocumentId } : {}) },
         screen: RouteNames.Club,
         stack: RouteNames.ClubStack,
       });
     }
-  }, [navigation]);
+  }, [childDocumentId, navigation]);
 
   // D69 — le bouton ouvre desormais la FEUILLE du pack (capture 05) au lieu de
   // pousser l'ecran plein `ClubFilters`. L'ecran reste enregistre : le
