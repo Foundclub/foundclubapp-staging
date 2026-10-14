@@ -23258,6 +23258,8 @@ export default {
       noChild: "Tu n'as pas encore déclaré d'enfant. "
         + 'Ajoute-le depuis « Mes enfants », puis reviens ici.',
       reminder: '{{type}} · {{date}}',
+      // PAR-L11c (14/10) — la catégorie est montrée, rien n'est bloqué (design planche 9).
+      reminderWithCategory: '{{type}} · {{category}} · {{date}}',
       title: 'Qui inscris-tu ?',
     },
     status: {

@@ -14574,6 +14574,8 @@ export default {
       defaultType: 'Event',
       noChild: "You haven't added a child yet. Add them from \"My children\", then come back here.",
       reminder: '{{type}} · {{date}}',
+      // PAR-L11c (14/10) — the category is shown, nothing is blocked.
+      reminderWithCategory: '{{type}} · {{category}} · {{date}}',
       title: 'Who are you registering?',
     },
     status: {

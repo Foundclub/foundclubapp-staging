@@ -69,7 +69,10 @@ const toneStyles = (Fonts) => ({
 });
 
 /**
- * Le rappel en tete de la feuille : « Detection / Seance d essai · 18/10/2026 ».
+ * Le rappel en tete de la feuille : « Detection / Seance d essai · U11 · 18/10/2026 ».
+ * PAR-L11c (14/10) point 5 : la CATEGORIE de l equipe organisatrice, lue comme l en-tete de
+ * l evenement (EventHeader.js) ; montree, jamais bloquante (design planche 9). Sans
+ * categorie : « type · date », comme avant.
  * @param {any} event - L evenement.
  * @param {(key: string, options?: object) => string} t - La traduction.
  * @returns {string} Le rappel.
@@ -79,11 +82,18 @@ const eventReminder = (event, t) => {
   const date = start && Number.isFinite(start.getTime())
     ? start.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '';
-  return t('childEventRegistration.sheet.reminder', {
-    date,
-    type: event?.type?.name || t('childEventRegistration.sheet.defaultType'),
-    ...SANS_ECHAPPEMENT,
-  });
+  const category = String(event?.team?.category?.name || '').trim();
+  return t(
+    category
+      ? 'childEventRegistration.sheet.reminderWithCategory'
+      : 'childEventRegistration.sheet.reminder',
+    {
+      category,
+      date,
+      type: event?.type?.name || t('childEventRegistration.sheet.defaultType'),
+      ...SANS_ECHAPPEMENT,
+    },
+  );
 };
 
 /**

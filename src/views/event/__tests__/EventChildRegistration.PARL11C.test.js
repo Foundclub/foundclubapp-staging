@@ -362,3 +362,39 @@ describe('PAR-L11c point 4 — le motif saisi au refus', () => {
     expect(mockDecide).not.toHaveBeenCalled();
   });
 });
+
+// Point 5 — le rappel en tete de « Qui inscris-tu ? » montre la CATEGORIE (design planche 9 :
+// « Détection U11 · lun. 12/10 ») ; « la catégorie est montrée, rien n'est bloqué ». La
+// categorie est celle de l equipe organisatrice, lue comme l en-tete de l evenement
+// (EventHeader.js : `event.team.category.name`).
+describe('PAR-L11c point 5 — la categorie dans le rappel en tete', () => {
+  const DATE = /\d{2}\/\d{2}\/\d{4}$/;
+
+  test('🔴 « type · categorie · date »', () => {
+    render(<EventChildRegistration
+      event={evenement("Détection / Séance d'essai", { team: { category: { name: 'U11' } } })}
+    />);
+    press('Inscrire mes enfants');
+
+    const rappel = getByText(/^Détection \/ Séance d'essai · U11 · /);
+    expect(rappel).toMatch(DATE);
+  });
+
+  test('sans categorie : « type · date », comme avant', () => {
+    render(<EventChildRegistration event={evenement("Détection / Séance d'essai")} />);
+    press('Inscrire mes enfants');
+
+    const rappel = getByText(/^Détection \/ Séance d'essai · /);
+    expect(rappel).toMatch(new RegExp(`^Détection / Séance d'essai · ${DATE.source}`));
+  });
+
+  test('la categorie ne bloque rien : un enfant de 7 ans reste cochable sur un U11', () => {
+    render(<EventChildRegistration
+      event={evenement('Détection', { team: { category: { name: 'U11' } } })}
+    />);
+    press('Inscrire mes enfants');
+
+    expect(byTestId('child-registration-unavailable-martin')).toHaveLength(0);
+    expect(getByText('Martin · 7 ans')).toBeTruthy();
+  });
+});
