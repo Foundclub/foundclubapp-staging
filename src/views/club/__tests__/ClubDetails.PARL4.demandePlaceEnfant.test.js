@@ -635,7 +635,15 @@ const ouvrir = async (arbre) => {
  * @param {any} arbre - L'arbre rendu.
  * @returns {any} Le noeud.
  */
-const suivant = (arbre) => parEtiquette(feuille(arbre), 'demande-enfant-suivant');
+const suivant = (arbre) => pressableSous(feuille(arbre), 'Choisir l’équipe')
+  || pressableSous(feuille(arbre), 'Continuer');
+
+/**
+ * Le bouton « Envoyer la demande » du recapitulatif.
+ * @param {any} arbre - L'arbre rendu.
+ * @returns {any} Le noeud.
+ */
+const envoyer = (arbre) => pressableSous(feuille(arbre), 'Envoyer la demande');
 
 /**
  * Ouvre la feuille, choisit l'enfant, l'equipe, et arrive au recapitulatif.
@@ -703,7 +711,7 @@ describe('PAR-L4 point 2 — une feuille en 3 etapes : l enfant, l equipe, l env
     expect(createClubInterestRequest).not.toHaveBeenCalled();
     expect(Alert.alert).not.toHaveBeenCalled();
 
-    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+    await appuyer(envoyer(arbre));
 
     expect(createClubInterestRequest).toHaveBeenCalledTimes(1);
     expect(createClubInterestRequest).toHaveBeenCalledWith({
@@ -715,7 +723,7 @@ describe('PAR-L4 point 2 — une feuille en 3 etapes : l enfant, l equipe, l env
   it('le resultat se dit avec l enfant et l equipe, et mene a SA fiche', async () => {
     const arbre = monter();
     await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
-    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+    await appuyer(envoyer(arbre));
 
     expect(feuille(arbre)).toBeUndefined();
     const [titre, message, boutons] = derniereAlerte();
@@ -736,7 +744,7 @@ describe('PAR-L4 point 2 — une feuille en 3 etapes : l enfant, l equipe, l env
     const arbre = monter();
     await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
 
-    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-retour'));
+    await appuyer(pressableSous(feuille(arbre), 'Retour'));
     expect(texteDe(feuille(arbre))).toContain('Étape 2/3');
     expect(rangeeEquipe(arbre, 't-filles').props.accessibilityState).toMatchObject({
       checked: true,
@@ -823,7 +831,7 @@ describe('PAR-L4 point 2 — une feuille en 3 etapes : l enfant, l equipe, l env
     expect(rangeeEquipe(arbre, 't-filles').props.disabled).toBe(false);
     await appuyer(rangeeEquipe(arbre, 't-filles'));
     await appuyer(suivant(arbre));
-    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+    await appuyer(envoyer(arbre));
 
     expect(createClubInterestRequest).toHaveBeenCalledWith({
       declaredChild: 'c-martin',
@@ -877,7 +885,7 @@ describe('PAR-L4 point 4 — les erreurs nomment l enfant, dans la feuille', () 
     });
     const arbre = monter();
     await jusquAuRecapitulatif(arbre, 'c-anissa', 't-filles');
-    await appuyer(parEtiquette(feuille(arbre), 'demande-enfant-envoyer'));
+    await appuyer(envoyer(arbre));
     return arbre;
   };
 

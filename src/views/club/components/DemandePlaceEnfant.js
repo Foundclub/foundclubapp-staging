@@ -76,11 +76,11 @@ function DemandePlaceEnfant({
   const equipe = equipes.find((ligne) => ligne.documentId === equipeId) || null;
   const nomme = { firstname: enfant?.firstname || '', ...SANS_ECHAPPEMENT };
 
-  const titres = {
-    1: t('clubDetails.childInterest.stepChild', 'Pour quel enfant ?'),
-    2: t('clubDetails.childInterest.stepTeam', 'Quelle équipe ?'),
-    3: t('clubDetails.childInterest.stepRecap', 'Récapitulatif'),
-  };
+  const titres = [
+    t('clubDetails.childInterest.stepChild', 'Pour quel enfant ?'),
+    t('clubDetails.childInterest.stepTeam', 'Quelle équipe ?'),
+    t('clubDetails.childInterest.stepRecap', 'Récapitulatif'),
+  ];
 
   /**
    * « Anissa · 11 ans », ou le prenom seul si l'age manque.
@@ -156,6 +156,12 @@ function DemandePlaceEnfant({
     })
     : t('clubDetails.childInterest.forChild', { defaultValue: 'Pour {{firstname}}', ...nomme });
 
+  /**
+   * Une ligne du recapitulatif : le libelle, puis la valeur en gras.
+   * @param {string} libelle - « Enfant », « Équipe », « Club ».
+   * @param {string} valeur - Ce qui a ete choisi.
+   * @returns {import('react').ReactElement} La ligne.
+   */
   const ligneDuRecapitulatif = (libelle, valeur) => (
     <View style={{ gap: 2 }}>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{libelle}</Text>
@@ -192,7 +198,7 @@ function DemandePlaceEnfant({
           />
         </View>
         <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {titres[etape]}
+          {titres[etape - 1]}
         </Text>
       </View>
 
@@ -232,7 +238,6 @@ function DemandePlaceEnfant({
             disabled={!enfant}
             onPress={() => setEtape(2)}
             style={{ marginTop: 8 }}
-            testID="demande-enfant-suivant"
             title={t('clubDetails.childInterest.chooseTeamAction', 'Choisir l’équipe')}
             variant="Primary"
           />
@@ -284,7 +289,6 @@ function DemandePlaceEnfant({
             disabled={!equipe}
             onPress={() => setEtape(3)}
             style={{ marginTop: 8 }}
-            testID="demande-enfant-suivant"
             title={t('clubDetails.childInterest.continueAction', 'Continuer')}
             variant="Primary"
           />
@@ -330,14 +334,12 @@ function DemandePlaceEnfant({
             <Button
               isLoading={envoiEnCours}
               onPress={() => onEnvoyer({ enfant, equipe })}
-              testID="demande-enfant-envoyer"
               title={t('clubDetails.childInterest.sendRequestAction', 'Envoyer la demande')}
               variant="Primary"
             />
             <Button
               disabled={envoiEnCours}
               onPress={() => setEtape(2)}
-              testID="demande-enfant-retour"
               title={t('common.back', 'Retour')}
               variant="Ghost"
             />
