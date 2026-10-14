@@ -169,7 +169,7 @@ describe('requestsHubService', () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toEqual(expect.objectContaining({
-      actions: { primary: 'respond', secondary: 'chat' },
+      actions: { primary: 'chat', secondary: 'respond' },
       id: 'interest:interest-1',
       type: 'interest',
     }));
