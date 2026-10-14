@@ -14,6 +14,7 @@ import { useCreateLieu, useGetPlacesFromCoordinates } from '@/services/places/pl
 
 import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 import mapsPlatform from '@/platform/maps';
 
 // ADRESSE-CARTE (07/10, décision d'Adel « adresse introuvable : ok pour ta solution ») —
@@ -100,6 +101,10 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  // 🤖 ANDROIDBAR-4 — fenêtre translucide : sur Android 15 et 16, rien ne la remonte au-dessus
+  // du clavier, qui recouvrait « Nom du lieu » et « Placer ici ». La carte rétrécit, le panneau
+  // remonte ; il garde déjà la barre système (`insets.bottom + 16`) : pas comptée deux fois.
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(insets.bottom);
   const departTape = premierResultat
     ? { lat: premierResultat.lat, lng: premierResultat.lng, zoom: ZOOM_DE_LA_RUE }
     : null;
@@ -171,7 +176,12 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
 
   return (
     <Modal animationType="slide" onRequestClose={onFermer} statusBarTranslucent visible>
-      <View style={[Alignments.fill, { backgroundColor: Colors.primary900 }]}>
+      <View
+        style={[
+          Alignments.fill,
+          { backgroundColor: Colors.primary900, paddingBottom: retraitDuClavier },
+        ]}
+      >
         <View
           style={[
             Alignments.row,

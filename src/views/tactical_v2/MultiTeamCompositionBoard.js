@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ImageBackground,
+  Keyboard,
   Modal,
   Platform,
   ScrollView,
@@ -278,6 +279,39 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     Spaces,
   } = useTheme();
   const insets = useSafeAreaInsets();
+
+  // 🤖 ANDROIDBAR-3BIS — Android 15 et 16 (bord à bord imposé, `adjustResize` mort) : le clavier
+  // couvrait le nom des équipes du bas. Ce plateau n'a pas de ScreenContainer (racine
+  // GestureHandlerRootView, jeton fantôme par-dessus) : il reprend SON motif (ANDROIDBAR-3) — la
+  // hauteur qu'Android envoie, 0 à la fermeture, clavier déjà ouvert lu au montage — et rend au
+  // bas du fond ce que le clavier couvre, barre de navigation comprise (le fond descend jusqu'en
+  // bas de l'écran). La zone qui défile rétrécit, Android y remonte le champ.
+  // Le glisser-déposer n'est pas touché : le calque du fantôme est hors du fond, et la prise d'un
+  // joueur remesure les terrains (`beginDrag`). iPhone, Android ≤ 14 et site : inchangés.
+  // Témoin : MultiTeamCompositionBoard.ANDROIDBAR3BIS.clavier.test.js.
+  // ponytail: 3ᵉ exemplaire du motif (Conversation, ScreenContainer) ; le mettre en commun
+  // demande de toucher ScreenContainer.
+  const ecouteLeClavierAndroid = Platform.OS === 'android'
+    && typeof Platform.Version === 'number'
+    && Platform.Version >= 35;
+  const [hauteurDuClavierAndroid, setHauteurDuClavierAndroid] = useState(0);
+  useEffect(() => {
+    if (!ecouteLeClavierAndroid) return undefined;
+    const hauteur = (coordonnees) => Math.max(0, coordonnees?.height || 0);
+    if (Keyboard.isVisible?.()) setHauteurDuClavierAndroid(hauteur(Keyboard.metrics?.()));
+    const ouvert = Keyboard.addListener('keyboardDidShow', (evenement) => {
+      setHauteurDuClavierAndroid(hauteur(evenement?.endCoordinates));
+    });
+    const ferme = Keyboard.addListener('keyboardDidHide', () => setHauteurDuClavierAndroid(0));
+    return () => {
+      ouvert.remove();
+      ferme.remove();
+    };
+  }, [ecouteLeClavierAndroid]);
+  const retraitDuClavierAndroid = hauteurDuClavierAndroid > 0
+    ? hauteurDuClavierAndroid + insets.bottom
+    : 0;
+
   const navigation = useNavigation();
   const route = useRoute();
   const queryClient = useQueryClient();
@@ -1142,7 +1176,10 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       <ImageBackground
         resizeMode="cover"
         source={Images.bg1}
-        style={[Alignments.fill, { paddingTop: insets.top + 8 }]}
+        style={[
+          Alignments.fill,
+          { paddingBottom: retraitDuClavierAndroid, paddingTop: insets.top + 8 },
+        ]}
       >
         <View style={[styles.header, Spaces.paddingHorizontal[16]]}>
           <View style={styles.headerBackButtonContainer}>

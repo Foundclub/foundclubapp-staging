@@ -93,6 +93,9 @@ function SuperAdminLeagueLayout({
       bgImage="bg2"
       bottomInsetMode="none"
       contentContainerStyle={[Spaces.paddingTop[16]]}
+      // 🤖 ANDROIDBAR-5 — les 5 pages LEAGUE à champ (litiges, matchs, paramètres, squads,
+      // cotisations) le rendent ici : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
       responsivePadding
     >
       <ScrollView

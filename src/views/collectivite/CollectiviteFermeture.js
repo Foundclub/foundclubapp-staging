@@ -5,11 +5,10 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { lieuAvecArticle } from '@/domains/collectivite/collectiviteDemandes';
-import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import {
   CLOSURE_MAX_NAME_LENGTH,
   CLOSURE_REASONS,
@@ -45,7 +44,8 @@ import {
 } from '@/services/facilityClosure/facilityClosureQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
-import { getFacilityTypeNoun } from '@/utils/facilityTypes';
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { getFacilityTypeLabel, getFacilityTypeNoun } from '@/utils/facilityTypes';
 
 import useGardeDeSortie from '@/hooks/useGardeDeSortie';
 import { useIsDesktop } from '@/responsive';
@@ -282,7 +282,18 @@ function FormulaireDeFermeture({
     nom: existante?.label || '',
   }));
   const [facilityId, setFacilityId] = useState(depart.facilityId);
-  const [choisir, setChoisir] = useState(!facilityId);
+  // CRFERM (13/10, planche P4v4-fermer-tel) — venue de l accueil, la Ville choisit d abord
+  // l installation (premier ecran) ; « Changer » n existe qu apres CE choix (venue de la fiche de
+  // l installation, elle est connue : pas de « Changer »).
+  const choisieIci = !depart.facilityId && !modification;
+  // CRFERM — « Toute la journee », active par defaut ; une fermeture relue avec des heures
+  // l eteint.
+  const [touteLaJournee, setTouteLaJournee] = useState(
+    () => bloquer || !(existante?.startTime || existante?.endTime),
+  );
+  const avecHeures = !bloquer && !touteLaJournee;
+  // CRFERM — le nom et le mot, replies derriere un lien ; deplies s ils ont deja une valeur.
+  const [deplie, setDeplie] = useState(Boolean(depart.nom || depart.mot));
   const installation = liste.find((ligne) => ligne.documentId === facilityId)
     || (existante?.facility?.documentId === facilityId ? existante.facility : null)
     || (params.facilityName ? { documentId: facilityId, name: params.facilityName } : null);
@@ -305,21 +316,24 @@ function FormulaireDeFermeture({
 
   const jourDebut = versJour(debut);
   const jourFin = bloquer ? jourDebut : versJour(fin);
-  const heuresLisibles = !bloquer
-    || (HEURE.test(heureDebut) && HEURE.test(heureFin) && heureDebut < heureFin);
+  // CRFERM : une fermeture en plage a deux heures ; le meme jour, la fin suit le debut.
+  const heuresLisibles = !(bloquer || avecHeures)
+    || (HEURE.test(heureDebut) && HEURE.test(heureFin)
+      && (heureDebut < heureFin || (avecHeures && jourDebut !== jourFin)));
   const datesLisibles = Boolean(jourDebut && jourFin && jourFin >= jourDebut);
 
-  // La carte des seances touchees part des que les dates (et les heures d un blocage) se lisent.
+  // La carte des seances touchees part des que les dates (et les heures d un blocage, ou d une
+  // fermeture en plage) se lisent.
   const apercuParams = useMemo(
     () => (datesLisibles && heuresLisibles
       ? {
         endDate: jourFin,
         kind: bloquer ? 'block' : 'closure',
         startDate: jourDebut,
-        ...(bloquer ? { endTime: heureFin, startTime: heureDebut } : {}),
+        ...(bloquer || avecHeures ? { endTime: heureFin, startTime: heureDebut } : {}),
       }
       : null),
-    [bloquer, datesLisibles, heureDebut, heureFin, heuresLisibles, jourDebut, jourFin],
+    [avecHeures, bloquer, datesLisibles, heureDebut, heureFin, heuresLisibles, jourDebut, jourFin],
   );
   const apercu = useFacilityClosurePreview(facilityId, apercuParams);
   const carte = apercu.data?.data || null;
@@ -361,7 +375,7 @@ function FormulaireDeFermeture({
   let erreurDeSaisie = null;
   if (debut && fin && !bloquer && jourDebut && jourFin && jourFin < jourDebut) {
     erreurDeSaisie = t('collectiviteFermetures.form.ordreDates', 'La fin doit suivre le début.');
-  } else if (bloquer && heureDebut && heureFin && !heuresLisibles) {
+  } else if ((bloquer || avecHeures) && heureDebut && heureFin && !heuresLisibles) {
     erreurDeSaisie = HEURE.test(heureDebut) && HEURE.test(heureFin)
       ? t('collectiviteFermetures.form.ordreHeures', 'La fin doit suivre le début.')
       : t(
@@ -371,15 +385,12 @@ function FormulaireDeFermeture({
   }
 
   // SAIS (T20 lot 2) — un bouton grisé dit ce qui manque : le premier manque, dans l ordre de
-  // l écran. Rien quand une erreur de saisie le dit déjà.
+  // l écran. Rien quand une erreur de saisie le dit déjà. CRFERM (13/10, S11) : l installation est
+  // toujours choisie avant le formulaire (premier ecran) ; « Choisissez l installation » ne se
+  // dit plus deux fois.
   let ceQuiManque = null;
   if (!pret && !erreurDeSaisie) {
-    if (!facilityId) {
-      ceQuiManque = t(
-        'collectiviteFermetures.form.manque.installation',
-        'Choisissez l’installation.',
-      );
-    } else if (!datesLisibles) {
+    if (!datesLisibles) {
       ceQuiManque = bloquer
         ? t('collectiviteFermetures.form.manque.jour', 'Choisissez le jour.')
         : t('collectiviteFermetures.form.manque.dates', 'Choisissez les dates.');
@@ -395,7 +406,8 @@ function FormulaireDeFermeture({
   const saisieModifiee = publier || debut !== depart.debut || fin !== depart.fin
     || facilityId !== depart.facilityId || heureDebut !== depart.heureDebut
     || heureFin !== depart.heureFin || mot !== depart.mot || motif !== depart.motif
-    || nomDeFermeture !== depart.nom;
+    || nomDeFermeture !== depart.nom
+    || touteLaJournee !== (bloquer || !(existante?.startTime || existante?.endTime));
   const sortieLibre = useGardeDeSortie(enPanneau ? null : navigation, {
     actif: saisieModifiee,
     textes: {
@@ -405,6 +417,18 @@ function FormulaireDeFermeture({
       titre: t('collectiviteFermetures.form.quitterTitre', 'Quitter sans enregistrer ?'),
     },
   });
+
+  // CRFERM (13/10) — le choix du premier écran. Sur ordinateur, le planning REMPLACE cet écran :
+  // une sortie voulue (SAIS). Une Ville à UNE installation passe directement au formulaire.
+  const choisirLInstallation = useCallback((/** @type {any} */ ligne) => {
+    setFacilityId(ligne.documentId);
+    if (onFacilityChange) sortieLibre.current = true;
+    onFacilityChange?.(ligne.documentId, ligne.name || null);
+  }, [onFacilityChange, sortieLibre]);
+  const seuleInstallation = choisieIci && !facilityId && liste.length === 1 ? liste[0] : null;
+  useEffect(() => {
+    if (seuleInstallation) choisirLInstallation(seuleInstallation);
+  }, [choisirLInstallation, seuleInstallation]);
 
   // VILLE-T18A « fermer A » (décision du chef d'orchestre, 07/10, T18 point 3, G54a) : après
   // « Fermer », la fermeture se lit dans l'onglet « Fermetures » de l'installation (« N clubs
@@ -439,6 +463,15 @@ function FormulaireDeFermeture({
       data.label = nomDuBlocage;
     } else {
       data.label = nomRetenu;
+      // CRFERM (13/10, « heures : plage ») : l heure du premier et du dernier jour ; une plage
+      // modifiee qui redevient « toute la journee » efface ses heures.
+      if (avecHeures) {
+        data.startTime = heureDebut;
+        data.endTime = heureFin;
+      } else if (existante?.startTime || existante?.endTime) {
+        data.startTime = null;
+        data.endTime = null;
+      }
     }
     try {
       if (modification) {
@@ -479,7 +512,15 @@ function FormulaireDeFermeture({
   const plusieursJours = Boolean(jourDebut && jourFin && jourDebut !== jourFin);
   const joursLongs = closureDaysLabel(
     t,
-    { endDate: jourFin, startDate: jourDebut },
+    avecHeures
+      ? {
+        endDate: jourFin,
+        endTime: heureFin,
+        kind: 'closure',
+        startDate: jourDebut,
+        startTime: heureDebut,
+      }
+      : { endDate: jourFin, startDate: jourDebut },
     { long: true },
   );
 
@@ -554,76 +595,176 @@ function FormulaireDeFermeture({
     </View>
   ) : null;
 
+  // CRFERM (13/10, planche P4v4) — « Gymnase · 2 équipes à la fois » : le type, puis la capacité.
+  const typeEtCapacite = (/** @type {any} */ ligne) => [
+    getFacilityTypeLabel(ligne?.type),
+    ligne?.maxSlots
+      ? t('collectiviteCreneaux.liste.capacite', {
+        count: Number(ligne.maxSlots) || 1,
+        defaultValue_one: '{{count}} équipe à la fois',
+        defaultValue_other: '{{count}} équipes à la fois',
+      })
+      : '',
+  ].filter(Boolean).join(' · ');
+
+  // L installation choisie, en boîte ; « Changer » seulement après un choix fait sur le premier
+  // écran (S11 : il s affichait sans rien de choisi). Il y ramène.
   const choixDeLInstallation = (
-    <View style={{ gap: 8 }}>
+    <View
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.padding[12],
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.06),
+          borderColor: withAlpha(Colors.primary500, 0.24),
+          borderRadius: 14,
+          borderWidth: 1,
+          gap: 12,
+          justifyContent: 'space-between',
+        },
+      ]}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        {nom ? <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text> : null}
+        {typeEtCapacite(installation) ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>{typeEtCapacite(installation)}</Text>
+        ) : null}
+      </View>
+      {choisieIci && liste.length > 1 ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => setFacilityId(null)}
+          style={{ justifyContent: 'center', minHeight: 44, minWidth: 44 }}
+          testID="fermeture-changer"
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+            {t('collectiviteFermetures.form.changer', 'Changer')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
+  // CRFERM (13/10, planche P4v4 états 1, 7, 8, 9) — LE PREMIER ÉCRAN, venue de l accueil : une
+  // seule question, une carte par installation à sa couleur ; chargement, erreur, liste vide.
+  let contenuDuChoix;
+  if (installations.isLoading) {
+    contenuDuChoix = [0, 1, 2].map((rang) => (
       <View
+        key={rang}
+        style={{
+          backgroundColor: withAlpha(Colors.primary500, 0.14),
+          borderRadius: 16,
+          height: 72,
+        }}
+        testID="fermeture-installation-squelette"
+      />
+    ));
+  } else if (installations.isError) {
+    contenuDuChoix = (
+      <View
+        accessibilityRole="alert"
         style={[
-          Alignments.row,
-          Alignments.alignCenter,
-          Spaces.padding[12],
+          Spaces.padding[16],
           {
-            backgroundColor: withAlpha(Colors.neutral00, 0.04),
-            borderColor: withAlpha(Colors.neutral00, 0.14),
-            borderRadius: 14,
+            backgroundColor: withAlpha(Colors.warning500, 0.08),
+            borderColor: withAlpha(Colors.warning500, 0.45),
+            borderRadius: 16,
             borderWidth: 1,
-            gap: 12,
-            justifyContent: 'space-between',
+            gap: 8,
           },
         ]}
       >
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {nom
-              || t('collectiviteFermetures.form.choisirInstallation', 'Choisissez l’installation')}
-          </Text>
-          {installation?.maxSlots ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {[
-                t('collectiviteCreneaux.liste.capacite', {
-                  count: Number(installation.maxSlots) || 1,
-                  defaultValue_one: '{{count}} équipe à la fois',
-                  defaultValue_other: '{{count}} équipes à la fois',
-                }),
-                // COLL-C4B-BIS : fermer = des journees ; la planche (etat 1) dit les horaires.
-                bloquer
-                  ? null
-                  : formatOpeningHours(installation.openingTime, installation.closingTime),
-              ].filter(Boolean).join(' · ')}
-            </Text>
-          ) : null}
-        </View>
-        {modification || liste.length < 2 ? null : (
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() => setChoisir(!choisir)}
-            style={{ justifyContent: 'center', minHeight: 44 }}
-            testID="fermeture-changer"
-          >
-            <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-              {t('collectiviteFermetures.form.changer', 'Changer')}
-            </Text>
-          </TouchableOpacity>
-        )}
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {t('collectiviteFermetures.choix.erreur', 'Les installations n’ont pas pu être lues.')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'collectiviteFermetures.choix.erreurAide',
+            'Vérifiez la connexion, puis réessayez. Rien n’a été perdu.',
+          )}
+        </Text>
+        <Button
+          onPress={() => installations.refetch?.()}
+          testID="fermeture-installations-reessayer"
+          title={t('collectiviteFermetures.choix.reessayer', 'Réessayer')}
+          variant="Secondary"
+        />
       </View>
-      {choisir && !modification ? (
-        <View accessibilityRole="radiogroup" style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-          {liste.map((ligne) => (
-            <PuceDeChoix
-              actif={ligne.documentId === facilityId}
-              key={ligne.documentId}
-              libelle={ligne.name}
-              onPress={() => {
-                setFacilityId(ligne.documentId);
-                setChoisir(false);
-                // SAIS : sur ordinateur, le planning REMPLACE cet écran : une sortie voulue.
-                if (onFacilityChange) sortieLibre.current = true;
-                onFacilityChange?.(ligne.documentId, ligne.name || null);
-              }}
-              testID={`fermeture-installation-${ligne.documentId}`}
-            />
-          ))}
-        </View>
-      ) : null}
+    );
+  } else if (!liste.length) {
+    contenuDuChoix = (
+      <View style={{ gap: 8 }}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {t('collectiviteFermetures.choix.vide', 'Aucune installation à fermer')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'collectiviteFermetures.choix.videAide',
+            'Ajoutez d’abord vos gymnases, terrains et salles.',
+          )}
+        </Text>
+        {collectiviteId ? (
+          <Button
+            onPress={() => navigation.navigate?.(
+              RouteNames.CollectiviteInstallationForm,
+              { collectiviteId },
+            )}
+            title={t('collectiviteFermetures.choix.ajouter', 'Ajouter une installation')}
+            variant="Secondary"
+          />
+        ) : null}
+      </View>
+    );
+  } else {
+    contenuDuChoix = liste.map((ligne) => {
+      const couleur = resolveFacilityPlanningColor(ligne) || Colors.primary500;
+      return (
+        <TouchableOpacity
+          accessibilityLabel={[ligne.name, typeEtCapacite(ligne)].filter(Boolean).join(', ')}
+          accessibilityRole="button"
+          key={ligne.documentId}
+          onPress={() => choisirLInstallation(ligne)}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.padding[16],
+            {
+              backgroundColor: withAlpha(Colors.primary800, 0.85),
+              borderColor: withAlpha(couleur, 0.7),
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 12,
+              minHeight: 64,
+            },
+          ]}
+          testID={`fermeture-installation-${ligne.documentId}`}
+        >
+          <View
+            style={{
+              backgroundColor: couleur, borderRadius: 4, height: 32, width: 6,
+            }}
+          />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{ligne.name}</Text>
+            {typeEtCapacite(ligne) ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{typeEtCapacite(ligne)}</Text>
+            ) : null}
+          </View>
+          <SvgIcon color={Colors.primary200} height={14} name="arrow-right" width={14} />
+        </TouchableOpacity>
+      );
+    });
+  }
+  const etapeDuChoix = (
+    <View style={{ gap: 12 }}>
+      <Text accessibilityRole="header" style={[Fonts.p1Bold, Fonts.neutral00]}>
+        {bloquer
+          ? t('collectiviteFermetures.choix.questionBloquer', 'Quelle installation bloquez-vous ?')
+          : t('collectiviteFermetures.choix.question', 'Quelle installation fermez-vous ?')}
+      </Text>
+      {contenuDuChoix}
     </View>
   );
 
@@ -632,29 +773,31 @@ function FormulaireDeFermeture({
   const ligneDErreur = erreurDeSaisie
     ? <Text style={[Fonts.p3, Fonts.error500]}>{erreurDeSaisie}</Text>
     : null;
-  // Fermer ET bloquer : les pastilles « Motif », puis un nom facultatif (SAIS : le « Pour quoi »
-  // libre d un blocage devient ce couple ; son exemple reste « Forum des associations »).
-  const motifEtNom = (
-    <>
-      <View style={{ gap: 8 }}>
-        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-          {t('collectiviteFermetures.form.motif', 'Motif')}
-        </Text>
-        <View accessibilityRole="radiogroup" style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
-          {CLOSURE_REASONS.map((raison) => (
-            <PuceDeChoix
-              actif={motif === raison}
-              key={raison}
-              libelle={reasonLabel(t, raison)}
-              onPress={() => setMotif(raison)}
-              testID={`fermeture-motif-${raison}`}
-            />
-          ))}
-        </View>
+  // Fermer ET bloquer : les pastilles « Motif ». CRFERM (13/10, planche P4v4) : le nom
+  // (« férié B », et le nom d un blocage, SAIS) et le mot pour les clubs sont REPLIÉS derrière
+  // un lien, en boîte.
+  const motifs = (
+    <View style={{ gap: 8 }}>
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+        {t('collectiviteFermetures.form.motif', 'Motif')}
+      </Text>
+      <View accessibilityRole="radiogroup" style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
+        {CLOSURE_REASONS.map((raison) => (
+          <PuceDeChoix
+            actif={motif === raison}
+            key={raison}
+            libelle={reasonLabel(t, raison)}
+            onPress={() => setMotif(raison)}
+            testID={`fermeture-motif-${raison}`}
+          />
+        ))}
       </View>
+    </View>
+  );
+  const nomEtMot = deplie ? (
+    <>
       {/* FINITIONS12-COLL : le nom s imprime (planning, bandeau, affiches), donc court. */}
       <Input
-        density="compact"
         label={t('collectiviteFermetures.form.nom', 'Nom (facultatif)')}
         maxLength={CLOSURE_MAX_NAME_LENGTH}
         onChangeText={setNomDeFermeture}
@@ -664,18 +807,83 @@ function FormulaireDeFermeture({
         testID="fermeture-nom"
         value={nomDeFermeture}
       />
+      <Input
+        label={t('collectiviteFermetures.form.mot', 'Un mot pour les clubs (facultatif)')}
+        onChangeText={setMot}
+        placeholder={t('collectiviteFermetures.form.motExemple', 'Réfection du sol')}
+        testID="fermeture-mot"
+        value={mot}
+      />
     </>
+  ) : (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={{ expanded: false }}
+      onPress={() => setDeplie(true)}
+      style={{ justifyContent: 'center', minHeight: 44 }}
+      testID="fermeture-deplier"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+        {t('collectiviteFermetures.form.deplier', 'Ajouter un nom ou un mot pour les clubs')}
+      </Text>
+    </TouchableOpacity>
   );
 
-  // SAIS (T20 lot 1) — une date vide le dit ; l espace de la Ville vouvoie.
-  const choisirUnJour = t('collectiviteFermetures.form.choisirUnJour', 'Choisissez un jour');
+  // CRFERM (13/10, planche P4v4) — une date vide attend « Choisir » : court, sur une ligne (S11 :
+  // « Choisissez un jour » passait sur deux lignes).
+  const choisir = t('collectiviteFermetures.form.choisir', 'Choisir');
+  // CRFERM (« heures : plage ») — « Toute la journée », activé par défaut. Il reste SOUS les dates
+  // dans les deux états : le doigt qui l éteint le retrouve au même endroit.
+  const interrupteur = (
+    <View style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('collectiviteFermetures.form.touteLaJournee', 'Toute la journée')}
+        </Text>
+        {touteLaJournee ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('collectiviteFermetures.form.sinonLesHeures', 'Sinon, choisissez les heures.')}
+          </Text>
+        ) : null}
+      </View>
+      <Switch
+        accessibilityLabel={t('collectiviteFermetures.form.touteLaJournee', 'Toute la journée')}
+        onValueChange={setTouteLaJournee}
+        testID="fermeture-toute-la-journee"
+        thumbColor={Colors.neutral00}
+        trackColor={{ false: withAlpha(Colors.primary500, 0.3), true: Colors.primary500 }}
+        value={touteLaJournee}
+      />
+    </View>
+  );
+  const jourDu = (
+    <DatePickerInput
+      label={t('collectiviteFermetures.form.du', 'Du')}
+      minimumDate={new Date()}
+      onChange={(/** @type {string} */ valeur) => {
+        setDebut(valeur);
+        if (!fin || (versJour(fin) || '') < (versJour(valeur) || '')) setFin(valeur);
+      }}
+      placeholder={choisir}
+      value={debut}
+    />
+  );
+  const jourAu = (
+    <DatePickerInput
+      label={t('collectiviteFermetures.form.au', 'Au')}
+      minimumDate={new Date()}
+      onChange={(/** @type {string} */ valeur) => setFin(valeur)}
+      placeholder={choisir}
+      value={fin}
+    />
+  );
   const champsDeDates = bloquer ? (
     <View style={{ gap: 12 }}>
       <DatePickerInput
         label={t('collectiviteFermetures.form.jour', 'Jour')}
         minimumDate={new Date()}
         onChange={(/** @type {string} */ valeur) => setDebut(valeur)}
-        placeholder={choisirUnJour}
+        placeholder={choisir}
         value={debut}
       />
       {/* SITE-VILLE-FINITIONS (T19) — les heures se CHOISISSENT, comme dans « Attribuer » et
@@ -699,35 +907,46 @@ function FormulaireDeFermeture({
         </View>
       </View>
       {ligneDErreur}
-      {motifEtNom}
     </View>
   ) : (
     <View style={{ gap: 12 }}>
-      <View style={[Alignments.row, { gap: 12 }]}>
-        <View style={{ flex: 1 }}>
-          <DatePickerInput
-            label={t('collectiviteFermetures.form.du', 'Du')}
-            minimumDate={new Date()}
-            onChange={(/** @type {string} */ valeur) => {
-              setDebut(valeur);
-              if (!fin || (versJour(fin) || '') < (versJour(valeur) || '')) setFin(valeur);
-            }}
-            placeholder={choisirUnJour}
-            value={debut}
-          />
+      {avecHeures ? (
+        <>
+          <View style={[Alignments.row, { gap: 12 }]}>
+            <View style={{ flex: 1 }}>{jourDu}</View>
+            <View style={{ flex: 1 }}>
+              <TimePickerInput
+                label={t('collectiviteFermetures.form.heureDebut', 'Heure de début')}
+                onChange={(/** @type {string} */ valeur) => setHeureDebut(
+                  String(valeur || '').trim(),
+                )}
+                placeholder="14:00"
+                value={heureDebut}
+              />
+            </View>
+          </View>
+          <View style={[Alignments.row, { gap: 12 }]}>
+            <View style={{ flex: 1 }}>{jourAu}</View>
+            <View style={{ flex: 1 }}>
+              <TimePickerInput
+                label={t('collectiviteFermetures.form.heureFin', 'Heure de fin')}
+                onChange={(/** @type {string} */ valeur) => setHeureFin(
+                  String(valeur || '').trim(),
+                )}
+                placeholder="12:00"
+                value={heureFin}
+              />
+            </View>
+          </View>
+        </>
+      ) : (
+        <View style={[Alignments.row, { gap: 12 }]}>
+          <View style={{ flex: 1 }}>{jourDu}</View>
+          <View style={{ flex: 1 }}>{jourAu}</View>
         </View>
-        <View style={{ flex: 1 }}>
-          <DatePickerInput
-            label={t('collectiviteFermetures.form.au', 'Au')}
-            minimumDate={new Date()}
-            onChange={(/** @type {string} */ valeur) => setFin(valeur)}
-            placeholder={choisirUnJour}
-            value={fin}
-          />
-        </View>
-      </View>
+      )}
+      {interrupteur}
       {ligneDErreur}
-      {motifEtNom}
     </View>
   );
 
@@ -740,7 +959,21 @@ function FormulaireDeFermeture({
     // FINITIONS11-COLL (03/10, planche 25) : « Fermer le gymnase ce jour-là » (type connu).
     const lieu = getFacilityTypeNoun(installation?.type);
     const valeursDuLieu = { ...SANS_ECHAPPEMENT, lieu: lieu?.nom };
-    boutonPrincipal = plusieursJours
+    // CRFERM (planche P4v4, état 3 bis) : certaines heures seulement, « Fermer le gymnase ».
+    const fermerLeLieu = phraseForFacilityType(lieu, {
+      feminine: t(
+        'collectiviteFermetures.form.boutonFermerFeminin',
+        'Fermer la {{lieu}}',
+        valeursDuLieu,
+      ),
+      generic: t('collectiviteFermetures.form.boutonFermer', 'Fermer l’installation'),
+      masculine: t(
+        'collectiviteFermetures.form.boutonFermerMasculin',
+        'Fermer le {{lieu}}',
+        valeursDuLieu,
+      ),
+    });
+    const fermerCesJours = plusieursJours
       ? phraseForFacilityType(lieu, {
         feminine: t(
           'collectiviteFermetures.form.boutonFermerJoursFeminin',
@@ -773,6 +1006,7 @@ function FormulaireDeFermeture({
           valeursDuLieu,
         ),
       });
+    boutonPrincipal = avecHeures ? fermerLeLieu : fermerCesJours;
   }
 
   const questionDeConfirmation = bloquer
@@ -830,10 +1064,13 @@ function FormulaireDeFermeture({
 
   // COLL-C4B-BIS : le corps du formulaire, le meme dans l ecran (telephone) et le panneau
   // (ordinateur) ; le panneau n a pas le choix de l installation (le planning la nomme).
+  // CRFERM (planche P4v4) : installation, dates, motif, séances touchées, case, nom et mot
+  // repliés ; le bouton est dans le PIED (`pied`), hors de ce qui défile.
   const corps = (
     <>
       {enPanneau ? null : choixDeLInstallation}
       {champsDeDates}
+      {motifs}
       {facilityId ? carteDesSeances : null}
       {apercu.error ? (
         <Text style={[Fonts.p3, Fonts.error500]}>
@@ -841,14 +1078,6 @@ function FormulaireDeFermeture({
               || getErrorMessage(/** @type {any} */ (apercu.error))}
         </Text>
       ) : null}
-      <Input
-        density="compact"
-        label={t('collectiviteFermetures.form.mot', 'Un mot pour les clubs (facultatif)')}
-        onChangeText={setMot}
-        placeholder={t('collectiviteFermetures.form.motExemple', 'Réfection du sol')}
-        testID="fermeture-mot"
-        value={mot}
-      />
       {bloquer || modification ? null : (
         <TouchableOpacity
           accessibilityLabel={t(
@@ -875,7 +1104,7 @@ function FormulaireDeFermeture({
               Alignments.justifyCenter,
               {
                 backgroundColor: publier ? Colors.primary500 : 'transparent',
-                borderColor: publier ? Colors.primary500 : Colors.neutral300,
+                borderColor: publier ? Colors.primary500 : Colors.primary200,
                 borderRadius: 6,
                 borderWidth: 1.5,
                 height: 22,
@@ -894,7 +1123,7 @@ function FormulaireDeFermeture({
                 'Publier aussi une actualité « Fermeture »',
               )}
             </Text>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t(
                 'collectiviteFermetures.form.publierPourQui',
                 'Pour tous les membres des clubs rattachés.',
@@ -903,13 +1132,20 @@ function FormulaireDeFermeture({
           </View>
         </TouchableOpacity>
       )}
+      {nomEtMot}
       {erreur ? (
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.error500]}>
           {erreur}
         </Text>
       ) : null}
+    </>
+  );
+  // CRFERM (13/10, S11 : le bouton sortait de l écran) — le PIED : ce qui manque, dit une fois,
+  // juste au-dessus du bouton ; au téléphone, hors du défilement.
+  const pied = (
+    <View style={{ gap: 8 }}>
       {ceQuiManque ? (
-        <Text style={[Fonts.p3, Fonts.neutral300]} testID="fermeture-manque">{ceQuiManque}</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]} testID="fermeture-manque">{ceQuiManque}</Text>
       ) : null}
       <Button
         disabled={!pret || enCours}
@@ -919,7 +1155,7 @@ function FormulaireDeFermeture({
         title={boutonPrincipal}
         variant="Primary"
       />
-    </>
+    </View>
   );
   const confirmation = (
     <BottomModal close={() => setConfirmer(false)} isVisible={confirmer} webPresentation="dialog">
@@ -978,10 +1214,13 @@ function FormulaireDeFermeture({
           </TouchableOpacity>
         </View>
         {corps}
+        {pied}
         {confirmation}
       </View>
     );
   }
+  // CRFERM : venue de l accueil, rien de choisi — le premier écran, une seule question.
+  const premierEcran = !modification && !facilityId;
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -995,8 +1234,9 @@ function FormulaireDeFermeture({
             ? t('collectiviteFermetures.form.titreModifier', 'Modifier la fermeture')
             : titre}
         </Text>
-        {corps}
+        {premierEcran ? etapeDuChoix : corps}
       </ScrollView>
+      {premierEcran ? null : <View style={{ paddingBottom: 8, paddingTop: 12 }}>{pied}</View>}
       {confirmation}
     </ScreenContainer>
   );

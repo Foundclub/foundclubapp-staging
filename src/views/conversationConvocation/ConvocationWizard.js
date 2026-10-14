@@ -61,6 +61,11 @@ import {
   RENDEZ_VOUS_LIEU_MAX,
   splitSelection,
 } from './convocationWizardUtils';
+// Aucune position ne satisfait les deux règles d'ordre (perfectionist veut les voisins `./`
+// d'abord, import/order l'alias d'abord) : on suit perfectionist, comme
+// `adminClubContentService.js`, et on tait l'autre sur CETTE ligne uniquement.
+// eslint-disable-next-line import/order
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 
 /** @type {any[]} */
 const EMPTY_LIST = [];
@@ -111,6 +116,11 @@ function ConvocationWizard({
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const insets = useSafeAreaInsets();
+  // 🤖 ANDROIDBAR-4 — la fenêtre est translucide : sur Android 15 et 16, rien ne la remonte
+  // au-dessus du clavier, qui recouvrait le pied et le bas des champs. Le pied garde déjà la
+  // barre système (`Math.max(insets.bottom, 12)`, plus bas) : le retrait ne la compte pas
+  // deux fois.
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(Math.max(insets.bottom, 12));
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { userData } = useAuth();
@@ -489,7 +499,10 @@ function ConvocationWizard({
       visible={visible}
     >
       <View
-        style={[styles.root, { backgroundColor: Colors.primary900 }]}
+        style={[
+          styles.root,
+          { backgroundColor: Colors.primary900, paddingBottom: retraitDuClavier },
+        ]}
         testID="convocation-wizard"
       >
         <View
