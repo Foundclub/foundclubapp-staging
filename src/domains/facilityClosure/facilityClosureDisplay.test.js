@@ -118,3 +118,51 @@ describe('FINITIONS12-COLL point 12 — le nom d’une fermeture passe avant son
     expect(closureTagLabel(t, sansNom)).toBe('Fermeture · vacances');
   });
 });
+
+// 🕑 CRFERM (13/10, décision d'Adel « heures : plage », planche P4v4-fermer état 3 bis) — UNE
+// FERMETURE PEUT AVOIR DES HEURES : une heure le premier jour, une le dernier (« du vendredi 14:00 au
+// lundi 12:00 »). Les mots les disent, le brouillon du planning et ses plages hachurées les suivent,
+// comme le serveur (admin CRFERM-3). Un blocage et une journée entière ne changent pas. ROUGE avant.
+describe('CRFERM — une fermeture en plage d’heures', () => {
+  // eslint-disable-next-line global-require
+  const { closureDaysLabel } = require('./facilityClosureDisplay');
+  const PLAGE = {
+    endDate: '2026-10-19', endTime: '12:00', kind: 'closure', reason: 'travaux', startDate: '2026-10-16', startTime: '14:00',
+  };
+  const ELECTION = {
+    endDate: '2026-10-04', endTime: '20:00', kind: 'closure', startDate: '2026-10-04', startTime: '07:00',
+  };
+
+  it('les jours disent leurs heures ; une journée entière, comme avant', () => {
+    expect(closureDaysLabel(t, PLAGE, { long: true })).toBe('du vendredi 16 octobre à 14:00 au lundi 19 octobre à 12:00');
+    expect(closureDaysLabel(t, PLAGE)).toBe('du ven. 16 oct. à 14:00 au lun. 19 oct. à 12:00');
+    expect(closureDaysLabel(t, ELECTION, { long: true })).toBe('dimanche 4 octobre de 07:00 à 20:00');
+    expect(closureDaysLabel(t, { ...PLAGE, endTime: null, startTime: null }, { long: true })).toBe('du vendredi 16 octobre au lundi 19 octobre');
+    expect(closureHoursLabel(t, PLAGE)).toBe('dès 14:00 · jusqu’à 12:00');
+    expect(closureHoursLabel(t, ELECTION)).toBe('07:00 – 20:00');
+  });
+
+  it('le brouillon du planning suit les heures : premier jour après, dernier jour avant, le milieu entier', () => {
+    const seance = (/** @type {string} */ jour, /** @type {string} */ heureUtc) => ({
+      endTime: null, startAt: `${jour}T${heureUtc}:00.000Z`, startTime: null,
+    });
+    // Octobre avant le 25 : Paris = UTC+2.
+    expect(closureTouchesBlock(seance('2026-10-16', '08:00'), PLAGE)).toBe(false);
+    expect(closureTouchesBlock(seance('2026-10-16', '16:00'), PLAGE)).toBe(true);
+    expect(closureTouchesBlock(seance('2026-10-17', '06:00'), PLAGE)).toBe(true);
+    expect(closureTouchesBlock(seance('2026-10-19', '07:00'), PLAGE)).toBe(true);
+    expect(closureTouchesBlock(seance('2026-10-19', '17:00'), PLAGE)).toBe(false);
+  });
+
+  it('les plages hachurées : le premier jour dès son heure, le dernier jusqu’à la sienne', () => {
+    const plages = closureBandsForRange(
+      [PLAGE],
+      { from: '2026-10-12', to: '2026-10-19' },
+      { closing: 22 * 60, opening: 8 * 60 },
+      () => 'Fermé · travaux',
+    );
+    expect(plages.map((plage) => [new Date(plage.startAt).getHours(), new Date(plage.endAt).getHours()])).toEqual([
+      [14, 22], [8, 22], [8, 22], [8, 12],
+    ]);
+  });
+});

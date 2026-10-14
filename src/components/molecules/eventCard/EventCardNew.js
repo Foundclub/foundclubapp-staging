@@ -29,6 +29,7 @@ import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Tag from '@/components/atoms/tag/Tag';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import FacilityClosureCardTag from '@/components/molecules/facilityClosure/FacilityClosureCardTag';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
 
 import {
@@ -454,7 +455,7 @@ function EventCardNew({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const { userData } = useAuth();
+  const { canManageEvent, userData } = useAuth();
   const { haveIAlreadyJoined } = useEvent();
 
   const participationState = getCurrentUserEventParticipationState({
@@ -1018,6 +1019,19 @@ function EventCardNew({
             </View>
           ) : null}
         </View>
+
+        {/* CRFERM (13/10, COL-010, « D8 B ») — la Ville a fermé l installation ce jour-là : la
+            marque du serveur (`facilityClosure`), au ton du bandeau de la fiche ; un bouton pour
+            qui peut modifier la séance. Hors du contenu inerte : elle se touche. */}
+        {item?.facilityClosure && !isShareMode ? (
+          <View pointerEvents="auto">
+            <FacilityClosureCardTag
+              canEdit={Boolean(canManageEvent?.(item))}
+              event={item}
+              onOpen={() => onPress?.(item)}
+            />
+          </View>
+        ) : null}
 
         {/* CTA - Interactive (Captures touches) */}
         {/* PARENT-PLANNING (06/10) — l evenement de l enfant se LIT, il ne se repond pas. */}

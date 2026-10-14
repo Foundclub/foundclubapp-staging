@@ -67,7 +67,7 @@ const LIEUX_FEMININS = ['salle', 'piscine', 'piste', 'halle', 'maison', 'base', 
  * @param {string} libelle - Le nom de l'installation.
  * @returns {'feminin' | 'masculin' | 'voyelle'} « à la », « au » ou « à l’ ».
  */
-const genreDuLieu = (libelle) => {
+export const genreDuLieu = (libelle) => {
   const premier = libelle.split(/\s+/)[0].normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
   if (/^[aeiouy]/.test(premier)) return 'voyelle';
   if (LIEUX_FEMININS.includes(premier)) return 'feminin';
