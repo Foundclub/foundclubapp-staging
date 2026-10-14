@@ -1443,7 +1443,7 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
-        {/* RESA-L5A2 (14/10/2026) — E-G04 « Réservations » et E-G05, la fiche d'une réservation. */}
+        {/* RESA-L5A2 (14/10/2026) — E-G04 « Réservations » et E-G05, la fiche. */}
         {COMPLEXES_GERANT ? (
           <Stack.Screen
             getComponent={() => require('@/views/complexe/ComplexeReservations').default}
