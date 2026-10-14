@@ -16,8 +16,20 @@
  * non par `import()` : jest n'exécute pas un import dynamique (mémoire
  * piege-jest-import-dynamique), et ce service a son témoin.
  *
+ * RESA-L6A (14/10) : ces DEUX `require` à l'appel (le client, et le service des fermetures qui
+ * importe le client) RESTENT, mesurés : les importer en tête fait échouer au CHARGEMENT 10
+ * suites de témoins dans toute copie de travail sans `.env` (9 de `views/profile` + le témoin des
+ * fermetures : « API_URL is missing », runtimeUrls.native.js:50) ; un `import()` dynamique, jest
+ * ne l'exécute pas (« dynamic import callback was invoked without --experimental-vm-modules »,
+ * 15 témoins du service rouges). Prix : le site plantera le jour où il APPELLERA ce service (son
+ * serveur de dev n'a pas `require`) ; les écrans du gérant n'y sont pas avant le lot web L7.
+ * Toute autre dépendance est importée en tête (témoin
+ * `views/reserverTerrain/__tests__/site.sansRequire.test.js`, qui tolère ces deux lignes
+ * seulement).
+ *
  * Témoin : `__tests__/complexeService.test.js`.
  */
+import { uploadActualiteFile } from '../collectivite/collectiviteActualiteService';
 
 /**
  * Le client HTTP de l'app, chargé à l'appel.
@@ -379,8 +391,4 @@ export const bloquerCreneau = async (terrainId, {
  * @param {any} brut - Ce que rend le sélecteur d'image.
  * @returns {Promise<{ id: number, url?: string } | null>} Le fichier, ou null.
  */
-export const televerserPhoto = async (brut) => {
-  // eslint-disable-next-line global-require
-  const { uploadActualiteFile } = require('../collectivite/collectiviteActualiteService');
-  return uploadActualiteFile(brut);
-};
+export const televerserPhoto = async (brut) => uploadActualiteFile(brut);

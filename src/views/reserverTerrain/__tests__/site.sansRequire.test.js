@@ -9,7 +9,8 @@ const path = require('path');
 // par la recherche du site (web/src/pages/seo/RechercheUnique.tsx). Le greffon du site ne
 // traduit que les `require` d'IMAGES (vite.config.ts, « foundclub-app-require-images »).
 // Témoin : AUCUN `require(` (hors image, hors commentaire) dans les fichiers que ce lot a touchés
-// et que le site compile, ou compilera avec le lot web L7. N'en sont pas : PrivateNavigator.js
+// et que le site compile, ou compilera avec le lot web L7 (+ complexeService.js de RESA-L5A1, à la
+// demande du chef de soutien, 14/10). N'en sont pas : PrivateNavigator.js
 // (le site a son propre registre d'écrans, web/src/routes/screenRegistry.tsx) et
 // webRouteExemptions.js (module CommonJS que le site ne compile pas : son script de couverture
 // des routes le LIT comme un texte, web/scripts/check-web-route-coverage.mjs).
@@ -24,6 +25,7 @@ const FICHIERS = [
   'navigation/routeNames.js',
   'services/complexe/complexeJoueurQueries.js',
   'services/complexe/complexeJoueurService.js',
+  'services/complexe/complexeService.js',
   'services/reservation/reservationService.js',
   'utils/notifications/notificationNavigation.js',
   'utils/notifications/notificationPresentation.js',
@@ -43,11 +45,25 @@ const TOUS = [...FICHIERS, ...vues(path.join(SRC, 'views', 'reserverTerrain'))];
 
 const IMAGE = /require\(\s*['"][^'"]+\.(png|jpe?g|gif|webp|svg)['"]\s*\)/g;
 
+// Les SEULES lignes tolérées, et pourquoi (décision du chef de soutien, 14/10) : le client HTTP de
+// complexeService.js (RESA-L5A1) et son service des fermetures restent chargés à l'appel. Importés
+// en tête, ils font échouer au chargement 10 suites de témoins dans toute copie de travail sans
+// `.env` ; un `import()` dynamique, jest ne l'exécute pas. Le site ne les appelle pas
+// avant L7.
+const TOLEREES = {
+  'services/complexe/complexeService.js': [
+    "const client = () => require('../client').default;",
+    "const fermetures = () => require('../facilityClosure/facilityClosureService');",
+  ],
+};
+
 describe('RESA-L6A — aucun `require` dans un fichier que le site compile', () => {
   it.each(TOUS)('%s', (fichier) => {
     const lignes = fs.readFileSync(path.join(SRC, fichier), 'utf8').split('\n');
+    const tolerees = TOLEREES[fichier] || [];
     const fautives = lignes.filter((ligne) => {
       const code = ligne.trim();
+      if (tolerees.includes(code)) return false;
       if (code.startsWith('//') || code.startsWith('*') || code.startsWith('/*')) return false;
       return /\brequire\(/.test(code.replace(IMAGE, ''));
     });
