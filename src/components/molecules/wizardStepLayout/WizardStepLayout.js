@@ -387,7 +387,7 @@ function WizardStepLayout({
             <TouchableOpacity
               accessibilityRole="button"
               onPress={onSkip}
-              style={Spaces.paddingVertical[8]}
+              style={[Spaces.paddingVertical[8], { justifyContent: 'center', minHeight: 44 }]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral300, Fonts.textCenter]}>
                 {skipLabel || t('teamWizard.actions.skipStep', 'Passer cette étape')}
