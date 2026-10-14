@@ -200,8 +200,10 @@ const AMICAL = {
   type: 'friendly',
 };
 
+// 👪 PAR-L9a (13/10) — telle que le mappeur la rend désormais : la conversation
+// est le geste principal (E15).
 const INTERET_ADULTE = {
-  actions: { primary: 'respond', secondary: 'chat' },
+  actions: { primary: 'chat', secondary: 'respond' },
   id: 'interest:i-1',
   meta: {
     requesterAvatarUrl: '/maryline.jpg',
@@ -210,8 +212,8 @@ const INTERET_ADULTE = {
     requestId: 'i-1',
     teamName: 'U11 Filles',
   },
-  subtitle: 'Maryline Monroe est intéressé par U11 Filles.',
-  title: 'Intérêt club',
+  subtitle: 'Maryline Monroe est intéressé·e par U11 Filles.',
+  title: 'Intérêt pour le club',
   type: 'interest',
 };
 
@@ -328,20 +330,24 @@ describe('PAR-L2L3 — la carte de demande, ce qui ne bouge pas', () => {
     act(() => carte.arbre.unmount());
   });
 
-  test('intérêt d un ADULTE : l adulte reste l adulte, ordre des boutons inchangé (L9a)', () => {
+  test('intérêt d un ADULTE : l adulte, la conversation d abord, le profil en lien (L9a)', () => {
     const surProfil = jest.fn();
     const carte = monter(INTERET_ADULTE, {
       onPrimaryPress: jest.fn(), onRequesterPress: surProfil, onSecondaryPress: jest.fn(),
     });
 
     expect(carte.textes.slice(0, 3)).toEqual([
-      'Intérêt club', 'Intérêt', 'Maryline Monroe est intéressé par U11 Filles.',
+      'Intérêt pour le club', 'Intérêt', 'Maryline Monroe est intéressé·e par U11 Filles.',
     ]);
     expect(carte.avatars).toHaveLength(1);
     expect(carte.avatars[0].props)
       .toMatchObject({ imageUrl: '/maryline.jpg', name: 'Maryline Monroe' });
     expect(carte.boutons.map((/** @type {any} */ b) => [b.titre, b.icone]))
-      .toEqual([['Voir le profil', undefined], ['Ouvrir chat', undefined], ['Répondre', 'check']]);
+      .toEqual([
+        ['Ouvrir une conversation', 'envelope'],
+        ['Répondre', undefined],
+        ['Voir le profil', undefined],
+      ]);
     // Toucher la ligne du demandeur ouvre toujours l'adulte.
     act(() => ancetre(carte.avatars[0], TouchableOpacity).props.onPress());
     expect(surProfil).toHaveBeenCalledWith(INTERET_ADULTE);

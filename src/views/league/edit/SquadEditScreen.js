@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Alert, ScrollView, Text, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -227,13 +227,11 @@ function SquadEditScreen({ navigation, route }) {
   }
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios'
-          ? 'padding'
-          : 'height'}
-        style={{ flex: 1 }}
-      >
+    <ScreenContainer bgImage="bg2" keyboardAvoiding>
+      {/* 🤖 ANDROIDBAR-6 — l'évitement du clavier est celui du ScreenContainer : le décalage 0
+          le croyait en haut de l'écran alors qu'il vit sous l'en-tête ⇒ 110 dp SOUS le clavier
+          sur Android 15/16 (Pixel 9), 103 pt sur iPhone 15. */}
+      <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], Spaces.gap[24], Spaces.paddingBottom[40]]}>
 
           <Controller
@@ -379,7 +377,7 @@ function SquadEditScreen({ navigation, route }) {
           </View>
 
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenContainer>
   );
 }
