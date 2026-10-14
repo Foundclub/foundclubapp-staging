@@ -6759,6 +6759,9 @@ export default {
     notifications: {
       modeComplexe: 'Venue mode',
     },
+    ordinateur: {
+      choisis: 'Pick a line to see its details.',
+    },
     planning: {
       a11y: '{{terrain}}, {{plage}}, {{etat}}',
       aucunCreneau: 'No slot that day.',

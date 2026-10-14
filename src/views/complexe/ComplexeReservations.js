@@ -23,11 +23,15 @@ import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import DeuxVolets from '@/views/complexe/components/DeuxVolets';
+import FicheReservation from '@/views/complexe/components/FicheReservation';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useReservationsDuComplexe, useTerrains } from '@/services/complexe/complexeQueries';
+
+import { useIsDesktop } from '@/responsive';
 
 /** @typedef {'a-venir' | 'aujourdhui' | 'passees'} VueDesReservations */
 /** @typedef {'source' | 'statut' | 'terrain'} NomDuFiltre */
@@ -49,6 +53,8 @@ const ETATS_FILTRES = Object.freeze([
  * l'état « Non honorée » du filtre (lot L5b, après RESA-L2B) ; « Confirmée la veille » (RG-VEILLE,
  * RESA-L2B) ; « 8/10 joueurs » (participants, lot L3 : la carte dit les joueurs DÉCLARÉS) ; « Créer
  * une affiche » sous « Aucune réservation à venir » (E-G13, lot L4).
+ * Ordinateur (planche OR1, ≥ 1024 px) : deux volets, la liste à gauche, la fiche (E-G05) à droite ;
+ * toucher une ligne l'ouvre dans le volet au lieu de changer d'écran.
  * Paramètres de route : `complexeId`, `vue` (l'onglet d'arrivée ; sinon Aujourd'hui). Caché par
  * `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -69,6 +75,8 @@ function ComplexeReservations() {
     source: '', statut: '', terrain: '',
   }));
   const [feuille, setFeuille] = useState(/** @type {NomDuFiltre | ''} */ (''));
+  const surOrdinateur = useIsDesktop();
+  const [choisie, setChoisie] = useState('');
 
   const remplis = Object.fromEntries(Object.entries(filtres).filter(([, valeur]) => valeur));
   const aujourdhui = useReservationsDuComplexe(complexeId, { ...remplis, vue: 'aujourdhui' });
@@ -83,6 +91,10 @@ function ComplexeReservations() {
   const lectures = { 'a-venir': aVenir, aujourdhui, passees };
   const lecture = lectures[vue];
   const lignes = lignesDesPages(lecture.data);
+  // OR1 : la ligne ouverte dans le volet droit (la première tant qu'aucune n'est choisie).
+  const ouverte = surOrdinateur
+    ? (lignes.find((ligne) => ligne.documentId === choisie) || lignes[0])?.documentId || ''
+    : '';
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
@@ -177,12 +189,19 @@ function ComplexeReservations() {
   const carteDe = (/** @type {any} */ ligne) => (
     <TouchableOpacity
       accessibilityRole="button"
+      accessibilityState={{ selected: ouverte === ligne.documentId }}
       key={ligne.documentId}
-      onPress={() => navigation.navigate(
+      onPress={() => (surOrdinateur ? setChoisie(ligne.documentId) : navigation.navigate(
         RouteNames.ComplexeReservation,
         { complexeId, reservationId: ligne.documentId },
-      )}
-      style={[carte, Alignments.row, Spaces.padding[12], { gap: 12 }]}
+      ))}
+      style={[
+        carte,
+        Alignments.row,
+        Spaces.padding[12],
+        { gap: 12 },
+        ouverte === ligne.documentId ? { borderColor: Colors.primary500, borderWidth: 2 } : null,
+      ]}
       testID={`reservation-${ligne.documentId}`}
     >
       <Text style={[Fonts.p1Black, Fonts.neutral00, { width: 56 }]}>{texteHeure(ligne.from)}</Text>
@@ -273,52 +292,69 @@ function ComplexeReservations() {
     );
   }
 
+  const volet = ouverte ? (
+    <FicheReservation
+      complexeId={complexeId}
+      onVoirPlanning={(fiche) => navigation.navigate(RouteNames.ComplexeEspace, {
+        params: { complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId },
+        screen: RouteNames.ComplexePlanning,
+      })}
+      reservationId={ouverte}
+    />
+  ) : (
+    <Text style={[Fonts.p2, Fonts.neutral200]}>
+      {t('complexeReservations.ordinateur.choisis', 'Choisis une ligne pour voir sa fiche.')}
+    </Text>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
-      <ScrollView
-        contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 12 }}
-        refreshControl={(
-          <RefreshControl
-            colors={[Colors.primary500]}
-            onRefresh={() => lecture.refetch?.()}
-            refreshing={Boolean(lecture.isRefetching)}
-            tintColor={Colors.primary500}
-          />
+      <DeuxVolets actif={surOrdinateur} droite={volet}>
+        <ScrollView
+          contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 12 }}
+          refreshControl={(
+            <RefreshControl
+              colors={[Colors.primary500]}
+              onRefresh={() => lecture.refetch?.()}
+              refreshing={Boolean(lecture.isRefetching)}
+              tintColor={Colors.primary500}
+            />
         )}
-        showsVerticalScrollIndicator={false}
-        style={[Alignments.fill]}
-      >
-        <Text
-          accessibilityRole="header"
-          style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
         >
-          {t('complexeReservations.liste.titre', 'Réservations').toUpperCase()}
-        </Text>
-        <SegmentedControl
-          onChange={(valeur) => setVue(/** @type {VueDesReservations} */ (valeur))}
-          options={[
-            {
-              label: avecNombre(
-                t('complexeReservations.liste.aujourdhui', 'Aujourd’hui'),
-                aujourdhui.data,
-              ),
-              value: 'aujourdhui',
-            },
-            {
-              label: avecNombre(t('complexeReservations.liste.aVenir', 'À venir'), aVenir.data),
-              value: 'a-venir',
-            },
-            { label: t('complexeReservations.liste.passees', 'Passées'), value: 'passees' },
-          ]}
-          value={vue}
-        />
-        {puces}
-        {corps}
-      </ScrollView>
+          <Text
+            accessibilityRole="header"
+            style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+          >
+            {t('complexeReservations.liste.titre', 'Réservations').toUpperCase()}
+          </Text>
+          <SegmentedControl
+            onChange={(valeur) => setVue(/** @type {VueDesReservations} */ (valeur))}
+            options={[
+              {
+                label: avecNombre(
+                  t('complexeReservations.liste.aujourdhui', 'Aujourd’hui'),
+                  aujourdhui.data,
+                ),
+                value: 'aujourdhui',
+              },
+              {
+                label: avecNombre(t('complexeReservations.liste.aVenir', 'À venir'), aVenir.data),
+                value: 'a-venir',
+              },
+              { label: t('complexeReservations.liste.passees', 'Passées'), value: 'passees' },
+            ]}
+            value={vue}
+          />
+          {puces}
+          {corps}
+        </ScrollView>
+      </DeuxVolets>
       <BottomModal
         close={() => setFeuille('')}
         isVisible={Boolean(feuille)}

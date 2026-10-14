@@ -7200,6 +7200,9 @@ export default {
     notifications: {
       modeComplexe: 'Mode complexe',
     },
+    ordinateur: {
+      choisis: 'Choisis une ligne pour voir sa fiche.',
+    },
     planning: {
       a11y: '{{terrain}}, {{plage}}, {{etat}}',
       aucunCreneau: 'Aucun créneau ce jour-là.',

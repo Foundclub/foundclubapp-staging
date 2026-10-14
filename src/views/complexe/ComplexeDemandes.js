@@ -24,7 +24,9 @@ import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import DeuxVolets from '@/views/complexe/components/DeuxVolets';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
+import FicheReservation from '@/views/complexe/components/FicheReservation';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -35,6 +37,8 @@ import {
   useReservationsDuComplexe,
   useTerrains,
 } from '@/services/complexe/complexeQueries';
+
+import { useIsDesktop } from '@/responsive';
 
 const ATTENTE = 'attente';
 const TRAITEES = 'traitees';
@@ -50,6 +54,8 @@ const TRAITEES = 'traitees';
  * Pas encore servi par le serveur (dit dans le compte rendu du lot) : « 10 joueurs ont déjà
  * répondu présent » (collecte, lot L3) ; la date d'une décision et le motif d'un refus dans
  * « Traitées » (la liste du serveur ne les rend pas : ils sont dans la fiche).
+ * Ordinateur (planche OR1, ≥ 1024 px) : deux volets, la file à gauche, la demande choisie à droite
+ * (sa fiche, E-G05) ; Refuser / Accepter vivent dans le volet, pas sur chaque carte.
  * Paramètre de route : `complexeId` (sinon le premier complexe du compte). Caché par
  * `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -77,9 +83,17 @@ function ComplexeDemandes() {
   const [conflits, setConflits] = useState(/** @type {Record<string, string>} */ ({}));
   const [message, setMessage] = useState('');
   const [enCours, setEnCours] = useState('');
+  const surOrdinateur = useIsDesktop();
+  const [choisie, setChoisie] = useState('');
 
   const lecture = onglet === ATTENTE ? attente : traitees;
   const lignes = lignesDesPages(lecture.data);
+  const ouverte = surOrdinateur
+    ? (lignes.find((ligne) => ligne.documentId === choisie) || lignes[0])?.documentId || ''
+    : '';
+  const marque = (/** @type {any} */ demande) => (ouverte === demande.documentId
+    ? { borderColor: Colors.primary500, borderWidth: 2 }
+    : null);
   const totalAttente = totalDesPages(attente.data);
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];
   const aDesTerrainsManuels = terrains.some((terrain) => terrain?.bookingMode === 'manuel');
@@ -92,10 +106,12 @@ function ComplexeDemandes() {
     borderWidth: 1,
   };
 
-  const ouvrirLaFiche = (/** @type {any} */ demande) => navigation.navigate(
-    RouteNames.ComplexeReservation,
-    { complexeId, reservationId: demande.documentId },
-  );
+  const ouvrirLaFiche = (/** @type {any} */ demande) => (surOrdinateur
+    ? setChoisie(demande.documentId)
+    : navigation.navigate(
+      RouteNames.ComplexeReservation,
+      { complexeId, reservationId: demande.documentId },
+    ));
   const repli = t(
     'complexeReservations.demandes.erreurDecision',
     'La demande n’a pas pu être tranchée.',
@@ -168,7 +184,7 @@ function ComplexeDemandes() {
         accessibilityRole="button"
         key={demande.documentId}
         onPress={() => ouvrirLaFiche(demande)}
-        style={[carte, Spaces.padding[16], { gap: 12 }]}
+        style={[carte, Spaces.padding[16], { gap: 12 }, marque(demande)]}
         testID={`demande-${demande.documentId}`}
       >
         <Text style={[Fonts.p2, Fonts.neutral00]}>
@@ -181,38 +197,40 @@ function ComplexeDemandes() {
           <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>{echeance}</Text>
         ) : null}
         {conflit ? <BandeauComplexe texte={conflit} ton="erreur" /> : null}
-        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-          <View
-            style={{ flexBasis: 120, flexGrow: 1 }}
-            testID={`demande-refuser-${demande.documentId}`}
-          >
-            <Button
-              accessibilityLabel={conflit
-                ? t('complexeReservations.demandes.refuserAvecUnMot', 'Refuser avec un mot')
-                : t('complexeReservations.demandes.refuser', 'Refuser')}
-              onPress={() => ouvrirLeRefus(demande)}
-              size="sm"
-              title={conflit
-                ? t('complexeReservations.demandes.refuserAvecUnMot', 'Refuser avec un mot')
-                : t('complexeReservations.demandes.refuser', 'Refuser')}
-              variant="Secondary"
-            />
-          </View>
-          {conflit ? null : (
+        {surOrdinateur ? null : (
+          <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
             <View
               style={{ flexBasis: 120, flexGrow: 1 }}
-              testID={`demande-accepter-${demande.documentId}`}
+              testID={`demande-refuser-${demande.documentId}`}
             >
               <Button
-                disabled={Boolean(enCours)}
-                isLoading={enCours === demande.documentId}
-                onPress={() => accepter(demande)}
+                accessibilityLabel={conflit
+                  ? t('complexeReservations.demandes.refuserAvecUnMot', 'Refuser avec un mot')
+                  : t('complexeReservations.demandes.refuser', 'Refuser')}
+                onPress={() => ouvrirLeRefus(demande)}
                 size="sm"
-                title={t('complexeReservations.demandes.accepter', 'Accepter')}
+                title={conflit
+                  ? t('complexeReservations.demandes.refuserAvecUnMot', 'Refuser avec un mot')
+                  : t('complexeReservations.demandes.refuser', 'Refuser')}
+                variant="Secondary"
               />
             </View>
-          )}
-        </View>
+            {conflit ? null : (
+              <View
+                style={{ flexBasis: 120, flexGrow: 1 }}
+                testID={`demande-accepter-${demande.documentId}`}
+              >
+                <Button
+                  disabled={Boolean(enCours)}
+                  isLoading={enCours === demande.documentId}
+                  onPress={() => accepter(demande)}
+                  size="sm"
+                  title={t('complexeReservations.demandes.accepter', 'Accepter')}
+                />
+              </View>
+            )}
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -223,7 +241,7 @@ function ComplexeDemandes() {
       accessibilityRole="button"
       key={demande.documentId}
       onPress={() => ouvrirLaFiche(demande)}
-      style={[carte, Spaces.padding[16], { gap: 8 }]}
+      style={[carte, Spaces.padding[16], { gap: 8 }, marque(demande)]}
       testID={`demande-${demande.documentId}`}
     >
       <Text style={[Fonts.p2, Fonts.neutral00]}>
@@ -326,53 +344,69 @@ function ComplexeDemandes() {
       ...SANS_ECHAPPEMENT,
     });
 
+  const volet = ouverte ? (
+    <FicheReservation
+      complexeId={complexeId}
+      onVoirPlanning={(fiche) => navigation.navigate(RouteNames.ComplexePlanning, {
+        complexeId, date: fiche.date, terrainId: fiche.terrain?.documentId,
+      })}
+      reservationId={ouverte}
+    />
+  ) : (
+    <Text style={[Fonts.p2, Fonts.neutral200]}>
+      {t('complexeReservations.ordinateur.choisis', 'Choisis une ligne pour voir sa fiche.')}
+    </Text>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
       bottomInsetMode="screen"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
-      <ScrollView
-        contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 16 }}
-        refreshControl={(
-          <RefreshControl
-            colors={[Colors.primary500]}
-            onRefresh={() => lecture.refetch?.()}
-            refreshing={Boolean(lecture.isRefetching)}
-            tintColor={Colors.primary500}
-          />
+      <DeuxVolets actif={surOrdinateur} droite={volet}>
+        <ScrollView
+          contentContainerStyle={{ gap: 16, paddingBottom: 24, paddingTop: 16 }}
+          refreshControl={(
+            <RefreshControl
+              colors={[Colors.primary500]}
+              onRefresh={() => lecture.refetch?.()}
+              refreshing={Boolean(lecture.isRefetching)}
+              tintColor={Colors.primary500}
+            />
         )}
-        showsVerticalScrollIndicator={false}
-        style={[Alignments.fill]}
-      >
-        <View style={{ gap: 4 }}>
-          <Text style={[Fonts.p3Bold, Fonts.primary500, { letterSpacing: 0.6 }]}>
-            {String(complexe?.name || '').toUpperCase()}
-          </Text>
-          <Text
-            accessibilityRole="header"
-            style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
-          >
-            {t('complexeReservations.demandes.titre', 'Demandes').toUpperCase()}
-          </Text>
-        </View>
-        <SegmentedControl
-          onChange={(valeur) => {
-            setMessage('');
-            setOnglet(valeur);
-          }}
-          options={[
-            { label: libelleAttente, value: ATTENTE },
-            {
-              label: t('complexeReservations.demandes.ongletTraitees', 'Traitées'),
-              value: TRAITEES,
-            },
-          ]}
-          value={onglet}
-        />
-        {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
-        {corps}
-      </ScrollView>
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
+        >
+          <View style={{ gap: 4 }}>
+            <Text style={[Fonts.p3Bold, Fonts.primary500, { letterSpacing: 0.6 }]}>
+              {String(complexe?.name || '').toUpperCase()}
+            </Text>
+            <Text
+              accessibilityRole="header"
+              style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
+            >
+              {t('complexeReservations.demandes.titre', 'Demandes').toUpperCase()}
+            </Text>
+          </View>
+          <SegmentedControl
+            onChange={(valeur) => {
+              setMessage('');
+              setOnglet(valeur);
+            }}
+            options={[
+              { label: libelleAttente, value: ATTENTE },
+              {
+                label: t('complexeReservations.demandes.ongletTraitees', 'Traitées'),
+                value: TRAITEES,
+              },
+            ]}
+            value={onglet}
+          />
+          {message ? <BandeauComplexe texte={message} ton="ok" /> : null}
+          {corps}
+        </ScrollView>
+      </DeuxVolets>
       <FeuilleMotif
         enCours={Boolean(decider.isPending)}
         erreur={erreurFeuille}
