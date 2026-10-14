@@ -34,8 +34,14 @@ describe('RESA-L5A1 E-G02 — la barre du bas de l’espace du complexe', () => 
 describe('RESA-L5A1 RB — le gérant n’existe que si l’interrupteur est allumé', () => {
   const source = lire('PrivateNavigator.js');
 
-  it('l’espace et « Devenir gérant » ne sont déclarés que sous COMPLEXES_GERANT', () => {
-    ['ComplexeDevenirGerant', 'ComplexeEspace'].forEach((nom) => {
+  it('l’espace et ses écrans ne sont déclarés que sous COMPLEXES_GERANT', () => {
+    [
+      'ComplexeDevenirGerant',
+      'ComplexeEspace',
+      // RESA-L5A2 (14/10/2026)
+      'ComplexeReservation',
+      'ComplexeReservations',
+    ].forEach((nom) => {
       const declaration = source.indexOf(`name={RouteNames.${nom}}`);
       const interrupteur = source.lastIndexOf('{COMPLEXES_GERANT ? (', declaration);
       expect(declaration).toBeGreaterThan(-1);

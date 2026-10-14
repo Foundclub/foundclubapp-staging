@@ -287,6 +287,42 @@ export const historiqueLisible = (t, etapes, { reserveur }) => (Array.isArray(et
   .filter(Boolean);
 
 /**
+ * Le nom court d'un réserveur : prénom et initiale (« Julien M. »), la règle du serveur
+ * (`bookerLabel`).
+ * @param {{ firstname?: string | null, lastname?: string | null } | null | undefined} personne - Le
+ *   réserveur.
+ * @returns {string} Le nom court, ou ''.
+ */
+export const nomCourt = (personne) => {
+  const prenom = String(personne?.firstname || '').trim();
+  const nom = String(personne?.lastname || '').trim();
+  if (!prenom) return nom ? `${nom.charAt(0).toUpperCase()}.` : '';
+  return nom ? `${prenom} ${nom.charAt(0).toUpperCase()}.` : prenom;
+};
+
+/**
+ * Les initiales d'un réserveur (l'avatar de la fiche) : « JM ».
+ * @param {{ firstname?: string | null, lastname?: string | null } | null | undefined} personne - Le
+ *   réserveur.
+ * @returns {string} Les initiales, ou ''.
+ */
+export const initialesDe = (personne) => [personne?.firstname, personne?.lastname]
+  .map((morceau) => String(morceau || '').trim().charAt(0).toUpperCase())
+  .join('');
+
+/**
+ * Un numéro français en « 06 39 98 56 78 » ; un autre reste tel quel.
+ * @param {unknown} numero - Le numéro (E.164 le plus souvent).
+ * @returns {string} Le numéro lisible.
+ */
+export const telephoneLisible = (numero) => {
+  const brut = String(numero || '').replace(/\s+/g, '');
+  const national = brut.startsWith('+33') ? `0${brut.slice(3)}` : brut;
+  if (!/^0\d{9}$/.test(national)) return String(numero || '');
+  return national.match(/\d{2}/g)?.join(' ') || national;
+};
+
+/**
  * Les motifs d'un refus en un appui (E-G05 état 3, modèle `DecisionCreneauModal`) : ils remplissent
  * le champ, qu'on peut compléter. « Autre » laisse le champ vide.
  * @type {ReadonlyArray<{ cle: string,

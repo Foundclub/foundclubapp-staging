@@ -4,6 +4,7 @@ import {
   expireDans,
   grouperParJour,
   historiqueLisible,
+  initialesDe,
   jourCourt,
   joursDeLaSemaine,
   libelleStatut,
@@ -11,7 +12,9 @@ import {
   messageDeRefusResa,
   minutesAParis,
   MOTIFS_DE_REFUS,
+  nomCourt,
   plageHoraire,
+  telephoneLisible,
   titreDuJour,
   totalDesPages,
 } from '@/domains/complexe/complexeReservation';
@@ -91,6 +94,18 @@ describe('RESA-L5A2 — les jours et les heures', () => {
     ]);
     expect(groupes.map((groupe) => [groupe.date, groupe.items.length]))
       .toEqual([['2026-10-15', 2], ['2026-10-16', 1]]);
+  });
+});
+
+describe('RESA-L5A2 — le réserveur dans la fiche (E-G05)', () => {
+  it('le nom court, les initiales, le numéro lisible', () => {
+    expect(nomCourt({ firstname: 'Julien', lastname: 'marchal' })).toBe('Julien M.');
+    expect(nomCourt({ firstname: '', lastname: 'Marchal' })).toBe('M.');
+    expect(nomCourt(null)).toBe('');
+    expect(initialesDe({ firstname: 'Julien', lastname: 'Marchal' })).toBe('JM');
+    expect(telephoneLisible('+33639985678')).toBe('06 39 98 56 78');
+    expect(telephoneLisible('0639985678')).toBe('06 39 98 56 78');
+    expect(telephoneLisible('+3225551234')).toBe('+3225551234');
   });
 });
 
