@@ -198,6 +198,18 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.ComplexeTerrain]:
     'RESA-L5A1 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
 
+  // --- RESA-L5A2 (14/10/2026) ---
+  // La suite du gérant (serveur RESA-L2A, non livré) : même raison, même lot web à venir.
+  [RouteNames.ComplexeDemandes]:
+    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  [RouteNames.ComplexeFermetures]:
+    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  [RouteNames.ComplexePlanning]:
+    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  [RouteNames.ComplexeReservation]:
+    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
+  [RouteNames.ComplexeReservations]:
+    'RESA-L5A2 : hidden by COMPLEXES_GERANT; its website URL comes with the venue-manager web lot',
   // --- RESA-L6A (14/10/2026) ---
   // Le joueur : écrans cachés par l interrupteur COMPLEXES_JOUEUR (serveur non livré). Leur
   // adresse sur le site (page publique du complexe, réserver) viendra avec le lot site L7.

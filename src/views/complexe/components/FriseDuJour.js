@@ -5,9 +5,14 @@ import {
 } from 'react-native';
 
 import { heureDe, minutesDe, texteHeure } from '@/domains/complexe/complexeTerrain';
-import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
+
+import {
+  ETATS_DU_CRENEAU,
+  libelleDeLEtat,
+  styleDuCreneau,
+} from '@/views/complexe/components/allureDuCreneau';
 
 const PAR_MINUTE = 1.4;
 const NOMS = 84;
@@ -15,14 +20,11 @@ const HAUTEUR = 44;
 
 /** @typedef {'app' | 'attente' | 'bloque' | 'exterieur' | 'ferme' | 'libre'} EtatDuCreneau */
 /**
- * @typedef {{ etat: EtatDuCreneau, from: string, libelle?: string, to: string }} CreneauDeLaFrise
+ * @typedef {{ etat: EtatDuCreneau, from: string, libelle?: string, reservationId?: string | null,
+ *   to: string }} CreneauDeLaFrise
  * @typedef {{ cle: string, couleur?: string | null, creneaux: CreneauDeLaFrise[],
  *   nom: string }} LigneDeLaFrise
  */
-
-const ETATS = /** @type {EtatDuCreneau[]} */ ([
-  'libre', 'app', 'exterieur', 'attente', 'bloque', 'ferme',
-]);
 
 /**
  * LA FRISE « AUJOURD'HUI » DE L'ACCUEIL DU GÉRANT — RESA-L5A1 (13/10/2026), planches E-G02 bloc 3
@@ -37,9 +39,14 @@ const ETATS = /** @type {EtatDuCreneau[]} */ ([
  * @param {number} [props.largeurNoms] - La colonne des noms : 84 sur téléphone, 120 sur
  *   ordinateur (planche OR1 : « noms des terrains en clair »).
  * @param {number} props.maintenant - L'heure courante, en minutes depuis minuit.
+ * @param {(ligne: LigneDeLaFrise, creneau: CreneauDeLaFrise) => void} [props.onToucher] - RESA-L5A2
+ *   (14/10/2026) : la case se touche (l'accueil ouvre la fiche d'une réservation, ou le planning
+ *   sur une case libre) ; sans lui, la case n'est qu'une vue.
  * @returns {import('react').ReactElement | null} La frise, ou rien sans créneau.
  */
-function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
+function FriseDuJour({
+  largeurNoms = NOMS, lignes, maintenant, onToucher = undefined,
+}) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const [legende, setLegende] = useState(false);
@@ -53,59 +60,10 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
   const largeur = (fin - debut) * PAR_MINUTE;
   const heures = Array.from({ length: (fin - debut) / 60 + 1 }, (_v, index) => debut + index * 60);
 
-  const libelleDe = (/** @type {EtatDuCreneau} */ etat) => {
-    switch (etat) {
-      case 'app':
-        return t('complexeGerant.frise.app', 'Réservé dans l’app');
-      case 'attente':
-        return t('complexeGerant.frise.attente', 'En attente');
-      case 'bloque':
-        return t('complexeGerant.frise.bloque', 'Bloqué');
-      case 'exterieur':
-        return t('complexeGerant.frise.exterieur', 'Réservé à l’extérieur');
-      case 'ferme':
-        return t('complexeGerant.frise.ferme', 'Fermé');
-      default:
-        return t('complexeGerant.frise.libre', 'Libre');
-    }
-  };
-
-  /**
-   * Le style d'un créneau selon son état.
-   * @param {EtatDuCreneau} etat - L'état.
-   * @param {string} couleur - La couleur du sport.
-   * @returns {import('react-native').ViewStyle} Le style.
-   */
-  const styleDe = (etat, couleur) => {
-    switch (etat) {
-      case 'app':
-        return { backgroundColor: withAlpha(couleur, 0.85), borderColor: couleur };
-      case 'attente':
-        return {
-          backgroundColor: 'transparent',
-          borderColor: Colors.warning500,
-          borderStyle: 'dashed',
-        };
-      case 'bloque':
-        return {
-          backgroundColor: withAlpha(Colors.primary200, 0.14),
-          borderColor: withAlpha(Colors.primary200, 0.4),
-        };
-      case 'exterieur':
-        return { backgroundColor: withAlpha(couleur, 0.3), borderColor: couleur };
-      case 'ferme':
-        return {
-          backgroundColor: withAlpha(Colors.warning500, 0.2),
-          borderColor: Colors.warning500,
-        };
-      default:
-        return {
-          backgroundColor: 'transparent',
-          borderColor: withAlpha(Colors.primary500, 0.6),
-          borderStyle: 'dashed',
-        };
-    }
-  };
+  const libelleDe = (/** @type {EtatDuCreneau} */ etat) => libelleDeLEtat(t, etat);
+  const styleDe = (/** @type {EtatDuCreneau} */ etat, /** @type {string} */ couleur) => (
+    styleDuCreneau(Colors, etat, couleur)
+  );
 
   const caseDuCreneau = (
     /** @type {LigneDeLaFrise} */ ligne,
@@ -115,8 +73,9 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
     const a = Number(minutesDe(creneau.to));
     const couleur = ligne.couleur || Colors.primary500;
     const libelle = creneau.libelle || libelleDe(creneau.etat);
+    const Case = onToucher ? TouchableOpacity : View;
     return (
-      <View
+      <Case
         accessibilityLabel={t(
           'complexeGerant.frise.a11y',
           '{{terrain}}, {{de}} – {{a}}, {{etat}}',
@@ -128,8 +87,10 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
             ...SANS_ECHAPPEMENT,
           },
         )}
+        accessibilityRole={onToucher ? 'button' : undefined}
         accessible
         key={`${ligne.cle}-${creneau.from}`}
+        onPress={onToucher ? () => onToucher(ligne, creneau) : undefined}
         style={[
           Alignments.justifyCenter,
           {
@@ -147,7 +108,7 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
         testID={`frise-creneau-${ligne.cle}-${creneau.from}`}
       >
         <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary100]}>{libelle}</Text>
-      </View>
+      </Case>
     );
   };
 
@@ -214,7 +175,7 @@ function FriseDuJour({ largeurNoms = NOMS, lignes, maintenant }) {
       </TouchableOpacity>
       {legende ? (
         <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-          {ETATS.map((etat) => (
+          {ETATS_DU_CRENEAU.map((etat) => (
             <View key={etat} style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
               <View
                 style={[

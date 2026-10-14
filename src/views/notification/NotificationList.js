@@ -15,11 +15,13 @@ import {
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { estNotificationDuComplexe } from '@/domains/complexe/notificationsDuComplexe';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
@@ -415,6 +417,8 @@ function NotificationList() {
                 >
                   {notification.body}
                 </Text>
+                {/* RESA-L5A2 (RB, état 4) : une notification du complexe, en mode joueur aussi. */}
+                {estNotificationDuComplexe(notification.type) ? <PastilleModeComplexe /> : null}
                 {isDeclinedParticipation ? (
                   <Text
                     style={[

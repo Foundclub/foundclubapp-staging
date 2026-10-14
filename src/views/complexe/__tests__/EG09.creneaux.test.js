@@ -3,6 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import ComplexeCreneaux from '@/views/complexe/ComplexeCreneaux';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import {
   lisibles,
   parRepere,
@@ -17,8 +19,9 @@ import {
 // l'aperçu jugé par le serveur (`dryRun`), « Ouvrir ces créneaux » / « Enregistrer ».
 
 let mockParams = /** @type {any} */ ({ complexeId: 'cx-five', terrainId: 't-1' });
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn(), setOptions: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate, setOptions: jest.fn() }),
   useRoute: () => ({ params: mockParams }),
 }));
 
@@ -297,5 +300,24 @@ describe('RESA-L5A1 E-G09 — tarifs et créneaux ponctuels (RA4 états 3 et 4)'
       { date: '2026-10-24', from: '07:00', to: '09:00' },
     ]);
     expect(lisibles(arbre)).toContain('Samedi 24/10 : 7 h – 9 h ajouté');
+  });
+});
+
+describe('RESA-L5A2 E-G09 — vers les fermetures et le planning', () => {
+  it('« Fermer des jours » (E-G10) et « Voir le planning » (E-G03), pour ce terrain', async () => {
+    const arbre = await monter();
+    await act(async () => {
+      pressable(arbre, 'Fermer des jours').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeFermetures, {
+      complexeId: 'cx-five', terrainId: 't-1',
+    });
+    await act(async () => {
+      pressable(arbre, 'Voir le planning').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeEspace, {
+      params: { complexeId: 'cx-five', terrainId: 't-1' },
+      screen: RouteNames.ComplexePlanning,
+    });
   });
 });

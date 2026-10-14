@@ -35,13 +35,16 @@ import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import FeuilleRetrait from '@/views/complexe/components/FeuilleRetrait';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import {
+  useApercuRetrait,
   useComplexeGere,
   useEnregistrerTerrain,
+  useReservationsDuComplexe,
   useTerrains,
 } from '@/services/complexe/complexeQueries';
 import { televerserPhoto } from '@/services/complexe/complexeService';
@@ -61,7 +64,10 @@ const VIGNETTE = 72;
  *     affiché et le numéro, pré-remplis avec ceux du complexe).
  *   · « Prix » : au créneau ou par joueur, prix de base facultatif, « Ce que voient les joueurs ».
  * Créé : on enchaîne sur ses créneaux (E-G09). Modifié : « Modifications enregistrées. ».
- * « Voir le planning » et « Retirer ce terrain » attendent les lots L5A2 / L2A et n'y sont pas.
+ * RESA-L5A2 (14/10/2026) — en modification : « Voir le planning » (E-G03), « Retirer ce terrain »
+ * (le compte des réservations à venir, puis le retrait), et deux avertissements après
+ * l'enregistrement : quitter la validation manuelle laisse les demandes en attente à trancher ;
+ * passer en « Téléphone seulement » garde les réservations à venir.
  * Paramètres de route : `complexeId`, `terrainId` (absent : un terrain neuf).
  * Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -85,6 +91,16 @@ function ComplexeTerrain() {
 
   const terrains = Array.isArray(terrainsLus.data) ? terrainsLus.data : [];
   const existant = terrainId ? terrains.find((terrain) => terrain?.documentId === terrainId) : null;
+  // RESA-L5A2 — les demandes en attente d'un terrain en validation manuelle, et le compte des
+  // réservations à venir (l'aperçu du retrait, rien n'est écrit).
+  const demandesLues = useReservationsDuComplexe(
+    complexeId,
+    { terrain: terrainId || undefined, vue: 'demandes' },
+    { enabled: existant?.bookingMode === 'manuel' },
+  );
+  const apercuRetrait = useApercuRetrait();
+  const [aRetirer, setARetirer] = useState(/** @type {any} */ (null));
+  const [avertissements, setAvertissements] = useState(/** @type {string[]} */ ([]));
 
   const [rempli, setRempli] = useState(false);
   const [nom, setNom] = useState('');
@@ -177,9 +193,57 @@ function ComplexeTerrain() {
     Boolean(erreurs[champ]) && (tente || champ === 'prix')
   );
 
+  /**
+   * Les avertissements après un enregistrement (planche EG08) : ils n'empêchent rien.
+   * @returns {Promise<string[]>} Les phrases.
+   */
+  const avertissementsApresEnregistrement = async () => {
+    /** @type {string[]} */
+    const notes = [];
+    const enAttente = Number(demandesLues.data?.pages?.[0]?.pagination?.total) || 0;
+    if (existant?.bookingMode === 'manuel' && mode !== 'manuel' && enAttente) {
+      notes.push(t(
+        'complexeReservations.terrain.demandesEnAttente',
+        '{{count}} demandes attendent ta réponse : elles restent à trancher dans Demandes.',
+        {
+          count: enAttente,
+          defaultValue_one:
+            '{{count}} demande attend ta réponse : elle reste à trancher dans Demandes.',
+          defaultValue_other:
+            '{{count}} demandes attendent ta réponse : elles restent à trancher dans Demandes.',
+          ...SANS_ECHAPPEMENT,
+        },
+      ));
+    }
+    if (existant && existant.bookingMode !== 'telephone' && mode === 'telephone') {
+      try {
+        const apercu = await apercuRetrait.mutateAsync({
+          complexeId, terrainId: existant.documentId,
+        });
+        const aVenir = Number(apercu?.data?.reservationsTouchees) || 0;
+        if (aVenir) {
+          notes.push(t(
+            'complexeReservations.terrain.gardees',
+            'Les {{count}} réservations à venir sont gardées.',
+            {
+              count: aVenir,
+              defaultValue_one: 'La réservation à venir est gardée.',
+              defaultValue_other: 'Les {{count}} réservations à venir sont gardées.',
+              ...SANS_ECHAPPEMENT,
+            },
+          ));
+        }
+      } catch {
+        // Le compte n'a pas pu être lu : l'avertissement se tait, l'enregistrement est fait.
+      }
+    }
+    return notes;
+  };
+
   const enregistrerLaFiche = async () => {
     setTente(true);
     setEnregistre(false);
+    setAvertissements([]);
     if (Object.keys(erreurs).length) return;
     setRefus('');
     try {
@@ -208,6 +272,7 @@ function ComplexeTerrain() {
         return;
       }
       setEnregistre(true);
+      setAvertissements(await avertissementsApresEnregistrement());
     } catch (erreur) {
       setRefus(messageDeRefus(
         t,
@@ -611,6 +676,9 @@ function ComplexeTerrain() {
             ton="ok"
           />
         ) : null}
+        {avertissements.map((texte) => (
+          <BandeauComplexe key={texte} texte={texte} ton="info" />
+        ))}
         {refus ? (
           <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>{refus}</Text>
         ) : null}
@@ -621,6 +689,31 @@ function ComplexeTerrain() {
           title={t('complexeGerant.terrain.enregistrer', 'Enregistrer')}
           variant="Primary"
         />
+        {existant ? (
+          <View style={{ gap: 4 }}>
+            <TouchableOpacity
+              accessibilityRole="link"
+              onPress={() => navigation.navigate(RouteNames.ComplexeEspace, {
+                params: { complexeId, terrainId: existant.documentId },
+                screen: RouteNames.ComplexePlanning,
+              })}
+              style={[Alignments.justifyCenter, { minHeight: 44 }]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('complexeReservations.installations.voirPlanning', 'Voir le planning')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setARetirer(existant)}
+              style={[Alignments.justifyCenter, { minHeight: 44 }]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.error300]}>
+                {t('complexeReservations.terrain.retirerCeTerrain', 'Retirer ce terrain')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </ScrollView>
 
       <BottomModal
@@ -648,6 +741,15 @@ function ComplexeTerrain() {
           />
         </View>
       </BottomModal>
+      <FeuilleRetrait
+        complexeId={complexeId}
+        onFermer={() => setARetirer(null)}
+        onRetire={() => {
+          setARetirer(null);
+          navigation.goBack();
+        }}
+        terrain={aRetirer}
+      />
     </ScreenContainer>
   );
 }

@@ -1430,6 +1430,29 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* RESA-L5A2 (14/10/2026) — E-G04 « Réservations » et E-G05, la fiche. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeReservations').default}
+            name={RouteNames.ComplexeReservations}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeReservation').default}
+            name={RouteNames.ComplexeReservation}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L5A2 — E-G10, les fermetures exceptionnelles. */}
+        {COMPLEXES_GERANT ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/complexe/ComplexeFermetures').default}
+            name={RouteNames.ComplexeFermetures}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
         {/* RESA-L6A (14/10/2026) — le joueur (chantier Réservation) : ses écrans ne sont DÉCLARÉS
             que si l'interrupteur `COMPLEXES_JOUEUR` est allumé (éteint : aucune porte, aucun lien
             ne les atteint). La recherche (E-P01) est le panneau « Réservations » de SearchHub.

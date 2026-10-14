@@ -30,6 +30,9 @@ jest.mock('@/services/complexe/complexeQueries', () => {
   const temoin = jest.requireActual('@/testSupport/temoinComplexe');
   return {
     useMesComplexes: () => ({ data: [temoin.COMPLEXE_FIVE] }),
+    // RESA-L5A2 (14/10/2026) — l'accueil lit aussi le planning et les listes : vides ici.
+    usePlanning: () => ({ data: undefined }),
+    useReservationsDuComplexe: () => ({ data: undefined }),
     useTerrains: () => ({ data: [temoin.terrainDeTemoin({ slotPlan: temoin.PLAN_OUVERT })] }),
   };
 });

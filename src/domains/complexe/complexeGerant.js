@@ -191,16 +191,17 @@ export const messageDeRefus = (t, erreur, repli) => {
 /**
  * Les cases « Gérer » de l'accueil, dans l'ordre de la planche (A-G03 : les trois mots d'Adel
  * d'abord, puis RC-G02). `route` : l'écran de ce lot qui s'ouvre ; sans elle, la case dit
- * « Bientôt » (Gérer mon complexe E-G11, Demandes, Planning, Réservations : lots L5A2 ; Canal,
- * Affiches, Fidélité, Clients, Statistiques : lot L4). Pas d'« Employés » en V1 (E-G18).
+ * « Bientôt » (Gérer mon complexe E-G11 ; Canal, Affiches, Fidélité, Clients, Statistiques : lot
+ * L4). Pas d'« Employés » en V1 (E-G18). RESA-L5A2 (14/10/2026) : Demandes (E-G06), Planning
+ * (E-G03) et Réservations (E-G04) ont leur écran.
  * @type {ReadonlyArray<{ cle: string, icone: string, route: string | null }>}
  */
 export const CASES_GERER = Object.freeze([
   { cle: 'complexe', icone: 'shield', route: null },
   { cle: 'installations', icone: 'stadium', route: RouteNames.ComplexeInstallations },
-  { cle: 'demandes', icone: 'inboxArrowDown', route: null },
-  { cle: 'planning', icone: 'calendar', route: null },
-  { cle: 'reservations', icone: 'clock', route: null },
+  { cle: 'demandes', icone: 'inboxArrowDown', route: RouteNames.ComplexeDemandes },
+  { cle: 'planning', icone: 'calendar', route: RouteNames.ComplexePlanning },
+  { cle: 'reservations', icone: 'clock', route: RouteNames.ComplexeReservations },
   { cle: 'canal', icone: 'envelope', route: null },
   { cle: 'affiches', icone: 'share2', route: null },
   { cle: 'fidelite', icone: 'trophy', route: null },

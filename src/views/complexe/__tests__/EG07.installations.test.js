@@ -23,7 +23,13 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 let mockTerrains = /** @type {any} */ ({});
+const mockRetirer = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
+  useApercuRetrait: () => ({
+    isPending: false,
+    mutateAsync: async () => ({ data: { dryRun: true, reservationsTouchees: 4 } }),
+  }),
+  useRetirerTerrain: () => ({ isPending: false, mutateAsync: mockRetirer }),
   useTerrains: () => mockTerrains,
 }));
 
@@ -161,5 +167,47 @@ describe('RESA-L5A1 E-G07 — vide, chargement, erreur (états 4 et 5)', () => {
     expect(lisibles(arbre)).toContain('Impossible de charger tes terrains.');
     await appuyer(arbre, 'Réessayer');
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RESA-L5A2 E-G07 — le menu « … » complet (Fermetures, Voir le planning, Retirer)', () => {
+  beforeEach(() => {
+    mockRetirer.mockResolvedValue({ data: { reservationsAnnulees: 4, retired: true } });
+  });
+
+  it('« Fermetures » et « Voir le planning » ouvrent E-G10 et E-G03 pour ce terrain', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Plus d’actions : Terrain 1');
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Créneaux', 'Fermetures', 'Voir le planning', 'Retirer',
+    ]));
+    await appuyer(arbre, 'Fermetures');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeFermetures, {
+      complexeId: 'cx-five', terrainId: 't-1',
+    });
+    await appuyer(arbre, 'Plus d’actions : Terrain 1');
+    await appuyer(arbre, 'Voir le planning');
+    expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ComplexeEspace, {
+      params: { complexeId: 'cx-five', terrainId: 't-1' },
+      screen: RouteNames.ComplexePlanning,
+    });
+  });
+
+  it('« Retirer » : le compte des réservations à venir, puis le retrait (N-18)', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Plus d’actions : Terrain 1');
+    await appuyer(arbre, 'Retirer');
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Retirer Terrain 1 ?',
+      '4 réservations à venir seront annulées et les joueurs prévenus.',
+    ]));
+    const confirmer = parRepere(arbre, 'retrait-confirmer')
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function')[0];
+    await act(async () => {
+      await confirmer.props.onPress();
+    });
+    expect(mockRetirer).toHaveBeenCalledWith({ complexeId: 'cx-five', terrainId: 't-1' });
+    expect(lisibles(arbre))
+      .toContain('Terrain 1 est retiré. 4 réservations annulées, les joueurs sont prévenus.');
   });
 });

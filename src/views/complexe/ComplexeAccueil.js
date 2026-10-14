@@ -14,6 +14,17 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { bandeauDeLAccueil, CASES_GERER, complexeChoisi } from '@/domains/complexe/complexeGerant';
+import {
+  chiffresDuPlanning,
+  enJours,
+  joursDeLaSemaine,
+  lignesDeLaFrise,
+  lignesDesPages,
+  plageHoraire,
+  prochainesReservations,
+  STATUTS,
+  totalDesPages,
+} from '@/domains/complexe/complexeReservation';
 import { creneauxDuJour } from '@/domains/complexe/complexeTerrain';
 import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import { withAlpha } from '@/theme/colors';
@@ -29,10 +40,16 @@ import JaugeOccupation from '@/views/collectivite/components/JaugeOccupation';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import FriseDuJour from '@/views/complexe/components/FriseDuJour';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
+import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useMesComplexes, useTerrains } from '@/services/complexe/complexeQueries';
+import {
+  useMesComplexes,
+  usePlanning,
+  useReservationsDuComplexe,
+  useTerrains,
+} from '@/services/complexe/complexeQueries';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
@@ -45,15 +62,10 @@ const ROLES_QUI_ENCADRENT = Object.freeze(['coach', 'president']);
 const LARGEUR_ORDINATEUR = 1024;
 
 /**
- * Les chiffres de l'accueil (RC-G01) : réservations du jour, occupation de la semaine, demandes en
- * attente, nouveaux favoris.
- * ponytail: tous à 0, et c'est exact — sans le lot L2A le serveur ne prend aucune réservation et ne
- * connaît aucun favori. Plafond : rien n'est lu. Voie de sortie : la lecture « accueil du
- * complexe » du lot L2A (plan E-G02 §8), branchée ici à la place de cet objet.
+ * Les nouveaux favoris (7 jours) : 0, et c'est exact — les favoris n'existent pas encore (lot L4,
+ * E-G17). RESA-L5A2 (14/10/2026) : les trois autres chiffres viennent du serveur RESA-L2A.
  */
-const CHIFFRES_SANS_RESERVATION = Object.freeze({
-  demandes: 0, favoris: 0, occupation: 0, reservations: 0,
-});
+const FAVORIS_SANS_LE_LOT_L4 = 0;
 
 /**
  * « AAAA-MM-JJ » et les minutes depuis minuit, à l'heure du téléphone.
@@ -103,6 +115,17 @@ function ComplexeAccueil() {
   const { date, minutes } = jourEtHeure(instant);
   const encadre = ROLES_QUI_ENCADRENT.includes(String(accountRoleKey || ''));
   const surOrdinateur = useWindowDimensions().width >= LARGEUR_ORDINATEUR;
+  // RESA-L5A2 (14/10/2026) — la semaine (et hier, un lundi) au planning, les listes du serveur.
+  const lundi = joursDeLaSemaine(date)[0];
+  const hier = enJours(date, -1);
+  const planning = usePlanning(
+    complexeId,
+    { from: hier < lundi ? hier : lundi, to: enJours(lundi, 6) },
+    { enabled: Boolean(terrainsLus.data?.length) },
+  );
+  const duJour = useReservationsDuComplexe(complexeId, { vue: 'aujourdhui' });
+  const aVenir = useReservationsDuComplexe(complexeId, { vue: 'a-venir' });
+  const enAttente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
 
   const carte = {
     backgroundColor: withAlpha(Colors.primary700, 0.45),
@@ -272,16 +295,30 @@ function ComplexeAccueil() {
   }
 
   // ── La frise « Aujourd'hui » ───────────────────────────────────────────────────────────
-  const lignes = terrains
-    .map((terrain) => ({
-      cle: String(terrain.documentId),
-      couleur: resolveFacilityPlanningColor(terrain),
-      // Sans le lot L2A, aucun créneau n'est pris : tous « libre ».
-      creneaux: creneauxDuJour(terrain.slotPlan, date)
-        .map((creneau) => ({ ...creneau, etat: /** @type {'libre'} */ ('libre') })),
-      nom: String(terrain.name || ''),
-    }))
-    .filter((ligne) => ligne.creneaux.length > 0);
+  // RESA-L5A2 : la frise du PLANNING du serveur (états, réservations) ; sans lui (chargement,
+  // panne), les créneaux du modèle, tous « libre », comme avant.
+  const couleurs = new Map(terrains.map((terrain) => [
+    String(terrain.documentId), resolveFacilityPlanningColor(terrain),
+  ]));
+  const lignes = planning.data
+    ? lignesDeLaFrise(t, planning.data, date)
+      .map((ligne) => ({ ...ligne, couleur: couleurs.get(ligne.cle) || null }))
+    : terrains
+      .map((terrain) => ({
+        cle: String(terrain.documentId),
+        couleur: resolveFacilityPlanningColor(terrain),
+        creneaux: creneauxDuJour(terrain.slotPlan, date)
+          .map((creneau) => ({ ...creneau, etat: /** @type {'libre'} */ ('libre') })),
+        nom: String(terrain.name || ''),
+      }))
+      .filter((ligne) => ligne.creneaux.length > 0);
+  const toucherLaFrise = (/** @type {any} */ ligne, /** @type {any} */ creneau) => {
+    if (creneau.reservationId) {
+      ouvrir(RouteNames.ComplexeReservation, { reservationId: creneau.reservationId });
+    } else {
+      ouvrir(RouteNames.ComplexePlanning, { date, terrainId: ligne.cle });
+    }
+  };
   const jour = instant.toLocaleDateString(localeDesFormats(), {
     day: 'numeric', month: 'long', weekday: 'long',
   });
@@ -297,32 +334,39 @@ function ComplexeAccueil() {
         largeurNoms={surOrdinateur ? 120 : undefined}
         lignes={lignes}
         maintenant={minutes}
+        onToucher={toucherLaFrise}
       />
     </View>
   ) : null;
 
   // ── Les 4 chiffres ─────────────────────────────────────────────────────────────────────
+  const chiffresDeLaSemaine = chiffresDuPlanning(planning.data, date);
+  /**
+   * @type {Array<{ cle: string, jauge?: number, libelle: string, onPress?: () => void,
+      valeur: string }>} */
   const tuiles = [
     {
       cle: 'reservations',
       libelle: t('complexeGerant.accueil.reservationsDuJour', 'réservations aujourd’hui'),
-      valeur: String(CHIFFRES_SANS_RESERVATION.reservations),
+      onPress: () => ouvrir(RouteNames.ComplexeReservations, { vue: 'aujourdhui' }),
+      valeur: String(chiffresDeLaSemaine.reservations),
     },
     {
       cle: 'occupation',
-      jauge: CHIFFRES_SANS_RESERVATION.occupation,
+      jauge: chiffresDeLaSemaine.occupation,
       libelle: t('complexeGerant.accueil.occupation', 'd’occupation cette semaine'),
-      valeur: `${CHIFFRES_SANS_RESERVATION.occupation} %`,
+      valeur: `${chiffresDeLaSemaine.occupation} %`,
     },
     {
       cle: 'demandes',
       libelle: t('complexeGerant.accueil.demandes', 'demandes en attente'),
-      valeur: String(CHIFFRES_SANS_RESERVATION.demandes),
+      onPress: () => ouvrir(RouteNames.ComplexeDemandes),
+      valeur: String(totalDesPages(enAttente.data) || 0),
     },
     {
       cle: 'favoris',
       libelle: t('complexeGerant.accueil.favoris', 'nouveaux favoris (7 jours)'),
-      valeur: String(CHIFFRES_SANS_RESERVATION.favoris),
+      valeur: String(FAVORIS_SANS_LE_LOT_L4),
     },
   ];
   const chiffres = (
@@ -330,41 +374,107 @@ function ComplexeAccueil() {
       style={[Alignments.row, { flexWrap: surOrdinateur ? 'nowrap' : 'wrap', gap: 12 }]}
       testID="complexe-accueil-chiffres"
     >
-      {tuiles.map((tuile) => (
-        <View
-          accessibilityLabel={`${tuile.valeur} ${tuile.libelle}`}
-          accessible
-          key={tuile.cle}
-          style={[
-            carte,
-            Spaces.padding[16],
-            {
-              flexBasis: surOrdinateur ? 0 : 140, flexGrow: 1, gap: 6, minHeight: 104,
-            },
-          ]}
-          testID={`complexe-accueil-chiffre-${tuile.cle}`}
-        >
-          <Text style={[Fonts.h2Black, Fonts.neutral00]}>{tuile.valeur}</Text>
-          {tuile.jauge === undefined ? null : <JaugeOccupation taux={tuile.jauge} />}
-          <Text style={[Fonts.p3, Fonts.neutral200]}>{tuile.libelle}</Text>
-        </View>
-      ))}
+      {tuiles.map((tuile) => {
+        const Tuile = tuile.onPress ? TouchableOpacity : View;
+        return (
+          <Tuile
+            accessibilityLabel={`${tuile.valeur} ${tuile.libelle}`}
+            accessibilityRole={tuile.onPress ? 'button' : undefined}
+            accessible
+            key={tuile.cle}
+            onPress={tuile.onPress}
+            style={[
+              carte,
+              Spaces.padding[16],
+              {
+                flexBasis: surOrdinateur ? 0 : 140, flexGrow: 1, gap: 6, minHeight: 104,
+              },
+            ]}
+            testID={`complexe-accueil-chiffre-${tuile.cle}`}
+          >
+            <Text style={[Fonts.h2Black, Fonts.neutral00]}>{tuile.valeur}</Text>
+            {tuile.jauge === undefined ? null : <JaugeOccupation taux={tuile.jauge} />}
+            <Text style={[Fonts.p3, Fonts.neutral200]}>{tuile.libelle}</Text>
+          </Tuile>
+        );
+      })}
     </View>
   );
 
+  const lesProchaines = prochainesReservations(
+    [...lignesDesPages(duJour.data), ...lignesDesPages(aVenir.data)],
+    instant,
+  );
   const prochaines = (
     <View style={{ gap: 12 }}>
-      {titreSection(t('complexeGerant.accueil.prochaines', 'Prochaines réservations'))}
-      <View style={[carte, Spaces.padding[16]]}>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {t(
-            'complexeGerant.accueil.aucuneAVenir',
-            'Aucune réservation à venir. Fais connaître ta page.',
-          )}
-        </Text>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+        {titreSection(t('complexeGerant.accueil.prochaines', 'Prochaines réservations'))}
+        <TouchableOpacity
+          accessibilityRole="link"
+          onPress={() => ouvrir(RouteNames.ComplexeReservations, { vue: 'a-venir' })}
+          style={[Alignments.justifyCenter, { minHeight: 44 }]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {t('complexeReservations.accueil.toutVoir', 'Tout voir')}
+          </Text>
+        </TouchableOpacity>
       </View>
+      {lesProchaines.length ? lesProchaines.map((ligne) => (
+        <TouchableOpacity
+          accessibilityRole="button"
+          key={ligne.documentId}
+          onPress={() => ouvrir(
+            RouteNames.ComplexeReservation,
+            { reservationId: ligne.documentId },
+          )}
+          style={[carte, Alignments.row, Spaces.padding[12], { gap: 12 }]}
+          testID={`complexe-accueil-prochaine-${ligne.documentId}`}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, { width: 96 }]}>
+            {plageHoraire(ligne.from, ligne.to)}
+          </Text>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {`${String(ligne.label || '')} · ${String(ligne.terrain?.name || '')}`}
+            </Text>
+            <PastillesReservation
+              sansEtat={ligne.source === 'exterieur' && ligne.status === STATUTS.confirmee}
+              source={ligne.source}
+              statut={ligne.status}
+            />
+          </View>
+        </TouchableOpacity>
+      )) : (
+        <View style={[carte, Spaces.padding[16]]}>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t(
+              'complexeGerant.accueil.aucuneAVenir',
+              'Aucune réservation à venir. Fais connaître ta page.',
+            )}
+          </Text>
+        </View>
+      )}
     </View>
   );
+  // L'alerte « Hier » (RC-G01) : « Vérifier » ouvre les réservations passées. Marquer une
+  // réservation « non honorée » vient avec le lot L5b (serveur RESA-L2B).
+  const alerteHier = chiffresDeLaSemaine.hier ? (
+    <BandeauComplexe
+      action={t('complexeReservations.accueil.verifier', 'Vérifier')}
+      onAction={() => ouvrir(RouteNames.ComplexeReservations, { vue: 'passees' })}
+      testID="complexe-accueil-hier"
+      texte={t(
+        'complexeReservations.accueil.hier',
+        'Hier : {{count}} réservations. Quelqu’un n’est pas venu ?',
+        {
+          count: chiffresDeLaSemaine.hier,
+          defaultValue_one: 'Hier : {{count}} réservation. Quelqu’un n’est pas venu ?',
+          defaultValue_other: 'Hier : {{count}} réservations. Quelqu’un n’est pas venu ?',
+          ...SANS_ECHAPPEMENT,
+        },
+      )}
+    />
+  ) : null;
 
   // ── « Gérer » ──────────────────────────────────────────────────────────────────────────
   const titreDeLaCase = (/** @type {string} */ cle) => {
@@ -536,6 +646,7 @@ function ComplexeAccueil() {
         {avecTerrains ? frise : null}
         {avecTerrains ? chiffres : null}
         {avecTerrains ? prochaines : null}
+        {avecTerrains ? alerteHier : null}
         {gerer}
       </ScrollView>
     </ScreenContainer>

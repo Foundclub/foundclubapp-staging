@@ -1,4 +1,4 @@
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,6 +33,8 @@ import Input from '@/components/molecules/input/Input';
 import TimePickerInput from '@/components/molecules/timePickerInput/TimePickerInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useApercuCreneaux,
@@ -94,8 +96,9 @@ const planVide = () => ({
  *   · « Les prix de la semaine », la « Période », les créneaux ponctuels (« Exceptions »).
  * Chaque geste est JUGÉ par le serveur avant d'entrer dans le modèle (`dryRun` : « Ce tarif
  * chevauche… », « 640 créneaux ouverts ») ; « Ouvrir ces créneaux » / « Enregistrer » l'écrit.
- * « Fermer des jours » (E-G10), « Voir le planning » (E-G03) et l'avertissement « réservations
- * hors des nouveaux horaires » attendent les lots L5A2 / L2A.
+ * RESA-L5A2 (14/10/2026) : « Fermer des jours » (E-G10) et « Voir le planning » (E-G03) ;
+ * l'avertissement « réservations hors des nouveaux horaires » n'est PAS servi par le serveur
+ * RESA-L2A (l'aperçu des créneaux ne compte pas les réservations) : absent.
  * Paramètres de route : `complexeId`, `terrainId`, `terrainAjoute` (E-G08 vient de le créer).
  * Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -103,6 +106,7 @@ const planVide = () => ({
 function ComplexeCreneaux() {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
+  const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
   /** @typedef {{ complexeId?: string, terrainAjoute?: string, terrainId?: string }} Parametres */
   const params = /** @type {Parametres | undefined} */ (route?.params);
@@ -635,6 +639,33 @@ function ComplexeCreneaux() {
             variant="Secondary"
           />
         </View>
+        {terrainId ? (
+          <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
+            <TouchableOpacity
+              accessibilityRole="link"
+              onPress={() => navigation.navigate(RouteNames.ComplexeFermetures, {
+                complexeId, terrainId,
+              })}
+              style={[Alignments.justifyCenter, { minHeight: 44 }]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('complexeReservations.planning.fermerDesJours', 'Fermer des jours')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="link"
+              onPress={() => navigation.navigate(RouteNames.ComplexeEspace, {
+                params: { complexeId, terrainId },
+                screen: RouteNames.ComplexePlanning,
+              })}
+              style={[Alignments.justifyCenter, { minHeight: 44 }]}
+            >
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {t('complexeReservations.installations.voirPlanning', 'Voir le planning')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </>
     ),
   );

@@ -1,16 +1,22 @@
 /* eslint-disable global-require */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useRoute } from '@react-navigation/native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
+import { totalDesPages } from '@/domains/complexe/complexeReservation';
+import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 import useTheme from '@/theme/themeContext';
 
 import { commonOptions, getTabScreenCommonOptions } from '@/navigation/commonOptions';
 import { RouteNames } from '@/navigation/routeNames';
 import { createFocusedTabResetListener } from '@/navigation/tabRootReset';
+
+import { useComplexeChoisi, useReservationsDuComplexe } from '@/services/complexe/complexeQueries';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,6 +26,8 @@ const Tab = createBottomTabNavigator();
  * Messages. Ce lot pose « Accueil » (E-G02) et « Messages » (la messagerie du compte) ;
  * « Demandes » (E-G06) et « Planning » (E-G03) viennent avec le lot L5A2, qui les insère entre les
  * deux (le témoin `ComplexeTabNavigator.test.js` fixe l'ordre).
+ * RESA-L5A2 (14/10/2026) — « Demandes » porte la pastille du nombre de demandes en attente (la
+ * même lecture que l'écran : le total du serveur).
  * Paramètres de route : `complexeId`, `justeCree` (E-G01, « … est en ligne »).
  * Monté seulement quand `COMPLEXES_GERANT` est allumé (PrivateNavigator). Sur le site, la même
  * navigation sera le menu latéral (lot web) : exempté (webRouteExemptions.js).
@@ -34,6 +42,15 @@ function ComplexeTabNavigator() {
     route?.params
   );
   const { unreadCount } = useUnreadMessages();
+  const { userData } = useAuth();
+  // RESA-L5A2 (planche RB, état 4) : ouvrir l'espace (par la bascule, « Mon compte » ou une
+  // notification du complexe reçue en mode joueur) repasse le téléphone en mode complexe.
+  useEffect(() => {
+    ecrireModeComplexe(userData?.documentId, true);
+  }, [userData?.documentId]);
+  const { complexeId } = useComplexeChoisi(params?.complexeId);
+  const enAttente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
+  const demandes = totalDesPages(enAttente.data) || 0;
 
   const renderIcone = (/** @type {{ badge: number, color: string, source: any }} */ {
     badge, color, source,
@@ -89,13 +106,31 @@ function ComplexeTabNavigator() {
       initialRouteName={RouteNames.ComplexeAccueil}
       screenOptions={commonOptions}
     >
-      {/* Deux déclarations EXPLICITES : le témoin de parité web lit chaque nom. */}
+      {/* Des déclarations EXPLICITES : le témoin de parité web lit chaque nom. */}
       <Tab.Screen
         getComponent={() => require('@/views/complexe/ComplexeAccueil').default}
         initialParams={{ complexeId: params?.complexeId, justeCree: params?.justeCree }}
         listeners={createFocusedTabResetListener}
         name={RouteNames.ComplexeAccueil}
         options={optionsDe(t('complexeGerant.onglets.accueil', 'Accueil'), Images.home, 0)}
+      />
+      <Tab.Screen
+        getComponent={() => require('@/views/complexe/ComplexeDemandes').default}
+        initialParams={{ complexeId: params?.complexeId }}
+        listeners={createFocusedTabResetListener}
+        name={RouteNames.ComplexeDemandes}
+        options={optionsDe(
+          t('complexeGerant.gerer.demandes', 'Demandes'),
+          Images.inboxArrowDown,
+          demandes,
+        )}
+      />
+      <Tab.Screen
+        getComponent={() => require('@/views/complexe/ComplexePlanning').default}
+        initialParams={{ complexeId: params?.complexeId }}
+        listeners={createFocusedTabResetListener}
+        name={RouteNames.ComplexePlanning}
+        options={optionsDe(t('complexeGerant.gerer.planning', 'Planning'), Images.calendar, 0)}
       />
       <Tab.Screen
         getComponent={() => require('@/views/Messaging').default}

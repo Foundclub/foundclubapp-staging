@@ -14,9 +14,18 @@ const lire = (/** @type {string} */ nom) => fs.readFileSync(
 describe('RESA-L5A1 E-G02 — la barre du bas de l’espace du complexe', () => {
   const source = lire('ComplexeTabNavigator.js');
 
-  it('Accueil, puis Messages (le lot L5A2 insère Demandes et Planning)', () => {
+  it('Accueil, Demandes, Planning (RESA-L5A2), puis Messages', () => {
     const noms = [...source.matchAll(/name=\{RouteNames\.(\w+)\}/g)].map((m) => m[1]);
-    expect(noms).toEqual(['ComplexeAccueil', 'Chat']);
+    expect(noms).toEqual(['ComplexeAccueil', 'ComplexeDemandes', 'ComplexePlanning', 'Chat']);
+  });
+
+  it('RESA-L5A2 — « Planning » ouvre E-G03', () => {
+    expect(source).toContain("require('@/views/complexe/ComplexePlanning')");
+  });
+
+  it('RESA-L5A2 — « Demandes » ouvre E-G06 et porte le nombre de demandes en attente', () => {
+    expect(source).toContain("require('@/views/complexe/ComplexeDemandes')");
+    expect(source).toContain("useReservationsDuComplexe(complexeId, { vue: 'demandes' })");
   });
 
   it('l’accueil est celui du gérant, la messagerie celle du compte', () => {
@@ -29,8 +38,15 @@ describe('RESA-L5A1 E-G02 — la barre du bas de l’espace du complexe', () => 
 describe('RESA-L5A1 RB — le gérant n’existe que si l’interrupteur est allumé', () => {
   const source = lire('PrivateNavigator.js');
 
-  it('l’espace et « Devenir gérant » ne sont déclarés que sous COMPLEXES_GERANT', () => {
-    ['ComplexeDevenirGerant', 'ComplexeEspace'].forEach((nom) => {
+  it('l’espace et ses écrans ne sont déclarés que sous COMPLEXES_GERANT', () => {
+    [
+      'ComplexeDevenirGerant',
+      'ComplexeEspace',
+      // RESA-L5A2 (14/10/2026)
+      'ComplexeFermetures',
+      'ComplexeReservation',
+      'ComplexeReservations',
+    ].forEach((nom) => {
       const declaration = source.indexOf(`name={RouteNames.${nom}}`);
       const interrupteur = source.lastIndexOf('{COMPLEXES_GERANT ? (', declaration);
       expect(declaration).toBeGreaterThan(-1);
@@ -51,5 +67,21 @@ describe('RESA-L5A1 RB — le gérant n’existe que si l’interrupteur est all
 
   it('l’espace du complexe n’est pas pris pour une étape d’onboarding', () => {
     expect(source).toContain('|| initialRouteName === RouteNames.ComplexeEspace');
+  });
+});
+
+describe('RESA-L5A2 RB état 4 — la notification du complexe, en mode joueur', () => {
+  it('l’espace, une fois ouvert (par une notification aussi), repasse en mode complexe', () => {
+    const source = lire('ComplexeTabNavigator.js');
+    expect(source).toContain('ecrireModeComplexe(userData?.documentId, true)');
+  });
+
+  it('la liste des notifications porte la pastille « Mode complexe »', () => {
+    const liste = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'views', 'notification', 'NotificationList.js'),
+      'utf8',
+    );
+    expect(liste).toContain('estNotificationDuComplexe(notification.type)');
+    expect(liste).toContain('<PastilleModeComplexe />');
   });
 });
