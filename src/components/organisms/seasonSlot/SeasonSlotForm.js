@@ -262,6 +262,31 @@ export function FenetrePleinEcran({ children, onRequestClose }) {
 }
 
 /**
+ * 📐 COLL-R-A7 — le meme plein ecran quand le tunnel ne peut pas encore s ouvrir (chargement,
+ * erreur, Ville sans installation) : la question de l etape, la croix, ce qui l empeche.
+ * Ici, et pas dans l ecran qui l ouvre : le gabarit des tunnels reste hors de `src/views`, ou
+ * ANDROIDBAR-6 exige qu il soit rendu en racine (WizardStepLayoutANDROIDBAR6.clavier.test.js).
+ * @param {{
+ *   children: import('react').ReactNode,
+ *   onClose: () => void,
+ *   sousTitre?: string,
+ *   titre: string,
+ * }} props
+ * @returns {import('react').ReactElement} La fenetre.
+ */
+export function TunnelEnAttente({
+  children, onClose, sousTitre, titre,
+}) {
+  return (
+    <FenetrePleinEcran onRequestClose={onClose}>
+      <WizardStepLayout headerVariant="focus" onClose={onClose} subtitle={sousTitre} title={titre}>
+        {children}
+      </WizardStepLayout>
+    </FenetrePleinEcran>
+  );
+}
+
+/**
  * Les creneaux d un jour de la semaine type, sans celui qu on modifie.
  * @param {any} creneaux - Les creneaux de l installation (lecture).
  * @param {number | null} numero - Le jour ISO.

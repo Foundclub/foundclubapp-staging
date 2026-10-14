@@ -34,9 +34,8 @@ import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
-import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import SeasonSlotForm, {
-  FenetrePleinEcran,
+  TunnelEnAttente,
 } from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import EcrireAuxDirigeants from '@/views/collectivite/components/EcrireAuxDirigeants';
@@ -134,18 +133,15 @@ function AttribuerAuClub({
   }
   if (empechement && pleinEcran) {
     return (
-      <FenetrePleinEcran onRequestClose={onCancel}>
-        <WizardStepLayout
-          headerVariant="focus"
-          onClose={onCancel}
-          subtitle={t('collectiviteCreneaux.tunnel.pourLeClub', 'Pour {{club}}', {
-            club: club.name, ...SANS_ECHAPPEMENT,
-          })}
-          title={t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?')}
-        >
-          {empechement}
-        </WizardStepLayout>
-      </FenetrePleinEcran>
+      <TunnelEnAttente
+        onClose={onCancel}
+        sousTitre={t('collectiviteCreneaux.tunnel.pourLeClub', 'Pour {{club}}', {
+          club: club.name, ...SANS_ECHAPPEMENT,
+        })}
+        titre={t('collectiviteCreneaux.tunnel.installation', 'Dans quelle installation ?')}
+      >
+        {empechement}
+      </TunnelEnAttente>
     );
   }
   if (empechement) return empechement;
