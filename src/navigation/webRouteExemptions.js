@@ -203,6 +203,8 @@ const MOBILE_ONLY_SCREENS = {
   // adresse sur le site (page publique du complexe, réserver) viendra avec le lot site L7.
   [RouteNames.ReserverComplexe]:
     'RESA-L6A : hidden by COMPLEXES_JOUEUR; its public website page comes with the L7 web lot',
+  [RouteNames.ReserverCreneau]:
+    'RESA-L6A : hidden by COMPLEXES_JOUEUR; its website URL comes with the L7 web lot',
 };
 
 /**

@@ -68,9 +68,9 @@ const siteComplet = (url) => {
  *   · « Infos » : description, photos, horaires d'accueil, adresse et itinéraire, téléphone DU
  *     complexe et « Appeler » (RG-TEL), site web.
  * Sur ordinateur (OR2) : les infos à gauche, la colonne « Réserver » à droite, sans segments.
- * Paramètres : \`slug\` ; \`apercu\` (le gérant regarde sa page : bandeau « Aperçu »).
+ * Paramètres : `slug` ; `apercu` (le gérant regarde sa page : bandeau « Aperçu »).
  * ⛔ Pas dans ce lot : le favori (cœur), le canal, la fidélité, les partenaires, « Signaler » et le
- * bandeau d'arrivée par l'affiche (serveur L4, puis L6b). Caché par \`COMPLEXES_JOUEUR\`.
+ * bandeau d'arrivée par l'affiche (serveur L4, puis L6b). Caché par `COMPLEXES_JOUEUR`.
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverComplexe() {

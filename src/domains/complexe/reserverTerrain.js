@@ -534,6 +534,42 @@ const detailsDe = (erreur) => (
   erreur?.details && typeof erreur.details === 'object' ? erreur.details : {}
 );
 
+/** Les détails d'un refus qui peuvent voyager jusqu'à E-P13 (liste blanche ; jamais `reason`). */
+const DETAILS_PERMIS = Object.freeze(['code', 'max', 'minAge', 'phone']);
+
+/**
+ * Les paramètres de route de E-P13 : la variante, le refus du serveur réduit à ce que l'écran
+ * affiche (code, détails permis, phrase), le créneau et le complexe. Des valeurs simples
+ * seulement (les paramètres de route se sérialisent). ⛔ RC-P08 : la raison privée d'un
+ * bannissement (`details.reason`) ne part jamais.
+ * @param {{ complexe?: string | null, creneau?: { from?: string, to?: string } | null,
+ *   date?: string | null, erreur?: any, slug?: string | null, telephone?: string | null,
+ *   terrain?: { documentId?: string, name?: string } | null, variante: string }} source - Ce
+ *   que l'écran sait.
+ * @returns {Record<string, any>} Les paramètres.
+ */
+export const parametresDEchec = (source) => {
+  const detailsBruts = detailsDe(source?.erreur);
+  const details = Object.fromEntries(Object.entries(detailsBruts).filter(([cle, valeur]) => (
+    DETAILS_PERMIS.includes(cle) && valeur !== undefined && valeur !== null
+  )));
+  const message = source?.variante === 'banni' ? '' : String(source?.erreur?.message || '').trim();
+  const params = {
+    complexe: source?.complexe ? String(source.complexe) : undefined,
+    date: source?.date || undefined,
+    details: Object.keys(details).length ? details : undefined,
+    from: source?.creneau?.from || undefined,
+    message: message || undefined,
+    slug: source?.slug || undefined,
+    telephone: source?.telephone || undefined,
+    terrain: source?.terrain?.name || undefined,
+    terrainId: source?.terrain?.documentId || undefined,
+    to: source?.creneau?.to || undefined,
+    variante: source.variante,
+  };
+  return Object.fromEntries(Object.entries(params).filter(([, valeur]) => valeur !== undefined));
+};
+
 /**
  * Le contenu d'une variante de E-P13 (même gabarit : pictogramme, titre, texte, boutons). Les
  * actions sont des clefs que l'écran traduit en boutons : `autresCreneaux` (E-P03), `ailleurs`

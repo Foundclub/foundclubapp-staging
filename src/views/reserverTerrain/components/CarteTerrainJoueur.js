@@ -31,7 +31,7 @@ const PHOTO = 120;
  * @param {() => void} props.onTelephone - « Réserver par téléphone ».
  * @param {() => void} props.onVoir - « Voir les créneaux ».
  * @param {string} props.slug - L'adresse publique du complexe.
- * @param {any} props.terrain - Le terrain (\`GET /public-complexes/:slug/terrains\`).
+ * @param {any} props.terrain - Le terrain (`GET /public-complexes/:slug/terrains`).
  * @returns {import('react').ReactElement} La carte.
  */
 function CarteTerrainJoueur({

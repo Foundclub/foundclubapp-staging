@@ -17411,10 +17411,23 @@ export default {
       voirLesCreneauxA11y: '{{nom}} : voir les créneaux',
     },
     creneau: {
+      aucunCeJour: 'Aucun créneau libre ce jour-là.',
+      choisi: 'Choisi',
+      choix: '{{jour}} · {{creneau}}',
+      continuer: 'Continuer',
+      erreur: 'Impossible de charger les créneaux.',
       ferme: 'Fermé',
+      jourFerme: 'Fermé ce jour-là : le complexe a fermé ce terrain.',
+      jourSansLibreA11y: '{{jour}}, aucun créneau libre',
+      jourSuivant: 'Voir le jour suivant',
       libre: 'Libre',
       pris: 'Pris',
+      prisPendantLeChoix: 'Ce créneau vient d’être pris. Choisis-en un autre.',
+      surDemande: 'Sur demande : le complexe te répond',
       tropTard: 'Trop tard ici',
+      // eslint-disable-next-line max-len
+      tropTardTexte: '{{jour}} · {{creneau}}. {{complexe}} ne prend plus ce créneau dans l’app : appelle le complexe.',
+      tropTardTitre: 'Trop tard pour réserver dans l’app',
     },
     echec: {
       age: 'Ce complexe accepte les réservations à partir de {{age}} ans.',

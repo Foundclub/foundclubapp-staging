@@ -9,6 +9,7 @@ import {
   libelleModeJoueur,
   lignesDuTerrainPublic,
   numeroLisible,
+  parametresDEchec,
   prixDuCreneau,
   prixDuTerrainPublic,
   quatorzeJours,
@@ -272,6 +273,44 @@ describe('les refus du serveur, NOMMÉS (E-P13)', () => {
     expect(tard.titre).toBe('Trop tard pour réserver ici : appelle le complexe.');
     expect(tard.telephone).toBe('+33639981234');
     expect(tard.actions).toEqual(['appeler']);
+  });
+});
+
+describe('les paramètres de E-P13 (ce que l’écran des échecs doit savoir)', () => {
+  it('la variante, le refus du serveur (code, détails, phrase), le créneau et le complexe', () => {
+    expect(parametresDEchec({
+      complexe: 'Le Five de Montrivage',
+      creneau: { from: '18:00', to: '19:00' },
+      date: '2026-10-14',
+      erreur: {
+        details: { code: 'COMPLEXE_RESERVATION_PLAFOND', max: 2 }, message: 'm', status: 409,
+      },
+      slug: 'le-five',
+      telephone: '+33639981234',
+      terrain: { documentId: 't-1', name: 'Terrain 1' },
+      variante: 'plafond',
+    })).toEqual({
+      complexe: 'Le Five de Montrivage',
+      date: '2026-10-14',
+      details: { code: 'COMPLEXE_RESERVATION_PLAFOND', max: 2 },
+      from: '18:00',
+      message: 'm',
+      slug: 'le-five',
+      telephone: '+33639981234',
+      terrain: 'Terrain 1',
+      terrainId: 't-1',
+      to: '19:00',
+      variante: 'plafond',
+    });
+  });
+
+  it('⛔ RC-P08 : jamais la raison privée d’un bannissement dans les paramètres', () => {
+    const params = parametresDEchec({
+      erreur: { details: { code: 'COMPLEXE_RESERVATION_BANNED', reason: 'secret', until: null } },
+      variante: 'banni',
+    });
+    expect(JSON.stringify(params)).not.toContain('secret');
+    expect(params).toEqual({ details: { code: 'COMPLEXE_RESERVATION_BANNED' }, variante: 'banni' });
   });
 });
 

@@ -434,4 +434,6 @@ export const RouteNames = /** @type {const} */ ({
   // (src/config/fonctionsMasquees.js).
   ReserverComplexe: 'ReserverComplexe',
   ReserverCreneau: 'ReserverCreneau',
+  ReserverEchec: 'ReserverEchec',
+  ReserverRecapitulatif: 'ReserverRecapitulatif',
 });
