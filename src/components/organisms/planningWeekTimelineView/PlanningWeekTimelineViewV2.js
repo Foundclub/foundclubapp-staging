@@ -26,6 +26,7 @@ import {
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 
+import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { images as Images } from '@/theme/images';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -246,22 +247,10 @@ function PlanningWeekTimelineView({
   const couleurDAttente = Colors.warning400 || pendingAccentColor;
   // COLL-R-APP-CREATION (13/10, COL-003, decision d Adel « D3- B ») — une seance EN ATTENTE dit
   // qui decide (`raw.pendingDecider`, pose par le serveur), avec les mots de sa fiche.
-  const libelleDAttente = (/** @type {any} */ event) => {
-    const decideur = String(event?.raw?.pendingDecider || '');
-    if (decideur === 'mairie') {
-      return t('collectiviteDemandes.club.enAttenteDeLaMairie', 'En attente de la mairie');
-    }
-    if (decideur === 'dirigeant') {
-      return t('collectiviteDemandes.club.enAttenteDuDirigeant', 'En attente de ton dirigeant');
-    }
-    if (decideur === 'proprietaire') {
-      return t(
-        'collectiviteDemandes.club.enAttenteDuProprietaire',
-        'En attente du gestionnaire de l’installation',
-      );
-    }
-    return null;
-  };
+  // MARQUE-MAIRIE (14/10) : les mots viennent de LA regle partagee (`pendingDeciderLabel`).
+  const libelleDAttente = (/** @type {any} */ event) => (
+    pendingDeciderLabel(event?.raw?.pendingDecider, t)
+  );
   const currentDate = propDate || internalDate;
   const nowReference = getPlanningDefaultDate();
   const scrollViewRef = useRef(null);
