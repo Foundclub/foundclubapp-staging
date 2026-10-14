@@ -449,6 +449,19 @@ describe('PAR-L7 — « Mes enfants » : chez le parent, et chez un sportif pare
     expect(carte).toContain("'homeHub.cards.search.myChildren.subtitle'");
   });
 
+  // PAR-L7 E01 (14/10, chef d'orchestre : la planche validee dit « une ligne d'enfant → sa
+  // fiche ») — chaque ligne de la carte s'ouvre sur SA destination, dans « Mon compte » ; un appui
+  // ailleurs garde `onPress` (« Mes enfants »). Les autres cartes n'ont pas de lignes.
+  it('chaque ligne d enfant ouvre SA fiche ; la carte garde « Mes enfants »', () => {
+    const carte = entre(SEARCH, REPERE_MES_ENFANTS, 'if (isParent) {');
+
+    expect(carte).toContain('lignes: mesEnfants.total > 0');
+    expect(carte).toContain('lignesDeLaCarte(t, mesEnfants,');
+    expect(carte).toContain('navigation.navigate(RouteNames.ProfileStack, destination)');
+    expect(SOURCE.match(/lignes: /g)).toHaveLength(1);
+    expect(SOURCE).toContain('lignes={card.lignes}');
+  });
+
   it('les lectures ne partent que pour un role du club (ni super admin ni compte neuf)', () => {
     expect(SOURCE).toContain('const mesEnfants = useMesEnfantsEnBref({');
     expect(SOURCE).toMatch(/actif: [^\n]*peutAvoirDesEnfants\(getUserRoleKey\(roleName\)\)/);

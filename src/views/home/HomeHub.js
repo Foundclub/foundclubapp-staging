@@ -68,7 +68,11 @@ import CollectivitePorteRow from '@/views/collectivite/components/CollectivitePo
 import FeuillePratiqueAussi from '@/views/home/FeuillePratiqueAussi';
 import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
-import { lignesAAfficher, peutAvoirDesEnfants } from '@/views/profile/parent/mesEnfantsEnBref';
+import {
+  lignesAAfficher,
+  lignesDeLaCarte,
+  peutAvoirDesEnfants,
+} from '@/views/profile/parent/mesEnfantsEnBref';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
@@ -180,6 +184,9 @@ const estAfficheeSurLAccueil = (card) => !CARTES_MASQUEES_A_TOUS.has(card.key);
  *  locked?: boolean;
  *  premiumScope?: 'club' | 'team';
  *  subtitleLines?: number;
+ *  lignes?: Array<{
+ *    cle: string, texte: string, accessibilityLabel?: string, onPress?: () => void,
+ *  }>;
  *  tutorial?: any;
  * }} HomeCard
  */
@@ -256,6 +263,7 @@ function HomeSection({
               icon={card.icon}
               illustration={card.illustration || illustrationsParFamille[card.icon]}
               illustrationPlacement={card.illustrationPlacement}
+              lignes={card.lignes}
               locked={card.locked}
               onPress={card.onPress}
               premiumScope={card.premiumScope}
@@ -2460,6 +2468,13 @@ function HomeHubContent({ auth, navigation, route }) {
       icon: 'users',
       key: 'search-my-children',
       layout: 'full',
+      // PAR-L7 E01 (14/10) — « une ligne d'enfant → sa fiche » : chaque ligne s'ouvre sur SA
+      // destination dans « Mon compte » ; un appui ailleurs sur la carte ouvre « Mes enfants ».
+      lignes: mesEnfants.total > 0
+        ? lignesDeLaCarte(t, mesEnfants, (destination) => (
+          navigation.navigate(RouteNames.ProfileStack, destination)
+        ))
+        : undefined,
       onPress: () => navigation.navigate(RouteNames.ProfileStack, {
         screen: RouteNames.MyChildren,
       }),

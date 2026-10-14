@@ -12,6 +12,10 @@
  */
 import { demandesDe, etatDeLEnfant } from '@/views/profile/parent/demandesDeLEnfant';
 
+import { RouteNames } from '@/navigation/routeNames';
+
+import { parentalPowerForAge } from '@/constants/parentalDeclaration';
+
 /**
  * Les rôles du club qui peuvent avoir des enfants dans l'app : le serveur leur ouvre les fiches
  * (`declared-child.mine`) et les liens (`parent-link-request.asParent`) — admin `src/index.ts`,
@@ -57,7 +61,7 @@ const etatDeLaFiche = (t, fiche, demandes) => {
  *   cle: string,
  *   prenom: string,
  *   etat: string,
- *   cible: { id: string, type: 'compte' | 'fiche' },
+ *   cible: { id: string, type: 'compte' | 'fiche', aSaPage?: boolean },
  * }} LigneDEnfant
  */
 
@@ -86,7 +90,12 @@ export const mesEnfantsEnBref = ({
       prenom: String(compte?.firstname || compte?.lastname || '').trim(),
     })),
     ...liste(fiches).map((enfant) => ({
-      cible: { id: String(enfant?.documentId || ''), type: /** @type {const} */ ('fiche') },
+      cible: {
+        // La règle de « Mes enfants » : seule une fiche de moins de 13 ans a SA page.
+        aSaPage: parentalPowerForAge(enfant?.age) === 'full',
+        id: String(enfant?.documentId || ''),
+        type: /** @type {const} */ ('fiche'),
+      },
       cle: `fiche-${enfant?.documentId}`,
       etat: etatDeLaFiche(t, enfant, lesDemandes),
       prenom: String(enfant?.firstname || enfant?.lastname || '').trim(),
@@ -116,4 +125,45 @@ export const texteDeLaLigne = (ligne) => `${ligne.prenom} · ${ligne.etat}`;
 export const lignesAAfficher = (t, bref) => [
   ...bref.lignes.map(texteDeLaLigne),
   ...(bref.reste > 0 ? [t('myChildren.summary.more', { count: bref.reste })] : []),
+];
+
+/**
+ * PAR-L7 (14/10, design parent E01 validé : « une ligne d'enfant → sa fiche ») — OÙ MÈNE UNE
+ * LIGNE, dans « Mon compte » (ProfileStack), avec la règle de « Mes enfants » : une fiche de
+ * moins de 13 ans ouvre SA page (`MyChildren` + `childDocumentId`) ; une fiche de 13 ans et plus
+ * n'en a pas, elle ouvre la liste (qui porte « Donner un compte ») ; un compte relié ouvre son
+ * profil.
+ * @param {LigneDEnfant['cible']} cible - Ce que la ligne désigne.
+ * @returns {{ screen: string, params?: object }} - L'écran, et ses paramètres.
+ */
+export const destinationDeLaLigne = (cible) => {
+  if (cible?.type === 'compte') {
+    return { params: { userId: cible.id }, screen: RouteNames.UserDetails };
+  }
+  if (cible?.aSaPage) {
+    return { params: { childDocumentId: cible.id }, screen: RouteNames.MyChildren };
+  }
+  return { screen: RouteNames.MyChildren };
+};
+
+/**
+ * Les lignes de la carte « Mes enfants » de l'accueil : chacune NOMMÉE pour le lecteur d'écran
+ * (« Anissa, U11 Filles ») et s'ouvre sur sa destination ; « + 2 autres » reste du texte (un
+ * appui y ouvre la carte, donc « Mes enfants »).
+ * @param {(cle: string, options?: any) => string} t - La traduction.
+ * @param {ReturnType<typeof mesEnfantsEnBref>} bref - Mes enfants en bref.
+ * @param {(destination: ReturnType<typeof destinationDeLaLigne>) => void} ouvrir - La navigation.
+ * @returns {Array<{ cle: string, texte: string, accessibilityLabel?: string,
+ *   onPress?: () => void }>} - Les lignes, dans l'ordre.
+ */
+export const lignesDeLaCarte = (t, bref, ouvrir) => [
+  ...bref.lignes.map((ligne) => ({
+    accessibilityLabel: `${ligne.prenom}, ${ligne.etat}`,
+    cle: ligne.cle,
+    onPress: () => ouvrir(destinationDeLaLigne(ligne.cible)),
+    texte: texteDeLaLigne(ligne),
+  })),
+  ...(bref.reste > 0
+    ? [{ cle: 'reste', texte: t('myChildren.summary.more', { count: bref.reste }) }]
+    : []),
 ];

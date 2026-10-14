@@ -1,5 +1,10 @@
 import {
-  lignesAAfficher, MAX_LIGNES, mesEnfantsEnBref, texteDeLaLigne,
+  destinationDeLaLigne,
+  lignesAAfficher,
+  lignesDeLaCarte,
+  MAX_LIGNES,
+  mesEnfantsEnBref,
+  texteDeLaLigne,
 } from '../mesEnfantsEnBref';
 
 const { t } = jest.requireActual('@/theme/strings/__mocks__/doublureTraduction');
@@ -69,7 +74,8 @@ describe('mesEnfantsEnBref — une ligne par enfant, le prénom d abord', () => 
       .toEqual(['Hugo · A son compte', 'Léa · Pas encore d’équipe']);
     expect(bref.lignes.map((ligne) => ligne.cible)).toEqual([
       { id: 'user-hugo', type: 'compte' },
-      { id: 'fiche-léa', type: 'fiche' },
+      // PAR-L7 E01 (14/10) : une fiche dit aussi si elle a SA page (moins de 13 ans).
+      { aSaPage: true, id: 'fiche-léa', type: 'fiche' },
     ]);
     expect(bref.total).toBe(2);
   });
@@ -117,5 +123,49 @@ describe('lignesAAfficher — ce que la carte d accueil écrit sous « Mes enfan
 
     expect(lignesAAfficher(t, quatre).at(-1)).toBe('+ 1 autre');
     expect(lignesAAfficher(t, un)).toEqual(['Anissa · Pas encore d’équipe']);
+  });
+});
+
+// PAR-L7 (14/10, design parent E01 validé : « une ligne d'enfant → sa fiche ») — OÙ MÈNE UNE
+// LIGNE, la même règle que « Mes enfants » : une fiche de moins de 13 ans a SA page ; une fiche
+// de 13 ans et plus n'en a pas (la liste porte « Donner un compte ») ; un compte relié ouvre
+// son profil. Les routes vivent dans « Mon compte » (ProfileStack).
+describe('destinationDeLaLigne / lignesDeLaCarte — chaque ligne ouvre SA fiche', () => {
+  const { RouteNames } = jest.requireActual('@/navigation/routeNames');
+
+  test('moins de 13 ans : sa page ; 13+ : la liste ; compte relié : son profil', () => {
+    const bref = mesEnfantsEnBref({
+      comptesRelies: [{ documentId: 'user-hugo', firstname: 'Hugo' }],
+      fiches: [fiche('Anissa', { age: 9 }), fiche('Lina', { age: 14 })],
+      t,
+    });
+
+    expect(bref.lignes.map((ligne) => destinationDeLaLigne(ligne.cible))).toEqual([
+      { params: { userId: 'user-hugo' }, screen: RouteNames.UserDetails },
+      { params: { childDocumentId: 'fiche-anissa' }, screen: RouteNames.MyChildren },
+      { screen: RouteNames.MyChildren },
+    ]);
+  });
+
+  test('les lignes de la carte : nommées, chacune s ouvre ; « + 2 autres » reste du texte', () => {
+    const ouvrir = jest.fn();
+    const bref = mesEnfantsEnBref({
+      fiches: ['Anissa', 'Martin', 'Léa', 'Noé', 'Ines'].map((prenom) => fiche(prenom)),
+      t,
+    });
+    const lignes = lignesDeLaCarte(t, bref, ouvrir);
+
+    expect(lignes.map((ligne) => ligne.texte)).toEqual([
+      'Anissa · Pas encore d’équipe',
+      'Martin · Pas encore d’équipe',
+      'Léa · Pas encore d’équipe',
+      '+ 2 autres',
+    ]);
+    expect(lignes[0].accessibilityLabel).toBe('Anissa, Pas encore d’équipe');
+    lignes[0].onPress();
+    expect(ouvrir).toHaveBeenCalledWith({
+      params: { childDocumentId: 'fiche-anissa' }, screen: RouteNames.MyChildren,
+    });
+    expect(lignes[3].onPress).toBeUndefined();
   });
 });
