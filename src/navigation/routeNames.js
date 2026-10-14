@@ -436,4 +436,5 @@ export const RouteNames = /** @type {const} */ ({
   ReserverCreneau: 'ReserverCreneau',
   ReserverEchec: 'ReserverEchec',
   ReserverRecapitulatif: 'ReserverRecapitulatif',
+  ReserverResultat: 'ReserverResultat',
 });
