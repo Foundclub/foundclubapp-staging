@@ -667,7 +667,12 @@ function AdminRevenue() {
   const canSubmitRetry = Boolean(String(retryModalReason || '').trim()) && !retryBillingEventMutation.isPending;
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="tab-scene"
+      // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
+      keyboardAvoiding
+    >
       <ScrollView
         contentContainerStyle={[
           Spaces.padding[24],

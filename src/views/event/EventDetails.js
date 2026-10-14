@@ -118,6 +118,7 @@ import {
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SharePlatform from '@/platform/share';
 // 🧾 N2 — AUCUN MODULE NOUVEAU N'ENTRE ICI : `licenseQueries` etait deja
@@ -814,6 +815,10 @@ function EventDetails({ navigation, route }) {
   );
 
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
+  // 🤖 ANDROIDBAR-4 — Android 15/16 : à la fermeture du clavier, Android envoie la hauteur
+  // VISIBLE comme haut du clavier ; l'évitement de la fenêtre « retard » gardait barre du bas +
+  // barre d'état de retrait (102 dp) et la carte restait trop haut. L'écoute partagée le remplace.
+  const clavierAndroid = useRetraitDuClavierAndroid(0);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
   const [lateModalUser, setLateModalUser] = useState(/** @type {User | null} */ (null));
   const [lateModalMinutes, setLateModalMinutes] = useState('0');
@@ -8204,12 +8209,15 @@ function EventDetails({ navigation, route }) {
             {/* COLL-C4B (02/10) — D16 : la Ville a ferme l installation ce jour-la
                 (`facilityClosure` de la fiche). Le bandeau et les deux gestes du CLUB
                 (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}
-            {event?.facilityClosure && canEdit ? (
+            {/* CRFERM (13/10, « D8 B ») : TOUS les membres lisent le bandeau ; un joueur, sans
+                les gestes ni le mot de la Ville (planche P8v4-fermee, état 3). */}
+            {event?.facilityClosure ? (
               <FacilityClosureBanner
                 closure={event.facilityClosure}
                 facilityType={event?.facility?.type}
-                onCancel={handleCancelEvent}
-                onMove={handleEditEvent}
+                onCancel={canEdit ? handleCancelEvent : undefined}
+                onMove={canEdit ? handleEditEvent : undefined}
+                pourUnMembre={!canEdit}
               />
             ) : null}
             {ligneDAttente ? (
@@ -9867,8 +9875,14 @@ function EventDetails({ navigation, route }) {
           >
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              enabled={!clavierAndroid.ecoute}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
-              style={[Alignments.fill, Alignments.justifyCenter, Spaces.paddingHorizontal[24]]}
+              style={[
+                Alignments.fill,
+                Alignments.justifyCenter,
+                Spaces.paddingHorizontal[24],
+                { paddingBottom: clavierAndroid.retrait },
+              ]}
             >
               <TouchableOpacity activeOpacity={1} onPress={() => null}>
                 <View
