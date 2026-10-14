@@ -86,6 +86,9 @@ function SearchHubScreen({ navigation, route }) {
   // ANNUAIRE-E1 (29/09) — l'annuaire du site pose `annuaire: true` : pas d'en-tête de l'app, et
   // une liste qui défile avec la page. Absent, rien ne change (le téléphone ne le pose jamais).
   const annuaire = route?.params?.annuaire === true;
+  // PAR-L4 (recette PAR-009) — « Chercher un club pour Anissa » : l'enfant venu de SA fiche
+  // (`MyChildren`) traverse la recherche jusqu'a la fiche club. Absent, rien ne change.
+  const childDocumentId = String(route?.params?.childDocumentId || '').trim() || undefined;
   const [activeType, setActiveType] = useState(requestedType);
   const [visitedTypes, setVisitedTypes] = useState(() => new Set([requestedType]));
   const [refreshSignals, setRefreshSignals] = useState({
@@ -204,6 +207,7 @@ function SearchHubScreen({ navigation, route }) {
       return (
         <ClubListContent
           annuaire={annuaire}
+          childDocumentId={childDocumentId}
           enableMapMode={enableMapMode}
           refreshSignal={refreshSignals.clubs}
           screenActive={activeType === 'clubs'}
@@ -271,6 +275,7 @@ function SearchHubScreen({ navigation, route }) {
     Colors,
     activeType,
     annuaire,
+    childDocumentId,
     enableMapMode,
     initialRecruitmentTab,
     refreshSignals,

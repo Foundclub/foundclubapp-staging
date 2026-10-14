@@ -569,12 +569,16 @@ describe('S02 — un club AVEC equipe garde exactement ses boutons d\'avant', ()
 // meme chantier (un temoin vert qui ne lisait pas le rendu).
 // ─────────────────────────────────────────────────────────────────────────────
 describe('PARENT P2 — la porte du parent sur la fiche club', () => {
-  it('P2/10 MOINS DE 13 ANS : le bouton est la, et il NOMME l enfant', () => {
+  it('P2/10 MOINS DE 13 ANS : le bouton est la (PAR-L4 : il ne nomme plus l enfant)', () => {
+    // 👶 PAR-L4 (13/10, design parent E10, recette PAR-009) — AVANT : « Demander à rejoindre au
+    // nom de Lea ». Le parent croyait que l'app choisissait l'enfant a sa place ; la porte dit
+    // desormais « pour un enfant », et la feuille demande « Pour quel enfant ? ».
     mockEnfantsDeclares = [{ age: 9, documentId: 'enf-1', firstname: 'Lea' }];
 
     const arbre = monter();
 
-    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Demander une place pour un enfant')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
   });
 
   it('P2/10 DEUX enfants de moins de 13 ans : le bouton n en nomme AUCUN', () => {
@@ -587,8 +591,8 @@ describe('PARENT P2 — la porte du parent sur la fiche club', () => {
 
     const arbre = monter();
 
-    expect(pressableAvecTexte(arbre, 'Demander à rejoindre pour mes enfants')).toBeDefined();
-    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
+    expect(pressableAvecTexte(arbre, 'Demander une place pour un enfant')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Demander une place pour Lea')).toBeUndefined();
   });
 
   it('P2/10 13 A 17 ANS : plus de bouton, mais l ecran EXPLIQUE pourquoi', () => {
@@ -596,7 +600,7 @@ describe('PARENT P2 — la porte du parent sur la fiche club', () => {
 
     const arbre = monter();
 
-    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
+    expect(pressableAvecTexte(arbre, 'Demander une place pour')).toBeUndefined();
     expect(texteDe(arbre.root)).toContain('ton enfant fait sa demande lui-même');
   });
 
@@ -605,14 +609,14 @@ describe('PARENT P2 — la porte du parent sur la fiche club', () => {
 
     const arbre = monter();
 
-    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
+    expect(pressableAvecTexte(arbre, 'Demander une place pour')).toBeUndefined();
     expect(texteDe(arbre.root)).not.toContain('ton enfant fait sa demande lui-même');
   });
 
   it('P2/10 sans aucun enfant declare, la fiche club ne change PAS', () => {
     const arbre = monter();
 
-    expect(texteDe(arbre.root)).not.toContain('Demander à rejoindre au nom de');
+    expect(texteDe(arbre.root)).not.toContain('Demander une place pour');
     expect(texteDe(arbre.root)).not.toContain('ton enfant fait sa demande lui-même');
   });
 });
