@@ -514,9 +514,18 @@ describe('COLL-C4B · le bandeau de la seance touchee par une fermeture', () => 
     alerte.mockRestore();
   });
 
-  test('un joueur ne lit pas le bandeau : c est au club de dire quoi faire (D16)', () => {
+  // CRFERM (13/10) — décision d'Adel « D8 B » (12/10), planche P8v4-fermee-tel état 3 : TOUS les
+  // membres voient la fermeture. Le joueur lit le bandeau SANS les deux gestes (c'est toujours au
+  // club de déplacer ou d'annuler, D16) et sans le mot de la Ville, avec la phrase qui lui dit ce
+  // qui va se passer. (Avant : « un joueur ne lit pas le bandeau ».) ROUGE avant le lot.
+  test('CRFERM-5/6 un joueur lit le bandeau SANS gestes ni mot de la Ville, avec ce qui va se passer', () => {
     const racine = monter({ auth: SPECTATEUR(), event: touchee() });
-    expect(parTestID(racine, 'bandeau-fermeture')).toHaveLength(0);
+    expect(parTestID(racine, 'bandeau-fermeture')).toHaveLength(1);
+    expect(contient(racine, 'L’installation est fermée ce jour-là')).toBe(true);
+    expect(contient(racine, 'Travaux. Ton club peut déplacer ou annuler la séance : tu seras prévenu·e.')).toBe(true);
+    expect(contient(racine, 'Réfection du sol')).toBe(false);
+    expect(boutonAvecTitre(racine, 'Changer l’heure ou le lieu')).toBeUndefined();
+    expect(boutonAvecTitre(racine, 'Annuler l’entraînement')).toBeUndefined();
   });
 
   test('sans fermeture, aucun bandeau', () => {
