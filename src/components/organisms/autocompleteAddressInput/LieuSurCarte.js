@@ -104,7 +104,8 @@ function LieuSurCarteOuvert({ onFermer, onLieuPose, premierResultat }) {
   // 🤖 ANDROIDBAR-4 — fenêtre translucide : sur Android 15 et 16, rien ne la remonte au-dessus
   // du clavier, qui recouvrait « Nom du lieu » et « Placer ici ». La carte rétrécit, le panneau
   // remonte ; il garde déjà la barre système (`insets.bottom + 16`) : pas comptée deux fois.
-  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(insets.bottom);
+  // 📱 CLAVIER-MODALES — sur iPhone non plus, rien ne la remonte : même retrait.
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(insets.bottom, { iPhone: true });
   const departTape = premierResultat
     ? { lat: premierResultat.lat, lng: premierResultat.lng, zoom: ZOOM_DE_LA_RUE }
     : null;

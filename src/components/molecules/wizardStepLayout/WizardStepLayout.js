@@ -6,7 +6,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Image,
-  KeyboardAvoidingView,
   Platform,
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -249,13 +248,15 @@ function WizardStepLayout({
         { paddingBottom: insets.bottom + 12 },
       ]}
       contentWidth={/** @type {any} */ ('readable')}
+      // 🤖 ANDROIDBAR-6 — l'évitement du clavier est celui du ScreenContainer (posé à
+      // l'écran, il connaît sa vraie position). Celui du gabarit vivait DANS le contenu,
+      // sous la barre d'état : son décalage 0 laissait « Suivant » 54 dp SOUS le clavier
+      // (mesuré le 14/10, Pixel 9, Android 16 : 1683 px pour un clavier à 1541), 59 pt sur
+      // iPhone 15. Témoin : __tests__/WizardStepLayoutANDROIDBAR6.clavier.test.js.
+      keyboardAvoiding
       responsivePadding
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-        style={[Alignments.fill]}
-      >
+      <View style={[Alignments.fill]}>
         <View style={[Alignments.fill]}>
           <View
             style={[
@@ -389,7 +390,7 @@ function WizardStepLayout({
             </TouchableOpacity>
           ) : null}
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenContainer>
   );
 }

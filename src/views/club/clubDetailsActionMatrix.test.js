@@ -48,25 +48,20 @@ describe('resolveClubDetailsActionMatrix', () => {
     });
   });
 
-  it('P2/10 DEMANDE DEJA PARTIE : la porte du parent s efface, elle ne fait pas doublon', () => {
-    // 🖥️ TROUVE SUR L EMULATEUR, le 2026-09-10, et invisible autrement : une
-    // fois l interet envoye, la fiche club affichait TROIS boutons portant le
-    // MEME libelle « Demande en attente » — le mien, plus les deux qui
-    // existaient. Ils empilaient quatre boutons flottants qui RECOUVRAIENT les
-    // informations du club (installations, sports), illisibles.
-    //
-    // La cause est nette : mon bouton envoie EXACTEMENT la meme demande que la
-    // porte d interet existante (`createClubArrivalInterestMutation`). Quand
-    // elle est deja partie, l autre porte le dit deja. La mienne n a plus rien
-    // a ajouter : elle s efface.
+  it('P2/10 DEMANDE DEJA PARTIE : PAR-L4, la porte du parent RESTE (la feuille le dit)', () => {
+    // 🖥️ AVANT (emulateur, 10/09) : une fois l interet envoye, la fiche montrait trois boutons
+    // au MEME libelle « Demande en attente » ; la porte du parent s effacait donc.
+    // 👶 PAR-L4 (13/10, design parent E10/E11) : elle dit « Demander une place pour un
+    // enfant » — plus de doublon de libelle — et elle RESTE : un enfant qui a deja une demande
+    // ici peut en faire une pour une autre equipe ; seule la paire equipe + enfant est bloquee,
+    // dans la feuille. Le drapeau `hasPendingChildInterest` n existe plus.
     expect(resolveClubDetailsActionMatrix({
       childrenUnder13Count: 1,
       clubHasTeams: true,
-      hasPendingChildInterest: true,
       isAuthenticated: true,
       minorChildrenCount: 1,
     })).toMatchObject({
-      showChildInterestAction: false,
+      showChildInterestAction: true,
     });
   });
 
