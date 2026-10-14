@@ -874,15 +874,24 @@ function SeasonSlotForm({
         />
       ))}
     </View>
-  ) : rangee(options.map((option) => (
-    <PuceDeChoix
-      actif={option.actif}
-      key={option.key}
-      libelle={option.libelleCourt || option.libelle}
-      onPress={option.onPress}
-      testID={option.testID}
-    />
-  ))));
+  ) : rangee(options.map((option) => {
+    const puce = (
+      <PuceDeChoix
+        actif={option.actif}
+        key={option.key}
+        libelle={option.libelleCourt || option.libelle}
+        onPress={option.onPress}
+        testID={option.testID}
+      />
+    );
+    if (!option.key.startsWith('jour-') || !option.detail) return puce;
+    return (
+      <View key={option.key} style={{ gap: 4, maxWidth: 160 }}>
+        {puce}
+        <Text style={[Fonts.p3, Fonts.warning500]}>{option.detail}</Text>
+      </View>
+    );
+  })));
 
   const saison = meta.season || null;
   const periode = saison
@@ -1227,7 +1236,7 @@ function SeasonSlotForm({
             // « Jours : oui » (Adel, 13/10, planche P4v4-attribuer 3/5) : un jour plein a
             // certaines heures le dit sous son nom (les mots de la planche P4v2).
             const ceJour = creneauxDuJour(lecture.data?.data, numero, slot?.documentId);
-            const pleines = tunnelPleinEcran ? fullRangesOfSlots(ceJour, capacite) : [];
+            const pleines = fullRangesOfSlots(ceJour, capacite);
             return {
               actif: numero === jour,
               avertissement: pleines.length > 0,

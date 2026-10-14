@@ -353,3 +353,31 @@ describe('COLL-R-A7-FINITIONS 4 — une lecture en échec peut être relancée',
     expect(mockShowBanner).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('COLL-R-A7-FINITIONS 7 — le panneau large nomme les heures complètes', () => {
+  const occupation = (documentId, startTime, endTime) => ({ documentId, weekday: 2, startTime, endTime });
+  const avecOccupation = () => {
+    /** @type {any} */ (listFacilitySeasonSlots).mockResolvedValue({
+      data: [occupation('a', '17:00', '19:00'), occupation('b', '18:00', '20:00')],
+      meta: { facility: { ...SALLE, plateaux: [] }, season: SAISON },
+    });
+  };
+
+  test('garde cinq étapes et les puces, avec complet 18:00 – 19:00 sous Mardi', async () => {
+    avecOccupation();
+    const arbre = await monter({ pleinEcran: false });
+    await choisir(arbre, 'Montrivage Basket');
+    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Suivant');
+    const mardi = choix(arbre, 'Mar.');
+    expect(mardi).toBeDefined();
+    expect(mardi.parent.parent.findAllByType(Text).some((n) => texte(n) === 'complet 18:00 – 19:00')).toBe(true);
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n) === 'Étape 3/5')).toBe(true);
+  });
+
+  test('ne compte pas le créneau modifié parmi les occupations', async () => {
+    avecOccupation();
+    const arbre = await monter({ pleinEcran: false, slot: { ...CRENEAU, documentId: 'a' } });
+    expect(arbre.root.findAllByType(Text).some((n) => texte(n).startsWith('complet '))).toBe(false);
+  });
+});
