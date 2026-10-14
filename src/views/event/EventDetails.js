@@ -73,6 +73,7 @@ import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
@@ -8228,6 +8229,15 @@ function EventDetails({ navigation, route }) {
                 (P4v3-fermer-tel ecran 5) ; rien n est annule a sa place. */}
             {/* CRFERM (13/10, « D8 B ») : TOUS les membres lisent le bandeau ; un joueur, sans
                 les gestes ni le mot de la Ville (planche P8v4-fermee, état 3). */}
+            {/* COLL-R-DEPLACER (14/10, « D9 = b ») : la proposition de la Ville, AU-DESSUS du
+                bandeau (planche P5v4-deplacer-ville-tel écran 5 b) ; le serveur ne la rend qu'à qui
+                peut déplacer la séance. */}
+            {canEdit && event?.relocationProposal ? (
+              <RelocationProposalCard
+                onChooseOther={() => handleMoveEvent(event.relocationProposal?.documentId)}
+                proposal={event.relocationProposal}
+              />
+            ) : null}
             {event?.facilityClosure ? (
               <FacilityClosureBanner
                 closure={event.facilityClosure}

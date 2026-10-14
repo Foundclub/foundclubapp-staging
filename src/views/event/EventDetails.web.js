@@ -35,6 +35,7 @@ import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
+import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
   peutRelireSaNote,
@@ -2462,6 +2463,15 @@ function EventDetails({ navigation, route }) {
                   fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses
                   deux gestes pour qui peut modifier la séance ; un joueur lit le bandeau seul. La
                   fiche du site n en disait rien (écart de parité). */}
+              {/* COLL-R-DEPLACER (14/10, « D9 = b », planche P5v4-deplacer-ordi état D) : la
+                  proposition de la Ville, au-dessus du bandeau, pour qui peut déplacer la
+                  séance. */}
+              {canEdit && event?.relocationProposal ? (
+                <RelocationProposalCard
+                  onChooseOther={() => ouvrirDeplacer(event.relocationProposal?.documentId)}
+                  proposal={event.relocationProposal}
+                />
+              ) : null}
               {event?.facilityClosure ? (
                 <FacilityClosureBanner
                   closure={event.facilityClosure}
