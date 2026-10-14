@@ -288,24 +288,10 @@ describe('ANDROIDBAR-4 — assistant de convocation : Android 15 et 16, clavier 
   });
 });
 
-describe('ANDROIDBAR-4 — caractérisation : iPhone et Android ≤ 14 ne bougent pas', () => {
-  it('iPhone : aucun retrait, clavier fermé comme ouvert (pied : barre + 10)', async () => {
-    telephone('ios', '18.0', 34);
-    const arbre = ouvrirLAssistant();
-    expect(retraitDeLaRacine(arbre)).toBe(0);
-
-    await act(async () => {
-      DeviceEventEmitter.emit('keyboardWillShow', {
-        duration: 0,
-        easing: 'keyboard',
-        endCoordinates: {
-          height: 336, screenX: 0, screenY: 852 - 336, width: 393,
-        },
-      });
-    });
-    expect(retraitDeLaRacine(arbre)).toBe(0);
-  });
-
+// 📱 CLAVIER-MODALES (13/10) — l'iPhone ne fait plus partie de cette caractérisation : sur
+// iPhone, le clavier recouvrait « Envoyer la convocation » (vu par Adel, 2.6.75), le pied le suit
+// désormais. Témoin : ConvocationWizardCLAVMOD.iphone.test.js.
+describe('ANDROIDBAR-4 — caractérisation : Android ≤ 14 ne bouge pas', () => {
   it.each([30, 34])('Android API %s : aucun retrait (la fenêtre rétrécit seule)', async (api) => {
     telephone('android', api, 0);
     const arbre = ouvrirLAssistant();
