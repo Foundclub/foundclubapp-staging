@@ -300,6 +300,92 @@ export const prixDuTerrainPublic = (t, terrain) => {
 };
 
 /**
+ * Le prix d'un terrain sur la page du complexe, en deux lignes (RA2, A-G28) : « 60 € le créneau »
+ * puis « soit 6 € par joueur à 10, à régler sur place » ; « par joueur » puis le prix du terrain
+ * plein. Plusieurs tarifs (`price.min < price.max`) : « dès … ». Jamais un total à payer (D4).
+ * @param {Traduire} t - Traduction.
+ * @param {{ capacity?: number | null, price?: { max?: number, min?: number, unit?: string }
+ *   | null }} terrain - Le terrain public.
+ * @returns {{ principal: string, secondaire: string } | null} Les deux lignes, ou null.
+ */
+export const lignesDuTerrainPublic = (t, terrain) => {
+  const prix = terrain?.price;
+  if (!prix || !Number.isFinite(Number(prix.min))) return null;
+  const lignes = lignesDePrix(t, {
+    basePrice: Number(prix.min),
+    capacity: Number(terrain?.capacity) > 0 ? Number(terrain?.capacity) : null,
+    priceUnit: prix.unit === 'joueur' ? 'joueur' : 'creneau',
+  });
+  if (!lignes) return null;
+  const principal = Number(prix.max) > Number(prix.min)
+    ? t('reserverTerrain.prix.des', 'dès {{prix}}', { prix: lignes.principal, ...SANS_ECHAPPEMENT })
+    : lignes.principal;
+  const secondaire = lignes.secondaire
+    ? t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
+      prix: lignes.secondaire,
+      ...SANS_ECHAPPEMENT,
+    })
+    : t('reserverTerrain.prix.aReglerSurPlace', 'à régler sur place');
+  return { principal, secondaire };
+};
+
+/**
+ * Les horaires d'accueil d'un complexe (`openingHours` : `[{ day 1-7, ranges [{ from, to }] }]`),
+ * en lignes : les jours qui se suivent avec les mêmes heures vont ensemble (« Lundi – Vendredi »,
+ * « 17 h – 23 h »).
+ * @param {Traduire} t - Traduction.
+ * @param {unknown} horaires - Les horaires du complexe.
+ * @returns {Array<{ heures: string, jours: string }>} Les lignes.
+ */
+export const horairesLisibles = (t, horaires) => {
+  const jours = nomsDesJours(t);
+  // 1 = lundi … 7 = dimanche ; `nomsDesJours` commence au dimanche.
+  const nomDuJourIso = (/** @type {number} */ jour) => jours[jour % 7];
+  const lignes = (Array.isArray(horaires) ? horaires : [])
+    .filter((jour) => Number.isInteger(jour?.day) && jour.day >= 1 && jour.day <= 7)
+    .sort((a, b) => a.day - b.day)
+    .map((jour) => ({
+      day: jour.day,
+      heures: (Array.isArray(jour.ranges) ? jour.ranges : [])
+        .map((/** @type {any} */ plage) => texteCreneau(plage?.from, plage?.to))
+        .filter(Boolean)
+        .join(', '),
+    }))
+    .filter((jour) => jour.heures);
+  /** @type {Array<{ debut: number, fin: number, heures: string }>} */
+  const groupes = [];
+  lignes.forEach((jour) => {
+    const dernier = groupes[groupes.length - 1];
+    if (dernier && dernier.heures === jour.heures && dernier.fin === jour.day - 1) {
+      dernier.fin = jour.day;
+    } else {
+      groupes.push({ debut: jour.day, fin: jour.day, heures: jour.heures });
+    }
+  });
+  return groupes.map((groupe) => ({
+    heures: groupe.heures,
+    jours: groupe.debut === groupe.fin
+      ? nomDuJourIso(groupe.debut)
+      : `${nomDuJourIso(groupe.debut)} – ${nomDuJourIso(groupe.fin)}`,
+  }));
+};
+
+/**
+ * Le délai d'annulation d'un complexe en mots (E-P02 bloc « Règles », E-P04).
+ * @param {Traduire} t - Traduction.
+ * @param {unknown} heures - `cancellationDelayHours` (0 à 48).
+ * @returns {string} « Annulation gratuite jusqu'à 24 h avant ».
+ */
+export const texteAnnulation = (t, heures) => (Number(heures) > 0
+  ? t('reserverTerrain.regles.annulation', 'Annulation gratuite jusqu’à {{heures}} h avant', {
+    heures: Number(heures),
+  })
+  : t(
+    'reserverTerrain.regles.annulationJusquauDebut',
+    'Annulation gratuite jusqu’au début du créneau',
+  ));
+
+/**
  * Un numéro français lisible : « +33639981234 » ⇒ « 06 39 98 12 34 » (le serveur garde le format
  * E.164). Un numéro étranger ou inattendu reste tel quel.
  * @param {unknown} numero - Le numéro.
@@ -440,6 +526,51 @@ export const varianteDeLaReservation = (reservation, contexte = {}) => {
 };
 
 /**
+ * Le jour et l'heure de Paris d'un instant (une échéance, une date de création).
+ * @param {unknown} instant - L'instant (ISO).
+ * @returns {{ date: string, heure: string } | null} « AAAA-MM-JJ » et « HH:MM », ou null.
+ */
+export const dateEtHeureDeParis = (instant) => {
+  if (!instant) return null;
+  const quand = new Date(String(instant));
+  if (Number.isNaN(quand.getTime())) return null;
+  const parts = getZonedDateParts(quand, 'Europe/Paris');
+  return {
+    date: `${parts.year}-${deuxChiffres(parts.month)}-${deuxChiffres(parts.day)}`,
+    heure: `${deuxChiffres(parts.hour)}:${deuxChiffres(parts.minute)}`,
+  };
+};
+
+/**
+ * L'état AFFICHÉ d'une réservation (P00 bloc 4, plan §1.2) : ceux du serveur, et « jouée » pour une
+ * confirmée dont le créneau est fini. « Non honorée » viendra avec le serveur L2B ; « en collecte »
+ * et « non aboutie » avec L3.
+ * @param {{ cancelledBy?: string | null, endsAt?: string | null, status?: string | null }
+ *   | null | undefined} reservation - La réservation vue par son réserveur.
+ * @param {Date} [maintenant] - L'instant de référence.
+ * @returns {string} `enAttente | confirmee | jouee | refusee | sansReponse | annuleeParToi |
+ *   annuleeParLeComplexe`, ou ''.
+ */
+export const etatAffiche = (reservation, maintenant = new Date()) => {
+  switch (reservation?.status) {
+    case 'annulee':
+      return reservation?.cancelledBy === 'reserveur' ? 'annuleeParToi' : 'annuleeParLeComplexe';
+    case 'confirmee': {
+      const fin = new Date(String(reservation?.endsAt || '')).getTime();
+      return Number.isFinite(fin) && fin <= maintenant.getTime() ? 'jouee' : 'confirmee';
+    }
+    case 'en_attente':
+      return 'enAttente';
+    case 'refusee':
+      return 'refusee';
+    case 'sans_reponse':
+      return 'sansReponse';
+    default:
+      return '';
+  }
+};
+
+/**
  * Le texte d'un détail du refus (le numéro du complexe, l'âge minimum, le plafond).
  * @param {any} erreur - Le refus.
  * @returns {Record<string, any>} Ses détails.
@@ -447,6 +578,42 @@ export const varianteDeLaReservation = (reservation, contexte = {}) => {
 const detailsDe = (erreur) => (
   erreur?.details && typeof erreur.details === 'object' ? erreur.details : {}
 );
+
+/** Les détails d'un refus qui peuvent voyager jusqu'à E-P13 (liste blanche ; jamais `reason`). */
+const DETAILS_PERMIS = Object.freeze(['code', 'max', 'minAge', 'phone']);
+
+/**
+ * Les paramètres de route de E-P13 : la variante, le refus du serveur réduit à ce que l'écran
+ * affiche (code, détails permis, phrase), le créneau et le complexe. Des valeurs simples
+ * seulement (les paramètres de route se sérialisent). ⛔ RC-P08 : la raison privée d'un
+ * bannissement (`details.reason`) ne part jamais.
+ * @param {{ complexe?: string | null, creneau?: { from?: string, to?: string } | null,
+ *   date?: string | null, erreur?: any, slug?: string | null, telephone?: string | null,
+ *   terrain?: { documentId?: string, name?: string } | null, variante: string }} source - Ce
+ *   que l'écran sait.
+ * @returns {Record<string, any>} Les paramètres.
+ */
+export const parametresDEchec = (source) => {
+  const detailsBruts = detailsDe(source?.erreur);
+  const details = Object.fromEntries(Object.entries(detailsBruts).filter(([cle, valeur]) => (
+    DETAILS_PERMIS.includes(cle) && valeur !== undefined && valeur !== null
+  )));
+  const message = source?.variante === 'banni' ? '' : String(source?.erreur?.message || '').trim();
+  const params = {
+    complexe: source?.complexe ? String(source.complexe) : undefined,
+    date: source?.date || undefined,
+    details: Object.keys(details).length ? details : undefined,
+    from: source?.creneau?.from || undefined,
+    message: message || undefined,
+    slug: source?.slug || undefined,
+    telephone: source?.telephone || undefined,
+    terrain: source?.terrain?.name || undefined,
+    terrainId: source?.terrain?.documentId || undefined,
+    to: source?.creneau?.to || undefined,
+    variante: source.variante,
+  };
+  return Object.fromEntries(Object.entries(params).filter(([, valeur]) => valeur !== undefined));
+};
 
 /**
  * Le contenu d'une variante de E-P13 (même gabarit : pictogramme, titre, texte, boutons). Les

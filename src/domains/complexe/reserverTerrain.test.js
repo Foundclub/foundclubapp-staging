@@ -1,15 +1,21 @@
 import {
   ajouterJours,
   contenuDEchec,
+  dateEtHeureDeParis,
   demandeDeReservation,
+  etatAffiche,
   filtresDeRecherche,
+  horairesLisibles,
   jourDeParis,
   libelleEtatDuCreneau,
   libelleModeJoueur,
+  lignesDuTerrainPublic,
   numeroLisible,
+  parametresDEchec,
   prixDuCreneau,
   prixDuTerrainPublic,
   quatorzeJours,
+  texteAnnulation,
   texteCreneau,
   texteJourCourt,
   texteJourLong,
@@ -107,6 +113,48 @@ describe('les mots d’un créneau, du mode, du prix (P00 blocs 3 et 5, RA2)', (
     expect(numeroLisible('0639981234')).toBe('06 39 98 12 34');
     expect(numeroLisible('+41 22 123 45 67')).toBe('+41 22 123 45 67');
     expect(numeroLisible(null)).toBe('');
+  });
+
+  it('le prix d’un terrain en deux lignes (RA2) : le créneau et la part d’un joueur', () => {
+    expect(lignesDuTerrainPublic(t, {
+      capacity: 10, price: { max: 60, min: 60, unit: 'creneau' },
+    })).toEqual({
+      principal: '60 € le créneau',
+      secondaire: 'soit 6 € par joueur à 10, à régler sur place',
+    });
+    expect(lignesDuTerrainPublic(t, {
+      capacity: 4, price: { max: 8, min: 6, unit: 'joueur' },
+    })).toEqual({
+      principal: 'dès 6 € par joueur',
+      secondaire: '24 € pour 4 joueurs, à régler sur place',
+    });
+    const sansJoueurs = { capacity: null, price: { max: 40, min: 40, unit: 'creneau' } };
+    expect(lignesDuTerrainPublic(t, sansJoueurs))
+      .toEqual({ principal: '40 € le créneau', secondaire: 'à régler sur place' });
+    expect(lignesDuTerrainPublic(t, { capacity: 10, price: null })).toBeNull();
+  });
+
+  it('les horaires d’accueil : les jours qui se suivent avec les mêmes heures, ensemble', () => {
+    expect(horairesLisibles(t, [
+      { day: 1, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 2, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 3, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 4, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 5, ranges: [{ from: '17:00', to: '23:00' }] },
+      { day: 6, ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '22:00' }] },
+      { day: 7, ranges: [{ from: '09:00', to: '12:00' }, { from: '14:00', to: '22:00' }] },
+    ])).toEqual([
+      { heures: '17 h – 23 h', jours: 'Lundi – Vendredi' },
+      { heures: '9 h – 12 h, 14 h – 22 h', jours: 'Samedi – Dimanche' },
+    ]);
+    expect(horairesLisibles(t, [{ day: 3, ranges: [{ from: '10:00', to: '12:00' }] }]))
+      .toEqual([{ heures: '10 h – 12 h', jours: 'Mercredi' }]);
+    expect(horairesLisibles(t, null)).toEqual([]);
+  });
+
+  it('le délai d’annulation du complexe, en mots', () => {
+    expect(texteAnnulation(t, 24)).toBe('Annulation gratuite jusqu’à 24 h avant');
+    expect(texteAnnulation(t, 0)).toBe('Annulation gratuite jusqu’au début du créneau');
   });
 
   it('une distance en kilomètres', () => {
@@ -227,6 +275,67 @@ describe('les refus du serveur, NOMMÉS (E-P13)', () => {
     expect(tard.titre).toBe('Trop tard pour réserver ici : appelle le complexe.');
     expect(tard.telephone).toBe('+33639981234');
     expect(tard.actions).toEqual(['appeler']);
+  });
+});
+
+describe('l’état AFFICHÉ d’une réservation (P00 bloc 4) et l’heure de Paris', () => {
+  const maintenant = new Date('2026-10-14T08:00:00Z');
+
+  it('les états du serveur, et « Jouée » quand une confirmée est passée', () => {
+    const etat = (/** @type {any} */ r) => etatAffiche(r, maintenant);
+    expect(etat({ endsAt: '2026-10-16T17:00:00Z', status: 'en_attente' })).toBe('enAttente');
+    expect(etat({ endsAt: '2026-10-16T17:00:00Z', status: 'confirmee' })).toBe('confirmee');
+    expect(etat({ endsAt: '2026-10-13T17:00:00Z', status: 'confirmee' })).toBe('jouee');
+    expect(etat({ status: 'refusee' })).toBe('refusee');
+    expect(etat({ status: 'sans_reponse' })).toBe('sansReponse');
+    expect(etat({ cancelledBy: 'reserveur', status: 'annulee' })).toBe('annuleeParToi');
+    expect(etat({ cancelledBy: 'complexe', status: 'annulee' })).toBe('annuleeParLeComplexe');
+  });
+
+  it('le jour et l’heure de Paris d’un instant', () => {
+    expect(dateEtHeureDeParis('2026-10-16T14:00:00.000Z'))
+      .toEqual({ date: '2026-10-16', heure: '16:00' });
+    expect(dateEtHeureDeParis('2026-10-13T22:30:00.000Z'))
+      .toEqual({ date: '2026-10-14', heure: '00:30' });
+    expect(dateEtHeureDeParis(null)).toBeNull();
+  });
+});
+
+describe('les paramètres de E-P13 (ce que l’écran des échecs doit savoir)', () => {
+  it('la variante, le refus du serveur (code, détails, phrase), le créneau et le complexe', () => {
+    expect(parametresDEchec({
+      complexe: 'Le Five de Montrivage',
+      creneau: { from: '18:00', to: '19:00' },
+      date: '2026-10-14',
+      erreur: {
+        details: { code: 'COMPLEXE_RESERVATION_PLAFOND', max: 2 }, message: 'm', status: 409,
+      },
+      slug: 'le-five',
+      telephone: '+33639981234',
+      terrain: { documentId: 't-1', name: 'Terrain 1' },
+      variante: 'plafond',
+    })).toEqual({
+      complexe: 'Le Five de Montrivage',
+      date: '2026-10-14',
+      details: { code: 'COMPLEXE_RESERVATION_PLAFOND', max: 2 },
+      from: '18:00',
+      message: 'm',
+      slug: 'le-five',
+      telephone: '+33639981234',
+      terrain: 'Terrain 1',
+      terrainId: 't-1',
+      to: '19:00',
+      variante: 'plafond',
+    });
+  });
+
+  it('⛔ RC-P08 : jamais la raison privée d’un bannissement dans les paramètres', () => {
+    const params = parametresDEchec({
+      erreur: { details: { code: 'COMPLEXE_RESERVATION_BANNED', reason: 'secret', until: null } },
+      variante: 'banni',
+    });
+    expect(JSON.stringify(params)).not.toContain('secret');
+    expect(params).toEqual({ details: { code: 'COMPLEXE_RESERVATION_BANNED' }, variante: 'banni' });
   });
 });
 

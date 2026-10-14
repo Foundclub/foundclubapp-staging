@@ -53,7 +53,7 @@ const Stack = createStackNavigator();
 
 // RESA-L5A1 (13/10/2026) — l'interrupteur du gérant de complexe. Lu par `require` : un `import`
 // ici ferait se contredire les deux règles d'ordre des imports (import/order et perfectionist).
-const { COMPLEXES_GERANT } = require('@/config/fonctionsMasquees');
+const { COMPLEXES_GERANT, COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
 
 /**
  *
@@ -1464,6 +1464,41 @@ function PrivateNavigator() {
             getComponent={() => require('@/views/complexe/ComplexeFermetures').default}
             name={RouteNames.ComplexeFermetures}
             options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* RESA-L6A (14/10/2026) — le joueur (chantier Réservation) : ses écrans ne sont DÉCLARÉS
+            que si l'interrupteur `COMPLEXES_JOUEUR` est allumé (éteint : aucune porte, aucun lien
+            ne les atteint). La recherche (E-P01) est le panneau « Réservations » de SearchHub.
+            E-P02 — la page du complexe. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverComplexe').default}
+            name={RouteNames.ReserverComplexe}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P03 — choisir un créneau. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverCreneau').default}
+            name={RouteNames.ReserverCreneau}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P04 — le récapitulatif. */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverRecapitulatif').default}
+            name={RouteNames.ReserverRecapitulatif}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
+        {/* E-P05 — le résultat : pas d'en-tête de retour (il ne ramène pas au récapitulatif). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverResultat').default}
+            name={RouteNames.ReserverResultat}
+            options={{ headerShown: false }}
           />
         ) : null}
 
