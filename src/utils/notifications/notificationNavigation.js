@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { destinationDuGerant, TYPE_DU_GERANT } from '@/domains/complexe/notificationsDuComplexe';
+
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -640,6 +642,12 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
         route: RouteNames.FriendlyMatchAdDetails,
       }
       : null);
+  }
+
+  // RESA-L5A2 (14/10/2026) — le gerant de complexe (contrat L2A : aucun ctaRoute ; l'app aiguille
+  // par type, data.change et reservationId). Eteint avec COMPLEXES_GERANT : aucune destination.
+  if (type === TYPE_DU_GERANT) {
+    return adaptDestinationForCurrentPlatform(payload, destinationDuGerant(payload));
   }
 
   switch (type) {

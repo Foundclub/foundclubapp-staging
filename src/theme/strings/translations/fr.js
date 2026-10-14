@@ -7197,6 +7197,9 @@ export default {
       fermeture: 'Fermeture',
       indisponible: 'Terrain indisponible',
     },
+    notifications: {
+      modeComplexe: 'Mode complexe',
+    },
     planning: {
       a11y: '{{terrain}}, {{plage}}, {{etat}}',
       aucunCreneau: 'Aucun créneau ce jour-là.',

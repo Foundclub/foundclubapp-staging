@@ -6756,6 +6756,9 @@ export default {
       fermeture: 'Closure',
       indisponible: 'Court unavailable',
     },
+    notifications: {
+      modeComplexe: 'Venue mode',
+    },
     planning: {
       a11y: '{{terrain}}, {{plage}}, {{etat}}',
       aucunCreneau: 'No slot that day.',

@@ -1,11 +1,14 @@
 /* eslint-disable global-require */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useRoute } from '@react-navigation/native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
 import { totalDesPages } from '@/domains/complexe/complexeReservation';
+import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
 import useTheme from '@/theme/themeContext';
 
@@ -39,6 +42,12 @@ function ComplexeTabNavigator() {
     route?.params
   );
   const { unreadCount } = useUnreadMessages();
+  const { userData } = useAuth();
+  // RESA-L5A2 (planche RB, état 4) : ouvrir l'espace (par la bascule, « Mon compte » ou une
+  // notification du complexe reçue en mode joueur) repasse le téléphone en mode complexe.
+  useEffect(() => {
+    ecrireModeComplexe(userData?.documentId, true);
+  }, [userData?.documentId]);
   const { complexeId } = useComplexeChoisi(params?.complexeId);
   const enAttente = useReservationsDuComplexe(complexeId, { vue: 'demandes' });
   const demandes = totalDesPages(enAttente.data) || 0;

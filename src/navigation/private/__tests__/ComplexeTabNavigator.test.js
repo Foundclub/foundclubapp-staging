@@ -69,3 +69,19 @@ describe('RESA-L5A1 RB — le gérant n’existe que si l’interrupteur est all
     expect(source).toContain('|| initialRouteName === RouteNames.ComplexeEspace');
   });
 });
+
+describe('RESA-L5A2 RB état 4 — la notification du complexe, en mode joueur', () => {
+  it('l’espace, une fois ouvert (par une notification aussi), repasse en mode complexe', () => {
+    const source = lire('ComplexeTabNavigator.js');
+    expect(source).toContain('ecrireModeComplexe(userData?.documentId, true)');
+  });
+
+  it('la liste des notifications porte la pastille « Mode complexe »', () => {
+    const liste = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'views', 'notification', 'NotificationList.js'),
+      'utf8',
+    );
+    expect(liste).toContain('estNotificationDuComplexe(notification.type)');
+    expect(liste).toContain('<PastilleModeComplexe />');
+  });
+});
