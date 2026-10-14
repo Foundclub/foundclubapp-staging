@@ -182,6 +182,7 @@ export const statusLine = (registration) => {
   return { key: 'childEventRegistration.status.pending', params: { firstname }, tone: 'waiting' };
 };
 
+/** @type {Record<string, string>} */
 const ERROR_KEY_BY_CODE = {
   ALREADY_PENDING: 'childEventRegistration.result.refused.ALREADY_PENDING',
   EVENT_INACTIVE: `${BLOCKED}.cancelled`,
