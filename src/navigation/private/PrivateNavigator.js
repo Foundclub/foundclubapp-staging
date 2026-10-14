@@ -403,22 +403,9 @@ function PrivateNavigator() {
             headerTitle: '',
           }}
         />
-        <Stack.Screen
-          getComponent={() => require('@/views/reservation/MissingPlayersView').default}
-          name={RouteNames.MissingPlayersView}
-          options={{
-            ...commonOptions,
-            headerTitle: t('privateNavigator.headers.missingPlayers', 'Joueurs recherchés'),
-          }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/booking/BookingCalendar').default}
-          name={RouteNames.BookingCalendar}
-          options={{
-            ...commonOptions,
-            headerTitle: t('privateNavigator.headers.bookSlot', 'Réserver un créneau'),
-          }}
-        />
+        {/* RESA-L6A (14/10/2026) — BookingCalendar et MissingPlayersView ne sont plus déclarés
+            sur le téléphone : aucun bouton, lien ni notification n'y menait (code mort, retiré).
+            Le site garde leurs jumeaux .web.js (web/src/routes/screenRegistry.tsx). */}
         <Stack.Screen
           getComponent={() => require('@/views/multisportClub/MultisportClubDetails').default}
           name={RouteNames.MultisportClubDetails}

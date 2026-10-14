@@ -227,6 +227,12 @@ const MOBILE_ONLY_SCREENS = {
  * aucun code existant se supprime, il ne s'exempte pas.
  */
 const UNREGISTERED_WEB_PATTERNS = {
+  // RESA-L6A (14/10/2026) — les écrans téléphone étaient morts (aucune porte) et sont retirés ; le
+  // site sert toujours BookingCalendar.web.js et MissingPlayersView.web.js à ces adresses.
+  [RouteNames.BookingCalendar]:
+    'RESA-L6A : website-only screen (BookingCalendar.web.js); the dead phone screen was removed',
+  [RouteNames.MissingPlayersView]:
+    'RESA-L6A : website-only screen (MissingPlayersView.web.js); the dead phone screen was removed',
   // ReservationEdit.web.js existe et est explicitement une variante web (adaptateur vers
   // EventEdit). Il n'a jamais ete branche dans une stack.
   [RouteNames.ReservationEdit]:

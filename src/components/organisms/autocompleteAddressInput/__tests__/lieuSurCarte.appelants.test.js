@@ -17,6 +17,8 @@ import path from 'path';
 // source : un appelant qui s'ajoute ou change d'avis doit changer cette liste, consciemment.
 // RESA-L5A1 (13/10) : 31 — « Devenir gérant » (E-G01) enregistre l'adresse d'un complexe, un lieu
 // PUBLIC (sa page est publique, il est sur la carte), comme l'adresse d'un club.
+// RESA-L6A (14/10) : 32 — la recherche de terrains (E-P01) choisit une VILLE autour de laquelle
+// chercher : un filtre « autour de… », il n'enregistre rien ⇒ sans le lien (dernier témoin).
 
 const SRC = path.resolve(__dirname, '..', '..', '..', '..');
 // Le champ lui-même (et ses témoins) n'est pas un appelant.
@@ -68,8 +70,8 @@ const usagesDe = (/** @type {string} */ fichier) => {
 };
 
 describe('ADRESSE-CARTE — le lien « Placez-la sur la carte » : où il est, où jamais', () => {
-  it('la carte des appelants tient toujours (31 fichiers montent le champ)', () => {
-    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(31);
+  it('la carte des appelants tient toujours (32 fichiers montent le champ)', () => {
+    expect(appelants().filter((f) => !f.startsWith(LE_CHAMP)).length).toBe(32);
   });
 
   it.each(LIEU_PUBLIC)('%s : le champ qui enregistre un lieu PUBLIC propose le lien', (fichier) => {
