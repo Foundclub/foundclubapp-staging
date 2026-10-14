@@ -9,6 +9,10 @@ import {
   NOTIFICATION_TYPES,
 } from '@/utils/notifications/notificationTypes';
 
+// RESA-L6A (14/10/2026) — l'interrupteur de la réservation côté joueur, lu par `require` comme dans
+// PrivateNavigator.js (les deux règles d'ordre des imports se contredisent sur `@/config`).
+const { COMPLEXES_JOUEUR } = require('@/config/fonctionsMasquees');
+
 /**
  * @typedef {Record<string, unknown> & {
  *  type?: string,
@@ -640,6 +644,26 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
         route: RouteNames.FriendlyMatchAdDetails,
       }
       : null);
+  }
+
+  // RESA-L6A (14/10/2026) — la réservation d'un terrain de complexe, côté joueur (N-14 à N-19) : le
+  // serveur n'envoie aucun ctaRoute (contrat L2A) ; on aiguille par le type, `change` et
+  // `reservationId` vers « Ma réservation » (E-P07), qui porte l'en-tête d'échec d'une réservation
+  // refusée ou annulée. Interrupteur COMPLEXES_JOUEUR éteint : l'écran n'est pas déclaré, on ne
+  // navigue pas. Témoin : views/reserverTerrain/__tests__/EP07.notification.test.js.
+  if (type === NOTIFICATION_TYPES.COMPLEXE_RESERVATION_JOUEUR) {
+    const reservationId = toSafeString(payload.reservationId).trim();
+    if (!COMPLEXES_JOUEUR || !reservationId) return null;
+    const change = toSafeString(payload.change).trim();
+    const fermeture = toSafeString(payload.closureLabel).trim();
+    return adaptDestinationForCurrentPlatform(payload, {
+      params: {
+        ...(change ? { change } : {}),
+        ...(change === 'fermeture' && fermeture ? { fermeture } : {}),
+        reservationId,
+      },
+      route: RouteNames.ReserverMaReservation,
+    });
   }
 
   switch (type) {

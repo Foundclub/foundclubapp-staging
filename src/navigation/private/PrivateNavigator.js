@@ -1486,6 +1486,14 @@ function PrivateNavigator() {
             options={{ ...commonOptions, headerTitle: '' }}
           />
         ) : null}
+        {/* E-P07 — la fiche de ma réservation (aussi ouverte par complexeReservationJoueur). */}
+        {COMPLEXES_JOUEUR ? (
+          <Stack.Screen
+            getComponent={() => require('@/views/reserverTerrain/ReserverMaReservation').default}
+            name={RouteNames.ReserverMaReservation}
+            options={{ ...commonOptions, headerTitle: '' }}
+          />
+        ) : null}
 
       </Stack.Navigator>
     </HistoryWizardProvider>

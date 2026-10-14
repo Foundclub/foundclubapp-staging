@@ -9,7 +9,9 @@ import {
   jourDeParis,
   libelleEtatDuCreneau,
   libelleModeJoueur,
+  lienAgendaGoogle,
   lignesDuTerrainPublic,
+  momentLisible,
   numeroLisible,
   parametresDEchec,
   prixDuCreneau,
@@ -298,6 +300,30 @@ describe('l’état AFFICHÉ d’une réservation (P00 bloc 4) et l’heure de P
     expect(dateEtHeureDeParis('2026-10-13T22:30:00.000Z'))
       .toEqual({ date: '2026-10-14', heure: '00:30' });
     expect(dateEtHeureDeParis(null)).toBeNull();
+  });
+});
+
+describe('un moment lisible, l’agenda (E-P07)', () => {
+  it('« 16/10 » et « 18 h » à Paris', () => {
+    expect(momentLisible('2026-10-16T16:00:00.000Z')).toEqual({ heure: '18 h', jour: '16/10' });
+    expect(momentLisible('2026-10-12T19:04:00.000Z')).toEqual({ heure: '21 h 04', jour: '12/10' });
+    expect(momentLisible('')).toBeNull();
+  });
+
+  it('le lien Google Agenda d’une réservation (heures en UTC)', () => {
+    const lien = lienAgendaGoogle({
+      debut: '2026-10-16T16:00:00.000Z',
+      details: 'Réservé sur FoundClub',
+      fin: '2026-10-16T17:00:00.000Z',
+      lieu: '12 allée des Sports, Montrivage',
+      titre: 'Terrain 1 · Le Five de Montrivage',
+    });
+    expect(lien).toBe('https://calendar.google.com/calendar/render?action=TEMPLATE'
+      + '&text=Terrain%201%20%C2%B7%20Le%20Five%20de%20Montrivage'
+      + '&dates=20261016T160000Z/20261016T170000Z'
+      + '&details=R%C3%A9serv%C3%A9%20sur%20FoundClub'
+      + '&location=12%20all%C3%A9e%20des%20Sports%2C%20Montrivage');
+    expect(lienAgendaGoogle({ debut: 'x', fin: null, titre: 't' })).toBeNull();
   });
 });
 

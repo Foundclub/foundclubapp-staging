@@ -542,6 +542,56 @@ export const dateEtHeureDeParis = (instant) => {
 };
 
 /**
+ * Un moment lisible, à Paris : « 16/10 » et « 18 h » (« Gratuit jusqu'au 15/10 à 18 h »).
+ * @param {unknown} instant - L'instant (ISO).
+ * @returns {{ heure: string, jour: string } | null} Le jour et l'heure, ou null.
+ */
+export const momentLisible = (instant) => {
+  const lu = dateEtHeureDeParis(instant);
+  if (!lu) return null;
+  const [, mois, jour] = lu.date.split('-');
+  return { heure: texteHeure(lu.heure), jour: `${jour}/${mois}` };
+};
+
+/**
+ * @typedef {{ debut: unknown, details?: string, fin: unknown, lieu?: string, titre: string }}
+ *   RendezVous
+ */
+
+/**
+ * Un instant au format de Google Agenda : « 20261016T160000Z » (UTC).
+ * @param {unknown} instant - L'instant (ISO).
+ * @returns {string | null} Le texte, ou null.
+ */
+const instantPourAgenda = (instant) => {
+  if (!instant) return null;
+  const quand = new Date(String(instant));
+  if (Number.isNaN(quand.getTime())) return null;
+  return quand.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+};
+
+/**
+ * « Ajouter à l'agenda » (E-P07) : le lien Google Agenda d'une réservation, comme les matchs League
+ * (`hooks/useNotifications.js`), sans fichier `.ics`.
+ * ponytail: troisième écriture de ce lien (useNotifications.js:126, Conversation.js:772,
+ * celle-ci) ; plafond : trois copies ; voie de sortie : un module `utils` commun qu'importeraient
+ * les trois.
+ * @param {RendezVous} rendezVous - Le titre, le début et la fin (ISO), le lieu, le détail.
+ * @returns {string | null} Le lien, ou null sans heures valables.
+ */
+export const lienAgendaGoogle = (rendezVous) => {
+  const debut = instantPourAgenda(rendezVous?.debut);
+  const fin = instantPourAgenda(rendezVous?.fin);
+  if (!debut || !fin) return null;
+  const enc = (/** @type {unknown} */ texte) => encodeURIComponent(String(texte || ''));
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+    + `&text=${enc(rendezVous.titre)}`
+    + `&dates=${debut}/${fin}`
+    + `&details=${enc(rendezVous.details)}`
+    + `&location=${enc(rendezVous.lieu)}`;
+};
+
+/**
  * L'état AFFICHÉ d'une réservation (P00 bloc 4, plan §1.2) : ceux du serveur, et « jouée » pour une
  * confirmée dont le créneau est fini. « Non honorée » viendra avec le serveur L2B ; « en collecte »
  * et « non aboutie » avec L3.
