@@ -33,6 +33,8 @@ import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
 import AutorisationsDuGroupe from '@/views/chat/AutorisationsDuGroupe';
 import FeuillePhotoDuGroupe from '@/views/chat/FeuillePhotoDuGroupe';
 
+import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
+
 /**
  * L'identifiant d'un membre.
  * @param {any} membre
@@ -121,6 +123,10 @@ function InfosDuGroupe({
   const { Colors } = useTheme();
   const { t } = useTranslation();
   const { bottom, top } = useSafeAreaInsets();
+  // 🤖 ANDROIDBAR-4 — fenêtre translucide : sur Android 15 et 16, rien ne la remonte au-dessus
+  // du clavier ; le défilement (et « Annuler / Enregistrer » du nom) continuait dessous. La page
+  // laisse la place du clavier, barre comprise : le défilement s'arrête à son haut.
+  const { retrait: retraitDuClavier } = useRetraitDuClavierAndroid(0);
   const nomDuGroupe = String(chat?.groupName || '').trim();
   const [enEdition, setEnEdition] = useState(false);
   const [brouillon, setBrouillon] = useState(nomDuGroupe);
@@ -211,7 +217,10 @@ function InfosDuGroupe({
   return (
     <Modal animationType="slide" onRequestClose={onClose} statusBarTranslucent visible={visible}>
       <View
-        style={[styles.page, { backgroundColor: Colors.chatBackground }]}
+        style={[
+          styles.page,
+          { backgroundColor: Colors.chatBackground, paddingBottom: retraitDuClavier },
+        ]}
         testID="infos-du-groupe"
       >
         <View style={[styles.enTete, { backgroundColor: Colors.chatBar, paddingTop: top }]}>

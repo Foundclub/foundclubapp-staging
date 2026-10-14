@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
+  Alert, ScrollView, Text, View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -227,10 +227,12 @@ function AddSponsor({ navigation, route }) {
         // qui vit hors du defilement.
         Spaces.paddingHorizontal[16],
       ]}
+      keyboardAvoiding
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
+      {/* 🤖 ANDROIDBAR-4 — l'évitement du clavier est celui du ScreenContainer : le
+          décalage écrit en dur (100) laissait 20 dp de vide sous le formulaire une fois le
+          clavier refermé, et passait 10 dp SOUS le clavier sur Android 15/16 (Pixel 9). */}
+      <View
         style={[
           Alignments.fill,
           Alignments.justifySpaceBetween,
@@ -336,7 +338,7 @@ function AddSponsor({ navigation, route }) {
             variant="Ghost"
           />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </ScreenContainer>
   );
 }
