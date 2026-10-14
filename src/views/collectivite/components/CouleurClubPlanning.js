@@ -94,7 +94,9 @@ export default function CouleurClubPlanning({ club, collectiviteId }) {
             : titre
         }
         accessibilityRole="radio"
-        accessibilityState={{ disabled: sauver.isPending, selected: selectionne }}
+        accessibilityState={{
+          checked: selectionne, disabled: sauver.isPending, selected: selectionne,
+        }}
         disabled={sauver.isPending}
         key={valeur || 'auto'}
         onPress={() => choisir(valeur)}
@@ -112,15 +114,13 @@ export default function CouleurClubPlanning({ club, collectiviteId }) {
             backgroundColor: valeur || couleur,
             borderColor: Colors.neutral300,
             borderRadius: 14,
-            borderWidth: 1,
+            borderWidth: selectionne ? 3 : 1,
             height: 24,
             width: 24,
           }}
         />
         <View style={{ flex: 1 }}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {`${titre}${selectionne ? ' · ✓' : ''}`}
-          </Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titre}</Text>
           {dejaPris ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t('collectiviteClubs.couleur.prise', {

@@ -3,6 +3,7 @@ import renderer, { act } from 'react-test-renderer';
 import { TouchableOpacity } from 'react-native';
 
 import CouleurClubPlanning from '../CouleurClubPlanning';
+import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
 
 let mockClubs;
 let mockMutation;
@@ -33,7 +34,8 @@ jest.mock('@/components/atoms/button/Button', () => {
 });
 
 const club = { documentId: 'a', name: 'AS A', planningColor: null };
-const other = { documentId: 'b', name: 'US B', planningColor: '#9D4DFF' };
+const purple = FACILITY_PLANNING_PALETTE[5];
+const other = { documentId: 'b', name: 'US B', planningColor: purple };
 let tree;
 const press = async (id) => act(async () => {
   const target = tree.root.findAllByProps({ testID: id })[0];
@@ -54,6 +56,7 @@ it('11 choix nommes, radio et hauteur >= 44 ; automatique sauve en un appui', as
   await press('club-couleur-changer');
   const radios = tree.root.findAllByType(TouchableOpacity).filter((x) => x.props.accessibilityRole === 'radio');
   expect(radios).toHaveLength(11);
+  expect(radios[0].props.accessibilityState.checked).toBe(true);
   radios.forEach((x) => {
     expect(x.props.accessibilityLabel).toBeTruthy();
     expect(x.props.style.minHeight).toBeGreaterThanOrEqual(44);
@@ -68,7 +71,7 @@ it('une couleur prise nomme le club, attend la confirmation, puis sauvegarde', a
   expect(mockMutation.mutateAsync).not.toHaveBeenCalled();
   expect(JSON.stringify(tree.toJSON())).toContain('US B');
   await press('club-couleur-confirmer');
-  expect(mockMutation.mutateAsync).toHaveBeenCalledWith({ collectiviteId: 'ville', clubId: 'a', planningColor: '#9D4DFF' });
+  expect(mockMutation.mutateAsync).toHaveBeenCalledWith({ collectiviteId: 'ville', clubId: 'a', planningColor: purple });
 });
 it('refus serveur visible, feuille conservee et nouvel essai possible', async () => {
   mockMutation.mutateAsync.mockRejectedValue(new Error('Refus de recette'));
